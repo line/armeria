@@ -17,6 +17,7 @@
 package com.linecorp.armeria.client.grpc.protocol;
 
 import java.nio.charset.StandardCharsets;
+import java.util.Base64;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 
@@ -30,10 +31,12 @@ import com.linecorp.armeria.client.ClientOptions;
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.Clients;
 import com.linecorp.armeria.client.HttpClient;
+import com.linecorp.armeria.client.RequestOptions;
 import com.linecorp.armeria.client.SimpleDecoratingHttpClient;
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.AggregationOptions;
+import com.linecorp.armeria.common.ExchangeType;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
@@ -71,12 +74,17 @@ import io.netty.handler.codec.http.HttpHeaderValues;
  */
 @UnstableApi
 public final class UnaryGrpcClient {
+
+    private static final Logger logger = LoggerFactory.getLogger(UnaryGrpcClient.class);
+
     private static final Set<SerializationFormat> SUPPORTED_SERIALIZATION_FORMATS =
             UnaryGrpcSerializationFormats.values();
 
+    private static final RequestOptions REQUEST_OPTIONS =
+            RequestOptions.builder().exchangeType(ExchangeType.UNARY).build();
+
     private final SerializationFormat serializationFormat;
     private final WebClient webClient;
-    private static final Logger logger = LoggerFactory.getLogger(UnaryGrpcClient.class);
 
     /**
      * Constructs a {@link UnaryGrpcClient} for the given {@link WebClient}.
@@ -130,7 +138,7 @@ public final class UnaryGrpcClient {
                 RequestHeaders.builder(HttpMethod.POST, uri).contentType(serializationFormat.mediaType())
                               .add(HttpHeaderNames.TE, HttpHeaderValues.TRAILERS.toString()).build(),
                 HttpData.wrap(payload));
-        return webClient.execute(request).aggregate(
+        return webClient.execute(request, REQUEST_OPTIONS).aggregate(
                                 AggregationOptions.builder()
                                                   .usePooledObjects(PooledByteBufAllocator.DEFAULT)
                                                   .build())
@@ -161,7 +169,14 @@ public final class UnaryGrpcClient {
             if (grpcMessage != null) {
                 grpcMessage = StatusMessageEscaper.unescape(grpcMessage);
             }
-            throw new ArmeriaStatusException(Integer.parseInt(grpcStatus), grpcMessage);
+            final String grpcDetails = headers.get(GrpcHeaderNames.GRPC_STATUS_DETAILS_BIN);
+            final byte[] details;
+            if (grpcDetails != null) {
+                details = Base64.getDecoder().decode(grpcDetails);
+            } else {
+                details = null;
+            }
+            throw new ArmeriaStatusException(Integer.parseInt(grpcStatus), grpcMessage, details);
         }
     }
 

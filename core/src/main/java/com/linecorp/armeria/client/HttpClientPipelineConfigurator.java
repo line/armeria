@@ -17,6 +17,7 @@
 package com.linecorp.armeria.client;
 
 import static com.google.common.base.MoreObjects.firstNonNull;
+import static com.linecorp.armeria.client.HttpChannelPool.TIMINGS_BUILDER_KEY;
 import static com.linecorp.armeria.common.SessionProtocol.H1;
 import static com.linecorp.armeria.common.SessionProtocol.H1C;
 import static com.linecorp.armeria.common.SessionProtocol.H2;
@@ -49,6 +50,7 @@ import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.RequestTarget;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.logging.ClientConnectionTimingsBuilder;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.common.util.SystemInfo;
 import com.linecorp.armeria.internal.client.DecodedHttpResponse;
@@ -129,6 +131,14 @@ final class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
             RequestOptions.builder()
                           .responseTimeoutMillis(0)
                           .maxResponseLength(UPGRADE_RESPONSE_MAX_LENGTH).build();
+
+    private static final RequestTarget REQ_TARGET_ASTERISK;
+
+    static {
+        final RequestTarget asterisk = RequestTarget.forClient("*");
+        assert asterisk != null;
+        REQ_TARGET_ASTERISK = asterisk;
+    }
 
     private enum HttpPreference {
         HTTP1_REQUIRED,
@@ -213,20 +223,21 @@ final class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
      * See <a href="https://http2.github.io/http2-spec/#discover-https">HTTP/2 specification</a>.
      */
     private void configureAsHttps(Channel ch, SocketAddress remoteAddr) {
-        assert isHttps();
+        assert sslCtx != null;
 
         final ChannelPipeline p = ch.pipeline();
-        final SslHandler sslHandler;
+        final SSLEngine sslEngine;
         if (remoteAddr instanceof InetSocketAddress) {
             final InetSocketAddress raddr = (InetSocketAddress) remoteAddr;
-            sslHandler = sslCtx.newHandler(ch.alloc(),
-                                           raddr.getHostString(),
-                                           raddr.getPort());
+            sslEngine = sslCtx.newEngine(ch.alloc(),
+                                         raddr.getHostString(),
+                                         raddr.getPort());
         } else {
             assert remoteAddr instanceof DomainSocketAddress : remoteAddr;
-            sslHandler = sslCtx.newHandler(ch.alloc());
+            sslEngine = sslCtx.newEngine(ch.alloc());
         }
-
+        final ClientConnectionTimingsBuilder timingsBuilder = ch.attr(TIMINGS_BUILDER_KEY).get();
+        final SslHandler sslHandler = new ClientSslHandler(sslEngine, timingsBuilder);
         p.addLast(configureSslHandler(sslHandler));
         p.addLast(TrafficLoggingHandler.CLIENT);
         p.addLast(new ChannelInboundHandlerAdapter() {
@@ -356,7 +367,11 @@ final class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
 
     private void configureUpgradeCodec(Channel ch, Consumer<ChannelHandler> pipelineCustomizer) {
         final Http2ClientConnectionHandler http2Handler = newHttp2ConnectionHandler(ch, http2);
-        if (clientFactory.useHttp2Preface()) {
+        // - h2c: HTTP/2 preface is always used.
+        // - http: Either HTTP/1.1 upgrade or HTTP/2 preface is used depending on 'useHttp2Preface()'.
+        final boolean shouldUsePreface = httpPreference == HttpPreference.HTTP2_REQUIRED ||
+                                         clientFactory.useHttp2Preface();
+        if (shouldUsePreface) {
             pipelineCustomizer.accept(new DowngradeHandler());
             pipelineCustomizer.accept(http2Handler);
         } else {
@@ -458,6 +473,25 @@ final class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
     }
 
     /**
+     * A handler that collects the ssl related metric.
+     */
+    private static final class ClientSslHandler extends SslHandler {
+        private final ClientConnectionTimingsBuilder timingsBuilder;
+
+        ClientSslHandler(SSLEngine engine, ClientConnectionTimingsBuilder timingsBuilder) {
+            super(engine);
+            this.timingsBuilder = timingsBuilder;
+        }
+
+        @Override
+        public void channelActive(ChannelHandlerContext ctx) throws Exception {
+            timingsBuilder.tlsHandshakeStart();
+            super.channelActive(ctx);
+            handshakeFuture().addListener(future -> timingsBuilder.tlsHandshakeEnd());
+        }
+    }
+
+    /**
      * A handler that triggers the cleartext upgrade to HTTP/2 by sending an initial HTTP request.
      */
     private final class UpgradeRequestHandler extends ChannelInboundHandlerAdapter {
@@ -538,13 +572,13 @@ final class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
             final DefaultClientRequestContext reqCtx = new DefaultClientRequestContext(
                     ctx.channel().eventLoop(), Flags.meterRegistry(), H1C, RequestId.random(),
                     com.linecorp.armeria.common.HttpMethod.OPTIONS,
-                    RequestTarget.forClient("*"), ClientOptions.of(),
+                    REQ_TARGET_ASTERISK, ClientOptions.of(),
                     HttpRequest.of(com.linecorp.armeria.common.HttpMethod.OPTIONS, "*"),
                     null, REQUEST_OPTIONS_FOR_UPGRADE_REQUEST, CancellationScheduler.noop(),
                     System.nanoTime(), SystemInfo.currentTimeMicros());
 
             // NB: No need to set the response timeout because we have session creation timeout.
-            responseDecoder.addResponse(0, res, reqCtx, ctx.channel().eventLoop());
+            responseDecoder.addResponse(null, 0, res, reqCtx, ctx.channel().eventLoop());
             ctx.fireChannelActive();
         }
 
@@ -729,18 +763,9 @@ final class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
 
         final Http2ClientConnectionHandlerBuilder builder =
                 new Http2ClientConnectionHandlerBuilder(ch, clientFactory, protocol);
-        builder.codec(decoder, encoder)
-               .initialSettings(http2Settings());
-
-        final long timeout = clientFactory.idleTimeoutMillis();
-        if (timeout > 0) {
-            builder.gracefulShutdownTimeoutMillis(timeout);
-        } else {
-            // Timeout disabled
-            builder.gracefulShutdownTimeoutMillis(-1);
-        }
-
-        return builder.build();
+        return builder.codec(decoder, encoder)
+                      .initialSettings(http2Settings())
+                      .build();
     }
 
     private static Http2ConnectionEncoder encoder(Http2Connection connection) {
@@ -788,7 +813,7 @@ final class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
 
         @Override
         public void close(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
-            HttpSession.get(ctx.channel()).deactivate();
+            HttpSession.get(ctx.channel()).markUnacquirable();
             super.close(ctx, promise);
         }
     }

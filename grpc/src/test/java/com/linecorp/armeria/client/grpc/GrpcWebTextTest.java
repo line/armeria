@@ -142,7 +142,7 @@ class GrpcWebTextTest {
 
         private static void writeTrailers(ServiceRequestContext ctx, HttpResponseWriter streaming) {
             final HttpHeadersBuilder trailersBuilder = HttpHeaders.builder();
-            GrpcTrailersUtil.addStatusMessageToTrailers(trailersBuilder, StatusCodes.OK, null);
+            GrpcTrailersUtil.addStatusMessageToTrailers(trailersBuilder, StatusCodes.OK, null, null);
             final ByteBuf serializedTrailers =
                     GrpcTrailersUtil.serializeTrailersAsMessage(ctx.alloc(), trailersBuilder.build());
             final HttpData httpdataTrailers = HttpData.wrap(

@@ -16,7 +16,7 @@
 
 package com.linecorp.armeria.common;
 
-import static com.linecorp.armeria.internal.common.ArmeriaHttpUtil.isContentAlwaysEmptyWithValidation;
+import static com.linecorp.armeria.common.HttpResponseUtil.httpResponseUtilLogger;
 import static java.util.Objects.requireNonNull;
 
 import com.linecorp.armeria.common.stream.StreamWriter;
@@ -34,18 +34,19 @@ public interface HttpResponseWriter extends HttpResponse, StreamWriter<HttpObjec
         HttpData content = null;
         try {
             requireNonNull(res, "res");
-
             final ResponseHeaders headers = res.headers();
-            final HttpStatus status = headers.status();
             content = res.content();
-            final boolean contentAlwaysEmpty = isContentAlwaysEmptyWithValidation(status, content);
-
             if (!tryWrite(headers)) {
                 return;
             }
 
-            // Add content if not empty.
-            if (!contentAlwaysEmpty && !content.isEmpty()) {
+            if (headers.status().isContentAlwaysEmpty()) {
+                if (!content.isEmpty()) {
+                    httpResponseUtilLogger.debug(
+                            "Non-empty content found with an empty status: {}, content length: {}",
+                            headers.status(), content.length());
+                }
+            } else if (!content.isEmpty()) {
                 transferredContent = true;
                 if (!tryWrite(content)) {
                     return;

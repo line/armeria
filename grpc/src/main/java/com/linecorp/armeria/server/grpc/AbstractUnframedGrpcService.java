@@ -63,6 +63,7 @@ import io.grpc.ServerMethodDefinition;
 import io.grpc.ServerServiceDefinition;
 import io.grpc.Status;
 import io.grpc.Status.Code;
+import io.netty.buffer.ByteBuf;
 import io.netty.util.AttributeKey;
 
 /**
@@ -142,8 +143,7 @@ abstract class AbstractUnframedGrpcService extends SimpleDecoratingHttpService i
             RequestHeaders grpcHeaders,
             HttpData content,
             CompletableFuture<HttpResponse> res,
-            @Nullable Function<HttpData, HttpData> responseBodyConverter,
-            MediaType responseContentType) {
+            @Nullable Function<AggregatedHttpResponse, AggregatedHttpResponse> responseConverter) {
         final HttpRequest grpcRequest;
         ctx.setAttr(IS_UNFRAMED_GRPC, true);
         try (ArmeriaMessageFramer framer = new ArmeriaMessageFramer(
@@ -177,7 +177,7 @@ abstract class AbstractUnframedGrpcService extends SimpleDecoratingHttpService i
                                         res.completeExceptionally(t);
                                     } else {
                                         deframeAndRespond(ctx, framedResponse, res, unframedGrpcErrorHandler,
-                                                          responseBodyConverter, responseContentType);
+                                                          responseConverter);
                                     }
                                 }
                                 return null;
@@ -189,8 +189,8 @@ abstract class AbstractUnframedGrpcService extends SimpleDecoratingHttpService i
                                   AggregatedHttpResponse grpcResponse,
                                   CompletableFuture<HttpResponse> res,
                                   UnframedGrpcErrorHandler unframedGrpcErrorHandler,
-                                  @Nullable Function<HttpData, HttpData> responseBodyConverter,
-                                  MediaType responseContentType) {
+                                  @Nullable
+                                  Function<AggregatedHttpResponse, AggregatedHttpResponse> responseConverter) {
         final HttpHeaders trailers = !grpcResponse.trailers().isEmpty() ?
                                      grpcResponse.trailers() : grpcResponse.headers();
         final String grpcStatusCode = trailers.get(GrpcHeaderNames.GRPC_STATUS);
@@ -226,19 +226,19 @@ abstract class AbstractUnframedGrpcService extends SimpleDecoratingHttpService i
 
         final ResponseHeadersBuilder unframedHeaders = grpcResponse.headers().toBuilder();
         unframedHeaders.set(GrpcHeaderNames.GRPC_STATUS, grpcStatusCode); // grpcStatusCode is 0 which is OK.
-        unframedHeaders.contentType(responseContentType);
 
         final ArmeriaMessageDeframer deframer = new ArmeriaMessageDeframer(
                 // Max outbound message size is handled by the GrpcService, so we don't need to set it here.
                 Integer.MAX_VALUE);
+        final Subscriber<DeframedMessage> subscriber = singleSubscriber(
+                unframedHeaders, res, responseConverter);
         grpcResponse.toHttpResponse().decode(deframer, ctx.alloc())
-                    .subscribe(singleSubscriber(unframedHeaders, res, responseBodyConverter), ctx.eventLoop(),
-                               SubscriptionOption.WITH_POOLED_OBJECTS);
+                    .subscribe(subscriber, ctx.eventLoop(), SubscriptionOption.WITH_POOLED_OBJECTS);
     }
 
     static Subscriber<DeframedMessage> singleSubscriber(
             ResponseHeadersBuilder unframedHeaders, CompletableFuture<HttpResponse> res,
-            @Nullable Function<HttpData, HttpData> responseBodyConverter) {
+            @Nullable Function<AggregatedHttpResponse, AggregatedHttpResponse> responseConverter) {
         return new Subscriber<DeframedMessage>() {
 
             @Override
@@ -249,12 +249,21 @@ abstract class AbstractUnframedGrpcService extends SimpleDecoratingHttpService i
             @Override
             public void onNext(DeframedMessage message) {
                 // We know that we don't support compression, so this is always a ByteBuf.
-                HttpData unframedContent = HttpData.wrap(message.buf());
-                if (responseBodyConverter != null) {
-                    unframedContent = responseBodyConverter.apply(unframedContent);
+                final ByteBuf buf = message.buf();
+                assert buf != null;
+                final HttpData unframedContent = HttpData.wrap(buf);
+                unframedHeaders.contentType(MediaType.JSON_UTF_8);
+
+                final AggregatedHttpResponse existingResponse = AggregatedHttpResponse.of(
+                        unframedHeaders.build(),
+                        unframedContent);
+
+                if (responseConverter != null) {
+                    final AggregatedHttpResponse convertedResponse = responseConverter.apply(existingResponse);
+                    res.complete(convertedResponse.toHttpResponse());
+                } else {
+                    res.complete(existingResponse.toHttpResponse());
                 }
-                unframedHeaders.contentLength(unframedContent.length());
-                res.complete(HttpResponse.of(unframedHeaders.build(), unframedContent));
             }
 
             @Override

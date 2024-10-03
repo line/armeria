@@ -29,17 +29,20 @@ import com.linecorp.armeria.common.annotation.Nullable;
 import io.fabric8.kubernetes.client.http.AsyncBody;
 import io.fabric8.kubernetes.client.http.HttpRequest;
 import io.fabric8.kubernetes.client.http.HttpResponse;
+import io.fabric8.kubernetes.client.http.StandardHttpRequest;
 import io.netty.util.AsciiString;
 
 final class ArmeriaHttpResponse implements HttpResponse<AsyncBody> {
 
+    private final StandardHttpRequest request;
     private final ResponseHeaders responseHeaders;
     private final AsyncBody body;
 
     @Nullable
     private Map<String, List<String>> headers;
 
-    ArmeriaHttpResponse(ResponseHeaders responseHeaders, AsyncBody body) {
+    ArmeriaHttpResponse(StandardHttpRequest request, ResponseHeaders responseHeaders, AsyncBody body) {
+        this.request = request;
         this.responseHeaders = responseHeaders;
         this.body = body;
     }
@@ -61,7 +64,7 @@ final class ArmeriaHttpResponse implements HttpResponse<AsyncBody> {
 
     @Override
     public HttpRequest request() {
-        return null;
+        return request;
     }
 
     @Override

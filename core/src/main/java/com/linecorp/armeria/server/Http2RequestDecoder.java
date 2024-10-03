@@ -207,10 +207,8 @@ final class Http2RequestDecoder extends Http2EventAdapter {
             req = DecodedHttpRequest.of(endOfStream, eventLoop, id, streamId, headers, true,
                                         inboundTrafficController, routingCtx);
             requests.put(streamId, req);
-            // An aggregating request will be fired later after all objects are collected.
-            if (!req.needsAggregation()) {
-                ctx.fireChannelRead(req);
-            }
+            cfg.serverMetrics().increasePendingHttp2Requests();
+            ctx.fireChannelRead(req);
         } else {
             if (!(req instanceof DecodedHttpRequestWriter)) {
                 // Silently ignore the following HEADERS Frames of non-DecodedHttpRequestWriter. The request
@@ -224,11 +222,6 @@ final class Http2RequestDecoder extends Http2EventAdapter {
             try {
                 // Trailers is received. The decodedReq will be automatically closed.
                 decodedReq.write(trailers);
-                if (req.needsAggregation()) {
-                    assert !req.isInitialized();
-                    // An aggregated request can be fired now.
-                    ctx.fireChannelRead(req);
-                }
             } catch (Throwable t) {
                 decodedReq.close(t);
                 throw Http2Exception.streamError(streamId, INTERNAL_ERROR, t,
@@ -318,10 +311,6 @@ final class Http2RequestDecoder extends Http2EventAdapter {
             // Received an empty DATA frame
             if (endOfStream) {
                 req.close();
-                if (req.needsAggregation()) {
-                    assert !req.isInitialized();
-                    ctx.fireChannelRead(req);
-                }
             }
             return padding;
         }
@@ -344,26 +333,12 @@ final class Http2RequestDecoder extends Http2EventAdapter {
 
             final HttpStatusException httpStatusException =
                     HttpStatusException.of(HttpStatus.REQUEST_ENTITY_TOO_LARGE, cause);
-            if (!decodedReq.isInitialized()) {
-                assert decodedReq.needsAggregation();
-                final StreamingDecodedHttpRequest streamingReq =
-                        decodedReq.toAbortedStreaming(inboundTrafficController,
-                                                      httpStatusException, shouldReset);
-                requests.put(streamId, streamingReq);
-                ctx.fireChannelRead(streamingReq);
-            } else {
-                decodedReq.setShouldResetOnlyIfRemoteIsOpen(shouldReset);
-                decodedReq.abortResponse(httpStatusException, true);
-            }
+            decodedReq.setShouldResetOnlyIfRemoteIsOpen(shouldReset);
+            decodedReq.abortResponse(httpStatusException, true);
         } else if (decodedReq.isOpen()) {
             try {
                 // The decodedReq will be automatically closed if endOfStream is true.
                 decodedReq.write(HttpData.wrap(data.retain()).withEndOfStream(endOfStream));
-                if (endOfStream && decodedReq.needsAggregation()) {
-                    assert !decodedReq.isInitialized();
-                    // An aggregated request is now ready to be fired.
-                    ctx.fireChannelRead(decodedReq);
-                }
             } catch (Throwable t) {
                 decodedReq.close(t);
                 throw Http2Exception.streamError(streamId, INTERNAL_ERROR, t,
@@ -412,13 +387,7 @@ final class Http2RequestDecoder extends Http2EventAdapter {
 
         final ClosedStreamException cause =
                 new ClosedStreamException("received a RST_STREAM frame: " + Http2Error.valueOf(errorCode));
-        if (!req.isInitialized()) {
-            assert req.needsAggregation();
-            // Call fireChannelRead so that the cause is logged by LoggingService.
-            ctx.fireChannelRead(req.toAbortedStreaming(inboundTrafficController, cause, false));
-        } else {
-            req.abortResponse(cause, /* cancel */ true);
-        }
+        req.abortResponse(cause, /* cancel */ true);
     }
 
     @Override

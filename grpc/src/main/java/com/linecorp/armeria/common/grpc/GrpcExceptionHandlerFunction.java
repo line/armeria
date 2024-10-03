@@ -40,12 +40,22 @@ public interface GrpcExceptionHandlerFunction {
     }
 
     /**
-     * Maps the specified {@link Throwable} to a gRPC {@link Status},
-     * and mutates the specified {@link Metadata}.
-     * If {@code null} is returned, the built-in mapping rule is used by default.
+     * Returns the default {@link GrpcExceptionHandlerFunction}.
+     */
+    @UnstableApi
+    static GrpcExceptionHandlerFunction of() {
+        return DefaultGrpcExceptionHandlerFunction.INSTANCE;
+    }
+
+    /**
+     * Maps the specified {@link Throwable} to a gRPC {@link Status} and mutates the specified {@link Metadata}.
+     * If {@code null} is returned, {@link #of()} will be used to return {@link Status} as the default.
+     *
+     * <p>The specified {@link Status} parameter was created via {@link Status#fromThrowable(Throwable)}.
+     * You can return the {@link Status} or any other {@link Status} as needed.
      */
     @Nullable
-    Status apply(RequestContext ctx, Throwable cause, Metadata metadata);
+    Status apply(RequestContext ctx, Status status, Throwable cause, Metadata metadata);
 
     /**
      * Returns a {@link GrpcExceptionHandlerFunction} that returns the result of this function
@@ -55,12 +65,15 @@ public interface GrpcExceptionHandlerFunction {
      */
     default GrpcExceptionHandlerFunction orElse(GrpcExceptionHandlerFunction next) {
         requireNonNull(next, "next");
-        return (ctx, cause, metadata) -> {
-            final Status status = apply(ctx, cause, metadata);
-            if (status != null) {
-                return status;
+        if (this == next) {
+            return this;
+        }
+        return (ctx, status, cause, metadata) -> {
+            final Status newStatus = apply(ctx, status, cause, metadata);
+            if (newStatus != null) {
+                return newStatus;
             }
-            return next.apply(ctx, cause, metadata);
+            return next.apply(ctx, status, cause, metadata);
         };
     }
 }

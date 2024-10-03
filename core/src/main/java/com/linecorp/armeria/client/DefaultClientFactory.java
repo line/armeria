@@ -77,11 +77,15 @@ final class DefaultClientFactory implements ClientFactory {
 
     static {
         if (DefaultClientFactory.class.getClassLoader() == ClassLoader.getSystemClassLoader()) {
-            Runtime.getRuntime().addShutdownHook(new Thread(() -> {
-                if (!shutdownHookDisabled) {
-                    ClientFactory.closeDefault();
-                }
-            }));
+            try {
+                Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+                    if (!shutdownHookDisabled) {
+                        ClientFactory.closeDefault();
+                    }
+                }));
+            } catch (IllegalStateException e) {
+                logger.debug("Skipped adding a shutdown hook to the DefaultClientFactory.", e);
+            }
         }
     }
 
@@ -163,6 +167,9 @@ final class DefaultClientFactory implements ClientFactory {
 
     @Override
     public Object newClient(ClientBuilderParams params) {
+        if (isClosing()) {
+            throw new IllegalStateException("Cannot create a client because the factory is closing.");
+        }
         validateParams(params);
         final Scheme scheme = params.scheme();
         final Class<?> clientType = params.clientType();
@@ -177,6 +184,7 @@ final class DefaultClientFactory implements ClientFactory {
                 "No ClientFactory for scheme: " + scheme + " matched clientType: " + clientType);
     }
 
+    @Nullable
     @Override
     public <T> T unwrap(Object client, Class<T> type) {
         final T params = ClientFactory.super.unwrap(client, type);

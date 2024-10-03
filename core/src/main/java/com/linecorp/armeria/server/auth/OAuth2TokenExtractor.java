@@ -61,7 +61,7 @@ final class OAuth2TokenExtractor implements Function<RequestHeaders, OAuth2Token
 
         final Matcher matcher = AUTHORIZATION_HEADER_PATTERN.matcher(authorization);
         if (!matcher.matches()) {
-            logger.warn("Invalid authorization header: " + authorization);
+            logger.debug("Invalid authorization header: {}", authorization);
             return null;
         }
 

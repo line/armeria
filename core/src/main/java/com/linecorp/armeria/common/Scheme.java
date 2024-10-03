@@ -114,8 +114,11 @@ public final class Scheme implements Comparable<Scheme> {
      * {@link SerializationFormat} and {@link SessionProtocol}.
      */
     public static Scheme of(SerializationFormat serializationFormat, SessionProtocol sessionProtocol) {
-        return SCHEMES.get(requireNonNull(serializationFormat, "serializationFormat").uriText() + '+' +
-                           requireNonNull(sessionProtocol, "sessionProtocol").uriText());
+        final Scheme scheme = SCHEMES.get(
+                requireNonNull(serializationFormat, "serializationFormat").uriText() + '+' +
+                requireNonNull(sessionProtocol, "sessionProtocol").uriText());
+        assert scheme != null;
+        return scheme;
     }
 
     private final SerializationFormat serializationFormat;

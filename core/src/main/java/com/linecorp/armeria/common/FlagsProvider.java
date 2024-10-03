@@ -34,6 +34,7 @@ import com.github.benmanes.caffeine.cache.CaffeineSpec;
 import com.linecorp.armeria.client.ClientBuilder;
 import com.linecorp.armeria.client.ClientFactoryBuilder;
 import com.linecorp.armeria.client.DnsResolverGroupBuilder;
+import com.linecorp.armeria.client.ResponseTimeoutMode;
 import com.linecorp.armeria.client.retry.Backoff;
 import com.linecorp.armeria.client.retry.RetryingClient;
 import com.linecorp.armeria.client.retry.RetryingRpcClient;
@@ -42,8 +43,10 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.common.util.Sampler;
 import com.linecorp.armeria.common.util.SystemInfo;
+import com.linecorp.armeria.common.util.TlsEngineType;
 import com.linecorp.armeria.common.util.TransportType;
 import com.linecorp.armeria.server.HttpService;
+import com.linecorp.armeria.server.MultipartRemovalStrategy;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.ServiceRequestContext;
@@ -56,6 +59,7 @@ import com.linecorp.armeria.server.file.HttpFile;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Metrics;
+import io.micrometer.core.instrument.distribution.DistributionStatisticConfig;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoopGroup;
 import io.netty.handler.codec.http2.Http2Exception;
@@ -197,9 +201,25 @@ public interface FlagsProvider {
      *
      * <p>This flag is enabled by default for supported platforms. Specify the
      * {@code -Dcom.linecorp.armeria.useOpenSsl=false} JVM option to disable it.
+     *
+     * @deprecated Use {@link #tlsEngineType()} and {@code -Dcom.linecorp.armeria.tlsEngineType=openssl}.
      */
     @Nullable
+    @Deprecated
     default Boolean useOpenSsl() {
+        return null;
+    }
+
+    /**
+     * Returns the {@link TlsEngineType} that will be used for processing TLS connections.
+     *
+     * <p>The default value of this flag is "openssl", which means the {@link TlsEngineType#OPENSSL} will
+     * be used. Specify the {@code -Dcom.linecorp.armeria.tlsEngineType=<jdk|openssl>} JVM option to override
+     * the default.</p>
+     */
+    @Nullable
+    @UnstableApi
+    default TlsEngineType tlsEngineType() {
         return null;
     }
 
@@ -210,8 +230,8 @@ public interface FlagsProvider {
      * <p>This flag is disabled by default. Specify the {@code -Dcom.linecorp.armeria.dumpOpenSslInfo=true} JVM
      * option to enable it.
      *
-     * <p>If {@link #useOpenSsl()} returns {@code false}, this also returns {@code false} no matter you
-     * specified the JVM option.
+     * <p>If {@link #tlsEngineType()} does not return {@link TlsEngineType#OPENSSL}, this also returns
+     * {@code false} no matter what the specified JVM option is.
      */
     @Nullable
     default Boolean dumpOpenSslInfo() {
@@ -561,6 +581,22 @@ public interface FlagsProvider {
      */
     @Nullable
     default Integer defaultMaxClientNumRequestsPerConnection() {
+        return null;
+    }
+
+    /**
+     * Returns the default client-side graceful connection shutdown timeout in microseconds.
+     *
+     * <p>Note that this flag has no effect if a user specified the value explicitly via
+     * {@link ClientFactoryBuilder#http2GracefulShutdownTimeoutMillis(long)}.
+     *
+     * <p>The default value of this flag is
+     * {@value DefaultFlagsProvider#DEFAULT_CLIENT_HTTP2_GRACEFUL_SHUTDOWN_TIMEOUT_MILLIS}.
+     * Specify the {@code -Dcom.linecorp.armeria.defaultClientHttp2GracefulShutdownTimeoutMillis=<long>}
+     * JVM option to override the default value. {@code 0} disables the graceful shutdown.
+     */
+    @Nullable
+    default Long defaultClientHttp2GracefulShutdownTimeoutMillis() {
         return null;
     }
 
@@ -979,6 +1015,20 @@ public interface FlagsProvider {
     }
 
     /**
+     * Returns the default maximum client hello length that a server allows.
+     * The length shouldn't exceed 16MiB as described in
+     * <a href="https://datatracker.ietf.org/doc/html/rfc5246#section-7.4">Handshake Protocol</a>.
+     *
+     * <p>The default value of this flag is {@value DefaultFlagsProvider#DEFAULT_MAX_CLIENT_HELLO_LENGTH}.
+     * Specify the {@code -Dcom.linecorp.armeria.defaultMaxClientHelloLength=<integer>} JVM option to
+     * override the default value.
+     */
+    @Nullable
+    default Integer defaultMaxClientHelloLength() {
+        return null;
+    }
+
+    /**
      * Returns the {@link Set} of {@link TransientServiceOption}s that are enabled for a
      * {@link TransientService}.
      *
@@ -1079,6 +1129,15 @@ public interface FlagsProvider {
     }
 
     /**
+     * Returns the {@link MultipartRemovalStrategy} that is used to determine how to remove the uploaded files
+     * from {@code multipart/form-data}.
+     */
+    @Nullable
+    default MultipartRemovalStrategy defaultMultipartRemovalStrategy() {
+        return null;
+    }
+
+    /**
      * Returns the {@link Sampler} that determines whether to trace the stack trace of request contexts leaks
      * and how frequently to keeps stack trace. A sampled exception will have the stack trace while the others
      * will have an empty stack trace to eliminate the cost of capturing the stack trace.
@@ -1109,13 +1168,85 @@ public interface FlagsProvider {
      * Returns the default interval in milliseconds between the reports on unhandled exceptions.
      *
      * <p>The default value of this flag is
-     * {@value DefaultFlagsProvider#DEFAULT_UNHANDLED_EXCEPTIONS_REPORT_INTERVAL_MILLIS}. Specify the
+     * {@value DefaultFlagsProvider#DEFAULT_UNLOGGED_EXCEPTIONS_REPORT_INTERVAL_MILLIS}. Specify the
      * {@code -Dcom.linecorp.armeria.defaultUnhandledExceptionsReportIntervalMillis=<long>} JVM option to
+     * override the default value.</p>
+     *
+     * @deprecated Use {@link #defaultUnloggedExceptionsReportIntervalMillis()} instead.
+     */
+    @Nullable
+    @Deprecated
+    default Long defaultUnhandledExceptionsReportIntervalMillis() {
+        return null;
+    }
+
+    /**
+     * Returns the default interval in milliseconds between the reports on unhandled exceptions.
+     *
+     * <p>The default value of this flag is
+     * {@value DefaultFlagsProvider#DEFAULT_UNLOGGED_EXCEPTIONS_REPORT_INTERVAL_MILLIS}. Specify the
+     * {@code -Dcom.linecorp.armeria.defaultUnloggedExceptionsReportIntervalMillis=<long>} JVM option to
      * override the default value.</p>
      */
     @Nullable
     @UnstableApi
-    default Long defaultUnhandledExceptionsReportIntervalMillis() {
+    default Long defaultUnloggedExceptionsReportIntervalMillis() {
+        return null;
+    }
+
+    /**
+     * Returns the {@link DistributionStatisticConfig} where armeria utilizes.
+     *
+     * <p>The default value of this flag is as follows:
+     * <pre>{@code
+     * DistributionStatisticConfig.builder()
+     *     .percentilesHistogram(false)
+     *     .serviceLevelObjectives()
+     *     .percentiles(
+     *          0, 0.5, 0.75, 0.9, 0.95, 0.98, 0.99, 0.999, 1.0)
+     *     .percentilePrecision(2)
+     *     .minimumExpectedValue(1.0)
+     *     .maximumExpectedValue(Double.MAX_VALUE)
+     *     .expiry(Duration.ofMinutes(3))
+     *     .bufferLength(3)
+     *     .build();
+     * }</pre>
+     */
+    @Nullable
+    @UnstableApi
+    default DistributionStatisticConfig distributionStatisticConfig() {
+        return null;
+    }
+
+    /**
+     * Returns the default time in milliseconds to wait before closing an HTTP/1 connection when a server needs
+     * to close the connection. This allows to avoid a server socket from remaining in the TIME_WAIT state
+     * instead of CLOSED when a connection is closed.
+     *
+     * <p>The default value of this flag is
+     * {@value DefaultFlagsProvider#DEFAULT_HTTP1_CONNECTION_CLOSE_DELAY_MILLIS}. Specify the
+     * {@code -Dcom.linecorp.armeria.defaultHttp1ConnectionCloseDelayMillis=<long>} JVM option to
+     * override the default value. {@code 0} closes the connection immediately. </p>
+     */
+    @Nullable
+    @UnstableApi
+    default Long defaultHttp1ConnectionCloseDelayMillis() {
+        return null;
+    }
+
+    /**
+     * Returns the {@link ResponseTimeoutMode} which determines when a response timeout
+     * will start to be scheduled.
+     *
+     * <p>The default value of this flag is {@link ResponseTimeoutMode#REQUEST_SENT}. Specify the
+     * {@code -Dcom.linecorp.armeria.responseTimeoutMode=ResponseTimeoutMode} JVM option to
+     * override the default value.
+     *
+     * @see ResponseTimeoutMode
+     */
+    @Nullable
+    @UnstableApi
+    default ResponseTimeoutMode responseTimeoutMode() {
         return null;
     }
 }

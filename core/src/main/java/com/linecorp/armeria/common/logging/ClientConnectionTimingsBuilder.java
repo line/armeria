@@ -32,6 +32,10 @@ public final class ClientConnectionTimingsBuilder {
 
     private final long connectionAcquisitionStartTimeMicros;
     private final long connectionAcquisitionStartNanos;
+    private long tlsHandshakeStartTimeMicros;
+    private long tlsHandshakeStartNanos;
+    private long tlsHandshakeEndNanos;
+    private boolean tlsHandshakeEndSet;
     private long dnsResolutionEndNanos;
     private boolean dnsResolutionEndSet;
 
@@ -77,10 +81,32 @@ public final class ClientConnectionTimingsBuilder {
      * @throws IllegalStateException if {@link #socketConnectStart()} is not invoked before calling this.
      */
     public ClientConnectionTimingsBuilder socketConnectEnd() {
-        checkState(socketConnectStartTimeMicros >= 0, "socketConnectStart() is not called yet.");
+        checkState(socketConnectStartTimeMicros > 0, "socketConnectStart() is not called yet.");
         checkState(!socketConnectEndSet, "socketConnectEnd() is already called.");
         socketConnectEndNanos = System.nanoTime();
         socketConnectEndSet = true;
+        return this;
+    }
+
+    /**
+     * Sets the time when the client started to TLS handshake to a remote peer.
+     */
+    public ClientConnectionTimingsBuilder tlsHandshakeStart() {
+        tlsHandshakeStartTimeMicros = SystemInfo.currentTimeMicros();
+        tlsHandshakeStartNanos = System.nanoTime();
+        return this;
+    }
+
+    /**
+     * Sets the time when the client ended to TLS handshake to a remote peer.
+     *
+     * @throws IllegalStateException if {@link #tlsHandshakeStart()} is not invoked before calling this.
+     */
+    public ClientConnectionTimingsBuilder tlsHandshakeEnd() {
+        checkState(tlsHandshakeStartTimeMicros > 0, "tlsHandshakeStart() is not called yet.");
+        checkState(!tlsHandshakeEndSet, "tlsHandshakeEnd() is already called.");
+        tlsHandshakeEndNanos = System.nanoTime();
+        tlsHandshakeEndSet = true;
         return this;
     }
 
@@ -103,7 +129,7 @@ public final class ClientConnectionTimingsBuilder {
      * @throws IllegalStateException if {@link #pendingAcquisitionStart()} is not invoked before calling this.
      */
     public ClientConnectionTimingsBuilder pendingAcquisitionEnd() {
-        checkState(pendingAcquisitionStartTimeMicros >= 0, "pendingAcquisitionStart() is not called yet.");
+        checkState(pendingAcquisitionStartTimeMicros > 0, "pendingAcquisitionStart() is not called yet.");
         pendingAcquisitionEndNanos = System.nanoTime();
         pendingAcquisitionEndSet = true;
         return this;
@@ -127,6 +153,8 @@ public final class ClientConnectionTimingsBuilder {
                 dnsResolutionEndSet ? dnsResolutionEndNanos - connectionAcquisitionStartNanos : -1,
                 socketConnectEndSet ? socketConnectStartTimeMicros : -1,
                 socketConnectEndSet ? socketConnectEndNanos - socketConnectStartNanos : -1,
+                tlsHandshakeEndSet ? tlsHandshakeStartTimeMicros : -1,
+                tlsHandshakeEndSet ? tlsHandshakeEndNanos - tlsHandshakeStartNanos : -1,
                 pendingAcquisitionEndSet ? pendingAcquisitionStartTimeMicros : -1,
                 pendingAcquisitionEndSet ? pendingAcquisitionEndNanos - pendingAcquisitionStartNanos : -1);
     }

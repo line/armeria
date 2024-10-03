@@ -21,6 +21,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.Endpoint;
+import com.linecorp.armeria.common.annotation.Nullable;
 
 final class RoundRobinStrategy implements EndpointSelectionStrategy {
 
@@ -46,6 +47,7 @@ final class RoundRobinStrategy implements EndpointSelectionStrategy {
             initialize();
         }
 
+        @Nullable
         @Override
         public Endpoint selectNow(ClientRequestContext ctx) {
             final List<Endpoint> endpoints = group().endpoints();

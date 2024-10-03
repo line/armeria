@@ -61,6 +61,9 @@ final class GrpcDecoratingService extends SimpleDecoratingHttpService implements
                                                          .config()
                                                          .dependencyInjector();
         decorated = handlerRegistry.applyDecorators(delegate, dependencyInjector);
+        for (HttpService decorator : decorated.values()) {
+            decorator.serviceAdded(cfg);
+        }
     }
 
     @Override
@@ -97,6 +100,7 @@ final class GrpcDecoratingService extends SimpleDecoratingHttpService implements
         return delegate.services();
     }
 
+    @Nullable
     @Override
     public ServerMethodDefinition<?, ?> methodDefinition(ServiceRequestContext ctx) {
         return delegate.methodDefinition(ctx);

@@ -30,10 +30,9 @@ import org.apache.thrift.async.AsyncMethodCallback;
 import org.apache.thrift.protocol.TMessageType;
 import org.apache.thrift.transport.TTransport;
 import org.apache.thrift.transport.TTransportException;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import com.google.common.base.Strings;
 
@@ -50,52 +49,28 @@ import com.linecorp.armeria.common.thrift.ThriftProtocolFactories;
 import com.linecorp.armeria.common.thrift.ThriftReply;
 import com.linecorp.armeria.internal.testing.AnticipatedException;
 import com.linecorp.armeria.server.HttpService;
-import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerBuilder;
-import com.linecorp.armeria.server.ServerPort;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.SimpleDecoratingHttpService;
 import com.linecorp.armeria.server.logging.LoggingService;
+import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
 import testing.thrift.main.HelloService;
 import testing.thrift.main.HelloService.AsyncIface;
 import testing.thrift.main.OnewayHelloService;
 import testing.thrift.main.SleepService;
 
-public abstract class AbstractThriftOverHttpTest {
+abstract class AbstractThriftOverHttpTest {
 
     private static final String LARGER_THAN_TLS = Strings.repeat("A", 16384);
-
-    private static final Server server;
-
-    private static int httpPort;
-    private static int httpsPort;
 
     private static volatile boolean recordMessageLogs;
     private static final BlockingQueue<RequestLog> requestLogs = new LinkedBlockingQueue<>();
 
-    abstract static class HelloServiceBase implements AsyncIface {
+    @RegisterExtension
+    static ServerExtension server = new ServerExtension() {
         @Override
-        @SuppressWarnings("unchecked")
-        public void hello(String name, AsyncMethodCallback resultHandler) throws TException {
-            resultHandler.onComplete(getResponse(name));
-        }
-
-        protected String getResponse(String name) {
-            return "Hello, " + name + '!';
-        }
-    }
-
-    static class HelloServiceChild extends HelloServiceBase {
-        @Override
-        protected String getResponse(String name) {
-            return "Goodbye, " + name + '!';
-        }
-    }
-
-    static {
-        final ServerBuilder sb = Server.builder();
-        try {
+        protected void configure(ServerBuilder sb) throws Exception {
             sb.http(0);
             sb.https(0);
             sb.tlsSelfSigned();
@@ -149,37 +124,36 @@ public abstract class AbstractThriftOverHttpTest {
                     };
 
             sb.decorator(logCollectingDecorator);
-        } catch (Exception e) {
-            throw new Error(e);
         }
-        server = sb.build();
+    };
+
+    abstract static class HelloServiceBase implements AsyncIface {
+        @Override
+        @SuppressWarnings("unchecked")
+        public void hello(String name, AsyncMethodCallback resultHandler) throws TException {
+            resultHandler.onComplete(getResponse(name));
+        }
+
+        protected String getResponse(String name) {
+            return "Hello, " + name + '!';
+        }
     }
 
-    @BeforeClass
-    public static void init() throws Exception {
-        server.start().get();
-
-        httpPort = server.activePorts().values().stream()
-                         .filter(ServerPort::hasHttp).findAny().get()
-                         .localAddress().getPort();
-        httpsPort = server.activePorts().values().stream()
-                          .filter(ServerPort::hasHttps).findAny().get()
-                          .localAddress().getPort();
+    static class HelloServiceChild extends HelloServiceBase {
+        @Override
+        protected String getResponse(String name) {
+            return "Goodbye, " + name + '!';
+        }
     }
 
-    @AfterClass
-    public static void destroy() throws Exception {
-        server.stop().get();
-    }
-
-    @Before
-    public void beforeTest() {
+    @BeforeEach
+    void beforeTest() {
         recordMessageLogs = false;
         requestLogs.clear();
     }
 
     @Test
-    public void testHttpInvocation() throws Exception {
+    void testHttpInvocation() throws Exception {
         try (TTransport transport = newTransport("http", "/hello")) {
             final HelloService.Client client =
                     new HelloService.Client.Factory().getClient(
@@ -190,7 +164,7 @@ public abstract class AbstractThriftOverHttpTest {
     }
 
     @Test
-    public void testInheritedThriftService() throws Exception {
+    void testInheritedThriftService() throws Exception {
         try (TTransport transport = newTransport("http", "/hellochild")) {
             final HelloService.Client client =
                     new HelloService.Client.Factory().getClient(
@@ -201,7 +175,7 @@ public abstract class AbstractThriftOverHttpTest {
     }
 
     @Test
-    public void testOnewaySyncInvocation() throws Exception {
+    void testOnewaySyncInvocation() throws Exception {
         recordMessageLogs = true;
 
         try (TTransport transport = newTransport("http", "/hello_oneway_sync")) {
@@ -224,7 +198,7 @@ public abstract class AbstractThriftOverHttpTest {
     }
 
     @Test
-    public void testOnewayAsyncInvocation() throws Exception {
+    void testOnewayAsyncInvocation() throws Exception {
         recordMessageLogs = true;
 
         try (TTransport transport = newTransport("http", "/hello_oneway_async")) {
@@ -262,7 +236,7 @@ public abstract class AbstractThriftOverHttpTest {
     }
 
     @Test
-    public void testHttpsInvocation() throws Exception {
+    void testHttpsInvocation() throws Exception {
         try (TTransport transport = newTransport("https", "/hello")) {
             final HelloService.Client client =
                     new HelloService.Client.Factory().getClient(
@@ -273,7 +247,7 @@ public abstract class AbstractThriftOverHttpTest {
     }
 
     @Test
-    public void testLargeHttpsInvocation() throws Exception {
+    void testLargeHttpsInvocation() throws Exception {
         try (TTransport transport = newTransport("https", "/large")) {
             final HelloService.Client client =
                     new HelloService.Client.Factory().getClient(
@@ -284,7 +258,7 @@ public abstract class AbstractThriftOverHttpTest {
     }
 
     @Test
-    public void testAcceptHeaderWithCommaSeparatedMediaTypes() throws Exception {
+    void testAcceptHeaderWithCommaSeparatedMediaTypes() throws Exception {
         try (TTransport transport = newTransport("http", "/hello",
                                                  HttpHeaders.of(HttpHeaderNames.ACCEPT, "text/plain, */*"))) {
             final HelloService.Client client =
@@ -296,7 +270,7 @@ public abstract class AbstractThriftOverHttpTest {
     }
 
     @Test
-    public void testAcceptHeaderWithQValues() throws Exception {
+    void testAcceptHeaderWithQValues() throws Exception {
         // Server should choose TBINARY because it has higher q-value (0.5) than that of TTEXT (0.2)
         try (TTransport transport = newTransport(
                 "http", "/hello",
@@ -312,7 +286,7 @@ public abstract class AbstractThriftOverHttpTest {
     }
 
     @Test
-    public void testAcceptHeaderWithDefaultQValues() throws Exception {
+    void testAcceptHeaderWithDefaultQValues() throws Exception {
         // Server should choose TBINARY because it has higher q-value (default 1.0) than that of TTEXT (0.2)
         try (TTransport transport = newTransport(
                 "http", "/hello",
@@ -328,7 +302,7 @@ public abstract class AbstractThriftOverHttpTest {
     }
 
     @Test
-    public void testAcceptHeaderWithUnsupportedMediaTypes() throws Exception {
+    void testAcceptHeaderWithUnsupportedMediaTypes() throws Exception {
         // Server should choose TBINARY because it does not support the media type
         // with the highest preference (text/plain).
         try (TTransport transport = newTransport(
@@ -343,8 +317,8 @@ public abstract class AbstractThriftOverHttpTest {
         }
     }
 
-    @Test(timeout = 10000)
-    public void testMessageLogsForCall() throws Exception {
+    @Test
+    void testMessageLogsForCall() throws Exception {
         try (TTransport transport = newTransport("http", "/hello")) {
             final HelloService.Client client =
                     new HelloService.Client.Factory().getClient(
@@ -385,8 +359,8 @@ public abstract class AbstractThriftOverHttpTest {
                 .isEqualTo("Hello, Trustin!");
     }
 
-    @Test(timeout = 10000)
-    public void testMessageLogsForException() throws Exception {
+    @Test
+    void testMessageLogsForException() throws Exception {
         try (TTransport transport = newTransport("http", "/exception")) {
             final HelloService.Client client =
                     new HelloService.Client.Factory().getClient(
@@ -439,9 +413,9 @@ public abstract class AbstractThriftOverHttpTest {
     protected static String newUri(String scheme, String path) {
         switch (scheme) {
             case "http":
-                return scheme + "://127.0.0.1:" + httpPort + path;
+                return scheme + "://127.0.0.1:" + server.httpPort() + path;
             case "https":
-                return scheme + "://127.0.0.1:" + httpsPort + path;
+                return scheme + "://127.0.0.1:" + server.httpsPort() + path;
         }
 
         throw new Error();

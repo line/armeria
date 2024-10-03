@@ -24,15 +24,19 @@ import org.junit.jupiter.api.Test;
 
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.Endpoint;
+import com.linecorp.armeria.client.InvalidResponseException;
+import com.linecorp.armeria.client.ResponseCancellationException;
 import com.linecorp.armeria.client.ResponseTimeoutException;
 import com.linecorp.armeria.client.WriteTimeoutException;
+import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.SuccessFunction;
 import com.linecorp.armeria.common.logging.ClientConnectionTimings;
+import com.linecorp.armeria.common.logging.RequestLogBuilder;
 import com.linecorp.armeria.common.metric.MeterIdPrefixFunction;
-import com.linecorp.armeria.common.metric.PrometheusMeterRegistries;
+import com.linecorp.armeria.common.prometheus.PrometheusMeterRegistries;
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.internal.testing.ImmediateEventLoop;
 import com.linecorp.armeria.server.RequestTimeoutException;
@@ -82,6 +86,8 @@ class RequestMetricSupportTest {
                                "service=FooService}", 1.0)
                 .containsEntry("foo.socket.connect.duration#count{http.status=200,method=POST," +
                                "service=FooService}", 1.0)
+                .containsEntry("foo.tls.handshake.duration#count{http.status=200,method=POST," +
+                               "service=FooService}", 1.0)
                 .containsEntry("foo.pending.acquisition.duration#count{http.status=200,method=POST," +
                                "service=FooService}", 1.0)
                 .containsEntry("foo.request.length#count{http.status=200,method=POST," +
@@ -106,6 +112,8 @@ class RequestMetricSupportTest {
                                       .dnsResolutionEnd()
                                       .socketConnectStart()
                                       .socketConnectEnd()
+                                      .tlsHandshakeStart()
+                                      .tlsHandshakeEnd()
                                       .pendingAcquisitionStart()
                                       .pendingAcquisitionEnd()
                                       .build();
@@ -165,6 +173,8 @@ class RequestMetricSupportTest {
                                1.0)
                 .containsEntry("foo.socket.connect.duration#count{http.status=500,method=POST,service=none}",
                                1.0)
+                .containsEntry("foo.tls.handshake.duration#count{http.status=500,method=POST,service=none}",
+                               1.0)
                 .containsEntry("foo.pending.acquisition.duration#count{http.status=500,method=POST," +
                                "service=none}", 1.0)
                 .containsEntry("foo.request.length#count{http.status=500,method=POST,service=none}", 1.0)
@@ -206,6 +216,32 @@ class RequestMetricSupportTest {
     }
 
     @Test
+    void allRetryingRequestFailedWithCauses() {
+        final MeterRegistry registry = PrometheusMeterRegistries.newRegistry();
+        final ClientRequestContext ctx = setupClientRequestCtx(registry);
+
+        addLogInfoInDerivedCtxWithCause(ctx, 501, new InvalidResponseException());
+        addLogInfoInDerivedCtx(ctx, 502);
+        addLogInfoInDerivedCtxWithCause(ctx, 503, ResponseCancellationException.get());
+
+        final RequestLogBuilder logBuilder = ctx.logBuilder();
+        // 500 will be overwritten for children logs
+        logBuilder.responseHeaders(ResponseHeaders.of(500));
+        logBuilder.endResponseWithLastChild();
+
+        final Map<String, Double> measurements = measureAll(registry);
+        assertThat(measurements)
+                .containsEntry("foo.actual.requests.failure#" +
+                               "count{cause=InvalidResponseException," +
+                               "http.status=501,method=POST,service=none}", 1.0)
+                .containsEntry("foo.actual.requests.failure#" +
+                               "count{cause=ResponseCancellationException," +
+                               "http.status=503,method=POST,service=none}", 1.0)
+                .containsEntry("foo.actual.requests.failure#" +
+                               "count{cause=null,http.status=502,method=POST,service=none}", 1.0);
+    }
+
+    @Test
     void firstRetryingRequestFailedAndTheSecondOneSuccess() {
         final MeterRegistry registry = PrometheusMeterRegistries.newRegistry();
         final ClientRequestContext ctx = setupClientRequestCtx(registry);
@@ -232,7 +268,12 @@ class RequestMetricSupportTest {
                 .containsEntry("foo.actual.requests.attempts#count{http.status=200,method=POST," +
                                "result=success,service=none}", 1.0)
                 .containsEntry("foo.actual.requests.attempts#total{http.status=200,method=POST," +
-                               "result=success,service=none}", 2.0);
+                               "result=success,service=none}", 2.0)
+                .containsEntry("foo.actual.requests.failure#" +
+                               "count{cause=null,http.status=500,method=POST,service=none}", 1.0)
+                // Should not contain the successful attempt.
+                .doesNotContainKey("foo.actual.requests.failure#" +
+                                   "count{cause=null,http.status=200,method=POST,service=none}");
     }
 
     @Test
@@ -291,7 +332,7 @@ class RequestMetricSupportTest {
 
         final MeterIdPrefixFunction meterIdPrefixFunction = MeterIdPrefixFunction.ofDefault("foo");
         RequestMetricSupport.setup(ctx, REQUEST_METRICS_SET, meterIdPrefixFunction, false,
-                                   SuccessFunction.ofDefault());
+                                   SuccessFunction.ofDefault(), Flags.distributionStatisticConfig());
         return ctx;
     }
 
@@ -312,6 +353,24 @@ class RequestMetricSupportTest {
         derivedCtx.logBuilder().endResponse();
     }
 
+    private static void addLogInfoInDerivedCtxWithCause(ClientRequestContext ctx, int statusCode,
+                                                        Throwable cause) {
+        final ClientRequestContext derivedCtx =
+                ctx.newDerivedContext(ctx.id(), ctx.request(), ctx.rpcRequest(), ctx.endpoint());
+
+        ctx.logBuilder().addChild(derivedCtx.log());
+        derivedCtx.logBuilder().session(null, ctx.sessionProtocol(), newConnectionTimings());
+        derivedCtx.logBuilder().requestFirstBytesTransferred();
+        derivedCtx.logBuilder().requestContent(null, null);
+        derivedCtx.logBuilder().requestLength(123);
+
+        derivedCtx.logBuilder().responseHeaders(ResponseHeaders.of(statusCode));
+        derivedCtx.logBuilder().responseFirstBytesTransferred();
+        derivedCtx.logBuilder().responseLength(456);
+        derivedCtx.logBuilder().endRequest();
+        derivedCtx.logBuilder().endResponse(cause);
+    }
+
     @Test
     void requestTimedOutInServerSide() {
         final MeterRegistry registry = PrometheusMeterRegistries.newRegistry();
@@ -324,7 +383,7 @@ class RequestMetricSupportTest {
 
         final MeterIdPrefixFunction meterIdPrefixFunction = MeterIdPrefixFunction.ofDefault("foo");
         RequestMetricSupport.setup(ctx, REQUEST_METRICS_SET, meterIdPrefixFunction, true,
-                                   SuccessFunction.ofDefault());
+                                   SuccessFunction.ofDefault(), Flags.distributionStatisticConfig());
 
         ctx.logBuilder().requestFirstBytesTransferred();
         ctx.logBuilder().responseHeaders(ResponseHeaders.of(503)); // 503 when request timed out
@@ -363,7 +422,7 @@ class RequestMetricSupportTest {
 
         final MeterIdPrefixFunction meterIdPrefixFunction = MeterIdPrefixFunction.ofDefault("bar");
         RequestMetricSupport.setup(ctx, REQUEST_METRICS_SET, meterIdPrefixFunction, false,
-                                   SuccessFunction.ofDefault());
+                                   SuccessFunction.ofDefault(), Flags.distributionStatisticConfig());
 
         ctx.logBuilder().name("BarService", "baz");
 
@@ -383,7 +442,7 @@ class RequestMetricSupportTest {
 
         RequestMetricSupport.setup(sctx, REQUEST_METRICS_SET,
                                    MeterIdPrefixFunction.ofDefault("foo"), true,
-                                   SuccessFunction.ofDefault());
+                                   SuccessFunction.ofDefault(), Flags.distributionStatisticConfig());
         sctx.logBuilder().endRequest();
         try (SafeCloseable ignored = sctx.push()) {
             final ClientRequestContext cctx =
@@ -394,7 +453,7 @@ class RequestMetricSupportTest {
                                         .build();
             RequestMetricSupport.setup(cctx, AttributeKey.valueOf("differentKey"),
                                        MeterIdPrefixFunction.ofDefault("bar"), false,
-                                       SuccessFunction.ofDefault());
+                                       SuccessFunction.ofDefault(), Flags.distributionStatisticConfig());
             cctx.logBuilder().endRequest();
             cctx.logBuilder().responseHeaders(ResponseHeaders.of(200));
             cctx.logBuilder().endResponse();
@@ -451,8 +510,10 @@ class RequestMetricSupportTest {
             final int statusCode = log.responseHeaders().status().code();
             return (statusCode >= 200 && statusCode < 400) || statusCode == 409;
         };
-        RequestMetricSupport.setup(ctx1, REQUEST_METRICS_SET, meterIdPrefixFunction, false, successFunction);
-        RequestMetricSupport.setup(ctx2, REQUEST_METRICS_SET, meterIdPrefixFunction, false, successFunction);
+        RequestMetricSupport.setup(ctx1, REQUEST_METRICS_SET, meterIdPrefixFunction, false, successFunction,
+                                   Flags.distributionStatisticConfig());
+        RequestMetricSupport.setup(ctx2, REQUEST_METRICS_SET, meterIdPrefixFunction, false, successFunction,
+                                   Flags.distributionStatisticConfig());
 
         ctx1.logBuilder().responseHeaders(ResponseHeaders.of(409));
         ctx1.logBuilder().endRequest();

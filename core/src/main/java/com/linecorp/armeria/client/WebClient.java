@@ -37,7 +37,6 @@ import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.util.BlockingTaskExecutor;
 import com.linecorp.armeria.common.util.Unwrappable;
-import com.linecorp.armeria.internal.common.stream.FixedStreamMessage;
 
 import io.netty.channel.EventLoop;
 
@@ -236,13 +235,7 @@ public interface WebClient extends ClientBuilderParams, Unwrappable {
      */
     @CheckReturnValue
     default HttpResponse execute(HttpRequest req) {
-        final RequestOptions requestOptions;
-        if (req instanceof FixedStreamMessage) {
-            requestOptions = RESPONSE_STREAMING_REQUEST_OPTIONS;
-        } else {
-            requestOptions = RequestOptions.of();
-        }
-        return execute(req, requestOptions);
+        return execute(req, RequestOptions.of());
     }
 
     /**
@@ -257,7 +250,7 @@ public interface WebClient extends ClientBuilderParams, Unwrappable {
     @CheckReturnValue
     default HttpResponse execute(AggregatedHttpRequest aggregatedReq) {
         requireNonNull(aggregatedReq, "aggregatedReq");
-        return execute(aggregatedReq.toHttpRequest());
+        return execute(aggregatedReq.toHttpRequest(), RESPONSE_STREAMING_REQUEST_OPTIONS);
     }
 
     /**
@@ -265,7 +258,7 @@ public interface WebClient extends ClientBuilderParams, Unwrappable {
      */
     @CheckReturnValue
     default HttpResponse execute(RequestHeaders headers) {
-        return execute(HttpRequest.of(headers));
+        return execute(HttpRequest.of(headers), RESPONSE_STREAMING_REQUEST_OPTIONS);
     }
 
     /**
@@ -273,7 +266,7 @@ public interface WebClient extends ClientBuilderParams, Unwrappable {
      */
     @CheckReturnValue
     default HttpResponse execute(RequestHeaders headers, HttpData content) {
-        return execute(HttpRequest.of(headers, content));
+        return execute(HttpRequest.of(headers, content), RESPONSE_STREAMING_REQUEST_OPTIONS);
     }
 
     /**
@@ -281,7 +274,7 @@ public interface WebClient extends ClientBuilderParams, Unwrappable {
      */
     @CheckReturnValue
     default HttpResponse execute(RequestHeaders headers, byte[] content) {
-        return execute(HttpRequest.of(headers, HttpData.wrap(content)));
+        return execute(HttpRequest.of(headers, HttpData.wrap(content)), RESPONSE_STREAMING_REQUEST_OPTIONS);
     }
 
     /**
@@ -289,7 +282,7 @@ public interface WebClient extends ClientBuilderParams, Unwrappable {
      */
     @CheckReturnValue
     default HttpResponse execute(RequestHeaders headers, String content) {
-        return execute(HttpRequest.of(headers, HttpData.ofUtf8(content)));
+        return execute(HttpRequest.of(headers, HttpData.ofUtf8(content)), RESPONSE_STREAMING_REQUEST_OPTIONS);
     }
 
     /**
@@ -297,7 +290,8 @@ public interface WebClient extends ClientBuilderParams, Unwrappable {
      */
     @CheckReturnValue
     default HttpResponse execute(RequestHeaders headers, String content, Charset charset) {
-        return execute(HttpRequest.of(headers, HttpData.of(charset, content)));
+        return execute(HttpRequest.of(headers, HttpData.of(charset, content)),
+                       RESPONSE_STREAMING_REQUEST_OPTIONS);
     }
 
     /**

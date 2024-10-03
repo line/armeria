@@ -19,9 +19,9 @@ package com.linecorp.armeria.server.cors;
 import static java.util.Objects.requireNonNull;
 
 import java.util.List;
-import java.util.function.Supplier;
+import java.util.function.Predicate;
 
-import com.linecorp.armeria.common.HttpMethod;
+import com.google.common.collect.ImmutableList;
 
 /**
  * Builds a new {@link CorsPolicy}.
@@ -31,17 +31,25 @@ import com.linecorp.armeria.common.HttpMethod;
  *
  * <p>Calling {@link #and()} method will return the control to {@link CorsServiceBuilder}.
  */
-public final class ChainedCorsPolicyBuilder extends AbstractCorsPolicyBuilder {
+public final class ChainedCorsPolicyBuilder extends AbstractCorsPolicyBuilder<ChainedCorsPolicyBuilder> {
 
+    private static final List<String> ALLOW_ANY_ORIGIN = ImmutableList.of("*");
     private final CorsServiceBuilder serviceBuilder;
 
     ChainedCorsPolicyBuilder(CorsServiceBuilder builder) {
+        super(ALLOW_ANY_ORIGIN);
         requireNonNull(builder, "builder");
         serviceBuilder = builder;
     }
 
     ChainedCorsPolicyBuilder(CorsServiceBuilder builder, List<String> origins) {
         super(origins);
+        requireNonNull(builder, "builder");
+        serviceBuilder = builder;
+    }
+
+    ChainedCorsPolicyBuilder(CorsServiceBuilder builder, Predicate<? super String> originPredicate) {
+        super(originPredicate);
         requireNonNull(builder, "builder");
         serviceBuilder = builder;
     }
@@ -71,82 +79,5 @@ public final class ChainedCorsPolicyBuilder extends AbstractCorsPolicyBuilder {
      */
     public ChainedCorsPolicyBuilder andForOrigin(String origin) {
         return and().andForOrigin(origin);
-    }
-
-    // Override the return type of the chaining methods in the superclass.
-
-    @Override
-    public ChainedCorsPolicyBuilder route(String pathPattern) {
-        return (ChainedCorsPolicyBuilder) super.route(pathPattern);
-    }
-
-    @Override
-    public ChainedCorsPolicyBuilder allowNullOrigin() {
-        return (ChainedCorsPolicyBuilder) super.allowNullOrigin();
-    }
-
-    @Override
-    public ChainedCorsPolicyBuilder allowCredentials() {
-        return (ChainedCorsPolicyBuilder) super.allowCredentials();
-    }
-
-    @Override
-    public ChainedCorsPolicyBuilder maxAge(long maxAge) {
-        return (ChainedCorsPolicyBuilder) super.maxAge(maxAge);
-    }
-
-    @Override
-    public ChainedCorsPolicyBuilder exposeHeaders(CharSequence... headers) {
-        return (ChainedCorsPolicyBuilder) super.exposeHeaders(headers);
-    }
-
-    @Override
-    public ChainedCorsPolicyBuilder exposeHeaders(Iterable<? extends CharSequence> headers) {
-        return (ChainedCorsPolicyBuilder) super.exposeHeaders(headers);
-    }
-
-    @Override
-    public ChainedCorsPolicyBuilder allowRequestMethods(HttpMethod... methods) {
-        return (ChainedCorsPolicyBuilder) super.allowRequestMethods(methods);
-    }
-
-    @Override
-    public ChainedCorsPolicyBuilder allowRequestMethods(Iterable<HttpMethod> methods) {
-        return (ChainedCorsPolicyBuilder) super.allowRequestMethods(methods);
-    }
-
-    @Override
-    public ChainedCorsPolicyBuilder allowAllRequestHeaders(boolean allowAllRequestHeaders) {
-        return (ChainedCorsPolicyBuilder) super.allowAllRequestHeaders(allowAllRequestHeaders);
-    }
-
-    @Override
-    public ChainedCorsPolicyBuilder allowRequestHeaders(CharSequence... headers) {
-        return (ChainedCorsPolicyBuilder) super.allowRequestHeaders(headers);
-    }
-
-    @Override
-    public ChainedCorsPolicyBuilder allowRequestHeaders(Iterable<? extends CharSequence> headers) {
-        return (ChainedCorsPolicyBuilder) super.allowRequestHeaders(headers);
-    }
-
-    @Override
-    public ChainedCorsPolicyBuilder preflightResponseHeader(CharSequence name, Object... values) {
-        return (ChainedCorsPolicyBuilder) super.preflightResponseHeader(name, values);
-    }
-
-    @Override
-    public ChainedCorsPolicyBuilder preflightResponseHeader(CharSequence name, Iterable<?> values) {
-        return (ChainedCorsPolicyBuilder) super.preflightResponseHeader(name, values);
-    }
-
-    @Override
-    public ChainedCorsPolicyBuilder preflightResponseHeader(CharSequence name, Supplier<?> valueSupplier) {
-        return (ChainedCorsPolicyBuilder) super.preflightResponseHeader(name, valueSupplier);
-    }
-
-    @Override
-    public ChainedCorsPolicyBuilder disablePreflightResponseHeaders() {
-        return (ChainedCorsPolicyBuilder) super.disablePreflightResponseHeaders();
     }
 }

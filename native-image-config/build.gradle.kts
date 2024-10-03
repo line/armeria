@@ -12,9 +12,9 @@ buildscript {
     dependencies {
         // TODO(trustin): Use platform(libs.boms.jackson) once Gradle supports platform() for build dependencies.
         //                https://github.com/gradle/gradle/issues/21788
-        val jacksonDatabind = libs.jackson.databind.get()
+        val jacksonDatabind: ModuleVersionSelector = libs.jackson.databind.get()
         classpath(
-            group = jacksonDatabind.group!!,
+            group = jacksonDatabind.group,
             name = jacksonDatabind.name,
             version = libs.boms.jackson.get().version
         )
@@ -24,6 +24,16 @@ buildscript {
 plugins {
     base
     `jvm-toolchains`
+}
+
+// If `-Pscratch` is specified, do not source the previously generated config at core/src/main/resources/META-INF/native-image
+// otherwise, the previously generated config will be merged into the newly generated config.
+val shouldGenerateFromScratch = project.findProperty("scratch").let {
+    when (it) {
+        null -> false
+        "" -> true
+        else -> throw IllegalArgumentException("-Pscratch option must be specified without any value.")
+    }
 }
 
 @Suppress("UNCHECKED_CAST")
@@ -38,6 +48,7 @@ val nativeImageConfigToolPath = "${graalHome.resolve("lib/svm/bin/native-image-c
 
 val thisProject = project
 val callerFilterFile = projectDir.resolve("src/trace-filters/caller-filter.json")
+val buildDir = layout.buildDirectory.asFile.get()
 val processNativeImageTracesOutputDir = buildDir.resolve("step-1-process-native-image-traces")
 val simplifyNativeImageConfigOutputDir = buildDir.resolve("step-2-simplify-native-image-config")
 val nativeImageConfigOutputDir = buildDir.resolve("step-3-final-native-image-config")
@@ -91,6 +102,8 @@ tasks.register("simplifyNativeImageConfig", SimplifyNativeImageConfigTask::class
         add("""Suite(?:$|\$)""".toRegex())
         add("""\.Test[A-Z]""".toRegex())
         add("""^android\.""".toRegex())
+        add("""^brave\.test\.""".toRegex())
+        add("""^com\.gradle\.""".toRegex())
         add("""^com\.sun\.jna\.""".toRegex())
         add("""^groovyx?\.""".toRegex())
         add("""^io\.grpc\.netty\.""".toRegex())
@@ -99,7 +112,10 @@ tasks.register("simplifyNativeImageConfig", SimplifyNativeImageConfigTask::class
         add("""^org\.assertj\.""".toRegex())
         add("""^org\.mockito\.""".toRegex())
         add("""^org\.gradle\.""".toRegex())
+        add("""^org\.junit\.jupiter\.""".toRegex())
+        add("""^org\.reactivestreams\.tck\.""".toRegex())
         add("""^org\.testcontainers\.""".toRegex())
+        add("""^org\.testng\.""".toRegex())
         add("""^testing\.""".toRegex())
         add("""^worker\.org\.gradle\.""".toRegex())
     }
@@ -120,11 +136,13 @@ tasks.register("simplifyNativeImageConfig", SimplifyNativeImageConfigTask::class
         add("""^META-INF/services/org\.codehaus\.groovy\.""".toRegex())
         add("""^META-INF/services/org\.junit(?:pioneer)?\.""".toRegex())
         add("""^META-INF/services/org\.testcontainers\.""".toRegex())
+        add("""^META-INF/services/org\.testng\.""".toRegex())
         add("""^catalog/""".toRegex())
         add("""^com/sun/jna/""".toRegex())
         add("""^docker-java\.properties$""".toRegex())
         add("""^jndi\.properties$""".toRegex())
         add("""^junit-platform\.properties$""".toRegex())
+        add("""^log4testng\.properties$""".toRegex())
         add("""^logback-test\.xml$""".toRegex())
         add("""^mockito-extensions/""".toRegex())
         add("""^mozilla/""".toRegex())
@@ -141,20 +159,57 @@ tasks.register("nativeImageConfig", Exec::class).configure {
     description = "Generates the final native image config by merging the base and generated native image config."
 
     dependsOn(simplifyNativeImageConfigTask)
-    inputs.dir(project.file("src/base-config"))
+
+    val baseConfigDir = project.file("src/base-config")
+    val previousConfigDir = project.file("../core/src/main/resources/META-INF/native-image/com.linecorp.armeria/armeria")
+    inputs.dir(baseConfigDir)
+    inputs.dir(previousConfigDir)
+    inputs.property("shouldGenerateFromScratch", shouldGenerateFromScratch)
     outputs.dir(nativeImageConfigOutputDir)
 
-    commandLine(
-            nativeImageConfigToolPath,
-            "generate",
-            "--input-dir=src/base-config",
-            "--input-dir=$simplifyNativeImageConfigOutputDir",
-            "--output-dir=$nativeImageConfigOutputDir"
-    )
+    val args = mutableListOf<String>()
+    args += nativeImageConfigToolPath
+    args += "generate"
+    args += "--output-dir=$nativeImageConfigOutputDir"
+    args += "--input-dir=$baseConfigDir"
+    args += "--input-dir=$simplifyNativeImageConfigOutputDir"
+    // Do not feed the previously generated config when `-Pscratch` option is specified.
+    if (!shouldGenerateFromScratch) {
+        args += "--input-dir=$previousConfigDir"
+    }
+
+    commandLine(args)
 
     doFirst {
         // Delete the output directory because otherwise the tool doesn't overwrite the files.
         delete(nativeImageConfigOutputDir)
+    }
+
+    doLast {
+        // Reformat all JSON files for consistent output.
+        // While reformatting, remove the comment patterns such as "$---- ... ----$" from resource-config.json.
+        val mapper = JsonMapper.builder().enable(SerializationFeature.INDENT_OUTPUT).build()!!
+        fun reformat(file: File, filter: (JsonNode) -> JsonNode = { it }) {
+            val obj = mapper.readTree(file)
+            val filteredObj = filter(obj)
+            mapper.writeValue(file, filteredObj)
+        }
+
+        nativeImageConfigOutputDir.walk().forEach { file ->
+            if (file.isFile && file.name.endsWith(".json")) {
+                logger.info("Reformatting $file ..")
+                if (file.name != "resource-config.json") {
+                    reformat(file)
+                } else {
+                    reformat(file) { obj ->
+                        val resourcesObj = obj["resources"] as ObjectNode
+                        val includesList = resourcesObj["includes"] as ArrayNode
+                        includesList.removeAll { it["pattern"].asText().startsWith('$') }
+                        obj
+                    }
+                }
+            }
+        }
     }
 }
 

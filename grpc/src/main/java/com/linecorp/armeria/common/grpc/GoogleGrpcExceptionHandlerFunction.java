@@ -40,7 +40,7 @@ public interface GoogleGrpcExceptionHandlerFunction extends GrpcExceptionHandler
 
     @Nullable
     @Override
-    default Status apply(RequestContext ctx, Throwable throwable, Metadata metadata) {
+    default Status apply(RequestContext ctx, Status status, Throwable throwable, Metadata metadata) {
         return handleException(ctx, throwable, metadata, this::applyStatusProto);
     }
 
@@ -48,7 +48,7 @@ public interface GoogleGrpcExceptionHandlerFunction extends GrpcExceptionHandler
      * Maps the specified {@link Throwable} to a {@link com.google.rpc.Status},
      * and mutates the specified {@link Metadata}.
      * The `grpc-status-details-bin` key is ignored since it will be overwritten
-     * by {@link GoogleGrpcExceptionHandlerFunction#apply(RequestContext, Throwable, Metadata)}.
+     * by {@link GrpcExceptionHandlerFunction#apply(RequestContext, Status, Throwable, Metadata)}.
      * If {@code null} is returned, the built-in mapping rule is used by default.
      */
     com.google.rpc.@Nullable Status applyStatusProto(RequestContext ctx, Throwable throwable,

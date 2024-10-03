@@ -36,7 +36,9 @@ import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.Http1HeaderNaming;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.UnstableApi;
+import com.linecorp.armeria.common.outlier.OutlierDetection;
 import com.linecorp.armeria.common.util.AbstractOptions;
+import com.linecorp.armeria.common.util.TlsEngineType;
 import com.linecorp.armeria.internal.common.util.ChannelUtil;
 
 import io.micrometer.core.instrument.MeterRegistry;
@@ -97,6 +99,13 @@ public final class ClientFactoryOptions
     @Deprecated
     public static final ClientFactoryOption<Boolean> TLS_ALLOW_UNSAFE_CIPHERS =
             ClientFactoryOption.define("tlsAllowUnsafeCiphers", Flags.tlsAllowUnsafeCiphers());
+
+    /**
+     * The {@link TlsEngineType} that will be used for processing TLS connections.
+     */
+    @UnstableApi
+    public static final ClientFactoryOption<TlsEngineType> TLS_ENGINE_TYPE =
+            ClientFactoryOption.define("tlsEngineType", Flags.tlsEngineType());
 
     /**
      * The factory that creates an {@link AddressResolverGroup} which resolves remote addresses into
@@ -189,6 +198,15 @@ public final class ClientFactoryOptions
     public static final ClientFactoryOption<Long> MAX_CONNECTION_AGE_MILLIS =
             ClientFactoryOption.define("MAX_CONNECTION_AGE_MILLIS", clampedDefaultMaxClientConnectionAge());
 
+    /**
+     * The {@link OutlierDetection} which is used to detect unhealthy connections.
+     * If an unhealthy connection is detected, it is disabled and a new connection will be created.
+     * This option is disabled by default.
+     */
+    @UnstableApi
+    public static final ClientFactoryOption<OutlierDetection> CONNECTION_OUTLIER_DETECTION =
+            ClientFactoryOption.define("CONNECTION_OUTLIER_DETECTION", OutlierDetection.disabled());
+
     private static long clampedDefaultMaxClientConnectionAge() {
         final long connectionAgeMillis = Flags.defaultMaxClientConnectionAgeMillis();
         if (connectionAgeMillis > 0 && connectionAgeMillis < MIN_MAX_CONNECTION_AGE_MILLIS) {
@@ -208,6 +226,12 @@ public final class ClientFactoryOptions
     /**
      * Whether to send an HTTP/2 preface string instead of an HTTP/1 upgrade request to negotiate
      * the protocol version of a cleartext HTTP connection.
+     *
+     * <p>Note that this option is only effective when the {@link SessionProtocol} of the {@link Endpoint} is
+     * {@link SessionProtocol#HTTP}.
+     * If the {@link SessionProtocol} is {@link SessionProtocol#HTTPS} or {@link SessionProtocol#H2}, ALPN will
+     * be used. If the {@link SessionProtocol} is {@link SessionProtocol#H2C}, the client will
+     * always use HTTP/2 connection preface.
      */
     public static final ClientFactoryOption<Boolean> USE_HTTP2_PREFACE =
             ClientFactoryOption.define("USE_HTTP2_PREFACE", Flags.defaultUseHttp2Preface());
@@ -240,6 +264,13 @@ public final class ClientFactoryOptions
      */
     public static final ClientFactoryOption<ConnectionPoolListener> CONNECTION_POOL_LISTENER =
             ClientFactoryOption.define("CONNECTION_POOL_LISTENER", ConnectionPoolListener.noop());
+
+    /**
+     * The graceful connection shutdown timeout in milliseconds..
+     */
+    public static final ClientFactoryOption<Long> HTTP2_GRACEFUL_SHUTDOWN_TIMEOUT_MILLIS =
+            ClientFactoryOption.define("HTTP2_GRACEFUL_SHUTDOWN_TIMEOUT_MILLIS",
+                                       Flags.defaultClientHttp2GracefulShutdownTimeoutMillis());
 
     /**
      * The {@link MeterRegistry} which collects various stats.
@@ -520,6 +551,12 @@ public final class ClientFactoryOptions
     /**
      * Returns whether to send an HTTP/2 preface string instead of an HTTP/1 upgrade request to negotiate
      * the protocol version of a cleartext HTTP connection.
+     *
+     * <p>Note that this option is only effective when the {@link SessionProtocol} of the {@link Endpoint} is
+     * {@link SessionProtocol#HTTP}.
+     * If the {@link SessionProtocol} is {@link SessionProtocol#HTTPS} or {@link SessionProtocol#H2}, ALPN will
+     * be used. If the {@link SessionProtocol} is {@link SessionProtocol#H2C}, the client will always use
+     * HTTP/2 connection preface.
      */
     public boolean useHttp2Preface() {
         return get(USE_HTTP2_PREFACE);
@@ -558,6 +595,21 @@ public final class ClientFactoryOptions
     }
 
     /**
+     * Returns the {@link OutlierDetection} which is used to detect unhealthy connections.
+     */
+    @UnstableApi
+    public OutlierDetection connectionOutlierDetection() {
+        return get(CONNECTION_OUTLIER_DETECTION);
+    }
+
+    /**
+     * Returns the graceful connection shutdown timeout in milliseconds.
+     */
+    public long http2GracefulShutdownTimeoutMillis() {
+        return get(HTTP2_GRACEFUL_SHUTDOWN_TIMEOUT_MILLIS);
+    }
+
+    /**
      * Returns the {@link MeterRegistry} which collects various stats.
      */
     public MeterRegistry meterRegistry() {
@@ -592,6 +644,14 @@ public final class ClientFactoryOptions
      */
     public boolean tlsAllowUnsafeCiphers() {
         return get(TLS_ALLOW_UNSAFE_CIPHERS);
+    }
+
+    /**
+     * Returns the {@link TlsEngineType} that will be used for processing TLS connections.
+     */
+    @UnstableApi
+    public TlsEngineType tlsEngineType() {
+        return get(TLS_ENGINE_TYPE);
     }
 
     /**

@@ -185,18 +185,17 @@ class DefaultRequestTargetTest {
     void shouldRejectControlChars(Mode mode) {
         assertRejected(parse(mode, "/\0"));
         assertRejected(parse(mode, "/a\nb"));
+        assertRejected(parse(mode, "/a\rb"));
         assertRejected(parse(mode, "/a\u007fb"));
 
         // Escaped
         assertRejected(parse(mode, "/%00"));
-        assertRejected(parse(mode, "/a%09b"));
         assertRejected(parse(mode, "/a%0ab"));
         assertRejected(parse(mode, "/a%0db"));
         assertRejected(parse(mode, "/a%7fb"));
 
         // With query string
         assertRejected(parse(mode, "/\0?c"));
-        assertRejected(parse(mode, "/a\tb?c"));
         assertRejected(parse(mode, "/a\nb?c"));
         assertRejected(parse(mode, "/a\rb?c"));
         assertRejected(parse(mode, "/a\u007fb?c"));
@@ -207,13 +206,33 @@ class DefaultRequestTargetTest {
         assertRejected(parse(mode, "/?a\u007fb"));
         assertRejected(parse(mode, "/?a%7Fb"));
 
-        // However, 0x0A, 0x0D, 0x09 should be accepted in a query string.
+        // However, 0x09, 0x1C-0x1F should be accepted in a path.
+        assertAccepted(parse(mode, "/a\tb"), "/a%09b");
+        assertAccepted(parse(mode, "/a\u001cb"), "/a%1Cb");
+        assertAccepted(parse(mode, "/a\u001db"), "/a%1Db");
+        assertAccepted(parse(mode, "/a\u001eb"), "/a%1Eb");
+        assertAccepted(parse(mode, "/a\u001fb"), "/a%1Fb");
+        assertAccepted(parse(mode, "/a%09b"), "/a%09b");
+        assertAccepted(parse(mode, "/a%1Cb"), "/a%1Cb");
+        assertAccepted(parse(mode, "/a%1Db"), "/a%1Db");
+        assertAccepted(parse(mode, "/a%1Eb"), "/a%1Eb");
+        assertAccepted(parse(mode, "/a%1Fb"), "/a%1Fb");
+
+        // However, 0x0A, 0x0D, 0x09, 0x1C-0x1F should be accepted in a query string.
         assertAccepted(parse(mode, "/?a\tb"), "/", "a%09b");
         assertAccepted(parse(mode, "/?a\nb"), "/", "a%0Ab");
         assertAccepted(parse(mode, "/?a\rb"), "/", "a%0Db");
+        assertAccepted(parse(mode, "/?a\u001cb"), "/", "a%1Cb");
+        assertAccepted(parse(mode, "/?a\u001db"), "/", "a%1Db");
+        assertAccepted(parse(mode, "/?a\u001eb"), "/", "a%1Eb");
+        assertAccepted(parse(mode, "/?a\u001fb"), "/", "a%1Fb");
         assertAccepted(parse(mode, "/?a%09b"), "/", "a%09b");
         assertAccepted(parse(mode, "/?a%0Ab"), "/", "a%0Ab");
         assertAccepted(parse(mode, "/?a%0Db"), "/", "a%0Db");
+        assertAccepted(parse(mode, "/?a%1Cb"), "/", "a%1Cb");
+        assertAccepted(parse(mode, "/?a%1Db"), "/", "a%1Db");
+        assertAccepted(parse(mode, "/?a%1Eb"), "/", "a%1Eb");
+        assertAccepted(parse(mode, "/?a%1Fb"), "/", "a%1Fb");
 
         if (mode == Mode.CLIENT) {
             // All sort of control characters should be rejected in a fragment.
@@ -221,12 +240,18 @@ class DefaultRequestTargetTest {
             assertRejected(forClient("/#%00"));
             assertRejected(forClient("/#a\u007fb"));
             assertRejected(forClient("/#a%7Fb"));
-            assertRejected(forClient("/#a\tb"));
             assertRejected(forClient("/#a\nb"));
             assertRejected(forClient("/#a\rb"));
-            assertRejected(forClient("/#a%09b"));
             assertRejected(forClient("/#a%0Ab"));
             assertRejected(forClient("/#a%0Db"));
+
+            // ... except the following.
+            assertAccepted(forClient("/#a\tb"), "/", null, "a%09b");
+            assertAccepted(forClient("/#a%09b"), "/", null, "a%09b");
+            assertAccepted(forClient("/#a%1Cb"), "/", null, "a%1Cb");
+            assertAccepted(forClient("/#a%1Db"), "/", null, "a%1Db");
+            assertAccepted(forClient("/#a%1Eb"), "/", null, "a%1Eb");
+            assertAccepted(forClient("/#a%1Fb"), "/", null, "a%1Fb");
         }
     }
 
@@ -461,10 +486,15 @@ class DefaultRequestTargetTest {
             "a://b?c#d,      a, b, /, c, d",
             "a://b#c?d,      a, b, /,, c?d",
             // Userinfo and port in authority
-            "a://b@c:80,     a, b@c:80, /,,",
+            "a://b@c:80,     a, c:80, /,,",
             // IP addresses
             "a://127.0.0.1/, a, 127.0.0.1, /,,",
             "a://[::1]:80/,  a, [::1]:80, /,,",
+            // default port numbers should be omitted
+            "http://a:80/,   http, a, /,,",
+            "http://a:443/,  http, a:443, /,,",
+            "https://a:80/,  https, a:80, /,,",
+            "https://a:443/, https, a, /,,",
     })
     void clientShouldAcceptAbsoluteUri(String uri,
                                        String expectedScheme, String expectedAuthority, String expectedPath,

@@ -198,7 +198,7 @@ class ServiceRequestContextTest {
     @Test
     void defaultServiceRequestContextShouldLogExceptions() {
         final ServiceRequestContext sctx = serviceRequestContext();
-        assertThat(sctx.shouldReportUnhandledExceptions()).isTrue();
+        assertThat(sctx.shouldReportUnloggedExceptions()).isTrue();
     }
 
     private static void assertUnwrapAllCurrentCtx(@Nullable RequestContext ctx) {

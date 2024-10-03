@@ -15,7 +15,6 @@
  */
 package com.linecorp.armeria.internal.client;
 
-import static com.google.common.base.MoreObjects.firstNonNull;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkState;
 import static com.linecorp.armeria.internal.common.HttpHeadersUtil.getScheme;
@@ -37,12 +36,11 @@ import java.util.function.Function;
 
 import javax.net.ssl.SSLSession;
 
-import com.google.common.net.HostAndPort;
-
 import com.linecorp.armeria.client.ClientOptions;
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.RequestOptions;
+import com.linecorp.armeria.client.ResponseTimeoutMode;
 import com.linecorp.armeria.client.UnprocessedRequestException;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.common.AttributesGetters;
@@ -69,12 +67,18 @@ import com.linecorp.armeria.common.logging.RequestLogAccess;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
 import com.linecorp.armeria.common.logging.RequestLogProperty;
 import com.linecorp.armeria.common.util.ReleasableHolder;
+import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.common.util.TextFormatter;
 import com.linecorp.armeria.common.util.TimeoutMode;
 import com.linecorp.armeria.common.util.UnmodifiableFuture;
 import com.linecorp.armeria.internal.common.CancellationScheduler;
+import com.linecorp.armeria.internal.common.CancellationScheduler.CancellationTask;
+import com.linecorp.armeria.internal.common.HeaderOverridingHttpRequest;
 import com.linecorp.armeria.internal.common.NonWrappingRequestContext;
 import com.linecorp.armeria.internal.common.RequestContextExtension;
+import com.linecorp.armeria.internal.common.RequestContextUtil;
+import com.linecorp.armeria.internal.common.SchemeAndAuthority;
+import com.linecorp.armeria.internal.common.stream.FixedStreamMessage;
 import com.linecorp.armeria.internal.common.util.ChannelUtil;
 import com.linecorp.armeria.internal.common.util.TemporaryThreadLocals;
 import com.linecorp.armeria.server.ServiceRequestContext;
@@ -165,6 +169,8 @@ public final class DefaultClientRequestContext
     @Nullable
     private volatile CompletableFuture<Boolean> whenInitialized;
 
+    private final ResponseTimeoutMode responseTimeoutMode;
+
     /**
      * Creates a new instance. Note that {@link #init(EndpointGroup)} method must be invoked to finish
      * the construction of this context.
@@ -180,12 +186,12 @@ public final class DefaultClientRequestContext
      *                               e.g. {@code System.currentTimeMillis() * 1000}.
      */
     public DefaultClientRequestContext(
-            EventLoop eventLoop, MeterRegistry meterRegistry, SessionProtocol sessionProtocol,
+            @Nullable EventLoop eventLoop, MeterRegistry meterRegistry, SessionProtocol sessionProtocol,
             RequestId id, HttpMethod method, RequestTarget reqTarget,
             ClientOptions options, @Nullable HttpRequest req, @Nullable RpcRequest rpcReq,
             RequestOptions requestOptions, CancellationScheduler responseCancellationScheduler,
             long requestStartTimeNanos, long requestStartTimeMicros) {
-        this(requireNonNull(eventLoop, "eventLoop"), meterRegistry, sessionProtocol,
+        this(eventLoop, meterRegistry, sessionProtocol,
              id, method, reqTarget, options, req, rpcReq, requestOptions, serviceRequestContext(),
              requireNonNull(responseCancellationScheduler, "responseCancellationScheduler"),
              requestStartTimeNanos, requestStartTimeMicros);
@@ -224,12 +230,9 @@ public final class DefaultClientRequestContext
             @Nullable ServiceRequestContext root, @Nullable CancellationScheduler responseCancellationScheduler,
             long requestStartTimeNanos, long requestStartTimeMicros) {
         super(meterRegistry, desiredSessionProtocol(sessionProtocol, options), id, method, reqTarget,
-              firstNonNull(requestOptions.exchangeType(), ExchangeType.BIDI_STREAMING),
+              guessExchangeType(requestOptions, req),
               requestAutoAbortDelayMillis(options, requestOptions), req, rpcReq,
               getAttributes(root), options.contextHook());
-        assert (eventLoop == null && responseCancellationScheduler == null) ||
-               (eventLoop != null && responseCancellationScheduler != null)
-                : "'eventLoop' and 'responseCancellationScheduler' should be both null or non-null";
 
         this.eventLoop = eventLoop;
         this.options = requireNonNull(options, "options");
@@ -279,6 +282,23 @@ public final class DefaultClientRequestContext
         } else {
             this.customizer = customizer.andThen(threadLocalCustomizer);
         }
+        responseTimeoutMode = responseTimeoutMode(options, requestOptions);
+    }
+
+    private static ExchangeType guessExchangeType(RequestOptions requestOptions, @Nullable HttpRequest req) {
+        final ExchangeType exchangeType = requestOptions.exchangeType();
+        if (exchangeType != null) {
+            return exchangeType;
+        }
+        if (req instanceof FixedStreamMessage) {
+            return ExchangeType.RESPONSE_STREAMING;
+        }
+        if (req instanceof HeaderOverridingHttpRequest) {
+            if (((HeaderOverridingHttpRequest) req).delegate() instanceof FixedStreamMessage) {
+                return ExchangeType.RESPONSE_STREAMING;
+            }
+        }
+        return ExchangeType.BIDI_STREAMING;
     }
 
     private static long requestAutoAbortDelayMillis(ClientOptions options, RequestOptions requestOptions) {
@@ -403,7 +423,9 @@ public final class DefaultClientRequestContext
             if (whenInitializedUpdater.compareAndSet(this, null, whenInitialized)) {
                 return whenInitialized;
             } else {
-                return this.whenInitialized;
+                final CompletableFuture<Boolean> oldWhenInitialized = this.whenInitialized;
+                assert oldWhenInitialized != null;
+                return oldWhenInitialized;
             }
         }
     }
@@ -416,7 +438,9 @@ public final class DefaultClientRequestContext
         } else {
             if (!whenInitializedUpdater.compareAndSet(this, null,
                                                       UnmodifiableFuture.completedFuture(success))) {
-                this.whenInitialized.complete(success);
+                final CompletableFuture<Boolean> oldWhenInitialized = this.whenInitialized;
+                assert oldWhenInitialized != null;
+                oldWhenInitialized.complete(success);
             }
         }
     }
@@ -432,7 +456,7 @@ public final class DefaultClientRequestContext
                     options().factory().acquireEventLoop(sessionProtocol(), endpointGroup, endpoint);
             eventLoop = releasableEventLoop.get();
             log.whenComplete().thenAccept(unused -> releasableEventLoop.release());
-            responseCancellationScheduler.init(eventLoop());
+            initializeResponseCancellationScheduler();
         }
     }
 
@@ -464,7 +488,7 @@ public final class DefaultClientRequestContext
             // The connection will be established with the IP address but `host` set to the `Endpoint`
             // could be used for SNI. It would make users send HTTPS requests with CSLB or configure a reverse
             // proxy based on an authority.
-            final String host = HostAndPort.fromString(removeUserInfo(authority)).getHost();
+            final String host = SchemeAndAuthority.of(null, authority).host();
             if (!NetUtil.isValidIpV4Address(host) && !NetUtil.isValidIpV6Address(host)) {
                 endpoint = endpoint.withHost(host);
             }
@@ -485,14 +509,6 @@ public final class DefaultClientRequestContext
             }
         }
         internalRequestHeaders = headersBuilder.build();
-    }
-
-    private static String removeUserInfo(String authority) {
-        final int indexOfDelimiter = authority.lastIndexOf('@');
-        if (indexOfDelimiter == -1) {
-            return authority;
-        }
-        return authority.substring(indexOfDelimiter + 1);
     }
 
     /**
@@ -522,6 +538,8 @@ public final class DefaultClientRequestContext
 
         log = RequestLog.builder(this);
         log.startRequest();
+        // Cancel the original timeout and create a new scheduler for the derived context.
+        ctx.responseCancellationScheduler.cancelScheduled();
         responseCancellationScheduler =
                 CancellationScheduler.ofClient(TimeUnit.MILLISECONDS.toNanos(ctx.responseTimeoutMillis()));
         writeTimeoutMillis = ctx.writeTimeoutMillis();
@@ -529,6 +547,7 @@ public final class DefaultClientRequestContext
 
         defaultRequestHeaders = ctx.defaultRequestHeaders();
         additionalRequestHeaders = ctx.additionalRequestHeaders();
+        responseTimeoutMode = ctx.responseTimeoutMode();
 
         for (final Iterator<Entry<AttributeKey<?>, Object>> i = ctx.ownAttrs(); i.hasNext();) {
             addAttr(i.next());
@@ -540,9 +559,28 @@ public final class DefaultClientRequestContext
         // the root context.
         if (endpoint == null || ctx.endpoint() == endpoint && ctx.log.children().isEmpty()) {
             eventLoop = ctx.eventLoop().withoutContext();
-            responseCancellationScheduler.init(eventLoop());
+            initializeResponseCancellationScheduler();
         } else {
             acquireEventLoop(endpoint);
+        }
+    }
+
+    private void initializeResponseCancellationScheduler() {
+        final CancellationTask cancellationTask = cause -> {
+            try (SafeCloseable ignored = RequestContextUtil.pop()) {
+                final HttpRequest request = request();
+                if (request != null) {
+                    request.abort(cause);
+                }
+                log.endRequest(cause);
+                log.endResponse(cause);
+            }
+        };
+        if (responseTimeoutMode() == ResponseTimeoutMode.FROM_START) {
+            responseCancellationScheduler.initAndStart(eventLoop().withoutContext(), cancellationTask);
+        } else {
+            responseCancellationScheduler.init(eventLoop().withoutContext());
+            responseCancellationScheduler.updateTask(cancellationTask);
         }
     }
 
@@ -616,6 +654,7 @@ public final class DefaultClientRequestContext
                                                sessionProtocol(), method(), requestTarget());
     }
 
+    @Nullable
     @Override
     protected RequestTarget validateHeaders(RequestHeaders headers) {
         // no need to validate since internal headers will contain
@@ -640,6 +679,7 @@ public final class DefaultClientRequestContext
         return newChannel;
     }
 
+    @Nullable
     @Override
     public InetSocketAddress remoteAddress() {
         final InetSocketAddress remoteAddress = this.remoteAddress;
@@ -652,6 +692,7 @@ public final class DefaultClientRequestContext
         return newRemoteAddress;
     }
 
+    @Nullable
     @Override
     public InetSocketAddress localAddress() {
         final InetSocketAddress localAddress = this.localAddress;
@@ -691,11 +732,13 @@ public final class DefaultClientRequestContext
         return options;
     }
 
+    @Nullable
     @Override
     public EndpointGroup endpointGroup() {
         return endpointGroup;
     }
 
+    @Nullable
     @Override
     public Endpoint endpoint() {
         return endpoint;
@@ -707,6 +750,7 @@ public final class DefaultClientRequestContext
         return requestTarget().fragment();
     }
 
+    @Nullable
     @Override
     public String authority() {
         final HttpHeaders additionalRequestHeaders = this.additionalRequestHeaders;
@@ -750,11 +794,39 @@ public final class DefaultClientRequestContext
         return origin;
     }
 
+    @Nullable
+    @Override
+    public String host() {
+        final String authority = authority();
+        if (authority == null) {
+            return null;
+        }
+        return SchemeAndAuthority.of(null, authority).host();
+    }
+
     @Override
     public URI uri() {
         final String scheme = getScheme(sessionProtocol());
-        try {
-            return new URI(scheme, authority(), path(), query(), fragment());
+        final String authority = authority();
+        final String path = path();
+        final String query = query();
+        final String fragment = fragment();
+        try (TemporaryThreadLocals tmp = TemporaryThreadLocals.acquire()) {
+            final StringBuilder buf = tmp.stringBuilder();
+            buf.append(scheme);
+            if (authority != null) {
+                buf.append("://").append(authority);
+            } else {
+                buf.append(':');
+            }
+            buf.append(path);
+            if (query != null) {
+                buf.append('?').append(query);
+            }
+            if (fragment != null) {
+                buf.append('#').append(fragment);
+            }
+            return new URI(buf.toString());
         } catch (URISyntaxException e) {
             throw new IllegalStateException("not a valid URI", e);
         }
@@ -894,13 +966,13 @@ public final class DefaultClientRequestContext
     @Deprecated
     @Override
     public CompletableFuture<Void> whenResponseTimingOut() {
-        return responseCancellationScheduler.whenTimingOut();
+        return whenResponseCancelling().handle((v, e) -> null);
     }
 
     @Deprecated
     @Override
     public CompletableFuture<Void> whenResponseTimedOut() {
-        return responseCancellationScheduler.whenTimedOut();
+        return whenResponseCancelled().handle((v, e) -> null);
     }
 
     @Override
@@ -987,9 +1059,23 @@ public final class DefaultClientRequestContext
                 });
                 // To deactivate the channel when initiateShutdown is called after the RequestHeaders is sent.
                 // The next request will trigger shutdown.
-                HttpSession.get(ch).deactivate();
+                HttpSession.get(ch).markUnacquirable();
             }
         });
         return completableFuture;
+    }
+
+    @Override
+    public ResponseTimeoutMode responseTimeoutMode() {
+        return responseTimeoutMode;
+    }
+
+    private static ResponseTimeoutMode responseTimeoutMode(ClientOptions options,
+                                                           RequestOptions requestOptions) {
+        final ResponseTimeoutMode requestOptionTimeoutMode = requestOptions.responseTimeoutMode();
+        if (requestOptionTimeoutMode != null) {
+            return requestOptionTimeoutMode;
+        }
+        return options.responseTimeoutMode();
     }
 }

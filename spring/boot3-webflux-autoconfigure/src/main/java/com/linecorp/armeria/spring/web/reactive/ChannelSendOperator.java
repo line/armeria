@@ -31,6 +31,8 @@
 
 package com.linecorp.armeria.spring.web.reactive;
 
+import static com.google.common.base.Preconditions.checkState;
+
 import java.util.function.Function;
 
 import org.reactivestreams.Publisher;
@@ -39,7 +41,6 @@ import org.reactivestreams.Subscription;
 import org.springframework.core.io.buffer.DataBuffer;
 import org.springframework.core.io.buffer.DataBufferUtils;
 import org.springframework.lang.Nullable;
-import org.springframework.util.Assert;
 
 import reactor.core.CoreSubscriber;
 import reactor.core.Scannable;
@@ -200,16 +201,16 @@ final class ChannelSendOperator<T> extends Mono<Void> implements Scannable {
                     }
                     result.subscribe(writeCompletionBarrier);
                 } else {
+                    writeCompletionBarrier.onError(new IllegalStateException("Unexpected item."));
                     if (subscription != null) {
                         subscription.cancel();
                     }
-                    writeCompletionBarrier.onError(new IllegalStateException("Unexpected item."));
                 }
             }
         }
 
         private Subscriber<? super T> requiredWriteSubscriber() {
-            Assert.state(writeSubscriber != null, "No write subscriber");
+            checkState(writeSubscriber != null, "No write subscriber");
             return writeSubscriber;
         }
 
@@ -346,7 +347,7 @@ final class ChannelSendOperator<T> extends Mono<Void> implements Scannable {
         @Override
         public void subscribe(Subscriber<? super T> writeSubscriber) {
             synchronized (this) {
-                Assert.state(this.writeSubscriber == null, "Only one write subscriber supported");
+                checkState(this.writeSubscriber == null, "Only one write subscriber supported");
                 this.writeSubscriber = writeSubscriber;
                 if (error != null || (completed && item == null)) {
                     this.writeSubscriber.onSubscribe(Operators.emptySubscription());

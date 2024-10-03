@@ -24,6 +24,7 @@ import java.util.Set;
 
 import com.google.protobuf.Message;
 
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.server.annotation.RequestConverterFunction;
 import com.linecorp.armeria.server.annotation.RequestConverterFunctionProvider;
@@ -35,6 +36,7 @@ import com.linecorp.armeria.server.protobuf.ProtobufRequestConverterFunction.Res
 @UnstableApi
 public final class ProtobufRequestConverterFunctionProvider implements RequestConverterFunctionProvider {
 
+    @Nullable
     @Override
     public RequestConverterFunction createRequestConverterFunction(Type requestType,
                                                                    RequestConverterFunction requestConverter) {

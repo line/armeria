@@ -55,8 +55,8 @@ final class AnnotatedServiceTypeUtil {
                     .put(Byte.class, Byte::valueOf)
                     .put(Short.TYPE, Short::valueOf)
                     .put(Short.class, Short::valueOf)
-                    .put(Boolean.TYPE, s -> StringUtil.toBoolean(s, true))
-                    .put(Boolean.class, s -> StringUtil.toBoolean(s, true))
+                    .put(Boolean.TYPE, s -> StringUtil.toBoolean(s))
+                    .put(Boolean.class, s -> StringUtil.toBoolean(s))
                     .put(Integer.TYPE, Integer::valueOf)
                     .put(Integer.class, Integer::valueOf)
                     .put(Long.TYPE, Long::valueOf)
@@ -154,7 +154,9 @@ final class AnnotatedServiceTypeUtil {
             try {
                 return (T) methodHandle.invokeWithArguments(str);
             } catch (InvocationTargetException e) {
-                return Exceptions.throwUnsafely(e.getCause());
+                final Throwable cause = e.getCause();
+                assert cause != null;
+                return Exceptions.throwUnsafely(cause);
             } catch (Throwable t) {
                 return Exceptions.throwUnsafely(t);
             }

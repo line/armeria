@@ -39,6 +39,7 @@ import com.google.common.collect.Lists;
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.common.Flags;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.util.AsyncCloseableSupport;
 import com.linecorp.armeria.common.util.EventLoopCheckingFuture;
@@ -159,6 +160,7 @@ public class DynamicEndpointGroup extends AbstractEndpointGroup implements Liste
         return selectionStrategy;
     }
 
+    @Nullable
     @Override
     public final Endpoint selectNow(ClientRequestContext ctx) {
         return maybeCreateSelector().selectNow(ctx);
@@ -198,7 +200,9 @@ public class DynamicEndpointGroup extends AbstractEndpointGroup implements Liste
             return newSelector;
         }
 
-        return this.selector.get();
+        final EndpointSelector oldSelector = this.selector.get();
+        assert oldSelector != null;
+        return oldSelector;
     }
 
     /**
@@ -290,6 +294,7 @@ public class DynamicEndpointGroup extends AbstractEndpointGroup implements Liste
         return false;
     }
 
+    @Nullable
     @Override
     protected List<Endpoint> latestValue() {
         final List<Endpoint> endpoints = this.endpoints;

@@ -48,7 +48,10 @@ abstract class AbstractRoot<T extends Snapshot<? extends XdsResource>>
         this.eventLoop = eventLoop;
     }
 
-    final EventExecutor eventLoop() {
+    /**
+     * The event loop used to notify updates to {@link SnapshotWatcher}s.
+     */
+    public final EventExecutor eventLoop() {
         return eventLoop;
     }
 
@@ -104,7 +107,7 @@ abstract class AbstractRoot<T extends Snapshot<? extends XdsResource>>
             return;
         }
         snapshot = newSnapshot;
-        notifyWatchers("snapshotUpdated", watcher -> watcher.snapshotUpdated(snapshot));
+        notifyWatchers("snapshotUpdated", watcher -> watcher.snapshotUpdated(newSnapshot));
     }
 
     @Override

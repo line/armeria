@@ -24,6 +24,7 @@ import java.util.concurrent.ThreadLocalRandom;
 import java.util.function.Supplier;
 
 import com.linecorp.armeria.common.Flags;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.Unwrappable;
 
 /**
@@ -185,6 +186,7 @@ public interface Backoff extends Unwrappable {
      *
      * @see Unwrappable
      */
+    @Nullable
     @Override
     default <T> T as(Class<T> type) {
         return Unwrappable.super.as(type);

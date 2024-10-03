@@ -22,9 +22,12 @@ import graphql.GraphQL;
 
 /**
  * Interface used to configure the {@link GraphQL}.
+ *
+ * @deprecated Use {@link GraphQL.Builder} directly.
  */
 @UnstableApi
 @FunctionalInterface
+@Deprecated
 public interface GraphqlConfigurator {
 
     /**

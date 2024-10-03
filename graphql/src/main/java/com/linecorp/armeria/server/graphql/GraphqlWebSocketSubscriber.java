@@ -77,11 +77,12 @@ final class GraphqlWebSocketSubscriber implements Subscriber<WebSocketFrame> {
                 subscription.request(1);
                 break;
             case CLOSE:
-                subscription.cancel();
                 outgoing.close();
                 break;
             // PONG is a noop
             case PONG:
+                subscription.request(1);
+                break;
             // Continuation is not mentioned in the spec. Should never happen.
             case CONTINUATION:
                 logger.trace("Ignoring frame type: {}", webSocketFrame.type());
@@ -111,6 +112,7 @@ final class GraphqlWebSocketSubscriber implements Subscriber<WebSocketFrame> {
         the Subscription cancelled after having received the signal.
          */
         logger.trace("onComplete");
+        graphqlWSSubProtocol.cancel();
         subscription = null;
     }
 }

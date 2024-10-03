@@ -42,6 +42,7 @@ import com.linecorp.armeria.client.DecoratingHttpClientFunction;
 import com.linecorp.armeria.client.DecoratingRpcClientFunction;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.HttpClient;
+import com.linecorp.armeria.client.ResponseTimeoutMode;
 import com.linecorp.armeria.client.RpcClient;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.client.redirect.RedirectConfig;
@@ -372,5 +373,10 @@ public final class ThriftClientBuilder extends AbstractClientOptionsBuilder {
     public ThriftClientBuilder contextCustomizer(
             Consumer<? super ClientRequestContext> contextCustomizer) {
         return (ThriftClientBuilder) super.contextCustomizer(contextCustomizer);
+    }
+
+    @Override
+    public ThriftClientBuilder responseTimeoutMode(ResponseTimeoutMode responseTimeoutMode) {
+        return (ThriftClientBuilder) super.responseTimeoutMode(responseTimeoutMode);
     }
 }

@@ -15,15 +15,17 @@
  */
 package com.linecorp.armeria.internal.common;
 
+import static com.linecorp.armeria.internal.common.ArmeriaHttpUtil.findAuthority;
+import static com.linecorp.armeria.internal.common.util.BitSetUtil.toBitSet;
 import static io.netty.util.internal.StringUtil.decodeHexNibble;
 import static java.util.Objects.requireNonNull;
 
-import java.net.URI;
 import java.util.BitSet;
 import java.util.Objects;
 
 import com.linecorp.armeria.common.RequestTarget;
 import com.linecorp.armeria.common.RequestTargetForm;
+import com.linecorp.armeria.common.Scheme;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.internal.common.util.TemporaryThreadLocals;
 
@@ -34,6 +36,36 @@ public final class DefaultRequestTarget implements RequestTarget {
 
     private static final String ALLOWED_COMMON_CHARS =
             "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~:/?@!$&'()*,;=";
+
+    private static final String ALLOWED_COMMON_ENCODED_CHARS;
+
+    static {
+        // Note:
+        // RFC 3986 doesn't prohibit control characters when percent-encoded.
+        // However, Armeria does prohibit most control characters except the following for security reasons:
+        //
+        // - TAB (0x09)
+        // - FS  (0x1C)
+        // - GS  (0x1D)
+        // - RS  (0x1E)
+        // - US  (0x1F)
+        // - LF  (0x0A, allowed only in a query string)
+        // - CR  (0x0D, allowed only in a query string)
+        //
+        // Please open a new issue to start a discussion if you think there are harmless control characters
+        // we should allow additionally.
+        final StringBuilder buf = new StringBuilder(128);
+        buf.append("\t\u001c\u001d\u001e\u001f");
+
+        // Add all non-control ASCII characters.
+        // Note that we don't need to add all unicode codepoints here
+        // because non-ASCII characters will always be percent-encoded.
+        for (char ch = ' '; ch <= '~'; ch++) {
+            assert !Character.isISOControl(ch) : "Attempted to add a control character: " + (int) ch;
+            buf.append(ch);
+        }
+        ALLOWED_COMMON_ENCODED_CHARS = buf.toString();
+    }
 
     /**
      * The lookup table for the characters allowed in a path.
@@ -49,6 +81,21 @@ public final class DefaultRequestTarget implements RequestTarget {
      * The lookup table for the characters allowed in a fragment.
      */
     private static final BitSet FRAGMENT_ALLOWED = PATH_ALLOWED;
+
+    /**
+     * The lookup table for the characters allowed in a path when percent-encoded.
+     */
+    private static final BitSet PATH_ALLOWED_IF_ENCODED = toBitSet(ALLOWED_COMMON_ENCODED_CHARS);
+
+    /**
+     * The lookup table for the characters allowed in a query when percent-encoded.
+     */
+    private static final BitSet QUERY_ALLOWED_IF_ENCODED = toBitSet(ALLOWED_COMMON_ENCODED_CHARS + "\n\r");
+
+    /**
+     * The lookup table for the characters allowed in a fragment when percent-encoded.
+     */
+    private static final BitSet FRAGMENT_ALLOWED_IF_ENCODED = PATH_ALLOWED_IF_ENCODED;
 
     /**
      * The lookup table for the characters that whose percent encoding must be preserved
@@ -73,30 +120,28 @@ public final class DefaultRequestTarget implements RequestTarget {
      */
     private static final BitSet FRAGMENT_MUST_PRESERVE_ENCODING = PATH_MUST_PRESERVE_ENCODING;
 
-    private static BitSet toBitSet(String chars) {
-        final BitSet bitSet = new BitSet();
-        for (int i = 0; i < chars.length(); i++) {
-            bitSet.set(chars.charAt(i));
-        }
-        return bitSet;
-    }
-
     private enum ComponentType {
-        CLIENT_PATH(PATH_ALLOWED, PATH_MUST_PRESERVE_ENCODING),
-        SERVER_PATH(PATH_ALLOWED, PATH_MUST_PRESERVE_ENCODING),
-        QUERY(QUERY_ALLOWED, QUERY_MUST_PRESERVE_ENCODING),
-        FRAGMENT(FRAGMENT_ALLOWED, FRAGMENT_MUST_PRESERVE_ENCODING);
+        CLIENT_PATH(PATH_ALLOWED, PATH_ALLOWED_IF_ENCODED, PATH_MUST_PRESERVE_ENCODING),
+        SERVER_PATH(PATH_ALLOWED, PATH_ALLOWED_IF_ENCODED, PATH_MUST_PRESERVE_ENCODING),
+        QUERY(QUERY_ALLOWED, QUERY_ALLOWED_IF_ENCODED, QUERY_MUST_PRESERVE_ENCODING),
+        FRAGMENT(FRAGMENT_ALLOWED, FRAGMENT_ALLOWED_IF_ENCODED, FRAGMENT_MUST_PRESERVE_ENCODING);
 
         private final BitSet allowed;
+        private final BitSet allowedIfEncoded;
         private final BitSet mustPreserveEncoding;
 
-        ComponentType(BitSet allowed, BitSet mustPreserveEncoding) {
+        ComponentType(BitSet allowed, BitSet allowedIfEncoded, BitSet mustPreserveEncoding) {
             this.allowed = allowed;
+            this.allowedIfEncoded = allowedIfEncoded;
             this.mustPreserveEncoding = mustPreserveEncoding;
         }
 
         boolean isAllowed(int cp) {
             return allowed.get(cp);
+        }
+
+        boolean isAllowedIfEncoded(int cp) {
+            return (cp & 0xFFFFFF80) != 0 || allowedIfEncoded.get(cp);
         }
 
         boolean mustPreserveEncoding(int cp) {
@@ -122,6 +167,8 @@ public final class DefaultRequestTarget implements RequestTarget {
             RequestTargetForm.ASTERISK,
             null,
             null,
+            null,
+            -1,
             "*",
             "*",
             null,
@@ -185,9 +232,10 @@ public final class DefaultRequestTarget implements RequestTarget {
      */
     public static RequestTarget createWithoutValidation(
             RequestTargetForm form, @Nullable String scheme, @Nullable String authority,
-            String path, String pathWithMatrixVariables, @Nullable String query, @Nullable String fragment) {
+            @Nullable String host, int port, String path, String pathWithMatrixVariables,
+            @Nullable String query, @Nullable String fragment) {
         return new DefaultRequestTarget(
-                form, scheme, authority, path, pathWithMatrixVariables, query, fragment);
+                form, scheme, authority, host, port, path, pathWithMatrixVariables, query, fragment);
     }
 
     private final RequestTargetForm form;
@@ -195,6 +243,9 @@ public final class DefaultRequestTarget implements RequestTarget {
     private final String scheme;
     @Nullable
     private final String authority;
+    @Nullable
+    private final String host;
+    private final int port;
     private final String path;
     private final String maybePathWithMatrixVariables;
     @Nullable
@@ -203,16 +254,20 @@ public final class DefaultRequestTarget implements RequestTarget {
     private final String fragment;
     private boolean cached;
 
-    private DefaultRequestTarget(RequestTargetForm form, @Nullable String scheme, @Nullable String authority,
+    private DefaultRequestTarget(RequestTargetForm form, @Nullable String scheme,
+                                 @Nullable String authority, @Nullable String host, int port,
                                  String path, String maybePathWithMatrixVariables,
                                  @Nullable String query, @Nullable String fragment) {
 
-        assert (scheme != null && authority != null) ||
-               (scheme == null && authority == null) : "scheme: " + scheme + ", authority: " + authority;
+        assert (scheme != null && authority != null && host != null) ||
+               (scheme == null && authority == null && host == null)
+                : "scheme: " + scheme + ", authority: " + authority + ", host: " + host;
 
         this.form = form;
         this.scheme = scheme;
         this.authority = authority;
+        this.host = host;
+        this.port = port;
         this.path = path;
         this.maybePathWithMatrixVariables = maybePathWithMatrixVariables;
         this.query = query;
@@ -224,14 +279,27 @@ public final class DefaultRequestTarget implements RequestTarget {
         return form;
     }
 
+    @Nullable
     @Override
     public String scheme() {
         return scheme;
     }
 
+    @Nullable
     @Override
     public String authority() {
         return authority;
+    }
+
+    @Override
+    @Nullable
+    public String host() {
+        return host;
+    }
+
+    @Override
+    public int port() {
+        return port;
     }
 
     @Override
@@ -244,11 +312,13 @@ public final class DefaultRequestTarget implements RequestTarget {
         return maybePathWithMatrixVariables;
     }
 
+    @Nullable
     @Override
     public String query() {
         return query;
     }
 
+    @Nullable
     @Override
     public String fragment() {
         return fragment;
@@ -369,6 +439,8 @@ public final class DefaultRequestTarget implements RequestTarget {
         return new DefaultRequestTarget(RequestTargetForm.ORIGIN,
                                         null,
                                         null,
+                                        null,
+                                        -1,
                                         matrixVariablesRemovedPath,
                                         encodedPath,
                                         encodeQueryToPercents(query),
@@ -411,7 +483,7 @@ public final class DefaultRequestTarget implements RequestTarget {
     @Nullable
     private static RequestTarget slowAbsoluteFormForClient(String reqTarget, int authorityPos) {
         // Extract scheme and authority while looking for path.
-        final URI schemeAndAuthority;
+        final SchemeAndAuthority schemeAndAuthority;
         final String scheme = reqTarget.substring(0, authorityPos - 3);
         final int nextPos = findNextComponent(reqTarget, authorityPos);
         final String authority;
@@ -428,20 +500,16 @@ public final class DefaultRequestTarget implements RequestTarget {
             return null;
         }
 
-        // Normalize scheme and authority.
-        schemeAndAuthority = normalizeSchemeAndAuthority(scheme, authority);
-        if (schemeAndAuthority == null) {
+        try {
+            // Normalize scheme and authority.
+            schemeAndAuthority = SchemeAndAuthority.of(scheme, authority);
+        } catch (Exception ignored) {
             // Invalid scheme or authority.
             return null;
         }
 
         if (nextPos < 0) {
-            return new DefaultRequestTarget(RequestTargetForm.ABSOLUTE,
-                                            schemeAndAuthority.getScheme(),
-                                            schemeAndAuthority.getRawAuthority(),
-                                            "/",
-                                            "/", null,
-                                            null);
+            return newAbsoluteTarget(schemeAndAuthority, "/", null, null);
         }
 
         return slowForClient(reqTarget, schemeAndAuthority, nextPos);
@@ -462,7 +530,7 @@ public final class DefaultRequestTarget implements RequestTarget {
 
     @Nullable
     private static RequestTarget slowForClient(String reqTarget,
-                                               @Nullable URI schemeAndAuthority,
+                                               @Nullable SchemeAndAuthority schemeAndAuthority,
                                                int pathPos) {
         final Bytes fragment;
         final Bytes path;
@@ -569,50 +637,63 @@ public final class DefaultRequestTarget implements RequestTarget {
         final String encodedFragment = encodeFragmentToPercents(fragment);
 
         if (schemeAndAuthority != null) {
-            return new DefaultRequestTarget(RequestTargetForm.ABSOLUTE,
-                                            schemeAndAuthority.getScheme(),
-                                            schemeAndAuthority.getRawAuthority(),
-                                            encodedPath,
-                                            encodedPath, encodedQuery,
-                                            encodedFragment);
+            return newAbsoluteTarget(schemeAndAuthority, encodedPath, encodedQuery, encodedFragment);
         } else {
             return new DefaultRequestTarget(RequestTargetForm.ORIGIN,
                                             null,
                                             null,
+                                            null,
+                                            -1,
                                             encodedPath,
                                             encodedPath, encodedQuery,
                                             encodedFragment);
         }
     }
 
-    /**
-     * Returns the index of the authority part if the specified {@code reqTarget} is an absolute URI.
-     * Returns {@code -1} otherwise.
-     */
-    private static int findAuthority(String reqTarget) {
-        final int firstColonIdx = reqTarget.indexOf(':');
-        if (firstColonIdx <= 0 || reqTarget.length() <= firstColonIdx + 3) {
-            return -1;
-        }
-        final int firstSlashIdx = reqTarget.indexOf('/');
-        if (firstSlashIdx <= 0 || firstSlashIdx < firstColonIdx) {
-            return -1;
+    private static DefaultRequestTarget newAbsoluteTarget(
+            SchemeAndAuthority schemeAndAuthority, String encodedPath,
+            @Nullable String encodedQuery, @Nullable String encodedFragment) {
+
+        final String scheme = schemeAndAuthority.scheme();
+        final String maybeAuthority = schemeAndAuthority.authority();
+        final String maybeHost = schemeAndAuthority.host();
+        final int maybePort = schemeAndAuthority.port();
+        final String authority;
+        final String host;
+        final int port;
+        if (maybeHost == null) {
+            authority = maybeAuthority;
+            host = maybeAuthority;
+            port = -1;
+        } else {
+            host = maybeHost;
+
+            // Specify the port number only when necessary, so that https://foo/ and https://foo:443/
+            // are considered equal.
+            if (maybePort >= 0) {
+                final Scheme parsedScheme = Scheme.tryParse(scheme);
+                if (parsedScheme == null || parsedScheme.sessionProtocol().defaultPort() != maybePort) {
+                    authority = maybeAuthority;
+                    port = maybePort;
+                } else {
+                    authority = maybeHost;
+                    port = -1;
+                }
+            } else {
+                authority = maybeHost;
+                port = -1;
+            }
         }
 
-        if (reqTarget.charAt(firstColonIdx + 1) == '/' && reqTarget.charAt(firstColonIdx + 2) == '/') {
-            return firstColonIdx + 3;
-        }
-
-        return -1;
-    }
-
-    @Nullable
-    private static URI normalizeSchemeAndAuthority(String scheme, String authority) {
-        try {
-            return new URI(scheme + "://" + authority);
-        } catch (Exception unused) {
-            return null;
-        }
+        return new DefaultRequestTarget(RequestTargetForm.ABSOLUTE,
+                                        scheme,
+                                        authority,
+                                        host,
+                                        port,
+                                        encodedPath,
+                                        encodedPath,
+                                        encodedQuery,
+                                        encodedFragment);
     }
 
     private static boolean isRelativePath(Bytes path) {
@@ -723,23 +804,6 @@ public final class DefaultRequestTarget implements RequestTarget {
     }
 
     private static boolean appendOneByte(Bytes buf, int cp, boolean wasSlash, ComponentType type) {
-        if (cp == 0x7F) {
-            // Reject the control character: 0x7F
-            return false;
-        }
-
-        if (cp >>> 5 == 0) {
-            // Reject the control characters: 0x00..0x1F
-            if (type != ComponentType.QUERY) {
-                return false;
-            }
-
-            if (cp != 0x0A && cp != 0x0D && cp != 0x09) {
-                // .. except 0x0A (LF), 0x0D (CR) and 0x09 (TAB) because they are used in a form.
-                return false;
-            }
-        }
-
         if (cp == '/' && type == ComponentType.SERVER_PATH) {
             if (!wasSlash) {
                 buf.ensure(1);
@@ -751,8 +815,10 @@ public final class DefaultRequestTarget implements RequestTarget {
             buf.ensure(1);
             if (type.isAllowed(cp)) {
                 buf.add((byte) cp);
-            } else {
+            } else if (type.isAllowedIfEncoded(cp)) {
                 buf.addEncoded((byte) cp);
+            } else {
+                return false;
             }
         }
 

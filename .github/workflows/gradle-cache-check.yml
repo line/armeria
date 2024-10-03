@@ -1,0 +1,38 @@
+name: Periodic Gradle Build Cache Check
+on:
+  schedule:
+    - cron: '0 01 * * 1'
+
+env:
+  LC_ALL: "en_US.UTF-8"
+  DEVELOCITY_ACCESS_KEY: ${{ secrets.DEVELOCITY_ACCESS_KEY }}
+
+jobs:
+  build-cache-check:
+    if: github.repository == 'line/armeria'
+    runs-on: ubuntu-latest
+    steps:
+      - id: setup-jdk-21
+        name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '21'
+
+      - uses: gradle/gradle-enterprise-build-validation-scripts/.github/actions/gradle/download@actions-stable
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: gradle/gradle-enterprise-build-validation-scripts/.github/actions/gradle/experiment-1@actions-stable
+        with:
+          gitRepo: https://github.com/line/armeria.git
+          gitBranch: main
+          tasks: build
+          args: --parallel -Pretry=true -PfailOnPassedAfterRetry=false
+
+      - uses: gradle/gradle-enterprise-build-validation-scripts/.github/actions/gradle/experiment-3@actions-stable
+        with:
+          gitRepo: https://github.com/line/armeria.git
+          gitBranch: main
+          tasks: build
+          args: --parallel -PfailIfNotFullyCacheable=true -Pretry=true -PfailOnPassedAfterRetry=false

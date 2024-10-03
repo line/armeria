@@ -50,7 +50,8 @@ import com.linecorp.armeria.server.logging.AccessLogWriter;
 import io.netty.channel.EventLoopGroup;
 
 @UnstableApi
-abstract class AbstractAnnotatedServiceConfigSetters implements AnnotatedServiceConfigSetters {
+abstract class AbstractAnnotatedServiceConfigSetters<SELF extends AbstractAnnotatedServiceConfigSetters<SELF>>
+        implements AnnotatedServiceConfigSetters<SELF> {
 
     private final DefaultServiceConfigSetters defaultServiceConfigSetters = new DefaultServiceConfigSetters();
     private final Builder<ExceptionHandlerFunction> exceptionHandlerFunctionBuilder = ImmutableList.builder();
@@ -73,64 +74,69 @@ abstract class AbstractAnnotatedServiceConfigSetters implements AnnotatedService
         this.contextPaths = requireNonNull(contextPaths, "contextPaths");
     }
 
-    @Override
-    public AbstractAnnotatedServiceConfigSetters pathPrefix(String pathPrefix) {
-        this.pathPrefix = requireNonNull(pathPrefix, "pathPrefix");
-        return this;
+    @SuppressWarnings("unchecked")
+    final SELF self() {
+        return (SELF) this;
     }
 
     @Override
-    public AbstractAnnotatedServiceConfigSetters exceptionHandlers(
+    public SELF pathPrefix(String pathPrefix) {
+        this.pathPrefix = requireNonNull(pathPrefix, "pathPrefix");
+        return self();
+    }
+
+    @Override
+    public SELF exceptionHandlers(
             ExceptionHandlerFunction... exceptionHandlerFunctions) {
         requireNonNull(exceptionHandlerFunctions, "exceptionHandlerFunctions");
         exceptionHandlerFunctionBuilder.add(exceptionHandlerFunctions);
-        return this;
+        return self();
     }
 
     @Override
-    public AbstractAnnotatedServiceConfigSetters exceptionHandlers(
+    public SELF exceptionHandlers(
             Iterable<? extends ExceptionHandlerFunction> exceptionHandlerFunctions) {
         requireNonNull(exceptionHandlerFunctions, "exceptionHandlerFunctions");
         exceptionHandlerFunctionBuilder.addAll(exceptionHandlerFunctions);
-        return this;
+        return self();
     }
 
     @Override
-    public AbstractAnnotatedServiceConfigSetters responseConverters(
+    public SELF responseConverters(
             ResponseConverterFunction... responseConverterFunctions) {
         requireNonNull(responseConverterFunctions, "responseConverterFunctions");
         responseConverterFunctionBuilder.add(responseConverterFunctions);
-        return this;
+        return self();
     }
 
     @Override
-    public AbstractAnnotatedServiceConfigSetters responseConverters(
+    public SELF responseConverters(
             Iterable<? extends ResponseConverterFunction> responseConverterFunctions) {
         requireNonNull(responseConverterFunctions, "responseConverterFunctions");
         responseConverterFunctionBuilder.addAll(responseConverterFunctions);
-        return this;
+        return self();
     }
 
     @Override
-    public AbstractAnnotatedServiceConfigSetters requestConverters(
+    public SELF requestConverters(
             RequestConverterFunction... requestConverterFunctions) {
         requireNonNull(requestConverterFunctions, "requestConverterFunctions");
         requestConverterFunctionBuilder.add(requestConverterFunctions);
-        return this;
+        return self();
     }
 
     @Override
-    public AbstractAnnotatedServiceConfigSetters requestConverters(
+    public SELF requestConverters(
             Iterable<? extends RequestConverterFunction> requestConverterFunctions) {
         requireNonNull(requestConverterFunctions, "requestConverterFunctions");
         requestConverterFunctionBuilder.addAll(requestConverterFunctions);
-        return this;
+        return self();
     }
 
     @Override
-    public AbstractAnnotatedServiceConfigSetters useBlockingTaskExecutor(boolean useBlockingTaskExecutor) {
+    public SELF useBlockingTaskExecutor(boolean useBlockingTaskExecutor) {
         this.useBlockingTaskExecutor = useBlockingTaskExecutor;
-        return this;
+        return self();
     }
 
     /**
@@ -147,110 +153,103 @@ abstract class AbstractAnnotatedServiceConfigSetters implements AnnotatedService
      * </ul>
      */
     @UnstableApi
-    public AbstractAnnotatedServiceConfigSetters queryDelimiter(String delimiter) {
+    public SELF queryDelimiter(String delimiter) {
         queryDelimiter = requireNonNull(delimiter, "delimiter");
-        return this;
+        return self();
     }
 
     @Override
-    public AbstractAnnotatedServiceConfigSetters decorator(
-            DecoratingHttpServiceFunction decoratingHttpServiceFunction) {
-        return (AbstractAnnotatedServiceConfigSetters) AnnotatedServiceConfigSetters.super.decorator(
-                decoratingHttpServiceFunction);
-    }
-
-    @Override
-    public AbstractAnnotatedServiceConfigSetters decorator(
+    public SELF decorator(
             Function<? super HttpService, ? extends HttpService> decorator) {
         defaultServiceConfigSetters.decorator(decorator);
-        return this;
+        return self();
     }
 
     @Override
-    public AbstractAnnotatedServiceConfigSetters decorators(
+    public SELF decorators(
             Function<? super HttpService, ? extends HttpService>... decorators) {
         defaultServiceConfigSetters.decorators(decorators);
-        return this;
+        return self();
     }
 
     @Override
-    public AbstractAnnotatedServiceConfigSetters decorators(
+    public SELF decorators(
             Iterable<? extends Function<? super HttpService, ? extends HttpService>> decorators) {
         defaultServiceConfigSetters.decorators(decorators);
-        return this;
+        return self();
     }
 
     @Override
-    public AbstractAnnotatedServiceConfigSetters requestTimeout(Duration requestTimeout) {
+    public SELF requestTimeout(Duration requestTimeout) {
         defaultServiceConfigSetters.requestTimeout(requestTimeout);
-        return this;
+        return self();
     }
 
     @Override
-    public AbstractAnnotatedServiceConfigSetters requestTimeoutMillis(long requestTimeoutMillis) {
+    public SELF requestTimeoutMillis(long requestTimeoutMillis) {
         defaultServiceConfigSetters.requestTimeoutMillis(requestTimeoutMillis);
-        return this;
+        return self();
     }
 
     @Override
-    public AbstractAnnotatedServiceConfigSetters maxRequestLength(long maxRequestLength) {
+    public SELF maxRequestLength(long maxRequestLength) {
         defaultServiceConfigSetters.maxRequestLength(maxRequestLength);
-        return this;
+        return self();
     }
 
     @Override
-    public AbstractAnnotatedServiceConfigSetters verboseResponses(boolean verboseResponses) {
+    public SELF verboseResponses(boolean verboseResponses) {
         defaultServiceConfigSetters.verboseResponses(verboseResponses);
-        return this;
+        return self();
     }
 
     @Override
-    public AbstractAnnotatedServiceConfigSetters accessLogFormat(String accessLogFormat) {
+    public SELF accessLogFormat(String accessLogFormat) {
         defaultServiceConfigSetters.accessLogFormat(accessLogFormat);
-        return this;
+        return self();
     }
 
     @Override
-    public AbstractAnnotatedServiceConfigSetters accessLogWriter(AccessLogWriter accessLogWriter,
+    public SELF accessLogWriter(AccessLogWriter accessLogWriter,
                                                                  boolean shutdownOnStop) {
         defaultServiceConfigSetters.accessLogWriter(accessLogWriter, shutdownOnStop);
-        return this;
+        return self();
     }
 
     @Override
-    public AbstractAnnotatedServiceConfigSetters defaultServiceName(String defaultServiceName) {
+    public SELF defaultServiceName(String defaultServiceName) {
         defaultServiceConfigSetters.defaultServiceName(defaultServiceName);
-        return this;
+        return self();
     }
 
     @Override
-    public AbstractAnnotatedServiceConfigSetters defaultServiceNaming(ServiceNaming defaultServiceNaming) {
+    public SELF defaultServiceNaming(ServiceNaming defaultServiceNaming) {
         defaultServiceConfigSetters.defaultServiceNaming(defaultServiceNaming);
-        return this;
+        return self();
     }
 
     @Override
-    public AbstractAnnotatedServiceConfigSetters defaultLogName(String defaultLogName) {
+    public SELF defaultLogName(String defaultLogName) {
         defaultServiceConfigSetters.defaultLogName(defaultLogName);
-        return this;
+        return self();
     }
 
     @Override
-    public AbstractAnnotatedServiceConfigSetters blockingTaskExecutor(
+    public SELF blockingTaskExecutor(
             ScheduledExecutorService blockingTaskExecutor, boolean shutdownOnStop) {
         defaultServiceConfigSetters.blockingTaskExecutor(blockingTaskExecutor, shutdownOnStop);
-        return this;
+        return self();
     }
 
     @Override
-    public AbstractAnnotatedServiceConfigSetters blockingTaskExecutor(BlockingTaskExecutor blockingTaskExecutor,
+    public SELF blockingTaskExecutor(BlockingTaskExecutor blockingTaskExecutor,
                                                                       boolean shutdownOnStop) {
         defaultServiceConfigSetters.blockingTaskExecutor(blockingTaskExecutor, shutdownOnStop);
-        return this;
+        return self();
     }
 
     @Override
-    public AbstractAnnotatedServiceConfigSetters blockingTaskExecutor(int numThreads) {
+    public SELF blockingTaskExecutor(int numThreads) {
         checkArgument(numThreads >= 0, "numThreads: %s (expected: >= 0)", numThreads);
         final BlockingTaskExecutor executor = BlockingTaskExecutor.builder()
                                                                   .numThreads(numThreads)
@@ -259,84 +258,92 @@ abstract class AbstractAnnotatedServiceConfigSetters implements AnnotatedService
     }
 
     @Override
-    public AbstractAnnotatedServiceConfigSetters successFunction(SuccessFunction successFunction) {
+    public SELF successFunction(SuccessFunction successFunction) {
         defaultServiceConfigSetters.successFunction(successFunction);
-        return this;
+        return self();
     }
 
     @Override
-    public AbstractAnnotatedServiceConfigSetters requestAutoAbortDelay(Duration delay) {
+    public SELF requestAutoAbortDelay(Duration delay) {
         defaultServiceConfigSetters.requestAutoAbortDelay(delay);
-        return this;
+        return self();
     }
 
     @Override
-    public AbstractAnnotatedServiceConfigSetters requestAutoAbortDelayMillis(long delayMillis) {
+    public SELF requestAutoAbortDelayMillis(long delayMillis) {
         defaultServiceConfigSetters.requestAutoAbortDelayMillis(delayMillis);
-        return this;
+        return self();
     }
 
     @Override
-    public AbstractAnnotatedServiceConfigSetters multipartUploadsLocation(Path multipartUploadsLocation) {
+    public SELF multipartUploadsLocation(Path multipartUploadsLocation) {
         defaultServiceConfigSetters.multipartUploadsLocation(multipartUploadsLocation);
-        return this;
+        return self();
+    }
+
+    @UnstableApi
+    @Override
+    public SELF multipartRemovalStrategy(
+            MultipartRemovalStrategy removalStrategy) {
+        defaultServiceConfigSetters.multipartRemovalStrategy(removalStrategy);
+        return self();
     }
 
     @Override
-    public ServiceConfigSetters serviceWorkerGroup(EventLoopGroup serviceWorkerGroup, boolean shutdownOnStop) {
+    public SELF serviceWorkerGroup(EventLoopGroup serviceWorkerGroup, boolean shutdownOnStop) {
         defaultServiceConfigSetters.serviceWorkerGroup(serviceWorkerGroup, shutdownOnStop);
-        return this;
+        return self();
     }
 
     @Override
-    public ServiceConfigSetters serviceWorkerGroup(int numThreads) {
+    public SELF serviceWorkerGroup(int numThreads) {
         defaultServiceConfigSetters.serviceWorkerGroup(numThreads);
-        return this;
+        return self();
     }
 
     @Override
-    public AbstractAnnotatedServiceConfigSetters requestIdGenerator(
+    public SELF requestIdGenerator(
             Function<? super RoutingContext, ? extends RequestId> requestIdGenerator) {
         defaultServiceConfigSetters.requestIdGenerator(requestIdGenerator);
-        return this;
+        return self();
     }
 
     @Override
-    public AbstractAnnotatedServiceConfigSetters addHeader(CharSequence name, Object value) {
+    public SELF addHeader(CharSequence name, Object value) {
         defaultServiceConfigSetters.addHeader(name, value);
-        return this;
+        return self();
     }
 
     @Override
-    public AbstractAnnotatedServiceConfigSetters addHeaders(
+    public SELF addHeaders(
             Iterable<? extends Entry<? extends CharSequence, ?>> defaultHeaders) {
         defaultServiceConfigSetters.addHeaders(defaultHeaders);
-        return this;
+        return self();
     }
 
     @Override
-    public AbstractAnnotatedServiceConfigSetters setHeader(CharSequence name, Object value) {
+    public SELF setHeader(CharSequence name, Object value) {
         defaultServiceConfigSetters.setHeader(name, value);
-        return this;
+        return self();
     }
 
     @Override
-    public AbstractAnnotatedServiceConfigSetters setHeaders(
+    public SELF setHeaders(
             Iterable<? extends Entry<? extends CharSequence, ?>> defaultHeaders) {
         defaultServiceConfigSetters.setHeaders(defaultHeaders);
-        return this;
+        return self();
     }
 
     @Override
-    public AbstractAnnotatedServiceConfigSetters errorHandler(ServiceErrorHandler serviceErrorHandler) {
+    public SELF errorHandler(ServiceErrorHandler serviceErrorHandler) {
         defaultServiceConfigSetters.errorHandler(serviceErrorHandler);
-        return this;
+        return self();
     }
 
     @Override
-    public AbstractAnnotatedServiceConfigSetters contextHook(Supplier<? extends AutoCloseable> contextHook) {
+    public SELF contextHook(Supplier<? extends AutoCloseable> contextHook) {
         defaultServiceConfigSetters.contextHook(contextHook);
-        return this;
+        return self();
     }
 
     /**

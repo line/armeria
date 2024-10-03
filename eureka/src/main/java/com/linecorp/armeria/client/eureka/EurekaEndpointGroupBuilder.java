@@ -42,6 +42,7 @@ import com.linecorp.armeria.client.DecoratingHttpClientFunction;
 import com.linecorp.armeria.client.DecoratingRpcClientFunction;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.HttpClient;
+import com.linecorp.armeria.client.ResponseTimeoutMode;
 import com.linecorp.armeria.client.RpcClient;
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.client.endpoint.AbstractDynamicEndpointGroupBuilder;
@@ -65,7 +66,7 @@ import com.linecorp.armeria.common.auth.OAuth2Token;
  * Builds a {@link EurekaEndpointGroup}.
  */
 public final class EurekaEndpointGroupBuilder extends AbstractWebClientBuilder
-        implements DynamicEndpointGroupSetters {
+        implements DynamicEndpointGroupSetters<EurekaEndpointGroupBuilder> {
 
     private static final long DEFAULT_REGISTRY_FETCH_INTERVAL_MILLIS = 30000;
 
@@ -433,6 +434,11 @@ public final class EurekaEndpointGroupBuilder extends AbstractWebClientBuilder
     }
 
     @Override
+    public EurekaEndpointGroupBuilder responseTimeoutMode(ResponseTimeoutMode responseTimeoutMode) {
+        return (EurekaEndpointGroupBuilder) super.responseTimeoutMode(responseTimeoutMode);
+    }
+
+    @Override
     public EurekaEndpointGroupBuilder allowEmptyEndpoints(boolean allowEmptyEndpoints) {
         dynamicEndpointGroupBuilder.allowEmptyEndpoints(allowEmptyEndpoints);
         return this;
@@ -465,7 +471,8 @@ public final class EurekaEndpointGroupBuilder extends AbstractWebClientBuilder
      * EurekaEndpointGroupBuilder can't extend AbstractDynamicEndpointGroupBuilder because it already extends
      * EurekaEndpointGroupBuilder.
      */
-    private static class DynamicEndpointGroupBuilder extends AbstractDynamicEndpointGroupBuilder {
+    private static class DynamicEndpointGroupBuilder
+            extends AbstractDynamicEndpointGroupBuilder<DynamicEndpointGroupBuilder> {
 
         DynamicEndpointGroupBuilder() {
             super(Flags.defaultResponseTimeoutMillis());

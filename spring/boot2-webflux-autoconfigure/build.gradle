@@ -15,7 +15,8 @@ dependencies {
     }
     implementation project(':logback')
 
-    optionalApi libs.micrometer.prometheus
+    optionalApi project(':prometheus1')
+    optionalApi libs.micrometer.prometheus.legacy
     optionalApi libs.dropwizard.metrics.json
     api libs.javax.inject
     compileOnly libs.javax.validation
@@ -57,8 +58,19 @@ task copyBoot3Sources(type: Copy) {
         include '**/LocalArmeriaPort.java'
         include '**/LocalArmeriaPorts.java'
         include '**/PrometheusSupport.java'
+        include '**/PrometheusLegacySupport.java'
         include '**/SpringDependencyInjector.java'
         include '**/Ssl.java'
+    }
+
+    into "${project.ext.genSrcDir}/main/java"
+}
+
+task copySpring6Sources(type: Copy) {
+    from("${rootProject.projectDir}/spring/spring6/src/main/java") {
+        include '**/ArmeriaClientHttpRequest.java'
+        include '**/ArmeriaClientHttpResponse.java'
+        include '**/DataBufferFactoryWrapper.java'
     }
 
     into "${project.ext.genSrcDir}/main/java"
@@ -67,11 +79,13 @@ task copyBoot3Sources(type: Copy) {
 // Copy the main and test sources from ':spring:boot3-webflux-autoconfigure'.
 task generateSources(type: Copy) {
     dependsOn(tasks.copyBoot3Sources)
+    dependsOn(tasks.copySpring6Sources)
     from("${"${rootProject.projectDir}/spring/boot3-webflux-autoconfigure"}/src") {
         exclude '**/AbstractServerHttpResponseVersionSpecific.java'
         exclude '**/AbstractServerHttpRequestVersionSpecific.java'
         exclude '**/package-info.java'
         exclude '**/org.springframework.boot.autoconfigure.AutoConfiguration.imports'
+        exclude '**/TlsUtil.java'
     }
 
     into "${project.ext.genSrcDir}"

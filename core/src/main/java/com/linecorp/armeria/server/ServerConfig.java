@@ -336,7 +336,20 @@ public interface ServerConfig {
     Function<String, String> absoluteUriTransformer();
 
     /**
-     * Returns the interval between reporting unhandled exceptions in milliseconds.
+     * Returns the interval between reporting unlogged exceptions in milliseconds.
+     *
+     * @deprecated Use {@link #unloggedExceptionsReportIntervalMillis()} instead.
      */
+    @Deprecated
     long unhandledExceptionsReportIntervalMillis();
+
+    /**
+     * Returns the interval between reporting unlogged exceptions in milliseconds.
+     */
+    long unloggedExceptionsReportIntervalMillis();
+
+    /**
+     * Returns the {@link ServerMetrics} that collects metrics related server.
+     */
+    ServerMetrics serverMetrics();
 }

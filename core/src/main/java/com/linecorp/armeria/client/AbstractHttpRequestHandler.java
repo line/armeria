@@ -33,8 +33,10 @@ import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpObject;
+import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.ResponseCompleteException;
+import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
@@ -43,6 +45,8 @@ import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.internal.client.ClientRequestContextExtension;
 import com.linecorp.armeria.internal.client.DecodedHttpResponse;
 import com.linecorp.armeria.internal.client.HttpSession;
+import com.linecorp.armeria.internal.common.CancellationScheduler;
+import com.linecorp.armeria.internal.common.CancellationScheduler.CancellationTask;
 import com.linecorp.armeria.internal.common.RequestContextUtil;
 import com.linecorp.armeria.unsafe.PooledObjects;
 
@@ -50,8 +54,8 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelPromise;
+import io.netty.handler.codec.http.HttpHeaderValues;
 import io.netty.handler.codec.http2.Http2Error;
-import io.netty.handler.proxy.ProxyConnectException;
 
 abstract class AbstractHttpRequestHandler implements ChannelFutureListener {
 
@@ -61,6 +65,7 @@ abstract class AbstractHttpRequestHandler implements ChannelFutureListener {
         NEEDS_TO_WRITE_FIRST_HEADER,
         NEEDS_DATA,
         NEEDS_DATA_OR_TRAILERS,
+        NEEDS_100_CONTINUE,
         DONE
     }
 
@@ -86,6 +91,7 @@ abstract class AbstractHttpRequestHandler implements ChannelFutureListener {
     private ScheduledFuture<?> timeoutFuture;
     private State state = State.NEEDS_TO_WRITE_FIRST_HEADER;
     private boolean loggedRequestFirstBytesTransferred;
+    private boolean failed;
 
     AbstractHttpRequestHandler(Channel ch, ClientHttpObjectEncoder encoder, HttpResponseDecoder responseDecoder,
                                DecodedHttpResponse originalRes,
@@ -143,6 +149,11 @@ abstract class AbstractHttpRequestHandler implements ChannelFutureListener {
                     responseWrapper.initTimeout();
                 }
 
+                if (state == State.NEEDS_100_CONTINUE) {
+                    assert responseWrapper != null;
+                    responseWrapper.initTimeout();
+                }
+
                 onWriteSuccess();
                 return;
             }
@@ -169,14 +180,14 @@ abstract class AbstractHttpRequestHandler implements ChannelFutureListener {
                         "Can't send requests. ID: " + id + ", session active: " +
                         session.isAcquirable(responseDecoder.keepAliveHandler()));
             }
-            session.deactivate();
+            session.markUnacquirable();
             // No need to send RST because we didn't send any packet and this will be disconnected anyway.
             fail(UnprocessedRequestException.of(exception));
             return false;
         }
 
         this.session = session;
-        responseWrapper = responseDecoder.addResponse(id, originalRes, ctx, ch.eventLoop());
+        responseWrapper = responseDecoder.addResponse(this, id, originalRes, ctx, ch.eventLoop());
 
         if (timeoutMillis > 0) {
             // The timer would be executed if the first message has not been sent out within the timeout.
@@ -184,7 +195,43 @@ abstract class AbstractHttpRequestHandler implements ChannelFutureListener {
                     () -> failAndReset(WriteTimeoutException.get()),
                     timeoutMillis, TimeUnit.MILLISECONDS);
         }
+        final CancellationScheduler scheduler = cancellationScheduler();
+        if (scheduler != null) {
+            scheduler.updateTask(newCancellationTask());
+            if (ctx.responseTimeoutMode() == ResponseTimeoutMode.CONNECTION_ACQUIRED) {
+                scheduler.start();
+            }
+        }
+        if (ctx.isCancelled()) {
+            // The previous cancellation task wraps the cause with an UnprocessedRequestException
+            // so we return early
+            return false;
+        }
         return true;
+    }
+
+    private CancellationTask newCancellationTask() {
+        return cause -> {
+            if (ch.eventLoop().inEventLoop()) {
+                try (SafeCloseable ignored = RequestContextUtil.pop()) {
+                    failAndReset(cause);
+                }
+            } else {
+                ch.eventLoop().execute(() -> failAndReset(cause));
+            }
+        };
+    }
+
+    RequestHeaders mergedRequestHeaders(RequestHeaders headers) {
+        final HttpHeaders internalHeaders;
+        final ClientRequestContextExtension ctxExtension = ctx.as(ClientRequestContextExtension.class);
+        if (ctxExtension == null) {
+            internalHeaders = HttpHeaders.of();
+        } else {
+            internalHeaders = ctxExtension.internalRequestHeaders();
+        }
+        return mergeRequestHeaders(
+                headers, ctx.defaultRequestHeaders(), ctx.additionalRequestHeaders(), internalHeaders);
     }
 
     /**
@@ -194,10 +241,13 @@ abstract class AbstractHttpRequestHandler implements ChannelFutureListener {
      * Note that the written data is not flushed by this method. The caller should explicitly call
      * {@link Channel#flush()} when each write unit is done.
      */
-    final void writeHeaders(RequestHeaders headers) {
+    final void writeHeaders(RequestHeaders headers, boolean needs100Continue) {
+        assert session != null;
         final SessionProtocol protocol = session.protocol();
         assert protocol != null;
-        if (headersOnly) {
+        if (needs100Continue) {
+            state = State.NEEDS_100_CONTINUE;
+        } else if (headersOnly) {
             state = State.DONE;
         } else if (allowTrailers) {
             state = State.NEEDS_DATA_OR_TRAILERS;
@@ -205,16 +255,7 @@ abstract class AbstractHttpRequestHandler implements ChannelFutureListener {
             state = State.NEEDS_DATA;
         }
 
-        final HttpHeaders internalHeaders;
-        final ClientRequestContextExtension ctxExtension = ctx.as(ClientRequestContextExtension.class);
-        if (ctxExtension == null) {
-            internalHeaders = HttpHeaders.of();
-        } else {
-            internalHeaders = ctxExtension.internalRequestHeaders();
-        }
-        final RequestHeaders merged = mergeRequestHeaders(
-                headers, ctx.defaultRequestHeaders(), ctx.additionalRequestHeaders(), internalHeaders);
-        logBuilder.requestHeaders(merged);
+        logBuilder.requestHeaders(headers);
 
         final String connectionOption = headers.get(HttpHeaderNames.CONNECTION);
         if (CLOSE_STRING.equalsIgnoreCase(connectionOption) || !keepAlive) {
@@ -223,15 +264,43 @@ abstract class AbstractHttpRequestHandler implements ChannelFutureListener {
             // connection by sending a GOAWAY frame that will be sent after receiving the corresponding
             // response from the remote peer. The "Connection: close" header is stripped when it is converted to
             // a Netty HTTP/2 header.
-            session.deactivate();
+            session.markUnacquirable();
         }
 
         final ChannelPromise promise = ch.newPromise();
         // Attach a listener first to make the listener early handle a cause raised while writing headers
         // before any other callbacks like `onStreamClosed()` are invoked.
         promise.addListener(this);
-        encoder.writeHeaders(id, streamId(), merged, headersOnly, promise);
+        encoder.writeHeaders(id, streamId(), headers, headersOnly, promise);
     }
+
+    static boolean needs100Continue(RequestHeaders headers) {
+        return headers.contains(HttpHeaderNames.EXPECT, HttpHeaderValues.CONTINUE.toString());
+    }
+
+    void handle100Continue(ResponseHeaders responseHeaders) {
+        if (state != State.NEEDS_100_CONTINUE) {
+            return;
+        }
+
+        if (responseHeaders.status() == HttpStatus.CONTINUE) {
+            state = State.NEEDS_DATA_OR_TRAILERS;
+            resume();
+            // TODO(minwoox): reset the timeout
+        } else {
+            // We do not retry the request when HttpStatus.EXPECTATION_FAILED is received
+            // because:
+            // - Most servers support 100-continue.
+            // - It's much simpler to just fail the request and let the user retry.
+            state = State.DONE;
+            logBuilder.endRequest();
+            discardRequestBody();
+        }
+    }
+
+    abstract void resume();
+
+    abstract void discardRequestBody();
 
     /**
      * Writes the {@link HttpData} to the {@link Channel}.
@@ -312,6 +381,10 @@ abstract class AbstractHttpRequestHandler implements ChannelFutureListener {
     }
 
     private void fail(Throwable cause) {
+        if (failed) {
+            return;
+        }
+        failed = true;
         state = State.DONE;
         cancel();
         logBuilder.endRequest(cause);
@@ -326,11 +399,27 @@ abstract class AbstractHttpRequestHandler implements ChannelFutureListener {
             logBuilder.endResponse(cause);
             originalRes.close(cause);
         }
+
+        final CancellationScheduler scheduler = cancellationScheduler();
+        if (scheduler != null) {
+            // best-effort attempt to cancel the scheduled timeout task so that RequestContext#cause
+            // isn't set unnecessarily
+            scheduler.cancelScheduled();
+        }
     }
 
     final void failAndReset(Throwable cause) {
-        if (cause instanceof ProxyConnectException || cause instanceof ResponseCompleteException) {
-            // - ProxyConnectException is handled by HttpSessionHandler.exceptionCaught().
+        if (failed) {
+            return;
+        }
+
+        if (cause instanceof WriteTimeoutException) {
+            final HttpSession session = HttpSession.get(ch);
+            // Mark the session as unhealthy so that subsequent requests do not use it.
+            session.markUnacquirable();
+        }
+
+        if (cause instanceof ResponseCompleteException) {
             // - ResponseCompleteException means the response is successfully received.
             state = State.DONE;
             cancel();
@@ -347,7 +436,7 @@ abstract class AbstractHttpRequestHandler implements ChannelFutureListener {
             error = Http2Error.INTERNAL_ERROR;
         }
 
-        if (error.code() != Http2Error.CANCEL.code()) {
+        if (error.code() != Http2Error.CANCEL.code() && cause != ctx.cancellationCause()) {
             Exceptions.logIfUnexpected(logger, ch,
                                        HttpSession.get(ch).protocol(),
                                        "a request publisher raised an exception", cause);
@@ -367,5 +456,14 @@ abstract class AbstractHttpRequestHandler implements ChannelFutureListener {
 
         this.timeoutFuture = null;
         return timeoutFuture.cancel(false);
+    }
+
+    @Nullable
+    private CancellationScheduler cancellationScheduler() {
+        final ClientRequestContextExtension ctxExt = ctx.as(ClientRequestContextExtension.class);
+        if (ctxExt != null) {
+            return ctxExt.responseCancellationScheduler();
+        }
+        return null;
     }
 }

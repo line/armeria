@@ -52,24 +52,34 @@ public class ClientRequestContextWrapper
         return unwrap().newDerivedContext(id, req, rpcReq, endpoint);
     }
 
+    @Nullable
     @Override
     public EndpointGroup endpointGroup() {
         return unwrap().endpointGroup();
     }
 
+    @Nullable
     @Override
     public Endpoint endpoint() {
         return unwrap().endpoint();
     }
 
+    @Nullable
     @Override
     public String fragment() {
         return unwrap().fragment();
     }
 
+    @Nullable
     @Override
     public String authority() {
         return unwrap().authority();
+    }
+
+    @Nullable
+    @Override
+    public String host() {
+        return unwrap().host();
     }
 
     @Override
@@ -155,6 +165,11 @@ public class ClientRequestContextWrapper
     @Override
     public ExchangeType exchangeType() {
         return unwrap().exchangeType();
+    }
+
+    @Override
+    public ResponseTimeoutMode responseTimeoutMode() {
+        return unwrap().responseTimeoutMode();
     }
 
     @Override

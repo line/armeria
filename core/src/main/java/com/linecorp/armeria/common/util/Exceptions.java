@@ -173,6 +173,7 @@ public final class Exceptions {
         requireNonNull(cause, "cause");
         if (cause instanceof UnprocessedRequestException) {
             cause = cause.getCause();
+            assert cause != null;
         }
 
         for (ExceptionClassifier classifier : exceptionClassifiers) {
@@ -218,7 +219,7 @@ public final class Exceptions {
      *         e.g. {@code return Exceptions.throwUnsafely(...);} vs.
      *              {@code Exceptions.throwUnsafely(...); return null;}
      */
-    @SuppressWarnings("ReturnOfNull")
+    @SuppressWarnings({ "ReturnOfNull", "NullAway" })
     public static <T> T throwUnsafely(Throwable cause) {
         doThrowUnsafely(requireNonNull(cause, "cause"));
         return null; // Never reaches here.

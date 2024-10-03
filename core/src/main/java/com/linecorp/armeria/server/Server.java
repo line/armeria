@@ -73,6 +73,7 @@ import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.common.util.ListenableAsyncCloseable;
 import com.linecorp.armeria.common.util.ShutdownHooks;
 import com.linecorp.armeria.common.util.StartStopSupport;
+import com.linecorp.armeria.common.util.TlsEngineType;
 import com.linecorp.armeria.common.util.TransportType;
 import com.linecorp.armeria.common.util.Version;
 import com.linecorp.armeria.internal.common.RequestTargetCache;
@@ -130,7 +131,8 @@ public final class Server implements ListenableAsyncCloseable {
         serverConfig.setServer(this);
         config = new UpdatableServerConfig(requireNonNull(serverConfig, "serverConfig"));
         startStop = new ServerStartStopSupport(config.startStopExecutor());
-        connectionLimitingHandler = new ConnectionLimitingHandler(config.maxNumConnections());
+        connectionLimitingHandler = new ConnectionLimitingHandler(config.maxNumConnections(),
+                                                                  config.serverMetrics());
 
         // Server-wide metrics.
         RequestTargetCache.registerServerMetrics(config.meterRegistry());
@@ -138,13 +140,17 @@ public final class Server implements ListenableAsyncCloseable {
 
         for (VirtualHost virtualHost : config().virtualHosts()) {
             if (virtualHost.sslContext() != null) {
-                setupTlsMetrics(virtualHost.sslContext(), virtualHost.hostnamePattern());
+                assert virtualHost.tlsEngineType() != null;
+                setupTlsMetrics(virtualHost.sslContext(), virtualHost.tlsEngineType(),
+                                virtualHost.hostnamePattern());
             }
         }
 
         // Invoke the serviceAdded() method in Service so that it can keep the reference to this Server or
         // add a listener to it.
-        config.serviceConfigs().forEach(cfg -> ServiceCallbackInvoker.invokeServiceAdded(cfg, cfg.service()));
+        for (ServiceConfig cfg : config.serviceConfigs()) {
+            ServiceCallbackInvoker.invokeServiceAdded(cfg, cfg.service());
+        }
         hasWebSocketService = hasWebSocketService(config);
     }
 
@@ -415,10 +421,10 @@ public final class Server implements ListenableAsyncCloseable {
     /**
      * Sets up gauge metric for each server certificate.
      */
-    private void setupTlsMetrics(SslContext sslContext, String hostnamePattern) {
+    private void setupTlsMetrics(SslContext sslContext, TlsEngineType tlsEngineType, String hostnamePattern) {
         final MeterRegistry meterRegistry = config().meterRegistry();
 
-        final SSLSession sslSession = validateSslContext(sslContext);
+        final SSLSession sslSession = validateSslContext(sslContext, tlsEngineType);
         final MeterIdPrefix meterIdPrefix = new MeterIdPrefix("armeria.server",
                                                               "hostname.pattern", hostnamePattern);
         for (Certificate certificate : sslSession.getLocalCertificates()) {
@@ -544,6 +550,9 @@ public final class Server implements ListenableAsyncCloseable {
                 return thread;
             });
 
+            final GracefulShutdownSupport gracefulShutdownSupport = this.gracefulShutdownSupport;
+            assert gracefulShutdownSupport != null;
+
             b.group(bossGroup, config.workerGroup());
             b.handler(connectionLimitingHandler);
             b.childHandler(new HttpServerPipelineConfigurator(config, port, gracefulShutdownSupport,
@@ -572,14 +581,13 @@ public final class Server implements ListenableAsyncCloseable {
         }
 
         private void setupServerMetrics() {
-            final MeterRegistry meterRegistry = config().meterRegistry();
+            final MeterRegistry meterRegistry = config.meterRegistry();
             final GracefulShutdownSupport gracefulShutdownSupport = this.gracefulShutdownSupport;
             assert gracefulShutdownSupport != null;
 
             meterRegistry.gauge("armeria.server.pending.responses", gracefulShutdownSupport,
                                 GracefulShutdownSupport::pendingResponses);
-            meterRegistry.gauge("armeria.server.connections", connectionLimitingHandler,
-                                ConnectionLimitingHandler::numConnections);
+            config.serverMetrics().bindTo(meterRegistry);
         }
 
         @Override

@@ -92,7 +92,7 @@ final class FallbackService implements HttpService {
 
     private static HttpResponse newFallbackResponse(ServiceRequestContext ctx, HttpStatus status) {
         final ServiceErrorHandler errorHandler = ctx.config().errorHandler();
-        final AggregatedHttpResponse rendered = errorHandler.renderStatus(ctx.config(),
+        final AggregatedHttpResponse rendered = errorHandler.renderStatus(ctx,
                                                                           ctx.request().headers(),
                                                                           status,
                                                                           null,

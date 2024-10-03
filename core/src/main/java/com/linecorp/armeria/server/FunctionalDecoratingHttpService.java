@@ -46,6 +46,12 @@ final class FunctionalDecoratingHttpService extends SimpleDecoratingHttpService 
     }
 
     @Override
+    public void serviceAdded(ServiceConfig cfg) throws Exception {
+        super.serviceAdded(cfg);
+        function.serviceAdded(cfg);
+    }
+
+    @Override
     public String toString() {
         return FunctionalDecoratingHttpService.class.getSimpleName() + '(' + unwrap() + ", " + function + ')';
     }

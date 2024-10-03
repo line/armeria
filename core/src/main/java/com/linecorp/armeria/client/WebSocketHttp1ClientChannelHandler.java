@@ -96,7 +96,8 @@ final class WebSocketHttp1ClientChannelHandler extends ChannelDuplexHandler impl
     }
 
     @Override
-    public HttpResponseWrapper addResponse(int id, DecodedHttpResponse decodedHttpResponse,
+    public HttpResponseWrapper addResponse(@Nullable AbstractHttpRequestHandler requestHandler,
+                                           int id, DecodedHttpResponse decodedHttpResponse,
                                            ClientRequestContext ctx, EventLoop eventLoop) {
         assert res == null;
         res = new WebSocketHttp1ResponseWrapper(decodedHttpResponse, eventLoop, ctx,
@@ -164,7 +165,7 @@ final class WebSocketHttp1ClientChannelHandler extends ChannelDuplexHandler impl
             switch (state) {
                 case NEEDS_HANDSHAKE_RESPONSE:
                     if (!(msg instanceof HttpObject)) {
-                        ctx.fireChannelRead(msg);
+                        ctx.fireChannelRead(ReferenceCountUtil.retain(msg));
                         return;
                     }
                     if (!(msg instanceof HttpResponse)) {
@@ -180,7 +181,7 @@ final class WebSocketHttp1ClientChannelHandler extends ChannelDuplexHandler impl
                     }
 
                     if (!HttpUtil.isKeepAlive(nettyRes)) {
-                        session().deactivate();
+                        session().markUnacquirable();
                     }
 
                     if (res == null && ArmeriaHttpUtil.isRequestTimeoutResponse(nettyRes)) {
@@ -188,11 +189,10 @@ final class WebSocketHttp1ClientChannelHandler extends ChannelDuplexHandler impl
                         return;
                     }
 
+                    assert res != null;
                     res.startResponse();
                     final ResponseHeaders responseHeaders = ArmeriaHttpUtil.toArmeria(nettyRes);
                     if (responseHeaders.status() == HttpStatus.SWITCHING_PROTOCOLS) {
-                        final ChannelPipeline pipeline = ctx.pipeline();
-                        pipeline.remove(HttpClientCodec.class);
                         state = State.NEEDS_HANDSHAKE_RESPONSE_END;
                     }
                     if (!res.tryWriteResponseHeaders(responseHeaders)) {
@@ -205,13 +205,18 @@ final class WebSocketHttp1ClientChannelHandler extends ChannelDuplexHandler impl
                         failWithUnexpectedMessageType(ctx, msg, EMPTY_LAST_CONTENT.getClass());
                         return;
                     }
+                    // The state should be set to UPGRADE_COMPLETE before removing HttpClientCodec.
+                    // Because pipeline.remove() could trigger channelRead() recursively.
                     state = State.UPGRADE_COMPLETE;
+                    final ChannelPipeline pipeline = ctx.pipeline();
+                    pipeline.remove(HttpClientCodec.class);
                     break;
                 case UPGRADE_COMPLETE:
                     assert msg instanceof ByteBuf;
                     final ByteBuf data = (ByteBuf) msg;
                     final int dataLength = data.readableBytes();
                     if (dataLength > 0) {
+                        assert res != null;
                         final long maxContentLength = res.maxContentLength();
                         final long writtenBytes = res.writtenBytes();
                         if (maxContentLength > 0 && writtenBytes > maxContentLength - dataLength) {

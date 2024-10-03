@@ -67,12 +67,14 @@ public final class GrpcMessageMarshaller<I, O> {
     private final MessageType responseType;
     private final boolean unsafeWrapDeserializedBuffer;
     private final boolean isProto;
+    private final boolean useMethodMarshaller;
 
     public GrpcMessageMarshaller(ByteBufAllocator alloc,
                                  SerializationFormat serializationFormat,
                                  MethodDescriptor<I, O> method,
                                  @Nullable GrpcJsonMarshaller jsonMarshaller,
-                                 boolean unsafeWrapDeserializedBuffer) {
+                                 boolean unsafeWrapDeserializedBuffer,
+                                 boolean useMethodMarshaller) {
         this.alloc = requireNonNull(alloc, "alloc");
         this.method = requireNonNull(method, "method");
         this.unsafeWrapDeserializedBuffer = unsafeWrapDeserializedBuffer;
@@ -84,6 +86,7 @@ public final class GrpcMessageMarshaller<I, O> {
         responseMarshaller = method.getResponseMarshaller();
         requestType = marshallerType(requestMarshaller);
         responseType = marshallerType(responseMarshaller);
+        this.useMethodMarshaller = useMethodMarshaller;
     }
 
     public ByteBuf serializeRequest(I message) throws IOException {
@@ -96,8 +99,11 @@ public final class GrpcMessageMarshaller<I, O> {
                 final CompositeByteBuf out = alloc.compositeBuffer();
                 try (ByteBufOutputStream os = new ByteBufOutputStream(out)) {
                     if (isProto) {
-                        ByteStreams.copy(method.streamRequest(message), os);
+                        try (InputStream is = method.streamRequest(message)) {
+                            ByteStreams.copy(is, os);
+                        }
                     } else {
+                        assert jsonMarshaller != null;
                         jsonMarshaller.serializeMessage(requestMarshaller, message, os);
                     }
                 }
@@ -128,10 +134,13 @@ public final class GrpcMessageMarshaller<I, O> {
                 }
             }
         }
+
+        assert messageStream != null;
         try (InputStream msg = messageStream) {
             if (isProto) {
                 return method.parseRequest(msg);
             } else {
+                assert jsonMarshaller != null;
                 return jsonMarshaller.deserializeMessage(requestMarshaller, msg);
             }
         }
@@ -148,8 +157,11 @@ public final class GrpcMessageMarshaller<I, O> {
                 final CompositeByteBuf out = alloc.compositeBuffer();
                 try (ByteBufOutputStream os = new ByteBufOutputStream(out)) {
                     if (isProto) {
-                        ByteStreams.copy(method.streamResponse(message), os);
+                        try (InputStream is = method.streamResponse(message)) {
+                            ByteStreams.copy(is, os);
+                        }
                     } else {
+                        assert jsonMarshaller != null;
                         jsonMarshaller.serializeMessage(responseMarshaller, message, os);
                     }
                 }
@@ -181,10 +193,13 @@ public final class GrpcMessageMarshaller<I, O> {
                 }
             }
         }
+
+        assert messageStream != null;
         try (InputStream msg = messageStream) {
             if (isProto) {
                 return method.parseResponse(msg);
             } else {
+                assert jsonMarshaller != null;
                 return jsonMarshaller.deserializeMessage(responseMarshaller, msg);
             }
         }
@@ -199,8 +214,17 @@ public final class GrpcMessageMarshaller<I, O> {
             final ByteBuf buf = alloc.buffer(serializedSize);
             boolean success = false;
             try {
-                message.writeTo(CodedOutputStream.newInstance(buf.nioBuffer(0, serializedSize)));
-                buf.writerIndex(serializedSize);
+                if (useMethodMarshaller) {
+                    final InputStream is = marshaller.stream((T) message);
+                    try (ByteBufOutputStream os = new ByteBufOutputStream(buf)) {
+                        ByteStreams.copy(is, os);
+                    } finally {
+                        is.close();
+                    }
+                } else {
+                    message.writeTo(CodedOutputStream.newInstance(buf.nioBuffer(0, serializedSize)));
+                    buf.writerIndex(serializedSize);
+                }
                 success = true;
             } finally {
                 if (!success) {
@@ -215,6 +239,7 @@ public final class GrpcMessageMarshaller<I, O> {
             try (ByteBufOutputStream os = new ByteBufOutputStream(buf)) {
                 @SuppressWarnings("unchecked")
                 final T cast = (T) message;
+                assert jsonMarshaller != null;
                 jsonMarshaller.serializeMessage(marshaller, cast, os);
                 success = true;
             } finally {
@@ -232,20 +257,25 @@ public final class GrpcMessageMarshaller<I, O> {
             if (!buf.isReadable()) {
                 return prototype.getDefaultInstanceForType();
             }
-            final CodedInputStream stream;
-            if (unsafeWrapDeserializedBuffer) {
-                stream = UnsafeByteOperations.unsafeWrap(buf.nioBuffer()).newCodedInput();
-                stream.enableAliasing(true);
-            } else {
-                stream = CodedInputStream.newInstance(buf.nioBuffer());
-            }
             try {
-                final Message msg = prototype.getParserForType().parseFrom(stream);
-                try {
-                    stream.checkLastTagWas(0);
-                } catch (InvalidProtocolBufferException e) {
-                    e.setUnfinishedMessage(msg);
-                    throw e;
+                final Message msg;
+                if (useMethodMarshaller) {
+                    msg = (Message) marshaller.parse(new ByteBufInputStream(buf));
+                } else {
+                    final CodedInputStream stream;
+                    if (unsafeWrapDeserializedBuffer) {
+                        stream = UnsafeByteOperations.unsafeWrap(buf.nioBuffer()).newCodedInput();
+                        stream.enableAliasing(true);
+                    } else {
+                        stream = CodedInputStream.newInstance(buf.nioBuffer());
+                    }
+                    msg = prototype.getParserForType().parseFrom(stream);
+                    try {
+                        stream.checkLastTagWas(0);
+                    } catch (InvalidProtocolBufferException e) {
+                        e.setUnfinishedMessage(msg);
+                        throw e;
+                    }
                 }
                 return msg;
             } catch (InvalidProtocolBufferException e) {
@@ -254,6 +284,7 @@ public final class GrpcMessageMarshaller<I, O> {
             }
         } else {
             try (ByteBufInputStream is = new ByteBufInputStream(buf, /* releaseOnClose */ false)) {
+                assert jsonMarshaller != null;
                 return (Message) jsonMarshaller.deserializeMessage(marshaller, is);
             }
         }

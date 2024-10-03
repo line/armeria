@@ -213,6 +213,9 @@ final class MimeParser {
 
                     case HEADERS:
                         logger.trace("state={}", State.HEADERS);
+                        assert bodyPartHeadersBuilder != null;
+                        assert bodyPartBuilder != null;
+
                         final String headerLine = readHeaderLine();
                         if (headerLine == null) {
                             // Need more data; DecodedHttpStreamMessage will handle.
@@ -241,6 +244,8 @@ final class MimeParser {
 
                     case BODY:
                         logger.trace("state={}", State.BODY);
+                        assert bodyPartPublisher != null;
+
                         final ByteBuf bodyContent = readBody();
                         if (bodyContent == NEED_MORE) {
                             final BodyPartPublisher currentPublisher = bodyPartPublisher;
@@ -267,6 +272,7 @@ final class MimeParser {
                         } else {
                             state = State.START_PART;
                         }
+                        assert bodyPartPublisher != null;
                         bodyPartPublisher.close();
                         bodyPartPublisher = null;
                         bodyPartHeadersBuilder = null;

@@ -62,6 +62,8 @@ import com.linecorp.armeria.internal.common.CancellationScheduler;
 import com.linecorp.armeria.internal.common.InitiateConnectionShutdown;
 import com.linecorp.armeria.internal.common.NonWrappingRequestContext;
 import com.linecorp.armeria.internal.common.util.TemporaryThreadLocals;
+import com.linecorp.armeria.internal.server.RouteDecoratingService.InitialDispatcherService;
+import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.ProxiedAddresses;
 import com.linecorp.armeria.server.Route;
 import com.linecorp.armeria.server.RoutingContext;
@@ -105,7 +107,7 @@ public final class DefaultServiceRequestContext
     private final InetSocketAddress remoteAddress;
     private final InetSocketAddress localAddress;
 
-    private boolean shouldReportUnhandledExceptions = true;
+    private boolean shouldReportUnloggedExceptions = true;
 
     private final RequestLogBuilder log;
 
@@ -208,6 +210,7 @@ public final class DefaultServiceRequestContext
         this.additionalResponseTrailers = additionalResponseTrailers;
     }
 
+    @Nullable
     @Override
     protected RequestTarget validateHeaders(RequestHeaders headers) {
         checkArgument(headers.scheme() != null && headers.authority() != null,
@@ -253,6 +256,18 @@ public final class DefaultServiceRequestContext
     @Override
     public ServiceConfig config() {
         return cfg;
+    }
+
+    @Nullable
+    @Override
+    public <T extends HttpService> T findService(Class<? extends T> serviceClass) {
+        requireNonNull(serviceClass, "serviceClass");
+        final HttpService service = config().service();
+        if (service instanceof InitialDispatcherService) {
+            return ((InitialDispatcherService) service).findService(this, serviceClass);
+        } else {
+            return service.as(serviceClass);
+        }
     }
 
     @Override
@@ -374,13 +389,13 @@ public final class DefaultServiceRequestContext
     @Deprecated
     @Override
     public CompletableFuture<Void> whenRequestTimingOut() {
-        return requestCancellationScheduler.whenTimingOut();
+        return requestCancellationScheduler.whenCancelling().handle((v, e) -> null);
     }
 
     @Deprecated
     @Override
     public CompletableFuture<Void> whenRequestTimedOut() {
-        return requestCancellationScheduler.whenTimedOut();
+        return requestCancellationScheduler.whenCancelled().handle((v, e) -> null);
     }
 
     @Override
@@ -469,12 +484,22 @@ public final class DefaultServiceRequestContext
 
     @Override
     public boolean shouldReportUnhandledExceptions() {
-        return shouldReportUnhandledExceptions;
+        return shouldReportUnloggedExceptions;
     }
 
     @Override
     public void setShouldReportUnhandledExceptions(boolean value) {
-        shouldReportUnhandledExceptions = value;
+        shouldReportUnloggedExceptions = value;
+    }
+
+    @Override
+    public boolean shouldReportUnloggedExceptions() {
+        return shouldReportUnloggedExceptions;
+    }
+
+    @Override
+    public void setShouldReportUnloggedExceptions(boolean value) {
+        shouldReportUnloggedExceptions = value;
     }
 
     @Override

@@ -37,6 +37,7 @@ import java.util.function.Consumer;
 import java.util.function.Supplier;
 
 import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
@@ -52,8 +53,9 @@ import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.SessionProtocol;
-import com.linecorp.armeria.common.metric.PrometheusMeterRegistries;
+import com.linecorp.armeria.common.prometheus.PrometheusMeterRegistries;
 import com.linecorp.armeria.common.util.DomainSocketAddress;
+import com.linecorp.armeria.common.util.TlsEngineType;
 import com.linecorp.armeria.common.util.TransportType;
 import com.linecorp.armeria.internal.common.util.MinifiedBouncyCastleProvider;
 import com.linecorp.armeria.internal.testing.MockAddressResolverGroup;
@@ -61,7 +63,7 @@ import com.linecorp.armeria.testing.junit5.server.SelfSignedCertificateExtension
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
 import io.micrometer.core.instrument.Metrics;
-import io.micrometer.prometheus.PrometheusMeterRegistry;
+import io.micrometer.prometheusmetrics.PrometheusMeterRegistry;
 import io.netty.channel.ChannelOption;
 import io.netty.handler.ssl.SslContextBuilder;
 import reactor.core.scheduler.Schedulers;
@@ -140,6 +142,13 @@ class ServerBuilderTest {
                      .idleTimeoutMillis(idleTimeoutMillis)
                      .pingIntervalMillis(pingIntervalMillis)
                      .build();
+    }
+
+    @AfterEach
+    void tearDown() {
+        poppedRouterCnt.set(0);
+        poppedRouterCnt2.set(0);
+        poppedCnt.set(0);
     }
 
     @Test
@@ -361,8 +370,8 @@ class ServerBuilderTest {
                                                           Duration.ofMillis(250),
                                                           ctx.eventLoop())))
                                     .withVirtualHost(
-                                            h -> h.hostnamePattern("foo.com")
-                                                  .service("/custom_virtual_host",
+                                            "foo.com",
+                                            h -> h.service("/custom_virtual_host",
                                                            (ctx, req) -> HttpResponse.delayed(
                                                                    HttpResponse.of(HttpStatus.OK),
                                                                    Duration.ofMillis(150),
@@ -556,6 +565,37 @@ class ServerBuilderTest {
     }
 
     @Test
+    void tlsEngineType() {
+        final Server sb1 = Server.builder()
+                                 .service("/example", (ctx, req) -> HttpResponse.of(HttpStatus.OK))
+                                 .build();
+        assertThat(sb1.config().defaultVirtualHost().tlsEngineType()).isEqualTo(TlsEngineType.OPENSSL);
+
+        final Server sb2 = Server.builder()
+                                 .tlsSelfSigned()
+                                 .service("/example", (ctx, req) -> HttpResponse.of(HttpStatus.OK))
+                                 .tlsEngineType(TlsEngineType.OPENSSL)
+                                 .virtualHost("*.example1.com")
+                                 .service("/example", (ctx, req) -> HttpResponse.of(HttpStatus.OK))
+                                 .tlsSelfSigned()
+                                 .tlsEngineType(TlsEngineType.JDK)
+                                 .and()
+                                 .virtualHost("*.example2.com")
+                                 .service("/example", (ctx, req) -> HttpResponse.of(HttpStatus.OK))
+                                 .tlsSelfSigned()
+                                 .and()
+                                 .virtualHost("*.example3.com")
+                                 .service("/example", (ctx, req) -> HttpResponse.of(HttpStatus.OK))
+                                 .and()
+                                 .build();
+        assertThat(sb2.config().defaultVirtualHost().tlsEngineType()).isEqualTo(TlsEngineType.OPENSSL);
+        assertThat(sb2.config().findVirtualHost("*.example1.com", 8080).tlsEngineType())
+                .isEqualTo(TlsEngineType.JDK);
+        assertThat(sb2.config().findVirtualHost("*.example2.com", 8080).tlsEngineType())
+                .isEqualTo(TlsEngineType.OPENSSL);
+    }
+
+    @Test
     void monitorBlockingTaskExecutorAndSchedulersTogetherWithPrometheus() {
         final PrometheusMeterRegistry registry = PrometheusMeterRegistries.newRegistry();
         Metrics.addRegistry(registry);
@@ -677,19 +717,19 @@ class ServerBuilderTest {
     void exceptionReportInterval() {
         final Server server1 = Server.builder()
                                      .service("/", (ctx, req) -> HttpResponse.of(HttpStatus.OK))
-                                     .unhandledExceptionsReportInterval(Duration.ofMillis(1000))
+                                     .unloggedExceptionsReportInterval(Duration.ofMillis(1000))
                                      .build();
-        assertThat(server1.config().unhandledExceptionsReportIntervalMillis()).isEqualTo(1000);
+        assertThat(server1.config().unloggedExceptionsReportIntervalMillis()).isEqualTo(1000);
 
         final Server server2 = Server.builder()
-                                     .unhandledExceptionsReportInterval(Duration.ofMillis(0))
+                                     .unloggedExceptionsReportInterval(Duration.ofMillis(0))
                                      .service("/", (ctx, req) -> HttpResponse.of(HttpStatus.OK))
                                      .build();
-        assertThat(server2.config().unhandledExceptionsReportIntervalMillis()).isZero();
+        assertThat(server2.config().unloggedExceptionsReportIntervalMillis()).isZero();
 
         assertThrows(IllegalArgumentException.class, () ->
                 Server.builder()
-                      .unhandledExceptionsReportInterval(Duration.ofMillis(-1000))
+                      .unloggedExceptionsReportInterval(Duration.ofMillis(-1000))
                       .service("/", (ctx, req) -> HttpResponse.of(HttpStatus.OK))
                       .build());
     }
@@ -697,20 +737,20 @@ class ServerBuilderTest {
     @Test
     void exceptionReportIntervalMilliSeconds() {
         final Server server1 = Server.builder()
-                                     .unhandledExceptionsReportIntervalMillis(1000)
+                                     .unloggedExceptionsReportIntervalMillis(1000)
                                      .service("/", (ctx, req) -> HttpResponse.of(HttpStatus.OK))
                                      .build();
-        assertThat(server1.config().unhandledExceptionsReportIntervalMillis()).isEqualTo(1000);
+        assertThat(server1.config().unloggedExceptionsReportIntervalMillis()).isEqualTo(1000);
 
         final Server server2 = Server.builder()
-                                     .unhandledExceptionsReportIntervalMillis(0)
+                                     .unloggedExceptionsReportIntervalMillis(0)
                                      .service("/", (ctx, req) -> HttpResponse.of(HttpStatus.OK))
                                      .build();
-        assertThat(server2.config().unhandledExceptionsReportIntervalMillis()).isZero();
+        assertThat(server2.config().unloggedExceptionsReportIntervalMillis()).isZero();
 
         assertThrows(IllegalArgumentException.class, () ->
                 Server.builder()
-                      .unhandledExceptionsReportIntervalMillis(-1000)
+                      .unloggedExceptionsReportIntervalMillis(-1000)
                       .service("/", (ctx, req) -> HttpResponse.of(HttpStatus.OK))
                       .build());
     }
@@ -740,7 +780,7 @@ class ServerBuilderTest {
         final AggregatedHttpResponse response = client.get("/hook").aggregate().join();
 
         assertThat(response.contentUtf8()).isEqualTo("hook");
-        assertThat(poppedCnt.get()).isEqualTo(1);
+        assertThat(poppedCnt.get()).isGreaterThan(0);
     }
 
     @Test
@@ -752,8 +792,8 @@ class ServerBuilderTest {
         final AggregatedHttpResponse response = client.get("/hook_route").aggregate().join();
 
         assertThat(response.contentUtf8()).isEqualTo("hook_route");
-        assertThat(poppedRouterCnt.get()).isEqualTo(1);
-        assertThat(poppedRouterCnt2.get()).isEqualTo(1);
+        assertThat(poppedRouterCnt.get()).isGreaterThan(0);
+        assertThat(poppedRouterCnt2.get()).isGreaterThan(0);
     }
 
     @Test

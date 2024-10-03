@@ -159,6 +159,17 @@ You can use the following path patterns to map an HTTP request path to a service
 | Regular expression                       | `regex:^/files/(?<filePath>.\*)$`     |
 +------------------------------------------+---------------------------------------+
 
+<Tip>
+By default, colon style path variables assume that a path segment starting with a ':' is a parameter name.
+If the colon starting a path segment should signify a literal, you can prefix the ':' with '\\'.
+
+e.g.
+- `/foo/\\:colon:` will match a request with path `/foo/:colon:`.
+  - Note that only the first colon starting the segment should be escaped.
+- `/foo/:colon` will match a request with path `/foo/bar`. The path parameter 'colon' will be bound to 'bar'.
+
+</Tip>
+
 ## Per service configuration
 
 The examples above are just mapping the path of an HTTP request on a service. If you want to set configuration

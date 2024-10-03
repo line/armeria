@@ -6,6 +6,8 @@
 // See also: ../thrift0.9/build.gradle
 
 dependencies {
+    testImplementation project(':prometheus1')
+
     // Use the classes compiled with the latest libthrift,
     // but use an older version for test classes.
     testImplementation(project(':thrift0.13')) {
@@ -22,8 +24,7 @@ dependencies {
 
     // Dropwizard and Prometheus, for testing metrics integration
     testImplementation libs.dropwizard.metrics.core
-    testImplementation libs.micrometer.prometheus
-    testImplementation libs.prometheus
+    testImplementation libs.prometheus.metrics.exposition.formats
 
     // micrometer tracing
     testImplementation (libs.micrometer.tracing.integration.test) {

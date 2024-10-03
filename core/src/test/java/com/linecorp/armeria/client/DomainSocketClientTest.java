@@ -105,6 +105,11 @@ class DomainSocketClientTest {
             final String expectedAddress = domainSocketAddress(useAbstractNamespace).toString();
             assertThat(ctx.localAddress()).hasToString(expectedAddress);
             assertThat(ctx.remoteAddress()).hasToString(expectedAddress);
+
+            final String expectedUri = (protocol.isTls() ? "https" : "http") +
+                                       baseUri.replaceAll("^[^:]+", "") +
+                                       "/greet";
+            assertThat(ctx.uri()).hasToString(expectedUri);
         }
     }
 
