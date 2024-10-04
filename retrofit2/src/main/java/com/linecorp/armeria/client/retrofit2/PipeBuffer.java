@@ -37,7 +37,8 @@ final class PipeBuffer {
             return;
         }
         /*
-         * Once use okhttp4, the synchronized block could be replaced by Reentrant and Condition for Virtual Thread support.
+         * Once use okhttp4, the synchronized block could be replaced by Reentrant and Condition
+         * for Virtual Thread support.
          * Especially, Timeout.awaitSignal(Condition) can be used upper than the okio 3.3.0.
          * Please refer here. https://github.com/square/okio/pull/1176/files
          */
