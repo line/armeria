@@ -303,4 +303,7 @@ abstract class AbstractServerHttpResponse implements ServerHttpResponse {
      */
     protected void touchDataBuffer(DataBuffer buffer) {
     }
+
+    @Nullable
+    abstract Integer getStatusCode0();
 }
