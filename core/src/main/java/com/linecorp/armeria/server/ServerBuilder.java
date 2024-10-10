@@ -1209,7 +1209,8 @@ public final class ServerBuilder implements TlsSetters, ServiceConfigsBuilder<Se
 
     /**
      * Configures SSL or TLS of the {@link Server} with an auto-generated self-signed certificate.
-     * <strong>Note:</strong> You should never use this in production but only for a testing purpose.
+     *
+     * <p><strong>Note:</strong> You should never use this in production but only for a testing purpose.
      *
      * @see #tlsCustomizer(Consumer)
      */
@@ -1220,7 +1221,8 @@ public final class ServerBuilder implements TlsSetters, ServiceConfigsBuilder<Se
 
     /**
      * Configures SSL or TLS of the {@link Server} with an auto-generated self-signed certificate.
-     * <strong>Note:</strong> You should never use this in production but only for a testing purpose.
+     *
+     * <p><strong>Note:</strong> You should never use this in production but only for a testing purpose.
      *
      * @see #tlsCustomizer(Consumer)
      */
@@ -2384,7 +2386,7 @@ public final class ServerBuilder implements TlsSetters, ServiceConfigsBuilder<Se
                 final TlsEngineType tlsEngineType = defaultVirtualHost.tlsEngineType();
                 assert tlsEngineType != null;
                 assert tlsProvider != null;
-                sslContexts = new TlsProviderMapping(tlsProvider, tlsEngineType, tlsConfig);
+                sslContexts = new TlsProviderMapping(tlsProvider, tlsEngineType, tlsConfig, meterRegistry);
             }
         }
         if (pingIntervalMillis > 0) {

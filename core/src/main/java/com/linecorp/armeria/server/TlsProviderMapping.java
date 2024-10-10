@@ -22,6 +22,7 @@ import com.linecorp.armeria.common.util.TlsEngineType;
 import com.linecorp.armeria.internal.common.SslContextFactory;
 import com.linecorp.armeria.internal.common.TlsProviderUtil;
 
+import io.micrometer.core.instrument.MeterRegistry;
 import io.netty.handler.ssl.SslContext;
 import io.netty.util.Mapping;
 
@@ -30,8 +31,8 @@ final class TlsProviderMapping implements Mapping<String, SslContext> {
     private final SslContextFactory sslContextFactory;
 
     TlsProviderMapping(TlsProvider tlsProvider, TlsEngineType tlsEngineType,
-                       @Nullable ServerTlsConfig tlsConfig) {
-        sslContextFactory = new SslContextFactory(tlsProvider, tlsEngineType, tlsConfig);
+                       @Nullable ServerTlsConfig tlsConfig, MeterRegistry meterRegistry) {
+        sslContextFactory = new SslContextFactory(tlsProvider, tlsEngineType, tlsConfig, meterRegistry);
     }
 
     @Override

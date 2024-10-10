@@ -223,7 +223,7 @@ class TlsProviderTrustedCertificatesTest {
                                   .tlsProvider(tlsProvider)
                                   .build()) {
             final BlockingWebClient client =
-                    WebClient.builder("https://foo.com:" + fooServer.httpsPort())
+                    WebClient.builder("https://bar.com:" + barServer.httpsPort())
                              .factory(factory)
                              .build()
                              .blocking();

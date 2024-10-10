@@ -157,11 +157,12 @@ final class AsyncMapStreamMessage<T, U> implements StreamMessage<U> {
             } catch (Throwable ex) {
                 StreamMessageUtil.closeOrAbort(item, ex);
 
+                // onError(ex) should be called before upstream.cancel() that may close downstream with
+                // CancelledSubscriptionException.
+                onError(ex);
                 final Subscription upstream = this.upstream;
                 assert upstream != null;
                 upstream.cancel();
-
-                onError(ex);
             }
         }
 
@@ -179,8 +180,8 @@ final class AsyncMapStreamMessage<T, U> implements StreamMessage<U> {
 
             try {
                 if (cause != null) {
-                    upstream.cancel();
                     onError(cause);
+                    upstream.cancel();
                 } else {
                     requireNonNull(item, "function.apply()'s future completed with null");
                     downstream.onNext(item);
@@ -205,8 +206,8 @@ final class AsyncMapStreamMessage<T, U> implements StreamMessage<U> {
                 if (item != null) {
                     StreamMessageUtil.closeOrAbort(item, ex);
                 }
-                upstream.cancel();
                 onError(ex);
+                upstream.cancel();
             }
         }
 

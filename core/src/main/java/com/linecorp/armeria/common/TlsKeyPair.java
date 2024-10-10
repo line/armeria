@@ -43,7 +43,7 @@ import com.linecorp.armeria.internal.common.util.SelfSignedCertificate;
 public final class TlsKeyPair {
 
     /**
-     * Creates a new {@link TlsKeyPair} from the specified the key {@link InputStream}, and certificate chain
+     * Creates a new {@link TlsKeyPair} from the specified key {@link InputStream}, and certificate chain
      * {@link InputStream}.
      */
     public static TlsKeyPair of(InputStream keyInputStream, InputStream certificateChainInputStream) {
@@ -51,7 +51,7 @@ public final class TlsKeyPair {
     }
 
     /**
-     * Creates a new {@link TlsKeyPair} from the specified the key {@link InputStream}, key password
+     * Creates a new {@link TlsKeyPair} from the specified key {@link InputStream}, key password
      * {@link InputStream} and certificate chain {@link InputStream}.
      */
     public static TlsKeyPair of(InputStream keyInputStream, @Nullable String keyPassword,
@@ -68,14 +68,14 @@ public final class TlsKeyPair {
     }
 
     /**
-     * Creates a new {@link TlsKeyPair} from the specified the key file and certificate chain file.
+     * Creates a new {@link TlsKeyPair} from the specified key file and certificate chain file.
      */
     public static TlsKeyPair of(File keyFile, File certificateChainFile) {
         return of(keyFile, null, certificateChainFile);
     }
 
     /**
-     * Creates a new {@link TlsKeyPair} from the specified the key file, key password and certificate chain
+     * Creates a new {@link TlsKeyPair} from the specified key file, key password and certificate chain
      * file.
      */
     public static TlsKeyPair of(File keyFile, @Nullable String keyPassword, File certificateChainFile) {

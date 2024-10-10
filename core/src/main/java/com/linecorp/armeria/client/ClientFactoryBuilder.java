@@ -64,6 +64,7 @@ import com.linecorp.armeria.common.TlsProvider;
 import com.linecorp.armeria.common.TlsSetters;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
+import com.linecorp.armeria.common.outlier.OutlierDetection;
 import com.linecorp.armeria.common.util.EventLoopGroups;
 import com.linecorp.armeria.common.util.TlsEngineType;
 import com.linecorp.armeria.internal.common.IgnoreHostsTrustManager;
@@ -861,6 +862,18 @@ public final class ClientFactoryBuilder implements TlsSetters {
             ConnectionPoolListener connectionPoolListener) {
         option(ClientFactoryOptions.CONNECTION_POOL_LISTENER,
                requireNonNull(connectionPoolListener, "connectionPoolListener"));
+        return this;
+    }
+
+    /**
+     * Sets the {@link OutlierDetection} which is used to detect unhealthy connections.
+     * If an unhealthy connection is detected, it is disabled and a new connection will be created.
+     * This option is disabled by default.
+     */
+    @UnstableApi
+    public ClientFactoryBuilder connectionOutlierDetection(OutlierDetection outlierDetection) {
+        option(ClientFactoryOptions.CONNECTION_OUTLIER_DETECTION,
+               requireNonNull(outlierDetection, "outlierDetection"));
         return this;
     }
 

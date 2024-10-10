@@ -112,8 +112,7 @@ class TlsProviderCacheTest {
                 TlsProvider.builder()
                            .keyPair("foo.com", clientFooCert.tlsKeyPair())
                            .keyPair("bar.com", clientBarCert.tlsKeyPair())
-                           .trustedCertificates(serverFooCert.certificate())
-                           .trustedCertificates(serverBarCert.certificate())
+                           .trustedCertificates(serverFooCert.certificate(), serverBarCert.certificate())
                            .build();
 
         final List<Channel> channels = new ArrayList<>();

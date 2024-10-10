@@ -295,8 +295,8 @@ final class FuseableStreamMessage<T, U> implements StreamMessage<U> {
                 if (result != null && item != result) {
                     StreamMessageUtil.closeOrAbort(result, ex);
                 }
-                upstream.cancel();
                 onError(ex);
+                upstream.cancel();
             }
         }
 

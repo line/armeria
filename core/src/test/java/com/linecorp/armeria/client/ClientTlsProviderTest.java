@@ -18,6 +18,9 @@ package com.linecorp.armeria.client;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.awaitility.Awaitility.await;
+
+import java.util.Map;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
@@ -25,6 +28,7 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.TlsKeyPair;
 import com.linecorp.armeria.common.TlsProvider;
+import com.linecorp.armeria.common.metric.MoreMeters;
 import com.linecorp.armeria.internal.common.util.CertificateUtil;
 import com.linecorp.armeria.internal.testing.MockAddressResolverGroup;
 import com.linecorp.armeria.server.ServerBuilder;
@@ -32,6 +36,8 @@ import com.linecorp.armeria.server.ServerTlsConfig;
 import com.linecorp.armeria.testing.junit5.server.SelfSignedCertificateExtension;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import io.netty.handler.ssl.ClientAuth;
 
 class ClientTlsProviderTest {
@@ -49,9 +55,12 @@ class ClientTlsProviderTest {
     @RegisterExtension
     static final SelfSignedCertificateExtension server1BarCert = new SelfSignedCertificateExtension("bar.com");
     @RegisterExtension
-    static final SelfSignedCertificateExtension clientFooCert = new SelfSignedCertificateExtension();
+    static final SelfSignedCertificateExtension clientFooCert = new SelfSignedCertificateExtension("foo.com");
     @RegisterExtension
-    static final SelfSignedCertificateExtension clientBarCert = new SelfSignedCertificateExtension();
+    static final SelfSignedCertificateExtension clientSubFooCert =
+            new SelfSignedCertificateExtension("sub.foo.com");
+    @RegisterExtension
+    static final SelfSignedCertificateExtension clientBarCert = new SelfSignedCertificateExtension("bar.com");
 
     @RegisterExtension
     static final ServerExtension server0 = new ServerExtension() {
@@ -62,7 +71,7 @@ class ClientTlsProviderTest {
                                .keyPair(server0DefaultCert.tlsKeyPair())
                                .keyPair("foo.com", server0FooCert.tlsKeyPair())
                                .keyPair("*.foo.com", server0SubFooCert.tlsKeyPair())
-                               .trustedCertificates(clientFooCert.certificate())
+                               .trustedCertificates(clientFooCert.certificate(), clientSubFooCert.certificate())
                                .build();
 
             final ServerTlsConfig tlsConfig = ServerTlsConfig.builder()
@@ -154,8 +163,10 @@ class ClientTlsProviderTest {
                            .trustedCertificates(server0DefaultCert.certificate())
                            .build();
 
+        final MeterRegistry meterRegistry = new SimpleMeterRegistry();
         try (ClientFactory factory = ClientFactory.builder()
                                                   .tlsProvider(tlsProvider)
+                                                  .meterRegistry(meterRegistry)
                                                   .addressResolverGroupFactory(
                                                           unused -> MockAddressResolverGroup.localhost())
                                                   .build()) {
@@ -175,7 +186,26 @@ class ClientTlsProviderTest {
                               .build()
                               .blocking();
             assertThat(client.get("/").contentUtf8()).isEqualTo("default:localhost");
+
+            await().untilAsserted(() -> {
+                final Map<String, Double> metrics = MoreMeters.measureAll(meterRegistry);
+                // Make sure that the metrics for the certificates generated from TlsProvider are exported.
+                assertThat(metrics.get("armeria.client.tls.certificate.validity#value{common.name=foo.com}"))
+                        .isEqualTo(1.0);
+                assertThat(
+                        metrics.get("armeria.client.tls.certificate.validity#value{common.name=sub.foo.com}"))
+                        .isEqualTo(1.0);
+            });
         }
+
+        await().untilAsserted(() -> {
+            final Map<String, Double> metrics = MoreMeters.measureAll(meterRegistry);
+            // The metrics for the certificates should be closed when the associated connections are closed.
+            assertThat(metrics.get("armeria.client.tls.certificate.validity#value{common.name=foo.com}"))
+                    .isNull();
+            assertThat(metrics.get("armeria.client.tls.certificate.validity#value{common.name=sub.foo.com}"))
+                    .isNull();
+        });
     }
 
     @Test

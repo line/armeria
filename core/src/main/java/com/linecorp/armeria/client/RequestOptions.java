@@ -112,4 +112,14 @@ public interface RequestOptions {
      */
     @Nullable
     ExchangeType exchangeType();
+
+    /**
+     * Returns the {@link ResponseTimeoutMode} which determines when a {@link #responseTimeoutMillis()}
+     * will start to be scheduled.
+     *
+     * @see ResponseTimeoutMode
+     */
+    @Nullable
+    @UnstableApi
+    ResponseTimeoutMode responseTimeoutMode();
 }

@@ -45,7 +45,7 @@ final class NoopCancellationScheduler implements CancellationScheduler {
     }
 
     @Override
-    public void start(CancellationTask task) {
+    public void start() {
     }
 
     @Override
@@ -53,7 +53,13 @@ final class NoopCancellationScheduler implements CancellationScheduler {
     }
 
     @Override
-    public void clearTimeout(boolean resetTimeout) {
+    public boolean cancelScheduled() {
+        return false;
+    }
+
+    @Override
+    public boolean isScheduled() {
+        return false;
     }
 
     @Override
@@ -100,12 +106,6 @@ final class NoopCancellationScheduler implements CancellationScheduler {
     }
 
     @Override
-    public CompletableFuture<Void> whenTimingOut() {
-        return VOID_FUTURE;
-    }
-
-    @Override
-    public CompletableFuture<Void> whenTimedOut() {
-        return VOID_FUTURE;
+    public void updateTask(CancellationTask cancellationTask) {
     }
 }
