@@ -16,16 +16,17 @@
 
 package com.linecorp.armeria.common;
 
-import static com.linecorp.armeria.internal.common.TlsProviderUtil.normalizeHostname;
 import static java.util.Objects.requireNonNull;
 
 import java.security.cert.X509Certificate;
+import java.util.List;
 import java.util.Map;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 
 import com.linecorp.armeria.client.ClientFactoryBuilder;
+import com.linecorp.armeria.internal.common.TlsProviderUtil;
 import com.linecorp.armeria.server.ServerBuilder;
 
 /**
@@ -37,7 +38,8 @@ import com.linecorp.armeria.server.ServerBuilder;
 public final class TlsProviderBuilder {
 
     private final ImmutableMap.Builder<String, TlsKeyPair> tlsKeyPairsBuilder = ImmutableMap.builder();
-    private final ImmutableList.Builder<X509Certificate> x509CertificateBuilder = ImmutableList.builder();
+    private final ImmutableMap.Builder<String, List<X509Certificate>> x509CertificateBuilder =
+            ImmutableMap.builder();
 
     /**
      * Creates a new instance.
@@ -45,7 +47,7 @@ public final class TlsProviderBuilder {
     TlsProviderBuilder() {}
 
     /**
-     * Set the {@link TlsKeyPair} for the specified (optionally wildcard) {@code hostname}.
+     * Sets the {@link TlsKeyPair} for the specified (optionally wildcard) {@code hostname}.
      *
      * <p><a href="https://en.wikipedia.org/wiki/Wildcard_DNS_record">DNS wildcard</a> is supported as hostname.
      * The wildcard will only match one sub-domain deep and only when wildcard is used as the most-left label.
@@ -58,31 +60,57 @@ public final class TlsProviderBuilder {
      * <a href="https://www.cloudflare.com/learning/access-management/what-is-mutual-tls/">client certificate authentication</a>
      * when it is used for a client.
      */
-    public TlsProviderBuilder set(String hostname, TlsKeyPair tlsKeyPair) {
+    public TlsProviderBuilder keyPair(String hostname, TlsKeyPair tlsKeyPair) {
         requireNonNull(hostname, "hostname");
         requireNonNull(tlsKeyPair, "tlsKeyPair");
-        if ("*".equals(hostname)) {
-            tlsKeyPairsBuilder.put("*", tlsKeyPair);
-        } else {
-            tlsKeyPairsBuilder.put(normalizeHostname(hostname), tlsKeyPair);
-        }
+        tlsKeyPairsBuilder.put(normalize(hostname), tlsKeyPair);
         return this;
     }
 
     /**
-     * Set the default {@link TlsKeyPair} which is used when no {@link TlsKeyPair} is specified for a hostname.
+     * Sets the default {@link TlsKeyPair} which is used when no {@link TlsKeyPair} is specified for a hostname.
      *
      * <p>The {@link TlsKeyPair} will be used for
      * <a href="https://www.cloudflare.com/learning/access-management/what-is-mutual-tls/">client certificate authentication</a>
      * when it is used for a client.
      */
-    public TlsProviderBuilder setDefault(TlsKeyPair tlsKeyPair) {
-        return set("*", tlsKeyPair);
+    public TlsProviderBuilder keyPair(TlsKeyPair tlsKeyPair) {
+        return keyPair("*", tlsKeyPair);
     }
 
     /**
-     * Adds the specified {@link X509Certificate}s to the trusted certificates that will be used for verifying
-     * the remote endpoint's certificate. If not specified, the system default will be used.
+     * Sets the specified {@link X509Certificate}s to the trusted certificates that will be used for verifying
+     * the remote endpoint's certificate.
+     *
+     * <p>The system default will be used if no specific trusted certificates are set for a hostname and no
+     * default trusted certificates are set.
+     */
+    public TlsProviderBuilder trustedCertificates(String hostname, X509Certificate... trustedCertificates) {
+        requireNonNull(trustedCertificates, "trustedCertificates");
+        return trustedCertificates(hostname, ImmutableList.copyOf(trustedCertificates));
+    }
+
+    /**
+     * Sets the specified {@link X509Certificate}s to the trusted certificates that will be used for verifying
+     * the specified {@code hostname}'s certificate.
+     *
+     * <p>The system default will be used if no specific trusted certificates are set for a hostname and no
+     * default trusted certificates are set.
+     */
+    public TlsProviderBuilder trustedCertificates(String hostname,
+                                                  Iterable<? extends X509Certificate> trustedCertificates) {
+        requireNonNull(hostname, "hostname");
+        requireNonNull(trustedCertificates, "trustedCertificates");
+        x509CertificateBuilder.put(normalize(hostname), ImmutableList.copyOf(trustedCertificates));
+        return this;
+    }
+
+    /**
+     * Sets the default {@link X509Certificate}s to the trusted certificates that is used for verifying
+     * the remote endpoint's certificate if no specific trusted certificates are set for a hostname.
+     *
+     * <p>The system default will be used if no specific trusted certificates are set for a hostname and no
+     * default trusted certificates are set.
      */
     public TlsProviderBuilder trustedCertificates(X509Certificate... trustedCertificates) {
         requireNonNull(trustedCertificates, "trustedCertificates");
@@ -90,13 +118,22 @@ public final class TlsProviderBuilder {
     }
 
     /**
-     * Adds the specified {@link X509Certificate}s to the trusted certificates that will be used for verifying
-     * the remote endpoint's certificate. If not specified, the system default will be used.
+     * Sets the default {@link X509Certificate}s to the trusted certificates that is used for verifying
+     * the remote endpoint's certificate if no specific trusted certificates are set for a hostname.
+     *
+     * <p>The system default will be used if no specific trusted certificates are set for a hostname and no
+     * default trusted certificates are set.
      */
     public TlsProviderBuilder trustedCertificates(Iterable<? extends X509Certificate> trustedCertificates) {
-        requireNonNull(trustedCertificates, "trustedCertificates");
-        x509CertificateBuilder.addAll(trustedCertificates);
-        return this;
+        return trustedCertificates("*", trustedCertificates);
+    }
+
+    private static String normalize(String hostname) {
+        if ("*".equals(hostname)) {
+            return "*";
+        } else {
+            return TlsProviderUtil.normalizeHostname(hostname);
+        }
     }
 
     /**
@@ -108,9 +145,9 @@ public final class TlsProviderBuilder {
             throw new IllegalStateException("No TLS key pair is set.");
         }
 
-        final ImmutableList<X509Certificate> trustedCerts = x509CertificateBuilder.build();
-        if (keyPairMappings.size() == 1 && keyPairMappings.containsKey("*")) {
-            return new StaticTlsProvider(keyPairMappings.get("*"), trustedCerts);
+        final Map<String, List<X509Certificate>> trustedCerts = x509CertificateBuilder.build();
+        if (keyPairMappings.size() == 1 && keyPairMappings.containsKey("*") && trustedCerts.isEmpty()) {
+            return new StaticTlsProvider(keyPairMappings.get("*"));
         }
 
         return new MappedTlsProvider(keyPairMappings, trustedCerts);

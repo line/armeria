@@ -18,32 +18,20 @@ package com.linecorp.armeria.common;
 
 import static java.util.Objects.requireNonNull;
 
-import java.security.cert.X509Certificate;
-import java.util.List;
-import java.util.Objects;
-
 import com.google.common.base.MoreObjects;
 
 final class StaticTlsProvider implements TlsProvider {
 
     private final TlsKeyPair tlsKeyPair;
-    private final List<X509Certificate> trustedCertificates;
 
-    StaticTlsProvider(TlsKeyPair tlsKeyPair, List<X509Certificate> trustedCertificates) {
+    StaticTlsProvider(TlsKeyPair tlsKeyPair) {
         requireNonNull(tlsKeyPair, "tlsKeyPair");
-        requireNonNull(trustedCertificates, "trustedCertificates");
         this.tlsKeyPair = tlsKeyPair;
-        this.trustedCertificates = trustedCertificates;
     }
 
     @Override
-    public TlsKeyPair find(String hostname) {
+    public TlsKeyPair keyPair(String hostname) {
         return tlsKeyPair;
-    }
-
-    @Override
-    public List<X509Certificate> trustedCertificates() {
-        return trustedCertificates;
     }
 
     @Override
@@ -55,13 +43,12 @@ final class StaticTlsProvider implements TlsProvider {
             return false;
         }
         final StaticTlsProvider that = (StaticTlsProvider) o;
-        return tlsKeyPair.equals(that.tlsKeyPair) &&
-               trustedCertificates.equals(that.trustedCertificates);
+        return tlsKeyPair.equals(that.tlsKeyPair);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(tlsKeyPair, trustedCertificates);
+        return tlsKeyPair.hashCode();
     }
 
     @Override
@@ -69,7 +56,6 @@ final class StaticTlsProvider implements TlsProvider {
         return MoreObjects.toStringHelper(this)
                           .omitNullValues()
                           .add("tlsKeyPair", tlsKeyPair)
-                          .add("trustedCertificates", trustedCertificates)
                           .toString();
     }
 }

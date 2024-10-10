@@ -47,7 +47,7 @@ class TlsProviderMTlsTest {
         @Override
         protected void configure(ServerBuilder sb) {
             final TlsProvider tlsProvider = TlsProvider.builder()
-                                                       .setDefault(sscServer.tlsKeyPair())
+                                                       .keyPair(sscServer.tlsKeyPair())
                                                        .trustedCertificates(sscClient.certificate())
                                                        .build();
             final ServerTlsConfig tlsConfig = ServerTlsConfig.builder()
@@ -65,7 +65,7 @@ class TlsProviderMTlsTest {
     void testMTls() {
         final TlsProvider tlsProvider = TlsProvider
                 .builder()
-                .setDefault(sscClient.tlsKeyPair())
+                .keyPair(sscClient.tlsKeyPair())
                 .trustedCertificates(sscServer.certificate())
                 .build();
         try (ClientFactory factory = ClientFactory

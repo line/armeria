@@ -59,9 +59,9 @@ class ClientTlsProviderTest {
         protected void configure(ServerBuilder sb) {
             final TlsProvider tlsProvider =
                     TlsProvider.builder()
-                               .setDefault(server0DefaultCert.tlsKeyPair())
-                               .set("foo.com", server0FooCert.tlsKeyPair())
-                               .set("*.foo.com", server0SubFooCert.tlsKeyPair())
+                               .keyPair(server0DefaultCert.tlsKeyPair())
+                               .keyPair("foo.com", server0FooCert.tlsKeyPair())
+                               .keyPair("*.foo.com", server0SubFooCert.tlsKeyPair())
                                .trustedCertificates(clientFooCert.certificate())
                                .build();
 
@@ -94,8 +94,8 @@ class ClientTlsProviderTest {
         protected void configure(ServerBuilder sb) {
             final TlsProvider tlsProvider =
                     TlsProvider.builder()
-                               .setDefault(server1DefaultCert.tlsKeyPair())
-                               .set("bar.com", server1BarCert.tlsKeyPair())
+                               .keyPair(server1DefaultCert.tlsKeyPair())
+                               .keyPair("bar.com", server1BarCert.tlsKeyPair())
                                .trustedCertificates(clientFooCert.certificate())
                                .build();
             final ServerTlsConfig tlsConfig = ServerTlsConfig.builder()
@@ -122,8 +122,8 @@ class ClientTlsProviderTest {
         protected void configure(ServerBuilder sb) {
             final TlsProvider tlsProvider =
                     TlsProvider.builder()
-                               .setDefault(server0DefaultCert.tlsKeyPair())
-                               .set("bar.com", server1BarCert.tlsKeyPair())
+                               .keyPair(server0DefaultCert.tlsKeyPair())
+                               .keyPair("bar.com", server1BarCert.tlsKeyPair())
                                .build();
 
             sb.https(0)
@@ -144,15 +144,14 @@ class ClientTlsProviderTest {
     void testExactMatch() {
         final TlsProvider tlsProvider =
                 TlsProvider.builder()
-                           .set("*.foo.com", clientFooCert.tlsKeyPair())
-                           .set("bar.com", clientBarCert.tlsKeyPair())
-                           .setDefault(TlsKeyPair.of(clientFooCert.privateKey(),
-                                                     clientFooCert.certificate()))
-                           .trustedCertificates(
-                                   server0DefaultCert.certificate(),
-                                   server0FooCert.certificate(),
-                                   server0SubFooCert.certificate(),
-                                   server1BarCert.certificate())
+                           .keyPair("*.foo.com", clientFooCert.tlsKeyPair())
+                           .keyPair("bar.com", clientBarCert.tlsKeyPair())
+                           .keyPair(TlsKeyPair.of(clientFooCert.privateKey(),
+                                                  clientFooCert.certificate()))
+                           .trustedCertificates("foo.com", server0FooCert.certificate())
+                           .trustedCertificates("bar.com", server1BarCert.certificate())
+                           .trustedCertificates("sub.foo.com", server0SubFooCert.certificate())
+                           .trustedCertificates(server0DefaultCert.certificate())
                            .build();
 
         try (ClientFactory factory = ClientFactory.builder()
@@ -183,8 +182,8 @@ class ClientTlsProviderTest {
     void testWildcardMatch() {
         final TlsProvider tlsProvider =
                 TlsProvider.builder()
-                           .set("foo.com", clientFooCert.tlsKeyPair())
-                           .set("*.foo.com", clientFooCert.tlsKeyPair())
+                           .keyPair("foo.com", clientFooCert.tlsKeyPair())
+                           .keyPair("*.foo.com", clientFooCert.tlsKeyPair())
                            .trustedCertificates(server0FooCert.certificate(),
                                                 server0SubFooCert.certificate())
                            .build();
@@ -213,7 +212,7 @@ class ClientTlsProviderTest {
     void testNoMtls() {
         final TlsProvider tlsProvider =
                 TlsProvider.builder()
-                           .set("foo.com", clientFooCert.tlsKeyPair())
+                           .keyPair("foo.com", clientFooCert.tlsKeyPair())
                            .trustedCertificates(server0DefaultCert.certificate(),
                                                 server1BarCert.certificate())
                            .build();

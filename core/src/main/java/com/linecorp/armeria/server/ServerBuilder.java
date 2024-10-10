@@ -1156,11 +1156,11 @@ public final class ServerBuilder implements TlsSetters, ServiceConfigsBuilder<Se
      * Server
      *   .builder()
      *   .tlsProvider(
-     *     TlsProvider.builderForServer()
+     *     TlsProvider.builder()
      *                // Set the default key pair.
-     *                .setDefault(TlsKeyPair.of(...))
+     *                .keyPair(TlsKeyPair.of(...))
      *                // Set the key pair for "example.com".
-     *                .set("example.com", TlsKeyPair.of(...))
+     *                .keyPair("example.com", TlsKeyPair.of(...))
      *                .build())
      * }</pre>
      *
@@ -1170,6 +1170,7 @@ public final class ServerBuilder implements TlsSetters, ServiceConfigsBuilder<Se
     public ServerBuilder tlsProvider(TlsProvider tlsProvider) {
         requireNonNull(tlsProvider, "tlsProvider");
         this.tlsProvider = tlsProvider;
+        tlsConfig = null;
         return this;
     }
 
@@ -1180,11 +1181,11 @@ public final class ServerBuilder implements TlsSetters, ServiceConfigsBuilder<Se
      * <pre>{@code
      * TlsProvider tlsProvider =
      *   TlsProvider
-     *     .builderForServer()
+     *     .builder()
      *     // Set the default key pair.
-     *     .setDefault(TlsKeyPair.of(...))
+     *     .keyPair(TlsKeyPair.of(...))
      *     // Set the key pair for "example.com".
-     *     .set("example.com", TlsKeyPair.of(...))
+     *     .keyPair("example.com", TlsKeyPair.of(...))
      *     .build();
      *
      * ServerTlsConfig tlsConfig =
@@ -1192,7 +1193,6 @@ public final class ServerBuilder implements TlsSetters, ServiceConfigsBuilder<Se
      *     .builder()
      *     .clientAuth(ClientAuth.REQUIRED)
      *     .meterIdPrefix(...)
-     *     .tlsCustomizer(c -> ...)
      *     .build();
      *
      * Server

@@ -24,7 +24,7 @@ enum NullTlsProvider implements TlsProvider {
     INSTANCE;
 
     @Override
-    public @Nullable TlsKeyPair find(String hostname) {
+    public @Nullable TlsKeyPair keyPair(String hostname) {
         return null;
     }
 }

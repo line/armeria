@@ -462,6 +462,17 @@ public final class ClientFactoryBuilder implements TlsSetters {
 
     /**
      * Sets the {@link TlsProvider} that provides {@link TlsKeyPair}s for client certificate authentication.
+     * <pre>
+     * ClientFactory
+     *   .builder()
+     *   .tlsProvider(
+     *     TlsProvider.builder()
+     *                // Set the default key pair.
+     *                .keyPair(TlsKeyPair.of(...))
+     *                // Set the key pair for "example.com".
+     *                .keyPair("example.com", TlsKeyPair.of(...))
+     *                .build())
+     * </pre>
      */
     @UnstableApi
     public ClientFactoryBuilder tlsProvider(TlsProvider tlsProvider) {
@@ -469,6 +480,7 @@ public final class ClientFactoryBuilder implements TlsSetters {
         checkState(!staticTlsSettingsSet,
                    "Cannot configure the TlsProvider because static TLS settings have been set already.");
         this.tlsProvider = tlsProvider;
+        tlsConfig = null;
         return this;
     }
 

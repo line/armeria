@@ -47,10 +47,10 @@ class ServerTlsProviderTest {
         protected void configure(ServerBuilder sb) {
             final TlsProvider tlsProvider =
                     TlsProvider.builder()
-                               .set("*", TlsKeyPair.ofSelfSigned("default"))
-                               .set("example.com", TlsKeyPair.ofSelfSigned("example.com"))
-                               .set("api.example.com", TlsKeyPair.ofSelfSigned("api.example.com"))
-                               .set("*.example.com", TlsKeyPair.ofSelfSigned("*.example.com"))
+                               .keyPair("*", TlsKeyPair.ofSelfSigned("default"))
+                               .keyPair("example.com", TlsKeyPair.ofSelfSigned("example.com"))
+                               .keyPair("api.example.com", TlsKeyPair.ofSelfSigned("api.example.com"))
+                               .keyPair("*.example.com", TlsKeyPair.ofSelfSigned("*.example.com"))
                                .build();
 
             sb.https(0)
@@ -180,7 +180,7 @@ class ServerTlsProviderTest {
         private volatile TlsKeyPair keyPair;
 
         @Override
-        public TlsKeyPair find(String hostname) {
+        public TlsKeyPair keyPair(String hostname) {
             return keyPair;
         }
 

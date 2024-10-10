@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.common;
 
+import static com.google.common.base.MoreObjects.firstNonNull;
 import static com.linecorp.armeria.internal.common.TlsProviderUtil.normalizeHostname;
 import static java.util.Objects.requireNonNull;
 
@@ -25,48 +26,56 @@ import java.util.Map;
 import java.util.Objects;
 
 import com.google.common.base.MoreObjects;
+import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.common.annotation.Nullable;
 
 final class MappedTlsProvider implements TlsProvider {
 
     private final Map<String, TlsKeyPair> tlsKeyPairs;
-    private final List<X509Certificate> trustedCertificates;
+    private final Map<String, List<X509Certificate>> trustedCertificates;
 
-    MappedTlsProvider(Map<String, TlsKeyPair> tlsKeyPairs, List<X509Certificate> trustedCertificates) {
+    MappedTlsProvider(Map<String, TlsKeyPair> tlsKeyPairs,
+                      Map<String, List<X509Certificate>> trustedCertificates) {
         this.tlsKeyPairs = tlsKeyPairs;
         this.trustedCertificates = trustedCertificates;
     }
 
     @Nullable
     @Override
-    public TlsKeyPair find(String hostname) {
+    public TlsKeyPair keyPair(String hostname) {
         requireNonNull(hostname, "hostname");
+        return find(hostname, tlsKeyPairs);
+    }
+
+    @Override
+    public List<X509Certificate> trustedCertificates(String hostname) {
+        final List<X509Certificate> certs = find(hostname, trustedCertificates);
+        return firstNonNull(certs, ImmutableList.of());
+    }
+
+    @Nullable
+    private static <T> T find(String hostname, Map<String, T> map) {
         if ("*".equals(hostname)) {
-            return tlsKeyPairs.get("*");
+            return map.get("*");
         }
         hostname = normalizeHostname(hostname);
 
-        TlsKeyPair tlsKeyPair = tlsKeyPairs.get(hostname);
-        if (tlsKeyPair != null) {
-            return tlsKeyPair;
+        T value = map.get(hostname);
+        if (value != null) {
+            return value;
         }
 
         // No exact match, let's try a wildcard match.
         final int idx = hostname.indexOf('.');
         if (idx != -1) {
-            tlsKeyPair = tlsKeyPairs.get(hostname.substring(idx));
-            if (tlsKeyPair != null) {
-                return tlsKeyPair;
+            value = map.get(hostname.substring(idx));
+            if (value != null) {
+                return value;
             }
         }
-        // Try to find the default TlsKeyPair.
-        return tlsKeyPairs.get("*");
-    }
-
-    @Override
-    public List<X509Certificate> trustedCertificates() {
-        return trustedCertificates;
+        // Try to find the default one.
+        return map.get("*");
     }
 
     @Override

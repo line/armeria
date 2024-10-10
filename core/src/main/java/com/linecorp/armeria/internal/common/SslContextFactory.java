@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.internal.common;
 
+import static com.google.common.base.MoreObjects.firstNonNull;
 import static com.linecorp.armeria.internal.common.util.SslContextUtil.createSslContext;
 
 import java.security.cert.X509Certificate;
@@ -26,6 +27,7 @@ import java.util.Objects;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.MoreObjects;
+import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.client.ClientTlsConfig;
 import com.linecorp.armeria.common.AbstractTlsConfig;
@@ -92,7 +94,8 @@ public final class SslContextFactory {
         lock.lock();
         try {
             final TlsKeyPair tlsKeyPair = findTlsKeyPair(mode, hostname);
-            final CacheKey cacheKey = new CacheKey(mode, tlsKeyPair);
+            final List<X509Certificate> trustedCertificates = findTrustedCertificates(hostname);
+            final CacheKey cacheKey = new CacheKey(mode, tlsKeyPair, trustedCertificates);
             final SslContextHolder contextHolder = cache.computeIfAbsent(cacheKey, this::create);
             contextHolder.retain();
             reverseCache.putIfAbsent(contextHolder.sslContext(), cacheKey);
@@ -122,10 +125,10 @@ public final class SslContextFactory {
 
     @Nullable
     private TlsKeyPair findTlsKeyPair(SslContextMode mode, String hostname) {
-        TlsKeyPair tlsKeyPair = tlsProvider.find(hostname);
+        TlsKeyPair tlsKeyPair = tlsProvider.keyPair(hostname);
         if (tlsKeyPair == null) {
             // Try to find the default TLS key pair.
-            tlsKeyPair = tlsProvider.find("*");
+            tlsKeyPair = tlsProvider.keyPair("*");
         }
         if (mode == SslContextMode.SERVER && tlsKeyPair == null) {
             // A TlsKeyPair must exist for a server.
@@ -134,14 +137,28 @@ public final class SslContextFactory {
         return tlsKeyPair;
     }
 
+    private List<X509Certificate> findTrustedCertificates(String hostname) {
+        List<X509Certificate> certs = tlsProvider.trustedCertificates(hostname);
+        if (certs == null) {
+            certs = tlsProvider.trustedCertificates("*");
+        }
+        return firstNonNull(certs, ImmutableList.of());
+    }
+
     private SslContextHolder create(CacheKey key) {
         final MeterIdPrefix meterIdPrefix = meterIdPrefix(key.mode);
         final SslContext sslContext = newSslContext(key);
-        final CloseableMeterBinder meterBinder;
+        final ImmutableList.Builder<X509Certificate> builder = ImmutableList.builder();
         if (key.tlsKeyPair != null) {
-            meterBinder = MoreMeterBinders.certificateMetrics(key.tlsKeyPair.certificateChain(), meterIdPrefix);
-        } else {
-            meterBinder = null;
+            builder.addAll(key.tlsKeyPair.certificateChain());
+        }
+        if (!key.trustedCertificates.isEmpty()) {
+            builder.addAll(key.trustedCertificates);
+        }
+        final List<X509Certificate> certs = builder.build();
+        CloseableMeterBinder meterBinder = null;
+        if (!certs.isEmpty()) {
+            meterBinder = MoreMeterBinders.certificateMetrics(certs, meterIdPrefix);
         }
         return new SslContextHolder(sslContext, meterBinder);
     }
@@ -149,6 +166,7 @@ public final class SslContextFactory {
     private SslContext newSslContext(CacheKey key) {
         final SslContextMode mode = key.mode();
         final TlsKeyPair tlsKeyPair = key.tlsKeyPair();
+        final List<X509Certificate> trustedCerts = key.trustedCertificates();
         if (mode == SslContextMode.SERVER) {
             assert tlsKeyPair != null;
             return createSslContext(
@@ -156,8 +174,7 @@ public final class SslContextFactory {
                         final SslContextBuilder contextBuilder = SslContextBuilder.forServer(
                                 tlsKeyPair.privateKey(),
                                 tlsKeyPair.certificateChain());
-                        final List<X509Certificate> trustedCerts = tlsProvider.trustedCertificates();
-                        if (trustedCerts != null && !trustedCerts.isEmpty()) {
+                        if (!trustedCerts.isEmpty()) {
                             contextBuilder.trustManager(trustedCerts);
                         }
                         applyTlsConfig(contextBuilder);
@@ -173,8 +190,7 @@ public final class SslContextFactory {
                         if (tlsKeyPair != null) {
                             contextBuilder.keyManager(tlsKeyPair.privateKey(), tlsKeyPair.certificateChain());
                         }
-                        final List<X509Certificate> trustedCerts = tlsProvider.trustedCertificates();
-                        if (trustedCerts != null && !trustedCerts.isEmpty()) {
+                        if (!trustedCerts.isEmpty()) {
                             contextBuilder.trustManager(trustedCerts);
                         }
                         applyTlsConfig(contextBuilder);
@@ -231,9 +247,13 @@ public final class SslContextFactory {
         @Nullable
         private final TlsKeyPair tlsKeyPair;
 
-        private CacheKey(SslContextMode mode, @Nullable TlsKeyPair tlsKeyPair) {
+        private final List<X509Certificate> trustedCertificates;
+
+        private CacheKey(SslContextMode mode, @Nullable TlsKeyPair tlsKeyPair,
+                         List<X509Certificate> trustedCertificates) {
             this.mode = mode;
             this.tlsKeyPair = tlsKeyPair;
+            this.trustedCertificates = trustedCertificates;
         }
 
         SslContextMode mode() {
@@ -245,6 +265,10 @@ public final class SslContextFactory {
             return tlsKeyPair;
         }
 
+        public List<X509Certificate> trustedCertificates() {
+            return trustedCertificates;
+        }
+
         @Override
         public boolean equals(Object o) {
             if (this == o) {
@@ -254,12 +278,14 @@ public final class SslContextFactory {
                 return false;
             }
             final CacheKey that = (CacheKey) o;
-            return mode == that.mode && Objects.equals(tlsKeyPair, that.tlsKeyPair);
+            return mode == that.mode &&
+                   Objects.equals(tlsKeyPair, that.tlsKeyPair) &&
+                   trustedCertificates.equals(that.trustedCertificates);
         }
 
         @Override
         public int hashCode() {
-            return Objects.hash(mode, tlsKeyPair);
+            return Objects.hash(mode, tlsKeyPair, trustedCertificates);
         }
 
         @Override
@@ -268,6 +294,7 @@ public final class SslContextFactory {
                               .omitNullValues()
                               .add("mode", mode)
                               .add("tlsKeyPair", tlsKeyPair)
+                              .add("trustedCertificates", trustedCertificates)
                               .toString();
         }
     }

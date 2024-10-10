@@ -44,25 +44,25 @@ class ClientTlsProviderBuilderTest {
         final TlsKeyPair barWildKeyPair = TlsKeyPair.ofSelfSigned();
         final TlsProvider tlsProvider =
                 TlsProvider.builder()
-                           .setDefault(defaultKeyPair)
-                           .set("example.com", exactKeyPair)
-                           .set("*.foo.com", wildcardKeyPair)
-                           .set("*.bar.com", barWildKeyPair)
-                           .set("bar.com", barKeyPair)
+                           .keyPair(defaultKeyPair)
+                           .keyPair("example.com", exactKeyPair)
+                           .keyPair("*.foo.com", wildcardKeyPair)
+                           .keyPair("*.bar.com", barWildKeyPair)
+                           .keyPair("bar.com", barKeyPair)
                            .build();
-        assertThat(tlsProvider.find("any.com")).isEqualTo(defaultKeyPair);
+        assertThat(tlsProvider.keyPair("any.com")).isEqualTo(defaultKeyPair);
         // Exact match
-        assertThat(tlsProvider.find("example.com")).isEqualTo(exactKeyPair);
+        assertThat(tlsProvider.keyPair("example.com")).isEqualTo(exactKeyPair);
         // Wildcard match
-        assertThat(tlsProvider.find("bar.foo.com")).isEqualTo(wildcardKeyPair);
+        assertThat(tlsProvider.keyPair("bar.foo.com")).isEqualTo(wildcardKeyPair);
 
         // Not a wildcard match
-        assertThat(tlsProvider.find("foo.com")).isEqualTo(defaultKeyPair);
+        assertThat(tlsProvider.keyPair("foo.com")).isEqualTo(defaultKeyPair);
         // No nested wildcard support
-        assertThat(tlsProvider.find("baz.bar.foo.com")).isEqualTo(defaultKeyPair);
+        assertThat(tlsProvider.keyPair("baz.bar.foo.com")).isEqualTo(defaultKeyPair);
 
-        assertThat(tlsProvider.find("bar.com")).isEqualTo(barKeyPair);
-        assertThat(tlsProvider.find("foo.bar.com")).isEqualTo(barWildKeyPair);
-        assertThat(tlsProvider.find("foo.foo.bar.com")).isEqualTo(defaultKeyPair);
+        assertThat(tlsProvider.keyPair("bar.com")).isEqualTo(barKeyPair);
+        assertThat(tlsProvider.keyPair("foo.bar.com")).isEqualTo(barWildKeyPair);
+        assertThat(tlsProvider.keyPair("foo.foo.bar.com")).isEqualTo(defaultKeyPair);
     }
 }

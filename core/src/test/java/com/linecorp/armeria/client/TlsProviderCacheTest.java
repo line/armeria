@@ -74,8 +74,8 @@ class TlsProviderCacheTest {
         protected void configure(ServerBuilder sb) {
             final TlsProvider tlsProvider =
                     TlsProvider.builder()
-                               .setDefault(serverFooCert.tlsKeyPair())
-                               .set("bar.com", serverBarCert.tlsKeyPair())
+                               .keyPair(serverFooCert.tlsKeyPair())
+                               .keyPair("bar.com", serverBarCert.tlsKeyPair())
                                .trustedCertificates(clientFooCert.certificate(),
                                                     clientBarCert.certificate())
                                .build();
@@ -110,8 +110,8 @@ class TlsProviderCacheTest {
         final CountingConnectionPoolListener poolListener = new CountingConnectionPoolListener();
         final TlsProvider tlsProvider =
                 TlsProvider.builder()
-                           .set("foo.com", clientFooCert.tlsKeyPair())
-                           .set("bar.com", clientBarCert.tlsKeyPair())
+                           .keyPair("foo.com", clientFooCert.tlsKeyPair())
+                           .keyPair("bar.com", clientBarCert.tlsKeyPair())
                            .trustedCertificates(serverFooCert.certificate())
                            .trustedCertificates(serverBarCert.certificate())
                            .build();

@@ -21,8 +21,6 @@ import static java.util.Objects.requireNonNull;
 import java.security.cert.X509Certificate;
 import java.util.List;
 
-import com.google.common.collect.ImmutableList;
-
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.server.Server;
@@ -39,7 +37,7 @@ public interface TlsProvider {
      */
     static TlsProvider of(TlsKeyPair tlsKeyPair) {
         requireNonNull(tlsKeyPair, "tlsKeyPair");
-        return builder().setDefault(tlsKeyPair).build();
+        return builder().keyPair(tlsKeyPair).build();
     }
 
     /**
@@ -50,11 +48,11 @@ public interface TlsProvider {
      * TlsProvider
      *   .builder()
      *   // Set the default key pair.
-     *   .setDefault(TlsKeyPair.of(...))
+     *   .keyPair(TlsKeyPair.of(...))
      *   // Set the key pair for "api.example.com".
-     *   .set("api.example.com", TlsKeyPair.of(...))
+     *   .keyPair("api.example.com", TlsKeyPair.of(...))
      *   // Set the key pair for "web.example.com".
-     *   .set("web.example.com", TlsKeyPair.of(...))
+     *   .keyPair("web.example.com", TlsKeyPair.of(...))
      *   .build();
      * }</pre>
      */
@@ -70,13 +68,17 @@ public interface TlsProvider {
      * If no default {@link TlsKeyPair} is found, {@code null} will be returned.
      */
     @Nullable
-    TlsKeyPair find(String hostname);
+    TlsKeyPair keyPair(String hostname);
 
     /**
-     * Returns trusted certificates for verifying the remote endpoint's certificate. The system default will be
-     * used if this method returns an empty list.
+     * Returns trusted certificates for verifying the remote endpoint's certificate.
+     *
+     * <p>If no matching {@link X509Certificate}s are found for a hostname, {@code "*"} will be specified to get
+     * the default {@link X509Certificate}s.
+     * The system default will be used if this method returns null.
      */
-    default List<X509Certificate> trustedCertificates() {
-        return ImmutableList.of();
+    @Nullable
+    default List<X509Certificate> trustedCertificates(String hostname) {
+        return null;
     }
 }

@@ -542,7 +542,7 @@ class ProxyClientIntegrationTest {
     void testMTlsHttpsProxyWithTlsProvider(SessionProtocol protocol, Endpoint endpoint) throws Exception {
         final TlsProvider tlsProvider =
                 TlsProvider.builder()
-                           .setDefault(clientSsc.tlsKeyPair())
+                           .keyPair(clientSsc.tlsKeyPair())
                            .trustedCertificates(proxySsc.certificate(), backendSsc.certificate())
                            .build();
 

@@ -30,10 +30,10 @@ class TlsProviderMappingTest {
     @Test
     void testNoDefault() {
         final TlsProvider tlsProvider = TlsProvider.builder()
-                                                   .set("example.com", TlsKeyPair.ofSelfSigned())
-                                                   .set("api.example.com", TlsKeyPair.ofSelfSigned())
-                                                   .set("foo.com", TlsKeyPair.ofSelfSigned())
-                                                   .set("*.foo.com", TlsKeyPair.ofSelfSigned())
+                                                   .keyPair("example.com", TlsKeyPair.ofSelfSigned())
+                                                   .keyPair("api.example.com", TlsKeyPair.ofSelfSigned())
+                                                   .keyPair("foo.com", TlsKeyPair.ofSelfSigned())
+                                                   .keyPair("*.foo.com", TlsKeyPair.ofSelfSigned())
                                                    .build();
         final TlsProviderMapping mapping = new TlsProviderMapping(tlsProvider,
                                                                   TlsEngineType.OPENSSL,
@@ -54,11 +54,11 @@ class TlsProviderMappingTest {
     @Test
     void testWithDefault() {
         final TlsProvider tlsProvider = TlsProvider.builder()
-                                                   .setDefault(TlsKeyPair.ofSelfSigned())
-                                                   .set("example.com", TlsKeyPair.ofSelfSigned())
-                                                   .set("api.example.com", TlsKeyPair.ofSelfSigned())
-                                                   .set("foo.com", TlsKeyPair.ofSelfSigned())
-                                                   .set("*.foo.com", TlsKeyPair.ofSelfSigned())
+                                                   .keyPair(TlsKeyPair.ofSelfSigned())
+                                                   .keyPair("example.com", TlsKeyPair.ofSelfSigned())
+                                                   .keyPair("api.example.com", TlsKeyPair.ofSelfSigned())
+                                                   .keyPair("foo.com", TlsKeyPair.ofSelfSigned())
+                                                   .keyPair("*.foo.com", TlsKeyPair.ofSelfSigned())
                                                    .build();
         final TlsProviderMapping mapping = new TlsProviderMapping(tlsProvider,
                                                                   TlsEngineType.OPENSSL,
