@@ -460,7 +460,6 @@ allstate
 ally
 alp1.ae.flow.ch
 alpha-myqnapcloud.com
-alpha.bounty-full.com
 alsace
 alstahaug.no
 alstom
@@ -619,6 +618,7 @@ arts.co
 arts.nf
 arts.ro
 arts.ve
+arvanedge.ir
 arvo.network
 as
 as.sh.cn
@@ -917,7 +917,7 @@ best
 bestbuy
 bet
 bet.ar
-beta.bounty-full.com
+bet.br
 beta.tailscale.net
 betainabox.com
 better-than.tv
@@ -1063,7 +1063,6 @@ blogspot.lt
 blogspot.lu
 blogspot.md
 blogspot.mk
-blogspot.mr
 blogspot.mx
 blogspot.my
 blogspot.nl
@@ -1132,7 +1131,6 @@ bostik
 boston
 bot
 bounceme.net
-bounty-full.com
 boutique
 boutir.com
 box
@@ -1371,7 +1369,6 @@ centralus.azurestaticapps.net
 ceo
 cern
 certification.aero
-certmgr.org
 cesena-forli.it
 cesenaforli.it
 cf
@@ -1890,7 +1887,6 @@ d.bg
 d.gv.vc
 d.se
 daa.jp
-dabur
 dad
 daegu.kr
 daejeon.kr
@@ -1907,7 +1903,6 @@ daknong.vn
 damnserver.com
 danang.vn
 dance
-daplie.me
 darklang.io
 data
 date
@@ -2113,7 +2108,6 @@ dyn-vpn.de
 dyn.cosidns.de
 dyn.ddnss.de
 dyn.home-webserver.de
-dyn53.io
 dynalias.com
 dynalias.net
 dynalias.org
@@ -2555,6 +2549,7 @@ execute-api.ap-southeast-1.amazonaws.com
 execute-api.ap-southeast-2.amazonaws.com
 execute-api.ap-southeast-3.amazonaws.com
 execute-api.ap-southeast-4.amazonaws.com
+execute-api.ap-southeast-5.amazonaws.com
 execute-api.ca-central-1.amazonaws.com
 execute-api.ca-west-1.amazonaws.com
 execute-api.cn-north-1.amazonaws.com.cn
@@ -2748,7 +2743,6 @@ forms.ac
 forsale
 forsand.no
 fortal.br
-forte.id
 forum
 forum.hu
 forumz.info
@@ -3480,6 +3474,7 @@ herokussl.com
 heroy.more-og-romsdal.no
 heroy.nordland.no
 heteml.net
+hf.space
 hi.cn
 hi.us
 hicam.net
@@ -4736,6 +4731,7 @@ legal
 legnica.pl
 lego
 leikanger.no
+leilao.br
 leirfjord.no
 leirvik.no
 leitungsen.de
@@ -4858,7 +4854,6 @@ loabat.no
 loan
 loans
 localcert.net
-localhost.daplie.me
 localhostcert.net
 localplayer.dev
 locker
@@ -5286,6 +5281,8 @@ mitoyo.kagawa.jp
 mitsubishi
 mitsue.nara.jp
 mitsuke.niigata.jp
+mittwald.info
+mittwaldserver.info
 miura.kanagawa.jp
 miyada.nagano.jp
 miyagi.jp
@@ -5476,6 +5473,7 @@ myasustor.com
 mycloudnas.com
 mydatto.com
 mydatto.net
+mydbserver.com
 myddns.rocks
 mydissent.net
 mydns.bz
@@ -6571,7 +6569,6 @@ paragliding.aero
 parallel.jp
 parasite.jp
 paris
-paris.eu.org
 paris.replit.dev
 parliament.nz
 parma.it
@@ -6798,6 +6795,7 @@ prof
 prof.pr
 profesional.bo
 progressive
+project.space
 promo
 properties
 property
@@ -6844,7 +6842,6 @@ pyatigorsk.ru
 pymnt.uk
 pythonanywhere.com
 pz.it
-q-a.eu.org
 q.bg
 qa
 qa2.com
@@ -7124,6 +7121,7 @@ s3-accesspoint.ap-southeast-1.amazonaws.com
 s3-accesspoint.ap-southeast-2.amazonaws.com
 s3-accesspoint.ap-southeast-3.amazonaws.com
 s3-accesspoint.ap-southeast-4.amazonaws.com
+s3-accesspoint.ap-southeast-5.amazonaws.com
 s3-accesspoint.ca-central-1.amazonaws.com
 s3-accesspoint.ca-west-1.amazonaws.com
 s3-accesspoint.cn-north-1.amazonaws.com.cn
@@ -7139,6 +7137,7 @@ s3-accesspoint.dualstack.ap-southeast-1.amazonaws.com
 s3-accesspoint.dualstack.ap-southeast-2.amazonaws.com
 s3-accesspoint.dualstack.ap-southeast-3.amazonaws.com
 s3-accesspoint.dualstack.ap-southeast-4.amazonaws.com
+s3-accesspoint.dualstack.ap-southeast-5.amazonaws.com
 s3-accesspoint.dualstack.ca-central-1.amazonaws.com
 s3-accesspoint.dualstack.ca-west-1.amazonaws.com
 s3-accesspoint.dualstack.cn-north-1.amazonaws.com.cn
@@ -7187,6 +7186,7 @@ s3-ap-south-1.amazonaws.com
 s3-ap-southeast-1.amazonaws.com
 s3-ap-southeast-2.amazonaws.com
 s3-ca-central-1.amazonaws.com
+s3-deprecated.ap-southeast-5.amazonaws.com
 s3-deprecated.cn-north-1.amazonaws.com.cn
 s3-deprecated.eu-west-1.amazonaws.com
 s3-deprecated.us-east-1.amazonaws.com
@@ -7228,7 +7228,9 @@ s3-object-lambda.ap-southeast-1.amazonaws.com
 s3-object-lambda.ap-southeast-2.amazonaws.com
 s3-object-lambda.ap-southeast-3.amazonaws.com
 s3-object-lambda.ap-southeast-4.amazonaws.com
+s3-object-lambda.ap-southeast-5.amazonaws.com
 s3-object-lambda.ca-central-1.amazonaws.com
+s3-object-lambda.ca-west-1.amazonaws.com
 s3-object-lambda.cn-north-1.amazonaws.com.cn
 s3-object-lambda.cn-northwest-1.amazonaws.com.cn
 s3-object-lambda.eu-central-1.amazonaws.com
@@ -7275,6 +7277,7 @@ s3-website.ap-southeast-1.amazonaws.com
 s3-website.ap-southeast-2.amazonaws.com
 s3-website.ap-southeast-3.amazonaws.com
 s3-website.ap-southeast-4.amazonaws.com
+s3-website.ap-southeast-5.amazonaws.com
 s3-website.ca-central-1.amazonaws.com
 s3-website.ca-west-1.amazonaws.com
 s3-website.cn-north-1.amazonaws.com.cn
@@ -7284,17 +7287,26 @@ s3-website.dualstack.ap-northeast-1.amazonaws.com
 s3-website.dualstack.ap-northeast-2.amazonaws.com
 s3-website.dualstack.ap-northeast-3.amazonaws.com
 s3-website.dualstack.ap-south-1.amazonaws.com
+s3-website.dualstack.ap-south-2.amazonaws.com
 s3-website.dualstack.ap-southeast-1.amazonaws.com
 s3-website.dualstack.ap-southeast-2.amazonaws.com
+s3-website.dualstack.ap-southeast-3.amazonaws.com
+s3-website.dualstack.ap-southeast-4.amazonaws.com
+s3-website.dualstack.ap-southeast-5.amazonaws.com
 s3-website.dualstack.ca-central-1.amazonaws.com
 s3-website.dualstack.ca-west-1.amazonaws.com
 s3-website.dualstack.cn-north-1.amazonaws.com.cn
 s3-website.dualstack.eu-central-1.amazonaws.com
+s3-website.dualstack.eu-central-2.amazonaws.com
 s3-website.dualstack.eu-south-1.amazonaws.com
+s3-website.dualstack.eu-south-2.amazonaws.com
 s3-website.dualstack.eu-west-1.amazonaws.com
 s3-website.dualstack.eu-west-3.amazonaws.com
+s3-website.dualstack.il-central-1.amazonaws.com
+s3-website.dualstack.me-central-1.amazonaws.com
 s3-website.dualstack.sa-east-1.amazonaws.com
 s3-website.dualstack.us-east-1.amazonaws.com
+s3-website.dualstack.us-east-2.amazonaws.com
 s3-website.dualstack.us-west-1.amazonaws.com
 s3-website.dualstack.us-west-2.amazonaws.com
 s3-website.eu-central-1.amazonaws.com
@@ -7330,6 +7342,7 @@ s3.ap-southeast-1.amazonaws.com
 s3.ap-southeast-2.amazonaws.com
 s3.ap-southeast-3.amazonaws.com
 s3.ap-southeast-4.amazonaws.com
+s3.ap-southeast-5.amazonaws.com
 s3.ca-central-1.amazonaws.com
 s3.ca-west-1.amazonaws.com
 s3.cn-north-1.amazonaws.com.cn
@@ -7345,6 +7358,7 @@ s3.dualstack.ap-southeast-1.amazonaws.com
 s3.dualstack.ap-southeast-2.amazonaws.com
 s3.dualstack.ap-southeast-3.amazonaws.com
 s3.dualstack.ap-southeast-4.amazonaws.com
+s3.dualstack.ap-southeast-5.amazonaws.com
 s3.dualstack.ca-central-1.amazonaws.com
 s3.dualstack.ca-west-1.amazonaws.com
 s3.dualstack.cn-north-1.amazonaws.com.cn
@@ -7775,6 +7789,7 @@ shoparena.pl
 shopitsite.com
 shopping
 shopselect.net
+shopware.shop
 shopware.store
 shouji
 show
@@ -7974,6 +7989,7 @@ statebank
 statefarm
 stathelle.no
 static-access.net
+static.hf.space
 static.observableusercontent.com
 stavanger.no
 stavern.no
@@ -8601,6 +8617,7 @@ tychy.pl
 tydal.no
 tynset.no
 typedream.app
+typo3server.info
 tysfjord.no
 tysnes.no
 tysvar.no
@@ -9003,6 +9020,7 @@ website.yandexcloud.net
 websitebuilder.online
 websozai.jp
 webspace.rocks
+webspaceconfig.de
 webthings.io
 webview-assets.aws-cloud9.af-south-1.amazonaws.com
 webview-assets.aws-cloud9.ap-east-1.amazonaws.com
