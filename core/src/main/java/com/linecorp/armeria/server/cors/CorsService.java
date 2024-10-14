@@ -127,6 +127,7 @@ public final class CorsService extends SimpleDecoratingHttpService {
 
     @Override
     public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
+        CorsHeaderUtil.corsHeadersSet(ctx);
         // check if CORS preflight must be returned, or if
         // we need to forbid access because origin could not be validated
         if (isCorsPreflightRequest(req.headers())) {
@@ -137,11 +138,10 @@ public final class CorsService extends SimpleDecoratingHttpService {
             return forbidden();
         }
 
-        return unwrap().serve(ctx, req).mapHeaders(headers -> {
-            final ResponseHeadersBuilder builder = headers.toBuilder();
+        ctx.mutateAdditionalResponseHeaders(builder -> {
             CorsHeaderUtil.setCorsResponseHeaders(ctx, req, builder, config);
-            return builder.build();
         });
+        return unwrap().serve(ctx, req);
     }
 
     /**
