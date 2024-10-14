@@ -618,6 +618,7 @@ arts.co
 arts.nf
 arts.ro
 arts.ve
+arvanedge.ir
 arvo.network
 as
 as.sh.cn
@@ -1062,7 +1063,6 @@ blogspot.lt
 blogspot.lu
 blogspot.md
 blogspot.mk
-blogspot.mr
 blogspot.mx
 blogspot.my
 blogspot.nl
@@ -2549,6 +2549,7 @@ execute-api.ap-southeast-1.amazonaws.com
 execute-api.ap-southeast-2.amazonaws.com
 execute-api.ap-southeast-3.amazonaws.com
 execute-api.ap-southeast-4.amazonaws.com
+execute-api.ap-southeast-5.amazonaws.com
 execute-api.ca-central-1.amazonaws.com
 execute-api.ca-west-1.amazonaws.com
 execute-api.cn-north-1.amazonaws.com.cn
@@ -6568,7 +6569,6 @@ paragliding.aero
 parallel.jp
 parasite.jp
 paris
-paris.eu.org
 paris.replit.dev
 parliament.nz
 parma.it
@@ -6842,7 +6842,6 @@ pyatigorsk.ru
 pymnt.uk
 pythonanywhere.com
 pz.it
-q-a.eu.org
 q.bg
 qa
 qa2.com
@@ -7122,6 +7121,7 @@ s3-accesspoint.ap-southeast-1.amazonaws.com
 s3-accesspoint.ap-southeast-2.amazonaws.com
 s3-accesspoint.ap-southeast-3.amazonaws.com
 s3-accesspoint.ap-southeast-4.amazonaws.com
+s3-accesspoint.ap-southeast-5.amazonaws.com
 s3-accesspoint.ca-central-1.amazonaws.com
 s3-accesspoint.ca-west-1.amazonaws.com
 s3-accesspoint.cn-north-1.amazonaws.com.cn
@@ -7137,6 +7137,7 @@ s3-accesspoint.dualstack.ap-southeast-1.amazonaws.com
 s3-accesspoint.dualstack.ap-southeast-2.amazonaws.com
 s3-accesspoint.dualstack.ap-southeast-3.amazonaws.com
 s3-accesspoint.dualstack.ap-southeast-4.amazonaws.com
+s3-accesspoint.dualstack.ap-southeast-5.amazonaws.com
 s3-accesspoint.dualstack.ca-central-1.amazonaws.com
 s3-accesspoint.dualstack.ca-west-1.amazonaws.com
 s3-accesspoint.dualstack.cn-north-1.amazonaws.com.cn
@@ -7185,6 +7186,7 @@ s3-ap-south-1.amazonaws.com
 s3-ap-southeast-1.amazonaws.com
 s3-ap-southeast-2.amazonaws.com
 s3-ca-central-1.amazonaws.com
+s3-deprecated.ap-southeast-5.amazonaws.com
 s3-deprecated.cn-north-1.amazonaws.com.cn
 s3-deprecated.eu-west-1.amazonaws.com
 s3-deprecated.us-east-1.amazonaws.com
@@ -7226,7 +7228,9 @@ s3-object-lambda.ap-southeast-1.amazonaws.com
 s3-object-lambda.ap-southeast-2.amazonaws.com
 s3-object-lambda.ap-southeast-3.amazonaws.com
 s3-object-lambda.ap-southeast-4.amazonaws.com
+s3-object-lambda.ap-southeast-5.amazonaws.com
 s3-object-lambda.ca-central-1.amazonaws.com
+s3-object-lambda.ca-west-1.amazonaws.com
 s3-object-lambda.cn-north-1.amazonaws.com.cn
 s3-object-lambda.cn-northwest-1.amazonaws.com.cn
 s3-object-lambda.eu-central-1.amazonaws.com
@@ -7273,6 +7277,7 @@ s3-website.ap-southeast-1.amazonaws.com
 s3-website.ap-southeast-2.amazonaws.com
 s3-website.ap-southeast-3.amazonaws.com
 s3-website.ap-southeast-4.amazonaws.com
+s3-website.ap-southeast-5.amazonaws.com
 s3-website.ca-central-1.amazonaws.com
 s3-website.ca-west-1.amazonaws.com
 s3-website.cn-north-1.amazonaws.com.cn
@@ -7282,17 +7287,26 @@ s3-website.dualstack.ap-northeast-1.amazonaws.com
 s3-website.dualstack.ap-northeast-2.amazonaws.com
 s3-website.dualstack.ap-northeast-3.amazonaws.com
 s3-website.dualstack.ap-south-1.amazonaws.com
+s3-website.dualstack.ap-south-2.amazonaws.com
 s3-website.dualstack.ap-southeast-1.amazonaws.com
 s3-website.dualstack.ap-southeast-2.amazonaws.com
+s3-website.dualstack.ap-southeast-3.amazonaws.com
+s3-website.dualstack.ap-southeast-4.amazonaws.com
+s3-website.dualstack.ap-southeast-5.amazonaws.com
 s3-website.dualstack.ca-central-1.amazonaws.com
 s3-website.dualstack.ca-west-1.amazonaws.com
 s3-website.dualstack.cn-north-1.amazonaws.com.cn
 s3-website.dualstack.eu-central-1.amazonaws.com
+s3-website.dualstack.eu-central-2.amazonaws.com
 s3-website.dualstack.eu-south-1.amazonaws.com
+s3-website.dualstack.eu-south-2.amazonaws.com
 s3-website.dualstack.eu-west-1.amazonaws.com
 s3-website.dualstack.eu-west-3.amazonaws.com
+s3-website.dualstack.il-central-1.amazonaws.com
+s3-website.dualstack.me-central-1.amazonaws.com
 s3-website.dualstack.sa-east-1.amazonaws.com
 s3-website.dualstack.us-east-1.amazonaws.com
+s3-website.dualstack.us-east-2.amazonaws.com
 s3-website.dualstack.us-west-1.amazonaws.com
 s3-website.dualstack.us-west-2.amazonaws.com
 s3-website.eu-central-1.amazonaws.com
@@ -7328,6 +7342,7 @@ s3.ap-southeast-1.amazonaws.com
 s3.ap-southeast-2.amazonaws.com
 s3.ap-southeast-3.amazonaws.com
 s3.ap-southeast-4.amazonaws.com
+s3.ap-southeast-5.amazonaws.com
 s3.ca-central-1.amazonaws.com
 s3.ca-west-1.amazonaws.com
 s3.cn-north-1.amazonaws.com.cn
@@ -7343,6 +7358,7 @@ s3.dualstack.ap-southeast-1.amazonaws.com
 s3.dualstack.ap-southeast-2.amazonaws.com
 s3.dualstack.ap-southeast-3.amazonaws.com
 s3.dualstack.ap-southeast-4.amazonaws.com
+s3.dualstack.ap-southeast-5.amazonaws.com
 s3.dualstack.ca-central-1.amazonaws.com
 s3.dualstack.ca-west-1.amazonaws.com
 s3.dualstack.cn-north-1.amazonaws.com.cn
