@@ -54,7 +54,9 @@ final class DefaultGracefulShutdown implements GracefulShutdown {
 
     @Override
     public boolean equals(Object o) {
-        if (this == o) {return true;}
+        if (this == o) {
+            return true;
+        }
         if (!(o instanceof DefaultGracefulShutdown)) {
             return false;
         }
