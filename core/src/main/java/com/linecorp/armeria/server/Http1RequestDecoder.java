@@ -438,7 +438,7 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
                     pipeline.context(Http2ServerConnectionHandler.class);
             final Http2ServerConnectionHandler connectionHandler =
                     (Http2ServerConnectionHandler) connectionHandlerCtx.handler();
-            encoder.close();
+            encoder.close(ClosedSessionException.get());
             // The HTTP/2 encoder will be used when a protocol violation error occurs after upgrading to HTTP/2
             // that is directly written by 'fail()'.
             encoder = connectionHandler.getOrCreateResponseEncoder(connectionHandlerCtx);
