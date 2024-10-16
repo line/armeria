@@ -207,10 +207,11 @@ class StreamMessageCollectingTest {
           .hasCauseInstanceOf(CancelledSubscriptionException.class);
 
         final List<ByteBuf> bufs = ImmutableList.copyOf(data.values());
-
-        for (ByteBuf buf : bufs) {
-            assertThat(buf.refCnt()).isZero();
-        }
+        await().untilAsserted(() -> {
+            for (ByteBuf buf : bufs) {
+                assertThat(buf.refCnt()).isZero();
+            }
+        });
     }
 
     @Test
