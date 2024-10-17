@@ -50,7 +50,14 @@ abstract class AbstractServerHttpResponseVersionSpecific extends AbstractServerH
     @Override
     @Nullable
     public HttpStatusCode getStatusCode() {
-        return statusCode;
+        if (statusCode != null) {
+            return statusCode;
+        }
+        final Integer statusCode0 = getStatusCode0();
+        if (statusCode0 != null) {
+            return HttpStatusCode.valueOf(statusCode0);
+        }
+        return null;
     }
 
     @Override
@@ -62,6 +69,7 @@ abstract class AbstractServerHttpResponseVersionSpecific extends AbstractServerH
     @Override
     @Nullable
     public Integer getRawStatusCode() {
+        final HttpStatusCode statusCode = getStatusCode();
         return statusCode != null ? statusCode.value() : null;
     }
 }
