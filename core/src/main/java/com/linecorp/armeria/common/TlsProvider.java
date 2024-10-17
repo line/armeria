@@ -65,6 +65,8 @@ public interface TlsProvider {
      * <p>If no matching {@link TlsKeyPair} is found for a hostname, {@code "*"} will be specified to get the
      * default {@link TlsKeyPair}.
      * If no default {@link TlsKeyPair} is found, {@code null} will be returned.
+     *
+     * <p>Note that this operation is executed in an event loop thread, so it should not be blocked.
      */
     @Nullable
     TlsKeyPair keyPair(String hostname);
@@ -75,6 +77,8 @@ public interface TlsProvider {
      * <p>If no matching {@link X509Certificate}s are found for a hostname, {@code "*"} will be specified to get
      * the default {@link X509Certificate}s.
      * The system default will be used if this method returns null.
+     *
+     * <p>Note that this operation is executed in an event loop thread, so it should not be blocked.
      */
     @Nullable
     default List<X509Certificate> trustedCertificates(String hostname) {
