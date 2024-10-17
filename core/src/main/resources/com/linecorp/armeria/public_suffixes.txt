@@ -916,7 +916,6 @@ bestbuy
 bet
 bet.ar
 bet.br
-beta.tailscale.net
 betainabox.com
 better-than.tv
 bf
@@ -1083,7 +1082,6 @@ blogspot.ug
 blogspot.vn
 blogsyte.com
 bloomberg
-bloxcms.com
 blue
 bluebite.io
 blush.jp
@@ -1920,7 +1918,6 @@ dclk
 dd-dns.de
 ddns.me
 ddns.net
-ddns5.com
 ddnsfree.com
 ddnsgeek.com
 ddnsking.com
