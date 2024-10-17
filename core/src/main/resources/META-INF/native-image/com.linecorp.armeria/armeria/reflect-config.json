@@ -11,6 +11,8 @@
 }, {
   "name" : "[J"
 }, {
+  "name" : "[Lcom.fasterxml.jackson.databind.deser.BeanDeserializerModifier;"
+}, {
   "name" : "[Lcom.fasterxml.jackson.databind.deser.Deserializers;"
 }, {
   "name" : "[Lcom.fasterxml.jackson.databind.deser.KeyDeserializers;"
@@ -80,6 +82,12 @@
     "parameterTypes" : [ ]
   } ]
 }, {
+  "name" : "ch.qos.logback.classic.joran.SerializedModelConfigurator",
+  "methods" : [ {
+    "name" : "<init>",
+    "parameterTypes" : [ ]
+  } ]
+}, {
   "name" : "ch.qos.logback.classic.jul.LevelChangePropagator",
   "queryAllPublicMethods" : true,
   "methods" : [ {
@@ -125,6 +133,12 @@
   } ]
 }, {
   "name" : "ch.qos.logback.classic.pattern.ThreadConverter",
+  "methods" : [ {
+    "name" : "<init>",
+    "parameterTypes" : [ ]
+  } ]
+}, {
+  "name" : "ch.qos.logback.classic.util.DefaultJoranConfigurator",
   "methods" : [ {
     "name" : "<init>",
     "parameterTypes" : [ ]
@@ -185,7 +199,11 @@
 }, {
   "name" : "ch.qos.logback.core.spi.ContextAware",
   "queryAllDeclaredMethods" : true,
-  "queryAllDeclaredConstructors" : true
+  "queryAllDeclaredConstructors" : true,
+  "queriedMethods" : [ {
+    "name" : "valueOf",
+    "parameterTypes" : [ "java.lang.String" ]
+  } ]
 }, {
   "name" : "ch.qos.logback.core.spi.ContextAwareBase",
   "queryAllDeclaredMethods" : true,
@@ -254,6 +272,293 @@
   "name" : "com.fasterxml.jackson.jaxrs.json.JacksonJsonProvider",
   "allDeclaredFields" : true,
   "queryAllDeclaredMethods" : true
+}, {
+  "name" : "com.google.api.CustomHttpPattern",
+  "queriedMethods" : [ {
+    "name" : "newBuilder",
+    "parameterTypes" : [ ]
+  } ]
+}, {
+  "name" : "com.google.api.HttpBody",
+  "methods" : [ {
+    "name" : "newBuilder",
+    "parameterTypes" : [ ]
+  } ],
+  "queriedMethods" : [ {
+    "name" : "getContentType",
+    "parameterTypes" : [ ]
+  }, {
+    "name" : "getContentTypeBytes",
+    "parameterTypes" : [ ]
+  }, {
+    "name" : "getData",
+    "parameterTypes" : [ ]
+  }, {
+    "name" : "getDefaultInstance",
+    "parameterTypes" : [ ]
+  }, {
+    "name" : "getExtensions",
+    "parameterTypes" : [ "int" ]
+  }, {
+    "name" : "getExtensionsCount",
+    "parameterTypes" : [ ]
+  }, {
+    "name" : "getExtensionsList",
+    "parameterTypes" : [ ]
+  } ]
+}, {
+  "name" : "com.google.api.HttpBody$Builder",
+  "queriedMethods" : [ {
+    "name" : "addExtensions",
+    "parameterTypes" : [ "com.google.protobuf.Any" ]
+  }, {
+    "name" : "clearContentType",
+    "parameterTypes" : [ ]
+  }, {
+    "name" : "clearData",
+    "parameterTypes" : [ ]
+  }, {
+    "name" : "clearExtensions",
+    "parameterTypes" : [ ]
+  }, {
+    "name" : "getContentType",
+    "parameterTypes" : [ ]
+  }, {
+    "name" : "getData",
+    "parameterTypes" : [ ]
+  }, {
+    "name" : "getExtensions",
+    "parameterTypes" : [ "int" ]
+  }, {
+    "name" : "getExtensionsBuilder",
+    "parameterTypes" : [ "int" ]
+  }, {
+    "name" : "getExtensionsCount",
+    "parameterTypes" : [ ]
+  }, {
+    "name" : "getExtensionsList",
+    "parameterTypes" : [ ]
+  }, {
+    "name" : "setContentType",
+    "parameterTypes" : [ "java.lang.String" ]
+  }, {
+    "name" : "setContentTypeBytes",
+    "parameterTypes" : [ "com.google.protobuf.ByteString" ]
+  }, {
+    "name" : "setData",
+    "parameterTypes" : [ "com.google.protobuf.ByteString" ]
+  }, {
+    "name" : "setExtensions",
+    "parameterTypes" : [ "int", "com.google.protobuf.Any" ]
+  } ]
+}, {
+  "name" : "com.google.api.HttpRule",
+  "methods" : [ {
+    "name" : "getAdditionalBindingsList",
+    "parameterTypes" : [ ]
+  }, {
+    "name" : "getBody",
+    "parameterTypes" : [ ]
+  }, {
+    "name" : "getPatternCase",
+    "parameterTypes" : [ ]
+  }, {
+    "name" : "getPost",
+    "parameterTypes" : [ ]
+  }, {
+    "name" : "getResponseBody",
+    "parameterTypes" : [ ]
+  }, {
+    "name" : "getSelector",
+    "parameterTypes" : [ ]
+  } ],
+  "queriedMethods" : [ {
+    "name" : "getAdditionalBindings",
+    "parameterTypes" : [ "int" ]
+  }, {
+    "name" : "getAdditionalBindingsCount",
+    "parameterTypes" : [ ]
+  }, {
+    "name" : "getBodyBytes",
+    "parameterTypes" : [ ]
+  }, {
+    "name" : "getCustom",
+    "parameterTypes" : [ ]
+  }, {
+    "name" : "getDelete",
+    "parameterTypes" : [ ]
+  }, {
+    "name" : "getDeleteBytes",
+    "parameterTypes" : [ ]
+  }, {
+    "name" : "getGet",
+    "parameterTypes" : [ ]
+  }, {
+    "name" : "getGetBytes",
+    "parameterTypes" : [ ]
+  }, {
+    "name" : "getPatch",
+    "parameterTypes" : [ ]
+  }, {
+    "name" : "getPatchBytes",
+    "parameterTypes" : [ ]
+  }, {
+    "name" : "getPostBytes",
+    "parameterTypes" : [ ]
+  }, {
+    "name" : "getPut",
+    "parameterTypes" : [ ]
+  }, {
+    "name" : "getPutBytes",
+    "parameterTypes" : [ ]
+  }, {
+    "name" : "getResponseBodyBytes",
+    "parameterTypes" : [ ]
+  }, {
+    "name" : "getSelectorBytes",
+    "parameterTypes" : [ ]
+  }, {
+    "name" : "newBuilder",
+    "parameterTypes" : [ ]
+  } ]
+}, {
+  "name" : "com.google.api.HttpRule$Builder",
+  "queriedMethods" : [ {
+    "name" : "addAdditionalBindings",
+    "parameterTypes" : [ "com.google.api.HttpRule" ]
+  }, {
+    "name" : "clearAdditionalBindings",
+    "parameterTypes" : [ ]
+  }, {
+    "name" : "clearBody",
+    "parameterTypes" : [ ]
+  }, {
+    "name" : "clearCustom",
+    "parameterTypes" : [ ]
+  }, {
+    "name" : "clearDelete",
+    "parameterTypes" : [ ]
+  }, {
+    "name" : "clearGet",
+    "parameterTypes" : [ ]
+  }, {
+    "name" : "clearPatch",
+    "parameterTypes" : [ ]
+  }, {
+    "name" : "clearPattern",
+    "parameterTypes" : [ ]
+  }, {
+    "name" : "clearPost",
+    "parameterTypes" : [ ]
+  }, {
+    "name" : "clearPut",
+    "parameterTypes" : [ ]
+  }, {
+    "name" : "clearResponseBody",
+    "parameterTypes" : [ ]
+  }, {
+    "name" : "clearSelector",
+    "parameterTypes" : [ ]
+  }, {
+    "name" : "getAdditionalBindings",
+    "parameterTypes" : [ "int" ]
+  }, {
+    "name" : "getAdditionalBindingsBuilder",
+    "parameterTypes" : [ "int" ]
+  }, {
+    "name" : "getAdditionalBindingsCount",
+    "parameterTypes" : [ ]
+  }, {
+    "name" : "getAdditionalBindingsList",
+    "parameterTypes" : [ ]
+  }, {
+    "name" : "getBody",
+    "parameterTypes" : [ ]
+  }, {
+    "name" : "getCustom",
+    "parameterTypes" : [ ]
+  }, {
+    "name" : "getCustomBuilder",
+    "parameterTypes" : [ ]
+  }, {
+    "name" : "getDelete",
+    "parameterTypes" : [ ]
+  }, {
+    "name" : "getGet",
+    "parameterTypes" : [ ]
+  }, {
+    "name" : "getPatch",
+    "parameterTypes" : [ ]
+  }, {
+    "name" : "getPatternCase",
+    "parameterTypes" : [ ]
+  }, {
+    "name" : "getPost",
+    "parameterTypes" : [ ]
+  }, {
+    "name" : "getPut",
+    "parameterTypes" : [ ]
+  }, {
+    "name" : "getResponseBody",
+    "parameterTypes" : [ ]
+  }, {
+    "name" : "getSelector",
+    "parameterTypes" : [ ]
+  }, {
+    "name" : "setAdditionalBindings",
+    "parameterTypes" : [ "int", "com.google.api.HttpRule" ]
+  }, {
+    "name" : "setBody",
+    "parameterTypes" : [ "java.lang.String" ]
+  }, {
+    "name" : "setBodyBytes",
+    "parameterTypes" : [ "com.google.protobuf.ByteString" ]
+  }, {
+    "name" : "setCustom",
+    "parameterTypes" : [ "com.google.api.CustomHttpPattern" ]
+  }, {
+    "name" : "setDelete",
+    "parameterTypes" : [ "java.lang.String" ]
+  }, {
+    "name" : "setDeleteBytes",
+    "parameterTypes" : [ "com.google.protobuf.ByteString" ]
+  }, {
+    "name" : "setGet",
+    "parameterTypes" : [ "java.lang.String" ]
+  }, {
+    "name" : "setGetBytes",
+    "parameterTypes" : [ "com.google.protobuf.ByteString" ]
+  }, {
+    "name" : "setPatch",
+    "parameterTypes" : [ "java.lang.String" ]
+  }, {
+    "name" : "setPatchBytes",
+    "parameterTypes" : [ "com.google.protobuf.ByteString" ]
+  }, {
+    "name" : "setPost",
+    "parameterTypes" : [ "java.lang.String" ]
+  }, {
+    "name" : "setPostBytes",
+    "parameterTypes" : [ "com.google.protobuf.ByteString" ]
+  }, {
+    "name" : "setPut",
+    "parameterTypes" : [ "java.lang.String" ]
+  }, {
+    "name" : "setPutBytes",
+    "parameterTypes" : [ "com.google.protobuf.ByteString" ]
+  }, {
+    "name" : "setResponseBody",
+    "parameterTypes" : [ "java.lang.String" ]
+  }, {
+    "name" : "setResponseBodyBytes",
+    "parameterTypes" : [ "com.google.protobuf.ByteString" ]
+  }, {
+    "name" : "setSelector",
+    "parameterTypes" : [ "java.lang.String" ]
+  }, {
+    "name" : "setSelectorBytes",
+    "parameterTypes" : [ "com.google.protobuf.ByteString" ]
+  } ]
 }, {
   "name" : "com.google.common.util.concurrent.AbstractFuture",
   "fields" : [ {
@@ -2133,6 +2438,13 @@
 }, {
   "name" : "com.linecorp.armeria.client.Bootstraps$1"
 }, {
+  "name" : "com.linecorp.armeria.client.DefaultEventLoopScheduler",
+  "fields" : [ {
+    "name" : "acquisitionStartIndex"
+  }, {
+    "name" : "lastCleanupTimeNanos"
+  } ]
+}, {
   "name" : "com.linecorp.armeria.client.Http1ResponseDecoder",
   "queriedMethods" : [ {
     "name" : "channelActive",
@@ -2198,6 +2510,12 @@
     "parameterTypes" : [ "io.netty.channel.ChannelHandlerContext" ]
   } ]
 }, {
+  "name" : "com.linecorp.armeria.client.HttpClientPipelineConfigurator$ClientSslHandler",
+  "queriedMethods" : [ {
+    "name" : "channelActive",
+    "parameterTypes" : [ "io.netty.channel.ChannelHandlerContext" ]
+  } ]
+}, {
   "name" : "com.linecorp.armeria.client.HttpClientPipelineConfigurator$DowngradeHandler"
 }, {
   "name" : "com.linecorp.armeria.client.HttpClientPipelineConfigurator$ReadSuppressingAndChannelDeactivatingHandler",
@@ -2224,6 +2542,21 @@
     "parameterTypes" : [ "io.netty.channel.ChannelHandlerContext", "java.lang.Object" ]
   } ]
 }, {
+  "name" : "com.linecorp.armeria.client.retrofit2.ArmeriaCallFactory$ArmeriaCall",
+  "fields" : [ {
+    "name" : "executionState"
+  } ]
+}, {
+  "name" : "com.linecorp.armeria.common.CompletableRpcResponse",
+  "fields" : [ {
+    "name" : "cause"
+  } ]
+}, {
+  "name" : "com.linecorp.armeria.common.DefaultConcurrentAttributes",
+  "fields" : [ {
+    "name" : "attributes"
+  } ]
+}, {
   "name" : "com.linecorp.armeria.common.HttpHeaderNames",
   "allDeclaredFields" : true
 }, {
@@ -2238,6 +2571,8 @@
     "name" : "<init>",
     "parameterTypes" : [ ]
   } ]
+}, {
+  "name" : "com.linecorp.armeria.common.ResponseEntity"
 }, {
   "name" : "com.linecorp.armeria.common.annotation.Nullable",
   "queryAllPublicMethods" : true
@@ -2283,11 +2618,80 @@
     "parameterTypes" : [ "java.lang.String" ]
   } ]
 }, {
+  "name" : "com.linecorp.armeria.common.logging.DefaultRequestLog",
+  "fields" : [ {
+    "name" : "deferredFlags"
+  }, {
+    "name" : "flags"
+  } ]
+}, {
+  "name" : "com.linecorp.armeria.common.multipart.MultipartDecoder",
+  "fields" : [ {
+    "name" : "delegatedSubscriber"
+  } ]
+}, {
+  "name" : "com.linecorp.armeria.common.multipart.MultipartEncoder",
+  "fields" : [ {
+    "name" : "completionFuture"
+  }, {
+    "name" : "subscribed"
+  } ]
+}, {
   "name" : "com.linecorp.armeria.common.sse.ServerSentEvent"
 }, {
   "name" : "com.linecorp.armeria.common.stream.AbortedStreamException",
   "fields" : [ {
     "name" : "INSTANCE"
+  } ]
+}, {
+  "name" : "com.linecorp.armeria.common.stream.AggregationSupport",
+  "fields" : [ {
+    "name" : "aggregation"
+  } ]
+}, {
+  "name" : "com.linecorp.armeria.common.stream.ConcatArrayStreamMessage",
+  "fields" : [ {
+    "name" : "subscribed"
+  } ]
+}, {
+  "name" : "com.linecorp.armeria.common.stream.ConcatArrayStreamMessage$ConcatArraySubscriber",
+  "fields" : [ {
+    "name" : "cancelled"
+  } ]
+}, {
+  "name" : "com.linecorp.armeria.common.stream.ConcatPublisherStreamMessage",
+  "fields" : [ {
+    "name" : "outerSubscriber"
+  } ]
+}, {
+  "name" : "com.linecorp.armeria.common.stream.ConcatPublisherStreamMessage$InnerSubscriber",
+  "fields" : [ {
+    "name" : "cancelled"
+  } ]
+}, {
+  "name" : "com.linecorp.armeria.common.stream.DefaultStreamMessage",
+  "fields" : [ {
+    "name" : "state"
+  }, {
+    "name" : "subscription"
+  } ]
+}, {
+  "name" : "com.linecorp.armeria.common.stream.DeferredStreamMessage",
+  "fields" : [ {
+    "name" : "abortCause"
+  }, {
+    "name" : "collectingFuture"
+  }, {
+    "name" : "downstreamSubscription"
+  }, {
+    "name" : "subscribedToUpstream"
+  }, {
+    "name" : "upstream"
+  } ]
+}, {
+  "name" : "com.linecorp.armeria.common.util.AsyncCloseableSupport",
+  "fields" : [ {
+    "name" : "closing"
   } ]
 }, {
   "name" : "com.linecorp.armeria.common.util.Version",
@@ -2326,10 +2730,29 @@
     "parameterTypes" : [ ]
   } ]
 }, {
+  "name" : "com.linecorp.armeria.internal.client.DefaultClientRequestContext",
+  "fields" : [ {
+    "name" : "additionalRequestHeaders"
+  }, {
+    "name" : "whenInitialized"
+  } ]
+}, {
+  "name" : "com.linecorp.armeria.internal.client.grpc.ArmeriaClientCall",
+  "fields" : [ {
+    "name" : "pendingMessages"
+  }, {
+    "name" : "pendingTask"
+  } ]
+}, {
   "name" : "com.linecorp.armeria.internal.common.AbstractHttp2ConnectionHandler",
   "queriedMethods" : [ {
     "name" : "close",
     "parameterTypes" : [ "io.netty.channel.ChannelHandlerContext", "io.netty.channel.ChannelPromise" ]
+  } ]
+}, {
+  "name" : "com.linecorp.armeria.internal.common.NonWrappingRequestContext",
+  "fields" : [ {
+    "name" : "contextHook"
   } ]
 }, {
   "name" : "com.linecorp.armeria.internal.common.ReadSuppressingHandler",
@@ -2539,6 +2962,23 @@
     "name" : "label"
   } ]
 }, {
+  "name" : "com.linecorp.armeria.internal.common.stream.AbortedStreamMessage",
+  "fields" : [ {
+    "name" : "subscribed"
+  } ]
+}, {
+  "name" : "com.linecorp.armeria.internal.common.stream.FixedStreamMessage",
+  "fields" : [ {
+    "name" : "abortCause"
+  }, {
+    "name" : "executor"
+  } ]
+}, {
+  "name" : "com.linecorp.armeria.internal.common.stream.RecoverableStreamMessage",
+  "fields" : [ {
+    "name" : "subscribed"
+  } ]
+}, {
   "name" : "com.linecorp.armeria.internal.consul.AgentServiceClient$Service",
   "allDeclaredFields" : true,
   "queryAllDeclaredMethods" : true,
@@ -2655,15 +3095,30 @@
     "parameterTypes" : [ ]
   } ]
 }, {
+  "name" : "com.linecorp.armeria.internal.server.DefaultServiceRequestContext",
+  "fields" : [ {
+    "name" : "additionalResponseHeaders"
+  }, {
+    "name" : "additionalResponseTrailers"
+  } ]
+}, {
   "name" : "com.linecorp.armeria.internal.shaded.bouncycastle.jcajce.provider.asymmetric.COMPOSITE$Mappings"
 }, {
   "name" : "com.linecorp.armeria.internal.shaded.bouncycastle.jcajce.provider.asymmetric.DH$Mappings"
 }, {
-  "name" : "com.linecorp.armeria.internal.shaded.bouncycastle.jcajce.provider.asymmetric.DSA$Mappings"
+  "name" : "com.linecorp.armeria.internal.shaded.bouncycastle.jcajce.provider.asymmetric.DSA$Mappings",
+  "methods" : [ {
+    "name" : "<init>",
+    "parameterTypes" : [ ]
+  } ]
 }, {
   "name" : "com.linecorp.armeria.internal.shaded.bouncycastle.jcajce.provider.asymmetric.DSTU4145$Mappings"
 }, {
-  "name" : "com.linecorp.armeria.internal.shaded.bouncycastle.jcajce.provider.asymmetric.EC$Mappings"
+  "name" : "com.linecorp.armeria.internal.shaded.bouncycastle.jcajce.provider.asymmetric.EC$Mappings",
+  "methods" : [ {
+    "name" : "<init>",
+    "parameterTypes" : [ ]
+  } ]
 }, {
   "name" : "com.linecorp.armeria.internal.shaded.bouncycastle.jcajce.provider.asymmetric.ECGOST$Mappings"
 }, {
@@ -2677,9 +3132,23 @@
 }, {
   "name" : "com.linecorp.armeria.internal.shaded.bouncycastle.jcajce.provider.asymmetric.IES$Mappings"
 }, {
-  "name" : "com.linecorp.armeria.internal.shaded.bouncycastle.jcajce.provider.asymmetric.RSA$Mappings"
+  "name" : "com.linecorp.armeria.internal.shaded.bouncycastle.jcajce.provider.asymmetric.RSA$Mappings",
+  "methods" : [ {
+    "name" : "<init>",
+    "parameterTypes" : [ ]
+  } ]
 }, {
-  "name" : "com.linecorp.armeria.internal.shaded.bouncycastle.jcajce.provider.asymmetric.X509$Mappings"
+  "name" : "com.linecorp.armeria.internal.shaded.bouncycastle.jcajce.provider.asymmetric.X509$Mappings",
+  "methods" : [ {
+    "name" : "<init>",
+    "parameterTypes" : [ ]
+  } ]
+}, {
+  "name" : "com.linecorp.armeria.internal.shaded.bouncycastle.jcajce.provider.asymmetric.rsa.DigestSignatureSpi$SHA256",
+  "methods" : [ {
+    "name" : "<init>",
+    "parameterTypes" : [ ]
+  } ]
 }, {
   "name" : "com.linecorp.armeria.internal.shaded.bouncycastle.jcajce.provider.asymmetric.x509.CertificateFactory",
   "methods" : [ {
@@ -3020,9 +3489,32 @@
     "name" : "thread"
   } ]
 }, {
+  "name" : "com.linecorp.armeria.internal.shaded.guava.util.concurrent.AggregateFutureState",
+  "fields" : [ {
+    "name" : "remaining"
+  }, {
+    "name" : "seenExceptions"
+  } ]
+}, {
+  "name" : "com.linecorp.armeria.internal.shaded.jctools.maps.ConcurrentAutoTable",
+  "fields" : [ {
+    "name" : "_cat"
+  } ]
+}, {
   "name" : "com.linecorp.armeria.internal.shaded.jctools.maps.NonBlockingHashMap",
   "fields" : [ {
     "name" : "_kvs"
+  } ]
+}, {
+  "name" : "com.linecorp.armeria.internal.shaded.jctools.maps.NonBlockingHashMap$CHM",
+  "fields" : [ {
+    "name" : "_copyDone"
+  }, {
+    "name" : "_copyIdx"
+  }, {
+    "name" : "_newkvs"
+  }, {
+    "name" : "_resizers"
   } ]
 }, {
   "name" : "com.linecorp.armeria.internal.shaded.jctools.queues.BaseMpscLinkedArrayQueueColdProducerFields",
@@ -3064,6 +3556,11 @@
     "parameterTypes" : [ ]
   } ]
 }, {
+  "name" : "com.linecorp.armeria.server.DefaultUnloggedExceptionsReporter",
+  "fields" : [ {
+    "name" : "scheduled"
+  } ]
+}, {
   "name" : "com.linecorp.armeria.server.Http1RequestDecoder",
   "queriedMethods" : [ {
     "name" : "channelActive",
@@ -3096,6 +3593,8 @@
     "name" : "userEventTriggered",
     "parameterTypes" : [ "io.netty.channel.ChannelHandlerContext", "java.lang.Object" ]
   } ]
+}, {
+  "name" : "com.linecorp.armeria.server.HttpServerCodec"
 }, {
   "name" : "com.linecorp.armeria.server.HttpServerHandler",
   "queriedMethods" : [ {
@@ -3518,6 +4017,11 @@
     "parameterTypes" : [ ]
   } ]
 }, {
+  "name" : "com.linecorp.armeria.server.grpc.StreamingServerCall",
+  "fields" : [ {
+    "name" : "pendingMessages"
+  } ]
+}, {
   "name" : "com.linecorp.armeria.server.protobuf.ProtobufRequestConverterFunction",
   "methods" : [ {
     "name" : "<init>",
@@ -3933,6 +4437,11 @@
 }, {
   "name" : "io.grpc.internal.PickFirstLoadBalancerProvider"
 }, {
+  "name" : "io.grpc.internal.SerializingExecutor",
+  "fields" : [ {
+    "name" : "runState"
+  } ]
+}, {
   "name" : "io.grpc.kotlin.AbstractCoroutineServerImpl",
   "queryAllDeclaredMethods" : true
 }, {
@@ -3974,6 +4483,16 @@
   "name" : "io.micrometer.core.instrument.DistributionSummary$Builder",
   "queryAllPublicMethods" : true
 }, {
+  "name" : "io.micrometer.core.instrument.distribution.AbstractTimeWindowHistogram",
+  "fields" : [ {
+    "name" : "rotating"
+  } ]
+}, {
+  "name" : "io.micrometer.core.instrument.distribution.TimeWindowMax",
+  "fields" : [ {
+    "name" : "rotating"
+  } ]
+}, {
   "name" : "io.netty.bootstrap.ServerBootstrap$1"
 }, {
   "name" : "io.netty.bootstrap.ServerBootstrap$ServerBootstrapAcceptor",
@@ -3991,6 +4510,11 @@
   "name" : "io.netty.buffer.AbstractReferenceCountedByteBuf",
   "fields" : [ {
     "name" : "refCnt"
+  } ]
+}, {
+  "name" : "io.netty.channel.AbstractChannelHandlerContext",
+  "fields" : [ {
+    "name" : "handlerState"
   } ]
 }, {
   "name" : "io.netty.channel.ChannelDuplexHandler",
@@ -4063,6 +4587,13 @@
   }, {
     "name" : "exceptionCaught",
     "parameterTypes" : [ "io.netty.channel.ChannelHandlerContext", "java.lang.Throwable" ]
+  } ]
+}, {
+  "name" : "io.netty.channel.ChannelOutboundBuffer",
+  "fields" : [ {
+    "name" : "totalPendingSize"
+  }, {
+    "name" : "unwritable"
   } ]
 }, {
   "name" : "io.netty.channel.ChannelOutboundHandlerAdapter",
@@ -4144,6 +4675,18 @@
   }, {
     "name" : "write",
     "parameterTypes" : [ "io.netty.channel.ChannelHandlerContext", "java.lang.Object", "io.netty.channel.ChannelPromise" ]
+  } ]
+}, {
+  "name" : "io.netty.channel.DefaultChannelConfig",
+  "fields" : [ {
+    "name" : "autoRead"
+  }, {
+    "name" : "writeBufferWaterMark"
+  } ]
+}, {
+  "name" : "io.netty.channel.DefaultChannelPipeline",
+  "fields" : [ {
+    "name" : "estimatorHandle"
   } ]
 }, {
   "name" : "io.netty.channel.DefaultChannelPipeline$HeadContext",
@@ -4346,6 +4889,11 @@
   "name" : "io.netty.channel.unix.DatagramSocketAddress"
 }, {
   "name" : "io.netty.channel.unix.DomainDatagramSocketAddress"
+}, {
+  "name" : "io.netty.channel.unix.FileDescriptor",
+  "fields" : [ {
+    "name" : "state"
+  } ]
 }, {
   "name" : "io.netty.channel.unix.PeerCredentials"
 }, {
@@ -4592,6 +5140,11 @@
 }, {
   "name" : "io.netty.internal.tcnative.SSLTask"
 }, {
+  "name" : "io.netty.resolver.dns.Cache$Entries",
+  "fields" : [ {
+    "name" : "expirationFuture"
+  } ]
+}, {
   "name" : "io.netty.resolver.dns.DnsNameResolver",
   "methods" : [ {
     "name" : "ndots",
@@ -4632,8 +5185,42 @@
     "name" : "refCnt"
   } ]
 }, {
+  "name" : "io.netty.util.DefaultAttributeMap",
+  "fields" : [ {
+    "name" : "attributes"
+  } ]
+}, {
+  "name" : "io.netty.util.DefaultAttributeMap$DefaultAttribute",
+  "fields" : [ {
+    "name" : "attributeMap"
+  } ]
+}, {
+  "name" : "io.netty.util.Recycler$DefaultHandle",
+  "fields" : [ {
+    "name" : "state"
+  } ]
+}, {
   "name" : "io.netty.util.ReferenceCountUtil",
   "queryAllDeclaredMethods" : true
+}, {
+  "name" : "io.netty.util.ResourceLeakDetector$DefaultResourceLeak",
+  "fields" : [ {
+    "name" : "droppedRecords"
+  }, {
+    "name" : "head"
+  } ]
+}, {
+  "name" : "io.netty.util.concurrent.DefaultPromise",
+  "fields" : [ {
+    "name" : "result"
+  } ]
+}, {
+  "name" : "io.netty.util.concurrent.SingleThreadEventExecutor",
+  "fields" : [ {
+    "name" : "state"
+  }, {
+    "name" : "threadProperties"
+  } ]
 }, {
   "name" : "io.netty.util.internal.NativeLibraryUtil",
   "methods" : [ {
@@ -4709,7 +5296,407 @@
 }, {
   "name" : "java.lang.CharSequence",
   "allDeclaredFields" : true,
-  "queryAllPublicMethods" : true
+  "queryAllPublicMethods" : true,
+  "queriedMethods" : [ {
+    "name" : "charAt",
+    "parameterTypes" : [ "int" ]
+  }, {
+    "name" : "checkBoundsBeginEnd",
+    "parameterTypes" : [ "int", "int", "int" ]
+  }, {
+    "name" : "checkBoundsOffCount",
+    "parameterTypes" : [ "int", "int", "int" ]
+  }, {
+    "name" : "checkIndex",
+    "parameterTypes" : [ "int", "int" ]
+  }, {
+    "name" : "checkOffset",
+    "parameterTypes" : [ "int", "int" ]
+  }, {
+    "name" : "codePointAt",
+    "parameterTypes" : [ "int" ]
+  }, {
+    "name" : "codePointBefore",
+    "parameterTypes" : [ "int" ]
+  }, {
+    "name" : "codePointCount",
+    "parameterTypes" : [ "int", "int" ]
+  }, {
+    "name" : "compare",
+    "parameterTypes" : [ "java.lang.CharSequence", "java.lang.CharSequence" ]
+  }, {
+    "name" : "compareTo",
+    "parameterTypes" : [ "java.lang.Object" ]
+  }, {
+    "name" : "compareTo",
+    "parameterTypes" : [ "java.lang.String" ]
+  }, {
+    "name" : "compareToIgnoreCase",
+    "parameterTypes" : [ "java.lang.String" ]
+  }, {
+    "name" : "concat",
+    "parameterTypes" : [ "java.lang.String" ]
+  }, {
+    "name" : "contains",
+    "parameterTypes" : [ "java.lang.CharSequence" ]
+  }, {
+    "name" : "contentEquals",
+    "parameterTypes" : [ "java.lang.CharSequence" ]
+  }, {
+    "name" : "contentEquals",
+    "parameterTypes" : [ "java.lang.StringBuffer" ]
+  }, {
+    "name" : "copyValueOf",
+    "parameterTypes" : [ "char[]" ]
+  }, {
+    "name" : "copyValueOf",
+    "parameterTypes" : [ "char[]", "int", "int" ]
+  }, {
+    "name" : "decode2",
+    "parameterTypes" : [ "int", "int" ]
+  }, {
+    "name" : "decode3",
+    "parameterTypes" : [ "int", "int", "int" ]
+  }, {
+    "name" : "decode4",
+    "parameterTypes" : [ "int", "int", "int", "int" ]
+  }, {
+    "name" : "decodeASCII",
+    "parameterTypes" : [ "byte[]", "int", "char[]", "int", "int" ]
+  }, {
+    "name" : "decodeUTF8_UTF16",
+    "parameterTypes" : [ "byte[]", "int", "int", "byte[]", "int", "boolean" ]
+  }, {
+    "name" : "decodeWithDecoder",
+    "parameterTypes" : [ "java.nio.charset.CharsetDecoder", "char[]", "byte[]", "int", "int" ]
+  }, {
+    "name" : "encode",
+    "parameterTypes" : [ "java.nio.charset.Charset", "byte", "byte[]" ]
+  }, {
+    "name" : "encode8859_1",
+    "parameterTypes" : [ "byte", "byte[]" ]
+  }, {
+    "name" : "encode8859_1",
+    "parameterTypes" : [ "byte", "byte[]", "boolean" ]
+  }, {
+    "name" : "encodeASCII",
+    "parameterTypes" : [ "byte", "byte[]" ]
+  }, {
+    "name" : "encodeUTF8",
+    "parameterTypes" : [ "byte", "byte[]", "boolean" ]
+  }, {
+    "name" : "encodeUTF8_UTF16",
+    "parameterTypes" : [ "byte[]", "boolean" ]
+  }, {
+    "name" : "encodeWithEncoder",
+    "parameterTypes" : [ "java.nio.charset.Charset", "byte", "byte[]", "boolean" ]
+  }, {
+    "name" : "endsWith",
+    "parameterTypes" : [ "java.lang.String" ]
+  }, {
+    "name" : "equals",
+    "parameterTypes" : [ "java.lang.Object" ]
+  }, {
+    "name" : "equalsIgnoreCase",
+    "parameterTypes" : [ "java.lang.String" ]
+  }, {
+    "name" : "format",
+    "parameterTypes" : [ "java.lang.String", "java.lang.Object[]" ]
+  }, {
+    "name" : "format",
+    "parameterTypes" : [ "java.util.Locale", "java.lang.String", "java.lang.Object[]" ]
+  }, {
+    "name" : "formatted",
+    "parameterTypes" : [ "java.lang.Object[]" ]
+  }, {
+    "name" : "getBytes",
+    "parameterTypes" : [ "int", "int", "byte[]", "int" ]
+  }, {
+    "name" : "getBytes",
+    "parameterTypes" : [ "java.lang.String" ]
+  }, {
+    "name" : "getBytes",
+    "parameterTypes" : [ "java.nio.charset.Charset" ]
+  }, {
+    "name" : "getBytes",
+    "parameterTypes" : [ "byte[]", "int", "byte" ]
+  }, {
+    "name" : "getBytes",
+    "parameterTypes" : [ "byte[]", "int", "int", "byte", "int" ]
+  }, {
+    "name" : "getBytesNoRepl",
+    "parameterTypes" : [ "java.lang.String", "java.nio.charset.Charset" ]
+  }, {
+    "name" : "getBytesNoRepl1",
+    "parameterTypes" : [ "java.lang.String", "java.nio.charset.Charset" ]
+  }, {
+    "name" : "getBytesUTF8NoRepl",
+    "parameterTypes" : [ "java.lang.String" ]
+  }, {
+    "name" : "getChars",
+    "parameterTypes" : [ "int", "int", "char[]", "int" ]
+  }, {
+    "name" : "indent",
+    "parameterTypes" : [ "int" ]
+  }, {
+    "name" : "indexOf",
+    "parameterTypes" : [ "int" ]
+  }, {
+    "name" : "indexOf",
+    "parameterTypes" : [ "int", "int" ]
+  }, {
+    "name" : "indexOf",
+    "parameterTypes" : [ "java.lang.String" ]
+  }, {
+    "name" : "indexOf",
+    "parameterTypes" : [ "java.lang.String", "int" ]
+  }, {
+    "name" : "indexOf",
+    "parameterTypes" : [ "byte[]", "byte", "int", "java.lang.String", "int" ]
+  }, {
+    "name" : "isASCII",
+    "parameterTypes" : [ "byte[]" ]
+  }, {
+    "name" : "isMalformed3",
+    "parameterTypes" : [ "int", "int", "int" ]
+  }, {
+    "name" : "isMalformed3_2",
+    "parameterTypes" : [ "int", "int" ]
+  }, {
+    "name" : "isMalformed4",
+    "parameterTypes" : [ "int", "int", "int" ]
+  }, {
+    "name" : "isMalformed4_2",
+    "parameterTypes" : [ "int", "int" ]
+  }, {
+    "name" : "isMalformed4_3",
+    "parameterTypes" : [ "int" ]
+  }, {
+    "name" : "isNotContinuation",
+    "parameterTypes" : [ "int" ]
+  }, {
+    "name" : "java.lang.String",
+    "parameterTypes" : [ "java.lang.AbstractStringBuilder", "java.lang.Void" ]
+  }, {
+    "name" : "java.lang.String",
+    "parameterTypes" : [ "java.lang.String" ]
+  }, {
+    "name" : "java.lang.String",
+    "parameterTypes" : [ "java.lang.StringBuffer" ]
+  }, {
+    "name" : "java.lang.String",
+    "parameterTypes" : [ "java.lang.StringBuilder" ]
+  }, {
+    "name" : "java.lang.String",
+    "parameterTypes" : [ "byte[]" ]
+  }, {
+    "name" : "java.lang.String",
+    "parameterTypes" : [ "byte[]", "byte" ]
+  }, {
+    "name" : "java.lang.String",
+    "parameterTypes" : [ "byte[]", "int" ]
+  }, {
+    "name" : "java.lang.String",
+    "parameterTypes" : [ "byte[]", "int", "int" ]
+  }, {
+    "name" : "java.lang.String",
+    "parameterTypes" : [ "byte[]", "int", "int", "int" ]
+  }, {
+    "name" : "java.lang.String",
+    "parameterTypes" : [ "byte[]", "int", "int", "java.lang.String" ]
+  }, {
+    "name" : "java.lang.String",
+    "parameterTypes" : [ "byte[]", "int", "int", "java.nio.charset.Charset" ]
+  }, {
+    "name" : "java.lang.String",
+    "parameterTypes" : [ "byte[]", "java.lang.String" ]
+  }, {
+    "name" : "java.lang.String",
+    "parameterTypes" : [ "byte[]", "java.nio.charset.Charset" ]
+  }, {
+    "name" : "java.lang.String",
+    "parameterTypes" : [ "char[]" ]
+  }, {
+    "name" : "java.lang.String",
+    "parameterTypes" : [ "char[]", "int", "int" ]
+  }, {
+    "name" : "java.lang.String",
+    "parameterTypes" : [ "char[]", "int", "int", "java.lang.Void" ]
+  }, {
+    "name" : "java.lang.String",
+    "parameterTypes" : [ "int[]", "int", "int" ]
+  }, {
+    "name" : "join",
+    "parameterTypes" : [ "java.lang.CharSequence", "java.lang.Iterable" ]
+  }, {
+    "name" : "join",
+    "parameterTypes" : [ "java.lang.CharSequence", "java.lang.CharSequence[]" ]
+  }, {
+    "name" : "join",
+    "parameterTypes" : [ "java.lang.String", "java.lang.String", "java.lang.String", "java.lang.String[]", "int" ]
+  }, {
+    "name" : "lambda$indent$0",
+    "parameterTypes" : [ "java.lang.String", "java.lang.String" ]
+  }, {
+    "name" : "lambda$indent$1",
+    "parameterTypes" : [ "java.lang.String" ]
+  }, {
+    "name" : "lambda$indent$2",
+    "parameterTypes" : [ "int", "java.lang.String" ]
+  }, {
+    "name" : "lambda$stripIndent$3",
+    "parameterTypes" : [ "int", "java.lang.String" ]
+  }, {
+    "name" : "lastIndexOf",
+    "parameterTypes" : [ "int" ]
+  }, {
+    "name" : "lastIndexOf",
+    "parameterTypes" : [ "int", "int" ]
+  }, {
+    "name" : "lastIndexOf",
+    "parameterTypes" : [ "java.lang.String" ]
+  }, {
+    "name" : "lastIndexOf",
+    "parameterTypes" : [ "java.lang.String", "int" ]
+  }, {
+    "name" : "lastIndexOf",
+    "parameterTypes" : [ "byte[]", "byte", "int", "java.lang.String", "int" ]
+  }, {
+    "name" : "lookupCharset",
+    "parameterTypes" : [ "java.lang.String" ]
+  }, {
+    "name" : "malformed3",
+    "parameterTypes" : [ "byte[]", "int" ]
+  }, {
+    "name" : "malformed4",
+    "parameterTypes" : [ "byte[]", "int" ]
+  }, {
+    "name" : "matches",
+    "parameterTypes" : [ "java.lang.String" ]
+  }, {
+    "name" : "newStringNoRepl",
+    "parameterTypes" : [ "byte[]", "java.nio.charset.Charset" ]
+  }, {
+    "name" : "newStringNoRepl1",
+    "parameterTypes" : [ "byte[]", "java.nio.charset.Charset" ]
+  }, {
+    "name" : "newStringUTF8NoRepl",
+    "parameterTypes" : [ "byte[]", "int", "int" ]
+  }, {
+    "name" : "nonSyncContentEquals",
+    "parameterTypes" : [ "java.lang.AbstractStringBuilder" ]
+  }, {
+    "name" : "offsetByCodePoints",
+    "parameterTypes" : [ "int", "int" ]
+  }, {
+    "name" : "outdent",
+    "parameterTypes" : [ "java.util.List" ]
+  }, {
+    "name" : "rangeCheck",
+    "parameterTypes" : [ "char[]", "int", "int" ]
+  }, {
+    "name" : "regionMatches",
+    "parameterTypes" : [ "int", "java.lang.String", "int", "int" ]
+  }, {
+    "name" : "regionMatches",
+    "parameterTypes" : [ "boolean", "int", "java.lang.String", "int", "int" ]
+  }, {
+    "name" : "repeat",
+    "parameterTypes" : [ "int" ]
+  }, {
+    "name" : "replace",
+    "parameterTypes" : [ "char", "char" ]
+  }, {
+    "name" : "replace",
+    "parameterTypes" : [ "java.lang.CharSequence", "java.lang.CharSequence" ]
+  }, {
+    "name" : "replaceAll",
+    "parameterTypes" : [ "java.lang.String", "java.lang.String" ]
+  }, {
+    "name" : "replaceFirst",
+    "parameterTypes" : [ "java.lang.String", "java.lang.String" ]
+  }, {
+    "name" : "resolveConstantDesc",
+    "parameterTypes" : [ "java.lang.invoke.MethodHandles$Lookup" ]
+  }, {
+    "name" : "safeTrim",
+    "parameterTypes" : [ "byte[]", "int", "boolean" ]
+  }, {
+    "name" : "scale",
+    "parameterTypes" : [ "int", "float" ]
+  }, {
+    "name" : "split",
+    "parameterTypes" : [ "java.lang.String" ]
+  }, {
+    "name" : "split",
+    "parameterTypes" : [ "java.lang.String", "int" ]
+  }, {
+    "name" : "startsWith",
+    "parameterTypes" : [ "java.lang.String" ]
+  }, {
+    "name" : "startsWith",
+    "parameterTypes" : [ "java.lang.String", "int" ]
+  }, {
+    "name" : "subSequence",
+    "parameterTypes" : [ "int", "int" ]
+  }, {
+    "name" : "substring",
+    "parameterTypes" : [ "int" ]
+  }, {
+    "name" : "substring",
+    "parameterTypes" : [ "int", "int" ]
+  }, {
+    "name" : "throwMalformed",
+    "parameterTypes" : [ "int", "int" ]
+  }, {
+    "name" : "throwMalformed",
+    "parameterTypes" : [ "byte[]" ]
+  }, {
+    "name" : "throwUnmappable",
+    "parameterTypes" : [ "int" ]
+  }, {
+    "name" : "throwUnmappable",
+    "parameterTypes" : [ "byte[]" ]
+  }, {
+    "name" : "toLowerCase",
+    "parameterTypes" : [ "java.util.Locale" ]
+  }, {
+    "name" : "toUpperCase",
+    "parameterTypes" : [ "java.util.Locale" ]
+  }, {
+    "name" : "transform",
+    "parameterTypes" : [ "java.util.function.Function" ]
+  }, {
+    "name" : "valueOf",
+    "parameterTypes" : [ "char" ]
+  }, {
+    "name" : "valueOf",
+    "parameterTypes" : [ "double" ]
+  }, {
+    "name" : "valueOf",
+    "parameterTypes" : [ "float" ]
+  }, {
+    "name" : "valueOf",
+    "parameterTypes" : [ "int" ]
+  }, {
+    "name" : "valueOf",
+    "parameterTypes" : [ "long" ]
+  }, {
+    "name" : "valueOf",
+    "parameterTypes" : [ "java.lang.Object" ]
+  }, {
+    "name" : "valueOf",
+    "parameterTypes" : [ "boolean" ]
+  }, {
+    "name" : "valueOf",
+    "parameterTypes" : [ "char[]" ]
+  }, {
+    "name" : "valueOf",
+    "parameterTypes" : [ "char[]", "int", "int" ]
+  }, {
+    "name" : "valueOfCodePoint",
+    "parameterTypes" : [ "int" ]
+  } ]
 }, {
   "name" : "java.lang.Character",
   "fields" : [ {
@@ -4734,17 +5721,39 @@
   }, {
     "name" : "isSealed",
     "parameterTypes" : [ ]
+  } ],
+  "queriedMethods" : [ {
+    "name" : "getAnnotatedInterfaces",
+    "parameterTypes" : [ ]
+  }, {
+    "name" : "getDeclaredMethod",
+    "parameterTypes" : [ "java.lang.String", "java.lang.Class[]" ]
+  }, {
+    "name" : "getMethod",
+    "parameterTypes" : [ "java.lang.String", "java.lang.Class[]" ]
+  }, {
+    "name" : "getNestHost",
+    "parameterTypes" : [ ]
+  }, {
+    "name" : "getNestMembers",
+    "parameterTypes" : [ ]
+  }, {
+    "name" : "getPermittedSubclasses",
+    "parameterTypes" : [ ]
+  }, {
+    "name" : "isNestmateOf",
+    "parameterTypes" : [ "java.lang.Class" ]
   } ]
 }, {
   "name" : "java.lang.ClassLoader",
   "methods" : [ {
+    "name" : "getDefinedPackage",
+    "parameterTypes" : [ "java.lang.String" ]
+  }, {
     "name" : "registerAsParallelCapable",
     "parameterTypes" : [ ]
   } ],
   "queriedMethods" : [ {
-    "name" : "getDefinedPackage",
-    "parameterTypes" : [ "java.lang.String" ]
-  }, {
     "name" : "getUnnamedModule",
     "parameterTypes" : [ ]
   } ]
@@ -4753,7 +5762,404 @@
 }, {
   "name" : "java.lang.Comparable",
   "allDeclaredFields" : true,
-  "queryAllPublicMethods" : true
+  "queryAllPublicMethods" : true,
+  "queriedMethods" : [ {
+    "name" : "charAt",
+    "parameterTypes" : [ "int" ]
+  }, {
+    "name" : "checkBoundsBeginEnd",
+    "parameterTypes" : [ "int", "int", "int" ]
+  }, {
+    "name" : "checkBoundsOffCount",
+    "parameterTypes" : [ "int", "int", "int" ]
+  }, {
+    "name" : "checkIndex",
+    "parameterTypes" : [ "int", "int" ]
+  }, {
+    "name" : "checkOffset",
+    "parameterTypes" : [ "int", "int" ]
+  }, {
+    "name" : "codePointAt",
+    "parameterTypes" : [ "int" ]
+  }, {
+    "name" : "codePointBefore",
+    "parameterTypes" : [ "int" ]
+  }, {
+    "name" : "codePointCount",
+    "parameterTypes" : [ "int", "int" ]
+  }, {
+    "name" : "compareTo",
+    "parameterTypes" : [ "java.lang.Object" ]
+  }, {
+    "name" : "compareTo",
+    "parameterTypes" : [ "java.lang.String" ]
+  }, {
+    "name" : "compareToIgnoreCase",
+    "parameterTypes" : [ "java.lang.String" ]
+  }, {
+    "name" : "concat",
+    "parameterTypes" : [ "java.lang.String" ]
+  }, {
+    "name" : "contains",
+    "parameterTypes" : [ "java.lang.CharSequence" ]
+  }, {
+    "name" : "contentEquals",
+    "parameterTypes" : [ "java.lang.CharSequence" ]
+  }, {
+    "name" : "contentEquals",
+    "parameterTypes" : [ "java.lang.StringBuffer" ]
+  }, {
+    "name" : "copyValueOf",
+    "parameterTypes" : [ "char[]" ]
+  }, {
+    "name" : "copyValueOf",
+    "parameterTypes" : [ "char[]", "int", "int" ]
+  }, {
+    "name" : "decode2",
+    "parameterTypes" : [ "int", "int" ]
+  }, {
+    "name" : "decode3",
+    "parameterTypes" : [ "int", "int", "int" ]
+  }, {
+    "name" : "decode4",
+    "parameterTypes" : [ "int", "int", "int", "int" ]
+  }, {
+    "name" : "decodeASCII",
+    "parameterTypes" : [ "byte[]", "int", "char[]", "int", "int" ]
+  }, {
+    "name" : "decodeUTF8_UTF16",
+    "parameterTypes" : [ "byte[]", "int", "int", "byte[]", "int", "boolean" ]
+  }, {
+    "name" : "decodeWithDecoder",
+    "parameterTypes" : [ "java.nio.charset.CharsetDecoder", "char[]", "byte[]", "int", "int" ]
+  }, {
+    "name" : "encode",
+    "parameterTypes" : [ "java.nio.charset.Charset", "byte", "byte[]" ]
+  }, {
+    "name" : "encode8859_1",
+    "parameterTypes" : [ "byte", "byte[]" ]
+  }, {
+    "name" : "encode8859_1",
+    "parameterTypes" : [ "byte", "byte[]", "boolean" ]
+  }, {
+    "name" : "encodeASCII",
+    "parameterTypes" : [ "byte", "byte[]" ]
+  }, {
+    "name" : "encodeUTF8",
+    "parameterTypes" : [ "byte", "byte[]", "boolean" ]
+  }, {
+    "name" : "encodeUTF8_UTF16",
+    "parameterTypes" : [ "byte[]", "boolean" ]
+  }, {
+    "name" : "encodeWithEncoder",
+    "parameterTypes" : [ "java.nio.charset.Charset", "byte", "byte[]", "boolean" ]
+  }, {
+    "name" : "endsWith",
+    "parameterTypes" : [ "java.lang.String" ]
+  }, {
+    "name" : "equals",
+    "parameterTypes" : [ "java.lang.Object" ]
+  }, {
+    "name" : "equalsIgnoreCase",
+    "parameterTypes" : [ "java.lang.String" ]
+  }, {
+    "name" : "format",
+    "parameterTypes" : [ "java.lang.String", "java.lang.Object[]" ]
+  }, {
+    "name" : "format",
+    "parameterTypes" : [ "java.util.Locale", "java.lang.String", "java.lang.Object[]" ]
+  }, {
+    "name" : "formatted",
+    "parameterTypes" : [ "java.lang.Object[]" ]
+  }, {
+    "name" : "getBytes",
+    "parameterTypes" : [ "int", "int", "byte[]", "int" ]
+  }, {
+    "name" : "getBytes",
+    "parameterTypes" : [ "java.lang.String" ]
+  }, {
+    "name" : "getBytes",
+    "parameterTypes" : [ "java.nio.charset.Charset" ]
+  }, {
+    "name" : "getBytes",
+    "parameterTypes" : [ "byte[]", "int", "byte" ]
+  }, {
+    "name" : "getBytes",
+    "parameterTypes" : [ "byte[]", "int", "int", "byte", "int" ]
+  }, {
+    "name" : "getBytesNoRepl",
+    "parameterTypes" : [ "java.lang.String", "java.nio.charset.Charset" ]
+  }, {
+    "name" : "getBytesNoRepl1",
+    "parameterTypes" : [ "java.lang.String", "java.nio.charset.Charset" ]
+  }, {
+    "name" : "getBytesUTF8NoRepl",
+    "parameterTypes" : [ "java.lang.String" ]
+  }, {
+    "name" : "getChars",
+    "parameterTypes" : [ "int", "int", "char[]", "int" ]
+  }, {
+    "name" : "indent",
+    "parameterTypes" : [ "int" ]
+  }, {
+    "name" : "indexOf",
+    "parameterTypes" : [ "int" ]
+  }, {
+    "name" : "indexOf",
+    "parameterTypes" : [ "int", "int" ]
+  }, {
+    "name" : "indexOf",
+    "parameterTypes" : [ "java.lang.String" ]
+  }, {
+    "name" : "indexOf",
+    "parameterTypes" : [ "java.lang.String", "int" ]
+  }, {
+    "name" : "indexOf",
+    "parameterTypes" : [ "byte[]", "byte", "int", "java.lang.String", "int" ]
+  }, {
+    "name" : "isASCII",
+    "parameterTypes" : [ "byte[]" ]
+  }, {
+    "name" : "isMalformed3",
+    "parameterTypes" : [ "int", "int", "int" ]
+  }, {
+    "name" : "isMalformed3_2",
+    "parameterTypes" : [ "int", "int" ]
+  }, {
+    "name" : "isMalformed4",
+    "parameterTypes" : [ "int", "int", "int" ]
+  }, {
+    "name" : "isMalformed4_2",
+    "parameterTypes" : [ "int", "int" ]
+  }, {
+    "name" : "isMalformed4_3",
+    "parameterTypes" : [ "int" ]
+  }, {
+    "name" : "isNotContinuation",
+    "parameterTypes" : [ "int" ]
+  }, {
+    "name" : "java.lang.String",
+    "parameterTypes" : [ "java.lang.AbstractStringBuilder", "java.lang.Void" ]
+  }, {
+    "name" : "java.lang.String",
+    "parameterTypes" : [ "java.lang.String" ]
+  }, {
+    "name" : "java.lang.String",
+    "parameterTypes" : [ "java.lang.StringBuffer" ]
+  }, {
+    "name" : "java.lang.String",
+    "parameterTypes" : [ "java.lang.StringBuilder" ]
+  }, {
+    "name" : "java.lang.String",
+    "parameterTypes" : [ "byte[]" ]
+  }, {
+    "name" : "java.lang.String",
+    "parameterTypes" : [ "byte[]", "byte" ]
+  }, {
+    "name" : "java.lang.String",
+    "parameterTypes" : [ "byte[]", "int" ]
+  }, {
+    "name" : "java.lang.String",
+    "parameterTypes" : [ "byte[]", "int", "int" ]
+  }, {
+    "name" : "java.lang.String",
+    "parameterTypes" : [ "byte[]", "int", "int", "int" ]
+  }, {
+    "name" : "java.lang.String",
+    "parameterTypes" : [ "byte[]", "int", "int", "java.lang.String" ]
+  }, {
+    "name" : "java.lang.String",
+    "parameterTypes" : [ "byte[]", "int", "int", "java.nio.charset.Charset" ]
+  }, {
+    "name" : "java.lang.String",
+    "parameterTypes" : [ "byte[]", "java.lang.String" ]
+  }, {
+    "name" : "java.lang.String",
+    "parameterTypes" : [ "byte[]", "java.nio.charset.Charset" ]
+  }, {
+    "name" : "java.lang.String",
+    "parameterTypes" : [ "char[]" ]
+  }, {
+    "name" : "java.lang.String",
+    "parameterTypes" : [ "char[]", "int", "int" ]
+  }, {
+    "name" : "java.lang.String",
+    "parameterTypes" : [ "char[]", "int", "int", "java.lang.Void" ]
+  }, {
+    "name" : "java.lang.String",
+    "parameterTypes" : [ "int[]", "int", "int" ]
+  }, {
+    "name" : "join",
+    "parameterTypes" : [ "java.lang.CharSequence", "java.lang.Iterable" ]
+  }, {
+    "name" : "join",
+    "parameterTypes" : [ "java.lang.CharSequence", "java.lang.CharSequence[]" ]
+  }, {
+    "name" : "join",
+    "parameterTypes" : [ "java.lang.String", "java.lang.String", "java.lang.String", "java.lang.String[]", "int" ]
+  }, {
+    "name" : "lambda$indent$0",
+    "parameterTypes" : [ "java.lang.String", "java.lang.String" ]
+  }, {
+    "name" : "lambda$indent$1",
+    "parameterTypes" : [ "java.lang.String" ]
+  }, {
+    "name" : "lambda$indent$2",
+    "parameterTypes" : [ "int", "java.lang.String" ]
+  }, {
+    "name" : "lambda$stripIndent$3",
+    "parameterTypes" : [ "int", "java.lang.String" ]
+  }, {
+    "name" : "lastIndexOf",
+    "parameterTypes" : [ "int" ]
+  }, {
+    "name" : "lastIndexOf",
+    "parameterTypes" : [ "int", "int" ]
+  }, {
+    "name" : "lastIndexOf",
+    "parameterTypes" : [ "java.lang.String" ]
+  }, {
+    "name" : "lastIndexOf",
+    "parameterTypes" : [ "java.lang.String", "int" ]
+  }, {
+    "name" : "lastIndexOf",
+    "parameterTypes" : [ "byte[]", "byte", "int", "java.lang.String", "int" ]
+  }, {
+    "name" : "lookupCharset",
+    "parameterTypes" : [ "java.lang.String" ]
+  }, {
+    "name" : "malformed3",
+    "parameterTypes" : [ "byte[]", "int" ]
+  }, {
+    "name" : "malformed4",
+    "parameterTypes" : [ "byte[]", "int" ]
+  }, {
+    "name" : "matches",
+    "parameterTypes" : [ "java.lang.String" ]
+  }, {
+    "name" : "newStringNoRepl",
+    "parameterTypes" : [ "byte[]", "java.nio.charset.Charset" ]
+  }, {
+    "name" : "newStringNoRepl1",
+    "parameterTypes" : [ "byte[]", "java.nio.charset.Charset" ]
+  }, {
+    "name" : "newStringUTF8NoRepl",
+    "parameterTypes" : [ "byte[]", "int", "int" ]
+  }, {
+    "name" : "nonSyncContentEquals",
+    "parameterTypes" : [ "java.lang.AbstractStringBuilder" ]
+  }, {
+    "name" : "offsetByCodePoints",
+    "parameterTypes" : [ "int", "int" ]
+  }, {
+    "name" : "outdent",
+    "parameterTypes" : [ "java.util.List" ]
+  }, {
+    "name" : "rangeCheck",
+    "parameterTypes" : [ "char[]", "int", "int" ]
+  }, {
+    "name" : "regionMatches",
+    "parameterTypes" : [ "int", "java.lang.String", "int", "int" ]
+  }, {
+    "name" : "regionMatches",
+    "parameterTypes" : [ "boolean", "int", "java.lang.String", "int", "int" ]
+  }, {
+    "name" : "repeat",
+    "parameterTypes" : [ "int" ]
+  }, {
+    "name" : "replace",
+    "parameterTypes" : [ "char", "char" ]
+  }, {
+    "name" : "replace",
+    "parameterTypes" : [ "java.lang.CharSequence", "java.lang.CharSequence" ]
+  }, {
+    "name" : "replaceAll",
+    "parameterTypes" : [ "java.lang.String", "java.lang.String" ]
+  }, {
+    "name" : "replaceFirst",
+    "parameterTypes" : [ "java.lang.String", "java.lang.String" ]
+  }, {
+    "name" : "resolveConstantDesc",
+    "parameterTypes" : [ "java.lang.invoke.MethodHandles$Lookup" ]
+  }, {
+    "name" : "safeTrim",
+    "parameterTypes" : [ "byte[]", "int", "boolean" ]
+  }, {
+    "name" : "scale",
+    "parameterTypes" : [ "int", "float" ]
+  }, {
+    "name" : "split",
+    "parameterTypes" : [ "java.lang.String" ]
+  }, {
+    "name" : "split",
+    "parameterTypes" : [ "java.lang.String", "int" ]
+  }, {
+    "name" : "startsWith",
+    "parameterTypes" : [ "java.lang.String" ]
+  }, {
+    "name" : "startsWith",
+    "parameterTypes" : [ "java.lang.String", "int" ]
+  }, {
+    "name" : "subSequence",
+    "parameterTypes" : [ "int", "int" ]
+  }, {
+    "name" : "substring",
+    "parameterTypes" : [ "int" ]
+  }, {
+    "name" : "substring",
+    "parameterTypes" : [ "int", "int" ]
+  }, {
+    "name" : "throwMalformed",
+    "parameterTypes" : [ "int", "int" ]
+  }, {
+    "name" : "throwMalformed",
+    "parameterTypes" : [ "byte[]" ]
+  }, {
+    "name" : "throwUnmappable",
+    "parameterTypes" : [ "int" ]
+  }, {
+    "name" : "throwUnmappable",
+    "parameterTypes" : [ "byte[]" ]
+  }, {
+    "name" : "toLowerCase",
+    "parameterTypes" : [ "java.util.Locale" ]
+  }, {
+    "name" : "toUpperCase",
+    "parameterTypes" : [ "java.util.Locale" ]
+  }, {
+    "name" : "transform",
+    "parameterTypes" : [ "java.util.function.Function" ]
+  }, {
+    "name" : "valueOf",
+    "parameterTypes" : [ "char" ]
+  }, {
+    "name" : "valueOf",
+    "parameterTypes" : [ "double" ]
+  }, {
+    "name" : "valueOf",
+    "parameterTypes" : [ "float" ]
+  }, {
+    "name" : "valueOf",
+    "parameterTypes" : [ "int" ]
+  }, {
+    "name" : "valueOf",
+    "parameterTypes" : [ "long" ]
+  }, {
+    "name" : "valueOf",
+    "parameterTypes" : [ "java.lang.Object" ]
+  }, {
+    "name" : "valueOf",
+    "parameterTypes" : [ "boolean" ]
+  }, {
+    "name" : "valueOf",
+    "parameterTypes" : [ "char[]" ]
+  }, {
+    "name" : "valueOf",
+    "parameterTypes" : [ "char[]", "int", "int" ]
+  }, {
+    "name" : "valueOfCodePoint",
+    "parameterTypes" : [ "int" ]
+  } ]
 }, {
   "name" : "java.lang.Deprecated",
   "queryAllDeclaredMethods" : true,
@@ -4924,6 +6330,9 @@
   "allDeclaredFields" : true,
   "queryAllDeclaredMethods" : true,
   "queryAllDeclaredConstructors" : true,
+  "fields" : [ {
+    "name" : "TYPE"
+  } ],
   "methods" : [ {
     "name" : "<init>",
     "parameterTypes" : [ "java.lang.String" ]
@@ -4985,11 +6394,805 @@
 }, {
   "name" : "java.lang.constant.Constable",
   "allDeclaredFields" : true,
-  "queryAllPublicMethods" : true
+  "queryAllPublicMethods" : true,
+  "queriedMethods" : [ {
+    "name" : "charAt",
+    "parameterTypes" : [ "int" ]
+  }, {
+    "name" : "checkBoundsBeginEnd",
+    "parameterTypes" : [ "int", "int", "int" ]
+  }, {
+    "name" : "checkBoundsOffCount",
+    "parameterTypes" : [ "int", "int", "int" ]
+  }, {
+    "name" : "checkIndex",
+    "parameterTypes" : [ "int", "int" ]
+  }, {
+    "name" : "checkOffset",
+    "parameterTypes" : [ "int", "int" ]
+  }, {
+    "name" : "codePointAt",
+    "parameterTypes" : [ "int" ]
+  }, {
+    "name" : "codePointBefore",
+    "parameterTypes" : [ "int" ]
+  }, {
+    "name" : "codePointCount",
+    "parameterTypes" : [ "int", "int" ]
+  }, {
+    "name" : "compareTo",
+    "parameterTypes" : [ "java.lang.Object" ]
+  }, {
+    "name" : "compareTo",
+    "parameterTypes" : [ "java.lang.String" ]
+  }, {
+    "name" : "compareToIgnoreCase",
+    "parameterTypes" : [ "java.lang.String" ]
+  }, {
+    "name" : "concat",
+    "parameterTypes" : [ "java.lang.String" ]
+  }, {
+    "name" : "contains",
+    "parameterTypes" : [ "java.lang.CharSequence" ]
+  }, {
+    "name" : "contentEquals",
+    "parameterTypes" : [ "java.lang.CharSequence" ]
+  }, {
+    "name" : "contentEquals",
+    "parameterTypes" : [ "java.lang.StringBuffer" ]
+  }, {
+    "name" : "copyValueOf",
+    "parameterTypes" : [ "char[]" ]
+  }, {
+    "name" : "copyValueOf",
+    "parameterTypes" : [ "char[]", "int", "int" ]
+  }, {
+    "name" : "decode2",
+    "parameterTypes" : [ "int", "int" ]
+  }, {
+    "name" : "decode3",
+    "parameterTypes" : [ "int", "int", "int" ]
+  }, {
+    "name" : "decode4",
+    "parameterTypes" : [ "int", "int", "int", "int" ]
+  }, {
+    "name" : "decodeASCII",
+    "parameterTypes" : [ "byte[]", "int", "char[]", "int", "int" ]
+  }, {
+    "name" : "decodeUTF8_UTF16",
+    "parameterTypes" : [ "byte[]", "int", "int", "byte[]", "int", "boolean" ]
+  }, {
+    "name" : "decodeWithDecoder",
+    "parameterTypes" : [ "java.nio.charset.CharsetDecoder", "char[]", "byte[]", "int", "int" ]
+  }, {
+    "name" : "encode",
+    "parameterTypes" : [ "java.nio.charset.Charset", "byte", "byte[]" ]
+  }, {
+    "name" : "encode8859_1",
+    "parameterTypes" : [ "byte", "byte[]" ]
+  }, {
+    "name" : "encode8859_1",
+    "parameterTypes" : [ "byte", "byte[]", "boolean" ]
+  }, {
+    "name" : "encodeASCII",
+    "parameterTypes" : [ "byte", "byte[]" ]
+  }, {
+    "name" : "encodeUTF8",
+    "parameterTypes" : [ "byte", "byte[]", "boolean" ]
+  }, {
+    "name" : "encodeUTF8_UTF16",
+    "parameterTypes" : [ "byte[]", "boolean" ]
+  }, {
+    "name" : "encodeWithEncoder",
+    "parameterTypes" : [ "java.nio.charset.Charset", "byte", "byte[]", "boolean" ]
+  }, {
+    "name" : "endsWith",
+    "parameterTypes" : [ "java.lang.String" ]
+  }, {
+    "name" : "equals",
+    "parameterTypes" : [ "java.lang.Object" ]
+  }, {
+    "name" : "equalsIgnoreCase",
+    "parameterTypes" : [ "java.lang.String" ]
+  }, {
+    "name" : "format",
+    "parameterTypes" : [ "java.lang.String", "java.lang.Object[]" ]
+  }, {
+    "name" : "format",
+    "parameterTypes" : [ "java.util.Locale", "java.lang.String", "java.lang.Object[]" ]
+  }, {
+    "name" : "formatted",
+    "parameterTypes" : [ "java.lang.Object[]" ]
+  }, {
+    "name" : "getBytes",
+    "parameterTypes" : [ "int", "int", "byte[]", "int" ]
+  }, {
+    "name" : "getBytes",
+    "parameterTypes" : [ "java.lang.String" ]
+  }, {
+    "name" : "getBytes",
+    "parameterTypes" : [ "java.nio.charset.Charset" ]
+  }, {
+    "name" : "getBytes",
+    "parameterTypes" : [ "byte[]", "int", "byte" ]
+  }, {
+    "name" : "getBytes",
+    "parameterTypes" : [ "byte[]", "int", "int", "byte", "int" ]
+  }, {
+    "name" : "getBytesNoRepl",
+    "parameterTypes" : [ "java.lang.String", "java.nio.charset.Charset" ]
+  }, {
+    "name" : "getBytesNoRepl1",
+    "parameterTypes" : [ "java.lang.String", "java.nio.charset.Charset" ]
+  }, {
+    "name" : "getBytesUTF8NoRepl",
+    "parameterTypes" : [ "java.lang.String" ]
+  }, {
+    "name" : "getChars",
+    "parameterTypes" : [ "int", "int", "char[]", "int" ]
+  }, {
+    "name" : "indent",
+    "parameterTypes" : [ "int" ]
+  }, {
+    "name" : "indexOf",
+    "parameterTypes" : [ "int" ]
+  }, {
+    "name" : "indexOf",
+    "parameterTypes" : [ "int", "int" ]
+  }, {
+    "name" : "indexOf",
+    "parameterTypes" : [ "java.lang.String" ]
+  }, {
+    "name" : "indexOf",
+    "parameterTypes" : [ "java.lang.String", "int" ]
+  }, {
+    "name" : "indexOf",
+    "parameterTypes" : [ "byte[]", "byte", "int", "java.lang.String", "int" ]
+  }, {
+    "name" : "isASCII",
+    "parameterTypes" : [ "byte[]" ]
+  }, {
+    "name" : "isMalformed3",
+    "parameterTypes" : [ "int", "int", "int" ]
+  }, {
+    "name" : "isMalformed3_2",
+    "parameterTypes" : [ "int", "int" ]
+  }, {
+    "name" : "isMalformed4",
+    "parameterTypes" : [ "int", "int", "int" ]
+  }, {
+    "name" : "isMalformed4_2",
+    "parameterTypes" : [ "int", "int" ]
+  }, {
+    "name" : "isMalformed4_3",
+    "parameterTypes" : [ "int" ]
+  }, {
+    "name" : "isNotContinuation",
+    "parameterTypes" : [ "int" ]
+  }, {
+    "name" : "java.lang.String",
+    "parameterTypes" : [ "java.lang.AbstractStringBuilder", "java.lang.Void" ]
+  }, {
+    "name" : "java.lang.String",
+    "parameterTypes" : [ "java.lang.String" ]
+  }, {
+    "name" : "java.lang.String",
+    "parameterTypes" : [ "java.lang.StringBuffer" ]
+  }, {
+    "name" : "java.lang.String",
+    "parameterTypes" : [ "java.lang.StringBuilder" ]
+  }, {
+    "name" : "java.lang.String",
+    "parameterTypes" : [ "byte[]" ]
+  }, {
+    "name" : "java.lang.String",
+    "parameterTypes" : [ "byte[]", "byte" ]
+  }, {
+    "name" : "java.lang.String",
+    "parameterTypes" : [ "byte[]", "int" ]
+  }, {
+    "name" : "java.lang.String",
+    "parameterTypes" : [ "byte[]", "int", "int" ]
+  }, {
+    "name" : "java.lang.String",
+    "parameterTypes" : [ "byte[]", "int", "int", "int" ]
+  }, {
+    "name" : "java.lang.String",
+    "parameterTypes" : [ "byte[]", "int", "int", "java.lang.String" ]
+  }, {
+    "name" : "java.lang.String",
+    "parameterTypes" : [ "byte[]", "int", "int", "java.nio.charset.Charset" ]
+  }, {
+    "name" : "java.lang.String",
+    "parameterTypes" : [ "byte[]", "java.lang.String" ]
+  }, {
+    "name" : "java.lang.String",
+    "parameterTypes" : [ "byte[]", "java.nio.charset.Charset" ]
+  }, {
+    "name" : "java.lang.String",
+    "parameterTypes" : [ "char[]" ]
+  }, {
+    "name" : "java.lang.String",
+    "parameterTypes" : [ "char[]", "int", "int" ]
+  }, {
+    "name" : "java.lang.String",
+    "parameterTypes" : [ "char[]", "int", "int", "java.lang.Void" ]
+  }, {
+    "name" : "java.lang.String",
+    "parameterTypes" : [ "int[]", "int", "int" ]
+  }, {
+    "name" : "join",
+    "parameterTypes" : [ "java.lang.CharSequence", "java.lang.Iterable" ]
+  }, {
+    "name" : "join",
+    "parameterTypes" : [ "java.lang.CharSequence", "java.lang.CharSequence[]" ]
+  }, {
+    "name" : "join",
+    "parameterTypes" : [ "java.lang.String", "java.lang.String", "java.lang.String", "java.lang.String[]", "int" ]
+  }, {
+    "name" : "lambda$indent$0",
+    "parameterTypes" : [ "java.lang.String", "java.lang.String" ]
+  }, {
+    "name" : "lambda$indent$1",
+    "parameterTypes" : [ "java.lang.String" ]
+  }, {
+    "name" : "lambda$indent$2",
+    "parameterTypes" : [ "int", "java.lang.String" ]
+  }, {
+    "name" : "lambda$stripIndent$3",
+    "parameterTypes" : [ "int", "java.lang.String" ]
+  }, {
+    "name" : "lastIndexOf",
+    "parameterTypes" : [ "int" ]
+  }, {
+    "name" : "lastIndexOf",
+    "parameterTypes" : [ "int", "int" ]
+  }, {
+    "name" : "lastIndexOf",
+    "parameterTypes" : [ "java.lang.String" ]
+  }, {
+    "name" : "lastIndexOf",
+    "parameterTypes" : [ "java.lang.String", "int" ]
+  }, {
+    "name" : "lastIndexOf",
+    "parameterTypes" : [ "byte[]", "byte", "int", "java.lang.String", "int" ]
+  }, {
+    "name" : "lookupCharset",
+    "parameterTypes" : [ "java.lang.String" ]
+  }, {
+    "name" : "malformed3",
+    "parameterTypes" : [ "byte[]", "int" ]
+  }, {
+    "name" : "malformed4",
+    "parameterTypes" : [ "byte[]", "int" ]
+  }, {
+    "name" : "matches",
+    "parameterTypes" : [ "java.lang.String" ]
+  }, {
+    "name" : "newStringNoRepl",
+    "parameterTypes" : [ "byte[]", "java.nio.charset.Charset" ]
+  }, {
+    "name" : "newStringNoRepl1",
+    "parameterTypes" : [ "byte[]", "java.nio.charset.Charset" ]
+  }, {
+    "name" : "newStringUTF8NoRepl",
+    "parameterTypes" : [ "byte[]", "int", "int" ]
+  }, {
+    "name" : "nonSyncContentEquals",
+    "parameterTypes" : [ "java.lang.AbstractStringBuilder" ]
+  }, {
+    "name" : "offsetByCodePoints",
+    "parameterTypes" : [ "int", "int" ]
+  }, {
+    "name" : "outdent",
+    "parameterTypes" : [ "java.util.List" ]
+  }, {
+    "name" : "rangeCheck",
+    "parameterTypes" : [ "char[]", "int", "int" ]
+  }, {
+    "name" : "regionMatches",
+    "parameterTypes" : [ "int", "java.lang.String", "int", "int" ]
+  }, {
+    "name" : "regionMatches",
+    "parameterTypes" : [ "boolean", "int", "java.lang.String", "int", "int" ]
+  }, {
+    "name" : "repeat",
+    "parameterTypes" : [ "int" ]
+  }, {
+    "name" : "replace",
+    "parameterTypes" : [ "char", "char" ]
+  }, {
+    "name" : "replace",
+    "parameterTypes" : [ "java.lang.CharSequence", "java.lang.CharSequence" ]
+  }, {
+    "name" : "replaceAll",
+    "parameterTypes" : [ "java.lang.String", "java.lang.String" ]
+  }, {
+    "name" : "replaceFirst",
+    "parameterTypes" : [ "java.lang.String", "java.lang.String" ]
+  }, {
+    "name" : "resolveConstantDesc",
+    "parameterTypes" : [ "java.lang.invoke.MethodHandles$Lookup" ]
+  }, {
+    "name" : "safeTrim",
+    "parameterTypes" : [ "byte[]", "int", "boolean" ]
+  }, {
+    "name" : "scale",
+    "parameterTypes" : [ "int", "float" ]
+  }, {
+    "name" : "split",
+    "parameterTypes" : [ "java.lang.String" ]
+  }, {
+    "name" : "split",
+    "parameterTypes" : [ "java.lang.String", "int" ]
+  }, {
+    "name" : "startsWith",
+    "parameterTypes" : [ "java.lang.String" ]
+  }, {
+    "name" : "startsWith",
+    "parameterTypes" : [ "java.lang.String", "int" ]
+  }, {
+    "name" : "subSequence",
+    "parameterTypes" : [ "int", "int" ]
+  }, {
+    "name" : "substring",
+    "parameterTypes" : [ "int" ]
+  }, {
+    "name" : "substring",
+    "parameterTypes" : [ "int", "int" ]
+  }, {
+    "name" : "throwMalformed",
+    "parameterTypes" : [ "int", "int" ]
+  }, {
+    "name" : "throwMalformed",
+    "parameterTypes" : [ "byte[]" ]
+  }, {
+    "name" : "throwUnmappable",
+    "parameterTypes" : [ "int" ]
+  }, {
+    "name" : "throwUnmappable",
+    "parameterTypes" : [ "byte[]" ]
+  }, {
+    "name" : "toLowerCase",
+    "parameterTypes" : [ "java.util.Locale" ]
+  }, {
+    "name" : "toUpperCase",
+    "parameterTypes" : [ "java.util.Locale" ]
+  }, {
+    "name" : "transform",
+    "parameterTypes" : [ "java.util.function.Function" ]
+  }, {
+    "name" : "valueOf",
+    "parameterTypes" : [ "char" ]
+  }, {
+    "name" : "valueOf",
+    "parameterTypes" : [ "double" ]
+  }, {
+    "name" : "valueOf",
+    "parameterTypes" : [ "float" ]
+  }, {
+    "name" : "valueOf",
+    "parameterTypes" : [ "int" ]
+  }, {
+    "name" : "valueOf",
+    "parameterTypes" : [ "long" ]
+  }, {
+    "name" : "valueOf",
+    "parameterTypes" : [ "java.lang.Object" ]
+  }, {
+    "name" : "valueOf",
+    "parameterTypes" : [ "boolean" ]
+  }, {
+    "name" : "valueOf",
+    "parameterTypes" : [ "char[]" ]
+  }, {
+    "name" : "valueOf",
+    "parameterTypes" : [ "char[]", "int", "int" ]
+  }, {
+    "name" : "valueOfCodePoint",
+    "parameterTypes" : [ "int" ]
+  } ]
 }, {
   "name" : "java.lang.constant.ConstantDesc",
   "allDeclaredFields" : true,
-  "queryAllPublicMethods" : true
+  "queryAllPublicMethods" : true,
+  "queriedMethods" : [ {
+    "name" : "charAt",
+    "parameterTypes" : [ "int" ]
+  }, {
+    "name" : "checkBoundsBeginEnd",
+    "parameterTypes" : [ "int", "int", "int" ]
+  }, {
+    "name" : "checkBoundsOffCount",
+    "parameterTypes" : [ "int", "int", "int" ]
+  }, {
+    "name" : "checkIndex",
+    "parameterTypes" : [ "int", "int" ]
+  }, {
+    "name" : "checkOffset",
+    "parameterTypes" : [ "int", "int" ]
+  }, {
+    "name" : "codePointAt",
+    "parameterTypes" : [ "int" ]
+  }, {
+    "name" : "codePointBefore",
+    "parameterTypes" : [ "int" ]
+  }, {
+    "name" : "codePointCount",
+    "parameterTypes" : [ "int", "int" ]
+  }, {
+    "name" : "compareTo",
+    "parameterTypes" : [ "java.lang.Object" ]
+  }, {
+    "name" : "compareTo",
+    "parameterTypes" : [ "java.lang.String" ]
+  }, {
+    "name" : "compareToIgnoreCase",
+    "parameterTypes" : [ "java.lang.String" ]
+  }, {
+    "name" : "concat",
+    "parameterTypes" : [ "java.lang.String" ]
+  }, {
+    "name" : "contains",
+    "parameterTypes" : [ "java.lang.CharSequence" ]
+  }, {
+    "name" : "contentEquals",
+    "parameterTypes" : [ "java.lang.CharSequence" ]
+  }, {
+    "name" : "contentEquals",
+    "parameterTypes" : [ "java.lang.StringBuffer" ]
+  }, {
+    "name" : "copyValueOf",
+    "parameterTypes" : [ "char[]" ]
+  }, {
+    "name" : "copyValueOf",
+    "parameterTypes" : [ "char[]", "int", "int" ]
+  }, {
+    "name" : "decode2",
+    "parameterTypes" : [ "int", "int" ]
+  }, {
+    "name" : "decode3",
+    "parameterTypes" : [ "int", "int", "int" ]
+  }, {
+    "name" : "decode4",
+    "parameterTypes" : [ "int", "int", "int", "int" ]
+  }, {
+    "name" : "decodeASCII",
+    "parameterTypes" : [ "byte[]", "int", "char[]", "int", "int" ]
+  }, {
+    "name" : "decodeUTF8_UTF16",
+    "parameterTypes" : [ "byte[]", "int", "int", "byte[]", "int", "boolean" ]
+  }, {
+    "name" : "decodeWithDecoder",
+    "parameterTypes" : [ "java.nio.charset.CharsetDecoder", "char[]", "byte[]", "int", "int" ]
+  }, {
+    "name" : "encode",
+    "parameterTypes" : [ "java.nio.charset.Charset", "byte", "byte[]" ]
+  }, {
+    "name" : "encode8859_1",
+    "parameterTypes" : [ "byte", "byte[]" ]
+  }, {
+    "name" : "encode8859_1",
+    "parameterTypes" : [ "byte", "byte[]", "boolean" ]
+  }, {
+    "name" : "encodeASCII",
+    "parameterTypes" : [ "byte", "byte[]" ]
+  }, {
+    "name" : "encodeUTF8",
+    "parameterTypes" : [ "byte", "byte[]", "boolean" ]
+  }, {
+    "name" : "encodeUTF8_UTF16",
+    "parameterTypes" : [ "byte[]", "boolean" ]
+  }, {
+    "name" : "encodeWithEncoder",
+    "parameterTypes" : [ "java.nio.charset.Charset", "byte", "byte[]", "boolean" ]
+  }, {
+    "name" : "endsWith",
+    "parameterTypes" : [ "java.lang.String" ]
+  }, {
+    "name" : "equals",
+    "parameterTypes" : [ "java.lang.Object" ]
+  }, {
+    "name" : "equalsIgnoreCase",
+    "parameterTypes" : [ "java.lang.String" ]
+  }, {
+    "name" : "format",
+    "parameterTypes" : [ "java.lang.String", "java.lang.Object[]" ]
+  }, {
+    "name" : "format",
+    "parameterTypes" : [ "java.util.Locale", "java.lang.String", "java.lang.Object[]" ]
+  }, {
+    "name" : "formatted",
+    "parameterTypes" : [ "java.lang.Object[]" ]
+  }, {
+    "name" : "getBytes",
+    "parameterTypes" : [ "int", "int", "byte[]", "int" ]
+  }, {
+    "name" : "getBytes",
+    "parameterTypes" : [ "java.lang.String" ]
+  }, {
+    "name" : "getBytes",
+    "parameterTypes" : [ "java.nio.charset.Charset" ]
+  }, {
+    "name" : "getBytes",
+    "parameterTypes" : [ "byte[]", "int", "byte" ]
+  }, {
+    "name" : "getBytes",
+    "parameterTypes" : [ "byte[]", "int", "int", "byte", "int" ]
+  }, {
+    "name" : "getBytesNoRepl",
+    "parameterTypes" : [ "java.lang.String", "java.nio.charset.Charset" ]
+  }, {
+    "name" : "getBytesNoRepl1",
+    "parameterTypes" : [ "java.lang.String", "java.nio.charset.Charset" ]
+  }, {
+    "name" : "getBytesUTF8NoRepl",
+    "parameterTypes" : [ "java.lang.String" ]
+  }, {
+    "name" : "getChars",
+    "parameterTypes" : [ "int", "int", "char[]", "int" ]
+  }, {
+    "name" : "indent",
+    "parameterTypes" : [ "int" ]
+  }, {
+    "name" : "indexOf",
+    "parameterTypes" : [ "int" ]
+  }, {
+    "name" : "indexOf",
+    "parameterTypes" : [ "int", "int" ]
+  }, {
+    "name" : "indexOf",
+    "parameterTypes" : [ "java.lang.String" ]
+  }, {
+    "name" : "indexOf",
+    "parameterTypes" : [ "java.lang.String", "int" ]
+  }, {
+    "name" : "indexOf",
+    "parameterTypes" : [ "byte[]", "byte", "int", "java.lang.String", "int" ]
+  }, {
+    "name" : "isASCII",
+    "parameterTypes" : [ "byte[]" ]
+  }, {
+    "name" : "isMalformed3",
+    "parameterTypes" : [ "int", "int", "int" ]
+  }, {
+    "name" : "isMalformed3_2",
+    "parameterTypes" : [ "int", "int" ]
+  }, {
+    "name" : "isMalformed4",
+    "parameterTypes" : [ "int", "int", "int" ]
+  }, {
+    "name" : "isMalformed4_2",
+    "parameterTypes" : [ "int", "int" ]
+  }, {
+    "name" : "isMalformed4_3",
+    "parameterTypes" : [ "int" ]
+  }, {
+    "name" : "isNotContinuation",
+    "parameterTypes" : [ "int" ]
+  }, {
+    "name" : "java.lang.String",
+    "parameterTypes" : [ "java.lang.AbstractStringBuilder", "java.lang.Void" ]
+  }, {
+    "name" : "java.lang.String",
+    "parameterTypes" : [ "java.lang.String" ]
+  }, {
+    "name" : "java.lang.String",
+    "parameterTypes" : [ "java.lang.StringBuffer" ]
+  }, {
+    "name" : "java.lang.String",
+    "parameterTypes" : [ "java.lang.StringBuilder" ]
+  }, {
+    "name" : "java.lang.String",
+    "parameterTypes" : [ "byte[]" ]
+  }, {
+    "name" : "java.lang.String",
+    "parameterTypes" : [ "byte[]", "byte" ]
+  }, {
+    "name" : "java.lang.String",
+    "parameterTypes" : [ "byte[]", "int" ]
+  }, {
+    "name" : "java.lang.String",
+    "parameterTypes" : [ "byte[]", "int", "int" ]
+  }, {
+    "name" : "java.lang.String",
+    "parameterTypes" : [ "byte[]", "int", "int", "int" ]
+  }, {
+    "name" : "java.lang.String",
+    "parameterTypes" : [ "byte[]", "int", "int", "java.lang.String" ]
+  }, {
+    "name" : "java.lang.String",
+    "parameterTypes" : [ "byte[]", "int", "int", "java.nio.charset.Charset" ]
+  }, {
+    "name" : "java.lang.String",
+    "parameterTypes" : [ "byte[]", "java.lang.String" ]
+  }, {
+    "name" : "java.lang.String",
+    "parameterTypes" : [ "byte[]", "java.nio.charset.Charset" ]
+  }, {
+    "name" : "java.lang.String",
+    "parameterTypes" : [ "char[]" ]
+  }, {
+    "name" : "java.lang.String",
+    "parameterTypes" : [ "char[]", "int", "int" ]
+  }, {
+    "name" : "java.lang.String",
+    "parameterTypes" : [ "char[]", "int", "int", "java.lang.Void" ]
+  }, {
+    "name" : "java.lang.String",
+    "parameterTypes" : [ "int[]", "int", "int" ]
+  }, {
+    "name" : "join",
+    "parameterTypes" : [ "java.lang.CharSequence", "java.lang.Iterable" ]
+  }, {
+    "name" : "join",
+    "parameterTypes" : [ "java.lang.CharSequence", "java.lang.CharSequence[]" ]
+  }, {
+    "name" : "join",
+    "parameterTypes" : [ "java.lang.String", "java.lang.String", "java.lang.String", "java.lang.String[]", "int" ]
+  }, {
+    "name" : "lambda$indent$0",
+    "parameterTypes" : [ "java.lang.String", "java.lang.String" ]
+  }, {
+    "name" : "lambda$indent$1",
+    "parameterTypes" : [ "java.lang.String" ]
+  }, {
+    "name" : "lambda$indent$2",
+    "parameterTypes" : [ "int", "java.lang.String" ]
+  }, {
+    "name" : "lambda$stripIndent$3",
+    "parameterTypes" : [ "int", "java.lang.String" ]
+  }, {
+    "name" : "lastIndexOf",
+    "parameterTypes" : [ "int" ]
+  }, {
+    "name" : "lastIndexOf",
+    "parameterTypes" : [ "int", "int" ]
+  }, {
+    "name" : "lastIndexOf",
+    "parameterTypes" : [ "java.lang.String" ]
+  }, {
+    "name" : "lastIndexOf",
+    "parameterTypes" : [ "java.lang.String", "int" ]
+  }, {
+    "name" : "lastIndexOf",
+    "parameterTypes" : [ "byte[]", "byte", "int", "java.lang.String", "int" ]
+  }, {
+    "name" : "lookupCharset",
+    "parameterTypes" : [ "java.lang.String" ]
+  }, {
+    "name" : "malformed3",
+    "parameterTypes" : [ "byte[]", "int" ]
+  }, {
+    "name" : "malformed4",
+    "parameterTypes" : [ "byte[]", "int" ]
+  }, {
+    "name" : "matches",
+    "parameterTypes" : [ "java.lang.String" ]
+  }, {
+    "name" : "newStringNoRepl",
+    "parameterTypes" : [ "byte[]", "java.nio.charset.Charset" ]
+  }, {
+    "name" : "newStringNoRepl1",
+    "parameterTypes" : [ "byte[]", "java.nio.charset.Charset" ]
+  }, {
+    "name" : "newStringUTF8NoRepl",
+    "parameterTypes" : [ "byte[]", "int", "int" ]
+  }, {
+    "name" : "nonSyncContentEquals",
+    "parameterTypes" : [ "java.lang.AbstractStringBuilder" ]
+  }, {
+    "name" : "offsetByCodePoints",
+    "parameterTypes" : [ "int", "int" ]
+  }, {
+    "name" : "outdent",
+    "parameterTypes" : [ "java.util.List" ]
+  }, {
+    "name" : "rangeCheck",
+    "parameterTypes" : [ "char[]", "int", "int" ]
+  }, {
+    "name" : "regionMatches",
+    "parameterTypes" : [ "int", "java.lang.String", "int", "int" ]
+  }, {
+    "name" : "regionMatches",
+    "parameterTypes" : [ "boolean", "int", "java.lang.String", "int", "int" ]
+  }, {
+    "name" : "repeat",
+    "parameterTypes" : [ "int" ]
+  }, {
+    "name" : "replace",
+    "parameterTypes" : [ "char", "char" ]
+  }, {
+    "name" : "replace",
+    "parameterTypes" : [ "java.lang.CharSequence", "java.lang.CharSequence" ]
+  }, {
+    "name" : "replaceAll",
+    "parameterTypes" : [ "java.lang.String", "java.lang.String" ]
+  }, {
+    "name" : "replaceFirst",
+    "parameterTypes" : [ "java.lang.String", "java.lang.String" ]
+  }, {
+    "name" : "resolveConstantDesc",
+    "parameterTypes" : [ "java.lang.invoke.MethodHandles$Lookup" ]
+  }, {
+    "name" : "safeTrim",
+    "parameterTypes" : [ "byte[]", "int", "boolean" ]
+  }, {
+    "name" : "scale",
+    "parameterTypes" : [ "int", "float" ]
+  }, {
+    "name" : "split",
+    "parameterTypes" : [ "java.lang.String" ]
+  }, {
+    "name" : "split",
+    "parameterTypes" : [ "java.lang.String", "int" ]
+  }, {
+    "name" : "startsWith",
+    "parameterTypes" : [ "java.lang.String" ]
+  }, {
+    "name" : "startsWith",
+    "parameterTypes" : [ "java.lang.String", "int" ]
+  }, {
+    "name" : "subSequence",
+    "parameterTypes" : [ "int", "int" ]
+  }, {
+    "name" : "substring",
+    "parameterTypes" : [ "int" ]
+  }, {
+    "name" : "substring",
+    "parameterTypes" : [ "int", "int" ]
+  }, {
+    "name" : "throwMalformed",
+    "parameterTypes" : [ "int", "int" ]
+  }, {
+    "name" : "throwMalformed",
+    "parameterTypes" : [ "byte[]" ]
+  }, {
+    "name" : "throwUnmappable",
+    "parameterTypes" : [ "int" ]
+  }, {
+    "name" : "throwUnmappable",
+    "parameterTypes" : [ "byte[]" ]
+  }, {
+    "name" : "toLowerCase",
+    "parameterTypes" : [ "java.util.Locale" ]
+  }, {
+    "name" : "toUpperCase",
+    "parameterTypes" : [ "java.util.Locale" ]
+  }, {
+    "name" : "transform",
+    "parameterTypes" : [ "java.util.function.Function" ]
+  }, {
+    "name" : "valueOf",
+    "parameterTypes" : [ "char" ]
+  }, {
+    "name" : "valueOf",
+    "parameterTypes" : [ "double" ]
+  }, {
+    "name" : "valueOf",
+    "parameterTypes" : [ "float" ]
+  }, {
+    "name" : "valueOf",
+    "parameterTypes" : [ "int" ]
+  }, {
+    "name" : "valueOf",
+    "parameterTypes" : [ "long" ]
+  }, {
+    "name" : "valueOf",
+    "parameterTypes" : [ "java.lang.Object" ]
+  }, {
+    "name" : "valueOf",
+    "parameterTypes" : [ "boolean" ]
+  }, {
+    "name" : "valueOf",
+    "parameterTypes" : [ "char[]" ]
+  }, {
+    "name" : "valueOf",
+    "parameterTypes" : [ "char[]", "int", "int" ]
+  }, {
+    "name" : "valueOfCodePoint",
+    "parameterTypes" : [ "int" ]
+  } ]
 }, {
   "name" : "java.lang.invoke.MethodHandle",
   "queriedMethods" : [ {
@@ -5212,6 +7415,12 @@
     "parameterTypes" : [ "java.lang.String", "java.lang.String" ]
   } ]
 }, {
+  "name" : "java.net.UnixDomainSocketAddress",
+  "methods" : [ {
+    "name" : "of",
+    "parameterTypes" : [ "java.lang.String" ]
+  } ]
+}, {
   "name" : "java.nio.Bits",
   "fields" : [ {
     "name" : "MAX_MEMORY"
@@ -5383,10 +7592,32 @@
     "name" : "e"
   } ]
 }, {
+  "name" : "java.util.concurrent.ForkJoinTask",
+  "fields" : [ {
+    "name" : "aux"
+  }, {
+    "name" : "status"
+  } ]
+}, {
   "name" : "java.util.concurrent.ScheduledThreadPoolExecutor",
   "queriedMethods" : [ {
     "name" : "setRemoveOnCancelPolicy",
     "parameterTypes" : [ "boolean" ]
+  } ]
+}, {
+  "name" : "java.util.concurrent.atomic.AtomicBoolean",
+  "fields" : [ {
+    "name" : "value"
+  } ]
+}, {
+  "name" : "java.util.concurrent.atomic.AtomicMarkableReference",
+  "fields" : [ {
+    "name" : "pair"
+  } ]
+}, {
+  "name" : "java.util.concurrent.atomic.AtomicReference",
+  "fields" : [ {
+    "name" : "value"
   } ]
 }, {
   "name" : "java.util.concurrent.atomic.LongAdder",
@@ -5401,6 +7632,13 @@
   "queriedMethods" : [ {
     "name" : "sum",
     "parameterTypes" : [ ]
+  } ]
+}, {
+  "name" : "java.util.concurrent.atomic.Striped64",
+  "fields" : [ {
+    "name" : "base"
+  }, {
+    "name" : "cellsBusy"
   } ]
 }, {
   "name" : "java.util.logging.LogManager",
@@ -5552,6 +7790,11 @@
 }, {
   "name" : "kotlin.Nothing"
 }, {
+  "name" : "kotlin.SafePublicationLazyImpl",
+  "fields" : [ {
+    "name" : "_value"
+  } ]
+}, {
   "name" : "kotlin.String"
 }, {
   "name" : "kotlin.Unit"
@@ -5588,6 +7831,11 @@
     "name" : "label"
   } ]
 }, {
+  "name" : "kotlin.reflect.full.KCallables$callSuspendBy$1",
+  "fields" : [ {
+    "name" : "label"
+  } ]
+}, {
   "name" : "kotlin.reflect.full.KClasses"
 }, {
   "name" : "kotlin.reflect.jvm.internal.ReflectionFactoryImpl",
@@ -5599,6 +7847,81 @@
   "name" : "kotlin.reflect.jvm.internal.impl.resolve.scopes.DescriptorKindFilter",
   "allPublicFields" : true
 }, {
+  "name" : "kotlinx.coroutines.CancellableContinuationImpl",
+  "fields" : [ {
+    "name" : "_decisionAndIndex$volatile"
+  }, {
+    "name" : "_parentHandle$volatile"
+  }, {
+    "name" : "_state$volatile"
+  } ]
+}, {
+  "name" : "kotlinx.coroutines.CancelledContinuation",
+  "fields" : [ {
+    "name" : "_resumed$volatile"
+  } ]
+}, {
+  "name" : "kotlinx.coroutines.CompletedExceptionally",
+  "fields" : [ {
+    "name" : "_handled$volatile"
+  } ]
+}, {
+  "name" : "kotlinx.coroutines.DispatchedCoroutine",
+  "fields" : [ {
+    "name" : "_decision$volatile"
+  } ]
+}, {
+  "name" : "kotlinx.coroutines.EventLoopImplBase",
+  "fields" : [ {
+    "name" : "_delayed$volatile"
+  }, {
+    "name" : "_isCompleted$volatile"
+  }, {
+    "name" : "_queue$volatile"
+  } ]
+}, {
+  "name" : "kotlinx.coroutines.InvokeOnCancelling",
+  "fields" : [ {
+    "name" : "_invoked$volatile"
+  } ]
+}, {
+  "name" : "kotlinx.coroutines.JobSupport",
+  "fields" : [ {
+    "name" : "_parentHandle$volatile"
+  }, {
+    "name" : "_state$volatile"
+  } ]
+}, {
+  "name" : "kotlinx.coroutines.JobSupport$Finishing",
+  "fields" : [ {
+    "name" : "_exceptionsHolder$volatile"
+  }, {
+    "name" : "_isCompleting$volatile"
+  }, {
+    "name" : "_rootCause$volatile"
+  } ]
+}, {
+  "name" : "kotlinx.coroutines.channels.BufferedChannel",
+  "fields" : [ {
+    "name" : "_closeCause$volatile"
+  }, {
+    "name" : "bufferEnd$volatile"
+  }, {
+    "name" : "bufferEndSegment$volatile"
+  }, {
+    "name" : "closeHandler$volatile"
+  }, {
+    "name" : "completedExpandBuffersAndPauseFlag$volatile"
+  }, {
+    "name" : "receiveSegment$volatile"
+  }, {
+    "name" : "receivers$volatile"
+  }, {
+    "name" : "sendSegment$volatile"
+  }, {
+    "name" : "sendersAndCloseStatus$volatile"
+  } ]
+}, {
   "name" : "kotlinx.coroutines.flow.AbstractFlow$collect$1",
   "fields" : [ {
     "name" : "label"
@@ -5606,7 +7929,103 @@
 }, {
   "name" : "kotlinx.coroutines.flow.Flow"
 }, {
+  "name" : "kotlinx.coroutines.internal.AtomicOp",
+  "fields" : [ {
+    "name" : "_consensus$volatile"
+  } ]
+}, {
+  "name" : "kotlinx.coroutines.internal.ConcurrentLinkedListNode",
+  "fields" : [ {
+    "name" : "_next$volatile"
+  }, {
+    "name" : "_prev$volatile"
+  } ]
+}, {
+  "name" : "kotlinx.coroutines.internal.DispatchedContinuation",
+  "fields" : [ {
+    "name" : "_reusableCancellableContinuation$volatile"
+  } ]
+}, {
+  "name" : "kotlinx.coroutines.internal.LimitedDispatcher",
+  "fields" : [ {
+    "name" : "runningWorkers$volatile"
+  } ]
+}, {
+  "name" : "kotlinx.coroutines.internal.LockFreeLinkedListNode",
+  "fields" : [ {
+    "name" : "_next$volatile"
+  }, {
+    "name" : "_prev$volatile"
+  }, {
+    "name" : "_removedRef$volatile"
+  } ]
+}, {
+  "name" : "kotlinx.coroutines.internal.LockFreeTaskQueue",
+  "fields" : [ {
+    "name" : "_cur$volatile"
+  } ]
+}, {
+  "name" : "kotlinx.coroutines.internal.LockFreeTaskQueueCore",
+  "fields" : [ {
+    "name" : "_next$volatile"
+  }, {
+    "name" : "_state$volatile"
+  } ]
+}, {
+  "name" : "kotlinx.coroutines.internal.Segment",
+  "fields" : [ {
+    "name" : "cleanedAndPointers$volatile"
+  } ]
+}, {
   "name" : "kotlinx.coroutines.internal.StackTraceRecoveryKt"
+}, {
+  "name" : "kotlinx.coroutines.internal.ThreadSafeHeap",
+  "fields" : [ {
+    "name" : "_size$volatile"
+  } ]
+}, {
+  "name" : "kotlinx.coroutines.scheduling.CoroutineScheduler",
+  "fields" : [ {
+    "name" : "_isTerminated$volatile"
+  }, {
+    "name" : "controlState$volatile"
+  }, {
+    "name" : "parkedWorkersStack$volatile"
+  } ]
+}, {
+  "name" : "kotlinx.coroutines.scheduling.CoroutineScheduler$Worker",
+  "fields" : [ {
+    "name" : "workerCtl$volatile"
+  } ]
+}, {
+  "name" : "kotlinx.coroutines.scheduling.WorkQueue",
+  "fields" : [ {
+    "name" : "blockingTasksInBuffer$volatile"
+  }, {
+    "name" : "consumerIndex$volatile"
+  }, {
+    "name" : "lastScheduledTask$volatile"
+  }, {
+    "name" : "producerIndex$volatile"
+  } ]
+}, {
+  "name" : "kotlinx.coroutines.sync.MutexImpl",
+  "fields" : [ {
+    "name" : "owner$volatile"
+  } ]
+}, {
+  "name" : "kotlinx.coroutines.sync.SemaphoreImpl",
+  "fields" : [ {
+    "name" : "_availablePermits$volatile"
+  }, {
+    "name" : "deqIdx$volatile"
+  }, {
+    "name" : "enqIdx$volatile"
+  }, {
+    "name" : "head$volatile"
+  }, {
+    "name" : "tail$volatile"
+  } ]
 }, {
   "name" : "net.bytebuddy.description.method.MethodDescription$InDefinedShape$AbstractBase$Executable",
   "queryAllPublicMethods" : true
@@ -5804,7 +8223,17 @@
   "name" : "net.bytebuddy.utility.JavaModule$Resolver",
   "queryAllPublicMethods" : true
 }, {
+  "name" : "org.HdrHistogram.AbstractHistogram",
+  "fields" : [ {
+    "name" : "maxValue"
+  }, {
+    "name" : "minNonZeroValue"
+  } ]
+}, {
   "name" : "org.HdrHistogram.ConcurrentHistogram",
+  "fields" : [ {
+    "name" : "totalCount"
+  } ],
   "methods" : [ {
     "name" : "<init>",
     "parameterTypes" : [ "long", "long", "int" ]
@@ -5817,6 +8246,15 @@
   "methods" : [ {
     "name" : "<init>",
     "parameterTypes" : [ "long", "long", "int" ]
+  } ]
+}, {
+  "name" : "org.HdrHistogram.WriterReaderPhaser",
+  "fields" : [ {
+    "name" : "evenEndEpoch"
+  }, {
+    "name" : "oddEndEpoch"
+  }, {
+    "name" : "startEpoch"
   } ]
 }, {
   "name" : "org.apache.curator.shaded.com.google.common.collect.ImmutableCollection",
@@ -6015,6 +8453,9 @@
     "name" : "checkObjectEnd",
     "parameterTypes" : [ "com.fasterxml.jackson.core.JsonToken" ]
   }, {
+    "name" : "fieldNamesEqual",
+    "parameterTypes" : [ "com.fasterxml.jackson.core.JsonParser", "java.lang.String", "java.lang.String" ]
+  }, {
     "name" : "mapUnknownEnumValue",
     "parameterTypes" : [ "int" ]
   }, {
@@ -6165,6 +8606,9 @@
   "allDeclaredFields" : true,
   "methods" : [ {
     "name" : "<init>",
+    "parameterTypes" : [ "com.google.api.HttpBody" ]
+  }, {
+    "name" : "<init>",
     "parameterTypes" : [ "com.google.rpc.BadRequest$FieldViolation" ]
   }, {
     "name" : "<init>",
@@ -6261,6 +8705,12 @@
     "parameterTypes" : [ "testing.grpc.Messages$TestMessage" ]
   }, {
     "name" : "<init>",
+    "parameterTypes" : [ "testing.grpc.Transcoding$ArbitraryHttpWrappedRequest" ]
+  }, {
+    "name" : "<init>",
+    "parameterTypes" : [ "testing.grpc.Transcoding$ArbitraryHttpWrappedResponse" ]
+  }, {
+    "name" : "<init>",
     "parameterTypes" : [ "testing.grpc.Transcoding$EchoAnyRequest" ]
   }, {
     "name" : "<init>",
@@ -6307,6 +8757,12 @@
   }, {
     "name" : "<init>",
     "parameterTypes" : [ "testing.grpc.Transcoding$EchoTimestampAndDurationResponse" ]
+  }, {
+    "name" : "<init>",
+    "parameterTypes" : [ "testing.grpc.Transcoding$EchoTimestampRequest" ]
+  }, {
+    "name" : "<init>",
+    "parameterTypes" : [ "testing.grpc.Transcoding$EchoTimestampResponse" ]
   }, {
     "name" : "<init>",
     "parameterTypes" : [ "testing.grpc.Transcoding$EchoValueRequest" ]
@@ -12682,7 +15138,316 @@
     "parameterTypes" : [ "org.slf4j.Marker", "java.lang.String", "int", "java.lang.String", "java.lang.Object[]", "java.lang.Throwable" ]
   } ]
 }, {
+  "name" : "reactor.core.publisher.FluxArray$ArraySubscription",
+  "fields" : [ {
+    "name" : "requested"
+  } ]
+}, {
+  "name" : "reactor.core.publisher.FluxAutoConnect",
+  "fields" : [ {
+    "name" : "remaining"
+  } ]
+}, {
+  "name" : "reactor.core.publisher.FluxCombineLatest$CombineLatestCoordinator",
+  "fields" : [ {
+    "name" : "error"
+  }, {
+    "name" : "requested"
+  }, {
+    "name" : "wip"
+  } ]
+}, {
+  "name" : "reactor.core.publisher.FluxCombineLatest$CombineLatestInner",
+  "fields" : [ {
+    "name" : "s"
+  } ]
+}, {
+  "name" : "reactor.core.publisher.FluxConcatArray$ConcatArrayDelayErrorSubscriber",
+  "fields" : [ {
+    "name" : "error"
+  }, {
+    "name" : "requested"
+  } ]
+}, {
+  "name" : "reactor.core.publisher.FluxConcatArray$ConcatArraySubscriber",
+  "fields" : [ {
+    "name" : "requested"
+  } ]
+}, {
+  "name" : "reactor.core.publisher.FluxConcatMapNoPrefetch$FluxConcatMapNoPrefetchSubscriber",
+  "fields" : [ {
+    "name" : "error"
+  }, {
+    "name" : "state"
+  } ]
+}, {
+  "name" : "reactor.core.publisher.FluxCreate$BaseSink",
+  "fields" : [ {
+    "name" : "disposable"
+  }, {
+    "name" : "requestConsumer"
+  }, {
+    "name" : "requested"
+  } ]
+}, {
+  "name" : "reactor.core.publisher.FluxCreate$BufferAsyncSink",
+  "fields" : [ {
+    "name" : "wip"
+  } ]
+}, {
+  "name" : "reactor.core.publisher.FluxCreate$SerializedFluxSink",
+  "fields" : [ {
+    "name" : "error"
+  }, {
+    "name" : "wip"
+  } ]
+}, {
+  "name" : "reactor.core.publisher.FluxFirstWithSignal$RaceCoordinator",
+  "fields" : [ {
+    "name" : "winner"
+  } ]
+}, {
+  "name" : "reactor.core.publisher.FluxGenerate$GenerateSubscription",
+  "fields" : [ {
+    "name" : "requested"
+  } ]
+}, {
+  "name" : "reactor.core.publisher.FluxInterval$IntervalRunnable",
+  "fields" : [ {
+    "name" : "requested"
+  } ]
+}, {
+  "name" : "reactor.core.publisher.FluxIterable$IterableSubscription",
+  "fields" : [ {
+    "name" : "requested"
+  } ]
+}, {
+  "name" : "reactor.core.publisher.FluxLimitRequest$FluxLimitRequestSubscriber",
+  "fields" : [ {
+    "name" : "requestRemaining"
+  } ]
+}, {
+  "name" : "reactor.core.publisher.FluxMergeSequential$MergeSequentialInner",
+  "fields" : [ {
+    "name" : "subscription"
+  } ]
+}, {
+  "name" : "reactor.core.publisher.FluxMergeSequential$MergeSequentialMain",
+  "fields" : [ {
+    "name" : "error"
+  }, {
+    "name" : "requested"
+  }, {
+    "name" : "wip"
+  } ]
+}, {
+  "name" : "reactor.core.publisher.FluxPublish",
+  "fields" : [ {
+    "name" : "connection"
+  } ]
+}, {
+  "name" : "reactor.core.publisher.FluxPublish$PubSubInner",
+  "fields" : [ {
+    "name" : "requested"
+  } ]
+}, {
+  "name" : "reactor.core.publisher.FluxPublish$PublishSubscriber",
+  "fields" : [ {
+    "name" : "error"
+  }, {
+    "name" : "state"
+  }, {
+    "name" : "subscribers"
+  } ]
+}, {
+  "name" : "reactor.core.publisher.FluxPublishOn$PublishOnSubscriber",
+  "fields" : [ {
+    "name" : "discardGuard"
+  }, {
+    "name" : "requested"
+  }, {
+    "name" : "wip"
+  } ]
+}, {
+  "name" : "reactor.core.publisher.FluxSwitchMapNoPrefetch$SwitchMapMain",
+  "fields" : [ {
+    "name" : "requested"
+  }, {
+    "name" : "state"
+  }, {
+    "name" : "throwable"
+  } ]
+}, {
+  "name" : "reactor.core.publisher.FluxZip$ZipScalarCoordinator",
+  "fields" : [ {
+    "name" : "state"
+  } ]
+}, {
+  "name" : "reactor.core.publisher.LambdaSubscriber",
+  "fields" : [ {
+    "name" : "subscription"
+  } ]
+}, {
   "name" : "reactor.core.publisher.Mono"
+}, {
+  "name" : "reactor.core.publisher.MonoCallable$MonoCallableSubscription",
+  "fields" : [ {
+    "name" : "requestedOnce"
+  } ]
+}, {
+  "name" : "reactor.core.publisher.MonoCompletionStage$MonoCompletionStageSubscription",
+  "fields" : [ {
+    "name" : "requestedOnce"
+  } ]
+}, {
+  "name" : "reactor.core.publisher.MonoCreate$DefaultMonoSink",
+  "fields" : [ {
+    "name" : "disposable"
+  }, {
+    "name" : "requestConsumer"
+  }, {
+    "name" : "state"
+  } ]
+}, {
+  "name" : "reactor.core.publisher.MonoDelay$MonoDelayRunnable",
+  "fields" : [ {
+    "name" : "state"
+  } ]
+}, {
+  "name" : "reactor.core.publisher.MonoIgnoreThen$ThenIgnoreMain",
+  "fields" : [ {
+    "name" : "state"
+  } ]
+}, {
+  "name" : "reactor.core.publisher.MonoNext$NextSubscriber",
+  "fields" : [ {
+    "name" : "wip"
+  } ]
+}, {
+  "name" : "reactor.core.publisher.MonoPublishOn$PublishOnSubscriber",
+  "fields" : [ {
+    "name" : "future"
+  }, {
+    "name" : "value"
+  } ]
+}, {
+  "name" : "reactor.core.publisher.MonoSupplier$MonoSupplierSubscription",
+  "fields" : [ {
+    "name" : "requestedOnce"
+  } ]
+}, {
+  "name" : "reactor.core.publisher.MonoZip$ZipCoordinator",
+  "fields" : [ {
+    "name" : "state"
+  } ]
+}, {
+  "name" : "reactor.core.publisher.MonoZip$ZipInner",
+  "fields" : [ {
+    "name" : "s"
+  } ]
+}, {
+  "name" : "reactor.core.publisher.Operators$DeferredSubscription",
+  "fields" : [ {
+    "name" : "requested"
+  } ]
+}, {
+  "name" : "reactor.core.publisher.Operators$MultiSubscriptionSubscriber",
+  "fields" : [ {
+    "name" : "missedProduced"
+  }, {
+    "name" : "missedRequested"
+  }, {
+    "name" : "missedSubscription"
+  }, {
+    "name" : "wip"
+  } ]
+}, {
+  "name" : "reactor.core.publisher.Operators$ScalarSubscription",
+  "fields" : [ {
+    "name" : "once"
+  } ]
+}, {
+  "name" : "reactor.core.publisher.StrictSubscriber",
+  "fields" : [ {
+    "name" : "error"
+  }, {
+    "name" : "requested"
+  }, {
+    "name" : "s"
+  }, {
+    "name" : "wip"
+  } ]
+}, {
+  "name" : "reactor.core.scheduler.ParallelScheduler",
+  "fields" : [ {
+    "name" : "state"
+  } ]
+}, {
+  "name" : "reactor.core.scheduler.PeriodicWorkerTask",
+  "fields" : [ {
+    "name" : "future"
+  }, {
+    "name" : "parent"
+  } ]
+}, {
+  "name" : "reactor.core.scheduler.SchedulerTask",
+  "fields" : [ {
+    "name" : "future"
+  }, {
+    "name" : "parent"
+  } ]
+}, {
+  "name" : "reactor.core.scheduler.SingleScheduler",
+  "fields" : [ {
+    "name" : "state"
+  } ]
+}, {
+  "name" : "reactor.core.scheduler.WorkerTask",
+  "fields" : [ {
+    "name" : "future"
+  }, {
+    "name" : "parent"
+  }, {
+    "name" : "thread"
+  } ]
+}, {
+  "name" : "reactor.test.DefaultStepVerifierBuilder$DefaultVerifySubscriber",
+  "fields" : [ {
+    "name" : "errors"
+  }, {
+    "name" : "requested"
+  }, {
+    "name" : "wip"
+  } ]
+}, {
+  "name" : "reactor.util.concurrent.MpscLinkedQueue",
+  "fields" : [ {
+    "name" : "consumerNode"
+  }, {
+    "name" : "producerNode"
+  } ]
+}, {
+  "name" : "reactor.util.concurrent.MpscLinkedQueue$LinkedQueueNode",
+  "fields" : [ {
+    "name" : "next"
+  } ]
+}, {
+  "name" : "reactor.util.concurrent.SpscArrayQueueConsumer",
+  "fields" : [ {
+    "name" : "consumerIndex"
+  } ]
+}, {
+  "name" : "reactor.util.concurrent.SpscArrayQueueProducer",
+  "fields" : [ {
+    "name" : "producerIndex"
+  } ]
+}, {
+  "name" : "reactor.util.concurrent.SpscLinkedArrayQueue",
+  "fields" : [ {
+    "name" : "consumerIndex"
+  }, {
+    "name" : "producerIndex"
+  } ]
 }, {
   "name" : "retrofit2.http.DELETE",
   "methods" : [ {
@@ -12726,9 +15491,53 @@
     "parameterTypes" : [ ]
   } ]
 }, {
+  "name" : "scala.Equals",
+  "queriedMethods" : [ {
+    "name" : "testing.scalapb.messages.SimpleRequest",
+    "parameterTypes" : [ "java.lang.String", "int", "scalapb.UnknownFieldSet" ]
+  } ]
+}, {
+  "name" : "scala.Product",
+  "queriedMethods" : [ {
+    "name" : "testing.scalapb.messages.SimpleRequest",
+    "parameterTypes" : [ "java.lang.String", "int", "scalapb.UnknownFieldSet" ]
+  } ]
+}, {
+  "name" : "scala.Serializable",
+  "queriedMethods" : [ {
+    "name" : "testing.scalapb.messages.SimpleRequest",
+    "parameterTypes" : [ "java.lang.String", "int", "scalapb.UnknownFieldSet" ]
+  } ]
+}, {
+  "name" : "scala.collection.concurrent.CNodeBase",
+  "fields" : [ {
+    "name" : "csize"
+  } ]
+}, {
+  "name" : "scala.collection.concurrent.INodeBase",
+  "fields" : [ {
+    "name" : "mainnode"
+  } ]
+}, {
+  "name" : "scala.collection.concurrent.MainNode",
+  "fields" : [ {
+    "name" : "prev"
+  } ]
+}, {
+  "name" : "scala.collection.concurrent.TrieMap",
+  "fields" : [ {
+    "name" : "root"
+  } ]
+}, {
   "name" : "scala.concurrent.ExecutionContext"
 }, {
   "name" : "scala.concurrent.Future"
+}, {
+  "name" : "scalapb.GeneratedMessage",
+  "queriedMethods" : [ {
+    "name" : "testing.scalapb.messages.SimpleRequest",
+    "parameterTypes" : [ "java.lang.String", "int", "scalapb.UnknownFieldSet" ]
+  } ]
 }, {
   "name" : "scalapb.descriptors.Descriptor",
   "fields" : [ {
@@ -12739,6 +15548,12 @@
     "name" : "oneofs$lzy1"
   }, {
     "name" : "sortedFields$lzy1"
+  } ]
+}, {
+  "name" : "scalapb.lenses.Updatable",
+  "queriedMethods" : [ {
+    "name" : "testing.scalapb.messages.SimpleRequest",
+    "parameterTypes" : [ "java.lang.String", "int", "scalapb.UnknownFieldSet" ]
   } ]
 }, {
   "name" : "sun.management.ClassLoadingImpl",
@@ -12933,6 +15748,16 @@
     "parameterTypes" : [ "java.security.SecureRandomParameters" ]
   } ]
 }, {
+  "name" : "sun.security.provider.NativePRNG$NonBlocking",
+  "methods" : [ {
+    "name" : "<init>",
+    "parameterTypes" : [ ]
+  } ],
+  "queriedMethods" : [ {
+    "name" : "<init>",
+    "parameterTypes" : [ "java.security.SecureRandomParameters" ]
+  } ]
+}, {
   "name" : "sun.security.provider.SHA",
   "methods" : [ {
     "name" : "<init>",
@@ -13042,6 +15867,12 @@
   "name" : "sun.security.ssl.SSLContextImpl$CustomizedTLSContext",
   "fields" : [ {
     "name" : "trustManager"
+  } ]
+}, {
+  "name" : "sun.security.ssl.SSLContextImpl$DefaultSSLContext",
+  "methods" : [ {
+    "name" : "<init>",
+    "parameterTypes" : [ ]
   } ]
 }, {
   "name" : "sun.security.ssl.SSLContextImpl$TLSContext",
