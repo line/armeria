@@ -94,10 +94,10 @@ public interface HttpObjectEncoder {
     /**
      * Releases the resources related with this encoder and fails any unfinished writes.
      */
-    void close();
+    void close(Throwable cause);
 
     /**
-     * Returns {@code true} if {@link #close()} is called.
+     * Returns {@code true} if {@link #close(Throwable)} is called.
      */
     boolean isClosed();
 

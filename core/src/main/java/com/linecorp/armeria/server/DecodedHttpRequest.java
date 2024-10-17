@@ -75,6 +75,9 @@ interface DecodedHttpRequest extends HttpRequest {
 
     void init(ServiceRequestContext ctx);
 
+    @Nullable
+    ServiceRequestContext requestContext();
+
     RoutingContext routingContext();
 
     /**
@@ -117,6 +120,11 @@ interface DecodedHttpRequest extends HttpRequest {
     default CompletableFuture<Void> whenAggregated() {
         return null;
     }
+
+    /**
+     * Returns a {@link CompletableFuture} that is completed when the response is fully sent.
+     */
+    CompletableFuture<Void> whenResponseSent();
 
     /**
      * Returns the {@link ExchangeType} that determines whether to stream an {@link HttpRequest} or

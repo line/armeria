@@ -95,6 +95,11 @@ enum DefaultServerErrorHandler implements ServerErrorHandler {
             return internalRenderStatus(ctx, ctx.request().headers(), status, cause);
         }
 
+        if (cause instanceof ShuttingDownException) {
+            return internalRenderStatus(ctx, ctx.request().headers(),
+                                        HttpStatus.SERVICE_UNAVAILABLE, cause);
+        }
+
         return internalRenderStatus(ctx, ctx.request().headers(),
                                     HttpStatus.INTERNAL_SERVER_ERROR, cause);
     }
