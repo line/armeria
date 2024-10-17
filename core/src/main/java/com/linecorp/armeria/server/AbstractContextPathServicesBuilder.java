@@ -409,4 +409,12 @@ abstract class AbstractContextPathServicesBuilder<SELF extends AbstractContextPa
     final Set<String> contextPaths() {
         return contextPaths;
     }
+
+    VirtualHostBuilder virtualHostBuilder() {
+        return this.virtualHostBuilder;
+    }
+
+    T parent() {
+        return parent;
+    }
 }
