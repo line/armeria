@@ -69,8 +69,8 @@ final class CorsServerErrorHandler implements ServerErrorHandler {
     /**
      * Sets CORS headers for <a href="https://developer.mozilla.org/en-US/docs/Web/HTTP/CORS#simple_requests">
      * simple CORS requests</a>.
-     * This method does not support preflight requests or forbidden origins because they require a complete
-     * response that is delegated to {@code serverErrorHandler}.
+     * This method does not support preflight requests because they require a complete response that is
+     * delegated to {@code serverErrorHandler}.
      */
     private static boolean shouldSetCorsHeaders(@Nullable CorsService corsService, ServiceRequestContext ctx) {
         if (corsService == null) {
@@ -83,13 +83,16 @@ final class CorsServerErrorHandler implements ServerErrorHandler {
         }
 
         final RequestHeaders headers = ctx.request().headers();
-        //noinspection RedundantIfStatement
-        if (isCorsPreflightRequest(headers) || isForbiddenOrigin(corsService.config(), ctx, headers)) {
+
+        if (isCorsPreflightRequest(headers)) {
             return false;
-        } else {
-            // A simple CORS request.
-            return true;
         }
+        //noinspection RedundantIfStatement
+        if (isForbiddenOrigin(corsService.config(), ctx, headers)) {
+            return false;
+        }
+        // A simple CORS request.
+        return true;
     }
 
     @Nullable
