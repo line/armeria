@@ -45,6 +45,8 @@ class GracefulShutdownSupportTest {
     @Mock
     private Ticker ticker;
 
+    private ServerMetrics serverMetrics;
+
     private GracefulShutdownSupport support;
     private ThreadPoolExecutor executor;
 
@@ -54,7 +56,9 @@ class GracefulShutdownSupportTest {
                 0, 1, 1, TimeUnit.SECONDS, new LinkedTransferQueue<>(),
                 ThreadFactories.newThreadFactory("graceful-shutdown-test", true));
 
-        support = GracefulShutdownSupport.create(Duration.ofNanos(QUIET_PERIOD_NANOS), executor, ticker);
+        serverMetrics = new ServerMetrics();
+        support = GracefulShutdownSupport.create(Duration.ofNanos(QUIET_PERIOD_NANOS), executor, ticker,
+                                                 serverMetrics);
     }
 
     @AfterEach
@@ -64,7 +68,7 @@ class GracefulShutdownSupportTest {
 
     @Test
     void testDisabled() {
-        final GracefulShutdownSupport support = GracefulShutdownSupport.createDisabled();
+        final GracefulShutdownSupport support = GracefulShutdownSupport.createDisabled(serverMetrics);
         assertThat(support.isShuttingDown()).isFalse();
         assertThat(support.completedQuietPeriod()).isTrue();
         assertThat(support.isShuttingDown()).isTrue();
