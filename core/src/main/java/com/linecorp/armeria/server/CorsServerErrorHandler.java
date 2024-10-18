@@ -58,6 +58,7 @@ final class CorsServerErrorHandler implements ServerErrorHandler {
     public HttpResponse onServiceException(ServiceRequestContext ctx, Throwable cause) {
         final CorsService corsService = ctx.findService(CorsService.class);
         if (shouldSetCorsHeaders(corsService, ctx)) {
+            assert corsService != null;
             ctx.mutateAdditionalResponseHeaders(builder -> {
                 CorsHeaderUtil.setCorsResponseHeaders(ctx, ctx.request(), builder, corsService.config());
             });
