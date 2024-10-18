@@ -144,15 +144,13 @@ class CorsServerErrorHandlerTest {
             "/cors_response_exception",
             "/cors_response_exception_route",
     })
-    void testCorsHeaderWithException(String path) {
+    void shouldNotHandlePreflightRequest(String path) {
         final WebClient client = server.webClient();
         final AggregatedHttpResponse response = preflightRequest(client, path,
                                                                  "http://example.com", "GET");
         assertThat(response.status()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
-        assertThat(response.headers().get(HttpHeaderNames.ACCESS_CONTROL_ALLOW_HEADERS)).isEqualTo(
-                "allow_request_header");
-        assertThat(response.headers().get(HttpHeaderNames.ACCESS_CONTROL_ALLOW_ORIGIN)).isEqualTo(
-                "http://example.com");
+        assertThat(response.headers().get(HttpHeaderNames.ACCESS_CONTROL_ALLOW_HEADERS)).isNull();
+        assertThat(response.headers().get(HttpHeaderNames.ACCESS_CONTROL_ALLOW_ORIGIN)).isNull();
     }
 
     /**
