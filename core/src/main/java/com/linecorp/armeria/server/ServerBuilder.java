@@ -23,7 +23,6 @@ import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.linecorp.armeria.common.SessionProtocol.HTTP;
 import static com.linecorp.armeria.common.SessionProtocol.HTTPS;
 import static com.linecorp.armeria.common.SessionProtocol.PROXY;
-import static com.linecorp.armeria.server.DefaultServerConfig.validateGreaterThanOrEqual;
 import static com.linecorp.armeria.server.DefaultServerConfig.validateIdleTimeoutMillis;
 import static com.linecorp.armeria.server.DefaultServerConfig.validateMaxNumConnections;
 import static com.linecorp.armeria.server.DefaultServerConfig.validateNonNegative;
@@ -216,8 +215,7 @@ public final class ServerBuilder implements TlsSetters, ServiceConfigsBuilder<Se
     private int http1MaxHeaderSize = Flags.defaultHttp1MaxHeaderSize();
     private int http1MaxChunkSize = Flags.defaultHttp1MaxChunkSize();
     private int proxyProtocolMaxTlvSize = PROXY_PROTOCOL_DEFAULT_MAX_TLV_SIZE;
-    private Duration gracefulShutdownQuietPeriod = DEFAULT_GRACEFUL_SHUTDOWN_QUIET_PERIOD;
-    private Duration gracefulShutdownTimeout = DEFAULT_GRACEFUL_SHUTDOWN_TIMEOUT;
+    private GracefulShutdown gracefulShutdown = GracefulShutdown.disabled();
     private MeterRegistry meterRegistry = Flags.meterRegistry();
     @Nullable
     private ServerErrorHandler errorHandler;
@@ -893,8 +891,10 @@ public final class ServerBuilder implements TlsSetters, ServiceConfigsBuilder<Se
      *                      to ensure the server shuts down even if there is a stuck request.
      */
     public ServerBuilder gracefulShutdownTimeoutMillis(long quietPeriodMillis, long timeoutMillis) {
-        return gracefulShutdownTimeout(
-                Duration.ofMillis(quietPeriodMillis), Duration.ofMillis(timeoutMillis));
+        return gracefulShutdown(GracefulShutdown.builder()
+                                                .quietPeriodMillis(quietPeriodMillis)
+                                                .timeoutMillis(timeoutMillis)
+                                                .build());
     }
 
     /**
@@ -909,12 +909,19 @@ public final class ServerBuilder implements TlsSetters, ServiceConfigsBuilder<Se
      *                shuts down even if there is a stuck request.
      */
     public ServerBuilder gracefulShutdownTimeout(Duration quietPeriod, Duration timeout) {
-        requireNonNull(quietPeriod, "quietPeriod");
-        requireNonNull(timeout, "timeout");
-        gracefulShutdownQuietPeriod = validateNonNegative(quietPeriod, "quietPeriod");
-        gracefulShutdownTimeout = validateNonNegative(timeout, "timeout");
-        validateGreaterThanOrEqual(gracefulShutdownTimeout, "quietPeriod",
-                                   gracefulShutdownQuietPeriod, "timeout");
+        return gracefulShutdown(GracefulShutdown.builder()
+                                                .quietPeriod(quietPeriod)
+                                                .timeout(timeout)
+                                                .build());
+    }
+
+    /**
+     * Sets the {@link GracefulShutdown} configuration.
+     * If not set, {@link GracefulShutdown#disabled()} is used.
+     */
+    @UnstableApi
+    public ServerBuilder gracefulShutdown(GracefulShutdown gracefulShutdown) {
+        this.gracefulShutdown = requireNonNull(gracefulShutdown, "gracefulShutdown");
         return this;
     }
 
@@ -2326,7 +2333,7 @@ public final class ServerBuilder implements TlsSetters, ServiceConfigsBuilder<Se
                 http2MaxFrameSize, http2MaxHeaderListSize,
                 http2MaxResetFramesPerWindow, http2MaxResetFramesWindowSeconds,
                 http1MaxInitialLineLength, http1MaxHeaderSize,
-                http1MaxChunkSize, gracefulShutdownQuietPeriod, gracefulShutdownTimeout,
+                http1MaxChunkSize, gracefulShutdown,
                 blockingTaskExecutor,
                 meterRegistry, proxyProtocolMaxTlvSize, channelOptions, newChildChannelOptions,
                 childChannelPipelineCustomizer,

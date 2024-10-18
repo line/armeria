@@ -34,8 +34,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.linecorp.armeria.client.ClientFactory;
+import com.linecorp.armeria.client.InvalidResponseHeadersException;
+import com.linecorp.armeria.client.logging.LoggingClient;
 import com.linecorp.armeria.client.thrift.ThriftClients;
-import com.linecorp.armeria.common.ClosedSessionException;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.logging.RequestLog;
@@ -45,6 +46,7 @@ import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.logging.AccessLogWriter;
+import com.linecorp.armeria.server.logging.LoggingService;
 import com.linecorp.armeria.server.thrift.THttpService;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
@@ -74,6 +76,7 @@ class GracefulShutdownIntegrationTest {
                         ServiceRequestContext.current().eventLoop().schedule(
                                 () -> resultHandler.onComplete(milliseconds), milliseconds, MILLISECONDS);
                     }));
+            sb.decorator(LoggingService.newDecorator());
 
             final AccessLogWriter writer1 = new AccessLogWriter() {
                 @Override
@@ -211,7 +214,9 @@ class GracefulShutdownIntegrationTest {
                 client.sleep(30000L);
                 completed.set(true);
             } catch (TTransportException cause) {
-                assertThat(cause).hasCauseInstanceOf(ClosedSessionException.class);
+                assertThat(cause).hasCauseInstanceOf(InvalidResponseHeadersException.class);
+                assertThat(((InvalidResponseHeadersException) cause.getCause()).headers().status())
+                        .isEqualTo(HttpStatus.SERVICE_UNAVAILABLE);
                 latch2.countDown();
             } catch (Throwable t) {
                 logger.error("Unexpected failure:", t);
@@ -272,6 +277,7 @@ class GracefulShutdownIntegrationTest {
 
     private SleepService.Iface newClient() {
         return ThriftClients.builder(server.httpUri())
+                            .decorator(LoggingClient.newDecorator())
                             .path("/sleep")
                             .factory(clientFactory)
                             .build(SleepService.Iface.class);
