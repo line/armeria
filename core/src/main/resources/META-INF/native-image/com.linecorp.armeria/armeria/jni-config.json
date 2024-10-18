@@ -146,6 +146,8 @@
     "parameterTypes" : [ "long", "byte[][]", "java.lang.String", "io.netty.internal.tcnative.CertificateVerifier" ]
   } ]
 }, {
+  "name" : "io.netty.internal.tcnative.Library"
+}, {
   "name" : "io.netty.internal.tcnative.NativeStaticallyReferencedJniMethods"
 }, {
   "name" : "io.netty.internal.tcnative.SSL"
