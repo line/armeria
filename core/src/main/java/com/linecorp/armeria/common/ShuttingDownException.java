@@ -14,12 +14,11 @@
  * under the License.
  */
 
-package com.linecorp.armeria.server;
+package com.linecorp.armeria.common;
 
-import com.linecorp.armeria.common.CancellationException;
-import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.util.Sampler;
+import com.linecorp.armeria.server.Server;
 
 /**
  * A {@link CancellationException} raised when a {@link Server} cannot handle a request because it's shutting

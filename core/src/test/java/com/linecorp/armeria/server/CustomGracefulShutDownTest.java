@@ -33,6 +33,7 @@ import com.linecorp.armeria.client.logging.LoggingClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
+import com.linecorp.armeria.common.ShuttingDownException;
 import com.linecorp.armeria.internal.testing.AnticipatedException;
 
 class CustomGracefulShutDownTest {
