@@ -17,6 +17,7 @@
 package com.linecorp.armeria.server.cors;
 
 import static com.linecorp.armeria.internal.common.ArmeriaHttpUtil.isCorsPreflightRequest;
+import static com.linecorp.armeria.internal.server.CorsHeaderUtil.isForbiddenOrigin;
 import static java.util.Objects.requireNonNull;
 
 import java.util.List;
@@ -29,7 +30,6 @@ import org.slf4j.LoggerFactory;
 
 import com.google.common.collect.ImmutableList;
 
-import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
@@ -133,8 +133,7 @@ public final class CorsService extends SimpleDecoratingHttpService {
         if (isCorsPreflightRequest(req.headers())) {
             return handleCorsPreflight(ctx, req);
         }
-        if (config.isShortCircuit() &&
-            config.getPolicy(req.headers().get(HttpHeaderNames.ORIGIN), ctx.routingContext()) == null) {
+        if (isForbiddenOrigin(config, ctx, req.headers())) {
             return forbidden();
         }
 

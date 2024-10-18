@@ -16,6 +16,9 @@
 
 package com.linecorp.armeria.server;
 
+import static com.linecorp.armeria.internal.common.ArmeriaHttpUtil.isCorsPreflightRequest;
+import static com.linecorp.armeria.internal.server.CorsHeaderUtil.isForbiddenOrigin;
+
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
@@ -54,12 +57,38 @@ final class CorsServerErrorHandler implements ServerErrorHandler {
     @Override
     public HttpResponse onServiceException(ServiceRequestContext ctx, Throwable cause) {
         final CorsService corsService = ctx.findService(CorsService.class);
-        if (corsService != null && !CorsHeaderUtil.isCorsHeadersSet(ctx)) {
+        if (shouldSetCorsHeaders(corsService, ctx)) {
             ctx.mutateAdditionalResponseHeaders(builder -> {
                 CorsHeaderUtil.setCorsResponseHeaders(ctx, ctx.request(), builder, corsService.config());
             });
         }
         return serverErrorHandler.onServiceException(ctx, cause);
+    }
+
+    /**
+     * Sets CORS headers for <a href="https://developer.mozilla.org/en-US/docs/Web/HTTP/CORS#simple_requests">
+     * simple CORS requests</a>.
+     * This method does not support preflight requests or forbidden origins because they require a complete
+     * response that is delegated to {@code serverErrorHandler}.
+     */
+    private static boolean shouldSetCorsHeaders(@Nullable CorsService corsService, ServiceRequestContext ctx) {
+        if (corsService == null) {
+            // No CorsService is configured.
+            return false;
+        }
+        if (CorsHeaderUtil.isCorsHeadersSet(ctx)) {
+            // CORS headers were set by CorsService.
+            return false;
+        }
+
+        final RequestHeaders headers = ctx.request().headers();
+        //noinspection RedundantIfStatement
+        if (isCorsPreflightRequest(headers) || isForbiddenOrigin(corsService.config(), ctx, headers)) {
+            return false;
+        } else {
+            // A simple CORS request.
+            return true;
+        }
     }
 
     @Nullable

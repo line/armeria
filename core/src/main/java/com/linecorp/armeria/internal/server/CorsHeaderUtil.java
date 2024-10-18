@@ -28,8 +28,6 @@ import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeadersBuilder;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.RequestHeaders;
-import com.linecorp.armeria.common.ResponseHeaders;
-import com.linecorp.armeria.common.ResponseHeadersBuilder;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.cors.CorsConfig;
@@ -50,17 +48,8 @@ public final class CorsHeaderUtil {
     public static final String DELIMITER = ",";
     private static final Joiner HEADER_JOINER = Joiner.on(DELIMITER);
 
-    private static AttributeKey<Boolean> IS_CORS_SET = AttributeKey.valueOf(CorsService.class, "IS_CORS_SET");
-
-    public static ResponseHeaders addCorsHeaders(ServiceRequestContext ctx, CorsConfig corsConfig,
-                                                 ResponseHeaders responseHeaders) {
-        final HttpRequest httpRequest = ctx.request();
-        final ResponseHeadersBuilder responseHeadersBuilder = responseHeaders.toBuilder();
-
-        setCorsResponseHeaders(ctx, httpRequest, responseHeadersBuilder, corsConfig);
-
-        return responseHeadersBuilder.build();
-    }
+    private static final AttributeKey<Boolean> IS_CORS_SET =
+            AttributeKey.valueOf(CorsService.class, "IS_CORS_SET");
 
     /**
      * Emit CORS headers if origin was found.
@@ -207,6 +196,11 @@ public final class CorsHeaderUtil {
      */
     private static String joinAllowedRequestHeaders(CorsPolicy corsPolicy) {
         return joinHeaders(corsPolicy.allowedRequestHeaders());
+    }
+
+    public static boolean isForbiddenOrigin(CorsConfig config, ServiceRequestContext ctx, RequestHeaders req) {
+        return config.isShortCircuit() &&
+               config.getPolicy(req.get(HttpHeaderNames.ORIGIN), ctx.routingContext()) == null;
     }
 
     public static boolean isCorsHeadersSet(ServiceRequestContext ctx) {
