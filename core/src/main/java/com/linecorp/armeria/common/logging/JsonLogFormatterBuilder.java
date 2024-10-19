@@ -23,8 +23,10 @@ import java.util.function.BiFunction;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 
 import com.linecorp.armeria.common.RequestContext;
+import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.internal.common.JacksonUtil;
@@ -58,7 +60,7 @@ public final class JsonLogFormatterBuilder
         final HeadersSanitizer<JsonNode> defaultHeadersSanitizer =
                 defaultHeadersSanitizer(objectMapper);
         final BiFunction<? super RequestContext, Object, JsonNode> defaultContentSanitizer =
-                defaultSanitizer(objectMapper);
+                defaultContentSanitizer(objectMapper);
         return new JsonLogFormatter(
                 firstNonNull(requestHeadersSanitizer(), HeadersSanitizer.ofJson()),
                 firstNonNull(responseHeadersSanitizer(), HeadersSanitizer.ofJson()),
@@ -70,8 +72,19 @@ public final class JsonLogFormatterBuilder
     }
 
     private static <T> BiFunction<? super RequestContext, T, JsonNode>
-    defaultSanitizer(ObjectMapper objectMapper) {
-        return (requestContext, obj) -> objectMapper.valueToTree(obj);
+    defaultContentSanitizer(ObjectMapper objectMapper) {
+        return (requestContext, obj) -> {
+            if (obj instanceof RpcRequest) {
+                RpcRequest rpcRequest = (RpcRequest) obj;
+                ObjectNode node = objectMapper.createObjectNode();
+                node.put("method", rpcRequest.method());
+                node.put("serviceName", rpcRequest.serviceName());
+//                node.set("params", objectMapper.valueToTree(rpcRequest.params()));
+
+                return node;
+            }
+            return objectMapper.valueToTree(obj);
+        };
     }
 
     private static HeadersSanitizer<JsonNode>
