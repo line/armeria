@@ -241,6 +241,11 @@ final class UpdatableServerConfig implements ServerConfig {
     }
 
     @Override
+    public GracefulShutdown gracefulShutdown() {
+        return delegate.gracefulShutdown();
+    }
+
+    @Override
     public BlockingTaskExecutor blockingTaskExecutor() {
         return delegate.blockingTaskExecutor();
     }

@@ -124,7 +124,7 @@ public abstract class Http2ObjectEncoder implements HttpObjectEncoder {
     }
 
     @Override
-    public final void close() {
+    public final void close(Throwable unused) {
         closed = true;
         keepAliveHandler().destroy();
     }

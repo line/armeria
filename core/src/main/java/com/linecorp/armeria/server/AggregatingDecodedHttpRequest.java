@@ -59,6 +59,7 @@ final class AggregatingDecodedHttpRequest extends AggregatingStreamMessage<HttpO
     private boolean isNormallyClosed;
 
     private final CompletableFuture<Void> aggregationFuture = new CompletableFuture<>();
+    private final CompletableFuture<Void> whenResponseSent = new CompletableFuture<>();
 
     AggregatingDecodedHttpRequest(EventLoop eventLoop, int id, int streamId, RequestHeaders headers,
                                   boolean keepAlive, long maxRequestLength,
@@ -87,6 +88,12 @@ final class AggregatingDecodedHttpRequest extends AggregatingStreamMessage<HttpO
     @Override
     public CompletableFuture<AggregatedHttpRequest> aggregate(AggregationOptions options) {
         return super.aggregate(options);
+    }
+
+    @Nullable
+    @Override
+    public ServiceRequestContext requestContext() {
+        return ctx;
     }
 
     @Override
@@ -232,6 +239,11 @@ final class AggregatingDecodedHttpRequest extends AggregatingStreamMessage<HttpO
     @Override
     public CompletableFuture<Void> whenAggregated() {
         return aggregationFuture;
+    }
+
+    @Override
+    public CompletableFuture<Void> whenResponseSent() {
+        return whenResponseSent;
     }
 
     @Override
