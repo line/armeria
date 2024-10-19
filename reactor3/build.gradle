@@ -1,3 +1,4 @@
 dependencies {
     api libs.reactor.core
+    implementation libs.context.propagation
 }
