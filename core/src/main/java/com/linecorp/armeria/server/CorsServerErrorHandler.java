@@ -16,15 +16,15 @@
 
 package com.linecorp.armeria.server;
 
-import static com.linecorp.armeria.internal.server.CorsHeaderUtil.addCorsHeaders;
+import static com.linecorp.armeria.internal.common.ArmeriaHttpUtil.isCorsPreflightRequest;
+import static com.linecorp.armeria.internal.server.CorsHeaderUtil.isForbiddenOrigin;
 
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.RequestHeaders;
-import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.annotation.Nullable;
-import com.linecorp.armeria.server.cors.CorsConfig;
+import com.linecorp.armeria.internal.server.CorsHeaderUtil;
 import com.linecorp.armeria.server.cors.CorsService;
 
 /**
@@ -50,49 +50,46 @@ final class CorsServerErrorHandler implements ServerErrorHandler {
                                                @Nullable RequestHeaders headers,
                                                HttpStatus status, @Nullable String description,
                                                @Nullable Throwable cause) {
-
-        if (ctx == null) {
-            return serverErrorHandler.renderStatus(null, serviceConfig, headers, status, description, cause);
-        }
-
-        final CorsService corsService = ctx.findService(CorsService.class);
-        if (corsService == null) {
-            return serverErrorHandler.renderStatus(ctx, serviceConfig, headers, status, description, cause);
-        }
-
-        final AggregatedHttpResponse res = serverErrorHandler.renderStatus(ctx, serviceConfig, headers, status,
-                                                                           description, cause);
-
-        if (res == null) {
-            return serverErrorHandler.renderStatus(ctx, serviceConfig, headers, status, description, cause);
-        }
-
-        final CorsConfig corsConfig = corsService.config();
-        final ResponseHeaders updatedResponseHeaders = addCorsHeaders(ctx, corsConfig,
-                                                                      res.headers());
-
-        return AggregatedHttpResponse.of(updatedResponseHeaders, res.content());
+        return serverErrorHandler.renderStatus(ctx, serviceConfig, headers, status, description, cause);
     }
 
     @Nullable
     @Override
     public HttpResponse onServiceException(ServiceRequestContext ctx, Throwable cause) {
-        if (cause instanceof HttpResponseException) {
-            final HttpResponse oldRes = serverErrorHandler.onServiceException(ctx, cause);
-            if (oldRes == null) {
-                return null;
-            }
-            final CorsService corsService = ctx.findService(CorsService.class);
-            if (corsService == null) {
-                return oldRes;
-            }
-            return oldRes.recover(HttpResponseException.class, ex -> {
-                return ex.httpResponse()
-                         .mapHeaders(oldHeaders -> addCorsHeaders(ctx, corsService.config(), oldHeaders));
+        final CorsService corsService = ctx.findService(CorsService.class);
+        if (shouldSetCorsHeaders(corsService, ctx)) {
+            assert corsService != null;
+            ctx.mutateAdditionalResponseHeaders(builder -> {
+                CorsHeaderUtil.setCorsResponseHeaders(ctx, ctx.request(), builder, corsService.config());
             });
-        } else {
-            return serverErrorHandler.onServiceException(ctx, cause);
         }
+        return serverErrorHandler.onServiceException(ctx, cause);
+    }
+
+    /**
+     * Sets CORS headers for <a href="https://developer.mozilla.org/en-US/docs/Web/HTTP/CORS#simple_requests">
+     * simple CORS requests</a> or main requests.
+     * Preflight requests is unsupported because we don't know if it is safe to perform the main request.
+     */
+    private static boolean shouldSetCorsHeaders(@Nullable CorsService corsService, ServiceRequestContext ctx) {
+        if (corsService == null) {
+            // No CorsService is configured.
+            return false;
+        }
+        if (CorsHeaderUtil.isCorsHeadersSet(ctx)) {
+            // CORS headers were set by CorsService.
+            return false;
+        }
+        final RequestHeaders headers = ctx.request().headers();
+        if (isCorsPreflightRequest(headers)) {
+            return false;
+        }
+        //noinspection RedundantIfStatement
+        if (isForbiddenOrigin(corsService.config(), ctx, headers)) {
+            return false;
+        }
+
+        return true;
     }
 
     @Nullable
