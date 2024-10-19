@@ -1585,6 +1585,7 @@ co.pw
 co.ro
 co.rs
 co.rw
+co.ss
 co.st
 co.sz
 co.technology
@@ -2182,6 +2183,7 @@ edu
 edu.ac
 edu.af
 edu.al
+edu.ao
 edu.ar
 edu.au
 edu.az
@@ -3125,6 +3127,7 @@ gov.ac
 gov.ae
 gov.af
 gov.al
+gov.ao
 gov.ar
 gov.as
 gov.au
@@ -6289,6 +6292,7 @@ org.ag
 org.ai
 org.al
 org.am
+org.ao
 org.ar
 org.au
 org.az
