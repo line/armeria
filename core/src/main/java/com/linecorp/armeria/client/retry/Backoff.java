@@ -59,7 +59,8 @@ public interface Backoff extends Unwrappable {
     }
 
     /**
-     * Returns a {@link Backoff} that waits an exponentially-increasing amount of time between attempts.
+     * Returns a {@link Backoff} that waits an exponentially-increasing with multiplier
+     * 2.0 amount of time between attempts.
      */
     static Backoff exponential(long initialDelayMillis, long maxDelayMillis) {
         return exponential(initialDelayMillis, maxDelayMillis, 2.0);
