@@ -81,8 +81,6 @@ public final class RandomBackoffBuilder {
      */
     public RandomBackoffBuilder minDelayMillis(long minDelayMillis) {
         checkArgument(minDelayMillis >= 0, "minDelayMillis: %s (expected: >= 0)", minDelayMillis);
-        checkArgument(minDelayMillis <= maxDelayMillis, "minDelayMillis: %s (expected: <= %s)",
-                      minDelayMillis, maxDelayMillis);
         this.minDelayMillis = minDelayMillis;
         return this;
     }
@@ -97,8 +95,6 @@ public final class RandomBackoffBuilder {
      */
     public RandomBackoffBuilder maxDelayMillis(long maxDelayMillis) {
         checkArgument(maxDelayMillis >= 0, "maxDelayMillis: %s (expected: >= 0)", maxDelayMillis);
-        checkArgument(minDelayMillis <= maxDelayMillis, "maxDelayMillis: %s (expected: >= %s)",
-                      maxDelayMillis, minDelayMillis);
         this.maxDelayMillis = maxDelayMillis;
         return this;
     }

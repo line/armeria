@@ -69,8 +69,7 @@ public final class FibonacciBackoffBuilder {
     public FibonacciBackoffBuilder initialDelayMillis(long initialDelayMillis) {
         checkArgument(initialDelayMillis >= 0,
                       "initialDelayMillis: %s (expected: >= 0)", initialDelayMillis);
-        checkArgument(initialDelayMillis <= maxDelayMillis, "initialDelayMillis: %s (expected: <= %s)",
-                      initialDelayMillis, maxDelayMillis);
+
         this.initialDelayMillis = initialDelayMillis;
         return this;
     }
@@ -87,8 +86,6 @@ public final class FibonacciBackoffBuilder {
     public FibonacciBackoffBuilder maxDelayMillis(long maxDelayMillis) {
         checkArgument(maxDelayMillis >= 0,
                       "maxDelayMillis: %s (expected: >= 0)", maxDelayMillis);
-        checkArgument(initialDelayMillis <= maxDelayMillis, "maxDelayMillis: %s (expected: >= %s)",
-                      maxDelayMillis, initialDelayMillis);
         this.maxDelayMillis = maxDelayMillis;
         return this;
     }
