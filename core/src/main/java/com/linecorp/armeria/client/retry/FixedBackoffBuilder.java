@@ -15,6 +15,10 @@
  */
 package com.linecorp.armeria.client.retry;
 
+import static com.google.common.base.Preconditions.checkArgument;
+
+import com.linecorp.armeria.common.annotation.UnstableApi;
+
 /**
  * A builder for creating instances of {@link FixedBackoff}.
  *
@@ -34,15 +38,18 @@ package com.linecorp.armeria.client.retry;
  *
  * @see FixedBackoff
  */
-public class FixedBackoffBuilder {
+@UnstableApi
+public final class FixedBackoffBuilder {
     private long delayMillis;
+
+    FixedBackoffBuilder() {}
 
     /**
      * Builds and returns a new {@link FixedBackoff} instance with the configured delay.
      *
      * @return a newly created {@link FixedBackoff} with the configured delay
      */
-    FixedBackoff build() {
+    public Backoff build() {
         return new FixedBackoff(delayMillis);
     }
 
@@ -56,6 +63,7 @@ public class FixedBackoffBuilder {
      * @return this {@code FixedBackoffBuilder} instance for method chaining
      */
     public FixedBackoffBuilder delayMillis(long delayMillis) {
+        checkArgument(delayMillis >= 0, "delayMillis: %s (expected: >= 0)", delayMillis);
         this.delayMillis = delayMillis;
         return this;
     }

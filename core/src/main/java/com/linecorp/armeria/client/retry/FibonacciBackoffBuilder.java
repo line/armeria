@@ -15,6 +15,10 @@
  */
 package com.linecorp.armeria.client.retry;
 
+import static com.google.common.base.Preconditions.checkArgument;
+
+import com.linecorp.armeria.common.annotation.UnstableApi;
+
 /**
  * A builder for creating instances of {@link FibonacciBackoff}.
  *
@@ -36,9 +40,12 @@ package com.linecorp.armeria.client.retry;
  *
  * @see FibonacciBackoff
  */
-public class FibonacciBackoffBuilder {
+@UnstableApi
+public final class FibonacciBackoffBuilder {
     private long initialDelayMillis;
     private long maxDelayMillis;
+
+    FibonacciBackoffBuilder() {}
 
     /**
      * Builds and returns a new {@link FibonacciBackoff} instance with the configured
@@ -46,7 +53,7 @@ public class FibonacciBackoffBuilder {
      *
      * @return a newly created {@link FibonacciBackoff} with the configured delays
      */
-    FibonacciBackoff build() {
+    public Backoff build() {
         return new FibonacciBackoff(initialDelayMillis, maxDelayMillis);
     }
 
@@ -60,6 +67,10 @@ public class FibonacciBackoffBuilder {
      * @return this {@code FibonacciBackoffBuilder} instance for method chaining
      */
     public FibonacciBackoffBuilder initialDelayMillis(long initialDelayMillis) {
+        checkArgument(initialDelayMillis >= 0,
+                      "initialDelayMillis: %s (expected: >= 0)", initialDelayMillis);
+        checkArgument(initialDelayMillis <= maxDelayMillis, "initialDelayMillis: %s (expected: <= %s)",
+                      initialDelayMillis, maxDelayMillis);
         this.initialDelayMillis = initialDelayMillis;
         return this;
     }
@@ -74,6 +85,10 @@ public class FibonacciBackoffBuilder {
      * @return this {@code FibonacciBackoffBuilder} instance for method chaining
      */
     public FibonacciBackoffBuilder maxDelayMillis(long maxDelayMillis) {
+        checkArgument(maxDelayMillis >= 0,
+                      "maxDelayMillis: %s (expected: >= 0)", maxDelayMillis);
+        checkArgument(initialDelayMillis <= maxDelayMillis, "maxDelayMillis: %s (expected: >= %s)",
+                      maxDelayMillis, initialDelayMillis);
         this.maxDelayMillis = maxDelayMillis;
         return this;
     }

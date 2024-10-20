@@ -15,6 +15,10 @@
  */
 package com.linecorp.armeria.client.retry;
 
+import static com.google.common.base.Preconditions.checkArgument;
+
+import com.linecorp.armeria.common.annotation.UnstableApi;
+
 /**
  * A builder for creating instances of {@link ExponentialBackoff}.
  *
@@ -37,10 +41,13 @@ package com.linecorp.armeria.client.retry;
  *
  * @see ExponentialBackoff
  */
-public class ExponentialBackoffBuilder {
+@UnstableApi
+public final class ExponentialBackoffBuilder {
     private long initialDelayMillis;
     private long maxDelayMillis;
-    private double multiplier;
+    private double multiplier = 2.0;
+
+    ExponentialBackoffBuilder() {}
 
     /**
      * Builds and returns a new {@link ExponentialBackoff} instance with the configured
@@ -48,7 +55,7 @@ public class ExponentialBackoffBuilder {
      *
      * @return a newly created {@link ExponentialBackoff} with the configured delays and multiplier
      */
-    ExponentialBackoff build() {
+    public Backoff build() {
         return new ExponentialBackoff(initialDelayMillis, maxDelayMillis, multiplier);
     }
 
@@ -63,6 +70,9 @@ public class ExponentialBackoffBuilder {
      * @return this {@code ExponentialBackoffBuilder} instance for method chaining
      */
     public ExponentialBackoffBuilder initialDelayMillis(long initialDelayMillis) {
+        checkArgument(initialDelayMillis >= 0, "initialDelayMillis: %s (expected: >= 0)", initialDelayMillis);
+        checkArgument(initialDelayMillis <= maxDelayMillis, "initialDelayMillis: %s (expected: <= %s)",
+                      initialDelayMillis, maxDelayMillis);
         this.initialDelayMillis = initialDelayMillis;
         return this;
     }
@@ -77,6 +87,9 @@ public class ExponentialBackoffBuilder {
      * @return this {@code ExponentialBackoffBuilder} instance for method chaining
      */
     public ExponentialBackoffBuilder maxDelayMillis(long maxDelayMillis) {
+        checkArgument(maxDelayMillis >= 0, "maxDelayMillis: %s (expected: >= 0)", maxDelayMillis);
+        checkArgument(initialDelayMillis <= maxDelayMillis, "maxDelayMillis: %s (expected: >= %s)",
+                      maxDelayMillis, initialDelayMillis);
         this.maxDelayMillis = maxDelayMillis;
         return this;
     }
@@ -92,6 +105,7 @@ public class ExponentialBackoffBuilder {
      * @return this {@code ExponentialBackoffBuilder} instance for method chaining
      */
     public ExponentialBackoffBuilder multiplier(double multiplier) {
+        checkArgument(multiplier > 1.0, "multiplier: %s (expected: > 1.0)", multiplier);
         this.multiplier = multiplier;
         return this;
     }

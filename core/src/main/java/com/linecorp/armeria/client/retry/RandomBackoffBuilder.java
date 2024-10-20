@@ -15,8 +15,13 @@
  */
 package com.linecorp.armeria.client.retry;
 
+import static com.google.common.base.Preconditions.checkArgument;
+import static java.util.Objects.requireNonNull;
+
 import java.util.Random;
 import java.util.function.Supplier;
+
+import com.linecorp.armeria.common.annotation.UnstableApi;
 
 /**
  * A builder for creating instances of {@link RandomBackoff}.
@@ -38,10 +43,13 @@ import java.util.function.Supplier;
  *
  * @see RandomBackoff
  */
-public class RandomBackoffBuilder {
+@UnstableApi
+public final class RandomBackoffBuilder {
     private long minDelayMillis;
     private long maxDelayMillis;
     private Supplier<Random> randomSupplier = Random::new;
+
+    RandomBackoffBuilder() {}
 
     /**
      * Builds and returns a newly created {@link RandomBackoff} instance with the properties
@@ -59,7 +67,7 @@ public class RandomBackoffBuilder {
      *
      * @return a newly created {@link RandomBackoff} instance with the configured or default values
      */
-    RandomBackoff build() {
+    public Backoff build() {
         return new RandomBackoff(minDelayMillis, maxDelayMillis, randomSupplier);
     }
 
@@ -72,6 +80,9 @@ public class RandomBackoffBuilder {
      * @return this {@code RandomBackoffBuilder} instance for method chaining
      */
     public RandomBackoffBuilder minDelayMillis(long minDelayMillis) {
+        checkArgument(minDelayMillis >= 0, "minDelayMillis: %s (expected: >= 0)", minDelayMillis);
+        checkArgument(minDelayMillis <= maxDelayMillis, "minDelayMillis: %s (expected: <= %s)",
+                      minDelayMillis, maxDelayMillis);
         this.minDelayMillis = minDelayMillis;
         return this;
     }
@@ -85,6 +96,9 @@ public class RandomBackoffBuilder {
      * @return this {@code RandomBackoffBuilder} instance for method chaining
      */
     public RandomBackoffBuilder maxDelayMillis(long maxDelayMillis) {
+        checkArgument(maxDelayMillis >= 0, "maxDelayMillis: %s (expected: >= 0)", maxDelayMillis);
+        checkArgument(minDelayMillis <= maxDelayMillis, "maxDelayMillis: %s (expected: >= %s)",
+                      maxDelayMillis, minDelayMillis);
         this.maxDelayMillis = maxDelayMillis;
         return this;
     }
@@ -100,6 +114,7 @@ public class RandomBackoffBuilder {
      * @throws NullPointerException if {@code randomSupplier} is {@code null}
      */
     public RandomBackoffBuilder randomSupplier(Supplier<Random> randomSupplier) {
+        requireNonNull(randomSupplier, "randomSupplier");
         this.randomSupplier = randomSupplier;
         return this;
     }
