@@ -230,11 +230,25 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
     }
 
     private void configureHttps(ChannelPipeline p, @Nullable ProxiedAddresses proxiedAddresses) {
-        final Mapping<String, SslContext> sslContexts =
-                requireNonNull(config.sslContextMapping(), "config.sslContextMapping() returned null");
-        p.addLast(new SniHandler(sslContexts, Flags.defaultMaxClientHelloLength(), config.idleTimeoutMillis()));
+        p.addLast(newSniHandler(p));
         p.addLast(TrafficLoggingHandler.SERVER);
         p.addLast(new Http2OrHttpHandler(proxiedAddresses));
+    }
+
+    private SniHandler newSniHandler(ChannelPipeline p) {
+        final Mapping<String, SslContext> sslContexts =
+                requireNonNull(config.sslContextMapping(), "config.sslContextMapping() returned null");
+        final SniHandler sniHandler = new SniHandler(sslContexts, Flags.defaultMaxClientHelloLength(),
+                                                     config.idleTimeoutMillis());
+        if (sslContexts instanceof TlsProviderMapping) {
+            p.channel().closeFuture().addListener(future -> {
+                final SslContext sslContext = sniHandler.sslContext();
+                if (sslContext != null) {
+                    ((TlsProviderMapping) sslContexts).release(sslContext);
+                }
+            });
+        }
+        return sniHandler;
     }
 
     private Http2ConnectionHandler newHttp2ConnectionHandler(ChannelPipeline pipeline, AsciiString scheme) {
