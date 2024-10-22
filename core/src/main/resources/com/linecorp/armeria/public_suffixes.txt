@@ -1474,6 +1474,7 @@ clinic
 clinique
 clothing
 cloud
+cloud-ip.biz
 cloud.fedoraproject.org
 cloud.goog
 cloud.interhostsolutions.be
@@ -3643,8 +3644,6 @@ hr.eu.org
 hra.health
 hrsn.dev
 hs.kr
-hs.run
-hs.zone
 hsbc
 ht
 httpbin.org
@@ -3896,6 +3895,7 @@ io.in
 io.vn
 iobb.net
 iopsys.se
+ip-dynamic.org
 ip.linodeusercontent.com
 ip6.arpa
 ipfs.nftstorage.link
