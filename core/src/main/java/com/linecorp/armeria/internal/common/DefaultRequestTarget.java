@@ -163,16 +163,8 @@ public final class DefaultRequestTarget implements RequestTarget {
     private static final Bytes EMPTY_BYTES = new Bytes(0);
     private static final Bytes SLASH_BYTES = new Bytes(new byte[] { '/' });
 
-    private static final RequestTarget INSTANCE_ASTERISK = createWithoutValidation(
-            RequestTargetForm.ASTERISK,
-            null,
-            null,
-            null,
-            -1,
-            "*",
-            "*",
-            null,
-            null);
+    private static final RequestTarget CLIENT_INSTANCE_ASTERISK = createAsterisk(false);
+    private static final RequestTarget SERVER_INSTANCE_ASTERISK = createAsterisk(true);
 
     /**
      * The main implementation of {@link RequestTarget#forServer(String)}.
@@ -232,10 +224,10 @@ public final class DefaultRequestTarget implements RequestTarget {
      */
     public static RequestTarget createWithoutValidation(
             RequestTargetForm form, @Nullable String scheme, @Nullable String authority,
-            @Nullable String host, int port, String path, String pathWithMatrixVariables,
+            @Nullable String host, int port, String path, String pathWithMatrixVariables, @Nullable String rawPath,
             @Nullable String query, @Nullable String fragment) {
         return new DefaultRequestTarget(
-                form, scheme, authority, host, port, path, pathWithMatrixVariables, query, fragment);
+                form, scheme, authority, host, port, path, pathWithMatrixVariables, rawPath, query, fragment);
     }
 
     private final RequestTargetForm form;
@@ -249,6 +241,8 @@ public final class DefaultRequestTarget implements RequestTarget {
     private final String path;
     private final String maybePathWithMatrixVariables;
     @Nullable
+    private final String rawPath;
+    @Nullable
     private final String query;
     @Nullable
     private final String fragment;
@@ -256,7 +250,7 @@ public final class DefaultRequestTarget implements RequestTarget {
 
     private DefaultRequestTarget(RequestTargetForm form, @Nullable String scheme,
                                  @Nullable String authority, @Nullable String host, int port,
-                                 String path, String maybePathWithMatrixVariables,
+                                 String path,String maybePathWithMatrixVariables, @Nullable String rawPath,
                                  @Nullable String query, @Nullable String fragment) {
 
         assert (scheme != null && authority != null && host != null) ||
@@ -270,6 +264,7 @@ public final class DefaultRequestTarget implements RequestTarget {
         this.port = port;
         this.path = path;
         this.maybePathWithMatrixVariables = maybePathWithMatrixVariables;
+        this.rawPath = rawPath;
         this.query = query;
         this.fragment = fragment;
     }
@@ -310,6 +305,12 @@ public final class DefaultRequestTarget implements RequestTarget {
     @Override
     public String maybePathWithMatrixVariables() {
         return maybePathWithMatrixVariables;
+    }
+
+    @Override
+    @Nullable
+    public String rawPath() {
+        return rawPath;
     }
 
     @Nullable
@@ -380,6 +381,21 @@ public final class DefaultRequestTarget implements RequestTarget {
         }
     }
 
+    private static RequestTarget createAsterisk(boolean server) {
+        final String rawPath = server ? "*" : null;
+        return createWithoutValidation(
+                RequestTargetForm.ASTERISK,
+                null,
+                null,
+                null,
+                -1,
+                "*",
+                "*",
+                rawPath,
+                null,
+                null);
+    }
+
     @Nullable
     private static RequestTarget slowForServer(String reqTarget, boolean allowSemicolonInPathComponent,
                                                boolean allowDoubleDotsInQueryString) {
@@ -411,7 +427,7 @@ public final class DefaultRequestTarget implements RequestTarget {
         // Reject a relative path and accept an asterisk (e.g. OPTIONS * HTTP/1.1).
         if (isRelativePath(path)) {
             if (query == null && path.length == 1 && path.data[0] == '*') {
-                return INSTANCE_ASTERISK;
+                return SERVER_INSTANCE_ASTERISK;
             } else {
                 // Do not accept a relative path.
                 return null;
@@ -443,6 +459,7 @@ public final class DefaultRequestTarget implements RequestTarget {
                                         -1,
                                         matrixVariablesRemovedPath,
                                         encodedPath,
+                                        reqTarget,
                                         encodeQueryToPercents(query),
                                         null);
     }
@@ -622,7 +639,7 @@ public final class DefaultRequestTarget implements RequestTarget {
 
         // Accept an asterisk (e.g. OPTIONS * HTTP/1.1).
         if (query == null && path.length == 1 && path.data[0] == '*') {
-            return INSTANCE_ASTERISK;
+            return CLIENT_INSTANCE_ASTERISK;
         }
 
         final String encodedPath;
@@ -645,7 +662,9 @@ public final class DefaultRequestTarget implements RequestTarget {
                                             null,
                                             -1,
                                             encodedPath,
-                                            encodedPath, encodedQuery,
+                                            encodedPath,
+                                            null,
+                                            encodedQuery,
                                             encodedFragment);
         }
     }
@@ -692,6 +711,7 @@ public final class DefaultRequestTarget implements RequestTarget {
                                         port,
                                         encodedPath,
                                         encodedPath,
+                                        null,
                                         encodedQuery,
                                         encodedFragment);
     }
