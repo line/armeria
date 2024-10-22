@@ -23,10 +23,10 @@ import java.nio.charset.StandardCharsets;
 import java.util.HashSet;
 import java.util.Set;
 
-import com.google.common.io.ByteStreams;
-import io.netty.util.NetUtil;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
+
+import com.google.common.io.ByteStreams;
 
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
@@ -81,7 +81,8 @@ class RawPathTest {
     }
 
     private static void rawPathAssertion(String path) throws Exception {
-        try (Socket s = new Socket(NetUtil.LOCALHOST, server.httpPort())) {
+        try (Socket s = new Socket()) {
+            s.connect(server.httpSocketAddress());
             s.setSoTimeout(10000);
             s.getOutputStream().write(
                     ("GET " + path + " HTTP/1.0\r\n" +

@@ -224,8 +224,8 @@ public final class DefaultRequestTarget implements RequestTarget {
      */
     public static RequestTarget createWithoutValidation(
             RequestTargetForm form, @Nullable String scheme, @Nullable String authority,
-            @Nullable String host, int port, String path, String pathWithMatrixVariables, @Nullable String rawPath,
-            @Nullable String query, @Nullable String fragment) {
+            @Nullable String host, int port, String path, String pathWithMatrixVariables,
+            @Nullable String rawPath, @Nullable String query, @Nullable String fragment) {
         return new DefaultRequestTarget(
                 form, scheme, authority, host, port, path, pathWithMatrixVariables, rawPath, query, fragment);
     }
