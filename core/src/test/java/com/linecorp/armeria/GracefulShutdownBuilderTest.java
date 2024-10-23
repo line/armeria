@@ -23,9 +23,9 @@ import java.time.Duration;
 
 import org.junit.jupiter.api.Test;
 
+import com.linecorp.armeria.common.ShuttingDownException;
 import com.linecorp.armeria.internal.testing.AnticipatedException;
 import com.linecorp.armeria.server.GracefulShutdown;
-import com.linecorp.armeria.common.ShuttingDownException;
 
 class GracefulShutdownBuilderTest {
 
