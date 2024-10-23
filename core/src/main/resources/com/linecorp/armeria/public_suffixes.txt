@@ -1474,6 +1474,7 @@ clinic
 clinique
 clothing
 cloud
+cloud-ip.biz
 cloud.fedoraproject.org
 cloud.goog
 cloud.interhostsolutions.be
@@ -1585,6 +1586,7 @@ co.pw
 co.ro
 co.rs
 co.rw
+co.ss
 co.st
 co.sz
 co.technology
@@ -2182,6 +2184,7 @@ edu
 edu.ac
 edu.af
 edu.al
+edu.ao
 edu.ar
 edu.au
 edu.az
@@ -3125,6 +3128,7 @@ gov.ac
 gov.ae
 gov.af
 gov.al
+gov.ao
 gov.ar
 gov.as
 gov.au
@@ -3640,8 +3644,6 @@ hr.eu.org
 hra.health
 hrsn.dev
 hs.kr
-hs.run
-hs.zone
 hsbc
 ht
 httpbin.org
@@ -3893,6 +3895,7 @@ io.in
 io.vn
 iobb.net
 iopsys.se
+ip-dynamic.org
 ip.linodeusercontent.com
 ip6.arpa
 ipfs.nftstorage.link
@@ -6289,6 +6292,7 @@ org.ag
 org.ai
 org.al
 org.am
+org.ao
 org.ar
 org.au
 org.az
