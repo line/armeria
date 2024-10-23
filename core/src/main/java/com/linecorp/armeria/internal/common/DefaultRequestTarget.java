@@ -250,7 +250,7 @@ public final class DefaultRequestTarget implements RequestTarget {
 
     private DefaultRequestTarget(RequestTargetForm form, @Nullable String scheme,
                                  @Nullable String authority, @Nullable String host, int port,
-                                 String path,String maybePathWithMatrixVariables, @Nullable String rawPath,
+                                 String path, String maybePathWithMatrixVariables, @Nullable String rawPath,
                                  @Nullable String query, @Nullable String fragment) {
 
         assert (scheme != null && authority != null && host != null) ||
