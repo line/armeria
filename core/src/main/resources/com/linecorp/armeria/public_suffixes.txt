@@ -3149,7 +3149,6 @@ gov.cl
 gov.cm
 gov.cn
 gov.co
-gov.cu
 gov.cx
 gov.cy
 gov.dm
