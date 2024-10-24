@@ -132,6 +132,14 @@ public interface RequestTarget {
     String maybePathWithMatrixVariables();
 
     /**
+     * Returns the server-side raw path of this {@link RequestTarget} from the ":path" header.
+     * Unlike {@link #path()}, the returned string is the original path without any normalization.
+     * For client-side target it always returns {@code null}.
+     */
+    @Nullable
+    String rawPath();
+
+    /**
      * Returns the query of this {@link RequestTarget}.
      */
     @Nullable

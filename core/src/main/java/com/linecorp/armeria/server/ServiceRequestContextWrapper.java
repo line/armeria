@@ -121,6 +121,11 @@ public class ServiceRequestContextWrapper
         return unwrap().decodedMappedPath();
     }
 
+    @Override
+    public String rawPath() {
+        return unwrap().rawPath();
+    }
+
     @Nullable
     @Override
     public MediaType negotiatedResponseMediaType() {
