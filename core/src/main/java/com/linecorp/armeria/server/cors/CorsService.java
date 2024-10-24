@@ -17,6 +17,7 @@
 package com.linecorp.armeria.server.cors;
 
 import static com.linecorp.armeria.internal.common.ArmeriaHttpUtil.isCorsPreflightRequest;
+import static com.linecorp.armeria.internal.server.CorsHeaderUtil.isForbiddenOrigin;
 import static java.util.Objects.requireNonNull;
 
 import java.util.List;
@@ -29,7 +30,6 @@ import org.slf4j.LoggerFactory;
 
 import com.google.common.collect.ImmutableList;
 
-import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
@@ -127,21 +127,20 @@ public final class CorsService extends SimpleDecoratingHttpService {
 
     @Override
     public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
+        CorsHeaderUtil.corsHeadersSet(ctx);
         // check if CORS preflight must be returned, or if
         // we need to forbid access because origin could not be validated
         if (isCorsPreflightRequest(req.headers())) {
             return handleCorsPreflight(ctx, req);
         }
-        if (config.isShortCircuit() &&
-            config.getPolicy(req.headers().get(HttpHeaderNames.ORIGIN), ctx.routingContext()) == null) {
+        if (isForbiddenOrigin(config, ctx, req.headers())) {
             return forbidden();
         }
 
-        return unwrap().serve(ctx, req).mapHeaders(headers -> {
-            final ResponseHeadersBuilder builder = headers.toBuilder();
+        ctx.mutateAdditionalResponseHeaders(builder -> {
             CorsHeaderUtil.setCorsResponseHeaders(ctx, req, builder, config);
-            return builder.build();
         });
+        return unwrap().serve(ctx, req);
     }
 
     /**
