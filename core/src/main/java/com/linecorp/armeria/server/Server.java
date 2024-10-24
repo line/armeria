@@ -502,11 +502,11 @@ public final class Server implements ListenableAsyncCloseable {
         @Override
         protected CompletionStage<Void> doStart(@Nullable Void arg) {
             if (config().gracefulShutdownQuietPeriod().isZero()) {
-                gracefulShutdownSupport = GracefulShutdownSupport.createDisabled();
+                gracefulShutdownSupport = GracefulShutdownSupport.createDisabled(config.serverMetrics());
             } else {
                 gracefulShutdownSupport =
                         GracefulShutdownSupport.create(config().gracefulShutdownQuietPeriod(),
-                                                       config().blockingTaskExecutor());
+                                                       config().blockingTaskExecutor(), config.serverMetrics());
             }
 
             // Initialize the server sockets asynchronously.
@@ -585,8 +585,6 @@ public final class Server implements ListenableAsyncCloseable {
             final GracefulShutdownSupport gracefulShutdownSupport = this.gracefulShutdownSupport;
             assert gracefulShutdownSupport != null;
 
-            meterRegistry.gauge("armeria.server.pending.responses", gracefulShutdownSupport,
-                                GracefulShutdownSupport::pendingResponses);
             config.serverMetrics().bindTo(meterRegistry);
         }
 
