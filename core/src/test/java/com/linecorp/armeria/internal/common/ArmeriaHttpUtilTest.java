@@ -503,23 +503,17 @@ class ArmeriaHttpUtilTest {
     }
 
     @Test
-    void toArmeriaRequestHeadersForWebSocketUpgrade() {
-        final Http2Headers in = new ArmeriaHttp2Headers().set("a", "b");
+    void toArmeriaForWebSocketUpgrade() {
+        final io.netty.handler.codec.http.HttpHeaders in = new DefaultHttpHeaders()
+            .add(HttpHeaderNames.CONNECTION, HttpHeaderValues.KEEP_ALIVE + ", " + HttpHeaderValues.UPGRADE)
+            .add(HttpHeaderNames.UPGRADE, HttpHeaderValues.WEBSOCKET + ", additional_value");
+        final HttpHeadersBuilder out = HttpHeaders.builder();
+        out.sizeHint(in.size());
+        toArmeria(in, out);
+        final HttpHeaders outHeaders = out.build();
 
-        final ChannelHandlerContext ctx = mockChannelHandlerContext();
-
-        in.set(HttpHeaderNames.METHOD, "GET")
-                .set(HttpHeaderNames.PATH, "/")
-                // It works even if the header contains multiple values
-                .set(HttpHeaderNames.CONNECTION, "keep-alive, upgrade")
-                .set(HttpHeaderNames.UPGRADE, "websocket, additional_value");
-        // Request headers without pseudo headers.
-        final RequestTarget reqTarget = RequestTarget.forServer(in.path().toString());
-        final RequestHeaders headers =
-                ArmeriaHttpUtil.toArmeriaRequestHeaders(ctx, in, false, "https",
-                        serverConfig(), reqTarget);
-        assertThat(headers.get(HttpHeaderNames.CONNECTION)).isEqualTo("keep-alive, upgrade");
-        assertThat(headers.get(HttpHeaderNames.UPGRADE)).isEqualTo("websocket, additional_value");
+        assertThat(outHeaders.get(HttpHeaderNames.CONNECTION)).isEqualTo("keep-alive, upgrade");
+        assertThat(outHeaders.get(HttpHeaderNames.UPGRADE)).isEqualTo("websocket, additional_value");
     }
 
     @Test
