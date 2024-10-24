@@ -885,11 +885,11 @@ public final class ArmeriaHttpUtil {
 
     private static boolean maybeWebSocketUpgrade(AsciiString header, CharSequence value) {
         if (HttpHeaderNames.CONNECTION.contentEqualsIgnoreCase(header) &&
-            HttpHeaderValues.UPGRADE.contentEqualsIgnoreCase(value)) {
+            AsciiString.containsIgnoreCase(value, HttpHeaderValues.UPGRADE)) {
             return true;
         }
         return HttpHeaderNames.UPGRADE.contentEqualsIgnoreCase(header) &&
-               HttpHeaderValues.WEBSOCKET.contentEqualsIgnoreCase(value);
+               AsciiString.containsIgnoreCase(value, HttpHeaderValues.WEBSOCKET);
     }
 
     private static CaseInsensitiveMap toLowercaseMap(Iterator<? extends CharSequence> valuesIter,
