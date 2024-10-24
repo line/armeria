@@ -35,6 +35,7 @@ import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.common.ResponseEntity;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.internal.testing.AnticipatedException;
 import com.linecorp.armeria.internal.testing.GenerateNativeImageTrace;
@@ -90,6 +91,11 @@ class ObservableResponseConverterFunctionTest {
                 public Maybe<HttpResult<String>> httpResult() {
                     return Maybe.just(HttpResult.of("a"));
                 }
+
+                @Get("/response-entity")
+                public Maybe<ResponseEntity<String>> responseEntity() {
+                    return Maybe.just(ResponseEntity.of("a"));
+                }
             });
 
             sb.annotatedService("/single", new Object() {
@@ -117,6 +123,11 @@ class ObservableResponseConverterFunctionTest {
                 @Get("/http-result")
                 public Single<HttpResult<String>> httpResult() {
                     return Single.just(HttpResult.of("a"));
+                }
+
+                @Get("/response-entity")
+                public Single<ResponseEntity<String>> responseEntity() {
+                    return Single.just(ResponseEntity.of("a"));
                 }
             });
 

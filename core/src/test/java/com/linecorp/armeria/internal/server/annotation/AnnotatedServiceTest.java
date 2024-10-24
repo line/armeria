@@ -900,7 +900,7 @@ class AnnotatedServiceTest {
         @Path("/response-entity-void")
         public ResponseEntity<Void> responseEntityVoid(RequestContext ctx) {
             validateContext(ctx);
-            return ResponseEntity.of(ResponseHeaders.of(HttpStatus.OK));
+            return ResponseEntity.of(HttpStatus.OK);
         }
 
         @Get
@@ -914,15 +914,14 @@ class AnnotatedServiceTest {
         @Path("/response-entity-status")
         public ResponseEntity<Void> responseEntityResponseData(RequestContext ctx) {
             validateContext(ctx);
-            return ResponseEntity.of(ResponseHeaders.of(HttpStatus.MOVED_PERMANENTLY));
+            return ResponseEntity.of(HttpStatus.MOVED_PERMANENTLY);
         }
 
         @Get
         @Path("/response-entity-http-response")
         public ResponseEntity<HttpResponse> responseEntityHttpResponse(RequestContext ctx) {
             validateContext(ctx);
-            return ResponseEntity.of(ResponseHeaders.of(HttpStatus.OK),
-                                     HttpResponse.of(HttpStatus.UNAUTHORIZED));
+            return ResponseEntity.of(HttpStatus.OK, HttpResponse.of(HttpStatus.UNAUTHORIZED));
         }
     }
 
