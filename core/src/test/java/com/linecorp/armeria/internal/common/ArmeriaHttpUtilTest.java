@@ -512,14 +512,14 @@ class ArmeriaHttpUtilTest {
                 .set(HttpHeaderNames.PATH, "/")
                 // It works even if the header contains multiple values
                 .set(HttpHeaderNames.CONNECTION, "keep-alive, upgrade")
-                .set(HttpHeaderNames.UPGRADE, "websocket");
+                .set(HttpHeaderNames.UPGRADE, "websocket, additional_value");
         // Request headers without pseudo headers.
         final RequestTarget reqTarget = RequestTarget.forServer(in.path().toString());
         final RequestHeaders headers =
                 ArmeriaHttpUtil.toArmeriaRequestHeaders(ctx, in, false, "https",
                         serverConfig(), reqTarget);
         assertThat(headers.get(HttpHeaderNames.CONNECTION)).isEqualTo("keep-alive, upgrade");
-        assertThat(headers.get(HttpHeaderNames.UPGRADE)).isEqualTo("websocket");
+        assertThat(headers.get(HttpHeaderNames.UPGRADE)).isEqualTo("websocket, additional_value");
     }
 
     @Test
