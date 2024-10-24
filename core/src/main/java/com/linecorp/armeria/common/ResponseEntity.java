@@ -30,7 +30,7 @@ public interface ResponseEntity<T> extends HttpEntity<T> {
     /**
      * Returns a newly created {@link ResponseEntity} with the specified {@link ResponseHeaders}.
      */
-    static ResponseEntity<Void> of(ResponseHeaders headers) {
+    static <T> ResponseEntity<T> of(ResponseHeaders headers) {
         return of(headers, null, HttpHeaders.of());
     }
 
@@ -44,15 +44,6 @@ public interface ResponseEntity<T> extends HttpEntity<T> {
     }
 
     /**
-     * Returns a newly created {@link ResponseEntity} with the specified {@code content} and
-     * {@link HttpStatus#OK} status.
-     */
-    static <T> ResponseEntity<T> of(T content) {
-        requireNonNull(content, "content");
-        return of(ResponseHeaders.of(HttpStatus.OK), content, HttpHeaders.of());
-    }
-
-    /**
      * Returns a newly created {@link ResponseEntity} with the specified {@link ResponseHeaders},
      * {@code content} and {@linkplain HttpHeaders trailers}.
      */
@@ -60,6 +51,38 @@ public interface ResponseEntity<T> extends HttpEntity<T> {
         requireNonNull(headers, "headers");
         requireNonNull(trailers, "trailers");
         return new DefaultResponseEntity<>(headers, content, trailers);
+    }
+
+    /**
+     * Returns a newly created {@link ResponseEntity} with the specified {@link HttpStatus}.
+     */
+    static <T> ResponseEntity<T> of(HttpStatus status) {
+        return of(ResponseHeaders.of(status));
+    }
+
+    /**
+     * Returns a newly created {@link ResponseEntity} with the specified {@link HttpStatus} and
+     * {@code content}.
+     */
+    static <T> ResponseEntity<T> of(HttpStatus status, T content) {
+        return of(ResponseHeaders.of(status), content);
+    }
+
+    /**
+     * Returns a newly created {@link ResponseEntity} with the specified {@link HttpStatus},
+     * {@code content} and {@linkplain HttpHeaders trailers}.
+     */
+    static <T> ResponseEntity<T> of(HttpStatus status, @Nullable T content, HttpHeaders trailers) {
+        return of(ResponseHeaders.of(status), content, trailers);
+    }
+
+    /**
+     * Returns a newly created {@link ResponseEntity} with the specified {@code content} and
+     * {@link HttpStatus#OK} status.
+     */
+    static <T> ResponseEntity<T> of(T content) {
+        requireNonNull(content, "content");
+        return of(HttpStatus.OK, content);
     }
 
     /**
