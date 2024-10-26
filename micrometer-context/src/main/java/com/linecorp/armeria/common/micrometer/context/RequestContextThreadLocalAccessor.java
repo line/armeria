@@ -13,12 +13,13 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package com.linecorp.armeria.internal.common;
+package com.linecorp.armeria.common.micrometer.context;
 
 import org.reactivestreams.Subscription;
 
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.RequestContextStorage;
+import com.linecorp.armeria.internal.common.RequestContextUtil;
 
 import io.micrometer.context.ContextRegistry;
 import io.micrometer.context.ContextSnapshot;

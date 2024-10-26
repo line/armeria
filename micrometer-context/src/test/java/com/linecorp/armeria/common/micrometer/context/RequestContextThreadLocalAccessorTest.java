@@ -13,12 +13,10 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package com.linecorp.armeria.internal.common;
+package com.linecorp.armeria.common.micrometer.context;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-
-import java.util.List;
 
 import org.junit.jupiter.api.Test;
 
@@ -26,23 +24,13 @@ import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.RequestContext;
+import com.linecorp.armeria.internal.common.RequestContextUtil;
 
-import io.micrometer.context.ContextRegistry;
 import io.micrometer.context.ContextSnapshot;
 import io.micrometer.context.ContextSnapshot.Scope;
 import io.micrometer.context.ContextSnapshotFactory;
-import io.micrometer.context.ThreadLocalAccessor;
 
 class RequestContextThreadLocalAccessorTest {
-
-    @Test
-    void should_be_loaded_by_SPI() {
-        final ContextRegistry ctxRegistry = ContextRegistry.getInstance();
-        final List<ThreadLocalAccessor<?>> threadLocalAccessors = ctxRegistry.getThreadLocalAccessors();
-
-        assertThat(threadLocalAccessors.size()).isGreaterThan(1);
-        assertThat(threadLocalAccessors).hasAtLeastOneElementOfType(RequestContextThreadLocalAccessor.class);
-    }
 
     @Test
     void should_return_expected_key() {

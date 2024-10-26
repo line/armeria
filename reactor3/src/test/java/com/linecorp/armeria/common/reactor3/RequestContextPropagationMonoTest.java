@@ -32,10 +32,12 @@ import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.RequestContext;
+import com.linecorp.armeria.common.micrometer.context.RequestContextThreadLocalAccessor;
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.internal.testing.AnticipatedException;
 import com.linecorp.armeria.internal.testing.GenerateNativeImageTrace;
 
+import io.micrometer.context.ContextRegistry;
 import reactor.core.publisher.Hooks;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Scheduler;
@@ -49,6 +51,9 @@ class RequestContextPropagationMonoTest {
 
     @BeforeAll
     static void setUp() {
+        ContextRegistry
+                .getInstance()
+                .registerThreadLocalAccessor(new RequestContextThreadLocalAccessor());
         Hooks.enableAutomaticContextPropagation();
     }
 
