@@ -19,6 +19,7 @@ import org.reactivestreams.Subscription;
 
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.RequestContextStorage;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.internal.common.RequestContextUtil;
 
 import io.micrometer.context.ContextRegistry;
@@ -64,6 +65,7 @@ public final class RequestContextThreadLocalAccessor implements ThreadLocalAcces
      * Furthermore, at the end of these methods, {@link Scope#close()} is executed
      * to revert the {@link RequestContextStorage} to its original state.
      */
+    @Nullable
     @Override
     public RequestContext getValue() {
         return RequestContext.currentOrNull();
