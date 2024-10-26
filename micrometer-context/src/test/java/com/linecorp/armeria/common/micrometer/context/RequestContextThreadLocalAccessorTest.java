@@ -26,6 +26,7 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.internal.common.RequestContextUtil;
 
+import io.micrometer.context.ContextRegistry;
 import io.micrometer.context.ContextSnapshot;
 import io.micrometer.context.ContextSnapshot.Scope;
 import io.micrometer.context.ContextSnapshotFactory;
@@ -126,6 +127,8 @@ class RequestContextThreadLocalAccessorTest {
     void requestContext_should_exist_inside_scope_and_not_outside() {
         // Given
         final RequestContextThreadLocalAccessor reqCtxAccessor = new RequestContextThreadLocalAccessor();
+        ContextRegistry.getInstance()
+                       .registerThreadLocalAccessor(reqCtxAccessor);
         final ClientRequestContext currentCtx = newContext();
         final ClientRequestContext expectedCtx = currentCtx;
         reqCtxAccessor.setValue(currentCtx);
@@ -141,7 +144,6 @@ class RequestContextThreadLocalAccessorTest {
 
             // Then : should not
             final RequestContext reqCtxInScope = RequestContext.currentOrNull();
-            assertThat(reqCtxInScope).isNotNull();
             assertThat(reqCtxInScope).isSameAs(expectedCtx);
         }
 
