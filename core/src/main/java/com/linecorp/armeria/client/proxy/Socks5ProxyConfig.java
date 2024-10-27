@@ -18,6 +18,9 @@ package com.linecorp.armeria.client.proxy;
 
 import java.net.InetSocketAddress;
 import java.util.Objects;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.function.BiConsumer;
 
 import com.google.common.base.MoreObjects;
 
@@ -28,7 +31,11 @@ import com.linecorp.armeria.common.annotation.Nullable;
  */
 public final class Socks5ProxyConfig extends ProxyConfig {
 
-    private final InetSocketAddress proxyAddress;
+    private final ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();
+
+    private InetSocketAddress proxyAddress;
+
+    private long lastUpdateTime = System.currentTimeMillis();
 
     @Nullable
     private final String username;
@@ -38,9 +45,27 @@ public final class Socks5ProxyConfig extends ProxyConfig {
 
     Socks5ProxyConfig(InetSocketAddress proxyAddress, @Nullable String username,
                       @Nullable String password) {
+        this(proxyAddress, username, password, -1);
+    }
+
+    Socks5ProxyConfig(InetSocketAddress proxyAddress, @Nullable String username,
+                      @Nullable String password, long refreshInterval) {
         this.proxyAddress = proxyAddress;
         this.username = username;
         this.password = password;
+
+        if (refreshInterval > 0) {
+            final BiConsumer<InetSocketAddress, Long> callback = (newProxyAddress, updateTime) -> {
+                this.proxyAddress = newProxyAddress;
+                this.lastUpdateTime = updateTime;
+            };
+
+            ProxyConfig.reserveDNSUpdate(callback,
+                                         proxyAddress.getHostName(),
+                                         proxyAddress.getPort(),
+                                         refreshInterval,
+                                         scheduler);
+        }
     }
 
     @Override
