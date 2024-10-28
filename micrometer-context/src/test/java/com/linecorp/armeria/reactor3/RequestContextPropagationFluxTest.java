@@ -13,11 +13,11 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package com.linecorp.armeria.common.reactor3;
+package com.linecorp.armeria.reactor3;
 
-import static com.linecorp.armeria.common.reactor3.ContextAwareMonoTest.ctxExists;
-import static com.linecorp.armeria.common.reactor3.ContextAwareMonoTest.newContext;
-import static com.linecorp.armeria.common.reactor3.ContextAwareMonoTest.noopSubscription;
+import static com.linecorp.armeria.reactor3.RequestContextPropagationMonoTest.ctxExists;
+import static com.linecorp.armeria.reactor3.RequestContextPropagationMonoTest.newContext;
+import static com.linecorp.armeria.reactor3.RequestContextPropagationMonoTest.noopSubscription;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 
