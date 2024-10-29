@@ -102,7 +102,9 @@ class WebSocketServiceHandshakeTest {
                                           .build();
         final RequestHeadersBuilder headersBuilder =
                 RequestHeaders.builder(HttpMethod.GET, "/chat")
-                              .add(HttpHeaderNames.CONNECTION, HttpHeaderValues.UPGRADE.toString());
+                              // It works even if the header contains multiple values
+                              .add(HttpHeaderNames.CONNECTION, HttpHeaderValues.UPGRADE +
+                                      ", " + HttpHeaderValues.KEEP_ALIVE);
         final Channel channel;
         try (ClientRequestContextCaptor captor = Clients.newContextCaptor()) {
             final AggregatedHttpResponse res = client.execute(headersBuilder.build()).aggregate().join();
@@ -114,7 +116,7 @@ class WebSocketServiceHandshakeTest {
                                                    "Connection: Upgrade");
         }
 
-        headersBuilder.add(HttpHeaderNames.UPGRADE, HttpHeaderValues.WEBSOCKET.toString());
+        headersBuilder.add(HttpHeaderNames.UPGRADE, HttpHeaderValues.WEBSOCKET + ", additional_value");
         try (ClientRequestContextCaptor captor = Clients.newContextCaptor()) {
             final AggregatedHttpResponse res = client.execute(headersBuilder.build()).aggregate().join();
 
@@ -192,7 +194,10 @@ class WebSocketServiceHandshakeTest {
 
         final RequestHeadersBuilder headersBuilder =
                 RequestHeaders.builder(HttpMethod.CONNECT, "/chat")
-                              .add(HttpHeaderNames.PROTOCOL, HttpHeaderValues.WEBSOCKET.toString());
+                              .add(HttpHeaderNames.PROTOCOL, HttpHeaderValues.WEBSOCKET.toString())
+                              // It works even if the header contains multiple values
+                              .add(HttpHeaderNames.CONNECTION, HttpHeaderValues.KEEP_ALIVE.toString())
+                              .add(HttpHeaderNames.UPGRADE, "additional_value");
         SplitHttpResponse split = client.execute(headersBuilder.build()).split();
         ResponseHeaders responseHeaders = split.headers().join();
         split.body().abort();
