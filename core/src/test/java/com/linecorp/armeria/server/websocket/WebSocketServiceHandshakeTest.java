@@ -194,7 +194,7 @@ class WebSocketServiceHandshakeTest {
 
         final RequestHeadersBuilder headersBuilder =
                 RequestHeaders.builder(HttpMethod.CONNECT, "/chat")
-                              .add(HttpHeaderNames.PROTOCOL, HttpHeaderValues.WEBSOCKET.toString())
+                              .add(HttpHeaderNames.PROTOCOL, HttpHeaderValues.WEBSOCKET.toString());
         SplitHttpResponse split = client.execute(headersBuilder.build()).split();
         ResponseHeaders responseHeaders = split.headers().join();
         split.body().abort();
