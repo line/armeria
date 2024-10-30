@@ -41,6 +41,11 @@ public final class DirectProxyConfig extends ProxyConfig {
     }
 
     @Override
+    public void refreshDns(InetSocketAddress socketAddress) {
+        // Do nothing.
+    }
+
+    @Override
     public String toString() {
         return "DirectProxyConfig{proxyType=DIRECT}";
     }

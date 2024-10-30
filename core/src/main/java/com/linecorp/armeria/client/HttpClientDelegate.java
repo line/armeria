@@ -21,6 +21,9 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.util.function.BiConsumer;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.linecorp.armeria.client.HttpChannelPool.PoolKey;
 import com.linecorp.armeria.client.endpoint.EmptyEndpointGroupException;
 import com.linecorp.armeria.client.proxy.HAProxyConfig;
@@ -50,6 +53,7 @@ import io.netty.util.concurrent.Future;
 
 final class HttpClientDelegate implements HttpClient {
 
+    private static final Logger logger = LoggerFactory.getLogger(HttpClientDelegate.class);
     private final HttpClientFactory factory;
     private final AddressResolverGroup<InetSocketAddress> addressResolverGroup;
 
@@ -90,7 +94,7 @@ final class HttpClientDelegate implements HttpClient {
         final SessionProtocol protocol = ctx.sessionProtocol();
         final ProxyConfig proxyConfig;
         try {
-            proxyConfig = getProxyConfig(protocol, endpoint);
+            proxyConfig = getProxyConfig(protocol, endpoint, ctx);
         } catch (Throwable t) {
             return earlyFailedResponse(t, ctx);
         }
@@ -215,9 +219,30 @@ final class HttpClientDelegate implements HttpClient {
         }
     }
 
-    private ProxyConfig getProxyConfig(SessionProtocol protocol, Endpoint endpoint) {
+    private ProxyConfig getProxyConfig(SessionProtocol protocol, Endpoint endpoint, ClientRequestContext ctx) {
         final ProxyConfig proxyConfig = factory.proxyConfigSelector().select(protocol, endpoint);
         requireNonNull(proxyConfig, "proxyConfig");
+
+        final Future<InetSocketAddress> resolveFuture = addressResolverGroup.getResolver(
+                ctx.eventLoop().withoutContext()).resolve(proxyConfig.proxyAddress());
+
+        resolveFuture.addListener(future -> {
+            if (future.isSuccess()) {
+                final InetSocketAddress resolvedAddress = (InetSocketAddress) future.get();
+                if (resolvedAddress != null && !resolvedAddress.isUnresolved()) {
+                    proxyConfig.refreshDns(resolvedAddress);
+                } else {
+                    logger.warn("Resolved address is invalid or unresolved: {}. " +
+                                "Using previous address instead.", resolvedAddress);
+                }
+            } else {
+                final Throwable cause = future.cause();
+                logger.warn("Failed to refresh {}'s ip address. " +
+                            "Use the previous inet address instead. reason: {}",
+                            proxyConfig.proxyAddress(),
+                            cause != null ? cause.getMessage() : "Unknown Error");
+            }
+        });
 
         // special behavior for haproxy when sourceAddress is null
         if (proxyConfig.proxyType() == ProxyType.HAPROXY &&

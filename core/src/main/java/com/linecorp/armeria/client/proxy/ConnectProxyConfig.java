@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.client.proxy;
 
+import static java.util.Objects.requireNonNull;
+
 import java.net.InetSocketAddress;
 import java.util.Objects;
 
@@ -29,7 +31,7 @@ import com.linecorp.armeria.common.annotation.Nullable;
  */
 public final class ConnectProxyConfig extends ProxyConfig {
 
-    private final InetSocketAddress proxyAddress;
+    private InetSocketAddress proxyAddress;
 
     @Nullable
     private final String username;
@@ -88,6 +90,12 @@ public final class ConnectProxyConfig extends ProxyConfig {
     @Override
     public ProxyType proxyType() {
         return ProxyType.CONNECT;
+    }
+
+    @Override
+    public void refreshDns(InetSocketAddress socketAddress) {
+        requireNonNull(socketAddress, "socketAddress");
+        this.proxyAddress = socketAddress;
     }
 
     @Override

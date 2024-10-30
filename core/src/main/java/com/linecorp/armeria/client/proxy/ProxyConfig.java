@@ -196,6 +196,12 @@ public abstract class ProxyConfig {
     public abstract ProxyType proxyType();
 
     /**
+     * Refreshes the proxyAddress which ProxyConfig has, to respect DNS TTL.
+     * @param socketAddress the inet socket address
+     */
+    public abstract void refreshDns(InetSocketAddress socketAddress);
+
+    /**
      * Returns the proxy address which is {@code null} only for {@link ProxyType#DIRECT}.
      */
     @Nullable

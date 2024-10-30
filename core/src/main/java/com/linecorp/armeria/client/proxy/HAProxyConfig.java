@@ -17,6 +17,7 @@
 package com.linecorp.armeria.client.proxy;
 
 import static com.google.common.base.Preconditions.checkArgument;
+import static java.util.Objects.requireNonNull;
 
 import java.net.InetSocketAddress;
 import java.util.Objects;
@@ -31,7 +32,7 @@ import com.linecorp.armeria.server.ServiceRequestContext;
  */
 public final class HAProxyConfig extends ProxyConfig {
 
-    private final InetSocketAddress proxyAddress;
+    private InetSocketAddress proxyAddress;
 
     @Nullable
     private final InetSocketAddress sourceAddress;
@@ -65,6 +66,12 @@ public final class HAProxyConfig extends ProxyConfig {
     @Nullable
     public InetSocketAddress sourceAddress() {
         return sourceAddress;
+    }
+
+    @Override
+    public void refreshDns(InetSocketAddress socketAddress) {
+        requireNonNull(socketAddress, "socketAddress");
+        this.proxyAddress = socketAddress;
     }
 
     @Override
