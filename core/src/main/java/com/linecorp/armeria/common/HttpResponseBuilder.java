@@ -173,6 +173,11 @@ public final class HttpResponseBuilder extends AbstractHttpMessageBuilder {
         return (HttpResponseBuilder) super.content(contentType, content);
     }
 
+    @Override
+    public HttpResponseBuilder content(HttpData content) {
+        return (HttpResponseBuilder) super.content(content);
+    }
+
     /**
      * Sets the content for this response.
      */

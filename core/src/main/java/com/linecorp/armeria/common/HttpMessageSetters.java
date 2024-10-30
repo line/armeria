@@ -70,6 +70,16 @@ public interface HttpMessageSetters {
     HttpMessageSetters content(MediaType contentType, byte[] content);
 
     /**
+     * Sets the content for this message without setting a content-type header.
+     * The {@code content} will be wrapped using {@link HttpData#wrap(byte[])},
+     * meaning any modifications made to {@code content} will be directly reflected in the request.
+     *
+     * <p>Note: This method does not set a content-type header. The caller is responsible
+     * for setting an appropriate content-type header if required.
+     */
+    HttpMessageSetters content(HttpData content);
+
+    /**
      * Sets the content for this message.
      */
     HttpMessageSetters content(MediaType contentType, HttpData content);

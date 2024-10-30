@@ -80,6 +80,12 @@ public interface HttpRequestSetters extends RequestMethodSetters, PathAndQueryPa
      * Sets the content for this request.
      */
     @Override
+    HttpRequestSetters content(HttpData content);
+
+    /**
+     * Sets the content for this request.
+     */
+    @Override
     HttpRequestSetters content(MediaType contentType, HttpData content);
 
     /**

@@ -137,6 +137,11 @@ public abstract class AbstractHttpRequestBuilder
     }
 
     @Override
+    public AbstractHttpRequestBuilder content(HttpData content) {
+        return (AbstractHttpRequestBuilder) super.content(content);
+    }
+
+    @Override
     public AbstractHttpRequestBuilder content(MediaType contentType, HttpData content) {
         return (AbstractHttpRequestBuilder) super.content(contentType, content);
     }

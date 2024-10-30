@@ -102,7 +102,7 @@ class HttpResponseBuilderTest {
         final AggregatedHttpResponse aggregatedRes = res.aggregate().join();
         assertThat(aggregatedRes.status()).isEqualTo(HttpStatus.OK);
         assertThat(aggregatedRes.contentUtf8()).isEqualTo("Armeriaはいろんな使い方がアルメリア");
-        assertThat(aggregatedRes.contentType()).isEqualTo(MediaType.PLAIN_TEXT_UTF_8);
+        assertThat(aggregatedRes.contentType()).isNull();
     }
 
     @Test
@@ -116,7 +116,7 @@ class HttpResponseBuilderTest {
         final AggregatedHttpResponse aggregatedRes = res.aggregate().join();
         assertThat(aggregatedRes.status()).isEqualTo(HttpStatus.OK);
         assertThat(aggregatedRes.contentUtf8()).isEqualTo("Armeriaはいろんな使い方がアルメリア");
-        assertThat(aggregatedRes.contentType()).isEqualTo(MediaType.PLAIN_TEXT_UTF_8);
+        assertThat(aggregatedRes.contentType()).isNull();
     }
 
     @Test
@@ -256,7 +256,7 @@ class HttpResponseBuilderTest {
         assertThat(aggregatedRes.headers().getAll(HttpHeaderNames.ACCEPT_ENCODING))
                 .containsExactly("gzip", "deflate", "gzip");
         assertThat(aggregatedRes.contentUtf8()).isEqualTo("Armeriaはいろんな使い方がアルメリア");
-        assertThat(aggregatedRes.contentType()).isEqualTo(MediaType.PLAIN_TEXT_UTF_8);
+        assertThat(aggregatedRes.contentType()).isNull();
         assertThat(aggregatedRes.trailers().contains("trailer-name")).isTrue();
         assertThat(aggregatedRes.trailers().get("trailer-name")).isEqualTo("trailer-value");
     }
