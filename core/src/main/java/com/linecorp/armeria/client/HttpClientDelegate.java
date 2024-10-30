@@ -223,6 +223,7 @@ final class HttpClientDelegate implements HttpClient {
         final ProxyConfig proxyConfig = factory.proxyConfigSelector().select(protocol, endpoint);
         requireNonNull(proxyConfig, "proxyConfig");
 
+        // DirectProxyConfig does not have proxyAddress as its field.
         if (proxyConfig.proxyAddress() != null) {
             final Future<InetSocketAddress> resolveFuture = addressResolverGroup.getResolver(
                     ctx.eventLoop().withoutContext()).resolve(proxyConfig.proxyAddress());
