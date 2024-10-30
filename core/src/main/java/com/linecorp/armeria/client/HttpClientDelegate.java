@@ -223,26 +223,28 @@ final class HttpClientDelegate implements HttpClient {
         final ProxyConfig proxyConfig = factory.proxyConfigSelector().select(protocol, endpoint);
         requireNonNull(proxyConfig, "proxyConfig");
 
-        final Future<InetSocketAddress> resolveFuture = addressResolverGroup.getResolver(
-                ctx.eventLoop().withoutContext()).resolve(proxyConfig.proxyAddress());
+        if (proxyConfig.proxyAddress() != null) {
+            final Future<InetSocketAddress> resolveFuture = addressResolverGroup.getResolver(
+                    ctx.eventLoop().withoutContext()).resolve(proxyConfig.proxyAddress());
 
-        resolveFuture.addListener(future -> {
-            if (future.isSuccess()) {
-                final InetSocketAddress resolvedAddress = (InetSocketAddress) future.get();
-                if (resolvedAddress != null && !resolvedAddress.isUnresolved()) {
-                    proxyConfig.refreshDns(resolvedAddress);
+            resolveFuture.addListener(future -> {
+                if (future.isSuccess()) {
+                    final InetSocketAddress resolvedAddress = (InetSocketAddress) future.get();
+                    if (resolvedAddress != null && !resolvedAddress.isUnresolved()) {
+                        proxyConfig.refreshDns(resolvedAddress);
+                    } else {
+                        logger.warn("Resolved address is invalid or unresolved: {}. " +
+                                    "Using previous address instead.", resolvedAddress);
+                    }
                 } else {
-                    logger.warn("Resolved address is invalid or unresolved: {}. " +
-                                "Using previous address instead.", resolvedAddress);
+                    final Throwable cause = future.cause();
+                    logger.warn("Failed to refresh {}'s ip address. " +
+                                "Use the previous inet address instead. reason: {}",
+                                proxyConfig.proxyAddress(),
+                                cause != null ? cause.getMessage() : "Unknown Error");
                 }
-            } else {
-                final Throwable cause = future.cause();
-                logger.warn("Failed to refresh {}'s ip address. " +
-                            "Use the previous inet address instead. reason: {}",
-                            proxyConfig.proxyAddress(),
-                            cause != null ? cause.getMessage() : "Unknown Error");
-            }
-        });
+            });
+        }
 
         // special behavior for haproxy when sourceAddress is null
         if (proxyConfig.proxyType() == ProxyType.HAPROXY &&
