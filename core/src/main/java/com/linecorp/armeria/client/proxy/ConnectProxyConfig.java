@@ -18,9 +18,6 @@ package com.linecorp.armeria.client.proxy;
 
 import java.net.InetSocketAddress;
 import java.util.Objects;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.function.BiConsumer;
 
 import com.google.common.base.MoreObjects;
 
@@ -32,11 +29,7 @@ import com.linecorp.armeria.common.annotation.Nullable;
  */
 public final class ConnectProxyConfig extends ProxyConfig {
 
-    private final ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();
-
-    private long lastUpdateTime = System.currentTimeMillis();
-
-    private InetSocketAddress proxyAddress;
+    private final InetSocketAddress proxyAddress;
 
     @Nullable
     private final String username;
@@ -50,30 +43,11 @@ public final class ConnectProxyConfig extends ProxyConfig {
 
     ConnectProxyConfig(InetSocketAddress proxyAddress, @Nullable String username,
                        @Nullable String password, HttpHeaders headers, boolean useTls) {
-        this(proxyAddress, username, password, headers, useTls, -1);
-    }
-
-    ConnectProxyConfig(InetSocketAddress proxyAddress, @Nullable String username,
-                       @Nullable String password, HttpHeaders headers, boolean useTls,
-                       long refreshInterval) {
         this.proxyAddress = proxyAddress;
         this.username = username;
         this.password = password;
         this.headers = headers;
         this.useTls = useTls;
-
-        if (refreshInterval > 0) {
-            final BiConsumer<InetSocketAddress, Long> callback = (newProxyAddress, updateTime) -> {
-                this.proxyAddress = newProxyAddress;
-                this.lastUpdateTime = updateTime;
-            };
-
-            ProxyConfig.reserveDNSUpdate(callback,
-                                         proxyAddress.getHostName(),
-                                         proxyAddress.getPort(),
-                                         refreshInterval,
-                                         scheduler);
-        }
     }
 
     @Override

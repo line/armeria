@@ -20,9 +20,6 @@ import static com.google.common.base.Preconditions.checkArgument;
 
 import java.net.InetSocketAddress;
 import java.util.Objects;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.function.BiConsumer;
 
 import com.google.common.base.MoreObjects;
 
@@ -34,72 +31,21 @@ import com.linecorp.armeria.server.ServiceRequestContext;
  */
 public final class HAProxyConfig extends ProxyConfig {
 
-    private final ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();
-
-    private long lastUpdateTime = System.currentTimeMillis();
-
-    private InetSocketAddress proxyAddress;
+    private final InetSocketAddress proxyAddress;
 
     @Nullable
-    private InetSocketAddress sourceAddress;
+    private final InetSocketAddress sourceAddress;
 
     HAProxyConfig(InetSocketAddress proxyAddress) {
-        this(proxyAddress, -1);
-    }
-
-    HAProxyConfig(InetSocketAddress proxyAddress, long refreshInterval) {
         this.proxyAddress = proxyAddress;
         sourceAddress = null;
-
-        if (refreshInterval > 0) {
-            final BiConsumer<InetSocketAddress, Long> callback = (newProxyAddress, updateTime) -> {
-                this.proxyAddress = newProxyAddress;
-                this.lastUpdateTime = updateTime;
-            };
-
-            ProxyConfig.reserveDNSUpdate(callback,
-                                         proxyAddress.getHostName(),
-                                         proxyAddress.getPort(),
-                                         refreshInterval,
-                                         scheduler);
-        }
     }
 
     HAProxyConfig(InetSocketAddress proxyAddress, InetSocketAddress sourceAddress) {
-        this(proxyAddress, sourceAddress, -1);
-    }
-
-    HAProxyConfig(InetSocketAddress proxyAddress, InetSocketAddress sourceAddress, long refreshInterval) {
         checkArgument(sourceAddress.getAddress().getClass() == proxyAddress.getAddress().getClass(),
                       "sourceAddress and proxyAddress should be the same type");
         this.proxyAddress = proxyAddress;
         this.sourceAddress = sourceAddress;
-
-        if (refreshInterval > 0) {
-            final BiConsumer<InetSocketAddress, Long> callback = (newProxyAddress, updateTime) -> {
-                this.proxyAddress = newProxyAddress;
-                this.lastUpdateTime = updateTime;
-            };
-
-            ProxyConfig.reserveDNSUpdate(callback,
-                                         proxyAddress.getHostName(),
-                                         proxyAddress.getPort(),
-                                         refreshInterval,
-                                         scheduler);
-        }
-
-        if (refreshInterval > 0) {
-            final BiConsumer<InetSocketAddress, Long> callback = (newSourceAddress, updateTime) -> {
-                this.sourceAddress = newSourceAddress;
-                this.lastUpdateTime = updateTime;
-            };
-
-            ProxyConfig.reserveDNSUpdate(callback,
-                                         sourceAddress.getHostName(),
-                                         sourceAddress.getPort(),
-                                         refreshInterval,
-                                         scheduler);
-        }
     }
 
     @Override

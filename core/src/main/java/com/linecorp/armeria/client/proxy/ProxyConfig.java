@@ -20,15 +20,7 @@ import static com.google.common.base.Preconditions.checkArgument;
 import static com.linecorp.armeria.client.proxy.DirectProxyConfig.DIRECT_PROXY_CONFIG;
 import static java.util.Objects.requireNonNull;
 
-import java.net.InetAddress;
 import java.net.InetSocketAddress;
-import java.net.UnknownHostException;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
-import java.util.function.BiConsumer;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.common.HttpHeaders;
@@ -40,8 +32,6 @@ import com.linecorp.armeria.server.ServiceRequestContext;
  * Base configuration for proxy settings used by {@link ClientFactory}.
  */
 public abstract class ProxyConfig {
-
-    private static final Logger logger = LoggerFactory.getLogger(ProxyConfig.class);
 
     /**
      * Creates a {@code ProxyConfig} configuration for SOCKS4 protocol.
@@ -58,38 +48,12 @@ public abstract class ProxyConfig {
      * Creates a {@code ProxyConfig} configuration for SOCKS4 protocol.
      *
      * @param proxyAddress the proxy address
-     * @param refreshInterval the DNS refresh time
-     */
-    public static Socks4ProxyConfig socks4(InetSocketAddress proxyAddress, long refreshInterval) {
-        requireNonNull(proxyAddress, "proxyAddress");
-        checkArgument(!proxyAddress.isUnresolved(), "proxyAddress must be resolved");
-        return new Socks4ProxyConfig(proxyAddress, null, refreshInterval);
-    }
-
-    /**
-     * Creates a {@code ProxyConfig} configuration for SOCKS4 protocol.
-     *
-     * @param proxyAddress the proxy address
      * @param username the username
      */
     public static Socks4ProxyConfig socks4(InetSocketAddress proxyAddress, String username) {
         requireNonNull(proxyAddress, "proxyAddress");
         checkArgument(!proxyAddress.isUnresolved(), "proxyAddress must be resolved");
         return new Socks4ProxyConfig(proxyAddress, requireNonNull(username, "username"));
-    }
-
-    /**
-     * Creates a {@code ProxyConfig} configuration for SOCKS4 protocol.
-     *
-     * @param proxyAddress the proxy address
-     * @param username the username
-     * @param refreshInterval the DNS refresh time
-     */
-    public static Socks4ProxyConfig socks4(InetSocketAddress proxyAddress, String username,
-                                           long refreshInterval) {
-        requireNonNull(proxyAddress, "proxyAddress");
-        checkArgument(!proxyAddress.isUnresolved(), "proxyAddress must be resolved");
-        return new Socks4ProxyConfig(proxyAddress, requireNonNull(username, "username"), refreshInterval);
     }
 
     /**
@@ -101,18 +65,6 @@ public abstract class ProxyConfig {
         requireNonNull(proxyAddress, "proxyAddress");
         checkArgument(!proxyAddress.isUnresolved(), "proxyAddress must be resolved");
         return new Socks5ProxyConfig(proxyAddress, null, null);
-    }
-
-    /**
-     * Creates a {@code ProxyConfig} configuration for SOCKS5 protocol.
-     *
-     * @param proxyAddress the proxy address
-     * @param refreshInterval the DNS refresh time
-     */
-    public static Socks5ProxyConfig socks5(InetSocketAddress proxyAddress, long refreshInterval) {
-        requireNonNull(proxyAddress, "proxyAddress");
-        checkArgument(!proxyAddress.isUnresolved(), "proxyAddress must be resolved");
-        return new Socks5ProxyConfig(proxyAddress, null, null, refreshInterval);
     }
 
     /**
@@ -131,23 +83,6 @@ public abstract class ProxyConfig {
     }
 
     /**
-     * Creates a {@code ProxyConfig} configuration for SOCKS5 protocol.
-     *
-     * @param proxyAddress the proxy address
-     * @param username the username
-     * @param password the password
-     * @param refreshInterval the DNS refresh time
-     */
-    public static Socks5ProxyConfig socks5(
-            InetSocketAddress proxyAddress, String username, String password, long refreshInterval) {
-        requireNonNull(proxyAddress, "proxyAddress");
-        checkArgument(!proxyAddress.isUnresolved(), "proxyAddress must be resolved");
-        return new Socks5ProxyConfig(proxyAddress, requireNonNull(username, "username"),
-                                     requireNonNull(password, "password"),
-                                     refreshInterval);
-    }
-
-    /**
      * Creates a {@code ProxyConfig} configuration for CONNECT protocol.
      *
      * @param proxyAddress the proxy address
@@ -162,38 +97,12 @@ public abstract class ProxyConfig {
      * Creates a {@code ProxyConfig} configuration for CONNECT protocol.
      *
      * @param proxyAddress the proxy address
-     * @param refreshInterval the DNS refresh time
-     */
-    public static ConnectProxyConfig connect(InetSocketAddress proxyAddress, long refreshInterval) {
-        requireNonNull(proxyAddress, "proxyAddress");
-        checkArgument(!proxyAddress.isUnresolved(), "proxyAddress must be resolved");
-        return new ConnectProxyConfig(proxyAddress, null, null, HttpHeaders.of(), false, refreshInterval);
-    }
-
-    /**
-     * Creates a {@code ProxyConfig} configuration for CONNECT protocol.
-     *
-     * @param proxyAddress the proxy address
      * @param useTls whether to use TLS to connect to the proxy
      */
     public static ConnectProxyConfig connect(InetSocketAddress proxyAddress, boolean useTls) {
         requireNonNull(proxyAddress, "proxyAddress");
         checkArgument(!proxyAddress.isUnresolved(), "proxyAddress must be resolved");
         return new ConnectProxyConfig(proxyAddress, null, null, HttpHeaders.of(), useTls);
-    }
-
-    /**
-     * Creates a {@code ProxyConfig} configuration for CONNECT protocol.
-     *
-     * @param proxyAddress the proxy address
-     * @param useTls whether to use TLS to connect to the proxy
-     * @param refreshInterval the DNS refresh time
-     */
-    public static ConnectProxyConfig connect(InetSocketAddress proxyAddress, boolean useTls,
-                                             long refreshInterval) {
-        requireNonNull(proxyAddress, "proxyAddress");
-        checkArgument(!proxyAddress.isUnresolved(), "proxyAddress must be resolved");
-        return new ConnectProxyConfig(proxyAddress, null, null, HttpHeaders.of(), useTls, refreshInterval);
     }
 
     /**
@@ -213,21 +122,6 @@ public abstract class ProxyConfig {
      * Creates a {@code ProxyConfig} configuration for CONNECT protocol.
      *
      * @param proxyAddress the proxy address
-     * @param username the username
-     * @param password the password
-     * @param useTls whether to use TLS to connect to the proxy
-     * @param refreshInterval the DNS refresh time
-     */
-    public static ConnectProxyConfig connect(
-            InetSocketAddress proxyAddress, String username, String password, boolean useTls,
-            long refreshInterval) {
-        return connect(proxyAddress, username, password, HttpHeaders.of(), useTls, refreshInterval);
-    }
-
-    /**
-     * Creates a {@code ProxyConfig} configuration for CONNECT protocol.
-     *
-     * @param proxyAddress the proxy address
      * @param headers the {@link HttpHeaders} to send to the proxy
      * @param useTls whether to use TLS to connect to the proxy
      */
@@ -237,22 +131,6 @@ public abstract class ProxyConfig {
         requireNonNull(proxyAddress, "proxyAddress");
         checkArgument(!proxyAddress.isUnresolved(), "proxyAddress must be resolved");
         return new ConnectProxyConfig(proxyAddress, null, null, headers, useTls);
-    }
-
-    /**
-     * Creates a {@code ProxyConfig} configuration for CONNECT protocol.
-     *
-     * @param proxyAddress the proxy address
-     * @param headers the {@link HttpHeaders} to send to the proxy
-     * @param useTls whether to use TLS to connect to the proxy
-     * @param refreshInterval the DNS refresh time
-     */
-    @UnstableApi
-    public static ConnectProxyConfig connect(
-            InetSocketAddress proxyAddress, HttpHeaders headers, boolean useTls, long refreshInterval) {
-        requireNonNull(proxyAddress, "proxyAddress");
-        checkArgument(!proxyAddress.isUnresolved(), "proxyAddress must be resolved");
-        return new ConnectProxyConfig(proxyAddress, null, null, headers, useTls, refreshInterval);
     }
 
     /**
@@ -276,27 +154,6 @@ public abstract class ProxyConfig {
     }
 
     /**
-     * Creates a {@code ProxyConfig} configuration for CONNECT protocol.
-     *
-     * @param proxyAddress the proxy address
-     * @param username the username
-     * @param password the password
-     * @param headers the {@link HttpHeaders} to send to the proxy
-     * @param useTls whether to use TLS to connect to the proxy
-     * @param refreshInterval the DNS refresh time
-     */
-    @UnstableApi
-    public static ConnectProxyConfig connect(InetSocketAddress proxyAddress, String username, String password,
-                                             HttpHeaders headers, boolean useTls, long refreshInterval) {
-        requireNonNull(proxyAddress, "proxyAddress");
-        checkArgument(!proxyAddress.isUnresolved(), "proxyAddress must be resolved");
-        requireNonNull(username, "username");
-        requireNonNull(password, "password");
-        requireNonNull(headers, "headers");
-        return new ConnectProxyConfig(proxyAddress, username, password, headers, useTls, refreshInterval);
-    }
-
-    /**
      * Creates a {@link ProxyConfig} configuration for HAProxy protocol.
      *
      * @param proxyAddress the proxy address
@@ -312,22 +169,6 @@ public abstract class ProxyConfig {
     }
 
     /**
-     * Creates a {@link ProxyConfig} configuration for HAProxy protocol.
-     *
-     * @param proxyAddress the proxy address
-     * @param sourceAddress the source address
-     * @param refreshInterval the DNS refresh time
-     */
-    public static HAProxyConfig haproxy(
-            InetSocketAddress proxyAddress, InetSocketAddress sourceAddress, long refreshInterval) {
-        requireNonNull(proxyAddress, "proxyAddress");
-        checkArgument(!proxyAddress.isUnresolved(), "proxyAddress must be resolved");
-        requireNonNull(sourceAddress, "sourceAddress");
-        checkArgument(!sourceAddress.isUnresolved(), "sourceAddress must be resolved");
-        return new HAProxyConfig(proxyAddress, sourceAddress, refreshInterval);
-    }
-
-    /**
      * Creates a {@link ProxyConfig} configuration for HAProxy protocol. The {@code sourceAddress} will
      * be inferred from either the {@link ServiceRequestContext} or the local connection address.
      *
@@ -337,19 +178,6 @@ public abstract class ProxyConfig {
         requireNonNull(proxyAddress, "proxyAddress");
         checkArgument(!proxyAddress.isUnresolved(), "proxyAddress must be resolved");
         return new HAProxyConfig(proxyAddress);
-    }
-
-    /**
-     * Creates a {@link ProxyConfig} configuration for HAProxy protocol. The {@code sourceAddress} will
-     * be inferred from either the {@link ServiceRequestContext} or the local connection address.
-     *
-     * @param proxyAddress the proxy address
-     * @param refreshInterval the DNS refresh time
-     */
-    public static ProxyConfig haproxy(InetSocketAddress proxyAddress, long refreshInterval) {
-        requireNonNull(proxyAddress, "proxyAddress");
-        checkArgument(!proxyAddress.isUnresolved(), "proxyAddress must be resolved");
-        return new HAProxyConfig(proxyAddress, refreshInterval);
     }
 
     /**
@@ -376,35 +204,5 @@ public abstract class ProxyConfig {
     @Nullable
     static String maskPassword(@Nullable String username, @Nullable String password) {
         return username != null ? "****" : null;
-    }
-
-    /**
-     * Reserves a task to periodically update DNS with a given scheduler.
-     *
-     * @param updateCallback The callback to update InetSocketAddress
-     * @param hostname The hostname
-     * @param port The port number
-     * @param refreshInterval The refresh Interval
-     * @param scheduler The scheduler
-     */
-    protected static void reserveDNSUpdate(BiConsumer<InetSocketAddress, Long> updateCallback,
-                                  String hostname,
-                                  int port,
-                                  long refreshInterval,
-                                  ScheduledExecutorService scheduler) {
-        scheduler.scheduleAtFixedRate(() -> {
-            try {
-                final String ipAddress = InetAddress.getByName(hostname)
-                                                    .getHostAddress();
-                final InetSocketAddress newInetSocketAddress = new InetSocketAddress(ipAddress, port);
-                final long lastUpdateTime = System.currentTimeMillis();
-                updateCallback.accept(newInetSocketAddress,
-                                      lastUpdateTime);
-            } catch (UnknownHostException e) {
-                logger.warn("Failed to refresh {}'s ip address. " +
-                            "Use the previous inet address instead.",
-                            hostname);
-            }
-        }, 0, refreshInterval, TimeUnit.MILLISECONDS);
     }
 }
