@@ -20,6 +20,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.nio.charset.StandardCharsets;
+import java.util.List;
 
 import org.junit.jupiter.api.Test;
 
@@ -106,6 +107,22 @@ class HttpResponseBuilderTest {
     }
 
     @Test
+    void buildWithPlainAndContentTypeHeader() {
+        final HttpResponse res = HttpResponse.builder()
+                                             .ok()
+                                             .content("Armeriaはいろんな使い方がアルメリア")
+                                             .header(HttpHeaderNames.CONTENT_TYPE, MediaType.JSON)
+                                             .build();
+        final AggregatedHttpResponse aggregatedRes = res.aggregate().join();
+        assertThat(aggregatedRes.status()).isEqualTo(HttpStatus.OK);
+        assertThat(aggregatedRes.contentUtf8()).isEqualTo("Armeriaはいろんな使い方がアルメリア");
+
+        final List<String> contentTypeHeaders = aggregatedRes.headers().getAll(HttpHeaderNames.CONTENT_TYPE);
+        assertThat(contentTypeHeaders).hasSize(1);
+        assertThat(contentTypeHeaders).containsExactly("application/json");
+    }
+
+    @Test
     void buildWithPlainFormat() {
         // Using non-ascii to test UTF-8 conversion
         final HttpResponse res = HttpResponse.builder()
@@ -117,6 +134,23 @@ class HttpResponseBuilderTest {
         assertThat(aggregatedRes.status()).isEqualTo(HttpStatus.OK);
         assertThat(aggregatedRes.contentUtf8()).isEqualTo("Armeriaはいろんな使い方がアルメリア");
         assertThat(aggregatedRes.contentType()).isNull();
+    }
+
+    @Test
+    void buildWithPlainFormatAndContentTypeHeader() {
+        final HttpResponse res = HttpResponse.builder()
+                                             .ok()
+                                             .content("%sはいろんな使い方が%s",
+                                                      "Armeria", "アルメリア")
+                                             .header(HttpHeaderNames.CONTENT_TYPE, MediaType.JSON)
+                                             .build();
+        final AggregatedHttpResponse aggregatedRes = res.aggregate().join();
+        assertThat(aggregatedRes.status()).isEqualTo(HttpStatus.OK);
+        assertThat(aggregatedRes.contentUtf8()).isEqualTo("Armeriaはいろんな使い方がアルメリア");
+
+        final List<String> contentTypeHeaders = aggregatedRes.headers().getAll(HttpHeaderNames.CONTENT_TYPE);
+        assertThat(contentTypeHeaders).hasSize(1);
+        assertThat(contentTypeHeaders).containsExactly("application/json");
     }
 
     @Test
