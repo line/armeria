@@ -1919,6 +1919,7 @@ dazaifu.fukuoka.jp
 dc.us
 dclk
 dd-dns.de
+ddns-ip.net
 ddns.me
 ddns.net
 ddnsfree.com
@@ -3589,6 +3590,7 @@ holmestrand.no
 holtalen.no
 holy.jp
 home-webserver.de
+home.arpa
 home.dyndns.org
 homebuilt.aero
 homedepot
@@ -3898,6 +3900,7 @@ io.in
 io.vn
 iobb.net
 iopsys.se
+ip-ddns.com
 ip-dynamic.org
 ip.linodeusercontent.com
 ip6.arpa
@@ -8241,6 +8244,7 @@ tateyama.toyama.jp
 tatsuno.hyogo.jp
 tatsuno.nagano.jp
 tattoo
+taveusercontent.com
 tawaramoto.nara.jp
 tax
 taxi
