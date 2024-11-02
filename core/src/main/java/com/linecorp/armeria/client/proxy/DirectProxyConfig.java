@@ -46,6 +46,11 @@ public final class DirectProxyConfig extends ProxyConfig {
     }
 
     @Override
+    public ProxyConfig withNewProxyAddress(InetSocketAddress newProxyAddress) {
+        return new DirectProxyConfig();
+    }
+
+    @Override
     public String toString() {
         return "DirectProxyConfig{proxyType=DIRECT}";
     }

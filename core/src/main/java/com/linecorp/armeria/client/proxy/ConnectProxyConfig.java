@@ -99,6 +99,12 @@ public final class ConnectProxyConfig extends ProxyConfig {
     }
 
     @Override
+    public ProxyConfig withNewProxyAddress(InetSocketAddress newProxyAddress) {
+        return new ConnectProxyConfig(newProxyAddress, this.username,
+                                      this.password, this.headers, this.useTls);
+    }
+
+    @Override
     public boolean equals(@Nullable Object o) {
         if (this == o) {
             return true;

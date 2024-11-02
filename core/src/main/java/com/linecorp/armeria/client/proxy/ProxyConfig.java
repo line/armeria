@@ -207,6 +207,8 @@ public abstract class ProxyConfig {
     @Nullable
     public abstract InetSocketAddress proxyAddress();
 
+    public abstract ProxyConfig withNewProxyAddress(InetSocketAddress newProxyAddress);
+
     @Nullable
     static String maskPassword(@Nullable String username, @Nullable String password) {
         return username != null ? "****" : null;
