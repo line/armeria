@@ -76,9 +76,8 @@ public final class HAProxyConfig extends ProxyConfig {
 
     @Override
     public ProxyConfig withNewProxyAddress(InetSocketAddress newProxyAddress) {
-        return this.sourceAddress == null ?
-               new HAProxyConfig(proxyAddress) :
-               new HAProxyConfig(proxyAddress, this.sourceAddress);
+        return this.sourceAddress == null ? new HAProxyConfig(proxyAddress)
+                                          : new HAProxyConfig(proxyAddress, this.sourceAddress);
     }
 
     @Override

@@ -207,6 +207,10 @@ public abstract class ProxyConfig {
     @Nullable
     public abstract InetSocketAddress proxyAddress();
 
+    /**
+     * Returns a new proxy address instance that respects DNS TTL.
+     * @param newProxyAddress the inet socket address
+     */
     public abstract ProxyConfig withNewProxyAddress(InetSocketAddress newProxyAddress);
 
     @Nullable

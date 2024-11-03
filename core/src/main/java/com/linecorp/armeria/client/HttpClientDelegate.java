@@ -92,23 +92,36 @@ final class HttpClientDelegate implements HttpClient {
         }
 
         final SessionProtocol protocol = ctx.sessionProtocol();
-        final ProxyConfig proxyConfig;
-        try {
-            proxyConfig = getProxyConfig(protocol, endpoint, ctx);
-        } catch (Throwable t) {
-            return earlyFailedResponse(t, ctx);
-        }
-
-        final Throwable cancellationCause = ctx.cancellationCause();
-        if (cancellationCause != null) {
-            return earlyFailedResponse(cancellationCause, ctx);
-        }
 
         final Endpoint endpointWithPort = endpoint.withDefaultPort(ctx.sessionProtocol());
         final EventLoop eventLoop = ctx.eventLoop().withoutContext();
         // TODO(ikhoon) Use ctx.exchangeType() to create an optimized HttpResponse for non-streaming response.
         final DecodedHttpResponse res = new DecodedHttpResponse(eventLoop);
         updateCancellationTask(ctx, req, res);
+
+        try {
+            resolveProxyConfig(protocol, endpoint, ctx, (proxyConfig, thrown) -> {
+                if (thrown != null) {
+                    earlyFailed(thrown, ctx);
+                    res.close(thrown);
+                } else {
+                    execute0(ctx, endpointWithPort, req, res, proxyConfig);
+                }
+            });
+        } catch (Throwable t) {
+            return earlyFailedResponse(t, ctx);
+        }
+        return res;
+    }
+
+    private void execute0(ClientRequestContext ctx, Endpoint endpointWithPort, HttpRequest req,
+                          DecodedHttpResponse res, ProxyConfig proxyConfig) {
+        final Throwable cancellationCause = ctx.cancellationCause();
+        if (cancellationCause != null) {
+            final Throwable t = earlyFailed(cancellationCause, ctx);
+            res.close(t);
+            return;
+        }
 
         final ClientConnectionTimingsBuilder timingsBuilder = ClientConnectionTimings.builder();
 
@@ -129,8 +142,6 @@ final class HttpClientDelegate implements HttpClient {
                 }
             });
         }
-
-        return res;
     }
 
     private static void updateCancellationTask(ClientRequestContext ctx, HttpRequest req,
@@ -219,34 +230,47 @@ final class HttpClientDelegate implements HttpClient {
         }
     }
 
-    private ProxyConfig getProxyConfig(SessionProtocol protocol, Endpoint endpoint, ClientRequestContext ctx) {
+    private void resolveProxyConfig(SessionProtocol protocol, Endpoint endpoint, ClientRequestContext ctx,
+                                    BiConsumer<@Nullable ProxyConfig, @Nullable Throwable> onComplete) {
         final ProxyConfig proxyConfig = factory.proxyConfigSelector().select(protocol, endpoint);
         requireNonNull(proxyConfig, "proxyConfig");
 
+        final ServiceRequestContext serviceCtx = ServiceRequestContext.currentOrNull();
+        final ProxiedAddresses capturedProxiedAddresses = serviceCtx == null ? null
+                                                          : serviceCtx.proxiedAddresses();
+
         // DirectProxyConfig does not have proxyAddress as its field.
         if (proxyConfig.proxyAddress() != null) {
-            final Future<InetSocketAddress> resolveFuture = addressResolverGroup.getResolver(
-                    ctx.eventLoop().withoutContext()).resolve(proxyConfig.proxyAddress());
+            final Future<InetSocketAddress> resolveFuture = addressResolverGroup
+                    .getResolver(ctx.eventLoop().withoutContext())
+                    .resolve(proxyConfig.proxyAddress());
 
             resolveFuture.addListener(future -> {
                 if (future.isSuccess()) {
-                    final InetSocketAddress resolvedAddress = (InetSocketAddress) future.get();
+                    final InetSocketAddress resolvedAddress = (InetSocketAddress) future.getNow();
                     if (resolvedAddress != null && !resolvedAddress.isUnresolved()) {
-                        proxyConfig.refreshDns(resolvedAddress);
+                        final ProxyConfig newProxyConfig = proxyConfig.withNewProxyAddress(resolvedAddress);
+                        onComplete.accept(maybeHAProxy(newProxyConfig, capturedProxiedAddresses), null);
                     } else {
                         logger.warn("Resolved address is invalid or unresolved: {}. " +
-                                    "Using previous address instead.", resolvedAddress);
+                                    "Using the previous address instead.", resolvedAddress);
+                        onComplete.accept(maybeHAProxy(proxyConfig, capturedProxiedAddresses), null);
                     }
                 } else {
                     final Throwable cause = future.cause();
                     logger.warn("Failed to refresh {}'s ip address. " +
-                                "Use the previous inet address instead. reason: {}",
+                                "Using the previous address instead. reason: {}",
                                 proxyConfig.proxyAddress(),
                                 cause != null ? cause.getMessage() : "Unknown Error");
+                    onComplete.accept(maybeHAProxy(proxyConfig, capturedProxiedAddresses), null);
                 }
             });
+        } else {
+            onComplete.accept(maybeHAProxy(proxyConfig, capturedProxiedAddresses), null);
         }
+    }
 
+    private ProxyConfig maybeHAProxy(ProxyConfig proxyConfig, @Nullable ProxiedAddresses proxiedAddresses) {
         // special behavior for haproxy when sourceAddress is null
         if (proxyConfig.proxyType() == ProxyType.HAPROXY &&
             ((HAProxyConfig) proxyConfig).sourceAddress() == null) {
@@ -254,13 +278,10 @@ final class HttpClientDelegate implements HttpClient {
             assert proxyAddress != null;
 
             // use proxy information in context if available
-            final ServiceRequestContext serviceCtx = ServiceRequestContext.currentOrNull();
-            if (serviceCtx != null) {
-                final ProxiedAddresses proxiedAddresses = serviceCtx.proxiedAddresses();
+            if (proxiedAddresses != null) {
                 return ProxyConfig.haproxy(proxyAddress, proxiedAddresses.sourceAddress());
             }
         }
-
         return proxyConfig;
     }
 
@@ -275,9 +296,14 @@ final class HttpClientDelegate implements HttpClient {
         }
     }
 
-    private static HttpResponse earlyFailedResponse(Throwable t, ClientRequestContext ctx) {
+    private static Throwable earlyFailed(Throwable t, ClientRequestContext ctx) {
         final UnprocessedRequestException cause = UnprocessedRequestException.of(t);
         ctx.cancel(cause);
+        return cause;
+    }
+
+    private static HttpResponse earlyFailedResponse(Throwable t, ClientRequestContext ctx) {
+        final Throwable cause = earlyFailed(t, ctx);
         return HttpResponse.ofFailure(cause);
     }
 
