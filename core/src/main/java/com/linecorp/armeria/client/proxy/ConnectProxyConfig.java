@@ -29,7 +29,7 @@ import com.linecorp.armeria.common.annotation.Nullable;
  */
 public final class ConnectProxyConfig extends ProxyConfig {
 
-    private InetSocketAddress proxyAddress;
+    private final InetSocketAddress proxyAddress;
 
     @Nullable
     private final String username;

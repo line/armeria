@@ -28,7 +28,7 @@ import com.linecorp.armeria.common.annotation.Nullable;
  */
 public final class Socks4ProxyConfig extends ProxyConfig {
 
-    private InetSocketAddress proxyAddress;
+    private final InetSocketAddress proxyAddress;
 
     @Nullable
     private final String username;
