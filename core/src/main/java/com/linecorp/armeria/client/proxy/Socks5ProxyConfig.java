@@ -16,8 +16,6 @@
 
 package com.linecorp.armeria.client.proxy;
 
-import static java.util.Objects.requireNonNull;
-
 import java.net.InetSocketAddress;
 import java.util.Objects;
 
