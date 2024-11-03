@@ -72,12 +72,6 @@ public final class Socks5ProxyConfig extends ProxyConfig {
     }
 
     @Override
-    public void refreshDns(InetSocketAddress socketAddress) {
-        requireNonNull(socketAddress, "socketAddress");
-        this.proxyAddress = socketAddress;
-    }
-
-    @Override
     public ProxyConfig withNewProxyAddress(InetSocketAddress newProxyAddress) {
         return new Socks5ProxyConfig(newProxyAddress, this.username, this.password);
     }

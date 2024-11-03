@@ -93,12 +93,6 @@ public final class ConnectProxyConfig extends ProxyConfig {
     }
 
     @Override
-    public void refreshDns(InetSocketAddress socketAddress) {
-        requireNonNull(socketAddress, "socketAddress");
-        this.proxyAddress = socketAddress;
-    }
-
-    @Override
     public ProxyConfig withNewProxyAddress(InetSocketAddress newProxyAddress) {
         return new ConnectProxyConfig(newProxyAddress, this.username,
                                       this.password, this.headers, this.useTls);

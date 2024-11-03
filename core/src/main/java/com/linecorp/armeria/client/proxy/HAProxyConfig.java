@@ -69,12 +69,6 @@ public final class HAProxyConfig extends ProxyConfig {
     }
 
     @Override
-    public void refreshDns(InetSocketAddress socketAddress) {
-        requireNonNull(socketAddress, "socketAddress");
-        this.proxyAddress = socketAddress;
-    }
-
-    @Override
     public ProxyConfig withNewProxyAddress(InetSocketAddress newProxyAddress) {
         return this.sourceAddress == null ? new HAProxyConfig(proxyAddress)
                                           : new HAProxyConfig(proxyAddress, this.sourceAddress);
