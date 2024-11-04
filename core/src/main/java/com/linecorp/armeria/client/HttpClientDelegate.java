@@ -53,7 +53,6 @@ import io.netty.util.concurrent.Future;
 
 final class HttpClientDelegate implements HttpClient {
 
-    private static final Logger logger = LoggerFactory.getLogger(HttpClientDelegate.class);
     private final HttpClientFactory factory;
     private final AddressResolverGroup<InetSocketAddress> addressResolverGroup;
 
@@ -248,21 +247,11 @@ final class HttpClientDelegate implements HttpClient {
             resolveFuture.addListener(future -> {
                 if (future.isSuccess()) {
                     final InetSocketAddress resolvedAddress = (InetSocketAddress) future.getNow();
-                    if (resolvedAddress != null && !resolvedAddress.isUnresolved()) {
-                        final ProxyConfig newProxyConfig = proxyConfig.withNewProxyAddress(resolvedAddress);
-                        onComplete.accept(maybeHAProxy(newProxyConfig, capturedProxiedAddresses), null);
-                    } else {
-                        logger.warn("Resolved address is invalid or unresolved: {}. " +
-                                    "Using the previous address instead.", resolvedAddress);
-                        onComplete.accept(maybeHAProxy(proxyConfig, capturedProxiedAddresses), null);
-                    }
+                    final ProxyConfig newProxyConfig = proxyConfig.withNewProxyAddress(resolvedAddress);
+                    onComplete.accept(maybeHAProxy(newProxyConfig, capturedProxiedAddresses), null);
                 } else {
                     final Throwable cause = future.cause();
-                    logger.warn("Failed to refresh {}'s ip address. " +
-                                "Using the previous address instead. reason: {}",
-                                proxyConfig.proxyAddress(),
-                                cause != null ? cause.getMessage() : "Unknown Error");
-                    onComplete.accept(maybeHAProxy(proxyConfig, capturedProxiedAddresses), null);
+                    onComplete.accept(maybeHAProxy(proxyConfig, capturedProxiedAddresses), cause);
                 }
             });
         } else {
