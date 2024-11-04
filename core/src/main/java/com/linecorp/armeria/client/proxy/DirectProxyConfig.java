@@ -20,8 +20,6 @@ import java.net.InetSocketAddress;
 
 import com.linecorp.armeria.common.annotation.Nullable;
 
-import sun.reflect.generics.reflectiveObjects.NotImplementedException;
-
 /**
  * Represents a direct connection without a proxy.
  */
@@ -44,7 +42,8 @@ public final class DirectProxyConfig extends ProxyConfig {
 
     @Override
     public ProxyConfig withNewProxyAddress(InetSocketAddress newProxyAddress) {
-        throw new UnsupportedOperationException("The method withNewProxyAddress(...) is not for DirectProxyConfig.");
+        throw new UnsupportedOperationException(
+                "The method withNewProxyAddress(...) is not for DirectProxyConfig.");
     }
 
     @Override
