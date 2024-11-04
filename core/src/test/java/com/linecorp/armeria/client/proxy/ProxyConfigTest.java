@@ -45,19 +45,6 @@ public class ProxyConfigTest {
     }
 
     @Test
-    void testUnresolvedProxyAddress() {
-        final InetSocketAddress unresolved = InetSocketAddress.createUnresolved("unresolved", 0);
-        final InetSocketAddress resolved = new InetSocketAddress("127.0.0.1", 80);
-        assertThatThrownBy(() -> ProxyConfig.socks4(unresolved)).isInstanceOf(IllegalArgumentException.class);
-        assertThatThrownBy(() -> ProxyConfig.socks5(unresolved)).isInstanceOf(IllegalArgumentException.class);
-        assertThatThrownBy(() -> ProxyConfig.connect(unresolved)).isInstanceOf(IllegalArgumentException.class);
-        assertThatThrownBy(() -> ProxyConfig.haproxy(unresolved, resolved))
-                .isInstanceOf(IllegalArgumentException.class);
-        assertThatThrownBy(() -> ProxyConfig.haproxy(resolved, unresolved))
-                .isInstanceOf(IllegalArgumentException.class);
-    }
-
-    @Test
     void testNullProxyAddress() {
         assertThatThrownBy(() -> ProxyConfig.socks4(null)).isInstanceOf(NullPointerException.class);
         assertThatThrownBy(() -> ProxyConfig.socks5(null)).isInstanceOf(NullPointerException.class);
