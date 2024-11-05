@@ -18,6 +18,7 @@
  * Micrometer context-propagation plugins to help keep {@link com.linecorp.armeria.common.RequestContext}
  * during Reactor operations.
  */
+@UnstableApi
 @NonNullByDefault
 package com.linecorp.armeria.common.micrometer.context;
 
