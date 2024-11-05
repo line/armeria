@@ -41,6 +41,7 @@ import io.micrometer.context.ThreadLocalAccessor;
  * Flux#contextWrite(ContextView) to end of the Reactor codes.
  * If not, {@link RequestContext} will not be keep during Reactor Operation.
  */
+@UnstableApi
 public final class RequestContextThreadLocalAccessor implements ThreadLocalAccessor<RequestContext> {
 
     private static final Object KEY = RequestContext.class;
