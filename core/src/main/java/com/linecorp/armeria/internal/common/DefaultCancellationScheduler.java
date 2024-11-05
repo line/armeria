@@ -158,6 +158,11 @@ final class DefaultCancellationScheduler implements CancellationScheduler {
     }
 
     @Override
+    public boolean isScheduled() {
+        return scheduledFuture != null;
+    }
+
+    @Override
     public void setTimeoutNanos(TimeoutMode mode, long timeoutNanos) {
         lock.lock();
         final ScheduleResult result;
