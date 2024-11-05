@@ -31,7 +31,6 @@ import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.util.AsyncCloseable;
 import com.linecorp.armeria.internal.client.endpoint.healthcheck.DefaultHttpHealthChecker;
-import com.linecorp.armeria.internal.client.endpoint.healthcheck.StaticHttpHealthChecker;
 
 import io.envoyproxy.envoy.config.cluster.v3.Cluster;
 import io.envoyproxy.envoy.config.core.v3.HealthCheck.HttpHealthCheck;

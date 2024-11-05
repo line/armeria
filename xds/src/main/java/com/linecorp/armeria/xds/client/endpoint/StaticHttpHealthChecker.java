@@ -14,27 +14,22 @@
  * under the License.
  */
 
-package com.linecorp.armeria.internal.client.endpoint.healthcheck;
+package com.linecorp.armeria.xds.client.endpoint;
 
 import java.util.concurrent.CompletableFuture;
 
-import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.endpoint.healthcheck.HealthCheckerContext;
-import com.linecorp.armeria.common.HttpMethod;
-import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.util.UnmodifiableFuture;
+import com.linecorp.armeria.internal.client.endpoint.healthcheck.HttpHealthChecker;
 
-public final class StaticHttpHealthChecker implements HttpHealthChecker {
+final class StaticHttpHealthChecker implements HttpHealthChecker {
 
     public static HttpHealthChecker of(HealthCheckerContext ctx, double healthy) {
         return new StaticHttpHealthChecker(ctx, healthy);
     }
 
-    private static final ClientRequestContext NOOP_CTX =
-            ClientRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
-
     private StaticHttpHealthChecker(HealthCheckerContext ctx, double healthy) {
-        ctx.updateHealth(healthy, NOOP_CTX, null, null);
+        ctx.updateHealth(healthy, null, null, null);
     }
 
     @Override
