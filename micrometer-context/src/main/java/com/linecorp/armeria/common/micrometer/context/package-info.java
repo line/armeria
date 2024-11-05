@@ -23,3 +23,4 @@
 package com.linecorp.armeria.common.micrometer.context;
 
 import com.linecorp.armeria.common.annotation.NonNullByDefault;
+import com.linecorp.armeria.common.annotation.UnstableApi;
