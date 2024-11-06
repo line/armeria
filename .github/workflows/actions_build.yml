@@ -49,9 +49,6 @@ jobs:
             on: ubicloud-standard-8
             min-java: 17
             coverage: true
-          # TODO(ikhoon): Remove ubuntu-latest after finding the root cause of the failure.
-          - java: 21
-            on: ubuntu-latest
           - java: 21
             on: ubicloud-standard-8
             snapshot: true

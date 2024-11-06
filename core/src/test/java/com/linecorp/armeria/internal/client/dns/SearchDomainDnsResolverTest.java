@@ -111,9 +111,12 @@ class SearchDomainDnsResolverTest {
         assertThat(result.join()).contains(record);
         assertThat(questions).hasSize(3);
         assertThat(questions).containsExactly(
-                DnsQuestionWithoutTrailingDot.of("trailing-dot.com.", "trailing-dot.com.", DnsRecordType.A),
-                DnsQuestionWithoutTrailingDot.of("trailing-dot.com.", "trailing-dot.com.armeria.io.", DnsRecordType.A),
-                DnsQuestionWithoutTrailingDot.of("trailing-dot.com.", "trailing-dot.com.armeria.dev.", DnsRecordType.A));
+                DnsQuestionWithoutTrailingDot.of("trailing-dot.com.", "trailing-dot.com.",
+                                                 DnsRecordType.A),
+                DnsQuestionWithoutTrailingDot.of("trailing-dot.com.", "trailing-dot.com.armeria.io.",
+                                                 DnsRecordType.A),
+                DnsQuestionWithoutTrailingDot.of("trailing-dot.com.", "trailing-dot.com.armeria.dev.",
+                                                 DnsRecordType.A));
         context.cancelScheduler();
     }
 }
