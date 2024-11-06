@@ -54,6 +54,7 @@ abstract class AbstractResourceNode<T extends XdsResource> implements ResourceNo
         return xdsBootstrap;
     }
 
+    @Nullable
     @Override
     public ConfigSource configSource() {
         return configSource;
@@ -63,6 +64,7 @@ abstract class AbstractResourceNode<T extends XdsResource> implements ResourceNo
         this.current = current;
     }
 
+    @Nullable
     @Override
     public T currentResource() {
         return current;

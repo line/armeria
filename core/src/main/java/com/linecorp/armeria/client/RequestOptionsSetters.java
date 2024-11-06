@@ -157,4 +157,12 @@ public interface RequestOptionsSetters {
      */
     @UnstableApi
     RequestOptionsSetters exchangeType(ExchangeType exchangeType);
+
+    /**
+     * Sets the {@link ResponseTimeoutMode} which determines when a {@link #responseTimeout(Duration)}}
+     * will start to be scheduled.
+     *
+     * @see ResponseTimeoutMode
+     */
+    RequestOptionsSetters responseTimeoutMode(ResponseTimeoutMode responseTimeoutMode);
 }

@@ -17,6 +17,7 @@
 package com.linecorp.armeria.server.grpc;
 
 import static com.google.common.base.Preconditions.checkState;
+import static com.linecorp.armeria.server.grpc.FramedGrpcService.GRPC_USE_BLOCKING_EXECUTOR;
 
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
@@ -96,7 +97,7 @@ final class ArmeriaCoroutineContextInterceptor extends CoroutineContextServerInt
             // No custom context is specified. Use an event loop or a block task
             // executor as the default Coroutine dispatcher.
             final ScheduledExecutorService executor;
-            if (useBlockingTaskExecutor) {
+            if (useBlockingTaskExecutor || Boolean.TRUE.equals(ctx.attr(GRPC_USE_BLOCKING_EXECUTOR))) {
                 executor = ctx.blockingTaskExecutor().withoutContext();
             } else {
                 executor = ctx.eventLoop().withoutContext();

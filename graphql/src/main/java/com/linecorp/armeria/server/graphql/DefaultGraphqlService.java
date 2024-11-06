@@ -139,7 +139,9 @@ final class DefaultGraphqlService extends AbstractGraphqlService implements Grap
                     }));
         } catch (Throwable cause) {
             cause = Exceptions.peel(cause);
-            return errorHandler.handle(ctx, input, null, cause);
+            final HttpResponse res = errorHandler.handle(ctx, input, null, cause);
+            assert res != null : "DefaultGraphqlService.handle() returned null?";
+            return res;
         }
     }
 

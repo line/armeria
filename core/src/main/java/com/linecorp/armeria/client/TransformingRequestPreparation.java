@@ -81,6 +81,12 @@ public class TransformingRequestPreparation<T, R> implements WebRequestPreparati
     }
 
     @Override
+    public TransformingRequestPreparation<T, R> responseTimeoutMode(ResponseTimeoutMode responseTimeoutMode) {
+        delegate.responseTimeoutMode(responseTimeoutMode);
+        return this;
+    }
+
+    @Override
     public TransformingRequestPreparation<T, R> requestOptions(RequestOptions requestOptions) {
         delegate.requestOptions(requestOptions);
         return this;

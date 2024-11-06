@@ -29,6 +29,7 @@ import javax.ws.rs.core.Response.Status;
 
 import org.jboss.resteasy.core.ResteasyDeploymentImpl;
 import org.jboss.resteasy.spi.ResteasyDeployment;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.slf4j.Logger;
@@ -40,6 +41,7 @@ import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.client.WebClientBuilder;
 import com.linecorp.armeria.client.logging.LoggingClient;
 import com.linecorp.armeria.client.resteasy.ArmeriaResteasyClientBuilder;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.logging.LogLevel;
 import com.linecorp.armeria.common.logging.LogWriter;
 import com.linecorp.armeria.internal.testing.GenerateNativeImageTrace;
@@ -69,6 +71,16 @@ class CalculatorServiceClientServerTest {
                     .build().register(serverBuilder);
         }
     };
+
+    @Nullable
+    private static Client restClient;
+
+    @AfterEach
+    void tearDown() {
+        if (restClient != null) {
+            restClient.close();
+        }
+    }
 
     @Test
     void testCalcContext() throws Exception {
@@ -121,7 +133,7 @@ class CalculatorServiceClientServerTest {
                                                            .decorator(LoggingClient.builder()
                                                                                    .logWriter(logWriter)
                                                                                    .newDecorator());
-        final Client restClient = ArmeriaResteasyClientBuilder.newBuilder(webClientBuilder).build();
+        restClient = ArmeriaResteasyClientBuilder.newBuilder(webClientBuilder).build();
         return restClient.target(restServer.httpUri());
     }
 }

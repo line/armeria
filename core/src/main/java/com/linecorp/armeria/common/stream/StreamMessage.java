@@ -20,6 +20,7 @@ import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.linecorp.armeria.common.stream.StreamMessageUtil.createStreamMessageFrom;
 import static com.linecorp.armeria.internal.common.stream.InternalStreamMessageUtil.EMPTY_OPTIONS;
+import static com.linecorp.armeria.internal.common.stream.InternalStreamMessageUtil.containsNotifyCancellation;
 import static java.util.Objects.requireNonNull;
 
 import java.io.File;
@@ -44,6 +45,7 @@ import org.reactivestreams.Subscription;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
+import com.google.common.collect.ObjectArrays;
 
 import com.linecorp.armeria.common.CommonPools;
 import com.linecorp.armeria.common.HttpData;
@@ -754,6 +756,11 @@ public interface StreamMessage<T> extends Publisher<T> {
         requireNonNull(executor, "executor");
         requireNonNull(options, "options");
         final StreamMessageCollector<T> collector = new StreamMessageCollector<>(options);
+        if (!containsNotifyCancellation(options)) {
+            // Make the return CompletableFuture completed exceptionally if the stream is cancelled while
+            // collecting the elements.
+            options = ObjectArrays.concat(options, SubscriptionOption.NOTIFY_CANCELLATION);
+        }
         subscribe(collector, executor, options);
         return collector.collect();
     }

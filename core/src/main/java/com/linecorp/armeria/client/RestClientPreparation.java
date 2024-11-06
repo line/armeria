@@ -313,4 +313,10 @@ public final class RestClientPreparation implements RequestPreparationSetters {
         delegate.requestOptions(requestOptions);
         return this;
     }
+
+    @Override
+    public RestClientPreparation responseTimeoutMode(ResponseTimeoutMode responseTimeoutMode) {
+        delegate.responseTimeoutMode(responseTimeoutMode);
+        return this;
+    }
 }

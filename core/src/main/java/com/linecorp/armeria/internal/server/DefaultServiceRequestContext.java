@@ -389,13 +389,13 @@ public final class DefaultServiceRequestContext
     @Deprecated
     @Override
     public CompletableFuture<Void> whenRequestTimingOut() {
-        return requestCancellationScheduler.whenTimingOut();
+        return requestCancellationScheduler.whenCancelling().handle((v, e) -> null);
     }
 
     @Deprecated
     @Override
     public CompletableFuture<Void> whenRequestTimedOut() {
-        return requestCancellationScheduler.whenTimedOut();
+        return requestCancellationScheduler.whenCancelled().handle((v, e) -> null);
     }
 
     @Override

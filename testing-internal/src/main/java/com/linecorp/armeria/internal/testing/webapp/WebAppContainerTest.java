@@ -131,7 +131,7 @@ public abstract class WebAppContainerTest {
         final AggregatedHttpResponse response = server().blockingWebClient().get(
                 "/jsp/" + URLEncoder.encode("日本語", "UTF-8") + "/index.jsp");
         assertThat(response.status()).isSameAs(HttpStatus.OK);
-        assertThat(response.contentType().toString()).startsWith("text/html");
+        assertThat(String.valueOf(response.contentType())).startsWith("text/html");
         final String actualContent = CR_OR_LF.matcher(response.contentUtf8())
                                              .replaceAll("");
         assertThat(actualContent).isEqualTo(
@@ -149,7 +149,7 @@ public abstract class WebAppContainerTest {
         AggregatedHttpResponse response = server().blockingWebClient().get(
                 "/jsp/query_string.jsp?foo=%31&bar=%32");
         assertThat(response.status()).isSameAs(HttpStatus.OK);
-        assertThat(response.contentType().toString()).startsWith("text/html");
+        assertThat(String.valueOf(response.contentType())).startsWith("text/html");
         String actualContent = CR_OR_LF.matcher(response.contentUtf8())
                                        .replaceAll("");
         assertThat(actualContent).isEqualTo(
@@ -160,7 +160,7 @@ public abstract class WebAppContainerTest {
         response = server().blockingWebClient().get(
                 "/jsp/query_string.jsp?foo=%33&bar=%34");
         assertThat(response.status()).isSameAs(HttpStatus.OK);
-        assertThat(response.contentType().toString()).startsWith("text/html");
+        assertThat(String.valueOf(response.contentType())).startsWith("text/html");
         actualContent = CR_OR_LF.matcher(response.contentUtf8())
                                              .replaceAll("");
         assertThat(actualContent).isEqualTo(
@@ -176,7 +176,7 @@ public abstract class WebAppContainerTest {
                 HttpMethod.POST, "jsp/query_string.jsp?foo=3").contentType(MediaType.FORM_DATA).build();
         AggregatedHttpResponse response = server().blockingWebClient().execute(headers, "bar=4");
         assertThat(response.status()).isSameAs(HttpStatus.OK);
-        assertThat(response.contentType().toString()).startsWith("text/html");
+        assertThat(String.valueOf(response.contentType())).startsWith("text/html");
         String actualContent = CR_OR_LF.matcher(response.contentUtf8())
                                        .replaceAll("");
         assertThat(actualContent).isEqualTo(
@@ -188,7 +188,7 @@ public abstract class WebAppContainerTest {
                 HttpMethod.POST, "jsp/query_string.jsp?foo=5").contentType(MediaType.FORM_DATA).build();
         response = server().blockingWebClient().execute(headers, "bar=6");
         assertThat(response.status()).isSameAs(HttpStatus.OK);
-        assertThat(response.contentType().toString()).startsWith("text/html");
+        assertThat(String.valueOf(response.contentType())).startsWith("text/html");
         actualContent = CR_OR_LF.matcher(response.contentUtf8())
                                        .replaceAll("");
         assertThat(actualContent).isEqualTo(
@@ -204,7 +204,7 @@ public abstract class WebAppContainerTest {
                 server().blockingWebClient(cb -> cb.responseTimeoutMillis(0))
                         .post("/jsp/echo_post.jsp", HttpData.ofUtf8("test"));
         assertThat(response.status()).isSameAs(HttpStatus.OK);
-        assertThat(response.contentType().toString()).startsWith("text/html");
+        assertThat(String.valueOf(response.contentType())).startsWith("text/html");
         final String actualContent = CR_OR_LF.matcher(response.contentUtf8())
                                              .replaceAll("");
         assertThat(actualContent).isEqualTo(
@@ -219,7 +219,7 @@ public abstract class WebAppContainerTest {
         final AggregatedHttpResponse response = server().blockingWebClient().post(
                 "/jsp/echo_post.jsp", HttpData.empty());
         assertThat(response.status()).isSameAs(HttpStatus.OK);
-        assertThat(response.contentType().toString()).startsWith("text/html");
+        assertThat(String.valueOf(response.contentType())).startsWith("text/html");
         final String actualContent = CR_OR_LF.matcher(response.contentUtf8())
                                              .replaceAll("");
         assertThat(actualContent).isEqualTo(
@@ -234,7 +234,7 @@ public abstract class WebAppContainerTest {
         final AggregatedHttpResponse response = WebClient.of(server().httpUri()).blocking()
                                                          .get("/jsp/addrs_and_ports.jsp");
         assertThat(response.status()).isSameAs(HttpStatus.OK);
-        assertThat(response.contentType().toString()).startsWith("text/html");
+        assertThat(String.valueOf(response.contentType())).startsWith("text/html");
         final String actualContent = CR_OR_LF.matcher(response.contentUtf8())
                                              .replaceAll("");
         assertThat(actualContent).matches(
@@ -256,7 +256,7 @@ public abstract class WebAppContainerTest {
                                                          "localhost:1111");
         final AggregatedHttpResponse response = WebClient.of(server().httpUri()).blocking().execute(headers);
         assertThat(response.status()).isSameAs(HttpStatus.OK);
-        assertThat(response.contentType().toString()).startsWith("text/html");
+        assertThat(String.valueOf(response.contentType())).startsWith("text/html");
         final String actualContent = CR_OR_LF.matcher(response.contentUtf8())
                                              .replaceAll("");
         assertThat(actualContent).matches(
@@ -285,7 +285,7 @@ public abstract class WebAppContainerTest {
     protected void testLarge(String path, boolean requiresContentLength) throws IOException {
         final AggregatedHttpResponse response = server().blockingWebClient().get(path);
         assertThat(response.status()).isSameAs(HttpStatus.OK);
-        assertThat(response.contentType().toString()).startsWith("text/plain");
+        assertThat(String.valueOf(response.contentType())).startsWith("text/plain");
         if (requiresContentLength) {
             // Check if the content-length header matches.
             assertThat(response.headers().contentLength()).isEqualTo(response.content().length());
@@ -307,6 +307,7 @@ public abstract class WebAppContainerTest {
 
         final AggregatedHttpResponse res = client.get("/jsp/tls.jsp").aggregate().join();
         final SSLSession sslSession = server().requestContextCaptor().take().sslSession();
+        assert sslSession != null;
         final String expectedId;
         if (sslSession.getId() != null) {
             expectedId = BaseEncoding.base16().encode(sslSession.getId());
