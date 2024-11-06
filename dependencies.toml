@@ -95,7 +95,7 @@ micrometer-docs-generator = "1.0.2"
 # Don't uprade mockito to 5.x.x that requires Java 11
 mockito = "4.11.0"
 monix = "3.4.1"
-munit = "1.0.0"
+munit = "1.0.2"
 netty = "4.1.114.Final"
 netty-incubator-transport-native-io_uring = "0.0.25.Final"
 nexus-publish = "2.0.0"
