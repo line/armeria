@@ -74,11 +74,63 @@ class SearchDomainTest {
     }
 
     @Test
+    void trailingDot() {
+        final DnsQuestion original = DnsQuestionWithoutTrailingDot.of("foo.com.", DnsRecordType.A);
+        final List<String> searchDomains = ImmutableList.of("armeria.io.", "armeria.com.",
+                                                            "armeria.org.", "armeria.dev.");
+        final SearchDomainQuestionContext ctx = new SearchDomainQuestionContext(original, searchDomains, 3);
+        final DnsQuestion firstQuestion = ctx.nextQuestion();
+        assertThat(firstQuestion.name()).isEqualTo("foo.com.");
+        for (String searchDomain : searchDomains) {
+            final DnsQuestion expected =
+                    DnsQuestionWithoutTrailingDot.of("foo.com.", "foo.com." + searchDomain,
+                                                     DnsRecordType.A);
+            assertThat(ctx.nextQuestion()).isEqualTo(expected);
+        }
+        assertThat(ctx.nextQuestion()).isNull();
+    }
+
+    @Test
+    void nonTrailingDot_shouldStartWithHostnameByNdots() {
+        final DnsQuestion original = DnsQuestionWithoutTrailingDot.of("bar.foo.com", DnsRecordType.A);
+        final List<String> searchDomains = ImmutableList.of("armeria.io.", "armeria.com.",
+                                                            "armeria.org.", "armeria.dev.");
+        final SearchDomainQuestionContext ctx = new SearchDomainQuestionContext(original, searchDomains, 2);
+        final DnsQuestion firstQuestion = ctx.nextQuestion();
+        assertThat(firstQuestion.name()).isEqualTo("bar.foo.com.");
+        for (String searchDomain : searchDomains) {
+            final DnsQuestion expected =
+                    DnsQuestionWithoutTrailingDot.of("bar.foo.com", "bar.foo.com." + searchDomain,
+                                                     DnsRecordType.A);
+            assertThat(ctx.nextQuestion()).isEqualTo(expected);
+        }
+        assertThat(ctx.nextQuestion()).isNull();
+    }
+
+    @Test
+    void nonTrailingDot_shouldNotStartWithHostnameByNdots() {
+        final DnsQuestion original = DnsQuestionWithoutTrailingDot.of("bar.foo.com", DnsRecordType.A);
+        final List<String> searchDomains = ImmutableList.of("armeria.io.", "armeria.com.",
+                                                            "armeria.org.", "armeria.dev.");
+        final SearchDomainQuestionContext ctx = new SearchDomainQuestionContext(original, searchDomains, 3);
+        for (String searchDomain : searchDomains) {
+            final DnsQuestion expected =
+                    DnsQuestionWithoutTrailingDot.of("bar.foo.com", "bar.foo.com." + searchDomain,
+                                                     DnsRecordType.A);
+            assertThat(ctx.nextQuestion()).isEqualTo(expected);
+        }
+        final DnsQuestion firstQuestion = ctx.nextQuestion();
+        assertThat(firstQuestion.name()).isEqualTo("bar.foo.com.");
+        assertThat(ctx.nextQuestion()).isNull();
+    }
+
+    @Test
     void noSearchDomain() {
         final DnsQuestion original = DnsQuestionWithoutTrailingDot.of("foo.com", DnsRecordType.A);
         final SearchDomainQuestionContext ctx =
                 new SearchDomainQuestionContext(original, ImmutableList.of(), 2);
-        assertThat(ctx.nextQuestion()).isEqualTo(original);
+        assertThat(ctx.nextQuestion()).isEqualTo(
+                DnsQuestionWithoutTrailingDot.of("foo.com", "foo.com.", DnsRecordType.A));
         assertThat(ctx.nextQuestion()).isNull();
     }
 }

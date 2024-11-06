@@ -45,6 +45,7 @@ import io.netty.handler.codec.dns.DefaultDnsQuestion;
 import io.netty.handler.codec.dns.DefaultDnsResponse;
 import io.netty.handler.codec.dns.DnsRecord;
 import io.netty.handler.codec.dns.DnsSection;
+import io.netty.resolver.ResolvedAddressTypes;
 import io.netty.util.ReferenceCountUtil;
 
 class TrailingDotAddressResolverTest {
@@ -81,13 +82,15 @@ class TrailingDotAddressResolverTest {
                         new DefaultDnsQuestion("foo.com.", A),
                         new DefaultDnsResponse(0).addRecord(ANSWER, newAddressRecord("foo.com.", "127.0.0.1"))),
                 dnsRecordCaptor)) {
-            try (ClientFactory factory = ClientFactory.builder()
-                                                      .domainNameResolverCustomizer(b -> {
-                                                          b.serverAddresses(dnsServer.addr());
-                                                          b.searchDomains("search.domain1", "search.domain2");
-                                                          b.ndots(3);
-                                                      })
-                                                      .build()) {
+            try (ClientFactory factory =
+                         ClientFactory.builder()
+                                      .domainNameResolverCustomizer(b -> {
+                                          b.resolvedAddressTypes(ResolvedAddressTypes.IPV4_ONLY);
+                                          b.serverAddresses(dnsServer.addr());
+                                          b.searchDomains("search.domain1", "search.domain2");
+                                          b.ndots(3);
+                                      })
+                                      .build()) {
 
                 final BlockingWebClient client = WebClient.builder()
                                                           .factory(factory)

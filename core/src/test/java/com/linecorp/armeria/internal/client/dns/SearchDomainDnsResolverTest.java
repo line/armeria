@@ -77,7 +77,7 @@ class SearchDomainDnsResolverTest {
                 DnsQuestionWithoutTrailingDot.of("example.com", "example.com.armeria.io.", DnsRecordType.A),
                 DnsQuestionWithoutTrailingDot.of("example.com", "example.com.armeria.dev.", DnsRecordType.A),
                 DnsQuestionWithoutTrailingDot.of("example.com", "example.com.", DnsRecordType.A));
-        context.cancel();
+        context.cancelScheduler();
     }
 
     @Test
@@ -114,6 +114,6 @@ class SearchDomainDnsResolverTest {
                 DnsQuestionWithoutTrailingDot.of("trailing-dot.com.", "trailing-dot.com.", DnsRecordType.A),
                 DnsQuestionWithoutTrailingDot.of("trailing-dot.com.", "trailing-dot.com.armeria.io.", DnsRecordType.A),
                 DnsQuestionWithoutTrailingDot.of("trailing-dot.com.", "trailing-dot.com.armeria.dev.", DnsRecordType.A));
-        context.cancel();
+        context.cancelScheduler();
     }
 }
