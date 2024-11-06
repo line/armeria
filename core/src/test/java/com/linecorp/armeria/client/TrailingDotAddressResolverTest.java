@@ -26,6 +26,8 @@ import java.util.concurrent.LinkedBlockingDeque;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.google.common.collect.ImmutableMap;
 
@@ -46,6 +48,8 @@ import io.netty.handler.codec.dns.DnsSection;
 import io.netty.util.ReferenceCountUtil;
 
 class TrailingDotAddressResolverTest {
+
+    private static final Logger logger = LoggerFactory.getLogger(TrailingDotAddressResolverTest.class);
 
     @RegisterExtension
     static ServerExtension server = new ServerExtension() {
@@ -93,6 +97,7 @@ class TrailingDotAddressResolverTest {
                         "http://foo.com.:" + server.httpPort() + '/');
                 assertThat(response.contentUtf8()).isEqualTo("Hello, world!");
                 assertThat(dnsRecordCaptor.records).isNotEmpty();
+                logger.debug("Captured DNS records: {}", dnsRecordCaptor.records);
                 dnsRecordCaptor.records.forEach(record -> {
                     assertThat(record.name()).isEqualTo("foo.com.");
                 });
