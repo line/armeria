@@ -16,7 +16,7 @@
 
 package com.linecorp.armeria.client.brave;
 
-import static com.linecorp.armeria.client.ClientRequestContextUtil.*;
+import static com.linecorp.armeria.client.ClientRequestContextUtil.firstNonNullException;
 
 import java.net.InetSocketAddress;
 
