@@ -1,5 +1,5 @@
 /*
- * Copyright 2023 LINE Corporation
+ * Copyright 2024 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -18,66 +18,50 @@ package com.linecorp.armeria.server;
 
 import static java.util.Objects.requireNonNull;
 
+import java.util.HashSet;
 import java.util.Set;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
-import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.server.annotation.ExceptionHandlerFunction;
 import com.linecorp.armeria.server.annotation.RequestConverterFunction;
 import com.linecorp.armeria.server.annotation.ResponseConverterFunction;
 
 /**
- * Builds {@link ServiceConfig}s for a {@link ServerBuilder}.
- * All {@link ServiceConfig}s built by this builder will be served under the specified context paths.
- *
- * <pre>{@code
- * Server.builder()
- *       .contextPath("/v1", "/v2")
- *       .service(myService) // served under "/v1" and "/v2"
- * }</pre>
+ * TBD.
  */
-@UnstableApi
-public final class ContextPathServicesBuilder
-        extends AbstractContextPathServicesBuilder<ContextPathServicesBuilder, ServerBuilder> {
+public final class NestedVirtualHostContextPathServicesBuilder
+        extends AbstractContextPathServicesBuilder<
+        NestedVirtualHostContextPathServicesBuilder,
+        VirtualHostBuilder> {
 
-    ContextPathServicesBuilder(ServerBuilder parent, VirtualHostBuilder virtualHostBuilder,
-                               Set<String> contextPaths) {
+    /**
+     * TBD.
+     * @param parent TBD.
+     * @param virtualHostBuilder  TBD.
+     * @param contextPaths TBD.
+     */
+    public NestedVirtualHostContextPathServicesBuilder(
+            VirtualHostBuilder parent,
+            VirtualHostBuilder virtualHostBuilder,
+            Set<String> contextPaths) {
         super(parent, virtualHostBuilder, contextPaths);
     }
 
-    /**
-     * Configures an {@link HttpService} under the context path with the {@code customizer}.
-     */
-    public ContextPathServicesBuilder withRoute(
-            Consumer<? super ContextPathServiceBindingBuilder> customizer) {
-        requireNonNull(customizer, "customizer");
-        customizer.accept(new ContextPathServiceBindingBuilder(this));
-        return this;
-    }
-
-    /**
-     * Returns a {@link ContextPathServiceBindingBuilder} which is for binding
-     * an {@link HttpService} fluently.
-     */
     @Override
-    public ContextPathServiceBindingBuilder route() {
-        return new ContextPathServiceBindingBuilder(this);
-    }
-
-    /**
-     * Returns a {@link ContextPathDecoratingBindingBuilder} which is for binding
-     * a {@code decorator} fluently.
-     * The specified decorator(s) is/are executed in reverse order of the insertion.
-     */
-    @Override
-    public ContextPathDecoratingBindingBuilder routeDecorator() {
-        return new ContextPathDecoratingBindingBuilder(this);
+    public NestedVirtualHostContextPathServiceBindingBuilder route() {
+        return new NestedVirtualHostContextPathServiceBindingBuilder(this);
     }
 
     @Override
-    public ContextPathServicesBuilder annotatedService(
-            String pathPrefix, Object service,
+    public NestedVirtualHostContextPathDecoratingBindingBuilder routeDecorator() {
+        return new NestedVirtualHostContextPathDecoratingBindingBuilder(this);
+    }
+
+    @Override
+    public NestedVirtualHostContextPathServicesBuilder annotatedService(
+            String pathPrefix,
+            Object service,
             Function<? super HttpService, ? extends HttpService> decorator,
             Iterable<? extends ExceptionHandlerFunction> exceptionHandlerFunctions,
             Iterable<? extends RequestConverterFunction> requestConverterFunctions,
@@ -97,15 +81,35 @@ public final class ContextPathServicesBuilder
     }
 
     @Override
-    public ContextPathAnnotatedServiceConfigSetters annotatedService() {
-        return new ContextPathAnnotatedServiceConfigSetters(this);
+    public NestedVirtualHostContextPathAnnotatedServiceConfigSetters annotatedService() {
+        return new NestedVirtualHostContextPathAnnotatedServiceConfigSetters(this);
     }
 
     /**
      * TBD.
-     *
+     * @param paths TBD.
+     * @param context TBD.
+     * @return TBD.
      */
-    public NestedContextPathServicesBuilder nestedContext() {
-        return new NestedContextPathServicesBuilder(parent(), virtualHostBuilder(), contextPaths());
+    public NestedVirtualHostContextPathServicesBuilder contextPaths(
+            Set<String> paths, Consumer<NestedVirtualHostContextPathServicesBuilder> context) {
+        final NestedVirtualHostContextPathServicesBuilder child = new
+                NestedVirtualHostContextPathServicesBuilder(
+                        parent(),
+                        virtualHostBuilder(),
+                        mergedContextPaths(paths));
+        context.accept(child);
+        return this;
+    }
+
+    private Set<String> mergedContextPaths(Set<String> paths) {
+        final Set<String> mergedContextPaths = new HashSet<>();
+        for (String currentContextPath : contextPaths()) {
+            for (String childContextPath : paths) {
+                final String mergedContextPath = currentContextPath + childContextPath;
+                mergedContextPaths.add(mergedContextPath);
+            }
+        }
+        return mergedContextPaths;
     }
 }
