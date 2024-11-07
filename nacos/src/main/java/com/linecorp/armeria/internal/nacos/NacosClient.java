@@ -15,6 +15,8 @@
  */
 package com.linecorp.armeria.internal.nacos;
 
+import static java.util.Objects.requireNonNull;
+
 import java.net.URI;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
@@ -52,11 +54,11 @@ public final class NacosClient {
                 @Nullable String clusterName, @Nullable Boolean healthyOnly, @Nullable String app) {
         this.uri = uri;
 
-        WebClientBuilder builder = WebClient.builder(uri);
+        final WebClientBuilder builder = WebClient.builder(uri)
+                                                  .decorator(retryingClientDecorator);
         if (username != null && password != null) {
-            builder = builder.decorator(LoginClient.newDecorator(builder.build(), username, password));
+            builder.decorator(LoginClient.newDecorator(builder.build(), username, password));
         }
-        builder = builder.decorator(retryingClientDecorator);
 
         final WebClient webClient = builder.build();
 
@@ -71,20 +73,22 @@ public final class NacosClient {
     }
 
     /**
-     * Registers a instance to Nacos with service name.
+     * Registers an instance to Nacos with service name.
      *
      * @return a {@link HttpResponse} indicating the result of the registration operation.
      */
     public HttpResponse register(Endpoint endpoint) {
+        requireNonNull(endpoint, "endpoint");
         return registerInstanceClient.register(endpoint.host(), endpoint.port(), endpoint.weight());
     }
 
     /**
-     * De-registers a instance to Nacos with service name.
+     * De-registers an instance to Nacos with service name.
      *
      * @return a {@link HttpResponse} indicating the result of the de-registration operation.
      */
     public HttpResponse deregister(Endpoint endpoint) {
+        requireNonNull(endpoint, "endpoint");
         return registerInstanceClient.deregister(endpoint.host(), endpoint.port(), endpoint.weight());
     }
 

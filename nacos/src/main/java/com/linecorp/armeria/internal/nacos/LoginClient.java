@@ -1,6 +1,6 @@
 /*
  * Copyright 2024 LY Corporation
-
+ *
  * LY Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
@@ -52,7 +52,6 @@ final class LoginClient extends SimpleDecoratingHttpClient {
         return delegate -> new LoginClient(delegate, webClient, username, password);
     }
 
-    private final HttpClient delegate;
     private final WebClient webClient;
     private final String queryParamsForLogin;
 
@@ -63,8 +62,6 @@ final class LoginClient extends SimpleDecoratingHttpClient {
 
     LoginClient(HttpClient delegate, WebClient webClient, String username, String password) {
         super(delegate);
-
-        this.delegate = requireNonNull(delegate, "delegate");
         this.webClient = requireNonNull(webClient, "webClient");
         queryParamsForLogin = QueryParams.builder()
                                          .add("username", requireNonNull(username, "username"))
@@ -94,7 +91,7 @@ final class LoginClient extends SimpleDecoratingHttpClient {
                                   .build();
                 });
                 ctx.updateRequest(newReq);
-                return delegate.execute(ctx, newReq);
+                return unwrap().execute(ctx, newReq);
             } catch (Exception e) {
                 return Exceptions.throwUnsafely(e);
             }
@@ -114,7 +111,7 @@ final class LoginClient extends SimpleDecoratingHttpClient {
         private final Boolean globalAdmin;
 
         @JsonCreator
-        LoginResult(@JsonProperty("accessToken") String accessToken, @JsonProperty("tokenTtl") Integer tokenTtl,
+        LoginResult(@JsonProperty("accessToken") String accessToken, @JsonProperty("tokenTtl") int tokenTtl,
                     @JsonProperty("globalAdmin") @Nullable Boolean globalAdmin) {
             this.accessToken = AuthToken.ofOAuth2(accessToken);
             createdAtNanos = System.nanoTime();
