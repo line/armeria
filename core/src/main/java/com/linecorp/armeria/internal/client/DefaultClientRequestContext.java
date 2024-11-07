@@ -483,15 +483,20 @@ public final class DefaultClientRequestContext
 
     // TODO(ikhoon): Consider moving the logic for filling authority to `HttpClientDelegate.exceute()`.
     private void autoFillSchemeAuthorityAndOrigin() {
-        final String authority = authority();
-        if (authority != null && endpoint != null && endpoint.isIpAddrOnly()) {
-            // The connection will be established with the IP address but `host` set to the `Endpoint`
-            // could be used for SNI. It would make users send HTTPS requests with CSLB or configure a reverse
-            // proxy based on an authority.
-            final String host = SchemeAndAuthority.of(null, authority).host();
-            if (!NetUtil.isValidIpV4Address(host) && !NetUtil.isValidIpV6Address(host)) {
-                endpoint = endpoint.withHost(host);
+
+        try {
+            final String authority = authority();
+            if (endpoint != null && endpoint.isIpAddrOnly()) {
+                // The connection will be established with the IP address but `host` set to the `Endpoint`
+                // could be used for SNI. It would make users send HTTPS requests
+                // with CSLB or configure a reverse proxy based on an authority.
+                final String host = SchemeAndAuthority.of(null, authority).host();
+                if (!NetUtil.isValidIpV4Address(host) && !NetUtil.isValidIpV6Address(host)) {
+                    endpoint = endpoint.withHost(host);
+                }
             }
+        } catch (IllegalStateException e) {
+            // Just pass, because it's normal condition.
         }
 
         final HttpHeadersBuilder headersBuilder = internalRequestHeaders.toBuilder();
@@ -750,7 +755,6 @@ public final class DefaultClientRequestContext
         return requestTarget().fragment();
     }
 
-    @Nullable
     @Override
     public String authority() {
         final HttpHeaders additionalRequestHeaders = this.additionalRequestHeaders;
@@ -774,6 +778,11 @@ public final class DefaultClientRequestContext
         if (authority == null) {
             authority = internalRequestHeaders.get(HttpHeaderNames.HOST);
         }
+        if (authority == null) {
+            throw new IllegalStateException(
+                    "ClientRequestContext may be in the process of initialization." +
+                    "In this case, host() or authority() could be null");
+        }
         return authority;
     }
 
@@ -794,12 +803,12 @@ public final class DefaultClientRequestContext
         return origin;
     }
 
-    @Nullable
     @Override
     public String host() {
         final String authority = authority();
         if (authority == null) {
-            return null;
+            throw new IllegalStateException("ClientRequestContext may be in the process of initialization." +
+                                            "In this case, host() or authority() could be null");
         }
         return SchemeAndAuthority.of(null, authority).host();
     }

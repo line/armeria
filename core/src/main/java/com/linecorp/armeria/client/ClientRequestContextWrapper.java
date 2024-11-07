@@ -70,13 +70,11 @@ public class ClientRequestContextWrapper
         return unwrap().fragment();
     }
 
-    @Nullable
     @Override
     public String authority() {
         return unwrap().authority();
     }
 
-    @Nullable
     @Override
     public String host() {
         return unwrap().host();
