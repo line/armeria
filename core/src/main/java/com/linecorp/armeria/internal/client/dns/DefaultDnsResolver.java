@@ -96,7 +96,7 @@ public final class DefaultDnsResolver implements SafeCloseable {
         });
         future.handle((unused0, unused1) -> {
             // Maybe cancel the timeout scheduler.
-            ctx.cancelScheduler();
+            ctx.setComplete();
             return null;
         });
         return future;
