@@ -6,7 +6,7 @@ import java.util.concurrent.atomic.AtomicInteger
 buildscript {
     repositories {
         gradlePluginPortal()
-        google()
+        mavenCentral()
     }
     dependencies {
         classpath "gradle.plugin.com.github.johnrengelman:shadow:${managedVersions['gradle.plugin.com.github.johnrengelman:shadow']}"

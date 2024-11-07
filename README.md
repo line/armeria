@@ -2,13 +2,13 @@ Visit [the official web site](https://armeria.dev/) for more information.
 
 # Armeria
 
-<a href="https://github.com/line/armeria"><img src="https://img.shields.io/github/stars/line/armeria.svg?style=social" /></a>
-<a href="https://twitter.com/armeria_project"><img src="https://img.shields.io/twitter/follow/armeria_project.svg?label=Follow" /></a>
-<a href="https://armeria.dev/s/discord"><img src="https://img.shields.io/badge/chat-on%20Discord-brightgreen.svg?style=social&amp;logo=discord" /></a>
-<a href="https://github.com/line/armeria/contributors"><img src="https://img.shields.io/github/contributors/line/armeria.svg" /></a>
-<a href="https://github.com/line/armeria/pulse"><img src="https://img.shields.io/github/commit-activity/m/line/armeria.svg?label=commits" /></a>
-<a href="https://search.maven.org/search?q=g:com.linecorp.armeria%20AND%20a:armeria"><img src="https://img.shields.io/maven-central/v/com.linecorp.armeria/armeria.svg?label=version" /></a>
-<a href="https://github.com/line/armeria/commits"><img src="https://img.shields.io/github/release-date/line/armeria.svg?label=release" /></a>
+[![GitHub stars](https://img.shields.io/github/stars/line/armeria.svg?style=social)](https://github.com/line/armeria)
+[![Twitter Follow](https://img.shields.io/twitter/follow/armeria_project.svg?label=Follow)](https://twitter.com/armeria_project)
+[![Discord](https://img.shields.io/badge/chat-on%20Discord-brightgreen.svg?style=social&logo=discord)](https://armeria.dev/s/discord)
+[![GitHub contributors](https://img.shields.io/github/contributors/line/armeria.svg)](https://github.com/line/armeria/contributors)
+[![GitHub commit activity](https://img.shields.io/github/commit-activity/m/line/armeria.svg?label=commits)](https://github.com/line/armeria/pulse)
+[![Maven Central](https://img.shields.io/maven-central/v/com.linecorp.armeria/armeria.svg?label=version)](https://search.maven.org/search?q=g:com.linecorp.armeria%20AND%20a:armeria)
+[![GitHub release date](https://img.shields.io/github/release-date/line/armeria.svg?label=release)](https://github.com/line/armeria/commits)
 [![Revved up by Develocity](https://img.shields.io/badge/Revved%20up%20by-Develocity-06A0CE?logo=Gradle&labelColor=02303A)](https://ge.armeria.dev/scans)
 
 

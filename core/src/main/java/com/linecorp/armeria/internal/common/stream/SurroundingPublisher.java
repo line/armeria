@@ -445,11 +445,11 @@ public final class SurroundingPublisher<T> implements StreamMessage<T> {
                 downstream.onComplete();
                 completionFuture.complete(null);
             } else {
+                downstream.onError(cause);
                 final Subscription upstream = this.upstream;
                 if (upstream != null) {
                     upstream.cancel();
                 }
-                downstream.onError(cause);
                 completionFuture.completeExceptionally(cause);
             }
             release(cause);
