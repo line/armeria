@@ -806,26 +806,22 @@ public final class DefaultClientRequestContext
     @Override
     public String host() {
         final String authority = authority();
-        if (authority == null) {
-            throw new IllegalStateException("ClientRequestContext may be in the process of initialization." +
-                                            "In this case, host() or authority() could be null");
-        }
         return SchemeAndAuthority.of(null, authority).host();
     }
 
     @Override
     public URI uri() {
         final String scheme = getScheme(sessionProtocol());
-        final String authority = authority();
         final String path = path();
         final String query = query();
         final String fragment = fragment();
         try (TemporaryThreadLocals tmp = TemporaryThreadLocals.acquire()) {
             final StringBuilder buf = tmp.stringBuilder();
             buf.append(scheme);
-            if (authority != null) {
+            try {
+                final String authority = authority();
                 buf.append("://").append(authority);
-            } else {
+            } catch (IllegalStateException e) {
                 buf.append(':');
             }
             buf.append(path);
