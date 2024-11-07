@@ -290,11 +290,13 @@ public interface ClientRequestContext extends RequestContext {
      *     <li>{@link Endpoint#authority()}.</li>
      * </ol>
      */
+    @UnstableApi
     String authority();
 
     /**
      * Returns the host part of {@link #authority()}, without a port number.
      */
+    @UnstableApi
     String host();
 
     /**
