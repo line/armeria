@@ -122,7 +122,7 @@ includeWithFlags ':logback13',                           'java', 'publish', 'rel
 project(':logback13').projectDir = file('logback/logback13')
 includeWithFlags ':logback14',                           'java11', 'publish', 'relocate', 'no_aggregation'
 project(':logback14').projectDir = file('logback/logback14')
-includeWithFlags ':micrometer-context',                  'java', 'publish', 'relocate', 'native'
+includeWithFlags ':micrometer-context',                  'java', 'relocate', 'native'
 includeWithFlags ':native-image-config'
 includeWithFlags ':oauth2',                              'java', 'publish', 'relocate', 'native'
 includeWithFlags ':prometheus1',                         'java', 'publish', 'relocate', 'native'
