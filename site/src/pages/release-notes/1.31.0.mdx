@@ -4,7 +4,7 @@ date: 2024-11-13
 
 ## 🌟 New features
 
-- You can now set TLS configurations dynamically using `TlsProvider` #5033 #5228
+- You can now set TLS configurations dynamically using <type://TlsProvider> #5033 #5228
   - You can create a <type://TlsProvider> which specifies <type://TlsKeyPair> dynamically.
     ```java
     // return a TlsKeyPair for host patterns
@@ -33,7 +33,7 @@ date: 2024-11-13
   ```java
   ServiceRequestContext ctx = ...;
   String rawPath = ctx.rawPath();
-    ```
+  ```
 - More static factory methods are added for <type://ResponseEntity>. #5954
   ```java
   ResponseEntity<Object> response = ResponseEntity.of(200);
@@ -57,7 +57,7 @@ a [Nacos](https://nacos.io/) registry server. #5365 #5409
     NacosUpdatingListener.builder(nacosUri, "my-service")
       ...
       .build());
-    ```
+  ```
   - Use <type://NacosEndpointGroup> for clients:
   ```java
   EndpointGroup group = NacosEndpointGroup.of(nacosUri, "my-service");
@@ -67,7 +67,7 @@ a [Nacos](https://nacos.io/) registry server. #5365 #5409
 ## 📈 Improvements
 
 - The GraalVM native image metadata has been updated to reflect recent code changes. #5946
-- <type://XdsEndpointGroup> now supports `disable_active_health_check` #5879
+- <type://XdsEndpointGroup> now supports `disable_active_health_check`. #5879
 
 ## 🛠️ Bug fixes
 
