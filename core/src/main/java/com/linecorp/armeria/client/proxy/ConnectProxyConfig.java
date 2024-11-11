@@ -91,7 +91,7 @@ public final class ConnectProxyConfig extends ProxyConfig {
     }
 
     @Override
-    public ProxyConfig withNewProxyAddress(InetSocketAddress newProxyAddress) {
+    public ProxyConfig withProxyAddress(InetSocketAddress newProxyAddress) {
         return new ConnectProxyConfig(newProxyAddress, this.username,
                                       this.password, this.headers, this.useTls);
     }

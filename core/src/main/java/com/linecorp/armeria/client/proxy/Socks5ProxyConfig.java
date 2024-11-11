@@ -70,7 +70,7 @@ public final class Socks5ProxyConfig extends ProxyConfig {
     }
 
     @Override
-    public ProxyConfig withNewProxyAddress(InetSocketAddress newProxyAddress) {
+    public ProxyConfig withProxyAddress(InetSocketAddress newProxyAddress) {
         return new Socks5ProxyConfig(newProxyAddress, this.username, this.password);
     }
 

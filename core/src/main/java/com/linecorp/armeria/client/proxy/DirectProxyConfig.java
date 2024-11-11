@@ -41,9 +41,9 @@ public final class DirectProxyConfig extends ProxyConfig {
     }
 
     @Override
-    public ProxyConfig withNewProxyAddress(InetSocketAddress newProxyAddress) {
+    public ProxyConfig withProxyAddress(InetSocketAddress newProxyAddress) {
         throw new UnsupportedOperationException(
-                "The method withNewProxyAddress(...) is not for DirectProxyConfig.");
+                "A proxy address can't be set to DirectProxyConfig.");
     }
 
     @Override

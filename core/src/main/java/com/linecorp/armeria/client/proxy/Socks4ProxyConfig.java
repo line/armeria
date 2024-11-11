@@ -57,7 +57,7 @@ public final class Socks4ProxyConfig extends ProxyConfig {
     }
 
     @Override
-    public ProxyConfig withNewProxyAddress(InetSocketAddress newProxyAddress) {
+    public ProxyConfig withProxyAddress(InetSocketAddress newProxyAddress) {
         return new Socks4ProxyConfig(newProxyAddress, this.username);
     }
 

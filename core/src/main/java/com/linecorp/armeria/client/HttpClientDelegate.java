@@ -98,8 +98,7 @@ final class HttpClientDelegate implements HttpClient {
         try {
             resolveProxyConfig(protocol, endpoint, ctx, (proxyConfig, thrown) -> {
                 if (thrown != null) {
-                    earlyFailed(thrown, ctx);
-                    res.close(thrown);
+                    earlyFailedResponse(thrown, ctx, res);
                 } else {
                     execute0(ctx, endpointWithPort, req, res, proxyConfig);
                 }
@@ -114,8 +113,7 @@ final class HttpClientDelegate implements HttpClient {
                           DecodedHttpResponse res, ProxyConfig proxyConfig) {
         final Throwable cancellationCause = ctx.cancellationCause();
         if (cancellationCause != null) {
-            final Throwable t = earlyFailed(cancellationCause, ctx);
-            res.close(t);
+            earlyFailedResponse(cancellationCause, ctx, res);
             return;
         }
 
@@ -244,11 +242,11 @@ final class HttpClientDelegate implements HttpClient {
             resolveFuture.addListener(future -> {
                 if (future.isSuccess()) {
                     final InetSocketAddress resolvedAddress = (InetSocketAddress) future.getNow();
-                    final ProxyConfig newProxyConfig = proxyConfig.withNewProxyAddress(resolvedAddress);
+                    final ProxyConfig newProxyConfig = proxyConfig.withProxyAddress(resolvedAddress);
                     onComplete.accept(maybeHAProxy(newProxyConfig, capturedProxiedAddresses), null);
                 } else {
                     final Throwable cause = future.cause();
-                    onComplete.accept(maybeHAProxy(proxyConfig, capturedProxiedAddresses), cause);
+                    onComplete.accept(null, cause);
                 }
             });
         } else {
@@ -282,15 +280,19 @@ final class HttpClientDelegate implements HttpClient {
         }
     }
 
-    private static Throwable earlyFailed(Throwable t, ClientRequestContext ctx) {
+    private static HttpResponse earlyFailedResponse(Throwable t, ClientRequestContext ctx) {
         final UnprocessedRequestException cause = UnprocessedRequestException.of(t);
         ctx.cancel(cause);
-        return cause;
+        return HttpResponse.ofFailure(cause);
     }
 
-    private static HttpResponse earlyFailedResponse(Throwable t, ClientRequestContext ctx) {
-        final Throwable cause = earlyFailed(t, ctx);
-        return HttpResponse.ofFailure(cause);
+    private static HttpResponse earlyFailedResponse(Throwable t,
+                                                    ClientRequestContext ctx,
+                                                    DecodedHttpResponse response) {
+        final UnprocessedRequestException cause = UnprocessedRequestException.of(t);
+        ctx.cancel(cause);
+        response.close(cause);
+        return response;
     }
 
     private static void doExecute(PooledChannel pooledChannel, ClientRequestContext ctx,

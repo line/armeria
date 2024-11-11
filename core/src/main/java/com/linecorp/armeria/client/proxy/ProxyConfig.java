@@ -195,7 +195,7 @@ public abstract class ProxyConfig {
      * Returns a new proxy address instance that respects DNS TTL.
      * @param newProxyAddress the inet socket address
      */
-    public abstract ProxyConfig withNewProxyAddress(InetSocketAddress newProxyAddress);
+    public abstract ProxyConfig withProxyAddress(InetSocketAddress newProxyAddress);
 
     @Nullable
     static String maskPassword(@Nullable String username, @Nullable String password) {

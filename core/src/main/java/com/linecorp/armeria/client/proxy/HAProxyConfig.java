@@ -17,9 +17,14 @@
 package com.linecorp.armeria.client.proxy;
 
 import static com.google.common.base.Preconditions.checkArgument;
+import static java.util.Objects.hash;
+import static java.util.Objects.requireNonNull;
 
 import java.net.InetSocketAddress;
 import java.util.Objects;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.google.common.base.MoreObjects;
 
@@ -30,6 +35,8 @@ import com.linecorp.armeria.server.ServiceRequestContext;
  * <a href="http://www.haproxy.org/download/1.8/doc/proxy-protocol.txt">HAPROXY configuration.</a>
  */
 public final class HAProxyConfig extends ProxyConfig {
+
+    private static final Logger logger = LoggerFactory.getLogger(HAProxyConfig.class);
 
     private final InetSocketAddress proxyAddress;
 
@@ -42,8 +49,18 @@ public final class HAProxyConfig extends ProxyConfig {
     }
 
     HAProxyConfig(InetSocketAddress proxyAddress, InetSocketAddress sourceAddress) {
-        checkArgument(sourceAddress.getAddress().getClass() == proxyAddress.getAddress().getClass(),
-                      "sourceAddress and proxyAddress should be the same type");
+        if (sourceAddress.getAddress() != null &&
+            proxyAddress.getAddress() != null) {
+            checkArgument(sourceAddress.getAddress().getClass() == proxyAddress.getAddress().getClass(),
+                          "sourceAddress and proxyAddress should be the same type");
+        } else {
+            logger.warn("Either the source or proxy address could not be resolved. " +
+                        "The proxy address may be resolved later. " +
+                        "proxyAddress: {}, sourceAddress: {}",
+                        proxyAddress.getAddress(),
+                        sourceAddress.getAddress());
+        }
+
         this.proxyAddress = proxyAddress;
         this.sourceAddress = sourceAddress;
     }
@@ -68,7 +85,8 @@ public final class HAProxyConfig extends ProxyConfig {
     }
 
     @Override
-    public ProxyConfig withNewProxyAddress(InetSocketAddress newProxyAddress) {
+    public ProxyConfig withProxyAddress(InetSocketAddress newProxyAddress) {
+        requireNonNull(newProxyAddress, "newProxyAddress");
         return this.sourceAddress == null ? new HAProxyConfig(proxyAddress)
                                           : new HAProxyConfig(proxyAddress, this.sourceAddress);
     }
@@ -88,7 +106,7 @@ public final class HAProxyConfig extends ProxyConfig {
 
     @Override
     public int hashCode() {
-        return Objects.hash(proxyAddress, sourceAddress);
+        return hash(proxyAddress, sourceAddress);
     }
 
     @Override
