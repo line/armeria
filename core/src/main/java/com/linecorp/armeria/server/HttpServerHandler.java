@@ -237,7 +237,10 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
 
     CompletableFuture<Void> shutdown(Channel channel) {
         final CompletableFuture<Void> completionFuture = new CompletableFuture<>();
-        cleanup(channel, true, completionFuture);
+        // This method is called from a startStopExecutor
+        channel.eventLoop().execute(() -> {
+            cleanup(channel, true, completionFuture);
+        });
         return completionFuture;
     }
 
