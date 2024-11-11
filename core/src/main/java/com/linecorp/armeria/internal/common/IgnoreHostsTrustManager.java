@@ -1,35 +1,20 @@
 /*
- *  Copyright 2020 LINE Corporation
+ * Copyright 2024 LINE Corporation
  *
- *  LINE Corporation licenses this file to you under the Apache License,
- *  version 2.0 (the "License"); you may not use this file except in compliance
- *  with the License. You may obtain a copy of the License at:
+ * LINE Corporation licenses this file to you under the Apache License,
+ * version 2.0 (the "License"); you may not use this file except in compliance
+ * with the License. You may obtain a copy of the License at:
  *
- *    https://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
- *  Unless required by applicable law or agreed to in writing, software
- *  distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
- *  WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
- *  License for the specific language governing permissions and limitations
- *  under the License.
- */
-/*
- *  Copyright (C) 2020 Square, Inc.
- *
- *  Licensed under the Apache License, Version 2.0 (the "License");
- *  you may not use this file except in compliance with the License.
- *  You may obtain a copy of the License at
- *
- *    https://www.apache.org/licenses/LICENSE-2.0
- *
- *  Unless required by applicable law or agreed to in writing, software
- *  distributed under the License is distributed on an "AS IS" BASIS,
- *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *  See the License for the specific language governing permissions and
- *  limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations
+ * under the License.
  */
 
-package com.linecorp.armeria.client;
+package com.linecorp.armeria.internal.common;
 
 import static java.util.Objects.requireNonNull;
 
@@ -51,7 +36,7 @@ import com.google.common.collect.ImmutableSet;
 /**
  * An implementation of {@link X509ExtendedTrustManager} that skips verification on the list of allowed hosts.
  */
-final class IgnoreHostsTrustManager extends X509ExtendedTrustManager {
+public final class IgnoreHostsTrustManager extends X509ExtendedTrustManager {
 
     // Forked from okhttp-4.9.0
     // https://github.com/square/okhttp/blob/1364ea44ae1f1c4b5a1cc32e4e7b51d23cb78517/okhttp-tls/src/main/kotlin/okhttp3/tls/internal/InsecureExtendedTrustManager.kt
@@ -59,7 +44,7 @@ final class IgnoreHostsTrustManager extends X509ExtendedTrustManager {
     /**
      * Returns new {@link IgnoreHostsTrustManager} instance.
      */
-    static IgnoreHostsTrustManager of(Set<String> insecureHosts) {
+    public static IgnoreHostsTrustManager of(Set<String> insecureHosts) {
         X509ExtendedTrustManager delegate = null;
         try {
             final TrustManagerFactory trustManagerFactory = TrustManagerFactory
@@ -82,7 +67,7 @@ final class IgnoreHostsTrustManager extends X509ExtendedTrustManager {
     private final X509ExtendedTrustManager delegate;
     private final Set<String> insecureHosts;
 
-    IgnoreHostsTrustManager(X509ExtendedTrustManager delegate, Set<String> insecureHosts) {
+    public IgnoreHostsTrustManager(X509ExtendedTrustManager delegate, Set<String> insecureHosts) {
         this.delegate = delegate;
         this.insecureHosts = insecureHosts;
     }

@@ -41,7 +41,7 @@ import io.netty.util.concurrent.EventExecutor;
  *     - the total number of IO tasks waiting to be run on event loops</li>
  * </ul>
  **/
-final class EventLoopMetrics implements MeterBinder {
+public final class EventLoopMetrics extends AbstractCloseableMeterBinder {
 
     private final EventLoopGroup eventLoopGroup;
     private final MeterIdPrefix idPrefix;
@@ -58,6 +58,8 @@ final class EventLoopMetrics implements MeterBinder {
     public void bindTo(MeterRegistry registry) {
         final Self metrics = MicrometerUtil.register(registry, idPrefix, Self.class, Self::new);
         metrics.add(eventLoopGroup);
+
+        addClosingTask(() -> metrics.remove(eventLoopGroup));
     }
 
     /**
@@ -79,6 +81,10 @@ final class EventLoopMetrics implements MeterBinder {
             registry.add(eventLoopGroup);
         }
 
+        void remove(EventLoopGroup eventLoopGroup) {
+            registry.remove(eventLoopGroup);
+        }
+
         double numWorkers() {
             int result = 0;
             for (EventLoopGroup group : registry) {
@@ -97,7 +103,7 @@ final class EventLoopMetrics implements MeterBinder {
             for (EventLoopGroup group : registry) {
                 // Purge event loop groups that were shutdown.
                 if (group.isShutdown()) {
-                    registry.remove(group);
+                    remove(group);
                     continue;
                 }
                 for (EventExecutor eventLoop : group) {

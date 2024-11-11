@@ -19,6 +19,7 @@ caffeine = "2.9.3"
 cglib = "3.3.0"
 checkerframework = "2.5.6"
 checkstyle = "10.3.2"
+context-propagation = "1.1.1"
 controlplane = "1.0.46"
 curator = "5.7.1"
 dagger = "2.52"
@@ -320,6 +321,10 @@ version.ref = "checkerframework"
 [libraries.checkstyle]
 module = "com.puppycrawl.tools:checkstyle"
 version.ref = "checkstyle"
+
+[libraries.context-propagation]
+module = "io.micrometer:context-propagation"
+version.ref = "context-propagation"
 
 [libraries.controlplane-api]
 module = "io.envoyproxy.controlplane:api"
