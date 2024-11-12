@@ -1537,6 +1537,7 @@ co.bj
 co.bn
 co.business
 co.bw
+co.bz
 co.ca
 co.ci
 co.cl
@@ -1803,7 +1804,6 @@ coop.rw
 coop.tt
 cooperativa.bo
 copro.uk
-corpnet.work
 corsica
 cosenza.it
 couchpotatofries.org
@@ -6548,6 +6548,7 @@ paas.massivegrid.com
 padova.it
 padua.it
 page
+pages-research.it.hs-heilbronn.de
 pages.dev
 pages.gay
 pages.it.hs-heilbronn.de
