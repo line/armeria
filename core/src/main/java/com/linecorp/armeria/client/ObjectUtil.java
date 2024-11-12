@@ -17,19 +17,17 @@ package com.linecorp.armeria.client;
 
 import java.util.function.Supplier;
 
-import javax.annotation.CheckForNull;
-
 /**
- * The utility class for ClientRequestContext.
+ * The utility class for Object.
  */
-public final class ClientRequestContextUtil {
+public final class ObjectUtil {
 
     /**
      * Returns a non-null value. If an unexpected exception occurs while retrieving the first value,
      * or the first value is null, this function will return the second value.
      * Otherwise, it returns the first value.
      */
-    public static <T> T firstNonNullException(@CheckForNull Supplier<T> firstSupplier, @CheckForNull T second) {
+    public static <T> T firstNonNullException(Supplier<T> firstSupplier, T second) {
         try {
             if (firstSupplier != null) {
                 final T first = firstSupplier.get();
@@ -45,9 +43,9 @@ public final class ClientRequestContextUtil {
             return second;
         }
 
-        throw new NullPointerException("Both parameters are null");
+        throw new NullPointerException("Both parameters are null.");
     }
 
-    private ClientRequestContextUtil() {
+    private ObjectUtil() {
     }
 }
