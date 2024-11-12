@@ -4,7 +4,7 @@ date: 2024-11-13
 
 ## 🌟 New features
 
-- You can now set TLS configurations dynamically using <type://TlsProvider> #5033 #5228
+- **Dynamic TLS Configuration**: You can now set TLS configurations dynamically using <type://TlsProvider> #5033 #5228
   - You can create a <type://TlsProvider> which specifies <type://TlsKeyPair> dynamically.
     ```java
     // return a TlsKeyPair for host patterns
@@ -29,24 +29,24 @@ date: 2024-11-13
       .builder()
       .tlsProvider(tlsProvider);
     ```
-- You can access the raw request path via <type://ServiceRequestContext#rawPath()>. #5931 #5932
+- **Access to Raw Request Path**: You can access the raw request path via <type://ServiceRequestContext#rawPath()>. #5931 #5932
   ```java
   ServiceRequestContext ctx = ...;
   String rawPath = ctx.rawPath();
   ```
-- More static factory methods are added for <type://ResponseEntity>. #5954
+- **Additional Static Factory Methods for ResponseEntity**: More static factory methods are added for <type://ResponseEntity>. #5954
   ```java
   ResponseEntity<Object> response = ResponseEntity.of(200);
   ResponseEntity<String> response = ResponseEntity.of("Hello!");
   ```
-- You can specify <type://HttpRequest#timeout(Duration)> or <type://HttpResponse#timeout(Duration)> to set a timeout
+- **Timeout Support for HttpRequest and HttpResponse**: You can specify <type://HttpRequest#timeout(Duration)> or <type://HttpResponse#timeout(Duration)> to set a timeout
   for an <type://HttpRequest> or <type://HttpResponse>. #5744 #5761
   ```java
   HttpRequest
     .streaming(HttpMethod.GET, "/")
     .timeout(Duration.ofSeconds(1)) // timeout if there is a delay exceeding 1 second between each data chunk
   ```
-- You can now register your server to or retrieve <typeplural://Endpoint> from
+- **Nacos Integration for Server Registration and Endpoint Retrieval**: You can now register your server to or retrieve <typeplural://Endpoint> from
 a [Nacos](https://nacos.io/) registry server. #5365 #5409
   - Use <type://NacosUpdatingListener> to register the <typeplural://Server> to [Nacos](https://nacos.io/):
   ```java
