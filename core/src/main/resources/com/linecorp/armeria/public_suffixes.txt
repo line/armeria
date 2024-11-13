@@ -4858,6 +4858,7 @@ locker
 locus
 lodi.it
 lodingen.no
+lodz.pl
 log.br
 loginline.app
 loginline.dev
@@ -6545,6 +6546,7 @@ paas.beebyte.io
 paas.datacenter.fi
 paas.hosted-by-previder.com
 paas.massivegrid.com
+pabianice.pl
 padova.it
 padua.it
 page
@@ -6683,6 +6685,7 @@ plesk.page
 pleskns.com
 pley.games
 plo.ps
+plock.pl
 plumbing
 plurinacional.bo
 plus
@@ -7801,6 +7804,7 @@ sicilia.it
 sicily.it
 siellak.no
 siena.it
+sieradz.pl
 sigdal.no
 siiites.com
 siljan.no
@@ -7834,6 +7838,7 @@ skedsmokorset.no
 ski
 ski.no
 skien.no
+skierniewice.pl
 skierva.no
 skin
 skiptvet.no
@@ -9759,6 +9764,7 @@ zarow.pl
 zeabur.app
 zentsuji.kagawa.jp
 zero
+zgierz.pl
 zgora.pl
 zgorzelec.pl
 zhitomir.ua
