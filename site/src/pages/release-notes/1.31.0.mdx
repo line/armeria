@@ -30,7 +30,7 @@ date: 2024-11-13
       .tlsProvider(tlsProvider);
     ```
 - **Access to Raw Request Path**: You can access the raw request path via <type://ServiceRequestContext#rawPath()>. #5931 #5932
-  - This can be useful when you need to get the original request path sent from the client, even if its potentially insecure.
+  - This can be useful when you need to get the original request path sent from the client, even if it's potentially insecure.
     ```java
     ServiceRequestContext ctx = ...;
     String rawPath = ctx.rawPath();
