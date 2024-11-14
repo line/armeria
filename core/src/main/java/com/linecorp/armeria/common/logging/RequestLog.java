@@ -44,6 +44,15 @@ import com.linecorp.armeria.server.logging.ContentPreviewingService;
  */
 public interface RequestLog extends RequestOnlyLog {
 
+    @Nullable
+    String setNameStackTrace();
+
+    @Nullable
+    String requestContentStackTrace();
+
+    @Nullable
+    String endRequestThreadName();
+
     /**
      * Returns a newly created {@link RequestLogBuilder}.
      */

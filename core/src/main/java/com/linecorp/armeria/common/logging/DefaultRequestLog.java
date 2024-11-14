@@ -51,6 +51,7 @@ import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.EventLoopCheckingFuture;
+import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.common.util.SystemInfo;
 import com.linecorp.armeria.common.util.UnmodifiableFuture;
 import com.linecorp.armeria.internal.common.util.ChannelUtil;
@@ -91,7 +92,12 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
     @Nullable
     private List<RequestLogAccess> children;
     private boolean hasLastChild;
-
+    @Nullable
+    private String setNameStackTrace;
+    @Nullable
+    private String requestContentStackTrace;
+    @Nullable
+    private String endRequestThread;
     /**
      * Updated by {@link #flagsUpdater}.
      */
@@ -200,6 +206,23 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
         requireNonNull(properties, "properties");
         checkArgument(properties.length != 0, "properties is empty.");
         return isAvailable(interestedFlags(properties));
+    }
+
+    @Override
+    @Nullable
+    public String setNameStackTrace() {
+        return setNameStackTrace;
+    }
+
+    @Override
+    @Nullable
+    public String requestContentStackTrace() {
+        return requestContentStackTrace;
+    }
+
+    @Nullable
+    public String endRequestThreadName() {
+        return endRequestThread;
     }
 
     @Override
@@ -994,8 +1017,20 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
         updateFlags(RequestLogProperty.REQUEST_CONTENT);
 
         final int requestCompletionFlags = RequestLogProperty.FLAGS_REQUEST_COMPLETE & ~deferredFlags;
-        if (isAvailable(requestCompletionFlags)) {
+        final boolean isAvailable = isAvailable(requestCompletionFlags);
+        long timestamp = System.nanoTime();
+        if (isAvailable) {
             setNamesIfAbsent();
+        }
+        try (TemporaryThreadLocals ttl = TemporaryThreadLocals.acquire()) {
+            StringBuilder sb = ttl.stringBuilder();
+            sb.append("Timestamp: ").append(timestamp)
+                    .append("\nflags: ").append(flags)
+                    .append("\nisAvailable: ").append(isAvailable)
+                    .append("\nCurrent Thread: ").append(Thread.currentThread().getName())
+                    .append("\nStack Trace:\n")
+                    .append(Exceptions.traceText(new Exception("Request content exception")));
+            requestContentStackTrace = sb.toString();
         }
     }
 
@@ -1109,6 +1144,7 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
         if (!hasInterestedFlags(deferredFlags, RequestLogProperty.REQUEST_CONTENT) ||
             isAvailable(RequestLogProperty.REQUEST_CONTENT)) {
             setNamesIfAbsent();
+
         }
         this.requestEndTimeNanos = requestEndTimeNanos;
 
@@ -1119,6 +1155,7 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
             this.requestCause = requestCause;
         }
         updateFlags(flags);
+        endRequestThread = Thread.currentThread().getName();
     }
 
     private void setNamesIfAbsent() {
@@ -1163,6 +1200,16 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
             name = newName;
 
             updateFlags(RequestLogProperty.NAME);
+
+            try (TemporaryThreadLocals ttl = TemporaryThreadLocals.acquire()) {
+                StringBuilder sb = ttl.stringBuilder();
+                sb.append("\nSet Name Stack Trace: ")
+                        .append("\nflags: ").append(flags)
+                        .append("\nStack Trace:\n")
+                        .append("\nCurrent Thread: ").append(Thread.currentThread().getName())
+                        .append(Exceptions.traceText(new Exception("setNamesIfAbsent")));
+                setNameStackTrace = sb.toString();
+            }
         }
     }
 
@@ -1553,6 +1600,23 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
      * checking availability.
      */
     private final class CompleteRequestLog implements RequestLog {
+
+        @Override
+        @Nullable
+        public String setNameStackTrace() {
+            return setNameStackTrace;
+        }
+
+        @Override
+        @Nullable
+        public String requestContentStackTrace() {
+            return requestContentStackTrace;
+        }
+
+        @Nullable
+        public String endRequestThreadName() {
+            return endRequestThread;
+        }
 
         @Override
         public boolean isComplete() {
