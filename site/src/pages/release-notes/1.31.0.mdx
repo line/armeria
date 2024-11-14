@@ -54,7 +54,8 @@ a [Nacos](https://nacos.io/) registry server. #5365 #5409
     Server.builder()
           ...;
   server.addListener(
-    NacosUpdatingListener.builder(nacosUri, "my-service")
+    NacosUpdatingListener
+      .builder(nacosUri, "my-service")
       ...
       .build());
   ```
