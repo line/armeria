@@ -52,9 +52,7 @@ date: 2024-11-13
 a [Nacos](https://nacos.io/) registry server. #5365 #5409
   - Use <type://NacosUpdatingListener> to register the <typeplural://Server> to [Nacos](https://nacos.io/):
   ```java
-  Server server =
-    Server.builder()
-          ...;
+  Server server = ...;
   server.addListener(
     NacosUpdatingListener
       .builder(nacosUri, "my-service")
