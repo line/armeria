@@ -30,10 +30,12 @@ date: 2024-11-13
       .tlsProvider(tlsProvider);
     ```
 - **Access to Raw Request Path**: You can access the raw request path via <type://ServiceRequestContext#rawPath()>. #5931 #5932
-  ```java
-  ServiceRequestContext ctx = ...;
-  String rawPath = ctx.rawPath();
-  ```
+  - This can be useful when you need to get the original request path sent from the client, even if its potentially insecure.
+    ```java
+    ServiceRequestContext ctx = ...;
+    String rawPath = ctx.rawPath();
+    // rawPath may contain unencoded, invalid or insecure characters.
+    ```
 - **Additional Static Factory Methods for ResponseEntity**: More static factory methods are added for <type://ResponseEntity>. #5954
   ```java
   ResponseEntity<Object> response = ResponseEntity.of(200);
