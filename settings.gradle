@@ -122,6 +122,7 @@ includeWithFlags ':logback13',                           'java', 'publish', 'rel
 project(':logback13').projectDir = file('logback/logback13')
 includeWithFlags ':logback14',                           'java11', 'publish', 'relocate', 'no_aggregation'
 project(':logback14').projectDir = file('logback/logback14')
+includeWithFlags ':micrometer-context',                  'java', 'relocate', 'native'
 includeWithFlags ':native-image-config'
 includeWithFlags ':oauth2',                              'java', 'publish', 'relocate', 'native'
 includeWithFlags ':prometheus1',                         'java', 'publish', 'relocate', 'native'
@@ -194,6 +195,7 @@ includeWithFlags ':zookeeper3',                          'java', 'publish', 'rel
 includeWithFlags ':saml',                                'java', 'publish', 'relocate', 'native'
 includeWithFlags ':bucket4j',                            'java', 'publish', 'relocate', 'native'
 includeWithFlags ':consul',                              'java', 'publish', 'relocate', 'native'
+includeWithFlags ':nacos',                               'java', 'publish', 'relocate', 'native'
 
 // Published Javadoc-only projects
 includeWithFlags ':javadoc',                             'java', 'publish', 'no_aggregation'
@@ -217,6 +219,7 @@ includeWithFlags ':it:jackson-provider',                       'java', 'relocate
 includeWithFlags ':it:kotlin',                                 'java', 'relocate', 'kotlin'
 includeWithFlags ':it:kubernetes-chaos-tests',                 'java', 'relocate'
 includeWithFlags ':it:logback1.4',                             'java11', 'relocate'
+includeWithFlags ':it:logback1.5',                             'java11', 'relocate'
 includeWithFlags ':it:multipart',                              'java17', 'relocate'
 includeWithFlags ':it:nio',                                    'java', 'relocate'
 includeWithFlags ':it:okhttp',                                 'java', 'relocate'

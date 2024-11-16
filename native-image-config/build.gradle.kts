@@ -123,7 +123,6 @@ tasks.register("simplifyNativeImageConfig", SimplifyNativeImageConfigTask::class
     excludedResourceRegexes.apply {
         // Exclude the resource files that are referenced only from the tests.
         add("""Test(?:Utils?)?\.""".toRegex())
-        add("""^test(?:ing)?[/\\.]""".toRegex())
         add("""^CatalogManager\.properties$""".toRegex())
         add("""^META-INF/armeria/grpc$""".toRegex())
         add("""^META-INF/dgminfo""".toRegex())
@@ -143,12 +142,13 @@ tasks.register("simplifyNativeImageConfig", SimplifyNativeImageConfigTask::class
         add("""^jndi\.properties$""".toRegex())
         add("""^junit-platform\.properties$""".toRegex())
         add("""^log4testng\.properties$""".toRegex())
-        add("""^logback-test\.xml$""".toRegex())
+        add("""^logback-test\.(xml|properties|scmo)$""".toRegex())
         add("""^mockito-extensions/""".toRegex())
         add("""^mozilla/""".toRegex())
         add("""^org/apache/hc/""".toRegex())
         add("""^org/apache/http/""".toRegex())
         add("""^org/apache/xml/""".toRegex())
+        add("""^test(?:ing)?[/\\.]""".toRegex())
         add("""^testcontainers\.properties$""".toRegex())
     }
 }
