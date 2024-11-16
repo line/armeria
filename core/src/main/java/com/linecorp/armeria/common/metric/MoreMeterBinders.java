@@ -18,7 +18,6 @@ package com.linecorp.armeria.common.metric;
 
 import static java.util.Objects.requireNonNull;
 
-import io.netty.buffer.PooledByteBufAllocator;
 import java.io.File;
 import java.io.InputStream;
 import java.security.cert.CertificateException;
@@ -30,6 +29,7 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.internal.common.util.CertificateUtil;
 
 import io.micrometer.core.instrument.binder.MeterBinder;
+import io.netty.buffer.PooledByteBufAllocator;
 import io.netty.channel.EventLoopGroup;
 
 /**
@@ -69,7 +69,8 @@ public final class MoreMeterBinders {
         return new EventLoopMetrics(eventLoopGroup, meterIdPrefix);
     }
 
-    public static PooledByteBufAllocatorMetrics pooledByteBufAllocatorMetrics(MeterIdPrefix meterIdPrefix) {
+    public static PooledByteBufAllocatorMetrics pooledByteBufAllocatorMetrics(
+            MeterIdPrefix meterIdPrefix) {
         return new PooledByteBufAllocatorMetrics(PooledByteBufAllocator.DEFAULT, meterIdPrefix);
     }
 

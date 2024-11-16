@@ -1,13 +1,31 @@
+/*
+ *  Copyright 2024 LINE Corporation
+ *
+ *  LINE Corporation licenses this file to you under the Apache License,
+ *  version 2.0 (the "License"); you may not use this file except in compliance
+ *  with the License. You may obtain a copy of the License at:
+ *
+ *    https://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing, software
+ *  distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ *  WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ *  License for the specific language governing permissions and limitations
+ *  under the License.
+ */
+
 package com.linecorp.armeria.common.metric;
 
+import java.util.Optional;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+
 import com.linecorp.armeria.internal.common.metric.MicrometerUtil;
+
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.binder.MeterBinder;
 import io.netty.buffer.PooledByteBufAllocator;
 import io.netty.util.internal.StringUtil;
-import java.util.Optional;
-import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * A {@link MeterBinder} to observe Netty {@link PooledByteBufAllocator}s. The following stats are
@@ -45,50 +63,50 @@ public class PooledByteBufAllocatorMetrics implements MeterBinder {
 
         private final Set<PooledByteBufAllocator> registry = ConcurrentHashMap.newKeySet(1);
 
-        void add(PooledByteBufAllocator allocator) {
-            registry.add(allocator);
-        }
-
         Self(MeterRegistry parent, MeterIdPrefix idPrefix) {
 
             final String numHeapArenas = idPrefix.name("pooled.byte.buf.allocator.numHeapArenas");
             parent.gauge(numHeapArenas, idPrefix.tags(), this,
-                PooledByteBufAllocatorMetrics.Self::numHeapArenas);
+                         PooledByteBufAllocatorMetrics.Self::numHeapArenas);
 
             final String numDirectArenas = idPrefix.name(
-                "pooled.byte.buf.allocator.numDirectArenas");
+                    "pooled.byte.buf.allocator.numDirectArenas");
             parent.gauge(numDirectArenas, idPrefix.tags(), this,
-                PooledByteBufAllocatorMetrics.Self::numDirectArenas);
+                         PooledByteBufAllocatorMetrics.Self::numDirectArenas);
 
             final String numThreadLocalCaches = idPrefix.name(
-                "pooled.byte.buf.allocator.numThreadLocalCaches");
+                    "pooled.byte.buf.allocator.numThreadLocalCaches");
             parent.gauge(numThreadLocalCaches, idPrefix.tags(), this,
-                PooledByteBufAllocatorMetrics.Self::numThreadLocalCaches);
+                         PooledByteBufAllocatorMetrics.Self::numThreadLocalCaches);
 
             final String pendingTasks = idPrefix.name("pooled.byte.buf.allocator.tinyCacheSize");
             parent.gauge(pendingTasks, idPrefix.tags(), this,
-                PooledByteBufAllocatorMetrics.Self::tinyCacheSize);
+                         PooledByteBufAllocatorMetrics.Self::tinyCacheSize);
 
             final String tinyCacheSize = idPrefix.name("pooled.byte.buf.allocator.smallCacheSize");
             parent.gauge(tinyCacheSize, idPrefix.tags(), this,
-                PooledByteBufAllocatorMetrics.Self::smallCacheSize);
+                         PooledByteBufAllocatorMetrics.Self::smallCacheSize);
 
             final String normalCacheSize = idPrefix.name(
-                "pooled.byte.buf.allocator.normalCacheSize");
+                    "pooled.byte.buf.allocator.normalCacheSize");
             parent.gauge(normalCacheSize, idPrefix.tags(), this,
-                PooledByteBufAllocatorMetrics.Self::normalCacheSize);
+                         PooledByteBufAllocatorMetrics.Self::normalCacheSize);
 
             final String chunkSize = idPrefix.name("pooled.byte.buf.allocator.chunkSize");
             parent.gauge(chunkSize, idPrefix.tags(), this,
-                PooledByteBufAllocatorMetrics.Self::chunkSize);
+                         PooledByteBufAllocatorMetrics.Self::chunkSize);
+        }
+
+        void add(PooledByteBufAllocator allocator) {
+            registry.add(allocator);
         }
 
         /**
          * Return the number of heap arenas.
          */
         public int numHeapArenas() {
-            Optional<PooledByteBufAllocator> first = registry.stream().findFirst();
-            PooledByteBufAllocator allocator = first.get();
+            final Optional<PooledByteBufAllocator> first = registry.stream().findFirst();
+            final PooledByteBufAllocator allocator = first.get();
             return allocator.numHeapArenas();
         }
 
@@ -96,8 +114,8 @@ public class PooledByteBufAllocatorMetrics implements MeterBinder {
          * Return the number of direct arenas.
          */
         public int numDirectArenas() {
-            Optional<PooledByteBufAllocator> first = registry.stream().findFirst();
-            PooledByteBufAllocator allocator = first.get();
+            final Optional<PooledByteBufAllocator> first = registry.stream().findFirst();
+            final PooledByteBufAllocator allocator = first.get();
             return allocator.numDirectArenas();
         }
 
@@ -105,8 +123,8 @@ public class PooledByteBufAllocatorMetrics implements MeterBinder {
          * Return the number of thread local caches used by this {@link PooledByteBufAllocator}.
          */
         public int numThreadLocalCaches() {
-            Optional<PooledByteBufAllocator> first = registry.stream().findFirst();
-            PooledByteBufAllocator allocator = first.get();
+            final Optional<PooledByteBufAllocator> first = registry.stream().findFirst();
+            final PooledByteBufAllocator allocator = first.get();
             return allocator.numThreadLocalCaches();
         }
 
@@ -117,8 +135,8 @@ public class PooledByteBufAllocatorMetrics implements MeterBinder {
          */
         @Deprecated
         public int tinyCacheSize() {
-            Optional<PooledByteBufAllocator> first = registry.stream().findFirst();
-            PooledByteBufAllocator allocator = first.get();
+            final Optional<PooledByteBufAllocator> first = registry.stream().findFirst();
+            final PooledByteBufAllocator allocator = first.get();
             return allocator.tinyCacheSize();
         }
 
@@ -126,8 +144,8 @@ public class PooledByteBufAllocatorMetrics implements MeterBinder {
          * Return the size of the small cache.
          */
         public int smallCacheSize() {
-            Optional<PooledByteBufAllocator> first = registry.stream().findFirst();
-            PooledByteBufAllocator allocator = first.get();
+            final Optional<PooledByteBufAllocator> first = registry.stream().findFirst();
+            final PooledByteBufAllocator allocator = first.get();
             return allocator.smallCacheSize();
         }
 
@@ -135,8 +153,8 @@ public class PooledByteBufAllocatorMetrics implements MeterBinder {
          * Return the size of the normal cache.
          */
         public int normalCacheSize() {
-            Optional<PooledByteBufAllocator> first = registry.stream().findFirst();
-            PooledByteBufAllocator allocator = first.get();
+            final Optional<PooledByteBufAllocator> first = registry.stream().findFirst();
+            final PooledByteBufAllocator allocator = first.get();
             return allocator.normalCacheSize();
         }
 
@@ -144,21 +162,21 @@ public class PooledByteBufAllocatorMetrics implements MeterBinder {
          * Return the chunk size for an arena.
          */
         public int chunkSize() {
-            Optional<PooledByteBufAllocator> first = registry.stream().findFirst();
-            PooledByteBufAllocator allocator = first.get();
+            final Optional<PooledByteBufAllocator> first = registry.stream().findFirst();
+            final PooledByteBufAllocator allocator = first.get();
             return allocator.chunkSize();
         }
 
         @Override
         public String toString() {
-            StringBuilder sb = new StringBuilder(256);
+            final StringBuilder sb = new StringBuilder(256);
             sb.append(StringUtil.simpleClassName(this))
-                .append("; numHeapArenas: ").append(numHeapArenas())
-                .append("; numDirectArenas: ").append(numDirectArenas())
-                .append("; smallCacheSize: ").append(smallCacheSize())
-                .append("; normalCacheSize: ").append(normalCacheSize())
-                .append("; numThreadLocalCaches: ").append(numThreadLocalCaches())
-                .append("; chunkSize: ").append(chunkSize()).append(')');
+              .append("; numHeapArenas: ").append(numHeapArenas())
+              .append("; numDirectArenas: ").append(numDirectArenas())
+              .append("; smallCacheSize: ").append(smallCacheSize())
+              .append("; normalCacheSize: ").append(normalCacheSize())
+              .append("; numThreadLocalCaches: ").append(numThreadLocalCaches())
+              .append("; chunkSize: ").append(chunkSize()).append(')');
             return sb.toString();
         }
     }
