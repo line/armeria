@@ -69,9 +69,8 @@ public final class MoreMeterBinders {
         return new EventLoopMetrics(eventLoopGroup, meterIdPrefix);
     }
 
-    public static PooledByteBufAllocatorMetrics pooledByteBufAllocatorMetrics(
-        PooledByteBufAllocator allocator, MeterIdPrefix meterIdPrefix) {
-        return new PooledByteBufAllocatorMetrics(allocator, meterIdPrefix);
+    public static PooledByteBufAllocatorMetrics pooledByteBufAllocatorMetrics(MeterIdPrefix meterIdPrefix) {
+        return new PooledByteBufAllocatorMetrics(PooledByteBufAllocator.DEFAULT, meterIdPrefix);
     }
 
     /**
