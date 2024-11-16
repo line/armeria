@@ -90,7 +90,7 @@ public interface HealthCheckerContext {
      * @param cause the cause of the failed health check request.
      *              {@code null} if the health checked request received the {@code headers}.
      */
-    default void updateHealth(double health, ClientRequestContext ctx,
+    default void updateHealth(double health, @Nullable ClientRequestContext ctx,
                               @Nullable ResponseHeaders headers, @Nullable Throwable cause) {
         // TODO(ikhoon): Make this method abstract in Armeria 2.0
         updateHealth(health);

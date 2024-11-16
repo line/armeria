@@ -159,7 +159,7 @@ final class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
 
     HttpClientPipelineConfigurator(HttpClientFactory clientFactory,
                                    boolean webSocket, SessionProtocol sessionProtocol,
-                                   @Nullable SslContext sslCtx) {
+                                   SslContext sslCtx) {
         this.clientFactory = clientFactory;
         this.webSocket = webSocket;
 

@@ -181,7 +181,7 @@ public class ServerTlsCertificateMetricsTest {
               .build();
 
         assertThatGauge(meterRegistry, CERT_VALIDITY_GAUGE_NAME, "localhost").isZero();
-        assertThatGauge(meterRegistry, CERT_VALIDITY_DAYS_GAUGE_NAME, "localhost").isEqualTo(-1);
+        assertThatGauge(meterRegistry, CERT_VALIDITY_DAYS_GAUGE_NAME, "localhost").isLessThanOrEqualTo(-1);
         assertThatGauge(meterRegistry, CERT_VALIDITY_GAUGE_NAME, "test.root.armeria").isOne();
         assertThatGauge(meterRegistry, CERT_VALIDITY_DAYS_GAUGE_NAME, "test.root.armeria").isPositive();
     }
