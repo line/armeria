@@ -69,6 +69,24 @@ public final class MoreMeterBinders {
         return new EventLoopMetrics(eventLoopGroup, meterIdPrefix);
     }
 
+    /**
+     * Returns a new {@link MeterBinder} to observe Netty's default {@link PooledByteBufAllocator}.
+     * The following stats are currently exported per registered {@link MeterIdPrefix}.
+     *
+     *
+     * <ul>
+     *   <li>"pooled.byte.buf.allocator.numHeapArenas" (gauge) - the number of heap arenas</li>
+     *   <li>"pooled.byte.buf.allocator.numDirectArenas" (gauge) - the number of direct arenas</li>
+     *   <li>"pooled.byte.buf.allocator.numThreadLocalCaches" (gauge) - the number of thread local caches</li>
+     *   <li>"pooled.byte.buf.allocator.tinyCacheSize" (gauge) - the size of tiny cache</li>
+     *   <li>"pooled.byte.buf.allocator.smallCacheSize" (gauge) - the size of small cache</li>
+     *   <li>"pooled.byte.buf.allocator.normalCacheSize" (gauge) - the size of normal cache</li>
+     *   <li>"pooled.byte.buf.allocator.chunkSize" (gauge) - the chunk size used by the allocator</li>
+     * </ul>
+     *
+     * @param meterIdPrefix the prefix to use for all metrics
+     * @return a new {@link PooledByteBufAllocatorMetrics} instance for the default allocator
+     */
     public static PooledByteBufAllocatorMetrics pooledByteBufAllocatorMetrics(
             MeterIdPrefix meterIdPrefix) {
         return new PooledByteBufAllocatorMetrics(PooledByteBufAllocator.DEFAULT, meterIdPrefix);
