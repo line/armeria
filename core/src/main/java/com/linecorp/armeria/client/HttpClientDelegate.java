@@ -237,7 +237,7 @@ final class HttpClientDelegate implements HttpClient {
         if (proxyConfig.proxyAddress() != null) {
             final Future<InetSocketAddress> resolveFuture = addressResolverGroup
                     .getResolver(ctx.eventLoop().withoutContext())
-                    .resolve(proxyConfig.proxyAddress());
+                    .resolve(createUnresolvedAddressForRefreshing(proxyConfig.proxyAddress()));
 
             resolveFuture.addListener(future -> {
                 if (future.isSuccess()) {
@@ -301,5 +301,9 @@ final class HttpClientDelegate implements HttpClient {
         final HttpSession session = HttpSession.get(channel);
         res.init(session.inboundTrafficController());
         session.invoke(pooledChannel, ctx, req, res);
+    }
+
+    private static InetSocketAddress createUnresolvedAddressForRefreshing(InetSocketAddress previousAddress) {
+        return new InetSocketAddress(previousAddress.getHostName(), previousAddress.getPort());
     }
 }
