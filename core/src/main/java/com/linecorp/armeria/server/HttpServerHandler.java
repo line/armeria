@@ -1,5 +1,5 @@
 /*
- * Copyright 2016 LINE Corporation
+ * Copyright 2024 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -13,6 +13,7 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
+
 package com.linecorp.armeria.server;
 
 import static com.google.common.base.MoreObjects.firstNonNull;
@@ -22,6 +23,7 @@ import static com.linecorp.armeria.common.SessionProtocol.H2;
 import static com.linecorp.armeria.common.SessionProtocol.H2C;
 import static com.linecorp.armeria.internal.common.HttpHeadersUtil.CLOSE_STRING;
 import static com.linecorp.armeria.internal.common.RequestContextUtil.NOOP_CONTEXT_HOOK;
+import static com.linecorp.armeria.server.AccessLogWriterUtil.maybeWriteAccessLog;
 import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_WINDOW_SIZE;
 import static java.util.Objects.requireNonNull;
 
@@ -612,11 +614,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
                     logBuilder.endResponse(firstNonNull(cause, f.cause()));
                 }
             }
-            reqCtx.log().whenComplete().thenAccept(log -> {
-                try (SafeCloseable ignored = reqCtx.push()) {
-                    reqCtx.config().accessLogWriter().log(log);
-                }
-            });
+            maybeWriteAccessLog(reqCtx);
         });
         return future;
     }

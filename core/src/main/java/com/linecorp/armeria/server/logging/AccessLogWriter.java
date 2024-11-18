@@ -1,5 +1,5 @@
 /*
- * Copyright 2018 LINE Corporation
+ * Copyright 2024 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -13,6 +13,7 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
+
 package com.linecorp.armeria.server.logging;
 
 import static com.google.common.base.Preconditions.checkArgument;
@@ -33,6 +34,11 @@ import com.linecorp.armeria.server.Service;
 public interface AccessLogWriter {
 
     /**
+     * A disabled access log writer that performs no operation.
+     */
+    AccessLogWriter DISABLED = requestLog -> { /* No operation. */ };
+
+    /**
      * Returns an access log writer with a common format.
      */
     static AccessLogWriter common() {
@@ -50,7 +56,7 @@ public interface AccessLogWriter {
      * Returns disabled access log writer.
      */
     static AccessLogWriter disabled() {
-        return requestLog -> { /* No operation. */ };
+        return DISABLED;
     }
 
     /**
