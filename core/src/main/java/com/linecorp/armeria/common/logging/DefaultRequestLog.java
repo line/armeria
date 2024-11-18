@@ -1119,7 +1119,9 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
         }
         updateFlags(flags);
 
-        // Check if REQUEST_CONTENT has been set by calling #requestContent() from a different thread
+        // The check here covers two cases:
+        // 1) #endRequest has completed all flags except name.
+        // 2) #requestContent has been called from a different thread, but names hasn't been set
         if (hasInterestedFlags(deferredFlags, RequestLogProperty.REQUEST_CONTENT) &&
             isAvailable(RequestLogProperty.REQUEST_CONTENT)) {
             setNamesIfAbsent();
