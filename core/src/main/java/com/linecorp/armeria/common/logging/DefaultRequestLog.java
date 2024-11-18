@@ -1104,12 +1104,11 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
             }
         }
 
-        // Set names if request content is not deferred or it was deferred but has been set
-        // before the request completion.
-        if (!hasInterestedFlags(deferredFlags, RequestLogProperty.REQUEST_CONTENT) ||
-            isAvailable(RequestLogProperty.REQUEST_CONTENT)) {
+        // Set names if request content is not deferred
+        if (!hasInterestedFlags(deferredFlags, RequestLogProperty.REQUEST_CONTENT)) {
             setNamesIfAbsent();
         }
+
         this.requestEndTimeNanos = requestEndTimeNanos;
 
         if (requestCause instanceof HttpStatusException || requestCause instanceof HttpResponseException) {
@@ -1119,6 +1118,12 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
             this.requestCause = requestCause;
         }
         updateFlags(flags);
+
+        // Check if REQUEST_CONTENT has been set by calling #requestContent() from a different thread
+        if (hasInterestedFlags(deferredFlags, RequestLogProperty.REQUEST_CONTENT) &&
+            isAvailable(RequestLogProperty.REQUEST_CONTENT)) {
+            setNamesIfAbsent();
+        }
     }
 
     private void setNamesIfAbsent() {
