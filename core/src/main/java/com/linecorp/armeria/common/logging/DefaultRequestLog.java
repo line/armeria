@@ -992,11 +992,7 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
             ctx.updateRpcRequest((RpcRequest) requestContent);
         }
         updateFlags(RequestLogProperty.REQUEST_CONTENT);
-
-        final int requestCompletionFlags = RequestLogProperty.FLAGS_REQUEST_COMPLETE & ~deferredFlags;
-        if (isAvailable(requestCompletionFlags)) {
-            setNamesIfAbsent();
-        }
+        setNamesIfAbsent();
     }
 
     @Nullable
@@ -1118,14 +1114,6 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
             this.requestCause = requestCause;
         }
         updateFlags(flags);
-
-        // The check here covers two cases:
-        // 1) #endRequest has completed all flags except name.
-        // 2) #requestContent has been called from a different thread, but names hasn't been set
-        if (hasInterestedFlags(deferredFlags, RequestLogProperty.REQUEST_CONTENT) &&
-            isAvailable(RequestLogProperty.REQUEST_CONTENT)) {
-            setNamesIfAbsent();
-        }
     }
 
     private void setNamesIfAbsent() {
