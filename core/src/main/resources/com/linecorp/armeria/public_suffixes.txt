@@ -1682,7 +1682,6 @@ com.im
 com.in
 com.io
 com.iq
-com.is
 com.jo
 com.kg
 com.ki
@@ -2234,7 +2233,6 @@ edu.ht
 edu.in
 edu.io
 edu.iq
-edu.is
 edu.it
 edu.jo
 edu.kg
@@ -3176,7 +3174,6 @@ gov.in
 gov.io
 gov.iq
 gov.ir
-gov.is
 gov.it
 gov.jo
 gov.kg
@@ -3474,6 +3471,8 @@ herokussl.com
 heroy.more-og-romsdal.no
 heroy.nordland.no
 heteml.net
+heyflow.page
+heyflow.site
 hf.space
 hi.cn
 hi.us
@@ -3821,7 +3820,6 @@ inf.ua
 infiniti
 info
 info.at
-info.au
 info.az
 info.bb
 info.bj
@@ -3874,7 +3872,6 @@ int.co
 int.cv
 int.eu.org
 int.in
-int.is
 int.la
 int.lk
 int.mv
@@ -5747,7 +5744,6 @@ net.in
 net.io
 net.iq
 net.ir
-net.is
 net.je
 net.jo
 net.kg
@@ -5961,7 +5957,6 @@ nohost.me
 noip.me
 noip.us
 nokia
-nom.ad
 nom.ag
 nom.co
 nom.es
@@ -6354,7 +6349,6 @@ org.in
 org.io
 org.iq
 org.ir
-org.is
 org.je
 org.jo
 org.kg
