@@ -27,7 +27,7 @@ final class AccessLogWriterUtil {
     /**
      * Writes an access log if the {@link TransientServiceOption#WITH_ACCESS_LOGGING} option is enabled
      * for the {@link ServiceConfig#transientServiceOptions()} and the {@link ServiceConfig#accessLogWriter()}
-     * is not {@link AccessLogWriter#DISABLED} for the given {@link ServiceRequestContext#config()}.
+     * is not {@link AccessLogWriter#disabled()} for the given {@link ServiceRequestContext#config()}.
      */
     static void maybeWriteAccessLog(ServiceRequestContext reqCtx) {
         final ServiceConfig config = reqCtx.config();
@@ -45,7 +45,7 @@ final class AccessLogWriterUtil {
      *
      */
     private static boolean shouldWriteAccessLog(ServiceConfig config) {
-        return config.accessLogWriter() != AccessLogWriter.DISABLED &&
+        return config.accessLogWriter() != AccessLogWriter.disabled() &&
                 config.transientServiceOptions().contains(TransientServiceOption.WITH_ACCESS_LOGGING);
     }
 

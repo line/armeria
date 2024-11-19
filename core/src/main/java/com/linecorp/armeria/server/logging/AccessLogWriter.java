@@ -34,11 +34,6 @@ import com.linecorp.armeria.server.Service;
 public interface AccessLogWriter {
 
     /**
-     * A disabled access log writer that performs no operation.
-     */
-    AccessLogWriter DISABLED = requestLog -> { /* No operation. */ };
-
-    /**
      * Returns an access log writer with a common format.
      */
     static AccessLogWriter common() {
@@ -56,7 +51,7 @@ public interface AccessLogWriter {
      * Returns disabled access log writer.
      */
     static AccessLogWriter disabled() {
-        return DISABLED;
+        return requestLog -> { /* No operation. */ };
     }
 
     /**
