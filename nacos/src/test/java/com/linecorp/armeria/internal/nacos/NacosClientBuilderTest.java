@@ -32,7 +32,7 @@ class NacosClientBuilderTest extends NacosTestBase {
     void gets403WhenNoToken() throws Exception {
         final HttpStatus status = WebClient.of(nacosUri())
                                            .blocking()
-                                           .get("/nacos/v1/ns/service/list?pageNo=0&pageSize=10")
+                                           .get("/v1/ns/service/list?pageNo=0&pageSize=10")
                                            .status();
         assertThat(status).isEqualTo(HttpStatus.FORBIDDEN);
     }
