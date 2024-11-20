@@ -352,8 +352,13 @@ static def failOnVersionConflict(Project project, Provider<MinimalExternalModule
                 if (selectionReason.conflictResolution && moduleVersion != null) {
                     // we don't care if the selected version is the one specified in dependencies.toml
                     if (targetDependency.module == moduleVersion.module && targetDependency.version != moduleVersion.version) {
-                        throw new IllegalStateException("Project '${project.name}:${config.name}' resolution failed " +
-                                "for '${targetDependency.module}' with '${getSelectionReason()}")
+                        def msg = "Project '${project.name}:${config.name}' resolution failed " +
+                                "for '${targetDependency.module}' with '${getSelectionReason()}"
+                        if (project.rootProject.hasProperty('debugDeps')) {
+                            project.logger.lifecycle(msg)
+                        } else {
+                            throw new IllegalStateException(msg)
+                        }
                     }
                 }
             }
