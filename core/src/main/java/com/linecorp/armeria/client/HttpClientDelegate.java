@@ -232,23 +232,28 @@ final class HttpClientDelegate implements HttpClient {
         final ServiceRequestContext serviceCtx = ServiceRequestContext.currentOrNull();
         final ProxiedAddresses capturedProxiedAddresses = serviceCtx == null ? null
                                                           : serviceCtx.proxiedAddresses();
-
         // DirectProxyConfig does not have proxyAddress as its field.
         if (proxyConfig.proxyAddress() != null) {
-            final Future<InetSocketAddress> resolveFuture = addressResolverGroup
-                    .getResolver(ctx.eventLoop().withoutContext())
-                    .resolve(createUnresolvedAddressForRefreshing(proxyConfig.proxyAddress()));
+            final InetSocketAddress currentAddr = proxyConfig.proxyAddress();
+            if (!currentAddr.isUnresolved() && (currentAddr.getHostName() == currentAddr.getHostString())) {
+                // If InetSocket is created from IP Address, we don't need to refresh DNS.
+                onComplete.accept(maybeHAProxy(proxyConfig, capturedProxiedAddresses), null);
+            } else {
+                final Future<InetSocketAddress> resolveFuture = addressResolverGroup
+                        .getResolver(ctx.eventLoop().withoutContext())
+                        .resolve(createUnresolvedAddressForRefreshing(proxyConfig.proxyAddress()));
 
-            resolveFuture.addListener(future -> {
-                if (future.isSuccess()) {
-                    final InetSocketAddress resolvedAddress = (InetSocketAddress) future.getNow();
-                    final ProxyConfig newProxyConfig = proxyConfig.withProxyAddress(resolvedAddress);
-                    onComplete.accept(maybeHAProxy(newProxyConfig, capturedProxiedAddresses), null);
-                } else {
-                    final Throwable cause = future.cause();
-                    onComplete.accept(null, cause);
-                }
-            });
+                resolveFuture.addListener(future -> {
+                    if (future.isSuccess()) {
+                        final InetSocketAddress resolvedAddress = (InetSocketAddress) future.getNow();
+                        final ProxyConfig newProxyConfig = proxyConfig.withProxyAddress(resolvedAddress);
+                        onComplete.accept(maybeHAProxy(newProxyConfig, capturedProxiedAddresses), null);
+                    } else {
+                        final Throwable cause = future.cause();
+                        onComplete.accept(null, cause);
+                    }
+                });
+            }
         } else {
             onComplete.accept(maybeHAProxy(proxyConfig, capturedProxiedAddresses), null);
         }
@@ -304,6 +309,6 @@ final class HttpClientDelegate implements HttpClient {
     }
 
     private static InetSocketAddress createUnresolvedAddressForRefreshing(InetSocketAddress previousAddress) {
-        return new InetSocketAddress(previousAddress.getHostName(), previousAddress.getPort());
+        return InetSocketAddress.createUnresolved(previousAddress.getHostString(), previousAddress.getPort());
     }
 }
