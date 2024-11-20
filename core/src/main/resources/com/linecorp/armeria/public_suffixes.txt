@@ -346,7 +346,6 @@ aem.live
 aem.page
 aero
 aero.mv
-aero.tt
 aerobatic.aero
 aeroclub.aero
 aerodrome.aero
@@ -371,6 +370,7 @@ agency
 agents.aero
 agr.br
 agrar.hu
+agri.jo
 agric.za
 agrigento.it
 agro.bj
@@ -381,6 +381,7 @@ ah.cn
 ah.no
 ai
 ai.in
+ai.jo
 ai.vn
 aibetsu.hokkaido.jp
 aichi.jp
@@ -612,7 +613,6 @@ art.pl
 art.sn
 arte
 arte.bo
-arts.co
 arts.nf
 arts.ro
 arts.ve
@@ -915,7 +915,6 @@ bestbuy
 bet
 bet.ar
 bet.br
-betainabox.com
 better-than.tv
 bf
 bg
@@ -1800,7 +1799,6 @@ coop.mv
 coop.mw
 coop.py
 coop.rw
-coop.tt
 cooperativa.bo
 copro.uk
 corsica
@@ -2459,6 +2457,7 @@ enebakk.no
 energy
 enf.br
 eng.br
+eng.jo
 eng.pro
 engerdal.no
 engine.aero
@@ -2662,7 +2661,6 @@ firewall-gateway.com
 firewall-gateway.de
 firewall-gateway.net
 firewalledreplit.co
-firm.co
 firm.dk
 firm.ht
 firm.in
@@ -2708,6 +2706,7 @@ fly.dev
 fm
 fm.br
 fm.it
+fm.jo
 fm.no
 fnc.fr-par.scw.cloud
 fnd.br
@@ -3824,7 +3823,6 @@ info.az
 info.bb
 info.bj
 info.bo
-info.co
 info.cx
 info.ec
 info.et
@@ -3868,7 +3866,6 @@ int.ar
 int.az
 int.bo
 int.ci
-int.co
 int.cv
 int.eu.org
 int.in
@@ -3880,7 +3877,6 @@ int.ni
 int.pt
 int.ru
 int.tj
-int.tt
 int.ve
 int.vn
 international
@@ -4128,7 +4124,6 @@ jnj
 jo
 joboji.iwate.jp
 jobs
-jobs.tt
 joburg
 joetsu.niigata.jp
 jogasz.hu
@@ -5201,6 +5196,7 @@ mil.tj
 mil.tm
 mil.to
 mil.tr
+mil.tt
 mil.tw
 mil.tz
 mil.uy
@@ -5328,7 +5324,6 @@ mobi
 mobi.gp
 mobi.ke
 mobi.ng
-mobi.tt
 mobi.tz
 mobile
 mochizuki.nagano.jp
@@ -5440,7 +5435,6 @@ museum
 museum.mv
 museum.no
 museum.om
-museum.tt
 music
 musica.ar
 musica.bo
@@ -5602,7 +5596,6 @@ name.eg
 name.et
 name.fj
 name.hr
-name.jo
 name.mk
 name.mv
 name.my
@@ -5969,7 +5962,6 @@ nom.ni
 nom.pa
 nom.pe
 nom.pl
-nom.re
 nom.ro
 nom.tm
 nom.ve
@@ -6596,9 +6588,9 @@ peewee.jp
 penne.jp
 penza.su
 pepper.jp
+per.jo
 per.la
 per.nf
-per.sg
 perma.jp
 perso.ht
 perso.sn
@@ -6621,6 +6613,7 @@ pharmacien.fr
 pharmaciens.km
 pharmacy
 phd
+phd.jo
 philips
 phone
 photo
@@ -6913,7 +6906,6 @@ realtor
 realty
 rebun.hokkaido.jp
 rec.br
-rec.co
 rec.nf
 rec.ro
 rec.ve
@@ -8487,7 +8479,6 @@ trapani.it
 travel
 travel.in
 travel.pl
-travel.tt
 travelers
 travelersinsurance
 travinh.vn
@@ -8592,6 +8583,7 @@ tv.br
 tv.im
 tv.in
 tv.it
+tv.jo
 tv.sd
 tv.tr
 tv.tz
@@ -8977,7 +8969,6 @@ weather
 weatherchannel
 web.app
 web.bo
-web.co
 web.do
 web.gu
 web.id
