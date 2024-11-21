@@ -335,7 +335,7 @@ final class GentlePlainTextReporter implements Reporter {
 
 /**
  * A custom version of failOnVersionConflict which can limit which dependencies should be checked for conflict.
- * Heavily inspired https://github.com/gradle/gradle/issues/8813.
+ * Heavily inspired by https://github.com/gradle/gradle/issues/8813.
  */
 static def failOnVersionConflict(Project project, ProviderConvertible<MinimalExternalModuleDependency> providerConvertible) {
     return failOnVersionConflict(project, providerConvertible.asProvider())
