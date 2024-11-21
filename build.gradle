@@ -489,3 +489,7 @@ allprojects {
         }
     }
 }
+
+configure(projectsWithFlags('java', 'publish')) {
+    failOnVersionConflict(libs.protobuf.java)
+}
