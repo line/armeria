@@ -15,6 +15,7 @@
  */
 package com.linecorp.armeria.client;
 
+import static com.linecorp.armeria.internal.common.util.IpAddrUtil.isCreatedWithIpAddressOnly;
 import static java.util.Objects.requireNonNull;
 
 import java.net.InetAddress;
@@ -226,50 +227,48 @@ final class HttpClientDelegate implements HttpClient {
 
     private void resolveProxyConfig(SessionProtocol protocol, Endpoint endpoint, ClientRequestContext ctx,
                                     BiConsumer<@Nullable ProxyConfig, @Nullable Throwable> onComplete) {
-        final ProxyConfig proxyConfig = factory.proxyConfigSelector().select(protocol, endpoint);
-        requireNonNull(proxyConfig, "proxyConfig");
+        final ProxyConfig unresolvedProxyConfig = factory.proxyConfigSelector().select(protocol, endpoint);
+        requireNonNull(unresolvedProxyConfig, "unresolvedProxyConfig");
+        final ProxyConfig proxyConfig = maybeSetHAProxySourceAddress(unresolvedProxyConfig);
 
-        final ServiceRequestContext serviceCtx = ServiceRequestContext.currentOrNull();
-        final ProxiedAddresses capturedProxiedAddresses = serviceCtx == null ? null
-                                                          : serviceCtx.proxiedAddresses();
-        // DirectProxyConfig does not have proxyAddress as its field.
-        if (proxyConfig.proxyAddress() != null) {
-            final InetSocketAddress currentAddr = proxyConfig.proxyAddress();
-            if (!currentAddr.isUnresolved() && (currentAddr.getHostName() == currentAddr.getHostString())) {
-                // If InetSocket is created from IP Address, we don't need to refresh DNS.
-                onComplete.accept(maybeHAProxy(proxyConfig, capturedProxiedAddresses), null);
-            } else {
-                final Future<InetSocketAddress> resolveFuture = addressResolverGroup
-                        .getResolver(ctx.eventLoop().withoutContext())
-                        .resolve(createUnresolvedAddressForRefreshing(proxyConfig.proxyAddress()));
+        final InetSocketAddress proxyAddress = proxyConfig.proxyAddress();
+        final boolean needsDnsResolution = proxyAddress != null && !isCreatedWithIpAddressOnly(proxyAddress);
+        if (needsDnsResolution) {
+            final Future<InetSocketAddress> resolveFuture = addressResolverGroup
+                    .getResolver(ctx.eventLoop().withoutContext())
+                    .resolve(createUnresolvedAddressForRefreshing(proxyAddress));
 
-                resolveFuture.addListener(future -> {
-                    if (future.isSuccess()) {
-                        final InetSocketAddress resolvedAddress = (InetSocketAddress) future.getNow();
-                        final ProxyConfig newProxyConfig = proxyConfig.withProxyAddress(resolvedAddress);
-                        onComplete.accept(maybeHAProxy(newProxyConfig, capturedProxiedAddresses), null);
-                    } else {
-                        final Throwable cause = future.cause();
-                        onComplete.accept(null, cause);
-                    }
-                });
-            }
+            resolveFuture.addListener(future -> {
+                if (future.isSuccess()) {
+                    final InetSocketAddress resolvedAddress = (InetSocketAddress) future.getNow();
+                    final ProxyConfig newProxyConfig = proxyConfig.withProxyAddress(resolvedAddress);
+                    onComplete.accept(newProxyConfig, null);
+                } else {
+                    final Throwable cause = future.cause();
+                    onComplete.accept(null, cause);
+                }
+            });
         } else {
-            onComplete.accept(maybeHAProxy(proxyConfig, capturedProxiedAddresses), null);
+            onComplete.accept(proxyConfig, null);
         }
     }
 
-    private ProxyConfig maybeHAProxy(ProxyConfig proxyConfig, @Nullable ProxiedAddresses proxiedAddresses) {
-        // special behavior for haproxy when sourceAddress is null
-        if (proxyConfig.proxyType() == ProxyType.HAPROXY &&
-            ((HAProxyConfig) proxyConfig).sourceAddress() == null) {
+    private static ProxyConfig maybeSetHAProxySourceAddress(ProxyConfig proxyConfig) {
+        if (proxyConfig.proxyType() != ProxyType.HAPROXY) {
+            return proxyConfig;
+        }
+        if (((HAProxyConfig) proxyConfig).sourceAddress() != null) {
+            return proxyConfig;
+        }
+
+        final ServiceRequestContext sctx = ServiceRequestContext.currentOrNull();
+        final ProxiedAddresses serviceProxiedAddresses = sctx == null ? null : sctx.proxiedAddresses();
+        if (serviceProxiedAddresses != null) {
+            // A special behavior for haproxy when sourceAddress is null.
+            // Use proxy information in the service context if available.
             final InetSocketAddress proxyAddress = proxyConfig.proxyAddress();
             assert proxyAddress != null;
-
-            // use proxy information in context if available
-            if (proxiedAddresses != null) {
-                return ProxyConfig.haproxy(proxyAddress, proxiedAddresses.sourceAddress());
-            }
+            return ProxyConfig.haproxy(proxyAddress, serviceProxiedAddresses.sourceAddress());
         }
         return proxyConfig;
     }
