@@ -405,7 +405,7 @@ class ProxyClientIntegrationTest {
             assertThatThrownBy(responseFuture::join).isInstanceOf(CompletionException.class)
                                                     .hasCauseInstanceOf(UnprocessedRequestException.class)
                                                     .hasRootCauseInstanceOf(NullPointerException.class)
-                                                    .hasRootCauseMessage("proxyConfig");
+                                                    .hasRootCauseMessage("unresolvedProxyConfig");
         }
     }
 

@@ -45,10 +45,6 @@ public final class IpAddrUtil {
         }
 
         final InetAddress inetAddress = socketAddress.getAddress();
-        if (inetAddress.isAnyLocalAddress()) {
-            return false; // Wildcard address
-        }
-
         // If hostname and host address are the same, it was created with an IP address
         return socketAddress.getHostString().equals(inetAddress.getHostAddress());
     }

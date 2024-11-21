@@ -234,6 +234,7 @@ final class HttpClientDelegate implements HttpClient {
         final InetSocketAddress proxyAddress = proxyConfig.proxyAddress();
         final boolean needsDnsResolution = proxyAddress != null && !isCreatedWithIpAddressOnly(proxyAddress);
         if (needsDnsResolution) {
+            assert proxyAddress != null;
             final Future<InetSocketAddress> resolveFuture = addressResolverGroup
                     .getResolver(ctx.eventLoop().withoutContext())
                     .resolve(createUnresolvedAddressForRefreshing(proxyAddress));

@@ -17,7 +17,6 @@
 package com.linecorp.armeria.client.proxy;
 
 import static com.google.common.base.Preconditions.checkArgument;
-import static java.util.Objects.hash;
 import static java.util.Objects.requireNonNull;
 
 import java.net.InetSocketAddress;
@@ -87,8 +86,8 @@ public final class HAProxyConfig extends ProxyConfig {
     @Override
     public ProxyConfig withProxyAddress(InetSocketAddress newProxyAddress) {
         requireNonNull(newProxyAddress, "newProxyAddress");
-        return this.sourceAddress == null ? new HAProxyConfig(proxyAddress)
-                                          : new HAProxyConfig(proxyAddress, this.sourceAddress);
+        return this.sourceAddress == null ? new HAProxyConfig(newProxyAddress)
+                                          : new HAProxyConfig(newProxyAddress, this.sourceAddress);
     }
 
     @Override
@@ -106,7 +105,7 @@ public final class HAProxyConfig extends ProxyConfig {
 
     @Override
     public int hashCode() {
-        return hash(proxyAddress, sourceAddress);
+        return Objects.hash(proxyAddress, sourceAddress);
     }
 
     @Override

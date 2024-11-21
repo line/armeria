@@ -41,6 +41,14 @@ class IpAddrUtilTest {
         inetSocketAddress = new InetSocketAddress(inetAddress, 8080);
         assertThat(IpAddrUtil.isCreatedWithIpAddressOnly(inetSocketAddress)).isTrue();
 
+        inetAddress = InetAddress.getByName("0.0.0.0");
+        inetSocketAddress = new InetSocketAddress(inetAddress, 8080);
+        assertThat(IpAddrUtil.isCreatedWithIpAddressOnly(inetSocketAddress)).isTrue();
+
+        inetAddress = InetAddress.getByName("::");
+        inetSocketAddress = new InetSocketAddress(inetAddress, 8080);
+        assertThat(IpAddrUtil.isCreatedWithIpAddressOnly(inetSocketAddress)).isTrue();
+
         inetAddress = InetAddress.getByAddress("foo.com", new byte[] { 1, 2, 3, 4 });
         inetSocketAddress = new InetSocketAddress(inetAddress, 8080);
         assertThat(IpAddrUtil.isCreatedWithIpAddressOnly(inetSocketAddress)).isFalse();
