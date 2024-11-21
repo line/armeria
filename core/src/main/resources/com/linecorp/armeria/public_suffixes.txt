@@ -1545,6 +1545,7 @@ co.com
 co.cr
 co.cz
 co.dk
+co.dm
 co.education
 co.events
 co.financial
@@ -8330,7 +8331,6 @@ tm.fr
 tm.hu
 tm.km
 tm.mc
-tm.mg
 tm.no
 tm.pl
 tm.ro
