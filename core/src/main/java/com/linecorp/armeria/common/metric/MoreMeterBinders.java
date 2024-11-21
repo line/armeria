@@ -25,10 +25,12 @@ import java.security.cert.X509Certificate;
 
 import com.google.common.collect.ImmutableList;
 
+import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.internal.common.util.CertificateUtil;
 
 import io.micrometer.core.instrument.binder.MeterBinder;
+import io.micrometer.core.instrument.binder.netty4.NettyAllocatorMetrics;
 import io.netty.buffer.PooledByteBufAllocator;
 import io.netty.channel.EventLoopGroup;
 
@@ -36,6 +38,12 @@ import io.netty.channel.EventLoopGroup;
  * Provides useful {@link MeterBinder}s to monitor various Armeria components.
  */
 public final class MoreMeterBinders {
+
+    static {
+        // Bind the default Netty allocator metrics to the default MeterRegistry.
+        new NettyAllocatorMetrics(PooledByteBufAllocator.DEFAULT)
+                .bindTo(Flags.meterRegistry());
+    }
 
     /**
      * Returns a new {@link MeterBinder} to observe Netty's {@link EventLoopGroup}s. The following stats are
@@ -67,29 +75,6 @@ public final class MoreMeterBinders {
     public static CloseableMeterBinder eventLoopMetrics(EventLoopGroup eventLoopGroup,
                                                         MeterIdPrefix meterIdPrefix) {
         return new EventLoopMetrics(eventLoopGroup, meterIdPrefix);
-    }
-
-    /**
-     * Returns a new {@link MeterBinder} to observe Netty's default {@link PooledByteBufAllocator}.
-     * The following stats are currently exported per registered {@link MeterIdPrefix}.
-     *
-     *
-     * <ul>
-     *   <li>"pooled.byte.buf.allocator.numHeapArenas" (gauge) - the number of heap arenas</li>
-     *   <li>"pooled.byte.buf.allocator.numDirectArenas" (gauge) - the number of direct arenas</li>
-     *   <li>"pooled.byte.buf.allocator.numThreadLocalCaches" (gauge) - the number of thread local caches</li>
-     *   <li>"pooled.byte.buf.allocator.tinyCacheSize" (gauge) - the size of tiny cache</li>
-     *   <li>"pooled.byte.buf.allocator.smallCacheSize" (gauge) - the size of small cache</li>
-     *   <li>"pooled.byte.buf.allocator.normalCacheSize" (gauge) - the size of normal cache</li>
-     *   <li>"pooled.byte.buf.allocator.chunkSize" (gauge) - the chunk size used by the allocator</li>
-     * </ul>
-     *
-     * @param meterIdPrefix the prefix to use for all metrics
-     * @return a new {@link PooledByteBufAllocatorMetrics} instance for the default allocator
-     */
-    public static PooledByteBufAllocatorMetrics pooledByteBufAllocatorMetrics(
-            MeterIdPrefix meterIdPrefix) {
-        return new PooledByteBufAllocatorMetrics(PooledByteBufAllocator.DEFAULT, meterIdPrefix);
     }
 
     /**
