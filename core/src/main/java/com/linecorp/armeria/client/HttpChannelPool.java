@@ -55,6 +55,7 @@ import com.linecorp.armeria.common.util.AsyncCloseable;
 import com.linecorp.armeria.common.util.AsyncCloseableSupport;
 import com.linecorp.armeria.internal.client.HttpSession;
 import com.linecorp.armeria.internal.client.PooledChannel;
+import com.linecorp.armeria.internal.common.SslContextFactory;
 import com.linecorp.armeria.internal.common.util.ChannelUtil;
 import com.linecorp.armeria.internal.common.util.TemporaryThreadLocals;
 
@@ -101,6 +102,7 @@ final class HttpChannelPool implements AsyncCloseable {
 
     HttpChannelPool(HttpClientFactory clientFactory, EventLoop eventLoop,
                     SslContext sslCtxHttp1Or2, SslContext sslCtxHttp1Only,
+                    @Nullable SslContextFactory sslContextFactory,
                     ConnectionPoolListener listener) {
         this.clientFactory = clientFactory;
         this.eventLoop = eventLoop;
@@ -116,7 +118,8 @@ final class HttpChannelPool implements AsyncCloseable {
                                        .get(ChannelOption.CONNECT_TIMEOUT_MILLIS);
         assert connectTimeoutMillisBoxed != null;
         connectTimeoutMillis = connectTimeoutMillisBoxed;
-        bootstraps = new Bootstraps(clientFactory, eventLoop, sslCtxHttp1Or2, sslCtxHttp1Only);
+        bootstraps = new Bootstraps(clientFactory, eventLoop, sslCtxHttp1Or2, sslCtxHttp1Only,
+                                    sslContextFactory);
     }
 
     private void configureProxy(Channel ch, ProxyConfig proxyConfig, SessionProtocol desiredProtocol) {
@@ -157,8 +160,11 @@ final class HttpChannelPool implements AsyncCloseable {
         ch.pipeline().addFirst(proxyHandler);
 
         if (proxyConfig instanceof ConnectProxyConfig && ((ConnectProxyConfig) proxyConfig).useTls()) {
-            final SslContext sslCtx = bootstraps.determineSslContext(desiredProtocol);
+            final SslContext sslCtx = bootstraps.getOrCreateSslContext(proxyAddress, desiredProtocol);
             ch.pipeline().addFirst(sslCtx.newHandler(ch.alloc()));
+            if (bootstraps.shouldReleaseSslContext(sslCtx)) {
+                ch.closeFuture().addListener(unused -> bootstraps.releaseSslContext(sslCtx));
+            }
         }
     }
 
@@ -382,7 +388,7 @@ final class HttpChannelPool implements AsyncCloseable {
                  @Nullable ClientConnectionTimingsBuilder timingsBuilder) {
         final Bootstrap bootstrap;
         try {
-            bootstrap = bootstraps.get(remoteAddress, desiredProtocol, serializationFormat);
+            bootstrap = bootstraps.getOrCreate(remoteAddress, desiredProtocol, serializationFormat);
         } catch (Exception e) {
             sessionPromise.tryFailure(e);
             return;

@@ -306,6 +306,14 @@ public final class DefaultServiceRequestContext
     }
 
     @Override
+    public String rawPath() {
+        final String rawPath = requestTarget().rawPath();
+        // rawPath should not be null for server-side targets.
+        assert rawPath != null;
+        return rawPath;
+    }
+
+    @Override
     public URI uri() {
         final HttpRequest request = request();
         assert request != null;
