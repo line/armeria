@@ -48,18 +48,8 @@ public final class HAProxyConfig extends ProxyConfig {
     }
 
     HAProxyConfig(InetSocketAddress proxyAddress, InetSocketAddress sourceAddress) {
-        if (sourceAddress.getAddress() != null &&
-            proxyAddress.getAddress() != null) {
-            checkArgument(sourceAddress.getAddress().getClass() == proxyAddress.getAddress().getClass(),
-                          "sourceAddress and proxyAddress should be the same type");
-        } else {
-            logger.warn("Either the source or proxy address could not be resolved. " +
-                        "The proxy address may be resolved later. " +
-                        "proxyAddress: {}, sourceAddress: {}",
-                        proxyAddress.getAddress(),
-                        sourceAddress.getAddress());
-        }
-
+        checkArgument(sourceAddress.getAddress().getClass() == proxyAddress.getAddress().getClass(),
+                      "sourceAddress and proxyAddress should be the same type");
         this.proxyAddress = proxyAddress;
         this.sourceAddress = sourceAddress;
     }
