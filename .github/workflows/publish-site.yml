@@ -1,6 +1,7 @@
 name: Publish Armeria site
 
 on:
+  workflow_dispatch:
   push:
     tags:
       - armeria-*
