@@ -32,8 +32,7 @@ public final class ResponseCompleteException extends CancellationException {
      * Returns the singleton {@link ResponseCompleteException}.
      */
     public static ResponseCompleteException get() {
-        if (Flags.verboseResponses() &&
-            Flags.verboseExceptionSampler().isSampled(ResponseCompleteException.class)) {
+        if (Flags.verboseExceptionSampler().isSampled(ResponseCompleteException.class)) {
             return new ResponseCompleteException();
         } else {
             return INSTANCE;
