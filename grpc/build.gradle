@@ -15,9 +15,7 @@ dependencies {
     optionalImplementation libs.grpc.kotlin
     optionalImplementation libs.kotlin.coroutines.core
 
-    api(libs.protobuf.jackson) {
-        exclude group: 'com.google.protobuf', module: 'protobuf-java'
-    }
+    api libs.protobuf.jackson
 
     testImplementation(libs.gax.grpc) {
         exclude group: 'com.google.protobuf', module: 'protobuf-java'
