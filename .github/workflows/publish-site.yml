@@ -3,7 +3,7 @@ name: Publish Armeria site
 on:
   workflow_dispatch:
     inputs:
-      release_version:
+      version:
         description: 'Release Version'
         required: true
         type: string
