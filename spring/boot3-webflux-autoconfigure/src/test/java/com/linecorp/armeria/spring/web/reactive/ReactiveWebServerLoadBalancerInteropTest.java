@@ -73,7 +73,7 @@ class ReactiveWebServerLoadBalancerInteropTest {
         RouterFunction<ServerResponse> routerFunction() {
             return route(GET("/router/api/ping"), request -> ok().body(fromValue("PONG")))
                     .and(route(HEAD("/router/api/ping"), request -> ok().body(fromValue("PONG")))
-                                 .and(route(HEAD("/router/api/poke"), request -> ok().build())));
+                    .and(route(HEAD("/router/api/poke"), request -> ok().build())));
         }
     }
 
