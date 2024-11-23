@@ -80,7 +80,7 @@ public abstract class NacosTestBase {
     static void start() {
         // Initialize Nacos Client
         nacosUri = URI.create(
-                "http://" + nacosContainer.getHost() + ':' + nacosContainer.getMappedPort(8848));
+                "http://" + nacosContainer.getHost() + ':' + nacosContainer.getMappedPort(8848) + "/nacos");
     }
 
     protected static NacosClient client(@Nullable String serviceName, @Nullable String groupName) {
