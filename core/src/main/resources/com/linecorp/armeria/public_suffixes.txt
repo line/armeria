@@ -5161,7 +5161,6 @@ mil.do
 mil.ec
 mil.eg
 mil.fj
-mil.ge
 mil.gh
 mil.gt
 mil.hn
@@ -7543,6 +7542,7 @@ schmidt
 schokokeks.net
 scholarships
 school
+school.ge
 school.nz
 school.za
 schoolbus.jp
