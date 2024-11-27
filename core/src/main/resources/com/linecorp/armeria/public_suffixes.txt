@@ -3699,6 +3699,7 @@ icu
 icurus.jp
 id
 id.au
+id.cv
 id.firewalledreplit.co
 id.forgerock.io
 id.ir
@@ -5707,6 +5708,7 @@ net.cm
 net.cn
 net.co
 net.cu
+net.cv
 net.cw
 net.cy
 net.dm
@@ -6804,6 +6806,7 @@ pu.it
 pub
 pub.instances.scw.cloud
 pub.sa
+publ.cv
 publ.pt
 public-inquiry.uk
 pubtls.org
@@ -9252,7 +9255,6 @@ xn--clchc0ea0b2g2a9gcd
 xn--czr694b
 xn--czrs0t
 xn--czru2d
-xn--czrw28b.tw
 xn--d1acj3b
 xn--d1alf
 xn--d1at.xn--90a3ac
@@ -9553,7 +9555,6 @@ xn--trna-woa.no
 xn--troms-zua.no
 xn--tysvr-vra.no
 xn--uc0atv.hk
-xn--uc0atv.tw
 xn--uc0atv.xn--j6w193g
 xn--uc0ay4a.hk
 xn--uist22h.jp
@@ -9598,7 +9599,6 @@ xn--ygarden-p1a.no
 xn--ygbi2ammx
 xn--ystre-slidre-ujb.no
 xn--zbx025d.jp
-xn--zf0ao64a.tw
 xn--zf0avx.hk
 xn--zfr164b
 xnbay.com
