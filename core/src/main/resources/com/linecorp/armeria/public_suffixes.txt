@@ -267,6 +267,7 @@ ac.ci
 ac.cn
 ac.cr
 ac.cy
+ac.eg
 ac.fj
 ac.gn
 ac.gov.br
@@ -3827,6 +3828,7 @@ info.bj
 info.bo
 info.cx
 info.ec
+info.eg
 info.et
 info.fj
 info.gu
@@ -3891,6 +3893,7 @@ investments
 inzai.chiba.jp
 io
 io.in
+io.noc.ruhr-uni-bochum.de
 io.vn
 iobb.net
 iopsys.se
@@ -5049,6 +5052,7 @@ md
 md.us
 me
 me-south-1.elasticbeanstalk.com
+me.eg
 me.eu.org
 me.in
 me.it
@@ -7059,8 +7063,10 @@ ru
 ru.com
 ru.eu.org
 ru.net
+rub.de
 rugby
 ruhr
+ruhr-uni-bochum.de
 rulez.jp
 run
 runcontainers.dev
@@ -7936,6 +7942,7 @@ sphinx.mythic-beasts.com
 spjelkavik.no
 spock.replit.dev
 sport
+sport.eg
 sport.hu
 spot
 spydeberg.no
@@ -8583,6 +8590,7 @@ tv
 tv.bb
 tv.bo
 tv.br
+tv.eg
 tv.im
 tv.in
 tv.it
