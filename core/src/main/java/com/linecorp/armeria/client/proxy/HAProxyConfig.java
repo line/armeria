@@ -22,9 +22,6 @@ import static java.util.Objects.requireNonNull;
 import java.net.InetSocketAddress;
 import java.util.Objects;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import com.google.common.base.MoreObjects;
 
 import com.linecorp.armeria.common.annotation.Nullable;
