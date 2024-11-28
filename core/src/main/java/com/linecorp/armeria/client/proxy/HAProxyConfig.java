@@ -35,8 +35,6 @@ import com.linecorp.armeria.server.ServiceRequestContext;
  */
 public final class HAProxyConfig extends ProxyConfig {
 
-    private static final Logger logger = LoggerFactory.getLogger(HAProxyConfig.class);
-
     private final InetSocketAddress proxyAddress;
 
     @Nullable
