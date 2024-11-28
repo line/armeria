@@ -47,7 +47,6 @@ public interface HealthCheckUpdateHandler {
      *
      * [ { "op": "replace", "path": "/healthy", "value": false } ]
      * }</pre>
-     *
      */
     @UnstableApi
     static HealthCheckUpdateHandler of() {
