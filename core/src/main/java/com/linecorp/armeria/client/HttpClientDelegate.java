@@ -101,6 +101,7 @@ final class HttpClientDelegate implements HttpClient {
                 if (thrown != null) {
                     earlyFailedResponse(thrown, ctx, res);
                 } else {
+                    assert proxyConfig != null;
                     execute0(ctx, endpointWithPort, req, res, proxyConfig);
                 }
             });
