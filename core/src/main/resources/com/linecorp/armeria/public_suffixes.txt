@@ -5046,7 +5046,6 @@ mc.it
 mcdir.me
 mcdir.ru
 mckinsey
-mcpe.me
 mcpre.ru
 md
 md.us
