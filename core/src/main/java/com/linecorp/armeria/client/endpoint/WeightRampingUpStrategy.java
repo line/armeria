@@ -241,9 +241,9 @@ final class WeightRampingUpStrategy implements EndpointSelectionStrategy {
             }
             final List<Endpoint> endpoints = targetEndpointsBuilder.build();
             if (rampingUpWindowsMap.isEmpty()) {
-                logger.info("Finished ramping up. endpoints: {}", endpoints);
+                logger.info("Finished ramping up. endpoints: {}", toShortString(endpoints));
             } else {
-                logger.debug("Ramping up. endpoints: {}", endpoints);
+                logger.debug("Ramping up. endpoints: {}", toShortString(endpoints));
             }
 
             boolean found = false;
