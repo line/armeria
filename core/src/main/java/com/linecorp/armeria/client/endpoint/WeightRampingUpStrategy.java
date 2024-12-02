@@ -22,6 +22,7 @@ import static com.linecorp.armeria.client.endpoint.WeightRampingUpStrategyBuilde
 import static com.linecorp.armeria.client.endpoint.WeightRampingUpStrategyBuilder.defaultTransition;
 import static com.linecorp.armeria.internal.client.endpoint.EndpointAttributeKeys.createdAtNanos;
 import static com.linecorp.armeria.internal.client.endpoint.EndpointAttributeKeys.hasCreatedAtNanos;
+import static com.linecorp.armeria.internal.client.endpoint.EndpointToStringUtil.toShortString;
 import static java.util.Objects.requireNonNull;
 
 import java.util.ArrayDeque;
@@ -36,6 +37,9 @@ import java.util.Set;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.MoreObjects;
@@ -75,6 +79,8 @@ import it.unimi.dsi.fastutil.objects.Object2LongOpenHashMap;
  * C is updated alone every 2000 milliseconds. D is ramped up together with A and B at t4.
  */
 final class WeightRampingUpStrategy implements EndpointSelectionStrategy {
+
+    private static final Logger logger = LoggerFactory.getLogger(WeightRampingUpStrategy.class);
 
     private static final Ticker defaultTicker = Ticker.systemTicker();
     private static final WeightedRandomDistributionEndpointSelector EMPTY_SELECTOR =
@@ -233,7 +239,25 @@ final class WeightRampingUpStrategy implements EndpointSelectionStrategy {
                             endpointAndStep.endpoint().withWeight(endpointAndStep.currentWeight()));
                 }
             }
-            endpointSelector = new WeightedRandomDistributionEndpointSelector(targetEndpointsBuilder.build());
+            final List<Endpoint> endpoints = targetEndpointsBuilder.build();
+            if (rampingUpWindowsMap.isEmpty()) {
+                logger.info("Finished ramping up. endpoints: {}", endpoints);
+            } else {
+                logger.debug("Ramping up. endpoints: {}", endpoints);
+            }
+
+            boolean found = false;
+            for (Endpoint endpoint : endpoints) {
+                if (endpoint.weight() > 0) {
+                    found = true;
+                    break;
+                }
+            }
+            if (!found) {
+                logger.warn("No valid endpoint with weight > 0. endpoints: {}", toShortString(endpoints));
+            }
+
+            endpointSelector = new WeightedRandomDistributionEndpointSelector(endpoints);
         }
 
         @VisibleForTesting
@@ -287,6 +311,16 @@ final class WeightRampingUpStrategy implements EndpointSelectionStrategy {
             } finally {
                 lock.unlock();
             }
+        }
+
+        @Override
+        public String toString() {
+            return MoreObjects.toStringHelper(this)
+                              .add("endpointSelector", endpointSelector)
+                              .add("endpointsFinishedRampingUp", endpointsFinishedRampingUp)
+                              .add("endpointsRampingUp", endpointsRampingUp)
+                              .add("rampingUpWindowsMap", rampingUpWindowsMap)
+                              .toString();
         }
     }
 
