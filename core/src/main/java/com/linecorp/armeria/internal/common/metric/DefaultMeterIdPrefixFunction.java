@@ -73,7 +73,7 @@ public final class DefaultMeterIdPrefixFunction implements MeterIdPrefixFunction
         requireNonNull(tagListBuilder, "tagListBuilder");
         requireNonNull(log, "log");
         addHostnamePattern(tagListBuilder, log);
-        addMethodAndService(tagListBuilder, log, true, true);
+        addMethodAndService(tagListBuilder, log);
     }
 
     /**
@@ -85,7 +85,7 @@ public final class DefaultMeterIdPrefixFunction implements MeterIdPrefixFunction
         requireNonNull(log, "log");
         addHostnamePattern(tagListBuilder, log);
         addHttpStatus(tagListBuilder, log);
-        addMethodAndService(tagListBuilder, log, true, true);
+        addMethodAndService(tagListBuilder, log);
     }
 
     /**
@@ -112,14 +112,9 @@ public final class DefaultMeterIdPrefixFunction implements MeterIdPrefixFunction
         }
     }
 
-    public static void addMethodAndService(Builder<Tag> tagListBuilder, RequestOnlyLog log,
-                                           boolean includeMethod, boolean includeService) {
-        if (includeMethod) {
-            tagListBuilder.add(Tag.of("method", log.name()));
-        }
-        if (includeService) {
-            tagListBuilder.add(Tag.of("service", firstNonNull(log.serviceName(), "none")));
-        }
+    private static void addMethodAndService(Builder<Tag> tagListBuilder, RequestOnlyLog log) {
+        tagListBuilder.add(Tag.of("method", log.name()));
+        tagListBuilder.add(Tag.of("service", firstNonNull(log.serviceName(), "none")));
     }
 
     @Override
