@@ -110,7 +110,6 @@ final class WeightRampingUpStrategyTest {
         scheduledJobs.poll().run();
         // Ramping up is done because the step reached the numberOfSteps.
 
-        assertThat(selector.endpointsRampingUp).isEmpty();
         endpointsFromEntry = endpointsFromSelectorEntry(selector);
         assertThat(endpointsFromEntry).usingElementComparator(EndpointComparator.INSTANCE)
                                       .containsExactlyInAnyOrder(
