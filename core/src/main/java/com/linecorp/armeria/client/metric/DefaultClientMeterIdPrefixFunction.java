@@ -13,7 +13,7 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package com.linecorp.armeria.internal.common.metric;
+package com.linecorp.armeria.client.metric;
 
 import static com.google.common.base.MoreObjects.firstNonNull;
 import static com.linecorp.armeria.internal.common.metric.DefaultMeterIdPrefixFunction.addHttpStatus;
@@ -32,18 +32,14 @@ import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestOnlyLog;
 import com.linecorp.armeria.common.metric.MeterIdPrefix;
-import com.linecorp.armeria.common.metric.MeterIdPrefixFunction;
 import com.linecorp.armeria.internal.common.util.TemporaryThreadLocals;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Tag;
 
-/**
- * Client {@link MeterIdPrefixFunction} implementation.
- */
-public final class ClientMeterIdPrefixFunction implements MeterIdPrefixFunction {
+final class DefaultClientMeterIdPrefixFunction implements ClientMeterIdPrefixFunction {
 
-    private static final Logger logger = LoggerFactory.getLogger(ClientMeterIdPrefixFunction.class);
+    private static final Logger logger = LoggerFactory.getLogger(DefaultClientMeterIdPrefixFunction.class);
     private static boolean warnedServiceRequestContext;
 
     private final String name;
@@ -52,7 +48,7 @@ public final class ClientMeterIdPrefixFunction implements MeterIdPrefixFunction 
     private final boolean includeRemoteAddress;
     private final boolean includeService;
 
-    public ClientMeterIdPrefixFunction(String name, boolean includeHttpStatus, boolean includeMethod,
+    DefaultClientMeterIdPrefixFunction(String name, boolean includeHttpStatus, boolean includeMethod,
                                        boolean includeRemoteAddress, boolean includeService) {
         this.name = requireNonNull(name, "name");
         this.includeHttpStatus = includeHttpStatus;
@@ -70,6 +66,7 @@ public final class ClientMeterIdPrefixFunction implements MeterIdPrefixFunction 
     }
 
     private void addActiveRequestTags(Builder<Tag> tagListBuilder, RequestOnlyLog log) {
+        // Add tags in lexicographical order of the tag key.
         if (includeMethod) {
             tagListBuilder.add(Tag.of("method", log.name()));
         }
@@ -114,6 +111,7 @@ public final class ClientMeterIdPrefixFunction implements MeterIdPrefixFunction 
     public MeterIdPrefix completeRequestPrefix(MeterRegistry registry, RequestLog log) {
         /* http.status, method, remoteAddress, service */
         final Builder<Tag> tagListBuilder = ImmutableList.builderWithExpectedSize(4);
+        // Add tags in lexicographical order of the tag key.
         if (includeHttpStatus) {
             addHttpStatus(tagListBuilder, log);
         }

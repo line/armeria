@@ -14,77 +14,76 @@
  * under the License.
  */
 
-package com.linecorp.armeria.common.metric;
+package com.linecorp.armeria.server.metric;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
 import org.junit.jupiter.api.Test;
 
-import com.linecorp.armeria.client.ClientRequestContext;
-import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.metric.MeterIdPrefix;
+import com.linecorp.armeria.common.metric.NoopMeterRegistry;
+import com.linecorp.armeria.server.ServiceRequestContext;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Tag;
 
-class ClientMeterIdPrefixFunctionTest {
+class ServerMeterIdPrefixFunctionTest {
 
     @Test
     void defaultApply() {
         final MeterRegistry registry = NoopMeterRegistry.get();
         // default
-        MeterIdPrefixFunction f = MeterIdPrefixFunction.builderForClient("foo")
-                                                       .build();
+        ServerMeterIdPrefixFunction f = ServerMeterIdPrefixFunction.builder("foo")
+                                                                   .build();
         MeterIdPrefix res;
 
-        final ClientRequestContext ctx = newClientContext(
-                HttpMethod.POST, "/post", RpcRequest.of(ClientMeterIdPrefixFunctionTest.class, "doFoo"));
+        final ServiceRequestContext ctx = newServiceContext(
+                HttpMethod.POST, "/post", RpcRequest.of(ServerMeterIdPrefixFunctionTest.class, "doFoo"));
         res = f.activeRequestPrefix(registry, ctx.log().ensureRequestComplete());
         assertThat(res.name()).isEqualTo("foo");
-        assertThat(res.tags()).containsExactly(Tag.of("method", "doFoo"),
+        assertThat(res.tags()).containsExactly(Tag.of("hostname.pattern", "*"),
+                                               Tag.of("method", "doFoo"),
                                                Tag.of("service",
-                                                      ClientMeterIdPrefixFunctionTest.class.getName()));
+                                                      ServerMeterIdPrefixFunctionTest.class.getName()));
 
         ctx.logBuilder().responseHeaders(ResponseHeaders.of(200));
         ctx.logBuilder().endResponse();
         res = f.completeRequestPrefix(registry, ctx.log().ensureComplete());
         assertThat(res.name()).isEqualTo("foo");
-        assertThat(res.tags()).containsExactly(Tag.of("http.status", "200"),
+        assertThat(res.tags()).containsExactly(Tag.of("hostname.pattern", "*"),
+                                               Tag.of("http.status", "200"),
                                                Tag.of("method", "doFoo"),
                                                Tag.of("service",
-                                                      ClientMeterIdPrefixFunctionTest.class.getName()));
+                                                      ServerMeterIdPrefixFunctionTest.class.getName()));
 
-        f = MeterIdPrefixFunction.builderForClient("foo")
-                                 .includeTags("remoteAddress")
-                                 .excludeTags("service")
-                                 .build();
+        f = ServerMeterIdPrefixFunction.builder("foo")
+                                       .excludeTags("service")
+                                       .build();
 
-        final ClientRequestContext ctx2 = newClientContext(
-                HttpMethod.POST, "/post", RpcRequest.of(ClientMeterIdPrefixFunctionTest.class, "doFoo"));
+        final ServiceRequestContext ctx2 = newServiceContext(
+                HttpMethod.POST, "/post", RpcRequest.of(ServerMeterIdPrefixFunctionTest.class, "doFoo"));
         res = f.activeRequestPrefix(registry, ctx2.log().ensureRequestComplete());
         assertThat(res.name()).isEqualTo("foo");
-        assertThat(res.tags()).containsExactly(Tag.of("method", "doFoo"),
-                                               Tag.of("remoteAddress", "foo.com/1.2.3.4:8080"));
+        assertThat(res.tags()).containsExactly(Tag.of("hostname.pattern", "*"),
+                                               Tag.of("method", "doFoo"));
 
         ctx2.logBuilder().responseHeaders(ResponseHeaders.of(200));
         ctx2.logBuilder().endResponse();
         res = f.completeRequestPrefix(registry, ctx2.log().ensureComplete());
         assertThat(res.name()).isEqualTo("foo");
-        assertThat(res.tags()).containsExactly(Tag.of("http.status", "200"),
-                                               Tag.of("method", "doFoo"),
-                                               Tag.of("remoteAddress", "foo.com/1.2.3.4:8080"));
+        assertThat(res.tags()).containsExactly(Tag.of("hostname.pattern", "*"),
+                                               Tag.of("http.status", "200"),
+                                               Tag.of("method", "doFoo"));
     }
 
-    private static ClientRequestContext newClientContext(HttpMethod method, String path,
-                                                         @Nullable Object requestContent) {
-        final ClientRequestContext ctx = ClientRequestContext.builder(HttpRequest.of(method, path))
-                                                             .endpointGroup(Endpoint.of("foo.com", 8080)
-                                                                                    .withIpAddr("1.2.3.4"))
-                                                             .build();
+    private static ServiceRequestContext newServiceContext(HttpMethod method, String path,
+                                                           @Nullable Object requestContent) {
+        final ServiceRequestContext ctx = ServiceRequestContext.of(HttpRequest.of(method, path));
         ctx.logBuilder().requestContent(requestContent, null);
         ctx.logBuilder().endRequest();
         return ctx;

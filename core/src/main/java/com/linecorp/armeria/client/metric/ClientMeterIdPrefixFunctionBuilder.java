@@ -13,7 +13,7 @@
  *  License for the specific language governing permissions and limitations
  *  under the License.
  */
-package com.linecorp.armeria.common.metric;
+package com.linecorp.armeria.client.metric;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkState;
@@ -24,12 +24,13 @@ import java.util.Set;
 
 import com.google.common.collect.ImmutableSet;
 
+import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpStatus;
-import com.linecorp.armeria.internal.common.metric.ClientMeterIdPrefixFunction;
+import com.linecorp.armeria.common.metric.MeterIdPrefix;
 
 /**
- * Builds a {@link MeterIdPrefixFunction} for a client.
+ * Builds a {@link DefaultClientMeterIdPrefixFunction}.
  */
 public final class ClientMeterIdPrefixFunctionBuilder {
 
@@ -54,14 +55,17 @@ public final class ClientMeterIdPrefixFunctionBuilder {
      *   <li>{@code method} - RPC method name or {@link HttpMethod#name()} if RPC method name is not
      *                        available</li>
      *   <li>{@code service} - RPC service name or innermost service class name</li>
-     *   <li>{@code remoteAddress} - the remote address that the client connects to</li>
+     *   <li>{@code remoteAddress} - the remote address that the client connects to in the form of
+     *                               {@code host/IP:port}</li>
      *   <li>{@code httpStatus} - {@link HttpStatus#code()}</li>
      * </ul>
      *
      * <p><strong>Note:</strong> The {@code method}, {@code service}, and {@code httpStatus} tags are
      * included by default. Exercise caution when adding the {@code remoteAddress} tag, as it may result
      * in a large number of distinct metric IDs if the client connects to many different remote addresses
-     * (e.g., when using Client-Side Load Balancing (CSLB)).
+     * (e.g., when using Client-Side Load Balancing (CSLB)). The {@code remoteAddress} value is created using
+     * the {@link Endpoint} of the client, so it doesn't contain the IP address if the {@link Endpoint} doesn't
+     * have the IP address.
      *
      * <p>Additionally, ensure that meters with the same name have the same set of tags. Use different
      * meter names for clients with differing tag sets, for example: {@code "armeria.client"} and
@@ -85,7 +89,9 @@ public final class ClientMeterIdPrefixFunctionBuilder {
      * <p><strong>Note:</strong> The {@code method}, {@code service}, and {@code httpStatus} tags are
      * included by default. Exercise caution when adding the {@code remoteAddress} tag, as it may result
      * in a large number of distinct metric IDs if the client connects to many different remote addresses
-     * (e.g., when using Client-Side Load Balancing (CSLB)).
+     * (e.g., when using Client-Side Load Balancing (CSLB)). The {@code remoteAddress} value is created using
+     * the {@link Endpoint} of the client, so it doesn't contain the IP address if the {@link Endpoint} doesn't
+     * have the IP address.
      *
      * <p>Additionally, ensure that meters with the same name have the same set of tags. Use different
      * meter names for clients with differing tag sets, for example: {@code "armeria.client"} and
@@ -140,15 +146,15 @@ public final class ClientMeterIdPrefixFunctionBuilder {
     }
 
     /**
-     * Builds a new {@link MeterIdPrefixFunction} with the configured settings.
+     * Builds a new {@link ClientMeterIdPrefixFunction} with the configured settings.
      */
-    public MeterIdPrefixFunction build() {
+    public ClientMeterIdPrefixFunction build() {
         checkState(!tags.isEmpty(), "tags is empty.");
         final boolean includeHttpStatus = tags.contains("httpStatus");
         final boolean includeMethod = tags.contains("method");
         final boolean includeRemoteAddress = tags.contains("remoteAddress");
         final boolean includeService = tags.contains("service");
-        return new ClientMeterIdPrefixFunction(name, includeHttpStatus, includeMethod, includeRemoteAddress,
-                                               includeService);
+        return new DefaultClientMeterIdPrefixFunction(name, includeHttpStatus, includeMethod,
+                                                      includeRemoteAddress, includeService);
     }
 }

@@ -65,13 +65,6 @@ public interface MeterIdPrefixFunction {
     }
 
     /**
-     * Returns a {@link ClientMeterIdPrefixFunctionBuilder} for a client with the specified name.
-     */
-    static ClientMeterIdPrefixFunctionBuilder builderForClient(String name) {
-        return new ClientMeterIdPrefixFunctionBuilder(name);
-    }
-
-    /**
      * Returns a {@link MeterIdPrefixFunction} which generates a {@link MeterIdPrefix} from the given
      * {@link MeterRegistry} and {@link RequestOnlyLog}.
      * Both {@link #activeRequestPrefix(MeterRegistry, RequestOnlyLog)}
