@@ -25,9 +25,7 @@ import static com.linecorp.armeria.internal.client.endpoint.EndpointAttributeKey
 import static com.linecorp.armeria.internal.client.endpoint.EndpointToStringUtil.toShortString;
 import static java.util.Objects.requireNonNull;
 
-import java.util.ArrayDeque;
 import java.util.ArrayList;
-import java.util.Deque;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -136,8 +134,6 @@ final class WeightRampingUpStrategy implements EndpointSelectionStrategy {
 
         private final List<Endpoint> endpointsFinishedRampingUp = new ArrayList<>();
 
-        @VisibleForTesting
-        final Deque<EndpointsRampingUpEntry> endpointsRampingUp = new ArrayDeque<>();
         @VisibleForTesting
         final Map<Long, EndpointsRampingUpEntry> rampingUpWindowsMap = new HashMap<>();
         private Object2LongOpenHashMap<Endpoint> endpointCreatedTimestamps = new Object2LongOpenHashMap<>();
@@ -318,7 +314,6 @@ final class WeightRampingUpStrategy implements EndpointSelectionStrategy {
             return MoreObjects.toStringHelper(this)
                               .add("endpointSelector", endpointSelector)
                               .add("endpointsFinishedRampingUp", endpointsFinishedRampingUp)
-                              .add("endpointsRampingUp", endpointsRampingUp)
                               .add("rampingUpWindowsMap", rampingUpWindowsMap)
                               .toString();
         }

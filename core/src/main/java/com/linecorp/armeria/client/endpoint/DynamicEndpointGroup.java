@@ -55,7 +55,7 @@ import com.linecorp.armeria.internal.common.util.ReentrantShortLock;
  */
 public class DynamicEndpointGroup extends AbstractEndpointGroup implements ListenableAsyncCloseable {
 
-    private static Logger logger = LoggerFactory.getLogger(DynamicEndpointGroup.class);
+    private static final Logger logger = LoggerFactory.getLogger(DynamicEndpointGroup.class);
 
     /**
      * Returns a newly created builder.

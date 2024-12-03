@@ -19,6 +19,8 @@ import static com.google.common.base.MoreObjects.firstNonNull;
 import static com.linecorp.armeria.internal.common.metric.DefaultMeterIdPrefixFunction.addHttpStatus;
 import static java.util.Objects.requireNonNull;
 
+import java.net.InetSocketAddress;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -27,11 +29,11 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableList.Builder;
 
 import com.linecorp.armeria.client.ClientRequestContext;
-import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestOnlyLog;
 import com.linecorp.armeria.common.metric.MeterIdPrefix;
+import com.linecorp.armeria.common.util.TextFormatter;
 import com.linecorp.armeria.internal.common.util.TemporaryThreadLocals;
 
 import io.micrometer.core.instrument.MeterRegistry;
@@ -89,20 +91,13 @@ final class DefaultClientMeterIdPrefixFunction implements ClientMeterIdPrefixFun
         }
 
         final ClientRequestContext cCtx = (ClientRequestContext) context;
-        final Endpoint endpoint = cCtx.endpoint();
-        if (endpoint == null) {
+        final InetSocketAddress remoteAddress = cCtx.remoteAddress();
+        if (remoteAddress == null) {
             return "none";
         }
-
         try (TemporaryThreadLocals acquired = TemporaryThreadLocals.acquire()) {
             final StringBuilder builder = acquired.stringBuilder();
-            builder.append(endpoint.host());
-            if (endpoint.hasIpAddr() && !endpoint.isIpAddrOnly()) {
-                builder.append('/').append(endpoint.ipAddr());
-            }
-            if (endpoint.hasPort()) {
-                builder.append(':').append(endpoint.port());
-            }
+            TextFormatter.appendSocketAddress(builder, remoteAddress);
             return builder.toString();
         }
     }

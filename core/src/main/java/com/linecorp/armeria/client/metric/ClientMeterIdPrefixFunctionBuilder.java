@@ -24,7 +24,6 @@ import java.util.Set;
 
 import com.google.common.collect.ImmutableSet;
 
-import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.metric.MeterIdPrefix;
@@ -63,9 +62,7 @@ public final class ClientMeterIdPrefixFunctionBuilder {
      * <p><strong>Note:</strong> The {@code method}, {@code service}, and {@code httpStatus} tags are
      * included by default. Exercise caution when adding the {@code remoteAddress} tag, as it may result
      * in a large number of distinct metric IDs if the client connects to many different remote addresses
-     * (e.g., when using Client-Side Load Balancing (CSLB)). The {@code remoteAddress} value is created using
-     * the {@link Endpoint} of the client, so it doesn't contain the IP address if the {@link Endpoint} doesn't
-     * have the IP address.
+     * (e.g., when using Client-Side Load Balancing (CSLB)).
      *
      * <p>Additionally, ensure that meters with the same name have the same set of tags. Use different
      * meter names for clients with differing tag sets, for example: {@code "armeria.client"} and
@@ -89,9 +86,7 @@ public final class ClientMeterIdPrefixFunctionBuilder {
      * <p><strong>Note:</strong> The {@code method}, {@code service}, and {@code httpStatus} tags are
      * included by default. Exercise caution when adding the {@code remoteAddress} tag, as it may result
      * in a large number of distinct metric IDs if the client connects to many different remote addresses
-     * (e.g., when using Client-Side Load Balancing (CSLB)). The {@code remoteAddress} value is created using
-     * the {@link Endpoint} of the client, so it doesn't contain the IP address if the {@link Endpoint} doesn't
-     * have the IP address.
+     * (e.g., when using Client-Side Load Balancing (CSLB)).
      *
      * <p>Additionally, ensure that meters with the same name have the same set of tags. Use different
      * meter names for clients with differing tag sets, for example: {@code "armeria.client"} and
