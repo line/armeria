@@ -269,6 +269,8 @@ public final class KubernetesEndpointGroup extends DynamicEndpointGroup {
                         if (podWatch0 != null) {
                             podWatch0.close();
                         }
+                        // Clear the podToNode map before starting a new pod watch.
+                        podToNode.clear();
                         podWatch0 = watchPod(service0.getSpec().getSelector());
                         if (closed) {
                             podWatch0.close();
@@ -384,6 +386,8 @@ public final class KubernetesEndpointGroup extends DynamicEndpointGroup {
                         nodeToIp.remove(nodeName);
                         break;
                 }
+                // TODO(ikhoon): Reschedule the update after a certain delay since multiple websocket events
+                //               are updated in a same task.
                 maybeUpdateEndpoints();
             }
 
