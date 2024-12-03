@@ -18,10 +18,11 @@ package com.linecorp.armeria.client.metric;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.net.InetSocketAddress;
+
 import org.junit.jupiter.api.Test;
 
 import com.linecorp.armeria.client.ClientRequestContext;
-import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.ResponseHeaders;
@@ -29,9 +30,11 @@ import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.metric.MeterIdPrefix;
 import com.linecorp.armeria.common.metric.NoopMeterRegistry;
+import com.linecorp.armeria.common.util.TextFormatter;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Tag;
+import io.netty.util.NetUtil;
 
 class ClientMeterIdPrefixFunctionTest {
 
@@ -68,9 +71,14 @@ class ClientMeterIdPrefixFunctionTest {
         final ClientRequestContext ctx2 = newClientContext(
                 HttpMethod.POST, "/post", RpcRequest.of(ClientMeterIdPrefixFunctionTest.class, "doFoo"));
         res = f.activeRequestPrefix(registry, ctx2.log().ensureRequestComplete());
+
+        // Fake channel is set in ClientRequestContextBuilder.
+        final InetSocketAddress fakeAddress = new InetSocketAddress(NetUtil.LOCALHOST, 80);
+        final String remoteAddress = TextFormatter.socketAddress(fakeAddress).toString();
+
         assertThat(res.name()).isEqualTo("foo");
         assertThat(res.tags()).containsExactly(Tag.of("method", "doFoo"),
-                                               Tag.of("remoteAddress", "foo.com/1.2.3.4:8080"));
+                                               Tag.of("remoteAddress", remoteAddress));
 
         ctx2.logBuilder().responseHeaders(ResponseHeaders.of(200));
         ctx2.logBuilder().endResponse();
@@ -78,14 +86,12 @@ class ClientMeterIdPrefixFunctionTest {
         assertThat(res.name()).isEqualTo("foo");
         assertThat(res.tags()).containsExactly(Tag.of("http.status", "200"),
                                                Tag.of("method", "doFoo"),
-                                               Tag.of("remoteAddress", "foo.com/1.2.3.4:8080"));
+                                               Tag.of("remoteAddress", remoteAddress));
     }
 
     private static ClientRequestContext newClientContext(HttpMethod method, String path,
                                                          @Nullable Object requestContent) {
         final ClientRequestContext ctx = ClientRequestContext.builder(HttpRequest.of(method, path))
-                                                             .endpointGroup(Endpoint.of("foo.com", 8080)
-                                                                                    .withIpAddr("1.2.3.4"))
                                                              .build();
         ctx.logBuilder().requestContent(requestContent, null);
         ctx.logBuilder().endRequest();
