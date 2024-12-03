@@ -6096,6 +6096,7 @@ nz.eu.org
 o.bg
 o.se
 o0o0.jp
+o365.cloud.nospamproxy.com
 oamishirasato.chiba.jp
 oarai.ibaraki.jp
 obama.fukui.jp
@@ -8687,7 +8688,6 @@ uol
 uonuma.niigata.jp
 uozu.toyama.jp
 up.in
-upli.io
 upow.gov.pl
 upper.jp
 uppo.gov.pl
