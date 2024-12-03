@@ -17,11 +17,16 @@
 package com.linecorp.armeria.client.endpoint;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
+import static com.linecorp.armeria.internal.client.endpoint.EndpointToStringUtil.toShortString;
 
 import java.util.Comparator;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Streams;
 
@@ -30,6 +35,8 @@ import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.common.annotation.Nullable;
 
 final class WeightedRoundRobinStrategy implements EndpointSelectionStrategy {
+
+    private static final Logger logger = LoggerFactory.getLogger(WeightedRoundRobinStrategy.class);
 
     static final WeightedRoundRobinStrategy INSTANCE = new WeightedRoundRobinStrategy();
 
@@ -63,6 +70,17 @@ final class WeightedRoundRobinStrategy implements EndpointSelectionStrategy {
 
         @Override
         protected void updateNewEndpoints(List<Endpoint> endpoints) {
+            boolean found = false;
+            for (Endpoint endpoint : endpoints) {
+                if (endpoint.weight() > 0) {
+                    found = true;
+                    break;
+                }
+            }
+            if (!found) {
+                logger.warn("No valid endpoint with weight > 0. endpoints: {}", toShortString(endpoints));
+            }
+
             final EndpointsAndWeights endpointsAndWeights = this.endpointsAndWeights;
             if (endpointsAndWeights == null || endpointsAndWeights.endpoints != endpoints) {
                 this.endpointsAndWeights = new EndpointsAndWeights(endpoints);
@@ -92,6 +110,13 @@ final class WeightedRoundRobinStrategy implements EndpointSelectionStrategy {
                 this.weight = weight;
                 this.accumulatedWeight = accumulatedWeight;
             }
+        }
+
+        @Override
+        public String toString() {
+            return MoreObjects.toStringHelper(this)
+                              .add("endpointsAndWeights", endpointsAndWeights)
+                              .toString();
         }
 
         //
@@ -227,6 +252,16 @@ final class WeightedRoundRobinStrategy implements EndpointSelectionStrategy {
                 }
 
                 return endpoints.get(Math.abs(currentSequence % endpoints.size()));
+            }
+
+            @Override
+            public String toString() {
+                return MoreObjects.toStringHelper(this)
+                                  .add("endpoints", endpoints)
+                                  .add("weighted", weighted)
+                                  .add("totalWeight", totalWeight)
+                                  .add("accumulatedGroups", accumulatedGroups)
+                                  .toString();
             }
         }
     }
