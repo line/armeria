@@ -199,13 +199,16 @@ class DefaultDnsResolverTest {
                 DnsQuestionWithoutTrailingDot.of("foo.com.", DnsRecordType.AAAA));
         final Object[] results = new Object[questions.size()];
 
+        final DnsQuestionContext ctx = new DnsQuestionContext(CommonPools.workerGroup().next(), Long.MAX_VALUE);
         final List<DnsRecord> fooDnsRecord = ImmutableList.of(newAddressRecord("foo.com.", "1.2.3.4"));
         final List<DnsRecord> barDnsRecord = ImmutableList.of(newAddressRecord("foo.com.", "2001:db8::1"));
         // Should not complete `future` and wait for the first result.
-        maybeCompletePreferredRecords(future, questions, results, 1, barDnsRecord, null);
+        maybeCompletePreferredRecords(ctx, future, questions, results, 1, barDnsRecord, null);
         assertThat(future).isNotCompleted();
-        maybeCompletePreferredRecords(future, questions, results, 0, fooDnsRecord, null);
+        assertThat(ctx.isCompleted()).isFalse();
+        maybeCompletePreferredRecords(ctx, future, questions, results, 0, fooDnsRecord, null);
         assertThat(future).isCompletedWithValue(fooDnsRecord);
+        assertThat(ctx.isCompleted()).isTrue();
     }
 
     @Test
@@ -216,12 +219,15 @@ class DefaultDnsResolverTest {
                 DnsQuestionWithoutTrailingDot.of("foo.com.", DnsRecordType.AAAA));
         final Object[] results = new Object[questions.size()];
 
+        final DnsQuestionContext ctx = new DnsQuestionContext(CommonPools.workerGroup().next(), Long.MAX_VALUE);
         final List<DnsRecord> barDnsRecord = ImmutableList.of(newAddressRecord("foo.com.", "2001:db8::1"));
         // Should not complete `future` and wait for the first result.
-        maybeCompletePreferredRecords(future, questions, results, 1, barDnsRecord, null);
+        maybeCompletePreferredRecords(ctx, future, questions, results, 1, barDnsRecord, null);
         assertThat(future).isNotCompleted();
-        maybeCompletePreferredRecords(future, questions, results, 0, null, new AnticipatedException());
+        assertThat(ctx.isCompleted()).isFalse();
+        maybeCompletePreferredRecords(ctx, future, questions, results, 0, null, new AnticipatedException());
         assertThat(future).isCompletedWithValue(barDnsRecord);
+        assertThat(ctx.isCompleted()).isTrue();
     }
 
     @Test
@@ -232,10 +238,12 @@ class DefaultDnsResolverTest {
                 DnsQuestionWithoutTrailingDot.of("foo.com.", DnsRecordType.AAAA));
         final Object[] results = new Object[questions.size()];
 
+        final DnsQuestionContext ctx = new DnsQuestionContext(CommonPools.workerGroup().next(), Long.MAX_VALUE);
         final List<DnsRecord> fooDnsRecord = ImmutableList.of(newAddressRecord("foo.com.", "1.2.3.4"));
-        maybeCompletePreferredRecords(future, questions, results, 0, fooDnsRecord, null);
+        maybeCompletePreferredRecords(ctx, future, questions, results, 0, fooDnsRecord, null);
         // The preferred question is resolved. Don't need to wait for the questions.
         assertThat(future).isCompletedWithValue(fooDnsRecord);
+        assertThat(ctx.isCompleted()).isTrue();
     }
 
     @Test
@@ -249,11 +257,14 @@ class DefaultDnsResolverTest {
         final List<DnsRecord> barDnsRecord = ImmutableList.of(newAddressRecord("foo.com.", "2001:db8::1"));
         // Should not complete `future` and wait for the first result.
         final AnticipatedException barCause = new AnticipatedException();
-        maybeCompletePreferredRecords(future, questions, results, 1, barDnsRecord, barCause);
+        final DnsQuestionContext ctx = new DnsQuestionContext(CommonPools.workerGroup().next(), Long.MAX_VALUE);
+        maybeCompletePreferredRecords(ctx, future, questions, results, 1, barDnsRecord, barCause);
         assertThat(future).isNotCompleted();
+        assertThat(ctx.isCompleted()).isFalse();
         final AnticipatedException fooCause = new AnticipatedException();
-        maybeCompletePreferredRecords(future, questions, results, 0, null, fooCause);
+        maybeCompletePreferredRecords(ctx, future, questions, results, 0, null, fooCause);
         assertThat(future).isCompletedExceptionally();
+        assertThat(ctx.isCompleted()).isTrue();
         assertThatThrownBy(future::join)
                 .isInstanceOf(CompletionException.class)
                 .cause()

@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 LINE Corporation
+ * Copyright 2024 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -36,7 +36,6 @@ import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
 import com.linecorp.armeria.common.logging.RequestLogProperty;
 import com.linecorp.armeria.common.stream.ClosedStreamException;
-import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.internal.common.CancellationScheduler.CancellationTask;
 import com.linecorp.armeria.internal.server.DefaultServiceRequestContext;
 
@@ -218,21 +217,6 @@ abstract class AbstractHttpResponseHandler {
         } else {
             logBuilder().endRequest();
             logBuilder().endResponse();
-        }
-    }
-
-    /**
-     * Writes an access log if the {@link TransientServiceOption#WITH_ACCESS_LOGGING} option is enabled for
-     * the {@link #service()}.
-     */
-    final void maybeWriteAccessLog() {
-        final ServiceConfig config = reqCtx.config();
-        if (config.transientServiceOptions().contains(TransientServiceOption.WITH_ACCESS_LOGGING)) {
-            reqCtx.log().whenComplete().thenAccept(log -> {
-                try (SafeCloseable ignored = reqCtx.push()) {
-                    config.accessLogWriter().log(log);
-                }
-            });
         }
     }
 

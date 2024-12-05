@@ -109,12 +109,16 @@ public interface RequestLogBuilder extends RequestLogAccess {
      *    <li>A path pattern and HTTP method name for {@link HttpService}</li>
      * </ul>
      * This property is often used as a meter tag or distributed trace's span name.
+     * Note that calling {@link #responseContent(Object, Object)} will automatically fill
+     * {@link RequestLogProperty#NAME}, so {@link #name(String, String)} must be called beforehand.
      */
     void name(String serviceName, String name);
 
     /**
      * Sets the human-readable name of the {@link Request}, such as RPC method name, annotated service method
      * name or HTTP method name. This property is often used as a meter tag or distributed trace's span name.
+     * Note that calling {@link #responseContent(Object, Object)} will automatically fill
+     * {@link RequestLogProperty#NAME}, so {@link #name(String)} must be called beforehand.
      */
     void name(String name);
 

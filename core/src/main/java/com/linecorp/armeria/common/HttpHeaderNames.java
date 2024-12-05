@@ -938,6 +938,12 @@ public final class HttpHeaderNames {
      */
     public static final AsciiString CDN_LOOP = create("CDN-Loop");
 
+    /**
+     * The HTTP <a href="https://wicg.github.io/ua-client-hints/#sec-ch-ua-form-factors">{@code
+     * Sec-CH-UA-Form-Factors}</a> header field name.
+     */
+    public static final AsciiString SEC_CH_UA_FORM_FACTORS = create("Sec-CH-UA-Form-Factors");
+
     private static final Map<CharSequence, AsciiString> map;
     private static final Map<AsciiString, String> inverseMap;
 
