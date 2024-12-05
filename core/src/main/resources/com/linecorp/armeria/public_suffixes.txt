@@ -7,6 +7,7 @@
 !city.yokohama.jp
 !www.ck
 *.001.test.code-builder-stg.platform.salesforce.com
+*.0e.vc
 *.0emm.com
 *.advisor.ws
 *.af-south-1.airflow.amazonaws.com
@@ -169,7 +170,6 @@
 0.bg
 001www.com
 0am.jp
-0e.vc
 0g0.jp
 0j0.jp
 0t0.jp
