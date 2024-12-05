@@ -64,5 +64,5 @@ public interface GracefulShutdown {
      * <p>If null is returned, the request will be terminated with {@link ShuttingDownException} that will be
      * converted to an {@link HttpStatus#SERVICE_UNAVAILABLE} response.
      */
-    Throwable shutdownError(ServiceRequestContext ctx, HttpRequest request);
+    Throwable toException(ServiceRequestContext ctx, HttpRequest request);
 }

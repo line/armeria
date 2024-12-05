@@ -28,13 +28,13 @@ final class DefaultGracefulShutdown implements GracefulShutdown {
 
     private final Duration quietPeriod;
     private final Duration timeout;
-    private final BiFunction<ServiceRequestContext, HttpRequest, Throwable> errorFunction;
+    private final BiFunction<ServiceRequestContext, HttpRequest, Throwable> toExceptionFunction;
 
     DefaultGracefulShutdown(Duration quietPeriod, Duration timeout,
-                            BiFunction<ServiceRequestContext, HttpRequest, Throwable> errorFunction) {
+                            BiFunction<ServiceRequestContext, HttpRequest, Throwable> toExceptionFunction) {
         this.quietPeriod = quietPeriod;
         this.timeout = timeout;
-        this.errorFunction = errorFunction;
+        this.toExceptionFunction = toExceptionFunction;
     }
 
     @Override
@@ -48,8 +48,8 @@ final class DefaultGracefulShutdown implements GracefulShutdown {
     }
 
     @Override
-    public Throwable shutdownError(ServiceRequestContext ctx, HttpRequest request) {
-        return errorFunction.apply(ctx, request);
+    public Throwable toException(ServiceRequestContext ctx, HttpRequest request) {
+        return toExceptionFunction.apply(ctx, request);
     }
 
     @Override
@@ -63,12 +63,12 @@ final class DefaultGracefulShutdown implements GracefulShutdown {
         final DefaultGracefulShutdown that = (DefaultGracefulShutdown) o;
         return quietPeriod.equals(that.quietPeriod) &&
                timeout.equals(that.timeout) &&
-               errorFunction.equals(that.errorFunction);
+               toExceptionFunction.equals(that.toExceptionFunction);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(quietPeriod, timeout, errorFunction);
+        return Objects.hash(quietPeriod, timeout, toExceptionFunction);
     }
 
     @Override
@@ -76,7 +76,7 @@ final class DefaultGracefulShutdown implements GracefulShutdown {
         return MoreObjects.toStringHelper(this)
                           .add("quietPeriod", quietPeriod)
                           .add("timeout", timeout)
-                          .add("errorFunction", errorFunction)
+                          .add("toExceptionFunction", toExceptionFunction)
                           .toString();
     }
 }

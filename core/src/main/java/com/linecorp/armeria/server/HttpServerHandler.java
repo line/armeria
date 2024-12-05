@@ -322,9 +322,9 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
             return null;
         }
         try {
-            return config.gracefulShutdown().shutdownError(ctx, req);
+            return config.gracefulShutdown().toException(ctx, req);
         } catch (Exception e) {
-            logger.warn("{} Unexpected exception from gracefulShutdown.shutdownError(): {}",
+            logger.warn("{} Unexpected exception from gracefulShutdown.toException(): {}",
                         ctx, config.gracefulShutdown(), e);
             return null;
         }

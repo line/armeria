@@ -44,7 +44,7 @@ public final class GracefulShutdownBuilder {
 
     private Duration quietPeriod = DEFAULT_GRACEFUL_SHUTDOWN_QUIET_PERIOD;
     private Duration timeout = DEFAULT_GRACEFUL_SHUTDOWN_TIMEOUT;
-    private BiFunction<ServiceRequestContext, HttpRequest, Throwable> errorFunction = DEFAULT_ERROR_FUNCTION;
+    private BiFunction<ServiceRequestContext, HttpRequest, Throwable> toException = DEFAULT_ERROR_FUNCTION;
 
     GracefulShutdownBuilder() {}
 
@@ -99,11 +99,11 @@ public final class GracefulShutdownBuilder {
      * shutting down. If unspecified, the request will be terminated with {@link ShuttingDownException} that
      * will be converted to an {@link HttpStatus#SERVICE_UNAVAILABLE} response.
      */
-    public GracefulShutdownBuilder shutdownErrorFunction(
-            BiFunction<? super ServiceRequestContext, ? super HttpRequest, ? extends Throwable> errorFunction) {
-        requireNonNull(errorFunction, "errorFunction");
+    public GracefulShutdownBuilder toExceptionFunction(
+            BiFunction<? super ServiceRequestContext, ? super HttpRequest, ? extends Throwable> toException) {
+        requireNonNull(toException, "toException");
         //noinspection unchecked
-        this.errorFunction = (BiFunction<ServiceRequestContext, HttpRequest, Throwable>) errorFunction;
+        this.toException = (BiFunction<ServiceRequestContext, HttpRequest, Throwable>) toException;
         return this;
     }
 
@@ -112,6 +112,6 @@ public final class GracefulShutdownBuilder {
      */
     public GracefulShutdown build() {
         validateGreaterThanOrEqual(timeout, "timeout", quietPeriod, "quietPeriod");
-        return new DefaultGracefulShutdown(quietPeriod, timeout, errorFunction);
+        return new DefaultGracefulShutdown(quietPeriod, timeout, toException);
     }
 }

@@ -78,7 +78,7 @@ class CustomGracefulShutDownTest {
                     GracefulShutdown.builder()
                                     .quietPeriod(Duration.ofMillis(500))
                                     .timeout(Duration.ofMillis(500))
-                                    .shutdownErrorFunction(
+                                    .toExceptionFunction(
                                             (ctx, req) -> new AnticipatedException())
                                     .build();
 

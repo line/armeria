@@ -54,7 +54,7 @@ class GracefulShutdownBuilderTest {
         final GracefulShutdown gracefulShutdown = GracefulShutdown.builder().build();
         assertThat(gracefulShutdown.quietPeriod()).isZero();
         assertThat(gracefulShutdown.timeout()).isZero();
-        assertThat(gracefulShutdown.shutdownError(null, null))
+        assertThat(gracefulShutdown.toException(null, null))
                 .isInstanceOf(ShuttingDownException.class);
     }
 
@@ -64,11 +64,11 @@ class GracefulShutdownBuilderTest {
                 GracefulShutdown.builder()
                                 .quietPeriod(Duration.ofSeconds(1))
                                 .timeout(Duration.ofSeconds(2))
-                                .shutdownErrorFunction((ctx, req) -> new AnticipatedException("test"))
+                                .toExceptionFunction((ctx, req) -> new AnticipatedException("test"))
                                 .build();
         assertThat(gracefulShutdown.quietPeriod()).isEqualTo(Duration.ofSeconds(1));
         assertThat(gracefulShutdown.timeout()).isEqualTo(Duration.ofSeconds(2));
-        assertThat(gracefulShutdown.shutdownError(null, null))
+        assertThat(gracefulShutdown.toException(null, null))
                 .isInstanceOf(AnticipatedException.class);
     }
 }
