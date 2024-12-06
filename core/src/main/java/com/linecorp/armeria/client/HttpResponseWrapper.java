@@ -260,7 +260,7 @@ class HttpResponseWrapper implements StreamWriter<HttpObject> {
             ctxExtension.responseCancellationScheduler().cancelScheduled();
         }
 
-        if (cancel) {
+        if (cancel || (cause != null && Exceptions.isStreamCancelling(cause))) {
             cancelAction(cause);
             return;
         }
