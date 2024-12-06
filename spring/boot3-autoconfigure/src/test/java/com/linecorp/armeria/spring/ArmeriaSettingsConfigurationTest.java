@@ -118,8 +118,8 @@ class ArmeriaSettingsConfigurationTest {
         assertThat(defaultVirtualHost.verboseResponses()).isTrue();
 
         // ArmeriaServerConfigurator overrides the properties from ArmeriaSettings.
-        assertThat(config.gracefulShutdownTimeout().toMillis()).isEqualTo(10000);
-        assertThat(config.gracefulShutdownQuietPeriod().toMillis()).isEqualTo(1000);
+        assertThat(config.gracefulShutdown().timeout().toMillis()).isEqualTo(10000);
+        assertThat(config.gracefulShutdown().quietPeriod().toMillis()).isEqualTo(1000);
 
         assertThat(config.dependencyInjector().getInstance(Object.class)).isSameAs(dummyObject);
         final ServiceRequestContext ctx = ServiceRequestContext.of(
