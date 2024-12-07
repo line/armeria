@@ -43,11 +43,10 @@ import io.fabric8.kubernetes.client.server.mock.EnableKubernetesMockClient;
                             kubernetesClientBuilderCustomizer = TestKubernetesClientBuilderCustomizer.class)
 class KubernetesEndpointGroupFaultToleranceTest {
 
-    private static KubernetesClient staticClient;
     private KubernetesClient client;
 
     @Test
-    void test() throws InterruptedException {
+    void shouldReconnectOnWatcherException() throws InterruptedException {
         // Prepare Kubernetes resources
         final List<Node> nodes = ImmutableList.of(newNode("1.1.1.1"), newNode("2.2.2.2"), newNode("3.3.3.3"));
         final Deployment deployment = newDeployment();
