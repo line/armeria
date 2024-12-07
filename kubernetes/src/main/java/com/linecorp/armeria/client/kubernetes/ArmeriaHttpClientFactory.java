@@ -17,6 +17,8 @@
 package com.linecorp.armeria.client.kubernetes;
 
 import com.linecorp.armeria.client.WebClientBuilder;
+import com.linecorp.armeria.client.websocket.WebSocketClient;
+import com.linecorp.armeria.client.websocket.WebSocketClientBuilder;
 
 import io.fabric8.kubernetes.client.http.HttpClient;
 
@@ -34,6 +36,13 @@ public class ArmeriaHttpClientFactory implements HttpClient.Factory {
      * This method is only called for clients constructed using the Config.
      */
     protected void additionalConfig(WebClientBuilder builder) {
+        // no default implementation
+    }
+
+    /**
+     * Subclasses may use this to apply additional configuration for {@link WebSocketClient}.
+     */
+    protected void additionalWebSocketConfig(WebSocketClientBuilder builder) {
         // no default implementation
     }
 }
