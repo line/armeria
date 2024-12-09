@@ -271,7 +271,7 @@ public final class KubernetesEndpointGroup extends DynamicEndpointGroup {
             logger.warn("[{}/{}] Failed to start the service watcher.", namespace, serviceName, e);
             return;
         }
-        // Recheck the closed flag because the watchService() method may take a while.
+        // Recheck the closed flag because the doWatchService() method may take a while.
         if (closed) {
             newServiceWatch.close();
         } else {
@@ -372,7 +372,7 @@ public final class KubernetesEndpointGroup extends DynamicEndpointGroup {
             logger.warn("[{}/{}] Failed to start the pod watcher.", namespace, serviceName, e);
             return;
         }
-        // Recheck the closed flag because the watchPod() method may take a while.
+        // Recheck the closed flag because the doWatchPod() method may take a while.
         if (closed) {
             newPodwatch.close();
         } else {
@@ -458,7 +458,7 @@ public final class KubernetesEndpointGroup extends DynamicEndpointGroup {
             return;
         }
         final Watch newNodeWatch = doWatchNode();
-        // Recheck the closed flag because the watchNode() method may take a while.
+        // Recheck the closed flag because the doWatchNode() method may take a while.
         if (closed) {
             newNodeWatch.close();
         } else {
