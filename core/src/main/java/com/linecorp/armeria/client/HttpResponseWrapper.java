@@ -58,7 +58,6 @@ class HttpResponseWrapper implements StreamWriter<HttpObject> {
     private final EventLoop eventLoop;
     private final ClientRequestContext ctx;
     private final long maxContentLength;
-    private final long responseTimeoutMillis;
 
     private boolean responseStarted;
     private long contentLengthHeaderValue = -1;
@@ -66,15 +65,14 @@ class HttpResponseWrapper implements StreamWriter<HttpObject> {
     private boolean done;
     private boolean closed;
 
-    HttpResponseWrapper(@Nullable AbstractHttpRequestHandler requestHandler,
-                        DecodedHttpResponse delegate, EventLoop eventLoop, ClientRequestContext ctx,
-                        long responseTimeoutMillis, long maxContentLength) {
+    HttpResponseWrapper(@Nullable AbstractHttpRequestHandler requestHandler, DecodedHttpResponse delegate,
+                        EventLoop eventLoop, ClientRequestContext ctx, long maxContentLength) {
+
         this.requestHandler = requestHandler;
         this.delegate = delegate;
         this.eventLoop = eventLoop;
         this.ctx = ctx;
         this.maxContentLength = maxContentLength;
-        this.responseTimeoutMillis = responseTimeoutMillis;
     }
 
     void handle100Continue(ResponseHeaders responseHeaders) {
@@ -327,7 +325,6 @@ class HttpResponseWrapper implements StreamWriter<HttpObject> {
                                    .add("eventLoop", eventLoop)
                                    .add("responseStarted", responseStarted)
                                    .add("maxContentLength", maxContentLength)
-                                   .add("responseTimeoutMillis", responseTimeoutMillis)
                                    .add("contentLengthHeaderValue", contentLengthHeaderValue)
                                    .add("delegate", delegate)
                                    .toString();

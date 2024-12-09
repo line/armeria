@@ -241,7 +241,7 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
                 ctx.setResponseTimeout(TimeoutMode.SET_FROM_NOW, Duration.ofNanos(remainingNanos));
             }
         } else {
-            remainingNanos = MILLISECONDS.toNanos(ctx.responseTimeoutMillis());
+            remainingNanos = ctx.remainingTimeoutNanos();
         }
 
         // Must come after handling deadline.

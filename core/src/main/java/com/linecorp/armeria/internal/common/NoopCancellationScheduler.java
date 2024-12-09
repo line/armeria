@@ -91,6 +91,11 @@ final class NoopCancellationScheduler implements CancellationScheduler {
     }
 
     @Override
+    public long remainingTimeoutNanos() {
+        return 0;
+    }
+
+    @Override
     public long startTimeNanos() {
         return 0;
     }

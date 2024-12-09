@@ -73,4 +73,6 @@ public interface ClientRequestContextExtension extends ClientRequestContext, Req
      * with default values on every request.
      */
     HttpHeaders internalRequestHeaders();
+
+    long remainingTimeoutNanos();
 }

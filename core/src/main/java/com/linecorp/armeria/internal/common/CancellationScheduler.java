@@ -108,6 +108,12 @@ public interface CancellationScheduler {
      */
     long timeoutNanos();
 
+    /**
+     * Before the scheduler has started, the configured timeout will be returned regardless of the
+     * {@link TimeoutMode}. If the scheduler has already started, the remaining time will be returned.
+     */
+    long remainingTimeoutNanos();
+
     long startTimeNanos();
 
     CompletableFuture<Throwable> whenCancelling();
