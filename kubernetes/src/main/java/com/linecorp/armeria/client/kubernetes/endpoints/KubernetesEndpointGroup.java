@@ -272,8 +272,8 @@ public final class KubernetesEndpointGroup extends DynamicEndpointGroup {
                 newServiceWatch.close();
             } else {
                 serviceWatch = newServiceWatch;
+                logger.info("[{}/{}] Service watcher is started.", namespace, serviceName);
             }
-            logger.info("[{}/{}] Service watcher is started.", namespace, serviceName);
             return null;
         }, worker);
     }
@@ -373,8 +373,8 @@ public final class KubernetesEndpointGroup extends DynamicEndpointGroup {
                 newPodwatch.close();
             } else {
                 podWatch = newPodwatch;
+                logger.info("[{}/{}] Pod watcher is started.", namespace, serviceName);
             }
-            logger.info("[{}/{}] Pod watcher is started.", namespace, serviceName);
             return null;
         }, worker);
     }
@@ -458,8 +458,8 @@ public final class KubernetesEndpointGroup extends DynamicEndpointGroup {
                 newNodeWatch.close();
             } else {
                 nodeWatch = newNodeWatch;
+                logger.info("[{}/{}] Node watcher is started.", namespace, serviceName);
             }
-            logger.info("[{}/{}] Node watcher is started.", namespace, serviceName);
             return null;
         }, worker);
     }
