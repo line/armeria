@@ -154,10 +154,10 @@ final class ConnectionPoolMetrics implements SafeCloseable {
 
     @Override
     public void close() {
+        // This method will be invoked after the connection pool is closed.
         closed = true;
         final ScheduledFuture<?> scheduledFuture = this.scheduledFuture;
         scheduledFuture.cancel(false);
-        // This method will be invoked after the connection pool is closed.
         CLEANUP_EXECUTOR.execute(this::cleanupInactiveMeters);
     }
 
