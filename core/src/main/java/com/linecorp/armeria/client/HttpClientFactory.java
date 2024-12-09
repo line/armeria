@@ -138,9 +138,10 @@ final class HttpClientFactory implements ClientFactory {
             () -> RequestContext.mapCurrent(
                     ctx -> ctx.eventLoop().withoutContext(), () -> eventLoopGroup().next());
     private final ClientFactoryOptions options;
+    private final boolean autoCloseConnectionPoolListener;
     private final AsyncCloseableSupport closeable = AsyncCloseableSupport.of(this::closeAsync);
 
-    HttpClientFactory(ClientFactoryOptions options) {
+    HttpClientFactory(ClientFactoryOptions options, boolean autoCloseConnectionPoolListener) {
         workerGroup = options.workerGroup();
 
         @SuppressWarnings("unchecked")
@@ -225,6 +226,7 @@ final class HttpClientFactory implements ClientFactory {
         maxConnectionAgeMillis = options.maxConnectionAgeMillis();
         maxNumRequestsPerConnection = options.maxNumRequestsPerConnection();
         channelPipelineCustomizer = options.channelPipelineCustomizer();
+        this.autoCloseConnectionPoolListener = autoCloseConnectionPoolListener;
 
         this.options = options;
 
@@ -461,6 +463,9 @@ final class HttpClientFactory implements ClientFactory {
                 logger.warn("Failed to close {}s:", HttpChannelPool.class.getSimpleName(), cause);
             }
 
+            if (autoCloseConnectionPoolListener) {
+                connectionPoolListener.close();
+            }
             if (shutdownWorkerGroupOnClose) {
                 workerGroup.shutdownGracefully().addListener((FutureListener<Object>) f -> {
                     if (f.cause() != null) {
