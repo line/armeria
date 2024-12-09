@@ -541,7 +541,7 @@ public final class DefaultClientRequestContext
         // Cancel the original timeout and create a new scheduler for the derived context.
         ctx.responseCancellationScheduler.cancelScheduled();
         responseCancellationScheduler =
-                CancellationScheduler.ofClient(TimeUnit.MILLISECONDS.toNanos(ctx.responseTimeoutMillis()));
+                CancellationScheduler.ofClient(ctx.remainingTimeoutNanos());
         writeTimeoutMillis = ctx.writeTimeoutMillis();
         maxResponseLength = ctx.maxResponseLength();
 
@@ -896,6 +896,11 @@ public final class DefaultClientRequestContext
     @Override
     public HttpHeaders internalRequestHeaders() {
         return internalRequestHeaders;
+    }
+
+    @Override
+    public long remainingTimeoutNanos() {
+        return responseCancellationScheduler().remainingTimeoutNanos();
     }
 
     @Override
