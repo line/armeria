@@ -39,8 +39,9 @@ import io.fabric8.kubernetes.api.model.apps.Deployment;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import io.fabric8.kubernetes.client.server.mock.EnableKubernetesMockClient;
 
-@EnableKubernetesMockClient(crud = true,
-                            kubernetesClientBuilderCustomizer = TestKubernetesClientBuilderCustomizer.class)
+@EnableKubernetesMockClient(
+        crud = true,
+        kubernetesClientBuilderCustomizer = TestKubernetesClientBuilderCustomizer.class)
 class KubernetesEndpointGroupFaultToleranceTest {
 
     private KubernetesClient client;
@@ -82,11 +83,7 @@ class KubernetesEndpointGroupFaultToleranceTest {
 
         TestKubernetesClientBuilderCustomizer.injectFault(true);
         // Add a new pod
-        try {
-            client.pods().resource(pods.get(2)).create();
-        } catch (Exception e) {
-            // Expected
-        }
+        client.pods().resource(pods.get(2)).create();
 
         Thread.sleep(2000);
 
