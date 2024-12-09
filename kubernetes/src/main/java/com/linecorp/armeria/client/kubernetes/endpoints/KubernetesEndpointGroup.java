@@ -315,7 +315,7 @@ public final class KubernetesEndpointGroup extends DynamicEndpointGroup {
                         service = service0;
                         nodePort = nodePort0;
 
-                        watchPodAsync(service0.getSpec().getSelector());
+                        watchPodAsync();
                         break;
                     case DELETED:
                         logger.warn("[{}/{}] service is deleted.", namespace, serviceName);
@@ -351,7 +351,7 @@ public final class KubernetesEndpointGroup extends DynamicEndpointGroup {
         }
     }
 
-    private CompletableFuture<Void> watchPodAsync(Map<String, String> selector) {
+    private CompletableFuture<Void> watchPodAsync() {
         return CompletableFuture.supplyAsync(() -> {
             final Watch oldPodWatch = podWatch;
             if (oldPodWatch != null) {
@@ -363,7 +363,7 @@ public final class KubernetesEndpointGroup extends DynamicEndpointGroup {
             }
             final Watch newPodwatch;
             try {
-                newPodwatch = watchPod(selector);
+                newPodwatch = watchPod();
             } catch (Exception e) {
                 logger.warn("[{}/{}] Failed to start the pod watcher.", namespace, serviceName, e);
                 return null;
@@ -379,7 +379,7 @@ public final class KubernetesEndpointGroup extends DynamicEndpointGroup {
         }, worker);
     }
 
-    private Watch watchPod(Map<String, String> selector) {
+    private Watch watchPod() {
         // Clear the podToNode map before starting a new pod watch.
         podToNode.clear();
         final Watcher<Pod> watcher = new Watcher<Pod>() {
@@ -425,7 +425,7 @@ public final class KubernetesEndpointGroup extends DynamicEndpointGroup {
                 logger.info("[{}/{}] Reconnecting the pod watcher...", namespace, serviceName);
                 // TODO(ikhoon): Add a backoff strategy to prevent rapid reconnections when the pod watcher
                 //               keeps failing.
-                watchPodAsync(selector);
+                watchPodAsync();
             }
 
             @Override
@@ -434,6 +434,9 @@ public final class KubernetesEndpointGroup extends DynamicEndpointGroup {
             }
         };
 
+        final Service service = this.service;
+        assert service != null;
+        final Map<String, String> selector = service.getSpec().getSelector();
         // watch() method will block until the watch connection is established.
         if (namespace == null) {
             return client.pods().withLabels(selector).watch(watcher);
