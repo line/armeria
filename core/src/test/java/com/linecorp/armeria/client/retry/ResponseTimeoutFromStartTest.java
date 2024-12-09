@@ -67,10 +67,6 @@ class ResponseTimeoutFromStartTest {
                 WebClient.builder(server.httpUri())
                          .responseTimeout(Duration.ofSeconds(timeoutSeconds))
                          .responseTimeoutMode(ResponseTimeoutMode.FROM_START)
-                         .decorator((delegate, ctx, req) -> {
-                             logger.info("ctx.responseTimeoutMillis: {}", ctx.responseTimeoutMillis());
-                             return delegate.execute(ctx, req);
-                         })
                          .decorator(
                                  RetryingClient.builder(RetryRule.builder()
                                                                  .onException()
