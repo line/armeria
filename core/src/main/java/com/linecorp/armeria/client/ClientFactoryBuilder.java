@@ -131,6 +131,7 @@ public final class ClientFactoryBuilder implements TlsSetters {
     @Nullable
     private ClientTlsConfig tlsConfig;
     private boolean staticTlsSettingsSet;
+    private boolean autoCloseConnectionPoolListener = true;
 
     ClientFactoryBuilder() {
         connectTimeoutMillis(Flags.defaultConnectTimeoutMillis());
@@ -857,11 +858,26 @@ public final class ClientFactoryBuilder implements TlsSetters {
 
     /**
      * Sets the listener which is notified on a connection pool event.
+     * Note that the specified {@link ConnectionPoolListener} will be closed automatically when the
+     * {@link ClientFactory} is closed.
+     */
+    public ClientFactoryBuilder connectionPoolListener(ConnectionPoolListener connectionPoolListener) {
+        return connectionPoolListener(connectionPoolListener, true);
+    }
+
+    /**
+     * Sets the listener which is notified on a connection pool event.
+     *
+     * <p>If {@code autoClose} is true, {@link ConnectionPoolListener#close()} will be automatically called when
+     * the {@link ClientFactory} is closed. Otherwise, you need to close it manually. {@code autoClose} is
+     * enabled by default.
+     *
      */
     public ClientFactoryBuilder connectionPoolListener(
-            ConnectionPoolListener connectionPoolListener) {
+            ConnectionPoolListener connectionPoolListener, boolean autoClose) {
         option(ClientFactoryOptions.CONNECTION_POOL_LISTENER,
                requireNonNull(connectionPoolListener, "connectionPoolListener"));
+        autoCloseConnectionPoolListener = autoClose;
         return this;
     }
 
@@ -1075,7 +1091,7 @@ public final class ClientFactoryBuilder implements TlsSetters {
      * Returns a newly-created {@link ClientFactory} based on the properties of this builder.
      */
     public ClientFactory build() {
-        return new DefaultClientFactory(new HttpClientFactory(buildOptions()));
+        return new DefaultClientFactory(new HttpClientFactory(buildOptions(), autoCloseConnectionPoolListener));
     }
 
     @Override

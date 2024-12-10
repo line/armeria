@@ -20,6 +20,7 @@ import java.net.InetSocketAddress;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.metric.MeterIdPrefix;
+import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.common.util.Ticker;
 import com.linecorp.armeria.common.util.Unwrappable;
 
@@ -29,7 +30,7 @@ import io.netty.util.AttributeMap;
 /**
  * Listens to the client connection pool events.
  */
-public interface ConnectionPoolListener extends Unwrappable {
+public interface ConnectionPoolListener extends Unwrappable, SafeCloseable {
 
     /**
      * Returns an instance that does nothing.
@@ -129,5 +130,10 @@ public interface ConnectionPoolListener extends Unwrappable {
     @Override
     default ConnectionPoolListener unwrap() {
         return this;
+    }
+
+    @Override
+    default void close() {
+        // Do nothing by default.
     }
 }
