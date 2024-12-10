@@ -5827,6 +5827,7 @@ netbank
 netflix
 netfy.app
 netgamers.jp
+netlib.re
 netlify.app
 network
 neustar
@@ -6221,6 +6222,7 @@ omotego.fukushima.jp
 omura.nagasaki.jp
 omuta.fukuoka.jp
 on-aptible.com
+on-fleek.app
 on-the-web.tv
 on-web.fr
 on.biz.ng
@@ -8290,7 +8292,6 @@ terni.it
 ternopil.ua
 teshikaga.hokkaido.jp
 test-iserv.de
-test.ru
 test.tj
 tests.cx
 teva
