@@ -55,12 +55,11 @@ const RequestBody: React.FunctionComponent<Props> = ({
 }) => {
   const monacoEditor = useMonaco();
 
-  const supportsJsonSchema =
+  const forceJsonSchema =
     serviceType === ServiceType.GRPC || serviceType === ServiceType.THRIFT;
-  useMemo(() => {
-    if (supportsJsonSchema) {
-      const schema = jsonSchemas.find((s: any) => s.$id === method.id) || {};
-
+  const hasJsonSchema = useMemo(() => {
+    const schema = jsonSchemas.find((s: any) => s.$id === method.id);
+    if (schema && (schema.useParamaterAsRoot || forceJsonSchema)) {
       monacoEditor?.languages.json.jsonDefaults.setDiagnosticsOptions({
         validate: true,
         schemas: [
@@ -71,12 +70,13 @@ const RequestBody: React.FunctionComponent<Props> = ({
           },
         ],
       });
-    } else {
-      monacoEditor?.languages.json.jsonDefaults.setDiagnosticsOptions({
-        validate: false,
-      });
+      return true;
     }
-  }, [monacoEditor, jsonSchemas, method.id, supportsJsonSchema]);
+    monacoEditor?.languages.json.jsonDefaults.setDiagnosticsOptions({
+      validate: false,
+    });
+    return false;
+  }, [monacoEditor, jsonSchemas, method.id, forceJsonSchema]);
 
   return (
     <>
@@ -109,7 +109,7 @@ const RequestBody: React.FunctionComponent<Props> = ({
           <Typography variant="body2" paragraph />
           <Editor
             height="30vh"
-            language={supportsJsonSchema ? 'json' : undefined}
+            language={hasJsonSchema ? 'json' : undefined}
             theme="vs-light"
             options={{
               minimap: { enabled: false },
