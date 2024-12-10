@@ -870,7 +870,7 @@ public final class ClientFactoryBuilder implements TlsSetters {
      *
      * <p>If {@code autoClose} is true, {@link ConnectionPoolListener#close()} will be automatically called when
      * the {@link ClientFactory} is closed. Otherwise, you need to close it manually. {@code autoClose} is
-     * enabled by default
+     * enabled by default.
      *
      */
     public ClientFactoryBuilder connectionPoolListener(
