@@ -27,6 +27,7 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicLong;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.errorprone.annotations.concurrent.GuardedBy;
@@ -163,22 +164,28 @@ final class ConnectionPoolMetrics implements SafeCloseable {
 
     private static final class Meters {
 
+        private static final AtomicLong COUNTER = new AtomicLong();
+
         private final Counter opened;
         private final Counter closed;
         private final Gauge active;
         private int activeConnections;
 
         Meters(MeterIdPrefix idPrefix, List<Tag> commonTags, MeterRegistry registry) {
+            final String index = String.valueOf(COUNTER.incrementAndGet());
             opened = Counter.builder(idPrefix.name("connections"))
                             .tags(commonTags)
                             .tag(STATE, "opened")
+                            .tag("creation.index", index)
                             .register(registry);
             closed = Counter.builder(idPrefix.name("connections"))
                             .tags(commonTags)
                             .tag(STATE, "closed")
+                            .tag("creation.index", index)
                             .register(registry);
             active = Gauge.builder(idPrefix.name("active.connections"), this, Meters::activeConnections)
                           .tags(commonTags)
+                          .tag("creation.index", index)
                           .register(registry);
         }
 
