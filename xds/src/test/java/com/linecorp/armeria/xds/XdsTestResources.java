@@ -52,6 +52,7 @@ import io.envoyproxy.envoy.config.core.v3.SocketAddress;
 import io.envoyproxy.envoy.config.core.v3.TransportSocket;
 import io.envoyproxy.envoy.config.endpoint.v3.ClusterLoadAssignment;
 import io.envoyproxy.envoy.config.endpoint.v3.Endpoint;
+import io.envoyproxy.envoy.config.endpoint.v3.Endpoint.HealthCheckConfig;
 import io.envoyproxy.envoy.config.endpoint.v3.LbEndpoint;
 import io.envoyproxy.envoy.config.endpoint.v3.LocalityLbEndpoints;
 import io.envoyproxy.envoy.config.listener.v3.ApiListener;
@@ -105,6 +106,11 @@ public final class XdsTestResources {
 
     public static LbEndpoint endpoint(String address, int port, Metadata metadata, int weight,
                                       HealthStatus healthStatus) {
+        return endpoint(address, port, metadata, weight, healthStatus, HealthCheckConfig.getDefaultInstance());
+    }
+
+    public static LbEndpoint endpoint(String address, int port, Metadata metadata, int weight,
+                                      HealthStatus healthStatus, HealthCheckConfig healthCheckConfig) {
         return LbEndpoint
                 .newBuilder()
                 .setLoadBalancingWeight(UInt32Value.of(weight))
@@ -112,6 +118,7 @@ public final class XdsTestResources {
                 .setHealthStatus(healthStatus)
                 .setEndpoint(Endpoint.newBuilder()
                                      .setAddress(address(address, port))
+                                     .setHealthCheckConfig(healthCheckConfig)
                                      .build()).build();
     }
 

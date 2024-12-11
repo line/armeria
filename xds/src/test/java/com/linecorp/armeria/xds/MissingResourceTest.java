@@ -212,7 +212,7 @@ class MissingResourceTest {
 
         @Override
         public void onNext(DiscoveryRequest value) {
-            if (value.getErrorDetail() != null && value.getErrorDetail().getCode() != 0) {
+            if (value.hasErrorDetail() && value.getErrorDetail().getCode() != 0) {
                 logger.warn("Unexpected request with error: {}", value.getErrorDetail());
                 return;
             }
