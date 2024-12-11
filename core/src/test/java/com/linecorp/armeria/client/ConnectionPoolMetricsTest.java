@@ -89,7 +89,8 @@ class ConnectionPoolMetricsTest {
     private static final class TestMeterRemovalListener implements Consumer<Meter> {
 
         final AtomicBoolean removing = new AtomicBoolean();
-        private final CompletableFuture<Void> waiting = new CompletableFuture<>();
+        final CompletableFuture<Void> waiting = new CompletableFuture<>();
+
         @Override
         public void accept(Meter meter) {
             removing.set(true);
