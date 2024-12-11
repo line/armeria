@@ -406,6 +406,7 @@ airtel
 airtraffic.aero
 aisai.aichi.jp
 aisho.shiga.jp
+aiven.app
 aivencloud.com
 aizubange.fukushima.jp
 aizumi.tokushima.jp
@@ -898,7 +899,6 @@ beep.pl
 beer
 beiarn.no
 bel.tr
-belau.pw
 belem.br
 belluno.it
 benevento.it
@@ -1584,7 +1584,6 @@ co.om
 co.pl
 co.place
 co.pn
-co.pw
 co.ro
 co.rs
 co.rw
@@ -2169,7 +2168,6 @@ ed.ao
 ed.ci
 ed.cr
 ed.jp
-ed.pw
 edeka
 edgeapp.net
 edgecompute.app
@@ -2612,7 +2610,6 @@ fbx-os.fr
 fbxos.fr
 fc.it
 fe.it
-fed.us
 federation.aero
 fedex
 fedje.no
@@ -2712,10 +2709,8 @@ fm.jo
 fm.no
 fnc.fr-par.scw.cloud
 fnd.br
-fnwk.site
 fo
 foggia.it
-folionetwork.site
 folkebibl.no
 folldal.no
 foo
@@ -3057,7 +3052,6 @@ go.jp
 go.ke
 go.kr
 go.leg.br
-go.pw
 go.th
 go.tj
 go.tz
@@ -3220,6 +3214,7 @@ gov.pn
 gov.pr
 gov.ps
 gov.pt
+gov.pw
 gov.py
 gov.qa
 gov.rs
@@ -4409,7 +4404,6 @@ kibichuo.okayama.jp
 kicks-ass.net
 kicks-ass.org
 kids
-kids.us
 kiengiang.vn
 kiev.ua
 kiho.mie.jp
@@ -6277,7 +6271,6 @@ or.jp
 or.ke
 or.kr
 or.mu
-or.pw
 or.th
 or.tz
 or.ug
@@ -6665,7 +6658,6 @@ pl
 pl.eu.org
 pl.ua
 place
-platform0.app
 platter-app.com
 platter-app.dev
 platterp.us
