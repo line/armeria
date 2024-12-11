@@ -360,14 +360,6 @@ final class DefaultServerConfig implements ServerConfig {
         return duration;
     }
 
-    static void validateGreaterThanOrEqual(Duration larger, String largerFieldName,
-                                           Duration smaller, String smallerFieldName) {
-        if (larger.compareTo(smaller) < 0) {
-            throw new IllegalArgumentException(largerFieldName + " must be greater than or equal to " +
-                                               smallerFieldName);
-        }
-    }
-
     @Override
     public Server server() {
         if (server == null) {

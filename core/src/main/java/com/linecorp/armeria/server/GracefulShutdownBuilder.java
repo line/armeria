@@ -16,7 +16,6 @@
 
 package com.linecorp.armeria.server;
 
-import static com.linecorp.armeria.server.DefaultServerConfig.validateGreaterThanOrEqual;
 import static com.linecorp.armeria.server.DefaultServerConfig.validateNonNegative;
 import static java.util.Objects.requireNonNull;
 
@@ -105,6 +104,14 @@ public final class GracefulShutdownBuilder {
         //noinspection unchecked
         this.toException = (BiFunction<ServiceRequestContext, HttpRequest, Throwable>) toException;
         return this;
+    }
+
+    private static void validateGreaterThanOrEqual(Duration larger, String largerFieldName,
+                                           Duration smaller, String smallerFieldName) {
+        if (larger.compareTo(smaller) < 0) {
+            throw new IllegalArgumentException(largerFieldName + " must be greater than or equal to " +
+                                               smallerFieldName);
+        }
     }
 
     /**
