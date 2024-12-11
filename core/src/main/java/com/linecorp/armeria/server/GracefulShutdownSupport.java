@@ -19,7 +19,6 @@ package com.linecorp.armeria.server;
 import java.time.Duration;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ThreadPoolExecutor;
-import java.util.concurrent.atomic.LongAdder;
 
 import com.google.common.base.Ticker;
 
@@ -29,39 +28,48 @@ import com.google.common.base.Ticker;
  */
 abstract class GracefulShutdownSupport {
 
-    static GracefulShutdownSupport create(Duration quietPeriod, Executor blockingTaskExecutor) {
-        return create(quietPeriod, blockingTaskExecutor, Ticker.systemTicker());
+    private final ServerMetrics serverMetrics;
+
+    static GracefulShutdownSupport create(Duration quietPeriod, Executor blockingTaskExecutor,
+                                          ServerMetrics serverMetrics) {
+        return create(quietPeriod, blockingTaskExecutor, Ticker.systemTicker(), serverMetrics);
     }
 
-    static GracefulShutdownSupport create(Duration quietPeriod, Executor blockingTaskExecutor, Ticker ticker) {
-        return new DefaultGracefulShutdownSupport(quietPeriod, blockingTaskExecutor, ticker);
+    static GracefulShutdownSupport create(Duration quietPeriod, Executor blockingTaskExecutor, Ticker ticker,
+                                          ServerMetrics serverMetrics) {
+        return new DefaultGracefulShutdownSupport(quietPeriod, blockingTaskExecutor, ticker, serverMetrics);
     }
 
-    static GracefulShutdownSupport createDisabled() {
-        return new DisabledGracefulShutdownSupport();
+    static GracefulShutdownSupport createDisabled(ServerMetrics serverMetrics) {
+        return new DisabledGracefulShutdownSupport(serverMetrics);
     }
 
-    private final LongAdder pendingResponses = new LongAdder();
+    /**
+     * Creates a new instance.
+     */
+    private GracefulShutdownSupport(ServerMetrics serverMetrics) {
+        this.serverMetrics = serverMetrics;
+    }
 
     /**
      * Increases the number of pending responses.
      */
     final void inc() {
-        pendingResponses.increment();
+        serverMetrics.increasePendingResponses();
     }
 
     /**
      * Decreases the number of pending responses.
      */
     void dec() {
-        pendingResponses.decrement();
+        serverMetrics.decreasePendingResponses();
     }
 
     /**
      * Returns the number of pending responses.
      */
     final long pendingResponses() {
-        return pendingResponses.sum();
+        return serverMetrics.pendingResponses();
     }
 
     /**
@@ -77,6 +85,14 @@ abstract class GracefulShutdownSupport {
     private static final class DisabledGracefulShutdownSupport extends GracefulShutdownSupport {
 
         private volatile boolean shuttingDown;
+
+        /**
+         * Creates a new instance.
+         *
+         */
+        private DisabledGracefulShutdownSupport(ServerMetrics serverMetrics) {
+            super(serverMetrics);
+        }
 
         @Override
         boolean isShuttingDown() {
@@ -102,7 +118,9 @@ abstract class GracefulShutdownSupport {
         private long lastResTimeNanos;
         private volatile long shutdownStartTimeNanos;
 
-        DefaultGracefulShutdownSupport(Duration quietPeriod, Executor blockingTaskExecutor, Ticker ticker) {
+        private DefaultGracefulShutdownSupport(Duration quietPeriod, Executor blockingTaskExecutor,
+                                               Ticker ticker, ServerMetrics serverMetrics) {
+            super(serverMetrics);
             quietPeriodNanos = quietPeriod.toNanos();
             this.blockingTaskExecutor = blockingTaskExecutor;
             this.ticker = ticker;
