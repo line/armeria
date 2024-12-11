@@ -27,12 +27,15 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicLong;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.errorprone.annotations.concurrent.GuardedBy;
 
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.metric.MeterIdPrefix;
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.common.util.ThreadFactories;
@@ -45,6 +48,8 @@ import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Tag;
 
 final class ConnectionPoolMetrics implements SafeCloseable {
+
+    private static final Logger logger = LoggerFactory.getLogger(ConnectionPoolMetrics.class);
 
     private static final ScheduledExecutorService CLEANUP_EXECUTOR =
             Executors.newSingleThreadScheduledExecutor(
@@ -62,6 +67,7 @@ final class ConnectionPoolMetrics implements SafeCloseable {
     private final Map<List<Tag>, Meters> metersMap = new HashMap<>();
     private final ReentrantShortLock lock = new ReentrantShortLock();
     private final int cleanupDelaySeconds;
+    private boolean garbageCollecting;
 
     private volatile boolean closed;
     private volatile ScheduledFuture<?> scheduledFuture;
@@ -88,8 +94,7 @@ final class ConnectionPoolMetrics implements SafeCloseable {
         final List<Tag> commonTags = commonTags(protocol, remoteAddr, localAddr);
         lock.lock();
         try {
-            final Meters meters = metersMap.computeIfAbsent(commonTags,
-                                                            key -> new Meters(idPrefix, key, meterRegistry));
+            final Meters meters = metersMap.computeIfAbsent(commonTags, Meters::new);
             meters.increment();
         } finally {
             lock.unlock();
@@ -121,24 +126,44 @@ final class ConnectionPoolMetrics implements SafeCloseable {
 
     void cleanupInactiveMeters() {
         final List<Meters> unusedMetersList = new ArrayList<>();
-        lock.lock();
         try {
-            for (final Iterator<Entry<List<Tag>, Meters>> it = metersMap.entrySet().iterator();
-                 it.hasNext();) {
-                final Entry<List<Tag>, Meters> entry = it.next();
-                final Meters meters = entry.getValue();
-                if (meters.activeConnections() == 0) {
-                    unusedMetersList.add(meters);
-                    it.remove();
+            lock.lock();
+            // Prevent meter registration while cleaning up.
+            garbageCollecting = true;
+
+            // Collect unused meters.
+            try {
+                for (final Iterator<Entry<List<Tag>, Meters>> it = metersMap.entrySet().iterator();
+                     it.hasNext();) {
+                    final Entry<List<Tag>, Meters> entry = it.next();
+                    final Meters meters = entry.getValue();
+                    if (meters.activeConnections() == 0) {
+                        unusedMetersList.add(meters);
+                        it.remove();
+                    }
                 }
+            } finally {
+                lock.unlock();
             }
-        } finally {
-            lock.unlock();
+
+            // Remove unused meters.
+            for (Meters meters : unusedMetersList) {
+                meters.remove(meterRegistry);
+            }
+
+            // Register metrics for the pending meters.
+            lock.lock();
+            try {
+                metersMap.values().forEach(Meters::maybeRegisterMetrics);
+                garbageCollecting = false;
+            } finally {
+                lock.unlock();
+            }
+        } catch (Throwable e) {
+            logger.warn("Failed to cleanup inactive meters.", e);
+            garbageCollecting = false;
         }
 
-        for (Meters meters : unusedMetersList) {
-            meters.remove(meterRegistry);
-        }
         if (closed) {
             return;
         }
@@ -162,53 +187,75 @@ final class ConnectionPoolMetrics implements SafeCloseable {
         CLEANUP_EXECUTOR.execute(this::cleanupInactiveMeters);
     }
 
-    private static final class Meters {
+    private final class Meters {
 
-        private static final AtomicLong COUNTER = new AtomicLong();
+        private final List<Tag> commonTags;
 
-        private final Counter opened;
-        private final Counter closed;
-        private final Gauge active;
-        private int activeConnections;
+        @Nullable
+        private Counter opened;
+        @Nullable
+        private Counter closed;
+        @Nullable
+        private Gauge active;
 
-        Meters(MeterIdPrefix idPrefix, List<Tag> commonTags, MeterRegistry registry) {
-            final String index = String.valueOf(COUNTER.incrementAndGet());
+        private int numOpened;
+        private int numClosed;
+
+        Meters(List<Tag> commonTags) {
+            this.commonTags = commonTags;
+            if (!garbageCollecting) {
+                maybeRegisterMetrics();
+            }
+        }
+
+        void maybeRegisterMetrics() {
+            if (opened != null) {
+                return;
+            }
+
             opened = Counter.builder(idPrefix.name("connections"))
                             .tags(commonTags)
                             .tag(STATE, "opened")
-                            .tag("creation.index", index)
-                            .register(registry);
+                            .register(meterRegistry);
+            opened.increment(numOpened);
+
             closed = Counter.builder(idPrefix.name("connections"))
                             .tags(commonTags)
                             .tag(STATE, "closed")
-                            .tag("creation.index", index)
-                            .register(registry);
+                            .register(meterRegistry);
+            closed.increment(numClosed);
+
             active = Gauge.builder(idPrefix.name("active.connections"), this, Meters::activeConnections)
                           .tags(commonTags)
-                          .tag("creation.index", index)
-                          .register(registry);
+                          .register(meterRegistry);
         }
 
-        Meters increment() {
-            activeConnections++;
-            opened.increment();
-            return this;
+        void increment() {
+            numOpened++;
+            if (opened != null) {
+                opened.increment();
+            }
         }
 
-        Meters decrement() {
-            activeConnections--;
-            closed.increment();
-            return this;
+        void decrement() {
+            numClosed++;
+            if (closed != null) {
+                closed.increment();
+            }
         }
 
         int activeConnections() {
-            return activeConnections;
+            return numOpened - numClosed;
         }
 
         void remove(MeterRegistry registry) {
-            registry.remove(opened);
-            registry.remove(closed);
-            registry.remove(active);
+            if (opened != null) {
+                assert closed != null;
+                assert active != null;
+                registry.remove(opened);
+                registry.remove(closed);
+                registry.remove(active);
+            }
         }
     }
 }

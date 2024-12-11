@@ -46,15 +46,15 @@ class ConnectionPoolCollectingMetricTest {
         final InetSocketAddress addressA = new InetSocketAddress("10.10.10.10", 3333);
         final InetSocketAddress addressB = new InetSocketAddress("10.10.10.11", 3333);
 
-        final String openABMetricKey = "armeria.client.connections#count{creation.index=1," +
+        final String openABMetricKey = "armeria.client.connections#count{" +
                                        "local.ip=10.10.10.11,protocol=H1,remote.ip=10.10.10.10,state=opened}";
-        final String closedABMetricKey = "armeria.client.connections#count{creation.index=1," +
+        final String closedABMetricKey = "armeria.client.connections#count{" +
                                          "local.ip=10.10.10.11,protocol=H1,remote.ip=10.10.10.10,state=closed}";
-        final String activeABMetricKey = "armeria.client.active.connections#value{creation.index=1," +
+        final String activeABMetricKey = "armeria.client.active.connections#value{" +
                                          "local.ip=10.10.10.11,protocol=H1,remote.ip=10.10.10.10}";
-        final String openBAMetricKey = "armeria.client.connections#count{creation.index=2," +
+        final String openBAMetricKey = "armeria.client.connections#count{" +
                                        "local.ip=10.10.10.10,protocol=H1,remote.ip=10.10.10.11,state=opened}";
-        final String activeBAMetricKey = "armeria.client.active.connections#value{creation.index=2," +
+        final String activeBAMetricKey = "armeria.client.active.connections#value{" +
                                          "local.ip=10.10.10.10,protocol=H1,remote.ip=10.10.10.11}";
 
         final AttributeMap attributeMap = new DefaultAttributeMap();
