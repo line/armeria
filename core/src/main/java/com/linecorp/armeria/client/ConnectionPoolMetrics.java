@@ -217,13 +217,17 @@ final class ConnectionPoolMetrics implements SafeCloseable {
                             .tags(commonTags)
                             .tag(STATE, "opened")
                             .register(meterRegistry);
-            opened.increment(numOpened);
+            if (numOpened > 0) {
+                opened.increment(numOpened);
+            }
 
             closed = Counter.builder(idPrefix.name("connections"))
                             .tags(commonTags)
                             .tag(STATE, "closed")
                             .register(meterRegistry);
-            closed.increment(numClosed);
+            if (numClosed > 0) {
+                closed.increment(numClosed);
+            }
 
             active = Gauge.builder(idPrefix.name("active.connections"), this, Meters::activeConnections)
                           .tags(commonTags)
