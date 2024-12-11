@@ -142,6 +142,11 @@ final class ConnectionPoolMetrics implements SafeCloseable {
                         it.remove();
                     }
                 }
+
+                if (unusedMetersList.isEmpty()) {
+                    garbageCollecting = false;
+                    return;
+                }
             } finally {
                 lock.unlock();
             }
