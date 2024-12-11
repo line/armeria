@@ -32,7 +32,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        on: [ ubicloud-standard-8, macos-12, windows-latest ]
+        on: [ ubicloud-standard-8, macos-latest, windows-latest ]
         java: [ 21 ]
         include:
           - java: 8

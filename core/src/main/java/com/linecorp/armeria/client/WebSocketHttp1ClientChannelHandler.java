@@ -100,8 +100,7 @@ final class WebSocketHttp1ClientChannelHandler extends ChannelDuplexHandler impl
                                            int id, DecodedHttpResponse decodedHttpResponse,
                                            ClientRequestContext ctx, EventLoop eventLoop) {
         assert res == null;
-        res = new WebSocketHttp1ResponseWrapper(decodedHttpResponse, eventLoop, ctx,
-                                                ctx.responseTimeoutMillis(), ctx.maxResponseLength());
+        res = new WebSocketHttp1ResponseWrapper(decodedHttpResponse, eventLoop, ctx, ctx.maxResponseLength());
         return res;
     }
 

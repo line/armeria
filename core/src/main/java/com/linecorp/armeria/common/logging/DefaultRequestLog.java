@@ -992,11 +992,7 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
             ctx.updateRpcRequest((RpcRequest) requestContent);
         }
         updateFlags(RequestLogProperty.REQUEST_CONTENT);
-
-        final int requestCompletionFlags = RequestLogProperty.FLAGS_REQUEST_COMPLETE & ~deferredFlags;
-        if (isAvailable(requestCompletionFlags)) {
-            setNamesIfAbsent();
-        }
+        setNamesIfAbsent();
     }
 
     @Nullable
@@ -1104,12 +1100,11 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
             }
         }
 
-        // Set names if request content is not deferred or it was deferred but has been set
-        // before the request completion.
-        if (!hasInterestedFlags(deferredFlags, RequestLogProperty.REQUEST_CONTENT) ||
-            isAvailable(RequestLogProperty.REQUEST_CONTENT)) {
+        // Set names if request content is not deferred
+        if (!hasInterestedFlags(deferredFlags, RequestLogProperty.REQUEST_CONTENT)) {
             setNamesIfAbsent();
         }
+
         this.requestEndTimeNanos = requestEndTimeNanos;
 
         if (requestCause instanceof HttpStatusException || requestCause instanceof HttpResponseException) {

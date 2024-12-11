@@ -22,6 +22,7 @@ import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.locks.ReentrantLock;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableList;
 import com.google.errorprone.annotations.concurrent.GuardedBy;
 
@@ -105,6 +106,17 @@ public class WeightedRandomDistributionSelector<T extends AbstractEntry> {
 
         // Since `allEntries` is not empty, should subselect one Endpoint from `allEntries`.
         throw new Error("Should never reach here");
+    }
+
+    @SuppressWarnings("GuardedBy")
+    @Override
+    public String toString() {
+        return MoreObjects.toStringHelper(this)
+                          .add("allEntries", allEntries)
+                          .add("currentEntries", currentEntries)
+                          .add("total", total)
+                          .add("remaining", remaining)
+                          .toString();
     }
 
     public abstract static class AbstractEntry {
