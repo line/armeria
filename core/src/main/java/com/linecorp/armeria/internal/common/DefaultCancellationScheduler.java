@@ -296,14 +296,19 @@ final class DefaultCancellationScheduler implements CancellationScheduler {
 
     @Override
     public long remainingTimeoutNanos() {
-        if (timeoutNanos == Long.MAX_VALUE) {
-            return 0;
+        lock.lock();
+        try {
+            if (timeoutNanos == Long.MAX_VALUE) {
+                return 0;
+            }
+            if (!isStarted()) {
+                return timeoutNanos;
+            }
+            final long elapsed = ticker.read() - startTimeNanos;
+            return Math.max(1, LongMath.saturatedSubtract(timeoutNanos, elapsed));
+        } finally {
+            lock.unlock();
         }
-        if (!isStarted()) {
-            return timeoutNanos;
-        }
-        final long elapsed = ticker.read() - startTimeNanos;
-        return Math.max(1, LongMath.saturatedSubtract(timeoutNanos, elapsed));
     }
 
     @Override
