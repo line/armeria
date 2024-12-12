@@ -544,6 +544,12 @@ final class SystemPropertyFlagsProvider implements FlagsProvider {
 
     @Nullable
     @Override
+    public Boolean allowLargeRequestEarlyRejection() {
+        return getBoolean("allowLargeRequestEarlyRejection");
+    }
+
+    @Nullable
+    @Override
     public Path defaultMultipartUploadsLocation() {
         return getAndParse("defaultMultipartUploadsLocation", Paths::get);
     }

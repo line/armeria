@@ -421,6 +421,9 @@ public final class Flags {
     private static final boolean ALLOW_SEMICOLON_IN_PATH_COMPONENT =
             getValue(FlagsProvider::allowSemicolonInPathComponent, "allowSemicolonInPathComponent");
 
+    private static final boolean ALLOW_LARGE_REQUEST_EARLY_REJECTION =
+            getValue(FlagsProvider::allowLargeRequestEarlyRejection, "allowLargeRequestEarlyRejection");
+
     private static final Path DEFAULT_MULTIPART_UPLOADS_LOCATION =
             getValue(FlagsProvider::defaultMultipartUploadsLocation, "defaultMultipartUploadsLocation");
 
@@ -1552,6 +1555,16 @@ public final class Flags {
      */
     public static boolean allowSemicolonInPathComponent() {
         return ALLOW_SEMICOLON_IN_PATH_COMPONENT;
+    }
+
+    /**
+     * Returns whether to allow early rejection for large request when reading content-length.
+     *
+     * <p>This flag is disabled by default. Specify the
+     * {@code -Dcom.linecorp.armeria.allowLargeRequestEarlyRejection=true} JVM option to enable it.
+     */
+    public static boolean allowLargeRequestEarlyRejection() {
+        return ALLOW_LARGE_REQUEST_EARLY_REJECTION;
     }
 
     /**

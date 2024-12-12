@@ -473,6 +473,11 @@ final class DefaultFlagsProvider implements FlagsProvider {
     }
 
     @Override
+    public Boolean allowLargeRequestEarlyRejection() {
+        return true;
+    }
+
+    @Override
     public Path defaultMultipartUploadsLocation() {
         return Paths.get(System.getProperty("java.io.tmpdir") +
                          File.separatorChar + "armeria" +

@@ -50,6 +50,7 @@ public final class ContentTooLargeException extends RuntimeException {
     private final long maxContentLength;
     private final long contentLength;
     private final long transferred;
+    private final boolean isEarlyRejection;
 
     private ContentTooLargeException() {
         this(false);
@@ -62,13 +63,15 @@ public final class ContentTooLargeException extends RuntimeException {
         maxContentLength = -1;
         transferred = -1;
         contentLength = -1;
+        isEarlyRejection = false;
     }
 
     ContentTooLargeException(long maxContentLength, long contentLength, long transferred,
-                             @Nullable Throwable cause) {
-        super(toString(maxContentLength, contentLength, transferred), cause);
+                             boolean isEarlyRejection, @Nullable Throwable cause) {
+        super(toString(maxContentLength, contentLength, transferred, isEarlyRejection), cause);
 
         neverSample = false;
+        this.isEarlyRejection = isEarlyRejection;
         this.transferred = transferred;
         this.contentLength = contentLength;
         this.maxContentLength = maxContentLength;
@@ -96,6 +99,13 @@ public final class ContentTooLargeException extends RuntimeException {
         return maxContentLength;
     }
 
+    /**
+     * Returns whether the rejections happens early when reading content-length header.
+     */
+    public boolean isEarlyRejection() {
+        return isEarlyRejection;
+    }
+
     @Override
     public Throwable fillInStackTrace() {
         if (!neverSample && Flags.verboseExceptionSampler().isSampled(getClass())) {
@@ -105,7 +115,8 @@ public final class ContentTooLargeException extends RuntimeException {
     }
 
     @Nullable
-    private static String toString(long maxContentLength, long contentLength, long transferred) {
+    private static String toString(long maxContentLength, long contentLength, long transferred,
+                                   boolean isEarlyRejection) {
         try (TemporaryThreadLocals ttl = TemporaryThreadLocals.acquire()) {
             final StringBuilder buf = ttl.stringBuilder();
             if (maxContentLength >= 0) {
@@ -116,6 +127,9 @@ public final class ContentTooLargeException extends RuntimeException {
             }
             if (transferred >= 0) {
                 buf.append(", transferred: ").append(transferred);
+            }
+            if (isEarlyRejection) {
+                buf.append(", isEarlyRejection: ").append("true");
             }
             return buf.length() != 0 ? buf.substring(2) : null;
         }
