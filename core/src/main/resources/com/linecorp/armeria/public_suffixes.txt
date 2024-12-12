@@ -238,7 +238,6 @@ a2hosted.com
 aa.no
 aaa
 aaa.pro
-aaa.vodka
 aarborte.no
 aarp
 ab.ca
@@ -2098,6 +2097,7 @@ dyn-berlin.de
 dyn-ip24.de
 dyn-o-saur.com
 dyn-vpn.de
+dyn.addr.tools
 dyn.cosidns.de
 dyn.ddnss.de
 dyn.home-webserver.de
@@ -3463,7 +3463,6 @@ here
 here-for-more.info
 hermes
 herokuapp.com
-herokussl.com
 heroy.more-og-romsdal.no
 heroy.nordland.no
 heteml.net
@@ -5454,6 +5453,9 @@ my-wan.de
 my.eu.org
 my.id
 myactivedirectory.com
+myaddr.dev
+myaddr.io
+myaddr.tools
 myamaze.net
 myasustor.com
 mycloudnas.com
