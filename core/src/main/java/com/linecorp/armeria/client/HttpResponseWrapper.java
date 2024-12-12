@@ -232,14 +232,16 @@ class HttpResponseWrapper implements StreamWriter<HttpObject> {
                                  requestAutoAbortDelayMillis, TimeUnit.MILLISECONDS);
     }
 
-    private void closeAction(@Nullable Throwable cause) {
+    private boolean closeAction(@Nullable Throwable cause) {
+        final boolean closed;
         if (cause != null) {
-            delegate.close(cause);
+            closed = delegate.tryClose(cause);
             ctx.logBuilder().endResponse(cause);
         } else {
-            delegate.close();
+            closed = delegate.tryClose();
             ctx.logBuilder().endResponse();
         }
+        return closed;
     }
 
     private void cancelAction(@Nullable Throwable cause) {
@@ -262,8 +264,10 @@ class HttpResponseWrapper implements StreamWriter<HttpObject> {
             cancelAction(cause);
             return;
         }
-        if (delegate.isOpen()) {
-            closeAction(cause);
+
+        // don't log if the cause will be exposed via the response/log
+        if (delegate.isOpen() && closeAction(cause)) {
+            return;
         }
 
         // the context has been cancelled either by timeout or by user invocation
