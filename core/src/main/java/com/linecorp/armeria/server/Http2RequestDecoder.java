@@ -210,7 +210,8 @@ final class Http2RequestDecoder extends Http2EventAdapter {
             if (Flags.allowLargeRequestEarlyRejection()) {
                 final DecodedHttpRequestWriter decodedReq =
                         (req instanceof DecodedHttpRequestWriter) ? (DecodedHttpRequestWriter) req : null;
-                if (decodedReq != null && contentLength > decodedReq.maxRequestLength()) {
+                if (decodedReq != null && decodedReq.maxRequestLength() > 0
+                        && contentLength > decodedReq.maxRequestLength()) {
                     abortLargeRequest(decodedReq, endOfStream, true);
                 }
             }
