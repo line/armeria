@@ -21,6 +21,7 @@ allprojects { p ->
         managedVersions = getManagedVersions(p.rootProject)
         findLibrary = this.&findLibrary.curry(p.rootProject)
         findPlugin = this.&findPlugin.curry(p.rootProject)
+        failOnVersionConflict = this.&failOnVersionConflict.curry(p)
     }
 }
 
@@ -329,5 +330,38 @@ final class GentlePlainTextReporter implements Reporter {
 
     String getFileExtension() {
         return delegate.getFileExtension()
+    }
+}
+
+/**
+ * A custom version of failOnVersionConflict which can limit which dependencies should be checked for conflict.
+ * Heavily inspired by https://github.com/gradle/gradle/issues/8813.
+ */
+static def failOnVersionConflict(Project project, ProviderConvertible<MinimalExternalModuleDependency> providerConvertible) {
+    return failOnVersionConflict(project, providerConvertible.asProvider())
+}
+
+static def failOnVersionConflict(Project project, Provider<MinimalExternalModuleDependency> dependencyProvider) {
+    if (!dependencyProvider.isPresent()) {
+        return
+    }
+    def targetDependency = dependencyProvider.get()
+    project.configurations.configureEach { config ->
+        incoming.afterResolve {
+            resolutionResult.allComponents {ResolvedComponentResult result ->
+                if (selectionReason.conflictResolution && moduleVersion != null) {
+                    // we don't care if the selected version is the one specified in dependencies.toml
+                    if (targetDependency.module == moduleVersion.module && targetDependency.version != moduleVersion.version) {
+                        def msg = "Project '${project.name}:${config.name}' resolution failed " +
+                                "for '${targetDependency.module}' with '${getSelectionReason()}"
+                        if (project.rootProject.hasProperty('debugDeps')) {
+                            project.logger.lifecycle(msg)
+                        } else {
+                            throw new IllegalStateException(msg)
+                        }
+                    }
+                }
+            }
+        }
     }
 }

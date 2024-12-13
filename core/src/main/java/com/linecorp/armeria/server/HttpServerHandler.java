@@ -1,5 +1,5 @@
 /*
- * Copyright 2016 LINE Corporation
+ * Copyright 2024 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -13,6 +13,7 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
+
 package com.linecorp.armeria.server;
 
 import static com.google.common.base.MoreObjects.firstNonNull;
@@ -20,8 +21,10 @@ import static com.linecorp.armeria.common.SessionProtocol.H1;
 import static com.linecorp.armeria.common.SessionProtocol.H1C;
 import static com.linecorp.armeria.common.SessionProtocol.H2;
 import static com.linecorp.armeria.common.SessionProtocol.H2C;
+import static com.linecorp.armeria.internal.client.ClosedStreamExceptionUtil.newClosedSessionException;
 import static com.linecorp.armeria.internal.common.HttpHeadersUtil.CLOSE_STRING;
 import static com.linecorp.armeria.internal.common.RequestContextUtil.NOOP_CONTEXT_HOOK;
+import static com.linecorp.armeria.server.AccessLogWriterUtil.maybeWriteAccessLog;
 import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_WINDOW_SIZE;
 import static java.util.Objects.requireNonNull;
 
@@ -54,6 +57,7 @@ import com.linecorp.armeria.common.ResponseCompleteException;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.ResponseHeadersBuilder;
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.ShuttingDownException;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
 import com.linecorp.armeria.common.metric.NoopMeterRegistry;
@@ -90,6 +94,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
 
     private static final Logger logger = LoggerFactory.getLogger(HttpServerHandler.class);
 
+    private static final CompletableFuture<?>[] EMPTY_FUTURES = {};
     private static final String ALLOWED_METHODS_STRING =
             HttpMethod.knownMethods().stream().map(HttpMethod::name).collect(Collectors.joining(","));
 
@@ -197,6 +202,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
     private final IdentityHashMap<DecodedHttpRequest, HttpResponse> unfinishedRequests;
     private boolean isReading;
     private boolean isCleaning;
+    private boolean isClosing;
     private boolean handledLastRequest;
 
     HttpServerHandler(ServerConfig config,
@@ -228,11 +234,23 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
 
     @Override
     public void channelInactive(ChannelHandlerContext ctx) throws Exception {
-        if (responseEncoder != null) {
-            // Immediately close responseEncoder so that a late response is completed with
-            // a ClosedSessionException.
-            responseEncoder.close();
+        cleanup(ctx.channel(), false, null);
+    }
+
+    CompletableFuture<Void> shutdown(Channel channel) {
+        final CompletableFuture<Void> completionFuture = new CompletableFuture<>();
+        // This method is called from a startStopExecutor
+        channel.eventLoop().execute(() -> {
+            cleanup(channel, true, completionFuture);
+        });
+        return completionFuture;
+    }
+
+    private void cleanup(Channel ch, boolean shutdown, @Nullable CompletableFuture<Void> completionFuture) {
+        if (isClosing) {
+            return;
         }
+        isClosing = true;
 
         // Give the unfinished streaming responses a chance to close themselves before we abort them,
         // so that successful responses are not aborted due to a race condition like the following:
@@ -249,26 +267,68 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
             case H1C:
             case H1:
                 // XXX(trustin): How much time is 'a little bit'?
-                ctx.channel().eventLoop().schedule(this::cleanup, 1, TimeUnit.SECONDS);
+                ch.eventLoop().schedule(() -> cleanup0(ch, shutdown, completionFuture), 1, TimeUnit.SECONDS);
                 break;
             default:
                 // HTTP/2 is unaffected by this issue because a client is expected to wait for a frame with
                 // endOfStream set.
-                cleanup();
+                cleanup0(ch, shutdown, completionFuture);
         }
     }
 
-    private void cleanup() {
+    private void cleanup0(Channel ch, boolean shutdown, @Nullable CompletableFuture<Void> completionFuture) {
+        final Throwable defaultCause = shutdown ? ShuttingDownException.get() : newClosedSessionException(ch);
         if (!unfinishedRequests.isEmpty()) {
             isCleaning = true;
-            final ClosedSessionException cause = ClosedSessionException.get();
             unfinishedRequests.forEach((req, res) -> {
                 // An HTTP2 request is cancelled by Http2RequestDecoder.onRstStreamRead()
                 final boolean cancel = !protocol.isMultiplex();
                 // Mark the request stream as closed due to disconnection.
+                Throwable cause = null;
+                if (shutdown) {
+                    cause = shutdownError(req);
+                }
+                if (cause == null) {
+                    cause = defaultCause;
+                }
                 req.abortResponse(cause, cancel);
             });
+
+            if (completionFuture != null) {
+                final CompletableFuture<?>[] futures =
+                        unfinishedRequests.keySet().stream()
+                                          .map(DecodedHttpRequest::whenResponseSent)
+                                          .toArray(CompletableFuture[]::new);
+                CompletableFuture.allOf(futures).handle((unused0, unused1) -> {
+                    completionFuture.complete(null);
+                    // responseEncoder.close() should be called after writing all unfinished responses.
+                    if (responseEncoder != null) {
+                        responseEncoder.close(defaultCause);
+                    }
+                    return null;
+                });
+            } else {
+                if (responseEncoder != null) {
+                    responseEncoder.close(defaultCause);
+                }
+            }
+
             unfinishedRequests.clear();
+        }
+    }
+
+    @Nullable
+    private Throwable shutdownError(DecodedHttpRequest req) {
+        final ServiceRequestContext ctx = req.requestContext();
+        if (ctx == null) {
+            return null;
+        }
+        try {
+            return config.gracefulShutdown().toException(ctx, req);
+        } catch (Exception e) {
+            logger.warn("{} Unexpected exception from gracefulShutdown.toException(): {}",
+                        ctx, config.gracefulShutdown(), e);
+            return null;
         }
     }
 
@@ -302,7 +362,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
         final Http2ServerConnectionHandler connectionHandler =
                 (Http2ServerConnectionHandler) connectionHandlerCtx.handler();
         if (responseEncoder instanceof Http1ObjectEncoder) {
-            responseEncoder.close();
+            responseEncoder.close(ClosedSessionException.get());
         }
         responseEncoder = connectionHandler.getOrCreateResponseEncoder(connectionHandlerCtx);
 
@@ -437,7 +497,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
 
         // A future which is completed when the all response objects are written to channel and
         // the returned promises are done.
-        final CompletableFuture<Void> resWriteFuture = new CompletableFuture<>();
+        final CompletableFuture<Void> resWriteFuture = req.whenResponseSent();
         resWriteFuture.handle(handler.responseCompleteHandler);
 
         // Set the response to the request in order to be able to immediately abort the response
@@ -612,11 +672,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
                     logBuilder.endResponse(firstNonNull(cause, f.cause()));
                 }
             }
-            reqCtx.log().whenComplete().thenAccept(log -> {
-                try (SafeCloseable ignored = reqCtx.push()) {
-                    reqCtx.config().accessLogWriter().log(log);
-                }
-            });
+            maybeWriteAccessLog(reqCtx);
         });
         return future;
     }

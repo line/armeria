@@ -1000,7 +1000,10 @@ version.ref = "protobuf-gradle-plugin"
 [libraries.protobuf-jackson]
 module = "org.curioswitch.curiostack:protobuf-jackson"
 version.ref = "protobuf-jackson"
-exclusions = "javax.annotation:javax.annotation-api"
+exclusions = [
+    'com.google.protobuf:protobuf-java',
+    "javax.annotation:javax.annotation-api",
+]
 javadocs = "https://developers.curioswitch.org/apidocs/java/"
 
 [libraries.reactor-core]

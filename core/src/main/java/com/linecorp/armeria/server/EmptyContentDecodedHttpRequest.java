@@ -58,6 +58,7 @@ final class EmptyContentDecodedHttpRequest implements DecodedHttpRequest {
 
     @Nullable
     private CompletableFuture<AggregatedHttpRequest> aggregateFuture;
+    private final CompletableFuture<Void> whenResponseSent = new CompletableFuture<>();
 
     @Nullable
     private HttpResponse response;
@@ -82,6 +83,12 @@ final class EmptyContentDecodedHttpRequest implements DecodedHttpRequest {
     @Override
     public void init(ServiceRequestContext ctx) {
         this.ctx = ctx;
+    }
+
+    @Nullable
+    @Override
+    public ServiceRequestContext requestContext() {
+        return ctx;
     }
 
     @Override
@@ -232,6 +239,11 @@ final class EmptyContentDecodedHttpRequest implements DecodedHttpRequest {
     @Override
     public boolean isResponseAborted() {
         return abortResponseCause != null;
+    }
+
+    @Override
+    public CompletableFuture<Void> whenResponseSent() {
+        return whenResponseSent;
     }
 
     @Override
