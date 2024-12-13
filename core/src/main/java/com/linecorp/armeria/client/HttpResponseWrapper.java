@@ -58,6 +58,7 @@ class HttpResponseWrapper implements StreamWriter<HttpObject> {
     private final EventLoop eventLoop;
     private final ClientRequestContext ctx;
     private final long maxContentLength;
+    static final String UNEXPECTED_EXCEPTION_MSG = "Unexpected exception while closing a request";
 
     private boolean responseStarted;
     private long contentLengthHeaderValue = -1;
@@ -279,7 +280,7 @@ class HttpResponseWrapper implements StreamWriter<HttpObject> {
             return;
         }
 
-        final StringBuilder logMsg = new StringBuilder("Unexpected exception while closing a request");
+        final StringBuilder logMsg = new StringBuilder(UNEXPECTED_EXCEPTION_MSG);
         final HttpRequest request = ctx.request();
         assert request != null;
         final String authority = request.authority();
