@@ -285,8 +285,8 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
                         final DecodedHttpRequestWriter decodedReq =
                                 (req instanceof DecodedHttpRequestWriter) ?
                                         (DecodedHttpRequestWriter) req : null;
-                        if (decodedReq != null && decodedReq.maxRequestLength() > 0
-                                && contentLength > decodedReq.maxRequestLength()) {
+                        if (decodedReq != null && decodedReq.maxRequestLength() > 0 &&
+                                contentLength > decodedReq.maxRequestLength()) {
                             abortLargeRequest(ctx, decodedReq, id, endOfStream, true, keepAliveHandler);
                         }
                     }
