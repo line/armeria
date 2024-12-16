@@ -15,11 +15,11 @@
  */
 package com.linecorp.armeria.internal.common.util;
 
+import com.linecorp.armeria.common.NonBlocking;
 import com.linecorp.armeria.common.annotation.Nullable;
 
 import io.netty.util.concurrent.FastThreadLocal;
 import io.netty.util.concurrent.FastThreadLocalThread;
-import reactor.core.scheduler.NonBlocking;
 
 /**
  * An event loop thread with support for {@link TemporaryThreadLocals}, Netty {@link FastThreadLocal} and
