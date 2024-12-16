@@ -16,6 +16,15 @@
 package com.linecorp.armeria.common;
 
 /**
- * A dummy interface that indicates non-blocking thread.
+ * An interface that indicates a non-blocking thread. You can use this interface to check if the current
+ * thread is a non-blocking thread. For example:
+ * <pre>{@code
+ * if (Thread.currentThread() instanceof NonBlocking) {
+ *     // Avoid blocking operations.
+ *     closeable.closeAsync();
+ * } else {
+ *     closeable.close();
+ * }
+ * }</pre>
  */
 public interface NonBlocking {}

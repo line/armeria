@@ -23,7 +23,7 @@ import io.netty.util.concurrent.FastThreadLocalThread;
 
 /**
  * An event loop thread with support for {@link TemporaryThreadLocals}, Netty {@link FastThreadLocal} and
- * Project Reactor {@link NonBlocking}.
+ * {@link NonBlocking} interface.
  */
 public final class EventLoopThread extends FastThreadLocalThread implements NonBlocking {
 
