@@ -7508,7 +7508,6 @@ search
 seat
 sebastopol.ua
 sec.ps
-secaas.hk
 secret.jp
 secure
 security
