@@ -168,7 +168,6 @@
 *.xmit.co
 *.yokohama.jp
 0.bg
-001www.com
 0am.jp
 0g0.jp
 0j0.jp
@@ -5460,7 +5459,6 @@ mywire.org
 mz
 n.bg
 n.se
-n4t.co
 na
 na.it
 na4u.ru
@@ -5978,7 +5976,6 @@ novecore.site
 now
 now-dns.net
 now-dns.org
-now-dns.top
 now.sh
 nowaruda.pl
 nowruz
