@@ -114,11 +114,7 @@ final class DefaultLogWriter implements LogWriter {
                     responseLogLevel.log(logger, logFormatter.formatRequest(log));
                 }
 
-                if (responseCause == null) {
-                    responseLogLevel.log(logger, responseStr);
-                    return;
-                }
-                if (responseCauseFilter.test(ctx, responseCause)) {
+                if (responseCause == null || responseCauseFilter.test(ctx, responseCause)) {
                     responseLogLevel.log(logger, responseStr);
                 } else {
                     responseLogLevel.log(logger, responseStr, responseCause);
@@ -135,8 +131,9 @@ final class DefaultLogWriter implements LogWriter {
         } else if (ctx instanceof ServiceRequestContext) {
             successFunction = ((ServiceRequestContext) ctx).config().successFunction();
         } else {
-            throw new IllegalStateException(
-                    ctx + " is neither ClientRequestContext nor ServiceRequestContext");
+            throw new IllegalArgumentException(
+                    ctx + " is neither " + ClientRequestContext.class.getSimpleName() + " nor " +
+                    ServiceRequestContext.class.getSimpleName());
         }
         return successFunction.isSuccess(ctx, log);
     }
