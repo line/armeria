@@ -36,6 +36,7 @@ import com.google.common.base.Strings;
 
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.common.FlagsProvider;
+import com.linecorp.armeria.common.NonBlocking;
 import com.linecorp.armeria.common.Scheme;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
@@ -49,7 +50,6 @@ import com.linecorp.armeria.common.util.Unwrappable;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
-import reactor.core.scheduler.NonBlocking;
 
 /**
  * Creates and manages clients.

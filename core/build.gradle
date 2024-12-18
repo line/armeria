@@ -139,6 +139,9 @@ dependencies {
     // JUnit Pioneer
     testImplementation libs.junit.pioneer
 
+    // Reactor for registering EventLoop as a non blocking thread.
+    optionalImplementation libs.reactor.core
+
     // Reactive Streams
     api libs.reactivestreams
     testImplementation libs.reactivestreams.tck
@@ -217,8 +220,6 @@ if (tasks.findByName('trimShadedJar')) {
     tasks.trimShadedJar.configure {
         // Keep all classes under com.linecorp.armeria, except the internal ones.
         keep "class !com.linecorp.armeria.internal.shaded.**,com.linecorp.armeria.** { *; }"
-        // Keep the 'NonBlocking' tag interface.
-        keep "class reactor.core.scheduler.NonBlocking { *; }"
         // Do not optimize the dependencies that access some fields via sun.misc.Unsafe or reflection only.
         keep "class com.linecorp.armeria.internal.shaded.caffeine.** { *; }"
         keep "class com.linecorp.armeria.internal.shaded.jctools.** { *; }"

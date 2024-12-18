@@ -42,6 +42,7 @@ import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.client.proxy.ProxyConfigSelector;
 import com.linecorp.armeria.client.redirect.RedirectConfig;
 import com.linecorp.armeria.common.Http1HeaderNaming;
+import com.linecorp.armeria.common.NonBlocking;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.Scheme;
 import com.linecorp.armeria.common.SerializationFormat;
@@ -71,7 +72,6 @@ import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.resolver.AddressResolverGroup;
 import io.netty.util.concurrent.FutureListener;
-import reactor.core.scheduler.NonBlocking;
 
 /**
  * A {@link ClientFactory} that creates an HTTP client.

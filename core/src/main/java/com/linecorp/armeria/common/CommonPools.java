@@ -41,6 +41,14 @@ public final class CommonPools {
         MoreMeterBinders
                 .eventLoopMetrics(WORKER_GROUP, new MeterIdPrefix("armeria.netty.common"))
                 .bindTo(Flags.meterRegistry());
+
+        try {
+            Class.forName("reactor.core.scheduler.Schedulers",
+                          true, CommonPools.class.getClassLoader());
+            ReactorNonBlockingUtil.registerEventLoopAsNonBlocking();
+        } catch (ClassNotFoundException e) {
+            // Do nothing.
+        }
     }
 
     /**
