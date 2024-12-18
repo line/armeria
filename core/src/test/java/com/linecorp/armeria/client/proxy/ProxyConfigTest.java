@@ -48,13 +48,19 @@ public class ProxyConfigTest {
     void testUnresolvedProxyAddress() {
         final InetSocketAddress unresolved = InetSocketAddress.createUnresolved("unresolved", 0);
         final InetSocketAddress resolved = new InetSocketAddress("127.0.0.1", 80);
-        assertThatThrownBy(() -> ProxyConfig.socks4(unresolved)).isInstanceOf(IllegalArgumentException.class);
-        assertThatThrownBy(() -> ProxyConfig.socks5(unresolved)).isInstanceOf(IllegalArgumentException.class);
-        assertThatThrownBy(() -> ProxyConfig.connect(unresolved)).isInstanceOf(IllegalArgumentException.class);
-        assertThatThrownBy(() -> ProxyConfig.haproxy(unresolved, resolved))
-                .isInstanceOf(IllegalArgumentException.class);
-        assertThatThrownBy(() -> ProxyConfig.haproxy(resolved, unresolved))
-                .isInstanceOf(IllegalArgumentException.class);
+
+        assertThat(ProxyConfig.socks4(unresolved)).isInstanceOf(Socks4ProxyConfig.class);
+        assertThat(ProxyConfig.socks5(unresolved)).isInstanceOf(Socks5ProxyConfig.class);
+        assertThat(ProxyConfig.connect(unresolved)).isInstanceOf(ConnectProxyConfig.class);
+
+        // for the HAProxy.
+        assertThat(ProxyConfig.haproxy(unresolved, resolved)).isInstanceOf(HAProxyConfig.class);
+        assertThat(ProxyConfig.haproxy(unresolved)).isInstanceOf(HAProxyConfig.class);
+        assertThat(ProxyConfig.haproxy(resolved)).isInstanceOf(HAProxyConfig.class);
+        assertThatThrownBy(
+                () -> ProxyConfig.haproxy(resolved, unresolved)).isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(
+                () -> ProxyConfig.haproxy(unresolved, unresolved)).isInstanceOf(IllegalArgumentException.class);
     }
 
     @Test
