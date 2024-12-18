@@ -178,7 +178,7 @@ jobs:
 
       - name: Upload the coverage report to Codecov
         if: ${{ matrix.coverage }}
-        uses: codecov/codecov-action@v3
+        uses: codecov/codecov-action@v5
 
       - name: Fail the run if any threads were blocked
         if: ${{ matrix.blockhound }}
