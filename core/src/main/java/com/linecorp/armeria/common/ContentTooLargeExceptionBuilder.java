@@ -30,6 +30,8 @@ public final class ContentTooLargeExceptionBuilder {
     private long maxContentLength = -1;
     private long contentLength = -1;
     private long transferred = -1;
+    private boolean isEarlyRejection;
+
     @Nullable
     private Throwable cause;
 
@@ -84,12 +86,23 @@ public final class ContentTooLargeExceptionBuilder {
     }
 
     /**
+     * Sets the exception as early rejection.
+     */
+    @UnstableApi
+    public ContentTooLargeExceptionBuilder setEarlyRejection(boolean isEarlyRejection) {
+        this.isEarlyRejection = isEarlyRejection;
+        return this;
+    }
+
+    /**
      * Returns a new instance of {@link ContentTooLargeException}.
      */
     public ContentTooLargeException build() {
-        if (maxContentLength < 0 && contentLength < 0 && transferred < 0 && cause == null) {
+        if (maxContentLength < 0 && contentLength < 0 &&
+                transferred < 0 && !isEarlyRejection && cause == null) {
             return ContentTooLargeException.get();
         }
-        return new ContentTooLargeException(maxContentLength, contentLength, transferred, cause);
+        return new ContentTooLargeException(maxContentLength, contentLength,
+                transferred, isEarlyRejection, cause);
     }
 }

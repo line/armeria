@@ -30,6 +30,7 @@ import com.google.common.base.Ascii;
 import com.linecorp.armeria.common.ClosedSessionException;
 import com.linecorp.armeria.common.ContentTooLargeException;
 import com.linecorp.armeria.common.ExchangeType;
+import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequestWriter;
@@ -208,8 +209,8 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
                     // Validate the 'content-length' header.
                     final String contentLengthStr = headers.get(HttpHeaderNames.CONTENT_LENGTH);
                     final boolean contentEmpty;
+                    long contentLength = 0;
                     if (contentLengthStr != null) {
-                        long contentLength;
                         try {
                             contentLength = Long.parseLong(contentLengthStr);
                         } catch (NumberFormatException ignored) {
@@ -280,6 +281,15 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
                     final boolean endOfStream = contentEmpty && !transferEncodingChunked;
                     this.req = req = DecodedHttpRequest.of(endOfStream, eventLoop, id, 1, headers,
                                                            keepAlive, inboundTrafficController, routingCtx);
+                    if (Flags.allowLargeRequestEarlyRejection()) {
+                        final DecodedHttpRequestWriter decodedReq =
+                                (req instanceof DecodedHttpRequestWriter) ?
+                                        (DecodedHttpRequestWriter) req : null;
+                        if (decodedReq != null && decodedReq.maxRequestLength() > 0 &&
+                                contentLength > decodedReq.maxRequestLength()) {
+                            abortLargeRequest(ctx, decodedReq, id, endOfStream, true, keepAliveHandler);
+                        }
+                    }
                     cfg.serverMetrics().increasePendingHttp1Requests();
                     ctx.fireChannelRead(req);
                 } else {
@@ -313,33 +323,7 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
                     final long maxContentLength = decodedReq.maxRequestLength();
                     final long transferredLength = decodedReq.transferredBytes();
                     if (maxContentLength > 0 && transferredLength > maxContentLength) {
-                        final ContentTooLargeException cause =
-                                ContentTooLargeException.builder()
-                                                        .maxContentLength(maxContentLength)
-                                                        .contentLength(req.headers())
-                                                        .transferred(transferredLength)
-                                                        .build();
-                        discarding = true;
-                        req = null;
-                        final boolean shouldReset;
-                        if (encoder instanceof ServerHttp1ObjectEncoder) {
-                            if (encoder.isResponseHeadersSent(id, 1)) {
-                                ctx.channel().close();
-                            } else {
-                                keepAliveHandler.disconnectWhenFinished();
-                            }
-                            shouldReset = false;
-                        } else {
-                            // Upgraded to HTTP/2. Reset only if the remote peer is still open.
-                            shouldReset = !endOfStream;
-                        }
-
-                        // Wrap the cause with the returned status to let LoggingService correctly log the
-                        // status.
-                        final HttpStatusException httpStatusException =
-                                HttpStatusException.of(HttpStatus.REQUEST_ENTITY_TOO_LARGE, cause);
-                        decodedReq.setShouldResetOnlyIfRemoteIsOpen(shouldReset);
-                        decodedReq.abortResponse(httpStatusException, true);
+                        abortLargeRequest(ctx, decodedReq, id, endOfStream, false, keepAliveHandler);
                         return;
                     }
 
@@ -375,6 +359,41 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
         } finally {
             ReferenceCountUtil.release(msg);
         }
+    }
+
+    private void abortLargeRequest(ChannelHandlerContext ctx, DecodedHttpRequestWriter decodedReq, int id,
+                                   boolean endOfStream, boolean isEarlyRejection,
+                                   KeepAliveHandler keepAliveHandler) {
+        final ContentTooLargeException cause =
+                ContentTooLargeException.builder()
+                        .maxContentLength(decodedReq.maxRequestLength())
+                        .transferred(decodedReq.transferredBytes())
+                        .contentLength(decodedReq.headers())
+                        .setEarlyRejection(isEarlyRejection)
+                        .build();
+        if (!isEarlyRejection) {
+            discarding = true;
+            req = null;
+        }
+        final boolean shouldReset;
+        if (encoder instanceof ServerHttp1ObjectEncoder) {
+            if (encoder.isResponseHeadersSent(id, 1)) {
+                ctx.channel().close();
+            } else {
+                keepAliveHandler.disconnectWhenFinished();
+            }
+            shouldReset = false;
+        } else {
+            // Upgraded to HTTP/2. Reset only if the remote peer is still open.
+            shouldReset = !endOfStream;
+        }
+
+        // Wrap the cause with the returned status to let LoggingService correctly log the
+        // status.
+        final HttpStatusException httpStatusException =
+                HttpStatusException.of(HttpStatus.REQUEST_ENTITY_TOO_LARGE, cause);
+        decodedReq.setShouldResetOnlyIfRemoteIsOpen(shouldReset);
+        decodedReq.abortResponse(httpStatusException, true);
     }
 
     private void removeFromPipelineIfUpgraded(ChannelHandlerContext ctx, boolean endOfStream) {

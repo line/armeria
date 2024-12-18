@@ -1098,6 +1098,17 @@ public interface FlagsProvider {
     }
 
     /**
+     * Returns whether to allow early rejection for large request when reading content-length.
+     *
+     * <p>This flag is disabled by default. Specify the
+     * {@code -Dcom.linecorp.armeria.allowLargeRequestEarlyRejection=true} JVM option to enable it.
+     */
+    @Nullable
+    default Boolean allowLargeRequestEarlyRejection() {
+        return null;
+    }
+
+    /**
      * Returns whether to allow a semicolon ({@code ;}) in a request path component on the server-side.
      * If disabled, the substring from the semicolon to before the next slash, commonly referred to as
      * matrix variables, is removed. For example, {@code /foo;a=b/bar} will be converted to {@code /foo/bar}.
