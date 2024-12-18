@@ -19,6 +19,7 @@ package com.linecorp.armeria.client.thrift;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.linecorp.armeria.client.thrift.ThriftClientOptions.MAX_RESPONSE_CONTAINER_LENGTH;
 import static com.linecorp.armeria.client.thrift.ThriftClientOptions.MAX_RESPONSE_STRING_LENGTH;
+import static com.linecorp.armeria.internal.client.ClientBuilderParamsUtil.preprocessorToUri;
 import static java.util.Objects.requireNonNull;
 
 import java.net.URI;
@@ -51,6 +52,7 @@ import com.linecorp.armeria.client.redirect.RedirectConfig;
 import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.Scheme;
 import com.linecorp.armeria.common.SerializationFormat;
+import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.SuccessFunction;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
@@ -92,6 +94,16 @@ public final class ThriftClientBuilder extends AbstractClientOptionsBuilder {
         this.scheme = scheme;
         validateOrSetSerializationFormat();
         this.endpointGroup = endpointGroup;
+    }
+
+    ThriftClientBuilder(SerializationFormat serializationFormat, RpcPreprocessor rpcPreprocessor) {
+        requireNonNull(serializationFormat, "serializationFormat");
+        requireNonNull(rpcPreprocessor, "rpcPreprocessor");
+        scheme = Scheme.of(serializationFormat, SessionProtocol.UNDEFINED);
+        validateOrSetSerializationFormat();
+        uri = preprocessorToUri(scheme, rpcPreprocessor, null);
+        endpointGroup = null;
+        rpcPreprocessor(rpcPreprocessor);
     }
 
     private void validateOrSetSerializationFormat() {

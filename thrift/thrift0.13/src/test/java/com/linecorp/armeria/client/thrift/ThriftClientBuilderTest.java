@@ -23,19 +23,30 @@ import java.lang.reflect.Modifier;
 import java.util.Arrays;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
+import java.util.stream.Stream;
 
 import org.apache.thrift.transport.TTransportException;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.reflections.ReflectionUtils;
 
 import com.linecorp.armeria.client.AbstractClientOptionsBuilder;
 import com.linecorp.armeria.client.ClientBuilderParams;
+import com.linecorp.armeria.client.ClientPreprocessors;
 import com.linecorp.armeria.client.Clients;
 import com.linecorp.armeria.client.Endpoint;
+import com.linecorp.armeria.client.HttpPreprocessor;
+import com.linecorp.armeria.client.PreClient;
 import com.linecorp.armeria.common.HttpRequest;
+import com.linecorp.armeria.common.Scheme;
 import com.linecorp.armeria.common.SerializationFormat;
+import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.stream.AbortedStreamException;
 import com.linecorp.armeria.common.thrift.ThriftSerializationFormats;
+import com.linecorp.armeria.internal.client.ClientBuilderParamsUtil;
+import com.linecorp.armeria.internal.client.endpoint.FailingEndpointGroup;
 import com.linecorp.armeria.internal.testing.AnticipatedException;
 
 import testing.thrift.main.HelloService;
@@ -69,6 +80,20 @@ class ThriftClientBuilderTest {
         assertThat(params).isNotNull();
         assertThat(params.uri().toString()).isEqualTo("tbinary+http://127.0.0.1/foo");
         assertThat(params.scheme().serializationFormat()).isSameAs(ThriftSerializationFormats.BINARY);
+    }
+
+    @Test
+    void undefinedProtocol() {
+        assertThatThrownBy(() -> ThriftClients
+                .newClient(Scheme.of(ThriftSerializationFormats.BINARY, SessionProtocol.UNDEFINED),
+                           Endpoint.of("1.2.3.4"), HelloService.Iface.class))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("At least one rpcPreprocessor must be specified");
+
+        assertThatThrownBy(() -> ThriftClients
+                .newClient("undefined://1.2.3.4", HelloService.Iface.class))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("At least one rpcPreprocessor must be specified");
     }
 
     @Test
@@ -165,5 +190,44 @@ class ThriftClientBuilderTest {
                        Arrays.equals(method.getParameterTypes(), tMethod.getParameterTypes());
             }).hasSize(1);
         }
+    }
+
+    @Test
+    void preprocessorThrows() {
+        final HttpPreprocessor preprocessor =
+                HttpPreprocessor.of(SessionProtocol.HTTP, Endpoint.of("foo.com"));
+        final ThriftClientBuilder builder = ThriftClients.builder("http://foo.com");
+        assertThatThrownBy(() -> builder.preprocessor(preprocessor))
+                .isInstanceOf(UnsupportedOperationException.class)
+                .hasMessageContaining("preprocessor() does not support Thrift");
+
+        assertThatThrownBy(() -> Clients.newClient(ThriftSerializationFormats.BINARY,
+                                                   ClientPreprocessors.of(preprocessor),
+                                                   HelloService.Iface.class))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("At least one rpcPreprocessor must be specified");
+    }
+
+    public static Stream<Arguments> preprocessParams_args() {
+        return Stream.of(
+                Arguments.of(ThriftClients.newClient(PreClient::execute,
+                                                     THttpClient.class), "/"),
+                Arguments.of(ThriftClients.builder(PreClient::execute)
+                                          .path("/prefix")
+                                          .build(THttpClient.class), "/prefix")
+        );
+    }
+
+    @ParameterizedTest
+    @MethodSource("preprocessParams_args")
+    void preprocessParams(ClientBuilderParams params, String expectedPrefix) {
+        assertThat(params.scheme()).isEqualTo(Scheme.of(ThriftSerializationFormats.BINARY,
+                                                        SessionProtocol.UNDEFINED));
+        assertThat(params.endpointGroup()).isInstanceOf(FailingEndpointGroup.class);
+        assertThat(params.absolutePathRef()).isEqualTo(expectedPrefix);
+        assertThat(params.uri().getRawAuthority()).startsWith("armeria-preprocessor");
+        assertThat(params.uri().getScheme()).isEqualTo("tbinary+undefined");
+        assertThat(ClientBuilderParamsUtil.isInternalUri(params.uri())).isTrue();
+        assertThat(Clients.isUndefinedUri(params.uri())).isFalse();
     }
 }

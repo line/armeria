@@ -35,6 +35,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 
 import com.linecorp.armeria.common.Flags;
+import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.util.TransportType;
 import com.linecorp.armeria.internal.common.util.MinifiedBouncyCastleProvider;
 
@@ -298,5 +299,22 @@ class ClientFactoryBuilderTest {
         try (ClientFactory factory = ClientFactory.builder().idleTimeoutMillis(1000, true).build()) {
             assertThat(factory.options().keepAliveOnPing()).isTrue();
         }
+    }
+
+    @Test
+    void emptyProcessorValidation() {
+        final ClientPreprocessors preprocessors = ClientPreprocessors.of();
+        assertThatThrownBy(() -> Clients.newClient(preprocessors, WebClient.class))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("At least one preprocessor must be set");
+    }
+
+    @Test
+    void undefinedUriClientNeedsOneHttpPreprocessor() {
+        final ClientPreprocessors preprocessors =
+                ClientPreprocessors.ofRpc(RpcPreprocessor.of(SessionProtocol.HTTP, Endpoint.of("1.2.3.4")));
+        assertThatThrownBy(() -> Clients.newClient(preprocessors, WebClient.class))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("At least one preprocessor must be specified for http-based clients");
     }
 }

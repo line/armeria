@@ -60,7 +60,7 @@ class PendingExceptionTest {
         }
     };
 
-    @EnumSource(value = SessionProtocol.class, mode = Mode.EXCLUDE, names = "PROXY")
+    @EnumSource(value = SessionProtocol.class, mode = Mode.EXCLUDE, names = {"PROXY", "UNDEFINED"})
     @ParameterizedTest
     void shouldPropagatePendingException(SessionProtocol protocol) {
         final AnticipatedException pendingException = new AnticipatedException();

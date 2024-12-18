@@ -30,6 +30,7 @@ import org.slf4j.LoggerFactory;
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.ClientRequestContextCaptor;
 import com.linecorp.armeria.client.Clients;
+import com.linecorp.armeria.client.HttpPreprocessor;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
@@ -100,6 +101,23 @@ public final class EurekaUpdatingListener extends ServerListenerAdapter {
     }
 
     /**
+     * Returns a new {@link EurekaUpdatingListener} which registers the current {@link Server} using
+     * the specified {@link HttpPreprocessor}.
+     */
+    public static EurekaUpdatingListener of(HttpPreprocessor preprocessor) {
+        return new EurekaUpdatingListenerBuilder(preprocessor, null).build();
+    }
+
+    /**
+     * Returns a new {@link EurekaUpdatingListener} which registers the current {@link Server} using
+     * the specified {@link HttpPreprocessor} under the specified {@code path}.
+     */
+    public static EurekaUpdatingListener of(HttpPreprocessor preprocessor, String path) {
+        return new EurekaUpdatingListenerBuilder(preprocessor, requireNonNull(path, "path"))
+                .build();
+    }
+
+    /**
      * Returns a new {@link EurekaUpdatingListenerBuilder} created with the specified {@code eurekaUri}.
      */
     public static EurekaUpdatingListenerBuilder builder(String eurekaUri) {
@@ -129,6 +147,21 @@ public final class EurekaUpdatingListener extends ServerListenerAdapter {
     public static EurekaUpdatingListenerBuilder builder(
             SessionProtocol sessionProtocol, EndpointGroup endpointGroup, String path) {
         return new EurekaUpdatingListenerBuilder(sessionProtocol, endpointGroup, requireNonNull(path, "path"));
+    }
+
+    /**
+     * Returns a new {@link EurekaUpdatingListenerBuilder} created with the specified {@link HttpPreprocessor}.
+     */
+    public static EurekaUpdatingListenerBuilder builder(HttpPreprocessor preprocessor) {
+        return new EurekaUpdatingListenerBuilder(preprocessor, null);
+    }
+
+    /**
+     * Returns a new {@link EurekaUpdatingListenerBuilder} created with the specified {@link HttpPreprocessor}
+     * and path.
+     */
+    public static EurekaUpdatingListenerBuilder builder(HttpPreprocessor preprocessor, String path) {
+        return new EurekaUpdatingListenerBuilder(preprocessor, requireNonNull(path, "path"));
     }
 
     private final EurekaWebClient client;

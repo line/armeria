@@ -17,6 +17,7 @@
 package com.linecorp.armeria.client;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Supplier;
@@ -33,6 +34,7 @@ import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.RequestHeadersBuilder;
+import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
@@ -209,5 +211,25 @@ class WebClientBuilderTest {
 
         assertThat(response.contentUtf8()).isEqualTo("Hello Armeria");
         assertThat(popped.get()).isGreaterThan(1);
+    }
+
+    @Test
+    void undefinedProtocol() {
+        assertThatThrownBy(() -> Clients.newClient(SessionProtocol.UNDEFINED, Endpoint.of("1.2.3.4"),
+                                                   WebClient.class))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("At least one preprocessor must be specified");
+
+        assertThatThrownBy(() -> Clients.newClient("undefined://1.2.3.4", WebClient.class))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("At least one preprocessor must be specified");
+
+        assertThatThrownBy(() -> WebClient.of(SessionProtocol.UNDEFINED, Endpoint.of("1.2.3.4")))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("scheme: undefined (expected: one of");
+
+        assertThatThrownBy(() -> WebClient.of("undefined://1.2.3.4"))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("scheme: undefined (expected: one of");
     }
 }

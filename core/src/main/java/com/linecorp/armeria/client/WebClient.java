@@ -146,6 +146,27 @@ public interface WebClient extends ClientBuilderParams, Unwrappable {
     }
 
     /**
+     * Returns a new {@link WebClient} that is configured using the specified {@link HttpPreprocessor}
+     * using the default {@link ClientFactory} and the default {@link ClientOptions}.
+     *
+     * @param httpPreprocessor the preprocessor
+     */
+    static WebClient of(HttpPreprocessor httpPreprocessor) {
+        return builder(httpPreprocessor).build();
+    }
+
+    /**
+     * Returns a new {@link WebClient} that is configured using the specified {@link HttpPreprocessor}
+     * and {@code path} using the default {@link ClientFactory} and the default {@link ClientOptions}.
+     *
+     * @param httpPreprocessor the preprocessor
+     * @param path the path to the endpoint
+     */
+    static WebClient of(HttpPreprocessor httpPreprocessor, String path) {
+        return builder(httpPreprocessor, path).build();
+    }
+
+    /**
      * Returns a new {@link WebClientBuilder} created without a base {@link URI}.
      */
     static WebClientBuilder builder() {
@@ -228,6 +249,22 @@ public interface WebClient extends ClientBuilderParams, Unwrappable {
         requireNonNull(endpointGroup, "endpointGroup");
         requireNonNull(path, "path");
         return new WebClientBuilder(protocol, endpointGroup, path);
+    }
+
+    /**
+     * Returns a new {@link WebClientBuilder} created with the specified {@link HttpPreprocessor}.
+     */
+    static WebClientBuilder builder(HttpPreprocessor httpPreprocessor) {
+        return new WebClientBuilder(httpPreprocessor, null);
+    }
+
+    /**
+     * Returns a new {@link WebClientBuilder} created with the specified {@link HttpPreprocessor}
+     * and path.
+     */
+    static WebClientBuilder builder(HttpPreprocessor httpPreprocessor, String path) {
+        return new WebClientBuilder(requireNonNull(httpPreprocessor, "httpPreprocessor"),
+                                    requireNonNull(path, "path"));
     }
 
     /**

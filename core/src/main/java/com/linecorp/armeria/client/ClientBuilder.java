@@ -29,6 +29,8 @@ import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.client.redirect.RedirectConfig;
 import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.Scheme;
+import com.linecorp.armeria.common.SerializationFormat;
+import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.SuccessFunction;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
@@ -36,6 +38,7 @@ import com.linecorp.armeria.common.auth.AuthToken;
 import com.linecorp.armeria.common.auth.BasicToken;
 import com.linecorp.armeria.common.auth.OAuth1aToken;
 import com.linecorp.armeria.common.auth.OAuth2Token;
+import com.linecorp.armeria.internal.client.ClientBuilderParamsUtil;
 
 /**
  * Creates a new client that connects to the specified {@link URI} using the builder pattern. Use the factory
@@ -93,6 +96,18 @@ public final class ClientBuilder extends AbstractClientOptionsBuilder {
         this.endpointGroup = endpointGroup;
         this.path = path;
         this.scheme = scheme;
+    }
+
+    ClientBuilder(SerializationFormat serializationFormat,
+                  ClientPreprocessors preprocessors, @Nullable String path) {
+        checkArgument(!preprocessors.isEmpty(),
+                      "At least one preprocessor must be set in ClientPreprocessors.");
+        endpointGroup = null;
+        this.path = path;
+        scheme = Scheme.of(serializationFormat, SessionProtocol.UNDEFINED);
+        uri = ClientBuilderParamsUtil.preprocessorToUri(scheme, preprocessors, path);
+        preprocessors.preprocessors().forEach(this::preprocessor);
+        preprocessors.rpcPreprocessors().forEach(this::rpcPreprocessor);
     }
 
     /**

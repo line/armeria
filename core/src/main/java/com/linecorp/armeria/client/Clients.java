@@ -15,7 +15,6 @@
  */
 package com.linecorp.armeria.client;
 
-import static com.linecorp.armeria.internal.client.ClientUtil.UNDEFINED_URI;
 import static java.util.Objects.requireNonNull;
 
 import java.net.URI;
@@ -35,7 +34,9 @@ import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.common.util.Unwrappable;
+import com.linecorp.armeria.internal.client.ClientBuilderParamsUtil;
 import com.linecorp.armeria.internal.client.ClientThreadLocalState;
+import com.linecorp.armeria.internal.client.ClientUtil;
 
 /**
  * Creates a new client that connects to a specified {@link URI}.
@@ -173,6 +174,56 @@ public final class Clients {
     }
 
     /**
+     * Creates a new client that is preprocessed the specified {@link ClientPreprocessors} with
+     * using the default {@link ClientFactory}.
+     *
+     * @param preprocessors the {@link ClientPreprocessors}
+     * @param clientType the type of the new client
+     *
+     * @throws IllegalArgumentException if the specified {@code clientType} is unsupported for
+     *                                  the specified {@link SerializationFormat} or
+     *                                  {@link ClientPreprocessors}
+     */
+    public static <T> T  newClient(ClientPreprocessors preprocessors, Class<T> clientType) {
+        return builder(preprocessors).build(clientType);
+    }
+
+    /**
+     * Creates a new client that is preprocessed the specified {@link ClientPreprocessors} with
+     * using the default {@link ClientFactory}.
+     *
+     * @param serializationFormat the {@link SerializationFormat}
+     * @param preprocessors the {@link ClientPreprocessors}
+     * @param clientType the type of the new client
+     *
+     * @throws IllegalArgumentException if the specified {@code clientType} is unsupported for
+     *                                  the specified {@link SerializationFormat} or
+     *                                  {@link ClientPreprocessors}
+     */
+    public static <T> T newClient(SerializationFormat serializationFormat, ClientPreprocessors preprocessors,
+                                  Class<T> clientType) {
+        return builder(serializationFormat, preprocessors).build(clientType);
+    }
+
+    /**
+     * Creates a new client that is preprocessed the specified {@link ClientPreprocessors} with
+     * using the default {@link ClientFactory}.
+     *
+     * @param serializationFormat the {@link SerializationFormat}
+     * @param preprocessors the {@link ClientPreprocessors}
+     * @param clientType the type of the new client
+     * @param path the prefix path of the new client
+     *
+     * @throws IllegalArgumentException if the specified {@code clientType} is unsupported for
+     *                                  the specified {@link SerializationFormat} or
+     *                                  {@link ClientPreprocessors}
+     */
+    public static <T> T newClient(SerializationFormat serializationFormat, ClientPreprocessors preprocessors,
+                                  Class<T> clientType, String path) {
+        return builder(serializationFormat, preprocessors, path).build(clientType);
+    }
+
+    /**
      * Returns a new {@link ClientBuilder} that builds the client that connects to the specified {@code uri}.
      *
      * @throws IllegalArgumentException if the specified {@code uri} is invalid, or the specified
@@ -253,6 +304,38 @@ public final class Clients {
     }
 
     /**
+     * Returns a new {@link ClientBuilder} that builds the client that is configured with the specified
+     * {@link ClientPreprocessors}.
+     */
+    public static ClientBuilder builder(ClientPreprocessors preprocessors) {
+        requireNonNull(preprocessors, "preprocessors");
+        return new ClientBuilder(SerializationFormat.NONE, preprocessors, null);
+    }
+
+    /**
+     * Returns a new {@link ClientBuilder} that builds the client that is configured with the specified
+     * {@link ClientPreprocessors}.
+     */
+    public static ClientBuilder builder(SerializationFormat serializationFormat,
+                                        ClientPreprocessors preprocessors) {
+        requireNonNull(serializationFormat, "serializationFormat");
+        requireNonNull(preprocessors, "preprocessors");
+        return new ClientBuilder(serializationFormat, preprocessors, null);
+    }
+
+    /**
+     * Returns a new {@link ClientBuilder} that builds the client that is configured with the specified
+     * {@link SerializationFormat}, {@link ClientPreprocessors} and {@param path}.
+     */
+    public static ClientBuilder builder(SerializationFormat serializationFormat,
+                                        ClientPreprocessors preprocessors, String path) {
+        requireNonNull(serializationFormat, "serializationFormat");
+        requireNonNull(preprocessors, "preprocessors");
+        requireNonNull(path, "path");
+        return new ClientBuilder(serializationFormat, preprocessors, path);
+    }
+
+    /**
      * Creates a new derived client that connects to the same {@link URI} with the specified {@code client}
      * and the specified {@code additionalOptions}.
      *
@@ -271,12 +354,17 @@ public final class Clients {
      * @see ClientBuilder ClientBuilder, for more information about how the base options and
      *                    additional options are merged when a derived client is created.
      */
+    @SuppressWarnings("unchecked")
     public static <T> T newDerivedClient(T client, Iterable<ClientOptionValue<?>> additionalOptions) {
         final ClientBuilderParams params = builderParams(client);
-        final ClientBuilder builder = newDerivedBuilder(params, true);
-        builder.options(additionalOptions);
-
-        return newDerivedClient(builder, params.clientType());
+        final ClientOptions newOptions = ClientOptions.builder()
+                                                      .options(params.options())
+                                                      .options(additionalOptions)
+                                                      .build();
+        final ClientBuilderParams newParams = params.paramsBuilder()
+                                                    .options(newOptions)
+                                                    .build();
+        return (T) newOptions.factory().newClient(newParams);
     }
 
     /**
@@ -604,7 +692,9 @@ public final class Clients {
      * {@code isUndefinedUri(WebClient.of().uri())} will return {@code true}.
      */
     public static boolean isUndefinedUri(URI uri) {
-        return uri == UNDEFINED_URI;
+        return (uri == ClientUtil.UNDEFINED_URI ||
+                ClientBuilderParamsUtil.UNDEFINED_URI_AUTHORITY.equals(uri.getAuthority())) &&
+                uri.getPort() == 1;
     }
 
     private Clients() {}

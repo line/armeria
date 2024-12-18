@@ -96,7 +96,7 @@ class ClientMaxConnectionAgeTest {
         };
     }
 
-    @EnumSource(value = SessionProtocol.class, names = "PROXY", mode = Mode.EXCLUDE)
+    @EnumSource(value = SessionProtocol.class, names = {"PROXY", "UNDEFINED"}, mode = Mode.EXCLUDE)
     @ParameterizedTest
     void maxConnectionAge(SessionProtocol protocol) {
         final int maxClosedConnection = 5;
@@ -152,7 +152,7 @@ class ClientMaxConnectionAgeTest {
         clientFactory.closeAsync();
     }
 
-    @EnumSource(value = SessionProtocol.class, names = "PROXY", mode = Mode.EXCLUDE)
+    @EnumSource(value = SessionProtocol.class, names = {"PROXY", "UNDEFINED"}, mode = Mode.EXCLUDE)
     @ParameterizedTest
     void shouldCloseIdleConnectionByMaxConnectionAge(SessionProtocol protocol) {
         try (ClientFactory factory = ClientFactory.builder()
@@ -172,7 +172,7 @@ class ClientMaxConnectionAgeTest {
         }
     }
 
-    @EnumSource(value = SessionProtocol.class, names = "PROXY", mode = Mode.EXCLUDE)
+    @EnumSource(value = SessionProtocol.class, names = {"PROXY", "UNDEFINED"}, mode = Mode.EXCLUDE)
     @ParameterizedTest
     void shouldCloseConnectionAfterLongRequest(SessionProtocol protocol) throws Exception {
         try (ClientFactory factory = ClientFactory.builder()
@@ -193,7 +193,7 @@ class ClientMaxConnectionAgeTest {
         }
     }
 
-    @EnumSource(value = SessionProtocol.class, names = "PROXY", mode = Mode.EXCLUDE)
+    @EnumSource(value = SessionProtocol.class, names = {"PROXY", "UNDEFINED"}, mode = Mode.EXCLUDE)
     @ParameterizedTest
     void shouldCloseConnectionAfterLongRequestTimeout(SessionProtocol protocol) throws Exception {
         try (ClientFactory factory = ClientFactory.builder()

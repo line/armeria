@@ -80,4 +80,12 @@ public interface ClientBuilderParams {
      * Returns the options of the client.
      */
     ClientOptions options();
+
+    /**
+     * Returns a {@link ClientBuilderParamsBuilder} which allows creation of a new
+     * {@link ClientBuilderParams} based on the current properties.
+     */
+    default ClientBuilderParamsBuilder paramsBuilder() {
+        return new ClientBuilderParamsBuilder(this);
+    }
 }

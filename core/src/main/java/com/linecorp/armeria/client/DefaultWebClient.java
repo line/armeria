@@ -32,6 +32,7 @@ import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.internal.client.ClientUtil;
 import com.linecorp.armeria.internal.client.DefaultClientRequestContext;
 import com.linecorp.armeria.internal.client.TailPreClient;
+import com.linecorp.armeria.internal.client.endpoint.FailingEndpointGroup;
 
 import io.micrometer.core.instrument.MeterRegistry;
 
@@ -83,23 +84,25 @@ final class DefaultWebClient extends UserClient<HttpRequest, HttpResponse> imple
                 assert scheme != null;
                 assert authority != null;
             } else {
+                // the scheme and authority may be null if the client is preprocessor-based
                 scheme = req.scheme();
                 authority = req.authority();
-
-                if (scheme == null || authority == null) {
-                    return abortRequestAndReturnFailureResponse(req, new IllegalArgumentException(
-                            "Scheme and authority must be specified in \":path\" or " +
-                            "in \":scheme\" and \":authority\". :path=" +
-                            originalPath + ", :scheme=" + req.scheme() + ", :authority=" + req.authority()));
-                }
             }
 
-            endpointGroup = Endpoint.parse(authority);
-            try {
-                protocol = Scheme.parse(scheme).sessionProtocol();
-            } catch (Exception e) {
-                return abortRequestAndReturnFailureResponse(req, new IllegalArgumentException(
-                        "Failed to parse a scheme: " + reqTarget.scheme(), e));
+            if (authority != null) {
+                endpointGroup = Endpoint.parse(authority);
+            } else {
+                endpointGroup = FailingEndpointGroup.of();
+            }
+            if (scheme != null) {
+                try {
+                    protocol = Scheme.parse(scheme).sessionProtocol();
+                } catch (Exception e) {
+                    return abortRequestAndReturnFailureResponse(req, new IllegalArgumentException(
+                            "Failed to parse a scheme: " + reqTarget.scheme(), e));
+                }
+            } else {
+                protocol = SessionProtocol.UNDEFINED;
             }
         } else {
             if (reqTarget.form() == RequestTargetForm.ABSOLUTE) {

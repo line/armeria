@@ -42,7 +42,7 @@ class PreferHttp1Test {
         }
     };
 
-    @EnumSource(value = SessionProtocol.class, names = "PROXY", mode = EnumSource.Mode.EXCLUDE)
+    @EnumSource(value = SessionProtocol.class, names = {"PROXY", "UNDEFINED"}, mode = EnumSource.Mode.EXCLUDE)
     @ParameterizedTest
     void shouldPreferHttp1(SessionProtocol protocol) throws InterruptedException {
         try (ClientFactory factory = ClientFactory.builder()
