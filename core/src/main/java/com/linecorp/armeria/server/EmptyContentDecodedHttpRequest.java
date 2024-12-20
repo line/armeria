@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 LINE Corporation
+ * Copyright 2024 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -259,5 +259,15 @@ final class EmptyContentDecodedHttpRequest implements DecodedHttpRequest {
     @Override
     public long requestStartTimeMicros() {
         return requestStartTimeMicros;
+    }
+
+    @Override
+    public long maxRequestLength() {
+        return 0;
+    }
+
+    @Override
+    public long transferredBytes() {
+        return 0;
     }
 }
