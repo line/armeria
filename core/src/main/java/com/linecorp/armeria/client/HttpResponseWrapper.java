@@ -25,6 +25,8 @@ import org.reactivestreams.Subscriber;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.common.annotations.VisibleForTesting;
+
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpObject;
@@ -58,6 +60,7 @@ class HttpResponseWrapper implements StreamWriter<HttpObject> {
     private final EventLoop eventLoop;
     private final ClientRequestContext ctx;
     private final long maxContentLength;
+    @VisibleForTesting
     static final String UNEXPECTED_EXCEPTION_MSG = "Unexpected exception while closing a request";
 
     private boolean responseStarted;
