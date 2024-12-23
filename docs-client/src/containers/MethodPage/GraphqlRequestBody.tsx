@@ -32,6 +32,7 @@ import {
 import TextField from '@material-ui/core/TextField';
 import Editor, { useMonaco, loader } from '@monaco-editor/react';
 import * as monaco from 'monaco-editor/esm/vs/editor/editor.api';
+
 import 'monaco-graphql';
 import { jsonPrettify } from '../../lib/json-util';
 import { docServiceDebug } from '../../lib/header-provider';
