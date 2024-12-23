@@ -29,7 +29,6 @@ import org.apache.http.client.methods.HttpPost;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
 import com.fasterxml.jackson.databind.JsonNode;
@@ -150,7 +149,6 @@ class GrpcDocServiceTest {
         }
     };
 
-    @Timeout(10000000)
     @Test
     void testOk() throws Exception {
         if (TestUtil.isDocServiceDemoMode()) {
