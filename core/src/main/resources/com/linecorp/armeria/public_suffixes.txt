@@ -2001,8 +2001,6 @@ dreamhosters.com
 drive
 drobak.no
 drr.ac
-drud.io
-drud.us
 dscloud.biz
 dscloud.me
 dscloud.mobi
@@ -6587,7 +6585,6 @@ pl
 pl.eu.org
 pl.ua
 place
-platter-app.com
 platter-app.dev
 platterp.us
 play
@@ -7853,7 +7850,6 @@ sp.leg.br
 spa
 space
 space-to-rent.com
-spacekit.io
 spb.ru
 spb.su
 spdns.de
