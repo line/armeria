@@ -1052,6 +1052,12 @@ bosch
 bostik
 boston
 bot
+botda.sh
+botdash.app
+botdash.dev
+botdash.gg
+botdash.net
+botdash.xyz
 bounceme.net
 boutique
 boutir.com
@@ -1778,7 +1784,6 @@ cuiaba.br
 cuisinella
 cuneo.it
 curitiba.br
-curv.dev
 cust.cloudscale.ch
 cust.dev.thingdust.io
 cust.disrec.thingdust.io
@@ -1917,7 +1922,6 @@ dienbien.vn
 diet
 digick.jp
 digital
-diher.solutions
 direct
 direct.quickconnect.cn
 direct.quickconnect.to
@@ -3013,7 +3017,6 @@ gold
 goldpoint
 golf
 golffan.us
-gon.pk
 gonna.jp
 gonohe.aomori.jp
 goo
@@ -6976,7 +6979,6 @@ rs.leg.br
 rs.webaccel.jp
 rsc.cdn77.org
 rsc.contentproxy9.cz
-rss.my.id
 rsvp
 rt.ht
 ru
