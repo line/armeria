@@ -155,7 +155,6 @@ In the following example, the <type://SessionProtocol> will be overwritten from 
 WebClient client = WebClient
         .builder()
         .preprocessor((delegate, ctx, req) -> {
-            assert ctx.sessionProtocol() == SessionProtocol.HTTP; // HTTP from the request
             ctx.sessionProtocol(SessionProtocol.HTTPS); // overwrite to HTTPS
             return delegate.execute(ctx, req);
         })
