@@ -57,6 +57,7 @@
     "advanced-scalapb",
     "advanced-flags-provider",
     "advanced-zipkin",
-    "advanced-client-interoperability"
+    "advanced-client-interoperability",
+    "advanced-client-preprocessor"
   ]
 }

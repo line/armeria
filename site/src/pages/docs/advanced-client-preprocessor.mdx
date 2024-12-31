@@ -1,0 +1,241 @@
+# Client Preprocessors
+
+A 'preprocessor' is a [decorator] that intercepts an outgoing request and allows users to
+customize certain properties before entering the decorating chain. These properties most
+notably include <type://EndpointGroup>, <type://SessionProtocol> and <type://EventLoop>.
+
+A preprocessor may be added when building a client:
+
+```java
+HttpPreprocessor preprocessor = ...
+WebClient client = WebClient.of(preprocessor);
+```
+
+or by adding a client option:
+
+```java
+HttpPreprocessor preprocessor = ...
+WebClient client = WebClient.builder()
+                            .preprocessor(preprocessor)
+                            .build();
+```
+
+or both:
+
+```java
+HttpPreprocessor preprocessor1 = ...
+HttpPreprocessor preprocessor2 = ...
+WebClient client = WebClient.builder(preprocessor1)
+                            .preprocessor(preprocessor2)
+                            .build();
+```
+
+## Implementing `HttpPreprocessor` and `RpcPreprocessor`
+
+<type://HttpPreprocessor> and <type://RpcPreprocessor> expose a <type://PartialClientRequestContext>.
+Users may influence the finalized <type://ClientRequestContext> by calling methods such as
+<type://PartialClientRequestContext#endpointGroup(EndpointGroup)> and
+<type://PartialClientRequestContext#sessionProtocol(SessionProtocol)>.
+
+In the following example, HTTP requests are routed to a different endpoint based on the request header.
+
+```java
+WebClient client = WebClient.of((delegate, ctx, req) -> {
+    if (req.headers().contains("x-canary")) {
+        ctx.endpointGroup(Endpoint.of("canary.dev"));
+    } else {
+        ctx.endpointGroup(Endpoint.of("non-canary.dev"));
+    }
+    return delegate.execute(ctx, req);
+});
+```
+
+Note that once the request is passed to the decorator chain, modifying the above properties are not
+allowed.
+
+```java
+WebClient client = WebClient.of((delegate, ctx, req) -> {
+    HttpResponse res = delegate.execute(ctx, req);
+    ctx.endpointGroup(Endpoint.of("some-endpoint")); // this is not allowed
+    return res;
+});
+```
+
+Implementing <type://RpcPreprocessor> is not very different from <type://HttpPreprocessor> except that
+the parameters are <type://RpcRequest> and <type://RpcResponse>. As such, <type://RpcPreprocessor> can
+only be added to RPC clients such as those built by <type://ThriftClients>.
+
+```java
+RpcPreprocessor rpcPreprocessor1 = ...;
+RpcPreprocessor rpcPreprocessor2 = ...;
+HelloService.Iface helloService = ThriftClients
+  .builder(rpcPreprocessor1)
+  .rpcPreprocessor(rpcPreprocessor2)
+  .build(HelloService.Iface.class);
+```
+
+## The order of preprocessors
+
+Similar to decorators, preprocessors are also executed in reverse order of insertion.
+The following example shows which order preprocessors are executed by printing messages.
+
+```java
+WebClient client = WebClient
+        .builder((delegate, ctx, req) -> {
+            System.err.println("Preprocessor 3");
+            return delegate.execute(ctx, req);
+        })
+        .decorator((delegate, ctx, req) -> {
+            System.err.println("Decorator 1");
+            return delegate.execute(ctx, req);
+        })
+        .preprocessor((delegate, ctx, req) -> {
+            System.err.println("Preprocessor 2");
+            return delegate.execute(ctx, req);
+        })
+        .preprocessor((delegate, ctx, req) -> {
+            System.err.println("Preprocessor 1");
+            return delegate.execute(ctx, req);
+        })
+        .build();
+HttpRequest httpRequest = ...;
+client.execute(httpRequest)
+```
+
+The following diagram describes how an HTTP request goes through preprocessors and decorators.
+Note that decorators are executed after all preprocessors are executed.
+
+```bob-svg
++-----------+  req  +--------------+  req  +--------------+  req  +--------------+  req  +----------+  req  +-----------+  req  +------------------+  req  +--------+
+|           |------>|              |------>|              |------>|              |------>|          |------>|           |------>|                  |------>|        |
+| WebClient |       | #1           |       | #2           |       | #3           |       | Finalize |       | #1        |       | Armeria          |       | Server |
+|           |  res  | preprocessor |  res  | preprocessor |  res  | preprocessor |  res  | Context  |  res  | decorator |  res  | Networking Layer |  res  |        |
+|           |<------|              |<------|              |<------|              |<------|          |<------|           |<------|                  |<------|        |
++-----------+       +--------------+       +--------------+       +--------------+       +----------+       +-----------+       +------------------+       +--------+
+```
+
+<type://RpcPreprocessor>s are executed similarly to <typeplural://HttpPreprocessor>.
+
+```java
+HelloService.Iface helloService = ThriftClients
+        .builder((delegate, ctx, req) -> {
+            System.err.println("RpcPreprocessor 3");
+            return delegate.execute(ctx, req);
+        })
+        .rpcPreprocessor((delegate, ctx, req) -> {
+            System.err.println("RpcPreprocessor 2");
+            return delegate.execute(ctx, req);
+        })
+        .rpcPreprocessor((delegate, ctx, req) -> {
+            System.err.println("RpcPreprocessor 1");
+            return delegate.execute(ctx, req);
+        })
+        .build(HelloService.Iface.class);
+```
+
+```bob-svg
++-----------+  req  +-----------------+  req  +-----------------+  req  +-----------------+  req  +----------+  req  +-----------+
+|           |------>|                 |------>|                 |------>|                 |------>|          |------>|           |
+| WebClient |       | #1              |       | #2              |       | #3              |       | Finalize |       | Decorator |
+|           |  res  | rpcPreprocessor |  res  | rpcPreprocessor |  res  | rpcPreprocessor |  res  | Context  |  res  | Chain     |
+|           |<------|                 |<------|                 |<------|                 |<------|          |<------|           |
++-----------+       +-----------------+       +-----------------+       +-----------------+       +----------+       +-----------+
+```
+
+Note that unlike decorators, <typeplural://HttpPreprocessor> are not executed for RPC-based clients.
+
+## Determining which property is finally chosen
+
+Preprocessors are an extension point which allow users to customize the request created by a client.
+As such, requests created by clients may be overwritten by preprocessors.
+
+In the following example, the <type://SessionProtocol> will be overwritten from `HTTP` to `HTTPS`.
+
+```java
+WebClient client = WebClient
+        .builder()
+        .preprocessor((delegate, ctx, req) -> {
+            assert ctx.sessionProtocol() == SessionProtocol.HTTP; // HTTP from the request
+            ctx.sessionProtocol(SessionProtocol.HTTPS); // overwrite to HTTPS
+            return delegate.execute(ctx, req);
+        })
+        .build();
+client.get("http://some-endpoint");
+```
+
+If a client is built exclusively by preprocessors, then the preprocessors are responsible for setting the
+necessary properties. At the very least, <type://PartialClientRequestContext#endpointGroup(EndpointGroup)> and
+<type://PartialClientRequestContext#sessionProtocol(SessionProtocol)> must be set by the final preprocessor. If
+a <type://SessionProtocol> and <type://EndpointGroup> are not specified, the request will fail early
+before entering the decorator chain.
+
+In the example below, it is unclear which endpoint the client should make a request to and the request will fail.
+
+```java
+WebClient client = WebClient
+        .of((delegate, ctx, req) -> {
+            ctx.endpointGroup(Endpoint.of("127.0.0.1"));
+            return delegate.execute(ctx, req);
+        });
+client.get("/").
+```
+
+If multiple preprocessors are specified, then preprocessors invoked later can override values
+set from previous preprocessors.
+
+In the example below, the <type://SessionProtocol> has been overwritten to use `HTTP`.
+
+```java
+WebClient client = WebClient
+        .builder((delegate, ctx, req) -> {
+            ctx.sessionProtocol(SessionProtocol.HTTP); // the protocol is overwritten to HTTP
+            return delegate.execute(ctx, req);
+        })
+        .preprocessor((delegate, ctx, req) -> {
+            ctx.endpointGroup(Endpoint.of("127.0.0.1")); // the endpoint is not overwritten
+            ctx.sessionProtocol(SessionProtocol.HTTPS);
+            return delegate.execute(ctx, req);
+        })
+        .build();
+```
+
+If a client specifies an <type://EndpointGroup> or an absolute `URI`, the specified values will be used unless overridden
+by preprocessors. In the example below, all requests will be made with `HTTPS`.
+
+```java
+// Client built with an EndpointGroup
+WebClient client = WebClient
+        .builder(SessionProtocol.HTTP, Endpoint.of("1.2.3.4"))
+        .preprocessor((delegate, ctx, req) -> {
+            ctx.sessionProtocol(SessionProtocol.HTTPS);
+            return delegate.execute(ctx, req);
+        })
+        .build();
+client.get("/");
+
+// Client built with an absolute URI
+WebClient client = WebClient
+        .builder("http://1.2.3.4")
+        .preprocessor((delegate, ctx, req) -> {
+            ctx.sessionProtocol(SessionProtocol.HTTPS);
+            return delegate.execute(ctx, req);
+        })
+        .build();
+client.get("/");
+
+// Client request with an absolute URI
+WebClient client = WebClient
+        .builder()
+        .preprocessor((delegate, ctx, req) -> {
+            ctx.sessionProtocol(SessionProtocol.HTTPS);
+            return delegate.execute(ctx, req);
+        })
+        .build();
+client.get("http://1.2.3.4/");
+```
+
+## See also
+
+- [Decorating a service](/docs/server-decorator)
+
+[decorator]: https://en.wikipedia.org/wiki/Decorator_pattern
