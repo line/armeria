@@ -503,6 +503,20 @@ class ArmeriaHttpUtilTest {
     }
 
     @Test
+    void toArmeriaForWebSocketUpgrade() {
+        final io.netty.handler.codec.http.HttpHeaders in = new DefaultHttpHeaders()
+            .add(HttpHeaderNames.CONNECTION, HttpHeaderValues.KEEP_ALIVE + ", " + HttpHeaderValues.UPGRADE)
+            .add(HttpHeaderNames.UPGRADE, HttpHeaderValues.WEBSOCKET + ", additional_value");
+        final HttpHeadersBuilder out = HttpHeaders.builder();
+        out.sizeHint(in.size());
+        toArmeria(in, out);
+        final HttpHeaders outHeaders = out.build();
+
+        assertThat(outHeaders.get(HttpHeaderNames.CONNECTION)).isEqualTo("keep-alive, upgrade");
+        assertThat(outHeaders.get(HttpHeaderNames.UPGRADE)).isEqualTo("websocket, additional_value");
+    }
+
+    @Test
     void isAbsoluteUri() {
         final String good = "none+http://a.com";
         assertThat(ArmeriaHttpUtil.isAbsoluteUri(good)).isTrue();
