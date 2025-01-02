@@ -640,6 +640,22 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
     }
 
     /**
+     * Returns a new {@link Endpoint} with a host whose trailing dot is removed.
+     *
+     * @return the new endpoint with the new host whose trailing dot is removed.
+     *         {@code this} if the {@link #host()} does not end with a dot ({@code .}).
+     */
+    @UnstableApi
+    public Endpoint withoutTrailingDot() {
+        if (!hasTrailingDot(host)) {
+            return this;
+        }
+
+        final String stripped = host.substring(0, host.length() - 1);
+        return new Endpoint(type, stripped, ipAddr, port, weight, attributes);
+    }
+
+    /**
      * Returns a new host endpoint with the specified weight.
      *
      * @return the new endpoint with the specified weight. {@code this} if this endpoint has the same weight.
