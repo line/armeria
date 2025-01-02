@@ -356,7 +356,8 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
     }
 
     private void abortLargeRequest(ChannelHandlerContext ctx, DecodedHttpRequest decodedReq, int id,
-                                   boolean endOfStream, KeepAliveHandler keepAliveHandler, boolean isEarlyRejection) {
+                                   boolean endOfStream, KeepAliveHandler keepAliveHandler,
+                                   boolean isEarlyRejection) {
         final ContentTooLargeException cause =
                 ContentTooLargeException.builder()
                         .maxContentLength(decodedReq.maxRequestLength())
