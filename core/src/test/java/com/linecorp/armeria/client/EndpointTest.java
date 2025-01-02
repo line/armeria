@@ -148,6 +148,13 @@ class EndpointTest {
         // The trailing dot should be removed for the authority.
         assertThat(endpoint.authority()).isEqualTo("foo.com");
         assertThat(endpoint.toSocketAddress(80).getHostString()).isEqualTo("foo.com.");
+
+        final Endpoint withoutTrailingDot = endpoint.withoutTrailingDot();
+        assertThat(withoutTrailingDot.host()).isEqualTo("foo.com");
+        assertThat(withoutTrailingDot.authority()).isEqualTo("foo.com");
+        assertThat(withoutTrailingDot.toSocketAddress(80).getHostString()).isEqualTo("foo.com");
+        assertThat(withoutTrailingDot.withoutTrailingDot()).isSameAs(withoutTrailingDot);
+
         final Endpoint barEndpoint = endpoint.withHost("bar.com");
         assertThat(barEndpoint.host()).isEqualTo("bar.com");
         assertThat(barEndpoint.authority()).isEqualTo("bar.com");
