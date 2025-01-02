@@ -483,7 +483,7 @@ public final class DefaultClientRequestContext
 
     // TODO(ikhoon): Consider moving the logic for filling authority to `HttpClientDelegate.exceute()`.
     private void autoFillSchemeAuthorityAndOrigin() {
-        final String authority = authority();
+        final String authority = authorityOrNull();
         if (authority != null && endpoint != null && endpoint.isIpAddrOnly()) {
             // The connection will be established with the IP address but `host` set to the `Endpoint`
             // could be used for SNI. It would make users send HTTPS requests with CSLB or configure a reverse
@@ -749,9 +749,19 @@ public final class DefaultClientRequestContext
         return requestTarget().fragment();
     }
 
-    @Nullable
     @Override
     public String authority() {
+        final String authority = authorityOrNull();
+        if (authority == null) {
+            throw new IllegalStateException(
+                    "ClientRequestContext may be in the process of initialization." +
+                    "In this case, host() or authority() could be null");
+        }
+        return authority;
+    }
+
+    @Nullable
+    private String authorityOrNull() {
         final HttpHeaders additionalRequestHeaders = this.additionalRequestHeaders;
         String authority = additionalRequestHeaders.get(HttpHeaderNames.AUTHORITY);
         if (authority == null) {
@@ -773,6 +783,7 @@ public final class DefaultClientRequestContext
         if (authority == null) {
             authority = internalRequestHeaders.get(HttpHeaderNames.HOST);
         }
+
         return authority;
     }
 
@@ -793,20 +804,16 @@ public final class DefaultClientRequestContext
         return origin;
     }
 
-    @Nullable
     @Override
     public String host() {
         final String authority = authority();
-        if (authority == null) {
-            return null;
-        }
         return SchemeAndAuthority.of(null, authority).host();
     }
 
     @Override
     public URI uri() {
         final String scheme = getScheme(sessionProtocol());
-        final String authority = authority();
+        final String authority = authorityOrNull();
         final String path = path();
         final String query = query();
         final String fragment = fragment();
