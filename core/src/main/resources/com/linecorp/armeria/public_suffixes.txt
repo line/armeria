@@ -1144,7 +1144,6 @@ ca.it
 ca.reclaim.cloud
 ca.us
 caa.aero
-caa.li
 cab
 cable-modem.org
 cafe
@@ -1708,7 +1707,6 @@ comsec
 condos
 conf.au
 conf.lv
-conf.se
 conference.aero
 conn.uk
 construction
@@ -2576,7 +2574,6 @@ filegear-sg.me
 filegear.me
 film
 film.hu
-fin.ci
 fin.ec
 fin.tn
 final
@@ -2690,7 +2687,6 @@ framercanvas.com
 frana.no
 fredrikstad.no
 free
-free.hr
 freebox-os.com
 freebox-os.fr
 freeboxos.com
@@ -8539,7 +8535,6 @@ u.se
 u2-local.xnbay.com
 u2.xnbay.com
 ua
-ua.rs
 ubank
 ube.yamaguchi.jp
 uber.space
