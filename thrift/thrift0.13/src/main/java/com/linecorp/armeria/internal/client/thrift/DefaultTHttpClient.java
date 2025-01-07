@@ -24,6 +24,7 @@ import org.apache.thrift.transport.TTransportException;
 import com.linecorp.armeria.client.ClientBuilderParams;
 import com.linecorp.armeria.client.RequestOptions;
 import com.linecorp.armeria.client.RpcClient;
+import com.linecorp.armeria.client.RpcPreClient;
 import com.linecorp.armeria.client.UserClient;
 import com.linecorp.armeria.client.thrift.THttpClient;
 import com.linecorp.armeria.common.ExchangeType;
@@ -32,6 +33,9 @@ import com.linecorp.armeria.common.RequestTarget;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.RpcResponse;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.internal.client.ClientUtil;
+import com.linecorp.armeria.internal.client.DefaultClientRequestContext;
+import com.linecorp.armeria.internal.client.TailPreClient;
 import com.linecorp.armeria.internal.common.RequestTargetCache;
 
 import io.micrometer.core.instrument.MeterRegistry;
@@ -43,9 +47,12 @@ final class DefaultTHttpClient extends UserClient<RpcRequest, RpcResponse> imple
                           .exchangeType(ExchangeType.UNARY)
                           .build();
 
+    private final RpcPreClient rpcPreprocessor;
+
     DefaultTHttpClient(ClientBuilderParams params, RpcClient delegate, MeterRegistry meterRegistry) {
         super(params, delegate, meterRegistry, RpcResponse::from,
               (ctx, cause) -> RpcResponse.ofFailure(decodeException(cause, null)));
+        rpcPreprocessor = TailPreClient.ofRpc(unwrap(), futureConverter(), errorResponseFactory());
     }
 
     @Override
@@ -77,8 +84,11 @@ final class DefaultTHttpClient extends UserClient<RpcRequest, RpcResponse> imple
         RequestTargetCache.putForClient(path, reqTarget);
 
         final RpcRequest call = RpcRequest.of(serviceType, method, args);
-        return execute(scheme().sessionProtocol(), HttpMethod.POST,
-                       reqTarget, call, UNARY_REQUEST_OPTIONS);
+        final DefaultClientRequestContext ctx = new DefaultClientRequestContext(
+                scheme().sessionProtocol(), null, HttpMethod.POST, call, reqTarget, endpointGroup(),
+                UNARY_REQUEST_OPTIONS, options());
+        final RpcPreClient execution = options().clientPreprocessors().rpcDecorate(rpcPreprocessor);
+        return ClientUtil.executeWithFallback(execution, ctx, call, errorResponseFactory());
     }
 
     @Override

@@ -57,6 +57,7 @@ public class AbstractClientOptionsBuilder {
 
     private final Map<ClientOption<?>, ClientOptionValue<?>> options = new LinkedHashMap<>();
     private final ClientDecorationBuilder decoration = ClientDecoration.builder();
+    private final ClientPreprocessorsBuilder clientPreprocessorsBuilder = new ClientPreprocessorsBuilder();
     private final HttpHeadersBuilder headers = HttpHeaders.builder();
 
     @Nullable
@@ -127,6 +128,8 @@ public class AbstractClientOptionsBuilder {
         } else if (opt == ClientOptions.HEADERS) {
             final HttpHeaders h = (HttpHeaders) optionValue.value();
             setHeaders(h);
+        } else if (opt == ClientOptions.PREPROCESSORS) {
+            clientPreprocessorsBuilder.add((ClientPreprocessors) optionValue.value());
         } else {
             options.put(opt, optionValue);
         }
@@ -521,6 +524,28 @@ public class AbstractClientOptionsBuilder {
     }
 
     /**
+     * Adds the specified HTTP-level {@code preprocessor}.
+     *
+     * @param preprocessor the {@link HttpPreprocessor} that preprocesses an invocation
+     */
+    @UnstableApi
+    public AbstractClientOptionsBuilder preprocessor(HttpPreprocessor preprocessor) {
+        clientPreprocessorsBuilder.add(preprocessor);
+        return this;
+    }
+
+    /**
+     * Adds the specified RPC-level {@code rpcPreprocessor}.
+     *
+     * @param rpcPreprocessor the {@link RpcPreprocessor} that preprocesses an invocation
+     */
+    @UnstableApi
+    public AbstractClientOptionsBuilder rpcPreprocessor(RpcPreprocessor rpcPreprocessor) {
+        clientPreprocessorsBuilder.addRpc(rpcPreprocessor);
+        return this;
+    }
+
+    /**
      * Builds {@link ClientOptions} with the given options and the
      * {@linkplain ClientOptions#of() default options}.
      */
@@ -538,6 +563,7 @@ public class AbstractClientOptionsBuilder {
                 ImmutableList.builder();
         additionalValues.addAll(optVals);
         additionalValues.add(ClientOptions.DECORATION.newValue(decoration.build()));
+        additionalValues.add(ClientOptions.PREPROCESSORS.newValue(clientPreprocessorsBuilder.build()));
         additionalValues.add(ClientOptions.HEADERS.newValue(headers.build()));
         additionalValues.add(ClientOptions.CONTEXT_HOOK.newValue(contextHook));
         if (contextCustomizer != null) {

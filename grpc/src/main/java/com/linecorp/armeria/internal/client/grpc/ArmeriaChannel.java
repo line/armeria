@@ -168,7 +168,6 @@ final class ArmeriaChannel extends Channel implements ClientBuilderParams, Unwra
 
         return new ArmeriaClientCall<>(
                 ctx,
-                params.endpointGroup(),
                 client,
                 req,
                 method,
@@ -183,7 +182,8 @@ final class ArmeriaChannel extends Channel implements ClientBuilderParams, Unwra
                 jsonMarshaller,
                 unsafeWrapResponseBuffers,
                 exceptionHandler,
-                useMethodMarshaller);
+                useMethodMarshaller,
+                options().clientPreprocessors());
     }
 
     @Override
@@ -248,6 +248,7 @@ final class ArmeriaChannel extends Channel implements ClientBuilderParams, Unwra
                 options().requestIdGenerator().get(),
                 method,
                 reqTarget,
+                endpointGroup(),
                 options(),
                 req,
                 null,

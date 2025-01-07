@@ -43,6 +43,7 @@ import org.reactivestreams.Subscription;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.HttpRequest;
@@ -572,7 +573,7 @@ final class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
             final DefaultClientRequestContext reqCtx = new DefaultClientRequestContext(
                     ctx.channel().eventLoop(), Flags.meterRegistry(), H1C, RequestId.random(),
                     com.linecorp.armeria.common.HttpMethod.OPTIONS,
-                    REQ_TARGET_ASTERISK, ClientOptions.of(),
+                    REQ_TARGET_ASTERISK, EndpointGroup.of(), ClientOptions.of(),
                     HttpRequest.of(com.linecorp.armeria.common.HttpMethod.OPTIONS, "*"),
                     null, REQUEST_OPTIONS_FOR_UPGRADE_REQUEST, CancellationScheduler.noop(),
                     System.nanoTime(), SystemInfo.currentTimeMicros());

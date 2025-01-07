@@ -42,8 +42,10 @@ import com.linecorp.armeria.client.DecoratingHttpClientFunction;
 import com.linecorp.armeria.client.DecoratingRpcClientFunction;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.HttpClient;
+import com.linecorp.armeria.client.HttpPreprocessor;
 import com.linecorp.armeria.client.ResponseTimeoutMode;
 import com.linecorp.armeria.client.RpcClient;
+import com.linecorp.armeria.client.RpcPreprocessor;
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.client.endpoint.AbstractDynamicEndpointGroupBuilder;
 import com.linecorp.armeria.client.endpoint.DynamicEndpointGroupSetters;
@@ -436,6 +438,17 @@ public final class EurekaEndpointGroupBuilder extends AbstractWebClientBuilder
     @Override
     public EurekaEndpointGroupBuilder responseTimeoutMode(ResponseTimeoutMode responseTimeoutMode) {
         return (EurekaEndpointGroupBuilder) super.responseTimeoutMode(responseTimeoutMode);
+    }
+
+    @Override
+    public EurekaEndpointGroupBuilder preprocessor(HttpPreprocessor decorator) {
+        return (EurekaEndpointGroupBuilder) super.preprocessor(decorator);
+    }
+
+    @Override
+    @Deprecated
+    public EurekaEndpointGroupBuilder rpcPreprocessor(RpcPreprocessor rpcPreprocessor) {
+        return (EurekaEndpointGroupBuilder) super.rpcPreprocessor(rpcPreprocessor);
     }
 
     @Override

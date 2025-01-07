@@ -45,8 +45,10 @@ import com.linecorp.armeria.client.DecoratingHttpClientFunction;
 import com.linecorp.armeria.client.DecoratingRpcClientFunction;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.HttpClient;
+import com.linecorp.armeria.client.HttpPreprocessor;
 import com.linecorp.armeria.client.ResponseTimeoutMode;
 import com.linecorp.armeria.client.RpcClient;
+import com.linecorp.armeria.client.RpcPreprocessor;
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.client.redirect.RedirectConfig;
@@ -395,5 +397,24 @@ public final class WebSocketClientBuilder extends AbstractWebClientBuilder {
     @Override
     public WebSocketClientBuilder responseTimeoutMode(ResponseTimeoutMode responseTimeoutMode) {
         return (WebSocketClientBuilder) super.responseTimeoutMode(responseTimeoutMode);
+    }
+
+    /**
+     * Raises an {@link UnsupportedOperationException} because {@link WebSocketClient} does
+     * not support {@link HttpPreprocessor}.
+     *
+     * @deprecated HTTP preprocessor cannot be added to the {@link WebSocketClient}.
+     */
+    @Override
+    @Deprecated
+    public WebSocketClientBuilder preprocessor(HttpPreprocessor preprocessor) {
+        throw new UnsupportedOperationException(
+                "RPC preprocessor cannot be added to the websocket client builder.");
+    }
+
+    @Override
+    @Deprecated
+    public WebSocketClientBuilder rpcPreprocessor(RpcPreprocessor rpcPreprocessor) {
+        return (WebSocketClientBuilder) super.rpcPreprocessor(rpcPreprocessor);
     }
 }

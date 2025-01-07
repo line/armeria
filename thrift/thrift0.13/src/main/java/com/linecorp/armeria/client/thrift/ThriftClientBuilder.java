@@ -42,8 +42,10 @@ import com.linecorp.armeria.client.DecoratingHttpClientFunction;
 import com.linecorp.armeria.client.DecoratingRpcClientFunction;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.HttpClient;
+import com.linecorp.armeria.client.HttpPreprocessor;
 import com.linecorp.armeria.client.ResponseTimeoutMode;
 import com.linecorp.armeria.client.RpcClient;
+import com.linecorp.armeria.client.RpcPreprocessor;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.client.redirect.RedirectConfig;
 import com.linecorp.armeria.common.RequestId;
@@ -378,5 +380,17 @@ public final class ThriftClientBuilder extends AbstractClientOptionsBuilder {
     @Override
     public ThriftClientBuilder responseTimeoutMode(ResponseTimeoutMode responseTimeoutMode) {
         return (ThriftClientBuilder) super.responseTimeoutMode(responseTimeoutMode);
+    }
+
+    @Override
+    @Deprecated
+    public ThriftClientBuilder preprocessor(HttpPreprocessor decorator) {
+        throw new UnsupportedOperationException("preprocessor() does not support Thrift. " +
+                                                "Use rpcPreprocessor() instead.");
+    }
+
+    @Override
+    public ThriftClientBuilder rpcPreprocessor(RpcPreprocessor decorator) {
+        return (ThriftClientBuilder) super.rpcPreprocessor(decorator);
     }
 }

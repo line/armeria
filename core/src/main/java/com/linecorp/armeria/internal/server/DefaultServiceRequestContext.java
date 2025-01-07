@@ -92,6 +92,7 @@ public final class DefaultServiceRequestContext
             additionalResponseTrailersUpdater = AtomicReferenceFieldUpdater.newUpdater(
             DefaultServiceRequestContext.class, HttpHeaders.class, "additionalResponseTrailers");
 
+    private final SessionProtocol sessionProtocol;
     private final Channel ch;
     private final EventLoop eventLoop;
     private final ServiceConfig cfg;
@@ -170,11 +171,12 @@ public final class DefaultServiceRequestContext
             HttpHeaders additionalResponseHeaders, HttpHeaders additionalResponseTrailers,
             Supplier<? extends AutoCloseable> contextHook) {
 
-        super(meterRegistry, sessionProtocol, id,
+        super(meterRegistry, id,
               requireNonNull(routingContext, "routingContext").method(),
               routingContext.requestTarget(), exchangeType, cfg.requestAutoAbortDelayMillis(),
               requireNonNull(req, "req"), null, null, contextHook);
 
+        this.sessionProtocol = requireNonNull(sessionProtocol, "sessionProtocol");
         this.ch = requireNonNull(ch, "ch");
         this.eventLoop = requireNonNull(eventLoop, "eventLoop");
         this.cfg = requireNonNull(cfg, "cfg");
@@ -229,6 +231,11 @@ public final class DefaultServiceRequestContext
     public Iterator<Entry<AttributeKey<?>, Object>> attrs() {
         // Don't check the root attributes; root is always null.
         return ownAttrs();
+    }
+
+    @Override
+    public SessionProtocol sessionProtocol() {
+        return sessionProtocol;
     }
 
     @Nonnull

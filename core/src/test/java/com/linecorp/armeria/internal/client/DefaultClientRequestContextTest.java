@@ -37,6 +37,7 @@ import com.linecorp.armeria.client.ClientRequestContextCaptor;
 import com.linecorp.armeria.client.Clients;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.RequestOptions;
+import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpMethod;
@@ -220,12 +221,13 @@ class DefaultClientRequestContextTest {
         final HttpRequest request1 = HttpRequest.of(RequestHeaders.of(
                 HttpMethod.POST, "/foo",
                 HttpHeaderNames.SCHEME, "http"));
-        final DefaultClientRequestContext ctx = newContext(ClientOptions.of(), request1);
+        final DefaultClientRequestContext ctx = newContext(ClientOptions.of(), request1,
+                                                           Endpoint.of("endpoint.com", 8080));
         assertThat(ctx.authority()).isNull();
         assertThat(ctx.uri().toString()).isEqualTo("http:/foo");
         assertThat(ctx.uri()).hasScheme("http").hasAuthority(null).hasPath("/foo");
 
-        ctx.init(Endpoint.of("endpoint.com", 8080));
+        ctx.init();
         assertThat(ctx.authority()).isEqualTo("endpoint.com:8080");
         assertThat(ctx.uri().toString()).isEqualTo("http://endpoint.com:8080/foo");
 
@@ -250,8 +252,9 @@ class DefaultClientRequestContextTest {
         final ClientOptions clientOptions = ClientOptions.builder()
                                                          .addHeader(HttpHeaderNames.AUTHORITY, "default.com")
                                                          .build();
-        final DefaultClientRequestContext ctx = newContext(clientOptions, request1);
-        ctx.init(Endpoint.of("example.com", 8080));
+        final DefaultClientRequestContext ctx = newContext(clientOptions, request1,
+                                                           Endpoint.of("example.com", 8080));
+        ctx.init();
         assertThat(ctx.authority()).isEqualTo("default.com");
         assertThat(ctx.uri().toString()).isEqualTo("http://default.com/foo");
     }
@@ -277,7 +280,8 @@ class DefaultClientRequestContextTest {
         final HttpRequest request = HttpRequest.of(RequestHeaders.of(
                 HttpMethod.POST, "/",
                 HttpHeaderNames.SCHEME, "http"));
-        final DefaultClientRequestContext ctx = newContext(ClientOptions.of(), request);
+        final DefaultClientRequestContext ctx = newContext(ClientOptions.of(), request,
+                                                           EndpointGroup.of());
         ctx.updateRequest(request);
         assertThat(ctx.uri().toString()).isEqualTo("http:/");
     }
@@ -287,19 +291,21 @@ class DefaultClientRequestContextTest {
                 HttpMethod.POST, "/foo",
                 HttpHeaderNames.SCHEME, "http",
                 HttpHeaderNames.AUTHORITY, "example.com:8080"));
-        final DefaultClientRequestContext ctx = newContext(ClientOptions.of(), request);
-        ctx.init(Endpoint.of("example.com", 8080));
+        final DefaultClientRequestContext ctx = newContext(ClientOptions.of(), request,
+                                                           Endpoint.of("example.com", 8080));
+        ctx.init();
         return ctx;
     }
 
     private static DefaultClientRequestContext newContext(ClientOptions clientOptions,
-                                                          HttpRequest httpRequest) {
+                                                          HttpRequest httpRequest,
+                                                          EndpointGroup endpointGroup) {
         final RequestTarget reqTarget = RequestTarget.forClient(httpRequest.path());
         assertThat(reqTarget).isNotNull();
 
         return new DefaultClientRequestContext(
                 mock(EventLoop.class), NoopMeterRegistry.get(), SessionProtocol.H2C,
-                RequestId.random(), HttpMethod.POST, reqTarget, clientOptions, httpRequest,
+                RequestId.random(), HttpMethod.POST, reqTarget, endpointGroup, clientOptions, httpRequest,
                 null, RequestOptions.of(), CancellationScheduler.ofClient(0), System.nanoTime(),
                 SystemInfo.currentTimeMicros());
     }
