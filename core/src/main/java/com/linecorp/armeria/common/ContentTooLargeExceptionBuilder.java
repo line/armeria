@@ -99,7 +99,7 @@ public final class ContentTooLargeExceptionBuilder {
      */
     public ContentTooLargeException build() {
         if (maxContentLength < 0 && contentLength < 0 &&
-                transferred < 0 && !earlyRejection && cause == null) {
+            transferred < 0 && !earlyRejection && cause == null) {
             return ContentTooLargeException.get();
         }
         return new ContentTooLargeException(maxContentLength, contentLength,
