@@ -5,6 +5,8 @@
 !city.sapporo.jp
 !city.sendai.jp
 !city.yokohama.jp
+!ignored.sub.wc.psl.hrsn.dev
+!ignored.wc.psl.hrsn.dev
 !www.ck
 *.001.test.code-builder-stg.platform.salesforce.com
 *.0e.vc
@@ -136,6 +138,7 @@
 *.stg.dev
 *.stgstage.dev
 *.stolos.io
+*.sub.wc.psl.hrsn.dev
 *.svc.firenet.ch
 *.sys.qcx.io
 *.telebit.xyz
@@ -160,6 +163,7 @@
 *.wadl.top
 *.wb.crm.dev
 *.wc.crm.dev
+*.wc.psl.hrsn.dev
 *.wd.crm.dev
 *.we.crm.dev
 *.webhare.dev
@@ -1416,6 +1420,7 @@ cloudaccess.host
 cloudaccess.net
 cloudapp.net
 cloudapps.digital
+cloudbeesusercontent.io
 cloudflare-ipfs.com
 cloudflare.net
 cloudfront.net
@@ -7979,6 +7984,7 @@ stufftoread.com
 style
 su
 sub.jp
+sub.psl.hrsn.dev
 sucks
 sue.fukuoka.jp
 suedtirol.it
