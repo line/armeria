@@ -28,6 +28,8 @@ import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.internal.client.ClientRequestContextExtension;
+import com.linecorp.armeria.internal.common.CancellationScheduler.State;
 import com.linecorp.armeria.testing.junit5.common.EventLoopExtension;
 
 class HttpPreprocessorTest {
@@ -71,6 +73,29 @@ class HttpPreprocessorTest {
         final AggregatedHttpResponse res = client.get("http://127.0.0.1").aggregate().join();
         assertThat(res.status().code()).isEqualTo(200);
         assertThat(list).containsExactly("3", "2", "1");
+    }
+
+    @Test
+    void cancellationSchedulerIsInitializedCorrectly() {
+        final HttpPreprocessor preprocessor = (delegate, ctx, req) -> {
+            ctx.eventLoop(eventLoop.get());
+            return delegate.execute(ctx, req);
+        };
+        final BlockingWebClient client =
+                WebClient.builder("http://1.2.3.4")
+                         .preprocessor(preprocessor)
+                         .responseTimeoutMode(ResponseTimeoutMode.FROM_START)
+                         .responseTimeoutMillis(10_000)
+                         .decorator((delegate, ctx, req) -> {
+                             assertThat(ctx.as(ClientRequestContextExtension.class)
+                                           .responseCancellationScheduler()
+                                           .state())
+                                     .isEqualTo(State.SCHEDULED);
+                             return HttpResponse.of(200);
+                         })
+                         .build()
+                         .blocking();
+        assertThat(client.get("/").status().code()).isEqualTo(200);
     }
 
     private static final class RunnablePreprocessor implements HttpPreprocessor {

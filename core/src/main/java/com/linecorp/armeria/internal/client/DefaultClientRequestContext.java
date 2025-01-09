@@ -758,6 +758,7 @@ public final class DefaultClientRequestContext
         checkState(!initialized, "Cannot update eventLoop after initialization");
         checkState(this.eventLoop == null, "eventLoop can be updated only once");
         this.eventLoop = requireNonNull(eventLoop, "eventLoop");
+        initializeResponseCancellationScheduler();
     }
 
     @Override

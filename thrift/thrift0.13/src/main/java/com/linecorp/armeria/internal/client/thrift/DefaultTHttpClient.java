@@ -47,12 +47,14 @@ final class DefaultTHttpClient extends UserClient<RpcRequest, RpcResponse> imple
                           .exchangeType(ExchangeType.UNARY)
                           .build();
 
-    private final RpcPreClient rpcPreprocessor;
+    private final RpcPreClient preClient;
 
     DefaultTHttpClient(ClientBuilderParams params, RpcClient delegate, MeterRegistry meterRegistry) {
         super(params, delegate, meterRegistry, RpcResponse::from,
               (ctx, cause) -> RpcResponse.ofFailure(decodeException(cause, null)));
-        rpcPreprocessor = TailPreClient.ofRpc(unwrap(), futureConverter(), errorResponseFactory());
+        final RpcPreClient tailPreClient =
+                TailPreClient.ofRpc(unwrap(), futureConverter(), errorResponseFactory());
+        preClient = options().clientPreprocessors().rpcDecorate(tailPreClient);
     }
 
     @Override
@@ -87,8 +89,7 @@ final class DefaultTHttpClient extends UserClient<RpcRequest, RpcResponse> imple
         final DefaultClientRequestContext ctx = new DefaultClientRequestContext(
                 scheme().sessionProtocol(), null, HttpMethod.POST, call, reqTarget, endpointGroup(),
                 UNARY_REQUEST_OPTIONS, options());
-        final RpcPreClient execution = options().clientPreprocessors().rpcDecorate(rpcPreprocessor);
-        return ClientUtil.executeWithFallback(execution, ctx, call, errorResponseFactory());
+        return ClientUtil.executeWithFallback(preClient, ctx, call, errorResponseFactory());
     }
 
     @Override

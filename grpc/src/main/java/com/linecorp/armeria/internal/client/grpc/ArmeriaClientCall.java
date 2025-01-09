@@ -37,9 +37,7 @@ import org.slf4j.LoggerFactory;
 
 import com.google.common.util.concurrent.MoreExecutors;
 
-import com.linecorp.armeria.client.ClientPreprocessors;
 import com.linecorp.armeria.client.ClientRequestContext;
-import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.client.HttpPreClient;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpRequest;
@@ -63,7 +61,6 @@ import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.common.util.TimeoutMode;
 import com.linecorp.armeria.internal.client.ClientUtil;
 import com.linecorp.armeria.internal.client.DefaultClientRequestContext;
-import com.linecorp.armeria.internal.client.TailPreClient;
 import com.linecorp.armeria.internal.client.grpc.protocol.InternalGrpcWebUtil;
 import com.linecorp.armeria.internal.common.grpc.ForwardingCompressor;
 import com.linecorp.armeria.internal.common.grpc.GrpcLogUtil;
@@ -111,7 +108,7 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
             ArmeriaClientCall.class, Runnable.class, "pendingTask");
 
     private final DefaultClientRequestContext ctx;
-    private final HttpClient client;
+    private final BiFunction<ClientRequestContext, Throwable, HttpResponse> errorResponseFactory;
     private final HttpRequestWriter req;
     private final MethodDescriptor<I, O> method;
     private final Map<MethodDescriptor<?, ?>, String> simpleMethodNames;
@@ -127,7 +124,7 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
     private final boolean grpcWebText;
     private final Compressor compressor;
     private final InternalGrpcExceptionHandler exceptionHandler;
-    private final ClientPreprocessors preprocessors;
+    private final HttpPreClient preClient;
 
     private boolean endpointInitialized;
     @Nullable
@@ -148,7 +145,6 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
 
     ArmeriaClientCall(
             DefaultClientRequestContext ctx,
-            HttpClient client,
             HttpRequestWriter req,
             MethodDescriptor<I, O> method,
             Map<MethodDescriptor<?, ?>, String> simpleMethodNames,
@@ -163,9 +159,9 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
             boolean unsafeWrapResponseBuffers,
             InternalGrpcExceptionHandler exceptionHandler,
             boolean useMethodMarshaller,
-            ClientPreprocessors preprocessors) {
+            HttpPreClient preClient,
+            BiFunction<ClientRequestContext, Throwable, HttpResponse> errorResponseFactory) {
         this.ctx = ctx;
-        this.client = client;
         this.req = req;
         this.method = method;
         this.simpleMethodNames = simpleMethodNames;
@@ -178,7 +174,8 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
         grpcWebText = GrpcSerializationFormats.isGrpcWebText(serializationFormat);
         this.maxInboundMessageSizeBytes = maxInboundMessageSizeBytes;
         this.exceptionHandler = exceptionHandler;
-        this.preprocessors = preprocessors;
+        this.preClient = preClient;
+        this.errorResponseFactory = errorResponseFactory;
 
         ctx.whenInitialized().handle((unused1, unused2) -> {
             runPendingTask();
@@ -248,18 +245,7 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
 
         // Must come after handling deadline.
         final HttpRequest newReq = prepareHeaders(compressor, metadata, remainingNanos);
-        final BiFunction<ClientRequestContext, Throwable, HttpResponse> errorResponseFactory =
-                (unused, cause) -> {
-                    final StatusAndMetadata statusAndMetadata = exceptionHandler.handle(ctx, cause);
-                    Status status = statusAndMetadata.status();
-                    if (status.getDescription() == null) {
-                        status = status.withDescription(cause.getMessage());
-                    }
-                    return HttpResponse.ofFailure(status.asRuntimeException());
-                };
-        final HttpPreClient execution =
-                preprocessors.decorate(TailPreClient.of(client, HttpResponse::of, errorResponseFactory));
-        final HttpResponse res = ClientUtil.executeWithFallback(execution, ctx, newReq, errorResponseFactory);
+        final HttpResponse res = ClientUtil.executeWithFallback(preClient, ctx, newReq, errorResponseFactory);
 
         final HttpStreamDeframer deframer = new HttpStreamDeframer(
                 decompressorRegistry, ctx, this, exceptionHandler,
