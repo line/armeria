@@ -169,11 +169,6 @@ public final class DefaultClientRequestContext
     private String strVal;
     private short strValAvailabilities;
 
-    // We use null checks which are faster than checking if a list is empty,
-    // because it is more common to have no customizers than to have any.
-    @Nullable
-    private volatile Consumer<ClientRequestContext> customizer;
-
     @Nullable
     private volatile CompletableFuture<Boolean> whenInitialized;
 
@@ -302,16 +297,6 @@ public final class DefaultClientRequestContext
 
         defaultRequestHeaders = options.get(ClientOptions.HEADERS);
         additionalRequestHeaders = HttpHeaders.of();
-
-        final Consumer<ClientRequestContext> customizer = options.contextCustomizer();
-        final Consumer<ClientRequestContext> threadLocalCustomizer = copyThreadLocalCustomizer();
-        if (customizer == ClientOptions.CONTEXT_CUSTOMIZER.defaultValue()) {
-            this.customizer = threadLocalCustomizer;
-        } else if (threadLocalCustomizer == null) {
-            this.customizer = customizer;
-        } else {
-            this.customizer = customizer.andThen(threadLocalCustomizer);
-        }
         responseTimeoutMode = responseTimeoutMode(options, requestOptions);
     }
 
@@ -363,14 +348,14 @@ public final class DefaultClientRequestContext
         assert !initialized;
         initialized = true;
 
-        try {
-            // Note: context customizer must be run before:
-            //       - EndpointSelector.select() so that the customizer can inject the attributes which may be
-            //         required by the EndpointSelector.
-            //       - mapEndpoint() to give an opportunity to override an Endpoint when using
-            //         an additional authority.
-            runContextCustomizer();
+        final Throwable cancellationCause = cancellationCause();
+        if (cancellationCause != null) {
+            acquireEventLoop(endpointGroup);
+            failEarly(cancellationCause);
+            return initFuture(false, null);
+        }
 
+        try {
             endpointGroup = mapEndpoint(endpointGroup);
             if (endpointGroup instanceof Endpoint) {
                 return initEndpoint((Endpoint) endpointGroup);
@@ -489,11 +474,24 @@ public final class DefaultClientRequestContext
         }
     }
 
-    private void runContextCustomizer() {
-        final Consumer<ClientRequestContext> customizer = this.customizer;
+    @Override
+    public void runContextCustomizer() {
+        final Consumer<ClientRequestContext> customizer;
+        final Consumer<ClientRequestContext> optionsCustomizer = options.contextCustomizer();
+        final Consumer<ClientRequestContext> threadLocalCustomizer = copyThreadLocalCustomizer();
+        if (optionsCustomizer == ClientOptions.CONTEXT_CUSTOMIZER.defaultValue()) {
+            customizer = threadLocalCustomizer;
+        } else if (threadLocalCustomizer == null) {
+            customizer = optionsCustomizer;
+        } else {
+            customizer = optionsCustomizer.andThen(threadLocalCustomizer);
+        }
         if (customizer != null) {
-            this.customizer = null;
-            customizer.accept(this);
+            try {
+                customizer.accept(this);
+            } catch (Throwable t) {
+                cancel(UnprocessedRequestException.of(t));
+            }
         }
     }
 

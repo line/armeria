@@ -75,4 +75,18 @@ public interface ClientRequestContextExtension extends ClientRequestContext, Req
     HttpHeaders internalRequestHeaders();
 
     long remainingTimeoutNanos();
+
+    /**
+     * The context customizer must be run before the following conditions.
+     * <li>
+     *     <ul>
+     *         EndpointSelector.select() so that the customizer can inject the attributes which may be
+     *         required by the EndpointSelector.</ul>
+     *     <ul>
+     *         mapEndpoint() to give an opportunity to override an Endpoint when using
+     *         an additional authority.
+     *     </ul>
+     * </li>
+     */
+    void runContextCustomizer();
 }

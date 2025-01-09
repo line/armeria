@@ -32,6 +32,8 @@ public final class ClientPreprocessorsBuilder {
     private final List<HttpPreprocessor> preprocessors = new ArrayList<>();
     private final List<RpcPreprocessor> rpcPreprocessors = new ArrayList<>();
 
+    ClientPreprocessorsBuilder() {}
+
     /**
      * Adds the specified {@link ClientPreprocessors}.
      */

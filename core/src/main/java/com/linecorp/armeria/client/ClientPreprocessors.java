@@ -62,7 +62,10 @@ public final class ClientPreprocessors {
         return builder().addRpc(preprocessor).build();
     }
 
-    static ClientPreprocessorsBuilder builder() {
+    /**
+     * Returns a newly created {@link ClientPreprocessorsBuilder}.
+     */
+    public static ClientPreprocessorsBuilder builder() {
         return new ClientPreprocessorsBuilder();
     }
 

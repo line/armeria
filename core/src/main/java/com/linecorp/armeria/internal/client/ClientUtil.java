@@ -157,11 +157,16 @@ public final class ClientUtil {
     O executeWithFallback(U execution,
                           PreClientRequestContext ctx, I req,
                           BiFunction<ClientRequestContext, Throwable, O> errorResponseFactory) {
+        final ClientRequestContextExtension ctxExt = ctx.as(ClientRequestContextExtension.class);
+        if (ctxExt != null) {
+            ctxExt.runContextCustomizer();
+        }
         try {
             return execution.execute(ctx, req);
         } catch (Exception e) {
-            fail(ctx, e);
-            return errorResponseFactory.apply(ctx, e);
+            final UnprocessedRequestException upe = UnprocessedRequestException.of(e);
+            fail(ctx, upe);
+            return errorResponseFactory.apply(ctx, upe);
         }
     }
 

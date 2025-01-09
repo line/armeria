@@ -293,6 +293,7 @@ class DefaultClientRequestContextTest {
                 HttpHeaderNames.AUTHORITY, "example.com:8080"));
         final DefaultClientRequestContext ctx = newContext(ClientOptions.of(), request,
                                                            Endpoint.of("example.com", 8080));
+        ctx.runContextCustomizer();
         ctx.init();
         return ctx;
     }

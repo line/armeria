@@ -48,12 +48,14 @@ final class DefaultWebClient extends UserClient<HttpRequest, HttpResponse> imple
     private BlockingWebClient blockingWebClient;
     @Nullable
     private RestClient restClient;
-    private final HttpPreClient tailClientExecution;
+    private final HttpPreClient preClient;
 
     DefaultWebClient(ClientBuilderParams params, HttpClient delegate, MeterRegistry meterRegistry) {
         super(params, delegate, meterRegistry,
               HttpResponse::of, (ctx, cause) -> HttpResponse.ofFailure(cause));
-        tailClientExecution = TailPreClient.of(unwrap(), futureConverter(), errorResponseFactory());
+        final HttpPreClient tailPreClient =
+                TailPreClient.of(unwrap(), futureConverter(), errorResponseFactory());
+        preClient = options().clientPreprocessors().decorate(tailPreClient);
     }
 
     @Override
@@ -120,8 +122,7 @@ final class DefaultWebClient extends UserClient<HttpRequest, HttpResponse> imple
 
         final DefaultClientRequestContext ctx = new DefaultClientRequestContext(
                 protocol, newReq, null, reqTarget, endpointGroup, requestOptions, options());
-        final HttpPreClient execution = options().clientPreprocessors().decorate(tailClientExecution);
-        return ClientUtil.executeWithFallback(execution, ctx, newReq, errorResponseFactory());
+        return ClientUtil.executeWithFallback(preClient, ctx, newReq, errorResponseFactory());
     }
 
     private static HttpResponse abortRequestAndReturnFailureResponse(
