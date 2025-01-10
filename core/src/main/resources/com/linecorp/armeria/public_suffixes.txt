@@ -7963,6 +7963,7 @@ studio.ca-central-1.sagemaker.aws
 studio.cn-north-1.sagemaker.com.cn
 studio.cn-northwest-1.sagemaker.com.cn
 studio.eu-central-1.sagemaker.aws
+studio.eu-central-2.sagemaker.aws
 studio.eu-north-1.sagemaker.aws
 studio.eu-south-1.sagemaker.aws
 studio.eu-south-2.sagemaker.aws
@@ -8404,6 +8405,15 @@ trani-barletta-andria.it
 traniandriabarletta.it
 tranibarlettaandria.it
 tranoy.no
+transfer-webapp.ap-northeast-1.on.aws
+transfer-webapp.ap-southeast-1.on.aws
+transfer-webapp.ap-southeast-2.on.aws
+transfer-webapp.eu-central-1.on.aws
+transfer-webapp.eu-north-1.on.aws
+transfer-webapp.eu-west-1.on.aws
+transfer-webapp.us-east-1.on.aws
+transfer-webapp.us-east-2.on.aws
+transfer-webapp.us-west-2.on.aws
 translate.goog
 translated.page
 transporte.bo
