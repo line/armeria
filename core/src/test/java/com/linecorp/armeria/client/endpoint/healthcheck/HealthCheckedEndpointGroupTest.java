@@ -617,7 +617,7 @@ class HealthCheckedEndpointGroupTest {
         final MockEndpointGroup delegate = new MockEndpointGroup();
         delegate.set(candidate1, candidate2, candidate2);
 
-        HealthCheckedEndpointGroup endpointGroup =
+        final HealthCheckedEndpointGroup endpointGroup =
                 new HealthCheckedEndpointGroup(delegate, true,
                                                10000, 10000,
                                                SessionProtocol.HTTP, 80,
