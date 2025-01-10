@@ -194,7 +194,7 @@ public final class HealthCheckedEndpointGroup extends DynamicEndpointGroup {
                 }
                 initialized = true;
                 destroyOldContexts(contextGroup);
-                setEndpoints(allHealthyEndpoints());
+                setEndpoints0(allHealthyEndpoints());
                 return null;
             });
         } finally {
@@ -303,8 +303,15 @@ public final class HealthCheckedEndpointGroup extends DynamicEndpointGroup {
 
         // Each new health status will be updated after initialization of the first context group.
         if (updated && initialized) {
-            setEndpoints(allHealthyEndpoints());
+            setEndpoints0(allHealthyEndpoints());
         }
+    }
+
+    private void setEndpoints0(List<Endpoint> endpoints) {
+        if (isClosing()) {
+            return;
+        }
+        setEndpoints(endpoints);
     }
 
     @Override
