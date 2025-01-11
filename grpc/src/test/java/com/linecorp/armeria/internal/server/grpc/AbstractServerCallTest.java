@@ -27,9 +27,12 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
+import org.reactivestreams.Subscriber;
+import org.reactivestreams.Subscription;
 
 import com.linecorp.armeria.client.grpc.GrpcClients;
-import com.linecorp.armeria.common.HttpRequest;
+import com.linecorp.armeria.common.FilteredHttpRequest;
+import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.util.BlockingTaskExecutor;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.grpc.GrpcService;
@@ -80,21 +83,29 @@ class AbstractServerCallTest {
                                .build();
             sb.service(grpcService);
             sb.decorator((delegate, ctx, req) -> {
-                final HttpRequest newReq = req.mapData(data -> {
-                    // This is called right before
-                    // blockingExecutor.execute(() -> invokeOnMessage(request, endOfStream)); is called
-                    // in AbstractServerCall.
-                    // https://github.com/line/armeria/blob/0960d091bfc7f350c17e68f57cc627de584b9705/grpc/src/main/java/com/linecorp/armeria/internal/server/grpc/AbstractServerCall.java#L363
-                    scheduledExecutorService.execute(() -> {
-                        final ServerCall<?, ?> serverCall = serverCallCaptor.get();
-                        assertThat(serverCall).isNotNull();
-                        // invokeOnMessage is not called until the request is cancelled.
-                        await().until(serverCall::isCancelled);
-                        // Now, AbstractServerCall.invokeOnMessage() is called and it doesn't call
-                        // listener.onMessage() because the request is cancelled.
-                    });
-                    return data;
-                });
+                final FilteredHttpRequest newReq = new FilteredHttpRequest(req) {
+                    @Override
+                    protected void beforeSubscribe(Subscriber<? super HttpObject> subscriber,
+                                                   Subscription subscription) {
+                        // This is called right before
+                        // blockingExecutor.execute(() -> invokeOnMessage(request, endOfStream)); is called
+                        // in AbstractServerCall.
+                        // https://github.com/line/armeria/blob/0960d091bfc7f350c17e68f57cc627de584b9705/grpc/src/main/java/com/linecorp/armeria/internal/server/grpc/AbstractServerCall.java#L363
+                        scheduledExecutorService.execute(() -> {
+                            final ServerCall<?, ?> serverCall = serverCallCaptor.get();
+                            assertThat(serverCall).isNotNull();
+                            // invokeOnMessage is not called until the request is cancelled.
+                            await().until(serverCall::isCancelled);
+                            // Now, AbstractServerCall.invokeOnMessage() is called and it doesn't call
+                            // listener.onMessage() because the request is cancelled.
+                        });
+                    }
+
+                    @Override
+                    protected HttpObject filter(HttpObject obj) {
+                        return obj;
+                    }
+                };
                 ctx.updateRequest(newReq);
                 return delegate.serve(ctx, newReq);
             });
