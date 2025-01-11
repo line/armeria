@@ -402,7 +402,6 @@ public abstract class AbstractServerCall<I, O> extends ServerCall<I, O> {
             // this task was scheduled to blockingTaskExecutor.
             return;
         }
-        System.err.println("invokeOnMessage 111111 " + request);
         try (SafeCloseable ignored = ctx.push()) {
             assert listener != null;
             listener.onMessage(request);
