@@ -382,6 +382,11 @@ public abstract class AbstractServerCall<I, O> extends ServerCall<I, O> {
     }
 
     protected final void invokeOnReady() {
+        if (blockingExecutor != null && cancelled) {
+            // Do not call listener.onReady() if the call is cancelled after
+            // this task was scheduled to blockingTaskExecutor.
+            return;
+        }
         try {
             if (listener != null) {
                 listener.onReady();
@@ -392,6 +397,12 @@ public abstract class AbstractServerCall<I, O> extends ServerCall<I, O> {
     }
 
     private void invokeOnMessage(I request, boolean halfClose) {
+        if (blockingExecutor != null && cancelled) {
+            // Do not call listener.onMessage() if the call is cancelled after
+            // this task was scheduled to blockingTaskExecutor.
+            return;
+        }
+        System.err.println("invokeOnMessage 111111 " + request);
         try (SafeCloseable ignored = ctx.push()) {
             assert listener != null;
             listener.onMessage(request);
@@ -404,6 +415,11 @@ public abstract class AbstractServerCall<I, O> extends ServerCall<I, O> {
     }
 
     protected final void invokeHalfClose() {
+        if (blockingExecutor != null && cancelled) {
+            // Do not call listener.onHalfClose() if the call is cancelled after
+            // this task was scheduled to blockingTaskExecutor.
+            return;
+        }
         try (SafeCloseable ignored = ctx.push()) {
             assert listener != null;
             listener.onHalfClose();
