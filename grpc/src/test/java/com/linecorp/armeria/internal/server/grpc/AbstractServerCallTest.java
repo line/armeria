@@ -68,10 +68,11 @@ class AbstractServerCallTest {
                                .addService(ServerInterceptors.intercept(
                                        new FooTestServiceImpl(),
                                        new ServerInterceptor() {
+
                                            @Override
-                                           public <ReqT, RespT> Listener<ReqT> interceptCall(
-                                                   ServerCall<ReqT, RespT> call, Metadata headers,
-                                                   ServerCallHandler<ReqT, RespT> next) {
+                                           public <T, U> Listener<T> interceptCall(
+                                                   ServerCall<T, U> call, Metadata headers,
+                                                   ServerCallHandler<T, U> next) {
                                                serverCallCaptor.set(call);
                                                return next.startCall(call, headers);
                                            }
