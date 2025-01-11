@@ -29,6 +29,7 @@ import java.util.concurrent.Executor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Splitter;
 
 import com.linecorp.armeria.common.HttpData;
@@ -111,8 +112,9 @@ public abstract class AbstractServerCall<I, O> extends ServerCall<I, O> {
     private final String clientAcceptEncoding;
     private final boolean autoCompression;
 
+    @VisibleForTesting
     @Nullable
-    private final Executor blockingExecutor;
+    final Executor blockingExecutor;
     private final InternalGrpcExceptionHandler exceptionHandler;
 
     // Only set once.

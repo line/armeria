@@ -20,8 +20,6 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.awaitility.Awaitility.await;
 
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -33,7 +31,6 @@ import org.reactivestreams.Subscription;
 import com.linecorp.armeria.client.grpc.GrpcClients;
 import com.linecorp.armeria.common.FilteredHttpRequest;
 import com.linecorp.armeria.common.HttpObject;
-import com.linecorp.armeria.common.util.BlockingTaskExecutor;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.grpc.GrpcService;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
@@ -57,12 +54,6 @@ class AbstractServerCallTest {
     static final ServerExtension server = new ServerExtension() {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
-            // Use a single-threaded executor to run the blocking task once at a time without accessing
-            // the sequential executor.
-            final ScheduledExecutorService scheduledExecutorService =
-                    Executors.newSingleThreadScheduledExecutor();
-            sb.blockingTaskExecutor(BlockingTaskExecutor.of(scheduledExecutorService), true);
-
             final AtomicReference<ServerCall<?, ?>> serverCallCaptor = new AtomicReference<>();
             final GrpcService grpcService =
                     GrpcService.builder()
@@ -88,12 +79,12 @@ class AbstractServerCallTest {
                     protected void beforeSubscribe(Subscriber<? super HttpObject> subscriber,
                                                    Subscription subscription) {
                         // This is called right before
-                        // blockingExecutor.execute(() -> invokeOnMessage(request, endOfStream)); is called
+                        // blockingExecutor.execute(() -> invokeOnMessage(request, endOfStream));
                         // in AbstractServerCall.
                         // https://github.com/line/armeria/blob/0960d091bfc7f350c17e68f57cc627de584b9705/grpc/src/main/java/com/linecorp/armeria/internal/server/grpc/AbstractServerCall.java#L363
-                        scheduledExecutorService.execute(() -> {
-                            final ServerCall<?, ?> serverCall = serverCallCaptor.get();
-                            assertThat(serverCall).isNotNull();
+                        final ServerCall<?, ?> serverCall = serverCallCaptor.get();
+                        assertThat(serverCall).isInstanceOf(AbstractServerCall.class);
+                        ((AbstractServerCall<?, ?>) serverCall).blockingExecutor.execute(() -> {
                             // invokeOnMessage is not called until the request is cancelled.
                             await().until(serverCall::isCancelled);
                             // Now, AbstractServerCall.invokeOnMessage() is called and it doesn't call
