@@ -20,6 +20,7 @@ import java.util.concurrent.CompletableFuture;
 
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
+import com.linecorp.armeria.client.endpoint.EndpointSelector;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.logging.RequestLog;
@@ -80,8 +81,8 @@ public interface ClientRequestContextExtension extends ClientRequestContext, Req
      * The context customizer must be run before the following conditions.
      * <li>
      *     <ul>
-     *         EndpointSelector.select() so that the customizer can inject the attributes which may be
-     *         required by the EndpointSelector.</ul>
+     *         {@link EndpointSelector#selectNow(ClientRequestContext)} so that the customizer
+     *         can inject the attributes which may be required by the EndpointSelector.</ul>
      *     <ul>
      *         mapEndpoint() to give an opportunity to override an Endpoint when using
      *         an additional authority.

@@ -121,7 +121,8 @@ final class DefaultWebClient extends UserClient<HttpRequest, HttpResponse> imple
         }
 
         final DefaultClientRequestContext ctx = new DefaultClientRequestContext(
-                protocol, newReq, null, reqTarget, endpointGroup, requestOptions, options());
+                protocol, newReq, newReq.method(), null, reqTarget, endpointGroup, requestOptions, options(),
+                meterRegistry());
         return ClientUtil.executeWithFallback(preClient, ctx, newReq, errorResponseFactory());
     }
 

@@ -54,6 +54,7 @@ public abstract class UserClient<I extends Request, O extends Response>
         implements ClientBuilderParams {
 
     private final ClientBuilderParams params;
+    private final MeterRegistry meterRegistry;
     private final Function<CompletableFuture<O>, O> futureConverter;
     private final BiFunction<ClientRequestContext, Throwable, O> errorResponseFactory;
 
@@ -74,6 +75,7 @@ public abstract class UserClient<I extends Request, O extends Response>
                          BiFunction<ClientRequestContext, Throwable, O> errorResponseFactory) {
         super(delegate);
         this.params = params;
+        this.meterRegistry = meterRegistry;
         this.futureConverter = futureConverter;
         this.errorResponseFactory = errorResponseFactory;
     }
@@ -125,13 +127,23 @@ public abstract class UserClient<I extends Request, O extends Response>
     }
 
     /**
+     * The {@link MeterRegistry} used for requests produced by this client.
+     */
+    protected MeterRegistry meterRegistry() {
+        return meterRegistry;
+    }
+
+    /**
      * Executes the specified {@link Request} via the delegate.
      *
      * @param protocol the {@link SessionProtocol} to use
      * @param method the method of the {@link Request}
      * @param reqTarget the {@link RequestTarget} of the {@link Request}
      * @param req the {@link Request}
+     *
+     * @deprecated prefer {@link ClientOptions#clientPreprocessors()} to execute requests
      */
+    @Deprecated
     protected final O execute(SessionProtocol protocol, HttpMethod method, RequestTarget reqTarget, I req) {
         return execute(protocol, method, reqTarget, req, RequestOptions.of());
     }
@@ -144,7 +156,10 @@ public abstract class UserClient<I extends Request, O extends Response>
      * @param reqTarget the {@link RequestTarget} of the {@link Request}
      * @param req the {@link Request}
      * @param requestOptions the {@link RequestOptions} of the {@link Request}
+     *
+     * @deprecated prefer {@link ClientOptions#clientPreprocessors()} to execute requests
      */
+    @Deprecated
     protected final O execute(SessionProtocol protocol, HttpMethod method, RequestTarget reqTarget,
                               I req, RequestOptions requestOptions) {
         return execute(protocol, endpointGroup(), method, reqTarget, req, requestOptions);
@@ -158,7 +173,10 @@ public abstract class UserClient<I extends Request, O extends Response>
      * @param method the method of the {@link Request}
      * @param reqTarget the {@link RequestTarget} of the {@link Request}
      * @param req the {@link Request}
+     *
+     * @deprecated prefer {@link ClientOptions#clientPreprocessors()} to execute requests
      */
+    @Deprecated
     protected final O execute(SessionProtocol protocol, EndpointGroup endpointGroup, HttpMethod method,
                               RequestTarget reqTarget, I req) {
         return execute(protocol, endpointGroup, method, reqTarget, req, RequestOptions.of());
@@ -173,7 +191,10 @@ public abstract class UserClient<I extends Request, O extends Response>
      * @param reqTarget the {@link RequestTarget} of the {@link Request}
      * @param req the {@link Request}
      * @param requestOptions the {@link RequestOptions} of the {@link Request}
+     *
+     * @deprecated prefer {@link ClientOptions#clientPreprocessors()} to execute requests
      */
+    @Deprecated
     protected final O execute(SessionProtocol protocol, EndpointGroup endpointGroup, HttpMethod method,
                               RequestTarget reqTarget, I req, RequestOptions requestOptions) {
 
@@ -190,7 +211,7 @@ public abstract class UserClient<I extends Request, O extends Response>
 
         final DefaultClientRequestContext ctx = new DefaultClientRequestContext(
                 protocol, httpReq, method, rpcReq, reqTarget, endpointGroup,
-                requestOptions, options());
+                requestOptions, options(), meterRegistry);
 
         return initContextAndExecuteWithFallback(unwrap(), ctx, futureConverter, errorResponseFactory, req);
     }

@@ -78,7 +78,7 @@ class HttpPreprocessorTest {
     @Test
     void cancellationSchedulerIsInitializedCorrectly() {
         final HttpPreprocessor preprocessor = (delegate, ctx, req) -> {
-            ctx.eventLoop(eventLoop.get());
+            ctx.setEventLoop(eventLoop.get());
             return delegate.execute(ctx, req);
         };
         final BlockingWebClient client =

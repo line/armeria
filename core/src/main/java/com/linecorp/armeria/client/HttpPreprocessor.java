@@ -54,9 +54,9 @@ public interface HttpPreprocessor extends Preprocessor<HttpRequest, HttpResponse
         requireNonNull(endpointGroup, "endpointGroup");
         requireNonNull(eventLoop, "eventLoop");
         return (delegate, ctx, req) -> {
-            ctx.sessionProtocol(sessionProtocol);
-            ctx.endpointGroup(endpointGroup);
-            ctx.eventLoop(eventLoop);
+            ctx.setSessionProtocol(sessionProtocol);
+            ctx.setEndpointGroup(endpointGroup);
+            ctx.setEventLoop(eventLoop);
             return delegate.execute(ctx, req);
         };
     }
@@ -69,8 +69,8 @@ public interface HttpPreprocessor extends Preprocessor<HttpRequest, HttpResponse
         requireNonNull(sessionProtocol, "sessionProtocol");
         requireNonNull(endpointGroup, "endpointGroup");
         return (delegate, ctx, req) -> {
-            ctx.sessionProtocol(sessionProtocol);
-            ctx.endpointGroup(endpointGroup);
+            ctx.setSessionProtocol(sessionProtocol);
+            ctx.setEndpointGroup(endpointGroup);
             return delegate.execute(ctx, req);
         };
     }

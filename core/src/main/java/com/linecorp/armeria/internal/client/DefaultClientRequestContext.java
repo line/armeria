@@ -187,6 +187,17 @@ public final class DefaultClientRequestContext
     public DefaultClientRequestContext(SessionProtocol sessionProtocol, @Nullable HttpRequest httpRequest,
                                        HttpMethod method, @Nullable RpcRequest rpcRequest,
                                        RequestTarget requestTarget, EndpointGroup endpointGroup,
+                                       RequestOptions requestOptions, ClientOptions clientOptions,
+                                       MeterRegistry meterRegistry) {
+        this(null, meterRegistry,
+             sessionProtocol, nextRequestId(clientOptions), method, requestTarget,
+             endpointGroup, clientOptions, httpRequest, rpcRequest, requestOptions, serviceRequestContext(),
+             null, System.nanoTime(), SystemInfo.currentTimeMicros());
+    }
+
+    public DefaultClientRequestContext(SessionProtocol sessionProtocol, @Nullable HttpRequest httpRequest,
+                                       HttpMethod method, @Nullable RpcRequest rpcRequest,
+                                       RequestTarget requestTarget, EndpointGroup endpointGroup,
                                        RequestOptions requestOptions, ClientOptions clientOptions) {
         this(null, clientOptions.factory().meterRegistry(),
              sessionProtocol, nextRequestId(clientOptions), method, requestTarget,
@@ -648,7 +659,7 @@ public final class DefaultClientRequestContext
     }
 
     @Override
-    public void sessionProtocol(SessionProtocol sessionProtocol) {
+    public void setSessionProtocol(SessionProtocol sessionProtocol) {
         checkState(!initialized, "Cannot update sessionProtocol after initialization");
         this.sessionProtocol = desiredSessionProtocol(requireNonNull(sessionProtocol, "sessionProtocol"),
                                                       options);
@@ -754,7 +765,7 @@ public final class DefaultClientRequestContext
     }
 
     @Override
-    public void eventLoop(EventLoop eventLoop) {
+    public void setEventLoop(EventLoop eventLoop) {
         checkState(!initialized, "Cannot update eventLoop after initialization");
         checkState(this.eventLoop == null, "eventLoop can be updated only once");
         this.eventLoop = requireNonNull(eventLoop, "eventLoop");
@@ -785,7 +796,7 @@ public final class DefaultClientRequestContext
     }
 
     @Override
-    public void endpointGroup(EndpointGroup endpointGroup) {
+    public void setEndpointGroup(EndpointGroup endpointGroup) {
         checkState(!initialized, "Cannot update endpointGroup after initialization");
         this.endpointGroup = requireNonNull(endpointGroup, "endpointGroup");
     }

@@ -33,12 +33,12 @@ public interface PreClientRequestContext extends ClientRequestContext {
     /**
      * Sets the {@link EndpointGroup} used for the current {@link Request}.
      */
-    void endpointGroup(EndpointGroup endpointGroup);
+    void setEndpointGroup(EndpointGroup endpointGroup);
 
     /**
      * Sets the {@link SessionProtocol} of the current {@link Request}.
      */
-    void sessionProtocol(SessionProtocol sessionProtocol);
+    void setSessionProtocol(SessionProtocol sessionProtocol);
 
     /**
      * Sets the {@link EventLoop} which will handle this request. Because changing
@@ -49,5 +49,5 @@ public interface PreClientRequestContext extends ClientRequestContext {
      *
      * @see EventLoopScheduler
      */
-    void eventLoop(EventLoop eventLoop);
+    void setEventLoop(EventLoop eventLoop);
 }
