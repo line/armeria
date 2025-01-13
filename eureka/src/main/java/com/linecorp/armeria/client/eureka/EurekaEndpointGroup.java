@@ -66,6 +66,7 @@ import com.linecorp.armeria.internal.common.eureka.InstanceInfo.PortWrapper;
 import com.linecorp.armeria.server.eureka.EurekaUpdatingListener;
 
 import io.netty.channel.EventLoop;
+import io.netty.util.AttributeKey;
 import io.netty.util.concurrent.ScheduledFuture;
 
 /**
@@ -399,6 +400,24 @@ public final class EurekaEndpointGroup extends DynamicEndpointGroup {
         }
     }
 
+    private static final class EurekaInstanceInfoUtil {
+
+        private static final AttributeKey<InstanceInfo> INSTANCE_INFO = AttributeKey.valueOf(
+                EurekaInstanceInfoUtil.class, "INSTANCE_INFO");
+
+        @Nullable
+        static InstanceInfo get(Endpoint endpoint) {
+            requireNonNull(endpoint, "endpoint");
+            return endpoint.attr(INSTANCE_INFO);
+        }
+
+        static Endpoint with(Endpoint endpoint, InstanceInfo instanceInfo) {
+            requireNonNull(endpoint, "endpoint");
+            requireNonNull(instanceInfo, "instanceInfo");
+            return endpoint.withAttr(INSTANCE_INFO, instanceInfo);
+        }
+    }
+
     private static Endpoint endpoint(InstanceInfo instanceInfo, boolean secureVip) {
         final String hostname = instanceInfo.getHostName();
         final PortWrapper portWrapper = instanceInfo.getPort();
@@ -415,7 +434,7 @@ public final class EurekaEndpointGroup extends DynamicEndpointGroup {
         if (ipAddr != null && hostname != ipAddr) {
             endpoint = endpoint.withIpAddr(ipAddr);
         }
-        return endpoint;
+        return EurekaInstanceInfoUtil.with(endpoint, instanceInfo);
     }
 
     @Override
