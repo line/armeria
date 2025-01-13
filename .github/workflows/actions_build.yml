@@ -96,7 +96,7 @@ jobs:
       - name: Build with Gradle (Shading only)
         run: |
           ./gradlew --no-daemon --stacktrace shadedJar shadedTestJar trimShadedJar \
-          ${{ startsWith(matrix.on, 'ubicloud') && '--max-workers=12' || '--max-workers=2' }} --parallel \
+          ${{ startsWith(matrix.on, 'ubicloud') && '--max-workers=8' || '--max-workers=2' }} --parallel \
           ${{ matrix.coverage && '-Pcoverage' || '' }} \
           -PnoLint \
           -PbuildJdkVersion=${{ env.BUILD_JDK_VERSION }} \
@@ -115,7 +115,7 @@ jobs:
       - name: Build with Gradle
         run: |
           ./gradlew --no-daemon --stacktrace build \
-          ${{ startsWith(matrix.on, 'ubicloud') && '--max-workers=12' || '--max-workers=2' }} --parallel \
+          ${{ startsWith(matrix.on, 'ubicloud') && '--max-workers=8' || '--max-workers=2' }} --parallel \
           ${{ matrix.coverage && '-Pcoverage' || '' }} \
           ${{ matrix.leak && '-Pleak' || '' }} \
           ${{ matrix.blockhound && '-Pblockhound' || '' }} \
