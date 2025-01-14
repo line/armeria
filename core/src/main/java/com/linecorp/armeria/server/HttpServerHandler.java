@@ -94,7 +94,6 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
 
     private static final Logger logger = LoggerFactory.getLogger(HttpServerHandler.class);
 
-    private static final CompletableFuture<?>[] EMPTY_FUTURES = {};
     private static final String ALLOWED_METHODS_STRING =
             HttpMethod.knownMethods().stream().map(HttpMethod::name).collect(Collectors.joining(","));
 
