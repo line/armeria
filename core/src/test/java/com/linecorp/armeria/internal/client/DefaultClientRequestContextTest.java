@@ -221,7 +221,8 @@ class DefaultClientRequestContextTest {
                 HttpMethod.POST, "/foo",
                 HttpHeaderNames.SCHEME, "http"));
         final DefaultClientRequestContext ctx = newContext(ClientOptions.of(), request1);
-        assertThat(ctx.authority()).isNull();
+
+        assertThatThrownBy(() -> ctx.authority()).isInstanceOf(IllegalStateException.class);
         assertThat(ctx.uri().toString()).isEqualTo("http:/foo");
         assertThat(ctx.uri()).hasScheme("http").hasAuthority(null).hasPath("/foo");
 

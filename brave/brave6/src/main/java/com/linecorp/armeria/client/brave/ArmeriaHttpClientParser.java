@@ -16,7 +16,7 @@
 
 package com.linecorp.armeria.client.brave;
 
-import static com.google.common.base.MoreObjects.firstNonNull;
+import static com.linecorp.armeria.client.ObjectUtil.firstNonNullException;
 
 import java.net.InetSocketAddress;
 
@@ -72,7 +72,7 @@ final class ArmeriaHttpClientParser implements HttpRequestParser, HttpResponsePa
             return;
         }
 
-        span.tag(SpanTags.TAG_HTTP_HOST, firstNonNull(ctx.authority(), "UNKNOWN"))
+        span.tag(SpanTags.TAG_HTTP_HOST, firstNonNullException(ctx::authority, "UNKNOWN"))
             .tag(SpanTags.TAG_HTTP_URL, ctx.uri().toString());
     }
 

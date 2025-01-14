@@ -16,7 +16,7 @@
 
 package com.linecorp.armeria.client.observation;
 
-import static com.google.common.base.MoreObjects.firstNonNull;
+import static com.linecorp.armeria.client.ObjectUtil.firstNonNullException;
 
 import java.net.InetSocketAddress;
 
@@ -106,7 +106,7 @@ class DefaultHttpClientObservationConvention implements ObservationConvention<Cl
         }
         final ImmutableList.Builder<KeyValue> builder = ImmutableList.builderWithExpectedSize(expectedSize);
         builder.add(HighCardinalityKeys.HTTP_PATH.withValue(ctx.path()),
-                    HighCardinalityKeys.HTTP_HOST.withValue(firstNonNull(ctx.authority(), "UNKNOWN")),
+                    HighCardinalityKeys.HTTP_HOST.withValue(firstNonNullException(ctx::authority, "UNKNOWN")),
                     HighCardinalityKeys.HTTP_URL.withValue(ctx.uri().toString()));
         addIfNotNull(addressRemote, builder);
         addIfNotNull(addressLocal, builder);

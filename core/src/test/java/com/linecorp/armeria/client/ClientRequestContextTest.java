@@ -18,6 +18,8 @@ package com.linecorp.armeria.client;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CountDownLatch;
 import java.util.function.Function;
 import java.util.stream.Stream;
 
@@ -29,6 +31,7 @@ import org.junit.jupiter.params.provider.ArgumentsProvider;
 import org.junit.jupiter.params.provider.ArgumentsSource;
 import org.junit.jupiter.params.provider.ValueSource;
 
+import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.RequestContext;
@@ -267,6 +270,31 @@ class ClientRequestContextTest {
             assertThat(sctx.hasOwnAttr(key)).isTrue();
             assertThat(cctx.hasOwnAttr(key)).isFalse();
         }
+    }
+
+    @Test
+    void callAuthorityShouldBeThrownDuringPartiallyInit() {
+        final CountDownLatch countDownLatch = new CountDownLatch(1);
+        final WebClient client = WebClient
+                .builder("http://localhost:8080")
+                .contextCustomizer(ctx -> {
+                    countDownLatch.countDown();
+                    assertThatThrownBy(ctx::host)
+                            .isInstanceOf(IllegalStateException.class)
+                            .hasMessage(
+                                    "ClientRequestContext may be in the process of initialization." +
+                                    "In this case, host() or authority() could be null");
+                    assertThatThrownBy(ctx::authority)
+                            .isInstanceOf(IllegalStateException.class)
+                            .hasMessage(
+                                    "ClientRequestContext may be in the process of initialization." +
+                                    "In this case, host() or authority() could be null"
+                            );
+                    }).build();
+
+        final CompletableFuture<AggregatedHttpResponse> aggregate = client.get("/").aggregate();
+        assertThat(countDownLatch.getCount()).isEqualTo(0);
+        aggregate.cancel(true);
     }
 
     @ParameterizedTest
