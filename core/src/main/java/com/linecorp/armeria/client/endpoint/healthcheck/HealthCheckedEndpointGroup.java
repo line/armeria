@@ -291,6 +291,12 @@ public final class HealthCheckedEndpointGroup extends DynamicEndpointGroup {
     }
 
     private void updateHealth(Endpoint endpoint, boolean health) {
+        if (isClosing()) {
+            logger.debug("HealthCheckedEndpointGroup is closed. Ignoring health update for: {}. (healthy: {})",
+                         endpoint, health);
+            return;
+        }
+
         final boolean updated;
         // A healthy endpoint should be a valid checker context.
         if (health && findContext(endpoint) != null) {
