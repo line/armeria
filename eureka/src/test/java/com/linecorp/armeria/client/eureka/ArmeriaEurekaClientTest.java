@@ -54,7 +54,7 @@ import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.auth.AuthToken;
 import com.linecorp.armeria.internal.common.eureka.EurekaWebClient;
-import com.linecorp.armeria.internal.common.eureka.InstanceInfo.PortWrapper;
+import com.linecorp.armeria.common.eureka.InstanceInfo.PortWrapper;
 
 import jakarta.ws.rs.core.MediaType;
 
@@ -118,19 +118,19 @@ public final class ArmeriaEurekaClientTest extends EurekaHttpClientCompatibility
             return convertVoidResponse(delegate.register(convertInstanceInfo(info)));
         }
 
-        private static com.linecorp.armeria.internal.common.eureka.InstanceInfo convertInstanceInfo(
+        private static com.linecorp.armeria.common.eureka.InstanceInfo convertInstanceInfo(
                 InstanceInfo info) {
             final PortWrapper port = new PortWrapper(info.isPortEnabled(PortType.UNSECURE), info.getPort());
             final PortWrapper securePort = new PortWrapper(info.isPortEnabled(PortType.SECURE),
                                                            info.getSecurePort());
 
-            return new com.linecorp.armeria.internal.common.eureka.InstanceInfo(
+            return new com.linecorp.armeria.common.eureka.InstanceInfo(
                     info.getInstanceId(),
                     info.getAppName(), info.getAppGroupName(), info.getHostName(),
                     info.getIPAddr(),
                     info.getVIPAddress(), info.getSecureVipAddress(), port,
                     securePort,
-                    com.linecorp.armeria.internal.common.eureka.InstanceInfo.InstanceStatus
+                    com.linecorp.armeria.common.eureka.InstanceInfo.InstanceStatus
                             .toEnum(info.getStatus().name()), info.getHomePageUrl(),
                     info.getStatusPageUrl(),
                     info.getHealthCheckUrl(),
@@ -162,7 +162,7 @@ public final class ArmeriaEurekaClientTest extends EurekaHttpClientCompatibility
             return convertResponse(delegate.sendHeartBeat(
                     appName, id, convertInstanceInfo(info),
                     overriddenStatus == null ?
-                    null : com.linecorp.armeria.internal.common.eureka.InstanceInfo.InstanceStatus
+                    null : com.linecorp.armeria.common.eureka.InstanceInfo.InstanceStatus
                             .toEnum(overriddenStatus.name())),
                                    InstanceInfo.class);
         }
