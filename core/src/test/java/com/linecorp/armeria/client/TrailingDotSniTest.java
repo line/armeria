@@ -26,7 +26,6 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
-import com.linecorp.armeria.common.TlsProvider;
 import com.linecorp.armeria.internal.testing.MockAddressResolverGroup;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.testing.junit5.server.SelfSignedCertificateExtension;
@@ -44,12 +43,12 @@ class TrailingDotSniTest {
         @Override
         protected void configure(ServerBuilder sb) {
             sb.https(0);
-            sb.tlsProvider(TlsProvider.builder()
-                                      .keyPair("example.com", ssc.tlsKeyPair())
-                                      .build());
-            sb.service("/", (ctx, req) -> {
-                return HttpResponse.of(200);
-            });
+            sb.tlsSelfSigned();
+            sb.virtualHost("example.com")
+              .tls(ssc.privateKey(), ssc.certificate())
+              .service("/", (ctx, req) -> {
+                  return HttpResponse.of(200);
+              });
         }
     };
 
