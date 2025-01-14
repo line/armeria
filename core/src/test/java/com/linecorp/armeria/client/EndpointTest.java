@@ -539,8 +539,9 @@ class EndpointTest {
 
         // attributes
         final Endpoint endpointWithAttr = Endpoint.of("127.0.0.1").withAttr(AttributeKey.valueOf("test"), 1);
+        // toString() should not include the attributes.
         assertThat(endpointWithAttr.toString())
-                .isEqualTo("Endpoint{127.0.0.1, weight=1000, attributes=[test=1]}");
+                .isEqualTo("Endpoint{127.0.0.1, weight=1000}");
     }
 
     @Test
