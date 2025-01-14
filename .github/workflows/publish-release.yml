@@ -13,7 +13,7 @@ jobs:
   publish:
     name: Publish final artifacts
     if: github.repository == 'line/armeria'
-    runs-on: ubicloud-standard-8
+    runs-on: ubicloud-standard-16
     steps:
       - uses: actions/checkout@v4
 
@@ -29,7 +29,7 @@ jobs:
 
       - name: Build with Gradle
         run: |
-          ./gradlew --no-daemon --stacktrace --max-workers=8 --parallel -PflakyTests=false \
+          ./gradlew --no-daemon --stacktrace --max-workers=12 --parallel -PflakyTests=false \
           -Pretry=true -PfailOnPassedAfterRetry=false \
           build
         shell: bash
