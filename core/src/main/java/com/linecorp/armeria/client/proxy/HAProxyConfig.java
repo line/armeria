@@ -17,6 +17,7 @@
 package com.linecorp.armeria.client.proxy;
 
 import static com.google.common.base.Preconditions.checkArgument;
+import static java.util.Objects.requireNonNull;
 
 import java.net.InetSocketAddress;
 import java.util.Objects;
@@ -42,8 +43,11 @@ public final class HAProxyConfig extends ProxyConfig {
     }
 
     HAProxyConfig(InetSocketAddress proxyAddress, InetSocketAddress sourceAddress) {
-        checkArgument(sourceAddress.getAddress().getClass() == proxyAddress.getAddress().getClass(),
-                      "sourceAddress and proxyAddress should be the same type");
+        // If proxyAddress is unresolved, getAddress() will return null.
+        if (proxyAddress.getAddress() != null) {
+            checkArgument(sourceAddress.getAddress().getClass() == proxyAddress.getAddress().getClass(),
+                          "sourceAddress and proxyAddress should be the same type");
+        }
         this.proxyAddress = proxyAddress;
         this.sourceAddress = sourceAddress;
     }
@@ -65,6 +69,13 @@ public final class HAProxyConfig extends ProxyConfig {
     @Nullable
     public InetSocketAddress sourceAddress() {
         return sourceAddress;
+    }
+
+    @Override
+    public ProxyConfig withProxyAddress(InetSocketAddress newProxyAddress) {
+        requireNonNull(newProxyAddress, "newProxyAddress");
+        return this.sourceAddress == null ? new HAProxyConfig(newProxyAddress)
+                                          : new HAProxyConfig(newProxyAddress, this.sourceAddress);
     }
 
     @Override
