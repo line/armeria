@@ -32,7 +32,7 @@ import io.netty.channel.EventLoop;
  * illustrates a sample use-case:
  * <pre>{@code
  * RpcPreprocessor preprocessor = (delegate, ctx, req) -> {
- *     ctx.endpointGroup(Endpoint.of("overriding-host"));
+ *     ctx.setEndpointGroup(Endpoint.of("overriding-host"));
  *     return delegate.execute(ctx, req);
  * };
  * Iface iface = ThriftClients.builder(Endpoint.of("overridden-host"))

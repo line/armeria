@@ -32,7 +32,7 @@ import io.netty.channel.EventLoop;
  * illustrates a sample use-case:
  * <pre>{@code
  * HttpPreprocessor preprocessor = (delegate, ctx, req) -> {
- *     ctx.endpointGroup(Endpoint.of("overriding-host"));
+ *     ctx.setEndpointGroup(Endpoint.of("overriding-host"));
  *     return delegate.execute(ctx, req);
  * };
  * WebClient client = WebClient.builder()
