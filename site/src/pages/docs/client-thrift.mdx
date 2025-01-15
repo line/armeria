@@ -41,10 +41,10 @@ using <type://ThriftClientBuilder#serializationFormat(SerializationFormat)>.
 import com.linecorp.armeria.common.thrift.ThriftSerializationFormats;
 
 HelloService.Iface helloService =
-    ThriftClient.builder("http://127.0.0.1:8080")
-                .path("/hello")
-                .serializationFormat(ThriftSerializationFormats.JSON)
-                .build(HelloService.Iface.class); // or AsyncIface.class
+    ThriftClients.builder("http://127.0.0.1:8080")
+                 .path("/hello")
+                 .serializationFormat(ThriftSerializationFormats.JSON)
+                 .build(HelloService.Iface.class); // or AsyncIface.class
 ```
 
 Since we specified `HelloService.Iface` as the client type, `ThriftClients.newClient()` will return a
