@@ -53,8 +53,8 @@ import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.auth.AuthToken;
-import com.linecorp.armeria.internal.common.eureka.EurekaWebClient;
 import com.linecorp.armeria.common.eureka.InstanceInfo.PortWrapper;
+import com.linecorp.armeria.internal.common.eureka.EurekaWebClient;
 
 import jakarta.ws.rs.core.MediaType;
 
