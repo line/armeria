@@ -145,6 +145,27 @@ public interface RestClient extends ClientBuilderParams, Unwrappable {
     }
 
     /**
+     * Returns a new {@link RestClient} that is preprocessed with the specified {@link HttpPreprocessor}
+     * using the default {@link ClientFactory} and the default {@link ClientOptions}.
+     *
+     * @param httpPreprocessor the preprocessor
+     */
+    static RestClient of(HttpPreprocessor httpPreprocessor) {
+        return builder(httpPreprocessor).build();
+    }
+
+    /**
+     * Returns a new {@link RestClient} that is preprocessed with the specified {@link HttpPreprocessor}
+     * and {@param path} using the default {@link ClientFactory} and the default {@link ClientOptions}.
+     *
+     * @param httpPreprocessor the preprocessor
+     * @param path the path to the endpoint
+     */
+    static RestClient of(HttpPreprocessor httpPreprocessor, String path) {
+        return builder(httpPreprocessor, path).build();
+    }
+
+    /**
      * Returns a new {@link RestClientBuilder} created without a base {@link URI}.
      */
     static RestClientBuilder builder() {
@@ -227,6 +248,24 @@ public interface RestClient extends ClientBuilderParams, Unwrappable {
         requireNonNull(endpointGroup, "endpointGroup");
         requireNonNull(path, "path");
         return new RestClientBuilder(protocol, endpointGroup, path);
+    }
+
+    /**
+     * Returns a new {@link RestClientBuilder} created with the specified {@link HttpPreprocessor}.
+     */
+    static RestClientBuilder builder(HttpPreprocessor httpPreprocessor) {
+        requireNonNull(httpPreprocessor, "httpPreprocessor");
+        return new RestClientBuilder(httpPreprocessor, null);
+    }
+
+    /**
+     * Returns a new {@link RestClientBuilder} created with the specified {@link HttpPreprocessor}
+     * and path.
+     */
+    static RestClientBuilder builder(HttpPreprocessor httpPreprocessor, String path) {
+        requireNonNull(httpPreprocessor, "httpPreprocessor");
+        requireNonNull(path, "path");
+        return new RestClientBuilder(httpPreprocessor, path);
     }
 
     /**

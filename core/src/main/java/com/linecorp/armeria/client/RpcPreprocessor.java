@@ -31,14 +31,18 @@ import io.netty.channel.EventLoop;
  * customize certain properties before entering the decorating chain. The following
  * illustrates a sample use-case:
  * <pre>{@code
- * RpcPreprocessor preprocessor = (delegate, ctx, req) -> {
+ * RpcPreprocessor rpcPreprocessor1 = (delegate, ctx, req) -> {
+ *     ctx.setSessionProtocol(SessionProtocol.HTTP);
  *     ctx.setEndpointGroup(Endpoint.of("overriding-host"));
  *     return delegate.execute(ctx, req);
  * };
- * Iface iface = ThriftClients.builder(Endpoint.of("overridden-host"))
- *                            .rpcPreprocessor(rpcPreprocessor)
+ * RpcPreprocessor rpcPreprocessor2 = ...
+ * Iface iface = ThriftClients.builder(rpcPreprocessor1)
+ *                            .rpcPreprocessor(rpcPreprocessor2)
  *                            .build(Iface.class);
  * }</pre>
+ * Note that clients created solely using a {@link RpcPreprocessor} must set the {@link SessionProtocol}
+ * and {@link EndpointGroup} at the very least.
  */
 @UnstableApi
 @FunctionalInterface

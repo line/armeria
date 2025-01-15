@@ -28,12 +28,14 @@ import com.linecorp.armeria.client.PreClient;
 import com.linecorp.armeria.client.PreClientRequestContext;
 import com.linecorp.armeria.client.RpcClient;
 import com.linecorp.armeria.client.RpcPreClient;
+import com.linecorp.armeria.client.UnprocessedRequestException;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.RpcResponse;
+import com.linecorp.armeria.common.SessionProtocol;
 
 public final class TailPreClient<I extends Request, O extends Response> implements PreClient<I, O> {
 
@@ -69,6 +71,13 @@ public final class TailPreClient<I extends Request, O extends Response> implemen
 
     @Override
     public O execute(PreClientRequestContext ctx, I req) {
+        if (ctx.sessionProtocol() == SessionProtocol.UNDEFINED) {
+            final UnprocessedRequestException e = UnprocessedRequestException.of(
+                    new IllegalArgumentException(
+                            "ctx.sessionProtocol() cannot be '" + ctx.sessionProtocol() + "'. " +
+                            "It must be one of '" + SessionProtocol.httpAndHttpsValues() + "'."));
+            return errorResponseFactory.apply(ctx, e);
+        }
         final ClientRequestContextExtension ctxExt = ctx.as(ClientRequestContextExtension.class);
         assert ctxExt != null;
         return ClientUtil.initContextAndExecuteWithFallback(delegate, ctxExt,

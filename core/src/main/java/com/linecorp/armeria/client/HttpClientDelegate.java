@@ -71,6 +71,12 @@ final class HttpClientDelegate implements HttpClient {
                                               "did you forget to call ctx.updateRequest() in your decorator?"),
                     ctx);
         }
+        if (ctx.sessionProtocol() == SessionProtocol.UNDEFINED) {
+            return earlyFailedResponse(
+                    new IllegalArgumentException(
+                            "ctx.sessionProtocol() cannot be '" + ctx.sessionProtocol() + "'. " +
+                            "It must be one of '" + SessionProtocol.httpAndHttpsValues() + "'."), ctx);
+        }
 
         final Endpoint endpoint = ctx.endpoint();
         if (endpoint == null) {

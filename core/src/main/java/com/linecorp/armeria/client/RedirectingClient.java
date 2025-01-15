@@ -58,6 +58,7 @@ import com.linecorp.armeria.common.logging.RequestLogBuilder;
 import com.linecorp.armeria.common.logging.RequestLogProperty;
 import com.linecorp.armeria.common.stream.AbortedStreamException;
 import com.linecorp.armeria.internal.client.AggregatedHttpRequestDuplicator;
+import com.linecorp.armeria.internal.client.ClientBuilderParamsUtil;
 import com.linecorp.armeria.internal.client.ClientUtil;
 import com.linecorp.armeria.internal.common.util.TemporaryThreadLocals;
 
@@ -76,9 +77,11 @@ final class RedirectingClient extends SimpleDecoratingHttpClient {
 
     static Function<? super HttpClient, RedirectingClient> newDecorator(
             ClientBuilderParams params, RedirectConfig redirectConfig) {
-        final boolean undefinedUri = Clients.isUndefinedUri(params.uri());
+        final boolean undefinedUri = Clients.isUndefinedUri(params.uri()) ||
+                                     ClientBuilderParamsUtil.isPreprocessorUri(params.uri());
+        final boolean undefinedScheme = params.scheme().sessionProtocol() == SessionProtocol.UNDEFINED;
         final Set<SessionProtocol> allowedProtocols =
-                allowedProtocols(undefinedUri, redirectConfig.allowedProtocols(),
+                allowedProtocols(undefinedScheme, redirectConfig.allowedProtocols(),
                                  params.scheme().sessionProtocol());
         final BiPredicate<ClientRequestContext, String> domainFilter =
                 domainFilter(undefinedUri, redirectConfig.domainFilter());
@@ -86,10 +89,10 @@ final class RedirectingClient extends SimpleDecoratingHttpClient {
                                                  redirectConfig.maxRedirects());
     }
 
-    private static Set<SessionProtocol> allowedProtocols(boolean undefinedUri,
+    private static Set<SessionProtocol> allowedProtocols(boolean undefinedScheme,
                                                          @Nullable Set<SessionProtocol> allowedProtocols,
                                                          SessionProtocol usedProtocol) {
-        if (undefinedUri) {
+        if (undefinedScheme) {
             if (allowedProtocols != null) {
                 return allowedProtocols;
             }

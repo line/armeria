@@ -66,6 +66,7 @@ import com.linecorp.armeria.client.ClientRequestContextCaptor;
 import com.linecorp.armeria.client.Clients;
 import com.linecorp.armeria.client.DecoratingHttpClientFunction;
 import com.linecorp.armeria.client.Endpoint;
+import com.linecorp.armeria.client.HttpPreprocessor;
 import com.linecorp.armeria.client.ResponseTimeoutException;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.common.CommonPools;
@@ -75,6 +76,7 @@ import com.linecorp.armeria.common.HttpHeadersBuilder;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.RpcResponse;
+import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.grpc.GrpcCallOptions;
 import com.linecorp.armeria.common.grpc.GrpcExceptionHandlerFunction;
@@ -296,6 +298,14 @@ class GrpcClientTest {
                 GrpcClients.builder(server.httpUri())
                            .serializationFormat(GrpcSerializationFormats.PROTO_WEB)
                            .build(TestServiceBlockingStub.class);
+        assertThat(stub.emptyCall(EMPTY)).isEqualTo(EMPTY);
+    }
+
+    @Test
+    void preprocessor() throws Exception {
+        final TestServiceBlockingStub stub =
+                GrpcClients.newClient(HttpPreprocessor.of(SessionProtocol.HTTP, server.httpEndpoint()),
+                                      TestServiceBlockingStub.class);
         assertThat(stub.emptyCall(EMPTY)).isEqualTo(EMPTY);
     }
 

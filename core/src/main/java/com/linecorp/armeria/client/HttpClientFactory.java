@@ -430,6 +430,25 @@ final class HttpClientFactory implements ClientFactory {
     }
 
     @Override
+    public ClientBuilderParams validateParams(ClientBuilderParams params) {
+        if (params.scheme().sessionProtocol() == SessionProtocol.UNDEFINED &&
+            params.options().clientPreprocessors().preprocessors().isEmpty()) {
+            // - HttpClient may be created for an RPC-based client
+            // - A default WebClient functions without preprocessors
+            if (params.clientType() != HttpClient.class && !Clients.isUndefinedUri(params.uri())) {
+                throw new IllegalArgumentException(
+                        "At least one preprocessor must be specified for http-based clients " +
+                        "with sessionProtocol '" + params.scheme().sessionProtocol() + "'.");
+            }
+        }
+        if (Clients.isUndefinedUri(params.uri()) && !"/".equals(params.absolutePathRef())) {
+            throw new IllegalArgumentException(
+                    "Cannot set a prefix path for clients created by 'WebClient.of().'");
+        }
+        return ClientFactory.super.validateParams(params);
+    }
+
+    @Override
     public boolean isClosing() {
         return closeable.isClosing();
     }

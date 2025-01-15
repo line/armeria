@@ -17,9 +17,11 @@
 package com.linecorp.armeria.client;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.CompletionException;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
@@ -36,6 +38,18 @@ class HttpPreprocessorTest {
 
     @RegisterExtension
     static final EventLoopExtension eventLoop = new EventLoopExtension();
+
+    @Test
+    void invalidSessionProtocol() {
+        final WebClient client = WebClient.of(PreClient::execute);
+        assertThatThrownBy(() -> client.get("/").aggregate().join())
+                .isInstanceOf(CompletionException.class)
+                .cause()
+                .isInstanceOf(UnprocessedRequestException.class)
+                .cause()
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("ctx.sessionProtocol() cannot be 'undefined'");
+    }
 
     @Test
     void overwriteByCustomPreprocessor() {
