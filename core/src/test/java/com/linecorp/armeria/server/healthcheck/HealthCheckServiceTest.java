@@ -143,6 +143,7 @@ class HealthCheckServiceTest {
     void setUp() {
         reset(logger);
         when(logger.isDebugEnabled()).thenReturn(true);
+        when(logger.isWarnEnabled()).thenReturn(true);
         checker.setHealthy(true);
     }
 
@@ -189,7 +190,7 @@ class HealthCheckServiceTest {
                              "connection: close\r\n\r\n" +
                              "{\"healthy\":false}");
         await().untilAsserted(() -> {
-            verify(logger).debug(anyString());
+            verify(logger).warn(anyString());
         });
     }
 
@@ -214,7 +215,7 @@ class HealthCheckServiceTest {
                              "armeria-lphc: 60, 5\r\n" +
                              "content-length: 17\r\n" +
                              "connection: close\r\n\r\n");
-        verify(logger).debug(anyString());
+        verify(logger).warn(anyString());
     }
 
     private static void assertResponseEquals(String request, String expectedResponse) throws Exception {

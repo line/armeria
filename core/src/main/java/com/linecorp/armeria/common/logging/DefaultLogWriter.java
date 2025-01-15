@@ -28,8 +28,11 @@ import org.slf4j.LoggerFactory;
 
 import com.google.common.base.MoreObjects;
 
+import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.common.RequestContext;
+import com.linecorp.armeria.common.SuccessFunction;
 import com.linecorp.armeria.common.util.SafeCloseable;
+import com.linecorp.armeria.server.ServiceRequestContext;
 
 final class DefaultLogWriter implements LogWriter {
 
@@ -98,26 +101,41 @@ final class DefaultLogWriter implements LogWriter {
             final String responseStr = logFormatter.formatResponse(log);
             final RequestContext ctx = log.context();
             try (SafeCloseable ignored = ctx.push()) {
-                if (responseCause == null) {
+                if (isSuccess(log)) {
                     responseLogLevel.log(logger, responseStr);
                     return;
                 }
+                // If the request is not successful,
+                // we log the request first if it's unlogged to help debugging.
 
                 final LogLevel requestLogLevel = requestLogLevelMapper.apply(log);
                 assert requestLogLevel != null;
                 if (!requestLogLevel.isEnabled(logger)) {
-                    // Request wasn't logged, but this is an unsuccessful response,
-                    // so we log the request too to help debugging.
                     responseLogLevel.log(logger, logFormatter.formatRequest(log));
                 }
 
-                if (responseCauseFilter.test(ctx, responseCause)) {
+                if (responseCause == null || responseCauseFilter.test(ctx, responseCause)) {
                     responseLogLevel.log(logger, responseStr);
                 } else {
                     responseLogLevel.log(logger, responseStr, responseCause);
                 }
             }
         }
+    }
+
+    static boolean isSuccess(RequestLog log) {
+        final RequestContext ctx = log.context();
+        final SuccessFunction successFunction;
+        if (ctx instanceof ClientRequestContext) {
+            successFunction = ((ClientRequestContext) ctx).options().successFunction();
+        } else if (ctx instanceof ServiceRequestContext) {
+            successFunction = ((ServiceRequestContext) ctx).config().successFunction();
+        } else {
+            throw new IllegalArgumentException(
+                    ctx + " is neither " + ClientRequestContext.class.getSimpleName() + " nor " +
+                    ServiceRequestContext.class.getSimpleName());
+        }
+        return successFunction.isSuccess(ctx, log);
     }
 
     @Override

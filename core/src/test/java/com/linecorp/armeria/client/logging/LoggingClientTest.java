@@ -90,7 +90,7 @@ class LoggingClientTest {
 
         customLoggerClient.execute(ctx, req);
 
-        verify(logger, times(2)).isInfoEnabled();
+        verify(logger, times(3)).isInfoEnabled();
 
         // verify request log
         verify(logger).info(argThat((String actLog) -> actLog.contains("Request:") &&
@@ -152,7 +152,7 @@ class LoggingClientTest {
         client.execute(ctx, req);
 
         // After the sanitization.
-        verify(logger, times(2)).isInfoEnabled();
+        verify(logger, times(3)).isInfoEnabled();
 
         // verify request log
         verify(logger).info(argThat((String text) -> text.contains("Request:") &&
@@ -196,7 +196,7 @@ class LoggingClientTest {
         client.execute(ctx, req);
 
         // After the sanitization.
-        verify(logger, times(2)).isInfoEnabled();
+        verify(logger, times(3)).isInfoEnabled();
 
         // verify request log
         verify(logger).info(argThat((String text) -> text.contains("Request:") &&
@@ -239,10 +239,10 @@ class LoggingClientTest {
 
         client.execute(ctx, req);
 
-        // Ensure the request content (the phone number 333-490-4499) is sanitized.
-        verify(logger, times(2)).isInfoEnabled();
+        verify(logger, times(3)).isInfoEnabled();
 
         // verify request log
+        // Ensure the request content (the phone number 333-490-4499) is sanitized.
         verify(logger).info(argThat((String text) -> text.contains("Request:") &&
                                                      !text.contains("333-490-4499")));
         // verify response log
@@ -283,10 +283,10 @@ class LoggingClientTest {
 
         client.execute(ctx, req);
 
-        // Ensure the request content (the phone number 333-490-4499) is sanitized.
-        verify(logger, times(2)).isInfoEnabled();
+        verify(logger, times(3)).isInfoEnabled();
 
         // verify request log
+        // Ensure the request content (the phone number 333-490-4499) is sanitized.
         verify(logger).info(argThat((String text) -> text.contains("Request:") &&
                                                      !text.contains("333-490-4499")));
         // verify response log
@@ -301,7 +301,7 @@ class LoggingClientTest {
         ctx.logBuilder().responseHeaders(ResponseHeaders.of(HttpStatus.INTERNAL_SERVER_ERROR));
 
         final Logger logger = LoggingTestUtil.newMockLogger(ctx, capturedCause);
-        when(logger.isDebugEnabled()).thenReturn(true);
+        when(logger.isWarnEnabled()).thenReturn(true);
 
         // use custom logger
         final LoggingClient customLoggerClient =
@@ -312,13 +312,14 @@ class LoggingClientTest {
         customLoggerClient.execute(ctx, req);
 
         verify(logger, times(2)).isDebugEnabled();
+        verify(logger, times(1)).isWarnEnabled();
 
         // verify request log
-        verify(logger).debug(argThat((String actLog) -> actLog.contains("Request:") &&
+        verify(logger).warn(argThat((String actLog) -> actLog.contains("Request:") &&
                                                         actLog.endsWith("headers=[:method=GET, :path=/]}")));
 
         // verify response log
-        verify(logger).debug(argThat((String actLog) -> actLog.contains("Response:") &&
+        verify(logger).warn(argThat((String actLog) -> actLog.contains("Response:") &&
                                                         actLog.endsWith("headers=[:status=500]}")));
     }
 
