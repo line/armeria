@@ -160,6 +160,19 @@ public final class ClientOptions
     public static final ClientOption<ResponseTimeoutMode> RESPONSE_TIMEOUT_MODE =
             ClientOption.define("RESPONSE_TIMEOUT_MODE", Flags.responseTimeoutMode());
 
+    @UnstableApi
+    public static final ClientOption<ClientPreprocessors> PREPROCESSORS =
+            ClientOption.define("PREPROCESSORS", ClientPreprocessors.of(), Function.identity(),
+                                (oldValue, newValue) -> {
+                                    final ClientPreprocessors newPreprocessors = newValue.value();
+                                    final ClientPreprocessors oldPreprocessors = oldValue.value();
+                                    return newValue.option().newValue(
+                                            ClientPreprocessors.builder()
+                                                               .add(oldPreprocessors)
+                                                               .add(newPreprocessors)
+                                                               .build());
+                                });
+
     private static final List<AsciiString> PROHIBITED_HEADER_NAMES = ImmutableList.of(
             HttpHeaderNames.HTTP2_SETTINGS,
             HttpHeaderNames.METHOD,
@@ -408,6 +421,14 @@ public final class ClientOptions
     @UnstableApi
     public ResponseTimeoutMode responseTimeoutMode() {
         return get(RESPONSE_TIMEOUT_MODE);
+    }
+
+    /**
+     * Returns the {@link Preprocessor}s that preprocesses the components of a client.
+     */
+    @UnstableApi
+    public ClientPreprocessors clientPreprocessors() {
+        return get(PREPROCESSORS);
     }
 
     /**

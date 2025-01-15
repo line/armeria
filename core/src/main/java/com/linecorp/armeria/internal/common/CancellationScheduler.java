@@ -20,6 +20,8 @@ import static com.linecorp.armeria.internal.common.DefaultCancellationScheduler.
 
 import java.util.concurrent.CompletableFuture;
 
+import com.google.common.annotations.VisibleForTesting;
+
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.TimeoutMode;
 
@@ -127,6 +129,9 @@ public interface CancellationScheduler {
      * {@link CancellationTask} will be executed after the currently set task has finished executing.
      */
     void updateTask(CancellationTask cancellationTask);
+
+    @VisibleForTesting
+    State state();
 
     enum State {
         INIT,

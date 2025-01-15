@@ -259,4 +259,15 @@ public final class RestClientBuilder extends AbstractWebClientBuilder {
     public RestClientBuilder responseTimeoutMode(ResponseTimeoutMode responseTimeoutMode) {
         return (RestClientBuilder) super.responseTimeoutMode(responseTimeoutMode);
     }
+
+    @Override
+    public RestClientBuilder preprocessor(HttpPreprocessor decorator) {
+        return (RestClientBuilder) super.preprocessor(decorator);
+    }
+
+    @Override
+    @Deprecated
+    public RestClientBuilder rpcPreprocessor(RpcPreprocessor rpcPreprocessor) {
+        return (RestClientBuilder) super.rpcPreprocessor(rpcPreprocessor);
+    }
 }

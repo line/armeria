@@ -29,6 +29,9 @@ import com.linecorp.armeria.common.RequestTargetForm;
 import com.linecorp.armeria.common.Scheme;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.internal.client.ClientUtil;
+import com.linecorp.armeria.internal.client.DefaultClientRequestContext;
+import com.linecorp.armeria.internal.client.TailPreClient;
 
 import io.micrometer.core.instrument.MeterRegistry;
 
@@ -45,10 +48,14 @@ final class DefaultWebClient extends UserClient<HttpRequest, HttpResponse> imple
     private BlockingWebClient blockingWebClient;
     @Nullable
     private RestClient restClient;
+    private final HttpPreClient preClient;
 
     DefaultWebClient(ClientBuilderParams params, HttpClient delegate, MeterRegistry meterRegistry) {
         super(params, delegate, meterRegistry,
               HttpResponse::of, (ctx, cause) -> HttpResponse.ofFailure(cause));
+        final HttpPreClient tailPreClient =
+                TailPreClient.of(unwrap(), futureConverter(), errorResponseFactory());
+        preClient = options().clientPreprocessors().decorate(tailPreClient);
     }
 
     @Override
@@ -113,12 +120,10 @@ final class DefaultWebClient extends UserClient<HttpRequest, HttpResponse> imple
             newReq = req.withHeaders(req.headers().toBuilder().path(newPath));
         }
 
-        return execute(protocol,
-                       endpointGroup,
-                       newReq.method(),
-                       reqTarget,
-                       newReq,
-                       requestOptions);
+        final DefaultClientRequestContext ctx = new DefaultClientRequestContext(
+                protocol, newReq, newReq.method(), null, reqTarget, endpointGroup, requestOptions, options(),
+                meterRegistry());
+        return ClientUtil.executeWithFallback(preClient, ctx, newReq, errorResponseFactory());
     }
 
     private static HttpResponse abortRequestAndReturnFailureResponse(
