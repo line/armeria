@@ -476,17 +476,33 @@ public final class InstanceInfo {
         private final boolean enabled;
         private final int port;
 
+        /**
+         * Constructs a new PortWrapper instance.
+         *
+         * @param enabled Whether the port is enabled or not.
+         * @param port The port number.
+         */
         public PortWrapper(@JsonProperty("@enabled") boolean enabled, @JsonProperty("$") int port) {
             this.enabled = enabled;
             this.port = port;
         }
 
+        /**
+         * Returns whether the port is enabled or not.
+         *
+         * @return {@code true} if the port is enabled, {@code false} otherwise.
+         */
         @JsonProperty("@enabled")
         @JsonSerialize(using = ToStringSerializer.class)
         public boolean isEnabled() {
             return enabled;
         }
 
+        /**
+         * Returns the port number.
+         *
+         * @return The port number.
+         */
         @JsonProperty("$")
         public int getPort() {
             return port;

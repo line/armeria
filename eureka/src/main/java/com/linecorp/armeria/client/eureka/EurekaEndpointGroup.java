@@ -58,11 +58,11 @@ import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.RequestHeadersBuilder;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
-import com.linecorp.armeria.internal.common.eureka.Application;
-import com.linecorp.armeria.internal.common.eureka.Applications;
 import com.linecorp.armeria.common.eureka.InstanceInfo;
 import com.linecorp.armeria.common.eureka.InstanceInfo.InstanceStatus;
 import com.linecorp.armeria.common.eureka.InstanceInfo.PortWrapper;
+import com.linecorp.armeria.internal.common.eureka.Application;
+import com.linecorp.armeria.internal.common.eureka.Applications;
 import com.linecorp.armeria.server.eureka.EurekaUpdatingListener;
 
 import io.netty.channel.EventLoop;
