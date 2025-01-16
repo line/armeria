@@ -34,8 +34,6 @@ import com.google.common.collect.ImmutableMap;
 
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.common.annotation.Nullable;
-import com.linecorp.armeria.internal.common.eureka.DataCenterInfo;
-import com.linecorp.armeria.internal.common.eureka.LeaseInfo;
 
 import io.netty.util.AttributeKey;
 

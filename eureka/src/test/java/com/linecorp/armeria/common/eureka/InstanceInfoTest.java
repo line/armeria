@@ -25,8 +25,6 @@ import org.junit.jupiter.api.Test;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.common.eureka.InstanceInfo.InstanceStatus;
 import com.linecorp.armeria.common.eureka.InstanceInfo.PortWrapper;
-import com.linecorp.armeria.internal.common.eureka.DataCenterInfo;
-import com.linecorp.armeria.internal.common.eureka.LeaseInfo;
 
 class InstanceInfoTest {
 
@@ -90,8 +88,8 @@ class InstanceInfoTest {
         assertThat(instanceInfoRetrieved.getStatusPageUrl()).isEqualTo(statusPageUrl);
         assertThat(instanceInfoRetrieved.getHealthCheckUrl()).isEqualTo(healthCheckUrl);
         assertThat(instanceInfoRetrieved.getSecureHealthCheckUrl()).isEqualTo(secureHealthCheckUrl);
-        //assertThat(instanceInfoRetrieved.getDataCenterInfo()).isEqualTo(dataCenterInfo);
-        //assertThat(instanceInfoRetrieved.getLeaseInfo()).isEqualTo(leaseInfo);
+        assertThat(instanceInfoRetrieved.getDataCenterInfo()).isEqualTo(dataCenterInfo);
+        assertThat(instanceInfoRetrieved.getLeaseInfo()).isEqualTo(leaseInfo);
         assertThat(instanceInfoRetrieved.getMetadata()).isEqualTo(metadata);
     }
 }

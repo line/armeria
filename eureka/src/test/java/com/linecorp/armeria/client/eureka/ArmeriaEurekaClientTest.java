@@ -140,9 +140,9 @@ public final class ArmeriaEurekaClientTest extends EurekaHttpClientCompatibility
                     info.getMetadata());
         }
 
-        private static com.linecorp.armeria.internal.common.eureka.LeaseInfo convertLeaseInfo(
+        private static com.linecorp.armeria.common.eureka.LeaseInfo convertLeaseInfo(
                 LeaseInfo leaseInfo) {
-            return new com.linecorp.armeria.internal.common.eureka.LeaseInfo(
+            return new com.linecorp.armeria.common.eureka.LeaseInfo(
                     leaseInfo.getRenewalIntervalInSecs(),
                     leaseInfo.getDurationInSecs(),
                     leaseInfo.getRegistrationTimestamp(),
@@ -312,7 +312,7 @@ public final class ArmeriaEurekaClientTest extends EurekaHttpClientCompatibility
             return result;
         }
 
-        private static com.linecorp.armeria.internal.common.eureka.DataCenterInfo convertDataCenterInfo(
+        private static com.linecorp.armeria.common.eureka.DataCenterInfo convertDataCenterInfo(
                 DataCenterInfo dataCenterInfo) {
             final Map<String, String> metadata;
             if (dataCenterInfo.getName() == Name.Amazon) {
@@ -320,7 +320,7 @@ public final class ArmeriaEurekaClientTest extends EurekaHttpClientCompatibility
             } else {
                 metadata = ImmutableMap.of();
             }
-            return new com.linecorp.armeria.internal.common.eureka.DataCenterInfo(
+            return new com.linecorp.armeria.common.eureka.DataCenterInfo(
                     dataCenterInfo.getName().name(), metadata);
         }
 
