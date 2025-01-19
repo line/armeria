@@ -359,14 +359,14 @@ class AnnotatedValueResolverTest {
                 } else {
                     if (String.class.isAssignableFrom(resolver.elementType())) {
                         assertThat(value).isEqualTo("");
-                    } else if(QUERY_PARAM_MAP.equals(resolver.httpElementName())) {
+                    } else if (QUERY_PARAM_MAP.equals(resolver.httpElementName())) {
                         assertThat(value).isNotNull();
                     } else {
                         assertThat(value).isNull();
                     }
                 }
             } else {
-                if(QUERY_PARAM_MAP.equals(resolver.httpElementName())) {
+                if (QUERY_PARAM_MAP.equals(resolver.httpElementName())) {
                     assertThat(resolver.defaultValue()).isNull();
                 } else {
                     assertThat(resolver.defaultValue()).isNotNull();
@@ -378,7 +378,7 @@ class AnnotatedValueResolverTest {
                             .isEqualTo(resolver.elementType());
                 } else if (resolver.shouldWrapValueAsOptional()) {
                     assertThat(value).isEqualTo(Optional.of(resolver.defaultValue()));
-                } else if(QUERY_PARAM_MAP.equals(resolver.httpElementName())) {
+                } else if (QUERY_PARAM_MAP.equals(resolver.httpElementName())) {
                     assertThat(value).isNotNull();
                     assertThat(value).isInstanceOf(Map.class);
                     assertThat((Map<?, ?>) value).size()
