@@ -48,6 +48,7 @@ import java.util.EnumSet;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.ServiceLoader;
@@ -56,6 +57,7 @@ import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
+import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -458,6 +460,11 @@ final class AnnotatedValueResolver {
         final Param param = annotatedElement.getAnnotation(Param.class);
         if (param != null) {
             final String name = findName(typeElement, param.value());
+            // If the parameter is of type Map and the @Param annotation does not specify a value,
+            // map all query parameters into the Map.
+            if (Map.class.isAssignableFrom(type) && DefaultValues.isUnspecified(param.value())) {
+                return ofQueryParamMap(name, annotatedElement, typeElement, type, description);
+            }
             if (type == File.class || type == Path.class || type == MultipartFile.class) {
                 return ofFileParam(name, annotatedElement, typeElement, type, description);
             }
@@ -583,6 +590,25 @@ final class AnnotatedValueResolver {
                                    () -> "Cannot resolve a value from a query parameter: " + name,
                                    queryDelimiter))
                 .build();
+    }
+
+    private static AnnotatedValueResolver ofQueryParamMap(String name,
+        AnnotatedElement annotatedElement,
+        AnnotatedElement typeElement, Class<?> type,
+        DescriptionInfo description) {
+
+        return new Builder(annotatedElement, type, name)
+            .annotationType(Param.class)
+            .typeElement(typeElement)
+            .description(description)
+            .aggregation(AggregationStrategy.FOR_FORM_DATA)
+            .resolver((resolver, ctx) -> ctx.queryParams().stream()
+                .collect(Collectors.toMap(
+                    Entry::getKey,
+                    Entry::getValue,
+                    (existing, replacement) -> replacement
+                )))
+            .build();
     }
 
     private static AnnotatedValueResolver ofFileParam(String name,
