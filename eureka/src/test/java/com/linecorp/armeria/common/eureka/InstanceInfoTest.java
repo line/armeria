@@ -29,7 +29,7 @@ import com.linecorp.armeria.common.eureka.InstanceInfo.PortWrapper;
 class InstanceInfoTest {
 
     @Test
-    void getShouldReturnAssociatedInstanceInfo() {
+    void instanceInfoShouldReturnAssociatedInstanceInfo() {
 
         final String instanceId = "123";
         final String appName = "myApp";
@@ -69,9 +69,9 @@ class InstanceInfoTest {
         );
         final Endpoint endpoint = Endpoint.parse("foo");
 
-        final Endpoint endpointWith = InstanceInfo.with(endpoint, instanceInfo);
+        final Endpoint endpointWithInstanceInfo = InstanceInfo.setInstanceInfo(endpoint, instanceInfo);
 
-        final InstanceInfo instanceInfoRetrieved = InstanceInfo.get(endpointWith);
+        final InstanceInfo instanceInfoRetrieved = InstanceInfo.instanceInfo(endpointWithInstanceInfo);
         assertThat(instanceInfoRetrieved).isNotNull();
         assertThat(instanceInfoRetrieved).isSameAs(instanceInfo);
         assertThat(instanceInfoRetrieved.getInstanceId()).isEqualTo(instanceId);

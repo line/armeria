@@ -56,7 +56,7 @@ public final class InstanceInfo {
      * @return The {@link InstanceInfo} associated with the specified {@link Endpoint}.
      */
     @Nullable
-    public static InstanceInfo get(Endpoint endpoint) {
+    public static InstanceInfo instanceInfo(Endpoint endpoint) {
         requireNonNull(endpoint, "endpoint");
         return endpoint.attr(INSTANCE_INFO);
     }
@@ -67,7 +67,7 @@ public final class InstanceInfo {
      * @param endpoint The {@link Endpoint} to which the {@link InstanceInfo} will be set as an attribute.
      * @return The same {@link Endpoint} passed as a parameter.
      */
-    public static Endpoint with(Endpoint endpoint, InstanceInfo instanceInfo) {
+    public static Endpoint setInstanceInfo(Endpoint endpoint, InstanceInfo instanceInfo) {
         requireNonNull(endpoint, "endpoint");
         requireNonNull(instanceInfo, "instanceInfo");
         return endpoint.withAttr(INSTANCE_INFO, instanceInfo);

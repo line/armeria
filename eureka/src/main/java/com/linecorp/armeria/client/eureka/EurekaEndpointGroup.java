@@ -415,7 +415,7 @@ public final class EurekaEndpointGroup extends DynamicEndpointGroup {
         if (ipAddr != null && hostname != ipAddr) {
             endpoint = endpoint.withIpAddr(ipAddr);
         }
-        return InstanceInfo.with(endpoint, instanceInfo);
+        return InstanceInfo.setInstanceInfo(endpoint, instanceInfo);
     }
 
     @Override
