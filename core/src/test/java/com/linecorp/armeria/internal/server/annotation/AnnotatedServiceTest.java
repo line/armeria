@@ -26,6 +26,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.TreeSet;
@@ -628,6 +629,14 @@ class AnnotatedServiceTest {
             validateContext(ctx);
             return username + '/' + password;
         }
+
+        @Get("/param/map")
+        public String map (RequestContext ctx, @Param Map<String, Object> map) {
+            validateContext(ctx);
+            return map.isEmpty() ? "empty" : map.entrySet().stream()
+                .map(entry -> entry.getKey() + "=" + entry.getValue())
+                .collect(Collectors.joining(", "));
+        }
     }
 
     @ResponseConverter(UnformattedStringConverterFunction.class)
@@ -1057,6 +1066,11 @@ class AnnotatedServiceTest {
             testStatusCode(hc, get("/7/param/default2"), 400);
 
             testBody(hc, get("/7/param/default_null"), "(null)");
+
+            // Case all query parameters test map
+            testBody(hc, get("/7/param/map?key1=value1&key2=value2"),
+                "key1=value1, key2=value2");
+            testBody(hc, get("/7/param/map"), "empty");
         }
     }
 
