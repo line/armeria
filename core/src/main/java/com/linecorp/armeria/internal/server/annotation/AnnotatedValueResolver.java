@@ -462,7 +462,15 @@ final class AnnotatedValueResolver {
             final String name = findName(typeElement, param.value());
             // If the parameter is of type Map and the @Param annotation does not specify a value,
             // map all query parameters into the Map.
-            if (Map.class.isAssignableFrom(type) && DefaultValues.isUnspecified(param.value())) {
+            if (Map.class.isAssignableFrom(type)) {
+                if (DefaultValues.isSpecified(param.value())) {
+                    throw new IllegalArgumentException(
+                        String.format("Invalid @Param annotation on Map parameter: '%s'. " +
+                                "The @Param annotation specifies a value ('%s'), which is not allowed. " +
+                                "When using a Map, @Param must not specify a value. " +
+                                "Please use @Param Map<String, Object> param without a value.",
+                            annotatedElement, param.value()));
+                }
                 return ofQueryParamMap(name, annotatedElement, typeElement, type, description);
             }
             if (type == File.class || type == Path.class || type == MultipartFile.class) {
