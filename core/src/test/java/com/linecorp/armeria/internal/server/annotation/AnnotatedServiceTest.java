@@ -631,7 +631,7 @@ class AnnotatedServiceTest {
         }
 
         @Get("/param/map")
-        public String map (RequestContext ctx, @Param Map<String, Object> map) {
+        public String map(RequestContext ctx, @Param Map<String, Object> map) {
             validateContext(ctx);
             return map.isEmpty() ? "empty" : map.entrySet().stream()
                 .map(entry -> entry.getKey() + "=" + entry.getValue())
