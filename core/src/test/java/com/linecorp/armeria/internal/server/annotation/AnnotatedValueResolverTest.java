@@ -359,8 +359,6 @@ class AnnotatedValueResolverTest {
                 } else {
                     if (String.class.isAssignableFrom(resolver.elementType())) {
                         assertThat(value).isEqualTo("");
-                    } else if (QUERY_PARAM_MAP.equals(resolver.httpElementName())) {
-                        assertThat(value).isNotNull();
                     } else {
                         assertThat(value).isNull();
                     }
