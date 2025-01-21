@@ -15,20 +15,12 @@
  */
 package com.linecorp.armeria.client;
 
-import static com.linecorp.armeria.internal.client.ClientBuilderParamsUtil.nullOrEmptyToSlash;
-import static java.util.Objects.requireNonNull;
-
 import java.net.URI;
 
 import com.google.common.base.MoreObjects;
 
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.common.Scheme;
-import com.linecorp.armeria.common.SerializationFormat;
-import com.linecorp.armeria.common.annotation.Nullable;
-import com.linecorp.armeria.internal.client.ClientBuilderParamsUtil;
-import com.linecorp.armeria.internal.client.endpoint.FailingEndpointGroup;
-import com.linecorp.armeria.internal.common.util.TemporaryThreadLocals;
 
 /**
  * Default {@link ClientBuilderParams} implementation.
@@ -41,67 +33,6 @@ final class DefaultClientBuilderParams implements ClientBuilderParams {
     private final URI uri;
     private final Class<?> type;
     private final ClientOptions options;
-
-    /**
-     * Creates a new instance.
-     */
-    DefaultClientBuilderParams(URI uri, Class<?> type, ClientOptions options) {
-        final ClientFactory factory = requireNonNull(options, "options").factory();
-        this.uri = factory.validateUri(uri);
-        this.type = requireNonNull(type, "type");
-        this.options = options;
-
-        scheme = factory.validateScheme(Scheme.parse(uri.getScheme()));
-        if (ClientBuilderParamsUtil.isInternalUri(uri)) {
-            endpointGroup = FailingEndpointGroup.of();
-        } else {
-            endpointGroup = Endpoint.parse(uri.getRawAuthority());
-        }
-
-        try (TemporaryThreadLocals tempThreadLocals = TemporaryThreadLocals.acquire()) {
-            final StringBuilder buf = tempThreadLocals.stringBuilder();
-            buf.append(nullOrEmptyToSlash(uri.getRawPath()));
-            if (uri.getRawQuery() != null) {
-                buf.append('?').append(uri.getRawQuery());
-            }
-            if (uri.getRawFragment() != null) {
-                buf.append('#').append(uri.getRawFragment());
-            }
-            absolutePathRef = buf.toString();
-        }
-    }
-
-    DefaultClientBuilderParams(Scheme scheme, EndpointGroup endpointGroup,
-                               @Nullable String absolutePathRef,
-                               Class<?> type, ClientOptions options) {
-        final ClientFactory factory = requireNonNull(options, "options").factory();
-        this.scheme = factory.validateScheme(scheme);
-        this.endpointGroup = requireNonNull(endpointGroup, "endpointGroup");
-        this.type = requireNonNull(type, "type");
-        this.options = options;
-
-        final String schemeStr;
-        if (scheme.serializationFormat() == SerializationFormat.NONE) {
-            schemeStr = scheme.sessionProtocol().uriText();
-        } else {
-            schemeStr = scheme.uriText();
-        }
-
-        final String normalizedAbsolutePathRef = nullOrEmptyToSlash(absolutePathRef);
-        final URI uri;
-        if (endpointGroup instanceof Endpoint) {
-            uri = URI.create(schemeStr + "://" + ((Endpoint) endpointGroup).authority() +
-                             normalizedAbsolutePathRef);
-        } else {
-            // Create a valid URI which will never succeed.
-            uri = URI.create(schemeStr + "://" + ClientBuilderParamsUtil.ENDPOINTGROUP_PREFIX +
-                             Integer.toHexString(System.identityHashCode(endpointGroup)) +
-                             ":1" + normalizedAbsolutePathRef);
-        }
-
-        this.uri = factory.validateUri(uri);
-        this.absolutePathRef = normalizedAbsolutePathRef;
-    }
 
     DefaultClientBuilderParams(Scheme scheme, EndpointGroup endpointGroup, String absolutePathRef,
                                URI uri, Class<?> type, ClientOptions options) {

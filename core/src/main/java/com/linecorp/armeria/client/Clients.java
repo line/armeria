@@ -32,6 +32,7 @@ import com.linecorp.armeria.common.Scheme;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.common.util.Unwrappable;
 import com.linecorp.armeria.internal.client.ClientBuilderParamsUtil;
@@ -179,12 +180,9 @@ public final class Clients {
      *
      * @param preprocessors the {@link ClientPreprocessors}
      * @param clientType the type of the new client
-     *
-     * @throws IllegalArgumentException if the specified {@code clientType} is unsupported for
-     *                                  the specified {@link SerializationFormat} or
-     *                                  {@link ClientPreprocessors}
      */
-    public static <T> T  newClient(ClientPreprocessors preprocessors, Class<T> clientType) {
+    @UnstableApi
+    public static <T> T newClient(ClientPreprocessors preprocessors, Class<T> clientType) {
         return builder(preprocessors).build(clientType);
     }
 
@@ -200,6 +198,7 @@ public final class Clients {
      *                                  the specified {@link SerializationFormat} or
      *                                  {@link ClientPreprocessors}
      */
+    @UnstableApi
     public static <T> T newClient(SerializationFormat serializationFormat, ClientPreprocessors preprocessors,
                                   Class<T> clientType) {
         return builder(serializationFormat, preprocessors).build(clientType);
@@ -218,6 +217,7 @@ public final class Clients {
      *                                  the specified {@link SerializationFormat} or
      *                                  {@link ClientPreprocessors}
      */
+    @UnstableApi
     public static <T> T newClient(SerializationFormat serializationFormat, ClientPreprocessors preprocessors,
                                   Class<T> clientType, String path) {
         return builder(serializationFormat, preprocessors, path).build(clientType);
@@ -307,6 +307,7 @@ public final class Clients {
      * Returns a new {@link ClientBuilder} that builds the client that is configured with the specified
      * {@link ClientPreprocessors}.
      */
+    @UnstableApi
     public static ClientBuilder builder(ClientPreprocessors preprocessors) {
         requireNonNull(preprocessors, "preprocessors");
         return new ClientBuilder(SerializationFormat.NONE, preprocessors, null);
@@ -316,6 +317,7 @@ public final class Clients {
      * Returns a new {@link ClientBuilder} that builds the client that is configured with the specified
      * {@link ClientPreprocessors}.
      */
+    @UnstableApi
     public static ClientBuilder builder(SerializationFormat serializationFormat,
                                         ClientPreprocessors preprocessors) {
         requireNonNull(serializationFormat, "serializationFormat");
@@ -327,6 +329,7 @@ public final class Clients {
      * Returns a new {@link ClientBuilder} that builds the client that is configured with the specified
      * {@link SerializationFormat}, {@link ClientPreprocessors} and {@param path}.
      */
+    @UnstableApi
     public static ClientBuilder builder(SerializationFormat serializationFormat,
                                         ClientPreprocessors preprocessors, String path) {
         requireNonNull(serializationFormat, "serializationFormat");

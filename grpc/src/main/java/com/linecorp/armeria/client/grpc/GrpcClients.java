@@ -130,6 +130,7 @@ public final class GrpcClients {
      *
      * @throws IllegalArgumentException if the {@code clientType} is an unsupported gRPC client stub.
      */
+    @UnstableApi
     public static <T> T newClient(HttpPreprocessor httpPreprocessor, Class<T> clientType) {
         return newClient(SerializationFormat.NONE, httpPreprocessor, clientType);
     }
@@ -144,6 +145,7 @@ public final class GrpcClients {
      *
      * @throws IllegalArgumentException if the {@code clientType} is an unsupported gRPC client stub.
      */
+    @UnstableApi
     public static <T> T newClient(SerializationFormat serializationFormat, HttpPreprocessor httpPreprocessor,
                                   Class<T> clientType) {
         return builder(serializationFormat, httpPreprocessor).build(clientType);
@@ -219,6 +221,7 @@ public final class GrpcClients {
      *
      * <p>Note that {@link GrpcSerializationFormats#PROTO} will be used by default.
      */
+    @UnstableApi
     public static GrpcClientBuilder builder(HttpPreprocessor httpPreprocessor) {
         requireNonNull(httpPreprocessor, "httpPreprocessor");
         return builder(SerializationFormat.NONE, httpPreprocessor);
@@ -231,6 +234,7 @@ public final class GrpcClients {
      * <p>Note that if {@link SerializationFormat#NONE} is specified,
      * {@link GrpcSerializationFormats#PROTO} will be used by default.
      */
+    @UnstableApi
     public static GrpcClientBuilder builder(SerializationFormat serializationFormat,
                                             HttpPreprocessor httpPreprocessor) {
         requireNonNull(serializationFormat, "serializationFormat");

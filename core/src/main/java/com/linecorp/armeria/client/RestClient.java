@@ -150,6 +150,7 @@ public interface RestClient extends ClientBuilderParams, Unwrappable {
      *
      * @param httpPreprocessor the preprocessor
      */
+    @UnstableApi
     static RestClient of(HttpPreprocessor httpPreprocessor) {
         return builder(httpPreprocessor).build();
     }
@@ -161,6 +162,7 @@ public interface RestClient extends ClientBuilderParams, Unwrappable {
      * @param httpPreprocessor the preprocessor
      * @param path the path to the endpoint
      */
+    @UnstableApi
     static RestClient of(HttpPreprocessor httpPreprocessor, String path) {
         return builder(httpPreprocessor, path).build();
     }
@@ -253,6 +255,7 @@ public interface RestClient extends ClientBuilderParams, Unwrappable {
     /**
      * Returns a new {@link RestClientBuilder} created with the specified {@link HttpPreprocessor}.
      */
+    @UnstableApi
     static RestClientBuilder builder(HttpPreprocessor httpPreprocessor) {
         requireNonNull(httpPreprocessor, "httpPreprocessor");
         return new RestClientBuilder(httpPreprocessor, null);
@@ -262,6 +265,7 @@ public interface RestClient extends ClientBuilderParams, Unwrappable {
      * Returns a new {@link RestClientBuilder} created with the specified {@link HttpPreprocessor}
      * and path.
      */
+    @UnstableApi
     static RestClientBuilder builder(HttpPreprocessor httpPreprocessor, String path) {
         requireNonNull(httpPreprocessor, "httpPreprocessor");
         requireNonNull(path, "path");

@@ -84,7 +84,7 @@ final class DefaultWebClient extends UserClient<HttpRequest, HttpResponse> imple
                 assert scheme != null;
                 assert authority != null;
             } else {
-                // the scheme and authority may be null if the client is preprocessor-based
+                // the scheme and authority may be null if the client has preprocessors
                 scheme = req.scheme();
                 authority = req.authority();
             }

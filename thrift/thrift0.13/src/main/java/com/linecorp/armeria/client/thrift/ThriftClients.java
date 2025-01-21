@@ -166,6 +166,7 @@ public final class ThriftClients {
      *
      * @throws IllegalArgumentException if the {@code clientType} is an unsupported Thrift client stub.
      */
+    @UnstableApi
     public static <T> T newClient(RpcPreprocessor rpcPreprocessor, Class<T> clientType) {
         return builder(rpcPreprocessor).build(clientType);
     }
@@ -180,6 +181,7 @@ public final class ThriftClients {
      *
      * @throws IllegalArgumentException if the {@code clientType} is an unsupported Thrift client stub.
      */
+    @UnstableApi
     public static <T> T newClient(SerializationFormat serializationFormat,
                                   RpcPreprocessor rpcPreprocessor, Class<T> clientType) {
         return builder(serializationFormat, rpcPreprocessor).build(clientType);
@@ -196,6 +198,7 @@ public final class ThriftClients {
      *
      * @throws IllegalArgumentException if the {@code clientType} is an unsupported Thrift client stub.
      */
+    @UnstableApi
     public static <T> T newClient(SerializationFormat serializationFormat,
                                   RpcPreprocessor rpcPreprocessor, Class<T> clientType,
                                   String path) {
@@ -270,6 +273,7 @@ public final class ThriftClients {
      * Returns a new {@link ThriftClientBuilder} that builds the client that is configured with
      * the specified {@link RpcPreprocessor} using {@link ThriftSerializationFormats#BINARY}.
      */
+    @UnstableApi
     public static ThriftClientBuilder builder(RpcPreprocessor rpcPreprocessor) {
         return new ThriftClientBuilder(SerializationFormat.NONE,
                                        requireNonNull(rpcPreprocessor, "rpcPreprocessor"));
@@ -282,6 +286,7 @@ public final class ThriftClients {
      * <p>Note that if {@link SerializationFormat#NONE} is specified
      * {@link ThriftSerializationFormats#BINARY} will be used by default.
      */
+    @UnstableApi
     public static ThriftClientBuilder builder(SerializationFormat serializationFormat,
                                               RpcPreprocessor rpcPreprocessor) {
         requireNonNull(serializationFormat, "serializationFormat");

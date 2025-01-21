@@ -151,6 +151,7 @@ public interface WebClient extends ClientBuilderParams, Unwrappable {
      *
      * @param httpPreprocessor the preprocessor
      */
+    @UnstableApi
     static WebClient of(HttpPreprocessor httpPreprocessor) {
         return builder(httpPreprocessor).build();
     }
@@ -162,6 +163,7 @@ public interface WebClient extends ClientBuilderParams, Unwrappable {
      * @param httpPreprocessor the preprocessor
      * @param path the path to the endpoint
      */
+    @UnstableApi
     static WebClient of(HttpPreprocessor httpPreprocessor, String path) {
         return builder(httpPreprocessor, path).build();
     }
@@ -254,6 +256,7 @@ public interface WebClient extends ClientBuilderParams, Unwrappable {
     /**
      * Returns a new {@link WebClientBuilder} created with the specified {@link HttpPreprocessor}.
      */
+    @UnstableApi
     static WebClientBuilder builder(HttpPreprocessor httpPreprocessor) {
         return new WebClientBuilder(httpPreprocessor, null);
     }
@@ -262,6 +265,7 @@ public interface WebClient extends ClientBuilderParams, Unwrappable {
      * Returns a new {@link WebClientBuilder} created with the specified {@link HttpPreprocessor}
      * and path.
      */
+    @UnstableApi
     static WebClientBuilder builder(HttpPreprocessor httpPreprocessor, String path) {
         return new WebClientBuilder(requireNonNull(httpPreprocessor, "httpPreprocessor"),
                                     requireNonNull(path, "path"));

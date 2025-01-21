@@ -16,41 +16,108 @@
 
 package com.linecorp.armeria.client;
 
-import static com.google.common.base.MoreObjects.firstNonNull;
 import static com.linecorp.armeria.internal.client.ClientBuilderParamsUtil.nullOrEmptyToSlash;
+import static java.util.Objects.requireNonNull;
 
 import java.net.URI;
 import java.net.URISyntaxException;
 
+import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.common.Scheme;
 import com.linecorp.armeria.common.SerializationFormat;
+import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.annotation.UnstableApi;
+import com.linecorp.armeria.internal.client.ClientBuilderParamsUtil;
+import com.linecorp.armeria.internal.client.endpoint.FailingEndpointGroup;
+import com.linecorp.armeria.internal.common.util.TemporaryThreadLocals;
 
 /**
  * Allows creation of a new {@link ClientBuilderParams} based on a previous {@link ClientBuilderParams}.
  */
+@UnstableApi
 public final class ClientBuilderParamsBuilder {
 
-    private final ClientBuilderParams params;
+    private final URI uri;
+    private final EndpointGroup endpointGroup;
+    private final SessionProtocol sessionProtocol;
 
-    @Nullable
     private SerializationFormat serializationFormat;
-    @Nullable
     private String absolutePathRef;
+
     @Nullable
     private Class<?> type;
     @Nullable
     private ClientOptions options;
 
     ClientBuilderParamsBuilder(ClientBuilderParams params) {
-        this.params = params;
+        uri = params.uri();
+        endpointGroup = params.endpointGroup();
+        sessionProtocol = params.scheme().sessionProtocol();
+
+        serializationFormat = params.scheme().serializationFormat();
+        absolutePathRef = params.absolutePathRef();
+        type = params.clientType();
+        options = params.options();
+    }
+
+    ClientBuilderParamsBuilder(URI uri) {
+        this.uri = uri;
+        final Scheme scheme = Scheme.parse(uri.getScheme());
+        final EndpointGroup endpointGroup;
+        if (ClientBuilderParamsUtil.isInternalUri(uri)) {
+            endpointGroup = FailingEndpointGroup.of();
+        } else {
+            endpointGroup = Endpoint.parse(uri.getRawAuthority());
+        }
+        final String absolutePathRef;
+        try (TemporaryThreadLocals tempThreadLocals = TemporaryThreadLocals.acquire()) {
+            final StringBuilder buf = tempThreadLocals.stringBuilder();
+            buf.append(nullOrEmptyToSlash(uri.getRawPath()));
+            if (uri.getRawQuery() != null) {
+                buf.append('?').append(uri.getRawQuery());
+            }
+            if (uri.getRawFragment() != null) {
+                buf.append('#').append(uri.getRawFragment());
+            }
+            absolutePathRef = buf.toString();
+        }
+        this.endpointGroup = endpointGroup;
+        serializationFormat = scheme.serializationFormat();
+        sessionProtocol = scheme.sessionProtocol();
+        this.absolutePathRef = absolutePathRef;
+    }
+
+    ClientBuilderParamsBuilder(Scheme scheme, EndpointGroup endpointGroup, @Nullable String absolutePathRef) {
+        this.endpointGroup = endpointGroup;
+        final String schemeStr;
+        if (scheme.serializationFormat() == SerializationFormat.NONE) {
+            schemeStr = scheme.sessionProtocol().uriText();
+        } else {
+            schemeStr = scheme.uriText();
+        }
+        final String normalizedAbsolutePathRef = nullOrEmptyToSlash(absolutePathRef);
+        final URI uri;
+        if (endpointGroup instanceof Endpoint) {
+            uri = URI.create(schemeStr + "://" + ((Endpoint) endpointGroup).authority() +
+                             normalizedAbsolutePathRef);
+        } else {
+            // Create a valid URI which will never succeed.
+            uri = URI.create(schemeStr + "://" + ClientBuilderParamsUtil.ENDPOINTGROUP_PREFIX +
+                             Integer.toHexString(System.identityHashCode(endpointGroup)) +
+                             ":1" + normalizedAbsolutePathRef);
+        }
+        this.uri = uri;
+        serializationFormat = scheme.serializationFormat();
+        sessionProtocol = scheme.sessionProtocol();
+        this.absolutePathRef = normalizedAbsolutePathRef;
     }
 
     /**
      * Sets the {@link SerializationFormat} for this {@link ClientBuilderParams}.
      */
     public ClientBuilderParamsBuilder serializationFormat(SerializationFormat serializationFormat) {
-        this.serializationFormat = serializationFormat;
+        this.serializationFormat = requireNonNull(serializationFormat, "serializationFormat");
         return this;
     }
 
@@ -58,7 +125,7 @@ public final class ClientBuilderParamsBuilder {
      * Sets the {@param absolutePathRef} for this {@link ClientBuilderParams}.
      */
     public ClientBuilderParamsBuilder absolutePathRef(String absolutePathRef) {
-        this.absolutePathRef = absolutePathRef;
+        this.absolutePathRef = requireNonNull(absolutePathRef, "absolutePathRef");
         return this;
     }
 
@@ -66,7 +133,7 @@ public final class ClientBuilderParamsBuilder {
      * Sets the {@param type} for this {@link ClientBuilderParams}.
      */
     public ClientBuilderParamsBuilder clientType(Class<?> type) {
-        this.type = type;
+        this.type = requireNonNull(type, "type");
         return this;
     }
 
@@ -74,7 +141,7 @@ public final class ClientBuilderParamsBuilder {
      * Sets the {@link ClientOptions} for this {@link ClientBuilderParams}.
      */
     public ClientBuilderParamsBuilder options(ClientOptions options) {
-        this.options = options;
+        this.options = requireNonNull(options, "options");
         return this;
     }
 
@@ -82,12 +149,13 @@ public final class ClientBuilderParamsBuilder {
      * Builds a new {@link ClientBuilderParams} based on the configured properties.
      */
     public ClientBuilderParams build() {
-        final Scheme scheme;
-        if (serializationFormat != null) {
-            scheme = Scheme.of(serializationFormat, params.scheme().sessionProtocol());
-        } else {
-            scheme = params.scheme();
-        }
+        final ClientOptions options = requireNonNull(this.options, "options");
+        final Class<?> type = requireNonNull(this.type, "type");
+
+        final SerializationFormat serializationFormat = this.serializationFormat;
+        final String absolutePathRef = this.absolutePathRef;
+        final ClientFactory factory = options.factory();
+        final Scheme scheme = factory.validateScheme(Scheme.of(serializationFormat, sessionProtocol));
         final String schemeStr;
         if (scheme.serializationFormat() == SerializationFormat.NONE) {
             schemeStr = scheme.sessionProtocol().uriText();
@@ -95,23 +163,15 @@ public final class ClientBuilderParamsBuilder {
             schemeStr = scheme.uriText();
         }
 
-        final String path;
-        if (absolutePathRef != null) {
-            path = nullOrEmptyToSlash(absolutePathRef);
-        } else {
-            path = params.absolutePathRef();
-        }
+        final String path = nullOrEmptyToSlash(absolutePathRef);
 
-        final URI prevUri = params.uri();
         final URI uri;
         try {
-            uri = new URI(schemeStr, prevUri.getRawAuthority(), path,
-                          prevUri.getRawQuery(), prevUri.getRawFragment());
+            uri = new URI(schemeStr + "://" + this.uri.getRawAuthority() + path);
         } catch (URISyntaxException e) {
             throw new IllegalArgumentException(e);
         }
-        return new DefaultClientBuilderParams(scheme, params.endpointGroup(), uri.getRawPath(),
-                                              uri, firstNonNull(type, params.clientType()),
-                                              firstNonNull(options, params.options()));
+        return new DefaultClientBuilderParams(scheme, endpointGroup, path,
+                                              factory.validateUri(uri), type, options);
     }
 }

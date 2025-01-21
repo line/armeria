@@ -37,6 +37,7 @@ import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.util.SystemInfo;
 import com.linecorp.armeria.internal.common.eureka.EurekaWebClient;
 import com.linecorp.armeria.internal.common.eureka.InstanceInfo;
@@ -104,6 +105,7 @@ public final class EurekaUpdatingListener extends ServerListenerAdapter {
      * Returns a new {@link EurekaUpdatingListener} which registers the current {@link Server} using
      * the specified {@link HttpPreprocessor}.
      */
+    @UnstableApi
     public static EurekaUpdatingListener of(HttpPreprocessor preprocessor) {
         return new EurekaUpdatingListenerBuilder(preprocessor, null).build();
     }
@@ -112,6 +114,7 @@ public final class EurekaUpdatingListener extends ServerListenerAdapter {
      * Returns a new {@link EurekaUpdatingListener} which registers the current {@link Server} using
      * the specified {@link HttpPreprocessor} under the specified {@code path}.
      */
+    @UnstableApi
     public static EurekaUpdatingListener of(HttpPreprocessor preprocessor, String path) {
         return new EurekaUpdatingListenerBuilder(preprocessor, requireNonNull(path, "path"))
                 .build();
@@ -152,6 +155,7 @@ public final class EurekaUpdatingListener extends ServerListenerAdapter {
     /**
      * Returns a new {@link EurekaUpdatingListenerBuilder} created with the specified {@link HttpPreprocessor}.
      */
+    @UnstableApi
     public static EurekaUpdatingListenerBuilder builder(HttpPreprocessor preprocessor) {
         return new EurekaUpdatingListenerBuilder(preprocessor, null);
     }
@@ -160,6 +164,7 @@ public final class EurekaUpdatingListener extends ServerListenerAdapter {
      * Returns a new {@link EurekaUpdatingListenerBuilder} created with the specified {@link HttpPreprocessor}
      * and path.
      */
+    @UnstableApi
     public static EurekaUpdatingListenerBuilder builder(HttpPreprocessor preprocessor, String path) {
         return new EurekaUpdatingListenerBuilder(preprocessor, requireNonNull(path, "path"));
     }

@@ -59,6 +59,7 @@ import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.RequestHeadersBuilder;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.internal.common.eureka.Application;
 import com.linecorp.armeria.internal.common.eureka.Applications;
 import com.linecorp.armeria.internal.common.eureka.InstanceInfo;
@@ -129,6 +130,7 @@ public final class EurekaEndpointGroup extends DynamicEndpointGroup {
      * Returns a new {@link EurekaEndpointGroup} that retrieves the {@link Endpoint} list from the specified
      * {@link HttpPreprocessor}.
      */
+    @UnstableApi
     public static EurekaEndpointGroup of(HttpPreprocessor preprocessor) {
         return new EurekaEndpointGroupBuilder(preprocessor, null).build();
     }
@@ -137,6 +139,7 @@ public final class EurekaEndpointGroup extends DynamicEndpointGroup {
      * Returns a new {@link EurekaEndpointGroup} that retrieves the {@link Endpoint} list from the specified
      * {@link HttpPreprocessor} under the specified {@code path}.
      */
+    @UnstableApi
     public static EurekaEndpointGroup of(HttpPreprocessor preprocessor, String path) {
         return new EurekaEndpointGroupBuilder(preprocessor, requireNonNull(path, "path")).build();
     }
@@ -176,6 +179,7 @@ public final class EurekaEndpointGroup extends DynamicEndpointGroup {
     /**
      * Returns a new {@link EurekaEndpointGroupBuilder} created with the specified {@link HttpPreprocessor}.
      */
+    @UnstableApi
     public static EurekaEndpointGroupBuilder builder(HttpPreprocessor preprocessor) {
         return new EurekaEndpointGroupBuilder(preprocessor, null);
     }
@@ -184,6 +188,7 @@ public final class EurekaEndpointGroup extends DynamicEndpointGroup {
      * Returns a new {@link EurekaEndpointGroupBuilder} created with the specified {@link HttpPreprocessor}
      * and path.
      */
+    @UnstableApi
     public static EurekaEndpointGroupBuilder builder(HttpPreprocessor preprocessor, String path) {
         return new EurekaEndpointGroupBuilder(preprocessor, requireNonNull(path, "path"));
     }
