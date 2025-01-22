@@ -42,7 +42,7 @@ public class HealthGrpcServerExtension extends ServerExtension {
             .build();
 
     public enum Action {
-        DO_HEALTHY, DO_UNHEALTHY, DO_TIMEOUT
+        RESPOND_HEALTHY, RESPOND_UNHEALTHY, TIMEOUT
     }
 
     private Action action;
@@ -54,19 +54,19 @@ public class HealthGrpcServerExtension extends ServerExtension {
                     @Override
                     public void check(HealthCheckRequest request,
                                       StreamObserver<HealthCheckResponse> responseObserver) {
-                        LOGGER.debug("Received health check response {}", TextFormat.shortDebugString(request));
+                        LOGGER.debug("Received health check request {}", TextFormat.shortDebugString(request));
 
-                        if (action == Action.DO_HEALTHY) {
+                        if (action == Action.RESPOND_HEALTHY) {
                             responseObserver.onNext(HEALTHY_HEALTH_CHECK_RESPONSE);
                             responseObserver.onCompleted();
-                        } else if (action == Action.DO_UNHEALTHY) {
+                            LOGGER.debug("Sent healthy health check response");
+                        } else if (action == Action.RESPOND_UNHEALTHY) {
                             responseObserver.onNext(UNHEALTHY_HEALTH_CHECK_RESPONSE);
                             responseObserver.onCompleted();
-                        } else if (action == Action.DO_TIMEOUT) {
+                            LOGGER.debug("Sent unhealthy health check response");
+                        } else if (action == Action.TIMEOUT) {
                             LOGGER.debug("Not sending a response...");
                         }
-
-                        LOGGER.debug("Completed health check response");
                     }
 
                     @Override

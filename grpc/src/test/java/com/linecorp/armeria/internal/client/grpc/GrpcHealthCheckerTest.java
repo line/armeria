@@ -67,7 +67,7 @@ class GrpcHealthCheckerTest {
 
     @Test
     void healthy() {
-        serverExtension.setAction(HealthGrpcServerExtension.Action.DO_HEALTHY);
+        serverExtension.setAction(HealthGrpcServerExtension.Action.RESPOND_HEALTHY);
 
         healthChecker.check();
 
@@ -77,17 +77,17 @@ class GrpcHealthCheckerTest {
 
     @Test
     void unhealthy() {
-        serverExtension.setAction(HealthGrpcServerExtension.Action.DO_UNHEALTHY);
+        serverExtension.setAction(HealthGrpcServerExtension.Action.RESPOND_UNHEALTHY);
 
         healthChecker.check();
 
         verify(context, timeout(1000).times(1)).updateHealth(eq(GrpcHealthChecker.UNHEALTHY),
-                any(ClientRequestContext.class), eq(null), eq(null));
+                any(ClientRequestContext.class), any(ResponseHeaders.class), eq(null));
     }
 
     @Test
     void exception() {
-        serverExtension.setAction(HealthGrpcServerExtension.Action.DO_TIMEOUT);
+        serverExtension.setAction(HealthGrpcServerExtension.Action.TIMEOUT);
 
         healthChecker.check();
 

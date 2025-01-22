@@ -16,10 +16,6 @@
 package com.linecorp.armeria.client.grpc.endpoint.healthcheck;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
-
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
@@ -35,7 +31,7 @@ class GrpcHealthCheckedEndpointGroupBuilderTest {
 
     @Test
     public void hasHealthyEndpoint() {
-        serverExtension.setAction(HealthGrpcServerExtension.Action.DO_HEALTHY);
+        serverExtension.setAction(HealthGrpcServerExtension.Action.RESPOND_HEALTHY);
 
         final HealthCheckedEndpointGroup endpointGroup = GrpcHealthCheckedEndpointGroupBuilder
                 .builder(serverExtension.endpoint(SessionProtocol.H2C))
@@ -46,15 +42,12 @@ class GrpcHealthCheckedEndpointGroupBuilderTest {
 
     @Test
     public void empty() throws Exception {
-        serverExtension.setAction(HealthGrpcServerExtension.Action.DO_UNHEALTHY);
+        serverExtension.setAction(HealthGrpcServerExtension.Action.RESPOND_UNHEALTHY);
 
         final HealthCheckedEndpointGroup endpointGroup = GrpcHealthCheckedEndpointGroupBuilder
                 .builder(serverExtension.endpoint(SessionProtocol.H2C))
                 .build();
 
-        assertThatThrownBy(() -> {
-            // whenReady() will timeout because there are no healthy endpoints
-            endpointGroup.whenReady().get(1, TimeUnit.SECONDS);
-        }).isInstanceOf(TimeoutException.class);
+        assertThat(endpointGroup.whenReady().get()).isEmpty();
     }
 }
