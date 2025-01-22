@@ -42,6 +42,7 @@ public final class GrpcHealthChecker implements AsyncCloseable {
 
     static final double HEALTHY = 1d;
     static final double UNHEALTHY = 0d;
+    static final ResponseHeaders UNHEALTHY_RESPONSE_HEADERS = ResponseHeaders.of(500);
 
     private final HealthCheckerContext ctx;
     @Nullable private final String service;
@@ -81,14 +82,16 @@ public final class GrpcHealthChecker implements AsyncCloseable {
                         if (healthCheckResponse.getStatus() == HealthCheckResponse.ServingStatus.SERVING) {
                             ctx.updateHealth(HEALTHY, reqCtx, null, null);
                         } else {
-                            ctx.updateHealth(UNHEALTHY, reqCtx, null, null);
+                            // not sure about the response headers but it needs to be non-null
+                            ctx.updateHealth(UNHEALTHY, reqCtx, UNHEALTHY_RESPONSE_HEADERS, null);
                         }
                     }
 
                     @Override
                     public void onError(Throwable throwable) {
                         final ClientRequestContext reqCtx = reqCtxCaptor.get();
-                        ctx.updateHealth(UNHEALTHY, reqCtx, ResponseHeaders.of(500), throwable);
+                        // same here
+                        ctx.updateHealth(UNHEALTHY, reqCtx, UNHEALTHY_RESPONSE_HEADERS, throwable);
                     }
 
                     @Override
