@@ -48,8 +48,10 @@ configure(relocatedProjects) {
 
         // Set the 'Automatic-Module-Name' property in MANIFEST.MF.
         if (project.ext.automaticModuleName != null) {
-            manifest {
-                attributes('Automatic-Module-Name': project.ext.automaticModuleName)
+            doFirst {
+                manifest {
+                    attributes('Automatic-Module-Name': project.ext.automaticModuleName.get())
+                }
             }
         }
     }

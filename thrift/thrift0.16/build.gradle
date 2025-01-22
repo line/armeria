@@ -56,6 +56,7 @@ def thriftFullVersion = libs.thrift016.get().versionConstraint.requiredVersion
 ext {
     thriftVersion = thriftFullVersion.substring(0, thriftFullVersion.lastIndexOf('.'));
     testThriftSrcDirs = ["$thrift013ProjectDir/src/test/thrift"]
+    automaticModuleNameOverride = "com.linecorp.armeria.thrift016"
 }
 
 tasks.generateSources.dependsOn(generateTestSources)
