@@ -1,7 +1,7 @@
 /*
- * Copyright 2019 LINE Corporation
- *
- * LINE Corporation licenses this file to you under the Apache License,
+ * Copyright 2024 LY Corporation
+
+ * LY Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
@@ -15,9 +15,11 @@
  */
 
 /**
- * Provides a dummy interface that makes Project Reactor recognize Armeria's event loop threads as non-blocking.
- */
+ * Automatic service registration and discovery with <a href="https://nacos.io/">Nacos</a>.
+ **/
 @NonNullByDefault
-package reactor.core.scheduler;
+@UnstableApi
+package com.linecorp.armeria.server.nacos;
 
 import com.linecorp.armeria.common.annotation.NonNullByDefault;
+import com.linecorp.armeria.common.annotation.UnstableApi;

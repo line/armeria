@@ -1,5 +1,5 @@
 /*
- * Copyright 2016 LINE Corporation
+ * Copyright 2024 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -208,8 +208,8 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
                     // Validate the 'content-length' header.
                     final String contentLengthStr = headers.get(HttpHeaderNames.CONTENT_LENGTH);
                     final boolean contentEmpty;
+                    long contentLength = 0;
                     if (contentLengthStr != null) {
-                        long contentLength;
                         try {
                             contentLength = Long.parseLong(contentLengthStr);
                         } catch (NumberFormatException ignored) {
@@ -280,6 +280,10 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
                     final boolean endOfStream = contentEmpty && !transferEncodingChunked;
                     this.req = req = DecodedHttpRequest.of(endOfStream, eventLoop, id, 1, headers,
                                                            keepAlive, inboundTrafficController, routingCtx);
+                    final long maxRequestLength = req.maxRequestLength();
+                    if (maxRequestLength > 0 && contentLength > maxRequestLength) {
+                        abortLargeRequest(ctx, req, id, endOfStream, keepAliveHandler, true);
+                    }
                     cfg.serverMetrics().increasePendingHttp1Requests();
                     ctx.fireChannelRead(req);
                 } else {
@@ -313,33 +317,7 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
                     final long maxContentLength = decodedReq.maxRequestLength();
                     final long transferredLength = decodedReq.transferredBytes();
                     if (maxContentLength > 0 && transferredLength > maxContentLength) {
-                        final ContentTooLargeException cause =
-                                ContentTooLargeException.builder()
-                                                        .maxContentLength(maxContentLength)
-                                                        .contentLength(req.headers())
-                                                        .transferred(transferredLength)
-                                                        .build();
-                        discarding = true;
-                        req = null;
-                        final boolean shouldReset;
-                        if (encoder instanceof ServerHttp1ObjectEncoder) {
-                            if (encoder.isResponseHeadersSent(id, 1)) {
-                                ctx.channel().close();
-                            } else {
-                                keepAliveHandler.disconnectWhenFinished();
-                            }
-                            shouldReset = false;
-                        } else {
-                            // Upgraded to HTTP/2. Reset only if the remote peer is still open.
-                            shouldReset = !endOfStream;
-                        }
-
-                        // Wrap the cause with the returned status to let LoggingService correctly log the
-                        // status.
-                        final HttpStatusException httpStatusException =
-                                HttpStatusException.of(HttpStatus.REQUEST_ENTITY_TOO_LARGE, cause);
-                        decodedReq.setShouldResetOnlyIfRemoteIsOpen(shouldReset);
-                        decodedReq.abortResponse(httpStatusException, true);
+                        abortLargeRequest(ctx, decodedReq, id, endOfStream, keepAliveHandler, false);
                         return;
                     }
 
@@ -375,6 +353,39 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
         } finally {
             ReferenceCountUtil.release(msg);
         }
+    }
+
+    private void abortLargeRequest(ChannelHandlerContext ctx, DecodedHttpRequest decodedReq, int id,
+                                   boolean endOfStream, KeepAliveHandler keepAliveHandler,
+                                   boolean isEarlyRejection) {
+        final ContentTooLargeException cause =
+                ContentTooLargeException.builder()
+                        .maxContentLength(decodedReq.maxRequestLength())
+                        .transferred(decodedReq.transferredBytes())
+                        .contentLength(decodedReq.headers())
+                        .earlyRejection(isEarlyRejection)
+                        .build();
+        discarding = true;
+        req = null;
+        final boolean shouldReset;
+        if (encoder instanceof ServerHttp1ObjectEncoder) {
+            if (encoder.isResponseHeadersSent(id, 1)) {
+                ctx.channel().close();
+            } else {
+                keepAliveHandler.disconnectWhenFinished();
+            }
+            shouldReset = false;
+        } else {
+            // Upgraded to HTTP/2. Reset only if the remote peer is still open.
+            shouldReset = !endOfStream;
+        }
+
+        // Wrap the cause with the returned status to let LoggingService correctly log the
+        // status.
+        final HttpStatusException httpStatusException =
+                HttpStatusException.of(HttpStatus.REQUEST_ENTITY_TOO_LARGE, cause);
+        decodedReq.setShouldResetOnlyIfRemoteIsOpen(shouldReset);
+        decodedReq.abortResponse(httpStatusException, true);
     }
 
     private void removeFromPipelineIfUpgraded(ChannelHandlerContext ctx, boolean endOfStream) {
@@ -438,7 +449,7 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
                     pipeline.context(Http2ServerConnectionHandler.class);
             final Http2ServerConnectionHandler connectionHandler =
                     (Http2ServerConnectionHandler) connectionHandlerCtx.handler();
-            encoder.close();
+            encoder.close(ClosedSessionException.get());
             // The HTTP/2 encoder will be used when a protocol violation error occurs after upgrading to HTTP/2
             // that is directly written by 'fail()'.
             encoder = connectionHandler.getOrCreateResponseEncoder(connectionHandlerCtx);

@@ -1,0 +1,4 @@
+dependencies {
+    implementation libs.context.propagation
+    testImplementation project(':reactor3')
+}

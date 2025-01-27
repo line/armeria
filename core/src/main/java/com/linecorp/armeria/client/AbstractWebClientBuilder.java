@@ -184,4 +184,16 @@ public abstract class AbstractWebClientBuilder extends AbstractClientOptionsBuil
     public AbstractWebClientBuilder rpcDecorator(DecoratingRpcClientFunction decorator) {
         throw new UnsupportedOperationException("RPC decorator cannot be added to the web client builder.");
     }
+
+    /**
+     * Raises an {@link UnsupportedOperationException} because this builder doesn't support RPC-level but only
+     * HTTP-level preprocessors.
+     *
+     * @deprecated RPC preprocessor cannot be added to the web client builder.
+     */
+    @Deprecated
+    @Override
+    public AbstractClientOptionsBuilder rpcPreprocessor(RpcPreprocessor rpcPreprocessor) {
+        throw new UnsupportedOperationException("RPC preprocessor cannot be added to the web client builder.");
+    }
 }

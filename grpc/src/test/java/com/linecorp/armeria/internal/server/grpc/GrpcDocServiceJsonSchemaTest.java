@@ -28,7 +28,6 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
-import com.google.protobuf.Descriptors.ServiceDescriptor;
 
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
@@ -47,10 +46,6 @@ import testing.grpc.TestServiceGrpc;
 import testing.grpc.TestServiceGrpc.TestServiceImplBase;
 
 class GrpcDocServiceJsonSchemaTest {
-
-    private static final ServiceDescriptor TEST_SERVICE_DESCRIPTOR =
-            testing.grpc.Test.getDescriptor()
-                                                  .findServiceByName("TestService");
 
     private static class TestService extends TestServiceImplBase {
         @Override

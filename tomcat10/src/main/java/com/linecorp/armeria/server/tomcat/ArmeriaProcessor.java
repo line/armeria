@@ -55,6 +55,9 @@ final class ArmeriaProcessor extends AbstractProcessor {
     protected void ack(ContinueResponseTiming continueResponseTiming) {}
 
     @Override
+    protected void earlyHints() throws IOException {}
+
+    @Override
     protected void flush() throws IOException {}
 
     @Override

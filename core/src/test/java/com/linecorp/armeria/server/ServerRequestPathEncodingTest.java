@@ -136,7 +136,7 @@ class ServerRequestPathEncodingTest {
     }
 
     private static byte[] headerBytes(String path) throws Exception {
-        final HPackEncoder encoder = new HPackEncoder(StandardCharsets.UTF_8);
+        final HPackEncoder encoder = new HPackEncoder(4096, StandardCharsets.UTF_8);
         final ByteArrayBuffer buffer = new ByteArrayBuffer(1024);
         encoder.encodeHeader(buffer, ":method", "GET", false);
         encoder.encodeHeader(buffer, ":authority", server.httpUri().getAuthority(), false);

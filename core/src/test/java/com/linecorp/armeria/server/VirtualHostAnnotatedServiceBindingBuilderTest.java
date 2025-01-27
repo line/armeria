@@ -107,7 +107,7 @@ class VirtualHostAnnotatedServiceBindingBuilderTest {
                 .multipartUploadsLocation(multipartUploadsLocation)
                 .requestIdGenerator(serviceRequestIdGenerator)
                 .build(new TestService())
-                .build(template, noopDependencyInjector, null, ServerErrorHandler.ofDefault());
+                .build(template, noopDependencyInjector, null, ServerErrorHandler.ofDefault(), null);
 
         assertThat(virtualHost.serviceConfigs()).hasSize(2);
         final ServiceConfig pathBar = virtualHost.serviceConfigs().get(0);

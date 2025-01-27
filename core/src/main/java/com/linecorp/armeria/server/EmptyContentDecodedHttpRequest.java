@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 LINE Corporation
+ * Copyright 2024 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -58,6 +58,7 @@ final class EmptyContentDecodedHttpRequest implements DecodedHttpRequest {
 
     @Nullable
     private CompletableFuture<AggregatedHttpRequest> aggregateFuture;
+    private final CompletableFuture<Void> whenResponseSent = new CompletableFuture<>();
 
     @Nullable
     private HttpResponse response;
@@ -82,6 +83,12 @@ final class EmptyContentDecodedHttpRequest implements DecodedHttpRequest {
     @Override
     public void init(ServiceRequestContext ctx) {
         this.ctx = ctx;
+    }
+
+    @Nullable
+    @Override
+    public ServiceRequestContext requestContext() {
+        return ctx;
     }
 
     @Override
@@ -235,6 +242,11 @@ final class EmptyContentDecodedHttpRequest implements DecodedHttpRequest {
     }
 
     @Override
+    public CompletableFuture<Void> whenResponseSent() {
+        return whenResponseSent;
+    }
+
+    @Override
     public ExchangeType exchangeType() {
         return exchangeType;
     }
@@ -247,5 +259,15 @@ final class EmptyContentDecodedHttpRequest implements DecodedHttpRequest {
     @Override
     public long requestStartTimeMicros() {
         return requestStartTimeMicros;
+    }
+
+    @Override
+    public long maxRequestLength() {
+        return 0;
+    }
+
+    @Override
+    public long transferredBytes() {
+        return 0;
     }
 }

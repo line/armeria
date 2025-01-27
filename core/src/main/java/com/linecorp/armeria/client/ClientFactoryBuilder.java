@@ -24,10 +24,7 @@ import static io.netty.handler.codec.http2.Http2CodecUtil.MAX_FRAME_SIZE_UPPER_B
 import static io.netty.handler.codec.http2.Http2CodecUtil.MAX_INITIAL_WINDOW_SIZE;
 import static java.util.Objects.requireNonNull;
 
-import java.io.ByteArrayInputStream;
 import java.io.File;
-import java.io.IOError;
-import java.io.IOException;
 import java.io.InputStream;
 import java.net.InetSocketAddress;
 import java.net.ProxySelector;
@@ -53,7 +50,6 @@ import com.google.common.base.MoreObjects;
 import com.google.common.base.MoreObjects.ToStringHelper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.io.ByteStreams;
 import com.google.common.primitives.Ints;
 
 import com.linecorp.armeria.client.proxy.ProxyConfig;
@@ -63,12 +59,15 @@ import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.Http1HeaderNaming;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.TlsKeyPair;
+import com.linecorp.armeria.common.TlsProvider;
 import com.linecorp.armeria.common.TlsSetters;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.outlier.OutlierDetection;
 import com.linecorp.armeria.common.util.EventLoopGroups;
 import com.linecorp.armeria.common.util.TlsEngineType;
+import com.linecorp.armeria.internal.common.IgnoreHostsTrustManager;
 import com.linecorp.armeria.internal.common.RequestContextUtil;
 import com.linecorp.armeria.internal.common.util.ChannelUtil;
 
@@ -127,6 +126,12 @@ public final class ClientFactoryBuilder implements TlsSetters {
     private final List<ToIntFunction<Endpoint>> maxNumEventLoopsFunctions = new ArrayList<>();
     private boolean tlsNoVerifySet;
     private final Set<String> insecureHosts = new HashSet<>();
+    @Nullable
+    private TlsProvider tlsProvider;
+    @Nullable
+    private ClientTlsConfig tlsConfig;
+    private boolean staticTlsSettingsSet;
+    private boolean autoCloseConnectionPoolListener = true;
 
     ClientFactoryBuilder() {
         connectTimeoutMillis(Flags.defaultConnectTimeoutMillis());
@@ -286,6 +291,7 @@ public final class ClientFactoryBuilder implements TlsSetters {
      */
     public ClientFactoryBuilder tlsNoVerify() {
         checkState(insecureHosts.isEmpty(), "tlsNoVerify() and tlsNoVerifyHosts() are mutually exclusive.");
+        ensureNoTlsProvider();
         tlsNoVerifySet = true;
         return this;
     }
@@ -299,6 +305,7 @@ public final class ClientFactoryBuilder implements TlsSetters {
      */
     public ClientFactoryBuilder tlsNoVerifyHosts(String... insecureHosts) {
         checkState(!tlsNoVerifySet, "tlsNoVerify() and tlsNoVerifyHosts() are mutually exclusive.");
+        ensureNoTlsProvider();
         this.insecureHosts.addAll(Arrays.asList(insecureHosts));
         return this;
     }
@@ -306,7 +313,10 @@ public final class ClientFactoryBuilder implements TlsSetters {
     /**
      * Configures SSL or TLS for client certificate authentication with the specified {@code keyCertChainFile}
      * and cleartext {@code keyFile}.
+     *
+     * @deprecated Use {@link #tls(TlsKeyPair)} or {@link #tlsProvider(TlsProvider)} instead.
      */
+    @Deprecated
     @Override
     public ClientFactoryBuilder tls(File keyCertChainFile, File keyFile) {
         return (ClientFactoryBuilder) TlsSetters.super.tls(keyCertChainFile, keyFile);
@@ -315,18 +325,22 @@ public final class ClientFactoryBuilder implements TlsSetters {
     /**
      * Configures SSL or TLS for client certificate authentication with the specified {@code keyCertChainFile},
      * {@code keyFile} and {@code keyPassword}.
+     *
+     * @deprecated Use {@link #tls(TlsKeyPair)} or {@link #tlsProvider(TlsProvider)} instead.
      */
+    @Deprecated
     @Override
     public ClientFactoryBuilder tls(File keyCertChainFile, File keyFile, @Nullable String keyPassword) {
-        requireNonNull(keyCertChainFile, "keyCertChainFile");
-        requireNonNull(keyFile, "keyFile");
-        return tlsCustomizer(customizer -> customizer.keyManager(keyCertChainFile, keyFile, keyPassword));
+        return (ClientFactoryBuilder) TlsSetters.super.tls(keyCertChainFile, keyFile, keyPassword);
     }
 
     /**
      * Configures SSL or TLS for client certificate authentication with the specified
      * {@code keyCertChainInputStream} and cleartext {@code keyInputStream}.
+     *
+     * @deprecated Use {@link #tls(TlsKeyPair)} or {@link #tlsProvider(TlsProvider)} instead.
      */
+    @Deprecated
     @Override
     public ClientFactoryBuilder tls(InputStream keyCertChainInputStream, InputStream keyInputStream) {
         return (ClientFactoryBuilder) TlsSetters.super.tls(keyCertChainInputStream, keyInputStream);
@@ -335,32 +349,26 @@ public final class ClientFactoryBuilder implements TlsSetters {
     /**
      * Configures SSL or TLS for client certificate authentication with the specified
      * {@code keyCertChainInputStream} and {@code keyInputStream} and {@code keyPassword}.
+     *
+     * @deprecated Use {@link #tls(TlsKeyPair)} or {@link #tlsProvider(TlsProvider)} instead.
      */
+    @Deprecated
     @Override
     public ClientFactoryBuilder tls(InputStream keyCertChainInputStream, InputStream keyInputStream,
                                     @Nullable String keyPassword) {
         requireNonNull(keyCertChainInputStream, "keyCertChainInputStream");
         requireNonNull(keyInputStream, "keyInputStream");
-
-        // Retrieve the content of the given streams so that they can be consumed more than once.
-        final byte[] keyCertChain;
-        final byte[] key;
-        try {
-            keyCertChain = ByteStreams.toByteArray(keyCertChainInputStream);
-            key = ByteStreams.toByteArray(keyInputStream);
-        } catch (IOException e) {
-            throw new IOError(e);
-        }
-
-        return tlsCustomizer(customizer -> customizer.keyManager(new ByteArrayInputStream(keyCertChain),
-                                                                 new ByteArrayInputStream(key),
-                                                                 keyPassword));
+        return (ClientFactoryBuilder) TlsSetters.super.tls(keyCertChainInputStream, keyInputStream,
+                                                           keyPassword);
     }
 
     /**
      * Configures SSL or TLS for client certificate authentication with the specified cleartext
      * {@link PrivateKey} and {@link X509Certificate} chain.
+     *
+     * @deprecated Use {@link #tls(TlsKeyPair)} or {@link #tlsProvider(TlsProvider)} instead.
      */
+    @Deprecated
     @Override
     public ClientFactoryBuilder tls(PrivateKey key, X509Certificate... keyCertChain) {
         return (ClientFactoryBuilder) TlsSetters.super.tls(key, keyCertChain);
@@ -369,7 +377,10 @@ public final class ClientFactoryBuilder implements TlsSetters {
     /**
      * Configures SSL or TLS for client certificate authentication with the specified cleartext
      * {@link PrivateKey} and {@link X509Certificate} chain.
+     *
+     * @deprecated Use {@link #tls(TlsKeyPair)} with {@link TlsKeyPair#of(PrivateKey, Iterable)} instead.
      */
+    @Deprecated
     @Override
     public ClientFactoryBuilder tls(PrivateKey key, Iterable<? extends X509Certificate> keyCertChain) {
         return (ClientFactoryBuilder) TlsSetters.super.tls(key, keyCertChain);
@@ -378,7 +389,11 @@ public final class ClientFactoryBuilder implements TlsSetters {
     /**
      * Configures SSL or TLS for client certificate authentication with the specified {@link PrivateKey},
      * {@code keyPassword} and {@link X509Certificate} chain.
+     *
+     * @deprecated Use {@link #tls(TlsKeyPair)} with {@link TlsKeyPair#of(PrivateKey, X509Certificate...)}
+     *             instead.
      */
+    @Deprecated
     @Override
     public ClientFactoryBuilder tls(PrivateKey key, @Nullable String keyPassword,
                                     X509Certificate... keyCertChain) {
@@ -388,18 +403,24 @@ public final class ClientFactoryBuilder implements TlsSetters {
     /**
      * Configures SSL or TLS for client certificate authentication with the specified {@link PrivateKey},
      * {@code keyPassword} and {@link X509Certificate} chain.
+     *
+     * @deprecated Use {@link #tls(TlsKeyPair)} with {@link TlsKeyPair#of(PrivateKey, Iterable)} instead.
      */
+    @Deprecated
     @Override
     public ClientFactoryBuilder tls(PrivateKey key, @Nullable String keyPassword,
                                     Iterable<? extends X509Certificate> keyCertChain) {
-        requireNonNull(key, "key");
-        requireNonNull(keyCertChain, "keyCertChain");
+        return (ClientFactoryBuilder) TlsSetters.super.tls(key, keyPassword, keyCertChain);
+    }
 
-        for (X509Certificate keyCert : keyCertChain) {
-            requireNonNull(keyCert, "keyCertChain contains null.");
-        }
-
-        return tlsCustomizer(customizer -> customizer.keyManager(key, keyPassword, keyCertChain));
+    /**
+     * Configures SSL or TLS for client certificate authentication with the specified {@link TlsKeyPair}.
+     */
+    @Override
+    public ClientFactoryBuilder tls(TlsKeyPair tlsKeyPair) {
+        requireNonNull(tlsKeyPair, "tlsKeyPair");
+        return tlsCustomizer(customizer -> customizer.keyManager(tlsKeyPair.privateKey(),
+                                                                 tlsKeyPair.certificateChain()));
     }
 
     /**
@@ -420,6 +441,8 @@ public final class ClientFactoryBuilder implements TlsSetters {
     @Override
     public ClientFactoryBuilder tlsCustomizer(Consumer<? super SslContextBuilder> tlsCustomizer) {
         requireNonNull(tlsCustomizer, "tlsCustomizer");
+        ensureNoTlsProvider();
+        staticTlsSettingsSet = true;
         @SuppressWarnings("unchecked")
         final ClientFactoryOptionValue<Consumer<? super SslContextBuilder>> oldTlsCustomizerValue =
                 (ClientFactoryOptionValue<Consumer<? super SslContextBuilder>>)
@@ -437,6 +460,44 @@ public final class ClientFactoryBuilder implements TlsSetters {
             });
         }
         return this;
+    }
+
+    /**
+     * Sets the {@link TlsProvider} that provides {@link TlsKeyPair}s for client certificate authentication.
+     * <pre>
+     * ClientFactory
+     *   .builder()
+     *   .tlsProvider(
+     *     TlsProvider.builder()
+     *                // Set the default key pair.
+     *                .keyPair(TlsKeyPair.of(...))
+     *                // Set the key pair for "example.com".
+     *                .keyPair("example.com", TlsKeyPair.of(...))
+     *                .build())
+     * </pre>
+     */
+    @UnstableApi
+    public ClientFactoryBuilder tlsProvider(TlsProvider tlsProvider) {
+        requireNonNull(tlsProvider, "tlsProvider");
+        checkState(!staticTlsSettingsSet,
+                   "Cannot configure the TlsProvider because static TLS settings have been set already.");
+        this.tlsProvider = tlsProvider;
+        tlsConfig = null;
+        return this;
+    }
+
+    /**
+     * Sets the {@link TlsProvider} that provides {@link TlsKeyPair}s for client certificate authentication.
+     */
+    @UnstableApi
+    public ClientFactoryBuilder tlsProvider(TlsProvider tlsProvider, ClientTlsConfig tlsConfig) {
+        tlsProvider(tlsProvider);
+        this.tlsConfig = requireNonNull(tlsConfig, "tlsConfig");
+        return this;
+    }
+
+    private void ensureNoTlsProvider() {
+        checkState(tlsProvider == null, "Cannot configure TLS settings because a TlsProvider has been set.");
     }
 
     /**
@@ -797,11 +858,26 @@ public final class ClientFactoryBuilder implements TlsSetters {
 
     /**
      * Sets the listener which is notified on a connection pool event.
+     * Note that the specified {@link ConnectionPoolListener} will be closed automatically when the
+     * {@link ClientFactory} is closed.
+     */
+    public ClientFactoryBuilder connectionPoolListener(ConnectionPoolListener connectionPoolListener) {
+        return connectionPoolListener(connectionPoolListener, true);
+    }
+
+    /**
+     * Sets the listener which is notified on a connection pool event.
+     *
+     * <p>If {@code autoClose} is true, {@link ConnectionPoolListener#close()} will be automatically called when
+     * the {@link ClientFactory} is closed. Otherwise, you need to close it manually. {@code autoClose} is
+     * enabled by default.
+     *
      */
     public ClientFactoryBuilder connectionPoolListener(
-            ConnectionPoolListener connectionPoolListener) {
+            ConnectionPoolListener connectionPoolListener, boolean autoClose) {
         option(ClientFactoryOptions.CONNECTION_POOL_LISTENER,
                requireNonNull(connectionPoolListener, "connectionPoolListener"));
+        autoCloseConnectionPoolListener = autoClose;
         return this;
     }
 
@@ -959,10 +1035,17 @@ public final class ClientFactoryBuilder implements TlsSetters {
             return ClientFactoryOptions.ADDRESS_RESOLVER_GROUP_FACTORY.newValue(addressResolverGroupFactory);
         });
 
-        if (tlsNoVerifySet) {
-            tlsCustomizer(b -> b.trustManager(InsecureTrustManagerFactory.INSTANCE));
-        } else if (!insecureHosts.isEmpty()) {
-            tlsCustomizer(b -> b.trustManager(IgnoreHostsTrustManager.of(insecureHosts)));
+        if (tlsProvider != null) {
+            option(ClientFactoryOptions.TLS_PROVIDER, tlsProvider);
+            if (tlsConfig != null) {
+                option(ClientFactoryOptions.TLS_CONFIG, tlsConfig);
+            }
+        } else {
+            if (tlsNoVerifySet) {
+                tlsCustomizer(b -> b.trustManager(InsecureTrustManagerFactory.INSTANCE));
+            } else if (!insecureHosts.isEmpty()) {
+                tlsCustomizer(b -> b.trustManager(IgnoreHostsTrustManager.of(insecureHosts)));
+            }
         }
 
         final ClientFactoryOptions newOptions = ClientFactoryOptions.of(options.values());
@@ -1008,7 +1091,7 @@ public final class ClientFactoryBuilder implements TlsSetters {
      * Returns a newly-created {@link ClientFactory} based on the properties of this builder.
      */
     public ClientFactory build() {
-        return new DefaultClientFactory(new HttpClientFactory(buildOptions()));
+        return new DefaultClientFactory(new HttpClientFactory(buildOptions(), autoCloseConnectionPoolListener));
     }
 
     @Override

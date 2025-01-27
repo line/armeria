@@ -35,6 +35,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.EnumSource;
 import org.junit.jupiter.params.provider.MethodSource;
 
 import com.google.common.collect.ImmutableList;
@@ -59,8 +60,10 @@ import io.envoyproxy.envoy.config.core.v3.HealthCheck;
 import io.envoyproxy.envoy.config.core.v3.HealthCheck.HttpHealthCheck;
 import io.envoyproxy.envoy.config.core.v3.HealthStatus;
 import io.envoyproxy.envoy.config.core.v3.Locality;
+import io.envoyproxy.envoy.config.core.v3.Metadata;
 import io.envoyproxy.envoy.config.endpoint.v3.ClusterLoadAssignment;
 import io.envoyproxy.envoy.config.endpoint.v3.ClusterLoadAssignment.Policy;
+import io.envoyproxy.envoy.config.endpoint.v3.Endpoint.HealthCheckConfig;
 import io.envoyproxy.envoy.config.endpoint.v3.LbEndpoint;
 import io.envoyproxy.envoy.config.listener.v3.Listener;
 import io.envoyproxy.envoy.type.v3.Percent;
@@ -220,6 +223,68 @@ class HealthCheckedTest {
                 );
             }
         }
+    }
+
+    @ParameterizedTest
+    @EnumSource(value = HealthStatus.class, names = {"UNKNOWN", "UNHEALTHY", "HEALTHY"})
+    void disabled(HealthStatus healthStatus) {
+        final Listener listener = staticResourceListener();
+        final HealthCheckConfig disabledConfig = HealthCheckConfig.newBuilder()
+                                                                  .setDisableActiveHealthCheck(true).build();
+
+        final List<LbEndpoint> healthyEndpoints =
+                server.server().activePorts().keySet()
+                      .stream().map(addr -> testEndpoint(addr, healthStatus, disabledConfig))
+                      .collect(Collectors.toList());
+        assertThat(healthyEndpoints).hasSize(3);
+        final List<LbEndpoint> unhealthyEndpoints =
+                noHealthCheck.server().activePorts().keySet()
+                             .stream().map(addr -> testEndpoint(addr, healthStatus, disabledConfig))
+                             .collect(Collectors.toList());
+        assertThat(unhealthyEndpoints).hasSize(3);
+        final List<LbEndpoint> allEndpoints = ImmutableList.<LbEndpoint>builder()
+                                                           .addAll(healthyEndpoints)
+                                                           .addAll(unhealthyEndpoints).build();
+
+        final ClusterLoadAssignment loadAssignment =
+                ClusterLoadAssignment
+                        .newBuilder()
+                        .addEndpoints(localityLbEndpoints(Locality.getDefaultInstance(), allEndpoints))
+                        .setPolicy(Policy.newBuilder().setWeightedPriorityHealth(true))
+                        .build();
+        final HttpHealthCheck httpHealthCheck = HttpHealthCheck.newBuilder()
+                                                               .setPath("/monitor/healthcheck")
+                                                               .build();
+        final Cluster cluster = createStaticCluster("cluster", loadAssignment)
+                .toBuilder()
+                .addHealthChecks(HealthCheck.newBuilder().setHttpHealthCheck(httpHealthCheck))
+                .setCommonLbConfig(CommonLbConfig.newBuilder()
+                                                 .setHealthyPanicThreshold(Percent.newBuilder().setValue(0)))
+                .build();
+
+        final Bootstrap bootstrap = staticBootstrap(listener, cluster);
+        try (XdsBootstrap xdsBootstrap = XdsBootstrap.of(bootstrap);
+             EndpointGroup endpointGroup = XdsEndpointGroup.of("listener", xdsBootstrap)) {
+            await().untilAsserted(() -> assertThat(endpointGroup.whenReady()).isDone());
+
+            final ClientRequestContext ctx =
+                    ClientRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
+            final Endpoint endpoint = endpointGroup.selectNow(ctx);
+
+            // The healthStatus set to the endpoint overrides
+            if (healthStatus == HealthStatus.HEALTHY || healthStatus == HealthStatus.UNKNOWN) {
+                assertThat(endpoint).isNotNull();
+            } else {
+                assertThat(healthStatus).isEqualTo(HealthStatus.UNHEALTHY);
+                assertThat(endpoint).isNull();
+            }
+        }
+    }
+
+    private static LbEndpoint testEndpoint(InetSocketAddress address, HealthStatus healthStatus,
+                                           HealthCheckConfig config) {
+        return endpoint(address.getAddress().getHostAddress(), address.getPort(),
+                        Metadata.getDefaultInstance(), 1, healthStatus, config);
     }
 
     private static List<Integer> ports(ServerExtension server) {
