@@ -20,7 +20,7 @@ import static com.google.common.base.Preconditions.checkArgument;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 
 /**
- * A builder for creating instances of {@link ExponentialBackoff}.
+ * A builder for creating instances of Exponential {@link Backoff}.
  *
  * <p>This builder allows you to configure an exponential backoff strategy by specifying
  * the initial delay, the maximum delay, and a multiplier. The exponential backoff
@@ -31,15 +31,13 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
  *
  * <pre>
  * {@code
- * ExponentialBackoff backoff = new ExponentialBackoffBuilder()
+ * ExponentialBackoff backoff = Backoff.builderForExponential()
  *     .initialDelayMillis(100)
  *     .maxDelayMillis(10000)
  *     .multiplier(2.0)
  *     .build();
  * }
  * </pre>
- *
- * @see ExponentialBackoff
  */
 @UnstableApi
 public final class ExponentialBackoffBuilder {
@@ -50,17 +48,7 @@ public final class ExponentialBackoffBuilder {
     ExponentialBackoffBuilder() {}
 
     /**
-     * Builds and returns a new {@link ExponentialBackoff} instance with the configured
-     * initial delay, maximum delay, and multiplier.
-     *
-     * @return a newly created {@link ExponentialBackoff} with the configured delays and multiplier
-     */
-    public Backoff build() {
-        return new ExponentialBackoff(initialDelayMillis, maxDelayMillis, multiplier);
-    }
-
-    /**
-     * Sets the initial delay in milliseconds for the {@link ExponentialBackoff}.
+     * Sets the initial delay in milliseconds for the Exponential {@link Backoff}.
      *
      * <p>The initial delay is the starting value for the exponential backoff, determining
      * the delay before the first retry. Subsequent delays will increase exponentially
@@ -76,7 +64,7 @@ public final class ExponentialBackoffBuilder {
     }
 
     /**
-     * Sets the maximum delay in milliseconds for the {@link ExponentialBackoff}.
+     * Sets the maximum delay in milliseconds for the Exponential {@link Backoff}.
      *
      * <p>The maximum delay is the upper limit for the backoff delay. Once the delay reaches
      * this value, it will not increase further, even if the multiplier would result in a higher value.</p>
@@ -91,7 +79,7 @@ public final class ExponentialBackoffBuilder {
     }
 
     /**
-     * Sets the multiplier for the {@link ExponentialBackoff}.
+     * Sets the multiplier for the Exponential {@link Backoff}.
      *
      * <p>The multiplier controls how much the delay increases after each retry.
      * The delay for each retry is determined by multiplying the previous delay by this value,
@@ -104,5 +92,13 @@ public final class ExponentialBackoffBuilder {
         checkArgument(multiplier > 1.0, "multiplier: %s (expected: > 1.0)", multiplier);
         this.multiplier = multiplier;
         return this;
+    }
+
+    /**
+     * Builds and returns a new Exponential {@link Backoff} instance with the configured
+     * initial delay, maximum delay, and multiplier.
+     */
+    public Backoff build() {
+        return new ExponentialBackoff(initialDelayMillis, maxDelayMillis, multiplier);
     }
 }

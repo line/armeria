@@ -24,24 +24,20 @@ import java.util.function.Supplier;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 
 /**
- * A builder for creating instances of {@link RandomBackoff}.
+ * A builder for creating instances of Random {@link Backoff}.
  *
- * <p>This builder allows you to configure the delay duration for a random backoff strategy.
- * You can specify the minimum delay, maximum delay in milliseconds and random supplier
- * then create a {@link RandomBackoff} instance.</p>
- *
+ * <p>This builder allows you to configure a random backoff strategy by specifying
+ * a minimum delay, maximum delay in milliseconds and random supplier.
  * <p>Example usage:</p>
  *
  * <pre>
  * {@code
- * RandomBackOff backoff = new RandomBackoffBuilder()
+ * RandomBackOff backoff = new Backoff.builderForRandom()
  *     .minDelayMillis(1000)
  *     .maxDelayMillis(3000)
  *     .build();
  * }
  * </pre>
- *
- * @see RandomBackoff
  */
 @UnstableApi
 public final class RandomBackoffBuilder {
@@ -52,27 +48,7 @@ public final class RandomBackoffBuilder {
     RandomBackoffBuilder() {}
 
     /**
-     * Builds and returns a newly created {@link RandomBackoff} instance with the properties
-     * specified in this builder.
-     *
-     * <p>If some properties are not set, they will default to the following values:</p>
-     * <ul>
-     *     <li><b>minDelayMillis</b>: 0</li>
-     *     <li><b>maxDelayMillis</b>: 0</li>
-     *     <li><b>randomSupplier</b>: {@code Random::new}</li>
-     * </ul>
-     *
-     * <p>All provided or defaulted properties will be applied to the {@link RandomBackoff} instance
-     * created by this method.</p>
-     *
-     * @return a newly created {@link RandomBackoff} instance with the configured or default values
-     */
-    public Backoff build() {
-        return new RandomBackoff(minDelayMillis, maxDelayMillis, randomSupplier);
-    }
-
-    /**
-     * Sets the minimum delay, in milliseconds, for the {@link RandomBackoff}.
+     * Sets the minimum delay, in milliseconds, for the Random {@link Backoff}.
      *
      * <p>This value represents the minimum time the backoff will delay before retrying an operation.</p>
      *
@@ -86,7 +62,7 @@ public final class RandomBackoffBuilder {
     }
 
     /**
-     * Sets the maximum delay, in milliseconds, for the {@link RandomBackoff}.
+     * Sets the maximum delay, in milliseconds, for the Random {@link Backoff}.
      *
      * <p>This value represents the maximum time the backoff will delay before retrying an operation.</p>
      *
@@ -100,7 +76,7 @@ public final class RandomBackoffBuilder {
     }
 
     /**
-     * Sets the {@link Supplier} that provides instances of {@link Random} for the {@link RandomBackoff}.
+     * Sets the {@link Supplier} that provides instances of {@link Random} for the Random {@link Backoff}.
      *
      * <p>This supplier will be used to generate random values when determining the
      * backoff delay between retries.</p>
@@ -113,5 +89,13 @@ public final class RandomBackoffBuilder {
         requireNonNull(randomSupplier, "randomSupplier");
         this.randomSupplier = randomSupplier;
         return this;
+    }
+
+    /**
+     * Builds and returns a newly created Random {@link Backoff} instance with the configured
+     * minimum delay, maximum delay, and random supplier.
+     */
+    public Backoff build() {
+        return new RandomBackoff(minDelayMillis, maxDelayMillis, randomSupplier);
     }
 }
