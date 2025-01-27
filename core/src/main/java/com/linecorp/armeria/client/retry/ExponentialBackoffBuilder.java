@@ -40,7 +40,7 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
  * </pre>
  */
 @UnstableApi
-public final class ExponentialBackoffBuilder {
+public final class ExponentialBackoffBuilder extends AbstractBackoffBuilder<ExponentialBackoffBuilder> {
     private long initialDelayMillis;
     private long maxDelayMillis;
     private double multiplier = 2.0;
@@ -94,11 +94,8 @@ public final class ExponentialBackoffBuilder {
         return this;
     }
 
-    /**
-     * Builds and returns a new Exponential {@link Backoff} instance with the configured
-     * initial delay, maximum delay, and multiplier.
-     */
-    public Backoff build() {
+    @Override
+    Backoff doBuild() {
         return new ExponentialBackoff(initialDelayMillis, maxDelayMillis, multiplier);
     }
 }

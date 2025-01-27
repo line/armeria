@@ -37,7 +37,7 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
  * </pre>
  */
 @UnstableApi
-public final class FixedBackoffBuilder {
+public final class FixedBackoffBuilder extends AbstractBackoffBuilder<FixedBackoffBuilder> {
     private long delayMillis;
 
     FixedBackoffBuilder() {}
@@ -57,10 +57,8 @@ public final class FixedBackoffBuilder {
         return this;
     }
 
-    /**
-     * Builds and returns a new Fixed {@link Backoff} instance with the configured delay.
-     */
-    public Backoff build() {
+    @Override
+    Backoff doBuild() {
         return new FixedBackoff(delayMillis);
     }
 }

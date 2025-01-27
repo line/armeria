@@ -39,7 +39,7 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
  * </pre>
  */
 @UnstableApi
-public final class FibonacciBackoffBuilder {
+public final class FibonacciBackoffBuilder extends AbstractBackoffBuilder<FibonacciBackoffBuilder> {
     private long initialDelayMillis;
     private long maxDelayMillis;
 
@@ -78,11 +78,8 @@ public final class FibonacciBackoffBuilder {
         return this;
     }
 
-    /**
-     * Builds and returns a new Fibonacci {@link Backoff} instance with the configured
-     * initial and maximum delays.
-     */
-    public Backoff build() {
+    @Override
+    Backoff doBuild() {
         return new FibonacciBackoff(initialDelayMillis, maxDelayMillis);
     }
 }

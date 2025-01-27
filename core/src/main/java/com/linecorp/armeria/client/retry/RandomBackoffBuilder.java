@@ -40,7 +40,7 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
  * </pre>
  */
 @UnstableApi
-public final class RandomBackoffBuilder {
+public final class RandomBackoffBuilder extends AbstractBackoffBuilder<RandomBackoffBuilder> {
     private long minDelayMillis;
     private long maxDelayMillis;
     private Supplier<Random> randomSupplier = Random::new;
@@ -91,11 +91,8 @@ public final class RandomBackoffBuilder {
         return this;
     }
 
-    /**
-     * Builds and returns a newly created Random {@link Backoff} instance with the configured
-     * minimum delay, maximum delay, and random supplier.
-     */
-    public Backoff build() {
+    @Override
+    Backoff doBuild() {
         return new RandomBackoff(minDelayMillis, maxDelayMillis, randomSupplier);
     }
 }
