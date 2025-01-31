@@ -1,0 +1,14 @@
+syntax = "proto3";
+
+package hello.v1;
+option java_package = "testing.grpc.jsonname";
+
+option java_multiple_files = true;
+
+message HelloRequest {
+  string name_input = 1;
+}
+
+message HelloReply {
+  string message = 1;
+}

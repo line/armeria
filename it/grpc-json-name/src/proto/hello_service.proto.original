@@ -1,0 +1,18 @@
+syntax = "proto3";
+
+package hello.service.v1;
+
+import "hello/v1/hello.proto";
+import "google/api/annotations.proto";
+
+option java_package = "testing.grpc.jsonname";
+option java_multiple_files = true;
+
+
+service HelloService {
+  rpc Hello (hello.v1.HelloRequest) returns (hello.v1.HelloReply){
+    option (google.api.http) = {
+      get: "/v1/hello/{name_input}"
+    };
+  }
+}

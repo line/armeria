@@ -20,6 +20,7 @@ import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
+import static com.linecorp.armeria.server.grpc.HttpJsonTranscodingQueryParamMatchRule.IGNORE_JSON_NAME;
 import static com.linecorp.armeria.server.grpc.HttpJsonTranscodingQueryParamMatchRule.LOWER_CAMEL_CASE;
 import static java.util.Objects.requireNonNull;
 
@@ -172,16 +173,20 @@ final class HttpJsonTranscodingService extends AbstractUnframedGrpcService
                     continue;
                 }
 
+                // TODO(ikhoon): Extract the build-time code into a separate class such as
+                //               HttpJsonTranscodingServiceBuilder or HttpJsonTranscodingSpecGenerator
+                final Set<HttpJsonTranscodingQueryParamMatchRule> queryParamMatchRules =
+                        httpJsonTranscodingOptions.queryParamMatchRules();
+                final boolean ignoreJsonName = queryParamMatchRules.contains(IGNORE_JSON_NAME);
                 final Route route = routeAndVariables.getKey();
                 final List<PathVariable> pathVariables = routeAndVariables.getValue();
                 final Map<String, Field> originalFields =
                         buildFields(methodDesc.getInputType(), ImmutableList.of(), ImmutableSet.of(),
-                                    false);
+                                    false, ignoreJsonName);
                 final Map<String, Field> camelCaseFields;
-                if (httpJsonTranscodingOptions.queryParamMatchRules().contains(LOWER_CAMEL_CASE)) {
-                    camelCaseFields =
-                            buildFields(methodDesc.getInputType(), ImmutableList.of(), ImmutableSet.of(),
-                                        true);
+                if (queryParamMatchRules.contains(LOWER_CAMEL_CASE)) {
+                    camelCaseFields = buildFields(methodDesc.getInputType(), ImmutableList.of(),
+                                                  ImmutableSet.of(), true, ignoreJsonName);
                 } else {
                     camelCaseFields = ImmutableMap.of();
                 }
@@ -312,7 +317,7 @@ final class HttpJsonTranscodingService extends AbstractUnframedGrpcService
     private static Map<String, Field> buildFields(Descriptor desc,
                                                   List<String> parentNames,
                                                   Set<Descriptor> visitedTypes,
-                                                  boolean useCamelCaseKeys) {
+                                                  boolean useCamelCaseKeys, boolean ignoreJsonName) {
         final StringJoiner namePrefixJoiner = new StringJoiner(".");
         parentNames.forEach(namePrefixJoiner::add);
         final String namePrefix = namePrefixJoiner.length() == 0 ? "" : namePrefixJoiner.toString() + '.';
@@ -322,7 +327,7 @@ final class HttpJsonTranscodingService extends AbstractUnframedGrpcService
             final JavaType type = field.getJavaType();
             final String fieldName;
 
-            if (field.toProto().hasJsonName()) {
+            if (!ignoreJsonName && field.toProto().hasJsonName()) {
                 fieldName = field.toProto().getJsonName();
             } else {
                 if (useCamelCaseKeys) {
@@ -369,7 +374,7 @@ final class HttpJsonTranscodingService extends AbstractUnframedGrpcService
                                                                .addAll(visitedTypes)
                                                                .add(field.getMessageType())
                                                                .build(),
-                                                   useCamelCaseKeys));
+                                                   useCamelCaseKeys, ignoreJsonName));
                     } catch (RecursiveTypeException e) {
                         if (e.recursiveTypeDescriptor() != field.getMessageType()) {
                             // Re-throw the exception if it is not caused by my field.

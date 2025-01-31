@@ -42,5 +42,14 @@ public enum HttpJsonTranscodingQueryParamMatchRule {
     /**
      * Uses the original fields in .proto files to match {@link QueryParams} of an {@link HttpRequest}.
      */
-    ORIGINAL_FIELD
+    ORIGINAL_FIELD,
+    /**
+     * Ignore the {@code json_name} field option in .proto files and uses either the original field name or the
+     * lowerCamelCase field name instead.
+     *
+     * <p>This option is useful when the protoc compiler always populates the {@code json_name} in the
+     * descriptor. See <a href="https://github.com/protocolbuffers/protobuf/issues/5587">protobuf/issues/5587</a>
+     * for more details.
+     */
+    IGNORE_JSON_NAME
 }
