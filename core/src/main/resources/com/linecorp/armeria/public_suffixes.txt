@@ -92,6 +92,7 @@
 *.lcl.dev
 *.lclstage.dev
 *.linodeobjects.com
+*.localto.net
 *.magentosite.cloud
 *.me-central-1.airflow.amazonaws.com
 *.me-south-1.airflow.amazonaws.com
@@ -125,6 +126,7 @@
 *.quipelements.com
 *.r.appspot.com
 *.run.app
+*.s.brave.app
 *.s.brave.io
 *.sa-east-1.airflow.amazonaws.com
 *.sapporo.jp
@@ -1085,6 +1087,8 @@ br.it
 bradesco
 brand.se
 brasilia.me
+brave.app
+brave.io
 bremanger.no
 brescia.it
 bridgestone
@@ -4784,6 +4788,7 @@ loans
 localcert.net
 localhostcert.net
 localplayer.dev
+localtonet.com
 locker
 locus
 lodi.it
@@ -6042,6 +6047,7 @@ obanazawa.yamagata.jp
 obi
 obihiro.hokkaido.jp
 obira.hokkaido.jp
+obj.ag
 objects.lpg.cloudscale.ch
 objects.rma.cloudscale.ch
 obl.ong
