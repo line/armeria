@@ -17,6 +17,8 @@
 package com.linecorp.armeria.server.grpc;
 
 import static com.google.common.base.Preconditions.checkArgument;
+import static com.linecorp.armeria.server.grpc.HttpJsonTranscodingQueryParamMatchRule.LOWER_CAMEL_CASE;
+import static com.linecorp.armeria.server.grpc.HttpJsonTranscodingQueryParamMatchRule.ORIGINAL_FIELD;
 import static java.util.Objects.requireNonNull;
 
 import java.util.EnumSet;
@@ -40,7 +42,7 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
 public final class HttpJsonTranscodingOptionsBuilder {
 
     private static final EnumSet<HttpJsonTranscodingQueryParamMatchRule> DEFAULT_QUERY_PARAM_MATCH_RULES =
-            EnumSet.of(HttpJsonTranscodingQueryParamMatchRule.ORIGINAL_FIELD);
+            EnumSet.of(ORIGINAL_FIELD);
 
     private UnframedGrpcErrorHandler errorHandler = UnframedGrpcErrorHandler.ofJson();
 
@@ -96,13 +98,13 @@ public final class HttpJsonTranscodingOptionsBuilder {
         if (queryParamMatchRules == null) {
             matchRules = DEFAULT_QUERY_PARAM_MATCH_RULES;
         } else {
-            if (!queryParamMatchRules.contains(HttpJsonTranscodingQueryParamMatchRule.LOWER_CAMEL_CASE) &&
-                !queryParamMatchRules.contains(HttpJsonTranscodingQueryParamMatchRule.ORIGINAL_FIELD)) {
+            if (!queryParamMatchRules.contains(LOWER_CAMEL_CASE) &&
+                !queryParamMatchRules.contains(ORIGINAL_FIELD)) {
                 // If neither LOWER_CAMEL_CASE nor ORIGINAL_FIELD is set, add ORIGINAL_FIELD by default.
                 final Set<HttpJsonTranscodingQueryParamMatchRule> newMatchRules =
                         ImmutableSet.<HttpJsonTranscodingQueryParamMatchRule>builder()
                                     .addAll(queryParamMatchRules)
-                                    .add(HttpJsonTranscodingQueryParamMatchRule.ORIGINAL_FIELD)
+                                    .add(ORIGINAL_FIELD)
                                     .build();
                 matchRules = Sets.immutableEnumSet(newMatchRules);
             } else {
