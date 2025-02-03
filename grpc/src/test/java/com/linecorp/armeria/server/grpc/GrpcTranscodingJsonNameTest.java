@@ -64,7 +64,8 @@ class GrpcTranscodingJsonNameTest {
     private static final class JsonNameTestService extends JsonNameTestServiceGrpc.JsonNameTestServiceImplBase {
         @Override
         public void hello(JsonNameRequest request, StreamObserver<JsonNameReply> responseObserver) {
-            final String message = request.getJsonNameInput() + " + " + request.toBuilder().getOriginalName() + " + " +
+            final String message = request.getJsonNameInput() + " + " +
+                                   request.toBuilder().getOriginalName() + " + " +
                                    request.getQueryParam();
             final JsonNameReply reply = JsonNameReply.newBuilder()
                                                      .setMessage(message)
