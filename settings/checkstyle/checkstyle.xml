@@ -368,8 +368,5 @@
   <module name="BeforeExecutionExclusionFileFilter">
     <property name="fileNamePattern" value="[\\/]armeria[\\/]kubernetes[\\/]it[\\/].*.java" />
   </module>
-  <module name="BeforeExecutionExclusionFileFilter">
-    <property name="fileNamePattern" value="[\\/]testing[\\/]grpc[\\/]jsonname[\\/].*.java" />
-  </module>
 
 </module>

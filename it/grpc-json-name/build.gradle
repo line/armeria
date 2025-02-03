@@ -1,4 +1,0 @@
-dependencies {
-    implementation project(':grpc')
-    testImplementation libs.javax.annotation
-}

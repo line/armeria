@@ -22,6 +22,7 @@ import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static com.linecorp.armeria.server.grpc.HttpJsonTranscodingQueryParamMatchRule.IGNORE_JSON_NAME;
 import static com.linecorp.armeria.server.grpc.HttpJsonTranscodingQueryParamMatchRule.LOWER_CAMEL_CASE;
+import static com.linecorp.armeria.server.grpc.HttpJsonTranscodingQueryParamMatchRule.ORIGINAL_FIELD;
 import static java.util.Objects.requireNonNull;
 
 import java.io.IOException;
@@ -568,7 +569,7 @@ final class HttpJsonTranscodingService extends AbstractUnframedGrpcService
                                           .contains(LOWER_CAMEL_CASE);
         useProtoFieldNameQueryParams =
                 httpJsonTranscodingOptions.queryParamMatchRules()
-                                          .contains(HttpJsonTranscodingQueryParamMatchRule.ORIGINAL_FIELD);
+                                          .contains(ORIGINAL_FIELD);
     }
 
     @Nullable

@@ -14,7 +14,10 @@
  * under the License.
  */
 
-package com.linecorp.armeria.server.grpc.jsonname;
+package com.linecorp.armeria.server.grpc;
+
+import static net.javacrumbs.jsonunit.fluent.JsonFluentAssert.assertThatJson;
+import static org.assertj.core.api.Assertions.assertThat;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
@@ -23,13 +26,12 @@ import com.linecorp.armeria.client.BlockingWebClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.server.ServerBuilder;
-import com.linecorp.armeria.server.grpc.GrpcService;
-import com.linecorp.armeria.server.grpc.HttpJsonTranscodingOptions;
-import com.linecorp.armeria.server.grpc.HttpJsonTranscodingQueryParamMatchRule;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
-import static net.javacrumbs.jsonunit.fluent.JsonFluentAssert.assertThatJson;
-import static org.assertj.core.api.Assertions.assertThat;
+import io.grpc.stub.StreamObserver;
+import testing.grpc.jsonname.JsonNameReply;
+import testing.grpc.jsonname.JsonNameRequest;
+import testing.grpc.jsonname.JsonNameTestServiceGrpc;
 
 class GrpcTranscodingJsonNameTest {
 
@@ -43,7 +45,7 @@ class GrpcTranscodingJsonNameTest {
                                                       HttpJsonTranscodingQueryParamMatchRule.IGNORE_JSON_NAME)
                                               .build();
             final GrpcService grpcService = GrpcService.builder()
-                                                       .addService(new HelloService())
+                                                       .addService(new JsonNameTestService())
                                                        .enableHttpJsonTranscoding(options)
                                                        .build();
             sb.service(grpcService);
@@ -53,9 +55,22 @@ class GrpcTranscodingJsonNameTest {
     @Test
     void shouldIgnoreJsonNameOption() {
         final BlockingWebClient client = server.blockingWebClient();
-        final AggregatedHttpResponse response = client.get("/v1/hello/Armeria");
+        final AggregatedHttpResponse response = client.get("/v1/hello/first/second?query_param=third");
         assertThat(response.status()).isEqualTo(HttpStatus.OK);
         assertThatJson(response.contentUtf8())
-                .isEqualTo("{\"message\":\"Hello, Armeria!\"}");
+                .isEqualTo("{\"message\":\"first + second + third\"}");
+    }
+
+    private static final class JsonNameTestService extends JsonNameTestServiceGrpc.JsonNameTestServiceImplBase {
+        @Override
+        public void hello(JsonNameRequest request, StreamObserver<JsonNameReply> responseObserver) {
+            final String message = request.getJsonNameInput() + " + " + request.toBuilder().getOriginalName() + " + " +
+                                   request.getQueryParam();
+            final JsonNameReply reply = JsonNameReply.newBuilder()
+                                                     .setMessage(message)
+                                                     .build();
+            responseObserver.onNext(reply);
+            responseObserver.onCompleted();
+        }
     }
 }

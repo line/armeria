@@ -23,6 +23,7 @@ import java.util.EnumSet;
 import java.util.Set;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Sets;
 import com.google.protobuf.Message;
@@ -95,7 +96,18 @@ public final class HttpJsonTranscodingOptionsBuilder {
         if (queryParamMatchRules == null) {
             matchRules = DEFAULT_QUERY_PARAM_MATCH_RULES;
         } else {
-            matchRules = Sets.immutableEnumSet(queryParamMatchRules);
+            if (!queryParamMatchRules.contains(HttpJsonTranscodingQueryParamMatchRule.LOWER_CAMEL_CASE) &&
+                !queryParamMatchRules.contains(HttpJsonTranscodingQueryParamMatchRule.ORIGINAL_FIELD)) {
+                // If neither LOWER_CAMEL_CASE nor ORIGINAL_FIELD is set, add ORIGINAL_FIELD by default.
+                final Set<HttpJsonTranscodingQueryParamMatchRule> newMatchRules =
+                        ImmutableSet.<HttpJsonTranscodingQueryParamMatchRule>builder()
+                                    .addAll(queryParamMatchRules)
+                                    .add(HttpJsonTranscodingQueryParamMatchRule.ORIGINAL_FIELD)
+                                    .build();
+                matchRules = Sets.immutableEnumSet(newMatchRules);
+            } else {
+                matchRules = Sets.immutableEnumSet(queryParamMatchRules);
+            }
         }
         return new DefaultHttpJsonTranscodingOptions(matchRules, errorHandler);
     }
