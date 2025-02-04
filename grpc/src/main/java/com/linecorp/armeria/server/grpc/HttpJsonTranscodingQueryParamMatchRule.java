@@ -25,6 +25,7 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
 /**
  * A naming rule to map {@link QueryParams} of an {@link HttpRequest} to fields in a {@link Message} for
  * HTTP-JSON transcoding endpoint.
+ * If multiple rules are specified, the first rule is tried first, then the second rule, and so on.
  */
 @UnstableApi
 public enum HttpJsonTranscodingQueryParamMatchRule {
@@ -44,12 +45,8 @@ public enum HttpJsonTranscodingQueryParamMatchRule {
      */
     ORIGINAL_FIELD,
     /**
-     * Ignore the {@code json_name} field option in .proto files and uses either the original field name or the
-     * lowerCamelCase field name instead.
-     *
-     * <p>This option is useful when the protoc compiler always populates the {@code json_name} in the
-     * descriptor. See <a href="https://github.com/protocolbuffers/protobuf/issues/5587">protobuf/issues/5587</a>
-     * for more details.
+     * Uses the {@code json_name} field option in .proto files if exists to match {@link QueryParams} of an
+     * {@link HttpRequest}.
      */
-    IGNORE_JSON_NAME
+    JSON_NAME
 }

@@ -17,7 +17,7 @@
 package com.linecorp.armeria.server.grpc;
 
 import static com.google.common.base.Preconditions.checkArgument;
-import static com.linecorp.armeria.server.grpc.HttpJsonTranscodingQueryParamMatchRule.LOWER_CAMEL_CASE;
+import static com.linecorp.armeria.server.grpc.HttpJsonTranscodingQueryParamMatchRule.JSON_NAME;
 import static com.linecorp.armeria.server.grpc.HttpJsonTranscodingQueryParamMatchRule.ORIGINAL_FIELD;
 import static java.util.Objects.requireNonNull;
 
@@ -41,8 +41,11 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
 @UnstableApi
 public final class HttpJsonTranscodingOptionsBuilder {
 
+    /**
+     * Evaluates json_name first, then original field.
+     */
     private static final EnumSet<HttpJsonTranscodingQueryParamMatchRule> DEFAULT_QUERY_PARAM_MATCH_RULES =
-            EnumSet.of(ORIGINAL_FIELD);
+            EnumSet.of(JSON_NAME, ORIGINAL_FIELD);
 
     private UnframedGrpcErrorHandler errorHandler = UnframedGrpcErrorHandler.ofJson();
 
@@ -98,8 +101,7 @@ public final class HttpJsonTranscodingOptionsBuilder {
         if (queryParamMatchRules == null) {
             matchRules = DEFAULT_QUERY_PARAM_MATCH_RULES;
         } else {
-            if (!queryParamMatchRules.contains(LOWER_CAMEL_CASE) &&
-                !queryParamMatchRules.contains(ORIGINAL_FIELD)) {
+            if (queryParamMatchRules.size() == 1 && queryParamMatchRules.contains(JSON_NAME)) {
                 // If neither LOWER_CAMEL_CASE nor ORIGINAL_FIELD is set, add ORIGINAL_FIELD by default.
                 final Set<HttpJsonTranscodingQueryParamMatchRule> newMatchRules =
                         ImmutableSet.<HttpJsonTranscodingQueryParamMatchRule>builder()

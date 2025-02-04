@@ -42,7 +42,7 @@ class GrpcTranscodingJsonNameTest {
             final HttpJsonTranscodingOptions options =
                     HttpJsonTranscodingOptions.builder()
                                               .queryParamMatchRules(
-                                                      HttpJsonTranscodingQueryParamMatchRule.IGNORE_JSON_NAME)
+                                                      HttpJsonTranscodingQueryParamMatchRule.JSON_NAME)
                                               .build();
             final GrpcService grpcService = GrpcService.builder()
                                                        .addService(new JsonNameTestService())
@@ -53,7 +53,7 @@ class GrpcTranscodingJsonNameTest {
     };
 
     @Test
-    void shouldIgnoreJsonNameOption() {
+    void shouldIgnoreJsonNameForPathVariable() {
         final BlockingWebClient client = server.blockingWebClient();
         final AggregatedHttpResponse response = client.get("/v1/hello/first/second?query_param=third");
         assertThat(response.status()).isEqualTo(HttpStatus.OK);
