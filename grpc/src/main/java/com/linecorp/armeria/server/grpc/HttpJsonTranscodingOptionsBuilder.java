@@ -27,7 +27,6 @@ import java.util.Set;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
-import com.google.common.collect.Sets;
 import com.google.protobuf.Message;
 
 import com.linecorp.armeria.common.HttpRequest;
@@ -108,9 +107,9 @@ public final class HttpJsonTranscodingOptionsBuilder {
                                     .addAll(queryParamMatchRules)
                                     .add(ORIGINAL_FIELD)
                                     .build();
-                matchRules = Sets.immutableEnumSet(newMatchRules);
+                matchRules = newMatchRules;
             } else {
-                matchRules = Sets.immutableEnumSet(queryParamMatchRules);
+                matchRules = ImmutableSet.copyOf(queryParamMatchRules);
             }
         }
         return new DefaultHttpJsonTranscodingOptions(matchRules, errorHandler);

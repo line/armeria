@@ -33,7 +33,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
-import java.util.StringJoiner;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -181,17 +180,18 @@ final class HttpJsonTranscodingService extends AbstractUnframedGrpcService
                 final Route route = routeAndVariables.getKey();
                 final List<PathVariable> pathVariables = routeAndVariables.getValue();
                 final Map<String, Field> originalFields = buildFields(methodDesc.getInputType(),
-                                                                      ImmutableList.of(), ImmutableSet.of(),
-                                                                      ORIGINAL_FIELD);
+                                                                      ImmutableList.of(),
+                                                                      "",
+                                                                      ImmutableSet.of(),
+                                                                      ORIGINAL_FIELD,
+                                                                      ImmutableSet.of(ORIGINAL_FIELD));
                 final List<Map<String, Field>> queryMappingFields =
                         queryParamMatchRules.stream().map(matchRule -> {
-                            if (matchRule == ORIGINAL_FIELD) {
-                                return originalFields;
-                            } else {
-                                return buildFields(methodDesc.getInputType(),
-                                                   ImmutableList.of(), ImmutableSet.of(),
-                                                   matchRule);
-                            }
+                            return buildFields(methodDesc.getInputType(),
+                                               ImmutableList.of(),
+                                               "",
+                                               ImmutableSet.of(),
+                                               matchRule, queryParamMatchRules);
                         }).collect(toImmutableList());
 
                 if (specs.containsKey(route)) {
@@ -320,18 +320,16 @@ final class HttpJsonTranscodingService extends AbstractUnframedGrpcService
 
     private static Map<String, Field> buildFields(Descriptor desc,
                                                   List<String> parentNames,
+                                                  String namePrefix,
                                                   Set<Descriptor> visitedTypes,
-                                                  HttpJsonTranscodingQueryParamMatchRule matchRule) {
-        final StringJoiner namePrefixJoiner = new StringJoiner(".");
-        parentNames.forEach(namePrefixJoiner::add);
-        final String namePrefix = namePrefixJoiner.length() == 0 ? "" : namePrefixJoiner.toString() + '.';
-
+                                                  HttpJsonTranscodingQueryParamMatchRule currentMatchRule,
+                                                  Set<HttpJsonTranscodingQueryParamMatchRule> matchRules) {
         final ImmutableMap.Builder<String, Field> builder = ImmutableMap.builder();
         for (FieldDescriptor field : desc.getFields()) {
             final JavaType type = field.getJavaType();
 
             final String fieldName;
-            switch (matchRule) {
+            switch (currentMatchRule) {
                 case ORIGINAL_FIELD:
                     fieldName = field.getName();
                     break;
@@ -353,7 +351,12 @@ final class HttpJsonTranscodingService extends AbstractUnframedGrpcService
                 continue;
             }
 
-            final String key = namePrefix + fieldName;
+            final String key;
+            if (namePrefix.isEmpty()) {
+                key = fieldName;
+            } else {
+                key = namePrefix + '.' + fieldName;
+            }
             switch (type) {
                 case INT:
                 case LONG:
@@ -381,17 +384,23 @@ final class HttpJsonTranscodingService extends AbstractUnframedGrpcService
                     }
 
                     final Descriptor typeDesc = field.getMessageType();
+                    // The json name should be used for the parent name because the keys are used to decode the
+                    // JSON to the message by the Protobuf JSON decoder.
+                    final String newParentName = field.getJsonName();
                     try {
-                        builder.putAll(buildFields(typeDesc,
-                                                   ImmutableList.<String>builder()
-                                                                .addAll(parentNames)
-                                                                .add(fieldName)
-                                                                .build(),
-                                                   ImmutableSet.<Descriptor>builder()
-                                                               .addAll(visitedTypes)
-                                                               .add(field.getMessageType())
-                                                               .build(),
-                                                   matchRule));
+                        for (HttpJsonTranscodingQueryParamMatchRule nestedMatchRule : matchRules) {
+                            builder.putAll(buildFields(typeDesc,
+                                                       ImmutableList.<String>builder()
+                                                                    .addAll(parentNames)
+                                                                    .add(newParentName)
+                                                                    .build(),
+                                                       key,
+                                                       ImmutableSet.<Descriptor>builder()
+                                                                   .addAll(visitedTypes)
+                                                                   .add(field.getMessageType())
+                                                                   .build(),
+                                                       nestedMatchRule, matchRules));
+                        }
                     } catch (RecursiveTypeException e) {
                         if (e.recursiveTypeDescriptor() != field.getMessageType()) {
                             // Re-throw the exception if it is not caused by my field.
@@ -403,7 +412,9 @@ final class HttpJsonTranscodingService extends AbstractUnframedGrpcService
                     break;
             }
         }
-        return builder.build();
+        // A generated field in LOWER_CAMEL_CASE from a single word such as 'text' could be conflict with the
+        // original field name.
+        return builder.buildKeepingLast();
     }
 
     @Nullable
@@ -711,9 +722,9 @@ final class HttpJsonTranscodingService extends AbstractUnframedGrpcService
     /**
      * Converts the HTTP request to gRPC JSON with the {@link TranscodingSpec}.
      */
-    private HttpData convertToJson(ServiceRequestContext ctx,
-                                   AggregatedHttpRequest request,
-                                   TranscodingSpec spec) throws IOException {
+    private static HttpData convertToJson(ServiceRequestContext ctx,
+                                          AggregatedHttpRequest request,
+                                          TranscodingSpec spec) throws IOException {
         try {
             switch (request.method()) {
                 case GET:

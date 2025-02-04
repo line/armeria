@@ -57,7 +57,7 @@ service HttpJsonTranscodingTestService {
   }
   rpc GetMessageV5(GetMessageRequestV5) returns (Message) {
     option (google.api.http) = {
-      get:"/v5/messages/{messageType}"
+      get:"/v5/messages/{message_id}"
     };
   }
   rpc UpdateMessageV1(UpdateMessageRequestV1) returns (Message) {

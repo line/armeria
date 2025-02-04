@@ -16,12 +16,6 @@
 
 package com.linecorp.armeria.server.grpc;
 
-import static com.linecorp.armeria.server.grpc.HttpJsonTranscodingQueryParamMatchRule.JSON_NAME;
-import static com.linecorp.armeria.server.grpc.HttpJsonTranscodingQueryParamMatchRule.LOWER_CAMEL_CASE;
-import static com.linecorp.armeria.server.grpc.HttpJsonTranscodingQueryParamMatchRule.ORIGINAL_FIELD;
-import static net.javacrumbs.jsonunit.fluent.JsonFluentAssert.assertThatJson;
-import static org.assertj.core.api.Assertions.assertThat;
-
 import java.util.HashMap;
 
 import org.junit.jupiter.api.extension.RegisterExtension;
@@ -35,9 +29,17 @@ import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
 import io.grpc.stub.StreamObserver;
+import testing.grpc.jsonname.JsonNameChild1Message;
+import testing.grpc.jsonname.JsonNameParentRequest;
 import testing.grpc.jsonname.JsonNameReply;
 import testing.grpc.jsonname.JsonNameRequest;
 import testing.grpc.jsonname.JsonNameTestServiceGrpc;
+
+import static com.linecorp.armeria.server.grpc.HttpJsonTranscodingQueryParamMatchRule.JSON_NAME;
+import static com.linecorp.armeria.server.grpc.HttpJsonTranscodingQueryParamMatchRule.LOWER_CAMEL_CASE;
+import static com.linecorp.armeria.server.grpc.HttpJsonTranscodingQueryParamMatchRule.ORIGINAL_FIELD;
+import static net.javacrumbs.jsonunit.fluent.JsonFluentAssert.assertThatJson;
+import static org.assertj.core.api.Assertions.assertThat;
 
 class GrpcTranscodingJsonNameTest {
 
@@ -96,7 +98,7 @@ class GrpcTranscodingJsonNameTest {
             "/jsonNameOrOriginal, customJsonNameQueryParam=third&query_param=fourth, first|second|third|fourth",
             // ORIGINAL, JSON_NAME: Ignore the camel case
             "/jsonNameOrOriginal, customJsonNameQueryParam=third&queryParam=fourth, first|second|third|",
-            // ORIGINAL, JSON_NAME: Ignore the camel case
+            // ORIGINAL, JSON_NAME: Ignore the camel case 2
             "/jsonNameOrOriginal, jsonNameQueryParam=third&query_param=fourth, first|second||fourth",
             // LOWER_CAMEL_CASE, JSON_NAME: Use the camel case
             "/jsonNameOrCamel, jsonNameQueryParam=third&queryParam=fourth, first|second|third|fourth",
@@ -116,12 +118,78 @@ class GrpcTranscodingJsonNameTest {
             "/all, json_name_query_param=third&query_param=fourth, first|second|third|fourth",
     })
     @ParameterizedTest
-    void testOriginalField(String prefix, String query, String expected) {
+    void testQueryParamMatching(String prefix, String query, String expected) {
         final BlockingWebClient client = server.blockingWebClient();
         final AggregatedHttpResponse response = client.get(prefix + "/v1/hello/first/second?" + query);
         assertThat(response.status()).isEqualTo(HttpStatus.OK);
         assertThatJson(response.contentUtf8())
                 .isEqualTo("{\"message\": \"" + expected + "\"}");
+    }
+
+    @CsvSource({
+            // ORIGINAL_FIELD: Use the original fields
+            "/original, parent.f_a=first&parent.f_b=second&parent.c_a.f_c=third&parent.c_a.f_d=fourth, " +
+            "first|second|third|fourth",
+            // ORIGINAL_FIELD: Ignore the json name
+            "/original, parent.f_a=first&parent.second_field=second&parent.c_a.f_c=third&" +
+            "parent.c_a.f_d=fourth, first||third|fourth",
+            // ORIGINAL_FIELD: Ignore the camel case
+            "/original, parent.fA=first&parent.f_b=second&parent.c_a.f_c=third&parent.c_a.f_d=fourth, " +
+            "|second|third|fourth",
+            // LOWER_CAMEL_CASE: Use the camel case
+            "/camel, parent.fA=first&parent.fB=second&parent.cA.fC=third&parent.cA.fD=fourth, " +
+            "first|second|third|fourth",
+            // LOWER_CAMEL_CASE: Ignore the json name
+            "/camel, parent.fA=first&parent.second_field=second&parent.cA.fC=third&" +
+            "parent.cA.fourth_field=fourth, " +
+            "first||third|",
+            // LOWER_CAMEL_CASE: Ignore the original fields
+            "/camel, parent.f_a=first&parent.fB=second&parent.cA.f_c=third&parent.cA.fD=fourth, " +
+            "|second||fourth",
+            // ORIGINAL, JSON_NAME: Use the original fields
+            "/jsonNameOrOriginal, parent.f_a=first&parent.f_b=second&parent.c_a.f_c=third&" +
+            "parent.c_a.f_d=fourth, " +
+            "first|second|third|fourth",
+            // ORIGINAL, JSON_NAME: Use both the original fields and json names
+            "/jsonNameOrOriginal, parent.f_a=first&parent.second_field=second&parent.customField.f_c=third&" +
+            "parent.customField.fourth_field=fourth, " +
+            "first|second|third|fourth",
+            // ORIGINAL, JSON_NAME: Ignore the camel case
+            "/jsonNameOrOriginal, parent.f_a=first&parent.fB=second&parent.cA.fC=third&" +
+            "parent.c_a.f_d=fourth, " +
+            "first|||fourth",
+            // LOWER_CAMEL_CASE, JSON_NAME: Use the camel case
+            "/jsonNameOrCamel, parent.fA=first&parent.fB=second&parent.cA.fC=third&parent.cA.fD=fourth, " +
+            "first|second|third|fourth",
+            // LOWER_CAMEL_CASE, JSON_NAME: Use both the camel case and json names
+            "/jsonNameOrCamel, parent.fA=first&parent.second_field=second&parent.customField.fC=third&" +
+            "parent.customField.fourth_field=fourth, " +
+            "first|second|third|fourth",
+            // LOWER_CAMEL_CASE, JSON_NAME: Ignore the original fields
+            "/jsonNameOrCamel, parent.f_a=first&parent.fB=second&parent.cA.f_c=third&parent.cA.fD=fourth, " +
+            "|second||fourth",
+            // ALL: Use the camel case
+            "/all, parent.fA=first&parent.fB=second&parent.cA.fC=third&parent.cA.fD=fourth, " +
+            "first|second|third|fourth",
+            // ALL: Use both the camel case and json names
+            "/all, parent.fA=first&parent.second_field=second&parent.customField.fC=third&" +
+            "parent.customField.fourth_field=fourth, " +
+            "first|second|third|fourth",
+            // ALL: Use both the original fields and the camel case
+            "/all, parent.f_a=first&parent.fB=second&parent.cA.fC=third&parent.cA.f_d=fourth, " +
+            "first|second|third|fourth",
+            // ALL: Use the original fields
+            "/all, parent.f_a=first&parent.f_b=second&parent.c_a.f_c=third&parent.c_a.f_d=fourth, " +
+            "first|second|third|fourth",
+    })
+    @ParameterizedTest
+    void testNestedMatching(String prefix, String query, String expected) {
+        final BlockingWebClient client = server.blockingWebClient(cb -> cb.responseTimeoutMillis(0));
+        final AggregatedHttpResponse response = client.get(prefix + "/v1/nested?" + query);
+        assertThat(response.status()).isEqualTo(HttpStatus.OK);
+        assertThatJson(response.contentUtf8())
+                .isEqualTo("{\"message\": \"" + expected + "\"}");
+
     }
 
     private static final class JsonNameTestService extends JsonNameTestServiceGrpc.JsonNameTestServiceImplBase {
@@ -131,6 +199,23 @@ class GrpcTranscodingJsonNameTest {
                                    request.getPathVariable() + '|' +
                                    request.getJsonNameQueryParam() + '|' +
                                    request.getQueryParam();
+            final JsonNameReply reply = JsonNameReply.newBuilder()
+                                                     .setMessage(message)
+                                                     .build();
+            responseObserver.onNext(reply);
+            responseObserver.onCompleted();
+        }
+
+        @Override
+        public void nestedQueryParams(JsonNameParentRequest request,
+                                      StreamObserver<JsonNameReply> responseObserver) {
+
+            final JsonNameChild1Message parent = request.getParent();
+            final JsonNameChild1Message.JsonNameChild2Message child = parent.getCA();
+            final String message = parent.getFA() + '|' +
+                                   parent.getFB() + '|' +
+                                   child.getFC() + '|' +
+                                   child.getFD();
             final JsonNameReply reply = JsonNameReply.newBuilder()
                                                      .setMessage(message)
                                                      .build();
