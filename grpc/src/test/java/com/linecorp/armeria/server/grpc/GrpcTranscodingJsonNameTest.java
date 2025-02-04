@@ -16,6 +16,12 @@
 
 package com.linecorp.armeria.server.grpc;
 
+import static com.linecorp.armeria.server.grpc.HttpJsonTranscodingQueryParamMatchRule.JSON_NAME;
+import static com.linecorp.armeria.server.grpc.HttpJsonTranscodingQueryParamMatchRule.LOWER_CAMEL_CASE;
+import static com.linecorp.armeria.server.grpc.HttpJsonTranscodingQueryParamMatchRule.ORIGINAL_FIELD;
+import static net.javacrumbs.jsonunit.fluent.JsonFluentAssert.assertThatJson;
+import static org.assertj.core.api.Assertions.assertThat;
+
 import java.util.HashMap;
 
 import org.junit.jupiter.api.extension.RegisterExtension;
@@ -30,16 +36,11 @@ import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
 import io.grpc.stub.StreamObserver;
 import testing.grpc.jsonname.JsonNameChild1Message;
+import testing.grpc.jsonname.JsonNameChild2Message;
 import testing.grpc.jsonname.JsonNameParentRequest;
 import testing.grpc.jsonname.JsonNameReply;
 import testing.grpc.jsonname.JsonNameRequest;
 import testing.grpc.jsonname.JsonNameTestServiceGrpc;
-
-import static com.linecorp.armeria.server.grpc.HttpJsonTranscodingQueryParamMatchRule.JSON_NAME;
-import static com.linecorp.armeria.server.grpc.HttpJsonTranscodingQueryParamMatchRule.LOWER_CAMEL_CASE;
-import static com.linecorp.armeria.server.grpc.HttpJsonTranscodingQueryParamMatchRule.ORIGINAL_FIELD;
-import static net.javacrumbs.jsonunit.fluent.JsonFluentAssert.assertThatJson;
-import static org.assertj.core.api.Assertions.assertThat;
 
 class GrpcTranscodingJsonNameTest {
 
@@ -189,7 +190,6 @@ class GrpcTranscodingJsonNameTest {
         assertThat(response.status()).isEqualTo(HttpStatus.OK);
         assertThatJson(response.contentUtf8())
                 .isEqualTo("{\"message\": \"" + expected + "\"}");
-
     }
 
     private static final class JsonNameTestService extends JsonNameTestServiceGrpc.JsonNameTestServiceImplBase {
@@ -211,7 +211,7 @@ class GrpcTranscodingJsonNameTest {
                                       StreamObserver<JsonNameReply> responseObserver) {
 
             final JsonNameChild1Message parent = request.getParent();
-            final JsonNameChild1Message.JsonNameChild2Message child = parent.getCA();
+            final JsonNameChild2Message child = parent.getCA();
             final String message = parent.getFA() + '|' +
                                    parent.getFB() + '|' +
                                    child.getFC() + '|' +

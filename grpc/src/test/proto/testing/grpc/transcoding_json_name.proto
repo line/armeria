@@ -38,10 +38,11 @@ message JsonNameChild1Message {
   string f_b = 2 [json_name = "second_field"];
   JsonNameChild2Message c_a = 3 [json_name = "customField"];
 
-  message JsonNameChild2Message {
-    string f_c = 1;
-    string f_d = 2 [json_name = "fourth_field"];
-  }
+}
+
+message JsonNameChild2Message {
+  string f_c = 1;
+  string f_d = 2 [json_name = "fourth_field"];
 }
 
 message JsonNameReply {
