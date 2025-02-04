@@ -23,9 +23,10 @@ option java_multiple_files = true;
 
 message JsonNameRequest {
   // Should ignore this json_name option for the path variable.
-  string json_name_input = 1 [json_name = "jsonNameInput"];
-  string original_name = 2;
-  string query_param = 3;
+  string json_name_path_variable = 1 [json_name = "jsonNamePathVariable"];
+  string path_variable = 2;
+  string json_name_query_param = 3 [json_name = "customJsonNameQueryParam"];
+  string query_param = 4;
 }
 
 message JsonNameReply {
@@ -35,8 +36,7 @@ message JsonNameReply {
 service JsonNameTestService {
   rpc Hello (JsonNameRequest) returns (JsonNameReply){
     option (google.api.http) = {
-      // This is a test to ignore the json_name option. The original name should be used to match the path.
-      get: "/v1/hello/{json_name_input}/{original_name}"
+      get: "/v1/hello/{json_name_path_variable}/{path_variable}"
     };
   }
 }
