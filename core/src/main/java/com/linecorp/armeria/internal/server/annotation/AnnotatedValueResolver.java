@@ -56,7 +56,6 @@ import java.util.Set;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.function.Supplier;
-import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -466,9 +465,7 @@ final class AnnotatedValueResolver {
                 if (DefaultValues.isSpecified(param.value())) {
                     throw new IllegalArgumentException(
                         String.format("Invalid @Param annotation on Map parameter: '%s'. " +
-                                "The @Param annotation specifies a value ('%s'), which is not allowed. " +
-                                "When using a Map, @Param must not specify a value. " +
-                                "Please use @Param Map<String, Object> param without a value.",
+                                "The @Param annotation specifies a value ('%s'), which is not allowed. ",
                             annotatedElement, param.value()));
                 }
                 return ofQueryParamMap(name, annotatedElement, typeElement, type, description);
@@ -611,7 +608,7 @@ final class AnnotatedValueResolver {
             .description(description)
             .aggregation(AggregationStrategy.FOR_FORM_DATA)
             .resolver((resolver, ctx) -> ctx.queryParams().stream()
-                .collect(Collectors.toMap(
+                .collect(toImmutableMap(
                     Entry::getKey,
                     Entry::getValue,
                     (existing, replacement) -> replacement
