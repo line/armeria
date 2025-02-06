@@ -75,7 +75,7 @@ public final class ConsulClient {
     }
 
     /**
-     * Registers a service to Consul Agent
+     * Registers a service to Consul Agent.
      *
      * @param serviceId a service ID that identifying a service
      * @param serviceName a service name to register
@@ -90,7 +90,7 @@ public final class ConsulClient {
     }
 
     /**
-     * De-registers a service from Consul Agent
+     * De-registers a service from Consul Agent.
      *
      * @param serviceId a service ID that identifying a service
      * @return an HttpResponse representing the HTTP response from Consul
@@ -110,8 +110,8 @@ public final class ConsulClient {
     }
 
     /**
-     * Retrieves the list of registered endpoints for the specified service name and datacenter from the Consul agent,
-     * optionally applying a filter.
+     * Retrieves the list of registered endpoints for the specified service name and datacenter
+     * from the Consul agent, optionally applying a filter.
      *
      * @param serviceName the name of the service whose endpoints are to be retrieved
      * @param datacenter the datacenter to query; if {@code null}, the default datacenter is used
@@ -134,8 +134,8 @@ public final class ConsulClient {
     }
 
     /**
-     * Retrieves the list of healthy endpoints for the specified service name and datacenter from the Consul agent,
-     * optionally applying a filter.
+     * Retrieves the list of healthy endpoints for the specified service name and datacenter
+     * from the Consul agent, optionally applying a filter.
      *
      * @param serviceName the name of the service whose healthy endpoints are to be retrieved
      * @param datacenter the datacenter to query; if {@code null}, the default datacenter is used
