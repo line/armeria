@@ -82,6 +82,7 @@ public final class ConsulClient {
      * @param endpoint an endpoint of service to register
      * @param check a check for the service
      * @param tags tags for the service
+     *
      * @return an HttpResponse representing the HTTP response from Consul
      */
     public HttpResponse register(String serviceId, String serviceName, Endpoint endpoint,
@@ -93,6 +94,7 @@ public final class ConsulClient {
      * De-registers a service from Consul Agent.
      *
      * @param serviceId a service ID that identifying a service
+     *
      * @return an HttpResponse representing the HTTP response from Consul
      */
     public HttpResponse deregister(String serviceId) {
@@ -103,6 +105,7 @@ public final class ConsulClient {
      * Retrieves the list of registered endpoints for the specified service name from the Consul agent.
      *
      * @param serviceName the name of the service whose endpoints are to be retrieved
+     *
      * @return a {@link CompletableFuture} which provides a list of {@link Endpoint}s
      */
     public CompletableFuture<List<Endpoint>> endpoints(String serviceName) {
@@ -116,6 +119,7 @@ public final class ConsulClient {
      * @param serviceName the name of the service whose endpoints are to be retrieved
      * @param datacenter the datacenter to query; if {@code null}, the default datacenter is used
      * @param filter a filter expression to apply; if {@code null}, no filtering is performed
+     *
      * @return a {@link CompletableFuture} which provides a list of {@link Endpoint}s
      */
     public CompletableFuture<List<Endpoint>> endpoints(String serviceName, @Nullable String datacenter,
@@ -127,6 +131,7 @@ public final class ConsulClient {
      * Retrieves the list of healthy endpoints for the specified service name from the Consul agent.
      *
      * @param serviceName the name of the service whose healthy endpoints are to be retrieved
+     *
      * @return a {@link CompletableFuture} which provides a list of healthy {@link Endpoint}s
      */
     public CompletableFuture<List<Endpoint>> healthyEndpoints(String serviceName) {
@@ -140,6 +145,7 @@ public final class ConsulClient {
      * @param serviceName the name of the service whose healthy endpoints are to be retrieved
      * @param datacenter the datacenter to query; if {@code null}, the default datacenter is used
      * @param filter a filter expression to apply; if {@code null}, no filtering is performed
+     *
      * @return a {@link CompletableFuture} which provides a list of healthy {@link Endpoint}s
      */
     public CompletableFuture<List<Endpoint>> healthyEndpoints(String serviceName, @Nullable String datacenter,
