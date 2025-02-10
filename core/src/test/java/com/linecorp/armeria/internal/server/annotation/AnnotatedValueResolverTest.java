@@ -380,8 +380,8 @@ class AnnotatedValueResolverTest {
                     assertThat(value).isNotNull();
                     assertThat(value).isInstanceOf(Map.class);
                     assertThat((Map<?, ?>) value).size()
-                                                 .isEqualTo(existingHttpParameters.size()
-                                                            + existingWithoutValueParameters.size());
+                                                 .isEqualTo(existingHttpParameters.size() +
+                                                            existingWithoutValueParameters.size());
                 } else {
                     assertThat(value).isEqualTo(resolver.defaultValue());
                 }
