@@ -1,4 +1,4 @@
-import type {ReactNode} from 'react';
+import React, { type ReactNode } from 'react';
 import clsx from 'clsx';
 import Heading from '@theme/Heading';
 import styles from './styles.module.css';
@@ -12,6 +12,7 @@ type FeatureItem = {
 const FeatureList: FeatureItem[] = [
   {
     title: 'Easy to Use',
+    // eslint-disable-next-line global-require
     Svg: require('@site/static/img/undraw_docusaurus_mountain.svg').default,
     description: (
       <>
@@ -22,6 +23,7 @@ const FeatureList: FeatureItem[] = [
   },
   {
     title: 'Focus on What Matters',
+    // eslint-disable-next-line global-require
     Svg: require('@site/static/img/undraw_docusaurus_tree.svg').default,
     description: (
       <>
@@ -32,6 +34,7 @@ const FeatureList: FeatureItem[] = [
   },
   {
     title: 'Powered by React',
+    // eslint-disable-next-line global-require
     Svg: require('@site/static/img/undraw_docusaurus_react.svg').default,
     description: (
       <>
@@ -42,7 +45,7 @@ const FeatureList: FeatureItem[] = [
   },
 ];
 
-function Feature({title, Svg, description}: FeatureItem) {
+const Feature = ({ title, Svg, description }: FeatureItem) => {
   return (
     <div className={clsx('col col--4')}>
       <div className="text--center">
@@ -54,18 +57,21 @@ function Feature({title, Svg, description}: FeatureItem) {
       </div>
     </div>
   );
-}
+};
 
-export default function HomepageFeatures(): ReactNode {
+const HomepageFeatures: React.FC = (): ReactNode => {
   return (
     <section className={styles.features}>
       <div className="container">
         <div className="row">
           {FeatureList.map((props, idx) => (
+            // eslint-disable-next-line react/no-array-index-key
             <Feature key={idx} {...props} />
           ))}
         </div>
       </div>
     </section>
   );
-}
+};
+
+export default HomepageFeatures;
