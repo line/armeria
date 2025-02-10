@@ -636,8 +636,8 @@ class AnnotatedServiceTest {
         public String map(RequestContext ctx, @Param Map<String, Object> map) {
             validateContext(ctx);
             return map.isEmpty() ? "empty" : map.entrySet().stream()
-                .map(entry -> entry.getKey() + '=' + entry.getValue())
-                .collect(Collectors.joining(", "));
+                                                .map(entry -> entry.getKey() + '=' + entry.getValue())
+                                                .collect(Collectors.joining(", "));
         }
     }
 
@@ -1078,7 +1078,7 @@ class AnnotatedServiceTest {
 
             // Case all query parameters test map
             testBody(hc, get("/7/param/map?key1=value1&key2=value2"),
-                "key1=value1, key2=value2");
+                     "key1=value1, key2=value2");
             testBody(hc, get("/7/param/map"), "empty");
         }
     }
@@ -1379,13 +1379,13 @@ class AnnotatedServiceTest {
     @Test
     void testInvalidParamAnnotationUsageOnMap() {
         assertThatThrownBy(() ->
-            Server.builder()
-                .annotatedService()
-                .build(new MyAnnotationService16())
-                .build()
+                                   Server.builder()
+                                         .annotatedService()
+                                         .build(new MyAnnotationService16())
+                                         .build()
         )
-        .isInstanceOf(IllegalArgumentException.class)
-        .hasMessageContaining("Invalid @Param annotation on Map parameter");
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("Invalid @Param annotation on Map parameter");
     }
 
     private enum UserLevel {

@@ -464,9 +464,9 @@ final class AnnotatedValueResolver {
             if (Map.class.isAssignableFrom(type)) {
                 if (DefaultValues.isSpecified(param.value())) {
                     throw new IllegalArgumentException(
-                        String.format("Invalid @Param annotation on Map parameter: '%s'. " +
-                                "The @Param annotation specifies a value ('%s'), which is not allowed. ",
-                            annotatedElement, param.value()));
+                            String.format("Invalid @Param annotation on Map parameter: '%s'. " +
+                                          "The @Param annotation specifies a value ('%s'), which is not allowed. ",
+                                          annotatedElement, param.value()));
                 }
                 return ofQueryParamMap(name, annotatedElement, typeElement, type, description);
             }
@@ -598,22 +598,22 @@ final class AnnotatedValueResolver {
     }
 
     private static AnnotatedValueResolver ofQueryParamMap(String name,
-        AnnotatedElement annotatedElement,
-        AnnotatedElement typeElement, Class<?> type,
-        DescriptionInfo description) {
+                                                          AnnotatedElement annotatedElement,
+                                                          AnnotatedElement typeElement, Class<?> type,
+                                                          DescriptionInfo description) {
 
         return new Builder(annotatedElement, type, name)
-            .annotationType(Param.class)
-            .typeElement(typeElement)
-            .description(description)
-            .aggregation(AggregationStrategy.FOR_FORM_DATA)
-            .resolver((resolver, ctx) -> ctx.queryParams().stream()
-                .collect(toImmutableMap(
-                    Entry::getKey,
-                    Entry::getValue,
-                    (existing, replacement) -> replacement
-                )))
-            .build();
+                .annotationType(Param.class)
+                .typeElement(typeElement)
+                .description(description)
+                .aggregation(AggregationStrategy.FOR_FORM_DATA)
+                .resolver((resolver, ctx) -> ctx.queryParams().stream()
+                                                .collect(toImmutableMap(
+                                                        Entry::getKey,
+                                                        Entry::getValue,
+                                                        (existing, replacement) -> replacement
+                                                )))
+                .build();
     }
 
     private static AnnotatedValueResolver ofFileParam(String name,
