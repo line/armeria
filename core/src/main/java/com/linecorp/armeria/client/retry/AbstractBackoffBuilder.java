@@ -21,14 +21,19 @@ import java.util.Random;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.function.Supplier;
 
+import com.linecorp.armeria.common.annotation.Nullable;
+
 /**
  * A skeletal builder implementation for {@link Backoff}.
  */
-public abstract class AbstractBackoffBuilder<SELF extends AbstractBackoffBuilder<SELF>> {
-    private double minJitterRate;
-    private double maxJitterRate;
+abstract class AbstractBackoffBuilder<SELF extends AbstractBackoffBuilder<SELF>> {
+    @Nullable
+    private Double minJitterRate;
+    @Nullable
+    private Double maxJitterRate;
+    @Nullable
+    private Integer maxAttempts;
     private Supplier<Random> randomSupplier = ThreadLocalRandom::current;
-    private int maxAttempts;
 
     @SuppressWarnings("unchecked")
     final SELF self() {
@@ -38,7 +43,7 @@ public abstract class AbstractBackoffBuilder<SELF extends AbstractBackoffBuilder
     /**
      * Sets the minimum and maximum jitter rates to apply to the delay.
      */
-    SELF jitter(double minJitterRate, double maxJitterRate) {
+    public SELF jitter(double minJitterRate, double maxJitterRate) {
         this.minJitterRate = minJitterRate;
         this.maxJitterRate = maxJitterRate;
         return self();
@@ -48,7 +53,7 @@ public abstract class AbstractBackoffBuilder<SELF extends AbstractBackoffBuilder
      * Sets the minimum and maximum jitter rates to apply to the delay, as well as a
      * custom {@link Random} supplier for generating the jitter.
      */
-    SELF jitter(double minJitterRate, double maxJitterRate, Supplier<Random> randomSupplier) {
+    public SELF jitter(double minJitterRate, double maxJitterRate, Supplier<Random> randomSupplier) {
         requireNonNull(randomSupplier, "randomSupplier");
         this.minJitterRate = minJitterRate;
         this.maxJitterRate = maxJitterRate;
@@ -60,7 +65,7 @@ public abstract class AbstractBackoffBuilder<SELF extends AbstractBackoffBuilder
      * Sets the maximum number of attempts
      * .
      */
-    SELF maxAttempts(int maxAttempts) {
+    public SELF maxAttempts(int maxAttempts) {
         this.maxAttempts = maxAttempts;
         return self();
     }
@@ -72,10 +77,10 @@ public abstract class AbstractBackoffBuilder<SELF extends AbstractBackoffBuilder
      */
     public final Backoff build() {
         Backoff backoff = doBuild();
-        if (maxJitterRate > minJitterRate) {
+        if (minJitterRate != null && maxJitterRate != null) {
             backoff = new JitterAddingBackoff(backoff, minJitterRate, maxJitterRate, randomSupplier);
         }
-        if (maxAttempts > 0) {
+        if (maxAttempts != null) {
             backoff = new AttemptLimitingBackoff(backoff, maxAttempts);
         }
         return backoff;
