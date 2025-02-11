@@ -4625,6 +4625,7 @@ lanxess
 laocai.vn
 lapy.pl
 laquila.it
+laravel.cloud
 lardal.no
 larvik.no
 lasalle
