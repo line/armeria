@@ -28,7 +28,6 @@ dependencies {
 def thriftFullVersion = libs.thrift013.get().versionConstraint.requiredVersion
 ext {
     thriftVersion = thriftFullVersion.substring(0, thriftFullVersion.lastIndexOf('.'))
-    automaticModuleNameOverride = "com.linecorp.armeria.thrift013"
 }
 
 // Keep the original Guava references in ThriftListenableFuture,

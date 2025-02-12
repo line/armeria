@@ -65,7 +65,6 @@ ext {
     thriftVersion = thriftFullVersion.substring(0, thriftFullVersion.lastIndexOf('.'));
     testThriftSrcDirs = ["$thrift013ProjectDir/src/test/thrift", "$projectDir/src/test/thrift",
                          "$thrift018ProjectDir/src/test/thrift"]
-    automaticModuleNameOverride = "com.linecorp.armeria.thrift019"
 }
 
 tasks.generateSources.dependsOn(generateTestSources)
