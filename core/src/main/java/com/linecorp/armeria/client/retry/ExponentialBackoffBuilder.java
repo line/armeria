@@ -41,8 +41,8 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
  */
 @UnstableApi
 public final class ExponentialBackoffBuilder extends AbstractBackoffBuilder<ExponentialBackoffBuilder> {
-    private long initialDelayMillis;
-    private long maxDelayMillis;
+    private long initialDelayMillis = 100;
+    private long maxDelayMillis = 10000;
     private double multiplier = 2.0;
 
     ExponentialBackoffBuilder() {}

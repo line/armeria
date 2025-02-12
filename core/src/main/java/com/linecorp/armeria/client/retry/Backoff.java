@@ -134,7 +134,12 @@ public interface Backoff extends Unwrappable {
 
     /**
      * Returns a {@link ExponentialBackoffBuilder} that provides methods to configure
-     * backoff delay which is exponentially-increasing.
+     * backoff delay which is exponentially-increasing. The default values are as follows:
+     * <ul>
+     *   <li><code>initialDelayMillis</code>: 100</li>
+     *   <li><code>maxDelayMillis</code>: 10000</li>
+     *   <li><code>multiplier</code>: 2.0</li>
+     * </ul>
      */
     @UnstableApi
     static ExponentialBackoffBuilder builderForExponential() {
