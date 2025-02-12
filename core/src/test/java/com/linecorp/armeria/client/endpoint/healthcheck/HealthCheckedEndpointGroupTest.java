@@ -602,6 +602,38 @@ class HealthCheckedEndpointGroupTest {
         }
     }
 
+    @Test
+    void shouldStopUpdatingEndpointsWhenClosing() throws InterruptedException {
+        final AtomicInteger counter = new AtomicInteger();
+        final Function<? super HealthCheckerContext, ? extends AsyncCloseable> checkFactory = ctx -> {
+            counter.incrementAndGet();
+            ctx.updateHealth(HEALTHY, null, null, null);
+            return AsyncCloseableSupport.of();
+        };
+
+        final Endpoint candidate1 = Endpoint.of("candidate1");
+        final Endpoint candidate2 = Endpoint.of("candidate2");
+
+        final MockEndpointGroup delegate = new MockEndpointGroup();
+        delegate.set(candidate1, candidate2, candidate2);
+
+        final HealthCheckedEndpointGroup endpointGroup =
+                new HealthCheckedEndpointGroup(delegate, true,
+                                               10000, 10000,
+                                               SessionProtocol.HTTP, 80,
+                                               DEFAULT_HEALTH_CHECK_RETRY_BACKOFF,
+                                               ClientOptions.of(), checkFactory,
+                                               HealthCheckStrategy.all(),
+                                               DEFAULT_ENDPOINT_PREDICATE);
+        assertThat(counter.get()).isEqualTo(2);
+        final EndpointComparator comparator = new EndpointComparator();
+        assertThat(endpointGroup.endpoints()).usingElementComparator(comparator)
+                                             .containsOnly(candidate1, candidate2);
+        endpointGroup.close();
+        assertThat(endpointGroup.endpoints()).usingElementComparator(comparator)
+                                             .containsOnly(candidate1, candidate2);
+    }
+
     static final class MockEndpointGroup extends DynamicEndpointGroup {
 
         MockEndpointGroup() {}

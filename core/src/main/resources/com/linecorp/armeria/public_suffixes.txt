@@ -92,6 +92,7 @@
 *.lcl.dev
 *.lclstage.dev
 *.linodeobjects.com
+*.localto.net
 *.magentosite.cloud
 *.me-central-1.airflow.amazonaws.com
 *.me-south-1.airflow.amazonaws.com
@@ -125,6 +126,7 @@
 *.quipelements.com
 *.r.appspot.com
 *.run.app
+*.s.brave.app
 *.s.brave.io
 *.sa-east-1.airflow.amazonaws.com
 *.sapporo.jp
@@ -287,6 +289,7 @@ ac.lk
 ac.ls
 ac.ma
 ac.me
+ac.ml
 ac.mu
 ac.mw
 ac.mz
@@ -458,6 +461,7 @@ alesund.no
 algard.no
 aliases121.com
 alibaba
+alibabacloudcs.com
 alipay
 allfinanz
 allstate
@@ -614,6 +618,7 @@ art.br
 art.do
 art.dz
 art.ht
+art.ml
 art.pl
 art.sn
 arte
@@ -669,6 +674,7 @@ asso.gp
 asso.ht
 asso.km
 asso.mc
+asso.ml
 asso.nc
 asso.re
 associates
@@ -1082,6 +1088,8 @@ br.it
 bradesco
 brand.se
 brasilia.me
+brave.app
+brave.io
 bremanger.no
 brescia.it
 bridgestone
@@ -2234,6 +2242,7 @@ edu.tr
 edu.tt
 edu.tw
 edu.ua
+edu.ug
 edu.uy
 edu.vc
 edu.ve
@@ -3174,6 +3183,7 @@ gov.tr
 gov.tt
 gov.tw
 gov.ua
+gov.ug
 gov.uk
 gov.vc
 gov.ve
@@ -3766,6 +3776,7 @@ info.ke
 info.ki
 info.la
 info.ls
+info.ml
 info.mv
 info.nf
 info.ni
@@ -3786,6 +3797,7 @@ ing.pa
 ingatlan.hu
 ink
 ino.kochi.jp
+inst.ml
 instance.datadetect.com
 instances.spawn.cc
 institute
@@ -4613,6 +4625,7 @@ lanxess
 laocai.vn
 lapy.pl
 laquila.it
+laravel.cloud
 lardal.no
 larvik.no
 lasalle
@@ -4777,6 +4790,7 @@ loans
 localcert.net
 localhostcert.net
 localplayer.dev
+localtonet.com
 locker
 locus
 lodi.it
@@ -5129,6 +5143,7 @@ mil.tr
 mil.tt
 mil.tw
 mil.tz
+mil.ug
 mil.uy
 mil.vc
 mil.ve
@@ -6034,6 +6049,7 @@ obanazawa.yamagata.jp
 obi
 obihiro.hokkaido.jp
 obira.hokkaido.jp
+obj.ag
 objects.lpg.cloudscale.ch
 objects.rma.cloudscale.ch
 obl.ong
@@ -6663,6 +6679,7 @@ pr.gov.br
 pr.gov.pl
 pr.it
 pr.leg.br
+pr.ml
 pr.us
 pramerica
 prato.it
@@ -7989,6 +8006,8 @@ style
 su
 sub.jp
 sub.psl.hrsn.dev
+subsc-pay.com
+subsc-pay.net
 sucks
 sue.fukuoka.jp
 suedtirol.it
@@ -8660,6 +8679,7 @@ us.ngrok.io
 us.org
 us.platform.sh
 us.reclaim.cloud
+us.ug
 usa.oita.jp
 user.aseinet.ne.jp
 user.party.eus
