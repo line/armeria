@@ -40,7 +40,7 @@ class HttpPreprocessorTest {
     static final EventLoopExtension eventLoop = new EventLoopExtension();
 
     @Test
-    void invalidSessionProtocol() {
+    void noEndpointGroup() {
         final WebClient client = WebClient.of(PreClient::execute);
         assertThatThrownBy(() -> client.get("/").aggregate().join())
                 .isInstanceOf(CompletionException.class)
@@ -48,7 +48,7 @@ class HttpPreprocessorTest {
                 .isInstanceOf(UnprocessedRequestException.class)
                 .cause()
                 .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("ctx.sessionProtocol() cannot be 'undefined'");
+                .hasMessageContaining("An endpointGroup has not been specified.");
     }
 
     @Test

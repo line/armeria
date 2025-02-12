@@ -325,20 +325,6 @@ class GrpcClientBuilderTest {
                 .isEqualTo(Code.RESOURCE_EXHAUSTED);
     }
 
-    @Test
-    void undefinedProtocol() {
-        assertThatThrownBy(() -> GrpcClients
-                .newClient(Scheme.of(GrpcSerializationFormats.PROTO, SessionProtocol.UNDEFINED),
-                           Endpoint.of("1.2.3.4"), TestServiceBlockingStub.class))
-                .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("At least one preprocessor must be specified");
-
-        assertThatThrownBy(() -> GrpcClients
-                .newClient("undefined://1.2.3.4", TestServiceBlockingStub.class))
-                .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("At least one preprocessor must be specified");
-    }
-
     public static Stream<Arguments> preprocessor_args() {
         final HttpPreprocessor preprocessor = HttpPreprocessor.of(SessionProtocol.HTTP, server.httpEndpoint());
         return Stream.of(
@@ -389,11 +375,11 @@ class GrpcClientBuilderTest {
     @MethodSource("preprocessParams_args")
     void preprocessParams(ClientBuilderParams params, String expectedPrefix) {
         assertThat(params.scheme()).isEqualTo(Scheme.of(GrpcSerializationFormats.PROTO,
-                                                        SessionProtocol.UNDEFINED));
+                                                        SessionProtocol.HTTP));
         assertThat(params.endpointGroup()).isInstanceOf(UndefinedEndpointGroup.class);
         assertThat(params.absolutePathRef()).isEqualTo(expectedPrefix);
         assertThat(params.uri().getRawAuthority()).startsWith("armeria-preprocessor");
-        assertThat(params.uri().getScheme()).isEqualTo("gproto+undefined");
+        assertThat(params.uri().getScheme()).isEqualTo("gproto+http");
         assertThat(ClientBuilderParamsUtil.isInternalUri(params.uri())).isTrue();
         assertThat(Clients.isUndefinedUri(params.uri())).isFalse();
     }

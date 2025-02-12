@@ -104,7 +104,7 @@ public final class ClientBuilder extends AbstractClientOptionsBuilder {
                       "At least one preprocessor must be set in ClientPreprocessors.");
         endpointGroup = null;
         this.path = path;
-        scheme = Scheme.of(serializationFormat, SessionProtocol.UNDEFINED);
+        scheme = Scheme.of(serializationFormat, SessionProtocol.HTTP);
         uri = ClientBuilderParamsUtil.preprocessorToUri(scheme, preprocessors, path);
         preprocessors.preprocessors().forEach(this::preprocessor);
         preprocessors.rpcPreprocessors().forEach(this::rpcPreprocessor);

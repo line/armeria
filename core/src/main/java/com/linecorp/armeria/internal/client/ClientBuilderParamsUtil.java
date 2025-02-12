@@ -39,7 +39,7 @@ public final class ClientBuilderParamsUtil {
     public static final String UNDEFINED_URI_AUTHORITY = "armeria-undefined:1";
 
     public static URI preprocessorToUri(Preprocessor<?, ?> preprocessor, @Nullable String absolutePathRef) {
-        return preprocessorToUri(Scheme.of(SerializationFormat.NONE, SessionProtocol.UNDEFINED),
+        return preprocessorToUri(Scheme.of(SerializationFormat.NONE, SessionProtocol.HTTP),
                                  preprocessor, absolutePathRef);
     }
 

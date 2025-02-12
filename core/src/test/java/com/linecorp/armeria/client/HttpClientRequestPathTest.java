@@ -106,7 +106,7 @@ class HttpClientRequestPathTest {
     }
 
     @ParameterizedTest
-    @EnumSource(value = SessionProtocol.class, mode = Mode.EXCLUDE, names = {"PROXY", "UNDEFINED"})
+    @EnumSource(value = SessionProtocol.class, mode = Mode.EXCLUDE, names = "PROXY")
     void default_withScheme(SessionProtocol protocol) {
         final HttpRequest request = HttpRequest.of(HttpMethod.GET, server2.uri(protocol) + "/simple-client");
         try (ClientRequestContextCaptor captor = Clients.newContextCaptor()) {
@@ -127,12 +127,12 @@ class HttpClientRequestPathTest {
                 .isInstanceOf(UnprocessedRequestException.class)
                 .cause()
                 .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("ctx.sessionProtocol() cannot be 'undefined'");
+                .hasMessageContaining("An endpointGroup has not been specified.");
     }
 
     @ParameterizedTest
     @EnumSource(value = SessionProtocol.class, mode = Mode.EXCLUDE,
-            names = { "HTTP", "HTTPS", "PROXY", "UNDEFINED"})
+            names = { "HTTP", "HTTPS", "PROXY"})
     void default_withRetryClient(SessionProtocol protocol) {
         final HttpRequest request = HttpRequest.of(HttpMethod.GET, server2.uri(protocol) + "/retry");
         final WebClient client = WebClient.builder()

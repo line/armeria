@@ -157,7 +157,6 @@ class KeepAliveMaxNumRequestsTest {
         public Stream<? extends Arguments> provideArguments(ExtensionContext context) throws Exception {
             return Arrays.stream(SessionProtocol.values())
                          .filter(protocol -> protocol != SessionProtocol.PROXY)
-                         .filter(protocol -> protocol != SessionProtocol.UNDEFINED)
                          .flatMap(protocol -> Stream.of(Arguments.of(protocol, false),
                                                         Arguments.of(protocol, true)));
         }

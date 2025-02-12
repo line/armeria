@@ -35,7 +35,6 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.QueryParams;
 import com.linecorp.armeria.common.RequestHeaders;
-import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.internal.testing.ImmediateEventLoop;
 
 import io.netty.channel.EventLoop;
@@ -146,17 +145,15 @@ class DefaultWebClientTest {
 
     @ParameterizedTest
     @CsvSource({
-            "/, HTTP, false",
-            "/, UNDEFINED, false",
-            "/prefix, HTTP, false",
-            "/prefix, UNDEFINED, false",
-            "/, HTTP, true",
+            "/, false",
+            "/prefix, false",
+            "/, true",
     })
-    void preprocessorBuilder(String prefix, SessionProtocol protocol, boolean isDefault) {
+    void preprocessorBuilder(String prefix, boolean isDefault) {
         final Endpoint endpoint = Endpoint.of("127.0.0.1");
         final EventLoop eventLoop = ImmediateEventLoop.INSTANCE;
         final WebClientBuilder builder;
-        final HttpPreprocessor preprocessor = HttpPreprocessor.of(protocol, endpoint, eventLoop);
+        final HttpPreprocessor preprocessor = HttpPreprocessor.of(HTTP, endpoint, eventLoop);
         if (isDefault) {
             builder = WebClient.builder().preprocessor(preprocessor);
         } else if ("/".equals(prefix)) {
@@ -172,25 +169,15 @@ class DefaultWebClientTest {
                            } else {
                                assertThat(req.path()).isEqualTo("/prefix/hello");
                            }
-                           assertThat(ctx.sessionProtocol()).isEqualTo(protocol);
+                           assertThat(ctx.sessionProtocol()).isEqualTo(HTTP);
                            assertThat(ctx.endpointGroup()).isEqualTo(endpoint);
                            assertThat(ctx.eventLoop().withoutContext()).isEqualTo(eventLoop);
                            return HttpResponse.of(200);
                        })
                        .build();
         final CompletableFuture<AggregatedHttpResponse> cf = client.get("/hello").aggregate();
-        if (SessionProtocol.httpAndHttpsValues().contains(protocol)) {
-            final AggregatedHttpResponse res = cf.join();
-            assertThat(res.status().code()).isEqualTo(200);
-        } else {
-            assertThatThrownBy(cf::join)
-                    .isInstanceOf(CompletionException.class)
-                    .cause()
-                    .isInstanceOf(UnprocessedRequestException.class)
-                    .cause()
-                    .isInstanceOf(IllegalArgumentException.class)
-                    .hasMessageContaining("ctx.sessionProtocol() cannot be 'undefined");
-        }
+        final AggregatedHttpResponse res = cf.join();
+        assertThat(res.status().code()).isEqualTo(200);
     }
 
     @Test

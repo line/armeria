@@ -56,6 +56,7 @@ import com.linecorp.armeria.common.util.ReleasableHolder;
 import com.linecorp.armeria.common.util.ShutdownHooks;
 import com.linecorp.armeria.common.util.TlsEngineType;
 import com.linecorp.armeria.common.util.TransportType;
+import com.linecorp.armeria.internal.client.ClientBuilderParamsUtil;
 import com.linecorp.armeria.internal.common.RequestTargetCache;
 import com.linecorp.armeria.internal.common.SslContextFactory;
 import com.linecorp.armeria.internal.common.util.ChannelUtil;
@@ -431,11 +432,11 @@ final class HttpClientFactory implements ClientFactory {
 
     @Override
     public ClientBuilderParams validateParams(ClientBuilderParams params) {
-        if (params.scheme().sessionProtocol() == SessionProtocol.UNDEFINED &&
+        if (ClientBuilderParamsUtil.isPreprocessorUri(params.uri()) &&
             params.options().clientPreprocessors().preprocessors().isEmpty()) {
             // - HttpClient may be created for an RPC-based client
             // - A default WebClient functions without preprocessors
-            if (params.clientType() != HttpClient.class && !Clients.isUndefinedUri(params.uri())) {
+            if (params.clientType() != HttpClient.class) {
                 throw new IllegalArgumentException(
                         "At least one preprocessor must be specified for http-based clients " +
                         "with sessionProtocol '" + params.scheme().sessionProtocol() + "'.");

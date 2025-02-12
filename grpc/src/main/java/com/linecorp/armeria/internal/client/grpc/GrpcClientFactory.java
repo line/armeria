@@ -56,6 +56,7 @@ import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.grpc.GrpcJsonMarshaller;
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
 import com.linecorp.armeria.common.util.Unwrappable;
+import com.linecorp.armeria.internal.client.ClientBuilderParamsUtil;
 
 import io.grpc.Channel;
 import io.grpc.ClientInterceptor;
@@ -188,7 +189,7 @@ final class GrpcClientFactory extends DecoratingClientFactory {
 
     @Override
     public ClientBuilderParams validateParams(ClientBuilderParams params) {
-        if (params.scheme().sessionProtocol() == SessionProtocol.UNDEFINED &&
+        if (ClientBuilderParamsUtil.isPreprocessorUri(params.uri()) &&
             params.options().clientPreprocessors().preprocessors().isEmpty()) {
             throw new IllegalArgumentException(
                     "At least one preprocessor must be specified for http-based clients " +

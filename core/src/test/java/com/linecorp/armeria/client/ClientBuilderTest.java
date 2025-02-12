@@ -67,6 +67,6 @@ class ClientBuilderTest {
         assertThat(Clients.isUndefinedUri(client.uri())).isFalse();
         assertThat(ClientBuilderParamsUtil.isInternalUri(client.uri())).isTrue();
         assertThat(client.endpointGroup()).isInstanceOf(UndefinedEndpointGroup.class);
-        assertThat(client.scheme().sessionProtocol()).isEqualTo(SessionProtocol.UNDEFINED);
+        assertThat(client.scheme().sessionProtocol()).isEqualTo(SessionProtocol.HTTP);
     }
 }

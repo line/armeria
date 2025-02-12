@@ -31,6 +31,7 @@ import com.linecorp.armeria.common.Scheme;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.thrift.ThriftSerializationFormats;
+import com.linecorp.armeria.internal.client.ClientBuilderParamsUtil;
 
 /**
  * A {@link DecoratingClientFactory} that creates a Thrift-over-HTTP client.
@@ -93,7 +94,7 @@ final class THttpClientFactory extends DecoratingClientFactory {
 
     @Override
     public ClientBuilderParams validateParams(ClientBuilderParams params) {
-        if (params.scheme().sessionProtocol() == SessionProtocol.UNDEFINED &&
+        if (ClientBuilderParamsUtil.isPreprocessorUri(params.uri()) &&
             params.options().clientPreprocessors().rpcPreprocessors().isEmpty()) {
             throw new IllegalArgumentException(
                     "At least one rpcPreprocessor must be specified for rpc-based clients " +

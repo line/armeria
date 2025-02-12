@@ -286,7 +286,7 @@ class WebClientAdditionalAuthorityTest {
                 .isInstanceOf(UnprocessedRequestException.class)
                 .cause()
                 .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("ctx.sessionProtocol() cannot be 'undefined'");
+                .hasMessageContaining("An endpointGroup has not been specified.");
     }
 
     @Test

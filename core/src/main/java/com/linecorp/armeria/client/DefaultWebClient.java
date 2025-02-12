@@ -102,7 +102,7 @@ final class DefaultWebClient extends UserClient<HttpRequest, HttpResponse> imple
                             "Failed to parse a scheme: " + scheme, e));
                 }
             } else {
-                protocol = SessionProtocol.UNDEFINED;
+                protocol = SessionProtocol.HTTP;
             }
         } else {
             if (reqTarget.form() == RequestTargetForm.ABSOLUTE) {

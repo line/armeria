@@ -79,9 +79,8 @@ final class RedirectingClient extends SimpleDecoratingHttpClient {
             ClientBuilderParams params, RedirectConfig redirectConfig) {
         final boolean undefinedUri = Clients.isUndefinedUri(params.uri()) ||
                                      ClientBuilderParamsUtil.isPreprocessorUri(params.uri());
-        final boolean undefinedScheme = params.scheme().sessionProtocol() == SessionProtocol.UNDEFINED;
         final Set<SessionProtocol> allowedProtocols =
-                allowedProtocols(undefinedScheme, redirectConfig.allowedProtocols(),
+                allowedProtocols(undefinedUri, redirectConfig.allowedProtocols(),
                                  params.scheme().sessionProtocol());
         final BiPredicate<ClientRequestContext, String> domainFilter =
                 domainFilter(undefinedUri, redirectConfig.domainFilter());
@@ -89,10 +88,10 @@ final class RedirectingClient extends SimpleDecoratingHttpClient {
                                                  redirectConfig.maxRedirects());
     }
 
-    private static Set<SessionProtocol> allowedProtocols(boolean undefinedScheme,
+    private static Set<SessionProtocol> allowedProtocols(boolean undefinedUri,
                                                          @Nullable Set<SessionProtocol> allowedProtocols,
                                                          SessionProtocol usedProtocol) {
-        if (undefinedScheme) {
+        if (undefinedUri) {
             if (allowedProtocols != null) {
                 return allowedProtocols;
             }

@@ -83,20 +83,6 @@ class ThriftClientBuilderTest {
     }
 
     @Test
-    void undefinedProtocol() {
-        assertThatThrownBy(() -> ThriftClients
-                .newClient(Scheme.of(ThriftSerializationFormats.BINARY, SessionProtocol.UNDEFINED),
-                           Endpoint.of("1.2.3.4"), HelloService.Iface.class))
-                .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("At least one rpcPreprocessor must be specified");
-
-        assertThatThrownBy(() -> ThriftClients
-                .newClient("undefined://1.2.3.4", HelloService.Iface.class))
-                .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("At least one rpcPreprocessor must be specified");
-    }
-
-    @Test
     void httpRequestIsAbortedIfDecoratorThrowException() throws Exception {
         final CompletableFuture<HttpRequest> reqCaptor = new CompletableFuture<>();
         final HelloService.Iface client = ThriftClients.builder("https://google.com/")
@@ -222,11 +208,11 @@ class ThriftClientBuilderTest {
     @MethodSource("preprocessParams_args")
     void preprocessParams(ClientBuilderParams params, String expectedPrefix) {
         assertThat(params.scheme()).isEqualTo(Scheme.of(ThriftSerializationFormats.BINARY,
-                                                        SessionProtocol.UNDEFINED));
+                                                        SessionProtocol.HTTP));
         assertThat(params.endpointGroup()).isInstanceOf(UndefinedEndpointGroup.class);
         assertThat(params.absolutePathRef()).isEqualTo(expectedPrefix);
         assertThat(params.uri().getRawAuthority()).startsWith("armeria-preprocessor");
-        assertThat(params.uri().getScheme()).isEqualTo("tbinary+undefined");
+        assertThat(params.uri().getScheme()).isEqualTo("tbinary+http");
         assertThat(ClientBuilderParamsUtil.isInternalUri(params.uri())).isTrue();
         assertThat(Clients.isUndefinedUri(params.uri())).isFalse();
     }
