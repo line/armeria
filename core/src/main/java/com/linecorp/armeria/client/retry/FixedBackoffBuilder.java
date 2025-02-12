@@ -30,7 +30,7 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
  *
  * <pre>
  * {@code
- * FixedBackoff backoff = Backoff.builderForFixed()
+ * Backoff backoff = Backoff.builderForFixed()
  *     .delayMillis(1000)
  *     .build();
  * }

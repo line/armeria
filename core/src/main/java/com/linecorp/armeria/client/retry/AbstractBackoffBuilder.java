@@ -62,8 +62,7 @@ abstract class AbstractBackoffBuilder<SELF extends AbstractBackoffBuilder<SELF>>
     }
 
     /**
-     * Sets the maximum number of attempts
-     * .
+     * Sets the maximum number of attempts.
      */
     public SELF maxAttempts(int maxAttempts) {
         this.maxAttempts = maxAttempts;

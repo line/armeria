@@ -32,7 +32,7 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
  *
  * <pre>
  * {@code
- * RandomBackOff backoff = new Backoff.builderForRandom()
+ * BackOff backoff = Backoff.builderForRandom()
  *     .minDelayMillis(1000)
  *     .maxDelayMillis(3000)
  *     .build();
@@ -83,7 +83,6 @@ public final class RandomBackoffBuilder extends AbstractBackoffBuilder<RandomBac
      *
      * @param randomSupplier a {@link Supplier} that provides {@link Random} instances
      * @return this {@code RandomBackoffBuilder} instance for method chaining
-     * @throws NullPointerException if {@code randomSupplier} is {@code null}
      */
     public RandomBackoffBuilder randomSupplier(Supplier<Random> randomSupplier) {
         requireNonNull(randomSupplier, "randomSupplier");

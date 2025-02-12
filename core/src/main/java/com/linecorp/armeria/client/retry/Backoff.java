@@ -25,6 +25,7 @@ import java.util.function.Supplier;
 
 import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.util.Unwrappable;
 
 /**
@@ -135,15 +136,17 @@ public interface Backoff extends Unwrappable {
      * Returns a {@link ExponentialBackoffBuilder} that provides methods to configure
      * backoff delay which is exponentially-increasing.
      */
+    @UnstableApi
     static ExponentialBackoffBuilder builderForExponential() {
         return new ExponentialBackoffBuilder();
     }
 
     /**
-     * Returns a {@link FixedBackoffBuilder} that provides methods to configure
+     * Returns a {@link FibonacciBackoffBuilder} that provides methods to configure
      * backoff delay which follows fibonacci sequence.
      * f(n) = f(n-1) + f(n-2) where f(0) = f(1) = {@code initialDelayMillis}
      */
+    @UnstableApi
     static FibonacciBackoffBuilder builderForFibonacci() {
         return new FibonacciBackoffBuilder();
     }
@@ -152,6 +155,7 @@ public interface Backoff extends Unwrappable {
      * Returns a {@link FixedBackoffBuilder} that provides methods to configure
      * backoff delay which is a fixed value.
      */
+    @UnstableApi
     static FixedBackoffBuilder builderForFixed() {
         return new FixedBackoffBuilder();
     }
@@ -160,6 +164,7 @@ public interface Backoff extends Unwrappable {
      * Returns a {@link RandomBackoffBuilder} that provides methods to configure
      * backoff delay which is a random value.
      */
+    @UnstableApi
     static RandomBackoffBuilder builderForRandom() {
         return new RandomBackoffBuilder();
     }

@@ -31,7 +31,7 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
  *
  * <pre>
  * {@code
- * ExponentialBackoff backoff = Backoff.builderForExponential()
+ * Backoff backoff = Backoff.builderForExponential()
  *     .initialDelayMillis(100)
  *     .maxDelayMillis(10000)
  *     .multiplier(2.0)

@@ -31,7 +31,7 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
  *
  * <pre>
  * {@code
- * FibonacciBackoff backoff = Backoff.builderForFibonacci()
+ * Backoff backoff = Backoff.builderForFibonacci()
  *     .initialDelayMillis(100)
  *     .maxDelayMillis(10000)
  *     .build();
