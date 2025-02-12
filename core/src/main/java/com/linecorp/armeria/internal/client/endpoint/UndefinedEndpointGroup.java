@@ -31,23 +31,23 @@ import com.linecorp.armeria.client.endpoint.EndpointSelectionStrategy;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.UnmodifiableFuture;
 
-public final class FailingEndpointGroup implements EndpointGroup {
+public final class UndefinedEndpointGroup implements EndpointGroup {
 
-    private static final FailingEndpointGroup INSTANCE =
-            new FailingEndpointGroup(new IllegalArgumentException(
+    private static final UndefinedEndpointGroup INSTANCE =
+            new UndefinedEndpointGroup(new IllegalArgumentException(
                     "An endpointGroup has not been specified. Specify an endpointGroup by " +
                     "1) building a client with a URI or EndpointGroup e.g. 'WebClient.of(uri)', " +
                     "2) sending a request with the authority 'client.execute(requestWithAuthority)', or " +
                     "3) setting the endpointGroup directly inside a Preprocessor via 'ctx.endpointGroup()'."));
 
-    public static FailingEndpointGroup of() {
+    public static UndefinedEndpointGroup of() {
         return INSTANCE;
     }
 
     private final RuntimeException exception;
     private final CompletableFuture<Endpoint> failedFuture;
 
-    private FailingEndpointGroup(Throwable throwable) {
+    private UndefinedEndpointGroup(Throwable throwable) {
         exception = UnprocessedRequestException.of(throwable);
         failedFuture = UnmodifiableFuture.exceptionallyCompletedFuture(exception);
     }
@@ -59,7 +59,8 @@ public final class FailingEndpointGroup implements EndpointGroup {
 
     @Override
     public EndpointSelectionStrategy selectionStrategy() {
-        return EndpointSelectionStrategy.roundRobin();
+        throw new UnsupportedOperationException(getClass().getSimpleName() +
+                                                ".selectionStrategy() is not supported");
     }
 
     @Override
@@ -76,12 +77,13 @@ public final class FailingEndpointGroup implements EndpointGroup {
 
     @Override
     public long selectionTimeoutMillis() {
-        return 0;
+        throw new UnsupportedOperationException(getClass().getSimpleName() +
+                                                ".selectionTimeoutMillis() is not supported");
     }
 
     @Override
     public CompletableFuture<List<Endpoint>> whenReady() {
-        return UnmodifiableFuture.completedFuture(null);
+        throw new UnsupportedOperationException(getClass().getSimpleName() + ".whenReady() is not supported");
     }
 
     @Override

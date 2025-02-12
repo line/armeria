@@ -29,7 +29,7 @@ import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.internal.client.ClientBuilderParamsUtil;
-import com.linecorp.armeria.internal.client.endpoint.FailingEndpointGroup;
+import com.linecorp.armeria.internal.client.endpoint.UndefinedEndpointGroup;
 import com.linecorp.armeria.internal.common.util.TemporaryThreadLocals;
 
 /**
@@ -66,7 +66,7 @@ public final class ClientBuilderParamsBuilder {
         final Scheme scheme = Scheme.parse(uri.getScheme());
         final EndpointGroup endpointGroup;
         if (ClientBuilderParamsUtil.isInternalUri(uri)) {
-            endpointGroup = FailingEndpointGroup.of();
+            endpointGroup = UndefinedEndpointGroup.of();
         } else {
             endpointGroup = Endpoint.parse(uri.getRawAuthority());
         }
@@ -90,12 +90,7 @@ public final class ClientBuilderParamsBuilder {
 
     ClientBuilderParamsBuilder(Scheme scheme, EndpointGroup endpointGroup, @Nullable String absolutePathRef) {
         this.endpointGroup = endpointGroup;
-        final String schemeStr;
-        if (scheme.serializationFormat() == SerializationFormat.NONE) {
-            schemeStr = scheme.sessionProtocol().uriText();
-        } else {
-            schemeStr = scheme.uriText();
-        }
+        final String schemeStr = scheme.effectiveUriText();
         final String normalizedAbsolutePathRef = nullOrEmptyToSlash(absolutePathRef);
         final URI uri;
         if (endpointGroup instanceof Endpoint) {
@@ -103,7 +98,7 @@ public final class ClientBuilderParamsBuilder {
                              normalizedAbsolutePathRef);
         } else {
             // Create a valid URI which will never succeed.
-            uri = URI.create(schemeStr + "://" + ClientBuilderParamsUtil.ENDPOINTGROUP_PREFIX +
+            uri = URI.create(schemeStr + "://" + ClientBuilderParamsUtil.ENDPOINT_GROUP_PREFIX +
                              Integer.toHexString(System.identityHashCode(endpointGroup)) +
                              ":1" + normalizedAbsolutePathRef);
         }
@@ -156,12 +151,7 @@ public final class ClientBuilderParamsBuilder {
         final String absolutePathRef = this.absolutePathRef;
         final ClientFactory factory = options.factory();
         final Scheme scheme = factory.validateScheme(Scheme.of(serializationFormat, sessionProtocol));
-        final String schemeStr;
-        if (scheme.serializationFormat() == SerializationFormat.NONE) {
-            schemeStr = scheme.sessionProtocol().uriText();
-        } else {
-            schemeStr = scheme.uriText();
-        }
+        final String schemeStr = scheme.effectiveUriText();
 
         final String path = nullOrEmptyToSlash(absolutePathRef);
 

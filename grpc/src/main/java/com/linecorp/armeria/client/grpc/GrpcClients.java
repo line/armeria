@@ -224,7 +224,7 @@ public final class GrpcClients {
     @UnstableApi
     public static GrpcClientBuilder builder(HttpPreprocessor httpPreprocessor) {
         requireNonNull(httpPreprocessor, "httpPreprocessor");
-        return builder(SerializationFormat.NONE, httpPreprocessor);
+        return builder(GrpcSerializationFormats.PROTO, httpPreprocessor);
     }
 
     /**

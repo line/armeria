@@ -34,8 +34,8 @@ import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.util.AsyncCloseable;
 import com.linecorp.armeria.common.util.Listenable;
-import com.linecorp.armeria.internal.client.endpoint.FailingEndpointGroup;
 import com.linecorp.armeria.internal.client.endpoint.StaticEndpointGroup;
+import com.linecorp.armeria.internal.client.endpoint.UndefinedEndpointGroup;
 
 /**
  * A list of {@link Endpoint}s.
@@ -208,6 +208,6 @@ public interface EndpointGroup extends Listenable<List<Endpoint>>, EndpointSelec
      * }</pre>
      */
     static boolean isUndefined(EndpointGroup endpointGroup) {
-        return FailingEndpointGroup.of() == endpointGroup;
+        return UndefinedEndpointGroup.of() == endpointGroup;
     }
 }

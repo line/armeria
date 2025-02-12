@@ -275,7 +275,7 @@ public final class ThriftClients {
      */
     @UnstableApi
     public static ThriftClientBuilder builder(RpcPreprocessor rpcPreprocessor) {
-        return new ThriftClientBuilder(SerializationFormat.NONE,
+        return new ThriftClientBuilder(ThriftSerializationFormats.BINARY,
                                        requireNonNull(rpcPreprocessor, "rpcPreprocessor"));
     }
 

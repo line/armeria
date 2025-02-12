@@ -35,7 +35,7 @@ public final class ClientBuilderParamsUtil {
 
     private static final String INTERNAL_PREFIX = "armeria-";
     private static final String PREPROCESSOR_PREFIX = "armeria-preprocessor-";
-    public static final String ENDPOINTGROUP_PREFIX = "armeria-group-";
+    public static final String ENDPOINT_GROUP_PREFIX = "armeria-group-";
     public static final String UNDEFINED_URI_AUTHORITY = "armeria-undefined:1";
 
     public static URI preprocessorToUri(Preprocessor<?, ?> preprocessor, @Nullable String absolutePathRef) {
@@ -54,13 +54,7 @@ public final class ClientBuilderParamsUtil {
     }
 
     private static URI preprocessorToUri(Scheme scheme, String hashCode, @Nullable String absolutePathRef) {
-        final String schemeStr;
-        if (scheme.serializationFormat() == SerializationFormat.NONE) {
-            schemeStr = scheme.sessionProtocol().uriText();
-        } else {
-            schemeStr = scheme.uriText();
-        }
-
+        final String schemeStr = scheme.effectiveUriText();
         final String normalizedAbsolutePathRef = nullOrEmptyToSlash(absolutePathRef);
         return URI.create(schemeStr + "://" + PREPROCESSOR_PREFIX + hashCode +
                           ":1" + normalizedAbsolutePathRef);

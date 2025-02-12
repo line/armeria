@@ -46,7 +46,7 @@ import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.stream.AbortedStreamException;
 import com.linecorp.armeria.common.thrift.ThriftSerializationFormats;
 import com.linecorp.armeria.internal.client.ClientBuilderParamsUtil;
-import com.linecorp.armeria.internal.client.endpoint.FailingEndpointGroup;
+import com.linecorp.armeria.internal.client.endpoint.UndefinedEndpointGroup;
 import com.linecorp.armeria.internal.testing.AnticipatedException;
 
 import testing.thrift.main.HelloService;
@@ -223,7 +223,7 @@ class ThriftClientBuilderTest {
     void preprocessParams(ClientBuilderParams params, String expectedPrefix) {
         assertThat(params.scheme()).isEqualTo(Scheme.of(ThriftSerializationFormats.BINARY,
                                                         SessionProtocol.UNDEFINED));
-        assertThat(params.endpointGroup()).isInstanceOf(FailingEndpointGroup.class);
+        assertThat(params.endpointGroup()).isInstanceOf(UndefinedEndpointGroup.class);
         assertThat(params.absolutePathRef()).isEqualTo(expectedPrefix);
         assertThat(params.uri().getRawAuthority()).startsWith("armeria-preprocessor");
         assertThat(params.uri().getScheme()).isEqualTo("tbinary+undefined");

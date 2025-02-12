@@ -21,6 +21,7 @@ import java.util.function.BiConsumer;
 
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Assumptions;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
@@ -46,10 +47,15 @@ abstract class BraveClientIntegrationTest extends ITHttpAsyncClient<WebClient> {
     /**
      * OkHttp's MockWebServer does not support H2C with HTTP/1 upgrade request.
      */
-    private static final ClientFactory clientFactoryWithoutUpgradeRequest =
-            ClientFactory.builder().useHttp2Preface(true).build();
+    private static ClientFactory clientFactoryWithoutUpgradeRequest;
 
-    @AfterAll static void closeClientFactory() {
+    @BeforeAll
+    static void createClientFactory() {
+        clientFactoryWithoutUpgradeRequest = ClientFactory.builder().useHttp2Preface(true).build();
+    }
+
+    @AfterAll
+    static void closeClientFactory() {
         clientFactoryWithoutUpgradeRequest.closeAsync();
     }
 

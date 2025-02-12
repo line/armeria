@@ -22,7 +22,7 @@ import org.junit.jupiter.api.Test;
 
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.internal.client.ClientBuilderParamsUtil;
-import com.linecorp.armeria.internal.client.endpoint.FailingEndpointGroup;
+import com.linecorp.armeria.internal.client.endpoint.UndefinedEndpointGroup;
 import com.linecorp.armeria.internal.testing.ImmediateEventLoop;
 
 /**
@@ -66,7 +66,7 @@ class ClientBuilderTest {
         final WebClient client = Clients.newClient(preprocessors, WebClient.class);
         assertThat(Clients.isUndefinedUri(client.uri())).isFalse();
         assertThat(ClientBuilderParamsUtil.isInternalUri(client.uri())).isTrue();
-        assertThat(client.endpointGroup()).isInstanceOf(FailingEndpointGroup.class);
+        assertThat(client.endpointGroup()).isInstanceOf(UndefinedEndpointGroup.class);
         assertThat(client.scheme().sessionProtocol()).isEqualTo(SessionProtocol.UNDEFINED);
     }
 }

@@ -32,7 +32,7 @@ import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.internal.client.ClientUtil;
 import com.linecorp.armeria.internal.client.DefaultClientRequestContext;
 import com.linecorp.armeria.internal.client.TailPreClient;
-import com.linecorp.armeria.internal.client.endpoint.FailingEndpointGroup;
+import com.linecorp.armeria.internal.client.endpoint.UndefinedEndpointGroup;
 
 import io.micrometer.core.instrument.MeterRegistry;
 
@@ -92,14 +92,14 @@ final class DefaultWebClient extends UserClient<HttpRequest, HttpResponse> imple
             if (authority != null) {
                 endpointGroup = Endpoint.parse(authority);
             } else {
-                endpointGroup = FailingEndpointGroup.of();
+                endpointGroup = UndefinedEndpointGroup.of();
             }
             if (scheme != null) {
                 try {
                     protocol = Scheme.parse(scheme).sessionProtocol();
                 } catch (Exception e) {
                     return abortRequestAndReturnFailureResponse(req, new IllegalArgumentException(
-                            "Failed to parse a scheme: " + reqTarget.scheme(), e));
+                            "Failed to parse a scheme: " + scheme, e));
                 }
             } else {
                 protocol = SessionProtocol.UNDEFINED;
