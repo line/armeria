@@ -25,6 +25,8 @@ import org.reactivestreams.Subscriber;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.common.annotations.VisibleForTesting;
+
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpObject;
@@ -58,7 +60,8 @@ class HttpResponseWrapper implements StreamWriter<HttpObject> {
     private final EventLoop eventLoop;
     private final ClientRequestContext ctx;
     private final long maxContentLength;
-    private final long responseTimeoutMillis;
+    @VisibleForTesting
+    static final String UNEXPECTED_EXCEPTION_MSG = "Unexpected exception while closing a request";
 
     private boolean responseStarted;
     private long contentLengthHeaderValue = -1;
@@ -66,15 +69,14 @@ class HttpResponseWrapper implements StreamWriter<HttpObject> {
     private boolean done;
     private boolean closed;
 
-    HttpResponseWrapper(@Nullable AbstractHttpRequestHandler requestHandler,
-                        DecodedHttpResponse delegate, EventLoop eventLoop, ClientRequestContext ctx,
-                        long responseTimeoutMillis, long maxContentLength) {
+    HttpResponseWrapper(@Nullable AbstractHttpRequestHandler requestHandler, DecodedHttpResponse delegate,
+                        EventLoop eventLoop, ClientRequestContext ctx, long maxContentLength) {
+
         this.requestHandler = requestHandler;
         this.delegate = delegate;
         this.eventLoop = eventLoop;
         this.ctx = ctx;
         this.maxContentLength = maxContentLength;
-        this.responseTimeoutMillis = responseTimeoutMillis;
     }
 
     void handle100Continue(ResponseHeaders responseHeaders) {
@@ -234,14 +236,16 @@ class HttpResponseWrapper implements StreamWriter<HttpObject> {
                                  requestAutoAbortDelayMillis, TimeUnit.MILLISECONDS);
     }
 
-    private void closeAction(@Nullable Throwable cause) {
+    private boolean closeAction(@Nullable Throwable cause) {
+        final boolean closed;
         if (cause != null) {
-            delegate.close(cause);
+            closed = delegate.tryClose(cause);
             ctx.logBuilder().endResponse(cause);
         } else {
-            delegate.close();
+            closed = delegate.tryClose();
             ctx.logBuilder().endResponse();
         }
+        return closed;
     }
 
     private void cancelAction(@Nullable Throwable cause) {
@@ -264,8 +268,10 @@ class HttpResponseWrapper implements StreamWriter<HttpObject> {
             cancelAction(cause);
             return;
         }
-        if (delegate.isOpen()) {
-            closeAction(cause);
+
+        // don't log if the cause will be exposed via the response/log
+        if (delegate.isOpen() && closeAction(cause)) {
+            return;
         }
 
         // the context has been cancelled either by timeout or by user invocation
@@ -277,7 +283,7 @@ class HttpResponseWrapper implements StreamWriter<HttpObject> {
             return;
         }
 
-        final StringBuilder logMsg = new StringBuilder("Unexpected exception while closing a request");
+        final StringBuilder logMsg = new StringBuilder(UNEXPECTED_EXCEPTION_MSG);
         final HttpRequest request = ctx.request();
         assert request != null;
         final String authority = request.authority();
@@ -327,7 +333,6 @@ class HttpResponseWrapper implements StreamWriter<HttpObject> {
                                    .add("eventLoop", eventLoop)
                                    .add("responseStarted", responseStarted)
                                    .add("maxContentLength", maxContentLength)
-                                   .add("responseTimeoutMillis", responseTimeoutMillis)
                                    .add("contentLengthHeaderValue", contentLengthHeaderValue)
                                    .add("delegate", delegate)
                                    .toString();

@@ -599,7 +599,11 @@ class HttpServerTest {
     @ArgumentsSource(ClientAndProtocolProvider.class)
     void testTooLargeContentToNonExistentService(WebClient client) {
         final byte[] content = new byte[(int) MAX_CONTENT_LENGTH + 1];
-        final AggregatedHttpResponse res = client.post("/non-existent", content).aggregate().join();
+        // Uses streaming request to avoid early rejection by content length header.
+        final HttpRequestWriter streaming = HttpRequest.streaming(HttpMethod.POST, "/non-existent");
+        streaming.write(HttpData.wrap(content));
+        streaming.close();
+        final AggregatedHttpResponse res = client.execute(streaming).aggregate().join();
         assertThat(res.status()).isSameAs(HttpStatus.NOT_FOUND);
         assertThat(res.contentUtf8()).startsWith("Status: 404\n");
     }

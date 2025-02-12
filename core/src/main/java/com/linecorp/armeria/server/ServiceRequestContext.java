@@ -336,6 +336,11 @@ public interface ServiceRequestContext extends RequestContext {
     String decodedMappedPath();
 
     /**
+     * Returns the original path without normalization from the ":path" header.
+     */
+    String rawPath();
+
+    /**
      * Returns the {@link URI} associated with the current {@link Request}.
      * Note that this method is a shortcut of calling {@link HttpRequest#uri()} on {@link #request()}.
      */

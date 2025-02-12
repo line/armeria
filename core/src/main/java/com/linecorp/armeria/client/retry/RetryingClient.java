@@ -32,7 +32,6 @@ import org.slf4j.LoggerFactory;
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.client.ResponseTimeoutException;
-import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.AggregationOptions;
 import com.linecorp.armeria.common.HttpHeaderNames;
@@ -310,20 +309,20 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
             return;
         }
 
+        final HttpRequest ctxReq = derivedCtx.request();
+        assert ctxReq != null;
         final HttpResponse response;
-        final EndpointGroup endpointGroup = derivedCtx.endpointGroup();
         final ClientRequestContextExtension ctxExtension = derivedCtx.as(ClientRequestContextExtension.class);
-        if (!initialAttempt && ctxExtension != null &&
-            endpointGroup != null && derivedCtx.endpoint() == null) {
+        if (!initialAttempt && ctxExtension != null && derivedCtx.endpoint() == null) {
             // clear the pending throwable to retry endpoint selection
             ClientPendingThrowableUtil.removePendingThrowable(derivedCtx);
             // if the endpoint hasn't been selected, try to initialize the ctx with a new endpoint/event loop
             response = initContextAndExecuteWithFallback(
-                    unwrap(), ctxExtension, endpointGroup, HttpResponse::of,
-                    (context, cause) -> HttpResponse.ofFailure(cause));
+                    unwrap(), ctxExtension, HttpResponse::of,
+                    (context, cause) -> HttpResponse.ofFailure(cause), ctxReq);
         } else {
             response = executeWithFallback(unwrap(), derivedCtx,
-                                           (context, cause) -> HttpResponse.ofFailure(cause));
+                                           (context, cause) -> HttpResponse.ofFailure(cause), ctxReq);
         }
         final RetryConfig<HttpResponse> config = mappedRetryConfig(ctx);
         if (!ctx.exchangeType().isResponseStreaming() || config.requiresResponseTrailers()) {

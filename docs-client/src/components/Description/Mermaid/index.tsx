@@ -15,7 +15,6 @@
  */
 import React, { useEffect } from 'react';
 import mermaid from 'mermaid';
-import mermaidAPI from 'mermaid/mermaidAPI';
 
 interface MermaidWrapperProps {
   docString: string;
@@ -28,9 +27,9 @@ interface MermaidProps {
 mermaid.initialize({
   startOnLoad: true,
   arrowMarkerAbsolute: false,
-  theme: 'base' as mermaidAPI.Theme,
-  logLevel: 5 as mermaidAPI.LogLevel,
-  securityLevel: 'strict' as mermaidAPI.SecurityLevel,
+  theme: 'base',
+  logLevel: 5,
+  securityLevel: 'strict',
 });
 
 const Mermaid: React.FunctionComponent<MermaidProps> = ({ chart }) => {

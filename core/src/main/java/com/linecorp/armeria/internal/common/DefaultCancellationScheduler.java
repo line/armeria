@@ -112,12 +112,14 @@ final class DefaultCancellationScheduler implements CancellationScheduler {
             if (state != State.INIT) {
                 return;
             }
-            state = State.SCHEDULED;
             startTimeNanos = ticker.read();
             if (timeoutMode == TimeoutMode.SET_FROM_NOW) {
                 final long elapsedTimeNanos = startTimeNanos - setFromNowStartNanos;
                 timeoutNanos = Long.max(LongMath.saturatedSubtract(timeoutNanos, elapsedTimeNanos), 0);
             }
+
+            // set the state after all timeout related fields are updated
+            state = State.SCHEDULED;
             if (timeoutNanos != Long.MAX_VALUE) {
                 scheduledFuture = eventLoop().schedule(() -> invokeTask(null), timeoutNanos, NANOSECONDS);
             }
@@ -293,6 +295,23 @@ final class DefaultCancellationScheduler implements CancellationScheduler {
     }
 
     @Override
+    public long remainingTimeoutNanos() {
+        lock.lock();
+        try {
+            if (timeoutNanos == Long.MAX_VALUE) {
+                return 0;
+            }
+            if (!isStarted()) {
+                return timeoutNanos;
+            }
+            final long elapsed = ticker.read() - startTimeNanos;
+            return Math.max(1, LongMath.saturatedSubtract(timeoutNanos, elapsed));
+        } finally {
+            lock.unlock();
+        }
+    }
+
+    @Override
     public long startTimeNanos() {
         return startTimeNanos;
     }
@@ -370,8 +389,9 @@ final class DefaultCancellationScheduler implements CancellationScheduler {
         return cause;
     }
 
+    @Override
     @VisibleForTesting
-    State state() {
+    public State state() {
         return state;
     }
 

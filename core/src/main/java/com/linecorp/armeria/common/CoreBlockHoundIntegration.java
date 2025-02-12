@@ -30,6 +30,8 @@ import reactor.blockhound.integration.BlockHoundIntegration;
 public final class CoreBlockHoundIntegration implements BlockHoundIntegration {
     @Override
     public void applyTo(Builder builder) {
+        builder.nonBlockingThreadPredicate(predicate -> predicate.or(NonBlocking.class::isInstance));
+
         // short locks
         builder.allowBlockingCallsInside("com.linecorp.armeria.client.HttpClientFactory",
                                          "pool");

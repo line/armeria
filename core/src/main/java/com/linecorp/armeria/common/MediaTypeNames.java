@@ -630,5 +630,10 @@ public final class MediaTypeNames {
      */
     public static final String GRAPHQL_RESPONSE_JSON = "application/graphql-response+json";
 
+    /**
+     * {@value #MD_UTF_8}.
+     */
+    public static final String MD_UTF_8 = "text/markdown; charset=utf-8";
+
     private MediaTypeNames() {}
 }

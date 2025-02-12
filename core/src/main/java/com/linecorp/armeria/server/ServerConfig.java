@@ -229,14 +229,26 @@ public interface ServerConfig {
     /**
      * Returns the number of milliseconds to wait for active requests to go end before shutting down.
      * {@code 0} means the server will stop right away without waiting.
+     *
+     * @deprecated Use {@link #gracefulShutdown()} and {@link GracefulShutdown#quietPeriod()} instead.
      */
+    @Deprecated
     Duration gracefulShutdownQuietPeriod();
 
     /**
      * Returns the number of milliseconds to wait before shutting down the server regardless of active
      * requests.
+     *
+     * @deprecated Use {@link #gracefulShutdown()} and {@link GracefulShutdown#timeout()} instead.
      */
+    @Deprecated
     Duration gracefulShutdownTimeout();
+
+    /**
+     * Returns the {@link GracefulShutdown} that is used to gracefully shut down the {@link Server}.
+     */
+    @UnstableApi
+    GracefulShutdown gracefulShutdown();
 
     /**
      * Returns the {@link BlockingTaskExecutor} dedicated to the execution of blocking tasks or invocations.

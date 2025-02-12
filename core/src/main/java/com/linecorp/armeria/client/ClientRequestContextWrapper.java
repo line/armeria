@@ -52,7 +52,6 @@ public class ClientRequestContextWrapper
         return unwrap().newDerivedContext(id, req, rpcReq, endpoint);
     }
 
-    @Nullable
     @Override
     public EndpointGroup endpointGroup() {
         return unwrap().endpointGroup();

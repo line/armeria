@@ -186,7 +186,7 @@ final class DefaultHealthCheckerContext
     }
 
     @Override
-    public void updateHealth(double health, ClientRequestContext ctx,
+    public void updateHealth(double health, @Nullable ClientRequestContext ctx,
                              @Nullable ResponseHeaders headers, @Nullable Throwable cause) {
         final boolean isHealthy = health > 0;
         if (headers != null && headers.contains("x-envoy-degraded")) {
