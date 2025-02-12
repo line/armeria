@@ -43,30 +43,34 @@ import com.linecorp.armeria.server.auth.AuthService;
  */
 public final class HealthCheckServiceBuilder implements TransientServiceBuilder {
 
+    private static final AggregatedHttpResponse DEFAULT_HEALTHY_RESPONSE =
+            AggregatedHttpResponse.of(HttpStatus.OK, MediaType.JSON_UTF_8,
+                                      "{\"healthy\":true,\"status\":\"HEALTHY\"}");
+    private static final AggregatedHttpResponse DEFAULT_DEGRADED_RESPONSE =
+            AggregatedHttpResponse.of(HttpStatus.OK, MediaType.JSON_UTF_8,
+                                      "{\"healthy\":true,\"status\":\"DEGRADED\"}");
+    private static final AggregatedHttpResponse DEFAULT_STOPPING_RESPONSE =
+            AggregatedHttpResponse.of(HttpStatus.SERVICE_UNAVAILABLE, MediaType.JSON_UTF_8,
+                                      "{\"healthy\":false,\"status\":\"STOPPING\"}");
+    private static final AggregatedHttpResponse DEFAULT_UNHEALTHY_RESPONSE =
+            AggregatedHttpResponse.of(HttpStatus.SERVICE_UNAVAILABLE, MediaType.JSON_UTF_8,
+                                      "{\"healthy\":false,\"status\":\"UNHEALTHY\"}");
+
+    private static final AggregatedHttpResponse DEFAULT_UNDER_MAINTENANCE_RESPONSE =
+            AggregatedHttpResponse.of(HttpStatus.SERVICE_UNAVAILABLE, MediaType.JSON_UTF_8,
+                                      "{\"healthy\":false,\"status\":\"UNDER_MAINTENANCE\"}");
+
     private static final int DEFAULT_LONG_POLLING_TIMEOUT_SECONDS = 60;
     private static final int DEFAULT_PING_INTERVAL_SECONDS = 5;
     private static final double DEFAULT_LONG_POLLING_TIMEOUT_JITTER_RATE = 0.2;
 
     private final ImmutableSet.Builder<HealthChecker> healthCheckers = ImmutableSet.builder();
-    private AggregatedHttpResponse healthyResponse =
-            AggregatedHttpResponse.of(HttpStatus.OK, MediaType.JSON_UTF_8,
-                                      "{\"healthy\":true,\"status\":\"HEALTHY\"}");
 
-    private AggregatedHttpResponse degradedResponse =
-            AggregatedHttpResponse.of(HttpStatus.OK, MediaType.JSON_UTF_8,
-                                      "{\"healthy\":true,\"status\":\"DEGRADED\"}");
-
-    private AggregatedHttpResponse stoppingResponse =
-            AggregatedHttpResponse.of(HttpStatus.SERVICE_UNAVAILABLE, MediaType.JSON_UTF_8,
-                                      "{\"healthy\":false,\"status\":\"STOPPING\"}");
-
-    private AggregatedHttpResponse unhealthyResponse =
-            AggregatedHttpResponse.of(HttpStatus.SERVICE_UNAVAILABLE, MediaType.JSON_UTF_8,
-                                      "{\"healthy\":false,\"status\":\"UNHEALTHY\"}");
-
-    private AggregatedHttpResponse underMaintenanceResponse =
-            AggregatedHttpResponse.of(HttpStatus.SERVICE_UNAVAILABLE, MediaType.JSON_UTF_8,
-                                      "{\"healthy\":false,\"status\":\"UNDER_MAINTENANCE\"}");
+    private AggregatedHttpResponse healthyResponse = DEFAULT_HEALTHY_RESPONSE;
+    private AggregatedHttpResponse degradedResponse = DEFAULT_DEGRADED_RESPONSE;
+    private AggregatedHttpResponse stoppingResponse = DEFAULT_STOPPING_RESPONSE;
+    private AggregatedHttpResponse unhealthyResponse = DEFAULT_UNHEALTHY_RESPONSE;
+    private AggregatedHttpResponse underMaintenanceResponse = DEFAULT_UNDER_MAINTENANCE_RESPONSE;
 
     private long maxLongPollingTimeoutMillis = TimeUnit.SECONDS.toMillis(DEFAULT_LONG_POLLING_TIMEOUT_SECONDS);
     private double longPollingTimeoutJitterRate = DEFAULT_LONG_POLLING_TIMEOUT_JITTER_RATE;
@@ -106,7 +110,7 @@ public final class HealthCheckServiceBuilder implements TransientServiceBuilder 
      * response is sent by default:
      *
      * <pre>{@code
-     * HTTP/1.1 200 OK
+     * HTTP/2 200 OK
      * Content-Type: application/json; charset=utf-8
      *
      * { "healthy": true, "status": "HEALTHY" }
@@ -125,7 +129,7 @@ public final class HealthCheckServiceBuilder implements TransientServiceBuilder 
      * response is sent by default:
      *
      * <pre>{@code
-     * HTTP/1.1 200 OK
+     * HTTP/2 200 OK
      * Content-Type: application/json; charset=utf-8
      *
      * { "healthy": true, "status": "DEGRADED" }
@@ -145,7 +149,7 @@ public final class HealthCheckServiceBuilder implements TransientServiceBuilder 
      * response is sent by default:
      *
      * <pre>{@code
-     * HTTP/1.1 503 Service Unavailable
+     * HTTP/2 503 Service Unavailable
      * Content-Type: application/json; charset=utf-8
      *
      * { "healthy": false, "status": "STOPPING" }
@@ -165,7 +169,7 @@ public final class HealthCheckServiceBuilder implements TransientServiceBuilder 
      * response is sent by default:
      *
      * <pre>{@code
-     * HTTP/1.1 503 Service Unavailable
+     * HTTP/2 503 Service Unavailable
      * Content-Type: application/json; charset=utf-8
      *
      * { "healthy": false, "status": "UNHEALTHY" }
@@ -184,7 +188,7 @@ public final class HealthCheckServiceBuilder implements TransientServiceBuilder 
      * following response is sent by default:
      *
      * <pre>{@code
-     * HTTP/1.1 503 Service Unavailable
+     * HTTP/2 503 Service Unavailable
      * Content-Type: application/json; charset=utf-8
      *
      * { "healthy": false, "status": "UNDER_MAINTENANCE" }

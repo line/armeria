@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.server.healthcheck;
 
+import static java.util.Objects.requireNonNull;
+
 import javax.annotation.Nonnull;
 
 import com.linecorp.armeria.common.annotation.UnstableApi;
@@ -54,7 +56,7 @@ public final class SettableHealthChecker extends AbstractListenable<HealthChecke
      */
     @UnstableApi
     public SettableHealthChecker(HealthStatus healthStatus) {
-        this.healthStatus = healthStatus;
+        this.healthStatus = requireNonNull(healthStatus, "healthStatus");
     }
 
     @Override
@@ -80,12 +82,13 @@ public final class SettableHealthChecker extends AbstractListenable<HealthChecke
      */
     @UnstableApi
     public SettableHealthChecker setHealthStatus(HealthStatus healthStatus) {
+        requireNonNull(healthStatus, "healthStatus");
         final HealthStatus oldValue = this.healthStatus;
-        this.healthStatus = healthStatus;
-        if (oldValue != healthStatus) {
-            notifyListeners(this);
+        if (oldValue == healthStatus) {
+            return this;
         }
-
+        this.healthStatus = healthStatus;
+        notifyListeners(this);
         return this;
     }
 

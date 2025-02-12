@@ -37,9 +37,7 @@ public final class HealthCheckStatus {
      * @param ttlMillis interval for scheduling the next check
      */
     public HealthCheckStatus(boolean isHealthy, long ttlMillis) {
-        checkArgument(ttlMillis > 0, "ttlMillis: %s (expected: > 0)", ttlMillis);
-        healthStatus = isHealthy ? HealthStatus.HEALTHY : HealthStatus.UNHEALTHY;
-        this.ttlMillis = ttlMillis;
+        this(isHealthy ? HealthStatus.HEALTHY : HealthStatus.UNHEALTHY, ttlMillis);
     }
 
     /**
@@ -48,7 +46,6 @@ public final class HealthCheckStatus {
      * @param healthStatus health check result
      * @param ttlMillis interval for scheduling the next check
      */
-    @UnstableApi
     public HealthCheckStatus(HealthStatus healthStatus, long ttlMillis) {
         checkArgument(ttlMillis > 0, "ttlMillis: %s (expected: > 0)", ttlMillis);
         this.healthStatus = healthStatus;
