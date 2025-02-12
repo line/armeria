@@ -773,6 +773,12 @@ class AnnotatedServiceTest {
                    String.join(":", strings);
         }
 
+        @Post("/headerNameSpecified")
+        public String headerNameSpecified(@Header("X-x-FoO-bAr") String id) {
+            // Because the header name is specified, it's not converted.
+            return id;
+        }
+
         @Get("/headerDefault")
         public String headerDefault(RequestContext ctx,
                                     @Header @Default("hello") String username,
@@ -894,7 +900,7 @@ class AnnotatedServiceTest {
         @Path("/response-entity-void")
         public ResponseEntity<Void> responseEntityVoid(RequestContext ctx) {
             validateContext(ctx);
-            return ResponseEntity.of(ResponseHeaders.of(HttpStatus.OK));
+            return ResponseEntity.of(HttpStatus.OK);
         }
 
         @Get
@@ -908,15 +914,14 @@ class AnnotatedServiceTest {
         @Path("/response-entity-status")
         public ResponseEntity<Void> responseEntityResponseData(RequestContext ctx) {
             validateContext(ctx);
-            return ResponseEntity.of(ResponseHeaders.of(HttpStatus.MOVED_PERMANENTLY));
+            return ResponseEntity.of(HttpStatus.MOVED_PERMANENTLY);
         }
 
         @Get
         @Path("/response-entity-http-response")
         public ResponseEntity<HttpResponse> responseEntityHttpResponse(RequestContext ctx) {
             validateContext(ctx);
-            return ResponseEntity.of(ResponseHeaders.of(HttpStatus.OK),
-                                     HttpResponse.of(HttpStatus.UNAUTHORIZED));
+            return ResponseEntity.of(HttpStatus.OK, HttpResponse.of(HttpStatus.UNAUTHORIZED));
         }
     }
 
@@ -1223,6 +1228,10 @@ class AnnotatedServiceTest {
             request.addHeader("strings", "giraffe");
             request.addHeader("strings", "minwoox");
             testBody(hc, request, "1:2:1/minwoox:giraffe");
+
+            request = post("/11/headerNameSpecified");
+            request.addHeader("X-x-FoO-bAr", "qwerty");
+            testBody(hc, request, "qwerty");
 
             request = get("/11/headerDefault");
             testBody(hc, request, "hello/world/(null)");

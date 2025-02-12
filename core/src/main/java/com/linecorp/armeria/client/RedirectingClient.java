@@ -192,8 +192,11 @@ final class RedirectingClient extends SimpleDecoratingHttpClient {
             return;
         }
 
+        final HttpRequest req = derivedCtx.request();
+        assert req != null;
         final HttpResponse response = executeWithFallback(unwrap(), derivedCtx,
-                                                          (context, cause) -> HttpResponse.ofFailure(cause));
+                                                          (context, cause) -> HttpResponse.ofFailure(cause),
+                                                          req);
         derivedCtx.log().whenAvailable(RequestLogProperty.RESPONSE_HEADERS).thenAccept(log -> {
             if (log.isAvailable(RequestLogProperty.RESPONSE_CAUSE)) {
                 final Throwable cause = log.responseCause();
@@ -561,15 +564,21 @@ final class RedirectingClient extends SimpleDecoratingHttpClient {
                 redirectSignatures = new LinkedHashSet<>();
 
                 final String originalProtocol = ctx.sessionProtocol().isTls() ? "https" : "http";
+                final String originalAuthority = ctx.authority();
+                assert originalAuthority != null;
                 final RedirectSignature originalSignature = new RedirectSignature(originalProtocol,
-                                                                                  ctx.authority(),
+                                                                                  originalAuthority,
                                                                                   request.headers().path(),
                                                                                   request.method());
                 redirectSignatures.add(originalSignature);
             }
 
-            final RedirectSignature signature = new RedirectSignature(nextReqTarget.scheme(),
-                                                                      nextReqTarget.authority(),
+            final String nextScheme = nextReqTarget.scheme();
+            final String nextAuthority = nextReqTarget.authority();
+            assert nextScheme != null;
+            assert nextAuthority != null;
+            final RedirectSignature signature = new RedirectSignature(nextScheme,
+                                                                      nextAuthority,
                                                                       nextReqTarget.pathAndQuery(),
                                                                       nextMethod);
             if (!redirectSignatures.add(signature)) {

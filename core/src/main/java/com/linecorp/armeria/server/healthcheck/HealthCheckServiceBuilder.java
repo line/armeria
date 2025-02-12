@@ -309,11 +309,12 @@ public final class HealthCheckServiceBuilder implements TransientServiceBuilder 
      *
      * @return {@code this}
      * @see #updatable(HealthCheckUpdateHandler)
+     * @see HealthCheckUpdateHandler#of()
      */
     public HealthCheckServiceBuilder updatable(boolean updatable) {
         if (updatable) {
             if (updateHandler == null) {
-                return updatable(DefaultHealthCheckUpdateHandler.INSTANCE);
+                return updatable(HealthCheckUpdateHandler.of());
             }
 
             return this;

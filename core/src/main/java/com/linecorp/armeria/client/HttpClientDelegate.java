@@ -33,9 +33,9 @@ import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.logging.ClientConnectionTimings;
 import com.linecorp.armeria.common.logging.ClientConnectionTimingsBuilder;
-import com.linecorp.armeria.common.logging.RequestLogBuilder;
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.internal.client.ClientPendingThrowableUtil;
+import com.linecorp.armeria.internal.client.ClientRequestContextExtension;
 import com.linecorp.armeria.internal.client.DecodedHttpResponse;
 import com.linecorp.armeria.internal.client.HttpSession;
 import com.linecorp.armeria.internal.client.PooledChannel;
@@ -63,13 +63,13 @@ final class HttpClientDelegate implements HttpClient {
     public HttpResponse execute(ClientRequestContext ctx, HttpRequest req) throws Exception {
         final Throwable throwable = ClientPendingThrowableUtil.pendingThrowable(ctx);
         if (throwable != null) {
-            return earlyFailedResponse(throwable, ctx, req);
+            return earlyFailedResponse(throwable, ctx);
         }
         if (req != ctx.request()) {
             return earlyFailedResponse(
                     new IllegalStateException("ctx.request() does not match the actual request; " +
                                               "did you forget to call ctx.updateRequest() in your decorator?"),
-                    ctx, req);
+                    ctx);
         }
 
         final Endpoint endpoint = ctx.endpoint();
@@ -84,7 +84,7 @@ final class HttpClientDelegate implements HttpClient {
             // and response created here will be exposed only when `EndpointGroup.select()` returned `null`.
             //
             // See `DefaultClientRequestContext.init()` for more information.
-            return earlyFailedResponse(EmptyEndpointGroupException.get(ctx.endpointGroup()), ctx, req);
+            return earlyFailedResponse(EmptyEndpointGroupException.get(ctx.endpointGroup()), ctx);
         }
 
         final SessionProtocol protocol = ctx.sessionProtocol();
@@ -92,13 +92,19 @@ final class HttpClientDelegate implements HttpClient {
         try {
             proxyConfig = getProxyConfig(protocol, endpoint);
         } catch (Throwable t) {
-            return earlyFailedResponse(t, ctx, req);
+            return earlyFailedResponse(t, ctx);
+        }
+
+        final Throwable cancellationCause = ctx.cancellationCause();
+        if (cancellationCause != null) {
+            return earlyFailedResponse(cancellationCause, ctx);
         }
 
         final Endpoint endpointWithPort = endpoint.withDefaultPort(ctx.sessionProtocol());
         final EventLoop eventLoop = ctx.eventLoop().withoutContext();
         // TODO(ikhoon) Use ctx.exchangeType() to create an optimized HttpResponse for non-streaming response.
         final DecodedHttpResponse res = new DecodedHttpResponse(eventLoop);
+        updateCancellationTask(ctx, req, res);
 
         final ClientConnectionTimingsBuilder timingsBuilder = ClientConnectionTimings.builder();
 
@@ -115,12 +121,29 @@ final class HttpClientDelegate implements HttpClient {
                     acquireConnectionAndExecute(ctx, resolved, req, res, timingsBuilder, proxyConfig);
                 } else {
                     ctx.logBuilder().session(null, ctx.sessionProtocol(), timingsBuilder.build());
-                    earlyFailedResponse(cause, ctx, req, res);
+                    ctx.cancel(cause);
                 }
             });
         }
 
         return res;
+    }
+
+    private static void updateCancellationTask(ClientRequestContext ctx, HttpRequest req,
+                                               DecodedHttpResponse res) {
+        final ClientRequestContextExtension ctxExt = ctx.as(ClientRequestContextExtension.class);
+        if (ctxExt == null) {
+            return;
+        }
+        ctxExt.responseCancellationScheduler().updateTask(cause -> {
+            try (SafeCloseable ignored = RequestContextUtil.pop()) {
+                final UnprocessedRequestException ure = UnprocessedRequestException.of(cause);
+                req.abort(ure);
+                ctx.logBuilder().endRequest(ure);
+                res.close(ure);
+                ctx.logBuilder().endResponse(ure);
+            }
+        });
     }
 
     private void resolveAddress(Endpoint endpoint, ClientRequestContext ctx,
@@ -169,7 +192,7 @@ final class HttpClientDelegate implements HttpClient {
         try {
             pool = factory.pool(ctx.eventLoop().withoutContext());
         } catch (Throwable t) {
-            earlyFailedResponse(t, ctx, req, res);
+            ctx.cancel(t);
             return;
         }
         final SessionProtocol protocol = ctx.sessionProtocol();
@@ -185,7 +208,7 @@ final class HttpClientDelegate implements HttpClient {
                     if (cause == null) {
                         doExecute(newPooledChannel, ctx, req, res);
                     } else {
-                        earlyFailedResponse(cause, ctx, req, res);
+                        ctx.cancel(cause);
                     }
                     return null;
                 });
@@ -224,27 +247,10 @@ final class HttpClientDelegate implements HttpClient {
         }
     }
 
-    private static HttpResponse earlyFailedResponse(Throwable t, ClientRequestContext ctx, HttpRequest req) {
+    private static HttpResponse earlyFailedResponse(Throwable t, ClientRequestContext ctx) {
         final UnprocessedRequestException cause = UnprocessedRequestException.of(t);
-        handleEarlyRequestException(ctx, req, cause);
+        ctx.cancel(cause);
         return HttpResponse.ofFailure(cause);
-    }
-
-    private static void earlyFailedResponse(Throwable t, ClientRequestContext ctx, HttpRequest req,
-                                            DecodedHttpResponse res) {
-        final UnprocessedRequestException cause = UnprocessedRequestException.of(t);
-        handleEarlyRequestException(ctx, req, cause);
-        res.close(cause);
-    }
-
-    private static void handleEarlyRequestException(ClientRequestContext ctx,
-                                                    HttpRequest req, Throwable cause) {
-        try (SafeCloseable ignored = RequestContextUtil.pop()) {
-            req.abort(cause);
-            final RequestLogBuilder logBuilder = ctx.logBuilder();
-            logBuilder.endRequest(cause);
-            logBuilder.endResponse(cause);
-        }
     }
 
     private static void doExecute(PooledChannel pooledChannel, ClientRequestContext ctx,

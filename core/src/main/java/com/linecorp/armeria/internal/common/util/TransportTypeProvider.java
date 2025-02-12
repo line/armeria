@@ -16,6 +16,7 @@
 package com.linecorp.armeria.internal.common.util;
 
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
+import static java.util.Objects.requireNonNull;
 
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
@@ -171,10 +172,19 @@ public final class TransportTypeProvider {
             final Class<? extends SocketChannel> sc =
                     findClass(channelPackageName, socketChannelTypeName);
 
-            final Class<? extends ServerDomainSocketChannel> sdsc =
-                    findClass(channelPackageName, domainServerSocketChannelTypeName);
-            final Class<? extends DomainSocketChannel> dsc =
-                    findClass(channelPackageName, domainSocketChannelTypeName);
+            final Class<? extends ServerDomainSocketChannel> sdsc;
+            if (domainServerSocketChannelTypeName != null) {
+                sdsc = findClass(channelPackageName, domainServerSocketChannelTypeName);
+            } else {
+                sdsc = null;
+            }
+
+            final Class<? extends DomainSocketChannel> dsc;
+            if (domainSocketChannelTypeName != null) {
+                dsc = findClass(channelPackageName, domainSocketChannelTypeName);
+            } else {
+                dsc = null;
+            }
 
             final Class<? extends DatagramChannel> dc =
                     findClass(channelPackageName, datagramChannelTypeName);
@@ -193,20 +203,15 @@ public final class TransportTypeProvider {
         }
     }
 
-    @Nullable
     @SuppressWarnings("unchecked")
-    private static <T> Class<T> findClass(String channelPackageName,
-                                          @Nullable String className) throws Exception {
-        if (className == null) {
-            return null;
-        }
-
+    private static <T> Class<T> findClass(String channelPackageName, String className) throws Exception {
         return (Class<T>) Class.forName(channelPackageName + className, false,
                                         TransportTypeProvider.class.getClassLoader());
     }
 
     private static BiFunction<Integer, ThreadFactory, ? extends EventLoopGroup> findEventLoopGroupConstructor(
             Class<? extends EventLoopGroup> eventLoopGroupType) throws Exception {
+        requireNonNull(eventLoopGroupType, "eventLoopGroupType");
         final MethodHandle constructor =
                 MethodHandles.lookup().unreflectConstructor(
                         eventLoopGroupType.getConstructor(int.class, ThreadFactory.class));

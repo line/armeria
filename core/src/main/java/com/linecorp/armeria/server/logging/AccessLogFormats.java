@@ -133,6 +133,7 @@ final class AccessLogFormats {
                         textBuilder.append(ch);
                     } else {
                         if (textBuilder.length() > 0) {
+                            assert condBuilder != null;
                             condBuilder.addHttpStatus(newStringAndReset(textBuilder));
                         }
                         // Loop again.

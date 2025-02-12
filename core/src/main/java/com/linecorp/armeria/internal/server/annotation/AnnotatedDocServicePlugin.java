@@ -270,6 +270,7 @@ public final class AnnotatedDocServicePlugin implements DocServicePlugin {
                     return null;
                 }
 
+                assert beanFactoryId != null;
                 final Class<?> type = beanFactoryId.type();
                 typeSignature = new RequestObjectTypeSignature(TypeSignatureType.STRUCT, type.getName(), type,
                                                                new AnnotatedValueResolversWrapper(resolvers));

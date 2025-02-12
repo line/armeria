@@ -26,6 +26,7 @@ import com.google.common.base.MoreObjects;
 
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.Endpoint;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.AsyncCloseableSupport;
 import com.linecorp.armeria.common.util.ListenableAsyncCloseable;
 
@@ -68,6 +69,7 @@ final class OrElseEndpointGroup extends AbstractEndpointGroup implements Listena
         return first.selectionStrategy();
     }
 
+    @Nullable
     @Override
     public Endpoint selectNow(ClientRequestContext ctx) {
         return selector.selectNow(ctx);

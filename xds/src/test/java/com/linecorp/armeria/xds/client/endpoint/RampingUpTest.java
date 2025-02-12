@@ -16,7 +16,7 @@
 
 package com.linecorp.armeria.xds.client.endpoint;
 
-import static com.linecorp.armeria.internal.client.endpoint.RampingUpKeys.createdAtNanos;
+import static com.linecorp.armeria.internal.client.endpoint.EndpointAttributeKeys.createdAtNanos;
 import static com.linecorp.armeria.xds.XdsTestResources.BOOTSTRAP_CLUSTER_NAME;
 import static com.linecorp.armeria.xds.XdsTestResources.endpoint;
 import static com.linecorp.armeria.xds.XdsTestResources.localityLbEndpoints;
@@ -41,6 +41,7 @@ import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
+import com.linecorp.armeria.common.CommonPools;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
@@ -127,8 +128,8 @@ class RampingUpTest {
         final Cluster bootstrapCluster =
                 XdsTestResources.createStaticCluster(BOOTSTRAP_CLUSTER_NAME, bootstrapLoadAssignment);
         final Bootstrap bootstrap = XdsTestResources.bootstrap(configSource, bootstrapCluster);
-        try (XdsBootstrap xdsBootstrap = XdsBootstrap.of(bootstrap)) {
-            final EndpointGroup xdsEndpointGroup = XdsEndpointGroup.of(xdsBootstrap.listenerRoot(listenerName));
+        try (XdsBootstrap xdsBootstrap = XdsBootstrap.of(bootstrap);
+             EndpointGroup xdsEndpointGroup = XdsEndpointGroup.of(listenerName, xdsBootstrap)) {
             await().untilAsserted(() -> assertThat(xdsEndpointGroup.endpoints())
                     .containsExactlyInAnyOrder(Endpoint.of("a.com", 80), Endpoint.of("b.com", 80)));
 
@@ -176,8 +177,8 @@ class RampingUpTest {
     private static Set<Endpoint> selectEndpoints(int weight, EndpointGroup xdsEndpointGroup) {
         final Set<Endpoint> selectedEndpoints = new HashSet<>();
         for (int i = 0; i < weight * 2; i++) {
-            selectedEndpoints.add(xdsEndpointGroup.selectNow(ctx()));
-            selectedEndpoints.add(xdsEndpointGroup.selectNow(ctx()));
+            selectedEndpoints.add(xdsEndpointGroup.select(ctx(), CommonPools.workerGroup()).join());
+            selectedEndpoints.add(xdsEndpointGroup.select(ctx(), CommonPools.workerGroup()).join());
         }
         return selectedEndpoints;
     }
@@ -200,8 +201,8 @@ class RampingUpTest {
         final Cluster bootstrapCluster =
                 XdsTestResources.createStaticCluster(BOOTSTRAP_CLUSTER_NAME, bootstrapLoadAssignment);
         final Bootstrap bootstrap = XdsTestResources.bootstrap(configSource, bootstrapCluster);
-        try (XdsBootstrap xdsBootstrap = XdsBootstrap.of(bootstrap)) {
-            final EndpointGroup xdsEndpointGroup = XdsEndpointGroup.of(xdsBootstrap.listenerRoot(listenerName));
+        try (XdsBootstrap xdsBootstrap = XdsBootstrap.of(bootstrap);
+             EndpointGroup xdsEndpointGroup = XdsEndpointGroup.of(listenerName, xdsBootstrap)) {
             final BlockingWebClient blockingClient = WebClient.of(SessionProtocol.HTTP, xdsEndpointGroup)
                                                               .blocking();
             assertThat(blockingClient.get("/hello").contentUtf8()).isEqualTo("world");

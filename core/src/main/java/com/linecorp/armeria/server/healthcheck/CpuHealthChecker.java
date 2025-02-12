@@ -51,9 +51,9 @@ final class CpuHealthChecker implements HealthChecker {
 
     private static final MethodHandles.Lookup LOOKUP = MethodHandles.lookup();
 
-    private static final DoubleSupplier currentSystemCpuUsageSupplier;
+    private static final DoubleSupplier DEFAULT_SYSTEM_CPU_USAGE_SUPPLIER;
 
-    private static final DoubleSupplier currentProcessCpuUsageSupplier;
+    private static final DoubleSupplier DEFAULT_PROCESS_CPU_USAGE_SUPPLIER;
 
     @Nullable
     private static final OperatingSystemMXBean operatingSystemBean;
@@ -78,8 +78,8 @@ final class CpuHealthChecker implements HealthChecker {
         final MethodHandle getCpuLoad = detectMethod("getCpuLoad");
         systemCpuLoad = getCpuLoad != null ? getCpuLoad : detectMethod("getSystemCpuLoad");
         processCpuLoad = detectMethod("getProcessCpuLoad");
-        currentSystemCpuUsageSupplier = () -> invoke(systemCpuLoad);
-        currentProcessCpuUsageSupplier = () -> invoke(processCpuLoad);
+        DEFAULT_SYSTEM_CPU_USAGE_SUPPLIER = () -> invoke(systemCpuLoad);
+        DEFAULT_PROCESS_CPU_USAGE_SUPPLIER = () -> invoke(processCpuLoad);
     }
 
     private final DoubleSupplier systemCpuUsageSupplier;
@@ -107,7 +107,7 @@ final class CpuHealthChecker implements HealthChecker {
     CpuHealthChecker(double targetSystemCpuUsage, double targetProcessCpuUsage) {
         this(targetSystemCpuUsage, targetProcessCpuUsage,
              targetSystemCpuUsage, targetProcessCpuUsage,
-             currentSystemCpuUsageSupplier, currentProcessCpuUsageSupplier);
+             DEFAULT_SYSTEM_CPU_USAGE_SUPPLIER, DEFAULT_PROCESS_CPU_USAGE_SUPPLIER);
     }
 
     /**
@@ -122,7 +122,7 @@ final class CpuHealthChecker implements HealthChecker {
                      double degradedTargetSystemCpuUsage, double degradedTargetProcessCpuLoad) {
         this(targetSystemCpuUsage, targetProcessCpuLoad,
              degradedTargetSystemCpuUsage, degradedTargetProcessCpuLoad,
-             currentSystemCpuUsageSupplier, currentProcessCpuUsageSupplier);
+             DEFAULT_SYSTEM_CPU_USAGE_SUPPLIER, DEFAULT_PROCESS_CPU_USAGE_SUPPLIER);
     }
 
     private CpuHealthChecker(double targetSystemCpuUsage, double targetProcessCpuLoad,
@@ -208,8 +208,8 @@ final class CpuHealthChecker implements HealthChecker {
      */
     @Override
     public HealthStatus healthStatus() {
-        final double currentSystemCpuUsage = currentSystemCpuUsageSupplier.getAsDouble();
-        final double currentProcessCpuUsage = currentProcessCpuUsageSupplier.getAsDouble();
+        final double currentSystemCpuUsage = systemCpuUsageSupplier.getAsDouble();
+        final double currentProcessCpuUsage = processCpuUsageSupplier.getAsDouble();
 
         if (currentSystemCpuUsage <= targetSystemCpuUsage && currentProcessCpuUsage <= targetProcessCpuLoad) {
             return HealthStatus.HEALTHY;

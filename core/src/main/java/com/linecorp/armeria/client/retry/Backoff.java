@@ -24,6 +24,7 @@ import java.util.concurrent.ThreadLocalRandom;
 import java.util.function.Supplier;
 
 import com.linecorp.armeria.common.Flags;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.Unwrappable;
 
 /**
@@ -58,7 +59,8 @@ public interface Backoff extends Unwrappable {
     }
 
     /**
-     * Returns a {@link Backoff} that waits an exponentially-increasing amount of time between attempts.
+     * Returns a {@link Backoff} that waits an exponentially-increasing with multiplier
+     * 2.0 amount of time between attempts.
      */
     static Backoff exponential(long initialDelayMillis, long maxDelayMillis) {
         return exponential(initialDelayMillis, maxDelayMillis, 2.0);
@@ -152,6 +154,7 @@ public interface Backoff extends Unwrappable {
      *
      * @see Unwrappable
      */
+    @Nullable
     @Override
     default <T> T as(Class<T> type) {
         return Unwrappable.super.as(type);

@@ -26,6 +26,7 @@ import org.slf4j.LoggerFactory;
 
 import com.google.common.base.MoreObjects;
 
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.internal.common.util.ReentrantShortLock;
 
 final class DefaultDependencyInjector implements DependencyInjector {
@@ -45,6 +46,7 @@ final class DefaultDependencyInjector implements DependencyInjector {
         }
     }
 
+    @Nullable
     @Override
     public <T> T getInstance(Class<T> type) {
         lock.lock();

@@ -17,6 +17,7 @@ package com.linecorp.armeria.client.endpoint;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.collect.ImmutableList.toImmutableList;
+import static com.linecorp.armeria.internal.client.endpoint.EndpointToStringUtil.toShortString;
 import static com.linecorp.armeria.internal.common.util.CollectionUtil.truncate;
 import static java.util.Objects.requireNonNull;
 
@@ -32,6 +33,9 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.Lock;
 import java.util.function.Consumer;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
@@ -39,6 +43,7 @@ import com.google.common.collect.Lists;
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.common.Flags;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.util.AsyncCloseableSupport;
 import com.linecorp.armeria.common.util.EventLoopCheckingFuture;
@@ -49,6 +54,8 @@ import com.linecorp.armeria.internal.common.util.ReentrantShortLock;
  * A dynamic {@link EndpointGroup}. The list of {@link Endpoint}s can be updated dynamically.
  */
 public class DynamicEndpointGroup extends AbstractEndpointGroup implements ListenableAsyncCloseable {
+
+    private static final Logger logger = LoggerFactory.getLogger(DynamicEndpointGroup.class);
 
     /**
      * Returns a newly created builder.
@@ -159,6 +166,7 @@ public class DynamicEndpointGroup extends AbstractEndpointGroup implements Liste
         return selectionStrategy;
     }
 
+    @Nullable
     @Override
     public final Endpoint selectNow(ClientRequestContext ctx) {
         return maybeCreateSelector().selectNow(ctx);
@@ -198,7 +206,9 @@ public class DynamicEndpointGroup extends AbstractEndpointGroup implements Liste
             return newSelector;
         }
 
-        return this.selector.get();
+        final EndpointSelector oldSelector = this.selector.get();
+        assert oldSelector != null;
+        return oldSelector;
     }
 
     /**
@@ -219,6 +229,8 @@ public class DynamicEndpointGroup extends AbstractEndpointGroup implements Liste
             final List<Endpoint> newEndpointsUnsorted = Lists.newArrayList(endpoints);
             newEndpointsUnsorted.add(e);
             endpoints = newEndpoints = ImmutableList.sortedCopyOf(newEndpointsUnsorted);
+            logger.info("An endpoint has been added: {}. Current endpoints: {}",
+                        toShortString(e), toShortString(newEndpoints));
         } finally {
             endpointsLock.unlock();
         }
@@ -234,12 +246,17 @@ public class DynamicEndpointGroup extends AbstractEndpointGroup implements Liste
         final List<Endpoint> newEndpoints;
         endpointsLock.lock();
         try {
-            if (!allowEmptyEndpoints && endpoints.size() == 1) {
+            final List<Endpoint> oldEndpoints = endpoints;
+            if (!allowEmptyEndpoints && oldEndpoints.size() == 1) {
                 return;
             }
-            endpoints = newEndpoints = endpoints.stream()
-                                                .filter(endpoint -> !endpoint.equals(e))
-                                                .collect(toImmutableList());
+            endpoints = newEndpoints = oldEndpoints.stream()
+                                                   .filter(endpoint -> !endpoint.equals(e))
+                                                   .collect(toImmutableList());
+            if (endpoints.size() != oldEndpoints.size()) {
+                logger.info("An endpoint has been removed: {}. Current endpoints: {}",
+                            toShortString(e), toShortString(newEndpoints));
+            }
         } finally {
             endpointsLock.unlock();
         }
@@ -262,6 +279,7 @@ public class DynamicEndpointGroup extends AbstractEndpointGroup implements Liste
                 return;
             }
             this.endpoints = newEndpoints;
+            logger.info("New endpoints have been set: {}", toShortString(newEndpoints));
         } finally {
             endpointsLock.unlock();
         }
@@ -290,6 +308,7 @@ public class DynamicEndpointGroup extends AbstractEndpointGroup implements Liste
         return false;
     }
 
+    @Nullable
     @Override
     protected List<Endpoint> latestValue() {
         final List<Endpoint> endpoints = this.endpoints;
@@ -371,13 +390,28 @@ public class DynamicEndpointGroup extends AbstractEndpointGroup implements Liste
     protected final String toString(Consumer<? super StringBuilder> builderMutator) {
         final StringBuilder buf = new StringBuilder();
         buf.append(getClass().getSimpleName());
-        buf.append("{selectionStrategy=").append(selectionStrategy.getClass());
+        buf.append("{selector=").append(toStringSelector());
         buf.append(", allowsEmptyEndpoints=").append(allowEmptyEndpoints);
         buf.append(", initialized=").append(initialEndpointsFuture.isDone());
         buf.append(", numEndpoints=").append(endpoints.size());
         buf.append(", endpoints=").append(truncate(endpoints, 10));
         builderMutator.accept(buf);
         return buf.append('}').toString();
+    }
+
+    /**
+     * Returns the string representation of the {@link EndpointSelector} of this {@link DynamicEndpointGroup}.
+     * If the {@link EndpointSelector} is not created yet, it returns the class name of the
+     * {@link EndpointSelectionStrategy}.
+     */
+    protected String toStringSelector() {
+        final EndpointSelector endpointSelector = selector.get();
+        if (endpointSelector == null) {
+            // Return selection strategy if selector is not created yet.
+            return selectionStrategy.getClass().toString();
+        }
+
+        return endpointSelector.toString();
     }
 
     private class InitialEndpointsFuture extends EventLoopCheckingFuture<List<Endpoint>> {

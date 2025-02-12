@@ -20,11 +20,13 @@ import static java.util.Objects.requireNonNull;
 import java.util.List;
 import java.util.function.ToLongFunction;
 
+import com.google.common.base.MoreObjects;
 import com.google.common.hash.Hashing;
 
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.common.HttpRequest;
+import com.linecorp.armeria.common.annotation.Nullable;
 
 /**
  * An {@link EndpointSelector} strategy which implements sticky load-balancing using
@@ -80,9 +82,9 @@ final class StickyEndpointSelectionStrategy implements EndpointSelectionStrategy
             initialize();
         }
 
+        @Nullable
         @Override
         public Endpoint selectNow(ClientRequestContext ctx) {
-
             final List<Endpoint> endpoints = group().endpoints();
             if (endpoints.isEmpty()) {
                 return null;
@@ -91,6 +93,13 @@ final class StickyEndpointSelectionStrategy implements EndpointSelectionStrategy
             final long key = requestContextHasher.applyAsLong(ctx);
             final int nearest = Hashing.consistentHash(key, endpoints.size());
             return endpoints.get(nearest);
+        }
+
+        @Override
+        public String toString() {
+            return MoreObjects.toStringHelper(this)
+                              .add("endpoints", group().endpoints())
+                              .toString();
         }
     }
 }

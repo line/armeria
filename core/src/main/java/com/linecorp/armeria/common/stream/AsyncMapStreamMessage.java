@@ -156,8 +156,13 @@ final class AsyncMapStreamMessage<T, U> implements StreamMessage<U> {
                 });
             } catch (Throwable ex) {
                 StreamMessageUtil.closeOrAbort(item, ex);
-                upstream.cancel();
+
+                // onError(ex) should be called before upstream.cancel() that may close downstream with
+                // CancelledSubscriptionException.
                 onError(ex);
+                final Subscription upstream = this.upstream;
+                assert upstream != null;
+                upstream.cancel();
             }
         }
 
@@ -170,10 +175,13 @@ final class AsyncMapStreamMessage<T, U> implements StreamMessage<U> {
                 return;
             }
 
+            final Subscription upstream = this.upstream;
+            assert upstream != null;
+
             try {
                 if (cause != null) {
-                    upstream.cancel();
                     onError(cause);
+                    upstream.cancel();
                 } else {
                     requireNonNull(item, "function.apply()'s future completed with null");
                     downstream.onNext(item);
@@ -195,9 +203,11 @@ final class AsyncMapStreamMessage<T, U> implements StreamMessage<U> {
                     }
                 }
             } catch (Throwable ex) {
-                StreamMessageUtil.closeOrAbort(item, ex);
-                upstream.cancel();
+                if (item != null) {
+                    StreamMessageUtil.closeOrAbort(item, ex);
+                }
                 onError(ex);
+                upstream.cancel();
             }
         }
 
@@ -230,6 +240,8 @@ final class AsyncMapStreamMessage<T, U> implements StreamMessage<U> {
             if (n <= 0) {
                 onError(new IllegalArgumentException(
                         "n: " + n + " (expected: > 0, see Reactive Streams specification rule 3.9)"));
+                final Subscription upstream = this.upstream;
+                assert upstream != null;
                 upstream.cancel();
                 return;
             }
@@ -256,6 +268,8 @@ final class AsyncMapStreamMessage<T, U> implements StreamMessage<U> {
                 }
 
                 requestedFromUpstream = IntMath.saturatedAdd(requestedFromUpstream, (int) toRequest);
+                final Subscription upstream = this.upstream;
+                assert upstream != null;
                 upstream.request(toRequest);
             }
         }
@@ -267,6 +281,8 @@ final class AsyncMapStreamMessage<T, U> implements StreamMessage<U> {
             }
 
             canceled = true;
+            final Subscription upstream = this.upstream;
+            assert upstream != null;
             upstream.cancel();
         }
     }

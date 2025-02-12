@@ -37,6 +37,7 @@ import java.util.function.Consumer;
 import java.util.function.Supplier;
 
 import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
@@ -54,6 +55,7 @@ import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.prometheus.PrometheusMeterRegistries;
 import com.linecorp.armeria.common.util.DomainSocketAddress;
+import com.linecorp.armeria.common.util.TlsEngineType;
 import com.linecorp.armeria.common.util.TransportType;
 import com.linecorp.armeria.internal.common.util.MinifiedBouncyCastleProvider;
 import com.linecorp.armeria.internal.testing.MockAddressResolverGroup;
@@ -140,6 +142,13 @@ class ServerBuilderTest {
                      .idleTimeoutMillis(idleTimeoutMillis)
                      .pingIntervalMillis(pingIntervalMillis)
                      .build();
+    }
+
+    @AfterEach
+    void tearDown() {
+        poppedRouterCnt.set(0);
+        poppedRouterCnt2.set(0);
+        poppedCnt.set(0);
     }
 
     @Test
@@ -553,6 +562,37 @@ class ServerBuilderTest {
               })
               .service("/", (ctx, req) -> HttpResponse.of(200))
               .build();
+    }
+
+    @Test
+    void tlsEngineType() {
+        final Server sb1 = Server.builder()
+                                 .service("/example", (ctx, req) -> HttpResponse.of(HttpStatus.OK))
+                                 .build();
+        assertThat(sb1.config().defaultVirtualHost().tlsEngineType()).isEqualTo(TlsEngineType.OPENSSL);
+
+        final Server sb2 = Server.builder()
+                                 .tlsSelfSigned()
+                                 .service("/example", (ctx, req) -> HttpResponse.of(HttpStatus.OK))
+                                 .tlsEngineType(TlsEngineType.OPENSSL)
+                                 .virtualHost("*.example1.com")
+                                 .service("/example", (ctx, req) -> HttpResponse.of(HttpStatus.OK))
+                                 .tlsSelfSigned()
+                                 .tlsEngineType(TlsEngineType.JDK)
+                                 .and()
+                                 .virtualHost("*.example2.com")
+                                 .service("/example", (ctx, req) -> HttpResponse.of(HttpStatus.OK))
+                                 .tlsSelfSigned()
+                                 .and()
+                                 .virtualHost("*.example3.com")
+                                 .service("/example", (ctx, req) -> HttpResponse.of(HttpStatus.OK))
+                                 .and()
+                                 .build();
+        assertThat(sb2.config().defaultVirtualHost().tlsEngineType()).isEqualTo(TlsEngineType.OPENSSL);
+        assertThat(sb2.config().findVirtualHost("*.example1.com", 8080).tlsEngineType())
+                .isEqualTo(TlsEngineType.JDK);
+        assertThat(sb2.config().findVirtualHost("*.example2.com", 8080).tlsEngineType())
+                .isEqualTo(TlsEngineType.OPENSSL);
     }
 
     @Test

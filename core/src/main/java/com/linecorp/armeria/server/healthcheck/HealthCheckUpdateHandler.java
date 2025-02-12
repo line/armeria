@@ -18,6 +18,7 @@ package com.linecorp.armeria.server.healthcheck;
 import java.util.concurrent.CompletionStage;
 
 import com.linecorp.armeria.common.HttpRequest;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.server.HttpResponseException;
 import com.linecorp.armeria.server.HttpStatusException;
 import com.linecorp.armeria.server.Server;
@@ -28,6 +29,30 @@ import com.linecorp.armeria.server.ServiceRequestContext;
  */
 @FunctionalInterface
 public interface HealthCheckUpdateHandler {
+
+    /**
+     * Returns the default {@link HealthCheckUpdateHandler} that accepts a JSON object which has a boolean
+     * property named {@code "healthy"} for a {@code PUT} or {@code POST} request. A JSON patch in a
+     * {@code PATCH} request is also accepted.
+     *
+     * <p>For example:
+     * <pre>{@code
+     * // Update healthiness of the server to unhealthy
+     * POST /internal/health HTTP/2.0
+     *
+     * { "healthy": false }
+     *
+     * // Patch healthiness of the server to unhealthy
+     * PATCH /internal/health HTTP/2.0
+     *
+     * [ { "op": "replace", "path": "/healthy", "value": false } ]
+     * }</pre>
+     */
+    @UnstableApi
+    static HealthCheckUpdateHandler of() {
+        return DefaultHealthCheckUpdateHandler.INSTANCE;
+    }
+
     /**
      * Determines if the healthiness of the {@link Server} needs to be changed or not from the given
      * {@link HttpRequest}.

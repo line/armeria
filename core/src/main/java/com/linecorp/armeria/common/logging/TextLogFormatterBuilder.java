@@ -28,7 +28,7 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
  */
 @UnstableApi
 public final class TextLogFormatterBuilder
-        extends AbstractLogFormatterBuilder<String, TextLogFormatterBuilder> {
+        extends AbstractLogFormatterBuilder<TextLogFormatterBuilder, String> {
 
     private boolean includeContext = true;
 

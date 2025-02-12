@@ -31,6 +31,8 @@ import com.google.common.base.MoreObjects;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.circuitbreaker.CircuitBreakerCallback;
+import com.linecorp.armeria.common.util.EventCount;
+import com.linecorp.armeria.common.util.EventCounter;
 import com.linecorp.armeria.common.util.Ticker;
 
 /**
@@ -71,7 +73,7 @@ final class NonBlockingCircuitBreaker implements CircuitBreaker, CircuitBreakerC
 
     @Override
     public void onSuccess() {
-        final State currentState = state.get();
+        final State currentState = state();
         if (currentState.isClosed()) {
             // fires success event
             final EventCount updatedCount = currentState.counter().onSuccess();
@@ -95,7 +97,7 @@ final class NonBlockingCircuitBreaker implements CircuitBreaker, CircuitBreakerC
 
     @Override
     public void onFailure() {
-        final State currentState = state.get();
+        final State currentState = state();
         if (currentState.isClosed()) {
             // fires failure event
             final EventCount updatedCount = currentState.counter().onFailure();
@@ -138,7 +140,7 @@ final class NonBlockingCircuitBreaker implements CircuitBreaker, CircuitBreakerC
 
     @Override
     public boolean tryRequest() {
-        final State currentState = state.get();
+        final State currentState = state();
         if (currentState.isClosed()) {
             // all requests are allowed during CLOSED
             return true;
@@ -166,7 +168,7 @@ final class NonBlockingCircuitBreaker implements CircuitBreaker, CircuitBreakerC
 
     @Override
     public CircuitState circuitState() {
-        return state.get().circuitState;
+        return state().circuitState;
     }
 
     @Override
@@ -192,8 +194,8 @@ final class NonBlockingCircuitBreaker implements CircuitBreaker, CircuitBreakerC
         return new State(
                 CircuitState.CLOSED,
                 Duration.ZERO,
-                new SlidingWindowCounter(ticker, config.counterSlidingWindow(),
-                                         config.counterUpdateInterval()));
+                EventCounter.ofSlidingWindow(ticker, config.counterSlidingWindow(),
+                                             config.counterUpdateInterval()));
     }
 
     private State newForcedOpenState() {
@@ -246,7 +248,13 @@ final class NonBlockingCircuitBreaker implements CircuitBreaker, CircuitBreakerC
 
     private void notifyCountUpdated(CircuitBreakerListener listener, EventCount count) {
         try {
-            listener.onEventCountUpdated(name(), count);
+            final String name = name();
+            listener.onEventCountUpdated(name, count);
+            // Deprecated but still supported for backward compatibility.
+            //noinspection deprecation
+            listener.onEventCountUpdated(name,
+                                         com.linecorp.armeria.client.circuitbreaker.EventCount.of(
+                                                 count.success(), count.failure()));
         } catch (Throwable t) {
             logger.warn("An error occurred when notifying an EventCountUpdated event", t);
         }
@@ -264,7 +272,9 @@ final class NonBlockingCircuitBreaker implements CircuitBreaker, CircuitBreakerC
 
     @VisibleForTesting
     State state() {
-        return state.get();
+        final State state = this.state.get();
+        assert state != null;
+        return state;
     }
 
     @VisibleForTesting
@@ -354,11 +364,13 @@ final class NonBlockingCircuitBreaker implements CircuitBreaker, CircuitBreakerC
             return EventCount.ZERO;
         }
 
+        @Nullable
         @Override
         public EventCount onSuccess() {
             return null;
         }
 
+        @Nullable
         @Override
         public EventCount onFailure() {
             return null;

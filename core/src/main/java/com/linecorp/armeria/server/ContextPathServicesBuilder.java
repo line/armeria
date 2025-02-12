@@ -39,7 +39,7 @@ import com.linecorp.armeria.server.annotation.ResponseConverterFunction;
  */
 @UnstableApi
 public final class ContextPathServicesBuilder
-        extends AbstractContextPathServicesBuilder<ServerBuilder, ContextPathServicesBuilder> {
+        extends AbstractContextPathServicesBuilder<ContextPathServicesBuilder, ServerBuilder> {
 
     ContextPathServicesBuilder(ServerBuilder parent, VirtualHostBuilder virtualHostBuilder,
                                Set<String> contextPaths) {

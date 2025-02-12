@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 LINE Corporation
+ * Copyright 2024 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -41,6 +41,7 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpRequestWriter;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
+import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.logging.LogFormatter;
 import com.linecorp.armeria.common.logging.LogWriter;
@@ -122,22 +123,34 @@ class ExceedingServiceMaxContentLengthTest {
     }
 
     @CsvSource({
-            "H1C, /streaming",
-            "H1C, /unary",
-            "H2C, /streaming",
-            "H2C, /unary",
+            "H1C, /streaming, true",
+            "H1C, /unary, true",
+            "H2C, /streaming, true",
+            "H2C, /unary, true",
+            "H1C, /streaming, false",
+            "H1C, /unary, false",
+            "H2C, /streaming, false",
+            "H2C, /unary, false",
     })
     @ParameterizedTest
-    void maxContentLength(SessionProtocol protocol, String path) throws InterruptedException {
-        final HttpRequestWriter streaming = HttpRequest.streaming(HttpMethod.POST, path);
-        for (int i = 0; i < 4; i++) {
-            streaming.write(HttpData.ofUtf8(Strings.repeat("a", 30)));
+    void maxContentLength(SessionProtocol protocol, String path, boolean shouldEarlyReject)
+            throws InterruptedException {
+        final HttpRequest request;
+        if (shouldEarlyReject) {
+            request = HttpRequest.of(HttpMethod.POST, path, MediaType.PLAIN_TEXT_UTF_8,
+                    HttpData.ofUtf8(Strings.repeat("a", 120)));
+        } else {
+            final HttpRequestWriter streaming = HttpRequest.streaming(HttpMethod.POST, path);
+            for (int i = 0; i < 4; i++) {
+                streaming.write(HttpData.ofUtf8(Strings.repeat("a", 30)));
+            }
+            streaming.close();
+            request = streaming;
         }
-        streaming.close();
         final AggregatedHttpResponse response = WebClient.of(server.uri(protocol))
-                                                         .execute(streaming)
-                                                         .aggregate()
-                                                         .join();
+                .execute(request)
+                .aggregate()
+                .join();
         assertThat(response.status()).isEqualTo(HttpStatus.REQUEST_ENTITY_TOO_LARGE);
         assertThat(response.headers().get("additional")).isEqualTo("header");
         assertThat(response.contentUtf8()).startsWith("Status: 413\n");
@@ -145,9 +158,15 @@ class ExceedingServiceMaxContentLengthTest {
         final RequestLog log = sctx.log().whenComplete().join();
         // Make sure that the response was correctly logged.
         assertThat(log.responseStatus()).isEqualTo(HttpStatus.REQUEST_ENTITY_TOO_LARGE);
+
         // Make sure that LoggingService is called.
         await().untilAsserted(
-                () -> assertThat(responseCause.get()).isExactlyInstanceOf(ContentTooLargeException.class));
+                () -> {
+                    final Throwable cause = responseCause.get();
+                    assertThat(cause).isExactlyInstanceOf(ContentTooLargeException.class);
+                    final ContentTooLargeException contentTooLargeException = (ContentTooLargeException) cause;
+                    assertThat(contentTooLargeException.earlyRejection()).isEqualTo(shouldEarlyReject);
+                });
 
         await().untilAsserted(() -> assertThat(byteBufs).allSatisfy(buf -> assertThat(buf.refCnt()).isZero()));
     }

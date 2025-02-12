@@ -64,12 +64,16 @@ final class ScheduledHealthChecker extends AbstractListenable<HealthChecker>
 
     @Override
     public boolean isHealthy() {
-        return healthStatusAtomicReference.get().isHealthy();
+        final HealthStatus healthStatus = healthStatusAtomicReference.get();
+        assert healthStatus != null;
+        return healthStatus.isHealthy();
     }
 
     @Override
     public HealthStatus healthStatus() {
-        return healthStatusAtomicReference.get();
+        final HealthStatus healthStatus = healthStatusAtomicReference.get();
+        assert healthStatus != null;
+        return healthStatus;
     }
 
     void startHealthChecker() {

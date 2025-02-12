@@ -290,6 +290,10 @@ class DefaultDnsCacheTest {
         dnsCache.cache(query0, ImmutableList.of(record0));
         // Exceeds the maximum size. The old cache, query0, should be removed.
         dnsCache.cache(query1, ImmutableList.of(record1));
+
+        // Perform a get operation to trigger the eviction.
+        dnsCache.get(query0);
+        dnsCache.get(query1);
         await().untilTrue(evicted);
         assertThat(removed).isFalse();
     }

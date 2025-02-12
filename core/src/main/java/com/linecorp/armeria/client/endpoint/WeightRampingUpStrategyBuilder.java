@@ -43,9 +43,17 @@ public final class WeightRampingUpStrategyBuilder {
     static final int DEFAULT_TOTAL_STEPS = 10;
     static final int DEFAULT_RAMPING_UP_TASK_WINDOW_MILLIS = 500;
     static final EndpointWeightTransition DEFAULT_LINEAR_TRANSITION =
-            (endpoint, currentStep, totalSteps) ->
-                    // currentStep is never greater than totalSteps so we can cast long to int.
-                    Ints.saturatedCast((long) endpoint.weight() * currentStep / totalSteps);
+            (endpoint, currentStep, totalSteps) -> {
+                // currentStep is never greater than totalSteps so we can cast long to int.
+                final int currentWeight =
+                        Ints.saturatedCast((long) endpoint.weight() * currentStep / totalSteps);
+                if (endpoint.weight() > 0 && currentWeight == 0) {
+                    // If the original weight is not 0,
+                    // we should return 1 to make sure the endpoint is selected.
+                    return 1;
+                }
+                return currentWeight;
+            };
     static final EndpointWeightTransition defaultTransition = EndpointWeightTransition.linear();
 
     private EndpointWeightTransition transition = defaultTransition;

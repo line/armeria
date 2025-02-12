@@ -20,17 +20,27 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Stream;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.CsvSource;
+import org.junit.jupiter.params.provider.MethodSource;
+import org.junit.jupiter.params.provider.NullSource;
 
+import com.linecorp.armeria.client.ClientRequestContext;
+import com.linecorp.armeria.client.ClientRequestContextBuilder;
+import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.RequestHeaders;
+import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.ResponseHeaders;
+import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.util.TextFormatter;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 class TextLogFormatterTest {
@@ -67,6 +77,23 @@ class TextLogFormatterTest {
         } else {
             assertThat(responseLog).matches(regex);
         }
+    }
+
+    @Test
+    void derivedLog() {
+        final LogFormatter logFormatter = LogFormatter.builderForText().build();
+        final HttpRequest request = HttpRequest.of(HttpMethod.GET, "/format");
+        final ClientRequestContext ctx = ClientRequestContext.of(request);
+        final ClientRequestContext derivedCtx =
+                ctx.newDerivedContext(RequestId.of(1), request, null, Endpoint.of("127.0.0.1"));
+        final DefaultRequestLog log = (DefaultRequestLog) derivedCtx.log();
+        ctx.logBuilder().addChild(log);
+        log.endRequest();
+        final String requestLog = logFormatter.formatRequest(log);
+        final String regex =
+                ".*Request: .*\\{startTime=.+, length=.+, duration=.+, scheme=.+, name=.+, headers=.+" +
+                "currentAttempt=1}$";
+        assertThat(requestLog).matches(regex);
     }
 
     @Test
@@ -131,7 +158,6 @@ class TextLogFormatterTest {
         final DefaultRequestLog log = (DefaultRequestLog) ctx.log();
         log.endRequest();
         final String requestLog = logFormatter.formatRequest(log);
-        System.out.println(requestLog);
         final Matcher matcher1 = Pattern.compile("cookie=(.*?)[,\\]]").matcher(requestLog);
         assertThat(matcher1.find()).isTrue();
         assertThat(matcher1.group(1)).isEqualTo(
@@ -234,5 +260,107 @@ class TextLogFormatterTest {
         final Matcher matcher3 = Pattern.compile("cache-control=(.*?)[,\\]]").matcher(responseLog);
         assertThat(matcher3.find()).isTrue();
         assertThat(matcher3.group(1)).isEqualTo("no-cache");
+    }
+
+    static Stream<Arguments> connectionTimingsAreLoggedIfExistParams() {
+        return Stream.of(
+                Arguments.of(ClientConnectionTimings.builder()
+                                                    .build()),
+                Arguments.of(ClientConnectionTimings.builder()
+                                                    .dnsResolutionEnd()
+                                                    .build()),
+                Arguments.of(ClientConnectionTimings.builder()
+                                                    .tlsHandshakeStart()
+                                                    .tlsHandshakeEnd()
+                                                    .build()),
+                Arguments.of(ClientConnectionTimings.builder()
+                                                    .dnsResolutionEnd()
+                                                    .pendingAcquisitionStart()
+                                                    .pendingAcquisitionEnd()
+                                                    .socketConnectStart()
+                                                    .socketConnectEnd()
+                                                    .tlsHandshakeStart()
+                                                    .tlsHandshakeEnd()
+                                                    .build())
+        );
+    }
+
+    @ParameterizedTest
+    @NullSource
+    @MethodSource("connectionTimingsAreLoggedIfExistParams")
+    void connectionTimingsAreLoggedIfExist(@Nullable ClientConnectionTimings timings) {
+        final LogFormatter logFormatter = TextLogFormatter.DEFAULT_INSTANCE;
+        final HttpRequest req = HttpRequest.of(RequestHeaders.of(HttpMethod.GET, "/"));
+        final ClientRequestContextBuilder builder = ClientRequestContext.builder(req);
+        if (timings != null) {
+            builder.connectionTimings(timings);
+        }
+        final ClientRequestContext ctx = builder.build();
+        final RequestLogBuilder logBuilder = ctx.logBuilder();
+        logBuilder.endRequest();
+        final String formatted = logFormatter.formatRequest(logBuilder.partial());
+
+        final Matcher connStartMatcher = Pattern.compile("Connection: \\{total=([^\\s,}]+)").matcher(formatted);
+        if (timings == null) {
+            assertThat(connStartMatcher.find()).isFalse();
+            return;
+        }
+        assertThat(connStartMatcher.find()).isTrue();
+        assertThat(connStartMatcher.group(1)).isEqualTo(
+                epochAndElapsed(timings.connectionAcquisitionStartTimeMicros(),
+                                timings.connectionAcquisitionDurationNanos()));
+
+        final Matcher dnsMatcher = Pattern.compile("dns=([^\\s,}]+)").matcher(formatted);
+        if (timings.dnsResolutionDurationNanos() >= 0) {
+            assertThat(dnsMatcher.find()).isTrue();
+            assertThat(dnsMatcher.group(1)).isEqualTo(
+                    epochAndElapsed(timings.dnsResolutionStartTimeMicros(),
+                                    timings.dnsResolutionDurationNanos()));
+        } else {
+            assertThat(dnsMatcher.find()).isFalse();
+        }
+
+        final Matcher pendingMatcher = Pattern.compile("pending=([^\\s,}]+)")
+                                              .matcher(formatted);
+        if (timings.pendingAcquisitionDurationNanos() >= 0) {
+            assertThat(pendingMatcher.find()).isTrue();
+            assertThat(pendingMatcher.group(1)).isEqualTo(
+                    epochAndElapsed(timings.pendingAcquisitionStartTimeMicros(),
+                                    timings.pendingAcquisitionDurationNanos()));
+        } else {
+            assertThat(pendingMatcher.find()).isFalse();
+        }
+
+        final Matcher socketMatcher = Pattern.compile("socket=([^\\s,}]+)").matcher(formatted);
+        if (timings.pendingAcquisitionDurationNanos() >= 0) {
+            assertThat(socketMatcher.find()).isTrue();
+            assertThat(socketMatcher.group(1)).isEqualTo(
+                    epochAndElapsed(timings.socketConnectStartTimeMicros(),
+                                    timings.socketConnectDurationNanos()));
+        } else {
+            assertThat(socketMatcher.find()).isFalse();
+        }
+
+        final Matcher tlsMatcher = Pattern.compile("tls=([^\\s,}]+)").matcher(formatted);
+        if (timings.tlsHandshakeDurationNanos() >= 0) {
+            assertThat(tlsMatcher.find()).isTrue();
+            assertThat(tlsMatcher.group(1)).isEqualTo(
+                    epochAndElapsed(timings.tlsHandshakeStartTimeMicros(),
+                                    timings.tlsHandshakeDurationNanos()));
+        } else {
+            assertThat(tlsMatcher.find()).isFalse();
+        }
+    }
+
+    @Test
+    void epochAndElapsedTest() {
+        assertThat(epochAndElapsed(1717987526233123L, 456L))
+                .isEqualTo("2024-06-10T02:45:26.233123Z[456ns]");
+    }
+
+    private static String epochAndElapsed(long epochMicros, long durationNanos) {
+        final StringBuilder sb = new StringBuilder();
+        TextFormatter.appendEpochAndElapsed(sb, epochMicros, durationNanos);
+        return sb.toString();
     }
 }

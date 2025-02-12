@@ -1,5 +1,5 @@
 /*
- * Copyright 2016 LINE Corporation
+ * Copyright 2024 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -165,8 +165,8 @@ final class Http2RequestDecoder extends Http2EventAdapter {
 
             // Validate the 'content-length' header if exists.
             final String contentLengthStr = headers.get(HttpHeaderNames.CONTENT_LENGTH);
+            long contentLength = 0;
             if (contentLengthStr != null) {
-                long contentLength;
                 try {
                     contentLength = Long.parseLong(contentLengthStr);
                 } catch (NumberFormatException ignored) {
@@ -206,7 +206,12 @@ final class Http2RequestDecoder extends Http2EventAdapter {
             final EventLoop eventLoop = ctx.channel().eventLoop();
             req = DecodedHttpRequest.of(endOfStream, eventLoop, id, streamId, headers, true,
                                         inboundTrafficController, routingCtx);
+            final long maxRequestLength = req.maxRequestLength();
+            if (maxRequestLength > 0 && contentLength > maxRequestLength) {
+                abortLargeRequest(req, endOfStream, true);
+            }
             requests.put(streamId, req);
+            cfg.serverMetrics().increasePendingHttp2Requests();
             ctx.fireChannelRead(req);
         } else {
             if (!(req instanceof DecodedHttpRequestWriter)) {
@@ -320,20 +325,7 @@ final class Http2RequestDecoder extends Http2EventAdapter {
         final long maxContentLength = decodedReq.maxRequestLength();
         final long transferredLength = decodedReq.transferredBytes();
         if (maxContentLength > 0 && transferredLength > maxContentLength) {
-            assert encoder != null;
-            final ContentTooLargeException cause =
-                    ContentTooLargeException.builder()
-                                            .maxContentLength(maxContentLength)
-                                            .contentLength(decodedReq.headers())
-                                            .transferred(transferredLength)
-                                            .build();
-
-            final boolean shouldReset = !endOfStream;
-
-            final HttpStatusException httpStatusException =
-                    HttpStatusException.of(HttpStatus.REQUEST_ENTITY_TOO_LARGE, cause);
-            decodedReq.setShouldResetOnlyIfRemoteIsOpen(shouldReset);
-            decodedReq.abortResponse(httpStatusException, true);
+            abortLargeRequest(decodedReq, endOfStream, false);
         } else if (decodedReq.isOpen()) {
             try {
                 // The decodedReq will be automatically closed if endOfStream is true.
@@ -347,6 +339,25 @@ final class Http2RequestDecoder extends Http2EventAdapter {
 
         // All bytes have been processed.
         return dataLength + padding;
+    }
+
+    private void abortLargeRequest(DecodedHttpRequest decodedReq, boolean endOfStream,
+                                   boolean isEarlyRejection) {
+        assert encoder != null;
+        final ContentTooLargeException cause =
+                ContentTooLargeException.builder()
+                        .maxContentLength(decodedReq.maxRequestLength())
+                        .contentLength(decodedReq.headers())
+                        .transferred(decodedReq.transferredBytes())
+                        .earlyRejection(isEarlyRejection)
+                        .build();
+
+        final boolean shouldReset = !endOfStream;
+
+        final HttpStatusException httpStatusException =
+                HttpStatusException.of(HttpStatus.REQUEST_ENTITY_TOO_LARGE, cause);
+        decodedReq.setShouldResetOnlyIfRemoteIsOpen(shouldReset);
+        decodedReq.abortResponse(httpStatusException, true);
     }
 
     private void writeInvalidRequestPathResponse(int streamId, @Nullable RequestHeaders headers) {

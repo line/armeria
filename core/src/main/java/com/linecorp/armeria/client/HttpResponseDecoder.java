@@ -31,8 +31,8 @@ interface HttpResponseDecoder {
 
     InboundTrafficController inboundTrafficController();
 
-    HttpResponseWrapper addResponse(
-            int id, DecodedHttpResponse res, ClientRequestContext ctx, EventLoop eventLoop);
+    HttpResponseWrapper addResponse(@Nullable AbstractHttpRequestHandler requestHandler, int id,
+                                    DecodedHttpResponse res, ClientRequestContext ctx, EventLoop eventLoop);
 
     @Nullable
     HttpResponseWrapper getResponse(int id);

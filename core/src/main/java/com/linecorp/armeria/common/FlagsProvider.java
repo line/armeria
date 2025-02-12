@@ -34,6 +34,7 @@ import com.github.benmanes.caffeine.cache.CaffeineSpec;
 import com.linecorp.armeria.client.ClientBuilder;
 import com.linecorp.armeria.client.ClientFactoryBuilder;
 import com.linecorp.armeria.client.DnsResolverGroupBuilder;
+import com.linecorp.armeria.client.ResponseTimeoutMode;
 import com.linecorp.armeria.client.retry.Backoff;
 import com.linecorp.armeria.client.retry.RetryingClient;
 import com.linecorp.armeria.client.retry.RetryingRpcClient;
@@ -217,6 +218,7 @@ public interface FlagsProvider {
      * the default.</p>
      */
     @Nullable
+    @UnstableApi
     default TlsEngineType tlsEngineType() {
         return null;
     }
@@ -1013,6 +1015,20 @@ public interface FlagsProvider {
     }
 
     /**
+     * Returns the default maximum client hello length that a server allows.
+     * The length shouldn't exceed 16MiB as described in
+     * <a href="https://datatracker.ietf.org/doc/html/rfc5246#section-7.4">Handshake Protocol</a>.
+     *
+     * <p>The default value of this flag is {@value DefaultFlagsProvider#DEFAULT_MAX_CLIENT_HELLO_LENGTH}.
+     * Specify the {@code -Dcom.linecorp.armeria.defaultMaxClientHelloLength=<integer>} JVM option to
+     * override the default value.
+     */
+    @Nullable
+    default Integer defaultMaxClientHelloLength() {
+        return null;
+    }
+
+    /**
      * Returns the {@link Set} of {@link TransientServiceOption}s that are enabled for a
      * {@link TransientService}.
      *
@@ -1215,6 +1231,22 @@ public interface FlagsProvider {
     @Nullable
     @UnstableApi
     default Long defaultHttp1ConnectionCloseDelayMillis() {
+        return null;
+    }
+
+    /**
+     * Returns the {@link ResponseTimeoutMode} which determines when a response timeout
+     * will start to be scheduled.
+     *
+     * <p>The default value of this flag is {@link ResponseTimeoutMode#REQUEST_SENT}. Specify the
+     * {@code -Dcom.linecorp.armeria.responseTimeoutMode=ResponseTimeoutMode} JVM option to
+     * override the default value.
+     *
+     * @see ResponseTimeoutMode
+     */
+    @Nullable
+    @UnstableApi
+    default ResponseTimeoutMode responseTimeoutMode() {
         return null;
     }
 }

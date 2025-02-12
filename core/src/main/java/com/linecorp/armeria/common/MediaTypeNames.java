@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.common;
 
+import com.linecorp.armeria.common.annotation.UnstableApi;
+
 /**
  * String constants defined in {@link MediaType} class.
  */
@@ -348,14 +350,17 @@ public final class MediaTypeNames {
     /**
      * {@value #GIT_UPLOAD_PACK_ADVERTISEMENT}.
      */
+    @UnstableApi
     public static final String GIT_UPLOAD_PACK_ADVERTISEMENT = "application/x-git-upload-pack-advertisement";
     /**
      * {@value #GIT_UPLOAD_PACK_REQUEST}.
      */
+    @UnstableApi
     public static final String GIT_UPLOAD_PACK_REQUEST = "application/x-git-upload-pack-request";
     /**
      * {@value #GIT_UPLOAD_PACK_RESULT}.
      */
+    @UnstableApi
     public static final String GIT_UPLOAD_PACK_RESULT = "application/x-git-upload-pack-result";
     /**
      * {@value #GZIP}.
@@ -624,6 +629,11 @@ public final class MediaTypeNames {
      * {@value #GRAPHQL_JSON}.
      */
     public static final String GRAPHQL_RESPONSE_JSON = "application/graphql-response+json";
+
+    /**
+     * {@value #MD_UTF_8}.
+     */
+    public static final String MD_UTF_8 = "text/markdown; charset=utf-8";
 
     private MediaTypeNames() {}
 }

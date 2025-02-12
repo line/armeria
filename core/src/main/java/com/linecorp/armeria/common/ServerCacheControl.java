@@ -245,6 +245,7 @@ public final class ServerCacheControl extends CacheControl {
             return false;
         }
 
+        assert o != null;
         final ServerCacheControl that = (ServerCacheControl) o;
         return cachePublic == that.cachePublic &&
                cachePrivate == that.cachePrivate &&

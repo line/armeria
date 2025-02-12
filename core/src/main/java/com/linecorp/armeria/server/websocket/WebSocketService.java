@@ -22,6 +22,7 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.websocket.WebSocket;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.ServiceConfig;
+import com.linecorp.armeria.server.ServiceOptions;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 /**
@@ -68,4 +69,9 @@ public interface WebSocketService extends HttpService {
      * Returns the {@link WebSocketProtocolHandler} of this service.
      */
     WebSocketProtocolHandler protocolHandler();
+
+    @Override
+    default ServiceOptions options() {
+        return WebSocketServiceBuilder.DEFAULT_OPTIONS;
+    }
 }

@@ -37,6 +37,8 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.function.Consumer;
 
+import javax.annotation.Nonnull;
+
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.google.common.annotations.VisibleForTesting;
@@ -230,7 +232,6 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
     private final int weight;
     private final List<Endpoint> endpoints;
     private final String authority;
-    private final String strVal;
 
     @Nullable
     private final Attributes attributes;
@@ -262,8 +263,6 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
 
         // Pre-generate the authority.
         authority = generateAuthority(type, host, port);
-        // Pre-generate toString() value.
-        strVal = generateToString(type, authority, ipAddr, weight, attributes);
         this.attributes = attributes;
     }
 
@@ -289,22 +288,6 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
         }
     }
 
-    private static String generateToString(Type type, String authority, @Nullable String ipAddr,
-                                           int weight, @Nullable Attributes attributes) {
-        try (TemporaryThreadLocals tempThreadLocals = TemporaryThreadLocals.acquire()) {
-            final StringBuilder buf = tempThreadLocals.stringBuilder();
-            buf.append("Endpoint{").append(authority);
-            if (type == Type.HOSTNAME_AND_IP) {
-                buf.append(", ipAddr=").append(ipAddr);
-            }
-            buf.append(", weight=").append(weight);
-            if (attributes != null) {
-                buf.append(", attributes=").append(attributes);
-            }
-            return buf.append('}').toString();
-        }
-    }
-
     @Override
     public List<Endpoint> endpoints() {
         return endpoints;
@@ -323,6 +306,7 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
         return EndpointSelectionStrategy.weightedRoundRobin();
     }
 
+    @Nonnull
     @Override
     public Endpoint selectNow(ClientRequestContext ctx) {
         return this;
@@ -637,6 +621,22 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
     }
 
     /**
+     * Returns a new {@link Endpoint} with a host whose trailing dot is removed.
+     *
+     * @return the new endpoint with the new host whose trailing dot is removed.
+     *         {@code this} if the {@link #host()} does not end with a dot ({@code .}).
+     */
+    @UnstableApi
+    public Endpoint withoutTrailingDot() {
+        if (!hasTrailingDot(host)) {
+            return this;
+        }
+
+        final String stripped = host.substring(0, host.length() - 1);
+        return new Endpoint(type, stripped, ipAddr, port, weight, attributes);
+    }
+
+    /**
      * Returns a new host endpoint with the specified weight.
      *
      * @return the new endpoint with the specified weight. {@code this} if this endpoint has the same weight.
@@ -693,7 +693,7 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
             if (value == null) {
                 return this;
             }
-            return withAttrs(Attributes.of(key, value));
+            return replaceAttrs(Attributes.of(key, value));
         }
 
         if (attributes.attr(key) == value) {
@@ -701,8 +701,32 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
         } else {
             final AttributesBuilder attributesBuilder = attributes.toBuilder();
             attributesBuilder.set(key, value);
-            return withAttrs(attributesBuilder.build());
+            return replaceAttrs(attributesBuilder.build());
         }
+    }
+
+    /**
+     * Returns a new {@link Endpoint} with the specified {@link Attributes}.
+     * Note that the {@link #attrs()} of this {@link Endpoint} is merged with the specified
+     * {@link Attributes}. For attributes with the same {@link AttributeKey}, the attribute
+     * in {@param newAttributes} has higher precedence.
+     */
+    @UnstableApi
+    @SuppressWarnings("unchecked")
+    public Endpoint withAttrs(Attributes newAttributes) {
+        requireNonNull(newAttributes, "newAttributes");
+        if (newAttributes.isEmpty()) {
+            return this;
+        }
+        if (attrs().isEmpty()) {
+            return replaceAttrs(newAttributes);
+        }
+        final AttributesBuilder builder = attrs().toBuilder();
+        newAttributes.attrs().forEachRemaining(entry -> {
+            final AttributeKey<Object> key = (AttributeKey<Object>) entry.getKey();
+            builder.set(key, entry.getValue());
+        });
+        return new Endpoint(type, host, ipAddr, port, weight, builder.build());
     }
 
     /**
@@ -711,7 +735,7 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
      * {@link Attributes}.
      */
     @UnstableApi
-    public Endpoint withAttrs(Attributes newAttributes) {
+    public Endpoint replaceAttrs(Attributes newAttributes) {
         requireNonNull(newAttributes, "newAttributes");
         if (attrs().isEmpty() && newAttributes.isEmpty()) {
             return this;
@@ -938,6 +962,14 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
 
     @Override
     public String toString() {
-        return strVal;
+        try (TemporaryThreadLocals tempThreadLocals = TemporaryThreadLocals.acquire()) {
+            final StringBuilder buf = tempThreadLocals.stringBuilder();
+            buf.append("Endpoint{").append(authority);
+            if (type == Type.HOSTNAME_AND_IP) {
+                buf.append(", ipAddr=").append(ipAddr);
+            }
+            return buf.append(", weight=").append(weight)
+                      .append('}').toString();
+        }
     }
 }

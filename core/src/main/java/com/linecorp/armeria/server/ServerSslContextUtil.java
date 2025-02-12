@@ -26,8 +26,8 @@ import javax.net.ssl.SSLEngineResult;
 import javax.net.ssl.SSLException;
 import javax.net.ssl.SSLSession;
 
-import com.google.common.collect.ImmutableList;
-
+import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.util.TlsEngineType;
 import com.linecorp.armeria.internal.common.util.SslContextUtil;
 
 import io.netty.buffer.ByteBufAllocator;
@@ -46,7 +46,7 @@ final class ServerSslContextUtil {
      * key store password is not given to key store when {@link SslContext} was created using
      * {@link KeyManagerFactory}, the validation will fail and an {@link IllegalStateException} will be raised.
      */
-    static SSLSession validateSslContext(SslContext sslContext) {
+    static SSLSession validateSslContext(SslContext sslContext, TlsEngineType tlsEngineType) {
         if (!sslContext.isServer()) {
             throw new IllegalArgumentException("sslContext: " + sslContext + " (expected: server context)");
         }
@@ -64,7 +64,7 @@ final class ServerSslContextUtil {
             final SslContext sslContextClient =
                     buildSslContext(() -> SslContextBuilder.forClient()
                                                            .trustManager(InsecureTrustManagerFactory.INSTANCE),
-                                    true, ImmutableList.of());
+                                    tlsEngineType, true, null);
             clientEngine = sslContextClient.newEngine(ByteBufAllocator.DEFAULT);
             clientEngine.setUseClientMode(true);
             clientEngine.setEnabledProtocols(clientEngine.getSupportedProtocols());
@@ -96,11 +96,12 @@ final class ServerSslContextUtil {
 
     static SslContext buildSslContext(
             Supplier<SslContextBuilder> sslContextBuilderSupplier,
+            TlsEngineType tlsEngineType,
             boolean tlsAllowUnsafeCiphers,
-            Iterable<? extends Consumer<? super SslContextBuilder>> tlsCustomizers) {
+            @Nullable Consumer<? super SslContextBuilder> tlsCustomizer) {
         return SslContextUtil
-                .createSslContext(sslContextBuilderSupplier,
-                        /* forceHttp1 */ false, tlsAllowUnsafeCiphers, tlsCustomizers, null);
+                .createSslContext(sslContextBuilderSupplier,/* forceHttp1 */ false, tlsEngineType,
+                                  tlsAllowUnsafeCiphers, tlsCustomizer, null);
     }
 
     private static void unwrap(SSLEngine engine, ByteBuffer packetBuf) throws SSLException {

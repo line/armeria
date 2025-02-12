@@ -41,6 +41,7 @@ import org.apache.hc.core5.http.HttpHeaders;
 import org.apache.hc.core5.http.io.entity.EntityUtils;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtensionContext;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.api.io.TempDir;
@@ -54,8 +55,10 @@ import org.slf4j.LoggerFactory;
 import com.google.common.io.ByteStreams;
 import com.google.common.io.Resources;
 
+import com.linecorp.armeria.client.BlockingWebClient;
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
+import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.OsType;
@@ -172,6 +175,23 @@ class FileServiceTest {
                                .orElse(FileService.builder(classLoader, baseResourceDir + "bar")
                                                   .maxCacheEntries(0)
                                                   .build()));
+
+            sb.serviceUnder(
+                    "/no-extension",
+                    FileService.builder(classLoader, baseResourceDir + "foo")
+                               .build());
+            sb.serviceUnder(
+                    "/extension",
+                    FileService.builder(classLoader, baseResourceDir + "foo")
+                               .fallbackFileExtensions("txt")
+                               .build());
+            sb.serviceUnder(
+                    "/extension/decompress",
+                    FileService.builder(classLoader, baseResourceDir + "foo")
+                               .fallbackFileExtensions("txt")
+                               .serveCompressedFiles(true)
+                               .autoDecompress(true)
+                               .build());
 
             sb.decorator(LoggingService.newDecorator());
         }
@@ -623,6 +643,33 @@ class FileServiceTest {
                 assert200Ok(res, "text/plain", expectedContentA);
             }
         }
+    }
+
+    @Test
+    void useFileExtensionsToFindFile() {
+        final BlockingWebClient client = server.blockingWebClient();
+        AggregatedHttpResponse response = client.get("/extension/foo.txt");
+        assertThat(response.status()).isEqualTo(HttpStatus.OK);
+        assertThat(response.contentUtf8()).isEqualTo("foo");
+
+        // Without .txt extension
+        response = client.get("/extension/foo");
+        assertThat(response.status()).isEqualTo(HttpStatus.OK);
+        assertThat(response.contentUtf8()).isEqualTo("foo");
+        // Make sure that the existing operation is not affected by the fileExtensions option.
+        response = client.get("/extension/");
+        assertThat(response.status()).isEqualTo(HttpStatus.OK);
+        assertThat(response.contentUtf8()).isEqualTo("<html><body></body></html>\n");
+
+        response = client.get("/no-extension/foo.txt");
+        assertThat(response.status()).isEqualTo(HttpStatus.OK);
+        assertThat(response.contentUtf8()).isEqualTo("foo");
+        response = client.get("/no-extension/foo");
+        assertThat(response.status()).isEqualTo(HttpStatus.NOT_FOUND);
+
+        response = client.get("/extension/decompress/foo");
+        assertThat(response.status()).isEqualTo(HttpStatus.OK);
+        assertThat(response.contentUtf8()).isEqualTo("foo");
     }
 
     private static void writeFile(Path path, String content) throws Exception {

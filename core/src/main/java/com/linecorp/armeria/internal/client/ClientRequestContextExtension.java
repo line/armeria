@@ -20,6 +20,7 @@ import java.util.concurrent.CompletableFuture;
 
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
+import com.linecorp.armeria.client.endpoint.EndpointSelector;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.logging.RequestLog;
@@ -41,7 +42,7 @@ public interface ClientRequestContextExtension extends ClientRequestContext, Req
      * Returns a {@link CompletableFuture} that will be completed
      * if this {@link ClientRequestContext} is initialized with an {@link EndpointGroup}.
      *
-     * @see #init(EndpointGroup)
+     * @see #init()
      */
     CompletableFuture<Boolean> whenInitialized();
 
@@ -53,7 +54,7 @@ public interface ClientRequestContextExtension extends ClientRequestContext, Req
      *         {@code false} if the initialization has failed and this context's {@link RequestLog} has been
      *         completed with the cause of the failure.
      */
-    CompletableFuture<Boolean> init(EndpointGroup endpointGroup);
+    CompletableFuture<Boolean> init();
 
     /**
      * Completes the {@link #whenInitialized()} with the specified value.
@@ -73,4 +74,20 @@ public interface ClientRequestContextExtension extends ClientRequestContext, Req
      * with default values on every request.
      */
     HttpHeaders internalRequestHeaders();
+
+    long remainingTimeoutNanos();
+
+    /**
+     * The context customizer must be run before the following conditions.
+     * <li>
+     *     <ul>
+     *         {@link EndpointSelector#selectNow(ClientRequestContext)} so that the customizer
+     *         can inject the attributes which may be required by the EndpointSelector.</ul>
+     *     <ul>
+     *         mapEndpoint() to give an opportunity to override an Endpoint when using
+     *         an additional authority.
+     *     </ul>
+     * </li>
+     */
+    void runContextCustomizer();
 }

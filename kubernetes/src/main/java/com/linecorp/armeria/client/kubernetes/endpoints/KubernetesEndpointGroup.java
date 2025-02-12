@@ -23,18 +23,26 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Predicate;
 
 import org.jctools.maps.NonBlockingHashMap;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.errorprone.annotations.concurrent.GuardedBy;
+
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.endpoint.DynamicEndpointGroup;
 import com.linecorp.armeria.client.endpoint.EndpointSelectionStrategy;
+import com.linecorp.armeria.client.retry.Backoff;
+import com.linecorp.armeria.common.CommonPools;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.util.ShutdownHooks;
+import com.linecorp.armeria.internal.common.util.ReentrantShortLock;
 
 import io.fabric8.kubernetes.api.model.Node;
 import io.fabric8.kubernetes.api.model.NodeAddress;
@@ -102,6 +110,12 @@ import io.fabric8.kubernetes.client.WatcherException;
 public final class KubernetesEndpointGroup extends DynamicEndpointGroup {
 
     private static final Logger logger = LoggerFactory.getLogger(KubernetesEndpointGroup.class);
+
+    /**
+     * The debounce millis for the update of the endpoints.
+     * A short delay would be enough because the initial events are delivered sequentially.
+     */
+    private static final int DEBOUNCE_MILLIS = 100;
 
     private static final KubernetesClient DEFAULT_CLIENT = new KubernetesClientBuilder().build();
 
@@ -190,6 +204,9 @@ public final class KubernetesEndpointGroup extends DynamicEndpointGroup {
         return builder(new KubernetesClientBuilder().withConfig(kubeConfig).build(), true);
     }
 
+    // TODO(ikhoon): Consider a dedicated executor for the blocking tasks if necessary.
+    private final ScheduledExecutorService worker = CommonPools.blockingTaskExecutor();
+
     private final KubernetesClient client;
     private final boolean autoClose;
     @Nullable
@@ -199,19 +216,29 @@ public final class KubernetesEndpointGroup extends DynamicEndpointGroup {
     private final String portName;
     private final Predicate<? super NodeAddress> nodeAddressFilter;
 
-    private final Watch nodeWatch;
-    private final Watch serviceWatch;
+    @Nullable
+    private volatile Watch nodeWatch;
+    @Nullable
+    private volatile Watch serviceWatch;
     @Nullable
     private volatile Watch podWatch;
 
     private final Map<String, String> podToNode = new NonBlockingHashMap<>();
     private final Map<String, String> nodeToIp = new NonBlockingHashMap<>();
     @Nullable
-    private Service service;
+    private volatile Service service;
     @Nullable
-    private Integer nodePort;
+    private volatile Integer nodePort;
+
+    private final ReentrantShortLock lock = new ReentrantShortLock();
+    @GuardedBy("lock")
+    @Nullable
+    private ScheduledFuture<?> scheduledFuture;
 
     private volatile boolean closed;
+    private volatile int numServiceFailures;
+    private volatile int numNodeFailures;
+    private volatile int numPodFailures;
 
     KubernetesEndpointGroup(KubernetesClient client, @Nullable String namespace, String serviceName,
                             @Nullable String portName, Predicate<? super NodeAddress> nodeAddressFilter,
@@ -224,14 +251,39 @@ public final class KubernetesEndpointGroup extends DynamicEndpointGroup {
         this.portName = portName;
         this.nodeAddressFilter = nodeAddressFilter;
         this.autoClose = autoClose;
-        nodeWatch = watchNodes();
-        serviceWatch = watchService();
+        watchJob(this::watchNode);
+        watchJob(this::watchService);
+    }
+
+    private void watchService() {
+        final Watch oldServiceWatch = serviceWatch;
+        if (oldServiceWatch != null) {
+            oldServiceWatch.close();
+        }
+
+        if (closed) {
+            return;
+        }
+        final Watch newServiceWatch;
+        try {
+            newServiceWatch = doWatchService();
+        } catch (Exception e) {
+            logger.warn("[{}/{}] Failed to start the service watcher.", namespace, serviceName, e);
+            return;
+        }
+        // Recheck the closed flag because the doWatchService() method may take a while.
+        if (closed) {
+            newServiceWatch.close();
+        } else {
+            serviceWatch = newServiceWatch;
+            logger.info("[{}/{}] Service watcher is started.", namespace, serviceName);
+        }
     }
 
     /**
      * Watches the service. {@link Watcher} will retry automatically on failures by {@link KubernetesClient}.
      */
-    private Watch watchService() {
+    private Watch doWatchService() {
         final Watcher<Service> watcher = new Watcher<Service>() {
             @Override
             public void eventReceived(Action action, Service service0) {
@@ -239,6 +291,7 @@ public final class KubernetesEndpointGroup extends DynamicEndpointGroup {
                     return;
                 }
 
+                numServiceFailures = 0;
                 switch (action) {
                     case ADDED:
                     case MODIFIED:
@@ -265,19 +318,10 @@ public final class KubernetesEndpointGroup extends DynamicEndpointGroup {
                         service = service0;
                         nodePort = nodePort0;
 
-                        Watch podWatch0 = podWatch;
-                        if (podWatch0 != null) {
-                            podWatch0.close();
-                        }
-                        podWatch0 = watchPod(service0.getSpec().getSelector());
-                        if (closed) {
-                            podWatch0.close();
-                        } else {
-                            podWatch = podWatch0;
-                        }
+                        watchJob(() -> watchPod());
                         break;
                     case DELETED:
-                        logger.warn("{} service is deleted. (namespace: {})", serviceName, namespace);
+                        logger.warn("[{}/{}] service is deleted.", namespace, serviceName);
                         // This situation should not occur in production.
                         break;
                     case ERROR:
@@ -292,7 +336,16 @@ public final class KubernetesEndpointGroup extends DynamicEndpointGroup {
                 if (closed) {
                     return;
                 }
-                logger.warn("{} service watcher is closed. (namespace: {})", namespace, serviceName, cause);
+                logger.warn("[{}/{}] Service watcher is closed.", namespace, serviceName, cause);
+                logger.info("[{}/{}] Reconnecting the service watcher...", namespace, serviceName);
+
+                // Immediately retry on the first failure.
+                watchJob(() -> watchService(), numServiceFailures++);
+            }
+
+            @Override
+            public void onClose() {
+                logger.info("[{}/{}] Service watcher is closed gracefully.", namespace, serviceName);
             }
         };
 
@@ -303,20 +356,53 @@ public final class KubernetesEndpointGroup extends DynamicEndpointGroup {
         }
     }
 
-    private Watch watchPod(Map<String, String> selector) {
+    private void watchPod() {
+        final Watch oldPodWatch = podWatch;
+        if (oldPodWatch != null) {
+            oldPodWatch.close();
+        }
+
+        if (closed) {
+            return;
+        }
+        final Watch newPodwatch;
+        try {
+            newPodwatch = doWatchPod();
+        } catch (Exception e) {
+            logger.warn("[{}/{}] Failed to start the pod watcher.", namespace, serviceName, e);
+            return;
+        }
+        // Recheck the closed flag because the doWatchPod() method may take a while.
+        if (closed) {
+            newPodwatch.close();
+        } else {
+            podWatch = newPodwatch;
+            logger.info("[{}/{}] Pod watcher is started.", namespace, serviceName);
+        }
+    }
+
+    private Watch doWatchPod() {
+        // Clear the podToNode map before starting a new pod watch.
+        podToNode.clear();
         final Watcher<Pod> watcher = new Watcher<Pod>() {
             @Override
             public void eventReceived(Action action, Pod resource) {
                 if (closed) {
                     return;
                 }
+
+                numPodFailures = 0;
                 if (action == Action.ERROR || action == Action.BOOKMARK) {
                     return;
                 }
                 final String podName = resource.getMetadata().getName();
                 final String nodeName = resource.getSpec().getNodeName();
+                logger.debug("[{}/{}] Pod event received. action: {}, pod: {}, node: {}",
+                             namespace, serviceName, action, podName, nodeName);
+
                 if (podName == null || nodeName == null) {
-                    logger.debug("Pod or node name is null. pod: {}, node: {}", podName, nodeName);
+                    logger.debug("[{}/{}] Pod or node name is null. pod: {}, node: {}",
+                                 namespace, serviceName, podName, nodeName);
                     return;
                 }
 
@@ -330,7 +416,7 @@ public final class KubernetesEndpointGroup extends DynamicEndpointGroup {
                         break;
                     default:
                 }
-                maybeUpdateEndpoints();
+                maybeUpdateEndpoints(false);
             }
 
             @Override
@@ -339,10 +425,22 @@ public final class KubernetesEndpointGroup extends DynamicEndpointGroup {
                     return;
                 }
 
-                logger.warn("Pod watcher for {}/{} is closed.", namespace, serviceName, cause);
+                logger.warn("[{}/{}] Pod watcher is closed.", namespace, serviceName, cause);
+                logger.info("[{}/{}] Reconnecting the pod watcher...", namespace, serviceName);
+
+                watchJob(() -> watchPod(), numPodFailures++);
+            }
+
+            @Override
+            public void onClose() {
+                logger.info("[{}/{}] Pod watcher is closed gracefully.", namespace, serviceName);
             }
         };
 
+        final Service service = this.service;
+        assert service != null;
+        final Map<String, String> selector = service.getSpec().getSelector();
+        // watch() method will block until the watch connection is established.
         if (namespace == null) {
             return client.pods().withLabels(selector).watch(watcher);
         } else {
@@ -350,10 +448,30 @@ public final class KubernetesEndpointGroup extends DynamicEndpointGroup {
         }
     }
 
+    private void watchNode() {
+        final Watch oldNodeWatch = nodeWatch;
+        if (oldNodeWatch != null) {
+            oldNodeWatch.close();
+        }
+
+        if (closed) {
+            return;
+        }
+        final Watch newNodeWatch = doWatchNode();
+        // Recheck the closed flag because the doWatchNode() method may take a while.
+        if (closed) {
+            newNodeWatch.close();
+        } else {
+            nodeWatch = newNodeWatch;
+            logger.info("[{}/{}] Node watcher is started.", namespace, serviceName);
+        }
+    }
+
     /**
      * Fetches the internal IPs of the node.
      */
-    private Watch watchNodes() {
+    private Watch doWatchNode() {
+        nodeToIp.clear();
         final Watcher<Node> watcher = new Watcher<Node>() {
             @Override
             public void eventReceived(Action action, Node node) {
@@ -361,11 +479,14 @@ public final class KubernetesEndpointGroup extends DynamicEndpointGroup {
                     return;
                 }
 
+                numNodeFailures = 0;
                 if (action == Action.ERROR || action == Action.BOOKMARK) {
                     return;
                 }
 
                 final String nodeName = node.getMetadata().getName();
+                logger.debug("[{}/{}] Node event received. action: {}, node: {}",
+                             namespace, serviceName, action, nodeName);
                 switch (action) {
                     case ADDED:
                     case MODIFIED:
@@ -374,7 +495,8 @@ public final class KubernetesEndpointGroup extends DynamicEndpointGroup {
                                                   .map(NodeAddress::getAddress)
                                                   .findFirst().orElse(null);
                         if (nodeIp == null) {
-                            logger.debug("No matching IP address is found in {}. node: {}", nodeName, node);
+                            logger.debug("[{}/{}] No matching IP address is found in {}. node: {}",
+                                         namespace, serviceName, nodeName, node);
                             nodeToIp.remove(nodeName);
                             return;
                         }
@@ -384,7 +506,7 @@ public final class KubernetesEndpointGroup extends DynamicEndpointGroup {
                         nodeToIp.remove(nodeName);
                         break;
                 }
-                maybeUpdateEndpoints();
+                maybeUpdateEndpoints(false);
             }
 
             @Override
@@ -392,14 +514,44 @@ public final class KubernetesEndpointGroup extends DynamicEndpointGroup {
                 if (closed) {
                     return;
                 }
-                logger.warn("Node watcher for {}/{} is closed.", namespace, serviceName, cause);
+                logger.warn("[{}/{}] Node watcher is closed.", namespace, serviceName, cause);
+                logger.info("[{}/{}] Reconnecting the node watcher...", namespace, serviceName);
+                watchJob(() -> watchNode(), numNodeFailures++);
+            }
+
+            @Override
+            public void onClose() {
+                logger.info("[{}/{}] Node watcher is closed gracefully.", namespace, serviceName);
             }
         };
 
         return client.nodes().watch(watcher);
     }
 
-    private void maybeUpdateEndpoints() {
+    private void watchJob(Runnable job) {
+        watchJob(job, 0);
+    }
+
+    private void watchJob(Runnable job, int numAttempts) {
+        final Runnable safeRunnable = () -> {
+            try {
+                job.run();
+            } catch (Exception e) {
+                logger.warn("[{}/{}] Failed to run a watch job.", namespace, serviceName, e);
+            }
+        };
+        if (numAttempts == 0) {
+            worker.execute(safeRunnable);
+        } else {
+            worker.schedule(safeRunnable, Backoff.ofDefault().nextDelayMillis(numAttempts),
+                            TimeUnit.MILLISECONDS);
+        }
+    }
+
+    private void maybeUpdateEndpoints(boolean scheduledJob) {
+        if (closed) {
+            return;
+        }
         if (service == null) {
             // No event received for the service yet.
             return;
@@ -413,6 +565,24 @@ public final class KubernetesEndpointGroup extends DynamicEndpointGroup {
         if (podToNode.isEmpty()) {
             // No event received for the pods yet.
             return;
+        }
+
+        lock.lock();
+        try {
+            if (scheduledJob) {
+                scheduledFuture = null;
+            } else {
+                if (scheduledFuture != null) {
+                    // A scheduled job is already scheduled.
+                    return;
+                }
+                // Schedule a job to debounce the update of the endpoints.
+                scheduledFuture = worker.schedule(() -> maybeUpdateEndpoints(true),
+                                                  DEBOUNCE_MILLIS, TimeUnit.MILLISECONDS);
+                return;
+            }
+        } finally {
+            lock.unlock();
         }
 
         assert nodePort != null;
@@ -433,8 +603,14 @@ public final class KubernetesEndpointGroup extends DynamicEndpointGroup {
     @Override
     protected void doCloseAsync(CompletableFuture<?> future) {
         closed = true;
-        serviceWatch.close();
-        nodeWatch.close();
+        final Watch serviceWatch = this.serviceWatch;
+        if (serviceWatch != null) {
+            serviceWatch.close();
+        }
+        final Watch nodeWatch = this.nodeWatch;
+        if (nodeWatch != null) {
+            nodeWatch.close();
+        }
         final Watch podWatch = this.podWatch;
         if (podWatch != null) {
             podWatch.close();

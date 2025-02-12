@@ -21,10 +21,9 @@ import static java.util.Objects.requireNonNull;
 import java.util.Set;
 
 abstract class AbstractContextPathAnnotatedServiceConfigSetters
-        <T extends AbstractContextPathServicesBuilder<?, ?>,
-                SELF extends AbstractContextPathAnnotatedServiceConfigSetters<T, SELF>>
-        extends AbstractAnnotatedServiceConfigSetters<
-        AbstractContextPathAnnotatedServiceConfigSetters<T, SELF>> {
+        <SELF extends AbstractContextPathAnnotatedServiceConfigSetters<SELF, T>,
+                T extends AbstractContextPathServicesBuilder<?, ?>>
+        extends AbstractAnnotatedServiceConfigSetters<SELF> {
 
     private final T builder;
     private final Set<String> contextPaths;
@@ -42,7 +41,7 @@ abstract class AbstractContextPathAnnotatedServiceConfigSetters
      *                If path prefix is not set then this service is registered to handle requests matching
      *                {@code /}
      */
-    T build(Object service) {
+    public T build(Object service) {
         requireNonNull(service, "service");
         service(service);
         contextPaths(contextPaths);

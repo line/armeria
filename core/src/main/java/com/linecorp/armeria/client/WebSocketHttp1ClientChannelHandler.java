@@ -96,11 +96,11 @@ final class WebSocketHttp1ClientChannelHandler extends ChannelDuplexHandler impl
     }
 
     @Override
-    public HttpResponseWrapper addResponse(int id, DecodedHttpResponse decodedHttpResponse,
+    public HttpResponseWrapper addResponse(@Nullable AbstractHttpRequestHandler requestHandler,
+                                           int id, DecodedHttpResponse decodedHttpResponse,
                                            ClientRequestContext ctx, EventLoop eventLoop) {
         assert res == null;
-        res = new WebSocketHttp1ResponseWrapper(decodedHttpResponse, eventLoop, ctx,
-                                                ctx.responseTimeoutMillis(), ctx.maxResponseLength());
+        res = new WebSocketHttp1ResponseWrapper(decodedHttpResponse, eventLoop, ctx, ctx.maxResponseLength());
         return res;
     }
 
@@ -180,7 +180,7 @@ final class WebSocketHttp1ClientChannelHandler extends ChannelDuplexHandler impl
                     }
 
                     if (!HttpUtil.isKeepAlive(nettyRes)) {
-                        session().deactivate();
+                        session().markUnacquirable();
                     }
 
                     if (res == null && ArmeriaHttpUtil.isRequestTimeoutResponse(nettyRes)) {
@@ -188,6 +188,7 @@ final class WebSocketHttp1ClientChannelHandler extends ChannelDuplexHandler impl
                         return;
                     }
 
+                    assert res != null;
                     res.startResponse();
                     final ResponseHeaders responseHeaders = ArmeriaHttpUtil.toArmeria(nettyRes);
                     if (responseHeaders.status() == HttpStatus.SWITCHING_PROTOCOLS) {
@@ -214,6 +215,7 @@ final class WebSocketHttp1ClientChannelHandler extends ChannelDuplexHandler impl
                     final ByteBuf data = (ByteBuf) msg;
                     final int dataLength = data.readableBytes();
                     if (dataLength > 0) {
+                        assert res != null;
                         final long maxContentLength = res.maxContentLength();
                         final long writtenBytes = res.writtenBytes();
                         if (maxContentLength > 0 && writtenBytes > maxContentLength - dataLength) {

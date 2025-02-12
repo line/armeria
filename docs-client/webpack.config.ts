@@ -82,6 +82,10 @@ const config: Configuration = {
     ],
   },
   resolve: {
+    // Workaround for monaco-editor issue: https://github.com/graphql/graphiql/issues/3639#issuecomment-2263636575
+    alias: {
+      'monaco-editor/esm/vs/editor/contrib/hover/browser/hover': 'monaco-editor/esm/vs/editor/contrib/hover/browser/hoverController',
+    },
     modules: ['src', 'node_modules'],
     extensions: ['.js', '.jsx', '.ts', '.tsx'],
     mainFields: ['browser', 'module', 'jsnext:main', 'main'],
@@ -154,7 +158,6 @@ plugins.push(
       },
     ],
     features: [
-      "!accessibilityHelp",
       "!bracketMatching",
       "!browser",
       "!caretOperations",

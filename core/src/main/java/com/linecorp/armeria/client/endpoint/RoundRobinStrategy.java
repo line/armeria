@@ -19,8 +19,11 @@ package com.linecorp.armeria.client.endpoint;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import com.google.common.base.MoreObjects;
+
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.Endpoint;
+import com.linecorp.armeria.common.annotation.Nullable;
 
 final class RoundRobinStrategy implements EndpointSelectionStrategy {
 
@@ -46,6 +49,7 @@ final class RoundRobinStrategy implements EndpointSelectionStrategy {
             initialize();
         }
 
+        @Nullable
         @Override
         public Endpoint selectNow(ClientRequestContext ctx) {
             final List<Endpoint> endpoints = group().endpoints();
@@ -54,6 +58,13 @@ final class RoundRobinStrategy implements EndpointSelectionStrategy {
             }
             final int currentSequence = sequence.getAndIncrement();
             return endpoints.get(Math.abs(currentSequence % endpoints.size()));
+        }
+
+        @Override
+        public String toString() {
+            return MoreObjects.toStringHelper(this)
+                              .add("endpoints", group().endpoints())
+                              .toString();
         }
     }
 }

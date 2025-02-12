@@ -25,16 +25,25 @@ import java.security.cert.X509Certificate;
 
 import com.google.common.collect.ImmutableList;
 
+import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.internal.common.util.CertificateUtil;
 
 import io.micrometer.core.instrument.binder.MeterBinder;
+import io.micrometer.core.instrument.binder.netty4.NettyAllocatorMetrics;
+import io.netty.buffer.PooledByteBufAllocator;
 import io.netty.channel.EventLoopGroup;
 
 /**
- *  Provides useful {@link MeterBinder}s to monitor various Armeria components.
+ * Provides useful {@link MeterBinder}s to monitor various Armeria components.
  */
 public final class MoreMeterBinders {
+
+    static {
+        // Bind the default Netty allocator metrics to the default MeterRegistry.
+        new NettyAllocatorMetrics(PooledByteBufAllocator.DEFAULT)
+                .bindTo(Flags.meterRegistry());
+    }
 
     /**
      * Returns a new {@link MeterBinder} to observe Netty's {@link EventLoopGroup}s. The following stats are
@@ -47,7 +56,7 @@ public final class MoreMeterBinders {
      * </ul>
      */
     @UnstableApi
-    public static MeterBinder eventLoopMetrics(EventLoopGroup eventLoopGroup, String name) {
+    public static CloseableMeterBinder eventLoopMetrics(EventLoopGroup eventLoopGroup, String name) {
         requireNonNull(name, "name");
         return eventLoopMetrics(eventLoopGroup, new MeterIdPrefix("armeria.netty." + name));
     }
@@ -63,7 +72,8 @@ public final class MoreMeterBinders {
      * </ul>
      */
     @UnstableApi
-    public static MeterBinder eventLoopMetrics(EventLoopGroup eventLoopGroup, MeterIdPrefix meterIdPrefix) {
+    public static CloseableMeterBinder eventLoopMetrics(EventLoopGroup eventLoopGroup,
+                                                        MeterIdPrefix meterIdPrefix) {
         return new EventLoopMetrics(eventLoopGroup, meterIdPrefix);
     }
 
@@ -82,7 +92,8 @@ public final class MoreMeterBinders {
      * @param meterIdPrefix the prefix to use for all metrics
      */
     @UnstableApi
-    public static MeterBinder certificateMetrics(X509Certificate certificate, MeterIdPrefix meterIdPrefix) {
+    public static CloseableMeterBinder certificateMetrics(X509Certificate certificate,
+                                                          MeterIdPrefix meterIdPrefix) {
         requireNonNull(certificate, "certificate");
         return certificateMetrics(ImmutableList.of(certificate), meterIdPrefix);
     }
@@ -102,8 +113,8 @@ public final class MoreMeterBinders {
      * @param meterIdPrefix the prefix to use for all metrics
      */
     @UnstableApi
-    public static MeterBinder certificateMetrics(Iterable<? extends X509Certificate> certificates,
-                                                 MeterIdPrefix meterIdPrefix) {
+    public static CloseableMeterBinder certificateMetrics(Iterable<? extends X509Certificate> certificates,
+                                                          MeterIdPrefix meterIdPrefix) {
         requireNonNull(certificates, "certificates");
         requireNonNull(meterIdPrefix, "meterIdPrefix");
         return new CertificateMetrics(ImmutableList.copyOf(certificates), meterIdPrefix);
@@ -124,7 +135,7 @@ public final class MoreMeterBinders {
      * @param meterIdPrefix the prefix to use for all metrics
      */
     @UnstableApi
-    public static MeterBinder certificateMetrics(File keyCertChainFile, MeterIdPrefix meterIdPrefix)
+    public static CloseableMeterBinder certificateMetrics(File keyCertChainFile, MeterIdPrefix meterIdPrefix)
             throws CertificateException {
         requireNonNull(keyCertChainFile, "keyCertChainFile");
         return certificateMetrics(CertificateUtil.toX509Certificates(keyCertChainFile), meterIdPrefix);
@@ -145,7 +156,8 @@ public final class MoreMeterBinders {
      * @param meterIdPrefix the prefix to use for all metrics
      */
     @UnstableApi
-    public static MeterBinder certificateMetrics(InputStream keyCertChainFile, MeterIdPrefix meterIdPrefix)
+    public static CloseableMeterBinder certificateMetrics(InputStream keyCertChainFile,
+                                                          MeterIdPrefix meterIdPrefix)
             throws CertificateException {
         requireNonNull(keyCertChainFile, "keyCertChainFile");
         return certificateMetrics(CertificateUtil.toX509Certificates(keyCertChainFile), meterIdPrefix);

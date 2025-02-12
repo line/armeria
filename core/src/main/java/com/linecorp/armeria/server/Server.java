@@ -26,6 +26,7 @@ import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.security.cert.Certificate;
 import java.security.cert.X509Certificate;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
@@ -73,7 +74,9 @@ import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.common.util.ListenableAsyncCloseable;
 import com.linecorp.armeria.common.util.ShutdownHooks;
 import com.linecorp.armeria.common.util.StartStopSupport;
+import com.linecorp.armeria.common.util.TlsEngineType;
 import com.linecorp.armeria.common.util.TransportType;
+import com.linecorp.armeria.common.util.UnmodifiableFuture;
 import com.linecorp.armeria.common.util.Version;
 import com.linecorp.armeria.internal.common.RequestTargetCache;
 import com.linecorp.armeria.internal.common.util.ChannelUtil;
@@ -130,7 +133,8 @@ public final class Server implements ListenableAsyncCloseable {
         serverConfig.setServer(this);
         config = new UpdatableServerConfig(requireNonNull(serverConfig, "serverConfig"));
         startStop = new ServerStartStopSupport(config.startStopExecutor());
-        connectionLimitingHandler = new ConnectionLimitingHandler(config.maxNumConnections());
+        connectionLimitingHandler = new ConnectionLimitingHandler(config.maxNumConnections(),
+                                                                  config.serverMetrics());
 
         // Server-wide metrics.
         RequestTargetCache.registerServerMetrics(config.meterRegistry());
@@ -138,7 +142,9 @@ public final class Server implements ListenableAsyncCloseable {
 
         for (VirtualHost virtualHost : config().virtualHosts()) {
             if (virtualHost.sslContext() != null) {
-                setupTlsMetrics(virtualHost.sslContext(), virtualHost.hostnamePattern());
+                assert virtualHost.tlsEngineType() != null;
+                setupTlsMetrics(virtualHost.sslContext(), virtualHost.tlsEngineType(),
+                                virtualHost.hostnamePattern());
             }
         }
 
@@ -417,10 +423,10 @@ public final class Server implements ListenableAsyncCloseable {
     /**
      * Sets up gauge metric for each server certificate.
      */
-    private void setupTlsMetrics(SslContext sslContext, String hostnamePattern) {
+    private void setupTlsMetrics(SslContext sslContext, TlsEngineType tlsEngineType, String hostnamePattern) {
         final MeterRegistry meterRegistry = config().meterRegistry();
 
-        final SSLSession sslSession = validateSslContext(sslContext);
+        final SSLSession sslSession = validateSslContext(sslContext, tlsEngineType);
         final MeterIdPrefix meterIdPrefix = new MeterIdPrefix("armeria.server",
                                                               "hostname.pattern", hostnamePattern);
         for (Certificate certificate : sslSession.getLocalCertificates()) {
@@ -497,11 +503,11 @@ public final class Server implements ListenableAsyncCloseable {
 
         @Override
         protected CompletionStage<Void> doStart(@Nullable Void arg) {
-            if (config().gracefulShutdownQuietPeriod().isZero()) {
+            if (config().gracefulShutdown().quietPeriod().isZero()) {
                 gracefulShutdownSupport = GracefulShutdownSupport.createDisabled();
             } else {
                 gracefulShutdownSupport =
-                        GracefulShutdownSupport.create(config().gracefulShutdownQuietPeriod(),
+                        GracefulShutdownSupport.create(config().gracefulShutdown().quietPeriod(),
                                                        config().blockingTaskExecutor());
             }
 
@@ -546,6 +552,9 @@ public final class Server implements ListenableAsyncCloseable {
                 return thread;
             });
 
+            final GracefulShutdownSupport gracefulShutdownSupport = this.gracefulShutdownSupport;
+            assert gracefulShutdownSupport != null;
+
             b.group(bossGroup, config.workerGroup());
             b.handler(connectionLimitingHandler);
             b.childHandler(new HttpServerPipelineConfigurator(config, port, gracefulShutdownSupport,
@@ -574,14 +583,13 @@ public final class Server implements ListenableAsyncCloseable {
         }
 
         private void setupServerMetrics() {
-            final MeterRegistry meterRegistry = config().meterRegistry();
+            final MeterRegistry meterRegistry = config.meterRegistry();
             final GracefulShutdownSupport gracefulShutdownSupport = this.gracefulShutdownSupport;
             assert gracefulShutdownSupport != null;
 
             meterRegistry.gauge("armeria.server.pending.responses", gracefulShutdownSupport,
                                 GracefulShutdownSupport::pendingResponses);
-            meterRegistry.gauge("armeria.server.connections", connectionLimitingHandler,
-                                ConnectionLimitingHandler::numConnections);
+            config.serverMetrics().bindTo(meterRegistry);
         }
 
         @Override
@@ -612,7 +620,7 @@ public final class Server implements ListenableAsyncCloseable {
                 gracefulShutdownExecutor.schedule(() -> {
                     quietPeriodFuture.cancel(false);
                     doStop(future, gracefulShutdownExecutor);
-                }, config.gracefulShutdownTimeout().toMillis(), TimeUnit.MILLISECONDS);
+                }, config.gracefulShutdown().timeout().toMillis(), TimeUnit.MILLISECONDS);
             } catch (RejectedExecutionException e) {
                 // Can be rejected if quiet period is complete already.
             }
@@ -649,50 +657,77 @@ public final class Server implements ListenableAsyncCloseable {
                     lock.unlock();
                 }
 
-                // Close all accepted sockets.
-                ChannelUtil.close(connectionLimitingHandler.children()).handle((unused3, unused4) -> {
-                    // Shut down the worker group if necessary.
-                    final Future<?> workerShutdownFuture;
-                    if (config.shutdownWorkerGroupOnStop()) {
-                        workerShutdownFuture = config.workerGroup().shutdownGracefully();
-                    } else {
-                        workerShutdownFuture = ImmediateEventExecutor.INSTANCE.newSucceededFuture(null);
-                    }
-
-                    workerShutdownFuture.addListener(unused5 -> {
-                        final Set<EventLoopGroup> bossGroups =
-                                Server.this.serverChannels.stream()
-                                                          .map(ch -> ch.eventLoop().parent())
-                                                          .collect(toImmutableSet());
-
-                        // If started to shutdown before initializing a boss group,
-                        // complete the future immediately.
-                        if (bossGroups.isEmpty()) {
-                            finishDoStop(future);
-                            return;
+                shutdownServerHandlers().handle((unused3, unused4) -> {
+                    // Close all accepted sockets.
+                    ChannelUtil.close(connectionLimitingHandler.children()).handle((unused5, unused6) -> {
+                        // Shut down the worker group if necessary.
+                        final Future<?> workerShutdownFuture;
+                        if (config.shutdownWorkerGroupOnStop()) {
+                            workerShutdownFuture = config.workerGroup().shutdownGracefully();
+                        } else {
+                            workerShutdownFuture = ImmediateEventExecutor.INSTANCE.newSucceededFuture(null);
                         }
 
-                        // Shut down all boss groups and wait until they are terminated.
-                        final AtomicInteger remainingBossGroups = new AtomicInteger(bossGroups.size());
-                        bossGroups.forEach(bossGroup -> {
-                            bossGroup.shutdownGracefully();
-                            bossGroup.terminationFuture().addListener(unused6 -> {
-                                if (remainingBossGroups.decrementAndGet() != 0) {
-                                    // There are more boss groups to terminate.
-                                    return;
-                                }
+                        workerShutdownFuture.addListener(unused7 -> {
+                            final Set<EventLoopGroup> bossGroups =
+                                    Server.this.serverChannels.stream()
+                                                              .map(ch -> ch.eventLoop().parent())
+                                                              .collect(toImmutableSet());
 
-                                // Boss groups have been terminated completely.
+                            // If started to shutdown before initializing a boss group,
+                            // complete the future immediately.
+                            if (bossGroups.isEmpty()) {
                                 finishDoStop(future);
+                                return;
+                            }
+
+                            // Shut down all boss groups and wait until they are terminated.
+                            final AtomicInteger remainingBossGroups = new AtomicInteger(bossGroups.size());
+                            bossGroups.forEach(bossGroup -> {
+                                bossGroup.shutdownGracefully();
+                                bossGroup.terminationFuture().addListener(unused8 -> {
+                                    if (remainingBossGroups.decrementAndGet() != 0) {
+                                        // There are more boss groups to terminate.
+                                        return;
+                                    }
+
+                                    // Boss groups have been terminated completely.
+                                    finishDoStop(future);
+                                });
                             });
                         });
-                    });
 
+                        return null;
+                    });
                     return null;
                 });
 
                 return null;
             });
+        }
+
+        private CompletableFuture<Void> shutdownServerHandlers() {
+            if (config.gracefulShutdown().timeout().isZero()) {
+                return UnmodifiableFuture.completedFuture(null);
+            }
+
+            final Set<Channel> children = connectionLimitingHandler.children();
+            final List<CompletableFuture<Void>> closeFutures = new ArrayList<>(children.size());
+            for (Channel ch : children) {
+                final HttpServerHandler serverHandler = ch.pipeline().get(HttpServerHandler.class);
+                if (serverHandler != null) {
+                    closeFutures.add(serverHandler.shutdown(ch));
+                }
+            }
+
+            // The future returned by shutdown() will be always completed successfully.
+            final CompletableFuture<List<Void>> combined = CompletableFutures.allAsList(closeFutures);
+            config.workerGroup().schedule(() -> {
+                combined.complete(ImmutableList.of());
+                // TODO(ikhoon): Make the timeout configurable.
+                // Wait for up to 1 second to send shutdown responses to clients.
+            }, 1, TimeUnit.SECONDS);
+            return combined.thenApply(ignored -> null);
         }
 
         private void finishDoStop(CompletableFuture<Void> future) {

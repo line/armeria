@@ -20,13 +20,12 @@ import static com.linecorp.armeria.client.endpoint.WeightRampingUpStrategyBuilde
 import static com.linecorp.armeria.client.endpoint.WeightRampingUpStrategyBuilder.DEFAULT_RAMPING_UP_TASK_WINDOW_MILLIS;
 import static com.linecorp.armeria.client.endpoint.WeightRampingUpStrategyBuilder.DEFAULT_TOTAL_STEPS;
 import static com.linecorp.armeria.client.endpoint.WeightRampingUpStrategyBuilder.defaultTransition;
-import static com.linecorp.armeria.internal.client.endpoint.RampingUpKeys.createdAtNanos;
-import static com.linecorp.armeria.internal.client.endpoint.RampingUpKeys.hasCreatedAtNanos;
+import static com.linecorp.armeria.internal.client.endpoint.EndpointAttributeKeys.createdAtNanos;
+import static com.linecorp.armeria.internal.client.endpoint.EndpointAttributeKeys.hasCreatedAtNanos;
+import static com.linecorp.armeria.internal.client.endpoint.EndpointToStringUtil.toShortString;
 import static java.util.Objects.requireNonNull;
 
-import java.util.ArrayDeque;
 import java.util.ArrayList;
-import java.util.Deque;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -36,6 +35,9 @@ import java.util.Set;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.MoreObjects;
@@ -47,8 +49,10 @@ import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.endpoint.WeightRampingUpStrategy.EndpointsRampingUpEntry.EndpointAndStep;
 import com.linecorp.armeria.common.CommonPools;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.ListenableAsyncCloseable;
 import com.linecorp.armeria.common.util.Ticker;
+import com.linecorp.armeria.internal.common.util.ReentrantShortLock;
 
 import io.netty.util.concurrent.EventExecutor;
 import it.unimi.dsi.fastutil.objects.Object2LongOpenHashMap;
@@ -73,6 +77,8 @@ import it.unimi.dsi.fastutil.objects.Object2LongOpenHashMap;
  * C is updated alone every 2000 milliseconds. D is ramped up together with A and B at t4.
  */
 final class WeightRampingUpStrategy implements EndpointSelectionStrategy {
+
+    private static final Logger logger = LoggerFactory.getLogger(WeightRampingUpStrategy.class);
 
     private static final Ticker defaultTicker = Ticker.systemTicker();
     private static final WeightedRandomDistributionEndpointSelector EMPTY_SELECTOR =
@@ -129,10 +135,9 @@ final class WeightRampingUpStrategy implements EndpointSelectionStrategy {
         private final List<Endpoint> endpointsFinishedRampingUp = new ArrayList<>();
 
         @VisibleForTesting
-        final Deque<EndpointsRampingUpEntry> endpointsRampingUp = new ArrayDeque<>();
-        @VisibleForTesting
         final Map<Long, EndpointsRampingUpEntry> rampingUpWindowsMap = new HashMap<>();
         private Object2LongOpenHashMap<Endpoint> endpointCreatedTimestamps = new Object2LongOpenHashMap<>();
+        private final ReentrantShortLock lock = new ReentrantShortLock(true);
 
         RampingUpEndpointWeightSelector(EndpointGroup endpointGroup, EventExecutor executor) {
             super(endpointGroup);
@@ -145,8 +150,13 @@ final class WeightRampingUpStrategy implements EndpointSelectionStrategy {
 
         @Override
         protected void updateNewEndpoints(List<Endpoint> endpoints) {
-            // Use the executor so the order of endpoints change is guaranteed.
-            executor.execute(() -> updateEndpoints(endpoints));
+            // Use a lock so the order of endpoints change is guaranteed.
+            lock.lock();
+            try {
+                updateEndpoints(endpoints);
+            } finally {
+                lock.unlock();
+            }
         }
 
         private long computeCreateTimestamp(Endpoint endpoint) {
@@ -159,6 +169,7 @@ final class WeightRampingUpStrategy implements EndpointSelectionStrategy {
             return ticker.read();
         }
 
+        @Nullable
         @Override
         public Endpoint selectNow(ClientRequestContext ctx) {
             return endpointSelector.selectEndpoint();
@@ -224,7 +235,25 @@ final class WeightRampingUpStrategy implements EndpointSelectionStrategy {
                             endpointAndStep.endpoint().withWeight(endpointAndStep.currentWeight()));
                 }
             }
-            endpointSelector = new WeightedRandomDistributionEndpointSelector(targetEndpointsBuilder.build());
+            final List<Endpoint> endpoints = targetEndpointsBuilder.build();
+            if (rampingUpWindowsMap.isEmpty()) {
+                logger.info("Finished ramping up. endpoints: {}", toShortString(endpoints));
+            } else {
+                logger.debug("Ramping up. endpoints: {}", toShortString(endpoints));
+            }
+
+            boolean found = false;
+            for (Endpoint endpoint : endpoints) {
+                if (endpoint.weight() > 0) {
+                    found = true;
+                    break;
+                }
+            }
+            if (!found) {
+                logger.warn("No valid endpoint with weight > 0. endpoints: {}", toShortString(endpoints));
+            }
+
+            endpointSelector = new WeightedRandomDistributionEndpointSelector(endpoints);
         }
 
         @VisibleForTesting
@@ -244,14 +273,19 @@ final class WeightRampingUpStrategy implements EndpointSelectionStrategy {
         }
 
         private void updateWeightAndStep(long window) {
-            final EndpointsRampingUpEntry entry = rampingUpWindowsMap.get(window);
-            assert entry != null;
-            final Set<EndpointAndStep> endpointAndSteps = entry.endpointAndSteps();
-            updateWeightAndStep(endpointAndSteps);
-            if (endpointAndSteps.isEmpty()) {
-                rampingUpWindowsMap.remove(window).scheduledFuture.cancel(true);
+            lock.lock();
+            try {
+                final EndpointsRampingUpEntry entry = rampingUpWindowsMap.get(window);
+                assert entry != null;
+                final Set<EndpointAndStep> endpointAndSteps = entry.endpointAndSteps();
+                updateWeightAndStep(endpointAndSteps);
+                if (endpointAndSteps.isEmpty()) {
+                    rampingUpWindowsMap.remove(window).scheduledFuture.cancel(true);
+                }
+                buildEndpointSelector();
+            } finally {
+                lock.unlock();
             }
-            buildEndpointSelector();
         }
 
         private void updateWeightAndStep(Set<EndpointAndStep> endpointAndSteps) {
@@ -267,7 +301,21 @@ final class WeightRampingUpStrategy implements EndpointSelectionStrategy {
         }
 
         private void close() {
-            rampingUpWindowsMap.values().forEach(e -> e.scheduledFuture.cancel(true));
+            lock.lock();
+            try {
+                rampingUpWindowsMap.values().forEach(e -> e.scheduledFuture.cancel(true));
+            } finally {
+                lock.unlock();
+            }
+        }
+
+        @Override
+        public String toString() {
+            return MoreObjects.toStringHelper(this)
+                              .add("endpointSelector", endpointSelector)
+                              .add("endpointsFinishedRampingUp", endpointsFinishedRampingUp)
+                              .add("rampingUpWindowsMap", rampingUpWindowsMap)
+                              .toString();
         }
     }
 

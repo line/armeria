@@ -46,6 +46,7 @@ import com.linecorp.armeria.client.ClientBuilder;
 import com.linecorp.armeria.client.ClientFactoryBuilder;
 import com.linecorp.armeria.client.DnsResolverGroupBuilder;
 import com.linecorp.armeria.client.Endpoint;
+import com.linecorp.armeria.client.ResponseTimeoutMode;
 import com.linecorp.armeria.client.retry.Backoff;
 import com.linecorp.armeria.client.retry.RetryingClient;
 import com.linecorp.armeria.client.retry.RetryingRpcClient;
@@ -400,6 +401,11 @@ public final class Flags {
     private static final boolean TLS_ALLOW_UNSAFE_CIPHERS =
             getValue(FlagsProvider::tlsAllowUnsafeCiphers, "tlsAllowUnsafeCiphers");
 
+    // Maximum 16MiB https://datatracker.ietf.org/doc/html/rfc5246#section-7.4
+    private static final int DEFAULT_MAX_CLIENT_HELLO_LENGTH =
+            getValue(FlagsProvider::defaultMaxClientHelloLength, "defaultMaxClientHelloLength",
+                     value -> value >= 0 && value <= 16777216); // 16MiB
+
     private static final Set<TransientServiceOption> TRANSIENT_SERVICE_OPTIONS =
             getValue(FlagsProvider::transientServiceOptions, "transientServiceOptions");
 
@@ -433,6 +439,9 @@ public final class Flags {
     private static final long DEFAULT_HTTP1_CONNECTION_CLOSE_DELAY_MILLIS =
             getValue(FlagsProvider::defaultHttp1ConnectionCloseDelayMillis,
                     "defaultHttp1ConnectionCloseDelayMillis", value -> value >= 0);
+
+    private static final ResponseTimeoutMode RESPONSE_TIMEOUT_MODE =
+            getValue(FlagsProvider::responseTimeoutMode, "responseTimeoutMode");
 
     /**
      * Returns the specification of the {@link Sampler} that determines whether to retain the stack
@@ -583,6 +592,7 @@ public final class Flags {
             return tlsEngineType;
         }
         detectTlsEngineAndDumpOpenSslInfo();
+        assert tlsEngineType != null;
         return tlsEngineType;
     }
 
@@ -629,8 +639,9 @@ public final class Flags {
             final SSLEngine engine = SslContextUtil.createSslContext(
                     SslContextBuilder::forClient,
                     /* forceHttp1 */ false,
+                    tlsEngineType,
                     /* tlsAllowUnsafeCiphers */ false,
-                    ImmutableList.of(), null).newEngine(ByteBufAllocator.DEFAULT);
+                    null, null).newEngine(ByteBufAllocator.DEFAULT);
             logger.info("All available SSL protocols: {}",
                         ImmutableList.copyOf(engine.getSupportedProtocols()));
             logger.info("Default enabled SSL protocols: {}", SslContextUtil.DEFAULT_PROTOCOLS);
@@ -655,6 +666,7 @@ public final class Flags {
             return dumpOpenSslInfo;
         }
         detectTlsEngineAndDumpOpenSslInfo();
+        assert dumpOpenSslInfo != null;
         return dumpOpenSslInfo;
     }
 
@@ -1427,6 +1439,19 @@ public final class Flags {
     }
 
     /**
+     * Returns the default maximum client hello length that a server allows.
+     * The length shouldn't exceed 16MiB as described in
+     * <a href="https://datatracker.ietf.org/doc/html/rfc5246#section-7.4">Handshake Protocol</a>.
+     *
+     * <p>The default value of this flag is {@value DefaultFlagsProvider#DEFAULT_MAX_CLIENT_HELLO_LENGTH}.
+     * Specify the {@code -Dcom.linecorp.armeria.defaultMaxClientHelloLength=<integer>} JVM option to
+     * override the default value.
+     */
+    public static int defaultMaxClientHelloLength() {
+        return DEFAULT_MAX_CLIENT_HELLO_LENGTH;
+    }
+
+    /**
      * Returns the {@link Set} of {@link TransientServiceOption}s that are enabled for a
      * {@link TransientService}.
      *
@@ -1619,6 +1644,21 @@ public final class Flags {
     @UnstableApi
     public static long defaultHttp1ConnectionCloseDelayMillis() {
         return DEFAULT_HTTP1_CONNECTION_CLOSE_DELAY_MILLIS;
+    }
+
+    /**
+     * Returns the {@link ResponseTimeoutMode} which determines when a response timeout
+     * will start to be scheduled.
+     *
+     * <p>The default value of this flag is {@link ResponseTimeoutMode#REQUEST_SENT}. Specify the
+     * {@code -Dcom.linecorp.armeria.responseTimeoutMode=ResponseTimeoutMode} JVM option to
+     * override the default value.
+     *
+     * @see ResponseTimeoutMode
+     */
+    @UnstableApi
+    public static ResponseTimeoutMode responseTimeoutMode() {
+        return RESPONSE_TIMEOUT_MODE;
     }
 
     @Nullable

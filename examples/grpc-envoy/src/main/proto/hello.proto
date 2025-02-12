@@ -1,0 +1,19 @@
+syntax = "proto3";
+
+package example.grpc.hello;
+option java_package = "example.armeria.grpc.envoy";
+option java_multiple_files = false;
+
+import "google/api/annotations.proto";
+
+service HelloService {
+  rpc Hello (HelloRequest) returns (HelloReply);
+}
+
+message HelloRequest {
+  string name = 1;
+}
+
+message HelloReply {
+  string message = 1;
+}

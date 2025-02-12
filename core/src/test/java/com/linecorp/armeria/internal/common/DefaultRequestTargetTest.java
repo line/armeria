@@ -143,9 +143,9 @@ class DefaultRequestTargetTest {
     void dotsAndEqualsInNameValueQuery() {
         QUERY_SEPARATORS.forEach(qs -> {
             assertThat(forServer("/?a=..=" + qs + "b=..=")).satisfies(res -> {
-                assertThat(res).isNotNull();
-                assertThat(res.query()).isEqualTo("a=..=" + qs + "b=..=");
-                assertThat(QueryParams.fromQueryString(res.query(), true)).containsExactly(
+                assertThat(res.requestTarget).isNotNull();
+                assertThat(res.requestTarget.query()).isEqualTo("a=..=" + qs + "b=..=");
+                assertThat(QueryParams.fromQueryString(res.requestTarget.query(), true)).containsExactly(
                         Maps.immutableEntry("a", "..="),
                         Maps.immutableEntry("b", "..=")
                 );
@@ -153,8 +153,8 @@ class DefaultRequestTargetTest {
 
             assertThat(forServer("/?a==.." + qs + "b==..")).satisfies(res -> {
                 assertThat(res).isNotNull();
-                assertThat(res.query()).isEqualTo("a==.." + qs + "b==..");
-                assertThat(QueryParams.fromQueryString(res.query(), true)).containsExactly(
+                assertThat(res.requestTarget.query()).isEqualTo("a==.." + qs + "b==..");
+                assertThat(QueryParams.fromQueryString(res.requestTarget.query(), true)).containsExactly(
                         Maps.immutableEntry("a", "=.."),
                         Maps.immutableEntry("b", "=..")
                 );
@@ -162,8 +162,8 @@ class DefaultRequestTargetTest {
 
             assertThat(forServer("/?a==..=" + qs + "b==..=")).satisfies(res -> {
                 assertThat(res).isNotNull();
-                assertThat(res.query()).isEqualTo("a==..=" + qs + "b==..=");
-                assertThat(QueryParams.fromQueryString(res.query(), true)).containsExactly(
+                assertThat(res.requestTarget.query()).isEqualTo("a==..=" + qs + "b==..=");
+                assertThat(QueryParams.fromQueryString(res.requestTarget.query(), true)).containsExactly(
                         Maps.immutableEntry("a", "=..="),
                         Maps.immutableEntry("b", "=..=")
                 );
@@ -185,18 +185,17 @@ class DefaultRequestTargetTest {
     void shouldRejectControlChars(Mode mode) {
         assertRejected(parse(mode, "/\0"));
         assertRejected(parse(mode, "/a\nb"));
+        assertRejected(parse(mode, "/a\rb"));
         assertRejected(parse(mode, "/a\u007fb"));
 
         // Escaped
         assertRejected(parse(mode, "/%00"));
-        assertRejected(parse(mode, "/a%09b"));
         assertRejected(parse(mode, "/a%0ab"));
         assertRejected(parse(mode, "/a%0db"));
         assertRejected(parse(mode, "/a%7fb"));
 
         // With query string
         assertRejected(parse(mode, "/\0?c"));
-        assertRejected(parse(mode, "/a\tb?c"));
         assertRejected(parse(mode, "/a\nb?c"));
         assertRejected(parse(mode, "/a\rb?c"));
         assertRejected(parse(mode, "/a\u007fb?c"));
@@ -207,13 +206,33 @@ class DefaultRequestTargetTest {
         assertRejected(parse(mode, "/?a\u007fb"));
         assertRejected(parse(mode, "/?a%7Fb"));
 
-        // However, 0x0A, 0x0D, 0x09 should be accepted in a query string.
+        // However, 0x09, 0x1C-0x1F should be accepted in a path.
+        assertAccepted(parse(mode, "/a\tb"), "/a%09b");
+        assertAccepted(parse(mode, "/a\u001cb"), "/a%1Cb");
+        assertAccepted(parse(mode, "/a\u001db"), "/a%1Db");
+        assertAccepted(parse(mode, "/a\u001eb"), "/a%1Eb");
+        assertAccepted(parse(mode, "/a\u001fb"), "/a%1Fb");
+        assertAccepted(parse(mode, "/a%09b"), "/a%09b");
+        assertAccepted(parse(mode, "/a%1Cb"), "/a%1Cb");
+        assertAccepted(parse(mode, "/a%1Db"), "/a%1Db");
+        assertAccepted(parse(mode, "/a%1Eb"), "/a%1Eb");
+        assertAccepted(parse(mode, "/a%1Fb"), "/a%1Fb");
+
+        // However, 0x0A, 0x0D, 0x09, 0x1C-0x1F should be accepted in a query string.
         assertAccepted(parse(mode, "/?a\tb"), "/", "a%09b");
         assertAccepted(parse(mode, "/?a\nb"), "/", "a%0Ab");
         assertAccepted(parse(mode, "/?a\rb"), "/", "a%0Db");
+        assertAccepted(parse(mode, "/?a\u001cb"), "/", "a%1Cb");
+        assertAccepted(parse(mode, "/?a\u001db"), "/", "a%1Db");
+        assertAccepted(parse(mode, "/?a\u001eb"), "/", "a%1Eb");
+        assertAccepted(parse(mode, "/?a\u001fb"), "/", "a%1Fb");
         assertAccepted(parse(mode, "/?a%09b"), "/", "a%09b");
         assertAccepted(parse(mode, "/?a%0Ab"), "/", "a%0Ab");
         assertAccepted(parse(mode, "/?a%0Db"), "/", "a%0Db");
+        assertAccepted(parse(mode, "/?a%1Cb"), "/", "a%1Cb");
+        assertAccepted(parse(mode, "/?a%1Db"), "/", "a%1Db");
+        assertAccepted(parse(mode, "/?a%1Eb"), "/", "a%1Eb");
+        assertAccepted(parse(mode, "/?a%1Fb"), "/", "a%1Fb");
 
         if (mode == Mode.CLIENT) {
             // All sort of control characters should be rejected in a fragment.
@@ -221,12 +240,18 @@ class DefaultRequestTargetTest {
             assertRejected(forClient("/#%00"));
             assertRejected(forClient("/#a\u007fb"));
             assertRejected(forClient("/#a%7Fb"));
-            assertRejected(forClient("/#a\tb"));
             assertRejected(forClient("/#a\nb"));
             assertRejected(forClient("/#a\rb"));
-            assertRejected(forClient("/#a%09b"));
             assertRejected(forClient("/#a%0Ab"));
             assertRejected(forClient("/#a%0Db"));
+
+            // ... except the following.
+            assertAccepted(forClient("/#a\tb"), "/", null, "a%09b");
+            assertAccepted(forClient("/#a%09b"), "/", null, "a%09b");
+            assertAccepted(forClient("/#a%1Cb"), "/", null, "a%1Cb");
+            assertAccepted(forClient("/#a%1Db"), "/", null, "a%1Db");
+            assertAccepted(forClient("/#a%1Eb"), "/", null, "a%1Eb");
+            assertAccepted(forClient("/#a%1Fb"), "/", null, "a%1Fb");
         }
     }
 
@@ -475,9 +500,9 @@ class DefaultRequestTargetTest {
                                        String expectedScheme, String expectedAuthority, String expectedPath,
                                        @Nullable String expectedQuery, @Nullable String expectedFragment) {
 
-        final RequestTarget res = forClient(uri);
-        assertThat(res.scheme()).isEqualTo(expectedScheme);
-        assertThat(res.authority()).isEqualTo(expectedAuthority);
+        final RequestTargetWithRawPath res = forClient(uri);
+        assertThat(res.requestTarget.scheme()).isEqualTo(expectedScheme);
+        assertThat(res.requestTarget.authority()).isEqualTo(expectedAuthority);
         assertAccepted(res, expectedPath, emptyToNull(expectedQuery), emptyToNull(expectedFragment));
     }
 
@@ -506,15 +531,15 @@ class DefaultRequestTargetTest {
     @ParameterizedTest
     @EnumSource(Mode.class)
     void testToString(Mode mode) {
-        assertThat(parse(mode, "/")).asString().isEqualTo("/");
-        assertThat(parse(mode, "/?")).asString().isEqualTo("/?");
-        assertThat(parse(mode, "/?a=b")).asString().isEqualTo("/?a=b");
+        assertThat(parse(mode, "/").requestTarget).asString().isEqualTo("/");
+        assertThat(parse(mode, "/?").requestTarget).asString().isEqualTo("/?");
+        assertThat(parse(mode, "/?a=b").requestTarget).asString().isEqualTo("/?a=b");
 
         if (mode == Mode.CLIENT) {
-            assertThat(forClient("/#")).asString().isEqualTo("/#");
-            assertThat(forClient("/?#")).asString().isEqualTo("/?#");
-            assertThat(forClient("/?a=b#c=d")).asString().isEqualTo("/?a=b#c=d");
-            assertThat(forClient("http://foo/bar?a=b#c=d")).asString().isEqualTo("http://foo/bar?a=b#c=d");
+            assertThat(forClient("/#").requestTarget).asString().isEqualTo("/#");
+            assertThat(forClient("/?#").requestTarget).asString().isEqualTo("/?#");
+            assertThat(forClient("/?a=b#c=d").requestTarget).asString().isEqualTo("/?a=b#c=d");
+            assertThat(forClient("http://foo/bar?a=b#c=d").requestTarget).asString().isEqualTo("http://foo/bar?a=b#c=d");
         }
     }
 
@@ -547,32 +572,32 @@ class DefaultRequestTargetTest {
         assertThat(removeMatrixVariables("/prefix/;a=b")).isNull();
     }
 
-    private static void assertAccepted(@Nullable RequestTarget res, String expectedPath) {
+    private static void assertAccepted(RequestTargetWithRawPath res, String expectedPath) {
         assertAccepted(res, expectedPath, null, null);
     }
 
-    private static void assertAccepted(@Nullable RequestTarget res,
+    private static void assertAccepted(RequestTargetWithRawPath res,
                                        String expectedPath,
                                        @Nullable String expectedQuery) {
         assertAccepted(res, expectedPath, expectedQuery, null);
     }
 
-    private static void assertAccepted(@Nullable RequestTarget res,
+    private static void assertAccepted(RequestTargetWithRawPath res,
                                        String expectedPath,
                                        @Nullable String expectedQuery,
                                        @Nullable String expectedFragment) {
-        assertThat(res).isNotNull();
-        assertThat(res.path()).isEqualTo(expectedPath);
-        assertThat(res.query()).isEqualTo(expectedQuery);
-        assertThat(res.fragment()).isEqualTo(expectedFragment);
+        assertThat(res.requestTarget).isNotNull();
+        assertThat(res.requestTarget.path()).isEqualTo(expectedPath);
+        assertThat(res.requestTarget.query()).isEqualTo(expectedQuery);
+        assertThat(res.requestTarget.fragment()).isEqualTo(expectedFragment);
+        assertThat(res.requestTarget.rawPath()).isEqualTo(res.rawPath);
     }
 
-    private static void assertRejected(@Nullable RequestTarget res) {
-        assertThat(res).isNull();
+    private static void assertRejected(RequestTargetWithRawPath res) {
+        assertThat(res.requestTarget).isNull();
     }
 
-    @Nullable
-    private static RequestTarget parse(Mode mode, String rawPath) {
+    private static RequestTargetWithRawPath parse(Mode mode, String rawPath) {
         switch (mode) {
             case SERVER:
                 return forServer(rawPath);
@@ -583,37 +608,57 @@ class DefaultRequestTargetTest {
         }
     }
 
-    @Nullable
-    private static RequestTarget forServer(String rawPath) {
+    private static class RequestTargetWithRawPath {
+        @Nullable
+        final String rawPath;
+        @Nullable
+        final RequestTarget requestTarget;
+
+        RequestTargetWithRawPath(@Nullable String rawPath, @Nullable RequestTarget requestTarget) {
+            this.rawPath = rawPath;
+            this.requestTarget = requestTarget;
+        }
+
+        @Override
+        public String toString() {
+            return "RequestTargetWithRawPath{" +
+                    "rawPath='" + rawPath + '\'' +
+                    ", requestTarget=" + requestTarget +
+                    '}';
+        }
+    }
+
+    private static RequestTargetWithRawPath forServer(String rawPath) {
         return forServer(rawPath, false);
     }
 
-    @Nullable
-    private static RequestTarget forServer(String rawPath, boolean allowSemicolonInPathComponent) {
-        final RequestTarget res = DefaultRequestTarget.forServer(rawPath, allowSemicolonInPathComponent, false);
-        if (res != null) {
-            logger.info("forServer({}) => path: {}, query: {}", rawPath, res.path(), res.query());
+    private static RequestTargetWithRawPath forServer(String rawPath, boolean allowSemicolonInPathComponent) {
+        final RequestTarget target = DefaultRequestTarget.forServer(
+                rawPath,
+                allowSemicolonInPathComponent,
+                false);
+        if (target != null) {
+            logger.info("forServer({}) => path: {}, query: {}", rawPath, target.path(), target.query());
         } else {
             logger.info("forServer({}) => null", rawPath);
         }
-        return res;
+        return new RequestTargetWithRawPath(rawPath, target);
     }
 
-    @Nullable
-    private static RequestTarget forClient(String rawPath) {
+    private static RequestTargetWithRawPath forClient(String rawPath) {
         return forClient(rawPath, null);
     }
 
-    @Nullable
-    private static RequestTarget forClient(String rawPath, @Nullable String prefix) {
-        final RequestTarget res = DefaultRequestTarget.forClient(rawPath, prefix);
-        if (res != null) {
-            logger.info("forClient({}, {}) => path: {}, query: {}, fragment: {}", rawPath, prefix, res.path(),
-                        res.query(), res.fragment());
+    private static RequestTargetWithRawPath forClient(String rawPath, @Nullable String prefix) {
+        final RequestTarget target = DefaultRequestTarget.forClient(rawPath, prefix);
+        if (target != null) {
+            logger.info("forClient({}, {}) => path: {}, query: {}, fragment: {}",
+                    rawPath, prefix, target.path(),
+                    target.query(), target.fragment());
         } else {
             logger.info("forClient({}, {}) => null", rawPath, prefix);
         }
-        return res;
+        return new RequestTargetWithRawPath(null, target);
     }
 
     private static String toAbsolutePath(String pattern) {

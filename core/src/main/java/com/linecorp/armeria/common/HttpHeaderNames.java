@@ -40,6 +40,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.math.IntMath;
 
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 
 import io.netty.util.AsciiString;
 
@@ -237,6 +238,7 @@ public final class HttpHeaderNames {
      * The HTTP {@code "Git-Protocol"} header field name, as described in
      * <a href="https://git-scm.com/docs/protocol-v2#_http_transport">HTTP Transport</a>.
      */
+    @UnstableApi
     public static final AsciiString GIT_PROTOCOL = create("Git-Protocol");
     /**
      * The HTTP {@code "Host"} header field name.
@@ -745,6 +747,12 @@ public final class HttpHeaderNames {
     public static final AsciiString PERMISSIONS_POLICY = create("Permissions-Policy");
     /**
      * The HTTP <a
+     * href="https://w3c.github.io/webappsec-permissions-policy/#permissions-policy-report-only-http-header-field">{@code
+     * Permissions-Policy-Report-Only}</a> header field name.
+     */
+    public static final AsciiString PERMISSIONS_POLICY_REPORT_ONLY = create("Permissions-Policy-Report-Only");
+    /**
+     * The HTTP <a
      * href="https://datatracker.ietf.org/doc/html/rfc8942">{@code
      * Accept-CH}</a> header field name.
      */
@@ -903,23 +911,38 @@ public final class HttpHeaderNames {
      */
     public static final AsciiString OBSERVE_BROWSING_TOPICS = create("Observe-Browsing-Topics");
     /**
-     * The HTTP <a href="https://datatracker.ietf.org/doc/html/rfc8586">{@code CDN-Loop}</a> header field name.
-     */
-    public static final AsciiString CDN_LOOP = create("CDN-Loop");
-
-    /**
      * The HTTP <a
      * href="https://wicg.github.io/turtledove/#handling-direct-from-seller-signals">{@code
      * Sec-Ad-Auction-Fetch}</a> header field name.
      */
     public static final AsciiString SEC_AD_AUCTION_FETCH = create("Sec-Ad-Auction-Fetch");
-
+    /**
+     * The HTTP <a
+     * href="https://privacycg.github.io/gpc-spec/#the-sec-gpc-header-field-for-http-requests">{@code
+     * Sec-GPC}</a> header field name.
+     */
+    public static final AsciiString SEC_GPC = create("Sec-GPC");
     /**
      * The HTTP <a
      * href="https://wicg.github.io/turtledove/#handling-direct-from-seller-signals">{@code
      * Ad-Auction-Signals}</a> header field name.
      */
     public static final AsciiString AD_AUCTION_SIGNALS = create("Ad-Auction-Signals");
+    /**
+     * The HTTP <a href="https://wicg.github.io/turtledove/#http-headerdef-ad-auction-allowed">{@code
+     * Ad-Auction-Allowed}</a> header field name.
+     */
+    public static final AsciiString AD_AUCTION_ALLOWED = create("Ad-Auction-Allowed");
+    /**
+     * The HTTP <a href="https://datatracker.ietf.org/doc/html/rfc8586">{@code CDN-Loop}</a> header field name.
+     */
+    public static final AsciiString CDN_LOOP = create("CDN-Loop");
+
+    /**
+     * The HTTP <a href="https://wicg.github.io/ua-client-hints/#sec-ch-ua-form-factors">{@code
+     * Sec-CH-UA-Form-Factors}</a> header field name.
+     */
+    public static final AsciiString SEC_CH_UA_FORM_FACTORS = create("Sec-CH-UA-Form-Factors");
 
     private static final Map<CharSequence, AsciiString> map;
     private static final Map<AsciiString, String> inverseMap;
@@ -941,6 +964,7 @@ public final class HttpHeaderNames {
             }
         }
         map = builder.build();
+        assert inverseMapBuilder != null;
         inverseMap = inverseMapBuilder.build();
         // inverseMapBuilder is used only when building inverseMap.
         inverseMapBuilder = null;
@@ -948,6 +972,7 @@ public final class HttpHeaderNames {
 
     private static AsciiString create(String name) {
         final AsciiString cached = AsciiString.cached(Ascii.toLowerCase(name));
+        assert inverseMapBuilder != null;
         inverseMapBuilder.put(cached, name);
         return cached;
     }

@@ -272,6 +272,9 @@ final class FuseableStreamMessage<T, U> implements StreamMessage<U> {
                 return;
             }
 
+            final Subscription upstream = this.upstream;
+            assert upstream != null;
+
             U result = null;
             try {
                 if (function != null) {
@@ -292,8 +295,8 @@ final class FuseableStreamMessage<T, U> implements StreamMessage<U> {
                 if (result != null && item != result) {
                     StreamMessageUtil.closeOrAbort(result, ex);
                 }
-                upstream.cancel();
                 onError(ex);
+                upstream.cancel();
             }
         }
 
@@ -332,6 +335,8 @@ final class FuseableStreamMessage<T, U> implements StreamMessage<U> {
             if (canceled) {
                 return;
             }
+            final Subscription upstream = this.upstream;
+            assert upstream != null;
             upstream.request(n);
         }
 
@@ -342,6 +347,8 @@ final class FuseableStreamMessage<T, U> implements StreamMessage<U> {
             }
 
             canceled = true;
+            final Subscription upstream = this.upstream;
+            assert upstream != null;
             upstream.cancel();
         }
     }

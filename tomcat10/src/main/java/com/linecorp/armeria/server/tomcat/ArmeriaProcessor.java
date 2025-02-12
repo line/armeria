@@ -27,6 +27,8 @@ import org.apache.tomcat.util.buf.ByteChunk;
 import org.apache.tomcat.util.net.AbstractEndpoint;
 import org.apache.tomcat.util.net.SocketWrapperBase;
 
+import com.linecorp.armeria.common.annotation.Nullable;
+
 import jakarta.servlet.ServletConnection;
 
 /**
@@ -51,6 +53,9 @@ final class ArmeriaProcessor extends AbstractProcessor {
 
     @Override
     protected void ack(ContinueResponseTiming continueResponseTiming) {}
+
+    @Override
+    protected void earlyHints() throws IOException {}
 
     @Override
     protected void flush() throws IOException {}
@@ -87,6 +92,7 @@ final class ArmeriaProcessor extends AbstractProcessor {
         return false;
     }
 
+    @Nullable
     @Override
     protected ServletConnection getServletConnection() {
         return null;
@@ -102,6 +108,7 @@ final class ArmeriaProcessor extends AbstractProcessor {
         throw new UnsupportedOperationException();
     }
 
+    @Nullable
     @Override
     protected AbstractEndpoint.Handler.SocketState service(SocketWrapperBase<?> socketWrapper)
             throws IOException {

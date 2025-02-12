@@ -21,6 +21,7 @@ import static java.util.Objects.requireNonNull;
 
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
 import java.util.Formatter;
 import java.util.List;
 import java.util.Locale;
@@ -47,9 +48,11 @@ import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.stream.PublisherBasedStreamMessage;
 import com.linecorp.armeria.common.stream.StreamMessage;
+import com.linecorp.armeria.common.stream.StreamTimeoutMode;
 import com.linecorp.armeria.common.stream.SubscriptionOption;
 import com.linecorp.armeria.internal.common.DefaultHttpRequest;
 import com.linecorp.armeria.internal.common.DefaultSplitHttpRequest;
+import com.linecorp.armeria.internal.common.HeaderOverridingHttpRequest;
 import com.linecorp.armeria.internal.common.stream.SurroundingPublisher;
 import com.linecorp.armeria.unsafe.PooledObjects;
 
@@ -478,8 +481,7 @@ public interface HttpRequest extends Request, HttpMessage {
             // Just check the reference only to avoid heavy comparison.
             return this;
         }
-
-        return new HeaderOverridingHttpRequest(this, newHeaders);
+        return HeaderOverridingHttpRequest.of(this, newHeaders);
     }
 
     /**
@@ -815,5 +817,17 @@ public interface HttpRequest extends Request, HttpMessage {
     default HttpRequest subscribeOn(EventExecutor eventExecutor) {
         requireNonNull(eventExecutor, "eventExecutor");
         return of(headers(), HttpMessage.super.subscribeOn(eventExecutor));
+    }
+
+    @UnstableApi
+    @Override
+    default HttpRequest timeout(Duration timeoutDuration) {
+        return timeout(timeoutDuration, StreamTimeoutMode.UNTIL_NEXT);
+    }
+
+    @UnstableApi
+    @Override
+    default HttpRequest timeout(Duration timeoutDuration, StreamTimeoutMode timeoutMode) {
+        return of(headers(), HttpMessage.super.timeout(timeoutDuration, timeoutMode));
     }
 }

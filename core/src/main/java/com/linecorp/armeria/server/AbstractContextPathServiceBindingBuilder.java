@@ -18,9 +18,10 @@ package com.linecorp.armeria.server;
 
 import static java.util.Objects.requireNonNull;
 
-abstract class AbstractContextPathServiceBindingBuilder<T extends AbstractContextPathServicesBuilder<?, ?>,
-        SELF extends AbstractContextPathServiceBindingBuilder<T, SELF>>
-        extends AbstractServiceBindingBuilder<AbstractContextPathServiceBindingBuilder<T, SELF>> {
+abstract class AbstractContextPathServiceBindingBuilder
+        <SELF extends AbstractContextPathServiceBindingBuilder<SELF, T>,
+                T extends AbstractContextPathServicesBuilder<?, ?>>
+        extends AbstractServiceBindingBuilder<SELF> {
 
     private final T contextPathServicesBuilder;
 
