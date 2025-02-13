@@ -1113,6 +1113,7 @@ bss.design
 bt
 bt.it
 bu.no
+bubbleapps.io
 budejju.no
 build
 builders
@@ -1290,6 +1291,7 @@ cci.fr
 cd
 cd.eu.org
 cdn-edges.net
+cdn.bubble.io
 cdn.cloudflare.net
 cdn.cloudflareanycast.net
 cdn.cloudflarecn.net
