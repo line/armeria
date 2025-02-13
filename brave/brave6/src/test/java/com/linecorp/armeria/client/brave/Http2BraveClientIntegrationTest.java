@@ -18,6 +18,7 @@ package com.linecorp.armeria.client.brave;
 import com.linecorp.armeria.common.SessionProtocol;
 
 class Http2BraveClientIntegrationTest extends BraveClientIntegrationTest {
+
     Http2BraveClientIntegrationTest() {
         super(SessionProtocol.H2C);
     }
