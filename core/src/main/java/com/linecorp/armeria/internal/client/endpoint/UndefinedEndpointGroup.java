@@ -54,7 +54,7 @@ public final class UndefinedEndpointGroup implements EndpointGroup {
 
     @Override
     public List<Endpoint> endpoints() {
-        return ImmutableList.of();
+        throw new UnsupportedOperationException(getClass().getSimpleName() + ".endpoints() is not supported");
     }
 
     @Override

@@ -695,9 +695,8 @@ public final class Clients {
      * {@code isUndefinedUri(WebClient.of().uri())} will return {@code true}.
      */
     public static boolean isUndefinedUri(URI uri) {
-        return (uri == ClientUtil.UNDEFINED_URI ||
-                ClientBuilderParamsUtil.UNDEFINED_URI_AUTHORITY.equals(uri.getAuthority())) &&
-                uri.getPort() == 1;
+        return uri == ClientUtil.UNDEFINED_URI ||
+               ClientBuilderParamsUtil.UNDEFINED_URI_AUTHORITY.equals(uri.getAuthority());
     }
 
     private Clients() {}
