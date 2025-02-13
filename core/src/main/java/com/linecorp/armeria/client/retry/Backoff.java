@@ -178,7 +178,7 @@ public interface Backoff extends Unwrappable {
      * backoff delay which is a random value. The default values are as follows:
      * <ul>
      *   <li><code>minDelayMillis</code>: 200</li>
-     *   <li><code>maxDelayMillis</code>: 10000</li>dd
+     *   <li><code>maxDelayMillis</code>: 10000</li>
      * </ul>
      */
     @UnstableApi
