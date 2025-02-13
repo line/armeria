@@ -33,16 +33,16 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
  * <pre>
  * {@code
  * BackOff backoff = Backoff.builderForRandom()
- *     .minDelayMillis(1000)
- *     .maxDelayMillis(3000)
+ *     .minDelayMillis(200)
+ *     .maxDelayMillis(10000)
  *     .build();
  * }
  * </pre>
  */
 @UnstableApi
 public final class RandomBackoffBuilder extends AbstractBackoffBuilder<RandomBackoffBuilder> {
-    private long minDelayMillis;
-    private long maxDelayMillis;
+    private long minDelayMillis = 200;
+    private long maxDelayMillis = 10000;
     private Supplier<Random> randomSupplier = Random::new;
 
     RandomBackoffBuilder() {}

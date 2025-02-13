@@ -32,7 +32,7 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
  * <pre>
  * {@code
  * Backoff backoff = Backoff.builderForFibonacci()
- *     .initialDelayMillis(100)
+ *     .initialDelayMillis(200)
  *     .maxDelayMillis(10000)
  *     .build();
  * }
@@ -40,8 +40,8 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
  */
 @UnstableApi
 public final class FibonacciBackoffBuilder extends AbstractBackoffBuilder<FibonacciBackoffBuilder> {
-    private long initialDelayMillis;
-    private long maxDelayMillis;
+    private long initialDelayMillis = 200;
+    private long maxDelayMillis = 10000;
 
     FibonacciBackoffBuilder() {}
 

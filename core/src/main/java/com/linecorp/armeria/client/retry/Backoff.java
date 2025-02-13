@@ -136,7 +136,7 @@ public interface Backoff extends Unwrappable {
      * Returns a {@link ExponentialBackoffBuilder} that provides methods to configure
      * backoff delay which is exponentially-increasing. The default values are as follows:
      * <ul>
-     *   <li><code>initialDelayMillis</code>: 100</li>
+     *   <li><code>initialDelayMillis</code>: 200</li>
      *   <li><code>maxDelayMillis</code>: 10000</li>
      *   <li><code>multiplier</code>: 2.0</li>
      * </ul>
@@ -150,6 +150,11 @@ public interface Backoff extends Unwrappable {
      * Returns a {@link FibonacciBackoffBuilder} that provides methods to configure
      * backoff delay which follows fibonacci sequence.
      * f(n) = f(n-1) + f(n-2) where f(0) = f(1) = {@code initialDelayMillis}
+     * The default values are as follows:
+     * <ul>
+     *   <li><code>initialDelayMillis</code>: 200</li>
+     *   <li><code>maxDelayMillis</code>: 10000</li>
+     * </ul>
      */
     @UnstableApi
     static FibonacciBackoffBuilder builderForFibonacci() {
@@ -158,7 +163,10 @@ public interface Backoff extends Unwrappable {
 
     /**
      * Returns a {@link FixedBackoffBuilder} that provides methods to configure
-     * backoff delay which is a fixed value.
+     * backoff delay which is a fixed value. The default values are as follows:
+     * <ul>
+     *   <li><code>delayMillis;</code>: 500</li>
+     * </ul>
      */
     @UnstableApi
     static FixedBackoffBuilder builderForFixed() {
@@ -167,7 +175,11 @@ public interface Backoff extends Unwrappable {
 
     /**
      * Returns a {@link RandomBackoffBuilder} that provides methods to configure
-     * backoff delay which is a random value.
+     * backoff delay which is a random value. The default values are as follows:
+     * <ul>
+     *   <li><code>minDelayMillis</code>: 200</li>
+     *   <li><code>maxDelayMillis</code>: 10000</li>dd
+     * </ul>
      */
     @UnstableApi
     static RandomBackoffBuilder builderForRandom() {

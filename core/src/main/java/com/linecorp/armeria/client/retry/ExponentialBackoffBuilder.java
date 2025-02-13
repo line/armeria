@@ -32,7 +32,7 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
  * <pre>
  * {@code
  * Backoff backoff = Backoff.builderForExponential()
- *     .initialDelayMillis(100)
+ *     .initialDelayMillis(200)
  *     .maxDelayMillis(10000)
  *     .multiplier(2.0)
  *     .build();
@@ -41,7 +41,7 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
  */
 @UnstableApi
 public final class ExponentialBackoffBuilder extends AbstractBackoffBuilder<ExponentialBackoffBuilder> {
-    private long initialDelayMillis = 100;
+    private long initialDelayMillis = 200;
     private long maxDelayMillis = 10000;
     private double multiplier = 2.0;
 

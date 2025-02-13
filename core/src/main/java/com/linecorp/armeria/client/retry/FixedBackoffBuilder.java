@@ -31,14 +31,14 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
  * <pre>
  * {@code
  * Backoff backoff = Backoff.builderForFixed()
- *     .delayMillis(1000)
+ *     .delayMillis(500)
  *     .build();
  * }
  * </pre>
  */
 @UnstableApi
 public final class FixedBackoffBuilder extends AbstractBackoffBuilder<FixedBackoffBuilder> {
-    private long delayMillis;
+    private long delayMillis = 500;
 
     FixedBackoffBuilder() {}
 
