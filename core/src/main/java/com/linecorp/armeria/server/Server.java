@@ -460,7 +460,14 @@ public final class Server implements ListenableAsyncCloseable {
         requireNonNull(serverConfigurator, "serverConfigurator");
         final ServerBuilder sb = builder();
         serverConfigurator.reconfigure(sb);
-        final DefaultServerConfig newConfig = sb.buildServerConfig(config());
+        final ImmutableList<ServerPort> serverPorts;
+        lock.lock();
+        try {
+            serverPorts = ImmutableList.copyOf(activePorts.values());
+        } finally {
+            lock.unlock();
+        }
+        final DefaultServerConfig newConfig = sb.buildServerConfig(serverPorts);
         newConfig.setServer(this);
         config.updateConfig(newConfig);
         // Invoke the serviceAdded() method in Service so that it can keep the reference to this Server or
@@ -522,12 +529,12 @@ public final class Server implements ListenableAsyncCloseable {
             try {
                 doStart(primary).addListener(new ServerPortStartListener(primary))
                                 .addListener(new NextServerPortStartListener(this, it, future));
-                setupServerMetrics();
+                // Chain the future to set up server metrics first before server start future is completed.
+                return future.thenAccept(unused -> bindServerMetricsToMeterRegistry());
             } catch (Throwable cause) {
                 future.completeExceptionally(cause);
+                return future;
             }
-
-            return future;
         }
 
         private ChannelFuture doStart(ServerPort port) {
@@ -582,7 +589,7 @@ public final class Server implements ListenableAsyncCloseable {
             return b.bind(localAddress);
         }
 
-        private void setupServerMetrics() {
+        private void bindServerMetricsToMeterRegistry() {
             final MeterRegistry meterRegistry = config.meterRegistry();
             final GracefulShutdownSupport gracefulShutdownSupport = this.gracefulShutdownSupport;
             assert gracefulShutdownSupport != null;
@@ -832,13 +839,16 @@ public final class Server implements ListenableAsyncCloseable {
                 // Update the boss thread so its name contains the actual port.
                 Thread.currentThread().setName(bossThreadName(actualPort));
 
+                final InetSocketAddress actualLocalAddress = actualPort.localAddress();
                 lock.lock();
                 try {
                     // Update the map of active ports.
-                    activePorts.put(actualPort.localAddress(), actualPort);
+                    activePorts.put(actualLocalAddress, actualPort);
                 } finally {
                     lock.unlock();
                 }
+
+                config().serverMetrics().addActivePort(actualPort);
 
                 if (logger.isInfoEnabled()) {
                     if (isLocalPort(actualPort)) {

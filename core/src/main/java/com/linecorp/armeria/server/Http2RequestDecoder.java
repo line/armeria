@@ -16,11 +16,15 @@
 
 package com.linecorp.armeria.server;
 
+import static com.google.common.base.MoreObjects.firstNonNull;
+import static com.linecorp.armeria.server.HttpServerHandler.UNKNOWN_ADDR;
 import static com.linecorp.armeria.server.HttpServerPipelineConfigurator.SCHEME_HTTP;
 import static com.linecorp.armeria.server.ServiceRouteUtil.newRoutingContext;
 import static io.netty.handler.codec.http2.Http2Error.INTERNAL_ERROR;
 import static io.netty.handler.codec.http2.Http2Error.PROTOCOL_ERROR;
 import static io.netty.handler.codec.http2.Http2Exception.connectionError;
+
+import java.net.InetSocketAddress;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -41,6 +45,7 @@ import com.linecorp.armeria.internal.common.ArmeriaHttpUtil;
 import com.linecorp.armeria.internal.common.Http2GoAwayHandler;
 import com.linecorp.armeria.internal.common.InboundTrafficController;
 import com.linecorp.armeria.internal.common.KeepAliveHandler;
+import com.linecorp.armeria.internal.common.util.ChannelUtil;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
@@ -65,6 +70,7 @@ final class Http2RequestDecoder extends Http2EventAdapter {
 
     private final ServerConfig cfg;
     private final Channel channel;
+    private final InetSocketAddress localAddress;
     private final AsciiString scheme;
     @Nullable
     private ServerHttp2ObjectEncoder encoder;
@@ -79,6 +85,7 @@ final class Http2RequestDecoder extends Http2EventAdapter {
                         AsciiString scheme, KeepAliveHandler keepAliveHandler) {
         this.cfg = cfg;
         this.channel = channel;
+        localAddress = firstNonNull(ChannelUtil.localAddress(channel), UNKNOWN_ADDR);
         this.scheme = scheme;
         inboundTrafficController =
                 InboundTrafficController.ofHttp2(channel, cfg.http2InitialConnectionWindowSize());
@@ -211,7 +218,7 @@ final class Http2RequestDecoder extends Http2EventAdapter {
                 abortLargeRequest(req, endOfStream, true);
             }
             requests.put(streamId, req);
-            cfg.serverMetrics().increasePendingHttp2Requests();
+            cfg.serverMetrics().increasePendingHttp2Requests(localAddress);
             ctx.fireChannelRead(req);
         } else {
             if (!(req instanceof DecodedHttpRequestWriter)) {

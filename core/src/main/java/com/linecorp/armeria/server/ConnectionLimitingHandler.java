@@ -16,6 +16,10 @@
 
 package com.linecorp.armeria.server;
 
+import static com.google.common.base.MoreObjects.firstNonNull;
+import static com.linecorp.armeria.server.HttpServerHandler.UNKNOWN_ADDR;
+
+import java.net.InetSocketAddress;
 import java.util.Collections;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -25,6 +29,8 @@ import java.util.concurrent.atomic.LongAdder;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import com.linecorp.armeria.internal.common.util.ChannelUtil;
 
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.Channel;
@@ -59,17 +65,17 @@ final class ConnectionLimitingHandler extends ChannelInboundHandlerAdapter {
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
         final Channel child = (Channel) msg;
-
-        final int conn = serverMetrics.increaseActiveConnectionsAndGet();
+        final InetSocketAddress localAddress = firstNonNull(ChannelUtil.localAddress(child), UNKNOWN_ADDR);
+        final int conn = serverMetrics.increaseActiveConnectionsAndGet(localAddress);
         if (conn > 0 && conn <= maxNumConnections) {
             childChannels.add(child);
             child.closeFuture().addListener(future -> {
                 childChannels.remove(child);
-                serverMetrics.decreaseActiveConnections();
+                serverMetrics.decreaseActiveConnections(localAddress);
             });
             super.channelRead(ctx, msg);
         } else {
-            serverMetrics.decreaseActiveConnections();
+            serverMetrics.decreaseActiveConnections(localAddress);
 
             // Set linger option to 0 so that the server doesn't get too many TIME_WAIT states.
             child.config().setOption(ChannelOption.SO_LINGER, 0);

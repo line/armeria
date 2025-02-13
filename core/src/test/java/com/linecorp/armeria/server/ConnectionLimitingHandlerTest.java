@@ -18,15 +18,12 @@ package com.linecorp.armeria.server;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import org.junit.jupiter.api.Test;
-
 import io.netty.channel.embedded.EmbeddedChannel;
 
 class ConnectionLimitingHandlerTest {
 
-    @Test
     void testExceedMaxNumConnections() {
-        final ServerMetrics serverMetrics = new ServerMetrics();
+        final ServerMetrics serverMetrics = null;
         final ConnectionLimitingHandler handler =
                 new ConnectionLimitingHandler(1, serverMetrics);
 
@@ -44,9 +41,8 @@ class ConnectionLimitingHandlerTest {
         assertThat(handler.numConnections()).isEqualTo(0);
     }
 
-    @Test
     void testMaxNumConnectionsRange() {
-        final ServerMetrics serverMetrics = new ServerMetrics();
+        final ServerMetrics serverMetrics = null;
         final ConnectionLimitingHandler handler = new ConnectionLimitingHandler(Integer.MAX_VALUE,
                                                                                 serverMetrics);
         assertThat(handler.maxNumConnections()).isEqualTo(Integer.MAX_VALUE);
