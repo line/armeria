@@ -88,7 +88,7 @@ public abstract class AbstractEndpointSelector implements EndpointSelector {
     @UnstableApi
     protected void updateNewEndpoints(List<Endpoint> endpoints) {}
 
-    private static class EndpointAsyncSelector extends AbstractAsyncSelector<Endpoint> {
+    private class EndpointAsyncSelector extends AbstractAsyncSelector<Endpoint> {
 
         private final EndpointGroup endpointGroup;
 
@@ -106,7 +106,7 @@ public abstract class AbstractEndpointSelector implements EndpointSelector {
         @Nullable
         @Override
         protected Endpoint selectNow(ClientRequestContext ctx) {
-            return endpointGroup.selectNow(ctx);
+            return AbstractEndpointSelector.this.selectNow(ctx);
         }
 
         @VisibleForTesting
