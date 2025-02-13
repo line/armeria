@@ -18,7 +18,6 @@ package com.linecorp.armeria.client.brave;
 import com.linecorp.armeria.common.SessionProtocol;
 
 class Http1BraveClientIntegrationTest extends BraveClientIntegrationTest {
-
     Http1BraveClientIntegrationTest() {
         super(SessionProtocol.H1C);
     }
