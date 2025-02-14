@@ -439,7 +439,8 @@ final class HttpClientFactory implements ClientFactory {
             if (params.clientType() != HttpClient.class) {
                 throw new IllegalArgumentException(
                         "At least one preprocessor must be specified for http-based clients " +
-                        "with sessionProtocol '" + params.scheme().sessionProtocol() + "'.");
+                        "with sessionProtocol '" + params.scheme().sessionProtocol() +
+                        "' and clientType '" + params.clientType() + "'.");
             }
         }
         if (Clients.isUndefinedUri(params.uri()) && !"/".equals(params.absolutePathRef())) {

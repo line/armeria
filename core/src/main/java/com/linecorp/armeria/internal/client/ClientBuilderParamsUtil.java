@@ -25,6 +25,7 @@ import com.google.common.base.Strings;
 
 import com.linecorp.armeria.client.ClientPreprocessors;
 import com.linecorp.armeria.client.Clients;
+import com.linecorp.armeria.client.HttpPreprocessor;
 import com.linecorp.armeria.client.Preprocessor;
 import com.linecorp.armeria.common.Scheme;
 import com.linecorp.armeria.common.SerializationFormat;
@@ -38,7 +39,7 @@ public final class ClientBuilderParamsUtil {
     public static final String ENDPOINT_GROUP_PREFIX = "armeria-group-";
     public static final String UNDEFINED_URI_AUTHORITY = "armeria-undefined:1";
 
-    public static URI preprocessorToUri(Preprocessor<?, ?> preprocessor, @Nullable String absolutePathRef) {
+    public static URI preprocessorToUri(HttpPreprocessor preprocessor, @Nullable String absolutePathRef) {
         return preprocessorToUri(Scheme.of(SerializationFormat.NONE, SessionProtocol.HTTP),
                                  preprocessor, absolutePathRef);
     }

@@ -357,7 +357,6 @@ public final class Clients {
      * @see ClientBuilder ClientBuilder, for more information about how the base options and
      *                    additional options are merged when a derived client is created.
      */
-    @SuppressWarnings("unchecked")
     public static <T> T newDerivedClient(T client, Iterable<ClientOptionValue<?>> additionalOptions) {
         final ClientBuilderParams params = builderParams(client);
         final ClientOptions newOptions = ClientOptions.builder()
@@ -367,7 +366,7 @@ public final class Clients {
         final ClientBuilderParams newParams = params.paramsBuilder()
                                                     .options(newOptions)
                                                     .build();
-        return (T) newOptions.factory().newClient(newParams);
+        return newDerivedClient(newOptions, newParams);
     }
 
     /**
@@ -394,24 +393,16 @@ public final class Clients {
     public static <T> T newDerivedClient(
             T client, Function<? super ClientOptions, ClientOptions> configurator) {
         final ClientBuilderParams params = builderParams(client);
-        final ClientBuilder builder = newDerivedBuilder(params, false);
-        builder.options(configurator.apply(params.options()));
-
-        return newDerivedClient(builder, params.clientType());
+        final ClientOptions newOptions = configurator.apply(params.options());
+        final ClientBuilderParams newParams = params.paramsBuilder()
+                                                    .options(newOptions)
+                                                    .build();
+        return newDerivedClient(newOptions, newParams);
     }
 
     @SuppressWarnings("unchecked")
-    private static <T> T newDerivedClient(ClientBuilder builder, Class<?> clientType) {
-        return builder.build((Class<T>) clientType);
-    }
-
-    private static ClientBuilder newDerivedBuilder(ClientBuilderParams params, boolean setOptions) {
-        final ClientBuilder builder = builder(params.scheme(), params.endpointGroup(),
-                                              params.absolutePathRef());
-        if (setOptions) {
-            builder.options(params.options());
-        }
-        return builder;
+    private static <T> T newDerivedClient(ClientOptions options, ClientBuilderParams params) {
+        return (T) options.factory().newClient(params);
     }
 
     private static ClientBuilderParams builderParams(Object client) {

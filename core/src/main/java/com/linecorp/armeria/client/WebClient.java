@@ -258,7 +258,7 @@ public interface WebClient extends ClientBuilderParams, Unwrappable {
      */
     @UnstableApi
     static WebClientBuilder builder(HttpPreprocessor httpPreprocessor) {
-        return new WebClientBuilder(httpPreprocessor, null);
+        return new WebClientBuilder(requireNonNull(httpPreprocessor, "httpPreprocessor"), null);
     }
 
     /**
