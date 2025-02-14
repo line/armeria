@@ -389,8 +389,9 @@ final class DefaultCancellationScheduler implements CancellationScheduler {
         return cause;
     }
 
+    @Override
     @VisibleForTesting
-    State state() {
+    public State state() {
         return state;
     }
 

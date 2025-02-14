@@ -29,6 +29,7 @@ import java.util.concurrent.Executor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Splitter;
 
 import com.linecorp.armeria.common.HttpData;
@@ -111,8 +112,9 @@ public abstract class AbstractServerCall<I, O> extends ServerCall<I, O> {
     private final String clientAcceptEncoding;
     private final boolean autoCompression;
 
+    @VisibleForTesting
     @Nullable
-    private final Executor blockingExecutor;
+    final Executor blockingExecutor;
     private final InternalGrpcExceptionHandler exceptionHandler;
 
     // Only set once.
@@ -382,6 +384,11 @@ public abstract class AbstractServerCall<I, O> extends ServerCall<I, O> {
     }
 
     protected final void invokeOnReady() {
+        if (blockingExecutor != null && cancelled) {
+            // Do not call listener.onReady() if the call is cancelled after
+            // this task was scheduled to blockingTaskExecutor.
+            return;
+        }
         try {
             if (listener != null) {
                 listener.onReady();
@@ -392,6 +399,11 @@ public abstract class AbstractServerCall<I, O> extends ServerCall<I, O> {
     }
 
     private void invokeOnMessage(I request, boolean halfClose) {
+        if (blockingExecutor != null && cancelled) {
+            // Do not call listener.onMessage() if the call is cancelled after
+            // this task was scheduled to blockingTaskExecutor.
+            return;
+        }
         try (SafeCloseable ignored = ctx.push()) {
             assert listener != null;
             listener.onMessage(request);
@@ -404,6 +416,11 @@ public abstract class AbstractServerCall<I, O> extends ServerCall<I, O> {
     }
 
     protected final void invokeHalfClose() {
+        if (blockingExecutor != null && cancelled) {
+            // Do not call listener.onHalfClose() if the call is cancelled after
+            // this task was scheduled to blockingTaskExecutor.
+            return;
+        }
         try (SafeCloseable ignored = ctx.push()) {
             assert listener != null;
             listener.onHalfClose();

@@ -148,6 +148,13 @@ class EndpointTest {
         // The trailing dot should be removed for the authority.
         assertThat(endpoint.authority()).isEqualTo("foo.com");
         assertThat(endpoint.toSocketAddress(80).getHostString()).isEqualTo("foo.com.");
+
+        final Endpoint withoutTrailingDot = endpoint.withoutTrailingDot();
+        assertThat(withoutTrailingDot.host()).isEqualTo("foo.com");
+        assertThat(withoutTrailingDot.authority()).isEqualTo("foo.com");
+        assertThat(withoutTrailingDot.toSocketAddress(80).getHostString()).isEqualTo("foo.com");
+        assertThat(withoutTrailingDot.withoutTrailingDot()).isSameAs(withoutTrailingDot);
+
         final Endpoint barEndpoint = endpoint.withHost("bar.com");
         assertThat(barEndpoint.host()).isEqualTo("bar.com");
         assertThat(barEndpoint.authority()).isEqualTo("bar.com");
@@ -532,8 +539,9 @@ class EndpointTest {
 
         // attributes
         final Endpoint endpointWithAttr = Endpoint.of("127.0.0.1").withAttr(AttributeKey.valueOf("test"), 1);
+        // toString() should not include the attributes.
         assertThat(endpointWithAttr.toString())
-                .isEqualTo("Endpoint{127.0.0.1, weight=1000, attributes=[test=1]}");
+                .isEqualTo("Endpoint{127.0.0.1, weight=1000}");
     }
 
     @Test

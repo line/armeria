@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 LINE Corporation
+ * Copyright 2024 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -13,11 +13,15 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
+package com.linecorp.armeria.common;
 
-/**
- * Provides a dummy interface that makes Project Reactor recognize Armeria's event loop threads as non-blocking.
- */
-@NonNullByDefault
-package reactor.core.scheduler;
+import reactor.core.scheduler.Schedulers;
 
-import com.linecorp.armeria.common.annotation.NonNullByDefault;
+final class ReactorNonBlockingUtil {
+
+    static void registerEventLoopAsNonBlocking() {
+        Schedulers.registerNonBlockingThreadPredicate(NonBlocking.class::isInstance);
+    }
+
+    private ReactorNonBlockingUtil() {}
+}

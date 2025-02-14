@@ -194,7 +194,7 @@ public final class HealthCheckedEndpointGroup extends DynamicEndpointGroup {
                 }
                 initialized = true;
                 destroyOldContexts(contextGroup);
-                setEndpoints(allHealthyEndpoints());
+                setEndpoints0(allHealthyEndpoints());
                 return null;
             });
         } finally {
@@ -291,6 +291,12 @@ public final class HealthCheckedEndpointGroup extends DynamicEndpointGroup {
     }
 
     private void updateHealth(Endpoint endpoint, boolean health) {
+        if (isClosing()) {
+            logger.debug("HealthCheckedEndpointGroup is closed. Ignoring health update for: {}. (healthy: {})",
+                         endpoint, health);
+            return;
+        }
+
         final boolean updated;
         // A healthy endpoint should be a valid checker context.
         if (health && findContext(endpoint) != null) {
@@ -303,8 +309,15 @@ public final class HealthCheckedEndpointGroup extends DynamicEndpointGroup {
 
         // Each new health status will be updated after initialization of the first context group.
         if (updated && initialized) {
-            setEndpoints(allHealthyEndpoints());
+            setEndpoints0(allHealthyEndpoints());
         }
+    }
+
+    private void setEndpoints0(List<Endpoint> endpoints) {
+        if (isClosing()) {
+            return;
+        }
+        setEndpoints(endpoints);
     }
 
     @Override

@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 LINE Corporation
+ * Copyright 2024 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -13,9 +13,17 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package reactor.core.scheduler;
+
+package com.linecorp.armeria.client;
+
+import com.linecorp.armeria.common.RpcRequest;
+import com.linecorp.armeria.common.RpcResponse;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 
 /**
- * A dummy interface that makes Project Reactor recognize Armeria's event loop threads as non-blocking.
+ * Prepares a {@link RpcRequest} before sending it to a remote {@link Endpoint}.
  */
-public interface NonBlocking {}
+@UnstableApi
+@FunctionalInterface
+public interface RpcPreClient extends PreClient<RpcRequest, RpcResponse> {
+}

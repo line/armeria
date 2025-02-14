@@ -55,8 +55,10 @@ import com.linecorp.armeria.client.DecoratingHttpClientFunction;
 import com.linecorp.armeria.client.DecoratingRpcClientFunction;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.HttpClient;
+import com.linecorp.armeria.client.HttpPreprocessor;
 import com.linecorp.armeria.client.ResponseTimeoutMode;
 import com.linecorp.armeria.client.RpcClient;
+import com.linecorp.armeria.client.RpcPreprocessor;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.client.redirect.RedirectConfig;
 import com.linecorp.armeria.common.RequestContext;
@@ -599,6 +601,18 @@ public final class GrpcClientBuilder extends AbstractClientOptionsBuilder {
     @Override
     public GrpcClientBuilder responseTimeoutMode(ResponseTimeoutMode responseTimeoutMode) {
         return (GrpcClientBuilder) super.responseTimeoutMode(responseTimeoutMode);
+    }
+
+    @Override
+    public GrpcClientBuilder preprocessor(HttpPreprocessor decorator) {
+        return (GrpcClientBuilder) super.preprocessor(decorator);
+    }
+
+    @Override
+    @Deprecated
+    public GrpcClientBuilder rpcPreprocessor(RpcPreprocessor decorator) {
+        throw new UnsupportedOperationException("rpcPreprocessor() does not support gRPC. " +
+                                                "Use preprocessor() instead.");
     }
 
     /**

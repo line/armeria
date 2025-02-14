@@ -47,6 +47,7 @@ import com.linecorp.armeria.client.proxy.ProxyType;
 import com.linecorp.armeria.client.proxy.Socks4ProxyConfig;
 import com.linecorp.armeria.client.proxy.Socks5ProxyConfig;
 import com.linecorp.armeria.common.ClosedSessionException;
+import com.linecorp.armeria.common.NonBlocking;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
@@ -76,7 +77,6 @@ import io.netty.handler.ssl.SslContext;
 import io.netty.util.AttributeKey;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.Promise;
-import reactor.core.scheduler.NonBlocking;
 
 final class HttpChannelPool implements AsyncCloseable {
 
@@ -619,7 +619,9 @@ final class HttpChannelPool implements AsyncCloseable {
         private final int hashCode;
 
         PoolKey(Endpoint endpoint, ProxyConfig proxyConfig) {
-            this.endpoint = endpoint;
+            // Remove the trailing dot of the host name because SNI does not allow it.
+            // https://lists.w3.org/Archives/Public/ietf-http-wg/2016JanMar/0430.html
+            this.endpoint = endpoint.withoutTrailingDot();
             this.proxyConfig = proxyConfig;
             hashCode = endpoint.hashCode() * 31 + proxyConfig.hashCode();
         }

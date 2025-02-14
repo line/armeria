@@ -5,6 +5,8 @@
 !city.sapporo.jp
 !city.sendai.jp
 !city.yokohama.jp
+!ignored.sub.wc.psl.hrsn.dev
+!ignored.wc.psl.hrsn.dev
 !www.ck
 *.001.test.code-builder-stg.platform.salesforce.com
 *.0e.vc
@@ -90,6 +92,7 @@
 *.lcl.dev
 *.lclstage.dev
 *.linodeobjects.com
+*.localto.net
 *.magentosite.cloud
 *.me-central-1.airflow.amazonaws.com
 *.me-south-1.airflow.amazonaws.com
@@ -123,6 +126,7 @@
 *.quipelements.com
 *.r.appspot.com
 *.run.app
+*.s.brave.app
 *.s.brave.io
 *.sa-east-1.airflow.amazonaws.com
 *.sapporo.jp
@@ -136,6 +140,7 @@
 *.stg.dev
 *.stgstage.dev
 *.stolos.io
+*.sub.wc.psl.hrsn.dev
 *.svc.firenet.ch
 *.sys.qcx.io
 *.telebit.xyz
@@ -160,6 +165,7 @@
 *.wadl.top
 *.wb.crm.dev
 *.wc.crm.dev
+*.wc.psl.hrsn.dev
 *.wd.crm.dev
 *.we.crm.dev
 *.webhare.dev
@@ -283,6 +289,7 @@ ac.lk
 ac.ls
 ac.ma
 ac.me
+ac.ml
 ac.mu
 ac.mw
 ac.mz
@@ -454,6 +461,7 @@ alesund.no
 algard.no
 aliases121.com
 alibaba
+alibabacloudcs.com
 alipay
 allfinanz
 allstate
@@ -610,6 +618,7 @@ art.br
 art.do
 art.dz
 art.ht
+art.ml
 art.pl
 art.sn
 arte
@@ -665,6 +674,7 @@ asso.gp
 asso.ht
 asso.km
 asso.mc
+asso.ml
 asso.nc
 asso.re
 associates
@@ -1078,6 +1088,8 @@ br.it
 bradesco
 brand.se
 brasilia.me
+brave.app
+brave.io
 bremanger.no
 brescia.it
 bridgestone
@@ -1101,6 +1113,7 @@ bss.design
 bt
 bt.it
 bu.no
+bubbleapps.io
 budejju.no
 build
 builders
@@ -1144,7 +1157,6 @@ ca.it
 ca.reclaim.cloud
 ca.us
 caa.aero
-caa.li
 cab
 cable-modem.org
 cafe
@@ -1279,6 +1291,7 @@ cci.fr
 cd
 cd.eu.org
 cdn-edges.net
+cdn.bubble.io
 cdn.cloudflare.net
 cdn.cloudflareanycast.net
 cdn.cloudflarecn.net
@@ -1417,6 +1430,7 @@ cloudaccess.host
 cloudaccess.net
 cloudapp.net
 cloudapps.digital
+cloudbeesusercontent.io
 cloudflare-ipfs.com
 cloudflare.net
 cloudfront.net
@@ -1708,7 +1722,6 @@ comsec
 condos
 conf.au
 conf.lv
-conf.se
 conference.aero
 conn.uk
 construction
@@ -2231,9 +2244,11 @@ edu.tr
 edu.tt
 edu.tw
 edu.ua
+edu.ug
 edu.uy
 edu.vc
 edu.ve
+edu.vg
 edu.vn
 edu.vu
 edu.ws
@@ -2576,7 +2591,6 @@ filegear-sg.me
 filegear.me
 film
 film.hu
-fin.ci
 fin.ec
 fin.tn
 final
@@ -2690,7 +2704,6 @@ framercanvas.com
 frana.no
 fredrikstad.no
 free
-free.hr
 freebox-os.com
 freebox-os.fr
 freeboxos.com
@@ -3172,6 +3185,7 @@ gov.tr
 gov.tt
 gov.tw
 gov.ua
+gov.ug
 gov.uk
 gov.vc
 gov.ve
@@ -3764,6 +3778,7 @@ info.ke
 info.ki
 info.la
 info.ls
+info.ml
 info.mv
 info.nf
 info.ni
@@ -3784,6 +3799,7 @@ ing.pa
 ingatlan.hu
 ink
 ino.kochi.jp
+inst.ml
 instance.datadetect.com
 instances.spawn.cc
 institute
@@ -3832,6 +3848,7 @@ ipiranga
 iq
 ir
 ir.md
+iran.liara.run
 iris.arpa
 irish
 iruma.saitama.jp
@@ -4610,6 +4627,7 @@ lanxess
 laocai.vn
 lapy.pl
 laquila.it
+laravel.cloud
 lardal.no
 larvik.no
 lasalle
@@ -4669,6 +4687,7 @@ lg.ua
 lgbt
 li
 li.it
+liara.run
 lib.ak.us
 lib.al.us
 lib.ar.us
@@ -4773,6 +4792,7 @@ loans
 localcert.net
 localhostcert.net
 localplayer.dev
+localtonet.com
 locker
 locus
 lodi.it
@@ -5125,6 +5145,7 @@ mil.tr
 mil.tt
 mil.tw
 mil.tz
+mil.ug
 mil.uy
 mil.vc
 mil.ve
@@ -6030,6 +6051,7 @@ obanazawa.yamagata.jp
 obi
 obihiro.hokkaido.jp
 obira.hokkaido.jp
+obj.ag
 objects.lpg.cloudscale.ch
 objects.rma.cloudscale.ch
 obl.ong
@@ -6659,6 +6681,7 @@ pr.gov.br
 pr.gov.pl
 pr.it
 pr.leg.br
+pr.ml
 pr.us
 pramerica
 prato.it
@@ -7960,6 +7983,7 @@ studio.ca-central-1.sagemaker.aws
 studio.cn-north-1.sagemaker.com.cn
 studio.cn-northwest-1.sagemaker.com.cn
 studio.eu-central-1.sagemaker.aws
+studio.eu-central-2.sagemaker.aws
 studio.eu-north-1.sagemaker.aws
 studio.eu-south-1.sagemaker.aws
 studio.eu-south-2.sagemaker.aws
@@ -7983,6 +8007,9 @@ stufftoread.com
 style
 su
 sub.jp
+sub.psl.hrsn.dev
+subsc-pay.com
+subsc-pay.net
 sucks
 sue.fukuoka.jp
 suedtirol.it
@@ -8400,6 +8427,15 @@ trani-barletta-andria.it
 traniandriabarletta.it
 tranibarlettaandria.it
 tranoy.no
+transfer-webapp.ap-northeast-1.on.aws
+transfer-webapp.ap-southeast-1.on.aws
+transfer-webapp.ap-southeast-2.on.aws
+transfer-webapp.eu-central-1.on.aws
+transfer-webapp.eu-north-1.on.aws
+transfer-webapp.eu-west-1.on.aws
+transfer-webapp.us-east-1.on.aws
+transfer-webapp.us-east-2.on.aws
+transfer-webapp.us-west-2.on.aws
 translate.goog
 translated.page
 transporte.bo
@@ -8539,7 +8575,6 @@ u.se
 u2-local.xnbay.com
 u2.xnbay.com
 ua
-ua.rs
 ubank
 ube.yamaguchi.jp
 uber.space
@@ -8646,6 +8681,7 @@ us.ngrok.io
 us.org
 us.platform.sh
 us.reclaim.cloud
+us.ug
 usa.oita.jp
 user.aseinet.ne.jp
 user.party.eus

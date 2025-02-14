@@ -30,8 +30,6 @@ final class NoopCancellationScheduler implements CancellationScheduler {
 
     private static final CompletableFuture<Throwable> THROWABLE_FUTURE =
             UnmodifiableFuture.wrap(new CompletableFuture<>());
-    private static final CompletableFuture<Void> VOID_FUTURE =
-            UnmodifiableFuture.wrap(new CompletableFuture<>());
 
     private NoopCancellationScheduler() {
     }
@@ -112,5 +110,10 @@ final class NoopCancellationScheduler implements CancellationScheduler {
 
     @Override
     public void updateTask(CancellationTask cancellationTask) {
+    }
+
+    @Override
+    public State state() {
+        return State.INIT;
     }
 }
