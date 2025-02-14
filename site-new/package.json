@@ -1,7 +1,13 @@
 {
-  "name": "site-new",
+  "name": "armeria-site",
+  "description": "Armeria web site",
   "version": "0.0.0",
-  "private": true,
+  "author": "dl_armeria@linecorp.com",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/line/armeria.git"
+  },
   "scripts": {
     "docusaurus": "docusaurus",
     "start": "docusaurus start",
