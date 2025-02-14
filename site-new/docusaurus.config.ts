@@ -58,7 +58,7 @@ const config: Config = {
           onUntruncatedBlogPosts: 'warn',
         },
         theme: {
-          customCss: './src/css/custom.css',
+          customCss: './src/css/custom.less',
         },
       } satisfies Preset.Options,
     ],
@@ -137,6 +137,10 @@ const config: Config = {
       darkTheme: prismThemes.dracula,
     },
   } satisfies Preset.ThemeConfig,
+
+  plugins: [
+    'docusaurus-plugin-less'
+],
 };
 
 export default config;

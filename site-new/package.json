@@ -30,6 +30,7 @@
     "@mdx-js/react": "^3.0.0",
     "antd": "^5.24.0",
     "clsx": "^2.0.0",
+    "docusaurus-plugin-less": "^2.0.2",
     "prism-react-renderer": "^2.3.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"
@@ -51,6 +52,8 @@
     "eslint-plugin-prettier": "^5.0.0",
     "eslint-plugin-react": "^7.37.4",
     "eslint-plugin-react-hooks": "^4.6.2",
+    "less": "^4.2.2",
+    "less-loader": "^12.2.0",
     "prettier": "^3.5.0",
     "typescript": ">=5.1.0 <5.2.0"
   },
