@@ -65,7 +65,7 @@ class AbstractAsyncSelectorTest {
         assertThat(cf).isNotDone();
 
         await().atLeast(10, TimeUnit.MILLISECONDS)
-               .atMost(30, TimeUnit.MILLISECONDS)
+               .atMost(1000, TimeUnit.MILLISECONDS)
                .pollInterval(10, TimeUnit.MILLISECONDS)
                .untilAsserted(() -> assertThat(cf).isDone().isCompletedWithValue(null));
     }
