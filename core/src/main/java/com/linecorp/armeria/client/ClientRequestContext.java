@@ -49,7 +49,6 @@ import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.common.util.TimeoutMode;
 import com.linecorp.armeria.internal.common.RequestContextUtil;
-import com.linecorp.armeria.internal.common.TimeoutExceptionPredicate;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 import io.netty.util.Attribute;

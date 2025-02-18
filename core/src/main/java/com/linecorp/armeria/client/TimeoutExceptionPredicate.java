@@ -14,9 +14,8 @@
  * under the License.
  */
 
-package com.linecorp.armeria.internal.common;
+package com.linecorp.armeria.client;
 
-import com.linecorp.armeria.client.UnprocessedRequestException;
 import com.linecorp.armeria.common.TimeoutException;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.Exceptions;
@@ -25,9 +24,9 @@ import com.linecorp.armeria.internal.client.dns.DnsUtil;
 import io.netty.channel.ConnectTimeoutException;
 import io.netty.handler.proxy.ProxyConnectException;
 
-public final class TimeoutExceptionPredicate {
+final class TimeoutExceptionPredicate {
 
-    public static boolean isTimeoutException(@Nullable Throwable cause) {
+    static boolean isTimeoutException(@Nullable Throwable cause) {
         if (cause == null) {
             return false;
         }

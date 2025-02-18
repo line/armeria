@@ -14,15 +14,13 @@
  * under the License.
  */
 
-package com.linecorp.armeria.internal.common;
+package com.linecorp.armeria.client;
 
-import static com.linecorp.armeria.internal.common.TimeoutExceptionPredicate.isTimeoutException;
+import static com.linecorp.armeria.client.TimeoutExceptionPredicate.isTimeoutException;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import org.junit.jupiter.api.Test;
 
-import com.linecorp.armeria.client.DnsTimeoutException;
-import com.linecorp.armeria.client.UnprocessedRequestException;
 import com.linecorp.armeria.internal.testing.AnticipatedException;
 import com.linecorp.armeria.server.RequestTimeoutException;
 
