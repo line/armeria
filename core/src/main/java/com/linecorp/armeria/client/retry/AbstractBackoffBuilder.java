@@ -33,17 +33,18 @@ abstract class AbstractBackoffBuilder<SELF extends AbstractBackoffBuilder<SELF>>
     private Double maxJitterRate;
     @Nullable
     private Integer maxAttempts;
-    private Supplier<Random> randomSupplier = ThreadLocalRandom::current;
+    @Nullable
+    private Supplier<Random> randomSupplier;
 
     @SuppressWarnings("unchecked")
-    final SELF self() {
+    private SELF self() {
         return (SELF) this;
     }
 
     /**
      * Sets the minimum and maximum jitter rates to apply to the delay.
      */
-    public SELF jitter(double minJitterRate, double maxJitterRate) {
+    public final SELF jitter(double minJitterRate, double maxJitterRate) {
         this.minJitterRate = minJitterRate;
         this.maxJitterRate = maxJitterRate;
         return self();
@@ -53,7 +54,7 @@ abstract class AbstractBackoffBuilder<SELF extends AbstractBackoffBuilder<SELF>>
      * Sets the minimum and maximum jitter rates to apply to the delay, as well as a
      * custom {@link Random} supplier for generating the jitter.
      */
-    public SELF jitter(double minJitterRate, double maxJitterRate, Supplier<Random> randomSupplier) {
+    public final SELF jitter(double minJitterRate, double maxJitterRate, Supplier<Random> randomSupplier) {
         requireNonNull(randomSupplier, "randomSupplier");
         this.minJitterRate = minJitterRate;
         this.maxJitterRate = maxJitterRate;
@@ -64,7 +65,7 @@ abstract class AbstractBackoffBuilder<SELF extends AbstractBackoffBuilder<SELF>>
     /**
      * Sets the maximum number of attempts.
      */
-    public SELF maxAttempts(int maxAttempts) {
+    public final SELF maxAttempts(int maxAttempts) {
         this.maxAttempts = maxAttempts;
         return self();
     }
@@ -77,6 +78,10 @@ abstract class AbstractBackoffBuilder<SELF extends AbstractBackoffBuilder<SELF>>
     public final Backoff build() {
         Backoff backoff = doBuild();
         if (minJitterRate != null && maxJitterRate != null) {
+            Supplier<Random> randomSupplier = this.randomSupplier;
+            if (randomSupplier == null) {
+                randomSupplier = ThreadLocalRandom::current;
+            }
             backoff = new JitterAddingBackoff(backoff, minJitterRate, maxJitterRate, randomSupplier);
         }
         if (maxAttempts != null) {
