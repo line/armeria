@@ -100,10 +100,10 @@ class RequestAutoAbortLeakTest {
     @MethodSource("autoAbortArgs")
     void http1Test(int abortDelayMillisHeader, Class<? extends Exception> requestCauseClass) throws Exception {
         final CountingConnectionPoolListener listener = new CountingConnectionPoolListener();
-        try (final ClientFactory cf = ClientFactory.builder()
-                                                   .connectionPoolListener(listener)
-                                                   .idleTimeoutMillis(0)
-                                                   .build()) {
+        try (ClientFactory cf = ClientFactory.builder()
+                                             .connectionPoolListener(listener)
+                                             .idleTimeoutMillis(0)
+                                             .build()) {
             final WebClient client = WebClient.builder(server.uri(SessionProtocol.H1C))
                                               .factory(cf).build();
             final RequestHeaders headers = RequestHeaders.of(HttpMethod.POST, "/http1",
