@@ -42,6 +42,7 @@ import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.TimeoutException;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
+import com.linecorp.armeria.internal.common.TimeoutExceptionPredicate;
 
 /**
  * A skeletal builder implementation for {@link RetryRule}, {@link RetryRuleWithContent},
@@ -257,8 +258,7 @@ public abstract class AbstractRuleBuilder<SELF extends AbstractRuleBuilder<SELF>
             if (ctx.isTimedOut()) {
                 return true;
             }
-            return ex instanceof TimeoutException ||
-                   ex instanceof UnprocessedRequestException && ex.getCause() instanceof TimeoutException;
+            return TimeoutExceptionPredicate.isTimeoutException(ex);
         });
     }
 

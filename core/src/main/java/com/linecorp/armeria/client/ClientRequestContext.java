@@ -49,6 +49,7 @@ import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.common.util.TimeoutMode;
 import com.linecorp.armeria.internal.common.RequestContextUtil;
+import com.linecorp.armeria.internal.common.TimeoutExceptionPredicate;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 import io.netty.util.Attribute;
@@ -525,8 +526,7 @@ public interface ClientRequestContext extends RequestContext {
             return true;
         }
         final Throwable cause = cancellationCause();
-        return cause instanceof TimeoutException ||
-               cause instanceof UnprocessedRequestException && cause.getCause() instanceof TimeoutException;
+        return TimeoutExceptionPredicate.isTimeoutException(cause);
     }
 
     /**
