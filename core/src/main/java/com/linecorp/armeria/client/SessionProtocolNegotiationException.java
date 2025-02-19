@@ -18,6 +18,8 @@ package com.linecorp.armeria.client;
 
 import static java.util.Objects.requireNonNull;
 
+import java.net.SocketAddress;
+
 import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
@@ -34,22 +36,30 @@ public final class SessionProtocolNegotiationException extends RuntimeException 
     private final SessionProtocol actual;
 
     /**
-     * Creates a new instance with the specified expected {@link SessionProtocol}.
+     * Creates a new instance with the specified expected {@link SessionProtocol} and {@link SocketAddress}.
      */
-    public SessionProtocolNegotiationException(SessionProtocol expected, @Nullable String reason) {
-        super(appendReason("expected: " + requireNonNull(expected, "expected"), reason));
+    public SessionProtocolNegotiationException(SessionProtocol expected,
+                                               @Nullable SocketAddress remoteAddress,
+                                               @Nullable String reason) {
+        super(appendReason("expected: " + requireNonNull(expected, "expected") +
+                           ", remoteAddress: " + remoteAddress,
+                           reason));
         this.expected = expected;
         actual = null;
     }
 
     /**
-     * Creates a new instance with the specified expected and actual {@link SessionProtocol}s.
+     * Creates a new instance with the specified expected and actual {@link SessionProtocol}s
+     * and {@link SocketAddress}.
      */
     public SessionProtocolNegotiationException(SessionProtocol expected,
-                                               @Nullable SessionProtocol actual, @Nullable String reason) {
-
+                                               @Nullable SessionProtocol actual,
+                                               @Nullable SocketAddress remoteAddress,
+                                               @Nullable String reason) {
         super(appendReason("expected: " + requireNonNull(expected, "expected") +
-                           ", actual: " + actual, reason));
+                           ", actual: " + actual +
+                           ", remoteAddress: " + remoteAddress,
+                           reason));
         this.expected = expected;
         this.actual = actual;
     }

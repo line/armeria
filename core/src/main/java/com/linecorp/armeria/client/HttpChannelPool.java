@@ -356,7 +356,7 @@ final class HttpChannelPool implements AsyncCloseable {
             notifyConnect(desiredProtocol, key,
                           eventLoop.newFailedFuture(
                                   new SessionProtocolNegotiationException(
-                                          desiredProtocol, "previously failed negotiation")),
+                                          desiredProtocol, remoteAddress, "previously failed negotiation")),
                           promise, timingsBuilder);
             return;
         }
