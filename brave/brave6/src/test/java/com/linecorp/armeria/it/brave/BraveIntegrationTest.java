@@ -41,9 +41,10 @@ import java.util.stream.IntStream;
 import org.apache.thrift.async.AsyncMethodCallback;
 import org.apache.thrift.transport.TTransportException;
 import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
@@ -61,6 +62,8 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.RequestContext;
+import com.linecorp.armeria.common.RpcRequest;
+import com.linecorp.armeria.common.RpcResponse;
 import com.linecorp.armeria.common.brave.RequestContextCurrentTraceContext;
 import com.linecorp.armeria.common.thrift.ThriftFuture;
 import com.linecorp.armeria.common.util.ThreadFactories;
@@ -68,8 +71,11 @@ import com.linecorp.armeria.internal.testing.BlockingUtils;
 import com.linecorp.armeria.internal.testing.GenerateNativeImageTrace;
 import com.linecorp.armeria.server.AbstractHttpService;
 import com.linecorp.armeria.server.HttpService;
+import com.linecorp.armeria.server.RpcService;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServiceRequestContext;
+import com.linecorp.armeria.server.SimpleDecoratingRpcService;
+import com.linecorp.armeria.server.brave.BraveRpcService;
 import com.linecorp.armeria.server.brave.BraveService;
 import com.linecorp.armeria.server.thrift.THttpService;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
@@ -90,17 +96,8 @@ import testing.brave.TestService.AsyncIface;
 @GenerateNativeImageTrace
 class BraveIntegrationTest {
 
+    private static final String CLIENT_TYPE_HEADER = "x-client-type";
     private static final SpanHandlerImpl spanHandler = new SpanHandlerImpl();
-
-    private static TestService.Iface fooClient;
-    private static TestService.Iface fooClientWithoutTracing;
-    private static TestService.Iface timeoutClient;
-    private static TestService.Iface timeoutClientClientTimesOut;
-    private static TestService.Iface http1TimeoutClientClientTimesOut;
-    private static TestService.AsyncIface barClient;
-    private static TestService.AsyncIface quxClient;
-    private static TestService.Iface zipClient;
-    private static WebClient poolWebClient;
 
     @RegisterExtension
     static ServerExtension server = new ServerExtension(true) {
@@ -110,33 +107,30 @@ class BraveIntegrationTest {
             // that a client cancels a request before a server receives it.
             sb.requestTimeout(Duration.ofSeconds(10));
 
-            sb.service("/foo", decorate("service/foo", THttpService.of(
-                    (AsyncIface) (name, resultHandler) ->
-                            barClient.hello("Miss. " + name, new DelegatingCallback(resultHandler)))));
+            sb.service("/foo", tHttpDecorate("service/foo", (name, resultHandler) ->
+                    newClient("/bar").hello("Miss. " + name, new DelegatingCallback(resultHandler))));
 
-            sb.service("/bar", decorate("service/bar", THttpService.of(
-                    (AsyncIface) (name, resultHandler) -> {
-                        if (name.startsWith("Miss. ")) {
-                            name = "Ms. " + name.substring(6);
-                        }
-                        quxClient.hello(name, new DelegatingCallback(resultHandler));
-                    })));
+            sb.service("/bar", tHttpDecorate("service/bar", (name, resultHandler) -> {
+                if (name.startsWith("Miss. ")) {
+                    name = "Ms. " + name.substring(6);
+                }
+                newClient("/qux").hello(name, new DelegatingCallback(resultHandler));
+            }));
 
-            sb.service("/zip", decorate("service/zip", THttpService.of(
-                    (AsyncIface) (name, resultHandler) -> {
-                        final ThriftFuture<String> f1 = new ThriftFuture<>();
-                        final ThriftFuture<String> f2 = new ThriftFuture<>();
-                        quxClient.hello(name, f1);
-                        quxClient.hello(name, f2);
-                        CompletableFuture.allOf(f1, f2).whenCompleteAsync((aVoid, throwable) -> {
-                            resultHandler.onComplete(f1.getNow(null) + ", and " + f2.getNow(null));
-                        }, RequestContext.current().eventLoop());
-                    })));
+            sb.service("/zip", tHttpDecorate("service/zip", (name, resultHandler) -> {
+                final ThriftFuture<String> f1 = new ThriftFuture<>();
+                final ThriftFuture<String> f2 = new ThriftFuture<>();
+                newClient("/qux").hello(name, f1);
+                newClient("/qux").hello(name, f2);
+                CompletableFuture.allOf(f1, f2).whenCompleteAsync((aVoid, throwable) -> {
+                    resultHandler.onComplete(f1.getNow(null) + ", and " + f2.getNow(null));
+                }, RequestContext.current().eventLoop());
+            }));
 
-            sb.service("/qux", decorate("service/qux", THttpService.of(
-                    (AsyncIface) (name, resultHandler) -> resultHandler.onComplete("Hello, " + name + '!'))));
+            sb.service("/qux", tHttpDecorate("service/qux", (name, resultHandler) ->
+                    resultHandler.onComplete("Hello, " + name + '!')));
 
-            sb.service("/pool", decorate("service/pool", new AbstractHttpService() {
+            sb.service("/pool", httpDecorate("service/pool", new AbstractHttpService() {
                 @Override
                 protected HttpResponse doGet(ServiceRequestContext ctx, HttpRequest req)
                         throws Exception {
@@ -191,64 +185,44 @@ class BraveIntegrationTest {
                 }
             }));
 
-            sb.service("/timeout", decorate("service/timeout", THttpService.of(
-                    // This service never calls the handler and will timeout.
-                    (AsyncIface) (name, resultHandler) -> {
-                    })));
+            sb.service("/timeout", tHttpDecorate("service/timeout",
+                                                 // This service never calls the handler and will timeout.
+                                                 (name, resultHandler) -> {}));
 
             sb.service("/http", (req, ctx) -> HttpResponse.of(HttpStatus.OK));
         }
     };
-
-    @BeforeEach
-    void setupClients() {
-        fooClient = ThriftClients.builder(server.httpUri())
-                                 .path("/foo")
-                                 .decorator(BraveClient.newDecorator(newTracing("client/foo")))
-                                 .build(TestService.Iface.class);
-        zipClient = ThriftClients.builder(server.httpUri())
-                                 .path("/zip")
-                                 .decorator(BraveClient.newDecorator(newTracing("client/zip")))
-                                 .build(TestService.Iface.class);
-        fooClientWithoutTracing = ThriftClients.newClient(server.httpUri() + "/foo", TestService.Iface.class);
-        barClient = newClient("/bar");
-        quxClient = newClient("/qux");
-        poolWebClient = WebClient.of(server.httpUri());
-        timeoutClient = ThriftClients.builder(server.httpUri())
-                                     .path("/timeout")
-                                     .decorator(BraveClient.newDecorator(newTracing("client/timeout")))
-                                     .build(TestService.Iface.class);
-        timeoutClientClientTimesOut =
-                ThriftClients.builder(server.httpUri())
-                             .path("/timeout")
-                             .decorator(BraveClient.newDecorator(newTracing("client/timeout")))
-                             .responseTimeout(Duration.ofSeconds(3))
-                             .build(TestService.Iface.class);
-        http1TimeoutClientClientTimesOut =
-                ThriftClients.builder(server.uri(H1C))
-                             .path("/timeout")
-                             .decorator(BraveClient.newDecorator(newTracing("client/timeout")))
-                             .responseTimeout(Duration.ofSeconds(3))
-                             .build(TestService.Iface.class);
-    }
-
-    @AfterEach
-    void tearDown() {
-        Tracing.current().close();
-    }
 
     @AfterEach
     void shouldHaveNoExtraSpans() {
         assertThat(spanHandler.spans).isEmpty();
     }
 
-    private static BraveService decorate(String name, HttpService service) {
+    private static HttpService tHttpDecorate(String name, AsyncIface asyncIface) {
+        final THttpService service =
+                THttpService.builder()
+                            .addService(asyncIface)
+                            .decorate(delegate -> new HeaderBasedBraveRpcService(delegate, name))
+                            .build();
+        return (ctx, req) -> {
+            final String braveServiceType = ctx.request().headers().get(CLIENT_TYPE_HEADER);
+            if ("http".equals(braveServiceType)) {
+                return BraveService.newDecorator(newTracing(name)).apply(service).serve(ctx, req);
+            }
+            return service.serve(ctx, req);
+        };
+    }
+
+    private static HttpService httpDecorate(String name, HttpService service) {
         return BraveService.newDecorator(newTracing(name)).apply(service);
     }
 
     private static TestService.AsyncIface newClient(String path) {
+        final ServiceRequestContext ctx = ServiceRequestContext.current();
+        final String braveServiceType = ctx.request().headers().get(CLIENT_TYPE_HEADER);
         return ThriftClients.builder(server.httpUri())
                             .path(path)
+                            .addHeader(CLIENT_TYPE_HEADER, "http")
                             .decorator(BraveClient.newDecorator(newTracing("client" + path)))
                             .build(TestService.AsyncIface.class);
     }
@@ -299,8 +273,15 @@ class BraveIntegrationTest {
         }
     }
 
-    @Test
-    void testServiceHasMultipleClientRequests() throws Exception {
+    @ParameterizedTest
+    @ValueSource(strings = {"http", "rpc"})
+    void testServiceHasMultipleClientRequests(String type) throws Exception {
+        final TestService.Iface zipClient =
+                ThriftClients.builder(server.httpUri())
+                             .addHeader(CLIENT_TYPE_HEADER, type)
+                             .path("/zip")
+                             .decorator(BraveClient.newDecorator(newTracing("client/zip")))
+                             .build(TestService.Iface.class);
         assertThat(zipClient.hello("Lee")).isEqualTo("Hello, Lee!, and Hello, Lee!");
 
         final MutableSpan[] spans = spanHandler.take(6);
@@ -308,8 +289,15 @@ class BraveIntegrationTest {
         assertThat(spans).allMatch(s -> s.traceId().equals(traceId));
     }
 
-    @Test
-    void testClientInitiatedTrace() throws Exception {
+    @ParameterizedTest
+    @ValueSource(strings = {"http", "rpc"})
+    void testClientInitiatedTrace(String type) throws Exception {
+        final TestService.Iface fooClient =
+                ThriftClients.builder(server.httpUri())
+                             .path("/foo")
+                             .addHeader(CLIENT_TYPE_HEADER, type)
+                             .decorator(BraveClient.newDecorator(newTracing("client/foo")))
+                             .build(TestService.Iface.class);
         assertThat(fooClient.hello("Lee")).isEqualTo("Hello, Ms. Lee!");
 
         final MutableSpan[] spans = spanHandler.take(6);
@@ -397,8 +385,13 @@ class BraveIntegrationTest {
         assertThat(serverEndTime).isGreaterThanOrEqualTo(serverWireSendTime);
     }
 
-    @Test
-    void testServiceInitiatedTrace() throws Exception {
+    @ParameterizedTest
+    @ValueSource(strings = {"http", "rpc"})
+    void testServiceInitiatedTrace(String type) throws Exception {
+        final TestService.Iface fooClientWithoutTracing =
+                ThriftClients.builder(server.httpUri() + "/foo")
+                             .addHeader(CLIENT_TYPE_HEADER, type)
+                             .build(TestService.Iface.class);
         assertThat(fooClientWithoutTracing.hello("Lee")).isEqualTo("Hello, Ms. Lee!");
 
         final MutableSpan[] spans = spanHandler.take(5);
@@ -441,7 +434,7 @@ class BraveIntegrationTest {
 
     @Test
     void testSpanInThreadPoolHasSameTraceId() throws Exception {
-        poolWebClient.get("pool").aggregate().get();
+        server.webClient().get("pool").aggregate().get();
         final MutableSpan[] spans = spanHandler.take(5);
         assertThat(Arrays.stream(spans).map(MutableSpan::traceId).collect(toImmutableSet())).hasSize(1);
         assertThat(Arrays.stream(spans).map(MutableSpan::parentId)
@@ -449,8 +442,15 @@ class BraveIntegrationTest {
                          .collect(toImmutableSet())).hasSize(1);
     }
 
-    @Test
-    void testServerTimesOut() throws Exception {
+    @ParameterizedTest
+    @ValueSource(strings = {"http", "rpc"})
+    void testServerTimesOut(String type) throws Exception {
+        final TestService.Iface timeoutClient =
+                ThriftClients.builder(server.httpUri())
+                             .path("/timeout")
+                             .addHeader(CLIENT_TYPE_HEADER, type)
+                             .decorator(BraveClient.newDecorator(newTracing("client/timeout")))
+                             .build(TestService.Iface.class);
         assertThatThrownBy(() -> timeoutClient.hello("name"))
                 .isInstanceOf(TTransportException.class)
                 .hasCauseInstanceOf(InvalidResponseHeadersException.class);
@@ -465,13 +465,29 @@ class BraveIntegrationTest {
         assertThat(clientSpan.annotations()).hasSize(2);
     }
 
-    @Test
-    void testHttp2ClientTimesOut() throws Exception {
+    @ParameterizedTest
+    @ValueSource(strings = {"http", "rpc"})
+    void testHttp2ClientTimesOut(String type) throws Exception {
+        final TestService.Iface timeoutClientClientTimesOut =
+                ThriftClients.builder(server.httpUri())
+                             .path("/timeout")
+                             .addHeader(CLIENT_TYPE_HEADER, type)
+                             .decorator(BraveClient.newDecorator(newTracing("client/timeout")))
+                             .responseTimeout(Duration.ofSeconds(3))
+                             .build(TestService.Iface.class);
         testClientTimesOut(timeoutClientClientTimesOut);
     }
 
-    @Test
-    void testHttp1ClientTimesOut() throws Exception {
+    @ParameterizedTest
+    @ValueSource(strings = {"http", "rpc"})
+    void testHttp1ClientTimesOut(String type) throws Exception {
+        final TestService.Iface http1TimeoutClientClientTimesOut =
+                ThriftClients.builder(server.uri(H1C))
+                             .path("/timeout")
+                             .addHeader(CLIENT_TYPE_HEADER, type)
+                             .decorator(BraveClient.newDecorator(newTracing("client/timeout")))
+                             .responseTimeout(Duration.ofSeconds(3))
+                             .build(TestService.Iface.class);
         testClientTimesOut(http1TimeoutClientClientTimesOut);
     }
 
@@ -583,6 +599,28 @@ class BraveIntegrationTest {
             // Reverse the collected spans to sort the spans by request time.
             Collections.reverse(taken);
             return taken.toArray(new MutableSpan[numSpans]);
+        }
+    }
+
+    private static class HeaderBasedBraveRpcService extends SimpleDecoratingRpcService {
+
+        private final RpcService delegate;
+        private final String name;
+
+        HeaderBasedBraveRpcService(RpcService delegate, String name) {
+            super(delegate);
+            this.delegate = delegate;
+            this.name = name;
+        }
+
+        @Override
+        public RpcResponse serve(ServiceRequestContext ctx,
+                                 RpcRequest req) throws Exception {
+            final String braveServiceType = ctx.request().headers().get(CLIENT_TYPE_HEADER);
+            if ("rpc".equals(braveServiceType)) {
+                return BraveRpcService.newDecorator(newTracing(name)).apply(delegate).serve(ctx, req);
+            }
+            return delegate.serve(ctx, req);
         }
     }
 }
