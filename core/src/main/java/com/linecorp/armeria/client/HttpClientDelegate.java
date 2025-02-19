@@ -28,6 +28,7 @@ import com.linecorp.armeria.client.proxy.ProxyConfig;
 import com.linecorp.armeria.client.proxy.ProxyType;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.IpAddressRejectedException;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
@@ -174,6 +175,21 @@ final class HttpClientDelegate implements HttpClient {
                                              HttpRequest req, DecodedHttpResponse res,
                                              ClientConnectionTimingsBuilder timingsBuilder,
                                              ProxyConfig proxyConfig) {
+        final InetSocketAddress remoteAddress = endpoint.toSocketAddress(-1);
+        try {
+            final boolean isValidIpAddr = factory.options().ipAddressFilter().test(remoteAddress);
+            if (!isValidIpAddr) {
+                final IpAddressRejectedException cause = new IpAddressRejectedException(
+                        "Invalid IP address: " + remoteAddress + " (endpoint: " + endpoint + ')');
+                earlyFailedResponse(cause, ctx);
+                return;
+            }
+        } catch (Throwable t) {
+            earlyFailedResponse(new IllegalStateException(
+                    "Unexpected exception from " + factory.options().ipAddressFilter(), t), ctx);
+            return;
+        }
+
         if (ctx.eventLoop().inEventLoop()) {
             acquireConnectionAndExecute0(ctx, endpoint, req, res, timingsBuilder, proxyConfig);
         } else {
