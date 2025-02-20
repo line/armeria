@@ -143,7 +143,7 @@ class ServerMetricsTest {
     @Test
     void pendingRequests() {
         final ServerPort activePort = server.server().activePort();
-        final ServerMetrics serverMetrics = new ServerMetrics(ImmutableList.of(activePort));
+        final ServerMetrics serverMetrics = new DefaultServerMetrics(ImmutableList.of(activePort));
         final InetSocketAddress localAddress = activePort.localAddress();
         serverMetrics.increasePendingHttp1Requests(localAddress);
         assertThat(serverMetrics.pendingRequests()).isEqualTo(1);
@@ -161,7 +161,7 @@ class ServerMetricsTest {
     @Test
     void activeRequests() {
         final ServerPort activePort = server.server().activePort();
-        final ServerMetrics serverMetrics = new ServerMetrics(ImmutableList.of(activePort));
+        final ServerMetrics serverMetrics = new DefaultServerMetrics(ImmutableList.of(activePort));
         final InetSocketAddress localAddress = activePort.localAddress();
         serverMetrics.increaseActiveHttp1Requests(localAddress);
         assertThat(serverMetrics.activeRequests()).isEqualTo(1);

@@ -37,7 +37,8 @@ class ConnectionLimitingHandlerTest {
         final InetSocketAddress localAddress2 = new InetSocketAddress(3);
         final ServerPort serverPort1 = new ServerPort(localAddress1, SessionProtocol.HTTP);
         final ServerPort serverPort2 = new ServerPort(localAddress2, SessionProtocol.HTTP);
-        final ServerMetrics serverMetrics = new ServerMetrics(ImmutableList.of(serverPort1, serverPort2));
+        final ServerMetrics serverMetrics =
+                new DefaultServerMetrics(ImmutableList.of(serverPort1, serverPort2));
 
         final ConnectionLimitingHandler handler = new ConnectionLimitingHandler(1, serverMetrics);
         final EmbeddedChannel ch1 = new EmbeddedChannel(handler) {
@@ -69,7 +70,7 @@ class ConnectionLimitingHandlerTest {
     void testMaxNumConnectionsRange() {
         // The port is not used in this test.
         final InetSocketAddress localAddress = new InetSocketAddress(2);
-        final ServerMetrics serverMetrics = new ServerMetrics(ImmutableList.of(
+        final ServerMetrics serverMetrics = new DefaultServerMetrics(ImmutableList.of(
                 new ServerPort(localAddress, SessionProtocol.HTTP)));
         final ConnectionLimitingHandler handler = new ConnectionLimitingHandler(Integer.MAX_VALUE,
                                                                                 serverMetrics);
