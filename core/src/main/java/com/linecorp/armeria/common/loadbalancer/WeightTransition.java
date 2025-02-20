@@ -17,8 +17,6 @@ package com.linecorp.armeria.common.loadbalancer;
 
 import static com.google.common.base.Preconditions.checkArgument;
 
-import com.google.common.primitives.Ints;
-
 import com.linecorp.armeria.common.annotation.UnstableApi;
 
 /**
@@ -34,25 +32,8 @@ public interface WeightTransition<T> {
      * step increases.
      */
     static <T> WeightTransition<T> linear() {
-        return new WeightTransition<T>() {
-            @Override
-            public int compute(T candidate, int weight, int currentStep, int totalSteps) {
-                // currentStep is never greater than totalSteps so we can cast long to int.
-                final int currentWeight =
-                        Ints.saturatedCast((long) weight * currentStep / totalSteps);
-                if (weight > 0 && currentWeight == 0) {
-                    // If the original weight is not 0,
-                    // we should return 1 to make sure the endpoint is selected.
-                    return 1;
-                }
-                return currentWeight;
-            }
-
-            @Override
-            public String toString() {
-                return "WeightTransition.linear()";
-            }
-        };
+        //noinspection unchecked
+        return (WeightTransition<T>) LinearWeightTransition.INSTANCE;
     }
 
     /**
@@ -68,27 +49,7 @@ public interface WeightTransition<T> {
                       "aggression: %s (expected: > 0.0)", aggression);
         checkArgument(minWeightPercent >= 0 && minWeightPercent <= 1.0,
                       "minWeightPercent: %s (expected: >= 0.0, <= 1.0)", minWeightPercent);
-        final int aggressionPercentage = Ints.saturatedCast(Math.round(aggression * 100));
-        final double invertedAggression = 100.0 / aggressionPercentage;
-        return new WeightTransition<T>() {
-            @Override
-            public int compute(T candidate, int weight, int currentStep, int totalSteps) {
-                final int minWeight = Ints.saturatedCast(Math.round(weight * minWeightPercent));
-                final int computedWeight;
-                if (aggressionPercentage == 100) {
-                    computedWeight = linear().compute(candidate, weight, currentStep, totalSteps);
-                } else {
-                    computedWeight = (int) (weight * Math.pow(1.0 * currentStep / totalSteps,
-                                                              invertedAggression));
-                }
-                return Math.max(computedWeight, minWeight);
-            }
-
-            @Override
-            public String toString() {
-                return "WeightTransition.aggression(" + aggression + ", " + minWeightPercent + ')';
-            }
-        };
+        return new AggregationWeightTransition<>(aggression, minWeightPercent);
     }
 
     /**

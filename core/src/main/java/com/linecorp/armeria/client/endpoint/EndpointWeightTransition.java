@@ -17,8 +17,6 @@ package com.linecorp.armeria.client.endpoint;
 
 import static com.google.common.base.Preconditions.checkArgument;
 
-import com.google.common.primitives.Ints;
-
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.common.loadbalancer.WeightTransition;
 
@@ -40,9 +38,9 @@ public interface EndpointWeightTransition {
      */
     @Deprecated
     static EndpointWeightTransition linear() {
-        return (endpoint, currentStep, totalSteps) ->
-                // currentStep is never greater than totalSteps so we can cast long to int.
-                Ints.saturatedCast((long) endpoint.weight() * currentStep / totalSteps);
+        return (endpoint, currentStep, totalSteps) -> {
+            return WeightTransition.linear().compute(endpoint, endpoint.weight(), currentStep, totalSteps);
+        };
     }
 
     /**
@@ -61,18 +59,9 @@ public interface EndpointWeightTransition {
                       "aggression: %s (expected: > 0.0)", aggression);
         checkArgument(minWeightPercent >= 0 && minWeightPercent <= 1.0,
                       "minWeightPercent: %s (expected: >= 0.0, <= 1.0)", minWeightPercent);
-        final int aggressionPercentage = Ints.saturatedCast(Math.round(aggression * 100));
-        final double invertedAggression = 100.0 / aggressionPercentage;
         return (endpoint, currentStep, totalSteps) -> {
-            final int weight = endpoint.weight();
-            final int minWeight = Ints.saturatedCast(Math.round(weight * minWeightPercent));
-            final int computedWeight;
-            if (aggressionPercentage == 100) {
-                computedWeight = linear().compute(endpoint, currentStep, totalSteps);
-            } else {
-                computedWeight = (int) (weight * Math.pow(1.0 * currentStep / totalSteps, invertedAggression));
-            }
-            return Math.max(computedWeight, minWeight);
+            return WeightTransition.aggression(aggression, minWeightPercent)
+                                   .compute(endpoint, endpoint.weight(), currentStep, totalSteps);
         };
     }
 
