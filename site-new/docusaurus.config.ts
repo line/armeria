@@ -138,9 +138,7 @@ const config: Config = {
     },
   } satisfies Preset.ThemeConfig,
 
-  plugins: [
-    'docusaurus-plugin-less'
-],
+  plugins: ['docusaurus-plugin-less'],
 };
 
 export default config;
