@@ -461,8 +461,7 @@ final class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
         final ChannelPipeline pipeline = ctx.pipeline();
         pipeline.channel().eventLoop().execute(
                 () -> pipeline.fireUserEventTriggered(
-                        new SessionProtocolNegotiationException(expected, actual,
-                                                                ctx.channel().remoteAddress(), reason)));
+                        new SessionProtocolNegotiationException(expected, actual, reason)));
         ctx.close();
     }
 
