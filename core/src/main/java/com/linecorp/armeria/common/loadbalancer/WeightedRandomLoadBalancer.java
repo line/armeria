@@ -41,7 +41,7 @@ import com.linecorp.armeria.internal.common.util.ReentrantShortLock;
  * selected as much as their weight, then A is removed temporarily and the chances that B and C are selected are
  * 4/10 and 6/10.
  */
-final class WeightedRandomLoadBalancer<T, C> implements LoadBalancer<T, C> {
+final class WeightedRandomLoadBalancer<T> implements SimpleLoadBalancer<T> {
 
     private final ReentrantLock lock = new ReentrantShortLock();
     private final List<CandidateContext<T>> allEntries;
@@ -78,7 +78,7 @@ final class WeightedRandomLoadBalancer<T, C> implements LoadBalancer<T, C> {
 
     @Nullable
     @Override
-    public T pick(C context) {
+    public T pick() {
         if (allEntries.isEmpty()) {
             return null;
         }

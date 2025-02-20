@@ -79,7 +79,12 @@ final class DefaultEndpointSelector<T extends LoadBalancer<Endpoint, ClientReque
     }
 
     @FunctionalInterface
-    interface LoadBalancerFactory<T extends LoadBalancer<Endpoint, ClientRequestContext>> {
+    interface LoadBalancerFactory<T> {
         T newLoadBalancer(@Nullable T oldLoadBalancer, List<Endpoint> candidates);
+
+        @SuppressWarnings("unchecked")
+        default T unsafeCast(LoadBalancer<Endpoint, ?> loadBalancer) {
+            return (T) loadBalancer;
+        }
     }
 }

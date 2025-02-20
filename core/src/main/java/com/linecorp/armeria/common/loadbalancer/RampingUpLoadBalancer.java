@@ -63,10 +63,10 @@ import it.unimi.dsi.fastutil.objects.Object2LongOpenHashMap;
  * A and B are ramped up right away when they are added and they are ramped up together at t4.
  * C is updated alone every 2000 milliseconds. D is ramped up together with A and B at t4.
  */
-final class RampingUpLoadBalancer<T, C> implements UpdatableLoadBalancer<T, C> {
+final class RampingUpLoadBalancer<T> implements UpdatableLoadBalancer<T> {
 
     private static final Logger logger = LoggerFactory.getLogger(RampingUpLoadBalancer.class);
-    private static final LoadBalancer<?, ?> EMPTY_RANDOM_LOAD_BALANCER =
+    private static final SimpleLoadBalancer<?> EMPTY_RANDOM_LOAD_BALANCER =
             LoadBalancer.ofWeightedRandom(ImmutableList.of(), x -> 0);
 
     private final long rampingUpIntervalNanos;
@@ -82,8 +82,8 @@ final class RampingUpLoadBalancer<T, C> implements UpdatableLoadBalancer<T, C> {
     private final ReentrantShortLock lock = new ReentrantShortLock(true);
 
     @SuppressWarnings("unchecked")
-    private volatile LoadBalancer<Weighted, @Nullable Void> weightedRandomLoadBalancer =
-            (LoadBalancer<Weighted, @Nullable Void>) EMPTY_RANDOM_LOAD_BALANCER;
+    private volatile SimpleLoadBalancer<Weighted> weightedRandomLoadBalancer =
+            (SimpleLoadBalancer<Weighted>) EMPTY_RANDOM_LOAD_BALANCER;
 
     private final List<Weighted> candidatesFinishedRampingUp = new ArrayList<>();
 
@@ -108,10 +108,10 @@ final class RampingUpLoadBalancer<T, C> implements UpdatableLoadBalancer<T, C> {
 
     @Nullable
     @Override
-    public T pick(C unused) {
-        final LoadBalancer<Weighted, @Nullable Void> loadBalancer = weightedRandomLoadBalancer;
+    public T pick() {
+        final SimpleLoadBalancer<Weighted> loadBalancer = weightedRandomLoadBalancer;
         @SuppressWarnings("NullAway")
-        final Weighted weighted = loadBalancer.pick(null);
+        final Weighted weighted = loadBalancer.pick();
         if (weighted == null) {
             return null;
         }
@@ -227,7 +227,7 @@ final class RampingUpLoadBalancer<T, C> implements UpdatableLoadBalancer<T, C> {
     }
 
     @VisibleForTesting
-    LoadBalancer<Weighted, Void> weightedRandomLoadBalancer() {
+    SimpleLoadBalancer<Weighted> weightedRandomLoadBalancer() {
         return weightedRandomLoadBalancer;
     }
 

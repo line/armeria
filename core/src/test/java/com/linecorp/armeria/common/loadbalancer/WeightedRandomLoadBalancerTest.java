@@ -37,9 +37,9 @@ final class WeightedRandomLoadBalancerTest {
         final Endpoint foo = Endpoint.of("foo.com").withWeight(0);
         final Endpoint bar = Endpoint.of("bar.com").withWeight(0);
         final List<Endpoint> endpoints = ImmutableList.of(foo, bar);
-        final LoadBalancer<Endpoint, Void> loadBalancer =
+        final SimpleLoadBalancer<Endpoint> loadBalancer =
                 LoadBalancer.ofWeightedRandom(endpoints, Endpoint::weight);
-        assertThat(loadBalancer.pick(null)).isNull();
+        assertThat(loadBalancer.pick()).isNull();
     }
 
     @Test
@@ -48,13 +48,13 @@ final class WeightedRandomLoadBalancerTest {
         final Endpoint bar = Endpoint.of("bar.com").withWeight(2);
         final Endpoint baz = Endpoint.of("baz.com").withWeight(1);
         final List<Endpoint> endpoints = ImmutableList.of(foo, bar, baz);
-        final LoadBalancer<Endpoint, Void> loadBalancer = LoadBalancer.ofWeightedRandom(
+        final SimpleLoadBalancer<Endpoint> loadBalancer = LoadBalancer.ofWeightedRandom(
                 endpoints, Endpoint::weight);
         for (int i = 0; i < 1000; i++) {
             final ImmutableList.Builder<Endpoint> builder = ImmutableList.builder();
             // The sum of weight is 6. Every endpoint is selected as many as its weight.
             for (int j = 0; j < 6; j++) {
-                builder.add(loadBalancer.pick(null));
+                builder.add(loadBalancer.pick());
             }
             final List<Endpoint> selected = builder.build();
             assertThat(selected).usingElementComparator(EndpointComparator.INSTANCE).containsExactlyInAnyOrder(
@@ -74,9 +74,9 @@ final class WeightedRandomLoadBalancerTest {
         final Endpoint bar = Endpoint.of("bar.com").withWeight(200);
         final Endpoint qux = Endpoint.of("qux.com").withWeight(300);
         final List<Endpoint> endpoints = ImmutableList.of(foo, bar, qux);
-        final WeightedRandomLoadBalancer<Endpoint, Void> loadBalancer =
-                (WeightedRandomLoadBalancer<Endpoint, Void>)
-                        LoadBalancer.<Endpoint, Void>ofWeightedRandom(endpoints, Endpoint::weight);
+        final WeightedRandomLoadBalancer<Endpoint> loadBalancer =
+                (WeightedRandomLoadBalancer<Endpoint>)
+                        LoadBalancer.ofWeightedRandom(endpoints, Endpoint::weight);
 
         final int totalWeight = foo.weight() + bar.weight() + qux.weight();
         for (int i = 0; i < concurrency; i++) {
@@ -86,7 +86,7 @@ final class WeightedRandomLoadBalancerTest {
                     startLatch0.await();
 
                     for (int count = 0; count < totalWeight * concurrency; count++) {
-                        assertThat(loadBalancer.pick(null)).isNotNull();
+                        assertThat(loadBalancer.pick()).isNotNull();
                     }
                     finalLatch0.countDown();
                     finalLatch0.await();
@@ -98,7 +98,7 @@ final class WeightedRandomLoadBalancerTest {
                     startLatch1.countDown();
                     startLatch1.await();
                     for (int count = 0; count < totalWeight * concurrency; count++) {
-                        assertThat(loadBalancer.pick(null)).isNotNull();
+                        assertThat(loadBalancer.pick()).isNotNull();
                     }
                     finalLatch1.countDown();
                 } catch (Exception e) {

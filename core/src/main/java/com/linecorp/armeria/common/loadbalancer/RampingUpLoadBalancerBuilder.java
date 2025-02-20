@@ -31,8 +31,8 @@ import io.netty.util.concurrent.EventExecutor;
  * A builder for creating a {@link RampingUpLoadBalancer}.
  */
 @UnstableApi
-public final class RampingUpLoadBalancerBuilder<T, C>
-        extends AbstractRampingUpLoadBalancerBuilder<T, RampingUpLoadBalancerBuilder<T, C>> {
+public final class RampingUpLoadBalancerBuilder<T>
+        extends AbstractRampingUpLoadBalancerBuilder<T, RampingUpLoadBalancerBuilder<T>> {
 
     private final List<T> candidates;
     @Nullable
@@ -47,7 +47,7 @@ public final class RampingUpLoadBalancerBuilder<T, C>
      * Returns a newly-created weight ramping up {@link LoadBalancer} which ramps the weight of
      * newly added candidates. The candidate is selected using weighted random distribution.
      */
-    public UpdatableLoadBalancer<T, C> build() {
+    public UpdatableLoadBalancer<T> build() {
         validate();
 
         EventExecutor executor = executor();

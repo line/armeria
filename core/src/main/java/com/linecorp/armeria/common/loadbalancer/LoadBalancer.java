@@ -42,7 +42,7 @@ public interface LoadBalancer<T, C> extends SafeCloseable {
     /**
      * Returns a {@link LoadBalancer} that selects a candidate using the round-robin strategy.
      */
-    static <T, C> LoadBalancer<T, C> ofRoundRobin(Iterable<? extends T> candidates) {
+    static <T> SimpleLoadBalancer<T> ofRoundRobin(Iterable<? extends T> candidates) {
         requireNonNull(candidates, "candidates");
         return new RoundRobinLoadBalancer<>(candidates);
     }
@@ -54,7 +54,7 @@ public interface LoadBalancer<T, C> extends SafeCloseable {
      *
      * @param weightFunction the weight function which returns the weight of the candidate.
      */
-    static <T, C> LoadBalancer<T, C> ofWeightedRoundRobin(Iterable<? extends T> candidates,
+    static <T> SimpleLoadBalancer<T> ofWeightedRoundRobin(Iterable<? extends T> candidates,
                                                           ToIntFunction<? super T> weightFunction) {
         requireNonNull(candidates, "candidates");
         requireNonNull(weightFunction, "weightFunction");
@@ -68,7 +68,7 @@ public interface LoadBalancer<T, C> extends SafeCloseable {
      * implements <a href="https://en.wikipedia.org/wiki/Weighted_round_robin#Interleaved_WRR">Interleaved WRR</a>
      * algorithm.
      */
-    static <T extends Weighted, C> LoadBalancer<T, C> ofWeightedRoundRobin(Iterable<? extends T> candidates) {
+    static <T extends Weighted> SimpleLoadBalancer<T> ofWeightedRoundRobin(Iterable<? extends T> candidates) {
         requireNonNull(candidates, "candidates");
         //noinspection unchecked
         return new WeightedRoundRobinLoadBalancer<>((Iterable<T>) candidates, null);
@@ -80,7 +80,7 @@ public interface LoadBalancer<T, C> extends SafeCloseable {
      * algorithm.
      */
     @SafeVarargs
-    static <T extends Weighted, C> LoadBalancer<T, C> ofWeightedRoundRobin(T... candidates) {
+    static <T extends Weighted> SimpleLoadBalancer<T> ofWeightedRoundRobin(T... candidates) {
         requireNonNull(candidates, "candidates");
         return ofWeightedRoundRobin(ImmutableList.copyOf(candidates));
     }
@@ -115,8 +115,8 @@ public interface LoadBalancer<T, C> extends SafeCloseable {
      *
      * @param weightFunction the weight function which returns the weight of the candidate.
      */
-    static <T, C> LoadBalancer<T, C> ofWeightedRandom(Iterable<? extends T> candidates,
-                                                      ToIntFunction<? super T> weightFunction) {
+    static <T, C> SimpleLoadBalancer<T> ofWeightedRandom(Iterable<? extends T> candidates,
+                                                         ToIntFunction<? super T> weightFunction) {
         requireNonNull(candidates, "candidates");
         requireNonNull(weightFunction, "weightFunction");
         return new WeightedRandomLoadBalancer<>(candidates, weightFunction);
@@ -125,7 +125,7 @@ public interface LoadBalancer<T, C> extends SafeCloseable {
     /**
      * Returns a {@link LoadBalancer} that selects a candidate using the weighted random distribution strategy.
      */
-    static <T extends Weighted, C> LoadBalancer<T, C> ofWeightedRandom(
+    static <T extends Weighted> SimpleLoadBalancer<T> ofWeightedRandom(
             Iterable<? extends T> candidates) {
         requireNonNull(candidates, "candidates");
         return new WeightedRandomLoadBalancer<>(candidates, null);
@@ -135,7 +135,7 @@ public interface LoadBalancer<T, C> extends SafeCloseable {
      * Returns a {@link LoadBalancer} that selects a candidate using the weighted random distribution strategy.
      */
     @SafeVarargs
-    static <T extends Weighted, C> LoadBalancer<T, C> ofWeightedRandom(T... candidates) {
+    static <T extends Weighted> SimpleLoadBalancer<T> ofWeightedRandom(T... candidates) {
         requireNonNull(candidates, "candidates");
         return ofWeightedRandom(ImmutableList.copyOf(candidates));
     }
@@ -150,11 +150,11 @@ public interface LoadBalancer<T, C> extends SafeCloseable {
      *
      * @param weightFunction the weight function which returns the weight of the candidate.
      */
-    static <T, C> UpdatableLoadBalancer<T, C> ofRampingUp(Iterable<? extends T> candidates,
-                                                          ToIntFunction<? super T> weightFunction) {
+    static <T, C> UpdatableLoadBalancer<T> ofRampingUp(Iterable<? extends T> candidates,
+                                                       ToIntFunction<? super T> weightFunction) {
         requireNonNull(candidates, "candidates");
         requireNonNull(weightFunction, "weightFunction");
-        return LoadBalancer.<T, C>builderForRampingUp(candidates, weightFunction)
+        return LoadBalancer.<T>builderForRampingUp(candidates, weightFunction)
                            .build();
     }
 
@@ -165,9 +165,9 @@ public interface LoadBalancer<T, C> extends SafeCloseable {
      * The weights of {@link Endpoint}s are ramped up by 10 percent every 2 seconds up to 100 percent
      * by default. If you want to customize the parameters, use {@link #builderForRampingUp(Iterable)}.
      */
-    static <T extends Weighted, C> UpdatableLoadBalancer<T, C> ofRampingUp(Iterable<? extends T> candidates) {
+    static <T extends Weighted> UpdatableLoadBalancer<T> ofRampingUp(Iterable<? extends T> candidates) {
         requireNonNull(candidates, "candidates");
-        return LoadBalancer.<T, C>builderForRampingUp(candidates).build();
+        return LoadBalancer.<T>builderForRampingUp(candidates).build();
     }
 
     /**
@@ -178,7 +178,7 @@ public interface LoadBalancer<T, C> extends SafeCloseable {
      * by default. If you want to customize the parameters, use {@link #builderForRampingUp(Iterable)}.
      */
     @SafeVarargs
-    static <T extends Weighted, C> UpdatableLoadBalancer<T, C> ofRampingUp(T... candidates) {
+    static <T extends Weighted> UpdatableLoadBalancer<T> ofRampingUp(T... candidates) {
         requireNonNull(candidates, "candidates");
         return ofRampingUp(ImmutableList.copyOf(candidates));
     }
@@ -190,7 +190,7 @@ public interface LoadBalancer<T, C> extends SafeCloseable {
      *
      * @param weightFunction the weight function which returns the weight of the candidate.
      */
-    static <T, C> RampingUpLoadBalancerBuilder<T, C> builderForRampingUp(
+    static <T> RampingUpLoadBalancerBuilder<T> builderForRampingUp(
             Iterable<? extends T> candidates, ToIntFunction<? super T> weightFunction) {
         requireNonNull(candidates, "candidates");
         requireNonNull(weightFunction, "weightFunction");
@@ -203,7 +203,7 @@ public interface LoadBalancer<T, C> extends SafeCloseable {
      * a {@link LoadBalancer} which ramps up the weight of newly added
      * candidates. The candidate is selected using weighted random distribution.
      */
-    static <T extends Weighted, C> RampingUpLoadBalancerBuilder<T, C> builderForRampingUp(
+    static <T extends Weighted> RampingUpLoadBalancerBuilder<T> builderForRampingUp(
             Iterable<? extends T> candidates) {
         requireNonNull(candidates, "candidates");
         //noinspection unchecked
@@ -216,7 +216,7 @@ public interface LoadBalancer<T, C> extends SafeCloseable {
      * candidates. The candidate is selected using weighted random distribution.
      */
     @SafeVarargs
-    static <T extends Weighted, C> RampingUpLoadBalancerBuilder<T, C> builderForRampingUp(T... candidates) {
+    static <T extends Weighted> RampingUpLoadBalancerBuilder<T> builderForRampingUp(T... candidates) {
         requireNonNull(candidates, "candidates");
         return builderForRampingUp(ImmutableList.copyOf(candidates));
     }

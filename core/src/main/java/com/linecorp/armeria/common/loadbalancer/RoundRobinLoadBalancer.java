@@ -29,7 +29,7 @@ import com.linecorp.armeria.common.annotation.Nullable;
  *
  * <p>For example, with node a, b and c, then select result is abc abc ...
  */
-final class RoundRobinLoadBalancer<T, C> implements LoadBalancer<T, C> {
+final class RoundRobinLoadBalancer<T> implements SimpleLoadBalancer<T> {
 
     private final AtomicInteger sequence = new AtomicInteger();
     private final List<T> candidates;
@@ -40,7 +40,7 @@ final class RoundRobinLoadBalancer<T, C> implements LoadBalancer<T, C> {
 
     @Nullable
     @Override
-    public T pick(C unused) {
+    public T pick() {
         if (candidates.isEmpty()) {
             return null;
         }

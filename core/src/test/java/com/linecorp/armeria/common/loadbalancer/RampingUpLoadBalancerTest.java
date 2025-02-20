@@ -83,7 +83,7 @@ class RampingUpLoadBalancerTest {
 
     @Test
     void endpointIsRemovedIfNotInNewEndpoints() {
-        final RampingUpLoadBalancer<Endpoint, Void> selector = setInitialEndpoints(2);
+        final RampingUpLoadBalancer<Endpoint> selector = setInitialEndpoints(2);
         ticker.addAndGet(rampingUpIntervalNanos);
         // Because we set only foo1.com, foo.com is removed.
         selector.updateCandidates(ImmutableList.of(Endpoint.of("foo1.com")));
@@ -97,7 +97,7 @@ class RampingUpLoadBalancerTest {
     @Test
     void rampingUpIsDoneAfterNumberOfSteps() {
         final int steps = 2;
-        final RampingUpLoadBalancer<Endpoint, Void> selector = setInitialEndpoints(steps);
+        final RampingUpLoadBalancer<Endpoint> selector = setInitialEndpoints(steps);
         ticker.addAndGet(rampingUpIntervalNanos);
         final long windowIndex = selector.windowIndex(ticker.get());
         selector.updateCandidates(ImmutableList.<Endpoint>builder()
@@ -130,7 +130,7 @@ class RampingUpLoadBalancerTest {
     @Test
     void endpointsAreAddedToPreviousEntry_IfTheyAreAddedWithinWindow() {
         final int steps = 10;
-        final RampingUpLoadBalancer<Endpoint, Void> selector = setInitialEndpoints(steps);
+        final RampingUpLoadBalancer<Endpoint> selector = setInitialEndpoints(steps);
 
         addSecondEndpoints(selector, steps);
 
@@ -166,7 +166,7 @@ class RampingUpLoadBalancerTest {
     @Test
     void endpointsAreAddedToNewEntry_IfAllTheEntryAreRemoved() {
         final int steps = 10;
-        final RampingUpLoadBalancer<Endpoint, Void> selector = setInitialEndpoints(steps);
+        final RampingUpLoadBalancer<Endpoint> selector = setInitialEndpoints(steps);
 
         addSecondEndpoints(selector, steps);
 
@@ -187,7 +187,7 @@ class RampingUpLoadBalancerTest {
     @Test
     void endpointsAreAddedToNextEntry_IfTheyAreAddedWithinWindow() {
         final int steps = 10;
-        final RampingUpLoadBalancer<Endpoint, Void> selector = setInitialEndpoints(steps);
+        final RampingUpLoadBalancer<Endpoint> selector = setInitialEndpoints(steps);
 
         long window = selector.windowIndex(ticker.get());
         addSecondEndpoints(selector, steps);
@@ -243,7 +243,7 @@ class RampingUpLoadBalancerTest {
     @Test
     void setEndpointWithDifferentWeight() {
         final int steps = 10;
-        final RampingUpLoadBalancer<Endpoint, Void> selector = setInitialEndpoints(steps);
+        final RampingUpLoadBalancer<Endpoint> selector = setInitialEndpoints(steps);
 
         // Set an endpoint with the weight which is lower than current weight so ramping up is
         // not happening for the endpoint.
@@ -312,7 +312,7 @@ class RampingUpLoadBalancerTest {
     @Test
     void rampingUpEndpointsAreRemoved() {
         final int steps = 10;
-        final RampingUpLoadBalancer<Endpoint, Void> selector = setInitialEndpoints(steps);
+        final RampingUpLoadBalancer<Endpoint> selector = setInitialEndpoints(steps);
 
         addSecondEndpoints(selector, steps);
 
@@ -351,7 +351,7 @@ class RampingUpLoadBalancerTest {
     @Test
     void sameEndpointsAreProcessed() {
         final int steps = 10;
-        final RampingUpLoadBalancer<Endpoint, Void> selector = setInitialEndpoints(steps);
+        final RampingUpLoadBalancer<Endpoint> selector = setInitialEndpoints(steps);
 
         addSecondEndpoints(selector, steps);
 
@@ -385,7 +385,7 @@ class RampingUpLoadBalancerTest {
     @Test
     void endpointTimestampsArePrioritized() {
         final int steps = 10;
-        final RampingUpLoadBalancer<Endpoint, Void> selector = setInitialEndpoints(steps);
+        final RampingUpLoadBalancer<Endpoint> selector = setInitialEndpoints(steps);
 
         // The three bar.com are converted into onw bar.com with 3000 weight.
         selector.updateCandidates(ImmutableList.of(Endpoint.of("foo.com")));
@@ -417,7 +417,7 @@ class RampingUpLoadBalancerTest {
     @Test
     void scheduledIsCanceledWhenEndpointGroupIsClosed() {
         final int steps = 10;
-        final RampingUpLoadBalancer<Endpoint, Void> selector = setInitialEndpoints(steps);
+        final RampingUpLoadBalancer<Endpoint> selector = setInitialEndpoints(steps);
 
         ticker.addAndGet(steps * rampingUpIntervalNanos);
 
@@ -474,9 +474,9 @@ class RampingUpLoadBalancerTest {
     @MethodSource("correctSchedulingParams")
     void correctScheduling(long intervalNanos, long windowNanos, int totalSteps,
                            long timePassed, long expectedInitialDelay, long expectedWindow) {
-        final RampingUpLoadBalancer<Endpoint, Void> loadBalancer =
-                (RampingUpLoadBalancer<Endpoint, Void>)
-                        LoadBalancer.<Endpoint, Void>builderForRampingUp(ImmutableList.of())
+        final RampingUpLoadBalancer<Endpoint> loadBalancer =
+                (RampingUpLoadBalancer<Endpoint>)
+                        LoadBalancer.<Endpoint>builderForRampingUp(ImmutableList.of())
                                     .weightTransition(weightTransition)
                                     .rampingUpInterval(Duration.ofNanos(intervalNanos))
                                     .rampingUpTaskWindow(Duration.ofNanos(windowNanos))
@@ -492,9 +492,9 @@ class RampingUpLoadBalancerTest {
         assertThat(loadBalancer.rampingUpWindowsMap).containsOnlyKeys(expectedWindow);
     }
 
-    private static RampingUpLoadBalancer<Endpoint, Void> setInitialEndpoints(int numberOfSteps) {
-        final RampingUpLoadBalancer<Endpoint, Void> loadBalancer = (RampingUpLoadBalancer<Endpoint, Void>)
-                LoadBalancer.<Endpoint, Void>builderForRampingUp(initialEndpoints)
+    private static RampingUpLoadBalancer<Endpoint> setInitialEndpoints(int numberOfSteps) {
+        final RampingUpLoadBalancer<Endpoint> loadBalancer = (RampingUpLoadBalancer<Endpoint>)
+                LoadBalancer.builderForRampingUp(initialEndpoints)
                             .weightTransition(weightTransition)
                             .rampingUpInterval(Duration.ofNanos(rampingUpIntervalNanos))
                             .rampingUpTaskWindow(Duration.ofNanos(rampingUpTaskWindowNanos))
@@ -522,9 +522,9 @@ class RampingUpLoadBalancerTest {
         return loadBalancer;
     }
 
-    private static List<Endpoint> endpointsFromSelectorEntry(RampingUpLoadBalancer<Endpoint, Void> selector) {
-        final WeightedRandomLoadBalancer<Weighted, Void> randomLoadBalancer =
-                (WeightedRandomLoadBalancer<Weighted, Void>) selector.weightedRandomLoadBalancer();
+    private static List<Endpoint> endpointsFromSelectorEntry(RampingUpLoadBalancer<Endpoint> selector) {
+        final WeightedRandomLoadBalancer<Weighted> randomLoadBalancer =
+                (WeightedRandomLoadBalancer<Weighted>) selector.weightedRandomLoadBalancer();
         return randomLoadBalancer.entries()
                                  .stream()
                                  .map(ctx -> {
@@ -541,7 +541,7 @@ class RampingUpLoadBalancerTest {
                                  .collect(Collectors.toList());
     }
 
-    private static void addSecondEndpoints(RampingUpLoadBalancer<Endpoint, Void> selector, int steps) {
+    private static void addSecondEndpoints(RampingUpLoadBalancer<Endpoint> selector, int steps) {
         final List<Endpoint> newEndpoints = ImmutableList.<Endpoint>builder()
                                                          .addAll(initialEndpoints)
                                                          .addAll(secondEndpoints)

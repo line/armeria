@@ -44,7 +44,7 @@ import com.linecorp.armeria.internal.common.loadbalancer.WeightedObject;
  *   <li>if endpoint weights are 3,5,7, then select result is abcabcabcbcbccc abcabcabcbcbccc ...</li>
  * </ul>
  */
-final class WeightedRoundRobinLoadBalancer<T, C> implements LoadBalancer<T, C> {
+final class WeightedRoundRobinLoadBalancer<T> implements SimpleLoadBalancer<T> {
 
     private static final Logger logger = LoggerFactory.getLogger(WeightedRoundRobinLoadBalancer.class);
 
@@ -58,7 +58,7 @@ final class WeightedRoundRobinLoadBalancer<T, C> implements LoadBalancer<T, C> {
 
     @Nullable
     @Override
-    public T pick(C unused) {
+    public T pick() {
         return candidatesAndWeights.select(sequence.getAndIncrement());
     }
 

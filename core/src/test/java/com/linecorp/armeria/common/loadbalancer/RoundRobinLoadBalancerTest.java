@@ -30,21 +30,16 @@ class RoundRobinLoadBalancerTest {
     void pick() {
         final ImmutableList<Endpoint> endpoints = ImmutableList.of(Endpoint.parse("localhost:1234"),
                                                                    Endpoint.parse("localhost:2345"));
-        final LoadBalancer<Endpoint, Void> loadBalancer = LoadBalancer.ofRoundRobin(endpoints);
-        assertThat(loadBalancer.pick(null))
-                .isEqualTo(endpoints.get(0));
-        assertThat(loadBalancer.pick(null))
-                .isEqualTo(endpoints.get(1));
-        assertThat(loadBalancer.pick(null))
-                .isEqualTo(endpoints.get(0));
-        assertThat(loadBalancer.pick(null))
-                .isEqualTo(endpoints.get(1));
+        final SimpleLoadBalancer<Endpoint> loadBalancer = LoadBalancer.ofRoundRobin(endpoints);
+        assertThat(loadBalancer.pick()).isEqualTo(endpoints.get(0));
+        assertThat(loadBalancer.pick()).isEqualTo(endpoints.get(1));
+        assertThat(loadBalancer.pick()).isEqualTo(endpoints.get(0));
+        assertThat(loadBalancer.pick()).isEqualTo(endpoints.get(1));
     }
 
     @Test
     void pickEmpty() {
-        final LoadBalancer<Endpoint, Void> loadBalancer = LoadBalancer.ofRoundRobin(
-                ImmutableList.of());
-        assertThat(loadBalancer.pick(null)).isNull();
+        final SimpleLoadBalancer<Endpoint> loadBalancer = LoadBalancer.ofRoundRobin(ImmutableList.of());
+        assertThat(loadBalancer.pick()).isNull();
     }
 }

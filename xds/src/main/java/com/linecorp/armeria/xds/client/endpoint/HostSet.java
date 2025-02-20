@@ -27,6 +27,7 @@ import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.loadbalancer.LoadBalancer;
+import com.linecorp.armeria.common.loadbalancer.SimpleLoadBalancer;
 import com.linecorp.armeria.internal.common.loadbalancer.WeightedObject;
 
 import io.envoyproxy.envoy.config.core.v3.Locality;
@@ -37,8 +38,8 @@ final class HostSet {
     private final boolean weightedPriorityHealth;
     private final int overProvisioningFactor;
 
-    private final LoadBalancer<WeightedObject<Locality>, Void> healthyLocalitySelector;
-    private final LoadBalancer<WeightedObject<Locality>, Void> degradedLocalitySelector;
+    private final SimpleLoadBalancer<WeightedObject<Locality>> healthyLocalitySelector;
+    private final SimpleLoadBalancer<WeightedObject<Locality>> degradedLocalitySelector;
 
     private final EndpointGroup hostsEndpointGroup;
     private final EndpointGroup healthyHostsEndpointGroup;
@@ -117,7 +118,7 @@ final class HostSet {
                           .toString();
     }
 
-    private static LoadBalancer<WeightedObject<Locality>, Void> rebuildLocalityScheduler(
+    private static SimpleLoadBalancer<WeightedObject<Locality>> rebuildLocalityScheduler(
             Map<Locality, EndpointGroup> eligibleHostsPerLocality,
             Map<Locality, EndpointGroup> allHostsPerLocality,
             Map<Locality, Integer> localityWeightsMap,
@@ -158,8 +159,7 @@ final class HostSet {
 
     @Nullable
     Locality chooseDegradedLocality() {
-        @SuppressWarnings("NullAway")
-        final WeightedObject<Locality> localityEntry = degradedLocalitySelector.pick(null);
+        final WeightedObject<Locality> localityEntry = degradedLocalitySelector.pick();
         if (localityEntry == null) {
             return null;
         }
@@ -168,8 +168,7 @@ final class HostSet {
 
     @Nullable
     Locality chooseHealthyLocality() {
-        @SuppressWarnings("NullAway")
-        final WeightedObject<Locality> localityEntry = healthyLocalitySelector.pick(null);
+        final WeightedObject<Locality> localityEntry = healthyLocalitySelector.pick();
         if (localityEntry == null) {
             return null;
         }

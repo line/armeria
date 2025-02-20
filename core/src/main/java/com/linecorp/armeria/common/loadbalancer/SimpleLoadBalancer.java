@@ -1,5 +1,5 @@
 /*
- * Copyright 2024 LINE Corporation
+ * Copyright 2025 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -16,16 +16,32 @@
 
 package com.linecorp.armeria.common.loadbalancer;
 
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 
 /**
- * A {@link SimpleLoadBalancer} that can update its candidates.
+ * A simple {@link LoadBalancer} which does not require any parameter to pick a candidate.
  */
+@SuppressWarnings("InterfaceMayBeAnnotatedFunctional")
 @UnstableApi
-public interface UpdatableLoadBalancer<T> extends SimpleLoadBalancer<T> {
+public interface SimpleLoadBalancer<T> extends LoadBalancer<T, Object> {
 
     /**
-     * Updates the candidates of this {@link LoadBalancer}.
+     * {@inheritDoc} This method is equivalent to {@link #pick()}.
+     *
+     * @deprecated Use {@link #pick()} instead.
      */
-    void updateCandidates(Iterable<? extends T> candidates);
+    @Override
+    @Nullable
+    @Deprecated
+    default T pick(Object unused) {
+        return pick();
+    }
+
+    /**
+     * Selects and returns an element from the list of candidates based on the strategy.
+     * {@code null} is returned if no candidate is available.
+     */
+    @Nullable
+    T pick();
 }

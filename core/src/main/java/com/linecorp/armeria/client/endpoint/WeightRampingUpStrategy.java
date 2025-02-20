@@ -54,7 +54,7 @@ import io.netty.util.concurrent.EventExecutor;
  */
 final class WeightRampingUpStrategy
         implements EndpointSelectionStrategy,
-                   LoadBalancerFactory<UpdatableLoadBalancer<Endpoint, ClientRequestContext>> {
+                   LoadBalancerFactory<LoadBalancer<Endpoint, ClientRequestContext>> {
 
     static final EndpointSelectionStrategy INSTANCE = EndpointSelectionStrategy.builderForRampingUp()
                                                                                .build();
@@ -92,22 +92,27 @@ final class WeightRampingUpStrategy
     }
 
     @Override
-    public UpdatableLoadBalancer<Endpoint, ClientRequestContext> newLoadBalancer(
-            @Nullable UpdatableLoadBalancer<Endpoint, ClientRequestContext> oldLoadBalancer,
-            List<Endpoint> candidates) {
+    public LoadBalancer<Endpoint, ClientRequestContext> newLoadBalancer(
+            @Nullable LoadBalancer<Endpoint, ClientRequestContext> oldLoadBalancer, List<Endpoint> candidates) {
         if (oldLoadBalancer == null) {
-            return LoadBalancer.<Endpoint, ClientRequestContext>builderForRampingUp(candidates)
-                               .rampingUpIntervalMillis(rampingUpIntervalMillis)
-                               .rampingUpTaskWindowMillis(rampingUpTaskWindowMillis)
-                               .totalSteps(totalSteps)
-                               .weightTransition(weightTransition)
-                               .timestampFunction(timestampFunction)
-                               .executor(executorSupplier.get())
-                               .ticker(ticker)
-                               .build();
+            final UpdatableLoadBalancer<Endpoint> newLoadBalancer =
+                    LoadBalancer.builderForRampingUp(candidates)
+                                .rampingUpIntervalMillis(rampingUpIntervalMillis)
+                                .rampingUpTaskWindowMillis(rampingUpTaskWindowMillis)
+                                .totalSteps(totalSteps)
+                                .weightTransition(weightTransition)
+                                .timestampFunction(timestampFunction)
+                                .executor(executorSupplier.get())
+                                .ticker(ticker)
+                                .build();
+            return unsafeCast(newLoadBalancer);
         } else {
-            oldLoadBalancer.updateCandidates(candidates);
-            return oldLoadBalancer;
+            assert oldLoadBalancer instanceof UpdatableLoadBalancer;
+            @SuppressWarnings("unchecked")
+            final UpdatableLoadBalancer<Endpoint> casted =
+                    (UpdatableLoadBalancer<Endpoint>) (LoadBalancer<Endpoint, ?>) oldLoadBalancer;
+            casted.updateCandidates(candidates);
+            return unsafeCast(casted);
         }
     }
 }

@@ -40,6 +40,6 @@ final class RoundRobinStrategy
     @Override
     public LoadBalancer<Endpoint, ClientRequestContext> newLoadBalancer(
             @Nullable LoadBalancer<Endpoint, ClientRequestContext> oldLoadBalancer, List<Endpoint> candidates) {
-        return LoadBalancer.ofRoundRobin(candidates);
+        return unsafeCast(LoadBalancer.ofRoundRobin(candidates));
     }
 }
