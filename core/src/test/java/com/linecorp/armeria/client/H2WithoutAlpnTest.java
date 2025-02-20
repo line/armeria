@@ -105,7 +105,7 @@ class H2WithoutAlpnTest {
                             "expected: h2",
                             "actual: h1",
                             "reason: unexpected protocol negotiation result",
-                            "R:127.0.0.1/127.0.0.1:"
+                            "R:127.0.0.1"
                     );
         }
     }
