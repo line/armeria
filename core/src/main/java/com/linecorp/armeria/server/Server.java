@@ -530,7 +530,7 @@ public final class Server implements ListenableAsyncCloseable {
                 doStart(primary).addListener(new ServerPortStartListener(primary))
                                 .addListener(new NextServerPortStartListener(this, it, future));
                 // Chain the future to set up server metrics first before server start future is completed.
-                return future.thenAccept(unused -> bindServerMetricsToMeterRegistry());
+                return future.thenAccept(unused -> setupServerMetrics());
             } catch (Throwable cause) {
                 future.completeExceptionally(cause);
                 return future;
@@ -589,7 +589,7 @@ public final class Server implements ListenableAsyncCloseable {
             return b.bind(localAddress);
         }
 
-        private void bindServerMetricsToMeterRegistry() {
+        private void setupServerMetrics() {
             final MeterRegistry meterRegistry = config.meterRegistry();
             final GracefulShutdownSupport gracefulShutdownSupport = this.gracefulShutdownSupport;
             assert gracefulShutdownSupport != null;

@@ -15,6 +15,7 @@
  */
 package com.linecorp.armeria.server;
 
+import static com.linecorp.armeria.server.DefaultServerMetrics.ALL_CONNECTIONS_METER_NAME;
 import static com.linecorp.armeria.server.DefaultServerMetrics.ALL_REQUESTS_METER_NAME;
 
 import java.net.InetSocketAddress;
@@ -183,44 +184,45 @@ final class DomainSocketServerMetrics implements ServerMetrics {
 
     @Override
     public void bindTo(MeterRegistry meterRegistry) {
-        pendingHttp1Requests.forEach((port, value) -> {
-            final Tag portTag = Tag.of("port", port);
+        pendingHttp1Requests.forEach((path, value) -> {
+            // The path is used as the 'port' tag.
+            final Tag portTag = Tag.of("port", path);
             meterRegistry.gauge(ALL_REQUESTS_METER_NAME,
                                 ImmutableList.of(portTag, Tag.of("protocol", "http1"),
                                                  Tag.of("state", "pending")),
                                 value);
         });
-        pendingHttp2Requests.forEach((port, value) -> {
-            final Tag portTag = Tag.of("port", port);
+        pendingHttp2Requests.forEach((path, value) -> {
+            final Tag portTag = Tag.of("port", path);
             meterRegistry.gauge(ALL_REQUESTS_METER_NAME,
                                 ImmutableList.of(portTag, Tag.of("protocol", "http2"),
                                                  Tag.of("state", "pending")),
                                 value);
         });
-        activeHttp1WebSocketRequests.forEach((port, value) -> {
-            final Tag portTag = Tag.of("port", port);
+        activeHttp1WebSocketRequests.forEach((path, value) -> {
+            final Tag portTag = Tag.of("port", path);
             meterRegistry.gauge(ALL_REQUESTS_METER_NAME,
                                 ImmutableList.of(portTag, Tag.of("protocol", "http1.websocket"),
                                                  Tag.of("state", "active")),
                                 value);
         });
-        activeHttp1Requests.forEach((port, value) -> {
-            final Tag portTag = Tag.of("port", port);
+        activeHttp1Requests.forEach((path, value) -> {
+            final Tag portTag = Tag.of("port", path);
             meterRegistry.gauge(ALL_REQUESTS_METER_NAME,
                                 ImmutableList.of(portTag, Tag.of("protocol", "http1"),
                                                  Tag.of("state", "active")),
                                 value);
         });
-        activeHttp2Requests.forEach((port, value) -> {
-            final Tag portTag = Tag.of("port", port);
+        activeHttp2Requests.forEach((path, value) -> {
+            final Tag portTag = Tag.of("port", path);
             meterRegistry.gauge(ALL_REQUESTS_METER_NAME,
                                 ImmutableList.of(portTag, Tag.of("protocol", "http2"),
                                                  Tag.of("state", "active")),
                                 value);
         });
-        activeConnections.forEach((port, value) -> {
-            final Tag portTag = Tag.of("port", port);
-            meterRegistry.gauge("ALL_CONNECTIONS_METER_NAME", ImmutableList.of(portTag), value);
+        activeConnections.forEach((path, value) -> {
+            final Tag portTag = Tag.of("port", path);
+            meterRegistry.gauge(ALL_CONNECTIONS_METER_NAME, ImmutableList.of(portTag), value);
         });
     }
 
