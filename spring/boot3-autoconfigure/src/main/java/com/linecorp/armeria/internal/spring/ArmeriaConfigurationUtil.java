@@ -258,6 +258,7 @@ public final class ArmeriaConfigurationUtil {
         }
 
         if (needsPortBasedVirtualHost) {
+            assert internalPort != null;
             if (usesPrefixPath) {
                 server.virtualHost(internalPort.getPort()).serviceUnder(servicePath, service);
             } else {

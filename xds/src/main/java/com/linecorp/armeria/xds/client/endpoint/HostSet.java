@@ -158,6 +158,7 @@ final class HostSet {
 
     @Nullable
     Locality chooseDegradedLocality() {
+        @SuppressWarnings("NullAway")
         final WeightedObject<Locality> localityEntry = degradedLocalitySelector.pick(null);
         if (localityEntry == null) {
             return null;
@@ -167,6 +168,7 @@ final class HostSet {
 
     @Nullable
     Locality chooseHealthyLocality() {
+        @SuppressWarnings("NullAway")
         final WeightedObject<Locality> localityEntry = healthyLocalitySelector.pick(null);
         if (localityEntry == null) {
             return null;

@@ -15,7 +15,6 @@
  */
 package com.linecorp.armeria.common.loadbalancer;
 
-import static com.linecorp.armeria.internal.client.endpoint.RampingUpKeys.withCreatedAtNanos;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.Mockito.mock;
@@ -49,7 +48,7 @@ import com.linecorp.armeria.client.endpoint.EndpointSelector;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.loadbalancer.RampingUpLoadBalancer.CandidateAndStep;
-import com.linecorp.armeria.internal.client.endpoint.RampingUpKeys;
+import com.linecorp.armeria.internal.client.endpoint.EndpointAttributeKeys;
 import com.linecorp.armeria.internal.common.loadbalancer.WeightedObject;
 
 import io.netty.channel.DefaultEventLoop;
@@ -399,7 +398,8 @@ class RampingUpLoadBalancerTest {
                                       .containsExactlyInAnyOrder(Endpoint.of("foo.com"));
 
         // as far as the selector is concerned, the endpoint is added at ticker#get now
-        final Endpoint endpoint = withCreatedAtNanos(Endpoint.of("foo.com"), ticker.get());
+        Endpoint endpoint = Endpoint.of("foo.com");
+        endpoint = endpoint.withAttr(EndpointAttributeKeys.CREATED_AT_NANOS_KEY, ticker.get());
         selector.updateCandidates(ImmutableList.of(endpoint));
 
         final long window = selector.windowIndex(ticker.get());
@@ -500,7 +500,7 @@ class RampingUpLoadBalancerTest {
                             .rampingUpTaskWindow(Duration.ofNanos(rampingUpTaskWindowNanos))
                             .ticker(ticker::get)
                             .totalSteps(numberOfSteps)
-                            .timestampFunction(RampingUpKeys::getCreatedAtNanos)
+                            .timestampFunction(EndpointAttributeKeys::createdAtNanos)
                             .executor(new ImmediateExecutor())
                             .build();
 

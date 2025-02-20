@@ -28,6 +28,9 @@ import static org.mockito.Mockito.when;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.BiFunction;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -49,6 +52,7 @@ import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.RpcResponse;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.util.ThreadFactories;
 import com.linecorp.armeria.internal.testing.AnticipatedException;
 import com.linecorp.armeria.internal.testing.ImmediateEventLoop;
 import com.linecorp.armeria.server.HttpService;
@@ -543,5 +547,23 @@ class DefaultRequestLogTest {
         assertThat(queue).allSatisfy(t -> assertThat(t)
                 .satisfiesAnyOf(t0 -> assertThat(t0).isEqualTo(testThread),
                                 t0 -> assertThat(ctx.eventLoop().inEventLoop(t0)).isTrue()));
+    }
+
+    @Test
+    void nameIsAlwaysSet() {
+        final AtomicInteger atomicInteger = new AtomicInteger();
+        final ExecutorService executorService =
+                Executors.newFixedThreadPool(2, ThreadFactories.newThreadFactory("test", true));
+        // a heurestic number of iterations to reproduce #5981
+        final int numIterations = 1000;
+        for (int i = 0; i < numIterations; i++) {
+            final ServiceRequestContext sctx = ServiceRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
+            final DefaultRequestLog log = new DefaultRequestLog(sctx);
+            log.defer(RequestLogProperty.REQUEST_CONTENT);
+            executorService.execute(log::endRequest);
+            executorService.execute(() -> log.requestContent(null, null));
+            log.whenRequestComplete().thenRun(atomicInteger::incrementAndGet);
+        }
+        await().untilAsserted(() -> assertThat(atomicInteger).hasValue(numIterations));
     }
 }

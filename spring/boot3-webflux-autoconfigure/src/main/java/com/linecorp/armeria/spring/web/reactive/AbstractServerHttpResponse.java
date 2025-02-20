@@ -110,7 +110,9 @@ abstract class AbstractServerHttpResponse implements ServerHttpResponse {
     }
 
     final State state() {
-        return state.get();
+        final State state = this.state.get();
+        assert state != null;
+        return state;
     }
 
     @Override
@@ -301,4 +303,7 @@ abstract class AbstractServerHttpResponse implements ServerHttpResponse {
      */
     protected void touchDataBuffer(DataBuffer buffer) {
     }
+
+    @Nullable
+    abstract Integer getStatusCode0();
 }

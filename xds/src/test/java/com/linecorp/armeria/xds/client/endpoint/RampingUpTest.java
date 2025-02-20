@@ -16,7 +16,7 @@
 
 package com.linecorp.armeria.xds.client.endpoint;
 
-import static com.linecorp.armeria.internal.client.endpoint.RampingUpKeys.createdAtNanos;
+import static com.linecorp.armeria.internal.client.endpoint.EndpointAttributeKeys.createdAtNanos;
 import static com.linecorp.armeria.xds.XdsTestResources.BOOTSTRAP_CLUSTER_NAME;
 import static com.linecorp.armeria.xds.XdsTestResources.endpoint;
 import static com.linecorp.armeria.xds.XdsTestResources.localityLbEndpoints;
@@ -132,8 +132,8 @@ class RampingUpTest {
         final Cluster bootstrapCluster =
                 XdsTestResources.createStaticCluster(BOOTSTRAP_CLUSTER_NAME, bootstrapLoadAssignment);
         final Bootstrap bootstrap = XdsTestResources.bootstrap(configSource, bootstrapCluster);
-        try (XdsBootstrap xdsBootstrap = XdsBootstrap.of(bootstrap)) {
-            final EndpointGroup xdsEndpointGroup = XdsEndpointGroup.of(xdsBootstrap.listenerRoot(listenerName));
+        try (XdsBootstrap xdsBootstrap = XdsBootstrap.of(bootstrap);
+             EndpointGroup xdsEndpointGroup = XdsEndpointGroup.of(listenerName, xdsBootstrap)) {
             await().untilAsserted(() -> assertThat(xdsEndpointGroup.endpoints())
                     .containsExactlyInAnyOrder(Endpoint.of("a.com", 80), Endpoint.of("b.com", 80)));
 
@@ -215,8 +215,8 @@ class RampingUpTest {
         final Cluster bootstrapCluster =
                 XdsTestResources.createStaticCluster(BOOTSTRAP_CLUSTER_NAME, bootstrapLoadAssignment);
         final Bootstrap bootstrap = XdsTestResources.bootstrap(configSource, bootstrapCluster);
-        try (XdsBootstrap xdsBootstrap = XdsBootstrap.of(bootstrap)) {
-            final EndpointGroup xdsEndpointGroup = XdsEndpointGroup.of(xdsBootstrap.listenerRoot(listenerName));
+        try (XdsBootstrap xdsBootstrap = XdsBootstrap.of(bootstrap);
+             EndpointGroup xdsEndpointGroup = XdsEndpointGroup.of(listenerName, xdsBootstrap)) {
             final BlockingWebClient blockingClient = WebClient.of(SessionProtocol.HTTP, xdsEndpointGroup)
                                                               .blocking();
             assertThat(blockingClient.get("/hello").contentUtf8()).isEqualTo("world");

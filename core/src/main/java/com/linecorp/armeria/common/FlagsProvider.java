@@ -34,6 +34,7 @@ import com.github.benmanes.caffeine.cache.CaffeineSpec;
 import com.linecorp.armeria.client.ClientBuilder;
 import com.linecorp.armeria.client.ClientFactoryBuilder;
 import com.linecorp.armeria.client.DnsResolverGroupBuilder;
+import com.linecorp.armeria.client.ResponseTimeoutMode;
 import com.linecorp.armeria.client.retry.Backoff;
 import com.linecorp.armeria.client.retry.RetryingClient;
 import com.linecorp.armeria.client.retry.RetryingRpcClient;
@@ -1230,6 +1231,22 @@ public interface FlagsProvider {
     @Nullable
     @UnstableApi
     default Long defaultHttp1ConnectionCloseDelayMillis() {
+        return null;
+    }
+
+    /**
+     * Returns the {@link ResponseTimeoutMode} which determines when a response timeout
+     * will start to be scheduled.
+     *
+     * <p>The default value of this flag is {@link ResponseTimeoutMode#REQUEST_SENT}. Specify the
+     * {@code -Dcom.linecorp.armeria.responseTimeoutMode=ResponseTimeoutMode} JVM option to
+     * override the default value.
+     *
+     * @see ResponseTimeoutMode
+     */
+    @Nullable
+    @UnstableApi
+    default ResponseTimeoutMode responseTimeoutMode() {
         return null;
     }
 }

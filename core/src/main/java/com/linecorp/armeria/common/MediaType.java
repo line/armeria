@@ -827,6 +827,11 @@ public final class MediaType {
     public static final MediaType GRAPHQL_RESPONSE_JSON =
             createConstant(APPLICATION_TYPE, "graphql-response+json");
 
+    /**
+     * <a href="https://www.rfc-editor.org/rfc/rfc7763.html">Markdown type</a>.
+     */
+    public static final MediaType MD_UTF_8 = createConstantUtf8(TEXT_TYPE, "markdown");
+
     private static final Charset NO_CHARSET = new Charset("NO_CHARSET", null) {
         @Override
         public boolean contains(Charset cs) {

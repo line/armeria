@@ -19,6 +19,7 @@ package com.linecorp.armeria.common.loadbalancer;
 import java.util.List;
 import java.util.function.ToLongFunction;
 
+import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableList;
 import com.google.common.hash.Hashing;
 
@@ -45,5 +46,13 @@ final class StickyLoadBalancer<T, C> implements LoadBalancer<T, C> {
         final long key = contextHasher.applyAsLong(context);
         final int nearest = Hashing.consistentHash(key, candidates.size());
         return candidates.get(nearest);
+    }
+
+    @Override
+    public String toString() {
+        return MoreObjects.toStringHelper(this)
+                          .add("contextHasher", contextHasher)
+                          .add("candidates", candidates)
+                          .toString();
     }
 }

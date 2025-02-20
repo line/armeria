@@ -15,10 +15,7 @@
  */
 package com.linecorp.armeria.internal.client.grpc;
 
-import static com.linecorp.armeria.internal.client.ClientUtil.initContextAndExecuteWithFallback;
 import static com.linecorp.armeria.internal.client.grpc.protocol.InternalGrpcWebUtil.messageBuf;
-import static com.linecorp.armeria.internal.common.grpc.GrpcExceptionHandlerFunctionUtil.fromThrowable;
-import static com.linecorp.armeria.internal.common.grpc.GrpcExceptionHandlerFunctionUtil.generateMetadataFromThrowable;
 import static java.util.Objects.requireNonNull;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 
@@ -41,8 +38,7 @@ import org.slf4j.LoggerFactory;
 import com.google.common.util.concurrent.MoreExecutors;
 
 import com.linecorp.armeria.client.ClientRequestContext;
-import com.linecorp.armeria.client.HttpClient;
-import com.linecorp.armeria.client.endpoint.EndpointGroup;
+import com.linecorp.armeria.client.HttpPreClient;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpRequestWriter;
@@ -50,7 +46,6 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.RequestHeadersBuilder;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.annotation.Nullable;
-import com.linecorp.armeria.common.grpc.GrpcExceptionHandlerFunction;
 import com.linecorp.armeria.common.grpc.GrpcJsonMarshaller;
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
 import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageFramer;
@@ -64,6 +59,7 @@ import com.linecorp.armeria.common.stream.StreamMessage;
 import com.linecorp.armeria.common.stream.SubscriptionOption;
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.common.util.TimeoutMode;
+import com.linecorp.armeria.internal.client.ClientUtil;
 import com.linecorp.armeria.internal.client.DefaultClientRequestContext;
 import com.linecorp.armeria.internal.client.grpc.protocol.InternalGrpcWebUtil;
 import com.linecorp.armeria.internal.common.grpc.ForwardingCompressor;
@@ -71,6 +67,7 @@ import com.linecorp.armeria.internal.common.grpc.GrpcLogUtil;
 import com.linecorp.armeria.internal.common.grpc.GrpcMessageMarshaller;
 import com.linecorp.armeria.internal.common.grpc.GrpcStatus;
 import com.linecorp.armeria.internal.common.grpc.HttpStreamDeframer;
+import com.linecorp.armeria.internal.common.grpc.InternalGrpcExceptionHandler;
 import com.linecorp.armeria.internal.common.grpc.MetadataUtil;
 import com.linecorp.armeria.internal.common.grpc.StatusAndMetadata;
 import com.linecorp.armeria.internal.common.grpc.TimeoutHeaderUtil;
@@ -111,8 +108,7 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
             ArmeriaClientCall.class, Runnable.class, "pendingTask");
 
     private final DefaultClientRequestContext ctx;
-    private final EndpointGroup endpointGroup;
-    private final HttpClient httpClient;
+    private final BiFunction<ClientRequestContext, Throwable, HttpResponse> errorResponseFactory;
     private final HttpRequestWriter req;
     private final MethodDescriptor<I, O> method;
     private final Map<MethodDescriptor<?, ?>, String> simpleMethodNames;
@@ -127,7 +123,8 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
     private final int maxInboundMessageSizeBytes;
     private final boolean grpcWebText;
     private final Compressor compressor;
-    private final GrpcExceptionHandlerFunction exceptionHandler;
+    private final InternalGrpcExceptionHandler exceptionHandler;
+    private final HttpPreClient preClient;
 
     private boolean endpointInitialized;
     @Nullable
@@ -148,8 +145,6 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
 
     ArmeriaClientCall(
             DefaultClientRequestContext ctx,
-            EndpointGroup endpointGroup,
-            HttpClient httpClient,
             HttpRequestWriter req,
             MethodDescriptor<I, O> method,
             Map<MethodDescriptor<?, ?>, String> simpleMethodNames,
@@ -162,11 +157,11 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
             SerializationFormat serializationFormat,
             @Nullable GrpcJsonMarshaller jsonMarshaller,
             boolean unsafeWrapResponseBuffers,
-            GrpcExceptionHandlerFunction exceptionHandler,
-            boolean useMethodMarshaller) {
+            InternalGrpcExceptionHandler exceptionHandler,
+            boolean useMethodMarshaller,
+            HttpPreClient preClient,
+            BiFunction<ClientRequestContext, Throwable, HttpResponse> errorResponseFactory) {
         this.ctx = ctx;
-        this.endpointGroup = endpointGroup;
-        this.httpClient = httpClient;
         this.req = req;
         this.method = method;
         this.simpleMethodNames = simpleMethodNames;
@@ -179,6 +174,8 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
         grpcWebText = GrpcSerializationFormats.isGrpcWebText(serializationFormat);
         this.maxInboundMessageSizeBytes = maxInboundMessageSizeBytes;
         this.exceptionHandler = exceptionHandler;
+        this.preClient = preClient;
+        this.errorResponseFactory = errorResponseFactory;
 
         ctx.whenInitialized().handle((unused1, unused2) -> {
             runPendingTask();
@@ -243,23 +240,12 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
                 ctx.setResponseTimeout(TimeoutMode.SET_FROM_NOW, Duration.ofNanos(remainingNanos));
             }
         } else {
-            remainingNanos = MILLISECONDS.toNanos(ctx.responseTimeoutMillis());
+            remainingNanos = ctx.remainingTimeoutNanos();
         }
 
         // Must come after handling deadline.
-        prepareHeaders(compressor, metadata, remainingNanos);
-
-        final BiFunction<ClientRequestContext, Throwable, HttpResponse> errorResponseFactory =
-                (unused, cause) -> {
-                    final Metadata responseMetadata = generateMetadataFromThrowable(cause);
-                    Status status = fromThrowable(ctx, exceptionHandler, cause, responseMetadata);
-                    if (status.getDescription() == null) {
-                        status = status.withDescription(cause.getMessage());
-                    }
-                    return HttpResponse.ofFailure(status.asRuntimeException());
-                };
-        final HttpResponse res = initContextAndExecuteWithFallback(
-                httpClient, ctx, endpointGroup, HttpResponse::of, errorResponseFactory);
+        final HttpRequest newReq = prepareHeaders(compressor, metadata, remainingNanos);
+        final HttpResponse res = ClientUtil.executeWithFallback(preClient, ctx, newReq, errorResponseFactory);
 
         final HttpStreamDeframer deframer = new HttpStreamDeframer(
                 decompressorRegistry, ctx, this, exceptionHandler,
@@ -460,8 +446,8 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
                 }
             });
         } catch (Throwable t) {
-            final Metadata metadata = generateMetadataFromThrowable(t);
-            close(fromThrowable(ctx, exceptionHandler, t, metadata), metadata);
+            final StatusAndMetadata statusAndMetadata = exceptionHandler.handle(ctx, t);
+            close(statusAndMetadata.status(), statusAndMetadata.metadata());
         }
     }
 
@@ -476,7 +462,7 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
     }
 
     @Override
-    public void transportReportStatus(Status status, Metadata metadata) {
+    public void transportReportStatus(Status status, @Nullable Metadata metadata) {
         // This method is invoked in ctx.eventLoop and we need to bounce it through
         // CallOptions executor (in case it's configured) to serialize with closes
         // that were potentially triggered when Listener throws (closeWhenListenerThrows).
@@ -495,7 +481,7 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
         });
     }
 
-    private void prepareHeaders(Compressor compressor, Metadata metadata, long remainingNanos) {
+    private HttpRequest prepareHeaders(Compressor compressor, Metadata metadata, long remainingNanos) {
         final RequestHeadersBuilder newHeaders = req.headers().toBuilder();
         if (compressor != Identity.NONE) {
             newHeaders.set(GrpcHeaderNames.GRPC_ENCODING, compressor.getMessageEncoding());
@@ -514,14 +500,15 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
 
         final HttpRequest newReq = req.withHeaders(newHeaders);
         ctx.updateRequest(newReq);
+        return newReq;
     }
 
     private void closeWhenListenerThrows(Throwable t) {
-        final Metadata metadata = generateMetadataFromThrowable(t);
-        closeWhenEos(fromThrowable(ctx, exceptionHandler, t, metadata), metadata);
+        final StatusAndMetadata statusAndMetadata = exceptionHandler.handle(ctx, t);
+        closeWhenEos(statusAndMetadata.status(), statusAndMetadata.metadata());
     }
 
-    private void closeWhenEos(Status status, Metadata metadata) {
+    private void closeWhenEos(Status status, @Nullable Metadata metadata) {
         if (needsDirectInvocation()) {
             close(status, metadata);
         } else {
@@ -537,7 +524,7 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
     // never do this concurrently: the abnormal call into close() from the caller thread happens in case
     // of early return, before event-loop is being assigned to this call. After event-loop is being
     // assigned, the driving call won't be able to trigger close() anymore.
-    private void close(Status status, Metadata metadata) {
+    private void close(Status status, @Nullable Metadata metadata) {
         if (closed) {
             // 'close()' could be called twice if a call is closed with non-OK status.
             // See: https://github.com/line/armeria/issues/3799
@@ -550,7 +537,10 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
             status = Status.DEADLINE_EXCEEDED;
             // Replace trailers to prevent mixing sources of status and trailers.
             metadata = new Metadata();
+        } else if (metadata == null) {
+            metadata = new Metadata();
         }
+
         if (status.getCode() == Code.DEADLINE_EXCEEDED) {
             status = status.augmentDescription("deadline exceeded after " +
                                                MILLISECONDS.toNanos(ctx.responseTimeoutMillis()) + "ns.");

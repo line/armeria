@@ -79,4 +79,9 @@ public interface XdsBootstrap extends SafeCloseable {
      * Returns the event loop used to notify events.
      */
     EventExecutor eventLoop();
+
+    /**
+     * Returns the original {@link Bootstrap} this {@link XdsBootstrap} is based on.
+     */
+    Bootstrap bootstrap();
 }

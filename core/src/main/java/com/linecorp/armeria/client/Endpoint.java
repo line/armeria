@@ -233,7 +233,6 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup, Weig
     private final int weight;
     private final List<Endpoint> endpoints;
     private final String authority;
-    private final String strVal;
 
     @Nullable
     private final Attributes attributes;
@@ -265,8 +264,6 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup, Weig
 
         // Pre-generate the authority.
         authority = generateAuthority(type, host, port);
-        // Pre-generate toString() value.
-        strVal = generateToString(type, authority, ipAddr, weight, attributes);
         this.attributes = attributes;
     }
 
@@ -289,22 +286,6 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup, Weig
                     host = host.substring(0, host.length() - 1);
                 }
                 return port != 0 ? host + ':' + port : host;
-        }
-    }
-
-    private static String generateToString(Type type, String authority, @Nullable String ipAddr,
-                                           int weight, @Nullable Attributes attributes) {
-        try (TemporaryThreadLocals tempThreadLocals = TemporaryThreadLocals.acquire()) {
-            final StringBuilder buf = tempThreadLocals.stringBuilder();
-            buf.append("Endpoint{").append(authority);
-            if (type == Type.HOSTNAME_AND_IP) {
-                buf.append(", ipAddr=").append(ipAddr);
-            }
-            buf.append(", weight=").append(weight);
-            if (attributes != null) {
-                buf.append(", attributes=").append(attributes);
-            }
-            return buf.append('}').toString();
         }
     }
 
@@ -641,6 +622,22 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup, Weig
     }
 
     /**
+     * Returns a new {@link Endpoint} with a host whose trailing dot is removed.
+     *
+     * @return the new endpoint with the new host whose trailing dot is removed.
+     *         {@code this} if the {@link #host()} does not end with a dot ({@code .}).
+     */
+    @UnstableApi
+    public Endpoint withoutTrailingDot() {
+        if (!hasTrailingDot(host)) {
+            return this;
+        }
+
+        final String stripped = host.substring(0, host.length() - 1);
+        return new Endpoint(type, stripped, ipAddr, port, weight, attributes);
+    }
+
+    /**
      * Returns a new host endpoint with the specified weight.
      *
      * @return the new endpoint with the specified weight. {@code this} if this endpoint has the same weight.
@@ -967,6 +964,14 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup, Weig
 
     @Override
     public String toString() {
-        return strVal;
+        try (TemporaryThreadLocals tempThreadLocals = TemporaryThreadLocals.acquire()) {
+            final StringBuilder buf = tempThreadLocals.stringBuilder();
+            buf.append("Endpoint{").append(authority);
+            if (type == Type.HOSTNAME_AND_IP) {
+                buf.append(", ipAddr=").append(ipAddr);
+            }
+            return buf.append(", weight=").append(weight)
+                      .append('}').toString();
+        }
     }
 }

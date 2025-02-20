@@ -17,6 +17,8 @@
 package com.linecorp.armeria.xds.client.endpoint;
 
 import static com.google.common.base.Preconditions.checkArgument;
+import static com.linecorp.armeria.xds.client.endpoint.DefaultLbStateFactory.isHostSetInPanic;
+import static com.linecorp.armeria.xds.client.endpoint.XdsRandom.RandomHint.ROUTING_ENABLED;
 
 import java.util.Map;
 
@@ -26,28 +28,37 @@ import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.common.annotation.Nullable;
-import com.linecorp.armeria.common.loadbalancer.LoadBalancer;
 import com.linecorp.armeria.xds.client.endpoint.DefaultLbStateFactory.DefaultLbState;
+import com.linecorp.armeria.xds.client.endpoint.LocalityRoutingStateFactory.LocalityRoutingState;
+import com.linecorp.armeria.xds.client.endpoint.LocalityRoutingStateFactory.State;
 
 import io.envoyproxy.envoy.config.core.v3.Locality;
 
-final class DefaultLoadBalancer implements LoadBalancer<Endpoint, ClientRequestContext> {
+final class DefaultLoadBalancer implements XdsLoadBalancer {
 
     private final DefaultLbStateFactory.DefaultLbState lbState;
+    private final PrioritySet prioritySet;
+    @Nullable
+    private final LocalityRoutingState localityRoutingState;
 
-    DefaultLoadBalancer(PrioritySet prioritySet) {
+    DefaultLoadBalancer(PrioritySet prioritySet, @Nullable LocalityRoutingState localityRoutingState) {
         lbState = DefaultLbStateFactory.newInstance(prioritySet);
+        this.prioritySet = prioritySet;
+        this.localityRoutingState = localityRoutingState;
     }
 
     @Override
     @Nullable
-    public Endpoint pick(ClientRequestContext ctx) {
+    public Endpoint selectNow(ClientRequestContext ctx) {
         final PrioritySet prioritySet = lbState.prioritySet();
         if (prioritySet.priorities().isEmpty()) {
             return null;
         }
-        final int hash = EndpointUtil.hash(ctx);
-        final HostsSource hostsSource = hostSourceToUse(lbState, hash);
+        XdsRandom random = ctx.attr(XdsAttributeKeys.XDS_RANDOM);
+        if (random == null) {
+            random = XdsRandom.DEFAULT;
+        }
+        final HostsSource hostsSource = hostSourceToUse(lbState, random, localityRoutingState);
         if (hostsSource == null) {
             return null;
         }
@@ -88,14 +99,16 @@ final class DefaultLoadBalancer implements LoadBalancer<Endpoint, ClientRequestC
     }
 
     @Nullable
-    HostsSource hostSourceToUse(DefaultLbState lbState, int hash) {
-        final PriorityAndAvailability priorityAndAvailability = lbState.choosePriority(hash);
+    HostsSource hostSourceToUse(DefaultLbState lbState, XdsRandom random,
+                                @Nullable LocalityRoutingState localityRoutingState) {
+        final PriorityAndAvailability priorityAndAvailability = lbState.choosePriority(random);
         if (priorityAndAvailability == null) {
             return null;
         }
         final PrioritySet prioritySet = lbState.prioritySet();
         final int priority = priorityAndAvailability.priority;
         final HostSet hostSet = prioritySet.hostSets().get(priority);
+        assert hostSet != null;
         final HostAvailability hostAvailability = priorityAndAvailability.hostAvailability;
         if (lbState.perPriorityPanic().get(priority)) {
             if (prioritySet.failTrafficOnPanic()) {
@@ -117,8 +130,24 @@ final class DefaultLoadBalancer implements LoadBalancer<Endpoint, ClientRequestC
             }
         }
 
-        // don't do zone aware routing for now
-        return new HostsSource(priority, sourceType(hostAvailability), null);
+        // only priority 0 supports zone aware routing
+        if (priority != 0 ||
+            localityRoutingState == null ||
+            localityRoutingState.state() == State.NO_LOCALITY_ROUTING ||
+            localityRoutingState.localHostSet() == null ||
+            prioritySet.routingEnabled() <= random.nextInt(100, ROUTING_ENABLED)) {
+            return new HostsSource(priority, sourceType(hostAvailability));
+        }
+
+        if (isHostSetInPanic(localityRoutingState.localHostSet(), prioritySet.panicThreshold())) {
+            if (prioritySet.failTrafficOnPanic()) {
+                return null;
+            }
+            return new HostsSource(priority, sourceType(hostAvailability));
+        }
+
+        return new HostsSource(priority, localitySourceType(hostAvailability),
+                               localityRoutingState.tryChooseLocalLocalityHosts(hostSet, random));
     }
 
     private static SourceType localitySourceType(HostAvailability hostAvailability) {
@@ -149,6 +178,17 @@ final class DefaultLoadBalancer implements LoadBalancer<Endpoint, ClientRequestC
                 throw new Error();
         }
         return sourceType;
+    }
+
+    @Override
+    public PrioritySet prioritySet() {
+        return prioritySet;
+    }
+
+    @Override
+    @Nullable
+    public LocalityRoutingState localityRoutingState() {
+        return localityRoutingState;
     }
 
     static class PriorityAndAvailability {

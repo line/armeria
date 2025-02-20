@@ -42,17 +42,9 @@ allprojects {
     ext {
         artifactId = {
             // Use the overridden one if available.
-            if (rootProject.ext.has('artifactIdOverrides')) {
-                def overrides = rootProject.ext.artifactIdOverrides
-                if (!(overrides instanceof Map)) {
-                    throw new IllegalStateException("artifactIdOverrides must be a Map: ${overrides}")
-                }
-
-                for (Map.Entry<String, String> e : overrides.entrySet()) {
-                    if (rootProject.project(e.key) == project) {
-                        return e.value
-                    }
-                }
+            def overriddenArtifactId = findOverridden('artifactIdOverrides', project)
+            if (overriddenArtifactId != null) {
+                return overriddenArtifactId
             }
 
             // Generate from the project names otherwise.
@@ -69,4 +61,65 @@ allprojects {
             return String.join('-', chain.reverse().collect { it.name })
         }.call()
     }
+}
+
+// Check whether to enable automatic module names.
+def isAutomaticModuleNameEnabled = 'true' == rootProject.findProperty('automaticModuleNames')
+
+allprojects {
+    ext {
+        automaticModuleName = {
+            if (!isAutomaticModuleNameEnabled) {
+                return null
+            }
+
+            return project.provider {
+                // per-project override
+                if (project.ext.has('automaticModuleNameOverride')) {
+                    def override = project.ext.get('automaticModuleNameOverride')
+                    if (!(override instanceof String)) {
+                        throw new IllegalStateException("project.ext.automaticModuleNameOverride must be a String: ${override}")
+                    }
+                    return override
+                }
+
+                // Use the overridden one if available.
+
+                def overriddenAutomaticModuleName = findOverridden('automaticModuleNameOverrides', project)
+                if (overriddenAutomaticModuleName != null) {
+                    return overriddenAutomaticModuleName
+                }
+
+                // Generate from the groupId and artifactId otherwise.
+                def groupIdComponents = String.valueOf(rootProject.group).split("\\.").toList()
+                def artifactIdComponents =
+                        String.valueOf(project.ext.artifactId).replace('-', '.').split("\\.").toList()
+                def generatedName
+                if (groupIdComponents.last() == artifactIdComponents.first()) {
+                    generatedName = String.join('.', groupIdComponents + artifactIdComponents.drop(1))
+                } else {
+                    generatedName = String.join('.', groupIdComponents + artifactIdComponents)
+                }
+                generatedName = generatedName.replaceAll("\\.(\\d)", "_\$1")
+                return generatedName
+            }
+        }.call()
+    }
+}
+
+def findOverridden(String overridesPropertyName, Project project) {
+    if (rootProject.ext.has(overridesPropertyName)) {
+        def overrides = rootProject.ext.get(overridesPropertyName)
+        if (!(overrides instanceof Map)) {
+            throw new IllegalStateException("rootProject.ext.${overridesPropertyName} must be a Map: ${overrides}")
+        }
+
+        for (Map.Entry<String, String> e : overrides.entrySet()) {
+            if (rootProject.project(e.key) == project) {
+                return String.valueOf(e.value)
+            }
+        }
+    }
+
+    return null
 }

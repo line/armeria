@@ -39,6 +39,7 @@ import com.google.common.primitives.Ints;
 
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.Ticker;
+import com.linecorp.armeria.internal.client.endpoint.EndpointToStringUtil;
 import com.linecorp.armeria.internal.common.loadbalancer.WeightedObject;
 import com.linecorp.armeria.internal.common.util.ReentrantShortLock;
 
@@ -207,6 +208,23 @@ final class RampingUpLoadBalancer<T, C> implements UpdatableLoadBalancer<T, C> {
             }
         }
         final List<Weighted> candidates = targetCandidatesBuilder.build();
+        if (rampingUpWindowsMap.isEmpty()) {
+            logger.info("Finished ramping up. endpoints: {}", EndpointToStringUtil.toString(candidates));
+        } else {
+            logger.debug("Ramping up. endpoints: {}", EndpointToStringUtil.toString(candidates));
+        }
+
+        boolean found = false;
+        for (Weighted candidate : candidates) {
+            if (candidate.weight() > 0) {
+                found = true;
+                break;
+            }
+        }
+        if (!found) {
+            logger.warn("No valid endpoint with weight > 0. endpoints: {}",
+                        EndpointToStringUtil.toString(candidates));
+        }
         weightedRandomLoadBalancer = LoadBalancer.ofWeightedRandom(candidates);
     }
 
@@ -271,6 +289,15 @@ final class RampingUpLoadBalancer<T, C> implements UpdatableLoadBalancer<T, C> {
         } finally {
             lock.unlock();
         }
+    }
+
+    @Override
+    public String toString() {
+        return MoreObjects.toStringHelper(this)
+                          .add("weightedRandomLoadBalancer", weightedRandomLoadBalancer)
+                          .add("candidatesFinishedRampingUp", candidatesFinishedRampingUp)
+                          .add("rampingUpWindowsMap", rampingUpWindowsMap)
+                          .toString();
     }
 
     private static int numStep(long rampingUpIntervalNanos, Ticker ticker, long createTimestamp) {

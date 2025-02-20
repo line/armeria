@@ -22,7 +22,6 @@ import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.linecorp.armeria.internal.server.annotation.AnnotatedElementNameUtil.findName;
 import static com.linecorp.armeria.internal.server.annotation.AnnotatedElementNameUtil.getName;
 import static com.linecorp.armeria.internal.server.annotation.AnnotatedElementNameUtil.getNameOrDefault;
-import static com.linecorp.armeria.internal.server.annotation.AnnotatedElementNameUtil.toHeaderName;
 import static com.linecorp.armeria.internal.server.annotation.AnnotatedServiceFactory.findDescription;
 import static com.linecorp.armeria.internal.server.annotation.AnnotatedServiceTypeUtil.stringToType;
 import static com.linecorp.armeria.internal.server.annotation.DefaultValues.getSpecifiedValue;
@@ -471,7 +470,7 @@ final class AnnotatedValueResolver {
 
         final Header header = annotatedElement.getAnnotation(Header.class);
         if (header != null) {
-            final String name = toHeaderName(findName(typeElement, header.value()));
+            final String name = findName(header, typeElement);
             return ofHeader(name, annotatedElement, typeElement, type, description);
         }
 

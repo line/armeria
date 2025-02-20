@@ -110,6 +110,7 @@ public class ArmeriaJaxrsClientEngine implements AsyncClientHttpEngine, Closeabl
 
     @Override
     public void close() {
+        client.options().factory().closeAsync();
     }
 
     /**

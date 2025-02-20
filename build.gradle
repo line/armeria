@@ -117,6 +117,10 @@ allprojects {
         doFirst {
             addTestOutputListener({ descriptor, event ->
                 if (event.message.contains('LEAK: ')) {
+                    if (isCi) {
+                        logger.warn("Leak is detected in ${descriptor.className}.${descriptor.displayName}\n" +
+                                    "${event.message}")
+                    }
                     hasLeak.set(true)
                 }
             })
@@ -186,15 +190,12 @@ configure(projectsWithFlags('java')) {
         tasks.withType(JavaCompile) {
             options.errorprone.excludedPaths = '.*/gen-src/.*'
             options.errorprone.nullaway {
-                if (name.toLowerCase().contains("test")) {
-                    // Disable NullAway for tests for now.
+                if (name.contains("Test") || name.contains("Jmh")) {
+                    // Disable NullAway for tests and benchmarks for now.
                     disable()
                 } else if (name.matches(/compileJava[0-9]+.*/)) {
                     // Disable MR-JAR classes which seem to confuse NullAway and break the build.
                     disable()
-                } else if (project != project(':core')) {
-                    // TODO(trustin): Enable NullAway for all projects once we fix all violations.
-                    warn()
                 } else {
                     error()
                     assertsEnabled = true
@@ -487,4 +488,8 @@ allprojects {
             }
         }
     }
+}
+
+configure(projectsWithFlags('java', 'publish')) {
+    failOnVersionConflict(libs.protobuf.java)
 }

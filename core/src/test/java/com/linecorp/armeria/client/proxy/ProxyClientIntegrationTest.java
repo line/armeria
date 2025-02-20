@@ -63,6 +63,7 @@ import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.TlsProvider;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.internal.testing.BlockingUtils;
 import com.linecorp.armeria.internal.testing.NettyServerExtension;
@@ -92,6 +93,7 @@ import io.netty.handler.codec.socksx.v4.DefaultSocks4CommandResponse;
 import io.netty.handler.codec.socksx.v4.Socks4CommandStatus;
 import io.netty.handler.logging.LoggingHandler;
 import io.netty.handler.proxy.ProxyConnectException;
+import io.netty.handler.ssl.ClientAuth;
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.handler.traffic.ChannelTrafficShapingHandler;
@@ -111,7 +113,15 @@ class ProxyClientIntegrationTest {
 
     @RegisterExtension
     @Order(0)
-    static final SelfSignedCertificateExtension ssc = new SelfSignedCertificateExtension();
+    static final SelfSignedCertificateExtension proxySsc = new SelfSignedCertificateExtension();
+
+    @RegisterExtension
+    @Order(0)
+    static final SelfSignedCertificateExtension backendSsc = new SelfSignedCertificateExtension();
+
+    @RegisterExtension
+    @Order(0)
+    static final SelfSignedCertificateExtension clientSsc = new SelfSignedCertificateExtension();
 
     @RegisterExtension
     @Order(1)
@@ -120,7 +130,7 @@ class ProxyClientIntegrationTest {
         protected void configure(ServerBuilder sb) throws Exception {
             sb.port(0, SessionProtocol.HTTP);
             sb.port(0, SessionProtocol.HTTPS);
-            sb.tlsSelfSigned();
+            sb.tls(backendSsc.tlsKeyPair());
             sb.service(PROXY_PATH, (ctx, req) -> HttpResponse.of(SUCCESS_RESPONSE));
         }
     };
@@ -172,7 +182,27 @@ class ProxyClientIntegrationTest {
         protected void configure(Channel ch) throws Exception {
             assertThat(sslContext).isNotNull();
             final SslContext sslContext = SslContextBuilder
-                    .forServer(ssc.privateKey(), ssc.certificate()).build();
+                    .forServer(proxySsc.privateKey(), proxySsc.certificate()).build();
+            ch.pipeline().addLast(sslContext.newHandler(ch.alloc()));
+            ch.pipeline().addLast(new HttpServerCodec());
+            ch.pipeline().addLast(new HttpObjectAggregator(1024));
+            ch.pipeline().addLast(new HttpProxyServerHandler());
+            ch.pipeline().addLast(new SleepHandler());
+            ch.pipeline().addLast(new IntermediaryProxyServerHandler("http", PROXY_CALLBACK));
+        }
+    };
+
+    @RegisterExtension
+    @Order(4)
+    static NettyServerExtension mTlsHttpsProxyServer = new NettyServerExtension() {
+        @Override
+        protected void configure(Channel ch) throws Exception {
+            assertThat(sslContext).isNotNull();
+            final SslContext sslContext = SslContextBuilder
+                    .forServer(proxySsc.privateKey(), proxySsc.certificate())
+                    .clientAuth(ClientAuth.REQUIRE)
+                    .trustManager(clientSsc.certificate())
+                    .build();
             ch.pipeline().addLast(sslContext.newHandler(ch.alloc()));
             ch.pipeline().addLast(new HttpServerCodec());
             ch.pipeline().addLast(new HttpObjectAggregator(1024));
@@ -205,7 +235,7 @@ class ProxyClientIntegrationTest {
     @BeforeAll
     static void beforeAll() throws Exception {
         sslContext = SslContextBuilder
-                .forServer(ssc.privateKey(), ssc.certificate()).build();
+                .forServer(proxySsc.privateKey(), proxySsc.certificate()).build();
     }
 
     @BeforeEach
@@ -494,6 +524,33 @@ class ProxyClientIntegrationTest {
         final ClientFactory clientFactory =
                 ClientFactory.builder().tlsNoVerify().proxyConfig(
                         ProxyConfig.connect(httpsProxyServer.address(), true)).build();
+        final WebClient webClient = WebClient.builder(protocol, endpoint)
+                                             .factory(clientFactory)
+                                             .decorator(LoggingClient.newDecorator())
+                                             .build();
+        final CompletableFuture<AggregatedHttpResponse> responseFuture =
+                webClient.get(PROXY_PATH).aggregate();
+        final AggregatedHttpResponse response = responseFuture.join();
+        assertThat(response.status()).isEqualTo(HttpStatus.OK);
+        assertThat(response.contentUtf8()).isEqualTo(SUCCESS_RESPONSE);
+        assertThat(numSuccessfulProxyRequests).isEqualTo(1);
+        clientFactory.closeAsync();
+    }
+
+    @ParameterizedTest
+    @MethodSource("sessionAndEndpointProvider")
+    void testMTlsHttpsProxyWithTlsProvider(SessionProtocol protocol, Endpoint endpoint) throws Exception {
+        final TlsProvider tlsProvider =
+                TlsProvider.builder()
+                           .keyPair(clientSsc.tlsKeyPair())
+                           .trustedCertificates(proxySsc.certificate(), backendSsc.certificate())
+                           .build();
+
+        final ClientFactory clientFactory =
+                ClientFactory.builder()
+                             .tlsProvider(tlsProvider)
+                             .proxyConfig(
+                                     ProxyConfig.connect(mTlsHttpsProxyServer.address(), true)).build();
         final WebClient webClient = WebClient.builder(protocol, endpoint)
                                              .factory(clientFactory)
                                              .decorator(LoggingClient.newDecorator())

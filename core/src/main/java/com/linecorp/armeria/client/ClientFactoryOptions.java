@@ -35,7 +35,10 @@ import com.linecorp.armeria.common.CommonPools;
 import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.Http1HeaderNaming;
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.TlsKeyPair;
+import com.linecorp.armeria.common.TlsProvider;
 import com.linecorp.armeria.common.annotation.UnstableApi;
+import com.linecorp.armeria.common.outlier.OutlierDetection;
 import com.linecorp.armeria.common.util.AbstractOptions;
 import com.linecorp.armeria.common.util.TlsEngineType;
 import com.linecorp.armeria.internal.common.util.ChannelUtil;
@@ -45,6 +48,7 @@ import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
+import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.resolver.AddressResolverGroup;
 
@@ -105,6 +109,21 @@ public final class ClientFactoryOptions
     @UnstableApi
     public static final ClientFactoryOption<TlsEngineType> TLS_ENGINE_TYPE =
             ClientFactoryOption.define("tlsEngineType", Flags.tlsEngineType());
+
+    /**
+     * The {@link TlsProvider} which provides the {@link TlsKeyPair} to create the
+     * {@link SslContext} for TLS handshake.
+     */
+    @UnstableApi
+    public static final ClientFactoryOption<TlsProvider> TLS_PROVIDER =
+            ClientFactoryOption.define("TLS_PROVIDER", NullTlsProvider.INSTANCE);
+
+    /**
+     * Ths {@link ClientTlsConfig} which is used to configure the client-side TLS.
+     */
+    @UnstableApi
+    public static final ClientFactoryOption<ClientTlsConfig> TLS_CONFIG =
+            ClientFactoryOption.define("TLS_CONFIG", ClientTlsConfig.NOOP);
 
     /**
      * The factory that creates an {@link AddressResolverGroup} which resolves remote addresses into
@@ -196,6 +215,15 @@ public final class ClientFactoryOptions
      */
     public static final ClientFactoryOption<Long> MAX_CONNECTION_AGE_MILLIS =
             ClientFactoryOption.define("MAX_CONNECTION_AGE_MILLIS", clampedDefaultMaxClientConnectionAge());
+
+    /**
+     * The {@link OutlierDetection} which is used to detect unhealthy connections.
+     * If an unhealthy connection is detected, it is disabled and a new connection will be created.
+     * This option is disabled by default.
+     */
+    @UnstableApi
+    public static final ClientFactoryOption<OutlierDetection> CONNECTION_OUTLIER_DETECTION =
+            ClientFactoryOption.define("CONNECTION_OUTLIER_DETECTION", OutlierDetection.disabled());
 
     private static long clampedDefaultMaxClientConnectionAge() {
         final long connectionAgeMillis = Flags.defaultMaxClientConnectionAgeMillis();
@@ -585,6 +613,14 @@ public final class ClientFactoryOptions
     }
 
     /**
+     * Returns the {@link OutlierDetection} which is used to detect unhealthy connections.
+     */
+    @UnstableApi
+    public OutlierDetection connectionOutlierDetection() {
+        return get(CONNECTION_OUTLIER_DETECTION);
+    }
+
+    /**
      * Returns the graceful connection shutdown timeout in milliseconds.
      */
     public long http2GracefulShutdownTimeoutMillis() {
@@ -634,6 +670,23 @@ public final class ClientFactoryOptions
     @UnstableApi
     public TlsEngineType tlsEngineType() {
         return get(TLS_ENGINE_TYPE);
+    }
+
+    /**
+     * Returns the {@link TlsProvider} which provides the {@link TlsKeyPair} that is used to create the
+     * {@link SslContext} for TLS handshake.
+     */
+    @UnstableApi
+    public TlsProvider tlsProvider() {
+        return get(TLS_PROVIDER);
+    }
+
+    /**
+     * Returns the {@link ClientTlsConfig} which is used to configure the client-side {@link SslContext}.
+     */
+    @UnstableApi
+    public ClientTlsConfig tlsConfig() {
+        return get(TLS_CONFIG);
     }
 
     /**

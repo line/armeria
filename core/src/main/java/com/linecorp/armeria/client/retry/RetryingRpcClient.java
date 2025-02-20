@@ -179,11 +179,11 @@ public final class RetryingRpcClient extends AbstractRetryingClient<RpcRequest, 
             // clear the pending throwable to retry endpoint selection
             ClientPendingThrowableUtil.removePendingThrowable(derivedCtx);
             // if the endpoint hasn't been selected, try to initialize the ctx with a new endpoint/event loop
-            res = initContextAndExecuteWithFallback(unwrap(), ctxExtension, endpointGroup, RpcResponse::from,
-                                                    (context, cause) -> RpcResponse.ofFailure(cause));
+            res = initContextAndExecuteWithFallback(unwrap(), ctxExtension, RpcResponse::from,
+                                                    (context, cause) -> RpcResponse.ofFailure(cause), req);
         } else {
             res = executeWithFallback(unwrap(), derivedCtx,
-                                      (context, cause) -> RpcResponse.ofFailure(cause));
+                                      (context, cause) -> RpcResponse.ofFailure(cause), req);
         }
 
         final RetryConfig<RpcResponse> retryConfig = mappedRetryConfig(ctx);

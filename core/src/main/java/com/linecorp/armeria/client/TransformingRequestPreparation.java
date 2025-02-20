@@ -25,6 +25,7 @@ import java.util.Map.Entry;
 import org.reactivestreams.Publisher;
 
 import com.google.errorprone.annotations.FormatMethod;
+import com.google.errorprone.annotations.FormatString;
 
 import com.linecorp.armeria.common.Cookie;
 import com.linecorp.armeria.common.ExchangeType;
@@ -76,6 +77,12 @@ public class TransformingRequestPreparation<T, R> implements WebRequestPreparati
     @Override
     public TransformingRequestPreparation<T, R> exchangeType(ExchangeType exchangeType) {
         delegate.exchangeType(exchangeType);
+        return this;
+    }
+
+    @Override
+    public TransformingRequestPreparation<T, R> responseTimeoutMode(ResponseTimeoutMode responseTimeoutMode) {
+        delegate.responseTimeoutMode(responseTimeoutMode);
         return this;
     }
 
@@ -186,7 +193,7 @@ public class TransformingRequestPreparation<T, R> implements WebRequestPreparati
     @Override
     @FormatMethod
     @SuppressWarnings("FormatStringAnnotation")
-    public TransformingRequestPreparation<T, R> content(MediaType contentType, String format,
+    public TransformingRequestPreparation<T, R> content(MediaType contentType, @FormatString String format,
                                                         Object... content) {
         delegate.content(contentType, format, content);
         return this;

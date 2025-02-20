@@ -37,7 +37,15 @@ public interface WeightTransition<T> {
         return new WeightTransition<T>() {
             @Override
             public int compute(T candidate, int weight, int currentStep, int totalSteps) {
-                return Ints.saturatedCast((long) weight * currentStep / totalSteps);
+                // currentStep is never greater than totalSteps so we can cast long to int.
+                final int currentWeight =
+                        Ints.saturatedCast((long) weight * currentStep / totalSteps);
+                if (weight > 0 && currentWeight == 0) {
+                    // If the original weight is not 0,
+                    // we should return 1 to make sure the endpoint is selected.
+                    return 1;
+                }
+                return currentWeight;
             }
 
             @Override

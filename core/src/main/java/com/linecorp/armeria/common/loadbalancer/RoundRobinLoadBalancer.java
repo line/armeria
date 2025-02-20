@@ -19,6 +19,7 @@ package com.linecorp.armeria.common.loadbalancer;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.common.annotation.Nullable;
@@ -46,5 +47,12 @@ final class RoundRobinLoadBalancer<T, C> implements LoadBalancer<T, C> {
 
         final int currentSequence = sequence.getAndIncrement();
         return candidates.get(Math.abs(currentSequence % candidates.size()));
+    }
+
+    @Override
+    public String toString() {
+        return MoreObjects.toStringHelper(this)
+                          .add("candidates", candidates)
+                          .toString();
     }
 }

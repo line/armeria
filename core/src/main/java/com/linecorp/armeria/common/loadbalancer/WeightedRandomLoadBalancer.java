@@ -26,6 +26,7 @@ import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.ToIntFunction;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.MoreObjects;
 import com.google.common.collect.Streams;
 import com.google.errorprone.annotations.concurrent.GuardedBy;
 
@@ -114,6 +115,17 @@ final class WeightedRandomLoadBalancer<T, C> implements LoadBalancer<T, C> {
 
         // Since `allEntries` is not empty, should subselect one Endpoint from `allEntries`.
         throw new Error("Should never reach here");
+    }
+
+    @SuppressWarnings("GuardedBy")
+    @Override
+    public String toString() {
+        return MoreObjects.toStringHelper(this)
+                          .add("allEntries", allEntries)
+                          .add("currentEntries", currentEntries)
+                          .add("total", total)
+                          .add("remaining", remaining)
+                          .toString();
     }
 
     @VisibleForTesting
