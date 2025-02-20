@@ -15,72 +15,35 @@
  */
 package com.linecorp.armeria.common.grpc;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import com.google.protobuf.TextFormat;
-
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.grpc.GrpcService;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
-import io.grpc.health.v1.HealthCheckRequest;
 import io.grpc.health.v1.HealthCheckResponse;
-import io.grpc.health.v1.HealthGrpc;
-import io.grpc.stub.StreamObserver;
+import io.grpc.protobuf.services.HealthStatusManager;
 
 public class HealthGrpcServerExtension extends ServerExtension {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(HealthGrpcServerExtension.class);
-
-    private static final HealthCheckResponse HEALTHY_HEALTH_CHECK_RESPONSE = HealthCheckResponse.newBuilder()
-            .setStatus(HealthCheckResponse.ServingStatus.SERVING)
-            .build();
-
-    private static final HealthCheckResponse UNHEALTHY_HEALTH_CHECK_RESPONSE = HealthCheckResponse.newBuilder()
-            .setStatus(HealthCheckResponse.ServingStatus.NOT_SERVING)
-            .build();
-
-    public enum Action {
-        RESPOND_HEALTHY, RESPOND_UNHEALTHY, TIMEOUT
-    }
-
-    private Action action;
+    private final HealthStatusManager healthStatusManager = new HealthStatusManager();
 
     @Override
     protected void configure(ServerBuilder sb) throws Exception {
         final GrpcService grpcService = GrpcService.builder()
-                .addService(new HealthGrpc.HealthImplBase() {
-                    @Override
-                    public void check(HealthCheckRequest request,
-                                      StreamObserver<HealthCheckResponse> responseObserver) {
-                        LOGGER.debug("Received health check request {}", TextFormat.shortDebugString(request));
-
-                        if (action == Action.RESPOND_HEALTHY) {
-                            responseObserver.onNext(HEALTHY_HEALTH_CHECK_RESPONSE);
-                            responseObserver.onCompleted();
-                            LOGGER.debug("Sent healthy health check response");
-                        } else if (action == Action.RESPOND_UNHEALTHY) {
-                            responseObserver.onNext(UNHEALTHY_HEALTH_CHECK_RESPONSE);
-                            responseObserver.onCompleted();
-                            LOGGER.debug("Sent unhealthy health check response");
-                        } else if (action == Action.TIMEOUT) {
-                            LOGGER.debug("Not sending a response...");
-                        }
-                    }
-
-                    @Override
-                    public void watch(HealthCheckRequest request,
-                                      StreamObserver<HealthCheckResponse> responseObserver) {
-                        throw new UnsupportedOperationException();
-                    }
-                })
+                .addService(healthStatusManager.getHealthService())
                 .build();
 
         sb.service(grpcService);
     }
 
-    public void setAction(Action action) {
-        this.action = action;
+    public void setStatus(HealthCheckResponse.ServingStatus status) {
+        healthStatusManager.setStatus(HealthStatusManager.SERVICE_NAME_ALL_SERVICES, status);
+    }
+
+    public void clearStatus() {
+        healthStatusManager.clearStatus(HealthStatusManager.SERVICE_NAME_ALL_SERVICES);
+    }
+
+    public void enterTerminalState() {
+        healthStatusManager.enterTerminalState();
     }
 }
