@@ -22,18 +22,6 @@ import com.linecorp.armeria.internal.common.util.TemporaryThreadLocals;
 
 public final class EndpointToStringUtil {
 
-    public static <T> String toString(List<T> maybeEndpoints) {
-        if (maybeEndpoints.isEmpty()) {
-            return "[]";
-        }
-        final T first = maybeEndpoints.get(0);
-        if (first instanceof Endpoint) {
-            //noinspection unchecked
-            return toShortString((List<Endpoint>) maybeEndpoints);
-        }
-        return maybeEndpoints.toString();
-    }
-
     public static String toShortString(List<Endpoint> endpoints) {
         try (TemporaryThreadLocals acquired = TemporaryThreadLocals.acquire()) {
             final StringBuilder builder = acquired.stringBuilder();

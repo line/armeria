@@ -39,7 +39,6 @@ import com.google.common.primitives.Ints;
 
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.Ticker;
-import com.linecorp.armeria.internal.client.endpoint.EndpointToStringUtil;
 import com.linecorp.armeria.internal.common.loadbalancer.WeightedObject;
 import com.linecorp.armeria.internal.common.util.ReentrantShortLock;
 
@@ -209,9 +208,9 @@ final class RampingUpLoadBalancer<T, C> implements UpdatableLoadBalancer<T, C> {
         }
         final List<Weighted> candidates = targetCandidatesBuilder.build();
         if (rampingUpWindowsMap.isEmpty()) {
-            logger.info("Finished ramping up. endpoints: {}", EndpointToStringUtil.toString(candidates));
+            logger.info("Finished ramping up. candidates: {}", candidates);
         } else {
-            logger.debug("Ramping up. endpoints: {}", EndpointToStringUtil.toString(candidates));
+            logger.debug("Ramping up. candidates: {}", candidates);
         }
 
         boolean found = false;
@@ -222,8 +221,7 @@ final class RampingUpLoadBalancer<T, C> implements UpdatableLoadBalancer<T, C> {
             }
         }
         if (!found) {
-            logger.warn("No valid endpoint with weight > 0. endpoints: {}",
-                        EndpointToStringUtil.toString(candidates));
+            logger.warn("No valid candidate with weight > 0. candidates: {}", candidates);
         }
         weightedRandomLoadBalancer = LoadBalancer.ofWeightedRandom(candidates);
     }

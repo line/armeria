@@ -32,7 +32,6 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Streams;
 
 import com.linecorp.armeria.common.annotation.Nullable;
-import com.linecorp.armeria.internal.client.endpoint.EndpointToStringUtil;
 import com.linecorp.armeria.internal.common.loadbalancer.WeightedObject;
 
 /**
@@ -144,8 +143,7 @@ final class WeightedRoundRobinLoadBalancer<T, C> implements LoadBalancer<T, C> {
             final long numCandidates = candidates.size();
 
             if (numCandidates == 0 && !Iterables.isEmpty(candidates0)) {
-                logger.warn("No valid endpoint with weight > 0. endpoints: {}",
-                            EndpointToStringUtil.toString(candidates));
+                logger.warn("No valid candidate with weight > 0. candidates: {}", candidates);
             }
 
             // get min weight, max weight and number of distinct weight
