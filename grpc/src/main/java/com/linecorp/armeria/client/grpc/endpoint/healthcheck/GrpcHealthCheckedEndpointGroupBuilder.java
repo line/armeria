@@ -24,6 +24,7 @@ import com.linecorp.armeria.client.endpoint.healthcheck.AbstractHealthCheckedEnd
 import com.linecorp.armeria.client.endpoint.healthcheck.HealthCheckerContext;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.AsyncCloseable;
+import com.linecorp.armeria.internal.client.grpc.GrpcHealthCheckWatcher;
 import com.linecorp.armeria.internal.client.grpc.GrpcHealthChecker;
 
 /**
@@ -33,17 +34,21 @@ public final class GrpcHealthCheckedEndpointGroupBuilder
         extends AbstractHealthCheckedEndpointGroupBuilder<GrpcHealthCheckedEndpointGroupBuilder> {
 
     private @Nullable String service;
+    private final GrpcHealthCheckMethod healthCheckMethod;
 
-    GrpcHealthCheckedEndpointGroupBuilder(EndpointGroup delegate) {
+    GrpcHealthCheckedEndpointGroupBuilder(EndpointGroup delegate, GrpcHealthCheckMethod healthCheckMethod) {
         super(delegate);
+        this.healthCheckMethod = healthCheckMethod;
     }
 
     /**
      * Returns a {@link GrpcHealthCheckedEndpointGroupBuilder} that builds a health checked
-     * endpoint group with the specified {@link EndpointGroup}.
+     * endpoint group with the specified {@link EndpointGroup} and {@link GrpcHealthCheckMethod}.
      */
-    public static GrpcHealthCheckedEndpointGroupBuilder builder(EndpointGroup delegate) {
-        return new GrpcHealthCheckedEndpointGroupBuilder(requireNonNull(delegate));
+    public static GrpcHealthCheckedEndpointGroupBuilder builder(EndpointGroup delegate,
+                                                                GrpcHealthCheckMethod healthCheckMethod) {
+        return new GrpcHealthCheckedEndpointGroupBuilder(requireNonNull(delegate),
+                requireNonNull(healthCheckMethod));
     }
 
     /**
@@ -56,24 +61,35 @@ public final class GrpcHealthCheckedEndpointGroupBuilder
 
     @Override
     protected Function<? super HealthCheckerContext, ? extends AsyncCloseable> newCheckerFactory() {
-        return new GrpcHealthCheckerFactory(service);
+        return new GrpcHealthCheckerFactory(service, healthCheckMethod);
     }
 
     private static final class GrpcHealthCheckerFactory
             implements Function<HealthCheckerContext, AsyncCloseable> {
 
         private final @Nullable String service;
+        private final GrpcHealthCheckMethod healthCheckMethod;
 
-        private GrpcHealthCheckerFactory(@Nullable String service) {
+        private GrpcHealthCheckerFactory(@Nullable String service, GrpcHealthCheckMethod healthCheckMethod) {
             this.service = service;
+            this.healthCheckMethod = healthCheckMethod;
         }
 
         @Override
         public AsyncCloseable apply(HealthCheckerContext ctx) {
-            final GrpcHealthChecker healthChecker = new GrpcHealthChecker(ctx, ctx.endpoint(),
-                    ctx.protocol(), service);
-            healthChecker.start();
-            return healthChecker;
+            if (healthCheckMethod == GrpcHealthCheckMethod.CHECK) {
+                final GrpcHealthChecker healthChecker = new GrpcHealthChecker(ctx, ctx.endpoint(),
+                        ctx.protocol(), service);
+                healthChecker.start();
+                return healthChecker;
+            } else if (healthCheckMethod == GrpcHealthCheckMethod.WATCH) {
+                final GrpcHealthCheckWatcher healthChecker = new GrpcHealthCheckWatcher(ctx, ctx.endpoint(),
+                        ctx.protocol(), service);
+                healthChecker.start();
+                return healthChecker;
+            }
+            // should not get here
+            throw new IllegalArgumentException("Invalid health check method");
         }
     }
 }

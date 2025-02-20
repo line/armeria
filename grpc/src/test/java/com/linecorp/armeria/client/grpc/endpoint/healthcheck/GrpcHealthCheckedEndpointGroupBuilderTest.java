@@ -24,17 +24,30 @@ import com.linecorp.armeria.client.endpoint.healthcheck.HealthCheckedEndpointGro
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.grpc.HealthGrpcServerExtension;
 
+import io.grpc.health.v1.HealthCheckResponse;
+
 class GrpcHealthCheckedEndpointGroupBuilderTest {
 
     @RegisterExtension
     private static HealthGrpcServerExtension serverExtension = new HealthGrpcServerExtension();
 
     @Test
-    public void hasHealthyEndpoint() {
-        serverExtension.setAction(HealthGrpcServerExtension.Action.RESPOND_HEALTHY);
+    public void hasHealthyEndpointViaCheck() {
+        serverExtension.setStatus(HealthCheckResponse.ServingStatus.SERVING);
 
         final HealthCheckedEndpointGroup endpointGroup = GrpcHealthCheckedEndpointGroupBuilder
-                .builder(serverExtension.endpoint(SessionProtocol.H2C))
+                .builder(serverExtension.endpoint(SessionProtocol.H2C), GrpcHealthCheckMethod.CHECK)
+                .build();
+
+        assertThat(endpointGroup.whenReady().join()).hasSize(1);
+    }
+
+    @Test
+    public void hasHealthyEndpointViaWatch() {
+        serverExtension.setStatus(HealthCheckResponse.ServingStatus.SERVING);
+
+        final HealthCheckedEndpointGroup endpointGroup = GrpcHealthCheckedEndpointGroupBuilder
+                .builder(serverExtension.endpoint(SessionProtocol.H2C), GrpcHealthCheckMethod.WATCH)
                 .build();
 
         assertThat(endpointGroup.whenReady().join()).hasSize(1);
@@ -42,10 +55,10 @@ class GrpcHealthCheckedEndpointGroupBuilderTest {
 
     @Test
     public void empty() throws Exception {
-        serverExtension.setAction(HealthGrpcServerExtension.Action.RESPOND_UNHEALTHY);
+        serverExtension.setStatus(HealthCheckResponse.ServingStatus.NOT_SERVING);
 
         final HealthCheckedEndpointGroup endpointGroup = GrpcHealthCheckedEndpointGroupBuilder
-                .builder(serverExtension.endpoint(SessionProtocol.H2C))
+                .builder(serverExtension.endpoint(SessionProtocol.H2C), GrpcHealthCheckMethod.CHECK)
                 .build();
 
         assertThat(endpointGroup.whenReady().get()).isEmpty();
