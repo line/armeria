@@ -110,7 +110,6 @@ final class RampingUpLoadBalancer<T> implements UpdatableLoadBalancer<T> {
     @Override
     public T pick() {
         final SimpleLoadBalancer<Weighted> loadBalancer = weightedRandomLoadBalancer;
-        @SuppressWarnings("NullAway")
         final Weighted weighted = loadBalancer.pick();
         if (weighted == null) {
             return null;
