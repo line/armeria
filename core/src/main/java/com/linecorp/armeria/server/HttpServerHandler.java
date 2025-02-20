@@ -384,7 +384,6 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
     private void handleRequest(ChannelHandlerContext ctx, DecodedHttpRequest req) throws Exception {
         final ServerHttpObjectEncoder responseEncoder = this.responseEncoder;
         assert responseEncoder != null;
-        final Channel channel = ctx.channel();
 
         // Ignore the request received after the last request,
         // because we are going to close the connection after sending the last response.
@@ -401,6 +400,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
             responseEncoder.keepAliveHandler().disconnectWhenFinished();
         }
 
+        final Channel channel = ctx.channel();
         final RequestHeaders headers = req.headers();
         final ProxiedAddresses proxiedAddresses = determineProxiedAddresses(headers);
         final InetAddress clientAddress = config.clientAddressMapper().apply(proxiedAddresses).getAddress();
@@ -451,15 +451,13 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
                 if (serviceEventLoop.inEventLoop()) {
                     return serve0(req, service, reqCtx, req.isHttp1WebSocket());
                 }
-                return serveInServiceEventLoop(req, service, reqCtx, serviceEventLoop,
-                                               req.isHttp1WebSocket());
+                return serveInServiceEventLoop(req, service, reqCtx, serviceEventLoop, req.isHttp1WebSocket());
             }));
         } else {
             if (serviceEventLoop.inEventLoop()) {
                 res = serve0(req, service, reqCtx, req.isHttp1WebSocket());
             } else {
-                res = serveInServiceEventLoop(req, service, reqCtx, serviceEventLoop,
-                                              req.isHttp1WebSocket());
+                res = serveInServiceEventLoop(req, service, reqCtx, serviceEventLoop, req.isHttp1WebSocket());
             }
         }
         res = res.recover(cause -> {

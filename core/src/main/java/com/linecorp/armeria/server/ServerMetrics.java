@@ -31,11 +31,11 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 
 import com.linecorp.armeria.common.annotation.UnstableApi;
+import com.linecorp.armeria.common.util.DomainSocketAddress;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Tag;
 import io.micrometer.core.instrument.binder.MeterBinder;
-import io.netty.channel.unix.DomainSocketAddress;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 
@@ -104,8 +104,8 @@ public final class ServerMetrics implements MeterBinder {
             final int port = address.getPort();
             if (port == 0) {
                 hasEphemeralPort = true;
-            } else if (address instanceof com.linecorp.armeria.common.util.DomainSocketAddress) {
-                final String path = ((com.linecorp.armeria.common.util.DomainSocketAddress) address).path();
+            } else if (address instanceof DomainSocketAddress) {
+                final String path = ((DomainSocketAddress) address).path();
                 domainSocketPendingHttp1RequestsBuilder.put(path, new LongAdder());
                 domainSocketPendingHttp2RequestsBuilder.put(path, new LongAdder());
                 domainSocketActiveHttp1WebSocketRequestsBuilder.put(path, new LongAdder());
@@ -203,8 +203,8 @@ public final class ServerMetrics implements MeterBinder {
         }
 
         final InetSocketAddress address = actualPort.localAddress();
-        if (address instanceof com.linecorp.armeria.common.util.DomainSocketAddress) {
-            final String path = ((com.linecorp.armeria.common.util.DomainSocketAddress) address).path();
+        if (address instanceof DomainSocketAddress) {
+            final String path = ((DomainSocketAddress) address).path();
             if (domainSocketPendingHttp1Requests.containsKey(path)) {
                 return;
             }
@@ -296,9 +296,8 @@ public final class ServerMetrics implements MeterBinder {
                                                    Map<Integer, LongAdder> pendingHttp1Requests,
                                                    Map<String, LongAdder> domainSocketPendingHttp1Requests,
                                                    boolean increase) {
-        // Armeria's DomainSocketAddress is used.
-        if (socketAddress instanceof com.linecorp.armeria.common.util.DomainSocketAddress) {
-            final String path = ((com.linecorp.armeria.common.util.DomainSocketAddress) socketAddress).path();
+        if (socketAddress instanceof DomainSocketAddress) {
+            final String path = ((DomainSocketAddress) socketAddress).path();
             final LongAdder longAdder = domainSocketPendingHttp1Requests.get(path);
             assert longAdder != null;
             if (increase) {
@@ -358,36 +357,34 @@ public final class ServerMetrics implements MeterBinder {
         increaseOrDecreaseRequests(socketAddress, activeHttp2Requests, domainSocketActiveHttp2Requests, false);
     }
 
-    int increaseActiveConnectionsAndGet(SocketAddress socketAddress) {
-        if (socketAddress instanceof InetSocketAddress) {
-            final int port = ((InetSocketAddress) socketAddress).getPort();
-            final AtomicInteger atomicInteger = activeConnections.get(port);
-            assert atomicInteger != null;
-            return atomicInteger.incrementAndGet();
-            // Netty's DomainSocketAddress is used.
-        } else if (socketAddress instanceof DomainSocketAddress) {
+    void increaseActiveConnections(SocketAddress socketAddress) {
+        if (socketAddress instanceof DomainSocketAddress) {
             final String path = ((DomainSocketAddress) socketAddress).path();
             final AtomicInteger atomicInteger = domainSocketActiveConnections.get(path);
             assert atomicInteger != null;
-            return atomicInteger.incrementAndGet();
+            atomicInteger.incrementAndGet();
+        } else if (socketAddress instanceof InetSocketAddress) {
+            final int port = ((InetSocketAddress) socketAddress).getPort();
+            final AtomicInteger atomicInteger = activeConnections.get(port);
+            assert atomicInteger != null;
+            atomicInteger.incrementAndGet();
         } else {
             if (!warnedInvalidSocketAddress) {
                 warnedInvalidSocketAddress = true;
                 logger.warn("Unexpected address type: {}", socketAddress.getClass().getName());
             }
-            return -1;
         }
     }
 
     void decreaseActiveConnections(SocketAddress socketAddress) {
-        if (socketAddress instanceof InetSocketAddress) {
-            final int port = ((InetSocketAddress) socketAddress).getPort();
-            final AtomicInteger atomicInteger = activeConnections.get(port);
-            assert atomicInteger != null;
-            atomicInteger.decrementAndGet();
-        } else if (socketAddress instanceof DomainSocketAddress) {
+        if (socketAddress instanceof DomainSocketAddress) {
             final String path = ((DomainSocketAddress) socketAddress).path();
             final AtomicInteger atomicInteger = domainSocketActiveConnections.get(path);
+            assert atomicInteger != null;
+            atomicInteger.decrementAndGet();
+        } else if (socketAddress instanceof InetSocketAddress) {
+            final int port = ((InetSocketAddress) socketAddress).getPort();
+            final AtomicInteger atomicInteger = activeConnections.get(port);
             assert atomicInteger != null;
             atomicInteger.decrementAndGet();
         }

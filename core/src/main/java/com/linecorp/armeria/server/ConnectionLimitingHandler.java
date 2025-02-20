@@ -25,6 +25,7 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.LongAdder;
 
 import org.slf4j.Logger;
@@ -54,6 +55,10 @@ final class ConnectionLimitingHandler extends ChannelInboundHandlerAdapter {
     private final int maxNumConnections;
     private final ServerMetrics serverMetrics;
 
+    /**
+     * AtomicInteger is used to read the number of active connections frequently.
+     */
+    private final AtomicInteger activeConnections = new AtomicInteger();
     private final AtomicBoolean loggingScheduled = new AtomicBoolean();
     private final LongAdder numDroppedConnections = new LongAdder();
 
@@ -66,8 +71,9 @@ final class ConnectionLimitingHandler extends ChannelInboundHandlerAdapter {
     public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
         final Channel child = (Channel) msg;
         final InetSocketAddress localAddress = firstNonNull(ChannelUtil.localAddress(child), UNKNOWN_ADDR);
-        final int conn = serverMetrics.increaseActiveConnectionsAndGet(localAddress);
+        final int conn = activeConnections.incrementAndGet();
         if (conn > 0 && conn <= maxNumConnections) {
+            serverMetrics.increaseActiveConnections(localAddress);
             childChannels.add(child);
             child.closeFuture().addListener(future -> {
                 childChannels.remove(child);
@@ -75,7 +81,7 @@ final class ConnectionLimitingHandler extends ChannelInboundHandlerAdapter {
             });
             super.channelRead(ctx, msg);
         } else {
-            serverMetrics.decreaseActiveConnections(localAddress);
+            activeConnections.decrementAndGet();
 
             // Set linger option to 0 so that the server doesn't get too many TIME_WAIT states.
             child.config().setOption(ChannelOption.SO_LINGER, 0);
