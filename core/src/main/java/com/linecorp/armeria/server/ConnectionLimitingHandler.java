@@ -70,13 +70,14 @@ final class ConnectionLimitingHandler extends ChannelInboundHandlerAdapter {
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
         final Channel child = (Channel) msg;
-        final InetSocketAddress localAddress = firstNonNull(ChannelUtil.localAddress(child), UNKNOWN_ADDR);
         final int conn = activeConnections.incrementAndGet();
         if (conn > 0 && conn <= maxNumConnections) {
+            final InetSocketAddress localAddress = firstNonNull(ChannelUtil.localAddress(child), UNKNOWN_ADDR);
             serverMetrics.increaseActiveConnections(localAddress);
             childChannels.add(child);
             child.closeFuture().addListener(future -> {
                 childChannels.remove(child);
+                activeConnections.decrementAndGet();
                 serverMetrics.decreaseActiveConnections(localAddress);
             });
             super.channelRead(ctx, msg);
@@ -116,7 +117,7 @@ final class ConnectionLimitingHandler extends ChannelInboundHandlerAdapter {
      * Returns the number of open connections.
      */
     public int numConnections() {
-        return serverMetrics.activeConnections();
+        return activeConnections.get();
     }
 
     /**

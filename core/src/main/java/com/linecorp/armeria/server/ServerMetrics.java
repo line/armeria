@@ -388,7 +388,7 @@ public final class ServerMetrics implements MeterBinder {
             assert atomicInteger != null;
             atomicInteger.decrementAndGet();
         }
-        // already warned in increaseActiveConnectionsAndGet
+        // already warned in increaseActiveConnections
     }
 
     @Override
