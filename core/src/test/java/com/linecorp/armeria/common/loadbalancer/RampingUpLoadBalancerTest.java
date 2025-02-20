@@ -500,7 +500,13 @@ class RampingUpLoadBalancerTest {
                             .rampingUpTaskWindow(Duration.ofNanos(rampingUpTaskWindowNanos))
                             .ticker(ticker::get)
                             .totalSteps(numberOfSteps)
-                            .timestampFunction(EndpointAttributeKeys::createdAtNanos)
+                            .timestampFunction(endpoint -> {
+                                if (EndpointAttributeKeys.hasCreatedAtNanos(endpoint)) {
+                                    return EndpointAttributeKeys.createdAtNanos(endpoint);
+                                } else {
+                                    return null;
+                                }
+                            })
                             .executor(new ImmediateExecutor())
                             .build();
 
