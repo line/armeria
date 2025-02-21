@@ -171,8 +171,8 @@ class BraveIntegrationTest {
                                    result -> allAsList(IntStream.range(1, 3).mapToObj(
                                            i -> executorService.submit(
                                                    RequestContext.current().makeContextAware(() -> {
-                                                       final ScopedSpan span =
-                                                               servicePoolTracing.tracer().startScopedSpan("aloha");
+                                                       final ScopedSpan span = servicePoolTracing
+                                                               .tracer().startScopedSpan("aloha");
                                                        try {
                                                            return null;
                                                        } finally {
