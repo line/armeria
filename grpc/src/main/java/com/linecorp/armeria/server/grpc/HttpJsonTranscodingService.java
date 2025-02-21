@@ -20,7 +20,6 @@ import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
-import static com.linecorp.armeria.server.grpc.HttpJsonTranscodingQueryParamMatchRule.JSON_NAME;
 import static com.linecorp.armeria.server.grpc.HttpJsonTranscodingQueryParamMatchRule.ORIGINAL_FIELD;
 import static java.util.Objects.requireNonNull;
 
@@ -176,7 +175,6 @@ final class HttpJsonTranscodingService extends AbstractUnframedGrpcService
                 //               HttpJsonTranscodingServiceBuilder or HttpJsonTranscodingSpecGenerator
                 final Set<HttpJsonTranscodingQueryParamMatchRule> queryParamMatchRules =
                         httpJsonTranscodingOptions.queryParamMatchRules();
-                final boolean ignoreJsonName = queryParamMatchRules.contains(JSON_NAME);
                 final Route route = routeAndVariables.getKey();
                 final List<PathVariable> pathVariables = routeAndVariables.getValue();
                 final Map<String, Field> originalFields = buildFields(methodDesc.getInputType(),
