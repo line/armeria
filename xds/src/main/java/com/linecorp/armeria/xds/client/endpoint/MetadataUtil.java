@@ -24,23 +24,22 @@ import com.google.protobuf.ProtocolStringList;
 import com.google.protobuf.Struct;
 import com.google.protobuf.Value;
 
-import com.linecorp.armeria.xds.ClusterSnapshot;
+import com.linecorp.armeria.client.ClientRequestContext;
+import com.linecorp.armeria.xds.internal.XdsAttributeKeys;
 
 import io.envoyproxy.envoy.config.cluster.v3.Cluster.LbSubsetConfig;
 import io.envoyproxy.envoy.config.cluster.v3.Cluster.LbSubsetConfig.LbSubsetSelector;
-import io.envoyproxy.envoy.config.route.v3.Route;
-import io.envoyproxy.envoy.config.route.v3.RouteAction;
+import io.envoyproxy.envoy.config.core.v3.Metadata;
 
 final class MetadataUtil {
 
-    static Struct filterMetadata(ClusterSnapshot clusterSnapshot) {
-        final Route route = clusterSnapshot.route();
-        if (route == null) {
+    static Struct filterMetadata(ClientRequestContext ctx) {
+        final Metadata metadataMatch = ctx.attr(XdsAttributeKeys.ROUTE_METADATA_MATCH);
+        if (metadataMatch == null) {
             return Struct.getDefaultInstance();
         }
-        final RouteAction action = route.getRoute();
-        return action.getMetadataMatch().getFilterMetadataOrDefault(SUBSET_LOAD_BALANCING_FILTER_NAME,
-                                                                    Struct.getDefaultInstance());
+        return metadataMatch.getFilterMetadataOrDefault(SUBSET_LOAD_BALANCING_FILTER_NAME,
+                                                        Struct.getDefaultInstance());
     }
 
     static boolean findMatchedSubsetSelector(LbSubsetConfig lbSubsetConfig, Struct filterMetadata) {

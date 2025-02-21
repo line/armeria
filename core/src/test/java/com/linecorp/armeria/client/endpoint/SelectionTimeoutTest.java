@@ -34,7 +34,7 @@ import com.google.common.collect.ImmutableList;
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.RequestOptions;
-import com.linecorp.armeria.client.endpoint.AbstractEndpointSelector.ListeningFuture;
+import com.linecorp.armeria.client.endpoint.AbstractAsyncSelector.ListeningFuture;
 import com.linecorp.armeria.client.endpoint.dns.DnsAddressEndpointGroup;
 import com.linecorp.armeria.client.endpoint.dns.DnsServiceEndpointGroup;
 import com.linecorp.armeria.client.endpoint.dns.DnsTextEndpointGroup;

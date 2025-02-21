@@ -19,9 +19,9 @@ package com.linecorp.armeria.xds;
 import static com.linecorp.armeria.xds.XdsTestResources.BOOTSTRAP_CLUSTER_NAME;
 import static com.linecorp.armeria.xds.XdsTestResources.bootstrapCluster;
 import static com.linecorp.armeria.xds.XdsTestResources.createCluster;
+import static com.linecorp.armeria.xds.XdsTestResources.createStaticCluster;
+import static com.linecorp.armeria.xds.XdsTestResources.loadAssignment;
 import static org.assertj.core.api.Assertions.assertThat;
-
-import java.util.List;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -95,14 +95,20 @@ class ResourceWatcherTest {
         final String resourceName = "cluster1";
         final Bootstrap bootstrap;
         final Cluster expectedCluster;
+        final ClusterLoadAssignment expectedEndpoints;
         if (useStaticCluster) {
             final ConfigSource configSource = XdsTestResources.basicConfigSource(BOOTSTRAP_CLUSTER_NAME);
             final Cluster bootstrapCluster = bootstrapCluster(server.httpUri(), BOOTSTRAP_CLUSTER_NAME);
-            expectedCluster = createCluster(resourceName);
+            expectedEndpoints = loadAssignment(resourceName);
+            expectedCluster = createStaticCluster(resourceName, expectedEndpoints);
             bootstrap = XdsTestResources.bootstrap(configSource, Listener.getDefaultInstance(),
                                                    bootstrapCluster, expectedCluster);
         } else {
             expectedCluster = cache.getSnapshot(GROUP).clusters().resources().get(resourceName);
+            expectedEndpoints = cache.getSnapshot(GROUP)
+                                     .endpoints()
+                                     .resources()
+                                     .get(resourceName);
             bootstrap = XdsTestResources.bootstrap(server.httpUri());
         }
         try (XdsBootstrap xdsBootstrap = XdsBootstrap.of(bootstrap)) {
@@ -110,37 +116,11 @@ class ResourceWatcherTest {
             final ClusterRoot clusterRoot = xdsBootstrap.clusterRoot(resourceName);
             clusterRoot.addSnapshotWatcher(watcher);
 
-            ClusterSnapshot clusterSnapshot = watcher.blockingChanged(ClusterSnapshot.class);
+            final ClusterSnapshot clusterSnapshot = watcher.blockingChanged(ClusterSnapshot.class);
             // the initial endpoint is fetched
             assertThat(clusterSnapshot.xdsResource().resource()).isEqualTo(expectedCluster);
-
-            final ClusterLoadAssignment expectedEndpoints = cache.getSnapshot(GROUP)
-                                                                 .endpoints()
-                                                                 .resources()
-                                                                 .get(resourceName);
             assertThat(clusterSnapshot.endpointSnapshot().xdsResource().resource())
                     .isEqualTo(expectedEndpoints);
-
-            // update the cache
-            final ClusterLoadAssignment assignment =
-                    XdsTestResources.loadAssignment(resourceName, "127.0.0.1", 8081);
-            final List<Cluster> clusters = useStaticCluster ? ImmutableList.of()
-                                                            : ImmutableList.of(expectedCluster);
-            cache.setSnapshot(
-                    GROUP,
-                    Snapshot.create(clusters,
-                                    ImmutableList.of(assignment),
-                                    ImmutableList.of(),
-                                    ImmutableList.of(), ImmutableList.of(), "2"));
-            clusterSnapshot = watcher.blockingChanged(ClusterSnapshot.class);
-
-            // check that the cluster reflects the changed cache
-            final ClusterLoadAssignment expectedEndpoints2 = cache.getSnapshot(GROUP)
-                                                                  .endpoints()
-                                                                  .resources()
-                                                                  .get(resourceName);
-            assertThat(clusterSnapshot.endpointSnapshot().xdsResource().resource())
-                    .isEqualTo(expectedEndpoints2);
         }
     }
 

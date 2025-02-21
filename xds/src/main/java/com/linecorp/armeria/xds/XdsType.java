@@ -23,15 +23,18 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
  */
 @UnstableApi
 public enum XdsType {
-    LISTENER("type.googleapis.com/envoy.config.listener.v3.Listener"),
-    ROUTE("type.googleapis.com/envoy.config.route.v3.RouteConfiguration"),
-    CLUSTER("type.googleapis.com/envoy.config.cluster.v3.Cluster"),
-    ENDPOINT("type.googleapis.com/envoy.config.endpoint.v3.ClusterLoadAssignment");
+    LISTENER("type.googleapis.com/envoy.config.listener.v3.Listener", true),
+    ROUTE("type.googleapis.com/envoy.config.route.v3.RouteConfiguration", true),
+    CLUSTER("type.googleapis.com/envoy.config.cluster.v3.Cluster", true),
+    ENDPOINT("type.googleapis.com/envoy.config.endpoint.v3.ClusterLoadAssignment", true),
+    VIRTUAL_HOST("type.googleapis.com/envoy.config.route.v3.VirtualHost", false);
 
     private final String typeUrl;
+    private final boolean discoverySupported;
 
-    XdsType(String typeUrl) {
+    XdsType(String typeUrl, boolean discoverySupported) {
         this.typeUrl = typeUrl;
+        this.discoverySupported = discoverySupported;
     }
 
     /**
@@ -39,5 +42,9 @@ public enum XdsType {
      */
     public String typeUrl() {
         return typeUrl;
+    }
+
+    boolean discoverySupported() {
+        return discoverySupported;
     }
 }

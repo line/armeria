@@ -283,8 +283,10 @@ class WebClientAdditionalAuthorityTest {
     void noAuthority() {
         final HttpRequest request = HttpRequest.of(RequestHeaders.of(HttpMethod.GET, "/"));
         assertThatThrownBy(() -> client.execute(request))
+                .isInstanceOf(UnprocessedRequestException.class)
+                .cause()
                 .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("Scheme and authority must be specified in");
+                .hasMessageContaining("ctx.sessionProtocol() cannot be 'undefined'");
     }
 
     @Test

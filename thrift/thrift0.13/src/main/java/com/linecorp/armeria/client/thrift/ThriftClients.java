@@ -21,6 +21,7 @@ import static java.util.Objects.requireNonNull;
 import java.net.URI;
 
 import com.linecorp.armeria.client.ClientFactory;
+import com.linecorp.armeria.client.RpcPreprocessor;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.common.Scheme;
 import com.linecorp.armeria.common.SerializationFormat;
@@ -157,6 +158,51 @@ public final class ThriftClients {
     }
 
     /**
+     * Creates a new client that is configured with the specified {@link RpcPreprocessor} using
+     * {@link ThriftSerializationFormats#BINARY} and the default {@link ClientFactory}.
+     *
+     * @param rpcPreprocessor the {@link RpcPreprocessor}
+     * @param clientType the type of the new client
+     *
+     * @throws IllegalArgumentException if the {@code clientType} is an unsupported Thrift client stub.
+     */
+    public static <T> T newClient(RpcPreprocessor rpcPreprocessor, Class<T> clientType) {
+        return builder(rpcPreprocessor).build(clientType);
+    }
+
+    /**
+     * Creates a new client that is configured with the specified {@link SerializationFormat} and
+     * {@link RpcPreprocessor} using the default {@link ClientFactory}.
+     *
+     * @param serializationFormat the {@link SerializationFormat}
+     * @param rpcPreprocessor the {@link RpcPreprocessor}
+     * @param clientType the type of the new client
+     *
+     * @throws IllegalArgumentException if the {@code clientType} is an unsupported Thrift client stub.
+     */
+    public static <T> T newClient(SerializationFormat serializationFormat,
+                                  RpcPreprocessor rpcPreprocessor, Class<T> clientType) {
+        return builder(serializationFormat, rpcPreprocessor).build(clientType);
+    }
+
+    /**
+     * Creates a new client that is configured with the specified {@link SerializationFormat},
+     * {@link RpcPreprocessor} and {@code path} using the default {@link ClientFactory}.
+     *
+     * @param serializationFormat the {@link SerializationFormat}
+     * @param rpcPreprocessor the {@link RpcPreprocessor}
+     * @param clientType the type of the new client
+     * @param path the path
+     *
+     * @throws IllegalArgumentException if the {@code clientType} is an unsupported Thrift client stub.
+     */
+    public static <T> T newClient(SerializationFormat serializationFormat,
+                                  RpcPreprocessor rpcPreprocessor, Class<T> clientType,
+                                  String path) {
+        return builder(serializationFormat, rpcPreprocessor).path(path).build(clientType);
+    }
+
+    /**
      * Returns a new {@link ThriftClientBuilder} that builds the client that connects to the specified
      * {@code uri}.
      *
@@ -218,6 +264,29 @@ public final class ThriftClients {
         requireNonNull(scheme, "scheme");
         requireNonNull(endpointGroup, "endpointGroup");
         return new ThriftClientBuilder(scheme, endpointGroup);
+    }
+
+    /**
+     * Returns a new {@link ThriftClientBuilder} that builds the client that is configured with
+     * the specified {@link RpcPreprocessor} using {@link ThriftSerializationFormats#BINARY}.
+     */
+    public static ThriftClientBuilder builder(RpcPreprocessor rpcPreprocessor) {
+        return new ThriftClientBuilder(SerializationFormat.NONE,
+                                       requireNonNull(rpcPreprocessor, "rpcPreprocessor"));
+    }
+
+    /**
+     * Returns a new {@link ThriftClientBuilder} that builds the client that is configured with
+     * the specified {@link RpcPreprocessor}.
+     *
+     * <p>Note that if {@link SerializationFormat#NONE} is specified
+     * {@link ThriftSerializationFormats#BINARY} will be used by default.
+     */
+    public static ThriftClientBuilder builder(SerializationFormat serializationFormat,
+                                              RpcPreprocessor rpcPreprocessor) {
+        requireNonNull(serializationFormat, "serializationFormat");
+        requireNonNull(rpcPreprocessor, "rpcPreprocessor");
+        return new ThriftClientBuilder(serializationFormat, rpcPreprocessor);
     }
 
     private ThriftClients() {}

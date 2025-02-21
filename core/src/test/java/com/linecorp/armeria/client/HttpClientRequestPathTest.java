@@ -106,7 +106,7 @@ class HttpClientRequestPathTest {
     }
 
     @ParameterizedTest
-    @EnumSource(value = SessionProtocol.class, mode = Mode.EXCLUDE, names = "PROXY")
+    @EnumSource(value = SessionProtocol.class, mode = Mode.EXCLUDE, names = {"PROXY", "UNDEFINED"})
     void default_withScheme(SessionProtocol protocol) {
         final HttpRequest request = HttpRequest.of(HttpMethod.GET, server2.uri(protocol) + "/simple-client");
         try (ClientRequestContextCaptor captor = Clients.newContextCaptor()) {
@@ -123,12 +123,16 @@ class HttpClientRequestPathTest {
         final HttpRequest request = HttpRequest.of(HttpMethod.GET, "/simple-client");
         final HttpResponse response = WebClient.of().execute(request);
         assertThatThrownBy(() -> response.aggregate().join())
-                .hasCauseInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("Scheme and authority must be specified");
+                .cause()
+                .isInstanceOf(UnprocessedRequestException.class)
+                .cause()
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("ctx.sessionProtocol() cannot be 'undefined'");
     }
 
     @ParameterizedTest
-    @EnumSource(value = SessionProtocol.class, mode = Mode.EXCLUDE, names = { "HTTP", "HTTPS", "PROXY"})
+    @EnumSource(value = SessionProtocol.class, mode = Mode.EXCLUDE,
+            names = { "HTTP", "HTTPS", "PROXY", "UNDEFINED"})
     void default_withRetryClient(SessionProtocol protocol) {
         final HttpRequest request = HttpRequest.of(HttpMethod.GET, server2.uri(protocol) + "/retry");
         final WebClient client = WebClient.builder()

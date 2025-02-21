@@ -16,165 +16,120 @@
 
 package com.linecorp.armeria.xds.client.endpoint;
 
-import static com.linecorp.armeria.internal.common.util.CollectionUtil.truncate;
+import static com.google.common.base.Preconditions.checkState;
 
-import java.util.List;
+import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Consumer;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import com.google.common.base.MoreObjects;
-import com.google.common.collect.ImmutableList;
 
-import com.linecorp.armeria.client.ClientRequestContext;
-import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.common.annotation.Nullable;
-import com.linecorp.armeria.common.util.AbstractListenable;
 import com.linecorp.armeria.common.util.AsyncCloseable;
+import com.linecorp.armeria.common.util.UnmodifiableFuture;
 import com.linecorp.armeria.xds.ClusterSnapshot;
-import com.linecorp.armeria.xds.client.endpoint.ClusterManager.LocalCluster;
-import com.linecorp.armeria.xds.client.endpoint.LocalityRoutingStateFactory.LocalityRoutingState;
 
 import io.netty.util.concurrent.EventExecutor;
 
-final class ClusterEntry extends AbstractListenable<XdsLoadBalancer> implements AsyncCloseable {
+final class ClusterEntry implements AsyncCloseable {
 
-    private static final Logger logger = LoggerFactory.getLogger(ClusterEntry.class);
-    private final Consumer<XdsLoadBalancer> localClusterEntryListener = this::updateLocalLoadBalancer;
+    private final Consumer<PrioritySet> localClusterEntryListener = this::updateLocalLoadBalancer;
 
     @Nullable
-    private volatile XdsLoadBalancer loadBalancer;
+    private volatile UpdatableLoadBalancer loadBalancer;
+    private boolean closed;
     @Nullable
-    private XdsLoadBalancer localLoadBalancer;
-    @Nullable
-    private EndpointsState endpointsState;
-    private final EndpointsPool endpointsPool;
+    private PrioritySet localPrioritySet;
     @Nullable
     private final LocalCluster localCluster;
     private final EventExecutor eventExecutor;
-    private boolean closing;
+    private int refCnt;
 
     ClusterEntry(EventExecutor eventExecutor, @Nullable LocalCluster localCluster) {
         this.eventExecutor = eventExecutor;
-        endpointsPool = new EndpointsPool(eventExecutor);
         this.localCluster = localCluster;
         if (localCluster != null) {
-            localCluster.clusterEntry().addListener(localClusterEntryListener, true);
+            localCluster.addListener(localClusterEntryListener, true);
+        }
+    }
+
+    XdsLoadBalancer update(ClusterSnapshot clusterSnapshot) {
+        checkState(!closed, "Cannot update cluster snapshot '%s' after closed", clusterSnapshot);
+        final UpdatableLoadBalancer prevLoadBalancer = loadBalancer;
+        if (prevLoadBalancer != null && Objects.equals(clusterSnapshot, prevLoadBalancer.clusterSnapshot())) {
+            return prevLoadBalancer;
+        }
+        AttributesPool prevAttrs = AttributesPool.NOOP;
+        if (prevLoadBalancer != null) {
+            prevAttrs = prevLoadBalancer.attributesPool();
+        }
+        final UpdatableLoadBalancer updatableLoadBalancer =
+                new UpdatableLoadBalancer(eventExecutor, clusterSnapshot, localCluster,
+                                          localPrioritySet, prevAttrs);
+        loadBalancer = updatableLoadBalancer;
+        if (prevLoadBalancer != null) {
+            prevLoadBalancer.close();
+        }
+        return updatableLoadBalancer;
+    }
+
+    private void updateLocalLoadBalancer(PrioritySet localPrioritySet) {
+        if (!eventExecutor.inEventLoop()) {
+            eventExecutor.execute(() -> updateLocalLoadBalancer(localPrioritySet));
+            return;
+        }
+        this.localPrioritySet = localPrioritySet;
+        final UpdatableLoadBalancer loadBalancer = this.loadBalancer;
+        if (loadBalancer != null) {
+            loadBalancer.updateLocalLoadBalancer(localPrioritySet);
         }
     }
 
     @Nullable
-    Endpoint selectNow(ClientRequestContext ctx) {
-        final LoadBalancer loadBalancer = latestValue();
-        if (loadBalancer == null) {
-            return null;
-        }
-        return loadBalancer.selectNow(ctx);
-    }
-
-    void updateClusterSnapshot(ClusterSnapshot clusterSnapshot) {
-        endpointsPool.updateClusterSnapshot(clusterSnapshot, this::updateEndpoints);
-    }
-
-    void updateEndpoints(EndpointsState endpointsState) {
-        assert eventExecutor.inEventLoop();
-        this.endpointsState = endpointsState;
-        tryRefresh();
-    }
-
-    private void updateLocalLoadBalancer(XdsLoadBalancer localLoadBalancer) {
-        assert eventExecutor.inEventLoop();
-        this.localLoadBalancer = localLoadBalancer;
-        tryRefresh();
-    }
-
-    void tryRefresh() {
-        if (closing) {
-            return;
-        }
-        final EndpointsState endpointsState = this.endpointsState;
-        if (endpointsState == null) {
-            return;
-        }
-
-        final ClusterSnapshot clusterSnapshot = endpointsState.clusterSnapshot;
-        final List<Endpoint> endpoints = endpointsState.endpoints;
-
-        final PrioritySet prioritySet = new PriorityStateManager(clusterSnapshot, endpoints).build();
-        if (logger.isTraceEnabled()) {
-            logger.trace("XdsEndpointGroup is using a new PrioritySet({})", prioritySet);
-        }
-
-        LocalityRoutingState localityRoutingState = null;
-        if (localLoadBalancer != null) {
-            assert localCluster != null;
-            localityRoutingState = localCluster.stateFactory().create(prioritySet,
-                                                                      localLoadBalancer.prioritySet());
-            logger.trace("Local routing is enabled with LocalityRoutingState({})", localityRoutingState);
-        }
-        XdsLoadBalancer loadBalancer = new DefaultLoadBalancer(prioritySet, localityRoutingState);
-        if (clusterSnapshot.xdsResource().resource().hasLbSubsetConfig()) {
-            loadBalancer = new SubsetLoadBalancer(prioritySet, loadBalancer);
-        }
-        this.loadBalancer = loadBalancer;
-        notifyListeners(loadBalancer);
-    }
-
-    @Override
-    @Nullable
-    protected XdsLoadBalancer latestValue() {
+    UpdatableLoadBalancer loadBalancer() {
         return loadBalancer;
     }
 
-    List<Endpoint> allEndpoints() {
-        final EndpointsState endpointsState = this.endpointsState;
-        if (endpointsState == null) {
-            return ImmutableList.of();
+    ClusterEntry retain() {
+        refCnt++;
+        return this;
+    }
+
+    boolean release() {
+        refCnt--;
+        assert refCnt >= 0;
+        if (refCnt == 0) {
+            closeAsync();
+            return true;
         }
-        return endpointsState.endpoints;
+        return false;
     }
 
     @Override
     public CompletableFuture<?> closeAsync() {
-        closing = true;
-        if (localCluster != null) {
-            localCluster.clusterEntry().removeListener(localClusterEntryListener);
+        if (closed) {
+            return UnmodifiableFuture.completedFuture(null);
         }
-        return endpointsPool.closeAsync();
+        closed = true;
+        if (localCluster != null) {
+            localCluster.removeListener(localClusterEntryListener);
+        }
+        final UpdatableLoadBalancer loadBalancer = this.loadBalancer;
+        if (loadBalancer != null) {
+            loadBalancer.close();
+        }
+        return UnmodifiableFuture.completedFuture(null);
     }
 
     @Override
     public void close() {
-        endpointsPool.close();
+        closeAsync().join();
     }
 
     @Override
     public String toString() {
         return MoreObjects.toStringHelper(this)
-                          .add("endpointsPool", endpointsPool)
                           .add("loadBalancer", loadBalancer)
-                          .add("endpointsState", endpointsState)
                           .toString();
-    }
-
-    static final class EndpointsState {
-        private final ClusterSnapshot clusterSnapshot;
-        private final List<Endpoint> endpoints;
-
-        EndpointsState(ClusterSnapshot clusterSnapshot, List<Endpoint> endpoints) {
-            this.clusterSnapshot = clusterSnapshot;
-            this.endpoints = ImmutableList.copyOf(endpoints);
-        }
-
-        @Override
-        public String toString() {
-            return MoreObjects.toStringHelper(this)
-                              .add("clusterSnapshot", clusterSnapshot)
-                              .add("numEndpoints", endpoints.size())
-                              .add("endpoints", truncate(endpoints, 10))
-                              .toString();
-        }
     }
 }

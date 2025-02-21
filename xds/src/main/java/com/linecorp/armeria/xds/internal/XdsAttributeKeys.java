@@ -1,5 +1,5 @@
 /*
- * Copyright 2024 LINE Corporation
+ * Copyright 2025 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -14,20 +14,17 @@
  * under the License.
  */
 
-package com.linecorp.armeria.xds.client.endpoint;
+package com.linecorp.armeria.xds.internal;
 
-import io.envoyproxy.envoy.config.endpoint.v3.LbEndpoint;
-import io.envoyproxy.envoy.config.endpoint.v3.LocalityLbEndpoints;
+import io.envoyproxy.envoy.config.core.v3.Metadata;
 import io.netty.util.AttributeKey;
 
-final class XdsAttributeKeys {
+public final class XdsAttributeKeys {
 
-    static final AttributeKey<LbEndpoint> LB_ENDPOINT_KEY =
-            AttributeKey.valueOf(XdsAttributeKeys.class, "LB_ENDPOINT_KEY");
-    static final AttributeKey<LocalityLbEndpoints> LOCALITY_LB_ENDPOINTS_KEY =
-            AttributeKey.valueOf(XdsAttributeKeys.class, "LOCALITY_LB_ENDPOINTS_KEY");
-    static final AttributeKey<XdsRandom> XDS_RANDOM =
-            AttributeKey.valueOf(XdsAttributeKeys.class, "XDS_RANDOM");
+    public static final AttributeKey<Metadata> ROUTE_METADATA_MATCH =
+            AttributeKey.valueOf(XdsAttributeKeys.class, "ROUTER_METADATA");
+    public static final AttributeKey<RouteConfig> ROUTE_CONFIG =
+            AttributeKey.valueOf(XdsAttributeKeys.class, "ROUTE_CONFIG");
 
     private XdsAttributeKeys() {}
 }

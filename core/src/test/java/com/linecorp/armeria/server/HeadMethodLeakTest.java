@@ -132,7 +132,7 @@ class HeadMethodLeakTest {
             final Stream.Builder<Arguments> builder = Stream.builder();
             for (int i = 0; i < 20; i++) {
                 for (SessionProtocol protocol : SessionProtocol.values()) {
-                    if (protocol == SessionProtocol.PROXY) {
+                    if (protocol == SessionProtocol.PROXY || protocol == SessionProtocol.UNDEFINED) {
                         continue;
                     }
                     for (ExchangeType exchangeType : ExchangeType.values()) {

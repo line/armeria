@@ -34,17 +34,22 @@ import com.linecorp.armeria.xds.client.endpoint.LocalityRoutingStateFactory.Stat
 
 import io.envoyproxy.envoy.config.core.v3.Locality;
 
-final class DefaultLoadBalancer implements XdsLoadBalancer {
+final class DefaultLoadBalancer implements LoadBalancer {
 
     private final DefaultLbStateFactory.DefaultLbState lbState;
     private final PrioritySet prioritySet;
     @Nullable
     private final LocalityRoutingState localityRoutingState;
 
-    DefaultLoadBalancer(PrioritySet prioritySet, @Nullable LocalityRoutingState localityRoutingState) {
+    DefaultLoadBalancer(PrioritySet prioritySet, @Nullable LocalCluster localCluster,
+                        @Nullable PrioritySet localPrioritySet) {
         lbState = DefaultLbStateFactory.newInstance(prioritySet);
         this.prioritySet = prioritySet;
-        this.localityRoutingState = localityRoutingState;
+        if (localCluster != null && localPrioritySet != null) {
+            localityRoutingState = localCluster.stateFactory().create(prioritySet, localPrioritySet);
+        } else {
+            localityRoutingState = null;
+        }
     }
 
     @Override
@@ -54,7 +59,7 @@ final class DefaultLoadBalancer implements XdsLoadBalancer {
         if (prioritySet.priorities().isEmpty()) {
             return null;
         }
-        XdsRandom random = ctx.attr(XdsAttributeKeys.XDS_RANDOM);
+        XdsRandom random = ctx.attr(ClientXdsAttributeKeys.XDS_RANDOM);
         if (random == null) {
             random = XdsRandom.DEFAULT;
         }
@@ -183,12 +188,6 @@ final class DefaultLoadBalancer implements XdsLoadBalancer {
     @Override
     public PrioritySet prioritySet() {
         return prioritySet;
-    }
-
-    @Override
-    @Nullable
-    public LocalityRoutingState localityRoutingState() {
-        return localityRoutingState;
     }
 
     static class PriorityAndAvailability {

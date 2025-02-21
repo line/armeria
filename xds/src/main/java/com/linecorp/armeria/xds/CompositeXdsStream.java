@@ -35,6 +35,9 @@ final class CompositeXdsStream implements XdsStream {
                        EventExecutor eventLoop, XdsResponseHandler handler,
                        SubscriberStorage subscriberStorage) {
         for (XdsType type: XdsType.values()) {
+            if (!type.discoverySupported()) {
+                continue;
+            }
             final SotwXdsStream stream = new SotwXdsStream(
                     SotwDiscoveryStub.basic(type, clientBuilder), node, backoff, eventLoop,
                     handler, subscriberStorage, EnumSet.of(type));

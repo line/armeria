@@ -16,7 +16,6 @@
 
 package com.linecorp.armeria.xds;
 
-import static com.linecorp.armeria.xds.StaticResourceUtils.staticCluster;
 import static com.linecorp.armeria.xds.XdsType.ROUTE;
 
 import java.util.ArrayList;
@@ -30,75 +29,48 @@ import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.common.annotation.Nullable;
 
-import io.envoyproxy.envoy.config.cluster.v3.Cluster;
 import io.envoyproxy.envoy.config.core.v3.ConfigSource;
-import io.envoyproxy.envoy.config.route.v3.Route;
-import io.envoyproxy.envoy.config.route.v3.Route.ActionCase;
-import io.envoyproxy.envoy.config.route.v3.RouteAction;
 import io.envoyproxy.envoy.config.route.v3.RouteConfiguration;
 import io.envoyproxy.envoy.config.route.v3.VirtualHost;
 import io.grpc.Status;
 
 final class RouteResourceNode extends AbstractResourceNodeWithPrimer<RouteXdsResource> {
 
-    private final List<ClusterSnapshot> clusterSnapshotList = new ArrayList<>();
-
     private final Set<Integer> pending = new HashSet<>();
-    private final ClusterSnapshotWatcher snapshotWatcher = new ClusterSnapshotWatcher();
+    private final List<VirtualHostSnapshot> virtualHostSnapshots = new ArrayList<>();
     private final SnapshotWatcher<RouteSnapshot> parentWatcher;
+    private final VirtualHostSnapshotWatcher snapshotWatcher = new VirtualHostSnapshotWatcher();
 
     RouteResourceNode(@Nullable ConfigSource configSource, String resourceName,
-                      XdsBootstrapImpl xdsBootstrap, @Nullable ListenerXdsResource primer,
+                      SubscriptionContext context, @Nullable ListenerXdsResource primer,
                       SnapshotWatcher<RouteSnapshot> parentWatcher, ResourceNodeType resourceNodeType) {
-        super(xdsBootstrap, configSource, ROUTE, resourceName, primer, parentWatcher, resourceNodeType);
+        super(context, configSource, ROUTE, resourceName, primer, parentWatcher, resourceNodeType);
         this.parentWatcher = parentWatcher;
     }
 
     @Override
     public void doOnChanged(RouteXdsResource resource) {
-        clusterSnapshotList.clear();
-        pending.clear();
+        virtualHostSnapshots.clear();
+
         final RouteConfiguration routeConfiguration = resource.resource();
-        int index = 0;
-        for (VirtualHost virtualHost: routeConfiguration.getVirtualHostsList()) {
-            for (Route route: virtualHost.getRoutesList()) {
-                if (route.getActionCase() != ActionCase.ROUTE) {
-                    continue;
-                }
-                final RouteAction routeAction = route.getRoute();
-                final String clusterName = routeAction.getCluster();
-
-                // add a dummy element to the index list so that we can call List.set later
-                // without incurring an IndexOutOfBoundException when a snapshot is updated
-                clusterSnapshotList.add(null);
-                pending.add(index);
-
-                final Cluster cluster = xdsBootstrap().bootstrapClusters().cluster(clusterName);
-                final ClusterResourceNode node;
-                if (cluster != null) {
-                    node = staticCluster(xdsBootstrap(), clusterName, resource, snapshotWatcher, virtualHost,
-                                         route, index++, cluster);
-                    children().add(node);
-                } else {
-                    final ConfigSource configSource =
-                            configSourceMapper().cdsConfigSource(null, clusterName);
-                    node = new ClusterResourceNode(configSource, clusterName, xdsBootstrap(),
-                                                   resource, snapshotWatcher, virtualHost, route,
-                                                   index++, ResourceNodeType.DYNAMIC);
-                    children().add(node);
-                    xdsBootstrap().subscribe(node);
-                }
-            }
+        for (int i = 0; i < routeConfiguration.getVirtualHostsList().size(); i++) {
+            pending.add(i);
+            virtualHostSnapshots.add(null);
+            final VirtualHost virtualHost = routeConfiguration.getVirtualHostsList().get(i);
+            final VirtualHostResourceNode childNode =
+                    StaticResourceUtils.staticVirtualHost(context(), name(), resource,
+                                                          snapshotWatcher, i, virtualHost);
+            children().add(childNode);
         }
         if (children().isEmpty()) {
             parentWatcher.snapshotUpdated(new RouteSnapshot(resource, Collections.emptyList()));
         }
     }
 
-    private class ClusterSnapshotWatcher implements SnapshotWatcher<ClusterSnapshot> {
+    private class VirtualHostSnapshotWatcher implements SnapshotWatcher<VirtualHostSnapshot> {
 
         @Override
-        public void snapshotUpdated(ClusterSnapshot newSnapshot) {
+        public void snapshotUpdated(VirtualHostSnapshot newSnapshot) {
             final RouteXdsResource current = currentResource();
             if (current == null) {
                 return;
@@ -106,14 +78,14 @@ final class RouteResourceNode extends AbstractResourceNodeWithPrimer<RouteXdsRes
             if (!Objects.equals(current, newSnapshot.xdsResource().primer())) {
                 return;
             }
-            clusterSnapshotList.set(newSnapshot.index(), newSnapshot);
+            virtualHostSnapshots.set(newSnapshot.index(), newSnapshot);
             pending.remove(newSnapshot.index());
             // checks if all clusters for the route have reported a snapshot
             if (!pending.isEmpty()) {
                 return;
             }
             parentWatcher.snapshotUpdated(
-                    new RouteSnapshot(current, ImmutableList.copyOf(clusterSnapshotList)));
+                    new RouteSnapshot(current, ImmutableList.copyOf(virtualHostSnapshots)));
         }
 
         @Override

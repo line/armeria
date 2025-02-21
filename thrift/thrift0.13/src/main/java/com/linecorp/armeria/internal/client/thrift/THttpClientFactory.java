@@ -78,11 +78,10 @@ final class THttpClientFactory extends DecoratingClientFactory {
         }
 
         // Create a THttpClient without path.
-        final ClientBuilderParams delegateParams =
-                ClientBuilderParams.of(params.scheme(),
-                                       params.endpointGroup(),
-                                       "/", THttpClient.class,
-                                       options);
+        final ClientBuilderParams delegateParams = params.paramsBuilder()
+                                                         .absolutePathRef("/")
+                                                         .clientType(THttpClient.class)
+                                                         .build();
 
         final THttpClient thriftClient = new DefaultTHttpClient(delegateParams, delegate, meterRegistry());
 
@@ -90,5 +89,16 @@ final class THttpClientFactory extends DecoratingClientFactory {
                 clientType.getClassLoader(),
                 new Class<?>[] { clientType },
                 new THttpClientInvocationHandler(params, thriftClient));
+    }
+
+    @Override
+    public ClientBuilderParams validateParams(ClientBuilderParams params) {
+        if (params.scheme().sessionProtocol() == SessionProtocol.UNDEFINED &&
+            params.options().clientPreprocessors().rpcPreprocessors().isEmpty()) {
+            throw new IllegalArgumentException(
+                    "At least one rpcPreprocessor must be specified for rpc-based clients " +
+                    "with sessionProtocol '" + params.scheme().sessionProtocol() + "'.");
+        }
+        return super.validateParams(params);
     }
 }

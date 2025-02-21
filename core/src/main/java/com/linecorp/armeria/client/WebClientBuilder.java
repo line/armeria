@@ -66,6 +66,10 @@ public final class WebClientBuilder extends AbstractWebClientBuilder {
         super(sessionProtocol, endpointGroup, path);
     }
 
+    WebClientBuilder(HttpPreprocessor httpPreprocessor, @Nullable String path) {
+        super(httpPreprocessor, path);
+    }
+
     /**
      * Returns a newly-created web client based on the properties of this builder.
      *
