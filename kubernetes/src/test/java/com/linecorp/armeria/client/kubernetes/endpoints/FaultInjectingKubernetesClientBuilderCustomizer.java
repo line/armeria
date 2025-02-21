@@ -16,9 +16,6 @@
 
 package com.linecorp.armeria.client.kubernetes.endpoints;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import com.linecorp.armeria.client.kubernetes.ArmeriaHttpClientFactory;
 import com.linecorp.armeria.client.websocket.WebSocketClientBuilder;
 import com.linecorp.armeria.common.HttpData;
@@ -29,14 +26,12 @@ import com.linecorp.armeria.internal.common.websocket.WebSocketFrameEncoder;
 import io.fabric8.kubernetes.client.KubernetesClientBuilder;
 import io.fabric8.kubernetes.client.server.mock.KubernetesClientBuilderCustomizer;
 
-public class TestKubernetesClientBuilderCustomizer extends KubernetesClientBuilderCustomizer {
-
-    private static final Logger logger = LoggerFactory.getLogger(TestKubernetesClientBuilderCustomizer.class);
+public class FaultInjectingKubernetesClientBuilderCustomizer extends KubernetesClientBuilderCustomizer {
 
     private static volatile boolean shouldInjectFault;
 
     static void injectFault(boolean shouldInjectFault) {
-        TestKubernetesClientBuilderCustomizer.shouldInjectFault = shouldInjectFault;
+        FaultInjectingKubernetesClientBuilderCustomizer.shouldInjectFault = shouldInjectFault;
     }
 
     @Override
