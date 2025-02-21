@@ -31,7 +31,7 @@ final class DefaultEndpointSelector<T extends LoadBalancer<Endpoint, ClientReque
     private final LoadBalancerFactory<T> loadBalancerFactory;
     @Nullable
     private volatile T loadBalancer;
-    private volatile boolean closed;
+    private boolean closed;
     private final ReentrantShortLock lock = new ReentrantShortLock();
 
     DefaultEndpointSelector(EndpointGroup endpointGroup,

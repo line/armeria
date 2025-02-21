@@ -24,13 +24,11 @@ import com.linecorp.armeria.client.endpoint.DefaultEndpointSelector.LoadBalancer
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.loadbalancer.LoadBalancer;
 
-final class WeightedRoundRobinStrategy
+enum WeightedRoundRobinStrategy
         implements EndpointSelectionStrategy,
                    LoadBalancerFactory<LoadBalancer<Endpoint, ClientRequestContext>> {
 
-    static final WeightedRoundRobinStrategy INSTANCE = new WeightedRoundRobinStrategy();
-
-    private WeightedRoundRobinStrategy() {}
+    INSTANCE;
 
     @Override
     public EndpointSelector newSelector(EndpointGroup endpointGroup) {

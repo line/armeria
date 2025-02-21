@@ -36,7 +36,7 @@ final class AggregationWeightTransition<T> implements WeightTransition<T> {
         final int minWeight = Ints.saturatedCast(Math.round(weight * minWeightPercent));
         final int computedWeight;
         if (aggressionPercentage == 100) {
-            computedWeight = WeightTransition.linear().compute(candidate, weight, currentStep, totalSteps);
+            computedWeight = WeightTransition.<T>linear().compute(candidate, weight, currentStep, totalSteps);
         } else {
             computedWeight = (int) (weight * Math.pow(1.0 * currentStep / totalSteps,
                                                       invertedAggression));
