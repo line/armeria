@@ -150,8 +150,8 @@ public interface LoadBalancer<T, C> extends SafeCloseable {
      *
      * @param weightFunction the weight function which returns the weight of the candidate.
      */
-    static <T, C> UpdatableLoadBalancer<T> ofRampingUp(Iterable<? extends T> candidates,
-                                                       ToIntFunction<? super T> weightFunction) {
+    static <T> UpdatableLoadBalancer<T> ofRampingUp(Iterable<? extends T> candidates,
+                                                    ToIntFunction<? super T> weightFunction) {
         requireNonNull(candidates, "candidates");
         requireNonNull(weightFunction, "weightFunction");
         return LoadBalancer.<T>builderForRampingUp(candidates, weightFunction)
