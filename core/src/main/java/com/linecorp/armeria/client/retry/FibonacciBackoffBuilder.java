@@ -40,6 +40,10 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
  */
 @UnstableApi
 public final class FibonacciBackoffBuilder extends AbstractBackoffBuilder<FibonacciBackoffBuilder> {
+
+    static final long DEFAULT_INITIAL_DELAY_MILLIS = 200;
+    static final long DEFAULT_MAX_DELAY_MILLIS = 10000;
+
     private long initialDelayMillis = 200;
     private long maxDelayMillis = 10000;
 
@@ -52,7 +56,6 @@ public final class FibonacciBackoffBuilder extends AbstractBackoffBuilder<Fibona
      * and it determines the delay before the first retry.</p>
      *
      * @param initialDelayMillis the initial delay in milliseconds
-     * @return this {@code FibonacciBackoffBuilder} instance for method chaining
      */
     public FibonacciBackoffBuilder initialDelayMillis(long initialDelayMillis) {
         checkArgument(initialDelayMillis >= 0,
@@ -69,7 +72,6 @@ public final class FibonacciBackoffBuilder extends AbstractBackoffBuilder<Fibona
      * sequence. Once the delays reach this value, they will not increase further.</p>
      *
      * @param maxDelayMillis the maximum delay in milliseconds
-     * @return this {@code FibonacciBackoffBuilder} instance for method chaining
      */
     public FibonacciBackoffBuilder maxDelayMillis(long maxDelayMillis) {
         checkArgument(maxDelayMillis >= 0,

@@ -41,9 +41,14 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
  */
 @UnstableApi
 public final class ExponentialBackoffBuilder extends AbstractBackoffBuilder<ExponentialBackoffBuilder> {
-    private long initialDelayMillis = 200;
-    private long maxDelayMillis = 10000;
-    private double multiplier = 2.0;
+
+    static final long DEFAULT_INITIAL_DELAY_MILLIS = 200;
+    static final long DEFAULT_MAX_DELAY_MILLIS = 10000;
+    static final double DEFAULT_MULTIPLIER = 2.0;
+
+    private long initialDelayMillis = DEFAULT_INITIAL_DELAY_MILLIS;
+    private long maxDelayMillis = DEFAULT_MAX_DELAY_MILLIS;
+    private double multiplier = DEFAULT_MULTIPLIER;
 
     ExponentialBackoffBuilder() {}
 
@@ -55,7 +60,6 @@ public final class ExponentialBackoffBuilder extends AbstractBackoffBuilder<Expo
      * based on the multiplier.</p>
      *
      * @param initialDelayMillis the initial delay in milliseconds
-     * @return this {@code ExponentialBackoffBuilder} instance for method chaining
      */
     public ExponentialBackoffBuilder initialDelayMillis(long initialDelayMillis) {
         checkArgument(initialDelayMillis >= 0, "initialDelayMillis: %s (expected: >= 0)", initialDelayMillis);
@@ -70,7 +74,6 @@ public final class ExponentialBackoffBuilder extends AbstractBackoffBuilder<Expo
      * this value, it will not increase further, even if the multiplier would result in a higher value.</p>
      *
      * @param maxDelayMillis the maximum delay in milliseconds
-     * @return this {@code ExponentialBackoffBuilder} instance for method chaining
      */
     public ExponentialBackoffBuilder maxDelayMillis(long maxDelayMillis) {
         checkArgument(maxDelayMillis >= 0, "maxDelayMillis: %s (expected: >= 0)", maxDelayMillis);
@@ -86,7 +89,6 @@ public final class ExponentialBackoffBuilder extends AbstractBackoffBuilder<Expo
      * until the maximum delay is reached.</p>
      *
      * @param multiplier the multiplier for the exponential backoff
-     * @return this {@code ExponentialBackoffBuilder} instance for method chaining
      */
     public ExponentialBackoffBuilder multiplier(double multiplier) {
         checkArgument(multiplier > 1.0, "multiplier: %s (expected: > 1.0)", multiplier);

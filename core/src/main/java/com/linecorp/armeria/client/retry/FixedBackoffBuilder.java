@@ -20,7 +20,7 @@ import static com.google.common.base.Preconditions.checkArgument;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 
 /**
- * A builder for creating instances of Fixed{@link Backoff}.
+ * A builder for creating instances of fixed {@link Backoff}.
  *
  * <p>This builder allows you to configure the delay duration for a fixed backoff strategy.
  * You can specify the delay in milliseconds and then create a Fixed {@link Backoff} instance
@@ -38,6 +38,8 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
  */
 @UnstableApi
 public final class FixedBackoffBuilder extends AbstractBackoffBuilder<FixedBackoffBuilder> {
+    static final long DEFAULT_DELAY_MILLIS = 500;
+
     private long delayMillis = 500;
 
     FixedBackoffBuilder() {}
@@ -49,7 +51,6 @@ public final class FixedBackoffBuilder extends AbstractBackoffBuilder<FixedBacko
      * before retrying an operation.</p>
      *
      * @param delayMillis the delay in milliseconds
-     * @return this {@code FixedBackoffBuilder} instance for method chaining
      */
     public FixedBackoffBuilder delayMillis(long delayMillis) {
         checkArgument(delayMillis >= 0, "delayMillis: %s (expected: >= 0)", delayMillis);

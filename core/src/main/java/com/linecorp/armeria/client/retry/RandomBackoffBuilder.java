@@ -41,6 +41,10 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
  */
 @UnstableApi
 public final class RandomBackoffBuilder extends AbstractBackoffBuilder<RandomBackoffBuilder> {
+
+    static final long DEFAULT_MIN_DELAY_MILLIS = 200;
+    static final long DEFAULT_MAX_DELAY_MILLIS = 10000;
+
     private long minDelayMillis = 200;
     private long maxDelayMillis = 10000;
     private Supplier<Random> randomSupplier = Random::new;

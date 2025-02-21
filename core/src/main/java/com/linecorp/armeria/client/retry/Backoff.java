@@ -133,12 +133,12 @@ public interface Backoff extends Unwrappable {
     }
 
     /**
-     * Returns a {@link ExponentialBackoffBuilder} that provides methods to configure
+     * Returns an {@link ExponentialBackoffBuilder} that provides methods to configure
      * backoff delay which is exponentially-increasing. The default values are as follows:
      * <ul>
-     *   <li><code>initialDelayMillis</code>: 200</li>
-     *   <li><code>maxDelayMillis</code>: 10000</li>
-     *   <li><code>multiplier</code>: 2.0</li>
+     *   <li>{@code initialDelayMillis}: {@value ExponentialBackoffBuilder#DEFAULT_INITIAL_DELAY_MILLIS}</li>
+     *   <li>{@code maxDelayMillis}: {@value ExponentialBackoffBuilder#DEFAULT_MAX_DELAY_MILLIS}</li>
+     *   <li>{@code multiplier}: {@value ExponentialBackoffBuilder#DEFAULT_MULTIPLIER}</li>
      * </ul>
      */
     @UnstableApi
@@ -152,8 +152,8 @@ public interface Backoff extends Unwrappable {
      * f(n) = f(n-1) + f(n-2) where f(0) = f(1) = {@code initialDelayMillis}
      * The default values are as follows:
      * <ul>
-     *   <li><code>initialDelayMillis</code>: 200</li>
-     *   <li><code>maxDelayMillis</code>: 10000</li>
+     *   <li>{@code initialDelayMillis}: {@value FibonacciBackoffBuilder#DEFAULT_INITIAL_DELAY_MILLIS}</li>
+     *   <li>{@code maxDelayMillis}: {@value FibonacciBackoffBuilder#DEFAULT_MAX_DELAY_MILLIS}</li>
      * </ul>
      */
     @UnstableApi
@@ -165,7 +165,7 @@ public interface Backoff extends Unwrappable {
      * Returns a {@link FixedBackoffBuilder} that provides methods to configure
      * backoff delay which is a fixed value. The default values are as follows:
      * <ul>
-     *   <li><code>delayMillis;</code>: 500</li>
+     *   <li>{@code delayMillis}: {@value FixedBackoffBuilder#DEFAULT_DELAY_MILLIS}</li>
      * </ul>
      */
     @UnstableApi
@@ -177,8 +177,8 @@ public interface Backoff extends Unwrappable {
      * Returns a {@link RandomBackoffBuilder} that provides methods to configure
      * backoff delay which is a random value. The default values are as follows:
      * <ul>
-     *   <li><code>minDelayMillis</code>: 200</li>
-     *   <li><code>maxDelayMillis</code>: 10000</li>
+     *   <li>{@code minDelayMillis}: {@value RandomBackoffBuilder#DEFAULT_MIN_DELAY_MILLIS}</li>
+     *   <li>{@code maxDelayMillis}: {@value RandomBackoffBuilder#DEFAULT_MAX_DELAY_MILLIS}</li>
      * </ul>
      */
     @UnstableApi
