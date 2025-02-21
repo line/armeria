@@ -15,6 +15,9 @@
  */
 package com.linecorp.armeria.client.proxy;
 
+import static com.linecorp.armeria.client.endpoint.dns.TestDnsServer.newAddressRecord;
+import static io.netty.handler.codec.dns.DnsRecordType.A;
+import static io.netty.handler.codec.dns.DnsSection.ANSWER;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.awaitility.Awaitility.await;
@@ -51,12 +54,15 @@ import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.MethodSource;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 
 import com.linecorp.armeria.client.ClientFactory;
+import com.linecorp.armeria.client.DNSResolverFacadeUtils;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.SessionProtocolNegotiationException;
 import com.linecorp.armeria.client.UnprocessedRequestException;
 import com.linecorp.armeria.client.WebClient;
+import com.linecorp.armeria.client.endpoint.dns.TestDnsServer;
 import com.linecorp.armeria.client.logging.LoggingClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.Flags;
@@ -76,6 +82,8 @@ import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.handler.codec.dns.DefaultDnsQuestion;
+import io.netty.handler.codec.dns.DefaultDnsResponse;
 import io.netty.handler.codec.http.DefaultFullHttpResponse;
 import io.netty.handler.codec.http.DefaultHttpHeaders;
 import io.netty.handler.codec.http.EmptyHttpHeaders;
@@ -97,6 +105,7 @@ import io.netty.handler.ssl.ClientAuth;
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.handler.traffic.ChannelTrafficShapingHandler;
+import io.netty.resolver.dns.DnsErrorCauseException;
 import io.netty.util.ReferenceCountUtil;
 
 class ProxyClientIntegrationTest {
@@ -426,7 +435,7 @@ class ProxyClientIntegrationTest {
             assertThatThrownBy(responseFuture::join).isInstanceOf(CompletionException.class)
                                                     .hasCauseInstanceOf(UnprocessedRequestException.class)
                                                     .hasRootCauseInstanceOf(NullPointerException.class)
-                                                    .hasRootCauseMessage("proxyConfig");
+                                                    .hasRootCauseMessage("unresolvedProxyConfig");
         }
     }
 
@@ -844,6 +853,66 @@ class ProxyClientIntegrationTest {
                                                     .hasRootCauseInstanceOf(ProxyConnectException.class);
             assertThat(failedAttempts).hasValue(1);
             assertThat(selector.result()).isTrue();
+        }
+    }
+
+    @Test
+    void testProxyConfigShouldBeResolved() throws Exception {
+        try (TestDnsServer server = new TestDnsServer(ImmutableMap.of(
+                new DefaultDnsQuestion("a.com.", A),
+                new DefaultDnsResponse(0).addRecord(ANSWER, newAddressRecord("a.com.", "127.0.0.1"))))
+        ) {
+            final InetSocketAddress proxySocketAddress = new InetSocketAddress(
+                    "a.com", httpProxyServer.address().getPort());
+            try (ClientFactory clientFactory =
+                         ClientFactory.builder()
+                                      .addressResolverGroupFactory(
+                                              DNSResolverFacadeUtils.getAddressResolverGroupForTest(server))
+                                      .proxyConfig(ProxyConfig.connect(proxySocketAddress))
+                                      .useHttp2Preface(true)
+                                      .build()) {
+
+                final WebClient webClient = WebClient.builder(SessionProtocol.H1C, backendServer.httpEndpoint())
+                                                     .factory(clientFactory)
+                                                     .decorator(LoggingClient.newDecorator())
+                                                     .build();
+                final CompletableFuture<AggregatedHttpResponse> responseFuture =
+                        webClient.get(PROXY_PATH).aggregate();
+                final AggregatedHttpResponse response = responseFuture.join();
+                assertThat(response.status()).isEqualTo(HttpStatus.OK);
+                assertThat(response.contentUtf8()).isEqualTo(SUCCESS_RESPONSE);
+                assertThat(numSuccessfulProxyRequests).isEqualTo(1);
+            }
+        }
+    }
+
+    @Test
+    void testProxyConfigShouldBeFailedToResolved() throws Exception {
+        try (TestDnsServer server = new TestDnsServer(ImmutableMap.of(
+                new DefaultDnsQuestion("b.com.", A),
+                new DefaultDnsResponse(0).addRecord(ANSWER, newAddressRecord("b.com.", "127.0.0.1"))))
+        ) {
+            final InetSocketAddress proxySocketAddress = new InetSocketAddress(
+                    "a.com", httpProxyServer.address().getPort());
+            try (ClientFactory clientFactory =
+                         ClientFactory.builder()
+                                      .addressResolverGroupFactory(
+                                              DNSResolverFacadeUtils.getAddressResolverGroupForTest(server))
+                                      .proxyConfig(ProxyConfig.connect(proxySocketAddress))
+                                      .useHttp2Preface(true)
+                                      .build()) {
+
+                final WebClient webClient = WebClient.builder(SessionProtocol.H1C, backendServer.httpEndpoint())
+                                                     .factory(clientFactory)
+                                                     .decorator(LoggingClient.newDecorator())
+                                                     .build();
+                final CompletableFuture<AggregatedHttpResponse> responseFuture =
+                        webClient.get(PROXY_PATH).aggregate();
+                assertThatThrownBy(responseFuture::join).isInstanceOf(CompletionException.class)
+                                                        .hasCauseInstanceOf(UnprocessedRequestException.class)
+                                                        .hasRootCauseInstanceOf(DnsErrorCauseException.class)
+                                                        .hasRootCauseMessage("Query failed with NXDOMAIN");
+            }
         }
     }
 
