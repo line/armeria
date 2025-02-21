@@ -48,7 +48,6 @@ public class ServiceWatchCoutingKubernetesClientBuilderCustomizer extends Kubern
                         WebSocketUtil.isHttp1WebSocketUpgradeRequest(req.headers())) {
                         numRequests.incrementAndGet();
                     }
-                    // Do something with the request.
                     return delegate.execute(ctx, req);
                 });
             }
