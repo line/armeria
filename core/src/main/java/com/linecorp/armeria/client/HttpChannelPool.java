@@ -358,7 +358,7 @@ final class HttpChannelPool implements AsyncCloseable {
                                   new SessionProtocolNegotiationException(
                                           desiredProtocol,
                                           "previously failed negotiation (remoteAddress: " +
-                                          remoteAddress + ")")),
+                                          remoteAddress + ')')),
                           promise, timingsBuilder);
             return;
         }
