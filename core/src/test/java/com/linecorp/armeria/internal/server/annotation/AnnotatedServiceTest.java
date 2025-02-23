@@ -639,6 +639,14 @@ class AnnotatedServiceTest {
                                                 .map(entry -> entry.getKey() + '=' + entry.getValue())
                                                 .collect(Collectors.joining(", "));
         }
+
+        @Get("/param/multiValueMap")
+        public String multiValueMap(RequestContext ctx, @Param Map<String, List<Object>> map) {
+            validateContext(ctx);
+            return map.isEmpty() ? "empty" : map.entrySet().stream()
+                                                .map(entry -> entry.getKey() + '=' + entry.getValue())
+                                                .collect(Collectors.joining(", "));
+        }
     }
 
     @ResponseConverter(UnformattedStringConverterFunction.class)
@@ -1080,6 +1088,11 @@ class AnnotatedServiceTest {
             testBody(hc, get("/7/param/map?key1=value1&key2=value2"),
                      "key1=value1, key2=value2");
             testBody(hc, get("/7/param/map"), "empty");
+
+            // Case all query parameters test multi value map
+            testBody(hc, get("/7/param/multiValueMap?key1=value1&key1=value2&key2=value1&key2=value2"),
+                     "key1=[value1, value2], key2=[value1, value2]");
+            testBody(hc, get("/7/param/multiValueMap"), "empty");
         }
     }
 

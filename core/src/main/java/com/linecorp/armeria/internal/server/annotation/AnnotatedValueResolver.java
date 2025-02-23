@@ -602,18 +602,44 @@ final class AnnotatedValueResolver {
                                                           AnnotatedElement annotatedElement,
                                                           AnnotatedElement typeElement, Class<?> type,
                                                           DescriptionInfo description) {
+        final Type valueType =
+                ((ParameterizedType) ((Parameter) typeElement).getParameterizedType()).getActualTypeArguments()[1];
+        final Class<?> rawValueType = ClassUtil.typeToClass(valueType);
+        assert rawValueType != null;
+
+        if (valueType instanceof ParameterizedType && !List.class.isAssignableFrom(rawValueType)) {
+            throw new IllegalArgumentException(
+                    "Invalid Map value type: " + rawValueType +
+                    ". Only List<?> is supported for multi-value query parameters.");
+        }
+
+        final BiFunction<AnnotatedValueResolver, ResolverContext, Object> biFunction;
+
+        if (List.class.isAssignableFrom(rawValueType)) {
+            biFunction = (resolver, ctx) -> ctx.queryParams().stream()
+                                               .collect(toImmutableMap(
+                                                       Entry::getKey,
+                                                       e -> ImmutableList.of(e.getValue()),
+                                                       (existing, replacement) -> ImmutableList.<String>builder()
+                                                                                               .addAll(existing)
+                                                                                               .addAll(replacement)
+                                                                                               .build()
+                                               ));
+        } else {
+            biFunction = (resolver, ctx) -> ctx.queryParams().stream()
+                                               .collect(toImmutableMap(
+                                                       Entry::getKey,
+                                                       Entry::getValue,
+                                                       (existing, replacement) -> replacement
+                                               ));
+        }
 
         return new Builder(annotatedElement, type, name)
                 .annotationType(Param.class)
                 .typeElement(typeElement)
                 .description(description)
                 .aggregation(AggregationStrategy.FOR_FORM_DATA)
-                .resolver((resolver, ctx) -> ctx.queryParams().stream()
-                                                .collect(toImmutableMap(
-                                                        Entry::getKey,
-                                                        Entry::getValue,
-                                                        (existing, replacement) -> replacement
-                                                )))
+                .resolver(biFunction)
                 .build();
     }
 
