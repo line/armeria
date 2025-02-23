@@ -186,11 +186,11 @@ class AnnotatedValueResolverTest {
 
         // Validate that invalid multi-value map parameter types trigger an exception
         getAllMethods(InvalidMultiValueMapService.class,
-                      method -> !Modifier.isPrivate(method.getModifiers())).forEach(method ->
-            assertThatThrownBy(() -> AnnotatedValueResolver.ofServiceMethod(
-                    method, pathParams, objectResolvers, false, noopDependencyInjector, null))
-                    .isInstanceOf(IllegalArgumentException.class)
-                    .hasMessageContaining("Invalid Map value type")
+                      method -> !Modifier.isPrivate(method.getModifiers())).forEach(
+                method -> assertThatThrownBy(() -> AnnotatedValueResolver.ofServiceMethod(
+                        method, pathParams, objectResolvers, false, noopDependencyInjector, null))
+                        .isInstanceOf(IllegalArgumentException.class)
+                        .hasMessageContaining("Invalid Map value type")
         );
     }
 
