@@ -602,8 +602,8 @@ final class AnnotatedValueResolver {
                                                           AnnotatedElement annotatedElement,
                                                           AnnotatedElement typeElement, Class<?> type,
                                                           DescriptionInfo description) {
-        final Type valueType =
-                ((ParameterizedType) ((Parameter) typeElement).getParameterizedType()).getActualTypeArguments()[1];
+        final Type valueType = ((ParameterizedType) ((Parameter) typeElement).getParameterizedType())
+                .getActualTypeArguments()[1];
         final Class<?> rawValueType = ClassUtil.typeToClass(valueType);
         assert rawValueType != null;
 
@@ -620,10 +620,11 @@ final class AnnotatedValueResolver {
                                                .collect(toImmutableMap(
                                                        Entry::getKey,
                                                        e -> ImmutableList.of(e.getValue()),
-                                                       (existing, replacement) -> ImmutableList.<String>builder()
-                                                                                               .addAll(existing)
-                                                                                               .addAll(replacement)
-                                                                                               .build()
+                                                       (existing, replacement) ->
+                                                               ImmutableList.<String>builder()
+                                                                            .addAll(existing)
+                                                                            .addAll(replacement)
+                                                                            .build()
                                                ));
         } else {
             biFunction = (resolver, ctx) -> ctx.queryParams().stream()
