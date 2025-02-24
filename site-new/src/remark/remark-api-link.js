@@ -5,7 +5,9 @@ import apiIndex from '../../gen-src-temp/api-index.json';
 const plugin = (options) => {
   const transformer = (markdownAST) => {
     visit(markdownAST, 'link', (node) => {
-      if (node.url !== 'type') {
+      const typeInput = node.url;
+
+      if (typeInput !== 'type' && typeInput !== 'typeplural') {
         return;
       }
 
@@ -13,7 +15,7 @@ const plugin = (options) => {
       const href = apiIndex[typeName];
       if (href) {
         // eslint-disable-next-line no-param-reassign
-        node.url = `type://${href}`;
+        node.url = `${typeInput}://${href}`;
       }
     });
   };
