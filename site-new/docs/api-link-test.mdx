@@ -2,31 +2,23 @@
 sidebar_position: 2
 ---
 
-# API Link Test
+# API Link Samples
 
 ## Type
 
-When you are using multiple decorators, you might want to pass some value to the next decorator.
-You can do this by attaching attributes to a [RequestContext](type).
-
+- [RequestContext](type)
 - [@Get](type)
 - [@Post](type)
 
 ## Type with expressions
 
-You can also iterate over all the attributes in a context using [RequestContext#attrs()](type):
-
-Then, you can access them via [RequestContext#attr(AttributeKey)](type):
-
-You can also create a [RequestOptions](type) and pass it
-to [WebClient#execute(HttpRequest,RequestOptions)?full](type) with an [HttpRequest](type).
+- [RequestContext#attrs()](type):
+- [RequestContext#attr(AttributeKey)](type):
+- [WebClient#execute(HttpRequest,RequestOptions)?full](type)
 
 ## Type on title: [WebClientRequestPreparation](type)
 
 ## Plural
 
-- `circuitOpenWindow`:
-  - The duration that a [CircuitBreaker](type) remains in `OPEN` state. All [Request](typeplural) are blocked
-    off responding with [FailFastException](type) during this state. The default value is `10` seconds.
-- `counterSlidingWindow`:
-  - The duration of a sliding window that a [CircuitBreaker](type) counts successful and failed [Request](typeplural) in it. The default value is `20` seconds.
+- [Request](typeplural)
+- [AccessLogWriter](typeplural)
