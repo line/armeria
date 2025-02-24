@@ -562,7 +562,25 @@ public final class Server implements ListenableAsyncCloseable {
             final GracefulShutdownSupport gracefulShutdownSupport = this.gracefulShutdownSupport;
             assert gracefulShutdownSupport != null;
 
-            final ServerPortMetric serverPortMetric = new ServerPortMetric();
+            ServerPortMetric serverPortMetric = null;
+            lock.lock();
+            try {
+                for (ServerPort serverPort : activePorts.values()) {
+                    final InetSocketAddress localAddress = serverPort.localAddress();
+                    if (!(localAddress instanceof DomainSocketAddress) &&
+                        localAddress.getPort() == port.localAddress().getPort()) {
+                        // Because we use the port number for aggregating metrics, use the previous
+                        // serverPortMetric.
+                        serverPortMetric = serverPort.serverPortMetric();
+                        break;
+                    }
+                }
+            } finally {
+                lock.unlock();
+            }
+            if (serverPortMetric == null) {
+                serverPortMetric = new ServerPortMetric();
+            }
             b.group(bossGroup, config.workerGroup());
             b.handler(connectionLimitingHandler.newChildHandler(serverPortMetric));
             b.childHandler(new HttpServerPipelineConfigurator(config, port, gracefulShutdownSupport,
@@ -837,6 +855,9 @@ public final class Server implements ListenableAsyncCloseable {
                     logger.warn("Unexpected local address type: {}", localAddress.getClass().getName());
                     return;
                 }
+                final ServerPortMetric serverPortMetric = ch.attr(SERVER_PORT_METRIC).get();
+                assert serverPortMetric != null;
+                actualPort.setServerPortMetric(serverPortMetric);
 
                 // Update the boss thread so its name contains the actual port.
                 Thread.currentThread().setName(bossThreadName(actualPort));
@@ -849,10 +870,7 @@ public final class Server implements ListenableAsyncCloseable {
                     lock.unlock();
                 }
 
-                final ServerPortMetric serverPortMetric = ch.attr(SERVER_PORT_METRIC).get();
-                assert serverPortMetric != null;
-                serverPortMetric.bindTo(config.meterRegistry(), actualPort);
-                config.serverMetrics().addServerPortMetric(serverPortMetric);
+                config.serverMetrics().addServerPort(actualPort);
 
                 if (logger.isInfoEnabled()) {
                     if (isLocalPort(actualPort)) {

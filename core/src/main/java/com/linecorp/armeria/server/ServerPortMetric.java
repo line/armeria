@@ -149,6 +149,8 @@ final class ServerPortMetric {
                             this, ServerPortMetric::activeConnections);
     }
 
+    // Use reference equality for comparison.
+
     @Override
     public String toString() {
         return MoreObjects.toStringHelper(this)

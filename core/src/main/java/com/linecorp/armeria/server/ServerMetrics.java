@@ -16,13 +16,15 @@
 
 package com.linecorp.armeria.server;
 
-import java.util.List;
-import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.Set;
+import java.util.concurrent.CopyOnWriteArraySet;
 
 import com.google.common.base.MoreObjects;
 import com.google.common.primitives.Ints;
 
 import com.linecorp.armeria.common.annotation.UnstableApi;
+
+import io.micrometer.core.instrument.MeterRegistry;
 
 /**
  * A class that holds metrics related server.
@@ -33,12 +35,19 @@ public final class ServerMetrics {
     static final String ALL_REQUESTS_METER_NAME = "armeria.server.all.requests";
     static final String ALL_CONNECTIONS_METER_NAME = "armeria.server.connections";
 
-    private final List<ServerPortMetric> serverPortMetrics = new CopyOnWriteArrayList<>();
+    private final Set<ServerPortMetric> serverPortMetrics = new CopyOnWriteArraySet<>();
+    private final MeterRegistry meterRegistry;
 
-    ServerMetrics() {}
+    ServerMetrics(MeterRegistry meterRegistry) {
+        this.meterRegistry = meterRegistry;
+    }
 
-    void addServerPortMetric(ServerPortMetric serverPortMetric) {
-        serverPortMetrics.add(serverPortMetric);
+    void addServerPort(ServerPort serverPort) {
+        final ServerPortMetric serverPortMetric = serverPort.serverPortMetric();
+        assert serverPortMetric != null;
+        if (serverPortMetrics.add(serverPortMetric)) {
+            serverPortMetric.bindTo(meterRegistry, serverPort);
+        }
     }
 
     /**
