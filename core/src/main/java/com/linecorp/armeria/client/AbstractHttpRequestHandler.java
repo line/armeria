@@ -429,7 +429,7 @@ abstract class AbstractHttpRequestHandler implements ChannelFutureListener {
         }
 
         final Http2Error error;
-        if (Exceptions.isStreamCancelling(cause) || cause instanceof ResponseCompleteException) {
+        if (cause instanceof ResponseCompleteException || Exceptions.isStreamCancelling(cause)) {
             error = Http2Error.CANCEL;
         } else {
             error = Http2Error.INTERNAL_ERROR;
