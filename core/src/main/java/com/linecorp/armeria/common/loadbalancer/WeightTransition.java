@@ -13,61 +13,48 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package com.linecorp.armeria.client.endpoint;
+package com.linecorp.armeria.common.loadbalancer;
 
 import static com.google.common.base.Preconditions.checkArgument;
 
-import com.linecorp.armeria.client.Endpoint;
-import com.linecorp.armeria.common.loadbalancer.WeightTransition;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 
 /**
- * Computes the weight of the given {@link Endpoint} using the given {@code currentStep}
+ * Computes the weight of the given candidate using the given {@code currentStep}
  * and {@code totalSteps}.
- *
- * @deprecated Use {@link WeightTransition} instead.
  */
-@Deprecated
+@UnstableApi
 @FunctionalInterface
-public interface EndpointWeightTransition {
+public interface WeightTransition<T> {
 
     /**
-     * Returns the {@link EndpointWeightTransition} which returns the gradually increased weight as the current
+     * Returns the {@link WeightTransition} which returns the gradually increased weight as the current
      * step increases.
-     *
-     * @deprecated Use {@link WeightTransition#linear()} instead.
      */
-    @Deprecated
-    static EndpointWeightTransition linear() {
-        return (endpoint, currentStep, totalSteps) -> {
-            return WeightTransition.linear().compute(endpoint, endpoint.weight(), currentStep, totalSteps);
-        };
+    static <T> WeightTransition<T> linear() {
+        //noinspection unchecked
+        return (WeightTransition<T>) LinearWeightTransition.INSTANCE;
     }
 
     /**
-     * Returns an {@link EndpointWeightTransition} which returns a non-linearly increasing weight
+     * Returns an {@link WeightTransition} which returns a non-linearly increasing weight
      * based on an aggression factor. Higher aggression factors will assign higher weights for lower steps.
      * You may also specify a {@code minWeightPercent} to specify a lower bound for the computed weights.
      * Refer to the following
      * <a href="https://www.envoyproxy.io/docs/envoy/latest/intro/arch_overview/upstream/load_balancing/slow_start">link</a>
      * for more information.
-     *
-     * @deprecated Use {@link WeightTransition#aggression(double, double)} instead.
      */
-    @Deprecated
-    static EndpointWeightTransition aggression(double aggression, double minWeightPercent) {
+    static <T> WeightTransition<T> aggression(double aggression, double minWeightPercent) {
         checkArgument(aggression > 0,
                       "aggression: %s (expected: > 0.0)", aggression);
         checkArgument(minWeightPercent >= 0 && minWeightPercent <= 1.0,
                       "minWeightPercent: %s (expected: >= 0.0, <= 1.0)", minWeightPercent);
-        return (endpoint, currentStep, totalSteps) -> {
-            return WeightTransition.aggression(aggression, minWeightPercent)
-                                   .compute(endpoint, endpoint.weight(), currentStep, totalSteps);
-        };
+        return new AggregationWeightTransition<>(aggression, minWeightPercent);
     }
 
     /**
-     * Returns the computed weight of the given {@link Endpoint} using the given {@code currentStep} and
+     * Returns the computed weight of the given candidate using the given {@code currentStep} and
      * {@code totalSteps}.
      */
-    int compute(Endpoint endpoint, int currentStep, int totalSteps);
+    int compute(T candidate, int weight, int currentStep, int totalSteps);
 }

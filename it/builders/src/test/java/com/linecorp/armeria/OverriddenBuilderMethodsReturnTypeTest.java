@@ -81,6 +81,7 @@ class OverriddenBuilderMethodsReturnTypeTest {
                 "JsonLogFormatterBuilder",
                 "KubernetesEndpointGroupBuilder",
                 "PathStreamMessageBuilder",
+                "RampingUpLoadBalancerBuilder",
                 "Resilience4jCircuitBreakerMappingBuilder",
                 "RetryRuleBuilder",
                 "RetryRuleWithContentBuilder",
@@ -96,6 +97,7 @@ class OverriddenBuilderMethodsReturnTypeTest {
                 "VirtualHostContextPathServicesBuilder",
                 "VirtualHostDecoratingServiceBindingBuilder",
                 "VirtualHostServiceBindingBuilder",
+                "WeightRampingUpStrategyBuilder",
                 "ZooKeeperEndpointGroupBuilder",
                 "ZooKeeperUpdatingListenerBuilder");
         final String packageName = "com.linecorp.armeria";
