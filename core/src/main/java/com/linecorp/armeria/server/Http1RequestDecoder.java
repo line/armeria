@@ -16,13 +16,11 @@
 
 package com.linecorp.armeria.server;
 
-import static com.google.common.base.MoreObjects.firstNonNull;
 import static com.linecorp.armeria.internal.common.websocket.WebSocketUtil.isHttp1WebSocketUpgradeRequest;
-import static com.linecorp.armeria.server.HttpServerHandler.UNKNOWN_ADDR;
 import static com.linecorp.armeria.server.HttpServerPipelineConfigurator.SCHEME_HTTP;
+import static com.linecorp.armeria.server.ServerPortMetric.SERVER_PORT_METRIC;
 import static com.linecorp.armeria.server.ServiceRouteUtil.newRoutingContext;
 
-import java.net.InetSocketAddress;
 import java.net.URISyntaxException;
 
 import org.slf4j.Logger;
@@ -49,7 +47,6 @@ import com.linecorp.armeria.internal.common.InboundTrafficController;
 import com.linecorp.armeria.internal.common.InitiateConnectionShutdown;
 import com.linecorp.armeria.internal.common.KeepAliveHandler;
 import com.linecorp.armeria.internal.common.NoopKeepAliveHandler;
-import com.linecorp.armeria.internal.common.util.ChannelUtil;
 import com.linecorp.armeria.server.HttpServerUpgradeHandler.UpgradeEvent;
 import com.linecorp.armeria.server.websocket.WebSocketService;
 
@@ -85,10 +82,10 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
     private static final ResponseHeaders CONTINUE_RESPONSE = ResponseHeaders.of(HttpStatus.CONTINUE);
 
     private final ServerConfig cfg;
+    private final ServerPortMetric serverPortMetric;
     private final AsciiString scheme;
     private SessionProtocol sessionProtocol;
     private final InboundTrafficController inboundTrafficController;
-    private final InetSocketAddress localAddress;
     private ServerHttpObjectEncoder encoder;
     private final HttpServer httpServer;
 
@@ -101,7 +98,9 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
     Http1RequestDecoder(ServerConfig cfg, Channel channel, AsciiString scheme,
                         ServerHttp1ObjectEncoder encoder, HttpServer httpServer) {
         this.cfg = cfg;
-        localAddress = firstNonNull(ChannelUtil.localAddress(channel), UNKNOWN_ADDR);
+        final ServerPortMetric serverPortMetric = channel.attr(SERVER_PORT_METRIC).get();
+        assert serverPortMetric != null;
+        this.serverPortMetric = serverPortMetric;
         this.scheme = scheme;
         sessionProtocol = scheme == SCHEME_HTTP ? SessionProtocol.H1C : SessionProtocol.H1;
         inboundTrafficController = InboundTrafficController.ofHttp1(channel);
@@ -277,7 +276,7 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
                             if (pipeline.get(HttpServerUpgradeHandler.class) != null) {
                                 pipeline.remove(HttpServerUpgradeHandler.class);
                             }
-                            cfg.serverMetrics().increasePendingHttp1Requests(localAddress);
+                            serverPortMetric.increasePendingHttp1Requests();
                             ctx.fireChannelRead(webSocketRequest);
                             return;
                         }
@@ -290,7 +289,7 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
                     if (maxRequestLength > 0 && contentLength > maxRequestLength) {
                         abortLargeRequest(ctx, req, id, endOfStream, keepAliveHandler, true);
                     }
-                    cfg.serverMetrics().increasePendingHttp1Requests(localAddress);
+                    serverPortMetric.increasePendingHttp1Requests();
                     ctx.fireChannelRead(req);
                 } else {
                     fail(id, null, HttpStatus.BAD_REQUEST, "Invalid decoder state", null);

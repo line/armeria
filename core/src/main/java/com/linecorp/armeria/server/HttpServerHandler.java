@@ -25,6 +25,7 @@ import static com.linecorp.armeria.internal.client.ClosedStreamExceptionUtil.new
 import static com.linecorp.armeria.internal.common.HttpHeadersUtil.CLOSE_STRING;
 import static com.linecorp.armeria.internal.common.RequestContextUtil.NOOP_CONTEXT_HOOK;
 import static com.linecorp.armeria.server.AccessLogWriterUtil.maybeWriteAccessLog;
+import static com.linecorp.armeria.server.ServerPortMetric.SERVER_PORT_METRIC;
 import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_WINDOW_SIZE;
 import static java.util.Objects.requireNonNull;
 
@@ -97,7 +98,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
     private static final String ALLOWED_METHODS_STRING =
             HttpMethod.knownMethods().stream().map(HttpMethod::name).collect(Collectors.joining(","));
 
-    static final InetSocketAddress UNKNOWN_ADDR;
+    private static final InetSocketAddress UNKNOWN_ADDR;
 
     static {
         InetAddress unknownAddr;
@@ -182,6 +183,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
     }
 
     private final ServerConfig config;
+    private final ServerPortMetric serverPortMetric;
     private final GracefulShutdownSupport gracefulShutdownSupport;
 
     private SessionProtocol protocol;
@@ -211,6 +213,9 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
         assert protocol == H1 || protocol == H1C || protocol == H2;
 
         this.config = requireNonNull(config, "config");
+        final ServerPortMetric serverPortMetric = channel.attr(SERVER_PORT_METRIC).get();
+        assert serverPortMetric != null;
+        this.serverPortMetric = serverPortMetric;
         remoteAddress = firstNonNull(ChannelUtil.remoteAddress(channel), UNKNOWN_ADDR);
         localAddress = firstNonNull(ChannelUtil.localAddress(channel), UNKNOWN_ADDR);
         this.gracefulShutdownSupport = requireNonNull(gracefulShutdownSupport, "gracefulShutdownSupport");
@@ -519,21 +524,21 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
 
     private void decreasePendingRequests() {
         if (protocol.isExplicitHttp1()) {
-            config.serverMetrics().decreasePendingHttp1Requests(localAddress);
+            serverPortMetric.decreasePendingHttp1Requests();
         } else {
             assert protocol.isExplicitHttp2();
-            config.serverMetrics().decreasePendingHttp2Requests(localAddress);
+            serverPortMetric.decreasePendingHttp2Requests();
         }
     }
 
     private void increaseActiveRequests(boolean isHttp1WebSocket) {
         if (isHttp1WebSocket) {
-            config.serverMetrics().increaseActiveHttp1WebSocketRequests(localAddress);
+            serverPortMetric.increaseActiveHttp1WebSocketRequests();
         } else if (protocol.isExplicitHttp1()) {
-            config.serverMetrics().increaseActiveHttp1Requests(localAddress);
+            serverPortMetric.increaseActiveHttp1Requests();
         } else {
             assert protocol.isExplicitHttp2();
-            config.serverMetrics().increaseActiveHttp2Requests(localAddress);
+            serverPortMetric.increaseActiveHttp2Requests();
         }
     }
 
@@ -819,11 +824,11 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
                     return;
                 }
                 if (req.isHttp1WebSocket()) {
-                    config.serverMetrics().decreaseActiveHttp1WebSocketRequests(localAddress);
+                    serverPortMetric.decreaseActiveHttp1WebSocketRequests();
                 } else if (protocol.isExplicitHttp1()) {
-                    config.serverMetrics().decreaseActiveHttp1Requests(localAddress);
+                    serverPortMetric.decreaseActiveHttp1Requests();
                 } else if (protocol.isExplicitHttp2()) {
-                    config.serverMetrics().decreaseActiveHttp2Requests(localAddress);
+                    serverPortMetric.decreaseActiveHttp2Requests();
                 }
 
                 // NB: logBuilder.endResponse() is called by HttpResponseSubscriber.

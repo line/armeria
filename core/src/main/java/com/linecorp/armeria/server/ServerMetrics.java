@@ -16,44 +16,56 @@
 
 package com.linecorp.armeria.server;
 
-import java.net.InetSocketAddress;
+import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
+
+import com.google.common.base.MoreObjects;
+import com.google.common.primitives.Ints;
 
 import com.linecorp.armeria.common.annotation.UnstableApi;
 
-import io.micrometer.core.instrument.binder.MeterBinder;
-
 /**
- * An interface that provides the requests and connections metrics information of the server.
+ * A class that holds metrics related server.
  */
 @UnstableApi
-public interface ServerMetrics extends MeterBinder {
+public final class ServerMetrics {
 
-    /**
-     * Adds the {@link ServerPort} to the {@link ServerMetrics}.
-     */
-    void addActivePort(ServerPort actualPort);
+    static final String ALL_REQUESTS_METER_NAME = "armeria.server.all.requests";
+    static final String ALL_CONNECTIONS_METER_NAME = "armeria.server.connections";
+
+    private final List<ServerPortMetric> serverPortMetrics = new CopyOnWriteArrayList<>();
+
+    ServerMetrics() {}
+
+    void addServerPortMetric(ServerPortMetric serverPortMetric) {
+        serverPortMetrics.add(serverPortMetric);
+    }
 
     /**
      * Returns the number of all pending requests.
      */
-    default long pendingRequests() {
+    public long pendingRequests() {
         return pendingHttp1Requests() + pendingHttp2Requests();
     }
 
     /**
      * Returns the number of pending http1 requests.
      */
-    long pendingHttp1Requests();
+    public long pendingHttp1Requests() {
+        return serverPortMetrics.stream().mapToLong(ServerPortMetric::pendingHttp1Requests).sum();
+    }
 
     /**
      * Returns the number of pending http2 requests.
      */
-    long pendingHttp2Requests();
+    public long pendingHttp2Requests() {
+        return serverPortMetrics.stream().mapToLong(ServerPortMetric::pendingHttp2Requests).sum();
+    }
 
     /**
      * Returns the number of all active requests.
      */
-    default long activeRequests() {
+    public long activeRequests() {
         return activeHttp1WebSocketRequests() +
                activeHttp1Requests() +
                activeHttp2Requests();
@@ -62,80 +74,36 @@ public interface ServerMetrics extends MeterBinder {
     /**
      * Returns the number of active http1 web socket requests.
      */
-    long activeHttp1WebSocketRequests();
+    public long activeHttp1WebSocketRequests() {
+        return serverPortMetrics.stream().mapToLong(ServerPortMetric::activeHttp1WebSocketRequests).sum();
+    }
 
     /**
      * Returns the number of active http1 requests.
      */
-    long activeHttp1Requests();
+    public long activeHttp1Requests() {
+        return serverPortMetrics.stream().mapToLong(ServerPortMetric::activeHttp1Requests).sum();
+    }
 
     /**
      * Returns the number of active http2 requests.
      */
-    long activeHttp2Requests();
+    public long activeHttp2Requests() {
+        return serverPortMetrics.stream().mapToLong(ServerPortMetric::activeHttp2Requests).sum();
+    }
 
     /**
      * Returns the number of open connections.
      */
-    long activeConnections();
+    public int activeConnections() {
+        return Ints.saturatedCast(serverPortMetrics.stream().mapToLong(ServerPortMetric::activeConnections)
+                                                   .sum());
+    }
 
-    /**
-     * Returns the number of all connections.
-     */
-    void increasePendingHttp1Requests(InetSocketAddress socketAddress);
-
-    /**
-     * Decreases the number of all pending http1 requests.
-     */
-    void decreasePendingHttp1Requests(InetSocketAddress socketAddress);
-
-    /**
-     * Increases the number of all pending http2 requests.
-     */
-    void increasePendingHttp2Requests(InetSocketAddress socketAddress);
-
-    /**
-     * Decreases the number of all pending http2 requests.
-     */
-    void decreasePendingHttp2Requests(InetSocketAddress socketAddress);
-
-    /**
-     * Increases the number of all active http1 requests.
-     */
-    void increaseActiveHttp1Requests(InetSocketAddress socketAddress);
-
-    /**
-     * Decreases the number of all active http1 requests.
-     */
-    void decreaseActiveHttp1Requests(InetSocketAddress socketAddress);
-
-    /**
-     * Increases the number of all active http1 web socket requests.
-     */
-    void increaseActiveHttp1WebSocketRequests(InetSocketAddress socketAddress);
-
-    /**
-     * Decreases the number of all active http1 web socket requests.
-     */
-    void decreaseActiveHttp1WebSocketRequests(InetSocketAddress socketAddress);
-
-    /**
-     * Increases the number of all active http2 requests.
-     */
-    void increaseActiveHttp2Requests(InetSocketAddress socketAddress);
-
-    /**
-     * Decreases the number of all active http2 requests.
-     */
-    void decreaseActiveHttp2Requests(InetSocketAddress socketAddress);
-
-    /**
-     * Increases the number of open connections.
-     */
-    void increaseActiveConnections(InetSocketAddress socketAddress);
-
-    /**
-     * Decreases the number of open connections.
-     */
-    void decreaseActiveConnections(InetSocketAddress socketAddress);
+    @Override
+    public String toString() {
+        return MoreObjects.toStringHelper(this)
+                          .add("serverPortMetrics", serverPortMetrics)
+                          .toString();
+    }
 }

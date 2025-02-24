@@ -18,18 +18,14 @@ package com.linecorp.armeria.server;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 
-import java.net.InetSocketAddress;
 import java.time.Duration;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
 import org.assertj.core.api.Condition;
-import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
-
-import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.client.BlockingWebClient;
 import com.linecorp.armeria.client.ClientFactory;
@@ -139,48 +135,6 @@ class ServerMetricsTest {
               });
         }
     };
-
-    @Test
-    void pendingRequests() {
-        final ServerPort activePort = server.server().activePort();
-        final ServerMetrics serverMetrics = new DefaultServerMetrics(ImmutableList.of(activePort));
-        final InetSocketAddress localAddress = activePort.localAddress();
-        serverMetrics.increasePendingHttp1Requests(localAddress);
-        assertThat(serverMetrics.pendingRequests()).isEqualTo(1);
-
-        serverMetrics.increasePendingHttp2Requests(localAddress);
-        assertThat(serverMetrics.pendingRequests()).isEqualTo(2);
-
-        serverMetrics.decreasePendingHttp1Requests(localAddress);
-        assertThat(serverMetrics.pendingRequests()).isEqualTo(1);
-
-        serverMetrics.decreasePendingHttp2Requests(localAddress);
-        assertThat(serverMetrics.pendingRequests()).isZero();
-    }
-
-    @Test
-    void activeRequests() {
-        final ServerPort activePort = server.server().activePort();
-        final ServerMetrics serverMetrics = new DefaultServerMetrics(ImmutableList.of(activePort));
-        final InetSocketAddress localAddress = activePort.localAddress();
-        serverMetrics.increaseActiveHttp1Requests(localAddress);
-        assertThat(serverMetrics.activeRequests()).isEqualTo(1);
-
-        serverMetrics.increaseActiveHttp1WebSocketRequests(localAddress);
-        assertThat(serverMetrics.activeRequests()).isEqualTo(2);
-
-        serverMetrics.increaseActiveHttp2Requests(localAddress);
-        assertThat(serverMetrics.activeRequests()).isEqualTo(3);
-
-        serverMetrics.decreaseActiveHttp1WebSocketRequests(localAddress);
-        assertThat(serverMetrics.activeRequests()).isEqualTo(2);
-
-        serverMetrics.decreaseActiveHttp1Requests(localAddress);
-        assertThat(serverMetrics.activeRequests()).isEqualTo(1);
-
-        serverMetrics.decreaseActiveHttp2Requests(localAddress);
-        assertThat(serverMetrics.activeRequests()).isZero();
-    }
 
     @CsvSource({ "H1C, 1, 0", "H2C, 0, 1" })
     @ParameterizedTest

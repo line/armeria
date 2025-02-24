@@ -18,46 +18,26 @@ package com.linecorp.armeria.server;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import java.net.InetSocketAddress;
-
 import org.junit.jupiter.api.Test;
 
-import com.google.common.collect.ImmutableList;
-
-import com.linecorp.armeria.common.SessionProtocol;
-
+import io.netty.channel.ChannelHandler;
 import io.netty.channel.embedded.EmbeddedChannel;
 
 class ConnectionLimitingHandlerTest {
 
     @Test
     void testExceedMaxNumConnections() {
-        // The port is not used in this test.
-        final InetSocketAddress localAddress1 = new InetSocketAddress(2);
-        final InetSocketAddress localAddress2 = new InetSocketAddress(3);
-        final ServerPort serverPort1 = new ServerPort(localAddress1, SessionProtocol.HTTP);
-        final ServerPort serverPort2 = new ServerPort(localAddress2, SessionProtocol.HTTP);
-        final ServerMetrics serverMetrics =
-                new DefaultServerMetrics(ImmutableList.of(serverPort1, serverPort2));
+        final ServerPortMetric serverPortMetric = new ServerPortMetric();
+        final ConnectionLimitingHandler handler = new ConnectionLimitingHandler(1);
 
-        final ConnectionLimitingHandler handler = new ConnectionLimitingHandler(1, serverMetrics);
-        final EmbeddedChannel ch1 = new EmbeddedChannel(handler) {
-            @Override
-            public InetSocketAddress localAddress() {
-                return localAddress1;
-            }
-        };
+        final ChannelHandler channelHandler = handler.newChildHandler(serverPortMetric);
 
+        final EmbeddedChannel ch1 = new EmbeddedChannel(channelHandler);
         ch1.writeInbound(ch1);
         assertThat(handler.numConnections()).isEqualTo(1);
         assertThat(ch1.isActive()).isTrue();
 
-        final EmbeddedChannel ch2 = new EmbeddedChannel(handler) {
-            @Override
-            public InetSocketAddress localAddress() {
-                return localAddress2;
-            }
-        };
+        final EmbeddedChannel ch2 = new EmbeddedChannel(channelHandler);
         ch2.writeInbound(ch2);
         assertThat(handler.numConnections()).isEqualTo(1);
         assertThat(ch2.isActive()).isFalse();
@@ -68,18 +48,13 @@ class ConnectionLimitingHandlerTest {
 
     @Test
     void testMaxNumConnectionsRange() {
-        // The port is not used in this test.
-        final InetSocketAddress localAddress = new InetSocketAddress(2);
-        final ServerMetrics serverMetrics = new DefaultServerMetrics(ImmutableList.of(
-                new ServerPort(localAddress, SessionProtocol.HTTP)));
-        final ConnectionLimitingHandler handler = new ConnectionLimitingHandler(Integer.MAX_VALUE,
-                                                                                serverMetrics);
+        final ConnectionLimitingHandler handler = new ConnectionLimitingHandler(Integer.MAX_VALUE);
         assertThat(handler.maxNumConnections()).isEqualTo(Integer.MAX_VALUE);
 
-        assertThatThrownBy(() -> new ConnectionLimitingHandler(0, serverMetrics))
+        assertThatThrownBy(() -> new ConnectionLimitingHandler(0))
                 .isInstanceOf(IllegalArgumentException.class);
 
-        assertThatThrownBy(() -> new ConnectionLimitingHandler(-1, serverMetrics))
+        assertThatThrownBy(() -> new ConnectionLimitingHandler(-1))
                 .isInstanceOf(IllegalArgumentException.class);
     }
 }
