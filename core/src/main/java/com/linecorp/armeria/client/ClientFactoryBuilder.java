@@ -40,6 +40,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.function.Consumer;
 import java.util.function.Function;
+import java.util.function.Predicate;
 import java.util.function.ToIntFunction;
 
 import javax.net.ssl.KeyManagerFactory;
@@ -585,6 +586,17 @@ public final class ClientFactoryBuilder implements TlsSetters {
             this.dnsResolverGroupCustomizer =
                     this.dnsResolverGroupCustomizer.andThen(dnsResolverGroupCustomizer);
         }
+        return this;
+    }
+
+    /**
+     * Sets the specified {@link Predicate} to validate the IP address of a remote server.
+     * If the predicate returns {@code false}, the request to the server will be rejected.
+     * By default, all IP addresses are accepted.
+     */
+    @UnstableApi
+    public ClientFactoryBuilder ipAddressFilter(Predicate<? super InetSocketAddress> ipAddressFilter) {
+        option(ClientFactoryOptions.IP_ADDRESS_FILTER, ipAddressFilter);
         return this;
     }
 
