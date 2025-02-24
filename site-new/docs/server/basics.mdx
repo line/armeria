@@ -1,0 +1,303 @@
+# Server basics
+
+To start a server, you need to build it first. Use [ServerBuilder](type):
+
+```java
+import com.linecorp.armeria.server.Server;
+import com.linecorp.armeria.server.ServerBuilder;
+
+ServerBuilder sb = Server.builder();
+// TODO: Configure your server here.
+Server server = sb.build();
+CompletableFuture<Void> future = server.start();
+// Wait until the server is ready.
+future.join();
+```
+
+## Ports
+
+To serve anything, you need to specify which TCP/IP port you want to bind onto:
+
+```java
+ServerBuilder sb = Server.builder();
+// Configure an HTTP port.
+sb.http(8080);
+// TODO: Add your services here.
+Server server = sb.build();
+CompletableFuture<Void> future = server.start();
+future.join();
+```
+
+## Services
+
+Even if we opened a port, it's of no use if we didn't bind any services to them. Let's add some:
+
+```java
+import com.linecorp.armeria.common.HttpRequest;
+import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.HttpStatus;
+import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.common.MediaTypeNames;
+import com.linecorp.armeria.common.QueryParams;
+
+import com.linecorp.armeria.server.AbstractHttpService;
+import com.linecorp.armeria.server.Server;
+import com.linecorp.armeria.server.ServerBuilder;
+import com.linecorp.armeria.server.ServiceRequestContext;
+import com.linecorp.armeria.server.annotation.Consumes;
+import com.linecorp.armeria.server.annotation.Default;
+import com.linecorp.armeria.server.annotation.Get;
+import com.linecorp.armeria.server.annotation.Param;
+import com.linecorp.armeria.server.annotation.Post;
+import com.linecorp.armeria.server.annotation.Produces;
+import com.linecorp.armeria.server.logging.LoggingService;
+
+ServerBuilder sb = Server.builder();
+sb.http(8080);
+
+// Add a simple 'Hello, world!' service.
+sb.service("/", (ctx, req) -> HttpResponse.of("Hello, world!"));
+
+// Using path variables:
+sb.service("/greet/{name}", new AbstractHttpService() {
+    @Override
+    protected HttpResponse doGet(ServiceRequestContext ctx, HttpRequest req) {
+        String name = ctx.pathParam("name");
+        return HttpResponse.of("Hello, %s!", name);
+    }
+}.decorate(LoggingService.newDecorator())); // Enable logging
+
+// Using an annotated service object:
+sb.annotatedService(new Object() {
+    @Get("/greet2/:name") // `:name` style is also available
+    public HttpResponse greet(@Param("name") String name) {
+        return HttpResponse.of("Hello, %s!", name);
+    }
+});
+
+// Just in case your name contains a slash:
+sb.serviceUnder("/greet3", (ctx, req) -> {
+    String path = ctx.mappedPath();  // Get the path without the prefix ('/greet3')
+    String name = path.substring(1); // Strip the leading slash ('/')
+    return HttpResponse.of("Hello, %s!", name);
+});
+
+// Using an annotated service object:
+sb.annotatedService(new Object() {
+    @Get("regex:^/greet4/(?<name>.*)$")
+    public HttpResponse greet(@Param("name") String name) {
+        return HttpResponse.of("Hello, %s!", name);
+    }
+});
+
+// Using a query parameter (e.g. /greet5?name=alice) on an annotated service object:
+sb.annotatedService(new Object() {
+    @Get("/greet5")
+    public HttpResponse greet(@Param("name") String name,
+                              @Param("title") @Default("Mr.") String title) {
+        // "Mr." is used by default if there is no title parameter in the request.
+        return HttpResponse.of("Hello, %s %s!", title, name);
+    }
+});
+
+// Getting a map of query parameters on an annotated service object:
+sb.annotatedService(new Object() {
+    @Get("/greet6")
+    public HttpResponse greet(QueryParams params) {
+        return HttpResponse.of("Hello, %s!", params.get("name"));
+    }
+});
+
+// Using media type negotiation:
+sb.annotatedService(new Object() {
+    @Get("/greet7")
+    @Produces(MediaTypeNames.JSON_UTF_8)
+    public HttpResponse greetGet(@Param("name") String name) {
+        return HttpResponse.of(HttpStatus.OK, MediaType.JSON_UTF_8,
+                               "{\"name\":\"%s\"}", name);
+    }
+
+    @Post("/greet7")
+    @Consumes(MediaTypeNames.FORM_DATA)
+    public HttpResponse greetPost(@Param("name") String name) {
+        return HttpResponse.of(HttpStatus.OK);
+    }
+});
+
+Server server = sb.build();
+CompletableFuture<Void> future = server.start();
+future.join();
+```
+
+As described in the example, `service()` and `serviceUnder()` perform an exact match and a prefix match
+on a request path respectively. [ServerBuilder](type) also provides advanced path mapping such as regex and
+glob pattern matching.
+
+Also, we decorated the second service using [LoggingService](type), which logs all requests and responses.
+You might be interested in decorating a service using other decorators, for example to gather metrics.
+
+You can also use an arbitrary object that's annotated by the [@Path](type) annotation 
+using `annotatedService()`.
+
+## Path patterns
+
+You can use the following path patterns to map an HTTP request path to a service or a decorator.
+
+| Pattern | Example |
+|---------|---------|
+| Exact match | `/foo/bar` or `exact:/foo/bar` |
+| Curly-brace style path variables | `/users/{userId}` |
+| Colon style path variables | `/list/:productType/by/:ordering` |
+| Prefix match | `prefix:/files` |
+| Glob pattern | `glob:/*/downloads/**` |
+| Regular expression | `regex:^/files/(?<filePath>.*)$` |
+
+:::tip
+
+By default, colon style path variables assume that a path segment starting with a ':' is a parameter name.
+If the colon starting a path segment should signify a literal, you can prefix the ':' with '\\'.
+
+e.g.
+- `/foo/\\:colon:` will match a request with path `/foo/:colon:`.
+  - Note that only the first colon starting the segment should be escaped.
+- `/foo/:colon` will match a request with path `/foo/bar`. The path parameter 'colon' will be bound to 'bar'.
+
+:::
+
+## Per service configuration
+
+The examples above are just mapping the path of an HTTP request on a service. If you want to set configuration
+for a specific service, you can use fluent API:
+
+```java
+ServerBuilder sb = Server.builder();
+sb.route()                    // Configure the service.
+  .post("/foo/bar")           // Matched when the path is "/foo/bar" and the method is POST.
+  .consumes(MediaType.JSON)   // Matched when the "content-type" header is "application/json".
+  .produces(MediaType.JSON)   // Matched when the "accept" headers is "application/json".
+  .matchesHeaders("baz=qux")  // Matched when the "baz" header is "qux".
+  .matchesParams("quux=quuz") // Matched when the "quux" parameter is "quuz".
+  .requestTimeoutMillis(5000)
+  .maxRequestLength(8192)
+  .verboseResponses(true)
+  .build((ctx, req) -> HttpResponse.of(OK)); // Should call to finish and return to the ServerBuilder.
+```
+
+Or use a `Consumer`:
+
+```java
+import com.linecorp.armeria.common.HttpMethod;
+
+ServerBuilder sb = Server.builder();
+sb.withRoute(builder -> builder.path("/baz") // Matched when the path is "/baz".
+                               // Matched when the method is GET or POST.
+                               .methods(HttpMethod.GET, HttpMethod.POST)
+                               ...
+                               .build((ctx, req) -> HttpResponse.of(OK)));
+```
+
+## SSL/TLS
+
+You can also add an HTTPS port with your certificate and its private key files:
+
+```java
+ServerBuilder sb = Server.builder();
+sb.https(8443)
+  .tls(new File("certificate.crt"), new File("private.key"), "myPassphrase");
+...
+```
+
+
+## PROXY protocol
+
+Armeria supports both text (v1) and binary (v2) versions of 
+[PROXY protocol](https://www.haproxy.org/download/1.8/doc/proxy-protocol.txt).
+If your server is behind a load balancer such as [HAProxy](https://www.haproxy.org/) and
+[AWS ELB](https://aws.amazon.com/elasticloadbalancing/), you could consider enabling the PROXY protocol:
+
+```java
+import static com.linecorp.armeria.common.SessionProtocol.HTTP;
+import static com.linecorp.armeria.common.SessionProtocol.HTTPS;
+import static com.linecorp.armeria.common.SessionProtocol.PROXY;
+
+ServerBuilder sb = Server.builder();
+sb.port(8080, PROXY, HTTP);
+sb.port(8443, PROXY, HTTPS);
+...
+```
+
+
+## Serving HTTP and HTTPS on the same port
+
+For whatever reason, you may have to serve both HTTP and HTTPS on the same port. Armeria is one of the few
+implementations that supports port unification:
+
+```java
+ServerBuilder sb = Server.builder();
+sb.port(8888, HTTP, HTTPS);
+// Enable PROXY protocol, too.
+sb.port(9999, PROXY, HTTP, HTTPS);
+...
+```
+
+
+## Virtual hosts
+
+Use [ServerBuilder#virtualHost(String)](type) to configure [a name-based virtual host]:
+
+```java
+ServerBuilder sb = Server.builder();
+// Configure foo.com.
+sb.virtualHost("foo.com")
+  .service(...)
+  .tls(...)
+  .and() // Configure *.bar.com.
+  .virtualHost("*.bar.com")
+  .service(...)
+  .tls(...)
+  .and() // Configure the default virtual host.
+  .service(...)
+  .tls(...);
+...
+```
+
+## Getting an IP address of a client who initiated a request
+
+You may want to get an IP address of a client who initiated a request in your service. In that case,
+you can use [ServiceRequestContext#clientAddress()](type). But you need to configure
+your [ServerBuilder](type) before doing that:
+
+```java
+import com.linecorp.armeria.common.util.InetAddressPredicates;
+import com.linecorp.armeria.server.ClientAddressSource;
+
+ServerBuilder sb = Server.builder();
+
+// Configure a filter which evaluates whether an address of a remote endpoint is
+// trusted. If unspecified, no remote endpoint is trusted.
+// e.g. servers who have an IP address in 10.0.0.0/8.
+sb.clientAddressTrustedProxyFilter(InetAddressPredicates.ofCidr("10.0.0.0/8"));
+
+// Configure a filter which evaluates whether an address can be used as
+// a client address. If unspecified, any address would be accepted.
+// e.g. public addresses
+sb.clientAddressFilter(address -> !address.isSiteLocalAddress());
+
+// Configure a list of sources which are used to determine where to look for
+// the client address, in the order of preference. If unspecified, 'Forwarded',
+// 'X-Forwarded-For' and the source address of a PROXY protocol header would be used.
+sb.clientAddressSources(ClientAddressSource.ofHeader(HttpHeaderNames.FORWARDED),
+                        ClientAddressSource.ofHeader(HttpHeaderNames.X_FORWARDED_FOR),
+                        ClientAddressSource.ofProxyProtocol());
+
+// Get an IP address of a client who initiated a request.
+sb.service("/", (ctx, res) ->
+        HttpResponse.of("A request was initiated by %s!", 
+                        ctx.clientAddress().getHostAddress()));
+```
+
+## See also
+
+- [Decorating a service](/docs/server-decorator)
+
+[a name-based virtual host]: https://en.wikipedia.org/wiki/Virtual_hosting#Name-based
