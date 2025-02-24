@@ -841,11 +841,10 @@ public final class Server implements ListenableAsyncCloseable {
                 // Update the boss thread so its name contains the actual port.
                 Thread.currentThread().setName(bossThreadName(actualPort));
 
-                final InetSocketAddress actualLocalAddress = actualPort.localAddress();
                 lock.lock();
                 try {
                     // Update the map of active ports.
-                    activePorts.put(actualLocalAddress, actualPort);
+                    activePorts.put(actualPort.localAddress(), actualPort);
                 } finally {
                     lock.unlock();
                 }
