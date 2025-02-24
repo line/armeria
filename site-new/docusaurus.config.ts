@@ -146,6 +146,17 @@ const config: Config = {
     prism: {
       theme: prismThemes.github,
       darkTheme: prismThemes.dracula,
+      additionalLanguages: [
+        // Base set of supported languages: https://github.com/FormidableLabs/prism-react-renderer/blob/master/packages/generate-prism-languages/index.ts#L9-L26
+        'bash',
+        'groovy',
+        'http',
+        'java',
+        'javascript',
+        'protobuf',
+        'scala',
+        'shell-session',
+      ],
     },
   } satisfies Preset.ThemeConfig,
 
