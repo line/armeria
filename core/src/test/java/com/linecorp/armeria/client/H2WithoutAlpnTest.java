@@ -93,7 +93,8 @@ class H2WithoutAlpnTest {
                                                   .tlsCustomizer(b -> b.trustManager(cert.certificate()))
                                                   .build()) {
 
-            final BlockingWebClient client = WebClient.builder("h2://127.0.0.1:" + server.httpPort())
+            String remote = "127.0.0.1";
+            final BlockingWebClient client = WebClient.builder("h2://" + remote + ":" + server.httpPort())
                                                       .factory(factory)
                                                       .build()
                                                       .blocking();
@@ -105,7 +106,7 @@ class H2WithoutAlpnTest {
                             "expected: h2",
                             "actual: h1",
                             "reason: unexpected protocol negotiation result",
-                            "R:127.0.0.1"
+                            remote
                     );
         }
     }
