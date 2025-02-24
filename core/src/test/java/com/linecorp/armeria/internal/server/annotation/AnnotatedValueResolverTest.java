@@ -108,12 +108,14 @@ class AnnotatedValueResolverTest {
                                                               "value3",
                                                               "value2");
 
+    static final Set<String> queryParamMaps = ImmutableSet.of("queryParamMap",
+                                                              "queryParamListMap",
+                                                              "queryParamSetMap");
+
     static final ResolverContext resolverContext;
     static final ServiceRequestContext context;
     static final HttpRequest request;
     static final RequestHeaders originalHeaders;
-    static final String QUERY_PARAM_MAP = "queryParamMap";
-    static final String QUERY_PARAM_MULTI_VALUE_MAP = "queryParamMultiValueMap";
     static Map<String, AttributeKey<?>> successExpectAttrKeys;
     static Map<String, AttributeKey<?>> failExpectAttrKeys;
 
@@ -374,8 +376,7 @@ class AnnotatedValueResolverTest {
                     }
                 }
             } else {
-                if (QUERY_PARAM_MAP.equals(resolver.httpElementName()) ||
-                    QUERY_PARAM_MULTI_VALUE_MAP.equals(resolver.httpElementName())) {
+                if (queryParamMaps.contains(resolver.httpElementName())) {
                     assertThat(resolver.defaultValue()).isNull();
                 } else {
                     assertThat(resolver.defaultValue()).isNotNull();
@@ -387,8 +388,7 @@ class AnnotatedValueResolverTest {
                             .isEqualTo(resolver.elementType());
                 } else if (resolver.shouldWrapValueAsOptional()) {
                     assertThat(value).isEqualTo(Optional.of(resolver.defaultValue()));
-                } else if (QUERY_PARAM_MAP.equals(resolver.httpElementName()) ||
-                           QUERY_PARAM_MULTI_VALUE_MAP.equals(resolver.httpElementName())) {
+                } else if (queryParamMaps.contains(resolver.httpElementName())) {
                     assertThat(value).isNotNull();
                     assertThat(value).isInstanceOf(Map.class);
                     assertThat((Map<?, ?>) value).size()
@@ -471,7 +471,8 @@ class AnnotatedValueResolverTest {
                      @Param @Default List<String> emptyParam3,
                      @Param @Default List<Integer> emptyParam4,
                      @Param Map<String, Object> queryParamMap,
-                     @Param Map<String, List<Object>> queryParamMultiValueMap,
+                     @Param Map<String, List<Object>> queryParamListMap,
+                     @Param Map<String, Set<Object>> queryParamSetMap,
                      @Header List<String> header1,
                      @Header("header1") Optional<List<ValueEnum>> optionalHeader1,
                      @Header String header2,
@@ -548,8 +549,6 @@ class AnnotatedValueResolverTest {
     }
 
     static class InvalidMultiValueMapService {
-        void invalidParamWithMapOfSet(@Param Map<String, Set<String>> param) {}
-
         void invalidParamWithMapOfMap(@Param Map<String, Map<String, String>> param) {}
     }
 

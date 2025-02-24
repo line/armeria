@@ -64,6 +64,7 @@ import com.google.common.base.Ascii;
 import com.google.common.base.MoreObjects;
 import com.google.common.base.Splitter;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.primitives.Primitives;
 
@@ -607,10 +608,12 @@ final class AnnotatedValueResolver {
         final Class<?> rawValueType = ClassUtil.typeToClass(valueType);
         assert rawValueType != null;
 
-        if (valueType instanceof ParameterizedType && !List.class.isAssignableFrom(rawValueType)) {
+        if (valueType instanceof ParameterizedType && !(rawValueType == Iterable.class ||
+                                                        rawValueType == List.class ||
+                                                        rawValueType == Collection.class ||
+                                                        rawValueType == Set.class)) {
             throw new IllegalArgumentException(
-                    "Invalid Map value type: " + rawValueType +
-                    ". Only List<?> is supported for multi-value query parameters.");
+                    "Invalid Map value type: " + rawValueType);
         }
 
         final BiFunction<AnnotatedValueResolver, ResolverContext, Object> biFunction;
@@ -625,6 +628,17 @@ final class AnnotatedValueResolver {
                                                                             .addAll(existing)
                                                                             .addAll(replacement)
                                                                             .build()
+                                               ));
+        } else if (Set.class.isAssignableFrom(rawValueType)) {
+            biFunction = (resolver, ctx) -> ctx.queryParams().stream()
+                                               .collect(toImmutableMap(
+                                                       Entry::getKey,
+                                                       e -> ImmutableSet.of(e.getValue()),
+                                                       (existing, replacement) ->
+                                                               ImmutableSet.<String>builder()
+                                                                           .addAll(existing)
+                                                                           .addAll(replacement)
+                                                                           .build()
                                                ));
         } else {
             biFunction = (resolver, ctx) -> ctx.queryParams().stream()
