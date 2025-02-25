@@ -2290,6 +2290,7 @@ emergency.aero
 emilia-romagna.it
 emiliaromagna.it
 emp.br
+emprende.ve
 empresa.bo
 emr.it
 emrappui-prod.af-south-1.amazonaws.com
@@ -7890,6 +7891,7 @@ sport.eg
 sport.hu
 spot
 spydeberg.no
+square.site
 square7.ch
 square7.de
 square7.net
