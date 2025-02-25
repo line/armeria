@@ -17,14 +17,16 @@
 package com.linecorp.armeria.server.brave;
 
 import static com.linecorp.armeria.internal.common.brave.TraceContextUtil.ensureScopeUsesRequestContext;
+import static com.linecorp.armeria.server.brave.ArmeriaServerParser.annotateWireSpan;
 
 import java.util.function.Function;
+
+import com.google.common.annotations.VisibleForTesting;
 
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.brave.RequestContextCurrentTraceContext;
 import com.linecorp.armeria.internal.common.RequestContextExtension;
-import com.linecorp.armeria.internal.common.brave.SpanTags;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.SimpleDecoratingHttpService;
@@ -34,6 +36,8 @@ import brave.Span;
 import brave.Tracer;
 import brave.Tracer.SpanInScope;
 import brave.Tracing;
+import brave.http.HttpRequestParser;
+import brave.http.HttpResponseParser;
 import brave.http.HttpServerHandler;
 import brave.http.HttpServerRequest;
 import brave.http.HttpServerResponse;
@@ -46,7 +50,19 @@ import brave.propagation.CurrentTraceContext.Scope;
  */
 public final class BraveService extends SimpleDecoratingHttpService {
 
-    private static final Scope SERVICE_REQUEST_DECORATING_SCOPE = new Scope() {
+    @VisibleForTesting
+    static final HttpRequestParser defaultRequestParser = (request, context, span) -> {
+        HttpRequestParser.DEFAULT.parse(request, context, span);
+        ArmeriaHttpServerParser.requestParser().parse(request, context, span);
+    };
+
+    @VisibleForTesting
+    static final HttpResponseParser defaultResponseParser = (response, context, span) -> {
+        HttpResponseParser.DEFAULT.parse(response, context, span);
+        ArmeriaHttpServerParser.responseParser().parse(response, context, span);
+    };
+
+    static final Scope SERVICE_REQUEST_DECORATING_SCOPE = new Scope() {
         @Override
         public void close() {}
 
@@ -62,8 +78,8 @@ public final class BraveService extends SimpleDecoratingHttpService {
     public static Function<? super HttpService, BraveService>
     newDecorator(Tracing tracing) {
         return newDecorator(HttpTracing.newBuilder(tracing)
-                                       .serverRequestParser(ArmeriaHttpServerParser.get())
-                                       .serverResponseParser(ArmeriaHttpServerParser.get())
+                                       .serverRequestParser(defaultRequestParser)
+                                       .serverResponseParser(defaultResponseParser)
                                        .build());
     }
 
@@ -120,19 +136,7 @@ public final class BraveService extends SimpleDecoratingHttpService {
         }
 
         ctx.log().whenComplete().thenAccept(log -> {
-            span.start(log.requestStartTimeMicros());
-
-            final Long wireReceiveTimeNanos = log.requestFirstBytesTransferredTimeNanos();
-            assert wireReceiveTimeNanos != null;
-            SpanTags.logWireReceive(span, wireReceiveTimeNanos, log);
-
-            final Long wireSendTimeNanos = log.responseFirstBytesTransferredTimeNanos();
-            if (wireSendTimeNanos != null) {
-                SpanTags.logWireSend(span, wireSendTimeNanos, log);
-            } else {
-                // If the client timed-out the request, we will have never sent any response data at all.
-            }
-
+            annotateWireSpan(log, span);
             final HttpServerResponse braveRes =
                     ServiceRequestContextAdapter.asHttpServerResponse(log, braveReq);
             handler.handleSend(braveRes, span);
