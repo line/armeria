@@ -121,8 +121,7 @@ final class HttpClientDelegate implements HttpClient {
                     assert resolved != null;
                     acquireConnectionAndExecute(ctx, resolved, req, res, timingsBuilder, proxyConfig);
                 } else {
-                    ctx.logBuilder().session(null, ctx.sessionProtocol(), timingsBuilder.build());
-                    ctx.cancel(cause);
+                    earlyCancelRequest(cause, ctx, timingsBuilder);
                 }
             });
         }
@@ -181,12 +180,13 @@ final class HttpClientDelegate implements HttpClient {
             if (!isValidIpAddr) {
                 final IpAddressRejectedException cause = new IpAddressRejectedException(
                         "Invalid IP address: " + remoteAddress + " (endpoint: " + endpoint + ')');
-                earlyFailedResponse(cause, ctx);
+                earlyCancelRequest(cause, ctx, timingsBuilder);
                 return;
             }
         } catch (Throwable t) {
-            earlyFailedResponse(new IllegalStateException(
-                    "Unexpected exception from " + factory.options().ipAddressFilter(), t), ctx);
+            final IllegalStateException cause = new IllegalStateException(
+                    "Unexpected exception from " + factory.options().ipAddressFilter(), t);
+            earlyCancelRequest(cause, ctx, timingsBuilder);
             return;
         }
 
@@ -208,7 +208,7 @@ final class HttpClientDelegate implements HttpClient {
         try {
             pool = factory.pool(ctx.eventLoop().withoutContext());
         } catch (Throwable t) {
-            ctx.cancel(t);
+            earlyCancelRequest(t, ctx, timingsBuilder);
             return;
         }
         final SessionProtocol protocol = ctx.sessionProtocol();
@@ -220,11 +220,11 @@ final class HttpClientDelegate implements HttpClient {
         } else {
             pool.acquireLater(protocol, serializationFormat, key, timingsBuilder)
                 .handle((newPooledChannel, cause) -> {
-                    logSession(ctx, newPooledChannel, timingsBuilder.build());
                     if (cause == null) {
+                        logSession(ctx, newPooledChannel, timingsBuilder.build());
                         doExecute(newPooledChannel, ctx, req, res);
                     } else {
-                        ctx.cancel(cause);
+                        earlyCancelRequest(cause, ctx, timingsBuilder);
                     }
                     return null;
                 });
@@ -267,6 +267,13 @@ final class HttpClientDelegate implements HttpClient {
         final UnprocessedRequestException cause = UnprocessedRequestException.of(t);
         ctx.cancel(cause);
         return HttpResponse.ofFailure(cause);
+    }
+
+    private static void earlyCancelRequest(Throwable t, ClientRequestContext ctx,
+                                           ClientConnectionTimingsBuilder connectionTimings) {
+        ctx.logBuilder().session(null, ctx.sessionProtocol(), connectionTimings.build());
+        final UnprocessedRequestException cause = UnprocessedRequestException.of(t);
+        ctx.cancel(cause);
     }
 
     private static void doExecute(PooledChannel pooledChannel, ClientRequestContext ctx,
