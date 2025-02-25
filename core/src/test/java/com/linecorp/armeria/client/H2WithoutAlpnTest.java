@@ -93,7 +93,7 @@ class H2WithoutAlpnTest {
                                                   .tlsCustomizer(b -> b.trustManager(cert.certificate()))
                                                   .build()) {
 
-            String remote = "127.0.0.1";
+            final String remote = "127.0.0.1";
             final BlockingWebClient client = WebClient.builder("h2://" + remote + ":" + server.httpPort())
                                                       .factory(factory)
                                                       .build()
