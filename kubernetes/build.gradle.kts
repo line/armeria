@@ -2,6 +2,8 @@ dependencies {
     api(libs.kubernetes.client.api)
     api(libs.kubernetes.client.impl)
     testImplementation(variantOf(libs.kubernetes.client.api) { classifier("tests") })
+    testImplementation(libs.kubernetes.mockwebserver)
     testImplementation(libs.kubernetes.server.mock)
     testImplementation(libs.kubernetes.junit.jupiter)
+    testImplementation(libs.okhttp3)
 }

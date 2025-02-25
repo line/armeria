@@ -2,7 +2,6 @@ dependencies {
     api libs.retrofit2
 
     implementation libs.caffeine
-    libs.okhttp3
 
     testImplementation libs.retrofit2.converter.jackson
 }

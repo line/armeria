@@ -453,6 +453,7 @@ class GrpcServiceServerTest {
 
             sb.service(
                     GrpcService.builder()
+                               // ProtoReflectionServiceV1 is added by default.
                                .addService(ProtoReflectionService.newInstance())
                                .build(),
                     service -> service.decorate(LoggingService.newDecorator()));
@@ -1247,6 +1248,43 @@ class GrpcServiceServerTest {
         request.onNext(ServerReflectionRequest.newBuilder()
                                               .setListServices("")
                                               .build());
+        request.onCompleted();
+
+        await().untilAsserted(
+                () -> {
+                    assertThat(response).doesNotHaveValue(null);
+                    // Instead of making this test depend on every other one, just check that there is at
+                    // least two services returned corresponding to UnitTestService and
+                    // ProtoReflectionService.
+                    assertThat(response.get().getListServicesResponse().getServiceList())
+                            .hasSizeGreaterThanOrEqualTo(2);
+                });
+    }
+
+    @Test
+    void reflectionServiceV1() throws Exception {
+        final io.grpc.reflection.v1.ServerReflectionGrpc.ServerReflectionStub stub =
+                io.grpc.reflection.v1.ServerReflectionGrpc.newStub(channel);
+
+        final AtomicReference<io.grpc.reflection.v1.ServerReflectionResponse> response =
+                new AtomicReference<>();
+
+        final StreamObserver<io.grpc.reflection.v1.ServerReflectionRequest> request = stub.serverReflectionInfo(
+                new StreamObserver<io.grpc.reflection.v1.ServerReflectionResponse>() {
+                    @Override
+                    public void onNext(io.grpc.reflection.v1.ServerReflectionResponse value) {
+                        response.set(value);
+                    }
+
+                    @Override
+                    public void onError(Throwable t) {}
+
+                    @Override
+                    public void onCompleted() {}
+                });
+        request.onNext(io.grpc.reflection.v1.ServerReflectionRequest.newBuilder()
+                                                                    .setListServices("")
+                                                                    .build());
         request.onCompleted();
 
         await().untilAsserted(
