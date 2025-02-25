@@ -154,8 +154,8 @@ abstract class DnsEndpointGroupBuilder<SELF extends DnsEndpointGroupBuilder<SELF
 
     final DefaultDnsResolver buildResolver(Consumer<DnsNameResolverBuilder> customizer, EventLoop eventLoop) {
         final DnsNameResolverBuilder resolverBuilder = new DnsNameResolverBuilder(eventLoop);
-        customizer.accept(resolverBuilder);
         buildConfigurator(eventLoop.parent()).accept(resolverBuilder);
+        customizer.accept(resolverBuilder);
 
         return DefaultDnsResolver.of(resolverBuilder.build(), maybeCreateDnsCache(), eventLoop,
                                      searchDomains(), ndots(), queryTimeoutMillis(),

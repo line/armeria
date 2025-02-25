@@ -18,6 +18,9 @@ package com.linecorp.armeria.client.endpoint.dns;
 import com.linecorp.armeria.client.Endpoint;
 
 import io.netty.channel.EventLoop;
+import io.netty.resolver.dns.DnsNameResolverBuilder;
+
+import java.util.function.Consumer;
 
 /**
  * Builds a new {@link DnsServiceEndpointGroup} that sources its {@link Endpoint} list from the {@code SRV}
@@ -37,6 +40,17 @@ public final class DnsServiceEndpointGroupBuilder
         final EventLoop eventLoop = getOrAcquireEventLoop();
         return new DnsServiceEndpointGroup(selectionStrategy(), shouldAllowEmptyEndpoints(),
                                            selectionTimeoutMillis(), buildResolver(eventLoop),
+                                           eventLoop, backoff(), minTtl(), maxTtl(),
+                                           hostname(), dnsQueryListeners());
+    }
+
+    /**
+     * Returns a newly created {@link DnsServiceEndpointGroup}. This builder exposes the {@link DnsNameResolverBuilder}.
+     */
+    public DnsServiceEndpointGroup build(Consumer<DnsNameResolverBuilder> customizer) {
+        final EventLoop eventLoop = getOrAcquireEventLoop();
+        return new DnsServiceEndpointGroup(selectionStrategy(), shouldAllowEmptyEndpoints(),
+                                           selectionTimeoutMillis(), buildResolver(customizer, eventLoop),
                                            eventLoop, backoff(), minTtl(), maxTtl(),
                                            hostname(), dnsQueryListeners());
     }
