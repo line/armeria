@@ -34,6 +34,20 @@ public class RandomBackoffTest {
     }
 
     @Test
+    public void nextDelayMillisWithBuilder() throws Exception {
+        final Random r = new Random(1);
+        final Backoff backoff2 = Backoff.builderForRandom()
+                .minDelayMillis(10)
+                .maxDelayMillis(100)
+                .randomSupplier(() -> r)
+                .build();
+        assertThat(backoff2.nextDelayMillis(1)).isEqualTo(18);
+        assertThat(backoff2.nextDelayMillis(1)).isEqualTo(93);
+        assertThat(backoff2.nextDelayMillis(1)).isEqualTo(12);
+        assertThat(backoff2.nextDelayMillis(1)).isEqualTo(95);
+    }
+
+    @Test
     public void validation() {
         // Negative minDelayMillis
         assertThatThrownBy(() -> new RandomBackoff(-1, 1, Random::new))
