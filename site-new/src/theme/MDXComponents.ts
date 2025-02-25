@@ -1,4 +1,3 @@
-import React from 'react';
 // Import the original mapper
 import MDXComponents from '@theme-original/MDXComponents';
 import AspectRatio from '@site/src/components/aspect-ratio';

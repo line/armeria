@@ -42,16 +42,3 @@ const plugin = (options) => {
 };
 
 export default plugin;
-
-/*
-{
-  type: 'link',
-  title: null,
-  url: 'type',
-  children: [ { type: 'text', value: 'AttributeKey', position: [Object] } ],
-  position: {
-    start: { line: 10, column: 6, offset: 190 },
-    end: { line: 10, column: 26, offset: 210 }
-  }
-}
-*/
