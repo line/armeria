@@ -510,8 +510,7 @@ public abstract class AbstractDnsResolverBuilder<SELF extends AbstractDnsResolve
     /**
      * Enables <a href="https://tools.ietf.org/html/rfc7766">TCP fallback</a> using the specified
      * {@link SocketChannel} type.
-     * <p>
-     * TCP fallback is disabled by default.
+     * Note that TCP fallback is disabled by default.
      * @param socketChannelType the type of {@link SocketChannel} to use for TCP fallback.
      * @param retrySocketChannelOnTimeout if {@code true} the {@link DnsNameResolver} will also fallback to
      *                                    TCP if a timeout was detected, if {@code false} it will only try to
