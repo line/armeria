@@ -112,8 +112,9 @@ public final class GrpcClientBuilder extends AbstractClientOptionsBuilder {
     GrpcClientBuilder(URI uri) {
         requireNonNull(uri, "uri");
         endpointGroup = null;
-        this.uri = SessionProtocolUtil.maybeApplyDefaultProtocol(uri);
-        scheme = Scheme.parse(this.uri.getScheme());
+        uri = SessionProtocolUtil.maybeApplyDefaultProtocol(uri);
+        this.uri = uri;
+        scheme = Scheme.parse(uri.getScheme());
         validateOrSetSerializationFormat();
     }
 

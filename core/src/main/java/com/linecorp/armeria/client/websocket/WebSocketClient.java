@@ -221,7 +221,7 @@ public interface WebSocketClient extends ClientBuilderParams, Unwrappable {
 
     /**
      * Returns a new {@link WebSocketClientBuilder} created with the specified
-     * the {@link EndpointGroup} and the {@code path}, using the default {@link Scheme}.
+     * {@link EndpointGroup}, {@code path} and the default {@link Scheme}.
      */
     static WebSocketClientBuilder builder(EndpointGroup endpointGroup, String path) {
         return builder(Scheme.of(SerializationFormat.WS, defaultSessionProtocol()), endpointGroup, path);

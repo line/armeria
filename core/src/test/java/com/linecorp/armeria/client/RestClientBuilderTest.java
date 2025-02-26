@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.client;
 
+import static com.linecorp.armeria.internal.client.SessionProtocolUtil.defaultSessionProtocol;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.net.URI;
@@ -24,8 +25,6 @@ import java.util.stream.Stream;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
-
-import com.linecorp.armeria.common.SessionProtocol;
 
 class RestClientBuilderTest {
 
@@ -45,7 +44,7 @@ class RestClientBuilderTest {
     @ParameterizedTest
     @MethodSource("withoutScheme_args")
     void withoutScheme(RestClient client) {
-        assertThat(client.scheme().sessionProtocol()).isEqualTo(SessionProtocol.HTTP);
+        assertThat(client.scheme().sessionProtocol()).isEqualTo(defaultSessionProtocol());
         assertThat(client.uri().toString()).isEqualTo("http://google.com/");
     }
 }

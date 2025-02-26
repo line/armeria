@@ -219,8 +219,6 @@ public final class Clients {
     /**
      * Returns a new {@link ClientBuilder} that builds the client that connects to the specified
      * {@link EndpointGroup} using the default {@link SessionProtocol}.
-     *
-     * @throws IllegalArgumentException if the {@code scheme} is invalid.
      */
     public static ClientBuilder builder(EndpointGroup endpointGroup) {
         return builder(Scheme.of(SerializationFormat.NONE, defaultSessionProtocol()), endpointGroup);
@@ -239,8 +237,6 @@ public final class Clients {
     /**
      * Returns a new {@link ClientBuilder} that builds the client that connects to the specified
      * {@link EndpointGroup} and {@code path} using the default {@link SessionProtocol}.
-     *
-     * @throws IllegalArgumentException if the {@code scheme} is invalid.
      */
     public static ClientBuilder builder(EndpointGroup endpointGroup, String path) {
         return builder(Scheme.of(SerializationFormat.NONE, defaultSessionProtocol()), endpointGroup, path);

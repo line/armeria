@@ -25,7 +25,6 @@ import com.linecorp.armeria.client.Clients;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
-import com.linecorp.armeria.common.Scheme;
 import com.linecorp.armeria.common.SessionProtocol;
 
 import retrofit2.Retrofit;
@@ -91,7 +90,7 @@ public final class ArmeriaRetrofit {
 
     /**
      * Returns a new {@link Retrofit} which sends requests to the specified {@link Endpoint} and {@code path}
-     * using the default {@link Scheme}.
+     * using the default {@link SessionProtocol}.
      */
     public static Retrofit of(EndpointGroup endpointGroup, String path) {
         return builder(endpointGroup, path).build();
