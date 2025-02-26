@@ -841,10 +841,6 @@ exclusions = ["org.slf4j:slf4j-api"]
 module = "io.fabric8:kubernetes-client"
 version.ref = "kubernetes-client"
 exclusions = ["io.fabric8:kubernetes-httpclient-okhttp", "org.slf4j:slf4j-api"]
-[libraries.kubernetes-mockwebserver]
-module = "io.fabric8:mockwebserver"
-version.ref = "kubernetes-client"
-exclusions = ["org.slf4j:slf4j-api"]
 [libraries.kubernetes-server-mock]
 module = "io.fabric8:kubernetes-server-mock"
 version.ref = "kubernetes-client"
