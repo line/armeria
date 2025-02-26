@@ -508,7 +508,7 @@ public abstract class AbstractDnsResolverBuilder<SELF extends AbstractDnsResolve
     }
 
     /**
-     * Enables <a href="https://tools.ietf.org/html/rfc7766">TCP fallback</a> using the specified
+     * Enables <a href="https://datatracker.ietf.org/doc/html/rfc7766">TCP fallback</a> using the specified
      * {@link SocketChannel} type.
      * Note that TCP fallback is disabled by default.
      * @param socketChannelType the type of {@link SocketChannel} to use for TCP fallback.
