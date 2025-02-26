@@ -1,6 +1,7 @@
 import { themes as prismThemes } from 'prism-react-renderer';
 import type { Config } from '@docusaurus/types';
 import type * as Preset from '@docusaurus/preset-classic';
+import remarkApiLink from './src/remark/remark-api-link';
 
 // This runs in Node.js - Don't use client-side code here (browser APIs, JSX...)
 
@@ -41,6 +42,7 @@ const config: Config = {
           // Remove this to remove the "edit this page" links.
           editUrl:
             'https://github.com/facebook/docusaurus/tree/main/packages/create-docusaurus/templates/shared/',
+          remarkPlugins: [remarkApiLink],
         },
         blog: {
           showReadingTime: true,
@@ -74,12 +76,21 @@ const config: Config = {
       },
       items: [
         {
-          type: 'docSidebar',
-          sidebarId: 'tutorialSidebar',
+          to: '/news',
+          label: 'News',
           position: 'left',
-          label: 'Tutorial',
         },
-        { to: '/blog', label: 'Blog', position: 'left' },
+        {
+          type: 'docSidebar',
+          sidebarId: 'documentationSideBar',
+          position: 'left',
+          label: 'Documentation',
+        },
+        {
+          to: '/community',
+          label: 'Community',
+          position: 'left',
+        },
         {
           href: 'https://github.com/facebook/docusaurus',
           label: 'GitHub',
@@ -135,12 +146,21 @@ const config: Config = {
     prism: {
       theme: prismThemes.github,
       darkTheme: prismThemes.dracula,
+      additionalLanguages: [
+        // Base set of supported languages: https://github.com/FormidableLabs/prism-react-renderer/blob/master/packages/generate-prism-languages/index.ts#L9-L26
+        'bash',
+        'groovy',
+        'http',
+        'java',
+        'javascript',
+        'protobuf',
+        'scala',
+        'shell-session',
+      ],
     },
   } satisfies Preset.ThemeConfig,
 
-  plugins: [
-    'docusaurus-plugin-less'
-],
+  plugins: ['docusaurus-plugin-less'],
 };
 
 export default config;
