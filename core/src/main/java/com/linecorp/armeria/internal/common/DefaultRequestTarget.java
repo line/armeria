@@ -201,6 +201,18 @@ public final class DefaultRequestTarget implements RequestTarget {
             return slowAbsoluteFormForClient(reqTarget, authorityPos);
         }
 
+        return forClientPath(reqTarget, prefix);
+    }
+
+    @Nullable
+    public static RequestTarget forClientPath(String reqTarget) {
+        return forClientPath(reqTarget, null);
+    }
+
+    @Nullable
+    public static RequestTarget forClientPath(String reqTarget, @Nullable String prefix) {
+        requireNonNull(reqTarget, "reqTarget");
+
         // Concatenate `prefix` and `reqTarget` if necessary.
         final String actualReqTarget;
         if (prefix == null || "*".equals(reqTarget)) {
@@ -210,7 +222,7 @@ public final class DefaultRequestTarget implements RequestTarget {
             actualReqTarget = ArmeriaHttpUtil.concatPaths(prefix, reqTarget);
         }
 
-        final RequestTarget cached = RequestTargetCache.getForClient(actualReqTarget);
+        final RequestTarget cached = RequestTargetCache.getForClientPath(actualReqTarget);
         if (cached != null) {
             return cached;
         }

@@ -54,6 +54,7 @@ import com.linecorp.armeria.common.util.SystemInfo;
 import com.linecorp.armeria.common.util.Unwrappable;
 import com.linecorp.armeria.internal.client.DefaultClientRequestContext;
 import com.linecorp.armeria.internal.client.TailPreClient;
+import com.linecorp.armeria.internal.common.DefaultRequestTarget;
 import com.linecorp.armeria.internal.common.RequestTargetCache;
 import com.linecorp.armeria.internal.common.grpc.InternalGrpcExceptionHandler;
 import com.linecorp.armeria.internal.common.grpc.StatusAndMetadata;
@@ -255,9 +256,9 @@ final class ArmeriaChannel extends Channel implements ClientBuilderParams, Unwra
     private <I, O> DefaultClientRequestContext newContext(HttpMethod method, HttpRequest req,
                                                           MethodDescriptor<I, O> methodDescriptor) {
         final String path = req.path();
-        final RequestTarget reqTarget = RequestTarget.forClient(path);
+        final RequestTarget reqTarget = DefaultRequestTarget.forClientPath(path);
         assert reqTarget != null : path;
-        RequestTargetCache.putForClient(path, reqTarget);
+        RequestTargetCache.putForClientPath(path, reqTarget);
 
         final RequestOptions requestOptions = REQUEST_OPTIONS_MAP.get(methodDescriptor.getType());
         assert requestOptions != null;

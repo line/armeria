@@ -753,7 +753,7 @@ public class ThriftOverHttpClientTest {
                                                                          : server.httpPort());
         final HelloService.Iface client =
                 ThriftClients.builder(format.uriText() + '+' + protocol.uriText() +
-                                      "://my-group" + Handlers.HELLO.path(format))
+                                      "://my-group/" + Handlers.HELLO.path(format))
                              .options(clientOptions)
                              .endpointRemapper(endpoint -> {
                                  if ("my-group".equals(endpoint.host())) {

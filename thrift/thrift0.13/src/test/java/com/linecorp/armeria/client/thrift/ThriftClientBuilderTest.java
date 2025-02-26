@@ -36,9 +36,12 @@ import org.reflections.ReflectionUtils;
 
 import com.linecorp.armeria.client.AbstractClientOptionsBuilder;
 import com.linecorp.armeria.client.ClientBuilderParams;
+import com.linecorp.armeria.client.ClientRequestContext;
+import com.linecorp.armeria.client.ClientRequestContextCaptor;
 import com.linecorp.armeria.client.Clients;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.common.HttpRequest;
+import com.linecorp.armeria.common.RpcResponse;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.stream.AbortedStreamException;
 import com.linecorp.armeria.common.thrift.ThriftSerializationFormats;
@@ -193,5 +196,19 @@ class ThriftClientBuilderTest {
         final ClientBuilderParams params = Clients.unwrap(client, ClientBuilderParams.class);
         assertThat(params.scheme().sessionProtocol()).isEqualTo(defaultSessionProtocol());
         assertThat(params.uri().toString()).isEqualTo("tbinary+http://google.com/");
+    }
+
+    @Test
+    void doubleSlashPath() throws Exception {
+        try (ClientRequestContextCaptor captor = Clients.newContextCaptor()) {
+            final HelloService.Iface iface =
+                    ThriftClients.builder(URI.create("http://1.2.3.4//my-path"))
+                                 .rpcDecorator((delegate, ctx, req) -> RpcResponse.of("world"))
+                                 .build(HelloService.Iface.class);
+            assertThat(iface.hello("hello")).isEqualTo("world");
+            final ClientRequestContext ctx = captor.get();
+            assertThat(ctx.authority()).isEqualTo("1.2.3.4");
+            assertThat(ctx.path()).isEqualTo("//my-path");
+        }
     }
 }

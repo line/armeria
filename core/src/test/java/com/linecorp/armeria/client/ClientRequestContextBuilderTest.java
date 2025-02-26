@@ -50,4 +50,10 @@ class ClientRequestContextBuilderTest {
         assertThat(ctx2.endpoint()).isEqualTo(EndpointGroup.of(
                 Endpoint.of("127.0.0.1", 1)));
     }
+
+    @Test
+    void testSchemeRelativeUri() {
+        final ClientRequestContext ctx = ClientRequestContext.of(HttpRequest.of(HttpMethod.GET, "//abc"));
+        assertThat(ctx.path()).isEqualTo("//abc");
+    }
 }
