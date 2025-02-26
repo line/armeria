@@ -16,6 +16,7 @@
 package com.linecorp.armeria.client.retrofit2;
 
 import static com.google.common.base.Preconditions.checkArgument;
+import static com.linecorp.armeria.internal.client.SessionProtocolUtil.defaultSessionProtocol;
 import static java.util.Objects.requireNonNull;
 
 import java.net.URI;
@@ -24,6 +25,7 @@ import com.linecorp.armeria.client.Clients;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
+import com.linecorp.armeria.common.Scheme;
 import com.linecorp.armeria.common.SessionProtocol;
 
 import retrofit2.Retrofit;
@@ -57,6 +59,14 @@ public final class ArmeriaRetrofit {
 
     /**
      * Returns a new {@link Retrofit} which sends requests to the specified {@link Endpoint} using
+     * the default {@link SessionProtocol}.
+     */
+    public static Retrofit of(EndpointGroup endpointGroup) {
+        return builder(defaultSessionProtocol(), endpointGroup).build();
+    }
+
+    /**
+     * Returns a new {@link Retrofit} which sends requests to the specified {@link Endpoint} using
      * the specified {@code protocol}.
      *
      * @throws IllegalArgumentException if the {@code protocol} is not one of the values in
@@ -77,6 +87,14 @@ public final class ArmeriaRetrofit {
      */
     public static Retrofit of(SessionProtocol protocol, EndpointGroup endpointGroup) {
         return builder(protocol, endpointGroup).build();
+    }
+
+    /**
+     * Returns a new {@link Retrofit} which sends requests to the specified {@link Endpoint} and {@code path}
+     * using the default {@link Scheme}.
+     */
+    public static Retrofit of(EndpointGroup endpointGroup, String path) {
+        return builder(endpointGroup, path).build();
     }
 
     /**
@@ -136,6 +154,14 @@ public final class ArmeriaRetrofit {
 
     /**
      * Returns a new {@link ArmeriaRetrofitBuilder} that builds a client that sends requests to
+     * the specified {@link EndpointGroup} using the default {@link SessionProtocol}.
+     */
+    public static ArmeriaRetrofitBuilder builder(EndpointGroup endpointGroup) {
+        return builder(defaultSessionProtocol(), endpointGroup);
+    }
+
+    /**
+     * Returns a new {@link ArmeriaRetrofitBuilder} that builds a client that sends requests to
      * the specified {@link EndpointGroup} using the specified {@code protocol}.
      *
      * @throws IllegalArgumentException if the {@code protocol} is not one of the values in
@@ -158,6 +184,14 @@ public final class ArmeriaRetrofit {
         requireNonNull(protocol, "protocol");
         requireNonNull(endpointGroup, "endpointGroup");
         return builder(WebClient.of(protocol, endpointGroup));
+    }
+
+    /**
+     * Returns a new {@link ArmeriaRetrofitBuilder} that builds a client that sends requests to
+     * the specified {@link EndpointGroup} and {@code path} using the default {@link SessionProtocol} .
+     */
+    public static ArmeriaRetrofitBuilder builder(EndpointGroup endpointGroup, String path) {
+        return builder(defaultSessionProtocol(), endpointGroup, path);
     }
 
     /**

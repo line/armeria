@@ -80,6 +80,16 @@ public interface WebClient extends ClientBuilderParams, Unwrappable {
     }
 
     /**
+     * Returns a new {@link WebClient} that connects to the specified {@link EndpointGroup}
+     * using the default {@link SessionProtocol}, {@link ClientFactory} and {@link ClientOptions}.
+     *
+     * @param endpointGroup the server {@link EndpointGroup}
+     */
+    static WebClient of(EndpointGroup endpointGroup) {
+        return builder(endpointGroup).build();
+    }
+
+    /**
      * Returns a new {@link WebClient} that connects to the specified {@link EndpointGroup} with
      * the specified {@code protocol} using the default {@link ClientFactory} and the default
      * {@link ClientOptions}.
@@ -109,6 +119,18 @@ public interface WebClient extends ClientBuilderParams, Unwrappable {
      */
     static WebClient of(SessionProtocol protocol, EndpointGroup endpointGroup) {
         return builder(protocol, endpointGroup).build();
+    }
+
+    /**
+     * Returns a new {@link WebClient} that connects to the specified {@link EndpointGroup}
+     * and {@code path} using the default {@link SessionProtocol}, {@link ClientFactory} and
+     * {@link ClientOptions}.
+     *
+     * @param endpointGroup the server {@link EndpointGroup}
+     * @param path the path to the endpoint
+     */
+    static WebClient of(EndpointGroup endpointGroup, String path) {
+        return builder(endpointGroup, path).build();
     }
 
     /**
@@ -175,6 +197,15 @@ public interface WebClient extends ClientBuilderParams, Unwrappable {
     }
 
     /**
+     * Returns a new {@link WebClientBuilder} created with the default {@link SessionProtocol}
+     * and base {@link EndpointGroup}.
+     */
+    static WebClientBuilder builder(EndpointGroup endpointGroup) {
+        requireNonNull(endpointGroup, "endpointGroup");
+        return new WebClientBuilder(endpointGroup, null);
+    }
+
+    /**
      * Returns a new {@link WebClientBuilder} created with the specified {@code protocol}
      * and base {@link EndpointGroup}.
      *
@@ -198,6 +229,16 @@ public interface WebClient extends ClientBuilderParams, Unwrappable {
         requireNonNull(protocol, "protocol");
         requireNonNull(endpointGroup, "endpointGroup");
         return new WebClientBuilder(protocol, endpointGroup, null);
+    }
+
+    /**
+     * Returns a new {@link WebClientBuilder} created with the default {@link SessionProtocol},
+     * base {@link EndpointGroup} and path.
+     */
+    static WebClientBuilder builder(EndpointGroup endpointGroup, String path) {
+        requireNonNull(endpointGroup, "endpointGroup");
+        requireNonNull(path, "path");
+        return new WebClientBuilder(endpointGroup, path);
     }
 
     /**

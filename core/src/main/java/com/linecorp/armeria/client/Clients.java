@@ -16,6 +16,7 @@
 package com.linecorp.armeria.client;
 
 import static com.linecorp.armeria.internal.client.ClientUtil.UNDEFINED_URI;
+import static com.linecorp.armeria.internal.client.SessionProtocolUtil.defaultSessionProtocol;
 import static java.util.Objects.requireNonNull;
 
 import java.net.URI;
@@ -73,6 +74,17 @@ public final class Clients {
     }
 
     /**
+     * Creates a new client that connects to the specified {@link EndpointGroup} with
+     * the default {@link SessionProtocol} and {@link ClientFactory}.
+     *
+     * @param endpointGroup the server {@link EndpointGroup}
+     * @param clientType the type of the new client
+     */
+    public static <T> T newClient(EndpointGroup endpointGroup, Class<T> clientType) {
+        return builder(endpointGroup).build(clientType);
+    }
+
+    /**
      * Creates a new client that connects to the specified {@link EndpointGroup} with the specified
      * {@code scheme} using the default {@link ClientFactory}.
      *
@@ -86,6 +98,18 @@ public final class Clients {
      */
     public static <T> T newClient(String scheme, EndpointGroup endpointGroup, Class<T> clientType) {
         return builder(scheme, endpointGroup).build(clientType);
+    }
+
+    /**
+     * Creates a new client that connects to the specified {@link EndpointGroup} and
+     * {@code path} using the default {@link SessionProtocol} and {@link ClientFactory}.
+     *
+     * @param endpointGroup the server {@link EndpointGroup}
+     * @param path the path to the endpoint
+     * @param clientType the type of the new client
+     */
+    public static <T> T newClient(EndpointGroup endpointGroup, String path, Class<T> clientType) {
+        return builder(endpointGroup, path).build(clientType);
     }
 
     /**
@@ -194,12 +218,32 @@ public final class Clients {
 
     /**
      * Returns a new {@link ClientBuilder} that builds the client that connects to the specified
+     * {@link EndpointGroup} using the default {@link SessionProtocol}.
+     *
+     * @throws IllegalArgumentException if the {@code scheme} is invalid.
+     */
+    public static ClientBuilder builder(EndpointGroup endpointGroup) {
+        return builder(Scheme.of(SerializationFormat.NONE, defaultSessionProtocol()), endpointGroup);
+    }
+
+    /**
+     * Returns a new {@link ClientBuilder} that builds the client that connects to the specified
      * {@link EndpointGroup} with the specified {@code scheme}.
      *
      * @throws IllegalArgumentException if the {@code scheme} is invalid.
      */
     public static ClientBuilder builder(String scheme, EndpointGroup endpointGroup) {
         return builder(Scheme.parse(requireNonNull(scheme, "scheme")), endpointGroup);
+    }
+
+    /**
+     * Returns a new {@link ClientBuilder} that builds the client that connects to the specified
+     * {@link EndpointGroup} and {@code path} using the default {@link SessionProtocol}.
+     *
+     * @throws IllegalArgumentException if the {@code scheme} is invalid.
+     */
+    public static ClientBuilder builder(EndpointGroup endpointGroup, String path) {
+        return builder(Scheme.of(SerializationFormat.NONE, defaultSessionProtocol()), endpointGroup, path);
     }
 
     /**

@@ -15,17 +15,23 @@
  */
 package com.linecorp.armeria.client.thrift;
 
+import static com.linecorp.armeria.internal.client.SessionProtocolUtil.defaultSessionProtocol;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
+import java.net.URI;
 import java.util.Arrays;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
+import java.util.stream.Stream;
 
 import org.apache.thrift.transport.TTransportException;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.reflections.ReflectionUtils;
 
 import com.linecorp.armeria.client.AbstractClientOptionsBuilder;
@@ -165,5 +171,27 @@ class ThriftClientBuilderTest {
                        Arrays.equals(method.getParameterTypes(), tMethod.getParameterTypes());
             }).hasSize(1);
         }
+    }
+
+    public static Stream<Arguments> withoutScheme_args() throws Exception {
+        return Stream.of(
+                Arguments.of(ThriftClients.newClient("//google.com", HelloService.Iface.class)),
+                Arguments.of(ThriftClients.builder("//google.com").build(HelloService.Iface.class)),
+                Arguments.of(ThriftClients.builder(new URI(null, "google.com", null, null))
+                                          .build(HelloService.Iface.class)),
+                Arguments.of(ThriftClients.newClient(Endpoint.of("google.com"), HelloService.Iface.class)),
+                Arguments.of(ThriftClients.newClient(Endpoint.of("google.com"), "/", HelloService.Iface.class)),
+                Arguments.of(ThriftClients.builder(Endpoint.of("google.com")).build(HelloService.Iface.class)),
+                Arguments.of(ThriftClients.builder(Endpoint.of("google.com")).path("/")
+                                          .build(HelloService.Iface.class))
+        );
+    }
+
+    @ParameterizedTest
+    @MethodSource("withoutScheme_args")
+    void withoutScheme(HelloService.Iface client) throws Exception {
+        final ClientBuilderParams params = Clients.unwrap(client, ClientBuilderParams.class);
+        assertThat(params.scheme().sessionProtocol()).isEqualTo(defaultSessionProtocol());
+        assertThat(params.uri().toString()).isEqualTo("tbinary+http://google.com/");
     }
 }

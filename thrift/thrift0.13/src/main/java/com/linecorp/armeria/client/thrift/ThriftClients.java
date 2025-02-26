@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.client.thrift;
 
+import static com.linecorp.armeria.internal.client.SessionProtocolUtil.defaultSessionProtocol;
 import static java.util.Objects.requireNonNull;
 
 import java.net.URI;
@@ -66,6 +67,33 @@ public final class ThriftClients {
      */
     public static <T> T newClient(URI uri, Class<T> clientType) {
         return builder(uri).build(clientType);
+    }
+
+    /**
+     * Creates a new Thrift client that connects to the specified {@link EndpointGroup}
+     * using the default {@link Scheme} and {@link ClientFactory}.
+     *
+     * @param endpointGroup the server {@link EndpointGroup}
+     * @param clientType the type of the new Thrift client
+     */
+    public static <T> T newClient(EndpointGroup endpointGroup, Class<T> clientType) {
+        return builder(endpointGroup).build(clientType);
+    }
+
+    /**
+     * Creates a new Thrift client that connects to the specified {@link EndpointGroup} with the specified
+     * {@link SerializationFormat} using the default {@link SessionProtocol} and {@link ClientFactory}.
+     *
+     * @param serializationFormat the {@link SerializationFormat}
+     * @param endpointGroup the server {@link EndpointGroup}
+     * @param clientType the type of the new Thrift client
+     *
+     * @throws IllegalArgumentException if the specified {@link SerializationFormat} is invalid or the
+     *                                  specified {@code clientType} is an unsupported Thrift client stub.
+     */
+    public static <T> T newClient(SerializationFormat serializationFormat, EndpointGroup endpointGroup,
+                                  String path, Class<T> clientType) {
+        return builder(serializationFormat, endpointGroup).path(path).build(clientType);
     }
 
     /**
@@ -140,6 +168,39 @@ public final class ThriftClients {
     }
 
     /**
+     * Creates a new Thrift client that connects to the specified {@link EndpointGroup} and
+     * {@link SerializationFormat} using the default {@link SessionProtocol} and
+     * {@link ClientFactory}.
+     *
+     * @param serializationFormat the {@link SerializationFormat}
+     * @param endpointGroup the server {@link EndpointGroup}
+     * @param clientType the type of the new Thrift client
+     *
+     * @throws IllegalArgumentException if the specified {@link SerializationFormat} is invalid or the
+     *                                  specified {@code clientType} is an unsupported Thrift client stub.
+     */
+    public static <T> T newClient(SerializationFormat serializationFormat,
+                                  EndpointGroup endpointGroup, Class<T> clientType) {
+        return builder(serializationFormat, endpointGroup).build(clientType);
+    }
+
+    /**
+     * Creates a new Thrift client that connects to the specified {@link EndpointGroup} and
+     * {@code path} using the default {@link Scheme} and {@link ClientFactory}.
+     *
+     * @param endpointGroup the server {@link EndpointGroup}
+     * @param path the path to the endpoint
+     * @param clientType the type of the new client
+     *
+     * @throws IllegalArgumentException if the specified {@code clientType} is an unsupported Thrift client
+     *                                  stub.
+     */
+    public static <T> T newClient(EndpointGroup endpointGroup, String path, Class<T> clientType) {
+        return builder(Scheme.of(ThriftSerializationFormats.BINARY, defaultSessionProtocol()),
+                       endpointGroup).path(path).build(clientType);
+    }
+
+    /**
      * Creates a new client that connects to the specified {@link EndpointGroup} with
      * the specified {@link SessionProtocol}, {@code path} and {@link ThriftSerializationFormats#BINARY}
      * using the default {@link ClientFactory}.
@@ -186,6 +247,14 @@ public final class ThriftClients {
 
     /**
      * Returns a new {@link ThriftClientBuilder} that builds the client that connects to the specified
+     * {@link EndpointGroup} with the default {@link Scheme}.
+     */
+    public static ThriftClientBuilder builder(EndpointGroup endpointGroup) {
+        return builder(Scheme.of(ThriftSerializationFormats.BINARY, defaultSessionProtocol()), endpointGroup);
+    }
+
+    /**
+     * Returns a new {@link ThriftClientBuilder} that builds the client that connects to the specified
      * {@link EndpointGroup} with the specified {@code scheme}.
      *
      * <p>Note that if a {@link SerializationFormat} is not specified in the given {@code scheme},
@@ -195,6 +264,17 @@ public final class ThriftClients {
      */
     public static ThriftClientBuilder builder(String scheme, EndpointGroup endpointGroup) {
         return builder(Scheme.parse(requireNonNull(scheme, "scheme")), endpointGroup);
+    }
+
+    /**
+     * Returns a new {@link ThriftClientBuilder} that builds the client that connects to the specified
+     * {@link EndpointGroup} with the specified {@link SerializationFormat}.
+     *
+     * @throws IllegalArgumentException if the {@code serializationFormat} is invalid.
+     */
+    public static ThriftClientBuilder builder(SerializationFormat serializationFormat,
+                                              EndpointGroup endpointGroup) {
+        return builder(Scheme.of(serializationFormat, defaultSessionProtocol()), endpointGroup);
     }
 
     /**

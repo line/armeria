@@ -16,11 +16,17 @@
 
 package com.linecorp.armeria.client.websocket;
 
+import static com.linecorp.armeria.internal.client.SessionProtocolUtil.defaultSessionProtocol;
 import static org.assertj.core.api.Assertions.assertThat;
+
+import java.net.URI;
+import java.util.stream.Stream;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.CsvSource;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import com.linecorp.armeria.client.ClientOptions;
 import com.linecorp.armeria.client.Endpoint;
@@ -107,5 +113,25 @@ class WebSocketClientBuilderTest {
         assertThat(client.options().get(ClientOptions.MAX_RESPONSE_LENGTH)).isEqualTo(0);
         assertThat(client.options().get(ClientOptions.REQUEST_AUTO_ABORT_DELAY_MILLIS)).isEqualTo(5000);
         assertThat(client.options().get(ClientOptions.AUTO_FILL_ORIGIN_HEADER)).isTrue();
+    }
+
+    public static Stream<Arguments> withoutScheme_args() throws Exception {
+        return Stream.of(
+                Arguments.of(WebSocketClient.of("//google.com")),
+                Arguments.of(WebSocketClient.builder("//google.com").build()),
+                Arguments.of(WebSocketClient.of(new URI(null, "google.com", null, null))),
+                Arguments.of(WebSocketClient.builder(new URI(null, "google.com", null, null)).build()),
+                Arguments.of(WebSocketClient.of(Endpoint.of("google.com"))),
+                Arguments.of(WebSocketClient.of(Endpoint.of("google.com"), "/")),
+                Arguments.of(WebSocketClient.builder(Endpoint.of("google.com")).build()),
+                Arguments.of(WebSocketClient.builder(Endpoint.of("google.com"), "/").build())
+        );
+    }
+
+    @ParameterizedTest
+    @MethodSource("withoutScheme_args")
+    void withoutScheme(WebSocketClient client) {
+        assertThat(client.scheme().sessionProtocol()).isEqualTo(defaultSessionProtocol());
+        assertThat(client.uri().toString()).isEqualTo("ws+http://google.com/");
     }
 }

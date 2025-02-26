@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.client.grpc;
 
+import static com.linecorp.armeria.internal.client.SessionProtocolUtil.defaultSessionProtocol;
 import static java.util.Objects.requireNonNull;
 
 import java.net.URI;
@@ -66,6 +67,19 @@ public final class GrpcClients {
      */
     public static <T> T newClient(URI uri, Class<T> clientType) {
         return builder(uri).build(clientType);
+    }
+
+    /**
+     * Creates a new gRPC client that connects to the specified {@link EndpointGroup}
+     * using the default {@link ClientFactory} and {@link SessionProtocol}.
+     *
+     * @param endpointGroup the server {@link EndpointGroup}
+     * @param clientType the type of the new gRPC client
+     *
+     * @throws IllegalArgumentException if the specified {@code clientType} is an unsupported gRPC client stub.
+     */
+    public static <T> T newClient(EndpointGroup endpointGroup, Class<T> clientType) {
+        return builder(endpointGroup).build(clientType);
     }
 
     /**
@@ -120,6 +134,22 @@ public final class GrpcClients {
     }
 
     /**
+     * Creates a new gRPC client that connects to the specified {@link EndpointGroup} with
+     * the specified {@link SerializationFormat} using the default {@link SessionProtocol} and
+     * {@link ClientFactory}.
+     *
+     * @param serializationFormat the {@link SerializationFormat}
+     * @param endpointGroup the server {@link EndpointGroup}
+     * @param clientType the type of the new gRPC client
+     *
+     * @throws IllegalArgumentException if the {@code clientType} is an unsupported gRPC client stub.
+     */
+    public static <T> T newClient(SerializationFormat serializationFormat, EndpointGroup endpointGroup,
+                                  Class<T> clientType) {
+        return builder(serializationFormat, endpointGroup).build(clientType);
+    }
+
+    /**
      * Returns a new {@link GrpcClientBuilder} that builds the client that connects to the specified
      * {@code uri}.
      *
@@ -149,6 +179,14 @@ public final class GrpcClients {
 
     /**
      * Returns a new {@link GrpcClientBuilder} that builds the client that connects to the specified
+     * {@link EndpointGroup} with the default {@link Scheme}.
+     */
+    public static GrpcClientBuilder builder(EndpointGroup endpointGroup) {
+        return builder(Scheme.of(GrpcSerializationFormats.PROTO, defaultSessionProtocol()), endpointGroup);
+    }
+
+    /**
+     * Returns a new {@link GrpcClientBuilder} that builds the client that connects to the specified
      * {@link EndpointGroup} with the specified {@code scheme}.
      *
      * <p>Note that if a {@link SerializationFormat} is not specified in the given {@code scheme},
@@ -168,6 +206,16 @@ public final class GrpcClients {
     public static GrpcClientBuilder builder(SessionProtocol protocol, EndpointGroup endpointGroup) {
         return builder(Scheme.of(GrpcSerializationFormats.PROTO, requireNonNull(protocol, "protocol")),
                        endpointGroup);
+    }
+
+    /**
+     * Returns a new {@link GrpcClientBuilder} that builds the gRPC client that connects
+     * to the specified {@link EndpointGroup} with the specified {@link SerializationFormat}
+     * and the default {@link SessionProtocol}.
+     */
+    public static GrpcClientBuilder builder(SerializationFormat serializationFormat,
+                                            EndpointGroup endpointGroup) {
+        return builder(Scheme.of(serializationFormat, defaultSessionProtocol()), endpointGroup);
     }
 
     /**

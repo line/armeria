@@ -17,6 +17,7 @@
 package com.linecorp.armeria.client.websocket;
 
 import static com.linecorp.armeria.internal.client.ClientUtil.UNDEFINED_URI;
+import static com.linecorp.armeria.internal.client.SessionProtocolUtil.defaultSessionProtocol;
 import static java.util.Objects.requireNonNull;
 
 import java.net.URI;
@@ -98,6 +99,14 @@ public interface WebSocketClient extends ClientBuilderParams, Unwrappable {
     }
 
     /**
+     * Returns a new {@link WebSocketClient} that connects to the specified {@link EndpointGroup} using
+     * the default {@link Scheme} and {@link ClientOptions}.
+     */
+    static WebSocketClient of(EndpointGroup endpointGroup) {
+        return builder(endpointGroup).build();
+    }
+
+    /**
      * Returns a new {@link WebSocketClient} that connects to the specified {@link EndpointGroup} with
      * the specified {@code scheme} using the default {@link ClientOptions}.
      */
@@ -119,6 +128,14 @@ public interface WebSocketClient extends ClientBuilderParams, Unwrappable {
      */
     static WebSocketClient of(SessionProtocol protocol, EndpointGroup endpointGroup) {
         return builder(protocol, endpointGroup).build();
+    }
+
+    /**
+     * Returns a new {@link WebSocketClient} that connects to the specified {@link EndpointGroup} with
+     * and {@code path} using the default {@link Scheme} and {@link ClientOptions}.
+     */
+    static WebSocketClient of(EndpointGroup endpointGroup, String path) {
+        return builder(endpointGroup, path).build();
     }
 
     /**
@@ -167,6 +184,14 @@ public interface WebSocketClient extends ClientBuilderParams, Unwrappable {
     }
 
     /**
+     * Returns a new {@link WebSocketClientBuilder} created with the specified {@link EndpointGroup}
+     * and the default {@link Scheme}.
+     */
+    static WebSocketClientBuilder builder(EndpointGroup endpointGroup) {
+        return builder(Scheme.of(SerializationFormat.WS, defaultSessionProtocol()), endpointGroup);
+    }
+
+    /**
      * Returns a new {@link WebSocketClientBuilder} created with the specified {@code scheme}
      * and the {@link EndpointGroup}.
      */
@@ -192,6 +217,14 @@ public interface WebSocketClient extends ClientBuilderParams, Unwrappable {
     static WebSocketClientBuilder builder(SessionProtocol protocol, EndpointGroup endpointGroup) {
         requireNonNull(protocol, "protocol");
         return builder(Scheme.of(SerializationFormat.WS, protocol), endpointGroup);
+    }
+
+    /**
+     * Returns a new {@link WebSocketClientBuilder} created with the specified
+     * the {@link EndpointGroup} and the {@code path}, using the default {@link Scheme}.
+     */
+    static WebSocketClientBuilder builder(EndpointGroup endpointGroup, String path) {
+        return builder(Scheme.of(SerializationFormat.WS, defaultSessionProtocol()), endpointGroup, path);
     }
 
     /**

@@ -20,12 +20,17 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.awaitility.Awaitility.await;
 
 import java.io.IOException;
+import java.net.URI;
 import java.time.Duration;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
+import java.util.stream.Stream;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
@@ -172,6 +177,24 @@ class ArmeriaRetrofitBuilderTest {
                                                .create(Service.class);
         service.voidReturn().join();
         await().until(future::isDone);
+    }
+
+    public static Stream<Arguments> withoutScheme_args() throws Exception {
+        return Stream.of(
+                Arguments.of(ArmeriaRetrofit.of("//google.com")),
+                Arguments.of(ArmeriaRetrofit.builder("//google.com").build()),
+                Arguments.of(ArmeriaRetrofit.builder(new URI(null, "google.com", null, null)).build()),
+                Arguments.of(ArmeriaRetrofit.of(Endpoint.of("google.com"))),
+                Arguments.of(ArmeriaRetrofit.of(Endpoint.of("google.com"), "/")),
+                Arguments.of(ArmeriaRetrofit.builder(Endpoint.of("google.com")).build()),
+                Arguments.of(ArmeriaRetrofit.builder(Endpoint.of("google.com"), "/").build())
+        );
+    }
+
+    @ParameterizedTest
+    @MethodSource("withoutScheme_args")
+    void withoutScheme(Retrofit retrofit) throws Exception {
+        assertThat(retrofit.baseUrl().toString()).isEqualTo("http://google.com/");
     }
 
     interface Service {

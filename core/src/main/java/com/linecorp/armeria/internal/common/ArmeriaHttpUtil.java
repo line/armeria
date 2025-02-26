@@ -279,6 +279,11 @@ public final class ArmeriaHttpUtil {
      * Returns {@code -1} otherwise.
      */
     public static int findAuthority(String reqTarget) {
+        // A scheme-relative uri denoted as "//" authority path-abempty
+        // https://datatracker.ietf.org/doc/html/rfc3986#section-4.2
+        if (reqTarget.length() > 2 && reqTarget.charAt(0) == '/' && reqTarget.charAt(1) == '/') {
+            return 2;
+        }
         final int firstColonIdx = reqTarget.indexOf(':');
         if (firstColonIdx <= 0 || reqTarget.length() <= firstColonIdx + 3) {
             return -1;

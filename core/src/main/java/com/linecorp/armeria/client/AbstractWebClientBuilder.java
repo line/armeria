@@ -18,6 +18,8 @@ package com.linecorp.armeria.client;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.linecorp.armeria.common.SessionProtocol.httpAndHttpsValues;
 import static com.linecorp.armeria.internal.client.ClientUtil.UNDEFINED_URI;
+import static com.linecorp.armeria.internal.client.SessionProtocolUtil.defaultSessionProtocol;
+import static com.linecorp.armeria.internal.client.SessionProtocolUtil.maybeApplyDefaultProtocol;
 import static java.util.Objects.requireNonNull;
 
 import java.net.URI;
@@ -62,6 +64,13 @@ public abstract class AbstractWebClientBuilder extends AbstractClientOptionsBuil
 
     /**
      * Creates a new instance.
+     */
+    protected AbstractWebClientBuilder(EndpointGroup endpointGroup, @Nullable String path) {
+        this(defaultSessionProtocol(), requireNonNull(endpointGroup, "endpointGroup"), path);
+    }
+
+    /**
+     * Creates a new instance.
      *
      * @throws IllegalArgumentException if the {@code sessionProtocol} is not one of the fields
      *                                  in {@link SessionProtocol}
@@ -87,6 +96,7 @@ public abstract class AbstractWebClientBuilder extends AbstractClientOptionsBuil
 
     private static URI validateUri(URI uri) {
         requireNonNull(uri, "uri");
+        uri = maybeApplyDefaultProtocol(uri);
         if (Clients.isUndefinedUri(uri)) {
             return uri;
         }

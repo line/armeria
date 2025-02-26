@@ -16,6 +16,7 @@
 package com.linecorp.armeria.client.eureka;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
+import static com.linecorp.armeria.internal.client.SessionProtocolUtil.defaultSessionProtocol;
 import static java.util.Objects.requireNonNull;
 
 import java.io.IOException;
@@ -107,6 +108,14 @@ public final class EurekaEndpointGroup extends DynamicEndpointGroup {
 
     /**
      * Returns a new {@link EurekaEndpointGroup} that retrieves the {@link Endpoint} list from the specified
+     * {@link EndpointGroup} using the default {@link SessionProtocol}.
+     */
+    public static EurekaEndpointGroup of(EndpointGroup endpointGroup) {
+        return new EurekaEndpointGroupBuilder(defaultSessionProtocol(), endpointGroup, null).build();
+    }
+
+    /**
+     * Returns a new {@link EurekaEndpointGroup} that retrieves the {@link Endpoint} list from the specified
      * {@link EndpointGroup}.
      */
     public static EurekaEndpointGroup of(
@@ -136,6 +145,14 @@ public final class EurekaEndpointGroup extends DynamicEndpointGroup {
      */
     public static EurekaEndpointGroupBuilder builder(URI eurekaUri) {
         return new EurekaEndpointGroupBuilder(eurekaUri);
+    }
+
+    /**
+     * Returns a new {@link EurekaEndpointGroupBuilder} created with the specified
+     * {@link EndpointGroup} using the default {@link SessionProtocol}.
+     */
+    public static EurekaEndpointGroupBuilder builder(EndpointGroup endpointGroup) {
+        return new EurekaEndpointGroupBuilder(defaultSessionProtocol(), endpointGroup, null);
     }
 
     /**

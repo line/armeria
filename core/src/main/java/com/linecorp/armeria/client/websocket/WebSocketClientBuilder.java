@@ -65,6 +65,7 @@ import com.linecorp.armeria.common.auth.BasicToken;
 import com.linecorp.armeria.common.auth.OAuth1aToken;
 import com.linecorp.armeria.common.auth.OAuth2Token;
 import com.linecorp.armeria.common.websocket.WebSocketFrameType;
+import com.linecorp.armeria.internal.client.SessionProtocolUtil;
 
 /**
  * Builds a {@link WebSocketClient}.
@@ -100,6 +101,7 @@ public final class WebSocketClientBuilder extends AbstractWebClientBuilder {
         if (Clients.isUndefinedUri(uri)) {
             return uri;
         }
+        uri = SessionProtocolUtil.maybeApplyDefaultProtocol(uri);
         final String givenScheme = requireNonNull(uri, "uri").getScheme();
         final Scheme scheme = validateScheme(givenScheme);
         if (scheme.uriText().equals(givenScheme)) {

@@ -16,23 +16,33 @@
 
 package com.linecorp.armeria.client;
 
+import static com.linecorp.armeria.internal.client.SessionProtocolUtil.defaultSessionProtocol;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import java.net.URI;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Supplier;
+import java.util.stream.Stream;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import com.linecorp.armeria.common.AggregatedHttpRequest;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpMethod;
+import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.RequestHeadersBuilder;
+import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
@@ -50,6 +60,7 @@ class WebClientBuilderTest {
                 return HttpResponse.of(pathAndQuery);
             });
             sb.service("/head", (ctx, req) -> HttpResponse.of("Hello Armeria"));
+            sb.service("/hello", (ctx, req) -> HttpResponse.of("world"));
         }
     };
 
@@ -74,6 +85,51 @@ class WebClientBuilderTest {
     void uriWithoutNone() {
         final WebClient client = WebClient.builder("https://google.com/").build();
         assertThat(client.uri().toString()).isEqualTo("https://google.com/");
+    }
+
+    public static Stream<Arguments> withoutScheme_args() throws Exception {
+        return Stream.of(
+                Arguments.of(WebClient.of("//google.com")),
+                Arguments.of(WebClient.builder("//google.com").build()),
+                Arguments.of(WebClient.of(new URI(null, "google.com", null, null))),
+                Arguments.of(WebClient.builder(new URI(null, "google.com", null, null)).build()),
+                Arguments.of(WebClient.of(Endpoint.of("google.com"))),
+                Arguments.of(WebClient.of(Endpoint.of("google.com"), "/")),
+                Arguments.of(WebClient.builder(Endpoint.of("google.com")).build()),
+                Arguments.of(WebClient.builder(Endpoint.of("google.com"), "/").build())
+        );
+    }
+
+    @ParameterizedTest
+    @MethodSource("withoutScheme_args")
+    void withoutScheme(WebClient client) {
+        assertThat(client.scheme().sessionProtocol()).isEqualTo(defaultSessionProtocol());
+        assertThat(client.uri().toString()).isEqualTo("http://google.com/");
+    }
+
+    public static Stream<Arguments> defaultWithoutScheme_args() throws Exception {
+        final String authority = server.httpUri().getAuthority();
+        return Stream.of(
+                Arguments.of(HttpRequest.of(RequestHeaders.of(HttpMethod.GET, "/hello",
+                                                              HttpHeaderNames.AUTHORITY, authority))),
+                Arguments.of(HttpRequest.of(HttpMethod.GET, "//" + authority + "/hello"))
+        );
+    }
+
+    @ParameterizedTest
+    @MethodSource("defaultWithoutScheme_args")
+    void defaultWithoutScheme(HttpRequest req) {
+        assertThat(WebClient.of().blocking().execute(req).contentUtf8()).isEqualTo("world");
+    }
+
+    @Test
+    void endpointGroupWithSchemeRelativeUri() {
+        final WebClient webClient = WebClient.of(SessionProtocol.HTTP, server.endpoint(SessionProtocol.HTTP));
+        assertThatThrownBy(() -> webClient.get("//relative-uri").aggregate().join())
+                .isInstanceOf(CompletionException.class)
+                .cause()
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("Cannot send a request with a \":path\" header");
     }
 
     @Test

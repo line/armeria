@@ -16,6 +16,7 @@
 package com.linecorp.armeria.server.eureka;
 
 import static com.google.common.base.Strings.isNullOrEmpty;
+import static com.linecorp.armeria.internal.client.SessionProtocolUtil.defaultSessionProtocol;
 import static com.linecorp.armeria.server.eureka.InstanceInfoBuilder.disabledPort;
 import static java.util.Objects.requireNonNull;
 
@@ -82,6 +83,14 @@ public final class EurekaUpdatingListener extends ServerListenerAdapter {
 
     /**
      * Returns a new {@link EurekaUpdatingListener} which registers the current {@link Server} to
+     * the specified {@link EndpointGroup} using the default {@link SessionProtocol}.
+     */
+    public static EurekaUpdatingListener of(EndpointGroup endpointGroup) {
+        return new EurekaUpdatingListenerBuilder(defaultSessionProtocol(), endpointGroup, null).build();
+    }
+
+    /**
+     * Returns a new {@link EurekaUpdatingListener} which registers the current {@link Server} to
      * the specified {@link EndpointGroup}.
      */
     public static EurekaUpdatingListener of(
@@ -111,6 +120,14 @@ public final class EurekaUpdatingListener extends ServerListenerAdapter {
      */
     public static EurekaUpdatingListenerBuilder builder(URI eurekaUri) {
         return new EurekaUpdatingListenerBuilder(eurekaUri);
+    }
+
+    /**
+     * Returns a new {@link EurekaUpdatingListenerBuilder} created with the specified
+     * {@link EndpointGroup} using the default {@link SessionProtocol}.
+     */
+    public static EurekaUpdatingListenerBuilder builder(EndpointGroup endpointGroup) {
+        return new EurekaUpdatingListenerBuilder(defaultSessionProtocol(), endpointGroup, null);
     }
 
     /**

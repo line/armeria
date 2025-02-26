@@ -16,9 +16,16 @@
 
 package com.linecorp.armeria.client;
 
+import static com.linecorp.armeria.internal.client.SessionProtocolUtil.defaultSessionProtocol;
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.net.URI;
+import java.util.stream.Stream;
+
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 
 /**
  * Test for {@link ClientBuilder}.
@@ -49,5 +56,25 @@ class ClientBuilderTest {
         final WebClient client = Clients.builder("http", Endpoint.of("127.0.0.1"), "/foo")
                                         .build(WebClient.class);
         assertThat(client.uri().toString()).isEqualTo("http://127.0.0.1/foo");
+    }
+
+    public static Stream<Arguments> withoutScheme_args() throws Exception {
+        return Stream.of(
+                Arguments.of(Clients.newClient("//google.com", WebClient.class)),
+                Arguments.of(Clients.builder("//google.com").build(WebClient.class)),
+                Arguments.of(Clients.builder(new URI(null, "google.com", null, null))
+                                    .build(WebClient.class)),
+                Arguments.of(Clients.newClient(Endpoint.of("google.com"), WebClient.class)),
+                Arguments.of(Clients.newClient(Endpoint.of("google.com"), "/", WebClient.class)),
+                Arguments.of(Clients.builder(Endpoint.of("google.com")).build(WebClient.class)),
+                Arguments.of(Clients.builder(Endpoint.of("google.com"), "/").build(WebClient.class))
+        );
+    }
+
+    @ParameterizedTest
+    @MethodSource("withoutScheme_args")
+    void withoutScheme(WebClient client) {
+        assertThat(client.scheme().sessionProtocol()).isEqualTo(defaultSessionProtocol());
+        assertThat(client.uri().toString()).isEqualTo("http://google.com/");
     }
 }

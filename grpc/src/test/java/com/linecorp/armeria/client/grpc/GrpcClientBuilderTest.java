@@ -16,22 +16,28 @@
 
 package com.linecorp.armeria.client.grpc;
 
+import static com.linecorp.armeria.internal.client.SessionProtocolUtil.defaultSessionProtocol;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static testing.grpc.Messages.PayloadType.COMPRESSABLE;
 
 import java.io.InputStream;
+import java.net.URI;
+import java.util.stream.Stream;
 
 import org.jetbrains.annotations.Nullable;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.CsvSource;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import com.google.protobuf.ByteString;
 
 import com.linecorp.armeria.client.ClientBuilderParams;
 import com.linecorp.armeria.client.Clients;
+import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.common.CommonPools;
 import com.linecorp.armeria.common.ContentTooLargeException;
@@ -306,5 +312,27 @@ class GrpcClientBuilderTest {
                 .extracting(e -> ((StatusRuntimeException) e).getStatus())
                 .extracting(Status::getCode)
                 .isEqualTo(Code.RESOURCE_EXHAUSTED);
+    }
+
+    public static Stream<Arguments> withoutScheme_args() throws Exception {
+        return Stream.of(
+                Arguments.of(GrpcClients.newClient("//google.com", TestServiceBlockingStub.class)),
+                Arguments.of(GrpcClients.builder("//google.com").build(TestServiceBlockingStub.class)),
+                Arguments.of(GrpcClients.builder(new URI(null, "google.com", null, null))
+                                        .build(TestServiceBlockingStub.class)),
+                Arguments.of(GrpcClients.newClient(new URI(null, "google.com", null, null),
+                                                   TestServiceBlockingStub.class)),
+                Arguments.of(GrpcClients.newClient(Endpoint.of("google.com"), TestServiceBlockingStub.class)),
+                Arguments.of(GrpcClients.builder(Endpoint.of("google.com"))
+                                        .build(TestServiceBlockingStub.class))
+        );
+    }
+
+    @ParameterizedTest
+    @MethodSource("withoutScheme_args")
+    void withoutScheme(TestServiceBlockingStub client) throws Exception {
+        final ClientBuilderParams params = Clients.unwrap(client, ClientBuilderParams.class);
+        assertThat(params.scheme().sessionProtocol()).isEqualTo(defaultSessionProtocol());
+        assertThat(params.uri().toString()).isEqualTo("gproto+http://google.com/");
     }
 }

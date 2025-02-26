@@ -284,7 +284,7 @@ class WebClientAdditionalAuthorityTest {
         final HttpRequest request = HttpRequest.of(RequestHeaders.of(HttpMethod.GET, "/"));
         assertThatThrownBy(() -> client.execute(request))
                 .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("Scheme and authority must be specified in");
+                .hasMessageContaining("Authority must be specified in");
     }
 
     @Test

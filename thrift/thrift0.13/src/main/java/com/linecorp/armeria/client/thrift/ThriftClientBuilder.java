@@ -59,6 +59,7 @@ import com.linecorp.armeria.common.auth.BasicToken;
 import com.linecorp.armeria.common.auth.OAuth1aToken;
 import com.linecorp.armeria.common.auth.OAuth2Token;
 import com.linecorp.armeria.common.thrift.ThriftSerializationFormats;
+import com.linecorp.armeria.internal.client.SessionProtocolUtil;
 
 /**
  * Creates a new Thrift client that connects to the specified {@link URI} using the builder pattern.
@@ -78,10 +79,9 @@ public final class ThriftClientBuilder extends AbstractClientOptionsBuilder {
 
     ThriftClientBuilder(URI uri) {
         requireNonNull(uri, "uri");
-        checkArgument(uri.getScheme() != null, "uri must have scheme: %s", uri);
         endpointGroup = null;
-        this.uri = uri;
-        scheme = Scheme.parse(uri.getScheme());
+        this.uri = SessionProtocolUtil.maybeApplyDefaultProtocol(uri);
+        scheme = Scheme.parse(this.uri.getScheme());
         validateOrSetSerializationFormat();
     }
 

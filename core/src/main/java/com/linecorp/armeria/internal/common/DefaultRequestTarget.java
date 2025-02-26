@@ -27,6 +27,7 @@ import com.linecorp.armeria.common.RequestTarget;
 import com.linecorp.armeria.common.RequestTargetForm;
 import com.linecorp.armeria.common.Scheme;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.internal.client.SessionProtocolUtil;
 import com.linecorp.armeria.internal.common.util.TemporaryThreadLocals;
 
 import it.unimi.dsi.fastutil.Arrays;
@@ -501,7 +502,12 @@ public final class DefaultRequestTarget implements RequestTarget {
     private static RequestTarget slowAbsoluteFormForClient(String reqTarget, int authorityPos) {
         // Extract scheme and authority while looking for path.
         final SchemeAndAuthority schemeAndAuthority;
-        final String scheme = reqTarget.substring(0, authorityPos - 3);
+        final String scheme;
+        if (authorityPos <= 3) {
+            scheme = SessionProtocolUtil.defaultSessionProtocol().uriText();
+        } else {
+            scheme = reqTarget.substring(0, authorityPos - 3);
+        }
         final int nextPos = findNextComponent(reqTarget, authorityPos);
         final String authority;
         if (nextPos < 0) {

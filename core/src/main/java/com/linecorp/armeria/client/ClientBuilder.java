@@ -16,6 +16,7 @@
 package com.linecorp.armeria.client;
 
 import static com.google.common.base.Preconditions.checkArgument;
+import static com.linecorp.armeria.internal.client.SessionProtocolUtil.maybeApplyDefaultProtocol;
 import static java.util.Objects.requireNonNull;
 
 import java.net.URI;
@@ -76,12 +77,11 @@ public final class ClientBuilder extends AbstractClientOptionsBuilder {
     private final Scheme scheme;
 
     ClientBuilder(URI uri) {
-        checkArgument(uri.getScheme() != null, "uri must have scheme: %s", uri);
         checkArgument(uri.getRawAuthority() != null, "uri must have authority: %s", uri);
-        this.uri = uri;
+        this.uri = maybeApplyDefaultProtocol(uri);
         endpointGroup = null;
         path = null;
-        scheme = Scheme.parse(uri.getScheme());
+        scheme = Scheme.parse(this.uri.getScheme());
     }
 
     ClientBuilder(Scheme scheme, EndpointGroup endpointGroup, @Nullable String path) {
