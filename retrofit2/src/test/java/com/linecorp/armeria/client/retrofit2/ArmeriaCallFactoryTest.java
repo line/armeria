@@ -36,6 +36,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.ArgumentsProvider;
 import org.junit.jupiter.params.provider.ArgumentsSource;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -44,6 +45,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.linecorp.armeria.client.ClientRequestContextCaptor;
 import com.linecorp.armeria.client.Clients;
 import com.linecorp.armeria.client.Endpoint;
+import com.linecorp.armeria.client.HttpPreprocessor;
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.common.HttpHeaderNames;
@@ -81,6 +83,7 @@ import retrofit2.http.Url;
 
 @GenerateNativeImageTrace
 class ArmeriaCallFactoryTest {
+
     public static class Pojo {
         @Nullable
         @JsonProperty("name")
@@ -181,12 +184,12 @@ class ArmeriaCallFactoryTest {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
             sb.service("/pojo", new AbstractHttpService() {
-                @Override
-                protected HttpResponse doGet(ServiceRequestContext ctx, HttpRequest req) throws Exception {
-                    return HttpResponse.of(HttpStatus.OK, MediaType.JSON_UTF_8,
-                                           "{\"name\":\"Cony\", \"age\":26}");
-                }
-            })
+                  @Override
+                  protected HttpResponse doGet(ServiceRequestContext ctx, HttpRequest req) throws Exception {
+                      return HttpResponse.of(HttpStatus.OK, MediaType.JSON_UTF_8,
+                                             "{\"name\":\"Cony\", \"age\":26}");
+                  }
+              })
               .serviceUnder("/pathWithName", new AbstractHttpService() {
 
                   @Override
@@ -631,5 +634,28 @@ class ArmeriaCallFactoryTest {
                                                           .create(Service.class))
                          .map(Arguments::of);
         }
+    }
+
+    public static Stream<Arguments> preprocessor_args() {
+        final HttpPreprocessor preprocessor = HttpPreprocessor.of(SessionProtocol.HTTP, server.httpEndpoint());
+        return Stream.of(
+                Arguments.of(
+                        ArmeriaRetrofit.builder(preprocessor)
+                                       .addConverterFactory(converterFactory)
+                                       .build()
+                                       .create(Service.class),
+                        ArmeriaRetrofit.builder(WebClient.of(preprocessor))
+                                       .addConverterFactory(converterFactory)
+                                       .build()
+                                       .create(Service.class)
+                )
+        );
+    }
+
+    @ParameterizedTest
+    @MethodSource("preprocessor_args")
+    void preprocessor(Service service) throws Exception {
+        final Pojo pojo = service.pojo().get();
+        assertThat(pojo).isEqualTo(new Pojo("Cony", 26));
     }
 }

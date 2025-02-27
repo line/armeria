@@ -16,7 +16,6 @@
 
 package com.linecorp.armeria.client;
 
-import java.net.URI;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Supplier;
@@ -51,17 +50,12 @@ public class DecoratingClientFactory extends AbstractUnwrappable<ClientFactory> 
      * {@link SerializationFormat} are always {@code "/"} and {@link SerializationFormat#NONE}.
      */
     protected final HttpClient newHttpClient(ClientBuilderParams params) {
-        final URI uri = params.uri();
-        final ClientBuilderParams newParams;
         final ClientOptions newOptions = params.options().toBuilder().factory(unwrap()).build();
-        if (Clients.isUndefinedUri(uri)) {
-            newParams = ClientBuilderParams.of(uri, HttpClient.class, newOptions);
-        } else {
-            final Scheme newScheme = Scheme.of(SerializationFormat.NONE, params.scheme().sessionProtocol());
-            newParams = ClientBuilderParams.of(newScheme, params.endpointGroup(),
-                                               null, HttpClient.class, newOptions);
-        }
-
+        final ClientBuilderParams newParams = params.paramsBuilder()
+                                                    .serializationFormat(SerializationFormat.NONE)
+                                                    .options(newOptions)
+                                                    .clientType(HttpClient.class)
+                                                    .build();
         return (HttpClient) unwrap().newClient(newParams);
     }
 
