@@ -314,7 +314,7 @@ class GrpcClientBuilderTest {
                 .isEqualTo(Code.RESOURCE_EXHAUSTED);
     }
 
-    public static Stream<Arguments> withoutScheme_args() throws Exception {
+    private static Stream<Arguments> withoutScheme_args() throws Exception {
         return Stream.of(
                 Arguments.of(GrpcClients.newClient("//google.com", TestServiceBlockingStub.class)),
                 Arguments.of(GrpcClients.builder("//google.com").build(TestServiceBlockingStub.class)),

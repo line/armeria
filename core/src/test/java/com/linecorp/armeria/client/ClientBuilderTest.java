@@ -58,7 +58,7 @@ class ClientBuilderTest {
         assertThat(client.uri().toString()).isEqualTo("http://127.0.0.1/foo");
     }
 
-    public static Stream<Arguments> withoutScheme_args() throws Exception {
+    private static Stream<Arguments> withoutScheme_args() throws Exception {
         return Stream.of(
                 Arguments.of(Clients.newClient("//google.com", WebClient.class)),
                 Arguments.of(Clients.builder("//google.com").build(WebClient.class)),

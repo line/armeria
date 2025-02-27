@@ -28,7 +28,7 @@ import org.junit.jupiter.params.provider.MethodSource;
 
 class RestClientBuilderTest {
 
-    public static Stream<Arguments> withoutScheme_args() throws Exception {
+    private static Stream<Arguments> withoutScheme_args() throws Exception {
         return Stream.of(
                 Arguments.of(RestClient.of("//google.com")),
                 Arguments.of(RestClient.builder("//google.com").build()),

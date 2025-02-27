@@ -87,7 +87,7 @@ class WebClientBuilderTest {
         assertThat(client.uri().toString()).isEqualTo("https://google.com/");
     }
 
-    public static Stream<Arguments> withoutScheme_args() throws Exception {
+    private static Stream<Arguments> withoutScheme_args() throws Exception {
         return Stream.of(
                 Arguments.of(WebClient.of("//google.com")),
                 Arguments.of(WebClient.builder("//google.com").build()),
@@ -107,9 +107,11 @@ class WebClientBuilderTest {
         assertThat(client.uri().toString()).isEqualTo("http://google.com/");
     }
 
-    public static Stream<Arguments> defaultWithoutScheme_args() throws Exception {
+    private static Stream<Arguments> defaultWithoutScheme_args() throws Exception {
         final String authority = server.httpUri().getAuthority();
         return Stream.of(
+                Arguments.of(HttpRequest.of(RequestHeaders.of(HttpMethod.GET, "/hello",
+                                                              HttpHeaderNames.AUTHORITY, authority))),
                 Arguments.of(HttpRequest.of(RequestHeaders.of(HttpMethod.GET, "/hello",
                                                               HttpHeaderNames.AUTHORITY, authority))),
                 Arguments.of(HttpRequest.of(HttpMethod.GET, "//" + authority + "/hello"))
@@ -123,9 +125,21 @@ class WebClientBuilderTest {
     }
 
     @Test
-    void endpointGroupWithSchemeRelativeUri() {
+    void schemeRelativeUriForPath() {
+        // https://datatracker.ietf.org/doc/html/rfc3986#section-3.3
+        // path-absolute   ; begins with "/" but not "//"
+
         final WebClient webClient = WebClient.of(SessionProtocol.HTTP, server.endpoint(SessionProtocol.HTTP));
         assertThatThrownBy(() -> webClient.get("//relative-uri").aggregate().join())
+                .isInstanceOf(CompletionException.class)
+                .cause()
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("Cannot send a request with a \":path\" header");
+
+        final HttpRequest req =
+                HttpRequest.of(RequestHeaders.of(HttpMethod.GET, "//relative-uri",
+                                                 HttpHeaderNames.AUTHORITY, server.httpUri().getAuthority()));
+        assertThatThrownBy(() -> webClient.execute(req).aggregate().join())
                 .isInstanceOf(CompletionException.class)
                 .cause()
                 .isInstanceOf(IllegalArgumentException.class)

@@ -115,7 +115,7 @@ class WebSocketClientBuilderTest {
         assertThat(client.options().get(ClientOptions.AUTO_FILL_ORIGIN_HEADER)).isTrue();
     }
 
-    public static Stream<Arguments> withoutScheme_args() throws Exception {
+    private static Stream<Arguments> withoutScheme_args() throws Exception {
         return Stream.of(
                 Arguments.of(WebSocketClient.of("//google.com")),
                 Arguments.of(WebSocketClient.builder("//google.com").build()),

@@ -179,7 +179,7 @@ class ArmeriaRetrofitBuilderTest {
         await().until(future::isDone);
     }
 
-    public static Stream<Arguments> withoutScheme_args() throws Exception {
+    private static Stream<Arguments> withoutScheme_args() throws Exception {
         return Stream.of(
                 Arguments.of(ArmeriaRetrofit.of("//google.com")),
                 Arguments.of(ArmeriaRetrofit.builder("//google.com").build()),

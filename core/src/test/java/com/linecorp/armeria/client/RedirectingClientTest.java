@@ -107,9 +107,9 @@ class RedirectingClientTest {
                     "http://foo.com:" + server.httpPort() + "/anotherDomainRedirect"));
             sb.virtualHost("foo.com")
               .service("/anotherDomainRedirect", (ctx, req) -> {
-                assertThat(req.authority()).isEqualTo("foo.com:" + server.server().activeLocalPort());
-                return HttpResponse.of(200);
-            });
+                  assertThat(req.authority()).isEqualTo("foo.com:" + server.server().activeLocalPort());
+                  return HttpResponse.of(200);
+              });
 
             sb.service("/removeDotSegments/foo", (ctx, req) -> HttpResponse.ofRedirect("./bar"))
               .service("/removeDotSegments/bar", (ctx, req) -> HttpResponse.of(200))
@@ -137,9 +137,9 @@ class RedirectingClientTest {
                       "http://domain1.com:" + server.httpPort() + "/authorityLoop"));
 
             sb.service("/queryLoop1", (ctx, req) -> {
-                final String queryParams = ctx.query();
-                final String redirectUrl = "/queryLoop2" + (queryParams == null ? "" : '?' + queryParams);
-                return HttpResponse.ofRedirect(redirectUrl);
+                  final String queryParams = ctx.query();
+                  final String redirectUrl = "/queryLoop2" + (queryParams == null ? "" : '?' + queryParams);
+                  return HttpResponse.ofRedirect(redirectUrl);
               })
               .service("/queryLoop2", (ctx, req) -> {
                   final String queryParams = ctx.query();
@@ -165,6 +165,12 @@ class RedirectingClientTest {
                     return HttpResponse.of(400);
                 }
             });
+
+            sb.service("/bar", (ctx, req) ->
+                      HttpResponse.ofRedirect("//barAuthority:" + server.httpPort() + "/barRedirect1"))
+              .service("/barRedirect1", (ctx, req) ->
+                      HttpResponse.ofRedirect("//barAuthority:" + server.httpPort() + "/barRedirect2"))
+              .service("/barRedirect2", (ctx, req) -> HttpResponse.of(200));
         }
 
         private int otherHttpPort(ServiceRequestContext ctx) {
@@ -200,7 +206,7 @@ class RedirectingClientTest {
 
     private static AggregatedHttpResponse sendRequest(int maxRedirects) {
         final WebClient client = WebClient.builder(server.httpUri())
-                .decorator(LoggingClient.newDecorator())
+                                          .decorator(LoggingClient.newDecorator())
                                           .followRedirects(RedirectConfig.builder()
                                                                          .maxRedirects(maxRedirects)
                                                                          .build())
@@ -337,7 +343,7 @@ class RedirectingClientTest {
                         final String message = exception.getMessage();
                         // All URIs have a port number.
                         expectedPathRegexPatterns.forEach(pattern ->
-                              assertThat(message).containsPattern(pattern));
+                                                                  assertThat(message).containsPattern(pattern));
                     });
         }
     }
@@ -414,6 +420,28 @@ class RedirectingClientTest {
         assertThat(log2.requestHeaders().path()).isEqualTo("/unencodedLocation/foo%20bar?value=$%7BP%7D");
         assertThat(log2.responseHeaders().status()).isEqualTo(HttpStatus.OK);
         assertThat(log2.context().uri().toString()).endsWith("/unencodedLocation/foo%20bar?value=$%7BP%7D");
+    }
+
+    @Test
+    void redirectRelativeScheme() {
+        try (MockAddressResolverGroup group = MockAddressResolverGroup.of(hostname -> {
+            if ("barAuthority".equalsIgnoreCase(hostname)) {
+                return server.httpSocketAddress().getAddress();
+            }
+            throw new RuntimeException();
+        });
+             ClientFactory cf = ClientFactory.builder()
+                                             .addressResolverGroupFactory(ignored -> group)
+                                             .build()) {
+            final BlockingWebClient client = WebClient.builder(server.httpUri())
+                                                      .factory(cf)
+                                                      .decorator(LoggingClient.newDecorator())
+                                                      .followRedirects(RedirectConfig.builder()
+                                                                                     .allowAllDomains()
+                                                                                     .build())
+                                                      .build().blocking();
+            assertThat(client.get("/bar").status().code()).isEqualTo(200);
+        }
     }
 
     @Test

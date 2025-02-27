@@ -176,7 +176,7 @@ class ThriftClientBuilderTest {
         }
     }
 
-    public static Stream<Arguments> withoutScheme_args() throws Exception {
+    private static Stream<Arguments> withoutScheme_args() throws Exception {
         return Stream.of(
                 Arguments.of(ThriftClients.newClient("//google.com", HelloService.Iface.class)),
                 Arguments.of(ThriftClients.builder("//google.com").build(HelloService.Iface.class)),
