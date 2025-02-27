@@ -173,6 +173,7 @@
 *.wf.crm.dev
 *.xmit.co
 *.yokohama.jp
+*.zerops.app
 0.bg
 0am.jp
 0g0.jp
