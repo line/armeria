@@ -20,22 +20,24 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import org.junit.jupiter.api.Test;
 
+import io.netty.channel.ChannelHandler;
 import io.netty.channel.embedded.EmbeddedChannel;
 
 class ConnectionLimitingHandlerTest {
 
     @Test
     void testExceedMaxNumConnections() {
-        final ServerMetrics serverMetrics = new ServerMetrics();
-        final ConnectionLimitingHandler handler =
-                new ConnectionLimitingHandler(1, serverMetrics);
+        final ServerPortMetric serverPortMetric = new ServerPortMetric();
+        final ConnectionLimitingHandler handler = new ConnectionLimitingHandler(1);
 
-        final EmbeddedChannel ch1 = new EmbeddedChannel(handler);
+        final ChannelHandler channelHandler = handler.newChildHandler(serverPortMetric);
+
+        final EmbeddedChannel ch1 = new EmbeddedChannel(channelHandler);
         ch1.writeInbound(ch1);
         assertThat(handler.numConnections()).isEqualTo(1);
         assertThat(ch1.isActive()).isTrue();
 
-        final EmbeddedChannel ch2 = new EmbeddedChannel(handler);
+        final EmbeddedChannel ch2 = new EmbeddedChannel(channelHandler);
         ch2.writeInbound(ch2);
         assertThat(handler.numConnections()).isEqualTo(1);
         assertThat(ch2.isActive()).isFalse();
@@ -46,15 +48,13 @@ class ConnectionLimitingHandlerTest {
 
     @Test
     void testMaxNumConnectionsRange() {
-        final ServerMetrics serverMetrics = new ServerMetrics();
-        final ConnectionLimitingHandler handler = new ConnectionLimitingHandler(Integer.MAX_VALUE,
-                                                                                serverMetrics);
+        final ConnectionLimitingHandler handler = new ConnectionLimitingHandler(Integer.MAX_VALUE);
         assertThat(handler.maxNumConnections()).isEqualTo(Integer.MAX_VALUE);
 
-        assertThatThrownBy(() -> new ConnectionLimitingHandler(0, serverMetrics))
+        assertThatThrownBy(() -> new ConnectionLimitingHandler(0))
                 .isInstanceOf(IllegalArgumentException.class);
 
-        assertThatThrownBy(() -> new ConnectionLimitingHandler(-1, serverMetrics))
+        assertThatThrownBy(() -> new ConnectionLimitingHandler(-1))
                 .isInstanceOf(IllegalArgumentException.class);
     }
 }

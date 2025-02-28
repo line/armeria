@@ -18,6 +18,7 @@ package com.linecorp.armeria.server;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
+import static com.linecorp.armeria.server.ServerPortMetric.SERVER_PORT_METRIC;
 import static com.linecorp.armeria.server.ServerSslContextUtil.validateSslContext;
 import static java.util.Objects.requireNonNull;
 
@@ -133,8 +134,7 @@ public final class Server implements ListenableAsyncCloseable {
         serverConfig.setServer(this);
         config = new UpdatableServerConfig(requireNonNull(serverConfig, "serverConfig"));
         startStop = new ServerStartStopSupport(config.startStopExecutor());
-        connectionLimitingHandler = new ConnectionLimitingHandler(config.maxNumConnections(),
-                                                                  config.serverMetrics());
+        connectionLimitingHandler = new ConnectionLimitingHandler(config.maxNumConnections());
 
         // Server-wide metrics.
         RequestTargetCache.registerServerMetrics(config.meterRegistry());
@@ -460,7 +460,14 @@ public final class Server implements ListenableAsyncCloseable {
         requireNonNull(serverConfigurator, "serverConfigurator");
         final ServerBuilder sb = builder();
         serverConfigurator.reconfigure(sb);
-        final DefaultServerConfig newConfig = sb.buildServerConfig(config());
+        final ImmutableList<ServerPort> serverPorts;
+        lock.lock();
+        try {
+            serverPorts = ImmutableList.copyOf(activePorts.values());
+        } finally {
+            lock.unlock();
+        }
+        final DefaultServerConfig newConfig = sb.buildServerConfig(serverPorts);
         newConfig.setServer(this);
         config.updateConfig(newConfig);
         // Invoke the serviceAdded() method in Service so that it can keep the reference to this Server or
@@ -522,12 +529,12 @@ public final class Server implements ListenableAsyncCloseable {
             try {
                 doStart(primary).addListener(new ServerPortStartListener(primary))
                                 .addListener(new NextServerPortStartListener(this, it, future));
-                setupServerMetrics();
+                // Chain the future to set up server metrics first before server start future is completed.
+                return future.thenAccept(unused -> setupPendingResponsesMetrics());
             } catch (Throwable cause) {
                 future.completeExceptionally(cause);
+                return future;
             }
-
-            return future;
         }
 
         private ChannelFuture doStart(ServerPort port) {
@@ -555,10 +562,31 @@ public final class Server implements ListenableAsyncCloseable {
             final GracefulShutdownSupport gracefulShutdownSupport = this.gracefulShutdownSupport;
             assert gracefulShutdownSupport != null;
 
+            ServerPortMetric serverPortMetric = null;
+            lock.lock();
+            try {
+                for (ServerPort serverPort : activePorts.values()) {
+                    final InetSocketAddress localAddress = serverPort.localAddress();
+                    if (!(localAddress instanceof DomainSocketAddress) &&
+                        localAddress.getPort() == port.localAddress().getPort()) {
+                        // Because we use the port number for aggregating metrics, use the previous
+                        // serverPortMetric.
+                        serverPortMetric = serverPort.serverPortMetric();
+                        break;
+                    }
+                }
+            } finally {
+                lock.unlock();
+            }
+            if (serverPortMetric == null) {
+                serverPortMetric = new ServerPortMetric();
+            }
             b.group(bossGroup, config.workerGroup());
-            b.handler(connectionLimitingHandler);
+            b.handler(connectionLimitingHandler.newChildHandler(serverPortMetric));
             b.childHandler(new HttpServerPipelineConfigurator(config, port, gracefulShutdownSupport,
                                                               hasWebSocketService));
+            b.attr(SERVER_PORT_METRIC, serverPortMetric);
+            b.childAttr(SERVER_PORT_METRIC, serverPortMetric);
 
             final SocketAddress localAddress;
             final Class<? extends ServerChannel> channelType;
@@ -582,14 +610,13 @@ public final class Server implements ListenableAsyncCloseable {
             return b.bind(localAddress);
         }
 
-        private void setupServerMetrics() {
-            final MeterRegistry meterRegistry = config.meterRegistry();
+        private void setupPendingResponsesMetrics() {
             final GracefulShutdownSupport gracefulShutdownSupport = this.gracefulShutdownSupport;
             assert gracefulShutdownSupport != null;
 
-            meterRegistry.gauge("armeria.server.pending.responses", gracefulShutdownSupport,
-                                GracefulShutdownSupport::pendingResponses);
-            config.serverMetrics().bindTo(meterRegistry);
+            // Move to ServerMetrics.
+            config.meterRegistry().gauge("armeria.server.pending.responses", gracefulShutdownSupport,
+                                         GracefulShutdownSupport::pendingResponses);
         }
 
         @Override
@@ -828,6 +855,9 @@ public final class Server implements ListenableAsyncCloseable {
                     logger.warn("Unexpected local address type: {}", localAddress.getClass().getName());
                     return;
                 }
+                final ServerPortMetric serverPortMetric = ch.attr(SERVER_PORT_METRIC).get();
+                assert serverPortMetric != null;
+                actualPort.setServerPortMetric(serverPortMetric);
 
                 // Update the boss thread so its name contains the actual port.
                 Thread.currentThread().setName(bossThreadName(actualPort));
@@ -839,6 +869,8 @@ public final class Server implements ListenableAsyncCloseable {
                 } finally {
                     lock.unlock();
                 }
+
+                config.serverMetrics().addServerPort(actualPort);
 
                 if (logger.isInfoEnabled()) {
                     if (isLocalPort(actualPort)) {

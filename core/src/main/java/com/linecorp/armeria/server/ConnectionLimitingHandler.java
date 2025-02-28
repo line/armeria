@@ -21,6 +21,7 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.LongAdder;
 
 import org.slf4j.Logger;
@@ -38,89 +39,105 @@ import io.netty.channel.ChannelOption;
  * Limit the number of open connections to the configured value.
  * {@link ConnectionLimitingHandler} instance would be set to {@link ServerBootstrap#handler(ChannelHandler)}.
  */
-@Sharable
-final class ConnectionLimitingHandler extends ChannelInboundHandlerAdapter {
+final class ConnectionLimitingHandler {
 
     private static final Logger logger = LoggerFactory.getLogger(ConnectionLimitingHandler.class);
 
     private final Set<Channel> childChannels = Collections.newSetFromMap(new ConcurrentHashMap<>());
     private final Set<Channel> unmodifiableChildChannels = Collections.unmodifiableSet(childChannels);
     private final int maxNumConnections;
-    private final ServerMetrics serverMetrics;
 
+    /**
+     * AtomicInteger is used to read the number of active connections frequently.
+     */
+    private final AtomicInteger activeConnections = new AtomicInteger();
     private final AtomicBoolean loggingScheduled = new AtomicBoolean();
     private final LongAdder numDroppedConnections = new LongAdder();
 
-    ConnectionLimitingHandler(int maxNumConnections, ServerMetrics serverMetrics) {
+    ConnectionLimitingHandler(int maxNumConnections) {
         this.maxNumConnections = validateMaxNumConnections(maxNumConnections);
-        this.serverMetrics = serverMetrics;
-    }
-
-    @Override
-    public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
-        final Channel child = (Channel) msg;
-
-        final int conn = serverMetrics.increaseActiveConnectionsAndGet();
-        if (conn > 0 && conn <= maxNumConnections) {
-            childChannels.add(child);
-            child.closeFuture().addListener(future -> {
-                childChannels.remove(child);
-                serverMetrics.decreaseActiveConnections();
-            });
-            super.channelRead(ctx, msg);
-        } else {
-            serverMetrics.decreaseActiveConnections();
-
-            // Set linger option to 0 so that the server doesn't get too many TIME_WAIT states.
-            child.config().setOption(ChannelOption.SO_LINGER, 0);
-            child.unsafe().closeForcibly();
-
-            numDroppedConnections.increment();
-
-            if (loggingScheduled.compareAndSet(false, true)) {
-                ctx.executor().schedule(this::writeNumDroppedConnectionsLog, 1, TimeUnit.SECONDS);
-            }
-        }
-    }
-
-    private void writeNumDroppedConnectionsLog() {
-        loggingScheduled.set(false);
-
-        final long dropped = numDroppedConnections.sumThenReset();
-        if (dropped > 0) {
-            logger.warn("Dropped {} connection(s) to limit the number of open connections to {}",
-                        dropped, maxNumConnections);
-        }
     }
 
     /**
      * Returns the maximum allowed number of open connections.
      */
-    public int maxNumConnections() {
+    int maxNumConnections() {
         return maxNumConnections;
     }
 
     /**
      * Returns the number of open connections.
      */
-    public int numConnections() {
-        return serverMetrics.activeConnections();
+    int numConnections() {
+        return activeConnections.get();
     }
 
     /**
      * Returns the immutable set of child {@link Channel}s.
      */
-    public Set<Channel> children() {
+    Set<Channel> children() {
         return unmodifiableChildChannels;
     }
 
     /**
      * Validates the maximum allowed number of open connections. It must be a positive number.
      */
-    public static int validateMaxNumConnections(int maxNumConnections) {
+    static int validateMaxNumConnections(int maxNumConnections) {
         if (maxNumConnections <= 0) {
             throw new IllegalArgumentException("maxNumConnections: " + maxNumConnections + " (expected: > 0)");
         }
         return maxNumConnections;
+    }
+
+    ChannelHandler newChildHandler(ServerPortMetric serverPortMetric) {
+        return new ConnectionLimitingChildHandler(serverPortMetric);
+    }
+
+    @Sharable
+    private class ConnectionLimitingChildHandler extends ChannelInboundHandlerAdapter {
+
+        private final ServerPortMetric serverPortMetric;
+
+        ConnectionLimitingChildHandler(ServerPortMetric serverPortMetric) {
+            this.serverPortMetric = serverPortMetric;
+        }
+
+        @Override
+        public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+            final Channel child = (Channel) msg;
+            final int conn = activeConnections.incrementAndGet();
+            if (conn > 0 && conn <= maxNumConnections) {
+            serverPortMetric.increaseActiveConnections();
+                childChannels.add(child);
+                child.closeFuture().addListener(future -> {
+                    childChannels.remove(child);
+                    activeConnections.decrementAndGet();
+                    serverPortMetric.decreaseActiveConnections();
+                });
+                super.channelRead(ctx, msg);
+            } else {
+                activeConnections.decrementAndGet();
+
+                // Set linger option to 0 so that the server doesn't get too many TIME_WAIT states.
+                child.config().setOption(ChannelOption.SO_LINGER, 0);
+                child.unsafe().closeForcibly();
+
+                numDroppedConnections.increment();
+
+                if (loggingScheduled.compareAndSet(false, true)) {
+                    ctx.executor().schedule(this::writeNumDroppedConnectionsLog, 1, TimeUnit.SECONDS);
+                }
+            }
+        }
+
+        private void writeNumDroppedConnectionsLog() {
+            loggingScheduled.set(false);
+
+            final long dropped = numDroppedConnections.sumThenReset();
+            if (dropped > 0) {
+                logger.warn("Dropped {} connection(s) to limit the number of open connections to {}",
+                            dropped, maxNumConnections);
+            }
+        }
     }
 }
