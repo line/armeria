@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.server.grpc;
 
+import static com.linecorp.armeria.server.grpc.HttpJsonTranscodingQueryParamMatchRule.JSON_NAME;
 import static com.linecorp.armeria.server.grpc.HttpJsonTranscodingQueryParamMatchRule.LOWER_CAMEL_CASE;
 import static com.linecorp.armeria.server.grpc.HttpJsonTranscodingQueryParamMatchRule.ORIGINAL_FIELD;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -59,6 +60,12 @@ class HttpJsonTranscodingOptionsBuilderTest {
                 .containsExactlyInAnyOrder(ORIGINAL_FIELD, LOWER_CAMEL_CASE);
 
         final HttpJsonTranscodingOptions defaultOptions = HttpJsonTranscodingOptions.of();
-        assertThat(defaultOptions.queryParamMatchRules()).containsExactly(ORIGINAL_FIELD);
+        assertThat(defaultOptions.queryParamMatchRules()).containsExactly(ORIGINAL_FIELD, JSON_NAME);
+
+        final HttpJsonTranscodingOptions onlyJsonName =
+                HttpJsonTranscodingOptions.builder()
+                                          .queryParamMatchRules(JSON_NAME)
+                                          .build();
+        assertThat(onlyJsonName.queryParamMatchRules()).containsExactly(JSON_NAME, ORIGINAL_FIELD);
     }
 }
