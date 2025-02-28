@@ -9725,6 +9725,7 @@ zlg.br
 zm
 zombie.jp
 zone
+zone.id
 zp.gov.pl
 zp.ua
 zpisdn.gov.pl
