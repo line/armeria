@@ -158,7 +158,9 @@ final class HttpJsonTranscodingService extends AbstractUnframedGrpcService
                     continue;
                 }
 
-                final HttpRule httpRule = methodOptions.getExtension((ExtensionLite<MethodOptions, HttpRule>)AnnotationsProto.http);
+                final HttpRule httpRule = methodOptions.getExtension(
+                        (ExtensionLite<MethodOptions, HttpRule>)AnnotationsProto.http
+                );
 
                 if (methodDefinition.getMethodDescriptor().getType() != MethodType.UNARY) {
                     logger.warn("Only unary methods can be configured with an HTTP/JSON endpoint: " +
