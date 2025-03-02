@@ -18,6 +18,7 @@ package com.linecorp.armeria.client.endpoint;
 
 import static java.util.Objects.requireNonNull;
 
+import java.net.URI;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
@@ -34,6 +35,7 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.util.AsyncCloseable;
 import com.linecorp.armeria.common.util.Listenable;
 import com.linecorp.armeria.internal.client.endpoint.StaticEndpointGroup;
+import com.linecorp.armeria.internal.client.endpoint.UndefinedEndpointGroup;
 
 /**
  * A list of {@link Endpoint}s.
@@ -188,5 +190,24 @@ public interface EndpointGroup extends Listenable<List<Endpoint>>, EndpointSelec
      */
     default EndpointGroup orElse(EndpointGroup nextEndpointGroup) {
         return new OrElseEndpointGroup(this, nextEndpointGroup);
+    }
+
+    /**
+     * Returns {@code true} if the specified {@code endpointGroup} is an undefined {@link EndpointGroup},
+     * which signifies that a request was created without a {@link URI} or {@link EndpointGroup}.
+     * For example,
+     * <pre>{@code
+     * HttpPreprocessor preprocessor = (delegate, ctx, req) -> {
+     *     if (EndpointGroup.isUndefined(ctx.endpointGroup())) {
+     *         ctx.setEndpointGroup(Endpoint.of("fallback-endpoint"));
+     *     }
+     *     return delegate.execute(ctx, req);
+     * };
+     * WebClient client = WebClient.builder(preprocessor)
+     *                             .build();
+     * }</pre>
+     */
+    static boolean isUndefined(EndpointGroup endpointGroup) {
+        return UndefinedEndpointGroup.of() == endpointGroup;
     }
 }
