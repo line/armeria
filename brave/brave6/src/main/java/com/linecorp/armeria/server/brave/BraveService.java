@@ -25,6 +25,7 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.brave.RequestContextCurrentTraceContext;
 import com.linecorp.armeria.internal.common.RequestContextExtension;
 import com.linecorp.armeria.internal.common.brave.SpanTags;
+import com.linecorp.armeria.internal.common.brave.TraceContextUtil;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.SimpleDecoratingHttpService;
@@ -99,6 +100,7 @@ public final class BraveService extends SimpleDecoratingHttpService {
 
         final HttpServerRequest braveReq = ServiceRequestContextAdapter.asHttpServerRequest(ctx);
         final Span span = handler.handleReceive(braveReq);
+        TraceContextUtil.setTraceContext(ctx, span.context());
 
         final RequestContextExtension ctxExtension = ctx.as(RequestContextExtension.class);
         if (currentTraceContext.scopeDecoratorAdded() && !span.isNoop() && ctxExtension != null) {

@@ -58,7 +58,9 @@ public final class RequestContextCurrentTraceContextBuilder extends CurrentTrace
      * RMI to serve monitoring requests.
      *
      * @see RequestContextCurrentTraceContext#setCurrentThreadNotRequestThread(boolean)
+     * @deprecated this setting has no effect
      */
+    @Deprecated
     public RequestContextCurrentTraceContextBuilder nonRequestThread(Pattern pattern) {
         nonRequestThreadPatterns.add(requireNonNull(pattern, "pattern"));
         return this;
