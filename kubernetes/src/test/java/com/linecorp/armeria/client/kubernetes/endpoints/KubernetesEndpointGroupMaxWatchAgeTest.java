@@ -45,7 +45,7 @@ import io.fabric8.kubernetes.client.server.mock.EnableKubernetesMockClient;
 
 @EnableKubernetesMockClient(
         crud = true,
-        kubernetesClientBuilderCustomizer = ServiceWatchCoutingKubernetesClientBuilderCustomizer.class)
+        kubernetesClientBuilderCustomizer = ServiceWatchCountingKubernetesClientBuilderCustomizer.class)
 class KubernetesEndpointGroupMaxWatchAgeTest {
 
     private static final Logger logger = LoggerFactory.getLogger(KubernetesEndpointGroupMaxWatchAgeTest.class);
@@ -54,7 +54,7 @@ class KubernetesEndpointGroupMaxWatchAgeTest {
 
     @BeforeEach
     void setUp() {
-        ServiceWatchCoutingKubernetesClientBuilderCustomizer.reset();
+        ServiceWatchCountingKubernetesClientBuilderCustomizer.reset();
     }
 
     @ValueSource(ints = { 0, 500, 1000 })
@@ -79,7 +79,7 @@ class KubernetesEndpointGroupMaxWatchAgeTest {
         client.apps().deployments().resource(deployment).create();
         client.services().resource(service).create();
 
-        final int oldNum = ServiceWatchCoutingKubernetesClientBuilderCustomizer.numRequests();
+        final int oldNum = ServiceWatchCountingKubernetesClientBuilderCustomizer.numRequests();
         final KubernetesEndpointGroup endpointGroup =
                 KubernetesEndpointGroup.builder(client)
                                        .namespace("test")
@@ -114,7 +114,7 @@ class KubernetesEndpointGroupMaxWatchAgeTest {
             );
         });
 
-        final int newNum = ServiceWatchCoutingKubernetesClientBuilderCustomizer.numRequests();
+        final int newNum = ServiceWatchCountingKubernetesClientBuilderCustomizer.numRequests();
         logger.debug("maxWatchAgeMillis: {}, oldNum: {}, newNum: {}", maxWatchAgeMillis, oldNum, newNum);
         if (maxWatchAgeMillis == 0) {
            // Should create one watch

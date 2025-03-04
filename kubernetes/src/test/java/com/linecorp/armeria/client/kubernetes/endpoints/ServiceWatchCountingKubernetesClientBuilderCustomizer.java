@@ -25,7 +25,7 @@ import com.linecorp.armeria.internal.common.websocket.WebSocketUtil;
 import io.fabric8.kubernetes.client.KubernetesClientBuilder;
 import io.fabric8.kubernetes.client.server.mock.KubernetesClientBuilderCustomizer;
 
-public class ServiceWatchCoutingKubernetesClientBuilderCustomizer extends KubernetesClientBuilderCustomizer {
+public class ServiceWatchCountingKubernetesClientBuilderCustomizer extends KubernetesClientBuilderCustomizer {
 
     private static final AtomicInteger numRequests = new AtomicInteger();
 
