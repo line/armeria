@@ -4,7 +4,7 @@ date: 2025-03-04
 
 ## 🌟 New features
 
-- **LoadBalancer**: You can now create a <type://LoadBalancer> using various load balancing strategies to
+- **Load Balancer**: You can now create a <type://LoadBalancer> using various load balancing strategies to
   select an element from a list of candidates. #5289 #5779
   ```java
   List<Endpoint> candidates = ...;
@@ -23,7 +23,7 @@ date: 2025-03-04
       if ("1.2.3.4".equals(ip.getAddress().getHostAddress())) {
         return false;
       }
-    return true;
+      return true;
     }).build();
   ```
 - **Graceful Shutdown**: You can now use <type://GracefulShutdown> to terminate unfinished requests
@@ -34,7 +34,7 @@ date: 2025-03-04
       .builder()
       .quietPeriod(Duration.ofSeconds(10))
       .timeout(Duration.ofSeconds(15))
-      .shutdownErrorFunction((ctx, req) -> {
+      .toExceptionFunction((ctx, req) -> {
         return new ServerStopException();
       })
       .build();
@@ -77,7 +77,7 @@ date: 2025-03-04
   ```
 - **Backoff Builder**: You can now easily create a <type://Backoff> using builder. #5483 #5488
   ```java
-  Backoff backoff2 =
+  Backoff backoff =
     Backoff.builderForExponential()
            .initialDelayMillis(100)
            .maxDelayMillis(10000)
@@ -102,7 +102,7 @@ date: 2025-03-04
   now work when a connection or proxy establishment is timed out. #6107
 - DNS refresh query is executed by the correct executor. #5891 #6092
 - You can now choose whether to use the `json_name` field option when transcoding HTTP/JSON to gRPC messages. #5890 #6082
-- The Thrift module names are correctly set by replacing a dot followed by a digit with an underscore. #6075 #6076
+- `Automatic-Module-Name`s are correctly set by replacing a dot followed by a digit with an underscore. #6075 #6076
 - Delayed tasks for gRPC requests that have already been cancelled are not executed anymore. #6066
 - You no longer see a false positive warning log when <type://HealthCheckedEndpointGroup> is closing. #6063
 - An <type://Endpoint> no longer includes attributes in `.toString()`. #6061
@@ -125,7 +125,8 @@ date: 2025-03-04
 
 ## ☢️ Breaking changes
 
-- N/A
+- The `json_name` field option will only be used when <type://HttpJsonTranscodingQueryParamMatchRule#JSON_NAME>
+  is explicitly specified via <type://HttpJsonTranscodingOptionsBuilder#queryParamMatchRules(Iterable)>. #6136
 
 ## ⛓ Dependencies
 
