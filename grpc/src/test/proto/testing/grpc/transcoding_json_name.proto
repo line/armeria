@@ -1,0 +1,64 @@
+// Copyright 2025 LINE Corporation
+//
+// LINE Corporation licenses this file to you under the Apache License,
+// version 2.0 (the "License"); you may not use this file except in compliance
+// with the License. You may obtain a copy of the License at:
+//
+//   https://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+// WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+// License for the specific language governing permissions and limitations
+// under the License.
+
+syntax = "proto3";
+
+package hello.service.v1;
+
+import "google/api/annotations.proto";
+
+option java_package = "testing.grpc.jsonname";
+option java_multiple_files = true;
+
+message JsonNameRequest {
+  // Should ignore this json_name option for the path variable.
+  string json_name_path_variable = 1 [json_name = "jsonNamePathVariable"];
+  string path_variable = 2;
+  string json_name_query_param = 3 [json_name = "customJsonNameQueryParam"];
+  string query_param = 4;
+}
+
+message JsonNameParentRequest {
+  JsonNameChild1Message parent = 2 [ json_name = "customJsonNameField" ];
+}
+
+message JsonNameChild1Message {
+  string f_a = 1;
+  string f_b = 2 [json_name = "second_field"];
+  JsonNameChild2Message c_a = 3 [json_name = "customField"];
+
+}
+
+message JsonNameChild2Message {
+  string f_c = 1;
+  string f_d = 2 [json_name = "fourth_field"];
+}
+
+message JsonNameReply {
+  string message = 1;
+}
+
+service JsonNameTestService {
+  rpc Hello (JsonNameRequest) returns (JsonNameReply){
+    option (google.api.http) = {
+      get: "/v1/hello/{json_name_path_variable}/{path_variable}"
+    };
+  }
+
+  rpc NestedQueryParams(JsonNameParentRequest) returns (JsonNameReply){
+    option (google.api.http) = {
+      get: "/v1/nested"
+    };
+  }
+}
