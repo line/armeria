@@ -1,8 +1,10 @@
 dependencies {
+    implementation(project(':grpc'))
+
     // switch to the protobuf-v4 version
     testImplementation platform(libs.protobuf4.bom)
     
-    testImplementation(project(':grpc'))
+    // copy from ../../grpc/build.gradle
     testImplementation(libs.gax.grpc) {
         exclude group: 'com.google.protobuf', module: 'protobuf-java'
     }
