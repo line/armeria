@@ -223,7 +223,7 @@ includeWithFlags ':it:logback1.4',                             'java11', 'reloca
 includeWithFlags ':it:logback1.5',                             'java11', 'relocate', 'no_aggregation'
 includeWithFlags ':it:multipart',                              'java17', 'relocate'
 includeWithFlags ':it:nio',                                    'java', 'relocate'
-includeWithFlags ':it:protobuf4',                              'java'
+includeWithFlags ':it:protobuf4',                              'java', 'relocate'
 includeWithFlags ':it:okhttp',                                 'java', 'relocate'
 includeWithFlags ':it:resilience4j',                           'java17', 'relocate'
 includeWithFlags ':it:server',                                 'java', 'relocate'
