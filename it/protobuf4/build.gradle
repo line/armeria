@@ -1,8 +1,9 @@
 dependencies {
-    // switch to the latest protobuf version
+    // switch to the protobuf-v4 version
     testImplementation platform(libs.protobuf4.bom)
     
     testImplementation(project(':grpc'))
+    testImplementation libs.javax.annotation
 }
 
 def grpcDir = "${rootProject.projectDir}/grpc"
