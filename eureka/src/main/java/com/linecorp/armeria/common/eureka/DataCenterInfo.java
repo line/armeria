@@ -13,7 +13,7 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package com.linecorp.armeria.internal.common.eureka;
+package com.linecorp.armeria.common.eureka;
 
 import static com.google.common.base.MoreObjects.toStringHelper;
 import static java.util.Objects.requireNonNull;
@@ -27,6 +27,7 @@ import com.google.common.base.Objects;
 import com.google.common.collect.ImmutableMap;
 
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.internal.common.eureka.DataCenterInfoSerializer;
 
 /**
  * The data center information.
@@ -52,10 +53,20 @@ public final class DataCenterInfo {
         }
     }
 
+    /**
+     * Returns the name of the object.
+     *
+     * @return the name of the object
+     */
     public String getName() {
         return name;
     }
 
+    /**
+     * Returns the metadata associated with the object.
+     *
+     * @return a map of key-value pairs representing the metadata
+     */
     public Map<String, String> getMetadata() {
         return metadata;
     }
