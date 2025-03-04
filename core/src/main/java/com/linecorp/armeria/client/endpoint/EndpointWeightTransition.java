@@ -16,25 +16,31 @@
 package com.linecorp.armeria.client.endpoint;
 
 import static com.google.common.base.Preconditions.checkArgument;
-import static com.linecorp.armeria.client.endpoint.WeightRampingUpStrategyBuilder.DEFAULT_LINEAR_TRANSITION;
-
-import com.google.common.primitives.Ints;
 
 import com.linecorp.armeria.client.Endpoint;
+import com.linecorp.armeria.common.loadbalancer.WeightTransition;
 
 /**
  * Computes the weight of the given {@link Endpoint} using the given {@code currentStep}
  * and {@code totalSteps}.
+ *
+ * @deprecated Use {@link WeightTransition} instead.
  */
+@Deprecated
 @FunctionalInterface
 public interface EndpointWeightTransition {
 
     /**
      * Returns the {@link EndpointWeightTransition} which returns the gradually increased weight as the current
      * step increases.
+     *
+     * @deprecated Use {@link WeightTransition#linear()} instead.
      */
+    @Deprecated
     static EndpointWeightTransition linear() {
-        return DEFAULT_LINEAR_TRANSITION;
+        return (endpoint, currentStep, totalSteps) -> {
+            return WeightTransition.linear().compute(endpoint, endpoint.weight(), currentStep, totalSteps);
+        };
     }
 
     /**
@@ -44,24 +50,18 @@ public interface EndpointWeightTransition {
      * Refer to the following
      * <a href="https://www.envoyproxy.io/docs/envoy/latest/intro/arch_overview/upstream/load_balancing/slow_start">link</a>
      * for more information.
+     *
+     * @deprecated Use {@link WeightTransition#aggression(double, double)} instead.
      */
+    @Deprecated
     static EndpointWeightTransition aggression(double aggression, double minWeightPercent) {
         checkArgument(aggression > 0,
                       "aggression: %s (expected: > 0.0)", aggression);
         checkArgument(minWeightPercent >= 0 && minWeightPercent <= 1.0,
                       "minWeightPercent: %s (expected: >= 0.0, <= 1.0)", minWeightPercent);
-        final int aggressionPercentage = Ints.saturatedCast(Math.round(aggression * 100));
-        final double invertedAggression = 100.0 / aggressionPercentage;
         return (endpoint, currentStep, totalSteps) -> {
-            final int weight = endpoint.weight();
-            final int minWeight = Ints.saturatedCast(Math.round(weight * minWeightPercent));
-            final int computedWeight;
-            if (aggressionPercentage == 100) {
-                computedWeight = linear().compute(endpoint, currentStep, totalSteps);
-            } else {
-                computedWeight = (int) (weight * Math.pow(1.0 * currentStep / totalSteps, invertedAggression));
-            }
-            return Math.max(computedWeight, minWeight);
+            return WeightTransition.aggression(aggression, minWeightPercent)
+                                   .compute(endpoint, endpoint.weight(), currentStep, totalSteps);
         };
     }
 

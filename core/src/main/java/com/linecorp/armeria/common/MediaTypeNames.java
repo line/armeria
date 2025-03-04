@@ -344,6 +344,10 @@ public final class MediaTypeNames {
      */
     public static final String APPLICATION_BINARY = "application/binary";
     /**
+     * {@value #APPLICATION_BINARY}.
+     */
+    public static final String CBOR = "application/cbor";
+    /**
      * {@value #GEO_JSON}.
      */
     public static final String GEO_JSON = "application/geo+json";

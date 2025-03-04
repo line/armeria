@@ -174,7 +174,7 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
         sessionTimeoutFuture = channel.eventLoop().schedule(() -> {
             if (sessionPromise.tryFailure(new SessionProtocolNegotiationException(
                     desiredProtocol,
-                    "connection established, but session creation timed out: " + channel))) {
+                    "connection established, but session creation timed out. (channel: " + channel + ')'))) {
                 channel.close();
             }
         }, connectionTimeoutMillis, TimeUnit.MILLISECONDS);

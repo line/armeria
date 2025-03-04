@@ -437,7 +437,7 @@ abstract class AbstractCorsPolicyBuilder<SELF extends AbstractCorsPolicyBuilder<
     /**
      * Returns a newly-created {@link CorsPolicy} based on the properties of this builder.
      */
-    CorsPolicy build() {
+    public final CorsPolicy build() {
         return new CorsPolicy(origins, originPredicate, routes, credentialsAllowed, maxAge,
                               nullOriginAllowed, exposedHeaders, allowAllRequestHeaders, allowedRequestHeaders,
                               allowedRequestMethods, preflightResponseHeadersDisabled,
