@@ -173,6 +173,7 @@
 *.wf.crm.dev
 *.xmit.co
 *.yokohama.jp
+*.zerops.app
 0.bg
 0am.jp
 0g0.jp
@@ -1760,6 +1761,7 @@ courses
 coz.br
 cpa
 cpa.pro
+cpanel.site
 cprapid.com
 cpserver.com
 cq.cn
@@ -2290,6 +2292,7 @@ emergency.aero
 emilia-romagna.it
 emiliaromagna.it
 emp.br
+emprende.ve
 empresa.bo
 emr.it
 emrappui-prod.af-south-1.amazonaws.com
@@ -4328,7 +4331,6 @@ kembuchi.hokkaido.jp
 kep.tr
 kepno.pl
 kerryhotels
-kerrylogistics
 kerryproperties
 ketrzyn.pl
 keymachine.de
@@ -4773,7 +4775,6 @@ lindesnes.no
 link
 linkyard-cloud.ch
 linkyard.cloud
-lipsy
 littlestar.jp
 live
 live-on.net
@@ -4832,6 +4833,8 @@ loseyourip.com
 loten.no
 lotte
 lotto
+lovable.app
+lovableproject.com
 love
 lovepop.jp
 lovesick.jp
@@ -7888,6 +7891,7 @@ sport.eg
 sport.hu
 spot
 spydeberg.no
+square.site
 square7.ch
 square7.de
 square7.net
@@ -9720,6 +9724,7 @@ zlg.br
 zm
 zombie.jp
 zone
+zone.id
 zp.gov.pl
 zp.ua
 zpisdn.gov.pl

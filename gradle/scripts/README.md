@@ -695,8 +695,16 @@ and artifact ID. For example:
 
 If enabled, each project with `java` flag will have the `automaticModuleName` property.
 
-You can override the automatic module name of a certain project via the `automaticModuleNameOverrides`
-extension property:
+You can override the automatic module name of a certain project via `automaticModuleNameOverride`:
+
+    ```groovy
+    ext {
+        // Change the automatic module name of a project to 'com.example.fubar'.
+        automaticModuleNameOverride = 'com.example.fubar'
+    }
+    ```
+
+Alternatively, you can also specify a mapping via the `automaticModuleNameOverrides` extension property:
 
     ```groovy
     ext {

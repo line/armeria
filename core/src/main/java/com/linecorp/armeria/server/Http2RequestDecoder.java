@@ -17,6 +17,7 @@
 package com.linecorp.armeria.server;
 
 import static com.linecorp.armeria.server.HttpServerPipelineConfigurator.SCHEME_HTTP;
+import static com.linecorp.armeria.server.ServerPortMetric.SERVER_PORT_METRIC;
 import static com.linecorp.armeria.server.ServiceRouteUtil.newRoutingContext;
 import static io.netty.handler.codec.http2.Http2Error.INTERNAL_ERROR;
 import static io.netty.handler.codec.http2.Http2Error.PROTOCOL_ERROR;
@@ -65,6 +66,7 @@ final class Http2RequestDecoder extends Http2EventAdapter {
 
     private final ServerConfig cfg;
     private final Channel channel;
+    private final ServerPortMetric serverPortMetric;
     private final AsciiString scheme;
     @Nullable
     private ServerHttp2ObjectEncoder encoder;
@@ -79,6 +81,9 @@ final class Http2RequestDecoder extends Http2EventAdapter {
                         AsciiString scheme, KeepAliveHandler keepAliveHandler) {
         this.cfg = cfg;
         this.channel = channel;
+        final ServerPortMetric serverPortMetric = channel.attr(SERVER_PORT_METRIC).get();
+        assert serverPortMetric != null;
+        this.serverPortMetric = serverPortMetric;
         this.scheme = scheme;
         inboundTrafficController =
                 InboundTrafficController.ofHttp2(channel, cfg.http2InitialConnectionWindowSize());
@@ -211,7 +216,7 @@ final class Http2RequestDecoder extends Http2EventAdapter {
                 abortLargeRequest(req, endOfStream, true);
             }
             requests.put(streamId, req);
-            cfg.serverMetrics().increasePendingHttp2Requests();
+            serverPortMetric.increasePendingHttp2Requests();
             ctx.fireChannelRead(req);
         } else {
             if (!(req instanceof DecodedHttpRequestWriter)) {
