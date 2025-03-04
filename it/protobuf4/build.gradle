@@ -3,7 +3,15 @@ dependencies {
     testImplementation platform(libs.protobuf4.bom)
     
     testImplementation(project(':grpc'))
-    testImplementation libs.javax.annotation
+    testImplementation(libs.gax.grpc) {
+        exclude group: 'com.google.protobuf', module: 'protobuf-java'
+    }
+    testImplementation project(':prometheus1')
+    testImplementation libs.grpc.okhttp
+    testImplementation libs.grpc.testing
+    testImplementation libs.micrometer.prometheus
+    testImplementation libs.reactor.test
+    testImplementation libs.reactivestreams.tck
 }
 
 def grpcDir = "${rootProject.projectDir}/grpc"
