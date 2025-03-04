@@ -109,7 +109,9 @@ final class DefaultCookieJar implements CookieJar {
                         cookieSet.add(ensuredCookie);
                         continue;
                     }
-                    if (!uri.getScheme().startsWith("http") && oldCookie.isHttpOnly()) {
+                    if (!(uri.getScheme().equals("http") ||
+                          uri.getScheme().equals("https")) && 
+                         oldCookie.isHttpOnly()) {
                         // if the new cookie is received from a non-HTTP and the old cookie is http-only, skip
                         continue;
                     }
