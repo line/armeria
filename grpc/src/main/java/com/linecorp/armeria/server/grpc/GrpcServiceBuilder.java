@@ -438,18 +438,13 @@ public final class GrpcServiceBuilder {
                    "Attempting to add a ProtoReflectionService but one is already present. " +
                    "ProtoReflectionService must only be added once.");
         protoReflectionServiceInterceptor = new ProtoReflectionServiceInterceptor();
+        if (protoReflectionService instanceof ProtoReflectionService) {
+            logger.warn("Use {} instead of {}.", ProtoReflectionServiceV1.class.getSimpleName(),
+                        protoReflectionService);
+        }
         final ServerServiceDefinition intercept =
                 ServerInterceptors.intercept(protoReflectionService, protoReflectionServiceInterceptor);
-        addProtoReflectionIntercept(intercept, path, methodDescriptor);
-        if (!(protoReflectionService instanceof ProtoReflectionService)) {
-            return this;
-        }
-        logger.warn("Use {} instead of {}.", ProtoReflectionServiceV1.class.getSimpleName(),
-                    protoReflectionService);
-        final ServerServiceDefinition interceptV1 =
-                ServerInterceptors.intercept(ProtoReflectionServiceV1.newInstance(),
-                                             protoReflectionServiceInterceptor);
-        return addProtoReflectionIntercept(interceptV1, path, methodDescriptor);
+        return addProtoReflectionIntercept(intercept, path, methodDescriptor);
     }
 
     private GrpcServiceBuilder addProtoReflectionIntercept(ServerServiceDefinition intercept,

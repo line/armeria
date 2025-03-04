@@ -109,11 +109,11 @@ import io.grpc.Status;
 import io.grpc.Status.Code;
 import io.grpc.StatusRuntimeException;
 import io.grpc.protobuf.ProtoUtils;
-import io.grpc.protobuf.services.ProtoReflectionService;
-import io.grpc.reflection.v1alpha.ServerReflectionGrpc;
-import io.grpc.reflection.v1alpha.ServerReflectionGrpc.ServerReflectionStub;
-import io.grpc.reflection.v1alpha.ServerReflectionRequest;
-import io.grpc.reflection.v1alpha.ServerReflectionResponse;
+import io.grpc.protobuf.services.ProtoReflectionServiceV1;
+import io.grpc.reflection.v1.ServerReflectionGrpc;
+import io.grpc.reflection.v1.ServerReflectionGrpc.ServerReflectionStub;
+import io.grpc.reflection.v1.ServerReflectionRequest;
+import io.grpc.reflection.v1.ServerReflectionResponse;
 import io.grpc.stub.ServerCallStreamObserver;
 import io.grpc.stub.StreamObserver;
 import io.netty.buffer.ByteBuf;
@@ -453,8 +453,7 @@ class GrpcServiceServerTest {
 
             sb.service(
                     GrpcService.builder()
-                               // ProtoReflectionServiceV1 is added by default.
-                               .addService(ProtoReflectionService.newInstance())
+                               .addService(ProtoReflectionServiceV1.newInstance())
                                .build(),
                     service -> service.decorate(LoggingService.newDecorator()));
         }
@@ -1230,7 +1229,8 @@ class GrpcServiceServerTest {
     void reflectionService() throws Exception {
         final ServerReflectionStub stub = ServerReflectionGrpc.newStub(channel);
 
-        final AtomicReference<ServerReflectionResponse> response = new AtomicReference<>();
+        final AtomicReference<ServerReflectionResponse> response =
+                new AtomicReference<>();
 
         final StreamObserver<ServerReflectionRequest> request = stub.serverReflectionInfo(
                 new StreamObserver<ServerReflectionResponse>() {
@@ -1248,43 +1248,6 @@ class GrpcServiceServerTest {
         request.onNext(ServerReflectionRequest.newBuilder()
                                               .setListServices("")
                                               .build());
-        request.onCompleted();
-
-        await().untilAsserted(
-                () -> {
-                    assertThat(response).doesNotHaveValue(null);
-                    // Instead of making this test depend on every other one, just check that there is at
-                    // least two services returned corresponding to UnitTestService and
-                    // ProtoReflectionService.
-                    assertThat(response.get().getListServicesResponse().getServiceList())
-                            .hasSizeGreaterThanOrEqualTo(2);
-                });
-    }
-
-    @Test
-    void reflectionServiceV1() throws Exception {
-        final io.grpc.reflection.v1.ServerReflectionGrpc.ServerReflectionStub stub =
-                io.grpc.reflection.v1.ServerReflectionGrpc.newStub(channel);
-
-        final AtomicReference<io.grpc.reflection.v1.ServerReflectionResponse> response =
-                new AtomicReference<>();
-
-        final StreamObserver<io.grpc.reflection.v1.ServerReflectionRequest> request = stub.serverReflectionInfo(
-                new StreamObserver<io.grpc.reflection.v1.ServerReflectionResponse>() {
-                    @Override
-                    public void onNext(io.grpc.reflection.v1.ServerReflectionResponse value) {
-                        response.set(value);
-                    }
-
-                    @Override
-                    public void onError(Throwable t) {}
-
-                    @Override
-                    public void onCompleted() {}
-                });
-        request.onNext(io.grpc.reflection.v1.ServerReflectionRequest.newBuilder()
-                                                                    .setListServices("")
-                                                                    .build());
         request.onCompleted();
 
         await().untilAsserted(
