@@ -525,8 +525,7 @@ public interface ClientRequestContext extends RequestContext {
             return true;
         }
         final Throwable cause = cancellationCause();
-        return cause instanceof TimeoutException ||
-               cause instanceof UnprocessedRequestException && cause.getCause() instanceof TimeoutException;
+        return TimeoutExceptionPredicate.isTimeoutException(cause);
     }
 
     /**

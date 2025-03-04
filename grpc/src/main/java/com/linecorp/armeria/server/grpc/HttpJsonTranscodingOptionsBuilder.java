@@ -17,14 +17,16 @@
 package com.linecorp.armeria.server.grpc;
 
 import static com.google.common.base.Preconditions.checkArgument;
+import static com.linecorp.armeria.server.grpc.HttpJsonTranscodingQueryParamMatchRule.JSON_NAME;
+import static com.linecorp.armeria.server.grpc.HttpJsonTranscodingQueryParamMatchRule.ORIGINAL_FIELD;
 import static java.util.Objects.requireNonNull;
 
 import java.util.EnumSet;
 import java.util.Set;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
-import com.google.common.collect.Sets;
 import com.google.protobuf.Message;
 
 import com.linecorp.armeria.common.HttpRequest;
@@ -38,8 +40,11 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
 @UnstableApi
 public final class HttpJsonTranscodingOptionsBuilder {
 
+    /**
+     * Evaluates json_name first, then original field.
+     */
     private static final EnumSet<HttpJsonTranscodingQueryParamMatchRule> DEFAULT_QUERY_PARAM_MATCH_RULES =
-            EnumSet.of(HttpJsonTranscodingQueryParamMatchRule.ORIGINAL_FIELD);
+            EnumSet.of(JSON_NAME, ORIGINAL_FIELD);
 
     private UnframedGrpcErrorHandler errorHandler = UnframedGrpcErrorHandler.ofJson();
 
@@ -95,7 +100,17 @@ public final class HttpJsonTranscodingOptionsBuilder {
         if (queryParamMatchRules == null) {
             matchRules = DEFAULT_QUERY_PARAM_MATCH_RULES;
         } else {
-            matchRules = Sets.immutableEnumSet(queryParamMatchRules);
+            if (queryParamMatchRules.size() == 1 && queryParamMatchRules.contains(JSON_NAME)) {
+                // If neither LOWER_CAMEL_CASE nor ORIGINAL_FIELD is set, add ORIGINAL_FIELD by default.
+                final Set<HttpJsonTranscodingQueryParamMatchRule> newMatchRules =
+                        ImmutableSet.<HttpJsonTranscodingQueryParamMatchRule>builder()
+                                    .addAll(queryParamMatchRules)
+                                    .add(ORIGINAL_FIELD)
+                                    .build();
+                matchRules = newMatchRules;
+            } else {
+                matchRules = ImmutableSet.copyOf(queryParamMatchRules);
+            }
         }
         return new DefaultHttpJsonTranscodingOptions(matchRules, errorHandler);
     }

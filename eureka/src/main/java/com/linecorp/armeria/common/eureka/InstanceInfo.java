@@ -13,7 +13,7 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package com.linecorp.armeria.internal.common.eureka;
+package com.linecorp.armeria.common.eureka;
 
 import static com.google.common.base.MoreObjects.toStringHelper;
 import static java.util.Objects.requireNonNull;
@@ -32,7 +32,10 @@ import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
 import com.google.common.base.Objects;
 import com.google.common.collect.ImmutableMap;
 
+import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.common.annotation.Nullable;
+
+import io.netty.util.AttributeKey;
 
 /**
  * An instance information.
@@ -42,6 +45,33 @@ import com.linecorp.armeria.common.annotation.Nullable;
 public final class InstanceInfo {
 
     private static final Logger logger = LoggerFactory.getLogger(InstanceInfo.class);
+
+    private static final AttributeKey<InstanceInfo> INSTANCE_INFO = AttributeKey.valueOf(
+            InstanceInfo.class, "INSTANCE_INFO");
+
+    /**
+     * Returns the {@link InstanceInfo} associated with the given {@link Endpoint}.
+     *
+     * @param endpoint The {@link Endpoint} whose {@link InstanceInfo} is to be retrieved.
+     * @return The {@link InstanceInfo} associated with the specified {@link Endpoint}.
+     */
+    @Nullable
+    public static InstanceInfo instanceInfo(Endpoint endpoint) {
+        requireNonNull(endpoint, "endpoint");
+        return endpoint.attr(INSTANCE_INFO);
+    }
+
+    /**
+     * Sets the Eureka {@link InstanceInfo} parameter to the {@link Endpoint} as an attribute.
+     *
+     * @param endpoint The {@link Endpoint} to which the {@link InstanceInfo} will be set as an attribute.
+     * @return The same {@link Endpoint} passed as a parameter.
+     */
+    public static Endpoint setInstanceInfo(Endpoint endpoint, InstanceInfo instanceInfo) {
+        requireNonNull(endpoint, "endpoint");
+        requireNonNull(instanceInfo, "instanceInfo");
+        return endpoint.withAttr(INSTANCE_INFO, instanceInfo);
+    }
 
     @Nullable
     private final String instanceId;
@@ -444,17 +474,33 @@ public final class InstanceInfo {
         private final boolean enabled;
         private final int port;
 
+        /**
+         * Constructs a new PortWrapper instance.
+         *
+         * @param enabled Whether the port is enabled or not.
+         * @param port The port number.
+         */
         public PortWrapper(@JsonProperty("@enabled") boolean enabled, @JsonProperty("$") int port) {
             this.enabled = enabled;
             this.port = port;
         }
 
+        /**
+         * Returns whether the port is enabled or not.
+         *
+         * @return {@code true} if the port is enabled, {@code false} otherwise.
+         */
         @JsonProperty("@enabled")
         @JsonSerialize(using = ToStringSerializer.class)
         public boolean isEnabled() {
             return enabled;
         }
 
+        /**
+         * Returns the port number.
+         *
+         * @return The port number.
+         */
         @JsonProperty("$")
         public int getPort() {
             return port;
