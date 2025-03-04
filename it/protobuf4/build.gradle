@@ -1,0 +1,33 @@
+dependencies {
+    // switch to the latest protobuf version
+    testImplementation platform(libs.protobuf4.bom)
+    
+    testImplementation(project(':grpc'))
+
+    // These are needed to compile test codes.
+    testImplementation project(':grpc-protocol')
+    testImplementation project(':protobuf')
+    testImplementation libs.grpc.kotlin
+    testImplementation libs.kotlin.coroutines.core
+  
+    // copy in build.gradle from project(:grpc)
+    testImplementation(libs.gax.grpc) {
+        exclude group: 'com.google.protobuf', module: 'protobuf-java'
+    }
+    testImplementation project(':prometheus1')
+    testImplementation libs.grpc.okhttp
+    testImplementation libs.grpc.testing
+    testImplementation libs.micrometer.prometheus
+    testImplementation libs.reactor.test
+    testImplementation libs.reactivestreams.tck
+}
+
+def grpcDir = "${rootProject.projectDir}/grpc"
+
+task generateTestSources(type: Copy) {
+    from("${grpcDir}/src/test/java")
+    into "${project.ext.genSrcDir}/test/java"
+}
+
+tasks.compileTestJava.dependsOn(tasks.generateTestSources)
+tasks.processTestResources.from "${grpcDir}/src/test/resources"
