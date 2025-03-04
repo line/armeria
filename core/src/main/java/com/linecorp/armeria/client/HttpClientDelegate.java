@@ -15,6 +15,9 @@
  */
 package com.linecorp.armeria.client;
 
+import static com.linecorp.armeria.internal.common.util.IpAddrUtil.isCreatedWithIpAddressOnly;
+import static java.util.Objects.requireNonNull;
+
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.util.function.BiConsumer;
@@ -42,12 +45,10 @@ import com.linecorp.armeria.internal.common.RequestContextUtil;
 import com.linecorp.armeria.server.ProxiedAddresses;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
-import static com.linecorp.armeria.internal.common.util.IpAddrUtil.isCreatedWithIpAddressOnly;
 import io.netty.channel.Channel;
 import io.netty.channel.EventLoop;
 import io.netty.resolver.AddressResolverGroup;
 import io.netty.util.concurrent.Future;
-import static java.util.Objects.requireNonNull;
 
 final class HttpClientDelegate implements HttpClient {
 
