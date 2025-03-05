@@ -26,15 +26,12 @@ import com.google.common.annotations.VisibleForTesting;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.brave.RequestContextCurrentTraceContext;
-import com.linecorp.armeria.internal.common.RequestContextExtension;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.ServiceRequestContext;
-import com.linecorp.armeria.server.SimpleDecoratingHttpService;
 import com.linecorp.armeria.server.TransientServiceOption;
 
 import brave.Span;
 import brave.Tracer;
-import brave.Tracer.SpanInScope;
 import brave.Tracing;
 import brave.http.HttpRequestParser;
 import brave.http.HttpResponseParser;
@@ -48,7 +45,8 @@ import brave.propagation.CurrentTraceContext.Scope;
  * Decorates an {@link HttpService} to trace inbound {@link HttpRequest}s using
  * <a href="https://github.com/openzipkin/brave">Brave</a>.
  */
-public final class BraveService extends SimpleDecoratingHttpService {
+public final class BraveService extends AbstractBraveService<HttpServerRequest, HttpRequest, HttpResponse>
+        implements HttpService {
 
     @VisibleForTesting
     static final HttpRequestParser defaultRequestParser = (request, context, span) -> {
@@ -95,12 +93,14 @@ public final class BraveService extends SimpleDecoratingHttpService {
     private final Tracer tracer;
     private final HttpServerHandler<HttpServerRequest, HttpServerResponse> handler;
     private final RequestContextCurrentTraceContext currentTraceContext;
+    private final HttpService delegate;
 
     /**
      * Creates a new instance.
      */
     private BraveService(HttpService delegate, HttpTracing httpTracing) {
         super(delegate);
+        this.delegate = delegate;
         final Tracing tracing = httpTracing.tracing();
         tracer = tracing.tracer();
         handler = HttpServerHandler.create(httpTracing);
@@ -112,24 +112,23 @@ public final class BraveService extends SimpleDecoratingHttpService {
         if (!ctx.config().transientServiceOptions().contains(TransientServiceOption.WITH_TRACING)) {
             return unwrap().serve(ctx, req);
         }
-
         final HttpServerRequest braveReq = ServiceRequestContextAdapter.asHttpServerRequest(ctx);
         final Span span = handler.handleReceive(braveReq);
-
-        final RequestContextExtension ctxExtension = ctx.as(RequestContextExtension.class);
-        if (currentTraceContext.scopeDecoratorAdded() && !span.isNoop() && ctxExtension != null) {
-            // Run the scope decorators when the ctx is pushed to the thread local.
-            ctxExtension.hook(() -> currentTraceContext.decorateScope(span.context(),
-                                                                      SERVICE_REQUEST_DECORATING_SCOPE));
-        }
-
-        maybeAddTagsToSpan(ctx, braveReq, span);
-        try (SpanInScope ignored = tracer.withSpanInScope(span)) {
-            return unwrap().serve(ctx, req);
-        }
+        return serve0(ctx, req, braveReq, span);
     }
 
-    private void maybeAddTagsToSpan(ServiceRequestContext ctx, HttpServerRequest braveReq, Span span) {
+    @Override
+    Tracer tracer() {
+        return tracer;
+    }
+
+    @Override
+    RequestContextCurrentTraceContext currentTraceContext() {
+        return currentTraceContext;
+    }
+
+    @Override
+    void maybeAddTagsToSpan(ServiceRequestContext ctx, HttpServerRequest braveReq, Span span) {
         if (span.isNoop()) {
             // For no-op spans, nothing special to do.
             return;
