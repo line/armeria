@@ -2287,11 +2287,7 @@ public final class ServerBuilder implements TlsSetters, ServiceConfigsBuilder<Se
         return server;
     }
 
-    DefaultServerConfig buildServerConfig(ServerConfig existingConfig) {
-        return buildServerConfig(existingConfig.ports());
-    }
-
-    private DefaultServerConfig buildServerConfig(List<ServerPort> serverPorts) {
+    DefaultServerConfig buildServerConfig(List<ServerPort> serverPorts) {
         final AnnotatedServiceExtensions extensions =
                 virtualHostTemplate.annotatedServiceExtensions();
         assert extensions != null;

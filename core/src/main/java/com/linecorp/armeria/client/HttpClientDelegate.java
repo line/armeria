@@ -29,6 +29,7 @@ import com.linecorp.armeria.client.proxy.ProxyConfig;
 import com.linecorp.armeria.client.proxy.ProxyType;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.IpAddressRejectedException;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
@@ -133,8 +134,7 @@ final class HttpClientDelegate implements HttpClient {
                     assert resolved != null;
                     acquireConnectionAndExecute(ctx, resolved, req, res, timingsBuilder, proxyConfig);
                 } else {
-                    ctx.logBuilder().session(null, ctx.sessionProtocol(), timingsBuilder.build());
-                    ctx.cancel(cause);
+                    earlyCancelRequest(cause, ctx, timingsBuilder);
                 }
             });
         }
@@ -185,6 +185,22 @@ final class HttpClientDelegate implements HttpClient {
                                              HttpRequest req, DecodedHttpResponse res,
                                              ClientConnectionTimingsBuilder timingsBuilder,
                                              ProxyConfig proxyConfig) {
+        final InetSocketAddress remoteAddress = endpoint.toSocketAddress(-1);
+        try {
+            final boolean isValidIpAddr = factory.options().ipAddressFilter().test(remoteAddress);
+            if (!isValidIpAddr) {
+                final IpAddressRejectedException cause = new IpAddressRejectedException(
+                        "Invalid IP address: " + remoteAddress + " (endpoint: " + endpoint + ')');
+                earlyCancelRequest(cause, ctx, timingsBuilder);
+                return;
+            }
+        } catch (Throwable t) {
+            final IllegalStateException cause = new IllegalStateException(
+                    "Unexpected exception from " + factory.options().ipAddressFilter(), t);
+            earlyCancelRequest(cause, ctx, timingsBuilder);
+            return;
+        }
+
         if (ctx.eventLoop().inEventLoop()) {
             acquireConnectionAndExecute0(ctx, endpoint, req, res, timingsBuilder, proxyConfig);
         } else {
@@ -203,7 +219,7 @@ final class HttpClientDelegate implements HttpClient {
         try {
             pool = factory.pool(ctx.eventLoop().withoutContext());
         } catch (Throwable t) {
-            ctx.cancel(t);
+            earlyCancelRequest(t, ctx, timingsBuilder);
             return;
         }
         final SessionProtocol protocol = ctx.sessionProtocol();
@@ -215,11 +231,11 @@ final class HttpClientDelegate implements HttpClient {
         } else {
             pool.acquireLater(protocol, serializationFormat, key, timingsBuilder)
                 .handle((newPooledChannel, cause) -> {
-                    logSession(ctx, newPooledChannel, timingsBuilder.build());
                     if (cause == null) {
+                        logSession(ctx, newPooledChannel, timingsBuilder.build());
                         doExecute(newPooledChannel, ctx, req, res);
                     } else {
-                        ctx.cancel(cause);
+                        earlyCancelRequest(cause, ctx, timingsBuilder);
                     }
                     return null;
                 });
@@ -299,6 +315,13 @@ final class HttpClientDelegate implements HttpClient {
         ctx.cancel(cause);
         response.close(cause);
         return response;
+    }
+
+    private static void earlyCancelRequest(Throwable t, ClientRequestContext ctx,
+                                           ClientConnectionTimingsBuilder connectionTimings) {
+        ctx.logBuilder().session(null, ctx.sessionProtocol(), connectionTimings.build());
+        final UnprocessedRequestException cause = UnprocessedRequestException.of(t);
+        ctx.cancel(cause);
     }
 
     private static void doExecute(PooledChannel pooledChannel, ClientRequestContext ctx,

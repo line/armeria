@@ -1761,6 +1761,7 @@ courses
 coz.br
 cpa
 cpa.pro
+cpanel.site
 cprapid.com
 cpserver.com
 cq.cn
@@ -4330,7 +4331,6 @@ kembuchi.hokkaido.jp
 kep.tr
 kepno.pl
 kerryhotels
-kerrylogistics
 kerryproperties
 ketrzyn.pl
 keymachine.de
@@ -4775,7 +4775,6 @@ lindesnes.no
 link
 linkyard-cloud.ch
 linkyard.cloud
-lipsy
 littlestar.jp
 live
 live-on.net
@@ -9725,6 +9724,7 @@ zlg.br
 zm
 zombie.jp
 zone
+zone.id
 zp.gov.pl
 zp.ua
 zpisdn.gov.pl
