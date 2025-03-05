@@ -98,7 +98,7 @@ date: 2025-03-05
 - A cookie is correctly overwritten when a cookie with the same name, domain, and path is set. #5870 #6126
 - <type://CorsPolicyBuilder#build()> is exposed publicly again. #6121
 - Connections do not hold references on automatically aborted requests, resulting in less memory pressure. #6108
-- <type://CircuitBreakerRuleBuilder#onTimeException()> and <Type://RetryRuleBuilder#onTimeoutException()>`
+- <type://CircuitBreakerRuleBuilder#onTimeoutException()> and <Type://RetryRuleBuilder#onTimeoutException()>
   now work when a connection or proxy establishment is timed out. #6107
 - DNS refresh query is executed by the correct executor. #5891 #6092
 - You can now choose whether to use the `json_name` field option when transcoding HTTP/JSON to gRPC messages. #5890 #6082
@@ -121,7 +121,7 @@ date: 2025-03-05
 
 - <type://ServerConfig#gracefulShutdownQuietPeriod()> and <type://ServerConfig#gracefulShutdownTimeout()>
   are now deprecated. #5941
-  - Use <type://ServerConfig.gracefulShutdown(GracefulShutdown)> instead.
+  - Use <type://ServerConfig.gracefulShutdown()> instead.
 
 ## ☢️ Breaking changes
 
