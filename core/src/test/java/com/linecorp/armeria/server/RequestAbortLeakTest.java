@@ -1,0 +1,177 @@
+/*
+ * Copyright 2025 LINE Corporation
+ *
+ * LINE Corporation licenses this file to you under the Apache License,
+ * version 2.0 (the "License"); you may not use this file except in compliance
+ * with the License. You may obtain a copy of the License at:
+ *
+ *   https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations
+ * under the License.
+ */
+
+package com.linecorp.armeria.server;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.awaitility.Awaitility.await;
+
+import java.lang.ref.Reference;
+import java.lang.ref.ReferenceQueue;
+import java.lang.ref.WeakReference;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.Set;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
+
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
+
+import com.linecorp.armeria.client.WebClient;
+import com.linecorp.armeria.common.HttpData;
+import com.linecorp.armeria.common.HttpMethod;
+import com.linecorp.armeria.common.HttpRequest;
+import com.linecorp.armeria.common.HttpRequestWriter;
+import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.RequestHeaders;
+import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.logging.RequestLogProperty;
+import com.linecorp.armeria.testing.junit5.server.ServerExtension;
+
+import io.netty.channel.Channel;
+import io.netty.handler.codec.http2.Http2Connection;
+import io.netty.handler.codec.http2.Http2ConnectionHandler;
+import io.netty.handler.codec.http2.Http2Stream;
+
+class RequestAbortLeakTest {
+
+    private static final ReferenceQueue<ServiceRequestContext> refQueue = new ReferenceQueue<>();
+    private static final AtomicReference<Http2Stream> streamRef = new AtomicReference<>();
+
+    @Nullable
+    private static final Set<Object> weakRefSet = Collections.synchronizedSet(new HashSet<>());
+
+    @RegisterExtension
+    static ServerExtension server = new ServerExtension() {
+        @Override
+        protected void configure(ServerBuilder sb) throws Exception {
+
+            sb.route()
+              .path("/server-auto-abort")
+              .requestAutoAbortDelayMillis(1_000)
+              .build((ctx, req) -> {
+                  final Channel channel = ctx.log().ensureAvailable(RequestLogProperty.SESSION).channel();
+                  final Http2Connection connection =
+                          channel.pipeline().get(Http2ConnectionHandler.class).connection();
+                  final Http2Stream stream = connection.stream(connection.remote().lastStreamCreated());
+                  streamRef.set(stream);
+                  weakRefSet.add(new WeakReference<>(ctx, refQueue));
+                  return HttpResponse.of(200);
+              });
+
+            sb.route()
+              .path("/server-abort")
+              .requestAutoAbortDelayMillis(-1)
+              .build((ctx, req) -> {
+                  final Channel channel = ctx.log().ensureAvailable(RequestLogProperty.SESSION).channel();
+                  final Http2Connection connection =
+                          channel.pipeline().get(Http2ConnectionHandler.class).connection();
+                  final Http2Stream stream = connection.stream(connection.remote().lastStreamCreated());
+                  streamRef.set(stream);
+                  weakRefSet.add(new WeakReference<>(ctx, refQueue));
+                  ctx.eventLoop().schedule(() -> req.abort(), 1, TimeUnit.SECONDS);
+                  return HttpResponse.of(200);
+              });
+
+            sb.route()
+              .path("/content-length")
+              .maxRequestLength(30)
+              .build((ctx, req) -> {
+                  weakRefSet.add(new WeakReference<>(ctx, refQueue));
+                  return HttpResponse.of(200);
+              });
+        }
+
+        @Override
+        protected boolean shouldCapture(ServiceRequestContext ctx) {
+            return false;
+        }
+    };
+
+    @BeforeEach
+    void beforeEach() {
+        assertThat(refQueue.poll()).isNull();
+        weakRefSet.clear();
+    }
+
+    @Test
+    void serverFirstAborts() throws Exception {
+        final WebClient client = WebClient.builder(server.uri(SessionProtocol.H2C))
+                                          .requestAutoAbortDelayMillis(-1)
+                                          .build();
+        final RequestHeaders headers = RequestHeaders.of(HttpMethod.POST, "/server-abort");
+        final HttpRequestWriter writer = HttpRequest.streaming(headers);
+        final HttpResponse res = client.execute(writer);
+        assertThat(res.aggregate().join().status().code()).isEqualTo(200);
+
+        await().pollInterval(1, TimeUnit.SECONDS)
+                .untilAsserted(() -> {
+                    System.gc();
+                    final Reference<? extends ServiceRequestContext> ref = refQueue.poll();
+                    assertThat(ref).isNotNull();
+                    assertThat(ref.get()).isNull();
+                });
+    }
+
+    @Test
+    void serverAutoAbort() throws Exception {
+        final WebClient client = WebClient.builder(server.uri(SessionProtocol.H2C))
+                                          .requestAutoAbortDelayMillis(-1)
+                                          .build();
+        final RequestHeaders headers = RequestHeaders.of(HttpMethod.POST, "/server-auto-abort");
+        final HttpRequestWriter writer = HttpRequest.streaming(headers);
+        final HttpResponse res = client.execute(writer);
+        assertThat(res.aggregate().join().status().code()).isEqualTo(200);
+
+        final ServiceRequestContext ctx;
+        while (true) {
+            final Reference<? extends ServiceRequestContext> ctxRef = refQueue.poll();
+            if (ctxRef != null) {
+                ctx = ctxRef.get();
+                break;
+            }
+            writer.write(HttpData.wrap(new byte[] { 1, 2, 3 }));
+            Thread.sleep(1_000);
+        }
+        System.out.println(ctx);
+    }
+
+    @Test
+    void maxContentLength() throws Exception {
+        final WebClient client = WebClient.builder(server.uri(SessionProtocol.H2C))
+                                          .requestAutoAbortDelayMillis(-1)
+                                          .build();
+        final RequestHeaders headers = RequestHeaders.of(HttpMethod.POST, "/content-length");
+        final HttpRequestWriter writer = HttpRequest.streaming(headers);
+        final HttpResponse res = client.execute(writer);
+        assertThat(res.aggregate().join().status().code()).isEqualTo(200);
+
+        final ServiceRequestContext ctx;
+        while (true) {
+            final Reference<? extends ServiceRequestContext> ctxRef = refQueue.poll();
+            if (ctxRef != null) {
+                ctx = ctxRef.get();
+                break;
+            }
+            writer.write(HttpData.wrap(new byte[] { 1, 2, 3 }));
+            Thread.sleep(1_000);
+        }
+        System.out.println(ctx);
+    }
+}
