@@ -18,12 +18,6 @@ package com.linecorp.armeria.common.brave;
 
 import static com.linecorp.armeria.internal.common.brave.TraceContextUtil.traceContext;
 
-import java.util.List;
-import java.util.regex.Pattern;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import com.linecorp.armeria.client.brave.BraveClient;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.annotation.Nullable;
@@ -94,26 +88,16 @@ public final class RequestContextCurrentTraceContext extends CurrentTraceContext
      */
     @Deprecated
     public static void setCurrentThreadNotRequestThread(boolean value) {
-        if (value) {
-            THREAD_NOT_REQUEST_THREAD.set(true);
-        } else {
-            THREAD_NOT_REQUEST_THREAD.remove();
-        }
     }
 
     private static final RequestContextCurrentTraceContext DEFAULT = builder().build();
 
-    private static final Logger logger = LoggerFactory.getLogger(RequestContextCurrentTraceContext.class);
-
     // Thread-local for storing TraceContext when invoking callbacks off the request thread.
     private static final ThreadLocal<TraceContext> THREAD_LOCAL_CONTEXT = new ThreadLocal<>();
 
-    private static final ThreadLocal<Boolean> THREAD_NOT_REQUEST_THREAD = new ThreadLocal<>();
-
     private final boolean scopeDecoratorAdded;
 
-    RequestContextCurrentTraceContext(CurrentTraceContext.Builder builder,
-                                      List<Pattern> nonRequestThreadPatterns, boolean scopeDecoratorAdded) {
+    RequestContextCurrentTraceContext(CurrentTraceContext.Builder builder, boolean scopeDecoratorAdded) {
         super(builder);
         this.scopeDecoratorAdded = scopeDecoratorAdded;
     }
