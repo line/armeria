@@ -120,6 +120,7 @@ prometheus-legacy = "0.16.0"
 #      (Switch to the right tag and look for "protobuf".)
 #      e.g. https://github.com/grpc/grpc-java/blob/v1.48.0/gradle/libs.versions.toml
 protobuf = "3.25.5"
+protobuf4 = "4.29.3"
 protobuf-gradle-plugin = "0.8.19"
 protobuf-jackson = "2.7.0"
 reactive-grpc = "1.2.4"
@@ -998,6 +999,11 @@ exclusions = [
     "javax.annotation:javax.annotation-api",
 ]
 javadocs = "https://developers.curioswitch.org/apidocs/java/"
+
+# Used only for compatibility test so do not specify in the [boms] section.
+[libraries.protobuf4-bom]
+module = "com.google.protobuf:protobuf-bom"
+version.ref = "protobuf4"
 
 [libraries.reactor-core]
 module = "io.projectreactor:reactor-core"

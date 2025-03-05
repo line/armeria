@@ -66,6 +66,7 @@ import com.google.protobuf.Descriptors.MethodDescriptor;
 import com.google.protobuf.Descriptors.ServiceDescriptor;
 import com.google.protobuf.DoubleValue;
 import com.google.protobuf.Duration;
+import com.google.protobuf.ExtensionLite;
 import com.google.protobuf.FieldMask;
 import com.google.protobuf.FloatValue;
 import com.google.protobuf.Int32Value;
@@ -152,11 +153,13 @@ final class HttpJsonTranscodingService extends AbstractUnframedGrpcService
                 }
 
                 final MethodOptions methodOptions = methodDesc.getOptions();
-                if (!methodOptions.hasExtension(AnnotationsProto.http)) {
+                if (!methodOptions.hasExtension((ExtensionLite<MethodOptions, ?>) AnnotationsProto.http)) {
                     continue;
                 }
 
-                final HttpRule httpRule = methodOptions.getExtension(AnnotationsProto.http);
+                final HttpRule httpRule = methodOptions.getExtension(
+                        (ExtensionLite<MethodOptions, HttpRule>)AnnotationsProto.http
+                );
 
                 if (methodDefinition.getMethodDescriptor().getType() != MethodType.UNARY) {
                     logger.warn("Only unary methods can be configured with an HTTP/JSON endpoint: " +
