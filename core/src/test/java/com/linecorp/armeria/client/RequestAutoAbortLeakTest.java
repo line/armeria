@@ -22,17 +22,20 @@ import static org.awaitility.Awaitility.await;
 
 import java.net.InetSocketAddress;
 import java.util.concurrent.CompletionException;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Stream;
 
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 
 import com.linecorp.armeria.common.AggregatedHttpResponse;
+import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpRequestWriter;
@@ -80,6 +83,43 @@ class RequestAutoAbortLeakTest {
                 ctx.setRequestAutoAbortDelayMillis(abortDelayMillis);
                 return HttpResponse.of(200);
             });
+
+            sb.route()
+              .path("/server-auto-abort")
+              .requestAutoAbortDelayMillis(1_000)
+              .build((ctx, req) -> {
+                  final Channel channel = ctx.log().ensureAvailable(RequestLogProperty.SESSION).channel();
+                  final Http2Connection connection =
+                          channel.pipeline().get(Http2ConnectionHandler.class).connection();
+                  final Http2Stream stream = connection.stream(connection.remote().lastStreamCreated());
+                  streamRef.set(stream);
+                  return HttpResponse.of(200);
+              });
+
+            sb.route()
+              .path("/server-abort")
+              .requestAutoAbortDelayMillis(-1)
+              .build((ctx, req) -> {
+                  final Channel channel = ctx.log().ensureAvailable(RequestLogProperty.SESSION).channel();
+                  final Http2Connection connection =
+                          channel.pipeline().get(Http2ConnectionHandler.class).connection();
+                  final Http2Stream stream = connection.stream(connection.remote().lastStreamCreated());
+                  streamRef.set(stream);
+                  ctx.eventLoop().schedule(() -> req.abort(), 1, TimeUnit.SECONDS);
+                  return HttpResponse.of(200);
+              });
+
+            sb.route()
+              .path("/content-length")
+              .maxRequestLength(30)
+              .build((ctx, req) -> {
+                  final Channel channel = ctx.log().ensureAvailable(RequestLogProperty.SESSION).channel();
+                  final Http2Connection connection =
+                          channel.pipeline().get(Http2ConnectionHandler.class).connection();
+                  final Http2Stream stream = connection.stream(connection.remote().lastStreamCreated());
+                  streamRef.set(stream);
+                  return HttpResponse.of(200);
+              });
         }
     };
 
@@ -153,6 +193,69 @@ class RequestAutoAbortLeakTest {
         final ServiceRequestContext sctx = server.requestContextCaptor().poll();
         sctx.request().subscribe();
         assertContextCompleted(sctx, requestCauseClass);
+
+        await().untilAsserted(() -> assertThat(stream.state()).isEqualTo(State.CLOSED));
+    }
+
+    @Test
+    void serverFirstAborts() throws Exception {
+        final WebClient client = WebClient.builder(server.uri(SessionProtocol.H2C))
+                                          .requestAutoAbortDelayMillis(-1)
+                                          .build();
+        final RequestHeaders headers = RequestHeaders.of(HttpMethod.POST, "/server-abort");
+        final HttpRequestWriter writer = HttpRequest.streaming(headers);
+        final HttpResponse res = client.execute(writer);
+        assertThat(res.aggregate().join().status().code()).isEqualTo(200);
+
+        await().untilAsserted(() -> assertThat(streamRef.get()).isNotNull());
+        final Http2Stream stream = streamRef.get();
+
+        while (stream.state() != State.CLOSED) {
+            writer.write(HttpData.wrap(new byte[] { 1, 2, 3 }));
+            Thread.sleep(1_000);
+        }
+
+        await().untilAsserted(() -> assertThat(stream.state()).isEqualTo(State.CLOSED));
+    }
+
+    @Test
+    void serverAutoAbort() throws Exception {
+        final WebClient client = WebClient.builder(server.uri(SessionProtocol.H2C))
+                                          .requestAutoAbortDelayMillis(-1)
+                                          .build();
+        final RequestHeaders headers = RequestHeaders.of(HttpMethod.POST, "/server-auto-abort");
+        final HttpRequestWriter writer = HttpRequest.streaming(headers);
+        final HttpResponse res = client.execute(writer);
+        assertThat(res.aggregate().join().status().code()).isEqualTo(200);
+
+        await().untilAsserted(() -> assertThat(streamRef.get()).isNotNull());
+        final Http2Stream stream = streamRef.get();
+
+        while (stream.state() != State.CLOSED) {
+            writer.write(HttpData.wrap(new byte[] { 1, 2, 3 }));
+            Thread.sleep(1_000);
+        }
+
+        await().untilAsserted(() -> assertThat(stream.state()).isEqualTo(State.CLOSED));
+    }
+
+    @Test
+    void maxContentLength() throws Exception {
+        final WebClient client = WebClient.builder(server.uri(SessionProtocol.H2C))
+                                          .requestAutoAbortDelayMillis(-1)
+                                          .build();
+        final RequestHeaders headers = RequestHeaders.of(HttpMethod.POST, "/content-length");
+        final HttpRequestWriter writer = HttpRequest.streaming(headers);
+        final HttpResponse res = client.execute(writer);
+        assertThat(res.aggregate().join().status().code()).isEqualTo(200);
+
+        await().untilAsserted(() -> assertThat(streamRef.get()).isNotNull());
+        final Http2Stream stream = streamRef.get();
+
+        while (stream.state() != State.CLOSED) {
+            writer.write(HttpData.wrap(new byte[] { 1, 2, 3 }));
+            Thread.sleep(1_000);
+        }
 
         await().untilAsserted(() -> assertThat(stream.state()).isEqualTo(State.CLOSED));
     }
