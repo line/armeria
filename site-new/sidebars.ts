@@ -17,7 +17,8 @@ const sidebars: SidebarsConfig = {
     {
       type: 'html',
       value: 'User manual',
-      defaultStyle: true, // TODO: Styling - bold, small, capital letters
+      defaultStyle: true,
+      className: 'sidebar-title',
     },
     'index',
     'setup',
@@ -52,12 +53,14 @@ const sidebars: SidebarsConfig = {
     {
       type: 'html',
       value: '<hr>',
-      defaultStyle: true, // TODO: Styling
+      defaultStyle: true,
+      className: 'sidebar-divider',
     },
     {
       type: 'html',
       value: 'Tutorials',
-      defaultStyle: true, // TODO: Styling
+      defaultStyle: true,
+      className: 'sidebar-title',
     },
     {
       type: 'doc',
@@ -94,7 +97,8 @@ const sidebars: SidebarsConfig = {
     {
       type: 'html',
       value: '<hr>',
-      defaultStyle: true, // TODO: Styling
+      defaultStyle: true,
+      className: 'sidebar-divider',
     },
     {
       type: 'link',
