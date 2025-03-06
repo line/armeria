@@ -1907,6 +1907,7 @@ democrat
 demon.nl
 deno-staging.dev
 deno.dev
+deno.net
 dental
 dentist
 dep.no
