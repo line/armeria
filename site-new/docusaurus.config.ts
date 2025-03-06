@@ -82,7 +82,7 @@ const config: Config = {
         },
         {
           type: 'docSidebar',
-          sidebarId: 'documentationSideBar',
+          sidebarId: 'docsSidebar',
           position: 'left',
           label: 'Documentation',
         },
@@ -160,7 +160,18 @@ const config: Config = {
     },
   } satisfies Preset.ThemeConfig,
 
-  plugins: ['docusaurus-plugin-less'],
+  plugins: [
+    'docusaurus-plugin-less',
+    [
+      '@docusaurus/plugin-content-docs',
+      {
+        id: 'community',
+        path: 'community',
+        routeBasePath: 'community',
+        sidebarPath: './sidebarsCommunity.ts',
+      },
+    ],
+  ],
 };
 
 export default config;
