@@ -78,6 +78,7 @@ import com.linecorp.armeria.common.util.TimeoutMode;
 import com.linecorp.armeria.common.util.UnmodifiableFuture;
 import com.linecorp.armeria.internal.common.CancellationScheduler;
 import com.linecorp.armeria.internal.common.CancellationScheduler.CancellationTask;
+import com.linecorp.armeria.internal.common.DefaultRequestTarget;
 import com.linecorp.armeria.internal.common.HeaderOverridingHttpRequest;
 import com.linecorp.armeria.internal.common.NonWrappingRequestContext;
 import com.linecorp.armeria.internal.common.RequestContextExtension;
@@ -675,7 +676,7 @@ public final class DefaultClientRequestContext
             final String oldPath = requestTarget().pathAndQuery();
             final String newPath = newHeaders.path();
             if (!oldPath.equals(newPath)) {
-                // path is changed.
+                // path is changed
                 final RequestTarget reqTarget = RequestTarget.forClient(newPath);
                 checkArgument(reqTarget != null, "invalid path: %s", newPath);
 
@@ -709,7 +710,7 @@ public final class DefaultClientRequestContext
     protected RequestTarget validateHeaders(RequestHeaders headers) {
         // no need to validate since internal headers will contain
         // the default host and session protocol headers set by endpoints.
-        return RequestTarget.forClient(headers.path());
+        return DefaultRequestTarget.forClientPath(headers.path());
     }
 
     @Override

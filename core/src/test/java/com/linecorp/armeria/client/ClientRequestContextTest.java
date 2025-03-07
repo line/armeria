@@ -269,17 +269,28 @@ class ClientRequestContextTest {
         }
     }
 
+    @Test
+    void updateRequestWithInvalidPath() {
+        final ClientRequestContext clientRequestContext = clientRequestContext();
+        assertThat(clientRequestContext.path()).isEqualTo("/");
+        final HttpRequest request =
+                HttpRequest.of(RequestHeaders.of(HttpMethod.GET, "%"));
+
+        assertThatThrownBy(() -> clientRequestContext.updateRequest(request))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("invalid path");
+    }
+
     @ParameterizedTest
-    @ValueSource(strings = {"%", "http:///", "http://foo.com/bar"})
-    void updateRequestWithInvalidPath(String path) {
+    @ValueSource(strings = {"http:///", "http://foo.com/bar"})
+    void updateRequestWithAbsolutePath(String path) {
         final ClientRequestContext clientRequestContext = clientRequestContext();
         assertThat(clientRequestContext.path()).isEqualTo("/");
         final HttpRequest request =
                 HttpRequest.of(RequestHeaders.of(HttpMethod.GET, path));
 
-        assertThatThrownBy(() -> clientRequestContext.updateRequest(request))
-                .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("invalid path");
+        clientRequestContext.updateRequest(request);
+        assertThat(clientRequestContext.path()).isEqualTo('/' + path);
     }
 
     @ParameterizedTest
