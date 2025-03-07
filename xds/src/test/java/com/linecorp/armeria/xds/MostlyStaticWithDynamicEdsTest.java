@@ -99,7 +99,9 @@ class MostlyStaticWithDynamicEdsTest {
             final RouteSnapshot routeSnapshot = listenerSnapshot.routeSnapshot();
             assertThat(routeSnapshot.xdsResource().resource()).isEqualTo(expectedRoute);
 
-            final ClusterSnapshot clusterSnapshot = routeSnapshot.clusterSnapshots().get(0);
+            final ClusterSnapshot clusterSnapshot = routeSnapshot.virtualHostSnapshots().get(0)
+                                                                 .routeEntries().get(0)
+                                                                 .clusterSnapshot();
             assertThat(clusterSnapshot.xdsResource().resource()).isEqualTo(staticCluster);
             final ClusterLoadAssignment expectedEndpoint =
                     cache.getSnapshot(GROUP).endpoints().resources().get("cluster");

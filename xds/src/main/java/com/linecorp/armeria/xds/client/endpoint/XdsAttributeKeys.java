@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.xds.client.endpoint;
 
+import io.envoyproxy.envoy.config.core.v3.Metadata;
 import io.envoyproxy.envoy.config.endpoint.v3.LbEndpoint;
 import io.envoyproxy.envoy.config.endpoint.v3.LocalityLbEndpoints;
 import io.netty.util.AttributeKey;
@@ -28,6 +29,8 @@ final class XdsAttributeKeys {
             AttributeKey.valueOf(XdsAttributeKeys.class, "LOCALITY_LB_ENDPOINTS_KEY");
     static final AttributeKey<XdsRandom> XDS_RANDOM =
             AttributeKey.valueOf(XdsAttributeKeys.class, "XDS_RANDOM");
+    public static final AttributeKey<Metadata> ROUTE_METADATA_MATCH =
+            AttributeKey.valueOf(XdsAttributeKeys.class, "ROUTER_METADATA");
 
     private XdsAttributeKeys() {}
 }
