@@ -1920,6 +1920,7 @@ design.aero
 det.br
 deta.app
 deta.dev
+deus-canvas.com
 dev
 dev-myqnapcloud.com
 dev.br
@@ -6187,6 +6188,7 @@ onfabrica.com
 ong
 ong.br
 onga.fukuoka.jp
+oninferno.net
 onion
 onjuku.chiba.jp
 onl
