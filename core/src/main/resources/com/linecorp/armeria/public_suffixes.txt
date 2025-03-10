@@ -1907,6 +1907,7 @@ democrat
 demon.nl
 deno-staging.dev
 deno.dev
+deno.net
 dental
 dentist
 dep.no
@@ -1919,6 +1920,7 @@ design.aero
 det.br
 deta.app
 deta.dev
+deus-canvas.com
 dev
 dev-myqnapcloud.com
 dev.br
@@ -6186,6 +6188,7 @@ onfabrica.com
 ong
 ong.br
 onga.fukuoka.jp
+oninferno.net
 onion
 onjuku.chiba.jp
 onl
