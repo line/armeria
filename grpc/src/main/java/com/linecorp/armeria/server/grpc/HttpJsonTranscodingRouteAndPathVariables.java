@@ -117,7 +117,7 @@ final class HttpJsonTranscodingRouteAndPathVariables {
         } else if (pathMappingType == PathMappingType.GLOB) {
             builder.glob(Stringifier.segmentsToPath(PathMappingType.GLOB, segments, true));
         } else {
-            builder.regex(Stringifier.segmentsToPath(PathMappingType.REGEX, segments, true));
+            builder.regex('^' + Stringifier.segmentsToPath(PathMappingType.REGEX, segments, true) + '$');
         }
         return new HttpJsonTranscodingRouteAndPathVariables(
                 builder.build(), PathVariable.from(segments, pathMappingType), hasVerb);
