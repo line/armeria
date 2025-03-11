@@ -295,8 +295,13 @@ public final class GrpcDocServicePlugin implements DocServicePlugin {
                         builder = FieldInfo.builder(paramName, toTypeSignature(parameter));
                     }
 
-                    fieldInfosBuilder.add(builder.requirement(FieldRequirement.REQUIRED)
-                                                 .location(fieldLocation)
+                    if (parameter.isOptional() || parameter.isRepeated()) {
+                        builder.requirement(FieldRequirement.OPTIONAL);
+                    } else {
+                        builder.requirement(FieldRequirement.REQUIRED);
+                    }
+
+                    fieldInfosBuilder.add(builder.location(fieldLocation)
                                                  .build());
                 }
             });

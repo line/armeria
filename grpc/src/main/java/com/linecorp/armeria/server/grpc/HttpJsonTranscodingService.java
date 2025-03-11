@@ -368,13 +368,14 @@ final class HttpJsonTranscodingService extends AbstractUnframedGrpcService
                 case BYTE_STRING:
                 case ENUM:
                     // Use field name which is specified in proto file.
-                    builder.put(key, new Field(field, parentNames, field.getJavaType()));
+                    builder.put(key, new Field(field, parentNames, field.getJavaType(), false));
                     break;
                 case MESSAGE:
                     @Nullable
                     final JavaType wellKnownFieldType = getJavaTypeForWellKnownTypes(field);
+                    final boolean isOptional = isOptionalFieldType(field);
                     if (wellKnownFieldType != null) {
-                        builder.put(key, new Field(field, parentNames, wellKnownFieldType));
+                        builder.put(key, new Field(field, parentNames, wellKnownFieldType, isOptional));
                         break;
                     }
 
@@ -408,7 +409,7 @@ final class HttpJsonTranscodingService extends AbstractUnframedGrpcService
                             throw e;
                         }
 
-                        builder.put(key, new Field(field, parentNames, JavaType.MESSAGE));
+                        builder.put(key, new Field(field, parentNames, JavaType.MESSAGE, isOptional));
                     }
                     break;
             }
@@ -416,6 +417,22 @@ final class HttpJsonTranscodingService extends AbstractUnframedGrpcService
         // A generated field in LOWER_CAMEL_CASE from a single word such as 'text' could be conflict with the
         // original field name.
         return builder.buildKeepingLast();
+    }
+
+    private static boolean isOptionalFieldType(FieldDescriptor field) {
+        final String fullName = field.getFullName();
+        if (DoubleValue.getDescriptor().getFullName().equals(fullName) ||
+                FloatValue.getDescriptor().getFullName().equals(fullName) ||
+                Int64Value.getDescriptor().getFullName().equals(fullName) ||
+                UInt64Value.getDescriptor().getFullName().equals(fullName) ||
+                Int32Value.getDescriptor().getFullName().equals(fullName) ||
+                UInt32Value.getDescriptor().getFullName().equals(fullName) ||
+                BoolValue.getDescriptor().getFullName().equals(fullName) ||
+                StringValue.getDescriptor().getFullName().equals(fullName) ||
+                BytesValue.getDescriptor().getFullName().equals(fullName)) {
+            return true;
+        }
+        return false;
     }
 
     @Nullable
@@ -606,7 +623,8 @@ final class HttpJsonTranscodingService extends AbstractUnframedGrpcService
                 spec.originalFields.entrySet().stream().collect(
                         toImmutableMap(Entry::getKey,
                                        fieldEntry -> new Parameter(fieldEntry.getValue().type(),
-                                                                   fieldEntry.getValue().isRepeated())));
+                                                                   fieldEntry.getValue().isRepeated(),
+                                                                   fieldEntry.getValue().isOptional())));
         return new HttpEndpointSpecification(spec.order,
                                              route,
                                              paramNames,
@@ -981,11 +999,13 @@ final class HttpJsonTranscodingService extends AbstractUnframedGrpcService
         private final FieldDescriptor descriptor;
         private final List<String> parentNames;
         private final JavaType javaType;
+        private final boolean isOptional;
 
-        private Field(FieldDescriptor descriptor, List<String> parentNames, JavaType javaType) {
+        private Field(FieldDescriptor descriptor, List<String> parentNames, JavaType javaType, boolean isOptional) {
             this.descriptor = descriptor;
             this.parentNames = parentNames;
             this.javaType = javaType;
+            this.isOptional = isOptional;
         }
 
         JavaType type() {
@@ -998,6 +1018,10 @@ final class HttpJsonTranscodingService extends AbstractUnframedGrpcService
 
         boolean isRepeated() {
             return descriptor.isRepeated();
+        }
+
+        boolean isOptional() {
+            return isOptional;
         }
     }
 
