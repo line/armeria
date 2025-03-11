@@ -180,12 +180,12 @@ public final class HttpEndpointSpecification {
     public static class Parameter {
         private final JavaType type;
         private final boolean isRepeated;
-        private final boolean isOptional;
+        private final boolean isRequired;
 
-        public Parameter(JavaType type, boolean isRepeated, boolean isOptional) {
+        public Parameter(JavaType type, boolean isRepeated, boolean isRequired) {
             this.type = requireNonNull(type, "type");
             this.isRepeated = isRepeated;
-            this.isOptional = isOptional || isRepeated;
+            this.isRequired = isRequired;
         }
 
         public JavaType type() {
@@ -196,8 +196,8 @@ public final class HttpEndpointSpecification {
             return isRepeated;
         }
 
-        public boolean isOptional() {
-            return isOptional;
+        public boolean isRequired() {
+            return isRequired;
         }
 
         @Override

@@ -36,6 +36,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+import com.google.api.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -44,9 +45,6 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
-import com.google.api.AnnotationsProto;
-import com.google.api.HttpBody;
-import com.google.api.HttpRule;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.CaseFormat;
 import com.google.common.base.MoreObjects;
@@ -368,14 +366,15 @@ final class HttpJsonTranscodingService extends AbstractUnframedGrpcService
                 case BYTE_STRING:
                 case ENUM:
                     // Use field name which is specified in proto file.
-                    builder.put(key, new Field(field, parentNames, field.getJavaType(), false));
+                    builder.put(key, new Field(field, parentNames, field.getJavaType(), true));
                     break;
                 case MESSAGE:
                     @Nullable
                     final JavaType wellKnownFieldType = getJavaTypeForWellKnownTypes(field);
-                    final boolean isOptional = isScalarValueWrapperMessage(field) || field.isOptional();
+                    final boolean isRequired = hasRequiredFieldBehavior(field);
+
                     if (wellKnownFieldType != null) {
-                        builder.put(key, new Field(field, parentNames, wellKnownFieldType, isOptional));
+                        builder.put(key, new Field(field, parentNames, wellKnownFieldType, isRequired));
                         break;
                     }
 
@@ -409,7 +408,7 @@ final class HttpJsonTranscodingService extends AbstractUnframedGrpcService
                             throw e;
                         }
 
-                        builder.put(key, new Field(field, parentNames, JavaType.MESSAGE, isOptional));
+                        builder.put(key, new Field(field, parentNames, JavaType.MESSAGE, isRequired));
                     }
                     break;
             }
@@ -417,6 +416,16 @@ final class HttpJsonTranscodingService extends AbstractUnframedGrpcService
         // A generated field in LOWER_CAMEL_CASE from a single word such as 'text' could be conflict with the
         // original field name.
         return builder.buildKeepingLast();
+    }
+
+    private static boolean hasRequiredFieldBehavior(FieldDescriptor field) {
+        if (!field.isRepeated()) {
+            List<FieldBehavior> fieldBehaviors = field
+                    .getOptions()
+                    .getExtension(FieldBehaviorProto.fieldBehavior);
+            return fieldBehaviors.contains(FieldBehavior.REQUIRED);
+        }
+        return false;
     }
 
     @Nullable
@@ -613,7 +622,7 @@ final class HttpJsonTranscodingService extends AbstractUnframedGrpcService
                         toImmutableMap(Entry::getKey,
                                        fieldEntry -> new Parameter(fieldEntry.getValue().type(),
                                                                    fieldEntry.getValue().isRepeated(),
-                                                                   fieldEntry.getValue().isOptional())));
+                                                                   fieldEntry.getValue().isRequired())));
         return new HttpEndpointSpecification(spec.order,
                                              route,
                                              paramNames,
@@ -988,17 +997,17 @@ final class HttpJsonTranscodingService extends AbstractUnframedGrpcService
         private final FieldDescriptor descriptor;
         private final List<String> parentNames;
         private final JavaType javaType;
-        private final boolean isOptional;
+        private final boolean isRequired;
 
         private Field(FieldDescriptor descriptor,
                       List<String> parentNames,
                       JavaType javaType,
-                      boolean isOptional
+                      boolean isRequired
         ) {
             this.descriptor = descriptor;
             this.parentNames = parentNames;
             this.javaType = javaType;
-            this.isOptional = isOptional;
+            this.isRequired = isRequired;
         }
 
         JavaType type() {
@@ -1013,8 +1022,8 @@ final class HttpJsonTranscodingService extends AbstractUnframedGrpcService
             return descriptor.isRepeated();
         }
 
-        boolean isOptional() {
-            return isOptional;
+        boolean isRequired() {
+            return isRequired;
         }
     }
 
