@@ -373,7 +373,7 @@ final class HttpJsonTranscodingService extends AbstractUnframedGrpcService
                 case MESSAGE:
                     @Nullable
                     final JavaType wellKnownFieldType = getJavaTypeForWellKnownTypes(field);
-                    final boolean isOptional = isScalarValueWrapperMessage(field);
+                    final boolean isOptional = isScalarValueWrapperMessage(field) || field.isOptional();
                     if (wellKnownFieldType != null) {
                         builder.put(key, new Field(field, parentNames, wellKnownFieldType, isOptional));
                         break;
