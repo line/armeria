@@ -1001,7 +1001,11 @@ final class HttpJsonTranscodingService extends AbstractUnframedGrpcService
         private final JavaType javaType;
         private final boolean isOptional;
 
-        private Field(FieldDescriptor descriptor, List<String> parentNames, JavaType javaType, boolean isOptional) {
+        private Field(FieldDescriptor descriptor,
+                      List<String> parentNames,
+                      JavaType javaType,
+                      boolean isOptional
+        ) {
             this.descriptor = descriptor;
             this.parentNames = parentNames;
             this.javaType = javaType;
