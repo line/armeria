@@ -27,6 +27,7 @@ import java.util.Map;
 
 import org.hamcrest.CustomTypeSafeMatcher;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
@@ -39,6 +40,7 @@ import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpStatus;
+import com.linecorp.armeria.internal.testing.DocServiceExtension;
 import com.linecorp.armeria.internal.testing.GenerateNativeImageTrace;
 import com.linecorp.armeria.internal.testing.TestUtil;
 import com.linecorp.armeria.server.Route;
@@ -54,6 +56,7 @@ import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 import graphql.schema.DataFetcher;
 
 @GenerateNativeImageTrace
+@ExtendWith(DocServiceExtension.class)
 class GraphqlDocServiceTest {
 
     private static final ObjectMapper mapper = new ObjectMapper();
