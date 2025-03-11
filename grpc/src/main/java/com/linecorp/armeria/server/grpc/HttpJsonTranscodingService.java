@@ -36,7 +36,6 @@ import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
-import com.google.api.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -45,6 +44,11 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.google.api.AnnotationsProto;
+import com.google.api.FieldBehavior;
+import com.google.api.FieldBehaviorProto;
+import com.google.api.HttpBody;
+import com.google.api.HttpRule;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.CaseFormat;
 import com.google.common.base.MoreObjects;
@@ -156,7 +160,7 @@ final class HttpJsonTranscodingService extends AbstractUnframedGrpcService
                 }
 
                 final HttpRule httpRule = methodOptions.getExtension(
-                        (ExtensionLite<MethodOptions, HttpRule>)AnnotationsProto.http
+                        (ExtensionLite<MethodOptions, HttpRule>) AnnotationsProto.http
                 );
 
                 if (methodDefinition.getMethodDescriptor().getType() != MethodType.UNARY) {
@@ -420,7 +424,7 @@ final class HttpJsonTranscodingService extends AbstractUnframedGrpcService
 
     private static boolean hasRequiredFieldBehavior(FieldDescriptor field) {
         if (!field.isRepeated()) {
-            List<FieldBehavior> fieldBehaviors = field
+            final List<FieldBehavior> fieldBehaviors = field
                     .getOptions()
                     .getExtension(FieldBehaviorProto.fieldBehavior);
             return fieldBehaviors.contains(FieldBehavior.REQUIRED);
