@@ -1,19 +1,37 @@
+/*
+ *  Copyright 2025 LINE Corporation
+ *
+ *  LINE Corporation licenses this file to you under the Apache License,
+ *  version 2.0 (the "License"); you may not use this file except in compliance
+ *  with the License. You may obtain a copy of the License at:
+ *
+ *    https://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing, software
+ *  distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ *  WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ *  License for the specific language governing permissions and limitations
+ *  under the License.
+ */
+
 package com.linecorp.armeria.common.grpc;
 
-import com.google.api.client.testing.util.TestableByteArrayOutputStream;
-import com.google.protobuf.util.JsonFormat;
-import io.grpc.MethodDescriptor;
-import org.apache.tools.ant.filters.StringInputStream;
-import org.jetbrains.annotations.Nullable;
-import org.junit.jupiter.api.Test;
-import testing.grpc.Messages;
-import testing.grpc.TestServiceGrpc;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.io.IOException;
 import java.io.InputStream;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import org.apache.tools.ant.filters.StringInputStream;
+import org.jetbrains.annotations.Nullable;
+import org.junit.jupiter.api.Test;
+
+import com.google.api.client.testing.util.TestableByteArrayOutputStream;
+import com.google.protobuf.util.JsonFormat;
+
+import io.grpc.MethodDescriptor;
+import testing.grpc.Messages;
+import testing.grpc.TestServiceGrpc;
 
 class GsonGrpcJsonMarshallerBuilderTest {
     private static final Messages.SimpleRequest testData = Messages.SimpleRequest.newBuilder()
@@ -51,33 +69,33 @@ class GsonGrpcJsonMarshallerBuilderTest {
 
     @Test
     void createJsonPrinterWithDefaultSettingsIfNoCustomizerRegistered() throws IOException {
-        GrpcJsonMarshaller jsonMarshaller = GrpcJsonMarshaller.builderForGson().build();
-        String json = serializeToJson(jsonMarshaller);
+        final GrpcJsonMarshaller jsonMarshaller = GrpcJsonMarshaller.builderForGson().build();
+        final String json = serializeToJson(jsonMarshaller);
         assertThat(json)
                 .isEqualTo("{\"payload\":{\"type\":\"RANDOM\"},\"fillUsername\":true}");
     }
 
     @Test
     void createJsonPrinterWithCustomizer() throws IOException {
-        GrpcJsonMarshaller jsonMarshaller = GrpcJsonMarshaller.builderForGson()
+        final GrpcJsonMarshaller jsonMarshaller = GrpcJsonMarshaller.builderForGson()
                 .jsonPrinterCustomizer(JsonFormat.Printer::preservingProtoFieldNames)
                 .jsonPrinterCustomizer(JsonFormat.Printer::printingEnumsAsInts)
                 .build();
-        String json = serializeToJson(jsonMarshaller);
+        final String json = serializeToJson(jsonMarshaller);
         assertThat(json)
                 .isEqualTo("{\"payload\":{\"type\":2},\"fill_username\":true}");
     }
 
     @Test
     void createJsonParserWithDefaultSettingsIfNoCustomizerRegistered() throws IOException {
-        GrpcJsonMarshaller jsonMarshaller = GrpcJsonMarshaller.builderForGson().build();
+        final GrpcJsonMarshaller jsonMarshaller = GrpcJsonMarshaller.builderForGson().build();
         assertThat(parseJson(jsonMarshaller, "{\"test\": true,\"fill_username\":true}").getFillUsername())
                 .isEqualTo(true);
     }
 
     @Test
     void createJsonParserWithCustomizerNotIgnoringUnknownFields() {
-        GrpcJsonMarshaller jsonMarshaller = GrpcJsonMarshaller.builderForGson()
+        final GrpcJsonMarshaller jsonMarshaller = GrpcJsonMarshaller.builderForGson()
                 .jsonParserCustomizer((parser -> parser.usingTypeRegistry(
                         JsonFormat.TypeRegistry.newBuilder()
                                 .add(Messages.SimpleRequest.getDescriptor())
@@ -90,12 +108,14 @@ class GsonGrpcJsonMarshallerBuilderTest {
     }
 
     private static String serializeToJson(GrpcJsonMarshaller jsonMarshaller) throws IOException {
-        TestableByteArrayOutputStream outputStream = new TestableByteArrayOutputStream();
+        final TestableByteArrayOutputStream outputStream = new TestableByteArrayOutputStream();
         jsonMarshaller.serializeMessage(customRequestMarshaller, testData, outputStream);
         return outputStream.toString();
     }
 
-    private static Messages.SimpleRequest parseJson(GrpcJsonMarshaller jsonMarshaller, String input) throws IOException {
+    private static Messages.SimpleRequest parseJson(
+            GrpcJsonMarshaller jsonMarshaller, String input
+    ) throws IOException {
         return jsonMarshaller.deserializeMessage(customRequestMarshaller, new StringInputStream(input));
     }
 }
