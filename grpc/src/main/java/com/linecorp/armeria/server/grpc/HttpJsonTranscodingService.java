@@ -423,7 +423,7 @@ final class HttpJsonTranscodingService extends AbstractUnframedGrpcService
     }
 
     private static boolean hasRequiredFieldBehavior(FieldDescriptor field) {
-        if (!field.isRepeated()) {
+        if (!field.isRepeated() && field.getOptions().hasExtension(FieldBehaviorProto.fieldBehavior)) {
             final List<FieldBehavior> fieldBehaviors = field
                     .getOptions()
                     .getExtension(FieldBehaviorProto.fieldBehavior);
