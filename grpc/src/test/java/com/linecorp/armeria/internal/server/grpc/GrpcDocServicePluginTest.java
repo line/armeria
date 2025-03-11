@@ -422,7 +422,7 @@ class GrpcDocServicePluginTest {
                          .location(FieldLocation.PATH).requirement(FieldRequirement.REQUIRED).build(),
                 FieldInfo.builder("revision",
                                   TypeSignature.ofList(TypeSignature.ofBase(JavaType.LONG.name())))
-                         .location(FieldLocation.QUERY).requirement(FieldRequirement.REQUIRED).build()));
+                         .location(FieldLocation.QUERY).requirement(FieldRequirement.OPTIONAL).build()));
         assertThat(getMessageV3.useParameterAsRoot()).isFalse();
 
         // Check HTTP PATCH method.
