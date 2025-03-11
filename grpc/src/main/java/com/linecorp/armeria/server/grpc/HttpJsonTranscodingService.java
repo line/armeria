@@ -448,7 +448,7 @@ final class HttpJsonTranscodingService extends AbstractUnframedGrpcService
             return JavaType.STRING;
         }
 
-        if (isScalarValueWrapperMessage(fd)) {
+        if (isScalarValueWrapperMessage(fullName)) {
             // "value" field. Wrappers must have one field.
             assert messageType.getFields().size() == 1 : "Wrappers must have one 'value' field.";
             return messageType.getFields().get(0).getJavaType();
@@ -475,8 +475,7 @@ final class HttpJsonTranscodingService extends AbstractUnframedGrpcService
         return null;
     }
 
-    private static boolean isScalarValueWrapperMessage(FieldDescriptor field) {
-        final String fullName = field.getFullName();
+    private static boolean isScalarValueWrapperMessage(String fullName) {
         return DoubleValue.getDescriptor().getFullName().equals(fullName) ||
                 FloatValue.getDescriptor().getFullName().equals(fullName) ||
                 Int64Value.getDescriptor().getFullName().equals(fullName) ||
