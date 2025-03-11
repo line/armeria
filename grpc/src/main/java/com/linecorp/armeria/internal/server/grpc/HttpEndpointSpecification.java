@@ -185,7 +185,7 @@ public final class HttpEndpointSpecification {
         public Parameter(JavaType type, boolean isRepeated, boolean isOptional) {
             this.type = requireNonNull(type, "type");
             this.isRepeated = isRepeated;
-            this.isOptional = isOptional;
+            this.isOptional = isOptional || isRepeated;
         }
 
         public JavaType type() {

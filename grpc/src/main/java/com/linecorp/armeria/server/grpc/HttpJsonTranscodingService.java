@@ -373,7 +373,7 @@ final class HttpJsonTranscodingService extends AbstractUnframedGrpcService
                 case MESSAGE:
                     @Nullable
                     final JavaType wellKnownFieldType = getJavaTypeForWellKnownTypes(field);
-                    final boolean isOptional = isOptionalFieldType(field);
+                    final boolean isOptional = isScalarValueWrapperMessage(field);
                     if (wellKnownFieldType != null) {
                         builder.put(key, new Field(field, parentNames, wellKnownFieldType, isOptional));
                         break;
@@ -419,22 +419,6 @@ final class HttpJsonTranscodingService extends AbstractUnframedGrpcService
         return builder.buildKeepingLast();
     }
 
-    private static boolean isOptionalFieldType(FieldDescriptor field) {
-        final String fullName = field.getFullName();
-        if (DoubleValue.getDescriptor().getFullName().equals(fullName) ||
-                FloatValue.getDescriptor().getFullName().equals(fullName) ||
-                Int64Value.getDescriptor().getFullName().equals(fullName) ||
-                UInt64Value.getDescriptor().getFullName().equals(fullName) ||
-                Int32Value.getDescriptor().getFullName().equals(fullName) ||
-                UInt32Value.getDescriptor().getFullName().equals(fullName) ||
-                BoolValue.getDescriptor().getFullName().equals(fullName) ||
-                StringValue.getDescriptor().getFullName().equals(fullName) ||
-                BytesValue.getDescriptor().getFullName().equals(fullName)) {
-            return true;
-        }
-        return false;
-    }
-
     @Nullable
     private static JavaType getJavaTypeForWellKnownTypes(FieldDescriptor fd) {
         // MapField can be sent only via HTTP body.
@@ -451,15 +435,7 @@ final class HttpJsonTranscodingService extends AbstractUnframedGrpcService
             return JavaType.STRING;
         }
 
-        if (DoubleValue.getDescriptor().getFullName().equals(fullName) ||
-            FloatValue.getDescriptor().getFullName().equals(fullName) ||
-            Int64Value.getDescriptor().getFullName().equals(fullName) ||
-            UInt64Value.getDescriptor().getFullName().equals(fullName) ||
-            Int32Value.getDescriptor().getFullName().equals(fullName) ||
-            UInt32Value.getDescriptor().getFullName().equals(fullName) ||
-            BoolValue.getDescriptor().getFullName().equals(fullName) ||
-            StringValue.getDescriptor().getFullName().equals(fullName) ||
-            BytesValue.getDescriptor().getFullName().equals(fullName)) {
+        if (isScalarValueWrapperMessage(fd)) {
             // "value" field. Wrappers must have one field.
             assert messageType.getFields().size() == 1 : "Wrappers must have one 'value' field.";
             return messageType.getFields().get(0).getJavaType();
@@ -484,6 +460,19 @@ final class HttpJsonTranscodingService extends AbstractUnframedGrpcService
         }
 
         return null;
+    }
+
+    private static boolean isScalarValueWrapperMessage(FieldDescriptor field) {
+        final String fullName = field.getFullName();
+        return DoubleValue.getDescriptor().getFullName().equals(fullName) ||
+                FloatValue.getDescriptor().getFullName().equals(fullName) ||
+                Int64Value.getDescriptor().getFullName().equals(fullName) ||
+                UInt64Value.getDescriptor().getFullName().equals(fullName) ||
+                Int32Value.getDescriptor().getFullName().equals(fullName) ||
+                UInt32Value.getDescriptor().getFullName().equals(fullName) ||
+                BoolValue.getDescriptor().getFullName().equals(fullName) ||
+                StringValue.getDescriptor().getFullName().equals(fullName) ||
+                BytesValue.getDescriptor().getFullName().equals(fullName);
     }
 
     // to make it more efficient, we calculate whether extract response body one time
