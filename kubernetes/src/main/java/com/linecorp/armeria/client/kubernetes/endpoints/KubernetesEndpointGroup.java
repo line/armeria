@@ -24,15 +24,12 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Predicate;
 
 import org.jctools.maps.NonBlockingHashMap;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import com.google.errorprone.annotations.concurrent.GuardedBy;
 
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.endpoint.DynamicEndpointGroup;
@@ -42,11 +39,12 @@ import com.linecorp.armeria.common.CommonPools;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.util.ShutdownHooks;
-import com.linecorp.armeria.internal.common.util.ReentrantShortLock;
 
 import io.fabric8.kubernetes.api.model.Node;
 import io.fabric8.kubernetes.api.model.NodeAddress;
+import io.fabric8.kubernetes.api.model.NodeList;
 import io.fabric8.kubernetes.api.model.Pod;
+import io.fabric8.kubernetes.api.model.PodList;
 import io.fabric8.kubernetes.api.model.Service;
 import io.fabric8.kubernetes.api.model.ServicePort;
 import io.fabric8.kubernetes.client.Config;
@@ -54,6 +52,7 @@ import io.fabric8.kubernetes.client.KubernetesClient;
 import io.fabric8.kubernetes.client.KubernetesClientBuilder;
 import io.fabric8.kubernetes.client.Watch;
 import io.fabric8.kubernetes.client.Watcher;
+import io.fabric8.kubernetes.client.Watcher.Action;
 import io.fabric8.kubernetes.client.WatcherException;
 
 /**
@@ -63,7 +62,7 @@ import io.fabric8.kubernetes.client.WatcherException;
  * or <a href="https://kubernetes.io/docs/concepts/services-networking/service/#loadbalancer">'LoadBalancer'</a>
  * to expose a node port for client side load balancing.
  *
- * <p>{@link KubernetesEndpointGroup} watches the nodes, services and pods in the Kubernetes cluster and updates
+ * <p>{@link KubernetesEndpointGroup} gets and watches the nodes, services and pods in the Kubernetes cluster and updates
  * the endpoints, so the credentials in the {@link Config} used to create {@link KubernetesClient} should
  * have permission to watch {@code services}, {@code nodes} and {@code pods}. Otherwise, the
  * {@link KubernetesEndpointGroup} will not be able to fetch the endpoints.
@@ -78,7 +77,7 @@ import io.fabric8.kubernetes.client.WatcherException;
  * rules:
  * - apiGroups: [""]
  *   resources: ["pods", "services", "nodes"]
- *   verbs: ["watch"]
+ *   verbs: ["get", "watch"]
  * }</pre>
  *
  * <p>Example:
@@ -110,12 +109,6 @@ import io.fabric8.kubernetes.client.WatcherException;
 public final class KubernetesEndpointGroup extends DynamicEndpointGroup {
 
     private static final Logger logger = LoggerFactory.getLogger(KubernetesEndpointGroup.class);
-
-    /**
-     * The debounce millis for the update of the endpoints.
-     * A short delay would be enough because the initial events are delivered sequentially.
-     */
-    private static final int DEBOUNCE_MILLIS = 100;
 
     private static final KubernetesClient DEFAULT_CLIENT = new KubernetesClientBuilder().build();
 
@@ -230,11 +223,6 @@ public final class KubernetesEndpointGroup extends DynamicEndpointGroup {
     @Nullable
     private volatile Integer nodePort;
 
-    private final ReentrantShortLock lock = new ReentrantShortLock();
-    @GuardedBy("lock")
-    @Nullable
-    private ScheduledFuture<?> scheduledFuture;
-
     private volatile boolean closed;
     private volatile int numServiceFailures;
     private volatile int numNodeFailures;
@@ -251,8 +239,54 @@ public final class KubernetesEndpointGroup extends DynamicEndpointGroup {
         this.portName = portName;
         this.nodeAddressFilter = nodeAddressFilter;
         this.autoClose = autoClose;
-        watchJob(this::watchNode);
+        watchJob(this::start);
+    }
+
+    private void start() {
+        try {
+            logger.info("[{}/{}] Fetching the service...", namespace, serviceName);
+            final Service service = client.services().withName(serviceName).get();
+            if (service == null) {
+                logger.warn("[{}/{}] Service not found.", namespace, serviceName);
+                throw new IllegalStateException(
+                        String.format("[%s/%s] Service not found.", namespace, serviceName));
+            }
+            if (!updateService(service)) {
+                throw new IllegalStateException(
+                        String.format("[%s/%s] NodePort not found.", namespace, serviceName));
+            }
+
+            logger.info("[{}/{}] Fetching the nodes ...", namespace, serviceName);
+            final NodeList nodes = client.nodes().list();
+            for (Node node : nodes.getItems()) {
+                updateNode(Action.ADDED, node);
+            }
+
+            final Map<String, String> selector = service.getSpec().getSelector();
+            logger.info("[{}/{}] Fetching the pods with the selector: {}", namespace, serviceName, selector);
+            final PodList pods;
+            if (namespace == null) {
+                pods = client.pods().withLabels(selector).list();
+            } else {
+                pods = client.pods().inNamespace(namespace).withLabels(selector).list();
+            }
+            for (Pod pod : pods.getItems()) {
+                updatePod(Action.ADDED, pod);
+            }
+
+            // Initialize the endpoints.
+            maybeUpdateEndpoints();
+        } catch (Exception e) {
+            failInit(e);
+            logger.warn("[{}/{}] Failed to start {}.", namespace, serviceName, this, e);
+            return;
+        }
+
+        logger.info("[{}/{}] {} is started.", namespace, serviceName,
+                    KubernetesEndpointGroup.class.getSimpleName());
+        logger.info("[{}/{}] Watching the service, nodes and pods...", namespace, serviceName);
         watchJob(this::watchService);
+        watchJob(this::watchNode);
     }
 
     private void watchService() {
@@ -295,28 +329,9 @@ public final class KubernetesEndpointGroup extends DynamicEndpointGroup {
                 switch (action) {
                     case ADDED:
                     case MODIFIED:
-                        final List<ServicePort> ports = service0.getSpec().getPorts();
-                        final Integer nodePort0 =
-                                ports.stream()
-                                     .filter(p -> portName == null || portName.equals(p.getName()))
-                                     .map(ServicePort::getNodePort)
-                                     .filter(Objects::nonNull)
-                                     .findFirst().orElse(null);
-                        if (nodePort0 == null) {
-                            if (portName != null) {
-                                logger.warn("No node port matching '{}' in the service: {}", portName,
-                                            service0);
-                            } else {
-                                logger.warn(
-                                        "No node port in the service. Either 'NodePort' or 'LoadBalancer' " +
-                                        "should be set as the type for your Kubernetes service to expose " +
-                                        "a node port. type:{}, service:{}", service0.getSpec().getType(),
-                                        service0);
-                            }
+                        if (!updateService(service0)) {
                             return;
                         }
-                        service = service0;
-                        nodePort = nodePort0;
 
                         watchJob(() -> watchPod());
                         break;
@@ -356,6 +371,32 @@ public final class KubernetesEndpointGroup extends DynamicEndpointGroup {
         }
     }
 
+    private boolean updateService(Service service) {
+        final List<ServicePort> ports = service.getSpec().getPorts();
+        final Integer nodePort0 =
+                ports.stream()
+                     .filter(p -> portName == null || portName.equals(p.getName()))
+                     .map(ServicePort::getNodePort)
+                     .filter(Objects::nonNull)
+                     .findFirst().orElse(null);
+        if (nodePort0 == null) {
+            if (portName != null) {
+                logger.warn("No node port matching '{}' in the service: {}", portName,
+                            service);
+            } else {
+                logger.warn(
+                        "No node port in the service. Either 'NodePort' or 'LoadBalancer' " +
+                        "should be set as the type for your Kubernetes service to expose " +
+                        "a node port. type:{}, service:{}", service.getSpec().getType(),
+                        service);
+            }
+            return false;
+        }
+        this.service = service;
+        nodePort = nodePort0;
+        return true;
+    }
+
     private void watchPod() {
         final Watch oldPodWatch = podWatch;
         if (oldPodWatch != null) {
@@ -392,31 +433,10 @@ public final class KubernetesEndpointGroup extends DynamicEndpointGroup {
                 }
 
                 numPodFailures = 0;
-                if (action == Action.ERROR || action == Action.BOOKMARK) {
+                if (!updatePod(action, resource)) {
                     return;
                 }
-                final String podName = resource.getMetadata().getName();
-                final String nodeName = resource.getSpec().getNodeName();
-                logger.debug("[{}/{}] Pod event received. action: {}, pod: {}, node: {}",
-                             namespace, serviceName, action, podName, nodeName);
-
-                if (podName == null || nodeName == null) {
-                    logger.debug("[{}/{}] Pod or node name is null. pod: {}, node: {}",
-                                 namespace, serviceName, podName, nodeName);
-                    return;
-                }
-
-                switch (action) {
-                    case ADDED:
-                    case MODIFIED:
-                        podToNode.put(podName, nodeName);
-                        break;
-                    case DELETED:
-                        podToNode.remove(podName);
-                        break;
-                    default:
-                }
-                maybeUpdateEndpoints(false);
+                maybeUpdateEndpoints();
             }
 
             @Override
@@ -446,6 +466,34 @@ public final class KubernetesEndpointGroup extends DynamicEndpointGroup {
         } else {
             return client.pods().inNamespace(namespace).withLabels(selector).watch(watcher);
         }
+    }
+
+    private boolean updatePod(Action action, Pod resource) {
+        if (action == Action.ERROR || action == Action.BOOKMARK) {
+            return false;
+        }
+        final String podName = resource.getMetadata().getName();
+        final String nodeName = resource.getSpec().getNodeName();
+        logger.debug("[{}/{}] Pod event received. action: {}, pod: {}, node: {}",
+                     namespace, serviceName, action, podName, nodeName);
+
+        if (podName == null || nodeName == null) {
+            logger.debug("[{}/{}] Pod or node name is null. pod: {}, node: {}",
+                         namespace, serviceName, podName, nodeName);
+            return false;
+        }
+
+        switch (action) {
+            case ADDED:
+            case MODIFIED:
+                podToNode.put(podName, nodeName);
+                break;
+            case DELETED:
+                podToNode.remove(podName);
+                break;
+            default:
+        }
+        return true;
     }
 
     private void watchNode() {
@@ -480,33 +528,10 @@ public final class KubernetesEndpointGroup extends DynamicEndpointGroup {
                 }
 
                 numNodeFailures = 0;
-                if (action == Action.ERROR || action == Action.BOOKMARK) {
+                if (!updateNode(action, node)) {
                     return;
                 }
-
-                final String nodeName = node.getMetadata().getName();
-                logger.debug("[{}/{}] Node event received. action: {}, node: {}",
-                             namespace, serviceName, action, nodeName);
-                switch (action) {
-                    case ADDED:
-                    case MODIFIED:
-                        final String nodeIp = node.getStatus().getAddresses().stream()
-                                                  .filter(nodeAddressFilter)
-                                                  .map(NodeAddress::getAddress)
-                                                  .findFirst().orElse(null);
-                        if (nodeIp == null) {
-                            logger.debug("[{}/{}] No matching IP address is found in {}. node: {}",
-                                         namespace, serviceName, nodeName, node);
-                            nodeToIp.remove(nodeName);
-                            return;
-                        }
-                        nodeToIp.put(nodeName, nodeIp);
-                        break;
-                    case DELETED:
-                        nodeToIp.remove(nodeName);
-                        break;
-                }
-                maybeUpdateEndpoints(false);
+                maybeUpdateEndpoints();
             }
 
             @Override
@@ -526,6 +551,36 @@ public final class KubernetesEndpointGroup extends DynamicEndpointGroup {
         };
 
         return client.nodes().watch(watcher);
+    }
+
+    private boolean updateNode(Action action, Node node) {
+        if (action == Action.ERROR || action == Action.BOOKMARK) {
+            return false;
+        }
+
+        final String nodeName = node.getMetadata().getName();
+        logger.debug("[{}/{}] Node event received. action: {}, node: {}",
+                     namespace, serviceName, action, nodeName);
+        switch (action) {
+            case ADDED:
+            case MODIFIED:
+                final String nodeIp = node.getStatus().getAddresses().stream()
+                                          .filter(nodeAddressFilter)
+                                          .map(NodeAddress::getAddress)
+                                          .findFirst().orElse(null);
+                if (nodeIp == null) {
+                    logger.debug("[{}/{}] No matching IP address is found in {}. node: {}",
+                                 namespace, serviceName, nodeName, node);
+                    nodeToIp.remove(nodeName);
+                } else {
+                    nodeToIp.put(nodeName, nodeIp);
+                }
+                break;
+            case DELETED:
+                nodeToIp.remove(nodeName);
+                break;
+        }
+        return true;
     }
 
     private void watchJob(Runnable job) {
@@ -548,7 +603,7 @@ public final class KubernetesEndpointGroup extends DynamicEndpointGroup {
         }
     }
 
-    private void maybeUpdateEndpoints(boolean scheduledJob) {
+    private void maybeUpdateEndpoints() {
         if (closed) {
             return;
         }
@@ -565,24 +620,6 @@ public final class KubernetesEndpointGroup extends DynamicEndpointGroup {
         if (podToNode.isEmpty()) {
             // No event received for the pods yet.
             return;
-        }
-
-        lock.lock();
-        try {
-            if (scheduledJob) {
-                scheduledFuture = null;
-            } else {
-                if (scheduledFuture != null) {
-                    // A scheduled job is already scheduled.
-                    return;
-                }
-                // Schedule a job to debounce the update of the endpoints.
-                scheduledFuture = worker.schedule(() -> maybeUpdateEndpoints(true),
-                                                  DEBOUNCE_MILLIS, TimeUnit.MILLISECONDS);
-                return;
-            }
-        } finally {
-            lock.unlock();
         }
 
         assert nodePort != null;
