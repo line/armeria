@@ -663,13 +663,7 @@ public class DefaultStreamMessageDuplicator<T> implements StreamMessageDuplicato
 
             for (;;) {
                 final long oldDemand = demand;
-                final long newDemand;
-                if (oldDemand >= Long.MAX_VALUE - n) {
-                    newDemand = Long.MAX_VALUE;
-                } else {
-                    newDemand = oldDemand + n;
-                }
-
+                final long newDemand = LongMath.saturatedAdd(oldDemand, n);
                 if (demandUpdater.compareAndSet(this, oldDemand, newDemand)) {
                     if (oldDemand == 0) {
                         signal();
