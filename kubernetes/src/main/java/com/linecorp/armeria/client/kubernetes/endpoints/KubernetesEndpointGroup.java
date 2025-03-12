@@ -240,6 +240,7 @@ public final class KubernetesEndpointGroup extends DynamicEndpointGroup {
     // Used for serializing the start() method.
     private volatile int wip;
     private volatile boolean closed;
+    private volatile int numStartFailures;
     private volatile int numServiceFailures;
     private volatile int numNodeFailures;
     private volatile int numPodFailures;
@@ -270,6 +271,7 @@ public final class KubernetesEndpointGroup extends DynamicEndpointGroup {
                 return;
             }
             if (!doStart(initial)) {
+                wipUpdater.set(this, 0);
                 return;
             }
             initial = false;
@@ -305,8 +307,7 @@ public final class KubernetesEndpointGroup extends DynamicEndpointGroup {
             }
 
             final Map<String, String> selector = service.getSpec().getSelector();
-            logger.info("[{}/{}] Fetching the pods with the selector: {}", namespace, serviceName,
-                        selector);
+            logger.info("[{}/{}] Fetching the pods with the selector: {}", namespace, serviceName, selector);
             if (namespace == null) {
                 pods = client.pods().withLabels(selector).list();
             } else {
@@ -315,7 +316,6 @@ public final class KubernetesEndpointGroup extends DynamicEndpointGroup {
             for (Pod pod : pods.getItems()) {
                 updatePod(Action.ADDED, pod);
             }
-
             // Initialize the endpoints.
             maybeUpdateEndpoints();
 
@@ -324,10 +324,12 @@ public final class KubernetesEndpointGroup extends DynamicEndpointGroup {
             watchNode(nodes.getMetadata().getResourceVersion());
             watchPod(pods.getMetadata().getResourceVersion());
         } catch (Exception e) {
+            logger.warn("[{}/{}] Failed to start {}.", namespace, serviceName, this, e);
             if (initial) {
                 failInit(e);
+            } else {
+                scheduleRestartWithBackoff(numStartFailures++);
             }
-            logger.warn("[{}/{}] Failed to start {}.", namespace, serviceName, this, e);
             return false;
         }
 
@@ -336,10 +338,9 @@ public final class KubernetesEndpointGroup extends DynamicEndpointGroup {
             return false;
         }
         if (maxWatchAgeMillis > 0) {
-            logger.debug("[{}/{}] Schedule to restart watchers in {} ms.", namespace,
-                         serviceName, maxWatchAgeMillis);
             scheduleRestart(maxWatchAgeMillis);
         }
+        numStartFailures = 0;
         return true;
     }
 
@@ -364,7 +365,10 @@ public final class KubernetesEndpointGroup extends DynamicEndpointGroup {
                 switch (action) {
                     case ADDED:
                     case MODIFIED:
-                        scheduleRestart(0);
+                        if (!service0.getMetadata().getResourceVersion().equals(resourceVersion)) {
+                            // Rebuild all resources if the service has been updated.
+                            scheduleRestart(0);
+                        }
                         break;
                     case DELETED:
                         logger.warn("[{}/{}] service is deleted.", namespace, serviceName);
@@ -385,11 +389,9 @@ public final class KubernetesEndpointGroup extends DynamicEndpointGroup {
                     return;
                 }
                 logger.warn("[{}/{}] Service watcher is closed.", namespace, serviceName, cause);
-                logger.info("[{}/{}] Reconnecting the service watcher...", namespace, serviceName);
 
                 // Immediately retry on the first failure.
-                final long delayMillis = delayMillis(numServiceFailures++);
-                scheduleRestart(delayMillis);
+                scheduleRestartWithBackoff(numServiceFailures++);
             }
 
             @Override
@@ -462,10 +464,7 @@ public final class KubernetesEndpointGroup extends DynamicEndpointGroup {
                 }
 
                 logger.warn("[{}/{}] Pod watcher is closed.", namespace, serviceName, cause);
-                logger.info("[{}/{}] Reconnecting the pod watcher...", namespace, serviceName);
-
-                final long delayMillis = delayMillis(numPodFailures++);
-                scheduleRestart(delayMillis);
+                scheduleRestartWithBackoff(numPodFailures++);
             }
 
             @Override
@@ -492,8 +491,9 @@ public final class KubernetesEndpointGroup extends DynamicEndpointGroup {
         }
         final String podName = resource.getMetadata().getName();
         final String nodeName = resource.getSpec().getNodeName();
-        logger.debug("[{}/{}] Pod event received. action: {}, pod: {}, node: {}",
-                     namespace, serviceName, action, podName, nodeName);
+        logger.debug("[{}/{}] Pod event received. action: {}, pod: {}, node: {}, resource version: {}",
+                     namespace, serviceName, action, podName, nodeName,
+                     resource.getMetadata().getResourceVersion());
 
         if (podName == null || nodeName == null) {
             logger.debug("[{}/{}] Pod or node name is null. pod: {}, node: {}",
@@ -544,8 +544,7 @@ public final class KubernetesEndpointGroup extends DynamicEndpointGroup {
                     return;
                 }
                 logger.warn("[{}/{}] Node watcher is closed.", namespace, serviceName, cause);
-                final long delayMillis = Backoff.ofDefault().nextDelayMillis(numNodeFailures++);
-                scheduleRestart(delayMillis);
+                scheduleRestartWithBackoff(numNodeFailures++);
             }
 
             @Override
@@ -593,6 +592,11 @@ public final class KubernetesEndpointGroup extends DynamicEndpointGroup {
 
     private ScheduledFuture<?> scheduleJob(Runnable job, long delayMillis) {
         return worker.schedule(safeRunnable(job), delayMillis, TimeUnit.MILLISECONDS);
+    }
+
+    private void scheduleRestartWithBackoff(int numFailures) {
+        final long delayMillis = delayMillis(numFailures);
+        scheduleRestart(delayMillis);
     }
 
     private void scheduleRestart(long delayMillis) {
