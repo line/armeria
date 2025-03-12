@@ -117,9 +117,8 @@ public final class KubernetesEndpointGroup extends DynamicEndpointGroup {
 
     private static final KubernetesClient DEFAULT_CLIENT = new KubernetesClientBuilder().build();
 
-    // Used for serializing the start() method.
     private static final AtomicIntegerFieldUpdater<KubernetesEndpointGroup> wipUpdater =
-            AtomicIntegerFieldUpdater.newUpdater(KubernetesEndpointGroup.class, "starting");
+            AtomicIntegerFieldUpdater.newUpdater(KubernetesEndpointGroup.class, "wip");
 
     static {
         ShutdownHooks.addClosingTask(DEFAULT_CLIENT);
@@ -238,7 +237,8 @@ public final class KubernetesEndpointGroup extends DynamicEndpointGroup {
     @Nullable
     private ScheduledFuture<?> scheduledFuture;
 
-    private volatile int starting;
+    // Used for serializing the start() method.
+    private volatile int wip;
     private volatile boolean closed;
     private volatile int numServiceFailures;
     private volatile int numNodeFailures;
