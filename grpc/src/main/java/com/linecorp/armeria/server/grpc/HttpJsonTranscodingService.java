@@ -161,7 +161,7 @@ final class HttpJsonTranscodingService extends AbstractUnframedGrpcService
                 }
 
                 final HttpRule httpRule = methodOptions.getExtension(
-                        (ExtensionLite<MethodOptions, HttpRule>) AnnotationsProto.http
+                        (ExtensionLite<MethodOptions, HttpRule>)AnnotationsProto.http
                 );
 
                 if (methodDefinition.getMethodDescriptor().getType() != MethodType.UNARY) {
