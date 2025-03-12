@@ -26,7 +26,11 @@ import static org.awaitility.Awaitility.await;
 
 import java.util.List;
 
-import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.google.common.collect.ImmutableList;
 
@@ -41,13 +45,21 @@ import io.fabric8.kubernetes.client.server.mock.EnableKubernetesMockClient;
 
 @EnableKubernetesMockClient(
         crud = true,
-        kubernetesClientBuilderCustomizer = FaultInjectingKubernetesClientBuilderCustomizer.class)
-class KubernetesEndpointGroupFaultToleranceTest {
+        kubernetesClientBuilderCustomizer = ServiceWatchCountingKubernetesClientBuilderCustomizer.class)
+class KubernetesEndpointGroupMaxWatchAgeTest {
+
+    private static final Logger logger = LoggerFactory.getLogger(KubernetesEndpointGroupMaxWatchAgeTest.class);
 
     private KubernetesClient client;
 
-    @Test
-    void shouldReconnectOnWatcherException() throws InterruptedException {
+    @BeforeEach
+    void setUp() {
+        ServiceWatchCountingKubernetesClientBuilderCustomizer.reset();
+    }
+
+    @ValueSource(ints = { 0, 500, 1000 })
+    @ParameterizedTest
+    void periodicallyCreateNewWatch(int maxWatchAgeMillis) throws InterruptedException {
         // Prepare Kubernetes resources
         final List<Node> nodes = ImmutableList.of(newNode("1.1.1.1"), newNode("2.2.2.2"), newNode("3.3.3.3"));
         final Deployment deployment = newDeployment();
@@ -67,8 +79,13 @@ class KubernetesEndpointGroupFaultToleranceTest {
         client.apps().deployments().resource(deployment).create();
         client.services().resource(service).create();
 
-        final KubernetesEndpointGroup endpointGroup = KubernetesEndpointGroup.of(client, "test",
-                                                                                 "nginx-service");
+        final int oldNum = ServiceWatchCountingKubernetesClientBuilderCustomizer.numRequests();
+        final KubernetesEndpointGroup endpointGroup =
+                KubernetesEndpointGroup.builder(client)
+                                       .namespace("test")
+                                       .serviceName("nginx-service")
+                                       .maxWatchAgeMillis(maxWatchAgeMillis)
+                                       .build();
         endpointGroup.whenReady().join();
 
         // Initial state
@@ -81,18 +98,12 @@ class KubernetesEndpointGroupFaultToleranceTest {
             );
         });
 
-        FaultInjectingKubernetesClientBuilderCustomizer.injectFault(true);
         // Add a new pod
         client.pods().resource(pods.get(2)).create();
 
-        Thread.sleep(2000);
+        final int sleepMillis = 2000;
+        Thread.sleep(sleepMillis);
 
-        assertThat(endpointGroup.endpoints()).containsExactlyInAnyOrder(
-                Endpoint.of("1.1.1.1", nodePort),
-                Endpoint.of("2.2.2.2", nodePort)
-        );
-
-        FaultInjectingKubernetesClientBuilderCustomizer.injectFault(false);
         // Make sure the new pod is added when the fault is recovered.
         await().untilAsserted(() -> {
             final List<Endpoint> endpoints = endpointGroup.endpoints();
@@ -102,5 +113,15 @@ class KubernetesEndpointGroupFaultToleranceTest {
                     Endpoint.of("3.3.3.3", nodePort)
             );
         });
+
+        final int newNum = ServiceWatchCountingKubernetesClientBuilderCustomizer.numRequests();
+        logger.debug("maxWatchAgeMillis: {}, oldNum: {}, newNum: {}", maxWatchAgeMillis, oldNum, newNum);
+        if (maxWatchAgeMillis == 0) {
+           // Should create one watch
+           assertThat(newNum - oldNum).isEqualTo(1);
+        } else {
+            // Create more than N new watches, where N = sleepMillis / maxWatchAgeMillis
+            assertThat(newNum - oldNum).isGreaterThan(sleepMillis / maxWatchAgeMillis);
+        }
     }
 }
