@@ -47,7 +47,6 @@ class HeaderListSizeExceptionTest {
         }
     };
 
-
     @Test
     void doNotSendRstStreamWhenHeaderListSizeExceptionIsRaised() throws InterruptedException {
         final CompletableFuture<AggregatedHttpResponse> future = server.webClient().get("/").aggregate();
