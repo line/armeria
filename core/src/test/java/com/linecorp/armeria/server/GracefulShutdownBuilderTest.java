@@ -14,7 +14,7 @@
  * under the License.
  */
 
-package com.linecorp.armeria;
+package com.linecorp.armeria.server;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -25,7 +25,6 @@ import org.junit.jupiter.api.Test;
 
 import com.linecorp.armeria.common.ShuttingDownException;
 import com.linecorp.armeria.internal.testing.AnticipatedException;
-import com.linecorp.armeria.server.GracefulShutdown;
 
 class GracefulShutdownBuilderTest {
 
