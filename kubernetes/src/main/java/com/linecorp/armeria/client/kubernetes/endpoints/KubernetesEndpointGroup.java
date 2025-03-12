@@ -26,7 +26,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.locks.ReentrantLock;
+import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import java.util.function.Predicate;
 
 import org.jctools.maps.NonBlockingHashMap;
@@ -116,6 +116,10 @@ public final class KubernetesEndpointGroup extends DynamicEndpointGroup {
     private static final Logger logger = LoggerFactory.getLogger(KubernetesEndpointGroup.class);
 
     private static final KubernetesClient DEFAULT_CLIENT = new KubernetesClientBuilder().build();
+
+    // Used for serializing the start() method.
+    private static final AtomicIntegerFieldUpdater<KubernetesEndpointGroup> wipUpdater =
+            AtomicIntegerFieldUpdater.newUpdater(KubernetesEndpointGroup.class, "starting");
 
     static {
         ShutdownHooks.addClosingTask(DEFAULT_CLIENT);
@@ -215,9 +219,6 @@ public final class KubernetesEndpointGroup extends DynamicEndpointGroup {
     private final Predicate<? super NodeAddress> nodeAddressFilter;
     private final long maxWatchAgeMillis;
 
-    // watchLock may acquire the lock for a long time, so we need to use a separate lock.
-    @SuppressWarnings("PreferReentrantShortLock")
-    private final ReentrantLock watchLock = new ReentrantLock();
     @Nullable
     private volatile Watch nodeWatch;
     @Nullable
@@ -235,17 +236,9 @@ public final class KubernetesEndpointGroup extends DynamicEndpointGroup {
     private final ReentrantShortLock schedulerLock = new ReentrantShortLock();
     @GuardedBy("schedulerLock")
     @Nullable
-    private ScheduledFuture<?> updateScheduledFuture;
-    @GuardedBy("schedulerLock")
-    @Nullable
-    private ScheduledFuture<?> serviceScheduledFuture;
-    @GuardedBy("schedulerLock")
-    @Nullable
-    private ScheduledFuture<?> nodeScheduledFuture;
-    @GuardedBy("schedulerLock")
-    @Nullable
-    private ScheduledFuture<?> podScheduledFuture;
+    private ScheduledFuture<?> scheduledFuture;
 
+    private volatile int starting;
     private volatile boolean closed;
     private volatile int numServiceFailures;
     private volatile int numNodeFailures;
@@ -263,13 +256,38 @@ public final class KubernetesEndpointGroup extends DynamicEndpointGroup {
         this.nodeAddressFilter = nodeAddressFilter;
         this.autoClose = autoClose;
         this.maxWatchAgeMillis = maxWatchAgeMillis == Long.MAX_VALUE ? 0 : maxWatchAgeMillis;
-        watchJob(this::start);
+        executeJob(() -> start(true));
     }
 
-    private void start() {
+    private void start(boolean initial) {
+        if (wipUpdater.getAndIncrement(this) > 0) {
+            // Another thread is already starting.
+            return;
+        }
+
+        do {
+            if (closed) {
+                return;
+            }
+            if (!doStart(initial)) {
+                return;
+            }
+            initial = false;
+            // Repeat until all `start()` requests are handled.
+        } while (wipUpdater.decrementAndGet(this) > 0);
+    }
+
+    private boolean doStart(boolean initial) {
+        nodeToIp.clear();
+        podToNode.clear();
+        closeResources();
+
+        final Service service;
+        final NodeList nodes;
+        final PodList pods;
         try {
             logger.info("[{}/{}] Fetching the service...", namespace, serviceName);
-            final Service service = client.services().withName(serviceName).get();
+            service = client.services().withName(serviceName).get();
             if (service == null) {
                 logger.warn("[{}/{}] Service not found.", namespace, serviceName);
                 throw new IllegalStateException(
@@ -281,14 +299,14 @@ public final class KubernetesEndpointGroup extends DynamicEndpointGroup {
             }
 
             logger.info("[{}/{}] Fetching the nodes ...", namespace, serviceName);
-            final NodeList nodes = client.nodes().list();
+            nodes = client.nodes().list();
             for (Node node : nodes.getItems()) {
                 updateNode(Action.ADDED, node);
             }
 
             final Map<String, String> selector = service.getSpec().getSelector();
-            logger.info("[{}/{}] Fetching the pods with the selector: {}", namespace, serviceName, selector);
-            final PodList pods;
+            logger.info("[{}/{}] Fetching the pods with the selector: {}", namespace, serviceName,
+                        selector);
             if (namespace == null) {
                 pods = client.pods().withLabels(selector).list();
             } else {
@@ -300,59 +318,42 @@ public final class KubernetesEndpointGroup extends DynamicEndpointGroup {
 
             // Initialize the endpoints.
             maybeUpdateEndpoints();
+
+            logger.info("[{}/{}] Watching the service, nodes and pods...", namespace, serviceName);
+            watchService(service.getMetadata().getResourceVersion());
+            watchNode(nodes.getMetadata().getResourceVersion());
+            watchPod(pods.getMetadata().getResourceVersion());
         } catch (Exception e) {
-            failInit(e);
+            if (initial) {
+                failInit(e);
+            }
             logger.warn("[{}/{}] Failed to start {}.", namespace, serviceName, this, e);
-            return;
+            return false;
         }
 
-        logger.info("[{}/{}] {} is started.", namespace, serviceName,
-                    KubernetesEndpointGroup.class.getSimpleName());
-        logger.info("[{}/{}] Watching the service, nodes and pods...", namespace, serviceName);
-        watchJob(this::watchService);
-        watchJob(this::watchNode);
+
+        if (closed) {
+            closeResources();
+            return false;
+        }
+        if (maxWatchAgeMillis > 0) {
+            logger.debug("[{}/{}] Schedule to restart watchers in {} ms.", namespace,
+                         serviceName, maxWatchAgeMillis);
+            scheduleRestart(maxWatchAgeMillis);
+        }
+        return true;
     }
 
-    private void watchService() {
-        watchLock.lock();
-        try {
-            final Watch oldServiceWatch = serviceWatch;
-            if (oldServiceWatch != null) {
-                oldServiceWatch.close();
-            }
-            if (closed) {
-                return;
-            }
-            final Watch newServiceWatch;
-            logger.info("[{}/{}] Start the service watcher...", namespace, serviceName);
-            try {
-                newServiceWatch = doWatchService();
-            } catch (Exception e) {
-                logger.warn("[{}/{}] Failed to start the service watcher.", namespace, serviceName, e);
-                return;
-            }
-            // Recheck the closed flag because the doWatchService() method may take a while.
-            if (closed) {
-                newServiceWatch.close();
-                return;
-            }
-            serviceWatch = newServiceWatch;
-            logger.info("[{}/{}] Service watcher is started.", namespace, serviceName);
-        } finally {
-            watchLock.unlock();
-        }
-
-        if (maxWatchAgeMillis > 0) {
-            logger.debug("[{}/{}] Schedule a new Service watcher to start in {} ms.", namespace,
-                         serviceName, maxWatchAgeMillis);
-            scheduleWatchService(maxWatchAgeMillis);
-        }
+    private void watchService(String resourceVersion) {
+        logger.info("[{}/{}] Start the service watcher...", namespace, serviceName);
+        serviceWatch = doWatchService(resourceVersion);
+        logger.info("[{}/{}] Service watcher is started.", namespace, serviceName);
     }
 
     /**
      * Watches the service. {@link Watcher} will retry automatically on failures by {@link KubernetesClient}.
      */
-    private Watch doWatchService() {
+    private Watch doWatchService(String resourceVersion) {
         final Watcher<Service> watcher = new Watcher<Service>() {
             @Override
             public void eventReceived(Action action, Service service0) {
@@ -364,11 +365,7 @@ public final class KubernetesEndpointGroup extends DynamicEndpointGroup {
                 switch (action) {
                     case ADDED:
                     case MODIFIED:
-                        if (!updateService(service0)) {
-                            return;
-                        }
-
-                        watchJob(() -> watchPod());
+                        scheduleRestart(0);
                         break;
                     case DELETED:
                         logger.warn("[{}/{}] service is deleted.", namespace, serviceName);
@@ -393,7 +390,7 @@ public final class KubernetesEndpointGroup extends DynamicEndpointGroup {
 
                 // Immediately retry on the first failure.
                 final long delayMillis = delayMillis(numServiceFailures++);
-                scheduleWatchService(delayMillis);
+                scheduleRestart(delayMillis);
             }
 
             @Override
@@ -402,10 +399,13 @@ public final class KubernetesEndpointGroup extends DynamicEndpointGroup {
             }
         };
 
+        final Service service = this.service;
+        assert service != null;
         if (namespace == null) {
-            return client.services().withName(serviceName).watch(watcher);
+            return client.services().withName(serviceName).withResourceVersion(resourceVersion).watch(watcher);
         } else {
-            return client.services().inNamespace(namespace).withName(serviceName).watch(watcher);
+            return client.services().inNamespace(namespace).withName(serviceName)
+                         .withResourceVersion(resourceVersion).watch(watcher);
         }
     }
 
@@ -435,40 +435,13 @@ public final class KubernetesEndpointGroup extends DynamicEndpointGroup {
         return true;
     }
 
-    private void watchPod() {
-        watchLock.lock();
-        try {
-            final Watch oldPodWatch = podWatch;
-            if (oldPodWatch != null) {
-                oldPodWatch.close();
-            }
-
-            if (closed) {
-                return;
-            }
-            final Watch newPodwatch;
-            logger.info("[{}/{}] Start the pod watcher...", namespace, serviceName);
-            try {
-                newPodwatch = doWatchPod();
-            } catch (Exception e) {
-                logger.warn("[{}/{}] Failed to start the pod watcher.", namespace, serviceName, e);
-                return;
-            }
-            // Recheck the closed flag because the doWatchPod() method may take a while.
-            if (closed) {
-                newPodwatch.close();
-            } else {
-                podWatch = newPodwatch;
-                logger.info("[{}/{}] Pod watcher is started.", namespace, serviceName);
-            }
-        } finally {
-            watchLock.unlock();
-        }
+    private void watchPod(String resourceVersion) {
+        logger.info("[{}/{}] Start the pod watcher...", namespace, serviceName);
+        podWatch = doWatchPod(resourceVersion);
+        logger.info("[{}/{}] Pod watcher is started.", namespace, serviceName);
     }
 
-    private Watch doWatchPod() {
-        // Clear the podToNode map before starting a new pod watch.
-        podToNode.clear();
+    private Watch doWatchPod(String resourceVersion) {
         final Watcher<Pod> watcher = new Watcher<Pod>() {
             @Override
             public void eventReceived(Action action, Pod resource) {
@@ -493,7 +466,7 @@ public final class KubernetesEndpointGroup extends DynamicEndpointGroup {
                 logger.info("[{}/{}] Reconnecting the pod watcher...", namespace, serviceName);
 
                 final long delayMillis = delayMillis(numPodFailures++);
-                scheduleWatchPod(delayMillis);
+                scheduleRestart(delayMillis);
             }
 
             @Override
@@ -507,9 +480,10 @@ public final class KubernetesEndpointGroup extends DynamicEndpointGroup {
         final Map<String, String> selector = service.getSpec().getSelector();
         // watch() method will block until the watch connection is established.
         if (namespace == null) {
-            return client.pods().withLabels(selector).watch(watcher);
+            return client.pods().withLabels(selector).withResourceVersion(resourceVersion).watch(watcher);
         } else {
-            return client.pods().inNamespace(namespace).withLabels(selector).watch(watcher);
+            return client.pods().inNamespace(namespace).withLabels(selector)
+                         .withResourceVersion(resourceVersion).watch(watcher);
         }
     }
 
@@ -541,42 +515,16 @@ public final class KubernetesEndpointGroup extends DynamicEndpointGroup {
         return true;
     }
 
-    private void watchNode() {
-        watchLock.lock();
-        try {
-            final Watch oldNodeWatch = nodeWatch;
-            if (oldNodeWatch != null) {
-                oldNodeWatch.close();
-            }
-
-            if (closed) {
-                return;
-            }
-            logger.info("[{}/{}] Start the node watcher...", namespace, serviceName);
-            final Watch newNodeWatch = doWatchNode();
-            // Recheck the closed flag because the doWatchNode() method may take a while.
-            if (closed) {
-                newNodeWatch.close();
-                return;
-            }
-            nodeWatch = newNodeWatch;
-            logger.info("[{}/{}] Node watcher is started.", namespace, serviceName);
-        } finally {
-            watchLock.unlock();
-        }
-
-        if (maxWatchAgeMillis > 0) {
-            logger.debug("[{}/{}] Schedule a new Node watcher to start in {} ms.",
-                         namespace, serviceName, maxWatchAgeMillis);
-            scheduleWatchNode(maxWatchAgeMillis);
-        }
+    private void watchNode(String resourceVersion) {
+        logger.info("[{}/{}] Start the node watcher...", namespace, serviceName);
+        nodeWatch = doWatchNode(resourceVersion);
+        logger.info("[{}/{}] Node watcher is started.", namespace, serviceName);
     }
 
     /**
      * Fetches the internal IPs of the node.
      */
-    private Watch doWatchNode() {
-        nodeToIp.clear();
+    private Watch doWatchNode(String resourceVersion) {
         final Watcher<Node> watcher = new Watcher<Node>() {
             @Override
             public void eventReceived(Action action, Node node) {
@@ -597,9 +545,8 @@ public final class KubernetesEndpointGroup extends DynamicEndpointGroup {
                     return;
                 }
                 logger.warn("[{}/{}] Node watcher is closed.", namespace, serviceName, cause);
-                logger.info("[{}/{}] Reconnecting the node watcher...", namespace, serviceName);
                 final long delayMillis = Backoff.ofDefault().nextDelayMillis(numNodeFailures++);
-                scheduleWatchNode(delayMillis);
+                scheduleRestart(delayMillis);
             }
 
             @Override
@@ -608,7 +555,7 @@ public final class KubernetesEndpointGroup extends DynamicEndpointGroup {
             }
         };
 
-        return client.nodes().watch(watcher);
+        return client.nodes().withResourceVersion(resourceVersion).watch(watcher);
     }
 
     private boolean updateNode(Action action, Node node) {
@@ -641,62 +588,31 @@ public final class KubernetesEndpointGroup extends DynamicEndpointGroup {
         return true;
     }
 
-    private void watchJob(Runnable job) {
-        final Runnable safeRunnable = safeRunnable(job);
-        worker.execute(safeRunnable);
+    private void executeJob(Runnable job) {
+        worker.execute(safeRunnable(job));
     }
 
     private ScheduledFuture<?> scheduleJob(Runnable job, long delayMillis) {
         return worker.schedule(safeRunnable(job), delayMillis, TimeUnit.MILLISECONDS);
     }
 
-    private void scheduleWatchService(long delayMillis) {
+    private void scheduleRestart(long delayMillis) {
         schedulerLock.lock();
         try {
-            final ScheduledFuture<?> serviceScheduledFuture = this.serviceScheduledFuture;
-            if (serviceScheduledFuture != null) {
-                serviceScheduledFuture.cancel(false);
+            final ScheduledFuture<?> scheduledFuture = this.scheduledFuture;
+            if (scheduledFuture != null) {
+                scheduledFuture.cancel(false);
+            }
+
+            if (closed) {
+                return;
             }
 
             if (delayMillis == 0) {
-                watchJob(this::watchService);
+                executeJob(() -> start(false));
                 return;
             }
-            this.serviceScheduledFuture = scheduleJob(this::watchService, delayMillis);
-        } finally {
-            schedulerLock.unlock();
-        }
-    }
-
-    private void scheduleWatchNode(long delayMillis) {
-        schedulerLock.lock();
-        try {
-            final ScheduledFuture<?> nodeScheduledFuture = this.nodeScheduledFuture;
-            if (nodeScheduledFuture != null) {
-                nodeScheduledFuture.cancel(false);
-            }
-            if (delayMillis == 0) {
-                watchJob(this::watchNode);
-                return;
-            }
-            this.nodeScheduledFuture = scheduleJob(this::watchNode, delayMillis);
-        } finally {
-            schedulerLock.unlock();
-        }
-    }
-
-    private void scheduleWatchPod(long delayMillis) {
-        schedulerLock.lock();
-        try {
-            final ScheduledFuture<?> podScheduledFuture = this.podScheduledFuture;
-            if (podScheduledFuture != null) {
-                podScheduledFuture.cancel(false);
-            }
-            if (delayMillis == 0) {
-                watchJob(this::watchPod);
-                return;
-            }
-            this.podScheduledFuture = scheduleJob(this::watchPod, delayMillis);
+            this.scheduledFuture = scheduleJob(() -> start(false), delayMillis);
         } finally {
             schedulerLock.unlock();
         }
@@ -756,6 +672,24 @@ public final class KubernetesEndpointGroup extends DynamicEndpointGroup {
     @Override
     protected void doCloseAsync(CompletableFuture<?> future) {
         closed = true;
+        closeResources();
+        if (autoClose) {
+            client.close();
+        }
+        super.doCloseAsync(future);
+    }
+
+    private void closeResources() {
+        schedulerLock.lock();
+        try {
+            final ScheduledFuture<?> scheduledFuture = this.scheduledFuture;
+            if (scheduledFuture != null) {
+                scheduledFuture.cancel(false);
+            }
+        } finally {
+            schedulerLock.unlock();
+        }
+
         final Watch serviceWatch = this.serviceWatch;
         if (serviceWatch != null) {
             serviceWatch.close();
@@ -768,9 +702,5 @@ public final class KubernetesEndpointGroup extends DynamicEndpointGroup {
         if (podWatch != null) {
             podWatch.close();
         }
-        if (autoClose) {
-            client.close();
-        }
-        super.doCloseAsync(future);
     }
 }
