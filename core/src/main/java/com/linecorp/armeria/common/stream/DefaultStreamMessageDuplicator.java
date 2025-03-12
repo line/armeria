@@ -340,7 +340,7 @@ public class DefaultStreamMessageDuplicator<T> implements StreamMessageDuplicato
             }
 
             final long delta = cumulativeDemand - requestedDemand;
-            requestedDemand += delta;
+            requestedDemand = cumulativeDemand;
             upstreamSubscription.request(delta);
         }
 
@@ -658,32 +658,18 @@ public class DefaultStreamMessageDuplicator<T> implements StreamMessageDuplicato
                 return;
             }
 
-            accumulateDemand(n);
+            cumulativeDemand = LongMath.saturatedAdd(cumulativeDemand, n);
             processor.requestDemand(cumulativeDemand);
 
             for (;;) {
                 final long oldDemand = demand;
-                final long newDemand;
-                if (oldDemand >= Long.MAX_VALUE - n) {
-                    newDemand = Long.MAX_VALUE;
-                } else {
-                    newDemand = oldDemand + n;
-                }
-
+                final long newDemand = LongMath.saturatedAdd(oldDemand, n);
                 if (demandUpdater.compareAndSet(this, oldDemand, newDemand)) {
                     if (oldDemand == 0) {
                         signal();
                     }
                     break;
                 }
-            }
-        }
-
-        private void accumulateDemand(long n) {
-            if (n == Long.MAX_VALUE || Long.MAX_VALUE - n >= cumulativeDemand) {
-                cumulativeDemand = Long.MAX_VALUE;
-            } else {
-                cumulativeDemand += n;
             }
         }
 
