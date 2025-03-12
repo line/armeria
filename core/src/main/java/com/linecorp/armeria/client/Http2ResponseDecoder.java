@@ -92,6 +92,9 @@ final class Http2ResponseDecoder extends AbstractHttpResponseDecoder implements 
         resWrapper.onSubscriptionCancelled(cause);
 
         if (cause != null) {
+            if (cause instanceof UnprocessedRequestException) {
+                return;
+            }
             // Removing the response and decrementing `unfinishedResponses` isn't done immediately
             // here. Instead, we rely on `Http2ResponseDecoder#onStreamClosed` to decrement
             // `unfinishedResponses` after Netty decrements `numActiveStreams` in `DefaultHttp2Connection`
