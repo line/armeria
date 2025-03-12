@@ -92,7 +92,8 @@ final class Http2ResponseDecoder extends AbstractHttpResponseDecoder implements 
         resWrapper.onSubscriptionCancelled(cause);
 
         if (cause != null) {
-            if (cause instanceof UnprocessedRequestException) {
+            if (cause instanceof UnprocessedRequestException ||
+                cause instanceof ClosedStreamException) {
                 return;
             }
             final int streamId = idToStreamId(id);
