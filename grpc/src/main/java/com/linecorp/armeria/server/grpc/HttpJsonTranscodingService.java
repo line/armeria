@@ -427,10 +427,11 @@ final class HttpJsonTranscodingService extends AbstractUnframedGrpcService
             return false;
         }
 
-        final List<FieldBehavior> fieldBehaviors = field.getOptions().getExtension(FieldBehaviorProto.fieldBehavior);
+        final List<FieldBehavior> fieldBehaviors = field
+                .getOptions()
+                .getExtension(FieldBehaviorProto.fieldBehavior);
         return fieldBehaviors.contains(FieldBehavior.REQUIRED);
     }
-
 
     @Nullable
     private static JavaType getJavaTypeForWellKnownTypes(FieldDescriptor fd) {
