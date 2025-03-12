@@ -319,18 +319,19 @@ public final class KubernetesEndpointGroup extends DynamicEndpointGroup {
             // Initialize the endpoints.
             maybeUpdateEndpoints();
 
-            logger.info("[{}/{}] Watching the service, nodes and pods...", namespace, serviceName);
             watchService(service.getMetadata().getResourceVersion());
             watchNode(nodes.getMetadata().getResourceVersion());
             watchPod(pods.getMetadata().getResourceVersion());
         } catch (Exception e) {
-            logger.warn("[{}/{}] Failed to start {}.", namespace, serviceName, this, e);
+            logger.warn("[{}/{}] Failed to start {}. (initial: {})", namespace, serviceName, this, initial, e);
             if (initial) {
                 failInit(e);
+                // Do not retry if the initialization fails since the error is likely to be persistent.
+                return false;
             } else {
-                scheduleRestartWithBackoff(numStartFailures++);
+                scheduleRestartWithBackoff(++numStartFailures);
+                return true;
             }
-            return false;
         }
 
         if (closed) {
@@ -345,7 +346,8 @@ public final class KubernetesEndpointGroup extends DynamicEndpointGroup {
     }
 
     private void watchService(String resourceVersion) {
-        logger.info("[{}/{}] Start the service watcher...", namespace, serviceName);
+        logger.info("[{}/{}] Start the service watcher... (resource version: {})", namespace, serviceName,
+                    resourceVersion);
         serviceWatch = doWatchService(resourceVersion);
         logger.info("[{}/{}] Service watcher is started.", namespace, serviceName);
     }
@@ -391,7 +393,7 @@ public final class KubernetesEndpointGroup extends DynamicEndpointGroup {
                 logger.warn("[{}/{}] Service watcher is closed.", namespace, serviceName, cause);
 
                 // Immediately retry on the first failure.
-                scheduleRestartWithBackoff(numServiceFailures++);
+                scheduleRestartWithBackoff(++numServiceFailures);
             }
 
             @Override
@@ -437,7 +439,8 @@ public final class KubernetesEndpointGroup extends DynamicEndpointGroup {
     }
 
     private void watchPod(String resourceVersion) {
-        logger.info("[{}/{}] Start the pod watcher...", namespace, serviceName);
+        logger.info("[{}/{}] Start the pod watcher... (resource version: {})", namespace, serviceName,
+                    resourceVersion);
         podWatch = doWatchPod(resourceVersion);
         logger.info("[{}/{}] Pod watcher is started.", namespace, serviceName);
     }
@@ -464,7 +467,7 @@ public final class KubernetesEndpointGroup extends DynamicEndpointGroup {
                 }
 
                 logger.warn("[{}/{}] Pod watcher is closed.", namespace, serviceName, cause);
-                scheduleRestartWithBackoff(numPodFailures++);
+                scheduleRestartWithBackoff(++numPodFailures);
             }
 
             @Override
@@ -515,7 +518,8 @@ public final class KubernetesEndpointGroup extends DynamicEndpointGroup {
     }
 
     private void watchNode(String resourceVersion) {
-        logger.info("[{}/{}] Start the node watcher...", namespace, serviceName);
+        logger.info("[{}/{}] Start the node watcher... (resource version: {})", namespace, serviceName,
+                    resourceVersion);
         nodeWatch = doWatchNode(resourceVersion);
         logger.info("[{}/{}] Node watcher is started.", namespace, serviceName);
     }
@@ -544,7 +548,7 @@ public final class KubernetesEndpointGroup extends DynamicEndpointGroup {
                     return;
                 }
                 logger.warn("[{}/{}] Node watcher is closed.", namespace, serviceName, cause);
-                scheduleRestartWithBackoff(numNodeFailures++);
+                scheduleRestartWithBackoff(++numNodeFailures);
             }
 
             @Override
@@ -562,8 +566,8 @@ public final class KubernetesEndpointGroup extends DynamicEndpointGroup {
         }
 
         final String nodeName = node.getMetadata().getName();
-        logger.debug("[{}/{}] Node event received. action: {}, node: {}",
-                     namespace, serviceName, action, nodeName);
+        logger.debug("[{}/{}] Node event received. action: {}, node: {}, resource version: {}",
+                     namespace, serviceName, action, nodeName, node.getMetadata().getResourceVersion());
         switch (action) {
             case ADDED:
             case MODIFIED:
@@ -596,6 +600,8 @@ public final class KubernetesEndpointGroup extends DynamicEndpointGroup {
 
     private void scheduleRestartWithBackoff(int numFailures) {
         final long delayMillis = delayMillis(numFailures);
+        logger.info("[{}/{}] Reconnecting to the Kubernetes API in {} ms (numFailures: {})",
+                    namespace, serviceName, delayMillis, numFailures);
         scheduleRestart(delayMillis);
     }
 
@@ -631,11 +637,12 @@ public final class KubernetesEndpointGroup extends DynamicEndpointGroup {
         };
     }
 
-    private static long delayMillis(int numAttempts) {
-        if (numAttempts == 0) {
+    private static long delayMillis(int numFailures) {
+        if (numFailures == 1) {
+            // Retry immediately on the first failure.
             return 0;
         }
-        return Backoff.ofDefault().nextDelayMillis(numAttempts);
+        return Backoff.ofDefault().nextDelayMillis(numFailures - 1);
     }
 
     private void maybeUpdateEndpoints() {
