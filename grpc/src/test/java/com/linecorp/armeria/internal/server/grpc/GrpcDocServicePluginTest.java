@@ -451,7 +451,11 @@ class GrpcDocServicePluginTest {
                 FieldInfo.builder("message_id", TypeSignature.ofBase(JavaType.STRING.name()))
                          .location(FieldLocation.PATH).requirement(FieldRequirement.REQUIRED).build(),
                 FieldInfo.builder("text", TypeSignature.ofBase(JavaType.STRING.name()))
-                         .location(FieldLocation.BODY).requirement(FieldRequirement.REQUIRED).build()));
+                         .location(FieldLocation.BODY).requirement(FieldRequirement.REQUIRED).build(),
+                FieldInfo.builder("required_text", TypeSignature.ofBase(JavaType.STRING.name()))
+                        .location(FieldLocation.BODY).requirement(FieldRequirement.REQUIRED).build(),
+                FieldInfo.builder("optional_text", TypeSignature.ofBase(JavaType.STRING.name()))
+                        .location(FieldLocation.BODY).requirement(FieldRequirement.OPTIONAL).build()));
         assertThat(updateMessageV2.useParameterAsRoot()).isFalse();
     }
 
