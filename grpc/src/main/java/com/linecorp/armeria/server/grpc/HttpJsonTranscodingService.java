@@ -59,6 +59,7 @@ import com.google.common.collect.ImmutableSet;
 import com.google.protobuf.Any;
 import com.google.protobuf.BoolValue;
 import com.google.protobuf.BytesValue;
+import com.google.protobuf.DescriptorProtos;
 import com.google.protobuf.DescriptorProtos.MethodOptions;
 import com.google.protobuf.Descriptors;
 import com.google.protobuf.Descriptors.Descriptor;
@@ -330,7 +331,7 @@ final class HttpJsonTranscodingService extends AbstractUnframedGrpcService
         final ImmutableMap.Builder<String, Field> builder = ImmutableMap.builder();
         for (FieldDescriptor field : desc.getFields()) {
             final JavaType type = field.getJavaType();
-
+            final boolean isRequired = hasRequiredFieldBehavior(field);
             final String fieldName;
             switch (currentMatchRule) {
                 case ORIGINAL_FIELD:
@@ -370,12 +371,11 @@ final class HttpJsonTranscodingService extends AbstractUnframedGrpcService
                 case BYTE_STRING:
                 case ENUM:
                     // Use field name which is specified in proto file.
-                    builder.put(key, new Field(field, parentNames, field.getJavaType(), true));
+                    builder.put(key, new Field(field, parentNames, field.getJavaType(), isRequired));
                     break;
                 case MESSAGE:
                     @Nullable
                     final JavaType wellKnownFieldType = getJavaTypeForWellKnownTypes(field);
-                    final boolean isRequired = hasRequiredFieldBehavior(field);
 
                     if (wellKnownFieldType != null) {
                         builder.put(key, new Field(field, parentNames, wellKnownFieldType, isRequired));
@@ -427,14 +427,11 @@ final class HttpJsonTranscodingService extends AbstractUnframedGrpcService
             return false;
         }
 
-        try {
-            final List<FieldBehavior> fieldBehaviors = field
-                    .getOptions()
-                    .getExtension(FieldBehaviorProto.fieldBehavior);
-            return fieldBehaviors.contains(FieldBehavior.REQUIRED);
-        } catch (NoSuchMethodError error) {
-            return false;
-        }
+        final List<FieldBehavior> fieldBehaviors = field
+                .getOptions()
+                .getExtension((ExtensionLite<DescriptorProtos.FieldOptions, List<FieldBehavior>>)
+                        FieldBehaviorProto.fieldBehavior);
+        return fieldBehaviors.contains(FieldBehavior.REQUIRED);
     }
 
     @Nullable
