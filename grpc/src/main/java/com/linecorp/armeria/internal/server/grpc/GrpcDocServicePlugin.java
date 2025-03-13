@@ -350,6 +350,13 @@ public final class GrpcDocServicePlugin implements DocServicePlugin {
 
     @VisibleForTesting
     static String convertRegexPath(String patternString) {
+        if (patternString.charAt(patternString.length() - 1) == '$') {
+            patternString = patternString.substring(0, patternString.length() - 1);
+        }
+        if (patternString.charAt(0) == '^') {
+            patternString = patternString.substring(1);
+        }
+
         // map '/a/(?<p0>[^/]+):get' to '/a/p0:get'
         return PATH_PARAM_PATTERN.matcher(patternString).replaceAll("$1");
     }

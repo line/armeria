@@ -457,7 +457,8 @@ class GrpcDocServicePluginTest {
 
     @Test
     void pathParamRegexIsConvertedCorrectly() {
-        assertThat(convertRegexPath("/a/(?<p0>[^/]+):get"))
-                .isEqualTo("/a/p0:get");
+        assertThat(convertRegexPath("/a/(?<p0>[^/]+):get")).isEqualTo("/a/p0:get");
+        assertThat(convertRegexPath("^/a/(?<p0>[^/]+):get")).isEqualTo("/a/p0:get");
+        assertThat(convertRegexPath("^/a/(?<p0>[^/]+):get$")).isEqualTo("/a/p0:get");
     }
 }

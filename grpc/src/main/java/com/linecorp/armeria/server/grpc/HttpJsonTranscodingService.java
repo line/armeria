@@ -26,8 +26,10 @@ import static java.util.Objects.requireNonNull;
 import java.io.IOException;
 import java.util.AbstractMap.SimpleImmutableEntry;
 import java.util.Base64;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -98,19 +100,14 @@ import com.linecorp.armeria.common.grpc.protocol.GrpcHeaderNames;
 import com.linecorp.armeria.common.logging.RequestLogProperty;
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.internal.common.JacksonUtil;
-import com.linecorp.armeria.internal.server.RouteUtil;
 import com.linecorp.armeria.internal.server.grpc.HttpEndpointSpecification;
 import com.linecorp.armeria.internal.server.grpc.HttpEndpointSpecification.Parameter;
 import com.linecorp.armeria.internal.server.grpc.HttpEndpointSupport;
 import com.linecorp.armeria.server.HttpStatusException;
 import com.linecorp.armeria.server.Route;
-import com.linecorp.armeria.server.RouteBuilder;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.grpc.HttpJsonTranscodingPathParser.PathSegment;
-import com.linecorp.armeria.server.grpc.HttpJsonTranscodingPathParser.PathSegment.PathMappingType;
-import com.linecorp.armeria.server.grpc.HttpJsonTranscodingPathParser.Stringifier;
 import com.linecorp.armeria.server.grpc.HttpJsonTranscodingPathParser.VariablePathSegment;
-import com.linecorp.armeria.server.grpc.HttpJsonTranscodingPathParser.VerbPathSegment;
 import com.linecorp.armeria.server.grpc.HttpJsonTranscodingService.PathVariable.ValueDefinition.Type;
 import com.linecorp.armeria.unsafe.PooledObjects;
 
@@ -169,7 +166,8 @@ final class HttpJsonTranscodingService extends AbstractUnframedGrpcService
                 }
 
                 @Nullable
-                final Entry<Route, List<PathVariable>> routeAndVariables = toRouteAndPathVariables(httpRule);
+                final HttpJsonTranscodingRouteAndPathVariables routeAndVariables =
+                        HttpJsonTranscodingRouteAndPathVariables.of(httpRule);
                 if (routeAndVariables == null) {
                     continue;
                 }
@@ -178,8 +176,7 @@ final class HttpJsonTranscodingService extends AbstractUnframedGrpcService
                 //               HttpJsonTranscodingServiceBuilder or HttpJsonTranscodingSpecGenerator
                 final Set<HttpJsonTranscodingQueryParamMatchRule> queryParamMatchRules =
                         httpJsonTranscodingOptions.queryParamMatchRules();
-                final Route route = routeAndVariables.getKey();
-                final List<PathVariable> pathVariables = routeAndVariables.getValue();
+                final Route route = routeAndVariables.route();
                 final Map<String, Field> originalFields = buildFields(methodDesc.getInputType(),
                                                                       ImmutableList.of(),
                                                                       "",
@@ -205,19 +202,20 @@ final class HttpJsonTranscodingService extends AbstractUnframedGrpcService
                 specs.put(route, new TranscodingSpec(order++, httpRule, methodDefinition,
                                                      serviceDesc, methodDesc, originalFields,
                                                      queryMappingFields,
-                                                     pathVariables,
+                                                     routeAndVariables.pathVariables(),
+                                                     routeAndVariables.hasVerb(),
                                                      responseBody));
                 for (HttpRule additionalHttpRule : httpRule.getAdditionalBindingsList()) {
                     @Nullable
-                    final Entry<Route, List<PathVariable>> additionalRouteAndVariables
-                            = toRouteAndPathVariables(additionalHttpRule);
+                    final HttpJsonTranscodingRouteAndPathVariables additionalRouteAndVariables
+                            = HttpJsonTranscodingRouteAndPathVariables.of(additionalHttpRule);
                     if (additionalRouteAndVariables != null) {
-                        specs.put(additionalRouteAndVariables.getKey(),
+                        specs.put(additionalRouteAndVariables.route(),
                                   new TranscodingSpec(order++, additionalHttpRule, methodDefinition,
                                                       serviceDesc, methodDesc, originalFields,
                                                       queryMappingFields,
-                                                      additionalRouteAndVariables.getValue(),
-                                                      responseBody));
+                                                      additionalRouteAndVariables.pathVariables(),
+                                                      routeAndVariables.hasVerb(), responseBody));
                     }
                 }
             }
@@ -248,75 +246,6 @@ final class HttpJsonTranscodingService extends AbstractUnframedGrpcService
             return ((ProtoMethodDescriptorSupplier) desc).getMethodDescriptor();
         }
         return null;
-    }
-
-    @VisibleForTesting
-    @Nullable
-    static Entry<Route, List<PathVariable>> toRouteAndPathVariables(HttpRule httpRule) {
-        final RouteBuilder builder = Route.builder();
-        final String path;
-        switch (httpRule.getPatternCase()) {
-            case GET:
-                builder.methods(HttpMethod.GET);
-                path = httpRule.getGet();
-                break;
-            case PUT:
-                builder.methods(HttpMethod.PUT);
-                path = httpRule.getPut();
-                break;
-            case POST:
-                builder.methods(HttpMethod.POST);
-                path = httpRule.getPost();
-                break;
-            case DELETE:
-                builder.methods(HttpMethod.DELETE);
-                path = httpRule.getDelete();
-                break;
-            case PATCH:
-                builder.methods(HttpMethod.PATCH);
-                path = httpRule.getPatch();
-                break;
-            case CUSTOM:
-            default:
-                logger.warn("Ignoring unsupported route pattern: pattern={}, httpRule={}",
-                            httpRule.getPatternCase(), httpRule);
-                return null;
-        }
-
-        // Check whether the path is Armeria-native.
-        if (path.startsWith(RouteUtil.EXACT) ||
-            path.startsWith(RouteUtil.PREFIX) ||
-            path.startsWith(RouteUtil.GLOB) ||
-            path.startsWith(RouteUtil.REGEX)) {
-
-            final Route route = builder.path(path).build();
-            final List<PathVariable> vars =
-                    route.paramNames().stream()
-                         .map(name -> new PathVariable(null, name,
-                                                       ImmutableList.of(
-                                                               new PathVariable.ValueDefinition(Type.REFERENCE,
-                                                                                                name))))
-                         .collect(toImmutableList());
-            return new SimpleImmutableEntry<>(route, vars);
-        }
-
-        final List<PathSegment> segments = HttpJsonTranscodingPathParser.parse(path);
-
-        PathMappingType pathMappingType =
-                segments.stream().allMatch(segment -> segment.support(PathMappingType.PARAMETERIZED)) ?
-                PathMappingType.PARAMETERIZED : PathMappingType.GLOB;
-        if (segments.get(segments.size() - 1) instanceof VerbPathSegment) {
-            pathMappingType = PathMappingType.REGEX;
-        }
-
-        if (pathMappingType == PathMappingType.PARAMETERIZED) {
-            builder.path(Stringifier.segmentsToPath(PathMappingType.PARAMETERIZED, segments, true));
-        } else if (pathMappingType == PathMappingType.GLOB) {
-            builder.glob(Stringifier.segmentsToPath(PathMappingType.GLOB, segments, true));
-        } else {
-            builder.regex(Stringifier.segmentsToPath(PathMappingType.REGEX, segments, true));
-        }
-        return new SimpleImmutableEntry<>(builder.build(), PathVariable.from(segments, pathMappingType));
     }
 
     private static Map<String, Field> buildFields(Descriptor desc,
@@ -586,10 +515,24 @@ final class HttpJsonTranscodingService extends AbstractUnframedGrpcService
                                        HttpJsonTranscodingOptions httpJsonTranscodingOptions) {
         super(delegate, httpJsonTranscodingOptions.errorHandler());
         this.routeAndSpecs = routeAndSpecs;
-        routes = ImmutableSet.<Route>builder()
-                             .addAll(delegate.routes())
-                             .addAll(routeAndSpecs.keySet())
-                             .build();
+
+        final LinkedHashSet<Route> linkedHashSet = new LinkedHashSet<>(delegate.routes().size() +
+                                                                       routeAndSpecs.size());
+        linkedHashSet.addAll(delegate.routes());
+
+        routeAndSpecs.entrySet().stream().sorted((o1, o2) -> {
+            if (o1.getValue().hasVerb) {
+                return -1;
+            }
+            if (o2.getValue().hasVerb) {
+                return 1;
+            }
+            return 0;
+        }).forEach(entry -> {
+            linkedHashSet.add(entry.getKey());
+        });
+
+        routes = Collections.unmodifiableSet(linkedHashSet);
     }
 
     @Nullable
@@ -938,6 +881,18 @@ final class HttpJsonTranscodingService extends AbstractUnframedGrpcService
         }
     }
 
+    static class RouteAndPathVariables {
+        final Route route;
+        final List<PathVariable> pathVariables;
+        final boolean hasVerb;
+
+        RouteAndPathVariables(Route route, List<PathVariable> pathVariables, boolean hasVerb) {
+            this.route = route;
+            this.pathVariables = pathVariables;
+            this.hasVerb = hasVerb;
+        }
+    }
+
     /**
      * Details of HTTP/JSON to gRPC transcoding.
      */
@@ -950,6 +905,7 @@ final class HttpJsonTranscodingService extends AbstractUnframedGrpcService
         private final Map<String, Field> originalFields;
         private final List<Map<String, Field>> queryMappingFields;
         private final List<PathVariable> pathVariables;
+        private final boolean hasVerb;
         @Nullable
         private final String responseBody;
 
@@ -961,7 +917,7 @@ final class HttpJsonTranscodingService extends AbstractUnframedGrpcService
                                 Map<String, Field> originalFields,
                                 List<Map<String, Field>> queryMappingFields,
                                 List<PathVariable> pathVariables,
-                                @Nullable String responseBody) {
+                                boolean hasVerb, @Nullable String responseBody) {
             this.order = order;
             this.httpRule = httpRule;
             this.method = method;
@@ -970,6 +926,7 @@ final class HttpJsonTranscodingService extends AbstractUnframedGrpcService
             this.originalFields = originalFields;
             this.queryMappingFields = queryMappingFields;
             this.pathVariables = pathVariables;
+            this.hasVerb = hasVerb;
             this.responseBody = responseBody;
         }
     }
