@@ -90,17 +90,12 @@ class KubernetesEndpointGroupMockServerTest {
 
         final KubernetesEndpointGroup endpointGroup = KubernetesEndpointGroup.of(client, "test",
                                                                                  "nginx-service");
-        endpointGroup.whenReady().join();
-
         // Initial state
-        await().untilAsserted(() -> {
-            final List<Endpoint> endpoints = endpointGroup.endpoints();
-            // Wait until all endpoints are ready
-            assertThat(endpoints).containsExactlyInAnyOrder(
-                    Endpoint.of("1.1.1.1", nodePort),
-                    Endpoint.of("2.2.2.2", nodePort)
-            );
-        });
+        final List<Endpoint> initialEndpoints = endpointGroup.whenReady().join();
+        assertThat(initialEndpoints).containsExactlyInAnyOrder(
+                Endpoint.of("1.1.1.1", nodePort),
+                Endpoint.of("2.2.2.2", nodePort)
+        );
 
         // Add a new pod
         client.pods().resource(pods.get(2)).create();

@@ -16,9 +16,11 @@
 
 package com.linecorp.armeria.client.kubernetes.endpoints;
 
+import com.linecorp.armeria.client.WebClientBuilder;
 import com.linecorp.armeria.client.kubernetes.ArmeriaHttpClientFactory;
 import com.linecorp.armeria.client.websocket.WebSocketClientBuilder;
 import com.linecorp.armeria.common.HttpData;
+import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.websocket.WebSocketFrame;
 import com.linecorp.armeria.internal.common.websocket.WebSocketFrameEncoder;
@@ -37,6 +39,21 @@ public class FaultInjectingKubernetesClientBuilderCustomizer extends KubernetesC
     @Override
     public void accept(KubernetesClientBuilder kubernetesClientBuilder) {
         kubernetesClientBuilder.withHttpClientFactory(new ArmeriaHttpClientFactory() {
+
+            @Override
+            protected void additionalConfig(WebClientBuilder builder) {
+                builder.decorator((delegate, ctx, req) -> {
+                    final HttpResponse response = delegate.execute(ctx, req);
+                    if (shouldInjectFault && ctx.method() == HttpMethod.GET) {
+                        return response.mapData(data -> {
+                            data.close();
+                            return HttpData.ofUtf8("invalid data");
+                        });
+                    } else {
+                        return response;
+                    }
+                });
+            }
 
             @Override
             protected void additionalWebSocketConfig(WebSocketClientBuilder builder) {

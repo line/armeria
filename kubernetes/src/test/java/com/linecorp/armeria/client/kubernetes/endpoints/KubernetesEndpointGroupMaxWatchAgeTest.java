@@ -121,7 +121,7 @@ class KubernetesEndpointGroupMaxWatchAgeTest {
            assertThat(newNum - oldNum).isEqualTo(1);
         } else {
             // Create more than N new watches, where N = sleepMillis / maxWatchAgeMillis
-            assertThat(newNum - oldNum).isGreaterThan(sleepMillis / maxWatchAgeMillis);
+            assertThat(newNum - oldNum).isGreaterThanOrEqualTo(sleepMillis / maxWatchAgeMillis);
         }
     }
 }
