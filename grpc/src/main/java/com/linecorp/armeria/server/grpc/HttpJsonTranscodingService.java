@@ -47,6 +47,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.google.api.AnnotationsProto;
+import com.google.api.FieldBehavior;
+import com.google.api.FieldBehaviorProto;
 import com.google.api.HttpBody;
 import com.google.api.HttpRule;
 import com.google.common.annotations.VisibleForTesting;
@@ -59,6 +61,7 @@ import com.google.common.collect.ImmutableSet;
 import com.google.protobuf.Any;
 import com.google.protobuf.BoolValue;
 import com.google.protobuf.BytesValue;
+import com.google.protobuf.DescriptorProtos;
 import com.google.protobuf.DescriptorProtos.MethodOptions;
 import com.google.protobuf.Descriptors;
 import com.google.protobuf.Descriptors.Descriptor;
@@ -257,7 +260,7 @@ final class HttpJsonTranscodingService extends AbstractUnframedGrpcService
         final ImmutableMap.Builder<String, Field> builder = ImmutableMap.builder();
         for (FieldDescriptor field : desc.getFields()) {
             final JavaType type = field.getJavaType();
-
+            final boolean isRequired = hasRequiredFieldBehavior(field);
             final String fieldName;
             switch (currentMatchRule) {
                 case ORIGINAL_FIELD:
@@ -297,13 +300,14 @@ final class HttpJsonTranscodingService extends AbstractUnframedGrpcService
                 case BYTE_STRING:
                 case ENUM:
                     // Use field name which is specified in proto file.
-                    builder.put(key, new Field(field, parentNames, field.getJavaType()));
+                    builder.put(key, new Field(field, parentNames, field.getJavaType(), isRequired));
                     break;
                 case MESSAGE:
                     @Nullable
                     final JavaType wellKnownFieldType = getJavaTypeForWellKnownTypes(field);
+
                     if (wellKnownFieldType != null) {
-                        builder.put(key, new Field(field, parentNames, wellKnownFieldType));
+                        builder.put(key, new Field(field, parentNames, wellKnownFieldType, isRequired));
                         break;
                     }
 
@@ -337,7 +341,7 @@ final class HttpJsonTranscodingService extends AbstractUnframedGrpcService
                             throw e;
                         }
 
-                        builder.put(key, new Field(field, parentNames, JavaType.MESSAGE));
+                        builder.put(key, new Field(field, parentNames, JavaType.MESSAGE, isRequired));
                     }
                     break;
             }
@@ -345,6 +349,18 @@ final class HttpJsonTranscodingService extends AbstractUnframedGrpcService
         // A generated field in LOWER_CAMEL_CASE from a single word such as 'text' could be conflict with the
         // original field name.
         return builder.buildKeepingLast();
+    }
+
+    private static boolean hasRequiredFieldBehavior(FieldDescriptor field) {
+        if (field.isRepeated()) {
+            return false;
+        }
+
+        final List<FieldBehavior> fieldBehaviors = field
+                .getOptions()
+                .getExtension((ExtensionLite<DescriptorProtos.FieldOptions, List<FieldBehavior>>)
+                        FieldBehaviorProto.fieldBehavior);
+        return fieldBehaviors.contains(FieldBehavior.REQUIRED);
     }
 
     @Nullable
@@ -363,15 +379,7 @@ final class HttpJsonTranscodingService extends AbstractUnframedGrpcService
             return JavaType.STRING;
         }
 
-        if (DoubleValue.getDescriptor().getFullName().equals(fullName) ||
-            FloatValue.getDescriptor().getFullName().equals(fullName) ||
-            Int64Value.getDescriptor().getFullName().equals(fullName) ||
-            UInt64Value.getDescriptor().getFullName().equals(fullName) ||
-            Int32Value.getDescriptor().getFullName().equals(fullName) ||
-            UInt32Value.getDescriptor().getFullName().equals(fullName) ||
-            BoolValue.getDescriptor().getFullName().equals(fullName) ||
-            StringValue.getDescriptor().getFullName().equals(fullName) ||
-            BytesValue.getDescriptor().getFullName().equals(fullName)) {
+        if (isScalarValueWrapperMessage(fullName)) {
             // "value" field. Wrappers must have one field.
             assert messageType.getFields().size() == 1 : "Wrappers must have one 'value' field.";
             return messageType.getFields().get(0).getJavaType();
@@ -396,6 +404,18 @@ final class HttpJsonTranscodingService extends AbstractUnframedGrpcService
         }
 
         return null;
+    }
+
+    private static boolean isScalarValueWrapperMessage(String fullName) {
+        return DoubleValue.getDescriptor().getFullName().equals(fullName) ||
+                FloatValue.getDescriptor().getFullName().equals(fullName) ||
+                Int64Value.getDescriptor().getFullName().equals(fullName) ||
+                UInt64Value.getDescriptor().getFullName().equals(fullName) ||
+                Int32Value.getDescriptor().getFullName().equals(fullName) ||
+                UInt32Value.getDescriptor().getFullName().equals(fullName) ||
+                BoolValue.getDescriptor().getFullName().equals(fullName) ||
+                StringValue.getDescriptor().getFullName().equals(fullName) ||
+                BytesValue.getDescriptor().getFullName().equals(fullName);
     }
 
     // to make it more efficient, we calculate whether extract response body one time
@@ -549,7 +569,8 @@ final class HttpJsonTranscodingService extends AbstractUnframedGrpcService
                 spec.originalFields.entrySet().stream().collect(
                         toImmutableMap(Entry::getKey,
                                        fieldEntry -> new Parameter(fieldEntry.getValue().type(),
-                                                                   fieldEntry.getValue().isRepeated())));
+                                                                   fieldEntry.getValue().isRepeated(),
+                                                                   fieldEntry.getValue().isRequired())));
         return new HttpEndpointSpecification(spec.order,
                                              route,
                                              paramNames,
@@ -938,11 +959,17 @@ final class HttpJsonTranscodingService extends AbstractUnframedGrpcService
         private final FieldDescriptor descriptor;
         private final List<String> parentNames;
         private final JavaType javaType;
+        private final boolean isRequired;
 
-        private Field(FieldDescriptor descriptor, List<String> parentNames, JavaType javaType) {
+        private Field(FieldDescriptor descriptor,
+                      List<String> parentNames,
+                      JavaType javaType,
+                      boolean isRequired
+        ) {
             this.descriptor = descriptor;
             this.parentNames = parentNames;
             this.javaType = javaType;
+            this.isRequired = isRequired;
         }
 
         JavaType type() {
@@ -955,6 +982,10 @@ final class HttpJsonTranscodingService extends AbstractUnframedGrpcService
 
         boolean isRepeated() {
             return descriptor.isRepeated();
+        }
+
+        boolean isRequired() {
+            return isRequired;
         }
     }
 
