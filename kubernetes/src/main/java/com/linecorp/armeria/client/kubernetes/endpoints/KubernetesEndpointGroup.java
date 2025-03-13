@@ -69,8 +69,8 @@ import io.fabric8.kubernetes.client.WatcherException;
  *
  * <p>{@link KubernetesEndpointGroup} gets and watches the nodes, services and pods in the Kubernetes cluster
  * and updates the endpoints, so the credentials in the {@link Config} used to create {@link KubernetesClient}
- * should have permission to get and watch {@code services}, {@code nodes} and {@code pods}. Otherwise, the
- * {@link KubernetesEndpointGroup} will not be able to fetch the endpoints.
+ * should have permission to {@code get}, {@code list} and {@code watch} {@code services}, {@code nodes} and
+ * {@code pods}. Otherwise, the {@link KubernetesEndpointGroup} will not be able to fetch the endpoints.
  *
  * <p>For instance, the following <a href="https://kubernetes.io/docs/reference/access-authn-authz/rbac/#referring-to-subjects">RBAC</a>
  * configuration is required:
@@ -82,7 +82,7 @@ import io.fabric8.kubernetes.client.WatcherException;
  * rules:
  * - apiGroups: [""]
  *   resources: ["pods", "services", "nodes"]
- *   verbs: ["get", "watch"]
+ *   verbs: ["get", "list", "watch"]
  * }</pre>
  *
  * <p>Example:
