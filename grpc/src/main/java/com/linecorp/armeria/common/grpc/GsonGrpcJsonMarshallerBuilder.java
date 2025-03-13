@@ -18,6 +18,7 @@ package com.linecorp.armeria.common.grpc;
 
 import static java.util.Objects.requireNonNull;
 
+import java.util.function.Consumer;
 import java.util.function.Function;
 
 import com.google.protobuf.Message;
@@ -53,6 +54,62 @@ public final class GsonGrpcJsonMarshallerBuilder {
             this.jsonParserCustomizer = cast;
         } else {
             this.jsonParserCustomizer = this.jsonParserCustomizer.andThen(jsonParserCustomizer);
+        }
+        return this;
+    }
+
+    /**
+     * Adds a {@link Consumer} that can customize the {@link JsonFormat.Parser}
+     * used when deserializing a JSON payload into a {@link Message}.
+     *
+     * @deprecated {@link JsonFormat.Parser} is immutable so all changes applied in the {@link Consumer}
+     *     will be lost. Please use the {@link #jsonParserCustomizer(Function) jsonParserCustomizer}
+     *     which accepts {@link Function} parameter instead.
+     */
+    @Deprecated
+    public GsonGrpcJsonMarshallerBuilder jsonParserCustomizer(
+            Consumer<? super JsonFormat.Parser> jsonParserCustomizer) {
+        requireNonNull(jsonParserCustomizer, "jsonParserCustomizer");
+        if (this.jsonParserCustomizer == null) {
+            @SuppressWarnings("unchecked")
+            final Consumer<JsonFormat.Parser> cast = (Consumer<JsonFormat.Parser>) jsonParserCustomizer;
+            this.jsonParserCustomizer = parser -> {
+                cast.accept(parser);
+                return parser;
+            };
+        } else {
+            this.jsonParserCustomizer = this.jsonParserCustomizer.andThen(parser -> {
+                jsonParserCustomizer.accept(parser);
+                return parser;
+            });
+        }
+        return this;
+    }
+
+    /**
+     * Adds a {@link Consumer} that can customize the {@link JsonFormat.Printer}
+     * used when serializing a {@link Message} into a JSON payload.
+     *
+     * @deprecated {@link JsonFormat.Printer} is immutable so all changes applied in the {@link Consumer}
+     *     will be lost. Please use the {@link #jsonPrinterCustomizer(Function) jsonParserCustomizer}
+     *     which accepts {@link Function} parameter instead.
+     */
+    @Deprecated
+    public GsonGrpcJsonMarshallerBuilder jsonPrinterCustomizer(
+            Consumer<? super JsonFormat.Printer> jsonPrinterCustomizer) {
+        requireNonNull(jsonPrinterCustomizer, "jsonPrinterCustomizer");
+        if (this.jsonPrinterCustomizer == null) {
+            @SuppressWarnings("unchecked")
+            final Consumer<JsonFormat.Printer> cast = (Consumer<JsonFormat.Printer>) jsonPrinterCustomizer;
+            this.jsonPrinterCustomizer = printer -> {
+                cast.accept(printer);
+                return printer;
+            };
+        } else {
+            this.jsonPrinterCustomizer = this.jsonPrinterCustomizer.andThen(printer -> {
+                jsonPrinterCustomizer.accept(printer);
+                return printer;
+            });
         }
         return this;
     }

@@ -96,12 +96,16 @@ class GsonGrpcJsonMarshallerBuilderTest {
     @Test
     void createJsonParserWithCustomizerNotIgnoringUnknownFields() {
         final GrpcJsonMarshaller jsonMarshaller = GrpcJsonMarshaller.builderForGson()
-                .jsonParserCustomizer((parser -> parser.usingTypeRegistry(
-                        JsonFormat.TypeRegistry.newBuilder()
-                                .add(Messages.SimpleRequest.getDescriptor())
-                                .build()
-                )))
-                .jsonParserCustomizer(parser -> JsonFormat.parser())
+                .jsonParserCustomizer(parser -> {
+                    return parser.usingTypeRegistry(
+                            JsonFormat.TypeRegistry.newBuilder()
+                                    .add(Messages.SimpleRequest.getDescriptor())
+                                    .build()
+                    );
+                })
+                .jsonParserCustomizer(parser -> {
+                    return JsonFormat.parser();
+                })
                 .build();
         assertThatThrownBy(() -> parseJson(jsonMarshaller, "{\"test\": true}"))
                 .hasMessageStartingWith("Cannot find field");
