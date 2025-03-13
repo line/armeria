@@ -276,6 +276,9 @@ public final class KubernetesEndpointGroup extends DynamicEndpointGroup {
             }
             initial = false;
             // Repeat until all `start()` requests are handled.
+            // Even if `doStart()` returns true, `start()` can be called recursively. Although `watchXXX()`
+            // successfully opens WebSocket sessions, if `Watcher.onClose()` is called quickly, a retry request
+            // may come in before the `start()` function finishes.
         } while (wipUpdater.decrementAndGet(this) > 0);
     }
 
