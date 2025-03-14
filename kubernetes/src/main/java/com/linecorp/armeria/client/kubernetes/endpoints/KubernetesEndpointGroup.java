@@ -292,7 +292,11 @@ public final class KubernetesEndpointGroup extends DynamicEndpointGroup {
         final PodList pods;
         try {
             logger.info("[{}/{}] Fetching the service...", namespace, serviceName);
-            service = client.services().withName(serviceName).get();
+            if (namespace == null) {
+                service = client.services().withName(serviceName).get();
+            } else {
+                service = client.services().inNamespace(namespace).withName(serviceName).get();
+            }
             if (service == null) {
                 logger.warn("[{}/{}] Service not found.", namespace, serviceName);
                 throw new IllegalStateException(
