@@ -42,6 +42,7 @@ import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.ResponseHeaders;
+import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
@@ -55,6 +56,20 @@ class JsonLogFormatterTest {
         final DefaultRequestLog log = (DefaultRequestLog) ctx.log();
         log.endRequest();
         final String requestLog = logFormatter.formatRequest(log);
+        assertThat(requestLog)
+                .matches("^\\{\"type\":\"request\",\"startTime\":\".+\",\"length\":\".+\"," +
+                         "\"duration\":\".+\",\"scheme\":\".+\",\"name\":\".+\",\"headers\":\\{\".+\"}}$");
+    }
+
+    @Test
+    void formatRpcRequest() {
+        final LogFormatter logFormatter = LogFormatter.ofJson();
+        final ServiceRequestContext ctx = ServiceRequestContext.of(HttpRequest.of(HttpMethod.POST, "/com.Foo"));
+        final DefaultRequestLog log = (DefaultRequestLog) ctx.log();
+        log.requestContent(RpcRequest.of(DefaultRequestLogTest.class, "service", "method"), null);
+        log.endRequest();
+        final String requestLog = logFormatter.formatRequest(log);
+        System.out.println(requestLog);
         assertThat(requestLog)
                 .matches("^\\{\"type\":\"request\",\"startTime\":\".+\",\"length\":\".+\"," +
                          "\"duration\":\".+\",\"scheme\":\".+\",\"name\":\".+\",\"headers\":\\{\".+\"}}$");
