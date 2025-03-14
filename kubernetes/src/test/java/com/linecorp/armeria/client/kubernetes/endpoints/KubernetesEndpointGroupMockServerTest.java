@@ -186,17 +186,11 @@ class KubernetesEndpointGroupMockServerTest {
 
         final KubernetesEndpointGroup endpointGroup = KubernetesEndpointGroup.of(client, "test",
                                                                                  "nginx-service");
-        endpointGroup.whenReady().join();
-
-        // Initial state
-        await().untilAsserted(() -> {
-            final List<Endpoint> endpoints = endpointGroup.endpoints();
-            // Wait until all endpoints are ready
-            assertThat(endpoints).containsExactlyInAnyOrder(
-                    Endpoint.of("1.1.1.1", nodePort),
-                    Endpoint.of("2.2.2.2", nodePort)
-            );
-        });
+        final List<Endpoint> endpoints = endpointGroup.whenReady().join();
+        assertThat(endpoints).containsExactlyInAnyOrder(
+                Endpoint.of("1.1.1.1", nodePort),
+                Endpoint.of("2.2.2.2", nodePort)
+        );
 
         // Update service and deployment with new selector
         final int newNodePort = 30001;
@@ -213,8 +207,8 @@ class KubernetesEndpointGroupMockServerTest {
                      .collect(toImmutableList());
         client.pods().resource(updatedPods.get(2)).create();
         await().untilAsserted(() -> {
-            final List<Endpoint> endpoints = endpointGroup.endpoints();
-            assertThat(endpoints).containsExactlyInAnyOrder(
+            final List<Endpoint> endpoints0 = endpointGroup.endpoints();
+            assertThat(endpoints0).containsExactlyInAnyOrder(
                     Endpoint.of("3.3.3.3", newNodePort)
             );
         });
