@@ -237,6 +237,10 @@ public final class KubernetesEndpointGroup extends DynamicEndpointGroup {
     @Nullable
     private ScheduledFuture<?> scheduledFuture;
 
+    // Used to prevent the old watchers from updating endpoints.
+    private final ReentrantShortLock updateLock = new ReentrantShortLock();
+    private long updateId;
+
     // Used for serializing the start() method.
     private volatile int wip;
     private volatile boolean closed;
@@ -283,9 +287,16 @@ public final class KubernetesEndpointGroup extends DynamicEndpointGroup {
     }
 
     private boolean doStart(boolean initial) {
-        nodeToIp.clear();
-        podToNode.clear();
         closeResources();
+        updateLock.lock();
+        try {
+            // Change the updateId to ensure that outdated watchers do not update endpoints.
+            updateId++;
+            nodeToIp.clear();
+            podToNode.clear();
+        } finally {
+            updateLock.unlock();
+        }
 
         final Service service;
         final NodeList nodes;
@@ -327,8 +338,8 @@ public final class KubernetesEndpointGroup extends DynamicEndpointGroup {
             maybeUpdateEndpoints();
 
             watchService(service.getMetadata().getResourceVersion());
-            watchNode(nodes.getMetadata().getResourceVersion());
-            watchPod(pods.getMetadata().getResourceVersion());
+            watchNode(updateId, nodes.getMetadata().getResourceVersion());
+            watchPod(updateId, pods.getMetadata().getResourceVersion());
         } catch (Exception e) {
             logger.warn("[{}/{}] Failed to start {}. (initial: {})", namespace, serviceName, this, initial, e);
             if (initial) {
@@ -445,26 +456,27 @@ public final class KubernetesEndpointGroup extends DynamicEndpointGroup {
         return true;
     }
 
-    private void watchPod(String resourceVersion) {
+    private void watchPod(long updateId, String resourceVersion) {
         logger.info("[{}/{}] Start the pod watcher... (resource version: {})", namespace, serviceName,
                     resourceVersion);
-        podWatch = doWatchPod(resourceVersion);
+        podWatch = doWatchPod(updateId, resourceVersion);
         logger.info("[{}/{}] Pod watcher is started.", namespace, serviceName);
     }
 
-    private Watch doWatchPod(String resourceVersion) {
+    private Watch doWatchPod(long updateId, String resourceVersion) {
         final Watcher<Pod> watcher = new Watcher<Pod>() {
             @Override
             public void eventReceived(Action action, Pod resource) {
                 if (closed) {
                     return;
                 }
-
                 numPodFailures = 0;
-                if (!updatePod(action, resource)) {
-                    return;
-                }
-                maybeUpdateEndpoints();
+                withUpdateLock(updateId, () -> {
+                    if (!updatePod(action, resource)) {
+                        return;
+                    }
+                    maybeUpdateEndpoints();
+                });
             }
 
             @Override
@@ -524,29 +536,30 @@ public final class KubernetesEndpointGroup extends DynamicEndpointGroup {
         return true;
     }
 
-    private void watchNode(String resourceVersion) {
+    private void watchNode(long updateId, String resourceVersion) {
         logger.info("[{}/{}] Start the node watcher... (resource version: {})", namespace, serviceName,
                     resourceVersion);
-        nodeWatch = doWatchNode(resourceVersion);
+        nodeWatch = doWatchNode(updateId, resourceVersion);
         logger.info("[{}/{}] Node watcher is started.", namespace, serviceName);
     }
 
     /**
      * Fetches the internal IPs of the node.
      */
-    private Watch doWatchNode(String resourceVersion) {
+    private Watch doWatchNode(long updateId, String resourceVersion) {
         final Watcher<Node> watcher = new Watcher<Node>() {
             @Override
             public void eventReceived(Action action, Node node) {
                 if (closed) {
                     return;
                 }
-
                 numNodeFailures = 0;
-                if (!updateNode(action, node)) {
-                    return;
-                }
-                maybeUpdateEndpoints();
+                withUpdateLock(updateId, () -> {
+                    if (!updateNode(action, node)) {
+                        return;
+                    }
+                    maybeUpdateEndpoints();
+                });
             }
 
             @Override
@@ -718,6 +731,19 @@ public final class KubernetesEndpointGroup extends DynamicEndpointGroup {
         final Watch podWatch = this.podWatch;
         if (podWatch != null) {
             podWatch.close();
+        }
+    }
+
+    private void withUpdateLock(long updateId, Runnable task) {
+        updateLock.lock();
+        try {
+            if (this.updateId != updateId) {
+                // The current update is outdated.
+                return;
+            }
+            task.run();
+        } finally {
+            updateLock.unlock();
         }
     }
 }
