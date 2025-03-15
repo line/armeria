@@ -36,6 +36,7 @@ import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.internal.client.ClientUtil;
 import com.linecorp.armeria.internal.client.DefaultClientRequestContext;
 import com.linecorp.armeria.internal.client.TailPreClient;
+import com.linecorp.armeria.internal.common.DefaultRequestTarget;
 import com.linecorp.armeria.internal.common.RequestTargetCache;
 
 import io.micrometer.core.instrument.MeterRegistry;
@@ -76,14 +77,14 @@ final class DefaultTHttpClient extends UserClient<RpcRequest, RpcResponse> imple
             path = path + '#' + serviceName;
         }
 
-        final RequestTarget reqTarget = RequestTarget.forClient(path, uri().getRawPath());
+        final RequestTarget reqTarget = DefaultRequestTarget.forClientPath(path, uri().getRawPath());
         if (reqTarget == null) {
             return RpcResponse.ofFailure(new TTransportException(
                     new IllegalArgumentException("invalid path: " + path)));
         }
 
         // A thrift path is always good to cache as it cannot have non-fixed parameters.
-        RequestTargetCache.putForClient(path, reqTarget);
+        RequestTargetCache.putForClientPath(path, reqTarget);
 
         final RpcRequest call = RpcRequest.of(serviceType, method, args);
         final DefaultClientRequestContext ctx = new DefaultClientRequestContext(

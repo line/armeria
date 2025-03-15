@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.client;
 
+import static com.linecorp.armeria.internal.client.SessionProtocolUtil.defaultSessionProtocol;
 import static java.util.Objects.requireNonNull;
 
 import com.google.common.base.Strings;
@@ -86,17 +87,16 @@ final class DefaultWebClient extends UserClient<HttpRequest, HttpResponse> imple
                 scheme = req.scheme();
                 authority = req.authority();
 
-                if (scheme == null || authority == null) {
+                if (authority == null) {
                     return abortRequestAndReturnFailureResponse(req, new IllegalArgumentException(
-                            "Scheme and authority must be specified in \":path\" or " +
-                            "in \":scheme\" and \":authority\". :path=" +
-                            originalPath + ", :scheme=" + req.scheme() + ", :authority=" + req.authority()));
+                            "Authority must be specified in \":path\" or " +
+                            "in \":authority\". :path=" + originalPath + ", :authority=" + req.authority()));
                 }
             }
 
             endpointGroup = Endpoint.parse(authority);
             try {
-                protocol = Scheme.parse(scheme).sessionProtocol();
+                protocol = computeSessionProtocol(scheme);
             } catch (Exception e) {
                 return abortRequestAndReturnFailureResponse(req, new IllegalArgumentException(
                         "Failed to parse a scheme: " + reqTarget.scheme(), e));
@@ -124,6 +124,13 @@ final class DefaultWebClient extends UserClient<HttpRequest, HttpResponse> imple
                 protocol, newReq, newReq.method(), null, reqTarget, endpointGroup, requestOptions, options(),
                 meterRegistry());
         return ClientUtil.executeWithFallback(preClient, ctx, newReq, errorResponseFactory());
+    }
+
+    private static SessionProtocol computeSessionProtocol(@Nullable String scheme) {
+        if (scheme == null) {
+            return defaultSessionProtocol();
+        }
+        return Scheme.parse(scheme).sessionProtocol();
     }
 
     private static HttpResponse abortRequestAndReturnFailureResponse(
