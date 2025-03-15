@@ -27,7 +27,7 @@ import jakarta.servlet.Servlet;
 public class HelloConfiguration {
 
     /**
-     * Returns a new {@link HealthChecker} that marks the server as unhealthy when Tomcat becomes unavailable.
+     * Returns a new {@link HealthChecker} that marks the server as unhealthy when Jetty becomes unavailable.
      */
     @Bean
     public HealthChecker jettyHealthChecker(ServletWebServerApplicationContext applicationContext) {
