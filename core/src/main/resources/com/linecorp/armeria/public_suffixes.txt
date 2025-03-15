@@ -80,6 +80,8 @@
 *.id.pub
 *.il-central-1.airflow.amazonaws.com
 *.in.futurecms.at
+*.inbrowser.dev
+*.inbrowser.link
 *.jm
 *.kawasaki.jp
 *.kh
@@ -1150,6 +1152,7 @@ bzh
 c.bg
 c.cdn77.org
 c.se
+c01.kr
 c66.me
 ca
 ca-central-1.elasticbeanstalk.com
@@ -2284,6 +2287,7 @@ elasticbeanstalk.com
 elblag.pl
 elementor.cloud
 elementor.cool
+eliv-dns.kr
 elk.pl
 elverum.no
 email
