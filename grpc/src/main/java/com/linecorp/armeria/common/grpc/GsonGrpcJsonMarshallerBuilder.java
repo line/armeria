@@ -21,6 +21,9 @@ import static java.util.Objects.requireNonNull;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.google.protobuf.Message;
 import com.google.protobuf.util.JsonFormat;
 
@@ -31,6 +34,10 @@ import com.linecorp.armeria.common.annotation.Nullable;
  * to and from JSON.
  */
 public final class GsonGrpcJsonMarshallerBuilder {
+    private static final Logger logger = LoggerFactory.getLogger(GsonGrpcJsonMarshallerBuilder.class);
+
+    private static boolean loggedJsonParserCustomizerWarning;
+    private static boolean loggedJsonPrinterCustomizerWarning;
 
     @Nullable
     private Function<JsonFormat.Parser, JsonFormat.Parser> jsonParserCustomizer;
@@ -69,6 +76,12 @@ public final class GsonGrpcJsonMarshallerBuilder {
     @Deprecated
     public GsonGrpcJsonMarshallerBuilder jsonParserCustomizer(
             Consumer<? super JsonFormat.Parser> jsonParserCustomizer) {
+        if (!loggedJsonParserCustomizerWarning) {
+            logger.warn("{}.jsonParserCustomizer(Consumer) does not work as expected, " +
+                            "use jsonParserCustomizer(Function).",
+                    getClass().getSimpleName());
+            loggedJsonParserCustomizerWarning = true;
+        }
         requireNonNull(jsonParserCustomizer, "jsonParserCustomizer");
         if (this.jsonParserCustomizer == null) {
             @SuppressWarnings("unchecked")
@@ -97,6 +110,13 @@ public final class GsonGrpcJsonMarshallerBuilder {
     @Deprecated
     public GsonGrpcJsonMarshallerBuilder jsonPrinterCustomizer(
             Consumer<? super JsonFormat.Printer> jsonPrinterCustomizer) {
+        if (!loggedJsonPrinterCustomizerWarning) {
+            logger.warn("{}.jsonPrinterCustomizer(Consumer) does not work as expected," +
+                            "use jsonPrinterCustomizer(Function).",
+                    getClass().getSimpleName());
+            loggedJsonPrinterCustomizerWarning = true;
+        }
+
         requireNonNull(jsonPrinterCustomizer, "jsonPrinterCustomizer");
         if (this.jsonPrinterCustomizer == null) {
             @SuppressWarnings("unchecked")
