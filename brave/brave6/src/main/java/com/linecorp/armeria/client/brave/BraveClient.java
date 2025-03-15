@@ -35,6 +35,7 @@ import com.linecorp.armeria.common.brave.RequestContextCurrentTraceContext;
 import com.linecorp.armeria.common.logging.ClientConnectionTimings;
 import com.linecorp.armeria.internal.common.RequestContextExtension;
 import com.linecorp.armeria.internal.common.brave.SpanTags;
+import com.linecorp.armeria.internal.common.brave.TraceContextUtil;
 
 import brave.Span;
 import brave.Tracer;
@@ -45,6 +46,7 @@ import brave.http.HttpClientRequest;
 import brave.http.HttpClientResponse;
 import brave.http.HttpTracing;
 import brave.propagation.CurrentTraceContext;
+import brave.propagation.CurrentTraceContext.Scope;
 
 /**
  * Decorates an {@link HttpClient} to trace outbound {@link HttpRequest}s using
@@ -120,11 +122,13 @@ public final class BraveClient extends SimpleDecoratingHttpClient {
         final Span span = handler.handleSend(braveReq);
         req = req.withHeaders(newHeaders);
         ctx.updateRequest(req);
+        TraceContextUtil.setTraceContext(ctx, span.context());
 
         final RequestContextExtension ctxExtension = ctx.as(RequestContextExtension.class);
         if (currentTraceContext != null && !span.isNoop() && ctxExtension != null) {
-            // Make the span the current span and run scope decorators when the ctx is pushed.
-            ctxExtension.hook(() -> currentTraceContext.newScope(span.context()));
+            // Run the scope decorators when the ctx is pushed to the thread local.
+            ctxExtension.hook(() -> currentTraceContext.decorateScope(span.context(),
+                                                                      CLIENT_REQUEST_DECORATING_SCOPE));
         }
 
         maybeAddTagsToSpan(ctx, braveReq, span);
@@ -191,4 +195,14 @@ public final class BraveClient extends SimpleDecoratingHttpClient {
         span.annotate(startTimeMicros, startName);
         span.annotate(startTimeMicros + TimeUnit.NANOSECONDS.toMicros(durationNanos), endName);
     }
+
+    private static final Scope CLIENT_REQUEST_DECORATING_SCOPE = new Scope() {
+        @Override
+        public void close() {}
+
+        @Override
+        public String toString() {
+            return "ClientRequestDecoratingScope";
+        }
+    };
 }
