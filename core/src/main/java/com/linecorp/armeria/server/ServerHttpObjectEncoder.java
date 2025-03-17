@@ -29,6 +29,7 @@ import com.linecorp.armeria.internal.common.HttpObjectEncoder;
 
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
+import io.netty.handler.codec.http2.Http2Error;
 
 /**
  * Converts an {@link HttpObject} into a protocol-specific object and writes it into a {@link Channel}.
@@ -111,4 +112,6 @@ interface ServerHttpObjectEncoder extends HttpObjectEncoder {
             }
         }
     }
+
+    void maybeResetStream(int id, int streamId, Http2Error http2Error);
 }

@@ -33,14 +33,12 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
 import com.linecorp.armeria.client.WebClient;
-import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpRequestWriter;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.SessionProtocol;
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.logging.RequestLogProperty;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
@@ -54,7 +52,6 @@ class RequestAbortLeakTest {
     private static final ReferenceQueue<ServiceRequestContext> refQueue = new ReferenceQueue<>();
     private static final AtomicReference<Http2Stream> streamRef = new AtomicReference<>();
 
-    @Nullable
     private static final Set<Object> weakRefSet = Collections.synchronizedSet(new HashSet<>());
 
     @RegisterExtension
@@ -139,17 +136,13 @@ class RequestAbortLeakTest {
         final HttpResponse res = client.execute(writer);
         assertThat(res.aggregate().join().status().code()).isEqualTo(200);
 
-        final ServiceRequestContext ctx;
-        while (true) {
-            final Reference<? extends ServiceRequestContext> ctxRef = refQueue.poll();
-            if (ctxRef != null) {
-                ctx = ctxRef.get();
-                break;
-            }
-            writer.write(HttpData.wrap(new byte[] { 1, 2, 3 }));
-            Thread.sleep(1_000);
-        }
-        System.out.println(ctx);
+        await().pollInterval(1, TimeUnit.SECONDS)
+               .untilAsserted(() -> {
+                   System.gc();
+                   final Reference<? extends ServiceRequestContext> ref = refQueue.poll();
+                   assertThat(ref).isNotNull();
+                   assertThat(ref.get()).isNull();
+               });
     }
 
     @Test
@@ -162,16 +155,12 @@ class RequestAbortLeakTest {
         final HttpResponse res = client.execute(writer);
         assertThat(res.aggregate().join().status().code()).isEqualTo(200);
 
-        final ServiceRequestContext ctx;
-        while (true) {
-            final Reference<? extends ServiceRequestContext> ctxRef = refQueue.poll();
-            if (ctxRef != null) {
-                ctx = ctxRef.get();
-                break;
-            }
-            writer.write(HttpData.wrap(new byte[] { 1, 2, 3 }));
-            Thread.sleep(1_000);
-        }
-        System.out.println(ctx);
+        await().pollInterval(1, TimeUnit.SECONDS)
+               .untilAsserted(() -> {
+                   System.gc();
+                   final Reference<? extends ServiceRequestContext> ref = refQueue.poll();
+                   assertThat(ref).isNotNull();
+                   assertThat(ref.get()).isNull();
+               });
     }
 }
