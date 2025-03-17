@@ -111,9 +111,9 @@ public final class GsonGrpcJsonMarshallerBuilder {
     public GsonGrpcJsonMarshallerBuilder jsonPrinterCustomizer(
             Consumer<? super JsonFormat.Printer> jsonPrinterCustomizer) {
         if (!loggedJsonPrinterCustomizerWarning) {
-            logger.warn("{}.jsonPrinterCustomizer(Consumer) does not work as expected," +
-                            "use jsonPrinterCustomizer(Function).",
-                    getClass().getSimpleName());
+            logger.warn("{}.jsonPrinterCustomizer(Consumer) does not work as expected; " +
+                        "use jsonPrinterCustomizer(Function).",
+                        getClass().getSimpleName());
             loggedJsonPrinterCustomizerWarning = true;
         }
 
