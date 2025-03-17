@@ -78,8 +78,8 @@ public final class GsonGrpcJsonMarshallerBuilder {
             Consumer<? super JsonFormat.Parser> jsonParserCustomizer) {
         if (!loggedJsonParserCustomizerWarning) {
             logger.warn("{}.jsonParserCustomizer(Consumer) does not work as expected, " +
-                            "use jsonParserCustomizer(Function).",
-                    getClass().getSimpleName());
+                        "use jsonParserCustomizer(Function).",
+                        getClass().getSimpleName());
             loggedJsonParserCustomizerWarning = true;
         }
         requireNonNull(jsonParserCustomizer, "jsonParserCustomizer");
