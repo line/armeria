@@ -281,7 +281,7 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
                                                            keepAlive, inboundTrafficController, routingCtx);
                     final long maxRequestLength = req.maxRequestLength();
                     if (maxRequestLength > 0 && contentLength > maxRequestLength) {
-                        abortLargeRequest(req, true);
+                        abortLargeRequest(id, req, true);
                     }
                     serverPortMetric.increasePendingHttp1Requests();
                     ctx.fireChannelRead(req);
@@ -316,7 +316,7 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
                     final long maxContentLength = decodedReq.maxRequestLength();
                     final long transferredLength = decodedReq.transferredBytes();
                     if (maxContentLength > 0 && transferredLength > maxContentLength) {
-                        abortLargeRequest(decodedReq, false);
+                        abortLargeRequest(id, decodedReq, false);
                         return;
                     }
 
@@ -354,16 +354,16 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
         }
     }
 
-    private void abortLargeRequest(DecodedHttpRequest decodedReq, boolean isEarlyRejection) {
+    private void abortLargeRequest(int id, DecodedHttpRequest decodedReq, boolean isEarlyRejection) {
         final ContentTooLargeException cause =
                 ContentTooLargeException.builder()
-                        .maxContentLength(decodedReq.maxRequestLength())
-                        .transferred(decodedReq.transferredBytes())
-                        .contentLength(decodedReq.headers())
-                        .earlyRejection(isEarlyRejection)
-                        .build();
+                                        .maxContentLength(decodedReq.maxRequestLength())
+                                        .transferred(decodedReq.transferredBytes())
+                                        .contentLength(decodedReq.headers())
+                                        .earlyRejection(isEarlyRejection)
+                                        .build();
         if (encoder instanceof ServerHttp1ObjectEncoder) {
-            discardAndClose();
+            failWithoutErrorResponse(id);
         }
         // Wrap the cause with the returned status to let LoggingService correctly log the
         // status.
@@ -420,6 +420,16 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
             // FIXME(trustin): Use a different verboseResponses for a different virtual host.
             encoder.writeErrorResponse(id, 1, cfg.defaultVirtualHost().fallbackServiceConfig(),
                                        headers, status, message, cause);
+        }
+    }
+
+    private void failWithoutErrorResponse(int id) {
+        if (encoder.isResponseHeadersSent(id, 1)) {
+            // the request is violated after the response has already been written
+            encoder.writeReset(id, 1, Http2Error.PROTOCOL_ERROR);
+        } else {
+            // close the connection once the in-flight response is completed
+            discardAndClose();
         }
     }
 
