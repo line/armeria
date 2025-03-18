@@ -1930,6 +1930,7 @@ dev-myqnapcloud.com
 dev.br
 development.run
 devices.resinstaging.io
+devinapps.com
 df.gov.br
 df.leg.br
 dfirma.pl
@@ -7927,6 +7928,7 @@ stackit.run
 stackit.zone
 stada
 stage.nodeart.io
+staging.devinapps.com
 staging.expo.app
 staging.replit.dev
 stalowa-wola.pl
