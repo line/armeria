@@ -31,6 +31,8 @@ import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.HttpMethod;
@@ -107,9 +109,10 @@ class RequestAbortLeakTest {
         weakRefSet.clear();
     }
 
-    @Test
-    void serverFirstAborts() throws Exception {
-        final WebClient client = WebClient.builder(server.uri(SessionProtocol.H2C))
+    @ParameterizedTest
+    @EnumSource(value = SessionProtocol.class, names = {"H1C", "H2C"})
+    void serverFirstAborts(SessionProtocol protocol) throws Exception {
+        final WebClient client = WebClient.builder(server.uri(protocol))
                                           .requestAutoAbortDelayMillis(-1)
                                           .build();
         final RequestHeaders headers = RequestHeaders.of(HttpMethod.POST, "/server-abort");
@@ -126,9 +129,10 @@ class RequestAbortLeakTest {
                 });
     }
 
-    @Test
-    void serverAutoAbort() throws Exception {
-        final WebClient client = WebClient.builder(server.uri(SessionProtocol.H2C))
+    @ParameterizedTest
+    @EnumSource(value = SessionProtocol.class, names = {"H1C", "H2C"})
+    void serverAutoAbort(SessionProtocol protocol) throws Exception {
+        final WebClient client = WebClient.builder(server.uri(protocol))
                                           .requestAutoAbortDelayMillis(-1)
                                           .build();
         final RequestHeaders headers = RequestHeaders.of(HttpMethod.POST, "/server-auto-abort");
@@ -145,9 +149,10 @@ class RequestAbortLeakTest {
                });
     }
 
-    @Test
-    void maxContentLength() throws Exception {
-        final WebClient client = WebClient.builder(server.uri(SessionProtocol.H2C))
+    @ParameterizedTest
+    @EnumSource(value = SessionProtocol.class, names = {"H1C", "H2C"})
+    void maxContentLength(SessionProtocol protocol) throws Exception {
+        final WebClient client = WebClient.builder(server.uri(protocol))
                                           .requestAutoAbortDelayMillis(-1)
                                           .build();
         final RequestHeaders headers = RequestHeaders.of(HttpMethod.POST, "/content-length");

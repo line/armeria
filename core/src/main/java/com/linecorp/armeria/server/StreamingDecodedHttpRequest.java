@@ -248,13 +248,4 @@ final class StreamingDecodedHttpRequest extends DefaultHttpRequest implements De
         return http1WebSocket;
     }
 
-    @Override
-    public void setShouldResetOnlyIfRemoteIsOpen(boolean shouldResetOnlyIfRemoteIsOpen) {
-        this.shouldResetOnlyIfRemoteIsOpen = shouldResetOnlyIfRemoteIsOpen;
-    }
-
-    @Override
-    public boolean shouldResetOnlyIfRemoteIsOpen() {
-        return shouldResetOnlyIfRemoteIsOpen;
-    }
 }

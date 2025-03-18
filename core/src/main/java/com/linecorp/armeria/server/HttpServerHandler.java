@@ -843,7 +843,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
                     unfinishedRequests.remove(req);
                 }
 
-                if (responseEncoder != null) {
+                if (protocol.isMultiplex() && responseEncoder != null) {
                     responseEncoder.maybeResetStream(req.id(), req.streamId(), Http2Error.CANCEL);
                 }
 
