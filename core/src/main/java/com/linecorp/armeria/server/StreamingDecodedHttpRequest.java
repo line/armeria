@@ -247,5 +247,4 @@ final class StreamingDecodedHttpRequest extends DefaultHttpRequest implements De
     public boolean isHttp1WebSocket() {
         return http1WebSocket;
     }
-
 }
