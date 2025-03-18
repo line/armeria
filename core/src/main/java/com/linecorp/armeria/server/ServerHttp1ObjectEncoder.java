@@ -229,10 +229,6 @@ final class ServerHttp1ObjectEncoder extends Http1ObjectEncoder implements Serve
         return future.addListener(ChannelFutureListener.CLOSE);
     }
 
-    @Override
-    public void maybeResetStream(int id, int streamId, Http2Error http2Error) {
-    }
-
     void webSocketUpgrading() {
         webSocketUpgrading = true;
     }

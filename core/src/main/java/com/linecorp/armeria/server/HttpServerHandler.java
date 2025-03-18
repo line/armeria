@@ -843,8 +843,9 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
                     unfinishedRequests.remove(req);
                 }
 
-                if (protocol.isMultiplex() && responseEncoder != null) {
-                    responseEncoder.maybeResetStream(req.id(), req.streamId(), Http2Error.CANCEL);
+                if (responseEncoder instanceof ServerHttp2ObjectEncoder) {
+                    ((ServerHttp2ObjectEncoder) responseEncoder)
+                            .maybeResetStream(req.streamId(), Http2Error.CANCEL);
                 }
 
                 final boolean needsDisconnection = ctx.channel().isActive() &&

@@ -112,6 +112,4 @@ interface ServerHttpObjectEncoder extends HttpObjectEncoder {
             }
         }
     }
-
-    void maybeResetStream(int id, int streamId, Http2Error http2Error);
 }

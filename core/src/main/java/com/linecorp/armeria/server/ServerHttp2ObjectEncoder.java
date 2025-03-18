@@ -138,8 +138,7 @@ final class ServerHttp2ObjectEncoder extends Http2ObjectEncoder implements Serve
         return future;
     }
 
-    @Override
-    public void maybeResetStream(int id, int streamId, Http2Error http2Error) {
+    public void maybeResetStream(int streamId, Http2Error http2Error) {
         final Http2Stream stream = encoder().connection().stream(streamId);
         if (stream == null) {
             return;
