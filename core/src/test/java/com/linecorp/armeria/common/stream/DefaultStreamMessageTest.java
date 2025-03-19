@@ -52,9 +52,6 @@ class DefaultStreamMessageTest {
     @RegisterExtension
     static final EventLoopExtension eventLoop = new EventLoopExtension();
 
-    @RegisterExtension
-    static final EventLoopExtension eventLoop2 = new EventLoopExtension();
-
     /**
      * Makes sure {@link Subscriber#onComplete()} is always invoked after
      * {@link Subscriber#onSubscribe(Subscription)} even if
@@ -341,7 +338,7 @@ class DefaultStreamMessageTest {
 
             @Override
             public void onComplete() {
-                queue.add("onError");
+                queue.add("onComplete");
             }
         }, eventLoop.get());
         latch.countDown();
