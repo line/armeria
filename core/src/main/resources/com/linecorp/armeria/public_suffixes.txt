@@ -2016,6 +2016,7 @@ dot
 dovre.no
 download
 dp.ua
+dpdns.org
 dr.in
 dr.tr
 drammen.no
@@ -6999,7 +7000,6 @@ room
 roros.no
 rost.no
 rotorcraft.aero
-router.management
 routingthecloud.com
 routingthecloud.net
 routingthecloud.org
