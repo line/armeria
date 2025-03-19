@@ -45,7 +45,98 @@ import com.linecorp.armeria.common.annotation.Nullable;
 public enum HttpMethod {
 
     // Forked from Netty 4.1.34 at ff7484864b1785103cbc62845ff3a392c93822b7
+    // Changes:
+    // - Switched to enum for type
+    // - Added additional methods from https://www.iana.org/assignments/http-methods/http-methods.xhtml
+    // - Added safe methods
 
+    /**
+     * Special HTTP method that is not defined in HTTP/1.1.
+     */
+    ACL(Type.IDEMPOTENT),
+    /**
+     * Special HTTP method that is not defined in HTTP/1.1.
+     */
+    BASELINE_CONTROL(Type.IDEMPOTENT),
+    /**
+     * Special HTTP method that is not defined in HTTP/1.1.
+     */
+    BIND(Type.IDEMPOTENT),
+    /**
+     * Special HTTP method that is not defined in HTTP/1.1.
+     */
+    CHECKIN(Type.IDEMPOTENT),
+    /**
+     * Special HTTP method that is not defined in HTTP/1.1.
+     */
+    CHECKOUT(Type.IDEMPOTENT),
+    /**
+     * The CONNECT method which is used for a proxy that can dynamically switch to being a tunnel or for
+     * <a href="https://datatracker.ietf.org/doc/rfc8441/">bootstrapping WebSockets with HTTP/2</a>.
+     * Note that Armeria handles a {@code CONNECT} request only for bootstrapping WebSockets.
+     */
+    CONNECT(Type.NORMAL),
+    /**
+     * Special HTTP method that is not defined in HTTP/1.1.
+     */
+    COPY(Type.IDEMPOTENT),
+    /**
+     * The DELETE method which requests that the origin server delete the resource identified by the
+     * Request-URI.
+     */
+    DELETE(Type.IDEMPOTENT),
+    /**
+     * The GET method which means retrieve whatever information (in the form of an entity) is identified
+     * by the Request-URI.  If the Request-URI refers to a data-producing process, it is the
+     * produced data which shall be returned as the entity in the response and not the source text
+     * of the process, unless that text happens to be the output of the process.
+     */
+    GET(Type.SAFE),
+    /**
+     * The HEAD method which is identical to GET except that the server MUST NOT return a message-body
+     * in the response.
+     */
+    HEAD(Type.SAFE),
+    /**
+     * Special HTTP method that is not defined in HTTP/1.1.
+     */
+    LABEL(Type.IDEMPOTENT),
+    /**
+     * Special HTTP method that is not defined in HTTP/1.1.
+     */
+    LINK(Type.IDEMPOTENT),
+    /**
+     * Special HTTP method that is not defined in HTTP/1.1.
+     */
+    LOCK(Type.NORMAL),
+    /**
+     * Special HTTP method that is not defined in HTTP/1.1.
+     */
+    MERGE(Type.IDEMPOTENT),
+    /**
+     * Special HTTP method that is not defined in HTTP/1.1.
+     */
+    MKACTIVITY(Type.IDEMPOTENT),
+    /**
+     * Special HTTP method that is not defined in HTTP/1.1.
+     */
+    MKCALENDAR(Type.IDEMPOTENT),
+    /**
+     * Special HTTP method that is not defined in HTTP/1.1.
+     */
+    MKCOL(Type.IDEMPOTENT),
+    /**
+     * Special HTTP method that is not defined in HTTP/1.1.
+     */
+    MKREDIRECTREF(Type.IDEMPOTENT),
+    /**
+     * Special HTTP method that is not defined in HTTP/1.1.
+     */
+    MKWORKSPACE(Type.IDEMPOTENT),
+    /**
+     * Special HTTP method that is not defined in HTTP/1.1.
+     */
+    MOVE(Type.IDEMPOTENT),
     /**
      * The OPTIONS method which represents a request for information about the communication options
      * available on the request/response chain identified by the Request-URI. This method allows
@@ -53,72 +144,124 @@ public enum HttpMethod {
      * capabilities of a server, without implying a resource action or initiating a resource
      * retrieval.
      */
-    OPTIONS,
-
+    OPTIONS(Type.SAFE),
     /**
-     * The GET method which means retrieve whatever information (in the form of an entity) is identified
-     * by the Request-URI.  If the Request-URI refers to a data-producing process, it is the
-     * produced data which shall be returned as the entity in the response and not the source text
-     * of the process, unless that text happens to be the output of the process.
+     * Special HTTP method that is not defined in HTTP/1.1.
      */
-    GET,
-
+    ORDERPATCH(Type.IDEMPOTENT),
     /**
-     * The HEAD method which is identical to GET except that the server MUST NOT return a message-body
-     * in the response.
+     * The PATCH method which requests that a set of changes described in the
+     * request entity be applied to the resource identified by the Request-URI.
      */
-    HEAD,
-
+    PATCH(Type.NORMAL),
     /**
      * The POST method which is used to request that the origin server accept the entity enclosed in the
      * request as a new subordinate of the resource identified by the Request-URI in the
      * Request-Line.
      */
-    POST,
-
+    POST(Type.NORMAL),
+    /**
+     * Special HTTP method that is not defined in HTTP/1.1.
+     */
+    PRI(Type.SAFE),
+    /**
+     * Special HTTP method that is not defined in HTTP/1.1.
+     */
+    PROPFIND(Type.SAFE),
+    /**
+     * Special HTTP method that is not defined in HTTP/1.1.
+     */
+    PROPPATCH(Type.IDEMPOTENT),
     /**
      * The PUT method which requests that the enclosed entity be stored under the supplied Request-URI.
      */
-    PUT,
-
+    PUT(Type.IDEMPOTENT),
     /**
-     * The PATCH method which requests that a set of changes described in the
-     * request entity be applied to the resource identified by the Request-URI.
+     * Special HTTP method that is not defined in HTTP/1.1.
      */
-    PATCH,
-
+    REBIND(Type.IDEMPOTENT),
     /**
-     * The DELETE method which requests that the origin server delete the resource identified by the
-     * Request-URI.
+     * Special HTTP method that is not defined in HTTP/1.1.
      */
-    DELETE,
-
+    REPORT(Type.SAFE),
+    /**
+     * Special HTTP method that is not defined in HTTP/1.1.
+     */
+    SEARCH(Type.SAFE),
     /**
      * The TRACE method which is used to invoke a remote, application-layer loop-back of the request
      * message.
      */
-    TRACE,
-
+    TRACE(Type.SAFE),
     /**
-     * The CONNECT method which is used for a proxy that can dynamically switch to being a tunnel or for
-     * <a href="https://datatracker.ietf.org/doc/rfc8441/">bootstrapping WebSockets with HTTP/2</a>.
-     * Note that Armeria handles a {@code CONNECT} request only for bootstrapping WebSockets.
+     * Special HTTP method that is not defined in HTTP/1.1.
      */
-    CONNECT,
-
+    UNBIND(Type.IDEMPOTENT),
+    /**
+     * Special HTTP method that is not defined in HTTP/1.1.
+     */
+    UNCHECKOUT(Type.IDEMPOTENT),
+    /**
+     * Special HTTP method that is not defined in HTTP/1.1.
+     */
+    UNLINK(Type.IDEMPOTENT),
+    /**
+     * Special HTTP method that is not defined in HTTP/1.1.
+     */
+    UNLOCK(Type.IDEMPOTENT),
+    /**
+     * Special HTTP method that is not defined in HTTP/1.1.
+     */
+    UPDATE(Type.IDEMPOTENT),
+    /**
+     * Special HTTP method that is not defined in HTTP/1.1.
+     */
+    UPDATEREDIRECTREF(Type.IDEMPOTENT),
+    /**
+     * Special HTTP method that is not defined in HTTP/1.1.
+     */
+    VERSION_CONTROL(Type.IDEMPOTENT),
     /**
      * A special constant returned by {@link RequestHeaders#method()} to signify that a request has a method
      * not defined in this enum.
      */
-    UNKNOWN;
+    UNKNOWN(Type.UNKNOWN);
 
     private static final Set<HttpMethod> knownMethods; // ImmutableEnumSet
-    private static final Set<HttpMethod> idempotentMethods = Sets.immutableEnumSet(GET, HEAD, PUT, DELETE);
+    private static final Set<HttpMethod> safeMethods;
+    private static final Set<HttpMethod> idempotentMethods;
 
     static {
         final Set<HttpMethod> allMethods = EnumSet.allOf(HttpMethod.class);
         allMethods.remove(UNKNOWN);
         knownMethods = Sets.immutableEnumSet(allMethods);
+        final Set<HttpMethod> safeMethodsBuilder = EnumSet.noneOf(HttpMethod.class);
+        for (HttpMethod method : knownMethods) {
+            if (method.type == Type.SAFE) {
+                safeMethodsBuilder.add(method);
+            }
+        }
+        safeMethods = Sets.immutableEnumSet(safeMethodsBuilder);
+        final Set<HttpMethod> idempotentMethodsBuilder = EnumSet.noneOf(HttpMethod.class);
+        for (HttpMethod method : knownMethods) {
+            if (method.type == Type.SAFE || method.type == Type.IDEMPOTENT) {
+                idempotentMethodsBuilder.add(method);
+            }
+        }
+        idempotentMethods = Sets.immutableEnumSet(idempotentMethodsBuilder);
+    }
+
+    private final Type type;
+
+    HttpMethod(Type type) {
+        this.type = type;
+    }
+
+    public enum Type {
+        UNKNOWN,
+        NORMAL,
+        IDEMPOTENT,
+        SAFE
     }
 
     /**
@@ -129,15 +272,45 @@ public enum HttpMethod {
     public static boolean isSupported(String value) {
         requireNonNull(value, "value");
         switch (value) {
-            case "OPTIONS":
+            case "ACL":
+            case "BASELINE-CONTROL":
+            case "BIND":
+            case "CHECKIN":
+            case "CHECKOUT":
+            case "CONNECT":
+            case "COPY":
+            case "DELETE":
             case "GET":
             case "HEAD":
-            case "POST":
-            case "PUT":
+            case "LABEL":
+            case "LINK":
+            case "LOCK":
+            case "MERGE":
+            case "MKACTIVITY":
+            case "MKCALENDAR":
+            case "MKCOL":
+            case "MKREDIRECTREF":
+            case "MKWORKSPACE":
+            case "MOVE":
+            case "OPTIONS":
+            case "ORDERPATCH":
             case "PATCH":
-            case "DELETE":
+            case "POST":
+            case "PRI":
+            case "PROPFIND":
+            case "PROPPATCH":
+            case "PUT":
+            case "REBIND":
+            case "REPORT":
+            case "SEARCH":
             case "TRACE":
-            case "CONNECT":
+            case "UNBIND":
+            case "UNCHECKOUT":
+            case "UNLINK":
+            case "UNLOCK":
+            case "UPDATE":
+            case "UPDATEREDIRECTREF":
+            case "VERSION-CONTROL":
                 return true;
         }
 
@@ -146,10 +319,18 @@ public enum HttpMethod {
 
     /**
      * Returns the <a href="https://developer.mozilla.org/en-US/docs/Glossary/Idempotent">idempotent</a>
-     * HTTP methods - {@link #GET}, {@link #HEAD}, {@link #PUT} and {@link #DELETE}.
+     * HTTP methods.
      */
     public static Set<HttpMethod> idempotentMethods() {
         return idempotentMethods;
+    }
+
+    /**
+     * Returns the <a href="https://developer.mozilla.org/en-US/docs/Glossary/Safe">safe</a>
+     * HTTP methods.
+     */
+    public static Set<HttpMethod> safeMethods() {
+        return safeMethods;
     }
 
     /**
@@ -174,24 +355,84 @@ public enum HttpMethod {
         }
 
         switch (method) {
-            case "OPTIONS":
-                return OPTIONS;
+            case "ACL":
+                return ACL;
+            case "BASELINE-CONTROL":
+                return BASELINE_CONTROL;
+            case "BIND":
+                return BIND;
+            case "CHECKIN":
+                return CHECKIN;
+            case "CHECKOUT":
+                return CHECKOUT;
+            case "CONNECT":
+                return CONNECT;
+            case "COPY":
+                return COPY;
+            case "DELETE":
+                return DELETE;
             case "GET":
                 return GET;
             case "HEAD":
                 return HEAD;
-            case "POST":
-                return POST;
-            case "PUT":
-                return PUT;
+            case "LABEL":
+                return LABEL;
+            case "LINK":
+                return LINK;
+            case "LOCK":
+                return LOCK;
+            case "MERGE":
+                return MERGE;
+            case "MKACTIVITY":
+                return MKACTIVITY;
+            case "MKCALENDAR":
+                return MKCALENDAR;
+            case "MKCOL":
+                return MKCOL;
+            case "MKREDIRECTREF":
+                return MKREDIRECTREF;
+            case "MKWORKSPACE":
+                return MKWORKSPACE;
+            case "MOVE":
+                return MOVE;
+            case "OPTIONS":
+                return OPTIONS;
+            case "ORDERPATCH":
+                return ORDERPATCH;
             case "PATCH":
                 return PATCH;
-            case "DELETE":
-                return DELETE;
+            case "POST":
+                return POST;
+            case "PRI":
+                return PRI;
+            case "PROPFIND":
+                return PROPFIND;
+            case "PROPPATCH":
+                return PROPPATCH;
+            case "PUT":
+                return PUT;
+            case "REBIND":
+                return REBIND;
+            case "REPORT":
+                return REPORT;
+            case "SEARCH":
+                return SEARCH;
             case "TRACE":
                 return TRACE;
-            case "CONNECT":
-                return CONNECT;
+            case "UNBIND":
+                return UNBIND;
+            case "UNCHECKOUT":
+                return UNCHECKOUT;
+            case "UNLINK":
+                return UNLINK;
+            case "UNLOCK":
+                return UNLOCK;
+            case "UPDATE":
+                return UPDATE;
+            case "UPDATEREDIRECTREF":
+                return UPDATEREDIRECTREF;
+            case "VERSION-CONTROL":
+                return VERSION_CONTROL;
             default:
                 return null;
         }
