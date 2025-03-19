@@ -80,6 +80,8 @@
 *.id.pub
 *.il-central-1.airflow.amazonaws.com
 *.in.futurecms.at
+*.inbrowser.dev
+*.inbrowser.link
 *.jm
 *.kawasaki.jp
 *.kh
@@ -390,6 +392,7 @@ ah.no
 ai
 ai.in
 ai.jo
+ai.kr
 ai.vn
 aibetsu.hokkaido.jp
 aichi.jp
@@ -1149,6 +1152,7 @@ bzh
 c.bg
 c.cdn77.org
 c.se
+c01.kr
 c66.me
 ca
 ca-central-1.elasticbeanstalk.com
@@ -1926,6 +1930,7 @@ dev-myqnapcloud.com
 dev.br
 development.run
 devices.resinstaging.io
+devinapps.com
 df.gov.br
 df.leg.br
 dfirma.pl
@@ -2283,6 +2288,7 @@ elasticbeanstalk.com
 elblag.pl
 elementor.cloud
 elementor.cool
+eliv-dns.kr
 elk.pl
 elverum.no
 email
@@ -3839,6 +3845,7 @@ investments
 inzai.chiba.jp
 io
 io.in
+io.kr
 io.noc.ruhr-uni-bochum.de
 io.vn
 iobb.net
@@ -3975,6 +3982,7 @@ it
 it.ao
 it.com
 it.eu.org
+it.kr
 it1.eur.aruba.jenv-aruba.cloud
 it1.jenv-aruba.cloud
 itabashi.tokyo.jp
@@ -5003,6 +5011,7 @@ me.eu.org
 me.in
 me.it
 me.ke
+me.kr
 me.so
 me.ss
 me.tz
@@ -7919,6 +7928,7 @@ stackit.run
 stackit.zone
 stada
 stage.nodeart.io
+staging.devinapps.com
 staging.expo.app
 staging.replit.dev
 stalowa-wola.pl
