@@ -53,6 +53,7 @@ import org.reactivestreams.Subscription;
 
 import com.google.common.base.Stopwatch;
 
+import com.linecorp.armeria.client.BlockingWebClient;
 import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.HttpClient;
@@ -102,16 +103,16 @@ class RetryingClientTest {
         clientFactory.closeAsync();
     }
 
-    private final AtomicInteger responseAbortServiceCallCounter = new AtomicInteger();
+    private static final AtomicInteger responseAbortServiceCallCounter = new AtomicInteger();
 
-    private final AtomicInteger requestAbortServiceCallCounter = new AtomicInteger();
+    private static final AtomicInteger requestAbortServiceCallCounter = new AtomicInteger();
 
-    private final AtomicInteger subscriberCancelServiceCallCounter = new AtomicInteger();
+    private static final AtomicInteger subscriberCancelServiceCallCounter = new AtomicInteger();
 
-    private AtomicInteger reqCount;
+    private static AtomicInteger reqCount;
 
     @RegisterExtension
-    final ServerExtension server = new ServerExtension() {
+    static final ServerExtension server = new ServerExtension() {
         @Override
         protected boolean runForEachTest() {
             return true;
@@ -311,12 +312,27 @@ class RetryingClientTest {
                     }
                 }
             });
+
+            sb.service("/relative-uri", new AbstractHttpService() {
+                @Override
+                protected HttpResponse doGet(ServiceRequestContext ctx, HttpRequest req)
+                        throws Exception {
+                    if (reqCount.getAndIncrement() < 2) {
+                        return HttpResponse.of(HttpStatus.SERVICE_UNAVAILABLE);
+                    } else {
+                        return HttpResponse.of("Succeeded after retry");
+                    }
+                }
+            });
         }
     };
 
     @BeforeEach
     void setUp() {
         reqCount = new AtomicInteger();
+        requestAbortServiceCallCounter.set(0);
+        responseAbortServiceCallCounter.set(0);
+        subscriberCancelServiceCallCounter.set(0);
     }
 
     @Test
@@ -526,15 +542,15 @@ class RetryingClientTest {
     void evaluatesMappingOnce() {
         final AtomicInteger evaluations = new AtomicInteger(0);
         final RetryConfigMapping<HttpResponse> mapping =
-            (ctx, req) -> {
-                evaluations.incrementAndGet();
-                return RetryConfig
-                        .<HttpResponse>builder0(RetryRule.builder()
-                                                         .onStatus(HttpStatus.valueOf(500))
-                                                         .thenBackoff())
-                        .maxTotalAttempts(2)
-                        .build();
-            };
+                (ctx, req) -> {
+                    evaluations.incrementAndGet();
+                    return RetryConfig
+                            .<HttpResponse>builder0(RetryRule.builder()
+                                                             .onStatus(HttpStatus.valueOf(500))
+                                                             .thenBackoff())
+                            .maxTotalAttempts(2)
+                            .build();
+                };
 
         final WebClient client = client(mapping);
 
@@ -833,6 +849,15 @@ class RetryingClientTest {
             latch.countDown();
         });
         latch.await();
+    }
+
+    @Test
+    void retryWithSchemeRelativeUri() {
+        final RetryRule rule = RetryRule.builder().onServerErrorStatus().onException().thenBackoff();
+        final BlockingWebClient client = WebClient.builder()
+                                                  .decorator(RetryingClient.newDecorator(rule))
+                                                  .build().blocking();
+        assertThat(client.get(server.httpUri() + "//relative-uri").status().code()).isEqualTo(200);
     }
 
     private WebClient client(RetryRule retryRule) {

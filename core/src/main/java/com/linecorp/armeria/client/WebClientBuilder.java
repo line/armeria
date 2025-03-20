@@ -58,6 +58,13 @@ public final class WebClientBuilder extends AbstractWebClientBuilder {
 
     /**
      * Creates a new instance.
+     */
+    WebClientBuilder(EndpointGroup endpointGroup, @Nullable String path) {
+        super(endpointGroup, path);
+    }
+
+    /**
+     * Creates a new instance.
      *
      * @throws IllegalArgumentException if the {@code sessionProtocol} is not one of the fields
      *                                  in {@link SessionProtocol}
