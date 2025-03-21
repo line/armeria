@@ -225,7 +225,7 @@ public enum HttpMethod {
      * A special constant returned by {@link RequestHeaders#method()} to signify that a request has a method
      * not defined in this enum.
      */
-    UNKNOWN(Type.UNKNOWN);
+    UNKNOWN(Type.NORMAL);
 
     private static final Set<HttpMethod> knownMethods; // ImmutableEnumSet
     private static final Set<HttpMethod> safeMethods;
@@ -257,8 +257,7 @@ public enum HttpMethod {
         this.type = type;
     }
 
-    public enum Type {
-        UNKNOWN,
+    private enum Type {
         NORMAL,
         IDEMPOTENT,
         SAFE
