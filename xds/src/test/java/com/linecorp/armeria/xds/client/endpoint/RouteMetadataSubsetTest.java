@@ -163,22 +163,6 @@ class RouteMetadataSubsetTest {
             assertThat(endpointGroup.selectNow(ctx)).isEqualTo(Endpoint.of("127.0.0.1", 8082));
         }
 
-        // No Route metadata so use all endpoints.
-        final Metadata routeMetadataMatch2 = Metadata.newBuilder().putFilterMetadata(
-                SUBSET_LOAD_BALANCING_FILTER_NAME, Struct.getDefaultInstance()).build();
-        bootstrap = XdsTestResources.bootstrap(configSource,
-                                               staticResourceListener(routeMetadataMatch2, clusterName),
-                                               bootstrapCluster);
-        try (XdsBootstrap xdsBootstrap = XdsBootstrap.of(bootstrap);
-             EndpointGroup endpointGroup = XdsEndpointGroup.of("listener", xdsBootstrap)) {
-
-            await().untilAsserted(() -> assertThat(endpointGroup.whenReady()).isDone());
-            final ClientRequestContext ctx = ClientRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
-            assertThat(endpointGroup.selectNow(ctx)).isEqualTo(Endpoint.of("127.0.0.1", 8080));
-            assertThat(endpointGroup.selectNow(ctx)).isEqualTo(Endpoint.of("127.0.0.1", 8081));
-            assertThat(endpointGroup.selectNow(ctx)).isEqualTo(Endpoint.of("127.0.0.1", 8082));
-        }
-
         final Metadata routeMetadataMatch3 = Metadata.newBuilder().putFilterMetadata(
                 SUBSET_LOAD_BALANCING_FILTER_NAME, Struct.newBuilder()
                                                          .putFields("foo", stringValue("foo1"))

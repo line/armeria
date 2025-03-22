@@ -34,8 +34,8 @@ import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.AbstractListenable;
 import com.linecorp.armeria.common.util.AsyncCloseable;
 import com.linecorp.armeria.xds.ClusterSnapshot;
+import com.linecorp.armeria.xds.RouteEntry;
 import com.linecorp.armeria.xds.client.endpoint.ClusterManager.LocalCluster;
-import com.linecorp.armeria.xds.client.endpoint.LocalityRoutingStateFactory.LocalityRoutingState;
 
 import io.netty.util.concurrent.EventExecutor;
 
@@ -53,13 +53,17 @@ final class ClusterEntry extends AbstractListenable<XdsLoadBalancer> implements 
     private final EndpointsPool endpointsPool;
     @Nullable
     private final LocalCluster localCluster;
+    @Nullable
+    private final RouteEntry routeEntry;
     private final EventExecutor eventExecutor;
     private boolean closing;
 
-    ClusterEntry(EventExecutor eventExecutor, @Nullable LocalCluster localCluster) {
+    ClusterEntry(EventExecutor eventExecutor, @Nullable LocalCluster localCluster,
+                 @Nullable RouteEntry routeEntry) {
         this.eventExecutor = eventExecutor;
         endpointsPool = new EndpointsPool(eventExecutor);
         this.localCluster = localCluster;
+        this.routeEntry = routeEntry;
         if (localCluster != null) {
             localCluster.clusterEntry().addListener(localClusterEntryListener, true);
         }
@@ -107,16 +111,17 @@ final class ClusterEntry extends AbstractListenable<XdsLoadBalancer> implements 
             logger.trace("XdsEndpointGroup is using a new PrioritySet({})", prioritySet);
         }
 
-        LocalityRoutingState localityRoutingState = null;
+        PrioritySet localPrioritySet = null;
+        final XdsLoadBalancer localLoadBalancer = this.localLoadBalancer;
         if (localLoadBalancer != null) {
             assert localCluster != null;
-            localityRoutingState = localCluster.stateFactory().create(prioritySet,
-                                                                      localLoadBalancer.prioritySet());
-            logger.trace("Local routing is enabled with LocalityRoutingState({})", localityRoutingState);
+            localPrioritySet = localLoadBalancer.prioritySet();
+            logger.trace("Local routing is enabled with local prioritySet({})", localPrioritySet);
         }
-        XdsLoadBalancer loadBalancer = new DefaultLoadBalancer(prioritySet, localityRoutingState);
+        XdsLoadBalancer loadBalancer = new DefaultLoadBalancer(prioritySet, localCluster, localPrioritySet);
         if (clusterSnapshot.xdsResource().resource().hasLbSubsetConfig()) {
-            loadBalancer = new SubsetLoadBalancer(prioritySet, loadBalancer);
+            loadBalancer = new SubsetLoadBalancer(prioritySet, loadBalancer, localCluster, localPrioritySet,
+                                                  routeEntry);
         }
         this.loadBalancer = loadBalancer;
         notifyListeners(loadBalancer);

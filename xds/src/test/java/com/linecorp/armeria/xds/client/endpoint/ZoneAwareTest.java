@@ -100,7 +100,6 @@ class ZoneAwareTest {
                 final ClusterEntry clusterEntry = endpointGroup.clusterEntriesMap().get("cluster");
                 assertThat(clusterEntry).isNotNull();
                 assertThat(clusterEntry.latestValue()).isNotNull();
-                assertThat(clusterEntry.latestValue().localityRoutingState()).isNotNull();
             });
             final ClientRequestContext ctx = ClientRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
             final SettableXdsRandom random = new SettableXdsRandom();
@@ -157,7 +156,6 @@ class ZoneAwareTest {
                 final ClusterEntry clusterEntry = endpointGroup.clusterEntriesMap().get("cluster");
                 assertThat(clusterEntry).isNotNull();
                 assertThat(clusterEntry.latestValue()).isNotNull();
-                assertThat(clusterEntry.latestValue().localityRoutingState()).isNotNull();
             });
             final ClientRequestContext ctx = ClientRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
             final SettableXdsRandom random = new SettableXdsRandom();
@@ -214,7 +212,6 @@ class ZoneAwareTest {
                 final ClusterEntry clusterEntry = endpointGroup.clusterEntriesMap().get("cluster");
                 assertThat(clusterEntry).isNotNull();
                 assertThat(clusterEntry.latestValue()).isNotNull();
-                assertThat(clusterEntry.latestValue().localityRoutingState()).isNotNull();
             });
             final ClientRequestContext ctx = ClientRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
             final SettableXdsRandom random = new SettableXdsRandom();
@@ -268,7 +265,6 @@ class ZoneAwareTest {
                 final ClusterEntry clusterEntry = endpointGroup.clusterEntriesMap().get("cluster");
                 assertThat(clusterEntry).isNotNull();
                 assertThat(clusterEntry.latestValue()).isNotNull();
-                assertThat(clusterEntry.latestValue().localityRoutingState()).isNotNull();
             });
             final ClientRequestContext ctx = ClientRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
             final SettableXdsRandom random = new SettableXdsRandom();
@@ -324,7 +320,6 @@ class ZoneAwareTest {
                 final ClusterEntry clusterEntry = endpointGroup.clusterEntriesMap().get("cluster");
                 assertThat(clusterEntry).isNotNull();
                 assertThat(clusterEntry.latestValue()).isNotNull();
-                assertThat(clusterEntry.latestValue().localityRoutingState()).isNotNull();
             });
             final ClientRequestContext ctx = ClientRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
             final SettableXdsRandom random = new SettableXdsRandom();
@@ -384,7 +379,6 @@ class ZoneAwareTest {
                 final ClusterEntry clusterEntry = endpointGroup.clusterEntriesMap().get("cluster");
                 assertThat(clusterEntry).isNotNull();
                 assertThat(clusterEntry.latestValue()).isNotNull();
-                assertThat(clusterEntry.latestValue().localityRoutingState()).isNotNull();
             });
             final ClientRequestContext ctx = ClientRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
             final SettableXdsRandom random = new SettableXdsRandom();
@@ -444,7 +438,6 @@ class ZoneAwareTest {
                 final ClusterEntry clusterEntry = endpointGroup.clusterEntriesMap().get("cluster");
                 assertThat(clusterEntry).isNotNull();
                 assertThat(clusterEntry.latestValue()).isNotNull();
-                assertThat(clusterEntry.latestValue().localityRoutingState()).isNotNull();
             });
             final ClientRequestContext ctx = ClientRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
             final SettableXdsRandom random = new SettableXdsRandom();
@@ -509,7 +502,6 @@ class ZoneAwareTest {
                 final ClusterEntry clusterEntry = endpointGroup.clusterEntriesMap().get("cluster");
                 assertThat(clusterEntry).isNotNull();
                 assertThat(clusterEntry.latestValue()).isNotNull();
-                assertThat(clusterEntry.latestValue().localityRoutingState()).isNotNull();
             });
             final ClientRequestContext ctx = ClientRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
             final SettableXdsRandom random = new SettableXdsRandom();

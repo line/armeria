@@ -39,7 +39,7 @@ public final class ListenerRoot extends AbstractRoot<ListenerSnapshot> {
             node = new ListenerResourceNode(null, resourceName, xdsBootstrap, this, ResourceNodeType.STATIC);
             node.onChanged(listenerXdsResource);
         } else {
-            final ConfigSource configSource = configSourceMapper.ldsConfigSource(null, resourceName);
+            final ConfigSource configSource = configSourceMapper.ldsConfigSource(resourceName);
             node = new ListenerResourceNode(configSource, resourceName, xdsBootstrap,
                                             this, ResourceNodeType.DYNAMIC);
             xdsBootstrap.subscribe(node);

@@ -54,8 +54,10 @@ import com.linecorp.armeria.xds.ClusterRoot;
 import com.linecorp.armeria.xds.ClusterSnapshot;
 import com.linecorp.armeria.xds.ListenerRoot;
 import com.linecorp.armeria.xds.ListenerSnapshot;
+import com.linecorp.armeria.xds.RouteEntry;
 import com.linecorp.armeria.xds.RouteSnapshot;
 import com.linecorp.armeria.xds.SnapshotWatcher;
+import com.linecorp.armeria.xds.VirtualHostSnapshot;
 import com.linecorp.armeria.xds.XdsBootstrap;
 import com.linecorp.armeria.xds.client.endpoint.ClusterManager.State;
 
@@ -100,7 +102,7 @@ final class ClusterManager implements SnapshotWatcher<ListenerSnapshot>, AsyncCl
         eventLoop = CommonPools.workerGroup().next();
         listenerRoot = null;
         localCluster = null;
-        final ClusterEntry clusterEntry = new ClusterEntry(eventLoop, null);
+        final ClusterEntry clusterEntry = new ClusterEntry(eventLoop, null, null);
         clusterEntry.addListener(ignored -> notifyListeners(), true);
         clusterEntry.updateClusterSnapshot(clusterSnapshot);
         clusterEntries =
@@ -123,26 +125,30 @@ final class ClusterManager implements SnapshotWatcher<ListenerSnapshot>, AsyncCl
         if (closed) {
             return;
         }
-        final RouteSnapshot routeSnapshot = listenerSnapshot.routeSnapshot();
-        final List<ClusterSnapshot> clusterSnapshots =
-                routeSnapshot != null ? routeSnapshot.clusterSnapshots() : ImmutableList.of();
+
         final ClusterEntries clusterEntries = this.clusterEntries;
         final Map<String, ClusterEntry> oldClusterEntries = clusterEntries.clusterEntriesMap;
         // ImmutableMap is used because it is important that the entries are added in order of
         // ClusterSnapshot#index so that the first matching route is selected in #selectNow
         final ImmutableMap.Builder<String, ClusterEntry> mappingBuilder = ImmutableMap.builder();
-        for (ClusterSnapshot clusterSnapshot : clusterSnapshots) {
-            if (clusterSnapshot.endpointSnapshot() == null) {
-                continue;
+        final RouteSnapshot routeSnapshot = listenerSnapshot.routeSnapshot();
+        final List<VirtualHostSnapshot> virtualHostSnapshots =
+                routeSnapshot == null ? ImmutableList.of() : routeSnapshot.virtualHostSnapshots();
+        for (VirtualHostSnapshot virtualHostSnapshot: virtualHostSnapshots) {
+            for (RouteEntry routeEntry: virtualHostSnapshot.routeEntries()) {
+                final ClusterSnapshot clusterSnapshot = routeEntry.clusterSnapshot();
+                if (clusterSnapshot == null || clusterSnapshot.endpointSnapshot() == null) {
+                    continue;
+                }
+                final String clusterName = clusterSnapshot.xdsResource().name();
+                ClusterEntry clusterEntry = oldClusterEntries.get(clusterName);
+                if (clusterEntry == null) {
+                    clusterEntry = new ClusterEntry(eventLoop, localCluster, routeEntry);
+                    clusterEntry.addListener(ignored -> notifyListeners(), false);
+                }
+                clusterEntry.updateClusterSnapshot(clusterSnapshot);
+                mappingBuilder.put(clusterName, clusterEntry);
             }
-            final String clusterName = clusterSnapshot.xdsResource().name();
-            ClusterEntry clusterEntry = oldClusterEntries.get(clusterName);
-            if (clusterEntry == null) {
-                clusterEntry = new ClusterEntry(eventLoop, localCluster);
-                clusterEntry.addListener(ignored -> notifyListeners(), false);
-            }
-            clusterEntry.updateClusterSnapshot(clusterSnapshot);
-            mappingBuilder.put(clusterName, clusterEntry);
         }
         final ImmutableMap<String, ClusterEntry> newClusterEntriesMap = mappingBuilder.build();
         this.clusterEntries = new ClusterEntries(listenerSnapshot, newClusterEntriesMap);
@@ -338,7 +344,7 @@ final class ClusterManager implements SnapshotWatcher<ListenerSnapshot>, AsyncCl
         private LocalCluster(String localClusterName, XdsBootstrap xdsBootstrap) {
             final Node node = xdsBootstrap.bootstrap().getNode();
             localityRoutingStateFactory = new LocalityRoutingStateFactory(node.getLocality());
-            clusterEntry = new ClusterEntry(xdsBootstrap.eventLoop(), null);
+            clusterEntry = new ClusterEntry(xdsBootstrap.eventLoop(), null, null);
             localClusterRoot = xdsBootstrap.clusterRoot(localClusterName);
             localClusterRoot.addSnapshotWatcher(clusterEntry::updateClusterSnapshot);
         }
