@@ -58,8 +58,6 @@ import io.netty.util.AsciiString;
 import io.netty.util.collection.IntObjectHashMap;
 import io.netty.util.collection.IntObjectMap;
 
-import java.util.Objects;
-
 final class Http2RequestDecoder extends Http2EventAdapter {
 
     private static final Logger logger = LoggerFactory.getLogger(Http2RequestDecoder.class);
@@ -150,7 +148,7 @@ final class Http2RequestDecoder extends Http2EventAdapter {
                                                             scheme.toString(), cfg, reqTarget);
 
             // Reject a request with an unsupported method.
-            if (Objects.requireNonNull(method) == HttpMethod.CONNECT) {
+            if (method == HttpMethod.CONNECT) {
                 // Accept a CONNECT request only when it has a :protocol header, as defined in:
                 // https://datatracker.ietf.org/doc/html/rfc8441#section-4
                 if (!nettyHeaders.contains(HttpHeaderNames.PROTOCOL)) {
