@@ -532,8 +532,7 @@ public abstract class TomcatService implements HttpService {
         coyoteReq.protocol().setString(ctx.sessionProtocol().isMultiplex() ? "HTTP/2.0" : "HTTP/1.1");
 
         // Set the method.
-        final HttpMethod method = req.method();
-        coyoteReq.method().setString(method.name());
+        coyoteReq.method().setString(req.headers().get(HttpHeaderNames.METHOD));
 
         // Set the request URI.
         final byte[] uriBytes = mappedPath.getBytes(StandardCharsets.US_ASCII);
