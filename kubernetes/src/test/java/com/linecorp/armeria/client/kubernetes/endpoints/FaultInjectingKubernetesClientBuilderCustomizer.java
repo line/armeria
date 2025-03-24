@@ -16,12 +16,11 @@
 
 package com.linecorp.armeria.client.kubernetes.endpoints;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
+import com.linecorp.armeria.client.WebClientBuilder;
 import com.linecorp.armeria.client.kubernetes.ArmeriaHttpClientFactory;
 import com.linecorp.armeria.client.websocket.WebSocketClientBuilder;
 import com.linecorp.armeria.common.HttpData;
+import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.websocket.WebSocketFrame;
 import com.linecorp.armeria.internal.common.websocket.WebSocketFrameEncoder;
@@ -29,19 +28,32 @@ import com.linecorp.armeria.internal.common.websocket.WebSocketFrameEncoder;
 import io.fabric8.kubernetes.client.KubernetesClientBuilder;
 import io.fabric8.kubernetes.client.server.mock.KubernetesClientBuilderCustomizer;
 
-public class TestKubernetesClientBuilderCustomizer extends KubernetesClientBuilderCustomizer {
-
-    private static final Logger logger = LoggerFactory.getLogger(TestKubernetesClientBuilderCustomizer.class);
+public class FaultInjectingKubernetesClientBuilderCustomizer extends KubernetesClientBuilderCustomizer {
 
     private static volatile boolean shouldInjectFault;
 
     static void injectFault(boolean shouldInjectFault) {
-        TestKubernetesClientBuilderCustomizer.shouldInjectFault = shouldInjectFault;
+        FaultInjectingKubernetesClientBuilderCustomizer.shouldInjectFault = shouldInjectFault;
     }
 
     @Override
     public void accept(KubernetesClientBuilder kubernetesClientBuilder) {
         kubernetesClientBuilder.withHttpClientFactory(new ArmeriaHttpClientFactory() {
+
+            @Override
+            protected void additionalConfig(WebClientBuilder builder) {
+                builder.decorator((delegate, ctx, req) -> {
+                    final HttpResponse response = delegate.execute(ctx, req);
+                    if (shouldInjectFault && ctx.method() == HttpMethod.GET) {
+                        return response.mapData(data -> {
+                            data.close();
+                            return HttpData.ofUtf8("invalid data");
+                        });
+                    } else {
+                        return response;
+                    }
+                });
+            }
 
             @Override
             protected void additionalWebSocketConfig(WebSocketClientBuilder builder) {

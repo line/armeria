@@ -41,6 +41,7 @@ import java.util.function.BiFunction;
 import java.util.stream.Stream;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
@@ -67,6 +68,7 @@ import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.MediaTypeNames;
 import com.linecorp.armeria.common.util.UnmodifiableFuture;
 import com.linecorp.armeria.internal.server.annotation.AnnotatedDocServicePluginTest.CompositeBean;
+import com.linecorp.armeria.internal.testing.DocServiceExtension;
 import com.linecorp.armeria.internal.testing.TestUtil;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.Route;
@@ -103,6 +105,7 @@ import com.linecorp.armeria.server.docs.ServiceSpecification;
 import com.linecorp.armeria.server.docs.TypeSignature;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
+@ExtendWith(DocServiceExtension.class)
 class AnnotatedDocServiceTest {
 
     private static final ObjectMapper mapper = new ObjectMapper();

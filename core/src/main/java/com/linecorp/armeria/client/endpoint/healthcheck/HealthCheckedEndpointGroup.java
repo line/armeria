@@ -292,8 +292,6 @@ public final class HealthCheckedEndpointGroup extends DynamicEndpointGroup {
 
     private void updateHealth(Endpoint endpoint, boolean health) {
         if (isClosing()) {
-            logger.debug("HealthCheckedEndpointGroup is closed. Ignoring health update for: {}. (healthy: {})",
-                         endpoint, health);
             return;
         }
 

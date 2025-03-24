@@ -28,6 +28,7 @@ import java.util.Set;
 
 import org.junit.ClassRule;
 import org.junit.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -45,6 +46,7 @@ import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.thrift.ThriftSerializationFormats;
 import com.linecorp.armeria.internal.server.thrift.ThriftDocServicePlugin.Entry;
 import com.linecorp.armeria.internal.server.thrift.ThriftDocServicePlugin.EntryBuilder;
+import com.linecorp.armeria.internal.testing.DocServiceExtension;
 import com.linecorp.armeria.internal.testing.TestUtil;
 import com.linecorp.armeria.server.Route;
 import com.linecorp.armeria.server.ServerBuilder;
@@ -63,6 +65,7 @@ import testing.thrift.main.HelloService.hello_args;
 import testing.thrift.main.OnewayHelloService;
 import testing.thrift.main.SleepService;
 
+@ExtendWith(DocServiceExtension.class)
 public class ThriftDocServiceTest {
 
     private static final HelloService.AsyncIface HELLO_SERVICE_HANDLER =

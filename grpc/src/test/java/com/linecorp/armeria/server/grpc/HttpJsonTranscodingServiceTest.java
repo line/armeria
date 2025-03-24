@@ -19,8 +19,6 @@ import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.params.provider.Arguments.arguments;
 
-import java.util.List;
-import java.util.Map.Entry;
 import java.util.Set;
 import java.util.stream.Stream;
 
@@ -45,11 +43,12 @@ public class HttpJsonTranscodingServiceTest {
     @ArgumentsSource(PathArgumentsProvider.class)
     void shouldAcceptArmeriaPathPatterns(String path,
                                          String patternStringAnswer,
-                                         Set<String> pathVariableNamesAnswer) {
+                                         Set<String> pathVariableNamesAnswer,
+                                         boolean hasVerb) {
         final HttpRule httpRule = HttpRule.newBuilder().setGet(path).build();
-        final Entry<Route, List<PathVariable>> routeAndPathVars =
-                HttpJsonTranscodingService.toRouteAndPathVariables(httpRule);
-        final Route route = routeAndPathVars.getKey();
+        final HttpJsonTranscodingRouteAndPathVariables routeAndPathVars =
+                HttpJsonTranscodingRouteAndPathVariables.of(httpRule);
+        final Route route = routeAndPathVars.route();
 
         assertThat(route.patternString()).isEqualTo(patternStringAnswer);
         assertThat(route.methods()).containsExactly(HttpMethod.GET);
@@ -65,9 +64,11 @@ public class HttpJsonTranscodingServiceTest {
         assertThat(route.paramNames().size()).isEqualTo(pathVariableNamesAnswer.size());
         assertThat(route.paramNames()).containsAll(pathVariableNamesAnswer);
 
-        assertThat(routeAndPathVars.getValue().size()).isEqualTo(pathVariableNamesAnswer.size());
-        assertThat(routeAndPathVars.getValue().stream().map(PathVariable::name).collect(toImmutableSet()))
+        assertThat(routeAndPathVars.pathVariables().size()).isEqualTo(pathVariableNamesAnswer.size());
+        assertThat(routeAndPathVars.pathVariables().stream().map(PathVariable::name).collect(toImmutableSet()))
                 .containsAll(pathVariableNamesAnswer);
+
+        assertThat(routeAndPathVars.hasVerb()).isEqualTo(hasVerb);
     }
 
     private static class PathArgumentsProvider implements ArgumentsProvider {
@@ -76,16 +77,32 @@ public class HttpJsonTranscodingServiceTest {
             return Stream.of(
                     arguments("exact:/v1/messages",
                               "/v1/messages",
-                              ImmutableSet.of()),
+                              ImmutableSet.of(), false),
+                    arguments("exact:/v1/messages:verb",
+                              "/v1/messages:verb",
+                              ImmutableSet.of(), true),
+                    arguments("exact:/v1/messages:verb/1",
+                              "/v1/messages:verb/1",
+                              ImmutableSet.of(), false),
+                    arguments("exact:/v1/messages/:verb",
+                              "/v1/messages/:verb",
+                              ImmutableSet.of(), false),
                     arguments("prefix:/v1/messages",
                               "/v1/messages/*",
-                              ImmutableSet.of()),
+                              ImmutableSet.of(), false),
                     arguments("regex:^/v1/messages/(?<name>.*)$",
                               "^/v1/messages/(?<name>.*)$",
-                              ImmutableSet.of("name")),
+                              ImmutableSet.of("name"), false),
+                    arguments("regex:^/v1/messages/(?<name>.*):verb$",
+                              "^/v1/messages/(?<name>.*):verb$",
+                              ImmutableSet.of("name"), true),
                     arguments("glob:/v1/messages/*/**",
                               "/v1/messages/*/**",
-                              ImmutableSet.of("0", "1")));
+                              ImmutableSet.of("0", "1"), false),
+                    arguments("glob:/v1/messages/*/**:verb",
+                              "/v1/messages/*/**:verb",
+                              ImmutableSet.of("0", "1"), true)
+            );
         }
     }
 }

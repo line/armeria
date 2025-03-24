@@ -48,7 +48,7 @@ public final class ArmeriaConfigurationNetUtil {
     public static void configurePorts(ServerBuilder server, List<Port> ports) {
         requireNonNull(server, "server");
         requireNonNull(ports, "ports");
-        ports.forEach(p -> {
+        ports.stream().filter(x -> x.getPort() >= 0).forEach(p -> {
             final String iface = p.getIface();
             final int port = p.getPort();
             final List<SessionProtocol> protocols = firstNonNull(p.getProtocols(),
