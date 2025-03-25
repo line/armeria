@@ -27,6 +27,7 @@ import java.net.Socket;
 import java.nio.charset.StandardCharsets;
 
 import org.apache.catalina.Context;
+import org.apache.catalina.Wrapper;
 import org.apache.catalina.connector.Connector;
 import org.apache.catalina.servlets.WebdavServlet;
 import org.apache.catalina.startup.Tomcat;
@@ -75,7 +76,7 @@ class UnmanagedTomcatServiceTest {
             Context ctx = tomcatWithPropfind.addContext("", "build" + File.separatorChar +
                                                                                "tomcat-" + UnmanagedTomcatServiceTest.class.getSimpleName() + "-3");
 
-            var webdavServlet = Tomcat.addServlet(ctx, "webdav", new WebdavServlet());
+            Wrapper webdavServlet = Tomcat.addServlet(ctx, "webdav", new WebdavServlet());
             webdavServlet.addInitParameter("readonly", "false");
             webdavServlet.addInitParameter("listings", "true");
 
