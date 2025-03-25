@@ -254,7 +254,7 @@ class ArmeriaHttpExchangeAdapterTest {
 
         final AggregatedHttpRequest request = server.takeRequest().request();
         assertThat(request.headers().get("Content-Type"))
-                .isEqualTo("application/x-www-form-urlencoded;charset=UTF-8");
+                .isEqualTo("application/x-www-form-urlencoded");
         assertThat(request.contentUtf8()).isEqualTo("param1=value+1&param2=value+2");
     }
 

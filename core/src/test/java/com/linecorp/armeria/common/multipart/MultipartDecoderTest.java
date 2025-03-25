@@ -140,21 +140,13 @@ public class MultipartDecoderTest {
         final List<String> headers = new CopyOnWriteArrayList<>();
         final BiConsumer<Subscription, BodyPart> consumer = (bodyPartSubscription, part) -> {
             headers.add(part.headers().get("Content-Id"));
-            if (counter.decrementAndGet() == 3) {
-                final HttpDataAggregator subscriber = new HttpDataAggregator();
-                part.content().subscribe(subscriber);
-                subscriber.content().thenAccept(body -> {
-                    counter.decrementAndGet();
-                    bodies.add(body);
-                });
-            } else {
-                final HttpDataAggregator subscriber = new HttpDataAggregator();
-                part.content().subscribe(subscriber);
-                subscriber.content().thenAccept(body -> {
-                    counter.decrementAndGet();
-                    bodies.add(body);
-                });
-            }
+            counter.decrementAndGet();
+            final HttpDataAggregator subscriber = new HttpDataAggregator();
+            part.content().subscribe(subscriber);
+            subscriber.content().thenAccept(body -> {
+                counter.decrementAndGet();
+                bodies.add(body);
+            });
         };
         final BodyPartSubscriber testSubscriber = new BodyPartSubscriber(subscriberType, consumer);
         final AtomicLong upstreamRequestCount = new AtomicLong();
