@@ -197,7 +197,9 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
                                                       cfg, scheme.toString(), reqTarget);
                     // Do not accept unsupported methods.
                     final HttpMethod method = headers.method();
-                    if (method == HttpMethod.CONNECT) {
+                    if (method == HttpMethod.CONNECT
+                        || (method == HttpMethod.UNKNOWN
+                        && !cfg.additionalAllowedHttpMethods().contains(headers.get(com.linecorp.armeria.common.HttpHeaderNames.METHOD)))) {
                         fail(id, headers, HttpStatus.METHOD_NOT_ALLOWED, "Unsupported method", null);
                         return;
                     }
