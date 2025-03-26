@@ -90,16 +90,32 @@ final class DefaultCookieJar implements CookieJar {
         lock.lock();
         try {
             for (Cookie cookie : cookies) {
-                cookie = ensureDomainAndPath(cookie, uri);
+                final Cookie ensuredCookie = ensureDomainAndPath(cookie, uri);
                 // remove similar cookie if present
-                store.removeLong(cookie);
-                if ((cookie.maxAge() == Cookie.UNDEFINED_MAX_AGE || cookie.maxAge() > 0) &&
-                    cookiePolicy.accept(uri, cookie)) {
-                    store.put(cookie, createdTimeMillis);
-                    final Set<Cookie> cookieSet = filter.computeIfAbsent(cookie.domain(), s -> new HashSet<>());
-                    // remove similar cookie if present
-                    cookieSet.remove(cookie);
-                    cookieSet.add(cookie);
+                store.removeLong(ensuredCookie);
+                if ((ensuredCookie.maxAge() == Cookie.UNDEFINED_MAX_AGE || ensuredCookie.maxAge() > 0) &&
+                    cookiePolicy.accept(uri, ensuredCookie)) {
+                    store.put(ensuredCookie, createdTimeMillis);
+                    final Set<Cookie> cookieSet = filter.computeIfAbsent(ensuredCookie.domain(),
+                                                                         s -> new HashSet<>());
+
+                    // remove the cookie with the same name, domain, and path if present
+                    // https://datatracker.ietf.org/doc/html/rfc6265#page-24
+                    final Cookie oldCookie = cookieSet.stream()
+                                                      .filter(c -> isSameNameAndPath(c, ensuredCookie))
+                                                      .findFirst()
+                                                      .orElse(null);
+                    if (oldCookie == null) {
+                        cookieSet.add(ensuredCookie);
+                        continue;
+                    }
+                    if (!("http".equals(uri.getScheme()) || "https".equals(uri.getScheme())) &&
+                        oldCookie.isHttpOnly()) {
+                        // if the new cookie is received from a non-HTTP and the old cookie is http-only, skip
+                        continue;
+                    }
+                    cookieSet.remove(oldCookie);
+                    cookieSet.add(ensuredCookie);
                 }
             }
         } finally {
@@ -212,5 +228,11 @@ final class DefaultCookieJar implements CookieJar {
         assert cookiePath != null;
         final boolean pathMatched = path.startsWith(cookiePath);
         return satisfiedHostOnly && satisfiedSecure && pathMatched;
+    }
+
+    private static boolean isSameNameAndPath(Cookie oldCookie, Cookie newCookie) {
+        final String oldCookiePath = oldCookie.path();
+        assert oldCookiePath != null;
+        return oldCookie.name().equals(newCookie.name()) && oldCookiePath.equals(newCookie.path());
     }
 }

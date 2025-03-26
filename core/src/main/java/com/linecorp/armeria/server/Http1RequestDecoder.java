@@ -18,6 +18,7 @@ package com.linecorp.armeria.server;
 
 import static com.linecorp.armeria.internal.common.websocket.WebSocketUtil.isHttp1WebSocketUpgradeRequest;
 import static com.linecorp.armeria.server.HttpServerPipelineConfigurator.SCHEME_HTTP;
+import static com.linecorp.armeria.server.ServerPortMetric.SERVER_PORT_METRIC;
 import static com.linecorp.armeria.server.ServiceRouteUtil.newRoutingContext;
 
 import java.net.URISyntaxException;
@@ -81,6 +82,7 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
     private static final ResponseHeaders CONTINUE_RESPONSE = ResponseHeaders.of(HttpStatus.CONTINUE);
 
     private final ServerConfig cfg;
+    private final ServerPortMetric serverPortMetric;
     private final AsciiString scheme;
     private SessionProtocol sessionProtocol;
     private final InboundTrafficController inboundTrafficController;
@@ -96,6 +98,9 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
     Http1RequestDecoder(ServerConfig cfg, Channel channel, AsciiString scheme,
                         ServerHttp1ObjectEncoder encoder, HttpServer httpServer) {
         this.cfg = cfg;
+        final ServerPortMetric serverPortMetric = channel.attr(SERVER_PORT_METRIC).get();
+        assert serverPortMetric != null;
+        this.serverPortMetric = serverPortMetric;
         this.scheme = scheme;
         sessionProtocol = scheme == SCHEME_HTTP ? SessionProtocol.H1C : SessionProtocol.H1;
         inboundTrafficController = InboundTrafficController.ofHttp1(channel);
@@ -271,7 +276,7 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
                             if (pipeline.get(HttpServerUpgradeHandler.class) != null) {
                                 pipeline.remove(HttpServerUpgradeHandler.class);
                             }
-                            cfg.serverMetrics().increasePendingHttp1Requests();
+                            serverPortMetric.increasePendingHttp1Requests();
                             ctx.fireChannelRead(webSocketRequest);
                             return;
                         }
@@ -284,7 +289,7 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
                     if (maxRequestLength > 0 && contentLength > maxRequestLength) {
                         abortLargeRequest(ctx, req, id, endOfStream, keepAliveHandler, true);
                     }
-                    cfg.serverMetrics().increasePendingHttp1Requests();
+                    serverPortMetric.increasePendingHttp1Requests();
                     ctx.fireChannelRead(req);
                 } else {
                     fail(id, null, HttpStatus.BAD_REQUEST, "Invalid decoder state", null);
