@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.xds;
 
+import com.google.common.base.MoreObjects;
+
 import com.linecorp.armeria.common.annotation.Nullable;
 
 import io.envoyproxy.envoy.config.route.v3.VirtualHost;
@@ -34,7 +36,7 @@ public final class VirtualHostXdsResource extends XdsResourceWithPrimer<VirtualH
         primer = null;
     }
 
-    VirtualHostXdsResource(VirtualHost virtualHost, @Nullable XdsResource primer) {
+    private VirtualHostXdsResource(VirtualHost virtualHost, @Nullable XdsResource primer) {
         this.virtualHost = virtualHost;
         this.primer = primer;
     }
@@ -63,5 +65,13 @@ public final class VirtualHostXdsResource extends XdsResourceWithPrimer<VirtualH
     @Override
     XdsResource primer() {
         return primer;
+    }
+
+    @Override
+    public String toString() {
+        return MoreObjects.toStringHelper(this)
+                          .add("virtualHost", virtualHost)
+                          .add("primer", primer)
+                          .toString();
     }
 }

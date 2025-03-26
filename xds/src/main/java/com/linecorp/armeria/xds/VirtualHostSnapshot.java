@@ -39,12 +39,13 @@ public final class VirtualHostSnapshot implements Snapshot<VirtualHostXdsResourc
     VirtualHostSnapshot(VirtualHostXdsResource virtualHostXdsResource,
                         List<@Nullable ClusterSnapshot> clusterSnapshots, int index) {
         this.virtualHostXdsResource = virtualHostXdsResource;
-        assert clusterSnapshots.size() == virtualHostXdsResource.resource().getRoutesCount();
+        final VirtualHost virtualHost = virtualHostXdsResource.resource();
+        assert clusterSnapshots.size() == virtualHost.getRoutesCount();
 
         final ImmutableList.Builder<RouteEntry> routeEntriesBuilder = ImmutableList.builder();
         for (int i = 0; i < clusterSnapshots.size(); i++) {
             final ClusterSnapshot clusterSnapshot = clusterSnapshots.get(i);
-            final Route route = virtualHostXdsResource.resource().getRoutes(i);
+            final Route route = virtualHost.getRoutes(i);
             routeEntriesBuilder.add(new RouteEntry(route, clusterSnapshot));
         }
         routeEntries = routeEntriesBuilder.build();

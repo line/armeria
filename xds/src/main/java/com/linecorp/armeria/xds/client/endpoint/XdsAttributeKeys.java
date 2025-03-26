@@ -30,7 +30,7 @@ final class XdsAttributeKeys {
     static final AttributeKey<XdsRandom> XDS_RANDOM =
             AttributeKey.valueOf(XdsAttributeKeys.class, "XDS_RANDOM");
     public static final AttributeKey<Metadata> ROUTE_METADATA_MATCH =
-            AttributeKey.valueOf(XdsAttributeKeys.class, "ROUTER_METADATA");
+            AttributeKey.valueOf(XdsAttributeKeys.class, "ROUTER_METADATA_MATCH");
 
     private XdsAttributeKeys() {}
 }

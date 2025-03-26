@@ -56,6 +56,7 @@ final class VirtualHostResourceNode extends AbstractResourceNodeWithPrimer<Virtu
     @Override
     void doOnChanged(VirtualHostXdsResource resource) {
         pending.clear();
+        clusterSnapshots.clear();
         for (Route route: resource.resource().getRoutesList()) {
             final RouteAction routeAction = route.getRoute();
             final String clusterName = routeAction.getCluster();

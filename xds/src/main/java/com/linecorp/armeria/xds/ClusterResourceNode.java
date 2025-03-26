@@ -80,11 +80,6 @@ final class ClusterResourceNode extends AbstractResourceNodeWithPrimer<ClusterXd
         }
     }
 
-    @Override
-    public void close() {
-        super.close();
-    }
-
     private class EndpointSnapshotWatcher implements SnapshotWatcher<EndpointSnapshot> {
         @Override
         public void snapshotUpdated(EndpointSnapshot newSnapshot) {

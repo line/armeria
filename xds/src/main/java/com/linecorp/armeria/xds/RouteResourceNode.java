@@ -50,13 +50,15 @@ final class RouteResourceNode extends AbstractResourceNodeWithPrimer<RouteXdsRes
 
     @Override
     public void doOnChanged(RouteXdsResource resource) {
+        pending.clear();
         virtualHostSnapshots.clear();
 
         final RouteConfiguration routeConfiguration = resource.resource();
-        for (int i = 0; i < routeConfiguration.getVirtualHostsList().size(); i++) {
+        final List<VirtualHost> virtualHosts = routeConfiguration.getVirtualHostsList();
+        for (int i = 0; i < virtualHosts.size(); i++) {
             pending.add(i);
             virtualHostSnapshots.add(null);
-            final VirtualHost virtualHost = routeConfiguration.getVirtualHostsList().get(i);
+            final VirtualHost virtualHost = virtualHosts.get(i);
             final VirtualHostResourceNode childNode =
                     StaticResourceUtils.staticVirtualHost(xdsBootstrap(), name(), resource,
                                                           snapshotWatcher, i, virtualHost);
