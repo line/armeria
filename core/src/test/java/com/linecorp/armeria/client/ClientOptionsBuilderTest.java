@@ -19,6 +19,8 @@ package com.linecorp.armeria.client;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.time.Duration;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
@@ -29,9 +31,13 @@ import com.linecorp.armeria.client.logging.LoggingClient;
 import com.linecorp.armeria.client.logging.LoggingRpcClient;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
+import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.RequestId;
+import com.linecorp.armeria.common.RpcRequest;
+import com.linecorp.armeria.common.RpcResponse;
+import com.linecorp.armeria.internal.client.DefaultClientRequestContext;
 
 class ClientOptionsBuilderTest {
     @Test
@@ -193,6 +199,78 @@ class ClientOptionsBuilderTest {
         assertThat(outer.as(inner.getClass())).isSameAs(inner);
         assertThat(outer.as(outer.getClass())).isSameAs(outer);
         assertThat(outer.as(LoggingClient.class)).isNull();
+    }
+
+    @Test
+    void testPreprocessors() throws Exception {
+        final ClientOptionsBuilder b = ClientOptions.builder();
+        final List<String> processorsList = new ArrayList<>();
+        final HttpPreprocessor http1 = new RunnableHttpPreprocessor(() -> processorsList.add("http1"));
+        final HttpPreprocessor http2 = new RunnableHttpPreprocessor(() -> processorsList.add("http2"));
+        final HttpPreprocessor http3 = new RunnableHttpPreprocessor(() -> processorsList.add("http3"));
+
+        b.option(ClientOptions.PREPROCESSORS.newValue(ClientPreprocessors.builder()
+                                                                         .add(http1).add(http2).build()));
+        assertThat(b.build().clientPreprocessors().preprocessors()).containsExactly(http1, http2);
+        b.option(ClientOptions.PREPROCESSORS.newValue(ClientPreprocessors.builder().add(http3).build()));
+        assertThat(b.build().clientPreprocessors().preprocessors()).containsExactly(http1, http2, http3);
+
+        final HttpRequest req = HttpRequest.of(HttpMethod.GET, "/");
+        final DefaultClientRequestContext ctx = (DefaultClientRequestContext) ClientRequestContext.of(req);
+        b.build().clientPreprocessors().decorate((ctx0, req0) -> HttpResponse.of(200))
+                .execute(ctx, req);
+        assertThat(processorsList).containsExactly("http3", "http2", "http1");
+
+        // Add an RPC decorator.
+        processorsList.clear();
+        final RpcPreprocessor rpc1 = new RunnableRpcPreprocessor(() -> processorsList.add("rpc1"));
+        final RpcPreprocessor rpc2 = new RunnableRpcPreprocessor(() -> processorsList.add("rpc2"));
+        final RpcPreprocessor rpc3 = new RunnableRpcPreprocessor(() -> processorsList.add("rpc3"));
+
+        b.option(ClientOptions.PREPROCESSORS.newValue(
+                ClientPreprocessors.builder().addRpc(rpc1).addRpc(rpc2).build()));
+        assertThat(b.build().clientPreprocessors().rpcPreprocessors()).containsExactly(rpc1, rpc2);
+        b.rpcPreprocessor(rpc3);
+        assertThat(b.build().clientPreprocessors().rpcPreprocessors()).containsSequence(rpc1, rpc2, rpc3);
+
+        final RpcRequest rpcRequest = RpcRequest.of(Object.class, "method");
+        final DefaultClientRequestContext rpcCtx =
+                (DefaultClientRequestContext) ClientRequestContext.of(rpcRequest, "http://127.0.0.1");
+        b.build().clientPreprocessors().rpcDecorate((ctx0, req0) -> RpcResponse.of(200))
+         .execute(rpcCtx, rpcRequest);
+        assertThat(processorsList).containsExactly("rpc3", "rpc2", "rpc1");
+    }
+
+    private static class RunnableHttpPreprocessor implements HttpPreprocessor {
+
+        private final Runnable runnable;
+
+        RunnableHttpPreprocessor(Runnable runnable) {
+            this.runnable = runnable;
+        }
+
+        @Override
+        public HttpResponse execute(PreClient<HttpRequest, HttpResponse> delegate,
+                                    PreClientRequestContext ctx, HttpRequest req) throws Exception {
+            runnable.run();
+            return delegate.execute(ctx, req);
+        }
+    }
+
+    private static class RunnableRpcPreprocessor implements RpcPreprocessor {
+
+        private final Runnable runnable;
+
+        RunnableRpcPreprocessor(Runnable runnable) {
+            this.runnable = runnable;
+        }
+
+        @Override
+        public RpcResponse execute(PreClient<RpcRequest, RpcResponse> delegate,
+                                   PreClientRequestContext ctx, RpcRequest req) throws Exception {
+            runnable.run();
+            return delegate.execute(ctx, req);
+        }
     }
 
     private static final class FooClient implements HttpClient {

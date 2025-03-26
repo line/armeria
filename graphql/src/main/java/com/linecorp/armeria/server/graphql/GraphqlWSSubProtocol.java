@@ -374,6 +374,7 @@ class GraphqlWSSubProtocol {
                 "id", operationId,
                 "payload", ImmutableList.of(
                         new GraphQLError() {
+                            @Nullable
                             @Override
                             public String getMessage() {
                                 return t.getMessage();
@@ -430,4 +431,3 @@ class GraphqlWSSubProtocol {
         }
     }
 }
-

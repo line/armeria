@@ -47,6 +47,7 @@ import com.linecorp.armeria.client.proxy.ProxyType;
 import com.linecorp.armeria.client.proxy.Socks4ProxyConfig;
 import com.linecorp.armeria.client.proxy.Socks5ProxyConfig;
 import com.linecorp.armeria.common.ClosedSessionException;
+import com.linecorp.armeria.common.NonBlocking;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
@@ -55,6 +56,7 @@ import com.linecorp.armeria.common.util.AsyncCloseable;
 import com.linecorp.armeria.common.util.AsyncCloseableSupport;
 import com.linecorp.armeria.internal.client.HttpSession;
 import com.linecorp.armeria.internal.client.PooledChannel;
+import com.linecorp.armeria.internal.common.SslContextFactory;
 import com.linecorp.armeria.internal.common.util.ChannelUtil;
 import com.linecorp.armeria.internal.common.util.TemporaryThreadLocals;
 
@@ -75,7 +77,6 @@ import io.netty.handler.ssl.SslContext;
 import io.netty.util.AttributeKey;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.Promise;
-import reactor.core.scheduler.NonBlocking;
 
 final class HttpChannelPool implements AsyncCloseable {
 
@@ -101,6 +102,7 @@ final class HttpChannelPool implements AsyncCloseable {
 
     HttpChannelPool(HttpClientFactory clientFactory, EventLoop eventLoop,
                     SslContext sslCtxHttp1Or2, SslContext sslCtxHttp1Only,
+                    @Nullable SslContextFactory sslContextFactory,
                     ConnectionPoolListener listener) {
         this.clientFactory = clientFactory;
         this.eventLoop = eventLoop;
@@ -110,10 +112,14 @@ final class HttpChannelPool implements AsyncCloseable {
                                           SessionProtocol.H2, SessionProtocol.H2C));
         pendingAcquisitions = newEnumMap(httpAndHttpsValues());
         allChannels = new IdentityHashMap<>();
-        connectTimeoutMillis = (Integer) clientFactory.options()
-                .channelOptions()
-                .get(ChannelOption.CONNECT_TIMEOUT_MILLIS);
-        bootstraps = new Bootstraps(clientFactory, eventLoop, sslCtxHttp1Or2, sslCtxHttp1Only);
+        final Integer connectTimeoutMillisBoxed =
+                (Integer) clientFactory.options()
+                                       .channelOptions()
+                                       .get(ChannelOption.CONNECT_TIMEOUT_MILLIS);
+        assert connectTimeoutMillisBoxed != null;
+        connectTimeoutMillis = connectTimeoutMillisBoxed;
+        bootstraps = new Bootstraps(clientFactory, eventLoop, sslCtxHttp1Or2, sslCtxHttp1Only,
+                                    sslContextFactory);
     }
 
     private void configureProxy(Channel ch, ProxyConfig proxyConfig, SessionProtocol desiredProtocol) {
@@ -154,8 +160,11 @@ final class HttpChannelPool implements AsyncCloseable {
         ch.pipeline().addFirst(proxyHandler);
 
         if (proxyConfig instanceof ConnectProxyConfig && ((ConnectProxyConfig) proxyConfig).useTls()) {
-            final SslContext sslCtx = bootstraps.determineSslContext(desiredProtocol);
+            final SslContext sslCtx = bootstraps.getOrCreateSslContext(proxyAddress, desiredProtocol);
             ch.pipeline().addFirst(sslCtx.newHandler(ch.alloc()));
+            if (bootstraps.shouldReleaseSslContext(sslCtx)) {
+                ch.closeFuture().addListener(unused -> bootstraps.releaseSslContext(sslCtx));
+            }
         }
     }
 
@@ -347,7 +356,9 @@ final class HttpChannelPool implements AsyncCloseable {
             notifyConnect(desiredProtocol, key,
                           eventLoop.newFailedFuture(
                                   new SessionProtocolNegotiationException(
-                                          desiredProtocol, "previously failed negotiation")),
+                                          desiredProtocol,
+                                          "previously failed negotiation (remoteAddress: " +
+                                          remoteAddress + ')')),
                           promise, timingsBuilder);
             return;
         }
@@ -379,7 +390,7 @@ final class HttpChannelPool implements AsyncCloseable {
                  @Nullable ClientConnectionTimingsBuilder timingsBuilder) {
         final Bootstrap bootstrap;
         try {
-            bootstrap = bootstraps.get(remoteAddress, desiredProtocol, serializationFormat);
+            bootstrap = bootstraps.getOrCreate(remoteAddress, desiredProtocol, serializationFormat);
         } catch (Exception e) {
             sessionPromise.tryFailure(e);
             return;
@@ -610,7 +621,9 @@ final class HttpChannelPool implements AsyncCloseable {
         private final int hashCode;
 
         PoolKey(Endpoint endpoint, ProxyConfig proxyConfig) {
-            this.endpoint = endpoint;
+            // Remove the trailing dot of the host name because SNI does not allow it.
+            // https://lists.w3.org/Archives/Public/ietf-http-wg/2016JanMar/0430.html
+            this.endpoint = endpoint.withoutTrailingDot();
             this.proxyConfig = proxyConfig;
             hashCode = endpoint.hashCode() * 31 + proxyConfig.hashCode();
         }
@@ -828,6 +841,7 @@ final class HttpChannelPool implements AsyncCloseable {
 
             switch (result) {
                 case SUCCESS:
+                    assert pch != null;
                     timingsBuilder.pendingAcquisitionEnd();
                     childPromise.complete(pch);
                     break;

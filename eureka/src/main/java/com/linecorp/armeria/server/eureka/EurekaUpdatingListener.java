@@ -36,11 +36,11 @@ import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.eureka.InstanceInfo;
+import com.linecorp.armeria.common.eureka.InstanceInfo.InstanceStatus;
+import com.linecorp.armeria.common.eureka.InstanceInfo.PortWrapper;
 import com.linecorp.armeria.common.util.SystemInfo;
 import com.linecorp.armeria.internal.common.eureka.EurekaWebClient;
-import com.linecorp.armeria.internal.common.eureka.InstanceInfo;
-import com.linecorp.armeria.internal.common.eureka.InstanceInfo.InstanceStatus;
-import com.linecorp.armeria.internal.common.eureka.InstanceInfo.PortWrapper;
 import com.linecorp.armeria.server.Route;
 import com.linecorp.armeria.server.RoutePathType;
 import com.linecorp.armeria.server.Server;
@@ -133,6 +133,7 @@ public final class EurekaUpdatingListener extends ServerListenerAdapter {
 
     private final EurekaWebClient client;
     private final InstanceInfo initialInstanceInfo;
+    @Nullable
     private InstanceInfo instanceInfo;
     @Nullable
     private volatile ScheduledFuture<?> heartBeatFuture;
@@ -335,8 +336,9 @@ public final class EurekaUpdatingListener extends ServerListenerAdapter {
         if (heartBeatFuture != null) {
             heartBeatFuture.cancel(false);
         }
+        final InstanceInfo instanceInfo = this.instanceInfo;
         final String appName = this.appName;
-        if (appName != null) {
+        if (instanceInfo != null && appName != null) {
             final String instanceId = instanceInfo.getInstanceId();
             assert instanceId != null;
             client.cancel(appName, instanceId).aggregate().handle((res, cause) -> {

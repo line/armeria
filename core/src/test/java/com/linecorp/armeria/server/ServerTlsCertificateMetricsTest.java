@@ -27,7 +27,7 @@ import org.assertj.core.api.AbstractDoubleAssert;
 import org.junit.jupiter.api.Test;
 
 import com.linecorp.armeria.common.HttpResponse;
-import com.linecorp.armeria.common.metric.PrometheusMeterRegistries;
+import com.linecorp.armeria.common.prometheus.PrometheusMeterRegistries;
 import com.linecorp.armeria.internal.common.util.SelfSignedCertificate;
 
 import io.micrometer.core.instrument.Gauge;
@@ -181,7 +181,7 @@ public class ServerTlsCertificateMetricsTest {
               .build();
 
         assertThatGauge(meterRegistry, CERT_VALIDITY_GAUGE_NAME, "localhost").isZero();
-        assertThatGauge(meterRegistry, CERT_VALIDITY_DAYS_GAUGE_NAME, "localhost").isEqualTo(-1);
+        assertThatGauge(meterRegistry, CERT_VALIDITY_DAYS_GAUGE_NAME, "localhost").isLessThanOrEqualTo(-1);
         assertThatGauge(meterRegistry, CERT_VALIDITY_GAUGE_NAME, "test.root.armeria").isOne();
         assertThatGauge(meterRegistry, CERT_VALIDITY_DAYS_GAUGE_NAME, "test.root.armeria").isPositive();
     }

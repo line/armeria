@@ -88,6 +88,7 @@ public final class FutureTransformingRequestPreparation<T>
 
         return response.exceptionally(cause -> {
             cause = Exceptions.peel(cause);
+            assert errorHandler != null;
             final Object maybeRecovered = errorHandler.apply(cause);
             if (maybeRecovered instanceof Throwable) {
                 // The cause was translated.
@@ -413,6 +414,13 @@ public final class FutureTransformingRequestPreparation<T>
     @Override
     public FutureTransformingRequestPreparation<T> exchangeType(ExchangeType exchangeType) {
         delegate.exchangeType(exchangeType);
+        return this;
+    }
+
+    @Override
+    public FutureTransformingRequestPreparation<T> responseTimeoutMode(
+            ResponseTimeoutMode responseTimeoutMode) {
+        delegate.responseTimeoutMode(responseTimeoutMode);
         return this;
     }
 }

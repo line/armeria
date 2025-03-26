@@ -19,10 +19,7 @@ package com.linecorp.armeria.server;
 import static java.util.Objects.requireNonNull;
 
 import java.util.function.Function;
-import java.util.function.Predicate;
 
-import com.linecorp.armeria.common.HttpMethod;
-import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.internal.server.RouteDecoratingService;
 
 /**
@@ -47,145 +44,14 @@ import com.linecorp.armeria.internal.server.RouteDecoratingService;
  *
  * @see VirtualHostDecoratingServiceBindingBuilder
  */
-public final class DecoratingServiceBindingBuilder extends AbstractBindingBuilder {
+public final class DecoratingServiceBindingBuilder
+        extends AbstractBindingBuilder<DecoratingServiceBindingBuilder> {
 
     private final ServerBuilder serverBuilder;
 
     DecoratingServiceBindingBuilder(ServerBuilder serverBuilder) {
         super(EMPTY_CONTEXT_PATHS);
         this.serverBuilder = requireNonNull(serverBuilder, "serverBuilder");
-    }
-
-    @Override
-    public DecoratingServiceBindingBuilder path(String pathPattern) {
-        return (DecoratingServiceBindingBuilder) super.path(pathPattern);
-    }
-
-    @Override
-    public DecoratingServiceBindingBuilder pathPrefix(String prefix) {
-        return (DecoratingServiceBindingBuilder) super.pathPrefix(prefix);
-    }
-
-    @Override
-    public DecoratingServiceBindingBuilder methods(HttpMethod... methods) {
-        return (DecoratingServiceBindingBuilder) super.methods(methods);
-    }
-
-    @Override
-    public DecoratingServiceBindingBuilder methods(Iterable<HttpMethod> methods) {
-        return (DecoratingServiceBindingBuilder) super.methods(methods);
-    }
-
-    @Override
-    public DecoratingServiceBindingBuilder get(String pathPattern) {
-        return (DecoratingServiceBindingBuilder) super.get(pathPattern);
-    }
-
-    @Override
-    public DecoratingServiceBindingBuilder post(String pathPattern) {
-        return (DecoratingServiceBindingBuilder) super.post(pathPattern);
-    }
-
-    @Override
-    public DecoratingServiceBindingBuilder put(String pathPattern) {
-        return (DecoratingServiceBindingBuilder) super.put(pathPattern);
-    }
-
-    @Override
-    public DecoratingServiceBindingBuilder patch(String pathPattern) {
-        return (DecoratingServiceBindingBuilder) super.patch(pathPattern);
-    }
-
-    @Override
-    public DecoratingServiceBindingBuilder delete(String pathPattern) {
-        return (DecoratingServiceBindingBuilder) super.delete(pathPattern);
-    }
-
-    @Override
-    public DecoratingServiceBindingBuilder options(String pathPattern) {
-        return (DecoratingServiceBindingBuilder) super.delete(pathPattern);
-    }
-
-    @Override
-    public DecoratingServiceBindingBuilder head(String pathPattern) {
-        return (DecoratingServiceBindingBuilder) super.head(pathPattern);
-    }
-
-    @Override
-    public DecoratingServiceBindingBuilder trace(String pathPattern) {
-        return (DecoratingServiceBindingBuilder) super.trace(pathPattern);
-    }
-
-    @Override
-    public DecoratingServiceBindingBuilder connect(String pathPattern) {
-        return (DecoratingServiceBindingBuilder) super.connect(pathPattern);
-    }
-
-    @Override
-    public DecoratingServiceBindingBuilder consumes(MediaType... consumeTypes) {
-        return (DecoratingServiceBindingBuilder) super.consumes(consumeTypes);
-    }
-
-    @Override
-    public DecoratingServiceBindingBuilder consumes(Iterable<MediaType> consumeTypes) {
-        return (DecoratingServiceBindingBuilder) super.consumes(consumeTypes);
-    }
-
-    @Override
-    public DecoratingServiceBindingBuilder produces(MediaType... produceTypes) {
-        return (DecoratingServiceBindingBuilder) super.produces(produceTypes);
-    }
-
-    @Override
-    public DecoratingServiceBindingBuilder produces(Iterable<MediaType> produceTypes) {
-        return (DecoratingServiceBindingBuilder) super.produces(produceTypes);
-    }
-
-    @Override
-    public DecoratingServiceBindingBuilder matchesParams(String... paramPredicates) {
-        return (DecoratingServiceBindingBuilder) super.matchesParams(paramPredicates);
-    }
-
-    @Override
-    public DecoratingServiceBindingBuilder matchesParams(Iterable<String> paramPredicates) {
-        return (DecoratingServiceBindingBuilder) super.matchesParams(paramPredicates);
-    }
-
-    @Override
-    public DecoratingServiceBindingBuilder matchesParams(String paramName,
-                                                         Predicate<? super String> valuePredicate) {
-        return (DecoratingServiceBindingBuilder) super.matchesParams(paramName, valuePredicate);
-    }
-
-    @Override
-    public DecoratingServiceBindingBuilder matchesHeaders(String... headerPredicates) {
-        return (DecoratingServiceBindingBuilder) super.matchesHeaders(headerPredicates);
-    }
-
-    @Override
-    public DecoratingServiceBindingBuilder matchesHeaders(Iterable<String> headerPredicates) {
-        return (DecoratingServiceBindingBuilder) super.matchesHeaders(headerPredicates);
-    }
-
-    @Override
-    public DecoratingServiceBindingBuilder matchesHeaders(CharSequence headerName,
-                                                          Predicate<? super String> valuePredicate) {
-        return (DecoratingServiceBindingBuilder) super.matchesHeaders(headerName, valuePredicate);
-    }
-
-    @Override
-    public DecoratingServiceBindingBuilder addRoute(Route route) {
-        return (DecoratingServiceBindingBuilder) super.addRoute(route);
-    }
-
-    @Override
-    public DecoratingServiceBindingBuilder exclude(String pathPattern) {
-        return (DecoratingServiceBindingBuilder) super.exclude(pathPattern);
-    }
-
-    @Override
-    public DecoratingServiceBindingBuilder exclude(Route excludedRoute) {
-        return (DecoratingServiceBindingBuilder) super.exclude(excludedRoute);
     }
 
     /**

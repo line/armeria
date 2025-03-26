@@ -33,8 +33,8 @@ import com.linecorp.armeria.server.annotation.ExceptionHandlerFunction;
 import com.linecorp.armeria.server.annotation.RequestConverterFunction;
 import com.linecorp.armeria.server.annotation.ResponseConverterFunction;
 
-abstract class AbstractContextPathServicesBuilder<T extends ServiceConfigsBuilder>
-        implements ServiceConfigsBuilder {
+abstract class AbstractContextPathServicesBuilder<SELF extends AbstractContextPathServicesBuilder<SELF, T>,
+        T extends ServiceConfigsBuilder<T>> implements ServiceConfigsBuilder<SELF> {
 
     private final Set<String> contextPaths;
     private final T parent;
@@ -52,11 +52,10 @@ abstract class AbstractContextPathServicesBuilder<T extends ServiceConfigsBuilde
         this.virtualHostBuilder = virtualHostBuilder;
     }
 
-    @Override
-    public abstract AbstractContextPathServiceBindingBuilder<T> route();
-
-    @Override
-    public abstract AbstractContextPathDecoratingBindingBuilder<T> routeDecorator();
+    @SuppressWarnings("unchecked")
+    final SELF self() {
+        return (SELF) this;
+    }
 
     /**
      * Binds the specified {@link HttpService} under the specified context path.
@@ -83,7 +82,7 @@ abstract class AbstractContextPathServicesBuilder<T extends ServiceConfigsBuilde
      * }</pre>
      */
     @Override
-    public AbstractContextPathServicesBuilder<T> serviceUnder(String pathPrefix, HttpService service) {
+    public SELF serviceUnder(String pathPrefix, HttpService service) {
         requireNonNull(pathPrefix, "pathPrefix");
         requireNonNull(service, "service");
         final HttpServiceWithRoutes serviceWithRoutes = service.as(HttpServiceWithRoutes.class);
@@ -99,7 +98,7 @@ abstract class AbstractContextPathServicesBuilder<T extends ServiceConfigsBuilde
         } else {
             service(Route.builder().pathPrefix(pathPrefix).build(), service);
         }
-        return this;
+        return self();
     }
 
     /**
@@ -118,7 +117,7 @@ abstract class AbstractContextPathServicesBuilder<T extends ServiceConfigsBuilde
      * @throws IllegalArgumentException if the specified path pattern is invalid
      */
     @Override
-    public AbstractContextPathServicesBuilder<T> service(String pathPattern, HttpService service) {
+    public SELF service(String pathPattern, HttpService service) {
         return service(Route.builder().path(pathPattern).build(), service);
     }
 
@@ -126,11 +125,11 @@ abstract class AbstractContextPathServicesBuilder<T extends ServiceConfigsBuilde
      * Binds the specified {@link HttpService} at the specified {@link Route} under the context path.
      */
     @Override
-    public AbstractContextPathServicesBuilder<T> service(Route route, HttpService service) {
+    public SELF service(Route route, HttpService service) {
         for (String contextPath: contextPaths) {
             addServiceConfigSetters(new ServiceConfigBuilder(route, contextPath, service));
         }
-        return this;
+        return self();
     }
 
     /**
@@ -141,16 +140,15 @@ abstract class AbstractContextPathServicesBuilder<T extends ServiceConfigsBuilde
      * @param decorators the decorator functions, which will be applied in the order specified.
      */
     @Override
-    public AbstractContextPathServicesBuilder<T> service(
-            HttpServiceWithRoutes serviceWithRoutes,
-            Iterable<? extends Function<? super HttpService, ? extends HttpService>> decorators) {
+    public SELF service(HttpServiceWithRoutes serviceWithRoutes,
+                        Iterable<? extends Function<? super HttpService, ? extends HttpService>> decorators) {
         requireNonNull(serviceWithRoutes, "serviceWithRoutes");
         requireNonNull(serviceWithRoutes.routes(), "serviceWithRoutes.routes()");
         requireNonNull(decorators, "decorators");
 
         final HttpService decorated = decorate(serviceWithRoutes, decorators);
         serviceWithRoutes.routes().forEach(route -> service(route, decorated));
-        return this;
+        return self();
     }
 
     /**
@@ -161,7 +159,7 @@ abstract class AbstractContextPathServicesBuilder<T extends ServiceConfigsBuilde
      * @param decorators the decorator functions, which will be applied in the order specified.
      */
     @Override
-    public AbstractContextPathServicesBuilder<T> service(
+    public SELF service(
             HttpServiceWithRoutes serviceWithRoutes,
             Function<? super HttpService, ? extends HttpService>... decorators) {
         return service(serviceWithRoutes, ImmutableList.copyOf(requireNonNull(decorators, "decorators")));
@@ -171,7 +169,7 @@ abstract class AbstractContextPathServicesBuilder<T extends ServiceConfigsBuilde
      * Binds the specified annotated service object under the context path.
      */
     @Override
-    public AbstractContextPathServicesBuilder<T> annotatedService(Object service) {
+    public SELF annotatedService(Object service) {
         return annotatedService("/", service, Function.identity(), ImmutableList.of());
     }
 
@@ -183,8 +181,7 @@ abstract class AbstractContextPathServicesBuilder<T extends ServiceConfigsBuilde
      *                                       the {@link ResponseConverterFunction}s
      */
     @Override
-    public AbstractContextPathServicesBuilder<T> annotatedService(Object service,
-                                                                  Object... exceptionHandlersAndConverters) {
+    public SELF annotatedService(Object service, Object... exceptionHandlersAndConverters) {
         return annotatedService("/", service, Function.identity(),
                                 ImmutableList.copyOf(requireNonNull(exceptionHandlersAndConverters,
                                                                     "exceptionHandlersAndConverters")));
@@ -198,7 +195,7 @@ abstract class AbstractContextPathServicesBuilder<T extends ServiceConfigsBuilde
      *                                       the {@link ResponseConverterFunction}s
      */
     @Override
-    public AbstractContextPathServicesBuilder<T> annotatedService(
+    public SELF annotatedService(
             Object service, Function<? super HttpService, ? extends HttpService> decorator,
             Object... exceptionHandlersAndConverters) {
         return annotatedService("/", service, decorator,
@@ -210,7 +207,7 @@ abstract class AbstractContextPathServicesBuilder<T extends ServiceConfigsBuilde
      * Binds the specified annotated service object under the specified path prefix.
      */
     @Override
-    public AbstractContextPathServicesBuilder<T> annotatedService(String pathPrefix, Object service) {
+    public SELF annotatedService(String pathPrefix, Object service) {
         return annotatedService(pathPrefix, service, Function.identity(), ImmutableList.of());
     }
 
@@ -222,8 +219,7 @@ abstract class AbstractContextPathServicesBuilder<T extends ServiceConfigsBuilde
      *                                       the {@link ResponseConverterFunction}s
      */
     @Override
-    public AbstractContextPathServicesBuilder<T> annotatedService(String pathPrefix, Object service,
-                                                                  Object... exceptionHandlersAndConverters) {
+    public SELF annotatedService(String pathPrefix, Object service, Object... exceptionHandlersAndConverters) {
         return annotatedService(pathPrefix, service, Function.identity(),
                                 ImmutableList.copyOf(requireNonNull(exceptionHandlersAndConverters,
                                                                     "exceptionHandlersAndConverters")));
@@ -237,7 +233,7 @@ abstract class AbstractContextPathServicesBuilder<T extends ServiceConfigsBuilde
      *                                       {@link ResponseConverterFunction}
      */
     @Override
-    public AbstractContextPathServicesBuilder<T> annotatedService(
+    public SELF annotatedService(
             String pathPrefix, Object service, Function<? super HttpService, ? extends HttpService> decorator,
             Object... exceptionHandlersAndConverters) {
         return annotatedService(pathPrefix, service, decorator,
@@ -253,7 +249,7 @@ abstract class AbstractContextPathServicesBuilder<T extends ServiceConfigsBuilde
      *                                       the {@link ResponseConverterFunction}s
      */
     @Override
-    public AbstractContextPathServicesBuilder<T> annotatedService(
+    public SELF annotatedService(
             String pathPrefix, Object service, Iterable<?> exceptionHandlersAndConverters) {
         return annotatedService(pathPrefix, service, Function.identity(),
                                 requireNonNull(exceptionHandlersAndConverters,
@@ -268,7 +264,7 @@ abstract class AbstractContextPathServicesBuilder<T extends ServiceConfigsBuilde
      *                                       {@link ResponseConverterFunction}
      */
     @Override
-    public AbstractContextPathServicesBuilder<T> annotatedService(
+    public SELF annotatedService(
             String pathPrefix, Object service, Function<? super HttpService, ? extends HttpService> decorator,
             Iterable<?> exceptionHandlersAndConverters) {
         requireNonNull(pathPrefix, "pathPrefix");
@@ -289,7 +285,8 @@ abstract class AbstractContextPathServicesBuilder<T extends ServiceConfigsBuilde
      * @param requestConverterFunctions the {@link RequestConverterFunction}s
      * @param responseConverterFunctions the {@link ResponseConverterFunction}s
      */
-    public abstract AbstractContextPathServicesBuilder<T> annotatedService(
+    @Override
+    public abstract SELF annotatedService(
             String pathPrefix,
             Object service,
             Function<? super HttpService, ? extends HttpService> decorator,
@@ -298,20 +295,13 @@ abstract class AbstractContextPathServicesBuilder<T extends ServiceConfigsBuilde
             Iterable<? extends ResponseConverterFunction> responseConverterFunctions);
 
     /**
-     * Returns a new instance of {@link AbstractContextPathAnnotatedServiceConfigSetters} to build
-     * an annotated service fluently.
-     */
-    @Override
-    public abstract AbstractContextPathAnnotatedServiceConfigSetters<T> annotatedService();
-
-    /**
      * Decorates all {@link HttpService}s with the specified {@code decorator}.
      * The specified decorator(s) is/are executed in reverse order of the insertion.
      *
      * @param decorator the {@link Function} that decorates {@link HttpService}s
      */
     @Override
-    public AbstractContextPathServicesBuilder<T> decorator(
+    public SELF decorator(
             Function<? super HttpService, ? extends HttpService> decorator) {
         return decorator(Route.ofCatchAll(), decorator);
     }
@@ -324,8 +314,7 @@ abstract class AbstractContextPathServicesBuilder<T extends ServiceConfigsBuilde
      *                                      {@link HttpService}s
      */
     @Override
-    public AbstractContextPathServicesBuilder<T> decorator(
-            DecoratingHttpServiceFunction decoratingHttpServiceFunction) {
+    public SELF decorator(DecoratingHttpServiceFunction decoratingHttpServiceFunction) {
         return decorator(Route.ofCatchAll(), decoratingHttpServiceFunction);
     }
 
@@ -334,8 +323,7 @@ abstract class AbstractContextPathServicesBuilder<T extends ServiceConfigsBuilde
      * The specified decorator(s) is/are executed in reverse order of the insertion.
      */
     @Override
-    public AbstractContextPathServicesBuilder<T> decorator(
-            String pathPattern, Function<? super HttpService, ? extends HttpService> decorator) {
+    public SELF decorator(String pathPattern, Function<? super HttpService, ? extends HttpService> decorator) {
         return decorator(Route.builder().path(pathPattern).build(), decorator);
     }
 
@@ -347,8 +335,7 @@ abstract class AbstractContextPathServicesBuilder<T extends ServiceConfigsBuilde
      *                                      {@link HttpService}s
      */
     @Override
-    public AbstractContextPathServicesBuilder<T> decorator(
-            String pathPattern, DecoratingHttpServiceFunction decoratingHttpServiceFunction) {
+    public SELF decorator(String pathPattern, DecoratingHttpServiceFunction decoratingHttpServiceFunction) {
         return decorator(Route.builder().path(pathPattern).build(), decoratingHttpServiceFunction);
     }
 
@@ -357,14 +344,13 @@ abstract class AbstractContextPathServicesBuilder<T extends ServiceConfigsBuilde
      * The specified decorator(s) is/are executed in reverse order of the insertion.
      */
     @Override
-    public AbstractContextPathServicesBuilder<T> decorator(
-            Route route, Function<? super HttpService, ? extends HttpService> decorator) {
+    public SELF decorator(Route route, Function<? super HttpService, ? extends HttpService> decorator) {
         requireNonNull(route, "route");
         requireNonNull(decorator, "decorator");
         for (String contextPath: contextPaths) {
             addRouteDecoratingService(new RouteDecoratingService(route, contextPath, decorator));
         }
-        return this;
+        return self();
     }
 
     /**
@@ -376,8 +362,7 @@ abstract class AbstractContextPathServicesBuilder<T extends ServiceConfigsBuilde
      *                                      {@link HttpService}s
      */
     @Override
-    public AbstractContextPathServicesBuilder<T> decorator(
-            Route route, DecoratingHttpServiceFunction decoratingHttpServiceFunction) {
+    public SELF decorator(Route route, DecoratingHttpServiceFunction decoratingHttpServiceFunction) {
         requireNonNull(decoratingHttpServiceFunction, "decoratingHttpServiceFunction");
         return decorator(route, delegate -> new FunctionalDecoratingHttpService(
                 delegate, decoratingHttpServiceFunction));
@@ -391,8 +376,7 @@ abstract class AbstractContextPathServicesBuilder<T extends ServiceConfigsBuilde
      *                                      {@link HttpService}s
      */
     @Override
-    public AbstractContextPathServicesBuilder<T> decoratorUnder(
-            String prefix, DecoratingHttpServiceFunction decoratingHttpServiceFunction) {
+    public SELF decoratorUnder(String prefix, DecoratingHttpServiceFunction decoratingHttpServiceFunction) {
         return decorator(Route.builder().pathPrefix(prefix).build(), decoratingHttpServiceFunction);
     }
 
@@ -401,20 +385,18 @@ abstract class AbstractContextPathServicesBuilder<T extends ServiceConfigsBuilde
      * The specified decorator(s) is/are executed in reverse order of the insertion.
      */
     @Override
-    public AbstractContextPathServicesBuilder<T> decoratorUnder(
-            String prefix, Function<? super HttpService, ? extends HttpService> decorator) {
+    public SELF decoratorUnder(String prefix, Function<? super HttpService, ? extends HttpService> decorator) {
         return decorator(Route.builder().pathPrefix(prefix).build(), decorator);
     }
 
-    AbstractContextPathServicesBuilder<T> addServiceConfigSetters(ServiceConfigSetters serviceConfigSetters) {
+    SELF addServiceConfigSetters(ServiceConfigSetters<?> serviceConfigSetters) {
         virtualHostBuilder.addServiceConfigSetters(serviceConfigSetters);
-        return this;
+        return self();
     }
 
-    AbstractContextPathServicesBuilder<T> addRouteDecoratingService(
-            RouteDecoratingService routeDecoratingService) {
+    SELF addRouteDecoratingService(RouteDecoratingService routeDecoratingService) {
         virtualHostBuilder.addRouteDecoratingService(routeDecoratingService);
-        return this;
+        return self();
     }
 
     /**

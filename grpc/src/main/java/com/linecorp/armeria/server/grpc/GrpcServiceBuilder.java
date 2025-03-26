@@ -51,7 +51,6 @@ import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
 import com.linecorp.armeria.common.grpc.GrpcStatusFunction;
 import com.linecorp.armeria.common.grpc.protocol.AbstractMessageDeframer;
 import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageFramer;
-import com.linecorp.armeria.internal.common.grpc.UnwrappingGrpcExceptionHandleFunction;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.HttpServiceWithRoutes;
 import com.linecorp.armeria.server.Server;
@@ -73,6 +72,7 @@ import io.grpc.ServerServiceDefinition;
 import io.grpc.ServiceDescriptor;
 import io.grpc.Status;
 import io.grpc.protobuf.services.ProtoReflectionService;
+import io.grpc.protobuf.services.ProtoReflectionServiceV1;
 
 /**
  * Constructs a {@link GrpcService} to serve gRPC services from within Armeria.
@@ -240,13 +240,9 @@ public final class GrpcServiceBuilder {
         requireNonNull(decorators, "decorators");
 
         final boolean hasDecorators = !Iterables.isEmpty(decorators);
-        if (bindableService instanceof ProtoReflectionService) {
-            if (hasDecorators) {
-                throw new IllegalArgumentException(
-                        "ProtoReflectionService should not be used with decorators.");
-            }
-            return addService(ServerInterceptors.intercept(bindableService,
-                                                           newProtoReflectionServiceInterceptor()));
+        if (bindableService instanceof ProtoReflectionService ||
+            bindableService instanceof ProtoReflectionServiceV1) {
+            return addProtoReflectionService(hasDecorators, bindableService, null, null);
         }
 
         if (bindableService instanceof GrpcHealthCheckService) {
@@ -300,15 +296,12 @@ public final class GrpcServiceBuilder {
         requireNonNull(path, "path");
         requireNonNull(bindableService, "bindableService");
         requireNonNull(decorators, "decorators");
-        if (bindableService instanceof ProtoReflectionService) {
-            if (!Iterables.isEmpty(decorators)) {
-                throw new IllegalArgumentException(
-                        "ProtoReflectionService should not be used with decorators.");
-            }
-
-            return addService(path, ServerInterceptors.intercept(bindableService,
-                                                                 newProtoReflectionServiceInterceptor()));
+        final boolean hasDecorators = !Iterables.isEmpty(decorators);
+        if (bindableService instanceof ProtoReflectionService ||
+            bindableService instanceof ProtoReflectionServiceV1) {
+            return addProtoReflectionService(hasDecorators, bindableService, path, null);
         }
+
         registryBuilder.addService(path, bindableService.bindService(), null, bindableService.getClass(),
                                    ImmutableList.copyOf(decorators));
         return this;
@@ -423,19 +416,50 @@ public final class GrpcServiceBuilder {
         requireNonNull(methodDescriptor, "methodDescriptor");
         requireNonNull(decorators, "decorators");
 
-        if (bindableService instanceof ProtoReflectionService) {
-            if (!Iterables.isEmpty(decorators)) {
-                throw new IllegalArgumentException(
-                        "ProtoReflectionService should not be used with decorators.");
-            }
-            final ServerServiceDefinition interceptor =
-                    ServerInterceptors.intercept(bindableService, newProtoReflectionServiceInterceptor());
-            return addService(path, interceptor, methodDescriptor);
+        if (bindableService instanceof ProtoReflectionService ||
+            bindableService instanceof ProtoReflectionServiceV1) {
+            return addProtoReflectionService(!Iterables.isEmpty(decorators), bindableService, path,
+                                             methodDescriptor);
         }
 
         registryBuilder.addService(path, bindableService.bindService(), methodDescriptor,
                                    bindableService.getClass(), ImmutableList.copyOf(decorators));
         return this;
+    }
+
+    private GrpcServiceBuilder addProtoReflectionService(boolean hasDecorators,
+                                                         BindableService protoReflectionService,
+                                                         @Nullable String path,
+                                                         @Nullable MethodDescriptor<?, ?> methodDescriptor) {
+        if (hasDecorators) {
+            throw new IllegalArgumentException("ProtoReflectionService should not be used with decorators.");
+        }
+        checkState(protoReflectionServiceInterceptor == null,
+                   "Attempting to add a ProtoReflectionService but one is already present. " +
+                   "ProtoReflectionService must only be added once.");
+        protoReflectionServiceInterceptor = new ProtoReflectionServiceInterceptor();
+        if (protoReflectionService instanceof ProtoReflectionService) {
+            logger.warn("Use {} instead of {}.", ProtoReflectionServiceV1.class.getSimpleName(),
+                        protoReflectionService);
+        }
+        final ServerServiceDefinition intercept =
+                ServerInterceptors.intercept(protoReflectionService, protoReflectionServiceInterceptor);
+        return addProtoReflectionIntercept(intercept, path, methodDescriptor);
+    }
+
+    private GrpcServiceBuilder addProtoReflectionIntercept(ServerServiceDefinition intercept,
+                                                           @Nullable String path,
+                                                           @Nullable MethodDescriptor<?, ?> methodDescriptor) {
+        if (methodDescriptor != null) {
+            assert path != null;
+            return addService(path, intercept, methodDescriptor);
+        }
+
+        if (path == null) {
+            return addService(intercept);
+        } else {
+            return addService(path, intercept);
+        }
     }
 
     /**
@@ -459,13 +483,6 @@ public final class GrpcServiceBuilder {
         requireNonNull(interceptors, "interceptors");
         interceptors().addAll(interceptors);
         return this;
-    }
-
-    private ProtoReflectionServiceInterceptor newProtoReflectionServiceInterceptor() {
-        checkState(protoReflectionServiceInterceptor == null,
-                   "Attempting to add a ProtoReflectionService but one is already present. " +
-                   "ProtoReflectionService must only be added once.");
-        return protoReflectionServiceInterceptor = new ProtoReflectionServiceInterceptor();
     }
 
     /**
@@ -878,7 +895,8 @@ public final class GrpcServiceBuilder {
     @Deprecated
     public GrpcServiceBuilder exceptionMapping(GrpcStatusFunction statusFunction) {
         requireNonNull(statusFunction, "statusFunction");
-        return exceptionHandler(statusFunction::apply);
+        return exceptionHandler(
+                (ctx, status, throwable, metadata) -> statusFunction.apply(ctx, throwable, metadata));
     }
 
     /**
@@ -943,7 +961,9 @@ public final class GrpcServiceBuilder {
         checkState(exceptionHandler == null,
                    "addExceptionMapping() and exceptionMapping() are mutually exclusive.");
 
-        exceptionMappingsBuilder().on(exceptionType, statusFunction::apply);
+        exceptionMappingsBuilder().on(exceptionType,
+                                      (ctx, status, throwable, metadata) ->
+                                              statusFunction.apply(ctx, throwable, metadata));
         return this;
     }
 
@@ -997,7 +1017,7 @@ public final class GrpcServiceBuilder {
             registryBuilder.addService(grpcHealthCheckService.bindService(), null, ImmutableList.of());
         }
 
-        GrpcExceptionHandlerFunction grpcExceptionHandler;
+        final GrpcExceptionHandlerFunction grpcExceptionHandler;
         if (exceptionMappingsBuilder != null) {
             grpcExceptionHandler = exceptionMappingsBuilder.build().orElse(GrpcExceptionHandlerFunction.of());
         } else if (exceptionHandler != null) {
@@ -1005,7 +1025,6 @@ public final class GrpcServiceBuilder {
         } else {
             grpcExceptionHandler = GrpcExceptionHandlerFunction.of();
         }
-        grpcExceptionHandler = new UnwrappingGrpcExceptionHandleFunction(grpcExceptionHandler);
         registryBuilder.setDefaultExceptionHandler(grpcExceptionHandler);
 
         if (interceptors != null) {

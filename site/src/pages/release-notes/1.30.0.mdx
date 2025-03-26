@@ -1,0 +1,164 @@
+---
+date: 2024-08-12
+---
+
+## 🌟 New features
+
+- **Outlier Detection for Connections**: You can now use <type://OutlierDetection> to detect unhealthy 
+  connections and close them gracefully. #5751 #5763
+  ```java
+  OutlierDetectingRule rule =
+    OutlierDetectingRule
+      .builder()
+      .onServerError()
+      .onException(IOException.class)
+      .onException(WriteTimeoutException.class, OutlierDetectionDecision.FATAL)
+      .build();
+  
+  OutlierDetection outlierDetection = 
+    OutlierDetection
+      .builder(rule)
+      .counterSlidingWindow(Duration.ofSeconds(10))
+      .counterUpdateInterval(Duration.ofSeconds(1))
+      .failureRateThreshold(0.5)
+      .build();
+  
+  ClientFactory
+    .builder()
+    // Apply the OutlierDetection to detect and close unhealthy connections
+    .connectionOutlierDetection(outlierDetection)
+  ```
+- **Automatic value loader**: You can now use an <type://AsyncLoader> to (re)load a value atomically, lazily and 
+  asynchronously. #5506 #5590
+  ```java
+  Function<String, CompletableFuture<String>> loader = cache -> {
+    ResponseEntity<String> response =
+      client.prepare().get("/api/v1/items").asString().execute();
+      return response.thenApply(res -> res.content());
+  };
+
+  AsyncLoader<String> asyncLoader =
+    AsyncLoader
+      .builder(loader)
+      .expireAfterLoad(Duration.ofSeconds(60))
+      .build();
+  asyncLoader.get().join();
+  ```
+- **Configurable Response Timeout**: You can now use <type://ResponseTimeoutMode> to configure when a response
+  timeout starts for a client. The timeout can be set when a request is started, a connection is acquired or a 
+  request is fully sent. #4591 #5793
+  ```java
+  ClientFactory
+    .builder()
+    .responseTimeout(Duration.ofSeconds(5))
+    // A request will be timed out if the response is not fully received
+    // within 5 seconds.
+    .responseTimeoutMode(ResponseTimeoutMode.FROM_START)
+    .build();
+  ```
+- **Fallback File Extensions**: You can now set fallback file extensions in <type://FileService>.
+  This feature is useful when you want to map a RESTful URI to a static resource file. #4542 #5806
+  ```java
+  FileService
+    .builder(rootDir)
+    // '/app/projects' path could be mapped to '<rootDir>/app/projects.html'
+    .fallbackFileExtensions("html")
+    ...
+  ```
+- **Sending Arbitrary Content in gRPC-JSON Transcoding**: You can now use [google.api.HttpBody](https://github.com/googleapis/googleapis/blob/master/google/api/httpbody.proto)
+  to [send arbitrary content](https://www.envoyproxy.io/docs/envoy/latest/configuration/http/http_filters/grpc_json_transcoder_filter#sending-arbitrary-content)
+  in gRPC-JSON transcoding. #5311 #5400
+  ```protobuf
+  rpc ArbitraryHttp(google.api.HttpBody) returns (google.api.HttpBody) {
+    option (google.api.http) = {
+      post: "/v1/arbitrary"
+    };
+  }
+  ```
+- **Zone-Aware Load Balancing**: <type://XdsEndpointGroup> now supports [zone-aware](https://www.envoyproxy.io/docs/envoy/latest/intro/arch_overview/upstream/load_balancing/zone_aware)
+  load balancing which prioritizes sending traffic to local zones. #5785 #5808
+- **WebSocketService Testing**: You can now use <type://ServerExtension#webSocketClient()> to test <type://WebSocketService>. #5538 #5765
+
+## 📈 Improvements
+
+- Armeria client now supports the [`Expect: 100-continue`](https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/100) header. #5646
+- <type://ClientRequestContext#cancel()> now cancels the associated request immediately. #5800
+- The health checking behavior of <type://XdsEndpointGroup> is more aligned with Envoy. #5785
+- [Subsets](https://www.envoyproxy.io/docs/envoy/latest/intro/arch_overview/upstream/load_balancing/subsets#load-balancer-subsets) now
+  supports features available in the default load balancer of <type://XdsEndpointGroup> #5801
+- New headers from Guava have been added to <type://HttpHeaderNames>. #5789
+- Armeria is now compatible with Thrift 0.19 and 0.20.0 #5243 #5822
+- Armeria client now silently ignores content instead of raising an exception when content exists for
+  a status that indicates empty content. #5823
+
+## 🛠️ Bug fixes
+
+- Validation for URI's authority is relaxed to permit underscores (`_`). #5814 #5854
+- A user can send and receive an HTTP request whose `:path` contains the following characters now: #5845
+  - TAB (0x09)
+  - FS (0x1C)
+  - GS (0x1D)
+  - RS (0x1E)
+  - US (0x1F)
+- Fixed a potential leak when sending compressed responses. #5858
+- `ResteasyClient` now correctly releases <type://ClientFactory> when it is closed. #5833
+- Content decompression exceptions are now properly propagated. #5177 #5620
+- <type://@Blocking> now correctly works with gRPC-Kotlin stubs #5295 #5399
+- Fixed <type://DocService> sidebar to occupy at most 40% of the window width. #5091 #5839
+- `InputStream` created from <type://StreamMessage#toInputStream(Function)> now correctly raises 
+  an exception if the original <type://StreamMessage> is closed with an exception. #5859
+- <type://ClientRequestContext#isTimedOut()> now correctly returns `true` if a DNS query, a session creation or
+  a write operation times out. #4935 #5156
+
+## 📃 Documentation
+
+- Added a gRPC reverse proxy server example. #2353 #5722
+
+## ☢️ Breaking changes
+
+- Modified the behavior of <type://Endpoint#withAttrs(Attributes)> to merge the original <type://Attributes> 
+  with the new one. #5802
+  - Instead, <type://Endpoint#replaceAttrs(Attributes)> is added to replace the entire attributes of <type://Endpoint>.
+
+## ⛓ Dependencies
+
+- Curator 5.6.0 → 5.7.0
+- Dropwizard Metrics 4.2.25 → 4.2.26
+- Eureka 2.0.2 → 2.0.3
+- GraphQL Kotlin 7.1.1 → 7.1.4
+- gRPC Java 1.64.0 → 1.65.1
+- Jackson 2.17.1 → 2.17.2
+- Jetty 9.4.54 → 9.4.55, 11.0.20 → 11.0.22, 12.0.8 → 12.0.12
+- Kafka client 3.7.0 → 3.8.0
+- Kubernetes client 6.12.1 → 6.13.1
+- Micrometer 1.13.0 → 1.13.2
+- Micrometer Tracing 1.2.4 → 1.3.2
+- Netty 4.1.110 → 4.1.112
+- Prometheus 1.3.0 → 1.3.1
+- Reactor 3.6.6 → 3.6.8
+- Sangria 4.1.0 → 4.1.1
+- Scala 3.4.1 - 3.4.2
+- ScalaPB 0.11.15 → 0.11.17
+- SLF4J 2.0.12 → 2.0.13
+- Spring 6.1.8 → 6.1.11
+- Spring Boot 3.3.0 → 3.3.2
+- Tomcat 9.0.87 → 9.0.91, 10.1.20 → 10.1.26
+
+## 🙇 Thank you
+
+<ThankYou usernames={[
+  'Be-poz',
+  'Dogacel',
+  'KarboniteKream',
+  'eottabom',
+  'ikhoon',
+  'injae-kim',
+  'jrhee17',
+  'kojilin',
+  'minwoox',
+  'moromin',
+  'patcher454',
+  'seonWKim',
+  'thomasbruggink',
+  'trustin'
+]} />

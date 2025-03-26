@@ -576,6 +576,13 @@ relocations [ { from: "com.google.common", to: "com.doe.john.myproject.shaded.gu
               { from: "com.google.thirdparty.publicsuffix", to: "com.doe.john.myproject.shaded.publicsuffix" } ]
 ```
 
+Unshaded tests are disabled by default when a shading task is configured. If you want to run unshaded tests,
+you can specify `-PpreferShadedTests=false` option.
+
+
+If you would like to remove specific files when shading the JAR, you may specify the
+`-PshadowExclusions=<comma delimited files>` option.
+
 ### Trimming a shaded JAR with `trim` flag
 
 If you shade many dependencies, your JAR will grow huge, even if you only use
@@ -688,8 +695,16 @@ and artifact ID. For example:
 
 If enabled, each project with `java` flag will have the `automaticModuleName` property.
 
-You can override the automatic module name of a certain project via the `automaticModuleNameOverrides`
-extension property:
+You can override the automatic module name of a certain project via `automaticModuleNameOverride`:
+
+    ```groovy
+    ext {
+        // Change the automatic module name of a project to 'com.example.fubar'.
+        automaticModuleNameOverride = 'com.example.fubar'
+    }
+    ```
+
+Alternatively, you can also specify a mapping via the `automaticModuleNameOverrides` extension property:
 
     ```groovy
     ext {

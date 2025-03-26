@@ -92,13 +92,22 @@ final class Http2ResponseDecoder extends AbstractHttpResponseDecoder implements 
         resWrapper.onSubscriptionCancelled(cause);
 
         if (cause != null) {
+            if (cause instanceof UnprocessedRequestException ||
+                cause instanceof ClosedStreamException) {
+                return;
+            }
+            final int streamId = idToStreamId(id);
+            final Http2Stream stream = conn.stream(streamId);
+            if (stream == null || !stream.isHeadersSent()) {
+                return;
+            }
             // Removing the response and decrementing `unfinishedResponses` isn't done immediately
             // here. Instead, we rely on `Http2ResponseDecoder#onStreamClosed` to decrement
             // `unfinishedResponses` after Netty decrements `numActiveStreams` in `DefaultHttp2Connection`
             // so that `unfinishedResponses` is never greater than `numActiveStreams`.
 
             // Reset the stream.
-            final int streamId = idToStreamId(id);
+
             final int lastStreamId = conn.local().lastStreamKnownByPeer();
             if (lastStreamId < 0 || // Did not receive a GOAWAY yet or
                 streamId <= lastStreamId) { // received a GOAWAY and the request's streamId <= lastStreamId
@@ -159,14 +168,14 @@ final class Http2ResponseDecoder extends AbstractHttpResponseDecoder implements 
 
     @Override
     public void onGoAwaySent(int lastStreamId, long errorCode, ByteBuf debugData) {
-        session().deactivate();
+        session().markUnacquirable();
         goAwayHandler.onGoAwaySent(channel(), lastStreamId, errorCode, debugData);
     }
 
     @Override
     public void onGoAwayReceived(int lastStreamId, long errorCode, ByteBuf debugData) {
         // Should not reuse a connection that received a GOAWAY frame.
-        session().deactivate();
+        session().markUnacquirable();
         goAwayHandler.onGoAwayReceived(channel(), lastStreamId, errorCode, debugData);
     }
 
@@ -206,6 +215,7 @@ final class Http2ResponseDecoder extends AbstractHttpResponseDecoder implements 
         if (converted instanceof ResponseHeaders) {
             res.startResponse();
             final ResponseHeaders responseHeaders = (ResponseHeaders) converted;
+            res.handle100Continue(responseHeaders);
             if (responseHeaders.status().codeClass() == HttpStatusClass.INFORMATIONAL) {
                 written = res.tryWrite(converted);
             } else {

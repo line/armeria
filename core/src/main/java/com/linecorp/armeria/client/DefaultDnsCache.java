@@ -147,6 +147,7 @@ final class DefaultDnsCache implements DnsCache {
         }
     }
 
+    @Nullable
     @Override
     public List<DnsRecord> get(DnsQuestion question) throws UnknownHostException {
         requireNonNull(question, "question");

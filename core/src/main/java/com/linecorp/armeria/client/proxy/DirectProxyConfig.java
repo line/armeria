@@ -18,6 +18,8 @@ package com.linecorp.armeria.client.proxy;
 
 import java.net.InetSocketAddress;
 
+import com.linecorp.armeria.common.annotation.Nullable;
+
 /**
  * Represents a direct connection without a proxy.
  */
@@ -32,9 +34,16 @@ public final class DirectProxyConfig extends ProxyConfig {
         return ProxyType.DIRECT;
     }
 
+    @Nullable
     @Override
     public InetSocketAddress proxyAddress() {
         return null;
+    }
+
+    @Override
+    public ProxyConfig withProxyAddress(InetSocketAddress newProxyAddress) {
+        throw new UnsupportedOperationException(
+                "A proxy address can't be set to DirectProxyConfig.");
     }
 
     @Override

@@ -26,6 +26,7 @@ import java.util.function.Predicate;
 import com.google.common.base.Splitter;
 import com.google.common.collect.ImmutableSet;
 
+import com.linecorp.armeria.client.ResponseTimeoutMode;
 import com.linecorp.armeria.common.util.Sampler;
 import com.linecorp.armeria.common.util.TlsEngineType;
 import com.linecorp.armeria.common.util.TransportType;
@@ -59,6 +60,9 @@ final class DefaultFlagsProvider implements FlagsProvider {
     static final boolean DEFAULT_CLIENT_KEEP_ALIVE_ON_PING = false;
     static final long DEFAULT_CONNECT_TIMEOUT_MILLIS = 3200; // 3.2 seconds
     static final long DEFAULT_WRITE_TIMEOUT_MILLIS = 1000; // 1 second
+
+    // Use the fragmentation size as the default. https://datatracker.ietf.org/doc/html/rfc5246#section-6.2.1
+    static final int DEFAULT_MAX_CLIENT_HELLO_LENGTH = 16384; // 16KiB
 
     // Use slightly greater value than the default request timeout so that clients have a higher chance of
     // getting proper 503 Service Unavailable response when server-side timeout occurs.
@@ -97,6 +101,7 @@ final class DefaultFlagsProvider implements FlagsProvider {
     static final String DNS_CACHE_SPEC = "maximumSize=4096";
     static final long DEFAULT_UNLOGGED_EXCEPTIONS_REPORT_INTERVAL_MILLIS = 10000;
     static final long DEFAULT_HTTP1_CONNECTION_CLOSE_DELAY_MILLIS = 3000;
+    static final ResponseTimeoutMode DEFAULT_RESPONSE_TIMEOUT_MODE = ResponseTimeoutMode.REQUEST_SENT;
 
     private DefaultFlagsProvider() {}
 
@@ -438,6 +443,11 @@ final class DefaultFlagsProvider implements FlagsProvider {
     }
 
     @Override
+    public Integer defaultMaxClientHelloLength() {
+        return DEFAULT_MAX_CLIENT_HELLO_LENGTH;
+    }
+
+    @Override
     public Set<TransientServiceOption> transientServiceOptions() {
         return ImmutableSet.of();
     }
@@ -502,5 +512,10 @@ final class DefaultFlagsProvider implements FlagsProvider {
     @Override
     public Long defaultHttp1ConnectionCloseDelayMillis() {
         return DEFAULT_HTTP1_CONNECTION_CLOSE_DELAY_MILLIS;
+    }
+
+    @Override
+    public ResponseTimeoutMode responseTimeoutMode() {
+        return DEFAULT_RESPONSE_TIMEOUT_MODE;
     }
 }

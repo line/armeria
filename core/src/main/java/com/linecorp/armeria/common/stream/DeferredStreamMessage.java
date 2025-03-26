@@ -31,6 +31,8 @@ import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 
+import com.google.common.math.LongMath;
+
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.util.CompletionActions;
@@ -177,6 +179,8 @@ public class DeferredStreamMessage<T> extends CancellableStreamMessage<T> {
         }
 
         if (!collectingFutureUpdater.compareAndSet(this, null, NO_COLLECTING_FUTURE)) {
+            assert collectingExecutor != null;
+            assert collectionOptions != null;
             upstream.collect(collectingExecutor, collectionOptions).handle((result, cause) -> {
                 final CompletableFuture<List<T>> collectingFuture = this.collectingFuture;
                 assert collectingFuture != null;
@@ -271,7 +275,7 @@ public class DeferredStreamMessage<T> extends CancellableStreamMessage<T> {
         if (upstreamSubscription != null) {
             upstreamSubscription.request(n);
         } else {
-            pendingDemand += n;
+            pendingDemand = LongMath.saturatedAdd(pendingDemand, n);
         }
     }
 
@@ -296,6 +300,8 @@ public class DeferredStreamMessage<T> extends CancellableStreamMessage<T> {
                 // Clear the subscriber when we become sure that the upstream will not produce events anymore.
                 final StreamMessage<T> upstream = this.upstream;
                 assert upstream != null;
+                final SubscriptionImpl downstreamSubscription = this.downstreamSubscription;
+                assert downstreamSubscription != null;
                 if (upstream.isComplete()) {
                     downstreamSubscription.clearSubscriber();
                 } else {
@@ -452,6 +458,8 @@ public class DeferredStreamMessage<T> extends CancellableStreamMessage<T> {
         requireNonNull(options, "options");
 
         if (!downstreamSubscriptionUpdater.compareAndSet(this, null, NOOP_SUBSCRIPTION)) {
+            final SubscriptionImpl downstreamSubscription = this.downstreamSubscription;
+            assert downstreamSubscription != null;
             final Subscriber<Object> subscriber = downstreamSubscription.subscriber();
             final Throwable cause = abortedOrLate(subscriber);
             final CompletableFuture<List<T>> collectingFuture = new CompletableFuture<>();

@@ -45,6 +45,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.TreeNode;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.api.HttpBody;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Streams;
 
@@ -70,12 +71,15 @@ import com.linecorp.armeria.server.grpc.GrpcService;
 import com.linecorp.armeria.server.grpc.GrpcServiceBuilder;
 import com.linecorp.armeria.server.grpc.HttpJsonTranscodingOptions;
 import com.linecorp.armeria.server.grpc.HttpJsonTranscodingQueryParamMatchRule;
+import com.linecorp.armeria.server.logging.LoggingService;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
 import io.grpc.Status.Code;
 import io.grpc.stub.StreamObserver;
 import testing.grpc.HttpJsonTranscodingTestServiceGrpc.HttpJsonTranscodingTestServiceBlockingStub;
 import testing.grpc.HttpJsonTranscodingTestServiceGrpc.HttpJsonTranscodingTestServiceImplBase;
+import testing.grpc.Transcoding.ArbitraryHttpWrappedRequest;
+import testing.grpc.Transcoding.ArbitraryHttpWrappedResponse;
 import testing.grpc.Transcoding.EchoAnyRequest;
 import testing.grpc.Transcoding.EchoAnyResponse;
 import testing.grpc.Transcoding.EchoFieldMaskRequest;
@@ -333,19 +337,39 @@ public class HttpJsonTranscodingTest {
                     .onNext(EchoNestedMessageResponse.newBuilder().setNested(request.getNested()).build());
             responseObserver.onCompleted();
         }
+
+        @Override
+        public void arbitraryHttp(HttpBody request, StreamObserver<HttpBody> responseObserver) {
+            final HttpBody.Builder builder = HttpBody.newBuilder();
+            builder.setContentType(request.getContentType())
+                   .setData(request.getData());
+            responseObserver.onNext(builder.build());
+            responseObserver.onCompleted();
+        }
+
+        @Override
+        public void arbitraryHttpWrapped(ArbitraryHttpWrappedRequest request,
+                                         StreamObserver<ArbitraryHttpWrappedResponse> responseObserver) {
+            final ArbitraryHttpWrappedResponse.Builder builder = ArbitraryHttpWrappedResponse.newBuilder();
+            builder.setResponseId(request.getRequestId() + "-response");
+            builder.setBody(request.getBody());
+            responseObserver.onNext(builder.build());
+            responseObserver.onCompleted();
+        }
     }
 
     @RegisterExtension
-    static final ServerExtension server = createServer(false, false, true);
+    static final ServerExtension server = createServer(false, false, true, false);
 
     @RegisterExtension
-    static final ServerExtension serverPreservingProtoFieldNames = createServer(true, false, true);
+    static final ServerExtension serverPreservingProtoFieldNames = createServer(true, false, true, false);
 
     @RegisterExtension
-    static final ServerExtension serverCamelCaseQueryOnlyParameters = createServer(false, true, false);
+    static final ServerExtension serverCamelCaseQueryOnlyParameters = createServer(false, true, false, false);
 
     @RegisterExtension
-    static final ServerExtension serverCamelCaseQueryAndOriginalParameters = createServer(false, true, true);
+    static final ServerExtension serverCamelCaseQueryAndOriginalParameters = createServer(false, true, true,
+                                                                                          true);
 
     private final ObjectMapper mapper = JacksonUtil.newDefaultObjectMapper();
 
@@ -361,7 +385,7 @@ public class HttpJsonTranscodingTest {
             serverCamelCaseQueryAndOriginalParameters.blockingWebClient();
 
     static ServerExtension createServer(boolean preservingProtoFieldNames, boolean camelCaseQueryParams,
-                                        boolean protoFieldNameQueryParams) {
+                                        boolean protoFieldNameQueryParams, boolean jsonNameQueryParams) {
         final ImmutableList.Builder<HttpJsonTranscodingQueryParamMatchRule> queryParamMatchRules =
                 ImmutableList.builder();
         if (camelCaseQueryParams) {
@@ -369,6 +393,9 @@ public class HttpJsonTranscodingTest {
         }
         if (protoFieldNameQueryParams) {
             queryParamMatchRules.add(HttpJsonTranscodingQueryParamMatchRule.ORIGINAL_FIELD);
+        }
+        if (jsonNameQueryParams) {
+            queryParamMatchRules.add(HttpJsonTranscodingQueryParamMatchRule.JSON_NAME);
         }
         final HttpJsonTranscodingOptions options =
                 HttpJsonTranscodingOptions.builder()
@@ -390,6 +417,7 @@ public class HttpJsonTranscodingTest {
                 final GrpcService grpcService = grpcServiceBuilder.build();
                 sb.service(grpcService)
                   .requestTimeout(Duration.ZERO)
+                  .decorator(LoggingService.newDecorator())
                   .serviceUnder("/foo", grpcService)
                   .serviceUnder("/docs", DocService.builder().build());
             }
@@ -546,7 +574,7 @@ public class HttpJsonTranscodingTest {
         final String duration = "1.000340012s";
 
         final AggregatedHttpResponse response =
-                webClient.get("/v1/echo/" + timestamp + '/' + duration).aggregate().join();
+                webClient.get("/v1/echo/timestamp/" + timestamp + '/' + duration).aggregate().join();
         final JsonNode root = mapper.readTree(response.contentUtf8());
         assertThat(response.contentType()).isEqualTo(MediaType.JSON_UTF_8);
         assertThat(root.get("timestamp").asText()).isEqualTo(timestamp);
@@ -558,7 +586,7 @@ public class HttpJsonTranscodingTest {
         final String timestamp = ZonedDateTime.now().format(DateTimeFormatter.ISO_INSTANT);
 
         final AggregatedHttpResponse response =
-                webClient.post("/v1/echo/" + timestamp + ":get", "").aggregate().join();
+                webClient.post("/v1/echo/timestamp/" + timestamp + ":get", "").aggregate().join();
         final JsonNode root = mapper.readTree(response.contentUtf8());
         assertThat(response.contentType()).isEqualTo(MediaType.JSON_UTF_8);
         assertThat(root.get("timestamp").asText()).isEqualTo(timestamp);
@@ -1054,6 +1082,7 @@ public class HttpJsonTranscodingTest {
 
         final JsonNode response =
                 webClientCamelCaseQueryAndOriginalParameters.prepare()
+                                                            .responseTimeoutMillis(0)
                                                             .get("/v5/messages/1")
                                                             .queryParams(query)
                                                             .asJson(JsonNode.class)
@@ -1083,6 +1112,19 @@ public class HttpJsonTranscodingTest {
         return StreamSupport.stream(methods.spliterator(), false)
                             .filter(node -> node.get("name").asText().equals(name))
                             .findFirst().get();
+    }
+
+    @Test
+    void shouldAcceptArbitraryHttpUsingHttpBody() {
+        final String content = "<html><body>Arbitrary HTTP body</body></html>";
+        final RequestHeaders headers = RequestHeaders.builder()
+                                                     .method(HttpMethod.POST).path("/v1/arbitrary")
+                                                     .contentType(MediaType.HTML_UTF_8).build();
+        final AggregatedHttpResponse response =
+                webClient.execute(headers, content.getBytes()).aggregate().join();
+
+        assertThat(response.contentType()).isEqualTo(MediaType.HTML_UTF_8);
+        assertThat(response.contentUtf8()).isEqualTo(content);
     }
 
     public static List<String> pathMapping(JsonNode method) {

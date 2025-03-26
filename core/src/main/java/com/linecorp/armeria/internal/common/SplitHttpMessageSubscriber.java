@@ -105,7 +105,9 @@ class SplitHttpMessageSubscriber implements Subscriber<HttpObject>, Subscription
         if (trailersFutureUpdater.compareAndSet(this, null, trailersFuture)) {
             return trailersFuture;
         } else {
-            return this.trailersFuture;
+            final HeadersFuture<HttpHeaders> oldTrailersFuture = this.trailersFuture;
+            assert oldTrailersFuture != null;
+            return oldTrailersFuture;
         }
     }
 
@@ -232,6 +234,7 @@ class SplitHttpMessageSubscriber implements Subscriber<HttpObject>, Subscription
         if (!usePooledObject) {
             httpData = PooledObjects.copyAndClose(httpData);
         }
+        final Subscriber<? super HttpData> downstream = this.downstream;
         assert downstream != null;
         downstream.onNext(httpData);
     }
@@ -291,7 +294,9 @@ class SplitHttpMessageSubscriber implements Subscriber<HttpObject>, Subscription
         if (trailersFutureUpdater.compareAndSet(this, null, trailersFuture)) {
             trailersFuture.doComplete(trailers);
         } else {
-            this.trailersFuture.doComplete(trailers);
+            final HeadersFuture<HttpHeaders> oldTrailersFuture = this.trailersFuture;
+            assert oldTrailersFuture != null;
+            oldTrailersFuture.doComplete(trailers);
         }
     }
 

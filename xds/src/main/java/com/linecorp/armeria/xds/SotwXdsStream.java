@@ -166,7 +166,10 @@ final class SotwXdsStream implements XdsStream {
             ackBackoffAttempts++;
             logger.debug("Sending discovery request: {} with backoff attempt ({})",
                          request, ackBackoffAttempts);
-            eventLoop.schedule(() -> requestObserver.onNext(request),
+            eventLoop.schedule(() -> {
+                                   assert requestObserver != null;
+                                   requestObserver.onNext(request);
+                               },
                                backoff.nextDelayMillis(ackBackoffAttempts), TimeUnit.MILLISECONDS);
         } else {
             ackBackoffAttempts = 0;

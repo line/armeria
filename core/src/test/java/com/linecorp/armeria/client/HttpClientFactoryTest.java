@@ -16,20 +16,38 @@
 
 package com.linecorp.armeria.client;
 
+import static com.google.common.collect.ImmutableList.toImmutableList;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.awaitility.Awaitility.await;
+
+import java.util.concurrent.CompletionException;
+import java.util.stream.Stream;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
+import com.google.common.collect.ImmutableMap;
+
+import com.linecorp.armeria.client.endpoint.dns.TestDnsServer;
+import com.linecorp.armeria.common.CommonPools;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.metric.PrometheusMeterRegistries;
 import com.linecorp.armeria.server.AbstractHttpService;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
+
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.handler.codec.dns.DatagramDnsQuery;
+import io.netty.resolver.ResolvedAddressTypes;
+import io.netty.resolver.dns.DnsServerAddressStreamProvider;
+import io.netty.resolver.dns.DnsServerAddresses;
+import io.netty.util.ReferenceCountUtil;
 
 class HttpClientFactoryTest {
     @RegisterExtension
@@ -102,5 +120,62 @@ class HttpClientFactoryTest {
                 assertThat(clientFactory.numConnections()).isEqualTo(2);
             });
         }
+    }
+
+    @Test
+    void execute_dnsTimeout_clientRequestContext_isTimedOut() {
+        try (TestDnsServer dnsServer = new TestDnsServer(ImmutableMap.of(), new AlwaysTimeoutHandler())) {
+            try (RefreshingAddressResolverGroup group = dnsTimeoutBuilder(dnsServer)
+                    .build(CommonPools.workerGroup().next())) {
+                final ClientFactory clientFactory = ClientFactory
+                        .builder()
+                        .addressResolverGroupFactory(eventExecutors -> group)
+                        .build();
+                final Endpoint endpoint = Endpoint
+                        .of("test")
+                        .withIpAddr(null); // to invoke dns resolve address
+                final WebClient client = WebClient
+                        .builder(endpoint.toUri(SessionProtocol.H1C))
+                        .factory(clientFactory)
+                        .build();
+
+                try (ClientRequestContextCaptor captor = Clients.newContextCaptor()) {
+                    assertThatThrownBy(() -> client.get("/").aggregate().join())
+                            .isInstanceOf(CompletionException.class)
+                            .hasCauseInstanceOf(UnprocessedRequestException.class)
+                            .hasRootCauseInstanceOf(DnsTimeoutException.class);
+                    captor.get().whenResponseCancelled().join();
+                    assertThat(captor.get().isTimedOut()).isTrue();
+                }
+
+                clientFactory.close();
+                endpoint.close();
+            }
+        }
+    }
+
+    private static class AlwaysTimeoutHandler extends ChannelInboundHandlerAdapter {
+        @Override
+        public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+            if (msg instanceof DatagramDnsQuery) {
+                // Just release the msg and return so that the client request is timed out.
+                ReferenceCountUtil.safeRelease(msg);
+                return;
+            }
+            super.channelRead(ctx, msg);
+        }
+    }
+
+    private static DnsResolverGroupBuilder dnsTimeoutBuilder(TestDnsServer... servers) {
+        final DnsServerAddressStreamProvider dnsServerAddressStreamProvider =
+                hostname -> DnsServerAddresses.sequential(
+                        Stream.of(servers).map(TestDnsServer::addr).collect(toImmutableList())).stream();
+        final DnsResolverGroupBuilder builder = new DnsResolverGroupBuilder()
+                .serverAddressStreamProvider(dnsServerAddressStreamProvider)
+                .meterRegistry(PrometheusMeterRegistries.newRegistry())
+                .resolvedAddressTypes(ResolvedAddressTypes.IPV4_ONLY)
+                .traceEnabled(false)
+                .queryTimeoutMillis(1); // dns timeout
+        return builder;
     }
 }

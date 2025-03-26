@@ -22,7 +22,6 @@ import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.linecorp.armeria.internal.server.annotation.AnnotatedElementNameUtil.findName;
 import static com.linecorp.armeria.internal.server.annotation.AnnotatedElementNameUtil.getName;
 import static com.linecorp.armeria.internal.server.annotation.AnnotatedElementNameUtil.getNameOrDefault;
-import static com.linecorp.armeria.internal.server.annotation.AnnotatedElementNameUtil.toHeaderName;
 import static com.linecorp.armeria.internal.server.annotation.AnnotatedServiceFactory.findDescription;
 import static com.linecorp.armeria.internal.server.annotation.AnnotatedServiceTypeUtil.stringToType;
 import static com.linecorp.armeria.internal.server.annotation.DefaultValues.getSpecifiedValue;
@@ -49,6 +48,7 @@ import java.util.EnumSet;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.ServiceLoader;
@@ -459,6 +459,18 @@ final class AnnotatedValueResolver {
         final Param param = annotatedElement.getAnnotation(Param.class);
         if (param != null) {
             final String name = findName(typeElement, param.value());
+            // If the parameter is of type Map and the @Param annotation does not specify a value,
+            // map all query parameters into the Map.
+            if (Map.class.isAssignableFrom(type)) {
+                if (DefaultValues.isSpecified(param.value())) {
+                    throw new IllegalArgumentException(
+                            String.format("Invalid @Param annotation on Map parameter: '%s'. " +
+                                          "The @Param annotation specifies a value ('%s'), " +
+                                          "which is not allowed. ",
+                                          annotatedElement, param.value()));
+                }
+                return ofQueryParamMap(name, annotatedElement, typeElement, type, description);
+            }
             if (type == File.class || type == Path.class || type == MultipartFile.class) {
                 return ofFileParam(name, annotatedElement, typeElement, type, description);
             }
@@ -471,7 +483,7 @@ final class AnnotatedValueResolver {
 
         final Header header = annotatedElement.getAnnotation(Header.class);
         if (header != null) {
-            final String name = toHeaderName(findName(typeElement, header.value()));
+            final String name = findName(header, typeElement);
             return ofHeader(name, annotatedElement, typeElement, type, description);
         }
 
@@ -583,6 +595,25 @@ final class AnnotatedValueResolver {
                 .resolver(resolver(ctx -> ctx.queryParams().getAll(name),
                                    () -> "Cannot resolve a value from a query parameter: " + name,
                                    queryDelimiter))
+                .build();
+    }
+
+    private static AnnotatedValueResolver ofQueryParamMap(String name,
+                                                          AnnotatedElement annotatedElement,
+                                                          AnnotatedElement typeElement, Class<?> type,
+                                                          DescriptionInfo description) {
+
+        return new Builder(annotatedElement, type, name)
+                .annotationType(Param.class)
+                .typeElement(typeElement)
+                .description(description)
+                .aggregation(AggregationStrategy.FOR_FORM_DATA)
+                .resolver((resolver, ctx) -> ctx.queryParams().stream()
+                                                .collect(toImmutableMap(
+                                                        Entry::getKey,
+                                                        Entry::getValue,
+                                                        (existing, replacement) -> replacement
+                                                )))
                 .build();
     }
 
@@ -727,7 +758,9 @@ final class AnnotatedValueResolver {
             return new Builder(annotatedElement, type, name)
                     .resolver((unused, ctx) -> {
                         final String filename = getName(annotatedElement);
-                        return Iterables.getFirst(ctx.aggregatedMultipart().files().get(filename), null);
+                        final FileAggregatedMultipart aggregatedMultipart = ctx.aggregatedMultipart();
+                        assert aggregatedMultipart != null;
+                        return Iterables.getFirst(aggregatedMultipart.files().get(filename), null);
                     })
                     .aggregation(AggregationStrategy.ALWAYS)
                     .build();
@@ -1597,6 +1630,7 @@ final class AnnotatedValueResolver {
         @Nullable
         private final AggregatedResult aggregatedResult;
 
+        @Nullable
         private volatile QueryParams queryParams;
 
         ResolverContext(ServiceRequestContext context, HttpRequest request,
@@ -1616,11 +1650,13 @@ final class AnnotatedValueResolver {
 
         @Nullable
         AggregatedHttpRequest aggregatedRequest() {
+            assert aggregatedResult != null;
             return aggregatedResult.aggregatedHttpRequest;
         }
 
         @Nullable
         FileAggregatedMultipart aggregatedMultipart() {
+            assert aggregatedResult != null;
             return aggregatedResult.aggregatedMultipart;
         }
 
@@ -1629,6 +1665,7 @@ final class AnnotatedValueResolver {
             if (result == null) {
                 result = queryParams;
                 if (result == null) {
+                    assert aggregatedResult != null;
                     queryParams = result = queryParamsOf(context.query(),
                                                          request.contentType(),
                                                          aggregatedResult);
@@ -1665,6 +1702,7 @@ final class AnnotatedValueResolver {
                 final QueryParams params1 = query != null ? QueryParams.fromQueryString(query) : null;
                 QueryParams params2 = null;
                 if (isFormData(contentType)) {
+                    assert contentType != null;
                     final AggregatedHttpRequest message = result.aggregatedHttpRequest;
                     if (message != null) {
                         // Respect 'charset' attribute of the 'content-type' header if it exists.

@@ -241,6 +241,11 @@ final class UpdatableServerConfig implements ServerConfig {
     }
 
     @Override
+    public GracefulShutdown gracefulShutdown() {
+        return delegate.gracefulShutdown();
+    }
+
+    @Override
     public BlockingTaskExecutor blockingTaskExecutor() {
         return delegate.blockingTaskExecutor();
     }
@@ -318,6 +323,11 @@ final class UpdatableServerConfig implements ServerConfig {
     @Override
     public long unloggedExceptionsReportIntervalMillis() {
         return delegate.unloggedExceptionsReportIntervalMillis();
+    }
+
+    @Override
+    public ServerMetrics serverMetrics() {
+        return delegate.serverMetrics();
     }
 
     @Override

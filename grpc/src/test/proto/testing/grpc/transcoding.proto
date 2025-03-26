@@ -21,12 +21,14 @@ package armeria.grpc.testing;
 option java_package = "testing.grpc";
 
 import "google/api/annotations.proto";
+import "google/api/field_behavior.proto";
 import "google/protobuf/timestamp.proto";
 import "google/protobuf/duration.proto";
 import "google/protobuf/wrappers.proto";
 import "google/protobuf/struct.proto";
 import "google/protobuf/any.proto";
 import "google/protobuf/field_mask.proto";
+import "google/api/httpbody.proto";
 
 service HttpJsonTranscodingTestService {
   rpc GetMessageV1(GetMessageRequestV1) returns (Message) {
@@ -56,7 +58,7 @@ service HttpJsonTranscodingTestService {
   }
   rpc GetMessageV5(GetMessageRequestV5) returns (Message) {
     option (google.api.http) = {
-      get:"/v5/messages/{messageType}"
+      get:"/v5/messages/{message_id}"
     };
   }
   rpc UpdateMessageV1(UpdateMessageRequestV1) returns (Message) {
@@ -74,13 +76,13 @@ service HttpJsonTranscodingTestService {
 
   rpc EchoTimestampAndDuration(EchoTimestampAndDurationRequest) returns (EchoTimestampAndDurationResponse) {
     option (google.api.http) = {
-      get: "/v1/echo/{timestamp}/{duration}"
+      get: "/v1/echo/timestamp/{timestamp}/{duration}"
     };
   }
 
   rpc EchoTimestamp(EchoTimestampRequest) returns (EchoTimestampResponse) {
     option (google.api.http) = {
-      post: "/v1/echo/{timestamp}:get",
+      post: "/v1/echo/timestamp/{timestamp}:get",
       body: "*"
     };
   }
@@ -224,6 +226,24 @@ service HttpJsonTranscodingTestService {
       }
     };
   }
+
+  rpc ArbitraryHttp(google.api.HttpBody) returns (google.api.HttpBody) {
+    option (google.api.http) = {
+      post: "/v1/arbitrary"
+    };
+  }
+
+  rpc ArbitraryHttpWrapped(ArbitraryHttpWrappedRequest) returns (ArbitraryHttpWrappedResponse) {
+    option (google.api.http) = {
+      post: "/v1/arbitrary_wrapped"
+    };
+  }
+
+  rpc EchoBidirectionalStream(stream Message) returns (stream Message) {
+    option (google.api.http) = {
+      post: "/v1/echo/bidirectional_stream"
+    };
+  }
 }
 
 message GetMessageRequestV1 {
@@ -273,6 +293,8 @@ message UpdateMessageRequestV1 {
 
 message Message {
   string text = 1; // The resource content.
+  google.protobuf.StringValue required_text = 2 [(google.api.field_behavior) = REQUIRED];
+  google.protobuf.StringValue optional_text = 3;
 }
 
 enum MessageType {
@@ -406,4 +428,14 @@ message EchoNestedMessageRequest {
 
 message EchoNestedMessageResponse {
   TopLevelMessage.NestedMessage nested = 1;
+}
+
+message ArbitraryHttpWrappedRequest {
+  string request_id = 1;
+  google.api.HttpBody body = 2;
+}
+
+message ArbitraryHttpWrappedResponse {
+  string response_id = 1;
+  google.api.HttpBody body = 2;
 }

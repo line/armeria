@@ -18,11 +18,13 @@ package com.linecorp.armeria.client.zookeeper;
 import javax.annotation.Nonnull;
 
 import com.linecorp.armeria.client.Endpoint;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.internal.common.zookeeper.LegacyNodeValueCodec;
 
 enum LegacyZooKeeperDiscoverySpec implements ZooKeeperDiscoverySpec {
     INSTANCE;
 
+    @Nullable
     @Override
     public String path() {
         return null;

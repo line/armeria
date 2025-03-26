@@ -131,6 +131,14 @@ final class JsonLogFormatter implements LogFormatter {
             objectNode.put("startTime",
                            TextFormatter.epochMicros(log.requestStartTimeMicros()).toString());
 
+            if (RequestLogProperty.SESSION.isAvailable(flags)) {
+                final ObjectNode connectionNode =
+                        maybeCreateConnectionTimings(log.connectionTimings(), objectMapper);
+                if (connectionNode != null) {
+                    objectNode.set("connection", connectionNode);
+                }
+            }
+
             if (RequestLogProperty.REQUEST_LENGTH.isAvailable(flags)) {
                 objectNode.put("length", TextFormatter.size(log.requestLength()).toString());
             }
@@ -170,11 +178,70 @@ final class JsonLogFormatter implements LogFormatter {
             if (sanitizedTrailers != null) {
                 objectNode.set("trailers", sanitizedTrailers);
             }
+
+            final int currentAttempt = log.currentAttempt();
+            if (currentAttempt > 0) {
+                objectNode.put("currentAttempt", currentAttempt);
+            }
+
             return objectMapper.writeValueAsString(objectNode);
         } catch (Exception e) {
             logger.warn("Unexpected exception while formatting a request log: {}", log, e);
             return "{}";
         }
+    }
+
+    @Nullable
+    private static ObjectNode maybeCreateConnectionTimings(@Nullable ClientConnectionTimings timings,
+                                                           ObjectMapper objectMapper) {
+        if (timings == null) {
+            return null;
+        }
+
+        final ObjectNode objectNode = objectMapper.createObjectNode();
+        final ObjectNode connectionObjectNode =
+                startTimeAndDuration(objectMapper,
+                                     timings.connectionAcquisitionDurationNanos(),
+                                     timings.connectionAcquisitionStartTimeMicros());
+        objectNode.set("total", connectionObjectNode);
+
+        if (timings.dnsResolutionDurationNanos() >= 0) {
+            final ObjectNode dnsObjectNode =
+                    startTimeAndDuration(objectMapper,
+                                         timings.dnsResolutionDurationNanos(),
+                                         timings.dnsResolutionStartTimeMicros());
+            objectNode.set("dns", dnsObjectNode);
+        }
+        if (timings.pendingAcquisitionDurationNanos() >= 0) {
+            final ObjectNode pendingObjectNode =
+                    startTimeAndDuration(objectMapper,
+                                         timings.pendingAcquisitionDurationNanos(),
+                                         timings.pendingAcquisitionStartTimeMicros());
+            objectNode.set("pending", pendingObjectNode);
+        }
+        if (timings.socketConnectDurationNanos() >= 0) {
+            final ObjectNode socketObjectNode =
+                    startTimeAndDuration(objectMapper,
+                                         timings.socketConnectDurationNanos(),
+                                         timings.socketConnectStartTimeMicros());
+            objectNode.set("socket", socketObjectNode);
+        }
+        if (timings.tlsHandshakeDurationNanos() >= 0) {
+            final ObjectNode tlsObjectNode =
+                    startTimeAndDuration(objectMapper,
+                                         timings.tlsHandshakeDurationNanos(),
+                                         timings.tlsHandshakeStartTimeMicros());
+            objectNode.set("tls", tlsObjectNode);
+        }
+        return objectNode;
+    }
+
+    static ObjectNode startTimeAndDuration(ObjectMapper objectMapper, long durationNanos,
+                                             long startTimeMicros) {
+        final ObjectNode objectNode = objectMapper.createObjectNode();
+        objectNode.put("durationNanos", durationNanos);
+        objectNode.put("startTimeMicros", startTimeMicros);
+        return objectNode;
     }
 
     @Override

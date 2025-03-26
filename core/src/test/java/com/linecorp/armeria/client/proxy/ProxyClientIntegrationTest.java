@@ -15,6 +15,9 @@
  */
 package com.linecorp.armeria.client.proxy;
 
+import static com.linecorp.armeria.client.endpoint.dns.TestDnsServer.newAddressRecord;
+import static io.netty.handler.codec.dns.DnsRecordType.A;
+import static io.netty.handler.codec.dns.DnsSection.ANSWER;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.awaitility.Awaitility.await;
@@ -51,18 +54,22 @@ import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.MethodSource;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 
 import com.linecorp.armeria.client.ClientFactory;
+import com.linecorp.armeria.client.DNSResolverFacadeUtils;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.SessionProtocolNegotiationException;
 import com.linecorp.armeria.client.UnprocessedRequestException;
 import com.linecorp.armeria.client.WebClient;
+import com.linecorp.armeria.client.endpoint.dns.TestDnsServer;
 import com.linecorp.armeria.client.logging.LoggingClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.TlsProvider;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.internal.testing.BlockingUtils;
 import com.linecorp.armeria.internal.testing.NettyServerExtension;
@@ -75,6 +82,8 @@ import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.handler.codec.dns.DefaultDnsQuestion;
+import io.netty.handler.codec.dns.DefaultDnsResponse;
 import io.netty.handler.codec.http.DefaultFullHttpResponse;
 import io.netty.handler.codec.http.DefaultHttpHeaders;
 import io.netty.handler.codec.http.EmptyHttpHeaders;
@@ -92,9 +101,11 @@ import io.netty.handler.codec.socksx.v4.DefaultSocks4CommandResponse;
 import io.netty.handler.codec.socksx.v4.Socks4CommandStatus;
 import io.netty.handler.logging.LoggingHandler;
 import io.netty.handler.proxy.ProxyConnectException;
+import io.netty.handler.ssl.ClientAuth;
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.handler.traffic.ChannelTrafficShapingHandler;
+import io.netty.resolver.dns.DnsErrorCauseException;
 import io.netty.util.ReferenceCountUtil;
 
 class ProxyClientIntegrationTest {
@@ -111,7 +122,15 @@ class ProxyClientIntegrationTest {
 
     @RegisterExtension
     @Order(0)
-    static final SelfSignedCertificateExtension ssc = new SelfSignedCertificateExtension();
+    static final SelfSignedCertificateExtension proxySsc = new SelfSignedCertificateExtension();
+
+    @RegisterExtension
+    @Order(0)
+    static final SelfSignedCertificateExtension backendSsc = new SelfSignedCertificateExtension();
+
+    @RegisterExtension
+    @Order(0)
+    static final SelfSignedCertificateExtension clientSsc = new SelfSignedCertificateExtension();
 
     @RegisterExtension
     @Order(1)
@@ -120,7 +139,7 @@ class ProxyClientIntegrationTest {
         protected void configure(ServerBuilder sb) throws Exception {
             sb.port(0, SessionProtocol.HTTP);
             sb.port(0, SessionProtocol.HTTPS);
-            sb.tlsSelfSigned();
+            sb.tls(backendSsc.tlsKeyPair());
             sb.service(PROXY_PATH, (ctx, req) -> HttpResponse.of(SUCCESS_RESPONSE));
         }
     };
@@ -172,7 +191,27 @@ class ProxyClientIntegrationTest {
         protected void configure(Channel ch) throws Exception {
             assertThat(sslContext).isNotNull();
             final SslContext sslContext = SslContextBuilder
-                    .forServer(ssc.privateKey(), ssc.certificate()).build();
+                    .forServer(proxySsc.privateKey(), proxySsc.certificate()).build();
+            ch.pipeline().addLast(sslContext.newHandler(ch.alloc()));
+            ch.pipeline().addLast(new HttpServerCodec());
+            ch.pipeline().addLast(new HttpObjectAggregator(1024));
+            ch.pipeline().addLast(new HttpProxyServerHandler());
+            ch.pipeline().addLast(new SleepHandler());
+            ch.pipeline().addLast(new IntermediaryProxyServerHandler("http", PROXY_CALLBACK));
+        }
+    };
+
+    @RegisterExtension
+    @Order(4)
+    static NettyServerExtension mTlsHttpsProxyServer = new NettyServerExtension() {
+        @Override
+        protected void configure(Channel ch) throws Exception {
+            assertThat(sslContext).isNotNull();
+            final SslContext sslContext = SslContextBuilder
+                    .forServer(proxySsc.privateKey(), proxySsc.certificate())
+                    .clientAuth(ClientAuth.REQUIRE)
+                    .trustManager(clientSsc.certificate())
+                    .build();
             ch.pipeline().addLast(sslContext.newHandler(ch.alloc()));
             ch.pipeline().addLast(new HttpServerCodec());
             ch.pipeline().addLast(new HttpObjectAggregator(1024));
@@ -205,7 +244,7 @@ class ProxyClientIntegrationTest {
     @BeforeAll
     static void beforeAll() throws Exception {
         sslContext = SslContextBuilder
-                .forServer(ssc.privateKey(), ssc.certificate()).build();
+                .forServer(proxySsc.privateKey(), proxySsc.certificate()).build();
     }
 
     @BeforeEach
@@ -396,7 +435,7 @@ class ProxyClientIntegrationTest {
             assertThatThrownBy(responseFuture::join).isInstanceOf(CompletionException.class)
                                                     .hasCauseInstanceOf(UnprocessedRequestException.class)
                                                     .hasRootCauseInstanceOf(NullPointerException.class)
-                                                    .hasRootCauseMessage("proxyConfig");
+                                                    .hasRootCauseMessage("unresolvedProxyConfig");
         }
     }
 
@@ -494,6 +533,33 @@ class ProxyClientIntegrationTest {
         final ClientFactory clientFactory =
                 ClientFactory.builder().tlsNoVerify().proxyConfig(
                         ProxyConfig.connect(httpsProxyServer.address(), true)).build();
+        final WebClient webClient = WebClient.builder(protocol, endpoint)
+                                             .factory(clientFactory)
+                                             .decorator(LoggingClient.newDecorator())
+                                             .build();
+        final CompletableFuture<AggregatedHttpResponse> responseFuture =
+                webClient.get(PROXY_PATH).aggregate();
+        final AggregatedHttpResponse response = responseFuture.join();
+        assertThat(response.status()).isEqualTo(HttpStatus.OK);
+        assertThat(response.contentUtf8()).isEqualTo(SUCCESS_RESPONSE);
+        assertThat(numSuccessfulProxyRequests).isEqualTo(1);
+        clientFactory.closeAsync();
+    }
+
+    @ParameterizedTest
+    @MethodSource("sessionAndEndpointProvider")
+    void testMTlsHttpsProxyWithTlsProvider(SessionProtocol protocol, Endpoint endpoint) throws Exception {
+        final TlsProvider tlsProvider =
+                TlsProvider.builder()
+                           .keyPair(clientSsc.tlsKeyPair())
+                           .trustedCertificates(proxySsc.certificate(), backendSsc.certificate())
+                           .build();
+
+        final ClientFactory clientFactory =
+                ClientFactory.builder()
+                             .tlsProvider(tlsProvider)
+                             .proxyConfig(
+                                     ProxyConfig.connect(mTlsHttpsProxyServer.address(), true)).build();
         final WebClient webClient = WebClient.builder(protocol, endpoint)
                                              .factory(clientFactory)
                                              .decorator(LoggingClient.newDecorator())
@@ -787,6 +853,66 @@ class ProxyClientIntegrationTest {
                                                     .hasRootCauseInstanceOf(ProxyConnectException.class);
             assertThat(failedAttempts).hasValue(1);
             assertThat(selector.result()).isTrue();
+        }
+    }
+
+    @Test
+    void testProxyConfigShouldBeResolved() throws Exception {
+        try (TestDnsServer server = new TestDnsServer(ImmutableMap.of(
+                new DefaultDnsQuestion("a.com.", A),
+                new DefaultDnsResponse(0).addRecord(ANSWER, newAddressRecord("a.com.", "127.0.0.1"))))
+        ) {
+            final InetSocketAddress proxySocketAddress = new InetSocketAddress(
+                    "a.com", httpProxyServer.address().getPort());
+            try (ClientFactory clientFactory =
+                         ClientFactory.builder()
+                                      .addressResolverGroupFactory(
+                                              DNSResolverFacadeUtils.getAddressResolverGroupForTest(server))
+                                      .proxyConfig(ProxyConfig.connect(proxySocketAddress))
+                                      .useHttp2Preface(true)
+                                      .build()) {
+
+                final WebClient webClient = WebClient.builder(SessionProtocol.H1C, backendServer.httpEndpoint())
+                                                     .factory(clientFactory)
+                                                     .decorator(LoggingClient.newDecorator())
+                                                     .build();
+                final CompletableFuture<AggregatedHttpResponse> responseFuture =
+                        webClient.get(PROXY_PATH).aggregate();
+                final AggregatedHttpResponse response = responseFuture.join();
+                assertThat(response.status()).isEqualTo(HttpStatus.OK);
+                assertThat(response.contentUtf8()).isEqualTo(SUCCESS_RESPONSE);
+                assertThat(numSuccessfulProxyRequests).isEqualTo(1);
+            }
+        }
+    }
+
+    @Test
+    void testProxyConfigShouldBeFailedToResolved() throws Exception {
+        try (TestDnsServer server = new TestDnsServer(ImmutableMap.of(
+                new DefaultDnsQuestion("b.com.", A),
+                new DefaultDnsResponse(0).addRecord(ANSWER, newAddressRecord("b.com.", "127.0.0.1"))))
+        ) {
+            final InetSocketAddress proxySocketAddress = new InetSocketAddress(
+                    "a.com", httpProxyServer.address().getPort());
+            try (ClientFactory clientFactory =
+                         ClientFactory.builder()
+                                      .addressResolverGroupFactory(
+                                              DNSResolverFacadeUtils.getAddressResolverGroupForTest(server))
+                                      .proxyConfig(ProxyConfig.connect(proxySocketAddress))
+                                      .useHttp2Preface(true)
+                                      .build()) {
+
+                final WebClient webClient = WebClient.builder(SessionProtocol.H1C, backendServer.httpEndpoint())
+                                                     .factory(clientFactory)
+                                                     .decorator(LoggingClient.newDecorator())
+                                                     .build();
+                final CompletableFuture<AggregatedHttpResponse> responseFuture =
+                        webClient.get(PROXY_PATH).aggregate();
+                assertThatThrownBy(responseFuture::join).isInstanceOf(CompletionException.class)
+                                                        .hasCauseInstanceOf(UnprocessedRequestException.class)
+                                                        .hasRootCauseInstanceOf(DnsErrorCauseException.class)
+                                                        .hasRootCauseMessage("Query failed with NXDOMAIN");
+            }
         }
     }
 

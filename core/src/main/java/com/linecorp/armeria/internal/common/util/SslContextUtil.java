@@ -37,8 +37,8 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 
-import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.util.TlsEngineType;
 
 import io.netty.buffer.PooledByteBufAllocator;
 import io.netty.handler.codec.http2.Http2SecurityUtil;
@@ -97,13 +97,13 @@ public final class SslContextUtil {
      */
     public static SslContext createSslContext(
             Supplier<SslContextBuilder> builderSupplier, boolean forceHttp1,
-            boolean tlsAllowUnsafeCiphers,
-            Iterable<? extends Consumer<? super SslContextBuilder>> userCustomizers,
+            TlsEngineType tlsEngineType, boolean tlsAllowUnsafeCiphers,
+            @Nullable Consumer<? super SslContextBuilder> userCustomizer,
             @Nullable List<X509Certificate> keyCertChainCaptor) {
 
         return MinifiedBouncyCastleProvider.call(() -> {
             final SslContextBuilder builder = builderSupplier.get();
-            final SslProvider provider = Flags.tlsEngineType().sslProvider();
+            final SslProvider provider = tlsEngineType.sslProvider();
             builder.sslProvider(provider);
 
             final Set<String> supportedProtocols = supportedProtocols(builder);
@@ -127,7 +127,9 @@ public final class SslContextUtil {
             builder.protocols(protocols.toArray(EmptyArrays.EMPTY_STRINGS))
                    .ciphers(DEFAULT_CIPHERS, SupportedCipherSuiteFilter.INSTANCE);
 
-            userCustomizers.forEach(customizer -> customizer.accept(builder));
+            if (userCustomizer != null) {
+                userCustomizer.accept(builder);
+            }
 
             // We called user customization logic before setting ALPN to make sure they don't break
             // compatibility with HTTP/2.

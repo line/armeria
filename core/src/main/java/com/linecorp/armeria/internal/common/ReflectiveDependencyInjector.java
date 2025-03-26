@@ -64,6 +64,7 @@ public final class ReflectiveDependencyInjector implements DependencyInjector {
 
     private boolean isShutdown;
 
+    @Nullable
     @Override
     public <T> T getInstance(Class<T> type) {
         lock.lock();

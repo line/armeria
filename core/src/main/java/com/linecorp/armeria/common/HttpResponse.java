@@ -18,6 +18,7 @@ package com.linecorp.armeria.common;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.linecorp.armeria.common.HttpResponseUtil.createHttpResponseFrom;
+import static com.linecorp.armeria.common.HttpResponseUtil.httpResponseUtilLogger;
 import static com.linecorp.armeria.internal.common.ArmeriaHttpUtil.maybeUpdateContentLengthAndEndOfStream;
 import static java.util.Objects.requireNonNull;
 
@@ -52,6 +53,7 @@ import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.stream.PublisherBasedStreamMessage;
 import com.linecorp.armeria.common.stream.StreamMessage;
+import com.linecorp.armeria.common.stream.StreamTimeoutMode;
 import com.linecorp.armeria.common.stream.SubscriptionOption;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.internal.common.AbortedHttpResponse;
@@ -62,6 +64,7 @@ import com.linecorp.armeria.internal.common.stream.RecoverableStreamMessage;
 import com.linecorp.armeria.unsafe.PooledObjects;
 
 import io.netty.buffer.ByteBufAllocator;
+import io.netty.channel.EventLoop;
 import io.netty.util.concurrent.EventExecutor;
 
 /**
@@ -193,9 +196,10 @@ public interface HttpResponse extends Response, HttpMessage {
     static HttpResponse delayed(Supplier<? extends HttpResponse> responseSupplier, Duration delay) {
         requireNonNull(responseSupplier, "responseSupplier");
         requireNonNull(delay, "delay");
-        return delayed(responseSupplier, delay,
-                       RequestContext.mapCurrent(RequestContext::eventLoop,
-                                                 CommonPools.workerGroup()::next));
+        final EventLoop executor = RequestContext.mapCurrent(RequestContext::eventLoop,
+                                                             CommonPools.workerGroup()::next);
+        assert executor != null;
+        return delayed(responseSupplier, delay, executor);
     }
 
     /**
@@ -430,6 +434,16 @@ public interface HttpResponse extends Response, HttpMessage {
 
         requireNonNull(content, "content");
         requireNonNull(trailers, "trailers");
+
+        if (headers.status().isContentAlwaysEmpty()) {
+            if (!content.isEmpty()) {
+                httpResponseUtilLogger.debug(
+                        "Non-empty content found with an empty status: {}, content length: {}",
+                        headers.status(), content.length());
+                content.close();
+                content = HttpData.empty();
+            }
+        }
 
         final ResponseHeaders newHeaders =
                 maybeUpdateContentLengthAndEndOfStream(headers, content, trailers, false);
@@ -1182,5 +1196,17 @@ public interface HttpResponse extends Response, HttpMessage {
     @Override
     default HttpResponse subscribeOn(EventExecutor eventExecutor) {
         return of(HttpMessage.super.subscribeOn(eventExecutor));
+    }
+
+    @UnstableApi
+    @Override
+    default HttpResponse timeout(Duration timeoutDuration) {
+        return timeout(timeoutDuration, StreamTimeoutMode.UNTIL_NEXT);
+    }
+
+    @UnstableApi
+    @Override
+    default HttpResponse timeout(Duration timeoutDuration, StreamTimeoutMode timeoutMode) {
+        return of(HttpMessage.super.timeout(timeoutDuration, timeoutMode));
     }
 }

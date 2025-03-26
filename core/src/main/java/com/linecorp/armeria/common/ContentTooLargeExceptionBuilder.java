@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 LINE Corporation
+ * Copyright 2024 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -30,6 +30,8 @@ public final class ContentTooLargeExceptionBuilder {
     private long maxContentLength = -1;
     private long contentLength = -1;
     private long transferred = -1;
+    private boolean earlyRejection;
+
     @Nullable
     private Throwable cause;
 
@@ -84,12 +86,23 @@ public final class ContentTooLargeExceptionBuilder {
     }
 
     /**
+     * Sets the exception as early rejection.
+     */
+    @UnstableApi
+    public ContentTooLargeExceptionBuilder earlyRejection(boolean isEarlyRejection) {
+        this.earlyRejection = isEarlyRejection;
+        return this;
+    }
+
+    /**
      * Returns a new instance of {@link ContentTooLargeException}.
      */
     public ContentTooLargeException build() {
-        if (maxContentLength < 0 && contentLength < 0 && transferred < 0 && cause == null) {
+        if (maxContentLength < 0 && contentLength < 0 &&
+            transferred < 0 && !earlyRejection && cause == null) {
             return ContentTooLargeException.get();
         }
-        return new ContentTooLargeException(maxContentLength, contentLength, transferred, cause);
+        return new ContentTooLargeException(maxContentLength, contentLength,
+                                            transferred, earlyRejection, cause);
     }
 }

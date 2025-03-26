@@ -21,7 +21,6 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.time.Duration;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 
 import org.assertj.core.api.AbstractLongAssert;
@@ -34,7 +33,6 @@ import com.google.common.collect.ImmutableList;
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.RequestOptions;
-import com.linecorp.armeria.client.endpoint.AbstractEndpointSelector.ListeningFuture;
 import com.linecorp.armeria.client.endpoint.dns.DnsAddressEndpointGroup;
 import com.linecorp.armeria.client.endpoint.dns.DnsServiceEndpointGroup;
 import com.linecorp.armeria.client.endpoint.dns.DnsTextEndpointGroup;
@@ -312,23 +310,6 @@ class SelectionTimeoutTest {
                 assertThat(BlockingUtils.blockingRun(result::join)).isNull();
                 assertThat(stopwatch.elapsed())
                         .isGreaterThanOrEqualTo(Duration.ofSeconds(2));
-            }
-            return null;
-        }, ctx.eventLoop());
-        future.join();
-    }
-
-    @Test
-    void select_unlimited() {
-        final CompletableFuture<?> future = CompletableFuture.supplyAsync(() -> {
-            ctx.clearResponseTimeout();
-            try (MockEndpointGroup endpointGroup = new MockEndpointGroup(Long.MAX_VALUE)) {
-                final ListeningFuture result =
-                        (ListeningFuture) endpointGroup.select(ctx, CommonPools.blockingTaskExecutor());
-                // No timeout is scheduled
-                assertThat((Future<?>) result.timeoutFuture()).isNull();
-                final Endpoint endpoint = Endpoint.of("foo", 8080);
-                endpointGroup.set(endpoint);
             }
             return null;
         }, ctx.eventLoop());

@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.client.kubernetes.endpoints;
 
+import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkState;
 import static java.util.Objects.requireNonNull;
 
@@ -33,12 +34,16 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
 
 import io.fabric8.kubernetes.api.model.NodeAddress;
 import io.fabric8.kubernetes.client.KubernetesClient;
+import io.fabric8.kubernetes.client.Watch;
 
 /**
  * A builder for creating a new {@link KubernetesEndpointGroup}.
  */
 @UnstableApi
-public final class KubernetesEndpointGroupBuilder extends AbstractDynamicEndpointGroupBuilder {
+public final class KubernetesEndpointGroupBuilder
+        extends AbstractDynamicEndpointGroupBuilder<KubernetesEndpointGroupBuilder> {
+
+    private static final int DEFAULT_MAX_WATCH_AGE_MILLIS = 10 * 60 * 1000; // 10 minutes
 
     private final KubernetesClient kubernetesClient;
     private final boolean autoClose;
@@ -53,6 +58,7 @@ public final class KubernetesEndpointGroupBuilder extends AbstractDynamicEndpoin
 
     private Predicate<? super NodeAddress> nodeAddressFilter = nodeAddress ->
             "InternalIP".equals(nodeAddress.getType()) && !Strings.isNullOrEmpty(nodeAddress.getAddress());
+    private long maxWatchAgeMillis = DEFAULT_MAX_WATCH_AGE_MILLIS;
 
     KubernetesEndpointGroupBuilder(KubernetesClient kubernetesClient, boolean autoClose) {
         super(Flags.defaultResponseTimeoutMillis());
@@ -110,22 +116,30 @@ public final class KubernetesEndpointGroupBuilder extends AbstractDynamicEndpoin
     }
 
     /**
-     * Sets whether to allow an empty {@link Endpoint} list.
-     * If unspecified, the default is {@code false} that disallows an empty {@link Endpoint} list.
+     * Sets the maximum age of the {@link Watch} in milliseconds. If the {@link Watch} is older than this value,
+     * it is closed and a new one is created. If unspecified, {@value DEFAULT_MAX_WATCH_AGE_MILLIS} ms will be
+     * used. {@code 0} disables this feature.
+     *
+     * <p>This option would be useful when the long-lived {@link Watch} is not working properly due to a
+     * network issue or a bug in the Kubernetes Server.
      */
-    @Override
-    public KubernetesEndpointGroupBuilder allowEmptyEndpoints(boolean allowEmptyEndpoints) {
-        return (KubernetesEndpointGroupBuilder) super.allowEmptyEndpoints(allowEmptyEndpoints);
+    public KubernetesEndpointGroupBuilder maxWatchAgeMillis(long maxWatchAgeMillis) {
+        checkArgument(maxWatchAgeMillis >= 0, "maxWatchAgeMillis: %s (expected: >= 0)", maxWatchAgeMillis);
+        this.maxWatchAgeMillis = maxWatchAgeMillis;
+        return this;
     }
 
-    @Override
-    public KubernetesEndpointGroupBuilder selectionTimeout(Duration selectionTimeout) {
-        return (KubernetesEndpointGroupBuilder) super.selectionTimeout(selectionTimeout);
-    }
-
-    @Override
-    public KubernetesEndpointGroupBuilder selectionTimeoutMillis(long selectionTimeoutMillis) {
-        return (KubernetesEndpointGroupBuilder) super.selectionTimeoutMillis(selectionTimeoutMillis);
+    /**
+     * Sets the maximum age of the {@link Watch}. If the {@link Watch} is older than this value,
+     * it is closed and a new one is created. If unspecified, {@value DEFAULT_MAX_WATCH_AGE_MILLIS} ms will be
+     * used. {@code 0} disables this feature.
+     *
+     * <p>This option would be useful when the long-lived {@link Watch} becomes stale due to a network issue or
+     * a bug in the Kubernetes Server.
+     */
+    public KubernetesEndpointGroupBuilder maxWatchAge(Duration maxWatchAge) {
+        requireNonNull(maxWatchAge, "maxWatchAge");
+        return maxWatchAgeMillis(maxWatchAge.toMillis());
     }
 
     /**
@@ -136,6 +150,6 @@ public final class KubernetesEndpointGroupBuilder extends AbstractDynamicEndpoin
         return new KubernetesEndpointGroup(kubernetesClient, namespace, serviceName, portName,
                                            nodeAddressFilter, autoClose,
                                            selectionStrategy, shouldAllowEmptyEndpoints(),
-                                           selectionTimeoutMillis());
+                                           selectionTimeoutMillis(), maxWatchAgeMillis);
     }
 }

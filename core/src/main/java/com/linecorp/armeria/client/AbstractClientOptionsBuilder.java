@@ -29,6 +29,8 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
+import com.google.common.collect.ImmutableList;
+
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.client.redirect.RedirectConfig;
 import com.linecorp.armeria.common.HttpHeaderNames;
@@ -55,6 +57,7 @@ public class AbstractClientOptionsBuilder {
 
     private final Map<ClientOption<?>, ClientOptionValue<?>> options = new LinkedHashMap<>();
     private final ClientDecorationBuilder decoration = ClientDecoration.builder();
+    private final ClientPreprocessorsBuilder clientPreprocessorsBuilder = new ClientPreprocessorsBuilder();
     private final HttpHeadersBuilder headers = HttpHeaders.builder();
 
     @Nullable
@@ -125,6 +128,8 @@ public class AbstractClientOptionsBuilder {
         } else if (opt == ClientOptions.HEADERS) {
             final HttpHeaders h = (HttpHeaders) optionValue.value();
             setHeaders(h);
+        } else if (opt == ClientOptions.PREPROCESSORS) {
+            clientPreprocessorsBuilder.add((ClientPreprocessors) optionValue.value());
         } else {
             options.put(opt, optionValue);
         }
@@ -507,6 +512,40 @@ public class AbstractClientOptionsBuilder {
     }
 
     /**
+     * Sets the {@link ResponseTimeoutMode} which determines when a {@link #responseTimeout(Duration)}}
+     * will start to be scheduled.
+     *
+     * @see ResponseTimeoutMode
+     */
+    @UnstableApi
+    public AbstractClientOptionsBuilder responseTimeoutMode(ResponseTimeoutMode responseTimeoutMode) {
+        return option(ClientOptions.RESPONSE_TIMEOUT_MODE,
+                      requireNonNull(responseTimeoutMode, "responseTimeoutMode"));
+    }
+
+    /**
+     * Adds the specified HTTP-level {@code preprocessor}.
+     *
+     * @param preprocessor the {@link HttpPreprocessor} that preprocesses an invocation
+     */
+    @UnstableApi
+    public AbstractClientOptionsBuilder preprocessor(HttpPreprocessor preprocessor) {
+        clientPreprocessorsBuilder.add(preprocessor);
+        return this;
+    }
+
+    /**
+     * Adds the specified RPC-level {@code rpcPreprocessor}.
+     *
+     * @param rpcPreprocessor the {@link RpcPreprocessor} that preprocesses an invocation
+     */
+    @UnstableApi
+    public AbstractClientOptionsBuilder rpcPreprocessor(RpcPreprocessor rpcPreprocessor) {
+        clientPreprocessorsBuilder.addRpc(rpcPreprocessor);
+        return this;
+    }
+
+    /**
      * Builds {@link ClientOptions} with the given options and the
      * {@linkplain ClientOptions#of() default options}.
      */
@@ -520,20 +559,21 @@ public class AbstractClientOptionsBuilder {
      */
     protected final ClientOptions buildOptions(@Nullable ClientOptions baseOptions) {
         final Collection<ClientOptionValue<?>> optVals = options.values();
-        final int numOpts = optVals.size();
-        final int extra = contextCustomizer == null ? 3 : 4;
-        final ClientOptionValue<?>[] optValArray = optVals.toArray(new ClientOptionValue[numOpts + extra]);
-        optValArray[numOpts] = ClientOptions.DECORATION.newValue(decoration.build());
-        optValArray[numOpts + 1] = ClientOptions.HEADERS.newValue(headers.build());
-        optValArray[numOpts + 2] = ClientOptions.CONTEXT_HOOK.newValue(contextHook);
+        final ImmutableList.Builder<ClientOptionValue<?>> additionalValues =
+                ImmutableList.builder();
+        additionalValues.addAll(optVals);
+        additionalValues.add(ClientOptions.DECORATION.newValue(decoration.build()));
+        additionalValues.add(ClientOptions.PREPROCESSORS.newValue(clientPreprocessorsBuilder.build()));
+        additionalValues.add(ClientOptions.HEADERS.newValue(headers.build()));
+        additionalValues.add(ClientOptions.CONTEXT_HOOK.newValue(contextHook));
         if (contextCustomizer != null) {
-            optValArray[numOpts + 3] = ClientOptions.CONTEXT_CUSTOMIZER.newValue(contextCustomizer);
+            additionalValues.add(ClientOptions.CONTEXT_CUSTOMIZER.newValue(contextCustomizer));
         }
 
         if (baseOptions != null) {
-            return ClientOptions.of(baseOptions, optValArray);
+            return ClientOptions.of(baseOptions, additionalValues.build());
         } else {
-            return ClientOptions.of(optValArray);
+            return ClientOptions.of(additionalValues.build());
         }
     }
 }

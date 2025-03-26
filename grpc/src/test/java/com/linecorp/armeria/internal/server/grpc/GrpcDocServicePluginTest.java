@@ -20,6 +20,7 @@ import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.linecorp.armeria.internal.server.docs.DocServiceUtil.unifyFilter;
 import static com.linecorp.armeria.internal.server.grpc.GrpcDocServicePlugin.buildHttpServiceInfos;
+import static com.linecorp.armeria.internal.server.grpc.GrpcDocServicePlugin.convertRegexPath;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 
@@ -117,7 +118,12 @@ class GrpcDocServicePluginTest {
         services.get(HttpJsonTranscodingTestServiceGrpc.SERVICE_NAME +
                      GrpcDocServicePlugin.HTTP_SERVICE_SUFFIX).methods().forEach(m -> {
             m.endpoints().forEach(e -> {
-                assertThat(e.pathMapping()).endsWith(m.examplePaths().get(0));
+                if (m.examplePaths().isEmpty()) {
+                    return;
+                }
+                assertThat(e.pathMapping()).satisfiesAnyOf(
+                        path -> assertThat(path).endsWith(m.examplePaths().get(0)),
+                        path -> assertThat(convertRegexPath(path)).endsWith(m.examplePaths().get(0)));
             });
         });
     }
@@ -397,11 +403,11 @@ class GrpcDocServicePluginTest {
                 FieldInfo.builder("message_id", TypeSignature.ofBase(JavaType.STRING.name()))
                          .location(FieldLocation.PATH).requirement(FieldRequirement.REQUIRED).build(),
                 FieldInfo.builder("revision", TypeSignature.ofBase(JavaType.LONG.name()))
-                         .location(FieldLocation.QUERY).requirement(FieldRequirement.REQUIRED).build(),
+                         .location(FieldLocation.QUERY).requirement(FieldRequirement.OPTIONAL).build(),
                 FieldInfo.builder("sub.subfield", TypeSignature.ofBase(JavaType.STRING.name()))
-                         .location(FieldLocation.QUERY).requirement(FieldRequirement.REQUIRED).build(),
+                         .location(FieldLocation.QUERY).requirement(FieldRequirement.OPTIONAL).build(),
                 FieldInfo.builder("type", TypeSignature.ofBase(JavaType.ENUM.name()))
-                         .location(FieldLocation.QUERY).requirement(FieldRequirement.REQUIRED).build()));
+                         .location(FieldLocation.QUERY).requirement(FieldRequirement.OPTIONAL).build()));
         assertThat(getMessageV2.useParameterAsRoot()).isFalse();
 
         final MethodInfo getMessageV3 = serviceInfo.methods().stream()
@@ -416,7 +422,7 @@ class GrpcDocServicePluginTest {
                          .location(FieldLocation.PATH).requirement(FieldRequirement.REQUIRED).build(),
                 FieldInfo.builder("revision",
                                   TypeSignature.ofList(TypeSignature.ofBase(JavaType.LONG.name())))
-                         .location(FieldLocation.QUERY).requirement(FieldRequirement.REQUIRED).build()));
+                         .location(FieldLocation.QUERY).requirement(FieldRequirement.OPTIONAL).build()));
         assertThat(getMessageV3.useParameterAsRoot()).isFalse();
 
         // Check HTTP PATCH method.
@@ -431,7 +437,7 @@ class GrpcDocServicePluginTest {
                 FieldInfo.builder("message_id", TypeSignature.ofBase(JavaType.STRING.name()))
                          .location(FieldLocation.PATH).requirement(FieldRequirement.REQUIRED).build(),
                 FieldInfo.builder("text", TypeSignature.ofBase(JavaType.STRING.name()))
-                         .location(FieldLocation.BODY).requirement(FieldRequirement.REQUIRED).build()));
+                         .location(FieldLocation.BODY).requirement(FieldRequirement.OPTIONAL).build()));
         assertThat(updateMessageV1.useParameterAsRoot()).isFalse();
 
         final MethodInfo updateMessageV2 = serviceInfo.methods().stream()
@@ -445,7 +451,18 @@ class GrpcDocServicePluginTest {
                 FieldInfo.builder("message_id", TypeSignature.ofBase(JavaType.STRING.name()))
                          .location(FieldLocation.PATH).requirement(FieldRequirement.REQUIRED).build(),
                 FieldInfo.builder("text", TypeSignature.ofBase(JavaType.STRING.name()))
-                         .location(FieldLocation.BODY).requirement(FieldRequirement.REQUIRED).build()));
+                         .location(FieldLocation.BODY).requirement(FieldRequirement.OPTIONAL).build(),
+                FieldInfo.builder("required_text", TypeSignature.ofBase(JavaType.STRING.name()))
+                        .location(FieldLocation.BODY).requirement(FieldRequirement.REQUIRED).build(),
+                FieldInfo.builder("optional_text", TypeSignature.ofBase(JavaType.STRING.name()))
+                        .location(FieldLocation.BODY).requirement(FieldRequirement.OPTIONAL).build()));
         assertThat(updateMessageV2.useParameterAsRoot()).isFalse();
+    }
+
+    @Test
+    void pathParamRegexIsConvertedCorrectly() {
+        assertThat(convertRegexPath("/a/(?<p0>[^/]+):get")).isEqualTo("/a/p0:get");
+        assertThat(convertRegexPath("^/a/(?<p0>[^/]+):get")).isEqualTo("/a/p0:get");
+        assertThat(convertRegexPath("^/a/(?<p0>[^/]+):get$")).isEqualTo("/a/p0:get");
     }
 }

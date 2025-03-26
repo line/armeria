@@ -89,11 +89,13 @@ final class DefaultCookie implements Cookie {
         return valueQuoted;
     }
 
+    @Nullable
     @Override
     public String domain() {
         return domain;
     }
 
+    @Nullable
     @Override
     public String path() {
         return path;
@@ -114,6 +116,7 @@ final class DefaultCookie implements Cookie {
         return httpOnly;
     }
 
+    @Nullable
     @Override
     public String sameSite() {
         return sameSite;

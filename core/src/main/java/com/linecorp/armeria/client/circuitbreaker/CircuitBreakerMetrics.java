@@ -27,6 +27,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import com.google.common.util.concurrent.AtomicDouble;
 
 import com.linecorp.armeria.common.metric.MeterIdPrefix;
+import com.linecorp.armeria.common.util.EventCount;
 
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;
@@ -51,10 +52,16 @@ final class CircuitBreakerMetrics {
         parent.gauge(idPrefix.name("state"), idPrefix.tags(), state, AtomicDouble::get);
 
         final String requests = idPrefix.name("requests");
-        parent.gauge(requests, idPrefix.tags("result", "success"),
-                     latestEventCount, lec -> lec.get().success());
-        parent.gauge(requests, idPrefix.tags("result", "failure"),
-                     latestEventCount, lec -> lec.get().failure());
+        parent.gauge(requests, idPrefix.tags("result", "success"), latestEventCount, lec -> {
+            final EventCount eventCount = lec.get();
+            assert eventCount != null;
+            return eventCount.success();
+        });
+        parent.gauge(requests, idPrefix.tags("result", "failure"), latestEventCount, lec -> {
+            final EventCount eventCount = lec.get();
+            assert eventCount != null;
+            return eventCount.failure();
+        });
 
         final String transitions = idPrefix.name("transitions");
         transitionsToClosed = parent.counter(transitions, idPrefix.tags("state", CLOSED.name()));

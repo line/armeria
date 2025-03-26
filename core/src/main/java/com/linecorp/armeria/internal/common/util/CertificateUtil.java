@@ -19,6 +19,8 @@ import static java.util.Objects.requireNonNull;
 
 import java.io.File;
 import java.io.InputStream;
+import java.security.KeyException;
+import java.security.PrivateKey;
 import java.security.cert.Certificate;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
@@ -41,6 +43,7 @@ import com.github.benmanes.caffeine.cache.LoadingCache;
 import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.util.Exceptions;
 
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.handler.ssl.ApplicationProtocolNegotiator;
@@ -91,6 +94,29 @@ public final class CertificateUtil {
         return ImmutableList.copyOf(SslContextProtectedAccessHack.toX509CertificateList(in));
     }
 
+    public static PrivateKey toPrivateKey(File file, @Nullable String keyPassword) throws KeyException {
+        requireNonNull(file, "file");
+        return MinifiedBouncyCastleProvider.call(() -> {
+            try {
+                return SslContextProtectedAccessHack.privateKey(file, keyPassword);
+            } catch (KeyException e) {
+                return Exceptions.throwUnsafely(e);
+            }
+        });
+    }
+
+    public static PrivateKey toPrivateKey(InputStream keyInputStream, @Nullable String keyPassword)
+            throws KeyException {
+        requireNonNull(keyInputStream, "keyInputStream");
+        return MinifiedBouncyCastleProvider.call(() -> {
+            try {
+                return SslContextProtectedAccessHack.privateKey(keyInputStream, keyPassword);
+            } catch (KeyException e) {
+                return Exceptions.throwUnsafely(e);
+            }
+        });
+    }
+
     private static final class SslContextProtectedAccessHack extends SslContext {
 
         static X509Certificate[] toX509CertificateList(File file) throws CertificateException {
@@ -99,6 +125,29 @@ public final class CertificateUtil {
 
         static X509Certificate[] toX509CertificateList(InputStream in) throws CertificateException {
             return SslContext.toX509Certificates(in);
+        }
+
+        static PrivateKey privateKey(File file, @Nullable String keyPassword) throws KeyException {
+            try {
+                return SslContext.toPrivateKey(file, keyPassword);
+            } catch (Exception e) {
+                if (e instanceof KeyException) {
+                    throw (KeyException) e;
+                }
+                throw new KeyException("Fail to read a private key file: " + file.getName(), e);
+            }
+        }
+
+        static PrivateKey privateKey(InputStream keyInputStream, @Nullable String keyPassword)
+                throws KeyException {
+            try {
+                return SslContext.toPrivateKey(keyInputStream, keyPassword);
+            } catch (Exception e) {
+                if (e instanceof KeyException) {
+                    throw (KeyException) e;
+                }
+                throw new KeyException("Fail to parse a private key", e);
+            }
         }
 
         @Override

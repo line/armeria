@@ -487,6 +487,13 @@ public final class MediaType {
     public static final MediaType APPLICATION_BINARY = createConstant(APPLICATION_TYPE, "binary");
 
     /**
+     * As described in <a href="https://www.rfc-editor.org/rfc/rfc8949.html">RFC 8949</a>, this
+     * constant ({@code application/cbor}) is used for the Concise Binary Object Representation (CBOR)
+     * data format.
+     */
+    public static final MediaType CBOR = createConstant(APPLICATION_TYPE, "cbor");
+
+    /**
      * <a href="https://datatracker.ietf.org/doc/rfc7946/">GeoJSON Format</a>, a geospatial data interchange format
      * based on JSON.
      */
@@ -496,6 +503,7 @@ public final class MediaType {
      * This constant is used for advertising the capabilities of a Git server,
      * as described in <a href="https://git-scm.com/docs/http-protocol/2.34.0#_smart_clients">Smart Clients</a>.
      */
+    @UnstableApi
     public static final MediaType GIT_UPLOAD_PACK_ADVERTISEMENT =
             createConstant(APPLICATION_TYPE, "x-git-upload-pack-advertisement");
 
@@ -504,6 +512,7 @@ public final class MediaType {
      * <a href="https://git-scm.com/docs/http-protocol/2.34.0#_smart_service_git_upload_pack">
      * Smart Service git-upload-pack</a>.
      */
+    @UnstableApi
     public static final MediaType GIT_UPLOAD_PACK_REQUEST =
             createConstant(APPLICATION_TYPE, "x-git-upload-pack-request");
 
@@ -512,6 +521,7 @@ public final class MediaType {
      * <a href="https://git-scm.com/docs/http-protocol/2.34.0#_smart_service_git_upload_pack">
      * Smart Service git-upload-pack</a>.
      */
+    @UnstableApi
     public static final MediaType GIT_UPLOAD_PACK_RESULT =
             createConstant(APPLICATION_TYPE, "x-git-upload-pack-result");
 
@@ -823,6 +833,11 @@ public final class MediaType {
     @UnstableApi
     public static final MediaType GRAPHQL_RESPONSE_JSON =
             createConstant(APPLICATION_TYPE, "graphql-response+json");
+
+    /**
+     * <a href="https://www.rfc-editor.org/rfc/rfc7763.html">Markdown type</a>.
+     */
+    public static final MediaType MD_UTF_8 = createConstantUtf8(TEXT_TYPE, "markdown");
 
     private static final Charset NO_CHARSET = new Charset("NO_CHARSET", null) {
         @Override

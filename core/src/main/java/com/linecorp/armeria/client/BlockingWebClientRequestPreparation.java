@@ -224,6 +224,12 @@ public final class BlockingWebClientRequestPreparation
     }
 
     @Override
+    public BlockingWebClientRequestPreparation responseTimeoutMode(ResponseTimeoutMode responseTimeoutMode) {
+        delegate.responseTimeoutMode(responseTimeoutMode);
+        return this;
+    }
+
+    @Override
     public BlockingWebClientRequestPreparation requestOptions(RequestOptions requestOptions) {
         delegate.requestOptions(requestOptions);
         return this;

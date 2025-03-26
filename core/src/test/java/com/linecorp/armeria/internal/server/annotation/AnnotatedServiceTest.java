@@ -19,6 +19,7 @@ import static org.apache.hc.core5.http.HttpHeaders.ACCEPT;
 import static org.apache.hc.core5.http.HttpHeaders.CONTENT_TYPE;
 import static org.apache.hc.core5.http.HttpHeaders.IF_MATCH;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.io.IOException;
 import java.nio.charset.Charset;
@@ -26,6 +27,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.TreeSet;
@@ -75,6 +77,7 @@ import com.linecorp.armeria.common.util.UnmodifiableFuture;
 import com.linecorp.armeria.internal.testing.AnticipatedException;
 import com.linecorp.armeria.internal.testing.GenerateNativeImageTrace;
 import com.linecorp.armeria.server.HttpStatusException;
+import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.TestConverters.NaiveIntConverterFunction;
@@ -342,19 +345,34 @@ class AnnotatedServiceTest {
             return "/verb/test:verb";
         }
 
-        @Get("/colon-param/:colon:verb")
-        public String verbTestParamColon(@Param String colon) {
-            return colon + " colon verb";
-        }
-
-        @Get("/braces-param/{braces}:verb")
-        public String verbTestParamBraces(@Param String braces) {
-            return braces + " braces verb";
-        }
-
         @Get("/verb/:param")
         public String noVerbTest(@Param String param) {
             return "no-verb";
+        }
+
+        @Get("/\\:colon:literal:/:param")
+        public String colonLiteralParam(@Param String param) {
+            return "colon-literal-" + param;
+        }
+
+        @Get("/\\:colon:literal:exact:implicit")
+        public String colonLiteralExactImplicit() {
+            return "colon-literal-exact-implicit";
+        }
+
+        @Get("exact:/\\:colon:literal:exact:explicit")
+        public String colonLiteralExactExplicit() {
+            return "colon-literal-exact-explicit";
+        }
+
+        @Get("glob:/:colon:literal:glob:/**")
+        public String colonLiteralGlob() {
+            return "colon-literal-glob";
+        }
+
+        @Get("regex:/:colon:literal:regex:/(?<param>[^/]+)$")
+        public String colonLiteralRegex(@Param String param) {
+            return "colon-literal-" + param;
         }
     }
 
@@ -613,6 +631,14 @@ class AnnotatedServiceTest {
             validateContext(ctx);
             return username + '/' + password;
         }
+
+        @Get("/param/map")
+        public String map(RequestContext ctx, @Param Map<String, Object> map) {
+            validateContext(ctx);
+            return map.isEmpty() ? "empty" : map.entrySet().stream()
+                                                .map(entry -> entry.getKey() + '=' + entry.getValue())
+                                                .collect(Collectors.joining(", "));
+        }
     }
 
     @ResponseConverter(UnformattedStringConverterFunction.class)
@@ -758,6 +784,12 @@ class AnnotatedServiceTest {
                    String.join(":", strings);
         }
 
+        @Post("/headerNameSpecified")
+        public String headerNameSpecified(@Header("X-x-FoO-bAr") String id) {
+            // Because the header name is specified, it's not converted.
+            return id;
+        }
+
         @Get("/headerDefault")
         public String headerDefault(RequestContext ctx,
                                     @Header @Default("hello") String username,
@@ -879,7 +911,7 @@ class AnnotatedServiceTest {
         @Path("/response-entity-void")
         public ResponseEntity<Void> responseEntityVoid(RequestContext ctx) {
             validateContext(ctx);
-            return ResponseEntity.of(ResponseHeaders.of(HttpStatus.OK));
+            return ResponseEntity.of(HttpStatus.OK);
         }
 
         @Get
@@ -893,15 +925,21 @@ class AnnotatedServiceTest {
         @Path("/response-entity-status")
         public ResponseEntity<Void> responseEntityResponseData(RequestContext ctx) {
             validateContext(ctx);
-            return ResponseEntity.of(ResponseHeaders.of(HttpStatus.MOVED_PERMANENTLY));
+            return ResponseEntity.of(HttpStatus.MOVED_PERMANENTLY);
         }
 
         @Get
         @Path("/response-entity-http-response")
         public ResponseEntity<HttpResponse> responseEntityHttpResponse(RequestContext ctx) {
             validateContext(ctx);
-            return ResponseEntity.of(ResponseHeaders.of(HttpStatus.OK),
-                                     HttpResponse.of(HttpStatus.UNAUTHORIZED));
+            return ResponseEntity.of(HttpStatus.OK, HttpResponse.of(HttpStatus.UNAUTHORIZED));
+        }
+    }
+
+    public static class MyAnnotationService16 {
+        @Get("/param/map-invalid")
+        public String invalidMapParam(@Param("param") Map<String, String> param) {
+            return "Should not reach here";
         }
     }
 
@@ -936,12 +974,14 @@ class AnnotatedServiceTest {
             testStatusCode(hc, get("/1/exception/42"), 500);
             testStatusCode(hc, get("/1/exception-async/1"), 500);
 
-            // Verb suffix in a path
+            // colon in a path
             testBody(hc, get("/1/verb/test:verb"), "String[/verb/test:verb]");
-            testBody(hc, get("/1/colon-param/test:verb"), "String[test colon verb]");
-            testBody(hc, get("/1/braces-param/test:verb"), "String[test braces verb]");
-            testBody(hc, get("/1/colon-param/colon:test:verb"), "String[colon:test colon verb]");
             testBody(hc, get("/1/verb/test:no-verb"), "String[no-verb]");
+            testBody(hc, get("/1/:colon:literal:/hello"), "String[colon-literal-hello]");
+            testBody(hc, get("/1/:colon:literal:exact:implicit"), "String[colon-literal-exact-implicit]");
+            testBody(hc, get("/1/:colon:literal:exact:explicit"), "String[colon-literal-exact-explicit]");
+            testBody(hc, get("/1/:colon:literal:glob:/a/b/c"), "String[colon-literal-glob]");
+            testBody(hc, get("/1/:colon:literal:regex:/regex"), "String[colon-literal-regex]");
 
             testBody(hc, get("/2/int/42"), "Number[42]");
             testBody(hc, post("/2/long/42"), "Number[42]");
@@ -1035,6 +1075,11 @@ class AnnotatedServiceTest {
             testStatusCode(hc, get("/7/param/default2"), 400);
 
             testBody(hc, get("/7/param/default_null"), "(null)");
+
+            // Case all query parameters test map
+            testBody(hc, get("/7/param/map?key1=value1&key2=value2"),
+                     "key1=value1, key2=value2");
+            testBody(hc, get("/7/param/map"), "empty");
         }
     }
 
@@ -1207,6 +1252,10 @@ class AnnotatedServiceTest {
             request.addHeader("strings", "minwoox");
             testBody(hc, request, "1:2:1/minwoox:giraffe");
 
+            request = post("/11/headerNameSpecified");
+            request.addHeader("X-x-FoO-bAr", "qwerty");
+            testBody(hc, request, "qwerty");
+
             request = get("/11/headerDefault");
             testBody(hc, request, "hello/world/(null)");
 
@@ -1325,6 +1374,18 @@ class AnnotatedServiceTest {
             testStatusCode(hc, get("/17/response-entity-status"), 301);
             testStatusCode(hc, get("/17/response-entity-http-response"), 401);
         }
+    }
+
+    @Test
+    void testInvalidParamAnnotationUsageOnMap() {
+        assertThatThrownBy(() ->
+                                   Server.builder()
+                                         .annotatedService()
+                                         .build(new MyAnnotationService16())
+                                         .build()
+        )
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("Invalid @Param annotation on Map parameter");
     }
 
     private enum UserLevel {

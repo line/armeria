@@ -365,6 +365,7 @@ public class DefaultStreamMessage<T> extends AbstractStreamWriter<T> {
             return;
         }
 
+        assert subscription != null;
         for (;;) {
             if (state == State.CLEANUP) {
                 cleanupObjects(null);
@@ -440,28 +441,41 @@ public class DefaultStreamMessage<T> extends AbstractStreamWriter<T> {
 
     @Override
     public void close() {
-        if (setState(State.OPEN, State.CLOSED)) {
-            addObjectOrEvent(SUCCESSFUL_CLOSE);
-        }
+        tryClose();
     }
 
     @Override
     public final void close(Throwable cause) {
         requireNonNull(cause, "cause");
-        if (cause instanceof CancelledSubscriptionException) {
-            throw new IllegalArgumentException("cause: " + cause + " (must use Subscription.cancel())");
-        }
 
         tryClose(cause);
+    }
+
+    /**
+     * Tries to close the stream.
+     *
+     * @return {@code true} if the stream has been closed by this method call.
+     *         {@code false} if the stream has been closed already by another party.
+     */
+    @UnstableApi
+    public final boolean tryClose() {
+        if (setState(State.OPEN, State.CLOSED)) {
+            addObjectOrEvent(SUCCESSFUL_CLOSE);
+            return true;
+        }
+        return false;
     }
 
     /**
      * Tries to close the stream with the specified {@code cause}.
      *
      * @return {@code true} if the stream has been closed by this method call.
-     *         {@code false} if the stream has been closed already by other party.
+     *         {@code false} if the stream has been closed already by another party.
      */
     public final boolean tryClose(Throwable cause) {
+        if (cause instanceof CancelledSubscriptionException) {
+            throw new IllegalArgumentException("cause: " + cause + " (must use Subscription.cancel())");
+        }
         if (setState(State.OPEN, State.CLOSED)) {
             addObjectOrEvent(new CloseEvent(cause));
             return true;

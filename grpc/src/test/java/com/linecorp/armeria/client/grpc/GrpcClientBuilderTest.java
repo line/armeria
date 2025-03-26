@@ -290,7 +290,7 @@ class GrpcClientBuilderTest {
 
     @Test
     void useDefaultGrpcExceptionHandlerFunctionAsFallback() {
-        final GrpcExceptionHandlerFunction noopExceptionHandler = (ctx, cause, metadata) -> null;
+        final GrpcExceptionHandlerFunction noopExceptionHandler = (ctx, status, cause, metadata) -> null;
         final GrpcExceptionHandlerFunction exceptionHandler =
                 GrpcExceptionHandlerFunction.builder()
                                             .on(ContentTooLargeException.class, noopExceptionHandler)

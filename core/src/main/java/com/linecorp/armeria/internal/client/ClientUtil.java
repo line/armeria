@@ -15,7 +15,6 @@
  */
 package com.linecorp.armeria.internal.client;
 
-import static com.google.common.base.MoreObjects.firstNonNull;
 import static java.util.Objects.requireNonNull;
 
 import java.net.URI;
@@ -26,6 +25,8 @@ import java.util.function.Function;
 import com.linecorp.armeria.client.Client;
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.Endpoint;
+import com.linecorp.armeria.client.PreClient;
+import com.linecorp.armeria.client.PreClientRequestContext;
 import com.linecorp.armeria.client.UnprocessedRequestException;
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
@@ -54,13 +55,12 @@ public final class ClientUtil {
     O initContextAndExecuteWithFallback(
             U delegate,
             ClientRequestContextExtension ctx,
-            EndpointGroup endpointGroup,
             Function<CompletableFuture<O>, O> futureConverter,
-            BiFunction<ClientRequestContext, Throwable, O> errorResponseFactory) {
+            BiFunction<ClientRequestContext, Throwable, O> errorResponseFactory,
+            I req) {
 
         requireNonNull(delegate, "delegate");
         requireNonNull(ctx, "ctx");
-        requireNonNull(endpointGroup, "endpointGroup");
         requireNonNull(futureConverter, "futureConverter");
         requireNonNull(errorResponseFactory, "errorResponseFactory");
 
@@ -68,7 +68,7 @@ public final class ClientUtil {
         boolean success = false;
         O response;
         try {
-            final CompletableFuture<Boolean> initFuture = ctx.init(endpointGroup);
+            final CompletableFuture<Boolean> initFuture = ctx.init();
             initialized = initFuture.isDone();
             if (initialized) {
                 // Initialization has been done immediately.
@@ -78,7 +78,7 @@ public final class ClientUtil {
                     throw UnprocessedRequestException.of(Exceptions.peel(e));
                 }
 
-                response = initContextAndExecuteWithFallback(delegate, ctx, errorResponseFactory, success);
+                response = initContextAndExecuteWithFallback(delegate, ctx, errorResponseFactory, success, req);
             } else {
                 response = futureConverter.apply(initFuture.handle((success0, cause) -> {
                     try {
@@ -86,7 +86,8 @@ public final class ClientUtil {
                             throw UnprocessedRequestException.of(Exceptions.peel(cause));
                         }
 
-                        return initContextAndExecuteWithFallback(delegate, ctx, errorResponseFactory, success0);
+                        return initContextAndExecuteWithFallback(
+                                delegate, ctx, errorResponseFactory, success0, req);
                     } catch (Throwable t) {
                         fail(ctx, t);
                         return errorResponseFactory.apply(ctx, t);
@@ -110,11 +111,11 @@ public final class ClientUtil {
     private static <I extends Request, O extends Response, U extends Client<I, O>>
     O initContextAndExecuteWithFallback(
             U delegate, ClientRequestContextExtension ctx,
-            BiFunction<ClientRequestContext, Throwable, O> errorResponseFactory, boolean succeeded)
+            BiFunction<ClientRequestContext, Throwable, O> errorResponseFactory, boolean succeeded, I req)
             throws Exception {
 
         if (succeeded) {
-            return pushAndExecute(delegate, ctx);
+            return pushAndExecute(delegate, ctx, req);
         } else {
             final Throwable cause = ctx.log().partial().requestCause();
             assert cause != null;
@@ -126,7 +127,7 @@ public final class ClientUtil {
             // See `init()` and `failEarly()` in `DefaultClientRequestContext`.
 
             // Call the decorator chain anyway so that the request is seen by the decorators.
-            final O res = pushAndExecute(delegate, ctx);
+            final O res = pushAndExecute(delegate, ctx, req);
 
             // We will use the fallback response which is created from the exception
             // raised in ctx.init(), so the response returned can be aborted.
@@ -141,7 +142,7 @@ public final class ClientUtil {
 
     public static <I extends Request, O extends Response, U extends Client<I, O>>
     O executeWithFallback(U delegate, ClientRequestContext ctx,
-                          BiFunction<ClientRequestContext, Throwable, O> errorResponseFactory) {
+                          BiFunction<ClientRequestContext, Throwable, O> errorResponseFactory, I req) {
 
         requireNonNull(delegate, "delegate");
         requireNonNull(ctx, "ctx");
@@ -149,7 +150,7 @@ public final class ClientUtil {
 
         O response;
         try {
-            response = pushAndExecute(delegate, ctx);
+            response = pushAndExecute(delegate, ctx, req);
         } catch (Throwable cause) {
             fail(ctx, cause);
             response = errorResponseFactory.apply(ctx, cause);
@@ -158,10 +159,25 @@ public final class ClientUtil {
         return response;
     }
 
+    public static <I extends Request, O extends Response, U extends PreClient<I, O>>
+    O executeWithFallback(U execution,
+                          PreClientRequestContext ctx, I req,
+                          BiFunction<ClientRequestContext, Throwable, O> errorResponseFactory) {
+        final ClientRequestContextExtension ctxExt = ctx.as(ClientRequestContextExtension.class);
+        if (ctxExt != null) {
+            ctxExt.runContextCustomizer();
+        }
+        try {
+            return execution.execute(ctx, req);
+        } catch (Exception e) {
+            final UnprocessedRequestException upe = UnprocessedRequestException.of(e);
+            fail(ctx, upe);
+            return errorResponseFactory.apply(ctx, upe);
+        }
+    }
+
     private static <I extends Request, O extends Response, U extends Client<I, O>>
-    O pushAndExecute(U delegate, ClientRequestContext ctx) throws Exception {
-        @SuppressWarnings("unchecked")
-        final I req = (I) firstNonNull(ctx.request(), ctx.rpcRequest());
+    O pushAndExecute(U delegate, ClientRequestContext ctx, I req) throws Exception {
         try (SafeCloseable ignored = ctx.push()) {
             return delegate.execute(ctx, req);
         }

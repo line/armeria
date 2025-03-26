@@ -6,9 +6,9 @@ plugins {
     // automatically download one based on the foojay Disco API.
     // https://docs.gradle.org/8.1.1/userguide/toolchains.html#sec:provisioning
     id 'org.gradle.toolchains.foojay-resolver-convention' version '0.6.0'
-    id 'com.gradle.develocity' version '3.17.3'
+    id 'com.gradle.develocity' version '3.19.2'
     // adds additional metadata to build scans
-    id 'com.gradle.common-custom-user-data-gradle-plugin' version '2.0.1'
+    id 'com.gradle.common-custom-user-data-gradle-plugin' version '2.1'
 }
 
 import com.gradle.develocity.agent.gradle.scan.PublishedBuildScan
@@ -71,10 +71,22 @@ rootProject.name = 'armeria'
 
 apply from: "${rootDir}/gradle/scripts/settings-flags.gradle"
 
+def virtualProjectsPath = "${rootDir}/build/virtual-projects"
+
 // Published BOM projects
 includeWithFlags ':bom',                                 'bom'
+project(':bom').with {
+    projectDir = file("${virtualProjectsPath}/bom")
+    projectDir.mkdirs()
+    buildFileName = 'gradle/scripts/lib/bom.gradle'
+}
 // Published version catalog projects
 includeWithFlags ':version-catalog',                     'version-catalog'
+project(':version-catalog').with {
+    projectDir = file("${virtualProjectsPath}/version-catalog")
+    projectDir.mkdirs()
+    buildFileName = 'gradle/scripts/version-catalog.gradle'
+}
 
 // Published Java projects
 includeWithFlags ':annotation-processor',                'java', 'publish', 'relocate'
@@ -110,8 +122,10 @@ includeWithFlags ':logback13',                           'java', 'publish', 'rel
 project(':logback13').projectDir = file('logback/logback13')
 includeWithFlags ':logback14',                           'java11', 'publish', 'relocate', 'no_aggregation'
 project(':logback14').projectDir = file('logback/logback14')
+includeWithFlags ':micrometer-context',                  'java', 'relocate', 'native'
 includeWithFlags ':native-image-config'
 includeWithFlags ':oauth2',                              'java', 'publish', 'relocate', 'native'
+includeWithFlags ':prometheus1',                         'java', 'publish', 'relocate', 'native'
 includeWithFlags ':protobuf',                            'java', 'publish', 'relocate', 'native'
 includeWithFlags ':reactor3',                            'java', 'publish', 'relocate', 'native'
 includeWithFlags ':resilience4j2',                       'java17', 'publish', 'relocate', 'native'
@@ -169,6 +183,10 @@ includeWithFlags ':thrift0.17',                          'java', 'publish', 'rel
 project(':thrift0.17').projectDir = file('thrift/thrift0.17')
 includeWithFlags ':thrift0.18',                          'java11', 'publish', 'relocate', 'no_aggregation', 'native'
 project(':thrift0.18').projectDir = file('thrift/thrift0.18')
+includeWithFlags ':thrift0.19',                          'java11', 'publish', 'relocate', 'no_aggregation', 'native'
+project(':thrift0.19').projectDir = file('thrift/thrift0.19')
+includeWithFlags ':thrift0.20',                          'java11', 'publish', 'relocate', 'no_aggregation', 'native'
+project(':thrift0.20').projectDir = file('thrift/thrift0.20')
 includeWithFlags ':tomcat8',                             'java', 'publish', 'relocate', 'no_aggregation'
 includeWithFlags ':tomcat9',                             'java', 'publish', 'relocate', 'no_aggregation'
 includeWithFlags ':tomcat10',                            'java11', 'publish', 'relocate'
@@ -177,6 +195,7 @@ includeWithFlags ':zookeeper3',                          'java', 'publish', 'rel
 includeWithFlags ':saml',                                'java', 'publish', 'relocate', 'native'
 includeWithFlags ':bucket4j',                            'java', 'publish', 'relocate', 'native'
 includeWithFlags ':consul',                              'java', 'publish', 'relocate', 'native'
+includeWithFlags ':nacos',                               'java', 'publish', 'relocate', 'native'
 
 // Published Javadoc-only projects
 includeWithFlags ':javadoc',                             'java', 'publish', 'no_aggregation'
@@ -188,6 +207,7 @@ includeWithFlags ':it:builders',                               'java'
 includeWithFlags ':it:context-storage',                        'java'
 includeWithFlags ':it:dgs',                                    'java17'
 includeWithFlags ':it:flags-cyclic-dep',                       'java'
+includeWithFlags ':it:flags-provider',                         'java', 'relocate'
 includeWithFlags ':it:graphql-multipart',                      'java17'
 includeWithFlags ':it:grpcweb',                                'java', 'akka-grpc_2.13'
 includeWithFlags ':it:grpc:java',                              'java'
@@ -195,17 +215,19 @@ includeWithFlags ':it:grpc:kotlin',                            'java', 'relocate
 includeWithFlags ':it:grpc:kotlin-coroutine-context-provider', 'java', 'relocate', 'kotlin-grpc', 'kotlin'
 includeWithFlags ':it:grpc:scala',                             'java', 'relocate', 'scala-grpc_2.13', 'scala_2.13'
 includeWithFlags ':it:grpc:reactor',                           'java', 'relocate', 'reactor-grpc'
-includeWithFlags ':it:flags-provider',                         'java', 'relocate'
+includeWithFlags ':it:grpc:protobuf4',                         'java', 'relocate'
+includeWithFlags ':it:internal-logging',                       'java', 'relocate'
 includeWithFlags ':it:jackson-provider',                       'java', 'relocate'
 includeWithFlags ':it:kotlin',                                 'java', 'relocate', 'kotlin'
 includeWithFlags ':it:kubernetes-chaos-tests',                 'java', 'relocate'
 includeWithFlags ':it:logback1.4',                             'java11', 'relocate'
-includeWithFlags ':it:micrometer1.3',                          'java', 'relocate'
+includeWithFlags ':it:logback1.5',                             'java11', 'relocate', 'no_aggregation'
 includeWithFlags ':it:multipart',                              'java17', 'relocate'
 includeWithFlags ':it:nio',                                    'java', 'relocate'
 includeWithFlags ':it:okhttp',                                 'java', 'relocate'
 includeWithFlags ':it:resilience4j',                           'java17', 'relocate'
 includeWithFlags ':it:server',                                 'java', 'relocate'
+includeWithFlags ':it:server-allow-semicolon',                 'java'
 includeWithFlags ':it:spring:boot3-jetty12',                   'java17', 'relocate'
 includeWithFlags ':it:spring:boot3-kotlin',                    'java17', 'relocate', 'kotlin'
 includeWithFlags ':it:spring:boot3-mixed',                     'java17', 'relocate'
@@ -252,6 +274,7 @@ includeWithFlags ':examples:graphql-kotlin-example',               'java17', 'ko
 project(':examples:graphql-kotlin-example').projectDir = file('examples/graphql-kotlin')
 includeWithFlags ':examples:graphql-sangria-example',              'java11', 'scala_2.13'
 project(':examples:graphql-sangria-example').projectDir = file('examples/graphql-sangria')
+includeWithFlags ':examples:grpc-envoy',                           'java11'
 includeWithFlags ':examples:grpc-example',                         'java11'
 project(':examples:grpc-example').projectDir = file('examples/grpc')
 includeWithFlags ':examples:grpc-kotlin',                          'java11', 'kotlin-grpc', 'kotlin'

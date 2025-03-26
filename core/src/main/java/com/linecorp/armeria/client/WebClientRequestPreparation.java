@@ -329,6 +329,11 @@ public final class WebClientRequestPreparation
         if (exchangeType != null) {
             exchangeType(exchangeType);
         }
+
+        final ResponseTimeoutMode responseTimeoutMode = requestOptions.responseTimeoutMode();
+        if (responseTimeoutMode != null) {
+            responseTimeoutMode(responseTimeoutMode);
+        }
         return this;
     }
 
@@ -389,6 +394,12 @@ public final class WebClientRequestPreparation
     @Override
     public WebClientRequestPreparation exchangeType(ExchangeType exchangeType) {
         requestOptionsBuilder().exchangeType(exchangeType);
+        return this;
+    }
+
+    @Override
+    public WebClientRequestPreparation responseTimeoutMode(ResponseTimeoutMode responseTimeoutMode) {
+        requestOptionsBuilder().responseTimeoutMode(responseTimeoutMode);
         return this;
     }
 

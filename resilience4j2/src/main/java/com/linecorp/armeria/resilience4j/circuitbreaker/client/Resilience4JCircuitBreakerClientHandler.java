@@ -27,6 +27,7 @@ import com.linecorp.armeria.client.circuitbreaker.CircuitBreakerClientHandler;
 import com.linecorp.armeria.client.circuitbreaker.CircuitBreakerMapping;
 import com.linecorp.armeria.client.circuitbreaker.ClientCircuitBreakerGenerator;
 import com.linecorp.armeria.common.Request;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.circuitbreaker.CircuitBreakerCallback;
 
@@ -102,6 +103,7 @@ public final class Resilience4JCircuitBreakerClientHandler implements CircuitBre
         this.mapping = mapping;
     }
 
+    @Nullable
     @Override
     public CircuitBreakerCallback tryRequest(ClientRequestContext ctx, Request req) {
         final CircuitBreaker circuitBreaker;

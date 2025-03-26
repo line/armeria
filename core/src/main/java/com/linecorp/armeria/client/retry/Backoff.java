@@ -24,6 +24,8 @@ import java.util.concurrent.ThreadLocalRandom;
 import java.util.function.Supplier;
 
 import com.linecorp.armeria.common.Flags;
+import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.util.Unwrappable;
 
 /**
@@ -58,7 +60,8 @@ public interface Backoff extends Unwrappable {
     }
 
     /**
-     * Returns a {@link Backoff} that waits an exponentially-increasing amount of time between attempts.
+     * Returns a {@link Backoff} that waits an exponentially-increasing with multiplier
+     * 2.0 amount of time between attempts.
      */
     static Backoff exponential(long initialDelayMillis, long maxDelayMillis) {
         return exponential(initialDelayMillis, maxDelayMillis, 2.0);
@@ -130,6 +133,60 @@ public interface Backoff extends Unwrappable {
     }
 
     /**
+     * Returns an {@link ExponentialBackoffBuilder} that provides methods to configure
+     * backoff delay which is exponentially-increasing. The default values are as follows:
+     * <ul>
+     *   <li>{@code initialDelayMillis}: {@value ExponentialBackoffBuilder#DEFAULT_INITIAL_DELAY_MILLIS}</li>
+     *   <li>{@code maxDelayMillis}: {@value ExponentialBackoffBuilder#DEFAULT_MAX_DELAY_MILLIS}</li>
+     *   <li>{@code multiplier}: {@value ExponentialBackoffBuilder#DEFAULT_MULTIPLIER}</li>
+     * </ul>
+     */
+    @UnstableApi
+    static ExponentialBackoffBuilder builderForExponential() {
+        return new ExponentialBackoffBuilder();
+    }
+
+    /**
+     * Returns a {@link FibonacciBackoffBuilder} that provides methods to configure
+     * backoff delay which follows fibonacci sequence.
+     * f(n) = f(n-1) + f(n-2) where f(0) = f(1) = {@code initialDelayMillis}
+     * The default values are as follows:
+     * <ul>
+     *   <li>{@code initialDelayMillis}: {@value FibonacciBackoffBuilder#DEFAULT_INITIAL_DELAY_MILLIS}</li>
+     *   <li>{@code maxDelayMillis}: {@value FibonacciBackoffBuilder#DEFAULT_MAX_DELAY_MILLIS}</li>
+     * </ul>
+     */
+    @UnstableApi
+    static FibonacciBackoffBuilder builderForFibonacci() {
+        return new FibonacciBackoffBuilder();
+    }
+
+    /**
+     * Returns a {@link FixedBackoffBuilder} that provides methods to configure
+     * backoff delay which is a fixed value. The default values are as follows:
+     * <ul>
+     *   <li>{@code delayMillis}: {@value FixedBackoffBuilder#DEFAULT_DELAY_MILLIS}</li>
+     * </ul>
+     */
+    @UnstableApi
+    static FixedBackoffBuilder builderForFixed() {
+        return new FixedBackoffBuilder();
+    }
+
+    /**
+     * Returns a {@link RandomBackoffBuilder} that provides methods to configure
+     * backoff delay which is a random value. The default values are as follows:
+     * <ul>
+     *   <li>{@code minDelayMillis}: {@value RandomBackoffBuilder#DEFAULT_MIN_DELAY_MILLIS}</li>
+     *   <li>{@code maxDelayMillis}: {@value RandomBackoffBuilder#DEFAULT_MAX_DELAY_MILLIS}</li>
+     * </ul>
+     */
+    @UnstableApi
+    static RandomBackoffBuilder builderForRandom() {
+        return new RandomBackoffBuilder();
+    }
+
+    /**
      * Returns the number of milliseconds to wait for before attempting a retry.
      *
      * @param numAttemptsSoFar the number of attempts made by a client so far, including the first attempt and
@@ -152,6 +209,7 @@ public interface Backoff extends Unwrappable {
      *
      * @see Unwrappable
      */
+    @Nullable
     @Override
     default <T> T as(Class<T> type) {
         return Unwrappable.super.as(type);

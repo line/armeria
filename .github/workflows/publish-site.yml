@@ -1,6 +1,12 @@
 name: Publish Armeria site
 
 on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Release Version'
+        required: true
+        type: string
   push:
     tags:
       - armeria-*
@@ -28,11 +34,15 @@ jobs:
           java-version: '21'
 
       - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v3
+        uses: gradle/actions/setup-gradle@v4
 
       - name: Build the site
         run: |
-          ./gradlew --no-daemon --stacktrace  --max-workers=2 --parallel -PgithubToken=${{ secrets.GITHUB_TOKEN }} site
+          if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+            ./gradlew --no-daemon --stacktrace --max-workers=2 --parallel -PgithubToken=${{ secrets.GITHUB_TOKEN }} -Pversion=${{ inputs.version }} site
+          else
+            ./gradlew --no-daemon --stacktrace --max-workers=2 --parallel -PgithubToken=${{ secrets.GITHUB_TOKEN }} site
+          fi
 
       - name: Deploy the site
         uses: peaceiris/actions-gh-pages@v4

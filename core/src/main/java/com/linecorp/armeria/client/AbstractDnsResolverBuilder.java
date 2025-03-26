@@ -38,10 +38,14 @@ import com.linecorp.armeria.internal.client.dns.DnsUtil;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import io.netty.channel.EventLoopGroup;
+import io.netty.channel.socket.DatagramChannel;
+import io.netty.channel.socket.SocketChannel;
 import io.netty.handler.codec.dns.DnsRecord;
 import io.netty.resolver.HostsFileEntriesResolver;
 import io.netty.resolver.dns.BiDnsQueryLifecycleObserverFactory;
+import io.netty.resolver.dns.DnsNameResolver;
 import io.netty.resolver.dns.DnsNameResolverBuilder;
+import io.netty.resolver.dns.DnsNameResolverChannelStrategy;
 import io.netty.resolver.dns.DnsQueryLifecycleObserverFactory;
 import io.netty.resolver.dns.DnsServerAddressStream;
 import io.netty.resolver.dns.DnsServerAddressStreamProvider;
@@ -56,7 +60,7 @@ import io.netty.resolver.dns.NoopDnsCnameCache;
  * A skeletal builder implementation for DNS resolvers.
  */
 @UnstableApi
-public abstract class AbstractDnsResolverBuilder {
+public abstract class AbstractDnsResolverBuilder<SELF extends AbstractDnsResolverBuilder<SELF>> {
 
     private DnsCache dnsCache = DnsCache.ofDefault();
     private String cacheSpec = Flags.dnsCacheSpec();
@@ -83,6 +87,11 @@ public abstract class AbstractDnsResolverBuilder {
     private List<String> searchDomains = DnsUtil.defaultSearchDomains();
     private int ndots = DnsUtil.defaultNdots();
     private boolean decodeIdn = true;
+    @Nullable
+    private DnsNameResolverChannelStrategy datagramChannelStrategy;
+    @Nullable
+    private Class<? extends SocketChannel> socketChannelType;
+    private boolean retrySocketChannelOnTimeout;
 
     @Nullable
     private MeterRegistry meterRegistry;
@@ -93,6 +102,14 @@ public abstract class AbstractDnsResolverBuilder {
     protected AbstractDnsResolverBuilder() {}
 
     /**
+     * Return {@code this}.
+     */
+    @SuppressWarnings("unchecked")
+    protected final SELF self() {
+        return (SELF) this;
+    }
+
+    /**
      * Sets if this resolver should generate detailed trace information in exception messages so that
      * it is easier to understand the cause of resolution failure. This flag is enabled by default.
      *
@@ -100,9 +117,9 @@ public abstract class AbstractDnsResolverBuilder {
      *             {@link LoggingDnsQueryLifeCycleObserverFactory}.
      */
     @Deprecated
-    public AbstractDnsResolverBuilder traceEnabled(boolean traceEnabled) {
+    public SELF traceEnabled(boolean traceEnabled) {
         this.traceEnabled = traceEnabled;
-        return this;
+        return self();
     }
 
     /**
@@ -110,7 +127,7 @@ public abstract class AbstractDnsResolverBuilder {
      * {@code 0} disables the timeout.
      * If unspecified, {@value DnsUtil#DEFAULT_DNS_QUERY_TIMEOUT_MILLIS} ms will be used.
      */
-    public AbstractDnsResolverBuilder queryTimeout(Duration queryTimeout) {
+    public SELF queryTimeout(Duration queryTimeout) {
         requireNonNull(queryTimeout, "queryTimeout");
         checkArgument(!queryTimeout.isNegative(), "queryTimeout: %s (expected: >= 0)", queryTimeout);
         return queryTimeoutMillis(queryTimeout.toMillis());
@@ -128,10 +145,10 @@ public abstract class AbstractDnsResolverBuilder {
      * {@code 0} disables the timeout.
      * If unspecified, {@value DnsUtil#DEFAULT_DNS_QUERY_TIMEOUT_MILLIS} ms will be used.
      */
-    public AbstractDnsResolverBuilder queryTimeoutMillis(long queryTimeoutMillis) {
+    public SELF queryTimeoutMillis(long queryTimeoutMillis) {
         checkArgument(queryTimeoutMillis >= 0, "queryTimeoutMillis: %s (expected: >= 0)", queryTimeoutMillis);
         this.queryTimeoutMillis = queryTimeoutMillis;
-        return this;
+        return self();
     }
 
     /**
@@ -140,7 +157,7 @@ public abstract class AbstractDnsResolverBuilder {
      * <a href="https://en.wikipedia.org/wiki/Search_domain">search domain</a> resolution.
      * If unspecified, the value of {@link #queryTimeout(Duration)} is used.
      */
-    public AbstractDnsResolverBuilder queryTimeoutForEachAttempt(Duration queryTimeoutForEachAttempt) {
+    public SELF queryTimeoutForEachAttempt(Duration queryTimeoutForEachAttempt) {
         requireNonNull(queryTimeoutForEachAttempt, "queryTimeoutForEachAttempt");
         final long queryTimeoutMillisForEachAttempt = queryTimeoutForEachAttempt.toMillis();
         checkArgument(queryTimeoutMillisForEachAttempt > 0, "queryTimeoutForEachAttempt: %s (expected: > 0)",
@@ -154,20 +171,20 @@ public abstract class AbstractDnsResolverBuilder {
      * <a href="https://en.wikipedia.org/wiki/Search_domain">search domain</a> resolution.
      * If unspecified, the value of {@link #queryTimeoutMillis(long)} is used.
      */
-    public AbstractDnsResolverBuilder queryTimeoutMillisForEachAttempt(long queryTimeoutMillisForEachAttempt) {
+    public SELF queryTimeoutMillisForEachAttempt(long queryTimeoutMillisForEachAttempt) {
         checkArgument(queryTimeoutMillisForEachAttempt > 0,
                       "queryTimeoutMillisForEachAttempt: %s (expected: > 0)", queryTimeoutMillisForEachAttempt);
         this.queryTimeoutMillisForEachAttempt = queryTimeoutMillisForEachAttempt;
-        return this;
+        return self();
     }
 
     /**
      * Sets if this resolver has to send a DNS query with the RD (recursion desired) flag set.
      * This flag is enabled by default.
      */
-    public AbstractDnsResolverBuilder recursionDesired(boolean recursionDesired) {
+    public SELF recursionDesired(boolean recursionDesired) {
         this.recursionDesired = recursionDesired;
-        return this;
+        return self();
     }
 
     /**
@@ -179,24 +196,24 @@ public abstract class AbstractDnsResolverBuilder {
      *
      * @see #serverAddressStreamProvider(DnsServerAddressStreamProvider)
      */
-    public AbstractDnsResolverBuilder maxQueriesPerResolve(int maxQueriesPerResolve) {
+    public SELF maxQueriesPerResolve(int maxQueriesPerResolve) {
         checkArgument(maxQueriesPerResolve > 0, "maxQueriesPerResolve: %s (expected: > 0)",
                       maxQueriesPerResolve);
         this.maxQueriesPerResolve = maxQueriesPerResolve;
-        return this;
+        return self();
     }
 
     /**
      * Sets the DNS server addresses to send queries to. Operating system default is used by default.
      */
-    public AbstractDnsResolverBuilder serverAddresses(InetSocketAddress... serverAddresses) {
+    public SELF serverAddresses(InetSocketAddress... serverAddresses) {
         return serverAddresses(ImmutableList.copyOf(requireNonNull(serverAddresses, "serverAddresses")));
     }
 
     /**
      * Sets the DNS server addresses to send queries to. Operating system default is used by default.
      */
-    public AbstractDnsResolverBuilder serverAddresses(Iterable<InetSocketAddress> serverAddresses) {
+    public SELF serverAddresses(Iterable<InetSocketAddress> serverAddresses) {
         final DnsServerAddresses addrs = DnsServerAddresses.sequential(serverAddresses);
         return serverAddressStreamProvider(hostname -> addrs.stream());
     }
@@ -212,11 +229,11 @@ public abstract class AbstractDnsResolverBuilder {
      * Sets the {@link DnsServerAddressStreamProvider} which is used to determine which DNS server is used to
      * resolve each hostname.
      */
-    public AbstractDnsResolverBuilder serverAddressStreamProvider(
+    public SELF serverAddressStreamProvider(
             DnsServerAddressStreamProvider serverAddressStreamProvider) {
         requireNonNull(serverAddressStreamProvider, "serverAddressStreamProvider");
         this.serverAddressStreamProvider = serverAddressStreamProvider;
-        return this;
+        return self();
     }
 
     /**
@@ -226,7 +243,7 @@ public abstract class AbstractDnsResolverBuilder {
      * @deprecated Use {@link #serverAddressStreamProvider(DnsServerAddressStreamProvider)} instead.
      */
     @Deprecated
-    public AbstractDnsResolverBuilder dnsServerAddressStreamProvider(
+    public SELF dnsServerAddressStreamProvider(
             DnsServerAddressStreamProvider dnsServerAddressStreamProvider) {
         return serverAddressStreamProvider(dnsServerAddressStreamProvider);
     }
@@ -234,10 +251,10 @@ public abstract class AbstractDnsResolverBuilder {
     /**
      * Sets the capacity of the datagram packet buffer in bytes.
      */
-    public AbstractDnsResolverBuilder maxPayloadSize(int maxPayloadSize) {
+    public SELF maxPayloadSize(int maxPayloadSize) {
         checkArgument(maxPayloadSize > 0, "maxPayloadSize: %s (expected: > 0)", maxPayloadSize);
         this.maxPayloadSize = maxPayloadSize;
-        return this;
+        return self();
     }
 
     /**
@@ -245,9 +262,9 @@ public abstract class AbstractDnsResolverBuilder {
      * about how much data the resolver can read per response. Some DNS Server may not support this and so
      * fail to answer queries.
      */
-    public AbstractDnsResolverBuilder optResourceEnabled(boolean optResourceEnabled) {
+    public SELF optResourceEnabled(boolean optResourceEnabled) {
         this.optResourceEnabled = optResourceEnabled;
-        return this;
+        return self();
     }
 
     /**
@@ -261,21 +278,21 @@ public abstract class AbstractDnsResolverBuilder {
      * Sets the {@link HostsFileEntriesResolver} which is used to first check if the hostname is locally
      * aliased.
      */
-    public AbstractDnsResolverBuilder hostsFileEntriesResolver(
+    public SELF hostsFileEntriesResolver(
             HostsFileEntriesResolver hostsFileEntriesResolver) {
         this.hostsFileEntriesResolver = hostsFileEntriesResolver;
-        return this;
+        return self();
     }
 
     /**
      * Sets the {@link DnsQueryLifecycleObserverFactory} that is used to generate objects which can observe
      * individual DNS queries.
      */
-    public AbstractDnsResolverBuilder dnsQueryLifecycleObserverFactory(
+    public SELF dnsQueryLifecycleObserverFactory(
             DnsQueryLifecycleObserverFactory observerFactory) {
         requireNonNull(observerFactory, "observerFactory");
         dnsQueryLifecycleObserverFactory = observerFactory;
-        return this;
+        return self();
     }
 
     /**
@@ -285,7 +302,7 @@ public abstract class AbstractDnsResolverBuilder {
      * @deprecated Use {@link #enableDnsQueryMetrics(boolean)} instead.
      */
     @Deprecated
-    public AbstractDnsResolverBuilder disableDnsQueryMetrics() {
+    public SELF disableDnsQueryMetrics() {
         return enableDnsQueryMetrics(false);
     }
 
@@ -293,9 +310,9 @@ public abstract class AbstractDnsResolverBuilder {
      * Enables the default {@link DnsQueryLifecycleObserverFactory} that collects DNS query
      * metrics through {@link MeterRegistry}. This option is enabled by default.
      */
-    public AbstractDnsResolverBuilder enableDnsQueryMetrics(boolean enable) {
+    public SELF enableDnsQueryMetrics(boolean enable) {
         dnsQueryMetricsEnabled = enable;
-        return this;
+        return self();
     }
 
     /**
@@ -308,7 +325,7 @@ public abstract class AbstractDnsResolverBuilder {
     /**
      * Sets the search domains of the resolver.
      */
-    public AbstractDnsResolverBuilder searchDomains(String... searchDomains) {
+    public SELF searchDomains(String... searchDomains) {
         requireNonNull(searchDomains, "searchDomains");
         return searchDomains(ImmutableList.copyOf(searchDomains));
     }
@@ -316,10 +333,10 @@ public abstract class AbstractDnsResolverBuilder {
     /**
      * Sets the list of search domains of the resolver.
      */
-    public AbstractDnsResolverBuilder searchDomains(Iterable<String> searchDomains) {
+    public SELF searchDomains(Iterable<String> searchDomains) {
         requireNonNull(searchDomains, "searchDomains");
         this.searchDomains = ImmutableList.copyOf(searchDomains);
-        return this;
+        return self();
     }
 
     /**
@@ -332,19 +349,19 @@ public abstract class AbstractDnsResolverBuilder {
     /**
      * Sets the number of dots which must appear in a name before an initial absolute query is made.
      */
-    public AbstractDnsResolverBuilder ndots(int ndots) {
+    public SELF ndots(int ndots) {
         checkArgument(ndots >= 0, "ndots: %s (expected: >= 0)", ndots);
         this.ndots = ndots;
-        return this;
+        return self();
     }
 
     /**
      * Sets if the domain and host names should be decoded to unicode when received.
      * See <a href="https://datatracker.ietf.org/doc/rfc3492/">rfc3492</a>. This flag is enabled by default.
      */
-    public AbstractDnsResolverBuilder decodeIdn(boolean decodeIdn) {
+    public SELF decodeIdn(boolean decodeIdn) {
         this.decodeIdn = decodeIdn;
-        return this;
+        return self();
     }
 
     /**
@@ -358,9 +375,9 @@ public abstract class AbstractDnsResolverBuilder {
     /**
      * Sets {@link MeterRegistry} to collect the DNS query metrics.
      */
-    public AbstractDnsResolverBuilder meterRegistry(MeterRegistry meterRegistry) {
+    public SELF meterRegistry(MeterRegistry meterRegistry) {
         this.meterRegistry = meterRegistry;
-        return this;
+        return self();
     }
 
     /**
@@ -376,11 +393,11 @@ public abstract class AbstractDnsResolverBuilder {
      *
      * <p>Note that {@link #cacheSpec(String)} and {@link #dnsCache(DnsCache)} are mutually exclusive.
      */
-    public AbstractDnsResolverBuilder cacheSpec(String cacheSpec) {
+    public SELF cacheSpec(String cacheSpec) {
         requireNonNull(cacheSpec, "cacheSpec");
         this.cacheSpec = cacheSpec;
         needsToCreateDnsCache = true;
-        return this;
+        return self();
     }
 
     /**
@@ -407,13 +424,13 @@ public abstract class AbstractDnsResolverBuilder {
      *
      * <p>Note that {@link #ttl(int, int)} and {@link #dnsCache(DnsCache)} are mutually exclusive.
      */
-    public AbstractDnsResolverBuilder ttl(int minTtl, int maxTtl) {
+    public SELF ttl(int minTtl, int maxTtl) {
         checkArgument(minTtl > 0 && minTtl <= maxTtl,
                       "minTtl: %s, maxTtl: %s (expected: 1 <= minTtl <= maxTtl)", minTtl, maxTtl);
         this.minTtl = minTtl;
         this.maxTtl = maxTtl;
         needsToCreateDnsCache = true;
-        return this;
+        return self();
     }
 
     /**
@@ -429,11 +446,11 @@ public abstract class AbstractDnsResolverBuilder {
      *
      * <p>Note that {@link #negativeTtl(int)} and {@link #dnsCache(DnsCache)} are mutually exclusive.
      */
-    public AbstractDnsResolverBuilder negativeTtl(int negativeTtl) {
+    public SELF negativeTtl(int negativeTtl) {
         checkArgument(negativeTtl >= 0, "negativeTtl: %s (expected: >= 0)", negativeTtl);
         needsToCreateDnsCache = true;
         this.negativeTtl = negativeTtl;
-        return this;
+        return self();
     }
 
     /**
@@ -447,10 +464,10 @@ public abstract class AbstractDnsResolverBuilder {
      * mutually exclusive with {@link #dnsCache(DnsCache)}.
      */
     @UnstableApi
-    public AbstractDnsResolverBuilder dnsCache(DnsCache dnsCache) {
+    public SELF dnsCache(DnsCache dnsCache) {
         requireNonNull(dnsCache, "dnsCache");
         this.dnsCache = dnsCache;
-        return this;
+        return self();
     }
 
     /**
@@ -477,6 +494,35 @@ public abstract class AbstractDnsResolverBuilder {
         } else {
             return dnsCache;
         }
+    }
+
+    /**
+     * Set the strategy that is used to determine how a {@link DatagramChannel} is used by the resolver for
+     * sending queries over UDP protocol.
+     */
+    @UnstableApi
+    public SELF datagramChannelStrategy(DnsNameResolverChannelStrategy datagramChannelStrategy) {
+        requireNonNull(datagramChannelStrategy, "datagramChannelStrategy");
+        this.datagramChannelStrategy = datagramChannelStrategy;
+        return self();
+    }
+
+    /**
+     * Enables <a href="https://datatracker.ietf.org/doc/html/rfc7766">TCP fallback</a> using the specified
+     * {@link SocketChannel} type.
+     * Note that TCP fallback is disabled by default.
+     * @param socketChannelType the type of {@link SocketChannel} to use for TCP fallback.
+     * @param retrySocketChannelOnTimeout if {@code true} the {@link DnsNameResolver} will also fallback to
+     *                                    TCP if a timeout was detected, if {@code false} it will only try to
+     *                                    use TCP if the response was marked as truncated.
+     */
+    @UnstableApi
+    public SELF socketChannelType(Class<? extends SocketChannel> socketChannelType,
+                                  boolean retrySocketChannelOnTimeout) {
+        requireNonNull(socketChannelType, "channelType");
+        this.socketChannelType = socketChannelType;
+        this.retrySocketChannelOnTimeout = retrySocketChannelOnTimeout;
+        return self();
     }
 
     /**
@@ -553,6 +599,13 @@ public abstract class AbstractDnsResolverBuilder {
             if (observerFactory != null) {
                 builder.dnsQueryLifecycleObserverFactory(observerFactory);
             }
+            final DnsNameResolverChannelStrategy datagramChannelStrategy = this.datagramChannelStrategy;
+            if (datagramChannelStrategy != null) {
+                builder.datagramChannelStrategy(datagramChannelStrategy);
+            }
+            final Class<? extends SocketChannel> socketChannelType = this.socketChannelType;
+            final boolean retrySocketChannelOnTimeout = this.retrySocketChannelOnTimeout;
+            builder.socketChannelType(socketChannelType, retrySocketChannelOnTimeout);
         };
     }
 }

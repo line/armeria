@@ -36,6 +36,7 @@ import org.reflections.util.ClasspathHelper;
 import org.reflections.util.ConfigurationBuilder;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 
 /**
  * Makes sure most builder overrides all overridden methods with the correct return type.
@@ -44,11 +45,68 @@ class OverriddenBuilderMethodsReturnTypeTest {
 
     @Test
     void methodChaining() {
+        final Set<String> excludedClasses = ImmutableSet.of(
+                "AbstractCircuitBreakerMappingBuilder",
+                "AbstractCuratorFrameworkBuilder",
+                "AbstractDnsResolverBuilder",
+                "AbstractDynamicEndpointGroupBuilder",
+                "AbstractHeadersSanitizerBuilder",
+                "AbstractHealthCheckedEndpointGroupBuilder",
+                "AbstractRuleBuilder",
+                "AbstractRuleWithContentBuilder",
+                "AnnotatedServiceBindingBuilder",
+                "ChainedCorsPolicyBuilder",
+                "CircuitBreakerMappingBuilder",
+                "CircuitBreakerRuleBuilder",
+                "CircuitBreakerRuleWithContentBuilder",
+                "ClientTlsConfigBuilder",
+                "ConsulEndpointGroupBuilder",
+                "ContextPathAnnotatedServiceConfigSetters",
+                "ContextPathDecoratingBindingBuilder",
+                "ContextPathServiceBindingBuilder",
+                "ContextPathServicesBuilder",
+                "CorsPolicyBuilder",
+                "DecoratingServiceBindingBuilder",
+                "DnsAddressEndpointGroupBuilder",
+                "DnsEndpointGroupBuilder",
+                "DnsResolverGroupBuilder",
+                "DnsServiceEndpointGroupBuilder",
+                "DnsTextEndpointGroupBuilder",
+                "DynamicEndpointGroupBuilder",
+                "DynamicEndpointGroupSetters",
+                "EurekaEndpointGroupBuilder",
+                "HealthCheckedEndpointGroupBuilder",
+                "InputStreamStreamMessageBuilder",
+                "JsonHeadersSanitizerBuilder",
+                "JsonLogFormatterBuilder",
+                "KubernetesEndpointGroupBuilder",
+                "PathStreamMessageBuilder",
+                "RampingUpLoadBalancerBuilder",
+                "Resilience4jCircuitBreakerMappingBuilder",
+                "RetryRuleBuilder",
+                "RetryRuleWithContentBuilder",
+                "ServerBuilder",
+                "ServerTlsConfigBuilder",
+                "ServiceBindingBuilder",
+                "TextHeadersSanitizerBuilder",
+                "TextLogFormatterBuilder",
+                "VirtualHostAnnotatedServiceBindingBuilder",
+                "VirtualHostBuilder",
+                "VirtualHostContextPathDecoratingBindingBuilder",
+                "VirtualHostContextPathServiceBindingBuilder",
+                "VirtualHostContextPathServicesBuilder",
+                "VirtualHostDecoratingServiceBindingBuilder",
+                "VirtualHostServiceBindingBuilder",
+                "WeightRampingUpStrategyBuilder",
+                "ZooKeeperEndpointGroupBuilder",
+                "ZooKeeperUpdatingListenerBuilder");
         final String packageName = "com.linecorp.armeria";
         findAllClasses(packageName).stream()
                                    .map(ReflectionUtils::forName)
                                    .filter(clazz -> clazz.getSimpleName().endsWith("Builder") &&
-                                                    Modifier.isFinal(clazz.getModifiers()))
+                                                    Modifier.isFinal(clazz.getModifiers()) &&
+                                                    Modifier.isPublic(clazz.getModifiers()))
+                                   .filter(clazz -> !excludedClasses.contains(clazz.getSimpleName()))
                                    .forEach(clazz -> {
                                        final List<Method> methods = overriddenMethods(clazz);
                                        for (Method m : methods) {

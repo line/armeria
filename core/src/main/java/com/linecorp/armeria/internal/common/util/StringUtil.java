@@ -20,6 +20,8 @@ import java.util.Map;
 
 import com.google.common.collect.ImmutableMap;
 
+import com.linecorp.armeria.common.annotation.Nullable;
+
 public final class StringUtil {
     private static final int MAX_NUM = 1000;
     private static final int MIN_NUM = -MAX_NUM;
@@ -56,15 +58,17 @@ public final class StringUtil {
         return Long.toString(num);
     }
 
-    public static Boolean toBoolean(String s, boolean errorOnFailure) {
+    public static Boolean toBoolean(String s) {
         final Boolean result = stringToBoolean.get(s);
         if (result != null) {
             return result;
         }
-        if (errorOnFailure) {
-            throw new IllegalArgumentException("must be one of " + stringToBoolean.keySet() + ": " + s);
-        }
-        return null;
+        throw new IllegalArgumentException("must be one of " + stringToBoolean.keySet() + ": " + s);
+    }
+
+    @Nullable
+    public static Boolean toBooleanOrNull(String s) {
+        return stringToBoolean.get(s);
     }
 
     private StringUtil() {}

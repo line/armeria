@@ -73,20 +73,35 @@ allprojects {
                 return null
             }
 
-            // Use the overridden one if available.
-            def overriddenAutomaticModuleName = findOverridden('automaticModuleNameOverrides', project)
-            if (overriddenAutomaticModuleName != null) {
-                return overriddenAutomaticModuleName
-            }
+            return project.provider {
+                // per-project override
+                if (project.ext.has('automaticModuleNameOverride')) {
+                    def override = project.ext.get('automaticModuleNameOverride')
+                    if (!(override instanceof String)) {
+                        throw new IllegalStateException("project.ext.automaticModuleNameOverride must be a String: ${override}")
+                    }
+                    return override
+                }
 
-            // Generate from the groupId and artifactId otherwise.
-            def groupIdComponents = String.valueOf(rootProject.group).split("\\.").toList()
-            def artifactIdComponents =
-                    String.valueOf(project.ext.artifactId).replace('-', '.').split("\\.").toList()
-            if (groupIdComponents.last() == artifactIdComponents.first()) {
-                return String.join('.', groupIdComponents + artifactIdComponents.drop(1))
-            } else {
-                return String.join('.', groupIdComponents + artifactIdComponents)
+                // Use the overridden one if available.
+
+                def overriddenAutomaticModuleName = findOverridden('automaticModuleNameOverrides', project)
+                if (overriddenAutomaticModuleName != null) {
+                    return overriddenAutomaticModuleName
+                }
+
+                // Generate from the groupId and artifactId otherwise.
+                def groupIdComponents = String.valueOf(rootProject.group).split("\\.").toList()
+                def artifactIdComponents =
+                        String.valueOf(project.ext.artifactId).replace('-', '.').split("\\.").toList()
+                def generatedName
+                if (groupIdComponents.last() == artifactIdComponents.first()) {
+                    generatedName = String.join('.', groupIdComponents + artifactIdComponents.drop(1))
+                } else {
+                    generatedName = String.join('.', groupIdComponents + artifactIdComponents)
+                }
+                generatedName = generatedName.replaceAll("\\.(\\d)", "_\$1")
+                return generatedName
             }
         }.call()
     }

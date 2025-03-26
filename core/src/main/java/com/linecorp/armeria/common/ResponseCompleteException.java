@@ -26,16 +26,22 @@ public final class ResponseCompleteException extends CancellationException {
 
     private static final long serialVersionUID = 6090278381004263949L;
 
-    private static final ResponseCompleteException INSTANCE = new ResponseCompleteException();
+    private static final ResponseCompleteException INSTANCE = new ResponseCompleteException(false);
 
     /**
      * Returns the singleton {@link ResponseCompleteException}.
      */
     public static ResponseCompleteException get() {
-        return INSTANCE;
+        if (Flags.verboseExceptionSampler().isSampled(ResponseCompleteException.class)) {
+            return new ResponseCompleteException();
+        } else {
+            return INSTANCE;
+        }
     }
 
-    private ResponseCompleteException() {
+    private ResponseCompleteException() {}
+
+    private ResponseCompleteException(@SuppressWarnings("unused") boolean dummy) {
         super(null, null, false, false);
     }
 }

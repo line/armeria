@@ -45,6 +45,7 @@ import org.slf4j.LoggerFactory;
 
 import com.google.common.collect.ImmutableList;
 
+import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.metric.MoreMeters;
@@ -109,7 +110,6 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
     private static final Logger logger = LoggerFactory.getLogger(HttpServerPipelineConfigurator.class);
 
     private static final int SSL_RECORD_HEADER_LENGTH = 5;
-    private static final int MAX_CLIENT_HELLO_LENGTH = 4096; // 4KiB should be more than enough.
 
     static final AsciiString SCHEME_HTTP = AsciiString.cached("http");
     static final AsciiString SCHEME_HTTPS = AsciiString.cached("https");
@@ -216,7 +216,7 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
                 p.channel(), H1C, keepAliveHandler, config.http1HeaderNaming()
         );
         p.addLast(TrafficLoggingHandler.SERVER);
-        final HttpServerHandler httpServerHandler = new HttpServerHandler(config,
+        final HttpServerHandler httpServerHandler = new HttpServerHandler(config, p.channel(),
                                                                           gracefulShutdownSupport,
                                                                           responseEncoder,
                                                                           H1C, proxiedAddresses);
@@ -230,11 +230,25 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
     }
 
     private void configureHttps(ChannelPipeline p, @Nullable ProxiedAddresses proxiedAddresses) {
-        final Mapping<String, SslContext> sslContexts =
-                requireNonNull(config.sslContextMapping(), "config.sslContextMapping() returned null");
-        p.addLast(new SniHandler(sslContexts, MAX_CLIENT_HELLO_LENGTH, config.idleTimeoutMillis()));
+        p.addLast(newSniHandler(p));
         p.addLast(TrafficLoggingHandler.SERVER);
         p.addLast(new Http2OrHttpHandler(proxiedAddresses));
+    }
+
+    private SniHandler newSniHandler(ChannelPipeline p) {
+        final Mapping<String, SslContext> sslContexts =
+                requireNonNull(config.sslContextMapping(), "config.sslContextMapping() returned null");
+        final SniHandler sniHandler = new SniHandler(sslContexts, Flags.defaultMaxClientHelloLength(),
+                                                     config.idleTimeoutMillis());
+        if (sslContexts instanceof TlsProviderMapping) {
+            p.channel().closeFuture().addListener(future -> {
+                final SslContext sslContext = sniHandler.sslContext();
+                if (sslContext != null) {
+                    ((TlsProviderMapping) sslContexts).release(sslContext);
+                }
+            });
+        }
+        return sniHandler;
     }
 
     private Http2ConnectionHandler newHttp2ConnectionHandler(ChannelPipeline pipeline, AsciiString scheme) {
@@ -497,7 +511,7 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
         private void addHttp2Handlers(ChannelHandlerContext ctx) {
             final ChannelPipeline p = ctx.pipeline();
             p.addLast(newHttp2ConnectionHandler(p, SCHEME_HTTPS));
-            p.addLast(new HttpServerHandler(config,
+            p.addLast(new HttpServerHandler(config, p.channel(),
                                             gracefulShutdownSupport,
                                             null, H2, proxiedAddresses));
         }
@@ -527,7 +541,7 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
                     config.http1MaxInitialLineLength(),
                     config.http1MaxHeaderSize(),
                     config.http1MaxChunkSize()));
-            final HttpServerHandler httpServerHandler = new HttpServerHandler(config,
+            final HttpServerHandler httpServerHandler = new HttpServerHandler(config, ch,
                                                                               gracefulShutdownSupport,
                                                                               encoder, H1, proxiedAddresses);
             p.addLast(new Http1RequestDecoder(config, ch, SCHEME_HTTPS, encoder, httpServerHandler));
