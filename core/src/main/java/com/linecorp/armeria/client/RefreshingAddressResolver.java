@@ -67,6 +67,7 @@ final class RefreshingAddressResolver
     @Nullable
     private final ToLongFunction<String> autoRefreshTimeoutFunction;
     private final boolean autoRefresh;
+    private final DnsCache dnsResolverCache;
 
     private volatile boolean resolverClosed;
 
@@ -78,6 +79,7 @@ final class RefreshingAddressResolver
                               @Nullable ToLongFunction<String> autoRefreshTimeoutFunction) {
         super(eventLoop);
         this.addressResolverCache = addressResolverCache;
+        this.dnsResolverCache = dnsResolverCache;
         this.resolver = resolver;
         this.dnsRecordTypes = dnsRecordTypes;
         this.negativeTtl = negativeTtl;
@@ -258,6 +260,7 @@ final class RefreshingAddressResolver
     @Override
     public void close() {
         resolverClosed = true;
+        dnsResolverCache.removeListener(this);
         resolver.close();
     }
 

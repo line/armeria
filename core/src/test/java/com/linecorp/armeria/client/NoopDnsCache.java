@@ -50,4 +50,7 @@ public enum NoopDnsCache implements DnsCache {
 
     @Override
     public void addListener(DnsCacheListener listener) {}
+
+    @Override
+    public void removeListener(DnsCacheListener listener) {}
 }
