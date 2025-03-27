@@ -148,8 +148,7 @@ public class DefaultStreamMessage<T> extends AbstractStreamWriter<T> {
             // 'invokedOnSubscribe' should be set after 'subscribe0()' is completed.
             // 'onComplete()' could be invoked by a subclass which overrides 'subscribe0()' to subscribe
             // to other Publishers.
-            invokedOnSubscribe = true;
-            subscriber.onSubscribe(subscription);
+            maybeInvokeOnSubscribe(subscription, subscriber);
             if (!queue.isEmpty()) {
                 notifySubscriber0();
             }
@@ -163,6 +162,14 @@ public class DefaultStreamMessage<T> extends AbstractStreamWriter<T> {
                             subscriber, t);
             }
         }
+    }
+
+    private void maybeInvokeOnSubscribe(SubscriptionImpl subscription, Subscriber<Object> subscriber) {
+        if (invokedOnSubscribe) {
+            return;
+        }
+        invokedOnSubscribe = true;
+        subscriber.onSubscribe(subscription);
     }
 
     /**
@@ -300,6 +307,7 @@ public class DefaultStreamMessage<T> extends AbstractStreamWriter<T> {
 
     private void notifySubscriberOfCloseEvent0(SubscriptionImpl subscription, CloseEvent event) {
         try {
+            maybeInvokeOnSubscribe(subscription, subscription.subscriber());
             event.notifySubscriber(subscription, whenComplete());
         } finally {
             subscription.clearSubscriber();
