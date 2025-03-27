@@ -279,6 +279,12 @@ public final class ArmeriaHttpUtil {
      * Returns {@code -1} otherwise.
      */
     public static int findAuthority(String reqTarget) {
+        // A scheme-relative uri denoted as "//" authority path-abempty
+        // https://datatracker.ietf.org/doc/html/rfc3986#section-4.2
+        if (reqTarget.length() >= 3 && reqTarget.charAt(0) == '/' &&
+            reqTarget.charAt(1) == '/' && reqTarget.charAt(2) != '/') {
+            return 2;
+        }
         final int firstColonIdx = reqTarget.indexOf(':');
         if (firstColonIdx <= 0 || reqTarget.length() <= firstColonIdx + 3) {
             return -1;
@@ -770,7 +776,7 @@ public final class ArmeriaHttpUtil {
      * for HTTP1 en/decoders.
      */
     private static void purgeHttp1OnlyHeaders(io.netty.handler.codec.http.HttpHeaders inHeaders,
-                                             HttpHeadersBuilder out) {
+                                              HttpHeadersBuilder out) {
         //TODO(minwoox): dedup the logic between these method and toArmeria
         maybeSetTeHeader(inHeaders, out);
         maybeRemoveConnectionHeaders(inHeaders, out);

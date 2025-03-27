@@ -107,7 +107,7 @@ public abstract class AbstractRequestContextBuilder {
 
         final String rawPath = req.headers().path();
         final RequestTarget reqTarget = server ? RequestTarget.forServer(rawPath)
-                                               : RequestTarget.forClient(rawPath);
+                                               : DefaultRequestTarget.forClientPath(rawPath);
         checkArgument(reqTarget != null, "request.path is not valid: %s", rawPath);
         checkArgument(reqTarget.form() != RequestTargetForm.ABSOLUTE,
                       "request.path must not contain scheme or authority: %s", rawPath);

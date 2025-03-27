@@ -41,6 +41,10 @@ public final class RequestTargetCache {
     private static final Cache<String, RequestTarget> CLIENT_CACHE =
             Flags.parsedPathCacheSpec() != null ? buildCache(Flags.parsedPathCacheSpec()) : null;
 
+    @Nullable
+    private static final Cache<String, RequestTarget> CLIENT_PATH_CACHE =
+            Flags.parsedPathCacheSpec() != null ? buildCache(Flags.parsedPathCacheSpec()) : null;
+
     private static Cache<String, RequestTarget> buildCache(String spec) {
         return Caffeine.from(spec).build();
     }
@@ -55,6 +59,10 @@ public final class RequestTargetCache {
         if (CLIENT_CACHE != null) {
             CaffeineMetricSupport.setup(registry, METER_ID_PREFIX.withTags("type", "client"), CLIENT_CACHE);
         }
+        if (CLIENT_PATH_CACHE != null) {
+            CaffeineMetricSupport.setup(registry, METER_ID_PREFIX.withTags("type", "client.path"),
+                                        CLIENT_PATH_CACHE);
+        }
     }
 
     @Nullable
@@ -65,6 +73,11 @@ public final class RequestTargetCache {
     @Nullable
     public static RequestTarget getForClient(String reqTarget) {
         return get(reqTarget, CLIENT_CACHE);
+    }
+
+    @Nullable
+    public static RequestTarget getForClientPath(String reqTarget) {
+        return get(reqTarget, CLIENT_PATH_CACHE);
     }
 
     @Nullable
@@ -82,6 +95,10 @@ public final class RequestTargetCache {
 
     public static void putForClient(String reqTarget, RequestTarget normalized) {
         put(reqTarget, normalized, CLIENT_CACHE);
+    }
+
+    public static void putForClientPath(String reqTarget, RequestTarget normalized) {
+        put(reqTarget, normalized, CLIENT_PATH_CACHE);
     }
 
     private static void put(String reqTarget, RequestTarget normalized,
@@ -123,8 +140,8 @@ public final class RequestTargetCache {
      */
     @VisibleForTesting
     public static Set<String> cachedClientPaths() {
-        assert CLIENT_CACHE != null : "CLIENT_CACHE";
-        return CLIENT_CACHE.asMap().keySet();
+        assert CLIENT_PATH_CACHE != null : "CLIENT_PATH_CACHE";
+        return CLIENT_PATH_CACHE.asMap().keySet();
     }
 
     private RequestTargetCache() {}
