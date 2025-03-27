@@ -19,8 +19,6 @@ package com.linecorp.armeria.client.retry;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.linecorp.armeria.internal.client.ClientUtil.executeWithFallback;
 import static com.linecorp.armeria.internal.client.ClientUtil.initContextAndExecuteWithFallback;
-import static com.linecorp.armeria.internal.client.RuleFilter.RULE_RESPONSE_HEADERS_KEY;
-import static com.linecorp.armeria.internal.client.RuleFilter.RULE_RESPONSE_TRAILERS_KEY;
 
 import java.time.Duration;
 import java.util.Date;
@@ -43,10 +41,11 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpResponseDuplicator;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RequestHeadersBuilder;
-import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.SplitHttpResponse;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
+import com.linecorp.armeria.common.logging.RequestLogProperty;
 import com.linecorp.armeria.common.stream.AbortedStreamException;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.internal.client.AggregatedHttpRequestDuplicator;
@@ -326,24 +325,29 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
             response = executeWithFallback(unwrap(), derivedCtx,
                                            (context, cause) -> HttpResponse.ofFailure(cause), ctxReq);
         }
+
         final RetryConfig<HttpResponse> config = mappedRetryConfig(ctx);
         if (!ctx.exchangeType().isResponseStreaming() || config.requiresResponseTrailers()) {
-            response.aggregate().handleAsync((aggregated, cause) -> {
+            response.aggregate().handle((aggregated, cause) -> {
                 if (cause != null) {
+                    derivedCtx.logBuilder().endResponse(cause);
                     handleResponseWithoutContent(config, ctx, rootReqDuplicator, originalReq, returnedRes,
                                                  future, derivedCtx, HttpResponse.ofFailure(cause), cause);
                 } else {
-                    derivedCtx.setAttr(RULE_RESPONSE_HEADERS_KEY, aggregated.headers());
-                    if (!aggregated.trailers().isEmpty()) {
-                        derivedCtx.setAttr(RULE_RESPONSE_TRAILERS_KEY, aggregated.trailers());
+                    if (!derivedCtx.log().isAvailable(
+                            RequestLogProperty.REQUEST_FIRST_BYTES_TRANSFERRED_TIME)) {
+                        derivedCtx.logBuilder().endRequest();
+                        derivedCtx.logBuilder().responseHeaders(aggregated.headers());
+                        if (!aggregated.trailers().isEmpty()) {
+                            derivedCtx.logBuilder().responseTrailers(aggregated.trailers());
+                        }
+                        derivedCtx.logBuilder().endResponse();
                     }
                     handleAggregatedResponse(config, ctx, rootReqDuplicator, originalReq, returnedRes, future,
                                              derivedCtx, aggregated);
                 }
                 return null;
-                // RequestLog is completed right after the response is fully received.
-                // So, we need to reschedule to get a complete RequestLog.
-            }, ctx.eventLoop());
+            });
         } else {
             handleStreamingResponse(config, ctx, rootReqDuplicator, originalReq, returnedRes,
                                     future, derivedCtx, response);
@@ -382,8 +386,31 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
                                          HttpResponse response) {
         final SplitHttpResponse splitResponse = response.split();
         splitResponse.headers().handle((headers, responseCause) -> {
-            if (headers != null) {
-                derivedCtx.setAttr(RULE_RESPONSE_HEADERS_KEY, headers);
+            final RequestLogBuilder logBuilder = derivedCtx.logBuilder();
+            if (responseCause == null) {
+                final RequestLog log = ctx.log().getIfAvailable(RequestLogProperty.RESPONSE_CAUSE);
+                responseCause = log.responseCause();
+            }
+            if (!logBuilder.isAvailable(RequestLogProperty.REQUEST_FIRST_BYTES_TRANSFERRED_TIME)) {
+                if (responseCause != null) {
+                    logBuilder.endRequest(responseCause);
+                    logBuilder.endResponse(responseCause);
+                } else {
+                    logBuilder.endRequest();
+                    logBuilder.responseHeaders(headers);
+                    response.whenComplete().handle((unused, cause) -> {
+                        if (cause != null) {
+                            logBuilder.endResponse(cause);
+                        } else {
+                            logBuilder.endResponse();
+                        }
+                        return null;
+                    });
+                }
+            }
+
+            if (!logBuilder.isAvailable(RequestLogProperty.RESPONSE_HEADERS)) {
+                logBuilder.responseHeaders(headers);
             }
             if (retryConfig.needsContentInRule() && responseCause == null) {
                 final HttpResponse response0 = HttpResponse.of(headers, splitResponse.body());
@@ -392,7 +419,8 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
                                                derivedCtx.maxResponseLength());
                 try {
                     final TruncatingHttpResponse truncatingHttpResponse =
-                            new TruncatingHttpResponse(duplicator.duplicate(), retryConfig.maxContentLength());
+                            new TruncatingHttpResponse(duplicator.duplicate(),
+                                                       retryConfig.maxContentLength());
                     final HttpResponse duplicated = duplicator.duplicate();
                     duplicator.close();
 
@@ -503,9 +531,9 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
     }
 
     private static long getRetryAfterMillis(ClientRequestContext ctx) {
-        final ResponseHeaders responseHeaders = ctx.attr(RULE_RESPONSE_HEADERS_KEY);
-        final String value = responseHeaders != null ? responseHeaders.get(HttpHeaderNames.RETRY_AFTER) : null;
-
+        final RequestLog requestLog = ctx.log().getIfAvailable(RequestLogProperty.RESPONSE_HEADERS);
+        final String value =
+                requestLog != null ? requestLog.responseHeaders().get(HttpHeaderNames.RETRY_AFTER) : null;
         if (value != null) {
             try {
                 return Duration.ofSeconds(Integer.parseInt(value)).toMillis();

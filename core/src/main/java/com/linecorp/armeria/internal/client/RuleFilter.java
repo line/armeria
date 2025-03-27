@@ -32,22 +32,13 @@ import com.linecorp.armeria.common.logging.RequestLogProperty;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.internal.common.InternalGrpcWebTrailers;
 
-import io.netty.util.AttributeKey;
-
 public final class RuleFilter implements BiFunction<ClientRequestContext, Throwable, Boolean> {
-
-    public static final AttributeKey<ResponseHeaders> RULE_RESPONSE_HEADERS_KEY =
-            AttributeKey.valueOf(RuleFilter.class, "RULE_RESPONSE_HEADERS");
-
-    public static final AttributeKey<HttpHeaders> RULE_RESPONSE_TRAILERS_KEY =
-            AttributeKey.valueOf(RuleFilter.class, "RULE_RESPONSE_TRAILERS");
 
     /**
      * Merges the filters of {@link AbstractRuleBuilder} that returns {@code true}
      * if all rules in the {@link AbstractRuleBuilder} match
      * a given {@link ClientRequestContext} and {@link Throwable}.
      */
-    // TODO(ikhoon): Use BiPredicate.
     public static RuleFilter of(
             BiPredicate<ClientRequestContext, RequestHeaders> requestHeadersFilter,
             @Nullable BiPredicate<ClientRequestContext, ResponseHeaders> responseHeadersFilter,
@@ -110,26 +101,26 @@ public final class RuleFilter implements BiFunction<ClientRequestContext, Throwa
             return true;
         }
 
-        final ResponseHeaders responseHeaders = ctx.attr(RULE_RESPONSE_HEADERS_KEY);
-        if (responseHeadersFilter != null && responseHeaders != null) {
+        if (responseHeadersFilter != null && log.isAvailable(RequestLogProperty.RESPONSE_HEADERS)) {
+            final ResponseHeaders responseHeaders = log.responseHeaders();
             if (responseHeadersFilter.test(ctx, responseHeaders)) {
                 return true;
             }
         }
 
-        final HttpHeaders responseTrailers = ctx.attr(RULE_RESPONSE_TRAILERS_KEY);
-        if (responseTrailersFilter != null && responseTrailers != null) {
+        if (responseTrailersFilter != null && log.isAvailable(RequestLogProperty.RESPONSE_TRAILERS)) {
+            final HttpHeaders responseTrailers = log.responseTrailers();
             if (responseTrailersFilter.test(ctx, responseTrailers)) {
                 return true;
             }
         }
 
-        if (grpcTrailersFilter != null && responseTrailers != null) {
+        if (grpcTrailersFilter != null && log.isAvailable(RequestLogProperty.RESPONSE_TRAILERS)) {
             // Check HTTP trailers first, because most gRPC responses have non-empty payload + trailers.
-            HttpHeaders maybeGrpcTrailers = responseTrailers;
-            if (!maybeGrpcTrailers.contains("grpc-status") && responseHeaders != null) {
+            HttpHeaders maybeGrpcTrailers = log.responseTrailers();
+            if (!maybeGrpcTrailers.contains("grpc-status")) {
                 // Check HTTP headers secondly.
-                maybeGrpcTrailers = responseHeaders;
+                maybeGrpcTrailers = log.responseHeaders();
                 if (!maybeGrpcTrailers.contains("grpc-status")) {
                     // Check gRPC Web trailers lastly, because gRPC Web is the least used protocol
                     // in reality.

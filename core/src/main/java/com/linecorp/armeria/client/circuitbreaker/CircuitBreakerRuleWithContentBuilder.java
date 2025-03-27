@@ -26,9 +26,7 @@ import com.linecorp.armeria.client.AbstractRuleWithContentBuilder;
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.Response;
-import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.internal.client.RuleFilter;
-import com.linecorp.armeria.internal.client.AbstractRuleBuilderUtil;
 
 /**
  * A builder for creating a new {@link CircuitBreakerRuleWithContent}.
