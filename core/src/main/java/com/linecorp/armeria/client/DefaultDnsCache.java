@@ -187,7 +187,7 @@ final class DefaultDnsCache implements DnsCache {
     }
 
     @VisibleForTesting
-    List<DnsCacheListener> getDnsCacheListener() {
+    List<DnsCacheListener> listeners() {
         return listeners;
     }
 

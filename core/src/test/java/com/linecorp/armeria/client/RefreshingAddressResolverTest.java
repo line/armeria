@@ -906,7 +906,7 @@ class RefreshingAddressResolverTest {
     }
 
     @Test
-    void shouldRemoveListenerFromCacheWhenClosed() {
+    void shouldRemoveListenerFromDnsCacheWhenClosed() {
         final EventLoop eventLoop = eventLoopExtension.get();
         final DnsCache dnsCache = DnsCache.builder()
                 .executor(eventLoop)
@@ -917,7 +917,7 @@ class RefreshingAddressResolverTest {
             final AddressResolver<InetSocketAddress> resolver = group.getResolver(eventLoop);
             resolver.close();
             final DefaultDnsCache defaultDnsCache = (DefaultDnsCache) dnsCache;
-            assertThat(defaultDnsCache.getDnsCacheListener()).isEmpty();
+            assertThat(defaultDnsCache.listeners()).isEmpty();
         }
     }
 
