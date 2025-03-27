@@ -337,8 +337,10 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
                                                  future, derivedCtx, HttpResponse.ofFailure(cause), cause);
                 } else {
                     completeLogIfIncomplete(aggregated, derivedCtx);
-                    handleAggregatedResponse(config, ctx, rootReqDuplicator, originalReq, returnedRes, future,
-                                             derivedCtx, aggregated);
+                    derivedCtx.log().whenAvailable(RequestLogProperty.RESPONSE_END_TIME).thenRun(() -> {
+                        handleAggregatedResponse(config, ctx, rootReqDuplicator, originalReq, returnedRes,
+                                                 future, derivedCtx, aggregated);
+                    });
                 }
                 return null;
             });
@@ -382,12 +384,12 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
         splitResponse.headers().handle((headers, headersCause) -> {
             final Throwable responseCause;
             if (headersCause == null) {
-                final RequestLog log = ctx.log().getIfAvailable(RequestLogProperty.RESPONSE_CAUSE);
+                final RequestLog log = derivedCtx.log().getIfAvailable(RequestLogProperty.RESPONSE_CAUSE);
                 responseCause = log != null ? log.responseCause() : null;
             } else {
                 responseCause = Exceptions.peel(headersCause);
             }
-            completeLogIfIncomplete(response, headers, ctx, responseCause);
+            completeLogIfIncomplete(response, headers, derivedCtx, responseCause);
 
             derivedCtx.log().whenAvailable(RequestLogProperty.RESPONSE_HEADERS).thenRun(() -> {
                 if (retryConfig.needsContentInRule() && responseCause == null) {
