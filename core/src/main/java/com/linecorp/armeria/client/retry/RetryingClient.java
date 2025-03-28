@@ -350,7 +350,7 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
         }
     }
 
-    // TODO(ikhoon): Add a request-scope class such as RetryRequestHandler to avoid passing too many parameters.
+    // TODO(ikhoon): Add a request-scope class such as RetryRequestContext to avoid passing too many parameters.
     private void handleResponseWithoutContent(RetryConfig<HttpResponse> config, ClientRequestContext ctx,
                                               HttpRequestDuplicator rootReqDuplicator, HttpRequest originalReq,
                                               HttpResponse returnedRes, CompletableFuture<HttpResponse> future,

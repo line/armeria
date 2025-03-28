@@ -1098,10 +1098,6 @@ public final class DefaultClientRequestContext
                .append(proto).append("://").append(authority).append(path).append('#').append(method)
                .append(']');
 
-            final HttpRequest request = request();
-            if (request != null) {
-                buf.append("headers: " + request.headers());
-            }
             return buf.toString();
         }
     }

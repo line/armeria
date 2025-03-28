@@ -231,7 +231,6 @@ class SplitHttpMessageSubscriber implements Subscriber<HttpObject>, Subscription
 
     private void onNext0(HttpData httpData) {
         wroteAny = true;
-        httpData.touch(this);
         if (!usePooledObject) {
             httpData = PooledObjects.copyAndClose(httpData);
         }
