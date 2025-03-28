@@ -422,6 +422,7 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
                 } else {
                     final HttpResponse response0;
                     if (responseCause != null) {
+                        splitResponse.body().abort(responseCause);
                         response0 = HttpResponse.ofFailure(responseCause);
                     } else {
                         response0 = HttpResponse.of(headers, splitResponse.body());
