@@ -3856,6 +3856,8 @@ ip-dynamic.org
 ip.linodeusercontent.com
 ip6.arpa
 ipfs.nftstorage.link
+ipfs.storacha.link
+ipfs.w3s.link
 ipifony.net
 ipiranga
 iq
