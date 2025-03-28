@@ -21,8 +21,6 @@ import static org.awaitility.Awaitility.await;
 
 import java.net.URI;
 import java.util.Deque;
-import java.util.List;
-import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.TimeUnit;
 
@@ -40,6 +38,7 @@ import io.envoyproxy.controlplane.cache.v3.SimpleCache;
 import io.envoyproxy.controlplane.cache.v3.Snapshot;
 import io.envoyproxy.controlplane.server.V3DiscoveryServer;
 import io.envoyproxy.envoy.config.bootstrap.v3.Bootstrap;
+import io.envoyproxy.envoy.config.cluster.v3.Cluster;
 import io.envoyproxy.envoy.config.cluster.v3.Cluster.DiscoveryType;
 import io.envoyproxy.envoy.config.endpoint.v3.ClusterLoadAssignment;
 import io.envoyproxy.envoy.config.listener.v3.Listener;
@@ -230,20 +229,27 @@ class AggregatingNodeTest {
         // verify route
         final RouteSnapshot routeSnapshot = listenerSnapshot.routeSnapshot();
         final String routeName = routeSnapshot.xdsResource().resource().getName();
-        final RouteConfiguration snapshotRouteConfiguration = snapshot.routes().resources().get(routeName);
-        assertThat(routeSnapshot.xdsResource().resource()).isEqualTo(snapshotRouteConfiguration);
+        final RouteConfiguration expectedRoute = snapshot.routes().resources().get(routeName);
+        assertThat(routeSnapshot.xdsResource().resource()).isEqualTo(expectedRoute);
 
-        int i = 0;
-        for (Entry<VirtualHost, List<ClusterSnapshot>> e : routeSnapshot.virtualHostMap().entrySet()) {
-            final VirtualHost snapshotVirtualHost = snapshotRouteConfiguration.getVirtualHosts(i++);
-            assertThat(e.getKey()).isEqualTo(snapshotVirtualHost);
-            final List<ClusterSnapshot> clusterSnapshots = e.getValue();
-            for (int j = 0; j < clusterSnapshots.size(); j++) {
-                final ClusterSnapshot clusterSnapshot = clusterSnapshots.get(j);
-                assertThat(clusterSnapshot.route()).isEqualTo(snapshotVirtualHost.getRoutes(j));
-                final String clusterName = clusterSnapshot.xdsResource().resource().getName();
-                assertThat(clusterSnapshot.xdsResource().resource())
-                        .isEqualTo(snapshot.clusters().resources().get(clusterName));
+        for (int i = 0; i < routeSnapshot.virtualHostSnapshots().size(); i++) {
+            // validate virtual host
+            final VirtualHostSnapshot virtualHostSnapshot = routeSnapshot.virtualHostSnapshots().get(i);
+            final VirtualHost expectedVirtualHost = expectedRoute.getVirtualHosts(i);
+            assertThat(virtualHostSnapshot.xdsResource().resource()).isEqualTo(expectedVirtualHost);
+            for (int j = 0; j < virtualHostSnapshot.routeEntries().size(); j++) {
+                final RouteEntry routeEntry = virtualHostSnapshot.routeEntries().get(j);
+                assertThat(routeEntry.route()).isEqualTo(expectedVirtualHost.getRoutes(j));
+
+                // validate cluster
+                final ClusterSnapshot clusterSnapshot = routeEntry.clusterSnapshot();
+                assertThat(clusterSnapshot).isNotNull();
+                final String clusterName = clusterSnapshot.xdsResource().name();
+                assertThat(clusterName).isEqualTo(expectedVirtualHost.getRoutes(j).getRoute().getCluster());
+                final Cluster expectedCluster = snapshot.clusters().resources().get(clusterName);
+                assertThat(clusterSnapshot.xdsResource().resource()).isEqualTo(expectedCluster);
+
+                // validate endpoint
                 final EndpointSnapshot endpointSnapshot = clusterSnapshot.endpointSnapshot();
                 assertThat(endpointSnapshot.xdsResource().resource())
                         .isEqualTo(snapshot.endpoints().resources().get(clusterName));

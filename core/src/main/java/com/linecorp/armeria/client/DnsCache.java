@@ -109,4 +109,9 @@ public interface DnsCache {
      * occurs.
      */
     void addListener(DnsCacheListener listener);
+
+    /**
+     * Removes the specified {@link DnsCacheListener} from this {@link DnsCache}.
+     */
+    void removeListener(DnsCacheListener listener);
 }
