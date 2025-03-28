@@ -336,7 +336,7 @@ class RetryingClientTest {
     @Test
     void retryWhenStatusMatched() {
         final WebClient client = client(RetryRule.builder().onServerErrorStatus().onException().thenBackoff());
-        final AggregatedHttpResponse res = client.get("/503-then-success?retryWhenStatusMatched").aggregate().join();
+        final AggregatedHttpResponse res = client.get("/503-then-success").aggregate().join();
         assertThat(res.contentUtf8()).isEqualTo("Succeeded after retry");
     }
 
@@ -346,7 +346,7 @@ class RetryingClientTest {
                                                             .onServerErrorStatus()
                                                             .onException()
                                                             .thenBackoff(), 10000, 0, 100);
-        final AggregatedHttpResponse res = client.get("/503-then-success?retryWhenStatusMatchedWithContent").aggregate().join();
+        final AggregatedHttpResponse res = client.get("/503-then-success").aggregate().join();
         assertThat(res.contentUtf8()).isEqualTo("Succeeded after retry");
     }
 
@@ -375,7 +375,7 @@ class RetryingClientTest {
     @Test
     void disableResponseTimeout() {
         final WebClient client = client(RetryRule.failsafe(), 0, 0, 100);
-        final AggregatedHttpResponse res = client.get("/503-then-success?disableResponseTimeout").aggregate().join();
+        final AggregatedHttpResponse res = client.get("/503-then-success").aggregate().join();
         assertThat(res.contentUtf8()).isEqualTo("Succeeded after retry");
         // response timeout did not happen.
     }
@@ -595,7 +595,7 @@ class RetryingClientTest {
         final WebClient client = client(retryRule);
 
         final Stopwatch sw = Stopwatch.createStarted();
-        AggregatedHttpResponse res = client.get("/503-then-success?differentBackoffBasedOnStatus").aggregate().join();
+        AggregatedHttpResponse res = client.get("/503-then-success").aggregate().join();
         assertThat(res.contentUtf8()).isEqualTo("Succeeded after retry");
         assertThat(sw.elapsed(TimeUnit.MILLISECONDS)).isBetween((long) (10 * 0.9), (long) (1000 * 1.1));
 
@@ -828,7 +828,7 @@ class RetryingClientTest {
                          })
                          .decorator(RetryingClient.newDecorator(RetryRule.failsafe(), 2))
                          .build();
-        client.get("/503-then-success?useSameEventLoopWhenAggregate").aggregate().whenComplete((unused, cause) -> {
+        client.get("/503-then-success").aggregate().whenComplete((unused, cause) -> {
             assertThat(eventLoop.get().inEventLoop()).isTrue();
             latch.countDown();
         });
