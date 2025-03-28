@@ -57,7 +57,7 @@ public final class ClientUtil {
             ClientRequestContextExtension ctx,
             Function<CompletableFuture<O>, O> futureConverter,
             BiFunction<ClientRequestContext, Throwable, O> errorResponseFactory,
-            I req) {
+            I req, boolean tryCompleteLog) {
 
         requireNonNull(delegate, "delegate");
         requireNonNull(ctx, "ctx");
@@ -104,7 +104,10 @@ public final class ClientUtil {
                 ctx.finishInitialization(success);
             }
         }
-        completeLogIfIncomplete(ctx, response);
+
+        if (tryCompleteLog) {
+            completeLogIfIncomplete(ctx, response);
+        }
         return response;
     }
 
@@ -142,7 +145,8 @@ public final class ClientUtil {
 
     public static <I extends Request, O extends Response, U extends Client<I, O>>
     O executeWithFallback(U delegate, ClientRequestContext ctx,
-                          BiFunction<ClientRequestContext, Throwable, O> errorResponseFactory, I req) {
+                          BiFunction<ClientRequestContext, Throwable, O> errorResponseFactory, I req,
+                          boolean tryCompleteLog) {
 
         requireNonNull(delegate, "delegate");
         requireNonNull(ctx, "ctx");
@@ -155,7 +159,10 @@ public final class ClientUtil {
             fail(ctx, cause);
             response = errorResponseFactory.apply(ctx, cause);
         }
-        completeLogIfIncomplete(ctx, response);
+
+        if (tryCompleteLog) {
+            completeLogIfIncomplete(ctx, response);
+        }
         return response;
     }
 

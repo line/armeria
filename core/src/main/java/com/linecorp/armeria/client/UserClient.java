@@ -213,6 +213,7 @@ public abstract class UserClient<I extends Request, O extends Response>
                 protocol, httpReq, method, rpcReq, reqTarget, endpointGroup,
                 requestOptions, options(), meterRegistry);
 
-        return initContextAndExecuteWithFallback(unwrap(), ctx, futureConverter, errorResponseFactory, req);
+        return initContextAndExecuteWithFallback(unwrap(), ctx, futureConverter, errorResponseFactory, req,
+                                                 true);
     }
 }
