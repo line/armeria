@@ -678,6 +678,7 @@ class RetryingClientTest {
                              })
                              .decorator(LoggingClient.newDecorator())
                              .build();
+            responseAbortServiceCallCounter.set(0);
             final HttpResponse httpResponse = client.get("/response-abort");
             if (abortCause == null) {
                 httpResponse.abort();
@@ -686,7 +687,6 @@ class RetryingClientTest {
             }
 
             final RequestLog log = context.get().log().whenComplete().join();
-            final int callCounter = responseAbortServiceCallCounter.get();
             final Throwable requestCause = log.requestCause();
             if (abortCause == null) {
                 assertThat(log.responseCause()).isExactlyInstanceOf(AbortedStreamException.class);
@@ -704,7 +704,7 @@ class RetryingClientTest {
 
             // Sleep 3 more seconds to check if there was another retry.
             TimeUnit.SECONDS.sleep(3);
-            assertThat(responseAbortServiceCallCounter).hasValue(callCounter);
+            assertThat(responseAbortServiceCallCounter).hasValueLessThanOrEqualTo(1);
             responseAbortServiceCallCounter.set(0);
         }
     }

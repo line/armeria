@@ -61,6 +61,7 @@ import com.linecorp.armeria.internal.common.DefaultHttpResponse;
 import com.linecorp.armeria.internal.common.DefaultSplitHttpResponse;
 import com.linecorp.armeria.internal.common.JacksonUtil;
 import com.linecorp.armeria.internal.common.stream.RecoverableStreamMessage;
+import com.linecorp.armeria.internal.common.stream.SurroundingPublisher;
 import com.linecorp.armeria.unsafe.PooledObjects;
 
 import io.netty.buffer.ByteBufAllocator;
@@ -485,7 +486,6 @@ public interface HttpResponse extends Response, HttpMessage {
         if (publisher instanceof HttpResponse) {
             return (HttpResponse) publisher;
         } else if (publisher instanceof StreamMessage) {
-            //noinspection unchecked
             return new StreamMessageBasedHttpResponse((StreamMessage<? extends HttpObject>) publisher);
         } else {
             return new PublisherBasedHttpResponse(publisher);
@@ -503,7 +503,8 @@ public interface HttpResponse extends Response, HttpMessage {
     static HttpResponse of(ResponseHeaders headers, Publisher<? extends HttpObject> publisher) {
         requireNonNull(headers, "headers");
         requireNonNull(publisher, "publisher");
-        return PublisherBasedHttpResponse.from(headers, publisher);
+        return new StreamMessageBasedHttpResponse(
+                new SurroundingPublisher<>(headers, publisher, unused -> null));
     }
 
     /**

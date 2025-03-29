@@ -72,6 +72,6 @@ public final class TailPreClient<I extends Request, O extends Response> implemen
         final ClientRequestContextExtension ctxExt = ctx.as(ClientRequestContextExtension.class);
         assert ctxExt != null;
         return ClientUtil.initContextAndExecuteWithFallback(delegate, ctxExt,
-                                                            futureConverter, errorResponseFactory, req);
+                                                            futureConverter, errorResponseFactory, req, true);
     }
 }

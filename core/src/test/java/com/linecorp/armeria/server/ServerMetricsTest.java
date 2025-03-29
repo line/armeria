@@ -197,9 +197,11 @@ class ServerMetricsTest {
             final AggregatedHttpResponse result = response.join();
 
             assertThat(result.status()).isSameAs(HttpStatus.INTERNAL_SERVER_ERROR);
-            assertThat(serverMetrics.pendingRequests()).isZero();
-            assertThat(serverMetrics.activeRequests()).isZero();
-            await().until(() -> serverMetrics.activeConnections() == 0);
+            await().untilAsserted(() -> {
+                assertThat(serverMetrics.pendingRequests()).isZero();
+                assertThat(serverMetrics.activeRequests()).isZero();
+                assertThat(serverMetrics.activeConnections()).isZero();
+            });
         }
     }
 
