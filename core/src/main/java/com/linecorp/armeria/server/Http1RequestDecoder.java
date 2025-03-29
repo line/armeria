@@ -143,12 +143,6 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
         final int id = req != null ? req.id() : ++receivedRequests;
         try {
             if (discarding) {
-                // This happens when:
-                // - Upgraded to HTTP/2 so the connection is reused.
-                // - the upgrade request exceeds maxRequestLength so this Http1RequestDecoder is discarded.
-                // - When receiving the LastHttpContent, remove this Http1RequestDecoder from the pipeline
-                //   thus, the next request will be handled by Http2RequestDecoder.
-                removeFromPipelineIfUpgraded(ctx, msg instanceof LastHttpContent);
                 return;
             }
 
@@ -287,7 +281,7 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
                                                            keepAlive, inboundTrafficController, routingCtx);
                     final long maxRequestLength = req.maxRequestLength();
                     if (maxRequestLength > 0 && contentLength > maxRequestLength) {
-                        abortLargeRequest(ctx, req, id, endOfStream, keepAliveHandler, true);
+                        abortLargeRequest(id, req, true);
                     }
                     serverPortMetric.increasePendingHttp1Requests();
                     ctx.fireChannelRead(req);
@@ -322,7 +316,7 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
                     final long maxContentLength = decodedReq.maxRequestLength();
                     final long transferredLength = decodedReq.transferredBytes();
                     if (maxContentLength > 0 && transferredLength > maxContentLength) {
-                        abortLargeRequest(ctx, decodedReq, id, endOfStream, keepAliveHandler, false);
+                        abortLargeRequest(id, decodedReq, false);
                         return;
                     }
 
@@ -360,36 +354,21 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
         }
     }
 
-    private void abortLargeRequest(ChannelHandlerContext ctx, DecodedHttpRequest decodedReq, int id,
-                                   boolean endOfStream, KeepAliveHandler keepAliveHandler,
-                                   boolean isEarlyRejection) {
+    private void abortLargeRequest(int id, DecodedHttpRequest decodedReq, boolean isEarlyRejection) {
         final ContentTooLargeException cause =
                 ContentTooLargeException.builder()
-                        .maxContentLength(decodedReq.maxRequestLength())
-                        .transferred(decodedReq.transferredBytes())
-                        .contentLength(decodedReq.headers())
-                        .earlyRejection(isEarlyRejection)
-                        .build();
-        discarding = true;
-        req = null;
-        final boolean shouldReset;
+                                        .maxContentLength(decodedReq.maxRequestLength())
+                                        .transferred(decodedReq.transferredBytes())
+                                        .contentLength(decodedReq.headers())
+                                        .earlyRejection(isEarlyRejection)
+                                        .build();
         if (encoder instanceof ServerHttp1ObjectEncoder) {
-            if (encoder.isResponseHeadersSent(id, 1)) {
-                ctx.channel().close();
-            } else {
-                keepAliveHandler.disconnectWhenFinished();
-            }
-            shouldReset = false;
-        } else {
-            // Upgraded to HTTP/2. Reset only if the remote peer is still open.
-            shouldReset = !endOfStream;
+            failWithoutErrorResponse(id);
         }
-
         // Wrap the cause with the returned status to let LoggingService correctly log the
         // status.
         final HttpStatusException httpStatusException =
                 HttpStatusException.of(HttpStatus.REQUEST_ENTITY_TOO_LARGE, cause);
-        decodedReq.setShouldResetOnlyIfRemoteIsOpen(shouldReset);
         decodedReq.abortResponse(httpStatusException, true);
     }
 
@@ -435,14 +414,29 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
         if (encoder.isResponseHeadersSent(id, 1)) {
             // The response is sent or being sent by HttpResponseSubscriber, so we cannot send
             // the error response.
-            encoder.writeReset(id, 1, Http2Error.PROTOCOL_ERROR, false);
+            encoder.writeReset(id, 1, Http2Error.PROTOCOL_ERROR);
         } else {
-            discarding = true;
-            req = null;
+            discardAndClose();
             // FIXME(trustin): Use a different verboseResponses for a different virtual host.
             encoder.writeErrorResponse(id, 1, cfg.defaultVirtualHost().fallbackServiceConfig(),
                                        headers, status, message, cause);
         }
+    }
+
+    private void failWithoutErrorResponse(int id) {
+        if (encoder.isResponseHeadersSent(id, 1)) {
+            // the request is violated after the response has already been written
+            encoder.writeReset(id, 1, Http2Error.PROTOCOL_ERROR);
+        } else {
+            // close the connection once the in-flight response is completed
+            discardAndClose();
+        }
+    }
+
+    private void discardAndClose() {
+        discarding = true;
+        req = null;
+        encoder.keepAliveHandler().disconnectWhenFinished();
     }
 
     @Override
