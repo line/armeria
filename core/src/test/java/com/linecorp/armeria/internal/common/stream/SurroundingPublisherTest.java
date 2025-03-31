@@ -464,7 +464,8 @@ class SurroundingPublisherTest {
                     return Unpooled.wrappedBuffer(new byte[] { (byte) i });
                 }).toArray(ByteBuf[]::new);
         final StreamMessage<ByteBuf> tail = StreamMessage.of(Arrays.copyOfRange(byteBufs, 1, 4));
-        final SurroundingPublisher<ByteBuf> stream = new SurroundingPublisher<>(byteBufs[0], tail, cause -> null);
+        final SurroundingPublisher<ByteBuf> stream =
+                new SurroundingPublisher<>(byteBufs[0], tail, cause -> null);
         stream.subscribe(new Subscriber<ByteBuf>() {
             @Override
             public void onSubscribe(Subscription s) {
