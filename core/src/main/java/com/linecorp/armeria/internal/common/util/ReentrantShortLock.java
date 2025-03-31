@@ -31,7 +31,7 @@ import org.slf4j.LoggerFactory;
  */
 public class ReentrantShortLock extends ReentrantLock {
     private static final long serialVersionUID = 8999619612996643502L;
-    private final ThreadLocal<Long> lockStartTime = new ThreadLocal<>();
+    private final ThreadLocal<Long> lockStartTime = ThreadLocal.withInitial(() -> 0L);
     private static final Logger logger = LoggerFactory.getLogger(ReentrantShortLock.class);
 
     public ReentrantShortLock() {}
@@ -49,12 +49,15 @@ public class ReentrantShortLock extends ReentrantLock {
 
     @Override
     public void unlock() {
-        long elapsed = System.nanoTime() - lockStartTime.get();
-        if (
-                TimeUnit.NANOSECONDS.toMillis(elapsed) > Flags.reentrantShortLockWarnThresholdMillis()) {
-            logger.warn("ReentrantShortLock held for {} ms", elapsed);
+        try {
+            long elapsed = System.nanoTime() - lockStartTime.get();
+            long thresholdMillis = Flags.reentrantShortLockWarnThresholdMillis();
+            if (TimeUnit.NANOSECONDS.toMillis(elapsed) > thresholdMillis) {
+                logger.warn("ReentrantShortLock held for {} ms", TimeUnit.NANOSECONDS.toMillis(elapsed));
+            }
+        } finally {
+            lockStartTime.remove();
+            super.unlock();
         }
-        lockStartTime.remove();
-        super.unlock();
     }
 }
