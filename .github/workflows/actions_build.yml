@@ -3,6 +3,8 @@ on:
   push:
     branches:
       - "**"
+      # Exclude branches to avoid running the same tests twice.
+      - '!dependabot/**'
     tags-ignore:
       # The release versions will be verified by 'publish-release.yml'
       - armeria-*
