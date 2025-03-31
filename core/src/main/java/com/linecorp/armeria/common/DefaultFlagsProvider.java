@@ -102,6 +102,7 @@ final class DefaultFlagsProvider implements FlagsProvider {
     static final long DEFAULT_UNLOGGED_EXCEPTIONS_REPORT_INTERVAL_MILLIS = 10000;
     static final long DEFAULT_HTTP1_CONNECTION_CLOSE_DELAY_MILLIS = 3000;
     static final ResponseTimeoutMode DEFAULT_RESPONSE_TIMEOUT_MODE = ResponseTimeoutMode.REQUEST_SENT;
+    static final long DEFAULT_REENTRANT_SHORT_LOCK_WARN_THRESHOLD_MILLIS = 50;
 
     private DefaultFlagsProvider() {}
 
@@ -517,5 +518,10 @@ final class DefaultFlagsProvider implements FlagsProvider {
     @Override
     public ResponseTimeoutMode responseTimeoutMode() {
         return DEFAULT_RESPONSE_TIMEOUT_MODE;
+    }
+
+    @Override
+    public Long reentrantShortLockWarnThresholdMillis() {
+        return DEFAULT_REENTRANT_SHORT_LOCK_WARN_THRESHOLD_MILLIS;
     }
 }

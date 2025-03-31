@@ -1785,4 +1785,20 @@ public final class Flags {
     static {
         FlagsLoaded.set();
     }
+
+    private static final long REENTRANT_SHORT_LOCK_WARN_THRESHOLD_MILLIS;
+
+    static {
+        Long threshold = getUserValue(
+                FlagsProvider::reentrantShortLockWarnThresholdMillis,
+                "reentrantShortLockWarnThresholdMillis",
+                value -> value >= 0
+        );
+        REENTRANT_SHORT_LOCK_WARN_THRESHOLD_MILLIS = threshold != null ? threshold : 50L;
+    }
+
+    public static long reentrantShortLockWarnThresholdMillis() {
+        return REENTRANT_SHORT_LOCK_WARN_THRESHOLD_MILLIS;
+    }
+
 }
