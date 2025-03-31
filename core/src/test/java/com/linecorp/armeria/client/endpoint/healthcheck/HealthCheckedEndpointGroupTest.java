@@ -553,7 +553,7 @@ class HealthCheckedEndpointGroupTest {
         final AtomicLong updateInvokedCounter = new AtomicLong();
         final Consumer<List<Endpoint>> endpointsListener = endpoints -> updateInvokedCounter.incrementAndGet();
 
-        HealthCheckedEndpointGroup endpointGroup = new HealthCheckedEndpointGroup(
+        final HealthCheckedEndpointGroup endpointGroup = new HealthCheckedEndpointGroup(
             delegate, true,
             10000, 10000,
             SessionProtocol.HTTP, 80,
