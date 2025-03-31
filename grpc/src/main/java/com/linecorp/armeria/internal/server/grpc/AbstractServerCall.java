@@ -328,9 +328,6 @@ public abstract class AbstractServerCall<I, O> extends ServerCall<I, O> {
 
     public void onRequestMessage(DeframedMessage message, boolean endOfStream) {
         try {
-            final I request;
-            final ByteBuf buf = message.buf();
-
             boolean success = false;
             try {
                 // Special case for unary calls.
@@ -353,22 +350,37 @@ public abstract class AbstractServerCall<I, O> extends ServerCall<I, O> {
                 }
             }
 
-            final boolean grpcWebText = GrpcSerializationFormats.isGrpcWebText(serializationFormat);
-            request = marshaller.deserializeRequest(message, grpcWebText);
-            maybeLogRequestContent(request);
-
-            if (unsafeWrapRequestBuffers && buf != null && !grpcWebText) {
-                GrpcUnsafeBufferUtil.storeBuffer(buf, request, ctx);
-            }
-
             if (blockingExecutor != null) {
-                blockingExecutor.execute(() -> invokeOnMessage(request, endOfStream));
+                blockingExecutor.execute(() -> deserializeAndInvoke(message, endOfStream));
             } else {
-                invokeOnMessage(request, endOfStream);
+                deserializeAndInvoke(message, endOfStream);
             }
         } catch (Throwable cause) {
             close(cause, true);
         }
+    }
+
+    private void deserializeAndInvoke(DeframedMessage message, boolean endOfStream) {
+        final I request;
+        try {
+            request = deserializeMessage(message);
+        } catch (Throwable e) {
+            close(e);
+            return;
+        }
+        invokeOnMessage(request, endOfStream);
+    }
+
+    private I deserializeMessage(DeframedMessage message) throws IOException {
+        final ByteBuf buf = message.buf();
+        final boolean grpcWebText = GrpcSerializationFormats.isGrpcWebText(serializationFormat);
+        final I request = marshaller.deserializeRequest(message, grpcWebText);
+        maybeLogRequestContent(request);
+
+        if (unsafeWrapRequestBuffers && buf != null && !grpcWebText) {
+            GrpcUnsafeBufferUtil.storeBuffer(buf, request, ctx);
+        }
+        return request;
     }
 
     protected final void onRequestComplete() {
