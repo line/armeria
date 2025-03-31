@@ -16,6 +16,10 @@
 
 package com.linecorp.armeria.internal.common.stream;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.awaitility.Awaitility.await;
+
+import java.util.Arrays;
 import java.util.function.Function;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
@@ -26,10 +30,14 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.ArgumentsProvider;
 import org.junit.jupiter.params.provider.ArgumentsSource;
+import org.reactivestreams.Subscriber;
+import org.reactivestreams.Subscription;
 
 import com.linecorp.armeria.common.stream.AbortedStreamException;
 import com.linecorp.armeria.common.stream.StreamMessage;
 
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
@@ -447,6 +455,38 @@ class SurroundingPublisherTest {
                     .expectNext(1, 2, 3, 4)
                     .expectError(RuntimeException.class)
                     .verify();
+    }
+
+    @Test
+    void shouldReleaseUpstreamElementsOnEarlyCancel() {
+        final ByteBuf[] byteBufs =
+                IntStream.range(0, 4).mapToObj(i -> {
+                    return Unpooled.wrappedBuffer(new byte[] { (byte) i });
+                }).toArray(ByteBuf[]::new);
+        final StreamMessage<ByteBuf> tail = StreamMessage.of(Arrays.copyOfRange(byteBufs, 1, 4));
+        final SurroundingPublisher<ByteBuf> stream = new SurroundingPublisher<>(byteBufs[0], tail, cause -> null);
+        stream.subscribe(new Subscriber<ByteBuf>() {
+            @Override
+            public void onSubscribe(Subscription s) {
+                // Abort the stream subscribing to the tail.
+                s.cancel();
+            }
+
+            @Override
+            public void onNext(ByteBuf byteBuf) {}
+
+            @Override
+            public void onError(Throwable throwable) {}
+
+            @Override
+            public void onComplete() {}
+        });
+
+        await().untilAsserted(() -> {
+            for (ByteBuf byteBuf : byteBufs) {
+                assertThat(byteBuf.refCnt()).isZero();
+            }
+        });
     }
 
     private static class OneElementSurroundingPublisherProvider implements ArgumentsProvider {
