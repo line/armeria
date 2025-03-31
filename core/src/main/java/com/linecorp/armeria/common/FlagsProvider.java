@@ -1252,9 +1252,9 @@ public interface FlagsProvider {
 
     /**
      * Returns the threshold in milliseconds that triggers a warning
-     * if{@link com.linecorp.armeria.internal.common.util.ReentrantShortLock} is held longer than this duration.
+     * if {@link com.linecorp.armeria.internal.common.util.ReentrantShortLock} is held longer than this duration.
      * <p> The default value of this flag is 50. You can override it by specifying
-     * the JVM option {@Code -Dcom.linecorp.armeria.reentrantShortLockWarnThresholdMillis=long}</p>
+     * the JVM option {@code -Dcom.linecorp.armeria.reentrantShortLockWarnThresholdMillis=long}</p>
      *
      */
     @Nullable
