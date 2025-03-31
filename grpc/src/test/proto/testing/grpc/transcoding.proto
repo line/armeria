@@ -21,6 +21,7 @@ package armeria.grpc.testing;
 option java_package = "testing.grpc";
 
 import "google/api/annotations.proto";
+import "google/api/field_behavior.proto";
 import "google/protobuf/timestamp.proto";
 import "google/protobuf/duration.proto";
 import "google/protobuf/wrappers.proto";
@@ -292,6 +293,8 @@ message UpdateMessageRequestV1 {
 
 message Message {
   string text = 1; // The resource content.
+  google.protobuf.StringValue required_text = 2 [(google.api.field_behavior) = REQUIRED];
+  google.protobuf.StringValue optional_text = 3;
 }
 
 enum MessageType {
