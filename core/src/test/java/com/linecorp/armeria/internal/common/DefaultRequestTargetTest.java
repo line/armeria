@@ -38,6 +38,7 @@ import com.google.common.collect.Maps;
 
 import com.linecorp.armeria.common.QueryParams;
 import com.linecorp.armeria.common.RequestTarget;
+import com.linecorp.armeria.common.RequestTargetForm;
 import com.linecorp.armeria.common.annotation.Nullable;
 
 class DefaultRequestTargetTest {
@@ -308,6 +309,31 @@ class DefaultRequestTargetTest {
     @Test
     void clientShouldRetainConsecutiveSlashesInFragment() {
         assertAccepted(forClient("/#/////"), "/", null, "/////");
+    }
+
+    @Test
+    void notSchemeRelative() {
+        assertThat(RequestTarget.forClient("//").form()).isEqualTo(RequestTargetForm.ORIGIN);
+        assertThat(RequestTarget.forClient("//").path()).isEqualTo("//");
+
+        assertThat(RequestTarget.forClient("a//").form()).isEqualTo(RequestTargetForm.ORIGIN);
+        assertThat(RequestTarget.forClient("a//").path()).isEqualTo("/a//");
+
+        assertThat(RequestTarget.forClient("a//", "//").form()).isEqualTo(RequestTargetForm.ORIGIN);
+        assertThat(RequestTarget.forClient("a//", "//").path()).isEqualTo("//a//");
+
+        assertThat(RequestTarget.forClient("///").form()).isEqualTo(RequestTargetForm.ORIGIN);
+        assertThat(RequestTarget.forClient("///").path()).isEqualTo("///");
+
+        assertThat(RequestTarget.forClient("///", "//").form()).isEqualTo(RequestTargetForm.ORIGIN);
+        assertThat(RequestTarget.forClient("///", "//").path()).isEqualTo("////");
+    }
+
+    @Test
+    void schemeRelative() {
+        assertThat(RequestTarget.forClient("//a").form()).isEqualTo(RequestTargetForm.ABSOLUTE);
+        assertThat(RequestTarget.forClient("//a").authority()).isEqualTo("a");
+        assertThat(RequestTarget.forClient("//a").path()).isEqualTo("/");
     }
 
     @ParameterizedTest
@@ -622,9 +648,9 @@ class DefaultRequestTargetTest {
         @Override
         public String toString() {
             return "RequestTargetWithRawPath{" +
-                    "rawPath='" + rawPath + '\'' +
-                    ", requestTarget=" + requestTarget +
-                    '}';
+                   "rawPath='" + rawPath + '\'' +
+                   ", requestTarget=" + requestTarget +
+                   '}';
         }
     }
 
@@ -653,8 +679,8 @@ class DefaultRequestTargetTest {
         final RequestTarget target = DefaultRequestTarget.forClient(rawPath, prefix);
         if (target != null) {
             logger.info("forClient({}, {}) => path: {}, query: {}, fragment: {}",
-                    rawPath, prefix, target.path(),
-                    target.query(), target.fragment());
+                        rawPath, prefix, target.path(),
+                        target.query(), target.fragment());
         } else {
             logger.info("forClient({}, {}) => null", rawPath, prefix);
         }
