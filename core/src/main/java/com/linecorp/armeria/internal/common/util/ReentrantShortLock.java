@@ -16,9 +16,13 @@
 
 package com.linecorp.armeria.internal.common.util;
 
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.ReentrantLock;
 
 import com.linecorp.armeria.common.CoreBlockHoundIntegration;
+import com.linecorp.armeria.common.Flags;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * A short lock which is whitelisted by {@link CoreBlockHoundIntegration}.
@@ -27,6 +31,8 @@ import com.linecorp.armeria.common.CoreBlockHoundIntegration;
  */
 public class ReentrantShortLock extends ReentrantLock {
     private static final long serialVersionUID = 8999619612996643502L;
+    private final ThreadLocal<Long> lockStartTime = new ThreadLocal<>();
+    private static final Logger logger = LoggerFactory.getLogger(ReentrantShortLock.class);
 
     public ReentrantShortLock() {}
 
@@ -36,6 +42,19 @@ public class ReentrantShortLock extends ReentrantLock {
 
     @Override
     public void lock() {
+        long startTime = System.nanoTime();
+        lockStartTime.set(startTime);
         super.lock();
+    }
+
+    @Override
+    public void unlock() {
+        long elapsed = System.nanoTime() - lockStartTime.get();
+        if (
+                TimeUnit.NANOSECONDS.toMillis(elapsed) > Flags.reentrantShortLockWarnThresholdMillis()) {
+            logger.warn("ReentrantShortLock held for {} ms", elapsed);
+        }
+        lockStartTime.remove();
+        super.unlock();
     }
 }
