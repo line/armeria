@@ -21,7 +21,6 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.util.concurrent.CompletionException;
 
-import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
@@ -33,6 +32,7 @@ import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.ExchangeType;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
+import com.linecorp.armeria.common.ResponseCompleteException;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.internal.testing.AnticipatedException;
 import com.linecorp.armeria.server.ServerBuilder;
@@ -50,13 +50,15 @@ class DecoratorResponseLogCompletionTest {
         }
     };
 
-    @Test
-    void testSimple_success() {
+    @EnumSource(ResponseTimeoutMode.class)
+    @ParameterizedTest
+    void testSimple_success(ResponseTimeoutMode timeoutMode) {
         final BlockingWebClient client =
                 WebClient.builder(server.httpUri())
                          .decorator((delegate, ctx, req) -> {
                              return HttpResponse.of(HttpStatus.OK);
                          })
+                         .responseTimeoutMode(timeoutMode)
                          .build()
                          .blocking();
         try (ClientRequestContextCaptor captor = Clients.newContextCaptor()) {
@@ -67,16 +69,20 @@ class DecoratorResponseLogCompletionTest {
             final RequestLog log = ctx.log().whenComplete().join();
             // The headers are not logged.
             assertThat(log.responseHeaders().status()).isEqualTo(HttpStatus.UNKNOWN);
+            assertThat(ctx.whenResponseCancelled().join())
+                    .isInstanceOf(ResponseCompleteException.class);
         }
     }
 
-    @Test
-    void testSimple_failure() {
+    @EnumSource(ResponseTimeoutMode.class)
+    @ParameterizedTest
+    void testSimple_failure(ResponseTimeoutMode timeoutMode) {
         final BlockingWebClient client =
                 WebClient.builder(server.httpUri())
                          .decorator((delegate, ctx, req) -> {
                              return HttpResponse.ofFailure(new AnticipatedException());
                          })
+                         .responseTimeoutMode(timeoutMode)
                          .build()
                          .blocking();
         try (ClientRequestContextCaptor captor = Clients.newContextCaptor()) {
@@ -85,6 +91,8 @@ class DecoratorResponseLogCompletionTest {
             final ClientRequestContext ctx = captor.get();
             final RequestLog log = ctx.log().whenComplete().join();
             assertThat(log.responseCause()).isInstanceOf(AnticipatedException.class);
+            assertThat(ctx.whenResponseCancelled().join())
+                    .isInstanceOf(AnticipatedException.class);
         }
     }
 
@@ -116,7 +124,7 @@ class DecoratorResponseLogCompletionTest {
         }
     }
 
-    @CsvSource({"UNARY, true", "UNARY, false", "BIDI_STREAMING, true", "BIDI_STREAMING, false"})
+    @CsvSource({ "UNARY, true", "UNARY, false", "BIDI_STREAMING, true", "BIDI_STREAMING, false" })
     @ParameterizedTest
     void testRetryingClient_responseFailure(ExchangeType exchangeType, boolean throwException) {
         final WebClient client =

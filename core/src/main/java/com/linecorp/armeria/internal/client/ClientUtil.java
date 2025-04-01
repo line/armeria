@@ -34,6 +34,7 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.Response;
+import com.linecorp.armeria.common.ResponseCompleteException;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.logging.RequestLog;
@@ -194,14 +195,12 @@ public final class ClientUtil {
         response.whenComplete().handle((unused, cause) -> {
             final RequestLogBuilder logBuilder = ctx.logBuilder();
             if (!logBuilder.isAvailable(RequestLogProperty.REQUEST_FIRST_BYTES_TRANSFERRED_TIME)) {
-                // As the request didn't reach AbstractHttpRequestHandler, the log won't be completed
-                // automatically. We need to end the request and response manually.
+                // As the request was not processed by AbstractHttpRequestHandler, the RequestLog won't be
+                // completed automatically. We manually cancel the request to ensure the log completion.
                 if (cause != null) {
-                    logBuilder.endRequest(cause);
-                    logBuilder.endResponse(cause);
+                    ctx.cancel(cause);
                 } else {
-                    logBuilder.endRequest();
-                    logBuilder.endResponse();
+                    ctx.cancel(ResponseCompleteException.get());
                 }
             }
             return null;
