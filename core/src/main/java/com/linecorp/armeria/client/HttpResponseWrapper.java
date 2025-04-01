@@ -286,7 +286,7 @@ class HttpResponseWrapper implements StreamWriter<HttpObject> {
         final StringBuilder logMsg = new StringBuilder(UNEXPECTED_EXCEPTION_MSG);
         final HttpRequest request = ctx.request();
         assert request != null;
-        final String authority = request.authority();
+        final String authority = ctx.authority();
         if (authority != null) {
             logMsg.append(" to ").append(authority);
         }
