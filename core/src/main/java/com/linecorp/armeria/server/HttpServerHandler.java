@@ -843,7 +843,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
                     unfinishedRequests.remove(req);
                 }
 
-                if (responseEncoder instanceof ServerHttp2ObjectEncoder) {
+                if (!isNeedsDisconnection() && responseEncoder instanceof ServerHttp2ObjectEncoder) {
                     ((ServerHttp2ObjectEncoder) responseEncoder)
                             .maybeResetStream(req.streamId(), Http2Error.CANCEL);
                 }
