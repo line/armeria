@@ -213,7 +213,7 @@ final class Http2RequestDecoder extends Http2EventAdapter {
                                         inboundTrafficController, routingCtx);
             final long maxRequestLength = req.maxRequestLength();
             if (maxRequestLength > 0 && contentLength > maxRequestLength) {
-                abortLargeRequest(req, endOfStream, true);
+                abortLargeRequest(req, true);
             }
             requests.put(streamId, req);
             serverPortMetric.increasePendingHttp2Requests();
@@ -330,7 +330,7 @@ final class Http2RequestDecoder extends Http2EventAdapter {
         final long maxContentLength = decodedReq.maxRequestLength();
         final long transferredLength = decodedReq.transferredBytes();
         if (maxContentLength > 0 && transferredLength > maxContentLength) {
-            abortLargeRequest(decodedReq, endOfStream, false);
+            abortLargeRequest(decodedReq, false);
         } else if (decodedReq.isOpen()) {
             try {
                 // The decodedReq will be automatically closed if endOfStream is true.
@@ -346,8 +346,7 @@ final class Http2RequestDecoder extends Http2EventAdapter {
         return dataLength + padding;
     }
 
-    private void abortLargeRequest(DecodedHttpRequest decodedReq, boolean endOfStream,
-                                   boolean isEarlyRejection) {
+    private void abortLargeRequest(DecodedHttpRequest decodedReq, boolean isEarlyRejection) {
         assert encoder != null;
         final ContentTooLargeException cause =
                 ContentTooLargeException.builder()
@@ -357,11 +356,8 @@ final class Http2RequestDecoder extends Http2EventAdapter {
                         .earlyRejection(isEarlyRejection)
                         .build();
 
-        final boolean shouldReset = !endOfStream;
-
         final HttpStatusException httpStatusException =
                 HttpStatusException.of(HttpStatus.REQUEST_ENTITY_TOO_LARGE, cause);
-        decodedReq.setShouldResetOnlyIfRemoteIsOpen(shouldReset);
         decodedReq.abortResponse(httpStatusException, true);
     }
 
