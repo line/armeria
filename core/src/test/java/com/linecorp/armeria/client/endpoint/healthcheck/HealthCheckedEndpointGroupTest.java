@@ -537,8 +537,8 @@ class HealthCheckedEndpointGroupTest {
         final Function<? super HealthCheckerContext, ? extends AsyncCloseable> checkFactory = ctx -> {
             final EventLoopGroup executors = CommonPools.workerGroup();
             final ScheduledFuture<?> scheduledFuture = executors.scheduleAtFixedRate(
-                () -> ctx.updateHealth(healthy.get(), null, headers.get(), null),
-                0, 100, TimeUnit.MILLISECONDS);
+                    () -> ctx.updateHealth(healthy.get(), null, headers.get(), null),
+                    0, 100, TimeUnit.MILLISECONDS);
             return AsyncCloseableSupport.of(f -> {
                 scheduledFuture.cancel(true);
                 f.complete(null);
@@ -554,13 +554,13 @@ class HealthCheckedEndpointGroupTest {
         final Consumer<List<Endpoint>> endpointsListener = endpoints -> updateInvokedCounter.incrementAndGet();
 
         final HealthCheckedEndpointGroup endpointGroup = new HealthCheckedEndpointGroup(
-            delegate, true,
-            10000, 10000,
-            SessionProtocol.HTTP, 80,
-            DEFAULT_HEALTH_CHECK_RETRY_BACKOFF,
-            ClientOptions.of(), checkFactory,
-            HealthCheckStrategy.all(),
-            DEFAULT_ENDPOINT_PREDICATE
+                delegate, true,
+                10000, 10000,
+                SessionProtocol.HTTP, 80,
+                DEFAULT_HEALTH_CHECK_RETRY_BACKOFF,
+                ClientOptions.of(), checkFactory,
+                HealthCheckStrategy.all(),
+                DEFAULT_ENDPOINT_PREDICATE
         );
 
         endpointGroup.whenReady().join();
@@ -569,19 +569,19 @@ class HealthCheckedEndpointGroupTest {
         await().untilAsserted(() -> assertThat(updateInvokedCounter).hasValue(1));
         // the counter should stay 1 after 1 second has passed
         await().pollDelay(1, TimeUnit.SECONDS)
-            .untilAsserted(() -> assertThat(updateInvokedCounter).hasValue(1));
+               .untilAsserted(() -> assertThat(updateInvokedCounter).hasValue(1));
         assertThat(endpointGroup.endpoints().get(0).attrs().attr(EndpointAttributeKeys.DEGRADED_ATTR))
-            .isFalse();
+                .isFalse();
         assertThat(endpointGroup.endpoints().get(0).attrs().attr(EndpointAttributeKeys.HEALTHY_ATTR))
-            .isTrue();
+                .isTrue();
 
         headers.set(ResponseHeaders.of(HttpStatus.OK, "x-envoy-degraded", ""));
         // the counter should be incremented to three now
         await().untilAsserted(() -> assertThat(updateInvokedCounter).hasValue(2));
         assertThat(endpointGroup.endpoints().get(0).attrs().attr(EndpointAttributeKeys.DEGRADED_ATTR))
-            .isTrue();
+                .isTrue();
         assertThat(endpointGroup.endpoints().get(0).attrs().attr(EndpointAttributeKeys.HEALTHY_ATTR))
-            .isTrue();
+                .isTrue();
 
         // the counter should be incremented to two now
         healthy.set(0);
@@ -592,17 +592,17 @@ class HealthCheckedEndpointGroupTest {
         healthy.set(1);
         await().untilAsserted(() -> assertThat(updateInvokedCounter).hasValue(4));
         assertThat(endpointGroup.endpoints().get(0).attrs().attr(EndpointAttributeKeys.HEALTHY_ATTR))
-            .isTrue();
+                .isTrue();
         assertThat(endpointGroup.endpoints().get(0).attrs().attr(EndpointAttributeKeys.DEGRADED_ATTR))
-            .isTrue();
+                .isTrue();
 
         // turn off degraded again
         headers.set(null);
         await().untilAsserted(() -> assertThat(updateInvokedCounter).hasValue(5));
         assertThat(endpointGroup.endpoints().get(0).attrs().attr(EndpointAttributeKeys.HEALTHY_ATTR))
-            .isTrue();
+                .isTrue();
         assertThat(endpointGroup.endpoints().get(0).attrs().attr(EndpointAttributeKeys.DEGRADED_ATTR))
-            .isFalse();
+                .isFalse();
     }
 
     @Test
