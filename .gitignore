@@ -26,6 +26,7 @@ hs_err_pid*
 
 # Gradle
 .gradle
+.kotlin
 
 # IntelliJ
 **/.idea/*
