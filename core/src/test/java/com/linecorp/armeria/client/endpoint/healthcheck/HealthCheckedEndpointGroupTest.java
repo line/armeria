@@ -564,7 +564,7 @@ class HealthCheckedEndpointGroupTest {
         );
 
         endpointGroup.whenReady().join();
-        endpointGroup.addListener(endpointsListener, true);
+        endpointGroup.addListener(endpointsListener, false);
 
         await().untilAsserted(() -> assertThat(updateInvokedCounter).hasValue(1));
         // the counter should stay 1 after 1 second has passed
