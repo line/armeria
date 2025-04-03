@@ -24,6 +24,7 @@
 *.ap-southeast-2.airflow.amazonaws.com
 *.ap-southeast-3.airflow.amazonaws.com
 *.ap-southeast-4.airflow.amazonaws.com
+*.appwrite.run
 *.awdev.ca
 *.awsapprunner.com
 *.azurecontainer.io
@@ -587,6 +588,7 @@ appspacehosted.com
 appspaceusercontent.com
 appspot.com
 appudo.net
+appwrite.global
 aq
 aq.it
 aquarelle
@@ -3856,6 +3858,8 @@ ip-dynamic.org
 ip.linodeusercontent.com
 ip6.arpa
 ipfs.nftstorage.link
+ipfs.storacha.link
+ipfs.w3s.link
 ipifony.net
 ipiranga
 iq

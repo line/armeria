@@ -152,7 +152,7 @@ public class MultipartDecoderTest {
         final AtomicLong upstreamRequestCount = new AtomicLong();
         partsPublisher(boundary, chunk1, upstreamRequestCount).subscribe(testSubscriber);
         await().untilAtomic(counter, is(0));
-        assertThat(testSubscriber.completionFuture).isDone();
+        await().untilAsserted(() -> assertThat(testSubscriber.completionFuture).isDone());
         assertThat(headers).containsExactly("part1", "part2");
         assertThat(bodies).containsExactly("body 1", "body 2");
         assertThat(upstreamRequestCount.get()).isLessThanOrEqualTo(1);
@@ -201,7 +201,7 @@ public class MultipartDecoderTest {
         partsPublisher(boundary, ImmutableList.of(chunk1, chunk2), upstreamRequestCount).subscribe(
                 testSubscriber);
         await().untilAtomic(counter, is(0));
-        assertThat(testSubscriber.completionFuture).isDone();
+        await().untilAsserted(() -> assertThat(testSubscriber.completionFuture).isDone());
         assertThat(contentIds).containsExactly("part1", "part2", "part3", "part4", "part5");
         assertThat(bodies).containsExactly("body 1", "body 2", "body 3", "body 4", "body 5");
         assertThat(upstreamRequestCount.get()).isLessThanOrEqualTo(3);
@@ -238,7 +238,7 @@ public class MultipartDecoderTest {
         partsPublisher(boundary, ImmutableList.of(chunk1, chunk2, chunk3, chunk4),
                        upstreamRequestCount).subscribe(testSubscriber);
         await().untilAtomic(counter, is(0));
-        assertThat(testSubscriber.completionFuture).isDone();
+        await().untilAsserted(() -> assertThat(testSubscriber.completionFuture).isDone());
         assertThat(contentIds).containsExactly("part1");
         assertThat(bodies).containsExactly(
                 "this-is-the-1st-slice-of-the-body\n" +
@@ -305,7 +305,7 @@ public class MultipartDecoderTest {
         partsPublisher(boundary, ImmutableList.of(chunk1, chunk2, chunk3, chunk4),
                        upstreamRequestCount).subscribe(testSubscriber);
         await().untilAtomic(counter, is(0));
-        assertThat(testSubscriber.completionFuture).isDone();
+        await().untilAsserted(() -> assertThat(testSubscriber.completionFuture).isDone());
         assertThat(contentIds).containsExactly("part1");
         assertThat(bodies).containsExactly(
                 "this-is-the-1st-slice-o",
@@ -368,7 +368,7 @@ public class MultipartDecoderTest {
                        upstreamRequestCount)
                 .subscribe(testSubscriber);
         await().forever().untilAtomic(counter, is(0));
-        assertThat(testSubscriber.completionFuture).isDone();
+        await().untilAsserted(() -> assertThat(testSubscriber.completionFuture).isDone());
         assertThat(bodies).containsExactly("body 1", "body 2");
         assertThat(upstreamRequestCount.get()).isLessThanOrEqualTo(11);
     }
@@ -406,7 +406,7 @@ public class MultipartDecoderTest {
         partsPublisher(boundary, ImmutableList.of(chunk1, chunk2, chunk3, chunk4, chunk5), upstreamRequestCount)
                 .subscribe(testSubscriber);
         await().untilAtomic(counter, is(0));
-        assertThat(testSubscriber.completionFuture).isDone();
+        await().untilAsserted(() -> assertThat(testSubscriber.completionFuture).isDone());
         assertThat(headers).containsExactly("part1", "text/plain", "bob=alice", "foo=bar");
         assertThat(bodies).containsExactly("body 1");
         assertThat(upstreamRequestCount.get()).isLessThanOrEqualTo(6);
@@ -467,7 +467,7 @@ public class MultipartDecoderTest {
         partsPublisher(boundary, ImmutableList.of(chunk1, chunk2, chunk3, chunk4, chunk5), upstreamRequestCount)
                 .subscribe(testSubscriber);
         await().untilAtomic(counter, is(0));
-        assertThat(testSubscriber.completionFuture).isDone();
+        await().untilAsserted(() -> assertThat(testSubscriber.completionFuture).isDone());
         assertThat(headers).containsExactly("part1", "text/plain", "bob=alice", "foo=bar");
         assertThat(bodies).containsExactly("body 1");
         assertThat(upstreamRequestCount.get()).isLessThanOrEqualTo(6);
@@ -512,7 +512,7 @@ public class MultipartDecoderTest {
         final AtomicLong upstreamRequestCount = new AtomicLong();
         partsPublisher(boundary, chunk1, upstreamRequestCount).subscribe(testSubscriber);
         await().forever().untilAtomic(counter, is(0));
-        assertThat(testSubscriber.completionFuture).isDone();
+        await().untilAsserted(() -> assertThat(testSubscriber.completionFuture).isDone());
         assertThat(bodies).containsExactly("body 1", "body 2");
         assertThat(upstreamRequestCount.get()).isLessThanOrEqualTo(2);
     }
@@ -627,7 +627,7 @@ public class MultipartDecoderTest {
         partsPublisher(boundary, ImmutableList.of(chunk1, chunk2, chunk3, chunk4),
                        upstreamRequestCount).subscribe(testSubscriber);
         await().untilAtomic(counter, is(1));
-        assertThat(testSubscriber.completionFuture).isNotDone();
+        await().untilAsserted(() -> assertThat(testSubscriber.completionFuture).isNotDone());
         assertThat(headers).containsExactly("part1");
         assertThat(upstreamRequestCount.get()).isLessThanOrEqualTo(2);
     }
@@ -820,7 +820,7 @@ public class MultipartDecoderTest {
                        upstreamRequestCount)
                 .subscribe(testSubscriber);
         await().untilAtomic(completeCounter, is(0));
-        assertThat(testSubscriber.completionFuture).isDone();
+        await().untilAsserted(() -> assertThat(testSubscriber.completionFuture).isDone());
         assertThat(headers).containsExactly("part1", "part2", "part3", "part4");
         assertThat(bodies).containsExactly("this-is-the-1st-slice-o", "body 2",
                                            "this-is-the-1st-slice-of", "body 4");
@@ -884,7 +884,7 @@ public class MultipartDecoderTest {
                        upstreamRequestCount)
                 .subscribe(testSubscriber);
         await().untilAtomic(completeCounter, is(0));
-        assertThat(testSubscriber.completionFuture).isDone();
+        await().untilAsserted(() -> assertThat(testSubscriber.completionFuture).isDone());
         assertThat(headers).containsExactly("part1");
         assertThat(bodies).containsExactly("this-is-the-1st-slice-o",
                                            "f-the-body\nthis-is-the-2nd-slice-o",
