@@ -40,7 +40,6 @@ public abstract class ProxyConfig {
      */
     public static Socks4ProxyConfig socks4(InetSocketAddress proxyAddress) {
         requireNonNull(proxyAddress, "proxyAddress");
-        checkArgument(!proxyAddress.isUnresolved(), "proxyAddress must be resolved");
         return new Socks4ProxyConfig(proxyAddress, null);
     }
 
@@ -52,7 +51,6 @@ public abstract class ProxyConfig {
      */
     public static Socks4ProxyConfig socks4(InetSocketAddress proxyAddress, String username) {
         requireNonNull(proxyAddress, "proxyAddress");
-        checkArgument(!proxyAddress.isUnresolved(), "proxyAddress must be resolved");
         return new Socks4ProxyConfig(proxyAddress, requireNonNull(username, "username"));
     }
 
@@ -63,7 +61,6 @@ public abstract class ProxyConfig {
      */
     public static Socks5ProxyConfig socks5(InetSocketAddress proxyAddress) {
         requireNonNull(proxyAddress, "proxyAddress");
-        checkArgument(!proxyAddress.isUnresolved(), "proxyAddress must be resolved");
         return new Socks5ProxyConfig(proxyAddress, null, null);
     }
 
@@ -77,7 +74,6 @@ public abstract class ProxyConfig {
     public static Socks5ProxyConfig socks5(
             InetSocketAddress proxyAddress, String username, String password) {
         requireNonNull(proxyAddress, "proxyAddress");
-        checkArgument(!proxyAddress.isUnresolved(), "proxyAddress must be resolved");
         return new Socks5ProxyConfig(proxyAddress, requireNonNull(username, "username"),
                                      requireNonNull(password, "password"));
     }
@@ -89,7 +85,6 @@ public abstract class ProxyConfig {
      */
     public static ConnectProxyConfig connect(InetSocketAddress proxyAddress) {
         requireNonNull(proxyAddress, "proxyAddress");
-        checkArgument(!proxyAddress.isUnresolved(), "proxyAddress must be resolved");
         return new ConnectProxyConfig(proxyAddress, null, null, HttpHeaders.of(), false);
     }
 
@@ -101,7 +96,6 @@ public abstract class ProxyConfig {
      */
     public static ConnectProxyConfig connect(InetSocketAddress proxyAddress, boolean useTls) {
         requireNonNull(proxyAddress, "proxyAddress");
-        checkArgument(!proxyAddress.isUnresolved(), "proxyAddress must be resolved");
         return new ConnectProxyConfig(proxyAddress, null, null, HttpHeaders.of(), useTls);
     }
 
@@ -129,7 +123,6 @@ public abstract class ProxyConfig {
     public static ConnectProxyConfig connect(
             InetSocketAddress proxyAddress, HttpHeaders headers, boolean useTls) {
         requireNonNull(proxyAddress, "proxyAddress");
-        checkArgument(!proxyAddress.isUnresolved(), "proxyAddress must be resolved");
         return new ConnectProxyConfig(proxyAddress, null, null, headers, useTls);
     }
 
@@ -146,7 +139,6 @@ public abstract class ProxyConfig {
     public static ConnectProxyConfig connect(InetSocketAddress proxyAddress, String username, String password,
                                              HttpHeaders headers, boolean useTls) {
         requireNonNull(proxyAddress, "proxyAddress");
-        checkArgument(!proxyAddress.isUnresolved(), "proxyAddress must be resolved");
         requireNonNull(username, "username");
         requireNonNull(password, "password");
         requireNonNull(headers, "headers");
@@ -162,7 +154,6 @@ public abstract class ProxyConfig {
     public static HAProxyConfig haproxy(
             InetSocketAddress proxyAddress, InetSocketAddress sourceAddress) {
         requireNonNull(proxyAddress, "proxyAddress");
-        checkArgument(!proxyAddress.isUnresolved(), "proxyAddress must be resolved");
         requireNonNull(sourceAddress, "sourceAddress");
         checkArgument(!sourceAddress.isUnresolved(), "sourceAddress must be resolved");
         return new HAProxyConfig(proxyAddress, sourceAddress);
@@ -176,7 +167,6 @@ public abstract class ProxyConfig {
      */
     public static ProxyConfig haproxy(InetSocketAddress proxyAddress) {
         requireNonNull(proxyAddress, "proxyAddress");
-        checkArgument(!proxyAddress.isUnresolved(), "proxyAddress must be resolved");
         return new HAProxyConfig(proxyAddress);
     }
 
@@ -200,6 +190,12 @@ public abstract class ProxyConfig {
      */
     @Nullable
     public abstract InetSocketAddress proxyAddress();
+
+    /**
+     * Returns a new proxy address instance that respects DNS TTL.
+     * @param newProxyAddress the inet socket address
+     */
+    public abstract ProxyConfig withProxyAddress(InetSocketAddress newProxyAddress);
 
     @Nullable
     static String maskPassword(@Nullable String username, @Nullable String password) {

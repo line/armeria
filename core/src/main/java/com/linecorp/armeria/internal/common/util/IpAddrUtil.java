@@ -15,6 +15,9 @@
  */
 package com.linecorp.armeria.internal.common.util;
 
+import java.net.InetAddress;
+import java.net.InetSocketAddress;
+
 import com.linecorp.armeria.common.annotation.Nullable;
 
 import io.netty.util.NetUtil;
@@ -34,6 +37,16 @@ public final class IpAddrUtil {
         }
 
         return NetUtil.bytesToIpAddress(array);
+    }
+
+    public static boolean isCreatedWithIpAddressOnly(InetSocketAddress socketAddress) {
+        if (socketAddress.isUnresolved()) {
+            return false;
+        }
+
+        final InetAddress inetAddress = socketAddress.getAddress();
+        // If hostname and host address are the same, it was created with an IP address
+        return socketAddress.getHostString().equals(inetAddress.getHostAddress());
     }
 
     private IpAddrUtil() {}

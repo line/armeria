@@ -21,7 +21,6 @@ import static java.util.Objects.requireNonNull;
 
 import java.util.Collection;
 import java.util.EnumMap;
-import java.util.EnumSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
@@ -74,7 +73,7 @@ final class SotwXdsStream implements XdsStream {
                   XdsResponseHandler responseHandler,
                   SubscriberStorage subscriberStorage) {
         this(stub, node, backoff, eventLoop, responseHandler, subscriberStorage,
-             EnumSet.allOf(XdsType.class));
+             XdsType.discoverableTypes());
     }
 
     SotwXdsStream(SotwDiscoveryStub stub,
