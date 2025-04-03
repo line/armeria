@@ -17,7 +17,6 @@
 package com.linecorp.armeria.server.brave;
 
 import static com.linecorp.armeria.internal.common.brave.TraceContextUtil.ensureScopeUsesRequestContext;
-import static com.linecorp.armeria.server.brave.ArmeriaServerParser.annotateWireSpan;
 
 import java.util.function.Function;
 
@@ -26,9 +25,9 @@ import com.google.common.annotations.VisibleForTesting;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.brave.RequestContextCurrentTraceContext;
+import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.ServiceRequestContext;
-import com.linecorp.armeria.server.TransientServiceOption;
 
 import brave.Span;
 import brave.Tracer;
@@ -45,8 +44,8 @@ import brave.propagation.CurrentTraceContext.Scope;
  * Decorates an {@link HttpService} to trace inbound {@link HttpRequest}s using
  * <a href="https://github.com/openzipkin/brave">Brave</a>.
  */
-public final class BraveService extends AbstractBraveService<HttpServerRequest, HttpRequest, HttpResponse>
-        implements HttpService {
+public final class BraveService extends AbstractBraveService<HttpServerRequest, HttpServerResponse,
+        HttpRequest, HttpResponse> implements HttpService {
 
     @VisibleForTesting
     static final HttpRequestParser defaultRequestParser = (request, context, span) -> {
@@ -93,14 +92,12 @@ public final class BraveService extends AbstractBraveService<HttpServerRequest, 
     private final Tracer tracer;
     private final HttpServerHandler<HttpServerRequest, HttpServerResponse> handler;
     private final RequestContextCurrentTraceContext currentTraceContext;
-    private final HttpService delegate;
 
     /**
      * Creates a new instance.
      */
     private BraveService(HttpService delegate, HttpTracing httpTracing) {
         super(delegate);
-        this.delegate = delegate;
         final Tracing tracing = httpTracing.tracing();
         tracer = tracing.tracer();
         handler = HttpServerHandler.create(httpTracing);
@@ -108,13 +105,23 @@ public final class BraveService extends AbstractBraveService<HttpServerRequest, 
     }
 
     @Override
-    public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
-        if (!ctx.config().transientServiceOptions().contains(TransientServiceOption.WITH_TRACING)) {
-            return unwrap().serve(ctx, req);
-        }
-        final HttpServerRequest braveReq = ServiceRequestContextAdapter.asHttpServerRequest(ctx);
-        final Span span = handler.handleReceive(braveReq);
-        return serve0(ctx, req, braveReq, span);
+    HttpServerRequest braveRequest(ServiceRequestContext ctx) {
+        return ServiceRequestContextAdapter.asHttpServerRequest(ctx);
+    }
+
+    @Override
+    HttpServerResponse braveResponse(ServiceRequestContext ctx, RequestLog log, HttpServerRequest braveReq) {
+        return ServiceRequestContextAdapter.asHttpServerResponse(log, braveReq);
+    }
+
+    @Override
+    Span handleReceive(HttpServerRequest braveReq) {
+        return handler.handleReceive(braveReq);
+    }
+
+    @Override
+    void handleSend(HttpServerResponse response, Span span) {
+        handler.handleSend(response, span);
     }
 
     @Override
@@ -125,20 +132,5 @@ public final class BraveService extends AbstractBraveService<HttpServerRequest, 
     @Override
     RequestContextCurrentTraceContext currentTraceContext() {
         return currentTraceContext;
-    }
-
-    @Override
-    void maybeAddTagsToSpan(ServiceRequestContext ctx, HttpServerRequest braveReq, Span span) {
-        if (span.isNoop()) {
-            // For no-op spans, nothing special to do.
-            return;
-        }
-
-        ctx.log().whenComplete().thenAccept(log -> {
-            annotateWireSpan(log, span);
-            final HttpServerResponse braveRes =
-                    ServiceRequestContextAdapter.asHttpServerResponse(log, braveReq);
-            handler.handleSend(braveRes, span);
-        });
     }
 }

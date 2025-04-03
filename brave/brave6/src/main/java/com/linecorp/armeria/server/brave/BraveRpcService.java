@@ -17,16 +17,15 @@
 package com.linecorp.armeria.server.brave;
 
 import static com.linecorp.armeria.internal.common.brave.TraceContextUtil.ensureScopeUsesRequestContext;
-import static com.linecorp.armeria.server.brave.ArmeriaServerParser.annotateWireSpan;
 
 import java.util.function.Function;
 
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.RpcResponse;
 import com.linecorp.armeria.common.brave.RequestContextCurrentTraceContext;
+import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.server.RpcService;
 import com.linecorp.armeria.server.ServiceRequestContext;
-import com.linecorp.armeria.server.TransientServiceOption;
 
 import brave.Span;
 import brave.Tracer;
@@ -42,8 +41,8 @@ import brave.rpc.RpcTracing;
  * Decorates an {@link RpcService} to trace inbound {@link RpcRequest}s using
  * <a href="https://github.com/openzipkin/brave">Brave</a>.
  */
-public final class BraveRpcService extends AbstractBraveService<RpcServerRequest, RpcRequest, RpcResponse>
-        implements RpcService {
+public final class BraveRpcService extends AbstractBraveService<RpcServerRequest, RpcServerResponse,
+        RpcRequest, RpcResponse> implements RpcService {
 
     private static final RpcRequestParser defaultRequestParser = (request, context, span) -> {
         RpcRequestParser.DEFAULT.parse(request, context, span);
@@ -78,11 +77,9 @@ public final class BraveRpcService extends AbstractBraveService<RpcServerRequest
     private final Tracer tracer;
     private final RpcServerHandler handler;
     private final RequestContextCurrentTraceContext currentTraceContext;
-    private final RpcService delegate;
 
     private BraveRpcService(RpcService delegate, RpcTracing rpcTracing) {
         super(delegate);
-        this.delegate = delegate;
         final Tracing tracing = rpcTracing.tracing();
         tracer = tracing.tracer();
         handler = RpcServerHandler.create(rpcTracing);
@@ -90,13 +87,23 @@ public final class BraveRpcService extends AbstractBraveService<RpcServerRequest
     }
 
     @Override
-    public RpcResponse serve(ServiceRequestContext ctx, RpcRequest req) throws Exception {
-        if (!ctx.config().transientServiceOptions().contains(TransientServiceOption.WITH_TRACING)) {
-            return unwrap().serve(ctx, req);
-        }
-        final RpcServerRequest braveReq = ServiceRequestContextAdapter.asRpcServerRequest(ctx);
-        final Span span = handler.handleReceive(braveReq);
-        return serve0(ctx, req, braveReq, span);
+    RpcServerRequest braveRequest(ServiceRequestContext ctx) {
+        return ServiceRequestContextAdapter.asRpcServerRequest(ctx);
+    }
+
+    @Override
+    RpcServerResponse braveResponse(ServiceRequestContext ctx, RequestLog log, RpcServerRequest braveReq) {
+        return ServiceRequestContextAdapter.asRpcServerResponse(ctx, log, braveReq);
+    }
+
+    @Override
+    Span handleReceive(RpcServerRequest braveReq) {
+        return handler.handleReceive(braveReq);
+    }
+
+    @Override
+    void handleSend(RpcServerResponse response, Span span) {
+        handler.handleSend(response, span);
     }
 
     @Override
@@ -107,20 +114,5 @@ public final class BraveRpcService extends AbstractBraveService<RpcServerRequest
     @Override
     RequestContextCurrentTraceContext currentTraceContext() {
         return currentTraceContext;
-    }
-
-    @Override
-    void maybeAddTagsToSpan(ServiceRequestContext ctx, RpcServerRequest braveReq, Span span) {
-        if (span.isNoop()) {
-            // For no-op spans, nothing special to do.
-            return;
-        }
-
-        ctx.log().whenComplete().thenAccept(log -> {
-            annotateWireSpan(log, span);
-            final RpcServerResponse braveRes =
-                    ServiceRequestContextAdapter.asRpcServerResponse(ctx, log, braveReq);
-            handler.handleSend(braveRes, span);
-        });
     }
 }

@@ -16,31 +16,49 @@
 
 package com.linecorp.armeria.server.brave;
 
+import static com.linecorp.armeria.server.brave.ArmeriaServerParser.annotateWireSpan;
 import static com.linecorp.armeria.server.brave.BraveService.SERVICE_REQUEST_DECORATING_SCOPE;
 
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.brave.RequestContextCurrentTraceContext;
-import com.linecorp.armeria.common.util.AbstractUnwrappable;
+import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.internal.common.RequestContextExtension;
 import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.ServiceRequestContext;
+import com.linecorp.armeria.server.SimpleDecoratingService;
+import com.linecorp.armeria.server.TransientServiceOption;
 
 import brave.Span;
 import brave.Tracer;
 import brave.Tracer.SpanInScope;
 
-abstract class AbstractBraveService<BI extends brave.Request, I extends Request, O extends Response>
-        extends AbstractUnwrappable<Service<I, O>> {
+abstract class AbstractBraveService<BI extends brave.Request, BO extends brave.Response,
+        I extends Request, O extends Response> extends SimpleDecoratingService<I, O> {
 
     /**
      * Creates a new instance that decorates the specified {@link Service}.
      */
-    AbstractBraveService(Service<I, O> delegate) {
+    protected AbstractBraveService(Service<I, O> delegate) {
         super(delegate);
     }
 
-    O serve0(ServiceRequestContext ctx, I req, BI braveReq, Span span) throws Exception {
+    abstract BI braveRequest(ServiceRequestContext ctx);
+
+    abstract BO braveResponse(ServiceRequestContext ctx, RequestLog log, BI braveReq);
+
+    abstract Span handleReceive(BI braveReq);
+
+    abstract void handleSend(BO response, Span span);
+
+    @Override
+    public final O serve(ServiceRequestContext ctx, I req) throws Exception {
+        if (!ctx.config().transientServiceOptions().contains(TransientServiceOption.WITH_TRACING)) {
+            return unwrap().serve(ctx, req);
+        }
+        final BI braveReq = braveRequest(ctx);
+        final Span span = handleReceive(braveReq);
+
         final RequestContextExtension ctxExtension = ctx.as(RequestContextExtension.class);
         if (currentTraceContext().scopeDecoratorAdded() && !span.isNoop() && ctxExtension != null) {
             // Run the scope decorators when the ctx is pushed to the thread local.
@@ -58,5 +76,16 @@ abstract class AbstractBraveService<BI extends brave.Request, I extends Request,
 
     abstract RequestContextCurrentTraceContext currentTraceContext();
 
-    abstract void maybeAddTagsToSpan(ServiceRequestContext ctx, BI braveReq, Span span);
+    void maybeAddTagsToSpan(ServiceRequestContext ctx, BI braveReq, Span span) {
+        if (span.isNoop()) {
+            // For no-op spans, nothing special to do.
+            return;
+        }
+
+        ctx.log().whenComplete().thenAccept(log -> {
+            annotateWireSpan(log, span);
+            final BO braveRes = braveResponse(ctx, log, braveReq);
+            handleSend(braveRes, span);
+        });
+    }
 }
