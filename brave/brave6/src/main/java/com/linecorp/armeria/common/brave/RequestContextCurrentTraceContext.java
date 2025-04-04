@@ -22,6 +22,7 @@ import com.linecorp.armeria.client.brave.BraveClient;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
+import com.linecorp.armeria.internal.common.brave.InternalTraceContextUtil;
 import com.linecorp.armeria.internal.common.brave.TraceContextUtil;
 import com.linecorp.armeria.server.brave.BraveService;
 
@@ -92,9 +93,6 @@ public final class RequestContextCurrentTraceContext extends CurrentTraceContext
 
     private static final RequestContextCurrentTraceContext DEFAULT = builder().build();
 
-    // Thread-local for storing TraceContext when invoking callbacks off the request thread.
-    private static final ThreadLocal<TraceContext> THREAD_LOCAL_CONTEXT = new ThreadLocal<>();
-
     private final boolean scopeDecoratorAdded;
 
     RequestContextCurrentTraceContext(CurrentTraceContext.Builder builder, boolean scopeDecoratorAdded) {
@@ -105,7 +103,7 @@ public final class RequestContextCurrentTraceContext extends CurrentTraceContext
     @Override
     @Nullable
     public TraceContext get() {
-        final TraceContext traceContext = THREAD_LOCAL_CONTEXT.get();
+        final TraceContext traceContext = InternalTraceContextUtil.get();
         if (traceContext != null) {
             return traceContext;
         }
@@ -123,13 +121,13 @@ public final class RequestContextCurrentTraceContext extends CurrentTraceContext
             return Scope.NOOP;
         }
 
-        final TraceContext threadPrev = THREAD_LOCAL_CONTEXT.get();
-        THREAD_LOCAL_CONTEXT.set(currentSpan);
+        final TraceContext threadPrev = InternalTraceContextUtil.get();
+        InternalTraceContextUtil.set(currentSpan);
 
         class ThreadLocalContextScope implements Scope {
             @Override
             public void close() {
-                THREAD_LOCAL_CONTEXT.set(threadPrev);
+                InternalTraceContextUtil.set(threadPrev);
             }
 
             @Override
