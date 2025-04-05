@@ -31,7 +31,7 @@ export default abstract class Transport {
     bodyJson?: string,
     endpointPath?: string,
     queries?: string,
-  ): Promise<string> {
+  ): Promise<{ body: string; headers: Record<string, string> }> {
     const providedHeaders = await Promise.all(
       providers.map((provider) => provider()),
     );
@@ -59,6 +59,7 @@ export default abstract class Transport {
       endpointPath,
       queries,
     );
+    const responseHeaders = this.extractHeaders(httpResponse.headers);
     const responseText = await httpResponse.text();
     const applicationType = httpResponse.headers.get('content-type') || '';
     if (applicationType.indexOf('json') >= 0) {
@@ -66,18 +67,37 @@ export default abstract class Transport {
         const json = JSONbig.parse(responseText);
         const prettified = jsonPrettify(JSONbig.stringify(json));
         if (prettified.length > 0) {
-          return prettified;
+          return {
+            body: prettified,
+            headers: responseHeaders,
+          };
         }
       } catch (e) {
-        return responseText;
+        return {
+          body: responseText,
+          headers: responseHeaders,
+        };
       }
     }
 
     if (responseText.length > 0) {
-      return responseText;
+      return {
+        body: responseText,
+        headers: responseHeaders,
+      };
     }
+    return {
+      body: '<zero-length response>',
+      headers: responseHeaders,
+    };
+  }
 
-    return '<zero-length response>';
+  protected extractHeaders(headers: Headers): Record<string, string> {
+    const result: Record<string, string> = {};
+    headers.forEach((value, key) => {
+      result[key] = value;
+    });
+    return result;
   }
 
   public findDebugMimeTypeEndpoint(
