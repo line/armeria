@@ -295,6 +295,7 @@ const DebugPage: React.FunctionComponent<Props> = ({
       }
 
       // window.location.origin may have compatibility issue
+      // https://developer.mozilla.org/en-US/docs/Web/API/Window/location#Browser_compatibility
       const host =
         `${window.location.protocol}//${window.location.hostname}` +
         `${window.location.port ? `:${window.location.port}` : ''}`;
@@ -461,6 +462,10 @@ const DebugPage: React.FunctionComponent<Props> = ({
 
     try {
       if (useRequestBody) {
+        // Do not round-trip through JSON.parse to minify the text so as to not lose numeric precision.
+        // See: https://github.com/line/armeria/issues/273
+
+        // For some reason jsonMinify minifies {} as empty string, so work around it.
         params.set('request_body', jsonMinify(requestBody) || '{}');
       }
 
@@ -477,6 +482,7 @@ const DebugPage: React.FunctionComponent<Props> = ({
       } else if (additionalPath.length > 0) {
         params.set('endpoint_path', additionalPath);
       } else {
+        // Fall back to default endpoint.
         params.delete('endpoint_path');
       }
 
@@ -511,6 +517,7 @@ const DebugPage: React.FunctionComponent<Props> = ({
 
     const serializedParams = `?${params.toString()}`;
     if (serializedParams !== location.search) {
+      // executeRequest may throw error before useEffect, we need to avoid useEffect cleanup the debug response.
       toggleKeepDebugResponse(true);
       history.push(`${location.pathname}${serializedParams}`);
     }
