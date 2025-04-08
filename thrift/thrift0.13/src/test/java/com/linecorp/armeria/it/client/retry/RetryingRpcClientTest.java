@@ -19,6 +19,7 @@ import static com.linecorp.armeria.client.retry.AbstractRetryingClient.ARMERIA_R
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.catchThrowable;
+import static org.awaitility.Awaitility.await;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
@@ -343,9 +344,13 @@ class RetryingRpcClientTest {
 
         assertThatThrownBy(() -> client.hello("hello")).isInstanceOf(CancellationException.class);
 
+        await().untilAsserted(() -> {
+            verify(serviceHandler, only()).hello("hello");
+        });
         final RequestLog log = context.get().log().whenComplete().join();
-        verify(serviceHandler, only()).hello("hello");
-        assertThat(log.requestCause()).isNull();
+
+        // ClientUtil.completeLogIfIncomplete() records exceptions caused by response cancellations.
+        assertThat(log.requestCause()).isExactlyInstanceOf(CancellationException.class);
         assertThat(log.responseCause()).isExactlyInstanceOf(CancellationException.class);
 
         // Sleep 1 second more to check if there was another retry.
