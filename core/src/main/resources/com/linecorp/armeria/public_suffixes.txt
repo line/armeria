@@ -9058,6 +9058,8 @@ williamhill
 win
 winb.gov.pl
 windows
+windsurf.app
+windsurf.build
 wine
 winners
 wios.gov.pl
