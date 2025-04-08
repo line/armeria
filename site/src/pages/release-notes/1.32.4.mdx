@@ -1,0 +1,19 @@
+---
+date: 2025-04-08
+---
+
+## 🛠️ Bug fixes
+
+- Fixed a potential deadlock in <type://RetryingClient> caused by an incomplete <type://RequestLog>. #5714
+- Fixed a bug where <type://RequestLog> is not completed when the HTTP response is fully consumed on the client. #5714
+- Handled race conditions between `onSubscribe` and `onError` when aborting a <type://StreamMessage>. #6168
+- Resolved memory pressure issues caused by incomplete HTTP/2 streams. #6166
+- Properly logs remote peer information when an unexpected request failure occurs on the client side. #6189
+- Improved slow endpoint updates in <type://HealthCheckedEndpointGroup>. #6190
+
+<ThankYou usernames={[
+  'ikhoon',
+  'jrhee17',
+  'minwoox',
+  'trustin'
+]} />
