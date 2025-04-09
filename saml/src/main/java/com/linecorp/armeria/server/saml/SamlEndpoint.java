@@ -118,7 +118,6 @@ public final class SamlEndpoint {
         requireNonNull(defaultHostname, "defaultHostname");
         validatePort(defaultPort);
 
-
         final StringBuilder sb = new StringBuilder();
         sb.append(firstNonNull(uri.getScheme(), defaultScheme)).append("://")
           .append(firstNonNull(uri.getHost(), defaultHostname));
