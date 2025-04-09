@@ -130,9 +130,11 @@ const toggle = (prev: boolean, override: unknown) => {
 
 const escapeSingleQuote = (text: string) => text.replace(/'/g, "'\\''");
 
+type Header = [name: string, value: string];
+
 interface ResponseData {
+  headers: Header[];
   body: string;
-  headers: Record<string, string>;
 }
 
 const DebugPage: React.FunctionComponent<Props> = ({
@@ -154,9 +156,9 @@ const DebugPage: React.FunctionComponent<Props> = ({
   const [requestBody, setRequestBody] = useState('');
   const [debugResponse, setDebugResponse] = useState('');
   const [additionalQueries, setAdditionalQueries] = useState('');
-  const [debugResponseHeaders, setDebugResponseHeaders] = useState<
-    Record<string, string>
-  >({});
+  const [debugResponseHeaders, setDebugResponseHeaders] = useState<Header[]>(
+    [],
+  );
   const [additionalPath, setAdditionalPath] = useState('');
   const [additionalHeaders, setAdditionalHeaders] = useState('');
   const [stickyHeaders, toggleStickyHeaders] = useReducer(toggle, false);
@@ -190,7 +192,7 @@ const DebugPage: React.FunctionComponent<Props> = ({
         setDebugResponseHeaders(responseCache[apiId].headers);
       } else {
         setDebugResponse('');
-        setDebugResponseHeaders({});
+        setDebugResponseHeaders([]);
       }
     }
   }, [method, currentApiId, responseCache]);
@@ -231,7 +233,7 @@ const DebugPage: React.FunctionComponent<Props> = ({
 
     if (!keepDebugResponse) {
       setDebugResponse('');
-      setDebugResponseHeaders({});
+      setDebugResponseHeaders([]);
       toggleKeepDebugResponse(false);
     }
     setSnackbarOpen(false);
@@ -394,7 +396,7 @@ const DebugPage: React.FunctionComponent<Props> = ({
 
   const onClear = useCallback(() => {
     setDebugResponse('');
-    setDebugResponseHeaders({});
+    setDebugResponseHeaders([]);
   }, []);
 
   const executeRequest = useCallback(
@@ -431,15 +433,15 @@ const DebugPage: React.FunctionComponent<Props> = ({
           queries,
         );
         setDebugResponse(body);
-        setDebugResponseHeaders(responseHeaders);
+        setDebugResponseHeaders(Object.entries(responseHeaders));
         setResponseCache((prev) => ({
           ...prev,
-          [currentApiId]: { body, headers: responseHeaders },
+          [currentApiId]: { body, headers: Object.entries(responseHeaders) },
         }));
       } catch (e) {
         const message = e instanceof Object ? e.toString() : '<unknown>';
         setDebugResponse(message);
-        setDebugResponseHeaders({});
+        setDebugResponseHeaders([]);
       }
     },
     [
@@ -548,7 +550,7 @@ const DebugPage: React.FunctionComponent<Props> = ({
         setDebugResponseHeaders(responseCache[newApiId].headers);
       } else {
         setDebugResponse('');
-        setDebugResponseHeaders({});
+        setDebugResponseHeaders([]);
       }
     }
   }, [method, currentApiId, responseCache]);
@@ -659,7 +661,11 @@ const DebugPage: React.FunctionComponent<Props> = ({
                         style={githubGist}
                         wrapLines={false}
                       >
-                        {JSON.stringify(debugResponseHeaders, null, 2)}
+                        {JSON.stringify(
+                          Object.fromEntries(debugResponseHeaders),
+                          null,
+                          2,
+                        )}
                       </SyntaxHighlighter>
                     </>
                   )}
@@ -769,7 +775,11 @@ const DebugPage: React.FunctionComponent<Props> = ({
                       style={githubGist}
                       wrapLines={false}
                     >
-                      {JSON.stringify(debugResponseHeaders, null, 2)}
+                      {JSON.stringify(
+                        Object.fromEntries(debugResponseHeaders),
+                        null,
+                        2,
+                      )}
                     </SyntaxHighlighter>
                   </>
                 )}
