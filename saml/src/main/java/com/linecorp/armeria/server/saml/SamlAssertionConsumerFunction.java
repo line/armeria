@@ -18,8 +18,6 @@ package com.linecorp.armeria.server.saml;
 import static com.linecorp.armeria.server.saml.SamlHttpParameterNames.SAML_RESPONSE;
 import static com.linecorp.armeria.server.saml.SamlMessageUtil.validateSignature;
 
-import java.net.URI;
-import java.net.URISyntaxException;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -52,6 +50,7 @@ import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.common.AggregatedHttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.RequestTarget;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
@@ -293,31 +292,31 @@ final class SamlAssertionConsumerFunction implements SamlServiceFunction {
             return true;
         }
 
-        final URI uri1 = parseUri(uriString1);
-        final URI uri2 = parseUri(uriString2);
-
-        return Objects.equals(uri1.getScheme(), uri2.getScheme()) &&
-               Objects.equals(uri1.getHost(), uri2.getHost()) &&
-               Objects.equals(uri1.getPath(), uri2.getPath()) &&
-               getPortOrDefault(uri1) == getPortOrDefault(uri2);
-    }
-
-    private static URI parseUri(String uriString) {
-        try {
-            return new URI(uriString);
-        } catch (URISyntaxException e) {
-            throw new IllegalArgumentException("Invalid URI: " + uriString, e);
-
+        final RequestTarget requestTarget1 = RequestTarget.forClient(uriString1);
+        if (requestTarget1 == null) {
+            throw new IllegalArgumentException("invalid URI: " + uriString1);
         }
+        final RequestTarget requestTarget2 = RequestTarget.forClient(uriString2);
+        if (requestTarget2 == null) {
+            throw new IllegalArgumentException("invalid URI: " + uriString2);
+        }
+
+        final String scheme1 = requestTarget1.scheme();
+        final String host1 = requestTarget1.host();
+        return scheme1 != null && scheme1.equals(requestTarget2.scheme()) &&
+               host1 != null && host1.equals(requestTarget2.host()) &&
+               requestTarget1.path().equals(requestTarget2.path()) &&
+               getPortOrDefault(requestTarget1) == getPortOrDefault(requestTarget2);
     }
 
-    private static int getPortOrDefault(URI uri) {
-        final int port = uri.getPort();
+    private static int getPortOrDefault(RequestTarget requestTarget) {
+        final int port = requestTarget.port();
         if (port > 0) {
             return port;
         }
 
-        final String scheme = uri.getScheme();
+        final String scheme = requestTarget.scheme();
+        assert scheme != null;
         switch (scheme.toLowerCase()) {
             case "http": {
                 return 80;
