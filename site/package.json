@@ -41,7 +41,7 @@
     "babel-plugin-import": "^1.13.5",
     "cross-env": "^7.0.3",
     "dayjs": "^1.11.1",
-    "dompurify": "^2.3.6",
+    "dompurify": "^3.2.4",
     "email-validator": "^2.0.4",
     "eslint": "^8.13.0",
     "eslint-config-airbnb": "^19.0.4",
