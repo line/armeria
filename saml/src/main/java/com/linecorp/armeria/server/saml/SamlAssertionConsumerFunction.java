@@ -18,6 +18,8 @@ package com.linecorp.armeria.server.saml;
 import static com.linecorp.armeria.server.saml.SamlHttpParameterNames.SAML_RESPONSE;
 import static com.linecorp.armeria.server.saml.SamlMessageUtil.validateSignature;
 
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -45,6 +47,7 @@ import org.opensaml.xmlsec.encryption.support.DecryptionException;
 import org.opensaml.xmlsec.encryption.support.InlineEncryptedKeyResolver;
 import org.opensaml.xmlsec.keyinfo.impl.StaticKeyInfoCredentialResolver;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.common.AggregatedHttpRequest;
@@ -240,9 +243,10 @@ final class SamlAssertionConsumerFunction implements SamlServiceFunction {
                     continue;
                 }
 
-                if (!endpointUri.equals(data.getRecipient())) {
+                final String recipient = data.getRecipient();
+                if (!isSameUri(endpointUri, recipient)) {
                     throw new InvalidSamlRequestException(
-                            "recipient is not matched: " + data.getRecipient() +
+                            "recipient is not matched: " + recipient +
                             " (expected: " + endpointUri + ')');
                 }
                 if (now.isAfter(data.getNotOnOrAfter())) {
@@ -281,6 +285,50 @@ final class SamlAssertionConsumerFunction implements SamlServiceFunction {
             }
         }
         throw new InvalidSamlRequestException("no subject found from the assertions");
+    }
+
+    @VisibleForTesting
+    static boolean isSameUri(String uriString1, String uriString2) {
+        if (uriString1.equals(uriString2)) {
+            return true;
+        }
+
+        final URI uri1 = parseUri(uriString1);
+        final URI uri2 = parseUri(uriString2);
+
+        return Objects.equals(uri1.getScheme(), uri2.getScheme()) &&
+               Objects.equals(uri1.getHost(), uri2.getHost()) &&
+               Objects.equals(uri1.getPath(), uri2.getPath()) &&
+               getPortOrDefault(uri1) == getPortOrDefault(uri2);
+    }
+
+    private static URI parseUri(String uriString) {
+        try {
+            return new URI(uriString);
+        } catch (URISyntaxException e) {
+            throw new IllegalArgumentException("Invalid URI: " + uriString, e);
+
+        }
+    }
+
+    private static int getPortOrDefault(URI uri) {
+        final int port = uri.getPort();
+        if (port > 0) {
+            return port;
+        }
+
+        final String scheme = uri.getScheme();
+        switch (scheme.toLowerCase()) {
+            case "http": {
+                return 80;
+            }
+            case "https": {
+                return 443;
+            }
+            default: {
+                throw new IllegalArgumentException("Unknown scheme: " + scheme);
+            }
+        }
     }
 
     private static Assertion decryptAssertion(EncryptedAssertion encryptedAssertion,
