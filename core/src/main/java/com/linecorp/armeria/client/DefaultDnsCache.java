@@ -33,6 +33,7 @@ import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.github.benmanes.caffeine.cache.RemovalCause;
 import com.github.benmanes.caffeine.cache.RemovalListener;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.MoreObjects;
 import com.google.common.base.MoreObjects.ToStringHelper;
 import com.google.common.base.Objects;
@@ -177,6 +178,17 @@ final class DefaultDnsCache implements DnsCache {
     public void addListener(DnsCacheListener listener) {
         requireNonNull(listener, "listener");
         listeners.add(listener);
+    }
+
+    @Override
+    public void removeListener(DnsCacheListener listener) {
+        requireNonNull(listener, "listener");
+        listeners.remove(listener);
+    }
+
+    @VisibleForTesting
+    List<DnsCacheListener> listeners() {
+        return listeners;
     }
 
     private static final class CacheEntry {
