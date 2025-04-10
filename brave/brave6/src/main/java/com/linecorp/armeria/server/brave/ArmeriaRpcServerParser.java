@@ -27,15 +27,15 @@ import brave.rpc.RpcResponseParser;
  * RpcTracing rpcTracing =
  *   RpcTracing.newBuilder(tracing)
  *              .serverRequestParser((req, ctx, span) -> {
- *                  // apply brave's default request parser
+ *                  // Apply Brave's default request parser
  *                  RpcRequestParser.DEFAULT.parse(req, ctx, span);
- *                  // apply armeria's default request parser
+ *                  // Apply Armeria's default request parser
  *                  ArmeriaRpcServerParser.requestParser().parse(req, ctx, span);
  *              })
  *              .serverResponseParser((res, ctx, span) -> {
- *                  // apply brave's default response parser
+ *                  // Apply Brave's default response parser
  *                  RpcResponseParser.DEFAULT.parse(res, ctx, span);
- *                  // apply armeria's default response parser
+ *                  // Apply Armeria's default response parser
  *                  ArmeriaRpcServerParser.responseParser().parse(res, ctx, span);
  *              });
  * BraveRpcService
