@@ -18,6 +18,8 @@ package com.linecorp.armeria.internal.common.brave;
 
 import static java.util.Objects.requireNonNull;
 
+import java.util.Objects;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -46,7 +48,7 @@ public final class TraceContextUtil {
 
     public static void setTraceContext(RequestContext ctx, TraceContext traceContext) {
         final TraceContext prevTraceContext = traceContext(ctx);
-        if (prevTraceContext != traceContext) {
+        if (Objects.equals(traceContext, prevTraceContext)) {
             logger.warn("[{}] Overriding traceContext<{}> with new traceContext<{}>",
                         ctx.id(), prevTraceContext, traceContext);
         }
