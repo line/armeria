@@ -24,6 +24,7 @@
 *.ap-southeast-2.airflow.amazonaws.com
 *.ap-southeast-3.airflow.amazonaws.com
 *.ap-southeast-4.airflow.amazonaws.com
+*.appwrite.run
 *.awdev.ca
 *.awsapprunner.com
 *.azurecontainer.io
@@ -80,6 +81,8 @@
 *.id.pub
 *.il-central-1.airflow.amazonaws.com
 *.in.futurecms.at
+*.inbrowser.dev
+*.inbrowser.link
 *.jm
 *.kawasaki.jp
 *.kh
@@ -173,6 +176,7 @@
 *.wf.crm.dev
 *.xmit.co
 *.yokohama.jp
+*.zerops.app
 0.bg
 0am.jp
 0g0.jp
@@ -389,6 +393,7 @@ ah.no
 ai
 ai.in
 ai.jo
+ai.kr
 ai.vn
 aibetsu.hokkaido.jp
 aichi.jp
@@ -583,6 +588,7 @@ appspacehosted.com
 appspaceusercontent.com
 appspot.com
 appudo.net
+appwrite.global
 aq
 aq.it
 aquarelle
@@ -1113,6 +1119,7 @@ bss.design
 bt
 bt.it
 bu.no
+bubbleapps.io
 budejju.no
 build
 builders
@@ -1147,6 +1154,7 @@ bzh
 c.bg
 c.cdn77.org
 c.se
+c01.kr
 c66.me
 ca
 ca-central-1.elasticbeanstalk.com
@@ -1290,6 +1298,7 @@ cci.fr
 cd
 cd.eu.org
 cdn-edges.net
+cdn.bubble.io
 cdn.cloudflare.net
 cdn.cloudflareanycast.net
 cdn.cloudflarecn.net
@@ -1758,6 +1767,7 @@ courses
 coz.br
 cpa
 cpa.pro
+cpanel.site
 cprapid.com
 cpserver.com
 cq.cn
@@ -1903,6 +1913,7 @@ democrat
 demon.nl
 deno-staging.dev
 deno.dev
+deno.net
 dental
 dentist
 dep.no
@@ -1915,11 +1926,13 @@ design.aero
 det.br
 deta.app
 deta.dev
+deus-canvas.com
 dev
 dev-myqnapcloud.com
 dev.br
 development.run
 devices.resinstaging.io
+devinapps.com
 df.gov.br
 df.leg.br
 dfirma.pl
@@ -2005,6 +2018,7 @@ dot
 dovre.no
 download
 dp.ua
+dpdns.org
 dr.in
 dr.tr
 drammen.no
@@ -2277,6 +2291,7 @@ elasticbeanstalk.com
 elblag.pl
 elementor.cloud
 elementor.cool
+eliv-dns.kr
 elk.pl
 elverum.no
 email
@@ -2288,6 +2303,7 @@ emergency.aero
 emilia-romagna.it
 emiliaromagna.it
 emp.br
+emprende.ve
 empresa.bo
 emr.it
 emrappui-prod.af-south-1.amazonaws.com
@@ -3832,6 +3848,7 @@ investments
 inzai.chiba.jp
 io
 io.in
+io.kr
 io.noc.ruhr-uni-bochum.de
 io.vn
 iobb.net
@@ -3841,6 +3858,8 @@ ip-dynamic.org
 ip.linodeusercontent.com
 ip6.arpa
 ipfs.nftstorage.link
+ipfs.storacha.link
+ipfs.w3s.link
 ipifony.net
 ipiranga
 iq
@@ -3968,6 +3987,7 @@ it
 it.ao
 it.com
 it.eu.org
+it.kr
 it1.eur.aruba.jenv-aruba.cloud
 it1.jenv-aruba.cloud
 itabashi.tokyo.jp
@@ -4326,7 +4346,6 @@ kembuchi.hokkaido.jp
 kep.tr
 kepno.pl
 kerryhotels
-kerrylogistics
 kerryproperties
 ketrzyn.pl
 keymachine.de
@@ -4771,7 +4790,6 @@ lindesnes.no
 link
 linkyard-cloud.ch
 linkyard.cloud
-lipsy
 littlestar.jp
 live
 live-on.net
@@ -4830,6 +4848,8 @@ loseyourip.com
 loten.no
 lotte
 lotto
+lovable.app
+lovableproject.com
 love
 lovepop.jp
 lovesick.jp
@@ -4996,6 +5016,7 @@ me.eu.org
 me.in
 me.it
 me.ke
+me.kr
 me.so
 me.ss
 me.tz
@@ -6181,6 +6202,7 @@ onfabrica.com
 ong
 ong.br
 onga.fukuoka.jp
+oninferno.net
 onion
 onjuku.chiba.jp
 onl
@@ -6982,7 +7004,6 @@ room
 roros.no
 rost.no
 rotorcraft.aero
-router.management
 routingthecloud.com
 routingthecloud.net
 routingthecloud.org
@@ -7886,6 +7907,7 @@ sport.eg
 sport.hu
 spot
 spydeberg.no
+square.site
 square7.ch
 square7.de
 square7.net
@@ -7910,6 +7932,7 @@ stackit.run
 stackit.zone
 stada
 stage.nodeart.io
+staging.devinapps.com
 staging.expo.app
 staging.replit.dev
 stalowa-wola.pl
@@ -9035,6 +9058,8 @@ williamhill
 win
 winb.gov.pl
 windows
+windsurf.app
+windsurf.build
 wine
 winners
 wios.gov.pl
@@ -9718,6 +9743,7 @@ zlg.br
 zm
 zombie.jp
 zone
+zone.id
 zp.gov.pl
 zp.ua
 zpisdn.gov.pl

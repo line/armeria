@@ -6,9 +6,9 @@ plugins {
     // automatically download one based on the foojay Disco API.
     // https://docs.gradle.org/8.1.1/userguide/toolchains.html#sec:provisioning
     id 'org.gradle.toolchains.foojay-resolver-convention' version '0.6.0'
-    id 'com.gradle.develocity' version '3.18.2'
+    id 'com.gradle.develocity' version '4.0'
     // adds additional metadata to build scans
-    id 'com.gradle.common-custom-user-data-gradle-plugin' version '2.0.2'
+    id 'com.gradle.common-custom-user-data-gradle-plugin' version '2.2.1'
 }
 
 import com.gradle.develocity.agent.gradle.scan.PublishedBuildScan
@@ -215,6 +215,7 @@ includeWithFlags ':it:grpc:kotlin',                            'java', 'relocate
 includeWithFlags ':it:grpc:kotlin-coroutine-context-provider', 'java', 'relocate', 'kotlin-grpc', 'kotlin'
 includeWithFlags ':it:grpc:scala',                             'java', 'relocate', 'scala-grpc_2.13', 'scala_2.13'
 includeWithFlags ':it:grpc:reactor',                           'java', 'relocate', 'reactor-grpc'
+includeWithFlags ':it:grpc:protobuf4',                         'java', 'relocate'
 includeWithFlags ':it:internal-logging',                       'java', 'relocate'
 includeWithFlags ':it:jackson-provider',                       'java', 'relocate'
 includeWithFlags ':it:kotlin',                                 'java', 'relocate', 'kotlin'

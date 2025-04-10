@@ -55,6 +55,7 @@ import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
+import com.linecorp.armeria.common.loadbalancer.Weighted;
 import com.linecorp.armeria.common.util.DomainSocketAddress;
 import com.linecorp.armeria.common.util.UnmodifiableFuture;
 import com.linecorp.armeria.internal.common.ArmeriaHttpUtil;
@@ -72,7 +73,7 @@ import io.netty.util.NetUtil;
  * represented as {@code "<host>"} or {@code "<host>:<port>"} in the authority part of a URI. It can have
  * an IP address if the host name has been resolved and thus there's no need to query a DNS server.</p>
  */
-public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
+public final class Endpoint implements Comparable<Endpoint>, EndpointGroup, Weighted {
 
     private static final Comparator<Endpoint> COMPARATOR =
             Comparator.comparing(Endpoint::host)
@@ -652,6 +653,7 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
     /**
      * Returns the weight of this endpoint.
      */
+    @Override
     public int weight() {
         return weight;
     }

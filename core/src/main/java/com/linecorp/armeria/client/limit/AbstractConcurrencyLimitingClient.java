@@ -108,7 +108,7 @@ public abstract class AbstractConcurrencyLimitingClient<I extends Request, O ext
                                 // Wrap the exception with UnprocessedRequestException.
                                 final UnprocessedRequestException t =
                                         UnprocessedRequestException.of(throwable);
-                                completeExceptionally(ctx, resFuture, t);
+                                resFuture.completeExceptionally(t);
                                 return null;
                             }
                             numActiveRequests.incrementAndGet();
@@ -124,19 +124,12 @@ public abstract class AbstractConcurrencyLimitingClient<I extends Request, O ext
                                 } catch (Throwable t) {
                                     permit.close();
                                     numActiveRequests.decrementAndGet();
-                                    completeExceptionally(ctx, resFuture, t);
+                                    resFuture.completeExceptionally(t);
                                 }
                             }
                             return null;
                         }, ctx.eventLoop().withoutContext());
         return deferred;
-    }
-
-    private static void completeExceptionally(ClientRequestContext ctx,
-                                              CompletableFuture<?> resFuture, Throwable t) {
-        resFuture.completeExceptionally(t);
-        ctx.logBuilder().endRequest(t);
-        ctx.logBuilder().endResponse(t);
     }
 
     /**

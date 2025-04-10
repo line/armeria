@@ -177,7 +177,6 @@ class ConcurrencyLimitingClientTest {
         await().untilAsserted(() -> assertThat(res.isOpen()).isFalse());
         assertThatThrownBy(() -> res.whenComplete().get()).hasCauseInstanceOf(Exception.class);
         await().untilAsserted(() -> assertThat(client.numActiveRequests()).isZero());
-        await().untilAsserted(() -> assertThat(ctx.log().isComplete()).isTrue());
     }
 
     @Test

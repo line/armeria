@@ -160,6 +160,11 @@ public class PublisherBasedStreamMessage<T> extends AggregationSupport implement
     }
 
     private void abort0(Throwable cause) {
+        if (publisher instanceof StreamMessage) {
+            ((StreamMessage<? extends T>) publisher).abort(cause);
+            return;
+        }
+
         final AbortableSubscriber subscriber = this.subscriber;
         if (subscriber != null) {
             subscriber.abort(cause);

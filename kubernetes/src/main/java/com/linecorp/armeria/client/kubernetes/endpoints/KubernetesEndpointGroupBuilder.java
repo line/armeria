@@ -16,9 +16,11 @@
 
 package com.linecorp.armeria.client.kubernetes.endpoints;
 
+import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkState;
 import static java.util.Objects.requireNonNull;
 
+import java.time.Duration;
 import java.util.function.Predicate;
 
 import com.google.common.base.Strings;
@@ -32,6 +34,7 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
 
 import io.fabric8.kubernetes.api.model.NodeAddress;
 import io.fabric8.kubernetes.client.KubernetesClient;
+import io.fabric8.kubernetes.client.Watch;
 
 /**
  * A builder for creating a new {@link KubernetesEndpointGroup}.
@@ -39,6 +42,8 @@ import io.fabric8.kubernetes.client.KubernetesClient;
 @UnstableApi
 public final class KubernetesEndpointGroupBuilder
         extends AbstractDynamicEndpointGroupBuilder<KubernetesEndpointGroupBuilder> {
+
+    private static final int DEFAULT_MAX_WATCH_AGE_MILLIS = 10 * 60 * 1000; // 10 minutes
 
     private final KubernetesClient kubernetesClient;
     private final boolean autoClose;
@@ -53,6 +58,7 @@ public final class KubernetesEndpointGroupBuilder
 
     private Predicate<? super NodeAddress> nodeAddressFilter = nodeAddress ->
             "InternalIP".equals(nodeAddress.getType()) && !Strings.isNullOrEmpty(nodeAddress.getAddress());
+    private long maxWatchAgeMillis = DEFAULT_MAX_WATCH_AGE_MILLIS;
 
     KubernetesEndpointGroupBuilder(KubernetesClient kubernetesClient, boolean autoClose) {
         super(Flags.defaultResponseTimeoutMillis());
@@ -110,6 +116,33 @@ public final class KubernetesEndpointGroupBuilder
     }
 
     /**
+     * Sets the maximum age of the {@link Watch} in milliseconds. If the {@link Watch} is older than this value,
+     * it is closed and a new one is created. If unspecified, {@value DEFAULT_MAX_WATCH_AGE_MILLIS} ms will be
+     * used. {@code 0} disables this feature.
+     *
+     * <p>This option would be useful when the long-lived {@link Watch} is not working properly due to a
+     * network issue or a bug in the Kubernetes Server.
+     */
+    public KubernetesEndpointGroupBuilder maxWatchAgeMillis(long maxWatchAgeMillis) {
+        checkArgument(maxWatchAgeMillis >= 0, "maxWatchAgeMillis: %s (expected: >= 0)", maxWatchAgeMillis);
+        this.maxWatchAgeMillis = maxWatchAgeMillis;
+        return this;
+    }
+
+    /**
+     * Sets the maximum age of the {@link Watch}. If the {@link Watch} is older than this value,
+     * it is closed and a new one is created. If unspecified, {@value DEFAULT_MAX_WATCH_AGE_MILLIS} ms will be
+     * used. {@code 0} disables this feature.
+     *
+     * <p>This option would be useful when the long-lived {@link Watch} becomes stale due to a network issue or
+     * a bug in the Kubernetes Server.
+     */
+    public KubernetesEndpointGroupBuilder maxWatchAge(Duration maxWatchAge) {
+        requireNonNull(maxWatchAge, "maxWatchAge");
+        return maxWatchAgeMillis(maxWatchAge.toMillis());
+    }
+
+    /**
      * Returns a newly-created {@link KubernetesEndpointGroup} based on the properties of this builder.
      */
     public KubernetesEndpointGroup build() {
@@ -117,6 +150,6 @@ public final class KubernetesEndpointGroupBuilder
         return new KubernetesEndpointGroup(kubernetesClient, namespace, serviceName, portName,
                                            nodeAddressFilter, autoClose,
                                            selectionStrategy, shouldAllowEmptyEndpoints(),
-                                           selectionTimeoutMillis());
+                                           selectionTimeoutMillis(), maxWatchAgeMillis);
     }
 }
