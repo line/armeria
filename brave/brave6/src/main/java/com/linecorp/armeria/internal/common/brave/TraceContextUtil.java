@@ -45,10 +45,10 @@ public final class TraceContextUtil {
     }
 
     public static void setTraceContext(RequestContext ctx, TraceContext traceContext) {
-        if (logger.isTraceEnabled()) {
-            final TraceContext prevTraceContext = traceContext(ctx);
-            logger.trace("[{}] Overriding traceContext<{}> with new traceContext<{}>",
-                         ctx.id(), prevTraceContext, traceContext);
+        final TraceContext prevTraceContext = traceContext(ctx);
+        if (prevTraceContext != traceContext) {
+            logger.warn("[{}] Overriding traceContext<{}> with new traceContext<{}>",
+                        ctx.id(), prevTraceContext, traceContext);
         }
         ctx.setAttr(TRACE_CONTEXT_KEY, traceContext);
     }
