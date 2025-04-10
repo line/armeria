@@ -242,7 +242,8 @@ final class SamlAssertionConsumerFunction implements SamlServiceFunction {
 
                 if (!endpointUri.equals(data.getRecipient())) {
                     throw new InvalidSamlRequestException(
-                            "recipient is not matched: " + data.getRecipient());
+                            "recipient is not matched: " + data.getRecipient() +
+                            " (expected: " + endpointUri + ')');
                 }
                 if (now.isAfter(data.getNotOnOrAfter())) {
                     throw new InvalidSamlRequestException(

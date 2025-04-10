@@ -85,6 +85,7 @@ import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.socket.ChannelInputShutdownReadComplete;
 import io.netty.handler.codec.http2.Http2Connection;
+import io.netty.handler.codec.http2.Http2Error;
 import io.netty.handler.codec.http2.Http2Exception;
 import io.netty.handler.codec.http2.Http2Settings;
 import io.netty.handler.ssl.SslCloseCompletionEvent;
@@ -840,6 +841,11 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
                 // As `unfinishedRequests` is being iterated, `unfinishedRequests` should not be removed.
                 if (!isCleaning) {
                     unfinishedRequests.remove(req);
+                }
+
+                if (!isNeedsDisconnection() && responseEncoder instanceof ServerHttp2ObjectEncoder) {
+                    ((ServerHttp2ObjectEncoder) responseEncoder)
+                            .maybeResetStream(req.streamId(), Http2Error.CANCEL);
                 }
 
                 final boolean needsDisconnection = ctx.channel().isActive() &&
