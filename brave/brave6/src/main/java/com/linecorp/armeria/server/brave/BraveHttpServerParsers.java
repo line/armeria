@@ -1,7 +1,7 @@
 /*
- * Copyright 2025 LINE Corporation
+ * Copyright 2025 LY Corporation
  *
- * LINE Corporation licenses this file to you under the Apache License,
+ * LY Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
@@ -16,30 +16,32 @@
 
 package com.linecorp.armeria.server.brave;
 
-import brave.rpc.RpcRequestParser;
-import brave.rpc.RpcResponseParser;
+import com.linecorp.armeria.common.annotation.UnstableApi;
+
+import brave.http.HttpRequestParser;
+import brave.http.HttpResponseParser;
 
 /**
- * Provides Armeria's default implementation for server-side RPC request and response parsers.
+ * Provides Armeria's default implementation for server-side HTTP request and response parsers.
  * Users may use the default parser like the following:
  * <pre>{@code
  * Tracing tracing = ...
- * RpcTracing rpcTracing =
- *   RpcTracing.newBuilder(tracing)
+ * HttpTracing httpTracing =
+ *   HttpTracing.newBuilder(tracing)
  *              .serverRequestParser((req, ctx, span) -> {
  *                  // Apply Brave's default request parser
- *                  RpcRequestParser.DEFAULT.parse(req, ctx, span);
+ *                  HttpRequestParser.DEFAULT.parse(req, ctx, span);
  *                  // Apply Armeria's default request parser
- *                  ArmeriaRpcServerParser.requestParser().parse(req, ctx, span);
+ *                  BraveHttpServerParsers.requestParser().parse(req, ctx, span);
  *              })
  *              .serverResponseParser((res, ctx, span) -> {
  *                  // Apply Brave's default response parser
- *                  RpcResponseParser.DEFAULT.parse(res, ctx, span);
+ *                  HttpResponseParser.DEFAULT.parse(res, ctx, span);
  *                  // Apply Armeria's default response parser
- *                  ArmeriaRpcServerParser.responseParser().parse(res, ctx, span);
+ *                  BraveHttpServerParsers.responseParser().parse(res, ctx, span);
  *              });
- * BraveRpcService
- *   .newDecorator(rpcTracing)
+ * BraveService
+ *   .newDecorator(httpTracing)
  *   ...
  * }</pre>
  * The following tags will be available by default:
@@ -52,25 +54,26 @@ import brave.rpc.RpcResponseParser;
  *   <li>address.local</li>
  * </ul>
  */
-public final class ArmeriaRpcServerParser {
+@UnstableApi
+public final class BraveHttpServerParsers {
 
-    private static final RpcRequestParser defaultRequestParser = ArmeriaServerParser::parseRequest;
+    private static final HttpRequestParser defaultRequestParser = ArmeriaServerParser::parseRequest;
 
-    private static final RpcResponseParser defaultResponseParser = ArmeriaServerParser::parseResponse;
+    private static final HttpResponseParser defaultResponseParser = ArmeriaServerParser::parseResponse;
 
     /**
-     * Returns the default {@link RpcRequestParser}.
+     * Returns the default {@link HttpRequestParser}.
      */
-    public static RpcRequestParser requestParser() {
+    public static HttpRequestParser requestParser() {
         return defaultRequestParser;
     }
 
     /**
-     * Returns the default {@link RpcResponseParser}.
+     * Returns the default {@link HttpResponseParser}.
      */
-    public static RpcResponseParser responseParser() {
+    public static HttpResponseParser responseParser() {
         return defaultResponseParser;
     }
 
-    private ArmeriaRpcServerParser() {}
+    private BraveHttpServerParsers() {}
 }

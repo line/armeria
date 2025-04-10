@@ -1,7 +1,7 @@
 /*
- * Copyright 2025 LINE Corporation
+ * Copyright 2025 LY Corporation
  *
- * LINE Corporation licenses this file to you under the Apache License,
+ * LY Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
@@ -36,20 +36,18 @@ import brave.Tracer.SpanInScope;
 abstract class AbstractBraveService<BI extends brave.Request, BO extends brave.Response,
         I extends Request, O extends Response> extends SimpleDecoratingService<I, O> {
 
+    private final Tracer tracer;
+    private final RequestContextCurrentTraceContext currentTraceContext;
+
     /**
      * Creates a new instance that decorates the specified {@link Service}.
      */
-    protected AbstractBraveService(Service<I, O> delegate) {
+    protected AbstractBraveService(Service<I, O> delegate, Tracer tracer,
+                                   RequestContextCurrentTraceContext currentTraceContext) {
         super(delegate);
+        this.tracer = tracer;
+        this.currentTraceContext = currentTraceContext;
     }
-
-    abstract BI braveRequest(ServiceRequestContext ctx);
-
-    abstract BO braveResponse(ServiceRequestContext ctx, RequestLog log, BI braveReq);
-
-    abstract Span handleReceive(BI braveReq);
-
-    abstract void handleSend(BO response, Span span);
 
     @Override
     public final O serve(ServiceRequestContext ctx, I req) throws Exception {
@@ -60,21 +58,25 @@ abstract class AbstractBraveService<BI extends brave.Request, BO extends brave.R
         final Span span = handleReceive(braveReq);
 
         final RequestContextExtension ctxExtension = ctx.as(RequestContextExtension.class);
-        if (currentTraceContext().scopeDecoratorAdded() && !span.isNoop() && ctxExtension != null) {
+        if (currentTraceContext.scopeDecoratorAdded() && !span.isNoop() && ctxExtension != null) {
             // Run the scope decorators when the ctx is pushed to the thread local.
-            ctxExtension.hook(() -> currentTraceContext().decorateScope(span.context(),
+            ctxExtension.hook(() -> currentTraceContext.decorateScope(span.context(),
                                                                         SERVICE_REQUEST_DECORATING_SCOPE));
         }
 
         maybeAddTagsToSpan(ctx, braveReq, span);
-        try (SpanInScope ignored = tracer().withSpanInScope(span)) {
+        try (SpanInScope ignored = tracer.withSpanInScope(span)) {
             return unwrap().serve(ctx, req);
         }
     }
 
-    abstract Tracer tracer();
+    abstract BI braveRequest(ServiceRequestContext ctx);
 
-    abstract RequestContextCurrentTraceContext currentTraceContext();
+    abstract BO braveResponse(ServiceRequestContext ctx, RequestLog log, BI braveReq);
+
+    abstract Span handleReceive(BI braveReq);
+
+    abstract void handleSend(BO response, Span span);
 
     void maybeAddTagsToSpan(ServiceRequestContext ctx, BI braveReq, Span span) {
         if (span.isNoop()) {

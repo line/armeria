@@ -1,7 +1,7 @@
 /*
- * Copyright 2019 LINE Corporation
+ * Copyright 2025 LY Corporation
  *
- * LINE Corporation licenses this file to you under the Apache License,
+ * LY Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
@@ -30,7 +30,6 @@ import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 import brave.Span;
-import brave.Tracer;
 import brave.Tracing;
 import brave.http.HttpRequestParser;
 import brave.http.HttpResponseParser;
@@ -50,13 +49,13 @@ public final class BraveService extends AbstractBraveService<HttpServerRequest, 
     @VisibleForTesting
     static final HttpRequestParser defaultRequestParser = (request, context, span) -> {
         HttpRequestParser.DEFAULT.parse(request, context, span);
-        ArmeriaHttpServerParser.requestParser().parse(request, context, span);
+        BraveHttpServerParsers.requestParser().parse(request, context, span);
     };
 
     @VisibleForTesting
     static final HttpResponseParser defaultResponseParser = (response, context, span) -> {
         HttpResponseParser.DEFAULT.parse(response, context, span);
-        ArmeriaHttpServerParser.responseParser().parse(response, context, span);
+        BraveHttpServerParsers.responseParser().parse(response, context, span);
     };
 
     static final Scope SERVICE_REQUEST_DECORATING_SCOPE = new Scope() {
@@ -89,19 +88,15 @@ public final class BraveService extends AbstractBraveService<HttpServerRequest, 
         return service -> new BraveService(service, httpTracing);
     }
 
-    private final Tracer tracer;
     private final HttpServerHandler<HttpServerRequest, HttpServerResponse> handler;
-    private final RequestContextCurrentTraceContext currentTraceContext;
 
     /**
      * Creates a new instance.
      */
     private BraveService(HttpService delegate, HttpTracing httpTracing) {
-        super(delegate);
-        final Tracing tracing = httpTracing.tracing();
-        tracer = tracing.tracer();
+        super(delegate, httpTracing.tracing().tracer(),
+              (RequestContextCurrentTraceContext) httpTracing.tracing().currentTraceContext());
         handler = HttpServerHandler.create(httpTracing);
-        currentTraceContext = (RequestContextCurrentTraceContext) tracing.currentTraceContext();
     }
 
     @Override
@@ -122,15 +117,5 @@ public final class BraveService extends AbstractBraveService<HttpServerRequest, 
     @Override
     void handleSend(HttpServerResponse response, Span span) {
         handler.handleSend(response, span);
-    }
-
-    @Override
-    Tracer tracer() {
-        return tracer;
-    }
-
-    @Override
-    RequestContextCurrentTraceContext currentTraceContext() {
-        return currentTraceContext;
     }
 }

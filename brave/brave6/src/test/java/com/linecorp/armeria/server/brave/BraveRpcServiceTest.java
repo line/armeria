@@ -1,7 +1,7 @@
 /*
- * Copyright 2025 LINE Corporation
+ * Copyright 2025 LY Corporation
  *
- * LINE Corporation licenses this file to you under the Apache License,
+ * LY Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
@@ -68,11 +68,11 @@ class BraveRpcServiceTest {
                     RpcTracing.newBuilder(tracing)
                               .serverRequestParser((request, context, span) -> {
                                   RpcRequestParser.DEFAULT.parse(request, context, span);
-                                  ArmeriaRpcServerParser.requestParser().parse(request, context, span);
+                                  BraveRpcServerParsers.requestParser().parse(request, context, span);
                               })
                               .serverResponseParser((response, context, span) -> {
                                   RpcResponseParser.DEFAULT.parse(response, context, span);
-                                  ArmeriaRpcServerParser.responseParser().parse(response, context, span);
+                                  BraveRpcServerParsers.responseParser().parse(response, context, span);
                               })
                               .serverSampler(req -> {
                                   final ServiceRequestContext ctx = (ServiceRequestContext) req.unwrap();
