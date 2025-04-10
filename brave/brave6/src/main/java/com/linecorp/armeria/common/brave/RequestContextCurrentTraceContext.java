@@ -85,7 +85,7 @@ public final class RequestContextCurrentTraceContext extends CurrentTraceContext
      * > });
      * }</pre>
      *
-     * @deprecated This setting has no effect
+     * @deprecated This setting has no effect.
      */
     @Deprecated
     public static void setCurrentThreadNotRequestThread(boolean value) {
