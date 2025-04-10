@@ -17,7 +17,6 @@
 package com.linecorp.armeria.server.brave;
 
 import com.linecorp.armeria.common.RpcRequest;
-import com.linecorp.armeria.common.RpcResponse;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogProperty;
@@ -114,12 +113,7 @@ final class RpcServiceRequestContextAdapter {
         @Nullable
         @Override
         public Throwable error() {
-            final Object content = log.responseContent();
-            if (!(content instanceof RpcResponse)) {
-                return null;
-            }
-            final RpcResponse response = (RpcResponse) content;
-            return response.cause();
+            return log.responseCause();
         }
 
         @Override
