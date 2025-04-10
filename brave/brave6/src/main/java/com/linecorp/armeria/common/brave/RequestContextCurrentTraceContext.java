@@ -85,13 +85,24 @@ public final class RequestContextCurrentTraceContext extends CurrentTraceContext
      * > });
      * }</pre>
      *
-     * @deprecated this setting has no effect
+     * @deprecated This setting has no effect
      */
     @Deprecated
     public static void setCurrentThreadNotRequestThread(boolean value) {
     }
 
     private static final RequestContextCurrentTraceContext DEFAULT = builder().build();
+
+    private static final Scope NOOP_SCOPE = new Scope() {
+        @Override
+        public void close() {
+        }
+
+        @Override
+        public String toString() {
+            return "ArmeriaNoopScope";
+        }
+    };
 
     private final boolean scopeDecoratorAdded;
 
@@ -122,6 +133,11 @@ public final class RequestContextCurrentTraceContext extends CurrentTraceContext
         }
 
         final TraceContext threadPrev = InternalTraceContextUtil.get();
+        if (threadPrev == currentSpan) {
+            // a custom noop scope is used to avoid special behavior in built-in scope decorators
+            return decorateScope(currentSpan, NOOP_SCOPE);
+        }
+
         InternalTraceContextUtil.set(currentSpan);
 
         class ThreadLocalContextScope implements Scope {
