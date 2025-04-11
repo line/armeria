@@ -16,7 +16,6 @@
 
 package com.linecorp.armeria.internal.common;
 
-import static com.linecorp.armeria.internal.client.ClosedStreamExceptionUtil.newClosedSessionException;
 import static java.util.Objects.requireNonNull;
 
 import java.util.AbstractMap.SimpleImmutableEntry;
@@ -346,7 +345,7 @@ public abstract class Http1ObjectEncoder implements HttpObjectEncoder {
                                             io.netty.handler.codec.http.HttpHeaders outputHeaders);
 
     @Override
-    public final ChannelFuture doWriteReset(int id, int streamId, Http2Error error, boolean unused) {
+    public final ChannelFuture doWriteReset(int id, int streamId, Http2Error error) {
         // NB: this.minClosedId can be overwritten more than once when 3+ pipelined requests are received
         //     and they are handled by different threads simultaneously.
         //     e.g. when the 3rd request triggers a reset and then the 2nd one triggers another.
@@ -392,7 +391,7 @@ public abstract class Http1ObjectEncoder implements HttpObjectEncoder {
     protected abstract boolean isPing(int id);
 
     @Override
-    public final void close() {
+    public final void close(Throwable cause) {
         if (closed) {
             return;
         }
@@ -403,7 +402,6 @@ public abstract class Http1ObjectEncoder implements HttpObjectEncoder {
             return;
         }
 
-        final ClosedSessionException cause = newClosedSessionException(ch);
         for (Queue<Entry<HttpObject, ChannelPromise>> queue : pendingWritesMap.values()) {
             for (;;) {
                 final Entry<HttpObject, ChannelPromise> e = queue.poll();

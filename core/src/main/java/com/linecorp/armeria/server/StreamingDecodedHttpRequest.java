@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.server;
 
+import java.util.concurrent.CompletableFuture;
+
 import javax.annotation.Nonnull;
 
 import com.linecorp.armeria.common.ExchangeType;
@@ -43,6 +45,8 @@ final class StreamingDecodedHttpRequest extends DefaultHttpRequest implements De
     private final long requestStartTimeNanos;
     private final long requestStartTimeMicros;
     private final boolean http1WebSocket;
+    private final CompletableFuture<Void> whenResponseSent = new CompletableFuture<>();
+
     private boolean shouldResetOnlyIfRemoteIsOpen;
 
     @Nullable
@@ -81,6 +85,12 @@ final class StreamingDecodedHttpRequest extends DefaultHttpRequest implements De
     @Override
     public void init(ServiceRequestContext ctx) {
         this.ctx = ctx;
+    }
+
+    @Nullable
+    @Override
+    public ServiceRequestContext requestContext() {
+        return ctx;
     }
 
     @Override
@@ -214,6 +224,11 @@ final class StreamingDecodedHttpRequest extends DefaultHttpRequest implements De
     }
 
     @Override
+    public CompletableFuture<Void> whenResponseSent() {
+        return whenResponseSent;
+    }
+
+    @Override
     public ExchangeType exchangeType() {
         return exchangeType;
     }
@@ -231,15 +246,5 @@ final class StreamingDecodedHttpRequest extends DefaultHttpRequest implements De
     @Override
     public boolean isHttp1WebSocket() {
         return http1WebSocket;
-    }
-
-    @Override
-    public void setShouldResetOnlyIfRemoteIsOpen(boolean shouldResetOnlyIfRemoteIsOpen) {
-        this.shouldResetOnlyIfRemoteIsOpen = shouldResetOnlyIfRemoteIsOpen;
-    }
-
-    @Override
-    public boolean shouldResetOnlyIfRemoteIsOpen() {
-        return shouldResetOnlyIfRemoteIsOpen;
     }
 }

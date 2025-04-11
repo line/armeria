@@ -72,6 +72,7 @@ import io.grpc.ServerServiceDefinition;
 import io.grpc.ServiceDescriptor;
 import io.grpc.Status;
 import io.grpc.protobuf.services.ProtoReflectionService;
+import io.grpc.protobuf.services.ProtoReflectionServiceV1;
 
 /**
  * Constructs a {@link GrpcService} to serve gRPC services from within Armeria.
@@ -239,13 +240,9 @@ public final class GrpcServiceBuilder {
         requireNonNull(decorators, "decorators");
 
         final boolean hasDecorators = !Iterables.isEmpty(decorators);
-        if (bindableService instanceof ProtoReflectionService) {
-            if (hasDecorators) {
-                throw new IllegalArgumentException(
-                        "ProtoReflectionService should not be used with decorators.");
-            }
-            return addService(ServerInterceptors.intercept(bindableService,
-                                                           newProtoReflectionServiceInterceptor()));
+        if (bindableService instanceof ProtoReflectionService ||
+            bindableService instanceof ProtoReflectionServiceV1) {
+            return addProtoReflectionService(hasDecorators, bindableService, null, null);
         }
 
         if (bindableService instanceof GrpcHealthCheckService) {
@@ -299,15 +296,12 @@ public final class GrpcServiceBuilder {
         requireNonNull(path, "path");
         requireNonNull(bindableService, "bindableService");
         requireNonNull(decorators, "decorators");
-        if (bindableService instanceof ProtoReflectionService) {
-            if (!Iterables.isEmpty(decorators)) {
-                throw new IllegalArgumentException(
-                        "ProtoReflectionService should not be used with decorators.");
-            }
-
-            return addService(path, ServerInterceptors.intercept(bindableService,
-                                                                 newProtoReflectionServiceInterceptor()));
+        final boolean hasDecorators = !Iterables.isEmpty(decorators);
+        if (bindableService instanceof ProtoReflectionService ||
+            bindableService instanceof ProtoReflectionServiceV1) {
+            return addProtoReflectionService(hasDecorators, bindableService, path, null);
         }
+
         registryBuilder.addService(path, bindableService.bindService(), null, bindableService.getClass(),
                                    ImmutableList.copyOf(decorators));
         return this;
@@ -422,19 +416,50 @@ public final class GrpcServiceBuilder {
         requireNonNull(methodDescriptor, "methodDescriptor");
         requireNonNull(decorators, "decorators");
 
-        if (bindableService instanceof ProtoReflectionService) {
-            if (!Iterables.isEmpty(decorators)) {
-                throw new IllegalArgumentException(
-                        "ProtoReflectionService should not be used with decorators.");
-            }
-            final ServerServiceDefinition interceptor =
-                    ServerInterceptors.intercept(bindableService, newProtoReflectionServiceInterceptor());
-            return addService(path, interceptor, methodDescriptor);
+        if (bindableService instanceof ProtoReflectionService ||
+            bindableService instanceof ProtoReflectionServiceV1) {
+            return addProtoReflectionService(!Iterables.isEmpty(decorators), bindableService, path,
+                                             methodDescriptor);
         }
 
         registryBuilder.addService(path, bindableService.bindService(), methodDescriptor,
                                    bindableService.getClass(), ImmutableList.copyOf(decorators));
         return this;
+    }
+
+    private GrpcServiceBuilder addProtoReflectionService(boolean hasDecorators,
+                                                         BindableService protoReflectionService,
+                                                         @Nullable String path,
+                                                         @Nullable MethodDescriptor<?, ?> methodDescriptor) {
+        if (hasDecorators) {
+            throw new IllegalArgumentException("ProtoReflectionService should not be used with decorators.");
+        }
+        checkState(protoReflectionServiceInterceptor == null,
+                   "Attempting to add a ProtoReflectionService but one is already present. " +
+                   "ProtoReflectionService must only be added once.");
+        protoReflectionServiceInterceptor = new ProtoReflectionServiceInterceptor();
+        if (protoReflectionService instanceof ProtoReflectionService) {
+            logger.warn("Use {} instead of {}.", ProtoReflectionServiceV1.class.getSimpleName(),
+                        protoReflectionService);
+        }
+        final ServerServiceDefinition intercept =
+                ServerInterceptors.intercept(protoReflectionService, protoReflectionServiceInterceptor);
+        return addProtoReflectionIntercept(intercept, path, methodDescriptor);
+    }
+
+    private GrpcServiceBuilder addProtoReflectionIntercept(ServerServiceDefinition intercept,
+                                                           @Nullable String path,
+                                                           @Nullable MethodDescriptor<?, ?> methodDescriptor) {
+        if (methodDescriptor != null) {
+            assert path != null;
+            return addService(path, intercept, methodDescriptor);
+        }
+
+        if (path == null) {
+            return addService(intercept);
+        } else {
+            return addService(path, intercept);
+        }
     }
 
     /**
@@ -458,13 +483,6 @@ public final class GrpcServiceBuilder {
         requireNonNull(interceptors, "interceptors");
         interceptors().addAll(interceptors);
         return this;
-    }
-
-    private ProtoReflectionServiceInterceptor newProtoReflectionServiceInterceptor() {
-        checkState(protoReflectionServiceInterceptor == null,
-                   "Attempting to add a ProtoReflectionService but one is already present. " +
-                   "ProtoReflectionService must only be added once.");
-        return protoReflectionServiceInterceptor = new ProtoReflectionServiceInterceptor();
     }
 
     /**

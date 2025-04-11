@@ -25,6 +25,7 @@ import java.util.Arrays;
 import java.util.Map;
 import java.util.function.Consumer;
 import java.util.function.Function;
+import java.util.function.Predicate;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -35,6 +36,8 @@ import com.linecorp.armeria.common.CommonPools;
 import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.Http1HeaderNaming;
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.TlsKeyPair;
+import com.linecorp.armeria.common.TlsProvider;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.outlier.OutlierDetection;
 import com.linecorp.armeria.common.util.AbstractOptions;
@@ -46,6 +49,7 @@ import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
+import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.resolver.AddressResolverGroup;
 
@@ -108,6 +112,21 @@ public final class ClientFactoryOptions
             ClientFactoryOption.define("tlsEngineType", Flags.tlsEngineType());
 
     /**
+     * The {@link TlsProvider} which provides the {@link TlsKeyPair} to create the
+     * {@link SslContext} for TLS handshake.
+     */
+    @UnstableApi
+    public static final ClientFactoryOption<TlsProvider> TLS_PROVIDER =
+            ClientFactoryOption.define("TLS_PROVIDER", NullTlsProvider.INSTANCE);
+
+    /**
+     * Ths {@link ClientTlsConfig} which is used to configure the client-side TLS.
+     */
+    @UnstableApi
+    public static final ClientFactoryOption<ClientTlsConfig> TLS_CONFIG =
+            ClientFactoryOption.define("TLS_CONFIG", ClientTlsConfig.NOOP);
+
+    /**
      * The factory that creates an {@link AddressResolverGroup} which resolves remote addresses into
      * {@link InetSocketAddress}es.
      */
@@ -115,6 +134,15 @@ public final class ClientFactoryOptions
             ? extends AddressResolverGroup<? extends InetSocketAddress>>> ADDRESS_RESOLVER_GROUP_FACTORY =
             ClientFactoryOption.define("ADDRESS_RESOLVER_GROUP_FACTORY",
                                        eventLoopGroup -> new DnsResolverGroupBuilder().build(eventLoopGroup));
+
+    /**
+     * The {@link Predicate} which validates the IP address of a remote server.
+     * If the predicate returns {@code false}, the request to the server will be rejected.
+     * By default, all IP addresses are accepted.
+     */
+    @UnstableApi
+    public static final ClientFactoryOption<Predicate<? super InetSocketAddress>> IP_ADDRESS_FILTER =
+            ClientFactoryOption.define("IP_ADDRESS_FILTER", addr -> true);
 
     /**
      * The HTTP/2 <a href="https://datatracker.ietf.org/doc/html/rfc7540#section-6.9.2">initial connection flow-control
@@ -452,6 +480,15 @@ public final class ClientFactoryOptions
     }
 
     /**
+     * Returns the {@link Predicate} which validates the IP address of a remote server.
+     */
+    @UnstableApi
+    public Predicate<InetSocketAddress> ipAddressFilter() {
+        //noinspection unchecked
+        return (Predicate<InetSocketAddress>) get(IP_ADDRESS_FILTER);
+    }
+
+    /**
      * Returns the HTTP/2 <a href="https://datatracker.ietf.org/doc/html/rfc7540#section-6.9.2">initial connection
      * flow-control window size</a>.
      */
@@ -652,6 +689,23 @@ public final class ClientFactoryOptions
     @UnstableApi
     public TlsEngineType tlsEngineType() {
         return get(TLS_ENGINE_TYPE);
+    }
+
+    /**
+     * Returns the {@link TlsProvider} which provides the {@link TlsKeyPair} that is used to create the
+     * {@link SslContext} for TLS handshake.
+     */
+    @UnstableApi
+    public TlsProvider tlsProvider() {
+        return get(TLS_PROVIDER);
+    }
+
+    /**
+     * Returns the {@link ClientTlsConfig} which is used to configure the client-side {@link SslContext}.
+     */
+    @UnstableApi
+    public ClientTlsConfig tlsConfig() {
+        return get(TLS_CONFIG);
     }
 
     /**

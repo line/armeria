@@ -32,7 +32,7 @@ final class ConfigSourceMapper {
     @Nullable
     private final ConfigSource bootstrapAdsConfig;
     @Nullable
-    private ConfigSource parentConfigSource;
+    private final ConfigSource parentConfigSource;
 
     ConfigSourceMapper(Bootstrap bootstrap) {
         this(bootstrap, null);
@@ -78,18 +78,7 @@ final class ConfigSourceMapper {
         throw new IllegalArgumentException("Cannot find an EDS config source for " + resourceName);
     }
 
-    ConfigSource cdsConfigSource(@Nullable ConfigSource configSource, String resourceName) {
-        if (configSource != null) {
-            if (configSource.hasApiConfigSource()) {
-                return configSource;
-            }
-            if (configSource.hasSelf() && parentConfigSource != null) {
-                return parentConfigSource;
-            }
-            if (configSource.hasAds() && bootstrapAdsConfig != null) {
-                return bootstrapAdsConfig;
-            }
-        }
+    ConfigSource cdsConfigSource(String resourceName) {
         if (bootstrapCdsConfig != null && bootstrapCdsConfig.hasApiConfigSource()) {
             return bootstrapCdsConfig;
         }
@@ -114,18 +103,7 @@ final class ConfigSourceMapper {
         throw new IllegalArgumentException("Cannot find an RDS config source for route: " + resourceName);
     }
 
-    ConfigSource ldsConfigSource(@Nullable ConfigSource configSource, String resourceName) {
-        if (configSource != null) {
-            if (configSource.hasApiConfigSource()) {
-                return configSource;
-            }
-            if (configSource.hasSelf() && parentConfigSource != null) {
-                return parentConfigSource;
-            }
-            if (configSource.hasAds() && bootstrapAdsConfig != null) {
-                return bootstrapAdsConfig;
-            }
-        }
+    ConfigSource ldsConfigSource(String resourceName) {
         if (bootstrapLdsConfig != null && bootstrapLdsConfig.hasApiConfigSource()) {
             return bootstrapLdsConfig;
         }

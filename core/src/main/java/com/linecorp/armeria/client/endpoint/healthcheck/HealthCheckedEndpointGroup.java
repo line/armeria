@@ -23,10 +23,12 @@ import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Deque;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Queue;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.locks.ReentrantLock;
@@ -194,7 +196,7 @@ public final class HealthCheckedEndpointGroup extends DynamicEndpointGroup {
                 }
                 initialized = true;
                 destroyOldContexts(contextGroup);
-                setEndpoints(allHealthyEndpoints());
+                setEndpoints0(allHealthyEndpoints());
                 return null;
             });
         } finally {
@@ -226,14 +228,17 @@ public final class HealthCheckedEndpointGroup extends DynamicEndpointGroup {
                 return ImmutableList.of();
             }
 
+            // newGroup.candidates() might have duplicate endpoints, so we need to use list instead of set.
             final List<Endpoint> allEndpoints = new ArrayList<>(newGroup.candidates());
+            // This set is used to check if endpoints from old group are already added to allEndpoints.
+            final Set<Endpoint> addedEndpoints = new HashSet<>(newGroup.candidates());
 
             for (HealthCheckContextGroup oldGroup : contextGroupChain) {
                 if (oldGroup == newGroup) {
                     break;
                 }
                 for (Endpoint candidate : oldGroup.candidates()) {
-                    if (!allEndpoints.contains(candidate)) {
+                    if (addedEndpoints.add(candidate)) {
                         // Add old Endpoints that do not exist in newGroup. When the first check for newGroup is
                         // completed, the old Endpoints will be removed.
                         allEndpoints.add(candidate);
@@ -291,6 +296,10 @@ public final class HealthCheckedEndpointGroup extends DynamicEndpointGroup {
     }
 
     private void updateHealth(Endpoint endpoint, boolean health) {
+        if (isClosing()) {
+            return;
+        }
+
         final boolean updated;
         // A healthy endpoint should be a valid checker context.
         if (health && findContext(endpoint) != null) {
@@ -303,8 +312,15 @@ public final class HealthCheckedEndpointGroup extends DynamicEndpointGroup {
 
         // Each new health status will be updated after initialization of the first context group.
         if (updated && initialized) {
-            setEndpoints(allHealthyEndpoints());
+            setEndpoints0(allHealthyEndpoints());
         }
+    }
+
+    private void setEndpoints0(List<Endpoint> endpoints) {
+        if (isClosing()) {
+            return;
+        }
+        setEndpoints(endpoints);
     }
 
     @Override
@@ -378,7 +394,7 @@ public final class HealthCheckedEndpointGroup extends DynamicEndpointGroup {
                           .add("numEndpoints", endpoints.size())
                           .add("candidates", truncate(delegateEndpoints, 10))
                           .add("numCandidates", delegateEndpoints.size())
-                          .add("selectionStrategy", selectionStrategy().getClass())
+                          .add("selector", toStringSelector())
                           .add("initialized", whenReady().isDone())
                           .add("initialSelectionTimeoutMillis", initialSelectionTimeoutMillis)
                           .add("selectionTimeoutMillis", selectionTimeoutMillis)

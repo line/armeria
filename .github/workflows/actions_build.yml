@@ -3,6 +3,8 @@ on:
   push:
     branches:
       - "**"
+      # Exclude branches to avoid running the same tests twice.
+      - '!dependabot/**'
     tags-ignore:
       # The release versions will be verified by 'publish-release.yml'
       - armeria-*
@@ -32,25 +34,25 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        on: [ ubicloud-standard-8, macos-12, windows-latest ]
+        on: [ ubicloud-standard-16, macos-latest, windows-latest ]
         java: [ 21 ]
         include:
           - java: 8
-            on: ubicloud-standard-8
+            on: ubicloud-standard-16
           - java: 11
-            on: ubicloud-standard-8
+            on: ubicloud-standard-16
           - java: 17
-            on: ubicloud-standard-8
+            on: ubicloud-standard-16
             leak: true
           - java: 17
-            on: ubicloud-standard-8
+            on: ubicloud-standard-16
             min-java: 11
           - java: 17
-            on: ubicloud-standard-8
+            on: ubicloud-standard-16
             min-java: 17
             coverage: true
           - java: 21
-            on: ubicloud-standard-8
+            on: ubicloud-standard-16
             snapshot: true
             # blockhound makes the build run about 10 minutes slower
             blockhound: true
@@ -178,7 +180,7 @@ jobs:
 
       - name: Upload the coverage report to Codecov
         if: ${{ matrix.coverage }}
-        uses: codecov/codecov-action@v3
+        uses: codecov/codecov-action@v5
 
       - name: Fail the run if any threads were blocked
         if: ${{ matrix.blockhound }}
@@ -236,7 +238,7 @@ jobs:
 
       - name: Run the linters
         run: |
-          ./gradlew --no-daemon --stacktrace --max-workers=8 --parallel lint
+          ./gradlew --no-daemon --stacktrace --max-workers=4 --parallel lint
 
   site:
     if: github.repository == 'line/armeria'

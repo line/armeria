@@ -53,6 +53,7 @@ import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.stream.PublisherBasedStreamMessage;
 import com.linecorp.armeria.common.stream.StreamMessage;
+import com.linecorp.armeria.common.stream.StreamTimeoutMode;
 import com.linecorp.armeria.common.stream.SubscriptionOption;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.internal.common.AbortedHttpResponse;
@@ -60,6 +61,7 @@ import com.linecorp.armeria.internal.common.DefaultHttpResponse;
 import com.linecorp.armeria.internal.common.DefaultSplitHttpResponse;
 import com.linecorp.armeria.internal.common.JacksonUtil;
 import com.linecorp.armeria.internal.common.stream.RecoverableStreamMessage;
+import com.linecorp.armeria.internal.common.stream.SurroundingPublisher;
 import com.linecorp.armeria.unsafe.PooledObjects;
 
 import io.netty.buffer.ByteBufAllocator;
@@ -484,7 +486,6 @@ public interface HttpResponse extends Response, HttpMessage {
         if (publisher instanceof HttpResponse) {
             return (HttpResponse) publisher;
         } else if (publisher instanceof StreamMessage) {
-            //noinspection unchecked
             return new StreamMessageBasedHttpResponse((StreamMessage<? extends HttpObject>) publisher);
         } else {
             return new PublisherBasedHttpResponse(publisher);
@@ -502,7 +503,8 @@ public interface HttpResponse extends Response, HttpMessage {
     static HttpResponse of(ResponseHeaders headers, Publisher<? extends HttpObject> publisher) {
         requireNonNull(headers, "headers");
         requireNonNull(publisher, "publisher");
-        return PublisherBasedHttpResponse.from(headers, publisher);
+        return new StreamMessageBasedHttpResponse(
+                new SurroundingPublisher<>(headers, publisher, unused -> null));
     }
 
     /**
@@ -1195,5 +1197,17 @@ public interface HttpResponse extends Response, HttpMessage {
     @Override
     default HttpResponse subscribeOn(EventExecutor eventExecutor) {
         return of(HttpMessage.super.subscribeOn(eventExecutor));
+    }
+
+    @UnstableApi
+    @Override
+    default HttpResponse timeout(Duration timeoutDuration) {
+        return timeout(timeoutDuration, StreamTimeoutMode.UNTIL_NEXT);
+    }
+
+    @UnstableApi
+    @Override
+    default HttpResponse timeout(Duration timeoutDuration, StreamTimeoutMode timeoutMode) {
+        return of(HttpMessage.super.timeout(timeoutDuration, timeoutMode));
     }
 }

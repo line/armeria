@@ -24,6 +24,8 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonRootName;
 import com.google.common.collect.ImmutableSet;
 
+import com.linecorp.armeria.common.eureka.InstanceInfo;
+
 /**
  * An application.
  */

@@ -137,4 +137,15 @@ final class ServerHttp2ObjectEncoder extends Http2ObjectEncoder implements Serve
 
         return future;
     }
+
+    public void maybeResetStream(int streamId, Http2Error http2Error) {
+        final Http2Stream stream = encoder().connection().stream(streamId);
+        if (stream == null) {
+            return;
+        }
+        if (stream.state().localSideOpen() || stream.state().remoteSideOpen()) {
+            encoder().writeRstStream(ctx(), streamId, http2Error.code(), ctx().voidPromise());
+            ctx().flush();
+        }
+    }
 }

@@ -251,9 +251,8 @@ public interface ClientRequestContext extends RequestContext {
      * Returns the {@link EndpointGroup} used for the current {@link Request}.
      *
      * @return the {@link EndpointGroup} if a user specified an {@link EndpointGroup} when initiating
-     *         a {@link Request}. {@code null} if a user specified an {@link Endpoint}.
+     *         a {@link Request}.
      */
-    @Nullable
     EndpointGroup endpointGroup();
 
     /**
@@ -526,8 +525,7 @@ public interface ClientRequestContext extends RequestContext {
             return true;
         }
         final Throwable cause = cancellationCause();
-        return cause instanceof TimeoutException ||
-               cause instanceof UnprocessedRequestException && cause.getCause() instanceof TimeoutException;
+        return TimeoutExceptionPredicate.isTimeoutException(cause);
     }
 
     /**

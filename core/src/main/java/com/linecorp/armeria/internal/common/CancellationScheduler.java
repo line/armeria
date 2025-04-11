@@ -20,6 +20,8 @@ import static com.linecorp.armeria.internal.common.DefaultCancellationScheduler.
 
 import java.util.concurrent.CompletableFuture;
 
+import com.google.common.annotations.VisibleForTesting;
+
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.TimeoutMode;
 
@@ -108,6 +110,12 @@ public interface CancellationScheduler {
      */
     long timeoutNanos();
 
+    /**
+     * Before the scheduler has started, the configured timeout will be returned regardless of the
+     * {@link TimeoutMode}. If the scheduler has already started, the remaining time will be returned.
+     */
+    long remainingTimeoutNanos();
+
     long startTimeNanos();
 
     CompletableFuture<Throwable> whenCancelling();
@@ -121,6 +129,9 @@ public interface CancellationScheduler {
      * {@link CancellationTask} will be executed after the currently set task has finished executing.
      */
     void updateTask(CancellationTask cancellationTask);
+
+    @VisibleForTesting
+    State state();
 
     enum State {
         INIT,

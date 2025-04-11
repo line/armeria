@@ -148,8 +148,7 @@ public class DefaultStreamMessage<T> extends AbstractStreamWriter<T> {
             // 'invokedOnSubscribe' should be set after 'subscribe0()' is completed.
             // 'onComplete()' could be invoked by a subclass which overrides 'subscribe0()' to subscribe
             // to other Publishers.
-            invokedOnSubscribe = true;
-            subscriber.onSubscribe(subscription);
+            maybeInvokeOnSubscribe(subscription, subscriber);
             if (!queue.isEmpty()) {
                 notifySubscriber0();
             }
@@ -163,6 +162,14 @@ public class DefaultStreamMessage<T> extends AbstractStreamWriter<T> {
                             subscriber, t);
             }
         }
+    }
+
+    private void maybeInvokeOnSubscribe(SubscriptionImpl subscription, Subscriber<Object> subscriber) {
+        if (invokedOnSubscribe) {
+            return;
+        }
+        invokedOnSubscribe = true;
+        subscriber.onSubscribe(subscription);
     }
 
     /**
@@ -300,6 +307,7 @@ public class DefaultStreamMessage<T> extends AbstractStreamWriter<T> {
 
     private void notifySubscriberOfCloseEvent0(SubscriptionImpl subscription, CloseEvent event) {
         try {
+            maybeInvokeOnSubscribe(subscription, subscription.subscriber());
             event.notifySubscriber(subscription, whenComplete());
         } finally {
             subscription.clearSubscriber();
@@ -441,28 +449,41 @@ public class DefaultStreamMessage<T> extends AbstractStreamWriter<T> {
 
     @Override
     public void close() {
-        if (setState(State.OPEN, State.CLOSED)) {
-            addObjectOrEvent(SUCCESSFUL_CLOSE);
-        }
+        tryClose();
     }
 
     @Override
     public final void close(Throwable cause) {
         requireNonNull(cause, "cause");
-        if (cause instanceof CancelledSubscriptionException) {
-            throw new IllegalArgumentException("cause: " + cause + " (must use Subscription.cancel())");
-        }
 
         tryClose(cause);
+    }
+
+    /**
+     * Tries to close the stream.
+     *
+     * @return {@code true} if the stream has been closed by this method call.
+     *         {@code false} if the stream has been closed already by another party.
+     */
+    @UnstableApi
+    public final boolean tryClose() {
+        if (setState(State.OPEN, State.CLOSED)) {
+            addObjectOrEvent(SUCCESSFUL_CLOSE);
+            return true;
+        }
+        return false;
     }
 
     /**
      * Tries to close the stream with the specified {@code cause}.
      *
      * @return {@code true} if the stream has been closed by this method call.
-     *         {@code false} if the stream has been closed already by other party.
+     *         {@code false} if the stream has been closed already by another party.
      */
     public final boolean tryClose(Throwable cause) {
+        if (cause instanceof CancelledSubscriptionException) {
+            throw new IllegalArgumentException("cause: " + cause + " (must use Subscription.cancel())");
+        }
         if (setState(State.OPEN, State.CLOSED)) {
             addObjectOrEvent(new CloseEvent(cause));
             return true;

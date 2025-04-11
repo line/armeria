@@ -26,6 +26,8 @@ import java.util.concurrent.LinkedBlockingDeque;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.google.common.collect.ImmutableMap;
 
@@ -43,9 +45,12 @@ import io.netty.handler.codec.dns.DefaultDnsQuestion;
 import io.netty.handler.codec.dns.DefaultDnsResponse;
 import io.netty.handler.codec.dns.DnsRecord;
 import io.netty.handler.codec.dns.DnsSection;
+import io.netty.resolver.ResolvedAddressTypes;
 import io.netty.util.ReferenceCountUtil;
 
 class TrailingDotAddressResolverTest {
+
+    private static final Logger logger = LoggerFactory.getLogger(TrailingDotAddressResolverTest.class);
 
     @RegisterExtension
     static ServerExtension server = new ServerExtension() {
@@ -77,13 +82,15 @@ class TrailingDotAddressResolverTest {
                         new DefaultDnsQuestion("foo.com.", A),
                         new DefaultDnsResponse(0).addRecord(ANSWER, newAddressRecord("foo.com.", "127.0.0.1"))),
                 dnsRecordCaptor)) {
-            try (ClientFactory factory = ClientFactory.builder()
-                                                      .domainNameResolverCustomizer(b -> {
-                                                          b.serverAddresses(dnsServer.addr());
-                                                          b.searchDomains("search.domain1", "search.domain2");
-                                                          b.ndots(3);
-                                                      })
-                                                      .build()) {
+            try (ClientFactory factory =
+                         ClientFactory.builder()
+                                      .domainNameResolverCustomizer(b -> {
+                                          b.resolvedAddressTypes(ResolvedAddressTypes.IPV4_ONLY);
+                                          b.serverAddresses(dnsServer.addr());
+                                          b.searchDomains("search.domain1", "search.domain2");
+                                          b.ndots(3);
+                                      })
+                                      .build()) {
 
                 final BlockingWebClient client = WebClient.builder()
                                                           .factory(factory)
@@ -93,6 +100,7 @@ class TrailingDotAddressResolverTest {
                         "http://foo.com.:" + server.httpPort() + '/');
                 assertThat(response.contentUtf8()).isEqualTo("Hello, world!");
                 assertThat(dnsRecordCaptor.records).isNotEmpty();
+                logger.debug("Captured DNS records: {}", dnsRecordCaptor.records);
                 dnsRecordCaptor.records.forEach(record -> {
                     assertThat(record.name()).isEqualTo("foo.com.");
                 });

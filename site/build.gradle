@@ -23,8 +23,8 @@ plugins {
 }
 
 node {
-    version = '22.3.0'
-    npmVersion = '10.8.1'
+    version = '22.10.0'
+    npmVersion = '10.9.0'
     download = true
     npmInstallCommand = "ci"
 }

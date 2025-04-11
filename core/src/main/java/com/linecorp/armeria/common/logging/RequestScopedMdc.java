@@ -116,8 +116,9 @@ public final class RequestScopedMdc {
 
         // Replace the default MDC adapter with ours.
         MDCAdapter oldAdapter;
+
         try {
-            final Field mdcAdapterField = MDC.class.getDeclaredField("mdcAdapter");
+            final Field mdcAdapterField = mdcAdapterField();
             mdcAdapterField.setAccessible(true);
             oldAdapter = (MDCAdapter) mdcAdapterField.get(null);
             final MDCAdapter newAdapter = new Adapter(oldAdapter);
@@ -152,6 +153,16 @@ public final class RequestScopedMdc {
             }
         }
         delegateGetPropertyMap = oldAdapterGetPropertyMap;
+    }
+
+    private static Field mdcAdapterField() throws NoSuchFieldException {
+        try {
+            // SLF4J 2.0.17 change the field name to 'MDC_ADAPTER'.
+            return MDC.class.getDeclaredField("MDC_ADAPTER");
+        } catch (NoSuchFieldException e) {
+            // Try use the old field name "mdcAdapter"
+            return MDC.class.getDeclaredField("mdcAdapter");
+        }
     }
 
     /**

@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 LINE Corporation
+ * Copyright 2024 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -75,6 +75,9 @@ interface DecodedHttpRequest extends HttpRequest {
 
     void init(ServiceRequestContext ctx);
 
+    @Nullable
+    ServiceRequestContext requestContext();
+
     RoutingContext routingContext();
 
     /**
@@ -119,6 +122,11 @@ interface DecodedHttpRequest extends HttpRequest {
     }
 
     /**
+     * Returns a {@link CompletableFuture} that is completed when the response is fully sent.
+     */
+    CompletableFuture<Void> whenResponseSent();
+
+    /**
      * Returns the {@link ExchangeType} that determines whether to stream an {@link HttpRequest} or
      * {@link HttpResponse}.
      */
@@ -136,23 +144,19 @@ interface DecodedHttpRequest extends HttpRequest {
     long requestStartTimeMicros();
 
     /**
+     * Returns the maximum allowed length of the content of the request.
+     */
+    long maxRequestLength();
+
+    /**
+     * Returns the transferred bytes of the request.
+     */
+    long transferredBytes();
+
+    /**
      * Returns whether the request is an HTTP/1.1 webSocket request.
      */
     default boolean isHttp1WebSocket() {
-        return false;
-    }
-
-    /**
-     * Sets whether to send an RST_STREAM after the response sending response when the peer is open state.
-     */
-    default void setShouldResetOnlyIfRemoteIsOpen(boolean shouldResetOnlyIfRemoteIsOpen) {
-        // no-op
-    }
-
-    /**
-     * Tells whether to send an RST_STREAM after the response sending response when the peer is open state.
-     */
-    default boolean shouldResetOnlyIfRemoteIsOpen() {
         return false;
     }
 }

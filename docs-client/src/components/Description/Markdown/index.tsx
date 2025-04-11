@@ -38,10 +38,10 @@ const MarkdownWrapper: React.FunctionComponent<MarkdownProps> = ({
             const match = /language-(\w+)/.exec(className || '');
             return !inline && match ? (
               <SyntaxHighlighter
-                style={prism}
                 language={match[1]}
                 PreTag="div"
                 {...props}
+                style={prism}
               >
                 {String(children).replace(/\n$/, '')}
               </SyntaxHighlighter>
