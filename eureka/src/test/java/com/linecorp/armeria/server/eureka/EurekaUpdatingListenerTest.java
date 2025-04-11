@@ -25,16 +25,21 @@ import java.time.Duration;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.stream.Stream;
 
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.CsvSource;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import com.linecorp.armeria.client.HttpPreprocessor;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpResponse;
@@ -63,7 +68,7 @@ class EurekaUpdatingListenerTest {
     private static final AtomicReference<HttpData> registerContentCaptor = new AtomicReference<>();
     private static final AtomicInteger registerCounter = new AtomicInteger();
 
-    private static final CompletableFuture<RequestHeaders> heartBeatHeadersCaptor = new CompletableFuture<>();
+    private static CompletableFuture<RequestHeaders> heartBeatHeadersCaptor;
     private static final AtomicInteger heartBeatRequestCounter = new AtomicInteger();
     private static final CompletableFuture<RequestHeaders> deregisterHeadersCaptor = new CompletableFuture<>();
 
@@ -106,15 +111,28 @@ class EurekaUpdatingListenerTest {
         }
     };
 
-    @Test
-    void registerHeartBeatAndDeregisterAreSent() throws IOException {
-        final EurekaUpdatingListener listener =
-                EurekaUpdatingListener.builder(eurekaServer.httpUri())
-                                      .instanceId(INSTANCE_ID)
-                                      .renewalIntervalMillis(2000)
-                                      .leaseDurationMillis(10000)
-                                      .appName(APP_NAME)
-                                      .build();
+    static Stream<Arguments> registerHeartBeatAndDeregisterAreSent_args() {
+        return Stream.of(
+                Arguments.of(EurekaUpdatingListener.builder(eurekaServer.httpUri())),
+                Arguments.of(EurekaUpdatingListener.builder(
+                        HttpPreprocessor.of(SessionProtocol.HTTP, eurekaServer.httpEndpoint())))
+        );
+    }
+
+    @BeforeEach
+    void beforeEach() {
+        heartBeatHeadersCaptor = new CompletableFuture<>();
+    }
+
+    @ParameterizedTest
+    @MethodSource("registerHeartBeatAndDeregisterAreSent_args")
+    void registerHeartBeatAndDeregisterAreSent(EurekaUpdatingListenerBuilder builder) throws IOException {
+        final EurekaUpdatingListener listener = builder
+                .instanceId(INSTANCE_ID)
+                .renewalIntervalMillis(2000)
+                .leaseDurationMillis(10000)
+                .appName(APP_NAME)
+                .build();
 
         final Server application = Server.builder()
                                          .http(0)
