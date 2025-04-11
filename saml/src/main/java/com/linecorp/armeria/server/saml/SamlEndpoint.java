@@ -16,12 +16,14 @@
 package com.linecorp.armeria.server.saml;
 
 import static com.google.common.base.MoreObjects.firstNonNull;
+import static com.google.common.base.Strings.isNullOrEmpty;
 import static com.linecorp.armeria.server.saml.SamlPortConfig.validatePort;
 import static java.util.Objects.requireNonNull;
 
 import java.net.URI;
 import java.net.URISyntaxException;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.MoreObjects;
 
 import com.linecorp.armeria.common.annotation.Nullable;
@@ -75,7 +77,17 @@ public final class SamlEndpoint {
     private final SamlBindingProtocol bindingProtocol;
     private final String uriAsString;
 
+    SamlEndpoint(@JsonProperty("uri") String uri,
+                 @JsonProperty("binding") @Nullable String bindingProtocol) throws URISyntaxException {
+        this(new URI(requireNonNull(uri, "uri")),
+             bindingProtocol != null ? SamlBindingProtocol.valueOf(bindingProtocol)
+                                     : SamlBindingProtocol.HTTP_POST);
+    }
+
     private SamlEndpoint(URI uri, SamlBindingProtocol bindingProtocol) {
+        if (isNullOrEmpty(uri.getPath()) || "/".equals(uri.getPath())) {
+            throw new IllegalArgumentException("uri.path is empty: " + uri);
+        }
         this.uri = uri;
         this.bindingProtocol = bindingProtocol;
         uriAsString = uri.toString();
@@ -91,6 +103,7 @@ public final class SamlEndpoint {
     /**
      * Returns a {@link URI} of this endpoint as a string.
      */
+    @JsonProperty("uri")
     public String toUriString() {
         return uriAsString;
     }
@@ -107,15 +120,23 @@ public final class SamlEndpoint {
 
         final StringBuilder sb = new StringBuilder();
         sb.append(firstNonNull(uri.getScheme(), defaultScheme)).append("://")
-          .append(firstNonNull(uri.getHost(), defaultHostname)).append(':')
-          .append(uri.getPort() > 0 ? uri.getPort() : defaultPort)
-          .append(uri.getPath());
+          .append(firstNonNull(uri.getHost(), defaultHostname));
+        if (uri.getHost() != null) {
+            if (uri.getPort() > 0) {
+                sb.append(':').append(uri.getPort());
+            }
+        } else {
+            // Append the default port only when the host is not specified.
+            sb.append(':').append(defaultPort);
+        }
+        sb.append(uri.getPath());
         return sb.toString();
     }
 
     /**
      * Returns a {@link SamlBindingProtocol} of this endpoint.
      */
+    @JsonProperty("bindingProtocol")
     public SamlBindingProtocol bindingProtocol() {
         return bindingProtocol;
     }
