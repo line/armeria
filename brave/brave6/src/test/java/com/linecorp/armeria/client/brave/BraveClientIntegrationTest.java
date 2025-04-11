@@ -19,7 +19,6 @@ import java.io.IOException;
 import java.util.List;
 import java.util.function.BiConsumer;
 
-import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Disabled;
@@ -27,7 +26,6 @@ import org.junit.jupiter.api.Test;
 
 import com.google.common.collect.ImmutableList;
 
-import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
@@ -42,16 +40,6 @@ import brave.test.http.ITHttpAsyncClient;
 import okhttp3.Protocol;
 
 abstract class BraveClientIntegrationTest extends ITHttpAsyncClient<WebClient> {
-
-    /**
-     * OkHttp's MockWebServer does not support H2C with HTTP/1 upgrade request.
-     */
-    private static final ClientFactory clientFactoryWithoutUpgradeRequest =
-            ClientFactory.builder().useHttp2Preface(true).build();
-
-    @AfterAll static void closeClientFactory() {
-        clientFactoryWithoutUpgradeRequest.closeAsync();
-    }
 
     private final List<Protocol> protocols;
     private final SessionProtocol sessionProtocol;
@@ -81,7 +69,6 @@ abstract class BraveClientIntegrationTest extends ITHttpAsyncClient<WebClient> {
     @Override
     protected WebClient newClient(int port) {
         return WebClient.builder(sessionProtocol.uriText() + "://127.0.0.1:" + port)
-                        .factory(clientFactoryWithoutUpgradeRequest)
                         .decorator(BraveClient.newDecorator(httpTracing))
                         .build();
     }

@@ -1,0 +1,15 @@
+syntax = "proto3";
+
+package armeria.grpc.testing;
+
+option java_package = "com.linecorp.armeria.grpc.testing";
+
+message InternalError {
+  int32 code = 1;
+  string message = 2;
+}
+
+message AuthError {
+  int32 code = 1;
+  string message = 2;
+}

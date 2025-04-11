@@ -196,7 +196,7 @@ final class RedirectingClient extends SimpleDecoratingHttpClient {
         assert req != null;
         final HttpResponse response = executeWithFallback(unwrap(), derivedCtx,
                                                           (context, cause) -> HttpResponse.ofFailure(cause),
-                                                          req);
+                                                          req, true);
         derivedCtx.log().whenAvailable(RequestLogProperty.RESPONSE_HEADERS).thenAccept(log -> {
             if (log.isAvailable(RequestLogProperty.RESPONSE_CAUSE)) {
                 final Throwable cause = log.responseCause();

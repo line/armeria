@@ -414,11 +414,13 @@ public final class SurroundingPublisher<T> implements StreamMessage<T> {
             }
             state = State.DONE;
 
+            final CancelledSubscriptionException cause = CancelledSubscriptionException.get();
             final Subscription upstream = this.upstream;
             if (upstream != null) {
                 upstream.cancel();
+            } else {
+                publisher.abort(cause);
             }
-            final CancelledSubscriptionException cause = CancelledSubscriptionException.get();
             if (containsNotifyCancellation(options)) {
                 downstream.onError(cause);
             }

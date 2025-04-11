@@ -25,6 +25,7 @@ import java.util.Arrays;
 import java.util.Map;
 import java.util.function.Consumer;
 import java.util.function.Function;
+import java.util.function.Predicate;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -133,6 +134,15 @@ public final class ClientFactoryOptions
             ? extends AddressResolverGroup<? extends InetSocketAddress>>> ADDRESS_RESOLVER_GROUP_FACTORY =
             ClientFactoryOption.define("ADDRESS_RESOLVER_GROUP_FACTORY",
                                        eventLoopGroup -> new DnsResolverGroupBuilder().build(eventLoopGroup));
+
+    /**
+     * The {@link Predicate} which validates the IP address of a remote server.
+     * If the predicate returns {@code false}, the request to the server will be rejected.
+     * By default, all IP addresses are accepted.
+     */
+    @UnstableApi
+    public static final ClientFactoryOption<Predicate<? super InetSocketAddress>> IP_ADDRESS_FILTER =
+            ClientFactoryOption.define("IP_ADDRESS_FILTER", addr -> true);
 
     /**
      * The HTTP/2 <a href="https://datatracker.ietf.org/doc/html/rfc7540#section-6.9.2">initial connection flow-control
@@ -467,6 +477,15 @@ public final class ClientFactoryOptions
             ? extends AddressResolverGroup<? extends InetSocketAddress>> addressResolverGroupFactory() {
 
         return get(ADDRESS_RESOLVER_GROUP_FACTORY);
+    }
+
+    /**
+     * Returns the {@link Predicate} which validates the IP address of a remote server.
+     */
+    @UnstableApi
+    public Predicate<InetSocketAddress> ipAddressFilter() {
+        //noinspection unchecked
+        return (Predicate<InetSocketAddress>) get(IP_ADDRESS_FILTER);
     }
 
     /**

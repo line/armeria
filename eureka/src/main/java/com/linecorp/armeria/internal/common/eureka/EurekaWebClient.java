@@ -34,7 +34,8 @@ import com.linecorp.armeria.common.QueryParams;
 import com.linecorp.armeria.common.QueryParamsBuilder;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.annotation.Nullable;
-import com.linecorp.armeria.internal.common.eureka.InstanceInfo.InstanceStatus;
+import com.linecorp.armeria.common.eureka.InstanceInfo;
+import com.linecorp.armeria.common.eureka.InstanceInfo.InstanceStatus;
 
 /**
  * A Eureka {@link WebClient} which communicates to the

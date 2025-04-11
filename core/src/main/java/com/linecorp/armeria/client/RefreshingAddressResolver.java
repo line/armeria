@@ -67,6 +67,7 @@ final class RefreshingAddressResolver
     @Nullable
     private final ToLongFunction<String> autoRefreshTimeoutFunction;
     private final boolean autoRefresh;
+    private final DnsCache dnsResolverCache;
 
     private volatile boolean resolverClosed;
 
@@ -78,6 +79,7 @@ final class RefreshingAddressResolver
                               @Nullable ToLongFunction<String> autoRefreshTimeoutFunction) {
         super(eventLoop);
         this.addressResolverCache = addressResolverCache;
+        this.dnsResolverCache = dnsResolverCache;
         this.resolver = resolver;
         this.dnsRecordTypes = dnsRecordTypes;
         this.negativeTtl = negativeTtl;
@@ -161,7 +163,7 @@ final class RefreshingAddressResolver
         return resolver.resolve(questions, hostname).handle((records, cause) -> {
             if (cause != null) {
                 cause = Exceptions.peel(cause);
-                return new CacheEntry(hostname, null, questions, creationTimeNanos, cause);
+                return new CacheEntry(executor(), hostname, null, questions, creationTimeNanos, cause);
             }
 
             InetAddress inetAddress = null;
@@ -175,17 +177,18 @@ final class RefreshingAddressResolver
                     break;
                 } catch (UnknownHostException e) {
                     // Should never reach here because we already validated it in extractAddressBytes.
-                    return new CacheEntry(hostname, null, questions, creationTimeNanos,
+                    return new CacheEntry(executor(), hostname, null, questions, creationTimeNanos,
                                           new IllegalArgumentException("Invalid address: " + hostname, e));
                 }
             }
 
             if (inetAddress == null) {
-                return new CacheEntry(hostname, null, questions, creationTimeNanos, new UnknownHostException(
-                        "failed to receive DNS records for " + hostname));
+                return new CacheEntry(executor(), hostname, null, questions, creationTimeNanos,
+                                      new UnknownHostException(
+                                              "failed to receive DNS records for " + hostname));
             }
 
-            return new CacheEntry(hostname, inetAddress, questions, creationTimeNanos, null);
+            return new CacheEntry(executor(), hostname, inetAddress, questions, creationTimeNanos, null);
         });
     }
 
@@ -220,8 +223,7 @@ final class RefreshingAddressResolver
         final CacheEntry entry = addressResolverCache.getIfPresent(hostname);
         if (entry != null) {
             if (entry.refreshable()) {
-                // onRemoval is invoked by the executor of 'dnsResolverCache'.
-                executor().execute(entry::refresh);
+                entry.refresh();
             } else {
                 // Remove the old CacheEntry.
                 addressResolverCache.invalidate(hostname);
@@ -258,11 +260,13 @@ final class RefreshingAddressResolver
     @Override
     public void close() {
         resolverClosed = true;
+        dnsResolverCache.removeListener(this);
         resolver.close();
     }
 
     final class CacheEntry {
 
+        private final EventExecutor executor;
         private final String hostname;
         @Nullable
         private final InetAddress address;
@@ -280,8 +284,10 @@ final class RefreshingAddressResolver
         private ScheduledFuture<?> retryFuture;
         private int numAttemptsSoFar = 1;
 
-        CacheEntry(String hostname, @Nullable InetAddress address, List<DnsQuestion> questions,
-                   @Nullable Long originalCreationTimeNanos, @Nullable Throwable cause) {
+        CacheEntry(EventExecutor executor, String hostname, @Nullable InetAddress address,
+                   List<DnsQuestion> questions, @Nullable Long originalCreationTimeNanos,
+                   @Nullable Throwable cause) {
+            this.executor = executor;
             this.hostname = hostname;
             this.address = address;
             this.questions = questions;
@@ -302,8 +308,8 @@ final class RefreshingAddressResolver
                 cacheable = !DnsUtil.isDnsQueryTimedOut(unknownHostException.getCause());
 
                 if (cacheable) {
-                    negativeCacheFuture = executor().schedule(() -> addressResolverCache.invalidate(hostname),
-                                                              negativeTtl, TimeUnit.SECONDS);
+                    negativeCacheFuture = executor.schedule(() -> addressResolverCache.invalidate(hostname),
+                                                            negativeTtl, TimeUnit.SECONDS);
                 }
             }
             this.cacheable = cacheable;
@@ -330,7 +336,7 @@ final class RefreshingAddressResolver
         }
 
         void clear() {
-            executor().execute(() -> {
+            executor.execute(() -> {
                 if (retryFuture != null) {
                     retryFuture.cancel(false);
                 }
@@ -341,6 +347,14 @@ final class RefreshingAddressResolver
         }
 
         void refresh() {
+            if (executor.inEventLoop()) {
+                refresh0();
+            } else {
+                executor.execute(this::refresh0);
+            }
+        }
+
+        void refresh0() {
             if (resolverClosed) {
                 return;
             }
@@ -354,10 +368,10 @@ final class RefreshingAddressResolver
             final String hostname = address.getHostName();
             // 'sendQueries()' always successfully completes.
             sendQueries(questions, hostname, originalCreationTimeNanos).thenAccept(entry -> {
-                if (executor().inEventLoop()) {
+                if (executor.inEventLoop()) {
                     maybeUpdate(hostname, entry);
                 } else {
-                    executor().execute(() -> maybeUpdate(hostname, entry));
+                    executor.execute(() -> maybeUpdate(hostname, entry));
                 }
             });
         }
@@ -381,7 +395,7 @@ final class RefreshingAddressResolver
                     if (retryFuture != null) {
                         retryFuture.cancel(false);
                     }
-                    this.retryFuture = executor().schedule(() -> {
+                    this.retryFuture = executor.schedule(() -> {
                         if (refreshable()) {
                             refresh();
                         } else {
@@ -440,6 +454,7 @@ final class RefreshingAddressResolver
         @Override
         public String toString() {
             return MoreObjects.toStringHelper(this).omitNullValues()
+                              .add("executor", executor)
                               .add("hostname", hostname)
                               .add("address", address)
                               .add("questions", questions)

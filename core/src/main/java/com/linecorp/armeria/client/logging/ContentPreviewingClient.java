@@ -157,8 +157,13 @@ public final class ContentPreviewingClient extends SimpleDecoratingHttpClient {
             ctx.logBuilder().requestContentPreview("");
         }
 
-        ctx.logBuilder().defer(RequestLogProperty.RESPONSE_CONTENT_PREVIEW);
-        final HttpResponse res = unwrap().execute(ctx, req);
-        return setUpResponseContentPreviewer(contentPreviewerFactory, ctx, res, responsePreviewSanitizer);
+        try {
+            ctx.logBuilder().defer(RequestLogProperty.RESPONSE_CONTENT_PREVIEW);
+            final HttpResponse res = unwrap().execute(ctx, req);
+            return setUpResponseContentPreviewer(contentPreviewerFactory, ctx, res, responsePreviewSanitizer);
+        } catch (Throwable e) {
+            ctx.logBuilder().responseContentPreview(null);
+            return HttpResponse.ofFailure(e);
+        }
     }
 }
