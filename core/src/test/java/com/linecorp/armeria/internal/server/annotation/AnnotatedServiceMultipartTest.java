@@ -19,7 +19,6 @@ package com.linecorp.armeria.internal.server.annotation;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static net.javacrumbs.jsonunit.fluent.JsonFluentAssert.assertThatJson;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.io.File;
 import java.io.IOException;
@@ -28,6 +27,7 @@ import java.util.function.Function;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
+import org.junit.jupiter.api.io.TempDir;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
@@ -48,6 +48,7 @@ import com.linecorp.armeria.common.multipart.AggregatedBodyPart;
 import com.linecorp.armeria.common.multipart.BodyPart;
 import com.linecorp.armeria.common.multipart.Multipart;
 import com.linecorp.armeria.common.multipart.MultipartFile;
+import com.linecorp.armeria.server.MultipartRemovalStrategy;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.annotation.Blocking;
 import com.linecorp.armeria.server.annotation.Consumes;
@@ -59,12 +60,17 @@ import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
 class AnnotatedServiceMultipartTest {
 
+    @TempDir
+    static java.nio.file.Path sharedTempDir;
+
     @RegisterExtension
     static final ServerExtension server = new ServerExtension() {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
             sb.annotatedService("/", new MyAnnotatedService());
             sb.decorator(LoggingService.newDecorator());
+            sb.multipartRemovalStrategy(MultipartRemovalStrategy.NEVER);
+            sb.multipartUploadsLocation(sharedTempDir);
         }
     };
 
@@ -113,6 +119,8 @@ class AnnotatedServiceMultipartTest {
                 "\"multipartFile1\":\"qux.txt_qux (application/octet-stream)\"," +
                 "\"multipartFile2\":\"quz.txt_quz (text/plain)\"," +
                 "\"param1\":\"armeria\"}");
+        assertThat(sharedTempDir.resolve("complete").toFile().listFiles())
+                .noneSatisfy(file -> assertThat(file).content(StandardCharsets.UTF_8).isEqualTo("qux3"));
     }
 
     @Test

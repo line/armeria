@@ -21,7 +21,6 @@ import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
-import java.util.Collections;
 import java.util.List;
 import java.util.Map.Entry;
 import java.util.concurrent.CompletableFuture;
@@ -64,7 +63,7 @@ public final class FileAggregatedMultipart {
         return files;
     }
 
-    private static boolean shouldHandle(BodyPart bodyPart, List<String> parameters) {
+    public static boolean shouldHandle(BodyPart bodyPart, List<String> parameters) {
         final String name = bodyPart.name();
         assert name != null;
         if (parameters.isEmpty()) {
@@ -73,16 +72,17 @@ public final class FileAggregatedMultipart {
         return parameters.contains(name);
     }
 
-    public static CompletableFuture<FileAggregatedMultipart> aggregateMultipart(ServiceRequestContext ctx,
-                                                                                HttpRequest req) {
-        return aggregateMultipart(ctx, req, Collections.emptyList());
+    public static CompletableFuture<FileAggregatedMultipart> aggregateMultipart(
+            ServiceRequestContext ctx, HttpRequest req) {
+        final Multipart multipart = Multipart.from(req);
+        return aggregateMultipart(ctx, multipart);
     }
 
     public static CompletableFuture<FileAggregatedMultipart> aggregateMultipart(
-            ServiceRequestContext ctx, HttpRequest req, List<String> parameters) {
+            ServiceRequestContext ctx, Multipart multipart) {
         final Path destination = ctx.config().multipartUploadsLocation();
-        return Multipart.from(req)
-                        .filterBodyParts(bodyPart -> shouldHandle(bodyPart, parameters)).collect(bodyPart -> {
+        return Multipart.of(multipart.bodyParts())
+                        .collect(bodyPart -> {
             final String name = bodyPart.name();
             assert name != null;
             final String filename = bodyPart.filename();

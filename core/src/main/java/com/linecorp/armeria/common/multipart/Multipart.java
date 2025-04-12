@@ -23,7 +23,6 @@ import static java.util.Objects.requireNonNull;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
-import java.util.function.Predicate;
 
 import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscriber;
@@ -432,17 +431,5 @@ public interface Multipart {
             Function<? super BodyPart, CompletableFuture<? extends T>> function,
             SubscriptionOption... options) {
         return bodyParts().mapAsync(function).collect(options);
-    }
-
-    /**
-     * Make only those that meet certain conditions in a body part a multipart.
-     *
-     * @param predicate certain conditions
-     * @return multipart matching the condition
-     */
-    default Multipart filterBodyParts(Predicate<BodyPart> predicate) {
-        requireNonNull(predicate, "predicate");
-        final StreamMessage<BodyPart> filteredParts = bodyParts().filter(predicate);
-        return new DefaultMultipart(boundary(), filteredParts);
     }
 }
