@@ -53,6 +53,7 @@
 *.dev-builder.code.com
 *.dev.adobeaemcloud.com
 *.developer.app
+*.devinapps.com
 *.digitaloceanspaces.com
 *.dweb.link
 *.elb.amazonaws.com
@@ -1742,6 +1743,8 @@ contact
 contagem.br
 contractors
 control.aero
+convex.app
+convex.cloud
 convex.site
 cooking
 cool
@@ -1934,7 +1937,6 @@ dev-myqnapcloud.com
 dev.br
 development.run
 devices.resinstaging.io
-devinapps.com
 df.gov.br
 df.leg.br
 dfirma.pl
@@ -2098,6 +2100,7 @@ e.bg
 e.se
 e12.ve
 e164.arpa
+e2b.app
 e4.cz
 earth
 east-kazakhstan.su
@@ -7553,6 +7556,7 @@ secure
 security
 securitytactics.com
 seek
+seg.ar
 seg.br
 seidat.net
 seihi.nagasaki.jp
@@ -7935,7 +7939,6 @@ stackit.run
 stackit.zone
 stada
 stage.nodeart.io
-staging.devinapps.com
 staging.expo.app
 staging.replit.dev
 stalowa-wola.pl
