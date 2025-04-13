@@ -130,13 +130,6 @@ const toggle = (prev: boolean, override: unknown) => {
 
 const escapeSingleQuote = (text: string) => text.replace(/'/g, "'\\''");
 
-type Header = [name: string, value: string];
-
-interface ResponseData {
-  headers: Header[];
-  body: string;
-}
-
 const DebugPage: React.FunctionComponent<Props> = ({
   exactPathMapping,
   exampleHeaders,
@@ -156,9 +149,9 @@ const DebugPage: React.FunctionComponent<Props> = ({
   const [requestBody, setRequestBody] = useState('');
   const [debugResponse, setDebugResponse] = useState('');
   const [additionalQueries, setAdditionalQueries] = useState('');
-  const [debugResponseHeaders, setDebugResponseHeaders] = useState<Header[]>(
-    [],
-  );
+  const [debugResponseHeaders, setDebugResponseHeaders] = useState<
+    [string, string[]][]
+  >([]);
   const [additionalPath, setAdditionalPath] = useState('');
   const [additionalHeaders, setAdditionalHeaders] = useState('');
   const [stickyHeaders, toggleStickyHeaders] = useReducer(toggle, false);
@@ -173,7 +166,7 @@ const DebugPage: React.FunctionComponent<Props> = ({
     method.id || method.name,
   );
   const [responseCache, setResponseCache] = useState<
-    Record<string, ResponseData>
+    Record<string, { body: string; headers: Map<string, string[]> }>
   >({});
 
   const classes = useStyles();
@@ -189,7 +182,9 @@ const DebugPage: React.FunctionComponent<Props> = ({
       setCurrentApiId(apiId);
       if (responseCache[apiId]) {
         setDebugResponse(responseCache[apiId].body);
-        setDebugResponseHeaders(responseCache[apiId].headers);
+        setDebugResponseHeaders(
+          Array.from(responseCache[apiId].headers.entries()),
+        );
       } else {
         setDebugResponse('');
         setDebugResponseHeaders([]);
@@ -433,10 +428,13 @@ const DebugPage: React.FunctionComponent<Props> = ({
           queries,
         );
         setDebugResponse(body);
-        setDebugResponseHeaders(Object.entries(responseHeaders));
+        setDebugResponseHeaders(Array.from(responseHeaders.entries()));
         setResponseCache((prev) => ({
           ...prev,
-          [currentApiId]: { body, headers: Object.entries(responseHeaders) },
+          [currentApiId]: {
+            body,
+            headers: responseHeaders,
+          },
         }));
       } catch (e) {
         const message = e instanceof Object ? e.toString() : '<unknown>';
@@ -547,7 +545,9 @@ const DebugPage: React.FunctionComponent<Props> = ({
       setCurrentApiId(newApiId);
       if (responseCache[newApiId]) {
         setDebugResponse(responseCache[newApiId].body);
-        setDebugResponseHeaders(responseCache[newApiId].headers);
+        setDebugResponseHeaders(
+          Array.from(responseCache[newApiId].headers.entries()),
+        );
       } else {
         setDebugResponse('');
         setDebugResponseHeaders([]);
@@ -662,7 +662,13 @@ const DebugPage: React.FunctionComponent<Props> = ({
                         wrapLines={false}
                       >
                         {JSON.stringify(
-                          Object.fromEntries(debugResponseHeaders),
+                          Object.fromEntries(
+                            debugResponseHeaders
+                              .entries()
+                              .flatMap(([key, values]) =>
+                                values.map((value) => [key, value]),
+                              ),
+                          ),
                           null,
                           2,
                         )}
@@ -776,7 +782,12 @@ const DebugPage: React.FunctionComponent<Props> = ({
                       wrapLines={false}
                     >
                       {JSON.stringify(
-                        Object.fromEntries(debugResponseHeaders),
+                        Object.fromEntries(
+                          Array.from(debugResponseHeaders.entries()).flatMap(
+                            ([key, values]) =>
+                              values.map((value) => [key, value]),
+                          ),
+                        ),
                         null,
                         2,
                       )}
