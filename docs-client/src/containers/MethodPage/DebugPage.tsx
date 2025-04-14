@@ -663,11 +663,9 @@ const DebugPage: React.FunctionComponent<Props> = ({
                       >
                         {JSON.stringify(
                           Object.fromEntries(
-                            debugResponseHeaders
-                              .entries()
-                              .flatMap(([key, values]) =>
-                                values.map((value) => [key, value]),
-                              ),
+                            Array.from(debugResponseHeaders).map(
+                              ([key, values]) => [key, values.join(', ')],
+                            ),
                           ),
                           null,
                           2,
@@ -783,9 +781,8 @@ const DebugPage: React.FunctionComponent<Props> = ({
                     >
                       {JSON.stringify(
                         Object.fromEntries(
-                          Array.from(debugResponseHeaders.entries()).flatMap(
-                            ([key, values]) =>
-                              values.map((value) => [key, value]),
+                          Array.from(debugResponseHeaders).map(
+                            ([key, values]) => [key, values.join(', ')],
                           ),
                         ),
                         null,
