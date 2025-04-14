@@ -92,14 +92,6 @@ export default abstract class Transport {
     };
   }
 
-  protected extractHeaders(headers: Headers): Record<string, string> {
-    const result: Record<string, string> = {};
-    headers.forEach((value, key) => {
-      result[key] = value;
-    });
-    return result;
-  }
-
   public findDebugMimeTypeEndpoint(
     method: Method,
     endpointPath?: string,
