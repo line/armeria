@@ -27,7 +27,6 @@ import java.util.List;
 import java.util.function.Consumer;
 
 import com.github.benmanes.caffeine.cache.CaffeineSpec;
-import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.common.Flags;
@@ -522,12 +521,6 @@ public abstract class AbstractDnsResolverBuilder<SELF extends AbstractDnsResolve
                                   boolean retrySocketChannelOnTimeout) {
         requireNonNull(socketChannelType, "channelType");
         this.socketChannelType = socketChannelType;
-        this.retrySocketChannelOnTimeout = retrySocketChannelOnTimeout;
-        return self();
-    }
-
-    @VisibleForTesting
-    SELF retrySocketChannelOnTimeout(boolean retrySocketChannelOnTimeout) {
         this.retrySocketChannelOnTimeout = retrySocketChannelOnTimeout;
         return self();
     }
