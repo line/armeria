@@ -4,6 +4,7 @@ import ApiLink from '@site/src/components/api-link';
 import AspectRatio from '@site/src/components/aspect-ratio';
 import MaxWidth from '@site/src/components/max-width';
 import RequiredDependencies from '@site/src/components/required-dependencies';
+import TutorialSteps from '@site/src/components/steps';
 
 import CodeBlock from '@theme/CodeBlock';
 import Tabs from '@theme/Tabs';
@@ -17,6 +18,7 @@ export default {
   AspectRatio,
   MaxWidth,
   RequiredDependencies,
+  TutorialSteps,
   CodeBlock,
   Tabs,
   TabItem,

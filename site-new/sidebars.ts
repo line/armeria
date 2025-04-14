@@ -74,7 +74,15 @@ const sidebars: SidebarsConfig = {
         type: 'doc',
         id: 'tutorials/rest/index',
       },
-      items: ['tutorials/rest/create-a-server'],
+      items: [
+        'tutorials/rest/create-server',
+        'tutorials/rest/prepare-data-object',
+        'tutorials/rest/add-services-to-server',
+        'tutorials/rest/implement-create',
+        'tutorials/rest/implement-read',
+        'tutorials/rest/implement-update',
+        'tutorials/rest/implement-delete',
+      ],
     },
     {
       type: 'category',
