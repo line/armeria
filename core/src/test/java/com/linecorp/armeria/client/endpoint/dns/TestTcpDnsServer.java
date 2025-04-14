@@ -22,12 +22,16 @@ import java.net.InetSocketAddress;
 import java.util.Map;
 import java.util.Map.Entry;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.google.common.collect.ImmutableMap;
 
 import com.linecorp.armeria.common.CommonPools;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.TransportType;
 
+import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
@@ -36,9 +40,14 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.SimpleChannelInboundHandler;
+import io.netty.handler.codec.dns.DatagramDnsQuery;
+import io.netty.handler.codec.dns.DatagramDnsQueryDecoder;
+import io.netty.handler.codec.dns.DatagramDnsResponse;
+import io.netty.handler.codec.dns.DatagramDnsResponseEncoder;
 import io.netty.handler.codec.dns.DefaultDnsQuery;
 import io.netty.handler.codec.dns.DefaultDnsRawRecord;
 import io.netty.handler.codec.dns.DefaultDnsResponse;
+import io.netty.handler.codec.dns.DnsOpCode;
 import io.netty.handler.codec.dns.DnsQuestion;
 import io.netty.handler.codec.dns.DnsRecord;
 import io.netty.handler.codec.dns.DnsResponse;
@@ -51,6 +60,8 @@ import io.netty.util.ReferenceCountUtil;
 
 public final class TestTcpDnsServer implements AutoCloseable {
 
+    private static final Logger logger = LoggerFactory.getLogger(TestTcpDnsServer.class);
+
     public static DnsRecord newAddressRecord(String name, String ipAddr) {
         return newAddressRecord(name, ipAddr, 60);
     }
@@ -62,6 +73,7 @@ public final class TestTcpDnsServer implements AutoCloseable {
                 NetUtil.createByteArrayFromIpAddressString(ipAddr))));
     }
 
+    private final Channel udpChannel;
     private final Channel tcpChannel;
     private volatile Map<DnsQuestion, DnsResponse> responses;
 
@@ -72,6 +84,44 @@ public final class TestTcpDnsServer implements AutoCloseable {
     public TestTcpDnsServer(Map<DnsQuestion, DnsResponse> responses,
                             @Nullable ChannelHandler beforeDnsServerHandler) {
         this.responses = ImmutableMap.copyOf(responses);
+
+        final Bootstrap b = new Bootstrap();
+        b.channel(TransportType.datagramChannelType(CommonPools.workerGroup()));
+        b.group(CommonPools.workerGroup());
+        b.handler(new ChannelInitializer<Channel>() {
+            @Override
+            protected void initChannel(Channel ch) throws Exception {
+                final ChannelPipeline p = ch.pipeline();
+                p.addLast(new DatagramDnsQueryDecoder());
+                p.addLast(new DatagramDnsResponseEncoder());
+                p.addLast(new SimpleChannelInboundHandler<DatagramDnsQuery>() {
+
+                    @Override
+                    protected void channelRead0(ChannelHandlerContext ctx, DatagramDnsQuery query)
+                            throws Exception {
+                        final DnsQuestion question = query.recordAt(DnsSection.QUESTION);
+
+                        logger.debug("Response is too large for UDP. Fallback to TCP. query: {}", query);
+                        // Create a truncated response to fallback to TCP.
+                        final DefaultDnsResponse response = new DefaultDnsResponse(query.id());
+                        response.setCode(DnsResponseCode.NOERROR);
+                        response.setOpCode(DnsOpCode.QUERY);
+                        response.setTruncated(true);
+                        response.addRecord(DnsSection.QUESTION, question);
+
+                        final DatagramDnsResponse reply = new DatagramDnsResponse(
+                                query.recipient(), query.sender(), response.id());
+                        reply.setCode(DnsResponseCode.NOERROR);
+                        reply.setTruncated(true);
+                        reply.addRecord(DnsSection.QUESTION, question);
+
+                        ctx.writeAndFlush(reply);
+                    }
+                });
+            }
+        });
+
+        udpChannel = b.bind(NetUtil.LOCALHOST, 0).syncUninterruptibly().channel();
 
         final ServerBootstrap tcp = new ServerBootstrap();
         tcp.channel(TransportType.serverChannelType(CommonPools.workerGroup()));
@@ -89,7 +139,8 @@ public final class TestTcpDnsServer implements AutoCloseable {
             }
         });
 
-        tcpChannel = tcp.bind(NetUtil.LOCALHOST, 0).syncUninterruptibly().channel();
+        final int port = ((InetSocketAddress) udpChannel.localAddress()).getPort();
+        tcpChannel = tcp.bind(NetUtil.LOCALHOST, port).syncUninterruptibly().channel();
     }
 
     public InetSocketAddress addr() {
@@ -107,6 +158,7 @@ public final class TestTcpDnsServer implements AutoCloseable {
             return;
         }
 
+        udpChannel.close().syncUninterruptibly();
         tcpChannel.close().syncUninterruptibly();
         responses.values().forEach(DnsResponse::release);
     }
@@ -114,6 +166,7 @@ public final class TestTcpDnsServer implements AutoCloseable {
     private class DnsServerHandler extends SimpleChannelInboundHandler<DefaultDnsQuery> {
         @Override
         protected void channelRead0(ChannelHandlerContext ctx, DefaultDnsQuery query) {
+            logger.debug("Received TCP query: {}", query);
             final DnsQuestion question = query.recordAt(DnsSection.QUESTION, 0);
             boolean responded = false;
             for (Entry<DnsQuestion, DnsResponse> e : responses.entrySet()) {

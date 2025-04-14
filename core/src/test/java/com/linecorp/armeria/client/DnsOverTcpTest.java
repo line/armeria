@@ -27,7 +27,6 @@ import org.junit.jupiter.api.Test;
 import com.google.common.collect.ImmutableMap;
 
 import com.linecorp.armeria.client.endpoint.dns.DnsAddressEndpointGroup;
-import com.linecorp.armeria.client.endpoint.dns.DnsAddressEndpointGroupBuilder;
 import com.linecorp.armeria.client.endpoint.dns.TestTcpDnsServer;
 
 import io.netty.handler.codec.dns.DefaultDnsQuestion;
@@ -36,30 +35,23 @@ import io.netty.handler.codec.dns.DefaultDnsResponse;
 class DnsOverTcpTest {
 
     @Test
-    void shouldFallbackToTcpByDefault() throws Exception {
+    void shouldFallbackToTcpOnTruncated() throws Exception {
         try (TestTcpDnsServer server = new TestTcpDnsServer(ImmutableMap.of(
                 new DefaultDnsQuestion("foo.com.", A),
                 new DefaultDnsResponse(0).addRecord(ANSWER, newAddressRecord("foo.com.", "1.1.1.1"))
                                          .addRecord(ANSWER, newAddressRecord("unrelated.com", "1.2.3.4")),
                 new DefaultDnsQuestion("foo.com.", AAAA),
-                new DefaultDnsResponse(0).addRecord(ANSWER, newAddressRecord("foo.com.", "::1"))))) {
+                new DefaultDnsResponse(0).addRecord(ANSWER, newAddressRecord("foo.com.", "::1"))));
+             DnsAddressEndpointGroup group =
+                     DnsAddressEndpointGroup.builder("foo.com")
+                                            .port(8080)
+                                            .serverAddresses(server.addr())
+                                            .queryTimeoutMillisForEachAttempt(1000)
+                                            .dnsCache(NoopDnsCache.INSTANCE)
+                                            .build()) {
 
-            final DnsAddressEndpointGroupBuilder builder =
-                    DnsAddressEndpointGroup.builder("foo.com")
-                                           .port(8080);
-
-            // Make sure TCP fallback is used on UDP timeout.
-            ((AbstractDnsResolverBuilder<?>) builder).retrySocketChannelOnTimeout(true);
-
-            try (DnsAddressEndpointGroup group =
-                         builder.serverAddresses(server.addr())
-                                .queryTimeoutMillisForEachAttempt(1000)
-                                .dnsCache(NoopDnsCache.INSTANCE)
-                                .build()) {
-
-                assertThat(group.whenReady().get()).containsExactly(
-                        Endpoint.of("foo.com", 8080).withIpAddr("1.1.1.1"));
-            }
+            assertThat(group.whenReady().get()).containsExactly(
+                    Endpoint.of("foo.com", 8080).withIpAddr("1.1.1.1"));
         }
     }
 }
