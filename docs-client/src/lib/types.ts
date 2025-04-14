@@ -24,3 +24,8 @@ export enum SpecLoadingStatus {
   FAILED,
   SUCCESS,
 }
+
+export interface ResponseData {
+  body: string;
+  headers: Map<string, string[]>;
+}

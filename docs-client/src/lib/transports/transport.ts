@@ -16,8 +16,8 @@
 import JSONbig from 'json-bigint';
 import { jsonPrettify } from '../json-util';
 import { docServiceDebug, providers } from '../header-provider';
-
 import { Endpoint, Method } from '../specification';
+import { ResponseData } from '../types';
 
 export default abstract class Transport {
   public abstract supportsMimeType(mimeType: string): boolean;
@@ -31,7 +31,7 @@ export default abstract class Transport {
     bodyJson?: string,
     endpointPath?: string,
     queries?: string,
-  ): Promise<{ body: string; headers: Record<string, string> }> {
+  ): Promise<ResponseData> {
     const providedHeaders = await Promise.all(
       providers.map((provider) => provider()),
     );
@@ -59,9 +59,9 @@ export default abstract class Transport {
       endpointPath,
       queries,
     );
-    const responseHeaders = this.extractHeaders(httpResponse.headers);
-    const responseText = await httpResponse.text();
-    const applicationType = httpResponse.headers.get('content-type') || '';
+    const responseHeaders = httpResponse.headers;
+    const responseText = httpResponse.body;
+    const applicationType = responseHeaders.get('content-type') || '';
     if (applicationType.indexOf('json') >= 0) {
       try {
         const json = JSONbig.parse(responseText);
@@ -90,14 +90,6 @@ export default abstract class Transport {
       body: '<zero-length response>',
       headers: responseHeaders,
     };
-  }
-
-  protected extractHeaders(headers: Headers): Record<string, string> {
-    const result: Record<string, string> = {};
-    headers.forEach((value, key) => {
-      result[key] = value;
-    });
-    return result;
   }
 
   public findDebugMimeTypeEndpoint(
@@ -181,5 +173,5 @@ export default abstract class Transport {
     bodyJson?: string,
     endpointPath?: string,
     queries?: string,
-  ): Promise<Response>;
+  ): Promise<ResponseData>;
 }

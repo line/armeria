@@ -17,6 +17,7 @@
 import Transport from './transport';
 import { Method } from '../specification';
 import { validateJsonObject } from '../json-util';
+import { ResponseData } from '../types';
 
 export const GRAPHQL_HTTP_MIME_TYPE = 'application/graphql+json';
 
@@ -36,7 +37,7 @@ export default class GraphqlHttpTransport extends Transport {
     bodyJson?: string,
     endpointPath?: string,
     queries?: string,
-  ): Promise<Response> {
+  ): Promise<ResponseData> {
     const endpoint = this.getDebugMimeTypeEndpoint(method);
 
     const hdrs = new Headers();
@@ -59,10 +60,26 @@ export default class GraphqlHttpTransport extends Transport {
     }
     newPath = pathPrefix + newPath;
 
-    return fetch(encodeURI(newPath), {
+    const response = await fetch(encodeURI(newPath), {
       headers: hdrs,
       method: method.httpMethod,
       body: bodyJson,
     });
+
+    const responseHeaders = new Map<string, string[]>();
+    response.headers.forEach((value, key) => {
+      const lowerKey = key.toLowerCase();
+      if (!responseHeaders.has(lowerKey)) {
+        responseHeaders.set(lowerKey, []);
+      }
+      responseHeaders.get(lowerKey)!.push(value);
+    });
+
+    const responseText = await response.text();
+
+    return {
+      body: responseText,
+      headers: responseHeaders,
+    };
   }
 }
