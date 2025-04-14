@@ -157,7 +157,7 @@ public final class Scheme implements Comparable<Scheme> {
      * If the {@link #serializationFormat()} is {@link SerializationFormat#NONE}, the serializationFormat
      * is omitted.
      */
-    public String effectiveUriText() {
+    public String shortUriText() {
         if (serializationFormat() == SerializationFormat.NONE) {
             return sessionProtocol().uriText();
         } else {

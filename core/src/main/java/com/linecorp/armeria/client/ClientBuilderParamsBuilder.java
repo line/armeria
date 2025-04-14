@@ -90,7 +90,7 @@ public final class ClientBuilderParamsBuilder {
 
     ClientBuilderParamsBuilder(Scheme scheme, EndpointGroup endpointGroup, @Nullable String absolutePathRef) {
         this.endpointGroup = endpointGroup;
-        final String schemeStr = scheme.effectiveUriText();
+        final String schemeStr = scheme.shortUriText();
         final String normalizedAbsolutePathRef = nullOrEmptyToSlash(absolutePathRef);
         final URI uri;
         if (endpointGroup instanceof Endpoint) {
@@ -151,7 +151,7 @@ public final class ClientBuilderParamsBuilder {
         final String absolutePathRef = this.absolutePathRef;
         final ClientFactory factory = options.factory();
         final Scheme scheme = factory.validateScheme(Scheme.of(serializationFormat, sessionProtocol));
-        final String schemeStr = scheme.effectiveUriText();
+        final String schemeStr = scheme.shortUriText();
 
         final String path = nullOrEmptyToSlash(absolutePathRef);
 

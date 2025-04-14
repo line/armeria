@@ -55,7 +55,7 @@ public final class ClientBuilderParamsUtil {
     }
 
     private static URI preprocessorToUri(Scheme scheme, String hashCode, @Nullable String absolutePathRef) {
-        final String schemeStr = scheme.effectiveUriText();
+        final String schemeStr = scheme.shortUriText();
         final String normalizedAbsolutePathRef = nullOrEmptyToSlash(absolutePathRef);
         return URI.create(schemeStr + "://" + PREPROCESSOR_PREFIX + hashCode +
                           ":1" + normalizedAbsolutePathRef);
