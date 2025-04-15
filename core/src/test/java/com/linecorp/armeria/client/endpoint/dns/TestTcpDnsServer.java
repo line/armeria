@@ -103,7 +103,6 @@ public final class TestTcpDnsServer implements AutoCloseable {
 
         tcpChannel = tcp.bind(NetUtil.LOCALHOST, 0).syncUninterruptibly().channel();
 
-
         final Bootstrap b = new Bootstrap();
         b.channel(TransportType.datagramChannelType(CommonPools.workerGroup()));
         b.group(CommonPools.workerGroup());
