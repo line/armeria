@@ -189,7 +189,11 @@ public final class TestTcpDnsServer implements AutoCloseable {
                         }
                     }
 
-                    ctx.writeAndFlush(res);
+                    ctx.writeAndFlush(res).addListener(future -> {
+                        if (!future.isSuccess()) {
+                            ReferenceCountUtil.safeRelease(res);
+                        }
+                    });
                     responded = true;
                 }
             }
@@ -198,7 +202,11 @@ public final class TestTcpDnsServer implements AutoCloseable {
                 final DnsResponse res = new DefaultDnsResponse(query.id(), query.opCode(),
                                                                DnsResponseCode.NXDOMAIN);
                 res.addRecord(DnsSection.QUESTION, question);
-                ctx.writeAndFlush(res);
+                ctx.writeAndFlush(res).addListener(future -> {
+                    if (!future.isSuccess()) {
+                        ReferenceCountUtil.safeRelease(res);
+                    }
+                });
             }
         }
     }
