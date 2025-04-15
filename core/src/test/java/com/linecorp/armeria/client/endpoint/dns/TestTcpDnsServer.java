@@ -85,6 +85,25 @@ public final class TestTcpDnsServer implements AutoCloseable {
                             @Nullable ChannelHandler beforeDnsServerHandler) {
         this.responses = ImmutableMap.copyOf(responses);
 
+        final ServerBootstrap tcp = new ServerBootstrap();
+        tcp.channel(TransportType.serverChannelType(CommonPools.workerGroup()));
+        tcp.group(CommonPools.workerGroup());
+        tcp.childHandler(new ChannelInitializer<Channel>() {
+            @Override
+            protected void initChannel(Channel ch) throws Exception {
+                final ChannelPipeline p = ch.pipeline();
+                p.addLast(new TcpDnsQueryDecoder());
+                p.addLast(new TcpDnsResponseEncoder());
+                if (beforeDnsServerHandler != null) {
+                    p.addLast(beforeDnsServerHandler);
+                }
+                p.addLast(new DnsServerHandler());
+            }
+        });
+
+        tcpChannel = tcp.bind(NetUtil.LOCALHOST, 0).syncUninterruptibly().channel();
+
+
         final Bootstrap b = new Bootstrap();
         b.channel(TransportType.datagramChannelType(CommonPools.workerGroup()));
         b.group(CommonPools.workerGroup());
@@ -121,26 +140,8 @@ public final class TestTcpDnsServer implements AutoCloseable {
             }
         });
 
-        udpChannel = b.bind(NetUtil.LOCALHOST, 0).syncUninterruptibly().channel();
-
-        final ServerBootstrap tcp = new ServerBootstrap();
-        tcp.channel(TransportType.serverChannelType(CommonPools.workerGroup()));
-        tcp.group(CommonPools.workerGroup());
-        tcp.childHandler(new ChannelInitializer<Channel>() {
-            @Override
-            protected void initChannel(Channel ch) throws Exception {
-                final ChannelPipeline p = ch.pipeline();
-                p.addLast(new TcpDnsQueryDecoder());
-                p.addLast(new TcpDnsResponseEncoder());
-                if (beforeDnsServerHandler != null) {
-                    p.addLast(beforeDnsServerHandler);
-                }
-                p.addLast(new DnsServerHandler());
-            }
-        });
-
-        final int port = ((InetSocketAddress) udpChannel.localAddress()).getPort();
-        tcpChannel = tcp.bind(NetUtil.LOCALHOST, port).syncUninterruptibly().channel();
+        final int port = ((InetSocketAddress) tcpChannel.localAddress()).getPort();
+        udpChannel = b.bind(NetUtil.LOCALHOST, port).syncUninterruptibly().channel();
     }
 
     public InetSocketAddress addr() {
@@ -158,8 +159,8 @@ public final class TestTcpDnsServer implements AutoCloseable {
             return;
         }
 
-        udpChannel.close().syncUninterruptibly();
         tcpChannel.close().syncUninterruptibly();
+        udpChannel.close().syncUninterruptibly();
         responses.values().forEach(DnsResponse::release);
     }
 
