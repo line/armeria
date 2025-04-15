@@ -167,6 +167,7 @@ public final class TestTcpDnsServer implements AutoCloseable {
         @Override
         protected void channelRead0(ChannelHandlerContext ctx, DefaultDnsQuery query) {
             logger.debug("Received TCP query: {}", query);
+            query.touch(ctx);
             final DnsQuestion question = query.recordAt(DnsSection.QUESTION, 0);
             boolean responded = false;
             for (Entry<DnsQuestion, DnsResponse> e : responses.entrySet()) {
