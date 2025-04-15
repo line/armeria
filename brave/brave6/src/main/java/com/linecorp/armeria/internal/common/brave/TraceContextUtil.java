@@ -40,6 +40,7 @@ public final class TraceContextUtil {
 
     private static final AttributeKey<TraceContext> TRACE_CONTEXT_KEY =
             AttributeKey.valueOf(TraceContextUtil.class, "TRACE_CONTEXT");
+    private static boolean logTraceContextOverwrite;
 
     @Nullable
     public static TraceContext traceContext(RequestContext ctx) {
@@ -47,10 +48,13 @@ public final class TraceContextUtil {
     }
 
     public static void setTraceContext(RequestContext ctx, TraceContext traceContext) {
-        final TraceContext prevTraceContext = traceContext(ctx);
-        if (Objects.equals(traceContext, prevTraceContext)) {
-            logger.warn("[{}] Overriding traceContext<{}> with new traceContext<{}>",
-                        ctx.id(), prevTraceContext, traceContext);
+        if (!logTraceContextOverwrite) {
+            final TraceContext prevTraceContext = traceContext(ctx);
+            if (prevTraceContext != null && !Objects.equals(traceContext, prevTraceContext)) {
+                logTraceContextOverwrite = true;
+                logger.warn("Overriding traceContext<{}> with new traceContext<{}> for RequestContext<{}>.",
+                            prevTraceContext, traceContext, ctx.id());
+            }
         }
         ctx.setAttr(TRACE_CONTEXT_KEY, traceContext);
     }
