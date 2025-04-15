@@ -171,6 +171,7 @@ const config: Config = {
         sidebarPath: './sidebarsCommunity.ts',
       },
     ],
+    './src/plugins/tutorial.ts',
   ],
 };
 
