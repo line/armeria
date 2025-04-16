@@ -50,7 +50,8 @@ public final class ClientUtil {
     /**
      * An undefined {@link URI} to create {@link WebClient} without specifying {@link URI}.
      */
-    public static final URI UNDEFINED_URI = URI.create("http://undefined");
+    public static final URI UNDEFINED_URI =
+            URI.create("http://" + ClientBuilderParamsUtil.UNDEFINED_URI_AUTHORITY);
 
     public static <I extends Request, O extends Response, U extends Client<I, O>>
     O initContextAndExecuteWithFallback(
@@ -178,9 +179,8 @@ public final class ClientUtil {
         try {
             return execution.execute(ctx, req);
         } catch (Exception e) {
-            final UnprocessedRequestException upe = UnprocessedRequestException.of(e);
-            fail(ctx, upe);
-            return errorResponseFactory.apply(ctx, upe);
+            fail(ctx, e);
+            return errorResponseFactory.apply(ctx, e);
         }
     }
 

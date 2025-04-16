@@ -21,6 +21,7 @@ import static java.util.Objects.requireNonNull;
 import java.net.URI;
 
 import com.linecorp.armeria.client.ClientFactory;
+import com.linecorp.armeria.client.HttpPreprocessor;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.common.Scheme;
 import com.linecorp.armeria.common.SerializationFormat;
@@ -120,6 +121,37 @@ public final class GrpcClients {
     }
 
     /**
+     /**
+     * Creates a new gRPC client that is configured with the specified {@link HttpPreprocessor} using
+     * {@link GrpcSerializationFormats#PROTO} and the default {@link ClientFactory}.
+     *
+     * @param httpPreprocessor the {@link HttpPreprocessor}
+     * @param clientType the type of the new gRPC client
+     *
+     * @throws IllegalArgumentException if the {@code clientType} is an unsupported gRPC client stub.
+     */
+    @UnstableApi
+    public static <T> T newClient(HttpPreprocessor httpPreprocessor, Class<T> clientType) {
+        return newClient(SerializationFormat.NONE, httpPreprocessor, clientType);
+    }
+
+    /**
+     * Creates a new gRPC client that is configured with the specified {@link HttpPreprocessor}
+     * and {@link SerializationFormat} using the default {@link ClientFactory}.
+     *
+     * @param serializationFormat the {@link SerializationFormat}
+     * @param httpPreprocessor the {@link HttpPreprocessor}
+     * @param clientType the type of the new gRPC client
+     *
+     * @throws IllegalArgumentException if the {@code clientType} is an unsupported gRPC client stub.
+     */
+    @UnstableApi
+    public static <T> T newClient(SerializationFormat serializationFormat, HttpPreprocessor httpPreprocessor,
+                                  Class<T> clientType) {
+        return builder(serializationFormat, httpPreprocessor).build(clientType);
+    }
+
+    /**
      * Returns a new {@link GrpcClientBuilder} that builds the client that connects to the specified
      * {@code uri}.
      *
@@ -181,6 +213,33 @@ public final class GrpcClients {
         requireNonNull(scheme, "scheme");
         requireNonNull(endpointGroup, "endpointGroup");
         return new GrpcClientBuilder(scheme, endpointGroup);
+    }
+
+    /**
+     * Returns a new {@link GrpcClientBuilder} that builds the client that is configured with
+     * {@link HttpPreprocessor}.
+     *
+     * <p>Note that {@link GrpcSerializationFormats#PROTO} will be used by default.
+     */
+    @UnstableApi
+    public static GrpcClientBuilder builder(HttpPreprocessor httpPreprocessor) {
+        requireNonNull(httpPreprocessor, "httpPreprocessor");
+        return builder(GrpcSerializationFormats.PROTO, httpPreprocessor);
+    }
+
+    /**
+     * Returns a new {@link GrpcClientBuilder} that builds the client that is configured with
+     * the specified {@link HttpPreprocessor} and {@link SerializationFormat}.
+     *
+     * <p>Note that if {@link SerializationFormat#NONE} is specified,
+     * {@link GrpcSerializationFormats#PROTO} will be used by default.
+     */
+    @UnstableApi
+    public static GrpcClientBuilder builder(SerializationFormat serializationFormat,
+                                            HttpPreprocessor httpPreprocessor) {
+        requireNonNull(serializationFormat, "serializationFormat");
+        requireNonNull(httpPreprocessor, "httpPreprocessor");
+        return new GrpcClientBuilder(serializationFormat, httpPreprocessor);
     }
 
     private GrpcClients() {}
