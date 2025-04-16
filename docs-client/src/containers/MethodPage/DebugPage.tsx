@@ -59,6 +59,12 @@ import { TRANSPORTS } from '../../lib/transports';
 import { SelectOption } from '../../lib/types';
 import DebugInputs from './DebugInputs';
 
+const stringifyHeaders = (headers: [string, string[]][]): string =>
+  JSON.stringify(
+    Object.fromEntries(headers.map(([key, value]) => [key, value.join(', ')])),
+    null,
+    2,
+  );
 const useStyles = makeStyles((theme: Theme) =>
   createStyles({
     actionDialog: {
@@ -162,9 +168,7 @@ const DebugPage: React.FunctionComponent<Props> = ({
     false,
   );
 
-  const [currentApiId, setCurrentApiId] = useState<string>(
-    method.id || method.name,
-  );
+  const [currentApiId, setCurrentApiId] = useState<string>(method.id);
   const [responseCache, setResponseCache] = useState<
     Record<string, { body: string; headers: Map<string, string[]> }>
   >({});
@@ -177,7 +181,7 @@ const DebugPage: React.FunctionComponent<Props> = ({
   }
 
   useEffect(() => {
-    const apiId = method.id || method.name;
+    const apiId = method.id;
     if (apiId !== currentApiId) {
       setCurrentApiId(apiId);
       if (responseCache[apiId]) {
@@ -334,23 +338,23 @@ const DebugPage: React.FunctionComponent<Props> = ({
         escapeSingleQuote(requestBody),
       );
 
-      const headersObj = new Headers();
-      headersObj.set('content-type', transport.getDebugMimeType());
+      const headers = new Headers();
+      headers.set('content-type', transport.getDebugMimeType());
       if (process.env.WEBPACK_DEV === 'true') {
-        headersObj.set(docServiceDebug, 'true');
+        headers.set(docServiceDebug, 'true');
       }
       if (serviceType === ServiceType.GRAPHQL) {
-        headersObj.set('accept', 'application/json');
+        headers.set('accept', 'application/json');
       }
       if (additionalHeaders) {
         const entries = Object.entries(JSON.parse(additionalHeaders));
         entries.forEach(([key, value]) => {
-          headersObj.set(key, String(value));
+          headers.set(key, String(value));
         });
       }
 
       const headerOptions: string[] = [];
-      headersObj.forEach((value, key) => {
+      headers.forEach((value, key) => {
         headerOptions.push(`-H '${key}: ${value}'`);
       });
 
@@ -539,22 +543,6 @@ const DebugPage: React.FunctionComponent<Props> = ({
     transport,
   ]);
 
-  useEffect(() => {
-    const newApiId = method.id || method.name;
-    if (newApiId !== currentApiId) {
-      setCurrentApiId(newApiId);
-      if (responseCache[newApiId]) {
-        setDebugResponse(responseCache[newApiId].body);
-        setDebugResponseHeaders(
-          Array.from(responseCache[newApiId].headers.entries()),
-        );
-      } else {
-        setDebugResponse('');
-        setDebugResponseHeaders([]);
-      }
-    }
-  }, [method, currentApiId, responseCache]);
-
   const supportedExamplePaths = useMemo(() => {
     if (
       serviceType === ServiceType.HTTP ||
@@ -661,15 +649,7 @@ const DebugPage: React.FunctionComponent<Props> = ({
                         style={githubGist}
                         wrapLines={false}
                       >
-                        {JSON.stringify(
-                          Object.fromEntries(
-                            Array.from(debugResponseHeaders).map(
-                              ([key, values]) => [key, values.join(', ')],
-                            ),
-                          ),
-                          null,
-                          2,
-                        )}
+                        {stringifyHeaders(debugResponseHeaders)}
                       </SyntaxHighlighter>
                     </>
                   )}
@@ -779,15 +759,7 @@ const DebugPage: React.FunctionComponent<Props> = ({
                       style={githubGist}
                       wrapLines={false}
                     >
-                      {JSON.stringify(
-                        Object.fromEntries(
-                          Array.from(debugResponseHeaders).map(
-                            ([key, values]) => [key, values.join(', ')],
-                          ),
-                        ),
-                        null,
-                        2,
-                      )}
+                      {stringifyHeaders(debugResponseHeaders)}
                     </SyntaxHighlighter>
                   </>
                 )}

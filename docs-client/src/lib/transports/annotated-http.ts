@@ -16,7 +16,11 @@
 import { Endpoint, Method } from '../specification';
 
 import Transport from './transport';
-import { isValidJsonMimeType, validateJsonObject } from '../json-util';
+import {
+  extractResponseHeaders,
+  isValidJsonMimeType,
+  validateJsonObject,
+} from '../json-util';
 import { ResponseData } from '../types';
 
 export const ANNOTATED_HTTP_MIME_TYPE = 'application/json; charset=utf-8';
@@ -123,15 +127,7 @@ export default class AnnotatedHttpTransport extends Transport {
       body: bodyJson,
     });
 
-    const responseHeaders = new Map<string, string[]>();
-    response.headers.forEach((value, key) => {
-      const lowerKey = key.toLowerCase();
-      if (!responseHeaders.has(lowerKey)) {
-        responseHeaders.set(lowerKey, []);
-      }
-      responseHeaders.get(lowerKey)!.push(value);
-    });
-
+    const responseHeaders = extractResponseHeaders(response.headers);
     const responseText = await response.text();
 
     return {
