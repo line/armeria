@@ -340,23 +340,23 @@ const DebugPage: React.FunctionComponent<Props> = ({
         escapeSingleQuote(requestBody),
       );
 
-      const headersObj = new Headers();
-      headersObj.set('content-type', transport.getDebugMimeType());
+      const headers = new Headers();
+      headers.set('content-type', transport.getDebugMimeType());
       if (process.env.WEBPACK_DEV === 'true') {
-        headersObj.set(docServiceDebug, 'true');
+        headers.set(docServiceDebug, 'true');
       }
       if (serviceType === ServiceType.GRAPHQL) {
-        headersObj.set('accept', 'application/json');
+        headers.set('accept', 'application/json');
       }
       if (additionalHeaders) {
         const entries = Object.entries(JSON.parse(additionalHeaders));
         entries.forEach(([key, value]) => {
-          headersObj.set(key, String(value));
+          headers.set(key, String(value));
         });
       }
 
       const headerOptions: string[] = [];
-      headersObj.forEach((value, key) => {
+      headers.forEach((value, key) => {
         headerOptions.push(`-H '${key}: ${value}'`);
       });
 
