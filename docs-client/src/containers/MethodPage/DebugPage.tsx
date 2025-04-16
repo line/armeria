@@ -539,22 +539,6 @@ const DebugPage: React.FunctionComponent<Props> = ({
     transport,
   ]);
 
-  useEffect(() => {
-    const newApiId = method.id || method.name;
-    if (newApiId !== currentApiId) {
-      setCurrentApiId(newApiId);
-      if (responseCache[newApiId]) {
-        setDebugResponse(responseCache[newApiId].body);
-        setDebugResponseHeaders(
-          Array.from(responseCache[newApiId].headers.entries()),
-        );
-      } else {
-        setDebugResponse('');
-        setDebugResponseHeaders([]);
-      }
-    }
-  }, [method, currentApiId, responseCache]);
-
   const supportedExamplePaths = useMemo(() => {
     if (
       serviceType === ServiceType.HTTP ||
