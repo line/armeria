@@ -59,6 +59,12 @@ import { TRANSPORTS } from '../../lib/transports';
 import { SelectOption } from '../../lib/types';
 import DebugInputs from './DebugInputs';
 
+const stringifyHeaders = (headers: [string, string[]][]): string =>
+  JSON.stringify(
+    Object.fromEntries(headers.map(([key, value]) => [key, value.join(', ')])),
+    null,
+    2,
+  );
 const useStyles = makeStyles((theme: Theme) =>
   createStyles({
     actionDialog: {
@@ -645,15 +651,7 @@ const DebugPage: React.FunctionComponent<Props> = ({
                         style={githubGist}
                         wrapLines={false}
                       >
-                        {JSON.stringify(
-                          Object.fromEntries(
-                            Array.from(debugResponseHeaders).map(
-                              ([key, values]) => [key, values.join(', ')],
-                            ),
-                          ),
-                          null,
-                          2,
-                        )}
+                        {stringifyHeaders(debugResponseHeaders)}
                       </SyntaxHighlighter>
                     </>
                   )}
@@ -763,15 +761,7 @@ const DebugPage: React.FunctionComponent<Props> = ({
                       style={githubGist}
                       wrapLines={false}
                     >
-                      {JSON.stringify(
-                        Object.fromEntries(
-                          Array.from(debugResponseHeaders).map(
-                            ([key, values]) => [key, values.join(', ')],
-                          ),
-                        ),
-                        null,
-                        2,
-                      )}
+                      {stringifyHeaders(debugResponseHeaders)}
                     </SyntaxHighlighter>
                   </>
                 )}
