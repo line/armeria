@@ -168,9 +168,7 @@ const DebugPage: React.FunctionComponent<Props> = ({
     false,
   );
 
-  const [currentApiId, setCurrentApiId] = useState<string>(
-    method.id || method.name,
-  );
+  const [currentApiId, setCurrentApiId] = useState<string>(method.id);
   const [responseCache, setResponseCache] = useState<
     Record<string, { body: string; headers: Map<string, string[]> }>
   >({});
@@ -183,7 +181,7 @@ const DebugPage: React.FunctionComponent<Props> = ({
   }
 
   useEffect(() => {
-    const apiId = method.id || method.name;
+    const apiId = method.id;
     if (apiId !== currentApiId) {
       setCurrentApiId(apiId);
       if (responseCache[apiId]) {
