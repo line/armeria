@@ -16,7 +16,7 @@
 import { Method } from '../specification';
 
 import Transport from './transport';
-import { validateJsonObject } from '../json-util';
+import { extractResponseHeaders, validateJsonObject } from '../json-util';
 import { ResponseData } from '../types';
 
 export const GRPC_UNFRAMED_MIME_TYPE =
@@ -63,15 +63,7 @@ export default class GrpcUnframedTransport extends Transport {
       body: bodyJson,
     });
 
-    const responseHeaders = new Map<string, string[]>();
-    response.headers.forEach((value, key) => {
-      const lowerKey = key.toLowerCase();
-      if (!responseHeaders.has(lowerKey)) {
-        responseHeaders.set(lowerKey, []);
-      }
-      responseHeaders.get(lowerKey)!.push(value);
-    });
-
+    const responseHeaders = extractResponseHeaders(response.headers);
     const responseText = await response.text();
 
     return {

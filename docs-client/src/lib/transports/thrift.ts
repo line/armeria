@@ -17,7 +17,7 @@
 import { Endpoint, Method } from '../specification';
 
 import Transport from './transport';
-import { validateJsonObject } from '../json-util';
+import { extractResponseHeaders, validateJsonObject } from '../json-util';
 import { ResponseData } from '../types';
 
 export const TTEXT_MIME_TYPE = 'application/x-thrift; protocol=TTEXT';
@@ -73,15 +73,7 @@ export default class ThriftTransport extends Transport {
       body: `{"method": "${thriftMethod}", "type": "CALL", "args": ${bodyJson}}`,
     });
 
-    const responseHeaders = new Map<string, string[]>();
-    response.headers.forEach((value, key) => {
-      const lowerKey = key.toLowerCase();
-      if (!responseHeaders.has(lowerKey)) {
-        responseHeaders.set(lowerKey, []);
-      }
-      responseHeaders.get(lowerKey)!.push(value);
-    });
-
+    const responseHeaders = extractResponseHeaders(response.headers);
     const responseText = await response.text();
 
     return {
