@@ -47,13 +47,11 @@ import io.netty.handler.codec.dns.DatagramDnsResponseEncoder;
 import io.netty.handler.codec.dns.DefaultDnsQuery;
 import io.netty.handler.codec.dns.DefaultDnsRawRecord;
 import io.netty.handler.codec.dns.DefaultDnsResponse;
-import io.netty.handler.codec.dns.DnsOpCode;
 import io.netty.handler.codec.dns.DnsQuestion;
 import io.netty.handler.codec.dns.DnsRecord;
 import io.netty.handler.codec.dns.DnsResponse;
 import io.netty.handler.codec.dns.DnsResponseCode;
 import io.netty.handler.codec.dns.DnsSection;
-import io.netty.handler.codec.dns.TcpDnsQueryDecoder;
 import io.netty.handler.codec.dns.TcpDnsResponseEncoder;
 import io.netty.util.NetUtil;
 import io.netty.util.ReferenceCountUtil;
@@ -121,14 +119,8 @@ public final class TestTcpDnsServer implements AutoCloseable {
 
                         logger.debug("Response is too large for UDP. Fallback to TCP. query: {}", query);
                         // Create a truncated response to fallback to TCP.
-                        final DefaultDnsResponse response = new DefaultDnsResponse(query.id());
-                        response.setCode(DnsResponseCode.NOERROR);
-                        response.setOpCode(DnsOpCode.QUERY);
-                        response.setTruncated(true);
-                        response.addRecord(DnsSection.QUESTION, question);
-
                         final DatagramDnsResponse reply = new DatagramDnsResponse(
-                                query.recipient(), query.sender(), response.id());
+                                query.recipient(), query.sender(), query.id());
                         reply.setCode(DnsResponseCode.NOERROR);
                         reply.setTruncated(true);
                         reply.addRecord(DnsSection.QUESTION, question);
@@ -189,11 +181,7 @@ public final class TestTcpDnsServer implements AutoCloseable {
                         }
                     }
 
-                    ctx.writeAndFlush(res).addListener(future -> {
-                        if (!future.isSuccess()) {
-                            ReferenceCountUtil.safeRelease(res);
-                        }
-                    });
+                    ctx.writeAndFlush(res);
                     responded = true;
                 }
             }
@@ -202,11 +190,7 @@ public final class TestTcpDnsServer implements AutoCloseable {
                 final DnsResponse res = new DefaultDnsResponse(query.id(), query.opCode(),
                                                                DnsResponseCode.NXDOMAIN);
                 res.addRecord(DnsSection.QUESTION, question);
-                ctx.writeAndFlush(res).addListener(future -> {
-                    if (!future.isSuccess()) {
-                        ReferenceCountUtil.safeRelease(res);
-                    }
-                });
+                ctx.writeAndFlush(res);
             }
         }
     }
