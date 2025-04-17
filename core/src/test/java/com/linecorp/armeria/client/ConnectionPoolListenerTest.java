@@ -30,7 +30,7 @@ import io.netty.util.AttributeMap;
 class ConnectionPoolListenerTest {
 
     @Test
-    void andThen_shouldFinishWithoutErrors() {
+    void andThen_shouldFinishWithoutErrors() throws Exception {
 
         final Integer[] counterArray = new Integer[6];
 
@@ -83,12 +83,9 @@ class ConnectionPoolListenerTest {
 
         final ConnectionPoolListener cplCombined = cpl1.andThen(cpl2).andThen(cpl3);
 
-        try {
-            cplCombined.connectionOpen(protocol, remoteAddr, localAddr, attrs);
-            cplCombined.connectionClosed(protocol, remoteAddr, localAddr, attrs);
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        }
+        cplCombined.connectionOpen(protocol, remoteAddr, localAddr, attrs);
+        cplCombined.connectionClosed(protocol, remoteAddr, localAddr, attrs);
+        cplCombined.close();
 
         assertThat(counterArray[0]).isEqualTo(0);
         assertThat(counterArray[1]).isEqualTo(10);

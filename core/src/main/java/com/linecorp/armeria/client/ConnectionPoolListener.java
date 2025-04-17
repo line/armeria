@@ -142,6 +142,7 @@ public interface ConnectionPoolListener extends Unwrappable, SafeCloseable {
     /**
      * Returns a new {@link ConnectionPoolListener} which combines two {@link ConnectionPoolListener}s.
      */
+    @UnstableApi
     default ConnectionPoolListener andThen(ConnectionPoolListener nextConnectionPoolListener) {
         requireNonNull(nextConnectionPoolListener, "nextConnectionPoolListener");
         return new ConnectionPoolListener() {
@@ -162,6 +163,15 @@ public interface ConnectionPoolListener extends Unwrappable, SafeCloseable {
                     ConnectionPoolListener.this.connectionClosed(protocol, remoteAddr, localAddr, attrs);
                 } finally {
                     nextConnectionPoolListener.connectionClosed(protocol, remoteAddr,localAddr,attrs);
+                }
+            }
+
+            @Override
+            public void close() {
+                try {
+                    ConnectionPoolListener.super.close();
+                } finally {
+                    nextConnectionPoolListener.close();
                 }
             }
         };
