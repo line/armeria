@@ -217,10 +217,12 @@ public final class VirtualHost {
             hostnamePattern = IDN.toASCII(hostnamePattern, IDN.ALLOW_UNASSIGNED);
         }
 
-        final String withoutWildCard = hostnamePattern.startsWith("*.") ? hostnamePattern.substring(2)
-                                                                        : hostnamePattern;
-        if (!"*".equals(hostnamePattern) && !HOSTNAME_WITH_NO_PORT_PATTERN.matcher(withoutWildCard).matches()) {
-            throw new IllegalArgumentException("hostnamePattern: " + hostnamePattern);
+        if (!"*".equals(hostnamePattern)) {
+            final String withoutWildCard = hostnamePattern.startsWith("*.") ? hostnamePattern.substring(2)
+                                                                            : hostnamePattern;
+            if (!HOSTNAME_WITH_NO_PORT_PATTERN.matcher(withoutWildCard).matches()) {
+                throw new IllegalArgumentException("hostnamePattern: " + hostnamePattern);
+            }
         }
 
         return Ascii.toLowerCase(hostnamePattern);
