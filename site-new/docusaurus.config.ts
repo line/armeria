@@ -60,7 +60,7 @@ const config: Config = {
           onUntruncatedBlogPosts: 'warn',
         },
         theme: {
-          customCss: './src/css/custom.less',
+          customCss: ['./src/css/custom.css', './src/css/antd.css'],
         },
       } satisfies Preset.Options,
     ],
@@ -161,7 +161,6 @@ const config: Config = {
   } satisfies Preset.ThemeConfig,
 
   plugins: [
-    'docusaurus-plugin-less',
     [
       '@docusaurus/plugin-content-docs',
       {

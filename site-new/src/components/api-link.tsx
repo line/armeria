@@ -1,5 +1,5 @@
 import React from 'react';
-import styles from './api-link.module.less';
+import styles from './api-link.module.css';
 
 interface ApiLinkProps {
   name: string;
