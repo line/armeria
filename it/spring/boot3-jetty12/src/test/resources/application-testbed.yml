@@ -1,4 +1,3 @@
-# This currently doesn't work. See https://github.com/line/armeria/issues/5039
 server.port: -1
 ---
 armeria:
