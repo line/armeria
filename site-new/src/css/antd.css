@@ -1,2 +1,26 @@
 .ant-steps-horizontal {
+
+  &.ant-steps-small {
+    .ant-steps-item-content {
+      max-width: 105px;
+    }
+
+    .ant-steps-item-title,
+    .ant-steps-item-description {
+      font-size: 12px
+    }
+
+    &.ant-steps-dot {
+      .ant-steps-item-icon {
+        margin-left: 50px;
+        margin-inline-start: 50px !important;
+      }
+      .ant-steps-item-tail {
+        margin-left: 52.5px;
+      }
+    .ant-steps-item-tail:after {
+      width: calc(100% - 20px);
+    }
+    }
+  }
 }
