@@ -1,13 +1,25 @@
 // Import the original mapper
 import MDXComponents from '@theme-original/MDXComponents';
-import AspectRatio from '@site/src/components/aspect-ratio';
 import ApiLink from '@site/src/components/api-link';
+import AspectRatio from '@site/src/components/aspect-ratio';
+import MaxWidth from '@site/src/components/max-width';
+import RequiredDependencies from '@site/src/components/required-dependencies';
+import TutorialSteps from '@site/src/components/steps';
+
+import CodeBlock from '@theme/CodeBlock';
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
 
 export default {
   // Re-use the default mapping
   ...MDXComponents,
-  // Map the "<AspectRatio>" tag to our AspectRatio component
-  // `AspectRatio` will receive all props that were passed to `<AspectRatio>` in MDX
-  AspectRatio,
+  // Map custom tags to our corresponding components
   ApiLink,
+  AspectRatio,
+  MaxWidth,
+  RequiredDependencies,
+  TutorialSteps,
+  CodeBlock,
+  Tabs,
+  TabItem,
 };
