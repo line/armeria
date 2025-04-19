@@ -59,12 +59,6 @@ import { TRANSPORTS } from '../../lib/transports';
 import { SelectOption } from '../../lib/types';
 import DebugInputs from './DebugInputs';
 
-const stringifyHeaders = (headers: [string, string[]][]): string =>
-  JSON.stringify(
-    Object.fromEntries(headers.map(([key, value]) => [key, value.join(', ')])),
-    null,
-    2,
-  );
 const useStyles = makeStyles((theme: Theme) =>
   createStyles({
     actionDialog: {
