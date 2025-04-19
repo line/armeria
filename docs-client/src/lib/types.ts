@@ -52,5 +52,5 @@ export const listHeaders = new Set([
 
 export interface ResponseData {
   body: string;
-  headers: Map<string, string[]>;
+  headers: string[];
 }
