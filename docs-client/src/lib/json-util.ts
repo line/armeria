@@ -14,6 +14,8 @@
  * under the License.
  */
 
+import { listHeaders } from './types';
+
 function doPrettify(ch: string, indentation: number): [string, number] {
   let prettified;
   let newIndentation = indentation;
@@ -133,4 +135,18 @@ export function isValidJsonMimeType(applicationType: string | null) {
     return false;
   }
   return applicationType.indexOf('json') >= 0;
+}
+
+export function extractHeaderLines(headers: Headers): string[] {
+  const headerLines: string[] = [];
+  headers.forEach((value, name) => {
+    if (listHeaders.has(name.toLowerCase())) {
+      value.split(',').forEach((v) => {
+        headerLines.push(`${name}: ${v.trim()}`);
+      });
+    } else {
+      headerLines.push(`${name}: ${value}`);
+    }
+  });
+  return headerLines;
 }

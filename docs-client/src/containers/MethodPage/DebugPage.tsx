@@ -149,6 +149,9 @@ const DebugPage: React.FunctionComponent<Props> = ({
   const [requestBody, setRequestBody] = useState('');
   const [debugResponse, setDebugResponse] = useState('');
   const [additionalQueries, setAdditionalQueries] = useState('');
+  const [debugResponseHeaders, setDebugResponseHeaders] = useState<string[]>(
+    [],
+  );
   const [additionalPath, setAdditionalPath] = useState('');
   const [additionalHeaders, setAdditionalHeaders] = useState('');
   const [stickyHeaders, toggleStickyHeaders] = useReducer(toggle, false);
@@ -159,12 +162,31 @@ const DebugPage: React.FunctionComponent<Props> = ({
     false,
   );
 
+  const [currentApiId, setCurrentApiId] = useState<string>(method.id);
+  const [responseCache, setResponseCache] = useState<
+    Record<string, { body: string; headers: string[] }>
+  >({});
+
   const classes = useStyles();
 
   const transport = TRANSPORTS.getDebugTransport(method);
   if (!transport) {
     throw new Error("This method doesn't have a debug transport.");
   }
+
+  useEffect(() => {
+    const apiId = method.id;
+    if (apiId !== currentApiId) {
+      setCurrentApiId(apiId);
+      if (responseCache[apiId]) {
+        setDebugResponse(responseCache[apiId].body);
+        setDebugResponseHeaders(responseCache[apiId].headers);
+      } else {
+        setDebugResponse('');
+        setDebugResponseHeaders([]);
+      }
+    }
+  }, [method, currentApiId, responseCache]);
 
   useEffect(() => {
     const urlParams = new URLSearchParams(location.search);
@@ -202,6 +224,7 @@ const DebugPage: React.FunctionComponent<Props> = ({
 
     if (!keepDebugResponse) {
       setDebugResponse('');
+      setDebugResponseHeaders([]);
       toggleKeepDebugResponse(false);
     }
     setSnackbarOpen(false);
@@ -364,6 +387,7 @@ const DebugPage: React.FunctionComponent<Props> = ({
 
   const onClear = useCallback(() => {
     setDebugResponse('');
+    setDebugResponseHeaders([]);
   }, []);
 
   const executeRequest = useCallback(
@@ -390,9 +414,8 @@ const DebugPage: React.FunctionComponent<Props> = ({
       const headersText = params.get('headers');
       const headers = headersText ? JSON.parse(headersText) : {};
 
-      let executedDebugResponse;
       try {
-        executedDebugResponse = await transport.send(
+        const { body, headers: responseHeaders } = await transport.send(
           method,
           headers,
           parseServerRootPath(docServiceRoute),
@@ -400,14 +423,20 @@ const DebugPage: React.FunctionComponent<Props> = ({
           executedEndpointPath,
           queries,
         );
+        setDebugResponse(body);
+        setDebugResponseHeaders(responseHeaders);
+        setResponseCache((prev) => ({
+          ...prev,
+          [currentApiId]: {
+            body,
+            headers: responseHeaders,
+          },
+        }));
       } catch (e) {
-        if (e instanceof Object) {
-          executedDebugResponse = e.toString();
-        } else {
-          executedDebugResponse = '<unknown>';
-        }
+        const message = e instanceof Object ? e.toString() : '<unknown>';
+        setDebugResponse(message);
+        setDebugResponseHeaders([]);
       }
-      setDebugResponse(executedDebugResponse);
     },
     [
       useRequestBody,
@@ -416,6 +445,7 @@ const DebugPage: React.FunctionComponent<Props> = ({
       method,
       transport,
       docServiceRoute,
+      currentApiId,
     ],
   );
 
@@ -572,7 +602,7 @@ const DebugPage: React.FunctionComponent<Props> = ({
             <Grid item xs={12} sm={6}>
               <Grid container spacing={1}>
                 <Grid item xs="auto">
-                  <Tooltip title="Copy response">
+                  <Tooltip title="Copy response body">
                     <div>
                       <IconButton
                         onClick={onCopy}
@@ -596,13 +626,37 @@ const DebugPage: React.FunctionComponent<Props> = ({
                   </Tooltip>
                 </Grid>
               </Grid>
-              <SyntaxHighlighter
-                language="json"
-                style={githubGist}
-                wrapLines={false}
-              >
-                {debugResponse}
-              </SyntaxHighlighter>
+              {debugResponse && (
+                <>
+                  {Object.keys(debugResponseHeaders).length > 0 && (
+                    <>
+                      <Typography
+                        variant="subtitle1"
+                        style={{ marginTop: '1rem' }}
+                      >
+                        Response Headers:
+                      </Typography>
+                      <SyntaxHighlighter
+                        language="text"
+                        style={githubGist}
+                        wrapLines={false}
+                      >
+                        {debugResponseHeaders.join('\n')}
+                      </SyntaxHighlighter>
+                    </>
+                  )}
+                  <Typography variant="subtitle1" style={{ marginTop: '1rem' }}>
+                    Response Body:
+                  </Typography>
+                  <SyntaxHighlighter
+                    language="json"
+                    style={githubGist}
+                    wrapLines={false}
+                  >
+                    {debugResponse}
+                  </SyntaxHighlighter>
+                </>
+              )}
             </Grid>
           </Grid>
           <Snackbar
@@ -684,6 +738,26 @@ const DebugPage: React.FunctionComponent<Props> = ({
                     </Tooltip>
                   </Grid>
                 </Grid>
+                {Object.keys(debugResponseHeaders).length > 0 && (
+                  <>
+                    <Typography
+                      variant="subtitle1"
+                      style={{ marginTop: '1rem' }}
+                    >
+                      Response Headers:
+                    </Typography>
+                    <SyntaxHighlighter
+                      language="text"
+                      style={githubGist}
+                      wrapLines={false}
+                    >
+                      {debugResponseHeaders.join('\n')}
+                    </SyntaxHighlighter>
+                  </>
+                )}
+                <Typography variant="subtitle1" style={{ marginTop: '1rem' }}>
+                  Response Body:
+                </Typography>
                 <SyntaxHighlighter
                   language="json"
                   style={githubGist}
