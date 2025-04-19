@@ -13,8 +13,6 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-import JSONbig from 'json-bigint';
-import { jsonPrettify } from '../json-util';
 import { docServiceDebug, providers } from '../header-provider';
 import { Endpoint, Method } from '../specification';
 import { ResponseData } from '../types';
@@ -61,24 +59,6 @@ export default abstract class Transport {
     );
     const responseHeaders = httpResponse.headers;
     const responseText = httpResponse.body;
-    const applicationType = responseHeaders.get('content-type') || '';
-    if (applicationType.indexOf('json') >= 0) {
-      try {
-        const json = JSONbig.parse(responseText);
-        const prettified = jsonPrettify(JSONbig.stringify(json));
-        if (prettified.length > 0) {
-          return {
-            body: prettified,
-            headers: responseHeaders,
-          };
-        }
-      } catch (e) {
-        return {
-          body: responseText,
-          headers: responseHeaders,
-        };
-      }
-    }
 
     if (responseText.length > 0) {
       return {
