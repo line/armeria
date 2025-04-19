@@ -18,7 +18,6 @@ package com.linecorp.armeria.internal.server.annotation;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.collect.ImmutableList.toImmutableList;
-import static com.linecorp.armeria.internal.server.FileAggregatedMultipart.shouldHandle;
 import static com.linecorp.armeria.internal.server.annotation.ResponseConverterFunctionUtil.newResponseConverter;
 import static java.util.Objects.requireNonNull;
 
@@ -52,7 +51,7 @@ import com.linecorp.armeria.common.ResponseEntity;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.ResponseHeadersBuilder;
 import com.linecorp.armeria.common.annotation.Nullable;
-import com.linecorp.armeria.common.multipart.Multipart;
+import com.linecorp.armeria.common.multipart.BodyPart;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.common.util.UnmodifiableFuture;
@@ -359,11 +358,9 @@ final class DefaultAnnotatedService implements AnnotatedService {
             case MULTIPART:
                 f = FileAggregatedMultipart.aggregateMultipart(
                         ctx,
-                        Multipart.of(Multipart.from(req).bodyParts()
-                                              .filter(part -> shouldHandle(
-                                                      part, parameters)
-                                              )))
-                                            .thenApply(AggregatedResult::new);
+                        req,
+                        part -> shouldHandle(part, parameters))
+                                           .thenApply(AggregatedResult::new);
                 break;
             case ALL:
                 f = req.aggregate().thenApply(AggregatedResult::new);
@@ -406,6 +403,15 @@ final class DefaultAnnotatedService implements AnnotatedService {
                     return f.thenApply(defaultApplyFunction);
                 }
         }
+    }
+
+    private boolean shouldHandle(BodyPart bodyPart, List<String> parameters) {
+        final String name = bodyPart.name();
+        assert name != null;
+        if (parameters.isEmpty()) {
+            return true;
+        }
+        return parameters.contains(name);
     }
 
     /**

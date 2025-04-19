@@ -21,11 +21,11 @@ import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
-import java.util.List;
 import java.util.Map.Entry;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.function.Predicate;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -36,6 +36,7 @@ import com.google.common.collect.Maps;
 
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpRequest;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.multipart.BodyPart;
 import com.linecorp.armeria.common.multipart.Multipart;
 import com.linecorp.armeria.common.multipart.MultipartFile;
@@ -63,31 +64,20 @@ public final class FileAggregatedMultipart {
         return files;
     }
 
-    public static boolean shouldHandle(BodyPart bodyPart, List<String> parameters) {
-        final String name = bodyPart.name();
-        assert name != null;
-        if (parameters.isEmpty()) {
-            return true;
-        }
-        return parameters.contains(name);
-    }
-
     public static CompletableFuture<FileAggregatedMultipart> aggregateMultipart(
             ServiceRequestContext ctx, HttpRequest req) {
-        final Multipart multipart = Multipart.from(req);
-        return aggregateMultipart(ctx, multipart);
+        return aggregateMultipart(ctx, req, null);
     }
 
     public static CompletableFuture<FileAggregatedMultipart> aggregateMultipart(
-            ServiceRequestContext ctx, Multipart multipart) {
+            ServiceRequestContext ctx, HttpRequest req, @Nullable Predicate<BodyPart> predicate) {
         final Path destination = ctx.config().multipartUploadsLocation();
-        return Multipart.of(multipart.bodyParts())
-                        .collect(bodyPart -> {
+        return Multipart.from(req).collect(bodyPart -> {
             final String name = bodyPart.name();
             assert name != null;
             final String filename = bodyPart.filename();
             final EventLoop eventLoop = ctx.eventLoop();
-            if (filename != null) {
+            if (filename != null && (predicate == null || predicate.test(bodyPart))) {
                 final Path incompleteDir = destination.resolve("incomplete");
                 final ScheduledExecutorService executor = ctx.blockingTaskExecutor().withoutContext();
 

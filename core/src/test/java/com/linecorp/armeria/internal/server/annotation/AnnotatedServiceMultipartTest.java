@@ -204,10 +204,13 @@ class AnnotatedServiceMultipartTest {
         @Blocking
         @Post
         @Path("/uploadWithUnintendedFileParam")
-        public HttpResponse uploadWithUnintendedFileParam(@Param File file1, @Param java.nio.file.Path path1,
-                                                MultipartFile multipartFile1,
-                                                @Param MultipartFile multipartFile2,
-                                                @Param String param1) throws IOException {
+        public HttpResponse uploadWithUnintendedFileParam(
+                @Param File file1,
+                @Param java.nio.file.Path path1,
+                MultipartFile multipartFile1,
+                @Param MultipartFile multipartFile2,
+                @Param String param1
+        ) throws IOException {
             final String file1Content = Files.asCharSource(file1, StandardCharsets.UTF_8).read();
             final String path1Content = Files.asCharSource(path1.toFile(), StandardCharsets.UTF_8)
                                              .read();
