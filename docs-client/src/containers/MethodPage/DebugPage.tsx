@@ -149,9 +149,9 @@ const DebugPage: React.FunctionComponent<Props> = ({
   const [requestBody, setRequestBody] = useState('');
   const [debugResponse, setDebugResponse] = useState('');
   const [additionalQueries, setAdditionalQueries] = useState('');
-  const [debugResponseHeaders, setDebugResponseHeaders] = useState<
-    [string, string[]][]
-  >([]);
+  const [debugResponseHeaders, setDebugResponseHeaders] = useState<string[]>(
+    [],
+  );
   const [additionalPath, setAdditionalPath] = useState('');
   const [additionalHeaders, setAdditionalHeaders] = useState('');
   const [stickyHeaders, toggleStickyHeaders] = useReducer(toggle, false);
@@ -164,7 +164,7 @@ const DebugPage: React.FunctionComponent<Props> = ({
 
   const [currentApiId, setCurrentApiId] = useState<string>(method.id);
   const [responseCache, setResponseCache] = useState<
-    Record<string, { body: string; headers: Map<string, string[]> }>
+    Record<string, { body: string; headers: string[] }>
   >({});
 
   const classes = useStyles();
@@ -180,9 +180,7 @@ const DebugPage: React.FunctionComponent<Props> = ({
       setCurrentApiId(apiId);
       if (responseCache[apiId]) {
         setDebugResponse(responseCache[apiId].body);
-        setDebugResponseHeaders(
-          Array.from(responseCache[apiId].headers.entries()),
-        );
+        setDebugResponseHeaders(responseCache[apiId].headers);
       } else {
         setDebugResponse('');
         setDebugResponseHeaders([]);
@@ -426,7 +424,7 @@ const DebugPage: React.FunctionComponent<Props> = ({
           queries,
         );
         setDebugResponse(body);
-        setDebugResponseHeaders(Array.from(responseHeaders.entries()));
+        setDebugResponseHeaders(responseHeaders);
         setResponseCache((prev) => ({
           ...prev,
           [currentApiId]: {
@@ -639,11 +637,11 @@ const DebugPage: React.FunctionComponent<Props> = ({
                         Response Headers:
                       </Typography>
                       <SyntaxHighlighter
-                        language="json"
+                        language="text"
                         style={githubGist}
                         wrapLines={false}
                       >
-                        {stringifyHeaders(debugResponseHeaders)}
+                        {debugResponseHeaders.join('\n')}
                       </SyntaxHighlighter>
                     </>
                   )}
@@ -749,11 +747,11 @@ const DebugPage: React.FunctionComponent<Props> = ({
                       Response Headers:
                     </Typography>
                     <SyntaxHighlighter
-                      language="json"
+                      language="text"
                       style={githubGist}
                       wrapLines={false}
                     >
-                      {stringifyHeaders(debugResponseHeaders)}
+                      {debugResponseHeaders.join('\n')}
                     </SyntaxHighlighter>
                   </>
                 )}
