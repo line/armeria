@@ -16,7 +16,7 @@
 import { Method } from '../specification';
 
 import Transport from './transport';
-import { extractResponseHeaders, validateJsonObject } from '../json-util';
+import { extractHeaderLines, validateJsonObject } from '../json-util';
 import { ResponseData } from '../types';
 
 export const GRPC_UNFRAMED_MIME_TYPE =
@@ -63,7 +63,7 @@ export default class GrpcUnframedTransport extends Transport {
       body: bodyJson,
     });
 
-    const responseHeaders = extractResponseHeaders(response.headers);
+    const responseHeaders = extractHeaderLines(response.headers);
     const responseText = await response.text();
 
     return {

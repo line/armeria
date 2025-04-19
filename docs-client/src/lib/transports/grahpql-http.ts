@@ -16,7 +16,7 @@
 
 import Transport from './transport';
 import { Method } from '../specification';
-import { extractResponseHeaders, validateJsonObject } from '../json-util';
+import { extractHeaderLines, validateJsonObject } from '../json-util';
 import { ResponseData } from '../types';
 
 export const GRAPHQL_HTTP_MIME_TYPE = 'application/graphql+json';
@@ -66,7 +66,7 @@ export default class GraphqlHttpTransport extends Transport {
       body: bodyJson,
     });
 
-    const responseHeaders = extractResponseHeaders(response.headers);
+    const responseHeaders = extractHeaderLines(response.headers);
     const responseText = await response.text();
 
     return {
