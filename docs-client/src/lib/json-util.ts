@@ -134,3 +134,17 @@ export function isValidJsonMimeType(applicationType: string | null) {
   }
   return applicationType.indexOf('json') >= 0;
 }
+
+export function extractResponseHeaders(
+  headers: Headers,
+): Map<string, string[]> {
+  const responseHeaders = new Map<string, string[]>();
+  headers.forEach((value, key) => {
+    const lowerKey = key.toLowerCase();
+    if (!responseHeaders.has(lowerKey)) {
+      responseHeaders.set(lowerKey, []);
+    }
+    responseHeaders.get(lowerKey)!.push(value);
+  });
+  return responseHeaders;
+}
