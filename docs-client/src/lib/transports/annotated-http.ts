@@ -17,7 +17,7 @@ import { Endpoint, Method } from '../specification';
 
 import Transport from './transport';
 import {
-  extractResponseHeaders,
+  extractHeaderLines,
   isValidJsonMimeType,
   validateJsonObject,
 } from '../json-util';
@@ -127,7 +127,7 @@ export default class AnnotatedHttpTransport extends Transport {
       body: bodyJson,
     });
 
-    const responseHeaders = extractResponseHeaders(response.headers);
+    const responseHeaders = extractHeaderLines(response.headers);
     const responseText = await response.text();
 
     return {
