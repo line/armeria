@@ -44,18 +44,18 @@ public class SurroundingPublisherTckTest extends StreamMessageVerification<Objec
     @Override
     public StreamMessage<Object> createPublisher(long elements) {
         if (elements == 0) {
-            final StreamMessage<Object> publisher = new SurroundingPublisher<>(null, Mono.empty(), unused -> null);
+            final StreamMessage<Object> publisher = SurroundingPublisher.of(null, Mono.empty(), unused -> null);
             // `SurroundingPublisher` doesn't check head, tail, publisher's availability before subscribed so manually set complete.
             publisher.whenComplete().complete(null);
             return publisher;
         }
         if (elements == 1) {
-            return new SurroundingPublisher<>("head", Mono.empty(), unused -> null);
+            return SurroundingPublisher.of("head", Mono.empty(), unused -> null);
         }
         if (elements == 2) {
-            return new SurroundingPublisher<>(null, Mono.just(1), unused -> "tail");
+            return SurroundingPublisher.of(null, Mono.just(1), unused -> "tail");
         }
-        return new SurroundingPublisher<>("head", Flux.fromStream(LongStream.range(0, elements - 2).boxed()), unused -> "tail");
+        return SurroundingPublisher.of("head", Flux.fromStream(LongStream.range(0, elements - 2).boxed()), unused -> "tail");
     }
 
     /**
@@ -71,13 +71,13 @@ public class SurroundingPublisherTckTest extends StreamMessageVerification<Objec
      */
     @Override
     public StreamMessage<Object> createFailedPublisher() {
-        return new SurroundingPublisher<>(null, Mono.error(new RuntimeException()), unused -> null);
+        return SurroundingPublisher.of(null, Mono.error(new RuntimeException()), unused -> null);
     }
 
     @Override
     public @Nullable StreamMessage<Object> createAbortedPublisher(long elements) {
         if (elements == 0) {
-            final StreamMessage<Object> publisher = new SurroundingPublisher<>(null, Mono.empty(), unused -> null);
+            final StreamMessage<Object> publisher = SurroundingPublisher.of(null, Mono.empty(), unused -> null);
             publisher.abort();
             return publisher;
         }

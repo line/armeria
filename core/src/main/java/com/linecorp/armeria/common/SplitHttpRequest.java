@@ -16,6 +16,10 @@
 
 package com.linecorp.armeria.common;
 
+import java.util.concurrent.CompletableFuture;
+
+import com.linecorp.armeria.common.annotation.UnstableApi;
+
 /**
  * An {@link HttpRequest} which splits a stream of {@link HttpObject}s into HTTP headers and payloads.
  */
@@ -25,4 +29,24 @@ public interface SplitHttpRequest extends SplitHttpMessage {
      * Returns the {@link RequestHeaders}.
      */
     RequestHeaders headers();
+
+    /**
+     * Combines the split {@link #headers()}, {@link #body()}, {@link #trailers()} into
+     * a single {@link HttpRequest}.
+     *
+     * <p>Note that this method can only be used before subscribing to {@link #body()}.
+     */
+    @UnstableApi
+    @Override
+    default HttpRequest unsplit() {
+        final CompletableFuture<HttpHeaders> trailersFuture = trailers().thenApply(trailers -> {
+            if (trailers.isEmpty()) {
+                // An empty trailers means that the request does not have trailers.
+                return null;
+            } else {
+                return trailers;
+            }
+        });
+        return HttpRequest.of(headers(), body(), trailersFuture);
+    }
 }
