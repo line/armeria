@@ -67,7 +67,6 @@ class SplitHttpMessageTest {
                     .verify();
     }
 
-
     @Test
     void unsplit_request_emptyTrailers() {
         final RequestHeaders headers = RequestHeaders.of(HttpMethod.POST, "/foo",
@@ -127,7 +126,6 @@ class SplitHttpMessageTest {
                     .expectComplete()
                     .verify();
     }
-
 
     @Test
     void unsplit_response_failed() {
