@@ -45,6 +45,13 @@ const config: Config = {
           remarkPlugins: [remarkApiLink],
         },
         blog: {
+          routeBasePath: '/news',
+          path: 'news',
+          blogTitle: 'Armeria Newsletter',
+          blogDescription:
+            'The Armeria Newsletter provides the latest insights, updates, and best practices to help you maximize the potential of Armeria.',
+          blogSidebarTitle: ' ',
+          blogSidebarCount: 'ALL',
           showReadingTime: true,
           feedOptions: {
             type: ['rss', 'atom'],
@@ -58,6 +65,7 @@ const config: Config = {
           onInlineTags: 'warn',
           onInlineAuthors: 'warn',
           onUntruncatedBlogPosts: 'warn',
+          remarkPlugins: [remarkApiLink],
         },
         theme: {
           customCss: ['./src/css/custom.css', './src/css/antd.css'],
@@ -76,7 +84,7 @@ const config: Config = {
       },
       items: [
         {
-          to: '/news',
+          to: '/news/2023/12/08/newsletter-6',
           label: 'News',
           position: 'left',
         },
