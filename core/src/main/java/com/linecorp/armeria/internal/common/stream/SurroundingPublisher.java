@@ -72,7 +72,7 @@ public final class SurroundingPublisher<T> implements StreamMessage<T> {
     }
 
     public static <T> SurroundingPublisher<T> of(@Nullable T head, Publisher<? extends T> publisher,
-                                                 CompletableFuture<? extends T> tail) {
+                                                 CompletableFuture<? extends @Nullable T> tail) {
         // The tail is ignored when the cause is not null.
         return new SurroundingPublisher<>(head, publisher, cause -> cause != null ? null : tail);
     }
