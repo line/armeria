@@ -20,20 +20,27 @@ import com.google.common.base.MoreObjects;
 
 import com.linecorp.armeria.common.AnnotatedResponse;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.logging.masker.BeanFieldInfo;
 
 public final class DefaultAnnotatedResponse implements AnnotatedResponse {
 
     @Nullable
     private final Object value;
+    private final BeanFieldInfo beanFieldInfo;
 
-    DefaultAnnotatedResponse(@Nullable Object value) {
+    DefaultAnnotatedResponse(@Nullable Object value, BeanFieldInfo beanFieldInfo) {
         this.value = value;
+        this.beanFieldInfo = beanFieldInfo;
     }
 
     @Nullable
     @Override
     public Object value() {
         return value;
+    }
+
+    public BeanFieldInfo beanFieldInfo() {
+        return beanFieldInfo;
     }
 
     @Override

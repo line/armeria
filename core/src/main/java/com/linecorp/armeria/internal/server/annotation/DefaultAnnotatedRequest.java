@@ -24,18 +24,26 @@ import com.google.common.base.MoreObjects;
 
 import com.linecorp.armeria.common.AnnotatedRequest;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.logging.masker.BeanFieldInfo;
 
 public final class DefaultAnnotatedRequest implements AnnotatedRequest {
 
     private final List<@Nullable Object> parameters;
+    private final List<BeanFieldInfo> beanFieldInfos;
 
-    DefaultAnnotatedRequest(Object[] parameters) {
+    DefaultAnnotatedRequest(Object[] parameters, List<BeanFieldInfo> beanFieldInfos) {
+        assert parameters.length == beanFieldInfos.size();
         this.parameters = Collections.unmodifiableList(Arrays.asList(parameters));
+        this.beanFieldInfos = beanFieldInfos;
     }
 
     @Override
     public List<@Nullable Object> parameters() {
         return parameters;
+    }
+
+    public List<BeanFieldInfo> beanFieldInfos() {
+        return beanFieldInfos;
     }
 
     @Override
