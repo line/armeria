@@ -2538,7 +2538,6 @@ expo.app
 exposed
 express
 express.aero
-express.val.run
 extraspace
 ezproxy.kuleuven.be
 f.bg
@@ -4860,6 +4859,7 @@ lovepop.jp
 lovesick.jp
 lowicz.pl
 lpages.co
+lpg.objectstorage.ch
 lpl
 lplfinancial
 lpusercontent.com
@@ -4900,6 +4900,8 @@ luster.no
 lutsk.ua
 luxe
 luxury
+luyani.app
+luyani.net
 lv
 lv.eu.org
 lv.ua
@@ -6985,6 +6987,7 @@ rj.gov.br
 rj.leg.br
 rl.no
 rm.it
+rma.objectstorage.ch
 rn.gov.br
 rn.it
 rn.leg.br
@@ -8753,6 +8756,7 @@ vagsoy.no
 vaksdal.no
 val-d-aosta.it
 val-daosta.it
+val.run
 vald-aosta.it
 valdaosta.it
 valer.hedmark.no
