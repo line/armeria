@@ -196,6 +196,7 @@ includeWithFlags ':saml',                                'java', 'publish', 'rel
 includeWithFlags ':bucket4j',                            'java', 'publish', 'relocate', 'native'
 includeWithFlags ':consul',                              'java', 'publish', 'relocate', 'native'
 includeWithFlags ':nacos',                               'java', 'publish', 'relocate', 'native'
+includeWithFlags ':json-rpc',                            'java', 'publish', 'relocate'
 
 // Published Javadoc-only projects
 includeWithFlags ':javadoc',                             'java', 'publish', 'no_aggregation'
