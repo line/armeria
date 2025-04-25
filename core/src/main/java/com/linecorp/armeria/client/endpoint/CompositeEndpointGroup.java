@@ -83,7 +83,8 @@ final class CompositeEndpointGroup extends AbstractEndpointGroup implements List
     }
 
     private List<Endpoint> rebuildEndpoints() {
-        while (true) {
+        for (;;) {
+            // Get the current endpoints before making a new endpoints list.
             final List<Endpoint> oldEndpoints = merged.get();
             final ImmutableList.Builder<Endpoint> newEndpointsBuilder = ImmutableList.builder();
             for (EndpointGroup endpointGroup : endpointGroups) {
@@ -93,6 +94,7 @@ final class CompositeEndpointGroup extends AbstractEndpointGroup implements List
             if (merged.compareAndSet(oldEndpoints, newEndpoints)) {
                 return newEndpoints;
             }
+            // Changed by another thread while we were building a new one. Try again.
         }
     }
 
