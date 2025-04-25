@@ -6,7 +6,7 @@ date: 2023-02-09
 
 ## 🌟 New features
 
-- <type://CircuitBreakerClient> integration with Resilience4j's circuit breaker is now available. #1469 #4139
+- [CircuitBreakerClient](type) integration with Resilience4j's circuit breaker is now available. #1469 #4139
   - Note that `armeria-resilience4j2` requires Java 17 or higher.
   ```java
   Resilience4jCircuitBreakerMapping mapping =
@@ -19,7 +19,7 @@ date: 2023-02-09
       .newDecorator())
     ...
   ```
-- You can now use <type://AsyncServerInterceptor> to asynchronously intercept gRPC service calls. #4647
+- You can now use [AsyncServerInterceptor](type) to asynchronously intercept gRPC service calls. #4647
   ```java
   class AuthServerInterceptor implements AsyncServerInterceptor {
     @Override
@@ -40,7 +40,7 @@ date: 2023-02-09
              .addService(...)
              ...
   ```
-- <type://@Blocking> annotation can now be used with gRPC services. #4389 #4585
+- [@Blocking](type) annotation can now be used with gRPC services. #4389 #4585
   ```java
   @Blocking // 👈👈👈 applies to all methods in the class
   class MyGrpcServiceImpl extends MyGrpcServiceImplBase {
@@ -51,32 +51,32 @@ date: 2023-02-09
   }
   ```
 - Armeria server with Spring integration can now be configured to bind to non-ip addresses. #4597 #4598
-- The authenticated remote user set by <type://RequestLogBuilder#authenticatedUser(String)> is now logged in access
+- The authenticated remote user set by [RequestLogBuilder#authenticatedUser(String)](type) is now logged in access
   logs. #4634
-- <type://DocService> now exposes [JSON Schema](https://json-schema.org/) via the `/schemas.json` endpoint. #4518
+- [DocService](type) now exposes [JSON Schema](https://json-schema.org/) via the `/schemas.json` endpoint. #4518
 
 ## 📈 Improvements
 
-- <type://Server#reconfigure(ServerConfigurator)> now dynamically updates TLS configurations correctly. #4637
+- [Server#reconfigure(ServerConfigurator)](type) now dynamically updates TLS configurations correctly. #4637
 - Thrift [typedefs](http://diwakergupta.github.io/thrift-missing-guide/#_typedefs) are
-  now correctly displayed in <type://DocService>. #4628
-- <type://DocService> front-end assets are now compressed using gzip instead of Brotli. #4616
+  now correctly displayed in [DocService](type). #4628
+- [DocService](type) front-end assets are now compressed using gzip instead of Brotli. #4616
 - An exception is raised if TLS is set for a port-based virtual host. #4588
 
 ## 🛠️ Bug fixes
 
-- A `NullPointerException` is not raised anymore when an aborted <type://StreamMessage> is collected. #4652
-- A <type://ClosedSessionException> is not set to <type://RequestLog#responseCause()> anymore when
+- A `NullPointerException` is not raised anymore when an aborted [StreamMessage](type) is collected. #4652
+- A [ClosedSessionException](type) is not set to [RequestLog#responseCause()](type) anymore when
   an HTTP/1 connection is closed after response data has been fully sent. #4632
 - [gRPC HTTP/JSON transcoding](https://cloud.google.com/endpoints/docs/grpc/transcoding) now doesn't throw an exception when used with nested messages. #4631 #4641
-- `431 Request Header Fields Too Large` is now returned instead of `400 Bad Request` if the header size exceeds <type://ServerConfig#http1MaxHeaderSize()>. #4609 #4655
-- Warnings on duplicate parameters in <type://DocService> are no longer visible when annotations are added to Kotlin data classes. #4645
+- `431 Request Header Fields Too Large` is now returned instead of `400 Bad Request` if the header size exceeds [ServerConfig#http1MaxHeaderSize()](type). #4609 #4655
+- Warnings on duplicate parameters in [DocService](type) are no longer visible when annotations are added to Kotlin data classes. #4645
 - [gRPC HTTP/JSON transcoding](https://cloud.google.com/endpoints/docs/grpc/transcoding) now correctly interprets `google.protobuf.FieldMask` type as a string. #4633 #4640
-- gRPC metadata is now exposed via <type://StatusRuntimeException> in <type://RequestLog#responseCause()>. #4635 #4636
+- gRPC metadata is now exposed via [StatusRuntimeException](type) in [RequestLog#responseCause()](type). #4635 #4636
 - Square brackets "`[]`" that are specified in path segments are correctly encoded. #4607 #4615
-- <type://DecodingService> and <type://DecodingClient> now correctly limit the max length of decompressed streaming data. #4613
+- [DecodingService](type) and [DecodingClient](type) now correctly limit the max length of decompressed streaming data. #4613
 - Client-side gRPC callback `ClientCall.Listener.onHeaders()` is now invoked correctly. #4583 #4608
-- <type://DocService> now correctly displays multiple example requests for a single endpoint. #4576 #4605
+- [DocService](type) now correctly displays multiple example requests for a single endpoint. #4576 #4605
 
 ## 🏚️ Deprecations
 

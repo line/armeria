@@ -6,7 +6,7 @@ date: 2022-08-08
 
 ## 🌟 New features
 
-- <type://DocService> can now render Markdown and [Mermaid](https://mermaid-js.github.io/mermaid/)
+- [DocService](type) can now render Markdown and [Mermaid](https://mermaid-js.github.io/mermaid/)
   formatted documentation for annotated services. #4299 #4304
 
   ```java
@@ -30,7 +30,7 @@ date: 2022-08-08
   }
   ```
 
-- You can now bind decorators to each gRPC service using <type://GrpcServiceBuilder#addService(BindableService,Iterable)>. #4311 #4316
+- You can now bind decorators to each gRPC service using [GrpcServiceBuilder#addService(BindableService,Iterable)](type). #4311 #4316
 
   ```java
   GrpcService.builder()
@@ -38,7 +38,7 @@ date: 2022-08-08
     .build();
   ```
 
-- <type://UnframedGrpcErrorHandler#ofJson()> now conforms to
+- [UnframedGrpcErrorHandler#ofJson()](type) now conforms to
   [Google's error model](https://cloud.google.com/apis/design/errors#error_model). #4231 #4384
 
   ```java
@@ -58,7 +58,7 @@ date: 2022-08-08
   }
   ```
 
-- You can now extract the innermost element of <type://Unwrappable> type objects easily using <type://Unwrappable#unwrapAll()>. #4338
+- You can now extract the innermost element of [Unwrappable](type) type objects easily using [Unwrappable#unwrapAll()](type). #4338
 
   ```java
   Foo foo = new Foo();
@@ -69,19 +69,19 @@ date: 2022-08-08
 
 ## 📈 Improvements
 
-- <type://RequestContext> now extends <type://Unwrappable>. #4308
+- [RequestContext](type) now extends [Unwrappable](type). #4308
 
 ## 🛠️ Bug fixes
 
-- You no longer see an intermittent <type://IllegalStateException> for gRPC services
-  when <type://GrpcServiceBuilder#useBlockingTaskExecutor(boolean)> is enabled. #4367 #4374
+- You no longer see an intermittent [IllegalStateException](type) for gRPC services
+  when [GrpcServiceBuilder#useBlockingTaskExecutor(boolean)](type) is enabled. #4367 #4374
 - Requests no longer hang when gRPC-JSON transcoding is enabled and gRPC decorators return an unframed response. #4337 #4348
-- You can now use <type://HttpFile> to serve files from the OSGI bundle. #4371 #4373
+- You can now use [HttpFile](type) to serve files from the OSGI bundle. #4371 #4373
 - A request's start time on the server side is now correctly
   recorded when a server receives the first header. #4365 #4372
 - You no longer see a false positive warning of unknown `MethodType` when using gRPC clients. #4363
-- You no longer see a `NoSuchElementException` while a <type://HealthCheckedEndpointGroup> is closed. #4349
-- <type://ClosedSessionException> and <type://ClosedStreamException> are raised correctly according to their usage. #4380
+- You no longer see a `NoSuchElementException` while a [HealthCheckedEndpointGroup](type) is closed. #4349
+- [ClosedSessionException](type) and [ClosedStreamException](type) are raised correctly according to their usage. #4380
 - The timeout for client's endpoint selection isn't clamped by `responseTimeout` anymore. #4383
 
 ## ⛓ Dependencies

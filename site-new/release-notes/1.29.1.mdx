@@ -6,15 +6,15 @@ date: 2024-06-28
 
 ## 🛠️ Bug fixes
 
-- The default <type://GrpcExceptionHandlerFunction> now properly handles and returns
+- The default [GrpcExceptionHandlerFunction](type) now properly handles and returns
   the correct gRPC `Status`. #5786
-- The <type://ExchangeType> is now correctly detected for the default <type://WebClient>. #5787
+- The [ExchangeType](type) is now correctly detected for the default [WebClient](type). #5787
 - A duplicate key exception isn't raised anymore when building a JSON schema. #5788
 - The duplicator's child stream subscriber methods are now called by the correct executor. #5783
 
 ## ☢️ Breaking changes
 
-- The signatures of <type://GrpcExceptionHandlerFunction#apply(RequestContext,Status,Throwable,Metadata)?full>
+- The signatures of [GrpcExceptionHandlerFunction#apply(RequestContext,Status,Throwable,Metadata)?full](type)
   has been changed. #5786
 
 ## 🙇 Thank you

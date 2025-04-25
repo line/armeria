@@ -13,7 +13,7 @@ date: 2022-01-27
 
   </Tip>
 
-- You can now fluently convert an <type://HttpResponse> into a desired type using <type://WebClient>. #4021
+- You can now fluently convert an [HttpResponse](type) into a desired type using [WebClient](type). #4021
   ```java
   WebClient client = WebClient.of("https://api.example.com");
   CompletableFuture<ResponseEntity<MyObject>> response =
@@ -22,7 +22,7 @@ date: 2022-01-27
           .asJson(MyObject.class)
           .execute();
   ``` 
-- You can now use <type://BlockingWebClient> to wait for an <type://HttpResponse> to be completed. #4021
+- You can now use [BlockingWebClient](type) to wait for an [HttpResponse](type) to be completed. #4021
   ```java
   BlockingWebClient client = BlockingWebClient.of("https://api.example.com");
   ResponseEntity<MyObject> response =
@@ -34,11 +34,11 @@ date: 2022-01-27
   <Tip>
 
   Note that you should never use this client in an `EventLoop` thread.
-  Use it from a non-`EventLoop` thread such as <type://BlockingTaskExecutor>.
+  Use it from a non-`EventLoop` thread such as [BlockingTaskExecutor](type).
  
   </Tip>
 - You can now fluently build a gRPC client with various options using
-  <type://GrpcClientBuilder>. #3981 #3999 #3964 #3975
+  [GrpcClientBuilder](type). #3981 #3999 #3964 #3975
   ```java
   GrpcClients
     .builder(...)
@@ -50,7 +50,7 @@ date: 2022-01-27
     .intercept(myInterceptors)
     .build(MyStub.class);
   ``` 
-- You can now fluently build an <type://HttpResponse> by using <type://HttpResponseBuilder>. #3398 #3941
+- You can now fluently build an [HttpResponse](type) by using [HttpResponseBuilder](type). #3398 #3941
   ```java
   HttpResponse
     .builder()
@@ -59,7 +59,7 @@ date: 2022-01-27
     .content(content)
     .build(); 
   ```
-- You can now use <type://StreamMessage#mapAsync(Function)> to transform a <type://StreamMessage> 
+- You can now use [StreamMessage#mapAsync(Function)](type) to transform a [StreamMessage](type) 
   using an async operation. #3916 #3962
   ```java
   StreamMessage<Integer> userIds = StreamMessage.of(...);
@@ -69,9 +69,9 @@ date: 2022-01-27
     ...
   }
   ```
-- You can now use <type://HttpResponse#peekHeaders(Consumer)>, <type://HttpMessage#peekData(Consumer)>, 
-  <type://HttpMessage#peekTrailers(Consumer)> and <type://StreamMessage#peekError(Consumer)> operators on
-  <type://HttpRequest> and <type://HttpResponse>. #3097 #3988 #3949
+- You can now use [HttpResponse#peekHeaders(Consumer)](type), [HttpMessage#peekData(Consumer)](type), 
+  [HttpMessage#peekTrailers(Consumer)](type) and [StreamMessage#peekError(Consumer)](type) operators on
+  [HttpRequest](type) and [HttpResponse](type). #3097 #3988 #3949
   ```java
   HttpRequest request =
     HttpRequest.of(RequestHeaders.of(HttpMethod.POST, "/items"),
@@ -90,8 +90,8 @@ date: 2022-01-27
     assert cause instanceof IllegalStateException;
   });
   ```
-- You can now generate an error response differently in <type://ServerErrorHandler> depending 
-  on the <type://RequestHeaders>. #4037
+- You can now generate an error response differently in [ServerErrorHandler](type) depending 
+  on the [RequestHeaders](type). #4037
 - You can now use `{*var}` and `:*var` path patterns to capture rest paths of a request. #3031 #3997
   ```java
   Server
@@ -102,9 +102,9 @@ date: 2022-01-27
       assert ctx.pathParam("contents").equals("foo/bar/baz");
     });
   ```
-- You can now use <type://ServiceRequestContext#queryParams(String)> to get the decoded query 
+- You can now use [ServiceRequestContext#queryParams(String)](type) to get the decoded query 
   parameters. #3955 #3960
-- You can now send query parameters using <type://QueryParams> with <type://WebClient>. #3915 #3921
+- You can now send query parameters using [QueryParams](type) with [WebClient](type). #3915 #3921
   ```java
   QueryParams params = QueryParams.of("foo", "bar");
   WebClient client = ...;
@@ -114,26 +114,26 @@ date: 2022-01-27
   client.post("/api/items", params, content);
   ```
 - You can now write a `StreamMessage<HttpData>` into a file using
-  <type://StreamMessages#writeTo(StreamMessage,Path,)>. #3870 #3874
+  [StreamMessages#writeTo(StreamMessage,Path,)](type). #3870 #3874
   ```java
   StreamMessage<HttpData> stream = ...;
   Path destination = ...;
   StreamMessages.writeTo(stream, destination);
   ```
-- You can now force a state transition of a <type://CircuitBreaker>
-  by using <type://CircuitBreaker#enterState(CircuitState)>. #4010 #4022
+- You can now force a state transition of a [CircuitBreaker](type)
+  by using [CircuitBreaker#enterState(CircuitState)](type). #4010 #4022
   ```java
   CircuitBreaker circuitBreaker = CircuitBreaker.of(...);
   circuitBreaker.enterState(CircuitState.FORCED_OPEN);
   ```
-- You can now conveniently create a <type://RetryRule> and <type://RetryRuleWithContent> by specifying
-  a <type://Backoff>. #3875 #2899 #3895
+- You can now conveniently create a [RetryRule](type) and [RetryRuleWithContent](type) by specifying
+  a [Backoff](type). #3875 #2899 #3895
   ```java
   RetryRule.failsafe(Backoff.fixed(1000));
   RetryRuleWithContent.onException(Backoff.fixed(2000));
   ```
 - You can now dynamically change the maximum number of concurrent active requests of
-  a <type://ConcurrencyLimitingClient>. #3842 #3985
+  a [ConcurrencyLimitingClient](type). #3842 #3985
   ```java
   ConcurrencyLimitingClient.newDecorator(new DynamicLimit());
   
@@ -145,8 +145,8 @@ date: 2022-01-27
     }
   }
   ```
-- You can now split an <type://HttpRequest> into <type://RequestHeaders>, `StreamMessage<HttpData>`
-  and trailers using <type://HttpRequest#split()>. #3924 #3953
+- You can now split an [HttpRequest](type) into [RequestHeaders](type), `StreamMessage<HttpData>`
+  and trailers using [HttpRequest#split()](type). #3924 #3953
   ```java
   HttpRequest request = HttpRequest.of(...);
   SplitHttpRequest splitRequest = request.split();
@@ -155,8 +155,8 @@ date: 2022-01-27
   StreamMessage<HttpData> body = splitRequest.body();
   CompletableFuture<HttpHeaders> trailers = splitRequest.trailers();
   ```
-- Added more well-known MIME type constants to <type://MediaType>. #4040
-- You can now customize the <type://MediaType> of a file when using <type://FileService>. #4001 #4009
+- Added more well-known MIME type constants to [MediaType](type). #4040
+- You can now customize the [MediaType](type) of a file when using [FileService](type). #4001 #4009
   ```java
   FileService
     .builder(resource)
@@ -172,8 +172,8 @@ date: 2022-01-27
     })
     .build();
   ```
-- You can now send requests to a test server by using <type://ServerExtension#webClient()>
-  or <type://ServerRule#webClient()>. #3761 #3890
+- You can now send requests to a test server by using [ServerExtension#webClient()](type)
+  or [ServerRule#webClient()](type). #3761 #3890
   ```java
    @RegisterExtension
    static ServerExtension server = new ServerExtension() {
@@ -192,9 +192,9 @@ date: 2022-01-27
    }
   ```
 - You can now export metrics as [OpenMetrics](https://github.com/OpenObservability/OpenMetrics/blob/main/specification/OpenMetrics.md)
-  format using <type://PrometheusExpositionService>. #3926 #3928
-- You can now use <type://UnframedGrpcStatusMappingFunction> to customize how a gRPC status is mapped to 
-  an <type://HttpStatus> when using an unframed gRPC service. #3683 #3948
+  format using [PrometheusExpositionService](type). #3926 #3928
+- You can now use [UnframedGrpcStatusMappingFunction](type) to customize how a gRPC status is mapped to 
+  an [HttpStatus](type) when using an unframed gRPC service. #3683 #3948
   ```java
   UnframedGrpcStatusMappingFunction mappingFunction = 
     (ctx, grpcStatus, cause) -> {
@@ -221,70 +221,70 @@ date: 2022-01-27
       include: actuator, health 
       port: 18080
   ``` 
-- Added <type://JettyServiceBuilder#tlsReverseDnsLookup(boolean)> that makes <type://JettyService>
+- Added [JettyServiceBuilder#tlsReverseDnsLookup(boolean)](type) that makes [JettyService](type)
   perform a reverse DNS lookup for each TLS connection, which may be useful for
   servlets that assume `ServletRequest.getRemoteHost()` will return a remote host name
   rather than a remote IP address.
-- Added <type://JettyServiceBuilder#httpConfiguration(HttpConfiguration)> that allows a user to set
+- Added [JettyServiceBuilder#httpConfiguration(HttpConfiguration)](type) that allows a user to set
   Jetty `HttpConfiguration` in a type-safe manner.
 
 ## 📈 Improvements
 
 - You can now distinguish services, messages and enums with the same name by their package names from 
-  <type://DocService> UI. #3979
-- Improved the memory footprint of <type://PrometheusExpositionService> by removing large byte array
+  [DocService](type) UI. #3979
+- Improved the memory footprint of [PrometheusExpositionService](type) by removing large byte array
   allocations. #3929
-- Meters created by <type://MoreMeters> are now using more accurate percentiles. #4047
+- Meters created by [MoreMeters](type) are now using more accurate percentiles. #4047
 
 
 ## 🛠️ Bug fixes
 
-- You no longer see `ClassCastException` when duplicating an <type://HttpRequest> or 
-  an <type://HttpResponse>. #4030 #4032
-- You no longer see `IllegalArgumentException` if an upper-bounded wildcard type with <type://@Param>
+- You no longer see `ClassCastException` when duplicating an [HttpRequest](type) or 
+  an [HttpResponse](type). #4030 #4032
+- You no longer see `IllegalArgumentException` if an upper-bounded wildcard type with [@Param](type)
   is used in annotated services. #4007 #4008
-- You can now properly get `SameSite` attribute from <type://Cookie#sameSite()>. #3968 #3984
-- You no longer see an <type://EmptyEndpointGroupException> when an <type://EndpointGroup> is successfully
-  resolved with the initial <typeplural://Endpoint>. #3978
-- <type://HttpRequestBuilder#header(CharSequence,Object)> does not overwrite an old header value 
+- You can now properly get `SameSite` attribute from [Cookie#sameSite()](type). #3968 #3984
+- You no longer see an [EmptyEndpointGroupException](type) when an [EndpointGroup](type) is successfully
+  resolved with the initial [Endpoint](typeplural). #3978
+- [HttpRequestBuilder#header(CharSequence,Object)](type) does not overwrite an old header value 
   anymore. #3932 #3941
   - A new header value will be appended to the old value.
 - You no longer see `413 Request Entity Too Large` when a server receives a cleartext (h2c) upgrade request
   larger than 16384 bytes. #3859 #3913
-  - The maximum allowed length of an upgrade request will respect <type://ServerBuilder#maxRequestLength(long)>
-    or <type://VirtualHost#maxRequestLength()>.
-- Fixed <type://Multipart> decoder to correctly publish chunks one by one when streaming
-  a large <type://BodyPart>. #3774 #3783
+  - The maximum allowed length of an upgrade request will respect [ServerBuilder#maxRequestLength(long)](type)
+    or [VirtualHost#maxRequestLength()](type).
+- Fixed [Multipart](type) decoder to correctly publish chunks one by one when streaming
+  a large [BodyPart](type). #3774 #3783
 - You can now use `google.protobuf.{Struct, Value, ListValue, Any}` messages from your `proto` files when
   using gRPC-JSON transcoder. #3986 #3992
-- <type://GrpcService> now automatically disables gRPC-JSON serialization for Protobuf 2 services
+- [GrpcService](type) now automatically disables gRPC-JSON serialization for Protobuf 2 services
   rather than throwing an exception. #4020 #4033
-- <type://FileService> now keeps query parameters when redirecting to a directory. #4049 #4050
+- [FileService](type) now keeps query parameters when redirecting to a directory. #4049 #4050
 - You no longer see `InvocationTargetException` with a Kotlin method whose return type is `Nothing`
   in an annotated service. #3961 #4005
 - Actuator now correctly shows `Liveness` and `Readiness` of a Kubernetes instance. #3031 #3997
 
 ## 🏚️ Deprecations
 
-- <type://CircuitBreaker#canRequest()> has been deprecated in favor of 
-  <type://CircuitBreaker#tryRequest()>. #4012
-- <type://Cookie#builder(String,String)> and <type://Cookie#of(String,String)> have been deprecated in favor of
-  <type://Cookie#secureBuilder(String,String)> and <type://Cookie#ofSecure(String,String)>. #3788 #3939
-- <type://GrpcServiceBuilder#setMaxInboundMessageSizeBytes(int)> and <type://GrpcServiceBuilder#setMaxOutboundMessageSizeBytes(int)>
-  have been deprecated in favor of <type://GrpcServiceBuilder#maxRequestMessageLength(int)> and 
-  <type://GrpcServiceBuilder#maxResponseMessageLength(int)>. #3999
-- <type://AbstractBlockingHttpVfs#get(Executor,String,Clock,String,HttpHeaders)?full> has been deprecated in favor of
-  <type://AbstractBlockingHttpVfs#get(Executor,String,Clock,String,HttpHeaders,MediaTypeResolver)?full>. #4009
-- <type://HttpVfs#get(Executor,String,Clock,String,HttpHeaders)?full> has been deprecated in favor of
-  <type://HttpVfs#get(Executor,String,Clock,String,HttpHeaders,MediaTypeResolver)?full>. #4009
+- [CircuitBreaker#canRequest()](type) has been deprecated in favor of 
+  [CircuitBreaker#tryRequest()](type). #4012
+- [Cookie#builder(String,String)](type) and [Cookie#of(String,String)](type) have been deprecated in favor of
+  [Cookie#secureBuilder(String,String)](type) and [Cookie#ofSecure(String,String)](type). #3788 #3939
+- [GrpcServiceBuilder#setMaxInboundMessageSizeBytes(int)](type) and [GrpcServiceBuilder#setMaxOutboundMessageSizeBytes(int)](type)
+  have been deprecated in favor of [GrpcServiceBuilder#maxRequestMessageLength(int)](type) and 
+  [GrpcServiceBuilder#maxResponseMessageLength(int)](type). #3999
+- [AbstractBlockingHttpVfs#get(Executor,String,Clock,String,HttpHeaders)?full](type) has been deprecated in favor of
+  [AbstractBlockingHttpVfs#get(Executor,String,Clock,String,HttpHeaders,MediaTypeResolver)?full](type). #4009
+- [HttpVfs#get(Executor,String,Clock,String,HttpHeaders)?full](type) has been deprecated in favor of
+  [HttpVfs#get(Executor,String,Clock,String,HttpHeaders,MediaTypeResolver)?full](type). #4009
 
 ## ☢️ Breaking changes
 
-- <type://HealthChecker#of(Supplier,Duration)?full> and 
-  <type://HealthChecker#of(Supplier,Duration,EventExecutor)?full> now returns 
-  <type://ListenableHealthChecker> instead of <type://HealthChecker>. #4017
-- <type://ServerErrorHandler#renderStatus(ServiceConfig,RequestHeaders,HttpStatus,String,Throwable)> now 
-  requires an additional parameter <type://RequestHeaders>. #4037
+- [HealthChecker#of(Supplier,Duration)?full](type) and 
+  [HealthChecker#of(Supplier,Duration,EventExecutor)?full](type) now returns 
+  [ListenableHealthChecker](type) instead of [HealthChecker](type). #4017
+- [ServerErrorHandler#renderStatus(ServiceConfig,RequestHeaders,HttpStatus,String,Throwable)](type) now 
+  requires an additional parameter [RequestHeaders](type). #4037
   - This allows a user to generate a different error response depending on the request header value.
 
 ## ⛓ Dependencies

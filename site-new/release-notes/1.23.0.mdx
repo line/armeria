@@ -6,7 +6,7 @@ date: 2023-04-07
 
 ## 🌸 Highlights
 
-- <type://DocService> now supports auto-completion for gRPC and Thrift services. #4516
+- [DocService](type) now supports auto-completion for gRPC and Thrift services. #4516
   - Check out this awesome demo video by @Dogacel to learn more.
   <AspectRatio width={18} height={9} maxWidth="21rem">
     <video controls>
@@ -26,7 +26,7 @@ final RetryRule rule =
   ```
 - Unhandled exceptions are logged periodically out of the box. #4324 #4687
   - You can change the interval of the periodic logging
-    using <type://ServerBuilder#unhandledExceptionsReportIntervalMillis(long)>.
+    using [ServerBuilder#unhandledExceptionsReportIntervalMillis(long)](type).
   ```java
   ServerBuilder sb = ...
   // Log every 10 seconds.
@@ -35,13 +35,13 @@ final RetryRule rule =
 - You can now use Spring Boot 3 with Armeria. #4574
   - Use `com.linecorp.armeria:armeria-spring-boot3-autoconfigure:1.23.0` dependency for the integration.
 - You can now disconnect connections gracefully
-  using <type://ClientRequestContext#initiateConnectionShutdown()>. #4555 #4708
+  using [ClientRequestContext#initiateConnectionShutdown()](type). #4555 #4708
   ```java
   ClientRequestContext ctx = ...
   // The connection will be gracefully shut down after a request is finished.
   ctx.initiateConnectionShutdown();
   ```
-- You can now use <type://ServiceErrorHandler> to configure the per-service or per-virtual host
+- You can now use [ServiceErrorHandler](type) to configure the per-service or per-virtual host
   error handlers. #3421 #4716
   ```java
   ServiceErrorHandler handler = (ctx, cause) -> {
@@ -60,7 +60,7 @@ final RetryRule rule =
     .build();
   ```
 - You can now handle an HTTP/1 request with an absolute URI
-  using <type://ServerBuilder#absoluteUriTransformer(Function)>. #4681 #4726
+  using [ServerBuilder#absoluteUriTransformer(Function)](type). #4681 #4726
   ```java
   ServerBuilder sb = ...
   sb.absoluteUriTransformer(absoluteUri -> {
@@ -70,7 +70,7 @@ final RetryRule rule =
     // return "/proxy?uri=" + URLEncoder.encode(absoluteUri);
   });
   ```
-- You can now listen to the result of DNS queries using <type://DnsQueryListener>. #4690 #4715
+- You can now listen to the result of DNS queries using [DnsQueryListener](type). #4690 #4715
   ```java
   DnsAddressEndpointGroup
     .builder("foo.com")
@@ -85,9 +85,9 @@ final RetryRule rule =
     })
     .build();
   ```
-- You can now create a <type://BlockingTaskExecutor> by wrapping a `ScheduledExecutorService`. #4760
+- You can now create a [BlockingTaskExecutor](type) by wrapping a `ScheduledExecutorService`. #4760
   - Additionally, you can create context-aware or context-propagating `Executor` and
-    <type://BlockingTaskExecutor>.
+    [BlockingTaskExecutor](type).
   ```java
   ScheduledExecutorService executorService = ...
   // Wrap a ScheduledExecutorService.
@@ -101,14 +101,14 @@ final RetryRule rule =
   // context-propagating
   RequestContext.makeContextPropagating(blockingTaskExecutor);
   ```
-- You can now use <type://StreamMessage#of(InputStream)> to convert an `InputStream`
-  to <type://StreamMessage>. #3937 #4703
+- You can now use [StreamMessage#of(InputStream)](type) to convert an `InputStream`
+  to [StreamMessage](type). #3937 #4703
   ```java
   InputStream in = ...
   // The input stream is divided into chunks of 8192 bytes by default.
   ByteStreamMessage stream = StreamMessage.of(in);
   ```
-- You can now use <type://StreamMessage#streaming()> to create <type://StreamWriter> for writing
+- You can now use [StreamMessage#streaming()](type) to create [StreamWriter](type) for writing
   streaming messages. #4253 #4696
   ```java
   StreamWriter<String> writer = StreamMessage.streaming();
@@ -119,7 +119,7 @@ final RetryRule rule =
   // Subscribe to the writer.
   writer.subscribe(...);
   ```
-- You can now generate a <type://RequestId> using the information of <type://RoutingContext>. #4362 #4691
+- You can now generate a [RequestId](type) using the information of [RoutingContext](type). #4362 #4691
   - Additionally, the request ID generator can be configured per-service or per-virtual host. #4730 #4752
   ```java
   ServerBuilder sb = ...
@@ -130,7 +130,7 @@ final RetryRule rule =
   });
   ```
 - You can now collect metrics of open and closed client connections
-  using <type://ConnectionPoolListener#metricCollecting(MeterRegistry)>. #4685 #4686
+  using [ConnectionPoolListener#metricCollecting(MeterRegistry)](type). #4685 #4686
   ```java
   MeterRegistry registry = ...
   ConnectionPoolListener listener = ConnectionPoolListener.metricCollecting(registry);
@@ -138,7 +138,7 @@ final RetryRule rule =
                                        .connectionPoolListener(listener)
                                        .build();
   ```
-- <type://ClientRequestContext#authority()> can now be used to get the authority that will be sent to
+- [ClientRequestContext#authority()](type) can now be used to get the authority that will be sent to
   the server. #4697
   ```java
   ClientRequestContext ctx = ...
@@ -161,7 +161,7 @@ final RetryRule rule =
           include: health, loggers, prometheus
   ```
 - You can now execute gRPC `ServerInterceptor` asynchronously in Kotlin
-  using <type://CoroutineServerInterceptor>. #4669 #4724
+  using [CoroutineServerInterceptor](type). #4669 #4724
   ```kotlin
   class AuthInterceptor : CoroutineServerInterceptor {
     private val authorizer = ...
@@ -183,10 +183,10 @@ final RetryRule rule =
 
 ## 📈 Improvements
 
-- The debug page of <type://DocService> is now a pop-up for easier access. #4599
+- The debug page of [DocService](type) is now a pop-up for easier access. #4599
 - You can now use `Connection: close` header to close a connection after sending or receiving a response.
   #4131 #4454 #4471 #4531
-- Armeria now exports the gauge metrics of <type://CommonPools#workerGroup()>. #4675 #4750
+- Armeria now exports the gauge metrics of [CommonPools#workerGroup()](type). #4675 #4750
   - The metric names:
     - `armeria.netty.common.event.loop.workers`
     - `armeria.netty.common.event.loop.pending.tasks`
@@ -196,43 +196,43 @@ final RetryRule rule =
 ## 🛠️ Bug fixes
 
 - Armeria client now handles the fragment part of URI consistently. #4789
-- The <type://RetryConfig> from <type://RetryConfigMapping> is retrieved only once for a retry session
+- The [RetryConfig](type) from [RetryConfigMapping](type) is retrieved only once for a retry session
   and reused. #4753 #4778
 - Fixed a memory leak of the response body for HEAD requests. #4771
 - A `#` character in a request path is now always percent-encoded on the server side. #4751 #4765
 - `Self-suppression` exception is not raised anymore in HTTP/1.1 encoder. #4749 #4758
-- `ConcurrentModificationException` is not raised anymore when using <type://AsyncServerInterceptor>. #4729
-- <type://RequestHeaders#path()> now returns percent-encoded value like
-  <type://RequestContext#path()> does when used in an Armeria server. #4694 #4721
-- <type://ByteStreamMessage#range(long,long)> of a path stream message now handles
+- `ConcurrentModificationException` is not raised anymore when using [AsyncServerInterceptor](type). #4729
+- [RequestHeaders#path()](type) now returns percent-encoded value like
+  [RequestContext#path()](type) does when used in an Armeria server. #4694 #4721
+- [ByteStreamMessage#range(long,long)](type) of a path stream message now handles
   the overflow of the range correctly. #4705
 - The authority header is now correctly set for retried requests. #4697
-- You no longer see <type://DnsTimeoutException> when an IPv6 network interface is enabled. #4695
-- No more deadlocks occur in Thrift 0.14 or older when loading <type://DocService>. #4688
-- <type://HttpStatusException> is not raised anymore when there is no matching route for a request. #4548 #4552
+- You no longer see [DnsTimeoutException](type) when an IPv6 network interface is enabled. #4695
+- No more deadlocks occur in Thrift 0.14 or older when loading [DocService](type). #4688
+- [HttpStatusException](type) is not raised anymore when there is no matching route for a request. #4548 #4552
   - Normal 404 Not Found response is sent instead.
 - A gRPC call is now correctly terminated with `Status.INTERLAL` when an invalid response is received. #4808
-- A server-side <type://RequestLog> is completed correctly when an empty response is sent. #4807
+- A server-side [RequestLog](type) is completed correctly when an empty response is sent. #4807
 
 ## 🏚️ Deprecations
 
-- <type://ClientFactory#setMeterRegistry(MeterRegistry)> is now deprecated in favor of
-  <type://FlagsProvider#meterRegistry()>. #4785
+- [ClientFactory#setMeterRegistry(MeterRegistry)](type) is now deprecated in favor of
+  [FlagsProvider#meterRegistry()](type). #4785
 
 ## ☢️ Breaking changes
 
 - Spring Boot 1 integration is no longer supported. #4651 #4787
-- The type of `blockingTaskExecutor` property such as <type://ServiceConfig#blockingTaskExecutor()> is
-  changed from `ScheduledExecutorService` to <type://BlockingTaskExecutor>. #4760
-  - Simply recompiling your code should be enough in most cases because <type://BlockingTaskExecutor>
+- The type of `blockingTaskExecutor` property such as [ServiceConfig#blockingTaskExecutor()](type) is
+  changed from `ScheduledExecutorService` to [BlockingTaskExecutor](type). #4760
+  - Simply recompiling your code should be enough in most cases because [BlockingTaskExecutor](type)
     is a `ScheduledExecutorService`.
-- The return types of `makeContextAware` methods on <type://RequestContext> are changed to the
+- The return types of `makeContextAware` methods on [RequestContext](type) are changed to the
   context-aware types. #4760
-  - `makeContextAware(Executor)` returns <type://ContextAwareExecutor> instead of `Executor`.
-  - `makeContextAware(ScheduledExecutorService)` returns <type://ContextAwareScheduledExecutorService>
+  - `makeContextAware(Executor)` returns [ContextAwareExecutor](type) instead of `Executor`.
+  - `makeContextAware(ScheduledExecutorService)` returns [ContextAwareScheduledExecutorService](type)
     instead of `ScheduledExecutorService`.
 - The signatures of `UserClient.execute()` have been changed. #4789
-  - It now contains the newly added <type://RequestTarget> as a parameter instead of the `path`, `query`,
+  - It now contains the newly added [RequestTarget](type) as a parameter instead of the `path`, `query`,
     and `fragment`.
 - The names of path cache meters have been changed. #4789
   - The old meter name: `armeria.server.parsed.path.cache`

@@ -6,7 +6,7 @@ date: 2020-10-22
 
 ## 🌟 New features
 
-- You can now bind a <type://GrpcService> to a custom route path. #3072 #3083
+- You can now bind a [GrpcService](type) to a custom route path. #3072 #3083
   This is useful if you want to serve an unframed gRPC service with RESTful routes.
   ```java
   ServerBuilder sb = ...
@@ -19,8 +19,8 @@ date: 2020-10-22
                                     UserServiceGrpc.getFriends())
                         .build());
   ```
-- You can now use <type://DecodingService> for decoding a compressed request. #1521 #3087
-- You can now use <type://HttpResponse#ofRedirect(String)> for easily sending a redirect response. #914 #3059
+- You can now use [DecodingService](type) for decoding a compressed request. #1521 #3087
+- You can now use [HttpResponse#ofRedirect(String)](type) for easily sending a redirect response. #914 #3059
   ```java
   // The status is HttpStatus.TEMPORARY_REDIRECT.
   HttpResponse.ofRedirect("/new-location");
@@ -29,10 +29,10 @@ date: 2020-10-22
   HttpResponse.ofRedirect(HttpStatus.MOVED_PERMANENTLY, "/new-location");
   ```
 - You can now choose a path when a Thrift/gRPC service has more than one path
-  in the <type://DocService>. #2167 #3024
-- You can now cancel a service's request or client's response with <type://CancellationException> or 
-  any `Throwable` using <type://RequestContext#cancel()> or
-  <type://RequestContext#cancel(Throwable)?full>. #3046 #3080
+  in the [DocService](type). #2167 #3024
+- You can now cancel a service's request or client's response with [CancellationException](type) or 
+  any `Throwable` using [RequestContext#cancel()](type) or
+  [RequestContext#cancel(Throwable)?full](type). #3046 #3080
   ```java
   ClientRequestContext cctx = ...;
   // Cancel a client's response with ResponseCancellationException
@@ -57,26 +57,26 @@ date: 2020-10-22
   the endpoint of the request doesn't exist. #3120
 - You no longer see duplicated MDC keys anymore when `armeria-logback` is applied. #3044 #3105
 - You can now get the normal response even though the request is not fully sent. #3115
-- You can now use milliseconds as an interval unit in <type://EurekaEndpointGroup>. #3108
+- You can now use milliseconds as an interval unit in [EurekaEndpointGroup](type). #3108
 - You no longer see `UNKNOWN` error code while sending stream messages with Reactive gRPC stub. #3090 #3099
 - `TTEXT_NAMED_ENUM` now correctly serializes enums when used inside maps. #3091
-- <type://BraveClient> and <type://BraveService> do not override 
+- [BraveClient](type) and [BraveService](type) do not override 
   the default `(Client|Server)(Request|Response)Parser` anymore. #3023 #3111
 - Armeria client now sets the default path(`/`) properly if a path is empty. #3098
 - You no longer see an outdated JS bundle in the browser 
-  when the <type://DocService> page is rebuilt. #3094
+  when the [DocService](type) page is rebuilt. #3094
 
 ## 🏚️ Deprecations
 
 - The following methods have been deprecated in favor of their `millis`-accepting versions: #3108
-  - <type://EurekaEndpointGroupBuilder.registryFetchIntervalSeconds()>
-  - <type://EurekaUpdatingServerListener.leaseDurationSeconds()>
-  - <type://EurekaUpdatingServerListener.renewalIntervalSeconds()>
+  - [EurekaEndpointGroupBuilder.registryFetchIntervalSeconds()](type)
+  - [EurekaUpdatingServerListener.leaseDurationSeconds()](type)
+  - [EurekaUpdatingServerListener.renewalIntervalSeconds()](type)
 - The following methods have been deprecated in favor of their `*Cancelling` and `*Cancelled` versions: #3080
-  - <type://ClientRequestContext.whenResponseTimingOut()>
-  - <type://ClientRequestContext.whenResponseTimedOut()>
-  - <type://ServiceRequestContext.whenRequestTimingOut()>
-  - <type://ServiceRequestContext.whenRequestTimedOut()>
+  - [ClientRequestContext.whenResponseTimingOut()](type)
+  - [ClientRequestContext.whenResponseTimedOut()](type)
+  - [ServiceRequestContext.whenRequestTimingOut()](type)
+  - [ServiceRequestContext.whenRequestTimedOut()](type)
 
 ## ⛓ Dependencies
 

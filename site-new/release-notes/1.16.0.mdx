@@ -6,7 +6,7 @@ date: 2022-04-19
 
 ## 🌟 New features
 
-- Armeria <type://Server> now exposes the metrics about TLS handshake results. #4191
+- Armeria [Server](type) now exposes the metrics about TLS handshake results. #4191
   ```
   armeria_server_tls_handshakes_total{
     cipher_suite=<the negotiated TLS cipher suite>,
@@ -16,7 +16,7 @@ date: 2022-04-19
     tls_protocol=<TLS protocol name, e.g. TLSv1.3>
   }
   ```
-- You can use the <type://@Delimiter> annotation in an annotated service to specify the delimiter of
+- You can use the [@Delimiter](type) annotation in an annotated service to specify the delimiter of
   a query parameter or header. #4060
   ```java
   public class MyAnnotatedService {
@@ -32,8 +32,8 @@ date: 2022-04-19
     }
   }
   ```
-  - You can also specify a delimiter programmatically with <type://AnnotatedServiceBindingBuilder#queryDelimiter(String)>
-- You can now use the no-op `subscribe()` to drain elements from a <type://StreamMessage>  #4145 #4185
+  - You can also specify a delimiter programmatically with [AnnotatedServiceBindingBuilder#queryDelimiter(String)](type)
+- You can now use the no-op `subscribe()` to drain elements from a [StreamMessage](type)  #4145 #4185
   ```java
   // The following statement prints 1, 2 and 3.
   StreamMessage
@@ -60,7 +60,7 @@ date: 2022-04-19
       repeated string my_number_array = 1; // 👈👈👈
     }
     ```
-- You can now use the <type://@Decorator> annotation to apply decorators to your gRPC stubs. #3967 #4041
+- You can now use the [@Decorator](type) annotation to apply decorators to your gRPC stubs. #3967 #4041
   ```java
   @LoggingDecorator // 👈👈👈
   public class GreeterImpl extends GreeterGrpc.GreeterImplBase {
@@ -80,9 +80,9 @@ date: 2022-04-19
     }
   }
   ```
-- <type://AbstractUnaryGrpcService> and unframed <type://GrpcService> now include the stack trace for failed
+- [AbstractUnaryGrpcService](type) and unframed [GrpcService](type) now include the stack trace for failed
   requests when `verboseResponses` option is enabled for easier debuggability. #4114 #4171
-- You can now specify query parameters additively by calling <type://WebClientRequestPreparation#queryParam(String,Object)>
+- You can now specify query parameters additively by calling [WebClientRequestPreparation#queryParam(String,Object)](type)
   #4173
   ```java
   // Send GET /api/v1/greet?foo=1&bar=2
@@ -93,7 +93,7 @@ date: 2022-04-19
     .queryParams(Map.of("bar", "2")) // 👈👈👈
     .execute()
   ```
-- You can now override the global <type://Flags> by implementing your own <type://FlagsProvider> and 
+- You can now override the global [Flags](type) by implementing your own [FlagsProvider](type) and 
   loading it via Java SPI. #4093 #4151
   ```java
   package com.example.providers;
@@ -116,8 +116,8 @@ date: 2022-04-19
     }
   }
   ``` 
-- When using `armeria-graphql`, you can now retrieve the current <type://ServiceRequestContext> with
-  <type://GraphqlServiceContexts#get(DataFetchingEnvironment)> #4201
+- When using `armeria-graphql`, you can now retrieve the current [ServiceRequestContext](type) with
+  [GraphqlServiceContexts#get(DataFetchingEnvironment)](type) #4201
   ```java
   new DataFetcher<>() {
     @Override
@@ -127,7 +127,7 @@ date: 2022-04-19
     }
   }
   ```
-- You can now disable the warning message about masked routes when building a <type://Server> by specifying
+- You can now disable the warning message about masked routes when building a [Server](type) by specifying
   the `-Dcom.linecorp.armeria.reportMaskedRoutes=false` JVM option. #4086
 
 ## 📈 Improvements
@@ -137,7 +137,7 @@ date: 2022-04-19
 
 ## 🛠️ Bug fixes
 
-- JSON-gRPC transcoding now works even if you bind a <type://GrpcService> with path prefix. #4086 #4215
+- JSON-gRPC transcoding now works even if you bind a [GrpcService](type) with path prefix. #4086 #4215
   ```java
   Server
     .builder()
@@ -153,19 +153,19 @@ date: 2022-04-19
     .build()
   ```
 - You now get the `HeaderListSizeException` as expected when the length of request headers is too long. #4180
-- <type://EurekaEndpointGroup> now continues refreshing itself even if it failed to refresh once. #4206
-- <type://HealthCheckedEndpointGroup> now leaves a detailed error message if all endpoints are unhealthy
+- [EurekaEndpointGroup](type) now continues refreshing itself even if it failed to refresh once. #4206
+- [HealthCheckedEndpointGroup](type) now leaves a detailed error message if all endpoints are unhealthy
   on the first check. #4200
-- Fixed a rare infinite loop in <type://EndpointSelectionStrategy#rampingUp()> #4219
+- Fixed a rare infinite loop in [EndpointSelectionStrategy#rampingUp()](type) #4219
 - The search domain DNS resolver no longer incorrectly resolves a search domain that starts with a dot.
   #4195 #4196
 - Fixed a bug where Armeria server doesn't log the remote address when TLS handshake fails. #4181
 - Reduced the cardinality of TLS certificate expiry metrics by using a hostname pattern instead of a hostname
   as a label. #4191
-- <type://TomcatService> now records the request start time of `CoyoteRequest` correctly. #4182 #4183
+- [TomcatService](type) now records the request start time of `CoyoteRequest` correctly. #4182 #4183
 - You don't get an exception anymore when parsing a multipart request with an empty body. #4175 #4179
 - You don't get the noisy warning message about double-completion of future, which occurs when a user
-  misconfigured a <type://ClientFactory> #4191
+  misconfigured a [ClientFactory](type) #4191
 
 ## 📃 Documentation
 
@@ -173,8 +173,8 @@ date: 2022-04-19
 
 ## 🏚️ Deprecations
 
-- <type://Flags#verboseExceptionSamplerSpec()> has been deprecated in favor of
-  <type://Flags#verboseExceptionSampler()> #4093 #4151
+- [Flags#verboseExceptionSamplerSpec()](type) has been deprecated in favor of
+  [Flags#verboseExceptionSampler()](type) #4093 #4151
 
 ## ☢️ Breaking changes
 
@@ -182,8 +182,8 @@ date: 2022-04-19
   `armeria.server.certificate.*` to `armeria.server.tls.certificate.*`
   for consistency. #4191
   - Also, the `hostname` label has been replaced with `hostname_pattern` to reduce the cardinality.
-- The return type of <type://Flags#requestContextStorageProvider()> was changed from `String` to
-  <type://RequestContextStorageProvider>, so that a user knows which provider will be used exactly. #4093 #4151
+- The return type of [Flags#requestContextStorageProvider()](type) was changed from `String` to
+  [RequestContextStorageProvider](type), so that a user knows which provider will be used exactly. #4093 #4151
 
 ## ⛓ Dependencies
 

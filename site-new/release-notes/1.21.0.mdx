@@ -6,7 +6,7 @@ date: 2022-12-22
 
 ## 🌟 New features
 
-- You can now use <type://@RequestTimeout> to set a request timeout to annotated services and
+- You can now use [@RequestTimeout](type) to set a request timeout to annotated services and
   gRPC services. #4463 #4499
   ```java
   import com.linecorp.armeria.server.annotation.decorator.RequestTimeout;
@@ -26,7 +26,7 @@ date: 2022-12-22
     }
   }
   ```
-- You can now set the default `MeterRegistry` by implementing a custom <type://FlagsProvider>. #4541
+- You can now set the default `MeterRegistry` by implementing a custom [FlagsProvider](type). #4541
   ```java
   public class CustomFlagsProvider implements FlagsProvider {
     @Override
@@ -35,8 +35,8 @@ date: 2022-12-22
     }
   }
   ```
-- You can now set the default <type://HttpHeaders> to <type://Server>, <type://VirtualHost> and
-  <type://Service>. #4520
+- You can now set the default [HttpHeaders](type) to [Server](type), [VirtualHost](type) and
+  [Service](type). #4520
   ```java
   static AsciiString CUSTOM_HEADER =
     HttpHeaderNames.of("x-custom-header");
@@ -50,8 +50,8 @@ date: 2022-12-22
     .path("/foo")
     .setHeader(CUSTOM_HEADER, "service-default-header")
   ```
-- You can now set `:authority` or `Host` header whose value is different from <type://Endpoint#host()> using
-  <type://ClientBuilder#setHeader(CharSequence,Object)>. #4440 #4520
+- You can now set `:authority` or `Host` header whose value is different from [Endpoint#host()](type) using
+  [ClientBuilder#setHeader(CharSequence,Object)](type). #4440 #4520
   - This will be useful when you want to send a request through a proxy server.
   ```java 
   WebClient
@@ -61,41 +61,41 @@ date: 2022-12-22
     .setHeader(HeaderNames.AUTHORITY, "my-order.service.com")
     ...
   ```
-- <type://CircuitBreakerClient> can now be used with arbitrary <type://CircuitBreaker> implementations. #4426
-- Added <type://Bytes> that represents binary data. #4505
-- You can now see the description of services in the overview section of <type://DocService>. #4480 #4537
+- [CircuitBreakerClient](type) can now be used with arbitrary [CircuitBreaker](type) implementations. #4426
+- Added [Bytes](type) that represents binary data. #4505
+- You can now see the description of services in the overview section of [DocService](type). #4480 #4537
 - You can now override an authority of a gRPC client using `CallOptions`. #4445 #4520
 
 ## 📈 Improvements
 
-- <type://DecodingClient> and <type://DecodingService> can now limit the maximum length of decompressed
+- [DecodingClient](type) and [DecodingService](type) can now limit the maximum length of decompressed
   data. #4469 #4564
-- `synchronized` blocks have been replaced with <type://ReentrantLock> for better virtual thread 
+- `synchronized` blocks have been replaced with [ReentrantLock](type) for better virtual thread 
   compatibility. #4551 #4549
-- <type://ServiceSpecification> for <type://DocService> is lazily loaded so as to not block a <type://Server>
+- [ServiceSpecification](type) for [DocService](type) is lazily loaded so as to not block a [Server](type)
   from starting. #4491
 
 ## 🛠️ Bug fixes
 
-- <type://HttpHeaders> set by <type://ClientBuilder#setHeader(CharSequence,Object)> is now stored in
-  <type://ClientRequestContext#defaultRequestHeaders()> which has the lowest priority and doesn't override
-  values in <type://RequestHeaders>.
-  - Previously, the <type://HttpHeaders> set via <type://ClientBuilder> were stored in
-    <type://ClientRequestContext#additionalRequestHeaders()> which overrode the values in
-    <type://RequestHeaders> #4440 #4520
-- Fixed a regression where `void` methods return `200 OK` instead of `204 NoContent` if a <type://@Produces>
+- [HttpHeaders](type) set by [ClientBuilder#setHeader(CharSequence,Object)](type) is now stored in
+  [ClientRequestContext#defaultRequestHeaders()](type) which has the lowest priority and doesn't override
+  values in [RequestHeaders](type).
+  - Previously, the [HttpHeaders](type) set via [ClientBuilder](type) were stored in
+    [ClientRequestContext#additionalRequestHeaders()](type) which overrode the values in
+    [RequestHeaders](type) #4440 #4520
+- Fixed a regression where `void` methods return `200 OK` instead of `204 NoContent` if a [@Produces](type)
   annotation is added. #4575
-- Deleted uncompressed <type://DocService> assets that were added unintentionally. #4500 #4568
-- An exception raised in <type://Authorizer> is now properly peeled using
-  <type://Exceptions#peel(Throwable)>. #4567
-- Exceptions raised in decorators can now be used to determine whether to retry by <type://RetryingClient>. #4558 #4559
-- <type://EndpointGroup> is now correctly copied to a newly derived client. #4556
-- <type://RequestContextExportingAppender> can now be used with logback `SocketAppender`. #4546 #4547
+- Deleted uncompressed [DocService](type) assets that were added unintentionally. #4500 #4568
+- An exception raised in [Authorizer](type) is now properly peeled using
+  [Exceptions#peel(Throwable)](type). #4567
+- Exceptions raised in decorators can now be used to determine whether to retry by [RetryingClient](type). #4558 #4559
+- [EndpointGroup](type) is now correctly copied to a newly derived client. #4556
+- [RequestContextExportingAppender](type) can now be used with logback `SocketAppender`. #4546 #4547
 - Reversed HTTP/1.1 responses are now correctly ordered when HTTP/1.1 pipelining is enabled. #4536 #4470
 - `414 Request-URI Too Long` is now correctly returned for a long URI in HTTP/1.1. #4478 #4532
 - Fixed to propagate the cause of a decoder failure of an HTTP/1.1 request to
-  <type://ServerErrorHandler#onProtocolViolation(ServiceConfig,RequestHeaders,HttpStatus,String,Throwable)> #4478 #4532
-- You can use <type://DocService> even when <type://Server#reconfigure(ServerConfigurator)> is called. #4491 #4513
+  [ServerErrorHandler#onProtocolViolation(ServiceConfig,RequestHeaders,HttpStatus,String,Throwable)](type) #4478 #4532
+- You can use [DocService](type) even when [Server#reconfigure(ServerConfigurator)](type) is called. #4491 #4513
 - Context leak stack trace is more readable now. #4517
 
 ## 🏚️ Deprecations
@@ -104,7 +104,7 @@ date: 2022-12-22
 
 ## ☢️ Breaking changes
 
-- `FieldInfo.childFieldInfo` has been removed to eliminate duplicate information on <type://StructInfo>. #4566
+- `FieldInfo.childFieldInfo` has been removed to eliminate duplicate information on [StructInfo](type). #4566
 
 ## ⛓ Dependencies
 

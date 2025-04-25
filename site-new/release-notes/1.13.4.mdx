@@ -6,11 +6,11 @@ date: 2021-12-03
 
 ## 🛠️ Bug fixes
 
-- <type://Server> now aborts the startup process if <type://ServerListener#serverStarting(Server)>
+- [Server](type) now aborts the startup process if [ServerListener#serverStarting(Server)](type)
   raises an exception. #3935 #3947
-- You no longer see an <type://EmptyEndpointGroupException> when the entire <typeplural://Endpoint>
-  are replaced in a <type://HealthCheckedEndpointGroup>. #3927
-- You no longer see an `IllegalStateException` in your gRPC calls when an <type://EndpointGroup> is
+- You no longer see an [EmptyEndpointGroupException](type) when the entire [Endpoint](typeplural)
+  are replaced in a [HealthCheckedEndpointGroup](type). #3927
+- You no longer see an `IllegalStateException` in your gRPC calls when an [EndpointGroup](type) is
   empty. #3951
 
 ## 🔒 Security fixes

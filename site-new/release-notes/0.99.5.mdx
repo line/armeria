@@ -6,7 +6,7 @@ date: 2020-05-14
 
 ## 🌟 New features
 
-- Added `Server.blockUntilShutdown()` which lets you wait for a <type://Server> to close. #2659
+- Added `Server.blockUntilShutdown()` which lets you wait for a [Server](type) to close. #2659
   ```java
   Server server = Server.builder()...build();
   server.start().join();
@@ -26,7 +26,7 @@ date: 2020-05-14
            .auth(OAuth2Token.of("token-0123456789abcdef"))
            .build();
   ```
-- New <type://RetryRule> and <type://RetryRuleWithContent> API let you define a complex retry policy
+- New [RetryRule](type) and [RetryRuleWithContent](type) API let you define a complex retry policy
   conveniently. #1634 #2661 #2709
   ```java
   Backoff myBackoff = Backoff.exponential(1000, 60000)
@@ -45,12 +45,12 @@ date: 2020-05-14
 
   RetryingClient.newDecorator(retryRule);
   ```
-- <type://CircuitBreakerListener> now has a new event listener method `onInitialized()`, which is invoked
+- [CircuitBreakerListener](type) now has a new event listener method `onInitialized()`, which is invoked
   when a circuit is initialized. By default, it simply delegates to `onStateChanged()`. #2675
-- You can now register your server to or retrieve the <typeplural://Endpoint> from
+- You can now register your server to or retrieve the [Endpoint](typeplural) from
   a [Eureka](https://spring.io/guides/gs/service-registration-and-discovery/) registry server,
   which gives nice integration with Spring Cloud. #707 #2701
-  - Use <type://EurekaUpdatingListener> for <typeplural://Server>:
+  - Use [EurekaUpdatingListener](type) for [Server](typeplural):
     ```java
     Server server = Server.builder()...build();
     server.addListener(EurekaUpdatingListener.of("https://my-eureka-registry.com/"));
@@ -59,7 +59,7 @@ date: 2020-05-14
     // Automatically deregisters when the Server stops.
     server.stop().join();
     ```
-  - Use <type://EurekaEndpointGroup> for clients:
+  - Use [EurekaEndpointGroup](type) for clients:
     ```java
     // Periodically retrieves the endpoint list from the registry.
     EndpointGroup group = EurekaEndpointGroup.of("https://my-eureka-registry/");
@@ -81,7 +81,7 @@ date: 2020-05-14
   mapper.registerModule(new ThriftJacksonModule(/* useNamedEnum */ true));
   String json = mapper.writeValueAsString(myTBaseStruct);
   ```
-- Added two Spring Boot annotations that inject the current local Armeria port(s) - <type://@LocalArmeriaPort> and <type://@LocalArmeriaPorts>,
+- Added two Spring Boot annotations that inject the current local Armeria port(s) - [@LocalArmeriaPort](type) and [@LocalArmeriaPorts](type),
   which is useful when you bind at an ephemeral port or more than one port: #2561 #2684
   ```java
   @Configuration
@@ -98,14 +98,14 @@ date: 2020-05-14
 
 ## 📈 Improvements
 
-- <type://ZooKeeperUpdatingListener> now updates the registry with both host name and IP address by default,
+- [ZooKeeperUpdatingListener](type) now updates the registry with both host name and IP address by default,
   so that the client does not have to do a DNS lookup. #2674 #2679
-  - The IP address is retrieved from `defaultNonLoopbackIpV4Address()` of <type://SystemInfo>.
+  - The IP address is retrieved from `defaultNonLoopbackIpV4Address()` of [SystemInfo](type).
 
 ## 🛠️ Bug fixes
 
 - Fixed a bug where more than one thread can consume from a streaming message. #2687 #2683
-- You will not get a `NullPointerException` anymore when starting a <type://JettyService> with DEBUG level
+- You will not get a `NullPointerException` anymore when starting a [JettyService](type) with DEBUG level
   logging enabled. #2688 #2691
 - PING interval now works as expected even if idle timeout is disabled. #2702
 - A connection is now closed immediately when PING fails, rather than waiting for idle timeout. #2699
@@ -116,10 +116,10 @@ date: 2020-05-14
 
 ## ☢️ Breaking changes
 
-- <type://BasicToken>, <type://OAuth1aToken> and <type://OAuth2Token> have been moved to
+- [BasicToken](type), [OAuth1aToken](type) and [OAuth2Token](type) have been moved to
   `com.linecorp.armeria.common.auth`. #2680
-- Builder and factory methods of <type://RetryingClient> need an explicit type parameter for
-  <type://RetryStrategy> when creating with a lambda expression. #2661
+- Builder and factory methods of [RetryingClient](type) need an explicit type parameter for
+  [RetryStrategy](type) when creating with a lambda expression. #2661
 
 ## ⛓ Dependencies
 

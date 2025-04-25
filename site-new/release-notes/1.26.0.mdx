@@ -2,7 +2,7 @@
 date: 2023-10-23
 ---
 
-# v1.526.0
+# v1.26.0
 
 ## 🌟 New features
 
@@ -23,8 +23,8 @@ date: 2023-10-23
   armeria:
     context-path: /api/v1
   ```
-- **Easier Request Scoping for Kotlin**: You can now easily propagate an Armeria <type://RequestContext> in Kotlin using
-  <type://ContextAwareExecutor#asCoroutineDispatcher()>. #5171
+- **Easier Request Scoping for Kotlin**: You can now easily propagate an Armeria [RequestContext](type) in Kotlin using
+  [ContextAwareExecutor#asCoroutineDispatcher()](type). #5171
   ```kotlin
   withContext(ctx.eventLoop().asCoroutineDispatcher()) {
     assert(RequestContext.current() == ctx)
@@ -32,7 +32,7 @@ date: 2023-10-23
   }
   ```
 - **gRPC Exception Handler Annotation**: You can now easily handle an exception that is raised from a gRPC service using
-  <type://@GrpcExceptionHandler> annotation. #5046
+  [@GrpcExceptionHandler](type) annotation. #5046
   ```java
   @GrpcExceptionHandler(MyGrpcExceptionHandlerFunction.class)
   @Override
@@ -52,8 +52,8 @@ date: 2023-10-23
     }
   }
   ```
-- **StreamMessage finalizer**: You can now produce the last value for a <type://StreamMessage> when it completes
-  exceptionally or successfully using <type://StreamMessage#endWith(Function)>. #4816 #5198
+- **StreamMessage finalizer**: You can now produce the last value for a [StreamMessage](type) when it completes
+  exceptionally or successfully using [StreamMessage#endWith(Function)](type). #4816 #5198
   ```java
   StreamMessage<Integer> message =
     original.endWith(th -> {
@@ -73,7 +73,7 @@ date: 2023-10-23
 - **Client Certificate Metrics**: You can now monitor client certificates with the following metrics. #5155
   - `armeria.client.tls.certificates.validity`: `1` if valid, `0` otherwise.
   - `armeria.client.tls.certificates.validity.days`: The number of days until the certificate expires.
-- You can now add a hook that is invoked when a <type://RequestContext> is pushed and popped. #4991 #5107
+- You can now add a hook that is invoked when a [RequestContext](type) is pushed and popped. #4991 #5107
   ```java
   Supplier<AutoCloseable> contextHook = () -> {
     System.out.println("Context is pushed.");
@@ -107,7 +107,7 @@ date: 2023-10-23
   ```
 - **RST Flood Attack Prevention**: You can now protect your server against
   [DDoS caused by RST flood attack](https://www.securityweek.com/rapid-reset-zero-day-exploited-to-launch-largest-ddos-attacks-in-history/)
-  using <type://ServerBuilder#http2MaxResetFramesPerWindow(int,int)>. #5232
+  using [ServerBuilder#http2MaxResetFramesPerWindow(int,int)](type). #5232
   - The default maximum number of allowed RST frames for an HTTP/2 connection is 400 per minute.
   ```java
   Server
@@ -121,41 +121,41 @@ date: 2023-10-23
 - Acquiring an `EventLoop` for sending a request is now improved when the number of `EventLoop`s is small.
   #4439 #4682
 - [Snappy](https://github.com/google/snappy) is now supported for content compression. #5125 #5174
-- The `CompletableFuture`s of a <type://RequestLog> are now completed with the
-  <type://RequestContext#eventLoop()> thus their callbacks are also executed by the `EventLoop`. #5189
+- The `CompletableFuture`s of a [RequestLog](type) are now completed with the
+  [RequestContext#eventLoop()](type) thus their callbacks are also executed by the `EventLoop`. #5189
 - Adding services and decorators are now unified. #5038 #5040
 
 ## 🛠️ Bug fixes
 
-- <type://RequestLog#responseCause()> is correctly propagated to <type://CircuitBreakerRule> when using
-  a <type://CircuitBreakerClient> with a <type://RetryingClient>. #5242
+- [RequestLog#responseCause()](type) is correctly propagated to [CircuitBreakerRule](type) when using
+  a [CircuitBreakerClient](type) with a [RetryingClient](type). #5242
 - A WebSocket session is correctly established even if the `Connection` header has `upgrade` value that is
   concateneted with other values using a comma. #5165 #5230
 - No more leaks when the size of a request exceeds the max content length. #3803 #5227
-- An `IllegalStateException` is raised if <type://GrpcSerializationFormats#JSON> isn't set when
-  <type://GrpcServiceBuilder#enableHttpJsonTranscoding(boolean)> is enabled. #5176 #5224
-- <type://CookieClient> is now correctly working with redirects. #5221
-- You no longer see duplicate <type://ClientOptions> when creating a derived client via
-  <type://Clients#newDerivedClient(T,Function)>. #5194
-- You no longer see `UnsupportedOperationException` when creating an <type://HttpResponse> with
+- An `IllegalStateException` is raised if [GrpcSerializationFormats#JSON](type) isn't set when
+  [GrpcServiceBuilder#enableHttpJsonTranscoding(boolean)](type) is enabled. #5176 #5224
+- [CookieClient](type) is now correctly working with redirects. #5221
+- You no longer see duplicate [ClientOptions](type) when creating a derived client via
+  [Clients#newDerivedClient(T,Function)](type). #5194
+- You no longer see `UnsupportedOperationException` when creating an [HttpResponse](type) with
   a `CompletationStage`. #5190
 - A new HTTP/2 connection is created and correctly reused from the pending requests when the number of requests
   exceeds max concurrent streams. #5173
-- You no longer see a false negative <type://EndpointSelectionTimeoutException> when
-  <type://EndpointSelectionStrategy#weightedRoundRobin()> is used with a <type://DynamicEndpointGroup>. #5163
+- You no longer see a false negative [EndpointSelectionTimeoutException](type) when
+  [EndpointSelectionStrategy#weightedRoundRobin()](type) is used with a [DynamicEndpointGroup](type). #5163
 - `NullPointerException` isn't raised anymore when a client establishes an HTTP session. #5162
 - Pending exceptions that are raised while sending requests or receiving responses are now correctly
   propagated to users. #5154
 - Armeria gRPC service no longer schedules a timeout if `grpc-timeout` header is omitted when
-  <type://GrpcServiceBuilder#useClientTimeoutHeader(boolean)> is enabled. #5144
+  [GrpcServiceBuilder#useClientTimeoutHeader(boolean)](type) is enabled. #5144
 - The `Content-Length` header isn't set anymore for the streaming response of a HEAD request. #4509 #4644
 
 ## 🏚️ Deprecations
 
-- <type://GrpcStatusFunction> is deprecated. Use <type://GrpcExceptionHandlerFunction> instead. #5046 #5267
-  - `exceptionMapping` methods on <type://GrpcServiceBuilder> are deprecated.
-    Use <type://GrpcExceptionHandlerFunctionBuilder> instead.
-  - <type://GoogleGrpcStatusFunction> is also deprecated. Use <type://GoogleGrpcExceptionHandlerFunction>
+- [GrpcStatusFunction](type) is deprecated. Use [GrpcExceptionHandlerFunction](type) instead. #5046 #5267
+  - `exceptionMapping` methods on [GrpcServiceBuilder](type) are deprecated.
+    Use [GrpcExceptionHandlerFunctionBuilder](type) instead.
+  - [GoogleGrpcStatusFunction](type) is also deprecated. Use [GoogleGrpcExceptionHandlerFunction](type)
     instead.
 
 ## ☢️ Breaking changes

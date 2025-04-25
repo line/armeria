@@ -7,7 +7,7 @@ date: 2020-06-22
 ## 🌟 New features
 
 - You can now specify the maximum lifespan of server-side connections using
-  <type://ServerBuilder#maxConnectionAge(Duration)>. This is useful when you have to deal with a load balancer
+  [ServerBuilder#maxConnectionAge(Duration)](type). This is useful when you have to deal with a load balancer
   without HTTP/2 support. #2747 #2796
   ```java
   Server server =
@@ -16,9 +16,9 @@ date: 2020-06-22
             ...
             .build();
   ```
-- You can now record the name of the service that handled a request into <type://RequestOnlyLog#serviceName()>.
+- You can now record the name of the service that handled a request into [RequestOnlyLog#serviceName()](type).
   #2768 #2780 #2809 #2820
-  - By using <type://ServiceBindingBuilder#defaultServiceName(String)>:
+  - By using [ServiceBindingBuilder#defaultServiceName(String)](type):
     ```java
     Server server =
         Server.builder()
@@ -27,7 +27,7 @@ date: 2020-06-22
                       .build(new MyService())
               .build();
     ```
-  - By using <type://@ServiceName>:
+  - By using [@ServiceName](type):
     ```java
     @ServiceName("my-service")
     public class MyAnnotatedService {
@@ -50,7 +50,7 @@ date: 2020-06-22
     ```
   - Armeria will use the FQCN of the service class if you did not specify a service name.
 - You can now use `@Nullable` annotation to specify an optional parameter or request object in annotated
-  services. Previously, only the parameters with <type://@Default> annotation or `Optional` type were accepted.
+  services. Previously, only the parameters with [@Default](type) annotation or `Optional` type were accepted.
   #2773
   ```java
   public class MyAnnotatedService {
@@ -68,7 +68,7 @@ date: 2020-06-22
   }
   ```
 - You can now determine whether a request was successful or not from HTTP trailers in
-  <type://CircuitBreakerClient> and <type://RetryingClient> using `onResponseTrailers()` method.
+  [CircuitBreakerClient](type) and [RetryingClient](type) using `onResponseTrailers()` method.
   This can be useful when you work with gRPC, whose status code is encoded in the `grpc-status` trailer. #2816
   ```java
   CircuitBreaker cb = CircuitBreaker.of("my-service");
@@ -85,7 +85,7 @@ date: 2020-06-22
              .decorator(CircuitBreakerClient.newDecorator(cb, cbr))
              .build(MyServiceStub.class);
   ```
-- <type://RequestLog> sanitizers now accept <type://RequestContext> as an additional input, so that
+- [RequestLog](type) sanitizers now accept [RequestContext](type) as an additional input, so that
   the sanitizers can behave differently depending on the current path, etc. #2803
   ```java
   Server server =
@@ -128,7 +128,7 @@ date: 2020-06-22
       curator, "/discovery/serversets",
       ZooKeeperRegistrationSpec.serverSets()));
   ```
-- You can now build <type://OAuth1aToken> more conveniently using the builder API. #2770
+- You can now build [OAuth1aToken](type) more conveniently using the builder API. #2770
   ```java
   OAuth1aToken token =
       OAuth1aToken.builder()
@@ -143,10 +143,10 @@ date: 2020-06-22
 - The Spring Boot integration now supports
   [the new graceful shutdown properties](https://docs.spring.io/spring-boot/docs/2.3.0.RELEASE/reference/html/spring-boot-features.html#boot-features-graceful-shutdown)
   introduced in Spring Boot 2.3. #2784 #2802
-- Added a new API for handling reference counted or pooled objects such as <type://PooledHttpData> in
+- Added a new API for handling reference counted or pooled objects such as [PooledHttpData](type) in
   a relatively safer way. #2448
-  - See <type://PooledHttpData>, <type://PooledWebClient>, <type://PooledHttpRequest> and
-    <type://PooledHttpResponse> for more information.
+  - See [PooledHttpData](type), [PooledWebClient](type), [PooledHttpRequest](type) and
+    [PooledHttpResponse](type) for more information.
 
 ## 📈 Improvements
 
@@ -155,7 +155,7 @@ date: 2020-06-22
 
 ## 🛠️ Bug fixes
 
-- It's now allowed to specify an absolute URL *only when* a <type://WebClient> was created *without* a base
+- It's now allowed to specify an absolute URL *only when* a [WebClient](type) was created *without* a base
   URL. #2757
   ```java
   WebClient clientWithoutBaseUrl = WebClient.of();
@@ -169,18 +169,18 @@ date: 2020-06-22
   ```
 - Boolean parameter conversion became more strict in annotated services. #2767 #2774
   - Only `true`, `false`, `1` and `0` are accepted. Other values will cause a `400 Bad Request` response.
-- <type://DocService> web UI now shows the 'request body' field for `DELETE` and `PATCH` methods in the debug
+- [DocService](type) web UI now shows the 'request body' field for `DELETE` and `PATCH` methods in the debug
   form. #2756 #2819
-- <type://JacksonRequestConverterFunction> now handles the case where the target type has a type parameter,
+- [JacksonRequestConverterFunction](type) now handles the case where the target type has a type parameter,
   e.g. `List<Long>`. #2769 #2779
-- Fixed a bug where the current <type://ServiceRequestContext> is not pushed when invoking
-  <type://ResponseConverterFunction#convertResponse(ServiceRequestContext,ResponseHeaders,Object,HttpHeaders)>.
+- Fixed a bug where the current [ServiceRequestContext](type) is not pushed when invoking
+  [ResponseConverterFunction#convertResponse(ServiceRequestContext,ResponseHeaders,Object,HttpHeaders)](type).
   #2789
-- <type://RequestContextExportingAppender> now handles the `<exports />` tag correctly. #2781
+- [RequestContextExportingAppender](type) now handles the `<exports />` tag correctly. #2781
 - Fixed a bug where some Reactive Streams `Subscriber` implementations violate the specification. #2815
-- You no longer get sporadic <type://WriteTimeoutException> from proxied connections. #2801 #2805
-- You no longer get a <type://CancelledSubscriptionException> unnecessarily when using
-  <type://PublisherBasedStreamMessage>. #2797
+- You no longer get sporadic [WriteTimeoutException](type) from proxied connections. #2801 #2805
+- You no longer get a [CancelledSubscriptionException](type) unnecessarily when using
+  [PublisherBasedStreamMessage](type). #2797
 - You no longer get sporadic `EncoderException`s from HTTP/1 connections. #2765
 - It's now disallowed to specify the following headers in gRPC `Metadata`. #2718
   - `:status`
@@ -190,28 +190,28 @@ date: 2020-06-22
 
 ## 🏚️ Deprecations
 
-- <type://AbstractUnwrappable#delegate()> has been deprecated in favor of <type://Unwrappable#unwrap()>.
+- [AbstractUnwrappable#delegate()](type) has been deprecated in favor of [Unwrappable#unwrap()](type).
 
 ## ☢️ Breaking changes
 
-- You can specify an absolute URL *only when* a <type://WebClient> was created *without* a base URL.
+- You can specify an absolute URL *only when* a [WebClient](type) was created *without* a base URL.
   It was previously allowed to specify an absolute URL even when created with a base URL. #2757
 - The method signature of
-  <type://RequestConverterFunction#convertRequest(ServiceRequestContext,AggregatedHttpRequest,Class,ParameterizedType)>
+  [RequestConverterFunction#convertRequest(ServiceRequestContext,AggregatedHttpRequest,Class,ParameterizedType)](type)
   has been changed to support parameterized types. #2779
-- The default <type://MeterIdPrefixFunction> returned by <type://MeterIdPrefixFunction#ofDefault(String)>
+- The default [MeterIdPrefixFunction](type) returned by [MeterIdPrefixFunction#ofDefault(String)](type)
   now generates the meter IDs with different tags. #2780
   - The `route` tag has been replaced with the `service` tag.
 - `RetrofitMeterIdPrefixFunctionBuilder` has been removed and superseded by
-  <type://RequestOnlyLog#serviceName()>. #2780
+  [RequestOnlyLog#serviceName()](type). #2780
 - ZooKeeper-based service discovery: #2749 #2791
-  - You now must specify <type://ZooKeeperRegistrationSpec> or <type://ZooKeeperDiscoverySpec> when creating
-    <type://ZooKeeperUpdatingListener> or <type://ZooKeeperEndpointGroup>.
+  - You now must specify [ZooKeeperRegistrationSpec](type) or [ZooKeeperDiscoverySpec](type) when creating
+    [ZooKeeperUpdatingListener](type) or [ZooKeeperEndpointGroup](type).
   - `NodeValueCodec` has been removed.
   - `ZooKeeperEndpointGroupBuilder.codec()` and `ZooKeeperUpdatingListenerBuilder.codec()` have been removed.
-- `ByteBufHttpData` has been replaced with <type://PooledHttpData>. #2448
+- `ByteBufHttpData` has been replaced with [PooledHttpData](type). #2448
 - `HttpRequest.aggregateWithPooledObjects()` and `HttpResponse.aggregateWithPooledObject` have been replaced
-  with <type://PooledHttpRequest> and <type://PooledHttpResponse>. #2448
+  with [PooledHttpRequest](type) and [PooledHttpResponse](type). #2448
 - `SubscriptionOption.WITH_POOLED_OBJECTS` has been removed. #2448
 
 ## ⛓ Dependencies

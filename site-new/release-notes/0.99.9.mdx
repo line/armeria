@@ -7,10 +7,10 @@ date: 2020-08-03
 ## 🌟 New features
 
 - You can now add multiple request timeout callbacks using the following methods: #2937 #2939
-  - <type://ClientRequestContext#whenResponseTimingOut()>
-  - <type://ClientRequestContext#whenResponseTimedOut()>
-  - <type://ServiceRequestContext#whenRequestTimingOut()>
-  - <type://ServiceRequestContext#whenRequestTimedOut()>
+  - [ClientRequestContext#whenResponseTimingOut()](type)
+  - [ClientRequestContext#whenResponseTimedOut()](type)
+  - [ServiceRequestContext#whenRequestTimingOut()](type)
+  - [ServiceRequestContext#whenRequestTimedOut()](type)
 - You can now specify multiple decorators with a single call when building a service binding fluently. #2889
   ```java
   Server.builder()
@@ -30,7 +30,7 @@ date: 2020-08-03
                            .build(myService);
 
   ```
-- You can also specify the <type://@Blocking> annotation on a class. It was previously allowed only on methods.
+- You can also specify the [@Blocking](type) annotation on a class. It was previously allowed only on methods.
   #2915
   ```java
   @Blocking
@@ -95,8 +95,8 @@ date: 2020-08-03
   // preserving the source address by using HAPROXY protocol.
   client.get("http://example.com/").aggregate().join();
   ```
-- You can now use different <type://ProxyConfig> for different <typeplural://Endpoint> using
-  <type://ProxyConfigSelector>. #2752
+- You can now use different [ProxyConfig](type) for different [Endpoint](typeplural) using
+  [ProxyConfigSelector](type). #2752
   ```java
   ProxyConfigSelector mySelector = (protocol, endpoint) -> {
       // Send the requests to *.foo.com via a SOCKS5 server.
@@ -115,13 +115,13 @@ date: 2020-08-03
                    .proxyConfig(mySelector)
                    .build();
   ```
-- Added <type://Route#patternString()> which can be used as a simple human-readable description of
-  a <type://Route>. #2932 #2933
-- <type://HttpData> now extends `AutoCloseable` and provides various methods useful when using
-  <type://SubscriptionOption#WITH_POOLED_OBJECTS>. #2892
+- Added [Route#patternString()](type) which can be used as a simple human-readable description of
+  a [Route](type). #2932 #2933
+- [HttpData](type) now extends `AutoCloseable` and provides various methods useful when using
+  [SubscriptionOption#WITH_POOLED_OBJECTS](type). #2892
   - Note that this feature is only for the advanced users who want to reduce the number of memory copies
     in a performance-sensitive environment.
-  - See <type://PooledObjects> for more information.
+  - See [PooledObjects](type) for more information.
 
 ## 📈 Improvements
 
@@ -133,21 +133,21 @@ date: 2020-08-03
 - You can now specify the connection ping interval less than 10 seconds, which was previously impossible. #2944
 - Improved the load distribution of client requests by randomizing how we choose the initial event loop,
   which may reduce the error rate in a certain situation. #2941
-- Improved the performance of <type://Endpoint#toString()>. #2906
+- Improved the performance of [Endpoint#toString()](type). #2906
 
 ## 🛠️ Bug fixes
 
-- <type://ClientRequestContext#currentOrNull()> and <type://ServiceRequestContext#currentOrNull()> don't throw
+- [ClientRequestContext#currentOrNull()](type) and [ServiceRequestContext#currentOrNull()](type) don't throw
   an `IllegalStateException` anymore but return `null` when the current context type mismatches. #2962
-- <type://Endpoint#parse(String)> doesn't fail anymore when given with an authority with a userInfo part.
+- [Endpoint#parse(String)](type) doesn't fail anymore when given with an authority with a userInfo part.
   #2869 #2893
-- `req.serviceName` in <type://BuiltInProperties> has been renamed to `req.service_name` for the consistency
+- `req.serviceName` in [BuiltInProperties](type) has been renamed to `req.service_name` for the consistency
   with other property names. #2958
 - We now handle an HTTP/2 request with a `Host` header properly, matching the behavior of HAPROXY. #2877 #2878
 - You can now send an HTTPS request via an HTTPS CONNECT proxy server (double encryption). #2887
 - Fixed the buffer leaks in the following places: 😱 #2891 #2892 #2951
-  - <type://RetryingClient>
-  - <type://CircuitBreakerClient>
+  - [RetryingClient](type)
+  - [CircuitBreakerClient](type)
   - `DefaultDnsNameResolver`
   - `DefaultStreamMessageDuplicator`
 - You are now disallowed to set a `:status` header when building an `HttpFile`, because it will make
@@ -156,28 +156,28 @@ date: 2020-08-03
 - gRPC-Web trailers are now compressed and decompressed properly. #2930
 - Fixed the compatibility issues with `grpc-kotlin` #2947 #2950
 - You can now use the graceful shutdown properties when integration with Spring Boot 1. #2954
-- You can now use <type://DocServiceConfigurator> when integrating with Spring Boot 2. #2960
-- <type://MetricCollectingService> now decorates all services if the `armeria.enableMetrics` property is set
+- You can now use [DocServiceConfigurator](type) when integrating with Spring Boot 2. #2960
+- [MetricCollectingService](type) now decorates all services if the `armeria.enableMetrics` property is set
   when integrating with Spring Boot. #2873 #2898
 
 ## 🏚️ Deprecations
 
-- All option constants in <type://ClientOption> and <type://ClientFactoryOption> have been moved to
-  <type://ClientOptions> and <type://ClientFactoryOptions> respectively. #2928
+- All option constants in [ClientOption](type) and [ClientFactoryOption](type) have been moved to
+  [ClientOptions](type) and [ClientFactoryOptions](type) respectively. #2928
 - Various implementation classes have been deprecated in favor of static factory methods: #2875 #2890
-  - <type://MetricCollectingCircuitBreakerListener> → <type://CircuitBreakerListener#metricCollecting(MeterRegistry)>
-  - <type://RateLimitingThrottlingStrategy> → <type://ThrottlingStrategy#rateLimiting(double)>
-  - <type://ConnectionPoolLoggingListener> → <type://ConnectionPoolListener#logging()>
-  - <type://StickyEndpointSelectionStrategy> → <type://EndpointSelectionStrategy#sticky(ToLongFunction)>
-  - <type://TTextProtocol> → <type://TTextProtocolFactory#getProtocol(TTransport)>
-- <type://Route#meterTag()> and <type://Route#loggerName()> have been deprecated in favor of
-  <type://Route#patternString()>. #2933
-- <type://ClientRequestContext#responseTimeoutHandler()>,
-  <type://ClientRequestContext#setResponseTimeoutHandler(Runnable)>,
-  <type://ServiceRequestContext#requestTimeoutHandler()> and
-  <type://ServiceRequestContext#setRequestTimeoutHandler(Runnable)> have been deprecated in favor of
-  <type://ClientRequestContext#whenResponseTimedOut()> and
-  <type://ServiceRequestContext#whenRequestTimedOut()>. #2939
+  - [MetricCollectingCircuitBreakerListener](type) → [CircuitBreakerListener#metricCollecting(MeterRegistry)](type)
+  - [RateLimitingThrottlingStrategy](type) → [ThrottlingStrategy#rateLimiting(double)](type)
+  - [ConnectionPoolLoggingListener](type) → [ConnectionPoolListener#logging()](type)
+  - [StickyEndpointSelectionStrategy](type) → [EndpointSelectionStrategy#sticky(ToLongFunction)](type)
+  - [TTextProtocol](type) → [TTextProtocolFactory#getProtocol(TTransport)](type)
+- [Route#meterTag()](type) and [Route#loggerName()](type) have been deprecated in favor of
+  [Route#patternString()](type). #2933
+- [ClientRequestContext#responseTimeoutHandler()](type),
+  [ClientRequestContext#setResponseTimeoutHandler(Runnable)](type),
+  [ServiceRequestContext#requestTimeoutHandler()](type) and
+  [ServiceRequestContext#setRequestTimeoutHandler(Runnable)](type) have been deprecated in favor of
+  [ClientRequestContext#whenResponseTimedOut()](type) and
+  [ServiceRequestContext#whenRequestTimedOut()](type). #2939
 
 ## ☢️ Breaking changes
 
@@ -186,16 +186,16 @@ date: 2020-08-03
 - `com.linecorp.armeria.common.util.NonNullByDefault` and `UnstableApi` have been moved to
   `com.linecorp.armeria.common.annotation`. #2890
 - `KeyedCircuitBreakerMapping` and its inner class are now package-private. #2890
-  - Use the static factory methods in <type://CircuitBreakerMapping>.
+  - Use the static factory methods in [CircuitBreakerMapping](type).
 - A `Host` header isn't automatically translated into the `:authority` header anymore, so that you can preserve
   the original headers when writing a proxy server with Armeria. #2877 #2878
-- `req.serviceName` in <type://BuiltInProperties> has been renamed to `req.service_name` for the consistency
+- `req.serviceName` in [BuiltInProperties](type) has been renamed to `req.service_name` for the consistency
   with other property names. #2958
 - Various classes and methods that were previously deprecated have been removed. #2926
 - The new `Pooled*` API introduced in the previous release has been reverted due to design and performance
   issues. #2882 #2892
-  - See <type://PooledObjects> for the new API.
-- `ClientFactoryOption.PROXY_CONFIG` has been replaced with <type://ClientFactoryOptions#PROXY_CONFIG_SELECTOR>.
+  - See [PooledObjects](type) for the new API.
+- `ClientFactoryOption.PROXY_CONFIG` has been replaced with [ClientFactoryOptions#PROXY_CONFIG_SELECTOR](type).
   #2752
 
 ## ⛓ Dependencies

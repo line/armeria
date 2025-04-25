@@ -6,7 +6,7 @@ date: 2024-08-12
 
 ## 🌟 New features
 
-- **Outlier Detection for Connections**: You can now use <type://OutlierDetection> to detect unhealthy 
+- **Outlier Detection for Connections**: You can now use [OutlierDetection](type) to detect unhealthy 
   connections and close them gracefully. #5751 #5763
   ```java
   OutlierDetectingRule rule =
@@ -30,7 +30,7 @@ date: 2024-08-12
     // Apply the OutlierDetection to detect and close unhealthy connections
     .connectionOutlierDetection(outlierDetection)
   ```
-- **Automatic value loader**: You can now use an <type://AsyncLoader> to (re)load a value atomically, lazily and 
+- **Automatic value loader**: You can now use an [AsyncLoader](type) to (re)load a value atomically, lazily and 
   asynchronously. #5506 #5590
   ```java
   Function<String, CompletableFuture<String>> loader = cache -> {
@@ -46,7 +46,7 @@ date: 2024-08-12
       .build();
   asyncLoader.get().join();
   ```
-- **Configurable Response Timeout**: You can now use <type://ResponseTimeoutMode> to configure when a response
+- **Configurable Response Timeout**: You can now use [ResponseTimeoutMode](type) to configure when a response
   timeout starts for a client. The timeout can be set when a request is started, a connection is acquired or a 
   request is fully sent. #4591 #5793
   ```java
@@ -58,7 +58,7 @@ date: 2024-08-12
     .responseTimeoutMode(ResponseTimeoutMode.FROM_START)
     .build();
   ```
-- **Fallback File Extensions**: You can now set fallback file extensions in <type://FileService>.
+- **Fallback File Extensions**: You can now set fallback file extensions in [FileService](type).
   This feature is useful when you want to map a RESTful URI to a static resource file. #4542 #5806
   ```java
   FileService
@@ -77,18 +77,18 @@ date: 2024-08-12
     };
   }
   ```
-- **Zone-Aware Load Balancing**: <type://XdsEndpointGroup> now supports [zone-aware](https://www.envoyproxy.io/docs/envoy/latest/intro/arch_overview/upstream/load_balancing/zone_aware)
+- **Zone-Aware Load Balancing**: [XdsEndpointGroup](type) now supports [zone-aware](https://www.envoyproxy.io/docs/envoy/latest/intro/arch_overview/upstream/load_balancing/zone_aware)
   load balancing which prioritizes sending traffic to local zones. #5785 #5808
-- **WebSocketService Testing**: You can now use <type://ServerExtension#webSocketClient()> to test <type://WebSocketService>. #5538 #5765
+- **WebSocketService Testing**: You can now use [ServerExtension#webSocketClient()](type) to test [WebSocketService](type). #5538 #5765
 
 ## 📈 Improvements
 
 - Armeria client now supports the [`Expect: 100-continue`](https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/100) header. #5646
-- <type://ClientRequestContext#cancel()> now cancels the associated request immediately. #5800
-- The health checking behavior of <type://XdsEndpointGroup> is more aligned with Envoy. #5785
+- [ClientRequestContext#cancel()](type) now cancels the associated request immediately. #5800
+- The health checking behavior of [XdsEndpointGroup](type) is more aligned with Envoy. #5785
 - [Subsets](https://www.envoyproxy.io/docs/envoy/latest/intro/arch_overview/upstream/load_balancing/subsets#load-balancer-subsets) now
-  supports features available in the default load balancer of <type://XdsEndpointGroup> #5801
-- New headers from Guava have been added to <type://HttpHeaderNames>. #5789
+  supports features available in the default load balancer of [XdsEndpointGroup](type) #5801
+- New headers from Guava have been added to [HttpHeaderNames](type). #5789
 - Armeria is now compatible with Thrift 0.19 and 0.20.0 #5243 #5822
 - Armeria client now silently ignores content instead of raising an exception when content exists for
   a status that indicates empty content. #5823
@@ -103,13 +103,13 @@ date: 2024-08-12
   - RS (0x1E)
   - US (0x1F)
 - Fixed a potential leak when sending compressed responses. #5858
-- `ResteasyClient` now correctly releases <type://ClientFactory> when it is closed. #5833
+- `ResteasyClient` now correctly releases [ClientFactory](type) when it is closed. #5833
 - Content decompression exceptions are now properly propagated. #5177 #5620
-- <type://@Blocking> now correctly works with gRPC-Kotlin stubs #5295 #5399
-- Fixed <type://DocService> sidebar to occupy at most 40% of the window width. #5091 #5839
-- `InputStream` created from <type://StreamMessage#toInputStream(Function)> now correctly raises 
-  an exception if the original <type://StreamMessage> is closed with an exception. #5859
-- <type://ClientRequestContext#isTimedOut()> now correctly returns `true` if a DNS query, a session creation or
+- [@Blocking](type) now correctly works with gRPC-Kotlin stubs #5295 #5399
+- Fixed [DocService](type) sidebar to occupy at most 40% of the window width. #5091 #5839
+- `InputStream` created from [StreamMessage#toInputStream(Function)](type) now correctly raises 
+  an exception if the original [StreamMessage](type) is closed with an exception. #5859
+- [ClientRequestContext#isTimedOut()](type) now correctly returns `true` if a DNS query, a session creation or
   a write operation times out. #4935 #5156
 
 ## 📃 Documentation
@@ -118,9 +118,9 @@ date: 2024-08-12
 
 ## ☢️ Breaking changes
 
-- Modified the behavior of <type://Endpoint#withAttrs(Attributes)> to merge the original <type://Attributes> 
+- Modified the behavior of [Endpoint#withAttrs(Attributes)](type) to merge the original [Attributes](type) 
   with the new one. #5802
-  - Instead, <type://Endpoint#replaceAttrs(Attributes)> is added to replace the entire attributes of <type://Endpoint>.
+  - Instead, [Endpoint#replaceAttrs(Attributes)](type) is added to replace the entire attributes of [Endpoint](type).
 
 ## ⛓ Dependencies
 

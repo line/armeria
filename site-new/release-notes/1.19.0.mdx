@@ -6,10 +6,10 @@ date: 2022-09-13
 
 ## 🌟 New features
 
-- You can now repeatedly aggregate an <type://HttpRequest> and <type://HttpResponse> when using
-  <type://HttpRequest#aggregate()> and <type://HttpResponse#aggregate()>. If an <type://HttpRequest> or an
-  <type://HttpResponse> is aggregated before, the cached <type://AggregatedHttpRequest> or
-  <type://AggregatedHttpResponse> is returned for subsequent calls. #3789 #4366
+- You can now repeatedly aggregate an [HttpRequest](type) and [HttpResponse](type) when using
+  [HttpRequest#aggregate()](type) and [HttpResponse#aggregate()](type). If an [HttpRequest](type) or an
+  [HttpResponse](type) is aggregated before, the cached [AggregatedHttpRequest](type) or
+  [AggregatedHttpResponse](type) is returned for subsequent calls. #3789 #4366
   ```java
   HttpRequest request = ...;
   AggregatedHttpRequest aggregatedReq0 = request.aggregate().join();
@@ -22,7 +22,7 @@ date: 2022-09-13
   assert aggregatedRes0 == aggregatedRes1;
   ```
 - You can now customize the behavior of auto-refresh for an `AddressResolverGroup` with
-  <type://DnsResolverGroupBuilder>. #4400
+  [DnsResolverGroupBuilder](type). #4400
   ```java 
   // Disable auto refresh 
   ClientFactory
@@ -58,7 +58,7 @@ date: 2022-09-13
     })
     .build();
   ```
-- You can now export <type://RequestOnlyLog#requestCause()> and <type://RequestLog#responseCause()> to MDC
+- You can now export [RequestOnlyLog#requestCause()](type) and [RequestLog#responseCause()](type) to MDC
   by specifying `req.cause` and `res.cause` to an appender of a Logback configuration.
   ```xml
   <?xml version="1.0" encoding="UTF-8"?>
@@ -71,8 +71,8 @@ date: 2022-09-13
     </appender>
   </configuration>
   ```
-- You can now trace a <type://RequestContext> leak by specifying `-Dcom.linecorp.armeria.requestContextLeakDetectionSampler=<sampler-spec>`
-  or implementing a custom <type://FlagsProvider>. #4100 #4232
+- You can now trace a [RequestContext](type) leak by specifying `-Dcom.linecorp.armeria.requestContextLeakDetectionSampler=<sampler-spec>`
+  or implementing a custom [FlagsProvider](type). #4100 #4232
   ```java
   public final class LeakDetectingFlagsProvider implements FlagsProvider {
     @Override
@@ -82,13 +82,13 @@ date: 2022-09-13
     }
   }
   ```
-- <type://DocService> now automatically generates a specification of annotated services for well known types. #4309 #4322
+- [DocService](type) now automatically generates a specification of annotated services for well known types. #4309 #4322
   - Java POJO
   - Kotlin data class
   - Scala case class
   - Protocol Buffers' `Message`
   - ScalaPB's `GeneratedMessage`
-- You can now upload files to your <type://GraphqlService> using
+- You can now upload files to your [GraphQlService](type) using
   [GraphQL multipart requests](https://github.com/jaydenseric/graphql-multipart-request-spec). #3971 #4199
 - You can now use `armeria-version-catalog` module to easily import Armeria and Armeria's direct dependencies
   using [Gradle's version catalog](https://docs.gradle.org/current/userguide/platforms.html#sec:version-catalog-plugin). #4377
@@ -131,10 +131,10 @@ date: 2022-09-13
   }
   ```
 - Armeria server no longer sends chunked encoding header with `304 Not Modified` status. #4386
-- HTTP/2 graceful shutdown timeout is correctly set using <type://ClientFactory#idleTimeoutMillis()>. #4381
-- Unframed <typeplural://GrpcService> now support `application/x-protobuf` and `application/x-google-protobuf`
+- HTTP/2 graceful shutdown timeout is correctly set using [ClientFactory#idleTimeoutMillis()](type). #4381
+- Unframed [GrpcService](typeplural) now support `application/x-protobuf` and `application/x-google-protobuf`
   media types. #4355 #4364
-- You can now use a custom `JsonFormat.Printer` for <type://ProtobufResponseConverterFunction>.  #4301 #4336
+- You can now use a custom `JsonFormat.Printer` for [ProtobufResponseConverterFunction](type).  #4301 #4336
 
 ## 📃 Documentation
 
@@ -144,16 +144,16 @@ date: 2022-09-13
 
 ## 🏚️ Deprecations
 
-- <type://DnsResolverGroupBuilder#refreshBackoff(Backoff)> has been deprecated in favor of
-  <type://DnsResolverGroupBuilder#autoRefreshBackoff(Backoff)>. #4400
+- [DnsResolverGroupBuilder#refreshBackoff(Backoff)](type) has been deprecated in favor of
+  [DnsResolverGroupBuilder#autoRefreshBackoff(Backoff)](type). #4400
 
 ## ☢️ Breaking changes
 
-- The method signature of <type://ResponseConverterFunctionProvider#createResponseConverterFunction(Type)> has
+- The method signature of [ResponseConverterFunctionProvider#createResponseConverterFunction(Type)](type) has
   been changed.
-  - <type://ResponseConverterFunctionProvider> no longer takes a <type://ResponseConverterFunction> as
-    the second parameter. Use <type://DelegatingResponseConverterFunctionProvider> to create a new 
-    <type://ResponseConverterFunction> based on the delegating <type://ResponseConverterFunction>.
+  - [ResponseConverterFunctionProvider](type) no longer takes a [ResponseConverterFunction](type) as
+    the second parameter. Use [DelegatingResponseConverterFunctionProvider](type) to create a new 
+    [ResponseConverterFunction](type) based on the delegating [ResponseConverterFunction](type).
 
 ## ⛓ Dependencies
 

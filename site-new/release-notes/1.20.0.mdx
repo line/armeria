@@ -6,7 +6,7 @@ date: 2022-10-05
 
 ## 🌟 New features
 
-- You can now handle a GraphQL error using <type://GraphqlErrorHandler>. #4435
+- You can now handle a GraphQL error using [GraphqlErrorHandler](type). #4435
   ```java
   GraphqlErrorHandler errorHandler = new GraphqlErrorHandler() {
     @Override
@@ -29,7 +29,7 @@ date: 2022-10-05
   ```
 
 - You can now easily configure client-side TLS key and certificates to support mTLS via
-  <type://ClientFactoryBuilder#tls(File,File)>. #4410
+  [ClientFactoryBuilder#tls(File,File)](type). #4410
   ```java
   File keyCertChainFile = ...;
   File keyFile = ...;
@@ -45,7 +45,7 @@ date: 2022-10-05
   ```
 
 - gRPC HTTP/JSON transcoding endpoint can now handle both the snake case and camel case query parameters
-  using <type://HttpJsonTranscodingOptions>. #4428
+  using [HttpJsonTranscodingOptions](type). #4428
   ```java
   HttpJsonTranscodingOptions options =
     HttpJsonTranscodingOptions
@@ -62,8 +62,8 @@ date: 2022-10-05
     .build();
   ```
 
-- You can now use `OutputStream` to write data to a <type://StreamMessage> using
-  <type://StreamMessage#fromOutputStream(Consumer)>. #4402
+- You can now use `OutputStream` to write data to a [StreamMessage](type) using
+  [StreamMessage#fromOutputStream(Consumer)](type). #4402
   ```java
   StreamMessage.fromOutputStream(os -> {
     // perform blocking operation
@@ -75,7 +75,7 @@ date: 2022-10-05
   }
   ```
 
-- You can now convert an <type://AggregatedHttpRequest> to an <type://HttpRequest> with new headers. #4441
+- You can now convert an [AggregatedHttpRequest](type) to an [HttpRequest](type) with new headers. #4441
   ```java
   AggregatedHttpRequest req = ...
   HttpRequest httpRequest = req.toHttpRequest(newHeaders);
@@ -87,17 +87,17 @@ date: 2022-10-05
 
 ## 🛠️ Bug fixes
 
-- <type://GraphqlService> now respects the accept header correctly. #4451
-- <type://GrpcService> and <type://THttpService> no longer throw double subscription exceptions when
+- [GraphQlService](type) now respects the accept header correctly. #4451
+- [GrpcService](type) and [THttpService](type) no longer throw double subscription exceptions when
   the request is aggregated in a decorator. #4449
-- The content-length header is automatically removed from <type://ResponseHeaders> for a server
-  streaming response in <type://GrpcService>. #4460
-- You no longer see a `NullPointerException` when using <type://EndpointSelectionStrategy#rampingUp()>. #4448
-- <type://DocService> no longer throw an exception when a protobuf message doesn't have any fields. #4436
+- The content-length header is automatically removed from [ResponseHeaders](type) for a server
+  streaming response in [GrpcService](type). #4460
+- You no longer see a `NullPointerException` when using [EndpointSelectionStrategy#rampingUp()](type). #4448
+- [DocService](type) no longer throw an exception when a protobuf message doesn't have any fields. #4436
 - You no longer see a 500 response when an empty multipart request is sent. #4432
 - The service name generated from a CGLIB-enhanced class no longer has a synthetic suffix in
-  <type://DocService>. #4430
-- Users can now use <type://ProtobufRequestConverterFunctionProvider> without encountering a potential
+  [DocService](type). #4430
+- Users can now use [ProtobufRequestConverterFunctionProvider](type) without encountering a potential
   `ClassCastException`. #4429
 - Fixed a regression where `thrift0.9` is incompatible with Thrift 0.9.1 since Armeria 1.17.0. #4427
 - `enable-auto-injection` property is correctly added to the generated `spring-configuration-metadata.json`
@@ -109,12 +109,12 @@ date: 2022-10-05
 
 ## 🏚️ Deprecations
 
-- <type://HttpRequest#aggregateWithPooledObjects(ByteBufAllocator)> and
-  <type://HttpResponse#aggregateWithPooledObjects(ByteBufAllocator)> are deprecated. #4449
-  - Use <type://HttpRequest#aggregate(AggregationOptions)> with
-    <type://AggregationOptions#usePooledObjects(ByteBufAllocator)>.
-- <type://GrpcServiceBuilder#httpJsonTranscodingErrorHandler(UnframedGrpcErrorHandler)> is deprecated. #4428
-  - Use <type://HttpJsonTranscodingOptionsBuilder#errorHandler(UnframedGrpcErrorHandler)>.
+- [HttpRequest#aggregateWithPooledObjects(ByteBufAllocator)](type) and
+  [HttpResponse#aggregateWithPooledObjects(ByteBufAllocator)](type) are deprecated. #4449
+  - Use [HttpRequest#aggregate(AggregationOptions)](type) with
+    [AggregationOptions#usePooledObjects(ByteBufAllocator)](type).
+- [GrpcServiceBuilder#httpJsonTranscodingErrorHandler(UnframedGrpcErrorHandler)](type) is deprecated. #4428
+  - Use [HttpJsonTranscodingOptionsBuilder#errorHandler(UnframedGrpcErrorHandler)](type).
 
 ## ☢️ Breaking changes
 

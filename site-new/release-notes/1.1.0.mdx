@@ -6,7 +6,7 @@ date: 2020-09-22
 
 ## 🌟 New features
 
-- You can now inject your own <type://MeterIdPrefixFunction> when using Armeria Spring Boot integration. #3034
+- You can now inject your own [MeterIdPrefixFunction](type) when using Armeria Spring Boot integration. #3034
   ```java
   @Bean
   public MeterIdPrefixFunction myMeterIdPrefixFunction() {
@@ -19,7 +19,7 @@ date: 2020-09-22
   // You should never use this in production but only for a testing purpose.
   builder.tlsNoVerifyHosts("trustin.com", "trustus.com");
   ```
-- You can now use a string to specify the `Logger` for <type://LoggingService> and <type://LoggingClient>. #3035
+- You can now use a string to specify the `Logger` for [LoggingService](type) and [LoggingClient](type). #3035
   ```java
   ServerBuilder sb = ...
   sb.decorator(LoggingService.builder()
@@ -29,22 +29,22 @@ date: 2020-09-22
 
 ## 📈 Improvements
 
-- <type://RequestLog#serviceName()> is now used as a span name if you use the default `HttpRequestParser`
-  and `HttpResponseParser` with <type://BraveClient> and <type://BraveService> for recognizing
+- [RequestLog#serviceName()](type) is now used as a span name if you use the default `HttpRequestParser`
+  and `HttpResponseParser` with [BraveClient](type) and [BraveService](type) for recognizing
   a span easily. #3023
 - You can now easily find out whether SPI service interfaces are applied from the logs. #3039
-- You can now get the log of the exception which is raised while converting a <type://RequestLog> into a
+- You can now get the log of the exception which is raised while converting a [RequestLog](type) into a
   `String`. #3043
-- The stack trace of <type://HttpStatusException> and <type://HttpResponseException> are not logged anymore by
-  <type://LoggingService> because a user already knows where they are come from. #3053, #3054
+- The stack trace of [HttpStatusException](type) and [HttpResponseException](type) are not logged anymore by
+  [LoggingService](type) because a user already knows where they are come from. #3053, #3054
 
 ## 🛠️ Bug fixes
 
 - `TimeoutScheduler` is now initialized exactly once. #3066
 - Reactor subscriber context is now properly propagated. #3058
-- Armeria Spring Boot integration collects metrics correctly if <type://ArmeriaSettings#enableMetrics>
+- Armeria Spring Boot integration collects metrics correctly if [ArmeriaSettings#enableMetrics](type)
 is `true`. #3048
-- You now see the proper exception from WebFlux `WebClient` when <type://CircuitBreakerClient> is applied. #3064
+- You now see the proper exception from WebFlux `WebClient` when [CircuitBreakerClient](type) is applied. #3064
 - Armeria client now rejects a `PUSH_PROMISE` frame correctly because it doesn't support it yet. #3045
   - `SETTINGS_ENABLE_PUSH` is now disabled.
 - Armeria gRPC server does not raise a `NullPointerException` anymore when a gRPC server interceptor closes

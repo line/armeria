@@ -6,17 +6,17 @@ date: 2021-05-14
 
 ## 🌟 New features
 
-- You can now create a <type://HealthChecker> that updates its healthiness periodically. #3392 #3406
+- You can now create a [HealthChecker](type) that updates its healthiness periodically. #3392 #3406
   ```java
   HealthChecker.of(() -> {
       HealthCheckStatus status = ...;
       UnmodifiableFuture.completedFuture(status);
   }, Duration.ofSeconds(5));
   ```
-- You can now create a propagating <type://ContextAwareExecutorService> and
-  <type://ContextAwareScheduledExecutorService> using <type://RequestContext#makeContextPropagating(ExecutorService)?full>
-  and <type://RequestContext#makeContextPropagating(ScheduledExecutorService)?full>.
-  The executors propagate a <type://RequestContext> to submitted tasks when a submission thread is 
+- You can now create a propagating [ContextAwareExecutorService](type) and
+  [ContextAwareScheduledExecutorService](type) using [RequestContext#makeContextPropagating(ExecutorService)?full](type)
+  and [RequestContext#makeContextPropagating(ScheduledExecutorService)?full](type).
+  The executors propagate a [RequestContext](type) to submitted tasks when a submission thread is 
   a request-context-aware thread. #3483
   ```java
   ExecutorService myExecutor = Executors.newSingleThreadExecutor();
@@ -28,7 +28,7 @@ date: 2021-05-14
   });
   ```
 - You can now set a maximum allowed length of a server response in the request level
-  using <type://WebClientRequestPreparation#maxResponseLength(long)>. #3565
+  using [WebClientRequestPreparation#maxResponseLength(long)](type). #3565
   ```java
   WebClient client = ...;
   client.prepare()
@@ -47,7 +47,7 @@ date: 2021-05-14
              .add(Map.of("page", "1"))
              .set(Map.of("size", "2"));
   ```
-- You can now disable DNS query metrics using <type://DnsResolverGroupBuilder#disableDnsQueryMetrics()>.
+- You can now disable DNS query metrics using [DnsResolverGroupBuilder#disableDnsQueryMetrics()](type).
   #3368 #3552
   ```java
   ClientFactory.builder()
@@ -55,14 +55,14 @@ date: 2021-05-14
                    customizer.disableDnsQueryMetrics();
                })
   ```
-- You can now create a [JSON Lines](https://jsonlines.org/) response using <type://JsonLines>. #3446 #3456
+- You can now create a [JSON Lines](https://jsonlines.org/) response using [JsonLines](type). #3446 #3456
   ```java
   Publisher<MyObject> publisher = StreamMessage.of(new MyObject(...), new MyObject(...), ...);
   HttpReponse response = JsonLines.fromPublisher(publisher);
   ```
-- You can now create an <type://RpcRequest> with a service name using
-  <type://RpcRequest#of(Class,String,String,Iterable)>. #3537
-- You can now customize <type://MetricCollectingService> with <type://MetricCollectingServiceConfigurator>
+- You can now create an [RpcRequest](type) with a service name using
+  [RpcRequest#of(Class,String,String,Iterable)](type). #3537
+- You can now customize [MetricCollectingService](type) with [MetricCollectingServiceConfigurator](type)
   when using Spring integration. #3536
   ```java
   @Bean
@@ -88,8 +88,8 @@ date: 2021-05-14
 - Armeria server now correctly sends `Connection: close` header on an invalid HTTP/1 request. #3506
 - You no longer see an infinity loop or an `IllegalStateException: Recurse update` when invalidating 
   a DNS cache. #3528
-- <type://LoggingService> now correctly logs a request failed with the server error class(5xx) that is served 
-  by <type://TransientService>. #3551 #3559
+- [LoggingService](type) now correctly logs a request failed with the server error class(5xx) that is served 
+  by [TransientService](type). #3551 #3559
 - You no longer see trailing dollar signs from a service name. #3508
 - You no longer see a `NullPointerException` when a request times out. #3564
 

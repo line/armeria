@@ -6,7 +6,7 @@ date: 2020-05-28
 
 ## 🌟 New features
 
-- New <type://CircuitBreakerRule> and <type://CircuitBreakerRuleWithContent> API let you define a complex
+- New [CircuitBreakerRule](type) and [CircuitBreakerRuleWithContent](type) API let you define a complex
   circuit breaking policy conveniently. #2726
   ```java
   CircuitBreakerRule myRule =
@@ -27,7 +27,7 @@ date: 2020-05-28
           // Neither a success nor a failure. Do not take this response into account.
           CircuitBreakerRule.builder().thenIgnore());
   ```
-- You can now easily bind an MDC property to a <type://RequestContext> and log it using a logging framework.
+- You can now easily bind an MDC property to a [RequestContext](type) and log it using a logging framework.
   #2634 #2724 #2729
   ```java
   MDC.put("transactionId", "1234");
@@ -40,7 +40,7 @@ date: 2020-05-28
       client.execute(...);
   }
   ```
-- You can now install a custom hook to <type://RequestContextStorage> in runtime, usually at startup time. #2723
+- You can now install a custom hook to [RequestContextStorage](type) in runtime, usually at startup time. #2723
   ```java
   RequestContextStorage.hook(delegate -> new RequestContextStorageWrapper(delegate) {
       @Nullable
@@ -61,33 +61,33 @@ date: 2020-05-28
   }
   ```
 - You can now set method parameter descriptions for annotated services in
-  <type://DocService> using Javadoc. #2697
-- You can now easily sanitize headers and content using <type://RegexBasedSanitizer>. #1810 #2721
+  [DocService](type) using Javadoc. #2697
+- You can now easily sanitize headers and content using [RegexBasedSanitizer](type). #1810 #2721
 
 ## 📈 Improvements
 
-- You can now easily call `ownAttr()` from <type://RequestContext>. #2727
-  - You don't have to check if the context is <type://ClientRequestContext> or not anymore.
+- You can now easily call `ownAttr()` from [RequestContext](type). #2727
+  - You don't have to check if the context is [ClientRequestContext](type) or not anymore.
   - `root()` and `ownAttrs()` are pulled up as well.
 
 ## 🛠️ Bug fixes
 
 - You can now use Armeria 0.99.6 with Micrometer 1.3.9.
   (It is recommended to use Micrometer 1.5.1, though.) #2742
-- You can now retry even when the current <type://EndpointGroup> is empty. #2736
-- You can send a request by setting the authority and scheme header to <type://RequestHeaders>. #2730 #2734
-- You no longer see `&lt;zero-length response&gt;` in <type://DocService> anymore. #2732
+- You can now retry even when the current [EndpointGroup](type) is empty. #2736
+- You can send a request by setting the authority and scheme header to [RequestHeaders](type). #2730 #2734
+- You no longer see `&lt;zero-length response&gt;` in [DocService](type) anymore. #2732
 - A `NullPointerException` is not raised anymore due to the dependency order when Armeria is shaded.
   #2731 #2735
 
 ## ☢️ Breaking changes
 
 - `RetryStrategy` and `RetryStrategyWithContent` are gone in favor of
-  <type://RetryRule> and <type://RetryRuleWithContent>. #2726
+  [RetryRule](type) and [RetryRuleWithContent](type). #2726
 - `CircuitBreakerStrategy` and `CircuitBreakerStrategyWithContent` are gone in favor of
-  <type://CircuitBreakerRule> and <type://CircuitBreakerRuleWithContent>. #2726
+  [CircuitBreakerRule](type) and [CircuitBreakerRuleWithContent](type). #2726
 - `EndpointSelector.select()` (and thus EndpointGroup.select() as well) now returns `null`
-  instead of throwing an <type://EmptyEndpointGroupException>. #2736
+  instead of throwing an [EmptyEndpointGroupException](type). #2736
 - The method signature of `ClientFactory.acquireEventLoop()` and `EventLoopScheduler.acquire()`
   have been changed. #2736
 

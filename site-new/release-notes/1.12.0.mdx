@@ -7,7 +7,7 @@ date: 2021-10-07
 ## 🌸 Highlights
 
 - You can now enable [HTTP/JSON to GRPC transcoding](https://cloud.google.com/endpoints/docs/grpc/transcoding)
-  in your <type://GrpcService>. #3786
+  in your [GrpcService](type). #3786
   ```java
   GrpcService.builder()
              .addService(helloService)
@@ -34,7 +34,7 @@ date: 2021-10-07
         ...
   ```
 - You can now customize any HTTP error status responses including a decoder-level error and
-  <type://HttpStatusException>. #3822 #3853
+  [HttpStatusException](type). #3822 #3853
   ```java
   ServerBuilder sb = ...
   sb.errorHandler(new ServerErrorHandler() {
@@ -69,7 +69,7 @@ date: 2021-10-07
       }
   })
   ```
-- You can now share <type://ConcurrencyLimit> between <type://ConcurrencyLimitingClient>. #3478 #3753 #3860
+- You can now share [ConcurrencyLimit](type) between [ConcurrencyLimitingClient](type). #3478 #3753 #3860
   ```java
   ConcurrencyLimit limit = ConcurrencyLimit.of(64); // Can send 64 requests concurrently.
 
@@ -87,7 +87,7 @@ date: 2021-10-07
   ```
 - You can now allow all headers in `Access-Control-Request-Headers` from a
   [preflight request](https://developer.mozilla.org/en-US/docs/Glossary/Preflight_request) using
-  <type://CorsServiceBuilder#allowAllRequestHeaders(boolean)>. #3839 #3843
+  [CorsServiceBuilder#allowAllRequestHeaders(boolean)](type). #3839 #3843
   ```java
   ServerBuilder sb = ...
   sb.service("/cors", myService.decorate(CorsService.builder("http://example.com")
@@ -97,7 +97,7 @@ date: 2021-10-07
   ```
   - Specifying `*` in `Access-Control-Allow-Headers` does not work with
     [certain browsers](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Access-Control-Allow-Headers#browser_compatibility)
-    so you should use <type://CorsServiceBuilder#allowAllRequestHeaders(boolean)> to allow all headers.
+    so you should use [CorsServiceBuilder#allowAllRequestHeaders(boolean)](type) to allow all headers.
 - You can now sanitize the preview of a request or a response. #3791 #3795
   ```java
   ContentPreviewingService.builder(ContentPreviewerFactory.text(100))
@@ -105,7 +105,7 @@ date: 2021-10-07
                           .responsePreviewSanitizer(responsePreviewSanitizer) // 👈👈👈
                           .newDecorator();
   ```
-- A compressed file is automatically decompressed if <type://FileServiceBuilder#autoDecompress(boolean)>
+- A compressed file is automatically decompressed if [FileServiceBuilder#autoDecompress(boolean)](type)
   is set to `true`. #3804 #3810
   ```java
   FileService.builder(FileServiceBuilderTest.class.getClassLoader(), "/")
@@ -113,14 +113,14 @@ date: 2021-10-07
              .autoDecompress(true) // 👈👈👈
              .build();
   ```
-- You can now send a delayed <type://HttpResponse> using <type://HttpResponse#delayed(Supplier,Duration)>.
+- You can now send a delayed [HttpResponse](type) using [HttpResponse#delayed(Supplier,Duration)](type).
   #3698 #3770
   ```java
   Supplier<HttpResponse> responseSupplier = ...
   HttpResponse.delayed(responseSupplier, Duration.ofSeconds(5)); // 👈👈👈
   ```
-- You can now specify different blocking task executors for different <type://HttpService> using
-  <type://ServiceBindingBuilder>. #3740 #3754
+- You can now specify different blocking task executors for different [HttpService](type) using
+  [ServiceBindingBuilder](type). #3740 #3754
   ```java
   Server.builder()
         .route()
@@ -133,13 +133,13 @@ date: 2021-10-07
         .build(barService)
         .build()
   ```
-- You can now specify an <type://AuthToken> when building a <type://HealthCheckedEndpointGroup>. #3809
+- You can now specify an [AuthToken](type) when building a [HealthCheckedEndpointGroup](type). #3809
   ```java
   HealthCheckedEndpointGroup.builder(endpointGroup, "/health")
                             .auth(AuthToken.ofOAuth2("..."))
                             .build();
   ```
-- You can now export different properties for different <typeplural://RequestContextExportingAppender> to log
+- You can now export different properties for different [RequestContextExportingAppender](typeplural) to log
   with [Logback](http://logback.qos.ch). #3775 #3769
   ```xml
   // logback.xml
@@ -162,7 +162,7 @@ date: 2021-10-07
 
 ### gRPC
 
-- You can now use <type://UnframedGrpcErrorHandler> to map a non-OK gRPC status to an <type://HttpResponse>
+- You can now use [UnframedGrpcErrorHandler](type) to map a non-OK gRPC status to an [HttpResponse](type)
   in an unframed gRPC service. #3777 #3782
   ```java
   GrpcService.builder()
@@ -200,7 +200,7 @@ date: 2021-10-07
       port: 18080 # 👈👈👈
       protocols: http
   ```
-- You can now specify all parameters of <type://ServerBuilder> with a Spring property file. #3705 #3735
+- You can now specify all parameters of [ServerBuilder](type) with a Spring property file. #3705 #3735
   ```yaml
   armeria:
     ports:
@@ -218,7 +218,7 @@ date: 2021-10-07
 
 ### GraphQL
 
-- You can now specify a `GraphQLSchema` or `schemaUrls` when building a <type://GraphQlService>. #3708 #3815
+- You can now specify a `GraphQLSchema` or `schemaUrls` when building a [GraphQlService](type). #3708 #3815
   ```java
   GraphQLSchema schema = ...
   sb.service("/graphql", GraphqlService.builder()
@@ -233,46 +233,46 @@ date: 2021-10-07
 
 ## 📈 Improvements
 
-- <type://ServiceRequestContext> is now automatically propagated to other dispatchers
+- [ServiceRequestContext](type) is now automatically propagated to other dispatchers
   over [Kotlin Coroutines](https://kotlinlang.org/docs/coroutines-overview.html) when
   using annotated and gRPC services. #3745 #3849
-- <type://JettyService> and <type://TomcatService> can now run the Servlets that
+- [JettyService](type) and [TomcatService](type) can now run the Servlets that
   depends on the TLS attributes. #3850
 
 ## 🛠️ Bug fixes
 
-- <type://ServerConfig#server()> doesn't raise an `IllegalStateException` anymore
-  after <type://Server#reconfigure(ServerConfigurator)> is called. #3853
-- The <type://RequestLog> is complete on the server-side even when an exception is raised and deferred values
+- [ServerConfig#server()](type) doesn't raise an `IllegalStateException` anymore
+  after [Server#reconfigure(ServerConfigurator)](type) is called. #3853
+- The [RequestLog](type) is complete on the server-side even when an exception is raised and deferred values
   are not set. #3823
-- <type://ResponseConverterFunctionProvider> now correctly works for suspending functions whose return type is
-  <type://HttpResult> in Kotlin. #3844
+- [ResponseConverterFunctionProvider](type) now correctly works for suspending functions whose return type is
+  [HttpResult](type) in Kotlin. #3844
 - `%2F` and `%2f` are no longer converted to `/` when decoding a request path. #3855
-- <type://ExceptionHandlerFunction> of an annotated service now correctly handles exceptions raised by
+- [ExceptionHandlerFunction](type) of an annotated service now correctly handles exceptions raised by
   service decorators. #3835
 - You can now correctly send additional response headers even if the request has failed. #3836
-- The <type://RequestLog> is complete on the server-side even when an exception is raised and deferred values
+- The [RequestLog](type) is complete on the server-side even when an exception is raised and deferred values
   are not set. #3823
-- The failed request to a <type://TransientService> is now logged properly. #3818
+- The failed request to a [TransientService](type) is now logged properly. #3818
 - You no longer see a pseudo request header in a response headers. #3801
-- You no longer see a <type://ClosedSessionException> when a server gracefully shut down an HTTP/2 connection.
+- You no longer see a [ClosedSessionException](type) when a server gracefully shut down an HTTP/2 connection.
   #3825
-- A response headers of a <type://GrpcService> is now correctly sent when the first response frame
+- A response headers of a [GrpcService](type) is now correctly sent when the first response frame
   is sent. #3856
-- <type://GrpcService> now correctly invokes `Server.Listener` in order. #3805
+- [GrpcService](type) now correctly invokes `Server.Listener` in order. #3805
 - gRPC client calls are now closed exactly once. #3799 #3800
-- Throwing an <type://ArmeriaStatusException> now overrides the gRPC status code and description as expected.
+- Throwing an [ArmeriaStatusException](type) now overrides the gRPC status code and description as expected.
   #3838
 
 ## 🏚️ Deprecations
 
-- <type://SamlAssertionConsumerConfigBuilder#endpoint(SamlEndpoint)> is deprecated. #3813
-  - Use <type://SamlServiceProviderBuilder#acs(SamlEndpoint)> instead.
+- [SamlAssertionConsumerConfigBuilder#endpoint(SamlEndpoint)](type) is deprecated. #3813
+  - Use [SamlServiceProviderBuilder#acs(SamlEndpoint)](type) instead.
 
 ## ☢️ Breaking changes
 
 - `ExceptionHandler` is now gone. #3853
-  - Use <type://ServerErrorHandler> instead.
+  - Use [ServerErrorHandler](type) instead.
 
 ## ⛓ Dependencies
 

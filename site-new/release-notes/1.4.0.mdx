@@ -23,8 +23,8 @@ date: 2021-02-01
                        .consulToken(myConsulAccessToken)
                        .build();
   ```
-- You can now smoothly ramp up the weight of newly added <type://Endpoint> in
-  an <type://EndpointGroup> using <type://EndpointSelectionStrategy#rampingUp()>
+- You can now smoothly ramp up the weight of newly added [Endpoint](type) in
+  an [EndpointGroup](type) using [EndpointSelectionStrategy#rampingUp()](type)
   to protect a fresh node from getting too much traffic suddenly. #1757 #3217
   ```java
   EndpointGroup endpointGroup =
@@ -43,12 +43,12 @@ date: 2021-02-01
     .build();
   ```
 - You can now start your server as unhealthy with
-  <type://HealthCheckServiceBuilder#startUnhealthy()>. #3260
+  [HealthCheckServiceBuilder#startUnhealthy()](type). #3260
   - This can be useful when you don't want to handle incoming requests immediately
     after startup but after some operational steps, such as warming up.
-- You can now add <typeplural://HealthCheckUpdateListener> to
-  <type://HealthCheckService> to get notified when healthiness is updated externally,
-  e.g., from a `POST` request handled by <type://HealthCheckUpdateHandler>. #3260
+- You can now add [HealthCheckUpdateListener](typeplural) to
+  [HealthCheckService](type) to get notified when healthiness is updated externally,
+  e.g., from a `POST` request handled by [HealthCheckUpdateHandler](type). #3260
   - This can be useful when used in combination with `startUnhealthy()` above.
 - You can now specify a custom HTTP header naming rule for HTTP/1 connections,
   so that you can work around the interoperability issues with old HTTP/1 servers
@@ -83,12 +83,12 @@ date: 2021-02-01
                  .maxNumRequestsPerConnection(2000);
     ```
 - You can now turn any service into a transient service by decorating it with
-  <type://TransientHttpService> or <type://TransientRpcService>. #3221
+  [TransientHttpService](type) or [TransientRpcService](type). #3221
   - By making a service transient, you can disable metric collection by
-    <type://MetricCollectingService>, service logging by <type://LoggingService> or
-    access logging by <type://AccessLogWriter>.
+    [MetricCollectingService](type), service logging by [LoggingService](type) or
+    access logging by [AccessLogWriter](type).
   - The following example disables metric collection, service and access logs for
-    <type://HealthCheckService>:
+    [HealthCheckService](type):
     ```java
     Server.builder()
           .serviceUnder(
@@ -110,7 +110,7 @@ date: 2021-02-01
         ...
   ```
 - You can now get, set and parse a `Content-Disposition` header using
-  <type://ContentDisposition>. #3253
+  [ContentDisposition](type). #3253
   ```java
   // Setting
   HttpHeaders headers = HttpHeaders.of(
@@ -128,7 +128,7 @@ date: 2021-02-01
     "attachment; name=\"fileName\"; filename=\"file.png\"");
   assert parsed.equals(disposition);
   ```
-- You can now serve a file by returning an <type://HttpFile> in an annotated service. #3258 #3287
+- You can now serve a file by returning an [HttpFile](type) in an annotated service. #3258 #3287
   ```java
   Server
     .builder()
@@ -142,9 +142,9 @@ date: 2021-02-01
     })
     .build();
   ```
-- You can now invoke `Runnable` or `Callable` with <type://RequestContext> set in
-  the thread-local storage using <type://RequestContext#run(Runnable)> and
-  <type://RequestContext#run(Callable)>. #3311
+- You can now invoke `Runnable` or `Callable` with [RequestContext](type) set in
+  the thread-local storage using [RequestContext#run(Runnable)](type) and
+  [RequestContext#run(Callable)](type). #3311
   ```java
   Runnable task = () -> {
     logger.info("Current request: {}", ServiceRequestContext.current());
@@ -152,7 +152,7 @@ date: 2021-02-01
   ctx.run(task);
   ``` 
 - You can now concat multiple `Publisher`s into one using 
-  <type://StreamMessage#concat(Iterable)>. #3254 #3299
+  [StreamMessage#concat(Iterable)](type). #3254 #3299
   ```java
   StreamMessage<String> stream =
     StreamMessage.concat(Mono.just("foo"),
@@ -169,9 +169,9 @@ date: 2021-02-01
     StreamMessage.concat(Flux.just(Mono.just("foo"),
                                    Mono.just("bar")));
   ```
-- You can now create an <type://HttpResponse> from a <type://ResponseHeaders> and
-  a stream of <typeplural://HttpData> using
-  <type://HttpResponse#of(ResponseHeaders,Publisher)>. #3089 #3237
+- You can now create an [HttpResponse](type) from a [ResponseHeaders](type) and
+  a stream of [HttpData](typeplural) using
+  [HttpResponse#of(ResponseHeaders,Publisher)](type). #3089 #3237
   ```java
   HttpResponse res = HttpResponse.of(
     ResponseHeaders.of(200),
@@ -179,8 +179,8 @@ date: 2021-02-01
         .map(HttpData::ofUtf8));
   ```
 - You can now check which native transports are available or not and why they are
-  unavailable using <type://TransportType#isAvailable()> and
-  <type://TransportType#unavailabilityCause()>. #3244
+  unavailable using [TransportType#isAvailable()](type) and
+  [TransportType#unavailabilityCause()](type). #3244
   ```java
   if (!TransportType.EPOLL.isAvailable()) {
     logger.warn("/dev/epoll support not available:",
@@ -190,15 +190,15 @@ date: 2021-02-01
   - We also added methods like `serverChannelType()`, `socketChannelType()` and
     `datagramChannelType()`, which may be useful when you need to deal with Netty
     channels.
-- You can now decode the body of <type://HttpRequest> or <type://HttpResponse> into
-  a <type://StreamMessage> using <type://HttpMessage#decode(HttpDecoder)>. #3215
+- You can now decode the body of [HttpRequest](type) or [HttpResponse](type) into
+  a [StreamMessage](type) using [HttpMessage#decode(HttpDecoder)](type). #3215
   - This feature can be useful when you need to reactively decode an HTTP body.
     For example, Armeria will use this feature to handle a multipart body.
-- Added <type://StreamMessage#demand()> that returns the remaining demand of
+- Added [StreamMessage#demand()](type) that returns the remaining demand of
   the current subscription. #3215
-- Added `withTags(Tag...)` method to <type://MeterIdPrefixFunction>. #3241 #3242
+- Added `withTags(Tag...)` method to [MeterIdPrefixFunction](type). #3241 #3242
 - You can now register a custom gRPC client stub factory via SPI or
-  <type://GrpcClientOptions#GRPC_CLIENT_STUB_FACTORY> option. #3214 #3294
+  [GrpcClientOptions#GRPC_CLIENT_STUB_FACTORY](type) option. #3214 #3294
 - You can now keep using the old decoration ordering for route decorators by
   specifying the `-Dcom.linecorp.armeria.useLegacyRouteDecoratorOrdering=true`
   JVM option. #3279
@@ -208,47 +208,47 @@ date: 2021-02-01
 - You can now run your Armeria application even if `netty-transport-native-epoll` and
   `netty-incubator-transport-native-io_uring` are not in the class path. #3244
 - You can now use `/dev/epoll` transport on WSL 2. #3244
-- You can now use <type://JettyService> with Jetty 9.3. We previously supported
+- You can now use [JettyService](type) with Jetty 9.3. We previously supported
   Jetty 9.4 only. #3288
-- We improved how we shut down a <type://Server> in our Spring Boot integration
+- We improved how we shut down a [Server](type) in our Spring Boot integration
   so it's more future-proof. #3266
 
 ## 🛠️ Bug fixes
 
-- The future returned by <type://StreamWriter#whenConsumed()> is now completed
+- The future returned by [StreamWriter#whenConsumed()](type) is now completed
   immediately even when the current demand is `0`. #3213
 - Fixed the violation of Reactive Streams specification when `null` is published. #3212 #3216
-- <type://TomcatService> does not raise a `NullPointerException` when it stops.
+- [TomcatService](type) does not raise a `NullPointerException` when it stops.
   #3136 #3218
 - Fixed stability and interoperability issues in Eureka service discovery module.
   #3235 #3275 #3238 #3301
 - The service name generated from a CGLIB-enhanced class does not have synthetic
   suffix anymore. #3103 #3240
-- <type://HealthCheckedEndpointGroup> now refreshes its <typeplural://Endpoint>'
+- [HealthCheckedEndpointGroup](type) now refreshes its [Endpoint](typeplural)'
   status when their weights are changed. #3236
 - You'll no longer see a `NullPointerException` when retrying a gRPC request. #3251
 - Fixed the incorrect return type of some builder methods. #3220
-- Fixed a UI glitch in the go-to form of <type://DocService> client #3261
+- Fixed a UI glitch in the go-to form of [DocService](type) client #3261
 - You'll no longer see a harmless `Http2Exception: Stream N does not exist`
   warning log message anymore. #3233
   - You'll see it if there was really a protocol violation, however.
-- Fixed an issue where a <type://RequestLog> is sometimes not completed immediately. #3291
+- Fixed an issue where a [RequestLog](type) is sometimes not completed immediately. #3291
 - TLS is now configured only once in Spring Boot WebFlux integration. #3266
 - Armeria now finds the gRPC `ServiceDescriptor` correctly from the code
   generated with [Reactive-gRPC](https://github.com/salesforce/reactive-grpc). #3294
 - A request refused with HTTP/2 `REFUSED_STREAM` error code now fails with
-  an <type://UnprocessedRequestException>, so it can be safely retried. #3298
-- <type://THttpService> can now handle the Thrift code generated with the `fullcamel`
+  an [UnprocessedRequestException](type), so it can be safely retried. #3298
+- [THttpService](type) can now handle the Thrift code generated with the `fullcamel`
   option. #3272
-- <type://ZooKeeperUpdatingListener> does not raise an `IllegalStateException` anymore
+- [ZooKeeperUpdatingListener](type) does not raise an `IllegalStateException` anymore
   even if the given Curator client is started already. #3305
 
 ## 🏚️ Deprecations
 
-- `*ChannelType()` methods in <type://EventLoopGroups> have been deprecated in favor of
-  the new methods in <type://TransportType>. #3244
-- <type://CircuitBreakerRpcClient#newPerHostAndMethodDecorator()> has been deprecated
-  in favor of <type://CircuitBreakerRpcClient#newDecorator(CircuitBreakerMapping,CircuitBreakerRuleWithContent)>.
+- `*ChannelType()` methods in [EventLoopGroups](type) have been deprecated in favor of
+  the new methods in [TransportType](type). #3244
+- [CircuitBreakerRpcClient#newPerHostAndMethodDecorator()](type) has been deprecated
+  in favor of [CircuitBreakerRpcClient#newDecorator(CircuitBreakerMapping,CircuitBreakerRuleWithContent)](type).
   #3249
 
 ## ☢️ Breaking changes
@@ -257,8 +257,8 @@ date: 2021-02-01
   anymore, which was pulled into runtime dependencies by mistake. #3256
 - You have to recompile your application because we changed the return type of
   some builder methods. #3220
-- Changes in the API annotated with <type://@UnstableApi>:
-  - `HttpDeframer` has been replaced with <type://HttpMessage#decode(HttpDecoder)>. #3215
+- Changes in the API annotated with [@UnstableApi](type):
+  - `HttpDeframer` has been replaced with [HttpMessage#decode(HttpDecoder)](type). #3215
 
 ## ⛓ Dependencies
 

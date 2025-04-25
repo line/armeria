@@ -28,13 +28,13 @@ date: 2021-04-07
   ```
 - Armeria now provides various useful extensions and conversions for Scala. #3395
   - See [Scala integration](/docs/advanced-scala) for the full features.
-- You can now create a <type://StreamMessage> from a `Path` or a `File`. #3344
+- You can now create a [StreamMessage](type) from a `Path` or a `File`. #3344
   ```java
   Path path = Paths.get("...");
   StreamMessage<HttpData> publisher = StreamMessage.of(path);
   ```
-- You can now filter or transform values of a <type://StreamMessage> using
-  <type://StreamMessage#filter(Predicate)> or <type://StreamMessage#map(Function)>. #3351
+- You can now filter or transform values of a [StreamMessage](type) using
+  [StreamMessage#filter(Predicate)](type) or [StreamMessage#map(Function)](type). #3351
   ```java
   // Filter.
   StreamMessage<Integer> source = StreamMessage.of(1, 2, 3, 4, 5);
@@ -56,7 +56,7 @@ date: 2021-04-07
       return null;
   })...
   ```
-- You can now convert an exception into an <type://RpcResponse> in <type://THttpService>. #3349 #3383
+- You can now convert an exception into an [RpcResponse](type) in [THttpService](type). #3349 #3383
   ```java
   THttpService.builder()
               .addService("hello", helloService)
@@ -67,7 +67,7 @@ date: 2021-04-07
                   ...
               })
   ```
-- You can now set a response timeout and attributes using <type://WebClientRequestPreparation>. #3347 #3357
+- You can now set a response timeout and attributes using [WebClientRequestPreparation](type). #3347 #3357
   ```java
   WebClient client = ...;
   client.prepare()
@@ -97,14 +97,14 @@ date: 2021-04-07
                               return (statusCode >= 200 && statusCode < 400) || statusCode == 404;
                           });
   ```
-- You can now fluently build a <type://DecodingClient> using the <type://DecodingClientBuilder>. #3348 #3372
+- You can now fluently build a [DecodingClient](type) using the [DecodingClientBuilder](type). #3348 #3372
   ```java
   DecodingClient.builder()
                 .autoFillAcceptEncoding(false)
                 .strictContentEncoding(true)
                 .newDecorator();
   ```
-- You can now fluently build an <type://HttpRequest> with a `Publisher<HttpData>`. #3343
+- You can now fluently build an [HttpRequest](type) with a `Publisher<HttpData>`. #3343
   ```java
   StreamMessage<HttpData> publisher = StreamMessage.of(...);
   HttpRequest.builder()
@@ -130,7 +130,7 @@ date: 2021-04-07
                        MyProtobufMessage.newBuilder()...build());
   }
   ```
-- You can now customize the default service name of a <type://RequestLog>. #3232 #3366
+- You can now customize the default service name of a [RequestLog](type). #3232 #3366
   ```java
   Server.builder()
         .defaultServiceNaming(ctx -> {
@@ -153,16 +153,16 @@ date: 2021-04-07
       return delegate.serve(ctx, req);
   });
   ```
-- <type://BraveService> does not trace requests for <type://TransientService> such as
-  <type://HealthCheckService> anymore. #3382
-  - You should specify <type://TransientServiceOption#WITH_TRACING> if you want to trace them.
+- [BraveService](type) does not trace requests for [TransientService](type) such as
+  [HealthCheckService](type) anymore. #3382
+  - You should specify [TransientServiceOption#WITH_TRACING](type) if you want to trace them.
   ```java
   HealthCheckService.builder()
                     .transientServiceOptions(WITH_TRACING)
                     ...
                     .build();
   ```
-- You can now clean up resources by overriding <type://FilteredStreamMessage#onCancellation(Subscriber)>
+- You can now clean up resources by overriding [FilteredStreamMessage#onCancellation(Subscriber)](type)
   when `Subscription.cancel()` is called. #3375
   ```java
   new MyFilteredHttpResponse(res) {
@@ -188,17 +188,17 @@ date: 2021-04-07
                                            .build();
   assert headers.cookies().equals(Cookies.of(setCookie1, setCookie2));
   ```
-- You can now use `req.root_id` <type://BuiltInProperty> to log the ID of <type://RequestContext#root()>.
+- You can now use `req.root_id` [BuiltInProperty](type) to log the ID of [RequestContext#root()](type).
   #3429 #3433
 - You can now use Thrift 0.14.0 with the new `armeria-thrift0.14` module. #3470 #3422
 - You can now use OAuth 2.0 related features with the new `armeria-oauth2` module. #2268 #2840
   - [OAuth 2.0 server-side token authorization](https://datatracker.ietf.org/doc/rfc7662/) using
-    <type://OAuth2TokenIntrospectionAuthorizer>
+    [OAuth2TokenIntrospectionAuthorizer](type)
   - [Client credential grants](https://datatracker.ietf.org/doc/html/rfc6749#section-4.4) using
-    <type://OAuth2ClientCredentialsGrant>
+    [OAuth2ClientCredentialsGrant](type)
   - [Resource Owner Password Credentials Grant](https://datatracker.ietf.org/doc/html/rfc6749#section-4.3)
-    using <type://OAuth2ResourceOwnerPasswordCredentialsGrant>
-  - [OAuth 2.0 Token Revocation](https://datatracker.ietf.org/doc/rfc7009/) using <type://TokenRevocation>
+    using [OAuth2ResourceOwnerPasswordCredentialsGrant](type)
+  - [OAuth 2.0 Token Revocation](https://datatracker.ietf.org/doc/rfc7009/) using [TokenRevocation](type)
 
   <Tip>
 
@@ -221,13 +221,13 @@ date: 2021-04-07
 
 ## 🛠️ Bug fixes
 
-- You no longer see `NullPointerException` in <type://HttpResponseDecoder>. #3036 #3407
+- You no longer see `NullPointerException` in [HttpResponseDecoder](type). #3036 #3407
 - You no longer see `405 Method Not Allowed` when the exact and param path are defined with
   different HTTP methods. #3330 #3340
 - You no longer see `Address family not supported by protocol` or `Connection refused` error anymore
   on certain machines with IPv6 enabled. #3425
 - The Unicode characters like emojis in a JSON response are now rendered correctly
-  in <type://DocService>. #3396
+  in [DocService](type). #3396
 - You no longer see the wrong response body when the payload violates the protocol or is too large. #3419
 - You can now use the Thrift client and service that is generated by
   [`java:fullcamel`](https://issues.apache.org/jira/browse/THRIFT-2469) option of Thrift compiler.
@@ -236,18 +236,18 @@ date: 2021-04-07
   by Spring integration. #3300
 - You can now use [Sealed oneofs](https://scalapb.github.io/docs/sealed-oneofs/) message from ScalaPB
   with JSON for gRPC and annotated services. #3342 #3394
-- You no longer see `CancellationException` when an <type://HttpResponse> is fully consumed on server-side.
+- You no longer see `CancellationException` when an [HttpResponse](type) is fully consumed on server-side.
   #3387
-- You no longer see <type://ClosedSteamException> in Jetty service when it fails to write to an
-  <type://HttpResponse>. `EofException` is raised instead. #3412
-- You no longer see `IllegalStateException` when <type://RequestContextHooks> is enabled. #3441 #3442
+- You no longer see [ClosedSteamException](type) in Jetty service when it fails to write to an
+  [HttpResponse](type). `EofException` is raised instead. #3412
+- You no longer see `IllegalStateException` when [RequestContextHooks](type) is enabled. #3441 #3442
 - `ArmeriaServerHttpResponse` of Spring Webflux integration now correctly propagates
   Reactor's [`Context`](https://projectreactor.io/docs/core/release/reference/#context). #3439 #3443
 
 ## ☢️ Breaking changes
 
-- <type://ServiceRequestContext> is added to the parameter of `handleMessage` in
-  <type://AbstractUnaryGrpcService>. #3403
+- [ServiceRequestContext](type) is added to the parameter of `handleMessage` in
+  [AbstractUnaryGrpcService](type). #3403
   - The return type is also changed to `CompletionStage`. #3409
   ```java
   protected abstract CompletionStage<byte[]> handleMessage(
@@ -256,8 +256,8 @@ date: 2021-04-07
   protected final CompletionStage<ByteBuf> handleMessage(
           ServiceRequestContext ctx, ByteBuf message) {...}
   ```
-- <type://GrpcStatusFunction> now extends `BiFunction<Throwable, Metadata, Status>`. #3329
-- The `numberSteps` method in <type://WeightRampingUpStrategyBuilder> is now changed to `totalSteps`. #3377
+- [GrpcStatusFunction](type) now extends `BiFunction<Throwable, Metadata, Status>`. #3329
+- The `numberSteps` method in [WeightRampingUpStrategyBuilder](type) is now changed to `totalSteps`. #3377
 
 ## ⛓ Dependencies
 
