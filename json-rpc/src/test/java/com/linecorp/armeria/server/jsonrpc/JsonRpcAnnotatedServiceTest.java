@@ -18,7 +18,7 @@ package com.linecorp.armeria.server.jsonrpc;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.linecorp.armeria.server.annotation.ProducesJson;
+import com.linecorp.armeria.server.annotation.*;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
@@ -34,9 +34,6 @@ import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.server.ServerBuilder;
-import com.linecorp.armeria.server.annotation.Get;
-import com.linecorp.armeria.server.annotation.Post;
-import com.linecorp.armeria.server.annotation.RequestObject;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
 /**
@@ -47,36 +44,34 @@ class JsonRpcAnnotatedServiceTest {
 
     private static final ObjectMapper mapper = new ObjectMapper();
 
+    private static class Result{
+
+        Result(int data) {
+            this.data = data;
+        }
+
+        public int data;
+    }
+
     /**
      * A test service with JSON-RPC methods.
      */
     private static class JsonRpcTestService {
-        /**
-         * The subtract method used in examples.
-         */
-        @Post("/subtract")
+
+        @Post
         @ProducesJson
-        public int subtract(JsonNode params) {
+        public Result subtract(JsonNode params, HttpRequest req) {
             // Handle both positional and named parameters
             if (params.isArray()) {
                 // Positional parameters
                 ArrayNode array = (ArrayNode) params;
-                return array.get(0).asInt() - array.get(1).asInt();
+                return new Result(array.get(0).asInt() - array.get(1).asInt());
             } else {
                 // Named parameters
                 ObjectNode object = (ObjectNode) params;
-                return object.get("minuend").asInt() - object.get("subtrahend").asInt();
+                return new Result(object.get("minuend").asInt() - object.get("subtrahend").asInt());
             }
         }
-
-        /**
-         * The update method used in notification example.
-         */
-        @Post("/update")
-        public void update(@RequestObject @Nullable JsonNode params) {
-            // This is a notification method, so no return value is needed
-        }
-
     }
 
     @RegisterExtension
@@ -118,7 +113,7 @@ class JsonRpcAnnotatedServiceTest {
         JsonNode response1 = sendJsonRpcRequest(request1);
         
         assertThat(response1.get("jsonrpc").asText()).isEqualTo("2.0");
-        assertThat(response1.get("result").asInt()).isEqualTo(19);
+        assertThat(response1.get("result").get("data").asInt()).isEqualTo(19);
         assertThat(response1.get("id").asInt()).isEqualTo(1);
         
         // Test case 2: Subtract 23 - 42 = -19
@@ -126,7 +121,7 @@ class JsonRpcAnnotatedServiceTest {
         JsonNode response2 = sendJsonRpcRequest(request2);
         
         assertThat(response2.get("jsonrpc").asText()).isEqualTo("2.0");
-        assertThat(response2.get("result").asInt()).isEqualTo(-19);
+        assertThat(response2.get("result").get("data").asInt()).isEqualTo(-19);
         assertThat(response2.get("id").asInt()).isEqualTo(2);
     }
 
@@ -139,7 +134,7 @@ class JsonRpcAnnotatedServiceTest {
         System.out.println(response1);
         
         assertThat(response1.get("jsonrpc").asText()).isEqualTo("2.0");
-        assertThat(response1.get("result").asInt()).isEqualTo(19);
+        assertThat(response1.get("result").get("data").asInt()).isEqualTo(19);
         assertThat(response1.get("id").asInt()).isEqualTo(3);
         
         // Test case 2: Subtract with named parameters in another order
@@ -148,7 +143,7 @@ class JsonRpcAnnotatedServiceTest {
         JsonNode response2 = sendJsonRpcRequest(request2);
         
         assertThat(response2.get("jsonrpc").asText()).isEqualTo("2.0");
-        assertThat(response2.get("result").asInt()).isEqualTo(19);
+        assertThat(response2.get("result").get("data").asInt()).isEqualTo(19);
         assertThat(response2.get("id").asInt()).isEqualTo(4);
     }
 

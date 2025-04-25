@@ -8,13 +8,11 @@ import javax.annotation.Nullable;
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public final class JsonRpcError {
 
-    // 표준 에러 코드 (https://www.jsonrpc.org/specification#error_object)
     public static final int PARSE_ERROR = -32700;
     public static final int INVALID_REQUEST = -32600;
     public static final int METHOD_NOT_FOUND = -32601;
     public static final int INVALID_PARAMS = -32602;
     public static final int INTERNAL_ERROR = -32603;
-    // -32000 to -32099: 서버 정의 에러
 
     private final int code;
     private final String message;
@@ -50,7 +48,6 @@ public final class JsonRpcError {
         return data;
     }
 
-    // 표준 오류 생성을 위한 정적 메소드 (예시)
     public static JsonRpcError parseError(@Nullable Object data) {
         return new JsonRpcError(PARSE_ERROR, "Parse error", data);
     }

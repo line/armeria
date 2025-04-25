@@ -10,8 +10,10 @@ import com.linecorp.armeria.common.jsonrpc.JsonRpcRequest;
 import com.linecorp.armeria.common.jsonrpc.JsonRpcResponse;
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.server.HttpService;
+import com.linecorp.armeria.server.Route;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.SimpleDecoratingHttpService;
+import io.netty.util.AttributeKey;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -48,9 +50,9 @@ public class JsonRpcServiceDecorator extends SimpleDecoratingHttpService {
 
 
                 if (rpcRequest.isNotification()) {
-                    return handleNotification(ctx, req, delegate, rpcRequest);
+                    return handleNotification(ctx, delegate, rpcRequest);
                 } else {
-                    return handleRegularCall(ctx, req, delegate, rpcRequest);
+                    return handleRegularCall(ctx, delegate, rpcRequest);
                 }
             } catch (JsonRpcRequestParseException e) {
                 logger.warn("Failed to parse or validate JSON-RPC request: {}", aggregatedReq.contentUtf8(), e);
@@ -104,7 +106,7 @@ public class JsonRpcServiceDecorator extends SimpleDecoratingHttpService {
      * logging any potential errors during preparation/initiation, and returning an immediate NO_CONTENT response.
      * The actual response from the delegate is ignored.
      */
-    private CompletableFuture<HttpResponse> handleNotification(ServiceRequestContext ctx, HttpRequest req, HttpService delegate, JsonRpcRequest rpcRequest) {
+    private CompletableFuture<HttpResponse> handleNotification(ServiceRequestContext ctx, HttpService delegate, JsonRpcRequest rpcRequest) {
         final String methodName = rpcRequest.method();
         final JsonNode params = rpcRequest.params();
         final Object requestId = rpcRequest.id();
@@ -113,7 +115,7 @@ public class JsonRpcServiceDecorator extends SimpleDecoratingHttpService {
         try {
 
             // Prepare and serve the delegate, but ignore the returned Future
-            final CompletableFuture<AggregatedHttpResponse> delegateResponseFuture = prepareAndServeDelegate(ctx, delegate, req, methodName, params, requestId);
+            final CompletableFuture<AggregatedHttpResponse> delegateResponseFuture = prepareAndServeDelegate(ctx, delegate, methodName, params, requestId);
 
             // Log completion/failure using whenComplete for observability
             delegateResponseFuture.whenComplete((response, throwable) -> {
@@ -141,14 +143,14 @@ public class JsonRpcServiceDecorator extends SimpleDecoratingHttpService {
      * Handles regular JSON-RPC requests (non-notifications) by preparing and calling the delegate,
      * then processing the delegate's response.
      */
-    private CompletableFuture<HttpResponse> handleRegularCall(ServiceRequestContext ctx, HttpRequest req, HttpService delegate, JsonRpcRequest rpcRequest) {
+    private CompletableFuture<HttpResponse> handleRegularCall(ServiceRequestContext ctx, HttpService delegate, JsonRpcRequest rpcRequest) {
         final String methodName = rpcRequest.method();
         final JsonNode params = rpcRequest.params();
         final Object requestId = rpcRequest.id();
 
         try {
             // Prepare, serve the delegate, and get the response future
-            final CompletableFuture<AggregatedHttpResponse> delegateResponseFuture = prepareAndServeDelegate(ctx, delegate, req, methodName, params, requestId);
+            final CompletableFuture<AggregatedHttpResponse> delegateResponseFuture = prepareAndServeDelegate(ctx, delegate, methodName, params, requestId);
 
             // Attach the response processing handler
             return delegateResponseFuture.handle((delegateResponse, throwable) ->
@@ -177,19 +179,19 @@ public class JsonRpcServiceDecorator extends SimpleDecoratingHttpService {
      * @throws Exception if parameter serialization or delegate execution fails.
      */
     private CompletableFuture<AggregatedHttpResponse> prepareAndServeDelegate(
-            ServiceRequestContext ctx, HttpService delegate, HttpRequest req, String methodName, @Nullable JsonNode params, @Nullable Object requestId)
+            ServiceRequestContext ctx, HttpService delegate, String methodName, @Nullable JsonNode params, @Nullable Object requestId)
             throws Exception {
 
         final String internalPath = "/".equals(ctx.path()) ? '/' + methodName : ctx.path() + '/' + methodName;
         final String paramsJson = (params == null || params.isNull()) ? "null" : objectMapper.writeValueAsString(params);
 
-        final RequestHeaders headers = req.headers().toBuilder()
-                .path(internalPath)
-                .accept(MediaType.JSON_UTF_8)
-                .contentType(MediaType.JSON_UTF_8)
-                .build();
 
-        final HttpRequest internalRequest = HttpRequest.of(headers, HttpData.ofUtf8(paramsJson));
+        final HttpRequest internalRequest = HttpRequest.of(
+                HttpMethod.POST,
+                internalPath,
+                MediaType.JSON_UTF_8,
+                paramsJson
+        );
 
         final String logId = requestId != null ? requestId.toString() : "notification";
         logger.debug("Delegating JSON-RPC method '{}' (id: {}) to internal path: {} with body: {}",
