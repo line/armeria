@@ -1,3 +1,18 @@
+/*
+ * Copyright 2025 LY Corporation
+ *
+ * LY Corporation licenses this file to you under the Apache License,
+ * version 2.0 (the "License"); you may not use this file except in compliance
+ * with the License. You may obtain a copy of the License at:
+ *
+ *   https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations
+ * under the License.
+ */
 package com.linecorp.armeria.server.jsonrpc;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -9,34 +24,42 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
-import com.linecorp.armeria.server.annotation.*;
-import com.linecorp.armeria.testing.junit5.server.ServerExtension;
-import com.linecorp.armeria.server.ServerBuilder;
-import com.linecorp.armeria.common.jsonrpc.JsonRpcErrorCode;
-import com.linecorp.armeria.common.annotation.Nullable;
-import com.linecorp.armeria.common.*;
-import com.linecorp.armeria.client.WebClient;
-import com.fasterxml.jackson.databind.node.ObjectNode;
-import com.fasterxml.jackson.databind.node.JsonNodeFactory;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.annotation.JsonCreator;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-public class JsonRpcServiceBuilderTest { 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.JsonNodeFactory;
+import com.fasterxml.jackson.databind.node.ObjectNode;
+
+import com.linecorp.armeria.client.WebClient;
+import com.linecorp.armeria.common.AggregatedHttpResponse;
+import com.linecorp.armeria.common.HttpRequest;
+import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.HttpStatus;
+import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.jsonrpc.JsonRpcErrorCode;
+import com.linecorp.armeria.server.ServerBuilder;
+import com.linecorp.armeria.server.annotation.Post;
+import com.linecorp.armeria.server.annotation.ProducesJson;
+import com.linecorp.armeria.server.annotation.RequestObject;
+import com.linecorp.armeria.testing.junit5.server.ServerExtension;
+
+public class JsonRpcServiceBuilderTest {
+
     private static final ObjectMapper mapper = new ObjectMapper();
     private static final JsonNodeFactory factory = mapper.getNodeFactory();
-
     private static final Logger logger = LoggerFactory.getLogger(JsonRpcServiceBuilderTest.class);
 
-    private static class RequestDTO{
+    private static class RequestDTO {
 
         @JsonCreator
-        RequestDTO(){
+        RequestDTO() {
         }
 
         RequestDTO(int minuend, int subtrahend) {
@@ -44,9 +67,17 @@ public class JsonRpcServiceBuilderTest {
             this.subtrahend = subtrahend;
         }
 
-        public int minuend;
+        private int minuend;
 
-        public int subtrahend;
+        private int subtrahend;
+
+        public int getMinuend() {
+            return minuend;
+        }
+
+        public int getSubtrahend() {
+            return subtrahend;
+        }
     }
 
     private static class JsonRpcTestService {
@@ -64,10 +95,9 @@ public class JsonRpcServiceBuilderTest {
              return HttpResponse.of(Integer.toString((Integer) arr[0] - (Integer) arr[1]));
         }
 
-
         @Post("/subtractByName")
         public HttpResponse subtractByName(@RequestObject RequestDTO requestDTO) {
-            return HttpResponse.of(Integer.toString(requestDTO.minuend - requestDTO.subtrahend));
+            return HttpResponse.of(Integer.toString(requestDTO.getMinuend() - requestDTO.getSubtrahend()));
         }
 
         @Post("/update")
@@ -113,7 +143,7 @@ public class JsonRpcServiceBuilderTest {
         } else if (id instanceof String) {
             requestJson.put("id", (String) id);
         } else if (id instanceof Number) {
-            Number numId = (Number) id;
+            final Number numId = (Number) id;
             if (id instanceof Integer) {
                 requestJson.put("id", numId.intValue());
             } else if (id instanceof Long) {
@@ -122,13 +152,11 @@ public class JsonRpcServiceBuilderTest {
                 requestJson.put("id", numId.doubleValue());
             } else if (id instanceof Float) {
                 requestJson.put("id", numId.floatValue());
-            }
-            else if (id instanceof BigDecimal) {
-                requestJson.set("id", factory.numberNode((BigDecimal)id));
+            } else if (id instanceof BigDecimal) {
+                requestJson.set("id", factory.numberNode((BigDecimal) id));
             } else if (id instanceof BigInteger) {
-                requestJson.set("id", factory.numberNode((BigInteger)id));
-            }
-            else {
+                requestJson.set("id", factory.numberNode((BigInteger) id));
+            } else {
                 requestJson.put("id", numId.doubleValue());
             }
         } else {
@@ -141,7 +169,9 @@ public class JsonRpcServiceBuilderTest {
         }
     }
 
-    private void assertJsonRpcSuccess(AggregatedHttpResponse response, Object expectedResult, Object expectedId) throws JsonProcessingException {
+    private void assertJsonRpcSuccess(AggregatedHttpResponse response,
+                                      Object expectedResult,
+                                      Object expectedId) throws JsonProcessingException {
         assertThat(response.status()).isEqualTo(HttpStatus.OK);
         assertThat(response.contentType()).isEqualTo(MediaType.JSON_UTF_8);
         final JsonNode responseJson = mapper.readTree(response.contentUtf8());
@@ -179,7 +209,9 @@ public class JsonRpcServiceBuilderTest {
          }
     }
 
-    private void assertJsonRpcError(AggregatedHttpResponse response, JsonRpcErrorCode errorCode, @Nullable Object expectedId) throws JsonProcessingException {
+    private void assertJsonRpcError(AggregatedHttpResponse response,
+                                    JsonRpcErrorCode errorCode,
+                                    @Nullable Object expectedId) throws JsonProcessingException {
         assertThat(response.status()).isEqualTo(HttpStatus.OK);
         assertThat(response.contentType()).isEqualTo(MediaType.JSON_UTF_8);
         final JsonNode responseJson = mapper.readTree(response.contentUtf8());
@@ -219,8 +251,6 @@ public class JsonRpcServiceBuilderTest {
         }
     }
 
-
-
     @Test
     void success_noParams() throws Exception {
         final String requestBody = createJsonRpcRequest("returnResult", null, 1);
@@ -252,7 +282,9 @@ public class JsonRpcServiceBuilderTest {
 
      @Test
     void success_namedParams() throws Exception {
-        final String requestBody = createJsonRpcRequest("subtractByName", new RequestDTO(43, 24), "req-3");
+        final String requestBody = createJsonRpcRequest("subtractByName",
+                                                        new RequestDTO(43, 24),
+                                                        "req-3");
         final AggregatedHttpResponse response = client().execute(
                         HttpRequest.builder()
                                 .post("/json-rpc/test")
@@ -278,7 +310,9 @@ public class JsonRpcServiceBuilderTest {
 
     @Test
     void notification_noParams() throws Exception {
-        final String requestBody = createJsonRpcRequest("update", Collections.singletonMap("data", "some data"), null);
+        final String requestBody = createJsonRpcRequest("update",
+                                                        Collections.singletonMap("data", "some data"),
+                                                        null);
         final AggregatedHttpResponse response = client().execute(
                         HttpRequest.builder()
                                 .post("/json-rpc/test")
@@ -291,7 +325,9 @@ public class JsonRpcServiceBuilderTest {
 
     @Test
     void error_methodNotFound() throws Exception {
-        final String requestBody = createJsonRpcRequest("nonExistentMethod", null, "err-1");
+        final String requestBody = createJsonRpcRequest("nonExistentMethod",
+                                                        null,
+                                                        "err-1");
         final AggregatedHttpResponse response = client().execute(
                         HttpRequest.builder()
                                 .post("/json-rpc/test")
@@ -311,7 +347,8 @@ public class JsonRpcServiceBuilderTest {
 
      @Test
     void error_parseError_invalidJson() throws Exception {
-         final String invalidJson = "{\"jsonrpc\": \"2.0\", \"method\": \"foo\", \"params\": \"bar\", \"id\": 1";
+         final String invalidJson =
+                 "{\"jsonrpc\": \"2.0\", \"method\": \"foo\", \"params\": \"bar\", \"id\": 1";
          final AggregatedHttpResponse response = client().execute(
                         HttpRequest.builder()
                                 .post("/json-rpc/test")
@@ -347,7 +384,8 @@ public class JsonRpcServiceBuilderTest {
 
      @Test
     void error_invalidParams_wrongType() throws Exception {
-        final String requestBody = createJsonRpcRequest("subtractByPos", "not an array", 5);
+        final String requestBody =
+                createJsonRpcRequest("subtractByPos", "not an array", 5);
          final AggregatedHttpResponse response = client().execute(
                         HttpRequest.builder()
                                 .post("/json-rpc/test")
@@ -374,7 +412,9 @@ public class JsonRpcServiceBuilderTest {
 
      @Test
      void error_invalidParams_structureMismatch_namedToPos() throws Exception {
-         final String requestBody = createJsonRpcRequest("subtractByName", new int[]{42, 23}, 7);
+         final String requestBody = createJsonRpcRequest("subtractByName",
+                                                         new int[]{42, 23},
+                                                         7);
          final AggregatedHttpResponse response = client().execute(
                  HttpRequest.builder()
                          .post("/json-rpc/test")
@@ -393,7 +433,8 @@ public class JsonRpcServiceBuilderTest {
          //             {"jsonrpc": "2.0", "method": "notify_hello", "params": [7]},
          //             {"jsonrpc": "2.0", "method": "subtractByPos", "params": [42,23], "id": "2"},
          //             {"foo": "boo"},
-         //             {"jsonrpc": "2.0", "method": "nonExistentMethod", "params": {"name": "myself"}, "id": "5"},
+         //             {"jsonrpc": "2.0", "method": "nonExistentMethod",
+         //                                "params": {"name": "myself"}, "id": "5"},
          //             {"jsonrpc": "2.0", "method": "getData", "id": "9"}
          //         ]
          //         """;
@@ -411,8 +452,10 @@ public class JsonRpcServiceBuilderTest {
                  "    {\"jsonrpc\": \"2.0\", \"method\": \"update\", \"params\": [7]}," +
                  "    {\"jsonrpc\": \"2.0\", \"method\": \"subtractByPos\", \"params\": [42,23], \"id\": 2}," +
                  "    {\"foo\": \"boo\"}," +
-                 "    {\"jsonrpc\": \"2.0\", \"method\": \"nonExistentMethod\", \"params\": {\"name\": \"myself\"}, \"id\": \"5\"}," +
-                 "    {\"jsonrpc\": \"2.0\", \"method\": \"subtractByName\", \"params\": {\"minuend\": 100, \"subtrahend\": 10}, \"id\": 9}" +
+                 "    {\"jsonrpc\": \"2.0\", \"method\": \"nonExistentMethod\", " +
+                 "                           \"params\": {\"name\": \"myself\"}, \"id\": \"5\"}," +
+                 "    {\"jsonrpc\": \"2.0\", \"method\": \"subtractByName\", " +
+                 "                           \"params\": {\"minuend\": 100, \"subtrahend\": 10}, \"id\": 9}" +
                  "]";
 
          final AggregatedHttpResponse response = client().execute(
@@ -455,7 +498,8 @@ public class JsonRpcServiceBuilderTest {
          final JsonNode getDataResponse = responseMap.get(1);
          assertThat(getDataResponse.get("jsonrpc").asText()).isEqualTo("2.0");
          assertThat(getDataResponse.has("error")).isFalse();
-         assertThat(getDataResponse.get("result")).isEqualTo(mapper.valueToTree(Arrays.asList("hello", 5)));
+         assertThat(getDataResponse.get("result"))
+                 .isEqualTo(mapper.valueToTree(Arrays.asList("hello", 5)));
          assertThat(getDataResponse.get("id").asInt()).isEqualTo(1);
 
          // Verify subtractByPos response (id: 2)
@@ -472,7 +516,8 @@ public class JsonRpcServiceBuilderTest {
          assertThat(invalidReqResponse.get("jsonrpc").asText()).isEqualTo("2.0");
          assertThat(invalidReqResponse.has("result")).isFalse();
          assertThat(invalidReqResponse.has("error")).isTrue();
-         assertThat(invalidReqResponse.get("error").get("code").asInt()).isEqualTo(JsonRpcErrorCode.INVALID_REQUEST.code());
+         assertThat(invalidReqResponse.get("error").get("code").asInt())
+                 .isEqualTo(JsonRpcErrorCode.INVALID_REQUEST.code());
          assertThat(invalidReqResponse.get("id").isNull()).isTrue();
 
          // Verify method not found response (id: "5")
@@ -481,7 +526,8 @@ public class JsonRpcServiceBuilderTest {
          assertThat(notFoundResponse.get("jsonrpc").asText()).isEqualTo("2.0");
          assertThat(notFoundResponse.has("result")).isFalse();
          assertThat(notFoundResponse.has("error")).isTrue();
-         assertThat(notFoundResponse.get("error").get("code").asInt()).isEqualTo(JsonRpcErrorCode.METHOD_NOT_FOUND.code());
+         assertThat(notFoundResponse.get("error").get("code").asInt())
+                 .isEqualTo(JsonRpcErrorCode.METHOD_NOT_FOUND.code());
          assertThat(notFoundResponse.get("id").asText()).isEqualTo("5");
 
          // Verify subtractByName response (id: 9)
@@ -495,4 +541,4 @@ public class JsonRpcServiceBuilderTest {
          // Ensure no other responses are present
          assertThat(responseMap.size()).isEqualTo(5); // 1 notification excluded
      }
-} 
+}

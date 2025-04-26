@@ -1,31 +1,56 @@
+/*
+ * Copyright 2025 LY Corporation
+ *
+ * LY Corporation licenses this file to you under the Apache License,
+ * version 2.0 (the "License"); you may not use this file except in compliance
+ * with the License. You may obtain a copy of the License at:
+ *
+ *   https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations
+ * under the License.
+ */
 package com.linecorp.armeria.server.jsonrpc;
 
 import static java.util.Objects.requireNonNull;
 
 import java.util.Collections;
-import java.util.Map;
-import java.util.List;
 import java.util.LinkedHashMap;
 import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.exc.MismatchedInputException;
-import com.linecorp.armeria.common.*;
+
+import com.linecorp.armeria.common.AggregatedHttpRequest;
+import com.linecorp.armeria.common.AggregatedHttpResponse;
+import com.linecorp.armeria.common.HttpData;
+import com.linecorp.armeria.common.HttpRequest;
+import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.HttpStatus;
+import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.jsonrpc.JsonRpcError;
 import com.linecorp.armeria.common.jsonrpc.JsonRpcRequest;
 import com.linecorp.armeria.common.jsonrpc.JsonRpcResponse;
+import com.linecorp.armeria.common.util.UnmodifiableFuture;
 import com.linecorp.armeria.internal.common.JacksonUtil;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServiceConfig;
 import com.linecorp.armeria.server.ServiceRequestContext;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * Builds a new {@link HttpService}s using Json rpc
@@ -74,7 +99,8 @@ public class JsonRpcServiceBuilder {
     /**
      * Adds an {@link HttpService} that handles JSON-RPC requests under the specified prefix.
      * The method name from the JSON-RPC request will be appended to the prefix to find the target service.
-     * Note: This method is primarily for internal use or advanced scenarios. Prefer {@link #addAnnotatedService(String, Object)}.
+     * Note: This method is primarily for internal use or advanced scenarios.
+     * Prefer {@link #addAnnotatedService(String, Object)}.
      *
      * @param prefix The path prefix for this service.
      * @param service The {@link HttpService} to handle requests under this prefix.
@@ -89,7 +115,8 @@ public class JsonRpcServiceBuilder {
 
     /**
      * Adds an annotated service object that handles JSON-RPC requests under the specified prefix.
-     * Methods within the service will be registered with the {@link ServerBuilder} when {@link #build()} is called.
+     * Methods within the service will be registered with the {@link ServerBuilder} when {@link #build()} is
+     * called.
      *
      * @param prefix The path prefix for this annotated service.
      * @param service The annotated service object.
@@ -118,12 +145,13 @@ public class JsonRpcServiceBuilder {
         }
 
         return (ctx, req) -> HttpResponse.of(req.aggregate().thenCompose(aggregatedRequest -> {
-            boolean wasRequestJsonArray;
+            final boolean wasRequestJsonArray;
             try {
                 wasRequestJsonArray = mapper.readTree(aggregatedRequest.contentUtf8()).isArray();
             } catch (JsonProcessingException e) {
                 logger.warn("Failed to parse JSON-RPC request body: {}", aggregatedRequest.contentUtf8(), e);
-                final JsonRpcError error = JsonRpcError.parseError("Invalid JSON received: " + e.getMessage());
+                final JsonRpcError error = JsonRpcError.parseError(
+                        "Invalid JSON received: " + e.getMessage());
                 final JsonRpcResponse rpcResponse = JsonRpcResponse.ofError(error, null);
                 return createErrorHttpResponseFuture(rpcResponse, null);
             }
@@ -149,8 +177,8 @@ public class JsonRpcServiceBuilder {
                                     return null;
                                 });
                             } catch (Exception e) {
-                                logger.warn("Failed to route or start execution for notification method '{}': {}",
-                                            rpcRequest.method(), e.getMessage(), e);
+                                logger.warn("Failed to route or start execution for notification method " +
+                                            "'{}': {}", rpcRequest.method(), e.getMessage(), e);
                             }
                         } else {
                             // Handle regular request
@@ -162,58 +190,76 @@ public class JsonRpcServiceBuilder {
                                                                 rpcRequest.method(), rpcRequest.id())
                                 ));
                             } catch (JsonRpcServiceNotFoundException e) {
-                                logger.warn("No service found matching JSON-RPC method path: {}", e.getLookupPath());
-                                final JsonRpcError error = JsonRpcError.methodNotFound("Method not found: " + e.getLookupPath());
-                                futures.add(createErrorHttpResponseFuture(JsonRpcResponse.ofError(error, rpcRequest.id()), rpcRequest.id()));
+                                logger.warn("No service found matching JSON-RPC method path: {}",
+                                            e.getLookupPath());
+                                final JsonRpcError error = JsonRpcError.methodNotFound(
+                                        "Method not found: " + e.getLookupPath());
+                                futures.add(createErrorHttpResponseFuture(
+                                        JsonRpcResponse.ofError(error, rpcRequest.id()), rpcRequest.id()));
                             } catch (Exception e) {
-                                logger.error("Unexpected error routing/processing JSON-RPC request item: {}", rpcRequest, e);
-                                final JsonRpcError error = JsonRpcError.internalError("Unexpected server error processing request item");
-                                futures.add(createErrorHttpResponseFuture(JsonRpcResponse.ofError(error, rpcRequest.id()), rpcRequest.id()));
+                                logger.error("Unexpected error routing/processing JSON-RPC request item: {}",
+                                             rpcRequest, e);
+                                final JsonRpcError error = JsonRpcError.internalError(
+                                        "Unexpected server error processing request item");
+                                futures.add(createErrorHttpResponseFuture(
+                                        JsonRpcResponse.ofError(error, rpcRequest.id()), rpcRequest.id()));
                             }
                         }
                     }
                 }
 
                 if (futures.isEmpty()) {
-                    // This happens if the batch contained ONLY notifications OR was an empty array parsed successfully
-                    // (Empty array case is now handled by JsonRpcRequestParseException below)
-                    return CompletableFuture.completedFuture(HttpResponse.of(HttpStatus.OK));
+                    // This happens if the batch contained ONLY notifications.
+                    // (Empty array case is handled by JsonRpcRequestParseException)
+                    return UnmodifiableFuture.completedFuture(HttpResponse.of(HttpStatus.OK));
                 }
 
-                // If the original request was not an array but resulted in a single future (successful single request),
+                // If the original request was not an array but resulted in a single future
+                // (successful single request),
                 // return the single response directly without wrapping in an array.
                 if (!wasRequestJsonArray && futures.size() == 1) {
                     return futures.get(0);
                 }
 
-                // Otherwise (batch request or single request with error during parsing), return an array response.
+                // Otherwise (batch request or single request with error during parsing),
+                // return an array response.
                 return CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]))
                         .thenApply(v -> {
                             final List<JsonNode> responseNodes = futures.stream()
                                     .map(future -> {
                                         try {
-                                            final HttpResponse aggResp = future.join(); // join is safe after allOf
-                                            return mapper.readTree(aggResp.aggregate().join().contentUtf8());
+                                            final HttpResponse aggResp = future.join();
+                                            return mapper.readTree(aggResp.aggregate()
+                                                                          .join()
+                                                                          .contentUtf8());
                                         } catch (Exception e) {
-                                            logger.warn("Failed to aggregate/parse individual JSON-RPC response within batch, returning internal error node", e);
-                                            return mapper.valueToTree(JsonRpcResponse.ofError(
-                                                    JsonRpcError.internalError("Failed to process response"), null));
+                                            logger.warn("Failed to aggregate/parse individual JSON-RPC " +
+                                                      "response within batch," +
+                                                        "returning internal error node", e);
+                                            return mapper.valueToTree(
+                                                    JsonRpcResponse.ofError(
+                                                    JsonRpcError
+                                                            .internalError("Failed to process response"),
+                                                    null));
                                         }
                                     })
                                     .collect(Collectors.toList());
-                            return HttpResponse.ofJson(MediaType.JSON_UTF_8, responseNodes);
+                            try {
+                                // Use HttpResponse.ofJson for batch responses
+                                return HttpResponse.ofJson(MediaType.JSON_UTF_8, responseNodes);
+                            } catch (Exception e) { // Catch potential exceptions from ofJson
+                                logger.error("Failed to serialize final batch JSON-RPC response", e);
+                                // This is a server-side issue, respond with a single internal error
+                                final JsonRpcResponse errResp = JsonRpcResponse.ofError(
+                                        JsonRpcError
+                                                .internalError("Failed to create batch response"),
+                                        null);
+                                return createSyncHttpResponse(errResp, null);
+                            }
                         });
-
             } catch (JsonRpcRequestParseException e) {
-                // Catch exceptions related to the overall request structure (e.g., empty batch array)
-                logger.warn("Failed to parse or validate overall JSON-RPC request structure: {}", aggregatedRequest.contentUtf8(), e);
+                logger.warn("Failed to parse incoming JSON-RPC request structure", e);
                 return createErrorHttpResponseFuture(e.getErrorResponse(), e.getRequestId());
-            } catch (Exception e) {
-                // Catch unexpected errors during the main processing logic
-                logger.error("Unexpected error during processing of JSON-RPC request: {}", aggregatedRequest.contentUtf8(), e);
-                final JsonRpcError error = JsonRpcError.internalError("Unexpected server error during request processing");
-                final JsonRpcResponse rpcResponse = JsonRpcResponse.ofError(error, null);
-                return createErrorHttpResponseFuture(rpcResponse, null);
             }
         }));
     }
@@ -228,7 +274,8 @@ public class JsonRpcServiceBuilder {
      * @return A list of {@link ParsedRpcItem}.
      * @throws JsonRpcRequestParseException if the overall structure is invalid (e.g., not JSON, empty array).
      */
-    private List<ParsedRpcItem> parseRequest(AggregatedHttpRequest aggregatedRequest) throws JsonRpcRequestParseException {
+    private List<ParsedRpcItem> parseRequest(AggregatedHttpRequest aggregatedRequest)
+            throws JsonRpcRequestParseException {
         final String requestBody = aggregatedRequest.contentUtf8();
         logger.trace("Received JSON-RPC request body: {}", requestBody);
         final List<ParsedRpcItem> parsedItems = new LinkedList<>();
@@ -239,8 +286,10 @@ public class JsonRpcServiceBuilder {
             if (node.isArray()) {
                 // Batch Request
                 if (node.isEmpty()) {
-                    final JsonRpcError error = JsonRpcError.invalidRequest("Received empty JSON-RPC batch request.");
-                    throw new JsonRpcRequestParseException(new IllegalArgumentException(error.message()), JsonRpcResponse.ofError(error, null), null);
+                    final JsonRpcError error = JsonRpcError.invalidRequest(
+                            "Received empty JSON-RPC batch request.");
+                    throw new JsonRpcRequestParseException(new IllegalArgumentException(error.message()),
+                                                         JsonRpcResponse.ofError(error, null), null);
                 }
                 for (JsonNode itemNode : node) {
                     parsedItems.add(parseSingleNode(itemNode)); // Parse each item individually
@@ -249,26 +298,28 @@ public class JsonRpcServiceBuilder {
                 // Single Request
                 parsedItems.add(parseSingleNode(node));
             } else {
-                final JsonRpcError error = JsonRpcError.invalidRequest("Request must be a JSON object or array.");
-                throw new JsonRpcRequestParseException(new IllegalArgumentException(error.message()), JsonRpcResponse.ofError(error, null), null);
+                final JsonRpcError error = JsonRpcError.invalidRequest(
+                        "Request must be a JSON object or array.");
+                throw new JsonRpcRequestParseException(new IllegalArgumentException(error.message()),
+                                                     JsonRpcResponse.ofError(error, null), null);
             }
 
             return parsedItems;
-
         } catch (JsonRpcRequestParseException e) {
-             // Rethrow exceptions related to overall structure (e.g., empty array)
-             throw e;
+            // Rethrow exceptions related to overall structure (e.g., empty array)
+            throw e;
         } catch (JsonProcessingException e) {
-             // Handle errors parsing the root JSON structure (not object or array, or invalid JSON)
-             logger.warn("Failed to parse overall JSON-RPC request body: {}", requestBody, e);
-             final JsonRpcError error = JsonRpcError.parseError("Invalid JSON received: " + e.getMessage());
-             throw new JsonRpcRequestParseException(e, JsonRpcResponse.ofError(error, null), null);
+            // Handle errors parsing the root JSON structure (not object or array, or invalid JSON)
+            logger.warn("Failed to parse overall JSON-RPC request body: {}", requestBody, e);
+            final JsonRpcError error = JsonRpcError.parseError("Invalid JSON received: " + e.getMessage());
+            throw new JsonRpcRequestParseException(e, JsonRpcResponse.ofError(error, null), null);
         } catch (Exception e) {
-             // Catch any other unexpected errors during parsing phase
-             logger.error("Unexpected error during JSON-RPC request parsing: {}", requestBody, e);
-             final JsonRpcError error = JsonRpcError.internalError("Unexpected server error during request parsing");
-             throw new JsonRpcRequestParseException(e, JsonRpcResponse.ofError(error, null), null);
-         }
+            // Catch any other unexpected errors during parsing phase
+            logger.error("Unexpected error during JSON-RPC request parsing: {}", requestBody, e);
+            final JsonRpcError error = JsonRpcError.internalError(
+                    "Unexpected server error during request parsing");
+            throw new JsonRpcRequestParseException(e, JsonRpcResponse.ofError(error, null), null);
+        }
     }
 
     /**
@@ -286,11 +337,16 @@ public class JsonRpcServiceBuilder {
         }
 
         Object idForError = null;
-        JsonNode idNode = itemNode.get("id"); // Attempt to get ID early for errors
+        final JsonNode idNode = itemNode.get("id"); // Attempt to get ID early for errors
         if (idNode != null) {
-             if (idNode.isTextual()) idForError = idNode.asText();
-             else if (idNode.isNumber()) idForError = idNode.numberValue();
-             else if (idNode.isNull()) idForError = null;
+            if (idNode.isTextual()) {
+                idForError = idNode.asText();
+            } else if (idNode.isNumber()) {
+                idForError = idNode.numberValue();
+            } else if (idNode.isNull()) {
+                idForError = null;
+            }
+            // Ignore other types for ID for error reporting
         }
 
         try {
@@ -307,15 +363,15 @@ public class JsonRpcServiceBuilder {
             }
             // Parameter structure validation (must be object or array if present)
             if (rpcRequest.params() != null && !rpcRequest.hasObjectParams() && !rpcRequest.hasArrayParams()) {
-                throw new IllegalArgumentException("JSON-RPC request 'params' must be an object or an array, but was: " +
-                                                   rpcRequest.params().getNodeType());
+                throw new IllegalArgumentException("JSON-RPC request 'params' must be an object or an array, " +
+                                                   "but was: " + rpcRequest.params().getNodeType());
             }
 
             logger.debug("Parsed JSON-RPC request: method={}, id={}", rpcRequest.method(), idForError);
             return new ParsedRpcItem(rpcRequest);
-
         } catch (JsonProcessingException e) {
-            // Distinguish between structural issues (Invalid Request) and pure JSON syntax issues (Parse Error).
+            // Distinguish between structural issues (Invalid Request)
+            // and pure JSON syntax issues (Parse Error)
             // MismatchedInputException often indicates missing required fields for JsonRpcRequest.
             logger.warn("Failed to parse JSON node into JsonRpcRequest (id: {}): {}", idForError, itemNode, e);
             final JsonRpcError error;
@@ -330,14 +386,17 @@ public class JsonRpcServiceBuilder {
         } catch (IllegalArgumentException e) {
             // Catches validation errors thrown above (e.g., wrong version, invalid params type)
             logger.warn("Invalid JSON-RPC request structure (id: {}): {}", idForError, itemNode, e);
-            final JsonRpcError error = JsonRpcError.invalidRequest("Invalid request object: " + e.getMessage());
+            final JsonRpcError error =
+                    JsonRpcError.invalidRequest("Invalid request object: " + e.getMessage());
             return new ParsedRpcItem(JsonRpcResponse.ofError(error, idForError));
         } catch (Exception e) {
-             // Catch any other unexpected errors during single node processing
-             logger.error("Unexpected error parsing JSON-RPC node (id: {}): {}", idForError, itemNode.toString(), e);
-             final JsonRpcError error = JsonRpcError.internalError("Unexpected server error parsing request item");
-             return new ParsedRpcItem(JsonRpcResponse.ofError(error, idForError));
-         }
+            // Catch any other unexpected errors during single node processing
+            logger.error("Unexpected error parsing JSON-RPC node (id: {}): {}",
+                         idForError, itemNode.toString(), e);
+            final JsonRpcError error = JsonRpcError.internalError(
+                    "Unexpected server error parsing request item");
+            return new ParsedRpcItem(JsonRpcResponse.ofError(error, idForError));
+        }
     }
 
     /**
@@ -351,10 +410,11 @@ public class JsonRpcServiceBuilder {
      * @return An {@link HttpResponse} produced by the delegate service.
      * @throws Exception if an error occurs during service lookup or invocation.
      */
-    private HttpResponse route(ServiceRequestContext context, HttpRequest originalHttpRequest, JsonRpcRequest jsonRpcRequest) throws Exception {
+    private HttpResponse route(ServiceRequestContext context, HttpRequest originalHttpRequest,
+                               JsonRpcRequest jsonRpcRequest) throws Exception {
         final String targetPath = context.mappedPath() +
-                (jsonRpcRequest.method().startsWith("/") ?
-                        jsonRpcRequest.method() : '/' + jsonRpcRequest.method());
+                                  (jsonRpcRequest.method().startsWith("/") ? jsonRpcRequest.method()
+                                                                           : '/' + jsonRpcRequest.method());
 
         final HttpService targetService = findService(context, targetPath);
 
@@ -375,9 +435,8 @@ public class JsonRpcServiceBuilder {
         return targetService.serve(ServiceRequestContext.of(delegateRequest), delegateRequest);
     }
 
-
     /**
-     * Finds the appropriate {@link HttpService} to handle a request based on the target path 
+     * Finds the appropriate {@link HttpService} to handle a request based on the target path
      * derived from the JSON-RPC method name. Uses a cache for efficiency.
      *
      * @param context The {@link ServiceRequestContext} (used only to access server config).
@@ -385,7 +444,8 @@ public class JsonRpcServiceBuilder {
      * @return The {@link HttpService} responsible for handling the request.
      * @throws JsonRpcServiceNotFoundException if no service is found for the target path.
      */
-    private HttpService findService(ServiceRequestContext context, String targetPath) throws JsonRpcServiceNotFoundException {
+    private HttpService findService(ServiceRequestContext context, String targetPath)
+            throws JsonRpcServiceNotFoundException {
         // Use the targetPath directly for cache lookup and server config search.
         final String lookupPath = targetPath.startsWith("/") ? targetPath : '/' + targetPath;
         final String prefix = context.mappedPath();
@@ -401,7 +461,8 @@ public class JsonRpcServiceBuilder {
 
             if (result == null) {
                 // Throw a specific exception for service not found, 404 Not Found
-                throw new JsonRpcServiceNotFoundException("No service registered for the method path: " + lookupPath, lookupPath);
+                throw new JsonRpcServiceNotFoundException(
+                        "No service registered for the method path: " + lookupPath, lookupPath);
             }
 
             cachedRoutes.put(lookupPath, result);
@@ -417,30 +478,38 @@ public class JsonRpcServiceBuilder {
      * into the final JSON-RPC {@link HttpResponse}. This method handles both successful delegate
      * responses and errors occurring during delegate execution or response aggregation.
      *
-     * @param delegatedAggregatedResponse The aggregated response from the delegate service. Can be {@code null} if {@code throwable} is not {@code null}.
-     * @param throwable                   A throwable caught during delegate execution or response aggregation. Can be {@code null}.
-     * @param methodName                  The name of the JSON-RPC method being processed. Used for logging and error messages.
-     * @param requestId                   The ID from the original JSON-RPC request. Used for inclusion in the response.
-     * @return The final {@link HttpResponse} containing the serialized JSON-RPC response (either success or error).
+     * @param delegatedAggregatedResponse The aggregated response from the delegate service. Can be {@code null}
+     *                                    if {@code throwable} is not {@code null}.
+     * @param throwable                   A throwable caught during delegate execution or response aggregation.
+     *                                    Can be {@code null}.
+     * @param methodName                  The name of the JSON-RPC method being processed. Used for logging and
+     *                                    error messages.
+     * @param requestId                   The ID from the original JSON-RPC request. Used for inclusion in the
+     *                                    response.
+     * @return The final {@link HttpResponse} containing the serialized JSON-RPC response (either success or
+     *         error).
      */
-    private HttpResponse processResponse(@Nullable AggregatedHttpResponse delegatedAggregatedResponse, @Nullable Throwable throwable,
+    private HttpResponse processResponse(@Nullable AggregatedHttpResponse delegatedAggregatedResponse,
+                                         @Nullable Throwable throwable,
                                          String methodName, @Nullable Object requestId) {
         try {
             JsonRpcResponse rpcResponse;
 
             if (throwable != null) {
-                logger.warn("Error executing delegate service or aggregating response for JSON-RPC method '{}' (id: {}): {}",
-                            methodName, requestId, throwable.getMessage(), throwable);
+                logger.warn("Error executing delegate service or aggregating response for JSON-RPC method " +
+                            "'{}' (id: {}): {}", methodName, requestId, throwable.getMessage(), throwable);
                 final JsonRpcError error = mapThrowableToJsonRpcError(throwable, methodName, requestId);
                 rpcResponse = JsonRpcResponse.ofError(error, requestId);
-
             } else {
-                assert delegatedAggregatedResponse != null : "delegatedAggregatedResponse cannot be null if throwable is null";
+                assert delegatedAggregatedResponse != null
+                        : "delegatedAggregatedResponse cannot be null if throwable is null";
 
                 final HttpStatus status = delegatedAggregatedResponse.status();
                 final String content = delegatedAggregatedResponse.contentUtf8();
-                logger.debug("Received delegate response for JSON-RPC method '{}' (id: {}): status={}, content='{}'",
-                             methodName, requestId, status, content.length() > 500 ? content.substring(0, 500) + "..." : content);
+                logger.debug("Received delegate response for JSON-RPC method '{}' (id: {}): status={}, " +
+                             "content='{}'",
+                             methodName, requestId, status,
+                             content.length() > 500 ? content.substring(0, 500) + "..." : content);
 
                 if (status.isSuccess()) {
                     // Parse the content as JsonNode before creating the response
@@ -448,23 +517,26 @@ public class JsonRpcServiceBuilder {
                         final JsonNode resultNode = mapper.readTree(content);
                         rpcResponse = JsonRpcResponse.ofSuccess(resultNode, requestId);
                     } catch (JsonProcessingException e) {
-                        logger.warn("Failed to parse delegate response content as JSON for method '{}' (id: {}). Treating as internal error. Content: {}",
+                        logger.warn("Failed to parse delegate response content as JSON for method '{}' " +
+                                    "(id: {}). Treating as internal error. Content: {}",
                                     methodName, requestId, content, e);
-                        final JsonRpcError error = JsonRpcError.internalError("Failed to parse successful delegate response as JSON");
+                        final JsonRpcError error = JsonRpcError.internalError(
+                                "Failed to parse successful delegate response as JSON");
                         rpcResponse = JsonRpcResponse.ofError(error, requestId);
                     }
                 } else {
-                    final JsonRpcError error = mapHttpResponseToJsonRpcError(delegatedAggregatedResponse, methodName, requestId);
+                    final JsonRpcError error = mapHttpResponseToJsonRpcError(delegatedAggregatedResponse,
+                                                                               methodName, requestId);
                     rpcResponse = JsonRpcResponse.ofError(error, requestId);
                 }
             }
 
             return createSyncHttpResponse(rpcResponse, requestId);
-
         } catch (Exception e) {
             logger.error("Unexpected error handling delegate response for method '{}' (id: {}): {}",
                          methodName, requestId, e.getMessage(), e);
-            final JsonRpcError error = JsonRpcError.internalError("Unexpected server error handling delegate response");
+            final JsonRpcError error = JsonRpcError.internalError(
+                    "Unexpected server error handling delegate response");
             final JsonRpcResponse rpcResponse = JsonRpcResponse.ofError(error, requestId);
             return createSyncHttpResponse(rpcResponse, requestId);
         }
@@ -472,7 +544,7 @@ public class JsonRpcServiceBuilder {
 
     /**
      * Creates the final {@link HttpResponse} containing the serialized JSON-RPC response.
-     * This method is used for both successful responses and errors that occur *after* the initial parsing phase.
+     * This method is used for both successful responses and errors that occur *after* the initial parsing phase
      * It always returns HTTP {@link HttpStatus#OK}, with the JSON-RPC error details included in the body
      * if the {@code rpcResponse} represents an error.
      *
@@ -494,7 +566,8 @@ public class JsonRpcServiceBuilder {
     }
 
     /**
-     * Maps an error {@link AggregatedHttpResponse} from the delegate service to a specific {@link JsonRpcError}.
+     * Maps an error {@link AggregatedHttpResponse}
+     * from the delegate service to a specific {@link JsonRpcError}.
      * Tries to interpret common HTTP error statuses (404, 400) into standard JSON-RPC errors.
      *
      * @param aggregatedHttpResponse The error response received from the delegate service.
@@ -502,15 +575,19 @@ public class JsonRpcServiceBuilder {
      * @param requestId The ID of the original JSON-RPC request.
      * @return A {@link JsonRpcError} representing the delegate's error.
      */
-    private JsonRpcError mapHttpResponseToJsonRpcError(AggregatedHttpResponse aggregatedHttpResponse, String methodName, @Nullable Object requestId) {
+    private JsonRpcError mapHttpResponseToJsonRpcError(AggregatedHttpResponse aggregatedHttpResponse,
+                                                         String methodName, @Nullable Object requestId) {
         final HttpStatus status = aggregatedHttpResponse.status();
         final String content = aggregatedHttpResponse.contentUtf8();
 
-        logger.warn("Mapping HTTP error response from delegate for method '{}' (id: {}): status={}, content='{}'",
-                    methodName, requestId, status, content.length() > 500 ? content.substring(0, 500) + "..." : content);
+        logger.warn("Mapping HTTP error response from delegate for method '{}' (id: {}): status={}, " +
+                    "content='{}'",
+                    methodName, requestId, status,
+                    content.length() > 500 ? content.substring(0, 500) + "..." : content);
 
         if (status == HttpStatus.NOT_FOUND) {
-            return JsonRpcError.methodNotFound("Method '" + methodName + "' not found at delegate service (returned 404)");
+            return JsonRpcError.methodNotFound(
+                    "Method '" + methodName + "' not found at delegate service (returned 404)");
         } else if (status == HttpStatus.BAD_REQUEST) {
             String message = "Invalid parameters for method '" + methodName + "' (delegate returned 400)";
             if (!content.isEmpty()) {
@@ -518,13 +595,15 @@ public class JsonRpcServiceBuilder {
             }
             return JsonRpcError.invalidParams(message);
         } else if (status.isClientError()) {
-            String message = "Client error during delegate execution for method '" + methodName + "' (delegate returned " + status + ")";
+            String message = "Client error during delegate execution for method '" + methodName + "' " +
+                           "(delegate returned " + status + ")";
             if (!content.isEmpty()) {
                 message += ": " + content;
             }
             return JsonRpcError.invalidRequest(message);
         } else {
-            String message = "Internal server error during delegate execution for method '" + methodName + "' (delegate returned " + status + ")";
+            String message = "Internal server error during delegate execution for method '" +
+                             methodName + "' " + "(delegate returned " + status + ')';
             if (!content.isEmpty()) {
                 message += ": " + content;
             }
@@ -533,15 +612,17 @@ public class JsonRpcServiceBuilder {
     }
 
     /**
-     * Maps a {@link Throwable} (potentially from delegate execution or response aggregation) to a specific {@link JsonRpcError}.
-     * Unwraps {@link java.util.concurrent.CompletionException} and maps common exception types.
+     * Maps a {@link Throwable} (potentially from delegate execution or response aggregation) to a specific
+     * {@link JsonRpcError}.
+     * Unwraps {@link java.util.concurrent.CompletionException} if present and maps common exception types.
      *
      * @param exception   The exception caught during processing.
      * @param methodName  The name of the JSON-RPC method being processed.
      * @param requestId   The ID of the original JSON-RPC request.
      * @return A {@link JsonRpcError} representing the exception.
      */
-    private JsonRpcError mapThrowableToJsonRpcError(Throwable exception, String methodName, @Nullable Object requestId) {
+    private JsonRpcError mapThrowableToJsonRpcError(Throwable exception, String methodName,
+                                                  @Nullable Object requestId) {
         Throwable cause = exception;
         while (cause instanceof java.util.concurrent.CompletionException && cause.getCause() != null) {
             cause = cause.getCause();
@@ -556,43 +637,57 @@ public class JsonRpcServiceBuilder {
             if (specificError != null) {
                 return specificError;
             } else {
-                logger.error("Inconsistency: JsonRpcRequestParseException (for method '{}', id: {}) contained a JsonRpcResponse without an error object.",
+                logger.error("Inconsistency: JsonRpcRequestParseException (for method '{}', id: {}) " +
+                             "contained a JsonRpcResponse without an error object.",
                              methodName, requestId);
-                return JsonRpcError.internalError("Internal server error processing request validation failure for method '" + methodName + "'");
+                return JsonRpcError.internalError(
+                        "Internal server error processing request validation failure for method '" +
+                        methodName + "'");
             }
+        } else if (cause instanceof JsonProcessingException) {
+            return JsonRpcError.internalError(
+                    "Internal Error: Failed to process delegate response as JSON. Cause: " +
+                    cause.getMessage());
+        } else if (cause instanceof IllegalArgumentException) {
+            return JsonRpcError.invalidRequest(
+                    "Invalid argument or state encountered during processing: " + cause.getMessage());
+        } else {
+            // Catch-all for other unexpected exceptions during delegate processing
+            return JsonRpcError.internalError(
+                    "Internal server error during delegate processing for method '" + methodName + "': " +
+                    cause.getMessage());
         }
-        if (cause instanceof JsonProcessingException) {
-            return JsonRpcError.internalError("Internal Error: Failed to process delegate response as JSON. Cause: " + cause.getMessage());
-        }
-        if (cause instanceof IllegalArgumentException) {
-             return JsonRpcError.invalidRequest("Invalid argument or state encountered during processing: " + cause.getMessage());
-        }
-
-        // Catch-all for other unexpected exceptions during delegate processing
-        return JsonRpcError.internalError("Internal server error during delegate processing for method '" + methodName + "': " + cause.getMessage());
     }
 
     /**
-     * Creates a {@link CompletableFuture<HttpResponse>} containing the serialized JSON-RPC error response.
+     * Creates a {@link CompletableFuture}{@code <HttpResponse>}
+     * containing the serialized JSON-RPC error response.
      * This is specifically used for errors detected during the initial request parsing/validation phase
      * (i.e., caught via {@link JsonRpcRequestParseException}).
      *
      * @param rpcResponse The {@link JsonRpcResponse} containing the error details (must be an error response).
      * @param requestId   The ID from the original request (if available, {@code null} otherwise).
-     * @return A completed future containing the {@link HttpResponse} with status OK and the serialized JSON-RPC error.
-     *         Returns a future with an {@link HttpStatus#INTERNAL_SERVER_ERROR} response if serialization fails.
+     * @return A completed future containing the {@link HttpResponse} with status OK and the serialized
+     *         JSON-RPC error.
+     *         Returns a future with an {@link HttpStatus#INTERNAL_SERVER_ERROR} response if serialization fails
      */
-    private CompletableFuture<HttpResponse> createErrorHttpResponseFuture(JsonRpcResponse rpcResponse, @Nullable Object requestId) {
+    private CompletableFuture<HttpResponse> createErrorHttpResponseFuture(JsonRpcResponse rpcResponse,
+                                                                        @Nullable Object requestId) {
         try {
             final HttpResponse errorHttpResponse = HttpResponse.of(HttpStatus.OK, MediaType.JSON_UTF_8,
                                                                    mapper.writeValueAsString(rpcResponse));
-            return CompletableFuture.completedFuture(errorHttpResponse);
+            // Use UnmodifiableFuture here
+            return UnmodifiableFuture.completedFuture(errorHttpResponse);
         } catch (JsonProcessingException jsonProcessingException) {
-            logger.error("CRITICAL: Failed to serialize JSON-RPC error response for request id {}: {}",
+            logger.error("Failed to serialize JSON-RPC error response for request id {}: {}",
                          requestId, jsonProcessingException.getMessage(), jsonProcessingException);
-            final HttpResponse fallbackResponse = HttpResponse.of(HttpStatus.INTERNAL_SERVER_ERROR, MediaType.PLAIN_TEXT_UTF_8,
-                                                                "Internal Server Error: Failed to serialize JSON-RPC error response.");
-            return CompletableFuture.completedFuture(fallbackResponse);
+            final HttpResponse internalErrorResponse =
+                    HttpResponse.of(HttpStatus.INTERNAL_SERVER_ERROR,
+                                    MediaType.PLAIN_TEXT_UTF_8,
+                                    "Internal Server Error: " +
+                                                "Failed to serialize JSON-RPC error response.");
+            // Use UnmodifiableFuture here
+            return UnmodifiableFuture.completedFuture(internalErrorResponse);
         }
     }
 }
