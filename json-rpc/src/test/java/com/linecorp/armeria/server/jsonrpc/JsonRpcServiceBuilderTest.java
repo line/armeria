@@ -1,22 +1,6 @@
 package com.linecorp.armeria.server.jsonrpc;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.JsonNodeFactory;
-import com.fasterxml.jackson.databind.node.ObjectNode;
-import com.linecorp.armeria.client.WebClient;
-import com.linecorp.armeria.common.*;
-import com.linecorp.armeria.common.annotation.Nullable;
-import com.linecorp.armeria.common.jsonrpc.JsonRpcErrorCode;
-import com.linecorp.armeria.server.ServerBuilder;
-import com.linecorp.armeria.server.annotation.*;
-import com.linecorp.armeria.testing.junit5.server.ServerExtension;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.RegisterExtension;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import static org.assertj.core.api.Assertions.assertThat;
 
 import java.math.BigDecimal;
 import java.math.BigInteger;
@@ -25,7 +9,23 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
-import static org.assertj.core.api.Assertions.assertThat;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
+import com.linecorp.armeria.server.annotation.*;
+import com.linecorp.armeria.testing.junit5.server.ServerExtension;
+import com.linecorp.armeria.server.ServerBuilder;
+import com.linecorp.armeria.common.jsonrpc.JsonRpcErrorCode;
+import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.*;
+import com.linecorp.armeria.client.WebClient;
+import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.fasterxml.jackson.databind.node.JsonNodeFactory;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.annotation.JsonCreator;
 
 public class JsonRpcServiceBuilderTest { 
     private static final ObjectMapper mapper = new ObjectMapper();
@@ -102,13 +102,15 @@ public class JsonRpcServiceBuilderTest {
     }
 
     private String createJsonRpcRequest(String method, @Nullable Object params, @Nullable Object id) {
-        ObjectNode requestJson = factory.objectNode();
+        final ObjectNode requestJson = factory.objectNode();
         requestJson.put("jsonrpc", "2.0");
         requestJson.put("method", method);
         if (params != null) {
             requestJson.set("params", mapper.valueToTree(params));
         }
-        if (id instanceof String) {
+        if (id == null) {
+            requestJson.set("id", factory.nullNode());
+        } else if (id instanceof String) {
             requestJson.put("id", (String) id);
         } else if (id instanceof Number) {
             Number numId = (Number) id;
@@ -129,8 +131,6 @@ public class JsonRpcServiceBuilderTest {
             else {
                 requestJson.put("id", numId.doubleValue());
             }
-        } else if (id == null) {
-            requestJson.set("id", factory.nullNode());
         } else {
             throw new IllegalArgumentException("Unsupported ID type: " + id.getClass().getName());
         }
@@ -144,13 +144,13 @@ public class JsonRpcServiceBuilderTest {
     private void assertJsonRpcSuccess(AggregatedHttpResponse response, Object expectedResult, Object expectedId) throws JsonProcessingException {
         assertThat(response.status()).isEqualTo(HttpStatus.OK);
         assertThat(response.contentType()).isEqualTo(MediaType.JSON_UTF_8);
-        JsonNode responseJson = mapper.readTree(response.contentUtf8());
+        final JsonNode responseJson = mapper.readTree(response.contentUtf8());
         assertThat(responseJson.get("jsonrpc").asText()).isEqualTo("2.0");
         assertThat(responseJson.has("error")).isFalse();
         assertThat(responseJson.has("result")).isTrue();
         assertThat(responseJson.get("result")).isEqualTo(mapper.valueToTree(expectedResult));
 
-         JsonNode idNode = responseJson.get("id");
+         final JsonNode idNode = responseJson.get("id");
          if (expectedId == null) {
              assertThat(idNode.isNull()).isTrue();
          } else if (expectedId instanceof String) {
@@ -158,7 +158,7 @@ public class JsonRpcServiceBuilderTest {
              assertThat(idNode.asText()).isEqualTo((String) expectedId);
          } else if (expectedId instanceof Number) {
              assertThat(idNode.isNumber()).isTrue();
-             Number expectedNum = (Number) expectedId;
+             final Number expectedNum = (Number) expectedId;
              if (expectedId instanceof Integer) {
                  assertThat(idNode.asInt()).isEqualTo(expectedNum.intValue());
              } else if (expectedId instanceof Long) {
@@ -182,15 +182,15 @@ public class JsonRpcServiceBuilderTest {
     private void assertJsonRpcError(AggregatedHttpResponse response, JsonRpcErrorCode errorCode, @Nullable Object expectedId) throws JsonProcessingException {
         assertThat(response.status()).isEqualTo(HttpStatus.OK);
         assertThat(response.contentType()).isEqualTo(MediaType.JSON_UTF_8);
-        JsonNode responseJson = mapper.readTree(response.contentUtf8());
+        final JsonNode responseJson = mapper.readTree(response.contentUtf8());
         assertThat(responseJson.get("jsonrpc").asText()).isEqualTo("2.0");
         assertThat(responseJson.has("result")).isFalse();
         assertThat(responseJson.has("error")).isTrue();
-        JsonNode errorJson = responseJson.get("error");
+        final JsonNode errorJson = responseJson.get("error");
         assertThat(errorJson.get("code").asInt()).isEqualTo(errorCode.code());
         assertThat(errorJson.get("message").asText()).contains(errorCode.message());
 
-        JsonNode idNode = responseJson.get("id");
+        final JsonNode idNode = responseJson.get("id");
         if (expectedId == null) {
              assertThat(idNode.isNull()).isTrue();
         } else if (expectedId instanceof String) {
@@ -198,7 +198,7 @@ public class JsonRpcServiceBuilderTest {
             assertThat(idNode.asText()).isEqualTo((String) expectedId);
         } else if (expectedId instanceof Number) {
             assertThat(idNode.isNumber()).isTrue();
-            Number expectedNum = (Number) expectedId;
+            final Number expectedNum = (Number) expectedId;
             if (expectedId instanceof Integer) {
                 assertThat(idNode.asInt()).isEqualTo(expectedNum.intValue());
             } else if (expectedId instanceof Long) {
@@ -426,7 +426,7 @@ public class JsonRpcServiceBuilderTest {
          assertThat(response.status()).isEqualTo(HttpStatus.OK);
          assertThat(response.contentType()).isEqualTo(MediaType.JSON_UTF_8);
 
-         JsonNode responseArray = mapper.readTree(response.contentUtf8());
+         final JsonNode responseArray = mapper.readTree(response.contentUtf8());
          assertThat(responseArray.isArray()).isTrue();
          assertThat(responseArray.size()).isEqualTo(5); // 1 notification excluded
 

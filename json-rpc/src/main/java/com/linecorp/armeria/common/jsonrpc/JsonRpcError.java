@@ -3,7 +3,7 @@ package com.linecorp.armeria.common.jsonrpc;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import javax.annotation.Nullable;
+import com.linecorp.armeria.common.annotation.Nullable;
 
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public final class JsonRpcError {

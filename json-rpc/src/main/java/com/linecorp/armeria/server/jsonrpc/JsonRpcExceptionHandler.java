@@ -1,6 +1,5 @@
 package com.linecorp.armeria.server.jsonrpc;
 
-import com.fasterxml.jackson.databind.exc.MismatchedInputException;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
@@ -15,7 +14,6 @@ public class JsonRpcExceptionHandler implements ExceptionHandlerFunction {
         if (cause instanceof IllegalArgumentException){
             return HttpResponse.of(HttpStatus.BAD_REQUEST);
         }
-
 
         return HttpResponse.of(HttpStatus.INTERNAL_SERVER_ERROR,
                 MediaType.PLAIN_TEXT_UTF_8,
