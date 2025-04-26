@@ -8,16 +8,14 @@ import javax.annotation.Nullable;
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public final class JsonRpcError {
 
-    public static final int PARSE_ERROR = -32700;
-    public static final int INVALID_REQUEST = -32600;
-    public static final int METHOD_NOT_FOUND = -32601;
-    public static final int INVALID_PARAMS = -32602;
-    public static final int INTERNAL_ERROR = -32603;
-
     private final int code;
     private final String message;
     @Nullable
     private final Object data;
+
+    public JsonRpcError(JsonRpcErrorCode code, @Nullable Object data) {
+        this(code.code(), code.message(), data);
+    }
 
     @JsonCreator
     public JsonRpcError(@JsonProperty(value = "code", required = true) int code,
@@ -49,22 +47,22 @@ public final class JsonRpcError {
     }
 
     public static JsonRpcError parseError(@Nullable Object data) {
-        return new JsonRpcError(PARSE_ERROR, "Parse error", data);
+        return new JsonRpcError(JsonRpcErrorCode.PARSE_ERROR, data);
     }
 
     public static JsonRpcError invalidRequest(@Nullable Object data) {
-        return new JsonRpcError(INVALID_REQUEST, "Invalid Request", data);
+        return new JsonRpcError(JsonRpcErrorCode.INVALID_REQUEST, data);
     }
 
      public static JsonRpcError methodNotFound(@Nullable Object data) {
-        return new JsonRpcError(METHOD_NOT_FOUND, "Method not found", data);
+        return new JsonRpcError(JsonRpcErrorCode.METHOD_NOT_FOUND, data);
     }
 
      public static JsonRpcError invalidParams(@Nullable Object data) {
-        return new JsonRpcError(INVALID_PARAMS, "Invalid params", data);
+        return new JsonRpcError(JsonRpcErrorCode.INVALID_PARAMS, data);
     }
 
      public static JsonRpcError internalError(@Nullable Object data) {
-        return new JsonRpcError(INTERNAL_ERROR, "Internal error", data);
+        return new JsonRpcError(JsonRpcErrorCode.INTERNAL_ERROR, data);
     }
 } 

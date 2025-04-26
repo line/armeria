@@ -1,0 +1,25 @@
+package com.linecorp.armeria.server.jsonrpc;
+
+import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.jsonrpc.JsonRpcResponse;
+
+public class JsonRpcRequestParseException extends Exception {
+    private final JsonRpcResponse errorResponse;
+    @Nullable
+    private final Object requestId;
+
+    JsonRpcRequestParseException(Throwable cause, JsonRpcResponse errorResponse, @Nullable Object requestId) {
+        super(cause.getMessage(), cause);
+        this.errorResponse = errorResponse;
+        this.requestId = requestId;
+    }
+
+    JsonRpcResponse getErrorResponse() {
+        return errorResponse;
+    }
+
+    @Nullable
+    Object getRequestId() {
+        return requestId;
+    }
+}

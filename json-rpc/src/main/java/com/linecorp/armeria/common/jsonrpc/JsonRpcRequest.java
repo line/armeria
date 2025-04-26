@@ -21,9 +21,6 @@ public final class JsonRpcRequest {
                           @JsonProperty(value = "method", required = true) String method,
                           @JsonProperty("params") @Nullable JsonNode params,
                           @JsonProperty("id") @Nullable Object id) {
-        if (!"2.0".equals(jsonrpc)) {
-            throw new IllegalArgumentException("Invalid jsonrpc version: " + jsonrpc);
-        }
         this.jsonrpc = jsonrpc;
         this.method = method;
         this.params = params;
