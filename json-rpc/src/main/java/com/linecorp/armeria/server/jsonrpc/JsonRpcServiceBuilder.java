@@ -487,7 +487,8 @@ public class JsonRpcServiceBuilder {
         final String lookupPath = targetPath.startsWith("/") ? targetPath : '/' + targetPath;
         final String prefix = context.mappedPath();
 
-        HttpService result = cachedRoutes.get(prefix);
+        HttpService result = cachedRoutes.get(lookupPath) != null ? cachedRoutes.get(lookupPath)
+                                                                  : cachedRoutes.get(prefix);
         if (result == null) {
             // Search server config using the exact lookupPath.
             result = context.config().server().serviceConfigs().stream()
