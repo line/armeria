@@ -56,7 +56,7 @@ import {
   ServiceType,
 } from '../../lib/specification';
 import { TRANSPORTS } from '../../lib/transports';
-import { SelectOption } from '../../lib/types';
+import { ResponseData, SelectOption } from '../../lib/types';
 import DebugInputs from './DebugInputs';
 
 const useStyles = makeStyles((theme: Theme) =>
@@ -147,11 +147,8 @@ const DebugPage: React.FunctionComponent<Props> = ({
   docServiceRoute,
 }) => {
   const [requestBody, setRequestBody] = useState('');
-  const [debugResponse, setDebugResponse] = useState('');
   const [additionalQueries, setAdditionalQueries] = useState('');
-  const [debugResponseHeaders, setDebugResponseHeaders] = useState<string[]>(
-    [],
-  );
+  const [responseData, setResponseData] = useState<ResponseData | null>(null);
   const [additionalPath, setAdditionalPath] = useState('');
   const [additionalHeaders, setAdditionalHeaders] = useState('');
   const [stickyHeaders, toggleStickyHeaders] = useReducer(toggle, false);
@@ -164,7 +161,7 @@ const DebugPage: React.FunctionComponent<Props> = ({
 
   const [currentApiId, setCurrentApiId] = useState<string>(method.id);
   const [responseCache, setResponseCache] = useState<
-    Record<string, { body: string; headers: string[] }>
+    Record<string, ResponseData>
   >({});
 
   const classes = useStyles();
@@ -179,11 +176,9 @@ const DebugPage: React.FunctionComponent<Props> = ({
     if (apiId !== currentApiId) {
       setCurrentApiId(apiId);
       if (responseCache[apiId]) {
-        setDebugResponse(responseCache[apiId].body);
-        setDebugResponseHeaders(responseCache[apiId].headers);
+        setResponseData(responseCache[apiId]);
       } else {
-        setDebugResponse('');
-        setDebugResponseHeaders([]);
+        setResponseData(null);
       }
     }
   }, [method, currentApiId, responseCache]);
@@ -223,8 +218,7 @@ const DebugPage: React.FunctionComponent<Props> = ({
       serviceType === ServiceType.HTTP ? urlParams.get('queries') ?? '' : '';
 
     if (!keepDebugResponse) {
-      setDebugResponse('');
-      setDebugResponseHeaders([]);
+      setResponseData(null);
       toggleKeepDebugResponse(false);
     }
     setSnackbarOpen(false);
@@ -358,9 +352,16 @@ const DebugPage: React.FunctionComponent<Props> = ({
       showSnackbar('The curl command has been copied to the clipboard.');
     } catch (e) {
       if (e instanceof Object) {
-        setDebugResponse(e.toString());
+        setResponseData({
+          body: e.toString?.() ?? '<unknown>',
+          headers: [],
+          status: undefined,
+          executionTime: 0,
+          size: 0,
+          timestamp: new Date().toLocaleString(),
+        });
       } else {
-        setDebugResponse('<unknown>');
+        setResponseData(null);
       }
     }
   }, [
@@ -378,16 +379,15 @@ const DebugPage: React.FunctionComponent<Props> = ({
   ]);
 
   const onCopy = useCallback(() => {
-    const response = debugResponse;
+    const response = responseData?.body ?? '';
     if (response.length > 0) {
       copyTextToClipboard(response);
       showSnackbar('The response has been copied to the clipboard.');
     }
-  }, [debugResponse, showSnackbar]);
+  }, [responseData, showSnackbar]);
 
   const onClear = useCallback(() => {
-    setDebugResponse('');
-    setDebugResponseHeaders([]);
+    setResponseData(null);
   }, []);
 
   const executeRequest = useCallback(
@@ -415,7 +415,7 @@ const DebugPage: React.FunctionComponent<Props> = ({
       const headers = headersText ? JSON.parse(headersText) : {};
 
       try {
-        const { body, headers: responseHeaders } = await transport.send(
+        const debugResponseData = await transport.send(
           method,
           headers,
           parseServerRootPath(docServiceRoute),
@@ -423,19 +423,13 @@ const DebugPage: React.FunctionComponent<Props> = ({
           executedEndpointPath,
           queries,
         );
-        setDebugResponse(body);
-        setDebugResponseHeaders(responseHeaders);
+        setResponseData(debugResponseData);
         setResponseCache((prev) => ({
           ...prev,
-          [currentApiId]: {
-            body,
-            headers: responseHeaders,
-          },
+          [currentApiId]: debugResponseData,
         }));
       } catch (e) {
-        const message = e instanceof Object ? e.toString() : '<unknown>';
-        setDebugResponse(message);
-        setDebugResponseHeaders([]);
+        setResponseData(null);
       }
     },
     [
@@ -450,8 +444,6 @@ const DebugPage: React.FunctionComponent<Props> = ({
   );
 
   const onSubmit = useCallback(async () => {
-    setDebugResponse('');
-
     const queries = additionalQueries;
     const headers = additionalHeaders;
     const params = new URLSearchParams(location.search);
@@ -498,9 +490,16 @@ const DebugPage: React.FunctionComponent<Props> = ({
       }
     } catch (e) {
       if (e instanceof Object) {
-        setDebugResponse(e.toString());
+        setResponseData({
+          body: e.toString?.() ?? '<unknown>',
+          headers: [],
+          status: undefined,
+          executionTime: 0,
+          size: 0,
+          timestamp: new Date().toLocaleString(),
+        });
       } else {
-        setDebugResponse('<unknown>');
+        setResponseData(null);
       }
       return;
     }
