@@ -41,6 +41,7 @@ export default class GrpcUnframedTransport extends Transport {
     if (!bodyJson) {
       throw new Error('A gRPC request must have body.');
     }
+    const start = performance.now();
     const endpoint = this.getDebugMimeTypeEndpoint(method, endpointPath);
 
     const hdrs = new Headers();
@@ -65,10 +66,15 @@ export default class GrpcUnframedTransport extends Transport {
 
     const responseHeaders = extractHeaderLines(response.headers);
     const responseText = await response.text();
-
+    const duration = Math.round(performance.now() - start);
+    const timestamp = new Date().toLocaleString();
     return {
       body: responseText,
       headers: responseHeaders,
+      status: response.status,
+      executionTime: duration,
+      size: responseText.length,
+      timestamp,
     };
   }
 }

@@ -38,6 +38,7 @@ export default class GraphqlHttpTransport extends Transport {
     endpointPath?: string,
     queries?: string,
   ): Promise<ResponseData> {
+    const start = performance.now();
     const endpoint = this.getDebugMimeTypeEndpoint(method);
 
     const hdrs = new Headers();
@@ -68,10 +69,15 @@ export default class GraphqlHttpTransport extends Transport {
 
     const responseHeaders = extractHeaderLines(response.headers);
     const responseText = await response.text();
-
+    const duration = Math.round(performance.now() - start);
+    const timestamp = new Date().toLocaleString();
     return {
       body: responseText,
       headers: responseHeaders,
+      status: response.status,
+      executionTime: duration,
+      size: responseText.length,
+      timestamp,
     };
   }
 }

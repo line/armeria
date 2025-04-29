@@ -30,6 +30,8 @@ export default abstract class Transport {
     endpointPath?: string,
     queries?: string,
   ): Promise<ResponseData> {
+    const start = performance.now();
+
     const providedHeaders = await Promise.all(
       providers.map((provider) => provider()),
     );
@@ -59,16 +61,25 @@ export default abstract class Transport {
     );
     const responseHeaders = httpResponse.headers;
     const responseText = httpResponse.body;
-
+    const duration = Math.round(performance.now() - start);
+    const timestamp = new Date().toLocaleString();
     if (responseText.length > 0) {
       return {
         body: responseText,
         headers: responseHeaders,
+        status: httpResponse.status,
+        executionTime: duration,
+        size: responseText.length,
+        timestamp,
       };
     }
     return {
       body: '<zero-length response>',
       headers: responseHeaders,
+      status: httpResponse.status,
+      executionTime: duration,
+      size: responseText.length,
+      timestamp,
     };
   }
 
