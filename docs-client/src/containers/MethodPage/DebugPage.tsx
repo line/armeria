@@ -550,6 +550,13 @@ const DebugPage: React.FunctionComponent<Props> = ({
     });
   }, [serviceType, transport, method, examplePaths]);
 
+  const getStatusColor = (status?: number): string | undefined => {
+    if (typeof status !== 'number') return undefined;
+    return status >= 200 && status < 300 ? 'green' : 'red';
+  };
+
+  const statusColor = getStatusColor(responseData?.status);
+  const modalStatusColor = getStatusColor(responseData?.status);
   return (
     <>
       <Section>
@@ -624,6 +631,43 @@ const DebugPage: React.FunctionComponent<Props> = ({
                       </IconButton>
                     </div>
                   </Tooltip>
+                </Grid>
+                <Grid
+                  item
+                  xs
+                  style={{
+                    display: 'flex',
+                    justifyContent: 'flex-end',
+                    alignItems: 'center',
+                  }}
+                >
+                  {responseData && (
+                    <Typography
+                      variant="body2"
+                      style={{ whiteSpace: 'nowrap' }}
+                    >
+                      <span
+                        style={{
+                          marginLeft: 16,
+                          color: statusColor,
+                        }}
+                      >
+                        <strong>Status</strong>: {responseData.status ?? '–'}
+                      </span>
+                      <span style={{ marginLeft: 16 }}>
+                        <strong>Execution Time</strong>:{' '}
+                        {responseData.executionTime ?? '–'} ms
+                      </span>
+                      <span style={{ marginLeft: 16 }}>
+                        <strong>Response Size</strong>:{' '}
+                        {responseData.size ?? '–'} B
+                      </span>
+                      <span style={{ marginLeft: 16 }}>
+                        <strong>Execution Timestamp</strong> :{' '}
+                        {responseData.timestamp ?? '-'}
+                      </span>
+                    </Typography>
+                  )}
                 </Grid>
               </Grid>
               {debugResponse && (
@@ -736,6 +780,43 @@ const DebugPage: React.FunctionComponent<Props> = ({
                         </IconButton>
                       </div>
                     </Tooltip>
+                  </Grid>
+                  <Grid
+                    item
+                    xs
+                    style={{
+                      display: 'flex',
+                      justifyContent: 'flex-end',
+                      alignItems: 'center',
+                    }}
+                  >
+                    {responseData && (
+                      <Typography
+                        variant="body2"
+                        style={{ whiteSpace: 'nowrap' }}
+                      >
+                        <span
+                          style={{
+                            marginLeft: 16,
+                            color: modalStatusColor,
+                          }}
+                        >
+                          <strong>Status</strong>: {responseData.status ?? '–'}
+                        </span>
+                        <span style={{ marginLeft: 16 }}>
+                          <strong>Execution Time</strong>:{' '}
+                          {responseData.executionTime ?? '–'} ms
+                        </span>
+                        <span style={{ marginLeft: 16 }}>
+                          <strong>Response Size</strong>:{' '}
+                          {responseData.size ?? '–'} B
+                        </span>
+                        <span style={{ marginLeft: 16 }}>
+                          <strong>Execution Timestamp</strong> :{' '}
+                          {responseData.timestamp ?? '-'}
+                        </span>
+                      </Typography>
+                    )}
                   </Grid>
                 </Grid>
                 {Object.keys(debugResponseHeaders).length > 0 && (
