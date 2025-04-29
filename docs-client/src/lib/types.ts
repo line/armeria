@@ -53,4 +53,8 @@ export const listHeaders = new Set([
 export interface ResponseData {
   body: string;
   headers: string[];
+  status?: number;
+  executionTime: number;
+  size: number;
+  timestamp?: string;
 }
