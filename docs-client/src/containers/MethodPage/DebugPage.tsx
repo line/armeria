@@ -556,6 +556,11 @@ const DebugPage: React.FunctionComponent<Props> = ({
 
   const statusColor = getStatusColor(responseData?.status);
   const modalStatusColor = getStatusColor(responseData?.status);
+  const responseBody = responseData?.body;
+  const responseHeadersString =
+    Array.isArray(responseData?.headers) && responseData.headers.length > 0
+      ? responseData.headers.join('\n')
+      : '';
   return (
     <>
       <Section>
@@ -612,7 +617,7 @@ const DebugPage: React.FunctionComponent<Props> = ({
                     <div>
                       <IconButton
                         onClick={onCopy}
-                        disabled={debugResponse.length === 0}
+                        disabled={!responseData?.body}
                       >
                         <FileCopyIcon />
                       </IconButton>
@@ -624,7 +629,7 @@ const DebugPage: React.FunctionComponent<Props> = ({
                     <div>
                       <IconButton
                         onClick={onClear}
-                        disabled={debugResponse.length === 0}
+                        disabled={!responseData?.body}
                       >
                         <DeleteSweepIcon />
                       </IconButton>
@@ -669,9 +674,9 @@ const DebugPage: React.FunctionComponent<Props> = ({
                   )}
                 </Grid>
               </Grid>
-              {debugResponse && (
+              {responseBody && (
                 <>
-                  {Object.keys(debugResponseHeaders).length > 0 && (
+                  {responseHeadersString && (
                     <>
                       <Typography
                         variant="subtitle1"
@@ -684,7 +689,7 @@ const DebugPage: React.FunctionComponent<Props> = ({
                         style={githubGist}
                         wrapLines={false}
                       >
-                        {debugResponseHeaders.join('\n')}
+                        {responseHeadersString}
                       </SyntaxHighlighter>
                     </>
                   )}
@@ -696,7 +701,7 @@ const DebugPage: React.FunctionComponent<Props> = ({
                     style={githubGist}
                     wrapLines={false}
                   >
-                    {debugResponse}
+                    {responseBody}
                   </SyntaxHighlighter>
                 </>
               )}
@@ -761,7 +766,7 @@ const DebugPage: React.FunctionComponent<Props> = ({
                       <div>
                         <IconButton
                           onClick={onCopy}
-                          disabled={debugResponse.length === 0}
+                          disabled={!responseData?.body}
                         >
                           <FileCopyIcon />
                         </IconButton>
@@ -773,7 +778,7 @@ const DebugPage: React.FunctionComponent<Props> = ({
                       <div>
                         <IconButton
                           onClick={onClear}
-                          disabled={debugResponse.length === 0}
+                          disabled={!responseData?.body}
                         >
                           <DeleteSweepIcon />
                         </IconButton>
@@ -818,33 +823,40 @@ const DebugPage: React.FunctionComponent<Props> = ({
                     )}
                   </Grid>
                 </Grid>
-                {Object.keys(debugResponseHeaders).length > 0 && (
+                {responseBody && (
                   <>
+                    {responseHeadersString && (
+                      <>
+                        <Typography
+                          variant="subtitle1"
+                          style={{ marginTop: '1rem' }}
+                        >
+                          Response Headers:
+                        </Typography>
+                        <SyntaxHighlighter
+                          language="text"
+                          style={githubGist}
+                          wrapLines={false}
+                        >
+                          {responseHeadersString}
+                        </SyntaxHighlighter>
+                      </>
+                    )}
                     <Typography
                       variant="subtitle1"
                       style={{ marginTop: '1rem' }}
                     >
-                      Response Headers:
+                      Response Body:
                     </Typography>
                     <SyntaxHighlighter
-                      language="text"
+                      language="json"
                       style={githubGist}
                       wrapLines={false}
                     >
-                      {debugResponseHeaders.join('\n')}
+                      {responseBody}
                     </SyntaxHighlighter>
                   </>
                 )}
-                <Typography variant="subtitle1" style={{ marginTop: '1rem' }}>
-                  Response Body:
-                </Typography>
-                <SyntaxHighlighter
-                  language="json"
-                  style={githubGist}
-                  wrapLines={false}
-                >
-                  {debugResponse}
-                </SyntaxHighlighter>
               </Grid>
             </Grid>
             <Snackbar
