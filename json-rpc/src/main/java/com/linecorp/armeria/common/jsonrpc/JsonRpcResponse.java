@@ -27,6 +27,8 @@ import com.linecorp.armeria.common.annotation.Nullable;
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public final class JsonRpcResponse {
 
+    private static final String JSONRPC_VERSION = "2.0";
+
     private final String jsonrpc;
     @Nullable
     private final Object result;
@@ -36,14 +38,14 @@ public final class JsonRpcResponse {
     private final Object id;
 
     private JsonRpcResponse(@Nullable Object result, @Nullable Object id) {
-        this.jsonrpc = "2.0"; // Fixed value for JSON-RPC version
+        this.jsonrpc = JSONRPC_VERSION; // Fixed value for JSON-RPC version
         this.result = result;
         this.error = null;
         this.id = id;
     }
 
     private JsonRpcResponse(JsonRpcError error, @Nullable Object id) {
-        this.jsonrpc = "2.0"; // Fixed value for JSON-RPC version
+        this.jsonrpc = JSONRPC_VERSION; // Fixed value for JSON-RPC version
         this.result = null;
         this.error = error;
         this.id = id;
@@ -54,7 +56,7 @@ public final class JsonRpcResponse {
      * This constructor is annotated with {@link JsonCreator} for Jackson deserialization.
      */
     @JsonCreator
-    public JsonRpcResponse(@JsonProperty("jsonrpc") String jsonrpc, // Consume the field, even if fixed
+    public JsonRpcResponse(@JsonProperty("jsonrpc") String jsonrpc,
                            @JsonProperty("result") @Nullable Object result,
                            @JsonProperty("error") @Nullable JsonRpcError error,
                            @JsonProperty("id") @Nullable Object id) {
@@ -87,8 +89,8 @@ public final class JsonRpcResponse {
     /**
      * Returns the JSON-RPC protocol version.
      */
-    @JsonProperty
-    public String jsonrpc() {
+    @JsonProperty("jsonrpc")
+    public String jsonRpcVersion() {
         return jsonrpc;
     }
 
