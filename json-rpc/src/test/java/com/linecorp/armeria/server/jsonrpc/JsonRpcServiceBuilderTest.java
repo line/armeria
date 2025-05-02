@@ -181,32 +181,7 @@ public class JsonRpcServiceBuilderTest {
         assertThat(responseJson.get("result")).isEqualTo(mapper.valueToTree(expectedResult));
 
          final JsonNode idNode = responseJson.get("id");
-         if (expectedId == null) {
-             assertThat(idNode.isNull()).isTrue();
-         } else if (expectedId instanceof String) {
-             assertThat(idNode.isTextual()).isTrue();
-             assertThat(idNode.asText()).isEqualTo((String) expectedId);
-         } else if (expectedId instanceof Number) {
-             assertThat(idNode.isNumber()).isTrue();
-             final Number expectedNum = (Number) expectedId;
-             if (expectedId instanceof Integer) {
-                 assertThat(idNode.asInt()).isEqualTo(expectedNum.intValue());
-             } else if (expectedId instanceof Long) {
-                 assertThat(idNode.asLong()).isEqualTo(expectedNum.longValue());
-             } else if (expectedId instanceof Double) {
-                 assertThat(idNode.asDouble()).isEqualTo(expectedNum.doubleValue());
-             } else if (expectedId instanceof Float) {
-                 assertThat(idNode.floatValue()).isEqualTo(expectedNum.floatValue());
-             } else if (expectedId instanceof BigDecimal) {
-                 assertThat(idNode.decimalValue()).isEqualTo((BigDecimal)expectedId);
-             } else if (expectedId instanceof BigInteger) {
-                 assertThat(idNode.bigIntegerValue()).isEqualTo((BigInteger)expectedId);
-             } else {
-                 assertThat(idNode.asDouble()).isEqualTo(expectedNum.doubleValue());
-             }
-         } else {
-             assertThat(idNode).isEqualTo(mapper.valueToTree(expectedId));
-         }
+         assertIdMatches(idNode, expectedId);
     }
 
     private void assertJsonRpcError(AggregatedHttpResponse response,
@@ -223,6 +198,10 @@ public class JsonRpcServiceBuilderTest {
         assertThat(errorJson.get("message").asText()).contains(errorCode.message());
 
         final JsonNode idNode = responseJson.get("id");
+        assertIdMatches(idNode, expectedId);
+    }
+
+    private void assertIdMatches(JsonNode idNode, @Nullable Object expectedId) {
         if (expectedId == null) {
              assertThat(idNode.isNull()).isTrue();
         } else if (expectedId instanceof String) {
