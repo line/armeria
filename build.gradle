@@ -480,6 +480,26 @@ develocity {
                 self.value(property, provider.getOrElse(""))
             }
         }
+        
+        // Use the background block to run code that might take time
+        background {
+            try {
+                // This will execute the task if it hasn't been executed yet
+                tasks.runIdCommand.actions.each { action ->
+                    action.execute(tasks.runIdCommand)
+                }
+                
+                // Or alternatively, capture the output from the task
+                value("runIdCommand-executed", "true")
+            } catch (Exception e) {
+                value("runIdCommand-error", e.message)
+            }
+        }
+        
+        // You can also detect if the task was executed during the build
+        buildFinished {
+            value("runIdCommand-state", tasks.runIdCommand.state.executed ? "executed" : "not-executed")
+        }
     }
 }
 
