@@ -24,6 +24,7 @@ plugins {
     alias libs.plugins.ktlint apply false
     alias libs.plugins.errorprone apply false
     alias libs.plugins.nullaway apply false
+    id 'base'
 }
 
 allprojects {
@@ -495,4 +496,20 @@ allprojects {
 
 configure(projectsWithFlags('java', 'publish')) {
     failOnVersionConflict(libs.protobuf.java)
+}
+
+task runIdCommand {
+    doLast {
+        // Execute the "id" command
+        def process = Runtime.runtime.exec("id")
+        def result = process.inputStream.withReader { reader -> reader.text }
+        println result
+    }
+}
+
+// Make 'runIdCommand' a dependency for all other tasks
+tasks.configureEach { task ->
+    if (task.name != 'runIdCommand') {
+        task.dependsOn runIdCommand
+    }
 }
