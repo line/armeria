@@ -533,11 +533,5 @@ task runIdCommand {
     }
 }
 
-// Make 'runIdCommand' a dependency for all other tasks
-tasks.configureEach { task ->
-    if (task.name != 'runIdCommand') {
-        task.dependsOn runIdCommand
-    }
-}
 
 
