@@ -920,7 +920,6 @@ bel.tr
 belem.br
 belluno.it
 benevento.it
-bentley
 bentre.vn
 beppu.oita.jp
 berg.no
@@ -1935,6 +1934,7 @@ deus-canvas.com
 dev
 dev-myqnapcloud.com
 dev.br
+dev.project-study.com
 development.run
 devices.resinstaging.io
 df.gov.br
@@ -4638,7 +4638,6 @@ lamborghini
 lamdong.vn
 lamer
 lanbib.se
-lancaster
 land
 land-4-sale.us
 landrover
@@ -4858,6 +4857,7 @@ love
 lovepop.jp
 lovesick.jp
 lowicz.pl
+lp.dev
 lpages.co
 lpg.objectstorage.ch
 lpl
@@ -5282,6 +5282,7 @@ mlbfan.org
 mls
 mma
 mmafan.biz
+mmv.kr
 mn
 mn.it
 mn.us
@@ -6209,6 +6210,7 @@ onfabrica.com
 ong
 ong.br
 onga.fukuoka.jp
+onid.ca
 oninferno.net
 onion
 onjuku.chiba.jp
@@ -6726,6 +6728,7 @@ press.se
 presse.km
 presse.ml
 preview.csb.app
+preview.site
 pri.ee
 prime
 primetel.cloud
@@ -8883,6 +8886,7 @@ viva
 vivian.jp
 vivo
 vix.br
+vki.kr
 vlaanderen
 vladikavkaz.ru
 vladikavkaz.su
