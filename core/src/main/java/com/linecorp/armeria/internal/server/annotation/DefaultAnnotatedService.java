@@ -50,6 +50,7 @@ import com.linecorp.armeria.common.ResponseEntity;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.ResponseHeadersBuilder;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.logging.RequestLogProperty;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.common.util.UnmodifiableFuture;
@@ -337,7 +338,22 @@ final class DefaultAnnotatedService implements AnnotatedService {
             }
         }
 
+        deferRequestContent(ctx, req);
+
         return HttpResponse.of(serve1(ctx, req, aggregationType));
+    }
+
+    private static void deferRequestContent(ServiceRequestContext ctx, HttpRequest req) {
+        if (!Flags.jsonContentLogging()) {
+            return;
+        }
+        // the deferred content is always set when either:
+        // 1) invoke is called 2) or the request completes exceptionally
+        ctx.logBuilder().defer(RequestLogProperty.REQUEST_CONTENT);
+        req.whenComplete().exceptionally(e -> {
+            ctx.logBuilder().requestContent(null, null);
+            return null;
+        });
     }
 
     /**
@@ -395,6 +411,21 @@ final class DefaultAnnotatedService implements AnnotatedService {
         }
     }
 
+    private static void maybeLogRequestContent(ServiceRequestContext ctx, Object[] arguments) {
+        if (!Flags.jsonContentLogging()) {
+            return;
+        }
+        ctx.logBuilder().requestContent(new DefaultAnnotatedRequest(arguments), arguments);
+    }
+
+    private static void maybeLogResponseContent(ServiceRequestContext ctx, @Nullable Object value) {
+        if (!Flags.jsonContentLogging()) {
+            return;
+        }
+        final DefaultAnnotatedResponse responseContent = new DefaultAnnotatedResponse(value);
+        ctx.logBuilder().responseContent(responseContent, value);
+    }
+
     /**
      * Invokes the service method with arguments.
      */
@@ -403,6 +434,9 @@ final class DefaultAnnotatedService implements AnnotatedService {
         try (SafeCloseable ignored = ctx.push()) {
             final ResolverContext resolverContext = new ResolverContext(ctx, req, aggregatedResult);
             final Object[] arguments = AnnotatedValueResolver.toArguments(resolvers, resolverContext);
+            maybeLogRequestContent(ctx, arguments);
+
+            final Object res;
             if (isKotlinSuspendingMethod) {
                 assert callKotlinSuspendingMethod != null;
                 final ScheduledExecutorService executor;
@@ -412,14 +446,20 @@ final class DefaultAnnotatedService implements AnnotatedService {
                 } else {
                     executor = ctx.eventLoop().withoutContext();
                 }
-                return callKotlinSuspendingMethod.invoke(
+                res = callKotlinSuspendingMethod.invoke(
                         method, object, arguments,
                         executor,
                         ctx);
             } else {
-                return methodHandle.invoke(arguments);
+                res = methodHandle.invoke(arguments);
             }
+            maybeLogResponseContent(ctx, res);
+            return res;
         } catch (Throwable cause) {
+            // just in case the deferred log is never completed
+            ctx.logBuilder().requestContent(null, null);
+            // no need to log the failed HttpResponse as content
+            maybeLogResponseContent(ctx, null);
             return HttpResponse.ofFailure(cause);
         }
     }

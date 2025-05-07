@@ -103,16 +103,16 @@ final class TextLogFormatter implements LogFormatter {
         }
 
         String sanitizedContent = null;
-        if (RequestLogProperty.REQUEST_CONTENT.isAvailable(flags)) {
-            final Object content = log.requestContent();
-            if (content != null) {
-                sanitizedContent = requestContentSanitizer.apply(ctx, content);
-            }
-        }
-        if (sanitizedContent == null && RequestLogProperty.REQUEST_CONTENT_PREVIEW.isAvailable(flags)) {
+        if (RequestLogProperty.REQUEST_CONTENT_PREVIEW.isAvailable(flags)) {
             final String contentPreview = log.requestContentPreview();
             if (contentPreview != null) {
                 sanitizedContent = requestContentSanitizer.apply(ctx, contentPreview);
+            }
+        }
+        if (sanitizedContent == null && RequestLogProperty.REQUEST_CONTENT.isAvailable(flags)) {
+            final Object content = log.requestContent();
+            if (content != null) {
+                sanitizedContent = requestContentSanitizer.apply(ctx, content);
             }
         }
 
@@ -257,16 +257,16 @@ final class TextLogFormatter implements LogFormatter {
         }
 
         String sanitizedContent = null;
-        if (RequestLogProperty.RESPONSE_CONTENT.isAvailable(flags)) {
-            final Object content = log.responseContent();
-            if (content != null) {
-                sanitizedContent = responseContentSanitizer.apply(ctx, content);
-            }
-        }
-        if (sanitizedContent == null && RequestLogProperty.RESPONSE_CONTENT_PREVIEW.isAvailable(flags)) {
+        if (RequestLogProperty.RESPONSE_CONTENT_PREVIEW.isAvailable(flags)) {
             final String contentPreview = log.responseContentPreview();
             if (contentPreview != null) {
                 sanitizedContent = responseContentSanitizer.apply(ctx, contentPreview);
+            }
+        }
+        if (sanitizedContent == null && RequestLogProperty.RESPONSE_CONTENT.isAvailable(flags)) {
+            final Object content = log.responseContent();
+            if (content != null) {
+                sanitizedContent = responseContentSanitizer.apply(ctx, content);
             }
         }
 
