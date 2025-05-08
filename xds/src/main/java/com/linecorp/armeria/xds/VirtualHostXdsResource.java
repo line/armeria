@@ -16,11 +16,16 @@
 
 package com.linecorp.armeria.xds;
 
+import static com.linecorp.armeria.xds.FilterUtil.toParsedFilterConfigs;
+
+import java.util.Map;
+
 import com.google.common.base.MoreObjects;
 
 import com.linecorp.armeria.common.annotation.Nullable;
 
 import io.envoyproxy.envoy.config.route.v3.VirtualHost;
+import io.envoyproxy.envoy.extensions.filters.network.http_connection_manager.v3.HttpFilter;
 
 /**
  * A resource object for a {@link VirtualHost}.
@@ -30,15 +35,28 @@ public final class VirtualHostXdsResource extends XdsResourceWithPrimer<VirtualH
     private final VirtualHost virtualHost;
     @Nullable
     private final XdsResource primer;
+    private final Map<String, ParsedFilterConfig> virtualHostFilterConfigs;
 
     VirtualHostXdsResource(VirtualHost virtualHost) {
         this.virtualHost = virtualHost;
         primer = null;
+        virtualHostFilterConfigs = toParsedFilterConfigs(virtualHost.getTypedPerFilterConfigMap());
     }
 
-    private VirtualHostXdsResource(VirtualHost virtualHost, @Nullable XdsResource primer) {
+    VirtualHostXdsResource(VirtualHost virtualHost, @Nullable XdsResource primer) {
         this.virtualHost = virtualHost;
         this.primer = primer;
+        virtualHostFilterConfigs = toParsedFilterConfigs(virtualHost.getTypedPerFilterConfigMap());
+    }
+
+    /**
+     * Returns the parsed {@link VirtualHost#getTypedPerFilterConfigMap()}.
+     *
+     * @param filterName the filter name represented by {@link HttpFilter#getName()}
+     */
+    @Nullable
+    public ParsedFilterConfig filterConfig(String filterName) {
+        return virtualHostFilterConfigs.get(filterName);
     }
 
     @Override

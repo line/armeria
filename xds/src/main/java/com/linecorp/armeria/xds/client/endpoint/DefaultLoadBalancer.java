@@ -28,14 +28,13 @@ import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.common.annotation.Nullable;
-import com.linecorp.armeria.xds.client.endpoint.ClusterManager.LocalCluster;
 import com.linecorp.armeria.xds.client.endpoint.DefaultLbStateFactory.DefaultLbState;
 import com.linecorp.armeria.xds.client.endpoint.LocalityRoutingStateFactory.LocalityRoutingState;
 import com.linecorp.armeria.xds.client.endpoint.LocalityRoutingStateFactory.State;
 
 import io.envoyproxy.envoy.config.core.v3.Locality;
 
-final class DefaultLoadBalancer implements XdsLoadBalancer {
+final class DefaultLoadBalancer implements LoadBalancer {
 
     private final DefaultLbStateFactory.DefaultLbState lbState;
     private final PrioritySet prioritySet;
@@ -60,7 +59,7 @@ final class DefaultLoadBalancer implements XdsLoadBalancer {
         if (prioritySet.priorities().isEmpty()) {
             return null;
         }
-        XdsRandom random = ctx.attr(XdsAttributeKeys.XDS_RANDOM);
+        XdsRandom random = ctx.attr(ClientXdsAttributeKeys.XDS_RANDOM);
         if (random == null) {
             random = XdsRandom.DEFAULT;
         }

@@ -44,10 +44,10 @@ final class VirtualHostResourceNode extends AbstractResourceNodeWithPrimer<Virtu
     private final int index;
 
     VirtualHostResourceNode(@Nullable ConfigSource configSource, String resourceName,
-                            XdsBootstrapImpl xdsBootstrap, @Nullable RouteXdsResource primer,
+                            SubscriptionContext context, @Nullable RouteXdsResource primer,
                             SnapshotWatcher<VirtualHostSnapshot> parentWatcher, int index,
                             ResourceNodeType resourceNodeType) {
-        super(xdsBootstrap, configSource, XdsType.VIRTUAL_HOST, resourceName, primer, parentWatcher,
+        super(context, configSource, XdsType.VIRTUAL_HOST, resourceName, primer, parentWatcher,
               resourceNodeType);
         this.parentWatcher = parentWatcher;
         this.index = index;
@@ -72,19 +72,19 @@ final class VirtualHostResourceNode extends AbstractResourceNodeWithPrimer<Virtu
             final int index = clusterSnapshots.size() - 1;
             pending.add(index);
 
-            final Cluster cluster = xdsBootstrap().bootstrapClusters().cluster(clusterName);
+            final Cluster cluster = context().bootstrapClusters().cluster(clusterName);
             final ClusterResourceNode node;
             if (cluster != null) {
-                node = staticCluster(xdsBootstrap(), clusterName, resource, snapshotWatcher,
+                node = staticCluster(context(), clusterName, resource, snapshotWatcher,
                                      index, cluster);
                 children().add(node);
             } else {
                 final ConfigSource configSource =
                         configSourceMapper().cdsConfigSource(clusterName);
-                node = new ClusterResourceNode(configSource, clusterName, xdsBootstrap(),
+                node = new ClusterResourceNode(configSource, clusterName, context(),
                                                resource, snapshotWatcher, index, ResourceNodeType.DYNAMIC);
                 children().add(node);
-                xdsBootstrap().subscribe(node);
+                context().subscribe(node);
             }
         }
     }

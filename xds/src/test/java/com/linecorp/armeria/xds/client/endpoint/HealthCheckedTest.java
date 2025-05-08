@@ -21,8 +21,8 @@ import static com.linecorp.armeria.xds.XdsTestResources.endpoint;
 import static com.linecorp.armeria.xds.XdsTestResources.localityLbEndpoints;
 import static com.linecorp.armeria.xds.XdsTestResources.staticBootstrap;
 import static com.linecorp.armeria.xds.XdsTestResources.staticResourceListener;
+import static com.linecorp.armeria.xds.XdsTestUtil.pollLoadBalancer;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.awaitility.Awaitility.await;
 
 import java.net.InetSocketAddress;
 import java.util.HashSet;
@@ -42,13 +42,13 @@ import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.Endpoint;
-import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.healthcheck.HealthCheckService;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
+import com.linecorp.armeria.xds.ListenerRoot;
 import com.linecorp.armeria.xds.XdsBootstrap;
 import com.linecorp.armeria.xds.client.endpoint.XdsRandom.RandomHint;
 
@@ -127,12 +127,12 @@ class HealthCheckedTest {
 
         final Bootstrap bootstrap = staticBootstrap(listener, cluster);
         try (XdsBootstrap xdsBootstrap = XdsBootstrap.of(bootstrap);
-             EndpointGroup endpointGroup = XdsEndpointGroup.of("listener", xdsBootstrap)) {
-            await().untilAsserted(() -> assertThat(endpointGroup.whenReady()).isDone());
+             ListenerRoot root = xdsBootstrap.listenerRoot("listener")) {
+            final XdsLoadBalancer loadBalancer = pollLoadBalancer(root, "cluster", cluster);
 
             final ClientRequestContext ctx =
                     ClientRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
-            final Endpoint endpoint = endpointGroup.selectNow(ctx);
+            final Endpoint endpoint = loadBalancer.select(ctx, ctx.eventLoop(), Long.MAX_VALUE).join();
             assertThat(endpoint).isNotNull();
             final Set<Integer> healthyPorts = server.server().activePorts().values().stream()
                                                     .map(port -> port.localAddress().getPort())
@@ -195,20 +195,20 @@ class HealthCheckedTest {
         final Bootstrap bootstrap = staticBootstrap(listener, cluster);
         try (XdsBootstrap xdsBootstrap = XdsBootstrap.of(bootstrap);
              // disable allowEmptyEndpoints since the first update iteration in no available healthy endpoints
-             EndpointGroup endpointGroup = XdsEndpointGroup.of("listener", xdsBootstrap, false)) {
-            await().untilAsserted(() -> assertThat(endpointGroup.whenReady()).isDone());
+             ListenerRoot root = xdsBootstrap.listenerRoot("listener")) {
+            final XdsLoadBalancer loadBalancer = pollLoadBalancer(root, "cluster", cluster);
 
             final ClientRequestContext ctx =
                     ClientRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
             final SettableXdsRandom random = new SettableXdsRandom();
-            ctx.setAttr(XdsAttributeKeys.XDS_RANDOM, random);
+            ctx.setAttr(ClientXdsAttributeKeys.XDS_RANDOM, random);
             final Set<Endpoint> selectedEndpoints = new HashSet<>();
             for (int i = 0; i < allEndpoints.size(); i++) {
                 // try to hit all the ranges of the selection hash
                 final int hash = 100 / allEndpoints.size() * i;
                 // WeightedRoundRobinStrategy guarantees that each endpoint will be selected at least once
                 random.fixNextInt(RandomHint.SELECT_PRIORITY, hash);
-                final Endpoint selected = endpointGroup.selectNow(ctx);
+                final Endpoint selected = loadBalancer.selectNow(ctx);
                 if (selected != null) {
                     selectedEndpoints.add(selected);
                 }
@@ -264,12 +264,12 @@ class HealthCheckedTest {
 
         final Bootstrap bootstrap = staticBootstrap(listener, cluster);
         try (XdsBootstrap xdsBootstrap = XdsBootstrap.of(bootstrap);
-             EndpointGroup endpointGroup = XdsEndpointGroup.of("listener", xdsBootstrap)) {
-            await().untilAsserted(() -> assertThat(endpointGroup.whenReady()).isDone());
+             ListenerRoot root = xdsBootstrap.listenerRoot("listener")) {
+            final XdsLoadBalancer loadBalancer = pollLoadBalancer(root, "cluster", cluster);
 
             final ClientRequestContext ctx =
                     ClientRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
-            final Endpoint endpoint = endpointGroup.selectNow(ctx);
+            final Endpoint endpoint = loadBalancer.selectNow(ctx);
 
             // The healthStatus set to the endpoint overrides
             if (healthStatus == HealthStatus.HEALTHY || healthStatus == HealthStatus.UNKNOWN) {

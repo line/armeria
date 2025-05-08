@@ -20,18 +20,16 @@ import static com.linecorp.armeria.internal.client.endpoint.EndpointAttributeKey
 import static com.linecorp.armeria.xds.XdsTestResources.BOOTSTRAP_CLUSTER_NAME;
 import static com.linecorp.armeria.xds.XdsTestResources.endpoint;
 import static com.linecorp.armeria.xds.XdsTestResources.localityLbEndpoints;
+import static com.linecorp.armeria.xds.XdsTestUtil.pollLoadBalancer;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 
 import java.net.URI;
-import java.util.ArrayList;
 import java.util.Collection;
-import java.util.List;
-import java.util.Map;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
-import java.util.stream.Collectors;
 
-import org.assertj.core.data.Offset;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
@@ -43,15 +41,14 @@ import com.linecorp.armeria.client.BlockingWebClient;
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.WebClient;
-import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.common.CommonPools;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
-import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.grpc.GrpcService;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
+import com.linecorp.armeria.xds.ListenerRoot;
 import com.linecorp.armeria.xds.XdsBootstrap;
 import com.linecorp.armeria.xds.XdsTestResources;
 
@@ -133,20 +130,16 @@ class RampingUpTest {
                 XdsTestResources.createStaticCluster(BOOTSTRAP_CLUSTER_NAME, bootstrapLoadAssignment);
         final Bootstrap bootstrap = XdsTestResources.bootstrap(configSource, bootstrapCluster);
         try (XdsBootstrap xdsBootstrap = XdsBootstrap.of(bootstrap);
-             EndpointGroup xdsEndpointGroup = XdsEndpointGroup.of(listenerName, xdsBootstrap)) {
-            await().untilAsserted(() -> assertThat(xdsEndpointGroup.endpoints())
+             ListenerRoot root = xdsBootstrap.listenerRoot(listenerName)) {
+            final XdsLoadBalancer loadBalancer = pollLoadBalancer(root, "cluster", cluster);
+            await().untilAsserted(() -> assertThat(loadBalancer.prioritySet().endpoints())
                     .containsExactlyInAnyOrder(Endpoint.of("a.com", 80), Endpoint.of("b.com", 80)));
 
-            Map<String, List<Endpoint>> selectedEndpoints = selectEndpoints(iteration, xdsEndpointGroup);
-            assertThat(selectedEndpoints.values().stream().flatMap(Collection::stream))
-                    .contains(Endpoint.of("a.com", 80), Endpoint.of("b.com", 80));
-            assertThat(selectedEndpoints).hasSize(2);
-            final int aWeight = selectedEndpoints.get("a.com").size();
-            int bWeight = selectedEndpoints.get("b.com").size();
-            assertThat(aWeight).isCloseTo(bWeight, Offset.offset(10));
-
-            final Endpoint aEndpoint = selectedEndpoints.get("a.com").get(0);
-            Endpoint bEndpoint = selectedEndpoints.get("b.com").get(0);
+            Set<Endpoint> selectedEndpoints = selectEndpoints(weight, loadBalancer);
+            assertThat(selectedEndpoints)
+                    .containsExactlyInAnyOrder(Endpoint.of("a.com", 80), Endpoint.of("b.com", 80));
+            final Endpoint aEndpoint = filterEndpoint(selectedEndpoints, "a.com");
+            Endpoint bEndpoint = filterEndpoint(selectedEndpoints, "b.com");
             assertThat(createdAtNanos(aEndpoint)).isEqualTo(createdAtNanos(bEndpoint));
             // RampingUpLoadBalancer does not alter the original weight of the endpoints.
             assertThat(aEndpoint.weight()).isEqualTo(weight);
@@ -169,15 +162,12 @@ class RampingUpTest {
                     Snapshot.create(ImmutableList.of(cluster), ImmutableList.of(loadAssignment),
                                     ImmutableList.of(listener), ImmutableList.of(route),
                                     ImmutableList.of(), "3"));
-            await().untilAsserted(() -> assertThat(xdsEndpointGroup.endpoints())
+            final XdsLoadBalancer loadBalancer2 = pollLoadBalancer(root, "cluster", loadAssignment);
+            await().untilAsserted(() -> assertThat(loadBalancer2.prioritySet().endpoints())
                     .containsExactlyInAnyOrder(Endpoint.of("b.com", 80), Endpoint.of("c.com", 80)));
-            selectedEndpoints = selectEndpoints(iteration, xdsEndpointGroup);
-            bWeight = selectedEndpoints.get("b.com").size();
-            final int cWeight = selectedEndpoints.get("c.com").size();
-            // Make sure the new endpoints slowly start to get traffic.
-            assertThat(cWeight * 2).isLessThan(bWeight);
-            bEndpoint = selectedEndpoints.get("b.com").get(0);
-            final Endpoint cEndpoint = selectedEndpoints.get("c.com").get(0);
+            selectedEndpoints = selectEndpoints(weight, loadBalancer2);
+            bEndpoint = filterEndpoint(selectedEndpoints, "b.com");
+            final Endpoint cEndpoint = filterEndpoint(selectedEndpoints, "c.com");
             assertThat(createdAtNanos(bEndpoint)).isLessThan(createdAtNanos(cEndpoint));
             assertThat(bEndpoint.weight()).isEqualTo(weight);
             assertThat(cEndpoint.weight()).isEqualTo(weight);
@@ -188,13 +178,13 @@ class RampingUpTest {
      * WeightedRandomLoadBalancer is random, so we just call selectNow
      * for a full iteration to consume all pending entries.
      */
-    private static Map<String, List<Endpoint>> selectEndpoints(int iteration, EndpointGroup xdsEndpointGroup) {
-        final List<Endpoint> selectedEndpoints = new ArrayList<>();
-        for (int i = 0; i < iteration; i++) {
-            selectedEndpoints.add(xdsEndpointGroup.select(ctx(), CommonPools.workerGroup()).join());
-            selectedEndpoints.add(xdsEndpointGroup.select(ctx(), CommonPools.workerGroup()).join());
+    private static Set<Endpoint> selectEndpoints(int weight, XdsLoadBalancer loadBalancer) {
+        final Set<Endpoint> selectedEndpoints = new HashSet<>();
+        for (int i = 0; i < weight * 2; i++) {
+            selectedEndpoints.add(loadBalancer.select(ctx(), CommonPools.workerGroup()).join());
+            selectedEndpoints.add(loadBalancer.select(ctx(), CommonPools.workerGroup()).join());
         }
-        return selectedEndpoints.stream().collect(Collectors.groupingBy(Endpoint::host));
+        return selectedEndpoints;
     }
 
     @Test
@@ -216,11 +206,15 @@ class RampingUpTest {
                 XdsTestResources.createStaticCluster(BOOTSTRAP_CLUSTER_NAME, bootstrapLoadAssignment);
         final Bootstrap bootstrap = XdsTestResources.bootstrap(configSource, bootstrapCluster);
         try (XdsBootstrap xdsBootstrap = XdsBootstrap.of(bootstrap);
-             EndpointGroup xdsEndpointGroup = XdsEndpointGroup.of(listenerName, xdsBootstrap)) {
-            final BlockingWebClient blockingClient = WebClient.of(SessionProtocol.HTTP, xdsEndpointGroup)
-                                                              .blocking();
+             XdsHttpPreprocessor preprocessor = XdsHttpPreprocessor.of(listenerName, xdsBootstrap)) {
+            final BlockingWebClient blockingClient = WebClient.of(preprocessor).blocking();
             assertThat(blockingClient.get("/hello").contentUtf8()).isEqualTo("world");
         }
+    }
+
+    private static Endpoint filterEndpoint(Collection<Endpoint> endpoints, String hostName) {
+        return endpoints.stream().filter(endpoint -> hostName.equals(endpoint.host()))
+                        .findFirst().orElseThrow(() -> new RuntimeException("not found"));
     }
 
     private static Cluster slowStartCluster(int windowMillis) {

@@ -34,24 +34,27 @@ final class ClusterResourceNode extends AbstractResourceNodeWithPrimer<ClusterXd
     private final int index;
     private final EndpointSnapshotWatcher snapshotWatcher = new EndpointSnapshotWatcher();
     private final SnapshotWatcher<ClusterSnapshot> parentWatcher;
+    private final ClusterEntryLifecycle clusterEntryLifecycle;
 
     ClusterResourceNode(@Nullable ConfigSource configSource,
-                        String resourceName, XdsBootstrapImpl xdsBootstrap,
+                        String resourceName, SubscriptionContext context,
                         @Nullable RouteXdsResource primer,
                         SnapshotWatcher<ClusterSnapshot> parentWatcher,
                         ResourceNodeType resourceNodeType) {
-        super(xdsBootstrap, configSource, CLUSTER, resourceName, primer, parentWatcher, resourceNodeType);
+        super(context, configSource, CLUSTER, resourceName, primer, parentWatcher, resourceNodeType);
         this.parentWatcher = parentWatcher;
         index = -1;
+        clusterEntryLifecycle = new ClusterEntryLifecycle(context.clusterManager(), resourceName);
     }
 
     ClusterResourceNode(@Nullable ConfigSource configSource,
-                        String resourceName, XdsBootstrapImpl xdsBootstrap,
+                        String resourceName, SubscriptionContext context,
                         @Nullable VirtualHostXdsResource primer, SnapshotWatcher<ClusterSnapshot> parentWatcher,
                         int index, ResourceNodeType resourceNodeType) {
-        super(xdsBootstrap, configSource, CLUSTER, resourceName, primer, parentWatcher, resourceNodeType);
+        super(context, configSource, CLUSTER, resourceName, primer, parentWatcher, resourceNodeType);
         this.parentWatcher = parentWatcher;
         this.index = index;
+        clusterEntryLifecycle = new ClusterEntryLifecycle(context.clusterManager(), resourceName);
     }
 
     @Override
@@ -60,7 +63,7 @@ final class ClusterResourceNode extends AbstractResourceNodeWithPrimer<ClusterXd
         if (cluster.hasLoadAssignment()) {
             final ClusterLoadAssignment loadAssignment = cluster.getLoadAssignment();
             final EndpointResourceNode node =
-                    StaticResourceUtils.staticEndpoint(xdsBootstrap(), loadAssignment.getClusterName(),
+                    StaticResourceUtils.staticEndpoint(context(), loadAssignment.getClusterName(),
                                                        resource, snapshotWatcher, loadAssignment);
             children().add(node);
         } else if (cluster.hasEdsClusterConfig()) {
@@ -70,14 +73,20 @@ final class ClusterResourceNode extends AbstractResourceNodeWithPrimer<ClusterXd
             final ConfigSource configSource = configSourceMapper()
                     .edsConfigSource(cluster.getEdsClusterConfig().getEdsConfig(), clusterName);
             final EndpointResourceNode node =
-                    new EndpointResourceNode(configSource, clusterName, xdsBootstrap(), resource,
+                    new EndpointResourceNode(configSource, clusterName, context(), resource,
                                              snapshotWatcher, ResourceNodeType.DYNAMIC);
             children().add(node);
-            xdsBootstrap().subscribe(node);
+            context().subscribe(node);
         } else {
             final ClusterSnapshot clusterSnapshot = new ClusterSnapshot(resource);
             parentWatcher.snapshotUpdated(clusterSnapshot);
         }
+    }
+
+    @Override
+    public void close() {
+        clusterEntryLifecycle.close();
+        super.close();
     }
 
     private class EndpointSnapshotWatcher implements SnapshotWatcher<EndpointSnapshot> {
@@ -90,7 +99,11 @@ final class ClusterResourceNode extends AbstractResourceNodeWithPrimer<ClusterXd
             if (!Objects.equals(newSnapshot.xdsResource().primer(), current)) {
                 return;
             }
+            if (clusterEntryLifecycle.closed()) {
+                return;
+            }
             final ClusterSnapshot clusterSnapshot = new ClusterSnapshot(current, newSnapshot, index);
+            clusterSnapshot.loadBalancer(clusterEntryLifecycle.update(clusterSnapshot));
             parentWatcher.snapshotUpdated(clusterSnapshot);
         }
 

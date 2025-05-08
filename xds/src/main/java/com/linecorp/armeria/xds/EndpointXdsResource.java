@@ -82,20 +82,18 @@ public final class EndpointXdsResource extends XdsResourceWithPrimer<EndpointXds
             return false;
         }
         final EndpointXdsResource resource = (EndpointXdsResource) object;
-        return Objects.equal(clusterLoadAssignment, resource.clusterLoadAssignment) &&
-               Objects.equal(primer, resource.primer);
+        return Objects.equal(clusterLoadAssignment, resource.clusterLoadAssignment);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hashCode(clusterLoadAssignment, primer);
+        return Objects.hashCode(clusterLoadAssignment);
     }
 
     @Override
     public String toString() {
         return MoreObjects.toStringHelper(this)
                           .add("clusterLoadAssignment", clusterLoadAssignment)
-                          .add("primer", primer)
                           .toString();
     }
 }
