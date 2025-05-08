@@ -1,4 +1,4 @@
-# Prevent the embedded Tomcat from opening a TCP/IP port.
+# Prevent the embedded Jetty from opening a TCP/IP port.
 server.port: -1
 ---
 armeria:
