@@ -1,5 +1,5 @@
 /*
- * Copyright 2024 LINE Corporation
+ * Copyright 2025 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -17,24 +17,31 @@
 package com.linecorp.armeria.xds.client.endpoint;
 
 import com.linecorp.armeria.client.ClientRequestContext;
-import com.linecorp.armeria.client.Endpoint;
-import com.linecorp.armeria.client.endpoint.AbstractEndpointSelector;
-import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.internal.client.AbstractAsyncSelector;
+import com.linecorp.armeria.xds.ListenerRoot;
+import com.linecorp.armeria.xds.ListenerSnapshot;
+import com.linecorp.armeria.xds.SnapshotWatcher;
 
-final class XdsEndpointSelector extends AbstractEndpointSelector {
+final class SnapshotWatcherSelector extends AbstractAsyncSelector<RouteConfig>
+        implements SnapshotWatcher<ListenerSnapshot> {
 
-    private final ClusterManager clusterManager;
+    @Nullable
+    private volatile RouteConfig routeConfig;
 
-    XdsEndpointSelector(ClusterManager clusterManager, EndpointGroup endpointGroup) {
-        super(endpointGroup);
-        this.clusterManager = clusterManager;
-        initialize();
+    SnapshotWatcherSelector(ListenerRoot listenerRoot) {
+        listenerRoot.addSnapshotWatcher(this);
     }
 
     @Override
     @Nullable
-    public Endpoint selectNow(ClientRequestContext ctx) {
-        return clusterManager.selectNow(ctx);
+    protected RouteConfig selectNow(ClientRequestContext ctx) {
+        return routeConfig;
+    }
+
+    @Override
+    public void snapshotUpdated(ListenerSnapshot newSnapshot) {
+        routeConfig = new RouteConfig(newSnapshot);
+        refresh();
     }
 }

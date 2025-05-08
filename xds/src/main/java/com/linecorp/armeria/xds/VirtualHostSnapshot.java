@@ -17,12 +17,11 @@
 package com.linecorp.armeria.xds;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 
 import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableList;
-
-import com.linecorp.armeria.common.annotation.Nullable;
 
 import io.envoyproxy.envoy.config.route.v3.Route;
 import io.envoyproxy.envoy.config.route.v3.VirtualHost;
@@ -37,15 +36,16 @@ public final class VirtualHostSnapshot implements Snapshot<VirtualHostXdsResourc
     private final int index;
 
     VirtualHostSnapshot(VirtualHostXdsResource virtualHostXdsResource,
-                        List<@Nullable ClusterSnapshot> clusterSnapshots, int index) {
+                        Map<String, ClusterSnapshot> clusterSnapshots, int index) {
         this.virtualHostXdsResource = virtualHostXdsResource;
         final VirtualHost virtualHost = virtualHostXdsResource.resource();
-        assert clusterSnapshots.size() == virtualHost.getRoutesCount();
 
         final ImmutableList.Builder<RouteEntry> routeEntriesBuilder = ImmutableList.builder();
-        for (int i = 0; i < clusterSnapshots.size(); i++) {
-            final ClusterSnapshot clusterSnapshot = clusterSnapshots.get(i);
-            final Route route = virtualHost.getRoutes(i);
+        for (Route route: virtualHost.getRoutesList()) {
+            ClusterSnapshot clusterSnapshot = null;
+            if (route.getRoute().hasCluster()) {
+                clusterSnapshot = clusterSnapshots.get(route.getRoute().getCluster());
+            }
             routeEntriesBuilder.add(new RouteEntry(route, clusterSnapshot));
         }
         routeEntries = routeEntriesBuilder.build();
