@@ -29,9 +29,12 @@ import com.linecorp.armeria.common.annotation.Nullable;
 public final class JsonRpcRequest {
 
     private final String jsonrpc;
+
     private final String method;
+
     @Nullable
     private final JsonNode params;
+
     @Nullable
     private final Object id;
 

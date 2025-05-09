@@ -59,6 +59,7 @@ class JsonRpcResponseFactoryTest {
         final JsonRpcResponse rpcError = JsonRpcResponse.ofError(TEST_ERROR, "err-id");
         final HttpResponse httpResponse = JsonRpcResponseFactory
                 .toHttpResponse(rpcError, mapper, "err-id");
+
         final String expectedBody = mapper.writeValueAsString(rpcError);
         final AggregatedHttpResponse aggregated = httpResponse.aggregate().join();
 
@@ -89,6 +90,7 @@ class JsonRpcResponseFactoryTest {
     @Test
     void toHttpResponseFuture() throws JsonProcessingException {
         final JsonRpcResponse rpcSuccess = JsonRpcResponse.ofSuccess(SUCCESS_RESULT, 1);
+
         final HttpResponse expectedHttpResponse = JsonRpcResponseFactory
                 .toHttpResponse(rpcSuccess, mapper, 1);
         final AggregatedHttpResponse expectedAggregated = expectedHttpResponse.aggregate().join();

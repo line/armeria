@@ -41,6 +41,7 @@ import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.jsonrpc.JsonRpcError;
 import com.linecorp.armeria.common.jsonrpc.JsonRpcRequest;
 import com.linecorp.armeria.common.jsonrpc.JsonRpcResponse;
@@ -58,6 +59,7 @@ import com.linecorp.armeria.server.ServiceRequestContext;
  * This service acts as a dispatcher, routing incoming JSON-RPC requests
  * based on their method name to the appropriate delegate service.
  */
+@UnstableApi
 public class JsonRpcServiceBuilder {
 
     private static final Logger logger = LoggerFactory.getLogger(JsonRpcServiceBuilder.class);
@@ -72,6 +74,7 @@ public class JsonRpcServiceBuilder {
 
         @Nullable
         private final JsonRpcRequest request;
+
         @Nullable
         private final JsonRpcResponse errorResponse;
 

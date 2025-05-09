@@ -174,6 +174,7 @@ public class JsonRpcServiceBuilderTest {
                                       Object expectedId) throws JsonProcessingException {
         assertThat(response.status()).isEqualTo(HttpStatus.OK);
         assertThat(response.contentType()).isEqualTo(MediaType.JSON_UTF_8);
+
         final JsonNode responseJson = mapper.readTree(response.contentUtf8());
         assertThat(responseJson.get("jsonrpc").asText()).isEqualTo("2.0");
         assertThat(responseJson.has("error")).isFalse();
@@ -189,10 +190,12 @@ public class JsonRpcServiceBuilderTest {
                                     @Nullable Object expectedId) throws JsonProcessingException {
         assertThat(response.status()).isEqualTo(HttpStatus.OK);
         assertThat(response.contentType()).isEqualTo(MediaType.JSON_UTF_8);
+
         final JsonNode responseJson = mapper.readTree(response.contentUtf8());
         assertThat(responseJson.get("jsonrpc").asText()).isEqualTo("2.0");
         assertThat(responseJson.has("result")).isFalse();
         assertThat(responseJson.has("error")).isTrue();
+
         final JsonNode errorJson = responseJson.get("error");
         assertThat(errorJson.get("code").asInt()).isEqualTo(errorCode.code());
         assertThat(errorJson.get("message").asText()).contains(errorCode.message());
@@ -246,7 +249,7 @@ public class JsonRpcServiceBuilderTest {
         assertJsonRpcSuccess(response, result, 1);
     }
 
-     @Test
+    @Test
     void success_positionalParams() throws Exception {
         final String requestBody = createJsonRpcRequest("subtractByPos", new int[]{42, 23}, 2);
         final AggregatedHttpResponse response = client().execute(
@@ -259,7 +262,7 @@ public class JsonRpcServiceBuilderTest {
         assertJsonRpcSuccess(response, 19, 2);
     }
 
-     @Test
+    @Test
     void success_namedParams() throws Exception {
         final String requestBody = createJsonRpcRequest("subtractByName",
                                                         new RequestDTO(43, 24),
@@ -324,7 +327,7 @@ public class JsonRpcServiceBuilderTest {
         assertJsonRpcError(response2, JsonRpcErrorCode.METHOD_NOT_FOUND, "err-1");
     }
 
-     @Test
+    @Test
     void error_parseError_invalidJson() throws Exception {
          final String invalidJson =
                  "{\"jsonrpc\": \"2.0\", \"method\": \"foo\", \"params\": \"bar\", \"id\": 1";
@@ -349,7 +352,7 @@ public class JsonRpcServiceBuilderTest {
         assertJsonRpcError(response, JsonRpcErrorCode.INVALID_REQUEST, 1);
     }
 
-     @Test
+    @Test
     void error_invalidRequest_wrongVersion() throws Exception {
         final String requestBody = "{\"jsonrpc\": \"1.0\", \"method\": \"foo\", \"id\": 1}";
         final AggregatedHttpResponse response = client().execute(
@@ -361,17 +364,18 @@ public class JsonRpcServiceBuilderTest {
          assertJsonRpcError(response, JsonRpcErrorCode.INVALID_REQUEST, 1);
     }
 
-     @Test
+    @Test
     void error_invalidParams_wrongType() throws Exception {
         final String requestBody =
                 createJsonRpcRequest("subtractByPos", "not an array", 5);
-         final AggregatedHttpResponse response = client().execute(
+        final AggregatedHttpResponse response = client().execute(
                         HttpRequest.builder()
                                 .post("/json-rpc/test")
                                 .content(MediaType.JSON_UTF_8, requestBody)
                                 .build())
                 .aggregate().join();
-         assertJsonRpcError(response, JsonRpcErrorCode.INVALID_REQUEST, 5);
+
+        assertJsonRpcError(response, JsonRpcErrorCode.INVALID_REQUEST, 5);
      }
 
      @Test
@@ -406,18 +410,6 @@ public class JsonRpcServiceBuilderTest {
      @Test
      void batchRequests() throws Exception {
          // Based on https://www.jsonrpc.org/specification#examples - rpc call Batch
-         // String batchRequestBody = """ Replaced with concatenation below
-         //         [
-         //             {"jsonrpc": "2.0", "method": "sum", "params": [1,2,4], "id": "1"},
-         //             {"jsonrpc": "2.0", "method": "notify_hello", "params": [7]},
-         //             {"jsonrpc": "2.0", "method": "subtractByPos", "params": [42,23], "id": "2"},
-         //             {"foo": "boo"},
-         //             {"jsonrpc": "2.0", "method": "nonExistentMethod",
-         //                                "params": {"name": "myself"}, "id": "5"},
-         //             {"jsonrpc": "2.0", "method": "getData", "id": "9"}
-         //         ]
-         //         """;
-
          // Request 1: Use getData with id "1"
          // Request 2: Notification with update
          // Request 3: Use subtractByPos with id "2"

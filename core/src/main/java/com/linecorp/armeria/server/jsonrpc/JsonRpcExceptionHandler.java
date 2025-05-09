@@ -25,7 +25,7 @@ import com.linecorp.armeria.server.annotation.ExceptionHandlerFunction;
 /**
  * A sample {@link ExceptionHandlerFunction} for handling exceptions in JSON-RPC services.
  */
-public class JsonRpcExceptionHandler implements ExceptionHandlerFunction {
+public final class JsonRpcExceptionHandler implements ExceptionHandlerFunction {
 
     @Override
     public HttpResponse handleException(ServiceRequestContext ctx, HttpRequest req, Throwable cause) {

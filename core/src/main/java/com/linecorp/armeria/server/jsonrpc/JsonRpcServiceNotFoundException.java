@@ -21,6 +21,7 @@ package com.linecorp.armeria.server.jsonrpc;
 public class JsonRpcServiceNotFoundException extends RuntimeException {
 
     private static final long serialVersionUID = 5996593317006754659L;
+
     private final String lookupPath;
 
     /**

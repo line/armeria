@@ -28,7 +28,9 @@ import com.linecorp.armeria.common.annotation.Nullable;
 public final class JsonRpcError {
 
     private final int code;
+
     private final String message;
+
     @Nullable
     private final Object data;
 

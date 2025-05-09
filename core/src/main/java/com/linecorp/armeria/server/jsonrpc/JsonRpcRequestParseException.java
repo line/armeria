@@ -22,8 +22,11 @@ import com.linecorp.armeria.common.jsonrpc.JsonRpcResponse;
  * Exception thrown when a JSON-RPC request cannot be parsed.
  */
 public class JsonRpcRequestParseException extends RuntimeException {
+
     private static final long serialVersionUID = -5526383831125611610L;
+
     private final JsonRpcResponse errorResponse;
+
     @Nullable
     private final Object requestId;
 

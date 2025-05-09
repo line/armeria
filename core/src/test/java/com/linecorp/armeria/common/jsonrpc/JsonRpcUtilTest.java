@@ -39,8 +39,10 @@ class JsonRpcUtilTest {
     @Test
     void parseDelegateResponse_success() throws JsonProcessingException {
         final String successJson = "{\"result\": \"success\"}";
+
         final AggregatedHttpResponse delegateResponse = AggregatedHttpResponse.of(
                 HttpStatus.OK, MediaType.JSON, HttpData.ofUtf8(successJson));
+
         final JsonNode expectedResult = mapper.readTree(successJson).get("result");
 
         final JsonRpcResponse rpcResponse = JsonRpcUtil.parseDelegateResponse(
@@ -81,6 +83,7 @@ class JsonRpcUtilTest {
     @Test
     void parseDelegateResponse_notFound() {
         final AggregatedHttpResponse delegateResponse = AggregatedHttpResponse.of(HttpStatus.NOT_FOUND);
+
         final JsonRpcResponse rpcResponse = JsonRpcUtil.parseDelegateResponse(
                 delegateResponse, "id-4", "notFoundMethod", mapper);
 
@@ -94,6 +97,7 @@ class JsonRpcUtilTest {
     void parseDelegateResponse_badRequest() {
         final AggregatedHttpResponse delegateResponse = AggregatedHttpResponse.of(
                 HttpStatus.BAD_REQUEST, MediaType.PLAIN_TEXT_UTF_8, "Invalid parameter value");
+
         final JsonRpcResponse rpcResponse = JsonRpcUtil.parseDelegateResponse(
                 delegateResponse, 5, "badParamMethod", mapper);
 
@@ -106,6 +110,7 @@ class JsonRpcUtilTest {
     @Test
     void parseDelegateResponse_otherClientError() {
         final AggregatedHttpResponse delegateResponse = AggregatedHttpResponse.of(HttpStatus.UNAUTHORIZED);
+
         final JsonRpcResponse rpcResponse = JsonRpcUtil.parseDelegateResponse(
                 delegateResponse, null, "authMethod", mapper);
 
@@ -119,6 +124,7 @@ class JsonRpcUtilTest {
     void parseDelegateResponse_serverError() {
         final AggregatedHttpResponse delegateResponse = AggregatedHttpResponse.of(
                 HttpStatus.INTERNAL_SERVER_ERROR, MediaType.PLAIN_TEXT_UTF_8, "DB connection failed");
+
         final JsonRpcResponse rpcResponse = JsonRpcUtil.parseDelegateResponse(
                 delegateResponse, "req-err", "processData", mapper);
 
@@ -159,6 +165,7 @@ class JsonRpcUtilTest {
     @Test
     void parseJsonNodeToRequest_invalidJsonType() {
         final JsonNode node = new TextNode("not an object");
+
         assertThatThrownBy(() -> JsonRpcUtil.parseJsonNodeToRequest(node, mapper))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("Request item must be a JSON object");
@@ -168,6 +175,7 @@ class JsonRpcUtilTest {
     void parseJsonNodeToRequest_missingVersion() throws JsonProcessingException {
         final String json = "{\"method\": \"foo\", \"id\": 1}";
         final JsonNode node = mapper.readTree(json);
+
         assertThatThrownBy(() -> JsonRpcUtil.parseJsonNodeToRequest(node, mapper))
                 .isInstanceOf(JsonProcessingException.class);
     }
@@ -176,6 +184,7 @@ class JsonRpcUtilTest {
     void parseJsonNodeToRequest_invalidVersion() throws JsonProcessingException {
         final String json = "{\"jsonrpc\": \"1.0\", \"method\": \"foo\", \"id\": 1}";
         final JsonNode node = mapper.readTree(json);
+
         assertThatThrownBy(() -> JsonRpcUtil.parseJsonNodeToRequest(node, mapper))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("Invalid JSON-RPC version: 1.0");
@@ -185,6 +194,7 @@ class JsonRpcUtilTest {
     void parseJsonNodeToRequest_missingMethod() throws JsonProcessingException {
         final String json = "{\"jsonrpc\": \"2.0\", \"id\": 1}";
         final JsonNode node = mapper.readTree(json);
+
         assertThatThrownBy(() -> JsonRpcUtil.parseJsonNodeToRequest(node, mapper))
                 .isInstanceOf(JsonProcessingException.class)
                 .hasMessageContaining("Missing required creator property 'method'");
@@ -194,6 +204,7 @@ class JsonRpcUtilTest {
     void parseJsonNodeToRequest_invalidParamsType() throws JsonProcessingException {
         final String json = "{\"jsonrpc\": \"2.0\", \"method\": \"foo\", \"params\": \"string\", \"id\": 1}";
         final JsonNode node = mapper.readTree(json);
+
         assertThatThrownBy(() -> JsonRpcUtil.parseJsonNodeToRequest(node, mapper))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("'params' must be an object or an array");

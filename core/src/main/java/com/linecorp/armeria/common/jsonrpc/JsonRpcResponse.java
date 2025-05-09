@@ -30,10 +30,13 @@ public final class JsonRpcResponse {
     private static final String JSONRPC_VERSION = "2.0";
 
     private final String jsonrpc;
+
     @Nullable
     private final Object result;
+
     @Nullable
     private final JsonRpcError error;
+
     @Nullable
     private final Object id;
 
