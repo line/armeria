@@ -19,11 +19,13 @@ package com.linecorp.armeria.common;
 import java.util.List;
 
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.server.annotation.AnnotatedService;
 
 /**
  * A request for an {@link AnnotatedService} method.
  */
+@UnstableApi
 public interface AnnotatedRequest {
 
     /**

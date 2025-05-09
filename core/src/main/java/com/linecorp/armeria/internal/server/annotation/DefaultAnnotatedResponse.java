@@ -21,7 +21,7 @@ import com.google.common.base.MoreObjects;
 import com.linecorp.armeria.common.AnnotatedResponse;
 import com.linecorp.armeria.common.annotation.Nullable;
 
-public final class DefaultAnnotatedResponse implements AnnotatedResponse {
+final class DefaultAnnotatedResponse implements AnnotatedResponse {
 
     @Nullable
     private final Object value;

@@ -607,8 +607,8 @@ final class SystemPropertyFlagsProvider implements FlagsProvider {
 
     @Nullable
     @Override
-    public Boolean jsonContentLogging() {
-        return getBoolean("jsonContentLogging");
+    public Boolean annotatedServiceContentLogging() {
+        return getBoolean("annotatedServiceContentLogging");
     }
 
     @Nullable

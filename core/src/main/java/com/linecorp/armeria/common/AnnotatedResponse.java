@@ -17,11 +17,13 @@
 package com.linecorp.armeria.common;
 
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.server.annotation.AnnotatedService;
 
 /**
  * A response for an {@link AnnotatedService}.
  */
+@UnstableApi
 public interface AnnotatedResponse {
 
     /**

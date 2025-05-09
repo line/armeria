@@ -25,7 +25,7 @@ import com.google.common.base.MoreObjects;
 import com.linecorp.armeria.common.AnnotatedRequest;
 import com.linecorp.armeria.common.annotation.Nullable;
 
-public final class DefaultAnnotatedRequest implements AnnotatedRequest {
+final class DefaultAnnotatedRequest implements AnnotatedRequest {
 
     private final List<@Nullable Object> parameters;
 
