@@ -23,6 +23,7 @@ import React, { ChangeEvent, useCallback, useMemo, useRef } from 'react';
 
 import { Specification } from '../../lib/specification';
 import { SelectOption } from '../../lib/types';
+import { getValidHexColor } from '../../lib/colors';
 
 type Option = SelectOption & { group: string };
 
@@ -121,8 +122,17 @@ const GotoSelect: React.FunctionComponent<GotoSelectProps> = ({
     [navigateTo],
   );
 
+  const extraInfo = specification.getDocServiceExtraInfo();
+  const headerGotoBackgroundColor = getValidHexColor(
+    extraInfo,
+    'headerGotoBackgroundColor',
+  );
+
   return (
-    <div className={classes.root}>
+    <div
+      className={classes.root}
+      style={{ backgroundColor: headerGotoBackgroundColor }}
+    >
       <Autocomplete
         autoHighlight
         blurOnSelect

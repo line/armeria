@@ -42,6 +42,7 @@ import Endpoints from './Endpoints';
 import Exceptions from './Exceptions';
 import Description from '../../components/Description';
 import ReturnType from './ReturnType';
+import { getValidHexColor } from '../../lib/colors';
 
 interface OwnProps {
   specification: Specification;
@@ -207,6 +208,12 @@ const MethodPage: React.FunctionComponent<Props> = (props) => {
     return param;
   });
 
+  const extraInfo = props.specification.getDocServiceExtraInfo();
+  const debugFormButtonsColor = getValidHexColor(
+    extraInfo,
+    'debugFormButtonsColor',
+  );
+
   return (
     <>
       <Grid item container justifyContent="space-between">
@@ -219,7 +226,7 @@ const MethodPage: React.FunctionComponent<Props> = (props) => {
             color="primary"
             onClick={() => setDebugFormIsOpen(true)}
             endIcon={<Launch />}
-            style={{ maxHeight: '3em' }}
+            style={{ maxHeight: '3em', backgroundColor: debugFormButtonsColor }}
           >
             Debug
           </Button>
