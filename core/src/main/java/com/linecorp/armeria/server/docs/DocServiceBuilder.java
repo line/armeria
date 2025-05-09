@@ -24,6 +24,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.function.BiFunction;
+import java.util.regex.Pattern;
 
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.ImmutableList;
@@ -61,6 +62,7 @@ public final class DocServiceBuilder {
     private final Map<String, ListMultimap<String, String>> exampleQueries = new HashMap<>();
     private final List<BiFunction<ServiceRequestContext, HttpRequest, String>> injectedScriptSuppliers =
             new ArrayList<>();
+    private final Map<String, String> docServiceExtraInfo = new HashMap<>();
 
     @Nullable
     private DescriptiveTypeInfoProvider descriptiveTypeInfoProvider;
@@ -552,11 +554,91 @@ public final class DocServiceBuilder {
     }
 
     /**
+     * Sets the title of the web application to be used in the documentation service.
+     * @param webAppTitle  * The title cannot be null, empty, or exceed a maximum length of 50 characters.
+     * @return The current {@link DocServiceBuilder} instance for method chaining.
+     */
+    public DocServiceBuilder webAppTitle(String webAppTitle) {
+        final String webAppTitleKey = "webAppTitle";
+        final Integer webAppTitleMaxSize = 50;
+        final String webAppTitlePattern = "<[^>]*>";
+        requireNonNull(webAppTitle, webAppTitleKey);
+        checkArgument(!webAppTitle.trim().isEmpty(), "%s is empty.", webAppTitleKey);
+        checkArgument(webAppTitle.length() <= webAppTitleMaxSize,
+                      "%s length exceeds %s.", webAppTitleKey, webAppTitleMaxSize);
+        final String webAppTitlePatternSanitized = Pattern.compile(webAppTitlePattern).matcher(webAppTitle)
+                                                          .replaceAll("").trim();
+        docServiceExtraInfo.putIfAbsent(webAppTitleKey, webAppTitlePatternSanitized);
+        return this;
+    }
+
+    /**
+     * Sets the header bar background color of the web application to be used in the documentation service.
+     * @param headerBarBackgroundColor The hexadecimal color code for the header bar background.
+     *     Must not be null or empty, and must match the pattern "#RRGGBB".
+     * @return The current {@link DocServiceBuilder} instance for method chaining.
+     */
+    public DocServiceBuilder headerBarBackgroundColor(String headerBarBackgroundColor) {
+        final String headerBarBackgroundColorKey = "headerBarBackgroundColor";
+        final Integer headerBarBackgroundColorMaxSize = 7;
+        final String hexColorPattern = "^#([0-9a-fA-F]{6})$";
+        requireNonNull(headerBarBackgroundColor, headerBarBackgroundColorKey);
+        checkArgument(!headerBarBackgroundColor.trim().isEmpty(), "%s is empty.", headerBarBackgroundColorKey);
+        checkArgument(headerBarBackgroundColor.length() <= headerBarBackgroundColorMaxSize,
+                      "%s length exceeds %s.", headerBarBackgroundColorKey, headerBarBackgroundColorMaxSize);
+        checkArgument(Pattern.compile(hexColorPattern).matcher(headerBarBackgroundColor).matches(),
+                      "%s not in hex format: %s.", headerBarBackgroundColorKey, headerBarBackgroundColor);
+        docServiceExtraInfo.putIfAbsent(headerBarBackgroundColorKey, headerBarBackgroundColor);
+        return this;
+    }
+
+    /**
+     * Sets the background color of the 'Goto' header bar component used in the documentation service.
+     * @param headerGotoBackgroundColor The hexadecimal color code
+     *     Must not be null or empty, and must match the pattern "#RRGGBB".
+     * @return The current {@link DocServiceBuilder} instance for method chaining.
+     */
+    public DocServiceBuilder headerGotoBackgroundColor(String headerGotoBackgroundColor) {
+        final String headerGotoBackgroundColorKey = "headerGotoBackgroundColor";
+        final Integer headerGotoBackgroundColorMaxSize = 7;
+        final String hexColorPattern = "^#([0-9a-fA-F]{6})$";
+        requireNonNull(headerGotoBackgroundColor, headerGotoBackgroundColorKey);
+        checkArgument(!headerGotoBackgroundColor.trim().isEmpty(),
+                      "%s is empty.", headerGotoBackgroundColorKey);
+        checkArgument(headerGotoBackgroundColor.length() <= headerGotoBackgroundColorMaxSize,
+                      "%s length exceeds %s.", headerGotoBackgroundColorKey, headerGotoBackgroundColorMaxSize);
+        checkArgument(Pattern.compile(hexColorPattern).matcher(headerGotoBackgroundColor).matches(),
+                      "%s not in hex format: %s.", headerGotoBackgroundColorKey, headerGotoBackgroundColor);
+        docServiceExtraInfo.putIfAbsent(headerGotoBackgroundColorKey, headerGotoBackgroundColor);
+        return this;
+    }
+
+    /**
+     * Sets the buttons color of the 'DebugPage' component used in the documentation service.
+     * @param debugFormButtonsColor The hexadecimal color code
+     *     Must not be null or empty, and must match the pattern "#RRGGBB".
+     * @return The current {@link DocServiceBuilder} instance for method chaining.
+     */
+    public DocServiceBuilder debugFormButtonsColor(String debugFormButtonsColor) {
+        final String debugFormButtonsColorKey = "debugFormButtonsColor";
+        final Integer debugFormButtonsColorMaxSize = 7;
+        final String hexColorPattern = "^#([0-9a-fA-F]{6})$";
+        requireNonNull(debugFormButtonsColor, debugFormButtonsColorKey);
+        checkArgument(!debugFormButtonsColor.trim().isEmpty(), "%s is empty.", debugFormButtonsColorKey);
+        checkArgument(debugFormButtonsColor.length() <= debugFormButtonsColorMaxSize,
+                      "%s length exceeds %s.", debugFormButtonsColorKey, debugFormButtonsColorMaxSize);
+        checkArgument(Pattern.compile(hexColorPattern).matcher(debugFormButtonsColor).matches(),
+                      "%s not in hex format: %s.", debugFormButtonsColorKey, debugFormButtonsColor);
+        docServiceExtraInfo.putIfAbsent(debugFormButtonsColorKey, debugFormButtonsColor);
+        return this;
+    }
+
+    /**
      * Returns a newly-created {@link DocService} based on the properties of this builder.
      */
     public DocService build() {
         return new DocService(exampleHeaders, exampleRequests, examplePaths, exampleQueries,
                               injectedScriptSuppliers, unifyFilter(includeFilter, excludeFilter),
-                              descriptiveTypeInfoProvider);
+                              descriptiveTypeInfoProvider, docServiceExtraInfo);
     }
 }
