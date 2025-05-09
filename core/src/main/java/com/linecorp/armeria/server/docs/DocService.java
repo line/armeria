@@ -23,6 +23,7 @@ import static java.util.Objects.requireNonNull;
 
 import java.time.Clock;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -133,7 +134,7 @@ public final class DocService extends SimpleDecoratingHttpService {
         this(/* exampleHeaders */ ImmutableMap.of(), /* exampleRequests */ ImmutableMap.of(),
                 /* examplePaths */ ImmutableMap.of(), /* exampleQueries */ ImmutableMap.of(),
                 /* injectedScriptSuppliers */ ImmutableList.of(), DocServiceBuilder.ALL_SERVICES,
-                                  null);
+                                  null, new HashMap<>());
     }
 
     /**
@@ -144,24 +145,27 @@ public final class DocService extends SimpleDecoratingHttpService {
                Map<String, ListMultimap<String, String>> examplePaths,
                Map<String, ListMultimap<String, String>> exampleQueries,
                List<BiFunction<ServiceRequestContext, HttpRequest, String>> injectedScriptSuppliers,
-               DocServiceFilter filter, @Nullable DescriptiveTypeInfoProvider descriptiveTypeInfoProvider) {
+               DocServiceFilter filter, @Nullable DescriptiveTypeInfoProvider descriptiveTypeInfoProvider,
+               Map<String, String> docServiceExtraInfo) {
         this(new ExampleSupport(immutableCopyOf(exampleHeaders, "exampleHeaders"),
                                 immutableCopyOf(exampleRequests, "exampleRequests"),
                                 immutableCopyOf(examplePaths, "examplePaths"),
                                 immutableCopyOf(exampleQueries, "exampleQueries")),
-             injectedScriptSuppliers, filter, descriptiveTypeInfoProvider);
+             injectedScriptSuppliers, filter, descriptiveTypeInfoProvider, docServiceExtraInfo);
     }
 
     private DocService(ExampleSupport exampleSupport,
                        List<BiFunction<ServiceRequestContext, HttpRequest, String>> injectedScriptSuppliers,
                        DocServiceFilter filter,
-                       @Nullable DescriptiveTypeInfoProvider descriptiveTypeInfoProvider) {
-        this(new SpecificationLoader(exampleSupport, filter, descriptiveTypeInfoProvider),
+                       @Nullable DescriptiveTypeInfoProvider descriptiveTypeInfoProvider,
+                       Map<String, String> docServiceExtraInfo) {
+        this(new SpecificationLoader(exampleSupport, filter, descriptiveTypeInfoProvider, docServiceExtraInfo),
              injectedScriptSuppliers);
     }
 
     private DocService(SpecificationLoader specificationLoader,
-                       List<BiFunction<ServiceRequestContext, HttpRequest, String>> injectedScriptSuppliers) {
+                       List<BiFunction<ServiceRequestContext, HttpRequest, String>> injectedScriptSuppliers
+                       ) {
         super(FileService.builder(new DocServiceVfs(specificationLoader))
                          .serveCompressedFiles(true)
                          .autoDecompress(true)
@@ -255,14 +259,17 @@ public final class DocService extends SimpleDecoratingHttpService {
         private final DescriptiveTypeInfoProvider descriptiveTypeInfoProvider;
         private final Map<String, CompletableFuture<AggregatedHttpFile>> files = new ConcurrentHashMap<>();
         private List<ServiceConfig> services = Collections.emptyList();
+        private final Map<String, String> docServiceExtraInfo;
 
         SpecificationLoader(
                 ExampleSupport exampleSupport,
                 DocServiceFilter filter,
-                @Nullable DescriptiveTypeInfoProvider descriptiveTypeInfoProvider) {
+                @Nullable DescriptiveTypeInfoProvider descriptiveTypeInfoProvider,
+                Map<String, String> docServiceExtraInfo) {
             this.exampleSupport = exampleSupport;
             this.filter = filter;
             this.descriptiveTypeInfoProvider = composeDescriptiveTypeInfoProvider(descriptiveTypeInfoProvider);
+            this.docServiceExtraInfo = requireNonNull(docServiceExtraInfo,"docServiceExtraInfo");
         }
 
         boolean contains(String path) {
@@ -324,6 +331,7 @@ public final class DocService extends SimpleDecoratingHttpService {
                 ServiceSpecification spec = generate(services, docServiceRoute);
                 spec = docStringSupport.addDocStrings(spec);
                 spec = exampleSupport.addExamples(spec);
+                spec.setDocServiceExtraInfo(docServiceExtraInfo);
                 return spec;
             }, executor);
         }
