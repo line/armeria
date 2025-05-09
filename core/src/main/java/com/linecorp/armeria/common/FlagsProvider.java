@@ -53,9 +53,11 @@ import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.ServiceWithRoutes;
 import com.linecorp.armeria.server.TransientService;
 import com.linecorp.armeria.server.TransientServiceOption;
+import com.linecorp.armeria.server.annotation.AnnotatedService;
 import com.linecorp.armeria.server.file.FileService;
 import com.linecorp.armeria.server.file.FileServiceBuilder;
 import com.linecorp.armeria.server.file.HttpFile;
+import com.linecorp.armeria.server.logging.LoggingService;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Metrics;
@@ -1247,6 +1249,20 @@ public interface FlagsProvider {
     @Nullable
     @UnstableApi
     default ResponseTimeoutMode responseTimeoutMode() {
+        return null;
+    }
+
+    /**
+     * Returns whether {@link AnnotatedService} should leave request/response content logs
+     * by default when a {@link LoggingService} is added.
+     *
+     * <p>By default, this option is enabled. Specify the
+     * {@code -Dcom.linecorp.armeria.annotatedServiceContentLogging=false} JVM option to
+     * override the default value.
+     */
+    @Nullable
+    @UnstableApi
+    default Boolean annotatedServiceContentLogging() {
         return null;
     }
 }

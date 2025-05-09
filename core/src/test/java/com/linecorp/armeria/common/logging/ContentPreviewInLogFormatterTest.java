@@ -29,6 +29,7 @@ import com.linecorp.armeria.client.logging.LoggingClient;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.server.ServerBuilder;
+import com.linecorp.armeria.server.annotation.Post;
 import com.linecorp.armeria.server.logging.ContentPreviewingService;
 import com.linecorp.armeria.server.logging.LoggingService;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
@@ -46,6 +47,14 @@ class ContentPreviewInLogFormatterTest {
                     return HttpResponse.of("World");
                 }));
             });
+            sb.annotatedService()
+                    .pathPrefix("/bar")
+                    .build(new Object() {
+                        @Post
+                        public String hello(String hello) {
+                            return "World";
+                        }
+                    });
         }
     };
 
@@ -59,6 +68,24 @@ class ContentPreviewInLogFormatterTest {
         try (ClientRequestContextCaptor captor = Clients.newContextCaptor()) {
             client.prepare()
                   .post("/foo")
+                  .content(MediaType.PLAIN_TEXT_UTF_8, "Hello")
+                  .execute();
+            final RequestLogAccess log = captor.get().log();
+            assertContentPreview(log);
+            assertContentPreview(server.requestContextCaptor().take().log());
+        }
+    }
+
+    @Test
+    void previewHasHigherPrecedence() throws InterruptedException {
+        final BlockingWebClient client = server.blockingWebClient(cb -> {
+            cb.decorator(LoggingClient.newDecorator())
+              .decorator(ContentPreviewingClient.newDecorator(10000));
+        });
+
+        try (ClientRequestContextCaptor captor = Clients.newContextCaptor()) {
+            client.prepare()
+                  .post("/bar")
                   .content(MediaType.PLAIN_TEXT_UTF_8, "Hello")
                   .execute();
             final RequestLogAccess log = captor.get().log();

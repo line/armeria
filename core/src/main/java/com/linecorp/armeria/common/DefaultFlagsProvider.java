@@ -518,4 +518,9 @@ final class DefaultFlagsProvider implements FlagsProvider {
     public ResponseTimeoutMode responseTimeoutMode() {
         return DEFAULT_RESPONSE_TIMEOUT_MODE;
     }
+
+    @Override
+    public Boolean annotatedServiceContentLogging() {
+        return true;
+    }
 }
