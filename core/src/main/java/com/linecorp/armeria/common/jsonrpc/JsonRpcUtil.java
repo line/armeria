@@ -45,8 +45,8 @@ public final class JsonRpcUtil {
      * @return The corresponding {@link JsonRpcResponse} (success or error).
      */
     public static JsonRpcResponse parseDelegateResponse(AggregatedHttpResponse delegateResponse,
-                                                          @Nullable Object id, String methodName,
-                                                          ObjectMapper mapper) {
+                                                        @Nullable Object id, String methodName,
+                                                        ObjectMapper mapper) {
         final HttpStatus status = delegateResponse.status();
         final String content = delegateResponse.contentUtf8();
         logger.debug("Parsing delegate response for JSON-RPC method '{}' (id: {}): status={}, content='{}'",
@@ -80,7 +80,7 @@ public final class JsonRpcUtil {
      * Maps an error {@link AggregatedHttpResponse} from a delegate service to a specific {@link JsonRpcError}.
      */
     private static JsonRpcError mapHttpResponseToError(AggregatedHttpResponse aggregatedHttpResponse,
-                                                         String methodName, @Nullable Object requestId) {
+                                                       String methodName, @Nullable Object requestId) {
         final HttpStatus status = aggregatedHttpResponse.status();
         final String content = aggregatedHttpResponse.contentUtf8();
 

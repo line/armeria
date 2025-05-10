@@ -15,7 +15,6 @@
  */
 package com.linecorp.armeria.common.jsonrpc;
 
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 
 import org.slf4j.Logger;
@@ -30,7 +29,6 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.annotation.Nullable;
-import com.linecorp.armeria.common.util.UnmodifiableFuture;
 
 /**
  * A factory class for creating JSON-RPC 2.0 {@link JsonRpcResponse} objects and converting them
@@ -66,48 +64,20 @@ public final class JsonRpcResponseFactory {
      *         Returns an {@link HttpStatus#INTERNAL_SERVER_ERROR} response if serialization fails.
      */
     public static HttpResponse toHttpResponse(JsonRpcResponse rpcResponse, ObjectMapper mapper,
-                                              @Nullable Object requestId) {
+                                                                  @Nullable Object requestId) {
         try {
             final String responseBody = mapper.writeValueAsString(rpcResponse);
-            return HttpResponse.of(HttpStatus.OK, MediaType.JSON_UTF_8, responseBody);
+            return AggregatedHttpResponse.of(HttpStatus.OK, MediaType.JSON_UTF_8, responseBody)
+                                         .toHttpResponse();
+
         } catch (JsonProcessingException jsonProcessingException) {
             logger.error("CRITICAL: Failed to serialize final JSON-RPC response for request id {}: {}",
                          requestId, jsonProcessingException.getMessage(), jsonProcessingException);
-            // Ensure consistent error response format if possible, but prioritize returning something.
-            return HttpResponse.of(HttpStatus.INTERNAL_SERVER_ERROR, MediaType.PLAIN_TEXT_UTF_8,
-                                   "Internal Server Error: Failed to serialize JSON-RPC response.");
+
+            return AggregatedHttpResponse.of(HttpStatus.INTERNAL_SERVER_ERROR, MediaType.PLAIN_TEXT_UTF_8,
+                                   "Internal Server Error: Failed to serialize JSON-RPC response.")
+                                         .toHttpResponse();
         }
-    }
-
-    /**
-     * Creates a {@link CompletableFuture}{@code <HttpResponse>} containing the serialized JSON-RPC response.
-     * Useful for error responses generated early in the handling chain.
-     *
-     * @param rpcResponse The {@link JsonRpcResponse} to serialize (can be success or error).
-     * @param mapper The {@link ObjectMapper} used for serialization.
-     * @param requestId The original request ID (used for logging in case of serialization error).
-     * @return A completed future containing the {@link HttpResponse}.
-     */
-    public static CompletableFuture<HttpResponse> toHttpResponseFuture(JsonRpcResponse rpcResponse,
-                                                                       ObjectMapper mapper,
-                                                                       @Nullable Object requestId) {
-        return UnmodifiableFuture.completedFuture(toHttpResponse(rpcResponse, mapper, requestId));
-    }
-
-    /**
-     * Creates a {@link JsonRpcResponse} based on the result of a delegate service call,
-     * represented by an {@link AggregatedHttpResponse}. Handles both successful and error responses.
-     *
-     * @param delegateResponse The aggregated response from the delegate service.
-     * @param id The ID from the original JSON-RPC request.
-     * @param methodName The name of the JSON-RPC method being processed.
-     * @param mapper The {@link ObjectMapper} used for parsing successful responses.
-     * @return The corresponding {@link JsonRpcResponse} (success or error).
-     */
-    public static JsonRpcResponse fromDelegateResponse(AggregatedHttpResponse delegateResponse,
-                                                         @Nullable Object id, String methodName,
-                                                         ObjectMapper mapper) {
-        return JsonRpcUtil.parseDelegateResponse(delegateResponse, id, methodName, mapper);
     }
 
     /**

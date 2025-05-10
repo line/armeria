@@ -20,7 +20,6 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 
 import org.junit.jupiter.api.Test;
@@ -31,7 +30,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.TextNode;
 
 import com.linecorp.armeria.common.AggregatedHttpResponse;
-import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.internal.common.JacksonUtil;
@@ -43,11 +41,15 @@ class JsonRpcResponseFactoryTest {
     private static final JsonRpcError TEST_ERROR = new JsonRpcError(-32000, "Test Server Error");
 
     @Test
-    void toHttpResponse_success() throws JsonProcessingException {
+    void toAggregatedHttpResponse_success() throws JsonProcessingException {
         final JsonRpcResponse rpcSuccess = JsonRpcResponse.ofSuccess(SUCCESS_RESULT, 1);
-        final HttpResponse httpResponse = JsonRpcResponseFactory.toHttpResponse(rpcSuccess, mapper, 1);
+
+        final AggregatedHttpResponse aggregated =
+                JsonRpcResponseFactory.toHttpResponse(rpcSuccess, mapper, 1)
+                                      .aggregate()
+                                      .join();
+
         final String expectedBody = mapper.writeValueAsString(rpcSuccess);
-        final AggregatedHttpResponse aggregated = httpResponse.aggregate().join();
 
         assertThat(aggregated.headers().status()).isEqualTo(HttpStatus.OK);
         assertThat(aggregated.headers().contentType()).isEqualTo(MediaType.JSON_UTF_8);
@@ -55,13 +57,15 @@ class JsonRpcResponseFactoryTest {
     }
 
     @Test
-    void toHttpResponse_error() throws JsonProcessingException {
+    void toAggregatedHttpResponse_error() throws JsonProcessingException {
         final JsonRpcResponse rpcError = JsonRpcResponse.ofError(TEST_ERROR, "err-id");
-        final HttpResponse httpResponse = JsonRpcResponseFactory
-                .toHttpResponse(rpcError, mapper, "err-id");
+
+        final AggregatedHttpResponse aggregated =
+                JsonRpcResponseFactory.toHttpResponse(rpcError, mapper, "err-id")
+                                      .aggregate()
+                                      .join();
 
         final String expectedBody = mapper.writeValueAsString(rpcError);
-        final AggregatedHttpResponse aggregated = httpResponse.aggregate().join();
 
         assertThat(aggregated.headers().status()).isEqualTo(HttpStatus.OK);
         assertThat(aggregated.headers().contentType()).isEqualTo(MediaType.JSON_UTF_8);
@@ -69,15 +73,16 @@ class JsonRpcResponseFactoryTest {
     }
 
     @Test
-    void toHttpResponse_serializationFailure() throws JsonProcessingException {
+    void toAggregatedHttpResponse_serializationFailure() throws JsonProcessingException {
         final JsonRpcResponse rpcSuccess = JsonRpcResponse.ofSuccess(SUCCESS_RESULT, 1);
         final ObjectMapper mockMapper = mock(ObjectMapper.class);
         when(mockMapper.writeValueAsString(any()))
                 .thenThrow(new JsonProcessingException("Serialization failed") {});
 
-        final HttpResponse httpResponse = JsonRpcResponseFactory
-                .toHttpResponse(rpcSuccess, mockMapper, 1);
-        final AggregatedHttpResponse aggregated = httpResponse.aggregate().join();
+        final AggregatedHttpResponse aggregated =
+                JsonRpcResponseFactory.toHttpResponse(rpcSuccess, mockMapper, 1)
+                                      .aggregate()
+                                      .join();
 
         assertThat(aggregated.headers().status()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
         assertThat(aggregated.headers().contentType()).isEqualTo(MediaType.PLAIN_TEXT_UTF_8);
@@ -88,18 +93,18 @@ class JsonRpcResponseFactoryTest {
     // --- toHttpResponseFuture Tests ---
 
     @Test
-    void toHttpResponseFuture() throws JsonProcessingException {
+    void toAggregatedHttpResponseFuture() throws JsonProcessingException {
         final JsonRpcResponse rpcSuccess = JsonRpcResponse.ofSuccess(SUCCESS_RESULT, 1);
 
-        final HttpResponse expectedHttpResponse = JsonRpcResponseFactory
-                .toHttpResponse(rpcSuccess, mapper, 1);
-        final AggregatedHttpResponse expectedAggregated = expectedHttpResponse.aggregate().join();
+        final AggregatedHttpResponse expectedAggregated =
+                JsonRpcResponseFactory.toHttpResponse(rpcSuccess, mapper, 1)
+                                      .aggregate()
+                                      .join();
 
-        final CompletableFuture<HttpResponse> future = JsonRpcResponseFactory.toHttpResponseFuture(
-                rpcSuccess, mapper, 1);
-
-        assertThat(future).isCompleted();
-        final AggregatedHttpResponse actualAggregated = future.join().aggregate().join();
+        final AggregatedHttpResponse actualAggregated =
+                JsonRpcResponseFactory.toHttpResponse(rpcSuccess, mapper, 1)
+                                      .aggregate()
+                                      .join();
 
         assertThat(actualAggregated.headers().status()).isEqualTo(expectedAggregated.headers().status());
         assertThat(actualAggregated.headers().contentType())
@@ -112,8 +117,9 @@ class JsonRpcResponseFactoryTest {
     @Test
     void fromThrowable_jsonProcessingException() {
         final JsonProcessingException exception = new JsonProcessingException("Bad JSON") {};
-        final JsonRpcResponse rpcResponse = JsonRpcResponseFactory.fromThrowable(
-                exception, "id1", "method1");
+
+        final JsonRpcResponse rpcResponse =
+                JsonRpcResponseFactory.fromThrowable(exception, "id1", "method1");
 
         assertThat(rpcResponse.error()).isNotNull();
         assertThat(rpcResponse.id()).isEqualTo("id1");
@@ -124,8 +130,9 @@ class JsonRpcResponseFactoryTest {
     @Test
     void fromThrowable_illegalArgumentException() {
         final IllegalArgumentException exception = new IllegalArgumentException("Invalid argument");
-        final JsonRpcResponse rpcResponse = JsonRpcResponseFactory.fromThrowable(
-                exception, 2, "method2");
+
+        final JsonRpcResponse rpcResponse =
+                JsonRpcResponseFactory.fromThrowable(exception, 2, "method2");
 
         assertThat(rpcResponse.error()).isNotNull();
         assertThat(rpcResponse.id()).isEqualTo(2);
@@ -136,9 +143,11 @@ class JsonRpcResponseFactoryTest {
     @Test
     void fromThrowable_completionExceptionWrappingIllegalArgument() {
         final IllegalArgumentException cause = new IllegalArgumentException("Inner invalid arg");
+
         final CompletionException exception = new CompletionException(cause);
-        final JsonRpcResponse rpcResponse = JsonRpcResponseFactory.fromThrowable(
-                exception, "id-wrap", "methodWrap");
+
+        final JsonRpcResponse rpcResponse =
+                JsonRpcResponseFactory.fromThrowable(exception, "id-wrap", "methodWrap");
 
         assertThat(rpcResponse.error()).isNotNull();
         assertThat(rpcResponse.id()).isEqualTo("id-wrap");
@@ -149,6 +158,7 @@ class JsonRpcResponseFactoryTest {
     @Test
     void fromThrowable_genericException() {
         final RuntimeException exception = new RuntimeException("Something unexpected");
+
         final JsonRpcResponse rpcResponse = JsonRpcResponseFactory.fromThrowable(
                 exception, null, "genericMethod");
 
