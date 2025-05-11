@@ -31,37 +31,64 @@ import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.annotation.Nullable;
 
 /**
- * A factory class for creating JSON-RPC 2.0 {@link JsonRpcResponse} objects and converting them
- * into Armeria {@link HttpResponse} objects.
+ * A utility factory class providing static methods for creating JSON-RPC 2.0 {@link JsonRpcResponse} objects
+ * and for converting these responses into Armeria {@link HttpResponse} objects.
+ * This class is not meant to be instantiated.
  */
 public final class JsonRpcResponseFactory {
 
     private static final Logger logger = LoggerFactory.getLogger(JsonRpcResponseFactory.class);
 
     /**
-     * Creates a JSON-RPC success response from a result {@link JsonNode}.
+     * Creates a new successful JSON-RPC response with the given result and ID.
+     * This is a convenience method that delegates to {@link JsonRpcResponse#ofSuccess(Object, Object)}.
+     *
+     * @param result the result of the method invocation, represented as a {@link JsonNode}.
+     *               Can be {@code null} to represent a successful response with a null result.
+     * @param id the ID of the original request this response corresponds to. Can be {@code null}.
+     * @return a new {@link JsonRpcResponse} instance representing a successful outcome.
      */
     public static JsonRpcResponse ofSuccess(JsonNode result, @Nullable Object id) {
         return JsonRpcResponse.ofSuccess(result, id);
     }
 
     /**
-     * Creates a JSON-RPC error response from a {@link JsonRpcError}.
+     * Creates a new JSON-RPC error response with the given {@link JsonRpcError} and ID.
+     * This is a convenience method that delegates to {@link JsonRpcResponse#ofError(JsonRpcError, Object)}.
+     *
+     * @param error the {@link JsonRpcError} object detailing the error that occurred. Must not be {@code null}.
+     * @param id the ID of the original request this response corresponds to. Can be {@code null},
+     *           especially if the error occurred before the request ID could be determined.
+     * @return a new {@link JsonRpcResponse} instance representing an error outcome.
      */
     public static JsonRpcResponse ofError(JsonRpcError error, @Nullable Object id) {
         return JsonRpcResponse.ofError(error, id);
     }
 
     /**
-     * Creates a final {@link HttpResponse} containing the serialized JSON-RPC response.
-     * Returns HTTP {@link HttpStatus#OK}, with the JSON-RPC error details included in the body
-     * if the {@code rpcResponse} represents an error.
+     * Converts a {@link JsonRpcResponse} (which can represent either a success or an error)
+     * into a final Armeria {@link HttpResponse}.
+     * <p>
+     * The resulting {@link HttpResponse} will typically have an HTTP status of {@link HttpStatus#OK}
+     * and a {@code Content-Type} of {@link MediaType#JSON_UTF_8}, with the serialized {@code rpcResponse}
+     * as its body. This is because, in JSON-RPC, application-level errors are conveyed within the
+     * JSON-RPC response structure itself, not necessarily through different HTTP status codes.
+     * </p>
+     * <p>
+     * If the serialization of the {@code rpcResponse} into a JSON string fails
+     * (an unexpected server-side issue),
+     * this method will return an {@link HttpResponse} with {@link HttpStatus#INTERNAL_SERVER_ERROR}
+     * and a plain text body indicating the failure.
+     * </p>
      *
-     * @param rpcResponse The {@link JsonRpcResponse} to serialize (can be success or error).
-     * @param mapper The {@link ObjectMapper} used for serialization.
-     * @param requestId The original request ID (used for logging in case of serialization error).
-     * @return An {@link HttpResponse} with status OK and JSON content type, containing the serialized response.
-     *         Returns an {@link HttpStatus#INTERNAL_SERVER_ERROR} response if serialization fails.
+     * @param rpcResponse The {@link JsonRpcResponse} to be serialized and wrapped in an {@link HttpResponse}.
+     *                    Must not be {@code null}.
+     * @param mapper The {@link ObjectMapper} to use for serializing the {@code rpcResponse} to JSON.
+     *               Must not be {@code null}.
+     * @param requestId The ID of the original request. This is used for logging purposes if a serialization
+     *                  error occurs. Can be {@code null}.
+     * @return An {@link HttpResponse} containing the serialized JSON-RPC response, or an internal server error
+     *         response if serialization fails.
      */
     public static HttpResponse toHttpResponse(JsonRpcResponse rpcResponse, ObjectMapper mapper,
                                                                   @Nullable Object requestId) {
@@ -69,7 +96,6 @@ public final class JsonRpcResponseFactory {
             final String responseBody = mapper.writeValueAsString(rpcResponse);
             return AggregatedHttpResponse.of(HttpStatus.OK, MediaType.JSON_UTF_8, responseBody)
                                          .toHttpResponse();
-
         } catch (JsonProcessingException jsonProcessingException) {
             logger.error("CRITICAL: Failed to serialize final JSON-RPC response for request id {}: {}",
                          requestId, jsonProcessingException.getMessage(), jsonProcessingException);
@@ -81,13 +107,20 @@ public final class JsonRpcResponseFactory {
     }
 
     /**
-     * Creates a {@link JsonRpcResponse} representing an error based on a {@link Throwable} caught
-     * during request processing or delegate execution.
+     * Creates a {@link JsonRpcResponse} representing an error, based on a {@link Throwable} that was caught
+     * during the processing of a JSON-RPC request or during the execution of a delegate service method.
+     * <p>
+     * This method uses {@link #mapThrowableToJsonRpcError(Throwable, String, Object)}
+     * to determine the appropriate
+     * {@link JsonRpcError} for the given {@code throwable}.
+     * </p>
      *
-     * @param throwable The exception caught.
-     * @param id The ID from the original JSON-RPC request.
-     * @param methodName The name of the JSON-RPC method being processed.
-     * @return A {@link JsonRpcResponse} containing the mapped {@link JsonRpcError}.
+     * @param throwable The {@link Throwable} (exception) that was caught. Must not be {@code null}.
+     * @param id The ID from the original JSON-RPC request. Can be {@code null}.
+     * @param methodName The name of the JSON-RPC method that was being processed when the throwable occurred.
+     *                   Used for logging and error reporting. Must not be {@code null}.
+     * @return A new {@link JsonRpcResponse} instance containing the {@link JsonRpcError} derived from
+     *         the {@code throwable}.
      */
     public static JsonRpcResponse fromThrowable(Throwable throwable, @Nullable Object id, String methodName) {
         final JsonRpcError error = mapThrowableToJsonRpcError(throwable, methodName, id);
@@ -95,8 +128,26 @@ public final class JsonRpcResponseFactory {
     }
 
     /**
-     * Maps a {@link Throwable} to a specific {@link JsonRpcError}.
-     * Unwraps {@link CompletionException}.
+     * Maps a given {@link Throwable} to an appropriate {@link JsonRpcError}.
+     * <p>
+     * This method attempts to provide a more specific JSON-RPC error based on the type of the exception:
+     * <ul>
+     *   <li>If the {@code exception} (or its underlying cause,
+     *       after unwrapping {@link CompletionException}) is a
+     *       {@link JsonProcessingException}, it's typically mapped to an internal server error related to
+     *       delegate response processing.</li>
+     *   <li>If it's an {@link IllegalArgumentException}, it's mapped to an invalid request error.</li>
+     *   <li>Other exceptions are generally mapped to a generic internal server error.</li>
+     * </ul>
+     * The original exception's message and type are usually included in the logs and potentially in the
+     * resulting {@link JsonRpcError}'s message or data, depending on the specific mapping.
+     * </p>
+     *
+     * @param exception The {@link Throwable} to map. Its {@link CompletionException}
+     *                  wrappers will be unwrapped.
+     * @param methodName The name of the JSON-RPC method being processed, for context in logging/error messages.
+     * @param requestId The ID of the original JSON-RPC request, for context in logging/error messages.
+     * @return A {@link JsonRpcError} representing the mapped error condition.
      */
     private static JsonRpcError mapThrowableToJsonRpcError(Throwable exception, String methodName,
                                                            @Nullable Object requestId) {

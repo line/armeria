@@ -36,6 +36,8 @@ public final class JsonRpcItemParseResult {
 
     /**
      * Creates a new instance representing a successfully parsed request.
+     *
+     * @param request the successfully parsed {@link JsonRpcRequest}. Must not be {@code null}.
      */
     public JsonRpcItemParseResult(JsonRpcRequest request) {
         this.request = requireNonNull(request, "request");
@@ -44,6 +46,10 @@ public final class JsonRpcItemParseResult {
 
     /**
      * Creates a new instance representing a parsing or validation error.
+     *
+     * @param errorResponse the {@link JsonRpcResponse} representing the parsing or validation error.
+     *                      Must not be {@code null} and must contain an error object.
+     * @throws IllegalArgumentException if {@code errorResponse} does not contain an error object.
      */
     public JsonRpcItemParseResult(JsonRpcResponse errorResponse) {
         requireNonNull(errorResponse, "errorResponse");
@@ -58,6 +64,8 @@ public final class JsonRpcItemParseResult {
 
     /**
      * Returns {@code true} if this instance represents an error.
+     *
+     * @return {@code true} if this result represents an error, {@code false} otherwise.
      */
     public boolean isError() {
         return errorResponse != null;
@@ -65,6 +73,8 @@ public final class JsonRpcItemParseResult {
 
     /**
      * Returns the successfully parsed {@link JsonRpcRequest}, or {@code null} if this represents an error.
+     *
+     * @return the {@link JsonRpcRequest}, or {@code null} if this is an error result.
      */
     @Nullable
     public JsonRpcRequest request() {
@@ -74,6 +84,9 @@ public final class JsonRpcItemParseResult {
     /**
      * Returns the {@link JsonRpcResponse} representing an error, or {@code null} if this represents a
      * successfully parsed request.
+     *
+     * @return the {@link JsonRpcResponse} representing the error, or {@code null} if this is not an
+     *         error result.
      */
     @Nullable
     public JsonRpcResponse errorResponse() {

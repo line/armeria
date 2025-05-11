@@ -42,15 +42,28 @@ final class JsonRpcRequestParser {
     private static final Logger logger = LoggerFactory.getLogger(JsonRpcRequestParser.class);
     private static final ObjectMapper mapper = JacksonUtil.newDefaultObjectMapper();
 
-    private JsonRpcRequestParser() {} // Utility class
-
     /**
-     * Parses the JSON request body into a list of {@link JsonRpcItemParseResult} objects.
-     * Handles both single JSON object requests and batch (JSON array) requests.
-     * Returns a list containing error representations for overall parsing errors or invalid items.
+     * Parses the JSON request body from an {@link AggregatedHttpRequest} into a list of
+     * {@link JsonRpcItemParseResult} objects.
      *
-     * @param aggregatedRequest The aggregated HTTP request.
-     * @return A list of {@link JsonRpcItemParseResult}, potentially containing errors.
+     * <p>This method handles both single JSON object requests and batch (JSON array) requests.
+     * <ul>
+     *     <li>If the overall JSON structure is invalid (e.g., not a JSON object or array, or malformed JSON),
+     *         the returned list will contain a single {@link JsonRpcItemParseResult}
+     *         representing this top-level parsing error.</li>
+     *     <li>For batch requests, if an individual item within the batch fails to parse or validate,
+     *         the corresponding {@link JsonRpcItemParseResult}
+     *         in the list will represent that specific item\'s error.
+     *         If the batch array itself is empty, a specific error indicating an empty batch is returned.</li>
+     * </ul>
+     * The method ensures that even in cases of severe parsing failures, a list containing at least one error
+     * representation is returned, facilitating consistent error handling downstream.
+     *
+     * @param aggregatedRequest The {@link AggregatedHttpRequest} containing the JSON-RPC request content.
+     *                          The content is expected to be UTF-8 encoded JSON. Must not be {@code null}.
+     * @return A non-null {@link List} of {@link JsonRpcItemParseResult} objects. Each object in the list
+     *         corresponds to an item in the original request (or a single item if it wasn\'t a batch).
+     *         The list will contain at least one element, even in case of errors.
      */
     public static List<JsonRpcItemParseResult> parseRequest(AggregatedHttpRequest aggregatedRequest) {
         final String requestBody = aggregatedRequest.contentUtf8();
@@ -108,8 +121,18 @@ final class JsonRpcRequestParser {
     }
 
     /**
-     * Helper method to parse a single JsonNode using JsonRpcUtil and handle potential exceptions,
-     * returning a JsonRpcItemParseResult.
+     * Helper method to parse a single {@link JsonNode} representing a JSON-RPC request item.
+     * It attempts to convert the node into a {@link JsonRpcRequest} using {@link JsonRpcUtil}.
+     * If parsing or validation (e.g., missing required fields, incorrect types) fails,
+     * this method catches the exception and wraps it in a {@link JsonRpcItemParseResult}
+     * containing an appropriate {@link JsonRpcResponse} error. The ID of the request item is extracted
+     * from the node if possible, to be included in any error response.
+     *
+     * @param node The {@link JsonNode} to parse. Assumed to be a JSON object representing a single
+     *             JSON-RPC request. Must not be {@code null}.
+     * @return A {@link JsonRpcItemParseResult} which either holds the successfully parsed
+     *         {@link JsonRpcRequest} or a {@link JsonRpcResponse} detailing the parsing/validation error.
+     *         Will not be {@code null}.
      */
     private static JsonRpcItemParseResult parseNodeAndHandleError(JsonNode node) {
         final Object id = extractIdFromJsonNode(node); // Extract ID early for error reporting
@@ -143,7 +166,17 @@ final class JsonRpcRequestParser {
     }
 
     /**
-     * Safely extracts the ID (String, Number, or null) from a JsonNode for error reporting.
+     * Safely extracts the ID from a {@link JsonNode} that is expected to represent a JSON-RPC request item.
+     * The JSON-RPC specification allows the "id" field to be a String, a Number, or null.
+     * This method attempts to retrieve the "id" field and return its value if it\'s one of these types.
+     * If the {@code itemNode} is not a JSON object, or if the "id" field is missing, explicitly null,
+     * or not a String or Number, this method returns {@code null}. This is crucial for constructing
+     * correct error responses, as the ID must be included if present and valid.
+     *
+     * @param itemNode The {@link JsonNode} from which to extract the ID. Expected to be a JSON object.
+     *                 Must not be {@code null}.
+     * @return The extracted ID as a {@link String}, {@link Number}, or {@code null} if the ID is absent,
+     *         explicitly null, or of an unsupported type.
      */
     @Nullable
     private static Object extractIdFromJsonNode(JsonNode itemNode) {
@@ -163,4 +196,6 @@ final class JsonRpcRequestParser {
         // Ignore other types for ID
         return null;
     }
+
+    private JsonRpcRequestParser() {}
 }

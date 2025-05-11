@@ -21,14 +21,14 @@ package com.linecorp.armeria.server.jsonrpc;
 public class JsonRpcServiceNotFoundException extends RuntimeException {
 
     private static final long serialVersionUID = 5996593317006754659L;
-
     private final String lookupPath;
 
     /**
      * Creates a new instance.
      *
-     * @param message the detail message
-     * @param lookupPath the path that was used to look up the service
+     * @param message the detail message explaining why the service was not found.
+     * @param lookupPath the full path (e.g., "/servicePrefix/methodName") that was used in the attempt
+     *                   to find a registered service, and for which no mapping was found.
      */
     public JsonRpcServiceNotFoundException(String message,
                                        String lookupPath) {
@@ -37,7 +37,9 @@ public class JsonRpcServiceNotFoundException extends RuntimeException {
     }
 
     /**
-     * Returns the path that was used when attempting to find the service.
+     * Returns the path that was used when attempting to find the service, but for which no mapping was found.
+     *
+     * @return the lookup path for which no service was found.
      */
     public String getLookupPath() {
         return lookupPath;

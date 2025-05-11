@@ -15,34 +15,59 @@
  */
 package com.linecorp.armeria.common.jsonrpc;
 
+import java.math.BigDecimal;
+import java.math.BigInteger;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.JsonNodeFactory;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.annotation.Nullable;
 
 /**
- * Utility class for JSON-RPC handling.
+ * A utility class providing static methods for common JSON-RPC 2.0 message handling tasks,
+ * such as parsing, validation, and creation of JSON-RPC requests and responses.
+ * This class is not meant to be instantiated.
  */
 public final class JsonRpcUtil {
 
     private static final Logger logger = LoggerFactory.getLogger(JsonRpcUtil.class);
 
     /**
-     * Parses the {@link AggregatedHttpResponse} from a delegate service into a {@link JsonRpcResponse}.
-     * Handles both successful responses (parsing the content as JSON) and error responses
-     * (mapping HTTP status to {@link JsonRpcError}).
+     * Parses an {@link AggregatedHttpResponse} received from a delegate service and converts it into a
+     * {@link JsonRpcResponse}.
+     * <p>
+     * If the {@code delegateResponse} has a successful HTTP status code (2xx):
+     * <ul>
+     *   <li>If the response content is empty (e.g., HTTP 204 No Content), it is treated as a successful
+     *       JSON-RPC response with a {@code null} result.</li>
+     *   <li>Otherwise, the response content is parsed as a JSON value using the provided {@link ObjectMapper}.
+     *       This JSON value becomes the {@code result} in the {@link JsonRpcResponse}.</li>
+     *   <li>If parsing the successful response content fails (e.g., invalid JSON), an internal JSON-RPC error
+     *       is generated.</li>
+     * </ul>
+     * If the {@code delegateResponse} has an error HTTP status code (non-2xx), it is mapped to an appropriate
+     * {@link JsonRpcError} using {@link #mapHttpResponseToError(AggregatedHttpResponse, String, Object)}.
+     * </p>
      *
-     * @param delegateResponse The aggregated response from the delegate service.
-     * @param id The ID from the original JSON-RPC request.
-     * @param methodName The name of the JSON-RPC method being processed.
-     * @param mapper The {@link ObjectMapper} used for parsing successful responses.
-     * @return The corresponding {@link JsonRpcResponse} (success or error).
+     * @param delegateResponse The {@link AggregatedHttpResponse} from the delegate service.
+     *                         Must not be {@code null}.
+     * @param id The ID from the original JSON-RPC request. This will be used as the ID in the resulting
+     *           {@link JsonRpcResponse}. Can be {@code null}.
+     * @param methodName The name of the JSON-RPC method that was invoked on the delegate service.
+     *                   Used for logging and error reporting. Must not be {@code null}.
+     * @param mapper The {@link ObjectMapper} used for parsing the content of successful responses.
+     *               Must not be {@code null}.
+     * @return A {@link JsonRpcResponse} representing either the successful result
+     *         from the delegate or an error.
+     *         Never {@code null}.
      */
     public static JsonRpcResponse parseDelegateResponse(AggregatedHttpResponse delegateResponse,
                                                         @Nullable Object id, String methodName,
@@ -77,7 +102,22 @@ public final class JsonRpcUtil {
     }
 
     /**
-     * Maps an error {@link AggregatedHttpResponse} from a delegate service to a specific {@link JsonRpcError}.
+     * Maps an error {@link AggregatedHttpResponse} (non-2xx status) from a delegate service
+     * to a specific {@link JsonRpcError}.
+     * The mapping logic is as follows:
+     * <ul>
+     *   <li>HTTP 404 (Not Found) is mapped to {@link JsonRpcErrorCode#METHOD_NOT_FOUND}.</li>
+     *   <li>HTTP 400 (Bad Request) is mapped to {@link JsonRpcErrorCode#INVALID_PARAMS}.</li>
+     *   <li>Other HTTP client errors (4xx) are mapped to {@link JsonRpcErrorCode#INVALID_REQUEST}.</li>
+     *   <li>HTTP server errors (5xx) are mapped to {@link JsonRpcErrorCode#INTERNAL_ERROR}.</li>
+     * </ul>
+     * The error message in the resulting {@link JsonRpcError} will include details about the invoked method,
+     * the HTTP status received, and the content of the HTTP response if available.
+     *
+     * @param aggregatedHttpResponse The error {@link AggregatedHttpResponse} from the delegate service.
+     * @param methodName The name of the JSON-RPC method that was invoked.
+     * @param requestId The ID of the original JSON-RPC request, for inclusion in error messages.
+     * @return A {@link JsonRpcError} corresponding to the HTTP error status.
      */
     private static JsonRpcError mapHttpResponseToError(AggregatedHttpResponse aggregatedHttpResponse,
                                                        String methodName, @Nullable Object requestId) {
@@ -116,14 +156,28 @@ public final class JsonRpcUtil {
     }
 
     /**
-     * Parses a single {@link JsonNode} representing a potential JSON-RPC request into a {@link JsonRpcRequest}.
-     * Throws exceptions if parsing or validation fails.
+     * Parses a single {@link JsonNode}, expected to represent a JSON-RPC request,
+     * into a {@link JsonRpcRequest} object.
+     * This method also performs basic validation against the JSON-RPC 2.0 specification:
+     * <ul>
+     *   <li>The input {@code itemNode} must be a JSON object.</li>
+     *   <li>The "jsonrpc" member must be present and equal to "2.0".</li>
+     *   <li>The "method" member must be present and non-empty.</li>
+     *   <li>If the "params" member is present and not null, it must be a JSON Array or a JSON Object.</li>
+     * </ul>
+     * If any of these validations fail, an {@link IllegalArgumentException} is thrown.
+     * If the {@code itemNode} cannot be deserialized into a {@link JsonRpcRequest}
+     * (e.g., due to type mismatches
+     * for required fields), a {@link JsonProcessingException} is thrown.
      *
-     * @param itemNode The JSON node representing a potential JSON-RPC request.
-     * @param mapper The {@link ObjectMapper} used for parsing.
-     * @return The successfully parsed {@link JsonRpcRequest}.
-     * @throws JsonProcessingException if the node cannot be parsed into a {@link JsonRpcRequest}.
-     * @throws IllegalArgumentException if the parsed request fails JSON-RPC 2.0 validation.
+     * @param itemNode The {@link JsonNode} to parse. Must be a JSON object representing a single request.
+     *                 Must not be {@code null}.
+     * @param mapper The {@link ObjectMapper} to use for deserializing the node into a {@link JsonRpcRequest}.
+     *               Must not be {@code null}.
+     * @return The successfully parsed and validated {@link JsonRpcRequest}.
+     * @throws JsonProcessingException if deserialization of the {@code itemNode} fails.
+     * @throws IllegalArgumentException if the {@code itemNode} is not a JSON object or if it fails
+     *                                  JSON-RPC 2.0 validation rules.
      */
     public static JsonRpcRequest parseJsonNodeToRequest(JsonNode itemNode, ObjectMapper mapper)
             throws JsonProcessingException, IllegalArgumentException {
@@ -153,8 +207,8 @@ public final class JsonRpcUtil {
         }
 
         // Basic JSON-RPC 2.0 Validation - Throw IllegalArgumentException for validation failures
-        if (!"2.0".equals(rpcRequest.jsonrpc())) {
-            throw new IllegalArgumentException("Invalid JSON-RPC version: " + rpcRequest.jsonrpc());
+        if (!"2.0".equals(rpcRequest.jsonRpcVersion())) {
+            throw new IllegalArgumentException("Invalid JSON-RPC version: " + rpcRequest.jsonRpcVersion());
         }
         if (rpcRequest.method() == null || rpcRequest.method().isEmpty()) {
             throw new IllegalArgumentException("JSON-RPC request 'method' is missing or empty");
@@ -168,6 +222,70 @@ public final class JsonRpcUtil {
 
         logger.debug("Parsed JSON-RPC request: method={}, id={}", rpcRequest.method(), rpcRequest.id());
         return rpcRequest;
+    }
+
+    /**
+     * Creates a JSON string representation of a JSON-RPC 2.0 request.
+     *
+     * @param method The name of the method to be invoked. Must not be {@code null}.
+     * @param params The parameters for the method. Can be any object that Jackson can serialize to a JSON Array
+     *               or JSON Object, or {@code null} if no parameters are needed.
+     * @param id The request identifier. Can be a {@link String}, a {@link Number}, or {@code null}
+     *           (for notifications).
+     *           If {@code null}, the "id" field in the JSON request will be explicitly set to JSON null.
+     * @param mapper The {@link ObjectMapper} to use for serializing the request to a JSON string.
+     *               Must not be {@code null}.
+     * @return A JSON string representing the JSON-RPC request.
+     * @throws IllegalArgumentException if the provided {@code id} is not a {@link String},
+     *                                  {@link Number}, or {@code null}.
+     *                                  (Note: This exception is caught internally and re-thrown as a
+     *                                  {@link RuntimeException} wrapping a {@link JsonProcessingException}
+     *                                  if JSON serialization itself fails, but the initial ID type check
+     *                                  can throw {@link IllegalArgumentException} directly).
+     * @throws RuntimeException         if JSON serialization fails
+     *                                  (wrapping the original {@link JsonProcessingException}).
+     */
+    public static String createJsonRpcRequestJsonString(String method,
+                                                        @Nullable Object params,
+                                                        @Nullable Object id,
+                                                        ObjectMapper mapper) {
+        final JsonNodeFactory factory = mapper.getNodeFactory();
+        final ObjectNode requestJson = factory.objectNode();
+
+        requestJson.put("jsonrpc", "2.0");
+        requestJson.put("method", method);
+        if (params != null) {
+            requestJson.set("params", mapper.valueToTree(params));
+        }
+        if (id == null) {
+            requestJson.set("id", factory.nullNode());
+        } else if (id instanceof String) {
+            requestJson.put("id", (String) id);
+        } else if (id instanceof Number) {
+            final Number numId = (Number) id;
+            if (id instanceof Integer) {
+                requestJson.put("id", numId.intValue());
+            } else if (id instanceof Long) {
+                requestJson.put("id", numId.longValue());
+            } else if (id instanceof Double) {
+                requestJson.put("id", numId.doubleValue());
+            } else if (id instanceof Float) {
+                requestJson.put("id", numId.floatValue());
+            } else if (id instanceof BigDecimal) {
+                requestJson.set("id", factory.numberNode((BigDecimal) id));
+            } else if (id instanceof BigInteger) {
+                requestJson.set("id", factory.numberNode((BigInteger) id));
+            } else {
+                requestJson.put("id", numId.doubleValue());
+            }
+        } else {
+            throw new IllegalArgumentException("Unsupported ID type: " + id.getClass().getName());
+        }
+        try {
+            return mapper.writeValueAsString(requestJson);
+        } catch (JsonProcessingException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     private JsonRpcUtil() {}

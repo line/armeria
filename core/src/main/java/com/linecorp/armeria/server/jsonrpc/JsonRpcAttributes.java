@@ -23,14 +23,25 @@ import io.netty.util.AttributeKey;
  * Defines constants for JSON-RPC related attributes to be passed via {@link ServiceRequestContext}.
  */
 public final class JsonRpcAttributes {
+    /**
+     * The {@link AttributeKey} to the ID of a JSON-RPC request or response.
+     * The value of this attribute is usually an {@link Integer}, {@link String} or {@code null}.
+     */
     public static final AttributeKey<Object> ID =
         AttributeKey.valueOf(JsonRpcAttributes.class, "ID");
 
+    /**
+     * The {@link AttributeKey} to the method name of a JSON-RPC request.
+     */
     public static final AttributeKey<String> METHOD =
         AttributeKey.valueOf(JsonRpcAttributes.class, "METHOD");
 
+    /**
+     * The {@link AttributeKey} to whether a JSON-RPC request is a notification.
+     * A notification is a request with no ID field or a {@code null} ID.
+     */
     public static final AttributeKey<Boolean> IS_NOTIFICATION =
         AttributeKey.valueOf(JsonRpcAttributes.class, "IS_NOTIFICATION");
 
     private JsonRpcAttributes() {}
-} 
+}

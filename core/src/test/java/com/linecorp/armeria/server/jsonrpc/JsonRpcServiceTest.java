@@ -15,10 +15,9 @@
  */
 package com.linecorp.armeria.server.jsonrpc;
 
+import static com.linecorp.armeria.common.jsonrpc.JsonRpcUtil.createJsonRpcRequestJsonString;
 import static org.assertj.core.api.Assertions.assertThat;
 
-import java.math.BigDecimal;
-import java.math.BigInteger;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
@@ -33,8 +32,6 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.JsonNodeFactory;
-import com.fasterxml.jackson.databind.node.ObjectNode;
 
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
@@ -53,11 +50,10 @@ import com.linecorp.armeria.server.annotation.ProducesJson;
 import com.linecorp.armeria.server.annotation.RequestObject;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
-public class JsonRpcServiceBuilderTest {
+class JsonRpcServiceTest {
 
     private static final ObjectMapper mapper = new ObjectMapper();
-    private static final JsonNodeFactory factory = mapper.getNodeFactory();
-    private static final Logger logger = LoggerFactory.getLogger(JsonRpcServiceBuilderTest.class);
+    private static final Logger logger = LoggerFactory.getLogger(JsonRpcServiceTest.class);
 
     private static class RequestDTO {
 
@@ -134,7 +130,7 @@ public class JsonRpcServiceBuilderTest {
     static final ServerExtension server = new ServerExtension() {
         @Override
         protected void configure(ServerBuilder sb) {
-            sb.serviceUnder("/json-rpc", new JsonRpcServiceBuilder(sb)
+            sb.service(JsonRpcService.builder(sb)
                     .addAnnotatedService("/test", new JsonRpcTestService())
                     .build()
             );
@@ -147,44 +143,6 @@ public class JsonRpcServiceBuilderTest {
         return WebClient.builder(server.httpUri())
                         .responseTimeoutMillis(0)
                         .build();
-    }
-
-    private String createJsonRpcRequest(String method, @Nullable Object params, @Nullable Object id) {
-        final ObjectNode requestJson = factory.objectNode();
-        requestJson.put("jsonrpc", "2.0");
-        requestJson.put("method", method);
-        if (params != null) {
-            requestJson.set("params", mapper.valueToTree(params));
-        }
-        if (id == null) {
-            requestJson.set("id", factory.nullNode());
-        } else if (id instanceof String) {
-            requestJson.put("id", (String) id);
-        } else if (id instanceof Number) {
-            final Number numId = (Number) id;
-            if (id instanceof Integer) {
-                requestJson.put("id", numId.intValue());
-            } else if (id instanceof Long) {
-                requestJson.put("id", numId.longValue());
-            } else if (id instanceof Double) {
-                requestJson.put("id", numId.doubleValue());
-            } else if (id instanceof Float) {
-                requestJson.put("id", numId.floatValue());
-            } else if (id instanceof BigDecimal) {
-                requestJson.set("id", factory.numberNode((BigDecimal) id));
-            } else if (id instanceof BigInteger) {
-                requestJson.set("id", factory.numberNode((BigInteger) id));
-            } else {
-                requestJson.put("id", numId.doubleValue());
-            }
-        } else {
-            throw new IllegalArgumentException("Unsupported ID type: " + id.getClass().getName());
-        }
-        try {
-            return mapper.writeValueAsString(requestJson);
-        } catch (JsonProcessingException e) {
-            throw new RuntimeException(e);
-        }
     }
 
     private void assertJsonRpcSuccess(AggregatedHttpResponse response,
@@ -225,39 +183,19 @@ public class JsonRpcServiceBuilderTest {
     private void assertIdMatches(JsonNode idNode, @Nullable Object expectedId) {
         if (expectedId == null) {
             assertThat(idNode.isNull()).isTrue();
-        } else if (expectedId instanceof String) {
-            assertThat(idNode.isTextual()).isTrue();
-            assertThat(idNode.asText()).isEqualTo((String) expectedId);
-        } else if (expectedId instanceof Number) {
-            assertThat(idNode.isNumber()).isTrue();
-            final Number expectedNum = (Number) expectedId;
-            if (expectedId instanceof Integer) {
-                assertThat(idNode.asInt()).isEqualTo(expectedNum.intValue());
-            } else if (expectedId instanceof Long) {
-                assertThat(idNode.asLong()).isEqualTo(expectedNum.longValue());
-            } else if (expectedId instanceof Double) {
-                assertThat(idNode.asDouble()).isEqualTo(expectedNum.doubleValue());
-            } else if (expectedId instanceof Float) {
-                assertThat(idNode.floatValue()).isEqualTo(expectedNum.floatValue());
-            } else if (expectedId instanceof BigDecimal) {
-                assertThat(idNode.decimalValue()).isEqualTo((BigDecimal) expectedId);
-            } else if (expectedId instanceof BigInteger) {
-                assertThat(idNode.bigIntegerValue()).isEqualTo((BigInteger) expectedId);
-            } else {
-                assertThat(idNode.asDouble()).isEqualTo(expectedNum.doubleValue());
-            }
-        } else {
+        }
+        else {
             assertThat(idNode).isEqualTo(mapper.valueToTree(expectedId));
         }
     }
 
     @Test
     void success_noParams() throws Exception {
-        final String requestBody = createJsonRpcRequest("returnResult", null, 1);
+        final String requestBody = createJsonRpcRequestJsonString("returnResult", null, 1, mapper);
         final AggregatedHttpResponse response =
                 client().execute(
                         HttpRequest.builder()
-                                   .post("/json-rpc/test")
+                                   .post("/test")
                                    .content(MediaType.JSON_UTF_8, requestBody)
                                    .build())
                         .aggregate().join();
@@ -270,11 +208,12 @@ public class JsonRpcServiceBuilderTest {
 
     @Test
     void success_positionalParams() throws Exception {
-        final String requestBody = createJsonRpcRequest("subtractByPos", new int[] { 42, 23 }, 2);
+        final String requestBody =
+                createJsonRpcRequestJsonString("subtractByPos", new int[] { 42, 23 }, 2, mapper);
         final AggregatedHttpResponse response =
                 client().execute(
                         HttpRequest.builder()
-                                   .post("/json-rpc/test")
+                                   .post("/test")
                                    .content(MediaType.JSON_UTF_8, requestBody)
                                    .build())
                         .aggregate().join();
@@ -284,13 +223,16 @@ public class JsonRpcServiceBuilderTest {
 
     @Test
     void success_namedParams() throws Exception {
-        final String requestBody = createJsonRpcRequest("subtractByName",
-                                                        new RequestDTO(43, 24),
-                                                        "req-3");
+        final String requestBody =
+                createJsonRpcRequestJsonString("subtractByName",
+                                               new RequestDTO(43, 24),
+                                               "req-3",
+                                               mapper);
+
         final AggregatedHttpResponse response =
                 client().execute(
                         HttpRequest.builder()
-                                   .post("/json-rpc/test")
+                                   .post("/test")
                                    .content(MediaType.JSON_UTF_8, requestBody)
                                    .build())
                         .aggregate().join();
@@ -300,11 +242,11 @@ public class JsonRpcServiceBuilderTest {
 
     @Test
     void success_arrayResult() throws Exception {
-        final String requestBody = createJsonRpcRequest("getData", null, 9);
+        final String requestBody = createJsonRpcRequestJsonString("getData", null, 9, mapper);
         final AggregatedHttpResponse response =
                 client().execute(
                         HttpRequest.builder()
-                                   .post("/json-rpc/test")
+                                   .post("/test")
                                    .content(MediaType.JSON_UTF_8, requestBody)
                                    .build())
                         .aggregate().join();
@@ -314,13 +256,14 @@ public class JsonRpcServiceBuilderTest {
 
     @Test
     void notification_noParams() throws Exception {
-        final String requestBody = createJsonRpcRequest("update",
-                                                        Collections.singletonMap("data", "some data"),
-                                                        null);
+        final String requestBody = createJsonRpcRequestJsonString("update",
+                                                                  Collections.singletonMap("data", "some data"),
+                                                                  null,
+                                                                  mapper);
         final AggregatedHttpResponse response =
                 client().execute(
                         HttpRequest.builder()
-                                   .post("/json-rpc/test")
+                                   .post("/test")
                                    .content(MediaType.JSON_UTF_8, requestBody)
                                    .build())
                         .aggregate().join();
@@ -330,26 +273,18 @@ public class JsonRpcServiceBuilderTest {
 
     @Test
     void error_methodNotFound() throws Exception {
-        final String requestBody = createJsonRpcRequest("nonExistentMethod",
-                                                        null,
-                                                        "err-1");
+        final String requestBody = createJsonRpcRequestJsonString("nonExistentMethod",
+                                                                  null,
+                                                                  "err-1",
+                                                                  mapper);
         final AggregatedHttpResponse response =
                 client().execute(
                         HttpRequest.builder()
-                                   .post("/json-rpc/test")
+                                   .post("/test")
                                    .content(MediaType.JSON_UTF_8, requestBody)
                                    .build())
                         .aggregate().join();
         assertJsonRpcError(response, JsonRpcErrorCode.METHOD_NOT_FOUND, "err-1");
-
-        final AggregatedHttpResponse response2 =
-                client().execute(
-                        HttpRequest.builder()
-                                   .post("/json-rpc/nonExistentPath")
-                                   .content(MediaType.JSON_UTF_8, requestBody)
-                                   .build())
-                        .aggregate().join();
-        assertJsonRpcError(response2, JsonRpcErrorCode.METHOD_NOT_FOUND, "err-1");
     }
 
     @Test
@@ -359,7 +294,7 @@ public class JsonRpcServiceBuilderTest {
         final AggregatedHttpResponse response =
                 client().execute(
                         HttpRequest.builder()
-                                   .post("/json-rpc/test")
+                                   .post("/test")
                                    .content(MediaType.JSON_UTF_8, invalidJson)
                                    .build())
                         .aggregate().join();
@@ -372,7 +307,7 @@ public class JsonRpcServiceBuilderTest {
         final AggregatedHttpResponse response =
                 client().execute(
                         HttpRequest.builder()
-                                   .post("/json-rpc/test")
+                                   .post("/test")
                                    .content(MediaType.JSON_UTF_8, requestBody)
                                    .build())
                         .aggregate().join();
@@ -385,7 +320,7 @@ public class JsonRpcServiceBuilderTest {
         final AggregatedHttpResponse response =
                 client().execute(
                         HttpRequest.builder()
-                                   .post("/json-rpc/test")
+                                   .post("/test")
                                    .content(MediaType.JSON_UTF_8, requestBody)
                                    .build())
                         .aggregate().join();
@@ -395,11 +330,11 @@ public class JsonRpcServiceBuilderTest {
     @Test
     void error_invalidParams_wrongType() throws Exception {
         final String requestBody =
-                createJsonRpcRequest("subtractByPos", "not an array", 5);
+                createJsonRpcRequestJsonString("subtractByPos", "not an array", 5, mapper);
         final AggregatedHttpResponse response =
                 client().execute(
                         HttpRequest.builder()
-                                   .post("/json-rpc/test")
+                                   .post("/test")
                                    .content(MediaType.JSON_UTF_8, requestBody)
                                    .build())
                         .aggregate().join();
@@ -412,11 +347,11 @@ public class JsonRpcServiceBuilderTest {
         final Map<String, Integer> params = new HashMap<>();
         params.put("p1", 42);
         params.put("p2", 23);
-        final String requestBody = createJsonRpcRequest("subtractByPos", params, 6);
+        final String requestBody = createJsonRpcRequestJsonString("subtractByPos", params, 6, mapper);
         final AggregatedHttpResponse response =
                 client().execute(
                         HttpRequest.builder()
-                                   .post("/json-rpc/test")
+                                   .post("/test")
                                    .content(MediaType.JSON_UTF_8, requestBody)
                                    .build())
                         .aggregate().join();
@@ -425,13 +360,14 @@ public class JsonRpcServiceBuilderTest {
 
     @Test
     void error_invalidParams_structureMismatch_namedToPos() throws Exception {
-        final String requestBody = createJsonRpcRequest("subtractByName",
-                                                        new int[] { 42, 23 },
-                                                        7);
+        final String requestBody = createJsonRpcRequestJsonString("subtractByName",
+                                                                  new int[] { 42, 23 },
+                                                                  7,
+                                                                  mapper);
         final AggregatedHttpResponse response =
                 client().execute(
                         HttpRequest.builder()
-                                   .post("/json-rpc/test")
+                                   .post("/test")
                                    .content(MediaType.JSON_UTF_8, requestBody)
                                    .build())
                         .aggregate().join();
@@ -463,7 +399,7 @@ public class JsonRpcServiceBuilderTest {
         final AggregatedHttpResponse response =
                 client().execute(
                         HttpRequest.builder()
-                                   .post("/json-rpc/test")
+                                   .post("/test")
                                    .content(MediaType.JSON_UTF_8, batchRequestBody)
                                    .build())
                         .aggregate().join();
