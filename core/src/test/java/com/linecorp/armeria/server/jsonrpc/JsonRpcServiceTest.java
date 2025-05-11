@@ -135,7 +135,6 @@ class JsonRpcServiceTest {
                     .build()
             );
             sb.requestTimeoutMillis(0);
-            sb.verboseResponses(true);
         }
     };
 
@@ -183,8 +182,7 @@ class JsonRpcServiceTest {
     private void assertIdMatches(JsonNode idNode, @Nullable Object expectedId) {
         if (expectedId == null) {
             assertThat(idNode.isNull()).isTrue();
-        }
-        else {
+        } else {
             assertThat(idNode).isEqualTo(mapper.valueToTree(expectedId));
         }
     }

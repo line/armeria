@@ -26,21 +26,21 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
+import com.linecorp.armeria.common.HttpData;
+import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
-import com.linecorp.armeria.common.jsonrpc.JsonRpcResponse;
-import com.linecorp.armeria.server.ServerBuilder;
-import com.linecorp.armeria.testing.junit5.server.ServerExtension;
-import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.jsonrpc.JsonRpcError;
 import com.linecorp.armeria.common.jsonrpc.JsonRpcErrorCode;
-import com.linecorp.armeria.common.HttpData;
+import com.linecorp.armeria.common.jsonrpc.JsonRpcResponse;
+import com.linecorp.armeria.server.ServerBuilder;
+import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
-public class JsonRpcServiceDecoratorTest {
+class JsonRpcServiceDecoratorTest {
 
     private static final ObjectMapper mapper = new ObjectMapper();
 
@@ -58,7 +58,6 @@ public class JsonRpcServiceDecoratorTest {
                                 aggregated.contentType(),
                                 aggregated.content());
                     })));
-
             sb.service("/test-success", (ctx, req) ->
                     HttpResponse.of(req.aggregate().thenApply(aggregated -> {
                         ctx.setAttr(JsonRpcAttributes.ID, "req-001");
@@ -69,7 +68,6 @@ public class JsonRpcServiceDecoratorTest {
                                 MediaType.JSON_UTF_8,
                                 "{\"data\": \"success_data\"}");
                     })));
-
             sb.service("/test-error", (ctx, req) ->
                     HttpResponse.of(req.aggregate().thenApply(aggregated -> {
                         ctx.setAttr(JsonRpcAttributes.ID, "req-002");
@@ -80,7 +78,6 @@ public class JsonRpcServiceDecoratorTest {
                                 MediaType.JSON_UTF_8,
                                 "{\"errorCode\": -32000, " + "\"errorMessage\": \"Server error\"}");
                     })));
-            
             sb.service("/test-success-string-id", (ctx, req) ->
                     HttpResponse.of(req.aggregate().thenApply(aggregated -> {
                         ctx.setAttr(JsonRpcAttributes.ID, "string-id-123");
@@ -91,7 +88,6 @@ public class JsonRpcServiceDecoratorTest {
                                 MediaType.JSON_UTF_8,
                                 "{\"data\": \"success_data\"}");
                     })));
-
             sb.service("/test-success-numeric-id", (ctx, req) ->
                     HttpResponse.of(req.aggregate().thenApply(aggregated -> {
                         ctx.setAttr(JsonRpcAttributes.ID, 12345);
@@ -102,7 +98,6 @@ public class JsonRpcServiceDecoratorTest {
                                 MediaType.JSON_UTF_8,
                                 "{\"data\": \"success_data\"}");
                     })));
-
             sb.service("/test-success-null-id", (ctx, req) ->
                     HttpResponse.of(req.aggregate().thenApply(aggregated -> {
                         ctx.setAttr(JsonRpcAttributes.ID, null);
@@ -113,10 +108,9 @@ public class JsonRpcServiceDecoratorTest {
                                 MediaType.JSON_UTF_8,
                                 "{\"data\": \"success_data\"}");
                     })));
-
             sb.service("/test-notification", (ctx, req) ->
                     HttpResponse.of(req.aggregate().thenApply(aggregated -> {
-                        ctx.setAttr(JsonRpcAttributes.ID, "noti-001"); 
+                        ctx.setAttr(JsonRpcAttributes.ID, "noti-001");
                         ctx.setAttr(JsonRpcAttributes.METHOD, "notifyMethod");
                         ctx.setAttr(JsonRpcAttributes.IS_NOTIFICATION, true);
                         return HttpResponse.of(
@@ -124,7 +118,6 @@ public class JsonRpcServiceDecoratorTest {
                                 MediaType.JSON_UTF_8,
                                 "{\"data\": \"success_data\"}");
                     })));
-
             sb.service("/test-no-id-attr", (ctx, req) ->
                     HttpResponse.of(req.aggregate().thenApply(aggregated -> {
                         ctx.setAttr(JsonRpcAttributes.METHOD, "someMethod");
@@ -134,7 +127,6 @@ public class JsonRpcServiceDecoratorTest {
                                 MediaType.PLAIN_TEXT_UTF_8,
                                 "Original Response No ID");
                     })));
-            
             sb.service("/test-no-isnotification-attr", (ctx, req) ->
                     HttpResponse.of(req.aggregate().thenApply(aggregated -> {
                         ctx.setAttr(JsonRpcAttributes.ID, "req-008");
@@ -144,7 +136,6 @@ public class JsonRpcServiceDecoratorTest {
                                 MediaType.APPLICATION_XML_UTF_8,
                                 "<data>text</data>");
                     })));
-
             sb.service("/test-no-method-attr", (ctx, req) ->
                     HttpResponse.of(req.aggregate().thenApply(aggregated -> {
                         ctx.setAttr(JsonRpcAttributes.ID, "req-009");
@@ -154,9 +145,10 @@ public class JsonRpcServiceDecoratorTest {
                                         HttpStatus.NOT_FOUND,
                                         HttpHeaderNames.CONTENT_TYPE,
                                         MediaType.HTML_UTF_8);
-                        return HttpResponse.of(responseHeaders, HttpData.ofUtf8("<html><body>Not Found</body></html>"));
+                        return HttpResponse.of(
+                                responseHeaders,
+                                HttpData.ofUtf8("<html><body>Not Found</body></html>"));
                     })));
-
             sb.service("/test-http201", (ctx, req) ->
                     HttpResponse.of(req.aggregate().thenApply(aggregated -> {
                         ctx.setAttr(JsonRpcAttributes.ID, "req-011");
@@ -167,7 +159,6 @@ public class JsonRpcServiceDecoratorTest {
                                 MediaType.JSON_UTF_8,
                                 "{\"resourceId\": \"newResource123\"}");
                     })));
-
             sb.service("/test-http400", (ctx, req) ->
                     HttpResponse.of(req.aggregate().thenApply(aggregated -> {
                         ctx.setAttr(JsonRpcAttributes.ID, "req-012");
@@ -179,7 +170,6 @@ public class JsonRpcServiceDecoratorTest {
                                 "{\"error_type\": \"VALIDATION_ERROR\"," +
                                 " \"details\": \"Invalid parameter\"}");
                     })));
-            
             sb.service("/test-http503", (ctx, req) ->
                     HttpResponse.of(req.aggregate().thenApply(aggregated -> {
                         ctx.setAttr(JsonRpcAttributes.ID, "req-013");
@@ -190,7 +180,6 @@ public class JsonRpcServiceDecoratorTest {
                                 MediaType.JSON_UTF_8,
                                 "{\"reason\": \"Downstream timeout\"}");
                     })));
-
             sb.decorator(JsonRpcServiceDecorator::new);
             sb.requestTimeoutMillis(0);
         }
@@ -205,16 +194,16 @@ public class JsonRpcServiceDecoratorTest {
     @Test
     void testNonNotificationRequest_ExistingGeneralCase() throws JsonProcessingException {
         final JsonNode requestBody = mapper.createObjectNode()
-                                    .put("test", "test_value_existing");
+                                           .put("test", "test_value_existing");
 
         final JsonRpcResponse expected = JsonRpcResponse.ofSuccess(requestBody, "echo-test");
 
-        final AggregatedHttpResponse response = client().execute(
-                HttpRequest.of(HttpMethod.POST,
-                               "/test-echo",
-                               MediaType.JSON_UTF_8,
-                               mapper.writeValueAsString(requestBody)))
-                .aggregate().join();
+        final AggregatedHttpResponse response =
+                client().execute(
+                        HttpRequest.of(HttpMethod.POST,
+                                       "/test-echo",
+                                       MediaType.JSON_UTF_8,
+                                       mapper.writeValueAsString(requestBody))).aggregate().join();
 
         assertEquals(HttpStatus.OK, response.status());
         assertEquals(MediaType.JSON_UTF_8, response.contentType());
@@ -227,12 +216,10 @@ public class JsonRpcServiceDecoratorTest {
     @Test
     void nonNotificationRequest_DelegatedServiceReturnsSuccessJson() throws JsonProcessingException {
         final String requestJsonBody = "{\"params\": [\"p1\", \"p2\"]}";
-        
         final JsonNode expectedResultNode = mapper.readTree("{\"data\": \"success_data\"}");
         final JsonRpcResponse expectedRpcResponse =
                 JsonRpcResponse.ofSuccess(expectedResultNode, "req-001");
         final JsonNode expectedRpcResponseJson = mapper.valueToTree(expectedRpcResponse);
-
         final AggregatedHttpResponse response = client().execute(
                 HttpRequest.of(HttpMethod.POST, "/test-success", MediaType.JSON_UTF_8, requestJsonBody))
                 .aggregate().join();
@@ -246,7 +233,6 @@ public class JsonRpcServiceDecoratorTest {
     @Test
     void nonNotificationRequest_DelegatedServiceReturnsErrorJson() throws JsonProcessingException {
         final String requestJsonBody = "{\"params\": [\"err_p1\"]}";
-
         final String expectedErrorDataString =
                 "Internal server error during delegate execution for method 'testMethodError' " +
                 "(delegate returned 500 Internal Server Error): " +
@@ -257,7 +243,6 @@ public class JsonRpcServiceDecoratorTest {
                 mapper.getNodeFactory().textNode(expectedErrorDataString));
         final JsonRpcResponse expectedRpcResponse = JsonRpcResponse.ofError(jsonRpcError, "req-002");
         final JsonNode expectedRpcResponseJson = mapper.valueToTree(expectedRpcResponse);
-        
         final AggregatedHttpResponse response = client().execute(
                 HttpRequest.of(HttpMethod.POST, "/test-error", MediaType.JSON_UTF_8, requestJsonBody))
                 .aggregate().join();
@@ -275,13 +260,11 @@ public class JsonRpcServiceDecoratorTest {
         final JsonRpcResponse expectedRpcResponse =
                 JsonRpcResponse.ofSuccess(expectedResultNode, "string-id-123");
         final JsonNode expectedRpcResponseJson = mapper.valueToTree(expectedRpcResponse);
-
         final AggregatedHttpResponse response = client().execute(
                 HttpRequest.of(
                         HttpMethod.POST,
                         "/test-success-string-id",
                         MediaType.JSON_UTF_8, requestJsonBody)).aggregate().join();
-        
         assertEquals(HttpStatus.OK, response.status());
         assertEquals(MediaType.JSON_UTF_8, response.contentType());
         final JsonNode actualRpcResponseJson = mapper.readTree(response.contentUtf8());
@@ -295,13 +278,11 @@ public class JsonRpcServiceDecoratorTest {
         final JsonRpcResponse expectedRpcResponse =
                 JsonRpcResponse.ofSuccess(expectedResultNode, mapper.getNodeFactory().numberNode(12345));
         final JsonNode expectedRpcResponseJson = mapper.valueToTree(expectedRpcResponse);
-
         final AggregatedHttpResponse response = client().execute(
                 HttpRequest.of(
                         HttpMethod.POST,
                         "/test-success-numeric-id",
                         MediaType.JSON_UTF_8, requestJsonBody)).aggregate().join();
-
         assertEquals(HttpStatus.OK, response.status());
         assertEquals(MediaType.JSON_UTF_8, response.contentType());
         final JsonNode actualRpcResponseJson = mapper.readTree(response.contentUtf8());
@@ -312,14 +293,12 @@ public class JsonRpcServiceDecoratorTest {
     void nonNotificationRequest_NullId() throws JsonProcessingException {
         final String requestJsonBody = "{\"params\": [\"p1\", \"p2\"]}";
         final JsonNode expectedResultNode = mapper.readTree("{\"data\": \"success_data\"}");
-        final JsonNode expectedRpcResponseJson = expectedResultNode; 
-        
+        final JsonNode expectedRpcResponseJson = expectedResultNode;
         final AggregatedHttpResponse response = client().execute(
                 HttpRequest.of(
                         HttpMethod.POST,
                         "/test-success-null-id",
                         MediaType.JSON_UTF_8, requestJsonBody)).aggregate().join();
-        
         assertEquals(HttpStatus.OK, response.status());
         assertEquals(MediaType.JSON_UTF_8, response.contentType());
         final JsonNode actualRpcResponseJson = mapper.readTree(response.contentUtf8());
@@ -329,16 +308,14 @@ public class JsonRpcServiceDecoratorTest {
     @Test
     void notificationRequest_ReturnsHttp200OkEmptyBody() throws JsonProcessingException {
         final String requestJsonBody = "{\"method\": \"notifyMethod\", \"params\": [\"p1\"]}";
-
         final AggregatedHttpResponse response = client().execute(
                 HttpRequest.of(
                         HttpMethod.POST,
                         "/test-notification",
                         MediaType.JSON_UTF_8, requestJsonBody)).aggregate().join();
-
         assertEquals(HttpStatus.OK, response.status());
         assertEquals(0, response.content().length());
-        String cl = response.headers().get(HttpHeaderNames.CONTENT_LENGTH);
+        final String cl = response.headers().get(HttpHeaderNames.CONTENT_LENGTH);
         if (cl != null) {
             assertEquals("0", cl);
         }
@@ -347,13 +324,11 @@ public class JsonRpcServiceDecoratorTest {
     @Test
     void nonRpcRequest_NoIdAttribute() throws JsonProcessingException {
         final String requestBody = "Any content";
-        
         final AggregatedHttpResponse response = client().execute(
                 HttpRequest.of(
                         HttpMethod.POST,
                         "/test-no-id-attr",
                         MediaType.PLAIN_TEXT_UTF_8, requestBody)).aggregate().join();
-
         assertEquals(HttpStatus.CREATED, response.status());
         assertEquals(MediaType.PLAIN_TEXT_UTF_8, response.contentType());
         assertEquals("Original Response No ID", response.contentUtf8());
@@ -362,13 +337,11 @@ public class JsonRpcServiceDecoratorTest {
     @Test
     void nonRpcRequest_NoIsNotificationAttribute() throws JsonProcessingException {
         final String requestBody = "Any content";
-        
         final AggregatedHttpResponse response = client().execute(
                 HttpRequest.of(
                         HttpMethod.POST,
                         "/test-no-isnotification-attr",
                         MediaType.PLAIN_TEXT_UTF_8, requestBody)).aggregate().join();
-
         assertEquals(HttpStatus.OK, response.status());
         assertEquals(MediaType.APPLICATION_XML_UTF_8, response.contentType());
         assertEquals("<data>text</data>", response.contentUtf8());
@@ -377,13 +350,11 @@ public class JsonRpcServiceDecoratorTest {
     @Test
     void nonRpcRequest_NoMethodAttribute() throws JsonProcessingException {
         final String requestBody = "Any content";
-        
         final AggregatedHttpResponse response = client().execute(
                 HttpRequest.of(
                         HttpMethod.POST,
                         "/test-no-method-attr",
                         MediaType.PLAIN_TEXT_UTF_8, requestBody)).aggregate().join();
-
         assertEquals(HttpStatus.NOT_FOUND, response.status());
         assertEquals(MediaType.HTML_UTF_8, response.contentType());
         assertEquals("<html><body>Not Found</body></html>", response.contentUtf8());
@@ -392,16 +363,13 @@ public class JsonRpcServiceDecoratorTest {
     @Test
     void nonNotificationRequest_DelegatedServiceReturnsHttp201Created() throws JsonProcessingException {
         final String requestJsonBody = "{\"params\": [\"create_p1\"]}";
-        
         final JsonNode expectedResultNode = mapper.readTree("{\"resourceId\": \"newResource123\"}");
         final JsonRpcResponse expectedRpcResponse =
                 JsonRpcResponse.ofSuccess(expectedResultNode, "req-011");
         final JsonNode expectedRpcResponseJson = mapper.valueToTree(expectedRpcResponse);
-
         final AggregatedHttpResponse response = client().execute(
                 HttpRequest.of(HttpMethod.POST, "/test-http201", MediaType.JSON_UTF_8, requestJsonBody))
                 .aggregate().join();
-        
         assertEquals(HttpStatus.OK, response.status());
         assertEquals(MediaType.JSON_UTF_8, response.contentType());
         final JsonNode actualRpcResponseJson = mapper.readTree(response.contentUtf8());
@@ -411,7 +379,6 @@ public class JsonRpcServiceDecoratorTest {
     @Test
     void nonNotificationRequest_DelegatedServiceReturnsHttp400BadRequest() throws JsonProcessingException {
         final String requestJsonBody = "{\"params\": [\"bad_p1\"]}";
-
         final String expectedErrorDataString =
                 "Invalid parameters for method 'invalidMethod' (delegate returned 400): " +
                 "{\"error_type\": \"VALIDATION_ERROR\", \"details\": \"Invalid parameter\"}";
@@ -421,11 +388,9 @@ public class JsonRpcServiceDecoratorTest {
                 mapper.getNodeFactory().textNode(expectedErrorDataString));
         final JsonRpcResponse expectedRpcResponse = JsonRpcResponse.ofError(jsonRpcError, "req-012");
         final JsonNode expectedRpcResponseJson = mapper.valueToTree(expectedRpcResponse);
-        
         final AggregatedHttpResponse response = client().execute(
                 HttpRequest.of(HttpMethod.POST, "/test-http400", MediaType.JSON_UTF_8, requestJsonBody))
                 .aggregate().join();
-
         assertEquals(HttpStatus.OK, response.status());
         assertEquals(MediaType.JSON_UTF_8, response.contentType());
         final JsonNode actualRpcResponseJson = mapper.readTree(response.contentUtf8());
@@ -436,7 +401,6 @@ public class JsonRpcServiceDecoratorTest {
     void nonNotificationRequest_DelegatedServiceReturnsHttp503ServiceUnavailable()
             throws JsonProcessingException {
         final String requestJsonBody = "{\"params\": [\"unavailable_p1\"]}";
-
         final String expectedErrorDataString =
                 "Internal server error during delegate execution for method 'unavailableMethod' " +
                 "(delegate returned 503 Service Unavailable): " +
@@ -447,11 +411,9 @@ public class JsonRpcServiceDecoratorTest {
                 mapper.getNodeFactory().textNode(expectedErrorDataString));
         final JsonRpcResponse expectedRpcResponse = JsonRpcResponse.ofError(jsonRpcError, "req-013");
         final JsonNode expectedRpcResponseJson = mapper.valueToTree(expectedRpcResponse);
-        
         final AggregatedHttpResponse response = client().execute(
                 HttpRequest.of(HttpMethod.POST, "/test-http503", MediaType.JSON_UTF_8, requestJsonBody))
                 .aggregate().join();
-
         assertEquals(HttpStatus.OK, response.status());
         assertEquals(MediaType.JSON_UTF_8, response.contentType());
         final JsonNode actualRpcResponseJson = mapper.readTree(response.contentUtf8());

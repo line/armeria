@@ -15,7 +15,6 @@
  */
 package com.linecorp.armeria.server.jsonrpc;
 
-import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 
 import com.fasterxml.jackson.databind.ObjectMapper;

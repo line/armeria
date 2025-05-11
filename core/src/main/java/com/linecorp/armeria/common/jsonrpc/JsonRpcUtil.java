@@ -194,6 +194,9 @@ public final class JsonRpcUtil {
                 idForErrorLogging = idNode.numberValue();
             } else if (idNode.isNull()) {
                 idForErrorLogging = null;
+            } else {
+                throw new IllegalArgumentException("ID MUST contain a String, Number," +
+                                                   " or NULL value if included");
             }
         }
 
