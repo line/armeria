@@ -150,8 +150,7 @@ public final class JsonRpcResponse {
      * @param id     the ID of the original request this response corresponds to. It should match the ID from
      *               the {@link JsonRpcRequest}. Can be a {@link String}, a {@link Number}, or {@code null}
      *               (though {@code null} ID
-     *               for a successful response is unusual unless the request ID was also null,
-     *               which would typically be a notification not expecting a response).
+     *               for a successful response is unusual unless the request ID was also null).
      * @return a new {@link JsonRpcResponse} instance representing a successful outcome.
      */
     public static JsonRpcResponse ofSuccess(@Nullable Object result, @Nullable Object id) {

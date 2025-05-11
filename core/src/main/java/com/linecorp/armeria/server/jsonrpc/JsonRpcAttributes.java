@@ -25,7 +25,7 @@ import io.netty.util.AttributeKey;
 public final class JsonRpcAttributes {
     /**
      * The {@link AttributeKey} to the ID of a JSON-RPC request or response.
-     * The value of this attribute is usually an {@link Integer}, {@link String} or {@code null}.
+     * The value of this attribute is usually an {@link Number}, {@link String} or {@code null}.
      */
     public static final AttributeKey<Object> ID =
         AttributeKey.valueOf(JsonRpcAttributes.class, "ID");

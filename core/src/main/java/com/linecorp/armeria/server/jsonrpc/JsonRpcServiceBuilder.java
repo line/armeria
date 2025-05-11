@@ -119,10 +119,9 @@ public class JsonRpcServiceBuilder {
     public JsonRpcService build() {
         // Register all annotated services with the server builder.
         for (Map.Entry<String, ?> entry : annotatedServices.entrySet()) {
-            serverBuilder.annotatedService(entry.getKey(), entry.getValue())
-                         .decorator(JsonRpcServiceDecorator::new);
+            serverBuilder.annotatedService(entry.getKey(), entry.getValue());
         }
-
+        serverBuilder.decorator(JsonRpcServiceDecorator::new);
         return new SimpleJsonRpcService(routes, mapper, nonAnnotatedService);
     }
 
