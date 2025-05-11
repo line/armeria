@@ -15,9 +15,6 @@
  */
 package com.linecorp.armeria.common.jsonrpc;
 
-import java.math.BigDecimal;
-import java.math.BigInteger;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -266,21 +263,7 @@ public final class JsonRpcUtil {
             requestJson.put("id", (String) id);
         } else if (id instanceof Number) {
             final Number numId = (Number) id;
-            if (id instanceof Integer) {
-                requestJson.put("id", numId.intValue());
-            } else if (id instanceof Long) {
-                requestJson.put("id", numId.longValue());
-            } else if (id instanceof Double) {
-                requestJson.put("id", numId.doubleValue());
-            } else if (id instanceof Float) {
-                requestJson.put("id", numId.floatValue());
-            } else if (id instanceof BigDecimal) {
-                requestJson.set("id", factory.numberNode((BigDecimal) id));
-            } else if (id instanceof BigInteger) {
-                requestJson.set("id", factory.numberNode((BigInteger) id));
-            } else {
-                requestJson.put("id", numId.doubleValue());
-            }
+            requestJson.set("id", mapper.valueToTree(numId));
         } else {
             throw new IllegalArgumentException("Unsupported ID type: " + id.getClass().getName());
         }
