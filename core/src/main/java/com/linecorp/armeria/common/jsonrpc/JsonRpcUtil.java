@@ -40,8 +40,8 @@ public final class JsonRpcUtil {
     /**
      * Parses an {@link AggregatedHttpResponse} received from a delegate service and converts it into a
      * {@link JsonRpcResponse}.
-     * <p>
-     * If the {@code delegateResponse} has a successful HTTP status code (2xx):
+     *
+     * <p>If the {@code delegateResponse} has a successful HTTP status code (2xx):
      * <ul>
      *   <li>If the response content is empty (e.g., HTTP 204 No Content), it is treated as a successful
      *       JSON-RPC response with a {@code null} result.</li>
@@ -52,7 +52,6 @@ public final class JsonRpcUtil {
      * </ul>
      * If the {@code delegateResponse} has an error HTTP status code (non-2xx), it is mapped to an appropriate
      * {@link JsonRpcError} using {@link #mapHttpResponseToError(AggregatedHttpResponse, String, Object)}.
-     * </p>
      *
      * @param delegateResponse The {@link AggregatedHttpResponse} from the delegate service.
      *                         Must not be {@code null}.

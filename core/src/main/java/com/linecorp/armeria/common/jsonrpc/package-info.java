@@ -16,8 +16,8 @@
 /**
  * Provides common data model classes for Armeria's JSON-RPC 2.0 implementation,
  * designed to be shared between client-side and server-side components.
- * <p>
- * This package contains Plain Old Java Objects (POJOs) that represent the fundamental
+ *
+ * <p>This package contains Plain Old Java Objects (POJOs) that represent the fundamental
  * structures of JSON-RPC 2.0 messages:
  * <ul>
  *   <li>{@link com.linecorp.armeria.common.jsonrpc.JsonRpcRequest}: Represents a JSON-RPC request object.</li>
@@ -30,9 +30,8 @@
  * </ul>
  * These classes are annotated for straightforward serialization to and deserialization from JSON
  * using the Jackson library.
- * </p>
- * <p>
- * Utility classes like {@link com.linecorp.armeria.common.jsonrpc.JsonRpcUtil} and
+ *
+ * <p>Utility classes like {@link com.linecorp.armeria.common.jsonrpc.JsonRpcUtil} and
  * {@link com.linecorp.armeria.common.jsonrpc.JsonRpcResponseFactory} offer helper methods
  * for creating, parsing, and transforming these JSON-RPC messages.
  * </p>
