@@ -159,18 +159,4 @@ interface DecodedHttpRequest extends HttpRequest {
     default boolean isHttp1WebSocket() {
         return false;
     }
-
-    /**
-     * Sets whether to send an RST_STREAM after the response sending response when the peer is open state.
-     */
-    default void setShouldResetOnlyIfRemoteIsOpen(boolean shouldResetOnlyIfRemoteIsOpen) {
-        // no-op
-    }
-
-    /**
-     * Tells whether to send an RST_STREAM after the response sending response when the peer is open state.
-     */
-    default boolean shouldResetOnlyIfRemoteIsOpen() {
-        return false;
-    }
 }

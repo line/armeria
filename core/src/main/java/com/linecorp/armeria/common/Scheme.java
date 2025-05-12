@@ -152,6 +152,19 @@ public final class Scheme implements Comparable<Scheme> {
         return uriText;
     }
 
+    /**
+     * Returns the textual representation ({@code "serializationFormat+sessionProtocol"}).
+     * If the {@link #serializationFormat()} is {@link SerializationFormat#NONE}, the serializationFormat
+     * is omitted.
+     */
+    public String shortUriText() {
+        if (serializationFormat() == SerializationFormat.NONE) {
+            return sessionProtocol().uriText();
+        } else {
+            return uriText;
+        }
+    }
+
     @Override
     public int hashCode() {
         return System.identityHashCode(this);

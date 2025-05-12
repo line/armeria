@@ -34,6 +34,7 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.Response;
+import com.linecorp.armeria.common.ResponseCompleteException;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.logging.RequestLog;
@@ -49,7 +50,8 @@ public final class ClientUtil {
     /**
      * An undefined {@link URI} to create {@link WebClient} without specifying {@link URI}.
      */
-    public static final URI UNDEFINED_URI = URI.create("http://undefined");
+    public static final URI UNDEFINED_URI =
+            URI.create("http://" + ClientBuilderParamsUtil.UNDEFINED_URI_AUTHORITY);
 
     public static <I extends Request, O extends Response, U extends Client<I, O>>
     O initContextAndExecuteWithFallback(
@@ -57,7 +59,7 @@ public final class ClientUtil {
             ClientRequestContextExtension ctx,
             Function<CompletableFuture<O>, O> futureConverter,
             BiFunction<ClientRequestContext, Throwable, O> errorResponseFactory,
-            I req) {
+            I req, boolean tryCompleteLog) {
 
         requireNonNull(delegate, "delegate");
         requireNonNull(ctx, "ctx");
@@ -66,6 +68,7 @@ public final class ClientUtil {
 
         boolean initialized = false;
         boolean success = false;
+        O response;
         try {
             final CompletableFuture<Boolean> initFuture = ctx.init();
             initialized = initFuture.isDone();
@@ -77,9 +80,9 @@ public final class ClientUtil {
                     throw UnprocessedRequestException.of(Exceptions.peel(e));
                 }
 
-                return initContextAndExecuteWithFallback(delegate, ctx, errorResponseFactory, success, req);
+                response = initContextAndExecuteWithFallback(delegate, ctx, errorResponseFactory, success, req);
             } else {
-                return futureConverter.apply(initFuture.handle((success0, cause) -> {
+                response = futureConverter.apply(initFuture.handle((success0, cause) -> {
                     try {
                         if (cause != null) {
                             throw UnprocessedRequestException.of(Exceptions.peel(cause));
@@ -97,12 +100,17 @@ public final class ClientUtil {
             }
         } catch (Throwable cause) {
             fail(ctx, cause);
-            return errorResponseFactory.apply(ctx, cause);
+            response = errorResponseFactory.apply(ctx, cause);
         } finally {
             if (initialized) {
                 ctx.finishInitialization(success);
             }
         }
+
+        if (tryCompleteLog) {
+            completeLogIfIncomplete(ctx, response);
+        }
+        return response;
     }
 
     private static <I extends Request, O extends Response, U extends Client<I, O>>
@@ -139,18 +147,25 @@ public final class ClientUtil {
 
     public static <I extends Request, O extends Response, U extends Client<I, O>>
     O executeWithFallback(U delegate, ClientRequestContext ctx,
-                          BiFunction<ClientRequestContext, Throwable, O> errorResponseFactory, I req) {
+                          BiFunction<ClientRequestContext, Throwable, O> errorResponseFactory, I req,
+                          boolean tryCompleteLog) {
 
         requireNonNull(delegate, "delegate");
         requireNonNull(ctx, "ctx");
         requireNonNull(errorResponseFactory, "errorResponseFactory");
 
+        O response;
         try {
-            return pushAndExecute(delegate, ctx, req);
+            response = pushAndExecute(delegate, ctx, req);
         } catch (Throwable cause) {
             fail(ctx, cause);
-            return errorResponseFactory.apply(ctx, cause);
+            response = errorResponseFactory.apply(ctx, cause);
         }
+
+        if (tryCompleteLog) {
+            completeLogIfIncomplete(ctx, response);
+        }
+        return response;
     }
 
     public static <I extends Request, O extends Response, U extends PreClient<I, O>>
@@ -164,9 +179,8 @@ public final class ClientUtil {
         try {
             return execution.execute(ctx, req);
         } catch (Exception e) {
-            final UnprocessedRequestException upe = UnprocessedRequestException.of(e);
-            fail(ctx, upe);
-            return errorResponseFactory.apply(ctx, upe);
+            fail(ctx, e);
+            return errorResponseFactory.apply(ctx, e);
         }
     }
 
@@ -175,6 +189,22 @@ public final class ClientUtil {
         try (SafeCloseable ignored = ctx.push()) {
             return delegate.execute(ctx, req);
         }
+    }
+
+    private static <O extends Response> void completeLogIfIncomplete(ClientRequestContext ctx, O response) {
+        response.whenComplete().handle((unused, cause) -> {
+            final RequestLogBuilder logBuilder = ctx.logBuilder();
+            if (!logBuilder.isAvailable(RequestLogProperty.REQUEST_FIRST_BYTES_TRANSFERRED_TIME)) {
+                // As the request was not processed by AbstractHttpRequestHandler, the RequestLog won't be
+                // completed automatically. We manually cancel the request to ensure the log completion.
+                if (cause != null) {
+                    ctx.cancel(cause);
+                } else {
+                    ctx.cancel(ResponseCompleteException.get());
+                }
+            }
+            return null;
+        });
     }
 
     private static void fail(ClientRequestContext ctx, Throwable cause) {
