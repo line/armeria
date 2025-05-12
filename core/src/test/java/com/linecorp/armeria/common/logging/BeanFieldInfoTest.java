@@ -14,7 +14,7 @@
  * under the License.
  */
 
-package com.linecorp.armeria.common.logging.masker;
+package com.linecorp.armeria.common.logging;
 
 import static net.javacrumbs.jsonunit.fluent.JsonFluentAssert.assertThatJson;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -28,14 +28,16 @@ import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.RequestContext;
-import com.linecorp.armeria.common.logging.masker.MaskingStructs.Parent.Child;
-import com.linecorp.armeria.common.logging.masker.MaskingStructs.Parent.Child.FieldAnn1;
-import com.linecorp.armeria.common.logging.masker.MaskingStructs.Parent.Child.FieldAnn2;
-import com.linecorp.armeria.common.logging.masker.MaskingStructs.Parent.Child.FieldAnn3;
-import com.linecorp.armeria.common.logging.masker.MaskingStructs.Parent.Child.Inner1.BeanAnn1;
-import com.linecorp.armeria.common.logging.masker.MaskingStructs.Parent.Child.ListFieldAnn1;
-import com.linecorp.armeria.common.logging.masker.MaskingStructs.Parent.FieldAnn4;
-import com.linecorp.armeria.common.logging.masker.MaskingStructs.Parent.Inner4.BeanAnn4;
+import com.linecorp.armeria.common.logging.MaskingStructs.Parent.Child;
+import com.linecorp.armeria.common.logging.MaskingStructs.Parent.Child.FieldAnn1;
+import com.linecorp.armeria.common.logging.MaskingStructs.Parent.Child.FieldAnn2;
+import com.linecorp.armeria.common.logging.MaskingStructs.Parent.Child.FieldAnn3;
+import com.linecorp.armeria.common.logging.MaskingStructs.Parent.Child.Inner1.BeanAnn1;
+import com.linecorp.armeria.common.logging.MaskingStructs.Parent.Child.ListFieldAnn1;
+import com.linecorp.armeria.common.logging.MaskingStructs.Parent.FieldAnn4;
+import com.linecorp.armeria.common.logging.MaskingStructs.Parent.Inner4.BeanAnn4;
+import com.linecorp.armeria.internal.server.annotation.BeanFieldInfo;
+import com.linecorp.armeria.internal.server.annotation.BeanFieldMaskerSelector;
 
 class BeanFieldInfoTest {
 

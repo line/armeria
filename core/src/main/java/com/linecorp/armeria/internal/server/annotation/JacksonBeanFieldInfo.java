@@ -14,7 +14,7 @@
  * under the License.
  */
 
-package com.linecorp.armeria.common.logging.masker;
+package com.linecorp.armeria.internal.server.annotation;
 
 import static java.util.Objects.requireNonNull;
 

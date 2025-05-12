@@ -33,10 +33,17 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.QueryParams;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.logging.FieldMasker;
 import com.linecorp.armeria.common.multipart.Multipart;
 import com.linecorp.armeria.common.multipart.MultipartFile;
 
 final class AnnotatedRequestJsonSerializer extends JsonSerializer<AnnotatedRequest> {
+
+    private final BeanFieldMaskerCache fieldMaskerCache;
+
+    AnnotatedRequestJsonSerializer(BeanFieldMaskerCache fieldMaskerCache) {
+        this.fieldMaskerCache = fieldMaskerCache;
+    }
 
     @Override
     public Class<AnnotatedRequest> handledType() {
@@ -56,6 +63,9 @@ final class AnnotatedRequestJsonSerializer extends JsonSerializer<AnnotatedReque
                 serializers.defaultSerializeNull(gen);
                 continue;
             }
+            final BeanFieldInfo beanFieldInfo = value.beanFieldInfos().get(i);
+            final FieldMasker fieldMasker = fieldMaskerCache.fieldMasker(beanFieldInfo);
+            parameter = fieldMasker.mask(parameter);
             parameter = handleInternalTypes(parameter);
             if (parameter == null) {
                 serializers.defaultSerializeNull(gen);

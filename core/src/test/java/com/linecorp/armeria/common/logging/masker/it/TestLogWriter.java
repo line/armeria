@@ -19,11 +19,11 @@ package com.linecorp.armeria.common.logging.masker.it;
 import java.util.concurrent.BlockingDeque;
 import java.util.concurrent.LinkedBlockingDeque;
 
+import com.linecorp.armeria.common.logging.ContentSanitizer;
 import com.linecorp.armeria.common.logging.LogFormatter;
 import com.linecorp.armeria.common.logging.LogWriter;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestOnlyLog;
-import com.linecorp.armeria.common.logging.masker.ContentSanitizer;
 
 public class TestLogWriter implements LogWriter {
 

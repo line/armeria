@@ -14,7 +14,7 @@
  * under the License.
  */
 
-package com.linecorp.armeria.common.logging.masker;
+package com.linecorp.armeria.common.logging;
 
 import com.linecorp.armeria.common.annotation.Nullable;
 

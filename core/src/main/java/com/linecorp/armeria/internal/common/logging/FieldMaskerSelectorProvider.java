@@ -14,13 +14,15 @@
  * under the License.
  */
 
-package com.linecorp.armeria.common.logging.masker;
+package com.linecorp.armeria.internal.common.logging;
 
 import java.util.List;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import com.linecorp.armeria.common.annotation.UnstableApi;
+import com.linecorp.armeria.common.logging.ContentSanitizer;
+import com.linecorp.armeria.common.logging.FieldMaskerSelector;
 
 /**
  * Customizes the {@link ObjectMapper} used by {@link ContentSanitizer}.

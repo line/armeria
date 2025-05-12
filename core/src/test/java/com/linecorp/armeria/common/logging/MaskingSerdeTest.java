@@ -14,7 +14,7 @@
  * under the License.
  */
 
-package com.linecorp.armeria.common.logging.masker;
+package com.linecorp.armeria.common.logging;
 
 import static net.javacrumbs.jsonunit.fluent.JsonFluentAssert.assertThatJson;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -26,13 +26,14 @@ import org.junit.jupiter.api.Test;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-import com.linecorp.armeria.common.logging.masker.MaskingStructs.Parent.Child;
-import com.linecorp.armeria.common.logging.masker.MaskingStructs.Parent.Child.Inner1;
-import com.linecorp.armeria.common.logging.masker.MaskingStructs.Parent.Inner4;
-import com.linecorp.armeria.common.logging.masker.MaskingStructs.Parent.SimpleFoo;
-import com.linecorp.armeria.common.logging.masker.MaskingStructs.Parent.SimpleFoo.HelloFieldAnn;
-import com.linecorp.armeria.common.logging.masker.MaskingStructs.Parent.SimpleFoo.InnerFoo;
+import com.linecorp.armeria.common.logging.MaskingStructs.Parent.Child;
+import com.linecorp.armeria.common.logging.MaskingStructs.Parent.Child.Inner1;
+import com.linecorp.armeria.common.logging.MaskingStructs.Parent.Inner4;
+import com.linecorp.armeria.common.logging.MaskingStructs.Parent.SimpleFoo;
+import com.linecorp.armeria.common.logging.MaskingStructs.Parent.SimpleFoo.HelloFieldAnn;
+import com.linecorp.armeria.common.logging.MaskingStructs.Parent.SimpleFoo.InnerFoo;
 import com.linecorp.armeria.internal.common.JacksonUtil;
+import com.linecorp.armeria.internal.server.annotation.BeanFieldMaskerSelector;
 
 class MaskingSerdeTest {
 

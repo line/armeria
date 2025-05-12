@@ -14,9 +14,9 @@
  * under the License.
  */
 
-package com.linecorp.armeria.common.logging.masker;
+package com.linecorp.armeria.common.logging;
 
-import static com.linecorp.armeria.internal.common.logging.masker.MaskerAttributeKeys.REQUEST_CONTEXT_KEY;
+import static com.linecorp.armeria.internal.common.logging.MaskerAttributeKeys.REQUEST_CONTEXT_KEY;
 
 import java.util.List;
 import java.util.Map;
@@ -33,9 +33,9 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 
 import com.linecorp.armeria.common.annotation.UnstableApi;
-import com.linecorp.armeria.common.logging.JsonLogFormatterBuilder;
-import com.linecorp.armeria.common.logging.TextLogFormatterBuilder;
 import com.linecorp.armeria.internal.common.JacksonUtil;
+import com.linecorp.armeria.internal.common.logging.FieldMaskerSelectorProvider;
+import com.linecorp.armeria.internal.server.annotation.BeanFieldMaskerSelector;
 import com.linecorp.armeria.server.annotation.AnnotatedService;
 
 /**

@@ -14,14 +14,14 @@
  * under the License.
  */
 
-package com.linecorp.armeria.common.logging.masker;
+package com.linecorp.armeria.common.logging;
 
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
-import com.linecorp.armeria.common.logging.masker.FieldMaskers.FallThroughFieldMasker;
-import com.linecorp.armeria.common.logging.masker.FieldMaskers.NoMaskFieldMasker;
-import com.linecorp.armeria.common.logging.masker.FieldMaskers.NullifyFieldMasker;
+import com.linecorp.armeria.common.logging.FieldMaskers.FallThroughFieldMasker;
+import com.linecorp.armeria.common.logging.FieldMaskers.NoMaskFieldMasker;
+import com.linecorp.armeria.common.logging.FieldMaskers.NullifyFieldMasker;
 
 /**
  * Masks a field value. Users are encouraged to use one of the provided implementations

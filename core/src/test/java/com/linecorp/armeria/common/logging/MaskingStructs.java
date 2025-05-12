@@ -14,7 +14,7 @@
  * under the License.
  */
 
-package com.linecorp.armeria.common.logging.masker;
+package com.linecorp.armeria.common.logging;
 
 import java.lang.annotation.Repeatable;
 import java.lang.annotation.Retention;
@@ -24,8 +24,8 @@ import com.fasterxml.jackson.annotation.JacksonAnnotationsInside;
 import com.google.common.base.MoreObjects;
 import com.google.common.base.Objects;
 
-import com.linecorp.armeria.common.logging.masker.MaskingStructs.Parent.Child.Inner1.BeanAnn1;
-import com.linecorp.armeria.common.logging.masker.MaskingStructs.Parent.Inner4.BeanAnn4;
+import com.linecorp.armeria.common.logging.MaskingStructs.Parent.Child.Inner1.BeanAnn1;
+import com.linecorp.armeria.common.logging.MaskingStructs.Parent.Inner4.BeanAnn4;
 
 @SuppressWarnings("checkstyle:VisibilityModifier")
 public final class MaskingStructs {

@@ -16,24 +16,28 @@
 
 package com.linecorp.armeria.internal.server.annotation;
 
-import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.google.common.base.MoreObjects;
 
 import com.linecorp.armeria.common.annotation.Nullable;
 
-@JsonSerialize(using = AnnotatedResponseJsonSerializer.class)
 final class AnnotatedResponse {
 
     @Nullable
     private final Object value;
+    private final BeanFieldInfo beanFieldInfo;
 
-    AnnotatedResponse(@Nullable Object value) {
+    AnnotatedResponse(@Nullable Object value, BeanFieldInfo beanFieldInfo) {
         this.value = value;
+        this.beanFieldInfo = beanFieldInfo;
     }
 
     @Nullable
     public Object value() {
         return value;
+    }
+
+    public BeanFieldInfo beanFieldInfo() {
+        return beanFieldInfo;
     }
 
     @Override

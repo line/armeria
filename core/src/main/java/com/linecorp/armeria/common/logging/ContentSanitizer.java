@@ -14,14 +14,12 @@
  * under the License.
  */
 
-package com.linecorp.armeria.common.logging.masker;
+package com.linecorp.armeria.common.logging;
 
 import java.util.function.BiFunction;
 
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.annotation.UnstableApi;
-import com.linecorp.armeria.common.logging.JsonLogFormatterBuilder;
-import com.linecorp.armeria.common.logging.TextLogFormatterBuilder;
 
 /**
  * A content sanitizer implementation which sanitizes an object before serializing it into a

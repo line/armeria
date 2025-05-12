@@ -23,7 +23,6 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import com.linecorp.armeria.common.annotation.Nullable;
-import com.linecorp.armeria.common.logging.masker.BeanFieldInfo;
 
 final class AnnotatedBeanFieldInfo implements BeanFieldInfo {
 

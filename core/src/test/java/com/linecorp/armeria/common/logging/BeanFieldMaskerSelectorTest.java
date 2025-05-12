@@ -14,7 +14,7 @@
  * under the License.
  */
 
-package com.linecorp.armeria.common.logging.masker;
+package com.linecorp.armeria.common.logging;
 
 import static net.javacrumbs.jsonunit.fluent.JsonFluentAssert.assertThatJson;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -35,7 +35,9 @@ import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.annotation.Nullable;
-import com.linecorp.armeria.common.logging.masker.MaskingStructs.Parent.SimpleFoo;
+import com.linecorp.armeria.common.logging.MaskingStructs.Parent.SimpleFoo;
+import com.linecorp.armeria.internal.server.annotation.BeanFieldInfo;
+import com.linecorp.armeria.internal.server.annotation.BeanFieldMaskerSelector;
 
 class BeanFieldMaskerSelectorTest {
 

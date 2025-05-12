@@ -20,22 +20,27 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
-import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.google.common.base.MoreObjects;
 
 import com.linecorp.armeria.common.annotation.Nullable;
 
-@JsonSerialize(using = AnnotatedRequestJsonSerializer.class)
 final class AnnotatedRequest {
 
     private final List<@Nullable Object> parameters;
+    private final List<BeanFieldInfo> beanFieldInfos;
 
-    AnnotatedRequest(Object[] parameters) {
+    AnnotatedRequest(Object[] parameters, List<BeanFieldInfo> beanFieldInfos) {
+        assert parameters.length == beanFieldInfos.size();
         this.parameters = Collections.unmodifiableList(Arrays.asList(parameters));
+        this.beanFieldInfos = beanFieldInfos;
     }
 
     public List<@Nullable Object> parameters() {
         return parameters;
+    }
+
+    public List<BeanFieldInfo> beanFieldInfos() {
+        return beanFieldInfos;
     }
 
     @Override

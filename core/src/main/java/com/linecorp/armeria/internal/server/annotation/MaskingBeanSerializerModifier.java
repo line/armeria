@@ -14,10 +14,10 @@
  * under the License.
  */
 
-package com.linecorp.armeria.common.logging.masker;
+package com.linecorp.armeria.internal.server.annotation;
 
 import static com.google.common.base.Preconditions.checkState;
-import static com.linecorp.armeria.internal.common.logging.masker.MaskerAttributeKeys.REQUEST_CONTEXT_KEY;
+import static com.linecorp.armeria.internal.common.logging.MaskerAttributeKeys.REQUEST_CONTEXT_KEY;
 
 import java.io.IOException;
 
@@ -34,6 +34,7 @@ import com.fasterxml.jackson.databind.ser.ResolvableSerializer;
 
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.logging.FieldMasker;
 
 final class MaskingBeanSerializerModifier extends BeanSerializerModifier {
 

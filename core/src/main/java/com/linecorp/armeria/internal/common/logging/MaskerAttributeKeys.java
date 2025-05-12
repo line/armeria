@@ -14,7 +14,7 @@
  * under the License.
  */
 
-package com.linecorp.armeria.internal.common.logging.masker;
+package com.linecorp.armeria.internal.common.logging;
 
 import com.linecorp.armeria.common.RequestContext;
 

@@ -14,9 +14,11 @@
  * under the License.
  */
 
-package com.linecorp.armeria.common.logging.masker;
+package com.linecorp.armeria.internal.server.annotation;
 
 import com.linecorp.armeria.common.annotation.UnstableApi;
+import com.linecorp.armeria.common.logging.FieldMasker;
+import com.linecorp.armeria.common.logging.FieldMaskerSelector;
 
 /**
  * A {@link FieldMaskerSelector} implementation for masking POJO data types.

@@ -14,7 +14,7 @@
  * under the License.
  */
 
-package com.linecorp.armeria.common.logging.masker;
+package com.linecorp.armeria.internal.server.annotation;
 
 import java.util.List;
 
@@ -23,6 +23,7 @@ import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 
 import com.linecorp.armeria.common.annotation.UnstableApi;
+import com.linecorp.armeria.internal.common.logging.FieldMaskerSelectorProvider;
 
 /**
  * A {@link FieldMaskerSelectorProvider} implementation that supports masking for POJO data types.

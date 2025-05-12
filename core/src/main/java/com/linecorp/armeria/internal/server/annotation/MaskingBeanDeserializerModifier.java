@@ -14,7 +14,7 @@
  * under the License.
  */
 
-package com.linecorp.armeria.common.logging.masker;
+package com.linecorp.armeria.internal.server.annotation;
 
 import static com.google.common.base.Preconditions.checkArgument;
 
@@ -31,6 +31,7 @@ import com.fasterxml.jackson.databind.deser.BeanDeserializerModifier;
 import com.fasterxml.jackson.databind.deser.std.DelegatingDeserializer;
 
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.logging.FieldMasker;
 
 final class MaskingBeanDeserializerModifier extends BeanDeserializerModifier {
 
