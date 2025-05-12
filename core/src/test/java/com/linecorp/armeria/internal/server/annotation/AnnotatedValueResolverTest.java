@@ -108,11 +108,14 @@ class AnnotatedValueResolverTest {
                                                               "value3",
                                                               "value2");
 
+    static final Set<String> queryParamMaps = ImmutableSet.of("queryParamMap",
+                                                              "queryParamListMap",
+                                                              "queryParamSetMap");
+
     static final ResolverContext resolverContext;
     static final ServiceRequestContext context;
     static final HttpRequest request;
     static final RequestHeaders originalHeaders;
-    static final String QUERY_PARAM_MAP = "queryParamMap";
     static Map<String, AttributeKey<?>> successExpectAttrKeys;
     static Map<String, AttributeKey<?>> failExpectAttrKeys;
 
@@ -182,6 +185,15 @@ class AnnotatedValueResolverTest {
                 // Ignore this exception because MixedBean class has not annotated method.
             }
         });
+
+        // Validate that invalid multi-value map parameter types trigger an exception
+        getAllMethods(InvalidMultiValueMapService.class,
+                      method -> !Modifier.isPrivate(method.getModifiers())).forEach(
+                method -> assertThatThrownBy(() -> AnnotatedValueResolver.ofServiceMethod(
+                        method, pathParams, objectResolvers, false, noopDependencyInjector, null))
+                        .isInstanceOf(IllegalArgumentException.class)
+                        .hasMessageContaining("Invalid parameterized map value type")
+        );
     }
 
     @Test
@@ -364,7 +376,7 @@ class AnnotatedValueResolverTest {
                     }
                 }
             } else {
-                if (QUERY_PARAM_MAP.equals(resolver.httpElementName())) {
+                if (queryParamMaps.contains(resolver.httpElementName())) {
                     assertThat(resolver.defaultValue()).isNull();
                 } else {
                     assertThat(resolver.defaultValue()).isNotNull();
@@ -376,7 +388,7 @@ class AnnotatedValueResolverTest {
                             .isEqualTo(resolver.elementType());
                 } else if (resolver.shouldWrapValueAsOptional()) {
                     assertThat(value).isEqualTo(Optional.of(resolver.defaultValue()));
-                } else if (QUERY_PARAM_MAP.equals(resolver.httpElementName())) {
+                } else if (queryParamMaps.contains(resolver.httpElementName())) {
                     assertThat(value).isNotNull();
                     assertThat(value).isInstanceOf(Map.class);
                     assertThat((Map<?, ?>) value).size()
@@ -459,6 +471,8 @@ class AnnotatedValueResolverTest {
                      @Param @Default List<String> emptyParam3,
                      @Param @Default List<Integer> emptyParam4,
                      @Param Map<String, Object> queryParamMap,
+                     @Param Map<String, List<Object>> queryParamListMap,
+                     @Param Map<String, Set<Object>> queryParamSetMap,
                      @Header List<String> header1,
                      @Header("header1") Optional<List<ValueEnum>> optionalHeader1,
                      @Header String header2,
@@ -519,7 +533,7 @@ class AnnotatedValueResolverTest {
                 Queue<String> successQueueToQueue,
                 @Attribute("failCastListToSet")
                 Set<String> failCastListToSet
-        ) { }
+        ) {}
 
         void time(@Param @Default("PT20.345S") Duration duration,
                   @Param @Default("2007-12-03T10:15:30.00Z") Instant instant,
@@ -532,6 +546,10 @@ class AnnotatedValueResolverTest {
                   @Param @Default("2007-12-03T10:15:30+01:00[Europe/Paris]") ZonedDateTime zonedDateTime,
                   @Param @Default("America/New_York") ZoneId zoneId,
                   @Param @Default("+01:00:00") ZoneOffset zoneOffset) {}
+    }
+
+    static class InvalidMultiValueMapService {
+        void invalidParamWithMapOfMap(@Param Map<String, Map<String, String>> param) {}
     }
 
     private static Map<String, AttributeKey<?>> injectFailCaseOfAttrKeyToServiceContextForAttributeTest() {

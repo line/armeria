@@ -444,8 +444,8 @@ public final class Flags {
     private static final ResponseTimeoutMode RESPONSE_TIMEOUT_MODE =
             getValue(FlagsProvider::responseTimeoutMode, "responseTimeoutMode");
 
-    private static final boolean JSON_CONTENT_LOGGING =
-            getValue(FlagsProvider::jsonContentLogging, "jsonContentLogging");
+    private static final boolean ANNOTATED_SERVICE_CONTENT_LOGGING =
+            getValue(FlagsProvider::annotatedServiceContentLogging, "annotatedServiceContentLogging");
 
     /**
      * Returns the specification of the {@link Sampler} that determines whether to retain the stack
@@ -1670,11 +1670,11 @@ public final class Flags {
      * by default when a {@link LoggingService} is added.
      *
      * <p>By default, this option is enabled. Specify the
-     * {@code -Dcom.linecorp.armeria.jsonContentLogging=false} JVM option to
+     * {@code -Dcom.linecorp.armeria.annotatedServiceContentLogging=false} JVM option to
      * override the default value.
      */
-    public static boolean jsonContentLogging() {
-        return JSON_CONTENT_LOGGING;
+    public static boolean annotatedServiceContentLogging() {
+        return ANNOTATED_SERVICE_CONTENT_LOGGING;
     }
 
     @Nullable

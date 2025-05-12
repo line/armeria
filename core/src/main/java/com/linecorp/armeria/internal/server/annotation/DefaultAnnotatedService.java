@@ -53,6 +53,7 @@ import com.linecorp.armeria.common.ResponseHeadersBuilder;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.logging.RequestLogProperty;
 import com.linecorp.armeria.common.logging.masker.BeanFieldInfo;
+import com.linecorp.armeria.common.logging.RequestLogProperty;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.common.util.UnmodifiableFuture;
@@ -357,7 +358,7 @@ final class DefaultAnnotatedService implements AnnotatedService {
     }
 
     private static void deferRequestContent(ServiceRequestContext ctx, HttpRequest req) {
-        if (!Flags.jsonContentLogging()) {
+        if (!Flags.annotatedServiceContentLogging()) {
             return;
         }
         // the deferred content is always set when either:
@@ -425,17 +426,17 @@ final class DefaultAnnotatedService implements AnnotatedService {
     }
 
     private void maybeLogRequestContent(ServiceRequestContext ctx, Object[] arguments) {
-        if (!Flags.jsonContentLogging()) {
+        if (!Flags.annotatedServiceContentLogging()) {
             return;
         }
-        ctx.logBuilder().requestContent(new DefaultAnnotatedRequest(arguments, paramBeanFieldInfos), arguments);
+        ctx.logBuilder().requestContent(new AnnotatedRequest(arguments, paramBeanFieldInfos), arguments);
     }
 
     private void maybeLogResponseContent(ServiceRequestContext ctx, @Nullable Object value) {
-        if (!Flags.jsonContentLogging()) {
+        if (!Flags.annotatedServiceContentLogging()) {
             return;
         }
-        final DefaultAnnotatedResponse responseContent = new DefaultAnnotatedResponse(value, retBeanFieldInfo);
+        final AnnotatedResponse responseContent = new AnnotatedResponse(value, retBeanFieldInfo);
         ctx.logBuilder().responseContent(responseContent, value);
     }
 

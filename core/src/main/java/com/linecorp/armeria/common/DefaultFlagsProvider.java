@@ -520,7 +520,7 @@ final class DefaultFlagsProvider implements FlagsProvider {
     }
 
     @Override
-    public Boolean jsonContentLogging() {
+    public Boolean annotatedServiceContentLogging() {
         return true;
     }
 }

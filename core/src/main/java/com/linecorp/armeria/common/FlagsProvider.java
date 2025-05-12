@@ -1257,12 +1257,12 @@ public interface FlagsProvider {
      * by default when a {@link LoggingService} is added.
      *
      * <p>By default, this option is enabled. Specify the
-     * {@code -Dcom.linecorp.armeria.jsonContentLogging=false} JVM option to
+     * {@code -Dcom.linecorp.armeria.annotatedServiceContentLogging=false} JVM option to
      * override the default value.
      */
     @Nullable
     @UnstableApi
-    default Boolean jsonContentLogging() {
+    default Boolean annotatedServiceContentLogging() {
         return null;
     }
 }

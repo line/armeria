@@ -14,19 +14,32 @@
  * under the License.
  */
 
-package com.linecorp.armeria.common;
+package com.linecorp.armeria.internal.server.annotation;
+
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+import com.google.common.base.MoreObjects;
 
 import com.linecorp.armeria.common.annotation.Nullable;
-import com.linecorp.armeria.server.annotation.AnnotatedService;
 
-/**
- * A response for an {@link AnnotatedService}.
- */
-public interface AnnotatedResponse {
+@JsonSerialize(using = AnnotatedResponseJsonSerializer.class)
+final class AnnotatedResponse {
 
-    /**
-     * The return value for an {@link AnnotatedService} method.
-     */
     @Nullable
-    Object value();
+    private final Object value;
+
+    AnnotatedResponse(@Nullable Object value) {
+        this.value = value;
+    }
+
+    @Nullable
+    public Object value() {
+        return value;
+    }
+
+    @Override
+    public String toString() {
+        return MoreObjects.toStringHelper(this)
+                          .add("value", value)
+                          .toString();
+    }
 }

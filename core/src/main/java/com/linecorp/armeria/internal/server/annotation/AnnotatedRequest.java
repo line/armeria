@@ -16,37 +16,32 @@
 
 package com.linecorp.armeria.internal.server.annotation;
 
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
+
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.google.common.base.MoreObjects;
 
-import com.linecorp.armeria.common.AnnotatedResponse;
 import com.linecorp.armeria.common.annotation.Nullable;
-import com.linecorp.armeria.common.logging.masker.BeanFieldInfo;
 
-public final class DefaultAnnotatedResponse implements AnnotatedResponse {
+@JsonSerialize(using = AnnotatedRequestJsonSerializer.class)
+final class AnnotatedRequest {
 
-    @Nullable
-    private final Object value;
-    private final BeanFieldInfo beanFieldInfo;
+    private final List<@Nullable Object> parameters;
 
-    DefaultAnnotatedResponse(@Nullable Object value, BeanFieldInfo beanFieldInfo) {
-        this.value = value;
-        this.beanFieldInfo = beanFieldInfo;
+    AnnotatedRequest(Object[] parameters) {
+        this.parameters = Collections.unmodifiableList(Arrays.asList(parameters));
     }
 
-    @Nullable
-    @Override
-    public Object value() {
-        return value;
-    }
-
-    public BeanFieldInfo beanFieldInfo() {
-        return beanFieldInfo;
+    public List<@Nullable Object> parameters() {
+        return parameters;
     }
 
     @Override
     public String toString() {
         return MoreObjects.toStringHelper(this)
-                          .add("value", value)
+                          .add("parameters", parameters)
                           .toString();
     }
 }
