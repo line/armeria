@@ -47,12 +47,12 @@ public final class BraveRpcService extends AbstractBraveService<RpcServerRequest
 
     private static final RpcRequestParser defaultRequestParser = (request, context, span) -> {
         RpcRequestParser.DEFAULT.parse(request, context, span);
-        BraveRpcServerParsers.requestParser().parse(request, context, span);
+        BraveServerParsers.rpcRequestParser().parse(request, context, span);
     };
 
     private static final RpcResponseParser defaultResponseParser = (response, context, span) -> {
         RpcResponseParser.DEFAULT.parse(response, context, span);
-        BraveRpcServerParsers.responseParser().parse(response, context, span);
+        BraveServerParsers.rpcResponseParser().parse(response, context, span);
     };
 
     /**

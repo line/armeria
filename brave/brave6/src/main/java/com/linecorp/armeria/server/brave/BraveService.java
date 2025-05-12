@@ -49,13 +49,13 @@ public final class BraveService extends AbstractBraveService<HttpServerRequest, 
     @VisibleForTesting
     static final HttpRequestParser defaultRequestParser = (request, context, span) -> {
         HttpRequestParser.DEFAULT.parse(request, context, span);
-        BraveHttpServerParsers.requestParser().parse(request, context, span);
+        BraveServerParsers.httpRequestParser().parse(request, context, span);
     };
 
     @VisibleForTesting
     static final HttpResponseParser defaultResponseParser = (response, context, span) -> {
         HttpResponseParser.DEFAULT.parse(response, context, span);
-        BraveHttpServerParsers.responseParser().parse(response, context, span);
+        BraveServerParsers.httpResponseParser().parse(response, context, span);
     };
 
     static final Scope SERVICE_REQUEST_DECORATING_SCOPE = new Scope() {

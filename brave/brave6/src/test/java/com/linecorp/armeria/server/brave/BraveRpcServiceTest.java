@@ -68,11 +68,11 @@ class BraveRpcServiceTest {
                     RpcTracing.newBuilder(tracing)
                               .serverRequestParser((request, context, span) -> {
                                   RpcRequestParser.DEFAULT.parse(request, context, span);
-                                  BraveRpcServerParsers.requestParser().parse(request, context, span);
+                                  BraveServerParsers.rpcRequestParser().parse(request, context, span);
                               })
                               .serverResponseParser((response, context, span) -> {
                                   RpcResponseParser.DEFAULT.parse(response, context, span);
-                                  BraveRpcServerParsers.responseParser().parse(response, context, span);
+                                  BraveServerParsers.rpcResponseParser().parse(response, context, span);
                               })
                               .serverSampler(req -> {
                                   final ServiceRequestContext ctx = (ServiceRequestContext) req.unwrap();
