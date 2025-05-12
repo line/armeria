@@ -15,6 +15,8 @@
  */
 package com.linecorp.armeria.client;
 
+import static java.util.Objects.requireNonNull;
+
 import java.net.InetSocketAddress;
 
 import com.linecorp.armeria.common.SessionProtocol;
@@ -135,5 +137,43 @@ public interface ConnectionPoolListener extends Unwrappable, SafeCloseable {
     @Override
     default void close() {
         // Do nothing by default.
+    }
+
+    /**
+     * Returns a new {@link ConnectionPoolListener} which combines two {@link ConnectionPoolListener}s.
+     */
+    @UnstableApi
+    default ConnectionPoolListener andThen(ConnectionPoolListener nextConnectionPoolListener) {
+        requireNonNull(nextConnectionPoolListener, "nextConnectionPoolListener");
+        return new ConnectionPoolListener() {
+            @Override
+            public void connectionOpen(SessionProtocol protocol, InetSocketAddress remoteAddr,
+                                       InetSocketAddress localAddr, AttributeMap attrs) throws Exception {
+                try {
+                    ConnectionPoolListener.this.connectionOpen(protocol, remoteAddr, localAddr, attrs);
+                } finally {
+                    nextConnectionPoolListener.connectionOpen(protocol, remoteAddr,localAddr,attrs);
+                }
+            }
+
+            @Override
+            public void connectionClosed(SessionProtocol protocol, InetSocketAddress remoteAddr,
+                                         InetSocketAddress localAddr, AttributeMap attrs) throws Exception {
+                try {
+                    ConnectionPoolListener.this.connectionClosed(protocol, remoteAddr, localAddr, attrs);
+                } finally {
+                    nextConnectionPoolListener.connectionClosed(protocol, remoteAddr,localAddr,attrs);
+                }
+            }
+
+            @Override
+            public void close() {
+                try {
+                    ConnectionPoolListener.super.close();
+                } finally {
+                    nextConnectionPoolListener.close();
+                }
+            }
+        };
     }
 }
