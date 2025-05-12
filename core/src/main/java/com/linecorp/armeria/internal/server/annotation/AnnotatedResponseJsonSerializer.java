@@ -25,15 +25,15 @@ import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.databind.JsonSerializer;
 import com.fasterxml.jackson.databind.SerializerProvider;
 
-final class AnnotatedResponseJsonSerializer extends JsonSerializer<DefaultAnnotatedResponse> {
+final class AnnotatedResponseJsonSerializer extends JsonSerializer<AnnotatedResponse> {
 
     @Override
-    public Class<DefaultAnnotatedResponse> handledType() {
-        return DefaultAnnotatedResponse.class;
+    public Class<AnnotatedResponse> handledType() {
+        return AnnotatedResponse.class;
     }
 
     @Override
-    public void serialize(DefaultAnnotatedResponse value, JsonGenerator gen, SerializerProvider serializers)
+    public void serialize(AnnotatedResponse value, JsonGenerator gen, SerializerProvider serializers)
             throws IOException {
         gen.writeStartObject();
         gen.writeFieldName("value");

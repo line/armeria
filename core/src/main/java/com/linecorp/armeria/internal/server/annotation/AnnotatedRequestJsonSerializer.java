@@ -36,15 +36,15 @@ import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.multipart.Multipart;
 import com.linecorp.armeria.common.multipart.MultipartFile;
 
-final class AnnotatedRequestJsonSerializer extends JsonSerializer<DefaultAnnotatedRequest> {
+final class AnnotatedRequestJsonSerializer extends JsonSerializer<AnnotatedRequest> {
 
     @Override
-    public Class<DefaultAnnotatedRequest> handledType() {
-        return DefaultAnnotatedRequest.class;
+    public Class<AnnotatedRequest> handledType() {
+        return AnnotatedRequest.class;
     }
 
     @Override
-    public void serialize(DefaultAnnotatedRequest value, JsonGenerator gen, SerializerProvider serializers)
+    public void serialize(AnnotatedRequest value, JsonGenerator gen, SerializerProvider serializers)
             throws IOException {
         gen.writeStartObject();
         gen.writeFieldName("params");

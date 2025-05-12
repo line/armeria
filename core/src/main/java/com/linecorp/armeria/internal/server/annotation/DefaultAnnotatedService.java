@@ -415,14 +415,14 @@ final class DefaultAnnotatedService implements AnnotatedService {
         if (!Flags.annotatedServiceContentLogging()) {
             return;
         }
-        ctx.logBuilder().requestContent(new DefaultAnnotatedRequest(arguments), arguments);
+        ctx.logBuilder().requestContent(new AnnotatedRequest(arguments), arguments);
     }
 
     private static void maybeLogResponseContent(ServiceRequestContext ctx, @Nullable Object value) {
         if (!Flags.annotatedServiceContentLogging()) {
             return;
         }
-        final DefaultAnnotatedResponse responseContent = new DefaultAnnotatedResponse(value);
+        final AnnotatedResponse responseContent = new AnnotatedResponse(value);
         ctx.logBuilder().responseContent(responseContent, value);
     }
 

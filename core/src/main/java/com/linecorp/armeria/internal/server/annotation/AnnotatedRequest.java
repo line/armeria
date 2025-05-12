@@ -23,19 +23,17 @@ import java.util.List;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.google.common.base.MoreObjects;
 
-import com.linecorp.armeria.common.AnnotatedRequest;
 import com.linecorp.armeria.common.annotation.Nullable;
 
 @JsonSerialize(using = AnnotatedRequestJsonSerializer.class)
-final class DefaultAnnotatedRequest implements AnnotatedRequest {
+final class AnnotatedRequest {
 
     private final List<@Nullable Object> parameters;
 
-    DefaultAnnotatedRequest(Object[] parameters) {
+    AnnotatedRequest(Object[] parameters) {
         this.parameters = Collections.unmodifiableList(Arrays.asList(parameters));
     }
 
-    @Override
     public List<@Nullable Object> parameters() {
         return parameters;
     }

@@ -19,21 +19,19 @@ package com.linecorp.armeria.internal.server.annotation;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.google.common.base.MoreObjects;
 
-import com.linecorp.armeria.common.AnnotatedResponse;
 import com.linecorp.armeria.common.annotation.Nullable;
 
 @JsonSerialize(using = AnnotatedResponseJsonSerializer.class)
-final class DefaultAnnotatedResponse implements AnnotatedResponse {
+final class AnnotatedResponse {
 
     @Nullable
     private final Object value;
 
-    DefaultAnnotatedResponse(@Nullable Object value) {
+    AnnotatedResponse(@Nullable Object value) {
         this.value = value;
     }
 
     @Nullable
-    @Override
     public Object value() {
         return value;
     }

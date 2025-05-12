@@ -26,8 +26,6 @@ import com.linecorp.armeria.client.ClientRequestContextCaptor;
 import com.linecorp.armeria.client.Clients;
 import com.linecorp.armeria.client.logging.ContentPreviewingClient;
 import com.linecorp.armeria.client.logging.LoggingClient;
-import com.linecorp.armeria.common.AnnotatedRequest;
-import com.linecorp.armeria.common.AnnotatedResponse;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.server.ServerBuilder;
@@ -113,14 +111,12 @@ class ContentPreviewInLogFormatterTest {
 
     private static void assertContentExists(RequestLogAccess logAccess) {
         final RequestLog log = logAccess.whenComplete().join();
-        assertThat(log.requestContent()).isInstanceOf(AnnotatedRequest.class);
-        assertThat(log.responseContent()).isInstanceOf(AnnotatedResponse.class);
 
         final LogFormatter textLogFormatter = LogFormatter.ofText();
         assertThat(textLogFormatter.formatRequest(log))
-                .contains(", content=DefaultAnnotatedRequest{parameters=[Hello]}");
+                .contains(", content=AnnotatedRequest{parameters=[Hello]}");
         assertThat(textLogFormatter.formatResponse(log))
-                .contains(", content=DefaultAnnotatedResponse{value=World}");
+                .contains(", content=AnnotatedResponse{value=World}");
         final LogFormatter jsonLogFormatter = LogFormatter.ofJson();
         assertThat(jsonLogFormatter.formatRequest(log)).contains("\"content\":{\"params\":[\"Hello\"]}");
         assertThat(jsonLogFormatter.formatResponse(log)).contains("\"content\":{\"value\":\"World\"}");
