@@ -29,6 +29,7 @@ import com.linecorp.armeria.client.logging.LoggingClient;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.server.ServerBuilder;
+import com.linecorp.armeria.server.annotation.Post;
 import com.linecorp.armeria.server.logging.ContentPreviewingService;
 import com.linecorp.armeria.server.logging.LoggingService;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
@@ -46,6 +47,14 @@ class ContentPreviewInLogFormatterTest {
                     return HttpResponse.of("World");
                 }));
             });
+            sb.annotatedService()
+                    .pathPrefix("/bar")
+                    .build(new Object() {
+                        @Post
+                        public String hello(String hello) {
+                            return "World";
+                        }
+                    });
         }
     };
 
@@ -67,16 +76,49 @@ class ContentPreviewInLogFormatterTest {
         }
     }
 
+    @Test
+    void annotatedService() throws InterruptedException {
+        final BlockingWebClient client = server.blockingWebClient(cb -> {
+            cb.decorator(LoggingClient.newDecorator())
+              .decorator(ContentPreviewingClient.newDecorator(10000));
+        });
+
+        try (ClientRequestContextCaptor captor = Clients.newContextCaptor()) {
+            client.prepare()
+                  .post("/bar")
+                  .content(MediaType.PLAIN_TEXT_UTF_8, "Hello")
+                  .execute();
+            final RequestLogAccess log = captor.get().log();
+            assertContentPreview(log);
+            final RequestLogAccess slog = server.requestContextCaptor().take().log();
+            assertContentPreview(slog);
+            assertContentExists(slog);
+        }
+    }
+
     private static void assertContentPreview(RequestLogAccess logAccess) {
         final RequestLog log = logAccess.whenComplete().join();
         assertThat(log.requestContentPreview()).isEqualTo("Hello");
         assertThat(log.responseContentPreview()).isEqualTo("World");
 
         final LogFormatter textLogFormatter = LogFormatter.ofText();
-        assertThat(textLogFormatter.formatRequest(log)).contains(", content=Hello");
-        assertThat(textLogFormatter.formatResponse(log)).contains(", content=World");
+        assertThat(textLogFormatter.formatRequest(log)).contains(", preview=Hello");
+        assertThat(textLogFormatter.formatResponse(log)).contains(", preview=World");
         final LogFormatter jsonLogFormatter = LogFormatter.ofJson();
-        assertThat(jsonLogFormatter.formatRequest(log)).contains("\"content\":\"Hello\"");
-        assertThat(jsonLogFormatter.formatResponse(log)).contains("\"content\":\"World\"");
+        assertThat(jsonLogFormatter.formatRequest(log)).contains("\"preview\":\"Hello\"");
+        assertThat(jsonLogFormatter.formatResponse(log)).contains("\"preview\":\"World\"");
+    }
+
+    private static void assertContentExists(RequestLogAccess logAccess) {
+        final RequestLog log = logAccess.whenComplete().join();
+
+        final LogFormatter textLogFormatter = LogFormatter.ofText();
+        assertThat(textLogFormatter.formatRequest(log))
+                .contains(", content=AnnotatedRequest{parameters=[Hello]}");
+        assertThat(textLogFormatter.formatResponse(log))
+                .contains(", content=AnnotatedResponse{value=World}");
+        final LogFormatter jsonLogFormatter = LogFormatter.ofJson();
+        assertThat(jsonLogFormatter.formatRequest(log)).contains("\"content\":{\"params\":[\"Hello\"]}");
+        assertThat(jsonLogFormatter.formatResponse(log)).contains("\"content\":{\"value\":\"World\"}");
     }
 }
