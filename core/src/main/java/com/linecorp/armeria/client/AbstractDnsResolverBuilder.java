@@ -553,9 +553,15 @@ public abstract class AbstractDnsResolverBuilder<SELF extends AbstractDnsResolve
         final boolean dnsQueryMetricsEnabled = this.dnsQueryMetricsEnabled;
         final boolean decodeIdn = this.decodeIdn;
 
+        Class<? extends SocketChannel> socketChannelType = this.socketChannelType;
+        if (socketChannelType == null) {
+            socketChannelType = TransportType.socketChannelType(eventLoopGroup);
+        }
+        final Class<? extends SocketChannel> finalSocketChannelType = socketChannelType;
+
         return builder -> {
-            builder.channelType(TransportType.datagramChannelType(eventLoopGroup))
-                   .socketChannelType(TransportType.socketChannelType(eventLoopGroup))
+            builder.datagramChannelType(TransportType.datagramChannelType(eventLoopGroup))
+                   .socketChannelType(finalSocketChannelType, retrySocketChannelOnTimeout)
                    // Disable all caches provided by Netty and use DnsCache instead.
                    .resolveCache(NoopDnsCache.INSTANCE)
                    .authoritativeDnsServerCache(NoopAuthoritativeDnsServerCache.INSTANCE)
@@ -603,9 +609,6 @@ public abstract class AbstractDnsResolverBuilder<SELF extends AbstractDnsResolve
             if (datagramChannelStrategy != null) {
                 builder.datagramChannelStrategy(datagramChannelStrategy);
             }
-            final Class<? extends SocketChannel> socketChannelType = this.socketChannelType;
-            final boolean retrySocketChannelOnTimeout = this.retrySocketChannelOnTimeout;
-            builder.socketChannelType(socketChannelType, retrySocketChannelOnTimeout);
         };
     }
 }

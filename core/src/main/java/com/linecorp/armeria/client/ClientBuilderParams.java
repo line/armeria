@@ -23,6 +23,7 @@ import java.net.URI;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.common.Scheme;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 
 /**
  * Provides the construction parameters of a client.
@@ -36,7 +37,9 @@ public interface ClientBuilderParams {
         requireNonNull(uri, "uri");
         requireNonNull(type, "type");
         requireNonNull(options, "options");
-        return new DefaultClientBuilderParams(uri, type, options);
+        return new ClientBuilderParamsBuilder(uri).options(options)
+                                                  .clientType(type)
+                                                  .build();
     }
 
     /**
@@ -48,7 +51,10 @@ public interface ClientBuilderParams {
         requireNonNull(endpointGroup, "endpointGroup");
         requireNonNull(type, "type");
         requireNonNull(options, "options");
-        return new DefaultClientBuilderParams(scheme, endpointGroup, absolutePathRef, type, options);
+        return new ClientBuilderParamsBuilder(scheme, endpointGroup, absolutePathRef)
+                .clientType(type)
+                .options(options)
+                .build();
     }
 
     /**
@@ -80,4 +86,13 @@ public interface ClientBuilderParams {
      * Returns the options of the client.
      */
     ClientOptions options();
+
+    /**
+     * Returns a {@link ClientBuilderParamsBuilder} which allows creation of a new
+     * {@link ClientBuilderParams} based on the current properties.
+     */
+    @UnstableApi
+    default ClientBuilderParamsBuilder paramsBuilder() {
+        return new ClientBuilderParamsBuilder(this);
+    }
 }
