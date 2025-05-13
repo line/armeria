@@ -33,7 +33,6 @@ import com.linecorp.armeria.common.logging.MaskingStructs.Parent.SimpleFoo;
 import com.linecorp.armeria.common.logging.MaskingStructs.Parent.SimpleFoo.HelloFieldAnn;
 import com.linecorp.armeria.common.logging.MaskingStructs.Parent.SimpleFoo.InnerFoo;
 import com.linecorp.armeria.internal.common.JacksonUtil;
-import com.linecorp.armeria.internal.server.annotation.BeanFieldMaskerSelector;
 
 class MaskingSerdeTest {
 

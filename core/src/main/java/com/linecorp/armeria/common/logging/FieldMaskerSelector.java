@@ -19,8 +19,6 @@ package com.linecorp.armeria.common.logging;
 import java.util.function.Function;
 
 import com.linecorp.armeria.common.annotation.UnstableApi;
-import com.linecorp.armeria.internal.server.annotation.BeanFieldInfo;
-import com.linecorp.armeria.internal.server.annotation.BeanFieldMaskerSelector;
 
 /**
  * A {@link FieldMaskerSelector} determines whether each field should be masked based on the provided

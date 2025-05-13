@@ -26,6 +26,7 @@ import com.google.common.base.MoreObjects;
 import com.google.common.base.Objects;
 
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.logging.BeanFieldInfo;
 
 final class JacksonBeanFieldInfo implements BeanFieldInfo {
 

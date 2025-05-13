@@ -35,7 +35,6 @@ import com.google.common.collect.ImmutableMap;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.internal.common.JacksonUtil;
 import com.linecorp.armeria.internal.common.logging.FieldMaskerSelectorProvider;
-import com.linecorp.armeria.internal.server.annotation.BeanFieldMaskerSelector;
 import com.linecorp.armeria.server.annotation.AnnotatedService;
 
 /**

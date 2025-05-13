@@ -14,13 +14,12 @@
  * under the License.
  */
 
-package com.linecorp.armeria.internal.server.annotation;
+package com.linecorp.armeria.common.logging;
 
 import java.lang.annotation.Annotation;
 
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
-import com.linecorp.armeria.common.logging.FieldMasker;
 
 /**
  * Holds information about a POJO field.

@@ -23,6 +23,7 @@ import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 
 import com.linecorp.armeria.common.annotation.UnstableApi;
+import com.linecorp.armeria.common.logging.BeanFieldMaskerSelector;
 import com.linecorp.armeria.internal.common.logging.FieldMaskerSelectorProvider;
 
 /**

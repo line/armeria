@@ -33,6 +33,7 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.QueryParams;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.logging.BeanFieldInfo;
 import com.linecorp.armeria.common.logging.FieldMasker;
 import com.linecorp.armeria.common.multipart.Multipart;
 import com.linecorp.armeria.common.multipart.MultipartFile;

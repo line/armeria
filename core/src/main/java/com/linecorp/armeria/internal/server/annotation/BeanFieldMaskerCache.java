@@ -23,6 +23,8 @@ import java.util.List;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 
+import com.linecorp.armeria.common.logging.BeanFieldInfo;
+import com.linecorp.armeria.common.logging.BeanFieldMaskerSelector;
 import com.linecorp.armeria.common.logging.FieldMasker;
 
 final class BeanFieldMaskerCache {

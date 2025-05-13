@@ -19,6 +19,7 @@ package com.linecorp.armeria.internal.server.annotation;
 import com.google.common.base.MoreObjects;
 
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.logging.BeanFieldInfo;
 
 final class AnnotatedResponse {
 

@@ -36,8 +36,6 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.logging.MaskingStructs.Parent.SimpleFoo;
-import com.linecorp.armeria.internal.server.annotation.BeanFieldInfo;
-import com.linecorp.armeria.internal.server.annotation.BeanFieldMaskerSelector;
 
 class BeanFieldMaskerSelectorTest {
 

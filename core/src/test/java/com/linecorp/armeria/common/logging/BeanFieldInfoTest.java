@@ -36,8 +36,6 @@ import com.linecorp.armeria.common.logging.MaskingStructs.Parent.Child.Inner1.Be
 import com.linecorp.armeria.common.logging.MaskingStructs.Parent.Child.ListFieldAnn1;
 import com.linecorp.armeria.common.logging.MaskingStructs.Parent.FieldAnn4;
 import com.linecorp.armeria.common.logging.MaskingStructs.Parent.Inner4.BeanAnn4;
-import com.linecorp.armeria.internal.server.annotation.BeanFieldInfo;
-import com.linecorp.armeria.internal.server.annotation.BeanFieldMaskerSelector;
 
 class BeanFieldInfoTest {
 
