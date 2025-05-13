@@ -6828,6 +6828,7 @@ quebec
 quest
 quicksytes.com
 quizzes.cx
+qzz.io
 r.bg
 r.cdn77.net
 r.se
@@ -9594,6 +9595,7 @@ xn--zf0avx.hk
 xn--zfr164b
 xnbay.com
 xs4all.space
+xx.kg
 xxx
 xyz
 xz.cn
