@@ -145,6 +145,12 @@ abstract class AbstractRoot<T extends Snapshot<? extends XdsResource>>
         }
     }
 
+    @Nullable
+    @VisibleForTesting
+    T current() {
+        return snapshot;
+    }
+
     @VisibleForTesting
     boolean closed() {
         return closed;

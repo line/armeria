@@ -22,12 +22,8 @@ import com.linecorp.armeria.common.annotation.Nullable;
 
 interface LoadBalancer {
 
-    LoadBalancer NOOP = new LoadBalancer() {
-        @Override
-        public @Nullable Endpoint selectNow(ClientRequestContext ctx) {
-            return null;
-        }
-    };
+    @Nullable
+    PrioritySet prioritySet();
 
     @Nullable
     Endpoint selectNow(ClientRequestContext ctx);

@@ -27,7 +27,7 @@ import static com.linecorp.armeria.xds.XdsTestResources.stringValue;
 import static com.linecorp.armeria.xds.client.endpoint.XdsConstants.SUBSET_LOAD_BALANCING_FILTER_NAME;
 import static com.linecorp.armeria.xds.client.endpoint.XdsConverterUtilTest.sampleClusterLoadAssignment;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.awaitility.Awaitility.await;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.util.List;
 
@@ -39,11 +39,15 @@ import org.junit.jupiter.params.provider.CsvSource;
 import com.google.common.collect.ImmutableList;
 import com.google.protobuf.Struct;
 
-import com.linecorp.armeria.client.ClientRequestContext;
-import com.linecorp.armeria.client.Endpoint;
-import com.linecorp.armeria.client.endpoint.EndpointGroup;
+import com.linecorp.armeria.client.BlockingWebClient;
+import com.linecorp.armeria.client.DecoratingHttpClientFunction;
+import com.linecorp.armeria.client.RequestOptions;
+import com.linecorp.armeria.client.UnprocessedRequestException;
+import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
+import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.TimeoutException;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.grpc.GrpcService;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
@@ -71,11 +75,15 @@ import io.envoyproxy.envoy.config.listener.v3.Listener;
 
 class RouteMetadataSubsetTest {
 
+    private static final String GROUP_KEY = "key";
+    static final SimpleCache<String> cache = new SimpleCache<>(node -> GROUP_KEY);
+    private static final DecoratingHttpClientFunction selectedPortDecorator =
+            (delegate, ctx, req) -> HttpResponse.of(String.valueOf(ctx.endpoint().port()));
+
     @RegisterExtension
     static final ServerExtension server = new ServerExtension() {
         @Override
         protected void configure(ServerBuilder sb) {
-            final SimpleCache<String> cache = new SimpleCache<>(node -> "key");
             setupCache(cache);
             final V3DiscoveryServer v3DiscoveryServer = new V3DiscoveryServer(cache);
             sb.service(GrpcService.builder()
@@ -155,12 +163,15 @@ class RouteMetadataSubsetTest {
                 configSource, staticResourceListener(routeMetadataMatch1, clusterName),
                 bootstrapCluster);
         try (XdsBootstrap xdsBootstrap = XdsBootstrap.of(bootstrap);
-             EndpointGroup endpointGroup = XdsEndpointGroup.of("listener", xdsBootstrap)) {
-
-            await().untilAsserted(() -> assertThat(endpointGroup.whenReady()).isDone());
-            final ClientRequestContext ctx = ClientRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
-            assertThat(endpointGroup.selectNow(ctx)).isEqualTo(Endpoint.of("127.0.0.1", 8082));
-            assertThat(endpointGroup.selectNow(ctx)).isEqualTo(Endpoint.of("127.0.0.1", 8082));
+             XdsHttpPreprocessor preprocessor = XdsHttpPreprocessor.of("listener", xdsBootstrap)) {
+            final BlockingWebClient client = WebClient.builder(preprocessor)
+                                                      .decorator(selectedPortDecorator)
+                                                      .responseTimeoutMillis(1000)
+                                                      .build()
+                                                      .blocking();
+            assertThat(client.get("/").contentUtf8()).isEqualTo("8082");
+            assertThat(client.get("/").contentUtf8()).isEqualTo("8082");
+            assertThat(client.get("/").contentUtf8()).isEqualTo("8082");
         }
 
         final Metadata routeMetadataMatch3 = Metadata.newBuilder().putFilterMetadata(
@@ -171,16 +182,22 @@ class RouteMetadataSubsetTest {
                                                staticResourceListener(routeMetadataMatch3, clusterName),
                                                bootstrapCluster);
         try (XdsBootstrap xdsBootstrap = XdsBootstrap.of(bootstrap);
-             EndpointGroup endpointGroup = XdsEndpointGroup.of("listener", xdsBootstrap)) {
-
-            await().untilAsserted(() -> assertThat(endpointGroup.whenReady()).isDone());
-            final ClientRequestContext ctx = ClientRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
+             XdsHttpPreprocessor preprocessor = XdsHttpPreprocessor.of("listener", xdsBootstrap)) {
+            final BlockingWebClient client = WebClient.builder(preprocessor)
+                                                      .decorator(selectedPortDecorator)
+                                                      .responseTimeoutMillis(1000)
+                                                      .build()
+                                                      .blocking();
             if (noFallback) {
-                assertThat(endpointGroup.selectNow(ctx)).isNull();
+                assertThatThrownBy(() -> client.get("/"))
+                        .isInstanceOf(UnprocessedRequestException.class)
+                        .cause()
+                        .isInstanceOf(TimeoutException.class)
+                        .hasMessageContaining("Failed to select an endpoint");
             } else {
-                assertThat(endpointGroup.selectNow(ctx)).isEqualTo(Endpoint.of("127.0.0.1", 8080));
-                assertThat(endpointGroup.selectNow(ctx)).isEqualTo(Endpoint.of("127.0.0.1", 8081));
-                assertThat(endpointGroup.selectNow(ctx)).isEqualTo(Endpoint.of("127.0.0.1", 8082));
+                assertThat(client.get("/").contentUtf8()).isEqualTo("8080");
+                assertThat(client.get("/").contentUtf8()).isEqualTo("8081");
+                assertThat(client.get("/").contentUtf8()).isEqualTo("8082");
             }
         }
     }
@@ -220,25 +237,38 @@ class RouteMetadataSubsetTest {
 
         final Bootstrap bootstrap = staticBootstrap(listener, cluster);
         try (XdsBootstrap xdsBootstrap = XdsBootstrap.of(bootstrap);
-             EndpointGroup endpointGroup = XdsEndpointGroup.of("listener", xdsBootstrap)) {
-            await().untilAsserted(() -> assertThat(endpointGroup.whenReady()).isDone());
-            final ClientRequestContext ctx =
-                    ClientRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
+             XdsHttpPreprocessor preprocessor = XdsHttpPreprocessor.of("listener", xdsBootstrap)) {
+            final BlockingWebClient client = WebClient.builder(preprocessor)
+                                                      .decorator(selectedPortDecorator)
+                                                      .build()
+                                                      .blocking();
+            final HttpRequest req = HttpRequest.of(HttpMethod.GET, "/");
 
             final SettableXdsRandom random = new SettableXdsRandom();
-            ctx.setAttr(XdsAttributeKeys.XDS_RANDOM, random);
             // default overprovisioning factor (140) * 0.5 = 70 will be routed
             // to healthy endpoints for priority 0
             random.fixNextInt(RandomHint.SELECT_PRIORITY, 0);
-            assertThat(endpointGroup.selectNow(ctx)).isEqualTo(Endpoint.of("127.0.0.1", 8080));
+            RequestOptions reqOptions = RequestOptions.builder()
+                                                      .attr(ClientXdsAttributeKeys.XDS_RANDOM, random)
+                                                      .build();
+            assertThat(client.execute(req, reqOptions).contentUtf8()).isEqualTo("8080");
             random.fixNextInt(RandomHint.SELECT_PRIORITY, 68);
-            assertThat(endpointGroup.selectNow(ctx)).isEqualTo(Endpoint.of("127.0.0.1", 8080));
+            reqOptions = RequestOptions.builder()
+                                       .attr(ClientXdsAttributeKeys.XDS_RANDOM, random)
+                                       .build();
+            assertThat(client.execute(req, reqOptions).contentUtf8()).isEqualTo("8080");
 
             // 100 - 70 (priority 0) = 30 will be routed to healthy endpoints for priority 1
             random.fixNextInt(RandomHint.SELECT_PRIORITY, 70);
-            assertThat(endpointGroup.selectNow(ctx)).isEqualTo(Endpoint.of("127.0.0.1", 8082));
+            reqOptions = RequestOptions.builder()
+                                       .attr(ClientXdsAttributeKeys.XDS_RANDOM, random)
+                                       .build();
+            assertThat(client.execute(req, reqOptions).contentUtf8()).isEqualTo("8082");
             random.fixNextInt(RandomHint.SELECT_PRIORITY, 99);
-            assertThat(endpointGroup.selectNow(ctx)).isEqualTo(Endpoint.of("127.0.0.1", 8082));
+            reqOptions = RequestOptions.builder()
+                                       .attr(ClientXdsAttributeKeys.XDS_RANDOM, random)
+                                       .build();
+            assertThat(client.execute(req, reqOptions).contentUtf8()).isEqualTo("8082");
         }
     }
 }

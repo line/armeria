@@ -16,37 +16,75 @@
 
 package com.linecorp.armeria.xds;
 
+import static com.google.common.base.Preconditions.checkArgument;
+
 import java.util.HashMap;
 import java.util.Map;
 
+import com.google.common.base.Strings;
+
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.xds.client.endpoint.XdsClusterManager;
+import com.linecorp.armeria.xds.client.endpoint.XdsLoadBalancer;
 
 import io.envoyproxy.envoy.config.bootstrap.v3.Bootstrap;
 import io.envoyproxy.envoy.config.bootstrap.v3.Bootstrap.StaticResources;
 import io.envoyproxy.envoy.config.cluster.v3.Cluster;
 import io.grpc.Status;
+import io.netty.util.concurrent.EventExecutor;
 
 final class BootstrapClusters implements SnapshotWatcher<ClusterSnapshot> {
 
     private final Map<String, ClusterSnapshot> clusterSnapshots = new HashMap<>();
-    private final Map<String, Cluster> clusters = new HashMap<>();
+    private final Map<String, XdsLoadBalancer> loadBalancers = new HashMap<>();
+    private final XdsClusterManager clusterManager;
 
-    BootstrapClusters(Bootstrap bootstrap, XdsBootstrapImpl xdsBootstrap) {
+    BootstrapClusters(Bootstrap bootstrap, EventExecutor eventLoop, XdsClusterManager clusterManager) {
+        this.clusterManager = clusterManager;
+        final SubscriptionContext context = new StaticSubscriptionContext(eventLoop, clusterManager);
+
+        final String localClusterName = bootstrap.getClusterManager().getLocalClusterName();
+        if (!Strings.isNullOrEmpty(localClusterName) && bootstrap.getNode().hasLocality()) {
+            final Cluster bootstrapLocalCluster = localCluster(localClusterName, bootstrap);
+            checkArgument(bootstrapLocalCluster != null,
+                          "A static cluster must be defined for localClusterName '%s'",
+                          localClusterName);
+            checkArgument(!bootstrapLocalCluster.hasEdsClusterConfig(),
+                          "Static cluster '%s' cannot use EDS", localClusterName);
+            StaticResourceUtils.staticCluster(context, localClusterName, this, bootstrapLocalCluster);
+        }
+
         if (bootstrap.hasStaticResources()) {
             final StaticResources staticResources = bootstrap.getStaticResources();
             for (Cluster cluster : staticResources.getClustersList()) {
-                if (cluster.hasLoadAssignment()) {
-                    // no need to clean this cluster up since it is fully static
-                    StaticResourceUtils.staticCluster(xdsBootstrap, cluster.getName(), this, cluster);
+                if (clusterSnapshots.containsKey(cluster.getName())) {
+                    continue;
                 }
-                clusters.put(cluster.getName(), cluster);
+                checkArgument(!cluster.hasEdsClusterConfig(),
+                              "Static cluster '%s' cannot use EDS", cluster.getName());
+                StaticResourceUtils.staticCluster(context, cluster.getName(), this, cluster);
             }
         }
     }
 
+    @Nullable
+    private static Cluster localCluster(String localClusterName, Bootstrap bootstrap) {
+        for (Cluster cluster: bootstrap.getStaticResources().getClustersList()) {
+            if (localClusterName.equals(cluster.getName())) {
+                return cluster;
+            }
+        }
+        return null;
+    }
+
     @Override
     public void snapshotUpdated(ClusterSnapshot newSnapshot) {
-        clusterSnapshots.put(newSnapshot.xdsResource().name(), newSnapshot);
+        final String name = newSnapshot.xdsResource().name();
+        final XdsLoadBalancer loadBalancer = clusterManager.get(name);
+        if (loadBalancer != null) {
+            loadBalancers.put(name, loadBalancer);
+        }
+        clusterSnapshots.put(name, newSnapshot);
     }
 
     @Nullable
@@ -56,7 +94,16 @@ final class BootstrapClusters implements SnapshotWatcher<ClusterSnapshot> {
 
     @Nullable
     Cluster cluster(String clusterName) {
-        return clusters.get(clusterName);
+        final ClusterSnapshot clusterSnapshot = clusterSnapshots.get(clusterName);
+        if (clusterSnapshot == null) {
+            return null;
+        }
+        return clusterSnapshot.xdsResource().resource();
+    }
+
+    @Nullable
+    XdsLoadBalancer loadBalancer(String clusterName) {
+        return loadBalancers.get(clusterName);
     }
 
     @Override

@@ -19,8 +19,11 @@ package com.linecorp.armeria.xds;
 import com.google.common.base.MoreObjects;
 import com.google.common.base.Objects;
 
+import com.linecorp.armeria.client.ClientRequestContext;
+import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
+import com.linecorp.armeria.xds.client.endpoint.XdsLoadBalancer;
 
 import io.envoyproxy.envoy.config.cluster.v3.Cluster;
 
@@ -33,6 +36,9 @@ public final class ClusterSnapshot implements Snapshot<ClusterXdsResource> {
     @Nullable
     private final EndpointSnapshot endpointSnapshot;
     private final int index;
+
+    @Nullable
+    private XdsLoadBalancer loadBalancer;
 
     ClusterSnapshot(ClusterXdsResource clusterXdsResource,
                     @Nullable EndpointSnapshot endpointSnapshot, int index) {
@@ -56,6 +62,19 @@ public final class ClusterSnapshot implements Snapshot<ClusterXdsResource> {
     @Nullable
     public EndpointSnapshot endpointSnapshot() {
         return endpointSnapshot;
+    }
+
+    void loadBalancer(XdsLoadBalancer loadBalancer) {
+        this.loadBalancer = loadBalancer;
+    }
+
+    /**
+     * The {@link XdsLoadBalancer} which allows users to select an upstream {@link Endpoint} for a given
+     * {@link ClientRequestContext}.
+     */
+    @Nullable
+    public XdsLoadBalancer loadBalancer() {
+        return loadBalancer;
     }
 
     int index() {

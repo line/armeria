@@ -21,18 +21,19 @@ import static com.linecorp.armeria.xds.client.endpoint.XdsConstants.SUBSET_LOAD_
 import com.google.protobuf.Struct;
 
 import com.linecorp.armeria.client.ClientRequestContext;
+import com.linecorp.armeria.xds.internal.XdsAttributeKeys;
 
 import io.envoyproxy.envoy.config.core.v3.Metadata;
 
 final class MetadataUtil {
 
-    static Struct filterMetadata(ClientRequestContext ctx, Struct defaultMetadata) {
+    static Struct filterMetadata(ClientRequestContext ctx) {
         final Metadata metadataMatch = ctx.attr(XdsAttributeKeys.ROUTE_METADATA_MATCH);
         if (metadataMatch == null) {
-            return defaultMetadata;
+            return Struct.getDefaultInstance();
         }
         return metadataMatch.getFilterMetadataOrDefault(SUBSET_LOAD_BALANCING_FILTER_NAME,
-                                                        defaultMetadata);
+                                                        Struct.getDefaultInstance());
     }
 
     private MetadataUtil() {}
