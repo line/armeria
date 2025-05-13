@@ -140,13 +140,7 @@ export function isValidJsonMimeType(applicationType: string | null) {
 export function extractHeaderLines(headers: Headers): string[] {
   const headerLines: string[] = [];
   headers.forEach((value, name) => {
-    if (listHeaders.has(name.toLowerCase())) {
-      value.split(',').forEach((v) => {
-        headerLines.push(`${name}: ${v.trim()}`);
-      });
-    } else {
-      headerLines.push(`${name}: ${value}`);
-    }
+    headerLines.push(`${name}: ${value}`);
   });
   return headerLines;
 }
