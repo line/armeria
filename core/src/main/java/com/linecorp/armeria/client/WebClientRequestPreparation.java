@@ -498,6 +498,11 @@ public final class WebClientRequestPreparation
     }
 
     @Override
+    public WebClientRequestPreparation content(HttpData content) {
+        return (WebClientRequestPreparation) super.content(content);
+    }
+
+    @Override
     public WebClientRequestPreparation content(MediaType contentType, HttpData content) {
         return (WebClientRequestPreparation) super.content(contentType, content);
     }
