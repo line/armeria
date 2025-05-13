@@ -25,31 +25,6 @@ export enum SpecLoadingStatus {
   SUCCESS,
 }
 
-export const listHeaders = new Set([
-  'accept',
-  'accept-charset',
-  'accept-encoding',
-  'accept-language',
-  'allow',
-  'cache-control',
-  'connection',
-  'content-encoding',
-  'content-language',
-  'expect',
-  'if-match',
-  'if-none-match',
-  'pragma',
-  'proxy-authenticate',
-  'te',
-  'trailer',
-  'transfer-encoding',
-  'upgrade',
-  'vary',
-  'via',
-  'warning',
-  'www-authenticate',
-]);
-
 export interface ResponseData {
   body: string;
   headers: string[];
