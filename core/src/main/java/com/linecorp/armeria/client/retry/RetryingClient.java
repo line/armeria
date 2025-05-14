@@ -394,7 +394,7 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
 
             derivedCtx.log().whenAvailable(RequestLogProperty.RESPONSE_HEADERS).thenRun(() -> {
                 if (retryConfig.needsContentInRule() && responseCause == null) {
-                    final HttpResponse response0 = HttpResponse.of(headers, splitResponse.body());
+                    final HttpResponse response0 = splitResponse.unsplit();
                     final HttpResponseDuplicator duplicator =
                             response0.toDuplicator(derivedCtx.eventLoop().withoutContext(),
                                                    derivedCtx.maxResponseLength());
@@ -426,7 +426,7 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
                         splitResponse.body().abort(responseCause);
                         response0 = HttpResponse.ofFailure(responseCause);
                     } else {
-                        response0 = HttpResponse.of(headers, splitResponse.body());
+                        response0 = splitResponse.unsplit();
                     }
                     handleResponseWithoutContent(retryConfig, ctx, rootReqDuplicator, originalReq, returnedRes,
                                                  future, derivedCtx, response0, responseCause);

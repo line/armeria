@@ -20,6 +20,7 @@ import java.util.concurrent.CompletableFuture;
 
 import com.google.errorprone.annotations.CheckReturnValue;
 
+import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.stream.ByteStreamMessage;
 import com.linecorp.armeria.common.stream.StreamMessage;
 
@@ -41,4 +42,12 @@ public interface SplitHttpMessage {
      * returned {@link CompletableFuture} will be completed with an {@linkplain HttpHeaders#of() empty headers}.
      */
     CompletableFuture<HttpHeaders> trailers();
+
+    /**
+     * Combines the split {@link #body()}, {@link #trailers()} into a single {@link HttpMessage}.
+     *
+     * <p>Note that this method can only be used before subscribing to {@link #body()}.
+     */
+    @UnstableApi
+    HttpMessage unsplit();
 }

@@ -20,6 +20,8 @@ import java.util.concurrent.CompletableFuture;
 
 import org.reactivestreams.Subscriber;
 
+import com.linecorp.armeria.common.annotation.UnstableApi;
+
 /**
  * An {@link HttpResponse} which splits a stream of {@link HttpObject}s into HTTP headers and payloads.
  * {@link #headers()} will be completed before publishing the first {@link HttpData}.
@@ -35,4 +37,32 @@ public interface SplitHttpResponse extends SplitHttpMessage {
      * Returns a {@link CompletableFuture} completed with a non-informational {@link ResponseHeaders}.
      */
     CompletableFuture<ResponseHeaders> headers();
+
+    /**
+     * Combines the split {@link #headers()}, {@link #body()} and {@link #trailers()} into a single
+     * {@link HttpResponse}.
+     *
+     * <p>Note that this method can only be used before subscribing to {@link #body()}.
+     */
+    @UnstableApi
+    @Override
+    default HttpResponse unsplit() {
+        // TODO(ikhoon): Provide an optimized implementation for unsplit().
+        final CompletableFuture<HttpResponse> future = headers().handle((headers, cause) -> {
+            if (cause != null) {
+                return HttpResponse.ofFailure(cause);
+            }
+
+            final CompletableFuture<HttpHeaders> trailersFuture = trailers().thenApply(trailers -> {
+                if (trailers.isEmpty()) {
+                    // An empty trailers means that the response does not have trailers.
+                    return null;
+                } else {
+                    return trailers;
+                }
+            });
+            return HttpResponse.of(headers, body(), trailersFuture);
+        });
+        return HttpResponse.of(future);
+    }
 }
