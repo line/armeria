@@ -77,7 +77,7 @@ the [ResponseHeaders](type) is sent before the service receives the [HttpRequest
 ```
 
 On the other hand, `totalDurationNanos` of the client-side contains
-[connectionAcquisitionDuration](/docs/advanced-structured-logging#client-connection-timing-properties),
+[connectionAcquisitionDuration](/docs/advanced/structured-logging#client-connection-timing-properties),
 because a client may have to establish a new connection or acquire an existing connection from
 the connection pool before sending a request:
 
@@ -259,7 +259,7 @@ WebClient client = WebClient
 :::tip
 
 The reason why we used the static method is that the [ClientConnectionTimings](type) is stored using
-the attribute. See [RequestContext custom attributes](/docs/advanced-custom-attributes) for more information.
+the attribute. See [RequestContext custom attributes](/docs/advanced/custom-attributes) for more information.
 
 :::
 
@@ -414,4 +414,4 @@ ctx.log().whenComplete().thenAccept(log -> {
 ```
 
 [RetryingClient](type) is a good example that leverages this feature.
-See [RetryingClient with logging](/docs/client-retry#retryingclient-with-logging) for more information.
+See [RetryingClient with logging](/docs/client/retry#retryingclient-with-logging) for more information.

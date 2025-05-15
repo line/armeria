@@ -160,14 +160,14 @@ cb.decorator(ContentPreviewingClient.newDecorator(1000));
 ```
 
 [DecodingClient](type) decodes the content of HTTP responses. [ContentPreviewingClient](type) is 
-[Enabling content previews](/docs/advanced-structured-logging#enabling-content-previews)
+[Enabling content previews](/docs/advanced/structured-logging#enabling-content-previews)
 of the HTTP response by setting it to the [RequestLog](type). 
 Because it's evaluated after [DecodingClient](type) from the point of view of an
 HTTP response, which means that the response content is set after it's decoded, you will see the decoded
 response content preview. If the two decorators are added in the opposite order, you will get the encoded
 preview because [ContentPreviewingClient](type) is evaluated first for the HTTP response.
 For [RetryingClient](type), please check out 
-[`RetryingClient` with logging](/docs/client-retry#retryingclient-with-logging).
+[`RetryingClient` with logging](/docs/client/retry#retryingclient-with-logging).
 
 ## Modifying responses
 
@@ -288,13 +288,13 @@ try (ClientRequestContextCaptor captor = Clients.newContextCaptor()) {
 }
 ```
 
-See [Structured Logging](/docs/advanced-structured-logging) to learn more about the properties
+See [Structured Logging](/docs/advanced/structured-logging) to learn more about the properties
 you can retrieve.
 
 ## See also
 
-- [Decorating a service](/docs/server-decorator)
-- [`RequestContext` custom attributes](/docs/advanced-custom-attributes)
+- [Decorating a service](/docs/server/decorator)
+- [`RequestContext` custom attributes](/docs/advanced/custom-attributes)
 
 [separating concerns]: https://en.wikipedia.org/wiki/Separation_of_concerns
 [the decorator pattern]: https://en.wikipedia.org/wiki/Decorator_pattern

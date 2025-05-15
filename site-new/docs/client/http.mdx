@@ -68,21 +68,21 @@ You can enrich your [WebClient](type) by decorating it with decorators.
 A decorator wraps another client to intercept an outgoing request or an incoming response.
 A lot of core features such as logging, metrics and distributed tracing are implemented as decorators.
 
-- [BraveClient](type) which [traces](/docs/advanced-zipkin) outbound requests using 
+- [BraveClient](type) which [traces](/docs/advanced/zipkin) outbound requests using 
   [Brave](https://github.com/openzipkin/brave).
-- [CircuitBreakerClient](type) which [opens a circuit](/docs/client-circuit-breaker) on failed responses.
+- [CircuitBreakerClient](type) which [opens a circuit](/docs/client/circuit-breaker) on failed responses.
 - [CookieClient](type) which stores cookies of responses using [CookieJar](type).
 - [ConcurrencyLimitingClient](type) which limits the concurrent number of active requests.
 - [ContentPreviewingClient](type) which
-  [previews the content](/docs/advanced-structured-logging/#enabling-content-previews) of
+  [previews the content](/docs/advanced/structured-logging/#enabling-content-previews) of
   requests and responses.
 - [DecodingClient](type) which decompresses a
   [compressed](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Encoding) response.
 - [MetricCollectingClient](type) which 
-  [collects metrics](/docs/advanced-metrics#collecting-client-side-metrics) using 
+  [collects metrics](/docs/advanced/metrics#collecting-client-side-metrics) using 
   [Micrometer](https://micrometer.io/).
 - [LoggingClient](type) which logs requests and responses.
-- [RetryingClient](type) which [automatically retries](/docs/client-retry) failed requests.
+- [RetryingClient](type) which [automatically retries](/docs/client/retry) failed requests.
   
 ```java
 import brave.http.HttpTracing;
@@ -117,14 +117,14 @@ WebClient.builder()
          .build();
 ```
 
-Please see [Decorating a client](/docs/client-decorator) to learn how it works.
+Please see [Decorating a client](/docs/client/decorator) to learn how it works.
 
 ## Service discovery with WebClient
 
 Armeria provides the various [service discovery](https://microservices.io/patterns/client-side-discovery.html)
 mechanisms with [EndpointGroup](type), 
-from Kubernetes-style [DNS records](/docs/client-service-discovery#dns-based-service-discovery-with-dnsendpointgroup) 
-to [Consul](/docs/client-service-discovery#consul-based-service-discovery-with-consulendpointgroup).
+from Kubernetes-style [DNS records](/docs/client/service-discovery#dns-based-service-discovery-with-dnsendpointgroup) 
+to [Consul](/docs/client/service-discovery#consul-based-service-discovery-with-consulendpointgroup).
 Requests are sent to dynamically retrieved [Endpoint](typeplural) by specifying an [EndpointGroup](type)
 to a [WebClient](type).
 
@@ -144,7 +144,7 @@ WebClient.builder(SessionProtocol.HTTP, healthCheckedGroup)
          .build();
 ```
 
-Please check [Client-side load balancing and service discovery](/docs/client-service-discovery)
+Please check [Client-side load balancing and service discovery](/docs/client/service-discovery)
 for more information.
 
 ## Configuring ClientFactory
@@ -169,9 +169,9 @@ WebClient client =
                  .build();
 ```
 
-Please check [Customizing a `ClientFactory` with `ClientFactoryBuilder`](/docs/client-factory)
+Please check [Customizing a `ClientFactory` with `ClientFactoryBuilder`](/docs/client/factory)
 for the details.
 
 ## See also
-- [Retrofit integration](/docs/client-retrofit)
+- [Retrofit integration](/docs/client/retrofit)
 

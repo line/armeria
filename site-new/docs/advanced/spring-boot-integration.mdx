@@ -115,7 +115,7 @@ First, you need the `armeria-spring-boot3-starter` dependency:
   ]}
 />
 
-Armeria's [annotated service](/docs/server-annotated-service) is similar to a Spring controller.
+Armeria's [annotated service](/docs/server/annotated-service) is similar to a Spring controller.
 You can declare the annotated service as a bean and inject it into the [ServerBuilder](type).
 Here's an example:
 
@@ -221,7 +221,7 @@ It is acceptable to set the port of the internal service to be the same as one o
 
 ### Documentation service
 
-Armeria has its own [documentation service](/docs/server-docservice) that offers useful features.
+Armeria has its own [documentation service](/docs/server/docservice) that offers useful features.
 For instance, it allows you to test RPC protocols in a web browser console, similar to [Swagger](https://swagger.io/).
 
 Add the service ID `docs` to `armeria.internal-services.include` configuration.
@@ -282,7 +282,7 @@ public HealthCheckServiceConfigurator healthCheckServiceConfigurator() {
 
 ### Collecting metrics
 
-Armeria provides a [built-in metric service](/docs/advanced-metrics) using the [Micrometer](https://micrometer.io) library.
+Armeria provides a [built-in metric service](/docs/advanced/metrics) using the [Micrometer](https://micrometer.io) library.
 You can expose the collected metrics to various monitoring systems, such as [Prometheus](https://prometheus.io) or [Dropwizard](https://metrics.dropwizard.io/)
 for comprehensive monitoring and analysis.
 

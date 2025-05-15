@@ -26,7 +26,7 @@ sb.annotatedService(new Object() {
 :::tip
 
 For more information about using some well-known clients, please refer to
-[Client interoperability](/docs/advanced-client-interoperability#annotated-services).
+[Client interoperability](/docs/advanced/client-interoperability#annotated-services).
 
 :::
 
@@ -1012,7 +1012,7 @@ more response types which can be used in the annotated service.
 ## Decorating an annotated service
 
 Every [HttpService](type) can be wrapped by another [HttpService](type) in Armeria (Refer to
-[Decorating a service](/docs/server-decorator) for more information). 
+[Decorating a service](/docs/server/decorator) for more information). 
 Simply, you can write your own decorator by 
 implementing [DecoratingHttpServiceFunction](type) interface as follows.
 
@@ -1567,7 +1567,7 @@ sb.annotatedService("/", new MyService(), service -> {
 :::tip
 
 You can also use [RequestLogAccess#whenComplete()](type) to access [RequestOnlyLog#name()](type).
-Please refer to [Structured logging](/docs/advanced-structured-logging)
+Please refer to [Structured logging](/docs/advanced/structured-logging)
 for more information about RPC and HTTP service names, and how to use it.
 
 :::

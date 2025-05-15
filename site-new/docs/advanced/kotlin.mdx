@@ -111,7 +111,7 @@ class MyAnnotatedService {
 
 :::tip
 
-If you use [Logback integration](/docs/advanced-logging) or [Zipkin integration](/docs/advanced-zipkin),
+If you use [Logback integration](/docs/advanced/logging) or [Zipkin integration](/docs/advanced/zipkin),
 coroutines should be executed in a thread that is aware of [RequestContext](type).
 
 :::
@@ -167,7 +167,7 @@ To use gRPC-Kotlin with Armeria, add the following dependency:
 ### Running a gRPC-Kotlin service
 
 gRPC-kotlin support is enabled automatically by registering coroutine stub services in
-[the same way](/docs/server-grpc) as using gRPC-Java.
+[the same way](/docs/server/grpc) as using gRPC-Java.
 
 ```kotlin
 import com.linecorp.armeria.server.Server
@@ -215,7 +215,7 @@ val client =
 
 :::tip
 
-Please refer to [Calling a gRPC service](/docs/client-grpc) for more information on gRPC clients.
+Please refer to [Calling a gRPC service](/docs/client/grpc) for more information on gRPC clients.
 
 :::
 

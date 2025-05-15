@@ -1,7 +1,7 @@
 # Automatic retry
 
 When a client gets an error response, it might want to retry the request depending on the response.
-This can be accomplished using a [decorator](/docs/client-decorator), and Armeria provides the following
+This can be accomplished using a [decorator](/docs/client/decorator), and Armeria provides the following
 implementations out-of-the box.
 - [RetryingClient](type)
 - [RetryingRpcClient](type)
@@ -348,15 +348,15 @@ Response: {startTime=..., length=..., headers=[:status=200, ...]}, {totalAttempt
 
 :::tip
 
-Please refer to [Nested log](/docs/advanced-structured-logging#nested-log),
+Please refer to [Nested log](/docs/advanced/structured-logging#nested-log),
 if you are curious about how this works internally.
 
 :::
 
 ## `RetryingClient` with circuit breaker
 
-You might want to use [Circuit breaker](/docs/client-circuit-breaker) with [RetryingClient](type) using
-[Decorating a client](/docs/client-decorator):
+You might want to use [Circuit breaker](/docs/client/circuit-breaker) with [RetryingClient](type) using
+[Decorating a client](/docs/client/decorator):
 
 ```java
 import com.linecorp.armeria.client.circuitbreaker.CircuitBreakerRule;
@@ -402,11 +402,11 @@ RetryRule.of(RetryRule.builder()
 
 You may want to allow retrying even on [FailFastException](type) when your endpoint is configured with
 client-side load balancing because the next attempt might be sent to the next available endpoint.
-See [Client-side load balancing and service discovery](/docs/client-service-discovery)
+See [Client-side load balancing and service discovery](/docs/client/service-discovery)
 for more information.
 
 :::
 
 ## See also
 
-- [Structured logging](/docs/advanced-structured-logging)
+- [Structured logging](/docs/advanced/structured-logging)

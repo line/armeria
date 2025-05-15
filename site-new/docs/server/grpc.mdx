@@ -123,7 +123,7 @@ server.start();
 
 :::tip
 
-See [Decorating `ServiceWithRoutes`](/docs/server-decorator#decorating-servicewithroutes) for more information
+See [Decorating `ServiceWithRoutes`](/docs/server/decorator#decorating-servicewithroutes) for more information
 about [HttpServiceWithRoutes](type).
 
 :::
@@ -199,7 +199,7 @@ sb.service(GrpcService.builder()
 Server server = sb.build();
 server.start();
 ```
-Please refer to [Configuring CORS](/docs/server-cors) for more information.
+Please refer to [Configuring CORS](/docs/server/cors) for more information.
 
 ## Unframed requests
 
@@ -308,7 +308,7 @@ convert it back into an exception for structured logging, etc. This response wil
 the actual source code in the server - make sure it is safe to send such potentially sensitive information
 to all your clients before enabling this flag!
 
-See more details at [Client gRPC](/docs/client-grpc).
+See more details at [Client gRPC](/docs/client/grpc).
 
 ## Server Reflection
 Armeria supports gRPC server reflection - just add an instance of `ProtoReflectionService` to your server.
@@ -329,8 +329,8 @@ server.start();
 For more information, see the official [gRPC Server Reflection tutorial](https://github.com/grpc/grpc-java/blob/master/documentation/server-reflection-tutorial.md).
 
 ## See also
-- [Client gRPC](/docs/client-grpc)
-- [Kotlin coroutine gRPC service](/docs/advanced-kotlin#coroutines-support-for-grpc-kotlin)
+- [Client gRPC](/docs/client/grpc)
+- [Kotlin coroutine gRPC service](/docs/advanced/kotlin#coroutines-support-for-grpc-kotlin)
 
 [gRPC]: https://grpc.io/
 [gRPC-Web]: https://github.com/grpc/grpc/blob/master/doc/PROTOCOL-WEB.md
