@@ -1,6 +1,6 @@
 # Calling an HTTP service
 
-You can create a <type://WebClient> with a base URI and send a request with a relative path.
+You can create a [WebClient](type) with a base URI and send a request with a relative path.
 
 ```java
 import com.linecorp.armeria.client.WebClient;
@@ -25,8 +25,8 @@ AggregatedHttpResponse res3 = webClient.post("/upload", "{ \"foo\": \"bar\" }")
                                        .aggregate().join();
 ```
 
-You can also create a <type://WebClient> without a base URI and send a request with an absolute URI.
-The ad-hoc <type://WebClient> would be useful in the following cases:
+You can also create a [WebClient](type) without a base URI and send a request with an absolute URI.
+The ad-hoc [WebClient](type) would be useful in the following cases:
 
 - Sending requests to arbitrary endpoints
 - Building a proxy server
@@ -64,25 +64,25 @@ AggregatedHttpResponse actual = webClient.get(location).aggregate().join();
 
 ## Decorating a WebClient
 
-You can enrich your <type://WebClient> by decorating it with decorators.
+You can enrich your [WebClient](type) by decorating it with decorators.
 A decorator wraps another client to intercept an outgoing request or an incoming response.
 A lot of core features such as logging, metrics and distributed tracing are implemented as decorators.
 
-- <type://BraveClient> which [traces](/docs/advanced-zipkin) outbound requests using 
+- [BraveClient](type) which [traces](/docs/advanced-zipkin) outbound requests using 
   [Brave](https://github.com/openzipkin/brave).
-- <type://CircuitBreakerClient> which [opens a circuit](/docs/client-circuit-breaker) on failed responses.
-- <type://CookieClient> which stores cookies of responses using <type://CookieJar>.
-- <type://ConcurrencyLimitingClient> which limits the concurrent number of active requests.
-- <type://ContentPreviewingClient> which
+- [CircuitBreakerClient](type) which [opens a circuit](/docs/client-circuit-breaker) on failed responses.
+- [CookieClient](type) which stores cookies of responses using [CookieJar](type).
+- [ConcurrencyLimitingClient](type) which limits the concurrent number of active requests.
+- [ContentPreviewingClient](type) which
   [previews the content](/docs/advanced-structured-logging/#enabling-content-previews) of
   requests and responses.
-- <type://DecodingClient> which decompresses a
+- [DecodingClient](type) which decompresses a
   [compressed](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Encoding) response.
-- <type://MetricCollectingClient> which 
+- [MetricCollectingClient](type) which 
   [collects metrics](/docs/advanced-metrics#collecting-client-side-metrics) using 
   [Micrometer](https://micrometer.io/).
-- <type://LoggingClient> which logs requests and responses.
-- <type://RetryingClient> which [automatically retries](/docs/client-retry) failed requests.
+- [LoggingClient](type) which logs requests and responses.
+- [RetryingClient](type) which [automatically retries](/docs/client-retry) failed requests.
   
 ```java
 import brave.http.HttpTracing;
@@ -122,11 +122,11 @@ Please see [Decorating a client](/docs/client-decorator) to learn how it works.
 ## Service discovery with WebClient
 
 Armeria provides the various [service discovery](https://microservices.io/patterns/client-side-discovery.html)
-mechanisms with <type://EndpointGroup>, 
+mechanisms with [EndpointGroup](type), 
 from Kubernetes-style [DNS records](/docs/client-service-discovery#dns-based-service-discovery-with-dnsendpointgroup) 
 to [Consul](/docs/client-service-discovery#consul-based-service-discovery-with-consulendpointgroup).
-Requests are sent to dynamically retrieved <typeplural://Endpoint> by specifying an <type://EndpointGroup>
-to a <type://WebClient>.
+Requests are sent to dynamically retrieved [Endpoint](typeplural) by specifying an [EndpointGroup](type)
+to a [WebClient](type).
 
 ```java
 import com.linecorp.armeria.client.endpoint.dns.DnsServiceEndpointGroup;
@@ -149,9 +149,9 @@ for more information.
 
 ## Configuring ClientFactory
 
-A <type://ClientFactory> manages connections and protocol-specific properties.
-You can build your own <type://ClientFactory> using <type://ClientFactoryBuilder> and 
-set it through <type://WebClientBuilder#factory()>.
+A [ClientFactory](type) manages connections and protocol-specific properties.
+You can build your own [ClientFactory](type) using [ClientFactoryBuilder](type) and 
+set it through [WebClientBuilder#factory()](type).
 
 ```java
 import com.linecorp.armeria.client.ClientFactory;

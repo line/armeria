@@ -13,12 +13,12 @@ for more information.
 
 ## State of `CircuitBreaker`
 
-A <type://CircuitBreaker> can be one of the following three states:
+A [CircuitBreaker](type) can be one of the following three states:
 - `CLOSED`
   - Initial state. All requests are treated normally.
 - `OPEN`
   - The state machine enters the `OPEN` state once the number of failures divided by the total number of
-    requests exceeds a certain threshold. All requests are blocked off responding with <type://FailFastException>.
+    requests exceeds a certain threshold. All requests are blocked off responding with [FailFastException](type).
 - `HALF_OPEN`.
   - After a certain amount of time in the `OPEN` state, the state machine enters the `HALF_OPEN` state
     which sends a request to find out if the service is still unavailable or not.
@@ -48,12 +48,12 @@ A <type://CircuitBreaker> can be one of the following three states:
 ## `CircuitBreakerClient`
 
 Armeria provides two different client implementations depending on the
-<type://Request> and <type://Response> types:
-- <type://CircuitBreakerClient>
-- <type://CircuitBreakerRpcClient>
+[Request](type) and [Response](type) types:
+- [CircuitBreakerClient](type)
+- [CircuitBreakerRpcClient](type)
 
-Let's use <type://CircuitBreakerClient> to find out what we can do.
-You can use the `decorator()` method in <type://WebClientBuilder> to build a <type://CircuitBreakerClient>:
+Let's use [CircuitBreakerClient](type) to find out what we can do.
+You can use the `decorator()` method in [WebClientBuilder](type) to build a [CircuitBreakerClient](type):
 
 ```java
 import com.linecorp.armeria.client.WebClient;
@@ -78,18 +78,18 @@ WebClient client = WebClient
 AggregatedHttpResponse res = client.execute(...).aggregate().join(); // Send requests on and on.
 ```
 
-Now, the <type://WebClient> can track the number of success or failure events depending on the
-<typeplural://Response>. The <type://CircuitBreaker> will enter `OPEN`, when the number of failures divided
-by the total number of <typeplural://Request> exceeds the failure rate.
-Then the <type://WebClient> will immediately get <type://FailFastException> by the <type://CircuitBreaker>.
+Now, the [WebClient](type) can track the number of success or failure events depending on the
+[Response](typeplural). The [CircuitBreaker](type) will enter `OPEN`, when the number of failures divided
+by the total number of [Request](typeplural) exceeds the failure rate.
+Then the [WebClient](type) will immediately get [FailFastException](type) by the [CircuitBreaker](type).
 
 ## `CircuitBreakerRule`
 
-How does a <type://CircuitBreaker> know whether a <type://Response> is successful or not?
-<type://CircuitBreakerRule> does the job. In the example above, if the status of a <type://Response> is `5xx`
+How does a [CircuitBreaker](type) know whether a [Response](type) is successful or not?
+[CircuitBreakerRule](type) does the job. In the example above, if the status of a [Response](type) is `5xx`
 or an `Exception` is raised during the call, the count of failure is increased.
-You can have your own `rule` by building <type://CircuitBreakerRule>.
-The following example builds a <type://CircuitBreakerRule> that fails when an `Exception`
+You can have your own `rule` by building [CircuitBreakerRule](type).
+The following example builds a [CircuitBreakerRule](type) that fails when an `Exception`
 is raised or the status is `5xx`, succeeds when the status is `2xx` and ignores others.
 
 ```java
@@ -117,8 +117,8 @@ final CircuitBreakerRule myRule =
 ```
 
 If you need to determine whether the request was successful by looking into the response content,
-you should build <type://CircuitBreakerRuleWithContent> and specify it when you create an
-<type://WebClient> using <type://CircuitBreakerClientBuilder>:
+you should build [CircuitBreakerRuleWithContent](type) and specify it when you create an
+[WebClient](type) using [CircuitBreakerClientBuilder](type):
 
 ```java
 import com.linecorp.armeria.client.circuitbreaker.CircuitBreakerRuleWithContent;
@@ -148,16 +148,16 @@ AggregatedHttpResponse res = client.execute(...).aggregate().join();
 
 ## Grouping `CircuitBreaker`s
 
-In the very first example above, a single <type://CircuitBreaker> was used to track the events. However,
-in many cases, you will want to use different <type://CircuitBreaker> for different endpoints. For example, there
+In the very first example above, a single [CircuitBreaker](type) was used to track the events. However,
+in many cases, you will want to use different [CircuitBreaker](type) for different endpoints. For example, there
 might be an API which performs heavy calculation which fails often. On the other hand, there can be another API
 which is not resource hungry and this is not likely to fail.
-Having one <type://CircuitBreaker> that tracks all the success and failure does not make sense in this scenario.
+Having one [CircuitBreaker](type) that tracks all the success and failure does not make sense in this scenario.
 It's even worse if the client connects to the services on different machines.
-When one of the remote services is down, your <type://CircuitBreaker> will probably be `OPEN` state although
+When one of the remote services is down, your [CircuitBreaker](type) will probably be `OPEN` state although
 you can connect to other services.
 Therefore, Armeria provides various ways that let users group the range of circuit breaker instances.
-- Group by host: a single <type://CircuitBreaker> is used for each remote host.
+- Group by host: a single [CircuitBreaker](type) is used for each remote host.
 
   ```java
   import com.linecorp.armeria.client.circuitbreaker.CircuitBreakerRpcClient;
@@ -178,7 +178,7 @@ Therefore, Armeria provides various ways that let users group the range of circu
   // The names of the created CircuitBreaker: my-cb-a.com, my-cb-b.com, ...
   ```
 
-- Group by method: a single <type://CircuitBreaker> is used for each method.
+- Group by method: a single [CircuitBreaker](type) is used for each method.
 
   ```java
   // Create CircuitBreakers per method
@@ -189,7 +189,7 @@ Therefore, Armeria provides various ways that let users group the range of circu
   // The names of the created CircuitBreaker: my-cb-methodA, my-cb-methodB, ...
   ```
 
-- Group by host and method: a single <type://CircuitBreaker> is used for each method and host combination.
+- Group by host and method: a single [CircuitBreaker](type) is used for each method and host combination.
 
   ```java
   // Create a CircuitBreaker with the host and method name
@@ -207,32 +207,32 @@ Therefore, Armeria provides various ways that let users group the range of circu
 
 ## `CircuitBreakerBuilder`
 
-We have used static factory methods in <type://CircuitBreaker> interface to create a <type://CircuitBreaker> so far.
-If you use <type://CircuitBreakerBuilder>, you can configure the parameters which decide
-<type://CircuitBreaker>'s behavior. Here are the parameters:
+We have used static factory methods in [CircuitBreaker](type) interface to create a [CircuitBreaker](type) so far.
+If you use [CircuitBreakerBuilder](type), you can configure the parameters which decide
+[CircuitBreaker](type)'s behavior. Here are the parameters:
 - `name`:
-  - The name of the <type://CircuitBreaker>.
+  - The name of the [CircuitBreaker](type).
 - `failureRateThreshold`:
-  - The threshold that changes <type://CircuitBreaker>'s state to `OPEN` when the number of failed
-    <typeplural://Request> divided by the number of total <typeplural://Request> exceeds it.
+  - The threshold that changes [CircuitBreaker](type)'s state to `OPEN` when the number of failed
+    [Request](typeplural) divided by the number of total [Request](typeplural) exceeds it.
     The default value is `0.5`.
 - `minimumRequestThreshold`:
-  - The minimum number of <typeplural://Request> to detect failures. The default value is `10`.
+  - The minimum number of [Request](typeplural) to detect failures. The default value is `10`.
 - `trialRequestInterval`:
-  - The duration that a <type://CircuitBreaker> remains in `HALF_OPEN` state. All requests are blocked off
-    responding with <type://FailFastException> during this state. The default value is `3` seconds.
+  - The duration that a [CircuitBreaker](type) remains in `HALF_OPEN` state. All requests are blocked off
+    responding with [FailFastException](type) during this state. The default value is `3` seconds.
 - `circuitOpenWindow`:
-  - The duration that a <type://CircuitBreaker> remains in `OPEN` state. All <typeplural://Request> are blocked
-    off responding with <type://FailFastException> during this state. The default value is `10` seconds.
+  - The duration that a [CircuitBreaker](type) remains in `OPEN` state. All [Request](typeplural) are blocked
+    off responding with [FailFastException](type) during this state. The default value is `10` seconds.
 - `counterSlidingWindow`:
-  - The duration of a sliding window that a <type://CircuitBreaker> counts successful and failed
-    <typeplural://Request> in it. The default value is `20` seconds.
+  - The duration of a sliding window that a [CircuitBreaker](type) counts successful and failed
+    [Request](typeplural) in it. The default value is `20` seconds.
 - `counterUpdateInterval`:
-  - The duration that a <type://CircuitBreaker> stores events in a bucket. The default value is `1` second.
+  - The duration that a [CircuitBreaker](type) stores events in a bucket. The default value is `1` second.
 - `listeners`:
-  - The listeners which are notified by a <type://CircuitBreaker> when an event occurs. The events are one of
+  - The listeners which are notified by a [CircuitBreaker](type) when an event occurs. The events are one of
     `stateChanged`, `eventCountUpdated` and `requestRejected`. You can use
-    <type://CircuitBreakerListener#metricCollecting()> to export metrics:
+    [CircuitBreakerListener#metricCollecting()](type) to export metrics:
 
   ```java
   import com.linecorp.armeria.client.circuitbreaker.CircuitBreakerListener;
@@ -247,13 +247,13 @@ If you use <type://CircuitBreakerBuilder>, you can configure the parameters whic
 
 ## Using `CircuitBreaker` with non-Armeria client
 
-<type://CircuitBreaker> API is designed to be framework-agnostic and thus can be used with any non-Armeria
+[CircuitBreaker](type) API is designed to be framework-agnostic and thus can be used with any non-Armeria
 clients:
 
-1. Create a <type://CircuitBreaker>.
+1. Create a [CircuitBreaker](type).
 2. Guard your client calls with `CircuitBreaker.tryRequest()`.
-3. Update the state of <type://CircuitBreaker> by calling <type://CircuitBreaker#onSuccess()> or
-   <type://CircuitBreaker#onFailure()> depending on the outcome of the client call.
+3. Update the state of [CircuitBreaker](type) by calling [CircuitBreaker#onSuccess()](type) or
+   [CircuitBreaker#onFailure()](type) depending on the outcome of the client call.
 
 For example:
 

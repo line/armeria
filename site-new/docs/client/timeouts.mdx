@@ -3,7 +3,7 @@
 Sometimes, the default timeouts used by the Armeria clients do not suit a particular scenario well.
 In these cases, you might want to override the timeout settings.
 
-## Using <type://ClientBuilder>
+## Using [ClientBuilder](type)
 
 ```java
 import java.time.Duration;
@@ -20,10 +20,10 @@ HelloService.Iface client =
            .build(HelloService.Iface.class);
 ```
 
-## Using <type://WebClientRequestPreparation>
+## Using [WebClientRequestPreparation](type)
 
-You can override the properties defined in <type://RequestOptions> at request level
-using <type://WebClient#prepare()>.
+You can override the properties defined in [RequestOptions](type) at request level
+using [WebClient#prepare()](type).
 
 ```java
 import com.linecorp.armeria.client.WebClient;
@@ -37,11 +37,11 @@ client.prepare()
       .execute();
 ```
 
-## Using <type://RequestOptions>
+## Using [RequestOptions](type)
 
-You can also create a <type://RequestOptions> to override the properties at request level. The
-created <type://RequestOptions> could be passed to <type://WebClient#execute(HttpRequest,RequestOptions)?full>
-with an <type://HttpRequest>.
+You can also create a [RequestOptions](type) to override the properties at request level. The
+created [RequestOptions](type) could be passed to [WebClient#execute(HttpRequest,RequestOptions)?full](type)
+with an [HttpRequest](type).
 
 ```java
 import com.linecorp.armeria.client.RequestOptions;
@@ -57,16 +57,16 @@ RequestOptions options =
 client.execute(req, options);
 ```
 
-<Tip>
+:::tip
 
 See [Response properties](/docs/advanced-structured-logging#response-properties) to understand when the
 response timeout is scheduled.
 
-</Tip>
+:::
 
 ## Adjusting connection-level timeouts
 
-You need to build a non-default <type://ClientFactory> using <type://ClientFactoryBuilder> to override the default
+You need to build a non-default [ClientFactory](type) using [ClientFactoryBuilder](type) to override the default
 connection-level timeouts such as connect timeout and idle timeout programmatically:
 
 ```java
@@ -84,8 +84,8 @@ ClientFactory factory =
                  .build();
 ```
 
-Note that <type://ClientFactory> implements `java.lang.AutoCloseable` and thus needs to be closed when you
-terminate your application. On `close()`, <type://ClientFactory> will close all the connections it manages
+Note that [ClientFactory](type) implements `java.lang.AutoCloseable` and thus needs to be closed when you
+terminate your application. On `close()`, [ClientFactory](type) will close all the connections it manages
 and abort any requests in progress.
 
 ## Using JVM system properties
@@ -101,9 +101,9 @@ prefer setting it programmatically:
 - `-Dcom.linecorp.armeria.defaultResponseTimeoutMillis=<integer>`
   - the default client-side timeout of a response in milliseconds. Default: `15000`
 
-<Warning>
+:::warning
 
 The JVM system properties have effect only when you did not specify them programmatically.
-See <type://Flags> for the complete list of JVM system properties in Armeria.
+See [Flags](type) for the complete list of JVM system properties in Armeria.
 
-</Warning>
+:::

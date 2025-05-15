@@ -1,7 +1,7 @@
 # Customizing a `ClientFactory` with `ClientFactoryBuilder`
 
-A <type://ClientFactory> manages connections and protocol-specific properties.
-You can customize the properties via <type://ClientFactoryBuilder>. For example,
+A [ClientFactory](type) manages connections and protocol-specific properties.
+You can customize the properties via [ClientFactoryBuilder](type). For example,
 let's say that you want to increase the connection timeout.
 
 ```java
@@ -19,20 +19,20 @@ WebClient client =
 client.get("/api").aggregate().join();
 ```
 
-The client created with the given <type://ClientFactory> will respect the settings such as connection timeout
+The client created with the given [ClientFactory](type) will respect the settings such as connection timeout
 that you defined.
-You might notice that the clients, which are created using the same <type://ClientFactory>,
+You might notice that the clients, which are created using the same [ClientFactory](type),
 share one connection pool. If you don't want to share the connections among the clients,
-you should use different <typeplural://ClientFactory>.
-For the complete list of properties, see <type://ClientFactoryBuilder>.
+you should use different [ClientFactory](typeplural).
+For the complete list of properties, see [ClientFactoryBuilder](type).
 
-<Tip>
+:::tip
 
-  You might want to take a look at <type://ClientBuilder> to distinguish the client-specific properties.
+  You might want to take a look at [ClientBuilder](type) to distinguish the client-specific properties.
 
-</Tip>
+:::
 
-You can also use <type://ClientFactoryOptions> to build <type://ClientFactory>.
+You can also use [ClientFactoryOptions](type) to build [ClientFactory](type).
 It's more verbose than calling a dedicated setter method, but it can be useful when you need to
 set a series of options programmatically.
 
@@ -40,9 +40,9 @@ set a series of options programmatically.
 
 You can configure the client authentication
 for [mutual TLS (mTLS)](https://www.cloudflare.com/learning/access-management/what-is-mutual-tls/)
-using <type://ClientFactoryBuilder#tls(InputStream,InputStream)> .
+using [ClientFactoryBuilder#tls(InputStream,InputStream)](type) .
 Additionally, you can specify various options such as a different CA certificate chain or enforce certain 
-cipher suites with <type://ClientFactoryBuilder#tlsCustomizer(Consumer)> .
+cipher suites with [ClientFactoryBuilder#tlsCustomizer(Consumer)](type) .
 
 ```java
 try (InputStream keyCertChainInputStream = ...;
@@ -61,16 +61,16 @@ try (InputStream keyCertChainInputStream = ...;
 
 ## Lifecycle of `ClientFactory`
 
-Most clients for a <type://ClientFactory> need to send requests to another server for the lifetime of an application.
-Therefore, you will generally avoid closing the <type://ClientFactory>, except for perhaps in a shutdown hook,
+Most clients for a [ClientFactory](type) need to send requests to another server for the lifetime of an application.
+Therefore, you will generally avoid closing the [ClientFactory](type), except for perhaps in a shutdown hook,
 to avoid losing any connection to the other servers.
-For unit tests where a <type://ClientFactory> is only used for a single test or test class,
+For unit tests where a [ClientFactory](type) is only used for a single test or test class,
 it is appropriate to close it when done using it.
 
 ## Specifying Netty `ChannelOption`s
 
 You can also specify Netty [`ChannelOption`](https://netty.io/4.1/api/io/netty/channel/ChannelOption.html)
-via <type://ClientFactoryBuilder#channelOption(ChannelOption,T)>:
+via [ClientFactoryBuilder#channelOption(ChannelOption,T)](type):
 
 ```java
 ClientFactory factory =
@@ -89,11 +89,11 @@ WebClient
 
 By default, Armeria keeps at most 1 connection per endpoint (host and port pair) when using HTTP/2,
 which is desirable for typical HTTP/2 services. Armeria achieves this by assigning one `EventLoop` per endpoint
-from the <type://ServerConfig#workerGroup()>. However, there's a limit to the requests that
+from the [ServerConfig#workerGroup()](type). However, there's a limit to the requests that
 a single connection(or `EventLoop` which is a thread) can handle, so you might want to increase
 the number of connections(or `EventLoop` threads) for certain or all endpoints.
 
-You can do this via <type://ClientFactoryBuilder#maxNumEventLoopsPerEndpoint(int)>:
+You can do this via [ClientFactoryBuilder#maxNumEventLoopsPerEndpoint(int)](type):
 
 ```java
 ClientFactory factory =
@@ -127,7 +127,7 @@ ClientFactory factory =
 ```
 
 The client might need to send many requests to a certain endpoint, while sending small number of requests to others.
-In that situation, you can use <type://ClientFactoryBuilder#maxNumEventLoopsFunction(ToIntFunction)>:
+In that situation, you can use [ClientFactoryBuilder#maxNumEventLoopsFunction(ToIntFunction)](type):
 
 ```java
 ClientFactory factory =

@@ -2,9 +2,9 @@
 
 When sending an RPC request, it is sometimes required to send HTTP headers with it, such as an authentication token.
 There are four ways to customize the HTTP headers of your RPC request:
-- Using the <type://Clients#withHeaders(Consumer)> method
-- Using the <type://ClientOption#HEADERS> option
-- Using the <type://ClientBuilder#decorator(Function)> method
+- Using the [Clients#withHeaders(Consumer)](type) method
+- Using the [ClientOption#HEADERS](type) option
+- Using the [ClientBuilder#decorator(Function)](type) method
 - Using a derived client
 
 ## Using `Clients.withHeaders()`
@@ -23,7 +23,7 @@ try (SafeCloseable ignored = Clients.withHeaders(
 ```
 
 If you are setting only a single header,
-you can use <type://Clients#withHeader(CharSequence,String)> simply:
+you can use [Clients#withHeader(CharSequence,String)](type) simply:
 
 ```java
 try (SafeCloseable ignored = Clients.withHeader(AUTHORIZATION, credential)) {
@@ -49,7 +49,7 @@ try (SafeCloseable ignored1 = Clients.withHeader(USER_AGENT, myUserAgent)) {
 ## Using `ClientOption.HEADERS`
 
 If you have a custom HTTP header whose value does not change often, you can use
-<type://ClientOption#HEADERS> which is more efficient:
+[ClientOption#HEADERS](type) which is more efficient:
 
 ```java
 import static com.linecorp.armeria.common.HttpHeaderNames.AUTHORIZATION;
@@ -83,12 +83,12 @@ HelloService.Iface client = cb.build(HelloService.Iface.class);
 client.hello("authorized personnel");
 ```
 
-Note that this method is as efficient as the <type://ClientOption#HEADERS> option.
+Note that this method is as efficient as the [ClientOption#HEADERS](type) option.
 Choose whichever you prefer.
 
 ## Using a derived client
 
-Although not as simple as using <type://Clients#withHeader(CharSequence,String)>,
+Although not as simple as using [Clients#withHeader(CharSequence,String)](type),
 you can create a derived client to add more custom headers to an existing client:
 
 ```java

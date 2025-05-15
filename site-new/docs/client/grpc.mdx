@@ -1,10 +1,10 @@
 # Calling a gRPC service
 
-<Tip>
+:::tip
 
 Visit [armeria-examples](https://github.com/line/armeria-examples) to find a fully working example.
 
-</Tip>
+:::
   
 
 Let's assume we have the following [gRPC] service definition, served at `http://127.0.0.1:8080/`, just like
@@ -48,11 +48,11 @@ Note that we added the serialization format of the call using the `+` operator i
 Because we are calling a [gRPC] server, we can choose: `gproto` or `gjson`. If you are using [gRPC-Web],
 you can use `gproto-web`, `gproto-web-text` or `gjson-web`.
 
-<Tip>
+:::tip
 
 If a serialization format is not specified, `gproto` will be used by default.
 
-</Tip>
+:::
 
 Since we specified `HelloServiceBlockingStub.class` as the client type, `Clients.newClient()` will return a
 synchronous client implementation.  If we specified `HelloServiceFutureStub`, the calling code would have
@@ -120,15 +120,15 @@ HelloReply reply = helloService.hello(request);
 assert reply.getMessage().equals("Hello, Armerian World!");
 ```
 
-As you might have noticed already, we decorated the client using <type://LoggingClient>, which logs all
+As you might have noticed already, we decorated the client using [LoggingClient](type), which logs all
 requests and responses. You might be interested in decorating a client using other decorators, for example
-to gather metrics. Please also refer to <type://ClientBuilder> for more configuration options.
+to gather metrics. Please also refer to [ClientBuilder](type) for more configuration options.
 
 ## Exception propagation
 
 If you have enabled `Flags.verboseResponses()` in the server being accessed by specifying
 `-Dcom.linecorp.armeria.verboseResponses=true` system property, then any exception during processing
-in the server will be returned to the client as a <type://StatusCauseException> attached to the normal gRPC
+in the server will be returned to the client as a [StatusCauseException](type) attached to the normal gRPC
 `Status`. This can be used for programmatic access to the exception that happened in the server. In this
 example, the server always fails with `throw new IllegalStateException("Failed!");`
 

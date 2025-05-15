@@ -7,13 +7,13 @@ distributed tracing are implemented as decorators and you will also find it usef
 
 There are basically two ways to write a decorating client:
 
-- Implementing <type://DecoratingHttpClientFunction> and <type://DecoratingRpcClientFunction>
-- Extending <type://SimpleDecoratingClient>
+- Implementing [DecoratingHttpClientFunction](type) and [DecoratingRpcClientFunction](type)
+- Extending [SimpleDecoratingClient](type)
 
 
 ## Implementing `DecoratingHttpClientFunction` and `DecoratingRpcClientFunction`
 
-<type://DecoratingHttpClientFunction> and <type://DecoratingRpcClientFunction> are functional interfaces that
+[DecoratingHttpClientFunction](type) and [DecoratingRpcClientFunction](type) are functional interfaces that
 greatly simplify the implementation of a decorating client.
 They enable you to write a decorating client with a single lambda expression:
 
@@ -34,8 +34,8 @@ MyService.Iface client = cb.build(MyService.Iface.class);
 ## Extending `SimpleDecoratingHttpClient` and `SimpleDecoratingRpcClient`
 
 If your decorator is expected to be reusable, it is recommended to define a new top-level class that extends
-<type://SimpleDecoratingHttpClient> or <type://SimpleDecoratingRpcClient> depending on whether 
-you are decorating an <type://HttpClient> or an <type://RpcClient>:
+[SimpleDecoratingHttpClient](type) or [SimpleDecoratingRpcClient](type) depending on whether 
+you are decorating an [HttpClient](type) or an [RpcClient](type):
 
 ```java
 import com.linecorp.armeria.client.HttpClient;
@@ -143,9 +143,9 @@ after the request is converted into the HTTP request, as described in the follow
 +--------+     +-----------+     +-----------+                     +-----------+     +-----------+
 ```
 
-If the decorator modifies the response (e.g. <type://DecodingClient>) or spawns more requests
-(e.g. <type://RetryingClient>), the outcome may be different depending on the order of the decorators.
-Let's look at the following example that <type://DecodingClient> and <type://ContentPreviewingClient>
+If the decorator modifies the response (e.g. [DecodingClient](type)) or spawns more requests
+(e.g. [RetryingClient](type)), the outcome may be different depending on the order of the decorators.
+Let's look at the following example that [DecodingClient](type) and [ContentPreviewingClient](type)
 are used together:
 
 ```java
@@ -159,22 +159,22 @@ cb.decorator(DecodingClient.newDecorator());
 cb.decorator(ContentPreviewingClient.newDecorator(1000));
 ```
 
-<type://DecodingClient> decodes the content of HTTP responses. <type://ContentPreviewingClient> is 
+[DecodingClient](type) decodes the content of HTTP responses. [ContentPreviewingClient](type) is 
 [Enabling content previews](/docs/advanced-structured-logging#enabling-content-previews)
-of the HTTP response by setting it to the <type://RequestLog>. 
-Because it's evaluated after <type://DecodingClient> from the point of view of an
+of the HTTP response by setting it to the [RequestLog](type). 
+Because it's evaluated after [DecodingClient](type) from the point of view of an
 HTTP response, which means that the response content is set after it's decoded, you will see the decoded
 response content preview. If the two decorators are added in the opposite order, you will get the encoded
-preview because <type://ContentPreviewingClient> is evaluated first for the HTTP response.
-For <type://RetryingClient>, please check out 
+preview because [ContentPreviewingClient](type) is evaluated first for the HTTP response.
+For [RetryingClient](type), please check out 
 [`RetryingClient` with logging](/docs/client-retry#retryingclient-with-logging).
 
 ## Modifying responses
 
-We can modify the responses in a decorator via the <type://HttpResponse#mapHeaders(Function)>,
-<type://HttpResponse#mapData(Function)>, <type://HttpResponse#mapInformational(Function)>
-or <type://HttpResponse.mapTrailers(Function)> methods, or, if more advanced/stateful
-processing is necessary, by wrapping the <type://HttpResponse> in a <type://FilteredHttpResponse>.
+We can modify the responses in a decorator via the [HttpResponse#mapHeaders(Function)](type),
+[HttpResponse#mapData(Function)](type), [HttpResponse#mapInformational(Function)](type)
+or [HttpResponse.mapTrailers(Function)](type) methods, or, if more advanced/stateful
+processing is necessary, by wrapping the [HttpResponse](type) in a [FilteredHttpResponse](type).
 
 ### Using transforming methods
 
@@ -209,12 +209,12 @@ cb.decorator((delegate, ctx, req) -> {
 });
 ```
 
-### Using <type://FilteredHttpResponse>:
+### Using [FilteredHttpResponse](type):
 
 A couple of caveats to note here.
 * Informational response headers may occur zero or more times.
-* <type://HttpData> will almost always just be a part of the whole response data
-  unless the response has been passed through <type://HttpResponse#aggregate()>.
+* [HttpData](type) will almost always just be a part of the whole response data
+  unless the response has been passed through [HttpResponse#aggregate()](type).
 
 ```java
 import com.linecorp.armeria.client.ClientBuilder;
@@ -268,10 +268,10 @@ cb.decorator((delegate, ctx, req) -> {
 ## Reacting to or logging responses
 
 If modification is not required, e.g. when handling quota responses from the service, and it doesn't need to
-look at the <type://HttpData>, it can be achieved in a more performant way via 
+look at the [HttpData](type), it can be achieved in a more performant way via 
 `ClientRequestContext.log().whenAvailable(RequestLogProperty).thenAccept(...)`. Accessing the
-<type://ClientRequestContext> can be done via either wrapping in a decorator (and using the ctx or by using
-<type://ClientRequestContextCaptor>:
+[ClientRequestContext](type) can be done via either wrapping in a decorator (and using the ctx or by using
+[ClientRequestContextCaptor](type):
 
 ```java
 import com.linecorp.armeria.client.ClientRequestContextCaptor;

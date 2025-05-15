@@ -1,10 +1,10 @@
 # Calling a Thrift service
 
-<Tip>
+:::tip
 
 Visit [armeria-examples](https://github.com/line/armeria-examples) to find a fully working example.
 
-</Tip>
+:::
 
 Let's assume we have the following Thrift IDL, served at `http://127.0.0.1:8080/hello`, just like what we
 used in [Running a Thrift service](/docs/server-thrift):
@@ -31,11 +31,11 @@ String greeting = helloService.hello("Armerian World");
 assert greeting.equals("Hello, Armerian World!");
 ```
 
-Note that if a serialization format is unspecified, <type://ThriftSerializationFormats#BINARY> is used by
-default. You can also specify one of <type://ThriftSerializationFormats#BINARY>,
-<type://ThriftSerializationFormats#COMPACT>, <type://ThriftSerializationFormats#JSON>
-and <type://ThriftSerializationFormats#TEXT> 
-using <type://ThriftClientBuilder#serializationFormat(SerializationFormat)>.
+Note that if a serialization format is unspecified, [ThriftSerializationFormats#BINARY](type) is used by
+default. You can also specify one of [ThriftSerializationFormats#BINARY](type),
+[ThriftSerializationFormats#COMPACT](type), [ThriftSerializationFormats#JSON](type)
+and [ThriftSerializationFormats#TEXT](type) 
+using [ThriftClientBuilder#serializationFormat(SerializationFormat)](type).
 
 ```java
 import com.linecorp.armeria.common.thrift.ThriftSerializationFormats;
@@ -73,9 +73,9 @@ future.thenAccept(response -> assert response.equals("Hello, Armerian World!"))
 String reply = future.get();
 ```
 
-The example above introduces a new class called <type://ThriftFuture>. It is a subtype of Java 8
+The example above introduces a new class called [ThriftFuture](type). It is a subtype of Java 8
 CompletableFuture_ that implements Thrift [AsyncMethodCallback]. Once passed as a callback of an asynchronous
-Thrift call, <type://ThriftFuture> will complete itself when the reply is received or the call
+Thrift call, [ThriftFuture](type) will complete itself when the reply is received or the call
 fails. You'll find it way more convenient to consume the reply than [AsyncMethodCallback] thanks to the rich set
 of methods provided by [CompletableFuture].
 
@@ -96,9 +96,9 @@ String greeting = helloService.hello("Armerian World");
 assert greeting.equals("Hello, Armerian World!");
 ```
 
-As you might have noticed already, we decorated the client using <type://LoggingClient>, which logs all
+As you might have noticed already, we decorated the client using [LoggingClient](type), which logs all
 requests and responses. You might be interested in decorating a client using other decorators, for example
-to gather metrics. Please also refer to <type://ThriftClientBuilder> for more configuration options.
+to gather metrics. Please also refer to [ThriftClientBuilder](type) for more configuration options.
 
 ## See also
 

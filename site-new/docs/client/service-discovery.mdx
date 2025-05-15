@@ -5,14 +5,14 @@ traditional server-side load balancing where the requests go through a dedicated
 [L4 and L7 switches](https://en.wikipedia.org/wiki/Multilayer_switch#Layer_4%E2%80%937_switch,_web_switch,_or_content_switch).
 
 There are 3 elements involved in client-side load balancing in Armeria:
-- <type://Endpoint> represents an individual host (with an optional port number) and its weight.
-- <type://EndpointGroup> represents a set of <typeplural://Endpoint>.
-- A user specifies an <type://EndpointGroup> when building a client.
+- [Endpoint](type) represents an individual host (with an optional port number) and its weight.
+- [EndpointGroup](type) represents a set of [Endpoint](typeplural).
+- A user specifies an [EndpointGroup](type) when building a client.
 
 ## Creating an `EndpointGroup`
 
-There are various <type://EndpointGroup> implementations provided out of the box, but let's start simple with
-<type://EndpointGroup> which always yields a pre-defined set of <typeplural://Endpoint> specified at construction
+There are various [EndpointGroup](type) implementations provided out of the box, but let's start simple with
+[EndpointGroup](type) which always yields a pre-defined set of [Endpoint](typeplural) specified at construction
 time:
 
 ```java
@@ -33,17 +33,17 @@ assert endpoints.contains(Endpoint.of("duckduckgo.com", 443));
 
 ## Choosing an `EndpointSelectionStrategy`
 
-An <type://EndpointGroup> is created with `EndpointSelectionStrategy.weightedRoundRobin()` by default,
-unless specified otherwise. Armeria currently provides the following <type://EndpointSelectionStrategy>
+An [EndpointGroup](type) is created with `EndpointSelectionStrategy.weightedRoundRobin()` by default,
+unless specified otherwise. Armeria currently provides the following [EndpointSelectionStrategy](type)
 implementations out-of-the-box:
 - `EndpointSelectionStrategy.weightedRoundRobin` for weighted round robin.
 - `EndpointSelectionStrategy.roundRobin` for round robin.
-- <type://StickyEndpointSelectionStrategy> for pinning requests based on a criteria
+- [StickyEndpointSelectionStrategy](type) for pinning requests based on a criteria
   such as a request parameter value.
-- You can also implement your own <type://EndpointSelectionStrategy>.
+- You can also implement your own [EndpointSelectionStrategy](type).
 
-An <type://EndpointSelectionStrategy> can usually be specified as an input parameter or via a builder method
-when you build an <type://EndpointGroup>:
+An [EndpointSelectionStrategy](type) can usually be specified as an input parameter or via a builder method
+when you build an [EndpointGroup](type):
 
 ```java
 import com.linecorp.armeria.client.endpoint.EndpointSelectionStrategy;
@@ -62,9 +62,9 @@ EndpointGroup group2 =
                                .build();
 ```
 
-<Tip>
+:::tip
 
-You can create an <type://Endpoint> with non-default weight using <type://Endpoint#withWeight(int)> method:
+You can create an [Endpoint](type) with non-default weight using [Endpoint#withWeight(int)](type) method:
 
 ```java
 // The default weight is 1000.
@@ -74,11 +74,11 @@ assert endpointWithDefaultWeight.weight() == 1000;
 assert endpointWithCustomWeight.weight() == 1500;
 ```
 
-</Tip>
+:::
 
 ## Connecting to an `EndpointGroup`
 
-Once an <type://EndpointGroup> is created, you can specify it when creating a new client:
+Once an [EndpointGroup](type) is created, you can specify it when creating a new client:
 
 ```java
 import static com.linecorp.armeria.common.SessionProtocol.HTTPS;
@@ -107,7 +107,7 @@ CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).join();
 
 ## Cleaning up an `EndpointGroup`
 
-<type://EndpointGroup> extends `java.lang.AutoCloseable`, which means you need to call the `close()`
+[EndpointGroup](type) extends `java.lang.AutoCloseable`, which means you need to call the `close()`
 method once you are done using it, usually when your application terminates:
 
 ```java
@@ -115,22 +115,22 @@ method once you are done using it, usually when your application terminates:
 searchEngines.close();
 ```
 
-`close()` is a no-op for some <type://EndpointGroup> implementations, but not all implementations are so,
-especially those which updates the <type://Endpoint> list dynamically, such as refreshing the list periodically.
+`close()` is a no-op for some [EndpointGroup](type) implementations, but not all implementations are so,
+especially those which updates the [Endpoint](type) list dynamically, such as refreshing the list periodically.
 
-<Tip>
+:::tip
 
-An <type://EndpointGroup>, whose <typeplural://Endpoint> change even after it's instantiated and registered,
+An [EndpointGroup](type), whose [Endpoint](typeplural) change even after it's instantiated and registered,
 is called *dynamic endpoint group*.
 
-</Tip>
+:::
 
 ## Removing unhealthy `Endpoint` with `HealthCheckedEndpointGroup`
 
-<type://HealthCheckedEndpointGroup> decorates an existing <type://EndpointGroup> to filter out the unhealthy
-<typeplural://Endpoint> from it so that a client has less chance of sending its requests to the unhealthy
-<typeplural://Endpoint>. It determines the healthiness by sending so called 'health check request' to each
-<type://Endpoint>, which is by default a simple `HEAD` request to a certain path. If an <type://Endpoint>
+[HealthCheckedEndpointGroup](type) decorates an existing [EndpointGroup](type) to filter out the unhealthy
+[Endpoint](typeplural) from it so that a client has less chance of sending its requests to the unhealthy
+[Endpoint](typeplural). It determines the healthiness by sending so called 'health check request' to each
+[Endpoint](type), which is by default a simple `HEAD` request to a certain path. If an [Endpoint](type)
 responds with non-200 status code or does not respond in time, it will be marked as unhealthy and thus
 be removed from the list.
 
@@ -161,30 +161,30 @@ WebClient client = WebClient.builder(SessionProtocol.HTTP, healthCheckedGroup)
                             .build();
 ```
 
-<Warning>
+:::warning
 
-You must specify the wrapped `healthCheckedGroup` when building a <type://WebClient>, otherwise health
+You must specify the wrapped `healthCheckedGroup` when building a [WebClient](type), otherwise health
 checking will not be enabled.
 
-</Warning>
+:::
 
-<Tip>
+:::tip
 
-You can decorate *any* <type://EndpointGroup> implementations with <type://HealthCheckedEndpointGroup>,
+You can decorate *any* [EndpointGroup](type) implementations with [HealthCheckedEndpointGroup](type),
 including what we will explain later in this page.
 
-</Tip>
+:::
 
 ## DNS-based service discovery with `DnsEndpointGroup`
 
-Armeria provides 3 DNS-based <type://EndpointGroup> implementations:
-- <type://DnsAddressEndpointGroup> that retrieves the <type://Endpoint> list from `A` and `AAAA` records
-- <type://DnsServiceEndpointGroup> that retrieves the <type://Endpoint> list from `SRV` records
-- <type://DnsTextEndpointGroup> that retrieves the <type://Endpoint> list from `TXT` records
+Armeria provides 3 DNS-based [EndpointGroup](type) implementations:
+- [DnsAddressEndpointGroup](type) that retrieves the [Endpoint](type) list from `A` and `AAAA` records
+- [DnsServiceEndpointGroup](type) that retrieves the [Endpoint](type) list from `SRV` records
+- [DnsTextEndpointGroup](type) that retrieves the [Endpoint](type) list from `TXT` records
 
-They refresh the <type://Endpoint> list automatically, respecting TTL values, and retry when DNS queries fail.
+They refresh the [Endpoint](type) list automatically, respecting TTL values, and retry when DNS queries fail.
 
-<type://DnsAddressEndpointGroup> is useful when accessing an external service with multiple public IP addresses:
+[DnsAddressEndpointGroup](type) is useful when accessing an external service with multiple public IP addresses:
 
 ```java
 DnsAddressEndpointGroup group =
@@ -198,7 +198,7 @@ DnsAddressEndpointGroup group =
 group.whenReady().get();
 ```
 
-<type://DnsServiceEndpointGroup> is useful when accessing an internal service with
+[DnsServiceEndpointGroup](type) is useful when accessing an internal service with
 [SRV records](https://en.wikipedia.org/wiki/SRV_record), which is often found in modern container
 environments that leverage DNS for service discovery such as Kubernetes:
 
@@ -216,7 +216,7 @@ DnsServiceEndpointGroup group =
 group.whenReady().get();
 ```
 
-<type://DnsTextEndpointGroup> is useful if you need to represent your <typeplural://Endpoint> in a non-standard
+[DnsTextEndpointGroup](type) is useful if you need to represent your [Endpoint](typeplural) in a non-standard
 form:
 
 ```java
@@ -243,7 +243,7 @@ First, You need the `armeria-zookeeper3` dependency:
   ]}
 />
 
-Then, use <type://ZooKeeperEndpointGroup> and <type://ZooKeeperDiscoverySpec> to retrieve the information
+Then, use [ZooKeeperEndpointGroup](type) and [ZooKeeperDiscoverySpec](type) to retrieve the information
 of servers:
 
 ```java
@@ -259,14 +259,14 @@ ZooKeeperEndpointGroup myEndpointGroup =
                               .build();
 ```
 
-The <type://ZooKeeperEndpointGroup> is used to fetch the binary representation of server information.
-The <type://ZooKeeperDiscoverySpec> converts the binary representation to an <type://Endpoint>.
+The [ZooKeeperEndpointGroup](type) is used to fetch the binary representation of server information.
+The [ZooKeeperDiscoverySpec](type) converts the binary representation to an [Endpoint](type).
 
-<type://ZooKeeperDiscoverySpec#curator(String)> uses the format of
+[ZooKeeperDiscoverySpec#curator(String)](type) uses the format of
 [Curator Service Discovery](https://curator.apache.org/curator-x-discovery/index.html) which is compatible
 with [Spring Cloud Zookeeper](https://cloud.spring.io/spring-cloud-zookeeper/reference/html/). If you
-registered your server with <type://ZooKeeperRegistrationSpec#curator(String)>, you must use
-<type://ZooKeeperDiscoverySpec#curator(String)>.
+registered your server with [ZooKeeperRegistrationSpec#curator(String)](type), you must use
+[ZooKeeperDiscoverySpec#curator(String)](type).
 
 You can use an existing
 [CuratorFramework](https://curator.apache.org/apidocs/org/apache/curator/framework/CuratorFramework.html)
@@ -286,11 +286,11 @@ ZooKeeperEndpointGroup myEndpointGroup =
 For more information, please refer to the API documentation of the
 [com.linecorp.armeria.client.zookeeper](https://javadoc.io/doc/com.linecorp.armeria/armeria-javadoc/latest/com/linecorp/armeria/server/client/package-summary.html) package.
 
-<Tip>
+:::tip
 
 See [ZooKeeper service registration](/docs/server-service-registration#zookeeper-based-service-registration-with-zookeeperupdatinglistener).
 
-</Tip>
+:::
 
 ## Eureka-based service discovery with `EurekaEndpointGroup`
 
@@ -303,7 +303,7 @@ First, You need the `armeria-eureka` dependency:
   ]}
 />
 
-Then, use <type://EurekaEndpointGroup> to retrieve the information of servers:
+Then, use [EurekaEndpointGroup](type) to retrieve the information of servers:
 
 ```java
 import com.linecorp.armeria.client.eureka.EurekaEndpointGroup;
@@ -313,7 +313,7 @@ EurekaEndpointGroup eurekaEndpointGroup =
 ```
 
 If you want to retrieve the information of certain regions or a service,
-use <type://EurekaEndpointGroupBuilder>:
+use [EurekaEndpointGroupBuilder](type):
 
 ```java
 import com.linecorp.armeria.client.eureka.EurekaEndpointGroupBuilder;
@@ -328,11 +328,11 @@ EurekaEndpointGroup eurekaEndpointGroup = builder.build();
 For more information, please refer to the API documentation of the
 [com.linecorp.armeria.client.eureka](https://javadoc.io/doc/com.linecorp.armeria/armeria-javadoc/latest/com/linecorp/armeria/client/eureka/package-summary.html) package.
 
-<Tip>
+:::tip
 
 See [Eureka service registration](/docs/server-service-registration#eureka-based-service-registration-with-eurekaupdatinglistener).
 
-</Tip>
+:::
 
 ## [Consul](https://www.consul.io)-based service discovery with `ConsulEndpointGroup`
 
@@ -345,7 +345,7 @@ dependencies={[
 ]}
 />
 
-Then, use <type://ConsulEndpointGroup> to retrieve the information of servers:
+Then, use [ConsulEndpointGroup](type) to retrieve the information of servers:
 
 ```java
 import com.linecorp.armeria.client.consul.ConsulEndpointGroup;
@@ -355,7 +355,7 @@ ConsulEndpointGroup consulEndpointGroup =
 ```
 
 If you want to get the information of certain [datacenter](https://www.consul.io/api-docs/catalog#dc-2) or
-[filter](https://www.consul.io/api-docs/features/filtering) endpoints, use <type://ConsulEndpointGroupBuilder>:
+[filter](https://www.consul.io/api-docs/features/filtering) endpoints, use [ConsulEndpointGroupBuilder](type):
 
 ```java
 import com.linecorp.armeria.client.consul.ConsulEndpointGroupBuilder;
@@ -371,8 +371,8 @@ ConsulEndpointGroup consulEndpointGroup = builder.build();
 For more information, please refer to the API documentation of the
 [com.linecorp.armeria.client.consul](https://javadoc.io/doc/com.linecorp.armeria/armeria-javadoc/latest/com/linecorp/armeria/client/consul/package-summary.html) package.
 
-<Tip>
+:::tip
 
 See [Consul service registration](/docs/server-service-registration#consul-based-service-registration-with-consulupdatinglistener).
 
-</Tip>
+:::
