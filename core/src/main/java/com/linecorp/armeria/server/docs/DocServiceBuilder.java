@@ -24,6 +24,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.function.BiFunction;
+import java.util.regex.Pattern;
 
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.ImmutableList;
@@ -61,6 +62,7 @@ public final class DocServiceBuilder {
     private final Map<String, ListMultimap<String, String>> exampleQueries = new HashMap<>();
     private final List<BiFunction<ServiceRequestContext, HttpRequest, String>> injectedScriptSuppliers =
             new ArrayList<>();
+    private final Map<String, String> docServiceExtraInfo = new HashMap<>();
 
     @Nullable
     private DescriptiveTypeInfoProvider descriptiveTypeInfoProvider;
@@ -552,11 +554,30 @@ public final class DocServiceBuilder {
     }
 
     /**
+     * Sets the title of the web application to be used in the documentation service.
+     * @param webAppTitle  * The title cannot be null, empty, or exceed a maximum length of 50 characters.
+     * @return The current {@link DocServiceBuilder} instance for method chaining.
+     */
+    public DocServiceBuilder webAppTitle(String webAppTitle) {
+        final String webAppTitleKey = "webAppTitle";
+        final Integer webAppTitleMaxSize = 50;
+        final String webAppTitlePattern = "<[^>]*>";
+        requireNonNull(webAppTitle, webAppTitleKey);
+        checkArgument(!webAppTitle.trim().isEmpty(), "%s is empty.", webAppTitleKey);
+        checkArgument(webAppTitle.length() <= webAppTitleMaxSize,
+                      "%s length exceeds %s.", webAppTitleKey, webAppTitleMaxSize);
+        final String webAppTitlePatternSanitized = Pattern.compile(webAppTitlePattern).matcher(webAppTitle)
+                                                          .replaceAll("").trim();
+        docServiceExtraInfo.putIfAbsent(webAppTitleKey, webAppTitlePatternSanitized);
+        return this;
+    }
+
+    /**
      * Returns a newly-created {@link DocService} based on the properties of this builder.
      */
     public DocService build() {
         return new DocService(exampleHeaders, exampleRequests, examplePaths, exampleQueries,
                               injectedScriptSuppliers, unifyFilter(includeFilter, excludeFilter),
-                              descriptiveTypeInfoProvider);
+                              descriptiveTypeInfoProvider, docServiceExtraInfo);
     }
 }
