@@ -64,7 +64,6 @@ import {
 } from '../../lib/versions';
 import { SpecLoadingStatus } from '../../lib/types';
 import LoadingContainer from '../../components/LoadingContainer';
-import { getValidHexColor } from '../../lib/colors';
 
 if (process.env.WEBPACK_DEV === 'true') {
   // DocService must always be accessed at the URL with a trailing slash. In non-dev mode, the server redirects
@@ -487,9 +486,6 @@ const App: React.FunctionComponent<Props> = (props) => {
   const [structsOpen, toggleStructsOpen] = useReducer(toggle, true);
   const [exceptionsOpen, toggleExceptionsOpen] = useReducer(toggle, true);
   const [webAppTitle, setWebAppTitle] = useState<string | null>(null);
-  const [headerBarBackgroundColor, setHeaderBarBackgroundColor] = useState<
-    string | undefined
-  >(undefined);
 
   useEffect(() => {
     (async () => {
@@ -505,14 +501,6 @@ const App: React.FunctionComponent<Props> = (props) => {
         if (simpleTitle) {
           const safeTitle = sanitizeTitle(simpleTitle);
           setWebAppTitle(safeTitle);
-        }
-
-        const headerBarColor = getValidHexColor(
-          extraInfo,
-          'headerBarBackgroundColor',
-        );
-        if (headerBarColor) {
-          setHeaderBarBackgroundColor(headerBarColor);
         }
 
         initialSpecification.getServices().forEach((service) => {
@@ -634,10 +622,7 @@ const App: React.FunctionComponent<Props> = (props) => {
         <script src="injected.js" />
       </Helmet>
       <CssBaseline />
-      <AppBar
-        className={classes.appBar}
-        style={{ backgroundColor: headerBarBackgroundColor }}
-      >
+      <AppBar className={classes.appBar} data-js-target="main-app-bar">
         <Toolbar disableGutters>
           <Hidden mdUp>
             <IconButton color="inherit" onClick={toggleMobileDrawer}>
