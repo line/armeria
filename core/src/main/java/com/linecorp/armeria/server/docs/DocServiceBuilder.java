@@ -573,67 +573,6 @@ public final class DocServiceBuilder {
     }
 
     /**
-     * Sets the header bar background color of the web application to be used in the documentation service.
-     * @param headerBarBackgroundColor The hexadecimal color code for the header bar background.
-     *     Must not be null or empty, and must match the pattern "#RRGGBB".
-     * @return The current {@link DocServiceBuilder} instance for method chaining.
-     */
-    public DocServiceBuilder headerBarBackgroundColor(String headerBarBackgroundColor) {
-        final String headerBarBackgroundColorKey = "headerBarBackgroundColor";
-        final Integer headerBarBackgroundColorMaxSize = 7;
-        final String hexColorPattern = "^#([0-9a-fA-F]{6})$";
-        requireNonNull(headerBarBackgroundColor, headerBarBackgroundColorKey);
-        checkArgument(!headerBarBackgroundColor.trim().isEmpty(), "%s is empty.", headerBarBackgroundColorKey);
-        checkArgument(headerBarBackgroundColor.length() <= headerBarBackgroundColorMaxSize,
-                      "%s length exceeds %s.", headerBarBackgroundColorKey, headerBarBackgroundColorMaxSize);
-        checkArgument(Pattern.compile(hexColorPattern).matcher(headerBarBackgroundColor).matches(),
-                      "%s not in hex format: %s.", headerBarBackgroundColorKey, headerBarBackgroundColor);
-        docServiceExtraInfo.putIfAbsent(headerBarBackgroundColorKey, headerBarBackgroundColor);
-        return this;
-    }
-
-    /**
-     * Sets the background color of the 'Goto' header bar component used in the documentation service.
-     * @param headerGotoBackgroundColor The hexadecimal color code
-     *     Must not be null or empty, and must match the pattern "#RRGGBB".
-     * @return The current {@link DocServiceBuilder} instance for method chaining.
-     */
-    public DocServiceBuilder headerGotoBackgroundColor(String headerGotoBackgroundColor) {
-        final String headerGotoBackgroundColorKey = "headerGotoBackgroundColor";
-        final Integer headerGotoBackgroundColorMaxSize = 7;
-        final String hexColorPattern = "^#([0-9a-fA-F]{6})$";
-        requireNonNull(headerGotoBackgroundColor, headerGotoBackgroundColorKey);
-        checkArgument(!headerGotoBackgroundColor.trim().isEmpty(),
-                      "%s is empty.", headerGotoBackgroundColorKey);
-        checkArgument(headerGotoBackgroundColor.length() <= headerGotoBackgroundColorMaxSize,
-                      "%s length exceeds %s.", headerGotoBackgroundColorKey, headerGotoBackgroundColorMaxSize);
-        checkArgument(Pattern.compile(hexColorPattern).matcher(headerGotoBackgroundColor).matches(),
-                      "%s not in hex format: %s.", headerGotoBackgroundColorKey, headerGotoBackgroundColor);
-        docServiceExtraInfo.putIfAbsent(headerGotoBackgroundColorKey, headerGotoBackgroundColor);
-        return this;
-    }
-
-    /**
-     * Sets the buttons color of the 'DebugPage' component used in the documentation service.
-     * @param debugFormButtonsColor The hexadecimal color code
-     *     Must not be null or empty, and must match the pattern "#RRGGBB".
-     * @return The current {@link DocServiceBuilder} instance for method chaining.
-     */
-    public DocServiceBuilder debugFormButtonsColor(String debugFormButtonsColor) {
-        final String debugFormButtonsColorKey = "debugFormButtonsColor";
-        final Integer debugFormButtonsColorMaxSize = 7;
-        final String hexColorPattern = "^#([0-9a-fA-F]{6})$";
-        requireNonNull(debugFormButtonsColor, debugFormButtonsColorKey);
-        checkArgument(!debugFormButtonsColor.trim().isEmpty(), "%s is empty.", debugFormButtonsColorKey);
-        checkArgument(debugFormButtonsColor.length() <= debugFormButtonsColorMaxSize,
-                      "%s length exceeds %s.", debugFormButtonsColorKey, debugFormButtonsColorMaxSize);
-        checkArgument(Pattern.compile(hexColorPattern).matcher(debugFormButtonsColor).matches(),
-                      "%s not in hex format: %s.", debugFormButtonsColorKey, debugFormButtonsColor);
-        docServiceExtraInfo.putIfAbsent(debugFormButtonsColorKey, debugFormButtonsColor);
-        return this;
-    }
-
-    /**
      * Returns a newly-created {@link DocService} based on the properties of this builder.
      */
     public DocService build() {
