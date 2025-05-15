@@ -158,6 +158,12 @@ const config: Config = {
         'shell-session',
       ],
     },
+    docs: {
+      sidebar: {
+        hideable: true,
+        autoCollapseCategories: true,
+      },
+    },
   } satisfies Preset.ThemeConfig,
 
   plugins: [
