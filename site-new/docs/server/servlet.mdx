@@ -18,7 +18,7 @@ You need the `armeria-tomcat9` dependency:
   ]}
 />
 
-Then, add a <type://TomcatService> to a <type://ServerBuilder>:
+Then, add a [TomcatService](type) to a [ServerBuilder](type):
 
 ```java
 import com.linecorp.armeria.server.ServerBuilder;
@@ -33,8 +33,8 @@ sb.serviceUnder("/tomcat/api/rest/v1/",
                 TomcatService.forFileSystem("/var/lib/webapps/old_api.war"));
 ```
 
-For more information, please refer to the API documentation of <type://TomcatService> and
-<type://TomcatServiceBuilder>.
+For more information, please refer to the API documentation of [TomcatService](type) and
+[TomcatServiceBuilder](type).
 
 ## Embedding Jetty
 
@@ -84,5 +84,5 @@ static WebAppContext newWebAppContext(String resourcePath) throws MalformedURLEx
 }
 ```
 
-For more information, please refer to the API documentation of <type://JettyService> and
-<type://JettyServiceBuilder>.
+For more information, please refer to the API documentation of [JettyService](type) and
+[JettyServiceBuilder](type).

@@ -1,20 +1,20 @@
 # Handling a multipart request
 
-Armeria provides <type://Multipart> encoder and decoder built on top of 
+Armeria provides [Multipart](type) encoder and decoder built on top of 
 [Reactive Streams](https://www.reactive-streams.org/).
 
 ## Building a multipart request
 
-A <type://Multipart> consists of multiple <typeplural://BodyPart>.
-Each <type://BodyPart> is divided into headers and a body. A <type://BodyPart> headers can be created simply 
-using <type://ContentDisposition>. 
-`String`, <type://HttpData>, or <type://StreamMessage> can be set as the body of the <type://BodyPart>.
+A [Multipart](type) consists of multiple [BodyPart](typeplural).
+Each [BodyPart](type) is divided into headers and a body. A [BodyPart](type) headers can be created simply 
+using [ContentDisposition](type). 
+`String`, [HttpData](type), or [StreamMessage](type) can be set as the body of the [BodyPart](type).
 
-<Tip>
+:::tip
 
-You can also use <type://HttpHeaders> to set complex headers for <type://BobyPart#headers()>.
+You can also use [HttpHeaders](type) to set complex headers for [BobyPart#headers()](type).
 
-</Tip>
+:::
 
 ```java
 import java.nio.file.Path;
@@ -39,13 +39,13 @@ BodyPart bodyPart2 = BodyPart.of(imageDisposition, StreamMessage.of(image));
 Multipart multipart = Multipart.of(bodyPart1, bodyPart2);
 ```
 
-If we encode and print the <type://Multipart> created above,
+If we encode and print the [Multipart](type) created above,
 ```java
 for (HttpData httpData : multipart.toStreamMessage().collect().join()) {
   System.out.print(httpData.toStringUtf8());
 }
 ```
-we can see how the <type://Multipart> is encoded as shown below:
+we can see how the [Multipart](type) is encoded as shown below:
 ```
 --ArmeriaBoundaryEsbNVr9Z66DAIYIN
 content-disposition:form-data; name="name"
@@ -62,8 +62,8 @@ content-type:application/octet-stream
 
 ## Sending a multipart request
 
-The <type://Multipart> created in this way can be converted to an <type://HttpRequest> through 
-<type://Multipart#toHttpRequest(String)> and transmitted to a server using a <type://WebClient>.
+The [Multipart](type) created in this way can be converted to an [HttpRequest](type) through 
+[Multipart#toHttpRequest(String)](type) and transmitted to a server using a [WebClient](type).
 
 ```java
 WebClient client = WebClient.of("https://armeria.dev");
@@ -74,8 +74,8 @@ client.execute(request).aggregate()...;
 
 ## Receiving a multipart request
 
-On the server side, the multipart request sent from the client can be decoded into a <type://Multipart>
-using <type://Multipart#from(HttpRequest)>.
+On the server side, the multipart request sent from the client can be decoded into a [Multipart](type)
+using [Multipart#from(HttpRequest)](type).
 ```java
 Server.builder()
       .service((ctx, req) -> {
@@ -84,10 +84,10 @@ Server.builder()
         ...
       })
 ```
-Since <type://Multipart> does not have the actual multipart data, you can use 
+Since [Multipart](type) does not have the actual multipart data, you can use 
 `Multipart.bodyParts().subscribe(...)` to read data little by little as needed.
 If the size of the data is not large, the data can be read after being loaded into memory through 
-<type://Multipart#aggregate()>.
+[Multipart#aggregate()](type).
 ```java
 // Use a `Subscriber` to read the data with backpressure.
 multipart.bodyParts().subsribe(new Subscriber() {
@@ -104,17 +104,17 @@ Multipart.from(req).aggregate()
          });
 ```
 
-## Using <type://@Param> annotation
+## Using [@Param](type) annotation
 
 In annotated services, a body part content of `multipart/form-data` can be directly mapped into a `String`, 
-`Path`, `File`, or <type://MultipartFile> using the <type://@Param> annotation.
+`Path`, `File`, or [MultipartFile](type) using the [@Param](type) annotation.
 
-<Tip>
+:::tip
 
-Note that a <type://BodyPart> can be converted into a `Path`, `File` or <type://MultipartFile> only when 
-the <type://BodyPart#filename()> and <type://BodyPart#name()> is specified.
+Note that a [BodyPart](type) can be converted into a `Path`, `File` or [MultipartFile](type) only when 
+the [BodyPart#filename()](type) and [BodyPart#name()](type) is specified.
 
-</Tip>
+:::
 
 ```java
 import java.io.File;
@@ -137,15 +137,15 @@ public HttpResponse upload(
 }
 ```
 
-<Tip>
+:::tip
 
-<type://ServerBuilder#multipartUploadsLocation(Path)> and the files are removed as soon as the request is 
-handled completely by default, i.e. when the <type://RequestLog> is complete. If you want to persist the 
+[ServerBuilder#multipartUploadsLocation(Path)](type) and the files are removed as soon as the request is 
+handled completely by default, i.e. when the [RequestLog](type) is complete. If you want to persist the 
 uploaded file, you can move the uploaded file to another folder or persistence layer before the deletion.
 
 Alternatively, you can disable the automatic deletion of the uploaded files by setting 
-<type://MultipartRemovalStrategy#NEVER> to 
-<type://ServerBuilder#multipartRemovalStrategy(MultipartRemovalStrategy)>, but please note that you must make
+[MultipartRemovalStrategy#NEVER](type) to 
+[ServerBuilder#multipartRemovalStrategy(MultipartRemovalStrategy)](type), but please note that you must make
 sure the uploaded files are deleted once they are not in use to avoid the excessive consumption of disk space.
 
-</Tip>
+:::

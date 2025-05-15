@@ -1,10 +1,10 @@
 # Running a gRPC service
 
-<Tip>
+:::tip
 
 Visit [armeria-examples](https://github.com/line/armeria-examples) to find a fully working example.
 
-</Tip>
+:::
 
 Let's assume we have the following [gRPC][gRPC] service definition:
 
@@ -58,17 +58,17 @@ public class MyHelloService extends HelloServiceGrpc.HelloServiceImplBase {
     }
 }
 ```
-<Tip>
+:::tip
 
 It is recommended to use the build plugin as explained in
 [the gRPC-Java README](https://github.com/grpc/grpc-java/blob/master/README.md#download) rather than
 running `protoc` manually.
 
-</Tip>
+:::
 
 ## `GrpcService`
-Once you've finished the implementation of the service, you need to build a <type://GrpcService> using
-a <type://GrpcServiceBuilder> and add it to the <type://ServerBuilder>:
+Once you've finished the implementation of the service, you need to build a [GrpcService](type) using
+a [GrpcServiceBuilder](type) and add it to the [ServerBuilder](type):
 
 ```java
 import com.linecorp.armeria.server.Server;
@@ -84,26 +84,26 @@ Server server = sb.build();
 server.start();
 ```
 
-<Tip>
+:::tip
 
-We bound the <type://GrpcService> without specifying any path. It is because <type://GrpcService>
-implements <type://HttpServiceWithRoutes>, which dynamically provides <typeplural://Route> by itself.
+We bound the [GrpcService](type) without specifying any path. It is because [GrpcService](type)
+implements [HttpServiceWithRoutes](type), which dynamically provides [Route](typeplural) by itself.
 
-</Tip>
+:::
 
-<Tip>
+:::tip
 
-<type://GrpcService> supports [gRPC][gRPC], [gRPC-Web][gRPC-Web] and [Protobuf-JSON][Protobuf-JSON] by default.
-If you don't want your <type://GrpcService> support all those formats, specify the formats you want
-using <type://GrpcServiceBuilder#supportedSerializationFormats(Iterable)>.
+[GrpcService](type) supports [gRPC][gRPC], [gRPC-Web][gRPC-Web] and [Protobuf-JSON][Protobuf-JSON] by default.
+If you don't want your [GrpcService](type) support all those formats, specify the formats you want
+using [GrpcServiceBuilder#supportedSerializationFormats(Iterable)](type).
 
-</Tip>
+:::
 
 
 ## Decorating a `GrpcService`
 
-Unlike a usual Armeria service, <type://GrpcService> implements a special interface called
-<type://HttpServiceWithRoutes>. Therefore, it is recommended to decorate a <type://GrpcService> by specifying
+Unlike a usual Armeria service, [GrpcService](type) implements a special interface called
+[HttpServiceWithRoutes](type). Therefore, it is recommended to decorate a [GrpcService](type) by specifying
 decorator functions as extra parameters rather than using `Service.decorate()`:
 
 ```java
@@ -121,16 +121,16 @@ Server server = sb.build();
 server.start();
 ```
 
-<Tip>
+:::tip
 
 See [Decorating `ServiceWithRoutes`](/docs/server-decorator#decorating-servicewithroutes) for more information
-about <type://HttpServiceWithRoutes>.
+about [HttpServiceWithRoutes](type).
 
-</Tip>
+:::
 
 The above decorator decorates all services. If you want to decorate only a specific service, you need to specify
-the decorators when you add the service to the <type://GrpcServiceBuilder>,
-or use the <type://@Decorator>.
+the decorators when you add the service to the [GrpcServiceBuilder](type),
+or use the [@Decorator](type).
 
 ```java
 GrpcService.builder()
@@ -155,22 +155,22 @@ As you might have noticed already, the decorators will be applied in the order o
 
 ## `gRPC-Web`
 
-<type://GrpcService> supports the [gRPC-Web][gRPC-Web] protocol,
+[GrpcService](type) supports the [gRPC-Web][gRPC-Web] protocol,
 a small modification to the [gRPC][gRPC] wire format that can be used from a browser.
 Use the [gRPC-Web-Client][the official gRPC-Web client] to access the service from a browser.
 
-<Tip>
+:::tip
 
 [gRPC-Web-Client][the official gRPC-Web client] does not support client-side
 (or bi-directional) streaming yet but only server-side streaming.
 See [here](https://github.com/grpc/grpc-web/issues/24) for more information.
 
-</Tip>
+:::
 
 If the origin of the Javascript and API server are different, [gRPC-Web-Client][the official gRPC-Web client] first sends `preflight`
 requests by the HTTP `OPTIONS` method, in order to determine whether the actual request is safe to send
-in terms of CORS. Armeria provides <type://CorsService> to handle this requests, so you need to decorate it when
-you build a <type://GrpcService>:
+in terms of CORS. Armeria provides [CorsService](type) to handle this requests, so you need to decorate it when
+you build a [GrpcService](type):
 
 ```java
 import com.linecorp.armeria.common.grpc.protocol.GrpcHeaderNames;
@@ -203,9 +203,9 @@ Please refer to [Configuring CORS](/docs/server-cors) for more information.
 
 ## Unframed requests
 
-<type://GrpcService> supports serving unary RPC methods (no streaming request or response) without [gRPC][gRPC]
+[GrpcService](type) supports serving unary RPC methods (no streaming request or response) without [gRPC][gRPC]
 wire format framing. This can be useful for gradually migrating an existing HTTP POST based API to [gRPC][gRPC].
-As <type://GrpcService> supports both binary protobuf and [Protobuf-JSON][Protobuf-JSON], either legacy protobuf
+As [GrpcService](type) supports both binary protobuf and [Protobuf-JSON][Protobuf-JSON], either legacy protobuf
 or JSON APIs can be used.
 
 ```java
@@ -228,12 +228,12 @@ for JSON POST body.
 
 Unlike upstream gRPC-Java, Armeria does not run service logic in a separate thread pool by default. If your
 service implementation requires blocking, run the individual blocking logic in a thread pool,
-annotate the gRPC services or methods with a <type://@Blocking> annotation, wrap the entire service implementation in
+annotate the gRPC services or methods with a [@Blocking](type) annotation, wrap the entire service implementation in
 `ServiceRequestContext.current().blockingTaskExecutor().submit()`, or set
-<type://GrpcServiceBuilder#useBlockingTaskExecutor(boolean)> so the above happens automatically for
+[GrpcServiceBuilder#useBlockingTaskExecutor(boolean)](type) so the above happens automatically for
 all service methods and lifecycle callbacks.
 
-### Using <type://@Blocking> annotation
+### Using [@Blocking](type) annotation
 
 ```java
 // You can apply the @Blocking annotation at the class level
@@ -267,7 +267,7 @@ class MyGrpcServiceImpl extends MyGrpcServiceImplBase {
 }
 ```
 
-### Wrapping a service with <type://ServiceRequestContext#blockingTaskExecutor()>
+### Wrapping a service with [ServiceRequestContext#blockingTaskExecutor()](type)
 
 ```java
 import com.linecorp.armeria.common.RequestContext;
@@ -289,7 +289,7 @@ public class MyHelloService extends HelloServiceGrpc.HelloServiceImplBase {
 }
 ```
 
-### Using <type://GrpcServiceBuilder#useBlockingTaskExecutor(boolean)>
+### Using [GrpcServiceBuilder#useBlockingTaskExecutor(boolean)](type)
 
 ```java
 ServerBuilder sb = Server.builder();
@@ -301,7 +301,7 @@ sb.service(GrpcService.builder()
                       .build());
 ```
 ## Exception propagation
-It can be very useful to enable <type://Flags#verboseResponses()> in your server by specifying the
+It can be very useful to enable [Flags#verboseResponses()](type) in your server by specifying the
 `-Dcom.linecorp.armeria.verboseResponses=true` system property, which will automatically return
 information about an exception thrown in the server to gRPC clients. Armeria clients will automatically
 convert it back into an exception for structured logging, etc. This response will include information about

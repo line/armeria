@@ -1,10 +1,10 @@
 # Annotated services
 
-<Tip>
+:::tip
 
 Visit [armeria-examples](https://github.com/line/armeria-examples) to find a fully working example.
 
-</Tip>
+:::
 
 Armeria provides a way to write an HTTP service using annotations. It helps a user make his or her code
 simple and easy to understand. A user is able to run an HTTP service by fewer lines of code using
@@ -23,12 +23,12 @@ sb.annotatedService(new Object() {
 });
 ```
 
-<Tip>
+:::tip
 
 For more information about using some well-known clients, please refer to
 [Client interoperability](/docs/advanced-client-interoperability#annotated-services).
 
-</Tip>
+:::
 
 ## Mapping HTTP service methods
 
@@ -295,13 +295,13 @@ public class MyAnnotatedService {
 }
 ```
 
-<Tip>
+:::tip
 
 `@Nullable` annotation can be from *any* package as long as its simple name is `Nullable`.
  For example, it can be `@javax.annotation.Nullable`, `@org.checkerframework.checker.nullness.qual.Nullable` or
  `@io.reactivex.annotations.Nullable`.
 
-</Tip>
+:::
 
 If multiple parameters exist with the same name in a query string, they can be injected as a `List<?>`
 or `Set<?>`, e.g. `/hello1?number=1&number=2&number=3`. You can use [@Default](type) annotation
@@ -843,7 +843,7 @@ public class MyAnnotatedService {
     }
 ```
 
-<Tip>
+:::tip
 
 You can apply the [@Blocking](type) annotation at the class level so all methods are executed by the
 blocking task executor:
@@ -864,7 +864,7 @@ public class MyBlockingAnnotatedService {
 }
 ```
 
-</Tip>
+:::
 
 You can also submit a task to the [ServiceRequestContext#blockingTaskExecutor()](type) or any `Executor`
 instead of using the [@Blocking](type) annotation:
@@ -1048,12 +1048,12 @@ If your decorator does not require any parameter, that is fine. However, what if
 a parameter? In this case, you can create your own decorator annotation. Let's see the following custom
 decorator annotation which applies [LoggingService](type) to an annotated service.
 
-<Tip>
+:::tip
 
 This example is actually just a copy of what Armeria provides out of the box. In reality,
 you could just use [@LoggingDecorator](type), without writing your own one.
 
-</Tip>
+:::
 
 ```java
 @DecoratorFactory(LoggingDecoratorFactoryFunction.class)
@@ -1280,13 +1280,13 @@ GET /hello HTTP/1.1
 Accept: application/json
 ```
 
-<Warning>
+:::warning
 
 Note that a `Content-Type` header of a response is not automatically set. You may want to get the
 negotiated [@Produces](type) from [ServiceRequestContext#negotiatedResponseMediaType()](type) method and
 set it as the value of the `Content-Type` header of your response.
     
-</Warning>
+:::
 
 If a client sends a request without an `Accept` header (or sending an `Accept` header with an unsupported
 content type), it would be usually mapped to `helloJson()` method because the methods are sorted by the
@@ -1459,15 +1459,11 @@ In this case, the values of the HTTP header named `custom-header` and the HTTP t
 Note that the trailers will not be injected into the responses with the following HTTP status code,
 because they always have an empty content.
 
-+--------------+----------------+
-| Status code  | Description    |
-+==============+================+
-| 204          | No content     |
-+--------------+----------------+
-| 205          | Reset content  |
-+--------------+----------------+
-| 304          | Not modified   |
-+--------------+----------------+
+| Status code | Description |
+|-------------|-------------|
+| 204 | No content |
+| 205 | Reset content |
+| 304 | Not modified |
 
 ## Using a composite annotation
 
@@ -1568,12 +1564,12 @@ sb.annotatedService("/", new MyService(), service -> {
 });
 ```
 
-<Tip>
+:::tip
 
 You can also use [RequestLogAccess#whenComplete()](type) to access [RequestOnlyLog#name()](type).
 Please refer to [Structured logging](/docs/advanced-structured-logging)
 for more information about RPC and HTTP service names, and how to use it.
 
-</Tip>
+:::
 
 [Publisher]: https://www.reactive-streams.org/reactive-streams-1.0.2-javadoc/org/reactivestreams/Publisher.html

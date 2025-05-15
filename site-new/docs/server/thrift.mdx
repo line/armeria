@@ -1,10 +1,10 @@
 # Running a Thrift service
 
-<Tip>
+:::tip
 
 Visit [armeria-examples](https://github.com/line/armeria-examples) to find a fully working example.
 
-</Tip>
+:::
 
 Let's assume we have the following Thrift IDL:
 
@@ -60,8 +60,8 @@ public class MySynchronousHelloService implements HelloService.Iface {
 
 ## `THttpService`
 
-Once you've finished the implementation of the interface, you need to wrap it with a <type://THttpService>
-and add it to the <type://ServerBuilder>:
+Once you've finished the implementation of the interface, you need to wrap it with a [THttpService](type)
+and add it to the [ServerBuilder](type):
 
 ```java
 ServerBuilder sb = Server.builder();
@@ -74,30 +74,20 @@ server.start();
 
 ## Serialization formats
 
-<type://THttpService> supports four Thrift serialization formats: TBINARY, TCOMPACT, TJSON and TTEXT.
+[THttpService](type) supports four Thrift serialization formats: TBINARY, TCOMPACT, TJSON and TTEXT.
 It chooses the serialization format based on the value of the `content-type` HTTP header.
 
-+----------------------------------------------------+----------------------------------------+
-| Header value                                       | Serialization format                   |
-+====================================================+========================================+
-| Unspecified or                                     | Use the default serialization format   |
-| `application/x-thrift`                             | (TBINARY unless specified)             |
-+----------------------------------------------------+----------------------------------------+
-| `application/x-thrift; protocol=TBINARY` or <br /> | TBINARY                                |
-| `vnd.apache.thrift.binary`                         |                                        |
-+----------------------------------------------------+----------------------------------------+
-| `application/x-thrift; protocol=TCOMPACT` or <br />| TCOMPACT                               |
-| `vnd.apache.thrift.compact`                        |                                        |
-+----------------------------------------------------+----------------------------------------+
-| `application/x-thrift; protocol=TJSON` or <br />   | TJSON                                  |
-| `vnd.apache.thrift.json`                           |                                        |
-+----------------------------------------------------+----------------------------------------+
-| `application/x-thrift; protocol=TTEXT` or <br />   | TTEXT                                  |
-| `vnd.apache.thrift.text`                           |                                        |
-+----------------------------------------------------+----------------------------------------+
+| Header value | Serialization format |
+|--------------|----------------------|
+| Unspecified or `application/x-thrift` | Use the default serialization format (TBINARY unless specified) |
+| `application/x-thrift; protocol=TBINARY` or <br /> `vnd.apache.thrift.binary` | TBINARY |
+| `application/x-thrift; protocol=TCOMPACT` or <br /> `vnd.apache.thrift.compact` | TCOMPACT |
+| `application/x-thrift; protocol=TJSON` or <br /> `vnd.apache.thrift.json` | TJSON |
+| `application/x-thrift; protocol=TTEXT` or <br /> `vnd.apache.thrift.text` | TTEXT |
+
 
 To change the default serialization format from TBINARY to something else, specify it when creating a
-<type://THttpService>:
+[THttpService](type):
 
 ```java
 import com.linecorp.armeria.common.thrift.ThriftSerializationFormats;
@@ -119,14 +109,14 @@ sb.service("/hello", THttpService.of(new MyHelloService(),
                                      ThriftSerializationFormats.COMPACT));
 ```
 
-<Warning>
+:::warning
 TTEXT is not designed for efficiency and is recommended to be only used for debugging.
 It's best to serve from a separate path only accessible internally.
-</Warning>
+:::
 
 ## Service multiplexing
 
-<type://THttpService> supports service multiplexing fully compatible with Apache Thrift [TMultiplexedProcessor].
+[THttpService](type) supports service multiplexing fully compatible with Apache Thrift [TMultiplexedProcessor].
 
 ```java
 Map<String, Object> impls = new HashMap<>();

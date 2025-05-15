@@ -1,10 +1,10 @@
 # Running a GraphQL service
 
-<Tip>
+:::tip
 
 Visit [armeria-examples](https://github.com/line/armeria-examples) to find a fully working example.
 
-</Tip>
+:::
 
 First, You need the `armeria-graphql` dependency:
 
@@ -51,16 +51,16 @@ class UserDataFetcher implements DataFetcher<User> {
 }
 ```
 
-<Tip>
+:::tip
 
 Please note that this is entirely based on [graphql-java](https://www.graphql-java.com/).
 
-</Tip>
+:::
 
 ## `GraphqlService`
 
-Once you've finished the implementation of the [DataFetcher](https://javadoc.io/doc/com.graphql-java/graphql-java/latest/graphql/schema/DataFetcher.html), you need to build a <type://GraphqlService> using
-a <type://GraphqlServiceBuilder> and add it to the <type://ServerBuilder>:
+Once you've finished the implementation of the [DataFetcher](https://javadoc.io/doc/com.graphql-java/graphql-java/latest/graphql/schema/DataFetcher.html), you need to build a [GraphqlService](type) using
+a [GraphqlServiceBuilder](type) and add it to the [ServerBuilder](type):
 
 ```java
 import com.linecorp.armeria.server.Server;
@@ -87,7 +87,7 @@ We used [RuntimeWiring](https://javadoc.io/doc/com.graphql-java/graphql-java/lat
 
 Armeria does not run service logic in a separate thread pool by default. If your service implementation
 requires blocking, either run the individual blocking logic in a thread pool, or set
-<type://GraphqlServiceBuilder#useBlockingTaskExecutor(boolean)> to `true` so the service runs in
+[GraphqlServiceBuilder#useBlockingTaskExecutor(boolean)](type) to `true` so the service runs in
 all service methods and lifecycle callbacks.
 
 ```java
@@ -104,8 +104,8 @@ sb.service("/graphql",
                          .build());
 ```
 
-<Tip>
+:::tip
 
 You can wrap a [DataFetcher](https://javadoc.io/doc/com.graphql-java/graphql-java/latest/graphql/schema/DataFetcher.html) using [AsyncDataFetcher](https://javadoc.io/doc/com.graphql-java/graphql-java/latest/graphql/schema/AsyncDataFetcher.html) to run it asynchronously.
 
-</Tip>
+:::

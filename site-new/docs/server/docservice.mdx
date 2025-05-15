@@ -1,11 +1,11 @@
 # Browsing and invoking services with `DocService`
 
-<type://DocService> is a single-page web application which provides the following useful features:
+[DocService](type) is a single-page web application which provides the following useful features:
 - Browsing the list of gRPC, Thrift or annotated services and their operations available in the server
 - Invoking a service operation from a web form
 - Creating a permalink for the invocation you've made
 
-First, add <type://DocService> to the <type://ServerBuilder>:
+First, add [DocService](type) to the [ServerBuilder](type):
 
 ```java
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
@@ -32,26 +32,26 @@ sb.serviceUnder("/docs", new DocService());
 Server server = sb.build();
 server.start().join();
 ```
-<Tip>
+:::tip
 
-<type://DocService> will scan for all supported services automatically when the <type://Server> starts up.
+[DocService](type) will scan for all supported services automatically when the [Server](type) starts up.
 Please see [Including and excluding service methods](#including-and-excluding-service-methods)
 to learn how to include or exclude certain services.
 
-</Tip>
+:::
 
 Open http://127.0.0.1:8080/docs/ in your web browser and you'll see the following screen:
 
-![](../../images/docservice_1.png)
+![](/img/docservice_1.png)
 
 The left pane of the screen shows the list of the available services and their operations. If you defined
 structs, enums or exceptions, they will appear there as well. If you click the `hello()` operation, the
 right pane will show the details of the operation such as the list of the parameters, the return type and
 the exceptions which may be thrown:
 
-![](../../images/docservice_2.png)
+![](/img/docservice_2.png)
 
-As you may have noticed, the 'description' column is empty. <type://DocService> can even show the docstrings
+As you may have noticed, the 'description' column is empty. [DocService](type) can even show the docstrings
 you put into your `.thrift` or `.proto` files with a little bit of build configuration. We will visit this
 later in this document.
 
@@ -60,7 +60,7 @@ later in this document.
 Now, scroll down the right pane. You'll find a 'debug form' which enables you to send an RPC request in
 human-friendly JSON format:
 
-![](../../images/docservice_3.png)
+![](/img/docservice_3.png)
 
 Type the request parameters like the following and click the 'Submit to: /hello' button:
 
@@ -72,7 +72,7 @@ Type the request parameters like the following and click the 'Submit to: /hello'
 
 The result pane right next to the text area you entered the JSON request will show the reply in JSON:
 
-![](../../images/docservice_4.png)
+![](/img/docservice_4.png)
 
 The current location of your web browser should be updated like the following:
 - `http://127.0.0.1:8080/docs/#!method/com.example.ThriftHelloService/hello?args=%7B%22name%22%3A%22Armeria%22%7D`
@@ -88,13 +88,13 @@ text area which allows you to specify the HTTP headers you want to add:
 
 <MaxWidth value={432}>
 
-![](../../images/docservice_5.png)
+![](/img/docservice_5.png)
 
 </MaxWidth>
 
 ## Including and excluding service methods
-You can include or exclude service methods using <type://DocServiceFilter> when building a <type://DocService>
-with a <type://DocServiceBuilder>:
+You can include or exclude service methods using [DocServiceFilter](type) when building a [DocService](type)
+with a [DocServiceBuilder](type):
 
 ```java
 import com.linecorp.armeria.server.docs.DocService;
@@ -121,7 +121,7 @@ The inclusion rule is as follows:
 
 ## Example requests and headers
 You can specify the example requests and HTTP headers which will be used as the default value of the debug form
-with a <type://DocServiceBuilder>:
+with a [DocServiceBuilder](type):
 
 ```java
 import com.linecorp.armeria.common.HttpHeaders;
@@ -143,7 +143,7 @@ sb.serviceUnder(
 ...
 ```
 
-By adding examples to <type://DocService>, your users will be able to play with the services you wrote
+By adding examples to [DocService](type), your users will be able to play with the services you wrote
 without a hassle and thus will understand them sooner and better.
 
 ## Adding docstrings
@@ -156,14 +156,18 @@ files into the specific location in the class path.
 
 ### For gRPC
 
-<Tip>Note that .bin, .desc, .dsc, .pb and .protobin are acceptable descriptor set file extensions.</Tip>
+:::tip
+
+Note that .bin, .desc, .dsc, .pb and .protobin are acceptable descriptor set file extensions.
+
+:::
 
 - Configure the protobuf plugin to generate the `.dsc` file that contains the docstrings and
   put it into the `META-INF/armeria/grpc` directory:
 
-  <Tabs>
-    <TabPane tab="Gradle" key="gradle">
-      <CodeBlock language="groovy" filename="build.gradle">{`
+  <Tabs groupId="grpc">
+    <TabItem label="Gradle" value="gradle">
+      <CodeBlock language="groovy" title="build.gradle">{`
       protobuf {
           generateProtoTasks {
               all().each { task ->
@@ -177,9 +181,9 @@ files into the specific location in the class path.
       }
       `}
       </CodeBlock>
-    </TabPane>
-    <TabPane tab="Gradle (Kotlin)" key="gradle_kotlin">
-      <CodeBlock language="kotlin" filename="build.gradle.kts">{`
+    </TabItem>
+    <TabItem label="Gradle (Kotlin)" value="gradle_kotlin">
+      <CodeBlock language="kotlin" title="build.gradle.kts">{`
       protobuf {
           generateProtoTasks {
               all().forEach {
@@ -192,9 +196,9 @@ files into the specific location in the class path.
           }
       }
       `}</CodeBlock>
-    </TabPane>
-    <TabPane tab="Maven" key="maven">
-      <CodeBlock language="xml" filename="pom.xml">{`
+    </TabItem>
+    <TabItem label="Maven" value="maven">
+      <CodeBlock language="xml" title="pom.xml">{`
       <!-- See https://www.xolstice.org/protobuf-maven-plugin/usage.html for more information. -->
       <plugin>
         <groupId>org.xolstice.maven.plugins</groupId>
@@ -220,12 +224,12 @@ files into the specific location in the class path.
         </executions>
       </plugin>
       `}</CodeBlock>
-    </TabPane>
+    </TabItem>
   </Tabs>
 
 ### For annotated service
 
-  Using <type://@Description> annotation:
+  Using [@Description](type) annotation:
 
   ```java
   import com.linecorp.armeria.server.annotation.Description;
@@ -262,29 +266,29 @@ files into the specific location in the class path.
   }
   ```
 
-  <Tip>
+  :::tip
 
-  You can render the description as [Markdown](https://github.github.com/gfm/) or [Mermaid](https://mermaid-js.github.io/mermaid/#/) using <type://Markup>.
+  You can render the description as [Markdown](https://github.github.com/gfm/) or [Mermaid](https://mermaid-js.github.io/mermaid/#/) using [Markup](type).
 
-  </Tip>
+  :::
 
   Using JavaDoc:
 
   This only works with method parameters.
   To enable it, you have to add the armeria annotation processor to your project:
 
-  <Tabs>
-    <TabPane tab="Gradle" key="gradle">
-      <CodeBlock language="groovy" filename="build.gradle">{`
+  <Tabs groupId="grpc">
+    <TabItem label="Gradle" value="gradle">
+      <CodeBlock language="groovy" title="build.gradle">{`
       dependencies {
           compileOnly 'com.linecorp.armeria:armeria-annotation-processor'
           annotationProcessor 'com.linecorp.armeria:armeria-annotation-processor'
       }
       `}
       </CodeBlock>
-    </TabPane>
-    <TabPane tab="Gradle (Kotlin)" key="gradle_kotlin">
-      <CodeBlock language="kotlin" filename="build.gradle.kts">{`
+    </TabItem>
+    <TabItem label="Gradle (Kotlin)" value="gradle_kotlin">
+      <CodeBlock language="kotlin" title="build.gradle.kts">{`
       plugins {
           kotlin("kapt") apply true
       }\n
@@ -295,5 +299,5 @@ files into the specific location in the class path.
           annotationProcessor("com.linecorp.armeria.server.annotation.processor.DocumentationProcessor")
       }
       `}</CodeBlock>
-    </TabPane>
+    </TabItem>
   </Tabs>

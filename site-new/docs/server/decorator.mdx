@@ -8,13 +8,13 @@ useful when [separating concerns](https://en.wikipedia.org/wiki/Separation_of_co
 
 There are basically three ways to write a decorating service:
 
-- Implementing <type://DecoratingHttpServiceFunction> and <type://DecoratingRpcServiceFunction>
-- Extending <type://SimpleDecoratingHttpService> and <type://SimpleDecoratingRpcService>
-- Extending <type://DecoratingService>
+- Implementing [DecoratingHttpServiceFunction](type) and [DecoratingRpcServiceFunction](type)
+- Extending [SimpleDecoratingHttpService](type) and [SimpleDecoratingRpcService](type)
+- Extending [DecoratingService](type)
 
 ## Implementing `DecoratingHttpServiceFunction` and `DecoratingRpcServiceFunction`
 
-<type://DecoratingHttpServiceFunction> and <type://DecoratingRpcServiceFunction> are functional interfaces that
+[DecoratingHttpServiceFunction](type) and [DecoratingRpcServiceFunction](type) are functional interfaces that
 greatly simplify the implementation of a decorating service. They enables you to write a decorating service
 with a single lambda expression:
 
@@ -39,8 +39,8 @@ sb.serviceUnder("/web", service.decorate((delegate, ctx, req) -> {
 ## Extending `SimpleDecoratingHttpService` and ``SimpleDecoratingRpcService``
 
 If your decorator is expected to be reusable, it is recommended to define a new top-level class that extends
-<type://SimpleDecoratingHttpService> or <type://SimpleDecoratingRpcService> depending on whether you are
-decorating an <type://HttpService> or an <type://RpcService>:
+[SimpleDecoratingHttpService](type) or [SimpleDecoratingRpcService](type) depending on whether you are
+decorating an [HttpService](type) or an [RpcService](type):
 
 ```java
 import com.linecorp.armeria.common.HttpRequest;
@@ -74,7 +74,7 @@ sb.serviceUnder("/web", service.decorate(delegate -> new AuthService(delegate)))
 ## Extending ``DecoratingService``
 
 So far, we only demonstrated the case where a decorating service does not transform the type of the request and
-response. You can do that as well, of course, using <type://DecoratingService>:
+response. You can do that as well, of course, using [DecoratingService](type):
 
 ```java
 import com.linecorp.armeria.server.RpcService;
@@ -136,9 +136,9 @@ for (ServiceConfig sc : serviceConfigs) {
 
 ## Decorating `ServiceWithRoutes`
 
-<type://ServiceWithRoutes> is a special variant of service which allows a user to register multiple
-routes for a single service. It has a method called <type://ServiceWithRoutes#routes()> which returns a `Set` of
-<typeplural://Route> so that you do not have to specify path when registering your service:
+[ServiceWithRoutes](type) is a special variant of service which allows a user to register multiple
+routes for a single service. It has a method called [ServiceWithRoutes#routes()](type) which returns a `Set` of
+[Route](typeplural) so that you do not have to specify path when registering your service:
 
 ```java
 import com.linecorp.armeria.server.Route;
@@ -166,9 +166,9 @@ sb.service(new MyServiceWithRoutes());
 sb.service("/services/hola", new MyServiceWithRoutes());
 ```
 
-However, decorating a <type://ServiceWithRoutes> can lead to a compilation error when you attempt to
+However, decorating a [ServiceWithRoutes](type) can lead to a compilation error when you attempt to
 register it without specifying a path explicitly, because a decorated service is not a
-<type://ServiceWithRoutes> anymore but just a service:
+[ServiceWithRoutes](type) anymore but just a service:
 
 ```java
 import com.linecorp.armeria.server.logging.LoggingService;
@@ -197,12 +197,12 @@ sb.service(new MyServiceWithRoutes(),
            LoggingService.newDecorator())
 ```
 
-A good real-world example of <type://ServiceWithRoutes> is <type://GrpcService>.
+A good real-world example of [ServiceWithRoutes](type) is [GrpcService](type).
 See [Decorating a GrpcService](/docs/server-grpc#decorating-a-grpcservice) for more information.
 
 ## Decorating multiple services by path mapping
 
-If you want to decorate multiple <typeplural://Service> by path mapping or router matching, you can specify
+If you want to decorate multiple [Service](typeplural) by path mapping or router matching, you can specify
 decorators using `decoratorUnder(pathPrefix, ...)` or `decorator(Route, ...)`.
 
 ```java
@@ -274,7 +274,7 @@ sb.routeDecorator()
   });
 ```
 
-Please refer to <type://DecoratingServiceBindingBuilder> for more information.
+Please refer to [DecoratingServiceBindingBuilder](type) for more information.
 
 ## See also
 

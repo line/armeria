@@ -1,16 +1,16 @@
 # Serving Server-Sent Events
 
-<Tip>
+:::tip
 
 Visit [armeria-examples](https://github.com/line/armeria-examples) to find a fully working example.
 
-</Tip>
+:::
 
 A traditional web page has to send a request to the server in order to receive new data.
 With [Server-Sent Events][Server-Sent Events], however, it is possible for a server to push a new data to
 the web page whenever it wants to.
 
-Armeria provides several factory methods by <type://ServerSentEvents> class which help a user to easily send
+Armeria provides several factory methods by [ServerSentEvents](type) class which help a user to easily send
 an event stream to the client. The following example shows how to build a server which serves services
 sending a response with [Server-Sent Events][Server-Sent Events].
 
@@ -34,7 +34,7 @@ Server server =
               .build();
 ```
 
-Of course, Armeria provides <type://@ProducesEventStream> annotation in order to convert the result objects
+Of course, Armeria provides [@ProducesEventStream](type) annotation in order to convert the result objects
 returned from an annotated service method into [Server-Sent Events][Server-Sent Events].
 The following example shows how to use the annotation.
 
