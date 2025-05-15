@@ -54,12 +54,10 @@ import {
   Route,
   RoutePathType,
   ServiceType,
-  Specification,
 } from '../../lib/specification';
 import { TRANSPORTS } from '../../lib/transports';
 import { SelectOption } from '../../lib/types';
 import DebugInputs from './DebugInputs';
-import { getValidHexColor } from '../../lib/colors';
 
 const useStyles = makeStyles((theme: Theme) =>
   createStyles({
@@ -87,7 +85,6 @@ interface OwnProps {
   setDebugFormIsOpen: Dispatch<React.SetStateAction<boolean>>;
   jsonSchemas: any[];
   docServiceRoute?: Route;
-  specification: Specification;
 }
 
 type Props = OwnProps & RouteComponentProps;
@@ -148,7 +145,6 @@ const DebugPage: React.FunctionComponent<Props> = ({
   setDebugFormIsOpen,
   jsonSchemas,
   docServiceRoute,
-  specification,
 }) => {
   const [requestBody, setRequestBody] = useState('');
   const [debugResponse, setDebugResponse] = useState('');
@@ -524,12 +520,6 @@ const DebugPage: React.FunctionComponent<Props> = ({
     });
   }, [serviceType, transport, method, examplePaths]);
 
-  const extraInfo = specification.getDocServiceExtraInfo();
-  const debugFormButtonsColor = getValidHexColor(
-    extraInfo,
-    'debugFormButtonsColor',
-  );
-
   return (
     <>
       <Section>
@@ -572,12 +562,7 @@ const DebugPage: React.FunctionComponent<Props> = ({
                 setRequestBody={setRequestBody}
               />
               <Typography variant="body2" paragraph />
-              <Button
-                variant="contained"
-                color="primary"
-                onClick={onSubmit}
-                style={{ backgroundColor: debugFormButtonsColor }}
-              >
+              <Button variant="contained" color="primary" onClick={onSubmit}>
                 Submit
               </Button>
               <Button variant="text" color="secondary" onClick={onExport}>
@@ -723,12 +708,7 @@ const DebugPage: React.FunctionComponent<Props> = ({
         </DialogContent>
         <DialogActions className={classes.actionDialog}>
           <div>
-            <Button
-              variant="contained"
-              color="primary"
-              onClick={onSubmit}
-              style={{ backgroundColor: debugFormButtonsColor }}
-            >
+            <Button variant="contained" color="primary" onClick={onSubmit}>
               Submit
             </Button>
             <Button variant="text" color="secondary" onClick={onExport}>
@@ -740,7 +720,6 @@ const DebugPage: React.FunctionComponent<Props> = ({
             onClick={() => setDebugFormIsOpen(false)}
             variant="contained"
             color="primary"
-            style={{ backgroundColor: debugFormButtonsColor }}
           >
             Close
           </Button>
