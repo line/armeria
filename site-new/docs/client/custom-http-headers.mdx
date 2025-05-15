@@ -1,0 +1,103 @@
+# Sending custom HTTP headers
+
+When sending an RPC request, it is sometimes required to send HTTP headers with it, such as an authentication token.
+There are four ways to customize the HTTP headers of your RPC request:
+- Using the <type://Clients#withHeaders(Consumer)> method
+- Using the <type://ClientOption#HEADERS> option
+- Using the <type://ClientBuilder#decorator(Function)> method
+- Using a derived client
+
+## Using `Clients.withHeaders()`
+
+```java
+import static com.linecorp.armeria.common.HttpHeaderNames.AUTHORIZATION;
+import com.linecorp.armeria.common.util.SafeCloseable;
+import com.linecorp.armeria.client.Clients;
+
+HelloService.Iface client = Clients.newClient("tbinary+http://example.com/hello",
+                                               HelloService.Iface.class);
+try (SafeCloseable ignored = Clients.withHeaders(
+        headers -> headers.set(AUTHORIZATION, credential))) {
+    client.hello("authorized personnel");
+}
+```
+
+If you are setting only a single header,
+you can use <type://Clients#withHeader(CharSequence,String)> simply:
+
+```java
+try (SafeCloseable ignored = Clients.withHeader(AUTHORIZATION, credential)) {
+    client.hello("authorized personnel");
+}
+```
+
+You can also nest `withHeader(s)`. The following example will send both `user-agent` header and
+`authorization` header when calling `client.hello()`:
+
+```java
+import static com.linecorp.armeria.common.HttpHeaderNames.USER_AGENT;
+
+try (SafeCloseable ignored1 = Clients.withHeader(USER_AGENT, myUserAgent)) {
+    for (String cred : credentials) {
+        try (SafeCloseable ignored2 = Clients.withHeaders(AUTHORIZATION, cred)) {
+            client.hello("authorized personnel");
+        }
+    }
+}
+```
+
+## Using `ClientOption.HEADERS`
+
+If you have a custom HTTP header whose value does not change often, you can use
+<type://ClientOption#HEADERS> which is more efficient:
+
+```java
+import static com.linecorp.armeria.common.HttpHeaderNames.AUTHORIZATION;
+import com.linecorp.armeria.common.HttpHeaders;
+import com.linecorp.armeria.client.ClientBuilder;
+import com.linecorp.armeria.client.ClientOption;
+
+ClientBuilder cb = Clients.builder("tbinary+http://example.com/hello");
+cb.setHeader(AUTHORIZATION, credential);
+// or:
+// cb.option(ClientOption.HEADERS, HttpHeaders.of(AUTHORIZATION, credential));
+HelloService.Iface client = cb.build(HelloService.Iface.class);
+client.hello("authorized personnel");
+```
+
+## Using `ClientBuilder.decorator()`
+
+If you want more freedom on how you manipulate the request headers, use a decorator:
+
+```java
+ClientBuilder cb = Clients.builder("tbinary+http://example.com/hello");
+
+// Add a decorator that inserts the custom header.
+cb.decorator((delegate, ctx, req) -> { // See DecoratingHttpClientFunction and DecoratingRpcClientFunction.
+    HttpRequest newReq = req.withHeaders(req.headers().toBuilder().set(AUTHORIZATION, credential));
+    ctx.updateRequest(newReq);
+    return delegate.execute(ctx, newReq);
+});
+
+HelloService.Iface client = cb.build(HelloService.Iface.class);
+client.hello("authorized personnel");
+```
+
+Note that this method is as efficient as the <type://ClientOption#HEADERS> option.
+Choose whichever you prefer.
+
+## Using a derived client
+
+Although not as simple as using <type://Clients#withHeader(CharSequence,String)>,
+you can create a derived client to add more custom headers to an existing client:
+
+```java
+HelloService.Iface client = ...;
+HelloService.Iface derivedClient = Clients.newDerivedClient(client, options -> {
+    return ClientOptions.builder()
+                        .options(options)
+                        .decorator(...)  // Add a decorator.
+                        .addHeader(AUTHORIZATION, credential)  // Add an HTTP header.
+                        .build();
+});
+```
