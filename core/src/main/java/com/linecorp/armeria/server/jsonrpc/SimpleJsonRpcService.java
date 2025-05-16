@@ -38,6 +38,7 @@ import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.jsonrpc.JsonRpcError;
 import com.linecorp.armeria.common.jsonrpc.JsonRpcRequest;
 import com.linecorp.armeria.common.jsonrpc.JsonRpcResponse;
@@ -56,6 +57,7 @@ import com.linecorp.armeria.server.ServiceRequestContext;
  * Delegate services can be either non-annotated {@link HttpService}s or annotated service objects,
  * typically registered via {@link JsonRpcServiceBuilder}.
  */
+@UnstableApi
 public class SimpleJsonRpcService implements JsonRpcService {
 
     private static final Logger logger = LoggerFactory.getLogger(SimpleJsonRpcService.class);
@@ -76,8 +78,8 @@ public class SimpleJsonRpcService implements JsonRpcService {
      *                       If {@code null}, an empty cache is initialized.
      */
     public SimpleJsonRpcService(Set<Route> routes,
-                                ObjectMapper mapper,
-                                @Nullable Map<String, HttpService> cachedServices) {
+            ObjectMapper mapper,
+            @Nullable Map<String, HttpService> cachedServices) {
         this.routes = routes;
         this.mapper = mapper;
         if (cachedServices != null) {
@@ -105,8 +107,7 @@ public class SimpleJsonRpcService implements JsonRpcService {
     @Override
     public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
         return HttpResponse.of(req.aggregate()
-                                  .thenCompose(aggregatedRequest ->
-                                                       handleAggregatedRequest(ctx, req, aggregatedRequest)));
+                .thenCompose(aggregatedRequest -> handleAggregatedRequest(ctx, req, aggregatedRequest)));
     }
 
     /**
@@ -168,29 +169,29 @@ public class SimpleJsonRpcService implements JsonRpcService {
     private HttpResponse combineResponses(List<CompletableFuture<AggregatedHttpResponse>> futures) {
         final List<JsonNode> responseNodes =
                 futures.stream()
-                       .map(future -> {
-                           try {
-                               final AggregatedHttpResponse aggResp = future.join();
-                               return mapper.readTree(aggResp.contentUtf8());
-                           } catch (Exception e) {
-                               logger.warn("Failed to aggregate/parse individual JSON-RPC " +
-                                           "response within batch," +
-                                           "returning internal error node", e);
+                        .map(future -> {
+                            try {
+                                final AggregatedHttpResponse aggResp = future.join();
+                                return mapper.readTree(aggResp.contentUtf8());
+                            } catch (Exception e) {
+                                logger.warn("Failed to aggregate/parse individual JSON-RPC " +
+                                        "response within batch," +
+                                        "returning internal error node", e);
 
-                               final JsonRpcError internalError =
-                                       JsonRpcError.internalError("Failed to process response");
-                               final JsonRpcResponse errorResponse =
-                                       JsonRpcResponse.ofError(internalError, null);
-                               return mapper.valueToTree(errorResponse);
-                           }
-                       }).collect(Collectors.toList());
+                                final JsonRpcError internalError =
+                                        JsonRpcError.INTERNAL_ERROR.withData("Failed to process response");
+                                final JsonRpcResponse errorResponse =
+                                        JsonRpcResponse.ofError(internalError, null);
+                                return mapper.valueToTree(errorResponse);
+                            }
+                        }).collect(Collectors.toList());
         try {
             return HttpResponse.ofJson(MediaType.JSON_UTF_8, responseNodes);
         } catch (Exception e) { // Catch potential exceptions from ofJson
             logger.error("Failed to serialize final batch JSON-RPC response", e);
             // This is a server-side issue, respond with a single internal error
             final JsonRpcResponse errResp = JsonRpcResponse.ofError(
-                    JsonRpcError.internalError("Failed to create batch response"), null);
+                    JsonRpcError.INTERNAL_ERROR.withData("Failed to create batch response"), null);
 
             return JsonRpcResponseFactory.toHttpResponse(errResp, mapper, null);
         }
@@ -239,8 +240,7 @@ public class SimpleJsonRpcService implements JsonRpcService {
 
                 futures.add(
                         JsonRpcResponseFactory.toHttpResponse(errorResponse, mapper, errorResponse.id())
-                                              .aggregate()
-                );
+                                .aggregate());
             } else {
                 final JsonRpcRequest rpcRequest = item.request();
                 assert rpcRequest != null;
@@ -251,7 +251,7 @@ public class SimpleJsonRpcService implements JsonRpcService {
                         route(ctx, originalRequest, rpcRequest);
                     } catch (Exception e) {
                         logger.warn("Failed to route or start execution for notification method " +
-                                    "'{}': {}", rpcRequest.method(), e.getMessage(), e);
+                                "'{}': {}", rpcRequest.method(), e.getMessage(), e);
                     }
                 } else {
                     // Handle regular request
@@ -259,24 +259,21 @@ public class SimpleJsonRpcService implements JsonRpcService {
                         final HttpResponse delegateResponseFuture = route(ctx, originalRequest, rpcRequest);
 
                         futures.add(
-                                delegateResponseFuture.aggregate()
-                        );
+                                delegateResponseFuture.aggregate());
                     } catch (JsonRpcServiceNotFoundException e) {
                         final JsonRpcResponse errorResponse = JsonRpcResponse.ofError(
-                                JsonRpcError.methodNotFound(e.getMessage()), rpcRequest.id());
+                                JsonRpcError.METHOD_NOT_FOUND.withData(e.getMessage()), rpcRequest.id());
 
                         futures.add(
                                 JsonRpcResponseFactory.toHttpResponse(errorResponse, mapper, rpcRequest.id())
-                                                      .aggregate()
-                        );
+                                        .aggregate());
                     } catch (Exception e) {
                         final JsonRpcResponse response =
                                 JsonRpcResponseFactory.fromThrowable(e, rpcRequest.id(), rpcRequest.method());
 
                         futures.add(
                                 JsonRpcResponseFactory.toHttpResponse(response, mapper, rpcRequest.id())
-                                                      .aggregate()
-                        );
+                                        .aggregate());
                     }
                 }
             }
@@ -316,17 +313,17 @@ public class SimpleJsonRpcService implements JsonRpcService {
      * @throws Exception if an error occurs during parameter serialization or service invocation.
      */
     private HttpResponse route(ServiceRequestContext context, HttpRequest originalHttpRequest,
-                               JsonRpcRequest jsonRpcRequest) throws Exception {
+            JsonRpcRequest jsonRpcRequest) throws Exception {
         final String targetPath = context.mappedPath() +
-                                  (jsonRpcRequest.method().startsWith("/") ? jsonRpcRequest.method()
-                                                                           : '/' + jsonRpcRequest.method());
+                (jsonRpcRequest.method().startsWith("/") ? jsonRpcRequest.method()
+                        : '/' + jsonRpcRequest.method());
 
         final HttpService targetService = findService(context, targetPath);
 
         // Build delegate headers with the actual target path.
         final RequestHeaders delegateHeaders = originalHttpRequest.headers().toBuilder()
-                                                                  .path(targetPath)
-                                                                  .build();
+                .path(targetPath)
+                .build();
 
         final HttpRequest delegateRequest;
         if (jsonRpcRequest.params() != null) {
@@ -382,15 +379,14 @@ public class SimpleJsonRpcService implements JsonRpcService {
         final String prefix = context.mappedPath();
 
         HttpService result = cachedServices.get(lookupPath) != null ? cachedServices.get(lookupPath)
-                                                                    : cachedServices.get(prefix);
+                : cachedServices.get(prefix);
         if (result == null) {
             // Search server config using the exact lookupPath.
             result = context.config().server().serviceConfigs().stream()
-                            .filter(serviceConfig ->
-                                            serviceConfig.route().patternString().equals(lookupPath))
-                            .map(ServiceConfig::service)
-                            .findFirst()
-                            .orElse(null);
+                    .filter(serviceConfig -> serviceConfig.route().patternString().equals(lookupPath))
+                    .map(ServiceConfig::service)
+                    .findFirst()
+                    .orElse(null);
 
             if (result == null) {
                 // Throw a specific exception for service not found, 404 Not Found

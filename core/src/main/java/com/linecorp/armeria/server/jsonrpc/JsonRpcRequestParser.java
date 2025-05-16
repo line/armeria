@@ -15,6 +15,8 @@
  */
 package com.linecorp.armeria.server.jsonrpc;
 
+import static java.util.Objects.requireNonNull;
+
 import java.util.LinkedList;
 import java.util.List;
 
@@ -28,6 +30,7 @@ import com.fasterxml.jackson.databind.exc.MismatchedInputException;
 
 import com.linecorp.armeria.common.AggregatedHttpRequest;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.jsonrpc.JsonRpcError;
 import com.linecorp.armeria.common.jsonrpc.JsonRpcRequest;
 import com.linecorp.armeria.common.jsonrpc.JsonRpcResponse;
@@ -37,6 +40,7 @@ import com.linecorp.armeria.internal.common.JacksonUtil;
 /**
  * Parses JSON-RPC requests.
  */
+@UnstableApi
 final class JsonRpcRequestParser {
 
     private static final Logger logger = LoggerFactory.getLogger(JsonRpcRequestParser.class);
@@ -66,6 +70,8 @@ final class JsonRpcRequestParser {
      *         The list will contain at least one element, even in case of errors.
      */
     public static List<JsonRpcItemParseResult> parseRequest(AggregatedHttpRequest aggregatedRequest) {
+        requireNonNull(aggregatedRequest, "aggregatedRequest");
+
         final String requestBody = aggregatedRequest.contentUtf8();
         logger.trace("Received JSON-RPC request body: {}", requestBody);
 
@@ -78,8 +84,8 @@ final class JsonRpcRequestParser {
                 // Batch Request
                 if (node.isEmpty()) {
                     logger.warn("Received empty JSON-RPC batch request.");
-                    final JsonRpcError error = JsonRpcError
-                            .invalidRequest("Received empty JSON-RPC batch request.");
+                    final JsonRpcError error =
+                            JsonRpcError.INVALID_REQUEST.withData("Received empty JSON-RPC batch request.");
                     parsedItems.add(new JsonRpcItemParseResult(JsonRpcResponse.ofError(error, null)));
                     // Return immediately for empty batch error
                     return parsedItems;
@@ -92,10 +98,10 @@ final class JsonRpcRequestParser {
                 parsedItems.add(parseNodeAndHandleError(node));
             } else {
                 logger.warn("Invalid JSON-RPC request: Request must be a JSON object or array. Body: {}",
-                            requestBody);
+                        requestBody);
 
-                final JsonRpcError error = JsonRpcError
-                        .invalidRequest("Request must be a JSON object or array.");
+                final JsonRpcError error =
+                        JsonRpcError.INVALID_REQUEST.withData("Request must be a JSON object or array.");
 
                 parsedItems.add(new JsonRpcItemParseResult(JsonRpcResponse.ofError(error, null)));
             }
@@ -103,16 +109,16 @@ final class JsonRpcRequestParser {
         } catch (JsonProcessingException e) {
             // Handle errors parsing the root JSON structure
             logger.warn("Failed to parse overall JSON-RPC request body: {}", requestBody, e);
-            final JsonRpcError error = JsonRpcError
-                    .parseError("Invalid JSON received: " + e.getMessage());
+            final JsonRpcError error =
+                    JsonRpcError.PARSE_ERROR.withData("Invalid JSON received: " + e.getMessage());
             parsedItems.clear(); // Ensure the list is empty before adding the single error
             parsedItems.add(new JsonRpcItemParseResult(JsonRpcResponse.ofError(error, null)));
             return parsedItems;
         } catch (Exception e) {
             // Catch any other unexpected errors during parsing phase
             logger.error("Unexpected error during JSON-RPC request parsing: {}", requestBody, e);
-            final JsonRpcError error = JsonRpcError
-                    .internalError("Unexpected server error during request parsing");
+            final JsonRpcError error =
+                    JsonRpcError.INTERNAL_ERROR.withData("Unexpected server error during request parsing");
 
             parsedItems.clear();
             parsedItems.add(new JsonRpcItemParseResult(JsonRpcResponse.ofError(error, null)));
@@ -144,23 +150,23 @@ final class JsonRpcRequestParser {
             final JsonRpcError error;
             if (e instanceof MismatchedInputException) {
                 // Likely missing required RPC fields
-                error = JsonRpcError.invalidRequest("Invalid request object: " + e.getMessage());
+                error = JsonRpcError.INVALID_REQUEST.withData("Invalid request object: " + e.getMessage());
             } else {
-                error = JsonRpcError.parseError("Failed to parse request object: " + e.getMessage());
+                error = JsonRpcError.PARSE_ERROR.withData("Failed to parse request object: " + e.getMessage());
             }
             return new JsonRpcItemParseResult(JsonRpcResponse.ofError(error, id));
-        } catch (IllegalArgumentException e) {
+        } catch (IllegalArgumentException | NullPointerException e) {
             // Handle validation errors (invalid version, method, params type etc.)
-            final JsonRpcError error = JsonRpcError
-                    .invalidRequest("Invalid request object: " + e.getMessage());
+            final JsonRpcError error =
+                    JsonRpcError.INVALID_REQUEST.withData("Invalid request object: " + e.getMessage());
 
             return new JsonRpcItemParseResult(JsonRpcResponse.ofError(error, id));
         } catch (Exception e) {
             // Catch any other unexpected errors during single node processing
             logger.error("Unexpected error parsing JSON-RPC node (id: {}): {}",
-                         id, node.toString(), e);
-            final JsonRpcError error = JsonRpcError
-                    .internalError("Unexpected server error parsing request item");
+                    id, node.toString(), e);
+            final JsonRpcError error =
+                    JsonRpcError.INTERNAL_ERROR.withData("Unexpected server error parsing request item");
             return new JsonRpcItemParseResult(JsonRpcResponse.ofError(error, id));
         }
     }

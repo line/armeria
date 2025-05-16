@@ -24,6 +24,7 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.jsonrpc.JsonRpcUtil;
 import com.linecorp.armeria.internal.common.JacksonUtil;
 import com.linecorp.armeria.server.HttpService;
@@ -35,6 +36,7 @@ import com.linecorp.armeria.server.SimpleDecoratingHttpService;
  * If the request is a JSON-RPC notification, it returns an HTTP 200 OK response.
  * Otherwise, it converts the delegate's response into a JSON-RPC response format.
  */
+@UnstableApi
 public final class JsonRpcServiceDecorator extends SimpleDecoratingHttpService {
 
     /**
@@ -87,8 +89,7 @@ public final class JsonRpcServiceDecorator extends SimpleDecoratingHttpService {
         final HttpResponse res = delegate.serve(ctx, req);
 
         final CompletableFuture<HttpResponse> future = res.aggregate()
-                                                          .thenApply(aggregated ->
-                                                                             toRpcResponse(aggregated, ctx));
+                .thenApply(aggregated -> toRpcResponse(aggregated, ctx));
         return HttpResponse.of(future);
     }
 
@@ -135,6 +136,6 @@ public final class JsonRpcServiceDecorator extends SimpleDecoratingHttpService {
         }
 
         return HttpResponse.ofJson(MediaType.JSON_UTF_8,
-                                   JsonRpcUtil.parseDelegateResponse(res, id, method, mapper));
+                JsonRpcUtil.parseDelegateResponse(res, id, method, mapper));
     }
 }

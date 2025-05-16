@@ -15,11 +15,14 @@
  */
 package com.linecorp.armeria.common.jsonrpc;
 
+import static java.util.Objects.requireNonNull;
+
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 
 /**
  * Represents a JSON-RPC 2.0 response object.
@@ -46,13 +49,9 @@ import com.linecorp.armeria.common.annotation.Nullable;
  * @see <a href="https://www.jsonrpc.org/specification#response_object">
  *     JSON-RPC 2.0 Specification - Response object</a>
  */
-@JsonInclude(JsonInclude.Include.NON_NULL) // Omit null fields (like result or error) during serialization
+@UnstableApi
+@JsonInclude(JsonInclude.Include.NON_NULL)
 public final class JsonRpcResponse {
-
-    /**
-     * The required JSON-RPC protocol version string.
-     */
-    private static final String JSONRPC_VERSION = "2.0";
 
     /**
      * A String specifying the version of the JSON-RPC protocol. MUST be exactly "2.0".
@@ -82,27 +81,15 @@ public final class JsonRpcResponse {
     @Nullable
     private final Object id;
 
-    /**
-     * Private constructor for creating a successful response.
-     *
-     * @param result the result of the method invocation. Can be any valid JSON value.
-     * @param id the ID of the original request.
-     */
-    private JsonRpcResponse(@Nullable Object result, @Nullable Object id) {
-        this.jsonrpc = JSONRPC_VERSION; // Fixed value for JSON-RPC version
+    private JsonRpcResponse(Object result, @Nullable Object id) {
+        this.jsonrpc = JsonRpcUtil.JSON_RPC_VERSION;
         this.result = result;
         this.error = null;
         this.id = id;
     }
 
-    /**
-     * Private constructor for creating an error response.
-     *
-     * @param error the {@link JsonRpcError} object detailing the error.
-     * @param id the ID of the original request, or {@code null} if the request ID could not be determined.
-     */
     private JsonRpcResponse(JsonRpcError error, @Nullable Object id) {
-        this.jsonrpc = JSONRPC_VERSION; // Fixed value for JSON-RPC version
+        this.jsonrpc = JsonRpcUtil.JSON_RPC_VERSION;
         this.result = null;
         this.error = error;
         this.id = id;
@@ -129,10 +116,10 @@ public final class JsonRpcResponse {
      */
     @JsonCreator
     public JsonRpcResponse(@JsonProperty("jsonrpc") String jsonrpc,
-                           @JsonProperty("result") @Nullable Object result,
-                           @JsonProperty("error") @Nullable JsonRpcError error,
-                           @JsonProperty("id") @Nullable Object id) {
-        this.jsonrpc = jsonrpc;
+            @JsonProperty("result") @Nullable Object result,
+            @JsonProperty("error") @Nullable JsonRpcError error,
+            @JsonProperty("id") @Nullable Object id) {
+        this.jsonrpc = requireNonNull(jsonrpc, "jsonrpc");
         this.result = result;
         this.error = error;
         this.id = id;
@@ -153,8 +140,8 @@ public final class JsonRpcResponse {
      *               for a successful response is unusual unless the request ID was also null).
      * @return a new {@link JsonRpcResponse} instance representing a successful outcome.
      */
-    public static JsonRpcResponse ofSuccess(@Nullable Object result, @Nullable Object id) {
-        return new JsonRpcResponse(result, id);
+    public static JsonRpcResponse ofSuccess(Object result, @Nullable Object id) {
+        return new JsonRpcResponse(requireNonNull(result, "result"), id);
     }
 
     /**
@@ -170,7 +157,7 @@ public final class JsonRpcResponse {
      * @return a new {@link JsonRpcResponse} instance representing an error outcome.
      */
     public static JsonRpcResponse ofError(JsonRpcError error, @Nullable Object id) {
-        return new JsonRpcResponse(error, id);
+        return new JsonRpcResponse(requireNonNull(error, "error"), id);
     }
 
     /**

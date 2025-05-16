@@ -25,8 +25,6 @@
  *       which can indicate either success (with a result) or failure (with an error).</li>
  *   <li>{@link com.linecorp.armeria.common.jsonrpc.JsonRpcError}: Represents the error object included in
  *       a response when a request fails.</li>
- *   <li>{@link com.linecorp.armeria.common.jsonrpc.JsonRpcErrorCode}: An enum defining standard
- *       JSON-RPC 2.0 error codes.</li>
  * </ul>
  * These classes are annotated for straightforward serialization to and deserialization from JSON
  * using the Jackson library.

@@ -41,46 +41,6 @@ class JsonRpcResponseFactoryTest {
 
     private static final ObjectMapper mapper = JacksonUtil.newDefaultObjectMapper();
 
-    // Test for ofSuccess(JsonNode result, @Nullable Object id)
-    @Test
-    void ofSuccess_delegatesToJsonRpcResponse() {
-        // Inputs/Preconditions
-        final JsonNode resultNode = mapper.getNodeFactory().textNode("data");
-        final Object id = "id1";
-
-        // Expected result from direct call
-        final JsonRpcResponse expectedResponse = JsonRpcResponse.ofSuccess(resultNode, id);
-
-        // Execute factory call
-        final JsonRpcResponse actualResponse = JsonRpcResponseFactory.ofSuccess(resultNode, id);
-
-        // Expected Outcomes/Postconditions
-        assertEquals(expectedResponse.jsonRpcVersion(), actualResponse.jsonRpcVersion());
-        assertEquals(expectedResponse.result(), actualResponse.result());
-        assertEquals(expectedResponse.error(), actualResponse.error());
-        assertEquals(expectedResponse.id(), actualResponse.id());
-    }
-
-    // Test for ofError(JsonRpcError error, @Nullable Object id)
-    @Test
-    void ofError_delegatesToJsonRpcResponse() {
-        // Inputs/Preconditions
-        final JsonRpcError error = JsonRpcError.internalError(null);
-        final Object id = "id2";
-
-        // Expected result from direct call
-        final JsonRpcResponse expectedResponse = JsonRpcResponse.ofError(error, id);
-
-        // Execute factory call
-        final JsonRpcResponse actualResponse = JsonRpcResponseFactory.ofError(error, id);
-
-        // Expected Outcomes/Postconditions
-        assertEquals(expectedResponse.jsonRpcVersion(), actualResponse.jsonRpcVersion());
-        assertEquals(expectedResponse.result(), actualResponse.result());
-        assertEquals(expectedResponse.error(), actualResponse.error());
-        assertEquals(expectedResponse.id(), actualResponse.id());
-    }
-
     @Test
     void toHttpResponse_successfulRpcResponse_returnsHttp200Ok() throws JsonProcessingException {
         // Inputs/Preconditions
@@ -97,7 +57,7 @@ class JsonRpcResponseFactoryTest {
         assertEquals(MediaType.JSON_UTF_8, aggregatedRes.contentType());
 
         final com.fasterxml.jackson.databind.node.ObjectNode expectedJsonBody = mapper.createObjectNode();
-        expectedJsonBody.put("jsonrpc", "2.0");
+        expectedJsonBody.put("jsonrpc", JsonRpcUtil.JSON_RPC_VERSION);
         expectedJsonBody.set("result", resultData);
         expectedJsonBody.put("id", "req-id-http");
         final String expectedJsonString = mapper.writeValueAsString(expectedJsonBody);
@@ -108,7 +68,7 @@ class JsonRpcResponseFactoryTest {
     @Test
     void toHttpResponse_errorRpcResponse_returnsHttp200OkWithJsonErrorBody() throws JsonProcessingException {
         // Inputs/Preconditions
-        final JsonRpcError rpcError = JsonRpcError.methodNotFound(null);
+        final JsonRpcError rpcError = JsonRpcError.METHOD_NOT_FOUND;
         final JsonRpcResponse rpcResponse = JsonRpcResponse.ofError(rpcError, "req-id-err-http");
         final Object requestId = "req-id-err-h_ttp";
 
@@ -121,7 +81,7 @@ class JsonRpcResponseFactoryTest {
         assertEquals(MediaType.JSON_UTF_8, aggregatedRes.contentType());
 
         final com.fasterxml.jackson.databind.node.ObjectNode expectedJsonBody = mapper.createObjectNode();
-        expectedJsonBody.put("jsonrpc", "2.0");
+        expectedJsonBody.put("jsonrpc", JsonRpcUtil.JSON_RPC_VERSION);
         final com.fasterxml.jackson.databind.node.ObjectNode errorNode = mapper.createObjectNode();
         errorNode.put("code", rpcError.code());
         errorNode.put("message", rpcError.message());
@@ -153,7 +113,7 @@ class JsonRpcResponseFactoryTest {
         assertEquals(HttpStatus.INTERNAL_SERVER_ERROR, aggregatedRes.status());
         assertEquals(MediaType.PLAIN_TEXT_UTF_8, aggregatedRes.contentType());
         assertEquals("Internal Server Error: Failed to serialize JSON-RPC response.",
-                                aggregatedRes.contentUtf8());
+                aggregatedRes.contentUtf8());
     }
 
     // Tests for fromThrowable(Throwable throwable, @Nullable Object id, String methodName)
@@ -172,7 +132,7 @@ class JsonRpcResponseFactoryTest {
         assertEquals(id, response.id());
         assertNull(response.result());
         assertNotNull(response.error());
-        assertEquals(JsonRpcErrorCode.INTERNAL_ERROR.code(), response.error().code());
+        assertEquals(JsonRpcError.INTERNAL_ERROR.code(), response.error().code());
         // The message from JsonRpcResponseFactory.fromThrowable might be more specific
         assertThat(response.error().message())
                 .isEqualTo("Internal error");
@@ -193,7 +153,7 @@ class JsonRpcResponseFactoryTest {
         assertEquals(id, response.id());
         assertNull(response.result());
         assertNotNull(response.error());
-        assertEquals(JsonRpcErrorCode.INVALID_REQUEST.code(), response.error().code());
+        assertEquals(JsonRpcError.INVALID_REQUEST.code(), response.error().code());
         assertThat(response.error().message())
                 .isEqualTo("Invalid Request");
     }
@@ -213,7 +173,7 @@ class JsonRpcResponseFactoryTest {
         assertEquals(id, response.id());
         assertNull(response.result());
         assertNotNull(response.error());
-        assertEquals(JsonRpcErrorCode.INTERNAL_ERROR.code(), response.error().code());
+        assertEquals(JsonRpcError.INTERNAL_ERROR.code(), response.error().code());
         assertThat(response.error().message())
                 .isEqualTo("Internal error");
     }
@@ -235,7 +195,7 @@ class JsonRpcResponseFactoryTest {
         assertNull(response.result());
         assertNotNull(response.error());
         // Should be mapped based on the cause (IllegalArgumentException -> INVALID_REQUEST)
-        assertEquals(JsonRpcErrorCode.INVALID_REQUEST.code(), response.error().code());
+        assertEquals(JsonRpcError.INVALID_REQUEST.code(), response.error().code());
         assertThat(response.error().message())
                 .isEqualTo("Invalid Request");
     }

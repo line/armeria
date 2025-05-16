@@ -52,7 +52,7 @@ class JsonRpcUtilTest {
 
         // Expected Outcomes/Postconditions
         assertNotNull(rpcResponse);
-        assertEquals("2.0", rpcResponse.jsonRpcVersion());
+        assertEquals(JsonRpcUtil.JSON_RPC_VERSION, rpcResponse.jsonRpcVersion());
         assertEquals(id, rpcResponse.id());
         assertNull(rpcResponse.error());
 
@@ -73,10 +73,10 @@ class JsonRpcUtilTest {
 
         // Expected Outcomes/Postconditions
         assertNotNull(rpcResponse);
-        assertEquals("2.0", rpcResponse.jsonRpcVersion());
+        assertEquals(JsonRpcUtil.JSON_RPC_VERSION, rpcResponse.jsonRpcVersion());
         assertEquals(id, rpcResponse.id());
         assertNull(rpcResponse.error());
-        assertNull(rpcResponse.result());
+        assertEquals(mapper.getNodeFactory().nullNode(), rpcResponse.result());
     }
 
     @Test
@@ -95,12 +95,12 @@ class JsonRpcUtilTest {
 
         // Expected Outcomes/Postconditions
         assertNotNull(rpcResponse);
-        assertEquals("2.0", rpcResponse.jsonRpcVersion());
+        assertEquals(JsonRpcUtil.JSON_RPC_VERSION, rpcResponse.jsonRpcVersion());
         assertEquals(id, rpcResponse.id());
         assertNull(rpcResponse.result());
 
         assertNotNull(rpcResponse.error());
-        assertEquals(JsonRpcErrorCode.INTERNAL_ERROR.code(), rpcResponse.error().code());
+        assertEquals(JsonRpcError.INTERNAL_ERROR.code(), rpcResponse.error().code());
         assertEquals("Internal error", rpcResponse.error().message());
     }
 
@@ -120,12 +120,12 @@ class JsonRpcUtilTest {
 
         // Expected Outcomes/Postconditions
         assertNotNull(rpcResponse);
-        assertEquals("2.0", rpcResponse.jsonRpcVersion());
+        assertEquals(JsonRpcUtil.JSON_RPC_VERSION, rpcResponse.jsonRpcVersion());
         assertEquals(id, rpcResponse.id());
         assertNull(rpcResponse.result());
 
         assertNotNull(rpcResponse.error());
-        assertEquals(JsonRpcErrorCode.METHOD_NOT_FOUND.code(), rpcResponse.error().code());
+        assertEquals(JsonRpcError.METHOD_NOT_FOUND.code(), rpcResponse.error().code());
         assertEquals("Method not found", rpcResponse.error().message());
     }
 
@@ -145,12 +145,12 @@ class JsonRpcUtilTest {
 
         // Expected Outcomes/Postconditions
         assertNotNull(rpcResponse);
-        assertEquals("2.0", rpcResponse.jsonRpcVersion());
+        assertEquals(JsonRpcUtil.JSON_RPC_VERSION, rpcResponse.jsonRpcVersion());
         assertEquals(id, rpcResponse.id());
         assertNull(rpcResponse.result());
 
         assertNotNull(rpcResponse.error());
-        assertEquals(JsonRpcErrorCode.INVALID_PARAMS.code(), rpcResponse.error().code());
+        assertEquals(JsonRpcError.INVALID_PARAMS.code(), rpcResponse.error().code());
         assertEquals("Invalid params", rpcResponse.error().message());
     }
 
@@ -167,12 +167,12 @@ class JsonRpcUtilTest {
 
         // Expected Outcomes/Postconditions
         assertNotNull(rpcResponse);
-        assertEquals("2.0", rpcResponse.jsonRpcVersion());
+        assertEquals(JsonRpcUtil.JSON_RPC_VERSION, rpcResponse.jsonRpcVersion());
         assertEquals(id, rpcResponse.id());
         assertNull(rpcResponse.result());
 
         assertNotNull(rpcResponse.error());
-        assertEquals(JsonRpcErrorCode.INVALID_PARAMS.code(), rpcResponse.error().code());
+        assertEquals(JsonRpcError.INVALID_PARAMS.code(), rpcResponse.error().code());
         assertEquals("Invalid params", rpcResponse.error().message());
     }
 
@@ -192,12 +192,12 @@ class JsonRpcUtilTest {
 
         // Expected Outcomes/Postconditions
         assertNotNull(rpcResponse);
-        assertEquals("2.0", rpcResponse.jsonRpcVersion());
+        assertEquals(JsonRpcUtil.JSON_RPC_VERSION, rpcResponse.jsonRpcVersion());
         assertEquals(id, rpcResponse.id());
         assertNull(rpcResponse.result());
 
         assertNotNull(rpcResponse.error());
-        assertEquals(JsonRpcErrorCode.INVALID_REQUEST.code(), rpcResponse.error().code());
+        assertEquals(JsonRpcError.INVALID_REQUEST.code(), rpcResponse.error().code());
         assertEquals("Invalid Request", rpcResponse.error().message());
     }
 
@@ -217,12 +217,12 @@ class JsonRpcUtilTest {
 
         // Expected Outcomes/Postconditions
         assertNotNull(rpcResponse);
-        assertEquals("2.0", rpcResponse.jsonRpcVersion());
+        assertEquals(JsonRpcUtil.JSON_RPC_VERSION, rpcResponse.jsonRpcVersion());
         assertEquals(id, rpcResponse.id());
         assertNull(rpcResponse.result());
 
         assertNotNull(rpcResponse.error());
-        assertEquals(JsonRpcErrorCode.INTERNAL_ERROR.code(), rpcResponse.error().code());
+        assertEquals(JsonRpcError.INTERNAL_ERROR.code(), rpcResponse.error().code());
         assertEquals("Internal error", rpcResponse.error().message());
     }
 
@@ -231,7 +231,7 @@ class JsonRpcUtilTest {
     void parseJsonNodeToRequest_validRequest_stringId_arrayParams() throws JsonProcessingException {
         // Inputs/Preconditions
         final ObjectNode itemNode = mapper.createObjectNode();
-        itemNode.put("jsonrpc", "2.0");
+        itemNode.put("jsonrpc", JsonRpcUtil.JSON_RPC_VERSION);
         itemNode.put("method", "subtract");
         itemNode.set("params", mapper.createArrayNode().add(42).add(23));
         itemNode.put("id", "req-1");
@@ -241,7 +241,7 @@ class JsonRpcUtilTest {
 
         // Expected Outcomes/Postconditions
         assertNotNull(request);
-        assertEquals("2.0", request.jsonRpcVersion());
+        assertEquals(JsonRpcUtil.JSON_RPC_VERSION, request.jsonRpcVersion());
         assertEquals("subtract", request.method());
         assertEquals("req-1", request.id());
         assertNotNull(request.params());
@@ -254,7 +254,7 @@ class JsonRpcUtilTest {
     void parseJsonNodeToRequest_validRequest_numberId_objectParams() throws JsonProcessingException {
         // Inputs/Preconditions
         final ObjectNode itemNode = mapper.createObjectNode();
-        itemNode.put("jsonrpc", "2.0");
+        itemNode.put("jsonrpc", JsonRpcUtil.JSON_RPC_VERSION);
         itemNode.put("method", "update");
         final ObjectNode paramsNode = mapper.createObjectNode();
         paramsNode.put("name", "foo");
@@ -267,7 +267,7 @@ class JsonRpcUtilTest {
 
         // Expected Outcomes/Postconditions
         assertNotNull(request);
-        assertEquals("2.0", request.jsonRpcVersion());
+        assertEquals(JsonRpcUtil.JSON_RPC_VERSION, request.jsonRpcVersion());
         assertEquals("update", request.method());
         assertEquals(123, request.id());
         assertNotNull(request.params());
@@ -280,7 +280,7 @@ class JsonRpcUtilTest {
     void parseJsonNodeToRequest_validNotification_nullId_noParams() throws JsonProcessingException {
         // Inputs/Preconditions
         final ObjectNode itemNode = mapper.createObjectNode();
-        itemNode.put("jsonrpc", "2.0");
+        itemNode.put("jsonrpc", JsonRpcUtil.JSON_RPC_VERSION);
         itemNode.put("method", "notify_event");
         itemNode.set("id", mapper.nullNode()); // Explicit null ID
 
@@ -289,7 +289,7 @@ class JsonRpcUtilTest {
 
         // Expected Outcomes/Postconditions
         assertNotNull(request);
-        assertEquals("2.0", request.jsonRpcVersion());
+        assertEquals(JsonRpcUtil.JSON_RPC_VERSION, request.jsonRpcVersion());
         assertEquals("notify_event", request.method());
         assertNull(request.id());
         assertNull(request.params());
@@ -300,7 +300,7 @@ class JsonRpcUtilTest {
     void parseJsonNodeToRequest_validNotification_missingId_noParams() throws JsonProcessingException {
         // Inputs/Preconditions
         final ObjectNode itemNode = mapper.createObjectNode();
-        itemNode.put("jsonrpc", "2.0");
+        itemNode.put("jsonrpc", JsonRpcUtil.JSON_RPC_VERSION);
         itemNode.put("method", "notify_event");
         // ID field is omitted
 
@@ -309,7 +309,7 @@ class JsonRpcUtilTest {
 
         // Expected Outcomes/Postconditions
         assertNotNull(request);
-        assertEquals("2.0", request.jsonRpcVersion());
+        assertEquals(JsonRpcUtil.JSON_RPC_VERSION, request.jsonRpcVersion());
         assertEquals("notify_event", request.method());
         assertNull(request.id());
         assertNull(request.params());
@@ -340,29 +340,29 @@ class JsonRpcUtilTest {
         final IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> {
             JsonRpcUtil.parseJsonNodeToRequest(itemNode, mapper);
         });
-        assertEquals("Invalid JSON-RPC version: 1.0", exception.getMessage());
+        assertEquals("jsonrpc must be '2.0', but was: 1.0", exception.getMessage());
     }
 
     @Test
     void parseJsonNodeToRequest_missingMethod_throwsIllegalArgumentException() {
         // Inputs/Preconditions - Scenario 1: method missing
         final ObjectNode itemNode = mapper.createObjectNode();
-        itemNode.put("jsonrpc", "2.0");
+        itemNode.put("jsonrpc", JsonRpcUtil.JSON_RPC_VERSION);
         itemNode.put("id", 1);
 
         // Execute & Expected Outcomes/Postconditions
-        final com.fasterxml.jackson.databind.exc.MismatchedInputException exception =
-                assertThrows(com.fasterxml.jackson.databind.exc.MismatchedInputException.class, () -> {
-            JsonRpcUtil.parseJsonNodeToRequest(itemNode, mapper);
-        });
-        assertThat(exception.getMessage()).contains("Missing required creator property 'method'");
+        final java.lang.NullPointerException exception =
+                assertThrows(java.lang.NullPointerException.class, () -> {
+                    JsonRpcUtil.parseJsonNodeToRequest(itemNode, mapper);
+                });
+        assertThat(exception.getMessage()).contains("method");
     }
 
     @Test
     void parseJsonNodeToRequest_emptyMethod_throwsIllegalArgumentException() {
         // Inputs/Preconditions - Scenario 2: method empty string
         final ObjectNode itemNode = mapper.createObjectNode();
-        itemNode.put("jsonrpc", "2.0");
+        itemNode.put("jsonrpc", JsonRpcUtil.JSON_RPC_VERSION);
         itemNode.put("method", "");
         itemNode.put("id", 1);
 
@@ -370,14 +370,14 @@ class JsonRpcUtilTest {
         final IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> {
             JsonRpcUtil.parseJsonNodeToRequest(itemNode, mapper);
         });
-        assertEquals("JSON-RPC request 'method' is missing or empty", exception.getMessage());
+        assertEquals("method must not be empty", exception.getMessage());
     }
 
     @Test
     void parseJsonNodeToRequest_paramsNotArrayOrObject_throwsIllegalArgumentException() {
         // Inputs/Preconditions
         final ObjectNode itemNode = mapper.createObjectNode();
-        itemNode.put("jsonrpc", "2.0");
+        itemNode.put("jsonrpc", JsonRpcUtil.JSON_RPC_VERSION);
         itemNode.put("method", "test");
         itemNode.put("params", "not-an-object-or-array"); // Invalid params type
         itemNode.put("id", 1);
@@ -387,7 +387,7 @@ class JsonRpcUtilTest {
             JsonRpcUtil.parseJsonNodeToRequest(itemNode, mapper);
         });
         assertEquals("JSON-RPC request 'params' must be an object or an array, but was: STRING",
-                     exception.getMessage());
+                exception.getMessage());
     }
 
     @Test
@@ -399,15 +399,15 @@ class JsonRpcUtilTest {
         // For now, we follow the test plan expecting JsonProcessingException.
         // MismatchedInputException is a subclass of JsonProcessingException.
         final ObjectNode itemNode = mapper.createObjectNode();
-        itemNode.put("jsonrpc", "2.0");
+        itemNode.put("jsonrpc", JsonRpcUtil.JSON_RPC_VERSION);
         // "method" field is missing, which should be caught by Jackson if JsonRpcRequest defines it as required
         itemNode.put("id", "jackson-fail-id");
 
-        final com.fasterxml.jackson.databind.exc.MismatchedInputException exception =
-                assertThrows(com.fasterxml.jackson.databind.exc.MismatchedInputException.class, () -> {
-            JsonRpcUtil.parseJsonNodeToRequest(itemNode, mapper);
-        });
-        assertThat(exception.getMessage()).contains("Missing required creator property 'method'");
+        final java.lang.NullPointerException exception =
+                assertThrows(java.lang.NullPointerException.class, () -> {
+                    JsonRpcUtil.parseJsonNodeToRequest(itemNode, mapper);
+                });
+        assertThat(exception.getMessage()).contains("method");
     }
 
     // Tests for createJsonRpcRequestJsonString
@@ -425,7 +425,7 @@ class JsonRpcUtilTest {
         assertNotNull(jsonString);
         // Field order might vary, so parse and compare JsonNode or use a JSONAssert library in a real project
         final JsonNode expectedNode = mapper.createObjectNode()
-                .put("jsonrpc", "2.0")
+                .put("jsonrpc", JsonRpcUtil.JSON_RPC_VERSION)
                 .put("method", "sum")
                 .set("params", mapper.valueToTree(params));
         ((com.fasterxml.jackson.databind.node.ObjectNode) expectedNode).put("id", "req-abc");
@@ -449,7 +449,7 @@ class JsonRpcUtilTest {
         // Expected: {"jsonrpc":"2.0","method":"log_event","id":null}
         // params might be omitted if null, which is fine.
         final ObjectNode expectedNode = mapper.createObjectNode();
-        expectedNode.put("jsonrpc", "2.0");
+        expectedNode.put("jsonrpc", JsonRpcUtil.JSON_RPC_VERSION);
         expectedNode.put("method", "log_event");
         expectedNode.set("id", mapper.nullNode()); // Explicitly check for null ID
 

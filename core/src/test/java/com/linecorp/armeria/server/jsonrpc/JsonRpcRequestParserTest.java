@@ -34,9 +34,10 @@ import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.RequestHeaders;
-import com.linecorp.armeria.common.jsonrpc.JsonRpcErrorCode;
+import com.linecorp.armeria.common.jsonrpc.JsonRpcError;
 import com.linecorp.armeria.common.jsonrpc.JsonRpcRequest;
 import com.linecorp.armeria.common.jsonrpc.JsonRpcResponse;
+import com.linecorp.armeria.common.jsonrpc.JsonRpcUtil;
 
 class JsonRpcRequestParserTest {
 
@@ -67,7 +68,7 @@ class JsonRpcRequestParserTest {
         assertNull(result.errorResponse());
 
         final JsonRpcRequest jsonRpcRequest = result.request();
-        assertEquals("2.0", jsonRpcRequest.jsonRpcVersion());
+        assertEquals(JsonRpcUtil.JSON_RPC_VERSION, jsonRpcRequest.jsonRpcVersion());
         assertEquals("subtract", jsonRpcRequest.method());
         assertEquals(mapper.readTree("[42, 23]"), jsonRpcRequest.params());
         assertEquals(1, jsonRpcRequest.id());
@@ -87,7 +88,7 @@ class JsonRpcRequestParserTest {
         assertNotNull(result.request());
 
         final JsonRpcRequest jsonRpcRequest = result.request();
-        assertEquals("2.0", jsonRpcRequest.jsonRpcVersion());
+        assertEquals(JsonRpcUtil.JSON_RPC_VERSION, jsonRpcRequest.jsonRpcVersion());
         assertEquals("update", jsonRpcRequest.method());
         assertEquals(mapper.readTree("[1,2,3,4,5]"), jsonRpcRequest.params());
         assertNull(jsonRpcRequest.id());
@@ -108,7 +109,7 @@ class JsonRpcRequestParserTest {
         assertNotNull(result.request());
 
         final JsonRpcRequest jsonRpcRequest = result.request();
-        assertEquals("2.0", jsonRpcRequest.jsonRpcVersion());
+        assertEquals(JsonRpcUtil.JSON_RPC_VERSION, jsonRpcRequest.jsonRpcVersion());
         assertEquals("foo", jsonRpcRequest.method());
         assertEquals(mapper.readTree("{\"bar\": \"baz\"}"), jsonRpcRequest.params());
         assertNull(jsonRpcRequest.id());
@@ -119,8 +120,8 @@ class JsonRpcRequestParserTest {
         // Test case 4: Normal batch JSON-RPC request (multiple valid requests)
         final String requestJson =
                 "[{\"jsonrpc\": \"2.0\", \"method\": \"sum\", \"params\": [1,2,4], \"id\": \"1\"}, " +
-                "{\"jsonrpc\": \"2.0\", \"method\": \"notify_hello\", \"params\": [7]}, " +
-                "{\"jsonrpc\": \"2.0\", \"method\": \"subtract\", \"params\": [42,23], \"id\": \"2\"}]";
+                        "{\"jsonrpc\": \"2.0\", \"method\": \"notify_hello\", \"params\": [7]}, " +
+                        "{\"jsonrpc\": \"2.0\", \"method\": \"subtract\", \"params\": [42,23], \"id\": \"2\"}]";
         final AggregatedHttpRequest httpRequest = createHttpRequest(requestJson);
 
         final List<JsonRpcItemParseResult> results = JsonRpcRequestParser.parseRequest(httpRequest);
@@ -167,7 +168,7 @@ class JsonRpcRequestParserTest {
         assertNotNull(result.errorResponse());
 
         final JsonRpcResponse errorResponse = result.errorResponse();
-        assertEquals(JsonRpcErrorCode.PARSE_ERROR.code(), errorResponse.error().code());
+        assertEquals(JsonRpcError.PARSE_ERROR.code(), errorResponse.error().code());
         assertNull(errorResponse.id());
     }
 
@@ -185,7 +186,7 @@ class JsonRpcRequestParserTest {
         assertNotNull(result.errorResponse());
 
         final JsonRpcResponse errorResponse = result.errorResponse();
-        assertEquals(JsonRpcErrorCode.INVALID_REQUEST.code(), errorResponse.error().code());
+        assertEquals(JsonRpcError.INVALID_REQUEST.code(), errorResponse.error().code());
         assertEquals(1, errorResponse.id());
     }
 
@@ -203,7 +204,7 @@ class JsonRpcRequestParserTest {
         assertNotNull(result.errorResponse());
 
         final JsonRpcResponse errorResponse = result.errorResponse();
-        assertEquals(JsonRpcErrorCode.INVALID_REQUEST.code(), errorResponse.error().code());
+        assertEquals(JsonRpcError.INVALID_REQUEST.code(), errorResponse.error().code());
         assertNull(errorResponse.id());
     }
 
@@ -221,7 +222,7 @@ class JsonRpcRequestParserTest {
         assertNotNull(result.errorResponse());
 
         final JsonRpcResponse errorResponse = result.errorResponse();
-        assertEquals(JsonRpcErrorCode.INVALID_REQUEST.code(), errorResponse.error().code());
+        assertEquals(JsonRpcError.INVALID_REQUEST.code(), errorResponse.error().code());
         assertNull(errorResponse.id());
     }
 
@@ -230,7 +231,7 @@ class JsonRpcRequestParserTest {
         // Test case 9: Batch request with some valid and some invalid items
         final String requestJson =
                 "[{\"jsonrpc\": \"2.0\", \"method\": \"sum\", \"params\": [1,2,4], \"id\": \"1\"}, " +
-                "{\"method\": \"invalid\"}]";
+                        "{\"method\": \"invalid\"}]";
         final AggregatedHttpRequest httpRequest = createHttpRequest(requestJson);
 
         final List<JsonRpcItemParseResult> results = JsonRpcRequestParser.parseRequest(httpRequest);
@@ -245,7 +246,7 @@ class JsonRpcRequestParserTest {
         final JsonRpcItemParseResult result2 = results.get(1);
         assertTrue(result2.isError());
         assertNotNull(result2.errorResponse());
-        assertEquals(JsonRpcErrorCode.INVALID_REQUEST.code(), result2.errorResponse().error().code());
+        assertEquals(JsonRpcError.INVALID_REQUEST.code(), result2.errorResponse().error().code());
         assertNull(result2.errorResponse().id());
     }
 
@@ -267,7 +268,7 @@ class JsonRpcRequestParserTest {
         final JsonRpcItemParseResult result2 = results.get(1);
         assertTrue(result2.isError());
         assertNotNull(result2.errorResponse());
-        assertEquals(JsonRpcErrorCode.INVALID_REQUEST.code(), result2.errorResponse().error().code());
+        assertEquals(JsonRpcError.INVALID_REQUEST.code(), result2.errorResponse().error().code());
         assertNull(result2.errorResponse().id());
     }
 
@@ -277,11 +278,11 @@ class JsonRpcRequestParserTest {
         // Request 1: params as object
         final String requestJson1 =
                 "{" +
-                    "\"jsonrpc\": \"2.0\", " +
-                    "\"method\": \"byName\", " +
-                    "\"params\": {\"name\": \"armeria\"}, " +
-                    "\"id\": 10" +
-                "}";
+                        "\"jsonrpc\": \"2.0\", " +
+                        "\"method\": \"byName\", " +
+                        "\"params\": {\"name\": \"armeria\"}, " +
+                        "\"id\": 10" +
+                        "}";
         final AggregatedHttpRequest httpRequest1 = createHttpRequest(requestJson1);
         final List<JsonRpcItemParseResult> results1 = JsonRpcRequestParser.parseRequest(httpRequest1);
 
@@ -317,7 +318,7 @@ class JsonRpcRequestParserTest {
         assertTrue(result.isError());
         assertNotNull(result.errorResponse());
         final JsonRpcResponse errorResponse = result.errorResponse();
-        assertEquals(JsonRpcErrorCode.INVALID_REQUEST.code(), errorResponse.error().code());
+        assertEquals(JsonRpcError.INVALID_REQUEST.code(), errorResponse.error().code());
         assertEquals(1, errorResponse.id());
     }
 
@@ -358,11 +359,11 @@ class JsonRpcRequestParserTest {
         // Test case 14: "id" field with invalid type (object)
         final String requestJson =
                 "{" +
-                    "\"jsonrpc\": \"2.0\", " +
-                    "\"method\": \"testMethod\", " +
-                    "\"params\":[], " +
-                    "\"id\": {\"invalid\": true}" +
-                "}";
+                        "\"jsonrpc\": \"2.0\", " +
+                        "\"method\": \"testMethod\", " +
+                        "\"params\":[], " +
+                        "\"id\": {\"invalid\": true}" +
+                        "}";
         final AggregatedHttpRequest httpRequest = createHttpRequest(requestJson);
 
         final List<JsonRpcItemParseResult> results = JsonRpcRequestParser.parseRequest(httpRequest);
@@ -372,7 +373,7 @@ class JsonRpcRequestParserTest {
         assertTrue(result.isError());
         assertNotNull(result.errorResponse());
         final JsonRpcResponse errorResponse = result.errorResponse();
-        assertEquals(JsonRpcErrorCode.INVALID_REQUEST.code(), errorResponse.error().code());
+        assertEquals(JsonRpcError.INVALID_REQUEST.code(), errorResponse.error().code());
         assertNull(errorResponse.id());
     }
 
@@ -390,7 +391,7 @@ class JsonRpcRequestParserTest {
         assertTrue(result.isError());
         assertNotNull(result.errorResponse());
         final JsonRpcResponse errorResponse = result.errorResponse();
-        assertEquals(JsonRpcErrorCode.INVALID_REQUEST.code(), errorResponse.error().code());
+        assertEquals(JsonRpcError.INVALID_REQUEST.code(), errorResponse.error().code());
         assertNull(errorResponse.id());
     }
 
@@ -408,7 +409,7 @@ class JsonRpcRequestParserTest {
         assertTrue(result.isError());
         assertNotNull(result.errorResponse());
         final JsonRpcResponse errorResponse = result.errorResponse();
-        assertEquals(JsonRpcErrorCode.INVALID_REQUEST.code(), errorResponse.error().code());
+        assertEquals(JsonRpcError.INVALID_REQUEST.code(), errorResponse.error().code());
         assertNull(errorResponse.id());
     }
 }

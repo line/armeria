@@ -18,6 +18,7 @@ package com.linecorp.armeria.server.jsonrpc;
 import static java.util.Objects.requireNonNull;
 
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.jsonrpc.JsonRpcRequest;
 import com.linecorp.armeria.common.jsonrpc.JsonRpcResponse;
 
@@ -26,6 +27,7 @@ import com.linecorp.armeria.common.jsonrpc.JsonRpcResponse;
  * It holds either a successfully parsed {@link JsonRpcRequest} or a {@link JsonRpcResponse} representing
  * a parsing/validation error specific to that item.
  */
+@UnstableApi
 public final class JsonRpcItemParseResult {
 
     @Nullable

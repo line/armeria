@@ -43,18 +43,18 @@ class JsonRpcRequestTest {
         // Inputs/Preconditions
         final String jsonRequestStr =
                 "{" +
-                " \"jsonrpc\": \"2.0\"," +
-                " \"method\": \"getData\"," +
-                " \"params\": {\"filter\": \"active\"}," +
-                " \"id\": \"req-xyz\"" +
-                "}";
+                        " \"jsonrpc\": \"2.0\"," +
+                        " \"method\": \"getData\"," +
+                        " \"params\": {\"filter\": \"active\"}," +
+                        " \"id\": \"req-xyz\"" +
+                        "}";
 
         // Execute
         final JsonRpcRequest request = mapper.readValue(jsonRequestStr, JsonRpcRequest.class);
 
         // Expected Outcomes/Postconditions
         assertNotNull(request);
-        assertEquals("2.0", request.jsonRpcVersion());
+        assertEquals(JsonRpcUtil.JSON_RPC_VERSION, request.jsonRpcVersion());
         assertEquals("getData", request.method());
         assertEquals("req-xyz", request.id());
         assertNotNull(request.params());
@@ -75,7 +75,7 @@ class JsonRpcRequestTest {
 
         // Expected Outcomes/Postconditions
         assertNotNull(request);
-        assertEquals("2.0", request.jsonRpcVersion());
+        assertEquals(JsonRpcUtil.JSON_RPC_VERSION, request.jsonRpcVersion());
         assertEquals("ping", request.method());
         assertNull(request.id());
         assertNull(request.params());
@@ -114,7 +114,7 @@ class JsonRpcRequestTest {
         // Inputs/Preconditions
         final JsonNode params = mapper.valueToTree(java.util.Arrays.asList(10, 5));
         final JsonRpcRequest request =
-                new JsonRpcRequest("2.0", "calculateSum", params, "calc-id");
+                new JsonRpcRequest(JsonRpcUtil.JSON_RPC_VERSION, "calculateSum", params, "calc-id");
 
         // Execute
         final String jsonString = mapper.writeValueAsString(request);
@@ -123,7 +123,7 @@ class JsonRpcRequestTest {
         assertNotNull(jsonString);
         // Expected: {"jsonrpc":"2.0","method":"calculateSum","params":[10,5],"id":"calc-id"}
         final ObjectNode expectedNode = mapper.createObjectNode();
-        expectedNode.put("jsonrpc", "2.0");
+        expectedNode.put("jsonrpc", JsonRpcUtil.JSON_RPC_VERSION);
         expectedNode.put("method", "calculateSum");
         expectedNode.set("params", params);
         expectedNode.put("id", "calc-id");
@@ -136,7 +136,7 @@ class JsonRpcRequestTest {
     void serialize_notificationObject_nullParams_nullId() throws JsonProcessingException {
         // Inputs/Preconditions
         final JsonRpcRequest request =
-                new JsonRpcRequest("2.0", "heartbeat", null, null);
+                new JsonRpcRequest(JsonRpcUtil.JSON_RPC_VERSION, "heartbeat", null, null);
 
         // Execute
         final String jsonString = mapper.writeValueAsString(request);
@@ -146,7 +146,7 @@ class JsonRpcRequestTest {
         // Expected: {"jsonrpc":"2.0","method":"heartbeat"}
         // params and id should be omitted due to @JsonInclude(JsonInclude.Include.NON_NULL)
         final ObjectNode expectedNode = mapper.createObjectNode();
-        expectedNode.put("jsonrpc", "2.0");
+        expectedNode.put("jsonrpc", JsonRpcUtil.JSON_RPC_VERSION);
         expectedNode.put("method", "heartbeat");
 
         final JsonNode actualNode = mapper.readTree(jsonString);
@@ -160,17 +160,17 @@ class JsonRpcRequestTest {
     void isNotification_returnsCorrectBoolean() {
         // Scenario 1: ID is null (Notification)
         final JsonRpcRequest notification =
-                new JsonRpcRequest("2.0", "notify", null, null);
+                new JsonRpcRequest(JsonRpcUtil.JSON_RPC_VERSION, "notify", null, null);
         assertTrue(notification.notificationRequest());
 
         // Scenario 2: ID is present (Request)
         final JsonRpcRequest requestWithId =
-                new JsonRpcRequest("2.0", "request", null, "id-1");
+                new JsonRpcRequest(JsonRpcUtil.JSON_RPC_VERSION, "request", null, "id-1");
         assertFalse(requestWithId.notificationRequest());
 
         // Scenario 3: ID is a number (Request)
         final JsonRpcRequest requestWithNumberId =
-                new JsonRpcRequest("2.0", "requestNum", null, 123);
+                new JsonRpcRequest(JsonRpcUtil.JSON_RPC_VERSION, "requestNum", null, 123);
         assertFalse(requestWithNumberId.notificationRequest());
     }
 
@@ -180,20 +180,20 @@ class JsonRpcRequestTest {
         // Scenario 1: params is ArrayNode
         final JsonNode arrayParams = mapper.createArrayNode().add(1);
         final JsonRpcRequest requestWithArrayParams =
-                new JsonRpcRequest("2.0", "method", arrayParams, "id");
+                new JsonRpcRequest(JsonRpcUtil.JSON_RPC_VERSION, "method", arrayParams, "id");
         assertTrue(requestWithArrayParams.hasArrayParams());
         assertFalse(requestWithArrayParams.hasObjectParams());
 
         // Scenario 2: params is ObjectNode
         final JsonNode objectParams = mapper.createObjectNode().put("key", "val");
         final JsonRpcRequest requestWithObjectParams =
-                new JsonRpcRequest("2.0", "method", objectParams, "id");
+                new JsonRpcRequest(JsonRpcUtil.JSON_RPC_VERSION, "method", objectParams, "id");
         assertFalse(requestWithObjectParams.hasArrayParams());
         assertTrue(requestWithObjectParams.hasObjectParams());
 
         // Scenario 3: params is null
         final JsonRpcRequest requestWithNullParams =
-                new JsonRpcRequest("2.0", "method", null, "id");
+                new JsonRpcRequest(JsonRpcUtil.JSON_RPC_VERSION, "method", null, "id");
         assertFalse(requestWithNullParams.hasArrayParams());
         assertFalse(requestWithNullParams.hasObjectParams());
     }
@@ -204,20 +204,20 @@ class JsonRpcRequestTest {
         // Scenario 1: params is ObjectNode
         final JsonNode objectParams = mapper.createObjectNode().put("key", "val");
         final JsonRpcRequest requestWithObjectParams =
-                new JsonRpcRequest("2.0", "method", objectParams, "id");
+                new JsonRpcRequest(JsonRpcUtil.JSON_RPC_VERSION, "method", objectParams, "id");
         assertTrue(requestWithObjectParams.hasObjectParams());
         assertFalse(requestWithObjectParams.hasArrayParams());
 
         // Scenario 2: params is ArrayNode
         final JsonNode arrayParams = mapper.createArrayNode().add(1);
         final JsonRpcRequest requestWithArrayParams =
-                new JsonRpcRequest("2.0", "method", arrayParams, "id");
+                new JsonRpcRequest(JsonRpcUtil.JSON_RPC_VERSION, "method", arrayParams, "id");
         assertFalse(requestWithArrayParams.hasObjectParams());
         assertTrue(requestWithArrayParams.hasArrayParams());
 
         // Scenario 3: params is null
         final JsonRpcRequest requestWithNullParams =
-                new JsonRpcRequest("2.0", "method", null, "id");
+                new JsonRpcRequest(JsonRpcUtil.JSON_RPC_VERSION, "method", null, "id");
         assertFalse(requestWithNullParams.hasObjectParams());
         assertFalse(requestWithNullParams.hasArrayParams());
     }

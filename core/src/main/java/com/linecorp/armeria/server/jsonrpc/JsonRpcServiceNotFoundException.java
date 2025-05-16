@@ -15,9 +15,12 @@
  */
 package com.linecorp.armeria.server.jsonrpc;
 
+import com.linecorp.armeria.common.annotation.UnstableApi;
+
 /**
  * Exception thrown when a specific JSON-RPC method cannot be mapped to a registered service.
  */
+@UnstableApi
 public class JsonRpcServiceNotFoundException extends RuntimeException {
 
     private static final long serialVersionUID = 5996593317006754659L;
@@ -31,7 +34,7 @@ public class JsonRpcServiceNotFoundException extends RuntimeException {
      *                   to find a registered service, and for which no mapping was found.
      */
     public JsonRpcServiceNotFoundException(String message,
-                                       String lookupPath) {
+            String lookupPath) {
         super(message);
         this.lookupPath = lookupPath;
     }

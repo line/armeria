@@ -15,13 +15,14 @@
  */
 package com.linecorp.armeria.common.jsonrpc;
 
+import static java.util.Objects.requireNonNull;
+
 import java.util.concurrent.CompletionException;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import com.linecorp.armeria.common.AggregatedHttpResponse;
@@ -29,41 +30,17 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 
 /**
  * A utility factory class providing static methods for creating JSON-RPC 2.0 {@link JsonRpcResponse} objects
  * and for converting these responses into Armeria {@link HttpResponse} objects.
  * This class is not meant to be instantiated.
  */
+@UnstableApi
 public final class JsonRpcResponseFactory {
 
     private static final Logger logger = LoggerFactory.getLogger(JsonRpcResponseFactory.class);
-
-    /**
-     * Creates a new successful JSON-RPC response with the given result and ID.
-     * This is a convenience method that delegates to {@link JsonRpcResponse#ofSuccess(Object, Object)}.
-     *
-     * @param result the result of the method invocation, represented as a {@link JsonNode}.
-     *               Can be {@code null} to represent a successful response with a null result.
-     * @param id the ID of the original request this response corresponds to. Can be {@code null}.
-     * @return a new {@link JsonRpcResponse} instance representing a successful outcome.
-     */
-    public static JsonRpcResponse ofSuccess(JsonNode result, @Nullable Object id) {
-        return JsonRpcResponse.ofSuccess(result, id);
-    }
-
-    /**
-     * Creates a new JSON-RPC error response with the given {@link JsonRpcError} and ID.
-     * This is a convenience method that delegates to {@link JsonRpcResponse#ofError(JsonRpcError, Object)}.
-     *
-     * @param error the {@link JsonRpcError} object detailing the error that occurred. Must not be {@code null}.
-     * @param id the ID of the original request this response corresponds to. Can be {@code null},
-     *           especially if the error occurred before the request ID could be determined.
-     * @return a new {@link JsonRpcResponse} instance representing an error outcome.
-     */
-    public static JsonRpcResponse ofError(JsonRpcError error, @Nullable Object id) {
-        return JsonRpcResponse.ofError(error, id);
-    }
 
     /**
      * Converts a {@link JsonRpcResponse} (which can represent either a success or an error)
@@ -91,18 +68,21 @@ public final class JsonRpcResponseFactory {
      *         response if serialization fails.
      */
     public static HttpResponse toHttpResponse(JsonRpcResponse rpcResponse, ObjectMapper mapper,
-                                                                  @Nullable Object requestId) {
+            @Nullable Object requestId) {
+        requireNonNull(rpcResponse, "rpcResponse");
+        requireNonNull(mapper, "mapper");
+
         try {
             final String responseBody = mapper.writeValueAsString(rpcResponse);
             return AggregatedHttpResponse.of(HttpStatus.OK, MediaType.JSON_UTF_8, responseBody)
-                                         .toHttpResponse();
+                    .toHttpResponse();
         } catch (JsonProcessingException jsonProcessingException) {
             logger.error("CRITICAL: Failed to serialize final JSON-RPC response for request id {}: {}",
-                         requestId, jsonProcessingException.getMessage(), jsonProcessingException);
+                    requestId, jsonProcessingException.getMessage(), jsonProcessingException);
 
             return AggregatedHttpResponse.of(HttpStatus.INTERNAL_SERVER_ERROR, MediaType.PLAIN_TEXT_UTF_8,
-                                   "Internal Server Error: Failed to serialize JSON-RPC response.")
-                                         .toHttpResponse();
+                    "Internal Server Error: Failed to serialize JSON-RPC response.")
+                    .toHttpResponse();
         }
     }
 
@@ -123,6 +103,9 @@ public final class JsonRpcResponseFactory {
      *         the {@code throwable}.
      */
     public static JsonRpcResponse fromThrowable(Throwable throwable, @Nullable Object id, String methodName) {
+        requireNonNull(throwable, "throwable");
+        requireNonNull(methodName, "methodName");
+
         final JsonRpcError error = mapThrowableToJsonRpcError(throwable, methodName, id);
         return JsonRpcResponse.ofError(error, id);
     }
@@ -150,25 +133,25 @@ public final class JsonRpcResponseFactory {
      * @return A {@link JsonRpcError} representing the mapped error condition.
      */
     private static JsonRpcError mapThrowableToJsonRpcError(Throwable exception, String methodName,
-                                                           @Nullable Object requestId) {
+            @Nullable Object requestId) {
         Throwable cause = exception;
         while (cause instanceof CompletionException && cause.getCause() != null) {
             cause = cause.getCause();
         }
 
         logger.warn("Mapping throwable for method '{}' (id: {}): {}: {}",
-                    methodName, requestId, cause.getClass().getName(), cause.getMessage(), cause);
+                methodName, requestId, cause.getClass().getName(), cause.getMessage(), cause);
 
         if (cause instanceof JsonProcessingException) {
-            return JsonRpcError.internalError(
+            return JsonRpcError.INTERNAL_ERROR.withData(
                     "Internal Error: Failed processing delegate response. Cause: " + cause.getMessage());
         } else if (cause instanceof IllegalArgumentException) {
-            return JsonRpcError.invalidRequest(
+            return JsonRpcError.INVALID_REQUEST.withData(
                     "Invalid argument or state encountered during processing: " + cause.getMessage());
         } else {
-            return JsonRpcError.internalError(
+            return JsonRpcError.INTERNAL_ERROR.withData(
                     "Internal server error during processing for method '" + methodName + "': " +
-                    cause.getClass().getSimpleName() + " - " + cause.getMessage());
+                            cause.getClass().getSimpleName() + " - " + cause.getMessage());
         }
     }
 

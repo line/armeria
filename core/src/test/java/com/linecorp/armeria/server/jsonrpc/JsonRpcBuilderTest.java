@@ -48,21 +48,21 @@ class JsonRpcBuilderTest {
 
         final JsonRpcService jsonRpcService =
                 JsonRpcService.builder(sb)
-                              .addAnnotatedService("/myRpc", new Object() {
-                                  @Post("/myMethod")
-                                  public HttpResponse myMethod() {
-                                      return HttpResponse.of("Hello");
-                                  }
-                              }).build();
+                        .addAnnotatedService("/myRpc", new Object() {
+                            @Post("/myMethod")
+                            public HttpResponse myMethod() {
+                                return HttpResponse.of("Hello");
+                            }
+                        }).build();
 
         assertFalse(jsonRpcService.routes().isEmpty());
         assertTrue(jsonRpcService.routes().stream()
-                                 .anyMatch(r -> r.patternString().equals("/myRpc")));
+                .anyMatch(r -> r.patternString().equals("/myRpc")));
 
         sb.service(jsonRpcService);
         final Server server = sb.build();
         assertTrue(server.serviceConfigs().stream()
-                         .anyMatch(s -> s.route().patternString().equals("/myRpc/myMethod")));
+                .anyMatch(s -> s.route().patternString().equals("/myRpc/myMethod")));
     }
 
     @Test
@@ -71,13 +71,13 @@ class JsonRpcBuilderTest {
 
         final JsonRpcService jsonRpcService =
                 JsonRpcService.builder(sb)
-                              .addService("/myRpc",
-                                          (ctx, req) ->
-                                                  HttpResponse.of(simpleHttpService(ctx, req))).build();
+                        .addService("/myRpc",
+                                (ctx, req) -> HttpResponse.of(simpleHttpService(ctx, req)))
+                        .build();
 
         assertFalse(jsonRpcService.routes().isEmpty());
         assertTrue(jsonRpcService.routes().stream()
-                                 .anyMatch(r -> r.patternString().equals("/myRpc")));
+                .anyMatch(r -> r.patternString().equals("/myRpc")));
 
         final HttpRequest req =
                 HttpRequest.of(
@@ -86,22 +86,22 @@ class JsonRpcBuilderTest {
                         MediaType.JSON_UTF_8,
                         JsonRpcUtil.createJsonRpcRequestJsonString(
                                 "method",
-                                new String[] {"a", "b"},
+                                new String[] { "a", "b" },
                                 "test",
                                 mapper));
 
         final AggregatedHttpResponse res = jsonRpcService.serve(ServiceRequestContext.of(req), req)
-                                                         .aggregate()
-                                                         .join();
+                .aggregate()
+                .join();
 
         final JsonNode expected =
                 mapper.createObjectNode()
-                      .put("id", "test")
-                      .put("method", "method")
-                      .put("isNotification", false)
-                      .put("body", mapper.writeValueAsString(mapper.createArrayNode()
-                                                                   .add("a")
-                                                                   .add("b")));
+                        .put("id", "test")
+                        .put("method", "method")
+                        .put("isNotification", false)
+                        .put("body", mapper.writeValueAsString(mapper.createArrayNode()
+                                .add("a")
+                                .add("b")));
 
         assertEquals(HttpStatus.OK, res.status());
         final JsonNode actual = mapper.readTree(res.contentUtf8());
@@ -116,20 +116,17 @@ class JsonRpcBuilderTest {
                         return HttpResponse.of(
                                 mapper.writeValueAsString(
                                         mapper.createObjectNode()
-                                              .put("id",
-                                                   ctx.attr(JsonRpcAttributes.ID).toString())
-                                              .put("method",
-                                                   ctx.attr(JsonRpcAttributes.METHOD).toString())
-                                              .put("isNotification",
-                                                   (boolean) ctx.attr(JsonRpcAttributes.IS_NOTIFICATION))
-                                              .put("body",
-                                                   aggregatedHttpRequest.contentUtf8())
-                                )
-                        );
+                                                .put("id",
+                                                        ctx.attr(JsonRpcAttributes.ID).toString())
+                                                .put("method",
+                                                        ctx.attr(JsonRpcAttributes.METHOD).toString())
+                                                .put("isNotification",
+                                                        (boolean) ctx.attr(JsonRpcAttributes.IS_NOTIFICATION))
+                                                .put("body",
+                                                        aggregatedHttpRequest.contentUtf8())));
                     } catch (JsonProcessingException e) {
                         throw new RuntimeException(e);
                     }
-                }
-        );
+                });
     }
 }

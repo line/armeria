@@ -16,11 +16,13 @@
 package com.linecorp.armeria.server.jsonrpc;
 
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.jsonrpc.JsonRpcResponse;
 
 /**
  * Exception thrown when a JSON-RPC request cannot be parsed.
  */
+@UnstableApi
 public class JsonRpcRequestParseException extends RuntimeException {
 
     private static final long serialVersionUID = -5526383831125611610L;

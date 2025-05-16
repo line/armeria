@@ -15,12 +15,16 @@
  */
 package com.linecorp.armeria.common.jsonrpc;
 
+import static com.google.common.base.Preconditions.checkArgument;
+import static java.util.Objects.requireNonNull;
+
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.JsonNode;
 
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 
 /**
  * Represents a JSON-RPC 2.0 request object.
@@ -39,7 +43,8 @@ import com.linecorp.armeria.common.annotation.Nullable;
  * @see <a href="https://www.jsonrpc.org/specification#request_object">
  *     JSON-RPC 2.0 Specification - Request object</a>
  */
-@JsonInclude(JsonInclude.Include.NON_NULL) // Omit null fields (like id or params) during serialization
+@UnstableApi
+@JsonInclude(JsonInclude.Include.NON_NULL)
 public final class JsonRpcRequest {
 
     private final String jsonrpc;
@@ -62,12 +67,14 @@ public final class JsonRpcRequest {
      *                A {@code null} ID (or its absence in JSON) signifies a notification.
      */
     @JsonCreator
-    public JsonRpcRequest(@JsonProperty(value = "jsonrpc", required = true) String jsonrpc,
-                          @JsonProperty(value = "method", required = true) String method,
-                          @JsonProperty("params") @Nullable JsonNode params,
-                          @JsonProperty("id") @Nullable Object id) {
+    public JsonRpcRequest(@JsonProperty("jsonrpc") String jsonrpc,
+            @JsonProperty("method") String method,
+            @JsonProperty("params") @Nullable JsonNode params,
+            @JsonProperty("id") @Nullable Object id) {
+        checkArgument(JsonRpcUtil.JSON_RPC_VERSION.equals(jsonrpc), "jsonrpc must be '2.0', but was: %s",
+                jsonrpc);
         this.jsonrpc = jsonrpc;
-        this.method = method;
+        this.method = requireNonNull(method, "method");
         this.params = params;
         this.id = id;
     }

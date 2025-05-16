@@ -15,7 +15,10 @@
  */
 package com.linecorp.armeria.server.jsonrpc;
 
+import static java.util.Objects.requireNonNull;
+
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.HttpServiceWithRoutes;
 import com.linecorp.armeria.server.Route;
@@ -33,6 +36,7 @@ import com.linecorp.armeria.server.ServerBuilder;
  * endpoints to be defined alongside other HTTP services.
  * </p>
  */
+@UnstableApi
 public interface JsonRpcService extends HttpServiceWithRoutes {
 
     /**
@@ -46,7 +50,7 @@ public interface JsonRpcService extends HttpServiceWithRoutes {
      * @return a new {@link JsonRpcServiceBuilder} instance, ready for configuration.
      */
     static JsonRpcServiceBuilder builder(ServerBuilder sb) {
-        return new JsonRpcServiceBuilder(sb);
+        return new JsonRpcServiceBuilder(requireNonNull(sb, "sb"));
     }
 
     /**

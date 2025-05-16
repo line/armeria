@@ -55,7 +55,7 @@ public class JsonRpcServiceBuilder {
      *                      Must not be {@code null}.
      */
     public JsonRpcServiceBuilder(ServerBuilder serverBuilder) {
-        this.serverBuilder = serverBuilder;
+        this.serverBuilder = requireNonNull(serverBuilder, "serverBuilder");
     }
 
     /**
@@ -133,7 +133,7 @@ public class JsonRpcServiceBuilder {
      */
     private Route newRoute(String prefix) {
         return Route.builder()
-                    .path(prefix)
-                    .build();
+                .path(prefix)
+                .build();
     }
 }

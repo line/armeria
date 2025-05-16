@@ -19,12 +19,14 @@ import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import org.junit.jupiter.api.Test;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 
 class JsonRpcResponseTest {
 
@@ -42,7 +44,7 @@ class JsonRpcResponseTest {
 
         // Expected Outcomes/Postconditions
         assertNotNull(response);
-        assertEquals("2.0", response.jsonRpcVersion());
+        assertEquals(JsonRpcUtil.JSON_RPC_VERSION, response.jsonRpcVersion());
         assertEquals(resultNode, response.result());
         assertNull(response.error());
         assertEquals(id, response.id());
@@ -55,21 +57,16 @@ class JsonRpcResponseTest {
         final Object id = null;
 
         // Execute
-        final JsonRpcResponse response = JsonRpcResponse.ofSuccess(result, id);
-
-        // Expected Outcomes/Postconditions
-        assertNotNull(response);
-        assertEquals("2.0", response.jsonRpcVersion());
-        assertNull(response.result());
-        assertNull(response.error());
-        assertNull(response.id());
+        assertThrows(NullPointerException.class, () -> {
+            JsonRpcResponse.ofSuccess(result, id);
+        });
     }
 
     // Tests for ofError(JsonRpcError error, @Nullable Object id)
     @Test
     void ofError_withErrorObjectAndNumberId() {
         // Inputs/Preconditions
-        final JsonRpcError error = JsonRpcError.parseError("Details");
+        final JsonRpcError error = JsonRpcError.PARSE_ERROR.withData("Details");
         final Number id = 12345;
 
         // Execute
@@ -77,10 +74,22 @@ class JsonRpcResponseTest {
 
         // Expected Outcomes/Postconditions
         assertNotNull(response);
-        assertEquals("2.0", response.jsonRpcVersion());
+        assertEquals(JsonRpcUtil.JSON_RPC_VERSION, response.jsonRpcVersion());
         assertNull(response.result());
         assertEquals(error, response.error());
         assertEquals(id, response.id());
+    }
+
+    @Test
+    void ofError_withNullErrorAndNullId() {
+        // Inputs/Preconditions
+        final JsonRpcError error = null;
+        final Object id = null;
+
+        // Execute
+        assertThrows(NullPointerException.class, () -> {
+            JsonRpcResponse.ofError(error, id);
+        });
     }
 
     // Tests for @JsonCreator JsonRpcResponse(@JsonProperty("jsonrpc") String jsonrpc, ...)
@@ -95,7 +104,7 @@ class JsonRpcResponseTest {
 
         // Expected Outcomes/Postconditions
         assertNotNull(response);
-        assertEquals("2.0", response.jsonRpcVersion());
+        assertEquals(JsonRpcUtil.JSON_RPC_VERSION, response.jsonRpcVersion());
         assertNotNull(response.result());
         assertEquals(mapper.createObjectNode().put("data", "content"), mapper.valueToTree(response.result()));
         assertNull(response.error());
@@ -107,17 +116,17 @@ class JsonRpcResponseTest {
         // Inputs/Preconditions
         final String jsonResponseStr =
                 "{" +
-                "\"jsonrpc\": \"2.0\", " +
-                "\"error\": {\"code\": -32600, \"message\": \"Invalid Request\"}, " +
-                "\"id\": null" +
-                "}";
+                        "\"jsonrpc\": \"2.0\", " +
+                        "\"error\": {\"code\": -32600, \"message\": \"Invalid Request\"}, " +
+                        "\"id\": null" +
+                        "}";
 
         // Execute
         final JsonRpcResponse response = mapper.readValue(jsonResponseStr, JsonRpcResponse.class);
 
         // Expected Outcomes/Postconditions
         assertNotNull(response);
-        assertEquals("2.0", response.jsonRpcVersion());
+        assertEquals(JsonRpcUtil.JSON_RPC_VERSION, response.jsonRpcVersion());
         assertNull(response.result());
         assertNotNull(response.error());
         assertEquals(-32600, response.error().code());
@@ -136,7 +145,7 @@ class JsonRpcResponseTest {
 
         // Expected Outcomes/Postconditions
         assertNotNull(response1);
-        assertEquals("2.0", response1.jsonRpcVersion());
+        assertEquals(JsonRpcUtil.JSON_RPC_VERSION, response1.jsonRpcVersion());
         assertEquals("ok", response1.result());
         assertNull(response1.error());
         assertNull(response1.id()); // ID is missing, should be null
@@ -149,7 +158,7 @@ class JsonRpcResponseTest {
 
         // Expected Outcomes/Postconditions
         assertNotNull(response2);
-        assertEquals("2.0", response2.jsonRpcVersion());
+        assertEquals(JsonRpcUtil.JSON_RPC_VERSION, response2.jsonRpcVersion());
         assertNull(response2.result()); // Result is missing, should be null
         assertNull(response2.error());  // Error is missing, should be null
         assertEquals("only-id", response2.id());
@@ -170,7 +179,7 @@ class JsonRpcResponseTest {
         // Expected: {"jsonrpc":"2.0","result":"success data","id":"ser-id-1"}
         // error field should be absent due to @JsonInclude(JsonInclude.Include.NON_NULL)
         final com.fasterxml.jackson.databind.node.ObjectNode expectedNode = mapper.createObjectNode();
-        expectedNode.put("jsonrpc", "2.0");
+        expectedNode.put("jsonrpc", JsonRpcUtil.JSON_RPC_VERSION);
         expectedNode.put("result", "success data");
         expectedNode.put("id", "ser-id-1");
 
@@ -193,7 +202,7 @@ class JsonRpcResponseTest {
         // Expected: {"jsonrpc":"2.0","error":{"code":-32000,"message":"Custom Error"},"id":null}
         // result field should be absent. data field in error should be absent if null.
         final com.fasterxml.jackson.databind.node.ObjectNode expectedNode = mapper.createObjectNode();
-        expectedNode.put("jsonrpc", "2.0");
+        expectedNode.put("jsonrpc", JsonRpcUtil.JSON_RPC_VERSION);
         final com.fasterxml.jackson.databind.node.ObjectNode errorNode = mapper.createObjectNode();
         errorNode.put("code", -32000);
         errorNode.put("message", "Custom Error");
@@ -218,8 +227,8 @@ class JsonRpcResponseTest {
         assertNotNull(jsonString);
         // Expected: {"jsonrpc":"2.0","result":"data","id":null}
         // The "id" field should be present and explicitly null.
-        final com.fasterxml.jackson.databind.node.ObjectNode expectedNode = mapper.createObjectNode();
-        expectedNode.put("jsonrpc", "2.0");
+        final ObjectNode expectedNode = mapper.createObjectNode();
+        expectedNode.put("jsonrpc", JsonRpcUtil.JSON_RPC_VERSION);
         expectedNode.put("result", "data");
         expectedNode.set("id", mapper.nullNode());
 

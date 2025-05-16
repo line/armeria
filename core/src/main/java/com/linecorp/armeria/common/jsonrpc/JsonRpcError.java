@@ -15,11 +15,14 @@
  */
 package com.linecorp.armeria.common.jsonrpc;
 
+import static java.util.Objects.requireNonNull;
+
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 
 /**
  * Represents a JSON-RPC 2.0 error object, which is included in a response when an error occurs.
@@ -35,26 +38,45 @@ import com.linecorp.armeria.common.annotation.Nullable;
  * @see <a href="https://www.jsonrpc.org/specification#error_object">
  *     JSON-RPC 2.0 Specification - Error object</a>
  */
-@JsonInclude(JsonInclude.Include.NON_NULL) // Ensure null 'data' field is not included in JSON output
+@UnstableApi
+@JsonInclude(JsonInclude.Include.NON_NULL)
 public final class JsonRpcError {
+
+    /**
+     * Invalid Request (-32600).
+     * The JSON sent is not a valid Request object.
+     */
+    public static final JsonRpcError INVALID_REQUEST = new JsonRpcError(-32600, "Invalid Request");
+
+    /**
+     * Method not found (-32601).
+     * The method does not exist / is not available.
+     */
+    public static final JsonRpcError METHOD_NOT_FOUND = new JsonRpcError(-32601, "Method not found");
+
+    /**
+     * Invalid params (-32602).
+     * Invalid method parameter(s).
+     */
+    public static final JsonRpcError INVALID_PARAMS = new JsonRpcError(-32602, "Invalid params");
+
+    /**
+     * Internal error (-32603).
+     * Internal JSON-RPC error.
+     */
+    public static final JsonRpcError INTERNAL_ERROR = new JsonRpcError(-32603, "Internal error");
+
+    /**
+     * Parse error (-32700).
+     * Invalid JSON was received by the server.
+     * An error occurred on the server while parsing the JSON text.
+     */
+    public static final JsonRpcError PARSE_ERROR = new JsonRpcError(-32700, "Parse error");
 
     private final int code;
     private final String message;
     @Nullable
     private final Object data;
-
-    /**
-     * Creates a new instance with the specified {@link JsonRpcErrorCode} and optional data.
-     * The message associated with the {@link JsonRpcErrorCode} will be used.
-     *
-     * @param errorCode the predefined {@link JsonRpcErrorCode} indicating the type of error.
-     *                  Must not be {@code null}.
-     * @param data      optional, application-defined data providing additional information about the error.
-     *                  Can be {@code null}.
-     */
-    public JsonRpcError(JsonRpcErrorCode errorCode, @Nullable Object data) {
-        this(errorCode.code(), errorCode.message(), data);
-    }
 
     /**
      * Creates a new instance with the specified code, message, and optional data.
@@ -67,11 +89,11 @@ public final class JsonRpcError {
      *                Can be {@code null}.
      */
     @JsonCreator
-    public JsonRpcError(@JsonProperty(value = "code", required = true) int code,
-                        @JsonProperty(value = "message", required = true) String message,
-                        @JsonProperty("data") @Nullable Object data) {
+    public JsonRpcError(@JsonProperty("code") int code,
+            @JsonProperty("message") String message,
+            @JsonProperty("data") @Nullable Object data) {
         this.code = code;
-        this.message = message;
+        this.message = requireNonNull(message, "message");
         this.data = data;
     }
 
@@ -83,7 +105,24 @@ public final class JsonRpcError {
      * @param message a string providing a short description of the error. Must not be {@code null}.
      */
     public JsonRpcError(int code, String message) {
-        this(code, message, null);
+        this(code, requireNonNull(message, "message"), null);
+    }
+
+    /**
+     * Creates a new {@link JsonRpcError} instance with the same code and message as this instance,
+     * but with the specified {@code data}. If the provided {@code data} is {@code null},
+     * this method returns the current instance.
+     *
+     * @param data the new data to associate with the error. May be {@code null}.
+     * @return the current {@link JsonRpcError} instance if {@code data} is {@code null},
+     *         otherwise a new {@link JsonRpcError} instance with the updated data.
+     */
+    public JsonRpcError withData(@Nullable Object data) {
+        if (data == null) {
+            return this;
+        }
+
+        return new JsonRpcError(this.code, this.message, data);
     }
 
     /**
@@ -116,66 +155,5 @@ public final class JsonRpcError {
     @Nullable
     public Object data() {
         return data;
-    }
-
-    /**
-     * Creates a 'Parse error' {@link JsonRpcError} (-32700) as defined by the JSON-RPC 2.0 specification.
-     * Indicates invalid JSON was received by the server
-     * or an error occurred on the server while parsing the JSON text.
-     *
-     * @param data optional, application-defined data providing additional information about the parse error.
-     *             Can be {@code null}.
-     * @return a new {@link JsonRpcError} instance representing a parse error.
-     */
-    public static JsonRpcError parseError(@Nullable Object data) {
-        return new JsonRpcError(JsonRpcErrorCode.PARSE_ERROR, data);
-    }
-
-    /**
-     * Creates an 'Invalid Request' {@link JsonRpcError} (-32600) as defined by the JSON-RPC 2.0 specification.
-     * Indicates the JSON sent is not a valid Request object.
-     *
-     * @param data optional, application-defined data providing additional information
-     *             about why the request was invalid.
-     *             Can be {@code null}.
-     * @return a new {@link JsonRpcError} instance representing an invalid request error.
-     */
-    public static JsonRpcError invalidRequest(@Nullable Object data) {
-        return new JsonRpcError(JsonRpcErrorCode.INVALID_REQUEST, data);
-    }
-
-    /**
-     * Creates a 'Method not found' {@link JsonRpcError} (-32601) as defined by the JSON-RPC 2.0 specification.
-     * Indicates the method does not exist or is not available.
-     *
-     * @param data optional, application-defined data. Can be {@code null}.
-     * @return a new {@link JsonRpcError} instance representing a method not found error.
-     */
-    public static JsonRpcError methodNotFound(@Nullable Object data) {
-        return new JsonRpcError(JsonRpcErrorCode.METHOD_NOT_FOUND, data);
-    }
-
-    /**
-     * Creates an 'Invalid params' {@link JsonRpcError} (-32602) as defined by the JSON-RPC 2.0 specification.
-     * Indicates invalid method parameters.
-     *
-     * @param data optional, application-defined data providing details about the invalid parameters.
-     *             Can be {@code null}.
-     * @return a new {@link JsonRpcError} instance representing an invalid parameters error.
-     */
-    public static JsonRpcError invalidParams(@Nullable Object data) {
-        return new JsonRpcError(JsonRpcErrorCode.INVALID_PARAMS, data);
-    }
-
-    /**
-     * Creates an 'Internal error' {@link JsonRpcError} (-32603) as defined by the JSON-RPC 2.0 specification.
-     * Indicates an internal JSON-RPC error on the server.
-     *
-     * @param data optional, application-defined data providing details about the internal error.
-     *             Can be {@code null}.
-     * @return a new {@link JsonRpcError} instance representing an internal error.
-     */
-    public static JsonRpcError internalError(@Nullable Object data) {
-        return new JsonRpcError(JsonRpcErrorCode.INTERNAL_ERROR, data);
     }
 }
