@@ -42,7 +42,7 @@ public final class RetryConfigMappingBuilder<T extends Response> {
         return perHost || perMethod || perPath;
     }
 
-    public RetryConfigMapping<T> build(RetryConfigFactory retryConfigFactory) {
+    public RetryConfigMapping<T> build(RetryConfigFactory<T> retryConfigFactory) {
         if (!validateMappingKeys()) {
             throw new IllegalStateException(
                     "A RetryConfigMapping created by this builder must be per host, method and/or path");
