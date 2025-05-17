@@ -1,7 +1,7 @@
 /*
- * Copyright 2022 LINE Corporation
+ * Copyright 2025 LY Corporation
  *
- * LINE Corporation licenses this file to you under the Apache License,
+ * LY Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
@@ -14,11 +14,12 @@
  * under the License.
  */
 
-/**
- * CircuitBreaker related classes used internally.
- * Anything in this package can be changed or removed at any time.
- */
-@NonNullByDefault
-package com.linecorp.armeria.internal.common.circuitbreaker;
+package com.linecorp.armeria.client.retry;
 
-import com.linecorp.armeria.common.annotation.NonNullByDefault;
+import com.linecorp.armeria.common.Response;
+import com.linecorp.armeria.common.annotation.Nullable;
+
+@FunctionalInterface
+public interface RetryConfigFactory<T extends Response> {
+    RetryConfig<T> apply(@Nullable String host, @Nullable String method, @Nullable String path);
+}

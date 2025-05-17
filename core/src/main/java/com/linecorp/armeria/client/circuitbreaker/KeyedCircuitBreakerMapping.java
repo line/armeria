@@ -1,7 +1,7 @@
 /*
- * Copyright 2016 LINE Corporation
+ * Copyright 2025 LY Corporation
  *
- * LINE Corporation licenses this file to you under the Apache License,
+ * LY Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
@@ -16,9 +16,9 @@
 
 package com.linecorp.armeria.client.circuitbreaker;
 
-import static com.linecorp.armeria.internal.common.circuitbreaker.CircuitBreakerMappingUtil.host;
-import static com.linecorp.armeria.internal.common.circuitbreaker.CircuitBreakerMappingUtil.method;
-import static com.linecorp.armeria.internal.common.circuitbreaker.CircuitBreakerMappingUtil.path;
+import static com.linecorp.armeria.internal.common.RequestContextUtil.host;
+import static com.linecorp.armeria.internal.common.RequestContextUtil.method;
+import static com.linecorp.armeria.internal.common.RequestContextUtil.path;
 import static java.util.Objects.requireNonNull;
 import static java.util.stream.Collectors.joining;
 
