@@ -52,20 +52,10 @@ public interface RetryConfigMapping<T extends Response> {
      * };
      * RetryConfigMapping mapping = RetryConfigMapping.of(keyFactory, configFactory);
      * } </pre>
-     *
-     * @deprecated Use {@link #perRequestAndContext(BiFunction, BiFunction)} instead.
      */
-    @Deprecated
     static <T extends Response> RetryConfigMapping<T> of(
             BiFunction<? super ClientRequestContext, Request, String> keyFactory,
             BiFunction<? super ClientRequestContext, Request, RetryConfig<T>> retryConfigFactory) {
-        return new KeyedRetryConfigMapping<>(keyFactory, retryConfigFactory);
-    }
-
-    static <T extends Response> RetryConfigMapping<T> perRequestAndContext(
-            BiFunction<? super ClientRequestContext, Request, String> keyFactory,
-            BiFunction<? super ClientRequestContext, Request, RetryConfig<T>> retryConfigFactory
-    ) {
         return new KeyedRetryConfigMapping<>(keyFactory, retryConfigFactory);
     }
 

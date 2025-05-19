@@ -341,12 +341,12 @@ class RetryConfigMappingTest {
 
 
     @Test
-    void createsCorrectMappingWithPerRequestAndContext() {
+    void createsCorrectMappingWithOf() {
         final AttributeKey<Integer> maxRetryAttemptsAttr =
                 AttributeKey.valueOf("maxRetryAttemptsAttr");
 
         final RetryConfigMapping<?> mapping =
-                RetryConfigMapping.perRequestAndContext((ctx, req) -> (ctx.hasAttr(maxRetryAttemptsAttr) ?
+                RetryConfigMapping.of((ctx, req) -> (ctx.hasAttr(maxRetryAttemptsAttr) ?
                                                                        ctx.attr(maxRetryAttemptsAttr) :
                                                                        Integer.valueOf(1)).toString()
                         , (ctx, req) ->
