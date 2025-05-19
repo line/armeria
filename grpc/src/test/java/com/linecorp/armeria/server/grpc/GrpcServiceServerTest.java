@@ -109,11 +109,11 @@ import io.grpc.Status;
 import io.grpc.Status.Code;
 import io.grpc.StatusRuntimeException;
 import io.grpc.protobuf.ProtoUtils;
-import io.grpc.protobuf.services.ProtoReflectionService;
-import io.grpc.reflection.v1alpha.ServerReflectionGrpc;
-import io.grpc.reflection.v1alpha.ServerReflectionGrpc.ServerReflectionStub;
-import io.grpc.reflection.v1alpha.ServerReflectionRequest;
-import io.grpc.reflection.v1alpha.ServerReflectionResponse;
+import io.grpc.protobuf.services.ProtoReflectionServiceV1;
+import io.grpc.reflection.v1.ServerReflectionGrpc;
+import io.grpc.reflection.v1.ServerReflectionGrpc.ServerReflectionStub;
+import io.grpc.reflection.v1.ServerReflectionRequest;
+import io.grpc.reflection.v1.ServerReflectionResponse;
 import io.grpc.stub.ServerCallStreamObserver;
 import io.grpc.stub.StreamObserver;
 import io.netty.buffer.ByteBuf;
@@ -453,7 +453,7 @@ class GrpcServiceServerTest {
 
             sb.service(
                     GrpcService.builder()
-                               .addService(ProtoReflectionService.newInstance())
+                               .addService(ProtoReflectionServiceV1.newInstance())
                                .build(),
                     service -> service.decorate(LoggingService.newDecorator()));
         }
@@ -1229,7 +1229,8 @@ class GrpcServiceServerTest {
     void reflectionService() throws Exception {
         final ServerReflectionStub stub = ServerReflectionGrpc.newStub(channel);
 
-        final AtomicReference<ServerReflectionResponse> response = new AtomicReference<>();
+        final AtomicReference<ServerReflectionResponse> response =
+                new AtomicReference<>();
 
         final StreamObserver<ServerReflectionRequest> request = stub.serverReflectionInfo(
                 new StreamObserver<ServerReflectionResponse>() {

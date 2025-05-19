@@ -421,6 +421,7 @@ public final class JettyService implements HttpService {
                 final int length = content != null ? content.remaining() : 0;
                 if (!head && length != 0) {
                     final HttpData data;
+                    assert content != null;
                     if (content.hasArray()) {
                         final int from = content.arrayOffset() + content.position();
                         content.position(content.position() + length);

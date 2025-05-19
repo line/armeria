@@ -28,6 +28,7 @@ import com.google.common.collect.ImmutableMap;
 
 import com.linecorp.armeria.common.ExchangeType;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 
 import io.netty.util.AttributeKey;
 
@@ -41,6 +42,8 @@ public final class RequestOptionsBuilder implements RequestOptionsSetters {
     private long maxResponseLength = -1;
     @Nullable
     private Long requestAutoAbortDelayMillis;
+    @Nullable
+    private ResponseTimeoutMode responseTimeoutMode;
 
     @Nullable
     private Map<AttributeKey<?>, Object> attributes;
@@ -58,6 +61,7 @@ public final class RequestOptionsBuilder implements RequestOptionsSetters {
                 attributes = new HashMap<>(attrs);
             }
             exchangeType = options.exchangeType();
+            responseTimeoutMode = options.responseTimeoutMode();
         }
     }
 
@@ -135,13 +139,20 @@ public final class RequestOptionsBuilder implements RequestOptionsSetters {
         return this;
     }
 
+    @Override
+    @UnstableApi
+    public RequestOptionsBuilder responseTimeoutMode(ResponseTimeoutMode responseTimeoutMode) {
+        this.responseTimeoutMode = requireNonNull(responseTimeoutMode, "responseTimeoutMode");
+        return this;
+    }
+
     /**
      * Returns a newly created {@link RequestOptions} with the properties specified so far.
      */
     public RequestOptions build() {
         if (responseTimeoutMillis < 0 && writeTimeoutMillis < 0 &&
             maxResponseLength < 0 && requestAutoAbortDelayMillis == null && attributes == null &&
-            exchangeType == null) {
+            exchangeType == null && responseTimeoutMode == null) {
             return EMPTY;
         } else {
             final Map<AttributeKey<?>, Object> attributes;
@@ -152,7 +163,7 @@ public final class RequestOptionsBuilder implements RequestOptionsSetters {
             }
             return new DefaultRequestOptions(responseTimeoutMillis, writeTimeoutMillis,
                                              maxResponseLength, requestAutoAbortDelayMillis,
-                                             attributes, exchangeType);
+                                             attributes, exchangeType, responseTimeoutMode);
         }
     }
 }

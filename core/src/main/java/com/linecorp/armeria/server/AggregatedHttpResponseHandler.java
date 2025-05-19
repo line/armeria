@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 LINE Corporation
+ * Copyright 2024 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -17,6 +17,7 @@
 package com.linecorp.armeria.server;
 
 import static com.google.common.base.MoreObjects.firstNonNull;
+import static com.linecorp.armeria.server.AccessLogWriterUtil.maybeWriteAccessLog;
 
 import java.nio.channels.ClosedChannelException;
 import java.util.concurrent.CompletableFuture;
@@ -125,12 +126,12 @@ final class AggregatedHttpResponseHandler extends AbstractHttpResponseHandler
     void fail(Throwable cause) {
         if (tryComplete(cause)) {
             endLogRequestAndResponse(cause);
-            maybeWriteAccessLog();
+            maybeWriteAccessLog(reqCtx);
         }
     }
 
     private void resetAndFail(Throwable cause) {
-        responseEncoder.writeReset(req.id(), req.streamId(), Http2Error.CANCEL, false).addListener(f -> {
+        responseEncoder.writeReset(req.id(), req.streamId(), Http2Error.CANCEL).addListener(f -> {
             try (SafeCloseable ignored = RequestContextUtil.pop()) {
                 fail(cause);
             }
@@ -185,7 +186,7 @@ final class AggregatedHttpResponseHandler extends AbstractHttpResponseHandler
                     }
                 }
                 endLogRequestAndResponse(cause);
-                maybeWriteAccessLog();
+                maybeWriteAccessLog(reqCtx);
             }
             return;
         }

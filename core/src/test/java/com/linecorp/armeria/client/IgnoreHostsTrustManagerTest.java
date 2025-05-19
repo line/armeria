@@ -37,6 +37,7 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 import com.google.common.collect.ImmutableSet;
 
 import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.internal.common.IgnoreHostsTrustManager;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 

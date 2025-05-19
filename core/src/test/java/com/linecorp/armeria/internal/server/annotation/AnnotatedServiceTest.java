@@ -19,6 +19,7 @@ import static org.apache.hc.core5.http.HttpHeaders.ACCEPT;
 import static org.apache.hc.core5.http.HttpHeaders.CONTENT_TYPE;
 import static org.apache.hc.core5.http.HttpHeaders.IF_MATCH;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.io.IOException;
 import java.nio.charset.Charset;
@@ -26,6 +27,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.TreeSet;
@@ -75,6 +77,7 @@ import com.linecorp.armeria.common.util.UnmodifiableFuture;
 import com.linecorp.armeria.internal.testing.AnticipatedException;
 import com.linecorp.armeria.internal.testing.GenerateNativeImageTrace;
 import com.linecorp.armeria.server.HttpStatusException;
+import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.TestConverters.NaiveIntConverterFunction;
@@ -628,6 +631,30 @@ class AnnotatedServiceTest {
             validateContext(ctx);
             return username + '/' + password;
         }
+
+        @Get("/param/map")
+        public String map(RequestContext ctx, @Param Map<String, Object> map) {
+            validateContext(ctx);
+            return map.isEmpty() ? "empty" : map.entrySet().stream()
+                                                .map(entry -> entry.getKey() + '=' + entry.getValue())
+                                                .collect(Collectors.joining(", "));
+        }
+
+        @Get("/param/listMap")
+        public String listMap(RequestContext ctx, @Param Map<String, List<Object>> map) {
+            validateContext(ctx);
+            return map.isEmpty() ? "empty" : map.entrySet().stream()
+                                                .map(entry -> entry.getKey() + '=' + entry.getValue())
+                                                .collect(Collectors.joining(", "));
+        }
+
+        @Get("/param/setMap")
+        public String setMap(RequestContext ctx, @Param Map<String, Set<Object>> map) {
+            validateContext(ctx);
+            return map.isEmpty() ? "empty" : map.entrySet().stream()
+                                                .map(entry -> entry.getKey() + '=' + entry.getValue())
+                                                .collect(Collectors.joining(", "));
+        }
     }
 
     @ResponseConverter(UnformattedStringConverterFunction.class)
@@ -773,6 +800,12 @@ class AnnotatedServiceTest {
                    String.join(":", strings);
         }
 
+        @Post("/headerNameSpecified")
+        public String headerNameSpecified(@Header("X-x-FoO-bAr") String id) {
+            // Because the header name is specified, it's not converted.
+            return id;
+        }
+
         @Get("/headerDefault")
         public String headerDefault(RequestContext ctx,
                                     @Header @Default("hello") String username,
@@ -894,7 +927,7 @@ class AnnotatedServiceTest {
         @Path("/response-entity-void")
         public ResponseEntity<Void> responseEntityVoid(RequestContext ctx) {
             validateContext(ctx);
-            return ResponseEntity.of(ResponseHeaders.of(HttpStatus.OK));
+            return ResponseEntity.of(HttpStatus.OK);
         }
 
         @Get
@@ -908,15 +941,21 @@ class AnnotatedServiceTest {
         @Path("/response-entity-status")
         public ResponseEntity<Void> responseEntityResponseData(RequestContext ctx) {
             validateContext(ctx);
-            return ResponseEntity.of(ResponseHeaders.of(HttpStatus.MOVED_PERMANENTLY));
+            return ResponseEntity.of(HttpStatus.MOVED_PERMANENTLY);
         }
 
         @Get
         @Path("/response-entity-http-response")
         public ResponseEntity<HttpResponse> responseEntityHttpResponse(RequestContext ctx) {
             validateContext(ctx);
-            return ResponseEntity.of(ResponseHeaders.of(HttpStatus.OK),
-                                     HttpResponse.of(HttpStatus.UNAUTHORIZED));
+            return ResponseEntity.of(HttpStatus.OK, HttpResponse.of(HttpStatus.UNAUTHORIZED));
+        }
+    }
+
+    public static class MyAnnotationService16 {
+        @Get("/param/map-invalid")
+        public String invalidMapParam(@Param("param") Map<String, String> param) {
+            return "Should not reach here";
         }
     }
 
@@ -1052,6 +1091,21 @@ class AnnotatedServiceTest {
             testStatusCode(hc, get("/7/param/default2"), 400);
 
             testBody(hc, get("/7/param/default_null"), "(null)");
+
+            // Case all query parameters test map
+            testBody(hc, get("/7/param/map?key1=value1&key2=value2"),
+                     "key1=value1, key2=value2");
+            testBody(hc, get("/7/param/map"), "empty");
+
+            // Case all query parameters test multi value map of List
+            testBody(hc, get("/7/param/listMap?key1=value1&key1=value2&key2=value1&key2=value2"),
+                     "key1=[value1, value2], key2=[value1, value2]");
+            testBody(hc, get("/7/param/listMap"), "empty");
+
+            // Case all query parameters test multi value map of Set
+            testBody(hc, get("/7/param/setMap?key1=value1&key1=value1&key2=value2&key2=value2"),
+                     "key1=[value1], key2=[value2]");
+            testBody(hc, get("/7/param/setMap"), "empty");
         }
     }
 
@@ -1224,6 +1278,10 @@ class AnnotatedServiceTest {
             request.addHeader("strings", "minwoox");
             testBody(hc, request, "1:2:1/minwoox:giraffe");
 
+            request = post("/11/headerNameSpecified");
+            request.addHeader("X-x-FoO-bAr", "qwerty");
+            testBody(hc, request, "qwerty");
+
             request = get("/11/headerDefault");
             testBody(hc, request, "hello/world/(null)");
 
@@ -1342,6 +1400,18 @@ class AnnotatedServiceTest {
             testStatusCode(hc, get("/17/response-entity-status"), 301);
             testStatusCode(hc, get("/17/response-entity-http-response"), 401);
         }
+    }
+
+    @Test
+    void testInvalidParamAnnotationUsageOnMap() {
+        assertThatThrownBy(() ->
+                                   Server.builder()
+                                         .annotatedService()
+                                         .build(new MyAnnotationService16())
+                                         .build()
+        )
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("Invalid @Param annotation on Map parameter");
     }
 
     private enum UserLevel {

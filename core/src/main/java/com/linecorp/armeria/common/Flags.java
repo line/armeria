@@ -46,6 +46,7 @@ import com.linecorp.armeria.client.ClientBuilder;
 import com.linecorp.armeria.client.ClientFactoryBuilder;
 import com.linecorp.armeria.client.DnsResolverGroupBuilder;
 import com.linecorp.armeria.client.Endpoint;
+import com.linecorp.armeria.client.ResponseTimeoutMode;
 import com.linecorp.armeria.client.retry.Backoff;
 import com.linecorp.armeria.client.retry.RetryingClient;
 import com.linecorp.armeria.client.retry.RetryingRpcClient;
@@ -67,6 +68,7 @@ import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.ServiceWithRoutes;
 import com.linecorp.armeria.server.TransientService;
 import com.linecorp.armeria.server.TransientServiceOption;
+import com.linecorp.armeria.server.annotation.AnnotatedService;
 import com.linecorp.armeria.server.annotation.ExceptionHandler;
 import com.linecorp.armeria.server.annotation.ExceptionVerbosity;
 import com.linecorp.armeria.server.file.FileService;
@@ -439,6 +441,12 @@ public final class Flags {
             getValue(FlagsProvider::defaultHttp1ConnectionCloseDelayMillis,
                     "defaultHttp1ConnectionCloseDelayMillis", value -> value >= 0);
 
+    private static final ResponseTimeoutMode RESPONSE_TIMEOUT_MODE =
+            getValue(FlagsProvider::responseTimeoutMode, "responseTimeoutMode");
+
+    private static final boolean ANNOTATED_SERVICE_CONTENT_LOGGING =
+            getValue(FlagsProvider::annotatedServiceContentLogging, "annotatedServiceContentLogging");
+
     /**
      * Returns the specification of the {@link Sampler} that determines whether to retain the stack
      * trace of the exceptions that are thrown frequently by Armeria. A sampled exception will have the stack
@@ -637,7 +645,7 @@ public final class Flags {
                     /* forceHttp1 */ false,
                     tlsEngineType,
                     /* tlsAllowUnsafeCiphers */ false,
-                    ImmutableList.of(), null).newEngine(ByteBufAllocator.DEFAULT);
+                    null, null).newEngine(ByteBufAllocator.DEFAULT);
             logger.info("All available SSL protocols: {}",
                         ImmutableList.copyOf(engine.getSupportedProtocols()));
             logger.info("Default enabled SSL protocols: {}", SslContextUtil.DEFAULT_PROTOCOLS);
@@ -1640,6 +1648,33 @@ public final class Flags {
     @UnstableApi
     public static long defaultHttp1ConnectionCloseDelayMillis() {
         return DEFAULT_HTTP1_CONNECTION_CLOSE_DELAY_MILLIS;
+    }
+
+    /**
+     * Returns the {@link ResponseTimeoutMode} which determines when a response timeout
+     * will start to be scheduled.
+     *
+     * <p>The default value of this flag is {@link ResponseTimeoutMode#REQUEST_SENT}. Specify the
+     * {@code -Dcom.linecorp.armeria.responseTimeoutMode=ResponseTimeoutMode} JVM option to
+     * override the default value.
+     *
+     * @see ResponseTimeoutMode
+     */
+    @UnstableApi
+    public static ResponseTimeoutMode responseTimeoutMode() {
+        return RESPONSE_TIMEOUT_MODE;
+    }
+
+    /**
+     * Returns whether {@link AnnotatedService} should leave request/response content logs
+     * by default when a {@link LoggingService} is added.
+     *
+     * <p>By default, this option is enabled. Specify the
+     * {@code -Dcom.linecorp.armeria.annotatedServiceContentLogging=false} JVM option to
+     * override the default value.
+     */
+    public static boolean annotatedServiceContentLogging() {
+        return ANNOTATED_SERVICE_CONTENT_LOGGING;
     }
 
     @Nullable

@@ -18,6 +18,7 @@ package com.linecorp.armeria.server;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
+import static com.linecorp.armeria.server.ServerPortMetric.SERVER_PORT_METRIC;
 import static com.linecorp.armeria.server.ServerSslContextUtil.validateSslContext;
 import static java.util.Objects.requireNonNull;
 
@@ -26,6 +27,7 @@ import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.security.cert.Certificate;
 import java.security.cert.X509Certificate;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
@@ -75,6 +77,7 @@ import com.linecorp.armeria.common.util.ShutdownHooks;
 import com.linecorp.armeria.common.util.StartStopSupport;
 import com.linecorp.armeria.common.util.TlsEngineType;
 import com.linecorp.armeria.common.util.TransportType;
+import com.linecorp.armeria.common.util.UnmodifiableFuture;
 import com.linecorp.armeria.common.util.Version;
 import com.linecorp.armeria.internal.common.RequestTargetCache;
 import com.linecorp.armeria.internal.common.util.ChannelUtil;
@@ -131,8 +134,7 @@ public final class Server implements ListenableAsyncCloseable {
         serverConfig.setServer(this);
         config = new UpdatableServerConfig(requireNonNull(serverConfig, "serverConfig"));
         startStop = new ServerStartStopSupport(config.startStopExecutor());
-        connectionLimitingHandler = new ConnectionLimitingHandler(config.maxNumConnections(),
-                                                                  config.serverMetrics());
+        connectionLimitingHandler = new ConnectionLimitingHandler(config.maxNumConnections());
 
         // Server-wide metrics.
         RequestTargetCache.registerServerMetrics(config.meterRegistry());
@@ -458,7 +460,14 @@ public final class Server implements ListenableAsyncCloseable {
         requireNonNull(serverConfigurator, "serverConfigurator");
         final ServerBuilder sb = builder();
         serverConfigurator.reconfigure(sb);
-        final DefaultServerConfig newConfig = sb.buildServerConfig(config());
+        final ImmutableList<ServerPort> serverPorts;
+        lock.lock();
+        try {
+            serverPorts = ImmutableList.copyOf(activePorts.values());
+        } finally {
+            lock.unlock();
+        }
+        final DefaultServerConfig newConfig = sb.buildServerConfig(serverPorts);
         newConfig.setServer(this);
         config.updateConfig(newConfig);
         // Invoke the serviceAdded() method in Service so that it can keep the reference to this Server or
@@ -501,11 +510,11 @@ public final class Server implements ListenableAsyncCloseable {
 
         @Override
         protected CompletionStage<Void> doStart(@Nullable Void arg) {
-            if (config().gracefulShutdownQuietPeriod().isZero()) {
+            if (config().gracefulShutdown().quietPeriod().isZero()) {
                 gracefulShutdownSupport = GracefulShutdownSupport.createDisabled();
             } else {
                 gracefulShutdownSupport =
-                        GracefulShutdownSupport.create(config().gracefulShutdownQuietPeriod(),
+                        GracefulShutdownSupport.create(config().gracefulShutdown().quietPeriod(),
                                                        config().blockingTaskExecutor());
             }
 
@@ -520,12 +529,12 @@ public final class Server implements ListenableAsyncCloseable {
             try {
                 doStart(primary).addListener(new ServerPortStartListener(primary))
                                 .addListener(new NextServerPortStartListener(this, it, future));
-                setupServerMetrics();
+                // Chain the future to set up server metrics first before server start future is completed.
+                return future.thenAccept(unused -> setupPendingResponsesMetrics());
             } catch (Throwable cause) {
                 future.completeExceptionally(cause);
+                return future;
             }
-
-            return future;
         }
 
         private ChannelFuture doStart(ServerPort port) {
@@ -553,10 +562,31 @@ public final class Server implements ListenableAsyncCloseable {
             final GracefulShutdownSupport gracefulShutdownSupport = this.gracefulShutdownSupport;
             assert gracefulShutdownSupport != null;
 
+            ServerPortMetric serverPortMetric = null;
+            lock.lock();
+            try {
+                for (ServerPort serverPort : activePorts.values()) {
+                    final InetSocketAddress localAddress = serverPort.localAddress();
+                    if (!(localAddress instanceof DomainSocketAddress) &&
+                        localAddress.getPort() == port.localAddress().getPort()) {
+                        // Because we use the port number for aggregating metrics, use the previous
+                        // serverPortMetric.
+                        serverPortMetric = serverPort.serverPortMetric();
+                        break;
+                    }
+                }
+            } finally {
+                lock.unlock();
+            }
+            if (serverPortMetric == null) {
+                serverPortMetric = new ServerPortMetric();
+            }
             b.group(bossGroup, config.workerGroup());
-            b.handler(connectionLimitingHandler);
+            b.handler(connectionLimitingHandler.newChildHandler(serverPortMetric));
             b.childHandler(new HttpServerPipelineConfigurator(config, port, gracefulShutdownSupport,
                                                               hasWebSocketService));
+            b.attr(SERVER_PORT_METRIC, serverPortMetric);
+            b.childAttr(SERVER_PORT_METRIC, serverPortMetric);
 
             final SocketAddress localAddress;
             final Class<? extends ServerChannel> channelType;
@@ -580,14 +610,13 @@ public final class Server implements ListenableAsyncCloseable {
             return b.bind(localAddress);
         }
 
-        private void setupServerMetrics() {
-            final MeterRegistry meterRegistry = config.meterRegistry();
+        private void setupPendingResponsesMetrics() {
             final GracefulShutdownSupport gracefulShutdownSupport = this.gracefulShutdownSupport;
             assert gracefulShutdownSupport != null;
 
-            meterRegistry.gauge("armeria.server.pending.responses", gracefulShutdownSupport,
-                                GracefulShutdownSupport::pendingResponses);
-            config.serverMetrics().bindTo(meterRegistry);
+            // Move to ServerMetrics.
+            config.meterRegistry().gauge("armeria.server.pending.responses", gracefulShutdownSupport,
+                                         GracefulShutdownSupport::pendingResponses);
         }
 
         @Override
@@ -618,7 +647,7 @@ public final class Server implements ListenableAsyncCloseable {
                 gracefulShutdownExecutor.schedule(() -> {
                     quietPeriodFuture.cancel(false);
                     doStop(future, gracefulShutdownExecutor);
-                }, config.gracefulShutdownTimeout().toMillis(), TimeUnit.MILLISECONDS);
+                }, config.gracefulShutdown().timeout().toMillis(), TimeUnit.MILLISECONDS);
             } catch (RejectedExecutionException e) {
                 // Can be rejected if quiet period is complete already.
             }
@@ -655,50 +684,77 @@ public final class Server implements ListenableAsyncCloseable {
                     lock.unlock();
                 }
 
-                // Close all accepted sockets.
-                ChannelUtil.close(connectionLimitingHandler.children()).handle((unused3, unused4) -> {
-                    // Shut down the worker group if necessary.
-                    final Future<?> workerShutdownFuture;
-                    if (config.shutdownWorkerGroupOnStop()) {
-                        workerShutdownFuture = config.workerGroup().shutdownGracefully();
-                    } else {
-                        workerShutdownFuture = ImmediateEventExecutor.INSTANCE.newSucceededFuture(null);
-                    }
-
-                    workerShutdownFuture.addListener(unused5 -> {
-                        final Set<EventLoopGroup> bossGroups =
-                                Server.this.serverChannels.stream()
-                                                          .map(ch -> ch.eventLoop().parent())
-                                                          .collect(toImmutableSet());
-
-                        // If started to shutdown before initializing a boss group,
-                        // complete the future immediately.
-                        if (bossGroups.isEmpty()) {
-                            finishDoStop(future);
-                            return;
+                shutdownServerHandlers().handle((unused3, unused4) -> {
+                    // Close all accepted sockets.
+                    ChannelUtil.close(connectionLimitingHandler.children()).handle((unused5, unused6) -> {
+                        // Shut down the worker group if necessary.
+                        final Future<?> workerShutdownFuture;
+                        if (config.shutdownWorkerGroupOnStop()) {
+                            workerShutdownFuture = config.workerGroup().shutdownGracefully();
+                        } else {
+                            workerShutdownFuture = ImmediateEventExecutor.INSTANCE.newSucceededFuture(null);
                         }
 
-                        // Shut down all boss groups and wait until they are terminated.
-                        final AtomicInteger remainingBossGroups = new AtomicInteger(bossGroups.size());
-                        bossGroups.forEach(bossGroup -> {
-                            bossGroup.shutdownGracefully();
-                            bossGroup.terminationFuture().addListener(unused6 -> {
-                                if (remainingBossGroups.decrementAndGet() != 0) {
-                                    // There are more boss groups to terminate.
-                                    return;
-                                }
+                        workerShutdownFuture.addListener(unused7 -> {
+                            final Set<EventLoopGroup> bossGroups =
+                                    Server.this.serverChannels.stream()
+                                                              .map(ch -> ch.eventLoop().parent())
+                                                              .collect(toImmutableSet());
 
-                                // Boss groups have been terminated completely.
+                            // If started to shutdown before initializing a boss group,
+                            // complete the future immediately.
+                            if (bossGroups.isEmpty()) {
                                 finishDoStop(future);
+                                return;
+                            }
+
+                            // Shut down all boss groups and wait until they are terminated.
+                            final AtomicInteger remainingBossGroups = new AtomicInteger(bossGroups.size());
+                            bossGroups.forEach(bossGroup -> {
+                                bossGroup.shutdownGracefully();
+                                bossGroup.terminationFuture().addListener(unused8 -> {
+                                    if (remainingBossGroups.decrementAndGet() != 0) {
+                                        // There are more boss groups to terminate.
+                                        return;
+                                    }
+
+                                    // Boss groups have been terminated completely.
+                                    finishDoStop(future);
+                                });
                             });
                         });
-                    });
 
+                        return null;
+                    });
                     return null;
                 });
 
                 return null;
             });
+        }
+
+        private CompletableFuture<Void> shutdownServerHandlers() {
+            if (config.gracefulShutdown().timeout().isZero()) {
+                return UnmodifiableFuture.completedFuture(null);
+            }
+
+            final Set<Channel> children = connectionLimitingHandler.children();
+            final List<CompletableFuture<Void>> closeFutures = new ArrayList<>(children.size());
+            for (Channel ch : children) {
+                final HttpServerHandler serverHandler = ch.pipeline().get(HttpServerHandler.class);
+                if (serverHandler != null) {
+                    closeFutures.add(serverHandler.shutdown(ch));
+                }
+            }
+
+            // The future returned by shutdown() will be always completed successfully.
+            final CompletableFuture<List<Void>> combined = CompletableFutures.allAsList(closeFutures);
+            config.workerGroup().schedule(() -> {
+                combined.complete(ImmutableList.of());
+                // TODO(ikhoon): Make the timeout configurable.
+                // Wait for up to 1 second to send shutdown responses to clients.
+            }, 1, TimeUnit.SECONDS);
+            return combined.thenApply(ignored -> null);
         }
 
         private void finishDoStop(CompletableFuture<Void> future) {
@@ -799,6 +855,9 @@ public final class Server implements ListenableAsyncCloseable {
                     logger.warn("Unexpected local address type: {}", localAddress.getClass().getName());
                     return;
                 }
+                final ServerPortMetric serverPortMetric = ch.attr(SERVER_PORT_METRIC).get();
+                assert serverPortMetric != null;
+                actualPort.setServerPortMetric(serverPortMetric);
 
                 // Update the boss thread so its name contains the actual port.
                 Thread.currentThread().setName(bossThreadName(actualPort));
@@ -810,6 +869,8 @@ public final class Server implements ListenableAsyncCloseable {
                 } finally {
                     lock.unlock();
                 }
+
+                config.serverMetrics().addServerPort(actualPort);
 
                 if (logger.isInfoEnabled()) {
                     if (isLocalPort(actualPort)) {

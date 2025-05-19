@@ -37,10 +37,17 @@ import com.linecorp.armeria.client.HttpChannelPool.PoolKey;
 import com.linecorp.armeria.client.proxy.ProxyType;
 import com.linecorp.armeria.common.AggregationOptions;
 import com.linecorp.armeria.common.ClosedSessionException;
+import com.linecorp.armeria.common.ContextAwareEventLoop;
 import com.linecorp.armeria.common.HttpRequest;
+import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.logging.RequestLog;
+import com.linecorp.armeria.common.outlier.OutlierDetection;
+import com.linecorp.armeria.common.outlier.OutlierDetectionDecision;
+import com.linecorp.armeria.common.outlier.OutlierDetector;
+import com.linecorp.armeria.common.outlier.OutlierRule;
 import com.linecorp.armeria.common.stream.CancelledSubscriptionException;
 import com.linecorp.armeria.common.stream.SubscriptionOption;
 import com.linecorp.armeria.common.util.SafeCloseable;
@@ -79,6 +86,10 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
     private final SerializationFormat serializationFormat;
     private final PoolKey poolKey;
     private final HttpClientFactory clientFactory;
+    @Nullable
+    private final OutlierDetector outlierDetector;
+    @Nullable
+    private final OutlierRule outlierRule;
 
     @Nullable
     private ScheduledFuture<?> sessionTimeoutFuture;
@@ -140,6 +151,14 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
         this.serializationFormat = serializationFormat;
         this.poolKey = poolKey;
         this.clientFactory = clientFactory;
+        final OutlierDetection outlierDetection = clientFactory.options().connectionOutlierDetection();
+        if (outlierDetection != OutlierDetection.disabled()) {
+            outlierDetector = outlierDetection.newDetector();
+            outlierRule = outlierDetection.rule();
+        } else {
+            outlierDetector = null;
+            outlierRule = null;
+        }
 
         if (!poolKey.proxyConfig.proxyType().isForwardProxy()) {
             scheduleSessionTimeout(channel, sessionPromise, connectionTimeoutMillis, desiredProtocol);
@@ -155,7 +174,7 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
         sessionTimeoutFuture = channel.eventLoop().schedule(() -> {
             if (sessionPromise.tryFailure(new SessionProtocolNegotiationException(
                     desiredProtocol,
-                    "connection established, but session creation timed out: " + channel))) {
+                    "connection established, but session creation timed out. (channel: " + channel + ')'))) {
                 channel.close();
             }
         }, connectionTimeoutMillis, TimeUnit.MILLISECONDS);
@@ -216,6 +235,7 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
     @Override
     public void invoke(PooledChannel pooledChannel, ClientRequestContext ctx,
                        HttpRequest req, DecodedHttpResponse res) {
+        applyOutlierDetection(ctx);
         if (handleEarlyCancellation(ctx, req, res)) {
             pooledChannel.release();
             return;
@@ -561,6 +581,66 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
             ctx.close();
         } else {
             // Netty will close the connection automatically on an IOException.
+        }
+    }
+
+    private void applyOutlierDetection(ClientRequestContext ctx) {
+        if (outlierRule == null || !isAcquirable()) {
+            return;
+        }
+        assert outlierDetector != null;
+        if (outlierDetector.isOutlier()) {
+            return;
+        }
+
+        ctx.log().whenComplete().thenAccept(this::detectOutlier);
+    }
+
+    private void detectOutlier(RequestLog log) {
+        final RequestContext context = log.context();
+        final ContextAwareEventLoop eventLoop = context.eventLoop();
+        if (!eventLoop.inEventLoop()) {
+            // Execute in the event loop to prevent a connection from being marked as an outlier as a request is
+            // about to be sent.
+            eventLoop.execute(() -> detectOutlier(log));
+            return;
+        }
+
+        assert outlierRule != null;
+        final OutlierDetectionDecision decision;
+        try {
+            decision = outlierRule.decide(context, log.responseHeaders(), log.responseCause());
+        } catch (Exception e) {
+            logger.warn("Unexpected exception from an OutlierDetectingRule: {}", outlierRule, e);
+            return;
+        }
+
+        if (decision == null) {
+            return;
+        }
+        assert outlierDetector != null;
+        switch (decision) {
+            // NEXT is assumed as SUCCESS.
+            case SUCCESS:
+            case NEXT:
+                outlierDetector.onSuccess();
+                if (outlierDetector.isOutlier()) {
+                    // Although the last request succeeded luckily, we should see the total result in a window
+                    // rather than just looking at one result.
+                    markUnacquirable();
+                }
+                break;
+            case FAILURE:
+                outlierDetector.onFailure();
+                if (outlierDetector.isOutlier()) {
+                    markUnacquirable();
+                }
+                break;
+            case FATAL:
+                markUnacquirable();
+                break;
+            case IGNORE:
+                break;
         }
     }
 }

@@ -382,7 +382,7 @@ class ArmeriaAutoConfigurationTest {
     void testMetrics() {
         assertThat(GrpcClients.newClient(newUrl("h2c") + '/', TestServiceBlockingStub.class)
                               .hello(HelloRequest.getDefaultInstance())
-                              .getMessage()).isNotNull();
+                              .getMessage()).isEqualTo("Hello, ");
 
         final String metricReport = WebClient.of(newUrl("http"))
                                              .get("/internal/metrics")

@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 LINE Corporation
+ * Copyright 2024 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -36,7 +36,6 @@ import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
 import com.linecorp.armeria.common.logging.RequestLogProperty;
 import com.linecorp.armeria.common.stream.ClosedStreamException;
-import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.internal.common.CancellationScheduler.CancellationTask;
 import com.linecorp.armeria.internal.server.DefaultServiceRequestContext;
 
@@ -222,33 +221,19 @@ abstract class AbstractHttpResponseHandler {
     }
 
     /**
-     * Writes an access log if the {@link TransientServiceOption#WITH_ACCESS_LOGGING} option is enabled for
-     * the {@link #service()}.
-     */
-    final void maybeWriteAccessLog() {
-        final ServiceConfig config = reqCtx.config();
-        if (config.transientServiceOptions().contains(TransientServiceOption.WITH_ACCESS_LOGGING)) {
-            reqCtx.log().whenComplete().thenAccept(log -> {
-                try (SafeCloseable ignored = reqCtx.push()) {
-                    config.accessLogWriter().log(log);
-                }
-            });
-        }
-    }
-
-    /**
      * Schedules a request timeout.
      */
     final void scheduleTimeout() {
         // Schedule the initial request timeout with the timeoutNanos in the CancellationScheduler
-        reqCtx.requestCancellationScheduler().start(newCancellationTask());
+        reqCtx.requestCancellationScheduler().updateTask(newCancellationTask());
+        reqCtx.requestCancellationScheduler().start();
     }
 
     /**
      * Clears the scheduled request timeout.
      */
     final void clearTimeout() {
-        reqCtx.requestCancellationScheduler().clearTimeout(false);
+        reqCtx.requestCancellationScheduler().cancelScheduled();
     }
 
     final CancellationTask newCancellationTask() {
@@ -260,19 +245,22 @@ abstract class AbstractHttpResponseHandler {
 
             @Override
             public void run(Throwable cause) {
-                // This method will be invoked only when `canSchedule()` returns true.
-                assert !isDone();
+                if (ctx.executor().inEventLoop()) {
+                    doCancel(cause);
+                } else {
+                    ctx.executor().execute(() -> doCancel(cause));
+                }
+            }
+
+            private void doCancel(Throwable cause) {
+                if (isDone()) {
+                    return;
+                }
 
                 if (cause instanceof ClosedStreamException) {
                     // A stream or connection was already closed by a client
                     fail(cause);
                 } else {
-                    if (reqCtx.sessionProtocol().isMultiplex()) {
-                        req.setShouldResetOnlyIfRemoteIsOpen(true);
-                    } else if (req.isOpen()) {
-                        disconnectWhenFinished();
-                    }
-
                     req.abortResponse(cause, false);
                 }
             }

@@ -30,17 +30,19 @@ import org.slf4j.LoggerFactory;
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.ClientRequestContextCaptor;
 import com.linecorp.armeria.client.Clients;
+import com.linecorp.armeria.client.HttpPreprocessor;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.annotation.UnstableApi;
+import com.linecorp.armeria.common.eureka.InstanceInfo;
+import com.linecorp.armeria.common.eureka.InstanceInfo.InstanceStatus;
+import com.linecorp.armeria.common.eureka.InstanceInfo.PortWrapper;
 import com.linecorp.armeria.common.util.SystemInfo;
 import com.linecorp.armeria.internal.common.eureka.EurekaWebClient;
-import com.linecorp.armeria.internal.common.eureka.InstanceInfo;
-import com.linecorp.armeria.internal.common.eureka.InstanceInfo.InstanceStatus;
-import com.linecorp.armeria.internal.common.eureka.InstanceInfo.PortWrapper;
 import com.linecorp.armeria.server.Route;
 import com.linecorp.armeria.server.RoutePathType;
 import com.linecorp.armeria.server.Server;
@@ -100,6 +102,25 @@ public final class EurekaUpdatingListener extends ServerListenerAdapter {
     }
 
     /**
+     * Returns a new {@link EurekaUpdatingListener} which registers the current {@link Server} using
+     * the specified {@link HttpPreprocessor}.
+     */
+    @UnstableApi
+    public static EurekaUpdatingListener of(HttpPreprocessor preprocessor) {
+        return new EurekaUpdatingListenerBuilder(preprocessor, null).build();
+    }
+
+    /**
+     * Returns a new {@link EurekaUpdatingListener} which registers the current {@link Server} using
+     * the specified {@link HttpPreprocessor} under the specified {@code path}.
+     */
+    @UnstableApi
+    public static EurekaUpdatingListener of(HttpPreprocessor preprocessor, String path) {
+        return new EurekaUpdatingListenerBuilder(preprocessor, requireNonNull(path, "path"))
+                .build();
+    }
+
+    /**
      * Returns a new {@link EurekaUpdatingListenerBuilder} created with the specified {@code eurekaUri}.
      */
     public static EurekaUpdatingListenerBuilder builder(String eurekaUri) {
@@ -131,8 +152,26 @@ public final class EurekaUpdatingListener extends ServerListenerAdapter {
         return new EurekaUpdatingListenerBuilder(sessionProtocol, endpointGroup, requireNonNull(path, "path"));
     }
 
+    /**
+     * Returns a new {@link EurekaUpdatingListenerBuilder} created with the specified {@link HttpPreprocessor}.
+     */
+    @UnstableApi
+    public static EurekaUpdatingListenerBuilder builder(HttpPreprocessor preprocessor) {
+        return new EurekaUpdatingListenerBuilder(preprocessor, null);
+    }
+
+    /**
+     * Returns a new {@link EurekaUpdatingListenerBuilder} created with the specified {@link HttpPreprocessor}
+     * and path.
+     */
+    @UnstableApi
+    public static EurekaUpdatingListenerBuilder builder(HttpPreprocessor preprocessor, String path) {
+        return new EurekaUpdatingListenerBuilder(preprocessor, requireNonNull(path, "path"));
+    }
+
     private final EurekaWebClient client;
     private final InstanceInfo initialInstanceInfo;
+    @Nullable
     private InstanceInfo instanceInfo;
     @Nullable
     private volatile ScheduledFuture<?> heartBeatFuture;
@@ -335,8 +374,9 @@ public final class EurekaUpdatingListener extends ServerListenerAdapter {
         if (heartBeatFuture != null) {
             heartBeatFuture.cancel(false);
         }
+        final InstanceInfo instanceInfo = this.instanceInfo;
         final String appName = this.appName;
-        if (appName != null) {
+        if (instanceInfo != null && appName != null) {
             final String instanceId = instanceInfo.getInstanceId();
             assert instanceId != null;
             client.cancel(appName, instanceId).aggregate().handle((res, cause) -> {

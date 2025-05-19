@@ -18,11 +18,14 @@ package com.linecorp.armeria.client.endpoint.healthcheck;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkState;
+import static com.linecorp.armeria.internal.client.endpoint.EndpointAttributeKeys.HEALTHY_ATTR;
 import static java.util.Objects.requireNonNull;
 
 import java.time.Duration;
 import java.util.function.Function;
+import java.util.function.Predicate;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.math.LongMath;
 
 import com.linecorp.armeria.client.Client;
@@ -51,6 +54,9 @@ public abstract class AbstractHealthCheckedEndpointGroupBuilder
         extends AbstractDynamicEndpointGroupBuilder<SELF> {
 
     static final Backoff DEFAULT_HEALTH_CHECK_RETRY_BACKOFF = Backoff.fixed(3000).withJitter(0.2);
+    @VisibleForTesting
+    static final Predicate<Endpoint> DEFAULT_ENDPOINT_PREDICATE =
+            endpoint -> Boolean.TRUE.equals(endpoint.attr(HEALTHY_ATTR));
 
     private final EndpointGroup delegate;
 
@@ -65,6 +71,7 @@ public abstract class AbstractHealthCheckedEndpointGroupBuilder
 
     private long initialSelectionTimeoutMillis = Flags.defaultResponseTimeoutMillis();
     private long selectionTimeoutMillis = Flags.defaultConnectTimeoutMillis();
+    private Predicate<Endpoint> healthCheckedEndpointPredicate = DEFAULT_ENDPOINT_PREDICATE;
 
     /**
      * Creates a new {@link AbstractHealthCheckedEndpointGroupBuilder}.
@@ -369,6 +376,26 @@ public abstract class AbstractHealthCheckedEndpointGroupBuilder
     }
 
     /**
+     * Sets a predicate to filter health checked {@link Endpoint}s. Whenever there is an update
+     * in endpoints, this predicate is used to filter {@link Endpoint}s that should be considered
+     * for selection.
+     *
+     * <p>For example:<pre>{@code
+     * // regardless of health check status, all endpoints will be considered for selection
+     * HealthCheckedEndpointGroup endpointGroup =
+     *     HealthCheckedEndpointGroup.builder(delegate, "/health")
+     *                               .healthCheckedEndpointPredicate(endpoint -> true)
+     *                               .build();
+     * }</pre>
+     */
+    @UnstableApi
+    public SELF healthCheckedEndpointPredicate(Predicate<Endpoint> healthCheckedEndpointPredicate) {
+        this.healthCheckedEndpointPredicate =
+                requireNonNull(healthCheckedEndpointPredicate, "healthCheckedEndpointPredicate");
+        return self();
+    }
+
+    /**
      * Returns a newly created {@link HealthCheckedEndpointGroup} based on the properties set so far.
      */
     public final HealthCheckedEndpointGroup build() {
@@ -392,7 +419,8 @@ public abstract class AbstractHealthCheckedEndpointGroupBuilder
                                               initialSelectionTimeoutMillis, selectionTimeoutMillis,
                                               protocol, port, retryBackoff,
                                               clientOptionsBuilder.build(),
-                                              newCheckerFactory(), healthCheckStrategy);
+                                              newCheckerFactory(), healthCheckStrategy,
+                                              healthCheckedEndpointPredicate);
     }
 
     /**

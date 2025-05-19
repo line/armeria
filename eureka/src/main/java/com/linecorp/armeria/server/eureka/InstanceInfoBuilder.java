@@ -27,11 +27,11 @@ import com.google.common.collect.ImmutableMap;
 
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
-import com.linecorp.armeria.internal.common.eureka.DataCenterInfo;
-import com.linecorp.armeria.internal.common.eureka.InstanceInfo;
-import com.linecorp.armeria.internal.common.eureka.InstanceInfo.InstanceStatus;
-import com.linecorp.armeria.internal.common.eureka.InstanceInfo.PortWrapper;
-import com.linecorp.armeria.internal.common.eureka.LeaseInfo;
+import com.linecorp.armeria.common.eureka.DataCenterInfo;
+import com.linecorp.armeria.common.eureka.InstanceInfo;
+import com.linecorp.armeria.common.eureka.InstanceInfo.InstanceStatus;
+import com.linecorp.armeria.common.eureka.InstanceInfo.PortWrapper;
+import com.linecorp.armeria.common.eureka.LeaseInfo;
 
 import io.netty.util.NetUtil;
 

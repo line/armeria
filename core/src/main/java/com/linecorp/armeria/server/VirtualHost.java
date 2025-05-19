@@ -39,6 +39,7 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.SuccessFunction;
+import com.linecorp.armeria.common.TlsProvider;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.logging.RequestLog;
@@ -52,6 +53,7 @@ import io.micrometer.core.instrument.MeterRegistry;
 import io.netty.channel.EventLoopGroup;
 import io.netty.handler.ssl.SslContext;
 import io.netty.util.Mapping;
+import io.netty.util.ReferenceCountUtil;
 
 /**
  * A <a href="https://en.wikipedia.org/wiki/Virtual_hosting#Name-based">name-based virtual host</a>.
@@ -84,6 +86,8 @@ public final class VirtualHost {
     @Nullable
     private final SslContext sslContext;
     @Nullable
+    private final TlsProvider tlsProvider;
+    @Nullable
     private final TlsEngineType tlsEngineType;
     private final Router<ServiceConfig> router;
     private final List<ServiceConfig> serviceConfigs;
@@ -109,6 +113,7 @@ public final class VirtualHost {
 
     VirtualHost(String defaultHostname, String hostnamePattern, int port,
                 @Nullable SslContext sslContext,
+                @Nullable TlsProvider tlsProvider,
                 @Nullable TlsEngineType tlsEngineType,
                 Iterable<ServiceConfig> serviceConfigs,
                 ServiceConfig fallbackServiceConfig,
@@ -138,6 +143,7 @@ public final class VirtualHost {
         }
         this.port = port;
         this.sslContext = sslContext;
+        this.tlsProvider = tlsProvider;
         this.tlsEngineType = tlsEngineType;
         this.defaultServiceNaming = defaultServiceNaming;
         this.defaultLogName = defaultLogName;
@@ -172,7 +178,11 @@ public final class VirtualHost {
     }
 
     VirtualHost withNewSslContext(SslContext sslContext) {
-        return new VirtualHost(originalDefaultHostname, originalHostnamePattern, port, sslContext,
+        if (tlsProvider != null) {
+            ReferenceCountUtil.release(sslContext);
+            throw new IllegalStateException("Cannot set a new SslContext when TlsProvider is set.");
+        }
+        return new VirtualHost(originalDefaultHostname, originalHostnamePattern, port, sslContext, null,
                                tlsEngineType, serviceConfigs, fallbackServiceConfig,
                                RejectedRouteHandler.DISABLED, host -> accessLogger, defaultServiceNaming,
                                defaultLogName, requestTimeoutMillis, maxRequestLength, verboseResponses,
@@ -207,10 +217,12 @@ public final class VirtualHost {
             hostnamePattern = IDN.toASCII(hostnamePattern, IDN.ALLOW_UNASSIGNED);
         }
 
-        final String withoutWildCard = hostnamePattern.startsWith("*.") ? hostnamePattern.substring(2)
-                                                                        : hostnamePattern;
-        if (!"*".equals(hostnamePattern) && !HOSTNAME_WITH_NO_PORT_PATTERN.matcher(withoutWildCard).matches()) {
-            throw new IllegalArgumentException("hostnamePattern: " + hostnamePattern);
+        if (!"*".equals(hostnamePattern)) {
+            final String withoutWildCard = hostnamePattern.startsWith("*.") ? hostnamePattern.substring(2)
+                                                                            : hostnamePattern;
+            if (!HOSTNAME_WITH_NO_PORT_PATTERN.matcher(withoutWildCard).matches()) {
+                throw new IllegalArgumentException("hostnamePattern: " + hostnamePattern);
+            }
         }
 
         return Ascii.toLowerCase(hostnamePattern);
@@ -590,7 +602,7 @@ public final class VirtualHost {
         final ServiceConfig fallbackServiceConfig =
                 this.fallbackServiceConfig.withDecoratedService(decorator);
 
-        return new VirtualHost(originalDefaultHostname, originalHostnamePattern, port, sslContext,
+        return new VirtualHost(originalDefaultHostname, originalHostnamePattern, port, sslContext, tlsProvider,
                                tlsEngineType, serviceConfigs, fallbackServiceConfig,
                                RejectedRouteHandler.DISABLED, host -> accessLogger, defaultServiceNaming,
                                defaultLogName, requestTimeoutMillis, maxRequestLength, verboseResponses,

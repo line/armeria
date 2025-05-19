@@ -16,7 +16,11 @@
 
 package com.linecorp.armeria.internal.common;
 
+import static com.linecorp.armeria.internal.common.DefaultCancellationScheduler.translateTimeoutNanos;
+
 import java.util.concurrent.CompletableFuture;
+
+import com.google.common.annotations.VisibleForTesting;
 
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.TimeoutMode;
@@ -26,10 +30,12 @@ import io.netty.util.concurrent.EventExecutor;
 public interface CancellationScheduler {
 
     static CancellationScheduler ofClient(long timeoutNanos) {
+        timeoutNanos = translateTimeoutNanos(timeoutNanos);
         return new DefaultCancellationScheduler(timeoutNanos, false);
     }
 
     static CancellationScheduler ofServer(long timeoutNanos) {
+        timeoutNanos = translateTimeoutNanos(timeoutNanos);
         return new DefaultCancellationScheduler(timeoutNanos, true);
     }
 
@@ -51,37 +57,64 @@ public interface CancellationScheduler {
         return NoopCancellationScheduler.INSTANCE;
     }
 
-    CancellationTask noopCancellationTask = new CancellationTask() {
-        @Override
-        public boolean canSchedule() {
-            return true;
-        }
-
-        @Override
-        public void run(Throwable cause) { /* no-op */ }
-    };
+    CancellationTask noopCancellationTask = cause -> {};
 
     void initAndStart(EventExecutor eventLoop, CancellationTask task);
 
     void init(EventExecutor eventLoop);
 
-    void start(CancellationTask task);
+    /**
+     * Starts the scheduler task. If a timeout has already been configured, then scheduling is done.
+     * If the timeout is undefined, then the task won't be scheduled. If a timeout has already been reached
+     * the execution will be done from the designated event loop. Note that this behavior
+     * differs from {@link #setTimeoutNanos(TimeoutMode, long)} where a task is invoked immediately in the
+     * same thread.
+     * This is mostly due to how armeria uses this API - if this behavior is to be changed,
+     * we should make sure all locations invoking {@link #start()} can handle exceptions on invocation.
+     */
+    void start();
 
+    /**
+     * Clears the timeout. If a scheduled task exists, a best effort is made to cancel it.
+     */
     void clearTimeout();
 
-    void clearTimeout(boolean resetTimeout);
+    /**
+     * Cancels the scheduled timeout task if exists.
+     * @return true if a timeout task doesn't exist, or a task has been cancelled.
+     */
+    boolean cancelScheduled();
+
+    /**
+     * Returns true if a timeout task is scheduled.
+     */
+    boolean isScheduled();
 
     void setTimeoutNanos(TimeoutMode mode, long timeoutNanos);
 
-    void finishNow();
+    default void finishNow() {
+        finishNow(null);
+    }
 
     void finishNow(@Nullable Throwable cause);
 
     boolean isFinished();
 
-    @Nullable Throwable cause();
+    @Nullable
+    Throwable cause();
 
+    /**
+     * Before the scheduler has started, the configured timeout will be returned regardless of the
+     * {@link TimeoutMode}. If the scheduler has already started, the timeout since
+     * {@link #startTimeNanos()} will be returned.
+     */
     long timeoutNanos();
+
+    /**
+     * Before the scheduler has started, the configured timeout will be returned regardless of the
+     * {@link TimeoutMode}. If the scheduler has already started, the remaining time will be returned.
+     */
+    long remainingTimeoutNanos();
 
     long startTimeNanos();
 
@@ -89,28 +122,34 @@ public interface CancellationScheduler {
 
     CompletableFuture<Throwable> whenCancelled();
 
-    @Deprecated
-    CompletableFuture<Void> whenTimingOut();
+    /**
+     * Updates the task that will be executed once this scheduler completes either by the configured timeout,
+     * or immediately via {@link #finishNow()}. If the scheduler hasn't completed yet, the task will simply
+     * be updated. If the scheduler has already been triggered for completion, the supplied
+     * {@link CancellationTask} will be executed after the currently set task has finished executing.
+     */
+    void updateTask(CancellationTask cancellationTask);
 
-    @Deprecated
-    CompletableFuture<Void> whenTimedOut();
+    @VisibleForTesting
+    State state();
 
     enum State {
         INIT,
-        INACTIVE,
         SCHEDULED,
-        FINISHING,
-        FINISHED
+        FINISHED,
     }
 
     /**
      * A cancellation task invoked by the scheduler when its timeout exceeds or invoke by the user.
      */
+    @FunctionalInterface
     interface CancellationTask {
         /**
          * Returns {@code true} if the cancellation task can be scheduled.
          */
-        boolean canSchedule();
+        default boolean canSchedule() {
+            return true;
+        }
 
         /**
          * Invoked by the scheduler with the cause of cancellation.

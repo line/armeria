@@ -22,8 +22,9 @@ import static org.awaitility.Awaitility.await;
 
 import java.util.List;
 
-import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -66,51 +67,50 @@ import io.fabric8.kubernetes.client.server.mock.EnableKubernetesMockClient;
 @EnableKubernetesMockClient(crud = true)
 class KubernetesEndpointGroupMockServerTest {
 
-    private static KubernetesClient staticClient;
+    private static final String NON_DEFAULT_NAMESPACE = "non-default-namespace";
 
     private KubernetesClient client;
 
-    @AfterAll
-    static void afterAll() {
-        // A workaround for the issue that the static client is leaked.
-        // Remove once https://github.com/fabric8io/kubernetes-client/pull/5854 is released.
-        staticClient.close();
-    }
-
-    @Test
-    void createEndpointsWithNodeIpAndPort() throws InterruptedException {
+    @CsvSource({ "true", "false" })
+    @ParameterizedTest
+    void createEndpointsWithNodeIpAndPort(boolean useNamespace) throws InterruptedException {
         // Prepare Kubernetes resources
         final List<Node> nodes = ImmutableList.of(newNode("1.1.1.1"), newNode("2.2.2.2"), newNode("3.3.3.3"));
-        final Deployment deployment = newDeployment();
+        final Deployment deployment = newDeployment("nginx", useNamespace);
         final int nodePort = 30000;
-        final Service service = newService(nodePort);
+        final Service service = newService(nodePort, useNamespace);
         final List<Pod> pods = nodes.stream()
                                     .map(node -> node.getMetadata().getName())
-                                    .map(nodeName -> newPod(deployment.getSpec().getTemplate(), nodeName))
+                                    .map(nodeName -> newPod(deployment.getSpec().getTemplate(),
+                                                            nodeName, useNamespace))
                                     .collect(toImmutableList());
 
         // Create Kubernetes resources
         for (Node node : nodes) {
             client.nodes().resource(node).create();
         }
-        client.pods().resource(pods.get(0)).create();
-        client.pods().resource(pods.get(1)).create();
-        client.apps().deployments().resource(deployment).create();
-        client.services().resource(service).create();
-
-        final KubernetesEndpointGroup endpointGroup = KubernetesEndpointGroup.of(client, "test",
-                                                                                 "nginx-service");
-        endpointGroup.whenReady().join();
-
+        if (useNamespace) {
+            client.pods().inNamespace(NON_DEFAULT_NAMESPACE).resource(pods.get(0)).create();
+            client.pods().inNamespace(NON_DEFAULT_NAMESPACE).resource(pods.get(1)).create();
+            client.apps().deployments().inNamespace(NON_DEFAULT_NAMESPACE).resource(deployment).create();
+            client.services().inNamespace(NON_DEFAULT_NAMESPACE).resource(service).create();
+        } else {
+            client.pods().resource(pods.get(0)).create();
+            client.pods().resource(pods.get(1)).create();
+            client.apps().deployments().resource(deployment).create();
+            client.services().resource(service).create();
+        }
+        final KubernetesEndpointGroupBuilder builder = KubernetesEndpointGroup.builder(client);
+        if (useNamespace) {
+            builder.namespace(NON_DEFAULT_NAMESPACE);
+        }
+        final KubernetesEndpointGroup endpointGroup = builder.serviceName("nginx-service").build();
         // Initial state
-        await().untilAsserted(() -> {
-            final List<Endpoint> endpoints = endpointGroup.endpoints();
-            // Wait until all endpoints are ready
-            assertThat(endpoints).containsExactlyInAnyOrder(
-                    Endpoint.of("1.1.1.1", nodePort),
-                    Endpoint.of("2.2.2.2", nodePort)
-            );
-        });
+        final List<Endpoint> initialEndpoints = endpointGroup.whenReady().join();
+        assertThat(initialEndpoints).containsExactlyInAnyOrder(
+                Endpoint.of("1.1.1.1", nodePort),
+                Endpoint.of("2.2.2.2", nodePort)
+        );
 
         // Add a new pod
         client.pods().resource(pods.get(2)).create();
@@ -136,7 +136,8 @@ class KubernetesEndpointGroupMockServerTest {
         // Add a new node and a new pod
         final Node node4 = newNode("4.4.4.4");
         client.nodes().resource(node4).create();
-        final Pod pod4 = newPod(deployment.getSpec().getTemplate(), node4.getMetadata().getName());
+        final Pod pod4 = newPod(deployment.getSpec().getTemplate(), node4.getMetadata().getName(),
+                                useNamespace);
         client.pods().resource(pod4).create();
         await().untilAsserted(() -> {
             final List<Endpoint> endpoints = endpointGroup.endpoints();
@@ -158,6 +159,57 @@ class KubernetesEndpointGroupMockServerTest {
                     Endpoint.of("2.2.2.2", nodePort),
                     Endpoint.of("3.3.3.3", nodePort),
                     Endpoint.of("4.4.4.4", nodePort)
+            );
+        });
+    }
+
+    @Test
+    void clearOldEndpointsWhenServiceIsUpdated() throws InterruptedException {
+        // Prepare Kubernetes resources
+        final List<Node> nodes = ImmutableList.of(newNode("1.1.1.1"), newNode("2.2.2.2"), newNode("3.3.3.3"));
+        final Deployment deployment = newDeployment();
+        final int nodePort = 30000;
+        final Service service = newService(nodePort);
+        final List<Pod> pods = nodes.stream()
+                                    .map(node -> node.getMetadata().getName())
+                                    .map(nodeName -> newPod(deployment.getSpec().getTemplate(), nodeName))
+                                    .collect(toImmutableList());
+
+        // Create Kubernetes resources
+        for (Node node : nodes) {
+            client.nodes().resource(node).create();
+        }
+        client.pods().resource(pods.get(0)).create();
+        client.pods().resource(pods.get(1)).create();
+        client.apps().deployments().resource(deployment).create();
+        client.services().resource(service).create();
+
+        final KubernetesEndpointGroup endpointGroup = KubernetesEndpointGroup.of(client, "test",
+                                                                                 "nginx-service");
+        final List<Endpoint> endpoints = endpointGroup.whenReady().join();
+        assertThat(endpoints).containsExactlyInAnyOrder(
+                Endpoint.of("1.1.1.1", nodePort),
+                Endpoint.of("2.2.2.2", nodePort)
+        );
+
+        // Update service and deployment with new selector
+        final int newNodePort = 30001;
+        final String newSelectorName = "nginx-updated";
+        final Service updatedService = newService(newNodePort, newSelectorName, false);
+        client.services().resource(updatedService).update();
+        final Deployment updatedDeployment = newDeployment(newSelectorName);
+        client.apps().deployments().resource(updatedDeployment).update();
+
+        final List<Pod> updatedPods =
+                nodes.stream()
+                     .map(node -> node.getMetadata().getName())
+                     .map(nodeName -> newPod(updatedDeployment.getSpec().getTemplate(), nodeName))
+                     .collect(toImmutableList());
+        client.pods().resource(updatedPods.get(2)).create();
+        await().untilAsserted(() -> {
+            final List<Endpoint> endpoints0 = endpointGroup.endpoints();
+            assertThat(endpoints0).containsExactlyInAnyOrder(
+                    Endpoint.of("3.3.3.3", newNodePort)
             );
         });
     }
@@ -287,21 +339,31 @@ class KubernetesEndpointGroupMockServerTest {
                 .build();
     }
 
-    private static Node newNode(String ip) {
+    static Node newNode(String ip) {
         return newNode(ip, "InternalIP");
     }
 
     static Service newService(@Nullable Integer nodePort) {
-        final ObjectMeta metadata = new ObjectMetaBuilder()
-                .withName("nginx-service")
-                .build();
+        return newService(nodePort, false);
+    }
+
+    private static Service newService(@Nullable Integer nodePort, boolean useNamespace) {
+        return newService(nodePort, "nginx", useNamespace);
+    }
+
+    static Service newService(@Nullable Integer nodePort, String selectorName, boolean useNamespace) {
+        final ObjectMetaBuilder objectMetaBuilder = new ObjectMetaBuilder().withName("nginx-service");
+        if (useNamespace) {
+            objectMetaBuilder.withNamespace(NON_DEFAULT_NAMESPACE);
+        }
+        final ObjectMeta metadata = objectMetaBuilder.build();
         final ServicePort servicePort = new ServicePortBuilder()
                 .withPort(80)
                 .withNodePort(nodePort)
                 .build();
         final ServiceSpec serviceSpec = new ServiceSpecBuilder()
                 .withPorts(servicePort)
-                .withSelector(ImmutableMap.of("app", "nginx"))
+                .withSelector(ImmutableMap.of("app", selectorName))
                 .withType("NodePort")
                 .build();
         return new ServiceBuilder()
@@ -311,16 +373,27 @@ class KubernetesEndpointGroupMockServerTest {
     }
 
     static Deployment newDeployment() {
-        final ObjectMeta metadata = new ObjectMetaBuilder()
-                .withName("nginx-deployment")
+        return newDeployment("nginx");
+    }
+
+    static Deployment newDeployment(String selectorName) {
+        return newDeployment(selectorName, false);
+    }
+
+    private static Deployment newDeployment(String selectorName, boolean useNamespace) {
+        final ObjectMetaBuilder objectMetaBuilder = new ObjectMetaBuilder().withName("nginx-deployment");
+        if (useNamespace) {
+            objectMetaBuilder.withNamespace(NON_DEFAULT_NAMESPACE);
+        }
+        final ObjectMeta metadata = objectMetaBuilder
                 .build();
         final LabelSelector selector = new LabelSelectorBuilder()
-                .withMatchLabels(ImmutableMap.of("app", "nginx"))
+                .withMatchLabels(ImmutableMap.of("app", selectorName))
                 .build();
         final DeploymentSpec deploymentSpec = new DeploymentSpecBuilder()
                 .withReplicas(4)
                 .withSelector(selector)
-                .withTemplate(newPodTemplate())
+                .withTemplate(newPodTemplate(selectorName))
                 .build();
         return new DeploymentBuilder()
                 .withMetadata(metadata)
@@ -328,9 +401,9 @@ class KubernetesEndpointGroupMockServerTest {
                 .build();
     }
 
-    private static PodTemplateSpec newPodTemplate() {
+    private static PodTemplateSpec newPodTemplate(String selectorName) {
         final ObjectMeta metadata = new ObjectMetaBuilder()
-                .withLabels(ImmutableMap.of("app", "nginx"))
+                .withLabels(ImmutableMap.of("app", selectorName))
                 .build();
         final Container container = new ContainerBuilder()
                 .withName("nginx")
@@ -348,15 +421,22 @@ class KubernetesEndpointGroupMockServerTest {
                 .build();
     }
 
-    private static Pod newPod(PodTemplateSpec template, String newNodeName) {
+    static Pod newPod(PodTemplateSpec template, String newNodeName) {
+        return newPod(template, newNodeName, false);
+    }
+
+    private static Pod newPod(PodTemplateSpec template, String newNodeName, boolean useNamespace) {
         final PodSpec spec = template.getSpec()
                                      .toBuilder()
                                      .withNodeName(newNodeName)
                                      .build();
-        final ObjectMeta metadata = template.getMetadata()
-                                            .toBuilder()
-                                            .withName("nginx-pod-" + newNodeName)
-                                            .build();
+        final ObjectMetaBuilder objectMetaBuilder = template.getMetadata()
+                                                            .toBuilder()
+                                                            .withName("nginx-pod-" + newNodeName);
+        if (useNamespace) {
+            objectMetaBuilder.withNamespace(NON_DEFAULT_NAMESPACE);
+        }
+        final ObjectMeta metadata = objectMetaBuilder.build();
         return new PodBuilder()
                 .withMetadata(metadata)
                 .withSpec(spec)
