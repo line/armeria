@@ -43,8 +43,7 @@ class RetryConfigMappingTest {
     @Test
     void createsCorrectMappingWithPerMethod() {
         final RetryConfig configForGet = RetryConfig.builder(RetryRule.failsafe()).build();
-        final RetryConfig configForPost =
-                RetryConfig.builder(RetryRule.builder().onException().thenNoRetry()).build();
+        final RetryConfig configForPost = RetryConfig.noRetry();
 
         final RetryConfigMapping<?> mapping = RetryConfigMapping.perMethod(method -> {
             switch (method) {
@@ -98,8 +97,7 @@ class RetryConfigMappingTest {
     @Test
     void createsCorrectMappingWithPerRpcMethod() {
         final RetryConfig configForQuery = RetryConfig.builder(RetryRule.failsafe()).build();
-        final RetryConfig configForMutation =
-                RetryConfig.builder(RetryRule.builder().onException().thenNoRetry()).build();
+        final RetryConfig configForMutation = RetryConfig.noRetry();
 
         final RetryConfigMapping<?> mapping = RetryConfigMapping.perMethod(method -> {
             switch (method) {
@@ -154,8 +152,7 @@ class RetryConfigMappingTest {
     @Test
     void createsCorrectMappingWithPerHost() {
         final RetryConfig configForExampleHost = RetryConfig.builder(RetryRule.failsafe()).build();
-        final RetryConfig configForLocalHost =
-                RetryConfig.builder(RetryRule.builder().onException().thenNoRetry()).build();
+        final RetryConfig configForLocalHost = RetryConfig.noRetry();
 
         final RetryConfigMapping<?> mapping = RetryConfigMapping.perHost(host -> {
             switch (host) {
@@ -209,8 +206,7 @@ class RetryConfigMappingTest {
     @Test
     void createsCorrectMappingWithPerHostAndRpcRequest() {
         final RetryConfig configForProdHost = RetryConfig.builder(RetryRule.failsafe()).build();
-        final RetryConfig configForTestHost =
-                RetryConfig.builder(RetryRule.builder().onException().thenNoRetry()).build();
+        final RetryConfig configForTestHost = RetryConfig.noRetry();
 
         final RetryConfigMapping<?> mapping = RetryConfigMapping.perHost(host -> {
             switch (host) {
@@ -239,8 +235,7 @@ class RetryConfigMappingTest {
     @Test
     void createsCorrectMappingWithPerPath() {
         final RetryConfig configForApiPath = RetryConfig.builder(RetryRule.failsafe()).build();
-        final RetryConfig configForHealthPath =
-                RetryConfig.builder(RetryRule.builder().onException().thenNoRetry()).build();
+        final RetryConfig configForHealthPath = RetryConfig.noRetry();
 
         final RetryConfigMapping<?> mapping = RetryConfigMapping.perPath(path -> {
             if (path.startsWith("/api/")) {
@@ -287,13 +282,20 @@ class RetryConfigMappingTest {
 
     @Test
     void createsCorrectMappingWithPerHostAndMethod() {
-        final RetryConfig configForIpAddrGet = RetryConfig.builder(RetryRule.failsafe()).build();
+        final RetryConfig configForIpAddrGet =
+                RetryConfig.builder(RetryRule.onException()).maxTotalAttempts(5).build();
         final RetryConfig configForIpAddrPost =
-                RetryConfig.builder(RetryRule.builder().onException().thenBackoff()).build();
+                RetryConfig.noRetry();
+
 
         // Duplicated just to see that we differentiate between the methods.
-        final RetryConfig configForUnknownGet = RetryConfig.builder(RetryRule.builder().onException().thenNoRetry()).build();
-        final RetryConfig configForUnknownPost = RetryConfig.builder(RetryRule.builder().onException().thenNoRetry()).build();
+        final RetryConfig configForUnknownGet =
+                RetryConfig.builder(RetryRule.onException()).maxTotalAttempts(10).build();
+        // Not using RetryConfig.noRetry() here in order to have two different configs for configForIpAddrPost
+        // and configForUnknownPost
+        final RetryConfig configForUnknownPost = RetryConfig.builder(
+                RetryRule.builder().onException().thenNoRetry()).build();
+
 
         final RetryConfigMapping<?> mapping = RetryConfigMapping.perHostAndMethod((host, method) -> {
             if ("192.168.1.1".equals(host)) {

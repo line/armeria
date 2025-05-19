@@ -1,7 +1,7 @@
 /*
- * Copyright 2020 LINE Corporation
+ * Copyright 2025 LY Corporation
  *
- * LINE Corporation licenses this file to you under the Apache License,
+ * LY Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
@@ -26,6 +26,7 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.RpcResponse;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.util.UnmodifiableFuture;
 
 /**
  * Holds retry config used by a {@link RetryingClient}.
@@ -35,6 +36,14 @@ import com.linecorp.armeria.common.annotation.Nullable;
 public final class RetryConfig<T extends Response> {
 
     private static final Logger logger = LoggerFactory.getLogger(RetryConfig.class);
+
+    private static final RetryConfig<?> NO_RETRY_CONFIG = builder(
+            (ctx, cause) -> UnmodifiableFuture.completedFuture(RetryDecision.noRetry())).build();
+
+    @SuppressWarnings("unchecked")
+    public static <T extends Response> RetryConfig<T> noRetry() {
+        return (RetryConfig<T>) NO_RETRY_CONFIG;
+    }
 
     /**
      * Returns a new {@link RetryConfigBuilder} with the specified {@link RetryRule}.
