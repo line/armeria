@@ -123,12 +123,16 @@ class HttpClientRequestPathTest {
         final HttpRequest request = HttpRequest.of(HttpMethod.GET, "/simple-client");
         final HttpResponse response = WebClient.of().execute(request);
         assertThatThrownBy(() -> response.aggregate().join())
-                .hasCauseInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("Scheme and authority must be specified");
+                .cause()
+                .isInstanceOf(UnprocessedRequestException.class)
+                .cause()
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("An endpointGroup has not been specified.");
     }
 
     @ParameterizedTest
-    @EnumSource(value = SessionProtocol.class, mode = Mode.EXCLUDE, names = { "HTTP", "HTTPS", "PROXY"})
+    @EnumSource(value = SessionProtocol.class, mode = Mode.EXCLUDE,
+            names = { "HTTP", "HTTPS", "PROXY"})
     void default_withRetryClient(SessionProtocol protocol) {
         final HttpRequest request = HttpRequest.of(HttpMethod.GET, server2.uri(protocol) + "/retry");
         final WebClient client = WebClient.builder()

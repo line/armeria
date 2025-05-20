@@ -17,6 +17,7 @@ package com.linecorp.armeria.client;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.linecorp.armeria.common.SessionProtocol.httpAndHttpsValues;
+import static com.linecorp.armeria.internal.client.ClientBuilderParamsUtil.preprocessorToUri;
 import static com.linecorp.armeria.internal.client.ClientUtil.UNDEFINED_URI;
 import static java.util.Objects.requireNonNull;
 
@@ -70,6 +71,14 @@ public abstract class AbstractWebClientBuilder extends AbstractClientOptionsBuil
                                        @Nullable String path) {
         this(null, validateSessionProtocol(sessionProtocol),
              requireNonNull(endpointGroup, "endpointGroup"), path);
+    }
+
+    /**
+     * Creates a new instance.
+     */
+    protected AbstractWebClientBuilder(HttpPreprocessor httpPreprocessor, @Nullable String path) {
+        this(preprocessorToUri(httpPreprocessor, path), null, null, null);
+        preprocessor(httpPreprocessor);
     }
 
     /**

@@ -606,6 +606,12 @@ final class SystemPropertyFlagsProvider implements FlagsProvider {
     }
 
     @Nullable
+    @Override
+    public Boolean annotatedServiceContentLogging() {
+        return getBoolean("annotatedServiceContentLogging");
+    }
+
+    @Nullable
     private static Long getLong(String name) {
         return getAndParse(name, Long::parseLong);
     }

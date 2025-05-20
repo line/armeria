@@ -1,6 +1,7 @@
 dependencies {
     api libs.brave6
     api libs.brave6.instrumentation.http
+    api libs.brave6.instrumentation.rpc
 
     if (project.ext.targetJavaVersion >= 11) {
         testImplementation project(':thrift0.18')

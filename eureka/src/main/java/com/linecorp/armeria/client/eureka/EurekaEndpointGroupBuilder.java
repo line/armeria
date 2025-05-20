@@ -107,6 +107,10 @@ public final class EurekaEndpointGroupBuilder extends AbstractWebClientBuilder
         super(sessionProtocol, endpointGroup, path);
     }
 
+    EurekaEndpointGroupBuilder(HttpPreprocessor httpPreprocessor, @Nullable String path) {
+        super(httpPreprocessor, path);
+    }
+
     /**
      * Sets the {@link EndpointSelectionStrategy} of the {@link EurekaEndpointGroup}.
      */
