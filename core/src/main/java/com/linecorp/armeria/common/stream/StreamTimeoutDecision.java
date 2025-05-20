@@ -18,100 +18,78 @@
 package com.linecorp.armeria.common.stream;
 
 import static com.google.common.base.Preconditions.checkArgument;
-import static com.google.common.base.Preconditions.checkState;
-
-import com.google.common.base.MoreObjects;
 
 /**
- * The result returned by {@link StreamTimeoutStrategy#evaluateTimeout(long, long)}.
+ * Result object returned by both {@link StreamTimeoutStrategy#initialDecision()}
+ * and
+ * {@link StreamTimeoutStrategy#evaluateTimeout(long, long)}.
  *
- * <p>A decision can be in one of three states:
+ * <p>A decision has exactly <strong>three</strong> possible meanings:</p>
  * <ul>
- *   <li>{@link #TIMED_OUT} – the stream has been considered timed-out.</li>
- *   <li>{@link #NO_SCHEDULE} – keep the stream alive with no further timeout checks.</li>
- *   <li>{@link #scheduleAt(long)} – keep the stream alive and re-evaluate at the given nano-time.</li>
+ *   <li>{@link #TIMED_OUT} – the stream is already timed-out.</li>
+ *   <li>{@link #NO_SCHEDULE} – keep the stream alive with <em>no</em> further timeout checks.</li>
+ *   <li>{@link #scheduleAfter(long)} – keep the stream alive and re-evaluate after the given
+ *       <em>delay (nanoseconds)</em>.</li>
  * </ul>
- *
- * <p>This class is immutable and thread-safe.</p>
  */
 public final class StreamTimeoutDecision {
 
-    /**
-     * Sentinel value indicating that no more timeout evaluation is required.
-     */
-    private static final long NO_NEXT_SCHEDULE = Long.MIN_VALUE;
-
-    /**
-     * A shared instance that indicates the stream has already timed out.
-     */
+    /** Indicates that the stream has already timed out. */
     public static final StreamTimeoutDecision TIMED_OUT =
-            new StreamTimeoutDecision(true, NO_NEXT_SCHEDULE);
+            new StreamTimeoutDecision(true, 0);
 
-    /**
-     * A shared instance that indicates the stream has not timed out
-     * and no further timeout evaluation is necessary.
-     */
+    /** Indicates that no further timeout checks are necessary. */
     public static final StreamTimeoutDecision NO_SCHEDULE =
-            new StreamTimeoutDecision(false, NO_NEXT_SCHEDULE);
+            new StreamTimeoutDecision(false, 0);
 
     /**
-     * Returns a decision that keeps the stream alive and schedules the next timeout
-     * evaluation at the specified nano-time.
+     * Creates a decision instructing the caller to run the next timeout check after
+     * the specified <em>positive</em> delay.
      *
-     * @param nextScheduleTimeNanos the nano-time (as returned by {@link System#nanoTime()})
-     *                              at which the next timeout check should run
+     * @param nextDelayNanos delay (in nanoseconds) before the next evaluation; must be {@code > 0}
+     * @return a new {@link StreamTimeoutDecision}
      *
-     * @throws IllegalArgumentException if {@code nextScheduleTimeNanos} is the reserved
-     *                                  sentinel value {@link #NO_NEXT_SCHEDULE}
+     * @throws IllegalArgumentException if {@code nextDelayNanos&nbsp;&le;&nbsp;0}
      */
-    public static StreamTimeoutDecision scheduleAt(long nextScheduleTimeNanos) {
-        checkArgument(nextScheduleTimeNanos != NO_NEXT_SCHEDULE,
-                      "Reserved value: %s", nextScheduleTimeNanos);
-        return new StreamTimeoutDecision(false, nextScheduleTimeNanos);
+    public static StreamTimeoutDecision scheduleAfter(long nextDelayNanos) {
+        checkArgument(nextDelayNanos > 0,
+                      "delay must be positive: %s", nextDelayNanos);
+        return new StreamTimeoutDecision(false, nextDelayNanos);
     }
 
     private final boolean timedOut;
 
-    private final long nextScheduleTimeNanos;
+    /** Delay until the next check (ns); {@code 0} ⇒ no schedule. */
+    private final long nextDelayNanos;
 
-    private StreamTimeoutDecision(boolean timedOut, long nextScheduleTimeNanos) {
+    private StreamTimeoutDecision(boolean timedOut, long nextDelayNanos) {
         this.timedOut = timedOut;
-        this.nextScheduleTimeNanos = nextScheduleTimeNanos;
+        this.nextDelayNanos = nextDelayNanos;
     }
 
-    /**
-     * Returns whether the stream is considered timed-out.
-     */
-    public boolean timedOut() {
+    /** @return {@code true} if the stream must be closed immediately. */
+    boolean timedOut() {
         return timedOut;
     }
 
     /**
-     * Returns whether this decision contains a next schedule time.
-     */
-    public boolean hasNextSchedule() {
-        return nextScheduleTimeNanos != NO_NEXT_SCHEDULE;
-    }
-
-    /**
-     * Returns the nano-time at which the next timeout evaluation must occur.
+     * Returns the delay in nanoseconds until the next timeout evaluation.
      *
-     * @return the scheduled nano-time
-     *
-     * @throws IllegalStateException if this decision has no next schedule
-     *                               (i.e. {@link #hasNextSchedule()} is {@code false})
+     * @return a positive value when another check is required,
+     *         or {@code 0} when no further scheduling is needed
+     *         (i.e.&nbsp;this decision is {@link #NO_SCHEDULE} or {@link #TIMED_OUT})
      */
-    public long nextScheduleTimeNanos() {
-        checkState(hasNextSchedule(), "nextScheduleTimeNanos not present");
-        return nextScheduleTimeNanos;
+    long nextDelayNanos() {
+        return nextDelayNanos;
     }
 
     @Override
     public String toString() {
-        return MoreObjects.toStringHelper(this)
-                          .add("timedOut", timedOut)
-                          .add("nextScheduleTimeNanos",
-                               hasNextSchedule() ? nextScheduleTimeNanos : "N/A")
-                          .toString();
+        if (timedOut) {
+            return "TIMED_OUT";
+        }
+        return nextDelayNanos == 0
+               ? "NO_SCHEDULE"
+               : "scheduleAfter(" + nextDelayNanos + "ns)";
     }
 }

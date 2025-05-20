@@ -17,38 +17,36 @@
 
 package com.linecorp.armeria.common.stream;
 
-/**A strategy that determines whether a {@link StreamMessage} has timed out
- * and, if not, when to schedule the next timeout check as needed.
+/**
+ * A strategy that decides whether a {@link StreamMessage} has timed out and,
+ * if not, how long to wait before the next timeout check.
  *
- * <p>This strategy defines two methods:</p>
+ * <p>Two entry points:</p>
  * <ul>
- *   <li>{@link #initialDecision(long)} – invoked once immediately after subscription,
- *       using the subscription time to return the first {@link StreamTimeoutDecision}.</li>
- *   <li>{@link #evaluateTimeout(long, long)} – invoked when the scheduled timer fires
- *       to re-evaluate the timeout status and, if necessary, schedule the next check.</li>
+ *   <li>{@link #initialDecision()} – called once right after subscription.</li>
+ *   <li>{@link #evaluateTimeout(long, long)} – called when the timer fires
+ *       to re-evaluate and, if necessary, reschedule.</li>
  * </ul>
  *
- * <p>All timestamps are in the same monotonic time domain as
+ * <p>All timestamps use the same monotonic time source as
  * {@link System#nanoTime()}.</p>
  */
 public interface StreamTimeoutStrategy {
 
     /**
-     * Invoked once immediately after subscription to determine the next timeout
-     * evaluation time based on the subscription timestamp.
+     * Called immediately after subscription.
      *
-     * @param subscribeTimeNanos the {@code System.nanoTime()} value captured at the moment of subscription
-     * @return a {@link StreamTimeoutDecision} representing the next timeout evaluation time
+     * @return the first {@link StreamTimeoutDecision}
      */
-    StreamTimeoutDecision initialDecision(long subscribeTimeNanos);
+    StreamTimeoutDecision initialDecision();
 
     /**
-     * Invoked when the scheduled timer fires to re-evaluate the timeout status
-     * and, if necessary, schedule the next check.
+     * Re-evaluates timeout status when the scheduled timer fires.
      *
-     * @param currentTimeNanos   the {@code System.nanoTime()} value when the scheduled timer fires
-     * @param lastEventTimeNanos the {@code System.nanoTime()} value of the last received data event
-     * @return a {@link StreamTimeoutDecision} containing the timeout result and the next evaluation time
+     * @param currentTimeNanos   current {@code System.nanoTime()} value
+     * @param lastEventTimeNanos {@code System.nanoTime()} of the last data event
+     * @return a {@link StreamTimeoutDecision} describing whether the stream
+     *         timed out and, if not, the delay before the next check
      */
     StreamTimeoutDecision evaluateTimeout(long currentTimeNanos, long lastEventTimeNanos);
 }
