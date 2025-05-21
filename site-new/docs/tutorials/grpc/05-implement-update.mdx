@@ -1,6 +1,5 @@
 ---
-menuTitle: "Implement UPDATE"
-order: 5
+sidebar_label: "5. Implement UPDATE"
 category: grpc
 tags:
   - server
@@ -21,7 +20,7 @@ We'll also learn how to handle an exception with a custom exception handler.
 You need to have the following files obtained from previous steps.
 You can always [download](https://github.com/line/armeria-examples/tree/main/tutorials/grpc) the full version, instead of creating one yourself.
 
-- [Generated Java code](/tutorials/grpc/blog/define-service#6-compile-the-proto-file)
+- [Generated Java code](/docs/tutorials/grpc/define-service#6-compile-the-proto-file)
 - `BlogService.java`
 - `Main.java`
 - `BlogServiceTest.java`
@@ -36,7 +35,7 @@ This time, we'll use a custom exception handler.
 First, add a custom exception handler for the blog service.
 
 1. Create a class for the exception to be thrown when a specified blog post ID doesn't exist.
-  ```java filename=BlogNotFoundException.java
+  ```java title="BlogNotFoundException.java"
   package example.armeria.server.blog.grpc;
 
   final class BlogNotFoundException extends IllegalStateException {
@@ -46,7 +45,7 @@ First, add a custom exception handler for the blog service.
   }
   ```
 2. Add an exception handler class for the blog service.
-  ```java filename=GrpcExceptionHandler.java
+  ```java title="GrpcExceptionHandler.java"
   package example.armeria.server.blog.grpc;
 
   import com.linecorp.armeria.common.RequestContext;
@@ -74,7 +73,7 @@ First, add a custom exception handler for the blog service.
   }
   ```
 3. In the `Main` class, bind the `GrpcExceptionHandler` to our service.
-  ```java filename=Main.java
+  ```java title="Main.java"
   private static Server newServer(int port) throws Exception {
     final GrpcService grpcService =
        GrpcService.builder()
@@ -88,7 +87,7 @@ First, add a custom exception handler for the blog service.
 ### Implement the service method
 
 In the `BlogServiceImpl` class, add a service method for updating a blog post.
-```java filename=BlogService.java
+```java title="BlogService.java"
 import example.armeria.blog.grpc.UpdateBlogPostRequest;
 
 public class BlogService extends BlogServiceGrpc.BlogServiceImplBase {
@@ -116,7 +115,7 @@ public class BlogService extends BlogServiceGrpc.BlogServiceImplBase {
 Let's try updating the content of the first blog post.
 Add a method like the following.
 
-```java filename=BlogServiceTest.java
+```java title="BlogServiceTest.java"
 @Test
 @Order(5)
 void updateBlogPosts() throws JsonProcessingException {
@@ -140,7 +139,7 @@ Check that you see the test is passed.
 To check that our exception handler is working, let's try updating a post which does not exist.
 
 1. Bind the exception handler to the service for the test server.
-  ```java filename=BlogServiceTest.java
+  ```java title="BlogServiceTest.java"
   @RegisterExtension
   static final ServerExtension server = new ServerExtension() {
     @Override
@@ -153,7 +152,7 @@ To check that our exception handler is working, let's try updating a post which 
   };
   ```
 2. Add a test method to update a blog post with an invalid ID, asserting an exception is thrown as expected.
-  ```java filename=BlogServiceTest.java
+  ```java title="BlogServiceTest.java"
   @Test
   @Order(6)
   void updateInvalidBlogPost() {
@@ -178,7 +177,7 @@ To check that our exception handler is working, let's try updating a post which 
 In this step, we've implemented a service method for updating a blog post.
 We've also added an exception handler.
 
-Next, at [Step 6. Implement DELETE](/tutorials/grpc/blog/implement-delete), we'll implement a method
-for deleting a blog post and add a [Documentation Service](/docs/server-docservice) to our service.
+Next, at [Step 6. Implement DELETE](/docs/tutorials/grpc/implement-delete), we'll implement a method
+for deleting a blog post and add a [Documentation Service](/docs/server/docservice) to our service.
 
 <TutorialSteps current={5} />

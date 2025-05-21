@@ -3,7 +3,7 @@ type: tutorial
 level: basic
 ---
 
-import versions from '/gen-src/versions.json';
+import versions from '../../../gen-src-temp/versions.json';
 
 # gRPC tutorial introduction
 
@@ -29,12 +29,12 @@ Armeria supports features that the upstream (gRPC-Java) does not support.
 - Serialization format - Unframed
   - Protobuf: application/protobuf
   - JSON: application/json
-- [HTTP level decorator](/docs/server-grpc#decorating-a-grpcservice)
+- [HTTP level decorator](/docs/server/grpc#decorating-a-grpcservice)
 - Richer error handling
 - [HTTP-to-JSON transcoding](https://google.aip.dev/127)
 - Customizing service method paths
-- [gRPC documentation service](/docs/server-docservice)
-- gRPC status monitoring with <type://MetricCollectingService>
+- [gRPC documentation service](/docs/server/docservice)
+- gRPC status monitoring with [MetricCollectingService](type)
 
 ## Assumptions
 
@@ -80,17 +80,17 @@ grpc/
 └─ build.gradle
 ```
 
-<Tip>
+:::tip
 
   To keep our focus on Armeria, this tutorial and the sample service implement memory-based operations instead of using a database.
 
-</Tip>
+:::
 
 ## Build and run sample service
 
 The sample service provides you implementations of CRUD operations with corresponding service methods.
 Have a go at running the sample gRPC service and see the outcome of this tutorial.
-Using Armeria's [Documentation Service](/docs/server-docservice), you can easily verify a server is running, receiving requests and sending responses.
+Using Armeria's [Documentation Service](/docs/server/docservice), you can easily verify a server is running, receiving requests and sending responses.
 
 1. Download the code from [here](https://github.com/line/armeria-examples/tree/main/tutorials/grpc).
 2. Build the sample service using the Gradle Wrapper.
@@ -129,10 +129,10 @@ dependencies {
 
 Start writing the blog service yourself by following the tutorial step by step:
 
-1. [Define a service](/tutorials/grpc/blog/define-service)
-2. [Run a service](/tutorials/grpc/blog/run-service)
-3. [Implement CREATE](/tutorials/grpc/blog/implement-create)
-4. [Implement READ](/tutorials/grpc/blog/implement-read)
-5. [Implement UPDATE](/tutorials/grpc/blog/implement-update)
-6. [Implement DELETE](/tutorials/grpc/blog/implement-delete)
+1. [Define a service](/docs/tutorials/grpc/define-service)
+2. [Run a service](/docs/tutorials/grpc/run-service)
+3. [Implement CREATE](/docs/tutorials/grpc/implement-create)
+4. [Implement READ](/docs/tutorials/grpc/implement-read)
+5. [Implement UPDATE](/docs/tutorials/grpc/implement-update)
+6. [Implement DELETE](/docs/tutorials/grpc/implement-delete)
 

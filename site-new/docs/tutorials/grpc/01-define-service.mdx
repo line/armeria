@@ -1,6 +1,5 @@
 ---
-menuTitle: "Define a service"
-order: 1
+sidebar_label: "1. Define a service"
 type: step
 targetLang: java
 ---
@@ -13,13 +12,13 @@ Let's begin by defining our gRPC blog service in a proto file.
 
 ## What you need
 
-No preparation is required for this step. Do check that you've prepared the [prerequisites](/tutorials/grpc/blog/#prerequisites).
+No preparation is required for this step. Do check that you've prepared the [prerequisites](/docs/tutorials/grpc/#prerequisites).
 
 ## 1. Create a proto file
 
 Create a file, `blog.proto` inside the directory, `{project_root}/src/main/proto`. This tutorial uses [Protocol Buffers version 3](https://developers.google.com/protocol-buffers/docs/proto3).
 
-```protobuf filename=blog.proto
+```protobuf title="blog.proto"
 syntax = "proto3";
 
 package example.armeria.blog.grpc;
@@ -27,17 +26,17 @@ option java_package = "example.armeria.blog.grpc";
 option java_multiple_files = true;
 ```
 
-<Tip>
+:::tip
 
-  See [Sample service structure](/tutorials/grpc/blog#sample-service) for the overall folder structure.
+  See [Sample service structure](/docs/tutorials/grpc#sample-service) for the overall folder structure.
 
-</Tip>
+:::
 
 ## 2. Define a blog post
 
 In the proto file, define the `BlogPost` message type with minimal data.
 
-```protobuf filename=blog.proto
+```protobuf title="blog.proto"
 message BlogPost {
   int32 id = 1;
   string title = 2;
@@ -51,13 +50,13 @@ message BlogPost {
 
 Add service methods to the blog service. We have two methods for retrieving blog posts; one is for retrieving a single post and another for multiple posts.
 
-<Tip>
+:::tip
 
   The APIs are designed based on the [Google's API design decisions](https://google.aip.dev/general).
 
-</Tip>
+:::
 
-```protobuf filename=blog.proto
+```protobuf title="blog.proto"
 import "google/protobuf/empty.proto";
 
 service BlogService {
@@ -73,7 +72,7 @@ service BlogService {
 
 Add request types for create, retrieve, update, and delete operations.
 
-```protobuf filename=blog.proto
+```protobuf title="blog.proto"
 message CreateBlogPostRequest {
   string title = 1;
   string content = 2;
@@ -102,7 +101,7 @@ message DeleteBlogPostRequest {
 
 Add a response type to return multiple blog posts.
 
-```protobuf filename=blog.proto
+```protobuf title="blog.proto"
 message ListBlogPostsResponse {
     repeated BlogPost blogs = 1;
 }
@@ -121,6 +120,6 @@ You'll see the generated Java code in the `{project_root}/build/generated/source
 
 ## Next step
 
-In this step, we've defined a proto file for our service and generated Java code. Next, we'll [run a service](/tutorials/grpc/blog/run-service) and test the connection.
+In this step, we've defined a proto file for our service and generated Java code. Next, we'll [run a service](/docs/tutorials/grpc/run-service) and test the connection.
 
 <TutorialSteps current={1} />

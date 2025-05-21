@@ -3,7 +3,7 @@ type: tutorial
 level: basic
 ---
 
-import versions from '/gen-src/versions.json';
+import versions from '../../../gen-src-temp/versions.json';
 
 # Thrift tutorial introduction
 
@@ -17,11 +17,11 @@ Follow this tutorial to write a service yourself or try [running the sample serv
 Before we start, let's swiftly go over Armeria's Thrift features:
 
 - Transport over HTTP/1.1 or HTTP/2.
-- Support for `TBINARY`, `TCOMPACT`, `TJSON` and `TTEXT` [serialization formats](/docs/server-thrift#serialization-formats).
-- RPC level decorator support for both [client](/docs/client-decorator#implementing-decoratinghttpclientfunction-and-decoratingrpcclientfunction)
-and [server](/docs/server-decorator#implementing-decoratinghttpservicefunction-and-decoratingrpcservicefunction).
+- Support for `TBINARY`, `TCOMPACT`, `TJSON` and `TTEXT` [serialization formats](/docs/server/thrift#serialization-formats).
+- RPC level decorator support for both [client](/docs/client/decorator#implementing-decoratinghttpclientfunction-and-decoratingrpcclientfunction)
+and [server](/docs/server/decorator#implementing-decoratinghttpservicefunction-and-decoratingrpcservicefunction).
   - Out of the box support for circuit breaker, retries, metric collection and more.
-- Full-fledged [Thrift documentation service](/docs/server-docservice).
+- Full-fledged [Thrift documentation service](/docs/server/docservice).
 
 ## Assumptions
 
@@ -70,16 +70,16 @@ thrift/
 └─ build.gradle
 ```
 
-<Tip>
+:::tip
 
   To keep our focus on Armeria, this tutorial and the sample service implement memory-based operations instead of using a database.
 
-</Tip>
+:::
 
 ## Build and run sample service
 
 Try running the sample service and see the outcome of this tutorial.
-Using Armeria's [Documentation Service](/docs/server-docservice), you can easily verify a server is running, receiving requests and sending responses.
+Using Armeria's [Documentation Service](/docs/server/docservice), you can easily verify a server is running, receiving requests and sending responses.
 
 1. Download the code from [here](https://github.com/line/armeria-examples/tree/main/tutorials/thrift).
 2. Build the sample service using the Gradle Wrapper.
@@ -127,9 +127,9 @@ tasks.withType(Test) {
 
 Start writing the blog service yourself by following the tutorial step by step:
 
-1. [Define a service](/tutorials/thrift/blog/define-service)
-2. [Run a service](/tutorials/thrift/blog/run-service)
-3. [Implement CREATE](/tutorials/thrift/blog/implement-create)
-4. [Implement READ](/tutorials/thrift/blog/implement-read)
-5. [Implement UPDATE](/tutorials/thrift/blog/implement-update)
-6. [Implement DELETE](/tutorials/thrift/blog/implement-delete)
+1. [Define a service](/docs/tutorials/thrift/define-service)
+2. [Run a service](/docs/tutorials/thrift/run-service)
+3. [Implement CREATE](/docs/tutorials/thrift/implement-create)
+4. [Implement READ](/docs/tutorials/thrift/implement-read)
+5. [Implement UPDATE](/docs/tutorials/thrift/implement-update)
+6. [Implement DELETE](/docs/tutorials/thrift/implement-delete)

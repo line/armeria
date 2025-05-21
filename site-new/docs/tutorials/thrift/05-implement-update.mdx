@@ -1,6 +1,5 @@
 ---
-menuTitle: "Implement UPDATE"
-order: 5
+sidebar_label: "5. Implement UPDATE"
 category: thrift
 tags:
   - server
@@ -21,7 +20,7 @@ We'll also learn how to handle an exception with a custom exception handler.
 You need to have the following files obtained from previous steps.
 You can always [download](https://github.com/line/armeria-examples/tree/main/tutorials/thrift) the full version, instead of creating one yourself.
 
-- [Generated Java code](/tutorials/thrift/blog/define-service#3-compile-the-thrift-file)
+- [Generated Java code](/docs/tutorials/thrift/define-service#3-compile-the-thrift-file)
 - `BlogServiceImpl.java`
 - `Main.java`
 - `BlogClient.java`
@@ -37,7 +36,7 @@ This time, we'll use a custom exception handler.
 First, add a custom exception handler for the blog service.
 
 1. Add an exception handler class to convert an `IllegalArgumentException` into a `BlogNotFoundException`.
-  ```java filename=BlogServiceExceptionHandler.java
+  ```java title="BlogServiceExceptionHandler.java"
   package example.armeria.server.blog.thrift;
 
   import java.util.function.BiFunction;
@@ -59,7 +58,7 @@ First, add a custom exception handler for the blog service.
   }
   ```
 2. In the `Main` class, bind the `BlogServiceExceptionHandler` to our service.
-  ```java filename=Main.java
+  ```java title="Main.java"
   ...
   private static Server newServer(int port) throws Exception {
     final THttpService tHttpService =
@@ -76,7 +75,7 @@ First, add a custom exception handler for the blog service.
 In the `BlogServiceImpl` class, implement the `updateBlogPost()` method to update a blog post.
 This time, let's use the `IllegalArgumentException` instead of the `BlogNotFoundException`.
 
-```java filename=BlogServiceImpl.java
+```java title="BlogServiceImpl.java"
 @Override
 public void updateBlogPost(UpdateBlogPostRequest request, AsyncMethodCallback<BlogPost> resultHandler)
         throws TException {
@@ -100,7 +99,7 @@ public void updateBlogPost(UpdateBlogPostRequest request, AsyncMethodCallback<Bl
 
 Add a method `updateBlogPost()` to send a request to update a blog post.
 
-```java filename=BlogClient.java
+```java title="BlogClient.java"
 import example.armeria.blog.thrift.UpdateBlogPostRequest;
 ...
 BlogPost updateBlogPost(int id, String newTitle, String newContent) throws TException {
@@ -114,7 +113,7 @@ BlogPost updateBlogPost(int id, String newTitle, String newContent) throws TExce
 Let's try updating the content of the first blog post.
 Add a method like the following.
 
-```java filename=BlogServiceTest.java
+```java title="BlogServiceTest.java"
 @Test
 @Order(5)
 void updateBlogPosts() throws TException {
@@ -134,7 +133,7 @@ Check that you see the test is passed.
 To check that our exception handler is working, let's try updating a post which does not exist.
 
 1. Bind the exception handler to the service for the test server.
-  ```java filename=BlogServiceTest.java
+  ```java title="BlogServiceTest.java"
   @RegisterExtension
   static final ServerExtension server = new ServerExtension() {
     @Override
@@ -147,7 +146,7 @@ To check that our exception handler is working, let's try updating a post which 
   };
   ```
 2. Add a test method to update a blog post with an invalid ID, asserting a `BlogNotFoundException` is thrown.
-  ```java filename=BlogServiceTest.java
+  ```java title="BlogServiceTest.java"
   @Test
   @Order(6)
   void updateInvalidBlogPost() {
@@ -170,7 +169,7 @@ To check that our exception handler is working, let's try updating a post which 
 In this step, we've implemented a service method and client method for updating a blog post.
 We've also added an exception handler.
 
-Next, at [Step 6. Implement DELETE](/tutorials/thrift/blog/implement-delete), we'll implement a method
-for deleting a blog post and add a [Documentation Service](/docs/server-docservice) to our service.
+Next, at [Step 6. Implement DELETE](/docs/tutorials/thrift/implement-delete), we'll implement a method
+for deleting a blog post and add a [Documentation Service](/docs/server/docservice) to our service.
 
 <TutorialSteps current={5} />

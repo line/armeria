@@ -1,6 +1,5 @@
 ---
-menuTitle: "Run a service"
-order: 2
+sidebar_label: "2. Run a service"
 category: thrift
 type: step
 targetLang: java
@@ -14,14 +13,14 @@ In this step, we'll do three things with the code we obtained from our Thrift fi
 
 ## What you need
 
-You need to have the [generated Java code](/tutorials/thrift/blog/define-service#3-compile-the-thrift-file) obtained from the previous step.
+You need to have the [generated Java code](/docs/tutorials/thrift/define-service#3-compile-the-thrift-file) obtained from the previous step.
 You can always [download](https://github.com/line/armeria-examples/tree/main/tutorials/thrift) the full version, instead of creating one yourself.
 
 ## 1. Implement the service
 
-Create a file, `BlogServiceImpl.java`, and declare the `BlogServiceImpl` class implementing the `BlogService` service we defined earlier in [Step 1. Define a service](/tutorials/thrift/blog/define-service).
+Create a file, `BlogServiceImpl.java`, and declare the `BlogServiceImpl` class implementing the `BlogService` service we defined earlier in [Step 1. Define a service](/docs/tutorials/thrift/define-service).
 
-```java filename=BlogServiceImpl.java
+```java title="BlogServiceImpl.java"
 package example.armeria.server.blog.thrift;
 
 import example.armeria.blog.thrift.BlogService;
@@ -35,7 +34,7 @@ Add empty service methods as follows to override the service methods.
 We'll implement the service methods one by one in this tutorial.
 Let's leave them empty for now.
 
-```java filename=BlogServiceImpl.java
+```java title="BlogServiceImpl.java"
 import example.armeria.blog.thrift.BlogPost;
 import example.armeria.blog.thrift.CreateBlogPostRequest;
 import example.armeria.blog.thrift.GetBlogPostRequest;
@@ -76,7 +75,7 @@ Let's create a server to serve our service.
 
 1. Create the `Main` class for the server.
 You can see the full version of the file [here](https://github.com/line/armeria-examples/tree/main/tutorials/thrift/src/main/java/example/armeria/server/blog/thrift/Main.java).
-  ```java filename=Main.java
+  ```java title="Main.java"
   package example.armeria.server.blog.thrift;
 
   import org.slf4j.Logger;
@@ -87,8 +86,8 @@ You can see the full version of the file [here](https://github.com/line/armeria-
   }
   ```
 2. Add the `newServer()` method in the `Main` class as follows.
-We are using Armeria's <type://THttpService> to handle Thrift calls.
-  ```java filename=Main.java
+We are using Armeria's [THttpService](type) to handle Thrift calls.
+  ```java title="Main.java"
   import com.linecorp.armeria.server.Server;
   import com.linecorp.armeria.server.thrift.THttpService;
   ...
@@ -99,9 +98,9 @@ We are using Armeria's <type://THttpService> to handle Thrift calls.
                           .build();
   }
   ```
-3. Create and return a server instance using Armeria's <type://ServerBuilder>.
+3. Create and return a server instance using Armeria's [ServerBuilder](type).
 Note that the service instance, `tHttpService`, is added to the server instance.
-  ```java filename=Main.java
+  ```java title="Main.java"
   private static Server newServer(int port) throws Exception {
     ...
     return Server.builder()
@@ -111,7 +110,7 @@ Note that the service instance, `tHttpService`, is added to the server instance.
   }
   ```
 4. Add the `main()` method in the `Main` class as follows.
-  ```java filename=Main.java
+  ```java title="Main.java"
   public static void main(String[] args) throws Exception {
     final Server server = newServer(8080);
 
@@ -139,6 +138,6 @@ Your server is running if you see the following message.
 
 In this step, we've created and added an empty Thrift service to a server.
 
-Next, we'll get on with implementing a service method for [creating blog posts](/tutorials/thrift/blog/implement-create).
+Next, we'll get on with implementing a service method for [creating blog posts](/docs/tutorials/thrift/implement-create).
 
 <TutorialSteps current={2} />

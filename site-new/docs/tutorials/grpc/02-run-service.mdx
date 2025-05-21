@@ -1,6 +1,5 @@
 ---
-menuTitle: "Run a service"
-order: 2
+sidebar_label: "2. Run a service"
 category: grpc
 tags:
   - server
@@ -16,14 +15,14 @@ In this step, we'll do three things with the code we obtained from our proto fil
 
 ## What you need
 
-You need to have the [generated Java code](/tutorials/grpc/blog/define-service#6-compile-the-proto-file) obtained from the previous step.
+You need to have the [generated Java code](/docs/tutorials/grpc/define-service#6-compile-the-proto-file) obtained from the previous step.
 You can always [download](https://github.com/line/armeria-examples/tree/main/tutorials/grpc) the full version, instead of creating one yourself.
 
 ## 1. Declare an empty service
 
 Create a file `BlogService.java` and declare an empty blog service. We'll implement the service methods later on in this file. For now, leave it empty.
 
-```java filename=BlogService.java
+```java title="BlogService.java"
 package example.armeria.blog.grpc;
 
 final class BlogService extends BlogServiceGrpc.BlogServiceImplBase {}
@@ -31,11 +30,11 @@ final class BlogService extends BlogServiceGrpc.BlogServiceImplBase {}
 
 ## 2. Add a service to a server
 
-Build a service and server using Armeria's <type://ServerBuilder> to serve our service.
+Build a service and server using Armeria's [ServerBuilder](type) to serve our service.
 
 1. Create a main class for our server. You can see the full version of the file [here](https://github.com/line/armeria-examples/blob/main/tutorials/grpc/src/main/java/example/armeria/server/blog/grpc/Main.java).
 
-  ```java filename=Main.java
+  ```java title="Main.java"
   package example.armeria.blog.grpc;
 
   import org.slf4j.Logger;
@@ -45,8 +44,8 @@ Build a service and server using Armeria's <type://ServerBuilder> to serve our s
     private static final Logger logger = LoggerFactory.getLogger(Main.class);
   }
   ```
-2. Create a service instance using Armeria's <type://GrpcService#builder()>.
-  ```java filename=Main.java
+2. Create a service instance using Armeria's [GrpcService#builder()](type).
+  ```java title="Main.java"
   import com.linecorp.armeria.server.grpc.GrpcService;
   import com.linecorp.armeria.server.Server;
 
@@ -60,8 +59,8 @@ Build a service and server using Armeria's <type://ServerBuilder> to serve our s
     }
   }
   ```
-3. Build and return a new server instance using Armeria's <type://ServerBuilder>.
-  ```java filename=Main.java
+3. Build and return a new server instance using Armeria's [ServerBuilder](type).
+  ```java title="Main.java"
     public final class Main {
       static Server newServer(int port) throws Exception {
         ...
@@ -78,7 +77,7 @@ Build a service and server using Armeria's <type://ServerBuilder> to serve our s
 Create a server instance and run the blog service.
 
 1. Create a server instance in the `main()` method.
-  ```java filename=Main.java
+  ```java title="Main.java"
   public static void main(String[] args) throws Exception {
       final Server server = newServer(8080);
 
@@ -105,7 +104,7 @@ Note that we'll use test code to verify what we implement along the way.
 
 1. Create a file, `BlogServiceTest.java`, under `{project_root}/src/test/java/example/armeria/blog/grpc` as follows.
 You can see the full version of the file [here](https://github.com/line/armeria-examples/blob/main/tutorials/grpc/src/test/java/example/armeria/server/blog/grpc/BlogServiceTest.java).
-  ```java filename=BlogServiceTest.java
+  ```java title="BlogServiceTest.java"
   package example.armeria.blog.grpc;
   import example.armeria.blog.grpc.BlogServiceGrpc.BlogServiceBlockingStub;
 
@@ -116,7 +115,7 @@ You can see the full version of the file [here](https://github.com/line/armeria-
 2. In the `BlogServiceTest` class, add a test method as follows.
 Although we haven't implemented any service methods, we'll call one just to check whether we can connect to the server.
 
-  ```java filename=BlogServiceTest.java
+  ```java title="BlogServiceTest.java"
   import org.junit.jupiter.api.Test;
   import com.linecorp.armeria.client.grpc.GrpcClients;
 
@@ -146,6 +145,6 @@ Although we haven't implemented any service methods, we'll call one just to chec
 
 In this step, we've created and added an empty gRPC service to a server. We've also written a test and made a call to the server.
 
-Next, we'll get on with implementing a service method for [creating blog posts](/tutorials/grpc/blog/implement-create).
+Next, we'll get on with implementing a service method for [creating blog posts](/docs/tutorials/grpc/implement-create).
 
 <TutorialSteps current={2} />

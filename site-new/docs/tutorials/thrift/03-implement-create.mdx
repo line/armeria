@@ -1,6 +1,5 @@
 ---
-menuTitle: "Implement CREATE"
-order: 3
+sidebar_label: "3. Implement CREATE"
 category: thrift
 tags:
   - server
@@ -12,7 +11,7 @@ type: step
 
 In the previous step, we defined empty service methods.
 In this step, we'll fill in one of the service methods to create a blog post and implement a corresponding client method.
-Also, we'll try making a call to the service method with test code using Armeria's <type://ServerExtension>.
+Also, we'll try making a call to the service method with test code using Armeria's [ServerExtension](type).
 
 <TutorialSteps current={3} />
 
@@ -21,7 +20,7 @@ Also, we'll try making a call to the service method with test code using Armeria
 You need to have the following files obtained from previous steps.
 You can always [download](https://github.com/line/armeria-examples/tree/main/tutorials/thrift) the full version, instead of creating one yourself.
 
-- [Generated Java code](/tutorials/thrift/blog/define-service#3-compile-the-thrift-file)
+- [Generated Java code](/docs/tutorials/thrift/define-service#3-compile-the-thrift-file)
 - `Main.java`
 - `BlogServiceImpl.java`
 
@@ -30,7 +29,7 @@ You can always [download](https://github.com/line/armeria-examples/tree/main/tut
 Let's implement a service method to create a blog post.
 
 1. In the `BlogServiceImpl` class, create an ID generator to issue temporary blog post IDs and a map to contain blog posts.
-  ```java filename=BlogServiceImpl.java
+  ```java title="BlogServiceImpl.java"
   import java.util.Map;
   import java.util.concurrent.ConcurrentHashMap;
   import java.util.concurrent.atomic.AtomicInteger;
@@ -42,7 +41,7 @@ Let's implement a service method to create a blog post.
   }
   ```
 2. In the `createBlogPost()` method, create a `BlogPost` object with a generated ID and request parameters.
-  ```java filename=BlogServiceImpl.java
+  ```java title="BlogServiceImpl.java"
   import java.time.Instant;
   ...
   @Override
@@ -59,7 +58,7 @@ Let's implement a service method to create a blog post.
   }
   ```
 2. In the `createBlogPost()` method, save the post information in the `blogPosts` map and return the information of the created blog post to the `resultHandler`.
-  ```java filename=BlogServiceImpl.java
+  ```java title="BlogServiceImpl.java"
   @Override
   public void createBlogPost(CreateBlogPostRequest request, AsyncMethodCallback<BlogPost> resultHandler)
           throws TException {
@@ -76,7 +75,7 @@ Let's create a client to send a request to the service.
 You can refer to the full version of the file [here](https://github.com/line/armeria-examples/blob/main/tutorials/thrift/src/main/java/example/armeria/server/blog/thrift/BlogClient.java) of the file.
 
 1. Create a class for our client. We'll name the class `BlogClient`.
-  ```java filename=BlogClient.java
+  ```java title="BlogClient.java"
   package example.armeria.server.blog.thrift;
 
   import org.slf4j.Logger;
@@ -86,8 +85,8 @@ You can refer to the full version of the file [here](https://github.com/line/arm
     private static final Logger logger = LoggerFactory.getLogger(BlogClient.class);
   }
   ```
-2. In the `BlogClient` class, add a constructor and create a Thrift client instance using Armeria's <type://ThriftClients>.
-  ```java filename=BlogClient.java
+2. In the `BlogClient` class, add a constructor and create a Thrift client instance using Armeria's [ThriftClients](type).
+  ```java title="BlogClient.java"
   import java.net.URI;
   import com.linecorp.armeria.client.thrift.ThriftClients;
   import example.armeria.blog.thrift.BlogService;
@@ -109,7 +108,7 @@ You can refer to the full version of the file [here](https://github.com/line/arm
 
 In the `BlogClient` class, add a method to send a request to create a blog post.
 
-```java filename=BlogClient.java
+```java title="BlogClient.java"
 import org.apache.thrift.TException;
 import example.armeria.blog.thrift.BlogPost;
 import example.armeria.blog.thrift.CreateBlogPostRequest;
@@ -129,7 +128,7 @@ We'll use test code to verify what we implement along the way.
 
 Create a file, `BlogServiceTest.java`, under `{project_root}/src/test/java/example/armeria/server/blog/thrift` as follows.
 You can see the full version of the file [here](https://github.com/line/armeria-examples/blob/main/tutorials/thrift/src/test/java/example/armeria/server/blog/thrift/BlogServiceTest.java).
-```java filename=BlogServiceTest.java
+```java title="BlogServiceTest.java"
 package example.armeria.server.blog.thrift;
 
 class BlogServiceTest {}
@@ -137,13 +136,13 @@ class BlogServiceTest {}
 
 ## 5. Register a ServerExtension
 
-Armeria's <type://ServerExtension> automatically handles set-up and tear-down of a server for testing.
+Armeria's [ServerExtension](type) automatically handles set-up and tear-down of a server for testing.
 This is convenient as it eliminates the need to execute the main method to set up a server before running our tests.
 
-In the `BlogServiceTest` class, register a <type://ServerExtension> as follows.
+In the `BlogServiceTest` class, register a [ServerExtension](type) as follows.
 Note that the service instance is added to the configuration.
 
-```java filename=BlogServiceTest.java
+```java title="BlogServiceTest.java"
 import org.junit.jupiter.api.extension.RegisterExtension;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.thrift.THttpService;
@@ -167,7 +166,7 @@ static final ServerExtension server = new ServerExtension() {
 Let's test if we can create a blog post.
 
 1. In the `BlogServiceTest` class, add a test method as follows.
-  ```java filename=BlogServiceTest.java
+  ```java title="BlogServiceTest.java"
   import static org.assertj.core.api.Assertions.assertThat;
   import org.apache.thrift.TException;
   import org.junit.jupiter.api.Test;
@@ -192,8 +191,8 @@ Let's test if we can create a blog post.
 ## What's next
 
 In this step, we've implemented a method for creating a blog post.
-We've also written test code and registered <type://ServerExtension> to our test.
+We've also written test code and registered [ServerExtension](type) to our test.
 
-Next, at [Step 4. Implement READ](/tutorials/thrift/blog/implement-read), we'll implement a READ operation to read a single post and also multiple posts.
+Next, at [Step 4. Implement READ](/docs/tutorials/thrift/implement-read), we'll implement a READ operation to read a single post and also multiple posts.
 
 <TutorialSteps current={3} />

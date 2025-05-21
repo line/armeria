@@ -1,6 +1,5 @@
 ---
-menuTitle: "Implement READ"
-order: 4
+sidebar_label: "4. Implement READ"
 type: step
 category: thrift
 tags:
@@ -21,7 +20,7 @@ We'll write two service methods, one for reading a single post and another for m
 You need to have the following files obtained from previous steps.
 You can always [download](https://github.com/line/armeria-examples/tree/main/tutorials/thrift) the full version, instead of creating one yourself.
 
-- [Generated Java code](/tutorials/thrift/blog/define-service#3-compile-the-thrift-file)
+- [Generated Java code](/docs/tutorials/thrift/define-service#3-compile-the-thrift-file)
 - `BlogServiceImpl.java`
 - `Main.java`
 - `BlogClient.java`
@@ -31,13 +30,13 @@ You can always [download](https://github.com/line/armeria-examples/tree/main/tut
 
 Let's write two methods for retrieving blog posts; one for a single post and another for multiple posts.
 
-<Tabs>
-<TabPane tab="Single post" key="1">
+<Tabs groupId="thrift-read">
+<TabItem label="Single post" value="1">
 
 In the `BlogServiceImpl` class, implement the `getBlogPost()` method to retrieve a single post.
 Let's throw an exception in case there is no blog post for the given ID.
 
-```java filename=BlogServiceImpl.java
+```java title="BlogServiceImpl.java"
 import example.armeria.blog.thrift.BlogNotFoundException;
 ...
 @Override
@@ -55,11 +54,11 @@ public void getBlogPost(GetBlogPostRequest request, AsyncMethodCallback<BlogPost
 }
 ```
 
-</TabPane>
-<TabPane tab="Multiple posts" key="2">
+</TabItem>
+<TabItem label="Multiple posts" value="2">
 
 1. Implement the `listBlogPosts()` method in the `BlogServiceImpl` class to retrieve multiple posts.
-  ```java filename=BlogServiceImpl.java
+  ```java title="BlogServiceImpl.java"
   import java.util.List;
   import java.util.stream.Collectors;
   ...
@@ -71,7 +70,7 @@ public void getBlogPost(GetBlogPostRequest request, AsyncMethodCallback<BlogPost
   }
   ```
 2. Add an if-else statement by adding line 9-16, to sort the blog posts based on the value of the `descending` parameter.
-  ```java filename=BlogServiceImpl.java showlineno=true
+  ```java title="BlogServiceImpl.java" showlineno=true
   import java.util.Collections;
   import java.util.Comparator;
   import java.util.Map.Entry;
@@ -92,7 +91,7 @@ public void getBlogPost(GetBlogPostRequest request, AsyncMethodCallback<BlogPost
   }
   ```
 
-</TabPane>
+</TabItem>
 </Tabs>
 
 ## 2. Implement client-side
@@ -100,12 +99,12 @@ public void getBlogPost(GetBlogPostRequest request, AsyncMethodCallback<BlogPost
 This time, we'll implement the client-side for reading blog posts.
 Let's implement client methods for each corresponding server method.
 
-<Tabs>
-<TabPane tab="Single post" key="1">
+<Tabs groupId="thrift-read">
+<TabItem label="Single post" value="1">
 
 In the `BlogClient` class, add a method to retrieve a single post.
 
-```java filename=BlogClient.java
+```java title="BlogClient.java"
 import example.armeria.blog.thrift.GetBlogPostRequest;
 ...
 BlogPost getBlogPost(int id) throws TException {
@@ -115,12 +114,12 @@ BlogPost getBlogPost(int id) throws TException {
 }
 ```
 
-</TabPane>
-<TabPane tab="Multiple posts" key="2">
+</TabItem>
+<TabItem label="Multiple posts" value="2">
 
 In the `BlogClient` class, add a method to retrieve a list of posts.
 
-```java filename=BlogClient.java
+```java title="BlogClient.java"
 import example.armeria.blog.thrift.ListBlogPostsRequest;
 import example.armeria.blog.thrift.ListBlogPostsResponse;
 ...
@@ -130,7 +129,7 @@ List<BlogPost> listBlogPosts(boolean descending) throws TException {
 }
 ```
 
-</TabPane>
+</TabItem>
 </Tabs>
 
 ## 3. Test retrieving a single post
@@ -138,7 +137,7 @@ List<BlogPost> listBlogPosts(boolean descending) throws TException {
 Let's test if we can retrieve a blog post we created.
 
 1. In the `BlogServiceTest` class, add a test method to retrieve the first blog post with ID `0`.
-  ```java filename=BlogServiceTest.java
+  ```java title="BlogServiceTest.java"
   @Test
   void getBlogPost() throws TException {
     final BlogClient client = new BlogClient(server.httpUri(), "/thrift");
@@ -150,7 +149,7 @@ Let's test if we can retrieve a blog post we created.
   ```
 2. Add annotations to configure the order our test methods will be executed.
   The annotations guarantee that the first blog post will be created in the `createBlogPost()` method before we try to retrieve it in the `getBlogPost()` method.
-  ```java filename=BlogServiceTest.java
+  ```java title="BlogServiceTest.java"
   import org.junit.jupiter.api.MethodOrderer.OrderAnnotation;
   import org.junit.jupiter.api.Order;
   import org.junit.jupiter.api.TestMethodOrder;
@@ -181,7 +180,7 @@ Let's test if we can retrieve a blog post we created.
 Let's try retrieving a blog post that does not exist.
 Add a test method to retrieve a blog post with an invalid ID, asserting an exception is thrown.
 
-```java filename=BlogServiceTest.java
+```java title="BlogServiceTest.java"
 import static org.assertj.core.api.Assertions.catchThrowable;
 import example.armeria.blog.thrift.BlogNotFoundException;
 ...
@@ -208,7 +207,7 @@ Check that you see the test is passed.
 Finally, let's test if we can retrieve multiple posts.
 Add a test method like the following to create the second blog post and test retrieving the list of blog posts.
 
-```java filename=BlogServiceTest.java
+```java title="BlogServiceTest.java"
 import java.util.List;
 ...
 @Test
@@ -236,6 +235,6 @@ Check that you see the test is passed.
 
 In this step, we've implemented service methods and client methods to retrieve blog posts.
 
-Next, at [Step 5. Implement UPDATE](/tutorials/thrift/blog/implement-update), we'll implement an UPDATE operation to update a blog post.
+Next, at [Step 5. Implement UPDATE](/docs/tutorials/thrift/implement-update), we'll implement an UPDATE operation to update a blog post.
 
 <TutorialSteps current={4} />

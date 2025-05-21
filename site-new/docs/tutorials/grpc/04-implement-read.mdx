@@ -1,6 +1,5 @@
 ---
-menuTitle: "Implement READ"
-order: 4
+sidebar_label: "4. Implement READ"
 type: step
 category: grpc
 tags:
@@ -21,7 +20,7 @@ We'll write two service methods, one for reading a single post and another for m
 You need to have the following files obtained from previous steps.
 You can always [download](https://github.com/line/armeria-examples/tree/main/tutorials/grpc) the full version, instead of creating one yourself.
 
-- [Generated Java code](/tutorials/grpc/blog/define-service#6-compile-the-proto-file)
+- [Generated Java code](/docs/tutorials/grpc/define-service#6-compile-the-proto-file)
 - `BlogService.java`
 - `Main.java`
 - `BlogServiceTest.java`
@@ -31,12 +30,12 @@ You can always [download](https://github.com/line/armeria-examples/tree/main/tut
 Let's write two methods for retrieving blog posts; one for a single post and
 another for multiple posts.
 
-<Tabs>
-<TabPane tab="Single post" key="1">
+<Tabs groupId="grpc-read">
+<TabItem label="Single post" value="1">
 
 Add a service method in `BlogService.java` to retrieve a single post.
 
-```java filename=BlogService.java
+```java title="BlogService.java"
 import example.armeria.blog.grpc.GetBlogPostRequest;
 
 public final class BlogService extends BlogServiceGrpc.BlogServiceImplBase {
@@ -56,12 +55,12 @@ public final class BlogService extends BlogServiceGrpc.BlogServiceImplBase {
 }
 ```
 
-</TabPane>
-<TabPane tab="Multiple posts" key="2">
+</TabItem>
+<TabItem label="Multiple posts" value="2">
 
 Add a service method in `BlogService.java` to retrieve multiple posts.
 
-```java filename=BlogService.java
+```java title="BlogService.java"
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
@@ -89,7 +88,7 @@ final class BlogService extends BlogServiceGrpc.BlogServiceImplBase {
 }
 ```
 
-</TabPane>
+</TabItem>
 </Tabs>
 
 ## 2. Test retrieving a single post
@@ -97,7 +96,7 @@ final class BlogService extends BlogServiceGrpc.BlogServiceImplBase {
 Let's test if we can retrieve a blog post we created.
 
 1. In the `BlogServiceTest` class, add a test method to retrieve the first blog post with ID `0`.
-  ```java filename=BlogServiceTest.java
+  ```java title="BlogServiceTest.java"
   @Test
   void getBlogPost() throws JsonProcessingException {
     final BlogPost blogPost = client.getBlogPost(GetBlogPostRequest.newBuilder().setId(0).build());
@@ -108,7 +107,7 @@ Let's test if we can retrieve a blog post we created.
   ```
 2. Add annotations to configure the order our test methods will be executed.
   The annotations guarantee that the first blog post will be created in the `createBlogPost()` method before we try to retrieve it in the `getBlogPost()` method.
-  ```java filename=BlogServiceTest.java
+  ```java title="BlogServiceTest.java"
   import org.junit.jupiter.api.MethodOrderer.OrderAnnotation;
   import org.junit.jupiter.api.Order;
   import org.junit.jupiter.api.TestMethodOrder;
@@ -139,7 +138,7 @@ Let's test if we can retrieve a blog post we created.
 Let's try retrieving a blog post that does not exist.
 Add a test method to retrieve a blog post with an invalid ID, asserting an exception is thrown.
 
-```java filename=BlogServiceTest.java
+```java title="BlogServiceTest.java"
 @Test
 @Order(3)
 void getInvalidBlogPost() throws JsonProcessingException {
@@ -161,7 +160,7 @@ Check that you see the test is passed.
 Finally, let's test if we can retrieve multiple posts.
 Add a test method like the following to create the second blog post and test retrieving the list of blog posts.
 
-```java filename=BlogServiceTest.java
+```java title="BlogServiceTest.java"
 @Test
 @Order(4)
 void listBlogPosts() throws JsonProcessingException {
@@ -194,6 +193,6 @@ Check that you see the test is passed.
 
 In this step, we've implemented service methods to retrieve blog posts.
 
-Next, at [Step 5. Implement UPDATE](/tutorials/grpc/blog/implement-update), we'll implement an UPDATE operation to update a blog post.
+Next, at [Step 5. Implement UPDATE](/docs/tutorials/grpc/implement-update), we'll implement an UPDATE operation to update a blog post.
 
 <TutorialSteps current={4} />
