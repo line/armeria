@@ -1,0 +1,199 @@
+---
+menuTitle: "Implement READ"
+order: 4
+type: step
+category: grpc
+tags:
+  - server
+level: basic
+---
+
+# Implementing READ operation
+
+In the earlier step, we created blog posts.
+In this step, we'll implement a read operation and make a call to read blog posts.
+We'll write two service methods, one for reading a single post and another for multiple posts.
+
+<TutorialSteps current={4} />
+
+## What you need
+
+You need to have the following files obtained from previous steps.
+You can always [download](https://github.com/line/armeria-examples/tree/main/tutorials/grpc) the full version, instead of creating one yourself.
+
+- [Generated Java code](/tutorials/grpc/blog/define-service#6-compile-the-proto-file)
+- `BlogService.java`
+- `Main.java`
+- `BlogServiceTest.java`
+
+## 1. Implement server-side
+
+Let's write two methods for retrieving blog posts; one for a single post and
+another for multiple posts.
+
+<Tabs>
+<TabPane tab="Single post" key="1">
+
+Add a service method in `BlogService.java` to retrieve a single post.
+
+```java filename=BlogService.java
+import example.armeria.blog.grpc.GetBlogPostRequest;
+
+public final class BlogService extends BlogServiceGrpc.BlogServiceImplBase {
+
+  @Override
+  public void getBlogPost(GetBlogPostRequest request, StreamObserver<BlogPost> responseObserver) {
+    final BlogPost blogPost = blogPosts.get(request.getId());
+    if (blogPost == null) {
+      responseObserver.onError(
+        Status.NOT_FOUND.withDescription("The blog post does not exist. ID: " + request.getId())
+                        .asRuntimeException());
+    } else {
+        responseObserver.onNext(blogPost);
+        responseObserver.onCompleted();
+    }
+  }
+}
+```
+
+</TabPane>
+<TabPane tab="Multiple posts" key="2">
+
+Add a service method in `BlogService.java` to retrieve multiple posts.
+
+```java filename=BlogService.java
+import java.util.Collection;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.Map.Entry;
+
+import example.armeria.blog.grpc.ListBlogPostsRequest;
+import example.armeria.blog.grpc.ListBlogPostsResponse;
+
+final class BlogService extends BlogServiceGrpc.BlogServiceImplBase {
+  @Override
+  public void listBlogPosts(ListBlogPostsRequest request,
+                            StreamObserver<ListBlogPostsResponse> responseObserver) {
+      final Collection<BlogPost> blogPosts;
+      if (request.getDescending()) {
+          blogPosts = this.blogPosts.entrySet()
+                      .stream()
+                      .sorted(Collections.reverseOrder(Comparator.comparingInt(Entry::getKey)))
+                      .map(Entry::getValue).collect(Collectors.toList());
+      } else {
+          blogPosts = this.blogPosts.values();
+      }
+      responseObserver.onNext(ListBlogPostsResponse.newBuilder().addAllBlogs(blogPosts).build());
+      responseObserver.onCompleted();
+  }
+}
+```
+
+</TabPane>
+</Tabs>
+
+## 2. Test retrieving a single post
+
+Let's test if we can retrieve a blog post we created.
+
+1. In the `BlogServiceTest` class, add a test method to retrieve the first blog post with ID `0`.
+  ```java filename=BlogServiceTest.java
+  @Test
+  void getBlogPost() throws JsonProcessingException {
+    final BlogPost blogPost = client.getBlogPost(GetBlogPostRequest.newBuilder().setId(0).build());
+
+    assertThat(blogPost.getTitle()).isEqualTo("My first blog");
+    assertThat(blogPost.getContent()).isEqualTo("Hello Armeria!");
+  }
+  ```
+2. Add annotations to configure the order our test methods will be executed.
+  The annotations guarantee that the first blog post will be created in the `createBlogPost()` method before we try to retrieve it in the `getBlogPost()` method.
+  ```java filename=BlogServiceTest.java
+  import org.junit.jupiter.api.MethodOrderer.OrderAnnotation;
+  import org.junit.jupiter.api.Order;
+  import org.junit.jupiter.api.TestMethodOrder;
+
+  @TestMethodOrder(OrderAnnotation.class) // Add this
+  class BlogServiceTest {
+    ...
+
+    @Test
+    @Order(1) // Add this
+    void createBlogPost() throws JsonProcessingException {
+      ...
+    }
+
+    @Test
+    @Order(2) // Add this
+    void getBlogPost() throws JsonProcessingException {
+      ...
+    }
+  }
+  ```
+3. Run all the test cases on your IDE or using Gradle.
+
+  Your client retrieved a blog post from the server successfully if the test is passed.
+
+## 4. Test an error case
+
+Let's try retrieving a blog post that does not exist.
+Add a test method to retrieve a blog post with an invalid ID, asserting an exception is thrown.
+
+```java filename=BlogServiceTest.java
+@Test
+@Order(3)
+void getInvalidBlogPost() throws JsonProcessingException {
+  final Throwable exception = catchThrowable(() -> {
+      client.getBlogPost(GetBlogPostRequest.newBuilder().setId(Integer.MAX_VALUE).build());
+  });
+  final StatusRuntimeException statusException = (StatusRuntimeException) exception;
+    assertThat(statusException.getStatus().getCode()).isEqualTo(Code.NOT_FOUND);
+    assertThat(statusException)
+          .hasMessageContaining("The blog post does not exist. ID: " + Integer.MAX_VALUE);
+}
+```
+
+Run all the test cases on your IDE or using Gradle.
+Check that you see the test is passed.
+
+## 5. Test retrieving multiple posts
+
+Finally, let's test if we can retrieve multiple posts.
+Add a test method like the following to create the second blog post and test retrieving the list of blog posts.
+
+```java filename=BlogServiceTest.java
+@Test
+@Order(4)
+void listBlogPosts() throws JsonProcessingException {
+  final CreateBlogPostRequest newBlogPost = CreateBlogPostRequest.newBuilder()
+                .setTitle("My second blog")
+                .setContent("Armeria is awesome!")
+                .build();
+  client.createBlogPost(newBlogPost);
+  final ListBlogPostsResponse
+          response = client.listBlogPosts(ListBlogPostsRequest.newBuilder()
+                .setDescending(false)
+                .build());
+
+  final List<BlogPost> blogs = response.getBlogsList();
+  assertThat(blogs).hasSize(2);
+  final BlogPost firstBlog = blogs.get(0);
+  assertThat(firstBlog.getTitle()).isEqualTo("My first blog");
+  assertThat(firstBlog.getContent()).isEqualTo("Hello Armeria!");
+
+  final BlogPost secondBlog = blogs.get(1);
+  assertThat(secondBlog.getTitle()).isEqualTo("My second blog");
+  assertThat(secondBlog.getContent()).isEqualTo("Armeria is awesome!");
+}
+```
+
+Run all the test cases on your IDE or using Gradle.
+Check that you see the test is passed.
+
+## What's next
+
+In this step, we've implemented service methods to retrieve blog posts.
+
+Next, at [Step 5. Implement UPDATE](/tutorials/grpc/blog/implement-update), we'll implement an UPDATE operation to update a blog post.
+
+<TutorialSteps current={4} />

@@ -1,0 +1,184 @@
+---
+menuTitle: "Implement UPDATE"
+order: 5
+category: grpc
+tags:
+  - server
+level: basic
+type: step
+---
+
+# Implementing UPDATE operation
+
+Previously, we created and read blog posts.
+Now, let's implement and make a call to update a blog post.
+We'll also learn how to handle an exception with a custom exception handler.
+
+<TutorialSteps current={5} />
+
+## What you need
+
+You need to have the following files obtained from previous steps.
+You can always [download](https://github.com/line/armeria-examples/tree/main/tutorials/grpc) the full version, instead of creating one yourself.
+
+- [Generated Java code](/tutorials/grpc/blog/define-service#6-compile-the-proto-file)
+- `BlogService.java`
+- `Main.java`
+- `BlogServiceTest.java`
+
+## 1. Implement server-side
+
+Let's implement the server-side for updating blog posts.
+This time, we'll use a custom exception handler.
+
+### Add an exception handler
+
+First, add a custom exception handler for the blog service.
+
+1. Create a class for the exception to be thrown when a specified blog post ID doesn't exist.
+  ```java filename=BlogNotFoundException.java
+  package example.armeria.server.blog.grpc;
+
+  final class BlogNotFoundException extends IllegalStateException {
+    BlogNotFoundException(String s) {
+        super(s);
+    }
+  }
+  ```
+2. Add an exception handler class for the blog service.
+  ```java filename=GrpcExceptionHandler.java
+  package example.armeria.server.blog.grpc;
+
+  import com.linecorp.armeria.common.RequestContext;
+  import com.linecorp.armeria.common.annotation.Nullable;
+  import com.linecorp.armeria.common.grpc.GrpcExceptionHandlerFunction;
+
+  import io.grpc.Metadata;
+  import io.grpc.Status;
+
+  public class GrpcExceptionHandler implements GrpcExceptionHandlerFunction {
+
+    @Nullable
+    @Override
+    public Status apply(RequestContext ctx, Throwable cause, Metadata metadata) {
+      if (cause instanceof IllegalArgumentException) {
+          return Status.INVALID_ARGUMENT.withCause(cause);
+      }
+      if (cause instanceof BlogNotFoundException) {
+          return Status.NOT_FOUND.withCause(cause).withDescription(cause.getMessage());
+      }
+
+      // The default mapping function will be applied.
+      return null;
+    }
+  }
+  ```
+3. In the `Main` class, bind the `GrpcExceptionHandler` to our service.
+  ```java filename=Main.java
+  private static Server newServer(int port) throws Exception {
+    final GrpcService grpcService =
+       GrpcService.builder()
+                  .addService(new BlogService())
+                  .exceptionMapping(new GrpcExceptionHandler()) // Add this
+                  .build();
+    ...
+  }
+  ```
+
+### Implement the service method
+
+In the `BlogServiceImpl` class, add a service method for updating a blog post.
+```java filename=BlogService.java
+import example.armeria.blog.grpc.UpdateBlogPostRequest;
+
+public class BlogService extends BlogServiceGrpc.BlogServiceImplBase {
+  @Override
+  public void updateBlogPost(UpdateBlogPostRequest request, StreamObserver<BlogPost> responseObserver) {
+    final BlogPost oldBlogPost = blogPosts.get(request.getId());
+    if (oldBlogPost == null) {
+      throw new BlogNotFoundException("The blog post does not exist. ID: " + request.getId());
+    } else {
+      final BlogPost newBlogPost = oldBlogPost.toBuilder()
+                .setTitle(request.getTitle())
+                .setContent(request.getContent())
+                .setModifiedAt(Instant.now().toEpochMilli())
+                .build();
+      blogPosts.put(request.getId(), newBlogPost);
+      responseObserver.onNext(newBlogPost);
+      responseObserver.onCompleted();
+    }
+  }
+}
+```
+
+## 3. Test updating a blog post
+
+Let's try updating the content of the first blog post.
+Add a method like the following.
+
+```java filename=BlogServiceTest.java
+@Test
+@Order(5)
+void updateBlogPosts() throws JsonProcessingException {
+  final UpdateBlogPostRequest request = UpdateBlogPostRequest.newBuilder()
+              .setId(0)
+              .setTitle("My first blog")
+              .setContent("Hello awesome Armeria!")
+              .build();
+  final BlogPost updated = client.updateBlogPost(request);
+  assertThat(updated.getId()).isZero();
+  assertThat(updated.getTitle()).isEqualTo("My first blog");
+  assertThat(updated.getContent()).isEqualTo("Hello awesome Armeria!");
+}
+```
+
+Run all the test cases on your IDE or using Gradle.
+Check that you see the test is passed.
+
+## 4. Test an error case
+
+To check that our exception handler is working, let's try updating a post which does not exist.
+
+1. Bind the exception handler to the service for the test server.
+  ```java filename=BlogServiceTest.java
+  @RegisterExtension
+  static final ServerExtension server = new ServerExtension() {
+    @Override
+    protected void configure(ServerBuilder sb) throws Exception {
+      sb.service(GrpcService.builder()
+                .addService(new BlogService())
+                .exceptionHandler(new GrpcExceptionHandler()) // Add this
+                .build());
+    }
+  };
+  ```
+2. Add a test method to update a blog post with an invalid ID, asserting an exception is thrown as expected.
+  ```java filename=BlogServiceTest.java
+  @Test
+  @Order(6)
+  void updateInvalidBlogPost() {
+    final Throwable exception = catchThrowable(() -> {
+       client.updateBlogPost(UpdateBlogPostRequest.newBuilder()
+                .setId(Integer.MAX_VALUE)
+                .setTitle("My first blog")
+                .setContent("Hello awesome Armeria!")
+                .build());
+    });
+    final StatusRuntimeException statusException = (StatusRuntimeException) exception;
+    assertThat(statusException.getStatus().getCode()).isEqualTo(Code.NOT_FOUND);
+    assertThat(statusException)
+                .hasMessageContaining("The blog post does not exist. ID: " + Integer.MAX_VALUE);
+  }
+  ```
+3. Run all the test cases on your IDE or using Gradle.
+  Check that you see the test is passed.
+
+## What's next
+
+In this step, we've implemented a service method for updating a blog post.
+We've also added an exception handler.
+
+Next, at [Step 6. Implement DELETE](/tutorials/grpc/blog/implement-delete), we'll implement a method
+for deleting a blog post and add a [Documentation Service](/docs/server-docservice) to our service.
+
+<TutorialSteps current={5} />

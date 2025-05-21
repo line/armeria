@@ -1,0 +1,158 @@
+---
+menuTitle: "Implement CREATE"
+order: 3
+category: grpc
+tags:
+  - server
+level: basic
+type: step
+---
+
+# Implementing CREATE operation
+
+In the previous step, we defined service methods.
+In this step, we'll implement one of the service methods to create a blog post and again, try making a call to a service method.
+Also, we'll use Armeria's <type://ServerExtension> for testing.
+
+<TutorialSteps current={3} />
+
+## What you need
+
+You need to have the following files obtained from previous steps.
+You can always [download](https://github.com/line/armeria-examples/tree/main/tutorials/grpc) the full version, instead of creating one yourself.
+
+- [Generated Java code](/tutorials/grpc/blog/define-service#6-compile-the-proto-file)
+- `BlogService.java`
+- `Main.java`
+- `BlogServiceTest.java`
+
+## 1. Implement server-side
+
+Let's implement a service method `createBlogPost()` in the `BlogService` class.
+
+1. Create an ID generator to issue temporary blog post IDs and a map to contain blogs posts.
+  ```java filename=BlogService.java
+  import java.util.Map;
+  import java.util.concurrent.ConcurrentHashMap;
+  import java.util.concurrent.atomic.AtomicInteger;
+
+  public final class BlogService extends BlogServiceGrpc.BlogServiceImplBase {
+    private final AtomicInteger idGenerator = new AtomicInteger();
+    private final Map<Integer, BlogPost> blogPosts = new ConcurrentHashMap<>();
+  }
+  ```
+2. Add a service method, `createBlogPost()`:
+    1. Create a `BlogPost` object with request parameters.
+    2. Save the post information in the map.
+    3. Return the information of the blog post created.
+  ```java filename=BlogService.java
+  import java.time.Instant;
+  import io.grpc.stub.StreamObserver;
+
+  final class BlogService extends BlogServiceGrpc.BlogServiceImplBase {
+    @Override
+    public void createBlogPost(CreateBlogPostRequest request, StreamObserver<BlogPost> responseObserver) {
+      final int id = idGenerator.getAndIncrement(); // Generate post ID
+      final Instant now = Instant.now();            // Get current time
+      final BlogPost updated = BlogPost.newBuilder()
+                       .setId(id)
+                       .setTitle(request.getTitle())
+                       .setContent(request.getContent())
+                       .setModifiedAt(now.toEpochMilli())
+                       .setCreatedAt(now.toEpochMilli())
+                       .build();
+      blogPosts.put(id, updated);
+      responseObserver.onNext(updated);
+      responseObserver.onCompleted();
+    }
+  }
+  ```
+
+## 2. Register a ServerExtension
+
+In the previous test code, we've connected directly to the server.
+This time, let's use Armeria's <type://ServerExtension> instead.
+This approach automatically handles set-up and tear-down of a server for testing.
+Now we don't have to invoke the main method to set up a server before running our tests.
+
+1. In the `BlogServiceTest` class, remove the `connect()` method to eliminate dependency on the main method.
+  ```java filename=BlogServiceTest.java
+  public class BlogServiceTest {
+    ...
+    @Test
+    void connect() {...} // Remove this method
+  }
+  ```
+2. Register a <type://ServerExtension> as follows.
+  Note that the service instance is added to the configuration.
+  ```java filename=BlogServiceTest.java
+  import org.junit.jupiter.api.extension.RegisterExtension;
+  import com.linecorp.armeria.server.ServerBuilder;
+  import com.linecorp.armeria.server.grpc.GrpcService;
+  import com.linecorp.armeria.testing.junit5.server.ServerExtension;
+
+  public class BlogServiceTest {
+    ...
+    @RegisterExtension
+    static final ServerExtension server = new ServerExtension() {
+      @Override
+      protected void configure(ServerBuilder sb) throws Exception {
+        sb.service(GrpcService.builder()
+                      // Add the service to the configuration
+                      .addService(new BlogService())
+                      .build());
+      }
+    };
+  }
+  ```
+
+## 3. Set up a client for testing
+
+In the `BlogServiceTest` class, add a method as follows.
+This will set up a client before executing each test cases.
+
+```java filename=BlogServiceTest.java
+import org.junit.jupiter.api.BeforeAll;
+
+@BeforeAll
+static void beforeAll() {
+  client = GrpcClients.newClient(server.httpUri(),
+                 BlogServiceBlockingStub.class);
+}
+```
+
+## 4. Test creating a blog post
+
+Let's test if we can create a blog post.
+
+1. In the `BlogServiceTest` class, add a test method as follows.
+  ```java filename=BlogServiceTest.java
+  import static org.assertj.core.api.Assertions.assertThat;
+  import com.fasterxml.jackson.core.JsonProcessingException;
+
+  @Test
+  void createBlogPost() throws JsonProcessingException {
+    final CreateBlogPostRequest request = CreateBlogPostRequest.newBuilder()
+                     .setTitle("My first blog")
+                     .setContent("Hello Armeria!")
+                     .build();
+    final BlogPost response = client.createBlogPost(request);
+    assertThat(response.getTitle()).isEqualTo(request.getTitle());
+    assertThat(response.getContent()).isEqualTo(request.getContent());
+  }
+  ```
+2. Run the test case on your IDE or using Gradle.
+  ```bash
+  ./gradlew test
+  ```
+
+The service worked as expected if you see the test case passed.
+
+## What's next
+
+In this step, we've implemented a method for creating a blog post.
+We've also registered <type://ServerExtension> to our test.
+
+Next, at [Step 4. Implement READ](/tutorials/grpc/blog/implement-read), we'll implement a READ operation to read a single post and also multiple posts.
+
+<TutorialSteps current={3} />
