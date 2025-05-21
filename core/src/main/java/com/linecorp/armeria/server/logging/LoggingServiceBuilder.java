@@ -19,6 +19,7 @@ package com.linecorp.armeria.server.logging;
 import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
 
+import java.util.concurrent.TimeUnit;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.function.Predicate;
@@ -49,6 +50,8 @@ public final class LoggingServiceBuilder extends LoggingDecoratorBuilder {
     private Sampler<? super ServiceRequestContext> successSampler = Sampler.always();
 
     private Sampler<? super ServiceRequestContext> failureSampler = Sampler.always();
+
+    private Sampler<Long> slowRequestSampler = Sampler.never();
 
     LoggingServiceBuilder() {}
 
@@ -108,6 +111,14 @@ public final class LoggingServiceBuilder extends LoggingDecoratorBuilder {
     }
 
     /**
+     * Sets the {@link Sampler} that determines whether a request is slow enough to be logged.
+     */
+    public LoggingServiceBuilder slowRequestSampler(Sampler<Long> slowRequestSampler) {
+        this.slowRequestSampler = requireNonNull(slowRequestSampler, "slowRequestSampler");
+        return this;
+    }
+
+    /**
      * Sets the rate at which to sample requests to log. Any number between {@code 0.0} and {@code 1.0} will
      * cause a random sample of the failure requests to be logged.
      */
@@ -119,11 +130,70 @@ public final class LoggingServiceBuilder extends LoggingDecoratorBuilder {
     }
 
     /**
+     * Sets conditions to sample slow requests.
+     *
+     * <p>If {slowRequestPercentile} is 0.99, {windowMilliseconds} is 60000, we will sample requests that are
+     * slower than 99% of the requests within 1-minute time window. This will make sure our sampling adapts the
+     * traffic pattern. For example, traffic can be very low during the night thus our average response time
+     * will be pretty low. Therefore, our p99s should be lower than the midday traffic.
+     * Otherwise, we won't log any p99s during night.</p>
+     *
+     * <p>If we set {slowRequestSamplingLowerBoundMilliseconds} to 100, we won't sample any request that took
+     * less than 1000ms. This is useful to filter out requests that are too fast to be considered
+     * as slow requests. If your endpoint performs pretty healthy, you shouldn't see any slow request logs.</p>
+     *
+     * <p>If we set {slowRequestSamplingUpperBoundMilliseconds} to 1000, we will sample any request that
+     * took more than 1000 milliseconds. This is useful to make sure we log slow requests even if
+     * they are not in the p99 percentile. If your service is unhealthy, this will make sure any slow request
+     * is logged into your system.</p>
+     *
+     * @param slowRequestPercentile percentile of slow requests.
+     * @param windowMilliseconds window size to calculate percentile.
+     * @param slowRequestSamplingLowerBoundMilliseconds lower bound of slow requests.
+     *          Any request that took less than this amount of time won't be sampled.
+     * @param slowRequestSamplingUpperBoundMilliseconds upper bound of slow requests.
+     *          Any request that took more than this amount of time will be sampled regardless
+     *          of their percentile.
+     *
+     */
+    public LoggingServiceBuilder slowRequestSamplingPercentile(float slowRequestPercentile,
+                                                               long windowMilliseconds,
+                                                               long slowRequestSamplingLowerBoundMilliseconds,
+                                                               long slowRequestSamplingUpperBoundMilliseconds) {
+        // Check if configuration is valid. A valid configuration requires at least one parameter to be set
+        // correctly. Either `slowRequestPercentile` or `slowRequestSamplingUpperBoundMilliseconds` should be
+        // set to a value that would trigger sampling.
+        if ((slowRequestPercentile <= 0.0 || windowMilliseconds <= 0) &&
+            slowRequestSamplingUpperBoundMilliseconds == Long.MAX_VALUE) {
+            // Ignore the invalid configuration.
+            return this;
+        }
+
+        // Samplers should use Nanoseconds as the unit.
+        final Sampler<Long> percentileMatches;
+        if (0.0 <= slowRequestPercentile && slowRequestPercentile <= 1.0) {
+            percentileMatches = Sampler.percentile(slowRequestPercentile, windowMilliseconds);
+        } else {
+            percentileMatches = Sampler.never();
+        }
+
+        final long slowEnoughNanos = TimeUnit.MILLISECONDS.toNanos(slowRequestSamplingLowerBoundMilliseconds);
+        final Sampler<Long> isSlowEnough = Sampler.greaterThanOrEqual(slowEnoughNanos);
+
+        final long verySlowNanos = TimeUnit.MILLISECONDS.toNanos(slowRequestSamplingUpperBoundMilliseconds);
+        final Sampler<Long> isVerySlow = Sampler.greaterThan(verySlowNanos);
+
+        return slowRequestSampler(
+                isVerySlow.or(isSlowEnough.and(percentileMatches))
+        );
+    }
+
+    /**
      * Returns a newly-created {@link LoggingService} decorating {@link HttpService} based on the properties
      * of this builder.
      */
     public LoggingService build(HttpService delegate) {
-        return new LoggingService(delegate, logWriter(), successSampler, failureSampler);
+        return new LoggingService(delegate, logWriter(), successSampler, failureSampler, slowRequestSampler);
     }
 
     /**
