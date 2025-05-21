@@ -1,6 +1,5 @@
 ---
-menuTitle: "Implement READ"
-order: 5
+sidebar_label: "5. Implement READ"
 type: step
 tags:
   - rest
@@ -11,7 +10,7 @@ level: basic
 # Implementing READ operation
 
 In this step, we'll implement two methods at once. One is for retrieving a single post and another for multiple blog 
-posts. By completing this step, you'll learn to map your service with the HTTP GET (<type://@Get>) method, use parameter injection (<type://@Param>), set default parameter value (<type://@Default>), and return a JSON object (<type://@ProducesJson>) as a response.
+posts. By completing this step, you'll learn to map your service with the HTTP GET ([@Get](type)) method, use parameter injection ([@Param](type)), set default parameter value ([@Default](type)), and return a JSON object ([@ProducesJson](type)) as a response.
 
 <TutorialSteps current={5} />
 
@@ -27,15 +26,15 @@ You can always [download](https://github.com/line/armeria-examples/blob/main/tut
 
 ## 1. Map HTTP method
 
-Let's start [mapping the HTTP GET method](/docs/server-annotated-service#mapping-http-service-methods) with our service method:
+Let's start [mapping the HTTP GET method](/docs/server/annotated-service#mapping-http-service-methods) with our service method:
 
-<Tabs>
-<TabPane tab="Single post" key="1">
+<Tabs groupId="rest-read">
+<TabItem label="Single post" value="1">
 
 Map the HTTP GET method for retrieving a single post:
 
 1. Declare a service method `getBlogPost()` in the class `BlogService`.
-2. Map this service method with the HTTP GET method by adding the <type://@Get> annotation as follows.
+2. Map this service method with the HTTP GET method by adding the [@Get](type) annotation as follows.
 3. Bind the endpoint `/blogs` to the method.
 
   ```java filename=BlogService.java highlight=6
@@ -51,13 +50,13 @@ Map the HTTP GET method for retrieving a single post:
   }
   ```
 
-</TabPane>
-<TabPane tab="Multiple posts" key="2">
+</TabItem>
+<TabItem label="Multiple posts" value="2">
 
 Map the HTTP GET method for retrieving multiple posts:
 
 1. Declare a service method `getBlogPosts()` in the class `BlogService`.
-2. Map this service method with the HTTP GET method by adding the <type://@Get> annotation as follows.
+2. Map this service method with the HTTP GET method by adding the [@Get](type) annotation as follows.
 3. Bind the endpoint `/blogs` to the method.
 
   ```java filename=BlogService.java highlight=6
@@ -73,20 +72,20 @@ Map the HTTP GET method for retrieving multiple posts:
   }
   ```
 
-</TabPane>
+</TabItem>
 </Tabs>
 
 ## 2. Handle parameters
 
 Take in information through _path_ and _query_ parameters for retrieving blog posts. For retrieving a single post, we'll take a blog post ID as the path parameter. For multiple posts, we'll take the sorting order as a query parameter.
 
-<Tabs defaultActiveKey="1">
-<TabPane tab="Single post" key="1">
+<Tabs groupId="rest-read">
+<TabItem label="Single post" value="1">
 
 Let's handle parameters for retrieving a single post:
 
-1. To take in a path parameter, add `/:id` to the <type://@Get> annotation's parameter as in line 6.
-2. [Inject the path parameter](/docs/server-annotated-service#parameter-injection) to the service method, annotate the parameter with <type://@Param> as in line 7.
+1. To take in a path parameter, add `/:id` to the [@Get](type) annotation's parameter as in line 6.
+2. [Inject the path parameter](/docs/server/annotated-service#parameter-injection) to the service method, annotate the parameter with [@Param](type) as in line 7.
 
 ```java filename=BlogService.java showlineno=true
 import com.linecorp.armeria.server.annotation.Param;
@@ -101,14 +100,14 @@ public final class BlogService {
 }
 ```
 
-</TabPane>
-<TabPane tab="Multiple posts" key="2">
+</TabItem>
+<TabItem label="Multiple posts" value="2">
 
 Let's handle parameters for retrieving multiple posts:
 
-1. Specify the endpoint for the service using the <type://@Get> annotation.
-2. [Inject the parameter](/docs/server-annotated-service#parameter-injection) by annotating the parameter `descending` with <type://@Param> as in line 8.
-3. Set the default sorting order to descending by annotating the parameter `descending` with <type://@Default>, with its parameter as `"true"`.
+1. Specify the endpoint for the service using the [@Get](type) annotation.
+2. [Inject the parameter](/docs/server/annotated-service#parameter-injection) by annotating the parameter `descending` with [@Param](type) as in line 8.
+3. Set the default sorting order to descending by annotating the parameter `descending` with [@Default](type), with its parameter as `"true"`.
 
   ```java filename=BlogService.java showlineno=true
   import com.linecorp.armeria.server.annotation.Param;
@@ -124,15 +123,15 @@ Let's handle parameters for retrieving multiple posts:
   }
   ```
 
-</TabPane>
+</TabItem>
 </Tabs>
 
 ## 3. Implement service code
 
 In this step, write the code required for service itself.
 
-<Tabs defaultActiveKey="1">
-<TabPane tab="Single post" key="1">
+<Tabs groupId="rest-read">
+<TabItem label="Single post" value="1">
 
 To retrieve a single blog post information, copy the following code inside the `getBlogPost()` method.
 
@@ -143,8 +142,8 @@ public void getBlogPost(@Param int id) {
 }
 ```
 
-</TabPane>
-<TabPane tab="Multiple posts" key="2">
+</TabItem>
+<TabItem label="Multiple posts" value="2">
 
 To retrieve multiple blog posts, copy the following code inside the `getBlogPosts()` method. Note that the return type has been changed from `void` to `Iterable<BlogPost>`.
 
@@ -168,7 +167,7 @@ public Iterable<BlogPost> getBlogPosts(@Param @Default("true") boolean descendin
 }
 ```
 
-</TabPane>
+</TabItem>
 </Tabs>
 
 
@@ -176,13 +175,13 @@ public Iterable<BlogPost> getBlogPosts(@Param @Default("true") boolean descendin
 
 Let's return a response for the service call.
 
-<Tabs defaultActiveKey="1">
-<TabPane tab="Single post" key="1">
+<Tabs groupId="rest-read">
+<TabItem label="Single post" value="1">
 
 To return a response for getting a single post:
 
-1. Replace the return type of the `getBlogPost()` method from `void` to <type://HttpResponse>.
-2. Return a response using Armeria's <type://HttpResponse> containing the content of the blog post retrieved.
+1. Replace the return type of the `getBlogPost()` method from `void` to [HttpResponse](type).
+2. Return a response using Armeria's [HttpResponse](type) containing the content of the blog post retrieved.
 
 ```java filename=BlogService.java highlight=5,8
 import com.linecorp.armeria.common.HttpResponse;
@@ -197,10 +196,10 @@ public final class BlogService {
 }
 ```
 
-</TabPane>
-<TabPane tab="Multiple posts" key="2">
+</TabItem>
+<TabItem label="Multiple posts" value="2">
 
-We've already implemented returning multiple blog posts in the previous step. Here, annotate the method `getBlogPosts()` with <type://@ProducesJson>. This converts a list of `BlogPost` objects into a JSON response.
+We've already implemented returning multiple blog posts in the previous step. Here, annotate the method `getBlogPosts()` with [@ProducesJson](type). This converts a list of `BlogPost` objects into a JSON response.
 
 ```java filename=BlogService.java highlight=4
 import com.linecorp.armeria.server.annotation.ProducesJson;
@@ -212,7 +211,7 @@ public Iterable<BlogPost> getBlogPosts(@Param @Default("true") boolean descendin
 }
 ```
 
-</TabPane>
+</TabItem>
 </Tabs>
 
 ## 5. Test retrieving a single post
@@ -292,12 +291,12 @@ void getBlogPosts() throws JsonProcessingException {
 Run all the test cases on your IDE or using Gradle.
 Check that you see the test is passed.
 
-You can test this also with Armeria's [Documentation service](/docs/server-docservice). See [Using DocService after adding service methods](/tutorials/rest/blog/add-services-to-server#using-docservice-after-adding-service-methods) for instructions.
+You can test this also with Armeria's [Documentation service](/docs/server/docservice). See [Using DocService after adding service methods](/docs/tutorials/rest/add-services-to-server#using-docservice-after-adding-service-methods) for instructions.
 
 ## Next step
 
-In this step, we've implemented methods for a READ operation and used Armeria's annotations; <type://@Get>, <type://@ProducesJson>, <type://@Param>, and <type://@Default>.
+In this step, we've implemented methods for a READ operation and used Armeria's annotations; [@Get](type), [@ProducesJson](type), [@Param](type), and [@Default](type).
 
-Next, at [Step 6. Implement UPDATE](/tutorials/rest/blog/implement-update), we'll implement an UPDATE operation to modify existing blog posts.
+Next, at [Step 6. Implement UPDATE](/docs/tutorials/rest/implement-update), we'll implement an UPDATE operation to modify existing blog posts.
 
 <TutorialSteps current={5} />

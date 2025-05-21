@@ -1,6 +1,5 @@
 ---
-menuTitle: "Implement UPDATE"
-order: 6
+sidebar_label: "6. Implement UPDATE"
 type: step
 tags:
   - rest
@@ -11,7 +10,7 @@ level: basic
 
 # Implementing UPDATE operation
 
-In this step, you'll write a method for updating a blog post. By completing this step, you'll learn to map your service with the HTTP PUT (<type://@Put>) method, use parameter injection, and convert request body into a Java object using a request object (<type://@RequestObject>).
+In this step, you'll write a method for updating a blog post. By completing this step, you'll learn to map your service with the HTTP PUT ([@Put](type)) method, use parameter injection, and convert request body into a Java object using a request object ([@RequestObject](type)).
 
 <TutorialSteps current={6} />
 
@@ -27,10 +26,10 @@ You can always [download](https://github.com/line/armeria-examples/blob/main/tut
 
 ## 1. Map HTTP method
 
-Let's start [mapping the HTTP PUT method](/docs/server-annotated-service#mapping-http-service-methods) with our service method:
+Let's start [mapping the HTTP PUT method](/docs/server/annotated-service#mapping-http-service-methods) with our service method:
 
 1. Declare a service method, `updateBlogPost()`, in the class `BlogService`.
-2. Map this service method with the HTTP PUT method by adding the <type://@Put> annotation.
+2. Map this service method with the HTTP PUT method by adding the [@Put](type) annotation.
 3. Bind the endpoint `/blogs` to the method.
 
 ```java filename=BlogService.java highlight=6
@@ -48,11 +47,11 @@ public final class BlogService {
 
 ## 2. Handle parameters
 
-For updating a blog post, let's take a blog post ID (`id`) and new blog post information to update with. For [creating a blog post](/tutorials/rest/blog/implement-create), we've used Armeria's <type://RequestConverter> to convert a request body into a Java object. For a change, let's try using <type://@RequestObject> to convert a request body.
+For updating a blog post, let's take a blog post ID (`id`) and new blog post information to update with. For [creating a blog post](/docs/tutorials/rest/implement-create), we've used Armeria's [RequestConverter](type) to convert a request body into a Java object. For a change, let's try using [@RequestObject](type) to convert a request body.
 
-1. Take in the ID value as a path parameter by adding `/blogs/:id` to the <type://@Put> annotation.
-2. [Inject the path parameter](/docs/server-annotated-service#parameter-injection) to the service method by annotating the parameter with <type://@Param>.
-3. [Convert request body](/docs/server-annotated-service#converting-an-http-request-to-a-java-object) into a Java object by annotating the `BlogPost` parameter with <type://@RequestObject>.
+1. Take in the ID value as a path parameter by adding `/blogs/:id` to the [@Put](type) annotation.
+2. [Inject the path parameter](/docs/server/annotated-service#parameter-injection) to the service method by annotating the parameter with [@Param](type).
+3. [Convert request body](/docs/server/annotated-service#converting-an-http-request-to-a-java-object) into a Java object by annotating the `BlogPost` parameter with [@RequestObject](type).
 
   ```java filename=BlogService.java
   import com.linecorp.armeria.server.annotation.Param;
@@ -116,8 +115,8 @@ Two possibilities are available for the response. If the blog post to update exi
 
 Let's return an error for the request to update a blog post that doesn't exist.
 
-1. Replace the return type of the `updateBlogPost()` method from `void` to <type://HttpResponse>.
-2. Return a response using Armeria's <type://HttpResponse> containing <type://HttpStatus#NOT_FOUND>.
+1. Replace the return type of the `updateBlogPost()` method from `void` to [HttpResponse](type).
+2. Return a response using Armeria's [HttpResponse](type) containing [HttpStatus#NOT_FOUND](type).
 
 ```java filename=BlogService.java highlight=8,11
 import com.linecorp.armeria.common.HttpResponse;
@@ -141,8 +140,8 @@ public final class BlogService {
 
 Let's return the information updated when the target blog post exists:
 
-1. Replace the return type of the `updateBlogPost()` method from `void` to <type://HttpResponse>.
-2. Return a response using Armeria's <type://HttpResponse> containing the updated information of the post.
+1. Replace the return type of the `updateBlogPost()` method from `void` to [HttpResponse](type).
+2. Return a response using Armeria's [HttpResponse](type) containing the updated information of the post.
 
 ```java filename=BlogService.java highlight=7,9
 import com.linecorp.armeria.common.HttpResponse;
@@ -190,13 +189,13 @@ void updateBlogPosts() throws JsonProcessingException {
 Run all the test cases on your IDE or using Gradle.
 Check that you see the test is passed.
 
-You can test this also with Armeria's [Documentation service](/docs/server-docservice). See [Using DocService after adding service methods](/tutorials/rest/blog/add-services-to-server#using-docservice-after-adding-service-methods) for instructions.
+You can test this also with Armeria's [Documentation service](/docs/server/docservice). See [Using DocService after adding service methods](/docs/tutorials/rest/add-services-to-server#using-docservice-after-adding-service-methods) for instructions.
 
 ## Next step
 
-In this step, we've implemented a method for an UPDATE operation and used Armeria's annotations; <type://@Put>, <type://@Param>, and <type://@RequestObject>.
+In this step, we've implemented a method for an UPDATE operation and used Armeria's annotations; [@Put](type), [@Param](type), and [@RequestObject](type).
 
-Next, at [Step 7. Implement DELETE](/tutorials/rest/blog/implement-delete), we'll implement a DELETE operation to delete
+Next, at [Step 7. Implement DELETE](/docs/tutorials/rest/implement-delete), we'll implement a DELETE operation to delete
 blog posts.
 
 <TutorialSteps current={6} />

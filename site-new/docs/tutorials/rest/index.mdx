@@ -10,7 +10,7 @@ tags:
 level: basic
 ---
 
-import versions from '/gen-src/versions.json';
+import versions from '../../../gen-src-temp/versions.json';
 
 # REST tutorial introduction
 
@@ -18,11 +18,11 @@ Using Armeria's annotations, you can build RESTful services on the go.
 Through this tutorial, you'll learn to build a RESTful service with Armeria.
 In particular, you'll be using these Armeria features:
 
-- [Service annotations](/docs/server-annotated-service)
-- [Request converter](/docs/server-annotated-service#converting-an-http-request-to-a-java-object)
-- [Parameter injection](/docs/server-annotated-service#injecting-value-of-parameters-and-http-headers-into-a-java-object)
-- [Exception handler](/docs/server-annotated-service#handling-exceptions)
-- [Blocking task executor](/docs/server-annotated-service/#specifying-a-blocking-task-executor)
+- [Service annotations](/docs/server/annotated-service)
+- [Request converter](/docs/server/annotated-service#converting-an-http-request-to-a-java-object)
+- [Parameter injection](/docs/server/annotated-service#injecting-value-of-parameters-and-http-headers-into-a-java-object)
+- [Exception handler](/docs/server/annotated-service#handling-exceptions)
+- [Blocking task executor](/docs/server/annotated-service/#specifying-a-blocking-task-executor)
 
 This tutorial is based on a [sample service](#sample-service), a minimal blog service, with which you can create, read, update, and delete blog posts.
 
@@ -49,10 +49,10 @@ The [sample service](https://github.com/line/armeria-examples/tree/main/tutorial
 
 | Operation | Method | Annotation |
 | -- | -- | -- |
-| Create | `createBlogPost()` | <type://@Post> |
-| Read | `getBlogPost()`, `getBlogPosts()` | <type://@Get> |
-| Update | `updateBlogPost()` | <type://@Put> |
-| Delete | `deleteBlogPost()` | <type://@Delete> |
+| Create | `createBlogPost()` | [@Post](type) |
+| Read | `getBlogPost()`, `getBlogPosts()` | [@Get](type) |
+| Update | `updateBlogPost()` | [@Put](type) |
+| Delete | `deleteBlogPost()` | [@Delete](type) |
 
 The sample service code consists of the following folders and files.
 
@@ -74,16 +74,16 @@ rest-api-annotated-service/
 └─ build.gradle
 ```
 
-<Tip>
+:::tip
 
   To keep our focus on Armeria, this tutorial and the sample service implement memory-based operations instead of using a database.
 
-</Tip>
+:::
 
 ## Build and run sample service
 
 Have a go at running the sample service and experience the outcome of this tutorial.
-Using Armeria's [Documentation Service](/docs/server-docservice), you can see a server running, receiving requests and sending responses.
+Using Armeria's [Documentation Service](/docs/server/docservice), you can see a server running, receiving requests and sending responses.
 
 1. Download the code from [here](https://github.com/line/armeria-examples/tree/main/tutorials/rest-api-annotated-service).
 2. Build the sample service using the Gradle Wrapper.
@@ -121,10 +121,10 @@ Below is a part of the `build.gradle` file for the sample service.
 
 Start writing the blog service yourself by following the tutorial step by step:
 
-1. [Creating a server](/tutorials/rest/blog/create-server)
-2. [Preparing a data object](/tutorials/rest/blog/prepare-data-object)
-3. [Adding services to server](/tutorials/rest/blog/add-services-to-server)
-4. [Implementing CREATE operation](/tutorials/rest/blog/implement-create)
-5. [Implementing READ operation](/tutorials/rest/blog/implement-read)
-6. [Implementing UPDATE operation](/tutorials/rest/blog/implement-update)
-7. [Implementing DELETE operation](/tutorials/rest/blog/implement-delete)
+1. [Creating a server](/docs/tutorials/rest/create-server)
+2. [Preparing a data object](/docs/tutorials/rest/prepare-data-object)
+3. [Adding services to server](/docs/tutorials/rest/add-services-to-server)
+4. [Implementing CREATE operation](/docs/tutorials/rest/implement-create)
+5. [Implementing READ operation](/docs/tutorials/rest/implement-read)
+6. [Implementing UPDATE operation](/docs/tutorials/rest/implement-update)
+7. [Implementing DELETE operation](/docs/tutorials/rest/implement-delete)

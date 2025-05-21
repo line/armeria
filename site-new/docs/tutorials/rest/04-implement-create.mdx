@@ -1,6 +1,5 @@
 ---
-menuTitle: "Implement CREATE"
-order: 4
+sidebar_label: "4. Implement CREATE"
 type: step
 tags:
   - rest
@@ -12,8 +11,8 @@ level: basic
 # Implementing CREATE operation
 
 In this step, you'll write a service method for creating a blog post and a test method to verify the service method.
-By completing this step, you'll learn to map your service with the HTTP POST (<type://@Post>) method,
-make your own request converter (<type://@RequestConverter>), and utilize a server extension for testing (<type://ServerExtension>).
+By completing this step, you'll learn to map your service with the HTTP POST ([@Post](type)) method,
+make your own request converter ([@RequestConverter](type)), and utilize a server extension for testing ([ServerExtension](type)).
 
 <TutorialSteps current={4} />
 
@@ -28,10 +27,10 @@ You can always [download](https://github.com/line/armeria-examples/blob/main/tut
 
 ## 1. Map HTTP method
 
-Let's start [mapping the HTTP POST method](/docs/server-annotated-service#mapping-http-service-methods) with our service method:
+Let's start [mapping the HTTP POST method](/docs/server/annotated-service#mapping-http-service-methods) with our service method:
 
 1. Declare a service method, `createBlogPost()`, in the class `BlogService`.
-2. Map this service method with the HTTP POST method by adding the <type://@Post> annotation.
+2. Map this service method with the HTTP POST method by adding the [@Post](type) annotation.
 3. Bind the endpoint `/blogs` to the method.
 
 ```java filename=BlogService.java highlight=6
@@ -47,17 +46,17 @@ public final class BlogService {
 
 ## 2. Handle parameters
 
-Let's receive blog post information through a request body. Armeria's [request converter](/docs/server-annotated-service#converting-an-http-request-to-a-java-object) converts request parameters in HTTP messages into Java objects for you. In the request converter, we define what keys of a JSON object to map with what properties of a Java object.
+Let's receive blog post information through a request body. Armeria's [request converter](/docs/server/annotated-service#converting-an-http-request-to-a-java-object) converts request parameters in HTTP messages into Java objects for you. In the request converter, we define what keys of a JSON object to map with what properties of a Java object.
 
 Let's first [write a request converter](#write-a-request-converter) and then [register the request converter](#register-a-request-converter) to the service method.
 
 ### Write a request converter
 
-Armeria's [request converter](/docs/server-annotated-service#converting-an-http-request-to-a-java-object) converts a request body from a client into a Java object for you.
+Armeria's [request converter](/docs/server/annotated-service#converting-an-http-request-to-a-java-object) converts a request body from a client into a Java object for you.
 
-We can use Armeria's default <type://JacksonRequestConverterFunction> as is, but here let's give a go at customizing a request converter for our blog post requests. We want to convert blog post details into a Java object.
+We can use Armeria's default [JacksonRequestConverterFunction](type) as is, but here let's give a go at customizing a request converter for our blog post requests. We want to convert blog post details into a Java object.
 
-1. Create a `BlogPostRequestConverter.java` file and declare a class, implementing the <type://RequestConverterFunction> interface. For the sake of simplicity, generate impromptu IDs for this tutorial.
+1. Create a `BlogPostRequestConverter.java` file and declare a class, implementing the [RequestConverterFunction](type) interface. For the sake of simplicity, generate impromptu IDs for this tutorial.
 
   ```java filename=BlogRequestConverter.java
   package example.armeria.server.blog;
@@ -121,7 +120,7 @@ We can use Armeria's default <type://JacksonRequestConverterFunction> as is, but
 
 ### Register a request converter
 
-In this step, assign the [request converter we customized](#write-a-request-converter) to our service method. Annotate the service method with <type://@RequestConverter> and specify the <type://RequestConverterFunction> class as `BlogPostRequestConverter.class`.
+In this step, assign the [request converter we customized](#write-a-request-converter) to our service method. Annotate the service method with [@RequestConverter](type) and specify the [RequestConverterFunction](type) class as `BlogPostRequestConverter.class`.
 
 ```java filename=BlogService.java highlight=7
 import com.linecorp.armeria.server.annotation.RequestConverter;
@@ -158,8 +157,8 @@ time.
 
 Let's return a response for blog post creation:
 
-1. Replace the return type of the `createBlogPost()` method from `void` to <type://HttpResponse>.
-2. Create and return an HTTP response using Armeria's <type://HttpResponse> with the information of the post created.
+1. Replace the return type of the `createBlogPost()` method from `void` to [HttpResponse](type).
+2. Create and return an HTTP response using Armeria's [HttpResponse](type) with the information of the post created.
 
   ```java filename=BlogService.java highlight=5,7
   import com.linecorp.armeria.common.HttpResponse;
@@ -193,10 +192,10 @@ class BlogServiceTest {
 
 ## 6. Register a ServerExtension
 
-Armeria's <type://ServerExtension> automatically handles set-up and tear-down of a server for testing.
+Armeria's [ServerExtension](type) automatically handles set-up and tear-down of a server for testing.
 This is convenient as it eliminates the need to execute the main method to set up a server before running our tests.
 
-In the `BlogServiceTest` class, register a <type://ServerExtension> as follows.
+In the `BlogServiceTest` class, register a [ServerExtension](type) as follows.
 Note that the service instance is added to the configuration.
 
 ```java filename=BlogServiceTest.java
@@ -264,14 +263,14 @@ Let's test if we can create a blog post.
 
   The service worked as expected if you see the test case passed.
 
-You can test this also with Armeria's [Documentation service](/docs/server-docservice). See [Using DocService after adding service methods](/tutorials/rest/blog/add-services-to-server#using-docservice-after-adding-service-methods) for instructions.
+You can test this also with Armeria's [Documentation service](/docs/server/docservice). See [Using DocService after adding service methods](/docs/tutorials/rest/add-services-to-server#using-docservice-after-adding-service-methods) for instructions.
 
 ## Next step
 
-In this step, we've written a method to implement a CREATE operation and used Armeria's annotations; <type://@Post> and <type://@RequestConverter>.
-We've also registered <type://ServerExtension> to our test and written a test method.
+In this step, we've written a method to implement a CREATE operation and used Armeria's annotations; [@Post](type) and [@RequestConverter](type).
+We've also registered [ServerExtension](type) to our test and written a test method.
 
-Next, at [Step 5. Implement READ](/tutorials/rest/blog/implement-read), we'll implement a READ operation to read a
+Next, at [Step 5. Implement READ](/docs/tutorials/rest/implement-read), we'll implement a READ operation to read a
 single post and also multiple posts.
 
 <TutorialSteps current={4} />

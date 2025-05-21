@@ -1,6 +1,5 @@
 ---
-menuTitle: "Create a server"
-order: 1
+sidebar_label: "1. Create a server"
 type: step
 tags:
   - server
@@ -10,17 +9,17 @@ level: basic
 # Creating a server
 
 As the first step of the tutorial, we create a server instance and run a dummy service to check that the server and service are launched.
-We'll use Armeria's <type://ServerBuilder> for this task.
+We'll use Armeria's [ServerBuilder](type) for this task.
 
 <TutorialSteps current={1} />
 
 ## What you need
 
-No preparation is required for this step. Do check that you've prepared the [prerequisites](/tutorials/rest/blog/#prerequisites).
+No preparation is required for this step. Do check that you've prepared the [prerequisites](/docs/tutorials/rest#prerequisites).
 
 ## 1. Create a server instance
 
-Let's create a server instance using Armeria's <type://ServerBuilder>:
+Let's create a server instance using Armeria's [ServerBuilder](type):
 
 1. Create a `Main` class. You can see the full version of the file [here](https://github.com/line/armeria-examples/blob/main/tutorials/rest-api-annotated-service/src/main/java/example/armeria/server/blog/Main.java).
 
@@ -53,7 +52,7 @@ Let's create a server instance using Armeria's <type://ServerBuilder>:
     ...
   ```
 
-  To learn how to add the actual blog service, see [Step 3. Add services to a server](/tutorials/rest/blog/add-services-to-server).
+  To learn how to add the actual blog service, see [Step 3. Add services to a server](/docs/tutorials/rest/add-services-to-server).
 
 ## 2. Start the server
 
@@ -86,12 +85,12 @@ As the last step, launch the server and run the service to check if you're all s
 
 Open the URL `http://127.0.0.1:8080` on a web browser and check the message `Hello, Armeria!` is displayed in the page.
 
-![](../../../../images/tutorial_test_run.png)
+![](/img/tutorial_test_run.png)
 
 ## What's next
 
 In this step, you've built a server, added a dummy service and launched a server.
 
-Next, at [Step 2. Prepare a data object](/tutorials/rest/blog/prepare-data-object), you'll write a data object to specify and contain blog post information.
+Next, at [Step 2. Prepare a data object](/docs/tutorials/rest/prepare-data-object), you'll write a data object to specify and contain blog post information.
 
 <TutorialSteps current={1} />
