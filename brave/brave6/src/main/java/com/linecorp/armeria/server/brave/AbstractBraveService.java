@@ -24,6 +24,7 @@ import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.brave.RequestContextCurrentTraceContext;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.internal.common.RequestContextExtension;
+import com.linecorp.armeria.internal.common.brave.TraceContextUtil;
 import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.SimpleDecoratingService;
@@ -56,6 +57,7 @@ abstract class AbstractBraveService<BI extends brave.Request, BO extends brave.R
         }
         final BI braveReq = braveRequest(ctx);
         final Span span = handleReceive(braveReq);
+        TraceContextUtil.setTraceContext(ctx, span.context());
 
         final RequestContextExtension ctxExtension = ctx.as(RequestContextExtension.class);
         if (currentTraceContext.scopeDecoratorAdded() && !span.isNoop() && ctxExtension != null) {
