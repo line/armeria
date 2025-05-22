@@ -23,7 +23,6 @@ import java.util.Map;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableMap;
 
 import com.linecorp.armeria.server.docs.DocService;
@@ -65,7 +64,9 @@ final class ThriftDocStringExtractor extends DocStringExtractor {
                 final Map<String, Object> namespaces =
                         (Map<String, Object>) json.getOrDefault("namespaces", ImmutableMap.of());
                 final String packageName = (String) namespaces.get("java");
-                assert packageName != null : "Missing namespace for Java? " + namespaces;
+                if (packageName == null) {
+                    continue;
+                }
                 json.forEach((key, children) -> {
                     if (children instanceof Collection) {
                         @SuppressWarnings("unchecked")
@@ -91,7 +92,7 @@ final class ThriftDocStringExtractor extends DocStringExtractor {
             final String doc = (String) map.get("doc");
             final String childPrefix;
             if (name != null) {
-                childPrefix = MoreObjects.firstNonNull(prefix, "") + delimiter + name;
+                childPrefix = prefix + delimiter + name;
                 if (doc != null) {
                     docStrings.put(childPrefix, doc.trim());
                 }
