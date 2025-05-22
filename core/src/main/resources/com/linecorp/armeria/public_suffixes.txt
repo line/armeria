@@ -566,6 +566,7 @@ ap.ngrok.io
 aparecida.br
 apartments
 api.gov.uk
+api.lp.dev
 api.stdlib.com
 apigee.io
 app
@@ -1436,7 +1437,6 @@ cloud.goog
 cloud.interhostsolutions.be
 cloud.nospamproxy.com
 cloud66.ws
-cloud66.zone
 cloudaccess.host
 cloudaccess.net
 cloudapp.net
@@ -2305,6 +2305,7 @@ elasticbeanstalk.com
 elblag.pl
 elementor.cloud
 elementor.cool
+eliv-cdn.kr
 eliv-dns.kr
 elk.pl
 elverum.no
@@ -2819,6 +2820,7 @@ from-wv.com
 from-wy.com
 from.hr
 from.tv
+frontend.encr.app
 frontier
 frosinone.it
 frosta.no
@@ -2979,6 +2981,7 @@ giske.no
 git-pages.rit.edu
 git-repos.de
 gitapp.si
+github.app
 github.io
 githubpreview.dev
 githubusercontent.com
@@ -3985,6 +3988,7 @@ isehara.kanagawa.jp
 isen.kagoshima.jp
 isernia.it
 iserv.dev
+iserv.host
 iservschule.de
 isesaki.gunma.jp
 ishigaki.okinawa.jp
@@ -6101,6 +6105,7 @@ obi
 obihiro.hokkaido.jp
 obira.hokkaido.jp
 obj.ag
+objects.lp.dev
 objects.lpg.cloudscale.ch
 objects.rma.cloudscale.ch
 obl.ong
