@@ -37,7 +37,7 @@ Map the HTTP GET method for retrieving a single post:
 2. Map this service method with the HTTP GET method by adding the [@Get](type) annotation as follows.
 3. Bind the endpoint `/blogs` to the method.
 
-  ```java filename=BlogService.java highlight=6
+  ```java title="BlogService.java" {6}
   import com.linecorp.armeria.server.annotation.Get;
 
   public final class BlogService {
@@ -59,7 +59,7 @@ Map the HTTP GET method for retrieving multiple posts:
 2. Map this service method with the HTTP GET method by adding the [@Get](type) annotation as follows.
 3. Bind the endpoint `/blogs` to the method.
 
-  ```java filename=BlogService.java highlight=6
+  ```java title="BlogService.java" {6}
   import com.linecorp.armeria.server.annotation.Get;
 
   public final class BlogService {
@@ -87,7 +87,7 @@ Let's handle parameters for retrieving a single post:
 1. To take in a path parameter, add `/:id` to the [@Get](type) annotation's parameter as in line 6.
 2. [Inject the path parameter](/docs/server/annotated-service#parameter-injection) to the service method, annotate the parameter with [@Param](type) as in line 7.
 
-```java filename=BlogService.java showlineno=true
+```java title="BlogService.java" showLineNumbers
 import com.linecorp.armeria.server.annotation.Param;
 
 public final class BlogService {
@@ -109,7 +109,7 @@ Let's handle parameters for retrieving multiple posts:
 2. [Inject the parameter](/docs/server/annotated-service#parameter-injection) by annotating the parameter `descending` with [@Param](type) as in line 8.
 3. Set the default sorting order to descending by annotating the parameter `descending` with [@Default](type), with its parameter as `"true"`.
 
-  ```java filename=BlogService.java showlineno=true
+  ```java title="BlogService.java" showLineNumbers
   import com.linecorp.armeria.server.annotation.Param;
   import com.linecorp.armeria.server.annotation.Default;
 
@@ -135,7 +135,7 @@ In this step, write the code required for service itself.
 
 To retrieve a single blog post information, copy the following code inside the `getBlogPost()` method.
 
-```java filename=BlogService.java highlight=3
+```java title="BlogService.java" {3}
 @Get("/blogs")
 public void getBlogPost(@Param int id) {
   BlogPost blogPost = blogPosts.get(id);
@@ -147,7 +147,7 @@ public void getBlogPost(@Param int id) {
 
 To retrieve multiple blog posts, copy the following code inside the `getBlogPosts()` method. Note that the return type has been changed from `void` to `Iterable<BlogPost>`.
 
-```java filename=BlogService.java
+```java title="BlogService.java"
 import java.util.Map.Entry;
 import java.util.Collections;
 import java.util.Comparator;
@@ -183,7 +183,7 @@ To return a response for getting a single post:
 1. Replace the return type of the `getBlogPost()` method from `void` to [HttpResponse](type).
 2. Return a response using Armeria's [HttpResponse](type) containing the content of the blog post retrieved.
 
-```java filename=BlogService.java highlight=5,8
+```java title="BlogService.java" {5,8}
 import com.linecorp.armeria.common.HttpResponse;
 
 public final class BlogService {
@@ -201,7 +201,7 @@ public final class BlogService {
 
 We've already implemented returning multiple blog posts in the previous step. Here, annotate the method `getBlogPosts()` with [@ProducesJson](type). This converts a list of `BlogPost` objects into a JSON response.
 
-```java filename=BlogService.java highlight=4
+```java title="BlogService.java" {4}
 import com.linecorp.armeria.server.annotation.ProducesJson;
 
 @Get("/blogs")
@@ -219,7 +219,7 @@ public Iterable<BlogPost> getBlogPosts(@Param @Default("true") boolean descendin
 Let's test if we can retrieve a blog post we created.
 
 1. In the `BlogServiceTest` class, add a test method to retrieve the first blog post with ID `0`.
-  ```java filename=BlogServiceTest.java
+  ```java title="BlogServiceTest.java"
   @Test
   void getBlogPost() throws JsonProcessingException {
     final WebClient client = WebClient.of(server.httpUri());
@@ -234,7 +234,7 @@ Let's test if we can retrieve a blog post we created.
   ```
 2. Add annotations to configure the order our test methods will be executed.
   The annotations guarantee that the first blog post will be created in the `createBlogPost()` method before we try to retrieve it in the `getBlogPost()` method.
-  ```java filename=BlogServiceTest.java
+  ```java title="BlogServiceTest.java"
   import org.junit.jupiter.api.MethodOrderer.OrderAnnotation;
   import org.junit.jupiter.api.Order;
   import org.junit.jupiter.api.TestMethodOrder;
@@ -265,7 +265,7 @@ Let's test if we can retrieve a blog post we created.
 Finally, let's test if we can retrieve multiple posts.
 Add a test method like the following to create the second blog post and test retrieving the list of blog posts.
 
-```java filename=BlogServiceTest.java
+```java title="BlogServiceTest.java"
 import java.util.List;
 
 @Test

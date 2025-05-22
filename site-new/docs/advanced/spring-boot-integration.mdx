@@ -40,7 +40,7 @@ First, add the following dependency to your application.
 
 Serve the embedded [TomcatService](type) via Armeria by using the [ArmeriaServerConfigurator](type) bean.
 
-```java filename=ArmeriaConfiguration.java
+```java title="ArmeriaConfiguration.java"
 import com.linecorp.armeria.server.tomcat.TomcatService;
 import com.linecorp.armeria.spring.ArmeriaServerConfigurator;
 import org.apache.catalina.connector.Connector;
@@ -73,7 +73,7 @@ Add the following properties to your `application.yml` (or `application.properti
 This configuration will prevent the exposure of the embedded Tomcat service and instead expose your Armeria service.
 You can explore additional configuration options in [ArmeriaSettings](type).
 
-```yaml filename=application.yml
+```yaml title="application.yml"
 # Prevent the embedded Tomcat from opening a TCP/IP port.
 server:
   port: -1
@@ -119,7 +119,7 @@ Armeria's [annotated service](/docs/server/annotated-service) is similar to a Sp
 You can declare the annotated service as a bean and inject it into the [ServerBuilder](type).
 Here's an example:
 
-```java filename=TodoAnnotatedService.java
+```java title="TodoAnnotatedService.java"
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.server.annotation.*;
@@ -164,7 +164,7 @@ public class TodoAnnotatedService {
 
 To inject the annotated service into the [ArmeriaServerConfigurator](type) bean, you can follow this approach:
 
-```java filename=ArmeriaConfiguration.java
+```java title="ArmeriaConfiguration.java"
 @Bean
 public ArmeriaServerConfigurator armeriaServerConfigurator(TodoAnnotatedService todoAnnotatedService) {
    return serverBuilder -> {
@@ -177,7 +177,7 @@ public ArmeriaServerConfigurator armeriaServerConfigurator(TodoAnnotatedService 
 
 The following configuration prevents the execution of Spring's embedded web server and instead runs Armeria.
 
-```yaml filename=application.yml
+```yaml title="application.yml"
 # See https://docs.spring.io/spring-boot/docs/current/reference/html/howto.html#howto.webserver.disable.
 # The application should not run as a web application and should not start an embedded web server.
 spring.main.web-application-type: none
@@ -195,7 +195,7 @@ Armeria supports four internal services that are useful for monitoring and manag
 You can enable these services by including their service IDs in your `application.yml` (or `application.properties`) file.
 Service ids are `docs`, `health`, `metrics`, and `actuator`. You can include one or multiple service IDs based on your requirements.
 
-```yaml filename=application.yml
+```yaml title="application.yml"
 armeria:
   ports:
     - port: 8080
@@ -227,7 +227,7 @@ For instance, it allows you to test RPC protocols in a web browser console, simi
 Add the service ID `docs` to `armeria.internal-services.include` configuration.
 The `armeria.docs-path` is not necessary, as the default path for the documentation service is `/internal/docs`.
 
-```yaml filename=application.yml
+```yaml title="application.yml"
 armeria:
   internal-services:
     include: docs
@@ -236,7 +236,7 @@ armeria:
 
 To add custom configuration to your documentation service, you can utilize the [DocServiceConfigurator](type) bean.
 
-```java filename=ArmeriaConfiguration.java
+```java title="ArmeriaConfiguration.java"
 @Bean
 public DocServiceConfigurator docServiceConfigurator() {
     return docServiceBuilder -> docServiceBuilder
@@ -251,7 +251,7 @@ To customize the health check operation, you can utilize the [HealthChecker](typ
 Add the service ID `health` to the `armeria.internal-services.include` configuration.
 The `armeria.health-check-path` is not necessary, as the default path for the health check service is `/internal/healthcheck`.
 
-```yaml filename=application.yml
+```yaml title="application.yml"
 armeria:
   internal-services:
     include: health
@@ -261,7 +261,7 @@ armeria:
 You can create a [HealthChecker](type) bean that implements your custom health check logic.
 For example, the below code determines if the server is healthy using Tomcat connector state.
 
-```java filename=ArmeriaConfiguration.java
+```java title="ArmeriaConfiguration.java"
 @Bean
 public HealthChecker tomcatConnectorHealthChecker(ServletWebServerApplicationContext applicationContext) {
     final Connector connector = getConnector(applicationContext);
@@ -271,7 +271,7 @@ public HealthChecker tomcatConnectorHealthChecker(ServletWebServerApplicationCon
 
 You can also add custom configuration to the service using the [HealthCheckServiceConfigurator](type) bean, similar to the documentation service.
 
-```java filename=ArmeriaConfiguration.java
+```java title="ArmeriaConfiguration.java"
 @Bean
 public HealthCheckServiceConfigurator healthCheckServiceConfigurator() {
     return healthCheckServiceBuilder -> healthCheckServiceBuilder
@@ -289,7 +289,7 @@ for comprehensive monitoring and analysis.
 To include the metrics service, simply add the service ID `metrics` to the `armeria.internal-services.include` configuration.
 You do not need to specify `armeria.enable-metrics` or `armeria.metrics-path` as the default path for the metrics service is `/internal/metrics`.
 
-```yaml filename=application.yml
+```yaml title="application.yml"
 armeria:
   internal-services:
     include: metrics
@@ -309,7 +309,7 @@ We will illustrate the bean configuration using an example with the Prometheus m
 First, create a [`PrometheusMeterRegistry`](https://www.javadoc.io/doc/io.micrometer/micrometer-registry-prometheus/latest/io/micrometer/prometheus/PrometheusMeterRegistry.html) bean.
 If you are using a different monitoring system, create a bean of [`MeterRegistry`](https://www.javadoc.io/doc/io.micrometer/micrometer-core/latest/io/micrometer/core/instrument/MeterRegistry.html) type.
 
-```java filename=ArmeriaConfiguration.java
+```java title="ArmeriaConfiguration.java"
 @Bean
 public PrometheusMeterRegistry prometheusMeterRegistry() {
     return new PrometheusMeterRegistry(PrometheusConfig.DEFAULT);
@@ -327,7 +327,7 @@ public PrometheusMeterRegistry prometheusMeterRegistry() {
 To add a prefix to the ID of collected metrics, you can use the [MeterIdPrefixFunction](type) bean.
 Additionally, you can customize the configuration of the service by utilizing the [MetricCollectingServiceConfigurator](type) bean.
 
-```java filename=ArmeriaConfiguration.java
+```java title="ArmeriaConfiguration.java"
 @Bean
 public MeterIdPrefixFunction meterIdPrefixFunction() {
     return MeterIdPrefixFunction.ofDefault("my.armeria.service");
@@ -363,7 +363,7 @@ In order to use the actuator service, you need to first add the following depend
 
 To include the actuator service, add the service ID `actuator` to the `armeria.internal-services.include` configuration.
 
-```yaml filename=application.yml
+```yaml title="application.yml"
 armeria:
   internal-services:
     include: actuator
@@ -392,7 +392,7 @@ You can refer to the example in the [1.17.0 release notes](/release-notes/1.17.0
 Create the [DependencyInjector](type) bean, which will replace the default dependency injector.
 It's important to note that in this case dependencies that were automatically injected before may not be injected anymore.
 
-```java filename=ArmeriaConfiguration.java
+```java title="ArmeriaConfiguration.java"
 @Bean
 public DependencyInjector dependencyInjector() {
     return DependencyInjector.ofSingletons(
@@ -406,7 +406,7 @@ public DependencyInjector dependencyInjector() {
 You can also utilize a dependency injector that leverages the [`BeanFactory`](https://docs.spring.io/spring-framework/docs/current/javadoc-api/org/springframework/beans/factory/BeanFactory.html)
 of Spring. After configuring the properties, you can effortlessly create beans to be injected, similar to how you would do it in a Spring-based setup.
 
-```yaml filename=application.yml
+```yaml title="application.yml"
 armeria:
   enable-auto-injection: true
 ```

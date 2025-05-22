@@ -35,7 +35,7 @@ Let's start [mapping the HTTP DELETE method](/docs/server/annotated-service#mapp
 2. Map this service method with the HTTP DELETE method by adding the [@Delete](type) annotation.
 3. Bind the endpoint `/blogs` to the method.
 
-```java filename=BlogService.java highlight=6
+```java title="BlogService.java" {6}
 import com.linecorp.armeria.server.annotation.Delete;
 
 public final class BlogService {
@@ -55,7 +55,7 @@ Let's take the blog post ID (`id`) as a path parameter for identifying the post 
 1. Take in the ID value as a path parameter by adding `/blogs/:id` to the [@Delete](type) annotation.
 2. [Inject the path parameter](/docs/server/annotated-service#parameter-injection) to the service method by annotating the parameter with [@Param](type).
 
-  ```java filename=BlogService.java highlight=6-7
+  ```java title="BlogService.java" {6}-7
   import com.linecorp.armeria.server.annotation.Param;
 
   public final class BlogService {
@@ -82,7 +82,7 @@ Deleting a given blog post in this tutorial means removing a blog post from the 
 
 To delete a blog post, copy line 3 into the `deleteBlogPost()` method.
 
-```java filename=BlogService.Java highlight=3 showlineno=true
+```java title="BlogService.Java" {3} showLineNumbers
 @Delete("/blogs/:id")
 public void deleteBlogPost(@Param int id) {
   BlogPost removed = blogPosts.remove(id);
@@ -95,7 +95,7 @@ What if there is no such post to delete? We can check if the blog exists before 
 
 1. Throw an `IllegalArgumentException` if no blog post exists with a given ID.
 
-  ```java filename=BlogService.java
+  ```java title="BlogService.java"
   @Delete("/blogs/:id")
   public void deleteBlogPost(@Param int id) {
     ...
@@ -110,7 +110,7 @@ What if there is no such post to delete? We can check if the blog exists before 
    1. Create a file, `BadRequestExceptionHandler.java`.
    2. In the file, declare a custom exception handler implementing Armeria's [ExceptionHandlerFunction](type) interface.
 
-   ```java filename=BadRequestExceptionHandler.java
+   ```java title="BadRequestExceptionHandler.java"
    package example.armeria.server.blog;
    
    import com.linecorp.armeria.server.annotation.ExceptionHandlerFunction;
@@ -123,7 +123,7 @@ What if there is no such post to delete? We can check if the blog exists before 
 
 3. Implement your own exception handler by overriding the default `handleException()` method. Add a code block for handling the `IllegalArgumentException` thrown. For this tutorial, return a BAD REQUEST as the response.
 
-  ```java filename=BadRequesExceptionHandler.java highlight=11,15,17
+  ```java title="BadRequesExceptionHandler.java" {11,15,17}
   import com.fasterxml.jackson.databind.node.ObjectNode;
   import com.linecorp.armeria.common.HttpResponse;
   import com.linecorp.armeria.common.HttpStatus;
@@ -147,7 +147,7 @@ What if there is no such post to delete? We can check if the blog exists before 
 
 4. Assign the exception handler to the `deleteBlogPost()` method by annotating the `deletePost()` method with the [@ExceptionHandler](type) as follows.
 
-  ```java filename=BlogService.java highlight=2
+  ```java title="BlogService.java" {2}
   import com.linecorp.armeria.server.annotation.ExceptionHandler;
 
   @Delete("/blogs/:id")
@@ -159,7 +159,7 @@ What if there is no such post to delete? We can check if the blog exists before 
 
 With real services, accessing and operating on a database takes time. We need to hand over such blocking tasks to [blocking task executor](/docs/server/annotated-service#specifying-a-blocking-task-executor) so that the EventLoop isn't blocked. There are a few options to implement this; we'll annotate our service method with the [@Blocking](type).
 
-```java filename=BlogService.java highlight=6
+```java title="BlogService.java" {6}
 import com.linecorp.armeria.server.annotation.Blocking;
 
 public final class BlogService {
@@ -179,7 +179,7 @@ We've already handled returning the not found error in the [exception handling s
 1. Replace the return type of the `deleteBlogPost()` method from `void` to [HttpResponse](type).
 2. Return a response using Armeria's [HttpResponse](type), containing [HttpStatus#NO_CONTENT](type).
 
-```java filename=BlogService.java highlight=9,11
+```java title="BlogService.java" {9,11}
 import com.linecorp.armeria.common.HttpResponse;
 
 public final class BlogService {
@@ -199,7 +199,7 @@ public final class BlogService {
 
 Add a test method as follows to test if our exception handler is working properly.
 
-```java filename=BlogServiceTest.java
+```java title="BlogServiceTest.java"
 import static org.assertj.core.api.Assertions.assertThat;
 
 @Test

@@ -33,7 +33,7 @@ Let's start [mapping the HTTP POST method](/docs/server/annotated-service#mappin
 2. Map this service method with the HTTP POST method by adding the [@Post](type) annotation.
 3. Bind the endpoint `/blogs` to the method.
 
-```java filename=BlogService.java highlight=6
+```java title="BlogService.java" {6}
 import com.linecorp.armeria.server.annotation.Post;
 
 public final class BlogService {
@@ -58,7 +58,7 @@ We can use Armeria's default [JacksonRequestConverterFunction](type) as is, but 
 
 1. Create a `BlogPostRequestConverter.java` file and declare a class, implementing the [RequestConverterFunction](type) interface. For the sake of simplicity, generate impromptu IDs for this tutorial.
 
-  ```java filename=BlogRequestConverter.java
+  ```java title="BlogRequestConverter.java"
   package example.armeria.server.blog;
 
   import com.fasterxml.jackson.databind.ObjectMapper;
@@ -73,7 +73,7 @@ We can use Armeria's default [JacksonRequestConverterFunction](type) as is, but 
 
 2. Add a method retrieving a value of a given key in a JSON object:
 
-  ```java filename=BlogRequestConverter.java highlight=6-12
+  ```java title="BlogRequestConverter.java" {6-12}
   import com.fasterxml.jackson.databind.JsonNode;
 
   final class BlogPostRequestConverter implements RequestConverterFunction {
@@ -91,7 +91,7 @@ We can use Armeria's default [JacksonRequestConverterFunction](type) as is, but 
 
 3. Customize the default `convertRequest()` method as follows.
 
-  ```java filename=BlogRequestConverter.java highlight=10-22
+  ```java title="BlogRequestConverter.java" {10-22}
   import com.linecorp.armeria.server.ServiceRequestContext;
   import com.linecorp.armeria.common.AggregatedHttpRequest;
   import com.linecorp.armeria.common.annotation.Nullable;
@@ -122,7 +122,7 @@ We can use Armeria's default [JacksonRequestConverterFunction](type) as is, but 
 
 In this step, assign the [request converter we customized](#write-a-request-converter) to our service method. Annotate the service method with [@RequestConverter](type) and specify the [RequestConverterFunction](type) class as `BlogPostRequestConverter.class`.
 
-```java filename=BlogService.java highlight=7
+```java title="BlogService.java" {7}
 import com.linecorp.armeria.server.annotation.RequestConverter;
 
 public final class BlogService {
@@ -142,7 +142,7 @@ When the request for creation is received, our request converter creates an inst
 
 Let's store the blog post information in the map by adding line 4, in the `createBlogPost()` method.
 
-```java filename=BlogService.java highlight=4 showlineno=true
+```java title="BlogService.java" {4} showLineNumbers
 @Post("/blogs")
 @RequestConverter(BlogPostRequestConverter.class)
 public void createBlogPost(BlogPost blogPost) {
@@ -160,7 +160,7 @@ Let's return a response for blog post creation:
 1. Replace the return type of the `createBlogPost()` method from `void` to [HttpResponse](type).
 2. Create and return an HTTP response using Armeria's [HttpResponse](type) with the information of the post created.
 
-  ```java filename=BlogService.java highlight=5,7
+  ```java title="BlogService.java" {5,7}
   import com.linecorp.armeria.common.HttpResponse;
 
   public final class BlogService {
@@ -180,7 +180,7 @@ We'll use test code to verify what we implement along the way.
 Create the `BlogServiceTest.java` file as follows.
 You can see the full version of the file [here](https://github.com/line/armeria-examples/blob/main/tutorials/rest-api-annotated-service/src/test/java/example/armeria/server/blog/BlogServiceTest.java).
 
-```java filename=BlogServiceTest.java
+```java title="BlogServiceTest.java"
 package example.armeria.server.blog;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -198,7 +198,7 @@ This is convenient as it eliminates the need to execute the main method to set u
 In the `BlogServiceTest` class, register a [ServerExtension](type) as follows.
 Note that the service instance is added to the configuration.
 
-```java filename=BlogServiceTest.java
+```java title="BlogServiceTest.java"
 import org.junit.jupiter.api.extension.RegisterExtension;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
@@ -220,7 +220,7 @@ class BlogServiceTest {
 Let's test if we can create a blog post.
 
 1. In the `BlogServiceTest` class, add a private method as follows.
-  ```java filename=BlogServiceTest.java
+  ```java title="BlogServiceTest.java"
   import java.util.Map;
   import com.fasterxml.jackson.core.JsonProcessingException;
   import com.linecorp.armeria.common.HttpRequest;
@@ -235,7 +235,7 @@ Let's test if we can create a blog post.
   }
   ```
 2. Add a test method as follows to test creating a blog post.
-  ```java filename=BlogServiceTest.java
+  ```java title="BlogServiceTest.java"
   import static net.javacrumbs.jsonunit.fluent.JsonFluentAssert.assertThatJson;
   import org.junit.jupiter.api.Test;
   import com.linecorp.armeria.client.WebClient;

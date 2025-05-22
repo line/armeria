@@ -23,7 +23,7 @@ Let's create a server instance using Armeria's [ServerBuilder](type):
 
 1. Create a `Main` class. You can see the full version of the file [here](https://github.com/line/armeria-examples/blob/main/tutorials/rest-api-annotated-service/src/main/java/example/armeria/server/blog/Main.java).
 
-  ```java filename=Main.java
+  ```java title="Main.java"
   package example.armeria.server.blog;
 
   import org.slf4j.Logger;
@@ -36,7 +36,7 @@ Let's create a server instance using Armeria's [ServerBuilder](type):
 
 2. In the `Main` class, add the method, `newServer()`. Since a server instance requires at least one service to run with, let's add a dummy service returning `"Hello, Armeria!"` for now.
 
-  ```java filename=Main.java highlight=10
+  ```java title="Main.java" {10}
   import com.linecorp.armeria.common.HttpResponse;
   import com.linecorp.armeria.server.Server;
   import com.linecorp.armeria.server.ServerBuilder;
@@ -62,7 +62,7 @@ Now that we have a server, have a go at starting the server with the dummy servi
 2. Call the `newServer()` method we implemented in step 2. Let's set the port to `8080` as in line 2.
 3. Start the server as in line 9.
 
-```java filename=Main.java highlight=2,9 showlineno=true
+```java title="Main.java" {2,9} showLineNumbers
 public static void main(String[] args) throws Exception {
   Server server = newServer(8080);
 

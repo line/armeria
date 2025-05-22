@@ -133,7 +133,7 @@ The Documentation service automatically creates documentation of your service me
   }
   ```
 2. In the `newServer()` method, add the [DocService](type) to our server builder.
-  ```java title="Main.java" highlight=5
+  ```java title="Main.java"
   private static Server newServer(int port) throws Exception {
     ...
     return Server.builder()
@@ -147,7 +147,7 @@ The Documentation service automatically creates documentation of your service me
   ```
 
 3. (Optional) To access the Documentation service result easily, edit the log message in the `main()` method.
-  ```java title="Main.java" highlight=2
+  ```java title="Main.java"
   public static void main(String[] args) throws Exception {
     ...
     logger.info("Server has been started. Serving DocService at http://127.0.0.1:{}/docs",

@@ -32,7 +32,7 @@ Let's start [mapping the HTTP PUT method](/docs/server/annotated-service#mapping
 2. Map this service method with the HTTP PUT method by adding the [@Put](type) annotation.
 3. Bind the endpoint `/blogs` to the method.
 
-```java filename=BlogService.java highlight=6
+```java title="BlogService.java" {6}
 import com.linecorp.armeria.server.annotation.Put;
 
 public final class BlogService {
@@ -53,7 +53,7 @@ For updating a blog post, let's take a blog post ID (`id`) and new blog post inf
 2. [Inject the path parameter](/docs/server/annotated-service#parameter-injection) to the service method by annotating the parameter with [@Param](type).
 3. [Convert request body](/docs/server/annotated-service#converting-an-http-request-to-a-java-object) into a Java object by annotating the `BlogPost` parameter with [@RequestObject](type).
 
-  ```java filename=BlogService.java
+  ```java title="BlogService.java"
   import com.linecorp.armeria.server.annotation.Param;
   import com.linecorp.armeria.server.annotation.RequestObject;
 
@@ -69,7 +69,7 @@ For updating a blog post, let's take a blog post ID (`id`) and new blog post inf
   ```
 4. For conversion, annotate blog post constructor to map JSON object keys to blog post object members. You can find more information on `@JsonCreator` [here](https://www.baeldung.com/jackson-annotations#1-jsoncreator).
 
-  ```java filename=BlogPost.java highlight=7-9
+  ```java title="BlogPost.java" {7-9}
   import com.fasterxml.jackson.annotation.JsonCreator;
   import com.fasterxml.jackson.annotation.JsonProperty;
 
@@ -90,7 +90,7 @@ In this step, write the code required for service itself. You need to update the
 
 To update a blog post, copy the following code inside the `updateBlogPost()` method.
 
-```java filename=BlogService.java
+```java title="BlogService.java"
   @Put("/blogs/:id")
   public void updateBlogPost(@Param int id, @RequestObject BlogPost blogPost) {
     BlogPost oldBlogPost = blogPosts.get(id);
@@ -118,7 +118,7 @@ Let's return an error for the request to update a blog post that doesn't exist.
 1. Replace the return type of the `updateBlogPost()` method from `void` to [HttpResponse](type).
 2. Return a response using Armeria's [HttpResponse](type) containing [HttpStatus#NOT_FOUND](type).
 
-```java filename=BlogService.java highlight=8,11
+```java title="BlogService.java" {8,11}
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 
@@ -143,7 +143,7 @@ Let's return the information updated when the target blog post exists:
 1. Replace the return type of the `updateBlogPost()` method from `void` to [HttpResponse](type).
 2. Return a response using Armeria's [HttpResponse](type) containing the updated information of the post.
 
-```java filename=BlogService.java highlight=7,9
+```java title="BlogService.java" {7,9}
 import com.linecorp.armeria.common.HttpResponse;
 
 public final class BlogService {
@@ -162,7 +162,7 @@ public final class BlogService {
 Let's try updating the content of the first blog post.
 Add a method like the following.
 
-```java filename=BlogServiceTest.java
+```java title="BlogServiceTest.java"
 @Test
 @Order(4)
 void updateBlogPosts() throws JsonProcessingException {
