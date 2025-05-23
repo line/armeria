@@ -24,7 +24,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.function.BiFunction;
-import java.util.regex.Pattern;
 
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.ImmutableList;
@@ -561,14 +560,11 @@ public final class DocServiceBuilder {
     public DocServiceBuilder webAppTitle(String webAppTitle) {
         final String webAppTitleKey = "webAppTitle";
         final Integer webAppTitleMaxSize = 50;
-        final String webAppTitlePattern = "<[^>]*>";
         requireNonNull(webAppTitle, webAppTitleKey);
         checkArgument(!webAppTitle.trim().isEmpty(), "%s is empty.", webAppTitleKey);
         checkArgument(webAppTitle.length() <= webAppTitleMaxSize,
                       "%s length exceeds %s.", webAppTitleKey, webAppTitleMaxSize);
-        final String webAppTitlePatternSanitized = Pattern.compile(webAppTitlePattern).matcher(webAppTitle)
-                                                          .replaceAll("").trim();
-        docServiceExtraInfo.putIfAbsent(webAppTitleKey, webAppTitlePatternSanitized);
+        docServiceExtraInfo.putIfAbsent(webAppTitleKey, webAppTitle);
         return this;
     }
 
