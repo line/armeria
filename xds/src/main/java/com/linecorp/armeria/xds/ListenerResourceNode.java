@@ -34,9 +34,9 @@ final class ListenerResourceNode extends AbstractResourceNode<ListenerXdsResourc
     private final SnapshotWatcher<ListenerSnapshot> parentWatcher;
 
     ListenerResourceNode(@Nullable ConfigSource configSource,
-                         String resourceName, XdsBootstrapImpl xdsBootstrap,
+                         String resourceName, SubscriptionContext context,
                          SnapshotWatcher<ListenerSnapshot> parentWatcher, ResourceNodeType resourceNodeType) {
-        super(xdsBootstrap, configSource, LISTENER, resourceName, parentWatcher, resourceNodeType);
+        super(context, configSource, LISTENER, resourceName, parentWatcher, resourceNodeType);
         this.parentWatcher = parentWatcher;
     }
 
@@ -47,7 +47,7 @@ final class ListenerResourceNode extends AbstractResourceNode<ListenerXdsResourc
             if (connectionManager.hasRouteConfig()) {
                 final RouteConfiguration routeConfig = connectionManager.getRouteConfig();
                 final RouteResourceNode node =
-                        StaticResourceUtils.staticRoute(xdsBootstrap(), routeConfig.getName(), resource,
+                        StaticResourceUtils.staticRoute(context(), routeConfig.getName(), resource,
                                                         snapshotWatcher, routeConfig);
                 children().add(node);
             }
@@ -57,10 +57,10 @@ final class ListenerResourceNode extends AbstractResourceNode<ListenerXdsResourc
                 final ConfigSource configSource = configSourceMapper()
                         .rdsConfigSource(rds.getConfigSource(), routeName);
                 final RouteResourceNode routeResourceNode =
-                        new RouteResourceNode(configSource, routeName, xdsBootstrap(), resource,
+                        new RouteResourceNode(configSource, routeName, context(), resource,
                                               snapshotWatcher, ResourceNodeType.DYNAMIC);
                 children().add(routeResourceNode);
-                xdsBootstrap().subscribe(routeResourceNode);
+                context().subscribe(routeResourceNode);
             }
         }
         if (children().isEmpty()) {

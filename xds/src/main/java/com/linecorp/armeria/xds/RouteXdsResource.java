@@ -16,6 +16,10 @@
 
 package com.linecorp.armeria.xds;
 
+import static com.linecorp.armeria.xds.FilterUtil.toParsedFilterConfigs;
+
+import java.util.Map;
+
 import com.google.common.base.MoreObjects;
 import com.google.common.base.Objects;
 
@@ -23,6 +27,7 @@ import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 
 import io.envoyproxy.envoy.config.route.v3.RouteConfiguration;
+import io.envoyproxy.envoy.extensions.filters.network.http_connection_manager.v3.HttpFilter;
 
 /**
  * A resource object for a {@link RouteConfiguration}.
@@ -34,15 +39,18 @@ public final class RouteXdsResource extends XdsResourceWithPrimer<RouteXdsResour
 
     @Nullable
     private final XdsResource primer;
+    private final Map<String, ParsedFilterConfig> filterConfigs;
 
     RouteXdsResource(RouteConfiguration routeConfiguration) {
         this.routeConfiguration = routeConfiguration;
         primer = null;
+        filterConfigs = toParsedFilterConfigs(routeConfiguration.getTypedPerFilterConfigMap());
     }
 
     RouteXdsResource(RouteConfiguration routeConfiguration, XdsResource primer) {
         this.routeConfiguration = routeConfiguration;
         this.primer = primer;
+        filterConfigs = toParsedFilterConfigs(routeConfiguration.getTypedPerFilterConfigMap());
     }
 
     @Override
@@ -74,6 +82,17 @@ public final class RouteXdsResource extends XdsResourceWithPrimer<RouteXdsResour
         return primer;
     }
 
+    /**
+     * Returns the parsed {@link RouteConfiguration#getTypedPerFilterConfigMap()}.
+     *
+     * @param filterName the filter name represented by {@link HttpFilter#getName()}
+     */
+    @Nullable
+    @UnstableApi
+    public ParsedFilterConfig filterConfig(String filterName) {
+        return filterConfigs.get(filterName);
+    }
+
     @Override
     public boolean equals(Object object) {
         if (this == object) {
@@ -83,8 +102,7 @@ public final class RouteXdsResource extends XdsResourceWithPrimer<RouteXdsResour
             return false;
         }
         final RouteXdsResource that = (RouteXdsResource) object;
-        return Objects.equal(routeConfiguration, that.routeConfiguration) &&
-               Objects.equal(primer, that.primer);
+        return Objects.equal(routeConfiguration, that.routeConfiguration);
     }
 
     @Override
@@ -96,7 +114,6 @@ public final class RouteXdsResource extends XdsResourceWithPrimer<RouteXdsResour
     public String toString() {
         return MoreObjects.toStringHelper(this)
                           .add("routeConfiguration", routeConfiguration)
-                          .add("primer", primer)
                           .toString();
     }
 }

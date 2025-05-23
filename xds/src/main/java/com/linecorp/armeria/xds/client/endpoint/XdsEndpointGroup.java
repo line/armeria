@@ -16,32 +16,35 @@
 
 package com.linecorp.armeria.xds.client.endpoint;
 
-import static java.util.Objects.requireNonNull;
-
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.locks.Lock;
+import java.util.function.Consumer;
 
-import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.MoreObjects;
-import com.google.common.collect.Iterables;
 
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.Endpoint;
+import com.linecorp.armeria.client.endpoint.AbstractEndpointSelector;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.client.endpoint.EndpointSelectionStrategy;
+import com.linecorp.armeria.client.endpoint.EndpointSelector;
 import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.util.AbstractListenable;
+import com.linecorp.armeria.common.util.UnmodifiableFuture;
 import com.linecorp.armeria.internal.common.util.ReentrantShortLock;
 import com.linecorp.armeria.xds.ClusterSnapshot;
+import com.linecorp.armeria.xds.ListenerRoot;
+import com.linecorp.armeria.xds.ListenerSnapshot;
+import com.linecorp.armeria.xds.RouteSnapshot;
+import com.linecorp.armeria.xds.SnapshotWatcher;
+import com.linecorp.armeria.xds.VirtualHostSnapshot;
 import com.linecorp.armeria.xds.XdsBootstrap;
-import com.linecorp.armeria.xds.client.endpoint.ClusterManager.State;
 
 import io.envoyproxy.envoy.config.core.v3.GrpcService;
 import io.envoyproxy.envoy.config.core.v3.SocketAddress;
@@ -60,9 +63,13 @@ import io.envoyproxy.envoy.config.endpoint.v3.ClusterLoadAssignment;
  * or locality based load balancing are not supported yet.
  * Note that it is important to shut down the endpoint group to clean up resources
  * for the provided {@link XdsBootstrap}.
+ *
+ * @deprecated use {@link XdsHttpPreprocessor} or {@link XdsRpcPreprocessor} instead
  */
 @UnstableApi
-public final class XdsEndpointGroup extends AbstractListenable<List<Endpoint>> implements EndpointGroup {
+@Deprecated
+public final class XdsEndpointGroup extends AbstractListenable<List<Endpoint>>
+        implements EndpointGroup, SnapshotWatcher<ListenerSnapshot>, Consumer<List<Endpoint>> {
 
     /**
      * Creates a {@link XdsEndpointGroup} which listens to the specified listener.
@@ -76,7 +83,7 @@ public final class XdsEndpointGroup extends AbstractListenable<List<Endpoint>> i
      */
     public static XdsEndpointGroup of(String listenerName, XdsBootstrap xdsBootstrap,
                                       boolean allowEmptyEndpoints) {
-        return new XdsEndpointGroup(new ClusterManager(listenerName, xdsBootstrap), allowEmptyEndpoints);
+        return new XdsEndpointGroup(listenerName, xdsBootstrap, allowEmptyEndpoints);
     }
 
     /**
@@ -86,8 +93,7 @@ public final class XdsEndpointGroup extends AbstractListenable<List<Endpoint>> i
      */
     @UnstableApi
     public static XdsEndpointGroup of(ClusterSnapshot clusterSnapshot) {
-        requireNonNull(clusterSnapshot, "clusterSnapshot");
-        return new XdsEndpointGroup(new ClusterManager(clusterSnapshot), false);
+        throw new UnsupportedOperationException("Use ClusterSnapshot.loadBalancer() to select endpoints.");
     }
 
     private static final List<Endpoint> UNINITIALIZED_ENDPOINTS = Collections.unmodifiableList(
@@ -95,37 +101,57 @@ public final class XdsEndpointGroup extends AbstractListenable<List<Endpoint>> i
 
     private final XdsEndpointSelectionStrategy selectionStrategy;
     private final boolean allowEmptyEndpoints;
-    private volatile State state = State.INITIAL_STATE;
     private final Lock stateLock = new ReentrantShortLock();
     private final CompletableFuture<List<Endpoint>> initialEndpointsFuture = new CompletableFuture<>();
 
-    private final ClusterManager clusterManager;
-    private final XdsEndpointSelector selector;
+    private final EndpointSelector selector;
+    @Nullable
+    private volatile XdsLoadBalancer loadBalancer;
+    private final ListenerRoot listenerRoot;
+    private List<Endpoint> endpoints = UNINITIALIZED_ENDPOINTS;
 
-    XdsEndpointGroup(ClusterManager clusterManager, boolean allowEmptyEndpoints) {
-        selectionStrategy = new XdsEndpointSelectionStrategy(clusterManager);
+    XdsEndpointGroup(String listenerName, XdsBootstrap xdsBootstrap, boolean allowEmptyEndpoints) {
         this.allowEmptyEndpoints = allowEmptyEndpoints;
+        selectionStrategy = new XdsEndpointSelectionStrategy();
         selector = selectionStrategy.newSelector(this);
-        clusterManager.addListener(this::updateState);
-        this.clusterManager = clusterManager;
+        listenerRoot = xdsBootstrap.listenerRoot(listenerName);
+        listenerRoot.addSnapshotWatcher(this);
     }
 
-    private void updateState(State state) {
-        if (!allowEmptyEndpoints && Iterables.isEmpty(state.endpoints())) {
+    @Override
+    public void snapshotUpdated(ListenerSnapshot listenerSnapshot) {
+        final RouteSnapshot routeSnapshot = listenerSnapshot.routeSnapshot();
+        if (routeSnapshot == null) {
             return;
         }
+        final List<VirtualHostSnapshot> virtualHostSnapshots = routeSnapshot.virtualHostSnapshots();
+        if (virtualHostSnapshots.isEmpty()) {
+            return;
+        }
+        final VirtualHostSnapshot virtualHostSnapshot = virtualHostSnapshots.get(0);
+        if (virtualHostSnapshot.routeEntries().isEmpty()) {
+            return;
+        }
+        final ClusterSnapshot clusterSnapshot = virtualHostSnapshot.routeEntries().get(0).clusterSnapshot();
+        if (clusterSnapshot == null) {
+            return;
+        }
+        final XdsLoadBalancer loadBalancer = clusterSnapshot.loadBalancer();
+        if (loadBalancer == null) {
+            return;
+        }
+
         stateLock.lock();
         try {
-            // It is too much work to keep track of the snapshot/endpoints/attributes that determine
-            // whether the state is cacheable or not. For now, to prevent bugs we just set the
-            // state transparently and don't decide whether to notify an event based on the cache.
-            this.state = state;
+            final XdsLoadBalancer prevLoadBalancer = this.loadBalancer;
+            if (prevLoadBalancer != null) {
+                prevLoadBalancer.removeEndpointsListener(this);
+            }
+            this.loadBalancer = loadBalancer;
+            loadBalancer.addEndpointsListener(this);
         } finally {
             stateLock.unlock();
         }
-
-        maybeCompleteInitialEndpointsFuture(state.endpoints());
-        notifyListeners(state.endpoints());
     }
 
     private void maybeCompleteInitialEndpointsFuture(List<Endpoint> endpoints) {
@@ -137,7 +163,7 @@ public final class XdsEndpointGroup extends AbstractListenable<List<Endpoint>> i
     @Nullable
     @Override
     protected List<Endpoint> latestValue() {
-        final List<Endpoint> endpoints = state.endpoints();
+        final List<Endpoint> endpoints = endpoints();
         if (endpoints == UNINITIALIZED_ENDPOINTS) {
             return null;
         } else {
@@ -145,14 +171,9 @@ public final class XdsEndpointGroup extends AbstractListenable<List<Endpoint>> i
         }
     }
 
-    @VisibleForTesting
-    Map<String, ClusterEntry> clusterEntriesMap() {
-        return clusterManager.clusterEntriesMap();
-    }
-
     @Override
     public List<Endpoint> endpoints() {
-        return state.endpoints();
+        return endpoints;
     }
 
     @Override
@@ -190,7 +211,8 @@ public final class XdsEndpointGroup extends AbstractListenable<List<Endpoint>> i
 
     @Override
     public CompletableFuture<?> closeAsync() {
-        return clusterManager.closeAsync();
+        listenerRoot.close();
+        return UnmodifiableFuture.completedFuture(null);
     }
 
     @Override
@@ -204,22 +226,40 @@ public final class XdsEndpointGroup extends AbstractListenable<List<Endpoint>> i
                           .add("selectionStrategy", selectionStrategy)
                           .add("allowEmptyEndpoints", allowEmptyEndpoints)
                           .add("initialized", initialEndpointsFuture.isDone())
-                          .add("state", state)
-                          .add("clusterManager", clusterManager)
+                          .add("endpoints", endpoints())
                           .toString();
     }
 
-    private static class XdsEndpointSelectionStrategy implements EndpointSelectionStrategy {
+    @Override
+    public void accept(List<Endpoint> endpoints) {
+        this.endpoints = endpoints;
+        notifyListeners(endpoints);
+        maybeCompleteInitialEndpointsFuture(endpoints);
+    }
 
-        private final ClusterManager clusterManager;
+    private class XdsEndpointSelectionStrategy implements EndpointSelectionStrategy {
 
-        XdsEndpointSelectionStrategy(ClusterManager clusterManager) {
-            this.clusterManager = clusterManager;
+        @Override
+        public EndpointSelector newSelector(EndpointGroup endpointGroup) {
+            return new XdsEndpointGroupSelector(endpointGroup);
+        }
+    }
+
+    private final class XdsEndpointGroupSelector extends AbstractEndpointSelector {
+
+        XdsEndpointGroupSelector(EndpointGroup endpointGroup) {
+            super(endpointGroup);
+            initialize();
         }
 
         @Override
-        public XdsEndpointSelector newSelector(EndpointGroup endpointGroup) {
-            return new XdsEndpointSelector(clusterManager, endpointGroup);
+        @Nullable
+        public Endpoint selectNow(ClientRequestContext ctx) {
+            final XdsLoadBalancer loadBalancer = XdsEndpointGroup.this.loadBalancer;
+            if (loadBalancer == null) {
+                return null;
+            }
+            return loadBalancer.selectNow(ctx);
         }
     }
 }

@@ -36,6 +36,8 @@ public final class ClusterXdsResource extends XdsResourceWithPrimer<ClusterXdsRe
     private final Cluster cluster;
     @Nullable
     private final XdsResource primer;
+    @Nullable
+    UpstreamTlsContext upstreamTlsContext;
 
     ClusterXdsResource(Cluster cluster) {
         this(cluster, null);
@@ -44,6 +46,7 @@ public final class ClusterXdsResource extends XdsResourceWithPrimer<ClusterXdsRe
     ClusterXdsResource(Cluster cluster, @Nullable XdsResource primer) {
         this.cluster = cluster;
         this.primer = primer;
+        upstreamTlsContext = upstreamTlsContext(cluster);
     }
 
     @Override
@@ -61,7 +64,7 @@ public final class ClusterXdsResource extends XdsResourceWithPrimer<ClusterXdsRe
     }
 
     @Nullable
-    UpstreamTlsContext upstreamTlsContext() {
+    private static UpstreamTlsContext upstreamTlsContext(Cluster cluster) {
         if (cluster.hasTransportSocket()) {
             final String transportSocketName = cluster.getTransportSocket().getName();
             checkArgument("envoy.transport_sockets.tls".equals(transportSocketName),
@@ -74,6 +77,14 @@ public final class ClusterXdsResource extends XdsResourceWithPrimer<ClusterXdsRe
             }
         }
         return null;
+    }
+
+    /**
+     * The upstream TLS context extracted from {@link Cluster#getTransportSocket()}.
+     */
+    @Nullable
+    public UpstreamTlsContext upstreamTlsContext() {
+        return upstreamTlsContext;
     }
 
     @Override
@@ -100,20 +111,18 @@ public final class ClusterXdsResource extends XdsResourceWithPrimer<ClusterXdsRe
             return false;
         }
         final ClusterXdsResource that = (ClusterXdsResource) object;
-        return Objects.equal(cluster, that.cluster) && Objects.equal(
-                primer, that.primer);
+        return Objects.equal(cluster, that.cluster);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hashCode(cluster, primer);
+        return Objects.hashCode(cluster);
     }
 
     @Override
     public String toString() {
         return MoreObjects.toStringHelper(this)
                           .add("cluster", cluster)
-                          .add("primer", primer)
                           .toString();
     }
 }

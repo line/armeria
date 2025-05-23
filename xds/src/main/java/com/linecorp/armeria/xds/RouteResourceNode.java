@@ -42,9 +42,9 @@ final class RouteResourceNode extends AbstractResourceNodeWithPrimer<RouteXdsRes
     private final VirtualHostSnapshotWatcher snapshotWatcher = new VirtualHostSnapshotWatcher();
 
     RouteResourceNode(@Nullable ConfigSource configSource, String resourceName,
-                      XdsBootstrapImpl xdsBootstrap, @Nullable ListenerXdsResource primer,
+                      SubscriptionContext context, @Nullable ListenerXdsResource primer,
                       SnapshotWatcher<RouteSnapshot> parentWatcher, ResourceNodeType resourceNodeType) {
-        super(xdsBootstrap, configSource, ROUTE, resourceName, primer, parentWatcher, resourceNodeType);
+        super(context, configSource, ROUTE, resourceName, primer, parentWatcher, resourceNodeType);
         this.parentWatcher = parentWatcher;
     }
 
@@ -54,13 +54,12 @@ final class RouteResourceNode extends AbstractResourceNodeWithPrimer<RouteXdsRes
         virtualHostSnapshots.clear();
 
         final RouteConfiguration routeConfiguration = resource.resource();
-        final List<VirtualHost> virtualHosts = routeConfiguration.getVirtualHostsList();
-        for (int i = 0; i < virtualHosts.size(); i++) {
+        for (int i = 0; i < routeConfiguration.getVirtualHostsList().size(); i++) {
             pending.add(i);
             virtualHostSnapshots.add(null);
-            final VirtualHost virtualHost = virtualHosts.get(i);
+            final VirtualHost virtualHost = routeConfiguration.getVirtualHostsList().get(i);
             final VirtualHostResourceNode childNode =
-                    StaticResourceUtils.staticVirtualHost(xdsBootstrap(), name(), resource,
+                    StaticResourceUtils.staticVirtualHost(context(), name(), resource,
                                                           snapshotWatcher, i, virtualHost);
             children().add(childNode);
         }
