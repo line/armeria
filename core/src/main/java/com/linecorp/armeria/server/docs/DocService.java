@@ -164,8 +164,7 @@ public final class DocService extends SimpleDecoratingHttpService {
     }
 
     private DocService(SpecificationLoader specificationLoader,
-                       List<BiFunction<ServiceRequestContext, HttpRequest, String>> injectedScriptSuppliers
-                       ) {
+                       List<BiFunction<ServiceRequestContext, HttpRequest, String>> injectedScriptSuppliers) {
         super(FileService.builder(new DocServiceVfs(specificationLoader))
                          .serveCompressedFiles(true)
                          .autoDecompress(true)
@@ -269,7 +268,7 @@ public final class DocService extends SimpleDecoratingHttpService {
             this.exampleSupport = exampleSupport;
             this.filter = filter;
             this.descriptiveTypeInfoProvider = composeDescriptiveTypeInfoProvider(descriptiveTypeInfoProvider);
-            this.docServiceExtraInfo = requireNonNull(docServiceExtraInfo,"docServiceExtraInfo");
+            this.docServiceExtraInfo = requireNonNull(docServiceExtraInfo, "docServiceExtraInfo");
         }
 
         boolean contains(String path) {
