@@ -25,7 +25,15 @@ import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.databind.JsonSerializer;
 import com.fasterxml.jackson.databind.SerializerProvider;
 
+import com.linecorp.armeria.common.logging.FieldMasker;
+
 final class AnnotatedResponseJsonSerializer extends JsonSerializer<AnnotatedResponse> {
+
+    private final BeanFieldMaskerCache fieldMaskerCache;
+
+    AnnotatedResponseJsonSerializer(BeanFieldMaskerCache fieldMaskerCache) {
+        this.fieldMaskerCache = fieldMaskerCache;
+    }
 
     @Override
     public Class<AnnotatedResponse> handledType() {
@@ -45,6 +53,8 @@ final class AnnotatedResponseJsonSerializer extends JsonSerializer<AnnotatedResp
             return;
         }
 
+        final FieldMasker fieldMasker = fieldMaskerCache.fieldMasker(value.beanFieldInfo());
+        retValue = fieldMasker.mask(retValue);
         retValue = handleInternalTypes(retValue);
         if (retValue == null) {
             serializers.defaultSerializeNull(gen);
