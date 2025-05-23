@@ -31,13 +31,7 @@ import Typography from '@material-ui/core/Typography';
 import ExpandLess from '@material-ui/icons/ExpandLess';
 import ExpandMore from '@material-ui/icons/ExpandMore';
 import MenuIcon from '@material-ui/icons/Menu';
-import React, {
-  useCallback,
-  useEffect,
-  useReducer,
-  useState,
-  useMemo,
-} from 'react';
+import React, { useCallback, useEffect, useReducer, useState } from 'react';
 import { Helmet } from 'react-helmet';
 import { hot } from 'react-hot-loader/root';
 import { Route, RouteComponentProps, withRouter } from 'react-router-dom';
@@ -496,11 +490,8 @@ const App: React.FunctionComponent<Props> = (props) => {
         const extraInfo = initialSpecification.getDocServiceExtraInfo();
 
         const simpleTitle = extraInfo.webAppTitle;
-        const sanitizeTitle = (title: string): string =>
-          title.replace(/<[^>]*>/g, '');
         if (simpleTitle) {
-          const safeTitle = sanitizeTitle(simpleTitle);
-          setWebAppTitle(safeTitle);
+          setWebAppTitle(simpleTitle);
         }
 
         initialSpecification.getServices().forEach((service) => {
@@ -538,15 +529,12 @@ const App: React.FunctionComponent<Props> = (props) => {
   }, []);
 
   const defaultTitle = 'Armeria documentation service';
-  const composedTitle = useMemo(() => {
-    const artifactVersion = versions
-      ? extractSimpleArtifactVersion(versions.getArmeriaArtifactVersion())
-      : '';
-    return `${
-      webAppTitle ? `${webAppTitle} - ` : ''
-    }${defaultTitle} ${artifactVersion}
-             `;
-  }, [versions, webAppTitle]);
+  const artifactVersion = versions
+    ? extractSimpleArtifactVersion(versions.getArmeriaArtifactVersion())
+    : '';
+  const composedTitle = `${
+    webAppTitle ? `${webAppTitle} - ` : ''
+  }${defaultTitle} ${artifactVersion}`;
 
   const classes = useStyles();
 
