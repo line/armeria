@@ -34,11 +34,15 @@ import static com.google.common.base.Preconditions.checkArgument;
  */
 public final class StreamTimeoutDecision {
 
-    /** Indicates that the stream has already timed out. */
+    /**
+     * Indicates that the stream has timed out and must be closed.
+     */
     public static final StreamTimeoutDecision TIMED_OUT =
             new StreamTimeoutDecision(true, 0);
 
-    /** Indicates that no further timeout checks are necessary. */
+    /**
+     * Indicates that no further timeout checks are necessary.
+     */
     public static final StreamTimeoutDecision NO_SCHEDULE =
             new StreamTimeoutDecision(false, 0);
 
@@ -59,15 +63,27 @@ public final class StreamTimeoutDecision {
 
     private final boolean timedOut;
 
-    /** Delay until the next check (ns); {@code 0} ⇒ no schedule. */
+    /**
+     * Delay until the next check (ns); {@code 0} ⇒ no schedule.
+     */
     private final long nextDelayNanos;
 
+    /**
+     * Creates a new {@link StreamTimeoutDecision}.
+     *
+     * @param timedOut whether the stream should be closed immediately
+     * @param nextDelayNanos delay in nanoseconds until the next evaluation (0 means no further check)
+     */
     private StreamTimeoutDecision(boolean timedOut, long nextDelayNanos) {
         this.timedOut = timedOut;
         this.nextDelayNanos = nextDelayNanos;
     }
 
-    /** @return {@code true} if the stream must be closed immediately. */
+    /**
+     * Returns whether the stream should be closed immediately due to a timeout.
+     *
+     * @return {@code true} if the stream must be closed immediately
+     */
     boolean timedOut() {
         return timedOut;
     }
@@ -88,8 +104,7 @@ public final class StreamTimeoutDecision {
         if (timedOut) {
             return "TIMED_OUT";
         }
-        return nextDelayNanos == 0
-               ? "NO_SCHEDULE"
+        return (nextDelayNanos == 0) ? "NO_SCHEDULE"
                : "scheduleAfter(" + nextDelayNanos + "ns)";
     }
 }

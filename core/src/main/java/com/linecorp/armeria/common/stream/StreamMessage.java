@@ -1254,6 +1254,6 @@ public interface StreamMessage<T> extends Publisher<T> {
     default StreamMessage<T> timeout(Duration timeoutDuration, StreamTimeoutMode timeoutMode) {
         requireNonNull(timeoutDuration, "timeoutDuration");
         requireNonNull(timeoutMode, "timeoutMode");
-        return new TimeoutStreamMessage<>(this, timeoutDuration, timeoutMode);
+        return new TimeoutStreamMessage<>(this, DefaultStreamTimeoutStrategy.of(timeoutDuration, timeoutMode));
     }
 }

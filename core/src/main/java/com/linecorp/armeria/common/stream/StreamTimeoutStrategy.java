@@ -17,6 +17,8 @@
 
 package com.linecorp.armeria.common.stream;
 
+import com.linecorp.armeria.common.StreamTimeoutException;
+
 /**
  * A strategy that decides whether a {@link StreamMessage} has timed out and,
  * if not, how long to wait before the next timeout check.
@@ -32,7 +34,6 @@ package com.linecorp.armeria.common.stream;
  * {@link System#nanoTime()}.</p>
  */
 public interface StreamTimeoutStrategy {
-
     /**
      * Called immediately after subscription.
      *
@@ -49,4 +50,21 @@ public interface StreamTimeoutStrategy {
      *         timed out and, if not, the delay before the next check
      */
     StreamTimeoutDecision evaluateTimeout(long currentTimeNanos, long lastEventTimeNanos);
+
+    /**
+     * Builds an exception that will be propagated via
+     * {@code Subscriber#onError(Throwable)} when this strategy determines
+     * the stream has timed out.
+     *
+     * <p>This method is invoked <em>only</em> when the most recent
+     * {@link StreamTimeoutDecision} returned by this strategy reports
+     * {@link StreamTimeoutDecision#timedOut() timed-out}{@code == true}.
+     * </p>
+     *
+     * @return the {@link StreamTimeoutException} that should be emitted for
+     *         this timeout event
+     */
+    default StreamTimeoutException newTimeoutException() {
+        return new StreamTimeoutException("stream timed out");
+    }
 }
