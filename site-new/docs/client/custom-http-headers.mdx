@@ -60,7 +60,7 @@ import com.linecorp.armeria.client.ClientOption;
 ClientBuilder cb = Clients.builder("tbinary+http://example.com/hello");
 cb.setHeader(AUTHORIZATION, credential);
 // or:
-// cb.option(ClientOption.HEADERS, HttpHeaders.of(AUTHORIZATION, credential));
+// cb.option(ClientOptions.HEADERS, HttpHeaders.of(AUTHORIZATION, credential));
 HelloService.Iface client = cb.build(HelloService.Iface.class);
 client.hello("authorized personnel");
 ```
