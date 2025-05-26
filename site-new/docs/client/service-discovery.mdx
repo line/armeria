@@ -33,7 +33,7 @@ assert endpoints.contains(Endpoint.of("duckduckgo.com", 443));
 
 ## Choosing an `EndpointSelectionStrategy`
 
-An [EndpointGroup](type) is created with `EndpointSelectionStrategy.weightedRoundRobin()` by default,
+An [EndpointGroup](type) is created with [EndpointSelectionStrategy#weightedRoundRobin()](type) by default,
 unless specified otherwise. Armeria currently provides the following [EndpointSelectionStrategy](type)
 implementations out-of-the-box:
 - `EndpointSelectionStrategy.weightedRoundRobin` for weighted round robin.
