@@ -36,9 +36,9 @@ assert endpoints.contains(Endpoint.of("duckduckgo.com", 443));
 An [EndpointGroup](type) is created with [EndpointSelectionStrategy#weightedRoundRobin()](type) by default,
 unless specified otherwise. Armeria currently provides the following [EndpointSelectionStrategy](type)
 implementations out-of-the-box:
-- `EndpointSelectionStrategy.weightedRoundRobin` for weighted round robin.
-- `EndpointSelectionStrategy.roundRobin` for round robin.
-- [StickyEndpointSelectionStrategy](type) for pinning requests based on a criteria
+- [EndpointSelectionStrategy#weightedRoundRobin()](type) for weighted round robin.
+- [EndpointSelectionStrategy#roundRobin()](type) for round robin.
+- [EndpointSelectionStrategy#sticky(ToLongFunction)](type) for pinning requests based on a criteria
   such as a request parameter value.
 - You can also implement your own [EndpointSelectionStrategy](type).
 
