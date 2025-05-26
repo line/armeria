@@ -46,7 +46,7 @@ try (SafeCloseable ignored1 = Clients.withHeader(USER_AGENT, myUserAgent)) {
 }
 ```
 
-## Using `ClientOption.HEADERS`
+## Using `ClientOptions.HEADERS`
 
 If you have a custom HTTP header whose value does not change often, you can use
 [ClientOption#HEADERS](type) which is more efficient:
