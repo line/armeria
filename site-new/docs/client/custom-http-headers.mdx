@@ -49,7 +49,7 @@ try (SafeCloseable ignored1 = Clients.withHeader(USER_AGENT, myUserAgent)) {
 ## Using `ClientOptions.HEADERS`
 
 If you have a custom HTTP header whose value does not change often, you can use
-[ClientOption#HEADERS](type) which is more efficient:
+[ClientOptions#HEADERS](type) which is more efficient:
 
 ```java
 import static com.linecorp.armeria.common.HttpHeaderNames.AUTHORIZATION;
