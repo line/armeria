@@ -17,6 +17,8 @@ package com.linecorp.armeria.client.endpoint;
 
 import static java.util.Objects.requireNonNull;
 
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ScheduledExecutorService;
@@ -86,13 +88,14 @@ final class CompositeEndpointGroup extends AbstractEndpointGroup implements List
         for (;;) {
             // Get the current endpoints before making a new endpoints list.
             final List<Endpoint> oldEndpoints = merged.get();
-            final ImmutableList.Builder<Endpoint> newEndpointsBuilder = ImmutableList.builder();
+            final List<Endpoint> newEndpoints = new ArrayList<>();
             for (EndpointGroup endpointGroup : endpointGroups) {
-                newEndpointsBuilder.addAll(endpointGroup.endpoints());
+                newEndpoints.addAll(endpointGroup.endpoints());
             }
-            final List<Endpoint> newEndpoints = newEndpointsBuilder.build();
-            if (merged.compareAndSet(oldEndpoints, newEndpoints)) {
-                return newEndpoints;
+            // Do not use ImmutableList because the empty ImmutableList uses a singleton instance.
+            final List<Endpoint> endpoints = Collections.unmodifiableList(newEndpoints);
+            if (merged.compareAndSet(oldEndpoints, endpoints)) {
+                return endpoints;
             }
             // Changed by another thread while we were building a new one. Try again.
         }
