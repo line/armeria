@@ -1,7 +1,7 @@
 /*
- * Copyright 2020 LINE Corporation
+ * Copyright 2025 LY Corporation
  *
- * LINE Corporation licenses this file to you under the Apache License,
+ * LY Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
@@ -77,6 +77,7 @@ public final class RetryConfig<T extends Response> {
 
     private final int maxTotalAttempts;
     private final long responseTimeoutMillisForEachAttempt;
+    private final boolean abortAttemptOnPerAttemptResponseTimeout;
     private final int maxContentLength;
 
     @Nullable
@@ -88,9 +89,11 @@ public final class RetryConfig<T extends Response> {
     @Nullable
     private RetryRuleWithContent<T> fromRetryRule;
 
-    RetryConfig(RetryRule retryRule, int maxTotalAttempts, long responseTimeoutMillisForEachAttempt) {
+    RetryConfig(RetryRule retryRule, int maxTotalAttempts, long responseTimeoutMillisForEachAttempt,
+                       boolean abortAttemptOnPerAttemptResponseTimeout) {
         this(requireNonNull(retryRule, "retryRule"), null,
-                maxTotalAttempts, responseTimeoutMillisForEachAttempt, 0);
+                maxTotalAttempts, responseTimeoutMillisForEachAttempt,
+             abortAttemptOnPerAttemptResponseTimeout, 0);
         checkArguments(maxTotalAttempts, responseTimeoutMillisForEachAttempt);
     }
 
@@ -98,9 +101,11 @@ public final class RetryConfig<T extends Response> {
             RetryRuleWithContent<T> retryRuleWithContent,
             int maxContentLength,
             int maxTotalAttempts,
-            long responseTimeoutMillisForEachAttempt) {
+            long responseTimeoutMillisForEachAttempt,
+            boolean abortAttemptOnPerAttemptResponseTimeout) {
         this(null, requireNonNull(retryRuleWithContent, "retryRuleWithContent"),
-                maxTotalAttempts, responseTimeoutMillisForEachAttempt, maxContentLength);
+                maxTotalAttempts, responseTimeoutMillisForEachAttempt,
+             abortAttemptOnPerAttemptResponseTimeout, maxContentLength);
     }
 
     private RetryConfig(
@@ -108,12 +113,14 @@ public final class RetryConfig<T extends Response> {
             @Nullable RetryRuleWithContent<T> retryRuleWithContent,
             int maxTotalAttempts,
             long responseTimeoutMillisForEachAttempt,
+            boolean abortAttemptOnPerAttemptResponseTimeout,
             int maxContentLength) {
         checkArguments(maxTotalAttempts, responseTimeoutMillisForEachAttempt);
         this.retryRule = retryRule;
         this.retryRuleWithContent = retryRuleWithContent;
         this.maxTotalAttempts = maxTotalAttempts;
         this.responseTimeoutMillisForEachAttempt = responseTimeoutMillisForEachAttempt;
+        this.abortAttemptOnPerAttemptResponseTimeout = abortAttemptOnPerAttemptResponseTimeout;
         this.maxContentLength = maxContentLength;
         if (retryRuleWithContent == null) {
             fromRetryRuleWithContent = null;
@@ -147,7 +154,8 @@ public final class RetryConfig<T extends Response> {
         }
         return builder
                 .maxTotalAttempts(maxTotalAttempts)
-                .responseTimeoutMillisForEachAttempt(responseTimeoutMillisForEachAttempt);
+                .responseTimeoutMillisForEachAttempt(responseTimeoutMillisForEachAttempt)
+                .abortAttemptOnPerAttemptResponseTimeout(abortAttemptOnPerAttemptResponseTimeout);
     }
 
     /**
@@ -164,6 +172,10 @@ public final class RetryConfig<T extends Response> {
      */
     public long responseTimeoutMillisForEachAttempt() {
         return responseTimeoutMillisForEachAttempt;
+    }
+
+    public boolean abortAttemptOnPerAttemptResponseTimeout() {
+        return abortAttemptOnPerAttemptResponseTimeout;
     }
 
     /**

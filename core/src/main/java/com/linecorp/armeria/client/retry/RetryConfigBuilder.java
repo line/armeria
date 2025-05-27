@@ -1,7 +1,7 @@
 /*
- * Copyright 2020 LINE Corporation
+ * Copyright 2025 LY Corporation
  *
- * LINE Corporation licenses this file to you under the Apache License,
+ * LY Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
@@ -36,6 +36,7 @@ import com.linecorp.armeria.common.annotation.Nullable;
 public final class RetryConfigBuilder<T extends Response> {
     private int maxTotalAttempts = Flags.defaultMaxTotalAttempts();
     private long responseTimeoutMillisForEachAttempt = Flags.defaultResponseTimeoutMillis();
+    private boolean abortAttemptOnPerAttemptResponseTimeout = true;
     private int maxContentLength;
 
     @Nullable
@@ -96,6 +97,12 @@ public final class RetryConfigBuilder<T extends Response> {
         return this;
     }
 
+
+    public RetryConfigBuilder<T> abortAttemptOnPerAttemptResponseTimeout(boolean abortAttemptOnPerAttemptResponseTimeout) {
+        this.abortAttemptOnPerAttemptResponseTimeout = abortAttemptOnPerAttemptResponseTimeout;
+        return this;
+    }
+
     /**
      * Sets the specified {@link Duration} by converting responseTimeoutForEachAttempt to millis.
      */
@@ -116,14 +123,15 @@ public final class RetryConfigBuilder<T extends Response> {
      */
     public RetryConfig<T> build() {
         if (retryRule != null) {
-            return new RetryConfig<>(retryRule, maxTotalAttempts, responseTimeoutMillisForEachAttempt);
+            return new RetryConfig<>(retryRule, maxTotalAttempts, responseTimeoutMillisForEachAttempt, abortAttemptOnPerAttemptResponseTimeout);
         }
         assert retryRuleWithContent != null;
         return new RetryConfig<>(
                 retryRuleWithContent,
                 maxContentLength,
                 maxTotalAttempts,
-                responseTimeoutMillisForEachAttempt);
+                responseTimeoutMillisForEachAttempt,
+                abortAttemptOnPerAttemptResponseTimeout);
     }
 
     @Override
@@ -139,6 +147,7 @@ public final class RetryConfigBuilder<T extends Response> {
                 .add("retryRuleWithContent", retryRuleWithContent)
                 .add("maxTotalAttempts", maxTotalAttempts)
                 .add("responseTimeoutMillisForEachAttempt", responseTimeoutMillisForEachAttempt)
+                .add("abortAttemptOnPerAttemptResponseTimeout", abortAttemptOnPerAttemptResponseTimeout)
                 .add("maxContentLength", maxContentLength);
     }
 }
