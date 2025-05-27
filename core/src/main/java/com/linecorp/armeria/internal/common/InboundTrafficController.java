@@ -98,4 +98,8 @@ public final class InboundTrafficController extends AtomicInteger {
                           .add("watermarks", highWatermark + "/" + lowWatermark)
                           .toString();
     }
+
+    public boolean isSuspended() {
+        return suspended;
+    }
 }

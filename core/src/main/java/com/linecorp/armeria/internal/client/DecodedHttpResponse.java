@@ -44,6 +44,10 @@ public final class DecodedHttpResponse extends DefaultHttpResponse {
         return writtenBytes;
     }
 
+    public @Nullable InboundTrafficController getInboundTrafficController() {
+        return inboundTrafficController;
+    }
+
     @Override
     public EventExecutor defaultSubscriberExecutor() {
         return eventLoop;
