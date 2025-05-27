@@ -915,7 +915,7 @@ public final class Flags {
      * {@link ClientFactoryBuilder#preferHttp1(boolean)}.
      *
      * <p>This flag is disabled by default. Specify the
-     * {@code -Dcom.linecorp.armeria.defaultPreferHttp1=true} JVM option to enable it.
+     * {@code -Dcom.linecorp.armeria.preferHttp1=true} JVM option to enable it.
      */
     @UnstableApi
     public static boolean defaultPreferHttp1() {
