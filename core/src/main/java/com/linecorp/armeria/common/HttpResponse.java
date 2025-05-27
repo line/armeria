@@ -504,7 +504,7 @@ public interface HttpResponse extends Response, HttpMessage {
         requireNonNull(headers, "headers");
         requireNonNull(publisher, "publisher");
         return new StreamMessageBasedHttpResponse(
-                new SurroundingPublisher<>(headers, publisher, unused -> null));
+                SurroundingPublisher.of(headers, publisher, unused -> null));
     }
 
     /**
@@ -521,12 +521,36 @@ public interface HttpResponse extends Response, HttpMessage {
         requireNonNull(headers, "headers");
         requireNonNull(publisher, "publisher");
         requireNonNull(trailers, "trailers");
-        return of(headers, publisher, ignored -> trailers);
+        return new StreamMessageBasedHttpResponse(
+                SurroundingPublisher.of(headers, publisher, trailers));
+    }
+
+    /**
+     * Creates a new HTTP response with the specified headers and trailers
+     * whose stream is produced from an existing {@link Publisher}.
+     *
+     * <p>Note that the {@link HttpData}s in the {@link Publisher} are not released when
+     * {@link Subscription#cancel()} or {@link #abort()} is called. You should add a hook in order to
+     * release the elements. See {@link PublisherBasedStreamMessage} for more information.
+     */
+    @UnstableApi
+    static HttpResponse of(ResponseHeaders headers,
+                           Publisher<? extends HttpData> publisher,
+                           CompletableFuture<HttpHeaders> trailers) {
+        requireNonNull(headers, "headers");
+        requireNonNull(publisher, "publisher");
+        requireNonNull(trailers, "trailers");
+        return new StreamMessageBasedHttpResponse(
+                SurroundingPublisher.of(headers, publisher, trailers));
     }
 
     /**
      * Creates a new HTTP response with the specified headers and trailers function
      * whose stream is produced from an existing {@link Publisher}.
+     *
+     * <p>If the trailers function returns null when the cause is not null, the returned {@link HttpResponse}
+     * will be completed with the given exception. If the trailers function returns an non-null value, the cause
+     * will be ignored and the {@link HttpResponse} will end with the returned trailers.
      *
      * <p>Note that the {@link HttpData}s in the {@link Publisher} are not released when
      * {@link Subscription#cancel()} or {@link #abort()} is called. You should add a hook in order to
@@ -534,11 +558,12 @@ public interface HttpResponse extends Response, HttpMessage {
      */
     static HttpResponse of(ResponseHeaders headers,
                            Publisher<? extends HttpData> publisher,
-                           Function<@Nullable Throwable, HttpHeaders> trailersFunction) {
+                           Function<@Nullable Throwable, @Nullable HttpHeaders> trailersFunction) {
         requireNonNull(headers, "headers");
         requireNonNull(publisher, "publisher");
         requireNonNull(trailersFunction, "trailersFunction");
-        return PublisherBasedHttpResponse.from(headers, publisher, trailersFunction);
+        return new StreamMessageBasedHttpResponse(
+                SurroundingPublisher.of(headers, publisher, trailersFunction));
     }
 
     /**
