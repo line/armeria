@@ -41,3 +41,15 @@ li {
     background-color: var(--ifm-color-gray-300);
   }
 }
+
+.doc-card-list-expanded {
+  h2, p {
+    overflow: visible;
+    white-space: normal;
+    text-overflow: initial;
+  }
+}
+
+.doc-card-list-no-description p {
+  display: none;
+}

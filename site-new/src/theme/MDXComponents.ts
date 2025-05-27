@@ -9,6 +9,7 @@ import TutorialSteps from '@site/src/components/steps';
 import CodeBlock from '@theme/CodeBlock';
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
+import DocCardList from '@theme/DocCardList';
 
 export default {
   // Re-use the default mapping
@@ -22,4 +23,5 @@ export default {
   CodeBlock,
   Tabs,
   TabItem,
+  DocCardList,
 };
