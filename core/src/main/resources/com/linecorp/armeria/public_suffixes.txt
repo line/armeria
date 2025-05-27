@@ -125,6 +125,8 @@
 *.privatelink.snowflake.app
 *.quipelements.com
 *.r.appspot.com
+*.raw.icp0.io
+*.raw.icp1.io
 *.run.app
 *.s.brave.app
 *.s.brave.io
@@ -1171,6 +1173,8 @@ caa.aero
 cab
 cable-modem.org
 cafe
+caffeine.ai
+caffeine.site
 cafjs.com
 cagliari.it
 cahcesuolo.no
@@ -3672,9 +3676,13 @@ ichinohe.iwate.jp
 ichinomiya.aichi.jp
 ichinomiya.chiba.jp
 ichinoseki.iwate.jp
+icp-api.io
+icp0.io
+icp1.io
 icu
 icurus.jp
 id
+id.ai
 id.au
 id.cv
 id.firewalledreplit.co
