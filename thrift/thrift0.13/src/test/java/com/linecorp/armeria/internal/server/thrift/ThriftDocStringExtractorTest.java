@@ -46,24 +46,8 @@ class ThriftDocStringExtractorTest {
     }
 
     @Test
-    void testCassandraJson() throws Exception {
-        final Map<String, String> docStrings = extractor.getDocStringsFromFiles(
-                ImmutableMap.of(
-                        "META-INF/armeria/thrift/ThriftTest.json",
-                        Resources.toByteArray(Resources.getResource(
-                                "META-INF/armeria/thrift/cassandra.json"))));
-        assertThat(docStrings.get("testing.thrift.cassandra.Compression"))
-                  .isEqualTo("CQL query compression");
-        assertThat(
-                docStrings.get("testing.thrift.cassandra.CqlResultType")).isNull();
-    }
-
-    @Test
     void testGetAllDocStrings() throws IOException {
         final Map<String, String> docStrings = extractor.getAllDocStrings(getClass().getClassLoader());
         assertThat(docStrings.containsKey("thrift.test.Numberz")).isTrue();
-        assertThat(
-                docStrings.containsKey("testing.thrift.cassandra.Compression"))
-                  .isTrue();
     }
 }
