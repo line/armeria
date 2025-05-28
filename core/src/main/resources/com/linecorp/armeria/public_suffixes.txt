@@ -4511,6 +4511,7 @@ kontum.vn
 konyvelo.hu
 koobin.events
 koori.fukushima.jp
+kop.id
 kopervik.no
 koriyama.fukushima.jp
 koryo.nara.jp
@@ -7574,6 +7575,7 @@ school.nz
 school.za
 schoolbus.jp
 schools.nsw.edu.au
+schuldock.de
 schule
 schulplattform.de
 schulserver.de
