@@ -16,10 +16,11 @@
 
 package com.linecorp.armeria.server.healthcheck;
 
-import java.util.concurrent.atomic.AtomicBoolean;
+import static java.util.Objects.requireNonNull;
 
 import javax.annotation.Nonnull;
 
+import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.util.AbstractListenable;
 import com.linecorp.armeria.server.Server;
 
@@ -31,7 +32,7 @@ import com.linecorp.armeria.server.Server;
 public final class SettableHealthChecker extends AbstractListenable<HealthChecker>
         implements ListenableHealthChecker {
 
-    private final AtomicBoolean isHealthy;
+    private volatile HealthStatus healthStatus;
 
     /**
      * Constructs a new {@link SettableHealthChecker} which starts out in a healthy state and can be changed
@@ -46,22 +47,48 @@ public final class SettableHealthChecker extends AbstractListenable<HealthChecke
      * changed using {@link #setHealthy(boolean)}.
      */
     public SettableHealthChecker(boolean isHealthy) {
-        this.isHealthy = new AtomicBoolean(isHealthy);
+        healthStatus = isHealthy ? HealthStatus.HEALTHY : HealthStatus.UNHEALTHY;
+    }
+
+    /**
+     * Constructs a new {@link SettableHealthChecker} which starts out in the specified health status and can
+     * be changed using {@link #setHealthStatus(HealthStatus)}.
+     */
+    @UnstableApi
+    public SettableHealthChecker(HealthStatus healthStatus) {
+        this.healthStatus = requireNonNull(healthStatus, "healthStatus");
     }
 
     @Override
     public boolean isHealthy() {
-        return isHealthy.get();
+        return healthStatus.isHealthy();
     }
 
     /**
      * Sets if the {@link Server} is healthy or not.
      */
     public SettableHealthChecker setHealthy(boolean isHealthy) {
-        final boolean oldValue = this.isHealthy.getAndSet(isHealthy);
-        if (oldValue != isHealthy) {
-            notifyListeners(this);
+        final HealthStatus newValue = isHealthy ? HealthStatus.HEALTHY : HealthStatus.UNHEALTHY;
+        return setHealthStatus(newValue);
+    }
+
+    @Override
+    public HealthStatus healthStatus() {
+        return healthStatus;
+    }
+
+    /**
+     * Sets the {@link HealthStatus} of the {@link Server}.
+     */
+    @UnstableApi
+    public SettableHealthChecker setHealthStatus(HealthStatus healthStatus) {
+        requireNonNull(healthStatus, "healthStatus");
+        final HealthStatus oldValue = this.healthStatus;
+        if (oldValue == healthStatus) {
+            return this;
         }
+        this.healthStatus = healthStatus;
+        notifyListeners(this);
         return this;
     }
 
@@ -73,6 +100,6 @@ public final class SettableHealthChecker extends AbstractListenable<HealthChecke
 
     @Override
     public String toString() {
-        return "SettableHealthChecker: " + (isHealthy.get() ? "healthy" : "not healthy");
+        return "SettableHealthChecker: " + healthStatus;
     }
 }
