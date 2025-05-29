@@ -34,9 +34,11 @@ import com.netflix.discovery.shared.Applications;
 import com.netflix.discovery.util.InstanceInfoGenerator;
 
 import com.linecorp.armeria.client.Endpoint;
+import com.linecorp.armeria.client.HttpPreprocessor;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.eureka.InstanceInfo;
 import com.linecorp.armeria.internal.testing.GenerateNativeImageTrace;
 import com.linecorp.armeria.server.ServerBuilder;
@@ -78,6 +80,18 @@ class EurekaEndpointGroupTest {
 
         // Created 6 instances but 1 is down, so 5 instances.
         assertThat(endpointsCaptor.join()).hasSize(5);
+    }
+
+    @Test
+    void preprocessor() {
+        try (EurekaEndpointGroup eurekaEndpointGroup = EurekaEndpointGroup.builder(
+                HttpPreprocessor.of(SessionProtocol.HTTP, eurekaServer.httpEndpoint())).build()) {
+            final CompletableFuture<List<Endpoint>> endpointsCaptor = new CompletableFuture<>();
+            eurekaEndpointGroup.addListener(endpointsCaptor::complete);
+
+            // Created 6 instances but 1 is down, so 5 instances.
+            assertThat(endpointsCaptor.join()).hasSize(5);
+        }
     }
 
     @Test

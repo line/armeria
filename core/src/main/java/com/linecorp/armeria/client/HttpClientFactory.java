@@ -56,6 +56,7 @@ import com.linecorp.armeria.common.util.ReleasableHolder;
 import com.linecorp.armeria.common.util.ShutdownHooks;
 import com.linecorp.armeria.common.util.TlsEngineType;
 import com.linecorp.armeria.common.util.TransportType;
+import com.linecorp.armeria.internal.client.ClientBuilderParamsUtil;
 import com.linecorp.armeria.internal.common.RequestTargetCache;
 import com.linecorp.armeria.internal.common.SslContextFactory;
 import com.linecorp.armeria.internal.common.util.ChannelUtil;
@@ -427,6 +428,26 @@ final class HttpClientFactory implements ClientFactory {
         }
 
         return clientType;
+    }
+
+    @Override
+    public ClientBuilderParams validateParams(ClientBuilderParams params) {
+        if (ClientBuilderParamsUtil.isPreprocessorUri(params.uri()) &&
+            params.options().clientPreprocessors().preprocessors().isEmpty()) {
+            // - HttpClient may be created for an RPC-based client
+            // - A default WebClient functions without preprocessors
+            if (params.clientType() != HttpClient.class) {
+                throw new IllegalArgumentException(
+                        "At least one preprocessor must be specified for http-based clients " +
+                        "with sessionProtocol '" + params.scheme().sessionProtocol() +
+                        "' and clientType '" + params.clientType() + "'.");
+            }
+        }
+        if (Clients.isUndefinedUri(params.uri()) && !"/".equals(params.absolutePathRef())) {
+            throw new IllegalArgumentException(
+                    "Cannot set a prefix path for clients created by 'WebClient.of().'");
+        }
+        return ClientFactory.super.validateParams(params);
     }
 
     @Override

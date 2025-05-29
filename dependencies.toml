@@ -258,6 +258,9 @@ version.ref = "brave5"
 [libraries.brave5-context-slf4j]
 module = 'io.zipkin.brave:brave-context-slf4j'
 version.ref = "brave5"
+[libraries.brave5-instrumentation-rpc]
+module = "io.zipkin.brave:brave-instrumentation-rpc"
+version.ref = "brave5"
 [libraries.brave5-instrumentation-http]
 module = "io.zipkin.brave:brave-instrumentation-http"
 version.ref = "brave5"
@@ -273,6 +276,9 @@ javadocs = [
     "https://www.javadoc.io/doc/io.zipkin.brave/brave-instrumentation-http/6.0.3/"]
 [libraries.brave6-context-slf4j]
 module = 'io.zipkin.brave:brave-context-slf4j'
+version.ref = "brave6"
+[libraries.brave6-instrumentation-rpc]
+module = "io.zipkin.brave:brave-instrumentation-rpc"
 version.ref = "brave6"
 [libraries.brave6-instrumentation-http]
 module = "io.zipkin.brave:brave-instrumentation-http"

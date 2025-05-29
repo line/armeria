@@ -39,6 +39,7 @@ import com.linecorp.armeria.common.stream.PublisherBasedStreamMessage;
 import com.linecorp.armeria.common.stream.StreamMessage;
 import com.linecorp.armeria.common.stream.SubscriptionOption;
 import com.linecorp.armeria.common.util.EventLoopCheckingFuture;
+import com.linecorp.armeria.common.util.UnmodifiableFuture;
 
 import io.netty.util.concurrent.EventExecutor;
 
@@ -50,10 +51,36 @@ public final class SurroundingPublisher<T> implements StreamMessage<T> {
     private static final AtomicIntegerFieldUpdater<SurroundingPublisher> subscribedUpdater =
             AtomicIntegerFieldUpdater.newUpdater(SurroundingPublisher.class, "subscribed");
 
+    public static <T> SurroundingPublisher<T> of(@Nullable T head, Publisher<? extends T> publisher, T tail) {
+        // The tail is ignored when the cause is not null.
+        return of(head, publisher, cause -> cause != null ? null : tail);
+    }
+
+    public static <T> SurroundingPublisher<T> of(
+            @Nullable T head, Publisher<? extends T> publisher,
+            Function<@Nullable Throwable, ? extends @Nullable T> finalizer) {
+        requireNonNull(finalizer, "finalizer");
+        final Function<@Nullable Throwable, @Nullable CompletableFuture<T>> asyncFinalizer = cause -> {
+            final T tail = finalizer.apply(cause);
+            if (tail == null) {
+                return null;
+            } else {
+                return UnmodifiableFuture.completedFuture(tail);
+            }
+        };
+        return new SurroundingPublisher<>(head, publisher, asyncFinalizer);
+    }
+
+    public static <T> SurroundingPublisher<T> of(@Nullable T head, Publisher<? extends T> publisher,
+                                                 CompletableFuture<? extends @Nullable T> tail) {
+        // The tail is ignored when the cause is not null.
+        return new SurroundingPublisher<>(head, publisher, cause -> cause != null ? null : tail);
+    }
+
     @Nullable
     private final T head;
     private final StreamMessage<T> publisher;
-    private final Function<@Nullable Throwable, ? extends @Nullable T> finalizer;
+    private final Function<@Nullable Throwable, ? extends @Nullable CompletableFuture<T>> finalizer;
 
     private volatile int subscribed;
     private final CompletableFuture<Void> completionFuture = new EventLoopCheckingFuture<>();
@@ -61,8 +88,9 @@ public final class SurroundingPublisher<T> implements StreamMessage<T> {
     @Nullable
     private volatile SurroundingSubscriber<T> surroundingSubscriber;
 
-    public SurroundingPublisher(@Nullable T head, Publisher<? extends T> publisher,
-                                Function<@Nullable Throwable, ? extends @Nullable T> finalizer) {
+    SurroundingPublisher(@Nullable T head, Publisher<? extends T> publisher,
+                         Function<@Nullable Throwable,
+                                 ? extends @Nullable CompletableFuture<? extends T>> finalizer) {
         requireNonNull(publisher, "publisher");
         requireNonNull(finalizer, "finalizer");
         this.head = head;
@@ -72,7 +100,8 @@ public final class SurroundingPublisher<T> implements StreamMessage<T> {
         } else {
             this.publisher = new PublisherBasedStreamMessage<>(publisher);
         }
-        this.finalizer = finalizer;
+        //noinspection unchecked
+        this.finalizer = (Function<Throwable, ? extends CompletableFuture<T>>) finalizer;
     }
 
     @Override
@@ -190,7 +219,7 @@ public final class SurroundingPublisher<T> implements StreamMessage<T> {
         @Nullable
         private T head;
         private final StreamMessage<T> publisher;
-        private final Function<@Nullable Throwable, ? extends @Nullable T> finalizer;
+        private final Function<@Nullable Throwable, ? extends @Nullable CompletableFuture<T>> finalizer;
 
         private Subscriber<? super T> downstream;
         private final EventExecutor executor;
@@ -206,7 +235,7 @@ public final class SurroundingPublisher<T> implements StreamMessage<T> {
         private final SubscriptionOption[] options;
 
         SurroundingSubscriber(@Nullable T head, StreamMessage<T> publisher,
-                              Function<@Nullable Throwable, ? extends @Nullable T> finalizer,
+                              Function<@Nullable Throwable, ? extends @Nullable CompletableFuture<T>> finalizer,
                               Subscriber<? super T> downstream, EventExecutor executor,
                               CompletableFuture<Void> completionFuture, SubscriptionOption... options) {
             requireNonNull(publisher, "publisher");
@@ -305,9 +334,9 @@ public final class SurroundingPublisher<T> implements StreamMessage<T> {
         }
 
         private void finalize(@Nullable Throwable cause) {
-            final T tail;
+            final CompletableFuture<T> tailFuture;
             try {
-                tail = finalizer.apply(cause);
+                tailFuture = finalizer.apply(cause);
             } catch (Throwable ex) {
                 if (cause != null) {
                     logger.warn("Unexpected exception from finalizer:", ex);
@@ -318,11 +347,28 @@ public final class SurroundingPublisher<T> implements StreamMessage<T> {
                 return;
             }
 
-            if (tail == null) {
+            if (tailFuture == null) {
                 // Immediately close the stream if the finalizer returns null.
                 close0(cause);
             } else {
-                downstream.onNext(tail);
+                tailFuture.handle((tail, cause0) -> {
+                    if (executor.inEventLoop()) {
+                        handleTail(tail, cause0);
+                    } else {
+                        executor.execute(() -> handleTail(tail, cause0));
+                    }
+                    return null;
+                });
+            }
+        }
+
+        private void handleTail(@Nullable T tail, @Nullable Throwable cause) {
+            if (cause != null) {
+                close0(cause);
+            } else {
+                if (tail != null) {
+                    downstream.onNext(tail);
+                }
                 close0(null);
             }
         }
@@ -414,11 +460,13 @@ public final class SurroundingPublisher<T> implements StreamMessage<T> {
             }
             state = State.DONE;
 
+            final CancelledSubscriptionException cause = CancelledSubscriptionException.get();
             final Subscription upstream = this.upstream;
             if (upstream != null) {
                 upstream.cancel();
+            } else {
+                publisher.abort(cause);
             }
-            final CancelledSubscriptionException cause = CancelledSubscriptionException.get();
             if (containsNotifyCancellation(options)) {
                 downstream.onError(cause);
             }

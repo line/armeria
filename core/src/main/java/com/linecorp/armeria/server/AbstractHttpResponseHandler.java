@@ -261,12 +261,6 @@ abstract class AbstractHttpResponseHandler {
                     // A stream or connection was already closed by a client
                     fail(cause);
                 } else {
-                    if (reqCtx.sessionProtocol().isMultiplex()) {
-                        req.setShouldResetOnlyIfRemoteIsOpen(true);
-                    } else if (req.isOpen()) {
-                        disconnectWhenFinished();
-                    }
-
                     req.abortResponse(cause, false);
                 }
             }

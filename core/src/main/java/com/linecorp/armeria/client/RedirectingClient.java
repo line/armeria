@@ -58,6 +58,7 @@ import com.linecorp.armeria.common.logging.RequestLogBuilder;
 import com.linecorp.armeria.common.logging.RequestLogProperty;
 import com.linecorp.armeria.common.stream.AbortedStreamException;
 import com.linecorp.armeria.internal.client.AggregatedHttpRequestDuplicator;
+import com.linecorp.armeria.internal.client.ClientBuilderParamsUtil;
 import com.linecorp.armeria.internal.client.ClientUtil;
 import com.linecorp.armeria.internal.common.util.TemporaryThreadLocals;
 
@@ -76,7 +77,8 @@ final class RedirectingClient extends SimpleDecoratingHttpClient {
 
     static Function<? super HttpClient, RedirectingClient> newDecorator(
             ClientBuilderParams params, RedirectConfig redirectConfig) {
-        final boolean undefinedUri = Clients.isUndefinedUri(params.uri());
+        final boolean undefinedUri = Clients.isUndefinedUri(params.uri()) ||
+                                     ClientBuilderParamsUtil.isPreprocessorUri(params.uri());
         final Set<SessionProtocol> allowedProtocols =
                 allowedProtocols(undefinedUri, redirectConfig.allowedProtocols(),
                                  params.scheme().sessionProtocol());
@@ -196,7 +198,7 @@ final class RedirectingClient extends SimpleDecoratingHttpClient {
         assert req != null;
         final HttpResponse response = executeWithFallback(unwrap(), derivedCtx,
                                                           (context, cause) -> HttpResponse.ofFailure(cause),
-                                                          req);
+                                                          req, true);
         derivedCtx.log().whenAvailable(RequestLogProperty.RESPONSE_HEADERS).thenAccept(log -> {
             if (log.isAvailable(RequestLogProperty.RESPONSE_CAUSE)) {
                 final Throwable cause = log.responseCause();

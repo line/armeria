@@ -5,8 +5,6 @@
 !city.sapporo.jp
 !city.sendai.jp
 !city.yokohama.jp
-!ignored.sub.wc.psl.hrsn.dev
-!ignored.wc.psl.hrsn.dev
 !www.ck
 *.001.test.code-builder-stg.platform.salesforce.com
 *.0e.vc
@@ -53,6 +51,7 @@
 *.dev-builder.code.com
 *.dev.adobeaemcloud.com
 *.developer.app
+*.devinapps.com
 *.digitaloceanspaces.com
 *.dweb.link
 *.elb.amazonaws.com
@@ -102,8 +101,6 @@
 *.migration.run
 *.mm
 *.moonscale.io
-*.my.canva.site
-*.my.canvasite.cn
 *.nagoya.jp
 *.nodebalancer.linode.com
 *.nom.br
@@ -128,6 +125,8 @@
 *.privatelink.snowflake.app
 *.quipelements.com
 *.r.appspot.com
+*.raw.icp0.io
+*.raw.icp1.io
 *.run.app
 *.s.brave.app
 *.s.brave.io
@@ -143,7 +142,6 @@
 *.stg.dev
 *.stgstage.dev
 *.stolos.io
-*.sub.wc.psl.hrsn.dev
 *.svc.firenet.ch
 *.sys.qcx.io
 *.telebit.xyz
@@ -168,7 +166,6 @@
 *.wadl.top
 *.wb.crm.dev
 *.wc.crm.dev
-*.wc.psl.hrsn.dev
 *.wd.crm.dev
 *.we.crm.dev
 *.webhare.dev
@@ -257,6 +254,7 @@ abbvie
 abc
 abc.br
 abeno.osaka.jp
+abg.ec
 abiko.chiba.jp
 abira.hokkaido.jp
 abkhazia.su
@@ -338,6 +336,7 @@ adachi.tokyo.jp
 adaptable.app
 adimo.co.uk
 adm.br
+adm.ec
 adobeaemcloud.com
 adobeaemcloud.net
 adobeio-static.net
@@ -387,6 +386,7 @@ agrigento.it
 agro.bj
 agro.bo
 agro.pl
+agron.ec
 aguni.okinawa.jp
 ah.cn
 ah.no
@@ -568,6 +568,7 @@ ap.ngrok.io
 aparecida.br
 apartments
 api.gov.uk
+api.lp.dev
 api.stdlib.com
 apigee.io
 app
@@ -619,10 +620,12 @@ army
 arna.no
 arpa
 arq.br
+arqt.ec
 art
 art.br
 art.do
 art.dz
+art.ec
 art.ht
 art.ml
 art.pl
@@ -722,6 +725,7 @@ austevoll.no
 austrheim.no
 auth-fips.us-east-1.amazoncognito.com
 auth-fips.us-east-2.amazoncognito.com
+auth-fips.us-gov-east-1.amazoncognito.com
 auth-fips.us-gov-west-1.amazoncognito.com
 auth-fips.us-west-1.amazoncognito.com
 auth-fips.us-west-2.amazoncognito.com
@@ -736,6 +740,7 @@ auth.ap-southeast-1.amazoncognito.com
 auth.ap-southeast-2.amazoncognito.com
 auth.ap-southeast-3.amazoncognito.com
 auth.ap-southeast-4.amazoncognito.com
+auth.ap-southeast-5.amazoncognito.com
 auth.ca-central-1.amazoncognito.com
 auth.ca-west-1.amazoncognito.com
 auth.eu-central-1.amazoncognito.com
@@ -834,6 +839,7 @@ bandai.fukushima.jp
 bando.ibaraki.jp
 bank
 bar
+bar.ec
 bar.pro
 barcelona
 barclaycard
@@ -917,7 +923,6 @@ bel.tr
 belem.br
 belluno.it
 benevento.it
-bentley
 bentre.vn
 beppu.oita.jp
 berg.no
@@ -980,6 +985,7 @@ biz.cy
 biz.dk
 biz.et
 biz.fj
+biz.gh
 biz.gl
 biz.id
 biz.in
@@ -1167,6 +1173,8 @@ caa.aero
 cab
 cable-modem.org
 cafe
+caffeine.ai
+caffeine.site
 cafjs.com
 cagliari.it
 cahcesuolo.no
@@ -1338,6 +1346,7 @@ chase
 chat
 cheap
 cheap.jp
+chef.ec
 cherkassy.ua
 cherkasy.ua
 chernigov.ua
@@ -1432,7 +1441,6 @@ cloud.goog
 cloud.interhostsolutions.be
 cloud.nospamproxy.com
 cloud66.ws
-cloud66.zone
 cloudaccess.host
 cloudaccess.net
 cloudapp.net
@@ -1736,10 +1744,13 @@ consulado.st
 consultant.aero
 consulting
 consulting.aero
+cont.ec
 contact
 contagem.br
 contractors
 control.aero
+convex.app
+convex.cloud
 convex.site
 cooking
 cool
@@ -1766,6 +1777,7 @@ coupons
 courses
 coz.br
 cpa
+cpa.ec
 cpa.pro
 cpanel.site
 cprapid.com
@@ -1801,6 +1813,7 @@ ct.it
 ct.us
 ctfcloud.net
 cu
+cue.ec
 cuiaba.br
 cuisinella
 cuneo.it
@@ -1914,6 +1927,7 @@ demon.nl
 deno-staging.dev
 deno.dev
 deno.net
+dent.ec
 dental
 dentist
 dep.no
@@ -1930,13 +1944,14 @@ deus-canvas.com
 dev
 dev-myqnapcloud.com
 dev.br
+dev.project-study.com
 development.run
 devices.resinstaging.io
-devinapps.com
 df.gov.br
 df.leg.br
 dfirma.pl
 dgca.aero
+dgn.ec
 dh.bytemark.co.uk
 dhl
 diadem.cloud
@@ -1950,6 +1965,7 @@ direct
 direct.quickconnect.cn
 direct.quickconnect.to
 directory
+disco.ec
 discordsays.com
 discordsez.com
 discount
@@ -1995,6 +2011,7 @@ dnsup.net
 dnsupdate.info
 dnsupdater.de
 do
+doc.ec
 docs
 doctor
 does-it.net
@@ -2096,6 +2113,7 @@ e.bg
 e.se
 e12.ve
 e164.arpa
+e2b.app
 e4.cz
 earth
 east-kazakhstan.su
@@ -2291,6 +2309,7 @@ elasticbeanstalk.com
 elblag.pl
 elementor.cloud
 elementor.cool
+eliv-cdn.kr
 eliv-dns.kr
 elk.pl
 elverum.no
@@ -2417,6 +2436,7 @@ enebakk.no
 energy
 enf.br
 eng.br
+eng.ec
 eng.jo
 eng.pro
 engerdal.no
@@ -2449,6 +2469,7 @@ es.kr
 es.leg.br
 esan.hokkaido.jp
 esashi.hokkaido.jp
+esm.ec
 esp.br
 esq
 est-a-la-maison.com
@@ -2533,7 +2554,6 @@ expo.app
 exposed
 express
 express.aero
-express.val.run
 extraspace
 ezproxy.kuleuven.be
 f.bg
@@ -2601,6 +2621,7 @@ fi.it
 fidelity
 fido
 fie.ee
+figma.site
 filegear-sg.me
 filegear.me
 film
@@ -2698,6 +2719,7 @@ forum.hu
 forumz.info
 fosnes.no
 fot.br
+fot.ec
 foundation
 fox
 foz.br
@@ -2802,6 +2824,7 @@ from-wv.com
 from-wy.com
 from.hr
 from.tv
+frontend.encr.app
 frontier
 frosinone.it
 frosta.no
@@ -2882,6 +2905,7 @@ ga
 ga.us
 gaivuotna.no
 gal
+gal.ec
 gallery
 gallo
 gallup
@@ -2961,6 +2985,7 @@ giske.no
 git-pages.rit.edu
 git-repos.de
 gitapp.si
+github.app
 github.io
 githubpreview.dev
 githubusercontent.com
@@ -3297,6 +3322,7 @@ gw
 gwangju.kr
 gx.cn
 gy
+gye.ec
 gyeongbuk.kr
 gyeonggi.kr
 gyeongnam.kr
@@ -3635,6 +3661,7 @@ ibaraki.osaka.jp
 ibestad.no
 ibigawa.gifu.jp
 ibm
+ibr.ec
 ibxos.it
 ic.gov.pl
 icbc
@@ -3649,9 +3676,13 @@ ichinohe.iwate.jp
 ichinomiya.aichi.jp
 ichinomiya.chiba.jp
 ichinoseki.iwate.jp
+icp-api.io
+icp0.io
+icp1.io
 icu
 icurus.jp
 id
+id.ai
 id.au
 id.cv
 id.firewalledreplit.co
@@ -3671,7 +3702,6 @@ idv.hk
 idv.tw
 ie
 ie.eu.org
-ie.ua
 ieee
 if.ua
 ifm
@@ -3756,7 +3786,6 @@ ind.br
 ind.gt
 ind.in
 ind.kw
-ind.mom
 ind.tn
 independent-commission.uk
 independent-inquest.uk
@@ -3966,6 +3995,7 @@ isehara.kanagawa.jp
 isen.kagoshima.jp
 isernia.it
 iserv.dev
+iserv.host
 iservschule.de
 isesaki.gunma.jp
 ishigaki.okinawa.jp
@@ -4480,6 +4510,7 @@ kontum.vn
 konyvelo.hu
 koobin.events
 koori.fukushima.jp
+kop.id
 kopervik.no
 koriyama.fukushima.jp
 koryo.nara.jp
@@ -4634,7 +4665,6 @@ lamborghini
 lamdong.vn
 lamer
 lanbib.se
-lancaster
 land
 land-4-sale.us
 landrover
@@ -4650,6 +4680,7 @@ larvik.no
 lasalle
 laspezia.it
 lat
+lat.ec
 latina.it
 latino
 latrobe
@@ -4806,7 +4837,6 @@ loabat.no
 loan
 loans
 localcert.net
-localhostcert.net
 localplayer.dev
 localtonet.com
 locker
@@ -4826,6 +4856,7 @@ logoip.com
 logoip.de
 lohmus.me
 loisirs.bj
+loj.ec
 lol
 lolipop.io
 lolipopmc.jp
@@ -4854,7 +4885,9 @@ love
 lovepop.jp
 lovesick.jp
 lowicz.pl
+lp.dev
 lpages.co
+lpg.objectstorage.ch
 lpl
 lplfinancial
 lpusercontent.com
@@ -4895,6 +4928,8 @@ luster.no
 lutsk.ua
 luxe
 luxury
+luyani.app
+luyani.net
 lv
 lv.eu.org
 lv.ua
@@ -5269,12 +5304,14 @@ mjondalen.no
 mk
 mk.eu.org
 mk.ua
+mktg.ec
 ml
 mlb
 mlbfan.org
 mls
 mma
 mmafan.biz
+mmv.kr
 mn
 mn.it
 mn.us
@@ -5312,6 +5349,7 @@ molde.no
 molise.it
 mom
 mombetsu.hokkaido.jp
+mon.ec
 monash
 mond.jp
 money
@@ -5419,6 +5457,8 @@ my-gateway.de
 my-router.de
 my-vigor.de
 my-wan.de
+my.canva.site
+my.canvasite.cn
 my.eu.org
 my.id
 myactivedirectory.com
@@ -5690,6 +5730,7 @@ net.fj
 net.fm
 net.ge
 net.gg
+net.gh
 net.gl
 net.gn
 net.gp
@@ -6036,6 +6077,7 @@ nt.no
 nt.ro
 ntdll.top
 ntr.br
+ntr.ec
 ntt
 nu
 nu.ca
@@ -6071,6 +6113,7 @@ obi
 obihiro.hokkaido.jp
 obira.hokkaido.jp
 obj.ag
+objects.lp.dev
 objects.lpg.cloudscale.ch
 objects.rma.cloudscale.ch
 obl.ong
@@ -6089,6 +6132,7 @@ odesa.ua
 odessa.ua
 odo.br
 odo.replit.dev
+odont.ec
 oe.yamagata.jp
 of.by
 of.je
@@ -6202,6 +6246,7 @@ onfabrica.com
 ong
 ong.br
 onga.fukuoka.jp
+onid.ca
 oninferno.net
 onion
 onjuku.chiba.jp
@@ -6703,7 +6748,6 @@ pr.it
 pr.leg.br
 pr.ml
 pr.us
-pramerica
 prato.it
 praxi
 prd.fr
@@ -6719,6 +6763,7 @@ press.se
 presse.km
 presse.ml
 preview.csb.app
+preview.site
 pri.ee
 prime
 primetel.cloud
@@ -6749,6 +6794,7 @@ prod
 production.aero
 productions
 prof
+prof.ec
 prof.pr
 profesional.bo
 progressive
@@ -6766,6 +6812,8 @@ przeworsk.pl
 ps
 psc.br
 psi.br
+psic.ec
+psiq.ec
 psp.gov.pl
 psse.gov.pl
 pstmn.io
@@ -6774,6 +6822,7 @@ pt.eu.org
 pt.it
 pu.it
 pub
+pub.ec
 pub.instances.scw.cloud
 pub.sa
 publ.cv
@@ -6823,6 +6872,7 @@ quebec
 quest
 quicksytes.com
 quizzes.cx
+qzz.io
 r.bg
 r.cdn77.net
 r.se
@@ -6967,6 +7017,7 @@ ringerike.no
 ringsaker.no
 rio
 rio.br
+rio.ec
 riobranco.br
 riopreto.br
 rip
@@ -6980,6 +7031,7 @@ rj.gov.br
 rj.leg.br
 rl.no
 rm.it
+rma.objectstorage.ch
 rn.gov.br
 rn.it
 rn.leg.br
@@ -7014,6 +7066,7 @@ royken.no
 royrvik.no
 rr.gov.br
 rr.leg.br
+rrpp.ec
 rs
 rs.ba
 rs.gov.br
@@ -7415,6 +7468,7 @@ sakurai.nara.jp
 sakuratan.com
 sakuraweb.com
 sakyo.kyoto.jp
+sal.ec
 salangen.no
 salat.no
 sale
@@ -7520,6 +7574,7 @@ school.nz
 school.za
 schoolbus.jp
 schools.nsw.edu.au
+schuldock.de
 schule
 schulplattform.de
 schulserver.de
@@ -7550,6 +7605,7 @@ secure
 security
 securitytactics.com
 seek
+seg.ar
 seg.br
 seidat.net
 seihi.nagasaki.jp
@@ -7932,7 +7988,6 @@ stackit.run
 stackit.zone
 stada
 stage.nodeart.io
-staging.devinapps.com
 staging.expo.app
 staging.replit.dev
 stalowa-wola.pl
@@ -8028,7 +8083,6 @@ stufftoread.com
 style
 su
 sub.jp
-sub.psl.hrsn.dev
 subsc-pay.com
 subsc-pay.net
 sucks
@@ -8233,6 +8287,7 @@ tec.br
 tec.mi.us
 tec.ve
 tech
+tech.ec
 tech.orange
 technology
 tecnologia.bo
@@ -8547,12 +8602,14 @@ tt.im
 tube
 tucker.replit.dev
 tui
+tul.ec
 tula.su
 tuleap-partners.com
 tunes
 tunk.org
 tur.ar
 tur.br
+tur.ec
 turek.pl
 turin.it
 turystyka.pl
@@ -8618,6 +8675,7 @@ ug.gov.pl
 ugim.gov.pl
 uh-oh.jp
 ui.nabu.casa
+uio.ec
 uji.kyoto.jp
 ujiie.tochigi.jp
 ujitawara.kyoto.jp
@@ -8748,6 +8806,7 @@ vagsoy.no
 vaksdal.no
 val-d-aosta.it
 val-daosta.it
+val.run
 vald-aosta.it
 valdaosta.it
 valer.hedmark.no
@@ -8809,6 +8868,7 @@ vestre-toten.no
 vestvagoy.no
 vet
 vet.br
+vet.ec
 veterinaire.fr
 veterinaire.km
 vevelstad.no
@@ -8874,6 +8934,7 @@ viva
 vivian.jp
 vivo
 vix.br
+vki.kr
 vlaanderen
 vladikavkaz.ru
 vladikavkaz.su
@@ -9058,6 +9119,8 @@ williamhill
 win
 winb.gov.pl
 windows
+windsurf.app
+windsurf.build
 wine
 winners
 wios.gov.pl
@@ -9585,7 +9648,9 @@ xn--zf0avx.hk
 xn--zfr164b
 xnbay.com
 xs4all.space
+xx.kg
 xxx
+xxx.ec
 xyz
 xz.cn
 y.bg

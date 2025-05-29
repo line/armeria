@@ -103,6 +103,11 @@ public final class EurekaUpdatingListenerBuilder extends AbstractWebClientBuilde
         instanceInfoBuilder = new InstanceInfoBuilder();
     }
 
+    EurekaUpdatingListenerBuilder(HttpPreprocessor preprocessor, @Nullable String path) {
+        super(preprocessor, path);
+        instanceInfoBuilder = new InstanceInfoBuilder();
+    }
+
     /**
      * Sets the interval between renewal. {@value DEFAULT_LEASE_RENEWAL_INTERVAL_SECONDS} seconds is used
      * by default and it's not recommended to modify this value. Eureka protocol stores this value in seconds
