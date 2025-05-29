@@ -23,11 +23,6 @@ configure(projectsWithFlags('java')) {
                     attribute(Usage.USAGE_ATTRIBUTE, project.objects.named(Usage, Usage.JAVA_API))
                 }
             }
-            jmhCompileProtoPath {
-                attributes {
-                    attribute(Usage.USAGE_ATTRIBUTE, project.objects.named(Usage, Usage.JAVA_API))
-                }
-            }
             testCompileProtoPath {
                 attributes {
                     attribute(Usage.USAGE_ATTRIBUTE, project.objects.named(Usage, Usage.JAVA_API))

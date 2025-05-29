@@ -12,7 +12,7 @@ RUN sed -i s/mirror.centos.org/vault.centos.org/g /etc/yum.repos.d/CentOS-*.repo
   sed -i s/^mirrorlist=http/#mirrorlist=http/g /etc/yum.repos.d/CentOS-*.repo
 
 # See https://archive.apache.org/dist/thrift/
-ENV THRIFT_VERSION=0.21.0
+ENV THRIFT_VERSION=0.22.0
 
 # See https://thrift.apache.org/docs/install/centos.html
 RUN yum update -y -q && \
@@ -32,7 +32,7 @@ RUN yum update -y -q && \
 
 ADD https://archive.apache.org/dist/thrift/${THRIFT_VERSION}/thrift-${THRIFT_VERSION}.tar.gz /tmp/thrift.tar.gz
 
-RUN echo "9a24f3eba9a4ca493602226c16d8c228037db3b9291c6fc4019bfe3bd39fc67c /tmp/thrift.tar.gz" | sha256sum -c && \
+RUN echo "794a0e455787960d9f27ab92c38e34da27e8deeda7a5db0e59dc64a00df8a1e5 /tmp/thrift.tar.gz" | sha256sum -c && \
   tar xzf /tmp/thrift.tar.gz -C /tmp
 
 RUN cd /tmp/thrift-${THRIFT_VERSION} && \
