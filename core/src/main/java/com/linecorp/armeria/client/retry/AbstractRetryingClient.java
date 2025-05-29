@@ -1,7 +1,7 @@
 /*
- * Copyright 2017 LINE Corporation
+ * Copyright 2025 LY Corporation
  *
- * LINE Corporation licenses this file to you under the Apache License,
+ * LY Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
@@ -15,9 +15,12 @@
  */
 package com.linecorp.armeria.client.retry;
 
+import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkState;
 import static java.util.Objects.requireNonNull;
 
+import java.util.LinkedList;
+import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 
@@ -51,7 +54,7 @@ import io.netty.util.concurrent.ScheduledFuture;
 public abstract class AbstractRetryingClient<I extends Request, O extends Response>
         extends SimpleDecoratingClient<I, O> {
 
-    private static final Logger logger = LoggerFactory.getLogger(AbstractRetryingClient.class);
+    protected static final Logger logger = LoggerFactory.getLogger(AbstractRetryingClient.class);
 
     /**
      * The header which indicates the retry count of a {@link Request}.
@@ -100,11 +103,18 @@ public abstract class AbstractRetryingClient<I extends Request, O extends Respon
      */
     protected abstract O doExecute(ClientRequestContext ctx, I req) throws Exception;
 
+    protected static void onRetryingComplete(ClientRequestContext ctx) {
+        ctx.logBuilder().endResponseWithLastChild();
+    }
+
     /**
      * This should be called when retrying is finished.
      */
-    protected static void onRetryingComplete(ClientRequestContext ctx) {
-        ctx.logBuilder().endResponseWithLastChild();
+    protected static void onRetryingComplete(ClientRequestContext ctx,
+                                             ClientRequestContext derivedCtx) {
+        // Cancel every in-flight attempt.
+        // The following is not long true.
+        ctx.logBuilder().endResponseWithChild(derivedCtx.log());
     }
 
     /**
@@ -154,7 +164,9 @@ public abstract class AbstractRetryingClient<I extends Request, O extends Respon
                 @SuppressWarnings("unchecked")
                 final ScheduledFuture<Void> scheduledFuture = (ScheduledFuture<Void>) ctx
                         .eventLoop().schedule(retryTask, nextDelayMillis, TimeUnit.MILLISECONDS);
+
                 scheduledFuture.addListener(future -> {
+                    state(ctx).removeRetryTask(scheduledFuture);
                     if (future.isCancelled()) {
                         // future is cancelled when the client factory is closed.
                         actionOnException.accept(new IllegalStateException(
@@ -164,9 +176,56 @@ public abstract class AbstractRetryingClient<I extends Request, O extends Respon
                         actionOnException.accept(future.cause());
                     }
                 });
+
+
+                state(ctx).addRetryTask(scheduledFuture);
             }
         } catch (Throwable t) {
             actionOnException.accept(t);
+        }
+    }
+
+    protected static void scheduleNextAttemptTimeout(ClientRequestContext ctx,
+                                                                      Runnable attemptTimeoutTask,
+                                                                      Consumer<? super Throwable> actionOnException,
+                                                                      long nextAttemptTimeoutMillis) {
+        checkArgument(nextAttemptTimeoutMillis > 0, "nextAttemptTimeoutMillis must be > 0");
+
+        try {
+            final ScheduledFuture<Void> nextAttemptTimeoutFuture = (ScheduledFuture<Void>) ctx
+                    .eventLoop()
+                    .schedule(attemptTimeoutTask, nextAttemptTimeoutMillis, TimeUnit.MILLISECONDS);
+
+            nextAttemptTimeoutFuture.addListener(thisAttemptTimeoutFuture -> {
+                if (thisAttemptTimeoutFuture.isCancelled()) {
+                    if (state(ctx).getCurrentAttemptTimeoutFuture() == thisAttemptTimeoutFuture) {
+                        actionOnException.accept(
+                                new IllegalStateException(ClientFactory.class.getSimpleName() + " has been "
+                                                          + "closed."));
+                    } else {
+                        // It is fine that attempt timeout tasks are cancelled to be replaced with the next
+                        // attempt timeout task.
+                    }
+                } else if (thisAttemptTimeoutFuture.cause() != null) {
+                    actionOnException.accept(thisAttemptTimeoutFuture.cause());
+                }
+            });
+
+            state(ctx).setCurrentAttemptTimeoutFuture(nextAttemptTimeoutFuture);
+        } catch (Throwable t) {
+            actionOnException.accept(t);
+        }
+    }
+
+    protected static void cancelRetryTasks(ClientRequestContext ctx) {
+        state(ctx).cancelAllRetryTasks();
+    }
+
+    protected static void cancelAttemptTimeout(ClientRequestContext ctx) {
+        final ScheduledFuture<Void> currentAttemptTimeoutFuture = state(ctx).getCurrentAttemptTimeoutFuture();
+        if (currentAttemptTimeoutFuture != null) {
+            currentAttemptTimeoutFuture.cancel(false);
+            state(ctx).setCurrentAttemptTimeoutFuture(null);
         }
     }
 
@@ -252,6 +311,15 @@ public abstract class AbstractRetryingClient<I extends Request, O extends Respon
         return state.totalAttemptNo;
     }
 
+    protected static boolean areAttemptsExhausted(ClientRequestContext ctx) {
+        final State state = ctx.attr(STATE);
+        if (state == null) {
+            // todo(szymon): when does this happen?
+            return true; // No retrying is in progress.
+        }
+        return state.areAttemptsExhausted();
+    }
+
     /**
      * Creates a new derived {@link ClientRequestContext}, replacing the requests.
      * If {@link ClientRequestContext#endpointGroup()} exists, a new {@link Endpoint} will be selected.
@@ -278,7 +346,11 @@ public abstract class AbstractRetryingClient<I extends Request, O extends Respon
         @Nullable
         private Backoff lastBackoff;
         private int currentAttemptNoWithLastBackoff;
+        // Starting with 1
         private int totalAttemptNo;
+        @Nullable
+        private ScheduledFuture<Void> currentAttemptTimeoutFuture;
+        private final List<ScheduledFuture<Void>> pendingRetryTasks;
 
         State(RetryConfig<?> config, long responseTimeoutMillis) {
             this.config = config;
@@ -291,6 +363,42 @@ public abstract class AbstractRetryingClient<I extends Request, O extends Respon
                 isTimeoutEnabled = true;
             }
             totalAttemptNo = 1;
+
+            // todo(szymon) can initialize with null first
+            pendingRetryTasks = new LinkedList<>();
+        }
+
+        @Nullable
+        ScheduledFuture<Void> getCurrentAttemptTimeoutFuture() {
+            return currentAttemptTimeoutFuture;
+        }
+
+        @Nullable
+        void setCurrentAttemptTimeoutFuture(@Nullable ScheduledFuture<Void> nextAttemptTimeoutFuture) {
+            if (currentAttemptTimeoutFuture != null) {
+                currentAttemptTimeoutFuture.cancel(false);
+            }
+
+            currentAttemptTimeoutFuture = nextAttemptTimeoutFuture;
+        }
+
+
+        void addRetryTask(ScheduledFuture<Void> retryTask) {
+            pendingRetryTasks.add(retryTask);
+        }
+
+
+        void removeRetryTask(ScheduledFuture<Void> retryTask) {
+            final boolean retryTaskFound = pendingRetryTasks.remove(retryTask);
+            assert retryTaskFound;
+        }
+
+
+        void cancelAllRetryTasks() {
+            for (ScheduledFuture<Void> retryTask : pendingRetryTasks) {
+                // They will all call removeRetryTask() when they are done.
+                retryTask.cancel(false);
+            }
         }
 
         /**
@@ -327,10 +435,17 @@ public abstract class AbstractRetryingClient<I extends Request, O extends Respon
             return TimeUnit.NANOSECONDS.toMillis(deadlineNanos - System.nanoTime());
         }
 
+        boolean areAttemptsExhausted() {
+            return totalAttemptNo >= config.maxTotalAttempts();
+        }
+
         int currentAttemptNoWith(Backoff backoff) {
-            if (totalAttemptNo++ >= config.maxTotalAttempts()) {
+            // todo(szymon): is it okay to not increment totalAttemptNo for this check?
+            if (areAttemptsExhausted()) {
                 return -1;
             }
+
+            totalAttemptNo++;
             if (lastBackoff != backoff) {
                 lastBackoff = backoff;
                 currentAttemptNoWithLastBackoff = 1;

@@ -1,7 +1,7 @@
 /*
- * Copyright 2018 LINE Corporation
+ * Copyright 2025 LY Corporation
  *
- * LINE Corporation licenses this file to you under the Apache License,
+ * LY Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
@@ -235,6 +235,11 @@ public final class ClientUtil {
             derived = ctx.newDerivedContext(id, req, rpcReq, ctx.endpoint());
         }
 
+        // We want to add the request log of the derived context as a child to the request log of the context
+        // we are deriving from.
+        // For that we copy over all log properties from the parent log to the derived log
+        // and add future actions to copy over content (previews).
+        // We are doing this because
         final RequestLogAccess parentLog = ctx.log();
         final RequestLog partial = parentLog.partial();
         final RequestLogBuilder logBuilder = derived.logBuilder();
@@ -277,7 +282,10 @@ public final class ClientUtil {
                      .thenAccept(requestLog -> logBuilder.responseContentPreview(
                              requestLog.responseContentPreview()));
         }
+
+        // We finally add the derived log as a child of the parent log.
         ctx.logBuilder().addChild(derived.log());
+
         return derived;
     }
 
