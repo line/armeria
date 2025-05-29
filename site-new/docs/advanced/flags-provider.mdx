@@ -36,7 +36,7 @@ You can also override these properties by setting JVM system properties. For exa
 Create your own [FlagsProvider](type) and load it via [Java SPI](https://docs.oracle.com/javase/tutorial/sound/SPI-intro.html).
 If there are multiple implementations of [FlagsProvider](type), the implementation with the highest priority will take precedence over the others.
 
-```java filename=MyFlagsProvider.java
+```java title="MyFlagsProvider.java"
 package com.example.providers;
 
 public class MyFlagsProvider implements FlagsProvider {
@@ -78,6 +78,6 @@ public class MyFlagsProvider implements FlagsProvider {
 
 Add the following text file to your classpath or JAR file.
 
-```text filename=META-INF/services/com.linecorp.armeria.common.FlagsProvider
+```text title="META-INF/services/com.linecorp.armeria.common.FlagsProvider"
 com.example.providers.MyFlagsProvider
 ```

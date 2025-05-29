@@ -137,7 +137,14 @@ const sidebars: SidebarsConfig = {
         type: 'doc',
         id: 'tutorials/grpc/index',
       },
-      items: ['tutorials/grpc/define-a-service'],
+      items: [
+        'tutorials/grpc/define-service',
+        'tutorials/grpc/run-service',
+        'tutorials/grpc/implement-create',
+        'tutorials/grpc/implement-read',
+        'tutorials/grpc/implement-update',
+        'tutorials/grpc/implement-delete',
+      ],
     },
     {
       type: 'category',
@@ -146,7 +153,14 @@ const sidebars: SidebarsConfig = {
         type: 'doc',
         id: 'tutorials/thrift/index',
       },
-      items: ['tutorials/thrift/define-a-service'],
+      items: [
+        'tutorials/thrift/define-service',
+        'tutorials/thrift/run-service',
+        'tutorials/thrift/implement-create',
+        'tutorials/thrift/implement-read',
+        'tutorials/thrift/implement-update',
+        'tutorials/thrift/implement-delete',
+      ],
     },
     {
       type: 'html',
