@@ -1,7 +1,7 @@
 /*
- * Copyright 2024 LINE Corporation
+ * Copyright 2025 LY Corporation
  *
- * LINE Corporation licenses this file to you under the Apache License,
+ * LY Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
@@ -29,20 +29,18 @@ import io.envoyproxy.envoy.config.cluster.v3.Cluster;
  */
 @UnstableApi
 public final class ClusterSnapshot implements Snapshot<ClusterXdsResource> {
+
     private final ClusterXdsResource clusterXdsResource;
     @Nullable
     private final EndpointSnapshot endpointSnapshot;
-    private final int index;
 
-    ClusterSnapshot(ClusterXdsResource clusterXdsResource,
-                    @Nullable EndpointSnapshot endpointSnapshot, int index) {
+    ClusterSnapshot(ClusterXdsResource clusterXdsResource, @Nullable EndpointSnapshot endpointSnapshot) {
         this.clusterXdsResource = clusterXdsResource;
         this.endpointSnapshot = endpointSnapshot;
-        this.index = index;
     }
 
     ClusterSnapshot(ClusterXdsResource clusterXdsResource) {
-        this(clusterXdsResource, null, -1);
+        this(clusterXdsResource, null);
     }
 
     @Override
@@ -56,10 +54,6 @@ public final class ClusterSnapshot implements Snapshot<ClusterXdsResource> {
     @Nullable
     public EndpointSnapshot endpointSnapshot() {
         return endpointSnapshot;
-    }
-
-    int index() {
-        return index;
     }
 
     @Override
