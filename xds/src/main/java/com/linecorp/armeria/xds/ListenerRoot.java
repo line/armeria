@@ -30,29 +30,30 @@ import io.envoyproxy.envoy.config.listener.v3.Listener;
 public final class ListenerRoot extends AbstractRoot<ListenerSnapshot> {
 
     private final ListenerResourceNode node;
+    final SubscriptionContext context;
 
-    ListenerRoot(XdsBootstrapImpl xdsBootstrap, ConfigSourceMapper configSourceMapper,
-                 String resourceName, BootstrapListeners bootstrapListeners) {
-        super(xdsBootstrap.eventLoop());
+    ListenerRoot(SubscriptionContext context, String resourceName, BootstrapListeners bootstrapListeners) {
+        super(context.eventLoop());
+        this.context = context;
         final ListenerXdsResource listenerXdsResource = bootstrapListeners.staticListeners().get(resourceName);
         if (listenerXdsResource != null) {
-            node = new ListenerResourceNode(null, resourceName, xdsBootstrap, this, ResourceNodeType.STATIC);
-            node.onChanged(listenerXdsResource);
+            node = new ListenerResourceNode(null, resourceName, context,
+                                            this, ResourceNodeType.STATIC);
+            eventLoop().execute(() -> node.onChanged(listenerXdsResource));
         } else {
-            final ConfigSource configSource = configSourceMapper.ldsConfigSource(resourceName);
-            node = new ListenerResourceNode(configSource, resourceName, xdsBootstrap,
+            final ConfigSource configSource = context.configSourceMapper()
+                                                     .ldsConfigSource(resourceName);
+            node = new ListenerResourceNode(configSource, resourceName, context,
                                             this, ResourceNodeType.DYNAMIC);
-            xdsBootstrap.subscribe(node);
+            eventLoop().execute(() -> context.subscribe(node));
         }
     }
 
     @Override
     public void close() {
-        if (!eventLoop().inEventLoop()) {
-            eventLoop().execute(this::close);
-            return;
-        }
-        node.close();
-        super.close();
+        eventLoop().execute(() -> {
+            node.close();
+            super.close();
+        });
     }
 }
