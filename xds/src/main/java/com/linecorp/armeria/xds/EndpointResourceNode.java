@@ -1,7 +1,7 @@
 /*
- * Copyright 2023 LINE Corporation
+ * Copyright 2025 LY Corporation
  *
- * LINE Corporation licenses this file to you under the Apache License,
+ * LY Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
@@ -22,20 +22,16 @@ import com.linecorp.armeria.common.annotation.Nullable;
 
 import io.envoyproxy.envoy.config.core.v3.ConfigSource;
 
-final class EndpointResourceNode extends AbstractResourceNodeWithPrimer<EndpointXdsResource> {
-
-    private final SnapshotWatcher<EndpointSnapshot> parentWatcher;
+final class EndpointResourceNode extends AbstractResourceNode<EndpointXdsResource, EndpointSnapshot> {
 
     EndpointResourceNode(@Nullable ConfigSource configSource,
-                         String resourceName, XdsBootstrapImpl xdsBootstrap,
-                         @Nullable ClusterXdsResource primer,
+                         String resourceName, SubscriptionContext context,
                          SnapshotWatcher<EndpointSnapshot> parentWatcher, ResourceNodeType resourceNodeType) {
-        super(xdsBootstrap, configSource, ENDPOINT, resourceName, primer, parentWatcher, resourceNodeType);
-        this.parentWatcher = parentWatcher;
+        super(context, configSource, ENDPOINT, resourceName, parentWatcher, resourceNodeType);
     }
 
     @Override
     void doOnChanged(EndpointXdsResource update) {
-        parentWatcher.snapshotUpdated(new EndpointSnapshot(update));
+        notifyOnChanged(new EndpointSnapshot(update));
     }
 }
