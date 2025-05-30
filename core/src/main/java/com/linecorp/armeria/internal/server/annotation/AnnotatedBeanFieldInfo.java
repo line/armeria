@@ -22,6 +22,8 @@ import java.util.Map;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+import com.google.common.base.MoreObjects;
+
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.logging.BeanFieldInfo;
 
@@ -60,5 +62,14 @@ final class AnnotatedBeanFieldInfo implements BeanFieldInfo {
     @Override
     public <T extends Annotation> T getClassAnnotation(Class<T> annotationClass) {
         return (T) typeMap.get(annotationClass);
+    }
+
+    @Override
+    public String toString() {
+        return MoreObjects.toStringHelper(this)
+                          .add("httpElementName", httpElementName)
+                          .add("typeElementMap", typeElementMap)
+                          .add("typeMap", typeMap)
+                          .toString();
     }
 }

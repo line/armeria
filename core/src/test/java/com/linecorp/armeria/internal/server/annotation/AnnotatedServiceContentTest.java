@@ -93,11 +93,11 @@ class AnnotatedServiceContentTest {
         final Object reqContent = sctx.log().whenComplete().join().requestContent();
         assertThat(reqContent).isInstanceOf(AnnotatedRequest.class);
         final AnnotatedRequest annotatedReq = (AnnotatedRequest) reqContent;
-        assertThat(annotatedReq.parameters()).containsExactly(foo);
+        assertThat(annotatedReq.rawParameters()).containsExactly(foo);
         final Object resContent = sctx.log().whenComplete().join().responseContent();
         assertThat(resContent).isInstanceOf(AnnotatedResponse.class);
         final AnnotatedResponse annotatedRes = (AnnotatedResponse) resContent;
-        assertThat(annotatedRes.value()).isEqualTo(foo);
+        assertThat(annotatedRes.rawValue()).isEqualTo(foo);
     }
 
     @Test
@@ -134,18 +134,18 @@ class AnnotatedServiceContentTest {
         final Object reqContent = sctx.log().whenComplete().join().requestContent();
         assertThat(reqContent).isInstanceOf(AnnotatedRequest.class);
         final AnnotatedRequest annotatedRequest = (AnnotatedRequest) reqContent;
-        assertThat(annotatedRequest.parameters()).hasSize(6);
-        assertThat(annotatedRequest.parameters().get(0)).isEqualTo(foo);
-        assertThat(annotatedRequest.parameters().get(1)).isEqualTo("paramValue");
-        assertThat(annotatedRequest.parameters().get(2)).isInstanceOf(HttpRequest.class);
-        assertThat(annotatedRequest.parameters().get(3)).isInstanceOf(AggregatedHttpRequest.class);
-        assertThat(annotatedRequest.parameters().get(4)).isSameAs(sctx);
-        assertThat(annotatedRequest.parameters().get(5)).isNull();
+        assertThat(annotatedRequest.rawParameters()).hasSize(6);
+        assertThat(annotatedRequest.rawParameters().get(0)).isEqualTo(foo);
+        assertThat(annotatedRequest.rawParameters().get(1)).isEqualTo("paramValue");
+        assertThat(annotatedRequest.rawParameters().get(2)).isInstanceOf(HttpRequest.class);
+        assertThat(annotatedRequest.rawParameters().get(3)).isInstanceOf(AggregatedHttpRequest.class);
+        assertThat(annotatedRequest.rawParameters().get(4)).isSameAs(sctx);
+        assertThat(annotatedRequest.rawParameters().get(5)).isNull();
 
         final Object resContent = sctx.log().whenComplete().join().responseContent();
         assertThat(resContent).isInstanceOf(AnnotatedResponse.class);
         final AnnotatedResponse annotatedResponse = (AnnotatedResponse) resContent;
-        assertThat(annotatedResponse.value()).isEqualTo(foo);
+        assertThat(annotatedResponse.rawValue()).isEqualTo(foo);
     }
 
     @Test
@@ -183,17 +183,17 @@ class AnnotatedServiceContentTest {
         final Object reqContent = sctx.log().whenComplete().join().requestContent();
         assertThat(reqContent).isInstanceOf(AnnotatedRequest.class);
         final AnnotatedRequest annotatedRequest = (AnnotatedRequest) reqContent;
-        assertThat(annotatedRequest.parameters()).hasSize(5);
-        assertThat(annotatedRequest.parameters().get(0)).isInstanceOf(File.class);
-        assertThat(annotatedRequest.parameters().get(1)).isInstanceOf(Path.class);
-        assertThat(annotatedRequest.parameters().get(2)).isInstanceOf(MultipartFile.class);
-        assertThat(annotatedRequest.parameters().get(3)).isInstanceOf(MultipartFile.class);
-        assertThat(annotatedRequest.parameters().get(4)).isEqualTo("armeria");
+        assertThat(annotatedRequest.rawParameters()).hasSize(5);
+        assertThat(annotatedRequest.rawParameters().get(0)).isInstanceOf(File.class);
+        assertThat(annotatedRequest.rawParameters().get(1)).isInstanceOf(Path.class);
+        assertThat(annotatedRequest.rawParameters().get(2)).isInstanceOf(MultipartFile.class);
+        assertThat(annotatedRequest.rawParameters().get(3)).isInstanceOf(MultipartFile.class);
+        assertThat(annotatedRequest.rawParameters().get(4)).isEqualTo("armeria");
 
         final Object resContent = sctx.log().whenComplete().join().responseContent();
         assertThat(resContent).isInstanceOf(AnnotatedResponse.class);
         final AnnotatedResponse annotatedResponse = (AnnotatedResponse) resContent;
-        assertThat(annotatedResponse.value()).isInstanceOf(HttpResponse.class);
+        assertThat(annotatedResponse.rawValue()).isInstanceOf(HttpResponse.class);
     }
 
     @Test
@@ -218,12 +218,12 @@ class AnnotatedServiceContentTest {
         final Object reqContent = sctx.log().whenComplete().join().requestContent();
         assertThat(reqContent).isInstanceOf(AnnotatedRequest.class);
         final AnnotatedRequest annotatedRequest = (AnnotatedRequest) reqContent;
-        assertThat(annotatedRequest.parameters()).isEmpty();
+        assertThat(annotatedRequest.rawParameters()).isEmpty();
 
         final Object resContent = sctx.log().whenComplete().join().responseContent();
         assertThat(resContent).isInstanceOf(AnnotatedResponse.class);
         final AnnotatedResponse annotatedResponse = (AnnotatedResponse) resContent;
-        assertThat(annotatedResponse.value()).isInstanceOf(HttpFile.class);
+        assertThat(annotatedResponse.rawValue()).isInstanceOf(HttpFile.class);
     }
 
     @Test
@@ -257,12 +257,12 @@ class AnnotatedServiceContentTest {
         final Object reqContent = sctx.log().whenComplete().join().requestContent();
         assertThat(reqContent).isInstanceOf(AnnotatedRequest.class);
         final AnnotatedRequest annotatedRequest = (AnnotatedRequest) reqContent;
-        assertThat(annotatedRequest.parameters()).containsExactly(foo);
+        assertThat(annotatedRequest.rawParameters()).containsExactly(foo);
 
         final Object resContent = sctx.log().whenComplete().join().responseContent();
         assertThat(resContent).isInstanceOf(AnnotatedResponse.class);
         final AnnotatedResponse annotatedResponse = (AnnotatedResponse) resContent;
-        assertThat(annotatedResponse.value()).isNull();
+        assertThat(annotatedResponse.rawValue()).isNull();
     }
 
     @SuppressWarnings("checkstyle:VisibilityModifier")

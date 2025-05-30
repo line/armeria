@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.internal.server.annotation;
 
+import static com.linecorp.armeria.internal.server.annotation.AnnotatedServiceLogUtil.maybeUnwrapFuture;
+
 import com.google.common.base.MoreObjects;
 
 import com.linecorp.armeria.common.annotation.Nullable;
@@ -24,27 +26,32 @@ import com.linecorp.armeria.common.logging.BeanFieldInfo;
 final class AnnotatedResponse {
 
     @Nullable
-    private final Object value;
+    private final Object rawValue;
     private final BeanFieldInfo beanFieldInfo;
 
-    AnnotatedResponse(@Nullable Object value, BeanFieldInfo beanFieldInfo) {
-        this.value = value;
+    AnnotatedResponse(@Nullable Object rawValue, BeanFieldInfo beanFieldInfo) {
+        this.rawValue = rawValue;
         this.beanFieldInfo = beanFieldInfo;
     }
 
     @Nullable
-    public Object value() {
-        return value;
+    Object rawValue() {
+        return rawValue;
     }
 
-    public BeanFieldInfo beanFieldInfo() {
+    @Nullable
+    Object value() {
+        return maybeUnwrapFuture(rawValue);
+    }
+
+    BeanFieldInfo beanFieldInfo() {
         return beanFieldInfo;
     }
 
     @Override
     public String toString() {
         return MoreObjects.toStringHelper(this)
-                          .add("value", value)
+                          .add("value", value())
                           .toString();
     }
 }

@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.internal.server.annotation;
 
+import static com.linecorp.armeria.internal.server.annotation.AnnotatedServiceLogUtil.customizeWellKnownSerializers;
+
 import java.util.List;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -46,6 +48,7 @@ public final class BeanFieldMaskerSelectorProvider
         module.setDeserializerModifier(new MaskingBeanDeserializerModifier(maskerCache));
         module.addSerializer(new AnnotatedRequestJsonSerializer(maskerCache));
         module.addSerializer(new AnnotatedResponseJsonSerializer(maskerCache));
+        customizeWellKnownSerializers(module);
         objectMapper.registerModule(module);
         // default to logging "{}" instead of throwing an exception for beans not intended for jackson
         objectMapper.disable(SerializationFeature.FAIL_ON_EMPTY_BEANS);

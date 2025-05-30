@@ -250,8 +250,8 @@ class BeanContentSanitizerITTest {
                                       .node("params[12]").isEqualTo("optionalParamValue")
                                       .node("params[13]").matches(new StringContains("param=paramValue"))
                                       .node("params[14]").isStringEqualTo("[]")
-                                      .node("params[15]").matches(new StringContains(":method=POST"))
-                                      .node("params[16]").matches(new StringContains(":method=POST"));
+                                      .node("params[15].:method").isStringEqualTo("POST")
+                                      .node("params[16].:method").isStringEqualTo("POST");
 
         final String responseLog = logWriter.blockingDeque().takeFirst();
         matcher = responseContentPattern.matcher(responseLog);

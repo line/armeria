@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.internal.server.annotation;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -27,27 +28,41 @@ import com.linecorp.armeria.common.logging.BeanFieldInfo;
 
 final class AnnotatedRequest {
 
-    private final List<@Nullable Object> parameters;
+    private final List<@Nullable Object> rawParameters;
     private final List<BeanFieldInfo> beanFieldInfos;
 
-    AnnotatedRequest(Object[] parameters, List<BeanFieldInfo> beanFieldInfos) {
-        assert parameters.length == beanFieldInfos.size();
-        this.parameters = Collections.unmodifiableList(Arrays.asList(parameters));
+    AnnotatedRequest(Object[] rawParameters, List<BeanFieldInfo> beanFieldInfos) {
+        assert rawParameters.length == beanFieldInfos.size();
+        this.rawParameters = Collections.unmodifiableList(Arrays.asList(rawParameters));
         this.beanFieldInfos = beanFieldInfos;
     }
 
-    public List<@Nullable Object> parameters() {
-        return parameters;
+    List<@Nullable Object> rawParameters() {
+        return rawParameters;
     }
 
-    public List<BeanFieldInfo> beanFieldInfos() {
+    @Nullable
+    Object getParameter(int index) {
+        final Object o = rawParameters.get(index);
+        return AnnotatedServiceLogUtil.maybeUnwrapFuture(o);
+    }
+
+    List<BeanFieldInfo> beanFieldInfos() {
         return beanFieldInfos;
+    }
+
+    private List<Object> parameters() {
+        final ArrayList<Object> parameters = new ArrayList<>();
+        for (int i = 0; i < rawParameters.size(); i++) {
+            parameters.add(getParameter(i));
+        }
+        return parameters;
     }
 
     @Override
     public String toString() {
         return MoreObjects.toStringHelper(this)
-                          .add("parameters", parameters)
+                          .add("parameters", parameters())
                           .toString();
     }
 }

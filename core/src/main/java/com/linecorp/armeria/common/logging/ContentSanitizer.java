@@ -18,6 +18,8 @@ package com.linecorp.armeria.common.logging;
 
 import java.util.function.BiFunction;
 
+import com.fasterxml.jackson.databind.JsonNode;
+
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 
@@ -45,5 +47,19 @@ public interface ContentSanitizer<T> extends BiFunction<RequestContext, Object, 
      */
     static ContentSanitizerBuilder builder() {
         return new ContentSanitizerBuilder();
+    }
+
+    /**
+     * Returns a {@link ContentSanitizer} instance which doesn't mask fields.
+     */
+    static ContentSanitizer<String> forText() {
+        return new ContentSanitizerBuilder().buildForText();
+    }
+
+    /**
+     * Returns a {@link ContentSanitizer} instance which doesn't mask fields.
+     */
+    static ContentSanitizer<JsonNode> forJson() {
+        return new ContentSanitizerBuilder().buildForJson();
     }
 }

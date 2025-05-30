@@ -114,11 +114,11 @@ class ContentPreviewInLogFormatterTest {
 
         final LogFormatter textLogFormatter = LogFormatter.ofText();
         assertThat(textLogFormatter.formatRequest(log))
-                .contains(", content=");
+                .contains(", content=AnnotatedRequest{parameters=[Hello]}");
         assertThat(textLogFormatter.formatResponse(log))
-                .contains(", content=");
+                .contains(", content=AnnotatedResponse{value=World}");
         final LogFormatter jsonLogFormatter = LogFormatter.ofJson();
-        assertThat(jsonLogFormatter.formatRequest(log)).contains("\"content\":");
-        assertThat(jsonLogFormatter.formatResponse(log)).contains("\"content\":");
+        assertThat(jsonLogFormatter.formatRequest(log)).contains("\"content\":{\"params\":[\"Hello\"]}");
+        assertThat(jsonLogFormatter.formatResponse(log)).contains("\"content\":{\"value\":\"World\"}");
     }
 }
