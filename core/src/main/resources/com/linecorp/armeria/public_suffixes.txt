@@ -101,8 +101,6 @@
 *.migration.run
 *.mm
 *.moonscale.io
-*.my.canva.site
-*.my.canvasite.cn
 *.nagoya.jp
 *.nodebalancer.linode.com
 *.nom.br
@@ -127,6 +125,8 @@
 *.privatelink.snowflake.app
 *.quipelements.com
 *.r.appspot.com
+*.raw.icp0.io
+*.raw.icp1.io
 *.run.app
 *.s.brave.app
 *.s.brave.io
@@ -254,6 +254,7 @@ abbvie
 abc
 abc.br
 abeno.osaka.jp
+abg.ec
 abiko.chiba.jp
 abira.hokkaido.jp
 abkhazia.su
@@ -335,6 +336,7 @@ adachi.tokyo.jp
 adaptable.app
 adimo.co.uk
 adm.br
+adm.ec
 adobeaemcloud.com
 adobeaemcloud.net
 adobeio-static.net
@@ -384,6 +386,7 @@ agrigento.it
 agro.bj
 agro.bo
 agro.pl
+agron.ec
 aguni.okinawa.jp
 ah.cn
 ah.no
@@ -565,6 +568,7 @@ ap.ngrok.io
 aparecida.br
 apartments
 api.gov.uk
+api.lp.dev
 api.stdlib.com
 apigee.io
 app
@@ -616,10 +620,12 @@ army
 arna.no
 arpa
 arq.br
+arqt.ec
 art
 art.br
 art.do
 art.dz
+art.ec
 art.ht
 art.ml
 art.pl
@@ -833,6 +839,7 @@ bandai.fukushima.jp
 bando.ibaraki.jp
 bank
 bar
+bar.ec
 bar.pro
 barcelona
 barclaycard
@@ -978,6 +985,7 @@ biz.cy
 biz.dk
 biz.et
 biz.fj
+biz.gh
 biz.gl
 biz.id
 biz.in
@@ -1165,6 +1173,8 @@ caa.aero
 cab
 cable-modem.org
 cafe
+caffeine.ai
+caffeine.site
 cafjs.com
 cagliari.it
 cahcesuolo.no
@@ -1336,6 +1346,7 @@ chase
 chat
 cheap
 cheap.jp
+chef.ec
 cherkassy.ua
 cherkasy.ua
 chernigov.ua
@@ -1430,7 +1441,6 @@ cloud.goog
 cloud.interhostsolutions.be
 cloud.nospamproxy.com
 cloud66.ws
-cloud66.zone
 cloudaccess.host
 cloudaccess.net
 cloudapp.net
@@ -1734,6 +1744,7 @@ consulado.st
 consultant.aero
 consulting
 consulting.aero
+cont.ec
 contact
 contagem.br
 contractors
@@ -1766,6 +1777,7 @@ coupons
 courses
 coz.br
 cpa
+cpa.ec
 cpa.pro
 cpanel.site
 cprapid.com
@@ -1801,6 +1813,7 @@ ct.it
 ct.us
 ctfcloud.net
 cu
+cue.ec
 cuiaba.br
 cuisinella
 cuneo.it
@@ -1914,6 +1927,7 @@ demon.nl
 deno-staging.dev
 deno.dev
 deno.net
+dent.ec
 dental
 dentist
 dep.no
@@ -1937,6 +1951,7 @@ df.gov.br
 df.leg.br
 dfirma.pl
 dgca.aero
+dgn.ec
 dh.bytemark.co.uk
 dhl
 diadem.cloud
@@ -1950,6 +1965,7 @@ direct
 direct.quickconnect.cn
 direct.quickconnect.to
 directory
+disco.ec
 discordsays.com
 discordsez.com
 discount
@@ -1995,6 +2011,7 @@ dnsup.net
 dnsupdate.info
 dnsupdater.de
 do
+doc.ec
 docs
 doctor
 does-it.net
@@ -2292,6 +2309,7 @@ elasticbeanstalk.com
 elblag.pl
 elementor.cloud
 elementor.cool
+eliv-cdn.kr
 eliv-dns.kr
 elk.pl
 elverum.no
@@ -2418,6 +2436,7 @@ enebakk.no
 energy
 enf.br
 eng.br
+eng.ec
 eng.jo
 eng.pro
 engerdal.no
@@ -2450,6 +2469,7 @@ es.kr
 es.leg.br
 esan.hokkaido.jp
 esashi.hokkaido.jp
+esm.ec
 esp.br
 esq
 est-a-la-maison.com
@@ -2699,6 +2719,7 @@ forum.hu
 forumz.info
 fosnes.no
 fot.br
+fot.ec
 foundation
 fox
 foz.br
@@ -2803,6 +2824,7 @@ from-wv.com
 from-wy.com
 from.hr
 from.tv
+frontend.encr.app
 frontier
 frosinone.it
 frosta.no
@@ -2883,6 +2905,7 @@ ga
 ga.us
 gaivuotna.no
 gal
+gal.ec
 gallery
 gallo
 gallup
@@ -2962,6 +2985,7 @@ giske.no
 git-pages.rit.edu
 git-repos.de
 gitapp.si
+github.app
 github.io
 githubpreview.dev
 githubusercontent.com
@@ -3298,6 +3322,7 @@ gw
 gwangju.kr
 gx.cn
 gy
+gye.ec
 gyeongbuk.kr
 gyeonggi.kr
 gyeongnam.kr
@@ -3636,6 +3661,7 @@ ibaraki.osaka.jp
 ibestad.no
 ibigawa.gifu.jp
 ibm
+ibr.ec
 ibxos.it
 ic.gov.pl
 icbc
@@ -3650,9 +3676,13 @@ ichinohe.iwate.jp
 ichinomiya.aichi.jp
 ichinomiya.chiba.jp
 ichinoseki.iwate.jp
+icp-api.io
+icp0.io
+icp1.io
 icu
 icurus.jp
 id
+id.ai
 id.au
 id.cv
 id.firewalledreplit.co
@@ -3756,7 +3786,6 @@ ind.br
 ind.gt
 ind.in
 ind.kw
-ind.mom
 ind.tn
 independent-commission.uk
 independent-inquest.uk
@@ -3966,6 +3995,7 @@ isehara.kanagawa.jp
 isen.kagoshima.jp
 isernia.it
 iserv.dev
+iserv.host
 iservschule.de
 isesaki.gunma.jp
 ishigaki.okinawa.jp
@@ -4480,6 +4510,7 @@ kontum.vn
 konyvelo.hu
 koobin.events
 koori.fukushima.jp
+kop.id
 kopervik.no
 koriyama.fukushima.jp
 koryo.nara.jp
@@ -4649,6 +4680,7 @@ larvik.no
 lasalle
 laspezia.it
 lat
+lat.ec
 latina.it
 latino
 latrobe
@@ -4824,6 +4856,7 @@ logoip.com
 logoip.de
 lohmus.me
 loisirs.bj
+loj.ec
 lol
 lolipop.io
 lolipopmc.jp
@@ -5271,6 +5304,7 @@ mjondalen.no
 mk
 mk.eu.org
 mk.ua
+mktg.ec
 ml
 mlb
 mlbfan.org
@@ -5315,6 +5349,7 @@ molde.no
 molise.it
 mom
 mombetsu.hokkaido.jp
+mon.ec
 monash
 mond.jp
 money
@@ -5422,6 +5457,8 @@ my-gateway.de
 my-router.de
 my-vigor.de
 my-wan.de
+my.canva.site
+my.canvasite.cn
 my.eu.org
 my.id
 myactivedirectory.com
@@ -5693,6 +5730,7 @@ net.fj
 net.fm
 net.ge
 net.gg
+net.gh
 net.gl
 net.gn
 net.gp
@@ -6039,6 +6077,7 @@ nt.no
 nt.ro
 ntdll.top
 ntr.br
+ntr.ec
 ntt
 nu
 nu.ca
@@ -6074,6 +6113,7 @@ obi
 obihiro.hokkaido.jp
 obira.hokkaido.jp
 obj.ag
+objects.lp.dev
 objects.lpg.cloudscale.ch
 objects.rma.cloudscale.ch
 obl.ong
@@ -6092,6 +6132,7 @@ odesa.ua
 odessa.ua
 odo.br
 odo.replit.dev
+odont.ec
 oe.yamagata.jp
 of.by
 of.je
@@ -6753,6 +6794,7 @@ prod
 production.aero
 productions
 prof
+prof.ec
 prof.pr
 profesional.bo
 progressive
@@ -6770,6 +6812,8 @@ przeworsk.pl
 ps
 psc.br
 psi.br
+psic.ec
+psiq.ec
 psp.gov.pl
 psse.gov.pl
 pstmn.io
@@ -6778,6 +6822,7 @@ pt.eu.org
 pt.it
 pu.it
 pub
+pub.ec
 pub.instances.scw.cloud
 pub.sa
 publ.cv
@@ -6972,6 +7017,7 @@ ringerike.no
 ringsaker.no
 rio
 rio.br
+rio.ec
 riobranco.br
 riopreto.br
 rip
@@ -7020,6 +7066,7 @@ royken.no
 royrvik.no
 rr.gov.br
 rr.leg.br
+rrpp.ec
 rs
 rs.ba
 rs.gov.br
@@ -7421,6 +7468,7 @@ sakurai.nara.jp
 sakuratan.com
 sakuraweb.com
 sakyo.kyoto.jp
+sal.ec
 salangen.no
 salat.no
 sale
@@ -7526,6 +7574,7 @@ school.nz
 school.za
 schoolbus.jp
 schools.nsw.edu.au
+schuldock.de
 schule
 schulplattform.de
 schulserver.de
@@ -8238,6 +8287,7 @@ tec.br
 tec.mi.us
 tec.ve
 tech
+tech.ec
 tech.orange
 technology
 tecnologia.bo
@@ -8552,12 +8602,14 @@ tt.im
 tube
 tucker.replit.dev
 tui
+tul.ec
 tula.su
 tuleap-partners.com
 tunes
 tunk.org
 tur.ar
 tur.br
+tur.ec
 turek.pl
 turin.it
 turystyka.pl
@@ -8623,6 +8675,7 @@ ug.gov.pl
 ugim.gov.pl
 uh-oh.jp
 ui.nabu.casa
+uio.ec
 uji.kyoto.jp
 ujiie.tochigi.jp
 ujitawara.kyoto.jp
@@ -8815,6 +8868,7 @@ vestre-toten.no
 vestvagoy.no
 vet
 vet.br
+vet.ec
 veterinaire.fr
 veterinaire.km
 vevelstad.no
@@ -9596,6 +9650,7 @@ xnbay.com
 xs4all.space
 xx.kg
 xxx
+xxx.ec
 xyz
 xz.cn
 y.bg
