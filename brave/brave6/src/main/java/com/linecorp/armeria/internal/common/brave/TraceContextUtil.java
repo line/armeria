@@ -49,7 +49,7 @@ public final class TraceContextUtil {
 
     public static void setTraceContext(RequestContext ctx, TraceContext traceContext) {
         if (!logTraceContextOverwrite) {
-            final TraceContext prevTraceContext = traceContext(ctx);
+            final TraceContext prevTraceContext = ctx.ownAttr(TRACE_CONTEXT_KEY);
             if (prevTraceContext != null && !Objects.equals(traceContext, prevTraceContext)) {
                 logTraceContextOverwrite = true;
                 logger.warn("Overriding traceContext<{}> with new traceContext<{}> for RequestContext<{}>.",
