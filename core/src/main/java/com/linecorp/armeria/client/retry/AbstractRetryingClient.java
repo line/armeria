@@ -111,10 +111,10 @@ public abstract class AbstractRetryingClient<I extends Request, O extends Respon
      * This should be called when retrying is finished.
      */
     protected static void onRetryingComplete(ClientRequestContext ctx,
-                                             ClientRequestContext derivedCtx) {
+                                             ClientRequestContext attemptCtx) {
         // Cancel every in-flight attempt.
         // The following is not long true.
-        ctx.logBuilder().endResponseWithChild(derivedCtx.log());
+        ctx.logBuilder().endResponseWithChild(attemptCtx.log());
     }
 
     /**
@@ -321,10 +321,10 @@ public abstract class AbstractRetryingClient<I extends Request, O extends Respon
     }
 
     /**
-     * Creates a new derived {@link ClientRequestContext}, replacing the requests.
+     * Creates a new derived {@link ClientRequestContext} for a retrying attempt, replacing the requests.
      * If {@link ClientRequestContext#endpointGroup()} exists, a new {@link Endpoint} will be selected.
      */
-    protected static ClientRequestContext newDerivedContext(ClientRequestContext ctx,
+    protected static ClientRequestContext newAttemptContext(ClientRequestContext ctx,
                                                             @Nullable HttpRequest req,
                                                             @Nullable RpcRequest rpcReq,
                                                             boolean initialAttempt) {

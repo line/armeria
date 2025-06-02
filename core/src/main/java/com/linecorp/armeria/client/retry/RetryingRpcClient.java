@@ -189,7 +189,7 @@ public final class RetryingRpcClient extends AbstractRetryingClient<RpcRequest, 
             // response timeout.
         }
 
-        final ClientRequestContext derivedCtx = newDerivedContext(ctx, null, req, initialAttempt);
+        final ClientRequestContext derivedCtx = newAttemptContext(ctx, null, req, initialAttempt);
         attemptCtxs.add(derivedCtx);
 
         if (!initialAttempt) {
