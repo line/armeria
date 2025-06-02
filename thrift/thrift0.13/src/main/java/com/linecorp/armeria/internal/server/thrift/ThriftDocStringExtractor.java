@@ -63,7 +63,8 @@ final class ThriftDocStringExtractor extends DocStringExtractor {
         final ImmutableMap.Builder<String, String> docStrings = ImmutableMap.builder();
         for (Map.Entry<String, byte[]> entry : files.entrySet()) {
             try {
-                final Map<String, Object> json = new ObjectMapper().readValue(entry.getValue(), JSON_VALUE_TYPE);
+                final Map<String, Object> json =
+                        new ObjectMapper().readValue(entry.getValue(), JSON_VALUE_TYPE);
                 @SuppressWarnings("unchecked")
                 final Map<String, Object> namespaces =
                         (Map<String, Object>) json.getOrDefault("namespaces", ImmutableMap.of());
