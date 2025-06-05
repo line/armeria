@@ -206,6 +206,12 @@ public class TransformingRequestPreparation<T, R> implements WebRequestPreparati
     }
 
     @Override
+    public TransformingRequestPreparation<T, R> content(HttpData content) {
+        delegate.content(content);
+        return this;
+    }
+
+    @Override
     public TransformingRequestPreparation<T, R> content(MediaType contentType,
                                                         HttpData content) {
         delegate.content(contentType, content);
