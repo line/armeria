@@ -36,6 +36,10 @@ jobs:
       - name: Setup Minikube
         id: minikube
         uses: medyagh/setup-minikube@latest
+        with:
+          # https://github.com/fabric8io/kubernetes-client/issues/7037
+          # TODO: Update kubernetes-client >= 7.2.0 and remove version tag
+          kubernetes-version: '1.32.5'
 
       - name: Install Chaos Mesh
         run: |
