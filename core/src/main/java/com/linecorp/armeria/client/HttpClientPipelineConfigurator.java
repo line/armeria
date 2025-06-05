@@ -540,7 +540,9 @@ final class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
             final Http2ResponseDecoder responseDecoder = this.responseDecoder;
             final DecodedHttpResponse res = new DecodedHttpResponse(ctx.channel().eventLoop());
 
+            final int id = 0;
             res.init(responseDecoder.inboundTrafficController());
+            res.setId(0);
             res.subscribe(new Subscriber<HttpObject>() {
 
                 private boolean notified;
@@ -581,7 +583,7 @@ final class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
                     System.nanoTime(), SystemInfo.currentTimeMicros());
 
             // NB: No need to set the response timeout because we have session creation timeout.
-            responseDecoder.addResponse(null, 0, res, reqCtx, ctx.channel().eventLoop());
+            responseDecoder.addResponse(null, id, res, reqCtx, ctx.channel().eventLoop());
             ctx.fireChannelActive();
         }
 

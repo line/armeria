@@ -79,7 +79,7 @@ public final class DecodedHttpResponse extends DefaultHttpResponse {
         if (obj instanceof HttpData) {
             final int length = ((HttpData) obj).length();
             assert inboundTrafficController != null;
-            assert id > 0 : "id must be set before consuming HttpData";
+            assert id > -1 : "id must be set before consuming HttpData";
             inboundTrafficController.dec(id, length);
         }
     }
