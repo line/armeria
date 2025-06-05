@@ -42,6 +42,7 @@ import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.internal.common.InboundTrafficController;
+import com.linecorp.armeria.server.logging.LoggingService;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
 import io.netty.handler.codec.http2.Http2Connection;
@@ -67,6 +68,7 @@ public class HttpServerFlowControlTest {
     static final ServerExtension server = new ServerExtension() {
         @Override
         protected void configure(ServerBuilder sb) {
+            sb.decorator(LoggingService.newDecorator());
             sb.http2InitialConnectionWindowSize(CONNECTION_WINDOW);
             sb.http2InitialStreamWindowSize(STREAM_WINDOW);
             sb.service(PATH, (ctx, req) -> {
@@ -107,11 +109,9 @@ public class HttpServerFlowControlTest {
                 @Override
                 public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
                     final CompletableFuture<HttpResponse> future = CompletableFuture.supplyAsync(() -> {
-                        final StreamingDecodedHttpRequest decodedReq = (StreamingDecodedHttpRequest) req;
-                        await().untilAsserted(() -> {
-                            // non-streaming request should not be suspended by flow control.
-                            assertThat(decodedReq.transferredBytes()).isEqualTo(DATA_SIZE);
-                        });
+                        final AggregatingDecodedHttpRequest decodedReq = (AggregatingDecodedHttpRequest) req;
+                        // non-streaming request should not be suspended by flow control.
+                        assertThat(decodedReq.transferredBytes()).isEqualTo(DATA_SIZE);
 
                         final AggregatedHttpRequest aggReq = req.aggregate().join();
                         return HttpResponse.of(HttpStatus.OK, MediaType.PLAIN_TEXT,
@@ -167,7 +167,7 @@ public class HttpServerFlowControlTest {
         final WebClient client = WebClient.of(server.uri(SessionProtocol.H2C));
 
         final AggregatedHttpResponse res =
-                client.post(PATH, HttpData.wrap(new byte[DATA_SIZE])).aggregate().join();
+                client.post("/aggregate", HttpData.wrap(new byte[DATA_SIZE])).aggregate().join();
         assertThat(res.status()).isEqualTo(HttpStatus.OK);
         assertThat(res.contentUtf8()).isEqualTo("Received: " + DATA_SIZE);
     }
