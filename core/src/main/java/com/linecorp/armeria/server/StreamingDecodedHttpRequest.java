@@ -151,6 +151,7 @@ final class StreamingDecodedHttpRequest extends DefaultHttpRequest implements De
         if (obj instanceof HttpHeaders) { // HTTP trailers.
             published = super.tryWrite(obj);
             ctx.logBuilder().requestTrailers((HttpHeaders) obj);
+            ctx.logBuilder().requestFullyReceived();
             // Close this stream because HTTP trailers is the last element of the request.
             close();
         } else {
@@ -162,6 +163,7 @@ final class StreamingDecodedHttpRequest extends DefaultHttpRequest implements De
                 inboundTrafficController.inc(httpData.length());
             }
             if (obj.isEndOfStream()) {
+                ctx.logBuilder().requestFullyReceived();
                 close();
             }
         }
@@ -246,5 +248,23 @@ final class StreamingDecodedHttpRequest extends DefaultHttpRequest implements De
     @Override
     public boolean isHttp1WebSocket() {
         return http1WebSocket;
+    }
+
+    @Override
+    public void close() {
+        logRequestFullyReceivedTiming();
+        super.close();
+    }
+
+    @Override
+    public void close(Throwable cause) {
+        logRequestFullyReceivedTiming();
+        super.close(cause);
+    }
+
+    private void logRequestFullyReceivedTiming() {
+        if (ctx != null) {
+            ctx.logBuilder().requestFullyReceived();
+        }
     }
 }

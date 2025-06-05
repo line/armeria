@@ -453,7 +453,7 @@ public class DefaultStreamMessage<T> extends AbstractStreamWriter<T> {
     }
 
     @Override
-    public final void close(Throwable cause) {
+    public void close(Throwable cause) {
         requireNonNull(cause, "cause");
 
         tryClose(cause);
