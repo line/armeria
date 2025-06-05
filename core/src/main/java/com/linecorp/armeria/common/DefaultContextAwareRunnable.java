@@ -19,14 +19,20 @@ package com.linecorp.armeria.common;
 import static java.util.Objects.requireNonNull;
 
 import com.linecorp.armeria.common.util.SafeCloseable;
+import com.linecorp.armeria.internal.common.context.ArmeriaContextPropagation;
+
+import io.micrometer.context.ContextSnapshot;
+import io.micrometer.context.ContextSnapshot.Scope;
 
 final class DefaultContextAwareRunnable implements ContextAwareRunnable {
     private final RequestContext context;
     private final Runnable runnable;
+    private final ContextSnapshot contextSnapshot;
 
     DefaultContextAwareRunnable(RequestContext context, Runnable runnable) {
         this.context = requireNonNull(context, "context");
         this.runnable = requireNonNull(runnable, "runnable");
+        contextSnapshot = ArmeriaContextPropagation.captureAll();
     }
 
     @Override
@@ -42,7 +48,9 @@ final class DefaultContextAwareRunnable implements ContextAwareRunnable {
     @Override
     public void run() {
         try (SafeCloseable ignored = context.push()) {
-            runnable.run();
+            try (Scope ignored2 = contextSnapshot.setThreadLocals()) {
+                runnable.run();
+            }
         }
     }
 }
