@@ -16,8 +16,6 @@
 
 package com.linecorp.armeria.server.logging;
 
-import static com.linecorp.armeria.internal.logging.ContentPreviewingUtil.setUpRequestContentPreviewer;
-import static com.linecorp.armeria.internal.logging.ContentPreviewingUtil.setUpResponseContentPreviewer;
 import static java.util.Objects.requireNonNull;
 
 import java.nio.charset.Charset;
@@ -36,7 +34,9 @@ import com.linecorp.armeria.common.logging.ContentPreviewer;
 import com.linecorp.armeria.common.logging.ContentPreviewerFactory;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogAccess;
+import com.linecorp.armeria.common.logging.RequestLogBuilder;
 import com.linecorp.armeria.common.logging.RequestLogProperty;
+import com.linecorp.armeria.internal.logging.ContentPreviewingUtil;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.SimpleDecoratingHttpService;
@@ -150,7 +150,9 @@ public final class ContentPreviewingService extends SimpleDecoratingHttpService 
         if (!req.isEmpty()) {
             final ContentPreviewer requestContentPreviewer =
                     contentPreviewerFactory.requestContentPreviewer(ctx, req.headers());
-            req = setUpRequestContentPreviewer(ctx, req, requestContentPreviewer, requestPreviewSanitizer);
+            req = ContentPreviewingUtil.setUpRequestContentPreviewer(ctx, req,
+                                                                     requestContentPreviewer,
+                                                                     requestPreviewSanitizer);
         } else {
             // Set empty String.
             ctx.logBuilder().requestContentPreview("");
@@ -159,10 +161,19 @@ public final class ContentPreviewingService extends SimpleDecoratingHttpService 
         try {
             ctx.logBuilder().defer(RequestLogProperty.RESPONSE_CONTENT_PREVIEW);
             final HttpResponse res = unwrap().serve(ctx, req);
-            return setUpResponseContentPreviewer(contentPreviewerFactory, ctx, res, responsePreviewSanitizer);
+            return setUpResponseContentPreviewer(ctx, res);
         } catch (Throwable t) {
-            ctx.logBuilder().responseContentPreview(null);
             return HttpResponse.ofFailure(t);
         }
+    }
+
+    /**
+     * Sets up the response {@link ContentPreviewer} to set
+     * {@link RequestLogBuilder#responseContentPreview(String)} when the preview is available.
+     */
+    public HttpResponse setUpResponseContentPreviewer(ServiceRequestContext ctx, HttpResponse res) {
+        return ContentPreviewingUtil.setUpResponseContentPreviewer(contentPreviewerFactory,
+                                                                   ctx, res,
+                                                                   responsePreviewSanitizer);
     }
 }

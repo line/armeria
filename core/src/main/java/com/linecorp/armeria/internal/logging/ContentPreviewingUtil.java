@@ -114,7 +114,10 @@ public final class ContentPreviewingUtil {
             this.factory = factory;
             this.ctx = ctx;
             whenComplete().handle((unused, cause) -> {
-                if (responseContentPreviewer != null) {
+                if (responseContentPreviewer == null) {
+                    return null;
+                }
+                if (!responseContentPreviewer.isDisabled()) {
                     @Nullable String produced = null;
                     try {
                         produced = responseContentPreviewer.produce();
@@ -144,12 +147,9 @@ public final class ContentPreviewingUtil {
                 if (ArmeriaHttpUtil.isInformational(status)) {
                     return obj;
                 }
-                final ContentPreviewer contentPreviewer = factory.responseContentPreviewer(ctx, resHeaders);
-                if (!contentPreviewer.isDisabled()) {
-                    responseContentPreviewer = contentPreviewer;
-                }
+                responseContentPreviewer = factory.responseContentPreviewer(ctx, resHeaders);
             } else if (obj instanceof HttpData) {
-                if (responseContentPreviewer != null) {
+                if (responseContentPreviewer != null && !responseContentPreviewer.isDisabled()) {
                     responseContentPreviewer.onData((HttpData) obj);
                 }
             }
