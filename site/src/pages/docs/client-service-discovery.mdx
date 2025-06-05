@@ -363,8 +363,7 @@ import com.linecorp.armeria.client.consul.ConsulEndpointGroupBuilder;
 ConsulEndpointGroupBuilder builder =
         ConsulEndpointGroup.builder("http://my-consul.com:8500", "my-service")
                            .datacenter("ds1")
-                           .filter("ServicePort == 8080")
-                           .build();
+                           .filter("ServicePort == 8080");
 ConsulEndpointGroup consulEndpointGroup = builder.build();
 ```
 
