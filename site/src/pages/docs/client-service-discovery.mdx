@@ -319,7 +319,7 @@ use <type://EurekaEndpointGroupBuilder>:
 import com.linecorp.armeria.client.eureka.EurekaEndpointGroupBuilder;
 
 EurekaEndpointGroupBuilder builder =
-        EurekaEndpointGroup.builder("https://eureka.com:8001/eureka/v2");
+        EurekaEndpointGroup.builder("https://eureka.com:8001/eureka/v2")
                            .regions("aws")
                            .appName("myApplication");
 EurekaEndpointGroup eurekaEndpointGroup = builder.build();
@@ -361,7 +361,7 @@ If you want to get the information of certain [datacenter](https://www.consul.io
 import com.linecorp.armeria.client.consul.ConsulEndpointGroupBuilder;
 
 ConsulEndpointGroupBuilder builder =
-        ConsulEndpointGroup.builder("http://my-consul.com:8500", "my-service");
+        ConsulEndpointGroup.builder("http://my-consul.com:8500", "my-service")
                            .datacenter("ds1")
                            .filter("ServicePort == 8080")
                            .build();
