@@ -28,6 +28,7 @@ import com.fasterxml.jackson.databind.SerializationFeature;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.internal.common.JacksonUtil;
+import com.linecorp.armeria.internal.server.annotation.AnnotatedServiceLogUtil;
 
 /**
  * A builder implementation for {@link JsonLogFormatter}.
@@ -42,6 +43,7 @@ public final class JsonLogFormatterBuilder
         objectMapper = JacksonUtil.newDefaultObjectMapper();
         // AnnotatedService can easily have parameters that are not readily serializable
         objectMapper.disable(SerializationFeature.FAIL_ON_EMPTY_BEANS);
+        AnnotatedServiceLogUtil.customize(objectMapper);
     }
 
     /**
