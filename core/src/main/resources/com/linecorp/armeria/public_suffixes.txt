@@ -102,6 +102,7 @@
 *.migration.run
 *.mm
 *.moonscale.io
+*.mtls.run.app
 *.nagoya.jp
 *.nodebalancer.linode.com
 *.nom.br
