@@ -1,7 +1,7 @@
 /*
- * Copyright 2017 LINE Corporation
+ * Copyright 2025 LY Corporation
  *
- * LINE Corporation licenses this file to you under the Apache License,
+ * LY Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
@@ -18,6 +18,8 @@ package com.linecorp.armeria.client.retry;
 import static com.linecorp.armeria.internal.client.ClientUtil.executeWithFallback;
 import static com.linecorp.armeria.internal.client.ClientUtil.initContextAndExecuteWithFallback;
 
+import java.util.LinkedList;
+import java.util.List;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
@@ -30,6 +32,7 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.RpcResponse;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.internal.client.ClientPendingThrowableUtil;
 import com.linecorp.armeria.internal.client.ClientRequestContextExtension;
 import com.linecorp.armeria.internal.common.util.StringUtil;
@@ -73,7 +76,7 @@ public final class RetryingRpcClient extends AbstractRetryingClient<RpcRequest, 
      * @param retryRuleWithContent the retry rule
      * @param maxTotalAttempts the maximum number of total attempts
      * @param responseTimeoutMillisForEachAttempt response timeout for each attempt. {@code 0} disables
-     *                                            the timeout
+     * the timeout
      *
      * @deprecated Use {@link #newDecorator(RetryConfig)} instead.
      */
@@ -103,7 +106,7 @@ public final class RetryingRpcClient extends AbstractRetryingClient<RpcRequest, 
      * RPC requests.
      *
      * @param mapping the mapping that returns a {@link RetryConfig} for a given {@link ClientRequestContext}
-     *        and {@link Request}.
+     * and {@link Request}.
      */
     public static Function<? super RpcClient, RetryingRpcClient>
     newDecorator(RetryConfigMapping<RpcResponse> mapping) {
@@ -144,26 +147,50 @@ public final class RetryingRpcClient extends AbstractRetryingClient<RpcRequest, 
     protected RpcResponse doExecute(ClientRequestContext ctx, RpcRequest req) throws Exception {
         final CompletableFuture<RpcResponse> future = new CompletableFuture<>();
         final RpcResponse res = RpcResponse.from(future);
-        doExecute0(ctx, req, res, future);
+
+        final List<ClientRequestContext> attemptCtxs = new LinkedList<>();
+
+        doExecute0(ctx, req, res, future, attemptCtxs);
         return res;
     }
 
     private void doExecute0(ClientRequestContext ctx, RpcRequest req,
-                            RpcResponse returnedRes, CompletableFuture<RpcResponse> future) {
+                            RpcResponse returnedRes, CompletableFuture<RpcResponse> future,
+                            List<ClientRequestContext> attemptCtxs) {
         final int totalAttempts = getTotalAttempts(ctx);
         final boolean initialAttempt = totalAttempts <= 1;
         if (returnedRes.isDone()) {
             // The response has been cancelled by the client before it receives a response, so stop retrying.
-            handleException(ctx, future, new CancellationException(
-                    "the response returned to the client has been cancelled"), initialAttempt);
-            return;
-        }
-        if (!setResponseTimeout(ctx)) {
-            handleException(ctx, future, ResponseTimeoutException.get(), initialAttempt);
+            handleException(ctx, mappedRetryConfig(ctx), attemptCtxs, future,
+                            new CancellationException(
+                                    "the response returned to the client has been cancelled"), initialAttempt);
             return;
         }
 
+        final RetryConfig<RpcResponse> retryConfig = mappedRetryConfig(ctx);
+        final RetryRuleWithContent<RpcResponse> retryRule =
+                retryConfig.needsContentInRule() ?
+                retryConfig.retryRuleWithContent() : retryConfig.fromRetryRule();
+        assert retryRule != null;
+
+        if (retryConfig.abortAttemptOnPerAttemptResponseTimeout()) {
+            if (!setResponseTimeout(ctx)) {
+                handleException(ctx, mappedRetryConfig(ctx), attemptCtxs, future,
+                                ResponseTimeoutException.get(),
+                                initialAttempt);
+                return;
+            }
+        } else {
+            // As the retry config stays constant for the entire retry process,
+            // retryConfig.abortAttemptOnPerAttemptResponseTimeout() stays
+            // constant too. This means that if abortAttemptOnPerAttemptResponseTimeout()
+            // returns false, we will never change the response timeout.
+            // This means we do not have to reset it here to the actual
+            // response timeout.
+        }
+
         final ClientRequestContext derivedCtx = newDerivedContext(ctx, null, req, initialAttempt);
+        attemptCtxs.add(derivedCtx);
 
         if (!initialAttempt) {
             derivedCtx.mutateAdditionalRequestHeaders(
@@ -188,52 +215,134 @@ public final class RetryingRpcClient extends AbstractRetryingClient<RpcRequest, 
                                       req, true);
         }
 
-        final RetryConfig<RpcResponse> retryConfig = mappedRetryConfig(ctx);
-        final RetryRuleWithContent<RpcResponse> retryRule =
-                retryConfig.needsContentInRule() ?
-                retryConfig.retryRuleWithContent() : retryConfig.fromRetryRule();
-        res.handle((unused1, cause) -> {
-            try {
-                assert retryRule != null;
-                retryRule.shouldRetry(derivedCtx, res, cause).handle((decision, unused3) -> {
-                    final Backoff backoff = decision != null ? decision.backoff() : null;
-                    if (backoff != null) {
-                        final long nextDelay = getNextDelay(derivedCtx, backoff);
-                        if (nextDelay < 0) {
-                            onRetryComplete(ctx, derivedCtx, res, future);
-                            return null;
-                        }
+        if (!retryConfig.abortAttemptOnPerAttemptResponseTimeout()) {
+            scheduleNextAttemptTimeout(ctx, () -> {
+                                           // todo(szymon): Can this happen?
+                                           if (returnedRes.isDone()) {
+                                               return;
+                                           }
 
-                        scheduleNextRetry(ctx, cause0 -> handleException(ctx, future, cause0, false),
-                                          () -> doExecute0(ctx, req, returnedRes, future), nextDelay);
-                    } else {
-                        onRetryComplete(ctx, derivedCtx, res, future);
-                    }
+                                           try {
+                                               retryRule.shouldRetry(derivedCtx, res,
+                                                                     ResponseTimeoutException.get()).handle(
+                                                       (decision, unused2) -> {
+                                                           final Backoff backoff = decision != null ? decision.backoff() : null;
+                                                           if (backoff != null && areAttemptsExhausted(ctx)) {
+                                                               // Rule gave us allowance to continue but we
+                                                               // do not have any attempts left.
+                                                               // In that case we do not want to complete
+                                                               // retrying immediately but let the pending
+                                                               // requests complete.
+                                                               return null;
+                                                           }
+
+                                                           handleRetryDecision(ctx, derivedCtx, req,
+                                                                               returnedRes,
+                                                                               res, future,
+                                                                               attemptCtxs,
+                                                                               decision);
+                                                           return null;
+                                                       }
+                                               );
+                                           } catch (Throwable cause) {
+                                               handleException(ctx, mappedRetryConfig(ctx),
+                                                               attemptCtxs, future, cause,
+                                                               false);
+                                           }
+                                       }, cause0 -> handleException(ctx, mappedRetryConfig(ctx),
+                                                                    attemptCtxs, future,
+                                                                    cause0, false), // todo
+                                       // (szymon): false or initialAttempt?
+                                       retryConfig.responseTimeoutMillisForEachAttempt());
+        }
+
+        res.handle((unused1, cause) -> {
+            if (returnedRes.isDone()) {
+                // With hedging it could be that another attempt has already provided a response.
+                // If this is the case every cleanup has already been done.
+                return null;
+            }
+
+            try {
+                retryRule.shouldRetry(derivedCtx, res, cause).handle((decision, unused3) -> {
+                    handleRetryDecision(ctx, derivedCtx, req, returnedRes, res, future,
+                                        attemptCtxs, decision);
                     return null;
                 });
             } catch (Throwable t) {
-                handleException(ctx, future, t, false);
+                handleException(ctx, mappedRetryConfig(ctx), attemptCtxs, future, t, false);
             }
             return null;
         });
     }
 
+    private void handleRetryDecision(ClientRequestContext ctx, ClientRequestContext derivedCtx,
+                                     RpcRequest req, RpcResponse returnedRes, RpcResponse res,
+                                     CompletableFuture<RpcResponse> future,
+                                     List<ClientRequestContext> attemptCtxs,
+                                     @Nullable RetryDecision decision) {
+        final Backoff backoff = decision != null ? decision.backoff() : null;
+        if (backoff != null) {
+            final long nextDelay = getNextDelay(derivedCtx, backoff);
+            if (nextDelay < 0) {
+                onRetryComplete(ctx, derivedCtx, mappedRetryConfig(ctx), res, future, attemptCtxs);
+            }
+
+            scheduleNextRetry(ctx, cause0 -> handleException(ctx, mappedRetryConfig(ctx),
+                                                             attemptCtxs, future, cause0,
+                                                             false),
+                              () -> doExecute0(ctx, req, returnedRes, future, attemptCtxs),
+                              nextDelay);
+        } else {
+            onRetryComplete(ctx, derivedCtx, mappedRetryConfig(ctx), res, future, attemptCtxs);
+        }
+    }
+
     private static void onRetryComplete(ClientRequestContext ctx, ClientRequestContext derivedCtx,
-                                        RpcResponse res, CompletableFuture<RpcResponse> future) {
-        onRetryingComplete(ctx);
+                                        RetryConfig<RpcResponse> retryConfig,
+                                        RpcResponse res, CompletableFuture<RpcResponse> future,
+                                        List<ClientRequestContext> attemptCtxs) {
+        if (future.isDone()) {
+            return;
+        }
+
+        onRetryingComplete(ctx, derivedCtx);
+
         final HttpRequest actualHttpReq = derivedCtx.request();
         if (actualHttpReq != null) {
             ctx.updateRequest(actualHttpReq);
         }
+
         future.complete(res);
+
+        cancelPendingAttempts(ctx, retryConfig, attemptCtxs);
     }
 
-    private static void handleException(ClientRequestContext ctx, CompletableFuture<RpcResponse> future,
+    private static void handleException(ClientRequestContext ctx,
+                                        RetryConfig<RpcResponse> retryConfig,
+                                        List<ClientRequestContext> attemptCtxs,
+                                        CompletableFuture<RpcResponse> future,
                                         Throwable cause, boolean endRequestLog) {
         future.completeExceptionally(cause);
         if (endRequestLog) {
             ctx.logBuilder().endRequest(cause);
         }
         ctx.logBuilder().endResponse(cause);
+
+        cancelPendingAttempts(ctx, retryConfig, attemptCtxs);
+    }
+
+    private static void cancelPendingAttempts(ClientRequestContext ctx, RetryConfig<RpcResponse> retryConfig,
+                                              List<ClientRequestContext> attemptCtxs) {
+        if (!retryConfig.abortAttemptOnPerAttemptResponseTimeout()) {
+            for (ClientRequestContext attemptCtx : attemptCtxs) {
+                if (!attemptCtx.isCancelled()) {
+                    attemptCtx.cancel();
+                }
+            }
+
+            // Cancel in-flight retry tasks.
+            cancelRetryTasks(ctx);
+        }
     }
 }
