@@ -22,20 +22,16 @@ import com.linecorp.armeria.common.annotation.Nullable;
 
 import io.envoyproxy.envoy.config.core.v3.ConfigSource;
 
-final class EndpointResourceNode extends AbstractResourceNodeWithPrimer<EndpointXdsResource> {
-
-    private final SnapshotWatcher<EndpointSnapshot> parentWatcher;
+final class EndpointResourceNode extends AbstractResourceNode<EndpointXdsResource, EndpointSnapshot> {
 
     EndpointResourceNode(@Nullable ConfigSource configSource,
-                         String resourceName, XdsBootstrapImpl xdsBootstrap,
-                         @Nullable ClusterXdsResource primer,
+                         String resourceName, SubscriptionContext context,
                          SnapshotWatcher<EndpointSnapshot> parentWatcher, ResourceNodeType resourceNodeType) {
-        super(xdsBootstrap, configSource, ENDPOINT, resourceName, primer, parentWatcher, resourceNodeType);
-        this.parentWatcher = parentWatcher;
+        super(context, configSource, ENDPOINT, resourceName, parentWatcher, resourceNodeType);
     }
 
     @Override
     void doOnChanged(EndpointXdsResource update) {
-        parentWatcher.snapshotUpdated(new EndpointSnapshot(update));
+        notifyOnChanged(new EndpointSnapshot(update));
     }
 }

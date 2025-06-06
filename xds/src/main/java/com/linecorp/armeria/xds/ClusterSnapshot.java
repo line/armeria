@@ -19,8 +19,11 @@ package com.linecorp.armeria.xds;
 import com.google.common.base.MoreObjects;
 import com.google.common.base.Objects;
 
+import com.linecorp.armeria.client.ClientRequestContext;
+import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
+import com.linecorp.armeria.xds.client.endpoint.XdsLoadBalancer;
 
 import io.envoyproxy.envoy.config.cluster.v3.Cluster;
 
@@ -29,20 +32,27 @@ import io.envoyproxy.envoy.config.cluster.v3.Cluster;
  */
 @UnstableApi
 public final class ClusterSnapshot implements Snapshot<ClusterXdsResource> {
+
     private final ClusterXdsResource clusterXdsResource;
     @Nullable
     private final EndpointSnapshot endpointSnapshot;
-    private final int index;
+    @Nullable
+    private final XdsLoadBalancer loadBalancer;
 
-    ClusterSnapshot(ClusterXdsResource clusterXdsResource,
-                    @Nullable EndpointSnapshot endpointSnapshot, int index) {
+    ClusterSnapshot(ClusterXdsResource clusterXdsResource, @Nullable EndpointSnapshot endpointSnapshot) {
         this.clusterXdsResource = clusterXdsResource;
         this.endpointSnapshot = endpointSnapshot;
-        this.index = index;
+        loadBalancer = null;
+    }
+
+    ClusterSnapshot(ClusterSnapshot clusterSnapshot, XdsLoadBalancer loadBalancer) {
+        clusterXdsResource = clusterSnapshot.clusterXdsResource;
+        endpointSnapshot = clusterSnapshot.endpointSnapshot;
+        this.loadBalancer = loadBalancer;
     }
 
     ClusterSnapshot(ClusterXdsResource clusterXdsResource) {
-        this(clusterXdsResource, null, -1);
+        this(clusterXdsResource, null);
     }
 
     @Override
@@ -58,8 +68,14 @@ public final class ClusterSnapshot implements Snapshot<ClusterXdsResource> {
         return endpointSnapshot;
     }
 
-    int index() {
-        return index;
+    /**
+     * The {@link XdsLoadBalancer} which allows users to select an upstream {@link Endpoint} for a given
+     * {@link ClientRequestContext}. Note that the lifecycle of {@link XdsLoadBalancer} is not bound to
+     * the current {@link ClusterSnapshot}, and may be updated if the cluster is updated.
+     */
+    @Nullable
+    public XdsLoadBalancer loadBalancer() {
+        return loadBalancer;
     }
 
     @Override

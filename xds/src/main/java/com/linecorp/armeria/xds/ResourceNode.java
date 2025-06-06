@@ -31,9 +31,6 @@ interface ResourceNode<T extends XdsResource> extends ResourceWatcher<T>, SafeCl
     @Nullable
     ConfigSource configSource();
 
-    @Nullable
-    T currentResource();
-
     XdsType type();
 
     String name();
