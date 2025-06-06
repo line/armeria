@@ -1,7 +1,7 @@
 /*
- * Copyright 2017 LINE Corporation
+ * Copyright 2025 LY Corporation
  *
- * LINE Corporation licenses this file to you under the Apache License,
+ * LY Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
@@ -334,9 +334,16 @@ class RetryingRpcClientTest {
                              .path("/thrift")
                              .rpcDecorator(RetryingRpcClient.builder(retryAlways).newDecorator())
                              .rpcDecorator((delegate, ctx, req) -> {
-                                 context.set(ctx);
                                  final RpcResponse res = delegate.execute(ctx, req);
-                                 res.cancel(true);
+
+                                 // We are not guarenteed that the retrying client will immediately retry but
+                                 // execute the first attempt in the event loop. It should be enough to just
+                                 // enqueue in the loop and only then cancel the response.
+                                 ctx.eventLoop().execute(() -> {
+                                     context.set(ctx);
+                                     res.cancel(true);
+                                 });
+
                                  return res;
                              })
                              .build(HelloService.Iface.class);

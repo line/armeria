@@ -77,7 +77,7 @@ public final class RetryConfig<T extends Response> {
 
     private final int maxTotalAttempts;
     private final long responseTimeoutMillisForEachAttempt;
-    private final boolean abortAttemptOnPerAttemptResponseTimeout;
+    private final @Nullable Backoff hedgingBackoff;
     private final int maxContentLength;
 
     @Nullable
@@ -89,11 +89,18 @@ public final class RetryConfig<T extends Response> {
     @Nullable
     private RetryRuleWithContent<T> fromRetryRule;
 
+    RetryConfig(RetryRule retryRule, int maxTotalAttempts, long responseTimeoutMillisForEachAttempt) {
+        this(requireNonNull(retryRule, "retryRule"), null,
+             maxTotalAttempts, responseTimeoutMillisForEachAttempt,
+             0, null);
+        checkArguments(maxTotalAttempts, responseTimeoutMillisForEachAttempt);
+    }
+
     RetryConfig(RetryRule retryRule, int maxTotalAttempts, long responseTimeoutMillisForEachAttempt,
-                       boolean abortAttemptOnPerAttemptResponseTimeout) {
+                       Backoff hedgingBackoff) {
         this(requireNonNull(retryRule, "retryRule"), null,
                 maxTotalAttempts, responseTimeoutMillisForEachAttempt,
-             abortAttemptOnPerAttemptResponseTimeout, 0);
+             0, requireNonNull(hedgingBackoff, "hedgingBackoff"));
         checkArguments(maxTotalAttempts, responseTimeoutMillisForEachAttempt);
     }
 
@@ -101,11 +108,21 @@ public final class RetryConfig<T extends Response> {
             RetryRuleWithContent<T> retryRuleWithContent,
             int maxContentLength,
             int maxTotalAttempts,
+            long responseTimeoutMillisForEachAttempt) {
+        this(null, requireNonNull(retryRuleWithContent, "retryRuleWithContent"),
+             maxTotalAttempts, responseTimeoutMillisForEachAttempt,
+             maxContentLength, null);
+    }
+
+    RetryConfig(
+            RetryRuleWithContent<T> retryRuleWithContent,
+            int maxContentLength,
+            int maxTotalAttempts,
             long responseTimeoutMillisForEachAttempt,
-            boolean abortAttemptOnPerAttemptResponseTimeout) {
+            Backoff hedgingBackoff) {
         this(null, requireNonNull(retryRuleWithContent, "retryRuleWithContent"),
                 maxTotalAttempts, responseTimeoutMillisForEachAttempt,
-             abortAttemptOnPerAttemptResponseTimeout, maxContentLength);
+             maxContentLength, requireNonNull(hedgingBackoff, "hedgingBackoff"));
     }
 
     private RetryConfig(
@@ -113,15 +130,16 @@ public final class RetryConfig<T extends Response> {
             @Nullable RetryRuleWithContent<T> retryRuleWithContent,
             int maxTotalAttempts,
             long responseTimeoutMillisForEachAttempt,
-            boolean abortAttemptOnPerAttemptResponseTimeout,
-            int maxContentLength) {
+            int maxContentLength,
+            @Nullable Backoff hedgingBackoff
+    ) {
         checkArguments(maxTotalAttempts, responseTimeoutMillisForEachAttempt);
         this.retryRule = retryRule;
         this.retryRuleWithContent = retryRuleWithContent;
         this.maxTotalAttempts = maxTotalAttempts;
         this.responseTimeoutMillisForEachAttempt = responseTimeoutMillisForEachAttempt;
-        this.abortAttemptOnPerAttemptResponseTimeout = abortAttemptOnPerAttemptResponseTimeout;
         this.maxContentLength = maxContentLength;
+        this.hedgingBackoff = hedgingBackoff;
         if (retryRuleWithContent == null) {
             fromRetryRuleWithContent = null;
         } else {
@@ -152,10 +170,15 @@ public final class RetryConfig<T extends Response> {
             assert retryRule != null;
             builder = builder0(retryRule);
         }
-        return builder
+        builder
                 .maxTotalAttempts(maxTotalAttempts)
-                .responseTimeoutMillisForEachAttempt(responseTimeoutMillisForEachAttempt)
-                .abortAttemptOnPerAttemptResponseTimeout(abortAttemptOnPerAttemptResponseTimeout);
+                .responseTimeoutMillisForEachAttempt(responseTimeoutMillisForEachAttempt);
+
+                if (hedgingBackoff != null) {
+                    builder.hedgingBackoff(hedgingBackoff);
+                }
+
+                return builder;
     }
 
     /**
@@ -174,8 +197,8 @@ public final class RetryConfig<T extends Response> {
         return responseTimeoutMillisForEachAttempt;
     }
 
-    public boolean abortAttemptOnPerAttemptResponseTimeout() {
-        return abortAttemptOnPerAttemptResponseTimeout;
+    public @Nullable Backoff hedgingBackoff() {
+        return hedgingBackoff;
     }
 
     /**

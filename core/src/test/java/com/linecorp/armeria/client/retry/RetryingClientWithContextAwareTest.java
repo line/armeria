@@ -1,11 +1,11 @@
 /*
- * Copyright 2019 LINE Corporation
+ * Copyright 2025 LY Corporation
  *
- * LINE Corporation licenses this file to you under the Apache License,
+ * LY Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -57,7 +57,15 @@ class RetryingClientWithContextAwareTest {
         final ServiceRequestContext dummyCtx = ServiceRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
         try (SafeCloseable ignored = dummyCtx.push()) {
             final CompletableFuture<AggregatedHttpResponse> future = client.get("/").aggregate();
-            assertThatThrownBy(() -> dummyCtx.makeContextAware(future).join()).hasCauseInstanceOf(
+            assertThatThrownBy(() -> {
+                try {
+                    dummyCtx.makeContextAware(future).join();
+                } catch (Exception e) {
+                    throw e;
+                }
+
+                System.out.println(future);
+            }).hasCauseInstanceOf(
                     ResponseTimeoutException.class);
         }
     }

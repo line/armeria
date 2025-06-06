@@ -191,7 +191,7 @@ class RetryingRpcClientWithHedgingTest {
                         )
                         .maxTotalAttempts(3)
                         .responseTimeoutMillisForEachAttempt(50)
-                        .abortAttemptOnPerAttemptResponseTimeout(false)
+                        .hedgingBackoff(Backoff.fixed(20))
                         .build()
         );
 
@@ -243,7 +243,7 @@ class RetryingRpcClientWithHedgingTest {
                         )
                         .maxTotalAttempts(3)
                         .responseTimeoutMillisForEachAttempt(50)
-                        .abortAttemptOnPerAttemptResponseTimeout(false)
+                        .hedgingBackoff(Backoff.fixed(20))
                         .build()
         );
 
@@ -302,7 +302,7 @@ class RetryingRpcClientWithHedgingTest {
                         )
                         .maxTotalAttempts(3)
                         .responseTimeoutMillisForEachAttempt(1)
-                        .abortAttemptOnPerAttemptResponseTimeout(false)
+                        .hedgingBackoff(Backoff.fixed(20))
                         .build()
         );
 
@@ -353,7 +353,7 @@ class RetryingRpcClientWithHedgingTest {
                         )
                         .maxTotalAttempts(3)
                         .responseTimeoutMillisForEachAttempt(1)
-                        .abortAttemptOnPerAttemptResponseTimeout(false)
+                        .hedgingBackoff(Backoff.fixed(20))
                         .build()
         );
 
@@ -420,7 +420,7 @@ class RetryingRpcClientWithHedgingTest {
                         )
                         .maxTotalAttempts(3)
                         .responseTimeoutMillisForEachAttempt(300)
-                        .abortAttemptOnPerAttemptResponseTimeout(false)
+                        .hedgingBackoff(Backoff.fixed(20))
                         .build(), 300 + 100 // Lets give the client 100ms to schedule the second attempt.
         );
 
