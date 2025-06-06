@@ -17,7 +17,6 @@ package com.linecorp.armeria.internal.server.thrift;
 
 import static com.linecorp.armeria.common.thrift.ThriftSerializationFormats.BINARY;
 import static com.linecorp.armeria.common.thrift.ThriftSerializationFormats.COMPACT;
-import static com.linecorp.armeria.common.thrift.ThriftSerializationFormats.TEXT;
 import static net.javacrumbs.jsonunit.fluent.JsonFluentAssert.assertThatJson;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
@@ -57,7 +56,6 @@ import com.linecorp.armeria.server.docs.ServiceSpecification;
 import com.linecorp.armeria.server.thrift.THttpService;
 import com.linecorp.armeria.testing.junit4.server.ServerRule;
 
-import testing.thrift.cassandra.Cassandra;
 import testing.thrift.hbase.Hbase;
 import testing.thrift.main.FooService;
 import testing.thrift.main.HelloService;
@@ -96,10 +94,6 @@ public class ThriftDocServiceTest {
                                 .build();
             final THttpService fooService =
                     THttpService.ofFormats(mock(FooService.AsyncIface.class), COMPACT);
-            final THttpService cassandraService =
-                    THttpService.ofFormats(mock(Cassandra.AsyncIface.class), BINARY);
-            final THttpService cassandraServiceDebug =
-                    THttpService.ofFormats(mock(Cassandra.AsyncIface.class), TEXT);
             final THttpService hbaseService =
                     THttpService.of(mock(Hbase.AsyncIface.class));
             final THttpService onewayHelloService =
@@ -109,8 +103,6 @@ public class ThriftDocServiceTest {
             sb.service("/foo", fooService);
             // Add a service with serviceUnder() to test whether prefix mapping is detected.
             sb.serviceUnder("/foo", fooService);
-            sb.service("/cassandra", cassandraService);
-            sb.service("/cassandra/debug", cassandraServiceDebug);
             sb.service("/hbase", hbaseService);
             sb.service("/oneway", onewayHelloService);
 
@@ -155,10 +147,6 @@ public class ThriftDocServiceTest {
                 new EntryBuilder(FooService.class)
                         .endpoint(EndpointInfo.builder("*", "/foo").defaultFormat(COMPACT).build())
                         .endpoint(EndpointInfo.builder("*", "/foo/").defaultFormat(COMPACT).build())
-                        .build(),
-                new EntryBuilder(Cassandra.class)
-                        .endpoint(EndpointInfo.builder("*", "/cassandra").defaultFormat(BINARY).build())
-                        .endpoint(EndpointInfo.builder("*", "/cassandra/debug").defaultFormat(TEXT).build())
                         .build(),
                 new EntryBuilder(Hbase.class)
                         .endpoint(EndpointInfo.builder("*", "/hbase")

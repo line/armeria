@@ -18,7 +18,7 @@ configure(projectsWithFlags('kotlin')) {
             (name.startsWith("compile") || name.startsWith("kaptGenerateStubs")) && name.endsWith("Kotlin")
         }.each { task ->
             task.kotlinOptions.jvmTarget = target
-            task.kotlinOptions.freeCompilerArgs = compilerArgs
+            task.kotlinOptions.freeCompilerArgs += compilerArgs
             if (kotlinTargetVersion != null) {
                 task.kotlinOptions.languageVersion = kotlinTargetVersion
                 task.kotlinOptions.apiVersion = kotlinTargetVersion
