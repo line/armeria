@@ -187,12 +187,12 @@ public final class RetryingRpcClient extends AbstractRetryingClient<RpcRequest, 
             ClientPendingThrowableUtil.removePendingThrowable(attemptCtx);
             // if the endpoint hasn't been selected, try to initialize the ctx with a new endpoint/event loop
             attemptRes = initContextAndExecuteWithFallback(unwrap(), ctxExtension, RpcResponse::from,
-                                                    (context, cause) -> RpcResponse.ofFailure(cause),
-                                                    req, true);
+                                                           (context, cause) -> RpcResponse.ofFailure(cause),
+                                                           req, true);
         } else {
             attemptRes = executeWithFallback(unwrap(), attemptCtx,
-                                      (context, cause) -> RpcResponse.ofFailure(cause),
-                                      req, true);
+                                             (context, cause) -> RpcResponse.ofFailure(cause),
+                                             req, true);
         }
 
         onAttemptStarted(ctx, attemptCtx, (@Nullable Throwable cause) -> {
@@ -210,12 +210,14 @@ public final class RetryingRpcClient extends AbstractRetryingClient<RpcRequest, 
                     final Backoff backoff = decision != null ? decision.backoff() : null;
 
                     if (backoff != null) {
-                        final RetrySchedulabilityDecision schedulabilityDecision = canScheduleWith(ctx, backoff);
+                        final RetrySchedulabilityDecision schedulabilityDecision = canScheduleWith(ctx,
+                                                                                                   backoff);
 
                         if (schedulabilityDecision.canSchedule()) {
                             scheduleNextRetry(ctx,
                                               () -> doExecute0(ctx, req, returnedRes, returnedResFuture),
                                               schedulabilityDecision.nextRetryTimeNanos(),
+                                              backoff,
                                               cause0 -> handleException(ctx, returnedResFuture, cause0, false));
                         }
                     }
@@ -234,7 +236,6 @@ public final class RetryingRpcClient extends AbstractRetryingClient<RpcRequest, 
             return null;
         });
 
-
         final @Nullable Backoff hedgingBackoff = retryConfig.hedgingBackoff();
 
         if (hedgingBackoff != null) {
@@ -242,13 +243,15 @@ public final class RetryingRpcClient extends AbstractRetryingClient<RpcRequest, 
                     canScheduleWith(ctx, hedgingBackoff);
             if (schedulabilityDecision.canSchedule()) {
                 scheduleNextRetry(ctx, () -> doExecute0(ctx, req, returnedRes, returnedResFuture),
-                                schedulabilityDecision.nextRetryTimeNanos(),
-                                cause -> handleException(ctx, returnedResFuture, cause, false));
+                                  schedulabilityDecision.nextRetryTimeNanos(),
+                                  hedgingBackoff,
+                                  cause -> handleException(ctx, returnedResFuture, cause, false));
             }
         }
     }
 
-    private static void handleException(ClientRequestContext ctx, CompletableFuture<RpcResponse> returnedResFuture,
+    private static void handleException(ClientRequestContext ctx,
+                                        CompletableFuture<RpcResponse> returnedResFuture,
                                         Throwable cause, boolean endRequestLog) {
         if (isRetryingComplete(ctx)) {
             return;

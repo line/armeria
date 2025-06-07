@@ -162,13 +162,14 @@ public abstract class AbstractRetryingClient<I extends Request, O extends Respon
      */
     protected static void onRetryingComplete(ClientRequestContext ctx,
                                              ClientRequestContext attemptCtx) {
+        logger.debug("onRetryingComplete: {}", attemptCtx);
         ctx.logBuilder().endResponseWithChild(attemptCtx.log());
-
         state(ctx).complete(attemptCtx);
     }
 
     protected static void onRetryingCompleteExceptionally(ClientRequestContext ctx,
                                                           Throwable cause) {
+        logger.debug("onRetryingCompleteExceptionally: {}", ctx, cause);
         ctx.logBuilder().endResponse(cause);
         state(ctx).completeExceptionally(cause);
     }
@@ -214,6 +215,7 @@ public abstract class AbstractRetryingClient<I extends Request, O extends Respon
         requireNonNull(ctx, "ctx");
         requireNonNull(attemptCtx, "attemptCtx");
         // todo(szymon) [Q]: should we track the attemptCtxs and check if we have multiple attempts started?
+        // todo(szymon): do we want to wait for acquisition when we schedule it?
         state(ctx).incrementPendingAttemptCount();
         state(ctx).whenRetryingComplete().handle((winningAttemptCtx, cause) -> {
             if (attemptCtx == winningAttemptCtx) {
@@ -232,7 +234,11 @@ public abstract class AbstractRetryingClient<I extends Request, O extends Respon
         final int numRemainingPendingAttempts = state(ctx).decrementPendingAttemptCount();
         logger.debug("onAttemptEnded: {}. numRemainingPendingAttempts = {}, hasScheduledRetryTask={}",
                      ctx, numRemainingPendingAttempts, state(ctx).scheduler().hasScheduledRetryTask());
-        return numRemainingPendingAttempts > 0 || state(ctx).scheduler().hasScheduledRetryTask();
+        return hasPendingOrScheduledAttempts(ctx);
+    }
+
+    protected static boolean hasPendingOrScheduledAttempts(ClientRequestContext ctx) {
+        return state(ctx).numPendingAttempts() > 0 || state(ctx).scheduler().hasScheduledRetryTask();
     }
 
     // an attempt did not trigger a retry. when does the attempt end?
@@ -245,6 +251,7 @@ public abstract class AbstractRetryingClient<I extends Request, O extends Respon
     protected static void scheduleNextRetry(ClientRequestContext ctx,
                                             Runnable retryTask,
                                             long retryTimeNanos,
+                                            Backoff responsibleBackoff,
                                             Consumer<? super Throwable> actionOnException) {
         requireNonNull(ctx, "ctx");
         requireNonNull(actionOnException, "actionOnException");
@@ -252,23 +259,30 @@ public abstract class AbstractRetryingClient<I extends Request, O extends Respon
 
         final RetryScheduler scheduler = state(ctx).scheduler();
 
-        scheduleNextRetry(ctx, retryTask, retryTimeNanos,
+        scheduleNextRetry(ctx, retryTask, retryTimeNanos, responsibleBackoff,
                           scheduler.getEarliestNextRetryTimeNanos(), actionOnException);
     }
 
     protected static void scheduleNextRetry(ClientRequestContext ctx,
                                             Runnable retryTask,
                                             long retryTimeNanos,
+                                            Backoff backoff,
                                             long earliestNextRetryTimeFromServerNanos,
                                             Consumer<? super Throwable> actionOnException) {
         requireNonNull(ctx, "ctx");
         requireNonNull(actionOnException, "actionOnException");
         requireNonNull(retryTask, "retryTask");
 
-        final RetryScheduler scheduler = state(ctx).scheduler();
+        final State state = state(ctx);
+        final RetryScheduler scheduler = state.scheduler();
 
+        // todo(szymon): remove
         scheduler.addEarliestNextRetryTimeNanos(earliestNextRetryTimeFromServerNanos);
-        scheduler.schedule(retryTask, retryTimeNanos, actionOnException);
+        scheduler.schedule(() -> {
+            checkState(!isRetryingComplete(ctx));
+            state.acquireAttemptNoWithCurrentBackoff(backoff);
+            retryTask.run();
+        }, retryTimeNanos, actionOnException);
     }
 
     protected static void addEarliestNextRetryTimeNanos(ClientRequestContext ctx,
@@ -358,9 +372,6 @@ public abstract class AbstractRetryingClient<I extends Request, O extends Respon
             return new RetrySchedulabilityDecision(Rationale.HAS_EARLIER_RETRY,
                                                    nextRetryTimeNanos, earliestNextRetryTimeNanos);
         }
-
-        // todo(szymon): do we want to wait for acquisition when we schedule it?
-        state(ctx).acquireAttemptNoWithCurrentBackoff(backoff);
 
         return new RetrySchedulabilityDecision(Rationale.SCHEDULABLE, nextRetryTimeNanos,
                                                earliestNextRetryTimeNanos);
@@ -595,6 +606,10 @@ public abstract class AbstractRetryingClient<I extends Request, O extends Respon
             checkArgument(numPendingAttempts > 0, "numPendingAttempts must be greater than 0. did you call "
                                                   + "incrementPendingAttemptCount() before?");
             return --numPendingAttempts;
+        }
+
+        int numPendingAttempts() {
+            return numPendingAttempts;
         }
 
         void complete(ClientRequestContext winningAttemptCtx) {

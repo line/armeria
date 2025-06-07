@@ -387,8 +387,10 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
             final RetrySchedulabilityDecision retrySchedulabilityDecision = canScheduleWith(ctx, hedgingBackoff,
                                                                                             -1);
             if (retrySchedulabilityDecision.canSchedule()) {
+                logger.debug("Scheduling hedging with backoff: " + hedgingBackoff);
                 scheduleNextRetry(ctx, () -> doExecute0(retryingContext),
                                   retrySchedulabilityDecision.nextRetryTimeNanos(),
+                                  hedgingBackoff,
                                   cause -> handleException(retryingContext, cause, false));
             }
         }
@@ -620,6 +622,7 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
                 scheduleNextRetry(retryingContext.ctx(),
                                   () -> doExecute0(retryingContext),
                                   schedulabilityDecision.nextRetryTimeNanos(),
+                                  backoff,
                                   schedulabilityDecision.earliestNextRetryTimeNanos(),
                                   cause -> handleException(retryingContext, cause, false));
             } else {
@@ -649,11 +652,11 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
         final RequestLogBuilder logBuilder = attemptCtx.logBuilder();
         logBuilder.responseContent(null, null);
         logBuilder.responseContentPreview(null);
-        attemptCtx.cancel();
+
         if (cause != null) {
-            attemptRes.abort(cause);
+            attemptCtx.cancel(cause);
         } else {
-            attemptRes.abort();
+            attemptCtx.cancel();
         }
     }
 

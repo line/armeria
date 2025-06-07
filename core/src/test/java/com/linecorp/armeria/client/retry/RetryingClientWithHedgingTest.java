@@ -28,6 +28,7 @@ import java.nio.charset.Charset;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
@@ -37,8 +38,6 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.client.ClientRequestContext;
@@ -47,6 +46,7 @@ import com.linecorp.armeria.client.Clients;
 import com.linecorp.armeria.client.ResponseCancellationException;
 import com.linecorp.armeria.client.ResponseTimeoutException;
 import com.linecorp.armeria.client.WebClient;
+import com.linecorp.armeria.client.WebClientBuilder;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.client.endpoint.EndpointSelectionStrategy;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
@@ -54,6 +54,7 @@ import com.linecorp.armeria.common.ExchangeType;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
+import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.logging.RequestLog;
@@ -72,8 +73,6 @@ class RetryingClientWithHedgingTest {
     private static final String SERVER1_RESPONSE = "s1";
     private static final String SERVER2_RESPONSE = "s2#";
     private static final String SERVER3_RESPONSE = "s3##";
-
-    private static final Logger log = LoggerFactory.getLogger(RetryingClientWithHedgingTest.class);
 
     private static class TestServer extends ServerExtension {
         private CountDownLatch responseLatch = new CountDownLatch(1);
@@ -188,16 +187,11 @@ class RetryingClientWithHedgingTest {
                 .hedgingBackoff(Backoff.fixed(100))
                 .build();
 
-        final WebClient client = WebClient.builder(SessionProtocol.H2C,
-                                                   EndpointGroup.of(EndpointSelectionStrategy.roundRobin(),
-                                                                    server1.httpEndpoint(),
-                                                                    server2.httpEndpoint(),
-                                                                    server3.httpEndpoint()))
-                                          .factory(clientFactory)
-                                          .decorator(
-                                                  RetryingClient.newDecorator(hedgingNoRetryConfig)
-                                          )
-                                          .build();
+        final WebClient client = clientBuilder()
+                .decorator(
+                        RetryingClient.newDecorator(hedgingNoRetryConfig)
+                )
+                .build();
 
         final CompletableFuture<AggregatedHttpResponse> responseFuture;
         final ClientRequestContext ctx;
@@ -245,16 +239,11 @@ class RetryingClientWithHedgingTest {
                 .hedgingBackoff(Backoff.fixed(100))
                 .build();
 
-        final WebClient client = WebClient.builder(SessionProtocol.H2C,
-                                                   EndpointGroup.of(EndpointSelectionStrategy.roundRobin(),
-                                                                    server1.httpEndpoint(),
-                                                                    server2.httpEndpoint(),
-                                                                    server3.httpEndpoint()))
-                                          .factory(clientFactory)
-                                          .decorator(
-                                                  RetryingClient.newDecorator(hedgingNoRetryConfig)
-                                          )
-                                          .build();
+        final WebClient client = clientBuilder()
+                .decorator(
+                        RetryingClient.newDecorator(hedgingNoRetryConfig)
+                )
+                .build();
 
         final CompletableFuture<AggregatedHttpResponse> responseFuture;
         final ClientRequestContext ctx;
@@ -304,16 +293,11 @@ class RetryingClientWithHedgingTest {
                 .hedgingBackoff(Backoff.fixed(500))
                 .build();
 
-        final WebClient client = WebClient.builder(SessionProtocol.H2C,
-                                                   EndpointGroup.of(EndpointSelectionStrategy.roundRobin(),
-                                                                    server1.httpEndpoint(),
-                                                                    server2.httpEndpoint(),
-                                                                    server3.httpEndpoint()))
-                                          .factory(clientFactory)
-                                          .decorator(
-                                                  RetryingClient.newDecorator(hedgingNoRetryConfig)
-                                          )
-                                          .build();
+        final WebClient client = clientBuilder()
+                .decorator(
+                        RetryingClient.newDecorator(hedgingNoRetryConfig)
+                )
+                .build();
 
         final CompletableFuture<AggregatedHttpResponse> responseFuture;
         final ClientRequestContext ctx;
@@ -346,6 +330,94 @@ class RetryingClientWithHedgingTest {
                             VERIFY_REQUEST_TIMED_OUT, GET_VERIFY_RESPONSE_HAS_CONTENT.apply(SERVER3_RESPONSE)
                     );
                 });
+    }
+
+    @Test
+    void thirdWinsEvenAfterRetriableError() throws Exception {
+        when(server1.getHelloService().serve(any(), any()))
+                .thenReturn(HttpResponse.of(HttpStatus.TOO_MANY_REQUESTS, MediaType.PLAIN_TEXT,
+                                            SERVER1_RESPONSE));
+        when(server2.getHelloService().serve(any(), any()))
+                .thenReturn(HttpResponse.of(HttpStatus.TOO_MANY_REQUESTS, MediaType.PLAIN_TEXT,
+                                            SERVER2_RESPONSE));
+        when(server3.getHelloService().serve(any(), any()))
+                .thenReturn(HttpResponse.of(SERVER3_RESPONSE));
+
+        final RetryConfig<HttpResponse> config = RetryConfig
+                .builder(RetryRule.of(
+                        RetryRule
+                                .builder()
+                                .onStatus(HttpStatus.TOO_MANY_REQUESTS)
+                                .thenBackoff(Backoff.withoutDelay()),
+                        NO_RETRY_RULE
+                ))
+                .maxTotalAttempts(3)
+                .hedgingBackoff(Backoff.fixed(200))
+                .build();
+
+        final WebClient client = client(config);
+
+        /*
+            We expect the following to happen:
+            1. The first request will be sent to server 1 while a hedged request is scheduled after 100ms after
+            that.
+            2. The first request will fail with TOO_MANY_REQUESTS and order an immediate retry. This will
+            cancel the hedged request.
+            3. The retry will be sent to server 2 and with that again schedule a hedged request after 100ms.
+            4. The second request will fail with TOO_MANY_REQUESTS and order an immediate retry. This will again
+            cancel the hedged request of the second request.
+            5. The immediate retry will be sent to server 3, which will succeed.
+         */
+
+        final CompletableFuture<AggregatedHttpResponse> responseFuture;
+        final ClientRequestContext ctx;
+        try (ClientRequestContextCaptor captor = Clients.newContextCaptor()) {
+            responseFuture = client.get("/hello").aggregate();
+            ctx = captor.get();
+        }
+
+        server1.unlatchResponse();
+        server2.unlatchResponse();
+        server3.unlatchResponse();
+
+        await().untilAsserted(() -> {
+            assertThat(server1.getNumRequests()).isOne();
+            assertThat(server2.getNumRequests()).isOne();
+            assertThat(server3.getNumRequests()).isOne();
+        });
+
+        await().untilAsserted(() -> {
+            assertValidServerRequestContext(server1, 1);
+            assertValidServerRequestContext(server2, 2);
+            assertValidServerRequestContext(server3, 3);
+
+            assertValidAggregatedResponse(responseFuture, SERVER3_RESPONSE);
+            assertValidClientRequestContext(
+                    ctx, GET_VERIFY_RESPONSE_HAS_CONTENT.apply(SERVER3_RESPONSE),
+                    GET_VERIFY_RESPONSE_HAS_CONTENT_AND_STATUS.apply(SERVER1_RESPONSE,
+                                                                     HttpStatus.TOO_MANY_REQUESTS),
+                    GET_VERIFY_RESPONSE_HAS_CONTENT_AND_STATUS.apply(SERVER2_RESPONSE,
+                                                                     HttpStatus.TOO_MANY_REQUESTS),
+                    GET_VERIFY_RESPONSE_HAS_CONTENT.apply(SERVER3_RESPONSE)
+            );
+        });
+    }
+
+    @Test
+    void loosesAfterNonRetriableError() {}
+
+    private static WebClientBuilder clientBuilder() {
+        return WebClient.builder(SessionProtocol.H2C,
+                                 EndpointGroup.of(EndpointSelectionStrategy.roundRobin(),
+                                                  server1.httpEndpoint(),
+                                                  server2.httpEndpoint(),
+                                                  server3.httpEndpoint()))
+                        .factory(clientFactory);
+    }
+
+    private static WebClient client(RetryConfig<HttpResponse> config) {
+        return clientBuilder()
+                .decorator(RetryingClient.newDecorator(config)).build();
     }
 
     private static String getResponseContent(AggregatedHttpResponse response) {
@@ -437,10 +509,17 @@ class RetryingClientWithHedgingTest {
 //                assertThat(log.responseCause().getCause()).isInstanceOf(ResponseTimeoutException.class);
 //            };
 //
-    private static final Function<String, RequestLogVerifier> GET_VERIFY_RESPONSE_HAS_CONTENT =
-            expectedResponseContent -> log -> {
+
+    private static final BiFunction<String, HttpStatus, RequestLogVerifier>
+            GET_VERIFY_RESPONSE_HAS_CONTENT_AND_STATUS =
+            (expectedResponseContent, expectedStatus) -> log -> {
                 assertThat(log.responseLength()).isEqualTo(expectedResponseContent.length());
+                assertThat(log.responseStatus()).isEqualTo(expectedStatus);
             };
+
+    private static final Function<String, RequestLogVerifier> GET_VERIFY_RESPONSE_HAS_CONTENT =
+            expectedResponseContent -> GET_VERIFY_RESPONSE_HAS_CONTENT_AND_STATUS.apply(expectedResponseContent,
+                                                                                        HttpStatus.OK);
 //
 //    private static final BiFunction<Integer, String, RequestLogVerifier>
 //            GET_VERIFY_RESPONSE_HAS_APPLICATION_EXCEPTION =
