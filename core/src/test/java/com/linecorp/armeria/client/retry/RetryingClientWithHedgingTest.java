@@ -27,6 +27,7 @@ import static org.mockito.Mockito.when;
 import java.nio.charset.Charset;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
@@ -187,11 +188,7 @@ class RetryingClientWithHedgingTest {
                 .hedgingBackoff(Backoff.fixed(100))
                 .build();
 
-        final WebClient client = clientBuilder()
-                .decorator(
-                        RetryingClient.newDecorator(hedgingNoRetryConfig)
-                )
-                .build();
+        final WebClient client = client(hedgingNoRetryConfig);
 
         final CompletableFuture<AggregatedHttpResponse> responseFuture;
         final ClientRequestContext ctx;
@@ -236,14 +233,10 @@ class RetryingClientWithHedgingTest {
         final RetryConfig<HttpResponse> hedgingNoRetryConfig = RetryConfig
                 .builder(NO_RETRY_RULE)
                 .maxTotalAttempts(3)
-                .hedgingBackoff(Backoff.fixed(100))
+                .hedgingBackoff(Backoff.fixed(10))
                 .build();
 
-        final WebClient client = clientBuilder()
-                .decorator(
-                        RetryingClient.newDecorator(hedgingNoRetryConfig)
-                )
-                .build();
+        final WebClient client = client(hedgingNoRetryConfig);
 
         final CompletableFuture<AggregatedHttpResponse> responseFuture;
         final ClientRequestContext ctx;
@@ -289,8 +282,8 @@ class RetryingClientWithHedgingTest {
                 .builder(RetryRule.builder().onTimeoutException().thenBackoff(Backoff.fixed(10_000))) // should
                 // be always overtaken by hedging task
                 .maxTotalAttempts(3)
-                .responseTimeoutMillisForEachAttempt(200)
-                .hedgingBackoff(Backoff.fixed(500))
+                .responseTimeoutMillisForEachAttempt(100)
+                .hedgingBackoff(Backoff.fixed(200))
                 .build();
 
         final WebClient client = clientBuilder()
@@ -306,16 +299,16 @@ class RetryingClientWithHedgingTest {
             ctx = captor.get();
         }
 
-        await().untilAsserted(() -> {
+        await().pollInterval(25, TimeUnit.MILLISECONDS).untilAsserted(() -> {
             assertThat(server1.getNumRequests()).isOne();
             assertThat(server2.getNumRequests()).isOne();
             assertThat(server3.getNumRequests()).isOne();
         });
 
         // Let the third server win
-        server1.unlatchResponse();
-        server2.unlatchResponse();
-        server3.unlatchResponse();
+        server1.unlatchResponse(); // issued at T
+        server2.unlatchResponse(); // issued at T + 200 (request 1 timed out)
+        server3.unlatchResponse(); // issued at T + 400 (request 2 timed out)
 
         await()
                 .untilAsserted(() -> {
@@ -333,7 +326,7 @@ class RetryingClientWithHedgingTest {
     }
 
     @Test
-    void thirdWinsEvenAfterRetriableError() throws Exception {
+    void thirdServerWinsEvenAfterRetriableResponse() throws Exception {
         when(server1.getHelloService().serve(any(), any()))
                 .thenReturn(HttpResponse.of(HttpStatus.TOO_MANY_REQUESTS, MediaType.PLAIN_TEXT,
                                             SERVER1_RESPONSE));
@@ -356,18 +349,6 @@ class RetryingClientWithHedgingTest {
                 .build();
 
         final WebClient client = client(config);
-
-        /*
-            We expect the following to happen:
-            1. The first request will be sent to server 1 while a hedged request is scheduled after 100ms after
-            that.
-            2. The first request will fail with TOO_MANY_REQUESTS and order an immediate retry. This will
-            cancel the hedged request.
-            3. The retry will be sent to server 2 and with that again schedule a hedged request after 100ms.
-            4. The second request will fail with TOO_MANY_REQUESTS and order an immediate retry. This will again
-            cancel the hedged request of the second request.
-            5. The immediate retry will be sent to server 3, which will succeed.
-         */
 
         final CompletableFuture<AggregatedHttpResponse> responseFuture;
         final ClientRequestContext ctx;
@@ -404,7 +385,53 @@ class RetryingClientWithHedgingTest {
     }
 
     @Test
-    void loosesAfterNonRetriableError() {}
+    void loosesAfterNonRetriableResponse() throws Exception {
+        when(server1.getHelloService().serve(any(), any()))
+                .thenReturn(HttpResponse.of(SERVER1_RESPONSE));
+        when(server2.getHelloService().serve(any(), any()))
+                .thenReturn(HttpResponse.of(HttpStatus.INTERNAL_SERVER_ERROR, MediaType.PLAIN_TEXT,
+                                            SERVER2_RESPONSE));
+
+        final RetryConfig<HttpResponse> config = RetryConfig
+                .builder(NO_RETRY_RULE)
+                .maxTotalAttempts(3)
+                .hedgingBackoff(Backoff.fixed(100))
+                .build();
+
+        final WebClient client = client(config);
+
+        final CompletableFuture<AggregatedHttpResponse> responseFuture;
+        final ClientRequestContext ctx;
+        try (ClientRequestContextCaptor captor = Clients.newContextCaptor()) {
+            responseFuture = client.get("/hello").aggregate();
+            ctx = captor.get();
+        }
+
+        server2.unlatchResponse();
+
+        await().untilAsserted(() -> {
+            assertThat(server2.getNumRequests()).isOne();
+        });
+
+        Thread.sleep(10);
+        server1.unlatchResponse();
+        server2.unlatchResponse();
+
+        await().untilAsserted(() -> {
+            assertValidServerRequestContext(server1, 1);
+            assertValidServerRequestContext(server2, 2);
+            assertNoServerRequestContext(server3);
+
+            assertValidAggregatedResponse(responseFuture, HttpStatus.INTERNAL_SERVER_ERROR, SERVER2_RESPONSE);
+            assertValidClientRequestContext(
+                    ctx, GET_VERIFY_RESPONSE_HAS_CONTENT_AND_STATUS.apply(SERVER2_RESPONSE,
+                                                                          HttpStatus.INTERNAL_SERVER_ERROR),
+                    VERIFY_REQUEST_CANCELLED,
+                    GET_VERIFY_RESPONSE_HAS_CONTENT_AND_STATUS.apply(SERVER2_RESPONSE,
+                                                                     HttpStatus.INTERNAL_SERVER_ERROR), null
+            );
+        });
+    }
 
     private static WebClientBuilder clientBuilder() {
         return WebClient.builder(SessionProtocol.H2C,
@@ -429,6 +456,14 @@ class RetryingClientWithHedgingTest {
         assertThat(resFuture.isDone()).isTrue();
         final AggregatedHttpResponse res = resFuture.getNow(null);
         assertThat(res.status()).isEqualTo(HttpStatus.OK);
+        assertThat(getResponseContent(res)).isEqualTo(expectedContent);
+    }
+
+    private void assertValidAggregatedResponse(CompletableFuture<AggregatedHttpResponse> resFuture,
+                                               HttpStatus expectedStatus, String expectedContent) {
+        assertThat(resFuture.isDone()).isTrue();
+        final AggregatedHttpResponse res = resFuture.getNow(null);
+        assertThat(res.status()).isEqualTo(expectedStatus);
         assertThat(getResponseContent(res)).isEqualTo(expectedContent);
     }
 
@@ -490,6 +525,10 @@ class RetryingClientWithHedgingTest {
         assertThat(slog.requestHeaders().path()).contains("hello");
     }
 
+    private void assertNoServerRequestContext(ServerExtension server) {
+        assertThat(server.requestContextCaptor().size()).isEqualTo(0);
+    }
+
     @FunctionalInterface
     private interface RequestLogVerifier extends Consumer<RequestLog> {}
 
@@ -520,13 +559,4 @@ class RetryingClientWithHedgingTest {
     private static final Function<String, RequestLogVerifier> GET_VERIFY_RESPONSE_HAS_CONTENT =
             expectedResponseContent -> GET_VERIFY_RESPONSE_HAS_CONTENT_AND_STATUS.apply(expectedResponseContent,
                                                                                         HttpStatus.OK);
-//
-//    private static final BiFunction<Integer, String, RequestLogVerifier>
-//            GET_VERIFY_RESPONSE_HAS_APPLICATION_EXCEPTION =
-//            (expectedType, expectedMessage) -> log -> {
-//                assertThat(log.responseCause()).isInstanceOf(TApplicationException.class);
-//                final TApplicationException cause = (TApplicationException) log.responseCause();
-//                assertThat(cause.getType()).isEqualTo(expectedType);
-//                assertThat(cause.getMessage()).contains(expectedMessage);
-//            };
 }
