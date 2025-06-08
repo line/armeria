@@ -3614,6 +3614,7 @@ hosting
 hosting-cluster.nl
 hostyhosting.io
 hot
+hotel
 hotel.hu
 hotel.lk
 hotel.tz
@@ -9049,6 +9050,7 @@ website
 website.yandexcloud.net
 websitebuilder.online
 websozai.jp
+webspace-host.com
 webspace.rocks
 webspaceconfig.de
 webthings.io
