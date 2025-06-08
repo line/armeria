@@ -342,7 +342,7 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
                                              false);
         }
 
-        onAttemptStarted(ctx, attemptCtx, (@Nullable Throwable cause) -> abortAttempt(attemptCtx, attemptRes,
+        onAttemptStarted(ctx, attemptCtx, (@Nullable Throwable cause) -> abortAttempt(attemptCtx,
                                                                                       cause));
 
         if (!ctx.exchangeType().isResponseStreaming() || config.requiresResponseTrailers()) {
@@ -646,7 +646,7 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
         }
     }
 
-    private static void abortAttempt(ClientRequestContext attemptCtx, HttpResponse attemptRes,
+    private static void abortAttempt(ClientRequestContext attemptCtx,
                                      @Nullable Throwable cause) {
         // Set response content with null to make sure that the log is complete.
         final RequestLogBuilder logBuilder = attemptCtx.logBuilder();

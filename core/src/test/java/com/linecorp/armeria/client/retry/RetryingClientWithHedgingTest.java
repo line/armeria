@@ -18,6 +18,7 @@ package com.linecorp.armeria.client.retry;
 
 import static com.linecorp.armeria.client.retry.AbstractRetryingClient.ARMERIA_RETRY_COUNT;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.fail;
 import static org.awaitility.Awaitility.await;
 import static org.mockito.ArgumentMatchers.any;
@@ -25,6 +26,8 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import java.nio.charset.Charset;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
@@ -37,6 +40,7 @@ import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.RepeatedTest;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
@@ -61,6 +65,7 @@ import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogAccess;
 import com.linecorp.armeria.common.logging.RequestLogProperty;
+import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.RoutingContext;
 import com.linecorp.armeria.server.ServerBuilder;
@@ -68,6 +73,8 @@ import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.logging.LoggingService;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
+// todo(szymon): change tests that we wait for the response and demand that immediately after we see all the
+//  logs in the appropriate state.
 class RetryingClientWithHedgingTest {
     private static final long LOOSING_SERVER_RESPONSE_DELAY_MILLIS = 300;
 
@@ -87,28 +94,32 @@ class RetryingClientWithHedgingTest {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
             sb.decorator(LoggingService.newDecorator());
+            sb.blockingTaskExecutor(1);
             sb.service("/hello",
                        new HttpService() {
                            @Override
                            public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req)
                                    throws Exception {
-                               numRequests.incrementAndGet();
-                               try {
-                                   responseLatch.await();
-                               } catch (InterruptedException e) {
-                                   fail(e);
-                               }
 
-                               req.whenComplete().handle((t, tt) -> {
-                                   System.out.println("Request completed: " + req);
-                                   return null;
-                               });
+                               final CompletableFuture<HttpResponse> responseFuture = new CompletableFuture<>();
+                               final HttpResponse res = HttpResponse.of(responseFuture);
 
-                               final HttpResponse res = helloService.serve(ctx, req);
+                               // We are using a blocking task executor to not block the event loop so we are
+                               // able to receive request cancellations.
+                               ctx.blockingTaskExecutor().execute(() -> {
+                                   numRequests.incrementAndGet();
+                                   try {
+                                       responseLatch.await();
+                                   } catch (InterruptedException e) {
+                                       responseFuture.completeExceptionally(e);
+                                       fail(e);
+                                   }
 
-                               res.whenComplete().handle((t, tt) -> {
-                                   System.out.println("Response completed: " + res);
-                                   return null;
+                                   try {
+                                       responseFuture.complete(helloService.serve(ctx, req));
+                                   } catch (Exception e) {
+                                       responseFuture.completeExceptionally(e);
+                                   }
                                });
 
                                return res;
@@ -210,9 +221,9 @@ class RetryingClientWithHedgingTest {
 
         await()
                 .untilAsserted(() -> {
-                    assertValidServerRequestContext(server1, 1);
-                    assertValidServerRequestContext(server2, 2);
-                    assertValidServerRequestContext(server3, 3);
+                    assertValidServerRequestContext(server1, 1, true);
+                    assertValidServerRequestContext(server2, 2, false);
+                    assertValidServerRequestContext(server3, 3, true);
 
                     assertValidAggregatedResponse(responseFuture, SERVER2_RESPONSE);
                     assertValidClientRequestContext(
@@ -258,9 +269,9 @@ class RetryingClientWithHedgingTest {
 
         await()
                 .untilAsserted(() -> {
-                    assertValidServerRequestContext(server1, 1);
-                    assertValidServerRequestContext(server2, 2);
-                    assertValidServerRequestContext(server3, 3);
+                    assertValidServerRequestContext(server1, 1, true);
+                    assertValidServerRequestContext(server2, 2, true);
+                    assertValidServerRequestContext(server3, 3, false);
 
                     assertValidAggregatedResponse(responseFuture, SERVER3_RESPONSE);
                     assertValidClientRequestContext(
@@ -312,9 +323,9 @@ class RetryingClientWithHedgingTest {
 
         await()
                 .untilAsserted(() -> {
-                    assertValidServerRequestContext(server1, 1);
-                    assertValidServerRequestContext(server2, 2);
-                    assertValidServerRequestContext(server3, 3);
+                    assertValidServerRequestContext(server1, 1, true);
+                    assertValidServerRequestContext(server2, 2, true);
+                    assertValidServerRequestContext(server3, 3, false);
 
                     assertValidAggregatedResponse(responseFuture, SERVER3_RESPONSE);
                     assertValidClientRequestContext(
@@ -418,8 +429,8 @@ class RetryingClientWithHedgingTest {
         server2.unlatchResponse();
 
         await().untilAsserted(() -> {
-            assertValidServerRequestContext(server1, 1);
-            assertValidServerRequestContext(server2, 2);
+            assertValidServerRequestContext(server1, 1, true);
+            assertValidServerRequestContext(server2, 2, false);
             assertNoServerRequestContext(server3);
 
             assertValidAggregatedResponse(responseFuture, HttpStatus.INTERNAL_SERVER_ERROR, SERVER2_RESPONSE);
@@ -431,6 +442,67 @@ class RetryingClientWithHedgingTest {
                                                                      HttpStatus.INTERNAL_SERVER_ERROR), null
             );
         });
+    }
+
+    @RepeatedTest(5)
+    void loosesAfterResponseTimeout() throws Exception {
+        final RetryConfig<HttpResponse> config = RetryConfig
+                .builder(NO_RETRY_RULE)
+                .maxTotalAttempts(3)
+                .hedgingBackoff(Backoff.withoutDelay())
+                .build();
+
+        final WebClient client = clientBuilder()
+                .responseTimeoutMillis(500)
+                .decorator(
+                        RetryingClient.newDecorator(config)
+                ).build();
+
+        final CompletableFuture<AggregatedHttpResponse> responseFuture;
+        final ClientRequestContext ctx;
+        try (ClientRequestContextCaptor captor = Clients.newContextCaptor()) {
+            responseFuture = client.get("/hello").aggregate();
+            ctx = captor.get();
+        }
+
+        await().atLeast(400, TimeUnit.MILLISECONDS).atMost(600, TimeUnit.MILLISECONDS).untilAsserted(() -> {
+            assertThat(responseFuture).isCompletedExceptionally();
+            assertThatThrownBy(responseFuture::get).satisfies(throwable -> {
+                final Throwable rootCause = Exceptions.peel(throwable);
+                assertThat(rootCause).isInstanceOf(ResponseTimeoutException.class);
+            });
+        });
+
+        final List<Throwable> childLogExceptions = new ArrayList<>();
+
+        final RequestLogVerifier catchException = log -> {
+            assertThat(log.responseCause()).isNotNull();
+            childLogExceptions.add(log.responseCause());
+        };
+
+        assertValidClientRequestContext(ctx, VERIFY_RESPONSE_TIMEOUT, catchException, catchException,
+                                        catchException);
+
+        int numTimeouts = 0;
+        int numCancelled = 0;
+
+        for (final @Nullable Throwable childException : childLogExceptions) {
+            if (childException instanceof ResponseTimeoutException) {
+                numTimeouts++;
+            } else if (childException instanceof ResponseCancellationException) {
+                numCancelled++;
+            } else {
+                fail("Unexpected exception: " + childException);
+            }
+        }
+
+        assertThat(numTimeouts + numCancelled).isEqualTo(3);
+        // At least one attempt needs to time out.
+        assertThat(numTimeouts).isPositive();
+
+        assertValidServerRequestContext(server1, 1, true);
+        assertValidServerRequestContext(server2, 2, true);
+        assertValidServerRequestContext(server3, 3, true);
     }
 
     private static WebClientBuilder clientBuilder() {
@@ -451,35 +523,41 @@ class RetryingClientWithHedgingTest {
         return response.content().toString(Charset.defaultCharset());
     }
 
-    private void assertValidAggregatedResponse(CompletableFuture<AggregatedHttpResponse> resFuture,
-                                               String expectedContent) {
+    private static void assertValidAggregatedResponse(CompletableFuture<AggregatedHttpResponse> resFuture,
+                                                      String expectedContent) {
         assertThat(resFuture.isDone()).isTrue();
         final AggregatedHttpResponse res = resFuture.getNow(null);
         assertThat(res.status()).isEqualTo(HttpStatus.OK);
         assertThat(getResponseContent(res)).isEqualTo(expectedContent);
     }
 
-    private void assertValidAggregatedResponse(CompletableFuture<AggregatedHttpResponse> resFuture,
-                                               HttpStatus expectedStatus, String expectedContent) {
+    private static void assertValidAggregatedResponse(CompletableFuture<AggregatedHttpResponse> resFuture,
+                                                      HttpStatus expectedStatus, String expectedContent) {
         assertThat(resFuture.isDone()).isTrue();
         final AggregatedHttpResponse res = resFuture.getNow(null);
         assertThat(res.status()).isEqualTo(expectedStatus);
         assertThat(getResponseContent(res)).isEqualTo(expectedContent);
     }
 
-    private void assertValidClientRequestContext(ClientRequestContext ctx,
-                                                 RequestLogVerifier logVerifierCtx,
-                                                 RequestLogVerifier logVerifierServer1,
-                                                 RequestLogVerifier logVerifierServer2,
-                                                 @Nullable RequestLogVerifier logVerifierServer3
-    ) {
+    private static void assertValidRootClientRequestContext(ClientRequestContext ctx,
+                                                            RequestLogVerifier logVerifierCtx,
+                                                            int expectedNumChildren) {
         assertThat(ctx.log().isComplete()).isTrue();
-        assertThat(ctx.log().children()).hasSize(logVerifierServer3 == null ? 2 : 3);
+        assertThat(ctx.log().children()).hasSize(expectedNumChildren);
         final RequestLog log = ctx.log().getIfAvailable(RequestLogProperty.RESPONSE_CONTENT,
                                                         RequestLogProperty.RESPONSE_CAUSE,
                                                         RequestLogProperty.REQUEST_HEADERS);
         assertThat(log).isNotNull();
         logVerifierCtx.accept(log);
+    }
+
+    private static void assertValidClientRequestContext(ClientRequestContext ctx,
+                                                        RequestLogVerifier logVerifierCtx,
+                                                        RequestLogVerifier logVerifierServer1,
+                                                        RequestLogVerifier logVerifierServer2,
+                                                        @Nullable RequestLogVerifier logVerifierServer3
+    ) {
+        assertValidRootClientRequestContext(ctx, logVerifierCtx, logVerifierServer3 == null ? 2 : 3);
         assertValidChildLog(ctx.log().children().get(0), 1, logVerifierServer1);
         assertValidChildLog(ctx.log().children().get(1), 2, logVerifierServer2);
         if (logVerifierServer3 != null) {
@@ -487,8 +565,8 @@ class RetryingClientWithHedgingTest {
         }
     }
 
-    void assertValidChildLog(RequestLogAccess logAccess, int attemptNumber,
-                             RequestLogVerifier requestLogVerifier) {
+    private static void assertValidChildLog(RequestLogAccess logAccess, int attemptNumber,
+                                            RequestLogVerifier requestLogVerifier) {
         assertThat(logAccess.isComplete()).isTrue();
         // After the check right above, all properties of the RequestLog should be available.
         final @Nullable RequestLog log = logAccess.getIfAvailable(RequestLogProperty.RESPONSE_CONTENT,
@@ -505,12 +583,19 @@ class RetryingClientWithHedgingTest {
         requestLogVerifier.accept(log);
     }
 
-    private void assertValidServerRequestContext(ServerExtension server, int attemptNumber) {
+    private static void assertValidServerRequestContext(ServerExtension server, int attemptNumber) {
+        assertValidServerRequestContext(server, attemptNumber, false);
+    }
+
+    private static void assertValidServerRequestContext(ServerExtension server, int attemptNumber,
+                                                        boolean expectCancelled) {
         assertThat(server.requestContextCaptor().size()).isEqualTo(1);
 
         final ServiceRequestContext sctx = server.requestContextCaptor().peek();
         assertThat(sctx).isNotNull();
         assertThat(sctx.log().isComplete()).isTrue();
+
+        assertThat(sctx.isCancelled()).isEqualTo(expectCancelled);
 
         final RequestLog slog = sctx.log().getIfAvailable(RequestLogProperty.REQUEST_HEADERS,
                                                           RequestLogProperty.REQUEST_CONTENT);
@@ -523,9 +608,10 @@ class RetryingClientWithHedgingTest {
         }
 
         assertThat(slog.requestHeaders().path()).contains("hello");
+
     }
 
-    private void assertNoServerRequestContext(ServerExtension server) {
+    private static void assertNoServerRequestContext(ServerExtension server) {
         assertThat(server.requestContextCaptor().size()).isEqualTo(0);
     }
 
@@ -542,12 +628,10 @@ class RetryingClientWithHedgingTest {
                 assertThat(log.responseCause()).isInstanceOf(ResponseTimeoutException.class);
             };
     //
-//    private static final RequestLogVerifier VERIFY_RESPONSE_TIMEOUT =
-//            log -> {
-//                assertThat(log.responseCause()).isInstanceOf(TTransportException.class);
-//                assertThat(log.responseCause().getCause()).isInstanceOf(ResponseTimeoutException.class);
-//            };
-//
+    private static final RequestLogVerifier VERIFY_RESPONSE_TIMEOUT =
+            log -> {
+                assertThat(log.responseCause()).isInstanceOf(ResponseTimeoutException.class);
+            };
 
     private static final BiFunction<String, HttpStatus, RequestLogVerifier>
             GET_VERIFY_RESPONSE_HAS_CONTENT_AND_STATUS =
