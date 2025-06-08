@@ -236,9 +236,10 @@ public final class RetryingRpcClient extends AbstractRetryingClient<RpcRequest, 
             return null;
         });
 
-        final @Nullable Backoff hedgingBackoff = retryConfig.hedgingBackoff();
+        final long hedgingDelayMillis = retryConfig.hedgingDelayMillis();
 
-        if (hedgingBackoff != null) {
+        if (hedgingDelayMillis >= 0) {
+            final Backoff hedgingBackoff = Backoff.fixed(hedgingDelayMillis);
             final RetrySchedulabilityDecision schedulabilityDecision =
                     canScheduleWith(ctx, hedgingBackoff);
             if (schedulabilityDecision.canSchedule()) {

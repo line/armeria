@@ -381,16 +381,18 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
         }
 
         @Nullable
-        final Backoff hedgingBackoff = config.hedgingBackoff();
+        final long hedgingDelayMillis = config.hedgingDelayMillis();
 
-        if (hedgingBackoff != null) {
-            final RetrySchedulabilityDecision retrySchedulabilityDecision = canScheduleWith(ctx, hedgingBackoff,
+        if (hedgingDelayMillis >= 0) {
+            final Backoff hedgingDelayBackoff = Backoff.fixed(hedgingDelayMillis);
+            final RetrySchedulabilityDecision retrySchedulabilityDecision = canScheduleWith(ctx,
+                                                                                            hedgingDelayBackoff,
                                                                                             -1);
             if (retrySchedulabilityDecision.canSchedule()) {
-                logger.debug("Scheduling hedging with backoff: " + hedgingBackoff);
+                logger.debug("Scheduling hedging with backoff: {}", hedgingDelayBackoff);
                 scheduleNextRetry(ctx, () -> doExecute0(retryingContext),
                                   retrySchedulabilityDecision.nextRetryTimeNanos(),
-                                  hedgingBackoff,
+                                  hedgingDelayBackoff,
                                   cause -> handleException(retryingContext, cause, false));
             }
         }

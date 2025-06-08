@@ -196,7 +196,7 @@ class RetryingClientWithHedgingTest {
         final RetryConfig<HttpResponse> hedgingNoRetryConfig = RetryConfig
                 .builder(NO_RETRY_RULE)
                 .maxTotalAttempts(3)
-                .hedgingBackoff(Backoff.fixed(100))
+                .hedgingDelayMillis(100)
                 .build();
 
         final WebClient client = client(hedgingNoRetryConfig);
@@ -244,7 +244,7 @@ class RetryingClientWithHedgingTest {
         final RetryConfig<HttpResponse> hedgingNoRetryConfig = RetryConfig
                 .builder(NO_RETRY_RULE)
                 .maxTotalAttempts(3)
-                .hedgingBackoff(Backoff.fixed(10))
+                .hedgingDelayMillis(10)
                 .build();
 
         final WebClient client = client(hedgingNoRetryConfig);
@@ -294,7 +294,7 @@ class RetryingClientWithHedgingTest {
                 // be always overtaken by hedging task
                 .maxTotalAttempts(3)
                 .responseTimeoutMillisForEachAttempt(100)
-                .hedgingBackoff(Backoff.fixed(200))
+                .hedgingDelayMillis(200)
                 .build();
 
         final WebClient client = clientBuilder()
@@ -356,7 +356,7 @@ class RetryingClientWithHedgingTest {
                         NO_RETRY_RULE
                 ))
                 .maxTotalAttempts(3)
-                .hedgingBackoff(Backoff.fixed(200))
+                .hedgingDelayMillis(200)
                 .build();
 
         final WebClient client = client(config);
@@ -406,7 +406,7 @@ class RetryingClientWithHedgingTest {
         final RetryConfig<HttpResponse> config = RetryConfig
                 .builder(NO_RETRY_RULE)
                 .maxTotalAttempts(3)
-                .hedgingBackoff(Backoff.fixed(100))
+                .hedgingDelayMillis(100)
                 .build();
 
         final WebClient client = client(config);
@@ -449,7 +449,7 @@ class RetryingClientWithHedgingTest {
         final RetryConfig<HttpResponse> config = RetryConfig
                 .builder(NO_RETRY_RULE)
                 .maxTotalAttempts(3)
-                .hedgingBackoff(Backoff.withoutDelay())
+                .hedgingDelayMillis(0)
                 .build();
 
         final WebClient client = clientBuilder()

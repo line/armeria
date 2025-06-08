@@ -74,8 +74,8 @@ class RetryingRpcClientWithHedgingTest {
     private static final long LOOSING_SERVER_RESPONSE_DELAY_MILLIS = 50;
 
     private static class TestServer extends ServerExtension {
-        private  CountDownLatch responseLatch = new CountDownLatch(1);
-        private  CountDownLatch requestLatch = new CountDownLatch(1);
+        private CountDownLatch responseLatch = new CountDownLatch(1);
+        private CountDownLatch requestLatch = new CountDownLatch(1);
         private volatile HelloService.Iface serviceHandler;
 
         TestServer() {
@@ -118,7 +118,7 @@ class RetryingRpcClientWithHedgingTest {
             responseLatch.countDown();
         }
 
-        public void waitForFirstRequest()  {
+        public void waitForFirstRequest() {
             try {
                 requestLatch.await();
             } catch (InterruptedException e) {
@@ -191,7 +191,7 @@ class RetryingRpcClientWithHedgingTest {
                         )
                         .maxTotalAttempts(3)
                         .responseTimeoutMillisForEachAttempt(50)
-                        .hedgingBackoff(Backoff.fixed(20))
+                        .hedgingDelayMillis(20)
                         .build()
         );
 
@@ -220,7 +220,7 @@ class RetryingRpcClientWithHedgingTest {
 
                     assertThat(result.get()).isEqualTo("server3");
                     assertValidClientRequestContext(
-                            ctx,GET_VERIFY_RESPONSE_HAS_CONTENT.apply("server3"), VERIFY_REQUEST_CANCELLED ,
+                            ctx, GET_VERIFY_RESPONSE_HAS_CONTENT.apply("server3"), VERIFY_REQUEST_CANCELLED,
                             VERIFY_REQUEST_CANCELLED,
                             GET_VERIFY_RESPONSE_HAS_CONTENT.apply("server3")
                     );
@@ -243,10 +243,9 @@ class RetryingRpcClientWithHedgingTest {
                         )
                         .maxTotalAttempts(3)
                         .responseTimeoutMillisForEachAttempt(50)
-                        .hedgingBackoff(Backoff.fixed(20))
+                        .hedgingDelayMillis(20)
                         .build()
         );
-
 
         final CompletableFuture<String> result;
         final ClientRequestContext ctx;
@@ -277,7 +276,7 @@ class RetryingRpcClientWithHedgingTest {
                     assertValidServerRequestContext(server3, 3);
 
                     assertThat(result.get()).isEqualTo("server3");
-                    assertValidClientRequestContext(ctx,GET_VERIFY_RESPONSE_HAS_CONTENT.apply("server3"),
+                    assertValidClientRequestContext(ctx, GET_VERIFY_RESPONSE_HAS_CONTENT.apply("server3"),
                                                     VERIFY_REQUEST_CANCELLED, VERIFY_REQUEST_CANCELLED,
                                                     GET_VERIFY_RESPONSE_HAS_CONTENT.apply("server3"));
                 });
@@ -302,7 +301,7 @@ class RetryingRpcClientWithHedgingTest {
                         )
                         .maxTotalAttempts(3)
                         .responseTimeoutMillisForEachAttempt(1)
-                        .hedgingBackoff(Backoff.fixed(20))
+                        .hedgingDelayMillis(20)
                         .build()
         );
 
@@ -329,7 +328,7 @@ class RetryingRpcClientWithHedgingTest {
 
             assertThat(result.get()).isEqualTo("server3");
             assertValidClientRequestContext(
-                    ctx,GET_VERIFY_RESPONSE_HAS_CONTENT.apply("server3"), VERIFY_REQUEST_CANCELLED,
+                    ctx, GET_VERIFY_RESPONSE_HAS_CONTENT.apply("server3"), VERIFY_REQUEST_CANCELLED,
                     VERIFY_REQUEST_CANCELLED, GET_VERIFY_RESPONSE_HAS_CONTENT.apply("server3")
             );
         });
@@ -353,7 +352,7 @@ class RetryingRpcClientWithHedgingTest {
                         )
                         .maxTotalAttempts(3)
                         .responseTimeoutMillisForEachAttempt(1)
-                        .hedgingBackoff(Backoff.fixed(20))
+                        .hedgingDelayMillis(20)
                         .build()
         );
 
@@ -367,7 +366,6 @@ class RetryingRpcClientWithHedgingTest {
         server1.waitForFirstRequest();
         server2.waitForFirstRequest();
         server3.waitForFirstRequest();
-
 
         // Let the second server win.
         server2.unlatchResponse();
@@ -393,17 +391,16 @@ class RetryingRpcClientWithHedgingTest {
                                                        ((TApplicationException) cause).getType())
                                                        .isEqualTo(TApplicationException.INTERNAL_ERROR)));
 
-
             assertValidClientRequestContext(
-                    ctx, GET_VERIFY_RESPONSE_HAS_APPLICATION_EXCEPTION.apply(TApplicationException.INTERNAL_ERROR,
-                                                                             errorMessage),
+                    ctx,
+                    GET_VERIFY_RESPONSE_HAS_APPLICATION_EXCEPTION.apply(TApplicationException.INTERNAL_ERROR,
+                                                                        errorMessage),
                     VERIFY_REQUEST_CANCELLED,
                     GET_VERIFY_RESPONSE_HAS_APPLICATION_EXCEPTION.apply(TApplicationException.INTERNAL_ERROR,
                                                                         errorMessage),
                     VERIFY_REQUEST_CANCELLED);
         });
     }
-
 
     @Test
     void execute_hedging_honorResponseTimeout() throws TException {
@@ -420,7 +417,7 @@ class RetryingRpcClientWithHedgingTest {
                         )
                         .maxTotalAttempts(3)
                         .responseTimeoutMillisForEachAttempt(300)
-                        .hedgingBackoff(Backoff.fixed(20))
+                        .hedgingDelayMillis(20)
                         .build(), 300 + 100 // Lets give the client 100ms to schedule the second attempt.
         );
 
@@ -444,7 +441,8 @@ class RetryingRpcClientWithHedgingTest {
                                {
 
                                    assertThat(cause.getCause()).isInstanceOf(TTransportException.class);
-                                   assertThat(cause.getCause().getCause()).isInstanceOf(ResponseTimeoutException.class);
+                                   assertThat(cause.getCause().getCause()).isInstanceOf(
+                                           ResponseTimeoutException.class);
                                }
                     );
 
@@ -468,7 +466,7 @@ class RetryingRpcClientWithHedgingTest {
         });
     }
 
-        private CompletableFuture<String> asyncHelloWith(HelloService.AsyncIface client) throws TException {
+    private CompletableFuture<String> asyncHelloWith(HelloService.AsyncIface client) throws TException {
         final CompletableFuture<String> future = new CompletableFuture<>();
         try {
             client.hello("hello", new AsyncMethodCallback<String>() {
@@ -511,6 +509,7 @@ class RetryingRpcClientWithHedgingTest {
     }
 
     private interface RequestLogVerifier extends Consumer<RequestLog> {}
+
     private static final RequestLogVerifier VERIFY_REQUEST_CANCELLED =
             log -> {
                 assertThat(log.responseCause()).isInstanceOf(TTransportException.class);

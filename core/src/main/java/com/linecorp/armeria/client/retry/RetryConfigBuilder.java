@@ -36,7 +36,7 @@ import com.linecorp.armeria.common.annotation.Nullable;
 public final class RetryConfigBuilder<T extends Response> {
     private int maxTotalAttempts = Flags.defaultMaxTotalAttempts();
     private long responseTimeoutMillisForEachAttempt = Flags.defaultResponseTimeoutMillis();
-    private @Nullable Backoff hedgingBackoff;
+    private long hedgingDelayMillis = -1;
     private int maxContentLength;
 
     @Nullable
@@ -85,6 +85,27 @@ public final class RetryConfigBuilder<T extends Response> {
         return this;
     }
 
+    public RetryConfigBuilder<T> hedgingDelay(Duration hedgingDelay) {
+        final long millis =
+                requireNonNull(hedgingDelay, "hedgingDelay")
+                        .toMillis();
+        checkArgument(
+                millis >= 0,
+                "responseTimeoutForEachAttempt.toMillis(): %s (expected: >= 0)",
+                millis);
+        hedgingDelayMillis = millis;
+        return this;
+    }
+
+    public RetryConfigBuilder<T> hedgingDelayMillis(long hedgingDelayMillis) {
+        checkArgument(
+                hedgingDelayMillis >= 0,
+                "hedgingDelayMillis: %s (expected: >= 0)",
+                hedgingDelayMillis);
+        this.hedgingDelayMillis = hedgingDelayMillis;
+        return this;
+    }
+
     /**
      * Sets the specified {@code responseTimeoutMillisForEachAttempt}.
      */
@@ -94,12 +115,6 @@ public final class RetryConfigBuilder<T extends Response> {
                 "responseTimeoutMillisForEachAttempt: %s (expected: >= 0)",
                 responseTimeoutMillisForEachAttempt);
         this.responseTimeoutMillisForEachAttempt = responseTimeoutMillisForEachAttempt;
-        return this;
-    }
-
-
-    public RetryConfigBuilder<T> hedgingBackoff(Backoff hedgingBackoff) {
-        this.hedgingBackoff = requireNonNull(hedgingBackoff);
         return this;
     }
 
@@ -123,18 +138,18 @@ public final class RetryConfigBuilder<T extends Response> {
      */
     public RetryConfig<T> build() {
         if (retryRule != null) {
-            if (hedgingBackoff != null) {
+            if (hedgingDelayMillis >= 0) {
                 return new RetryConfig<>(retryRule, maxTotalAttempts, responseTimeoutMillisForEachAttempt,
-                                         hedgingBackoff);
+                                         hedgingDelayMillis);
             } else {
                 return new RetryConfig<>(retryRule, maxTotalAttempts, responseTimeoutMillisForEachAttempt);
             }
         }
         assert retryRuleWithContent != null;
 
-        if (hedgingBackoff != null) {
+        if (hedgingDelayMillis >= 0) {
             return new RetryConfig<>(retryRuleWithContent, maxContentLength, maxTotalAttempts,
-                                     responseTimeoutMillisForEachAttempt, hedgingBackoff);
+                                     responseTimeoutMillisForEachAttempt, hedgingDelayMillis);
         } else {
             return new RetryConfig<>(retryRuleWithContent, maxContentLength, maxTotalAttempts,
                                      responseTimeoutMillisForEachAttempt);
@@ -154,7 +169,7 @@ public final class RetryConfigBuilder<T extends Response> {
                 .add("retryRuleWithContent", retryRuleWithContent)
                 .add("maxTotalAttempts", maxTotalAttempts)
                 .add("responseTimeoutMillisForEachAttempt", responseTimeoutMillisForEachAttempt)
-                .add("hedgingBackoff", hedgingBackoff)
+                .add("hedgingDelayMillis", hedgingDelayMillis)
                 .add("maxContentLength", maxContentLength);
     }
 }

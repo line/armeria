@@ -77,7 +77,7 @@ public final class RetryConfig<T extends Response> {
 
     private final int maxTotalAttempts;
     private final long responseTimeoutMillisForEachAttempt;
-    private final @Nullable Backoff hedgingBackoff;
+    private final long hedgingDelayMillis;
     private final int maxContentLength;
 
     @Nullable
@@ -92,15 +92,15 @@ public final class RetryConfig<T extends Response> {
     RetryConfig(RetryRule retryRule, int maxTotalAttempts, long responseTimeoutMillisForEachAttempt) {
         this(requireNonNull(retryRule, "retryRule"), null,
              maxTotalAttempts, responseTimeoutMillisForEachAttempt,
-             0, null);
+             0, -1);
         checkArguments(maxTotalAttempts, responseTimeoutMillisForEachAttempt);
     }
 
     RetryConfig(RetryRule retryRule, int maxTotalAttempts, long responseTimeoutMillisForEachAttempt,
-                       Backoff hedgingBackoff) {
+                long hedgingDelayMillis) {
         this(requireNonNull(retryRule, "retryRule"), null,
-                maxTotalAttempts, responseTimeoutMillisForEachAttempt,
-             0, requireNonNull(hedgingBackoff, "hedgingBackoff"));
+             maxTotalAttempts, responseTimeoutMillisForEachAttempt,
+             0, hedgingDelayMillis);
         checkArguments(maxTotalAttempts, responseTimeoutMillisForEachAttempt);
     }
 
@@ -111,7 +111,7 @@ public final class RetryConfig<T extends Response> {
             long responseTimeoutMillisForEachAttempt) {
         this(null, requireNonNull(retryRuleWithContent, "retryRuleWithContent"),
              maxTotalAttempts, responseTimeoutMillisForEachAttempt,
-             maxContentLength, null);
+             maxContentLength, -1);
     }
 
     RetryConfig(
@@ -119,10 +119,10 @@ public final class RetryConfig<T extends Response> {
             int maxContentLength,
             int maxTotalAttempts,
             long responseTimeoutMillisForEachAttempt,
-            Backoff hedgingBackoff) {
+            long hedgingDelayMillis) {
         this(null, requireNonNull(retryRuleWithContent, "retryRuleWithContent"),
-                maxTotalAttempts, responseTimeoutMillisForEachAttempt,
-             maxContentLength, requireNonNull(hedgingBackoff, "hedgingBackoff"));
+             maxTotalAttempts, responseTimeoutMillisForEachAttempt,
+             maxContentLength, hedgingDelayMillis);
     }
 
     private RetryConfig(
@@ -131,7 +131,7 @@ public final class RetryConfig<T extends Response> {
             int maxTotalAttempts,
             long responseTimeoutMillisForEachAttempt,
             int maxContentLength,
-            @Nullable Backoff hedgingBackoff
+            long hedgingDelayMillis
     ) {
         checkArguments(maxTotalAttempts, responseTimeoutMillisForEachAttempt);
         this.retryRule = retryRule;
@@ -139,7 +139,7 @@ public final class RetryConfig<T extends Response> {
         this.maxTotalAttempts = maxTotalAttempts;
         this.responseTimeoutMillisForEachAttempt = responseTimeoutMillisForEachAttempt;
         this.maxContentLength = maxContentLength;
-        this.hedgingBackoff = hedgingBackoff;
+        this.hedgingDelayMillis = hedgingDelayMillis;
         if (retryRuleWithContent == null) {
             fromRetryRuleWithContent = null;
         } else {
@@ -174,11 +174,11 @@ public final class RetryConfig<T extends Response> {
                 .maxTotalAttempts(maxTotalAttempts)
                 .responseTimeoutMillisForEachAttempt(responseTimeoutMillisForEachAttempt);
 
-                if (hedgingBackoff != null) {
-                    builder.hedgingBackoff(hedgingBackoff);
-                }
+        if (hedgingDelayMillis >= 0) {
+            builder.hedgingDelayMillis(hedgingDelayMillis);
+        }
 
-                return builder;
+        return builder;
     }
 
     /**
@@ -197,8 +197,8 @@ public final class RetryConfig<T extends Response> {
         return responseTimeoutMillisForEachAttempt;
     }
 
-    public @Nullable Backoff hedgingBackoff() {
-        return hedgingBackoff;
+    public long hedgingDelayMillis() {
+        return hedgingDelayMillis;
     }
 
     /**
