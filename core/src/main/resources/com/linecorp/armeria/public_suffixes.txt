@@ -108,6 +108,7 @@
 *.nom.br
 *.northflank.app
 *.np
+*.nxa.eu
 *.oci.customer-oci.com
 *.ocp.customer-oci.com
 *.ocs.customer-oci.com
@@ -219,6 +220,7 @@
 3.bg
 32-b.it
 3utilities.com
+4.at
 4.azurestaticapps.net
 4.bg
 4lima.at
@@ -5460,8 +5462,10 @@ my-gateway.de
 my-router.de
 my-vigor.de
 my-wan.de
+my.at
 my.canva.site
 my.canvasite.cn
+my.de
 my.eu.org
 my.id
 myactivedirectory.com
@@ -6091,6 +6095,7 @@ numazu.shizuoka.jp
 nuoro.it
 nv.us
 nx.cn
+nx.gw
 ny-1.paas.massivegrid.net
 ny-2.paas.massivegrid.net
 ny.us
