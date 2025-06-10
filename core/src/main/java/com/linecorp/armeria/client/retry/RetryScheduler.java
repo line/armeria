@@ -219,8 +219,8 @@ class RetryScheduler {
         }
     }
 
-    public void close() {
-        cancelCurrentRetryTask();
+    public boolean close() {
+        return cancelCurrentRetryTask();
     }
 
     // todo(szymon): Remove dependency on nextEarliestNextRetryTimeNanos. Users should simply set it before
