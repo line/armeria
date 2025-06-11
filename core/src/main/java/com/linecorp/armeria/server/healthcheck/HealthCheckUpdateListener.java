@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.server.healthcheck;
 
+import static java.util.Objects.requireNonNull;
+
 /**
  * A listener interface for receiving {@link HealthCheckService} update events.
  */
@@ -26,4 +28,13 @@ public interface HealthCheckUpdateListener {
      * Invoked when the healthiness is updated.
      */
     void healthUpdated(boolean isHealthy) throws Exception;
+
+    /**
+     * Invoked when the health status is updated. Override this method for more fine-grained health status
+     * updates.
+     */
+    default void healthStatusUpdated(HealthStatus healthStatus) throws Exception {
+        requireNonNull(healthStatus, "healthStatus");
+        healthUpdated(healthStatus.isHealthy());
+    }
 }
