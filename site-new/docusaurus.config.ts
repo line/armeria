@@ -38,10 +38,7 @@ const config: Config = {
       {
         docs: {
           sidebarPath: './sidebars.ts',
-          // Please change this to your repo.
-          // Remove this to remove the "edit this page" links.
-          editUrl:
-            'https://github.com/facebook/docusaurus/tree/main/packages/create-docusaurus/templates/shared/',
+          editUrl: 'https://github.com/line/armeria/edit/main/site/',
           remarkPlugins: [remarkApiLink],
         },
         blog: {
@@ -52,15 +49,12 @@ const config: Config = {
             'The Armeria Newsletter provides the latest insights, updates, and best practices to help you maximize the potential of Armeria.',
           blogSidebarTitle: ' ',
           blogSidebarCount: 'ALL',
-          showReadingTime: true,
+          showReadingTime: false,
           feedOptions: {
             type: ['rss', 'atom'],
             xslt: true,
           },
-          // Please change this to your repo.
-          // Remove this to remove the "edit this page" links.
-          editUrl:
-            'https://github.com/facebook/docusaurus/tree/main/packages/create-docusaurus/templates/shared/',
+          editUrl: 'https://github.com/line/armeria/edit/main/site/',
           // Useful options to enforce blogging best practices
           onInlineTags: 'warn',
           onInlineAuthors: 'warn',
@@ -84,9 +78,19 @@ const config: Config = {
       },
       items: [
         {
-          to: '/news/2023/12/08/newsletter-6',
+          type: 'dropdown',
           label: 'News',
           position: 'left',
+          items: [
+            {
+              label: 'Newsletter',
+              to: '/news',
+            },
+            {
+              label: 'Release notes',
+              to: '/release-notes',
+            },
+          ],
         },
         {
           type: 'docSidebar',

@@ -1,5 +1,5 @@
 import React from 'react';
 
-const ThankYou: React.FC<any> = (props) => <div>Thank you</div>;
+const ThankYou: React.FC<any> = () => <div>Thank you</div>;
 
 export default ThankYou;
