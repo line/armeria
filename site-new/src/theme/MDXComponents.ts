@@ -7,6 +7,7 @@ import RequiredDependencies from '@site/src/components/required-dependencies';
 import TutorialSteps from '@site/src/components/steps';
 import ThankYou from '@site/src/components/thank-you';
 import Mailchimp from '@site/src/components/mailchimp';
+import AnimatedLogo from '@site/src/components/animated-logo';
 
 import CodeBlock from '@theme/CodeBlock';
 import Tabs from '@theme/Tabs';
@@ -24,6 +25,7 @@ export default {
   TutorialSteps,
   ThankYou,
   Mailchimp,
+  AnimatedLogo,
   CodeBlock,
   Tabs,
   TabItem,
