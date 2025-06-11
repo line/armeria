@@ -265,4 +265,22 @@ final class AggregatingDecodedHttpRequest extends AggregatingStreamMessage<HttpO
     public RequestHeaders headers() {
         return headers;
     }
+
+    @Override
+    public void close() {
+        logRequestFullyReceivedTiming();
+        super.close();
+    }
+
+    @Override
+    public void close(Throwable cause) {
+        logRequestFullyReceivedTiming();
+        super.close(cause);
+    }
+
+    private void logRequestFullyReceivedTiming() {
+        if (ctx != null) {
+            ctx.logBuilder().requestFullyReceived();
+        }
+    }
 }
