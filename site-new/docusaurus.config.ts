@@ -2,6 +2,7 @@ import { themes as prismThemes } from 'prism-react-renderer';
 import type { Config } from '@docusaurus/types';
 import type * as Preset from '@docusaurus/preset-classic';
 import remarkApiLink from './src/remark/remark-api-link';
+import remarkGithub from 'remark-github';
 
 // This runs in Node.js - Don't use client-side code here (browser APIs, JSX...)
 
@@ -39,7 +40,7 @@ const config: Config = {
         docs: {
           sidebarPath: './sidebars.ts',
           editUrl: 'https://github.com/line/armeria/edit/main/site/',
-          remarkPlugins: [remarkApiLink],
+          remarkPlugins: [remarkApiLink, remarkGithub],
         },
         blog: {
           routeBasePath: '/news',
@@ -59,7 +60,7 @@ const config: Config = {
           onInlineTags: 'warn',
           onInlineAuthors: 'warn',
           onUntruncatedBlogPosts: 'warn',
-          remarkPlugins: [remarkApiLink],
+          remarkPlugins: [remarkApiLink, remarkGithub],
         },
         theme: {
           customCss: ['./src/css/custom.css', './src/css/antd.css', './src/css/react-tweet.css'],
