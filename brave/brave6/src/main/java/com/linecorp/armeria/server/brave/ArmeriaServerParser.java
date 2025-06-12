@@ -16,51 +16,26 @@
 
 package com.linecorp.armeria.server.brave;
 
-import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.internal.common.brave.SpanTags;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
+import brave.Request;
+import brave.Response;
+import brave.Span;
 import brave.SpanCustomizer;
-import brave.http.HttpRequestParser;
-import brave.http.HttpResponse;
-import brave.http.HttpResponseParser;
 import brave.propagation.TraceContext;
 
-/**
- * Default implementation of {@link HttpRequestParser} and {@link HttpResponseParser} for servers.
- * This parser adds some custom tags and overwrites the name of span if {@link RequestLog#requestContent()}
- * is {@link RpcRequest}.
- * The following tags become available:
- * <ul>
- *   <li>http.url</li>
- *   <li>http.host</li>
- *   <li>http.protocol</li>
- *   <li>http.serfmt</li>
- *   <li>address.remote</li>
- *   <li>address.local</li>
- * </ul>
- */
-final class ArmeriaHttpServerParser implements HttpRequestParser, HttpResponseParser {
+final class ArmeriaServerParser {
 
-    private static final ArmeriaHttpServerParser INSTANCE = new ArmeriaHttpServerParser();
-
-    static ArmeriaHttpServerParser get() {
-        return INSTANCE;
+    private ArmeriaServerParser() {
     }
 
-    private ArmeriaHttpServerParser() {
-    }
-
-    @Override
-    public void parse(brave.http.HttpRequest request, TraceContext context, SpanCustomizer span) {
-        HttpRequestParser.DEFAULT.parse(request, context, span);
-
-        final Object unwrapped = request.unwrap();
+    static void parseRequest(Request req, TraceContext context, SpanCustomizer span) {
+        final Object unwrapped = req.unwrap();
         if (!(unwrapped instanceof ServiceRequestContext)) {
             return;
         }
-
         final ServiceRequestContext ctx = (ServiceRequestContext) unwrapped;
         span.tag(SpanTags.TAG_HTTP_HOST, ctx.request().authority())
             .tag(SpanTags.TAG_HTTP_URL, ctx.request().uri().toString())
@@ -69,16 +44,12 @@ final class ArmeriaHttpServerParser implements HttpRequestParser, HttpResponsePa
             .tag(SpanTags.TAG_ADDRESS_LOCAL, ctx.localAddress().toString());
     }
 
-    @Override
-    public void parse(HttpResponse response, TraceContext context, SpanCustomizer span) {
-        HttpResponseParser.DEFAULT.parse(response, context, span);
-
-        final Object res = response.unwrap();
-        if (!(res instanceof ServiceRequestContext)) {
+    static void parseResponse(Response res, TraceContext context, SpanCustomizer span) {
+        final Object unwrapped = res.unwrap();
+        if (!(unwrapped instanceof ServiceRequestContext)) {
             return;
         }
-
-        final ServiceRequestContext ctx = (ServiceRequestContext) res;
+        final ServiceRequestContext ctx = (ServiceRequestContext) unwrapped;
         final RequestLog requestLog = ctx.log().ensureComplete();
         final String serFmt = ServiceRequestContextAdapter.serializationFormat(requestLog);
         if (serFmt != null) {
@@ -88,6 +59,20 @@ final class ArmeriaHttpServerParser implements HttpRequestParser, HttpResponsePa
         final String name = requestLog.name();
         if (name != null) {
             span.name(name);
+        }
+    }
+
+    static void annotateWireSpan(RequestLog log, Span span) {
+        span.start(log.requestStartTimeMicros());
+        final Long wireReceiveTimeNanos = log.requestFirstBytesTransferredTimeNanos();
+        assert wireReceiveTimeNanos != null;
+        SpanTags.logWireReceive(span, wireReceiveTimeNanos, log);
+
+        final Long wireSendTimeNanos = log.responseFirstBytesTransferredTimeNanos();
+        if (wireSendTimeNanos != null) {
+            SpanTags.logWireSend(span, wireSendTimeNanos, log);
+        } else {
+            // If the client timed-out the request, we will have never sent any response data at all.
         }
     }
 }
