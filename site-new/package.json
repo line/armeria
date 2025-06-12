@@ -34,6 +34,7 @@
     "prism-react-renderer": "^2.3.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
+    "react-tweet": "^3.2.2",
     "unist-util-visit": "^5.0.0"
   },
   "devDependencies": {

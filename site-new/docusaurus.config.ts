@@ -62,7 +62,7 @@ const config: Config = {
           remarkPlugins: [remarkApiLink],
         },
         theme: {
-          customCss: ['./src/css/custom.css', './src/css/antd.css'],
+          customCss: ['./src/css/custom.css', './src/css/antd.css', './src/css/react-tweet.css'],
         },
       } satisfies Preset.Options,
     ],
