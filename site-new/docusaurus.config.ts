@@ -190,6 +190,17 @@ const config: Config = {
       },
     ],
     './src/plugins/tutorial.ts',
+    [
+      '@docusaurus/plugin-client-redirects',
+      {
+        redirects: [
+          {
+            from: '/s/discord',
+            to: 'https://discord.gg/7FH8c6npmg',
+          },
+        ],
+      },
+    ],
   ],
 };
 
