@@ -53,3 +53,28 @@ li {
 .doc-card-list-no-description p {
   display: none;
 }
+
+.noBullet {
+  > ol, > ul {
+    list-style: none;
+    margin-left: 0;
+    padding-left: 0;
+    > li {
+      margin-left: 0;
+      padding-left: 0;
+      > ol, > ul {
+        margin-left: 24px;
+      }
+    }
+  }
+}
+
+.tweet-box {
+  width: 45%;
+}
+
+@media screen and (max-width: 996px) {
+  .tweet-box {
+    width: 100%;
+  }
+}
