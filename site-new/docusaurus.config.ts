@@ -1,8 +1,8 @@
 import { themes as prismThemes } from 'prism-react-renderer';
+import remarkGithub from 'remark-github';
 import type { Config } from '@docusaurus/types';
 import type * as Preset from '@docusaurus/preset-classic';
 import remarkApiLink from './src/remark/remark-api-link';
-import remarkGithub from 'remark-github';
 
 // This runs in Node.js - Don't use client-side code here (browser APIs, JSX...)
 
@@ -63,7 +63,11 @@ const config: Config = {
           remarkPlugins: [remarkApiLink, remarkGithub],
         },
         theme: {
-          customCss: ['./src/css/custom.css', './src/css/antd.css', './src/css/react-tweet.css'],
+          customCss: [
+            './src/css/custom.css',
+            './src/css/antd.css',
+            './src/css/react-tweet.css',
+          ],
         },
       } satisfies Preset.Options,
     ],
