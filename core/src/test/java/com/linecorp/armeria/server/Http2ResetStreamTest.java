@@ -40,6 +40,7 @@ import io.netty.handler.codec.http2.Http2Frame;
 import io.netty.handler.codec.http2.Http2FrameLogger;
 import io.netty.handler.codec.http2.Http2HeadersFrame;
 import io.netty.handler.logging.LogLevel;
+import io.netty.util.ReferenceCountUtil;
 
 class Http2ResetStreamTest {
 
@@ -62,31 +63,32 @@ class Http2ResetStreamTest {
                 super.logRstStream(direction, ctx, streamId, errorCode);
             }
         };
-        final SimpleHttp2Connection conn = SimpleHttp2Connection.of(server.httpUri(), frameLogger);
-        final Http2Stream stream = conn.createStream();
-        final DefaultHttp2Headers headers = new DefaultHttp2Headers();
-        headers.method("GET");
-        headers.path("/");
-        final Http2HeadersFrame headersFrame = new DefaultHttp2HeadersFrame(headers, true);
-        stream.sendFrame(headersFrame).syncUninterruptibly();
+        try (final SimpleHttp2Connection conn = SimpleHttp2Connection.of(server.httpUri(), frameLogger);
+             final Http2Stream stream = conn.createStream()) {
+            final DefaultHttp2Headers headers = new DefaultHttp2Headers();
+            headers.method("GET");
+            headers.path("/");
+            final Http2HeadersFrame headersFrame = new DefaultHttp2HeadersFrame(headers, true);
+            stream.sendFrame(headersFrame).syncUninterruptibly();
 
-        await().untilAsserted(() -> assertThat(stream.isOpen()).isFalse());
-        final Http2Frame responseHeaderFrame = stream.take();
-        assertThat(responseHeaderFrame).isInstanceOf(Http2HeadersFrame.class);
-        assertThat(((Http2HeadersFrame) responseHeaderFrame).headers().status()).asString().isEqualTo("200");
+            await().untilAsserted(() -> assertThat(stream.isOpen()).isFalse());
+            final Http2Frame responseHeaderFrame = stream.take();
+            assertThat(responseHeaderFrame).isInstanceOf(Http2HeadersFrame.class);
+            assertThat(((Http2HeadersFrame) responseHeaderFrame).headers().status()).asString().isEqualTo("200");
 
-        Http2Frame dataFrame = stream.take();
-        assertThat(dataFrame).isInstanceOf(Http2DataFrame.class);
-        assertThat(((Http2DataFrame) dataFrame).content().toString(StandardCharsets.UTF_8))
-                .asString().isEqualTo("hello");
+            Http2Frame dataFrame = stream.take();
+            assertThat(dataFrame).isInstanceOf(Http2DataFrame.class);
+            assertThat(((Http2DataFrame) dataFrame).content().toString(StandardCharsets.UTF_8))
+                    .asString().isEqualTo("hello");
+            ReferenceCountUtil.release(dataFrame);
 
-        dataFrame = stream.take();
-        assertThat(dataFrame).isInstanceOf(Http2DataFrame.class);
-        assertThat(((Http2DataFrame) dataFrame).isEndStream()).isTrue();
+            dataFrame = stream.take();
+            assertThat(dataFrame).isInstanceOf(Http2DataFrame.class);
+            assertThat(((Http2DataFrame) dataFrame).isEndStream()).isTrue();
+            ReferenceCountUtil.release(dataFrame);
 
-        await().atLeast(100, TimeUnit.MILLISECONDS)
-               .untilAsserted(() -> assertThat(rstStreamFrames).isEmpty());
-
-        conn.close();
+            await().atLeast(100, TimeUnit.MILLISECONDS)
+                   .untilAsserted(() -> assertThat(rstStreamFrames).isEmpty());
+        }
     }
 }

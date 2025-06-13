@@ -23,7 +23,6 @@ import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.SafeCloseable;
 
 import io.netty.bootstrap.Bootstrap;
-import io.netty.buffer.UnpooledByteBufAllocator;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelOption;
@@ -71,8 +70,6 @@ public final class SimpleHttp2Connection implements SafeCloseable {
 
         // Start the client.
         channel = b.connect().syncUninterruptibly().channel();
-        // just don't worry about memory leaks at all
-        channel.config().setAllocator(UnpooledByteBufAllocator.DEFAULT);
     }
 
     public Channel channel() {
