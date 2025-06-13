@@ -59,6 +59,7 @@ final class ServerHttp2ObjectEncoder extends Http2ObjectEncoder implements Serve
 
         final Http2Headers converted = convertHeaders(headers, isTrailersEmpty);
         onKeepAliveReadOrWrite();
+        maybeSetEndStreamSent(streamId, endStream);
         return encoder().writeHeaders(ctx(), streamId, converted, 0, endStream, ctx().newPromise());
     }
 
@@ -98,6 +99,7 @@ final class ServerHttp2ObjectEncoder extends Http2ObjectEncoder implements Serve
 
         final Http2Headers converted = ArmeriaHttpUtil.toNettyHttp2ServerTrailers(headers);
         onKeepAliveReadOrWrite();
+        maybeSetEndStreamSent(streamId, true);
         return encoder().writeHeaders(ctx(), streamId, converted, 0, true, ctx().newPromise());
     }
 
@@ -143,7 +145,7 @@ final class ServerHttp2ObjectEncoder extends Http2ObjectEncoder implements Serve
         if (stream == null) {
             return;
         }
-        if (stream.state().localSideOpen() || stream.state().remoteSideOpen()) {
+        if ((stream.state().localSideOpen() && !isEndStreamSent(stream)) || stream.state().remoteSideOpen()) {
             encoder().writeRstStream(ctx(), streamId, http2Error.code(), ctx().voidPromise());
             ctx().flush();
         }
