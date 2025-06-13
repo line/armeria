@@ -16,9 +16,9 @@
 
 package com.linecorp.armeria.xds;
 
-final class DummyResourceWatcher implements ResourceWatcher<XdsResourceWithPrimer<?>> {
+final class DummyResourceWatcher implements ResourceWatcher<XdsResource> {
 
     @Override
-    public void onChanged(XdsResourceWithPrimer<?> update) {
+    public void onChanged(XdsResource update) {
     }
 }

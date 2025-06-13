@@ -1,5 +1,5 @@
 /*
- * Copyright 2024 LINE Corporation
+ * Copyright 2025 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -16,12 +16,17 @@
 
 package com.linecorp.armeria.xds;
 
-import com.linecorp.armeria.common.annotation.Nullable;
+import io.netty.util.concurrent.EventExecutor;
 
-abstract class XdsResourceWithPrimer<T extends XdsResourceWithPrimer<T>> implements XdsResource {
+interface SubscriptionContext {
 
-    abstract T withPrimer(@Nullable XdsResource primer);
+    EventExecutor eventLoop();
 
-    @Nullable
-    abstract XdsResource primer();
+    void subscribe(ResourceNode<?> node);
+
+    void unsubscribe(ResourceNode<?> node);
+
+    ConfigSourceMapper configSourceMapper();
+
+    XdsClusterManager clusterManager();
 }
