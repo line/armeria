@@ -79,6 +79,7 @@ import io.netty.handler.codec.http2.DefaultHttp2ConnectionDecoder;
 import io.netty.handler.codec.http2.DefaultHttp2ConnectionEncoder;
 import io.netty.handler.codec.http2.DefaultHttp2FrameReader;
 import io.netty.handler.codec.http2.DefaultHttp2FrameWriter;
+import io.netty.handler.codec.http2.DefaultHttp2LocalFlowController;
 import io.netty.handler.codec.http2.Http2CodecUtil;
 import io.netty.handler.codec.http2.Http2Connection;
 import io.netty.handler.codec.http2.Http2ConnectionDecoder;
@@ -88,6 +89,7 @@ import io.netty.handler.codec.http2.Http2FrameLogger;
 import io.netty.handler.codec.http2.Http2FrameReader;
 import io.netty.handler.codec.http2.Http2FrameWriter;
 import io.netty.handler.codec.http2.Http2InboundFrameLogger;
+import io.netty.handler.codec.http2.Http2LocalFlowController;
 import io.netty.handler.codec.http2.Http2OutboundFrameLogger;
 import io.netty.handler.codec.http2.Http2Settings;
 import io.netty.handler.flush.FlushConsolidationHandler;
@@ -275,6 +277,9 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
                 /* validateHeaders */ true, config.http2MaxHeaderListSize());
         Http2FrameReader reader = new DefaultHttp2FrameReader(headersDecoder);
         reader = new Http2InboundFrameLogger(reader, frameLogger);
+        final Http2LocalFlowController flowController =
+                new DefaultHttp2LocalFlowController(connection, config.http2StreamWindowSizeRatio(), false);
+        connection.local().flowController(flowController);
         return new DefaultHttp2ConnectionDecoder(connection, encoder, reader);
     }
 
