@@ -63,8 +63,8 @@ class Http2ResetStreamTest {
                 super.logRstStream(direction, ctx, streamId, errorCode);
             }
         };
-        try (final SimpleHttp2Connection conn = SimpleHttp2Connection.of(server.httpUri(), frameLogger);
-             final Http2Stream stream = conn.createStream()) {
+        try (SimpleHttp2Connection conn = SimpleHttp2Connection.of(server.httpUri(), frameLogger);
+             Http2Stream stream = conn.createStream()) {
             final DefaultHttp2Headers headers = new DefaultHttp2Headers();
             headers.method("GET");
             headers.path("/");
