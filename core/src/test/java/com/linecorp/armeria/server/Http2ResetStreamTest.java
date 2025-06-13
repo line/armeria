@@ -74,7 +74,8 @@ class Http2ResetStreamTest {
             await().untilAsserted(() -> assertThat(stream.isOpen()).isFalse());
             final Http2Frame responseHeaderFrame = stream.take();
             assertThat(responseHeaderFrame).isInstanceOf(Http2HeadersFrame.class);
-            assertThat(((Http2HeadersFrame) responseHeaderFrame).headers().status()).asString().isEqualTo("200");
+            assertThat(((Http2HeadersFrame) responseHeaderFrame).headers().status())
+                    .asString().isEqualTo("200");
 
             Http2Frame dataFrame = stream.take();
             assertThat(dataFrame).isInstanceOf(Http2DataFrame.class);
