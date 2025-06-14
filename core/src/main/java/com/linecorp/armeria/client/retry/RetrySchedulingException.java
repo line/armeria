@@ -26,7 +26,7 @@ class RetrySchedulingException extends RuntimeException {
         DELAY_FROM_BACKOFF_EXCEEDS_RESPONSE_TIMEOUT("Delay from backoff exceeds response timeout"),
         DELAY_FROM_SERVER_EXCEEDS_RESPONSE_TIMEOUT("Delay from server exceeds response timeout"),
         RETRY_TASK_OVERTAKEN("Has earlier retry"),
-        RETRY_TASK_CANCELLED("Retry task cancelled without outside of rescheduling.");
+        RETRY_TASK_CANCELLED("Retry task cancelled unexpectedly.");
 
         private final String message;
 
