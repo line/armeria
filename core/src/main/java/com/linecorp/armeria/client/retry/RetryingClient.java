@@ -29,6 +29,7 @@ import java.util.function.Function;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.client.ResponseTimeoutException;
@@ -241,16 +242,10 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
     }
 
     @Override
-    protected ResponseFuturePair<HttpResponse> getResponseFuturePair(
-            ClientRequestContext ctx) {
+    protected HttpResponse doExecute(ClientRequestContext ctx, HttpRequest req) throws Exception {
         final CompletableFuture<HttpResponse> responseFuture = new CompletableFuture<>();
         final HttpResponse res = HttpResponse.of(responseFuture, ctx.eventLoop());
-        return new ResponseFuturePair<>(res, responseFuture);
-    }
 
-    @Override
-    protected void doExecute(ClientRequestContext ctx, HttpRequest req, HttpResponse res,
-                             CompletableFuture<HttpResponse> responseFuture) throws Exception {
         if (ctx.exchangeType().isRequestStreaming()) {
             final HttpRequestDuplicator reqDuplicator = req.toDuplicator(ctx.eventLoop().withoutContext(), 0);
             doExecute0(new RetryingContext(mappedRetryConfig(ctx), ctx, reqDuplicator, req, res,
@@ -259,7 +254,7 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
             req.aggregate(AggregationOptions.usePooledObjects(ctx.alloc(), ctx.eventLoop()))
                .handle((agg, cause) -> {
                    if (cause != null) {
-                       handleException(ctx, null, responseFuture, cause, true);
+                       completeRetryingExceptionally(ctx, null, responseFuture, cause, true);
                    } else {
                        final HttpRequestDuplicator reqDuplicator = new AggregatedHttpRequestDuplicator(agg);
                        doExecute0(new RetryingContext(mappedRetryConfig(ctx), ctx, reqDuplicator, req, res,
@@ -268,23 +263,27 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
                    return null;
                });
         }
+
+        return res;
     }
 
     private void doExecute0(RetryingContext retryingContext) {
+
         final RetryConfig<HttpResponse> config = retryingContext.config();
         final ClientRequestContext ctx = retryingContext.ctx();
         final HttpRequestDuplicator rootReqDuplicator = retryingContext.reqDuplicator();
         final HttpRequest originalReq = retryingContext.req();
         final HttpResponse returnedRes = retryingContext.res();
 
+        // todo(szymon): we need to inject the attempt number as there may be concurrent attempts
+        //   starting and acquiring an attempt number.
         final int totalAttempts = getTotalAttempts(ctx);
-        logger.trace("doExecute0: {}", totalAttempts);
         final boolean initialAttempt = totalAttempts <= 1;
         // The request or attemptRes has been aborted by the client before it receives a attemptRes,
         // so stop retrying.
         if (originalReq.whenComplete().isCompletedExceptionally()) {
             originalReq.whenComplete().handle((unused, cause) -> {
-                handleException(retryingContext, cause, initialAttempt);
+                completeRetryingExceptionally(retryingContext, cause, initialAttempt);
                 return null;
             });
             return;
@@ -297,14 +296,14 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
                 } else {
                     abortCause = AbortedStreamException.get();
                 }
-                handleException(retryingContext, abortCause, initialAttempt);
+                completeRetryingExceptionally(retryingContext, abortCause, initialAttempt);
                 return null;
             });
             return;
         }
 
-        if (!updateResponseTimeout(ctx)) {
-            handleException(retryingContext, ResponseTimeoutException.get(), initialAttempt);
+        if (!setResponseTimeout(ctx)) {
+            completeRetryingExceptionally(retryingContext, ResponseTimeoutException.get(), initialAttempt);
             return;
         }
 
@@ -321,7 +320,7 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
         try {
             attemptCtx = newAttemptContext(ctx, attemptReq, ctx.rpcRequest(), initialAttempt);
         } catch (Throwable t) {
-            handleException(retryingContext, t, initialAttempt);
+            completeRetryingExceptionally(retryingContext, t, initialAttempt);
             return;
         }
 
@@ -342,8 +341,20 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
                                              false);
         }
 
-        onAttemptStarted(ctx, attemptCtx, (@Nullable Throwable cause) -> abortAttempt(attemptCtx,
-                                                                                      cause));
+        startRetryAttempt(ctx, attemptCtx, (winningAttemptCtx,
+                                            winningAttemptRes) -> {
+                              logger.debug("accepting win for attempt: {}, winningAttemptCtx: {}, ",
+                                           winningAttemptCtx, winningAttemptRes);
+                              retryingContext.reqDuplicator().close();
+
+                              retryingContext.ctx().logBuilder().endResponseWithChild(winningAttemptCtx.log());
+                              retryingContext.resFuture().complete(winningAttemptRes);
+                          },
+                          (abortingAttemptCtx, cause) -> {
+                              abortAttempt(abortingAttemptCtx,
+                                           cause);
+                          }
+        );
 
         if (!ctx.exchangeType().isResponseStreaming() || config.requiresResponseTrailers()) {
             attemptRes.aggregate().handle((attemptAggResponse, cause) -> {
@@ -385,17 +396,31 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
 
         if (hedgingDelayMillis >= 0) {
             final Backoff hedgingDelayBackoff = Backoff.fixed(hedgingDelayMillis);
-            final RetrySchedulabilityDecision retrySchedulabilityDecision = canScheduleWith(ctx,
-                                                                                            hedgingDelayBackoff,
-                                                                                            -1);
-            if (retrySchedulabilityDecision.canSchedule()) {
-                logger.debug("Scheduling hedging with backoff: {}", hedgingDelayBackoff);
-                scheduleNextRetry(ctx, () -> doExecute0(retryingContext),
-                                  retrySchedulabilityDecision.nextRetryTimeNanos(),
-                                  hedgingDelayBackoff,
-                                  cause -> handleException(retryingContext, cause, false));
+            logger.debug("Scheduling hedging with backoff: {}", hedgingDelayBackoff);
+            scheduleNextRetry(ctx, () -> doExecute0(retryingContext),
+                              hedgingDelayBackoff,
+                              cause -> handleExceptionAfterScheduling(retryingContext, cause));
+        }
+    }
+
+    private void handleExceptionAfterScheduling(
+            RetryingContext retryingContext, Throwable cause) {
+        if (cause instanceof RetrySchedulingException) {
+            switch (((RetrySchedulingException) cause).getType()) {
+                case NO_MORE_ATTEMPTS_IN_RETRY:
+                case NO_MORE_ATTEMPTS_IN_BACKOFF:
+                case DELAY_FROM_BACKOFF_EXCEEDS_RESPONSE_TIMEOUT:
+                case DELAY_FROM_SERVER_EXCEEDS_RESPONSE_TIMEOUT:
+                case RETRY_TASK_OVERTAKEN:
+                    completeRetryingIfNoPendingAttempts(retryingContext.ctx());
+                    return;
+                case RETRY_TASK_CANCELLED:
+                    cause = new IllegalStateException(
+                            ClientFactory.class.getSimpleName() + " has been closed.", cause);
+                    break;
             }
         }
+        completeRetryingExceptionally(retryingContext, cause, false);
     }
 
     private void handleResponseWithoutContent(RetryingContext retryingContext,
@@ -418,7 +443,7 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
                 return null;
             });
         } catch (Throwable cause) {
-            handleException(retryingContext, cause, false);
+            completeRetryingExceptionally(retryingContext, cause, false);
         }
     }
 
@@ -485,7 +510,7 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
                                        });
                     } catch (Throwable cause) {
                         attemptResDuplicator.abort(cause);
-                        handleException(retryingContext, cause, false);
+                        completeRetryingExceptionally(retryingContext, cause, false);
                     }
                 } else {
                     final HttpResponse attemptUnsplitRes;
@@ -523,7 +548,7 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
                                    return null;
                                });
             } catch (Throwable cause) {
-                handleException(retryingContext, cause, false);
+                completeRetryingExceptionally(retryingContext, cause, false);
             }
             return;
         }
@@ -577,17 +602,18 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
         }
     }
 
-    private static void handleException(RetryingContext retryingContext, Throwable cause,
-                                        boolean endRequestLog) {
-        handleException(
+    private static void completeRetryingExceptionally(RetryingContext retryingContext, Throwable cause,
+                                                      boolean endRequestLog) {
+        completeRetryingExceptionally(
                 retryingContext.ctx(), retryingContext.reqDuplicator(), retryingContext.resFuture(),
                 cause, endRequestLog);
     }
 
-    private static void handleException(ClientRequestContext ctx,
-                                        @Nullable HttpRequestDuplicator rootReqDuplicator,
-                                        CompletableFuture<HttpResponse> returnedResFuture, Throwable cause,
-                                        boolean endRequestLog) {
+    private static void completeRetryingExceptionally(ClientRequestContext ctx,
+                                                      @Nullable HttpRequestDuplicator rootReqDuplicator,
+                                                      CompletableFuture<HttpResponse> returnedResFuture,
+                                                      Throwable cause,
+                                                      boolean endRequestLog) {
         if (isRetryingComplete(ctx)) {
             return;
         }
@@ -600,56 +626,31 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
             ctx.logBuilder().endRequest(cause);
         }
 
+        ctx.logBuilder().endResponse(cause);
         returnedResFuture.completeExceptionally(cause);
 
-        onRetryingCompleteExceptionally(ctx, cause);
+        completeRetryingExceptionally(ctx, cause);
     }
 
     private void handleRetryDecision(RetryingContext retryingContext, @Nullable RetryDecision decision,
                                      ClientRequestContext attemptCtx, HttpResponse attemptRes) {
         final Backoff backoff = decision != null ? decision.backoff() : null;
-        final boolean shouldContinueRetry;
 
         if (backoff != null) {
-            shouldContinueRetry = true;
             final long millisAfter = useRetryAfter ? getRetryAfterMillis(attemptCtx) : -1;
-            final RetrySchedulabilityDecision schedulabilityDecision = canScheduleWith(retryingContext.ctx(),
-                                                                                       backoff,
-                                                                                       millisAfter);
-
-            if (schedulabilityDecision.canSchedule()) {
-                logger.debug("Scheduling next retry for {} with backoff: {}, "
-                             + "schedulabilityDecision: {}",
-                             retryingContext.ctx(), backoff, schedulabilityDecision);
-                scheduleNextRetry(retryingContext.ctx(),
-                                  () -> doExecute0(retryingContext),
-                                  schedulabilityDecision.nextRetryTimeNanos(),
-                                  backoff,
-                                  schedulabilityDecision.earliestNextRetryTimeNanos(),
-                                  cause -> handleException(retryingContext, cause, false));
-            } else {
-                logger.debug("Not scheduling next retry for {} with backoff: {}, "
-                             + "schedulabilityDecision: {}",
-                             retryingContext.ctx(), backoff, schedulabilityDecision);
-                addEarliestNextRetryTimeNanos(retryingContext.ctx(),
-                                              schedulabilityDecision.earliestNextRetryTimeNanos());
-            }
-        } else {
-            shouldContinueRetry = false;
+            scheduleNextRetry(retryingContext.ctx(),
+                              () -> doExecute0(retryingContext),
+                              backoff,
+                              millisAfter,
+                              cause -> handleExceptionAfterScheduling(retryingContext, cause));
         }
 
-        final boolean isOtherAttemptInProgress = onAttemptEnded(retryingContext.ctx());
-
-        if (!shouldContinueRetry || !isOtherAttemptInProgress) {
-            onRetryingComplete(retryingContext, attemptCtx, attemptRes);
-        } else {
-            logger.debug("Retrying is not complete for {} with decision: {}",
-                         retryingContext.ctx(), decision);
-        }
+        completeRetryAttempt(retryingContext.ctx(), attemptCtx, attemptRes, backoff == null);
     }
 
     private static void abortAttempt(ClientRequestContext attemptCtx,
                                      @Nullable Throwable cause) {
+        logger.debug("aborting attempt. attemptCtx: {}, cause: {}", attemptCtx, cause);
         // Set response content with null to make sure that the log is complete.
         final RequestLogBuilder logBuilder = attemptCtx.logBuilder();
         logBuilder.responseContent(null, null);
@@ -701,20 +702,6 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
             assert rule != null;
             return rule;
         }
-    }
-
-    void onRetryingComplete(RetryingContext retryingContext,
-                            ClientRequestContext attemptCtx,
-                            HttpResponse attemptRes) {
-        if (isRetryingComplete(retryingContext.ctx())) {
-            return;
-        }
-
-        logger.debug("Completing retrying");
-
-        retryingContext.reqDuplicator().close();
-        retryingContext.resFuture().complete(attemptRes);
-        onRetryingComplete(retryingContext.ctx(), attemptCtx);
     }
 
     private static class RetryingContext {

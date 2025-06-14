@@ -151,6 +151,10 @@ public final class ServiceRequestContextCaptor {
         return serviceContexts.take();
     }
 
+    /**
+     * Retrieves, but does not remove, the first captured {@link ServiceRequestContext}, or returns
+     * {@code null} if there are no captured contexts.
+     */
     @Nullable
     public ServiceRequestContext peek() {
         return serviceContexts.peek();

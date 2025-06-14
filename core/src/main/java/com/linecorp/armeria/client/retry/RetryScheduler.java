@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.client.retry;
 
+import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkState;
 import static java.util.Objects.requireNonNull;
 
@@ -25,6 +26,7 @@ import java.util.function.Consumer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.linecorp.armeria.client.retry.RetrySchedulingException.Type;
 import com.linecorp.armeria.common.annotation.Nullable;
 
 import io.netty.channel.EventLoop;
@@ -32,48 +34,61 @@ import io.netty.util.concurrent.ScheduledFuture;
 
 class RetryScheduler {
     private static class RetryTaskHandle {
+        enum State {
+            SCHEDULED,
+            OVERTAKEN,
+            RESCHEDULED
+        }
+
         private final Runnable retryTask;
         private final ScheduledFuture<Void> scheduledFuture;
-        private boolean isCancellationMuted;
+        private State state;
 
-        private final Consumer<@Nullable ? super Throwable> onExceptionHandler;
+        private final Consumer<@Nullable ? super Throwable> exceptionHandler;
 
         private final long retryTimeNanos;
 
         RetryTaskHandle(ScheduledFuture<Void> scheduledFuture, Runnable retryTask,
                         long retryTimeNanos,
-                        Consumer<@Nullable ? super Throwable> onExceptionHandler) {
+                        Consumer<@Nullable ? super Throwable> exceptionHandler) {
             this.retryTask = retryTask;
             this.scheduledFuture = scheduledFuture;
-            this.onExceptionHandler = onExceptionHandler;
+            this.exceptionHandler = exceptionHandler;
             this.retryTimeNanos = retryTimeNanos;
+            state = State.SCHEDULED;
         }
 
-        public Runnable getRetryTaskRunnable() {
+        Runnable getRetryTaskRunnable() {
             return retryTask;
         }
 
-        public long retryTimeNanos() {
+        long retryTimeNanos() {
             return retryTimeNanos;
         }
 
-        public boolean isCancellationMuted() {
-            return isCancellationMuted;
+        void markRescheduled() {
+            assert state == State.SCHEDULED;
+            state = State.RESCHEDULED;
         }
 
-        public void muteCancellation() {
-            isCancellationMuted = true;
+        void markOvertaken() {
+            assert state == State.SCHEDULED;
+            state = State.OVERTAKEN;
         }
 
-        public void unmuteCancellation() {
-            isCancellationMuted = false;
+        boolean isRescheduled() {
+            return state == State.RESCHEDULED;
         }
 
-        public Consumer<? super Throwable> getOnExceptionHandler() {
-            return onExceptionHandler;
+        boolean isOvertaken() {
+            return state == State.OVERTAKEN;
         }
 
-        public ScheduledFuture<Void> getFuture() {
+        Consumer<? super Throwable> getexceptionHandler() {
+            return exceptionHandler;
+        }
+
+        ScheduledFuture<Void> getFuture() {
             return scheduledFuture;
         }
     }
@@ -84,6 +99,11 @@ class RetryScheduler {
     private final long latestNextRetryTimeNanos;
 
     private long earliestNextRetryTimeNanos;
+
+    // The retry task that is about to be executed next.
+    // It is possible that the delay of this task is shorter than the `earliestNextRetryTimeNanos`,
+    // because of calls to `addEarliestNextRetryTimeNanos` with a pending call to `schedule` or
+    // `rescheduleCurrentRetryTaskIfTooEarly`.
     private @Nullable RetryTaskHandle currentRetryTask;
 
     RetryScheduler(EventLoop eventLoop) {
@@ -98,46 +118,41 @@ class RetryScheduler {
     }
 
     public synchronized void schedule(Runnable retryTask, long nextRetryTimeNanos,
-                                      Consumer<? super Throwable> onRetryTaskFailedHandler) {
+                                      long earliestNextRetryTimeNanos,
+                                      Consumer<? super Throwable> exceptionHandler) {
         requireNonNull(retryTask, "retryTask");
-        requireNonNull(onRetryTaskFailedHandler, "onRetryTaskFailedHandler");
+        checkArgument(nextRetryTimeNanos >= earliestNextRetryTimeNanos,
+                      "nextRetryTimeNanos: %s (expected: >= %s)",
+                      nextRetryTimeNanos, earliestNextRetryTimeNanos);
+        requireNonNull(exceptionHandler, "exceptionHandler");
 
-        if (nextRetryTimeNanos < earliestNextRetryTimeNanos) {
-            // The next retry time is before the earliestNextRetryTimeNanos.
-            // We need to update the earliestNextRetryTimeNanos.
-            onRetryTaskFailedHandler.accept(
-                    new IllegalStateException(
-                            "nextRetryTimeNanos is before the earliestNextRetryTimeNanos: " +
-                            nextRetryTimeNanos + " < " + earliestNextRetryTimeNanos));
-            return;
+        addEarliestNextRetryTimeNanos(earliestNextRetryTimeNanos);
+        nextRetryTimeNanos = Math.max(nextRetryTimeNanos, this.earliestNextRetryTimeNanos);
+
+        // Math.max because we could have added an earliestNextRetryTimeNanos that is later than the
+        // currently scheduled retry task (even not by us in this method).
+        if (currentRetryTask == null || nextRetryTimeNanos < Math.max(this.earliestNextRetryTimeNanos,
+                                                                      currentRetryTask.retryTimeNanos())) {
+            scheduleNextRetryTask(retryTask, nextRetryTimeNanos, exceptionHandler, false);
+        } else {
+            // Make sure the current retry task is not scheduled too early.
+            rescheduleCurrentRetryTaskIfTooEarly();
+
+            exceptionHandler.accept(new RetrySchedulingException(
+                    RetrySchedulingException.Type.RETRY_TASK_OVERTAKEN));
         }
-
-        if (nextRetryTimeNanos > latestNextRetryTimeNanos) {
-            // The next retry time is after the latestNextRetryTimeNanos.
-            onRetryTaskFailedHandler.accept(
-                    new IllegalStateException("nextRetryTimeNanos is after the latestNextRetryTimeNanos: " +
-                                              nextRetryTimeNanos + " > " + latestNextRetryTimeNanos));
-            return;
-        }
-
-        if (currentRetryTask == null || nextRetryTimeNanos < currentRetryTask.retryTimeNanos()) {
-            scheduleNextRetryTask(retryTask, nextRetryTimeNanos, onRetryTaskFailedHandler);
-            return;
-        }
-
-        onRetryTaskFailedHandler.accept(
-                new IllegalStateException("A retry task is already scheduled at " +
-                                          currentRetryTask.retryTimeNanos() + ". " +
-                                          "nextRetryTimeNanos: " + nextRetryTimeNanos));
     }
 
-    private synchronized boolean cancelCurrentRetryTask() {
+    private synchronized boolean cancelCurrentRetryTask(boolean cancelForRescheduling) {
         if (currentRetryTask != null) {
             final ScheduledFuture<Void> retryTaskFuture = currentRetryTask.getFuture();
 
-            currentRetryTask.muteCancellation();
+            if (cancelForRescheduling) {
+                currentRetryTask.markRescheduled();
+            } else {
+                currentRetryTask.markOvertaken();
+            }
             if (!retryTaskFuture.cancel(false)) {
-                currentRetryTask.unmuteCancellation();
                 return false;
             } else {
                 clearCurrentRetryTask();
@@ -157,16 +172,25 @@ class RetryScheduler {
         }
 
         if (retryTaskFuture.isCancelled()) {
-            if (!retryTaskHandle.isCancellationMuted()) {
-                // The retry task was cancelled by the user, not by the scheduler.
-                retryTaskHandle.getOnExceptionHandler().accept(
-                        new IllegalStateException("Retry task was cancelled by the user."));
+            if (retryTaskHandle.isRescheduled()) {
+                return;
             }
+
+            if (retryTaskHandle.isOvertaken()) {
+                retryTaskHandle.getexceptionHandler().accept(
+                        new RetrySchedulingException(Type.RETRY_TASK_OVERTAKEN)
+                );
+                return;
+            }
+
+            // The retry task was cancelled by the user, not by the scheduler.
+            retryTaskHandle.getexceptionHandler().accept(
+                    new RetrySchedulingException(Type.RETRY_TASK_CANCELLED));
             return;
         }
 
         if (!retryTaskFuture.isSuccess()) {
-            retryTaskHandle.getOnExceptionHandler().accept(retryTaskFuture.cause());
+            retryTaskHandle.getexceptionHandler().accept(retryTaskFuture.cause());
         }
     }
 
@@ -176,24 +200,33 @@ class RetryScheduler {
     }
 
     private synchronized void scheduleNextRetryTask(Runnable retryRunnable, long retryTimeNanos,
-                                                    Consumer<? super Throwable> onExceptionHandler) {
+                                                    Consumer<? super Throwable> exceptionHandler,
+                                                    boolean isReschedule) {
         assert earliestNextRetryTimeNanos <= retryTimeNanos;
-        assert retryTimeNanos <= latestNextRetryTimeNanos;
 
-        if (!cancelCurrentRetryTask()) {
-            onExceptionHandler.accept(
-                    new IllegalStateException("Could not cancel the current retry task."));
+        if (!cancelCurrentRetryTask(isReschedule)) {
+            exceptionHandler.accept(new IllegalStateException("Current retry task could not be cancelled."));
             return;
         }
 
         assert currentRetryTask == null;
 
         try {
-            final long delayNanos = Math.max(retryTimeNanos - System.nanoTime(), 0);
+            final long nowNanos = System.nanoTime();
+            final long delayNanos;
+            if (retryTimeNanos <= nowNanos) {
+                delayNanos = 0;
+            } else {
+                delayNanos = retryTimeNanos - nowNanos;
+            }
+
             final Runnable wrappedRetryRunnable = () -> {
                 logger.debug("Retry task starting. Resetting...");
                 // todo(szymon): do sanity check that we are clearing this task (very bad otherwise).
                 clearCurrentRetryTask();
+
+                // todo(szymon): Q should we check whether we are too early here?
+
                 retryRunnable.run();
             };
 
@@ -210,32 +243,13 @@ class RetryScheduler {
             // rescheduled multiple times.
             final RetryTaskHandle nextRetryTask = new RetryTaskHandle(nextRetryTaskFuture, retryRunnable,
                                                                       retryTimeNanos,
-                                                                      onExceptionHandler);
+                                                                      exceptionHandler);
 
             nextRetryTaskFuture.addListener(f -> handleRetryTaskCompletion(nextRetryTask));
             currentRetryTask = nextRetryTask;
         } catch (Throwable t) {
-            onExceptionHandler.accept(t);
+            exceptionHandler.accept(t);
         }
-    }
-
-    public boolean close() {
-        return cancelCurrentRetryTask();
-    }
-
-    // todo(szymon): Remove dependency on nextEarliestNextRetryTimeNanos. Users should simply set it before
-    //   calling this method.
-    public synchronized boolean hasAlreadyRetryScheduledBefore(long nextRetryTimeNanos,
-                                                               long nextEarliestNextRetryTimeNanos) {
-        checkState(nextEarliestNextRetryTimeNanos <= latestNextRetryTimeNanos);
-        earliestNextRetryTimeNanos = Math.max(earliestNextRetryTimeNanos, nextEarliestNextRetryTimeNanos);
-
-        if (currentRetryTask == null) {
-            return false;
-        }
-
-        return Math.max(currentRetryTask.retryTimeNanos(), earliestNextRetryTimeNanos)
-               <= nextRetryTimeNanos;
     }
 
     public synchronized void addEarliestNextRetryTimeNanos(long earliestNextRetryTimeNanos) {
@@ -244,23 +258,20 @@ class RetryScheduler {
                                                    earliestNextRetryTimeNanos);
     }
 
-    public synchronized long getEarliestNextRetryTimeNanos() {
-        return earliestNextRetryTimeNanos;
-    }
-
     public synchronized void rescheduleCurrentRetryTaskIfTooEarly() {
         if (currentRetryTask != null) {
             if (currentRetryTask.retryTimeNanos() < earliestNextRetryTimeNanos) {
                 // Current retry task is going to be executed before the earliestNextRetryTimeNanos so
                 // we need to reschedule it.
+
                 scheduleNextRetryTask(currentRetryTask.getRetryTaskRunnable(),
                                       earliestNextRetryTimeNanos,
-                                      currentRetryTask.getOnExceptionHandler());
+                                      currentRetryTask.getexceptionHandler(), true);
             }
         }
     }
 
-    public synchronized boolean hasScheduledRetryTask() {
-        return currentRetryTask != null;
+    public boolean shutdown() {
+        return cancelCurrentRetryTask(true);
     }
 }

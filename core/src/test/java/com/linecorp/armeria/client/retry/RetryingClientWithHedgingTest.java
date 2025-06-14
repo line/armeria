@@ -42,6 +42,8 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.client.ClientRequestContext;
@@ -53,6 +55,7 @@ import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.client.WebClientBuilder;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.client.endpoint.EndpointSelectionStrategy;
+import com.linecorp.armeria.client.logging.LoggingClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.ExchangeType;
 import com.linecorp.armeria.common.HttpRequest;
@@ -75,13 +78,15 @@ import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 // todo(szymon): change tests that we wait for the response and demand that immediately after we see all the
 //  logs in the appropriate state.
 class RetryingClientWithHedgingTest {
-    private static final long LOOSING_SERVER_RESPONSE_DELAY_MILLIS = 300;
+    private static final long LOOSING_SERVER_RESPONSE_DELAY_MILLIS = 1000;
 
     private static final String SERVER1_RESPONSE = "s1";
     private static final String SERVER2_RESPONSE = "s2#";
     private static final String SERVER3_RESPONSE = "s3##";
 
     private static class TestServer extends ServerExtension {
+        private static final Logger logger = LoggerFactory.getLogger(TestServer.class);
+
         private CountDownLatch responseLatch = new CountDownLatch(1);
         private final AtomicInteger numRequests = new AtomicInteger();
         private HttpService helloService = mock(HttpService.class);
@@ -93,7 +98,7 @@ class RetryingClientWithHedgingTest {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
             sb.decorator(LoggingService.newDecorator());
-            sb.blockingTaskExecutor(1);
+            sb.blockingTaskExecutor(5);
             sb.service("/hello",
                        new HttpService() {
                            @Override
@@ -108,11 +113,14 @@ class RetryingClientWithHedgingTest {
                                ctx.blockingTaskExecutor().execute(() -> {
                                    numRequests.incrementAndGet();
                                    try {
+                                       logger.debug("Got a request. Waiting for the latch to be released.");
                                        responseLatch.await();
                                    } catch (InterruptedException e) {
                                        responseFuture.completeExceptionally(e);
                                        fail(e);
                                    }
+
+                                   logger.debug("Latch released. Returning response.");
 
                                    try {
                                        responseFuture.complete(helloService.serve(ctx, req));
@@ -510,6 +518,7 @@ class RetryingClientWithHedgingTest {
                                                   server1.httpEndpoint(),
                                                   server2.httpEndpoint(),
                                                   server3.httpEndpoint()))
+                        .decorator(LoggingClient.newDecorator())
                         .factory(clientFactory);
     }
 

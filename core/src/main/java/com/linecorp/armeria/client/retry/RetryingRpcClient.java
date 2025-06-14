@@ -22,15 +22,16 @@ import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
 
+import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.ResponseTimeoutException;
 import com.linecorp.armeria.client.RpcClient;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.Request;
+import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.RpcResponse;
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.internal.client.ClientPendingThrowableUtil;
 import com.linecorp.armeria.internal.client.ClientRequestContextExtension;
 import com.linecorp.armeria.internal.common.util.StringUtil;
@@ -142,17 +143,11 @@ public final class RetryingRpcClient extends AbstractRetryingClient<RpcRequest, 
     }
 
     @Override
-    protected ResponseFuturePair<RpcResponse> getResponseFuturePair(
-            ClientRequestContext ctx) {
-        final CompletableFuture<RpcResponse> responseFuture = new CompletableFuture<>();
-        final RpcResponse res = RpcResponse.from(responseFuture);
-        return new ResponseFuturePair<>(res, responseFuture);
-    }
-
-    @Override
-    protected void doExecute(ClientRequestContext ctx, RpcRequest req, RpcResponse res,
-                             CompletableFuture<RpcResponse> returnedResFuture) throws Exception {
+    protected RpcResponse doExecute(ClientRequestContext ctx, RpcRequest req) throws Exception {
+        final CompletableFuture<RpcResponse> returnedResFuture = new CompletableFuture<>();
+        final RpcResponse res = RpcResponse.from(returnedResFuture);
         doExecute0(ctx, req, res, returnedResFuture);
+        return res;
     }
 
     private void doExecute0(ClientRequestContext ctx, RpcRequest req,
@@ -161,12 +156,13 @@ public final class RetryingRpcClient extends AbstractRetryingClient<RpcRequest, 
         final boolean initialAttempt = totalAttempts <= 1;
         if (returnedRes.isDone()) {
             // The response has been cancelled by the client before it receives a response, so stop retrying.
-            handleException(ctx, returnedResFuture, new CancellationException(
+            completeRetryingExceptionally(ctx, returnedResFuture, new CancellationException(
                     "the response returned to the client has been cancelled"), initialAttempt);
             return;
         }
-        if (!updateResponseTimeout(ctx)) {
-            handleException(ctx, returnedResFuture, ResponseTimeoutException.get(), initialAttempt);
+        if (!setResponseTimeout(ctx)) {
+            completeRetryingExceptionally(ctx, returnedResFuture, ResponseTimeoutException.get(),
+                                          initialAttempt);
             return;
         }
 
@@ -195,9 +191,15 @@ public final class RetryingRpcClient extends AbstractRetryingClient<RpcRequest, 
                                              req, true);
         }
 
-        onAttemptStarted(ctx, attemptCtx, (@Nullable Throwable cause) -> {
-            attemptCtx.cancel();
-        });
+        startRetryAttempt(ctx, attemptCtx, (winningAttemptCtx, winningAttemptRes) -> {
+            final HttpRequest actualHttpReq = winningAttemptCtx.request();
+
+            if (actualHttpReq != null) {
+                ctx.updateRequest(actualHttpReq);
+            }
+
+            returnedResFuture.complete(winningAttemptRes);
+        }, RequestContext::cancel);
 
         final RetryConfig<RpcResponse> retryConfig = mappedRetryConfig(ctx);
         final RetryRuleWithContent<RpcResponse> retryRule =
@@ -210,28 +212,18 @@ public final class RetryingRpcClient extends AbstractRetryingClient<RpcRequest, 
                     final Backoff backoff = decision != null ? decision.backoff() : null;
 
                     if (backoff != null) {
-                        final RetrySchedulabilityDecision schedulabilityDecision = canScheduleWith(ctx,
-                                                                                                   backoff);
-
-                        if (schedulabilityDecision.canSchedule()) {
-                            scheduleNextRetry(ctx,
-                                              () -> doExecute0(ctx, req, returnedRes, returnedResFuture),
-                                              schedulabilityDecision.nextRetryTimeNanos(),
-                                              backoff,
-                                              cause0 -> handleException(ctx, returnedResFuture, cause0, false));
-                        }
+                        scheduleNextRetry(ctx,
+                                          () -> doExecute0(ctx, req, returnedRes, returnedResFuture),
+                                          backoff,
+                                          cause0 -> completeRetryingExceptionally(ctx, returnedResFuture,
+                                                                                  cause0, false));
                     }
 
-                    final boolean isOtherAttemptInProgress = onAttemptEnded(ctx);
-
-                    if (!isOtherAttemptInProgress) {
-                        onRetryingComplete(ctx, returnedResFuture, attemptCtx, attemptRes);
-                    }
-
+                    completeRetryAttempt(ctx, attemptCtx, attemptRes, backoff == null);
                     return null;
                 });
             } catch (Throwable t) {
-                handleException(ctx, returnedResFuture, t, false);
+                completeRetryingExceptionally(ctx, returnedResFuture, t, false);
             }
             return null;
         });
@@ -240,20 +232,35 @@ public final class RetryingRpcClient extends AbstractRetryingClient<RpcRequest, 
 
         if (hedgingDelayMillis >= 0) {
             final Backoff hedgingBackoff = Backoff.fixed(hedgingDelayMillis);
-            final RetrySchedulabilityDecision schedulabilityDecision =
-                    canScheduleWith(ctx, hedgingBackoff);
-            if (schedulabilityDecision.canSchedule()) {
-                scheduleNextRetry(ctx, () -> doExecute0(ctx, req, returnedRes, returnedResFuture),
-                                  schedulabilityDecision.nextRetryTimeNanos(),
-                                  hedgingBackoff,
-                                  cause -> handleException(ctx, returnedResFuture, cause, false));
-            }
+            scheduleNextRetry(ctx, () -> doExecute0(ctx, req, returnedRes, returnedResFuture),
+                              hedgingBackoff,
+                              cause -> handleExceptionAfterScheduling(ctx, returnedResFuture, cause));
         }
     }
 
-    private static void handleException(ClientRequestContext ctx,
-                                        CompletableFuture<RpcResponse> returnedResFuture,
-                                        Throwable cause, boolean endRequestLog) {
+    private void handleExceptionAfterScheduling(
+            ClientRequestContext ctx, CompletableFuture<RpcResponse> returnedResFuture, Throwable cause) {
+        if (cause instanceof RetrySchedulingException) {
+            switch (((RetrySchedulingException) cause).getType()) {
+                case NO_MORE_ATTEMPTS_IN_RETRY:
+                case NO_MORE_ATTEMPTS_IN_BACKOFF:
+                case DELAY_FROM_BACKOFF_EXCEEDS_RESPONSE_TIMEOUT:
+                case DELAY_FROM_SERVER_EXCEEDS_RESPONSE_TIMEOUT:
+                case RETRY_TASK_OVERTAKEN:
+                    completeRetryingIfNoPendingAttempts(ctx);
+                    return;
+                case RETRY_TASK_CANCELLED:
+                    cause = new IllegalStateException(
+                            ClientFactory.class.getSimpleName() + " has been closed.", cause);
+                    break;
+            }
+        }
+        completeRetryingExceptionally(ctx, returnedResFuture, cause, false);
+    }
+
+    private static void completeRetryingExceptionally(ClientRequestContext ctx,
+                                                      CompletableFuture<RpcResponse> returnedResFuture,
+                                                      Throwable cause, boolean endRequestLog) {
         if (isRetryingComplete(ctx)) {
             return;
         }
@@ -262,23 +269,9 @@ public final class RetryingRpcClient extends AbstractRetryingClient<RpcRequest, 
         if (endRequestLog) {
             ctx.logBuilder().endRequest(cause);
         }
-        onRetryingCompleteExceptionally(ctx, cause);
-    }
 
-    void onRetryingComplete(ClientRequestContext ctx,
-                            CompletableFuture<RpcResponse> returnedResFuture,
-                            ClientRequestContext attemptCtx,
-                            RpcResponse attemptRes) {
-        if (isRetryingComplete(ctx)) {
-            return;
-        }
+        ctx.logBuilder().endResponse(cause);
 
-        final HttpRequest actualHttpReq = attemptCtx.request();
-        if (actualHttpReq != null) {
-            ctx.updateRequest(actualHttpReq);
-        }
-
-        returnedResFuture.complete(attemptRes);
-        onRetryingComplete(ctx, attemptCtx);
+        completeRetryingExceptionally(ctx, cause);
     }
 }
