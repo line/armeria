@@ -182,8 +182,8 @@ class RetryingRpcClientWithHedgingTest {
         when(server3.getServiceHandler().hello(anyString())).thenReturn("server3");
 
         final HelloService.AsyncIface client = helloClientThreeEndpoints(
-                RetryConfig.
-                        builderForRpc(
+                RetryConfig
+                        .builderForRpc(
                                 RetryRule
                                         .builder()
                                         .onTimeoutException()
@@ -234,8 +234,8 @@ class RetryingRpcClientWithHedgingTest {
         when(server3.getServiceHandler().hello(anyString())).thenReturn("server3");
 
         final HelloService.AsyncIface client = helloClientThreeEndpoints(
-                RetryConfig.
-                        builderForRpc(
+                RetryConfig
+                        .builderForRpc(
                                 RetryRule
                                         .builder()
                                         .onTimeoutException()
@@ -292,8 +292,8 @@ class RetryingRpcClientWithHedgingTest {
         when(server3.getServiceHandler().hello(anyString())).thenReturn("server3");
 
         final HelloService.AsyncIface client = helloClientThreeEndpoints(
-                RetryConfig.
-                        builderForRpc(
+                RetryConfig
+                        .builderForRpc(
                                 RetryRule
                                         .builder()
                                         .onTimeoutException()
@@ -343,8 +343,8 @@ class RetryingRpcClientWithHedgingTest {
         when(server3.getServiceHandler().hello(anyString())).thenReturn("server3");
 
         final HelloService.AsyncIface client = helloClientThreeEndpoints(
-                RetryConfig.
-                        builderForRpc(
+                RetryConfig
+                        .builderForRpc(
                                 RetryRule
                                         .builder()
                                         .onTimeoutException()
@@ -408,8 +408,8 @@ class RetryingRpcClientWithHedgingTest {
         when(server2.getServiceHandler().hello(anyString())).thenReturn("server2");
 
         final HelloService.AsyncIface client = helloClientThreeEndpoints(
-                RetryConfig.
-                        builderForRpc(
+                RetryConfig
+                        .builderForRpc(
                                 RetryRule
                                         .builder()
                                         .onTimeoutException()
@@ -437,9 +437,7 @@ class RetryingRpcClientWithHedgingTest {
 
             assertThatExceptionOfType(ExecutionException.class)
                     .isThrownBy(result::get)
-                    .satisfies(cause ->
-                               {
-
+                    .satisfies(cause -> {
                                    assertThat(cause.getCause()).isInstanceOf(TTransportException.class);
                                    assertThat(cause.getCause().getCause()).isInstanceOf(
                                            ResponseTimeoutException.class);
@@ -607,5 +605,4 @@ class RetryingRpcClientWithHedgingTest {
     private void assertNoServerRequestContext(ServerExtension server) {
         assertThat(server.requestContextCaptor().size()).isEqualTo(0);
     }
-
 }
