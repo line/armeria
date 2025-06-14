@@ -78,12 +78,6 @@ import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 // todo(szymon): change tests that we wait for the response and demand that immediately after we see all the
 //  logs in the appropriate state.
 class RetryingClientWithHedgingTest {
-    private static final long LOOSING_SERVER_RESPONSE_DELAY_MILLIS = 1000;
-
-    private static final String SERVER1_RESPONSE = "s1";
-    private static final String SERVER2_RESPONSE = "s2#";
-    private static final String SERVER3_RESPONSE = "s3##";
-
     private static class TestServer extends ServerExtension {
         private static final Logger logger = LoggerFactory.getLogger(TestServer.class);
 
@@ -158,6 +152,12 @@ class RetryingClientWithHedgingTest {
         }
     }
 
+    private static final long LOOSING_SERVER_RESPONSE_DELAY_MILLIS = 1000;
+
+    private static final String SERVER1_RESPONSE = "s1";
+    private static final String SERVER2_RESPONSE = "s2#";
+    private static final String SERVER3_RESPONSE = "s3##";
+
     @RegisterExtension
     private static final TestServer server1 = new TestServer();
     @RegisterExtension
@@ -195,7 +195,43 @@ class RetryingClientWithHedgingTest {
     }
 
     @Test
-    void letSecondServerWins() throws Exception {
+    void firstServerWins() throws Exception {
+        when(server1.getHelloService().serve(any(), any())).thenReturn(HttpResponse.of(SERVER1_RESPONSE));
+
+        final RetryConfig<HttpResponse> hedgingNoRetryConfig = RetryConfig
+                .builder(NO_RETRY_RULE)
+                .maxTotalAttempts(3)
+                .hedgingDelayMillis(100)
+                .build();
+
+        final WebClient client = client(hedgingNoRetryConfig);
+
+        final CompletableFuture<AggregatedHttpResponse> responseFuture;
+        final ClientRequestContext ctx;
+        try (ClientRequestContextCaptor captor = Clients.newContextCaptor()) {
+            responseFuture = client.get("/hello").aggregate();
+            ctx = captor.get();
+        }
+
+        server1.unlatchResponse();
+        server2.unlatchResponse();
+        server3.unlatchResponse();
+
+        await().untilAsserted(() -> {
+            assertThat(server1.getNumRequests()).isEqualTo(1);
+            assertValidServerRequestContext(server1, 1, false);
+            assertNoServerRequestContext(server2);
+            assertNoServerRequestContext(server3);
+
+            assertValidAggregatedResponse(responseFuture, SERVER1_RESPONSE);
+            assertValidClientRequestContext(
+                    ctx, GET_VERIFY_RESPONSE_HAS_CONTENT.apply(SERVER1_RESPONSE),
+                    GET_VERIFY_RESPONSE_HAS_CONTENT.apply(SERVER1_RESPONSE), null, null);
+        });
+    }
+
+    @Test
+    void secondServerWins() throws Exception {
         when(server1.getHelloService().serve(any(), any())).thenReturn(HttpResponse.of(SERVER1_RESPONSE));
         when(server2.getHelloService().serve(any(), any())).thenReturn(HttpResponse.of(SERVER2_RESPONSE));
         when(server3.getHelloService().serve(any(), any())).thenReturn(HttpResponse.of(SERVER3_RESPONSE));
@@ -243,7 +279,7 @@ class RetryingClientWithHedgingTest {
     }
 
     @Test
-    void letThirdServerWin() throws Exception {
+    void thirdServerWin() throws Exception {
         when(server1.getHelloService().serve(any(), any())).thenReturn(HttpResponse.of(SERVER1_RESPONSE));
         when(server2.getHelloService().serve(any(), any())).thenReturn(HttpResponse.of(SERVER2_RESPONSE));
         when(server3.getHelloService().serve(any(), any())).thenReturn(HttpResponse.of(SERVER3_RESPONSE));
@@ -562,12 +598,19 @@ class RetryingClientWithHedgingTest {
     private static void assertValidClientRequestContext(ClientRequestContext ctx,
                                                         RequestLogVerifier logVerifierCtx,
                                                         RequestLogVerifier logVerifierServer1,
-                                                        RequestLogVerifier logVerifierServer2,
+                                                        @Nullable RequestLogVerifier logVerifierServer2,
                                                         @Nullable RequestLogVerifier logVerifierServer3
     ) {
-        assertValidRootClientRequestContext(ctx, logVerifierCtx, logVerifierServer3 == null ? 2 : 3);
+
+        final int expectedNumChildren = 1 + (logVerifierServer2 == null ? 0 : 1) +
+                                        (logVerifierServer3 == null ? 0 : 1);
+
+        assertValidRootClientRequestContext(ctx, logVerifierCtx, expectedNumChildren);
         assertValidChildLog(ctx.log().children().get(0), 1, logVerifierServer1);
-        assertValidChildLog(ctx.log().children().get(1), 2, logVerifierServer2);
+        if (logVerifierServer2 != null) {
+            assertValidChildLog(ctx.log().children().get(1), 2, logVerifierServer2);
+        }
+
         if (logVerifierServer3 != null) {
             assertValidChildLog(ctx.log().children().get(2), 3, logVerifierServer3);
         }
