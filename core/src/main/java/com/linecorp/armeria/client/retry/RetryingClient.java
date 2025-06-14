@@ -97,7 +97,7 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
      * it will hand over the stream to the client.
      *
      * @throws IllegalArgumentException if the specified {@code maxContentLength} is equal to or
-     * less than {@code 0}
+     *                                  less than {@code 0}
      */
     public static RetryingClientBuilder builder(RetryRuleWithContent<HttpResponse> retryRuleWithContent,
                                                 int maxContentLength) {
@@ -171,7 +171,7 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
      * @param retryRule the retry rule
      * @param maxTotalAttempts the maximum number of total attempts
      * @param responseTimeoutMillisForEachAttempt response timeout for each attempt. {@code 0} disables
-     * the timeout
+     *                                            the timeout
      *
      * @deprecated Use {@link #newDecorator(RetryConfig)} instead.
      */
@@ -190,7 +190,7 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
      * @param retryRuleWithContent the retry rule
      * @param maxTotalAttempts the maximum number of total attempts
      * @param responseTimeoutMillisForEachAttempt response timeout for each attempt. {@code 0} disables
-     * the timeout
+     *                                            the timeout
      *
      * @deprecated Use {@link #newDecorator(RetryConfig)} instead.
      */
@@ -220,7 +220,7 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
      * requests.
      *
      * @param mapping the mapping that returns a {@link RetryConfig} for a given {@link ClientRequestContext}
-     * and {@link Request}.
+     *                and {@link Request}.
      */
     public static Function<? super HttpClient, RetryingClient>
     newDecoratorWithMapping(RetryConfigMapping<HttpResponse> mapping) {

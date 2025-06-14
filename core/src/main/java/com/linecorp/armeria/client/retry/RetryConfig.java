@@ -197,6 +197,9 @@ public final class RetryConfig<T extends Response> {
         return responseTimeoutMillisForEachAttempt;
     }
 
+    /**
+     * todo(szymon): [doc].
+     */
     public long hedgingDelayMillis() {
         return hedgingDelayMillis;
     }

@@ -124,6 +124,9 @@ public abstract class AbstractRetryingClient<I extends Request, O extends Respon
         state(ctx).completeIfNoPendingAttempts();
     }
 
+    /**
+     * todo(szymon): [doc].
+     */
     protected static void completeRetryingExceptionally(ClientRequestContext ctx,
                                                         Throwable cause) {
         logger.debug("onRetryingCompleteExceptionally: {}", ctx, cause);
@@ -164,6 +167,9 @@ public abstract class AbstractRetryingClient<I extends Request, O extends Respon
         return retryRuleWithContent;
     }
 
+    /**
+     * todo(szymon): [doc].
+     */
     protected void startRetryAttempt(ClientRequestContext ctx,
                                      ClientRequestContext attemptCtx,
                                      BiConsumer<ClientRequestContext, O> onAcceptHandler,
@@ -198,6 +204,9 @@ public abstract class AbstractRetryingClient<I extends Request, O extends Respon
         logger.debug("onAttemptStarted: {}", ctx);
     }
 
+    /**
+     * todo(szymon): [doc].
+     */
     protected static <O extends Response> void completeRetryAttempt(ClientRequestContext ctx,
                                                                     ClientRequestContext attemptCtx,
                                                                     O attemptRes, boolean isWinning) {
@@ -210,11 +219,17 @@ public abstract class AbstractRetryingClient<I extends Request, O extends Respon
         }
     }
 
+    /**
+     * todo(szymon): [doc].
+     */
     protected static boolean isRetryingComplete(ClientRequestContext ctx) {
         requireNonNull(ctx, "ctx");
         return state(ctx).whenRetryingComplete().isDone();
     }
 
+    /**
+     * todo(szymon): [doc].
+     */
     protected void scheduleNextRetry(ClientRequestContext ctx,
                                      Runnable retryTask,
                                      Backoff backoff,
@@ -222,6 +237,9 @@ public abstract class AbstractRetryingClient<I extends Request, O extends Respon
         scheduleNextRetry(ctx, retryTask, backoff, -1, actionOnException);
     }
 
+    /**
+     * todo(szymon): [doc].
+     */
     protected static void scheduleNextRetry(ClientRequestContext ctx,
                                             Runnable retryTask,
                                             Backoff backoff,
@@ -239,8 +257,8 @@ public abstract class AbstractRetryingClient<I extends Request, O extends Respon
 
         final long earliestRetryTimeNanos = retryDelayFromServerMillis >= 0 ?
                                             (nowTimeNanos + TimeUnit.MILLISECONDS.toNanos(
-                                                    retryDelayFromServerMillis)) :
-                                            Long.MIN_VALUE;
+                                                    retryDelayFromServerMillis))
+                                                                            : Long.MIN_VALUE;
         if (state.timeoutForWholeRetryEnabled() &&
             earliestRetryTimeNanos > state.responseTimeoutTimeNanos()) {
             actionOnException.accept(
@@ -431,7 +449,7 @@ public abstract class AbstractRetryingClient<I extends Request, O extends Respon
          * remaining {@link #responseTimeoutMillisForAttempt}.
          *
          * @return 0 if the response timeout for both of each request and whole retry is disabled or
-         * -1 if the elapsed time from the first request has passed {@code responseTimeoutMillis}
+         *         -1 if the elapsed time from the first request has passed {@code responseTimeoutMillis}
          */
         long responseTimeoutMillisForAttempt() {
             if (!timeoutForWholeRetryEnabled()) {
@@ -555,10 +573,7 @@ public abstract class AbstractRetryingClient<I extends Request, O extends Respon
             }
 
             if (lastAttempt == null) {
-                completeExceptionally(new IllegalStateException("completed retrying "
-                                                                + "without a single "
-                                                                + "successful"
-                                                                + "attempt"));
+                completeExceptionally(new IllegalStateException("Completed retrying without any attempts."));
             } else {
                 retryingCompleteFuture.complete(lastAttempt);
             }

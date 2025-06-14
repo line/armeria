@@ -166,7 +166,7 @@ class RetryingClientWithHedgingTest {
     private static final TestServer server3 = new TestServer();
 
     private static ClientFactory clientFactory;
-    private final RetryRule NO_RETRY_RULE = RetryRule.builder().thenNoRetry();
+    private static final RetryRule NO_RETRY_RULE = RetryRule.builder().thenNoRetry();
 
     @BeforeAll
     static void beforeAll() {
@@ -616,7 +616,6 @@ class RetryingClientWithHedgingTest {
         }
 
         assertThat(slog.requestHeaders().path()).contains("hello");
-
     }
 
     private static void assertNoServerRequestContext(ServerExtension server) {

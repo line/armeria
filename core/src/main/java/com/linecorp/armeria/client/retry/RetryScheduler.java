@@ -230,10 +230,6 @@ class RetryScheduler {
                 retryRunnable.run();
             };
 
-            logger.debug("Scheduling the retry task. delayNanos = {}, "
-                         + "retryTimeNanos = {}, earliestNextRetryTimeNanos = {}",
-                         delayNanos, retryTimeNanos, earliestNextRetryTimeNanos);
-
             //noinspection unchecked
             final ScheduledFuture<Void> nextRetryTaskFuture =
                     (ScheduledFuture<Void>) eventLoop.schedule(wrappedRetryRunnable, delayNanos,

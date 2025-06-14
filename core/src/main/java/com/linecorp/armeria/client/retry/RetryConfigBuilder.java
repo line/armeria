@@ -85,6 +85,9 @@ public final class RetryConfigBuilder<T extends Response> {
         return this;
     }
 
+    /**
+     * todo(szymon): [doc].
+     */
     public RetryConfigBuilder<T> hedgingDelay(Duration hedgingDelay) {
         final long millis =
                 requireNonNull(hedgingDelay, "hedgingDelay")
@@ -97,6 +100,9 @@ public final class RetryConfigBuilder<T extends Response> {
         return this;
     }
 
+    /**
+     * todo(szymon): [doc].
+     */
     public RetryConfigBuilder<T> hedgingDelayMillis(long hedgingDelayMillis) {
         checkArgument(
                 hedgingDelayMillis >= 0,

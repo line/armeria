@@ -281,8 +281,10 @@ class RetrySchedulerTest {
         for (int taskNo = 0; taskNo < 9; taskNo++) {
             final Runnable task = tasks.get(taskNo);
             verify(task, times(0)).run();
-            verifyExceptionHandlerCatchedSchedulingException(exceptionHandlers.get(taskNo),
-                                                             RetrySchedulingException.Type.RETRY_TASK_OVERTAKEN);
+            verifyExceptionHandlerCatchedSchedulingException(
+                    exceptionHandlers.get(taskNo),
+                    RetrySchedulingException.Type.RETRY_TASK_OVERTAKEN
+            );
         }
 
         // Verify that the last task was executed
@@ -562,7 +564,7 @@ class RetrySchedulerTest {
         assertThat(capturedException.getMessage()).contains("event executor terminated");
     }
 
-    private static class EventLoopScheduleCall {
+    private static final class EventLoopScheduleCall {
         private final long delayNanos;
 
         private EventLoopScheduleCall(long scheduledTimeNanos) {

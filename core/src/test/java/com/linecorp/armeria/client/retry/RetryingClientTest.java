@@ -663,8 +663,8 @@ class RetryingClientTest {
         }
         assertThat(t).isInstanceOf(IllegalStateException.class)
                      .satisfies(cause -> assertThat(cause.getMessage()).matches(
-                             "(?i).*(factory has been closed|not accepting a task|factory is closing or "
-                             + "closed).*"));
+                             "(?i).*(factory has been closed|not accepting a task" +
+                             "|factory is closing or closed).*"));
     }
 
     @Test
