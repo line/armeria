@@ -95,17 +95,20 @@
 *.lclstage.dev
 *.linodeobjects.com
 *.localto.net
+*.lutrausercontent.com
 *.magentosite.cloud
 *.me-central-1.airflow.amazonaws.com
 *.me-south-1.airflow.amazonaws.com
 *.migration.run
 *.mm
 *.moonscale.io
+*.mtls.run.app
 *.nagoya.jp
 *.nodebalancer.linode.com
 *.nom.br
 *.northflank.app
 *.np
+*.nxa.eu
 *.oci.customer-oci.com
 *.ocp.customer-oci.com
 *.ocs.customer-oci.com
@@ -217,6 +220,7 @@
 3.bg
 32-b.it
 3utilities.com
+4.at
 4.azurestaticapps.net
 4.bg
 4lima.at
@@ -353,7 +357,9 @@ ae.org
 aeg
 aejrie.no
 aem.live
+aem.network
 aem.page
+aem.reviews
 aero
 aero.mv
 aerobatic.aero
@@ -3543,7 +3549,6 @@ hl.cn
 hl.no
 hlx.live
 hlx.page
-hlx3.page
 hm
 hm.no
 hn
@@ -3612,6 +3617,7 @@ hosting
 hosting-cluster.nl
 hostyhosting.io
 hot
+hotel
 hotel.hu
 hotel.lk
 hotel.tz
@@ -5457,8 +5463,10 @@ my-gateway.de
 my-router.de
 my-vigor.de
 my-wan.de
+my.at
 my.canva.site
 my.canvasite.cn
+my.de
 my.eu.org
 my.id
 myactivedirectory.com
@@ -6088,6 +6096,7 @@ numazu.shizuoka.jp
 nuoro.it
 nv.us
 nx.cn
+nx.gw
 ny-1.paas.massivegrid.net
 ny-2.paas.massivegrid.net
 ny.us
@@ -8274,6 +8283,7 @@ taxi.br
 tayninh.vn
 tc
 tc.br
+tche.br
 tci
 tcp4.me
 td
@@ -8853,6 +8863,7 @@ ventures
 verbania.it
 vercel.app
 vercel.dev
+vercel.run
 vercelli.it
 verdal.no
 verisign
@@ -9045,6 +9056,7 @@ website
 website.yandexcloud.net
 websitebuilder.online
 websozai.jp
+webspace-host.com
 webspace.rocks
 webspaceconfig.de
 webthings.io
