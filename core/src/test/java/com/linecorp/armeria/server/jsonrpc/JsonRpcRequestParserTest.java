@@ -54,7 +54,6 @@ class JsonRpcRequestParserTest {
 
     @Test
     void parseRequest_singleValidRequestWithId() throws Exception {
-        // Test case 1: Normal single JSON-RPC request (with ID)
         final String requestJson =
                 "{\"jsonrpc\": \"2.0\", \"method\": \"subtract\", \"params\": [42, 23], \"id\": 1}";
         final AggregatedHttpRequest httpRequest = createHttpRequest(requestJson);
@@ -76,7 +75,6 @@ class JsonRpcRequestParserTest {
 
     @Test
     void parseRequest_singleValidNotificationRequest() throws Exception {
-        // Test case 2: Normal single JSON-RPC notification request (no ID)
         final String requestJson = "{\"jsonrpc\": \"2.0\", \"method\": \"update\", \"params\": [1,2,3,4,5]}";
         final AggregatedHttpRequest httpRequest = createHttpRequest(requestJson);
 
@@ -96,7 +94,6 @@ class JsonRpcRequestParserTest {
 
     @Test
     void parseRequest_singleValidRequestWithNullId() throws Exception {
-        // Test case 3: Normal single JSON-RPC request (ID is null)
         final String requestJson =
                 "{\"jsonrpc\": \"2.0\", \"method\": \"foo\", \"params\": {\"bar\": \"baz\"}, \"id\": null}";
         final AggregatedHttpRequest httpRequest = createHttpRequest(requestJson);
@@ -117,7 +114,6 @@ class JsonRpcRequestParserTest {
 
     @Test
     void parseRequest_validBatchRequest() throws Exception {
-        // Test case 4: Normal batch JSON-RPC request (multiple valid requests)
         final String requestJson =
                 "[{\"jsonrpc\": \"2.0\", \"method\": \"sum\", \"params\": [1,2,4], \"id\": \"1\"}, " +
                         "{\"jsonrpc\": \"2.0\", \"method\": \"notify_hello\", \"params\": [7]}, " +
@@ -155,7 +151,6 @@ class JsonRpcRequestParserTest {
 
     @Test
     void parseRequest_invalidJsonFormatTopLevel() {
-        // Test case 5: Invalid JSON format (top level)
         final String requestJson = "{\"jsonrpc\": \"2.0\", \"method\": \"foo\", \"params\": [1,2";
         final AggregatedHttpRequest httpRequest = createHttpRequest(requestJson);
 
@@ -174,7 +169,6 @@ class JsonRpcRequestParserTest {
 
     @Test
     void parseRequest_notJsonRpcObjectMissingJsonRpcField() throws Exception {
-        // Test case 6: JSON object that is not a JSON-RPC request (e.g., "jsonrpc" field missing)
         final String requestJson = "{\"method\": \"foo\", \"id\": 1}";
         final AggregatedHttpRequest httpRequest = createHttpRequest(requestJson);
 
@@ -192,7 +186,6 @@ class JsonRpcRequestParserTest {
 
     @Test
     void parseRequest_notJsonObjectOrArray() {
-        // Test case 7: Non-JSON object or array type (number, string, etc.)
         final String requestJson = "123";
         final AggregatedHttpRequest httpRequest = createHttpRequest(requestJson);
 
@@ -210,7 +203,6 @@ class JsonRpcRequestParserTest {
 
     @Test
     void parseRequest_emptyBatchRequest() {
-        // Test case 8: Empty batch JSON-RPC request (`[]`)
         final String requestJson = "[]";
         final AggregatedHttpRequest httpRequest = createHttpRequest(requestJson);
 
@@ -228,7 +220,6 @@ class JsonRpcRequestParserTest {
 
     @Test
     void parseRequest_batchWithValidAndInvalidItems() throws Exception {
-        // Test case 9: Batch request with some valid and some invalid items
         final String requestJson =
                 "[{\"jsonrpc\": \"2.0\", \"method\": \"sum\", \"params\": [1,2,4], \"id\": \"1\"}, " +
                         "{\"method\": \"invalid\"}]";
@@ -237,11 +228,13 @@ class JsonRpcRequestParserTest {
         final List<JsonRpcItemParseResult> results = JsonRpcRequestParser.parseRequest(httpRequest);
 
         assertThat(results).hasSize(2);
+
         // First item (valid)
         final JsonRpcItemParseResult result1 = results.get(0);
         assertFalse(result1.isError());
         assertNotNull(result1.request());
         assertEquals("1", result1.request().id());
+
         // Second item (invalid)
         final JsonRpcItemParseResult result2 = results.get(1);
         assertTrue(result2.isError());
@@ -252,18 +245,19 @@ class JsonRpcRequestParserTest {
 
     @Test
     void parseRequest_batchWithNonJsonObjectItem() throws Exception {
-        // Test case 10: Batch request with a non-JSON object item
         final String requestJson = "[{\"jsonrpc\": \"2.0\", \"method\": \"sum\", \"id\": \"1\"}, 123]";
         final AggregatedHttpRequest httpRequest = createHttpRequest(requestJson);
 
         final List<JsonRpcItemParseResult> results = JsonRpcRequestParser.parseRequest(httpRequest);
 
         assertThat(results).hasSize(2);
+
         // First item (valid)
         final JsonRpcItemParseResult result1 = results.get(0);
         assertFalse(result1.isError());
         assertNotNull(result1.request());
         assertEquals("1", result1.request().id());
+
         // Second item (invalid - not an object)
         final JsonRpcItemParseResult result2 = results.get(1);
         assertTrue(result2.isError());
@@ -274,8 +268,6 @@ class JsonRpcRequestParserTest {
 
     @Test
     void parseRequest_validParamsTypes() throws Exception {
-        // Test case 11: "params" field with various valid types (array, object)
-        // Request 1: params as object
         final String requestJson1 =
                 "{" +
                         "\"jsonrpc\": \"2.0\", " +
@@ -291,6 +283,7 @@ class JsonRpcRequestParserTest {
         assertNotNull(req1);
         assertTrue(req1.params().isObject());
         assertEquals(mapper.readTree("{\"name\": \"armeria\"}"), req1.params());
+
         // Request 2: params as array
         final String requestJson2 =
                 "{\"jsonrpc\": \"2.0\", \"method\": \"byPosition\", \"params\": [1, 2], \"id\": 11}";
@@ -306,7 +299,6 @@ class JsonRpcRequestParserTest {
 
     @Test
     void parseRequest_invalidParamsType() throws Exception {
-        // Test case 12: "params" field with invalid type (e.g., string)
         final String requestJson =
                 "{\"jsonrpc\": \"2.0\", \"method\": \"test\", \"params\": \"invalid\", \"id\": 1}";
         final AggregatedHttpRequest httpRequest = createHttpRequest(requestJson);
@@ -324,8 +316,6 @@ class JsonRpcRequestParserTest {
 
     @Test
     void parseRequest_validIdTypes() throws Exception {
-        // Test case 13: "id" field with various valid types (string, number)
-        // Request 1: ID as string
         final String requestJson1 =
                 "{\"jsonrpc\": \"2.0\", \"method\": \"echo\", \"params\": [\"hello\"], \"id\": \"abc\"}";
         final AggregatedHttpRequest httpRequest1 = createHttpRequest(requestJson1);
@@ -334,7 +324,7 @@ class JsonRpcRequestParserTest {
         final JsonRpcRequest req1 = results1.get(0).request();
         assertNotNull(req1);
         assertEquals("abc", req1.id());
-        // Request 2: ID as integer
+
         final String requestJson2 =
                 "{\"jsonrpc\": \"2.0\", \"method\": \"echo\", \"params\": [\"world\"], \"id\": 123}";
         final AggregatedHttpRequest httpRequest2 = createHttpRequest(requestJson2);
@@ -343,7 +333,7 @@ class JsonRpcRequestParserTest {
         final JsonRpcRequest req2 = results2.get(0).request();
         assertNotNull(req2);
         assertEquals(123, req2.id());
-        // Request 3: ID as floating point number
+
         final String requestJson3 =
                 "{\"jsonrpc\": \"2.0\", \"method\": \"echo\", \"params\": [\"test\"], \"id\": 1.5}";
         final AggregatedHttpRequest httpRequest3 = createHttpRequest(requestJson3);
@@ -356,7 +346,6 @@ class JsonRpcRequestParserTest {
 
     @Test
     void parseRequest_invalidIdType_object() throws Exception {
-        // Test case 14: "id" field with invalid type (object)
         final String requestJson =
                 "{" +
                         "\"jsonrpc\": \"2.0\", " +
@@ -379,7 +368,6 @@ class JsonRpcRequestParserTest {
 
     @Test
     void parseRequest_invalidIdType_array() throws Exception {
-        // Test case 14: "id" field with invalid type (array)
         final String requestJson =
                 "{\"jsonrpc\": \"2.0\", \"method\": \"testMethod\", \"params\":[], \"id\": [\"invalid\"]}";
         final AggregatedHttpRequest httpRequest = createHttpRequest(requestJson);
@@ -397,7 +385,6 @@ class JsonRpcRequestParserTest {
 
     @Test
     void parseRequest_invalidIdType_boolean() throws Exception {
-        // Test case 14: "id" field with invalid type (boolean)
         final String requestJson =
                 "{\"jsonrpc\": \"2.0\", \"method\": \"testMethod\", \"params\":[], \"id\": true}";
         final AggregatedHttpRequest httpRequest = createHttpRequest(requestJson);

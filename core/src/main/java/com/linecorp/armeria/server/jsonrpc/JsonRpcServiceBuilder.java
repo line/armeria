@@ -117,7 +117,6 @@ public class JsonRpcServiceBuilder {
      *         that handles JSON-RPC dispatching for all registered services and methods.
      */
     public JsonRpcService build() {
-        // Register all annotated services with the server builder.
         for (Map.Entry<String, ?> entry : annotatedServices.entrySet()) {
             serverBuilder.annotatedService(entry.getKey(), entry.getValue());
         }
@@ -125,12 +124,6 @@ public class JsonRpcServiceBuilder {
         return new SimpleJsonRpcService(routes, mapper, nonAnnotatedService);
     }
 
-    /**
-     * Creates a new {@link Route} for the given path prefix.
-     *
-     * @param prefix the path prefix for the route.
-     * @return a new {@link Route} instance.
-     */
     private Route newRoute(String prefix) {
         return Route.builder()
                 .path(prefix)

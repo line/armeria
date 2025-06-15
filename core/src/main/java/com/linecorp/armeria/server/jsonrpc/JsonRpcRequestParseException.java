@@ -45,21 +45,10 @@ public class JsonRpcRequestParseException extends RuntimeException {
         this.requestId = requestId;
     }
 
-    /**
-     * Returns the {@link JsonRpcResponse} that represents the parse error.
-     *
-     * @return the {@link JsonRpcResponse} containing error details.
-     */
     JsonRpcResponse getErrorResponse() {
         return errorResponse;
     }
 
-    /**
-     * Returns the ID of the request that failed to parse.
-     *
-     * @return the request ID, or {@code null} if the ID could not be determined during parsing
-     *         or if the request was a notification.
-     */
     @Nullable
     Object getRequestId() {
         return requestId;

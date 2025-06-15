@@ -43,15 +43,12 @@ class JsonRpcResponseFactoryTest {
 
     @Test
     void toHttpResponse_successfulRpcResponse_returnsHttp200Ok() throws JsonProcessingException {
-        // Inputs/Preconditions
         final JsonNode resultData = mapper.getNodeFactory().booleanNode(true);
         final JsonRpcResponse rpcResponse = JsonRpcResponse.ofSuccess(resultData, "req-id-http");
         final Object requestId = "req-id-http";
 
-        // Execute
         final HttpResponse httpResponse = JsonRpcResponseFactory.toHttpResponse(rpcResponse, mapper, requestId);
 
-        // Expected Outcomes/Postconditions
         final AggregatedHttpResponse aggregatedRes = httpResponse.aggregate().join();
         assertEquals(HttpStatus.OK, aggregatedRes.status());
         assertEquals(MediaType.JSON_UTF_8, aggregatedRes.contentType());
@@ -67,15 +64,12 @@ class JsonRpcResponseFactoryTest {
 
     @Test
     void toHttpResponse_errorRpcResponse_returnsHttp200OkWithJsonErrorBody() throws JsonProcessingException {
-        // Inputs/Preconditions
         final JsonRpcError rpcError = JsonRpcError.METHOD_NOT_FOUND;
         final JsonRpcResponse rpcResponse = JsonRpcResponse.ofError(rpcError, "req-id-err-http");
         final Object requestId = "req-id-err-h_ttp";
 
-        // Execute
         final HttpResponse httpResponse = JsonRpcResponseFactory.toHttpResponse(rpcResponse, mapper, requestId);
 
-        // Expected Outcomes/Postconditions
         final AggregatedHttpResponse aggregatedRes = httpResponse.aggregate().join();
         assertEquals(HttpStatus.OK, aggregatedRes.status());
         assertEquals(MediaType.JSON_UTF_8, aggregatedRes.contentType());
@@ -94,21 +88,16 @@ class JsonRpcResponseFactoryTest {
 
     @Test
     void toHttpResponse_serializationFailure_returnsHttp500() throws JsonProcessingException {
-        // Inputs/Preconditions
         final JsonRpcResponse rpcResponse = JsonRpcResponse.ofSuccess("data", "req-id-ser-fail");
         final Object requestId = "req-id-ser-fail";
 
         final ObjectMapper mockMapper = mock(ObjectMapper.class);
-        // Use a more specific type for the anonymous class if possible, or ensure the method signature matches.
-        // For writeValueAsString(Object), any Object will do for the argument matcher.
         when(mockMapper.writeValueAsString(any(JsonRpcResponse.class)))
                 .thenThrow(new JsonProcessingException("Serialization failed") {});
 
-        // Execute
         final HttpResponse httpResponse =
                 JsonRpcResponseFactory.toHttpResponse(rpcResponse, mockMapper, requestId);
 
-        // Expected Outcomes/Postconditions
         final AggregatedHttpResponse aggregatedRes = httpResponse.aggregate().join();
         assertEquals(HttpStatus.INTERNAL_SERVER_ERROR, aggregatedRes.status());
         assertEquals(MediaType.PLAIN_TEXT_UTF_8, aggregatedRes.contentType());
@@ -116,39 +105,31 @@ class JsonRpcResponseFactoryTest {
                 aggregatedRes.contentUtf8());
     }
 
-    // Tests for fromThrowable(Throwable throwable, @Nullable Object id, String methodName)
     @Test
     void fromThrowable_JsonProcessingException_mapsToInternalError() {
-        // Inputs/Preconditions
         final Throwable throwable = new JsonProcessingException("parse error detail") {};
         final Object id = "throwable-id-1";
         final String methodName = "methodCausingJsonError";
 
-        // Execute
         final JsonRpcResponse response = JsonRpcResponseFactory.fromThrowable(throwable, id, methodName);
 
-        // Expected Outcomes/Postconditions
         assertNotNull(response);
         assertEquals(id, response.id());
         assertNull(response.result());
         assertNotNull(response.error());
         assertEquals(JsonRpcError.INTERNAL_ERROR.code(), response.error().code());
-        // The message from JsonRpcResponseFactory.fromThrowable might be more specific
         assertThat(response.error().message())
                 .isEqualTo("Internal error");
     }
 
     @Test
     void fromThrowable_IllegalArgumentException_mapsToInvalidRequest() {
-        // Inputs/Preconditions
         final Throwable throwable = new IllegalArgumentException("Bad argument provided");
         final Object id = "throwable-id-2";
         final String methodName = "methodWithBadArg";
 
-        // Execute
         final JsonRpcResponse response = JsonRpcResponseFactory.fromThrowable(throwable, id, methodName);
 
-        // Expected Outcomes/Postconditions
         assertNotNull(response);
         assertEquals(id, response.id());
         assertNull(response.result());
@@ -160,15 +141,12 @@ class JsonRpcResponseFactoryTest {
 
     @Test
     void fromThrowable_OtherException_mapsToInternalError() {
-        // Inputs/Preconditions
         final Throwable throwable = new RuntimeException("Generic runtime issue");
         final Object id = "throwable-id-3";
         final String methodName = "genericErrorMethod";
 
-        // Execute
         final JsonRpcResponse response = JsonRpcResponseFactory.fromThrowable(throwable, id, methodName);
 
-        // Expected Outcomes/Postconditions
         assertNotNull(response);
         assertEquals(id, response.id());
         assertNull(response.result());
@@ -180,21 +158,17 @@ class JsonRpcResponseFactoryTest {
 
     @Test
     void fromThrowable_CompletionException_unwrapsAndMapsCause() {
-        // Inputs/Preconditions
         final Throwable cause = new IllegalArgumentException("Wrapped bad argument");
         final Throwable throwable = new CompletionException(cause);
         final Object id = "throwable-id-4";
         final String methodName = "wrappedErrorMethod";
 
-        // Execute
         final JsonRpcResponse response = JsonRpcResponseFactory.fromThrowable(throwable, id, methodName);
 
-        // Expected Outcomes/Postconditions
         assertNotNull(response);
         assertEquals(id, response.id());
         assertNull(response.result());
         assertNotNull(response.error());
-        // Should be mapped based on the cause (IllegalArgumentException -> INVALID_REQUEST)
         assertEquals(JsonRpcError.INVALID_REQUEST.code(), response.error().code());
         assertThat(response.error().message())
                 .isEqualTo("Invalid Request");

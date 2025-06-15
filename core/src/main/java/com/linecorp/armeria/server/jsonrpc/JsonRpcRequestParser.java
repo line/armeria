@@ -87,7 +87,6 @@ final class JsonRpcRequestParser {
                     final JsonRpcError error =
                             JsonRpcError.INVALID_REQUEST.withData("Received empty JSON-RPC batch request.");
                     parsedItems.add(new JsonRpcItemParseResult(JsonRpcResponse.ofError(error, null)));
-                    // Return immediately for empty batch error
                     return parsedItems;
                 }
                 for (JsonNode itemNode : node) {
@@ -107,7 +106,6 @@ final class JsonRpcRequestParser {
             }
             return parsedItems;
         } catch (JsonProcessingException e) {
-            // Handle errors parsing the root JSON structure
             logger.warn("Failed to parse overall JSON-RPC request body: {}", requestBody, e);
             final JsonRpcError error =
                     JsonRpcError.PARSE_ERROR.withData("Invalid JSON received: " + e.getMessage());
@@ -115,7 +113,6 @@ final class JsonRpcRequestParser {
             parsedItems.add(new JsonRpcItemParseResult(JsonRpcResponse.ofError(error, null)));
             return parsedItems;
         } catch (Exception e) {
-            // Catch any other unexpected errors during parsing phase
             logger.error("Unexpected error during JSON-RPC request parsing: {}", requestBody, e);
             final JsonRpcError error =
                     JsonRpcError.INTERNAL_ERROR.withData("Unexpected server error during request parsing");
@@ -141,28 +138,23 @@ final class JsonRpcRequestParser {
      *         Will not be {@code null}.
      */
     private static JsonRpcItemParseResult parseNodeAndHandleError(JsonNode node) {
-        final Object id = extractIdFromJsonNode(node); // Extract ID early for error reporting
+        final Object id = extractIdFromJsonNode(node);
         try {
             final JsonRpcRequest request = JsonRpcUtil.parseJsonNodeToRequest(node, mapper);
             return new JsonRpcItemParseResult(request);
         } catch (JsonProcessingException e) {
-            // Handle parsing errors (invalid JSON structure within the node)
             final JsonRpcError error;
             if (e instanceof MismatchedInputException) {
-                // Likely missing required RPC fields
                 error = JsonRpcError.INVALID_REQUEST.withData("Invalid request object: " + e.getMessage());
             } else {
                 error = JsonRpcError.PARSE_ERROR.withData("Failed to parse request object: " + e.getMessage());
             }
             return new JsonRpcItemParseResult(JsonRpcResponse.ofError(error, id));
         } catch (IllegalArgumentException | NullPointerException e) {
-            // Handle validation errors (invalid version, method, params type etc.)
             final JsonRpcError error =
                     JsonRpcError.INVALID_REQUEST.withData("Invalid request object: " + e.getMessage());
-
             return new JsonRpcItemParseResult(JsonRpcResponse.ofError(error, id));
         } catch (Exception e) {
-            // Catch any other unexpected errors during single node processing
             logger.error("Unexpected error parsing JSON-RPC node (id: {}): {}",
                     id, node.toString(), e);
             final JsonRpcError error =
@@ -199,7 +191,6 @@ final class JsonRpcRequestParser {
         if (idNode.isNumber()) {
             return idNode.numberValue();
         }
-        // Ignore other types for ID
         return null;
     }
 

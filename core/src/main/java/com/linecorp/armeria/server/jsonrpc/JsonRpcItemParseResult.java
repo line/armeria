@@ -55,11 +55,6 @@ public final class JsonRpcItemParseResult {
      */
     public JsonRpcItemParseResult(JsonRpcResponse errorResponse) {
         requireNonNull(errorResponse, "errorResponse");
-        // Check if the error object exists, as JsonRpcResponse always represents a response
-        if (errorResponse.error() == null) {
-            throw new IllegalArgumentException(
-                    "errorResponse must contain an error object: " + errorResponse);
-        }
         this.request = null;
         this.errorResponse = errorResponse;
     }

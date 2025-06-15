@@ -129,23 +129,13 @@ public class SimpleJsonRpcService implements JsonRpcService {
                 processJsonRpcRequest(ctx, originalRequest, parsedItems);
 
         if (futures.isEmpty()) {
-            // This can happen if the request was a batch containing only notifications,
-            // or an empty valid batch.
-            // The case of an empty JSON array `[]` resulting in an error is handled by JsonRpcRequestParser.
-            // If JsonRpcRequestParser returns an empty list
-            // (e.g. after filtering out only notifications from a batch),
             return UnmodifiableFuture.completedFuture(HttpResponse.of(HttpStatus.OK));
         }
 
-        // If the original request was not a JSON array but resulted in a single future
-        // (e.g., a successful single non-notification request or a parse error for a single request),
-        // return the single response directly without wrapping it in a JSON array.
-        if (parsedItems.size() == 1 && !isOriginalRequestJsonArray(aggregatedRequest)) {
+        if (parsedItems.size() == 1 && !isBatchRequest(aggregatedRequest)) {
             return futures.get(0).thenApply(AggregatedHttpResponse::toHttpResponse);
         }
 
-        // Batch request (multiple items or a single item originally wrapped in a JSON array, e.g., "[{...}]")
-        // Combine all individual response futures into a single HttpResponse containing a JSON array.
         return CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]))
                 .thenApply(v -> combineResponses(futures));
     }
@@ -187,9 +177,8 @@ public class SimpleJsonRpcService implements JsonRpcService {
                         }).collect(Collectors.toList());
         try {
             return HttpResponse.ofJson(MediaType.JSON_UTF_8, responseNodes);
-        } catch (Exception e) { // Catch potential exceptions from ofJson
+        } catch (Exception e) {
             logger.error("Failed to serialize final batch JSON-RPC response", e);
-            // This is a server-side issue, respond with a single internal error
             final JsonRpcResponse errResp = JsonRpcResponse.ofError(
                     JsonRpcError.INTERNAL_ERROR.withData("Failed to create batch response"), null);
 
@@ -246,7 +235,6 @@ public class SimpleJsonRpcService implements JsonRpcService {
                 assert rpcRequest != null;
 
                 if (rpcRequest.notificationRequest()) {
-                    // Handle notification request
                     try {
                         route(ctx, originalRequest, rpcRequest);
                     } catch (Exception e) {
@@ -254,7 +242,6 @@ public class SimpleJsonRpcService implements JsonRpcService {
                                 "'{}': {}", rpcRequest.method(), e.getMessage(), e);
                     }
                 } else {
-                    // Handle regular request
                     try {
                         final HttpResponse delegateResponseFuture = route(ctx, originalRequest, rpcRequest);
 
@@ -320,7 +307,6 @@ public class SimpleJsonRpcService implements JsonRpcService {
 
         final HttpService targetService = findService(context, targetPath);
 
-        // Build delegate headers with the actual target path.
         final RequestHeaders delegateHeaders = originalHttpRequest.headers().toBuilder()
                 .path(targetPath)
                 .build();
@@ -338,7 +324,6 @@ public class SimpleJsonRpcService implements JsonRpcService {
         newContext.setAttr(JsonRpcAttributes.METHOD, jsonRpcRequest.method());
         newContext.setAttr(JsonRpcAttributes.IS_NOTIFICATION, jsonRpcRequest.notificationRequest());
 
-        // Serve using a new context derived from the delegate request.
         return targetService.serve(newContext, delegateRequest);
     }
 
@@ -374,14 +359,12 @@ public class SimpleJsonRpcService implements JsonRpcService {
      */
     private HttpService findService(ServiceRequestContext context, String targetPath)
             throws JsonRpcServiceNotFoundException {
-        // Use the targetPath directly for cache lookup and server config search.
         final String lookupPath = targetPath.startsWith("/") ? targetPath : '/' + targetPath;
         final String prefix = context.mappedPath();
 
         HttpService result = cachedServices.get(lookupPath) != null ? cachedServices.get(lookupPath)
                 : cachedServices.get(prefix);
         if (result == null) {
-            // Search server config using the exact lookupPath.
             result = context.config().server().serviceConfigs().stream()
                     .filter(serviceConfig -> serviceConfig.route().patternString().equals(lookupPath))
                     .map(ServiceConfig::service)
@@ -389,7 +372,6 @@ public class SimpleJsonRpcService implements JsonRpcService {
                     .orElse(null);
 
             if (result == null) {
-                // Throw a specific exception for service not found, 404 Not Found
                 throw new JsonRpcServiceNotFoundException(
                         "No service registered for the method path: " + lookupPath, lookupPath);
             }
@@ -402,15 +384,7 @@ public class SimpleJsonRpcService implements JsonRpcService {
         return result;
     }
 
-    /**
-     * Utility method to check if the content of an {@link AggregatedHttpRequest} appears to be a JSON array.
-     * It performs a simple string check on the trimmed UTF-8 content of the request body.
-     *
-     * @param aggregatedRequest The {@link AggregatedHttpRequest} whose content is to be checked.
-     * @return {@code true} if the request body string starts with '[' and ends with ']',
-     *         {@code false} otherwise.
-     */
-    private boolean isOriginalRequestJsonArray(AggregatedHttpRequest aggregatedRequest) {
+    private boolean isBatchRequest(AggregatedHttpRequest aggregatedRequest) {
         final String requestBody = aggregatedRequest.contentUtf8().trim();
         return requestBody.startsWith("[") && requestBody.endsWith("]");
     }

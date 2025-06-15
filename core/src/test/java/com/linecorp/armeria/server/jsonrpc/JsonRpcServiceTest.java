@@ -79,7 +79,7 @@ class JsonRpcServiceTest {
         }
     }
 
-    private static class JsonRpcExceptionHandler implements ExceptionHandlerFunction {
+    private static final class JsonRpcExceptionHandler implements ExceptionHandlerFunction {
 
         @Override
         public HttpResponse handleException(ServiceRequestContext ctx, HttpRequest req, Throwable cause) {
@@ -94,7 +94,7 @@ class JsonRpcServiceTest {
     }
 
     @ExceptionHandler(JsonRpcExceptionHandler.class)
-    private static class JsonRpcTestService {
+    private static final class JsonRpcTestService {
 
         @Post("/returnResult")
         @ProducesJson

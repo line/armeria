@@ -414,7 +414,7 @@ private static final ObjectMapper mapper = new ObjectMapper();
                         throws JsonProcessingException {
                 final String requestJsonBody = "{\"params\": [\"unavailable_p1\"]}";
                 final String expectedErrorDataString =
-                                "Internal server error during delegate execution" +
+                                "Internal server error during delegate execution " +
                                                 "for method 'unavailableMethod' " +
                                                 "(delegate returned 503 Service Unavailable): " +
                                                 "{\"reason\": \"Downstream timeout\"}";

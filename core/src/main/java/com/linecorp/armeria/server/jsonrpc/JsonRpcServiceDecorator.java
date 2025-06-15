@@ -123,7 +123,6 @@ public final class JsonRpcServiceDecorator extends SimpleDecoratingHttpService {
         final String method = ctx.attr(JsonRpcAttributes.METHOD);
 
         if (id == null || isNotification == null || method == null) {
-            // Non-JsonRPC requests
             return res.toHttpResponse();
         }
 

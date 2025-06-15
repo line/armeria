@@ -38,7 +38,6 @@ class JsonRpcUtilTest {
 
     @Test
     void parseDelegateResponse_successfulHttpAndValidJsonBody() {
-        // Inputs/Preconditions
         final AggregatedHttpResponse delegateResponse = AggregatedHttpResponse.of(
                 HttpStatus.OK,
                 MediaType.JSON_UTF_8,
@@ -46,11 +45,9 @@ class JsonRpcUtilTest {
         final Object id = "test-id-1";
         final String methodName = "testMethod";
 
-        // Execute
         final JsonRpcResponse rpcResponse =
                 JsonRpcUtil.parseDelegateResponse(delegateResponse, id, methodName, mapper);
 
-        // Expected Outcomes/Postconditions
         assertNotNull(rpcResponse);
         assertEquals(JsonRpcUtil.JSON_RPC_VERSION, rpcResponse.jsonRpcVersion());
         assertEquals(id, rpcResponse.id());
@@ -62,16 +59,13 @@ class JsonRpcUtilTest {
 
     @Test
     void parseDelegateResponse_successfulHttp204NoContentAndEmptyBody() {
-        // Inputs/Preconditions
         final AggregatedHttpResponse delegateResponse = AggregatedHttpResponse.of(HttpStatus.NO_CONTENT);
         final Object id = "test-id-2";
         final String methodName = "testMethodNoContent";
 
-        // Execute
         final JsonRpcResponse rpcResponse =
                 JsonRpcUtil.parseDelegateResponse(delegateResponse, id, methodName, mapper);
 
-        // Expected Outcomes/Postconditions
         assertNotNull(rpcResponse);
         assertEquals(JsonRpcUtil.JSON_RPC_VERSION, rpcResponse.jsonRpcVersion());
         assertEquals(id, rpcResponse.id());
@@ -81,19 +75,16 @@ class JsonRpcUtilTest {
 
     @Test
     void parseDelegateResponse_successfulHttpButInvalidJsonBody() {
-        // Inputs/Preconditions
         final AggregatedHttpResponse delegateResponse = AggregatedHttpResponse.of(
                 HttpStatus.OK,
-                MediaType.JSON_UTF_8, // The server might still claim it's JSON
+                MediaType.JSON_UTF_8,
                 "invalid-json");
         final Object id = "test-id-3";
         final String methodName = "testMethodInvalidJson";
 
-        // Execute
         final JsonRpcResponse rpcResponse =
                 JsonRpcUtil.parseDelegateResponse(delegateResponse, id, methodName, mapper);
 
-        // Expected Outcomes/Postconditions
         assertNotNull(rpcResponse);
         assertEquals(JsonRpcUtil.JSON_RPC_VERSION, rpcResponse.jsonRpcVersion());
         assertEquals(id, rpcResponse.id());
@@ -106,7 +97,6 @@ class JsonRpcUtilTest {
 
     @Test
     void parseDelegateResponse_errorHttp404NotFound() {
-        // Inputs/Preconditions
         final AggregatedHttpResponse delegateResponse = AggregatedHttpResponse.of(
                 HttpStatus.NOT_FOUND,
                 MediaType.PLAIN_TEXT_UTF_8,
@@ -114,11 +104,9 @@ class JsonRpcUtilTest {
         final Object id = "test-id-4";
         final String methodName = "nonExistentMethod";
 
-        // Execute
         final JsonRpcResponse rpcResponse =
                 JsonRpcUtil.parseDelegateResponse(delegateResponse, id, methodName, mapper);
 
-        // Expected Outcomes/Postconditions
         assertNotNull(rpcResponse);
         assertEquals(JsonRpcUtil.JSON_RPC_VERSION, rpcResponse.jsonRpcVersion());
         assertEquals(id, rpcResponse.id());
@@ -131,7 +119,6 @@ class JsonRpcUtilTest {
 
     @Test
     void parseDelegateResponse_errorHttp400BadRequest_withBody() {
-        // Inputs/Preconditions - Scenario 1
         final AggregatedHttpResponse delegateResponse = AggregatedHttpResponse.of(
                 HttpStatus.BAD_REQUEST,
                 MediaType.PLAIN_TEXT_UTF_8,
@@ -139,11 +126,9 @@ class JsonRpcUtilTest {
         final Object id = "test-id-5a";
         final String methodName = "methodWithBadParam";
 
-        // Execute
         final JsonRpcResponse rpcResponse =
                 JsonRpcUtil.parseDelegateResponse(delegateResponse, id, methodName, mapper);
 
-        // Expected Outcomes/Postconditions
         assertNotNull(rpcResponse);
         assertEquals(JsonRpcUtil.JSON_RPC_VERSION, rpcResponse.jsonRpcVersion());
         assertEquals(id, rpcResponse.id());
@@ -156,16 +141,13 @@ class JsonRpcUtilTest {
 
     @Test
     void parseDelegateResponse_errorHttp400BadRequest_emptyBody() {
-        // Inputs/Preconditions - Scenario 2
         final AggregatedHttpResponse delegateResponse = AggregatedHttpResponse.of(HttpStatus.BAD_REQUEST);
         final Object id = "test-id-5b";
         final String methodName = "methodWithBadParamEmpty";
 
-        // Execute
         final JsonRpcResponse rpcResponse =
                 JsonRpcUtil.parseDelegateResponse(delegateResponse, id, methodName, mapper);
 
-        // Expected Outcomes/Postconditions
         assertNotNull(rpcResponse);
         assertEquals(JsonRpcUtil.JSON_RPC_VERSION, rpcResponse.jsonRpcVersion());
         assertEquals(id, rpcResponse.id());
@@ -178,19 +160,16 @@ class JsonRpcUtilTest {
 
     @Test
     void parseDelegateResponse_otherClientErrorHttp401Unauthorized() {
-        // Inputs/Preconditions
         final AggregatedHttpResponse delegateResponse = AggregatedHttpResponse.of(
-                HttpStatus.UNAUTHORIZED, // Example: 401
+                HttpStatus.UNAUTHORIZED,
                 MediaType.PLAIN_TEXT_UTF_8,
                 "Auth failed");
         final Object id = "test-id-6";
         final String methodName = "protectedMethod";
 
-        // Execute
         final JsonRpcResponse rpcResponse =
                 JsonRpcUtil.parseDelegateResponse(delegateResponse, id, methodName, mapper);
 
-        // Expected Outcomes/Postconditions
         assertNotNull(rpcResponse);
         assertEquals(JsonRpcUtil.JSON_RPC_VERSION, rpcResponse.jsonRpcVersion());
         assertEquals(id, rpcResponse.id());
@@ -203,19 +182,16 @@ class JsonRpcUtilTest {
 
     @Test
     void parseDelegateResponse_serverErrorHttp5xx() {
-        // Inputs/Preconditions
         final AggregatedHttpResponse delegateResponse = AggregatedHttpResponse.of(
-                HttpStatus.INTERNAL_SERVER_ERROR, // Example: 500
+                HttpStatus.INTERNAL_SERVER_ERROR,
                 MediaType.PLAIN_TEXT_UTF_8,
                 "Server crashed");
         final Object id = "test-id-7";
         final String methodName = "buggyMethod";
 
-        // Execute
         final JsonRpcResponse rpcResponse =
                 JsonRpcUtil.parseDelegateResponse(delegateResponse, id, methodName, mapper);
 
-        // Expected Outcomes/Postconditions
         assertNotNull(rpcResponse);
         assertEquals(JsonRpcUtil.JSON_RPC_VERSION, rpcResponse.jsonRpcVersion());
         assertEquals(id, rpcResponse.id());
@@ -226,20 +202,16 @@ class JsonRpcUtilTest {
         assertEquals("Internal error", rpcResponse.error().message());
     }
 
-    // Tests for parseJsonNodeToRequest
     @Test
     void parseJsonNodeToRequest_validRequest_stringId_arrayParams() throws JsonProcessingException {
-        // Inputs/Preconditions
         final ObjectNode itemNode = mapper.createObjectNode();
         itemNode.put("jsonrpc", JsonRpcUtil.JSON_RPC_VERSION);
         itemNode.put("method", "subtract");
         itemNode.set("params", mapper.createArrayNode().add(42).add(23));
         itemNode.put("id", "req-1");
 
-        // Execute
         final JsonRpcRequest request = JsonRpcUtil.parseJsonNodeToRequest(itemNode, mapper);
 
-        // Expected Outcomes/Postconditions
         assertNotNull(request);
         assertEquals(JsonRpcUtil.JSON_RPC_VERSION, request.jsonRpcVersion());
         assertEquals("subtract", request.method());
@@ -252,7 +224,6 @@ class JsonRpcUtilTest {
 
     @Test
     void parseJsonNodeToRequest_validRequest_numberId_objectParams() throws JsonProcessingException {
-        // Inputs/Preconditions
         final ObjectNode itemNode = mapper.createObjectNode();
         itemNode.put("jsonrpc", JsonRpcUtil.JSON_RPC_VERSION);
         itemNode.put("method", "update");
@@ -262,10 +233,8 @@ class JsonRpcUtilTest {
         itemNode.set("params", paramsNode);
         itemNode.put("id", 123);
 
-        // Execute
         final JsonRpcRequest request = JsonRpcUtil.parseJsonNodeToRequest(itemNode, mapper);
 
-        // Expected Outcomes/Postconditions
         assertNotNull(request);
         assertEquals(JsonRpcUtil.JSON_RPC_VERSION, request.jsonRpcVersion());
         assertEquals("update", request.method());
@@ -278,16 +247,13 @@ class JsonRpcUtilTest {
 
     @Test
     void parseJsonNodeToRequest_validNotification_nullId_noParams() throws JsonProcessingException {
-        // Inputs/Preconditions
         final ObjectNode itemNode = mapper.createObjectNode();
         itemNode.put("jsonrpc", JsonRpcUtil.JSON_RPC_VERSION);
         itemNode.put("method", "notify_event");
-        itemNode.set("id", mapper.nullNode()); // Explicit null ID
+        itemNode.set("id", mapper.nullNode());
 
-        // Execute
         final JsonRpcRequest request = JsonRpcUtil.parseJsonNodeToRequest(itemNode, mapper);
 
-        // Expected Outcomes/Postconditions
         assertNotNull(request);
         assertEquals(JsonRpcUtil.JSON_RPC_VERSION, request.jsonRpcVersion());
         assertEquals("notify_event", request.method());
@@ -298,16 +264,12 @@ class JsonRpcUtilTest {
 
     @Test
     void parseJsonNodeToRequest_validNotification_missingId_noParams() throws JsonProcessingException {
-        // Inputs/Preconditions
         final ObjectNode itemNode = mapper.createObjectNode();
         itemNode.put("jsonrpc", JsonRpcUtil.JSON_RPC_VERSION);
         itemNode.put("method", "notify_event");
-        // ID field is omitted
 
-        // Execute
         final JsonRpcRequest request = JsonRpcUtil.parseJsonNodeToRequest(itemNode, mapper);
 
-        // Expected Outcomes/Postconditions
         assertNotNull(request);
         assertEquals(JsonRpcUtil.JSON_RPC_VERSION, request.jsonRpcVersion());
         assertEquals("notify_event", request.method());
@@ -318,10 +280,8 @@ class JsonRpcUtilTest {
 
     @Test
     void parseJsonNodeToRequest_itemNodeNotJsonObject_throwsIllegalArgumentException() {
-        // Inputs/Preconditions
         final JsonNode itemNode = mapper.createArrayNode().add(1).add(2).add(3);
 
-        // Execute & Expected Outcomes/Postconditions
         final IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> {
             JsonRpcUtil.parseJsonNodeToRequest(itemNode, mapper);
         });
@@ -330,13 +290,11 @@ class JsonRpcUtilTest {
 
     @Test
     void parseJsonNodeToRequest_invalidJsonRpcVersion_throwsIllegalArgumentException() {
-        // Inputs/Preconditions
         final ObjectNode itemNode = mapper.createObjectNode();
-        itemNode.put("jsonrpc", "1.0"); // Invalid version
+        itemNode.put("jsonrpc", "1.0");
         itemNode.put("method", "test");
         itemNode.put("id", 1);
 
-        // Execute & Expected Outcomes/Postconditions
         final IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> {
             JsonRpcUtil.parseJsonNodeToRequest(itemNode, mapper);
         });
@@ -345,12 +303,10 @@ class JsonRpcUtilTest {
 
     @Test
     void parseJsonNodeToRequest_missingMethod_throwsIllegalArgumentException() {
-        // Inputs/Preconditions - Scenario 1: method missing
         final ObjectNode itemNode = mapper.createObjectNode();
         itemNode.put("jsonrpc", JsonRpcUtil.JSON_RPC_VERSION);
         itemNode.put("id", 1);
 
-        // Execute & Expected Outcomes/Postconditions
         final java.lang.NullPointerException exception =
                 assertThrows(java.lang.NullPointerException.class, () -> {
                     JsonRpcUtil.parseJsonNodeToRequest(itemNode, mapper);
@@ -360,13 +316,11 @@ class JsonRpcUtilTest {
 
     @Test
     void parseJsonNodeToRequest_emptyMethod_throwsIllegalArgumentException() {
-        // Inputs/Preconditions - Scenario 2: method empty string
         final ObjectNode itemNode = mapper.createObjectNode();
         itemNode.put("jsonrpc", JsonRpcUtil.JSON_RPC_VERSION);
         itemNode.put("method", "");
         itemNode.put("id", 1);
 
-        // Execute & Expected Outcomes/Postconditions
         final IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> {
             JsonRpcUtil.parseJsonNodeToRequest(itemNode, mapper);
         });
@@ -375,14 +329,12 @@ class JsonRpcUtilTest {
 
     @Test
     void parseJsonNodeToRequest_paramsNotArrayOrObject_throwsIllegalArgumentException() {
-        // Inputs/Preconditions
         final ObjectNode itemNode = mapper.createObjectNode();
         itemNode.put("jsonrpc", JsonRpcUtil.JSON_RPC_VERSION);
         itemNode.put("method", "test");
-        itemNode.put("params", "not-an-object-or-array"); // Invalid params type
+        itemNode.put("params", "not-an-object-or-array");
         itemNode.put("id", 1);
 
-        // Execute & Expected Outcomes/Postconditions
         final IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> {
             JsonRpcUtil.parseJsonNodeToRequest(itemNode, mapper);
         });
@@ -392,15 +344,8 @@ class JsonRpcUtilTest {
 
     @Test
     void parseJsonNodeToRequest_missingRequiredField_JacksonThrowsJsonProcessingException() {
-        // Inputs/Preconditions
-        // Assuming JsonRpcRequest has @JsonProperty(required=true) for "method"
-        // This test expects JsonRpcUtil.parseJsonNodeToRequest to propagate the JsonProcessingException
-        // from mapper.treeToValue if a required field is missing and not caught by prior checks.
-        // For now, we follow the test plan expecting JsonProcessingException.
-        // MismatchedInputException is a subclass of JsonProcessingException.
         final ObjectNode itemNode = mapper.createObjectNode();
         itemNode.put("jsonrpc", JsonRpcUtil.JSON_RPC_VERSION);
-        // "method" field is missing, which should be caught by Jackson if JsonRpcRequest defines it as required
         itemNode.put("id", "jackson-fail-id");
 
         final java.lang.NullPointerException exception =
@@ -410,20 +355,15 @@ class JsonRpcUtilTest {
         assertThat(exception.getMessage()).contains("method");
     }
 
-    // Tests for createJsonRpcRequestJsonString
     @Test
     void createJsonRpcRequestJsonString_validInput_stringId_listParams() throws JsonProcessingException {
-        // Inputs/Preconditions
         final String method = "sum";
         final java.util.List<Integer> params = java.util.Arrays.asList(1, 2, 3);
         final String id = "req-abc";
 
-        // Execute
         final String jsonString = JsonRpcUtil.createJsonRpcRequestJsonString(method, params, id, mapper);
 
-        // Expected Outcomes/Postconditions
         assertNotNull(jsonString);
-        // Field order might vary, so parse and compare JsonNode or use a JSONAssert library in a real project
         final JsonNode expectedNode = mapper.createObjectNode()
                 .put("jsonrpc", JsonRpcUtil.JSON_RPC_VERSION)
                 .put("method", "sum")
@@ -436,39 +376,33 @@ class JsonRpcUtilTest {
 
     @Test
     void createJsonRpcRequestJsonString_notification_nullId_nullParams() throws JsonProcessingException {
-        // Inputs/Preconditions
         final String method = "log_event";
         final Object params = null;
         final Object id = null;
 
-        // Execute
         final String jsonString = JsonRpcUtil.createJsonRpcRequestJsonString(method, params, id, mapper);
 
-        // Expected Outcomes/Postconditions
         assertNotNull(jsonString);
-        // Expected: {"jsonrpc":"2.0","method":"log_event","id":null}
-        // params might be omitted if null, which is fine.
+
         final ObjectNode expectedNode = mapper.createObjectNode();
         expectedNode.put("jsonrpc", JsonRpcUtil.JSON_RPC_VERSION);
         expectedNode.put("method", "log_event");
-        expectedNode.set("id", mapper.nullNode()); // Explicitly check for null ID
+        expectedNode.set("id", mapper.nullNode());
 
         final JsonNode actualNode = mapper.readTree(jsonString);
         assertEquals(expectedNode.get("jsonrpc"), actualNode.get("jsonrpc"));
         assertEquals(expectedNode.get("method"), actualNode.get("method"));
         assertThat(actualNode.has("id")).isTrue();
         assertThat(actualNode.get("id").isNull()).isTrue();
-        assertThat(actualNode.has("params")).isFalse(); // As per plan, params can be omitted
+        assertThat(actualNode.has("params")).isFalse();
     }
 
     @Test
     void createJsonRpcRequestJsonString_invalidIdType_throwsIllegalArgumentException() {
-        // Inputs/Preconditions
         final String method = "test";
         final Object params = null;
-        final Boolean id = true; // Invalid ID type
+        final Boolean id = true;
 
-        // Execute & Expected Outcomes/Postconditions
         final IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> {
             JsonRpcUtil.createJsonRpcRequestJsonString(method, params, id, mapper);
         });

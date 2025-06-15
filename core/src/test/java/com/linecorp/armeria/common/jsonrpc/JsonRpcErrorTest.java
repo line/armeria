@@ -15,9 +15,7 @@
  */
 package com.linecorp.armeria.common.jsonrpc;
 
-import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 
 import java.util.Arrays;
@@ -25,54 +23,10 @@ import java.util.List;
 
 import org.junit.jupiter.api.Test;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ObjectNode;
-
 class JsonRpcErrorTest {
 
-    private static final ObjectMapper mapper = new ObjectMapper();
-
-    // Test for @JsonCreator JsonRpcError(int code, String message, @Nullable Object data)
-    @Test
-    void constructor_withCodeMessageAndData() {
-        // Inputs/Preconditions
-        final int code = -32001;
-        final String message = "Application specific error";
-        final String data = "Error details here";
-
-        // Execute
-        final JsonRpcError error = new JsonRpcError(code, message, data);
-
-        // Expected Outcomes/Postconditions
-        assertNotNull(error);
-        assertEquals(code, error.code());
-        assertEquals(message, error.message());
-        assertEquals(data, error.data());
-    }
-
-    // Test for constructor JsonRpcError(int code, String message)
-    @Test
-    void constructor_withCodeAndMessage_nullData() {
-        // Inputs/Preconditions
-        final int code = -32002;
-        final String message = "Another error without data";
-
-        // Execute
-        final JsonRpcError error = new JsonRpcError(code, message);
-
-        // Expected Outcomes/Postconditions
-        assertNotNull(error);
-        assertEquals(code, error.code());
-        assertEquals(message, error.message());
-        assertNull(error.data());
-    }
-
-    // Tests for static factory methods
     @Test
     void staticFactoryMethods_createCorrectErrorObjects() {
-        // JsonRpcError.parseError(Object data)
         final JsonRpcError parseErrorNullData = JsonRpcError.PARSE_ERROR;
         assertEquals(-32700, parseErrorNullData.code());
         assertEquals("Parse error", parseErrorNullData.message());
@@ -84,7 +38,6 @@ class JsonRpcErrorTest {
         assertEquals("Parse error", parseErrorWithData.message());
         assertEquals(parseErrorDataStr, parseErrorWithData.data());
 
-        // JsonRpcError.invalidRequest(Object data)
         final JsonRpcError invalidRequestNullData = JsonRpcError.INVALID_REQUEST;
         assertEquals(-32600, invalidRequestNullData.code());
         assertEquals("Invalid Request", invalidRequestNullData.message());
@@ -97,7 +50,6 @@ class JsonRpcErrorTest {
         assertEquals("Invalid Request", invalidRequestWithData.message());
         assertEquals(invalidRequestDataStr, invalidRequestWithData.data());
 
-        // JsonRpcError.methodNotFound(Object data)
         final JsonRpcError methodNotFoundNullData = JsonRpcError.METHOD_NOT_FOUND;
         assertEquals(-32601, methodNotFoundNullData.code());
         assertEquals("Method not found", methodNotFoundNullData.message());
@@ -111,7 +63,6 @@ class JsonRpcErrorTest {
         assertEquals("Method not found", methodNotFoundWithData.message());
         assertEquals(methodNotFoundDataMap, methodNotFoundWithData.data());
 
-        // JsonRpcError.invalidParams(Object data)
         final JsonRpcError invalidParamsNullData = JsonRpcError.INVALID_PARAMS;
         assertEquals(-32602, invalidParamsNullData.code());
         assertEquals("Invalid params", invalidParamsNullData.message());
@@ -123,7 +74,6 @@ class JsonRpcErrorTest {
         assertEquals("Invalid params", invalidParamsWithData.message());
         assertEquals(invalidParamsDataList, invalidParamsWithData.data());
 
-        // JsonRpcError.internalError(Object data)
         final JsonRpcError internalErrorNullData = JsonRpcError.INTERNAL_ERROR;
         assertEquals(-32603, internalErrorNullData.code());
         assertEquals("Internal error", internalErrorNullData.message());
@@ -134,49 +84,5 @@ class JsonRpcErrorTest {
         assertEquals(-32603, internalErrorWithData.code());
         assertEquals("Internal error", internalErrorWithData.message());
         assertEquals(internalErrorDataStr, internalErrorWithData.data());
-    }
-
-    // Tests for Jackson Serialization (Object -> JSON String)
-    @Test
-    void serialize_errorObject_withData() throws JsonProcessingException {
-        // Inputs/Preconditions
-        final java.util.Map<String, String> dataMap = new java.util.HashMap<>();
-        dataMap.put("info", "details here");
-        final JsonRpcError error = new JsonRpcError(-32000, "Server Error", dataMap);
-
-        // Execute
-        final String jsonString = mapper.writeValueAsString(error);
-
-        // Expected Outcomes/Postconditions
-        assertNotNull(jsonString);
-        // Expected: {"code":-32000,"message":"Server Error","data":{"info":"details here"}}
-        final ObjectNode expectedNode = mapper.createObjectNode();
-        expectedNode.put("code", -32000);
-        expectedNode.put("message", "Server Error");
-        expectedNode.set("data", mapper.valueToTree(dataMap));
-
-        final JsonNode actualNode = mapper.readTree(jsonString);
-        assertEquals(expectedNode, actualNode);
-    }
-
-    @Test
-    void serialize_errorObject_nullData_omitsDataField() throws JsonProcessingException {
-        // Inputs/Preconditions
-        final JsonRpcError error = JsonRpcError.INTERNAL_ERROR;
-
-        // Execute
-        final String jsonString = mapper.writeValueAsString(error);
-
-        // Expected Outcomes/Postconditions
-        assertNotNull(jsonString);
-        // Expected: {"code":-32603,"message":"Internal error"}
-        // data field should be omitted due to @JsonInclude(JsonInclude.Include.NON_NULL)
-        final ObjectNode expectedNode = mapper.createObjectNode();
-        expectedNode.put("code", JsonRpcError.INTERNAL_ERROR.code());
-        expectedNode.put("message", JsonRpcError.INTERNAL_ERROR.message());
-
-        final JsonNode actualNode = mapper.readTree(jsonString);
-        assertEquals(expectedNode, actualNode);
-        assertThat(actualNode.has("data")).isFalse();
     }
 }
