@@ -564,6 +564,9 @@ class RetrySchedulerTest {
         assertThat(capturedException.getMessage()).contains("event executor terminated");
     }
 
+    // todo(szymon): add test that verifies that when a task is about to run it gets rescheduled when the
+    //  earliest next retry time was set to something later in the meantime.
+
     private static final class EventLoopScheduleCall {
         private final long delayNanos;
 

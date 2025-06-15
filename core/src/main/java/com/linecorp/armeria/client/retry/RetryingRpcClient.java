@@ -29,7 +29,6 @@ import com.linecorp.armeria.client.RpcClient;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.Request;
-import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.RpcResponse;
 import com.linecorp.armeria.internal.client.ClientPendingThrowableUtil;
@@ -199,7 +198,13 @@ public final class RetryingRpcClient extends AbstractRetryingClient<RpcRequest, 
             }
 
             returnedResFuture.complete(winningAttemptRes);
-        }, RequestContext::cancel);
+        }, (abortingAttemptCtx, cause) -> {
+            if (cause != null) {
+                abortingAttemptCtx.cancel(cause);
+            } else {
+                abortingAttemptCtx.cancel();
+            }
+        });
 
         final RetryConfig<RpcResponse> retryConfig = mappedRetryConfig(ctx);
         final RetryRuleWithContent<RpcResponse> retryRule =

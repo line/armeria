@@ -93,6 +93,7 @@ class RetryingClientWithHedgingTest {
         protected void configure(ServerBuilder sb) throws Exception {
             sb.decorator(LoggingService.newDecorator());
             sb.blockingTaskExecutor(5);
+
             sb.service("/hello",
                        new HttpService() {
                            @Override
@@ -201,7 +202,7 @@ class RetryingClientWithHedgingTest {
         final RetryConfig<HttpResponse> hedgingNoRetryConfig = RetryConfig
                 .builder(NO_RETRY_RULE)
                 .maxTotalAttempts(3)
-                .hedgingDelayMillis(100)
+                .hedgingDelayMillis(500)
                 .build();
 
         final WebClient client = client(hedgingNoRetryConfig);
@@ -214,32 +215,27 @@ class RetryingClientWithHedgingTest {
         }
 
         server1.unlatchResponse();
-        server2.unlatchResponse();
-        server3.unlatchResponse();
 
         await().untilAsserted(() -> {
-            assertThat(server1.getNumRequests()).isEqualTo(1);
-            assertValidServerRequestContext(server1, 1, false);
-            assertNoServerRequestContext(server2);
-            assertNoServerRequestContext(server3);
-
             assertValidAggregatedResponse(responseFuture, SERVER1_RESPONSE);
             assertValidClientRequestContext(
                     ctx, GET_VERIFY_RESPONSE_HAS_CONTENT.apply(SERVER1_RESPONSE),
                     GET_VERIFY_RESPONSE_HAS_CONTENT.apply(SERVER1_RESPONSE), null, null);
+
+            assertValidServerRequestContext(server1, 1, false);
+            assertNoServerRequestContext(server2);
+            assertNoServerRequestContext(server3);
         });
     }
 
     @Test
     void secondServerWins() throws Exception {
-        when(server1.getHelloService().serve(any(), any())).thenReturn(HttpResponse.of(SERVER1_RESPONSE));
         when(server2.getHelloService().serve(any(), any())).thenReturn(HttpResponse.of(SERVER2_RESPONSE));
-        when(server3.getHelloService().serve(any(), any())).thenReturn(HttpResponse.of(SERVER3_RESPONSE));
 
         final RetryConfig<HttpResponse> hedgingNoRetryConfig = RetryConfig
                 .builder(NO_RETRY_RULE)
                 .maxTotalAttempts(3)
-                .hedgingDelayMillis(100)
+                .hedgingDelayMillis(500)
                 .build();
 
         final WebClient client = client(hedgingNoRetryConfig);
@@ -253,41 +249,36 @@ class RetryingClientWithHedgingTest {
 
         await().untilAsserted(() -> {
             assertThat(server1.getNumRequests()).isOne();
-            assertThat(server2.getNumRequests()).isOne();
             assertThat(server3.getNumRequests()).isOne();
         });
 
         server2.unlatchResponse();
-        Thread.sleep(LOOSING_SERVER_RESPONSE_DELAY_MILLIS);
-        server1.unlatchResponse();
-        server3.unlatchResponse();
 
         await()
                 .untilAsserted(() -> {
-                    assertValidServerRequestContext(server1, 1, true);
-                    assertValidServerRequestContext(server2, 2, false);
-                    assertValidServerRequestContext(server3, 3, true);
-
                     assertValidAggregatedResponse(responseFuture, SERVER2_RESPONSE);
+
                     assertValidClientRequestContext(
                             ctx, GET_VERIFY_RESPONSE_HAS_CONTENT.apply(SERVER2_RESPONSE),
                             VERIFY_REQUEST_CANCELLED,
                             GET_VERIFY_RESPONSE_HAS_CONTENT.apply(SERVER2_RESPONSE),
                             VERIFY_REQUEST_CANCELLED
                     );
+
+                    assertValidServerRequestContext(server1, 1, true);
+                    assertValidServerRequestContext(server2, 2, false);
+                    assertValidServerRequestContext(server3, 3, true);
                 });
     }
 
     @Test
-    void thirdServerWin() throws Exception {
-        when(server1.getHelloService().serve(any(), any())).thenReturn(HttpResponse.of(SERVER1_RESPONSE));
-        when(server2.getHelloService().serve(any(), any())).thenReturn(HttpResponse.of(SERVER2_RESPONSE));
+    void thirdServerWins() throws Exception {
         when(server3.getHelloService().serve(any(), any())).thenReturn(HttpResponse.of(SERVER3_RESPONSE));
 
         final RetryConfig<HttpResponse> hedgingNoRetryConfig = RetryConfig
                 .builder(NO_RETRY_RULE)
                 .maxTotalAttempts(3)
-                .hedgingDelayMillis(10)
+                .hedgingDelayMillis(500)
                 .build();
 
         final WebClient client = client(hedgingNoRetryConfig);
@@ -302,20 +293,12 @@ class RetryingClientWithHedgingTest {
         await().untilAsserted(() -> {
             assertThat(server1.getNumRequests()).isOne();
             assertThat(server2.getNumRequests()).isOne();
-            assertThat(server3.getNumRequests()).isOne();
         });
 
         server3.unlatchResponse();
-        Thread.sleep(LOOSING_SERVER_RESPONSE_DELAY_MILLIS);
-        server1.unlatchResponse();
-        server2.unlatchResponse();
 
         await()
                 .untilAsserted(() -> {
-                    assertValidServerRequestContext(server1, 1, true);
-                    assertValidServerRequestContext(server2, 2, true);
-                    assertValidServerRequestContext(server3, 3, false);
-
                     assertValidAggregatedResponse(responseFuture, SERVER3_RESPONSE);
                     assertValidClientRequestContext(
                             ctx, GET_VERIFY_RESPONSE_HAS_CONTENT.apply(SERVER3_RESPONSE),
@@ -323,16 +306,20 @@ class RetryingClientWithHedgingTest {
                             VERIFY_REQUEST_CANCELLED,
                             GET_VERIFY_RESPONSE_HAS_CONTENT.apply(SERVER3_RESPONSE)
                     );
+
+                    assertValidServerRequestContext(server1, 1, true);
+                    assertValidServerRequestContext(server2, 2, true);
+                    assertValidServerRequestContext(server3, 3, false);
                 });
     }
 
     @Test
-    void noOneWinsPickLastResponse() {
+    void allServerLosePickLastResponse() {
         // todo(szymon): implement
     }
 
     @Test
-    void thirdWinsEvenAfterPerAttemptTimeout() throws Exception {
+    void thirdServerWinsEvenAfterPerAttemptTimeout() throws Exception {
         when(server1.getHelloService().serve(any(), any())).thenReturn(HttpResponse.of(SERVER1_RESPONSE));
         when(server2.getHelloService().serve(any(), any())).thenReturn(HttpResponse.of(SERVER2_RESPONSE));
         when(server3.getHelloService().serve(any(), any())).thenReturn(HttpResponse.of(SERVER3_RESPONSE));
@@ -454,7 +441,9 @@ class RetryingClientWithHedgingTest {
         final RetryConfig<HttpResponse> config = RetryConfig
                 .builder(NO_RETRY_RULE)
                 .maxTotalAttempts(3)
-                .hedgingDelayMillis(100)
+                // Should be long enough so we can complete the second request before we continue issuing
+                // a third request to the third server.
+                .hedgingDelayMillis(500)
                 .build();
 
         final WebClient client = client(config);
@@ -465,6 +454,8 @@ class RetryingClientWithHedgingTest {
             responseFuture = client.get("/hello").aggregate();
             ctx = captor.get();
         }
+
+        await().untilAsserted(() -> assertThat(server1.getNumRequests()).isEqualTo(1));
 
         server2.unlatchResponse();
 
