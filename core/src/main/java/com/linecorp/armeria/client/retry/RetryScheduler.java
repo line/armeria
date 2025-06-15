@@ -266,8 +266,6 @@ class RetryScheduler {
 
                 clearCurrentRetryTask();
 
-                // todo(szymon): Q should we check whether we are too early here?
-
                 retryRunnable.run();
             };
 
