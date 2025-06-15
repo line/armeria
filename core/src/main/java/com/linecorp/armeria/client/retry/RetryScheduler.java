@@ -84,7 +84,7 @@ class RetryScheduler {
             return state == State.OVERTAKEN;
         }
 
-        Consumer<? super Throwable> getexceptionHandler() {
+        Consumer<? super Throwable> getExceptionHandler() {
             return exceptionHandler;
         }
 
@@ -92,6 +92,12 @@ class RetryScheduler {
             return scheduledFuture;
         }
     }
+
+    // todo(szymon) [Q]: make this configurable?
+    // Number of nanoseconds that we allow the retry task to be scheduled earlier than
+    // the earliestNextRetryTimeNanos.
+    // This should avoid unnecessary rescheduling.
+    private static final long RESCHEDULING_OVERTAKING_TOLERANCE_NANOS = TimeUnit.MICROSECONDS.toNanos(500);
 
     private static final Logger logger = LoggerFactory.getLogger(RetryScheduler.class);
 
@@ -177,20 +183,20 @@ class RetryScheduler {
             }
 
             if (retryTaskHandle.isOvertaken()) {
-                retryTaskHandle.getexceptionHandler().accept(
+                retryTaskHandle.getExceptionHandler().accept(
                         new RetrySchedulingException(Type.RETRY_TASK_OVERTAKEN)
                 );
                 return;
             }
 
             // The retry task was cancelled by the user, not by the scheduler.
-            retryTaskHandle.getexceptionHandler().accept(
+            retryTaskHandle.getExceptionHandler().accept(
                     new RetrySchedulingException(Type.RETRY_TASK_CANCELLED));
             return;
         }
 
         if (!retryTaskFuture.isSuccess()) {
-            retryTaskHandle.getexceptionHandler().accept(retryTaskFuture.cause());
+            retryTaskHandle.getExceptionHandler().accept(retryTaskFuture.cause());
         }
     }
 
@@ -223,6 +229,41 @@ class RetryScheduler {
             final Runnable wrappedRetryRunnable = () -> {
                 logger.debug("Retry task starting. Resetting...");
                 // todo(szymon): do sanity check that we are clearing this task (very bad otherwise).
+
+                synchronized (this) {
+                    if (currentRetryTask == null) {
+                        clearCurrentRetryTask();
+                        exceptionHandler.accept(
+                                new IllegalStateException(
+                                        "Currently executing retry task was cleared." +
+                                        " Likely a bug in the retry scheduler."
+                                )
+                        );
+                        return;
+                    }
+
+                    final long taskRunTimeNanos = System.nanoTime();
+
+                    // max to be robust against overflows.
+                    if (Math.max(taskRunTimeNanos, taskRunTimeNanos + RESCHEDULING_OVERTAKING_TOLERANCE_NANOS) <
+                        earliestNextRetryTimeNanos) {
+                        // We are too early to execute the retry task.
+                        logger.debug("Retry task is too early. Rescheduling...");
+
+                        final Runnable currentRetryRunnable = currentRetryTask.getRetryTaskRunnable();
+                        final Consumer<? super Throwable> currentExceptionHandler =
+                                currentRetryTask.getExceptionHandler();
+
+                        clearCurrentRetryTask();
+                        // do not invoke rescheduleCurrentRetryTaskIfTooEarly here as it will not be able
+                        // to cancel us.
+                        scheduleNextRetryTask(currentRetryRunnable,
+                                              earliestNextRetryTimeNanos,
+                                              currentExceptionHandler, false);
+                        return;
+                    }
+                }
+
                 clearCurrentRetryTask();
 
                 // todo(szymon): Q should we check whether we are too early here?
@@ -248,22 +289,30 @@ class RetryScheduler {
         }
     }
 
-    public synchronized void addEarliestNextRetryTimeNanos(long earliestNextRetryTimeNanos) {
+    public synchronized long addEarliestNextRetryTimeNanos(long earliestNextRetryTimeNanos) {
         checkState(earliestNextRetryTimeNanos <= latestNextRetryTimeNanos);
         this.earliestNextRetryTimeNanos = Math.max(this.earliestNextRetryTimeNanos,
                                                    earliestNextRetryTimeNanos);
+
+        return this.earliestNextRetryTimeNanos;
     }
 
     public synchronized void rescheduleCurrentRetryTaskIfTooEarly() {
-        if (currentRetryTask != null) {
-            if (currentRetryTask.retryTimeNanos() < earliestNextRetryTimeNanos) {
-                // Current retry task is going to be executed before the earliestNextRetryTimeNanos so
-                // we need to reschedule it.
+        if (currentRetryTask == null) {
+            return;
+        }
 
-                scheduleNextRetryTask(currentRetryTask.getRetryTaskRunnable(),
-                                      earliestNextRetryTimeNanos,
-                                      currentRetryTask.getexceptionHandler(), true);
-            }
+        if (
+                Math.max(currentRetryTask.retryTimeNanos(),
+                         currentRetryTask.retryTimeNanos() + RESCHEDULING_OVERTAKING_TOLERANCE_NANOS) <
+                earliestNextRetryTimeNanos
+        ) {
+            // Current retry task is going to be executed before the earliestNextRetryTimeNanos so
+            // we need to reschedule it.
+
+            scheduleNextRetryTask(currentRetryTask.getRetryTaskRunnable(),
+                                  earliestNextRetryTimeNanos,
+                                  currentRetryTask.getExceptionHandler(), true);
         }
     }
 

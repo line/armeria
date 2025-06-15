@@ -21,6 +21,7 @@ class RetrySchedulingException extends RuntimeException {
     private final Type type;
 
     enum Type {
+        RETRYING_ALREADY_COMPLETED("Retrying completed"),
         NO_MORE_ATTEMPTS_IN_RETRY("No more attempts available in retry"),
         NO_MORE_ATTEMPTS_IN_BACKOFF("No more attempts available in backoff"),
         DELAY_FROM_BACKOFF_EXCEEDS_RESPONSE_TIMEOUT("Delay from backoff exceeds response timeout"),

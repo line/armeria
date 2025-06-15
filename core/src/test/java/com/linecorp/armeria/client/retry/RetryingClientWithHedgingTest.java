@@ -327,6 +327,11 @@ class RetryingClientWithHedgingTest {
     }
 
     @Test
+    void noOneWinsPickLastResponse() {
+        // todo(szymon): implement
+    }
+
+    @Test
     void thirdWinsEvenAfterPerAttemptTimeout() throws Exception {
         when(server1.getHelloService().serve(any(), any())).thenReturn(HttpResponse.of(SERVER1_RESPONSE));
         when(server2.getHelloService().serve(any(), any())).thenReturn(HttpResponse.of(SERVER2_RESPONSE));

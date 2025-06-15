@@ -343,16 +343,20 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
 
         startRetryAttempt(ctx, attemptCtx, (winningAttemptCtx,
                                             winningAttemptRes) -> {
-                              logger.debug("accepting win for attempt: {}, winningAttemptCtx: {}, ",
-                                           winningAttemptCtx, winningAttemptRes);
                               retryingContext.reqDuplicator().close();
-
                               retryingContext.ctx().logBuilder().endResponseWithChild(winningAttemptCtx.log());
                               retryingContext.resFuture().complete(winningAttemptRes);
                           },
                           (abortingAttemptCtx, cause) -> {
-                              abortAttempt(abortingAttemptCtx,
-                                           cause);
+                              final RequestLogBuilder logBuilder = abortingAttemptCtx.logBuilder();
+                              logBuilder.responseContent(null, null);
+                              logBuilder.responseContentPreview(null);
+
+                              if (cause != null) {
+                                  attemptCtx.cancel(cause);
+                              } else {
+                                  attemptCtx.cancel();
+                              }
                           }
         );
 
@@ -396,17 +400,19 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
 
         if (hedgingDelayMillis >= 0) {
             final Backoff hedgingDelayBackoff = Backoff.fixed(hedgingDelayMillis);
-            logger.debug("Scheduling hedging with backoff: {}", hedgingDelayBackoff);
             scheduleNextRetry(ctx, () -> doExecute0(retryingContext),
                               hedgingDelayBackoff,
                               cause -> handleExceptionAfterScheduling(retryingContext, cause));
         }
     }
 
-    private void handleExceptionAfterScheduling(
+    private static void handleExceptionAfterScheduling(
             RetryingContext retryingContext, Throwable cause) {
+        logger.debug("handleExceptionAfterScheduling", cause);
         if (cause instanceof RetrySchedulingException) {
             switch (((RetrySchedulingException) cause).getType()) {
+                case RETRYING_ALREADY_COMPLETED:
+                    return;
                 case NO_MORE_ATTEMPTS_IN_RETRY:
                 case NO_MORE_ATTEMPTS_IN_BACKOFF:
                 case DELAY_FROM_BACKOFF_EXCEEDS_RESPONSE_TIMEOUT:
@@ -646,21 +652,6 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
         }
 
         completeRetryAttempt(retryingContext.ctx(), attemptCtx, attemptRes, backoff == null);
-    }
-
-    private static void abortAttempt(ClientRequestContext attemptCtx,
-                                     @Nullable Throwable cause) {
-        logger.debug("aborting attempt. attemptCtx: {}, cause: {}", attemptCtx, cause);
-        // Set response content with null to make sure that the log is complete.
-        final RequestLogBuilder logBuilder = attemptCtx.logBuilder();
-        logBuilder.responseContent(null, null);
-        logBuilder.responseContentPreview(null);
-
-        if (cause != null) {
-            attemptCtx.cancel(cause);
-        } else {
-            attemptCtx.cancel();
-        }
     }
 
     private static long getRetryAfterMillis(ClientRequestContext ctx) {

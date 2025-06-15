@@ -192,8 +192,8 @@ public final class RetryingRpcClient extends AbstractRetryingClient<RpcRequest, 
         }
 
         startRetryAttempt(ctx, attemptCtx, (winningAttemptCtx, winningAttemptRes) -> {
+            ctx.logBuilder().endResponseWithChild(winningAttemptCtx.log());
             final HttpRequest actualHttpReq = winningAttemptCtx.request();
-
             if (actualHttpReq != null) {
                 ctx.updateRequest(actualHttpReq);
             }
@@ -215,8 +215,8 @@ public final class RetryingRpcClient extends AbstractRetryingClient<RpcRequest, 
                         scheduleNextRetry(ctx,
                                           () -> doExecute0(ctx, req, returnedRes, returnedResFuture),
                                           backoff,
-                                          cause0 -> completeRetryingExceptionally(ctx, returnedResFuture,
-                                                                                  cause0, false));
+                                          cause0 -> handleExceptionAfterScheduling(ctx, returnedResFuture,
+                                                                                   cause0));
                     }
 
                     completeRetryAttempt(ctx, attemptCtx, attemptRes, backoff == null);
@@ -238,10 +238,12 @@ public final class RetryingRpcClient extends AbstractRetryingClient<RpcRequest, 
         }
     }
 
-    private void handleExceptionAfterScheduling(
+    private static void handleExceptionAfterScheduling(
             ClientRequestContext ctx, CompletableFuture<RpcResponse> returnedResFuture, Throwable cause) {
         if (cause instanceof RetrySchedulingException) {
             switch (((RetrySchedulingException) cause).getType()) {
+                case RETRYING_ALREADY_COMPLETED:
+                    return;
                 case NO_MORE_ATTEMPTS_IN_RETRY:
                 case NO_MORE_ATTEMPTS_IN_BACKOFF:
                 case DELAY_FROM_BACKOFF_EXCEEDS_RESPONSE_TIMEOUT:
