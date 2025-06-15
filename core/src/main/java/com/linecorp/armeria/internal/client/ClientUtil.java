@@ -239,7 +239,6 @@ public final class ClientUtil {
         // we are deriving from.
         // For that we copy over all log properties from the parent log to the derived log
         // and add future actions to copy over content (previews).
-        // We are doing this because
         final RequestLogAccess parentLog = ctx.log();
         final RequestLog partial = parentLog.partial();
         final RequestLogBuilder logBuilder = derived.logBuilder();
