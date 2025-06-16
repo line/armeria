@@ -544,6 +544,20 @@ class RetryingClientWithHedgingTest {
         assertValidServerRequestContext(server3, 3, true);
     }
 
+    // todo(szymon): add test to verify that we are respecting the maximum number of attempts
+
+    /*
+        todo(szymon):
+          Add a test verifing following behaviour given by gRPC:
+          "If server pushback that specifies not to retry is received in response to a hedged request,
+          no further hedged requests should be issued for the call."
+          For us the Retry-Header as our pushback mechanism. Negative or not parsable it should be interpreted
+          as an explicit do not retry (like gRPC does for grpc-retry-pushback-ms):
+          https://grpc.io/docs/guides/request-hedging/#server-pushback
+     */
+
+    // todo(szymon): test being able to set different hedging delays for different servers
+
     private static WebClientBuilder clientBuilder() {
         return WebClient.builder(SessionProtocol.H2C,
                                  EndpointGroup.of(EndpointSelectionStrategy.roundRobin(),
