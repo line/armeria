@@ -14,8 +14,6 @@
  * under the License.
  */
 
-import { listHeaders } from './types';
-
 function doPrettify(ch: string, indentation: number): [string, number] {
   let prettified;
   let newIndentation = indentation;
