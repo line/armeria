@@ -179,13 +179,13 @@ public abstract class AbstractRetryingClient<I extends Request, O extends Respon
      */
     protected void startRetryAttempt(ClientRequestContext ctx,
                                      ClientRequestContext attemptCtx,
-                                     BiConsumer<ClientRequestContext, O> onAcceptHandler,
+                                     BiConsumer<ClientRequestContext, O> onWinHandler,
                                      BiConsumer<ClientRequestContext, @Nullable Throwable>
                                              onAttemptAbortedHandler
     ) {
         requireNonNull(ctx, "ctx");
         requireNonNull(attemptCtx, "attemptCtx");
-        requireNonNull(onAcceptHandler, "onAcceptHandler");
+        requireNonNull(onWinHandler, "onWinHandler");
         requireNonNull(onAttemptAbortedHandler, "onAttemptAbortedHandler");
 
         final State<O> state = state(ctx);
@@ -210,7 +210,7 @@ public abstract class AbstractRetryingClient<I extends Request, O extends Respon
                 assert winningAttemptRes != null;
 
                 if (attemptCtx == winningAttemptCtx) {
-                    onAcceptHandler.accept(winningAttemptCtx, winningAttemptRes);
+                    onWinHandler.accept(winningAttemptCtx, winningAttemptRes);
                     return null;
                 }
 
@@ -223,9 +223,9 @@ public abstract class AbstractRetryingClient<I extends Request, O extends Respon
     /**
      * todo(szymon): [doc].
      */
-    protected static <O extends Response> void completeRetryAttempt(ClientRequestContext ctx,
-                                                                    ClientRequestContext attemptCtx,
-                                                                    O attemptRes, boolean isWinning) {
+    protected void completeRetryAttempt(ClientRequestContext ctx,
+                                        ClientRequestContext attemptCtx,
+                                        O attemptRes, boolean isWinning) {
         if (isRetryingComplete(ctx)) {
             // The complete handler of this attempt was already executed (provided that `attemptCtx`
             // was registered with `startRetryAttempt` as by the contract of `completeRetryAttempt`.
@@ -306,7 +306,7 @@ public abstract class AbstractRetryingClient<I extends Request, O extends Respon
         // minimum retry delay from the server.
         earliestRetryTimeNanos = scheduler.addEarliestNextRetryTimeNanos(earliestRetryTimeNanos);
 
-        final int attemptNoWithBackoff = state.nextAttemptNoWithBackoff(backoff);
+        final int attemptNoWithBackoff = state.numAttemptsSoFarWithBackoff(backoff);
         if (attemptNoWithBackoff < 0) {
             scheduler.rescheduleCurrentRetryTaskIfTooEarly();
             actionOnException.accept(
@@ -333,7 +333,9 @@ public abstract class AbstractRetryingClient<I extends Request, O extends Respon
             return;
         }
 
-        state.startRetryTask();
+        synchronized (state) {
+            state.startRetryTask();
+        }
         scheduler.schedule(() -> {
 
             final int thisAttemptNo;
@@ -574,7 +576,7 @@ public abstract class AbstractRetryingClient<I extends Request, O extends Respon
             numScheduledAttempts--;
         }
 
-        int nextAttemptNoWithBackoff(Backoff backoff) {
+        int numAttemptsSoFarWithBackoff(Backoff backoff) {
             if (totalAttemptNo >= config.maxTotalAttempts()) {
                 return -1;
             }
