@@ -125,8 +125,6 @@ class RetryingRpcClientWithHedgingTest {
         }
     }
 
-    private static final long LOOSING_SERVER_RESPONSE_DELAY_MILLIS = 50;
-
     private static final String RETRIABLE_RESPONSE = "please-retry-thanks";
     private static final String SERVER1_RESPONSE = "s1";
     private static final String SERVER2_RESPONSE = "s2#";
@@ -295,7 +293,50 @@ class RetryingRpcClientWithHedgingTest {
 
     @Test
     void thirdServerWinsEvenAfterPerAttemptTimeout() throws Exception {
-        // todo(szymon): implement
+        when(server3.getServiceHandler().hello(anyString())).thenReturn(SERVER3_RESPONSE);
+
+        final RetryConfig<RpcResponse> hedgingNoRetryConfig = RetryConfig
+                .builderForRpc(
+                        RetryRule.builder().onTimeoutException().thenBackoff(Backoff.fixed(10_000))) // should
+                // be always overtaken by hedging task
+                .maxTotalAttempts(3)
+                .responseTimeoutMillisForEachAttempt(100)
+                .hedgingDelayMillis(200)
+                .build();
+
+        final HelloService.AsyncIface client = client(hedgingNoRetryConfig);
+
+        final CompletableFuture<String> responseFuture;
+        final ClientRequestContext ctx;
+        try (ClientRequestContextCaptor captor = Clients.newContextCaptor()) {
+            responseFuture = asyncHelloWith(client);
+            ctx = captor.get();
+        }
+
+        await().pollInterval(25, TimeUnit.MILLISECONDS).untilAsserted(() -> {
+            assertThat(server3.getNumRequests()).isOne();
+        });
+
+        // As we know that the third server received a request, we know that
+        // we are at >= T + 400. This means that:
+        server1.unlatchResponse(); // issued at T (timed out)
+        server2.unlatchResponse(); // issued at T + 200 (timed out)
+        server3.unlatchResponse(); // issued at T + 400 (hopefully not timed out yet)
+
+        await().untilAsserted(() -> {
+            assertThat(responseFuture.get()).isEqualTo(SERVER3_RESPONSE);
+
+            assertValidServerRequestContext(server1, 1, true);
+            assertValidServerRequestContext(server2, 2, true);
+            assertValidServerRequestContext(server3, 3, false);
+
+            assertValidClientRequestContext(
+                    ctx, GET_VERIFY_RESPONSE_HAS_CONTENT.apply(SERVER3_RESPONSE),
+                    VERIFY_RESPONSE_TIMEOUT,
+                    VERIFY_RESPONSE_TIMEOUT,
+                    GET_VERIFY_RESPONSE_HAS_CONTENT.apply(SERVER3_RESPONSE)
+            );
+        });
     }
 
     @Test

@@ -153,8 +153,6 @@ class RetryingClientWithHedgingTest {
         }
     }
 
-    private static final long LOOSING_SERVER_RESPONSE_DELAY_MILLIS = 1000;
-
     private static final String SERVER1_RESPONSE = "s1";
     private static final String SERVER2_RESPONSE = "s2#";
     private static final String SERVER3_RESPONSE = "s3##";
@@ -346,15 +344,14 @@ class RetryingClientWithHedgingTest {
         }
 
         await().pollInterval(25, TimeUnit.MILLISECONDS).untilAsserted(() -> {
-            assertThat(server1.getNumRequests()).isOne();
-            assertThat(server2.getNumRequests()).isOne();
             assertThat(server3.getNumRequests()).isOne();
         });
 
-        // Let the third server win
-        server1.unlatchResponse(); // issued at T
-        server2.unlatchResponse(); // issued at T + 200 (request 1 timed out)
-        server3.unlatchResponse(); // issued at T + 400 (request 2 timed out)
+        // As we know that the third server received a request, we know that
+        // we are at >= T + 400. This means that:
+        server1.unlatchResponse(); // issued at T (timed out)
+        server2.unlatchResponse(); // issued at T + 200 (timed out)
+        server3.unlatchResponse(); // issued at T + 400 (hopefully not timed out yet)
 
         await()
                 .untilAsserted(() -> {
