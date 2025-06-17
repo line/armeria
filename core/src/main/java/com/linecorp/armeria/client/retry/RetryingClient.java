@@ -249,7 +249,7 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
         if (ctx.exchangeType().isRequestStreaming()) {
             final HttpRequestDuplicator reqDuplicator = req.toDuplicator(ctx.eventLoop().withoutContext(), 0);
             doExecute0(new RetryingContext(mappedRetryConfig(ctx), ctx, reqDuplicator, req, res,
-                                           responseFuture));
+                                           responseFuture), 1);
         } else {
             req.aggregate(AggregationOptions.usePooledObjects(ctx.alloc(), ctx.eventLoop()))
                .handle((agg, cause) -> {
@@ -258,7 +258,7 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
                    } else {
                        final HttpRequestDuplicator reqDuplicator = new AggregatedHttpRequestDuplicator(agg);
                        doExecute0(new RetryingContext(mappedRetryConfig(ctx), ctx, reqDuplicator, req, res,
-                                                      responseFuture));
+                                                      responseFuture), 1);
                    }
                    return null;
                });
@@ -267,7 +267,7 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
         return res;
     }
 
-    private void doExecute0(RetryingContext retryingContext) {
+    private void doExecute0(RetryingContext retryingContext, int attemptNo) {
 
         final RetryConfig<HttpResponse> config = retryingContext.config();
         final ClientRequestContext ctx = retryingContext.ctx();
@@ -277,8 +277,7 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
 
         // todo(szymon): we need to inject the attempt number as there may be concurrent attempts
         //   starting and acquiring an attempt number.
-        final int totalAttempts = getTotalAttempts(ctx);
-        final boolean initialAttempt = totalAttempts <= 1;
+        final boolean initialAttempt = attemptNo <= 1;
         // The request or attemptRes has been aborted by the client before it receives a attemptRes,
         // so stop retrying.
         if (originalReq.whenComplete().isCompletedExceptionally()) {
@@ -312,7 +311,7 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
             attemptReq = rootReqDuplicator.duplicate();
         } else {
             final RequestHeadersBuilder newHeaders = originalReq.headers().toBuilder();
-            newHeaders.setInt(ARMERIA_RETRY_COUNT, totalAttempts - 1);
+            newHeaders.setInt(ARMERIA_RETRY_COUNT, attemptNo - 1);
             attemptReq = rootReqDuplicator.duplicate(newHeaders.build());
         }
 
@@ -400,7 +399,7 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
 
         if (hedgingDelayMillis >= 0) {
             final Backoff hedgingDelayBackoff = Backoff.fixed(hedgingDelayMillis);
-            scheduleNextRetry(ctx, () -> doExecute0(retryingContext),
+            scheduleNextRetry(ctx, hedgingAttemptNo -> doExecute0(retryingContext, hedgingAttemptNo),
                               hedgingDelayBackoff,
                               cause -> handleExceptionAfterScheduling(retryingContext, cause));
         }
@@ -645,7 +644,7 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
         if (backoff != null) {
             final long millisAfter = useRetryAfter ? getRetryAfterMillis(attemptCtx) : -1;
             scheduleNextRetry(retryingContext.ctx(),
-                              () -> doExecute0(retryingContext),
+                              attemptNo -> doExecute0(retryingContext, attemptNo),
                               backoff,
                               millisAfter,
                               cause -> handleExceptionAfterScheduling(retryingContext, cause));

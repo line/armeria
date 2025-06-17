@@ -145,14 +145,14 @@ public final class RetryingRpcClient extends AbstractRetryingClient<RpcRequest, 
     protected RpcResponse doExecute(ClientRequestContext ctx, RpcRequest req) throws Exception {
         final CompletableFuture<RpcResponse> returnedResFuture = new CompletableFuture<>();
         final RpcResponse res = RpcResponse.from(returnedResFuture);
-        doExecute0(ctx, req, res, returnedResFuture);
+        doExecute0(ctx, req, res, returnedResFuture, 1);
         return res;
     }
 
     private void doExecute0(ClientRequestContext ctx, RpcRequest req,
-                            RpcResponse returnedRes, CompletableFuture<RpcResponse> returnedResFuture) {
-        final int totalAttempts = getTotalAttempts(ctx);
-        final boolean initialAttempt = totalAttempts <= 1;
+                            RpcResponse returnedRes, CompletableFuture<RpcResponse> returnedResFuture,
+                            int attemptNo) {
+        final boolean initialAttempt = attemptNo <= 1;
         if (returnedRes.isDone()) {
             // The response has been cancelled by the client before it receives a response, so stop retrying.
             completeRetryingExceptionally(ctx, returnedResFuture, new CancellationException(
@@ -169,7 +169,7 @@ public final class RetryingRpcClient extends AbstractRetryingClient<RpcRequest, 
 
         if (!initialAttempt) {
             attemptCtx.mutateAdditionalRequestHeaders(
-                    mutator -> mutator.add(ARMERIA_RETRY_COUNT, StringUtil.toString(totalAttempts - 1)));
+                    mutator -> mutator.add(ARMERIA_RETRY_COUNT, StringUtil.toString(attemptNo - 1)));
         }
 
         final RpcResponse attemptRes;
@@ -218,7 +218,8 @@ public final class RetryingRpcClient extends AbstractRetryingClient<RpcRequest, 
 
                     if (backoff != null) {
                         scheduleNextRetry(ctx,
-                                          () -> doExecute0(ctx, req, returnedRes, returnedResFuture),
+                                          nextAttemptNo -> doExecute0(ctx, req, returnedRes,
+                                                                      returnedResFuture, nextAttemptNo),
                                           backoff,
                                           cause0 -> handleExceptionAfterScheduling(ctx, returnedResFuture,
                                                                                    cause0));
@@ -237,7 +238,9 @@ public final class RetryingRpcClient extends AbstractRetryingClient<RpcRequest, 
 
         if (hedgingDelayMillis >= 0) {
             final Backoff hedgingBackoff = Backoff.fixed(hedgingDelayMillis);
-            scheduleNextRetry(ctx, () -> doExecute0(ctx, req, returnedRes, returnedResFuture),
+            scheduleNextRetry(ctx, hedgingAttemptNo ->
+                                      doExecute0(ctx, req, returnedRes, returnedResFuture,
+                                                 hedgingAttemptNo),
                               hedgingBackoff,
                               cause -> handleExceptionAfterScheduling(ctx, returnedResFuture, cause));
         }

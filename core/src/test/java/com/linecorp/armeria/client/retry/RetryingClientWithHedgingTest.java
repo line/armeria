@@ -23,6 +23,9 @@ import static org.assertj.core.api.Assertions.fail;
 import static org.awaitility.Awaitility.await;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.nio.charset.Charset;
@@ -106,9 +109,13 @@ class RetryingClientWithHedgingTest {
                                // We are using a blocking task executor to not block the event loop so we are
                                // able to receive request cancellations.
                                ctx.blockingTaskExecutor().execute(() -> {
-                                   numRequests.incrementAndGet();
+                                   if (numRequests.incrementAndGet() != 1) {
+                                       responseFuture.completeExceptionally(new IllegalStateException(
+                                               "Expected only one request, but got: " + numRequests.get()));
+                                       return;
+                                   }
+
                                    try {
-                                       logger.debug("Got a request. Waiting for the latch to be released.");
                                        responseLatch.await();
                                    } catch (InterruptedException e) {
                                        responseFuture.completeExceptionally(e);
@@ -312,8 +319,153 @@ class RetryingClientWithHedgingTest {
     }
 
     @Test
-    void allServerLosePickLastResponse() {
-        // todo(szymon): implement
+    void respectsShorterBackoffTriggeringFasterRetry() throws Exception {
+        when(server1.getHelloService().serve(any(), any()))
+                .thenReturn(HttpResponse.of(HttpStatus.TOO_MANY_REQUESTS, MediaType.PLAIN_TEXT,
+                                            SERVER1_RESPONSE));
+        when(server2.getHelloService().serve(any(), any()))
+                .thenReturn(HttpResponse.of(HttpStatus.TOO_MANY_REQUESTS, MediaType.PLAIN_TEXT,
+                                            SERVER2_RESPONSE));
+        when(server3.getHelloService().serve(any(), any()))
+                .thenReturn(HttpResponse.of(HttpStatus.TOO_MANY_REQUESTS, MediaType.PLAIN_TEXT,
+                                            SERVER3_RESPONSE));
+
+        class SpyableAttemptLimitingBackoff implements Backoff {
+            private final Backoff delegate = Backoff.withoutDelay().withMaxAttempts(2);
+
+            @Override
+            public long nextDelayMillis(int numAttemptsSoFar) {
+                return delegate.nextDelayMillis(numAttemptsSoFar);
+            }
+        }
+
+        final Backoff backoff = spy(new SpyableAttemptLimitingBackoff());
+
+        final RetryConfig<HttpResponse> config = RetryConfig
+                .builder(RetryRule.of(
+                        RetryRule
+                                .builder()
+                                .onStatus(HttpStatus.TOO_MANY_REQUESTS)
+                                .thenBackoff(backoff),
+                        NO_RETRY_RULE
+                ))
+                .maxTotalAttempts(3)
+                .hedgingDelayMillis(500)
+                .build();
+
+        final WebClient client = client(config);
+        final CompletableFuture<AggregatedHttpResponse> responseFuture;
+        final ClientRequestContext ctx;
+        try (ClientRequestContextCaptor captor = Clients.newContextCaptor()) {
+            responseFuture = client.get("/hello").aggregate();
+            ctx = captor.get();
+        }
+
+        server2.unlatchResponse();
+        server3.unlatchResponse();
+
+        // 500ms for the hedging request to server 2 and 250ms tolerance.
+        await().atMost(500 + 250, TimeUnit.MILLISECONDS).untilAsserted(() -> {
+            assertThat(server1.getNumRequests()).isOne();
+            // Server 1 is blocking, after 500ms hedging request to server 2 will come to the rescue.
+            assertThat(server2.getNumRequests()).isOne();
+            // Server 2 responds immediately, backoff will order retry immediately.
+            // This cancels the hedging request that came with the request to server 2.
+            assertThat(server3.getNumRequests()).isOne();
+            // The hedged request to server 3 will not be issued because we are out of total attempts.
+            // Server 3 responds immediately, but we will not continue as we are out of attempts.
+
+            verify(backoff, times(1)).nextDelayMillis(1);
+        });
+
+        // Should be enough for the client to receive and process the two responses from server
+        // 2 and server 3.
+        Thread.sleep(500);
+        // Server 1 answers, again with TOO_MANY_REQUESTS, and it tries to retry.
+        // We exceeded the number of attempts _of the backoff_ so we should stop retrying and take the last
+        // response which is the response from server 1.
+        server1.unlatchResponse();
+
+        await().untilAsserted(() -> {
+            assertValidAggregatedResponse(responseFuture, HttpStatus.TOO_MANY_REQUESTS, SERVER1_RESPONSE);
+            assertValidClientRequestContext(
+                    ctx, GET_VERIFY_RESPONSE_HAS_CONTENT_AND_STATUS.apply(SERVER1_RESPONSE,
+                                                                          HttpStatus.TOO_MANY_REQUESTS),
+                    GET_VERIFY_RESPONSE_HAS_CONTENT_AND_STATUS.apply(SERVER1_RESPONSE,
+                                                                     HttpStatus.TOO_MANY_REQUESTS),
+                    GET_VERIFY_RESPONSE_HAS_CONTENT_AND_STATUS.apply(SERVER2_RESPONSE,
+                                                                     HttpStatus.TOO_MANY_REQUESTS),
+                    GET_VERIFY_RESPONSE_HAS_CONTENT_AND_STATUS.apply(SERVER3_RESPONSE,
+                                                                     HttpStatus.TOO_MANY_REQUESTS)
+            );
+
+            assertValidServerRequestContext(server1, 1, false);
+            assertValidServerRequestContext(server2, 2, false);
+            assertValidServerRequestContext(server3, 3, false);
+        });
+    }
+
+    @Test
+    void allServerLosePickLastResponse() throws Exception {
+        when(server1.getHelloService().serve(any(), any()))
+                .thenReturn(HttpResponse.of(HttpStatus.TOO_MANY_REQUESTS, MediaType.PLAIN_TEXT,
+                                            SERVER1_RESPONSE));
+        when(server2.getHelloService().serve(any(), any()))
+                .thenReturn(HttpResponse.of(HttpStatus.TOO_MANY_REQUESTS, MediaType.PLAIN_TEXT,
+                                            SERVER2_RESPONSE));
+        when(server3.getHelloService().serve(any(), any()))
+                .thenReturn(HttpResponse.of(HttpStatus.TOO_MANY_REQUESTS, MediaType.PLAIN_TEXT,
+                                            SERVER3_RESPONSE));
+
+        final RetryConfig<HttpResponse> config = RetryConfig
+                .builder(RetryRule.of(
+                        RetryRule
+                                .builder()
+                                .onStatus(HttpStatus.TOO_MANY_REQUESTS)
+                                .thenBackoff(Backoff.fixed(10_000)),
+                        NO_RETRY_RULE
+                ))
+                .maxTotalAttempts(3)
+                .hedgingDelayMillis(500)
+                .build();
+
+        final WebClient client = client(config);
+        final CompletableFuture<AggregatedHttpResponse> responseFuture;
+        final ClientRequestContext ctx;
+        try (ClientRequestContextCaptor captor = Clients.newContextCaptor()) {
+            responseFuture = client.get("/hello").aggregate();
+            ctx = captor.get();
+        }
+
+        server1.unlatchResponse();
+        server2.unlatchResponse();
+        server3.unlatchResponse();
+
+        await().untilAsserted(() -> {
+            assertValidAggregatedResponse(responseFuture, HttpStatus.TOO_MANY_REQUESTS, SERVER3_RESPONSE);
+            assertValidClientRequestContext(ctx,
+                                            GET_VERIFY_RESPONSE_HAS_CONTENT_AND_STATUS.apply(
+                                                    SERVER3_RESPONSE,
+                                                    HttpStatus.TOO_MANY_REQUESTS
+                                            ),
+                                            GET_VERIFY_RESPONSE_HAS_CONTENT_AND_STATUS.apply(
+                                                    SERVER1_RESPONSE,
+                                                    HttpStatus.TOO_MANY_REQUESTS
+                                            ),
+                                            GET_VERIFY_RESPONSE_HAS_CONTENT_AND_STATUS.apply(
+                                                    SERVER2_RESPONSE,
+                                                    HttpStatus.TOO_MANY_REQUESTS
+                                            ),
+                                            GET_VERIFY_RESPONSE_HAS_CONTENT_AND_STATUS.apply(
+                                                    SERVER3_RESPONSE,
+                                                    HttpStatus.TOO_MANY_REQUESTS
+                                            )
+            );
+
+            assertValidServerRequestContext(server1, 1, false);
+            assertValidServerRequestContext(server2, 2, false);
+            assertValidServerRequestContext(server3, 3, false);
+        });
     }
 
     @Test
@@ -540,18 +692,6 @@ class RetryingClientWithHedgingTest {
         assertValidServerRequestContext(server2, 2, true);
         assertValidServerRequestContext(server3, 3, true);
     }
-
-    // todo(szymon): add test to verify that we are respecting the maximum number of attempts
-
-    /*
-        todo(szymon):
-          Add a test verifing following behaviour given by gRPC:
-          "If server pushback that specifies not to retry is received in response to a hedged request,
-          no further hedged requests should be issued for the call."
-          For us the Retry-Header as our pushback mechanism. Negative or not parsable it should be interpreted
-          as an explicit do not retry (like gRPC does for grpc-retry-pushback-ms):
-          https://grpc.io/docs/guides/request-hedging/#server-pushback
-     */
 
     // todo(szymon): test being able to set different hedging delays for different servers
 

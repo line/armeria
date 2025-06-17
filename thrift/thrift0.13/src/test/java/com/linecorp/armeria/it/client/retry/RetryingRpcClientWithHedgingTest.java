@@ -43,6 +43,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
+import org.mockito.Mockito;
 
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.ClientRequestContextCaptor;
@@ -131,19 +132,6 @@ class RetryingRpcClientWithHedgingTest {
     private static final String SERVER3_RESPONSE = "s3##";
 
     private static final RetryRule NO_RETRY_RULE = RetryRule.builder().thenNoRetry();
-    private static final RetryRuleWithContent<RpcResponse> RETRY_RETRIABLE_RESPONSES_RULE =
-            RetryRuleWithContent
-                    .<RpcResponse>builder()
-                    .onResponse((ctx, response) -> {
-                        return response.whenComplete().handle(
-                                (responseData, cause) -> {
-                                    assertThat(cause).isNull();
-                                    assertThat(responseData).isInstanceOf(String.class);
-                                    return responseData.equals(RETRIABLE_RESPONSE);
-                                }
-                        );
-                    })
-                    .thenBackoff(Backoff.withoutDelay());
 
     @RegisterExtension
     private static final TestServer server1 = new TestServer();
@@ -287,8 +275,107 @@ class RetryingRpcClientWithHedgingTest {
     }
 
     @Test
-    void allServerLosePickLastResponse() {
-        // todo(szymon): implement
+    void respectsShorterBackoffTriggeringFasterRetry() throws Exception {
+        when(server1.getServiceHandler().hello(anyString())).thenReturn(RETRIABLE_RESPONSE);
+        when(server2.getServiceHandler().hello(anyString())).thenReturn(RETRIABLE_RESPONSE);
+        when(server3.getServiceHandler().hello(anyString())).thenReturn(RETRIABLE_RESPONSE);
+
+        class SpyableAttemptLimitingBackoff implements Backoff {
+            private final Backoff delegate = Backoff.withoutDelay().withMaxAttempts(2);
+
+            @Override
+            public long nextDelayMillis(int numAttemptsSoFar) {
+                return delegate.nextDelayMillis(numAttemptsSoFar);
+            }
+        }
+
+        final Backoff backoff = Mockito.spy(new SpyableAttemptLimitingBackoff());
+
+        final RetryConfig<RpcResponse> config = RetryConfig.builderForRpc(
+                                                                   getRetryRetriableResponsesRule(backoff))
+                                                           .maxTotalAttempts(3)
+                                                           .hedgingDelayMillis(500)
+                                                           .build();
+
+        final HelloService.AsyncIface client = client(config);
+        final CompletableFuture<String> responseFuture;
+        final ClientRequestContext ctx;
+        try (ClientRequestContextCaptor captor = Clients.newContextCaptor()) {
+            responseFuture = asyncHelloWith(client);
+            ctx = captor.get();
+        }
+
+        server2.unlatchResponse();
+        server3.unlatchResponse();
+
+        // 500ms for the hedging request to server 2 and 250ms tolerance.
+        await().atMost(500 + 250, TimeUnit.MILLISECONDS).untilAsserted(() -> {
+            assertThat(server1.getNumRequests()).isEqualTo(1);
+            assertThat(server2.getNumRequests()).isEqualTo(1);
+            assertThat(server3.getNumRequests()).isEqualTo(1);
+            Mockito.verify(backoff, Mockito.times(1)).nextDelayMillis(1);
+        });
+
+        Thread.sleep(500);
+        server1.unlatchResponse();
+
+        await().untilAsserted(() -> {
+            assertThat(responseFuture.get()).isEqualTo(RETRIABLE_RESPONSE);
+            assertValidClientRequestContext(
+                    ctx,
+                    GET_VERIFY_RESPONSE_HAS_CONTENT.apply(RETRIABLE_RESPONSE),
+                    GET_VERIFY_RESPONSE_HAS_CONTENT.apply(RETRIABLE_RESPONSE),
+                    GET_VERIFY_RESPONSE_HAS_CONTENT.apply(RETRIABLE_RESPONSE),
+                    GET_VERIFY_RESPONSE_HAS_CONTENT.apply(RETRIABLE_RESPONSE)
+            );
+            assertValidServerRequestContext(server1, 1, false);
+            assertValidServerRequestContext(server2, 2, false);
+            assertValidServerRequestContext(server3, 3, false);
+        });
+    }
+
+    @Test
+    void allServerLosePickLastResponse() throws Exception {
+        when(server1.getServiceHandler().hello(anyString())).thenReturn(RETRIABLE_RESPONSE);
+        when(server2.getServiceHandler().hello(anyString())).thenReturn(RETRIABLE_RESPONSE);
+        when(server3.getServiceHandler().hello(anyString())).thenReturn(RETRIABLE_RESPONSE);
+
+        final RetryConfig<RpcResponse> config = RetryConfig.builderForRpc(
+                                                                   getRetryRetriableResponsesRule(
+                                                                           Backoff.fixed(10_000)
+                                                                   )
+                                                           )
+                                                           .maxTotalAttempts(3)
+                                                           .hedgingDelayMillis(0)
+                                                           .build();
+
+        final HelloService.AsyncIface client = client(config);
+        final CompletableFuture<String> responseFuture;
+        final ClientRequestContext ctx;
+        try (ClientRequestContextCaptor captor = Clients.newContextCaptor()) {
+            responseFuture = asyncHelloWith(client);
+            ctx = captor.get();
+        }
+
+        server1.unlatchResponse();
+        server2.unlatchResponse();
+        server3.unlatchResponse();
+
+        await().untilAsserted(() -> {
+            assertThat(responseFuture.get()).isEqualTo(RETRIABLE_RESPONSE);
+
+            assertValidServerRequestContext(server1, 1, false);
+            assertValidServerRequestContext(server2, 2, false);
+            assertValidServerRequestContext(server3, 3, false);
+
+            assertValidClientRequestContext(
+                    ctx,
+                    GET_VERIFY_RESPONSE_HAS_CONTENT.apply(RETRIABLE_RESPONSE),
+                    GET_VERIFY_RESPONSE_HAS_CONTENT.apply(RETRIABLE_RESPONSE),
+                    GET_VERIFY_RESPONSE_HAS_CONTENT.apply(RETRIABLE_RESPONSE),
+                    GET_VERIFY_RESPONSE_HAS_CONTENT.apply(RETRIABLE_RESPONSE)
+            );
+        });
     }
 
     @Test
@@ -345,7 +432,11 @@ class RetryingRpcClientWithHedgingTest {
         when(server2.getServiceHandler().hello(anyString())).thenReturn(RETRIABLE_RESPONSE);
         when(server3.getServiceHandler().hello(anyString())).thenReturn(SERVER3_RESPONSE);
 
-        final RetryConfig<RpcResponse> config = RetryConfig.builderForRpc(RETRY_RETRIABLE_RESPONSES_RULE)
+        final RetryConfig<RpcResponse> config = RetryConfig.builderForRpc(
+                                                                   getRetryRetriableResponsesRule(
+                                                                           Backoff.withoutDelay()
+                                                                   )
+                                                           )
                                                            .maxTotalAttempts(3)
                                                            .hedgingDelayMillis(10)
                                                            .build();
@@ -530,6 +621,21 @@ class RetryingRpcClientWithHedgingTest {
                             .path("/thrift")
                             .rpcDecorator(RetryingRpcClient.builder(config).newDecorator())
                             .build(HelloService.AsyncIface.class);
+    }
+
+    private static RetryRuleWithContent<RpcResponse> getRetryRetriableResponsesRule(Backoff backoff) {
+        return RetryRuleWithContent
+                .<RpcResponse>builder()
+                .onResponse((ctx, response) -> {
+                    return response.whenComplete().handle(
+                            (responseData, cause) -> {
+                                assertThat(cause).isNull();
+                                assertThat(responseData).isInstanceOf(String.class);
+                                return responseData.equals(RETRIABLE_RESPONSE);
+                            }
+                    );
+                })
+                .thenBackoff(backoff);
     }
 
     private interface RequestLogVerifier extends Consumer<RequestLog> {}

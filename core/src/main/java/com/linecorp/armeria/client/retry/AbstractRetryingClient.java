@@ -180,7 +180,8 @@ public abstract class AbstractRetryingClient<I extends Request, O extends Respon
     protected void startRetryAttempt(ClientRequestContext ctx,
                                      ClientRequestContext attemptCtx,
                                      BiConsumer<ClientRequestContext, O> onAcceptHandler,
-                                     BiConsumer<ClientRequestContext, @Nullable Throwable> onAttemptAbortedHandler
+                                     BiConsumer<ClientRequestContext, @Nullable Throwable>
+                                             onAttemptAbortedHandler
     ) {
         requireNonNull(ctx, "ctx");
         requireNonNull(attemptCtx, "attemptCtx");
@@ -231,11 +232,13 @@ public abstract class AbstractRetryingClient<I extends Request, O extends Respon
             return;
         }
 
-        synchronized (state(ctx)) {
-            state(ctx).completeAttempt(attemptCtx, attemptRes);
+        final State<O> state = state(ctx);
+
+        synchronized (state) {
+            state.completeAttempt(attemptCtx, attemptRes);
 
             if (isWinning) {
-                state(ctx).complete();
+                state.complete();
             }
         }
     }
@@ -257,7 +260,7 @@ public abstract class AbstractRetryingClient<I extends Request, O extends Respon
      * todo(szymon): [doc].
      */
     protected void scheduleNextRetry(ClientRequestContext ctx,
-                                     Runnable retryTask,
+                                     Consumer<Integer> retryTask,
                                      Backoff backoff,
                                      Consumer<? super Throwable> actionOnException) {
         scheduleNextRetry(ctx, retryTask, backoff, -1, actionOnException);
@@ -267,7 +270,7 @@ public abstract class AbstractRetryingClient<I extends Request, O extends Respon
      * todo(szymon): [doc].
      */
     protected static void scheduleNextRetry(ClientRequestContext ctx,
-                                            Runnable retryTask,
+                                            Consumer<Integer> retryTask,
                                             Backoff backoff,
                                             long retryDelayFromServerMillis,
                                             Consumer<? super Throwable> actionOnException) {
@@ -332,6 +335,8 @@ public abstract class AbstractRetryingClient<I extends Request, O extends Respon
 
         state.startRetryTask();
         scheduler.schedule(() -> {
+
+            final int thisAttemptNo;
             // *, see comment above.
             synchronized (state) {
                 if (isRetryingComplete(ctx)) {
@@ -340,10 +345,10 @@ public abstract class AbstractRetryingClient<I extends Request, O extends Respon
                     return;
                 }
 
-                state.acquireAttemptNoWithCurrentBackoff(backoff);
+                thisAttemptNo = state.acquireAttemptNoWithCurrentBackoff(backoff);
             }
 
-            retryTask.run();
+            retryTask.accept(thisAttemptNo);
 
             synchronized (state) {
                 state.completeRetryTask();
@@ -578,10 +583,10 @@ public abstract class AbstractRetryingClient<I extends Request, O extends Respon
                 return 1;
             }
 
-            return currentAttemptNoWithLastBackoff + 1;
+            return currentAttemptNoWithLastBackoff;
         }
 
-        void acquireAttemptNoWithCurrentBackoff(Backoff backoff) {
+        int acquireAttemptNoWithCurrentBackoff(Backoff backoff) {
             checkState(!retryingCompleteFuture.isDone());
             checkState((totalAttemptNo + 1) <= config.maxTotalAttempts(),
                        "Exceeded the maximum number of attempts: %s", config.maxTotalAttempts());
@@ -591,10 +596,11 @@ public abstract class AbstractRetryingClient<I extends Request, O extends Respon
             if (lastBackoff != backoff) {
                 lastBackoff = backoff;
                 currentAttemptNoWithLastBackoff = 1;
-                return;
             }
 
             currentAttemptNoWithLastBackoff++;
+
+            return totalAttemptNo;
         }
 
         int numPendingAttempts() {
