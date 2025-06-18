@@ -334,16 +334,9 @@ class RetryingRpcClientTest {
                              .path("/thrift")
                              .rpcDecorator(RetryingRpcClient.builder(retryAlways).newDecorator())
                              .rpcDecorator((delegate, ctx, req) -> {
+                                 context.set(ctx);
                                  final RpcResponse res = delegate.execute(ctx, req);
-
-                                 // We are not guarenteed that the retrying client will immediately retry but
-                                 // execute the first attempt in the event loop. It should be enough to just
-                                 // enqueue in the loop and only then cancel the response.
-                                 ctx.eventLoop().execute(() -> {
-                                     context.set(ctx);
-                                     res.cancel(true);
-                                 });
-
+                                 res.cancel(true);
                                  return res;
                              })
                              .build(HelloService.Iface.class);
