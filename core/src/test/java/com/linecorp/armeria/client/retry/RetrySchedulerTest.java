@@ -19,7 +19,6 @@ package com.linecorp.armeria.client.retry;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
@@ -30,6 +29,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -45,6 +45,7 @@ import org.mockito.ArgumentCaptor;
 import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.client.retry.RetrySchedulingException.Type;
+import com.linecorp.armeria.internal.common.util.ReentrantShortLock;
 import com.linecorp.armeria.internal.testing.AnticipatedException;
 
 import io.netty.channel.DefaultEventLoop;
@@ -55,18 +56,51 @@ class RetrySchedulerTest {
     private static final long SCHEDULING_TOLERANCE_MILLIS = TimeUnit.NANOSECONDS.toMillis(
             SCHEDULING_TOLERANCE_NANOS);
 
+    private ReentrantLock lock;
+    private Consumer<ReentrantLock> dummyRetryTask;
+    private Consumer<ReentrantLock> dummyThrowingRetryTask;
+
     private EventLoop eventLoop;
 
     private RetryScheduler scheduler;
 
+    private static class SpyableRetryTask implements Consumer<ReentrantLock> {
+        private final Consumer<ReentrantLock> delegate;
+
+        SpyableRetryTask(Consumer<ReentrantLock> delegate) {
+            this.delegate = delegate;
+        }
+
+        @Override
+        public void accept(ReentrantLock retryLock) {
+            delegate.accept(retryLock);
+        }
+    }
+
     @BeforeEach
     void setUp() {
         eventLoop = spy(new DefaultEventLoop());
-        scheduler = new RetryScheduler(eventLoop);
+        lock = new ReentrantShortLock();
+        dummyRetryTask = new SpyableRetryTask(retryLock -> {
+            assertThat(retryLock).isEqualTo(lock);
+            assertThat(retryLock.isHeldByCurrentThread()).isTrue();
+            assertThat(retryLock.getHoldCount()).isOne();
+            retryLock.unlock();
+        });
+
+        dummyThrowingRetryTask = new SpyableRetryTask(retryLock -> {
+            assertThat(retryLock).isEqualTo(lock);
+            assertThat(retryLock.isHeldByCurrentThread()).isTrue();
+            assertThat(retryLock.getHoldCount()).isOne();
+            retryLock.unlock();
+            throw new AnticipatedException();
+        });
+        scheduler = new RetryScheduler(lock, eventLoop);
     }
 
     @AfterEach
     void tearDown() throws Exception {
+        assertThat(lock.isLocked()).isFalse();
         assertThat(scheduler.shutdown()).isTrue();
         eventLoop.shutdownGracefully();
     }
@@ -91,7 +125,7 @@ class RetrySchedulerTest {
         }
 
         // Schedule the task
-        final Runnable task = mock(Runnable.class);
+        final Consumer<ReentrantLock> task = spy(dummyRetryTask);
         final Consumer<Throwable> exceptionHandler = mock(Consumer.class);
 
         scheduler.schedule(task, taskScheduledTimeNanos, newEarliestNextRetryTimeNanos, exceptionHandler);
@@ -102,7 +136,7 @@ class RetrySchedulerTest {
 
         Thread.sleep(expectedDelayMs + SCHEDULING_TOLERANCE_MILLIS);
 
-        verify(task, times(1)).run();
+        verify(task, times(1)).accept(lock);
         verifyNoMoreInteractions(exceptionHandler);
         verifyEventLoopScheduleCalls(
                 EventLoopScheduleCall.of(now, expectedScheduledTimeNanos)
@@ -135,7 +169,7 @@ class RetrySchedulerTest {
 
     @Test
     void testScheduleTaskInThePast() throws Exception {
-        final Runnable task = mock(Runnable.class);
+        final Consumer<ReentrantLock> task = spy(dummyRetryTask);
         final long taskSchedulingTime = System.nanoTime();
         final long expectedTaskRunTime = taskSchedulingTime;
         final Consumer<Throwable> exceptionHandler = mock(Consumer.class);
@@ -148,13 +182,13 @@ class RetrySchedulerTest {
 
         Thread.sleep(SCHEDULING_TOLERANCE_MILLIS);
 
-        verify(task, times(1)).run();
+        verify(task, times(1)).accept(lock);
         verifyNoMoreInteractions(exceptionHandler);
         verifyEventLoopScheduleCalls(
                 EventLoopScheduleCall.of(taskSchedulingTime, expectedTaskRunTime)
         );
 
-        final Runnable task2 = mock(Runnable.class);
+        final Consumer<ReentrantLock> task2 = spy(dummyRetryTask);
         final long task2SchedulingTime = System.nanoTime();
         final long expectedTask2RunTime = task2SchedulingTime;
         final Consumer<Throwable> task2ExceptionHandler = mock(Consumer.class);
@@ -168,7 +202,7 @@ class RetrySchedulerTest {
 
         Thread.sleep(SCHEDULING_TOLERANCE_MILLIS);
 
-        verify(task2, times(1)).run();
+        verify(task2, times(1)).accept(lock);
         verifyNoMoreInteractions(task2ExceptionHandler);
         verifyEventLoopScheduleCalls(
                 EventLoopScheduleCall.of(taskSchedulingTime, expectedTaskRunTime),
@@ -178,7 +212,7 @@ class RetrySchedulerTest {
 
     @Test
     void testFailingScheduleWithInvalidArguments() {
-        final Runnable task = mock(Runnable.class);
+        final Consumer<ReentrantLock> task = spy(dummyRetryTask);
         final Consumer<Throwable> exceptionHandler = mock(Consumer.class);
 
         assertThatThrownBy(() -> scheduler.schedule(null, 200, 200,
@@ -198,8 +232,7 @@ class RetrySchedulerTest {
 
     @Test
     void testScheduleTaskWithException() throws Exception {
-        final Runnable task1 = mock(Runnable.class);
-        doThrow(new AnticipatedException()).when(task1).run();
+        final Consumer<ReentrantLock> task1 = spy(dummyThrowingRetryTask);
 
         final long task1SchedulingTime = System.nanoTime();
         final long expectedTask1RunTime = task1SchedulingTime + TimeUnit.MILLISECONDS.toNanos(100);
@@ -212,7 +245,7 @@ class RetrySchedulerTest {
 
         Thread.sleep(100 + SCHEDULING_TOLERANCE_MILLIS);
 
-        verify(task1, times(1)).run();
+        verify(task1, times(1)).accept(lock);
         final ArgumentCaptor<Throwable> exceptionCaptor = ArgumentCaptor.forClass(Throwable.class);
         verify(task1ExceptionHandler, times(1)).accept(exceptionCaptor.capture());
         assertThat(exceptionCaptor.getValue()).isInstanceOf(AnticipatedException.class);
@@ -220,14 +253,14 @@ class RetrySchedulerTest {
 
     @Test
     void testEarlierRetryTaskOvertakesLaterOne() throws Exception {
-        final Runnable task1 = mock(Runnable.class);
+        final Consumer<ReentrantLock> task1 = spy(dummyRetryTask);
 
         final long task1SchedulingTime = System.nanoTime();
         final long expectedTask1RunTime = task1SchedulingTime + TimeUnit.MILLISECONDS.toNanos(200);
         final Consumer<Throwable> task1ExceptionHandler = mock(Consumer.class);
         scheduler.schedule(task1, expectedTask1RunTime, Long.MIN_VALUE, task1ExceptionHandler);
 
-        final Runnable task2 = mock(Runnable.class);
+        final Consumer<ReentrantLock> task2 = spy(dummyRetryTask);
         final long task2SchedulingTime = System.nanoTime();
         final long expectedTask2RunTime = task2SchedulingTime + TimeUnit.MILLISECONDS.toNanos(100);
         final Consumer<Throwable> task2ExceptionHandler = mock(Consumer.class);
@@ -235,8 +268,8 @@ class RetrySchedulerTest {
 
         Thread.sleep(200 + SCHEDULING_TOLERANCE_MILLIS);
 
-        verify(task1, times(0)).run();
-        verify(task2, times(1)).run();
+        verify(task1, times(0)).accept(lock);
+        verify(task2, times(1)).accept(lock);
 
         verifyExceptionHandlerCatchedSchedulingException(task1ExceptionHandler,
                                                          RetrySchedulingException.Type.RETRY_TASK_OVERTAKEN);
@@ -256,13 +289,13 @@ class RetrySchedulerTest {
         //   next task is scheduled earlier.
         // - Only the last task (100ms) should be executed.
 
-        final List<Runnable> tasks = new ArrayList<>();
+        final List<Consumer<ReentrantLock>> tasks = new ArrayList<>();
         final List<Long> schedulingTimes = new ArrayList<>();
         final List<Long> expectedRunTimes = new ArrayList<>();
         final List<Consumer<Throwable>> exceptionHandlers = new ArrayList<>();
 
         for (int taskNo = 0; taskNo < 10; taskNo++) {
-            final Runnable task = mock(Runnable.class);
+            final Consumer<ReentrantLock> task = spy(dummyRetryTask);
             tasks.add(task);
             final Consumer<Throwable> exceptionHandler = mock(Consumer.class);
             exceptionHandlers.add(exceptionHandler);
@@ -279,8 +312,8 @@ class RetrySchedulerTest {
         Thread.sleep(1000 + SCHEDULING_TOLERANCE_MILLIS);
 
         for (int taskNo = 0; taskNo < 9; taskNo++) {
-            final Runnable task = tasks.get(taskNo);
-            verify(task, times(0)).run();
+            final Consumer<ReentrantLock> task = tasks.get(taskNo);
+            verify(task, times(0)).accept(lock);
             verifyExceptionHandlerCatchedSchedulingException(
                     exceptionHandlers.get(taskNo),
                     RetrySchedulingException.Type.RETRY_TASK_OVERTAKEN
@@ -288,7 +321,7 @@ class RetrySchedulerTest {
         }
 
         // Verify that the last task was executed
-        verify(tasks.get(9), times(1)).run();
+        verify(tasks.get(9), times(1)).accept(lock);
         verifyNoMoreInteractions(exceptionHandlers.get(9));
 
         verifyEventLoopScheduleCalls(
@@ -303,14 +336,14 @@ class RetrySchedulerTest {
 
     @Test
     void testLaterRetryTaskDoesNotOvertakeEarlierOne() throws Exception {
-        final Runnable task1 = mock(Runnable.class);
+        final Consumer<ReentrantLock> task1 = spy(dummyRetryTask);
         final long task1SchedulingTime = System.nanoTime();
         final long expectedTask1RunTime = task1SchedulingTime + TimeUnit.MILLISECONDS.toNanos(200);
         final Consumer<Throwable> task1ExceptionHandler = mock(Consumer.class);
         scheduler.schedule(task1, expectedTask1RunTime, Long.MIN_VALUE, task1ExceptionHandler);
 
         // Schedule a new task with a later time than the current one
-        final Runnable task2 = mock(Runnable.class);
+        final Consumer<ReentrantLock> task2 = spy(dummyRetryTask);
         final long task2SchedulingTime = System.nanoTime();
         final long expectedTask2RunTime = task2SchedulingTime + TimeUnit.MILLISECONDS.toNanos(300);
         final Consumer<Throwable> task2ExceptionHandler = mock(Consumer.class);
@@ -319,11 +352,11 @@ class RetrySchedulerTest {
         Thread.sleep(300 + SCHEDULING_TOLERANCE_MILLIS);
 
         // Verify that the first task was executed
-        verify(task1, times(1)).run();
+        verify(task1, times(1)).accept(lock);
         verifyNoMoreInteractions(task1ExceptionHandler);
 
         // Verify that the second task was not executed
-        verify(task2, times(0)).run();
+        verify(task2, times(0)).accept(lock);
         verifyExceptionHandlerCatchedSchedulingException(
                 task2ExceptionHandler, RetrySchedulingException.Type.RETRY_TASK_OVERTAKEN);
 
@@ -342,7 +375,7 @@ class RetrySchedulerTest {
         // Schedule a task to run after 300ms
         final long task1SchedulingTime = System.nanoTime();
         final long taskTime = task1SchedulingTime + TimeUnit.MILLISECONDS.toNanos(300);
-        final Runnable task1 = mock(Runnable.class);
+        final Consumer<ReentrantLock> task1 = spy(dummyRetryTask);
         final Consumer<Throwable> exceptionHandler = mock(Consumer.class);
 
         scheduler.schedule(task1, taskTime, Long.MIN_VALUE, exceptionHandler);
@@ -355,7 +388,7 @@ class RetrySchedulerTest {
 
         Thread.sleep(400 + SCHEDULING_TOLERANCE_MILLIS);
 
-        verify(task1, times(1)).run();
+        verify(task1, times(1)).accept(lock);
         verifyEventLoopScheduleCalls(
                 EventLoopScheduleCall.of(task1SchedulingTime, taskTime),
                 EventLoopScheduleCall.of(earliestTimeUpdateTime, newEarliestTimeNanos)
@@ -382,7 +415,11 @@ class RetrySchedulerTest {
         final long expectedTaskTime = taskScheduledTime + TimeUnit.MILLISECONDS.toNanos(100);
 
         scheduler.schedule(
-                () -> {
+                retryLock0 -> {
+                    assertThat(retryLock0).isEqualTo(lock);
+                    assertThat(retryLock0.isHeldByCurrentThread()).isTrue();
+                    assertThat(retryLock0.getHoldCount()).isOne();
+                    retryLock0.unlock();
                     // note that we inherit the earliest next retry time from the calls above
                 }, taskScheduledTime + TimeUnit.MILLISECONDS.toNanos(50), Long.MIN_VALUE, t -> {
                     // do nothing
@@ -411,7 +448,7 @@ class RetrySchedulerTest {
     @Test
     void testIdempotentReschedule() throws Exception {
         // Schedule a task to run after 200ms
-        final Runnable task = mock(Runnable.class);
+        final Consumer<ReentrantLock> task = spy(dummyRetryTask);
         final long taskScheduledTime = System.nanoTime();
         final long taskTime = taskScheduledTime + TimeUnit.MILLISECONDS.toNanos(100);
         final Consumer<Throwable> exceptionHandler = mock(Consumer.class);
@@ -480,7 +517,7 @@ class RetrySchedulerTest {
 
         Thread.sleep(300 + SCHEDULING_TOLERANCE_MILLIS);
 
-        verify(task, times(1)).run();
+        verify(task, times(1)).accept(lock);
         verifyNoMoreInteractions(exceptionHandler);
 
         verifyEventLoopScheduleCalls(
@@ -499,7 +536,7 @@ class RetrySchedulerTest {
     @Test
     void testSchedulerShutdownCancelsTask() throws Exception {
         // Schedule a task that should run after 200ms
-        final Runnable task = mock(Runnable.class);
+        final Consumer<ReentrantLock> task = spy(dummyRetryTask);
         final long taskSchedulingTime = System.nanoTime();
         final long expectedTaskRunTime = taskSchedulingTime + TimeUnit.MILLISECONDS.toNanos(200);
         final Consumer<Throwable> exceptionHandler = mock(Consumer.class);
@@ -516,14 +553,15 @@ class RetrySchedulerTest {
 
         Thread.sleep(400);
 
-        verify(task, times(0)).run();
-        verifyNoMoreInteractions(exceptionHandler);
+        verify(task, times(0)).accept(any());
+        verifyExceptionHandlerCatchedSchedulingException(
+                exceptionHandler, Type.RETRYING_ALREADY_COMPLETED);
     }
 
     @Test
     void testEventLoopShutdownCancelsTask() throws Exception {
         // Schedule a task that should run after 200ms
-        final Runnable task = mock(Runnable.class);
+        final Consumer<ReentrantLock> task = spy(dummyRetryTask);
         final long taskSchedulingTime = System.nanoTime();
         final long expectedTaskRunTime = taskSchedulingTime + TimeUnit.MILLISECONDS.toNanos(200);
         final Consumer<Throwable> exceptionHandler = mock(Consumer.class);
@@ -540,7 +578,7 @@ class RetrySchedulerTest {
 
         Thread.sleep(400);
 
-        verify(task, times(0)).run();
+        verify(task, times(0)).accept(any());
         verifyExceptionHandlerCatchedSchedulingException(
                 exceptionHandler, Type.RETRY_TASK_CANCELLED);
     }
@@ -549,7 +587,7 @@ class RetrySchedulerTest {
     void testScheduledOnShutdownEventLoop() throws InterruptedException {
         eventLoop.shutdownGracefully().sync();
 
-        final Runnable task = mock(Runnable.class);
+        final Consumer<ReentrantLock> task = spy(dummyRetryTask);
         final long taskSchedulingTime = System.nanoTime();
         final long expectedTaskRunTime = taskSchedulingTime + TimeUnit.MILLISECONDS.toNanos(200);
         final Consumer<Throwable> exceptionHandler = mock(Consumer.class);
@@ -559,7 +597,7 @@ class RetrySchedulerTest {
         verify(exceptionHandler, times(1)).accept(exceptionCaptor.capture());
         final Throwable capturedException = exceptionCaptor.getValue();
 
-        verify(task, times(0)).run();
+        verify(task, times(0)).accept(lock);
         assertThat(capturedException).isInstanceOf(RejectedExecutionException.class);
         assertThat(capturedException.getMessage()).contains("event executor terminated");
     }

@@ -407,7 +407,6 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
 
     private static void handleExceptionAfterScheduling(
             RetryingContext retryingContext, Throwable cause) {
-        logger.debug("handleExceptionAfterScheduling", cause);
         if (cause instanceof RetrySchedulingException) {
             switch (((RetrySchedulingException) cause).getType()) {
                 case RETRYING_ALREADY_COMPLETED:

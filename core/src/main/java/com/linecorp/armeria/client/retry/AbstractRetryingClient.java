@@ -22,6 +22,8 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 
@@ -41,6 +43,7 @@ import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.TimeoutMode;
 import com.linecorp.armeria.internal.client.ClientUtil;
+import com.linecorp.armeria.internal.common.util.ReentrantShortLock;
 
 import io.netty.util.AsciiString;
 import io.netty.util.AttributeKey;
@@ -85,14 +88,16 @@ public abstract class AbstractRetryingClient<I extends Request, O extends Respon
         requireNonNull(config, "mapping.get() returned null");
 
         final State<O> state;
+        final ReentrantShortLock retryLock = new ReentrantShortLock();
         if (ctx.responseTimeoutMillis() <= 0 || ctx.responseTimeoutMillis() == Long.MAX_VALUE) {
-            final RetryScheduler scheduler = new RetryScheduler(ctx.eventLoop());
-            state = new State<>(config, scheduler);
+            final RetryScheduler scheduler = new RetryScheduler(retryLock, ctx.eventLoop());
+            state = new State<>(retryLock, config, scheduler);
         } else {
             final long responseTimeoutTimeNanos =
                     System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(ctx.responseTimeoutMillis());
-            final RetryScheduler scheduler = new RetryScheduler(ctx.eventLoop(), responseTimeoutTimeNanos);
-            state = new State<>(config, scheduler, responseTimeoutTimeNanos);
+            final RetryScheduler scheduler = new RetryScheduler(retryLock, ctx.eventLoop(),
+                                                                responseTimeoutTimeNanos);
+            state = new State<>(retryLock, config, scheduler, responseTimeoutTimeNanos);
         }
 
         state.whenRetryingComplete().handle((f, t) -> {
@@ -119,13 +124,11 @@ public abstract class AbstractRetryingClient<I extends Request, O extends Respon
             throws Exception;
 
     /**
-     * This should be called when retrying is finished.
+     * todo(szymon): [doc].
      */
     protected static void completeRetryingIfNoPendingAttempts(ClientRequestContext ctx) {
         final State<?> state = state(ctx);
-        synchronized (state) {
-            state.completeIfNoPendingAttempts();
-        }
+        state.completeIfNoPendingAttempts();
     }
 
     /**
@@ -133,11 +136,8 @@ public abstract class AbstractRetryingClient<I extends Request, O extends Respon
      */
     protected static void completeRetryingExceptionally(ClientRequestContext ctx,
                                                         Throwable cause) {
-        logger.debug("onRetryingCompleteExceptionally: {}", ctx, cause);
         final State<?> state = state(ctx);
-        synchronized (state) {
-            state.completeExceptionally(cause);
-        }
+        state.completeExceptionally(cause);
     }
 
     /**
@@ -189,35 +189,40 @@ public abstract class AbstractRetryingClient<I extends Request, O extends Respon
         requireNonNull(onAttemptAbortedHandler, "onAttemptAbortedHandler");
 
         final State<O> state = state(ctx);
+        final ReentrantLock retryLock = state.getLock();
 
-        synchronized (state) {
-            if (isRetryingComplete(ctx)) {
-                onAttemptAbortedHandler.accept(attemptCtx,
-                                               new IllegalStateException("Retrying is already complete."));
-                return;
+        retryLock.lock();
+
+        if (isRetryingComplete(ctx)) {
+            // This really should not happen. However, let us call the abort handler to free
+            // potentially expensive resources here.
+            retryLock.unlock();
+            onAttemptAbortedHandler.accept(attemptCtx,
+                                           new IllegalStateException("Retrying is already complete."));
+            return;
+        }
+
+        state.startAttempt(attemptCtx);
+        retryLock.unlock();
+        state.whenRetryingComplete().handleAsync((winningAttempt, cause) -> {
+            if (winningAttempt == null) {
+                // If the retrying is complete exceptionally, we need to call the onAttemptAbortedHandler.
+                onAttemptAbortedHandler.accept(winningAttempt.ctx(), cause);
+                return null;
             }
 
-            state.startAttempt(attemptCtx);
-            state.whenRetryingComplete().handle((winningAttempt, cause) -> {
-                if (winningAttempt == null) {
-                    // If the retrying is complete exceptionally, we need to call the onAttemptAbortedHandler.
-                    onAttemptAbortedHandler.accept(winningAttempt.ctx(), cause);
-                    return null;
-                }
+            final ClientRequestContext winningAttemptCtx = winningAttempt.ctx();
+            final O winningAttemptRes = winningAttempt.res();
+            assert winningAttemptRes != null;
 
-                final ClientRequestContext winningAttemptCtx = winningAttempt.ctx();
-                final O winningAttemptRes = winningAttempt.res();
-                assert winningAttemptRes != null;
-
-                if (attemptCtx == winningAttemptCtx) {
-                    onWinHandler.accept(winningAttemptCtx, winningAttemptRes);
-                    return null;
-                }
-
-                onAttemptAbortedHandler.accept(attemptCtx, cause);
+            if (attemptCtx == winningAttemptCtx) {
+                onWinHandler.accept(winningAttemptCtx, winningAttemptRes);
                 return null;
-            });
-        }
+            }
+
+            onAttemptAbortedHandler.accept(attemptCtx, cause);
+            return null;
+        }, attemptCtx.eventLoop());
     }
 
     /**
@@ -232,15 +237,7 @@ public abstract class AbstractRetryingClient<I extends Request, O extends Respon
             return;
         }
 
-        final State<O> state = state(ctx);
-
-        synchronized (state) {
-            state.completeAttempt(attemptCtx, attemptRes);
-
-            if (isWinning) {
-                state.complete();
-            }
-        }
+        state(ctx).completeAttempt(attemptCtx, attemptRes, isWinning);
     }
 
     /**
@@ -251,9 +248,7 @@ public abstract class AbstractRetryingClient<I extends Request, O extends Respon
 
         final State<?> state = state(ctx);
 
-        synchronized (state) {
-            return state.whenRetryingComplete().isDone();
-        }
+        return state.isRetryingComplete();
     }
 
     /**
@@ -285,7 +280,9 @@ public abstract class AbstractRetryingClient<I extends Request, O extends Respon
         }
 
         final State<?> state = state(ctx);
-        final RetryScheduler scheduler = state.scheduler();
+        final ReentrantLock retryLock = state.getLock();
+
+        retryLock.lock();
 
         final long nowTimeNanos = System.nanoTime();
 
@@ -296,6 +293,7 @@ public abstract class AbstractRetryingClient<I extends Request, O extends Respon
 
         if (state.timeoutForWholeRetryEnabled() &&
             earliestRetryTimeNanos > state.responseTimeoutTimeNanos()) {
+            retryLock.unlock();
             actionOnException.accept(
                     new RetrySchedulingException(
                             Type.DELAY_FROM_SERVER_EXCEEDS_RESPONSE_TIMEOUT));
@@ -304,10 +302,12 @@ public abstract class AbstractRetryingClient<I extends Request, O extends Respon
 
         // Even when we cannot schedule the retry task, we want to respect the
         // minimum retry delay from the server.
+        final RetryScheduler scheduler = state.scheduler();
         earliestRetryTimeNanos = scheduler.addEarliestNextRetryTimeNanos(earliestRetryTimeNanos);
 
         final int attemptNoWithBackoff = state.numAttemptsSoFarWithBackoff(backoff);
         if (attemptNoWithBackoff < 0) {
+            retryLock.unlock();
             scheduler.rescheduleCurrentRetryTaskIfTooEarly();
             actionOnException.accept(
                     new RetrySchedulingException(RetrySchedulingException.Type.NO_MORE_ATTEMPTS_IN_RETRY));
@@ -316,15 +316,18 @@ public abstract class AbstractRetryingClient<I extends Request, O extends Respon
 
         final long retryDelayMillis = backoff.nextDelayMillis(attemptNoWithBackoff);
         if (retryDelayMillis < 0) {
+            retryLock.unlock();
             scheduler.rescheduleCurrentRetryTaskIfTooEarly();
             actionOnException.accept(
-                    new RetrySchedulingException(RetrySchedulingException.Type.NO_MORE_ATTEMPTS_IN_BACKOFF));
+                    new RetrySchedulingException(
+                            RetrySchedulingException.Type.NO_MORE_ATTEMPTS_IN_BACKOFF));
             return;
         }
 
         final long retryTimeNanos = Math.max(nowTimeNanos + TimeUnit.MILLISECONDS.toNanos(retryDelayMillis),
                                              earliestRetryTimeNanos);
         if (state.timeoutForWholeRetryEnabled() && retryTimeNanos > state.responseTimeoutTimeNanos()) {
+            retryLock.unlock();
             scheduler.rescheduleCurrentRetryTaskIfTooEarly();
             // This cannot be the minimum delay from the server, because we already checked it above.
             actionOnException.accept(
@@ -333,36 +336,50 @@ public abstract class AbstractRetryingClient<I extends Request, O extends Respon
             return;
         }
 
-        synchronized (state) {
-            state.startRetryTask();
-        }
-        scheduler.schedule(() -> {
+        final AtomicBoolean exceptionDuringScheduling = new AtomicBoolean(true);
+        state.startRetryTask();
+        scheduler.schedule(retryLock0 -> {
+            assert retryLock == retryLock0;
+            assert retryLock.isHeldByCurrentThread();
+            assert retryLock.getHoldCount() == 1;
 
-            final int thisAttemptNo;
-            // *, see comment above.
-            synchronized (state) {
-                if (isRetryingComplete(ctx)) {
-                    state.completeRetryTask();
-                    actionOnException.accept(new RetrySchedulingException(Type.RETRYING_ALREADY_COMPLETED));
-                    return;
-                }
-
-                thisAttemptNo = state.acquireAttemptNoWithCurrentBackoff(backoff);
+            if (isRetryingComplete(ctx)) {
+                state.completeRetryTask();
+                retryLock.unlock();
+                actionOnException.accept(new RetrySchedulingException(Type.RETRYING_ALREADY_COMPLETED));
+                return;
             }
 
-            retryTask.accept(thisAttemptNo);
+            final int thisAttemptNo = state.acquireAttemptNoWithCurrentBackoff(backoff);
+            assert thisAttemptNo >= 1;
 
-            synchronized (state) {
+            retryLock.unlock();
+
+            try {
+                assert !retryLock.isHeldByCurrentThread();
+                retryTask.accept(thisAttemptNo);
+            } finally {
                 state.completeRetryTask();
             }
 
             completeRetryingIfNoPendingAttempts(ctx);
         }, retryTimeNanos, earliestRetryTimeNanos, cause -> {
-            synchronized (state) {
-                state.completeRetryTask();
+            state.completeRetryTask();
+
+            if (exceptionDuringScheduling.get()) {
+                assert state(ctx).getLock().isHeldByCurrentThread();
+                retryLock.unlock();
             }
+
             actionOnException.accept(cause);
+
+            if (exceptionDuringScheduling.get()) {
+                retryLock.lock();
+            }
         });
+
+        exceptionDuringScheduling.set(false);
+        retryLock.unlock();
     }
 
     // todo(szymon): improve documentation for this method
@@ -448,6 +465,8 @@ public abstract class AbstractRetryingClient<I extends Request, O extends Respon
             }
         }
 
+        private final ReentrantLock lock;
+        private boolean isRetryingComplete;
         private final RetryConfig<?> config;
         private final long deadlineNanos;
         private final boolean isTimeoutEnabled;
@@ -475,7 +494,9 @@ public abstract class AbstractRetryingClient<I extends Request, O extends Respon
         // Starting with 1
         private int totalAttemptNo;
 
-        State(RetryConfig<?> config, RetryScheduler retryScheduler) {
+        State(ReentrantLock retryingLock, RetryConfig<?> config, RetryScheduler retryScheduler) {
+            lock = retryingLock;
+            isRetryingComplete = false;
             this.config = config;
             this.retryScheduler = retryScheduler;
             totalAttemptNo = 1;
@@ -484,7 +505,10 @@ public abstract class AbstractRetryingClient<I extends Request, O extends Respon
             isTimeoutEnabled = false;
         }
 
-        State(RetryConfig<?> config, RetryScheduler retryScheduler, long responseTimeoutTimeNanos) {
+        State(ReentrantLock retryingLock, RetryConfig<?> config, RetryScheduler retryScheduler,
+              long responseTimeoutTimeNanos) {
+            lock = retryingLock;
+            isRetryingComplete = false;
             this.config = config;
             this.retryScheduler = retryScheduler;
             totalAttemptNo = 1;
@@ -497,6 +521,10 @@ public abstract class AbstractRetryingClient<I extends Request, O extends Respon
             return retryScheduler;
         }
 
+        ReentrantLock getLock() {
+            return lock;
+        }
+
         /**
          * Returns the smaller value between {@link RetryConfig#responseTimeoutMillisForEachAttempt()} and
          * remaining {@link #responseTimeoutMillisForAttempt}. This method is thread-safe.
@@ -505,22 +533,28 @@ public abstract class AbstractRetryingClient<I extends Request, O extends Respon
          *         -1 if the elapsed time from the first request has passed {@code responseTimeoutMillis}
          */
         long responseTimeoutMillisForAttempt() {
-            if (!timeoutForWholeRetryEnabled()) {
-                return config.responseTimeoutMillisForEachAttempt();
+            lock.lock();
+
+            try {
+                if (!timeoutForWholeRetryEnabled()) {
+                    return config.responseTimeoutMillisForEachAttempt();
+                }
+
+                final long actualResponseTimeoutMillis = responseTimeoutMillis();
+
+                // Consider 0 or less than 0 of actualResponseTimeoutMillis as timed out.
+                if (actualResponseTimeoutMillis <= 0) {
+                    return -1;
+                }
+
+                if (config.responseTimeoutMillisForEachAttempt() > 0) {
+                    return Math.min(config.responseTimeoutMillisForEachAttempt(), actualResponseTimeoutMillis);
+                }
+
+                return actualResponseTimeoutMillis;
+            } finally {
+                lock.unlock();
             }
-
-            final long actualResponseTimeoutMillis = responseTimeoutMillis();
-
-            // Consider 0 or less than 0 of actualResponseTimeoutMillis as timed out.
-            if (actualResponseTimeoutMillis <= 0) {
-                return -1;
-            }
-
-            if (config.responseTimeoutMillisForEachAttempt() > 0) {
-                return Math.min(config.responseTimeoutMillisForEachAttempt(), actualResponseTimeoutMillis);
-            }
-
-            return actualResponseTimeoutMillis;
         }
 
         boolean timeoutForWholeRetryEnabled() {
@@ -539,119 +573,191 @@ public abstract class AbstractRetryingClient<I extends Request, O extends Respon
         }
 
         void startAttempt(ClientRequestContext attemptCtx) {
-            checkState(!retryingCompleteFuture.isDone());
-
-            logger.debug("Attempt started: {}, num attempts pending = {}, num retry task scheduled = {}",
-                         attemptCtx, activeAttempts.size(), numScheduledAttempts);
-            checkState(!activeAttempts.containsKey(attemptCtx),
-                       "Attempt %s already exists in active attempts.", attemptCtx);
-            final Attempt<O> attempt = new Attempt<>(attemptCtx, null);
-            activeAttempts.put(attempt.ctx(), attempt);
+            lock.lock();
+            try {
+                checkState(!isRetryingComplete());
+                checkState(!activeAttempts.containsKey(attemptCtx),
+                           "Attempt %s already is already pending.", attemptCtx);
+                final Attempt<O> attempt = new Attempt<>(attemptCtx, null);
+                activeAttempts.put(attempt.ctx(), attempt);
+            } finally {
+                lock.unlock();
+            }
         }
 
-        void completeAttempt(ClientRequestContext attemptCtx, O attemptRes) {
-            if (retryingCompleteFuture.isDone()) {
-                return;
+        void completeAttempt(ClientRequestContext attemptCtx, O attemptRes, boolean isWinning) {
+            lock.lock();
+            try {
+                if (isRetryingComplete()) {
+                    lock.unlock();
+                    return;
+                }
+
+                checkState(activeAttempts.containsKey(attemptCtx),
+                           "Attempt %s is not registered as pending.", attemptCtx);
+
+                lastAttempt = activeAttempts.get(attemptCtx);
+                lastAttempt.setRes(attemptRes);
+                activeAttempts.remove(attemptCtx);
+            } catch (Exception e) {
+                lock.unlock();
+                throw e;
             }
 
-            checkState(activeAttempts.containsKey(attemptCtx),
-                       "Attempt %s not found in active attempts: %s", attemptCtx, activeAttempts);
-
-            lastAttempt = activeAttempts.get(attemptCtx);
-            lastAttempt.setRes(attemptRes);
-            activeAttempts.remove(attemptCtx);
-
-            completeIfNoPendingAttempts();
+            if (isWinning) {
+                // If this is the winning attempt, we can complete the retrying.
+                // transfers ownership of current lock
+                complete0();
+            } else {
+                // transfers ownership of current lock
+                completeIfNoPendingAttempts0();
+            }
         }
 
         void startRetryTask() {
             // This can get (temporarily) above max total attempts as there is a moment between scheduling
             // a new retry task and cancelling the previous one. This is because startRetryTask() needs to be
             // increment before we call the RetryScheduler.schedule() method.
+            lock.lock();
             numScheduledAttempts++;
+            lock.unlock();
         }
 
         void completeRetryTask() {
-            checkState(numScheduledAttempts > 0);
-            numScheduledAttempts--;
+            lock.lock();
+            try {
+                checkState(numScheduledAttempts > 0);
+                numScheduledAttempts--;
+            } finally {
+                lock.unlock();
+            }
         }
 
         int numAttemptsSoFarWithBackoff(Backoff backoff) {
-            if (totalAttemptNo >= config.maxTotalAttempts()) {
-                return -1;
-            }
+            lock.lock();
+            try {
+                if (totalAttemptNo >= config.maxTotalAttempts()) {
+                    return -1;
+                }
 
-            if (lastBackoff != backoff) {
-                return 1;
-            }
+                if (lastBackoff != backoff) {
+                    return 1;
+                }
 
-            return currentAttemptNoWithLastBackoff;
+                return currentAttemptNoWithLastBackoff;
+            } finally {
+                lock.unlock();
+            }
         }
 
         int acquireAttemptNoWithCurrentBackoff(Backoff backoff) {
-            checkState(!retryingCompleteFuture.isDone());
-            checkState((totalAttemptNo + 1) <= config.maxTotalAttempts(),
-                       "Exceeded the maximum number of attempts: %s", config.maxTotalAttempts());
+            lock.lock();
+            try {
+                checkState(!isRetryingComplete());
+                checkState((totalAttemptNo + 1) <= config.maxTotalAttempts(),
+                           "Exceeded the maximum number of attempts: %s", config.maxTotalAttempts());
 
-            totalAttemptNo++;
+                totalAttemptNo++;
 
-            if (lastBackoff != backoff) {
-                lastBackoff = backoff;
-                currentAttemptNoWithLastBackoff = 1;
+                if (lastBackoff != backoff) {
+                    lastBackoff = backoff;
+                    currentAttemptNoWithLastBackoff = 1;
+                }
+
+                currentAttemptNoWithLastBackoff++;
+
+                return totalAttemptNo;
+            } finally {
+                lock.unlock();
             }
-
-            currentAttemptNoWithLastBackoff++;
-
-            return totalAttemptNo;
         }
 
         int numPendingAttempts() {
-            return activeAttempts.size() + (numScheduledAttempts > 0 ? 1 : 0);
+            lock.lock();
+            try {
+                return activeAttempts.size() + (numScheduledAttempts > 0 ? 1 : 0);
+            } finally {
+                lock.unlock();
+            }
         }
 
         void completeIfNoPendingAttempts() {
-            logger.debug(
-                    "completeIfNoPendingAttempts: {}, num attempts pending = {}, num retry task scheduled = {}",
-                    lastAttempt != null ? lastAttempt.ctx() : "null", numPendingAttempts(),
-                    numScheduledAttempts);
-            if (retryingCompleteFuture.isDone()) {
-                logger.debug("completeIfNoPendingAttempts: Retrying already completed: {}",
-                             lastAttempt != null ? lastAttempt.ctx() : "null");
+            lock.lock();
+
+            if (isRetryingComplete()) {
+                lock.unlock();
                 return;
             }
 
-            if (numPendingAttempts() > 0) {
-                logger.debug(
-                        "completeIfNoPendingAttempts: Have pending attempts," +
-                        " num attempts pending = {}, num retry task scheduled = {}",
-                        numPendingAttempts(), numScheduledAttempts
-                );
-                return;
-            }
-
-            // If there are no pending attempts, we can complete the retrying.
-            complete();
+            // transfers ownership of current lock
+            completeIfNoPendingAttempts0();
         }
 
-        void complete() {
-            if (retryingCompleteFuture.isDone()) {
+        // transfers ownership of current lock
+        private void completeIfNoPendingAttempts0() {
+            assert lock.isHeldByCurrentThread();
+            assert !isRetryingComplete();
+
+            if (numPendingAttempts() > 0) {
+                lock.unlock();
                 return;
             }
 
-            if (lastAttempt == null) {
-                completeExceptionally(new IllegalStateException("Completed retrying without any attempts."));
+            // transfer ownership of current lock
+            complete0();
+        }
+
+        // takes ownership of current lock
+        private void complete0() {
+            assert lock.isHeldByCurrentThread();
+            assert !isRetryingComplete();
+
+            final boolean hasLastAttempt = lastAttempt != null;
+
+            if (!hasLastAttempt) {
+                // takes ownership of current lock
+                completeExceptionally0(
+                        new IllegalStateException("Completed retrying without any attempts."));
             } else {
-                logger.debug("Completing...");
+                isRetryingComplete = true;
+                // We do not want to call the handlers with the lock.
+                lock.unlock();
                 retryingCompleteFuture.complete(lastAttempt);
             }
         }
 
         void completeExceptionally(Throwable cause) {
-            if (retryingCompleteFuture.isDone()) {
+            lock.lock();
+
+            if (isRetryingComplete()) {
+                lock.unlock();
                 return;
             }
 
+            // takes ownership of current lock
+            completeExceptionally0(cause);
+        }
+
+        // takes ownership of current lock
+        private void completeExceptionally0(Throwable cause) {
+            assert lock.isHeldByCurrentThread();
+            assert !isRetryingComplete();
+
+            isRetryingComplete = true;
+
+            // We do not want to call the handlers with the lock.
+            lock.unlock();
+
             retryingCompleteFuture.completeExceptionally(cause);
+        }
+
+        boolean isRetryingComplete() {
+            try {
+                lock.lock();
+                return isRetryingComplete;
+            } finally {
+                lock.unlock();
+            }
         }
 
         CompletableFuture<Attempt<O>> whenRetryingComplete() {
