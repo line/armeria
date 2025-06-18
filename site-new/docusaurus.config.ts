@@ -66,7 +66,7 @@ const config: Config = {
           customCss: [
             './src/css/custom.css',
             './src/css/antd.css',
-            './src/css/react-tweet.css',
+            require.resolve('react-tweet/theme.css'),
           ],
         },
       } satisfies Preset.Options,
