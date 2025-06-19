@@ -645,38 +645,38 @@ class RetryingClientWithHedgingTest {
                 final Throwable rootCause = Exceptions.peel(throwable);
                 assertThat(rootCause).isInstanceOf(ResponseTimeoutException.class);
             });
-        });
 
-        final List<Throwable> childLogExceptions = new ArrayList<>();
+            final List<Throwable> childLogExceptions = new ArrayList<>();
 
-        final RequestLogVerifier catchException = log -> {
-            assertThat(log.responseCause()).isNotNull();
-            childLogExceptions.add(log.responseCause());
-        };
+            final RequestLogVerifier catchException = log -> {
+                assertThat(log.responseCause()).isNotNull();
+                childLogExceptions.add(log.responseCause());
+            };
 
-        assertValidClientRequestContext(ctx, VERIFY_RESPONSE_TIMEOUT, catchException, catchException,
-                                        catchException);
+            assertValidClientRequestContext(ctx, VERIFY_RESPONSE_TIMEOUT, catchException, catchException,
+                                            catchException);
 
-        int numTimeouts = 0;
-        int numCancelled = 0;
+            int numTimeouts = 0;
+            int numCancelled = 0;
 
-        for (final @Nullable Throwable childException : childLogExceptions) {
-            if (childException instanceof ResponseTimeoutException) {
-                numTimeouts++;
-            } else if (childException instanceof ResponseCancellationException) {
-                numCancelled++;
-            } else {
-                fail("Unexpected exception: " + childException);
+            for (final @Nullable Throwable childException : childLogExceptions) {
+                if (childException instanceof ResponseTimeoutException) {
+                    numTimeouts++;
+                } else if (childException instanceof ResponseCancellationException) {
+                    numCancelled++;
+                } else {
+                    fail("Unexpected exception: " + childException);
+                }
             }
-        }
 
-        assertThat(numTimeouts + numCancelled).isEqualTo(3);
-        // At least one attempt needs to time out.
-        assertThat(numTimeouts).isPositive();
+            assertThat(numTimeouts + numCancelled).isEqualTo(3);
+            // At least one attempt needs to time out.
+            assertThat(numTimeouts).isPositive();
 
-        assertValidServerRequestContext(server1, 1, true);
-        assertValidServerRequestContext(server2, 2, true);
-        assertValidServerRequestContext(server3, 3, true);
+            assertValidServerRequestContext(server1, 1, true);
+            assertValidServerRequestContext(server2, 2, true);
+            assertValidServerRequestContext(server3, 3, true);
+        });
     }
 
     // todo(szymon): test being able to set different hedging delays for different servers

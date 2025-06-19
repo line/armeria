@@ -545,43 +545,43 @@ class RetryingRpcClientWithHedgingTest {
                 assertThat(peeledThrowable).isInstanceOf(TTransportException.class);
                 assertThat(peeledThrowable.getCause()).isInstanceOf(ResponseTimeoutException.class);
             });
-        });
 
-        final List<Throwable> childLogExceptions = new ArrayList<>();
+            final List<Throwable> childLogExceptions = new ArrayList<>();
 
-        final RequestLogVerifier catchException = log -> {
-            assertThat(log.responseCause()).isInstanceOf(TTransportException.class);
-            final TTransportException cause = (TTransportException) log.responseCause();
-            assertThat(cause.getCause()).isNotNull();
-            childLogExceptions.add(cause.getCause());
-        };
+            final RequestLogVerifier catchException = log -> {
+                assertThat(log.responseCause()).isInstanceOf(TTransportException.class);
+                final TTransportException cause = (TTransportException) log.responseCause();
+                assertThat(cause.getCause()).isNotNull();
+                childLogExceptions.add(cause.getCause());
+            };
 
-        assertValidClientRequestContext(ctx,
-                                        VERIFY_RESPONSE_TIMEOUT,
-                                        catchException,
-                                        catchException,
-                                        catchException);
+            assertValidClientRequestContext(ctx,
+                                            VERIFY_RESPONSE_TIMEOUT,
+                                            catchException,
+                                            catchException,
+                                            catchException);
 
-        int numTimeouts = 0;
-        int numCancelled = 0;
+            int numTimeouts = 0;
+            int numCancelled = 0;
 
-        for (final @Nullable Throwable childException : childLogExceptions) {
-            if (childException instanceof ResponseTimeoutException) {
-                numTimeouts++;
-            } else if (childException instanceof ResponseCancellationException) {
-                numCancelled++;
-            } else {
-                fail("Unexpected exception: " + childException);
+            for (final @Nullable Throwable childException : childLogExceptions) {
+                if (childException instanceof ResponseTimeoutException) {
+                    numTimeouts++;
+                } else if (childException instanceof ResponseCancellationException) {
+                    numCancelled++;
+                } else {
+                    fail("Unexpected exception: " + childException);
+                }
             }
-        }
 
-        assertThat(numTimeouts + numCancelled).isEqualTo(3);
-        // At least one attempt needs to time out.
-        assertThat(numTimeouts).isPositive();
+            assertThat(numTimeouts + numCancelled).isEqualTo(3);
+            // At least one attempt needs to time out.
+            assertThat(numTimeouts).isPositive();
 
-        assertValidServerRequestContext(server1, 1, true);
-        assertValidServerRequestContext(server2, 2, true);
-        assertValidServerRequestContext(server3, 3, true);
+            assertValidServerRequestContext(server1, 1, true);
+            assertValidServerRequestContext(server2, 2, true);
+            assertValidServerRequestContext(server3, 3, true);
+        });
     }
 
     private CompletableFuture<String> asyncHelloWith(HelloService.AsyncIface client) {
