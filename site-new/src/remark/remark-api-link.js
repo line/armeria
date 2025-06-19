@@ -34,6 +34,10 @@ const plugin = (options) => {
           // eslint-disable-next-line no-param-reassign
           node.url += option;
         }
+      } else {
+        // If the api link is not found, set a blank URL
+        // eslint-disable-next-line no-param-reassign
+        node.url = 'type://#';
       }
     });
   };

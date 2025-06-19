@@ -1,4 +1,5 @@
 import { themes as prismThemes } from 'prism-react-renderer';
+import remarkGithub from 'remark-github';
 import type { Config } from '@docusaurus/types';
 import type * as Preset from '@docusaurus/preset-classic';
 import remarkApiLink from './src/remark/remark-api-link';
@@ -38,29 +39,35 @@ const config: Config = {
       {
         docs: {
           sidebarPath: './sidebars.ts',
-          // Please change this to your repo.
-          // Remove this to remove the "edit this page" links.
-          editUrl:
-            'https://github.com/facebook/docusaurus/tree/main/packages/create-docusaurus/templates/shared/',
-          remarkPlugins: [remarkApiLink],
+          editUrl: 'https://github.com/line/armeria/edit/main/site/',
+          remarkPlugins: [remarkApiLink, remarkGithub],
         },
         blog: {
-          showReadingTime: true,
+          routeBasePath: '/news',
+          path: 'news',
+          blogTitle: 'Armeria Newsletter',
+          blogDescription:
+            'The Armeria Newsletter provides the latest insights, updates, and best practices to help you maximize the potential of Armeria.',
+          blogSidebarTitle: ' ',
+          blogSidebarCount: 'ALL',
+          showReadingTime: false,
           feedOptions: {
             type: ['rss', 'atom'],
             xslt: true,
           },
-          // Please change this to your repo.
-          // Remove this to remove the "edit this page" links.
-          editUrl:
-            'https://github.com/facebook/docusaurus/tree/main/packages/create-docusaurus/templates/shared/',
+          editUrl: 'https://github.com/line/armeria/edit/main/site/',
           // Useful options to enforce blogging best practices
           onInlineTags: 'warn',
           onInlineAuthors: 'warn',
           onUntruncatedBlogPosts: 'warn',
+          remarkPlugins: [remarkApiLink, remarkGithub],
         },
         theme: {
-          customCss: ['./src/css/custom.css', './src/css/antd.css'],
+          customCss: [
+            './src/css/custom.css',
+            './src/css/antd.css',
+            require.resolve('react-tweet/theme.css'),
+          ],
         },
       } satisfies Preset.Options,
     ],
@@ -76,9 +83,19 @@ const config: Config = {
       },
       items: [
         {
-          to: '/news',
+          type: 'dropdown',
           label: 'News',
           position: 'left',
+          items: [
+            {
+              label: 'Newsletter',
+              to: '/news',
+            },
+            {
+              label: 'Release notes',
+              to: '/release-notes',
+            },
+          ],
         },
         {
           type: 'docSidebar',
@@ -177,6 +194,17 @@ const config: Config = {
       },
     ],
     './src/plugins/tutorial.ts',
+    [
+      '@docusaurus/plugin-client-redirects',
+      {
+        redirects: [
+          {
+            from: '/s/discord',
+            to: 'https://discord.gg/7FH8c6npmg',
+          },
+        ],
+      },
+    ],
   ],
 };
 
