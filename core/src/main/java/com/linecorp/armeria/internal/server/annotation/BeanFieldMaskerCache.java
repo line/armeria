@@ -19,9 +19,8 @@ package com.linecorp.armeria.internal.server.annotation;
 import static com.google.common.base.Preconditions.checkArgument;
 
 import java.util.List;
-
-import com.github.benmanes.caffeine.cache.Cache;
-import com.github.benmanes.caffeine.cache.Caffeine;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 import com.linecorp.armeria.common.logging.BeanFieldInfo;
 import com.linecorp.armeria.common.logging.BeanFieldMaskerSelector;
@@ -30,14 +29,14 @@ import com.linecorp.armeria.common.logging.FieldMasker;
 final class BeanFieldMaskerCache {
 
     private final List<BeanFieldMaskerSelector> selectors;
-    private final Cache<BeanFieldInfo, FieldMasker> fieldMaskerCache = Caffeine.newBuilder().build();
+    private final Map<BeanFieldInfo, FieldMasker> fieldMaskers = new ConcurrentHashMap<>();
 
     BeanFieldMaskerCache(List<BeanFieldMaskerSelector> selectors) {
         this.selectors = selectors;
     }
 
     FieldMasker fieldMasker(BeanFieldInfo annotationHolder) {
-        final FieldMasker fieldMasker = fieldMaskerCache.get(annotationHolder, holder -> {
+        return fieldMaskers.computeIfAbsent(annotationHolder, holder -> {
             for (BeanFieldMaskerSelector selector : selectors) {
                 final FieldMasker masker = selector.fieldMasker(holder);
                 checkArgument(masker != null, "%s.fieldMasker() returned null for (%s)",
@@ -48,7 +47,5 @@ final class BeanFieldMaskerCache {
             }
             return FieldMasker.noMask();
         });
-        assert fieldMasker != null;
-        return fieldMasker;
     }
 }
