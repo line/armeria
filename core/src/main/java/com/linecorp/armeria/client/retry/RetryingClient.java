@@ -268,15 +268,12 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
     }
 
     private void doExecute0(RetryingContext retryingContext, int attemptNo) {
-
         final RetryConfig<HttpResponse> config = retryingContext.config();
         final ClientRequestContext ctx = retryingContext.ctx();
         final HttpRequestDuplicator rootReqDuplicator = retryingContext.reqDuplicator();
         final HttpRequest originalReq = retryingContext.req();
         final HttpResponse returnedRes = retryingContext.res();
 
-        // todo(szymon): we need to inject the attempt number as there may be concurrent attempts
-        //   starting and acquiring an attempt number.
         final boolean initialAttempt = attemptNo <= 1;
         // The request or attemptRes has been aborted by the client before it receives a attemptRes,
         // so stop retrying.
@@ -340,22 +337,48 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
                                              false);
         }
 
-        startRetryAttempt(ctx, attemptCtx, (winningAttemptCtx,
-                                            winningAttemptRes) -> {
-                              retryingContext.reqDuplicator().close();
-                              retryingContext.ctx().logBuilder().endResponseWithChild(winningAttemptCtx.log());
-                              retryingContext.resFuture().complete(winningAttemptRes);
-                          },
-                          (abortingAttemptCtx, cause) -> {
-                              final RequestLogBuilder logBuilder = abortingAttemptCtx.logBuilder();
-                              logBuilder.responseContent(null, null);
-                              logBuilder.responseContentPreview(null);
+        startRetryAttempt(ctx, attemptCtx, attemptRes, (winningAttemptCtx,
+                                                        winningAttemptRes) -> {
+                              assert attemptCtx == winningAttemptCtx;
 
-                              if (cause != null) {
-                                  attemptCtx.cancel(cause);
-                              } else {
-                                  attemptCtx.cancel();
-                              }
+                              winningAttemptCtx.eventLoop().execute(() -> {
+                                  retryingContext.reqDuplicator().close();
+                                  retryingContext
+                                          .ctx()
+                                          .logBuilder()
+                                          .endResponseWithChild(winningAttemptCtx.log());
+                                  retryingContext.resFuture().complete(winningAttemptRes);
+                              });
+                          },
+                          (abortingAttemptCtx,
+                           abortingAttemptRes,
+                           cause
+                          ) -> {
+                              assert attemptCtx == abortingAttemptCtx;
+                              assert attemptRes == abortingAttemptRes;
+
+                              final CompletableFuture<Void> abortCompletedFuture = new CompletableFuture<>();
+
+                              attemptCtx.eventLoop().execute(() -> {
+                                  final RequestLogBuilder logBuilder = abortingAttemptCtx.logBuilder();
+                                  logBuilder.responseContent(null, null);
+                                  logBuilder.responseContentPreview(null);
+
+                                  if (cause != null) {
+                                      attemptCtx.cancel(cause);
+                                      abortingAttemptRes.abort(cause);
+                                  } else {
+                                      attemptCtx.cancel();
+                                      abortingAttemptRes.abort();
+                                  }
+
+                                  abortingAttemptRes.whenComplete().handle((unused, unusedCause) -> {
+                                      abortCompletedFuture.complete(null);
+                                      return null;
+                                  });
+                              });
+
+                              return abortCompletedFuture;
                           }
         );
 
@@ -465,12 +488,6 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
             }
 
             completeAttemptLogIfBytesNotTransferred(attemptCtx, attemptRes, headers, responseCause);
-
-            // see above
-            if (isRetryingComplete(retryingContext.ctx())) {
-                attemptSplitRes.body().abort();
-                return null;
-            }
 
             attemptCtx.log().whenAvailable(RequestLogProperty.RESPONSE_HEADERS).thenRun(() -> {
                 // see above

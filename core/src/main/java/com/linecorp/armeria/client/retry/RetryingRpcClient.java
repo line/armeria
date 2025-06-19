@@ -31,6 +31,7 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.RpcResponse;
+import com.linecorp.armeria.common.util.UnmodifiableFuture;
 import com.linecorp.armeria.internal.client.ClientPendingThrowableUtil;
 import com.linecorp.armeria.internal.client.ClientRequestContextExtension;
 import com.linecorp.armeria.internal.common.util.StringUtil;
@@ -190,7 +191,7 @@ public final class RetryingRpcClient extends AbstractRetryingClient<RpcRequest, 
                                              req, true);
         }
 
-        startRetryAttempt(ctx, attemptCtx, (winningAttemptCtx, winningAttemptRes) -> {
+        startRetryAttempt(ctx, attemptCtx, attemptRes, (winningAttemptCtx, winningAttemptRes) -> {
             ctx.logBuilder().endResponseWithChild(winningAttemptCtx.log());
             final HttpRequest actualHttpReq = winningAttemptCtx.request();
             if (actualHttpReq != null) {
@@ -198,12 +199,16 @@ public final class RetryingRpcClient extends AbstractRetryingClient<RpcRequest, 
             }
 
             returnedResFuture.complete(winningAttemptRes);
-        }, (abortingAttemptCtx, cause) -> {
+        }, (abortingAttemptCtx,
+            abortingAttemptRes,
+            cause) -> {
             if (cause != null) {
                 abortingAttemptCtx.cancel(cause);
             } else {
                 abortingAttemptCtx.cancel();
             }
+            abortingAttemptRes.cancel(false);
+            return UnmodifiableFuture.completedFuture(null);
         });
 
         final RetryConfig<RpcResponse> retryConfig = mappedRetryConfig(ctx);

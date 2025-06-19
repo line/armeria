@@ -45,8 +45,6 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.client.ClientRequestContext;
@@ -59,6 +57,8 @@ import com.linecorp.armeria.client.WebClientBuilder;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.client.endpoint.EndpointSelectionStrategy;
 import com.linecorp.armeria.client.logging.LoggingClient;
+import com.linecorp.armeria.client.retry.AbstractRetryingClient.State;
+import com.linecorp.armeria.client.retry.AbstractRetryingClient.State.Attempt;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.ExchangeType;
 import com.linecorp.armeria.common.HttpRequest;
@@ -78,12 +78,8 @@ import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.logging.LoggingService;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
-// todo(szymon): change tests that we wait for the response and demand that immediately after we see all the
-//  logs in the appropriate state.
 class RetryingClientWithHedgingTest {
     private static class TestServer extends ServerExtension {
-        private static final Logger logger = LoggerFactory.getLogger(TestServer.class);
-
         private CountDownLatch responseLatch = new CountDownLatch(1);
         private final AtomicInteger numRequests = new AtomicInteger();
         private HttpService helloService = mock(HttpService.class);
@@ -121,8 +117,6 @@ class RetryingClientWithHedgingTest {
                                        responseFuture.completeExceptionally(e);
                                        fail(e);
                                    }
-
-                                   logger.debug("Latch released. Returning response.");
 
                                    try {
                                        responseFuture.complete(helloService.serve(ctx, req));
@@ -171,6 +165,7 @@ class RetryingClientWithHedgingTest {
     @RegisterExtension
     private static final TestServer server3 = new TestServer();
 
+    private @Nullable ClientRequestContext ctx;
     private static ClientFactory clientFactory;
     private static final RetryRule NO_RETRY_RULE = RetryRule.builder().thenNoRetry();
 
@@ -213,7 +208,6 @@ class RetryingClientWithHedgingTest {
         final WebClient client = client(hedgingNoRetryConfig);
 
         final CompletableFuture<AggregatedHttpResponse> responseFuture;
-        final ClientRequestContext ctx;
         try (ClientRequestContextCaptor captor = Clients.newContextCaptor()) {
             responseFuture = client.get("/hello").aggregate();
             ctx = captor.get();
@@ -246,7 +240,6 @@ class RetryingClientWithHedgingTest {
         final WebClient client = client(hedgingNoRetryConfig);
 
         final CompletableFuture<AggregatedHttpResponse> responseFuture;
-        final ClientRequestContext ctx;
         try (ClientRequestContextCaptor captor = Clients.newContextCaptor()) {
             responseFuture = client.get("/hello").aggregate();
             ctx = captor.get();
@@ -289,7 +282,6 @@ class RetryingClientWithHedgingTest {
         final WebClient client = client(hedgingNoRetryConfig);
 
         final CompletableFuture<AggregatedHttpResponse> responseFuture;
-        final ClientRequestContext ctx;
         try (ClientRequestContextCaptor captor = Clients.newContextCaptor()) {
             responseFuture = client.get("/hello").aggregate();
             ctx = captor.get();
@@ -355,7 +347,6 @@ class RetryingClientWithHedgingTest {
 
         final WebClient client = client(config);
         final CompletableFuture<AggregatedHttpResponse> responseFuture;
-        final ClientRequestContext ctx;
         try (ClientRequestContextCaptor captor = Clients.newContextCaptor()) {
             responseFuture = client.get("/hello").aggregate();
             ctx = captor.get();
@@ -431,7 +422,6 @@ class RetryingClientWithHedgingTest {
 
         final WebClient client = client(config);
         final CompletableFuture<AggregatedHttpResponse> responseFuture;
-        final ClientRequestContext ctx;
         try (ClientRequestContextCaptor captor = Clients.newContextCaptor()) {
             responseFuture = client.get("/hello").aggregate();
             ctx = captor.get();
@@ -489,7 +479,6 @@ class RetryingClientWithHedgingTest {
                 .build();
 
         final CompletableFuture<AggregatedHttpResponse> responseFuture;
-        final ClientRequestContext ctx;
         try (ClientRequestContextCaptor captor = Clients.newContextCaptor()) {
             responseFuture = client.get("/hello").aggregate();
             ctx = captor.get();
@@ -546,7 +535,6 @@ class RetryingClientWithHedgingTest {
         final WebClient client = client(config);
 
         final CompletableFuture<AggregatedHttpResponse> responseFuture;
-        final ClientRequestContext ctx;
         try (ClientRequestContextCaptor captor = Clients.newContextCaptor()) {
             responseFuture = client.get("/hello").aggregate();
             ctx = captor.get();
@@ -598,7 +586,6 @@ class RetryingClientWithHedgingTest {
         final WebClient client = client(config);
 
         final CompletableFuture<AggregatedHttpResponse> responseFuture;
-        final ClientRequestContext ctx;
         try (ClientRequestContextCaptor captor = Clients.newContextCaptor()) {
             responseFuture = client.get("/hello").aggregate();
             ctx = captor.get();
@@ -647,7 +634,6 @@ class RetryingClientWithHedgingTest {
                 ).build();
 
         final CompletableFuture<AggregatedHttpResponse> responseFuture;
-        final ClientRequestContext ctx;
         try (ClientRequestContextCaptor captor = Clients.newContextCaptor()) {
             responseFuture = client.get("/hello").aggregate();
             ctx = captor.get();
@@ -701,6 +687,7 @@ class RetryingClientWithHedgingTest {
                                                   server1.httpEndpoint(),
                                                   server2.httpEndpoint(),
                                                   server3.httpEndpoint()))
+                        .requestAutoAbortDelayMillis(0)
                         .decorator(LoggingClient.newDecorator())
                         .factory(clientFactory);
     }
@@ -742,17 +729,27 @@ class RetryingClientWithHedgingTest {
         logVerifierCtx.accept(log);
     }
 
+    private static void assertValidRetryingState(ClientRequestContext ctx, int expectedAttempts) {
+        final State<HttpResponse> state = AbstractRetryingClient.state(ctx);
+        assertThat(state.isRetryingComplete()).isTrue();
+
+        final List<Attempt<HttpResponse>> startedAttempts = state.startedAttempts();
+        assertThat(startedAttempts).hasSize(expectedAttempts);
+        for (Attempt<HttpResponse> attempt : startedAttempts) {
+            assertThat(attempt.attemptRes().isComplete()).isTrue();
+        }
+    }
+
     private static void assertValidClientRequestContext(ClientRequestContext ctx,
                                                         RequestLogVerifier logVerifierCtx,
                                                         RequestLogVerifier logVerifierServer1,
                                                         @Nullable RequestLogVerifier logVerifierServer2,
                                                         @Nullable RequestLogVerifier logVerifierServer3
     ) {
+        final int expectedAttempts = 1 + (logVerifierServer2 == null ? 0 : 1) +
+                                     (logVerifierServer3 == null ? 0 : 1);
 
-        final int expectedNumChildren = 1 + (logVerifierServer2 == null ? 0 : 1) +
-                                        (logVerifierServer3 == null ? 0 : 1);
-
-        assertValidRootClientRequestContext(ctx, logVerifierCtx, expectedNumChildren);
+        assertValidRootClientRequestContext(ctx, logVerifierCtx, expectedAttempts);
         assertValidChildLog(ctx.log().children().get(0), 1, logVerifierServer1);
         if (logVerifierServer2 != null) {
             assertValidChildLog(ctx.log().children().get(1), 2, logVerifierServer2);
@@ -761,6 +758,8 @@ class RetryingClientWithHedgingTest {
         if (logVerifierServer3 != null) {
             assertValidChildLog(ctx.log().children().get(2), 3, logVerifierServer3);
         }
+
+        assertValidRetryingState(ctx, expectedAttempts);
     }
 
     private static void assertValidChildLog(RequestLogAccess logAccess, int attemptNumber,

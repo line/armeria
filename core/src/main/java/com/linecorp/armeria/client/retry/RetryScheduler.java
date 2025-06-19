@@ -24,9 +24,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Consumer;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import com.linecorp.armeria.client.retry.RetrySchedulingException.Type;
 import com.linecorp.armeria.common.annotation.Nullable;
 
@@ -93,13 +90,11 @@ class RetryScheduler {
         }
     }
 
-    // todo(szymon) [Q]: make this configurable?
+    // todo: should we make this a flag?
     // Number of nanoseconds that we allow the retry task to be scheduled earlier than
     // the earliestNextRetryTimeNanos.
     // This should avoid unnecessary rescheduling.
     private static final long RESCHEDULING_OVERTAKING_TOLERANCE_NANOS = TimeUnit.MICROSECONDS.toNanos(500);
-
-    private static final Logger logger = LoggerFactory.getLogger(RetryScheduler.class);
 
     // for locking
     private final ReentrantLock retryLock;
@@ -320,7 +315,6 @@ class RetryScheduler {
                 retryRunnable.accept(retryLock);
             };
 
-            // todo(szymon): must not be executed immediately in this thread.
             //noinspection unchecked
             final ScheduledFuture<Void> nextRetryTaskFuture =
                     (ScheduledFuture<Void>) eventLoop.schedule(wrappedRetryRunnable, delayNanos,

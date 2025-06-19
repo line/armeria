@@ -52,6 +52,9 @@ import com.linecorp.armeria.client.ResponseCancellationException;
 import com.linecorp.armeria.client.ResponseTimeoutException;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.client.endpoint.EndpointSelectionStrategy;
+import com.linecorp.armeria.client.retry.AbstractRetryingClient;
+import com.linecorp.armeria.client.retry.AbstractRetryingClient.State;
+import com.linecorp.armeria.client.retry.AbstractRetryingClient.State.Attempt;
 import com.linecorp.armeria.client.retry.Backoff;
 import com.linecorp.armeria.client.retry.RetryConfig;
 import com.linecorp.armeria.client.retry.RetryRule;
@@ -668,6 +671,17 @@ class RetryingRpcClientWithHedgingTest {
                 assertThat(cause.getMessage()).contains(expectedMessage);
             };
 
+    private static void assertValidRetryingState(ClientRequestContext ctx, int expectedAttempts) {
+        final State<RpcResponse> state = AbstractRetryingClient.state(ctx);
+        assertThat(state.isRetryingComplete()).isTrue();
+
+        final List<Attempt<RpcResponse>> startedAttempts = state.startedAttempts();
+        assertThat(startedAttempts).hasSize(expectedAttempts);
+        for (Attempt<RpcResponse> attempt : startedAttempts) {
+            assertThat(attempt.attemptRes().whenComplete().isDone()).isTrue();
+        }
+    }
+
     private static void assertValidRootClientRequestContext(ClientRequestContext ctx,
                                                             RequestLogVerifier logVerifierCtx,
                                                             int expectedNumChildren) {
@@ -678,6 +692,8 @@ class RetryingRpcClientWithHedgingTest {
                                                         RequestLogProperty.REQUEST_HEADERS);
         assertThat(log).isNotNull();
         logVerifierCtx.accept(log);
+
+        assertValidRetryingState(ctx, expectedNumChildren);
     }
 
     private void assertValidClientRequestContext(ClientRequestContext ctx,

@@ -19,16 +19,19 @@ import static com.google.common.base.Preconditions.checkState;
 import static java.util.Objects.requireNonNull;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.ReentrantLock;
-import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import com.google.common.annotations.VisibleForTesting;
+import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.client.Client;
 import com.linecorp.armeria.client.ClientRequestContext;
@@ -42,6 +45,7 @@ import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.TimeoutMode;
+import com.linecorp.armeria.common.util.UnmodifiableFuture;
 import com.linecorp.armeria.internal.client.ClientUtil;
 import com.linecorp.armeria.internal.common.util.ReentrantShortLock;
 
@@ -99,11 +103,6 @@ public abstract class AbstractRetryingClient<I extends Request, O extends Respon
                                                                 responseTimeoutTimeNanos);
             state = new State<>(retryLock, config, scheduler, responseTimeoutTimeNanos);
         }
-
-        state.whenRetryingComplete().handle((f, t) -> {
-            state.scheduler().shutdown();
-            return null;
-        });
 
         ctx.setAttr(STATE, state);
         return doExecute(ctx, req);
@@ -179,14 +178,15 @@ public abstract class AbstractRetryingClient<I extends Request, O extends Respon
      */
     protected void startRetryAttempt(ClientRequestContext ctx,
                                      ClientRequestContext attemptCtx,
-                                     BiConsumer<ClientRequestContext, O> onWinHandler,
-                                     BiConsumer<ClientRequestContext, @Nullable Throwable>
-                                             onAttemptAbortedHandler
+                                     O attemptRes,
+                                     AttemptWinHandler<O> onWinHandler,
+                                     AttemptAbortHandler<O>
+                                             onAbortHandler
     ) {
         requireNonNull(ctx, "ctx");
         requireNonNull(attemptCtx, "attemptCtx");
         requireNonNull(onWinHandler, "onWinHandler");
-        requireNonNull(onAttemptAbortedHandler, "onAttemptAbortedHandler");
+        requireNonNull(onAbortHandler, "onAbortHandler");
 
         final State<O> state = state(ctx);
         final ReentrantLock retryLock = state.getLock();
@@ -197,32 +197,14 @@ public abstract class AbstractRetryingClient<I extends Request, O extends Respon
             // This really should not happen. However, let us call the abort handler to free
             // potentially expensive resources here.
             retryLock.unlock();
-            onAttemptAbortedHandler.accept(attemptCtx,
-                                           new IllegalStateException("Retrying is already complete."));
+            onAbortHandler.accept(attemptCtx,
+                                  attemptRes,
+                                  new IllegalStateException("Retrying is already complete."));
             return;
         }
 
-        state.startAttempt(attemptCtx);
+        state.startAttempt(attemptCtx, attemptRes, onWinHandler, onAbortHandler);
         retryLock.unlock();
-        state.whenRetryingComplete().handleAsync((winningAttempt, cause) -> {
-            if (winningAttempt == null) {
-                // If the retrying is complete exceptionally, we need to call the onAttemptAbortedHandler.
-                onAttemptAbortedHandler.accept(winningAttempt.ctx(), cause);
-                return null;
-            }
-
-            final ClientRequestContext winningAttemptCtx = winningAttempt.ctx();
-            final O winningAttemptRes = winningAttempt.res();
-            assert winningAttemptRes != null;
-
-            if (attemptCtx == winningAttemptCtx) {
-                onWinHandler.accept(winningAttemptCtx, winningAttemptRes);
-                return null;
-            }
-
-            onAttemptAbortedHandler.accept(attemptCtx, cause);
-            return null;
-        }, attemptCtx.eventLoop());
     }
 
     /**
@@ -382,7 +364,7 @@ public abstract class AbstractRetryingClient<I extends Request, O extends Respon
         retryLock.unlock();
     }
 
-    // todo(szymon): improve documentation for this method
+    // todo(szymon): [doc]
 
     /**
      * Resets the {@link ClientRequestContext#responseTimeoutMillis()}.
@@ -429,39 +411,96 @@ public abstract class AbstractRetryingClient<I extends Request, O extends Respon
         return ClientUtil.newDerivedContext(ctx, req, rpcReq, initialAttempt);
     }
 
+    @FunctionalInterface
+    protected interface AttemptWinHandler<O> {
+        /**
+         * todo(szymon): [doc].
+         */
+        void accept(ClientRequestContext attemptCtx, O attemptResOnComplete);
+    }
+
+    @FunctionalInterface
+    protected interface AttemptAbortHandler<O> {
+        /**
+         * todo(szymon): [doc].
+         */
+        CompletableFuture<Void> accept(ClientRequestContext attemptCtx, O attemptRes,
+                                       @Nullable Throwable abortCause);
+    }
+
+    /**
+     * todo(szymon): [doc].
+     */
+    @VisibleForTesting
     @SuppressWarnings("unchecked")
-    private static <O extends Response> State<O> state(ClientRequestContext ctx) {
+    public static <O extends Response> State<O> state(ClientRequestContext ctx) {
         final State<O> state = (State<O>) ctx.attr(STATE);
         assert state != null;
         return state;
     }
 
-    private static final class State<O extends Response> {
-        static class Attempt<O> {
+    /**
+     * todo(szymon): [doc].
+     */
+    @VisibleForTesting
+    public static final class State<O extends Response> {
+        /**
+         * todo(szymon): [doc].
+         */
+        @VisibleForTesting
+        public static class Attempt<O> {
             private final ClientRequestContext attemptCtx;
-            private @Nullable O attemptRes;
+            private final O attemptRes;
+            private @Nullable O attemptResOnComplete;
 
-            private boolean isCompleted;
+            private final AttemptWinHandler<O> onWinHandler;
+            private final AttemptAbortHandler<O>
+                    onAbortHandler;
 
-            Attempt(ClientRequestContext attemptCtx, @Nullable O attemptRes) {
-                this.attemptCtx = requireNonNull(attemptCtx, "attemptCtx");
+            private boolean hasCalledHandler;
+
+            Attempt(ClientRequestContext attemptCtx, O attemptRes,
+                    AttemptWinHandler<O> onWinHandler,
+                    AttemptAbortHandler<O> onAbortHandler) {
+                this.attemptCtx = attemptCtx;
                 this.attemptRes = attemptRes;
-                isCompleted = this.attemptRes != null;
+                this.onWinHandler = onWinHandler;
+                this.onAbortHandler = onAbortHandler;
+
+                hasCalledHandler = false;
+                attemptResOnComplete = null;
             }
 
-            public ClientRequestContext ctx() {
+            ClientRequestContext ctx() {
                 return attemptCtx;
             }
 
-            @Nullable
-            public O res() {
+            /**
+             * todo(szymon): [doc].
+             */
+            public O attemptRes() {
                 return attemptRes;
             }
 
-            public void setRes(O res) {
-                checkState(!isCompleted);
-                isCompleted = true;
-                attemptRes = requireNonNull(res, "res");
+            void completeWithRes(O res) {
+                assert attemptResOnComplete == null;
+                attemptResOnComplete = res;
+            }
+
+            CompletableFuture<Void> callHandler(boolean isWinning, @Nullable Throwable cause) {
+                if (hasCalledHandler) {
+                    return UnmodifiableFuture.completedFuture(null);
+                }
+
+                hasCalledHandler = true;
+
+                if (isWinning) {
+                    assert attemptResOnComplete != null;
+                    onWinHandler.accept(attemptCtx, attemptResOnComplete);
+                    return UnmodifiableFuture.completedFuture(null);
+                } else {
+                    return onAbortHandler.accept(attemptCtx, attemptRes, cause);
+                }
             }
         }
 
@@ -471,9 +510,11 @@ public abstract class AbstractRetryingClient<I extends Request, O extends Respon
         private final long deadlineNanos;
         private final boolean isTimeoutEnabled;
 
-        private final Map<ClientRequestContext, Attempt<O>> activeAttempts = new HashMap<>();
+        private final Map<ClientRequestContext, Attempt<O>> startedAttempts = new HashMap<>();
 
         private final RetryScheduler retryScheduler;
+
+        private int numPendingAttempts;
 
         // An attempt is considered scheduled between two points:
         // - right before its retry task is scheduled
@@ -485,8 +526,6 @@ public abstract class AbstractRetryingClient<I extends Request, O extends Respon
         private int numScheduledAttempts;
 
         private @Nullable Attempt<O> lastAttempt;
-
-        private final CompletableFuture<Attempt<O>> retryingCompleteFuture;
 
         @Nullable
         private Backoff lastBackoff;
@@ -500,7 +539,9 @@ public abstract class AbstractRetryingClient<I extends Request, O extends Respon
             this.config = config;
             this.retryScheduler = retryScheduler;
             totalAttemptNo = 1;
-            retryingCompleteFuture = new CompletableFuture<>();
+            numPendingAttempts = 0;
+            numScheduledAttempts = 0;
+
             deadlineNanos = 0;
             isTimeoutEnabled = false;
         }
@@ -512,7 +553,9 @@ public abstract class AbstractRetryingClient<I extends Request, O extends Respon
             this.config = config;
             this.retryScheduler = retryScheduler;
             totalAttemptNo = 1;
-            retryingCompleteFuture = new CompletableFuture<>();
+            numPendingAttempts = 0;
+            numScheduledAttempts = 0;
+
             deadlineNanos = responseTimeoutTimeNanos;
             isTimeoutEnabled = true;
         }
@@ -572,14 +615,19 @@ public abstract class AbstractRetryingClient<I extends Request, O extends Respon
             return deadlineNanos;
         }
 
-        void startAttempt(ClientRequestContext attemptCtx) {
+        void startAttempt(ClientRequestContext attemptCtx, O attemptRes,
+                          AttemptWinHandler<O> onWinHandler,
+                          AttemptAbortHandler<O>
+                                  onAbortHandler) {
             lock.lock();
             try {
                 checkState(!isRetryingComplete());
-                checkState(!activeAttempts.containsKey(attemptCtx),
+                checkState(!startedAttempts.containsKey(attemptCtx),
                            "Attempt %s already is already pending.", attemptCtx);
-                final Attempt<O> attempt = new Attempt<>(attemptCtx, null);
-                activeAttempts.put(attempt.ctx(), attempt);
+                final Attempt<O> attempt = new Attempt<>(attemptCtx, attemptRes, onWinHandler,
+                                                         onAbortHandler);
+                startedAttempts.put(attempt.ctx(), attempt);
+                numPendingAttempts++;
             } finally {
                 lock.unlock();
             }
@@ -593,12 +641,12 @@ public abstract class AbstractRetryingClient<I extends Request, O extends Respon
                     return;
                 }
 
-                checkState(activeAttempts.containsKey(attemptCtx),
+                checkState(startedAttempts.containsKey(attemptCtx),
                            "Attempt %s is not registered as pending.", attemptCtx);
 
-                lastAttempt = activeAttempts.get(attemptCtx);
-                lastAttempt.setRes(attemptRes);
-                activeAttempts.remove(attemptCtx);
+                lastAttempt = startedAttempts.get(attemptCtx);
+                lastAttempt.completeWithRes(attemptRes);
+                numPendingAttempts--;
             } catch (Exception e) {
                 lock.unlock();
                 throw e;
@@ -675,7 +723,7 @@ public abstract class AbstractRetryingClient<I extends Request, O extends Respon
         int numPendingAttempts() {
             lock.lock();
             try {
-                return activeAttempts.size() + (numScheduledAttempts > 0 ? 1 : 0);
+                return numPendingAttempts + (numScheduledAttempts > 0 ? 1 : 0);
             } finally {
                 lock.unlock();
             }
@@ -720,9 +768,11 @@ public abstract class AbstractRetryingClient<I extends Request, O extends Respon
                         new IllegalStateException("Completed retrying without any attempts."));
             } else {
                 isRetryingComplete = true;
-                // We do not want to call the handlers with the lock.
+                scheduler().shutdown();
                 lock.unlock();
-                retryingCompleteFuture.complete(lastAttempt);
+                // We do not want to call the handlers with the lock.
+                // Save to reference lastAttempt as this cannot change anymore.
+                notifyAllAttemptHandlers(lastAttempt, null);
             }
         }
 
@@ -738,20 +788,49 @@ public abstract class AbstractRetryingClient<I extends Request, O extends Respon
             completeExceptionally0(cause);
         }
 
+        private void notifyAllAttemptHandlers(@Nullable Attempt<O> winningAttempt, @Nullable Throwable cause) {
+            assert isRetryingComplete();
+
+            final CompletableFuture<?> allOtherAttemptsAbortedFuture = CompletableFuture.allOf(
+                    startedAttempts.values().stream()
+                                   .filter(attempt -> attempt != winningAttempt)
+                                   .map(attempt ->
+                                                attempt.callHandler(false, cause)
+                                   )
+                                   .toArray(CompletableFuture[]::new)
+            );
+
+            allOtherAttemptsAbortedFuture.handle(
+                    (unused, throwable) -> {
+                        if (throwable != null) {
+                            logger.warn("Failed to notify all aborted attempt handlers.", throwable);
+                        }
+
+                        if (winningAttempt != null) {
+                            winningAttempt.callHandler(true, cause);
+                        }
+                        return null;
+                    });
+        }
+
         // takes ownership of current lock
         private void completeExceptionally0(Throwable cause) {
             assert lock.isHeldByCurrentThread();
             assert !isRetryingComplete();
 
             isRetryingComplete = true;
+            scheduler().shutdown();
 
             // We do not want to call the handlers with the lock.
             lock.unlock();
 
-            retryingCompleteFuture.completeExceptionally(cause);
+            notifyAllAttemptHandlers(null, cause);
         }
 
-        boolean isRetryingComplete() {
+        /**
+         * todo(szymon): [doc].
+         */
+        public boolean isRetryingComplete() {
             try {
                 lock.lock();
                 return isRetryingComplete;
@@ -760,8 +839,16 @@ public abstract class AbstractRetryingClient<I extends Request, O extends Respon
             }
         }
 
-        CompletableFuture<Attempt<O>> whenRetryingComplete() {
-            return retryingCompleteFuture;
+        /**
+         * todo(szymon): [doc].
+         */
+        public List<Attempt<O>> startedAttempts() {
+            lock.lock();
+            try {
+                return ImmutableList.copyOf(startedAttempts.values());
+            } finally {
+                lock.unlock();
+            }
         }
     }
 }
