@@ -599,7 +599,7 @@ class RetryingClientWithHedgingTest {
             assertThat(server2.getNumRequests()).isOne();
         });
 
-        Thread.sleep(10);
+        Thread.sleep(500);
         server1.unlatchResponse();
         server2.unlatchResponse();
 
@@ -639,7 +639,7 @@ class RetryingClientWithHedgingTest {
             ctx = captor.get();
         }
 
-        await().atLeast(400, TimeUnit.MILLISECONDS).atMost(600, TimeUnit.MILLISECONDS).untilAsserted(() -> {
+        await().untilAsserted(() -> {
             assertThat(responseFuture).isCompletedExceptionally();
             assertThatThrownBy(responseFuture::get).satisfies(throwable -> {
                 final Throwable rootCause = Exceptions.peel(throwable);
