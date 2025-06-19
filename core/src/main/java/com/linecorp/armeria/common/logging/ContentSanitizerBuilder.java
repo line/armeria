@@ -17,6 +17,7 @@
 package com.linecorp.armeria.common.logging;
 
 import static com.linecorp.armeria.internal.common.logging.MaskerAttributeKeys.REQUEST_CONTEXT_KEY;
+import static java.util.Objects.requireNonNull;
 
 import java.util.List;
 import java.util.Map;
@@ -73,6 +74,7 @@ public final class ContentSanitizerBuilder {
      * {@link FieldMasker#fallthrough()}, no masking will occur for the field.
      */
     public ContentSanitizerBuilder fieldMaskerSelector(FieldMaskerSelector<?> masker) {
+        requireNonNull(masker, "masker");
         Preconditions.checkArgument(!customizersMap.containsKey(masker.getClass()),
                                     "Specified masker should be one of the following types: %s",
                                     customizersMap.keySet());
@@ -134,7 +136,7 @@ public final class ContentSanitizerBuilder {
         final List<T> filtered =
                 selectors.stream().filter(selector -> provider.supportedType().isInstance(selector))
                          .map(selector -> (T) selector)
-                         .collect(Collectors.toList());
+                         .collect(ImmutableList.toImmutableList());
         provider.customize(filtered, objectMapper);
     }
 }

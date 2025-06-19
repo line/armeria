@@ -28,6 +28,7 @@ import com.linecorp.armeria.common.logging.FieldMaskers.NullifyFieldMasker;
  * or {@link #builder()} rather than implementing this interface directly.
  */
 @UnstableApi
+@FunctionalInterface
 public interface FieldMasker {
 
     /**
@@ -100,7 +101,7 @@ public interface FieldMasker {
     /**
      * Provides a mapping from between the output class and the input class.
      */
-    default Class<?> mapClass(Class<?> clazz) {
+    default Class<?> mappedClass(Class<?> clazz) {
         return clazz;
     }
 }

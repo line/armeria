@@ -89,7 +89,7 @@ final class MaskingBeanSerializerModifier extends BeanSerializerModifier {
                 serializerProvider.defaultSerializeNull(jsonGenerator);
                 return;
             }
-            final Class<?> outClass = mapper.mapClass(o.getClass());
+            final Class<?> outClass = mapper.mappedClass(o.getClass());
             if (outClass != o.getClass()) {
                 jsonGenerator.writeObject(masked);
                 return;

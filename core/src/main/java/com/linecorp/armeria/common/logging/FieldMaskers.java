@@ -24,7 +24,6 @@ final class FieldMaskers {
 
         static final FieldMasker INSTANCE = new FallThroughFieldMasker();
 
-        @Nullable
         @Override
         public Object mask(Object obj) {
             return obj;
@@ -35,7 +34,6 @@ final class FieldMaskers {
 
         static final FieldMasker INSTANCE = new NoMaskFieldMasker();
 
-        @Nullable
         @Override
         public Object mask(Object obj) {
             return obj;

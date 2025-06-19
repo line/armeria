@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.common.logging;
 
+import static java.util.Objects.requireNonNull;
+
 import java.util.List;
 import java.util.function.Function;
 
@@ -43,10 +45,13 @@ public final class FieldMaskerBuilder {
      * is found, the masker will be applied to the field value.
      */
     public <T> FieldMaskerBuilder addMasker(Class<T> clazz, Function<T, T> masker) {
+        requireNonNull(clazz, "clazz");
+        requireNonNull(masker, "masker");
         maskersBuilder.add(new TypedMasker(clazz, new FieldMasker() {
             @Nullable
             @Override
             public Object mask(Object obj) {
+                //noinspection unchecked
                 return masker.apply((T) obj);
             }
         }));
@@ -60,6 +65,9 @@ public final class FieldMaskerBuilder {
      */
     public <T> FieldMaskerBuilder addMasker(Class<T> clazz, Function<T, String> encryptorFunction,
                                             Function<String, T> decryptorFunction) {
+        requireNonNull(clazz, "clazz");
+        requireNonNull(encryptorFunction, "encryptorFunction");
+        requireNonNull(decryptorFunction, "decryptorFunction");
         maskersBuilder.add(new TypedMasker(clazz, new FieldMasker() {
             @Nullable
             @Override
@@ -73,7 +81,7 @@ public final class FieldMaskerBuilder {
             }
 
             @Override
-            public Class<?> mapClass(Class<?> clazz) {
+            public Class<?> mappedClass(Class<?> clazz) {
                 return String.class;
             }
         }));
@@ -92,6 +100,7 @@ public final class FieldMaskerBuilder {
      * none of the maskers added by {@link #addMasker(Class, Function)} can handle the field value.
      */
     public FieldMasker build(FieldMasker defaultMasker) {
+        requireNonNull(defaultMasker, "defaultMasker");
         final List<TypedMasker> maskers = maskersBuilder.build();
         return new CompositeFieldMasker(maskers, defaultMasker);
     }
@@ -166,13 +175,13 @@ public final class FieldMaskerBuilder {
         }
 
         @Override
-        public Class<?> mapClass(Class<?> clazz) {
+        public Class<?> mappedClass(Class<?> clazz) {
             for (TypedMasker masker : maskers) {
                 if (masker.clazz().isAssignableFrom(clazz)) {
-                    return masker.masker().mapClass(clazz);
+                    return masker.masker().mappedClass(clazz);
                 }
             }
-            return defaultMasker.mapClass(clazz);
+            return defaultMasker.mappedClass(clazz);
         }
 
         @Override

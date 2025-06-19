@@ -76,7 +76,7 @@ final class MaskingBeanDeserializerModifier extends BeanDeserializerModifier {
 
         @Override
         public Object deserialize(JsonParser p, DeserializationContext ctxt) throws IOException {
-            final Class<?> mappedClass = mapper.mapClass(beanDesc.getBeanClass());
+            final Class<?> mappedClass = mapper.mappedClass(beanDesc.getBeanClass());
             final Object readValue;
             if (mappedClass != beanDesc.getBeanClass()) {
                 readValue = p.readValueAs(mappedClass);

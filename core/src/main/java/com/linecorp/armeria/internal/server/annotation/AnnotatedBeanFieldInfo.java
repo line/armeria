@@ -20,9 +20,9 @@ import java.lang.annotation.Annotation;
 import java.lang.reflect.AnnotatedElement;
 import java.util.Map;
 import java.util.function.Function;
-import java.util.stream.Collectors;
 
 import com.google.common.base.MoreObjects;
+import com.google.common.collect.ImmutableMap;
 
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.logging.BeanFieldInfo;
@@ -41,8 +41,9 @@ final class AnnotatedBeanFieldInfo implements BeanFieldInfo {
 
     private static Map<Class<?>, Annotation> annotationMap(AnnotatedElement annotatedElement) {
         return AnnotationUtil.getAllAnnotations(annotatedElement).stream()
-                             .collect(Collectors.toMap(Annotation::annotationType, Function.identity(),
-                                                       (a, b) -> a));
+                             .collect(ImmutableMap.toImmutableMap(Annotation::annotationType,
+                                                                  Function.identity(),
+                                                                  (a, b) -> a));
     }
 
     @Override
