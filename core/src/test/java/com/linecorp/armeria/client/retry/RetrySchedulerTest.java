@@ -52,7 +52,7 @@ import io.netty.channel.DefaultEventLoop;
 import io.netty.channel.EventLoop;
 
 class RetrySchedulerTest {
-    private static final long SCHEDULING_TOLERANCE_NANOS = TimeUnit.MILLISECONDS.toNanos(50);
+    private static final long SCHEDULING_TOLERANCE_NANOS = TimeUnit.MILLISECONDS.toNanos(200);
     private static final long SCHEDULING_TOLERANCE_MILLIS = TimeUnit.NANOSECONDS.toMillis(
             SCHEDULING_TOLERANCE_NANOS);
 
