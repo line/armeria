@@ -48,6 +48,11 @@ public enum RequestLogProperty {
     REQUEST_FIRST_BYTES_TRANSFERRED_TIME(true),
 
     /**
+     * {@link RequestLog#requestFullyReceivedTimeNanos()}.
+     */
+    REQUEST_FULLY_RECEIVED(true),
+
+    /**
      * {@link RequestLog#channel()}, {@link RequestLog#sessionProtocol()}, {@link RequestLog#sslSession()},
      * {@link RequestLog#connectionTimings()}.
      */
@@ -108,7 +113,7 @@ public enum RequestLogProperty {
 
     /**
      * {@link RequestLog#responseEndTimeNanos()}, {@link RequestLog#responseDurationNanos()},
-     * {@link RequestLog#totalDurationNanos()}.
+     * {@link RequestLog#requestReceivedDurationNanos()},{@link RequestLog#totalDurationNanos()}.
      */
     RESPONSE_END_TIME(false),
 
