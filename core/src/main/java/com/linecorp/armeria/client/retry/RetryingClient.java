@@ -501,7 +501,7 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
                 }
 
                 if (retryingContext.config().needsContentInRule() && responseCause == null) {
-                    final HttpResponse attemptUnsplitRes = HttpResponse.of(headers, attemptSplitRes.body());
+                    final HttpResponse attemptUnsplitRes = attemptSplitRes.unsplit();
                     final HttpResponseDuplicator attemptResDuplicator =
                             attemptUnsplitRes.toDuplicator(attemptCtx.eventLoop().withoutContext(),
                                                            attemptCtx.maxResponseLength());
@@ -539,7 +539,7 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
                         attemptSplitRes.body().abort(responseCause);
                         attemptUnsplitRes = HttpResponse.ofFailure(responseCause);
                     } else {
-                        attemptUnsplitRes = HttpResponse.of(headers, attemptSplitRes.body());
+                        attemptUnsplitRes = attemptSplitRes.unsplit();
                     }
                     handleResponseWithoutContent(retryingContext, attemptCtx, attemptUnsplitRes, responseCause);
                 }
