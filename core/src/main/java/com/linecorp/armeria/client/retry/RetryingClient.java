@@ -388,24 +388,11 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
                     attemptCtx.logBuilder().endRequest(cause);
                     attemptCtx.logBuilder().endResponse(cause);
 
-                    // At that point we completed the request log for the attempt.
-                    // What comes next investigates the attempt's response to decide
-                    // on retry. We do not want to continue if we already completed
-                    // the whole retrying process/ if we have a winning attempt.
-                    if (isRetryingComplete(ctx)) {
-                        return null;
-                    }
-
                     handleResponseWithoutContent(retryingContext, attemptCtx,
                                                  HttpResponse.ofFailure(cause),
                                                  cause);
                 } else {
                     completeAttemptLogIfBytesNotTransferred(attemptCtx, attemptAggResponse);
-
-                    // see above
-                    if (isRetryingComplete(ctx)) {
-                        return null;
-                    }
 
                     attemptCtx.log().whenAvailable(RequestLogProperty.RESPONSE_END_TIME).thenRun(() -> {
                         handleAggregatedResponse(retryingContext, attemptCtx, attemptAggResponse);
@@ -461,10 +448,6 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
             final RetryRule retryRule = retryRule(retryingContext.config());
             final CompletionStage<RetryDecision> f = retryRule.shouldRetry(attemptCtx, attemptResCause);
             f.handle((decision, shouldRetryCause) -> {
-                if (isRetryingComplete(retryingContext.ctx())) {
-                    return null;
-                }
-
                 warnIfExceptionIsRaised(retryRule, shouldRetryCause);
                 handleRetryDecision(retryingContext, decision, attemptCtx, attemptRes);
                 return null;
@@ -490,16 +473,6 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
             completeAttemptLogIfBytesNotTransferred(attemptCtx, attemptRes, headers, responseCause);
 
             attemptCtx.log().whenAvailable(RequestLogProperty.RESPONSE_HEADERS).thenRun(() -> {
-                // see above
-                if (isRetryingComplete(retryingContext.ctx())) {
-                    if (responseCause != null) {
-                        attemptSplitRes.body().abort(responseCause);
-                    } else {
-                        attemptSplitRes.body().abort();
-                    }
-                    return;
-                }
-
                 if (retryingContext.config().needsContentInRule() && responseCause == null) {
                     final HttpResponse attemptUnsplitRes = attemptSplitRes.unsplit();
                     final HttpResponseDuplicator attemptResDuplicator =
@@ -519,11 +492,6 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
                                        .handle((decision, cause) -> {
                                            warnIfExceptionIsRaised(ruleWithContent, cause);
                                            attemptTruncatedRes.abort();
-
-                                           if (isRetryingComplete(retryingContext.ctx())) {
-                                               attemptResDuplicator.abort();
-                                               return null;
-                                           }
 
                                            handleRetryDecision(retryingContext, decision, attemptCtx,
                                                                attemptDuplicatedRes);
@@ -559,10 +527,6 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
                 ruleWithContent.shouldRetry(attemptCtx, attemptAggRes.toHttpResponse(), null)
                                .handle((decision, cause) -> {
                                    warnIfExceptionIsRaised(ruleWithContent, cause);
-
-                                   if (isRetryingComplete(retryingContext.ctx())) {
-                                       return null;
-                                   }
 
                                    handleRetryDecision(retryingContext,
                                                        decision, attemptCtx, attemptAggRes.toHttpResponse());
@@ -655,6 +619,10 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
 
     private void handleRetryDecision(RetryingContext retryingContext, @Nullable RetryDecision decision,
                                      ClientRequestContext attemptCtx, HttpResponse attemptRes) {
+        if (isRetryingComplete(retryingContext.ctx())) {
+            return;
+        }
+
         final Backoff backoff = decision != null ? decision.backoff() : null;
 
         if (backoff != null) {
