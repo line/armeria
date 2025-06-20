@@ -1,7 +1,7 @@
 /*
- * Copyright 2020 LINE Corporation
+ * Copyright 2025 LY Corporation
  *
- * LINE Corporation licenses this file to you under the Apache License,
+ * LY Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
@@ -77,6 +77,7 @@ public final class RetryConfig<T extends Response> {
 
     private final int maxTotalAttempts;
     private final long responseTimeoutMillisForEachAttempt;
+    private final long hedgingDelayMillis;
     private final int maxContentLength;
 
     @Nullable
@@ -90,7 +91,16 @@ public final class RetryConfig<T extends Response> {
 
     RetryConfig(RetryRule retryRule, int maxTotalAttempts, long responseTimeoutMillisForEachAttempt) {
         this(requireNonNull(retryRule, "retryRule"), null,
-                maxTotalAttempts, responseTimeoutMillisForEachAttempt, 0);
+             maxTotalAttempts, responseTimeoutMillisForEachAttempt,
+             0, -1);
+        checkArguments(maxTotalAttempts, responseTimeoutMillisForEachAttempt);
+    }
+
+    RetryConfig(RetryRule retryRule, int maxTotalAttempts, long responseTimeoutMillisForEachAttempt,
+                long hedgingDelayMillis) {
+        this(requireNonNull(retryRule, "retryRule"), null,
+             maxTotalAttempts, responseTimeoutMillisForEachAttempt,
+             0, hedgingDelayMillis);
         checkArguments(maxTotalAttempts, responseTimeoutMillisForEachAttempt);
     }
 
@@ -100,7 +110,19 @@ public final class RetryConfig<T extends Response> {
             int maxTotalAttempts,
             long responseTimeoutMillisForEachAttempt) {
         this(null, requireNonNull(retryRuleWithContent, "retryRuleWithContent"),
-                maxTotalAttempts, responseTimeoutMillisForEachAttempt, maxContentLength);
+             maxTotalAttempts, responseTimeoutMillisForEachAttempt,
+             maxContentLength, -1);
+    }
+
+    RetryConfig(
+            RetryRuleWithContent<T> retryRuleWithContent,
+            int maxContentLength,
+            int maxTotalAttempts,
+            long responseTimeoutMillisForEachAttempt,
+            long hedgingDelayMillis) {
+        this(null, requireNonNull(retryRuleWithContent, "retryRuleWithContent"),
+             maxTotalAttempts, responseTimeoutMillisForEachAttempt,
+             maxContentLength, hedgingDelayMillis);
     }
 
     private RetryConfig(
@@ -108,13 +130,16 @@ public final class RetryConfig<T extends Response> {
             @Nullable RetryRuleWithContent<T> retryRuleWithContent,
             int maxTotalAttempts,
             long responseTimeoutMillisForEachAttempt,
-            int maxContentLength) {
+            int maxContentLength,
+            long hedgingDelayMillis
+    ) {
         checkArguments(maxTotalAttempts, responseTimeoutMillisForEachAttempt);
         this.retryRule = retryRule;
         this.retryRuleWithContent = retryRuleWithContent;
         this.maxTotalAttempts = maxTotalAttempts;
         this.responseTimeoutMillisForEachAttempt = responseTimeoutMillisForEachAttempt;
         this.maxContentLength = maxContentLength;
+        this.hedgingDelayMillis = hedgingDelayMillis;
         if (retryRuleWithContent == null) {
             fromRetryRuleWithContent = null;
         } else {
@@ -145,9 +170,15 @@ public final class RetryConfig<T extends Response> {
             assert retryRule != null;
             builder = builder0(retryRule);
         }
-        return builder
+        builder
                 .maxTotalAttempts(maxTotalAttempts)
                 .responseTimeoutMillisForEachAttempt(responseTimeoutMillisForEachAttempt);
+
+        if (hedgingDelayMillis >= 0) {
+            builder.hedgingDelayMillis(hedgingDelayMillis);
+        }
+
+        return builder;
     }
 
     /**
@@ -164,6 +195,13 @@ public final class RetryConfig<T extends Response> {
      */
     public long responseTimeoutMillisForEachAttempt() {
         return responseTimeoutMillisForEachAttempt;
+    }
+
+    /**
+     * todo(szymon): [doc].
+     */
+    public long hedgingDelayMillis() {
+        return hedgingDelayMillis;
     }
 
     /**

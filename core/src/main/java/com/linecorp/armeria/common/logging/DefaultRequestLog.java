@@ -1,7 +1,7 @@
 /*
- * Copyright 2016 LINE Corporation
+ * Copyright 2025 LY Corporation
  *
- * LINE Corporation licenses this file to you under the Apache License,
+ * LY Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
@@ -596,6 +596,15 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
     }
 
     @Override
+    public void endResponseWithChild(RequestLogAccess child) {
+        checkState(!hasLastChild, "last child is already added");
+        checkState(children != null && !children.isEmpty(), "at least one child should be already added");
+        checkState(children.stream().anyMatch(c -> c == child), "child is not a child of this log: %s", child);
+        hasLastChild = true;
+        propagateResponseSideLog(child.partial());
+    }
+
+    @Override
     public void endResponseWithLastChild() {
         checkState(!hasLastChild, "last child is already added");
         checkState(children != null && !children.isEmpty(), "at least one child should be already added");
@@ -604,58 +613,58 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
         propagateResponseSideLog(lastChild.partial());
     }
 
-    private void propagateResponseSideLog(RequestLog lastChild) {
-        if (lastChild.isAvailable(RequestLogProperty.RESPONSE_CAUSE)) {
+    private void propagateResponseSideLog(RequestLog child) {
+        if (child.isAvailable(RequestLogProperty.RESPONSE_CAUSE)) {
             // Update responseCause first if available because callbacks of the other properties may need it
             // to retry or open circuit breakers.
-            final Throwable responseCause = lastChild.responseCause();
+            final Throwable responseCause = child.responseCause();
             if (responseCause != null) {
                 responseCause(responseCause);
             }
         }
 
-        // Update the available properties without adding a callback if the lastChild already has them.
-        if (lastChild.isAvailable(RequestLogProperty.RESPONSE_START_TIME)) {
-            startResponse(lastChild.responseStartTimeNanos(), lastChild.responseStartTimeMicros(), true);
+        // Update the available properties without adding a callback if the child already has them.
+        if (child.isAvailable(RequestLogProperty.RESPONSE_START_TIME)) {
+            startResponse(child.responseStartTimeNanos(), child.responseStartTimeMicros(), true);
         } else {
-            lastChild.whenAvailable(RequestLogProperty.RESPONSE_START_TIME)
-                     .thenAccept(log -> startResponse(log.responseStartTimeNanos(),
-                                                      log.responseStartTimeMicros(), true));
+            child.whenAvailable(RequestLogProperty.RESPONSE_START_TIME)
+                 .thenAccept(log -> startResponse(log.responseStartTimeNanos(),
+                                                  log.responseStartTimeMicros(), true));
         }
 
-        if (lastChild.isAvailable(RequestLogProperty.RESPONSE_FIRST_BYTES_TRANSFERRED_TIME)) {
-            final Long timeNanos = lastChild.responseFirstBytesTransferredTimeNanos();
+        if (child.isAvailable(RequestLogProperty.RESPONSE_FIRST_BYTES_TRANSFERRED_TIME)) {
+            final Long timeNanos = child.responseFirstBytesTransferredTimeNanos();
             if (timeNanos != null) {
                 responseFirstBytesTransferred(timeNanos);
             }
         } else {
-            lastChild.whenAvailable(RequestLogProperty.RESPONSE_FIRST_BYTES_TRANSFERRED_TIME)
-                     .thenAccept(log -> {
-                         final Long timeNanos = log.responseFirstBytesTransferredTimeNanos();
-                         if (timeNanos != null) {
-                             responseFirstBytesTransferred(timeNanos);
-                         }
-                     });
+            child.whenAvailable(RequestLogProperty.RESPONSE_FIRST_BYTES_TRANSFERRED_TIME)
+                 .thenAccept(log -> {
+                     final Long timeNanos = log.responseFirstBytesTransferredTimeNanos();
+                     if (timeNanos != null) {
+                         responseFirstBytesTransferred(timeNanos);
+                     }
+                 });
         }
 
-        if (lastChild.isAvailable(RequestLogProperty.RESPONSE_HEADERS)) {
-            responseHeaders(lastChild.responseHeaders());
+        if (child.isAvailable(RequestLogProperty.RESPONSE_HEADERS)) {
+            responseHeaders(child.responseHeaders());
         } else {
-            lastChild.whenAvailable(RequestLogProperty.RESPONSE_HEADERS)
-                     .thenAccept(log -> responseHeaders(log.responseHeaders()));
+            child.whenAvailable(RequestLogProperty.RESPONSE_HEADERS)
+                 .thenAccept(log -> responseHeaders(log.responseHeaders()));
         }
 
-        if (lastChild.isAvailable(RequestLogProperty.RESPONSE_TRAILERS)) {
-            responseTrailers(lastChild.responseTrailers());
+        if (child.isAvailable(RequestLogProperty.RESPONSE_TRAILERS)) {
+            responseTrailers(child.responseTrailers());
         } else {
-            lastChild.whenAvailable(RequestLogProperty.RESPONSE_TRAILERS)
-                     .thenAccept(log -> responseTrailers(log.responseTrailers()));
+            child.whenAvailable(RequestLogProperty.RESPONSE_TRAILERS)
+                 .thenAccept(log -> responseTrailers(log.responseTrailers()));
         }
 
-        if (lastChild.isComplete()) {
-            propagateResponseEndData(lastChild);
+        if (child.isComplete()) {
+            propagateResponseEndData(child);
         } else {
-            lastChild.whenComplete().thenAccept(this::propagateResponseEndData);
+            child.whenComplete().thenAccept(this::propagateResponseEndData);
         }
     }
 
@@ -1068,8 +1077,8 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
         final int deferredFlags;
         if (requestCause != null) {
             // Will auto-fill request content and its preview if request has failed.
-            deferredFlags = this.deferredFlags & (~(RequestLogProperty.REQUEST_CONTENT.flag() |
-                                                    RequestLogProperty.REQUEST_CONTENT_PREVIEW.flag()));
+            deferredFlags = this.deferredFlags & ~(RequestLogProperty.REQUEST_CONTENT.flag() |
+                                                   RequestLogProperty.REQUEST_CONTENT_PREVIEW.flag());
         } else {
             deferredFlags = this.deferredFlags;
         }
@@ -1419,8 +1428,8 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
         final int deferredFlags;
         if (responseCause != null) {
             // Will auto-fill response content and its preview if response has failed.
-            deferredFlags = this.deferredFlags & (~(RequestLogProperty.RESPONSE_CONTENT.flag() |
-                                                    RequestLogProperty.RESPONSE_CONTENT_PREVIEW.flag()));
+            deferredFlags = this.deferredFlags & ~(RequestLogProperty.RESPONSE_CONTENT.flag() |
+                                                   RequestLogProperty.RESPONSE_CONTENT_PREVIEW.flag());
         } else {
             deferredFlags = this.deferredFlags;
         }
