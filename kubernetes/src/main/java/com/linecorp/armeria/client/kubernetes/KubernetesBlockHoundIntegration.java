@@ -32,12 +32,8 @@ public final class KubernetesBlockHoundIntegration implements BlockHoundIntegrat
         // a fully readable ByteBuffer.
         builder.allowBlockingCallsInside(
                 "io.fabric8.kubernetes.client.http.HttpClientReadableByteChannel", "doLockedAndSignal");
-        // StandardHttpRequest creates UUIDs using java.util.UUID.randomUUID() that uses SecureRandom.
-        // The method is temporarily allowed until the problem is resolved in the upstream.
-        // See: https://github.com/fabric8io/kubernetes-client/issues/5735
-        // TODO(ikhoon): Remove this once the issue is fixed.
+        // This only used in mock server.
         builder.allowBlockingCallsInside(
-                "io.fabric8.kubernetes.client.http.StandardHttpRequest$Builder",
-                "build");
+                "io.fabric8.kubernetes.client.server.mock.WatchEventsListener", "onClosed");
     }
 }
