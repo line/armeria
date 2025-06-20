@@ -643,6 +643,8 @@ public final class ClientFactoryBuilder implements TlsSetters {
      *
      * <p>The default value is {@value DefaultHttp2LocalFlowController#DEFAULT_WINDOW_UPDATE_RATIO}.
      * The value must be greater than 0 and less than 1.0.
+     *
+     * <p>Note: Do not change this value unless you know what you are doing.
      */
     @UnstableApi
     public ClientFactoryBuilder http2StreamWindowUpdateRatio(float http2StreamWindowUpdateRatio) {

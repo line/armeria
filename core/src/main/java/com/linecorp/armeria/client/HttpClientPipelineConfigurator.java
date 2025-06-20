@@ -542,7 +542,7 @@ final class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
 
             final int id = 0;
             res.init(responseDecoder.inboundTrafficController());
-            res.setId(0);
+            res.setId(id);
             res.subscribe(new Subscriber<HttpObject>() {
 
                 private boolean notified;
