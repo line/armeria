@@ -865,10 +865,9 @@ class RetryingClientTest {
 
             ctx = captor.get();
         }
-
+        awaitValidClientRequestContext(ctx, 1);
         TimeUnit.SECONDS.sleep(1L); // Sleep to check if there's a retry.
         assertThat(subscriberCancelServiceCallCounter.get()).isEqualTo(1);
-        awaitValidClientRequestContext(ctx, 1);
     }
 
     @Test
