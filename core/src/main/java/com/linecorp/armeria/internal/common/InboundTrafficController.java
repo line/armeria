@@ -131,7 +131,7 @@ public final class InboundTrafficController extends AtomicInteger {
             } catch (Http2Exception e) {
                 logger.warn("{} Failed to consume bytes from stream {}", channel, streamId, e);
             }
-        } else if (!decoder.connection().streamMayHaveExisted(streamId)){
+        } else if (!decoder.connection().streamMayHaveExisted(streamId)) {
             logger.warn("{} Stream {} not found when consuming bytes", channel, streamId);
         }
     }
