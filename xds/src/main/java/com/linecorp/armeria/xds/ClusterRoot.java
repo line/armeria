@@ -1,7 +1,7 @@
 /*
- * Copyright 2023 LINE Corporation
+ * Copyright 2025 LY Corporation
  *
- * LINE Corporation licenses this file to you under the Apache License,
+ * LY Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
@@ -16,12 +16,9 @@
 
 package com.linecorp.armeria.xds;
 
-import static com.linecorp.armeria.xds.StaticResourceUtils.staticCluster;
-
 import com.linecorp.armeria.common.annotation.UnstableApi;
 
 import io.envoyproxy.envoy.config.cluster.v3.Cluster;
-import io.envoyproxy.envoy.config.core.v3.ConfigSource;
 
 /**
  * A root node representing a {@link Cluster}.
@@ -31,28 +28,21 @@ import io.envoyproxy.envoy.config.core.v3.ConfigSource;
 @UnstableApi
 public final class ClusterRoot extends AbstractRoot<ClusterSnapshot> {
 
-    private final ClusterResourceNode node;
+    private final SubscriptionContext context;
+    private final String resourceName;
 
-    ClusterRoot(XdsBootstrapImpl xdsBootstrap, ConfigSourceMapper configSourceMapper, String resourceName) {
-        super(xdsBootstrap.eventLoop());
-        final Cluster cluster = xdsBootstrap.bootstrapClusters().cluster(resourceName);
-        if (cluster != null) {
-            node = staticCluster(xdsBootstrap, resourceName, this, cluster);
-        } else {
-            final ConfigSource configSource = configSourceMapper.cdsConfigSource(resourceName);
-            node = new ClusterResourceNode(configSource, resourceName, xdsBootstrap,
-                                           null, this, ResourceNodeType.DYNAMIC);
-            xdsBootstrap.subscribe(node);
-        }
+    ClusterRoot(SubscriptionContext context, String resourceName) {
+        super(context.eventLoop());
+        this.context = context;
+        this.resourceName = resourceName;
+        eventLoop().execute(() -> context.clusterManager().register(resourceName, context, this));
     }
 
     @Override
     public void close() {
-        if (!eventLoop().inEventLoop()) {
-            eventLoop().execute(this::close);
-            return;
-        }
-        node.close();
-        super.close();
+        eventLoop().execute(() -> {
+            context.clusterManager().unregister(resourceName, this);
+            super.close();
+        });
     }
 }
