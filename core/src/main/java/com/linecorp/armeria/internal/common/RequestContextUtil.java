@@ -1,7 +1,7 @@
 /*
- * Copyright 2019 LINE Corporation
+ * Copyright 2025 LY Corporation
  *
- * LINE Corporation licenses this file to you under the Apache License,
+ * LY Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
@@ -30,12 +30,15 @@ import org.slf4j.LoggerFactory;
 import com.google.common.collect.MapMaker;
 import com.google.errorprone.annotations.MustBeClosed;
 
+import com.linecorp.armeria.client.ClientRequestContext;
+import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.common.ContextHolder;
 import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.RequestContextStorage;
 import com.linecorp.armeria.common.RequestContextStorageProvider;
+import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.common.util.Sampler;
@@ -265,6 +268,30 @@ public final class RequestContextUtil {
             throw new IllegalArgumentException(
                     "cannot create a " + type.getSimpleName() + " using another " + contextHolder);
         }
+    }
+
+    public static String host(ClientRequestContext ctx) {
+        final Endpoint endpoint = ctx.endpoint();
+        if (endpoint == null) {
+            return "UNKNOWN";
+        } else {
+            final String ipAddr = endpoint.ipAddr();
+            if (ipAddr == null || endpoint.isIpAddrOnly()) {
+                return endpoint.authority();
+            } else {
+                return endpoint.authority() + '/' + ipAddr;
+            }
+        }
+    }
+
+    public static String method(ClientRequestContext ctx) {
+        final RpcRequest rpcReq = ctx.rpcRequest();
+        return rpcReq != null ? rpcReq.method() : ctx.method().name();
+    }
+
+    public static String path(ClientRequestContext ctx) {
+        final HttpRequest request = ctx.request();
+        return request == null ? "" : request.path();
     }
 
     private RequestContextUtil() {}
