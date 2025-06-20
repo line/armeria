@@ -62,7 +62,7 @@ final class XdsBootstrapImpl implements XdsBootstrap {
                 eventLoop, clusterManager, new ConfigSourceMapper(bootstrap), controlPlaneClientManager);
 
         eventLoop.execute(() -> {
-            bootstrapClusters.secondaryInitialize(subscriptionContext);
+            bootstrapClusters.initializeSecondary(subscriptionContext);
         });
     }
 

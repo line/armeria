@@ -37,10 +37,10 @@ final class BootstrapClusters implements SnapshotWatcher<ClusterSnapshot> {
         this.bootstrap = bootstrap;
         this.eventLoop = eventLoop;
         this.clusterManager = clusterManager;
-        primaryInitialize(bootstrap);
+        initializePrimary(bootstrap);
     }
 
-    private void primaryInitialize(Bootstrap bootstrap) {
+    private void initializePrimary(Bootstrap bootstrap) {
         final StaticSubscriptionContext context = new StaticSubscriptionContext(eventLoop);
         for (Cluster cluster: bootstrap.getStaticResources().getClustersList()) {
             if (!cluster.hasLoadAssignment()) {
@@ -50,7 +50,7 @@ final class BootstrapClusters implements SnapshotWatcher<ClusterSnapshot> {
         }
     }
 
-    void secondaryInitialize(SubscriptionContext context) {
+    void initializeSecondary(SubscriptionContext context) {
         for (Cluster cluster: bootstrap.getStaticResources().getClustersList()) {
             if (!cluster.hasEdsClusterConfig()) {
                 continue;

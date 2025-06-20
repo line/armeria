@@ -24,6 +24,8 @@ import java.util.Set;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.common.base.MoreObjects;
+
 import com.linecorp.armeria.common.annotation.Nullable;
 
 import io.envoyproxy.envoy.config.core.v3.ConfigSource;
@@ -70,37 +72,37 @@ abstract class AbstractResourceNode<T extends XdsResource, S extends Snapshot<T>
         this.resourceNodeType = resourceNodeType;
     }
 
-    SubscriptionContext context() {
+    final SubscriptionContext context() {
         return context;
     }
 
     @Nullable
     @Override
-    public ConfigSource configSource() {
+    public final ConfigSource configSource() {
         return configSource;
     }
 
-    void addWatcher(SnapshotWatcher<S> watcher) {
+    final void addWatcher(SnapshotWatcher<S> watcher) {
         watchers.add(watcher);
         if (snapshot != null) {
             watcher.snapshotUpdated(snapshot);
         }
     }
 
-    void removeWatcher(SnapshotWatcher<S> watcher) {
+    final void removeWatcher(SnapshotWatcher<S> watcher) {
         watchers.remove(watcher);
     }
 
-    boolean hasWatchers() {
+    final boolean hasWatchers() {
         return !watchers.isEmpty();
     }
 
     @Override
-    public void onError(XdsType type, Status error) {
+    public final void onError(XdsType type, Status error) {
         notifyOnError(type, error);
     }
 
-    void notifyOnError(XdsType type, Status error) {
+    final void notifyOnError(XdsType type, Status error) {
         for (SnapshotWatcher<S> watcher : watchers) {
             try {
                 watcher.onError(type, error);
@@ -112,11 +114,11 @@ abstract class AbstractResourceNode<T extends XdsResource, S extends Snapshot<T>
     }
 
     @Override
-    public void onResourceDoesNotExist(XdsType type, String resourceName) {
+    public final void onResourceDoesNotExist(XdsType type, String resourceName) {
         notifyOnMissing(type, resourceName);
     }
 
-    void notifyOnMissing(XdsType type, String resourceName) {
+    final void notifyOnMissing(XdsType type, String resourceName) {
         for (SnapshotWatcher<S> watcher : watchers) {
             try {
                 watcher.onMissing(type, resourceName);
@@ -128,14 +130,14 @@ abstract class AbstractResourceNode<T extends XdsResource, S extends Snapshot<T>
     }
 
     @Override
-    public void onChanged(T update) {
+    public final void onChanged(T update) {
         assert update.type() == type();
         doOnChanged(update);
     }
 
     abstract void doOnChanged(T update);
 
-    void notifyOnChanged(S snapshot) {
+    final void notifyOnChanged(S snapshot) {
         this.snapshot = snapshot;
         for (SnapshotWatcher<S> watcher : watchers) {
             try {
@@ -155,12 +157,25 @@ abstract class AbstractResourceNode<T extends XdsResource, S extends Snapshot<T>
     }
 
     @Override
-    public XdsType type() {
+    public final XdsType type() {
         return type;
     }
 
     @Override
-    public String name() {
+    public final String name() {
         return resourceName;
+    }
+
+    @Override
+    public String toString() {
+        return MoreObjects.toStringHelper(this)
+                          .add("context", context)
+                          .add("configSource", configSource)
+                          .add("type", type)
+                          .add("resourceName", resourceName)
+                          .add("watchers", watchers)
+                          .add("resourceNodeType", resourceNodeType)
+                          .add("snapshot", snapshot)
+                          .toString();
     }
 }

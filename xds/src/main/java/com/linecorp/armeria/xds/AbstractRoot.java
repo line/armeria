@@ -80,23 +80,6 @@ abstract class AbstractRoot<T extends Snapshot<? extends XdsResource>>
         }
     }
 
-    /**
-     * Removes a watcher which waits for a snapshot update.
-     */
-    public void removeSnapshotWatcher(SnapshotWatcher<? super T> watcher) {
-        requireNonNull(watcher, "watcher");
-        checkState(!closed, "Watcher %s can't be removed since %s is already closed.",
-                   watcher, getClass().getSimpleName());
-        if (!eventLoop.inEventLoop()) {
-            eventLoop.execute(() -> removeSnapshotWatcher(watcher));
-            return;
-        }
-        if (closed) {
-            return;
-        }
-        snapshotWatchers.remove(watcher);
-    }
-
     @Override
     public void snapshotUpdated(T newSnapshot) {
         if (closed) {

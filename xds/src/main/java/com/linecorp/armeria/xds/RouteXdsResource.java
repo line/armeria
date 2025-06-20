@@ -64,7 +64,7 @@ public final class RouteXdsResource implements XdsResource {
 
     @Override
     public int hashCode() {
-        return Objects.hashCode(routeConfiguration);
+        return routeConfiguration.hashCode();
     }
 
     @Override
