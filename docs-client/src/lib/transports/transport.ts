@@ -13,11 +13,9 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-import JSONbig from 'json-bigint';
-import { jsonPrettify } from '../json-util';
 import { docServiceDebug, providers } from '../header-provider';
-
 import { Endpoint, Method } from '../specification';
+import { ResponseData } from '../types';
 
 export default abstract class Transport {
   public abstract supportsMimeType(mimeType: string): boolean;
@@ -31,7 +29,9 @@ export default abstract class Transport {
     bodyJson?: string,
     endpointPath?: string,
     queries?: string,
-  ): Promise<string> {
+  ): Promise<ResponseData> {
+    const start = performance.now();
+
     const providedHeaders = await Promise.all(
       providers.map((provider) => provider()),
     );
@@ -59,25 +59,28 @@ export default abstract class Transport {
       endpointPath,
       queries,
     );
-    const responseText = await httpResponse.text();
-    const applicationType = httpResponse.headers.get('content-type') || '';
-    if (applicationType.indexOf('json') >= 0) {
-      try {
-        const json = JSONbig.parse(responseText);
-        const prettified = jsonPrettify(JSONbig.stringify(json));
-        if (prettified.length > 0) {
-          return prettified;
-        }
-      } catch (e) {
-        return responseText;
-      }
-    }
-
+    const responseHeaders = httpResponse.headers;
+    const responseText = httpResponse.body;
+    const duration = Math.round(performance.now() - start);
+    const timestamp = new Date().toLocaleString();
     if (responseText.length > 0) {
-      return responseText;
+      return {
+        body: responseText,
+        headers: responseHeaders,
+        status: httpResponse.status,
+        executionTime: duration,
+        size: responseText.length,
+        timestamp,
+      };
     }
-
-    return '<zero-length response>';
+    return {
+      body: '<zero-length response>',
+      headers: responseHeaders,
+      status: httpResponse.status,
+      executionTime: duration,
+      size: responseText.length,
+      timestamp,
+    };
   }
 
   public findDebugMimeTypeEndpoint(
@@ -161,5 +164,5 @@ export default abstract class Transport {
     bodyJson?: string,
     endpointPath?: string,
     queries?: string,
-  ): Promise<Response>;
+  ): Promise<ResponseData>;
 }
