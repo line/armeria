@@ -245,7 +245,6 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
     protected HttpResponse doExecute(ClientRequestContext ctx, HttpRequest req) throws Exception {
         final CompletableFuture<HttpResponse> responseFuture = new CompletableFuture<>();
         final HttpResponse res = HttpResponse.of(responseFuture, ctx.eventLoop());
-
         if (ctx.exchangeType().isRequestStreaming()) {
             final HttpRequestDuplicator reqDuplicator = req.toDuplicator(ctx.eventLoop().withoutContext(), 0);
             doExecute0(new RetryingContext(mappedRetryConfig(ctx), ctx, reqDuplicator, req, res,

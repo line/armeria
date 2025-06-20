@@ -191,13 +191,15 @@ public final class RetryingRpcClient extends AbstractRetryingClient<RpcRequest, 
         }
 
         startRetryAttempt(ctx, attemptCtx, attemptRes, (winningAttemptCtx, winningAttemptRes) -> {
-            ctx.logBuilder().endResponseWithChild(winningAttemptCtx.log());
-            final HttpRequest actualHttpReq = winningAttemptCtx.request();
-            if (actualHttpReq != null) {
-                ctx.updateRequest(actualHttpReq);
-            }
+            winningAttemptCtx.eventLoop().execute(() -> {
+                ctx.logBuilder().endResponseWithChild(winningAttemptCtx.log());
+                final HttpRequest actualHttpReq = winningAttemptCtx.request();
+                if (actualHttpReq != null) {
+                    ctx.updateRequest(actualHttpReq);
+                }
 
-            returnedResFuture.complete(winningAttemptRes);
+                returnedResFuture.complete(winningAttemptRes);
+            });
         }, (abortingAttemptCtx,
             abortingAttemptRes,
             cause) -> {
