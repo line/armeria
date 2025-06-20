@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.common.logging;
 
+import static java.util.Objects.requireNonNull;
+
 import com.linecorp.armeria.common.annotation.UnstableApi;
 
 /**
@@ -42,4 +44,19 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
 @UnstableApi
 @FunctionalInterface
 public interface BeanFieldMaskerSelector extends FieldMaskerSelector<BeanFieldInfo> {
+
+    /**
+     * Delegates {@link FieldMasker} selection to a different {@link BeanFieldMaskerSelector}
+     * if the current {@link BeanFieldMaskerSelector} returns {@link FieldMasker#fallthrough()}.
+     */
+    default BeanFieldMaskerSelector orElse(BeanFieldMaskerSelector other) {
+        requireNonNull(other, "other");
+        return beanFieldInfo -> {
+            final FieldMasker fieldMasker = fieldMasker(beanFieldInfo);
+            if (fieldMasker != FieldMasker.fallthrough()) {
+                return fieldMasker;
+            }
+            return other.fieldMasker(beanFieldInfo);
+        };
+    }
 }
