@@ -20,6 +20,7 @@ import static com.google.common.base.Preconditions.checkArgument;
 import static com.linecorp.armeria.internal.server.annotation.ResponseConverterFunctionUtil.newResponseConverter;
 import static java.util.Objects.requireNonNull;
 
+import java.lang.annotation.Annotation;
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
 import java.lang.reflect.Method;
@@ -50,6 +51,7 @@ import com.linecorp.armeria.common.ResponseEntity;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.ResponseHeadersBuilder;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.logging.BeanFieldInfo;
 import com.linecorp.armeria.common.logging.RequestLogProperty;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.common.util.SafeCloseable;
@@ -116,6 +118,8 @@ final class DefaultAnnotatedService implements AnnotatedService {
     private final String name;
 
     private final ServiceOptions options;
+    private final List<BeanFieldInfo> paramBeanFieldInfos;
+    private final BeanFieldInfo retBeanFieldInfo;
 
     DefaultAnnotatedService(Object object, Method method,
                             int overloadId, List<AnnotatedValueResolver> resolvers,
@@ -169,10 +173,7 @@ final class DefaultAnnotatedService implements AnnotatedService {
         }
         callKotlinSuspendingMethod = KotlinUtil.getCallKotlinSuspendingMethod();
 
-        ServiceName serviceName = AnnotationUtil.findFirst(method, ServiceName.class);
-        if (serviceName == null) {
-            serviceName = AnnotationUtil.findFirst(object.getClass(), ServiceName.class);
-        }
+        final ServiceName serviceName = getFirstAnnotation(object, method, ServiceName.class);
         if (serviceName != null) {
             name = serviceName.value();
         } else {
@@ -183,15 +184,27 @@ final class DefaultAnnotatedService implements AnnotatedService {
         // following must be called only after method.setAccessible(true)
         methodHandle = asMethodHandle(method, object);
 
-        ServiceOption serviceOption = AnnotationUtil.findFirst(method, ServiceOption.class);
-        if (serviceOption == null) {
-            serviceOption = AnnotationUtil.findFirst(object.getClass(), ServiceOption.class);
-        }
+        final ServiceOption serviceOption = getFirstAnnotation(object, method, ServiceOption.class);
         if (serviceOption != null) {
             options = buildServiceOptions(serviceOption);
         } else {
             options = ServiceOptions.of();
         }
+
+        paramBeanFieldInfos = resolvers.stream().map(AnnotatedValueResolver::beanFieldInfo)
+                                       .collect(ImmutableList.toImmutableList());
+        retBeanFieldInfo = new AnnotatedBeanFieldInfo(method, returnType, method.getName());
+    }
+
+    @Nullable
+    private static <T extends Annotation> T getFirstAnnotation(Object object, Method method,
+                                                               Class<T> annotationClass) {
+        @Nullable
+        T annotation = AnnotationUtil.findFirst(method, annotationClass);
+        if (annotation == null) {
+            annotation = AnnotationUtil.findFirst(object.getClass(), annotationClass);
+        }
+        return annotation;
     }
 
     private static Type getActualReturnType(Method method) {
@@ -411,18 +424,18 @@ final class DefaultAnnotatedService implements AnnotatedService {
         }
     }
 
-    private static void maybeLogRequestContent(ServiceRequestContext ctx, Object[] arguments) {
+    private void maybeLogRequestContent(ServiceRequestContext ctx, Object[] arguments) {
         if (!Flags.annotatedServiceContentLogging()) {
             return;
         }
-        ctx.logBuilder().requestContent(new AnnotatedRequest(arguments), arguments);
+        ctx.logBuilder().requestContent(new AnnotatedRequest(arguments, paramBeanFieldInfos), arguments);
     }
 
-    private static void maybeLogResponseContent(ServiceRequestContext ctx, @Nullable Object value) {
+    private void maybeLogResponseContent(ServiceRequestContext ctx, @Nullable Object value) {
         if (!Flags.annotatedServiceContentLogging()) {
             return;
         }
-        final AnnotatedResponse responseContent = new AnnotatedResponse(value);
+        final AnnotatedResponse responseContent = new AnnotatedResponse(value, retBeanFieldInfo);
         ctx.logBuilder().responseContent(responseContent, value);
     }
 
