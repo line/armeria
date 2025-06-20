@@ -275,6 +275,10 @@ final class SystemPropertyFlagsProvider implements FlagsProvider {
     @Nullable
     @Override
     public Boolean defaultPreferHttp1() {
+        final Boolean defaultPreferHttp1 = getBoolean("defaultPreferHttp1");
+        if (defaultPreferHttp1 != null) {
+            return defaultPreferHttp1;
+        }
         return getBoolean("preferHttp1");
     }
 
@@ -603,6 +607,12 @@ final class SystemPropertyFlagsProvider implements FlagsProvider {
     @Nullable
     public ResponseTimeoutMode responseTimeoutMode() {
         return getAndParse("responseTimeoutMode", ResponseTimeoutMode::valueOf);
+    }
+
+    @Nullable
+    @Override
+    public Boolean annotatedServiceContentLogging() {
+        return getBoolean("annotatedServiceContentLogging");
     }
 
     @Nullable

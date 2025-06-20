@@ -64,6 +64,7 @@ import com.google.common.base.Ascii;
 import com.google.common.base.MoreObjects;
 import com.google.common.base.Splitter;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.primitives.Primitives;
 
@@ -602,18 +603,60 @@ final class AnnotatedValueResolver {
                                                           AnnotatedElement annotatedElement,
                                                           AnnotatedElement typeElement, Class<?> type,
                                                           DescriptionInfo description) {
+        final Type valueType = ((ParameterizedType) ((Parameter) typeElement).getParameterizedType())
+                .getActualTypeArguments()[1];
+        final Class<?> rawValueType = ClassUtil.typeToClass(valueType);
+        assert rawValueType != null;
+
+        if (valueType instanceof ParameterizedType && !(List.class.isAssignableFrom(rawValueType) ||
+                                                        Set.class.isAssignableFrom(rawValueType))) {
+            throw new IllegalArgumentException(
+                    "Invalid parameterized map value type: " + rawValueType +
+                    " (expected List or Set)");
+        }
+
+        final BiFunction<AnnotatedValueResolver, ResolverContext, Object> biFunction;
+
+        if (Set.class.isAssignableFrom(rawValueType)) {
+            biFunction = (resolver, ctx) -> ctx.queryParams().stream()
+                                               .collect(toImmutableMap(
+                                                       Entry::getKey,
+                                                       e -> ImmutableSet.of(e.getValue()),
+                                                       (existing, replacement) ->
+                                                               ImmutableSet.<String>builder()
+                                                                           .addAll(existing)
+                                                                           .addAll(replacement)
+                                                                           .build()
+                                               ));
+        } else if (List.class.isAssignableFrom(rawValueType) ||
+                   Collection.class.isAssignableFrom(rawValueType) ||
+                   Iterable.class.isAssignableFrom(rawValueType)
+        ) {
+            biFunction = (resolver, ctx) -> ctx.queryParams().stream()
+                                               .collect(toImmutableMap(
+                                                       Entry::getKey,
+                                                       e -> ImmutableList.of(e.getValue()),
+                                                       (existing, replacement) ->
+                                                               ImmutableList.<String>builder()
+                                                                            .addAll(existing)
+                                                                            .addAll(replacement)
+                                                                            .build()
+                                               ));
+        } else {
+            biFunction = (resolver, ctx) -> ctx.queryParams().stream()
+                                               .collect(toImmutableMap(
+                                                       Entry::getKey,
+                                                       Entry::getValue,
+                                                       (existing, replacement) -> replacement
+                                               ));
+        }
 
         return new Builder(annotatedElement, type, name)
                 .annotationType(Param.class)
                 .typeElement(typeElement)
                 .description(description)
                 .aggregation(AggregationStrategy.FOR_FORM_DATA)
-                .resolver((resolver, ctx) -> ctx.queryParams().stream()
-                                                .collect(toImmutableMap(
-                                                        Entry::getKey,
-                                                        Entry::getValue,
-                                                        (existing, replacement) -> replacement
-                                                )))
+                .resolver(biFunction)
                 .build();
     }
 

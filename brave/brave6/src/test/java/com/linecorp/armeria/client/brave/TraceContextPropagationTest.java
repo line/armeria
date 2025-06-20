@@ -23,21 +23,27 @@ import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 
 import com.linecorp.armeria.client.BlockingWebClient;
+import com.linecorp.armeria.client.ClientRequestContext;
+import com.linecorp.armeria.client.ClientRequestContextCaptor;
+import com.linecorp.armeria.client.Clients;
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.brave.RequestContextCurrentTraceContext;
+import com.linecorp.armeria.internal.common.brave.TraceContextUtil;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.annotation.Blocking;
 import com.linecorp.armeria.server.annotation.Get;
 import com.linecorp.armeria.server.brave.BraveService;
 import com.linecorp.armeria.server.logging.LoggingService;
+import com.linecorp.armeria.testing.junit5.common.EventLoopExtension;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
 import brave.Tracing;
@@ -56,6 +62,10 @@ class TraceContextPropagationTest {
                                                   .build();
 
     private static final Map<String, TraceContext> traceContexts = new ConcurrentHashMap<>();
+    private static final String RESCHEDULE_HEADER = "x-reschedule";
+
+    @RegisterExtension
+    static EventLoopExtension eventLoop = new EventLoopExtension();
 
     @RegisterExtension
     static ServerExtension server = new ServerExtension() {
@@ -131,6 +141,22 @@ class TraceContextPropagationTest {
             });
             sb.decorator(BraveService.newDecorator(tracing));
             sb.decorator(LoggingService.newDecorator());
+
+            sb.decorator((delegate, ctx, req) -> {
+                if (req.headers().contains(RESCHEDULE_HEADER)) {
+                    final CompletableFuture<HttpResponse> cf = new CompletableFuture<>();
+                    eventLoop.get().execute(() -> {
+                        try {
+                            cf.complete(delegate.serve(ctx, req));
+                        } catch (Throwable t) {
+                            cf.completeExceptionally(t);
+                        }
+                    });
+                    return HttpResponse.of(cf);
+                }
+                return delegate.serve(ctx, req);
+            });
+            sb.service("/hello", (ctx, req) -> HttpResponse.of(currentTraceContext.get().traceIdString()));
         }
     };
 
@@ -163,5 +189,18 @@ class TraceContextPropagationTest {
         assertThat(barServiceTraceContext.traceId()).isEqualTo(traceId);
         assertThat(barServiceTraceContext.parentId()).isEqualTo(fooServiceTraceContext.spanId());
         assertThat(barServiceTraceContext.spanId()).isEqualTo(barClientTraceContext.spanId());
+    }
+
+    @Test
+    void rescheduleBeforeBraveService() {
+        try (ClientRequestContextCaptor captor = Clients.newContextCaptor()) {
+            final AggregatedHttpResponse res =
+                    server.webClient(cb -> cb.addHeader(RESCHEDULE_HEADER, true)
+                                             .decorator(BraveClient.newDecorator(tracing)))
+                          .blocking().get("/hello");
+            assertThat(res.status().code()).isEqualTo(200);
+            final ClientRequestContext cctx = captor.get();
+            assertThat(res.contentUtf8()).isEqualTo(TraceContextUtil.traceContext(cctx).traceIdString());
+        }
     }
 }

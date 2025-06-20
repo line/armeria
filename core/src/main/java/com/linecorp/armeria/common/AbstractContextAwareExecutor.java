@@ -24,6 +24,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.internal.common.context.ArmeriaContextPropagation;
 
 abstract class AbstractContextAwareExecutor<E extends Executor> implements Executor {
     enum LogRequestContextWarningOnce implements Supplier<RequestContext> {
@@ -73,7 +74,10 @@ abstract class AbstractContextAwareExecutor<E extends Executor> implements Execu
 
     final Runnable makeContextAware(Runnable task) {
         final RequestContext context = contextOrNull();
-        return context == null ? task : context.makeContextAware(task);
+        if (context != null) {
+            return context.makeContextAware(task);
+        }
+        return ArmeriaContextPropagation.captureAll().wrap(task);
     }
 
     @Override
