@@ -713,8 +713,8 @@ class RetryingClientWithHedgingTest {
                                                       HttpStatus expectedStatus, String expectedContent) {
         assertThat(resFuture.isDone()).isTrue();
         final AggregatedHttpResponse res = resFuture.getNow(null);
-        assertThat(res.status()).isEqualTo(expectedStatus);
         assertThat(getResponseContent(res)).isEqualTo(expectedContent);
+        assertThat(res.status()).isEqualTo(expectedStatus);
     }
 
     private static void assertValidRootClientRequestContext(ClientRequestContext ctx,
