@@ -73,6 +73,7 @@ import com.linecorp.armeria.internal.common.RequestContextUtil;
 import com.linecorp.armeria.internal.common.RequestTargetCache;
 import com.linecorp.armeria.internal.common.util.ChannelUtil;
 import com.linecorp.armeria.internal.server.DefaultServiceRequestContext;
+import com.linecorp.armeria.server.logging.ContentPreviewingService;
 
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
@@ -470,7 +471,18 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
             reqCtx.logBuilder().responseCause(cause);
             // Recover the failed response with the error handler.
             try (SafeCloseable ignored = reqCtx.push()) {
-                return serviceCfg.errorHandler().onServiceException(reqCtx, cause);
+                final HttpResponse errorRes = serviceCfg.errorHandler().onServiceException(reqCtx, cause);
+                final ContentPreviewingService contentPreviewingService =
+                        reqCtx.findService(ContentPreviewingService.class);
+                if (contentPreviewingService != null) {
+                    if (errorRes != null) {
+                        return contentPreviewingService.setUpResponseContentPreviewer(reqCtx, errorRes);
+                    } else {
+                        // Call requestContentPreview(null) to make sure that the log is complete.
+                        reqCtx.logBuilder().responseContentPreview(null);
+                    }
+                }
+                return errorRes;
             }
         });
 
