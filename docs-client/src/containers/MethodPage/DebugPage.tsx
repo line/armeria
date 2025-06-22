@@ -143,14 +143,24 @@ const ResponseStatusBar: React.FC<{
   return (
     <Grid
       item
-      xs
+      xs={12}
       style={{
         display: 'flex',
+        flexWrap: 'wrap',
         justifyContent: 'flex-end',
         alignItems: 'center',
+        gap: '4px 16px',
+        overflow: 'hidden',
+        wordBreak: 'break-word',
       }}
     >
-      <Typography variant="body2" style={{ whiteSpace: 'nowrap' }}>
+      <Typography
+        variant="body2"
+        style={{
+          display: 'flex',
+          flexWrap: 'wrap',
+        }}
+      >
         <span style={{ marginLeft: 16, color }}>
           <strong>Status</strong>: {responseMetaData.status ?? '–'}
         </span>
