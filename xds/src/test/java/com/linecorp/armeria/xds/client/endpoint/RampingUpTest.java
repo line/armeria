@@ -41,12 +41,10 @@ import com.linecorp.armeria.client.BlockingWebClient;
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.WebClient;
-import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.common.CommonPools;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
-import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.grpc.GrpcService;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
@@ -208,9 +206,8 @@ class RampingUpTest {
                 XdsTestResources.createStaticCluster(BOOTSTRAP_CLUSTER_NAME, bootstrapLoadAssignment);
         final Bootstrap bootstrap = XdsTestResources.bootstrap(configSource, bootstrapCluster);
         try (XdsBootstrap xdsBootstrap = XdsBootstrap.of(bootstrap);
-             EndpointGroup xdsEndpointGroup = XdsEndpointGroup.of(listenerName, xdsBootstrap)) {
-            final BlockingWebClient blockingClient =
-                    WebClient.of(SessionProtocol.HTTP, xdsEndpointGroup).blocking();
+             XdsHttpPreprocessor preprocessor = XdsHttpPreprocessor.ofListener(listenerName, xdsBootstrap)) {
+            final BlockingWebClient blockingClient = WebClient.of(preprocessor).blocking();
             assertThat(blockingClient.get("/hello").contentUtf8()).isEqualTo("world");
         }
     }

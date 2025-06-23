@@ -39,6 +39,7 @@ import javax.net.ssl.SSLSession;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.linecorp.armeria.client.ClientDecoration;
 import com.linecorp.armeria.client.ClientOptions;
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.Endpoint;
@@ -173,6 +174,7 @@ public final class DefaultClientRequestContext
     private volatile CompletableFuture<Boolean> whenInitialized;
 
     private final ResponseTimeoutMode responseTimeoutMode;
+    private ClientDecoration decoration = ClientDecoration.of();
 
     public DefaultClientRequestContext(SessionProtocol sessionProtocol, HttpRequest httpRequest,
                                        @Nullable RpcRequest rpcRequest, RequestTarget requestTarget,
@@ -504,6 +506,16 @@ public final class DefaultClientRequestContext
                 cancel(UnprocessedRequestException.of(t));
             }
         }
+    }
+
+    @Override
+    public ClientDecoration decoration() {
+        return decoration;
+    }
+
+    @Override
+    public void decoration(ClientDecoration decoration) {
+        this.decoration = requireNonNull(decoration, "decoration");
     }
 
     private void failEarly(Throwable cause) {
