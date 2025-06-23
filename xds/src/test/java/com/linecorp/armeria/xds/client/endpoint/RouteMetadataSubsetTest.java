@@ -90,6 +90,7 @@ class RouteMetadataSubsetTest {
                 }
                 return HttpResponse.of(String.valueOf(endpoint.port()));
             };
+
     // TODO: @jrhee17 remove this once xds-based preprocessors fully implement routing
     private static HttpPreprocessor metadataPreprocessor(Metadata routeMetadataMatch1) {
         return (delegate, ctx, req) -> {
