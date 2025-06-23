@@ -1,7 +1,7 @@
 /*
- * Copyright 2023 LINE Corporation
+ * Copyright 2025 LY Corporation
  *
- * LINE Corporation licenses this file to you under the Apache License,
+ * LY Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
@@ -18,9 +18,8 @@ package com.linecorp.armeria.xds;
 
 import static com.linecorp.armeria.xds.XdsType.LISTENER;
 
-import java.util.Objects;
-
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.util.SafeCloseable;
 
 import io.envoyproxy.envoy.config.core.v3.ConfigSource;
 import io.envoyproxy.envoy.config.route.v3.RouteConfiguration;
@@ -28,68 +27,103 @@ import io.envoyproxy.envoy.extensions.filters.network.http_connection_manager.v3
 import io.envoyproxy.envoy.extensions.filters.network.http_connection_manager.v3.Rds;
 import io.grpc.Status;
 
-final class ListenerResourceNode extends AbstractResourceNode<ListenerXdsResource> {
+final class ListenerResourceNode extends AbstractResourceNode<ListenerXdsResource, ListenerSnapshot> {
 
-    private final RouteResourceWatcher snapshotWatcher = new RouteResourceWatcher();
-    private final SnapshotWatcher<ListenerSnapshot> parentWatcher;
+    @Nullable
+    private RouteSnapshotWatcher snapshotWatcher;
 
     ListenerResourceNode(@Nullable ConfigSource configSource,
-                         String resourceName, XdsBootstrapImpl xdsBootstrap,
+                         String resourceName, SubscriptionContext context,
                          SnapshotWatcher<ListenerSnapshot> parentWatcher, ResourceNodeType resourceNodeType) {
-        super(xdsBootstrap, configSource, LISTENER, resourceName, parentWatcher, resourceNodeType);
-        this.parentWatcher = parentWatcher;
+        super(context, configSource, LISTENER, resourceName, parentWatcher, resourceNodeType);
     }
 
     @Override
     public void doOnChanged(ListenerXdsResource resource) {
-        final HttpConnectionManager connectionManager = resource.connectionManager();
-        if (connectionManager != null) {
-            if (connectionManager.hasRouteConfig()) {
-                final RouteConfiguration routeConfig = connectionManager.getRouteConfig();
-                final RouteResourceNode node =
-                        StaticResourceUtils.staticRoute(xdsBootstrap(), routeConfig.getName(), resource,
-                                                        snapshotWatcher, routeConfig);
-                children().add(node);
-            }
-            if (connectionManager.hasRds()) {
-                final Rds rds = connectionManager.getRds();
-                final String routeName = rds.getRouteConfigName();
-                final ConfigSource configSource = configSourceMapper()
-                        .rdsConfigSource(rds.getConfigSource(), routeName);
-                final RouteResourceNode routeResourceNode =
-                        new RouteResourceNode(configSource, routeName, xdsBootstrap(), resource,
-                                              snapshotWatcher, ResourceNodeType.DYNAMIC);
-                children().add(routeResourceNode);
-                xdsBootstrap().subscribe(routeResourceNode);
-            }
-        }
-        if (children().isEmpty()) {
-            parentWatcher.snapshotUpdated(new ListenerSnapshot(resource, null));
+        final RouteSnapshotWatcher previousWatcher = snapshotWatcher;
+        snapshotWatcher = new RouteSnapshotWatcher(resource, context(), this,
+                                                   configSource());
+        if (previousWatcher != null) {
+            previousWatcher.close();
         }
     }
 
-    private class RouteResourceWatcher implements SnapshotWatcher<RouteSnapshot> {
+    @Override
+    public void close() {
+        final RouteSnapshotWatcher snapshotWatcher = this.snapshotWatcher;
+        if (snapshotWatcher != null) {
+            snapshotWatcher.close();
+        }
+        super.close();
+    }
+
+    private static class RouteSnapshotWatcher implements SnapshotWatcher<RouteSnapshot>, SafeCloseable {
+
+        private final ListenerXdsResource resource;
+        private final ListenerResourceNode parentNode;
+        @Nullable
+        private final RouteResourceNode node;
+        private boolean closed;
+
+        RouteSnapshotWatcher(ListenerXdsResource resource, SubscriptionContext context,
+                             ListenerResourceNode parentNode, @Nullable ConfigSource parentConfigSource) {
+            this.resource = resource;
+            this.parentNode = parentNode;
+
+            RouteResourceNode node = null;
+            final HttpConnectionManager connectionManager = resource.connectionManager();
+            if (connectionManager != null) {
+                if (connectionManager.hasRouteConfig()) {
+                    final RouteConfiguration routeConfig = connectionManager.getRouteConfig();
+                    node = StaticResourceUtils.staticRoute(context, routeConfig.getName(),
+                                                           this, routeConfig);
+                } else if (connectionManager.hasRds()) {
+                    final Rds rds = connectionManager.getRds();
+                    final String routeName = rds.getRouteConfigName();
+                    final ConfigSource configSource =
+                            context.configSourceMapper().withParentConfigSource(parentConfigSource)
+                                   .rdsConfigSource(rds.getConfigSource(), routeName);
+                    node = new RouteResourceNode(configSource, routeName, context,
+                                                 this, ResourceNodeType.DYNAMIC);
+                    context.subscribe(node);
+                }
+            }
+            this.node = node;
+            if (node == null) {
+                parentNode.notifyOnChanged(new ListenerSnapshot(resource, null));
+            }
+        }
 
         @Override
         public void snapshotUpdated(RouteSnapshot newSnapshot) {
-            final ListenerXdsResource current = currentResource();
-            if (current == null) {
+            if (closed) {
                 return;
             }
-            if (!Objects.equals(newSnapshot.xdsResource().primer(), current)) {
-                return;
-            }
-            parentWatcher.snapshotUpdated(new ListenerSnapshot(current, newSnapshot));
+            parentNode.notifyOnChanged(new ListenerSnapshot(resource, newSnapshot));
         }
 
         @Override
         public void onMissing(XdsType type, String resourceName) {
-            parentWatcher.onMissing(type, resourceName);
+            if (closed) {
+                return;
+            }
+            parentNode.notifyOnMissing(type, resourceName);
         }
 
         @Override
         public void onError(XdsType type, Status status) {
-            parentWatcher.onError(type, status);
+            if (closed) {
+                return;
+            }
+            parentNode.notifyOnError(type, status);
+        }
+
+        @Override
+        public void close() {
+            closed = true;
+            if (node != null) {
+                node.close();
+            }
         }
     }
 }
