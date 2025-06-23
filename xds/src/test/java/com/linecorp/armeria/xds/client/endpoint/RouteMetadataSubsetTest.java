@@ -41,15 +41,17 @@ import com.google.protobuf.Struct;
 
 import com.linecorp.armeria.client.BlockingWebClient;
 import com.linecorp.armeria.client.DecoratingHttpClientFunction;
+import com.linecorp.armeria.client.Endpoint;
+import com.linecorp.armeria.client.HttpPreprocessor;
 import com.linecorp.armeria.client.RequestOptions;
 import com.linecorp.armeria.client.UnprocessedRequestException;
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
+import com.linecorp.armeria.client.endpoint.EndpointSelectionTimeoutException;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.SessionProtocol;
-import com.linecorp.armeria.common.TimeoutException;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.grpc.GrpcService;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
@@ -80,7 +82,21 @@ class RouteMetadataSubsetTest {
     private static final String GROUP_KEY = "key";
     static final SimpleCache<String> cache = new SimpleCache<>(node -> GROUP_KEY);
     private static final DecoratingHttpClientFunction selectedPortDecorator =
-            (delegate, ctx, req) -> HttpResponse.of(String.valueOf(ctx.endpoint().port()));
+            (delegate, ctx, req) -> {
+                final Endpoint endpoint = ctx.endpoint();
+                if (endpoint == null) {
+                    // fall through to test behavior when endpoint not selected
+                    return delegate.execute(ctx, req);
+                }
+                return HttpResponse.of(String.valueOf(endpoint.port()));
+            };
+    // TODO: @jrhee17 remove this once xds-based preprocessors fully implement routing
+    private static HttpPreprocessor metadataPreprocessor(Metadata routeMetadataMatch1) {
+        return (delegate, ctx, req) -> {
+            ctx.setAttr(XdsAttributeKeys.ROUTE_METADATA_MATCH, routeMetadataMatch1);
+            return delegate.execute(ctx, req);
+        };
+    }
 
     @RegisterExtension
     static final ServerExtension server = new ServerExtension() {
@@ -167,6 +183,7 @@ class RouteMetadataSubsetTest {
         try (XdsBootstrap xdsBootstrap = XdsBootstrap.of(bootstrap);
              EndpointGroup endpointGroup = XdsEndpointGroup.of("listener", xdsBootstrap)) {
             final BlockingWebClient client = WebClient.builder(SessionProtocol.HTTP, endpointGroup)
+                                                      .preprocessor(metadataPreprocessor(routeMetadataMatch1))
                                                       .decorator(selectedPortDecorator)
                                                       .responseTimeoutMillis(1000)
                                                       .build()
@@ -186,6 +203,7 @@ class RouteMetadataSubsetTest {
         try (XdsBootstrap xdsBootstrap = XdsBootstrap.of(bootstrap);
              EndpointGroup endpointGroup = XdsEndpointGroup.of("listener", xdsBootstrap)) {
             final BlockingWebClient client = WebClient.builder(SessionProtocol.HTTP, endpointGroup)
+                                                      .preprocessor(metadataPreprocessor(routeMetadataMatch3))
                                                       .decorator(selectedPortDecorator)
                                                       .responseTimeoutMillis(1000)
                                                       .build()
@@ -194,8 +212,8 @@ class RouteMetadataSubsetTest {
                 assertThatThrownBy(() -> client.get("/"))
                         .isInstanceOf(UnprocessedRequestException.class)
                         .cause()
-                        .isInstanceOf(TimeoutException.class)
-                        .hasMessageContaining("Failed to select an endpoint");
+                        .isInstanceOf(EndpointSelectionTimeoutException.class)
+                        .hasMessageContaining("Failed to select within");
             } else {
                 assertThat(client.get("/").contentUtf8()).isEqualTo("8080");
                 assertThat(client.get("/").contentUtf8()).isEqualTo("8081");
@@ -241,6 +259,7 @@ class RouteMetadataSubsetTest {
         try (XdsBootstrap xdsBootstrap = XdsBootstrap.of(bootstrap);
              EndpointGroup endpointGroup = XdsEndpointGroup.of("listener", xdsBootstrap)) {
             final BlockingWebClient client = WebClient.builder(SessionProtocol.HTTP, endpointGroup)
+                                                      .preprocessor(metadataPreprocessor(metadata))
                                                       .decorator(selectedPortDecorator)
                                                       .build()
                                                       .blocking();

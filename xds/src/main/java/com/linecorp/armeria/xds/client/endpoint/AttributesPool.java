@@ -35,12 +35,6 @@ final class AttributesPool {
 
     private Map<Endpoint, Attributes> cachedAttrs = ImmutableMap.of();
 
-    AttributesPool() {}
-
-    AttributesPool(AttributesPool other) {
-        cachedAttrs = ImmutableMap.copyOf(other.cachedAttrs);
-    }
-
     List<Endpoint> cacheAttributesAndDelegate(List<Endpoint> endpoints) {
         final long defaultTimestamp = System.nanoTime();
         final ImmutableList.Builder<Endpoint> endpointsBuilder = ImmutableList.builder();

@@ -174,8 +174,8 @@ final class DefaultXdsLoadBalancer implements UpdatableXdsLoadBalancer {
     public void close() {
         // wait for an arbitrary amount of seconds just in case:
         // 1) this cluster uses DNS type discovery
-        // 2) this load balancer was closed immediately after creation
-        // 3) a client is using this load balancer
+        // 2) this load balancer was closed immediately after creation (the cluster was removed immediately)
+        // 3) a request selected this load balancer
         // if the endpointGroup is closed immediately, requests may fail
         // before there is a chance of dns resolution
         eventLoop.schedule(() -> {

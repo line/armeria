@@ -18,8 +18,6 @@ package com.linecorp.armeria.xds;
 
 import static com.google.common.base.Preconditions.checkArgument;
 
-import java.util.List;
-
 import com.google.common.base.MoreObjects;
 import com.google.common.base.Objects;
 import com.google.protobuf.Any;
@@ -29,9 +27,7 @@ import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 
 import io.envoyproxy.envoy.config.listener.v3.Listener;
-import io.envoyproxy.envoy.extensions.filters.http.router.v3.Router;
 import io.envoyproxy.envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager;
-import io.envoyproxy.envoy.extensions.filters.network.http_connection_manager.v3.HttpFilter;
 
 /**
  * A resource object for a {@link Listener}.
@@ -42,14 +38,10 @@ public final class ListenerXdsResource implements XdsResource {
     private static final String HTTP_CONNECTION_MANAGER_TYPE_URL =
             "type.googleapis.com/" +
             "envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager";
-    private static final String ROUTER_TYPE_URL =
-            "type.googleapis.com/envoy.extensions.filters.http.router.v3.Router";
 
     private final Listener listener;
     @Nullable
     private final HttpConnectionManager connectionManager;
-    @Nullable
-    private final Router router;
 
     ListenerXdsResource(Listener listener) {
         this.listener = listener;
@@ -66,7 +58,6 @@ public final class ListenerXdsResource implements XdsResource {
         } else {
             connectionManager = null;
         }
-        router = router(connectionManager);
     }
 
     @Override
@@ -79,47 +70,14 @@ public final class ListenerXdsResource implements XdsResource {
         return listener;
     }
 
-    /**
-     * The {@link HttpConnectionManager} contained in the {@link Listener#getListenerFiltersList()}.
-     */
     @Nullable
-    public HttpConnectionManager connectionManager() {
+    HttpConnectionManager connectionManager() {
         return connectionManager;
     }
 
     @Override
     public String name() {
         return listener.getName();
-    }
-
-    /**
-     * The {@link Router} contained in the {@link Listener}.
-     */
-    @Nullable
-    public Router router() {
-        return router;
-    }
-
-    @Nullable
-    private static Router router(@Nullable HttpConnectionManager connectionManager) {
-        if (connectionManager == null) {
-            return null;
-        }
-        final List<HttpFilter> httpFilters = connectionManager.getHttpFiltersList();
-        if (httpFilters.isEmpty()) {
-            return null;
-        }
-        final HttpFilter lastHttpFilter = httpFilters.get(httpFilters.size() - 1);
-        if (!ROUTER_TYPE_URL.equals(lastHttpFilter.getName())) {
-            // the router should be the last/terminal filter
-            return null;
-        }
-        checkArgument(lastHttpFilter.hasTypedConfig(), "Only typedConfig is supported for 'Router'.");
-        try {
-            return lastHttpFilter.getTypedConfig().unpack(Router.class);
-        } catch (InvalidProtocolBufferException e) {
-            throw new RuntimeException("Failed to unpack 'Router'.", e);
-        }
     }
 
     @Override
