@@ -53,7 +53,7 @@ final class XdsBootstrapImpl implements XdsBootstrap {
                      Consumer<GrpcClientBuilder> configClientCustomizer) {
         this.bootstrap = bootstrap;
         this.eventLoop = requireNonNull(eventLoop, "eventLoop");
-        clusterManager = new XdsClusterManager(eventLoop);
+        clusterManager = new XdsClusterManager(eventLoop, bootstrap);
         bootstrapClusters = new BootstrapClusters(bootstrap, eventLoop, clusterManager);
         bootstrapListeners = new BootstrapListeners(bootstrap);
         controlPlaneClientManager = new ControlPlaneClientManager(bootstrap, eventLoop,
