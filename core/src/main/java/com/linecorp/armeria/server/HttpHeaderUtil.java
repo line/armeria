@@ -59,8 +59,14 @@ final class HttpHeaderUtil {
     private static final CharMatcher QUOTED_STRING_TRIMMER = CharMatcher.is('"');
 
     @VisibleForTesting
-    static final Function<String, @Nullable String> FORWARDED_CONVERTER =
-            value -> TOKEN_SPLITTER.split(value).get("for");
+    static final Function<String, @Nullable String> FORWARDED_CONVERTER = value -> {
+        try {
+            return TOKEN_SPLITTER.split(value).get("for");
+        } catch (IllegalArgumentException e) {
+            logger.debug("Failed to parse Forwarded header chunk {}", value, e);
+            return null;
+        }
+    };
     private static boolean warnedIllegalAbsoluteUriTransformer;
 
     /**
