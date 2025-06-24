@@ -47,6 +47,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BiConsumer;
 
+import com.linecorp.armeria.common.grpc.GrpcMethodDescriptor;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -391,6 +392,14 @@ class GrpcClientTest {
                     .emptyCall(EMPTY);
             final ClientRequestContext ctx = ctxCaptor.get();
             assertThat(GrpcCallOptions.get(ctx).getOption(MY_CALL_OPTION_KEY)).isEqualTo("foo");
+        }
+    }
+
+    void grpcMethodDescriptor() {
+        try (ClientRequestContextCaptor ctxCaptor = Clients.newContextCaptor()) {
+            blockingStub.emptyCall(EMPTY);
+            final ClientRequestContext ctx = ctxCaptor.get();
+            assertThat(GrpcMethodDescriptor.get(ctx).getBareMethodName()).isEqualTo("emptyCall");
         }
     }
 
