@@ -143,7 +143,7 @@ final class ServerHttp2ObjectEncoder extends Http2ObjectEncoder implements Serve
         if (stream == null) {
             return;
         }
-        if (stream.state().localSideOpen() || stream.state().remoteSideOpen()) {
+        if (stream.state().remoteSideOpen()) {
             encoder().writeRstStream(ctx(), streamId, http2Error.code(), ctx().voidPromise());
             ctx().flush();
         }

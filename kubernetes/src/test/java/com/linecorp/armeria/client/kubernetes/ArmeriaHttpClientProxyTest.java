@@ -50,9 +50,9 @@ import io.fabric8.kubernetes.client.http.AbstractHttpClientProxyTest;
 import io.fabric8.kubernetes.client.http.HttpClient;
 import io.fabric8.kubernetes.client.http.StandardHttpHeaders;
 import io.fabric8.mockwebserver.DefaultMockServer;
+import io.fabric8.mockwebserver.http.Headers;
+import io.fabric8.mockwebserver.http.RecordedRequest;
 import io.fabric8.mockwebserver.utils.ResponseProvider;
-import okhttp3.Headers;
-import okhttp3.mockwebserver.RecordedRequest;
 
 class ArmeriaHttpClientProxyTest extends AbstractHttpClientProxyTest {
 
@@ -153,8 +153,8 @@ class ArmeriaHttpClientProxyTest extends AbstractHttpClientProxyTest {
             assertThat(server.getLastRequest())
                     .extracting(RecordedRequest::getHeaders)
                     .extracting(Headers::toMultimap)
-                    .hasFieldOrPropertyWithValue("Host", ImmutableList.of("0.0.0.0:" + server.getPort()))
-                    .hasFieldOrPropertyWithValue("Proxy-Authorization", ImmutableList.of("Other kind of auth"));
+                    .hasFieldOrPropertyWithValue("host", ImmutableList.of("0.0.0.0:" + server.getPort()))
+                    .hasFieldOrPropertyWithValue("proxy-authorization", ImmutableList.of("Other kind of auth"));
         }
     }
 }

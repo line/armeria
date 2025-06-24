@@ -1,5 +1,5 @@
 /*
- * Copyright 2024 LINE Corporation
+ * Copyright 2021 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -14,14 +14,10 @@
  * under the License.
  */
 
-package com.linecorp.armeria.xds;
+/**
+ * Various classes used internally. Anything in this package can be changed or removed at any time.
+ */
+@NonNullByDefault
+package com.linecorp.armeria.internal.common.context;
 
-import com.linecorp.armeria.common.annotation.Nullable;
-
-abstract class XdsResourceWithPrimer<T extends XdsResourceWithPrimer<T>> implements XdsResource {
-
-    abstract T withPrimer(@Nullable XdsResource primer);
-
-    @Nullable
-    abstract XdsResource primer();
-}
+import com.linecorp.armeria.common.annotation.NonNullByDefault;

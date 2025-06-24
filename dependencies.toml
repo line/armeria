@@ -48,7 +48,7 @@ hbase = "1.2.6"
 hibernate-validator6 = "6.2.5.Final"
 hibernate-validator8 = "8.0.1.Final"
 j2objc = "3.0.0"
-jackson = "2.18.2"
+jackson = "2.19.1"
 jakarta-inject = "2.0.1"
 jakarta-validation = "3.1.1"
 jakarta-websocket = "2.2.0"
@@ -85,8 +85,7 @@ kotlin = "2.1.10"
 kotlin-coroutine = "1.10.1"
 krotodc = "1.1.1"
 ktlint-gradle-plugin = "12.1.2"
-# Don't uprade kubernetes-client to 7.x.x that requires Java 11
-kubernetes-client = "6.13.5"
+kubernetes-client = "7.3.1"
 logback12 = "1.2.13"
 logback13 = "1.3.14"
 logback14 = "1.4.14"
@@ -111,7 +110,7 @@ okhttp4 = "4.12.0" # For testing
 opensaml = "3.4.6"
 osdetector = "1.7.3"
 # Used for kubernetes-chaos-tests
-picocli = "4.7.6"
+picocli = "4.7.7"
 proguard = "7.5.0"
 prometheus = "1.3.6"
 prometheus-legacy = "0.16.0"
@@ -168,6 +167,7 @@ thrift017 = { strictly = "0.17.0" }
 thrift018 = { strictly = "0.18.1" }
 thrift019 = { strictly = "0.19.0" }
 thrift020 = { strictly = "0.20.0" }
+thrift021 = { strictly = "0.21.0" }
 tomcat8 = "8.5.100"
 tomcat9 = "9.0.96"
 tomcat10 = "10.1.31"
@@ -258,6 +258,9 @@ version.ref = "brave5"
 [libraries.brave5-context-slf4j]
 module = 'io.zipkin.brave:brave-context-slf4j'
 version.ref = "brave5"
+[libraries.brave5-instrumentation-rpc]
+module = "io.zipkin.brave:brave-instrumentation-rpc"
+version.ref = "brave5"
 [libraries.brave5-instrumentation-http]
 module = "io.zipkin.brave:brave-instrumentation-http"
 version.ref = "brave5"
@@ -273,6 +276,9 @@ javadocs = [
     "https://www.javadoc.io/doc/io.zipkin.brave/brave-instrumentation-http/6.0.3/"]
 [libraries.brave6-context-slf4j]
 module = 'io.zipkin.brave:brave-context-slf4j'
+version.ref = "brave6"
+[libraries.brave6-instrumentation-rpc]
+module = "io.zipkin.brave:brave-instrumentation-rpc"
 version.ref = "brave6"
 [libraries.brave6-instrumentation-http]
 module = "io.zipkin.brave:brave-instrumentation-http"
@@ -1371,6 +1377,14 @@ exclusions = [
 module = "org.apache.thrift:libthrift"
 version.ref = "thrift020"
 javadocs = "https://www.javadoc.io/doc/org.apache.thrift/libthrift/0.20.0/"
+exclusions = [
+    "javax.annotation:javax.annotation-api",
+    "org.apache.httpcomponents:httpcore",
+    "org.apache.httpcomponents:httpclient"]
+[libraries.thrift021]
+module = "org.apache.thrift:libthrift"
+version.ref = "thrift021"
+javadocs = "https://www.javadoc.io/doc/org.apache.thrift/libthrift/0.21.0/"
 exclusions = [
     "javax.annotation:javax.annotation-api",
     "org.apache.httpcomponents:httpcore",
