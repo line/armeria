@@ -599,8 +599,8 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
     public void endResponseWithLastChild() {
         checkState(!hasLastChild, "last child is already added");
         checkState(children != null && !children.isEmpty(), "at least one child should be already added");
-        final RequestLogAccess lastChild = children.get(children.size() - 1);
         hasLastChild = true;
+        final RequestLogAccess lastChild = children.get(children.size() - 1);
         propagateResponseSideLog(lastChild.partial());
     }
 
