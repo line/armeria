@@ -47,7 +47,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BiConsumer;
 
-import com.linecorp.armeria.common.grpc.GrpcMethodDescriptor;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -81,6 +80,7 @@ import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.grpc.GrpcCallOptions;
 import com.linecorp.armeria.common.grpc.GrpcExceptionHandlerFunction;
+import com.linecorp.armeria.common.grpc.GrpcMethodDescriptor;
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
 import com.linecorp.armeria.common.grpc.protocol.GrpcHeaderNames;
 import com.linecorp.armeria.common.logging.RequestLog;
@@ -385,6 +385,7 @@ class GrpcClientTest {
         await().untilAtomic(onCompleteThread, instanceOf(EventLoopThread.class));
     }
 
+    @Test
     void grpcCallOptions() {
         try (ClientRequestContextCaptor ctxCaptor = Clients.newContextCaptor()) {
             blockingStub
@@ -395,11 +396,12 @@ class GrpcClientTest {
         }
     }
 
+    @Test
     void grpcMethodDescriptor() {
         try (ClientRequestContextCaptor ctxCaptor = Clients.newContextCaptor()) {
             blockingStub.emptyCall(EMPTY);
             final ClientRequestContext ctx = ctxCaptor.get();
-            assertThat(GrpcMethodDescriptor.get(ctx).getBareMethodName()).isEqualTo("emptyCall");
+            assertThat(GrpcMethodDescriptor.get(ctx).getBareMethodName()).isEqualTo("EmptyCall");
         }
     }
 

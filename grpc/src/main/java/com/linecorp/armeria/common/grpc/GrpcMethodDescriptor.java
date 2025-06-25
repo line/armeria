@@ -16,18 +16,18 @@
 
 package com.linecorp.armeria.common.grpc;
 
+import static java.util.Objects.requireNonNull;
+
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
-import io.grpc.CallOptions;
+
 import io.grpc.MethodDescriptor;
 import io.netty.util.AttributeKey;
 
-import static java.util.Objects.requireNonNull;
-
 /**
- * Retrieves {@link io.grpc.MethodDescriptor} from a given {@link RequestContext}. This might be useful while providing
- * common middleware that needs to act based on the method invoked based on protobuf custom options.
+ * Retrieves {@link io.grpc.MethodDescriptor} from a given {@link RequestContext}. This might be useful while
+ * providing common middleware that needs to act based on the method invoked based on protobuf custom options.
  * <p>
  * Here is an example of how custom call options might be propagated between a gRPC stub and a decorator.
  * </p>
@@ -36,9 +36,9 @@ import static java.util.Objects.requireNonNull;
  *         .builder(grpcServerUri)
  *         .decorator((delegate, ctx, req) -> {
  *             MethodDescriptor descriptor = GrpcMethodDescriptor.get(ctx);
- *             bool safe = descriptor.isIdempotent() || descriptor.isSafe()
+ *             boolean retryable = descriptor.isIdempotent() || descriptor.isSafe()
  *
- *             // act on safe if needed
+ *             // act on retryable if needed
  *
  *             return delegate.execute(ctx, req);
  *         })
@@ -48,7 +48,7 @@ import static java.util.Objects.requireNonNull;
 @UnstableApi
 public final class GrpcMethodDescriptor {
 
-    private static final AttributeKey<MethodDescriptor<?,?>> GRPC_METHOD_DESCRIPTOR = AttributeKey.valueOf(
+    private static final AttributeKey<MethodDescriptor<?, ?>> GRPC_METHOD_DESCRIPTOR = AttributeKey.valueOf(
             GrpcMethodDescriptor.class, "GRPC_METHOD_DESCRIPTOR");
 
     /**
@@ -56,7 +56,7 @@ public final class GrpcMethodDescriptor {
      * {@link #set(RequestContext, MethodDescriptor)}.
      */
     @Nullable
-    public static MethodDescriptor<?,?> get(RequestContext ctx) {
+    public static MethodDescriptor<?, ?> get(RequestContext ctx) {
         requireNonNull(ctx, "ctx");
         return ctx.attr(GRPC_METHOD_DESCRIPTOR);
     }
@@ -64,11 +64,12 @@ public final class GrpcMethodDescriptor {
     /**
      * Sets the specified {@link MethodDescriptor} to the {@link RequestContext}.
      */
-    public static void set(RequestContext ctx, MethodDescriptor<?,?> descriptor) {
+    public static void set(RequestContext ctx, MethodDescriptor<?, ?> descriptor) {
         requireNonNull(ctx, "ctx");
-        requireNonNull(descriptor, "options");
+        requireNonNull(descriptor, "descriptor");
         ctx.setAttr(GRPC_METHOD_DESCRIPTOR, descriptor);
     }
 
-    private GrpcMethodDescriptor() {}
+    private GrpcMethodDescriptor() {
+    }
 }
