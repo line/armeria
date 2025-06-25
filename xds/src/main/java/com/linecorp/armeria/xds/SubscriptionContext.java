@@ -1,7 +1,7 @@
 /*
- * Copyright 2020 LINE Corporation
+ * Copyright 2025 LY Corporation
  *
- * LINE Corporation licenses this file to you under the Apache License,
+ * LY Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
@@ -14,22 +14,19 @@
  * under the License.
  */
 
-export interface SelectOption {
-  label: string;
-  value: string;
-}
+package com.linecorp.armeria.xds;
 
-export enum SpecLoadingStatus {
-  INITIALIZED,
-  FAILED,
-  SUCCESS,
-}
+import io.netty.util.concurrent.EventExecutor;
 
-export interface ResponseData {
-  body: string;
-  headers: string[];
-  status?: number;
-  executionTime: number;
-  size: number;
-  timestamp?: string;
+interface SubscriptionContext {
+
+    EventExecutor eventLoop();
+
+    void subscribe(ResourceNode<?> node);
+
+    void unsubscribe(ResourceNode<?> node);
+
+    ConfigSourceMapper configSourceMapper();
+
+    XdsClusterManager clusterManager();
 }
