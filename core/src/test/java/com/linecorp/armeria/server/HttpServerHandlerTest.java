@@ -19,6 +19,7 @@ package com.linecorp.armeria.server;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 
+import java.net.InetSocketAddress;
 import java.util.concurrent.atomic.AtomicReference;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -58,8 +59,10 @@ class HttpServerHandlerTest {
                   throw HttpResponseException.of(HttpResponse.of(201));
               });
             sb.route()
-                .get("/forwarded")
-                .build((ctx, req) -> HttpResponse.of(ctx.proxiedAddresses().sourceAddress().toString()));
+              .get("/forwarded").build((ctx, req) -> {
+                  final InetSocketAddress addr = ctx.proxiedAddresses().sourceAddress();
+                  return HttpResponse.of(addr.getAddress().getHostAddress());
+              });
         }
     };
 
@@ -81,14 +84,14 @@ class HttpServerHandlerTest {
 
     @ParameterizedTest
     @CsvSource({
-            "'/..', 127.0.0.1",
-            "'/..,for=192.0.2.61', 192.0.2.61",
-            "' ,for=192.0.2.61', 192.0.2.61",
-            "'some-random-junk', 127.0.0.1",
-            "'for=, /.., foo=bar,for=10.0.0.1', 10.0.0.1",
-            "'for=\"[2001:db8:cafe::\"," +
-                    "for=\"[2001:db8:cafe::17]:4711\";proto=http;by=203.0.113.43,for=192.0.2.61'," +
-                    "'[2001:db8:cafe:0:0:0:0:17]:4711'"
+        "'/..', '127.0.0.1'",
+        "'/..,for=192.0.2.61', '192.0.2.61'",
+        "' ,for=192.0.2.61', '192.0.2.61'",
+        "'some-random-junk', '127.0.0.1'",
+        "'for=, /.., foo=bar,for=10.0.0.1', '10.0.0.1'",
+        "'for=\"[2001:db8:cafe::\"," +
+        "for=\"[2001:db8:cafe::17]:4711\";proto=http;by=203.0.113.43,for=192.0.2.61'," +
+                "'2001:db8:cafe:0:0:0:0:17'"
     })
     void invalidForwardedHeaderShouldReturn200(String header, String expectedSourceAddress) {
         final WebClient client = WebClient.of(server.httpUri());
