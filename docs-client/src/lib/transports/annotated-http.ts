@@ -16,7 +16,12 @@
 import { Endpoint, Method } from '../specification';
 
 import Transport from './transport';
-import { isValidJsonMimeType, validateJsonObject } from '../json-util';
+import {
+  extractHeaderLines,
+  isValidJsonMimeType,
+  validateJsonObject,
+} from '../json-util';
+import { ResponseData } from '../types';
 
 export const ANNOTATED_HTTP_MIME_TYPE = 'application/json; charset=utf-8';
 
@@ -88,7 +93,8 @@ export default class AnnotatedHttpTransport extends Transport {
     bodyJson?: string,
     endpointPath?: string,
     queries?: string,
-  ): Promise<Response> {
+  ): Promise<ResponseData> {
+    const start = performance.now();
     const endpoint = this.getDebugMimeTypeEndpoint(method);
 
     const hdrs = new Headers();
@@ -116,10 +122,23 @@ export default class AnnotatedHttpTransport extends Transport {
     }
     newPath = pathPrefix + newPath;
 
-    return fetch(encodeURI(newPath), {
+    const response = await fetch(encodeURI(newPath), {
       headers: hdrs,
       method: method.httpMethod,
       body: bodyJson,
     });
+
+    const responseHeaders = extractHeaderLines(response.headers);
+    const responseText = await response.text();
+    const duration = Math.round(performance.now() - start);
+    const timestamp = new Date().toLocaleString();
+    return {
+      body: responseText,
+      headers: responseHeaders,
+      status: response.status,
+      executionTime: duration,
+      size: responseText.length,
+      timestamp,
+    };
   }
 }

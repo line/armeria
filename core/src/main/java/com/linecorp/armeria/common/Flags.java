@@ -68,6 +68,7 @@ import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.ServiceWithRoutes;
 import com.linecorp.armeria.server.TransientService;
 import com.linecorp.armeria.server.TransientServiceOption;
+import com.linecorp.armeria.server.annotation.AnnotatedService;
 import com.linecorp.armeria.server.annotation.ExceptionHandler;
 import com.linecorp.armeria.server.annotation.ExceptionVerbosity;
 import com.linecorp.armeria.server.file.FileService;
@@ -442,6 +443,9 @@ public final class Flags {
 
     private static final ResponseTimeoutMode RESPONSE_TIMEOUT_MODE =
             getValue(FlagsProvider::responseTimeoutMode, "responseTimeoutMode");
+
+    private static final boolean ANNOTATED_SERVICE_CONTENT_LOGGING =
+            getValue(FlagsProvider::annotatedServiceContentLogging, "annotatedServiceContentLogging");
 
     /**
      * Returns the specification of the {@link Sampler} that determines whether to retain the stack
@@ -1659,6 +1663,18 @@ public final class Flags {
     @UnstableApi
     public static ResponseTimeoutMode responseTimeoutMode() {
         return RESPONSE_TIMEOUT_MODE;
+    }
+
+    /**
+     * Returns whether {@link AnnotatedService} should leave request/response content logs
+     * by default when a {@link LoggingService} is added.
+     *
+     * <p>By default, this option is enabled. Specify the
+     * {@code -Dcom.linecorp.armeria.annotatedServiceContentLogging=false} JVM option to
+     * override the default value.
+     */
+    public static boolean annotatedServiceContentLogging() {
+        return ANNOTATED_SERVICE_CONTENT_LOGGING;
     }
 
     @Nullable
