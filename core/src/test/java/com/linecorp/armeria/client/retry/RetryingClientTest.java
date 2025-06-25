@@ -87,7 +87,6 @@ import com.linecorp.armeria.internal.testing.AnticipatedException;
 import com.linecorp.armeria.server.AbstractHttpService;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServiceRequestContext;
-import com.linecorp.armeria.server.logging.LoggingService;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
 import io.netty.channel.EventLoop;
@@ -130,8 +129,6 @@ class RetryingClientTest {
 
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
-            sb.decorator(LoggingService.newDecorator());
-
             sb.service("/retry-content", new AbstractHttpService() {
                 @Override
                 protected HttpResponse doGet(ServiceRequestContext ctx, HttpRequest req)
