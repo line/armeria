@@ -1,7 +1,7 @@
 /*
- * Copyright 2025 LY Corporation
+ * Copyright 2017 LINE Corporation
  *
- * LY Corporation licenses this file to you under the Apache License,
+ * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
@@ -60,6 +60,7 @@ import io.netty.util.AttributeKey;
  */
 public abstract class AbstractRetryingClient<I extends Request, O extends Response>
         extends SimpleDecoratingClient<I, O> {
+
     private static final Logger logger = LoggerFactory.getLogger(AbstractRetryingClient.class);
 
     /**
@@ -119,8 +120,7 @@ public abstract class AbstractRetryingClient<I extends Request, O extends Respon
      * Invoked by {@link #execute(ClientRequestContext, Request)}
      * after the deadline for response timeout is set.
      */
-    protected abstract O doExecute(ClientRequestContext ctx, I req)
-            throws Exception;
+    protected abstract O doExecute(ClientRequestContext ctx, I req) throws Exception;
 
     /**
      * todo(szymon): [doc].
@@ -373,7 +373,6 @@ public abstract class AbstractRetryingClient<I extends Request, O extends Respon
      */
     @SuppressWarnings("MethodMayBeStatic") // Intentionally left non-static for better user experience.
     protected final boolean setResponseTimeout(ClientRequestContext ctx) {
-        // We do not need to acquire a lock on the state as this method body is thread-safe.
         requireNonNull(ctx, "ctx");
         final long responseTimeoutMillis = state(ctx).responseTimeoutMillisForAttempt();
         if (responseTimeoutMillis < 0) {
@@ -392,7 +391,6 @@ public abstract class AbstractRetryingClient<I extends Request, O extends Respon
      * {@link ClientRequestContext}.
      */
     protected static int getTotalAttempts(ClientRequestContext ctx) {
-        // We do not need to acquire a lock on the state as this method body is thread-safe.
         final State<?> state = ctx.attr(STATE);
         if (state == null) {
             return 0;
@@ -401,10 +399,10 @@ public abstract class AbstractRetryingClient<I extends Request, O extends Respon
     }
 
     /**
-     * Creates a new derived {@link ClientRequestContext} for a retrying attempt, replacing the requests.
+     * Creates a new derived {@link ClientRequestContext}, replacing the requests.
      * If {@link ClientRequestContext#endpointGroup()} exists, a new {@link Endpoint} will be selected.
      */
-    protected static ClientRequestContext newAttemptContext(ClientRequestContext ctx,
+    protected static ClientRequestContext newDerivedContext(ClientRequestContext ctx,
                                                             @Nullable HttpRequest req,
                                                             @Nullable RpcRequest rpcReq,
                                                             boolean initialAttempt) {
@@ -604,7 +602,6 @@ public abstract class AbstractRetryingClient<I extends Request, O extends Respon
             return isTimeoutEnabled;
         }
 
-        // Is thread-safe.
         long responseTimeoutMillis() {
             assert isTimeoutEnabled;
             return Math.max(TimeUnit.NANOSECONDS.toMillis(deadlineNanos - System.nanoTime()), -1);
@@ -755,7 +752,7 @@ public abstract class AbstractRetryingClient<I extends Request, O extends Respon
             complete0();
         }
 
-        // takes ownership of current lock
+        // Takes ownership of the current retry lock acquisition
         private void complete0() {
             assert lock.isHeldByCurrentThread();
             assert !isRetryingComplete();
@@ -763,7 +760,7 @@ public abstract class AbstractRetryingClient<I extends Request, O extends Respon
             final boolean hasLastAttempt = lastAttempt != null;
 
             if (!hasLastAttempt) {
-                // takes ownership of current lock
+                // Takes ownership of the current retry lock acquisition
                 completeExceptionally0(
                         new IllegalStateException("Completed retrying without any attempts."));
             } else {
@@ -784,7 +781,7 @@ public abstract class AbstractRetryingClient<I extends Request, O extends Respon
                 return;
             }
 
-            // takes ownership of current lock
+            // Takes ownership of the current retry lock acquisition
             completeExceptionally0(cause);
         }
 
@@ -813,7 +810,7 @@ public abstract class AbstractRetryingClient<I extends Request, O extends Respon
                     });
         }
 
-        // takes ownership of current lock
+        // Takes ownership of the current retry lock acquisition
         private void completeExceptionally0(Throwable cause) {
             assert lock.isHeldByCurrentThread();
             assert !isRetryingComplete();

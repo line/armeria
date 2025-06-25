@@ -1,7 +1,7 @@
 /*
- * Copyright 2025 LY Corporation
+ * Copyright 2020 LINE Corporation
  *
- * LY Corporation licenses this file to you under the Apache License,
+ * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
@@ -94,7 +94,7 @@ public final class RetryConfigBuilder<T extends Response> {
                         .toMillis();
         checkArgument(
                 millis >= 0,
-                "responseTimeoutForEachAttempt.toMillis(): %s (expected: >= 0)",
+                "hedgingDelay.toMillis(): %s (expected: >= 0)",
                 millis);
         hedgingDelayMillis = millis;
         return this;
@@ -175,7 +175,7 @@ public final class RetryConfigBuilder<T extends Response> {
                 .add("retryRuleWithContent", retryRuleWithContent)
                 .add("maxTotalAttempts", maxTotalAttempts)
                 .add("responseTimeoutMillisForEachAttempt", responseTimeoutMillisForEachAttempt)
-                .add("hedgingDelayMillis", hedgingDelayMillis)
-                .add("maxContentLength", maxContentLength);
+                .add("maxContentLength", maxContentLength)
+                .add("hedgingDelayMillis", hedgingDelayMillis);
     }
 }

@@ -105,9 +105,9 @@ class RetryScheduler {
     private long retryTaskId;
 
     // The retry task that is about to be executed next.
-    // It is possible that the delay of this task is shorter than the `earliestNextRetryTimeNanos`,
-    // because of calls to `addEarliestNextRetryTimeNanos` with a pending call to `schedule` or
-    // `rescheduleCurrentRetryTaskIfTooEarly`.
+    // It is possible that the delay of this task is shorter than earliestNextRetryTimeNanos,
+    // because of calls to addEarliestNextRetryTimeNanos with a pending call to schedule or
+    // rescheduleCurrentRetryTaskIfTooEarly.
     private @Nullable RetryTaskHandle currentRetryTask;
 
     RetryScheduler(ReentrantLock retryLock, EventLoop eventLoop) {
@@ -141,11 +141,11 @@ class RetryScheduler {
         // currently scheduled retry task (even not by us in this method).
         if (currentRetryTask == null || nextRetryTimeNanos < Math.max(this.earliestNextRetryTimeNanos,
                                                                       currentRetryTask.retryTimeNanos())) {
-            // takes ownership of the acquired retry lock
+            // Takes ownership of the current retry lock acquisition
             scheduleNextRetryTask(retryTask, nextRetryTimeNanos, exceptionHandler, false);
         } else {
             // Make sure the current retry task is not scheduled too early.
-            // takes ownership of the acquired retry lock
+            // Takes ownership of the current retry lock acquisition
             rescheduleCurrentRetryTaskIfTooEarly0();
 
             exceptionHandler.accept(new RetrySchedulingException(
@@ -236,7 +236,7 @@ class RetryScheduler {
         }
     }
 
-    // takes ownership of the acquired retry lock
+    // Takes ownership of the current retry lock acquisition
     private void scheduleNextRetryTask(Consumer<ReentrantLock> retryRunnable, long retryTimeNanos,
                                        Consumer<? super Throwable> exceptionHandler,
                                        boolean isReschedule) {
@@ -287,7 +287,7 @@ class RetryScheduler {
 
                 final long taskRunTimeNanos = System.nanoTime();
 
-                // max to be robust against overflows.
+                // Math.max to be robust against overflows.
                 if (Math.max(taskRunTimeNanos, taskRunTimeNanos + RESCHEDULING_OVERTAKING_TOLERANCE_NANOS) <
                     earliestNextRetryTimeNanos) {
 
@@ -297,9 +297,9 @@ class RetryScheduler {
                             currentRetryTask.getExceptionHandler();
 
                     clearCurrentRetryTask();
-                    // do not invoke rescheduleCurrentRetryTaskIfTooEarly here as it will not be able
+                    // Do not invoke rescheduleCurrentRetryTaskIfTooEarly here as it will not be able
                     // to cancel us.
-                    // takes ownership of the acquired retry lock
+                    // Takes ownership of the current retry lock acquisition
                     scheduleNextRetryTask(currentRetryRunnable,
                                           earliestNextRetryTimeNanos,
                                           currentExceptionHandler, false);
@@ -350,14 +350,14 @@ class RetryScheduler {
         }
     }
 
-    // takes ownership of the acquired retry lock (if any)
+    // Takes ownership of the current retry lock acquisition (if any)
     public void rescheduleCurrentRetryTaskIfTooEarly() {
         retryLock.lock();
-        // takes ownership of the acquired retry lock
+        // Takes ownership of the current retry lock acquisition
         rescheduleCurrentRetryTaskIfTooEarly0();
     }
 
-    // takes ownership of the acquired retry lock
+    // Takes ownership of the current retry lock acquisition
     private void rescheduleCurrentRetryTaskIfTooEarly0() {
         assert retryLock.isHeldByCurrentThread();
 
@@ -371,10 +371,10 @@ class RetryScheduler {
                          currentRetryTask.retryTimeNanos() + RESCHEDULING_OVERTAKING_TOLERANCE_NANOS) <
                 earliestNextRetryTimeNanos
         ) {
-            // Current retry task is going to be executed before the earliestNextRetryTimeNanos so
+            // The current retry task is going to be executed before earliestNextRetryTimeNanos so
             // we need to reschedule it.
 
-            // Takes ownership of the acquired lock.
+            // Takes ownership of the current retry lock acquisition
             scheduleNextRetryTask(currentRetryTask.getRetryTaskRunnable(),
                                   earliestNextRetryTimeNanos,
                                   currentRetryTask.getExceptionHandler(), true);

@@ -21,13 +21,15 @@ class RetrySchedulingException extends RuntimeException {
     private final Type type;
 
     enum Type {
-        RETRYING_ALREADY_COMPLETED("Retrying completed"),
-        NO_MORE_ATTEMPTS_IN_RETRY("No more attempts available in retry"),
+        RETRYING_ALREADY_COMPLETED("Retrying completed already"),
+        NO_MORE_ATTEMPTS_IN_RETRY("No more attempts with respect to `RetryConfig.maxAttempts`"),
         NO_MORE_ATTEMPTS_IN_BACKOFF("No more attempts available in backoff"),
         DELAY_FROM_BACKOFF_EXCEEDS_RESPONSE_TIMEOUT("Delay from backoff exceeds response timeout"),
         DELAY_FROM_SERVER_EXCEEDS_RESPONSE_TIMEOUT("Delay from server exceeds response timeout"),
-        RETRY_TASK_OVERTAKEN("Has earlier retry"),
-        RETRY_TASK_CANCELLED("Retry task cancelled unexpectedly.");
+        RETRY_TASK_OVERTAKEN(
+                "Retry task cannot run because of another retry task for the same attempt being" +
+                " scheduled earlier"),
+        RETRY_TASK_CANCELLED("A retry task was cancelled unexpectedly");
 
         private final String message;
 

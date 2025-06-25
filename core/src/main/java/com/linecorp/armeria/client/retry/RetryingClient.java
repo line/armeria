@@ -1,7 +1,7 @@
 /*
- * Copyright 2025 LY Corporation
+ * Copyright 2017 LINE Corporation
  *
- * LY Corporation licenses this file to you under the Apache License,
+ * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
@@ -220,7 +220,7 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
      * requests.
      *
      * @param mapping the mapping that returns a {@link RetryConfig} for a given {@link ClientRequestContext}
-     *                and {@link Request}.
+     *        and {@link Request}.
      */
     public static Function<? super HttpClient, RetryingClient>
     newDecoratorWithMapping(RetryConfigMapping<HttpResponse> mapping) {
@@ -313,7 +313,7 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
 
         final ClientRequestContext attemptCtx;
         try {
-            attemptCtx = newAttemptContext(ctx, attemptReq, ctx.rpcRequest(), initialAttempt);
+            attemptCtx = newDerivedContext(ctx, attemptReq, ctx.rpcRequest(), initialAttempt);
         } catch (Throwable t) {
             completeRetryingExceptionally(retryingContext, t, initialAttempt);
             return;
