@@ -36,6 +36,8 @@ import java.util.function.BiFunction;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.Mock;
 
 import com.linecorp.armeria.client.ClientRequestContext;
@@ -182,75 +184,125 @@ class DefaultRequestLogTest {
         assertThat(log.isAvailable(RequestLogProperty.RESPONSE_CAUSE)).isEqualTo(true);
     }
 
-    @Test
-    void addChild() {
+    @ParameterizedTest
+    @ValueSource(booleans = {true, false})
+    void addChild(boolean isResponseEndingWithFirstChild) {
         when(ctx.method()).thenReturn(HttpMethod.GET);
         when(ctx.eventLoop()).thenReturn(ContextAwareEventLoop.of(ctx, ImmediateEventLoop.INSTANCE));
-        final DefaultRequestLog child = new DefaultRequestLog(ctx);
-        log.addChild(child);
-        child.startRequest();
-        child.session(channel, SessionProtocol.H2C, null, null);
-        assertThat(log.requestStartTimeMicros()).isEqualTo(child.requestStartTimeMicros());
+        final DefaultRequestLog firstChild = new DefaultRequestLog(ctx);
+        final DefaultRequestLog lastChild = new DefaultRequestLog(ctx);
+        log.addChild(firstChild);
+        log.addChild(lastChild);
+        firstChild.startRequest();
+        assertThat(log.requestStartTimeMicros()).isEqualTo(firstChild.requestStartTimeMicros());
+        lastChild.startRequest();
+        assertThat(log.requestStartTimeMicros()).isEqualTo(firstChild.requestStartTimeMicros());
+
+        lastChild.session(channel, SessionProtocol.H1C, null, null);
+        assertThatThrownBy(() -> log.channel()).isExactlyInstanceOf(RequestLogAvailabilityException.class);
+        firstChild.session(channel, SessionProtocol.H2C, null, null);
         assertThat(log.channel()).isSameAs(channel);
         assertThat(log.sessionProtocol()).isSameAs(SessionProtocol.H2C);
 
-        child.serializationFormat(SerializationFormat.NONE);
+        lastChild.serializationFormat(SerializationFormat.UNKNOWN);
+        assertThatThrownBy(() -> log.scheme())
+                .isExactlyInstanceOf(RequestLogAvailabilityException.class);
+        firstChild.serializationFormat(SerializationFormat.NONE);
         assertThat(log.scheme().serializationFormat()).isSameAs(SerializationFormat.NONE);
 
-        child.requestFirstBytesTransferred();
+        assertThatThrownBy(() -> log.requestFirstBytesTransferredTimeNanos())
+                .isExactlyInstanceOf(RequestLogAvailabilityException.class);
+        lastChild.requestFirstBytesTransferred();
+        assertThatThrownBy(() -> log.requestFirstBytesTransferredTimeNanos())
+                .isExactlyInstanceOf(RequestLogAvailabilityException.class);
+        firstChild.requestFirstBytesTransferred();
         assertThat(log.requestFirstBytesTransferredTimeNanos())
-                .isEqualTo(child.requestFirstBytesTransferredTimeNanos());
+                .isEqualTo(firstChild.requestFirstBytesTransferredTimeNanos());
 
         final RequestHeaders foo = RequestHeaders.of(HttpMethod.GET, "/foo");
-        child.requestHeaders(foo);
-        assertThat(log.requestHeaders()).isSameAs(foo);
+        final RequestHeaders bar = RequestHeaders.of(HttpMethod.GET, "/bar");
+
+        lastChild.requestHeaders(foo);
+        assertThatThrownBy(() -> log.requestHeaders())
+                .isExactlyInstanceOf(RequestLogAvailabilityException.class);
+        firstChild.requestHeaders(bar);
+        assertThat(log.requestHeaders()).isSameAs(bar);
 
         final String requestContent = "baz";
         final String rawRequestContent = "qux";
 
-        child.requestContent(requestContent, rawRequestContent);
+        lastChild.requestContent(rawRequestContent, requestContent); // swapped
+        assertThatThrownBy(() -> log.requestContent())
+                .isExactlyInstanceOf(RequestLogAvailabilityException.class);
+        firstChild.requestContent(requestContent, rawRequestContent);
         assertThat(log.requestContent()).isSameAs(requestContent);
         assertThat(log.rawRequestContent()).isSameAs(rawRequestContent);
 
-        child.endRequest();
-        assertThat(log.requestDurationNanos()).isEqualTo(child.requestDurationNanos());
+        lastChild.endRequest();
+        assertThatThrownBy(() -> log.requestDurationNanos())
+                .isExactlyInstanceOf(RequestLogAvailabilityException.class);
+        firstChild.endRequest();
+        assertThat(log.requestDurationNanos()).isEqualTo(firstChild.requestDurationNanos());
 
-        // response-side log are propagated when RequestLogBuilder.endResponseWithLastChild() is invoked
-        child.startResponse();
+        // response-side log are propagated when RequestLogBuilder.endResponseWith(Last)Child() is invoked
+        firstChild.startResponse();
+        lastChild.startResponse();
         assertThatThrownBy(() -> log.responseStartTimeMicros())
                 .isExactlyInstanceOf(RequestLogAvailabilityException.class);
 
-        child.responseFirstBytesTransferred();
+        lastChild.responseFirstBytesTransferred();
+        firstChild.responseFirstBytesTransferred();
         assertThatThrownBy(() -> log.responseFirstBytesTransferredTimeNanos())
                 .isExactlyInstanceOf(RequestLogAvailabilityException.class);
 
         final ResponseHeaders responseHeaders = ResponseHeaders.of(200);
-        child.responseHeaders(responseHeaders);
+        final ResponseHeaders responseHeaders2 = ResponseHeaders.of(404);
+        firstChild.responseHeaders(responseHeaders);
+        lastChild.responseHeaders(responseHeaders2);
         assertThatThrownBy(() -> log.responseHeaders())
                 .isExactlyInstanceOf(RequestLogAvailabilityException.class);
 
         final HttpHeaders responseTrailers = HttpHeaders.of("status", 0);
-        child.responseTrailers(responseTrailers);
+        final HttpHeaders responseTrailers2 = HttpHeaders.of("status", 42);
+        firstChild.responseTrailers(responseTrailers);
+        lastChild.responseTrailers(responseTrailers2);
         assertThatThrownBy(() -> log.responseTrailers())
                 .isExactlyInstanceOf(RequestLogAvailabilityException.class);
 
-        log.endResponseWithLastChild();
-        assertThat(log.responseStartTimeMicros()).isEqualTo(child.responseStartTimeMicros());
+        if (isResponseEndingWithFirstChild) {
+            log.endResponseWithChild(firstChild);
+        } else {
+            log.endResponseWithLastChild();
+        }
 
+        final DefaultRequestLog winningChild  = isResponseEndingWithFirstChild ? firstChild : lastChild;
+        final DefaultRequestLog loosingChild = isResponseEndingWithFirstChild ? lastChild : firstChild;
+
+        assertThat(log.responseStartTimeMicros()).isEqualTo(winningChild.responseStartTimeMicros());
         assertThat(log.responseFirstBytesTransferredTimeNanos())
-                .isEqualTo(child.responseFirstBytesTransferredTimeNanos());
-        assertThat(log.responseHeaders()).isSameAs(responseHeaders);
-        assertThat(log.responseTrailers()).isSameAs(responseTrailers);
+                .isEqualTo(winningChild.responseFirstBytesTransferredTimeNanos());
+        assertThat(log.responseHeaders()).isSameAs(winningChild.responseHeaders());
+        assertThat(log.responseTrailers()).isSameAs(winningChild.responseTrailers());
 
         final String responseContent = "baz1";
         final String rawResponseContent = "qux1";
-        child.responseContent(responseContent, rawResponseContent);
+        winningChild.responseContent(responseContent, rawResponseContent);
+        loosingChild.responseContent(rawResponseContent, responseContent); // swapped
 
-        child.endResponse(new AnticipatedException("Oops!"));
-        assertThat(log.responseContent()).isSameAs(responseContent);
-        assertThat(log.rawResponseContent()).isSameAs(rawResponseContent);
-        assertThat(log.responseDurationNanos()).isEqualTo(child.responseDurationNanos());
-        assertThat(log.totalDurationNanos()).isEqualTo(child.totalDurationNanos());
+        loosingChild.endResponse(new IllegalStateException());
+        winningChild.endResponse(new AnticipatedException("Oops!"));
+
+        assertThat(log.responseContent()).isSameAs(winningChild.responseContent());
+        assertThat(log.rawResponseContent()).isSameAs(winningChild.rawResponseContent());
+        assertThat(log.responseDurationNanos()).isEqualTo(winningChild.responseDurationNanos());
+        assertThat(log.requestStartTimeNanos()).isEqualTo(
+                Math.min(loosingChild.requestStartTimeNanos(), winningChild.requestStartTimeNanos())
+        );
+        assertThat(log.requestEndTimeNanos())
+                .isEqualTo(Math.max(loosingChild.requestEndTimeNanos(), winningChild.requestEndTimeNanos()));
+        assertThat(log.responseEndTimeNanos()).isEqualTo(winningChild.responseEndTimeNanos());
+        assertThat(log.totalDurationNanos())
+                .isEqualTo(winningChild.responseEndTimeNanos() - log.requestStartTimeNanos());
     }
 
     @Test
