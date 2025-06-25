@@ -18,10 +18,18 @@ package com.linecorp.armeria.client.retry;
 
 import static com.linecorp.armeria.client.retry.AbstractRetryingClient.ARMERIA_RETRY_COUNT;
 import static com.linecorp.armeria.common.util.Exceptions.peel;
+import static com.linecorp.armeria.internal.testing.RequestContextUtils.assertValidClientRequestContext;
+import static com.linecorp.armeria.internal.testing.RequestContextUtils.assertValidClientRequestContextWithParentLogVerifier;
+import static com.linecorp.armeria.internal.testing.RequestContextUtils.verifyAllValid;
+import static com.linecorp.armeria.internal.testing.RequestContextUtils.verifyExactlyOneValid;
+import static com.linecorp.armeria.internal.testing.RequestContextUtils.verifyResponseCause;
+import static com.linecorp.armeria.internal.testing.RequestContextUtils.verifyResponseHeader;
+import static com.linecorp.armeria.internal.testing.RequestContextUtils.verifyResponseTrailer;
+import static com.linecorp.armeria.internal.testing.RequestContextUtils.verifyStatusCode;
+import static com.linecorp.armeria.internal.testing.RequestContextUtils.verifyUnprocessedRequestException;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.catchThrowable;
-import static org.assertj.core.api.Assertions.fail;
 import static org.awaitility.Awaitility.await;
 
 import java.time.Duration;
@@ -33,7 +41,6 @@ import java.util.concurrent.CompletionException;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -80,8 +87,10 @@ import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.stream.AbortedStreamException;
+import com.linecorp.armeria.common.stream.CancelledSubscriptionException;
 import com.linecorp.armeria.common.util.UnmodifiableFuture;
 import com.linecorp.armeria.internal.testing.AnticipatedException;
+import com.linecorp.armeria.internal.testing.RequestContextUtils.RequestLogVerifier;
 import com.linecorp.armeria.server.AbstractHttpService;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServiceRequestContext;
@@ -328,7 +337,7 @@ class RetryingClientTest {
     }
 
     @Test
-    void retryWhenContentMatched() {
+    void retryContentMatched() {
         final Function<? super HttpClient, RetryingClient> retryingDecorator =
                 RetryingClient.builder(new RetryIfContentMatch("Need to retry"), 1024)
                               .newDecorator();
@@ -342,7 +351,11 @@ class RetryingClientTest {
             ctx = captor.get();
         }
         assertThat(res.contentUtf8()).isEqualTo("Succeeded after retry");
-        awaitValidClientRequestContext(ctx, 3);
+        awaitValidClientRequestContext(ctx,
+                                       verifyStatusCode(HttpStatus.OK),
+                                       verifyStatusCode(HttpStatus.OK),
+                                       verifyStatusCode(HttpStatus.OK)
+        );
     }
 
     @Test
@@ -354,7 +367,8 @@ class RetryingClientTest {
             ctx = captor.get();
         }
         assertThat(res.contentUtf8()).isEqualTo("Succeeded after retry");
-        awaitValidClientRequestContext(ctx, 2);
+        awaitValidClientRequestContext(ctx, verifyStatusCode(HttpStatus.SERVICE_UNAVAILABLE),
+                                       verifyStatusCode(HttpStatus.OK));
     }
 
     @Test
@@ -369,7 +383,10 @@ class RetryingClientTest {
             ctx = captor.get();
         }
         assertThat(res.contentUtf8()).isEqualTo("Succeeded after retry");
-        awaitValidClientRequestContext(ctx, 2);
+        await().untilAsserted(
+                () -> awaitValidClientRequestContext(ctx, verifyStatusCode(HttpStatus.SERVICE_UNAVAILABLE),
+                                                     verifyStatusCode(HttpStatus.OK))
+        );
     }
 
     @Test
@@ -386,7 +403,16 @@ class RetryingClientTest {
             ctx = captor.get();
         }
         assertThat(res.contentUtf8()).isEqualTo("Succeeded after retry");
-        awaitValidClientRequestContext(ctx, 2);
+        awaitValidClientRequestContext(ctx,
+                                       verifyAllValid(
+                                               verifyStatusCode(HttpStatus.OK),
+                                               verifyResponseTrailer("grpc-status", "3")
+                                       ),
+                                       verifyAllValid(
+                                               verifyStatusCode(HttpStatus.OK),
+                                               verifyResponseTrailer("grpc-status", "0")
+                                       )
+        );
     }
 
     @Test
@@ -401,7 +427,16 @@ class RetryingClientTest {
             ctx = captor.get();
         }
         assertThat(res.contentUtf8()).isEqualTo("Succeeded after retry");
-        awaitValidClientRequestContext(ctx);
+
+        await().untilAsserted(() -> {
+            assertThat(ctx.log().isComplete()).isTrue();
+        });
+
+        final int actualAttemptCount = ctx.log().children().size();
+        final RequestLogVerifier[] clientLogVerifiers = new RequestLogVerifier[actualAttemptCount];
+        Arrays.fill(clientLogVerifiers, verifyStatusCode(HttpStatus.OK));
+        clientLogVerifiers[0] = verifyStatusCode(HttpStatus.SERVICE_UNAVAILABLE);
+        awaitValidClientRequestContext(ctx, clientLogVerifiers);
     }
 
     @Test
@@ -414,7 +449,8 @@ class RetryingClientTest {
         }
         assertThat(res.contentUtf8()).isEqualTo("Succeeded after retry");
         // response timeout did not happen.
-        awaitValidClientRequestContext(ctx, 2);
+        awaitValidClientRequestContext(ctx, verifyStatusCode(HttpStatus.SERVICE_UNAVAILABLE),
+                                       verifyStatusCode(HttpStatus.OK));
     }
 
     @Test
@@ -429,13 +465,20 @@ class RetryingClientTest {
         }
 
         assertThat(res.contentUtf8()).isEqualTo("Succeeded after retry");
+        assertThat(res.headers().get(HttpHeaderNames.RETRY_AFTER.toString())).isNull();
         assertThat(sw.elapsed(TimeUnit.MILLISECONDS)).isGreaterThanOrEqualTo(
                 (long) (TimeUnit.SECONDS.toMillis(1) * 0.9));
-        awaitValidClientRequestContext(ctx, 2);
+        awaitValidClientRequestContext(ctx,
+                                       verifyAllValid(
+                                               verifyStatusCode(HttpStatus.SERVICE_UNAVAILABLE),
+                                               verifyResponseHeader(
+                                                       HttpHeaderNames.RETRY_AFTER.toString(),
+                                                       "1")),
+                                       verifyStatusCode(HttpStatus.OK));
     }
 
     @Test
-    void respectRetryAfterWithHttpDate() {
+    void respectRetryAfterWithHttpDate() throws InterruptedException {
         final WebClient client = client(RetryRule.failsafe());
 
         final Stopwatch sw = Stopwatch.createStarted();
@@ -446,10 +489,22 @@ class RetryingClientTest {
         }
 
         assertThat(res.contentUtf8()).isEqualTo("Succeeded after retry");
+        final String expectedRetryAfterHeader =
+                server.requestContextCaptor().take().log().partial().responseHeaders().get(
+                        HttpHeaderNames.RETRY_AFTER.toString());
+        assertThat(expectedRetryAfterHeader).isNotNull();
+
+        // This header should be transferred to the caller as retrying should be transparent.
+        assertThat(res.headers().get(HttpHeaderNames.RETRY_AFTER.toString())).isNull();
         // Since ZonedDateTime doesn't express exact time,
         // just check out whether it is retried after delayed some time.
         assertThat(sw.elapsed(TimeUnit.MILLISECONDS)).isGreaterThanOrEqualTo(1000);
-        awaitValidClientRequestContext(ctx, 2);
+        awaitValidClientRequestContext(ctx, verifyAllValid(verifyStatusCode(
+                                                                   HttpStatus.SERVICE_UNAVAILABLE),
+                                                           verifyResponseHeader(
+                                                                   HttpHeaderNames.RETRY_AFTER.toString(),
+                                                                   expectedRetryAfterHeader)),
+                                       verifyStatusCode(HttpStatus.OK));
     }
 
     @Test
@@ -464,7 +519,7 @@ class RetryingClientTest {
             ctx = captor.get();
         }
         assertThat(res.status()).isSameAs(HttpStatus.SERVICE_UNAVAILABLE);
-        awaitValidClientRequestContext(ctx, 1);
+        awaitValidClientRequestContext(ctx, verifyStatusCode(HttpStatus.SERVICE_UNAVAILABLE));
     }
 
     @Test
@@ -477,11 +532,15 @@ class RetryingClientTest {
             ctx = captor.get();
         }
         assertThat(res.status()).isSameAs(HttpStatus.SERVICE_UNAVAILABLE);
-        awaitValidClientRequestContext(ctx, 3); // equal to max attempts
+        // maximum number of attempts
+        awaitValidClientRequestContext(ctx,
+                                       verifyStatusCode(HttpStatus.SERVICE_UNAVAILABLE),
+                                       verifyStatusCode(HttpStatus.SERVICE_UNAVAILABLE),
+                                       verifyStatusCode(HttpStatus.SERVICE_UNAVAILABLE));
     }
 
     @Test
-    void retryAfterOneYear() {
+    void retryAfterOneYear() throws InterruptedException {
         final WebClient client = client(RetryRule.failsafe());
         // The response will be the last response whose headers contains HttpHeaderNames.RETRY_AFTER
         // because next retry is after timeout
@@ -492,7 +551,20 @@ class RetryingClientTest {
         }
         assertThat(headers.status()).isSameAs(HttpStatus.SERVICE_UNAVAILABLE);
         assertThat(headers.get(HttpHeaderNames.RETRY_AFTER)).isNotNull();
-        awaitValidClientRequestContext(ctx, 1);
+        final String expectedRetryAfterHeader = server
+                .requestContextCaptor()
+                .take()
+                .log()
+                .partial()
+                .responseHeaders()
+                .get(HttpHeaderNames.RETRY_AFTER.toString());
+        assertThat(expectedRetryAfterHeader).isNotNull();
+
+        awaitValidClientRequestContext(ctx, verifyAllValid(verifyStatusCode(
+                                                                   HttpStatus.SERVICE_UNAVAILABLE),
+                                                           verifyResponseHeader(
+                                                                   HttpHeaderNames.RETRY_AFTER.toString(),
+                                                                   expectedRetryAfterHeader)));
     }
 
     @Test
@@ -515,7 +587,10 @@ class RetryingClientTest {
         }
 
         assertThat(res.contentUtf8()).isEqualTo("Succeeded after retry");
-        awaitValidClientRequestContext(ctx, 2);
+        awaitValidClientRequestContext(ctx, verifyAllValid(
+                verifyStatusCode(HttpStatus.UNKNOWN),
+                verifyResponseCause(ResponseTimeoutException.class)
+        ), verifyStatusCode(HttpStatus.OK));
     }
 
     @Test
@@ -544,7 +619,11 @@ class RetryingClientTest {
         assertThat(res.contentUtf8()).isEqualTo("Succeeded after retry");
         // Make sure that all customized RetryRuleWithContents are called.
         assertThat(queue).containsExactly(1, 2, 3);
-        awaitValidClientRequestContext(ctx, 2);
+        awaitValidClientRequestContext(ctx, verifyAllValid(
+                                               verifyStatusCode(HttpStatus.UNKNOWN),
+                                               verifyResponseCause(ResponseTimeoutException.class)
+                                       ),
+                                       verifyStatusCode(HttpStatus.OK));
     }
 
     @Test
@@ -587,7 +666,8 @@ class RetryingClientTest {
             ctx = captor.get();
         }
         assertThat(stopwatch.elapsed()).isBetween(Duration.ofSeconds(2), Duration.ofSeconds(6));
-        awaitValidClientRequestContext(ctx, 2);
+        awaitValidClientRequestContext(ctx, verifyStatusCode(HttpStatus.INTERNAL_SERVER_ERROR),
+                                       verifyStatusCode(HttpStatus.INTERNAL_SERVER_ERROR));
 
         stopwatch = Stopwatch.createStarted();
         try (ClientRequestContextCaptor captor = Clients.newContextCaptor()) {
@@ -596,7 +676,15 @@ class RetryingClientTest {
             ctx = captor.get();
         }
         assertThat(stopwatch.elapsed()).isBetween(Duration.ofSeconds(14), Duration.ofSeconds(28));
-        awaitValidClientRequestContext(ctx, 8);
+        awaitValidClientRequestContext(ctx,
+                                       verifyStatusCode(HttpStatus.NOT_IMPLEMENTED),
+                                       verifyStatusCode(HttpStatus.NOT_IMPLEMENTED),
+                                       verifyStatusCode(HttpStatus.NOT_IMPLEMENTED),
+                                       verifyStatusCode(HttpStatus.NOT_IMPLEMENTED),
+                                       verifyStatusCode(HttpStatus.NOT_IMPLEMENTED),
+                                       verifyStatusCode(HttpStatus.NOT_IMPLEMENTED),
+                                       verifyStatusCode(HttpStatus.NOT_IMPLEMENTED),
+                                       verifyStatusCode(HttpStatus.NOT_IMPLEMENTED));
 
         stopwatch = Stopwatch.createStarted();
         try (ClientRequestContextCaptor captor = Clients.newContextCaptor()) {
@@ -605,7 +693,7 @@ class RetryingClientTest {
             ctx = captor.get();
         }
         assertThat(stopwatch.elapsed()).isBetween(Duration.ofSeconds(0), Duration.ofSeconds(2));
-        awaitValidClientRequestContext(ctx, 1);
+        awaitValidClientRequestContext(ctx, verifyStatusCode(HttpStatus.BAD_GATEWAY));
     }
 
     @Test
@@ -632,7 +720,8 @@ class RetryingClientTest {
 
         // 1 logical request; 2 retries
         assertThat(evaluations.get()).isEqualTo(1);
-        awaitValidClientRequestContext(ctx, 2);
+        awaitValidClientRequestContext(ctx, verifyStatusCode(HttpStatus.INTERNAL_SERVER_ERROR),
+                                       verifyStatusCode(HttpStatus.OK));
 
         reqCount.set(0);
         try (ClientRequestContextCaptor captor = Clients.newContextCaptor()) {
@@ -643,7 +732,8 @@ class RetryingClientTest {
 
         // 2 logical requests; 2 retries
         assertThat(evaluations.get()).isEqualTo(2);
-        awaitValidClientRequestContext(ctx, 2);
+        awaitValidClientRequestContext(ctx, verifyStatusCode(HttpStatus.INTERNAL_SERVER_ERROR),
+                                       verifyStatusCode(HttpStatus.OK));
     }
 
     @Test
@@ -683,7 +773,12 @@ class RetryingClientTest {
                 ctx = captor.get();
             }
             assertThat(stopwatch.elapsed()).isBetween(Duration.ofSeconds(7), Duration.ofSeconds(20));
-            awaitValidClientRequestContext(ctx, 5); // max attempts
+            awaitValidClientRequestContext(ctx,
+                                           verifyUnprocessedRequestException(),
+                                           verifyUnprocessedRequestException(),
+                                           verifyUnprocessedRequestException(),
+                                           verifyUnprocessedRequestException(),
+                                           verifyUnprocessedRequestException());
         }
     }
 
@@ -700,7 +795,8 @@ class RetryingClientTest {
         }
         assertThat(res.contentUtf8()).isEqualTo("Succeeded after retry");
         assertThat(sw.elapsed(TimeUnit.MILLISECONDS)).isBetween((long) (10 * 0.9), (long) (1000 * 1.1));
-        awaitValidClientRequestContext(ctx, 2);
+        awaitValidClientRequestContext(ctx, verifyStatusCode(HttpStatus.SERVICE_UNAVAILABLE),
+                                       verifyStatusCode(HttpStatus.OK));
 
         reqCount.set(0);
         sw.reset().start();
@@ -711,7 +807,8 @@ class RetryingClientTest {
         }
         assertThat(res.contentUtf8()).isEqualTo("Succeeded after retry");
         assertThat(sw.elapsed(TimeUnit.MILLISECONDS)).isGreaterThanOrEqualTo((long) (1000 * 0.9));
-        awaitValidClientRequestContext(ctx, 2);
+        awaitValidClientRequestContext(ctx, verifyStatusCode(HttpStatus.INTERNAL_SERVER_ERROR),
+                                       verifyStatusCode(HttpStatus.OK));
     }
 
     @Test
@@ -726,7 +823,9 @@ class RetryingClientTest {
             ctx = captor.get();
         }
         assertThat(res.contentUtf8()).isEqualTo("bar");
-        awaitValidClientRequestContext(ctx, 2);
+        awaitValidClientRequestContext(ctx,
+                                       verifyStatusCode(HttpStatus.SERVICE_UNAVAILABLE),
+                                       verifyStatusCode(HttpStatus.OK));
     }
 
     @Test
@@ -769,11 +868,20 @@ class RetryingClientTest {
             t = peel(catchThrowable(() -> client.get("/service-unavailable").aggregate().join()));
             ctx = captor.get();
         }
-        awaitValidClientRequestContext(ctx, 1); // not able to schedule second retry.
         if (t instanceof UnprocessedRequestException) {
             final Throwable cause = t.getCause();
             assertThat(cause).isInstanceOf(IllegalStateException.class);
             t = cause;
+            // not able to schedule second retry.
+            awaitValidClientRequestContext(ctx, verifyUnprocessedRequestException());
+        } else {
+            awaitValidClientRequestContext(ctx, verifyExactlyOneValid(
+                    verifyStatusCode(HttpStatus.SERVICE_UNAVAILABLE),
+                    verifyAllValid(
+                            verifyStatusCode(HttpStatus.UNKNOWN),
+                            verifyResponseCause(IllegalStateException.class)
+                    )
+            ));
         }
         assertThat(t).isInstanceOf(IllegalStateException.class)
                      .satisfies(cause -> assertThat(cause.getMessage()).matches(
@@ -785,14 +893,9 @@ class RetryingClientTest {
         final List<Throwable> abortCauses =
                 Arrays.asList(null, new IllegalStateException("abort stream with a specified cause"));
         for (Throwable abortCause : abortCauses) {
-            final AtomicReference<ClientRequestContext> context = new AtomicReference<>();
             final WebClient client =
                     WebClient.builder(server.httpUri())
                              .decorator(RetryingClient.newDecorator(retryAlways))
-                             .decorator((delegate, ctx, req) -> {
-                                 context.set(ctx);
-                                 return delegate.execute(ctx, req);
-                             })
                              .decorator(LoggingClient.newDecorator())
                              .build();
             responseAbortServiceCallCounter.set(0);
@@ -806,21 +909,28 @@ class RetryingClientTest {
             } else {
                 httpResponse.abort(abortCause);
             }
-            awaitValidClientRequestContext(ctx, 1);
 
-            final RequestLog log = context.get().log().whenComplete().join();
+            final RequestLog log = ctx.log().whenComplete().join();
             final Throwable requestCause = log.requestCause();
             if (abortCause == null) {
                 assertThat(log.responseCause()).isExactlyInstanceOf(AbortedStreamException.class);
+                awaitValidClientRequestContext(ctx, verifyResponseCause(AbortedStreamException.class));
                 if (requestCause != null) {
                     // A request can either successfully complete or fail depending on timing.
                     assertThat(requestCause).isExactlyInstanceOf(AbortedStreamException.class);
                 }
             } else {
-                assertThat(log.responseCause()).isSameAs(abortCause);
                 if (requestCause != null) {
+                    awaitValidClientRequestContext(ctx,
+                                                   verifyExactlyOneValid(
+                                                           verifyResponseCause(abortCause),
+                                                           verifyResponseCause(AbortedStreamException.class)
+                                                   )
+                    );
                     // A request can either successfully complete or fail depending on timing.
                     assertThat(requestCause).isSameAs(abortCause);
+                } else {
+                    awaitValidClientRequestContext(ctx, verifyResponseCause(requestCause));
                 }
             }
 
@@ -855,9 +965,19 @@ class RetryingClientTest {
 
             ctx = captor.get();
         }
-        awaitValidClientRequestContext(ctx, 1);
+
         TimeUnit.SECONDS.sleep(1L); // Sleep to check if there's a retry.
         assertThat(subscriberCancelServiceCallCounter.get()).isEqualTo(1);
+        awaitValidClientRequestContext(ctx, verifyExactlyOneValid(
+                verifyAllValid(
+                        verifyStatusCode(HttpStatus.SERVICE_UNAVAILABLE),
+                        verifyResponseCause(AbortedStreamException.class)
+                ),
+                verifyAllValid(
+                        verifyStatusCode(HttpStatus.UNKNOWN),
+                        verifyResponseCause(CancelledSubscriptionException.class)
+                )
+        ));
     }
 
     @Test
@@ -890,7 +1010,7 @@ class RetryingClientTest {
             TimeUnit.SECONDS.sleep(1);
             // No request is made.
             assertThat(responseAbortServiceCallCounter.get()).isZero();
-            awaitValidClientRequestContext(ctx, 0);
+            awaitValidClientRequestContext(ctx);
             final RequestLog log = context.get().log().whenComplete().join();
             if (abortCause == null) {
                 assertThat(log.requestCause()).isExactlyInstanceOf(AbortedStreamException.class);
@@ -923,7 +1043,12 @@ class RetryingClientTest {
             ctx = captor.get();
         }
         assertThat(retryCounter.get()).isEqualTo(5);
-        awaitValidClientRequestContext(ctx, 5);
+        // max attempts
+        awaitValidClientRequestContext(ctx, verifyResponseCause(AnticipatedException.class),
+                                       verifyResponseCause(AnticipatedException.class),
+                                       verifyResponseCause(AnticipatedException.class),
+                                       verifyResponseCause(AnticipatedException.class),
+                                       verifyResponseCause(AnticipatedException.class));
     }
 
     @Test
@@ -940,7 +1065,10 @@ class RetryingClientTest {
                     .hasCauseReference(exception);
             ctx = captor.get();
         }
-        awaitValidClientRequestContext(ctx, 1);
+        awaitValidClientRequestContext(ctx, verifyExactlyOneValid(
+                verifyResponseCause(AbortedStreamException.class),
+                verifyResponseCause(exception)
+        ));
     }
 
     @Test
@@ -950,14 +1078,23 @@ class RetryingClientTest {
             throw exception;
         };
 
-        final WebClient client = client(rule, 10000, 0, 100);
+        final WebClient client = client(rule,
+                                        10000, 0, 100);
         try (ClientRequestContextCaptor captor = Clients.newContextCaptor()) {
             assertThatThrownBy(client.get("/").aggregate()::join)
                     .isInstanceOf(CompletionException.class)
                     .hasCauseReference(exception);
             ctx = captor.get();
         }
-        awaitValidClientRequestContext(ctx, 1);
+
+        await().untilAsserted(() -> {
+            ctx.log().isComplete();
+        });
+        assertThat(ctx.log().children()).hasSize(1);
+
+        awaitValidClientRequestContextWithParentLogVerifier(ctx,
+                                                            verifyStatusCode(HttpStatus.UNKNOWN),
+                                                            verifyStatusCode(HttpStatus.NOT_FOUND));
     }
 
     @Test
@@ -973,14 +1110,16 @@ class RetryingClientTest {
                          .decorator(RetryingClient.newDecorator(RetryRule.failsafe(), 2))
                          .build();
         try (ClientRequestContextCaptor captor = Clients.newContextCaptor()) {
-            client.get("/503-then-success").aggregate().whenComplete((unused, cause) -> {
-                assertThat(eventLoop.get().inEventLoop()).isTrue();
-                latch.countDown();
-            });
+            client.get("/503-then-success").aggregate()
+                  .whenComplete((unused, cause) -> {
+                      assertThat(eventLoop.get().inEventLoop()).isTrue();
+                      latch.countDown();
+                  });
             ctx = captor.get();
         }
         latch.await();
-        awaitValidClientRequestContext(ctx, 2);
+        awaitValidClientRequestContext(ctx, verifyStatusCode(HttpStatus.SERVICE_UNAVAILABLE),
+                                       verifyStatusCode(HttpStatus.OK));
     }
 
     private WebClient client(RetryRule retryRule) {
@@ -1034,6 +1173,19 @@ class RetryingClientTest {
                         .build();
     }
 
+    private static void awaitValidClientRequestContext(ClientRequestContext ctx,
+                                                       RequestLogVerifier... childLogVerifiers) {
+        await().untilAsserted(() -> assertValidClientRequestContext(ctx, childLogVerifiers));
+    }
+
+    public static void awaitValidClientRequestContextWithParentLogVerifier(
+            ClientRequestContext ctx,
+            RequestLogVerifier parentLogVerifier,
+            RequestLogVerifier... childLogVerifiers) {
+        await().untilAsserted(() -> assertValidClientRequestContextWithParentLogVerifier(ctx, parentLogVerifier,
+                                                                                         childLogVerifiers));
+    }
+
     private static class RetryIfContentMatch implements RetryRuleWithContent<HttpResponse> {
         private final String retryContent;
         private final RetryDecision decision = RetryDecision.retry(Backoff.fixed(100));
@@ -1074,25 +1226,5 @@ class RetryingClientTest {
 
             return Stream.of(retryRule).map(Arguments::of);
         }
-    }
-
-    private static void awaitValidClientRequestContext(ClientRequestContext ctx) {
-        awaitValidClientRequestContext(ctx, ctx.log().children().size());
-    }
-
-    private static void awaitValidClientRequestContext(ClientRequestContext ctx, int expectedNumRequests) {
-        await().untilAsserted(() -> {
-            assertThat(ctx.log().isComplete()).isTrue();
-            assertThat(ctx.log().children()).hasSize(expectedNumRequests);
-            ctx.log().children().forEach(childLogAccess -> {
-                try {
-                    final RequestLog childLog = childLogAccess.whenComplete().get();
-                    assertThat(childLog).isNotNull();
-                    assertThat(childLog.isComplete()).isTrue();
-                } catch (InterruptedException | ExecutionException e) {
-                    fail(e);
-                }
-            });
-        });
     }
 }
