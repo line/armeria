@@ -16,7 +16,6 @@
 
 package com.linecorp.armeria.xds;
 
-import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
 
 import com.google.protobuf.Any;
@@ -32,7 +31,7 @@ import io.envoyproxy.envoy.config.route.v3.FilterConfig;
 import io.envoyproxy.envoy.extensions.filters.network.http_connection_manager.v3.HttpFilter;
 
 /**
- * Represents a parsed {@link FilterConfig}.
+ * Represents a {@link FilterConfig} that is pre-parsed by the global {@link HttpFilterFactory}.
  */
 @UnstableApi
 public final class ParsedFilterConfig {
@@ -118,22 +117,16 @@ public final class ParsedFilterConfig {
     }
 
     /**
-     * Returns a configuration for the supplied {@link HttpFilterFactory}.
-     * If the configuration is optional and the filter isn't registered with {@link HttpFilterFactoryRegistry},
-     * {@link HttpFilterFactory#defaultConfig()} may be returned.
-     * If the {@link HttpFilterFactory} expects a different configuration class, an
-     * exception will be raised.
-     *
-     * @param filterFactory the {@link HttpFilterFactory} corresponding to this config
+     * Returns the pre-parsed configuration for the supplied {@link HttpFilterFactory}.
+     * If the configuration is optional and the {@link HttpFilterFactory} is not registered in
+     * the {@link HttpFilterFactoryRegistry}, the supplied {@code defaultConfig} will be returned.
      */
+    @UnstableApi
     @SuppressWarnings("unchecked")
-    public <T extends Message> T config(HttpFilterFactory<T> filterFactory) {
-        if (configClass == null || parsedConfig == null) {
-            return filterFactory.defaultConfig();
+    public <T> T parsedConfig(T defaultConfig) {
+        if (parsedConfig != null) {
+            return (T) parsedConfig;
         }
-        checkArgument(filterFactory.configClass() == configClass,
-                      "Provided filter factory '%s' does not support the expected class '%s'",
-                      filterFactory, configClass.getSimpleName());
-        return (T) parsedConfig;
+        return defaultConfig;
     }
 }

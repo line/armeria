@@ -40,7 +40,7 @@ import io.netty.channel.EventLoop;
 class XdsPreprocessor<I extends Request, O extends Response> implements Preprocessor<I, O>, AutoCloseable {
 
     private final ListenerRoot listenerRoot;
-    private final SnapshotWatcherSelector snapshotWatcherSelector;
+    private final RouteConfigSelector routeConfigSelector;
     private final String listenerName;
     private final Function<CompletableFuture<O>, O> futureConverter;
     private final BiFunction<ClientPreprocessors, PreClient<I, O>, PreClient<I, O>> filterFunction;
@@ -52,25 +52,25 @@ class XdsPreprocessor<I extends Request, O extends Response> implements Preproce
         this.futureConverter = futureConverter;
         this.filterFunction = filterFunction;
         listenerRoot = xdsBootstrap.listenerRoot(listenerName);
-        snapshotWatcherSelector = new SnapshotWatcherSelector(listenerRoot);
+        routeConfigSelector = new RouteConfigSelector(listenerRoot);
     }
 
     @Override
     public O execute(PreClient<I, O> delegate, PreClientRequestContext ctx, I req) throws Exception {
-        final RouteConfig routeConfig = snapshotWatcherSelector.selectNow(ctx);
+        final RouteConfig routeConfig = routeConfigSelector.selectNow(ctx);
         if (routeConfig != null) {
             return execute0(delegate, ctx, req, routeConfig);
         }
         final EventLoop temporaryEventLoop = ctx.options().factory().eventLoopSupplier().get();
         final CompletableFuture<O> resFuture =
-                snapshotWatcherSelector.select(ctx, temporaryEventLoop, ctx.responseTimeoutMillis())
-                                       .thenApply(clusterEntries0 -> {
-                                           try {
-                                               return execute0(delegate, ctx, req, clusterEntries0);
-                                           } catch (Exception e) {
-                                               throw new CompletionException(e);
-                                           }
-                                       });
+                routeConfigSelector.select(ctx, temporaryEventLoop, ctx.responseTimeoutMillis())
+                                   .thenApply(routeConfig0 -> {
+                                       try {
+                                           return execute0(delegate, ctx, req, routeConfig0);
+                                       } catch (Exception e) {
+                                           throw new CompletionException(e);
+                                       }
+                                   });
         return futureConverter.apply(resFuture);
     }
 

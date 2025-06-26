@@ -84,7 +84,7 @@ final class RouterFilter<I extends Request, O extends Response> implements Prepr
         final XdsLoadBalancer loadBalancer = clusterSnapshot.loadBalancer();
         if (loadBalancer == null) {
             throw UnprocessedRequestException.of(new IllegalArgumentException(
-                    "The target cluster '" + clusterSnapshot + "' does not contain endpoints."));
+                    "The target cluster '" + clusterSnapshot + "' does not specify ClusterLoadAssignments."));
         }
 
         final Endpoint endpoint = loadBalancer.selectNow(ctx);

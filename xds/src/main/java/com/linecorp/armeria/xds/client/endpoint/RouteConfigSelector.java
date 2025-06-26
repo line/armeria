@@ -23,13 +23,13 @@ import com.linecorp.armeria.xds.ListenerRoot;
 import com.linecorp.armeria.xds.ListenerSnapshot;
 import com.linecorp.armeria.xds.SnapshotWatcher;
 
-final class SnapshotWatcherSelector extends AbstractAsyncSelector<RouteConfig>
+final class RouteConfigSelector extends AbstractAsyncSelector<RouteConfig>
         implements SnapshotWatcher<ListenerSnapshot> {
 
     @Nullable
     private volatile RouteConfig routeConfig;
 
-    SnapshotWatcherSelector(ListenerRoot listenerRoot) {
+    RouteConfigSelector(ListenerRoot listenerRoot) {
         listenerRoot.addSnapshotWatcher(this);
     }
 

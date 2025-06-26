@@ -127,7 +127,7 @@ final class FilterUtil {
                          @Nullable ConfigSupplier overrideConfigSupplier) {
             this.filterFactory = filterFactory;
             filterConfig = computeFinalConfig(filterFactory, httpFilter, overrideConfigSupplier);
-            config = filterConfig.config(filterFactory);
+            config = filterConfig.parsedConfig(filterFactory.defaultConfig());
         }
 
         private ParsedFilterConfig computeFinalConfig(HttpFilterFactory<T> filterFactory, HttpFilter httpFilter,
@@ -138,7 +138,6 @@ final class FilterUtil {
                     return config;
                 }
             }
-
             return ParsedFilterConfig.of(httpFilter.getName(), httpFilter.getTypedConfig(),
                                          httpFilter.getIsOptional(), httpFilter.getDisabled());
         }

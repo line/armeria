@@ -35,12 +35,12 @@ import com.linecorp.armeria.xds.VirtualHostSnapshot;
 final class RouteConfig {
     private final ListenerSnapshot listenerSnapshot;
     private final ClientPreprocessors downstreamFilters;
-    private final Map<IndexPair, SelectedRoute> selectedRoutes;
+    private final Map<IndexPair, SelectedRoute> precomputedRoutes;
 
     RouteConfig(ListenerSnapshot listenerSnapshot) {
         this.listenerSnapshot = listenerSnapshot;
         downstreamFilters = FilterUtil.buildDownstreamFilter(listenerSnapshot);
-        selectedRoutes = routeEntries(listenerSnapshot);
+        precomputedRoutes = routeEntries(listenerSnapshot);
     }
 
     private static Map<IndexPair, SelectedRoute> routeEntries(ListenerSnapshot listenerSnapshot) {
@@ -88,7 +88,7 @@ final class RouteConfig {
                     continue;
                 }
                 ctx.setAttr(ROUTE_METADATA_MATCH, routeEntry.route().getRoute().getMetadataMatch());
-                return selectedRoutes.get(new IndexPair(i, j));
+                return precomputedRoutes.get(new IndexPair(i, j));
             }
         }
         return null;
