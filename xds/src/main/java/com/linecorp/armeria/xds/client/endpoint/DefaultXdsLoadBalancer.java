@@ -57,7 +57,7 @@ final class DefaultXdsLoadBalancer implements UpdatableXdsLoadBalancer {
     private List<Endpoint> endpoints;
     @Nullable
     private PrioritySet localPrioritySet;
-    private final AttributesPool attributesPool = AttributesPool.NOOP;
+    private final AttributesPool attributesPool = new AttributesPool();
     private EndpointGroup endpointGroup = EndpointGroup.of();
     @Nullable
     private PrioritySet prioritySet;
@@ -111,9 +111,7 @@ final class DefaultXdsLoadBalancer implements UpdatableXdsLoadBalancer {
         }
 
         final PrioritySet prioritySet = new PriorityStateManager(clusterSnapshot, endpoints).build();
-        if (logger.isTraceEnabled()) {
-            logger.trace("XdsEndpointGroup is using a new PrioritySet({})", prioritySet);
-        }
+        logger.trace("XdsEndpointGroup is using a new PrioritySet<{}>", prioritySet);
 
         final PrioritySet localPrioritySet = this.localPrioritySet;
         LoadBalancer loadBalancer = new DefaultLoadBalancer(prioritySet, localCluster, localPrioritySet);

@@ -105,9 +105,9 @@ final class ClusterResourceNode extends AbstractResourceNode<ClusterXdsResource,
             if (closed) {
                 return;
             }
-            final ClusterSnapshot clusterSnapshot = new ClusterSnapshot(resource, newSnapshot);
+            final ClusterSnapshot clusterSnapshot = new ClusterSnapshot(resource, newSnapshot, loadBalancer);
             loadBalancer.updateSnapshot(clusterSnapshot);
-            parentNode.notifyOnChanged(new ClusterSnapshot(clusterSnapshot, loadBalancer));
+            parentNode.notifyOnChanged(clusterSnapshot);
         }
 
         @Override

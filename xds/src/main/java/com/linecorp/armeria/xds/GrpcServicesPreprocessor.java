@@ -20,7 +20,6 @@ import static com.google.common.base.Preconditions.checkState;
 
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CompletionException;
 
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.HttpPreprocessor;
@@ -29,6 +28,7 @@ import com.linecorp.armeria.client.PreClientRequestContext;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.xds.client.endpoint.XdsLoadBalancer;
 
 import io.envoyproxy.envoy.config.core.v3.GrpcService;
@@ -83,7 +83,7 @@ final class GrpcServicesPreprocessor implements HttpPreprocessor {
                                 try {
                                     return delegate.execute(ctx, req);
                                 } catch (Exception e) {
-                                    throw new CompletionException(e);
+                                    return Exceptions.throwUnsafely(e);
                                 }
                             });
         return HttpResponse.of(cf);

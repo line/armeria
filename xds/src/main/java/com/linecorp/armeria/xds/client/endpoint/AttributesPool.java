@@ -31,14 +31,14 @@ import io.netty.util.AttributeKey;
 
 final class AttributesPool {
 
-    static final AttributesPool NOOP = new AttributesPool();
-
     private Map<Endpoint, Attributes> cachedAttrs = ImmutableMap.of();
 
     List<Endpoint> cacheAttributesAndDelegate(List<Endpoint> endpoints) {
         final long defaultTimestamp = System.nanoTime();
-        final ImmutableList.Builder<Endpoint> endpointsBuilder = ImmutableList.builder();
-        final ImmutableMap.Builder<Endpoint, Attributes> prevAttrsBuilder = ImmutableMap.builder();
+        final ImmutableList.Builder<Endpoint> endpointsBuilder =
+                ImmutableList.builderWithExpectedSize(endpoints.size());
+        final ImmutableMap.Builder<Endpoint, Attributes> prevAttrsBuilder =
+                ImmutableMap.builderWithExpectedSize(endpoints.size());
         for (Endpoint endpoint: endpoints) {
             // attach attributes
             endpoint = attachAttribute(endpoint, EndpointAttributeKeys.CREATED_AT_NANOS_KEY, defaultTimestamp);

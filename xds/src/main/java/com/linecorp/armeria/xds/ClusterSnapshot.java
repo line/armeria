@@ -39,20 +39,17 @@ public final class ClusterSnapshot implements Snapshot<ClusterXdsResource> {
     @Nullable
     private final XdsLoadBalancer loadBalancer;
 
-    ClusterSnapshot(ClusterXdsResource clusterXdsResource, @Nullable EndpointSnapshot endpointSnapshot) {
+    ClusterSnapshot(ClusterXdsResource clusterXdsResource) {
         this.clusterXdsResource = clusterXdsResource;
-        this.endpointSnapshot = endpointSnapshot;
+        endpointSnapshot = null;
         loadBalancer = null;
     }
 
-    ClusterSnapshot(ClusterSnapshot clusterSnapshot, XdsLoadBalancer loadBalancer) {
-        clusterXdsResource = clusterSnapshot.clusterXdsResource;
-        endpointSnapshot = clusterSnapshot.endpointSnapshot;
+    ClusterSnapshot(ClusterXdsResource clusterXdsResource, EndpointSnapshot endpointSnapshot,
+                    XdsLoadBalancer loadBalancer) {
+        this.clusterXdsResource = clusterXdsResource;
+        this.endpointSnapshot = endpointSnapshot;
         this.loadBalancer = loadBalancer;
-    }
-
-    ClusterSnapshot(ClusterXdsResource clusterXdsResource) {
-        this(clusterXdsResource, null);
     }
 
     @Override
@@ -78,7 +75,8 @@ public final class ClusterSnapshot implements Snapshot<ClusterXdsResource> {
         }
         final ClusterSnapshot that = (ClusterSnapshot) object;
         return Objects.equal(clusterXdsResource, that.clusterXdsResource) &&
-               Objects.equal(endpointSnapshot, that.endpointSnapshot);
+               Objects.equal(endpointSnapshot, that.endpointSnapshot) &&
+               Objects.equal(loadBalancer, that.loadBalancer);
     }
 
     /**
@@ -93,7 +91,7 @@ public final class ClusterSnapshot implements Snapshot<ClusterXdsResource> {
 
     @Override
     public int hashCode() {
-        return Objects.hashCode(clusterXdsResource, endpointSnapshot);
+        return Objects.hashCode(clusterXdsResource, endpointSnapshot, loadBalancer);
     }
 
     @Override
@@ -102,6 +100,7 @@ public final class ClusterSnapshot implements Snapshot<ClusterXdsResource> {
                           .omitNullValues()
                           .add("clusterXdsResource", clusterXdsResource)
                           .add("endpointSnapshot", endpointSnapshot)
+                          .add("loadBalancer", loadBalancer)
                           .toString();
     }
 }

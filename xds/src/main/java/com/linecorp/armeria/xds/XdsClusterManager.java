@@ -21,6 +21,8 @@ import static com.google.common.base.Preconditions.checkArgument;
 import java.util.HashMap;
 import java.util.Map;
 
+import com.google.common.base.Strings;
+
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.xds.client.endpoint.UpdatableXdsLoadBalancer;
@@ -47,7 +49,7 @@ final class XdsClusterManager implements SafeCloseable {
         this.eventLoop = eventLoop;
         this.bootstrap = bootstrap;
         localClusterName = bootstrap.getClusterManager().getLocalClusterName();
-        if (bootstrap.getNode().hasLocality()) {
+        if (!Strings.isNullOrEmpty(localClusterName) && bootstrap.getNode().hasLocality()) {
             localLoadBalancer = XdsLoadBalancer.of(eventLoop, bootstrap.getNode().getLocality(), null);
         } else {
             localLoadBalancer = null;
