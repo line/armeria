@@ -34,7 +34,6 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
@@ -61,7 +60,6 @@ import com.linecorp.armeria.common.CompletableRpcResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.RpcResponse;
 import com.linecorp.armeria.common.annotation.Nullable;
-import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.util.UnmodifiableFuture;
 import com.linecorp.armeria.internal.testing.RequestContextUtils.RequestLogVerifier;
 import com.linecorp.armeria.server.ServerBuilder;
@@ -304,20 +302,6 @@ class RetryingRpcClientTest {
                                                                          .maxTotalAttempts(maxAttempts)
                                                                          .build())
                                                      .newDecorator())
-                            .build(HelloService.Iface.class);
-    }
-
-    private HelloService.Iface helloClient(RetryRuleWithContent<RpcResponse> rule, int maxAttempts,
-                                           BlockingQueue<RequestLog> logQueue) {
-        return ThriftClients.builder(server.httpUri())
-                            .path("/thrift")
-                            .rpcDecorator(RetryingRpcClient.builder(rule)
-                                                           .maxTotalAttempts(maxAttempts)
-                                                           .newDecorator())
-                            .rpcDecorator((delegate, ctx, req) -> {
-                                ctx.log().whenComplete().thenAccept(logQueue::add);
-                                return delegate.execute(ctx, req);
-                            })
                             .build(HelloService.Iface.class);
     }
 
