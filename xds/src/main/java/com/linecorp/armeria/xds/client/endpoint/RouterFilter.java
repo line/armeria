@@ -19,7 +19,6 @@ package com.linecorp.armeria.xds.client.endpoint;
 import static com.linecorp.armeria.xds.client.endpoint.XdsAttributeKeys.ROUTE_CONFIG;
 
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CompletionException;
 import java.util.function.Function;
 
 import com.linecorp.armeria.client.ClientDecoration;
@@ -34,6 +33,7 @@ import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.TimeoutException;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.internal.client.ClientRequestContextExtension;
 import com.linecorp.armeria.xds.ClusterSnapshot;
 
@@ -52,9 +52,9 @@ final class RouterFilter<I extends Request, O extends Response> implements Prepr
     public O execute(PreClient<I, O> delegate, PreClientRequestContext ctx, I req) throws Exception {
         final RouteConfig routeConfig = ctx.attr(ROUTE_CONFIG);
         if (routeConfig == null) {
-            throw new IllegalArgumentException(
+            throw UnprocessedRequestException.of(new IllegalArgumentException(
                     "RouteConfig is not set for the ctx. If a new ctx has been used, " +
-                    "please make sure to use ctx.newDerivedContext().");
+                    "please make sure to use ctx.newDerivedContext()."));
         }
         final HttpRequest httpReq = ctx.request();
         final SelectedRoute selectedRoute = routeConfig.select(httpReq, ctx);
@@ -98,7 +98,7 @@ final class RouterFilter<I extends Request, O extends Response> implements Prepr
                                 try {
                                     return execute0(delegate, ctx, req, endpoint0);
                                 } catch (Exception e) {
-                                    throw new CompletionException(e);
+                                    return Exceptions.throwUnsafely(e);
                                 }
                             });
         return futureConverter.apply(cf);

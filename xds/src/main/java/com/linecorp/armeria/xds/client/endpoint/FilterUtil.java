@@ -89,7 +89,8 @@ final class FilterUtil {
     }
 
     @Nullable
-    private static XdsFilter xdsHttpFilter(HttpFilter httpFilter, @Nullable ConfigSupplier configSupplier) {
+    private static XdsFilter xdsHttpFilter(HttpFilter httpFilter,
+                                           @Nullable ConfigSupplier overrideConfigSupplier) {
         final HttpFilterFactory<?> filterFactory =
                 HttpFilterFactoryRegistry.of().filterFactory(httpFilter.getName());
         if (filterFactory == null) {
@@ -101,7 +102,7 @@ final class FilterUtil {
         checkArgument(httpFilter.getConfigTypeCase() == ConfigTypeCase.TYPED_CONFIG,
                       "Only 'typed_config' is supported, but '%s' was supplied",
                       httpFilter.getConfigTypeCase());
-        return new DefaultXdsFilter<>(filterFactory, httpFilter, configSupplier);
+        return new DefaultXdsFilter<>(filterFactory, httpFilter, overrideConfigSupplier);
     }
 
     interface XdsFilter {
@@ -123,16 +124,16 @@ final class FilterUtil {
         private final ParsedFilterConfig filterConfig;
 
         DefaultXdsFilter(HttpFilterFactory<T> filterFactory, HttpFilter httpFilter,
-                         @Nullable ConfigSupplier configSupplier) {
+                         @Nullable ConfigSupplier overrideConfigSupplier) {
             this.filterFactory = filterFactory;
-            filterConfig = computeFinalConfig(filterFactory, httpFilter, configSupplier);
+            filterConfig = computeFinalConfig(filterFactory, httpFilter, overrideConfigSupplier);
             config = filterConfig.config(filterFactory);
         }
 
         private ParsedFilterConfig computeFinalConfig(HttpFilterFactory<T> filterFactory, HttpFilter httpFilter,
-                                                      @Nullable ConfigSupplier configSupplier) {
-            if (configSupplier != null) {
-                final ParsedFilterConfig config = configSupplier.config(filterFactory.filterName());
+                                                      @Nullable ConfigSupplier overrideConfigSupplier) {
+            if (overrideConfigSupplier != null) {
+                final ParsedFilterConfig config = overrideConfigSupplier.config(filterFactory.filterName());
                 if (config != null) {
                     return config;
                 }
