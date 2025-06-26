@@ -1,5 +1,5 @@
 /*
- * Copyright 2025 LINE Corporation
+ * Copyright 2023 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -14,20 +14,21 @@
  * under the License.
  */
 
-package com.linecorp.armeria.common.grpc;
+package com.linecorp.armeria.client.grpc;
 
+import static com.linecorp.armeria.internal.client.grpc.GrpcClientCall.GRPC_CALL_OPTIONS;
+import static com.linecorp.armeria.internal.client.grpc.GrpcClientCall.GRPC_METHOD_DESCRIPTOR;
 import static java.util.Objects.requireNonNull;
 
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.annotation.Nullable;
-import com.linecorp.armeria.common.annotation.UnstableApi;
 
+import io.grpc.CallOptions;
 import io.grpc.MethodDescriptor;
-import io.netty.util.AttributeKey;
 
 /**
- * Retrieves {@link io.grpc.MethodDescriptor} from a given {@link RequestContext}. This might be useful while
- * providing common middleware that needs to act based on the method invoked based on protobuf custom options.
+ * Retrieves gRPC context from a given {@link RequestContext}. This might be useful while providing
+ * common middleware that needs to act on options configured at the gRPC client's call site.
  * <p>
  * Here is an example of how custom call options might be propagated between a gRPC stub and a decorator.
  * </p>
@@ -35,41 +36,42 @@ import io.netty.util.AttributeKey;
  *     MyGrpcStub client = GrpcClients
  *         .builder(grpcServerUri)
  *         .decorator((delegate, ctx, req) -> {
- *             MethodDescriptor descriptor = GrpcMethodDescriptor.get(ctx);
+ *             CallOptions options = GrpcClientCall.getCallOptions(ctx);
+ *             MyOption myOption = options.getOption(myOptionKey);
+ *             MethodDescriptor descriptor = GrpcClientCall.getMethodDescriptor(ctx);
  *             boolean retryable = descriptor.isIdempotent() || descriptor.isSafe()
  *
- *             // act on retryable if needed
+ *             // act on myOption or retryable if needed
  *
  *             return delegate.execute(ctx, req);
  *         })
  *         .build(MyGrpcStub.class)
+ *
+ *     client
+ *       .withOption(myOptionKey, myOptionValue)
+ *       .echo(...)
  * }</pre>
  */
-@UnstableApi
-public final class GrpcMethodDescriptor {
-
-    private static final AttributeKey<MethodDescriptor<?, ?>> GRPC_METHOD_DESCRIPTOR = AttributeKey.valueOf(
-            GrpcMethodDescriptor.class, "GRPC_METHOD_DESCRIPTOR");
+public final class GrpcClientCall {
 
     /**
-     * Returns {@link MethodDescriptor} which was set to the specified {@link RequestContext} using
-     * {@link #set(RequestContext, MethodDescriptor)}.
+     * Returns {@link MethodDescriptor} for the method called.
      */
     @Nullable
-    public static MethodDescriptor<?, ?> get(RequestContext ctx) {
+    public static MethodDescriptor<?, ?> getMethodDescriptor(RequestContext ctx) {
         requireNonNull(ctx, "ctx");
         return ctx.attr(GRPC_METHOD_DESCRIPTOR);
     }
 
     /**
-     * Sets the specified {@link MethodDescriptor} to the {@link RequestContext}.
+     * Returns {@link CallOptions} which were used in the call.
      */
-    public static void set(RequestContext ctx, MethodDescriptor<?, ?> descriptor) {
+    @Nullable
+    public static CallOptions getCallOptions(RequestContext ctx) {
         requireNonNull(ctx, "ctx");
-        requireNonNull(descriptor, "descriptor");
-        ctx.setAttr(GRPC_METHOD_DESCRIPTOR, descriptor);
+        return ctx.attr(GRPC_CALL_OPTIONS);
     }
 
-    private GrpcMethodDescriptor() {
+    private GrpcClientCall() {
     }
 }
