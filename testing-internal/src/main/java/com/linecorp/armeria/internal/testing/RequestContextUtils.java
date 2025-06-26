@@ -96,12 +96,6 @@ public final class RequestContextUtils {
         };
     }
 
-    public static RequestLogVerifier verifyRequestCause(Throwable expectedCause) {
-        return childLog -> {
-            assertThat(childLog.requestCause()).isSameAs(expectedCause);
-        };
-    }
-
     public static RequestLogVerifier verifyResponseCause(Class<?> expectedCauseClass) {
         return childLog -> {
             assertThat(childLog.responseCause()).isExactlyInstanceOf(expectedCauseClass);
