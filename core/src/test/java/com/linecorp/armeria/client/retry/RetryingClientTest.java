@@ -18,8 +18,8 @@ package com.linecorp.armeria.client.retry;
 
 import static com.linecorp.armeria.client.retry.AbstractRetryingClient.ARMERIA_RETRY_COUNT;
 import static com.linecorp.armeria.common.util.Exceptions.peel;
-import static com.linecorp.armeria.internal.testing.RequestContextUtils.assertValidClientRequestContext;
-import static com.linecorp.armeria.internal.testing.RequestContextUtils.assertValidClientRequestContextWithParentLogVerifier;
+import static com.linecorp.armeria.internal.testing.RequestContextUtils.assertValidRequestContext;
+import static com.linecorp.armeria.internal.testing.RequestContextUtils.assertValidRequestContextWithParentLogVerifier;
 import static com.linecorp.armeria.internal.testing.RequestContextUtils.verifyAllValid;
 import static com.linecorp.armeria.internal.testing.RequestContextUtils.verifyExactlyOneValid;
 import static com.linecorp.armeria.internal.testing.RequestContextUtils.verifyResponseCause;
@@ -1175,14 +1175,14 @@ class RetryingClientTest {
 
     private static void awaitValidClientRequestContext(ClientRequestContext ctx,
                                                        RequestLogVerifier... childLogVerifiers) {
-        await().untilAsserted(() -> assertValidClientRequestContext(ctx, childLogVerifiers));
+        await().untilAsserted(() -> assertValidRequestContext(ctx, childLogVerifiers));
     }
 
     public static void awaitValidClientRequestContextWithParentLogVerifier(
             ClientRequestContext ctx,
             RequestLogVerifier parentLogVerifier,
             RequestLogVerifier... childLogVerifiers) {
-        await().untilAsserted(() -> assertValidClientRequestContextWithParentLogVerifier(ctx, parentLogVerifier,
+        await().untilAsserted(() -> assertValidRequestContextWithParentLogVerifier(ctx, parentLogVerifier,
                                                                                          childLogVerifiers));
     }
 

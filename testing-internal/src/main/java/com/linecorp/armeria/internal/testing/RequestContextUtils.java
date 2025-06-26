@@ -25,10 +25,13 @@ import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
 
-import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.UnprocessedRequestException;
+import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpStatus;
+import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.ResponseHeaders;
+import com.linecorp.armeria.common.RpcRequest;
+import com.linecorp.armeria.common.RpcResponse;
 import com.linecorp.armeria.common.logging.RequestLog;
 
 public final class RequestContextUtils {
@@ -87,9 +90,21 @@ public final class RequestContextUtils {
         );
     }
 
-    public static RequestLogVerifier verifyResponseCause(Class<?> expectedResponseCauseClass) {
+    public static RequestLogVerifier verifyRequestCause(Class<?> expectedCauseClass) {
         return childLog -> {
-            assertThat(childLog.responseCause()).isExactlyInstanceOf(expectedResponseCauseClass);
+            assertThat(childLog.requestCause()).isExactlyInstanceOf(expectedCauseClass);
+        };
+    }
+
+    public static RequestLogVerifier verifyRequestCause(Throwable expectedCause) {
+        return childLog -> {
+            assertThat(childLog.requestCause()).isSameAs(expectedCause);
+        };
+    }
+
+    public static RequestLogVerifier verifyResponseCause(Class<?> expectedCauseClass) {
+        return childLog -> {
+            assertThat(childLog.responseCause()).isExactlyInstanceOf(expectedCauseClass);
         };
     }
 
@@ -100,7 +115,7 @@ public final class RequestContextUtils {
     }
 
     public static RequestLogVerifier verifyResponseHeader(String headerName,
-                                                           String expectedHeaderValue) {
+                                                          String expectedHeaderValue) {
         return childLog -> {
             final ResponseHeaders headers = childLog.responseHeaders();
             assertThat(headers.get(headerName)).isEqualTo(expectedHeaderValue);
@@ -114,66 +129,94 @@ public final class RequestContextUtils {
         };
     }
 
-    public static void assertValidClientRequestContext(ClientRequestContext ctx,
-                                                       RequestLogVerifier... childLogVerifiers) {
-        assertValidClientRequestContextWithVerifier(ctx, childLogVerifiers);
+    public static RequestLogVerifier verifyResponseContent(String expectedResponseContent) {
+        return childLog -> {
+            assertThat(childLog.responseContent()).isExactlyInstanceOf(String.class);
+            assertThat(childLog.responseContent()).isEqualTo(expectedResponseContent);
+        };
     }
 
-    public static void assertValidClientRequestContextWithParentLogVerifier(
-            ClientRequestContext ctx,
+    public static void assertValidRequestContext(RequestContext ctx,
+                                                 RequestLogVerifier... childLogVerifiers) {
+        assertValidRequestContextWithVerifier(ctx, childLogVerifiers);
+    }
+
+    public static void assertValidRequestContextWithParentLogVerifier(
+            RequestContext ctx,
             RequestLogVerifier parentLogVerifier,
             RequestLogVerifier... childLogVerifiers) {
-        assertValidClientRequestContextWithVerifier(ctx, parentLogVerifier, childLogVerifiers);
+        assertValidRequestContextWithVerifier(ctx, parentLogVerifier, childLogVerifiers);
     }
 
-    private static void assertValidClientRequestContextWithVerifier(
-            ClientRequestContext ctx,
+    private static void assertValidRequestContextWithVerifier(
+            RequestContext ctx,
             RequestLogVerifier[] childLogVerifiers) {
         if (childLogVerifiers.length == 0) {
             childLogVerifiers = new RequestLogVerifier[ctx.log().children().size()];
             Arrays.fill(childLogVerifiers, VERIFY_NOTHING);
         }
 
-        assertValidClientRequestContextWithVerifier(
+        assertValidRequestContextWithVerifier(
                 ctx,
                 childLogVerifiers.length == 0 ?
-                VERIFY_NOTHING : childLogVerifiers[childLogVerifiers.length - 1], childLogVerifiers
+                VERIFY_NOTHING
+                        : verifyAllValid(
+                        childLog -> {
+                            // Default parent log verifier.
+                            final HttpRequest req = ctx.request();
+                            assertThat(req).isNotNull();
+                            assert req != null;
+                            assertThat(req.isComplete()).isTrue();
+
+                            if (ctx.rpcRequest() != null) {
+                                final HttpRequest lastHttpReq =
+                                        ctx.log().children()
+                                           .get(ctx.log().children().size() - 1).context().request();
+
+                                if (lastHttpReq != null) {
+                                    assertThat(lastHttpReq).isSameAs(ctx.log().context().request());
+                                }
+                            }
+                        },
+                        childLogVerifiers[childLogVerifiers.length - 1]
+                ), childLogVerifiers
         );
     }
 
-    private static void assertValidClientRequestContextWithVerifier(
-            ClientRequestContext ctx,
+    private static void assertValidRequestContextWithVerifier(
+            RequestContext ctx,
             RequestLogVerifier parentLogVerifier,
             RequestLogVerifier[] childLogVerifiers) {
         final int expectedNumRequests = childLogVerifiers.length;
+        assertThat(ctx.log().isComplete()).isTrue();
+        assertThat(ctx.log().children()).hasSize(expectedNumRequests);
 
-            assertThat(ctx.log().isComplete()).isTrue();
-            assertThat(ctx.log().children()).hasSize(expectedNumRequests);
+        if (expectedNumRequests == 0) {
+            return;
+        }
 
-            if (expectedNumRequests == 0) {
-                return;
+        for (int childLogIndex = 0; childLogIndex < expectedNumRequests; childLogIndex++) {
+            final RequestLog childLog = ctx.log().children().get(childLogIndex).whenComplete().join();
+            assertThat(childLog).isNotNull();
+            assertThat(childLog.isComplete()).isTrue();
+            assertThat(childLog.children()).isEmpty();
+            if (ctx.rpcRequest() != null) {
+                assertThat(childLog.requestContent()).isInstanceOf(RpcRequest.class);
+                assertThat(childLog.responseContent()).isInstanceOf(RpcResponse.class);
             }
 
-            for (int childLogIndex = 0; childLogIndex < expectedNumRequests; childLogIndex++) {
-                final RequestLog childLog = ctx.log().children().get(childLogIndex).whenComplete().join();
-                assertThat(childLog).isNotNull();
-                assertThat(childLog.isComplete()).isTrue();
-                assertThat(childLog.children()).isEmpty();
-                assertThat(childLog.requestContent()).isNull();
-                assertThat(childLog.responseContent()).isNull();
-                assertThat(childLog.rawResponseContent()).isNull();
-                assertThat(childLog.responseContentPreview()).isNull();
-                try {
-                    childLogVerifiers[childLogIndex].verifyChildLog(childLog);
-                } catch (Throwable e) {
-                    fail("Failed to verify child log (" + (childLogIndex + 1) +
-                         '/' + expectedNumRequests + ')', e);
-                }
-            }
             try {
-                parentLogVerifier.verifyChildLog(ctx.log().partial());
+                childLogVerifiers[childLogIndex].verifyChildLog(childLog);
             } catch (Throwable e) {
-                fail("Failed to verify parent log", e);
+                fail("Failed to verify child log (" + (childLogIndex + 1) +
+                     '/' + expectedNumRequests + ')', e);
             }
+        }
+
+        try {
+            parentLogVerifier.verifyChildLog(ctx.log().partial());
+        } catch (Throwable e) {
+            fail("Failed to verify parent log", e);
+        }
     }
 }
