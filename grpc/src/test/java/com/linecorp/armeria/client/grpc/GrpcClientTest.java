@@ -80,6 +80,7 @@ import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.grpc.GrpcCallOptions;
 import com.linecorp.armeria.common.grpc.GrpcExceptionHandlerFunction;
+import com.linecorp.armeria.common.grpc.GrpcMethodDescriptor;
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
 import com.linecorp.armeria.common.grpc.protocol.GrpcHeaderNames;
 import com.linecorp.armeria.common.logging.RequestLog;
@@ -384,6 +385,7 @@ class GrpcClientTest {
         await().untilAtomic(onCompleteThread, instanceOf(EventLoopThread.class));
     }
 
+    @Test
     void grpcCallOptions() {
         try (ClientRequestContextCaptor ctxCaptor = Clients.newContextCaptor()) {
             blockingStub
@@ -391,6 +393,15 @@ class GrpcClientTest {
                     .emptyCall(EMPTY);
             final ClientRequestContext ctx = ctxCaptor.get();
             assertThat(GrpcCallOptions.get(ctx).getOption(MY_CALL_OPTION_KEY)).isEqualTo("foo");
+        }
+    }
+
+    @Test
+    void grpcMethodDescriptor() {
+        try (ClientRequestContextCaptor ctxCaptor = Clients.newContextCaptor()) {
+            blockingStub.emptyCall(EMPTY);
+            final ClientRequestContext ctx = ctxCaptor.get();
+            assertThat(GrpcMethodDescriptor.get(ctx).getBareMethodName()).isEqualTo("EmptyCall");
         }
     }
 
