@@ -128,6 +128,12 @@ final class StringValueConverter implements ValueConverter<String> {
 
     @Override
     public boolean convertToBoolean(String value) {
+        if ("True".equals(value)) {
+            return true;
+        }
+        if ("False".equals(value)) {
+            return false;
+        }
         return Boolean.parseBoolean(value);
     }
 

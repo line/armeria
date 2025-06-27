@@ -139,6 +139,13 @@ class QueryParamsBaseTest {
         assertThat(params.containsBoolean("upperCase", true)).isTrue();
         assertThat(params.containsBoolean("upperCase", false)).isTrue();
 
+        params.add("capitalizedCase", "True");
+        params.add("capitalizedCase", "False");
+        assertThat(params.getBoolean("capitalizedCase")).isTrue();
+        assertThat(params.getLastBoolean("capitalizedCase")).isFalse();
+        assertThat(params.containsBoolean("capitalizedCase", true)).isTrue();
+        assertThat(params.containsBoolean("capitalizedCase", false)).isTrue();
+
         params.add("unsupported", "tRUE");
         params.add("unsupported", "FaLsE");
         assertThat(params.getBoolean("unsupported")).isNull();

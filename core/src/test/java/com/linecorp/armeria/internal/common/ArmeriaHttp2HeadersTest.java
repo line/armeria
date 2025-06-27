@@ -106,6 +106,12 @@ class ArmeriaHttp2HeadersTest {
         headers.add("baz", "false");
         assertThat(headers.containsBoolean("baz", false)).isTrue();
         assertThat(headers.containsBoolean("baz", true)).isFalse();
+
+        headers.add("capitalizedCase", "True");
+        headers.add("capitalizedCase", "False");
+        assertThat(headers.getBoolean("capitalizedCase")).isTrue();
+        assertThat(headers.containsBoolean("capitalizedCase", true)).isTrue();
+        assertThat(headers.containsBoolean("capitalizedCase", false)).isTrue();
     }
 
     // Tests forked from io.netty.handler.codec.DefaultHeadersTest

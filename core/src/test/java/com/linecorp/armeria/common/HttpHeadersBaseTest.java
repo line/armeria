@@ -143,6 +143,13 @@ class HttpHeadersBaseTest {
         assertThat(headers.containsBoolean("upperCase", true)).isTrue();
         assertThat(headers.containsBoolean("upperCase", false)).isTrue();
 
+        headers.add("capitalizedCase", "True");
+        headers.add("capitalizedCase", "False");
+        assertThat(headers.getBoolean("capitalizedCase")).isTrue();
+        assertThat(headers.getLastBoolean("capitalizedCase")).isFalse();
+        assertThat(headers.containsBoolean("capitalizedCase", true)).isTrue();
+        assertThat(headers.containsBoolean("capitalizedCase", false)).isTrue();
+
         headers.add("unsupported", "tRUE");
         headers.add("unsupported", "FaLsE");
         assertThat(headers.getBoolean("unsupported")).isNull();
