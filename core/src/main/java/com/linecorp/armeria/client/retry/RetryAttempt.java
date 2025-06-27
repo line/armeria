@@ -66,7 +66,7 @@ class RetryAttempt {
         COMPLETED,
         // State after a call to `commit`. Terminal state, caller cannot make further calls.
         COMMITTED,
-        // State after a call to `commit`. Terminal state, caller cannot make further calls.
+        // State after a call to `abort`. Terminal state, caller cannot make further calls.
         // `res` is aborted.
         ABORTED
     }
