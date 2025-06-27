@@ -438,6 +438,12 @@ public interface RequestLogBuilder extends RequestLogAccess {
     void addChild(RequestLogAccess child);
 
     /**
+     * Fills the response-side logs from the specified child. Note that already collected properties
+     * in the child log will be propagated immediately.
+     */
+    void endResponseWithChild(RequestLogAccess child);
+
+    /**
      * Fills the response-side logs from the last added child. Note that already collected properties
      * in the child log will be propagated immediately.
      */
