@@ -31,9 +31,11 @@ public final class StringUtil {
             ImmutableMap.<String, Boolean>builder()
                         .put("true", true)
                         .put("TRUE", true)
+                        .put("True", true)
                         .put("1", true)
                         .put("false", false)
                         .put("FALSE", false)
+                        .put("False", false)
                         .put("0", false)
                         .build();
 

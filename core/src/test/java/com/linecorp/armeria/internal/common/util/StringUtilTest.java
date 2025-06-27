@@ -32,4 +32,37 @@ class StringUtilTest {
         assertThat(StringUtil.toString(-1001)).isEqualTo("-1001");
         assertThat(StringUtil.toString(1001)).isEqualTo("1001");
     }
+
+    @Test
+    void testToBoolean() {
+        // Test supported boolean values
+        assertThat(StringUtil.toBoolean("true")).isTrue();
+        assertThat(StringUtil.toBoolean("TRUE")).isTrue();
+        assertThat(StringUtil.toBoolean("True")).isTrue();
+        assertThat(StringUtil.toBoolean("1")).isTrue();
+
+        assertThat(StringUtil.toBoolean("false")).isFalse();
+        assertThat(StringUtil.toBoolean("FALSE")).isFalse();
+        assertThat(StringUtil.toBoolean("False")).isFalse();
+        assertThat(StringUtil.toBoolean("0")).isFalse();
+    }
+
+    @Test
+    void testToBooleanOrNull() {
+        // Test supported boolean values
+        assertThat(StringUtil.toBooleanOrNull("true")).isTrue();
+        assertThat(StringUtil.toBooleanOrNull("TRUE")).isTrue();
+        assertThat(StringUtil.toBooleanOrNull("True")).isTrue();
+        assertThat(StringUtil.toBooleanOrNull("1")).isTrue();
+
+        assertThat(StringUtil.toBooleanOrNull("false")).isFalse();
+        assertThat(StringUtil.toBooleanOrNull("FALSE")).isFalse();
+        assertThat(StringUtil.toBooleanOrNull("False")).isFalse();
+        assertThat(StringUtil.toBooleanOrNull("0")).isFalse();
+
+        // Test unsupported values return null
+        assertThat(StringUtil.toBooleanOrNull("tRUE")).isNull();
+        assertThat(StringUtil.toBooleanOrNull("FaLsE")).isNull();
+        assertThat(StringUtil.toBooleanOrNull("invalid")).isNull();
+    }
 }
