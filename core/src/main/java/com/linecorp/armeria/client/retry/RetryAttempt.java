@@ -79,13 +79,11 @@ class RetryAttempt {
 
     final int number;
 
-    // Available only in Attempt.State.EXECUTING.
     @Nullable
     private ClientRequestContext ctx;
     @Nullable
     private HttpResponse res;
 
-    // Available only after Attempt.State.COMPLETED.
     @Nullable
     private HttpResponse resWithContent;
     @Nullable
