@@ -102,7 +102,10 @@ public abstract class AbstractRetryingClient<I extends Request, O extends Respon
 
     /**
      * This should be called when retrying is finished.
+     *
+     * @deprecated Call ctx.logBuilder().endResponseWithLastChild(); instead of this method.
      */
+    @Deprecated
     protected static void onRetryingComplete(ClientRequestContext ctx) {
         ctx.logBuilder().endResponseWithLastChild();
     }

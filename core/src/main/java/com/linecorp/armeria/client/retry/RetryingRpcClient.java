@@ -226,7 +226,7 @@ public final class RetryingRpcClient extends AbstractRetryingClient<RpcRequest, 
 
     private static void onRetryComplete(ClientRequestContext ctx, CompletableFuture<RpcResponse> resFuture,
                                         ClientRequestContext attemptCtx, RpcResponse attemptRes) {
-        onRetryingComplete(ctx);
+        ctx.logBuilder().endResponseWithLastChild();
         final HttpRequest attemptReq = attemptCtx.request();
         if (attemptReq != null) {
             ctx.updateRequest(attemptReq);
