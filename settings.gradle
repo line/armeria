@@ -189,6 +189,8 @@ includeWithFlags ':thrift0.20',                          'java11', 'publish', 'r
 project(':thrift0.20').projectDir = file('thrift/thrift0.20')
 includeWithFlags ':thrift0.21',                          'java11', 'publish', 'relocate', 'no_aggregation', 'native'
 project(':thrift0.21').projectDir = file('thrift/thrift0.21')
+includeWithFlags ':thrift0.22',                          'java11', 'publish', 'relocate', 'no_aggregation', 'native'
+project(':thrift0.22').projectDir = file('thrift/thrift0.22')
 includeWithFlags ':tomcat8',                             'java', 'publish', 'relocate', 'no_aggregation'
 includeWithFlags ':tomcat9',                             'java', 'publish', 'relocate', 'no_aggregation'
 includeWithFlags ':tomcat10',                            'java11', 'publish', 'relocate'
