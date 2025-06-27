@@ -384,6 +384,7 @@ class GrpcClientTest {
         await().untilAtomic(onCompleteThread, instanceOf(EventLoopThread.class));
     }
 
+    @Test
     void grpcCallOptions() {
         try (ClientRequestContextCaptor ctxCaptor = Clients.newContextCaptor()) {
             blockingStub
@@ -391,6 +392,18 @@ class GrpcClientTest {
                     .emptyCall(EMPTY);
             final ClientRequestContext ctx = ctxCaptor.get();
             assertThat(GrpcCallOptions.get(ctx).getOption(MY_CALL_OPTION_KEY)).isEqualTo("foo");
+        }
+    }
+
+    @Test
+    void grpcClientCall() {
+        try (ClientRequestContextCaptor ctxCaptor = Clients.newContextCaptor()) {
+            blockingStub
+                    .withOption(MY_CALL_OPTION_KEY, "foo")
+                    .emptyCall(EMPTY);
+            final ClientRequestContext ctx = ctxCaptor.get();
+            assertThat(GrpcClientCall.getCallOptions(ctx).getOption(MY_CALL_OPTION_KEY)).isEqualTo("foo");
+            assertThat(GrpcClientCall.getMethodDescriptor(ctx).getBareMethodName()).isEqualTo("EmptyCall");
         }
     }
 
