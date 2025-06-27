@@ -87,7 +87,7 @@ class RetryAttempt {
 
     // Available only after Attempt.State.COMPLETED.
     @Nullable
-    private HttpResponse truncatedRes;
+    private HttpResponse resWithContent;
     @Nullable
     private Throwable resCause;
 
@@ -99,7 +99,7 @@ class RetryAttempt {
         this.number = number;
         whenCompletedFuture = new CompletableFuture<>();
 
-        truncatedRes = null;
+        resWithContent = null;
         resCause = null;
 
         state = State.INITIALIZED;
@@ -192,8 +192,8 @@ class RetryAttempt {
         assert res != null;
         state = State.COMMITTED;
 
-        if (truncatedRes != null) {
-            truncatedRes.abort();
+        if (resWithContent != null) {
+            resWithContent.abort();
         }
 
         return res;
@@ -217,8 +217,8 @@ class RetryAttempt {
         assert ctx != null && res != null;
         state = State.ABORTED;
 
-        if (truncatedRes != null) {
-            truncatedRes.abort();
+        if (resWithContent != null) {
+            resWithContent.abort();
         }
 
         final RequestLogBuilder logBuilder = ctx.logBuilder();
@@ -270,7 +270,7 @@ class RetryAttempt {
             } else {
                 completeLogIfBytesNotTransferred(aggRes);
                 ctx.log().whenAvailable(RequestLogProperty.RESPONSE_END_TIME).thenRun(() -> {
-                    complete(aggRes.toHttpResponse(), null);
+                    completeWithContent(aggRes.toHttpResponse(), aggRes.toHttpResponse());
                 });
             }
             return null;
@@ -312,7 +312,7 @@ class RetryAttempt {
                                 new TruncatingHttpResponse(resDuplicator.duplicate(),
                                                            rctx.config().maxContentLength());
                         resDuplicator.close();
-                        completeWithTruncated(duplicatedRes, truncatingAttemptRes);
+                        completeWithContent(duplicatedRes, truncatingAttemptRes);
                 } else {
                     if (resCause != null) {
                         splitRes.body().abort(resCause);
@@ -369,12 +369,12 @@ class RetryAttempt {
         }
     }
 
-    private void completeWithTruncated(HttpResponse res, TruncatingHttpResponse truncatedRes) {
+    private void completeWithContent(HttpResponse res, HttpResponse resWithContent) {
         assert state == State.EXECUTING;
         state = State.COMPLETED;
 
         this.res = res;
-        this.truncatedRes = truncatedRes;
+        this.resWithContent = resWithContent;
         resCause = null;
         whenCompletedFuture.complete(null);
     }
@@ -388,7 +388,7 @@ class RetryAttempt {
         }
 
         this.res = res;
-        truncatedRes = null;
+        resWithContent = null;
         this.resCause = resCause;
         whenCompletedFuture.complete(null);
     }
@@ -422,10 +422,10 @@ class RetryAttempt {
             resForRule = null;
             causeForRule = resCause;
         } else {
-            if (truncatedRes == null) {
+            if (resWithContent == null) {
                 resForRule = res;
             } else {
-                resForRule = truncatedRes;
+                resForRule = resWithContent;
             }
 
             causeForRule = null;
