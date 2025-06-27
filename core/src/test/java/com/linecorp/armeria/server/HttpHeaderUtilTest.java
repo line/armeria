@@ -90,6 +90,30 @@ class HttpHeaderUtilTest {
         // The unknown identifier
         assertThat(forwarded("for=unknown;proto=http;by=203.0.113.43,for=192.0.2.61"))
                 .containsExactly(new InetSocketAddress("192.0.2.61", 0));
+
+        // Malformed chunk (no '='), should be skipped
+        assertThat(forwarded("/..,for=192.0.2.61"))
+                .containsExactly(new InetSocketAddress("192.0.2.61", 0));
+
+        // Empty chunk
+        assertThat(forwarded(" ,for=192.0.2.61"))
+                .containsExactly(new InetSocketAddress("192.0.2.61", 0));
+
+        // Only malformed chunk
+        assertThat(forwarded("/..")).isEmpty();
+
+        // Only missing value
+        assertThat(forwarded("for=")).isEmpty();
+
+        // Only missing key
+        assertThat(forwarded("=value")).isEmpty();
+
+        // Totally malformed string
+        assertThat(forwarded("some-random-junk")).isEmpty();
+
+        // Multiple mixed chunks, some malformed
+        assertThat(forwarded("for=, /.., foo=bar,for=10.0.0.1"))
+                .containsExactly(new InetSocketAddress("10.0.0.1", 0));
     }
 
     @Nullable
@@ -185,6 +209,21 @@ class HttpHeaderUtilTest {
 
         // All addresses which is not a loopback
         assertThat(forwarded("for=localhost", addr -> !addr.isLoopbackAddress())).isEmpty();
+
+        // Malformed chunk should be skipped, and valid address filtered
+        assertThat(forwarded("/..,for=10.0.0.1", InetAddress::isSiteLocalAddress))
+                .containsExactly(new InetSocketAddress("10.0.0.1", 0));
+
+        // Malformed chunk before a non-loopback address
+        assertThat(forwarded("/..,for=8.8.8.8", addr -> !addr.isLoopbackAddress()))
+                .containsExactly(new InetSocketAddress("8.8.8.8", 0));
+
+        // Malformed chunk and an address that gets filtered out
+        assertThat(forwarded("/..,for=localhost", addr -> !addr.isLoopbackAddress())).isEmpty();
+
+        // Multiple malformed and one matching address
+        assertThat(forwarded("/..,=bad,for=,foo=bar,for=8.8.8.8", addr -> !addr.isLoopbackAddress()))
+                .containsExactly(new InetSocketAddress("8.8.8.8", 0));
     }
 
     @Test
@@ -221,6 +260,24 @@ class HttpHeaderUtilTest {
                 HttpHeaders.of(HttpHeaderNames.FORWARDED, "for=10.0.0.1,for=10.0.0.2"),
                 ClientAddressSource.DEFAULT_SOURCES, null, remoteAddr, ACCEPT_ANY))
                 .isEqualTo(proxiedAddresses);
+
+        // Include malformed chunk that should be ignored
+        assertThat(HttpHeaderUtil.determineProxiedAddresses(
+                HttpHeaders.of(HttpHeaderNames.FORWARDED, "/..,for=10.0.0.1,for=10.0.0.2"),
+                ClientAddressSource.DEFAULT_SOURCES, null, remoteAddr, ACCEPT_ANY))
+                .isEqualTo(proxiedAddresses);
+
+        // All invalid chunks — fallback to remote address
+        assertThat(HttpHeaderUtil.determineProxiedAddresses(
+                HttpHeaders.of(HttpHeaderNames.FORWARDED, "/..,for=,=value,some-junk"),
+                ClientAddressSource.DEFAULT_SOURCES, null, remoteAddr, ACCEPT_ANY))
+                .isEqualTo(ProxiedAddresses.of(remoteAddr));
+
+        // Mixed invalid and valid — only valid one used
+        assertThat(HttpHeaderUtil.determineProxiedAddresses(
+                HttpHeaders.of(HttpHeaderNames.FORWARDED, "for=, /.., foo=bar,for=10.0.0.1"),
+                ClientAddressSource.DEFAULT_SOURCES, null, remoteAddr, ACCEPT_ANY))
+                .isEqualTo(ProxiedAddresses.of(new InetSocketAddress("10.0.0.1", 0)));
     }
 
     @Test
