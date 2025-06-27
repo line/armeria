@@ -19,6 +19,7 @@ import static java.util.Objects.requireNonNull;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.StreamSupport;
 
@@ -42,6 +43,7 @@ import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.streaming.ServerSentEvents;
 
 import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
 
 /**
  * A JSON-RPC {@link HttpService}.
@@ -113,37 +115,34 @@ public final class JsonRpcService implements HttpService {
 
         if (shouldUseSse) {
             return ServerSentEvents.fromPublisher(
-                Flux.create(sink -> {
-                    requests.forEach(item -> item.thenApply(JsonRpcService::toServerSentEvent)
-                                                 .thenAccept(sse -> {
-                                                        if (sse != null) {
-                                                            sink.next(sse);
-                                                        }
-                                                    }));
-
-                    CompletableFuture.allOf(requests.toArray(CompletableFuture[]::new))
-                                     .thenAccept(a -> sink.complete());
-                }));
+                Flux.fromIterable(requests)
+                    .flatMap(Mono::fromFuture)
+                    .map(JsonRpcService::toServerSentEvent)
+                    .filter(Objects::nonNull));
         } else {
             return HttpResponse.of(
                 CompletableFuture.allOf(requests.toArray(CompletableFuture[]::new))
                                  .thenApply(v -> requests.stream()
                                                          .map(req -> req.join())
-                                                         .filter(x -> x != null)
+                                                         .filter(Objects::nonNull)
                                                          .toList())
                                  .thenApply(HttpResponse::ofJson));
         }
     }
 
     private CompletableFuture<DefaultJsonRpcResponse> executeRpcCall(ServiceRequestContext ctx, JsonNode node) {
-        return UnmodifiableFuture.completedFuture(node)
-                .thenApply(JsonRpcService::parseNodeAsRpcRequest)
-                .thenApply(req -> invokeMethod(ctx, req))
+        final JsonRpcRequest request;
+        try {
+            request = parseNodeAsRpcRequest(node);
+        } catch (IllegalArgumentException e) {
+            return UnmodifiableFuture.completedFuture(
+                    new DefaultJsonRpcResponse(null, JsonRpcError.PARSE_ERROR));
+        }
+
+        return invokeMethod(ctx, request)
                 .exceptionally(e -> {
-                    if (e instanceof IllegalArgumentException) {
-                        return new DefaultJsonRpcResponse(null, JsonRpcError.PARSE_ERROR);
-                    }
-                    return new DefaultJsonRpcResponse(null, JsonRpcError.INTERNAL_ERROR.withData(e));
+                    return new DefaultJsonRpcResponse(request.id(),
+                            JsonRpcError.INTERNAL_ERROR.withData(e.getMessage()));
                 });
     }
 
@@ -155,14 +154,24 @@ public final class JsonRpcService implements HttpService {
         }
     }
 
-    private DefaultJsonRpcResponse invokeMethod(ServiceRequestContext ctx, JsonRpcRequest req) {
+    private CompletableFuture<DefaultJsonRpcResponse> invokeMethod(ServiceRequestContext ctx,
+                                                                   JsonRpcRequest req) {
         final JsonRpcHandler handler = methodHandlers.get(req.method());
+
+        // Notification
+        if (req.id() == null) {
+            if (handler != null) {
+                handler.handle(ctx, req);
+            }
+            return UnmodifiableFuture.completedFuture(null);
+        }
+
         if (handler == null) {
-            return new DefaultJsonRpcResponse(req.id(), JsonRpcError.METHOD_NOT_FOUND);
+            return UnmodifiableFuture.completedFuture(
+                new DefaultJsonRpcResponse(req.id(), JsonRpcError.METHOD_NOT_FOUND));
         }
         return handler.handle(ctx, req)
-                .thenApply(res -> buildFinalResponse(req, res))
-                .join();
+                .thenApply(res -> buildFinalResponse(req, res));
     }
 
     private DefaultJsonRpcResponse buildFinalResponse(JsonRpcRequest request, JsonRpcResponse response) {
