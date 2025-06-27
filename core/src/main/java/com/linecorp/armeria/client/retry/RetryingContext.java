@@ -22,42 +22,47 @@ import java.util.concurrent.CompletableFuture;
 
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.ResponseTimeoutException;
+import com.linecorp.armeria.common.AggregationOptions;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpRequestDuplicator;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.RequestHeadersBuilder;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.stream.AbortedStreamException;
+import com.linecorp.armeria.internal.client.AggregatedHttpRequestDuplicator;
 
 class RetryingContext {
     private enum State {
-        RETRYING,
+        UNINITIALIZED,
+        INITIALIZING,
+        INITIALIZED,
         COMPLETING,
         COMPLETED
     }
 
     private final ClientRequestContext ctx;
     private final RetryConfig<HttpResponse> retryConfig;
-    private final HttpRequest req;
-    private final HttpRequestDuplicator reqDuplicator;
     private final HttpResponse res;
     private final CompletableFuture<HttpResponse> resFuture;
-
+    private final HttpRequest req;
     private State state;
+
+    @Nullable
+    private HttpRequestDuplicator reqDuplicator;
 
     RetryingContext(ClientRequestContext ctx,
                     RetryConfig<HttpResponse> retryConfig,
-                    HttpRequest req,
-                    HttpRequestDuplicator reqDuplicator,
                     HttpResponse res,
-                    CompletableFuture<HttpResponse> resFuture) {
+                    CompletableFuture<HttpResponse> resFuture,
+                    HttpRequest req) {
 
         this.ctx = ctx;
         this.retryConfig = retryConfig;
-        this.req = req;
-        this.reqDuplicator = reqDuplicator;
         this.res = res;
         this.resFuture = resFuture;
-        state = State.RETRYING;
+        this.req = req;
+        state = State.UNINITIALIZED;
+        reqDuplicator = null; // will be initialized in init().
     }
 
     RetryConfig<HttpResponse> config() {
@@ -68,12 +73,45 @@ class RetryingContext {
         return ctx;
     }
 
+    CompletableFuture<Boolean> init() {
+        assert state == State.UNINITIALIZED;
+        state = State.INITIALIZING;
+        final CompletableFuture<Boolean> initFuture = new CompletableFuture<>();
+
+        if (ctx.exchangeType().isRequestStreaming()) {
+            reqDuplicator =
+                    req.toDuplicator(ctx.eventLoop().withoutContext(), 0);
+            state = State.INITIALIZED;
+            initFuture.complete(true);
+        } else {
+            req.aggregate(AggregationOptions.usePooledObjects(ctx.alloc(), ctx.eventLoop()))
+               .handle((agg, reqCause) -> {
+                   assert state == State.INITIALIZING;
+
+                   if (reqCause != null) {
+                       resFuture.completeExceptionally(reqCause);
+                       ctx.logBuilder().endRequest(reqCause);
+                       ctx.logBuilder().endResponse(reqCause);
+                       state = State.COMPLETED;
+                       initFuture.complete(false);
+                   } else {
+                       reqDuplicator = new AggregatedHttpRequestDuplicator(agg);
+                       state = State.INITIALIZED;
+                       initFuture.complete(true);
+                   }
+                   return null;
+               });
+        }
+
+        return initFuture;
+    }
+
     boolean isCompleted() {
         if (state == State.COMPLETING || state == State.COMPLETED) {
             return true;
         }
 
-        assert state == State.RETRYING;
+        assert state == State.INITIALIZED;
 
         // The request or response has been aborted by the client before it receives a response,
         // so stop retrying.
@@ -105,7 +143,8 @@ class RetryingContext {
     }
 
     public ClientRequestContext newAttemptContext(int attemptNumber) {
-        assert state == State.RETRYING;
+        assert state == State.INITIALIZED;
+        assert reqDuplicator != null;
 
         final boolean isInitialAttempt = attemptNumber <= 1;
 
@@ -132,7 +171,8 @@ class RetryingContext {
             return;
         }
         assert attempt.state() == RetryAttempt.State.COMPLETED;
-        assert state == State.RETRYING;
+        assert state == State.INITIALIZED;
+        assert reqDuplicator != null;
         state = State.COMPLETED;
 
         final HttpResponse attemptRes = attempt.commit();
@@ -147,7 +187,8 @@ class RetryingContext {
             return;
         }
 
-        assert state == State.RETRYING || state == State.COMPLETING;
+        assert state == State.INITIALIZED || state == State.COMPLETING;
+        assert reqDuplicator != null;
         state = State.COMPLETED;
 
         reqDuplicator.abort(cause);

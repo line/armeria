@@ -27,14 +27,11 @@ import org.slf4j.LoggerFactory;
 
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.HttpClient;
-import com.linecorp.armeria.common.AggregationOptions;
 import com.linecorp.armeria.common.HttpRequest;
-import com.linecorp.armeria.common.HttpRequestDuplicator;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.UnmodifiableFuture;
-import com.linecorp.armeria.internal.client.AggregatedHttpRequestDuplicator;
 
 /**
  * An {@link HttpClient} decorator that handles failures of an invocation and retries HTTP requests.
@@ -223,30 +220,17 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
     protected HttpResponse doExecute(ClientRequestContext ctx, HttpRequest req) throws Exception {
         final CompletableFuture<HttpResponse> resFuture = new CompletableFuture<>();
         final HttpResponse res = HttpResponse.of(resFuture, ctx.eventLoop());
-        if (ctx.exchangeType().isRequestStreaming()) {
-            final HttpRequestDuplicator reqDuplicator =
-                    req.toDuplicator(ctx.eventLoop().withoutContext(), 0);
-            final RetryingContext rctx = new RetryingContext(
-                    ctx, mappedRetryConfig(ctx), req, reqDuplicator, res, resFuture);
+        final RetryingContext rctx = new RetryingContext(ctx, mappedRetryConfig(ctx), res, resFuture, req);
+        rctx.init().handle((initSuccessful, unused) -> {
+            if (!initSuccessful) {
+                return null;
+            }
+
             final RetryAttempt attempt = new RetryAttempt(rctx, unwrap(), 1);
             doExecuteAttempt(rctx, attempt);
-        } else {
-            req.aggregate(AggregationOptions.usePooledObjects(ctx.alloc(), ctx.eventLoop()))
-               .handle((agg, reqCause) -> {
-                   if (reqCause != null) {
-                       resFuture.completeExceptionally(reqCause);
-                       ctx.logBuilder().endRequest(reqCause);
-                       ctx.logBuilder().endResponse(reqCause);
-                   } else {
-                       final HttpRequestDuplicator reqDuplicator = new AggregatedHttpRequestDuplicator(agg);
-                       final RetryingContext rctx = new RetryingContext(
-                               ctx, mappedRetryConfig(ctx), req, reqDuplicator, res, resFuture);
-                       final RetryAttempt attempt = new RetryAttempt(rctx, unwrap(), 1);
-                       doExecuteAttempt(rctx, attempt);
-                   }
-                   return null;
-               });
-        }
+
+            return null;
+        });
         return res;
     }
 
