@@ -53,22 +53,22 @@ class RetryAttempt {
     private static final Logger logger = LoggerFactory.getLogger(RetryAttempt.class);
 
     enum State {
-        // State of the attempt after construction and before the call to execute() or abort().
+        // Initial state after constructing an `Attempt`.
+        // Caller can only invoke `execute` or `abort`.
         INITIALIZED,
-        // State of the attempt before the outer call to execute() and before the inner call to complete()
-        // or abort().
+        // State after calling `execute`
+        // `ctx` and `res` are now available
+        // The attempt response is underway but did not complete yet.
         EXECUTING,
-        // State of the attempt before the call to commit() and before the outer call to commit() or abort()
-        // It means that this attempt ended up with a response, with or without content depending on the
-        // RetryRule, and it is up to the caller to decide on whether to commit on this response (i.e.,
-        // returning this response from this client) or to abort to continue retrying with
-        // another attempt.
+        // State after the (maybe exceptional) result of the attempt response was processed.
+        // `res` is available. `truncatedRes` and `resCause` are also available if applicable.
+        // Caller can only invoke `shouldRetry`, `commit` or `abort`.
         COMPLETED,
-        // After the outer call to commit(). Terminal state.
+        // State after a call to `commit`. Terminal state, caller cannot make further calls.
         COMMITTED,
+        // State after a call to `commit`. Terminal state, caller cannot make further calls.
+        // `res` is aborted.
         ABORTED
-        // After the outer call to abort() or after an unexpected exception. Terminal state.
-        // After setting this state, all attempt-related resources are freed.
     }
 
     private State state;
@@ -87,9 +87,9 @@ class RetryAttempt {
 
     // Available only after Attempt.State.COMPLETED.
     @Nullable
-    private HttpResponse completedRes;
+    private HttpResponse truncatedRes;
     @Nullable
-    private Throwable completedResCause;
+    private Throwable resCause;
 
     Client<HttpRequest, HttpResponse> delegate;
 
@@ -98,11 +98,11 @@ class RetryAttempt {
         this.delegate = delegate;
         this.number = number;
         whenCompletedFuture = new CompletableFuture<>();
-        state = State.INITIALIZED;
-    }
 
-    int number() {
-        return number;
+        truncatedRes = null;
+        resCause = null;
+
+        state = State.INITIALIZED;
     }
 
     State state() {
@@ -192,8 +192,8 @@ class RetryAttempt {
         assert res != null;
         state = State.COMMITTED;
 
-        if (completedRes != null) {
-            completedRes.abort();
+        if (truncatedRes != null) {
+            truncatedRes.abort();
         }
 
         return res;
@@ -217,8 +217,8 @@ class RetryAttempt {
         assert ctx != null && res != null;
         state = State.ABORTED;
 
-        if (completedRes != null) {
-            completedRes.abort();
+        if (truncatedRes != null) {
+            truncatedRes.abort();
         }
 
         final RequestLogBuilder logBuilder = ctx.logBuilder();
@@ -227,13 +227,11 @@ class RetryAttempt {
         logBuilder.responseContentPreview(null);
         res.abort(cause);
 
-        if (!whenCompletedFuture.isDone()) {
-            whenCompletedFuture.completeExceptionally(cause);
-        }
+        whenCompletedFuture.completeExceptionally(cause);
     }
 
     private HttpResponse executeAttemptRequest() {
-        assert state == State.INITIALIZED;
+        assert state == State.EXECUTING;
         assert ctx != null;
 
         final HttpRequest req = ctx.request();
@@ -295,6 +293,7 @@ class RetryAttempt {
             } else {
                 resCause = Exceptions.peel(headersCause);
             }
+
             completeLogIfBytesNotTransferred(resHeaders, resCause);
 
             ctx.log().whenAvailable(RequestLogProperty.RESPONSE_HEADERS).thenRun(() -> {
@@ -306,27 +305,21 @@ class RetryAttempt {
                     final HttpResponseDuplicator resDuplicator =
                             unsplitRes.toDuplicator(ctx.eventLoop().withoutContext(),
                                                     ctx.maxResponseLength());
-                    try {
-                        res = resDuplicator.duplicate();
+                        // todo(szymon): We do not call duplicator.abort(cause); but res.abort on an exception.
+                        //   Is this okay?
+                        final HttpResponse duplicatedRes = resDuplicator.duplicate();
                         final TruncatingHttpResponse truncatingAttemptRes =
                                 new TruncatingHttpResponse(resDuplicator.duplicate(),
                                                            rctx.config().maxContentLength());
                         resDuplicator.close();
-                        complete(truncatingAttemptRes, null);
-                    } catch (Throwable cause) {
-                        resDuplicator.abort(cause);
-                        abort(cause);
-                    }
+                        completeWithTruncated(duplicatedRes, truncatingAttemptRes);
                 } else {
-                    final HttpResponse unsplitRes;
                     if (resCause != null) {
                         splitRes.body().abort(resCause);
-                        unsplitRes = HttpResponse.ofFailure(resCause);
+                        complete(HttpResponse.ofFailure(resCause), resCause);
                     } else {
-                        unsplitRes = splitRes.unsplit();
+                        complete(splitRes.unsplit(), null);
                     }
-
-                    complete(unsplitRes, resCause);
                 }
             });
             return null;
@@ -376,17 +369,27 @@ class RetryAttempt {
         }
     }
 
-    private void complete(HttpResponse resToCompleteWith,
-                          @Nullable Throwable causeToCompleteWith) {
+    private void completeWithTruncated(HttpResponse res, TruncatingHttpResponse truncatedRes) {
         assert state == State.EXECUTING;
         state = State.COMPLETED;
 
-        if (causeToCompleteWith != null) {
-            causeToCompleteWith = Exceptions.peel(causeToCompleteWith);
+        this.res = res;
+        this.truncatedRes = truncatedRes;
+        resCause = null;
+        whenCompletedFuture.complete(null);
+    }
+
+    private void complete(HttpResponse res, @Nullable Throwable resCause) {
+        assert state == State.EXECUTING;
+        state = State.COMPLETED;
+
+        if (resCause != null) {
+            resCause = Exceptions.peel(resCause);
         }
 
-        completedRes = resToCompleteWith;
-        completedResCause = causeToCompleteWith;
+        this.res = res;
+        truncatedRes = null;
+        this.resCause = resCause;
         whenCompletedFuture.complete(null);
     }
 
@@ -394,7 +397,7 @@ class RetryAttempt {
         assert state == State.COMPLETED;
         assert ctx != null;
 
-        return retryRule.shouldRetry(ctx, completedResCause)
+        return retryRule.shouldRetry(ctx, resCause)
                         .handle((decision, cause) -> {
                             if (cause != null) {
                                 logger.warn("Unexpected exception is raised from {}.",
@@ -410,7 +413,25 @@ class RetryAttempt {
         assert state == State.COMPLETED;
         assert ctx != null;
 
-        return retryRuleWithContent.shouldRetry(ctx, completedRes, completedResCause)
+        @Nullable
+        final HttpResponse resForRule;
+        @Nullable
+        final Throwable causeForRule;
+
+        if (resCause != null) {
+            resForRule = null;
+            causeForRule = resCause;
+        } else {
+            if (truncatedRes == null) {
+                resForRule = res;
+            } else {
+                resForRule = truncatedRes;
+            }
+
+            causeForRule = null;
+        }
+
+        return retryRuleWithContent.shouldRetry(ctx, resForRule, causeForRule)
                                    .handle((decision, cause) -> {
                                        if (cause != null) {
                                            logger.warn("Unexpected exception is raised from {}.",

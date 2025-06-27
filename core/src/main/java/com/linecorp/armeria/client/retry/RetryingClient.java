@@ -33,6 +33,7 @@ import com.linecorp.armeria.common.HttpRequestDuplicator;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.util.UnmodifiableFuture;
 import com.linecorp.armeria.internal.client.AggregatedHttpRequestDuplicator;
 
 /**
@@ -303,19 +304,23 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
     private CompletionStage<Long> decideOnAttempt(RetryingContext rctx, RetryAttempt attempt) {
         assert attempt.state() == RetryAttempt.State.COMPLETED;
 
-        return attempt.shouldRetry().handle((decision, cause) -> {
-            assert cause == null;
-            assert attempt.state() == RetryAttempt.State.COMPLETED;
-            final Backoff backoff = decision != null ? decision.backoff() : null;
-            if (backoff != null) {
-                final long millisAfter = useRetryAfter ? attempt.retryAfterMillis() : -1;
-                final long nextDelay = getNextDelay(rctx.ctx(), backoff, millisAfter);
-                if (nextDelay >= 0) {
-                    return nextDelay;
+        try {
+            return attempt.shouldRetry().handle((decision, cause) -> {
+                assert cause == null;
+                assert attempt.state() == RetryAttempt.State.COMPLETED;
+                final Backoff backoff = decision != null ? decision.backoff() : null;
+                if (backoff != null) {
+                    final long millisAfter = useRetryAfter ? attempt.retryAfterMillis() : -1;
+                    final long nextDelay = getNextDelay(rctx.ctx(), backoff, millisAfter);
+                    if (nextDelay >= 0) {
+                        return nextDelay;
+                    }
                 }
-            }
 
-            return -1L;
-        });
+                return -1L;
+            });
+        } catch (Throwable t) {
+            return UnmodifiableFuture.exceptionallyCompletedFuture(t);
+        }
     }
 }

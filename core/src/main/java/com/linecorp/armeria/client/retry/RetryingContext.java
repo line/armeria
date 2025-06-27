@@ -131,7 +131,7 @@ class RetryingContext {
         }
         assert attempt.state() == RetryAttempt.State.COMPLETED;
         assert state == State.RETRYING;
-        state = State.COMPLETING;
+        state = State.COMPLETED;
 
         final HttpResponse attemptRes = attempt.commit();
         ctx.logBuilder().endResponseWithLastChild();
@@ -148,7 +148,6 @@ class RetryingContext {
         assert state == State.RETRYING || state == State.COMPLETING;
         state = State.COMPLETED;
 
-        resFuture.completeExceptionally(cause);
         reqDuplicator.abort(cause);
 
         // todo(szymon): verify that this safe to do so we can avoid isInitialAttempt check
@@ -157,5 +156,7 @@ class RetryingContext {
         }
 
         ctx.logBuilder().endResponse(cause);
+
+        resFuture.completeExceptionally(cause);
     }
 }
