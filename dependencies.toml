@@ -919,9 +919,6 @@ version.ref = "mockito"
 [libraries.mockito-junit-jupiter]
 module = "org.mockito:mockito-junit-jupiter"
 version.ref = "mockito"
-[libraries.mockito-inline]
-module = "org.mockito:mockito-inline"
-version.ref = "mockito"
 
 [libraries.monix-reactive_v212]
 module = "io.monix:monix-reactive_2.12"
