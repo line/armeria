@@ -105,6 +105,8 @@ class RetryingContext {
     }
 
     public ClientRequestContext newAttemptContext(int attemptNumber) {
+        assert state == State.RETRYING;
+
         final boolean isInitialAttempt = attemptNumber <= 1;
 
         if (!AbstractRetryingClient.setResponseTimeout(ctx)) {
