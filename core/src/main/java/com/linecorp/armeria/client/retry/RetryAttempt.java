@@ -16,8 +16,6 @@
 
 package com.linecorp.armeria.client.retry;
 
-import static com.linecorp.armeria.client.retry.AbstractRetryingClient.ARMERIA_RETRY_COUNT;
-import static com.linecorp.armeria.client.retry.AbstractRetryingClient.newAttemptContext;
 import static com.linecorp.armeria.internal.client.ClientUtil.executeWithFallback;
 import static com.linecorp.armeria.internal.client.ClientUtil.initContextAndExecuteWithFallback;
 
@@ -36,7 +34,6 @@ import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpResponseDuplicator;
-import com.linecorp.armeria.common.RequestHeadersBuilder;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.SplitHttpResponse;
 import com.linecorp.armeria.common.annotation.Nullable;
@@ -114,27 +111,16 @@ class RetryAttempt {
 
     CompletableFuture<Void> execute() {
         assert state == State.INITIALIZED;
-        final boolean isInitialAttempt = number <= 1;
-
-        final HttpRequest req;
-        if (isInitialAttempt) {
-            req = rctx.reqDuplicator().duplicate();
-        } else {
-            final RequestHeadersBuilder attemptHeadersBuilder = rctx.req().headers().toBuilder();
-            attemptHeadersBuilder.setInt(ARMERIA_RETRY_COUNT, number - 1);
-            req = rctx.reqDuplicator().duplicate(attemptHeadersBuilder.build());
-        }
+        state = State.EXECUTING;
 
         try {
-            ctx = newAttemptContext(
-                    rctx.ctx(), req, rctx.ctx().rpcRequest(), isInitialAttempt);
+            ctx = rctx.newAttemptContext(number);
         } catch (Throwable t) {
             abort(t);
             return whenCompletedFuture;
         }
 
-        executeAttemptRequest();
-        assert state == State.EXECUTING && res != null && ctx != null;
+        res = executeAttemptRequest();
 
         if (!rctx.ctx().exchangeType().isResponseStreaming() || rctx.config().requiresResponseTrailers()) {
             handleAggRes();
@@ -202,9 +188,8 @@ class RetryAttempt {
             return res;
         }
 
-        assert res != null;
-
         assert state == State.COMPLETED;
+        assert res != null;
         state = State.COMMITTED;
 
         if (completedRes != null) {
@@ -219,9 +204,15 @@ class RetryAttempt {
     }
 
     void abort(Throwable cause) {
-        if (state == State.ABORTED) {
+        if (state == State.ABORTED || state == State.COMMITTED) {
             return;
         }
+
+        if (state == State.INITIALIZED) {
+            assert ctx == null && res == null;
+            return;
+        }
+
         assert state == State.EXECUTING || state == State.COMPLETED;
         assert ctx != null && res != null;
         state = State.ABORTED;
@@ -241,11 +232,13 @@ class RetryAttempt {
         }
     }
 
-    private void executeAttemptRequest() {
+    private HttpResponse executeAttemptRequest() {
         assert state == State.INITIALIZED;
         assert ctx != null;
+
         final HttpRequest req = ctx.request();
         assert req != null;
+
         final ClientRequestContextExtension ctxExtension =
                 ctx.as(ClientRequestContextExtension.class);
         if ((number > 1) && ctxExtension != null && ctx.endpoint() == null) {
@@ -253,17 +246,15 @@ class RetryAttempt {
             ClientPendingThrowableUtil.removePendingThrowable(ctx);
             // if the endpoint hasn't been selected,
             // try to initialize the ctx with a new endpoint/event loop
-            res = initContextAndExecuteWithFallback(
+            return initContextAndExecuteWithFallback(
                     delegate, ctxExtension, HttpResponse::of,
                     (context, cause) ->
                             HttpResponse.ofFailure(cause), req, false);
         } else {
-            res = executeWithFallback(delegate, ctx,
+            return executeWithFallback(delegate, ctx,
                                       (context, cause) ->
                                               HttpResponse.ofFailure(cause), req, false);
         }
-
-        state = State.EXECUTING;
     }
 
     private void handleAggRes() {
@@ -385,10 +376,9 @@ class RetryAttempt {
         }
     }
 
-    private void complete(@Nullable HttpResponse resToCompleteWith,
+    private void complete(HttpResponse resToCompleteWith,
                           @Nullable Throwable causeToCompleteWith) {
         assert state == State.EXECUTING;
-        assert ctx != null && res != null;
         state = State.COMPLETED;
 
         if (causeToCompleteWith != null) {

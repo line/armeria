@@ -16,20 +16,33 @@
 
 package com.linecorp.armeria.client.retry;
 
+import static com.linecorp.armeria.client.retry.AbstractRetryingClient.ARMERIA_RETRY_COUNT;
+
 import java.util.concurrent.CompletableFuture;
 
 import com.linecorp.armeria.client.ClientRequestContext;
+import com.linecorp.armeria.client.ResponseTimeoutException;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpRequestDuplicator;
 import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.RequestHeadersBuilder;
+import com.linecorp.armeria.common.stream.AbortedStreamException;
 
 class RetryingContext {
+    private enum State {
+        RETRYING,
+        COMPLETING,
+        COMPLETED
+    }
+
     private final ClientRequestContext ctx;
     private final RetryConfig<HttpResponse> retryConfig;
     private final HttpRequest req;
     private final HttpRequestDuplicator reqDuplicator;
     private final HttpResponse res;
     private final CompletableFuture<HttpResponse> resFuture;
+
+    private State state;
 
     RetryingContext(ClientRequestContext ctx,
                     RetryConfig<HttpResponse> retryConfig,
@@ -44,6 +57,7 @@ class RetryingContext {
         this.reqDuplicator = reqDuplicator;
         this.res = res;
         this.resFuture = resFuture;
+        state = State.RETRYING;
     }
 
     RetryConfig<HttpResponse> config() {
@@ -54,24 +68,71 @@ class RetryingContext {
         return ctx;
     }
 
-    HttpRequestDuplicator reqDuplicator() {
-        return reqDuplicator;
+    boolean isCompleted() {
+        if (state == State.COMPLETING || state == State.COMPLETED) {
+            return true;
+        }
+
+        assert state == State.RETRYING;
+
+        // The request or response has been aborted by the client before it receives a response,
+        // so stop retrying.
+        if (req.whenComplete().isCompletedExceptionally()) {
+            state = State.COMPLETING;
+            req.whenComplete().handle((unused, cause) -> {
+                abort(cause);
+                return null;
+            });
+            return true;
+        }
+
+        if (res.isComplete()) {
+            state = State.COMPLETING;
+            res.whenComplete().handle((result, cause) -> {
+                final Throwable abortCause;
+                if (cause != null) {
+                    abortCause = cause;
+                } else {
+                    abortCause = AbortedStreamException.get();
+                }
+                abort(abortCause);
+                return null;
+            });
+            return true;
+        }
+
+        return false;
     }
 
-    HttpRequest req() {
-        return req;
-    }
+    public ClientRequestContext newAttemptContext(int attemptNumber) {
+        final boolean isInitialAttempt = attemptNumber <= 1;
 
-    HttpResponse res() {
-        return res;
-    }
+        if (!AbstractRetryingClient.setResponseTimeout(ctx)) {
+            throw ResponseTimeoutException.get();
+        }
 
-    CompletableFuture<HttpResponse> resFuture() {
-        return resFuture;
+        final HttpRequest attemptReq;
+        if (isInitialAttempt) {
+            attemptReq = reqDuplicator.duplicate();
+        } else {
+            final RequestHeadersBuilder attemptHeadersBuilder = req.headers().toBuilder();
+            attemptHeadersBuilder.setInt(ARMERIA_RETRY_COUNT, attemptNumber - 1);
+            attemptReq = reqDuplicator.duplicate(attemptHeadersBuilder.build());
+        }
+
+        return AbstractRetryingClient.newAttemptContext(
+                    ctx, attemptReq, ctx.rpcRequest(), isInitialAttempt);
     }
 
     void commit(RetryAttempt attempt) {
+        if (state == State.COMPLETED) {
+            // Already completed.
+            return;
+        }
         assert attempt.state() == RetryAttempt.State.COMPLETED;
+        assert state == State.RETRYING;
+        state = State.COMPLETING;
+
         final HttpResponse attemptRes = attempt.commit();
         ctx.logBuilder().endResponseWithLastChild();
         resFuture.complete(attemptRes);
@@ -79,15 +140,22 @@ class RetryingContext {
     }
 
     void abort(Throwable cause) {
-        abort(cause, false);
-    }
+        if (state == State.COMPLETED) {
+            // Already completed.
+            return;
+        }
 
-    void abort(Throwable cause, boolean endRequestLog) {
+        assert state == State.RETRYING || state == State.COMPLETING;
+        state = State.COMPLETED;
+
         resFuture.completeExceptionally(cause);
         reqDuplicator.abort(cause);
-        if (endRequestLog) {
+
+        // todo(szymon): verify that this safe to do so we can avoid isInitialAttempt check
+        if (!ctx.log().isRequestComplete()) {
             ctx.logBuilder().endRequest(cause);
         }
+
         ctx.logBuilder().endResponse(cause);
     }
 }

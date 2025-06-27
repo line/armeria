@@ -27,14 +27,12 @@ import org.slf4j.LoggerFactory;
 
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.HttpClient;
-import com.linecorp.armeria.client.ResponseTimeoutException;
 import com.linecorp.armeria.common.AggregationOptions;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpRequestDuplicator;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.annotation.Nullable;
-import com.linecorp.armeria.common.stream.AbortedStreamException;
 import com.linecorp.armeria.internal.client.AggregatedHttpRequestDuplicator;
 
 /**
@@ -252,33 +250,10 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
     }
 
     private void doExecuteAttempt(RetryingContext rctx, RetryAttempt attempt) {
-        assert attempt.state() == RetryAttempt.State.INITIALIZED;
-        final boolean isInitialAttempt = attempt.number() <= 1;
-        // The request or response has been aborted by the client before it receives a response,
-        // so stop retrying.
-        if (rctx.req().whenComplete().isCompletedExceptionally()) {
-            rctx.req().whenComplete().handle((unused, cause) -> {
-                rctx.abort(cause, isInitialAttempt);
-                return null;
-            });
-            return;
-        }
-        if (rctx.res().isComplete()) {
-            rctx.res().whenComplete().handle((result, cause) -> {
-                final Throwable abortCause;
-                if (cause != null) {
-                    abortCause = cause;
-                } else {
-                    abortCause = AbortedStreamException.get();
-                }
-                rctx.abort(abortCause, isInitialAttempt);
-                return null;
-            });
-            return;
-        }
-
-        if (!setResponseTimeout(rctx.ctx())) {
-            rctx.abort(ResponseTimeoutException.get(), isInitialAttempt);
+        if (rctx.isCompleted()) {
+            // The request or response has been aborted by the client before it receives a response,
+            // so stop retrying.
+            attempt.abort();
             return;
         }
 
@@ -306,11 +281,10 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
                     assert attempt.state() == RetryAttempt.State.ABORTED;
 
                     scheduleNextRetry(
-                            rctx.ctx(), schedulingCause -> rctx.abort(schedulingCause),
+                            rctx.ctx(), rctx::abort,
                             () -> {
-                                final RetryAttempt nextAttempt = new RetryAttempt(rctx,
-                                                                                  unwrap(),
-                                                                                  attempt.number() + 1);
+                                final RetryAttempt nextAttempt = new RetryAttempt(
+                                            rctx, unwrap(), getTotalAttempts(rctx.ctx()));
                                 doExecuteAttempt(rctx, nextAttempt);
                             },
                             nextDelayMillis);
