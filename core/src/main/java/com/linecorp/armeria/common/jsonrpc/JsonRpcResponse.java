@@ -33,7 +33,7 @@ public interface JsonRpcResponse {
     /**
     * Creates a new instance with error.
     */
-    static JsonRpcResponse of(JsonRpcError error) {
+    static JsonRpcResponse ofError(JsonRpcError error) {
         return new SimpleJsonResponse(error);
     }
 

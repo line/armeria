@@ -21,6 +21,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
+import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -111,7 +112,7 @@ public final class JsonRpcService implements HttpService {
         final List<CompletableFuture<DefaultJsonRpcResponse>> requests =
             StreamSupport.stream(batch.spliterator(), false)
                          .map(item -> executeRpcCall(ctx, item))
-                         .toList();
+                         .collect(Collectors.toList());
 
         if (shouldUseSse) {
             return ServerSentEvents.fromPublisher(
@@ -121,11 +122,11 @@ public final class JsonRpcService implements HttpService {
                     .filter(Objects::nonNull));
         } else {
             return HttpResponse.of(
-                CompletableFuture.allOf(requests.toArray(CompletableFuture[]::new))
+                CompletableFuture.allOf(requests.stream().toArray(CompletableFuture[]::new))
                                  .thenApply(v -> requests.stream()
                                                          .map(req -> req.join())
                                                          .filter(Objects::nonNull)
-                                                         .toList())
+                                                         .collect(Collectors.toList()))
                                  .thenApply(HttpResponse::ofJson));
         }
     }
@@ -179,20 +180,20 @@ public final class JsonRpcService implements HttpService {
             return (DefaultJsonRpcResponse) response;
         }
 
-        if (response.result() != null && response.error() == null) {
+        if (request.id() != null && response.result() != null && response.error() == null) {
             return new DefaultJsonRpcResponse(request.id(), response.result());
         }
         if (response.error() != null && response.result() == null) {
             return new DefaultJsonRpcResponse(request.id(), response.error());
         }
-        return null;
+        return new DefaultJsonRpcResponse(request.id(), JsonRpcError.INTERNAL_ERROR);
     }
 
     private static ServerSentEvent toServerSentEvent(DefaultJsonRpcResponse response) {
         try {
             return ServerSentEvent.ofData(mapper.writeValueAsString(response));
         } catch (Exception e) {
-            return null;
+            return ServerSentEvent.empty();
         }
     }
 }

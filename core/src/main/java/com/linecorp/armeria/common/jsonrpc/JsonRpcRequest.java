@@ -54,7 +54,7 @@ public interface JsonRpcRequest {
      */
     static JsonRpcRequest of(@Nullable Object id, String method, Iterable<?> params) {
         requireNonNull(params, "params");
-        return of(id, method, params);
+        return new DefaultJsonRpcRequest(id, method, params);
     }
 
     /**

@@ -36,6 +36,7 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
  */
 @UnstableApi
 final class DefaultJsonRpcRequest implements JsonRpcRequest {
+    @Nullable
     private final Object id;
     private final String method;
     private final List<Object> params;

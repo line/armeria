@@ -27,7 +27,10 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
  */
 @UnstableApi
 public abstract class AbstractJsonRpcResponse implements JsonRpcResponse {
+    @Nullable
     private final Object result;
+
+    @Nullable
     private final JsonRpcError error;
 
     /**

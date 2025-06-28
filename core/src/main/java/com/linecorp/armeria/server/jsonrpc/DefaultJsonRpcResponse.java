@@ -29,6 +29,7 @@ import com.linecorp.armeria.common.jsonrpc.JsonRpcError;
 @UnstableApi
 @JsonInclude(JsonInclude.Include.NON_NULL)
 final class DefaultJsonRpcResponse extends AbstractJsonRpcResponse {
+    @Nullable
     private final Object id;
 
     DefaultJsonRpcResponse(Object id, Object result) {
