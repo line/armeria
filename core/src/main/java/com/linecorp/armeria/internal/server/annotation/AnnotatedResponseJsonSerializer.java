@@ -16,16 +16,27 @@
 
 package com.linecorp.armeria.internal.server.annotation;
 
-import static com.linecorp.armeria.internal.server.annotation.AnnotatedRequestJsonSerializer.handleInternalTypes;
-import static com.linecorp.armeria.internal.server.annotation.AnnotatedRequestJsonSerializer.maybeUnwrapFuture;
-
 import java.io.IOException;
+import java.util.function.BiFunction;
 
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.databind.JsonSerializer;
 import com.fasterxml.jackson.databind.SerializerProvider;
 
+import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.logging.BeanFieldInfo;
+
 final class AnnotatedResponseJsonSerializer extends JsonSerializer<AnnotatedResponse> {
+
+    private final BiFunction<BeanFieldInfo, Object, @Nullable Object> masker;
+
+    AnnotatedResponseJsonSerializer(BeanFieldMaskerCache fieldMaskerCache) {
+        masker = (info, o) -> fieldMaskerCache.fieldMasker(info).mask(o);
+    }
+
+    AnnotatedResponseJsonSerializer() {
+        masker = (info, o) -> o;
+    }
 
     @Override
     public Class<AnnotatedResponse> handledType() {
@@ -38,16 +49,15 @@ final class AnnotatedResponseJsonSerializer extends JsonSerializer<AnnotatedResp
         gen.writeStartObject();
         gen.writeFieldName("value");
         Object retValue = value.value();
-        retValue = maybeUnwrapFuture(retValue);
         if (retValue == null) {
-            serializers.defaultSerializeNull(gen);
+            gen.writeNull();
             gen.writeEndObject();
             return;
         }
 
-        retValue = handleInternalTypes(retValue);
+        retValue = masker.apply(value.beanFieldInfo(), retValue);
         if (retValue == null) {
-            serializers.defaultSerializeNull(gen);
+            gen.writeNull();
             gen.writeEndObject();
             return;
         }
