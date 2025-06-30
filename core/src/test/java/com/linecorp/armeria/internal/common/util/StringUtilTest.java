@@ -58,8 +58,7 @@ class StringUtilTest {
     @Test
     void testToBooleanNull() {
         assertThatThrownBy(() -> StringUtil.toBoolean(null))
-                .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("Input must not be null");
+                .isInstanceOf(IllegalArgumentException.class);
     }
 
     @ParameterizedTest

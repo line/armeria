@@ -58,10 +58,7 @@ public final class StringUtil {
     }
 
     public static Boolean toBoolean(String s) {
-        if (s == null) {
-            throw new IllegalArgumentException("Input must not be null");
-        }
-        final String normalized = s.trim().toLowerCase(Locale.ROOT);
+        final String normalized = s == null ? null : s.trim().toLowerCase(Locale.ROOT);
         final Boolean result = stringToBoolean.get(normalized);
         if (result != null) {
             return result;
