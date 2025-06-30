@@ -17,8 +17,11 @@
 package com.linecorp.armeria.internal.common.util;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 class StringUtilTest {
     @Test
@@ -33,36 +36,52 @@ class StringUtilTest {
         assertThat(StringUtil.toString(1001)).isEqualTo("1001");
     }
 
-    @Test
-    void testToBoolean() {
-        // Test supported boolean values
-        assertThat(StringUtil.toBoolean("true")).isTrue();
-        assertThat(StringUtil.toBoolean("TRUE")).isTrue();
-        assertThat(StringUtil.toBoolean("True")).isTrue();
-        assertThat(StringUtil.toBoolean("1")).isTrue();
+    @ParameterizedTest
+    @ValueSource(strings = {"true", "TRUE", "True", "TrUe", " true ", "  TRUE  ", "1", " 1 "})
+    void testToBooleanTrue(String input) {
+        assertThat(StringUtil.toBoolean(input)).isTrue();
+    }
 
-        assertThat(StringUtil.toBoolean("false")).isFalse();
-        assertThat(StringUtil.toBoolean("FALSE")).isFalse();
-        assertThat(StringUtil.toBoolean("False")).isFalse();
-        assertThat(StringUtil.toBoolean("0")).isFalse();
+    @ParameterizedTest
+    @ValueSource(strings = {"false", "FALSE", "False", "FaLsE", " false ", "  FALSE  ", "0", " 0 "})
+    void testToBooleanFalse(String input) {
+        assertThat(StringUtil.toBoolean(input)).isFalse();
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"invalid", "yes", "no", "2", ""})
+    void testToBooleanInvalid(String input) {
+        assertThatThrownBy(() -> StringUtil.toBoolean(input))
+                .isInstanceOf(IllegalArgumentException.class);
     }
 
     @Test
-    void testToBooleanOrNull() {
-        // Test supported boolean values
-        assertThat(StringUtil.toBooleanOrNull("true")).isTrue();
-        assertThat(StringUtil.toBooleanOrNull("TRUE")).isTrue();
-        assertThat(StringUtil.toBooleanOrNull("True")).isTrue();
-        assertThat(StringUtil.toBooleanOrNull("1")).isTrue();
+    void testToBooleanNull() {
+        assertThatThrownBy(() -> StringUtil.toBoolean(null))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("Input must not be null");
+    }
 
-        assertThat(StringUtil.toBooleanOrNull("false")).isFalse();
-        assertThat(StringUtil.toBooleanOrNull("FALSE")).isFalse();
-        assertThat(StringUtil.toBooleanOrNull("False")).isFalse();
-        assertThat(StringUtil.toBooleanOrNull("0")).isFalse();
+    @ParameterizedTest
+    @ValueSource(strings = {"true", "TRUE", "True", "TrUe", " true ", "  TRUE  ", "1", " 1 "})
+    void testToBooleanOrNullTrue(String input) {
+        assertThat(StringUtil.toBooleanOrNull(input)).isTrue();
+    }
 
-        // Test unsupported values return null
-        assertThat(StringUtil.toBooleanOrNull("tRUE")).isNull();
-        assertThat(StringUtil.toBooleanOrNull("FaLsE")).isNull();
-        assertThat(StringUtil.toBooleanOrNull("invalid")).isNull();
+    @ParameterizedTest
+    @ValueSource(strings = {"false", "FALSE", "False", "FaLsE", " false ", "  FALSE  ", "0", " 0 "})
+    void testToBooleanOrNullFalse(String input) {
+        assertThat(StringUtil.toBooleanOrNull(input)).isFalse();
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"invalid", "yes", "no", "2", ""})
+    void testToBooleanOrNullInvalid(String input) {
+        assertThat(StringUtil.toBooleanOrNull(input)).isNull();
+    }
+
+    @Test
+    void testToBooleanOrNullNull() {
+        assertThat(StringUtil.toBooleanOrNull(null)).isNull();
     }
 }

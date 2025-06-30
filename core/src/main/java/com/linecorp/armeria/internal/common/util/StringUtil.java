@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.internal.common.util;
 
+import java.util.Locale;
 import java.util.Map;
 
 import com.google.common.collect.ImmutableMap;
@@ -30,12 +31,8 @@ public final class StringUtil {
     private static final Map<String, Boolean> stringToBoolean =
             ImmutableMap.<String, Boolean>builder()
                         .put("true", true)
-                        .put("TRUE", true)
-                        .put("True", true)
                         .put("1", true)
                         .put("false", false)
-                        .put("FALSE", false)
-                        .put("False", false)
                         .put("0", false)
                         .build();
 
@@ -61,7 +58,11 @@ public final class StringUtil {
     }
 
     public static Boolean toBoolean(String s) {
-        final Boolean result = stringToBoolean.get(s);
+        if (s == null) {
+            throw new IllegalArgumentException("Input must not be null");
+        }
+        final String normalized = s.trim().toLowerCase(Locale.ROOT);
+        final Boolean result = stringToBoolean.get(normalized);
         if (result != null) {
             return result;
         }
@@ -70,7 +71,11 @@ public final class StringUtil {
 
     @Nullable
     public static Boolean toBooleanOrNull(String s) {
-        return stringToBoolean.get(s);
+        if (s == null) {
+            return null;
+        }
+        final String normalized = s.trim().toLowerCase(Locale.ROOT);
+        return stringToBoolean.get(normalized);
     }
 
     private StringUtil() {}
