@@ -50,12 +50,11 @@ final class DefaultJsonRpcRequest implements JsonRpcRequest {
         this(id, method, copyParams(params), JsonRpcConstants.JSON_RPC_VERSION);
     }
 
-    @JsonCreator
     private DefaultJsonRpcRequest(
-            @JsonProperty("id") @Nullable Object id,
-            @JsonProperty("method") String method,
-            @JsonProperty("params") @Nullable List<Object> params,
-            @JsonProperty("jsonrpc") String version) {
+            @Nullable Object id,
+            String method,
+            @Nullable List<Object> params,
+            String version) {
         checkArgument(JsonRpcConstants.JSON_RPC_VERSION.equals(version),
             "jsonrpc: %s (expected: 2.0)", version);
         checkArgument(id == null || id instanceof Number || id instanceof String,
@@ -68,12 +67,30 @@ final class DefaultJsonRpcRequest implements JsonRpcRequest {
         this.version = version;
     }
 
+    @JsonCreator
+    private static DefaultJsonRpcRequest fromJson(
+            @JsonProperty("id") @Nullable Object id,
+            @JsonProperty("method") String method,
+            @JsonProperty("params") @Nullable Object params,
+            @JsonProperty("jsonrpc") String version) {
+        if (params == null) {
+            return new DefaultJsonRpcRequest(id, method, ImmutableList.of());
+        }
+
+        if (params instanceof Iterable) {
+            return new DefaultJsonRpcRequest(id, method, (Iterable<?>) params);
+        }
+
+        return new DefaultJsonRpcRequest(id, method, ImmutableList.of(params));
+    }
+
     private static List<Object> copyParams(Iterable<?> params) {
         requireNonNull(params, "params");
         if (params instanceof ImmutableList) {
             //noinspection unchecked
             return (List<Object>) params;
         }
+
         return ImmutableList.copyOf(params);
     }
 
@@ -82,21 +99,25 @@ final class DefaultJsonRpcRequest implements JsonRpcRequest {
     }
 
     @Override
+    @JsonProperty
     public @Nullable Object id() {
         return id;
     }
 
     @Override
+    @JsonProperty
     public String method() {
         return method;
     }
 
     @Override
+    @JsonProperty
     public List<Object> params() {
         return params;
     }
 
     @Override
+    @JsonProperty
     public String version() {
         return version;
     }
