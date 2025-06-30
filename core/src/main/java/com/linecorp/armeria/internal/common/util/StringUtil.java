@@ -58,8 +58,7 @@ public final class StringUtil {
     }
 
     public static Boolean toBoolean(String s) {
-        final String normalized = s == null ? null : s.trim().toLowerCase(Locale.ROOT);
-        final Boolean result = stringToBoolean.get(normalized);
+        final Boolean result = toBooleanOrNull(s);
         if (result != null) {
             return result;
         }
