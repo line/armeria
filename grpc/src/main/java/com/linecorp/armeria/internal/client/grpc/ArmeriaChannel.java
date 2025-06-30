@@ -147,7 +147,7 @@ final class ArmeriaChannel extends Channel implements ClientBuilderParams, Unwra
         final HttpRequestWriter req = HttpRequest.streaming(headersBuilder.build());
         final DefaultClientRequestContext ctx = newContext(HttpMethod.POST, req, method);
 
-        GrpcClientCall.set(ctx, callOptions, method);
+        InternalGrpcClientCall.set(ctx, callOptions, method);
 
         ctx.logBuilder().serializationFormat(serializationFormat);
         ctx.logBuilder().defer(RequestLogProperty.REQUEST_CONTENT,

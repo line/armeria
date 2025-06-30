@@ -16,12 +16,13 @@
 
 package com.linecorp.armeria.client.grpc;
 
-import static com.linecorp.armeria.internal.client.grpc.GrpcClientCall.GRPC_CALL_OPTIONS;
-import static com.linecorp.armeria.internal.client.grpc.GrpcClientCall.GRPC_METHOD_DESCRIPTOR;
+import static com.linecorp.armeria.internal.client.grpc.InternalGrpcClientCall.GRPC_CALL_OPTIONS;
+import static com.linecorp.armeria.internal.client.grpc.InternalGrpcClientCall.GRPC_METHOD_DESCRIPTOR;
 import static java.util.Objects.requireNonNull;
 
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 
 import io.grpc.CallOptions;
 import io.grpc.MethodDescriptor;
@@ -36,9 +37,9 @@ import io.grpc.MethodDescriptor;
  *     MyGrpcStub client = GrpcClients
  *         .builder(grpcServerUri)
  *         .decorator((delegate, ctx, req) -> {
- *             CallOptions options = GrpcClientCall.getCallOptions(ctx);
+ *             CallOptions options = GrpcClientCall.callOptions(ctx);
  *             MyOption myOption = options.getOption(myOptionKey);
- *             MethodDescriptor descriptor = GrpcClientCall.getMethodDescriptor(ctx);
+ *             MethodDescriptor descriptor = GrpcClientCall.methodDescriptor(ctx);
  *             boolean retryable = descriptor.isIdempotent() || descriptor.isSafe()
  *
  *             // act on myOption or retryable if needed
@@ -52,13 +53,14 @@ import io.grpc.MethodDescriptor;
  *       .echo(...)
  * }</pre>
  */
+@UnstableApi
 public final class GrpcClientCall {
 
     /**
      * Returns {@link MethodDescriptor} for the method called.
      */
     @Nullable
-    public static MethodDescriptor<?, ?> getMethodDescriptor(RequestContext ctx) {
+    public static MethodDescriptor<?, ?> methodDescriptor(RequestContext ctx) {
         requireNonNull(ctx, "ctx");
         return ctx.attr(GRPC_METHOD_DESCRIPTOR);
     }
@@ -67,7 +69,7 @@ public final class GrpcClientCall {
      * Returns {@link CallOptions} which were used in the call.
      */
     @Nullable
-    public static CallOptions getCallOptions(RequestContext ctx) {
+    public static CallOptions callOptions(RequestContext ctx) {
         requireNonNull(ctx, "ctx");
         return ctx.attr(GRPC_CALL_OPTIONS);
     }

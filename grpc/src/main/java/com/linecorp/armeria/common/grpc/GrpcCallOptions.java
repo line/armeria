@@ -62,7 +62,7 @@ public final class GrpcCallOptions {
      */
     @Nullable
     public static CallOptions get(RequestContext ctx) {
-        return GrpcClientCall.getCallOptions(ctx);
+        return GrpcClientCall.callOptions(ctx);
     }
 
     private GrpcCallOptions() {}

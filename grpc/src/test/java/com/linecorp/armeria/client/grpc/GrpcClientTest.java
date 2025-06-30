@@ -402,8 +402,8 @@ class GrpcClientTest {
                     .withOption(MY_CALL_OPTION_KEY, "foo")
                     .emptyCall(EMPTY);
             final ClientRequestContext ctx = ctxCaptor.get();
-            assertThat(GrpcClientCall.getCallOptions(ctx).getOption(MY_CALL_OPTION_KEY)).isEqualTo("foo");
-            assertThat(GrpcClientCall.getMethodDescriptor(ctx).getBareMethodName()).isEqualTo("EmptyCall");
+            assertThat(GrpcClientCall.callOptions(ctx).getOption(MY_CALL_OPTION_KEY)).isEqualTo("foo");
+            assertThat(GrpcClientCall.methodDescriptor(ctx).getBareMethodName()).isEqualTo("EmptyCall");
         }
     }
 

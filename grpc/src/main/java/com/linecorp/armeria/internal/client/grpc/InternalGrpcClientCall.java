@@ -24,18 +24,18 @@ import io.grpc.CallOptions;
 import io.grpc.MethodDescriptor;
 import io.netty.util.AttributeKey;
 
-public final class GrpcClientCall {
+public final class InternalGrpcClientCall {
 
     public static final AttributeKey<MethodDescriptor<?, ?>> GRPC_METHOD_DESCRIPTOR = AttributeKey.valueOf(
-            GrpcClientCall.class, "GRPC_METHOD_DESCRIPTOR");
+            InternalGrpcClientCall.class, "GRPC_METHOD_DESCRIPTOR");
 
     public static final AttributeKey<CallOptions> GRPC_CALL_OPTIONS = AttributeKey.valueOf(
-            GrpcClientCall.class, "GRPC_CALL_OPTIONS");
+            InternalGrpcClientCall.class, "GRPC_CALL_OPTIONS");
 
     /**
      * Sets the specified {@link CallOptions} and {@link MethodDescriptor} to the {@link RequestContext}.
      */
-    protected static void set(RequestContext ctx, CallOptions options, MethodDescriptor<?, ?> descriptor) {
+    static void set(RequestContext ctx, CallOptions options, MethodDescriptor<?, ?> descriptor) {
         requireNonNull(ctx, "ctx");
         requireNonNull(options, "options");
         requireNonNull(descriptor, "descriptor");
@@ -43,6 +43,6 @@ public final class GrpcClientCall {
         ctx.setAttr(GRPC_METHOD_DESCRIPTOR, descriptor);
     }
 
-    private GrpcClientCall() {
+    private InternalGrpcClientCall() {
     }
 }
