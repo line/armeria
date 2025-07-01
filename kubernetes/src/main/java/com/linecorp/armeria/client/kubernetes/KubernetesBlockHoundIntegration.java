@@ -32,8 +32,5 @@ public final class KubernetesBlockHoundIntegration implements BlockHoundIntegrat
         // a fully readable ByteBuffer.
         builder.allowBlockingCallsInside(
                 "io.fabric8.kubernetes.client.http.HttpClientReadableByteChannel", "doLockedAndSignal");
-        // This only used in mock server.
-        builder.allowBlockingCallsInside(
-                "io.fabric8.kubernetes.client.server.mock.WatchEventsListener", "onClosed");
     }
 }
