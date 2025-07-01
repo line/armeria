@@ -27,5 +27,7 @@ public final class KubernetesTestBlockHoundIntegration implements BlockHoundInte
     public void applyTo(Builder builder) {
         builder.allowBlockingCallsInside(
                 "io.fabric8.kubernetes.client.server.mock.WatchEventsListener", "onClosed");
+        builder.allowBlockingCallsInside(
+                "io.fabric8.kubernetes.client.server.mock.WatchEventsListener", "onFailure");
     }
 }
