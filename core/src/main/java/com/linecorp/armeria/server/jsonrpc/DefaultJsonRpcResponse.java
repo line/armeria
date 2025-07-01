@@ -17,8 +17,11 @@ package com.linecorp.armeria.server.jsonrpc;
 
 import static java.util.Objects.requireNonNull;
 
+import java.util.Objects;
+
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.base.MoreObjects;
 
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
@@ -50,5 +53,34 @@ final class DefaultJsonRpcResponse extends AbstractJsonRpcResponse {
     @JsonProperty("jsonrpc")
     public String version() {
         return JsonRpcConstants.JSON_RPC_VERSION;
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(id(), result(), error());
+    }
+
+    @Override
+    public boolean equals(@Nullable Object obj) {
+        if (this == obj) {
+            return true;
+        }
+
+        if (!(obj instanceof DefaultJsonRpcResponse)) {
+            return false;
+        }
+
+        final DefaultJsonRpcResponse that = (DefaultJsonRpcResponse) obj;
+        return Objects.equals(id(), that.id()) &&
+               Objects.equals(result(), that.result()) &&
+               Objects.equals(error(), that.error());
+    }
+
+    @Override
+    public String toString() {
+        return MoreObjects.toStringHelper(this)
+                          .add("id", id())
+                          .add("result", result())
+                          .add("error", error()).toString();
     }
 }
