@@ -17,9 +17,10 @@ package com.linecorp.armeria.it.client.retry;
 
 import static com.linecorp.armeria.client.retry.AbstractRetryingClient.ARMERIA_RETRY_COUNT;
 import static com.linecorp.armeria.internal.testing.RequestContextUtils.assertValidRequestContext;
-import static com.linecorp.armeria.internal.testing.RequestContextUtils.assertValidRequestContextWithParentLogVerifier;
 import static com.linecorp.armeria.internal.testing.RequestContextUtils.verifyAllVerifierValid;
+import static com.linecorp.armeria.internal.testing.RequestContextUtils.verifyLastChildHasSameHttpRequest;
 import static com.linecorp.armeria.internal.testing.RequestContextUtils.verifyRequestCause;
+import static com.linecorp.armeria.internal.testing.RequestContextUtils.verifyRequestExistsAndCompleted;
 import static com.linecorp.armeria.internal.testing.RequestContextUtils.verifyResponseCause;
 import static com.linecorp.armeria.internal.testing.RequestContextUtils.verifyStatusCode;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -278,8 +279,6 @@ class RetryingRpcClientTest {
 
         awaitValidRequestContextWithParentLogVerifier(ctx,
                                                       verifyAllVerifierValid(
-                                                              // Not a response exception from the server so
-                                                              // we are not using verifyResponseCause
                                                               verifyStatusCode(HttpStatus.UNKNOWN),
                                                               verifyResponseCause(exception)
                                                       ),
@@ -383,7 +382,6 @@ class RetryingRpcClientTest {
         } else {
             awaitValidRequestContextWithParentLogVerifier(ctx,
                                                           verifyAllVerifierValid(
-                                                                  // Same as above.
                                                                   verifyStatusCode(HttpStatus.UNKNOWN),
                                                                   verifyResponseCause(t)
                                                           ),
@@ -423,7 +421,7 @@ class RetryingRpcClientTest {
         // Sleep 1 second more to check if there was another retry.
         TimeUnit.SECONDS.sleep(1);
         verify(serviceHandler, only()).hello("hello");
-        assertValidRequestContextWithParentLogVerifier(
+        assertValidRequestContext(
                 ctx,
                 // ClientUtil.completeLogIfIncomplete() records exceptions caused by response cancellations.
                 verifyRequestException(CancellationException.class),
@@ -432,13 +430,19 @@ class RetryingRpcClientTest {
 
     private static void awaitValidClientRequestContext(ClientRequestContext ctx,
                                                        RequestLogVerifier... childLogVerifiers) {
-        await().untilAsserted(() -> assertValidRequestContext(ctx, childLogVerifiers));
+        await().untilAsserted(() -> assertValidRequestContext(ctx,
+                                                              verifyAllVerifierValid(
+                                                                      verifyRequestExistsAndCompleted(),
+                                                                      verifyLastChildHasSameHttpRequest()
+                                                              ),
+                                                              childLogVerifiers)
+        );
     }
 
     private static void awaitValidRequestContextWithParentLogVerifier(ClientRequestContext ctx,
                                                                       RequestLogVerifier parentLogVerifier,
                                                                       RequestLogVerifier... childLogVerifiers) {
-        await().untilAsserted(() -> assertValidRequestContextWithParentLogVerifier(
+        await().untilAsserted(() -> assertValidRequestContext(
                 ctx, parentLogVerifier, childLogVerifiers));
     }
 

@@ -19,9 +19,9 @@ package com.linecorp.armeria.client.retry;
 import static com.linecorp.armeria.client.retry.AbstractRetryingClient.ARMERIA_RETRY_COUNT;
 import static com.linecorp.armeria.common.util.Exceptions.peel;
 import static com.linecorp.armeria.internal.testing.RequestContextUtils.assertValidRequestContext;
-import static com.linecorp.armeria.internal.testing.RequestContextUtils.assertValidRequestContextWithParentLogVerifier;
 import static com.linecorp.armeria.internal.testing.RequestContextUtils.verifyAllVerifierValid;
 import static com.linecorp.armeria.internal.testing.RequestContextUtils.verifyExactlyOneVerifierValid;
+import static com.linecorp.armeria.internal.testing.RequestContextUtils.verifyRequestExistsAndCompleted;
 import static com.linecorp.armeria.internal.testing.RequestContextUtils.verifyResponseCause;
 import static com.linecorp.armeria.internal.testing.RequestContextUtils.verifyResponseHeader;
 import static com.linecorp.armeria.internal.testing.RequestContextUtils.verifyResponseTrailer;
@@ -1174,15 +1174,19 @@ class RetryingClientTest {
 
     private static void awaitValidClientRequestContext(ClientRequestContext ctx,
                                                        RequestLogVerifier... childLogVerifiers) {
-        await().untilAsserted(() -> assertValidRequestContext(ctx, childLogVerifiers));
+        await().untilAsserted(() ->
+                                      assertValidRequestContext(
+                                              ctx, verifyRequestExistsAndCompleted(), childLogVerifiers
+                                      )
+        );
     }
 
     public static void awaitValidClientRequestContextWithParentLogVerifier(
             ClientRequestContext ctx,
             RequestLogVerifier parentLogVerifier,
             RequestLogVerifier... childLogVerifiers) {
-        await().untilAsserted(() -> assertValidRequestContextWithParentLogVerifier(ctx, parentLogVerifier,
-                                                                                         childLogVerifiers));
+        await().untilAsserted(() -> assertValidRequestContext(ctx, parentLogVerifier,
+                                                              childLogVerifiers));
     }
 
     private static class RetryIfContentMatch implements RetryRuleWithContent<HttpResponse> {
