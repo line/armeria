@@ -46,7 +46,7 @@ public final class RequestContextUtils {
         // No verification is performed.
     };
 
-    public static RequestLogVerifier verifyAllValid(RequestLogVerifier... childLogVerifiers) {
+    public static RequestLogVerifier verifyAllVerifierValid(RequestLogVerifier... childLogVerifiers) {
         return childLog -> {
             for (RequestLogVerifier childLogVerifier : childLogVerifiers) {
                 childLogVerifier.verifyLog(childLog);
@@ -84,7 +84,7 @@ public final class RequestContextUtils {
     }
 
     public static RequestLogVerifier verifyUnprocessedRequestException() {
-        return verifyAllValid(
+        return verifyAllVerifierValid(
                 verifyStatusCode(HttpStatus.UNKNOWN),
                 verifyResponseCause(UnprocessedRequestException.class)
         );
@@ -154,7 +154,7 @@ public final class RequestContextUtils {
                 ctx,
                 childLogVerifiers.length == 0 ?
                 VERIFY_NOTHING
-                        : verifyAllValid(
+                        : verifyAllVerifierValid(
                         childLog -> {
                             // Default parent log verifier.
                             final HttpRequest req = ctx.request();

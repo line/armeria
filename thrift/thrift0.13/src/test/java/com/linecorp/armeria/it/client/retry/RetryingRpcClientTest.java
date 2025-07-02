@@ -18,7 +18,7 @@ package com.linecorp.armeria.it.client.retry;
 import static com.linecorp.armeria.client.retry.AbstractRetryingClient.ARMERIA_RETRY_COUNT;
 import static com.linecorp.armeria.internal.testing.RequestContextUtils.assertValidRequestContext;
 import static com.linecorp.armeria.internal.testing.RequestContextUtils.assertValidRequestContextWithParentLogVerifier;
-import static com.linecorp.armeria.internal.testing.RequestContextUtils.verifyAllValid;
+import static com.linecorp.armeria.internal.testing.RequestContextUtils.verifyAllVerifierValid;
 import static com.linecorp.armeria.internal.testing.RequestContextUtils.verifyRequestCause;
 import static com.linecorp.armeria.internal.testing.RequestContextUtils.verifyResponseCause;
 import static com.linecorp.armeria.internal.testing.RequestContextUtils.verifyStatusCode;
@@ -277,7 +277,7 @@ class RetryingRpcClientTest {
         }
 
         awaitValidRequestContextWithParentLogVerifier(ctx,
-                                                      verifyAllValid(
+                                                      verifyAllVerifierValid(
                                                               // Not a response exception from the server so
                                                               // we are not using verifyResponseCause
                                                               verifyStatusCode(HttpStatus.UNKNOWN),
@@ -372,7 +372,7 @@ class RetryingRpcClientTest {
             final Throwable cause = t.getCause();
             assertThat(cause).isInstanceOf(IllegalStateException.class);
             t = cause;
-            awaitValidClientRequestContext(ctx, verifyAllValid(
+            awaitValidClientRequestContext(ctx, verifyAllVerifierValid(
                     // We cannot be sure that we set
                     // the request cause so we are not checking
                     // with verifyRequestException/
@@ -382,7 +382,7 @@ class RetryingRpcClientTest {
             ));
         } else {
             awaitValidRequestContextWithParentLogVerifier(ctx,
-                                                          verifyAllValid(
+                                                          verifyAllVerifierValid(
                                                                   // Same as above.
                                                                   verifyStatusCode(HttpStatus.UNKNOWN),
                                                                   verifyResponseCause(t)
@@ -443,7 +443,7 @@ class RetryingRpcClientTest {
     }
 
     private static RequestLogVerifier verifyRequestException(Class<?> causeClass) {
-        return verifyAllValid(
+        return verifyAllVerifierValid(
                 verifyStatusCode(HttpStatus.UNKNOWN),
                 verifyRequestCause(causeClass),
                 verifyResponseCause(causeClass)
@@ -455,7 +455,7 @@ class RetryingRpcClientTest {
     }
 
     private static RequestLogVerifier verifyResponseException(int type) {
-        return verifyAllValid(
+        return verifyAllVerifierValid(
                 verifyStatusCode(HttpStatus.OK),
                 verifyResponseCause(TApplicationException.class),
                 childLog -> {
@@ -468,7 +468,7 @@ class RetryingRpcClientTest {
     }
 
     private static RequestLogVerifier verifyResponse(@Nullable String expectedResponse) {
-        return verifyAllValid(
+        return verifyAllVerifierValid(
                 verifyStatusCode(HttpStatus.OK),
                 childLog -> {
                     assertThat(childLog.responseContent()).isExactlyInstanceOf(CompletableRpcResponse.class);

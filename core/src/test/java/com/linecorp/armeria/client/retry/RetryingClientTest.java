@@ -20,7 +20,7 @@ import static com.linecorp.armeria.client.retry.AbstractRetryingClient.ARMERIA_R
 import static com.linecorp.armeria.common.util.Exceptions.peel;
 import static com.linecorp.armeria.internal.testing.RequestContextUtils.assertValidRequestContext;
 import static com.linecorp.armeria.internal.testing.RequestContextUtils.assertValidRequestContextWithParentLogVerifier;
-import static com.linecorp.armeria.internal.testing.RequestContextUtils.verifyAllValid;
+import static com.linecorp.armeria.internal.testing.RequestContextUtils.verifyAllVerifierValid;
 import static com.linecorp.armeria.internal.testing.RequestContextUtils.verifyExactlyOneVerifierValid;
 import static com.linecorp.armeria.internal.testing.RequestContextUtils.verifyResponseCause;
 import static com.linecorp.armeria.internal.testing.RequestContextUtils.verifyResponseHeader;
@@ -404,11 +404,11 @@ class RetryingClientTest {
         }
         assertThat(res.contentUtf8()).isEqualTo("Succeeded after retry");
         awaitValidClientRequestContext(ctx,
-                                       verifyAllValid(
+                                       verifyAllVerifierValid(
                                                verifyStatusCode(HttpStatus.OK),
                                                verifyResponseTrailer("grpc-status", "3")
                                        ),
-                                       verifyAllValid(
+                                       verifyAllVerifierValid(
                                                verifyStatusCode(HttpStatus.OK),
                                                verifyResponseTrailer("grpc-status", "0")
                                        )
@@ -469,7 +469,7 @@ class RetryingClientTest {
         assertThat(sw.elapsed(TimeUnit.MILLISECONDS)).isGreaterThanOrEqualTo(
                 (long) (TimeUnit.SECONDS.toMillis(1) * 0.9));
         awaitValidClientRequestContext(ctx,
-                                       verifyAllValid(
+                                       verifyAllVerifierValid(
                                                verifyStatusCode(HttpStatus.SERVICE_UNAVAILABLE),
                                                verifyResponseHeader(
                                                        HttpHeaderNames.RETRY_AFTER.toString(),
@@ -499,9 +499,9 @@ class RetryingClientTest {
         // Since ZonedDateTime doesn't express exact time,
         // just check out whether it is retried after delayed some time.
         assertThat(sw.elapsed(TimeUnit.MILLISECONDS)).isGreaterThanOrEqualTo(1000);
-        awaitValidClientRequestContext(ctx, verifyAllValid(verifyStatusCode(
+        awaitValidClientRequestContext(ctx, verifyAllVerifierValid(verifyStatusCode(
                                                                    HttpStatus.SERVICE_UNAVAILABLE),
-                                                           verifyResponseHeader(
+                                                                   verifyResponseHeader(
                                                                    HttpHeaderNames.RETRY_AFTER.toString(),
                                                                    expectedRetryAfterHeader)),
                                        verifyStatusCode(HttpStatus.OK));
@@ -560,9 +560,9 @@ class RetryingClientTest {
                 .get(HttpHeaderNames.RETRY_AFTER.toString());
         assertThat(expectedRetryAfterHeader).isNotNull();
 
-        awaitValidClientRequestContext(ctx, verifyAllValid(verifyStatusCode(
+        awaitValidClientRequestContext(ctx, verifyAllVerifierValid(verifyStatusCode(
                                                                    HttpStatus.SERVICE_UNAVAILABLE),
-                                                           verifyResponseHeader(
+                                                                   verifyResponseHeader(
                                                                    HttpHeaderNames.RETRY_AFTER.toString(),
                                                                    expectedRetryAfterHeader)));
     }
@@ -587,7 +587,7 @@ class RetryingClientTest {
         }
 
         assertThat(res.contentUtf8()).isEqualTo("Succeeded after retry");
-        awaitValidClientRequestContext(ctx, verifyAllValid(
+        awaitValidClientRequestContext(ctx, verifyAllVerifierValid(
                 verifyStatusCode(HttpStatus.UNKNOWN),
                 verifyResponseCause(ResponseTimeoutException.class)
         ), verifyStatusCode(HttpStatus.OK));
@@ -619,7 +619,7 @@ class RetryingClientTest {
         assertThat(res.contentUtf8()).isEqualTo("Succeeded after retry");
         // Make sure that all customized RetryRuleWithContents are called.
         assertThat(queue).containsExactly(1, 2, 3);
-        awaitValidClientRequestContext(ctx, verifyAllValid(
+        awaitValidClientRequestContext(ctx, verifyAllVerifierValid(
                                                verifyStatusCode(HttpStatus.UNKNOWN),
                                                verifyResponseCause(ResponseTimeoutException.class)
                                        ),
@@ -877,7 +877,7 @@ class RetryingClientTest {
         } else {
             awaitValidClientRequestContext(ctx, verifyExactlyOneVerifierValid(
                     verifyStatusCode(HttpStatus.SERVICE_UNAVAILABLE),
-                    verifyAllValid(
+                    verifyAllVerifierValid(
                             verifyStatusCode(HttpStatus.UNKNOWN),
                             verifyResponseCause(IllegalStateException.class)
                     )
@@ -969,11 +969,11 @@ class RetryingClientTest {
         TimeUnit.SECONDS.sleep(1L); // Sleep to check if there's a retry.
         assertThat(subscriberCancelServiceCallCounter.get()).isEqualTo(1);
         awaitValidClientRequestContext(ctx, verifyExactlyOneVerifierValid(
-                verifyAllValid(
+                verifyAllVerifierValid(
                         verifyStatusCode(HttpStatus.SERVICE_UNAVAILABLE),
                         verifyResponseCause(AbortedStreamException.class)
                 ),
-                verifyAllValid(
+                verifyAllVerifierValid(
                         verifyStatusCode(HttpStatus.UNKNOWN),
                         verifyResponseCause(CancelledSubscriptionException.class)
                 )
