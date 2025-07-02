@@ -21,7 +21,7 @@ import static com.linecorp.armeria.common.util.Exceptions.peel;
 import static com.linecorp.armeria.internal.testing.RequestContextUtils.assertValidRequestContext;
 import static com.linecorp.armeria.internal.testing.RequestContextUtils.assertValidRequestContextWithParentLogVerifier;
 import static com.linecorp.armeria.internal.testing.RequestContextUtils.verifyAllValid;
-import static com.linecorp.armeria.internal.testing.RequestContextUtils.verifyExactlyOneValid;
+import static com.linecorp.armeria.internal.testing.RequestContextUtils.verifyExactlyOneVerifierValid;
 import static com.linecorp.armeria.internal.testing.RequestContextUtils.verifyResponseCause;
 import static com.linecorp.armeria.internal.testing.RequestContextUtils.verifyResponseHeader;
 import static com.linecorp.armeria.internal.testing.RequestContextUtils.verifyResponseTrailer;
@@ -875,7 +875,7 @@ class RetryingClientTest {
             // not able to schedule second retry.
             awaitValidClientRequestContext(ctx, verifyUnprocessedRequestException());
         } else {
-            awaitValidClientRequestContext(ctx, verifyExactlyOneValid(
+            awaitValidClientRequestContext(ctx, verifyExactlyOneVerifierValid(
                     verifyStatusCode(HttpStatus.SERVICE_UNAVAILABLE),
                     verifyAllValid(
                             verifyStatusCode(HttpStatus.UNKNOWN),
@@ -922,7 +922,7 @@ class RetryingClientTest {
             } else {
                 if (requestCause != null) {
                     awaitValidClientRequestContext(ctx,
-                                                   verifyExactlyOneValid(
+                                                   verifyExactlyOneVerifierValid(
                                                            verifyResponseCause(abortCause),
                                                            verifyResponseCause(AbortedStreamException.class)
                                                    )
@@ -968,7 +968,7 @@ class RetryingClientTest {
 
         TimeUnit.SECONDS.sleep(1L); // Sleep to check if there's a retry.
         assertThat(subscriberCancelServiceCallCounter.get()).isEqualTo(1);
-        awaitValidClientRequestContext(ctx, verifyExactlyOneValid(
+        awaitValidClientRequestContext(ctx, verifyExactlyOneVerifierValid(
                 verifyAllValid(
                         verifyStatusCode(HttpStatus.SERVICE_UNAVAILABLE),
                         verifyResponseCause(AbortedStreamException.class)
@@ -1065,7 +1065,7 @@ class RetryingClientTest {
                     .hasCauseReference(exception);
             ctx = captor.get();
         }
-        awaitValidClientRequestContext(ctx, verifyExactlyOneValid(
+        awaitValidClientRequestContext(ctx, verifyExactlyOneVerifierValid(
                 verifyResponseCause(AbortedStreamException.class),
                 verifyResponseCause(exception)
         ));

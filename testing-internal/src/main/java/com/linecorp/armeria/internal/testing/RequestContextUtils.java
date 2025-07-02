@@ -54,7 +54,7 @@ public final class RequestContextUtils {
         };
     }
 
-    public static RequestLogVerifier verifyExactlyOneValid(RequestLogVerifier... childLogVerifiers) {
+    public static RequestLogVerifier verifyExactlyOneVerifierValid(RequestLogVerifier... childLogVerifiers) {
         return childLog -> {
             final Throwable[] verifierCauses = new Throwable[childLogVerifiers.length];
 
