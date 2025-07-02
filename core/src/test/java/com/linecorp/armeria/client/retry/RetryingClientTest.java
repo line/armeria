@@ -1078,8 +1078,7 @@ class RetryingClientTest {
             throw exception;
         };
 
-        final WebClient client = client(rule,
-                                        10000, 0, 100);
+        final WebClient client = client(rule, 10000, 0, 100);
         try (ClientRequestContextCaptor captor = Clients.newContextCaptor()) {
             assertThatThrownBy(client.get("/").aggregate()::join)
                     .isInstanceOf(CompletionException.class)
