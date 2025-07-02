@@ -43,32 +43,32 @@ public final class RequestContextUtils {
         void verifyLog(RequestLog requestLog) throws Exception;
     }
 
-    public static final RequestLogVerifier VERIFY_NOTHING = childLog -> {
+    public static final RequestLogVerifier VERIFY_NOTHING = requestLog -> {
         // No verification is performed.
     };
 
-    public static RequestLogVerifier verifyAllVerifierValid(RequestLogVerifier... childLogVerifiers) {
-        return childLog -> {
-            for (RequestLogVerifier childLogVerifier : childLogVerifiers) {
-                childLogVerifier.verifyLog(childLog);
+    public static RequestLogVerifier verifyAllVerifierValid(RequestLogVerifier... requestLogVerifiers) {
+        return requestLog -> {
+            for (RequestLogVerifier requestLogVerifier : requestLogVerifiers) {
+                requestLogVerifier.verifyLog(requestLog);
             }
         };
     }
 
-    public static RequestLogVerifier verifyExactlyOneVerifierValid(RequestLogVerifier... childLogVerifiers) {
-        return childLog -> {
-            final Throwable[] verifierCauses = new Throwable[childLogVerifiers.length];
+    public static RequestLogVerifier verifyExactlyOneVerifierValid(RequestLogVerifier... requestLogVerifiers) {
+        return requestLog -> {
+            final Throwable[] verifierCauses = new Throwable[requestLogVerifiers.length];
 
-            for (int i = 0; i < childLogVerifiers.length; i++) {
+            for (int i = 0; i < requestLogVerifiers.length; i++) {
                 final int index = i;
-                verifierCauses[i] = catchThrowable(() -> childLogVerifiers[index].verifyLog(childLog));
+                verifierCauses[i] = catchThrowable(() -> requestLogVerifiers[index].verifyLog(requestLog));
             }
 
             final List<Throwable> nonNullVerifierCauses = Arrays.stream(verifierCauses)
                                                                 .filter(Objects::nonNull)
                                                                 .collect(Collectors.toList());
 
-            if (nonNullVerifierCauses.size() != childLogVerifiers.length - 1) {
+            if (nonNullVerifierCauses.size() != requestLogVerifiers.length - 1) {
                 final Throwable allCauses = nonNullVerifierCauses.get(0);
 
                 for (int i = 1; i < nonNullVerifierCauses.size(); i++) {
@@ -81,7 +81,7 @@ public final class RequestContextUtils {
     }
 
     public static RequestLogVerifier verifyStatusCode(HttpStatus expectedStatus) {
-        return childLog -> assertThat(childLog.responseHeaders().status()).isEqualTo(expectedStatus);
+        return requestLog -> assertThat(requestLog.responseHeaders().status()).isEqualTo(expectedStatus);
     }
 
     public static RequestLogVerifier verifyUnprocessedRequestException() {
@@ -92,8 +92,8 @@ public final class RequestContextUtils {
     }
 
     public static RequestLogVerifier verifyRequestCause(Class<?> expectedCauseClass) {
-        return childLog -> {
-            assertThat(childLog.requestCause()).isExactlyInstanceOf(expectedCauseClass);
+        return requestLog -> {
+            assertThat(requestLog.requestCause()).isExactlyInstanceOf(expectedCauseClass);
         };
     }
 
@@ -130,36 +130,36 @@ public final class RequestContextUtils {
     }
 
     public static RequestLogVerifier verifyResponseCause(Class<?> expectedCauseClass) {
-        return childLog -> {
-            assertThat(childLog.responseCause()).isExactlyInstanceOf(expectedCauseClass);
+        return requestLog -> {
+            assertThat(requestLog.responseCause()).isExactlyInstanceOf(expectedCauseClass);
         };
     }
 
     public static RequestLogVerifier verifyResponseCause(Throwable expectedCause) {
-        return childLog -> {
-            assertThat(childLog.responseCause()).isSameAs(expectedCause);
+        return requestLog -> {
+            assertThat(requestLog.responseCause()).isSameAs(expectedCause);
         };
     }
 
     public static RequestLogVerifier verifyResponseHeader(String headerName,
                                                           String expectedHeaderValue) {
-        return childLog -> {
-            final ResponseHeaders headers = childLog.responseHeaders();
+        return requestLog -> {
+            final ResponseHeaders headers = requestLog.responseHeaders();
             assertThat(headers.get(headerName)).isEqualTo(expectedHeaderValue);
         };
     }
 
     public static RequestLogVerifier verifyResponseTrailer(String headerName,
                                                            String expectedHeaderValue) {
-        return childLog -> {
-            assertThat(childLog.responseTrailers().get(headerName)).isEqualTo(expectedHeaderValue);
+        return requestLog -> {
+            assertThat(requestLog.responseTrailers().get(headerName)).isEqualTo(expectedHeaderValue);
         };
     }
 
     public static RequestLogVerifier verifyResponseContent(String expectedResponseContent) {
-        return childLog -> {
-            assertThat(childLog.responseContent()).isExactlyInstanceOf(String.class);
-            assertThat(childLog.responseContent()).isEqualTo(expectedResponseContent);
+        return requestLog -> {
+            assertThat(requestLog.responseContent()).isExactlyInstanceOf(String.class);
+            assertThat(requestLog.responseContent()).isEqualTo(expectedResponseContent);
         };
     }
 
@@ -167,10 +167,10 @@ public final class RequestContextUtils {
             RequestContext ctx,
             RequestLogVerifier parentLogVerifier,
             RequestLogVerifier... childLogVerifiers) {
-        assertValidRequestContextWithVerifier(ctx, parentLogVerifier, childLogVerifiers);
+        assertValidRequestContext0(ctx, parentLogVerifier, childLogVerifiers);
     }
 
-    private static void assertValidRequestContextWithVerifier(
+    private static void assertValidRequestContext0(
             RequestContext ctx,
             RequestLogVerifier parentLogVerifier,
             RequestLogVerifier[] childLogVerifiers) {
