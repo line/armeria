@@ -39,7 +39,7 @@ public final class RequestContextUtils {
 
     @FunctionalInterface
     public interface RequestLogVerifier {
-        void verifyChildLog(RequestLog childLog) throws Exception;
+        void verifyLog(RequestLog requestLog) throws Exception;
     }
 
     public static final RequestLogVerifier VERIFY_NOTHING = childLog -> {
@@ -49,7 +49,7 @@ public final class RequestContextUtils {
     public static RequestLogVerifier verifyAllValid(RequestLogVerifier... childLogVerifiers) {
         return childLog -> {
             for (RequestLogVerifier childLogVerifier : childLogVerifiers) {
-                childLogVerifier.verifyChildLog(childLog);
+                childLogVerifier.verifyLog(childLog);
             }
         };
     }
@@ -60,7 +60,7 @@ public final class RequestContextUtils {
 
             for (int i = 0; i < childLogVerifiers.length; i++) {
                 final int index = i;
-                verifierCauses[i] = catchThrowable(() -> childLogVerifiers[index].verifyChildLog(childLog));
+                verifierCauses[i] = catchThrowable(() -> childLogVerifiers[index].verifyLog(childLog));
             }
 
             final List<Throwable> nonNullVerifierCauses = Arrays.stream(verifierCauses)
@@ -200,7 +200,7 @@ public final class RequestContextUtils {
             }
 
             try {
-                childLogVerifiers[childLogIndex].verifyChildLog(childLog);
+                childLogVerifiers[childLogIndex].verifyLog(childLog);
             } catch (Throwable e) {
                 fail("Failed to verify child log (" + (childLogIndex + 1) +
                      '/' + expectedNumRequests + ')', e);
@@ -208,7 +208,7 @@ public final class RequestContextUtils {
         }
 
         try {
-            parentLogVerifier.verifyChildLog(ctx.log().partial());
+            parentLogVerifier.verifyLog(ctx.log().partial());
         } catch (Throwable e) {
             fail("Failed to verify parent log", e);
         }
