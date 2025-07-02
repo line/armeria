@@ -185,10 +185,6 @@ public final class RequestContextUtils {
         assertThat(ctx.log().isComplete()).isTrue();
         assertThat(ctx.log().children()).hasSize(expectedNumRequests);
 
-        if (expectedNumRequests == 0) {
-            return;
-        }
-
         for (int childLogIndex = 0; childLogIndex < expectedNumRequests; childLogIndex++) {
             final RequestLog childLog = ctx.log().children().get(childLogIndex).whenComplete().join();
             assertThat(childLog).isNotNull();
