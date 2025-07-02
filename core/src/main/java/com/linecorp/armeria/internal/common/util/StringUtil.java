@@ -67,9 +67,6 @@ public final class StringUtil {
 
     @Nullable
     public static Boolean toBooleanOrNull(String s) {
-        if (s == null) {
-            return null;
-        }
         final String normalized = s.trim().toLowerCase(Locale.ROOT);
         return stringToBoolean.get(normalized);
     }
