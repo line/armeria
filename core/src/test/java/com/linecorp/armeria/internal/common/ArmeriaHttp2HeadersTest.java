@@ -112,6 +112,18 @@ class ArmeriaHttp2HeadersTest {
         assertThat(headers.getBoolean("capitalizedCase")).isTrue();
         assertThat(headers.containsBoolean("capitalizedCase", true)).isTrue();
         assertThat(headers.containsBoolean("capitalizedCase", false)).isTrue();
+
+        headers.add("mixedCase", "tRUE");
+        headers.add("mixedCase", "FaLsE");
+        assertThat(headers.getBoolean("mixedCase")).isTrue();
+        assertThat(headers.containsBoolean("mixedCase", true)).isTrue();
+        assertThat(headers.containsBoolean("mixedCase", false)).isTrue();
+
+        headers.add("withSpaces", " true ");
+        headers.add("withSpaces", "  FALSE  ");
+        assertThat(headers.getBoolean("withSpaces")).isTrue();
+        assertThat(headers.containsBoolean("withSpaces", true)).isTrue();
+        assertThat(headers.containsBoolean("withSpaces", false)).isTrue();
     }
 
     // Tests forked from io.netty.handler.codec.DefaultHeadersTest
