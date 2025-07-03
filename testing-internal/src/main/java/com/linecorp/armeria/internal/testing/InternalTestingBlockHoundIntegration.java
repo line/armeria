@@ -52,6 +52,8 @@ public final class InternalTestingBlockHoundIntegration implements BlockHoundInt
 
     @Override
     public void applyTo(Builder builder) {
+        builder.nonBlockingThreadPredicate(predicate -> predicate.and(
+                thread -> !thread.getName().startsWith("vert.x-internal-blocking")));
 
         // tests are allowed to block event loops
         builder.allowBlockingCallsInside("com.linecorp.armeria.internal.testing.BlockingUtils",
