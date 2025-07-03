@@ -27,6 +27,7 @@ import java.util.stream.StreamSupport;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.annotations.VisibleForTesting;
 
 import com.linecorp.armeria.common.AggregatedHttpRequest;
 import com.linecorp.armeria.common.HttpRequest;
@@ -75,7 +76,7 @@ public final class JsonRpcService implements HttpService {
                .thenApply(JsonRpcService::parseRequestContentAsJson)
                .thenApply(json -> dispatchRequest(ctx, json))
                .exceptionally(e -> {
-                    if (e.getCause() instanceof JsonProcessingException) {
+                    if (e.getCause() instanceof IllegalArgumentException) {
                         return HttpResponse.ofJson(HttpStatus.BAD_REQUEST, "Invalid JSON format");
                     }
                     return HttpResponse.ofFailure(e);
@@ -83,7 +84,8 @@ public final class JsonRpcService implements HttpService {
             );
     }
 
-    private static JsonNode parseRequestContentAsJson(AggregatedHttpRequest request) {
+    @VisibleForTesting
+    static JsonNode parseRequestContentAsJson(AggregatedHttpRequest request) {
         try {
             return mapper.readTree(request.contentUtf8());
         } catch (JsonProcessingException e) {
@@ -91,7 +93,8 @@ public final class JsonRpcService implements HttpService {
         }
     }
 
-    private HttpResponse dispatchRequest(ServiceRequestContext ctx, JsonNode rawRequest) {
+    @VisibleForTesting
+    HttpResponse dispatchRequest(ServiceRequestContext ctx, JsonNode rawRequest) {
         if (rawRequest.isObject()) {
             return handleUnaryRequest(ctx, rawRequest);
         } else if (rawRequest.isArray()) {
@@ -104,8 +107,8 @@ public final class JsonRpcService implements HttpService {
 
     private HttpResponse handleUnaryRequest(ServiceRequestContext ctx, JsonNode unary) {
         return HttpResponse.of(
-            executeRpcCall(ctx, unary)
-                .thenApply(HttpResponse::ofJson));
+                executeRpcCall(ctx, unary)
+                    .thenApply(x -> Objects.nonNull(x) ? HttpResponse.ofJson(x) : HttpResponse.of("")));
     }
 
     private HttpResponse handleBatchRequests(ServiceRequestContext ctx, JsonNode batch) {
@@ -118,8 +121,8 @@ public final class JsonRpcService implements HttpService {
             return ServerSentEvents.fromPublisher(
                 Flux.fromIterable(requests)
                     .flatMap(Mono::fromFuture)
-                    .map(JsonRpcService::toServerSentEvent)
-                    .filter(Objects::nonNull));
+                    .filter(Objects::nonNull)
+                    .map(JsonRpcService::toServerSentEvent));
         } else {
             return HttpResponse.of(
                 CompletableFuture.allOf(requests.stream().toArray(CompletableFuture[]::new))
@@ -131,13 +134,14 @@ public final class JsonRpcService implements HttpService {
         }
     }
 
-    private CompletableFuture<DefaultJsonRpcResponse> executeRpcCall(ServiceRequestContext ctx, JsonNode node) {
+    @VisibleForTesting
+    CompletableFuture<DefaultJsonRpcResponse> executeRpcCall(ServiceRequestContext ctx, JsonNode node) {
         final JsonRpcRequest request;
         try {
             request = parseNodeAsRpcRequest(node);
         } catch (IllegalArgumentException e) {
             return UnmodifiableFuture.completedFuture(
-                    new DefaultJsonRpcResponse(null, JsonRpcError.PARSE_ERROR));
+                    new DefaultJsonRpcResponse(null, JsonRpcError.PARSE_ERROR.withData(e.getMessage())));
         }
 
         return invokeMethod(ctx, request)
@@ -147,7 +151,8 @@ public final class JsonRpcService implements HttpService {
                 });
     }
 
-    private static JsonRpcRequest parseNodeAsRpcRequest(JsonNode node) {
+    @VisibleForTesting
+    static JsonRpcRequest parseNodeAsRpcRequest(JsonNode node) {
         try {
             return JsonRpcRequest.of(node);
         } catch (JsonProcessingException e) {
@@ -155,7 +160,8 @@ public final class JsonRpcService implements HttpService {
         }
     }
 
-    private CompletableFuture<DefaultJsonRpcResponse> invokeMethod(ServiceRequestContext ctx,
+    @VisibleForTesting
+    CompletableFuture<DefaultJsonRpcResponse> invokeMethod(ServiceRequestContext ctx,
                                                                    JsonRpcRequest req) {
         final JsonRpcHandler handler = methodHandlers.get(req.method());
 
@@ -175,7 +181,8 @@ public final class JsonRpcService implements HttpService {
                 .thenApply(res -> buildFinalResponse(req, res));
     }
 
-    private DefaultJsonRpcResponse buildFinalResponse(JsonRpcRequest request, JsonRpcResponse response) {
+    @VisibleForTesting
+    DefaultJsonRpcResponse buildFinalResponse(JsonRpcRequest request, JsonRpcResponse response) {
         if (response instanceof DefaultJsonRpcResponse) {
             return (DefaultJsonRpcResponse) response;
         }
@@ -186,10 +193,12 @@ public final class JsonRpcService implements HttpService {
         if (response.error() != null && response.result() == null) {
             return new DefaultJsonRpcResponse(request.id(), response.error());
         }
-        return new DefaultJsonRpcResponse(request.id(), JsonRpcError.INTERNAL_ERROR);
+        return new DefaultJsonRpcResponse(request.id(),
+            JsonRpcError.INTERNAL_ERROR.withData("Non-error responses can't have nulls in the Id field."));
     }
 
-    private static ServerSentEvent toServerSentEvent(DefaultJsonRpcResponse response) {
+    @VisibleForTesting
+    static ServerSentEvent toServerSentEvent(DefaultJsonRpcResponse response) {
         try {
             return ServerSentEvent.ofData(mapper.writeValueAsString(response));
         } catch (Exception e) {

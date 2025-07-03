@@ -17,9 +17,12 @@ package com.linecorp.armeria.common.jsonrpc;
 
 import static java.util.Objects.requireNonNull;
 
+import java.util.Objects;
+
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.base.MoreObjects;
 
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
@@ -120,5 +123,34 @@ public final class JsonRpcError {
     @Nullable
     public Object data() {
         return data;
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(code, message, data);
+    }
+
+    @Override
+    public boolean equals(@Nullable Object obj) {
+        if (this == obj) {
+            return true;
+        }
+
+        if (!(obj instanceof JsonRpcError)) {
+            return false;
+        }
+
+        final JsonRpcError that = (JsonRpcError) obj;
+        return Objects.equals(code, that.code()) &&
+               Objects.equals(message, that.message()) &&
+               Objects.equals(data, that.data());
+    }
+
+    @Override
+    public String toString() {
+        return MoreObjects.toStringHelper(this)
+                          .add("code", code())
+                          .add("message", message())
+                          .add("data", data()).toString();
     }
 }
