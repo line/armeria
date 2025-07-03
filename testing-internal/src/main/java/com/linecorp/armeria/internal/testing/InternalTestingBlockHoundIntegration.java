@@ -80,8 +80,8 @@ public final class InternalTestingBlockHoundIntegration implements BlockHoundInt
                 "io.fabric8.kubernetes.client.server.mock.WatchEventsListener", "onClosed");
         builder.allowBlockingCallsInside(
                 "io.fabric8.kubernetes.client.server.mock.WatchEventsListener", "onFailure");
-        builder.allowBlockingCallsInside(
-                "io.fabric8.mockwebserver.internal.WebSocketSession", "onOpen");
+        builder.allowBlockingCallsInside("io.fabric8.mockwebserver.internal.WebSocketSession", "onOpen");
+        builder.allowBlockingCallsInside("io.vertx.core.spi.tls.DefaultSslContextFactory", "createContext");
 
         // prints the exception which makes it easier to debug issues
         builder.blockingMethodCallback(this::writeBlockingMethod);
