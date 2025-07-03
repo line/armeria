@@ -422,11 +422,16 @@ public final class KubernetesEndpointGroup extends DynamicEndpointGroup {
 
         final Service service = this.service;
         assert service != null;
+
+        // Fabric8 Kubernetes client uses a list API to establish a watch connection, such as
+        // "/api/v1/namespaces/<namespace>/services?fieldSelector=metadata.name=<service-name>&watch=true".
+        // Therefore, the resource version of a service cannot be used. Instead, it fetches the latest version
+        // and compares it with the cached version in `watcher.eventReceived()` to decide whether an update is
+        // needed.
         if (namespace == null) {
-            return client.services().withName(serviceName).withResourceVersion(resourceVersion).watch(watcher);
+            return client.services().withName(serviceName).watch(watcher);
         } else {
-            return client.services().inNamespace(namespace).withName(serviceName)
-                         .withResourceVersion(resourceVersion).watch(watcher);
+            return client.services().inNamespace(namespace).withName(serviceName).watch(watcher);
         }
     }
 
