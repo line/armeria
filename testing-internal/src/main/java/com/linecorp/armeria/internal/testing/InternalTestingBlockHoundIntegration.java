@@ -76,6 +76,12 @@ public final class InternalTestingBlockHoundIntegration implements BlockHoundInt
         builder.allowBlockingCallsInside("com.linecorp.armeria.client.ClientFactory", "ofDefault");
         builder.allowBlockingCallsInside("io.envoyproxy.controlplane.cache.SimpleCache", "createWatch");
         builder.allowBlockingCallsInside("io.grpc.netty.shaded.io.netty.util.Version", "identify");
+        builder.allowBlockingCallsInside(
+                "io.fabric8.kubernetes.client.server.mock.WatchEventsListener", "onClosed");
+        builder.allowBlockingCallsInside(
+                "io.fabric8.kubernetes.client.server.mock.WatchEventsListener", "onFailure");
+        builder.allowBlockingCallsInside(
+                "io.fabric8.mockwebserver.internal.WebSocketSession", "onOpen");
 
         // prints the exception which makes it easier to debug issues
         builder.blockingMethodCallback(this::writeBlockingMethod);
