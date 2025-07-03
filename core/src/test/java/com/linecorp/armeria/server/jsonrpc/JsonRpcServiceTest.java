@@ -442,7 +442,7 @@ class JsonRpcServiceTest {
     void serve_whenBatchRequest_thenHandlesSuccessfully() throws JsonMappingException, JsonProcessingException {
         final List<JsonRpcRequest> jsonRpcRequests = Arrays.asList(
                 JsonRpcRequest.of(1, "echo", "hello"),
-                JsonRpcRequest.of(2, "echo", Arrays.asList(1, 2)),
+                JsonRpcRequest.of(2, "echo", Arrays.asList(1, 2, null)),
                 JsonRpcRequest.of(null, "echo", "hello"));
 
         final AggregatedHttpResponse aggregatedHttpResponse = client().execute(
@@ -457,7 +457,7 @@ class JsonRpcServiceTest {
         final JsonNode actualNode = objectMapper.readTree(aggregatedHttpResponse.contentUtf8());
         final List<DefaultJsonRpcResponse> expectedResponses = Arrays.asList(
                 new DefaultJsonRpcResponse(1, ImmutableList.of("hello")),
-                new DefaultJsonRpcResponse(2, Arrays.asList(1, 2))
+                new DefaultJsonRpcResponse(2, Arrays.asList(1, 2, null))
                 // Notification
         );
         final JsonNode expectedNode = objectMapper.valueToTree(expectedResponses);

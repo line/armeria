@@ -18,7 +18,9 @@ package com.linecorp.armeria.common.jsonrpc;
 import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
 
-import java.util.Arrays;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
@@ -91,11 +93,30 @@ final class DefaultJsonRpcRequest implements JsonRpcRequest {
             return (List<Object>) params;
         }
 
-        return ImmutableList.copyOf(params);
+        // Note we do not use ImmutableList.copyOf() here,
+        // because it does not allow a null element and we should allow a null argument.
+        final List<Object> copy;
+        if (params instanceof Collection) {
+            copy = new ArrayList<>(((Collection<?>) params).size());
+        } else {
+            copy = new ArrayList<>(8);
+        }
+
+        for (Object p : params) {
+            copy.add(p);
+        }
+
+        return Collections.unmodifiableList(copy);
     }
 
     private static List<Object> copyParams(Object... params) {
-        return copyParams(() -> Arrays.stream(params).iterator());
+        if (params.length == 0) {
+            return ImmutableList.of();
+        }
+
+        final List<Object> copy = new ArrayList<>(params.length);
+        Collections.addAll(copy, params);
+        return Collections.unmodifiableList(copy);
     }
 
     @Override
