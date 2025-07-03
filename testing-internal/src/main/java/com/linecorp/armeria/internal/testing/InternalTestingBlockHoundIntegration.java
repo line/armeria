@@ -52,6 +52,8 @@ public final class InternalTestingBlockHoundIntegration implements BlockHoundInt
 
     @Override
     public void applyTo(Builder builder) {
+        builder.nonBlockingThreadPredicate(predicate -> predicate.and(
+                thread -> !thread.getName().startsWith("vert.x-internal-blocking")));
 
         // tests are allowed to block event loops
         builder.allowBlockingCallsInside("com.linecorp.armeria.internal.testing.BlockingUtils",
@@ -76,6 +78,12 @@ public final class InternalTestingBlockHoundIntegration implements BlockHoundInt
         builder.allowBlockingCallsInside("com.linecorp.armeria.client.ClientFactory", "ofDefault");
         builder.allowBlockingCallsInside("io.envoyproxy.controlplane.cache.SimpleCache", "createWatch");
         builder.allowBlockingCallsInside("io.grpc.netty.shaded.io.netty.util.Version", "identify");
+        builder.allowBlockingCallsInside(
+                "io.fabric8.kubernetes.client.server.mock.WatchEventsListener", "onClosed");
+        builder.allowBlockingCallsInside(
+                "io.fabric8.kubernetes.client.server.mock.WatchEventsListener", "onFailure");
+        builder.allowBlockingCallsInside("io.fabric8.mockwebserver.internal.WebSocketSession", "onOpen");
+        builder.allowBlockingCallsInside("io.vertx.core.spi.tls.DefaultSslContextFactory", "createContext");
 
         // prints the exception which makes it easier to debug issues
         builder.blockingMethodCallback(this::writeBlockingMethod);
