@@ -111,6 +111,7 @@ final class DefaultServerConfig implements ServerConfig {
     private final boolean enableDateHeader;
     private final ServerErrorHandler errorHandler;
     private final Http1HeaderNaming http1HeaderNaming;
+    private final List<String> additionalAllowedHttpMethods;
     private final DependencyInjector dependencyInjector;
     private final Function<String, String> absoluteUriTransformer;
     private final long unloggedExceptionsReportIntervalMillis;
@@ -148,6 +149,7 @@ final class DefaultServerConfig implements ServerConfig {
             ServerErrorHandler errorHandler,
             @Nullable Mapping<String, SslContext> sslContexts,
             Http1HeaderNaming http1HeaderNaming,
+            List<String> additionalAllowedHttpMethods,
             DependencyInjector dependencyInjector,
             Function<? super String, String> absoluteUriTransformer,
             long unloggedExceptionsReportIntervalMillis,
@@ -259,6 +261,8 @@ final class DefaultServerConfig implements ServerConfig {
         this.errorHandler = requireNonNull(errorHandler, "errorHandler");
         this.sslContexts = sslContexts;
         this.http1HeaderNaming = requireNonNull(http1HeaderNaming, "http1HeaderNaming");
+        this.additionalAllowedHttpMethods = ImmutableList.copyOf(
+                requireNonNull(additionalAllowedHttpMethods, "additionalAllowedHttpMethods"));
         this.dependencyInjector = requireNonNull(dependencyInjector, "dependencyInjector");
         @SuppressWarnings("unchecked")
         final Function<String, String> castAbsoluteUriTransformer =
@@ -652,6 +656,11 @@ final class DefaultServerConfig implements ServerConfig {
     @Override
     public Http1HeaderNaming http1HeaderNaming() {
         return http1HeaderNaming;
+    }
+
+    @Override
+    public List<String> additionalAllowedHttpMethods() {
+        return additionalAllowedHttpMethods;
     }
 
     @Override
