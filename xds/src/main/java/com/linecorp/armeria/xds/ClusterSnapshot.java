@@ -19,8 +19,12 @@ package com.linecorp.armeria.xds;
 import com.google.common.base.MoreObjects;
 import com.google.common.base.Objects;
 
+import com.linecorp.armeria.client.ClientRequestContext;
+import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
+import com.linecorp.armeria.xds.client.endpoint.UpdatableXdsLoadBalancer;
+import com.linecorp.armeria.xds.client.endpoint.XdsLoadBalancer;
 
 import io.envoyproxy.envoy.config.cluster.v3.Cluster;
 
@@ -33,14 +37,27 @@ public final class ClusterSnapshot implements Snapshot<ClusterXdsResource> {
     private final ClusterXdsResource clusterXdsResource;
     @Nullable
     private final EndpointSnapshot endpointSnapshot;
+    @Nullable
+    private final XdsLoadBalancer loadBalancer;
 
-    ClusterSnapshot(ClusterXdsResource clusterXdsResource, @Nullable EndpointSnapshot endpointSnapshot) {
-        this.clusterXdsResource = clusterXdsResource;
-        this.endpointSnapshot = endpointSnapshot;
+    static ClusterSnapshot of(ClusterXdsResource clusterXdsResource,
+                              EndpointSnapshot newSnapshot, UpdatableXdsLoadBalancer loadBalancer) {
+        final ClusterSnapshot snapshot = new ClusterSnapshot(clusterXdsResource, newSnapshot, loadBalancer);
+        loadBalancer.updateSnapshot(snapshot);
+        return snapshot;
     }
 
     ClusterSnapshot(ClusterXdsResource clusterXdsResource) {
-        this(clusterXdsResource, null);
+        this.clusterXdsResource = clusterXdsResource;
+        endpointSnapshot = null;
+        loadBalancer = null;
+    }
+
+    ClusterSnapshot(ClusterXdsResource clusterXdsResource, EndpointSnapshot endpointSnapshot,
+                    XdsLoadBalancer loadBalancer) {
+        this.clusterXdsResource = clusterXdsResource;
+        this.endpointSnapshot = endpointSnapshot;
+        this.loadBalancer = loadBalancer;
     }
 
     @Override
@@ -66,12 +83,23 @@ public final class ClusterSnapshot implements Snapshot<ClusterXdsResource> {
         }
         final ClusterSnapshot that = (ClusterSnapshot) object;
         return Objects.equal(clusterXdsResource, that.clusterXdsResource) &&
-               Objects.equal(endpointSnapshot, that.endpointSnapshot);
+               Objects.equal(endpointSnapshot, that.endpointSnapshot) &&
+               Objects.equal(loadBalancer, that.loadBalancer);
+    }
+
+    /**
+     * The {@link XdsLoadBalancer} which allows users to select an upstream {@link Endpoint} for a given
+     * {@link ClientRequestContext}. Note that the lifecycle of {@link XdsLoadBalancer} is not bound to
+     * the current {@link ClusterSnapshot}, and may be updated if the cluster is updated.
+     */
+    @Nullable
+    public XdsLoadBalancer loadBalancer() {
+        return loadBalancer;
     }
 
     @Override
     public int hashCode() {
-        return Objects.hashCode(clusterXdsResource, endpointSnapshot);
+        return Objects.hashCode(clusterXdsResource, endpointSnapshot, loadBalancer);
     }
 
     @Override
@@ -80,6 +108,7 @@ public final class ClusterSnapshot implements Snapshot<ClusterXdsResource> {
                           .omitNullValues()
                           .add("clusterXdsResource", clusterXdsResource)
                           .add("endpointSnapshot", endpointSnapshot)
+                          .add("loadBalancer", loadBalancer)
                           .toString();
     }
 }
