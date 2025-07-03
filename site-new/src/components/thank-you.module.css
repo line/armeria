@@ -1,5 +1,4 @@
 .wrapper {
-  overflow: hidden;
   line-height: 0;
 }
 
@@ -7,6 +6,7 @@
   display: inline-block;
   position: relative;
   overflow: hidden;
+  transition: transform 300ms ease;
 }
 
 .wrapper .avatar img {
@@ -34,15 +34,15 @@
     rgba(255, 255, 255, 0.5) 92%,
     rgba(255, 255, 255, 0) 100%
   );
-  transition-property: left, top, opacity;
-  transition-duration: 0.7s, 0.7s, 0.15s;
-  transition-timing-function: ease;
 }
 
 .wrapper .avatar:hover:after {
   opacity: 1;
   top: -30%;
   left: -30%;
+  transition-property: left, top, opacity;
+  transition-duration: 0.7s, 0.7s, 0.15s;
+  transition-timing-function: ease;
 }
 
 .wrapper .avatar:active:after {

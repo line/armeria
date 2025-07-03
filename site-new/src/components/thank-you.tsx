@@ -136,30 +136,35 @@ const ThankYou: React.FC<ThankYouProps> = (props) => {
         <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.2.0/dist/confetti.browser.min.js" />
       </Head>
       {message}
-      <div className={styles.wrapper}>
-        <ReactMixitup
-          ref={wrapperRef}
-          keys={usernames} // TODO 애니메이션 끊김
-          renderCell={(key, style, ref) => (
-            <span key={key} ref={ref} style={style} className={styles.avatar}>
-              <a href={(props.href || defaultHref)(key)}>
-                <img
-                  src={getAvatarUrl(key)}
-                  width={size}
-                  height={size}
-                  alt={`@${key}`}
-                  title={`@${key}`}
-                  loading="lazy"
-                  onMouseEnter={onMouseEnterCallback}
-                  onMouseLeave={onMouseExitCallback}
-                />
-              </a>
-            </span>
-          )}
-          dynamicDirection={'off'}
-          transitionDuration={300}
-        />
-      </div>
+      <ReactMixitup
+        ref={wrapperRef}
+        keys={usernames}
+        renderCell={(key, style, ref) => (
+          <span key={key} ref={ref} style={style} className={styles.avatar}>
+            <a href={(props.href || defaultHref)(key)}>
+              <img
+                src={getAvatarUrl(key)}
+                width={size}
+                height={size}
+                alt={`@${key}`}
+                title={`@${key}`}
+                loading="lazy"
+                onMouseEnter={onMouseEnterCallback}
+                onMouseLeave={onMouseExitCallback}
+              />
+            </a>
+          </span>
+        )}
+        renderWrapper={(style, ref, cells) => {
+          return (
+            <div className={styles.wrapper} style={style} ref={ref}>
+              {cells}
+            </div>
+          );
+        }}
+        dynamicDirection={'off'}
+        transitionDuration={300}
+      />
     </>
   );
 };
