@@ -33,7 +33,6 @@ const ThankYou: React.FC<ThankYouProps> = (props) => {
     return props.message ? (
       props.message(newSeed)
     ) : (
-      // TODO: antd paragraph?
       <p>
         This release was possible thanks to the following contributors who
         shared their brilliant ideas and awesome pull requests:
@@ -51,7 +50,7 @@ const ThankYou: React.FC<ThankYouProps> = (props) => {
       const newSeed = currentSeed();
       setSeed(newSeed);
       setMessage(getMessage(newSeed));
-    }, 30 * 100);
+    }, 30 * 1000);
     return () => {
       clearInterval(timerId);
     };
