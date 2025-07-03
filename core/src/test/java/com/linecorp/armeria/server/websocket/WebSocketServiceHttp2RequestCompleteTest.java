@@ -112,7 +112,7 @@ class WebSocketServiceHttp2RequestCompleteTest {
                                                  .requestAutoAbortDelayMillis(Long.MAX_VALUE)
                                                  .build()
                                                  .execute(requestWriter).split();
-        split.headers().thenAccept(headers -> assertThat(headers.status()).isSameAs(HttpStatus.OK));
+        assertThat(split.headers().join().status()).isSameAs(HttpStatus.OK);
         split.body().subscribe(bodySubscriber);
 
         final ServiceRequestContext sctx = server.requestContextCaptor().take();
