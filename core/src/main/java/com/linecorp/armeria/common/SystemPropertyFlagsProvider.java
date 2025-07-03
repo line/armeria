@@ -348,6 +348,11 @@ final class SystemPropertyFlagsProvider implements FlagsProvider {
         return getInt("defaultHttp2InitialStreamWindowSize");
     }
 
+    @Override
+    public @Nullable Float defaultHttp2StreamWindowUpdateRatio() {
+        return getFloat("defaultHttp2StreamWindowUpdateRatio");
+    }
+
     @Nullable
     @Override
     public Integer defaultHttp2MaxFrameSize() {
@@ -623,6 +628,11 @@ final class SystemPropertyFlagsProvider implements FlagsProvider {
     @Nullable
     private static Integer getInt(String name) {
         return getAndParse(name, Integer::parseInt);
+    }
+
+    @Nullable
+    private static Float getFloat(String name) {
+        return getAndParse(name, Float::parseFloat);
     }
 
     @Nullable
