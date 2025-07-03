@@ -46,7 +46,7 @@ public abstract class AbstractJsonRpcResponse implements JsonRpcResponse {
     */
     public AbstractJsonRpcResponse(JsonRpcError error) {
         this.result = null;
-        this.error = error;
+        this.error = requireNonNull(error, "error");
     }
 
     @Override

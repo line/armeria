@@ -15,6 +15,8 @@
  */
 package com.linecorp.armeria.server.jsonrpc;
 
+import static java.util.Objects.requireNonNull;
+
 import java.util.HashMap;
 import java.util.Map;
 
@@ -34,6 +36,8 @@ public class JsonRpcServiceBuilder {
     * Adds a Json-RPC {@link JsonRpcHandler} to this {@link JsonRpcServiceBuilder}.
     */
     public JsonRpcServiceBuilder addHandler(String methodName, JsonRpcHandler handler) {
+        requireNonNull(methodName, "methodName");
+        requireNonNull(handler, "handler");
         methodHandlers.put(methodName, handler);
         return this;
     }

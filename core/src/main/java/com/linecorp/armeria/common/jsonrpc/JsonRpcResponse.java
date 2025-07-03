@@ -16,6 +16,7 @@
 package com.linecorp.armeria.common.jsonrpc;
 
 import static com.google.common.base.Preconditions.checkArgument;
+import static java.util.Objects.requireNonNull;
 
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
@@ -29,6 +30,7 @@ public interface JsonRpcResponse {
     * Creates a new instance with result.
     */
     static JsonRpcResponse of(Object result) {
+        requireNonNull(result, "result");
         checkArgument(!(result instanceof JsonRpcError),
             "result.class: %s (expected: not JsonRpcError)", result.getClass());
 
@@ -39,6 +41,7 @@ public interface JsonRpcResponse {
     * Creates a new instance with error.
     */
     static JsonRpcResponse ofError(JsonRpcError error) {
+        requireNonNull(error);
         return new SimpleJsonRpcResponse(error);
     }
 

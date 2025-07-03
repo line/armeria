@@ -37,7 +37,7 @@ public interface JsonRpcRequest {
     * Creates a new instance with no parameter.
     */
     static JsonRpcRequest of(@Nullable Object id, String method) {
-        return new DefaultJsonRpcRequest(id, method, ImmutableList.of());
+        return new DefaultJsonRpcRequest(id, requireNonNull(method, "method"), ImmutableList.of());
     }
 
     /**
@@ -46,23 +46,25 @@ public interface JsonRpcRequest {
     static JsonRpcRequest of(@Nullable Object id, String method, @Nullable Object parameter) {
         final List<Object> parameters = parameter == null ? ImmutableList.of()
                                                           : ImmutableList.of(parameter);
-        return new DefaultJsonRpcRequest(id, method, parameters);
+        return new DefaultJsonRpcRequest(id, requireNonNull(method, "method"), parameters);
     }
 
     /**
      * Creates a new instance with the specified parameters.
      */
     static JsonRpcRequest of(@Nullable Object id, String method, Iterable<?> params) {
-        requireNonNull(params, "params");
-        return new DefaultJsonRpcRequest(id, method, params);
+        return new DefaultJsonRpcRequest(id,
+                requireNonNull(method, "method"),
+                requireNonNull(params, "params"));
     }
 
     /**
      * Creates a new instance with the specified parameters.
      */
     static JsonRpcRequest of(@Nullable Object id, String method, Object... params) {
-        requireNonNull(params, "params");
-        return new DefaultJsonRpcRequest(id, method, params);
+        return new DefaultJsonRpcRequest(id,
+                requireNonNull(method, "method"),
+                requireNonNull(params, "params"));
     }
 
     /**
