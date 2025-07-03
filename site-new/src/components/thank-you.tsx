@@ -20,6 +20,10 @@ const ThankYou: React.FC<ThankYouProps> = (props) => {
   const [periodicConfettiFire, setPeriodicConfettiFire] = useState(false);
   const numActiveConfetti = useRef(0);
   const [message, setMessage] = useState(getMessage(seed));
+  const [wrapperDimensions, setWrapperDimensions] = useState({
+    width: 0,
+    height: 0,
+  });
 
   function currentSeed() {
     return new Date().getTime();
@@ -130,6 +134,30 @@ const ThankYou: React.FC<ThankYouProps> = (props) => {
     ); // TODO: fallback
   }
 
+  // Calculate wrapper dimensions based on window size and number of usernames.
+  useEffect(() => {
+    const calculateDimensions = () => {
+      let width = 580;
+      if (width > window.innerWidth - 20) {
+        width = window.innerWidth - 20;
+      }
+      const numColumns = Math.floor(width / size);
+      const numRows = Math.ceil(usernames.length / numColumns);
+
+      setWrapperDimensions({
+        width: width,
+        height: numRows * size,
+      });
+    };
+
+    calculateDimensions();
+
+    window.addEventListener('resize', calculateDimensions);
+    return () => {
+      window.removeEventListener('resize', calculateDimensions);
+    };
+  }, [usernames.length, size]);
+
   return (
     <>
       <Head>
@@ -157,7 +185,15 @@ const ThankYou: React.FC<ThankYouProps> = (props) => {
         )}
         renderWrapper={(style, ref, cells) => {
           return (
-            <div className={styles.wrapper} style={style} ref={ref}>
+            <div
+              className={styles.wrapper}
+              style={{
+                width: `${wrapperDimensions.width}px`,
+                height: `${wrapperDimensions.height}px`,
+                ...style,
+              }}
+              ref={ref}
+            >
               {cells}
             </div>
           );
