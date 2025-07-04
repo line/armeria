@@ -30,76 +30,81 @@ const Mailchimp: React.FC<MailchimpProps> = (givenProps) => {
 
   const [email, setEmail] = useState('');
   const [sending, setSending] = useState(false);
+  const [messageApi, contextHolder] = message.useMessage();
   const messageDuration = 5;
 
   return (
-    <Input.Search
-      className={styles.signUpForm}
-      type="email"
-      prefix={<MailOutlined />}
-      placeholder="Your e-mail"
-      enterButton={
-        <Button
-          type={props.buttonType || 'default'}
-          title="Sign up for our newsletters"
-        >
-          Subscribe
-        </Button>
-      }
-      required
-      aria-required
-      value={email}
-      loading={sending}
-      onChange={useCallback((e) => setEmail(e.target.value), [])}
-      onSearch={useCallback(
-        (
-          value: string,
-          event:
-            | React.SyntheticEvent<HTMLInputElement>
-            | React.MouseEvent<HTMLElement>
-            | React.KeyboardEvent<HTMLInputElement>,
-        ) => {
-          event.preventDefault();
-          if (!EmailValidator.validate(email)) {
-            message.warn(
-              'Please enter a valid e-mail address.',
-              messageDuration,
-            );
-            return;
-          }
-
-          const url = `${props.url.replace(
-            '/post?',
-            '/post-json?',
-          )}&EMAIL=${encodeURIComponent(email)}&${props.botCode}=`;
-
-          setSending(true);
-          jsonp(url, { param: 'c' }, (err: any, data: any) => {
-            setSending(false);
-            if (err || data.result !== 'success') {
-              message.error(
-                <span
-                  // eslint-disable-next-line react/no-danger
-                  dangerouslySetInnerHTML={{
-                    __html: DOMPurify.sanitize(
-                      data.msg || 'Failed to sign up. Please try again later.',
-                    ),
-                  }}
-                />,
+    <>
+      {contextHolder}
+      <Input.Search
+        className={styles.signUpForm}
+        type="email"
+        prefix={<MailOutlined />}
+        placeholder="Your e-mail"
+        enterButton={
+          <Button
+            type={props.buttonType || 'default'}
+            title="Sign up for our newsletters"
+          >
+            Subscribe
+          </Button>
+        }
+        required
+        aria-required
+        value={email}
+        loading={sending}
+        onChange={useCallback((e) => setEmail(e.target.value), [])}
+        onSearch={useCallback(
+          (
+            value: string,
+            event:
+              | React.SyntheticEvent<HTMLInputElement>
+              | React.MouseEvent<HTMLElement>
+              | React.KeyboardEvent<HTMLInputElement>,
+          ) => {
+            event.preventDefault();
+            if (!EmailValidator.validate(email)) {
+              messageApi.warning(
+                'Please enter a valid e-mail address.',
                 messageDuration,
               );
-            } else {
-              setEmail('');
-              message.info(
-                <Emoji text="Thank you for signing up! 🙇" />,
-                messageDuration,
-              );
+              return;
             }
-          });
-        },
-        [email, props.botCode, props.url],
-      )}
-    />
+
+            const url = `${props.url.replace(
+              '/post?',
+              '/post-json?',
+            )}&EMAIL=${encodeURIComponent(email)}&${props.botCode}=`;
+
+            setSending(true);
+            jsonp(url, { param: 'c' }, (err: any, data: any) => {
+              setSending(false);
+              if (err || data.result !== 'success') {
+                messageApi.error(
+                  <span
+                    // eslint-disable-next-line react/no-danger
+                    dangerouslySetInnerHTML={{
+                      __html: DOMPurify.sanitize(
+                        data.msg ||
+                          'Failed to sign up. Please try again later.',
+                      ),
+                    }}
+                  />,
+                  messageDuration,
+                );
+              } else {
+                setEmail('');
+                messageApi.info(
+                  <Emoji text="Thank you for signing up! 🙇" />,
+                  messageDuration,
+                );
+              }
+            });
+          },
+          [email, props.botCode, props.url],
+        )}
+      />
+    </>
   );
 };
 
