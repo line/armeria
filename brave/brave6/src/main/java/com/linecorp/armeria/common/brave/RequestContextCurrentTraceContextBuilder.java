@@ -20,8 +20,6 @@ import static java.util.Objects.requireNonNull;
 
 import java.util.regex.Pattern;
 
-import com.google.common.collect.ImmutableList;
-
 import brave.propagation.CurrentTraceContext;
 import brave.propagation.CurrentTraceContext.Builder;
 import brave.propagation.CurrentTraceContext.ScopeDecorator;
@@ -30,8 +28,6 @@ import brave.propagation.CurrentTraceContext.ScopeDecorator;
  * A builder of {@link RequestContextCurrentTraceContext} to enable tracing of an Armeria-based application.
  */
 public final class RequestContextCurrentTraceContextBuilder extends CurrentTraceContext.Builder {
-
-    private final ImmutableList.Builder<Pattern> nonRequestThreadPatterns = ImmutableList.builder();
 
     private boolean scopeDecoratorAdded;
 
@@ -44,7 +40,9 @@ public final class RequestContextCurrentTraceContextBuilder extends CurrentTrace
      * monitoring requests.
      *
      * @see RequestContextCurrentTraceContext#setCurrentThreadNotRequestThread(boolean)
+     * @deprecated This setting has no effect.
      */
+    @Deprecated
     public RequestContextCurrentTraceContextBuilder nonRequestThread(String pattern) {
         requireNonNull(pattern, "pattern");
         final Pattern compiled  = Pattern.compile(pattern);
@@ -58,9 +56,10 @@ public final class RequestContextCurrentTraceContextBuilder extends CurrentTrace
      * RMI to serve monitoring requests.
      *
      * @see RequestContextCurrentTraceContext#setCurrentThreadNotRequestThread(boolean)
+     * @deprecated This setting has no effect.
      */
+    @Deprecated
     public RequestContextCurrentTraceContextBuilder nonRequestThread(Pattern pattern) {
-        nonRequestThreadPatterns.add(requireNonNull(pattern, "pattern"));
         return this;
     }
 
@@ -79,7 +78,6 @@ public final class RequestContextCurrentTraceContextBuilder extends CurrentTrace
      */
     @Override
     public RequestContextCurrentTraceContext build() {
-        return new RequestContextCurrentTraceContext(this, nonRequestThreadPatterns.build(),
-                                                     scopeDecoratorAdded);
+        return new RequestContextCurrentTraceContext(this, scopeDecoratorAdded);
     }
 }

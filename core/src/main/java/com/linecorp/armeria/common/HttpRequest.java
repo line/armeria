@@ -279,7 +279,6 @@ public interface HttpRequest extends Request, HttpMessage {
         if (publisher instanceof HttpRequest) {
             return ((HttpRequest) publisher).withHeaders(headers);
         } else if (publisher instanceof StreamMessage) {
-            //noinspection unchecked
             return new StreamMessageBasedHttpRequest(headers, (StreamMessage<? extends HttpObject>) publisher);
         } else {
             return new PublisherBasedHttpRequest(headers, publisher);
@@ -303,7 +302,24 @@ public interface HttpRequest extends Request, HttpMessage {
         if (trailers.isEmpty()) {
             return of(headers, publisher);
         }
-        return of(headers, new SurroundingPublisher<>(null, publisher, unused -> trailers));
+        return of(headers, SurroundingPublisher.of(null, publisher, trailers));
+    }
+
+    /**
+     * Creates a new instance from an existing {@link RequestHeaders}, {@link Publisher} and trailers.
+     *
+     * <p>Note that the {@link HttpData}s in the {@link Publisher} are not released when
+     * {@link Subscription#cancel()} or {@link #abort()} is called. You should add a hook in order to
+     * release the elements. See {@link PublisherBasedStreamMessage} for more information.
+     */
+    @UnstableApi
+    static HttpRequest of(RequestHeaders headers,
+                          Publisher<? extends HttpData> publisher,
+                          CompletableFuture<HttpHeaders> trailers) {
+        requireNonNull(headers, "headers");
+        requireNonNull(publisher, "publisher");
+        requireNonNull(trailers, "trailers");
+        return of(headers, SurroundingPublisher.of(null, publisher, trailers));
     }
 
     /**

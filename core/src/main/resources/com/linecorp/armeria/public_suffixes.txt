@@ -95,17 +95,20 @@
 *.lclstage.dev
 *.linodeobjects.com
 *.localto.net
+*.lutrausercontent.com
 *.magentosite.cloud
 *.me-central-1.airflow.amazonaws.com
 *.me-south-1.airflow.amazonaws.com
 *.migration.run
 *.mm
 *.moonscale.io
+*.mtls.run.app
 *.nagoya.jp
 *.nodebalancer.linode.com
 *.nom.br
 *.northflank.app
 *.np
+*.nxa.eu
 *.oci.customer-oci.com
 *.ocp.customer-oci.com
 *.ocs.customer-oci.com
@@ -125,6 +128,8 @@
 *.privatelink.snowflake.app
 *.quipelements.com
 *.r.appspot.com
+*.raw.icp0.io
+*.raw.icp1.io
 *.run.app
 *.s.brave.app
 *.s.brave.io
@@ -215,6 +220,7 @@
 3.bg
 32-b.it
 3utilities.com
+4.at
 4.azurestaticapps.net
 4.bg
 4lima.at
@@ -351,7 +357,9 @@ ae.org
 aeg
 aejrie.no
 aem.live
+aem.network
 aem.page
+aem.reviews
 aero
 aero.mv
 aerobatic.aero
@@ -1171,6 +1179,8 @@ caa.aero
 cab
 cable-modem.org
 cafe
+caffeine.ai
+caffeine.site
 cafjs.com
 cagliari.it
 cahcesuolo.no
@@ -1879,6 +1889,9 @@ dazaifu.fukuoka.jp
 dc.us
 dclk
 dd-dns.de
+ddl.fr-par.scw.cloud
+ddl.nl-ams.scw.cloud
+ddl.pl-waw.scw.cloud
 ddns-ip.net
 ddns.me
 ddns.net
@@ -2051,6 +2064,9 @@ dsmynas.net
 dsmynas.org
 dst.mi.us
 dtv
+dtwh.fr-par.scw.cloud
+dtwh.nl-ams.scw.cloud
+dtwh.pl-waw.scw.cloud
 dubai
 duckdns.org
 dunlop
@@ -3539,7 +3555,6 @@ hl.cn
 hl.no
 hlx.live
 hlx.page
-hlx3.page
 hm
 hm.no
 hn
@@ -3608,6 +3623,7 @@ hosting
 hosting-cluster.nl
 hostyhosting.io
 hot
+hotel
 hotel.hu
 hotel.lk
 hotel.tz
@@ -3672,9 +3688,13 @@ ichinohe.iwate.jp
 ichinomiya.aichi.jp
 ichinomiya.chiba.jp
 ichinoseki.iwate.jp
+icp-api.io
+icp0.io
+icp1.io
 icu
 icurus.jp
 id
+id.ai
 id.au
 id.cv
 id.firewalledreplit.co
@@ -3697,6 +3717,9 @@ ie.eu.org
 ieee
 if.ua
 ifm
+ifr.fr-par.scw.cloud
+ifr.nl-ams.scw.cloud
+ifr.pl-waw.scw.cloud
 iglesias-carbonia.it
 iglesiascarbonia.it
 iheya.okinawa.jp
@@ -3778,7 +3801,6 @@ ind.br
 ind.gt
 ind.in
 ind.kw
-ind.mom
 ind.tn
 independent-commission.uk
 independent-inquest.uk
@@ -4211,6 +4233,9 @@ kadena.okinawa.jp
 kadogawa.miyazaki.jp
 kadoma.osaka.jp
 kafjord.no
+kafk.fr-par.scw.cloud
+kafk.nl-ams.scw.cloud
+kafk.pl-waw.scw.cloud
 kaga.ishikawa.jp
 kagami.kochi.jp
 kagamiishi.fukushima.jp
@@ -4503,6 +4528,7 @@ kontum.vn
 konyvelo.hu
 koobin.events
 koori.fukushima.jp
+kop.id
 kopervik.no
 koriyama.fukushima.jp
 koryo.nara.jp
@@ -5105,6 +5131,9 @@ mex.com
 mg
 mg.gov.br
 mg.leg.br
+mgdb.fr-par.scw.cloud
+mgdb.nl-ams.scw.cloud
+mgdb.pl-waw.scw.cloud
 mh
 mi.it
 mi.th
@@ -5449,8 +5478,10 @@ my-gateway.de
 my-router.de
 my-vigor.de
 my-wan.de
+my.at
 my.canva.site
 my.canvasite.cn
+my.de
 my.eu.org
 my.id
 myactivedirectory.com
@@ -6080,6 +6111,7 @@ numazu.shizuoka.jp
 nuoro.it
 nv.us
 nx.cn
+nx.gw
 ny-1.paas.massivegrid.net
 ny-2.paas.massivegrid.net
 ny.us
@@ -6904,6 +6936,9 @@ ravenna.it
 ravpage.co.il
 rawa-maz.pl
 rc.it
+rdb.fr-par.scw.cloud
+rdb.nl-ams.scw.cloud
+rdb.pl-waw.scw.cloud
 rdy.jp
 re
 re.it
@@ -7543,6 +7578,9 @@ sc.ug
 sc.us
 scalebook.scw.cloud
 scb
+scbl.fr-par.scw.cloud
+scbl.nl-ams.scw.cloud
+scbl.pl-waw.scw.cloud
 sch.ae
 sch.id
 sch.ir
@@ -7566,6 +7604,7 @@ school.nz
 school.za
 schoolbus.jp
 schools.nsw.edu.au
+schuldock.de
 schule
 schulplattform.de
 schulserver.de
@@ -8265,6 +8304,7 @@ taxi.br
 tayninh.vn
 tc
 tc.br
+tche.br
 tci
 tcp4.me
 td
@@ -8844,6 +8884,7 @@ ventures
 verbania.it
 vercel.app
 vercel.dev
+vercel.run
 vercelli.it
 verdal.no
 verisign
@@ -8920,6 +8961,7 @@ virtualserver.io
 virtualuser.de
 visa
 vision
+vistablog.ir
 viterbo.it
 viva
 vivian.jp
@@ -9036,6 +9078,7 @@ website
 website.yandexcloud.net
 websitebuilder.online
 websozai.jp
+webspace-host.com
 webspace.rocks
 webspaceconfig.de
 webthings.io

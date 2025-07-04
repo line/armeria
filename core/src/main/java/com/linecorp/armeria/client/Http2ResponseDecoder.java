@@ -301,7 +301,10 @@ final class Http2ResponseDecoder extends AbstractHttpResponseDecoder implements 
         keepAliveChannelRead();
         final HttpResponseWrapper res = getResponse(streamIdToId(streamId));
         if (res == null || !res.isOpen()) {
-            if (conn.streamMayHaveExisted(streamId)) {
+            final Http2Stream stream = conn.stream(streamId);
+            if (stream != null) {
+                // the stream was active, but will be closed now
+            } else if (conn.streamMayHaveExisted(streamId)) {
                 if (logger.isDebugEnabled()) {
                     logger.debug("{} Received a late RST_STREAM frame for a closed stream: {}",
                                  ctx.channel(), streamId);

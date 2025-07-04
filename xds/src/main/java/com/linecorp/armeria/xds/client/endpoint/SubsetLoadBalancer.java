@@ -37,8 +37,6 @@ import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.xds.ClusterSnapshot;
-import com.linecorp.armeria.xds.RouteEntry;
-import com.linecorp.armeria.xds.client.endpoint.ClusterManager.LocalCluster;
 
 import io.envoyproxy.envoy.config.cluster.v3.Cluster;
 import io.envoyproxy.envoy.config.cluster.v3.Cluster.LbSubsetConfig;
@@ -46,11 +44,10 @@ import io.envoyproxy.envoy.config.cluster.v3.Cluster.LbSubsetConfig.LbSubsetFall
 import io.envoyproxy.envoy.config.cluster.v3.Cluster.LbSubsetConfig.LbSubsetSelector;
 import io.envoyproxy.envoy.config.endpoint.v3.LbEndpoint;
 
-final class SubsetLoadBalancer implements XdsLoadBalancer {
+final class SubsetLoadBalancer implements LoadBalancer {
 
     private static final Logger logger = LoggerFactory.getLogger(SubsetLoadBalancer.class);
 
-    private final PrioritySet prioritySet;
     private final LoadBalancer allEndpointsLoadBalancer;
     @Nullable
     private final LocalCluster localCluster;
@@ -61,11 +58,8 @@ final class SubsetLoadBalancer implements XdsLoadBalancer {
     private final LbSubsetConfig lbSubsetConfig;
     private final LbSubsetFallbackPolicy fallbackPolicy;
 
-    private final Struct defaultMetadataMatch;
-
     SubsetLoadBalancer(PrioritySet prioritySet, LoadBalancer allEndpointsLoadBalancer,
-                       @Nullable LocalCluster localCluster, @Nullable PrioritySet localPrioritySet,
-                       @Nullable RouteEntry routeEntry) {
+                       @Nullable LocalCluster localCluster, @Nullable PrioritySet localPrioritySet) {
         this.allEndpointsLoadBalancer = allEndpointsLoadBalancer;
         this.localCluster = localCluster;
         this.localPrioritySet = localPrioritySet;
@@ -76,18 +70,6 @@ final class SubsetLoadBalancer implements XdsLoadBalancer {
         fallbackPolicy = lbSubsetFallbackPolicy(lbSubsetConfig);
 
         subsetLoadBalancers = createSubsetLoadBalancers(prioritySet);
-        this.prioritySet = prioritySet;
-
-        defaultMetadataMatch = defaultMetadataMatch(routeEntry);
-    }
-
-    private static Struct defaultMetadataMatch(@Nullable RouteEntry routeEntry) {
-        if (routeEntry == null) {
-            return Struct.getDefaultInstance();
-        }
-        return routeEntry.route().getRoute().getMetadataMatch()
-                         .getFilterMetadataOrDefault(SUBSET_LOAD_BALANCING_FILTER_NAME,
-                                                     Struct.getDefaultInstance());
     }
 
     private static LbSubsetFallbackPolicy lbSubsetFallbackPolicy(LbSubsetConfig lbSubsetConfig) {
@@ -104,7 +86,7 @@ final class SubsetLoadBalancer implements XdsLoadBalancer {
     @Override
     @Nullable
     public Endpoint selectNow(ClientRequestContext ctx) {
-        final Struct filterMetadata = filterMetadata(ctx, defaultMetadataMatch);
+        final Struct filterMetadata = filterMetadata(ctx);
         final LoadBalancer subsetLoadBalancer = subsetLoadBalancers.get(filterMetadata);
         if (subsetLoadBalancer != null) {
             return subsetLoadBalancer.selectNow(ctx);
@@ -162,10 +144,5 @@ final class SubsetLoadBalancer implements XdsLoadBalancer {
                           .add("subsetLoadBalancers", subsetLoadBalancers)
                           .add("allEndpointsLoadBalancer", allEndpointsLoadBalancer)
                           .toString();
-    }
-
-    @Override
-    public PrioritySet prioritySet() {
-        return prioritySet;
     }
 }

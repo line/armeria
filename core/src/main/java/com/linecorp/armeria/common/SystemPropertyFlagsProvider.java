@@ -275,6 +275,10 @@ final class SystemPropertyFlagsProvider implements FlagsProvider {
     @Nullable
     @Override
     public Boolean defaultPreferHttp1() {
+        final Boolean defaultPreferHttp1 = getBoolean("defaultPreferHttp1");
+        if (defaultPreferHttp1 != null) {
+            return defaultPreferHttp1;
+        }
         return getBoolean("preferHttp1");
     }
 

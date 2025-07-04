@@ -16,8 +16,7 @@
 
 package com.linecorp.armeria.common.grpc;
 
-import static java.util.Objects.requireNonNull;
-
+import com.linecorp.armeria.client.grpc.GrpcClientCall;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
@@ -48,30 +47,22 @@ import io.netty.util.AttributeKey;
  *       .withOption(myOptionKey, myOptionValue)
  *       .echo(...)
  * }</pre>
+ *
+ * @deprecated Use {@link GrpcClientCall} instead.
  */
 @UnstableApi
+@Deprecated
 public final class GrpcCallOptions {
 
     private static final AttributeKey<CallOptions> GRPC_CALL_OPTIONS = AttributeKey.valueOf(
             GrpcCallOptions.class, "GRPC_CALL_OPTIONS");
 
     /**
-     * Returns {@link CallOptions} which was set to the specified {@link RequestContext} using
-     * {@link #set(RequestContext, CallOptions)}.
+     * Returns {@link CallOptions} which were passed during the call.
      */
     @Nullable
     public static CallOptions get(RequestContext ctx) {
-        requireNonNull(ctx, "ctx");
-        return ctx.attr(GRPC_CALL_OPTIONS);
-    }
-
-    /**
-     * Sets the specified {@link CallOptions} to the {@link RequestContext}.
-     */
-    public static void set(RequestContext ctx, CallOptions options) {
-        requireNonNull(ctx, "ctx");
-        requireNonNull(options, "options");
-        ctx.setAttr(GRPC_CALL_OPTIONS, options);
+        return GrpcClientCall.callOptions(ctx);
     }
 
     private GrpcCallOptions() {}

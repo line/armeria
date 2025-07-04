@@ -73,6 +73,7 @@ import io.envoyproxy.envoy.type.v3.Percent;
 public final class XdsTestResources {
 
     public static final String BOOTSTRAP_CLUSTER_NAME = "bootstrap-cluster";
+    public static final String TLS_TRANSPORT_SOCKET_NAME = "envoy.transport_sockets.tls";
 
     private XdsTestResources() {}
 
@@ -141,7 +142,8 @@ public final class XdsTestResources {
     }
 
     public static ClusterLoadAssignment loadAssignment(String clusterName, URI uri) {
-        return loadAssignment(clusterName, uri.getHost(), uri.getPort());
+        final int port = uri.getPort() > -1 ? uri.getPort() : 80;
+        return loadAssignment(clusterName, uri.getHost(), port);
     }
 
     public static ClusterLoadAssignment loadAssignment(String clusterName, String address, int port) {
