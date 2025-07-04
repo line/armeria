@@ -226,23 +226,24 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
                 return null;
             }
 
-            final RetryAttempt attempt = new RetryAttempt(rctx, unwrap(), 1);
-            doExecuteAttempt(rctx, attempt);
+            doExecuteAttempt(rctx);
 
             return null;
         });
         return res;
     }
 
-    private void doExecuteAttempt(RetryingContext rctx, RetryAttempt attempt) {
-        if (rctx.isCompleted()) {
-            // The request or response has been aborted by the client before it receives a response,
-            // so stop retrying.
-            attempt.abort();
+    private void doExecuteAttempt(RetryingContext rctx) {
+        @Nullable
+        final RetryAttempt attempt = rctx.newRetryAttempt(getTotalAttempts(rctx.ctx()), unwrap());
+
+        if (attempt == null) {
+            // Retrying completed already, error handling
+            // is done inside `RetryingContext`.
             return;
         }
 
-        attempt.execute().handle((unused, unexpectedAttemptCause) -> {
+        attempt.whenCompleted().handleAsync((unused, unexpectedAttemptCause) -> {
             if (unexpectedAttemptCause != null) {
                 assert attempt.state() == RetryAttempt.State.ABORTED;
                 rctx.abort(unexpectedAttemptCause);
@@ -267,11 +268,7 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
 
                     scheduleNextRetry(
                             rctx.ctx(), rctx::abort,
-                            () -> {
-                                final RetryAttempt nextAttempt = new RetryAttempt(
-                                            rctx, unwrap(), getTotalAttempts(rctx.ctx()));
-                                doExecuteAttempt(rctx, nextAttempt);
-                            },
+                            () -> doExecuteAttempt(rctx),
                             nextDelayMillis);
                     return null;
                 }
@@ -282,7 +279,7 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
             });
 
             return null;
-        });
+        }, rctx.ctx().eventLoop());
     }
 
     private CompletionStage<Long> decideOnAttempt(RetryingContext rctx, RetryAttempt attempt) {

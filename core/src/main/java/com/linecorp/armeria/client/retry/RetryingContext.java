@@ -17,9 +17,12 @@
 package com.linecorp.armeria.client.retry;
 
 import static com.linecorp.armeria.client.retry.AbstractRetryingClient.ARMERIA_RETRY_COUNT;
+import static com.linecorp.armeria.internal.client.ClientUtil.executeWithFallback;
+import static com.linecorp.armeria.internal.client.ClientUtil.initContextAndExecuteWithFallback;
 
 import java.util.concurrent.CompletableFuture;
 
+import com.linecorp.armeria.client.Client;
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.ResponseTimeoutException;
 import com.linecorp.armeria.common.AggregationOptions;
@@ -30,6 +33,8 @@ import com.linecorp.armeria.common.RequestHeadersBuilder;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.stream.AbortedStreamException;
 import com.linecorp.armeria.internal.client.AggregatedHttpRequestDuplicator;
+import com.linecorp.armeria.internal.client.ClientPendingThrowableUtil;
+import com.linecorp.armeria.internal.client.ClientRequestContextExtension;
 
 class RetryingContext {
     private enum State {
@@ -106,43 +111,12 @@ class RetryingContext {
         return initFuture;
     }
 
-    boolean isCompleted() {
-        if (state == State.COMPLETING || state == State.COMPLETED) {
-            return true;
+    @Nullable
+    public RetryAttempt newRetryAttempt(int attemptNumber, Client<HttpRequest, HttpResponse> delegate) {
+        if (isCompleted()) {
+            return null;
         }
 
-        assert state == State.INITIALIZED;
-
-        // The request or response has been aborted by the client before it receives a response,
-        // so stop retrying.
-        if (req.whenComplete().isCompletedExceptionally()) {
-            state = State.COMPLETING;
-            req.whenComplete().handle((unused, cause) -> {
-                abort(cause);
-                return null;
-            });
-            return true;
-        }
-
-        if (res.isComplete()) {
-            state = State.COMPLETING;
-            res.whenComplete().handle((result, cause) -> {
-                final Throwable abortCause;
-                if (cause != null) {
-                    abortCause = cause;
-                } else {
-                    abortCause = AbortedStreamException.get();
-                }
-                abort(abortCause);
-                return null;
-            });
-            return true;
-        }
-
-        return false;
-    }
-
-    public ClientRequestContext newAttemptContext(int attemptNumber) {
         assert state == State.INITIALIZED;
         assert reqDuplicator != null;
 
@@ -153,6 +127,7 @@ class RetryingContext {
         }
 
         final HttpRequest attemptReq;
+        final ClientRequestContext attemptCtx;
         if (isInitialAttempt) {
             attemptReq = reqDuplicator.duplicate();
         } else {
@@ -161,8 +136,28 @@ class RetryingContext {
             attemptReq = reqDuplicator.duplicate(attemptHeadersBuilder.build());
         }
 
-        return AbstractRetryingClient.newAttemptContext(
-                    ctx, attemptReq, ctx.rpcRequest(), isInitialAttempt);
+        attemptCtx = AbstractRetryingClient.newAttemptContext(
+                ctx, attemptReq, ctx.rpcRequest(), isInitialAttempt);
+
+        final HttpResponse attemptRes;
+        final ClientRequestContextExtension attemptCtxExt =
+                attemptCtx.as(ClientRequestContextExtension.class);
+        if (!isInitialAttempt && attemptCtxExt != null && attemptCtx.endpoint() == null) {
+            // clear the pending throwable to retry endpoint selection
+            ClientPendingThrowableUtil.removePendingThrowable(attemptCtx);
+            // if the endpoint hasn't been selected,
+            // try to initialize the attempCtx with a new endpoint/event loop
+            attemptRes = initContextAndExecuteWithFallback(
+                    delegate, attemptCtxExt, HttpResponse::of,
+                    (context, cause) ->
+                            HttpResponse.ofFailure(cause), attemptReq, false);
+        } else {
+            attemptRes = executeWithFallback(delegate, attemptCtx,
+                                       (context, cause) ->
+                                               HttpResponse.ofFailure(cause), attemptReq, false);
+        }
+
+        return new RetryAttempt(this, attemptCtx, attemptRes);
     }
 
     void commit(RetryAttempt attempt) {
@@ -201,5 +196,41 @@ class RetryingContext {
         ctx.logBuilder().endResponse(cause);
 
         resFuture.completeExceptionally(cause);
+    }
+
+    private boolean isCompleted() {
+        if (state == State.COMPLETING || state == State.COMPLETED) {
+            return true;
+        }
+
+        assert state == State.INITIALIZED;
+
+        // The request or response has been aborted by the client before it receives a response,
+        // so stop retrying.
+        if (req.whenComplete().isCompletedExceptionally()) {
+            state = State.COMPLETING;
+            req.whenComplete().handle((unused, cause) -> {
+                abort(cause);
+                return null;
+            });
+            return true;
+        }
+
+        if (res.isComplete()) {
+            state = State.COMPLETING;
+            res.whenComplete().handle((result, cause) -> {
+                final Throwable abortCause;
+                if (cause != null) {
+                    abortCause = cause;
+                } else {
+                    abortCause = AbortedStreamException.get();
+                }
+                abort(abortCause);
+                return null;
+            });
+            return true;
+        }
+
+        return false;
     }
 }

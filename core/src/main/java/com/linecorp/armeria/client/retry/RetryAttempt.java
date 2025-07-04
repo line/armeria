@@ -16,9 +16,6 @@
 
 package com.linecorp.armeria.client.retry;
 
-import static com.linecorp.armeria.internal.client.ClientUtil.executeWithFallback;
-import static com.linecorp.armeria.internal.client.ClientUtil.initContextAndExecuteWithFallback;
-
 import java.time.Duration;
 import java.util.Date;
 import java.util.concurrent.CompletableFuture;
@@ -27,11 +24,9 @@ import java.util.concurrent.CompletionStage;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.linecorp.armeria.client.Client;
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpHeaderNames;
-import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpResponseDuplicator;
 import com.linecorp.armeria.common.ResponseHeaders;
@@ -43,8 +38,6 @@ import com.linecorp.armeria.common.logging.RequestLogBuilder;
 import com.linecorp.armeria.common.logging.RequestLogProperty;
 import com.linecorp.armeria.common.stream.AbortedStreamException;
 import com.linecorp.armeria.common.util.Exceptions;
-import com.linecorp.armeria.internal.client.ClientPendingThrowableUtil;
-import com.linecorp.armeria.internal.client.ClientRequestContextExtension;
 import com.linecorp.armeria.internal.client.TruncatingHttpResponse;
 
 import io.netty.handler.codec.DateFormatter;
@@ -54,10 +47,6 @@ class RetryAttempt {
 
     enum State {
         // Initial state after constructing an `Attempt`.
-        // Caller can only invoke `execute` or `abort`.
-        INITIALIZED,
-        // State after calling `execute`
-        // `ctx` and `res` are now available
         // The attempt response is underway but did not complete yet.
         EXECUTING,
         // State after the (maybe exceptional) result of the attempt response was processed.
@@ -73,15 +62,9 @@ class RetryAttempt {
 
     private State state;
 
+    private final RetryingContext rctx;
+    private final ClientRequestContext ctx;
     private final CompletableFuture<Void> whenCompletedFuture;
-
-    RetryingContext rctx;
-
-    final int number;
-
-    @Nullable
-    private ClientRequestContext ctx;
-    @Nullable
     private HttpResponse res;
 
     @Nullable
@@ -89,49 +72,30 @@ class RetryAttempt {
     @Nullable
     private Throwable resCause;
 
-    Client<HttpRequest, HttpResponse> delegate;
-
-    RetryAttempt(RetryingContext rctx, Client<HttpRequest, HttpResponse> delegate, int number) {
+    RetryAttempt(RetryingContext rctx, ClientRequestContext ctx, HttpResponse res) {
         this.rctx = rctx;
-        this.delegate = delegate;
-        this.number = number;
+        this.ctx = ctx;
+        this.res = res;
         whenCompletedFuture = new CompletableFuture<>();
 
         resWithContent = null;
         resCause = null;
 
-        state = State.INITIALIZED;
-    }
-
-    State state() {
-        return state;
-    }
-
-    CompletableFuture<Void> execute() {
-        assert state == State.INITIALIZED;
         state = State.EXECUTING;
-
-        try {
-            ctx = rctx.newAttemptContext(number);
-        } catch (Throwable t) {
-            abort(t);
-            return whenCompletedFuture;
-        }
-
-        res = executeAttemptRequest();
 
         if (!rctx.ctx().exchangeType().isResponseStreaming() || rctx.config().requiresResponseTrailers()) {
             handleAggRes();
         } else {
             handleStreamingRes();
         }
+    }
 
-        return whenCompletedFuture;
+    State state() {
+        return state;
     }
 
     CompletionStage<@Nullable RetryDecision> shouldRetry() {
         assert state == State.COMPLETED;
-        assert ctx != null;
 
         if (rctx.config().needsContentInRule()) {
             final RetryRuleWithContent<HttpResponse> retryRuleWithContent =
@@ -147,7 +111,6 @@ class RetryAttempt {
 
     long retryAfterMillis() {
         assert state == State.COMPLETED;
-        assert ctx != null;
 
         final RequestLogAccess attemptLog = ctx.log();
         final String retryAfterValue;
@@ -182,12 +145,10 @@ class RetryAttempt {
 
     HttpResponse commit() {
         if (state == State.COMMITTED) {
-            assert res != null;
             return res;
         }
 
         assert state == State.COMPLETED;
-        assert res != null;
         state = State.COMMITTED;
 
         if (resWithContent != null) {
@@ -206,13 +167,7 @@ class RetryAttempt {
             return;
         }
 
-        if (state == State.INITIALIZED) {
-            assert ctx == null && res == null;
-            return;
-        }
-
         assert state == State.EXECUTING || state == State.COMPLETED;
-        assert ctx != null && res != null;
         state = State.ABORTED;
 
         if (resWithContent != null) {
@@ -228,38 +183,15 @@ class RetryAttempt {
         whenCompletedFuture.completeExceptionally(cause);
     }
 
-    private HttpResponse executeAttemptRequest() {
-        assert state == State.EXECUTING;
-        assert ctx != null;
-
-        final HttpRequest req = ctx.request();
-        assert req != null;
-
-        final ClientRequestContextExtension ctxExtension =
-                ctx.as(ClientRequestContextExtension.class);
-        if ((number > 1) && ctxExtension != null && ctx.endpoint() == null) {
-            // clear the pending throwable to retry endpoint selection
-            ClientPendingThrowableUtil.removePendingThrowable(ctx);
-            // if the endpoint hasn't been selected,
-            // try to initialize the ctx with a new endpoint/event loop
-            return initContextAndExecuteWithFallback(
-                    delegate, ctxExtension, HttpResponse::of,
-                    (context, cause) ->
-                            HttpResponse.ofFailure(cause), req, false);
-        } else {
-            return executeWithFallback(delegate, ctx,
-                                      (context, cause) ->
-                                              HttpResponse.ofFailure(cause), req, false);
-        }
+    public CompletableFuture<Void> whenCompleted() {
+        return whenCompletedFuture;
     }
 
     private void handleAggRes() {
         assert state == State.EXECUTING;
-        assert ctx != null && res != null;
 
         res.aggregate().handle((aggRes, resCause) -> {
             assert state == State.EXECUTING;
-            assert ctx != null && res != null;
 
             if (resCause != null) {
                 ctx.logBuilder().endRequest(resCause);
@@ -277,12 +209,10 @@ class RetryAttempt {
 
     private void handleStreamingRes() {
         assert state == State.EXECUTING;
-        assert ctx != null && res != null;
 
         final SplitHttpResponse splitRes = res.split();
         splitRes.headers().handle((resHeaders, headersCause) -> {
             assert state == State.EXECUTING;
-            assert ctx != null && res != null;
 
             final Throwable resCause;
             if (headersCause == null) {
@@ -296,7 +226,6 @@ class RetryAttempt {
 
             ctx.log().whenAvailable(RequestLogProperty.RESPONSE_HEADERS).thenRun(() -> {
                 assert state == State.EXECUTING;
-                assert ctx != null && res != null;
 
                 if (rctx.config().needsContentInRule() && resCause == null) {
                     final HttpResponse unsplitRes = splitRes.unsplit();
@@ -326,7 +255,6 @@ class RetryAttempt {
 
     private void completeLogIfBytesNotTransferred(AggregatedHttpResponse aggRes) {
         assert state == State.EXECUTING;
-        assert ctx != null && res != null;
 
         if (!ctx.log().isAvailable(RequestLogProperty.REQUEST_FIRST_BYTES_TRANSFERRED_TIME)) {
             final RequestLogBuilder attemptLogBuilder = ctx.logBuilder();
@@ -343,7 +271,6 @@ class RetryAttempt {
             @Nullable ResponseHeaders headers,
             @Nullable Throwable resCause) {
         assert state == State.EXECUTING;
-        assert ctx != null && res != null;
 
         if (!ctx.log().isAvailable(RequestLogProperty.REQUEST_FIRST_BYTES_TRANSFERRED_TIME)) {
             final RequestLogBuilder logBuilder = ctx.logBuilder();
@@ -393,7 +320,6 @@ class RetryAttempt {
 
     private CompletionStage<@Nullable RetryDecision> shouldBeRetriedWith(RetryRule retryRule) {
         assert state == State.COMPLETED;
-        assert ctx != null;
 
         return retryRule.shouldRetry(ctx, resCause)
                         .handle((decision, cause) -> {
@@ -409,7 +335,6 @@ class RetryAttempt {
     private CompletionStage<@Nullable RetryDecision> shouldBeRetriedWith(
             RetryRuleWithContent<HttpResponse> retryRuleWithContent) {
         assert state == State.COMPLETED;
-        assert ctx != null;
 
         @Nullable
         final HttpResponse resForRule;
