@@ -1,3 +1,4 @@
+import '@ant-design/v5-patch-for-react-19'; //  Make antd work properly in React 19. See https://ant.design/docs/react/v5-for-19.
 import { MailOutlined } from '@ant-design/icons';
 import { Button, Input, message } from 'antd';
 import { ButtonType } from 'antd/es/button';
