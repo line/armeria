@@ -112,21 +112,21 @@ public final class JsonRpcService implements HttpService {
     }
 
     private HttpResponse handleBatchRequests(ServiceRequestContext ctx, JsonNode batch) {
-        final List<CompletableFuture<DefaultJsonRpcResponse>> requests =
+        final List<CompletableFuture<DefaultJsonRpcResponse>> responseFutures =
             StreamSupport.stream(batch.spliterator(), false)
                          .map(item -> executeRpcCall(ctx, item))
                          .collect(Collectors.toList());
 
         if (shouldUseSse) {
             return ServerSentEvents.fromPublisher(
-                Flux.fromIterable(requests)
+                Flux.fromIterable(responseFutures)
                     .flatMap(Mono::fromFuture)
                     .filter(Objects::nonNull)
                     .map(JsonRpcService::toServerSentEvent));
         } else {
             return HttpResponse.of(
-                CompletableFuture.allOf(requests.stream().toArray(CompletableFuture[]::new))
-                                 .thenApply(v -> requests.stream()
+                CompletableFuture.allOf(responseFutures.stream().toArray(CompletableFuture[]::new))
+                                 .thenApply(v -> responseFutures.stream()
                                                          .map(req -> req.join())
                                                          .filter(Objects::nonNull)
                                                          .collect(Collectors.toList()))
