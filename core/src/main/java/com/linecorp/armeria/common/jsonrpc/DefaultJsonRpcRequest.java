@@ -139,7 +139,7 @@ final class DefaultJsonRpcRequest implements JsonRpcRequest {
     }
 
     @Override
-    @JsonProperty
+    @JsonProperty("jsonrpc")
     public String version() {
         return version;
     }
