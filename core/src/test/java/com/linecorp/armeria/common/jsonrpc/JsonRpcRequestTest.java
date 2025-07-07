@@ -112,6 +112,20 @@ class JsonRpcRequestTest {
     }
 
     @Test
+    void of_fromJsonNode_withNullParams() throws JsonProcessingException {
+        final String json =
+                "{\"jsonrpc\": \"2.0\", \"method\": \"subtract\", \"params\": null, \"id\": 1}";
+        final JsonNode node = mapper.readTree(json);
+
+        final JsonRpcRequest req = JsonRpcRequest.of(node);
+
+        assertThat(req.id()).isEqualTo(1);
+        assertThat(req.method()).isEqualTo("subtract");
+        assertThat(req.params()).isEmpty();
+        assertThat(req.version()).isEqualTo("2.0");
+    }
+
+    @Test
     void of_fromJsonNode_withNamedParams() throws JsonProcessingException {
         final String json =
             "{\"jsonrpc\": \"2.0\", \"method\": \"subtract\", \"params\": {\"subtrahend\": 23}, \"id\": 3}";

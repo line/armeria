@@ -55,7 +55,7 @@ final class DefaultJsonRpcRequest implements JsonRpcRequest {
     private DefaultJsonRpcRequest(
             @Nullable Object id,
             String method,
-            @Nullable List<Object> params,
+            List<Object> params,
             String version) {
         checkArgument(JsonRpcConstants.JSON_RPC_VERSION.equals(version),
             "jsonrpc: %s (expected: 2.0)", version);
@@ -66,7 +66,7 @@ final class DefaultJsonRpcRequest implements JsonRpcRequest {
 
         this.id = id;
         this.method = requireNonNull(method, "method");
-        this.params = params == null ? ImmutableList.of() : params;
+        this.params = params;
         this.version = version;
     }
 
