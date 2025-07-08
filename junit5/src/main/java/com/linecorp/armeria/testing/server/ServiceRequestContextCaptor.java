@@ -152,6 +152,15 @@ public final class ServiceRequestContextCaptor {
     }
 
     /**
+     * Retrieves, but does not remove, the first captured {@link ServiceRequestContext}, or returns
+     * {@code null} if there are no captured contexts.
+     */
+    @Nullable
+    public ServiceRequestContext peek() {
+        return serviceContexts.peek();
+    }
+
+    /**
      * Retrieves and removes the first captured {@link ServiceRequestContext}, waiting up to
      * {@value DEFAULT_TIMEOUT_IN_SECONDS} seconds if necessary until an element becomes available.
      *
