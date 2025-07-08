@@ -152,10 +152,10 @@ class HttpHeadersBaseTest {
 
         headers.add("mixedCase", "tRUE");
         headers.add("mixedCase", "FaLsE");
-        assertThat(headers.getBoolean("mixedCase")).isTrue();
-        assertThat(headers.getLastBoolean("mixedCase")).isFalse();
-        assertThat(headers.containsBoolean("mixedCase", true)).isTrue();
-        assertThat(headers.containsBoolean("mixedCase", false)).isTrue();
+        assertThat(headers.getBoolean("mixedCase")).isNull();
+        assertThat(headers.getLastBoolean("mixedCase")).isNull();
+        assertThat(headers.containsBoolean("mixedCase", true)).isFalse();
+        assertThat(headers.containsBoolean("mixedCase", false)).isFalse();
 
         headers.add("withSpaces", " true ");
         headers.add("withSpaces", "  FALSE  ");
@@ -164,8 +164,19 @@ class HttpHeadersBaseTest {
         assertThat(headers.containsBoolean("withSpaces", true)).isTrue();
         assertThat(headers.containsBoolean("withSpaces", false)).isTrue();
 
+        headers.add("numberCase", "1");
+        headers.add("numberCase", "0");
+        assertThat(headers.getBoolean("numberCase")).isTrue();
+        assertThat(headers.getLastBoolean("numberCase")).isFalse();
+        assertThat(headers.containsBoolean("numberCase", true)).isTrue();
+        assertThat(headers.containsBoolean("numberCase", false)).isTrue();
+
+        headers.add("unsupported", "tRUE");
+        headers.add("unsupported", "FaLsE");
         headers.add("unsupported", "yes");
         headers.add("unsupported", "no");
+        headers.add("unsupported", " true ");
+        headers.add("unsupported", " false ");
         assertThat(headers.getBoolean("unsupported")).isNull();
         assertThat(headers.getLastBoolean("unsupported")).isNull();
         assertThat(headers.containsBoolean("unsupported", true)).isFalse();

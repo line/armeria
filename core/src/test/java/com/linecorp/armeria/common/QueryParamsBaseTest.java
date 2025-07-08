@@ -146,22 +146,19 @@ class QueryParamsBaseTest {
         assertThat(params.containsBoolean("capitalizedCase", true)).isTrue();
         assertThat(params.containsBoolean("capitalizedCase", false)).isTrue();
 
-        params.add("mixedCase", "tRUE");
-        params.add("mixedCase", "FaLsE");
-        assertThat(params.getBoolean("mixedCase")).isTrue();
-        assertThat(params.getLastBoolean("mixedCase")).isFalse();
-        assertThat(params.containsBoolean("mixedCase", true)).isTrue();
-        assertThat(params.containsBoolean("mixedCase", false)).isTrue();
+        params.add("numberCase", "1");
+        params.add("numberCase", "0");
+        assertThat(params.getBoolean("numberCase")).isTrue();
+        assertThat(params.getLastBoolean("numberCase")).isFalse();
+        assertThat(params.containsBoolean("numberCase", true)).isTrue();
+        assertThat(params.containsBoolean("numberCase", false)).isTrue();
 
-        params.add("withSpaces", " true ");
-        params.add("withSpaces", "  FALSE  ");
-        assertThat(params.getBoolean("withSpaces")).isTrue();
-        assertThat(params.getLastBoolean("withSpaces")).isFalse();
-        assertThat(params.containsBoolean("withSpaces", true)).isTrue();
-        assertThat(params.containsBoolean("withSpaces", false)).isTrue();
-
+        params.add("unsupported", "tRUE");
+        params.add("unsupported", "FaLsE");
         params.add("unsupported", "yes");
         params.add("unsupported", "no");
+        params.add("unsupported", " true ");
+        params.add("unsupported", " false ");
         assertThat(params.getBoolean("unsupported")).isNull();
         assertThat(params.getLastBoolean("unsupported")).isNull();
         assertThat(params.containsBoolean("unsupported", true)).isFalse();

@@ -113,11 +113,33 @@ class ArmeriaHttp2HeadersTest {
         assertThat(headers.containsBoolean("capitalizedCase", true)).isTrue();
         assertThat(headers.containsBoolean("capitalizedCase", false)).isTrue();
 
+        headers.add("upperCase", "TRUE");
+        headers.add("upperCase", "FALSE");
+        assertThat(headers.getBoolean("upperCase")).isTrue();
+        assertThat(headers.containsBoolean("upperCase", true)).isTrue();
+        assertThat(headers.containsBoolean("upperCase", false)).isTrue();
+
+        headers.add("numberCase", "1");
+        headers.add("numberCase", "0");
+        assertThat(headers.getBoolean("numberCase")).isTrue();
+        assertThat(headers.containsBoolean("numberCase", true)).isTrue();
+        assertThat(headers.containsBoolean("numberCase", false)).isTrue();
+
+        headers.add("unsupported", "tRUE");
+        headers.add("unsupported", "FaLsE");
+        headers.add("unsupported", "yes");
+        headers.add("unsupported", "no");
+        headers.add("unsupported", " true ");
+        headers.add("unsupported", " false ");
+        assertThat(headers.getBoolean("unsupported")).isNull();
+        assertThat(headers.containsBoolean("unsupported", true)).isFalse();
+        assertThat(headers.containsBoolean("unsupported", false)).isFalse();
+
         headers.add("mixedCase", "tRUE");
         headers.add("mixedCase", "FaLsE");
-        assertThat(headers.getBoolean("mixedCase")).isTrue();
-        assertThat(headers.containsBoolean("mixedCase", true)).isTrue();
-        assertThat(headers.containsBoolean("mixedCase", false)).isTrue();
+        assertThat(headers.getBoolean("mixedCase")).isNull();
+        assertThat(headers.containsBoolean("mixedCase", true)).isFalse();
+        assertThat(headers.containsBoolean("mixedCase", false)).isFalse();
 
         headers.add("withSpaces", " true ");
         headers.add("withSpaces", "  FALSE  ");
