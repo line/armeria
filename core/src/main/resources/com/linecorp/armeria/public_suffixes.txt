@@ -109,6 +109,7 @@
 *.northflank.app
 *.np
 *.nxa.eu
+*.oaiusercontent.com
 *.oci.customer-oci.com
 *.ocp.customer-oci.com
 *.ocs.customer-oci.com
