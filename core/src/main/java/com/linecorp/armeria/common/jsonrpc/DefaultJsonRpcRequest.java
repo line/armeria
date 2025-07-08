@@ -62,11 +62,10 @@ final class DefaultJsonRpcRequest implements JsonRpcRequest {
         checkArgument(id == null || id instanceof Number || id instanceof String,
             "id type: %s (expected: Null or Number or String)",
             Optional.ofNullable(id).map(Object::getClass).orElse(null));
-        requireNonNull(method, "method");
 
         this.id = id;
         this.method = requireNonNull(method, "method");
-        this.params = params;
+        this.params = requireNonNull(params, "params");
         this.version = version;
     }
 
