@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.server;
 
+import static com.linecorp.armeria.internal.logging.ContentPreviewingUtil.setUpResponseContentPreviewer;
+
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.server.logging.ContentPreviewingService;
@@ -35,7 +37,9 @@ final class ContentPreviewServerErrorHandler implements DecoratingServerErrorHan
         }
 
         if (res != null) {
-            return contentPreviewingService.setUpResponseContentPreviewer(ctx, res);
+            return setUpResponseContentPreviewer(contentPreviewingService.contentPreviewerFactory(),
+                                                 ctx, res,
+                                                 contentPreviewingService.responsePreviewSanitizer());
         }
         // Call requestContentPreview(null) to make sure that the log is complete.
         ctx.logBuilder().responseContentPreview(null);
