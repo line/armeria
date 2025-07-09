@@ -111,6 +111,7 @@ import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.EventLoopGroup;
+import io.netty.handler.codec.http2.DefaultHttp2LocalFlowController;
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.util.Mapping;
@@ -210,6 +211,7 @@ public final class ServerBuilder implements TlsSetters, ServiceConfigsBuilder<Se
     private int maxNumRequestsPerConnection = Flags.defaultMaxServerNumRequestsPerConnection();
     private int http2InitialConnectionWindowSize = Flags.defaultHttp2InitialConnectionWindowSize();
     private int http2InitialStreamWindowSize = Flags.defaultHttp2InitialStreamWindowSize();
+    private float http2StreamWindowUpdateRatio = Flags.defaultHttp2StreamWindowUpdateRatio();
     private long http2MaxStreamsPerConnection = Flags.defaultHttp2MaxStreamsPerConnection();
     private int http2MaxFrameSize = Flags.defaultHttp2MaxFrameSize();
     private long http2MaxHeaderListSize = Flags.defaultHttp2MaxHeaderListSize();
@@ -794,6 +796,23 @@ public final class ServerBuilder implements TlsSetters, ServiceConfigsBuilder<Se
                       "http2InitialStreamWindowSize: %s (expected: > 0)",
                       http2InitialStreamWindowSize);
         this.http2InitialStreamWindowSize = http2InitialStreamWindowSize;
+        return this;
+    }
+
+    /**
+     * Sets the threshold ratio of the HTTP/2 stream flow-control window at which a
+     * <a href="https://datatracker.ietf.org/doc/html/rfc7540#section-6.9">WINDOW_UPDATE</a> frame will be sent.
+     * When the size of the flow-control window drops below the specified ratio (relative to the initial window
+     * size), a {@code WINDOW_UPDATE} frame is triggered to replenish the window.
+     *
+     * <p>The default value is {@value DefaultHttp2LocalFlowController#DEFAULT_WINDOW_UPDATE_RATIO}.
+     * The value must be greater than 0 and less than 1.0.
+     */
+    public ServerBuilder http2StreamWindowUpdateRatio(float http2StreamWindowUpdateRatio) {
+        checkArgument(http2StreamWindowUpdateRatio > 0 && http2StreamWindowUpdateRatio < 1.0f,
+                      "http2StreamWindowUpdateRatio: %s (expected: > 0 and < 1.0)",
+                      http2StreamWindowUpdateRatio);
+        this.http2StreamWindowUpdateRatio = http2StreamWindowUpdateRatio;
         return this;
     }
 
@@ -2417,7 +2436,7 @@ public final class ServerBuilder implements TlsSetters, ServiceConfigsBuilder<Se
                 idleTimeoutMillis, keepAliveOnPing, pingIntervalMillis, maxConnectionAgeMillis,
                 maxNumRequestsPerConnection,
                 connectionDrainDurationMicros, http2InitialConnectionWindowSize,
-                http2InitialStreamWindowSize, http2MaxStreamsPerConnection,
+                http2InitialStreamWindowSize, http2StreamWindowUpdateRatio, http2MaxStreamsPerConnection,
                 http2MaxFrameSize, http2MaxHeaderListSize,
                 http2MaxResetFramesPerWindow, http2MaxResetFramesWindowSeconds,
                 http1MaxInitialLineLength, http1MaxHeaderSize,
