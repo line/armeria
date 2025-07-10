@@ -194,7 +194,8 @@ public final class JsonRpcService implements HttpService {
             return new DefaultJsonRpcResponse(request.id(), response.error());
         }
         return new DefaultJsonRpcResponse(request.id(),
-            JsonRpcError.INTERNAL_ERROR.withData("Non-error responses can't have nulls in the Id field."));
+            JsonRpcError.INTERNAL_ERROR
+                    .withData("A response cannot have both or neither 'result' and 'error' fields."));
     }
 
     @VisibleForTesting

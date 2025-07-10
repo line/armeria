@@ -201,9 +201,8 @@ class JsonRpcServiceTest {
         final DefaultJsonRpcResponse actualResponse =
                 jsonRpcService.buildFinalResponse(notificationRequest, resultResponse);
         final DefaultJsonRpcResponse expectedResponse =
-                new DefaultJsonRpcResponse(notificationRequest.id(),
-                        JsonRpcError.INTERNAL_ERROR
-                                .withData("Non-error responses can't have nulls in the Id field."));
+                new DefaultJsonRpcResponse(notificationRequest.id(), JsonRpcError.INTERNAL_ERROR
+                        .withData("A response cannot have both or neither 'result' and 'error' fields."));
 
         assertThat(actualResponse).isEqualTo(expectedResponse);
     }
