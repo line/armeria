@@ -23,7 +23,7 @@ import java.util.Map;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 
 /**
- * Constructs a {@link JsonRpcService} to serve Json-RPC services from within Armeria.
+ * Constructs a {@link JsonRpcService} to serve Json-RPC services.
  */
 @UnstableApi
 public class JsonRpcServiceBuilder {
