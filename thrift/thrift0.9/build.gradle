@@ -49,6 +49,7 @@ def thriftFullVersion = libs.thrift09.get().versionConstraint.requiredVersion
 ext {
     thriftVersion = thriftFullVersion.substring(0, thriftFullVersion.lastIndexOf('.'))
     disableThriftJson()
+    testThriftSrcDirs = ["$projectDir/src/test/thrift", "$projectDir/gen-src/test/thrift"]
 }
 
 // Keep the original Guava references in ThriftListenableFuture,
@@ -68,3 +69,13 @@ tasks.shadedJar.doLast {
 tasks.withType(Checkstyle) {
     onlyIf { false }
 }
+
+task thrift9ify(type: Copy) {
+    from "${rootProject.projectDir}/thrift/thrift0.13/src/test/thrift"
+    into "${rootProject.projectDir}/thrift/thrift0.9/gen-src/test/thrift"
+    filter { String line ->
+        line.replaceAll('i8', 'byte')
+    }
+}
+
+tasks.compileTestThrift.dependsOn(thrift9ify)
