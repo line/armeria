@@ -45,6 +45,7 @@ import testing.thrift.main.FooEnum;
 import testing.thrift.main.FooServiceException;
 import testing.thrift.main.FooStruct;
 import testing.thrift.main.FooUnion;
+import testing.thrift.main.InnerFooStruct;
 
 class ThriftDescriptiveTypeInfoProviderTest {
 
@@ -91,6 +92,7 @@ class ThriftDescriptiveTypeInfoProviderTest {
         fields.add(FieldInfo.of("listVal", TypeSignature.ofList(string)));
         fields.add(FieldInfo.builder("selfRef", TypeSignature.ofStruct(FooStruct.class))
                             .requirement(FieldRequirement.OPTIONAL).build());
+        fields.add(FieldInfo.builder("innerFooStruct", TypeSignature.ofStruct(InnerFooStruct.class)).build());
 
         final StructInfo fooStruct = newStructInfo(FooStruct.class);
         assertThat(fooStruct).isEqualTo(new StructInfo(FooStruct.class.getName(), fields));
