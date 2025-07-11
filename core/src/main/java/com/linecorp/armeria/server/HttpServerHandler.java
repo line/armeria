@@ -413,7 +413,8 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
         // `determineProxiedAddresses` could throw IllegalArgumentException if the headers are invalid.
         // If it does, we will return a 400 Bad Request response.
         // We need to get the ServiceConfig before responding, hence, we store the exception first.
-        ProxiedAddresses proxiedAddresses = ProxiedAddresses.of(remoteAddress);
+        ProxiedAddresses proxiedAddresses = (this.proxiedAddresses != null) ?
+                this.proxiedAddresses : ProxiedAddresses.of(remoteAddress);
         IllegalArgumentException invalidProxiedAddressesException = null;
         try {
             proxiedAddresses = determineProxiedAddresses(headers);
@@ -449,6 +450,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
             responseEncoder.writeErrorResponse(req.id(), req.streamId(), serviceCfg, headers,
                     HttpStatus.BAD_REQUEST, "Invalid proxied address",
                     invalidProxiedAddressesException);
+            req.abort(invalidProxiedAddressesException);
             decreasePendingRequests();
             return;
         }
