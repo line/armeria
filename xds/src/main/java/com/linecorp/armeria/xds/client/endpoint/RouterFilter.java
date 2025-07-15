@@ -21,7 +21,6 @@ import static com.linecorp.armeria.xds.client.endpoint.XdsAttributeKeys.ROUTE_CO
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
 
-import com.linecorp.armeria.client.ClientDecoration;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.PreClient;
 import com.linecorp.armeria.client.PreClientRequestContext;
@@ -70,8 +69,18 @@ final class RouterFilter<I extends Request, O extends Response> implements Prepr
 
         final ClientRequestContextExtension ctxExt = ctx.as(ClientRequestContextExtension.class);
         if (ctxExt != null) {
-            final ClientDecoration decoration = selectedRoute.upstreamFilter();
-            ctxExt.decoration(decoration);
+            if (selectedRoute.rpcClient() != null) {
+                ctxExt.rpcClientCustomizer(actualClient -> {
+                    DelegatingRpcClient.setDelegate(ctx, actualClient);
+                    return selectedRoute.rpcClient();
+                });
+            }
+            if (selectedRoute.httpClient() != null) {
+                ctxExt.httpClientCustomizer(actualClient -> {
+                    DelegatingHttpClient.setDelegate(ctx, actualClient);
+                    return selectedRoute.httpClient();
+                });
+            }
         }
 
         final UpstreamTlsContext tlsContext = clusterSnapshot.xdsResource().upstreamTlsContext();

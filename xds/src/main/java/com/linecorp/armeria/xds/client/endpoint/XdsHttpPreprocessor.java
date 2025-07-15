@@ -17,6 +17,8 @@
 package com.linecorp.armeria.xds.client.endpoint;
 
 import com.linecorp.armeria.client.HttpPreprocessor;
+import com.linecorp.armeria.client.PreClient;
+import com.linecorp.armeria.client.PreClientRequestContext;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.annotation.UnstableApi;
@@ -49,5 +51,12 @@ public final class XdsHttpPreprocessor extends XdsPreprocessor<HttpRequest, Http
     private XdsHttpPreprocessor(String listenerName, XdsBootstrap xdsBootstrap) {
         super(listenerName, xdsBootstrap, HttpResponse::of,
               (xdsFilter, preClient) -> xdsFilter.decorate(preClient::execute));
+    }
+
+    @Override
+    HttpResponse execute1(PreClient<HttpRequest, HttpResponse> delegate, PreClientRequestContext ctx,
+                          HttpRequest req, RouteConfig routeConfig) throws Exception {
+        DelegatingHttpClient.setDelegate(ctx, delegate);
+        return routeConfig.httpPreClient().execute(ctx, req);
     }
 }

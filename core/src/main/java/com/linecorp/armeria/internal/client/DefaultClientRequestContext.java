@@ -39,13 +39,14 @@ import javax.net.ssl.SSLSession;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.linecorp.armeria.client.ClientDecoration;
 import com.linecorp.armeria.client.ClientOptions;
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.Endpoint;
+import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.client.PreClientRequestContext;
 import com.linecorp.armeria.client.RequestOptions;
 import com.linecorp.armeria.client.ResponseTimeoutMode;
+import com.linecorp.armeria.client.RpcClient;
 import com.linecorp.armeria.client.UnprocessedRequestException;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.common.AttributesGetters;
@@ -174,7 +175,8 @@ public final class DefaultClientRequestContext
     private volatile CompletableFuture<Boolean> whenInitialized;
 
     private final ResponseTimeoutMode responseTimeoutMode;
-    private ClientDecoration decoration = ClientDecoration.of();
+    private Function<HttpClient, HttpClient> httpClientCustomizer = Function.identity();
+    private Function<RpcClient, RpcClient> rpcClientCustomizer = Function.identity();
 
     public DefaultClientRequestContext(SessionProtocol sessionProtocol, HttpRequest httpRequest,
                                        @Nullable RpcRequest rpcRequest, RequestTarget requestTarget,
@@ -509,13 +511,23 @@ public final class DefaultClientRequestContext
     }
 
     @Override
-    public ClientDecoration decoration() {
-        return decoration;
+    public void httpClientCustomizer(Function<HttpClient, HttpClient> httpClientCustomizer) {
+        this.httpClientCustomizer = this.httpClientCustomizer.andThen(httpClientCustomizer);
     }
 
     @Override
-    public void decoration(ClientDecoration decoration) {
-        this.decoration = requireNonNull(decoration, "decoration");
+    public Function<HttpClient, HttpClient> httpClientCustomizer() {
+        return httpClientCustomizer;
+    }
+
+    @Override
+    public void rpcClientCustomizer(Function<RpcClient, RpcClient> rpcClientCustomizer) {
+        this.rpcClientCustomizer = this.rpcClientCustomizer.andThen(rpcClientCustomizer);
+    }
+
+    @Override
+    public Function<RpcClient, RpcClient> rpcClientCustomizer() {
+        return rpcClientCustomizer;
     }
 
     private void failEarly(Throwable cause) {

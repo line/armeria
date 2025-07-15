@@ -37,7 +37,8 @@ import com.linecorp.armeria.xds.XdsBootstrap;
 
 import io.netty.channel.EventLoop;
 
-class XdsPreprocessor<I extends Request, O extends Response> implements Preprocessor<I, O>, AutoCloseable {
+abstract class XdsPreprocessor<I extends Request, O extends Response>
+        implements Preprocessor<I, O>, AutoCloseable {
 
     private final ListenerRoot listenerRoot;
     private final RouteConfigSelector routeConfigSelector;
@@ -81,9 +82,11 @@ class XdsPreprocessor<I extends Request, O extends Response> implements Preproce
                     new TimeoutException("Couldn't select a snapshot for listener '" + listenerName + "'."));
         }
         ctx.setAttr(ROUTE_CONFIG, routeConfig);
-        final ClientPreprocessors downstreamFilter = routeConfig.downstreamFilters();
-        return filterFunction.apply(downstreamFilter, delegate).execute(ctx, req);
+        return execute1(delegate, ctx, req, routeConfig);
     }
+
+    abstract O execute1(PreClient<I, O> delegate, PreClientRequestContext ctx, I req,
+                        RouteConfig routeConfig) throws Exception;
 
     @Override
     public void close() {

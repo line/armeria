@@ -17,6 +17,8 @@
 package com.linecorp.armeria.xds.client.endpoint;
 
 import com.linecorp.armeria.client.ClientDecoration;
+import com.linecorp.armeria.client.HttpClient;
+import com.linecorp.armeria.client.RpcClient;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.xds.ClusterSnapshot;
 import com.linecorp.armeria.xds.ListenerSnapshot;
@@ -26,11 +28,14 @@ import com.linecorp.armeria.xds.VirtualHostSnapshot;
 
 final class SelectedRoute implements ConfigSupplier {
 
-    private final ClientDecoration upstreamFilter;
     private final ListenerSnapshot listenerSnapshot;
     private final RouteSnapshot routeSnapshot;
     private final VirtualHostSnapshot virtualHostSnapshot;
     private final RouteEntry routeEntry;
+    @Nullable
+    private final HttpClient httpClient;
+    @Nullable
+    private final RpcClient rpcClient;
 
     SelectedRoute(ListenerSnapshot listenerSnapshot, RouteSnapshot routeSnapshot,
                   VirtualHostSnapshot virtualHostSnapshot, RouteEntry routeEntry) {
@@ -38,7 +43,14 @@ final class SelectedRoute implements ConfigSupplier {
         this.routeSnapshot = routeSnapshot;
         this.virtualHostSnapshot = virtualHostSnapshot;
         this.routeEntry = routeEntry;
-        upstreamFilter = FilterUtil.buildUpstreamFilter(this);
+        final ClientDecoration upstreamFilter = FilterUtil.buildUpstreamFilter(this);
+        if (upstreamFilter == ClientDecoration.of()) {
+            httpClient = null;
+            rpcClient = null;
+        } else {
+            httpClient = upstreamFilter.decorate(DelegatingHttpClient.INSTANCE);
+            rpcClient = upstreamFilter.rpcDecorate(DelegatingRpcClient.INSTANCE);
+        }
     }
 
     @Override
@@ -62,8 +74,14 @@ final class SelectedRoute implements ConfigSupplier {
         return routeEntry.clusterSnapshot();
     }
 
-    public ClientDecoration upstreamFilter() {
-        return upstreamFilter;
+    @Nullable
+    HttpClient httpClient() {
+        return httpClient;
+    }
+
+    @Nullable
+    RpcClient rpcClient() {
+        return rpcClient;
     }
 
     @Override

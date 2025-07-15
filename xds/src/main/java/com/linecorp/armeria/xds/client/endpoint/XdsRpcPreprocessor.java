@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.xds.client.endpoint;
 
+import com.linecorp.armeria.client.PreClient;
+import com.linecorp.armeria.client.PreClientRequestContext;
 import com.linecorp.armeria.client.RpcPreprocessor;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.RpcResponse;
@@ -49,5 +51,12 @@ public final class XdsRpcPreprocessor extends XdsPreprocessor<RpcRequest, RpcRes
     private XdsRpcPreprocessor(String listenerName, XdsBootstrap xdsBootstrap) {
         super(listenerName, xdsBootstrap, RpcResponse::of,
               (xdsFilter, preClient) -> xdsFilter.rpcDecorate(preClient::execute));
+    }
+
+    @Override
+    RpcResponse execute1(PreClient<RpcRequest, RpcResponse> delegate, PreClientRequestContext ctx,
+                         RpcRequest req, RouteConfig routeConfig) throws Exception {
+        DelegatingRpcClient.setDelegate(ctx, delegate);
+        return routeConfig.rpcPreClient().execute(ctx, req);
     }
 }

@@ -24,7 +24,9 @@ import java.util.Objects;
 import com.google.common.collect.ImmutableMap;
 
 import com.linecorp.armeria.client.ClientPreprocessors;
+import com.linecorp.armeria.client.HttpPreClient;
 import com.linecorp.armeria.client.PreClientRequestContext;
+import com.linecorp.armeria.client.RpcPreClient;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.xds.ListenerSnapshot;
@@ -34,12 +36,16 @@ import com.linecorp.armeria.xds.VirtualHostSnapshot;
 
 final class RouteConfig {
     private final ListenerSnapshot listenerSnapshot;
-    private final ClientPreprocessors downstreamFilters;
+
+    private final HttpPreClient httpPreClient;
+    private final RpcPreClient rpcPreClient;
     private final Map<IndexPair, SelectedRoute> precomputedRoutes;
 
     RouteConfig(ListenerSnapshot listenerSnapshot) {
         this.listenerSnapshot = listenerSnapshot;
-        downstreamFilters = FilterUtil.buildDownstreamFilter(listenerSnapshot);
+        final ClientPreprocessors preprocessors = FilterUtil.buildDownstreamFilter(listenerSnapshot);
+        httpPreClient = preprocessors.decorate(DelegatingHttpClient.INSTANCE);
+        rpcPreClient = preprocessors.rpcDecorate(DelegatingRpcClient.INSTANCE);
         precomputedRoutes = routeEntries(listenerSnapshot);
     }
 
@@ -66,8 +72,12 @@ final class RouteConfig {
         return listenerSnapshot;
     }
 
-    ClientPreprocessors downstreamFilters() {
-        return downstreamFilters;
+    HttpPreClient httpPreClient() {
+        return httpPreClient;
+    }
+
+    RpcPreClient rpcPreClient() {
+        return rpcPreClient;
     }
 
     @Nullable
