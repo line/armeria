@@ -64,7 +64,7 @@ import io.envoyproxy.envoy.config.endpoint.v3.ClusterLoadAssignment;
  * Note that it is important to shut down the endpoint group to clean up resources
  * for the provided {@link XdsBootstrap}.
  *
- * @deprecated use {@link XdsHttpPreprocessor} or {@link XdsRpcPreprocessor} instead
+ * @deprecated use {@link XdsHttpPreprocessor} for HTTP and gRPC or {@link XdsRpcPreprocessor} for Thrift.
  */
 @UnstableApi
 @Deprecated

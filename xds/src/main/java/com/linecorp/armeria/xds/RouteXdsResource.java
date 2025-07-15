@@ -64,7 +64,6 @@ public final class RouteXdsResource implements XdsResource {
      * @param filterName the filter name represented by {@link HttpFilter#getName()}
      */
     @Nullable
-    @UnstableApi
     public ParsedFilterConfig filterConfig(String filterName) {
         return filterConfigs.get(filterName);
     }

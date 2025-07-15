@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.xds.client.endpoint;
 
+import static java.util.Objects.requireNonNull;
+
 import com.linecorp.armeria.client.PreClient;
 import com.linecorp.armeria.client.PreClientRequestContext;
 import com.linecorp.armeria.client.RpcPreprocessor;
@@ -25,16 +27,16 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.xds.XdsBootstrap;
 
 /**
- * A {@link RpcPreprocessor} implementation which allows clients to execute requests based on
+ * An {@link RpcPreprocessor} implementation which allows clients to execute requests based on
  * xDS (* Discovery Service). A typical user may make requests like the following:
  * <pre>{@code
  * XdsBootstrap bootstrap = XdsBootstrap.of(...);
- * XdsRpcPreprocessor rpcPreprocessor = XdsRpcPreprocessor.ofListener("my-listener" ,bootstrap);
+ * XdsRpcPreprocessor rpcPreprocessor = XdsRpcPreprocessor.ofListener("my-listener", bootstrap);
  * HelloService.Iface iface = ThriftClients.newClient(rpcPreprocessor, HelloService.Iface.class);
  * iface.hello() // the request will be routed based on how the listener "my-listener" is configured
  * rpcPreprocessor.close();
  * }</pre>
- * Once a {@link XdsRpcPreprocessor} is no longer used, invoking {@link XdsRpcPreprocessor#close()}
+ * Once an {@link XdsRpcPreprocessor} is no longer used, invoking {@link XdsRpcPreprocessor#close()}
  * may help save resources.
  */
 @UnstableApi
@@ -45,11 +47,13 @@ public final class XdsRpcPreprocessor extends XdsPreprocessor<RpcRequest, RpcRes
      * Creates a {@link XdsRpcPreprocessor}.
      */
     public static XdsRpcPreprocessor ofListener(String listenerName, XdsBootstrap xdsBootstrap) {
+        requireNonNull(listenerName, "listenerName");
+        requireNonNull(xdsBootstrap, "xdsBootstrap");
         return new XdsRpcPreprocessor(listenerName, xdsBootstrap);
     }
 
     private XdsRpcPreprocessor(String listenerName, XdsBootstrap xdsBootstrap) {
-        super(listenerName, xdsBootstrap, RpcResponse::of,
+        super(listenerName, xdsBootstrap, RpcResponse::from,
               (xdsFilter, preClient) -> xdsFilter.rpcDecorate(preClient::execute));
     }
 

@@ -21,6 +21,7 @@ import static com.linecorp.armeria.xds.client.endpoint.XdsAttributeKeys.ROUTE_CO
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
 
+import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.PreClient;
 import com.linecorp.armeria.client.PreClientRequestContext;
@@ -37,6 +38,7 @@ import com.linecorp.armeria.internal.client.ClientRequestContextExtension;
 import com.linecorp.armeria.xds.ClusterSnapshot;
 
 import io.envoyproxy.envoy.extensions.transport_sockets.tls.v3.UpstreamTlsContext;
+import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoop;
 
 final class RouterFilter<I extends Request, O extends Response> implements Preprocessor<I, O> {
@@ -102,7 +104,7 @@ final class RouterFilter<I extends Request, O extends Response> implements Prepr
         }
         final EventLoop temporaryEventLoop = ctx.options().factory().eventLoopSupplier().get();
         final CompletableFuture<O> cf =
-                loadBalancer.select(ctx, temporaryEventLoop, ctx.responseTimeoutMillis())
+                loadBalancer.select(ctx, temporaryEventLoop, connectTimeoutMillis(ctx))
                             .thenApply(endpoint0 -> {
                                 try {
                                     return execute0(delegate, ctx, req, endpoint0);
@@ -111,6 +113,14 @@ final class RouterFilter<I extends Request, O extends Response> implements Prepr
                                 }
                             });
         return futureConverter.apply(cf);
+    }
+
+    private int connectTimeoutMillis(ClientRequestContext ctx) {
+        final Integer connectTimeoutMillisBoxed =
+                (Integer) ctx.options().factory().options()
+                             .channelOptions().get(ChannelOption.CONNECT_TIMEOUT_MILLIS);
+        assert connectTimeoutMillisBoxed != null;
+        return connectTimeoutMillisBoxed;
     }
 
     private O execute0(PreClient<I, O> delegate, PreClientRequestContext ctx, I req,

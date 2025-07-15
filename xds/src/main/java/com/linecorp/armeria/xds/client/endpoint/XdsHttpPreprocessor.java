@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.xds.client.endpoint;
 
+import static java.util.Objects.requireNonNull;
+
 import com.linecorp.armeria.client.HttpPreprocessor;
 import com.linecorp.armeria.client.PreClient;
 import com.linecorp.armeria.client.PreClientRequestContext;
@@ -29,7 +31,7 @@ import com.linecorp.armeria.xds.XdsBootstrap;
  * xDS (* Discovery Service). A typical user may make requests like the following:
  * <pre>{@code
  * XdsBootstrap bootstrap = XdsBootstrap.of(...);
- * XdsHttpPreprocessor httpPreprocessor = XdsHttpPreprocessor.ofListener("my-listener" ,bootstrap);
+ * XdsHttpPreprocessor httpPreprocessor = XdsHttpPreprocessor.ofListener("my-listener", bootstrap);
  * WebClient client = WebClient.of(httpPreprocessor);
  * client.get("/"); // the request will be routed based on how the listener "my-listener" is configured
  * httpPreprocessor.close();
@@ -45,6 +47,8 @@ public final class XdsHttpPreprocessor extends XdsPreprocessor<HttpRequest, Http
      * Creates a {@link XdsHttpPreprocessor}.
      */
     public static XdsHttpPreprocessor ofListener(String listenerName, XdsBootstrap xdsBootstrap) {
+        requireNonNull(listenerName, "listenerName");
+        requireNonNull(xdsBootstrap, "xdsBootstrap");
         return new XdsHttpPreprocessor(listenerName, xdsBootstrap);
     }
 

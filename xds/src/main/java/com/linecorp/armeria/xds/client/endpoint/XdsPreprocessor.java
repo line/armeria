@@ -19,7 +19,6 @@ package com.linecorp.armeria.xds.client.endpoint;
 import static com.linecorp.armeria.xds.client.endpoint.XdsAttributeKeys.ROUTE_CONFIG;
 
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CompletionException;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 
@@ -32,6 +31,7 @@ import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.TimeoutException;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.xds.ListenerRoot;
 import com.linecorp.armeria.xds.XdsBootstrap;
 
@@ -69,7 +69,7 @@ abstract class XdsPreprocessor<I extends Request, O extends Response>
                                        try {
                                            return execute0(delegate, ctx, req, routeConfig0);
                                        } catch (Exception e) {
-                                           throw new CompletionException(e);
+                                           return Exceptions.throwUnsafely(e);
                                        }
                                    });
         return futureConverter.apply(resFuture);

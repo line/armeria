@@ -22,6 +22,7 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.RpcResponse;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.xds.filter.HttpFilterFactory;
 
 import io.envoyproxy.envoy.extensions.filters.http.router.v3.Router;
@@ -29,6 +30,7 @@ import io.envoyproxy.envoy.extensions.filters.http.router.v3.Router;
 /**
  * A {@link HttpFilterFactory} implementation of the {@link Router} filter.
  */
+@UnstableApi
 public final class RouterFilterFactory implements HttpFilterFactory<Router> {
 
     private static final String NAME = "envoy.filters.http.router";
@@ -41,9 +43,11 @@ public final class RouterFilterFactory implements HttpFilterFactory<Router> {
         return INSTANCE;
     }
 
+    private RouterFilterFactory() {}
+
     @Override
     public RpcPreprocessor rpcPreprocessor(Router config) {
-        return (delegate, ctx, req) -> new RouterFilter<RpcRequest, RpcResponse>(RpcResponse::of)
+        return (delegate, ctx, req) -> new RouterFilter<RpcRequest, RpcResponse>(RpcResponse::from)
                 .execute(delegate, ctx, req);
     }
 

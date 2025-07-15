@@ -105,10 +105,12 @@ final class RouteConfig {
     }
 
     private static boolean matches(@Nullable HttpRequest req, RouteEntry routeEntry) {
+        // matches the first entry for now
         return true;
     }
 
     private static boolean matches(@Nullable HttpRequest req, VirtualHostSnapshot virtualHostSnapshot) {
+        // matches the first entry for now
         return true;
     }
 

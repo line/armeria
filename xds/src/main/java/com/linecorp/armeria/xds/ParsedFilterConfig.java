@@ -44,7 +44,7 @@ public final class ParsedFilterConfig {
      * @param filterName the name of the {@link HttpFilter}
      * @param config the config to be parsed
      */
-    public static ParsedFilterConfig of(String filterName, Any config) {
+    static ParsedFilterConfig of(String filterName, Any config) {
         requireNonNull(config, "config");
         if (FILTER_CONFIG_TYPE_URL.equals(config.getTypeUrl())) {
             final FilterConfig filterConfig;
@@ -77,23 +77,19 @@ public final class ParsedFilterConfig {
 
     @Nullable
     private final Object parsedConfig;
-    @Nullable
-    private final Class<?> configClass;
     private final boolean disabled;
 
     private ParsedFilterConfig(String filterName, Any config, boolean optional, boolean disabled) {
         final HttpFilterFactory<?> filterFactory = HttpFilterFactoryRegistry.of().filterFactory(filterName);
         if (filterFactory == null) {
             if (!optional) {
-                throw new IllegalArgumentException("Filter config for filter: '" + filterName +
+                throw new IllegalArgumentException("Filter config for filter '" + filterName +
                                                    "' is not registered in HttpFilterFactoryRegistry.");
             }
         }
         if (filterFactory != null) {
-            configClass = filterFactory.configClass();
             parsedConfig = maybeParseConfig(config, filterFactory.configClass());
         } else {
-            configClass = null;
             parsedConfig = null;
         }
         this.disabled = disabled;
