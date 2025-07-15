@@ -168,6 +168,7 @@ thrift018 = { strictly = "0.18.1" }
 thrift019 = { strictly = "0.19.0" }
 thrift020 = { strictly = "0.20.0" }
 thrift021 = { strictly = "0.21.0" }
+thrift022 = { strictly = "0.22.0" }
 tomcat8 = "8.5.100"
 tomcat9 = "9.0.96"
 tomcat10 = "10.1.31"
@@ -1385,6 +1386,14 @@ exclusions = [
 module = "org.apache.thrift:libthrift"
 version.ref = "thrift021"
 javadocs = "https://www.javadoc.io/doc/org.apache.thrift/libthrift/0.21.0/"
+exclusions = [
+    "javax.annotation:javax.annotation-api",
+    "org.apache.httpcomponents:httpcore",
+    "org.apache.httpcomponents:httpclient"]
+[libraries.thrift022]
+module = "org.apache.thrift:libthrift"
+version.ref = "thrift022"
+javadocs = "https://www.javadoc.io/doc/org.apache.thrift/libthrift/0.22.0/"
 exclusions = [
     "javax.annotation:javax.annotation-api",
     "org.apache.httpcomponents:httpcore",
