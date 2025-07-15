@@ -17,15 +17,14 @@
 package com.linecorp.armeria.internal.common.thrift.logging;
 
 import static com.linecorp.armeria.internal.common.thrift.logging.ThriftMaskingStructs.fooStruct;
-import static com.linecorp.armeria.internal.common.thrift.logging.ThriftMaskingStructs.optionalFooStruct;
-import static com.linecorp.armeria.internal.common.thrift.logging.ThriftMaskingStructs.requiredFooStruct;
 import static net.javacrumbs.jsonunit.fluent.JsonFluentAssert.assertThatJson;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Stream;
 
-import org.apache.thrift.TBase;
-import org.apache.thrift.TSerializer;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
@@ -40,33 +39,10 @@ import com.linecorp.armeria.common.logging.FieldMasker;
 import com.linecorp.armeria.common.thrift.ThriftProtocolFactories;
 import com.linecorp.armeria.common.thrift.logging.ThriftFieldMaskerSelector;
 
-import testing.thrift.main.FooEnum;
-import testing.thrift.main.FooStruct;
-import testing.thrift.main.FooUnion;
 import testing.thrift.main.InnerFooStruct;
-import testing.thrift.main.OptionalFooStruct;
 import testing.thrift.main.SecretStruct;
-import testing.thrift.main.TypedefedFooStruct;
 
 class MaskingTest {
-
-    public static Stream<Arguments> jsonProtocolComparison_args() {
-        return Stream.of(
-                Arguments.of(fooStruct()), Arguments.of(new FooStruct()),
-                Arguments.of(optionalFooStruct()), Arguments.of(new OptionalFooStruct()),
-                Arguments.of(requiredFooStruct()));
-    }
-
-    @ParameterizedTest
-    @MethodSource("jsonProtocolComparison_args")
-    void delegatingProtocol(TBase<?, ?> tBase) throws Exception {
-        final TSerializer tSerializer = new TSerializer(ThriftProtocolFactories.json());
-        final TBaseSelectorCache cache = new TBaseSelectorCache(ImmutableList.of());
-        final TMaskingSerializer serializer = new TMaskingSerializer(ThriftProtocolFactories.json(), cache);
-        final String upstreamSer = tSerializer.toString(tBase);
-        final String ser = serializer.toString(tBase);
-        assertThatJson(ser).isEqualTo(upstreamSer);
-    }
 
     @Test
     void maskPrimitiveToNull() throws Exception {
@@ -83,6 +59,22 @@ class MaskingTest {
         final String ser = serializer.toString(struct);
         assertThatJson(ser).node("1.str").isStringEqualTo("hello")
                            .node("2.str").isStringEqualTo("");
+    }
+
+    @Test
+    void maskPrimitiveToString() throws Exception {
+        final TBaseSelectorCache cache =
+                new TBaseSelectorCache(ImmutableList.of(ThriftFieldMaskerSelector.of(info -> {
+                    if ("boolVal".equals(info.fieldMetaData().fieldName)) {
+                        return FieldMasker.builder()
+                                          .addMasker(Boolean.class, b -> "masked", s -> true)
+                                          .build();
+                    }
+                    return FieldMasker.noMask();
+                })));
+        final TMaskingSerializer serializer = new TMaskingSerializer(ThriftProtocolFactories.json(), cache);
+        final String ser = serializer.toString(fooStruct());
+        assertThatJson(ser).node("1.tf").isStringEqualTo("masked");
     }
 
     @ParameterizedTest
@@ -122,6 +114,50 @@ class MaskingTest {
         final TMaskingSerializer serializer = new TMaskingSerializer(ThriftProtocolFactories.json(), cache);
         final String ser = serializer.toString(struct);
         assertThatJson(ser).node(jsonNode).isEqualTo("{}");
+    }
+
+    @ParameterizedTest
+    @CsvSource({"innerFooStruct,3.rec", "typedefedInnerFooStruct,4.rec"})
+    void maskTbaseToString(String fieldName, String jsonNode) throws Exception {
+        final InnerFooStruct inner = new InnerFooStruct().setStringVal("val1");
+        final SecretStruct struct = new SecretStruct().setInnerFooStruct(inner)
+                                                      .setTypedefedInnerFooStruct(inner);
+        final TBaseSelectorCache cache =
+                new TBaseSelectorCache(ImmutableList.of(ThriftFieldMaskerSelector.of(info -> {
+                    if (fieldName.equals(info.fieldMetaData().fieldName)) {
+                        return FieldMasker.builder()
+                                          .addMasker(InnerFooStruct.class, f -> "masked", s -> inner)
+                                          .build();
+                    }
+                    return FieldMasker.noMask();
+                })));
+        final TMaskingSerializer serializer = new TMaskingSerializer(ThriftProtocolFactories.json(), cache);
+        final String ser = serializer.toString(struct);
+        assertThatJson(ser).node(jsonNode).isEqualTo("masked");
+    }
+
+    @ParameterizedTest
+    @CsvSource({"innerFooStruct,3.rec", "typedefedInnerFooStruct,4.rec"})
+    void maskTbaseToRandomThrows(String fieldName, String jsonNode) throws Exception {
+        final InnerFooStruct inner = new InnerFooStruct().setStringVal("val1");
+        final SecretStruct struct = new SecretStruct().setInnerFooStruct(inner)
+                                                      .setTypedefedInnerFooStruct(inner);
+        final TBaseSelectorCache cache =
+                new TBaseSelectorCache(ImmutableList.of(ThriftFieldMaskerSelector.of(info -> {
+                    if (fieldName.equals(info.fieldMetaData().fieldName)) {
+                        return new FieldMasker() {
+                            @Override
+                            public Object mask(Object obj) {
+                                return new Object();
+                            }
+                        };
+                    }
+                    return FieldMasker.noMask();
+                })));
+        final TMaskingSerializer serializer = new TMaskingSerializer(ThriftProtocolFactories.json(), cache);
+        assertThatThrownBy(() -> serializer.toString(struct))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("does not match the expected mapped class");
     }
 
     private static Stream<Arguments> maskMap_args() {
@@ -293,37 +329,95 @@ class MaskingTest {
         assertThatJson(ser).node(jsonNode + "[3]").isEqualTo("{}");
     }
 
-    static TypedefedFooStruct typedefedFooStruct() {
-        return new TypedefedFooStruct().setBoolVal(true)
-                                       .setByteVal((byte) 3)
-                                       .setI16Val((short) 4)
-                                       .setI32Val(5)
-                                       .setI64Val(6)
-                                       .setDoubleVal(7.2)
-                                       .setStringVal("abc")
-                                       .setBinaryVal(new byte[] { 1, 2, 3 })
-                                       .setEnumVal(FooEnum.VAL2)
-                                       .setUnionVal(FooUnion.enumVal(FooEnum.VAL3))
-                                       .setMapVal(ImmutableMap.of("1", FooEnum.VAL1, "2", FooEnum.VAL2,
-                                                                  "3", FooEnum.VAL3))
-                                       .setSetVal(ImmutableSet.of(FooUnion.enumVal(FooEnum.VAL1),
-                                                                  FooUnion.stringVal("sval1")))
-                                       .setListVal(ImmutableList.of("lval1", "lval2", "lval3"))
-                                       .setInnerFooStruct(new InnerFooStruct().setStringVal("innerSval1"));
+    @Test
+    void maskMapOfMaps() throws Exception {
+        final TBaseSelectorCache cache =
+                new TBaseSelectorCache(ImmutableList.of(ThriftFieldMaskerSelector.of(info -> {
+                    if ("stringVal".equals(info.fieldMetaData().fieldName)) {
+                        return FieldMasker.builder()
+                                          .addMasker(String.class, s -> s + '+')
+                                          .build();
+                    }
+                    return FieldMasker.noMask();
+                })));
+        final TMaskingSerializer serializer = new TMaskingSerializer(ThriftProtocolFactories.json(), cache);
+        final String ser = serializer.toString(fooStruct());
+        assertThatJson(ser).node("19.map[2]").isEqualTo(2);
+        assertThatJson(ser).node("19.map[3].key1[3].key1\\.1.1.str").isEqualTo("lval1+");
+        assertThatJson(ser).node("19.map[3].key1[3].key1\\.2.1.str").isEqualTo("lval2+");
+        assertThatJson(ser).node("19.map[3].key2[3].key1\\.1.1.str").isEqualTo("lval1+");
+        assertThatJson(ser).node("19.map[3].key2[3].key1\\.2.1.str").isEqualTo("lval2+");
     }
 
-    static Stream<Arguments> typedefJsonProtocolComparison_args() {
-        return Stream.of(Arguments.of(typedefedFooStruct()), Arguments.of(new TypedefedFooStruct()));
+    @Test
+    void maskListOfLists() throws Exception {
+        final TBaseSelectorCache cache =
+                new TBaseSelectorCache(ImmutableList.of(ThriftFieldMaskerSelector.of(info -> {
+                    if ("stringVal".equals(info.fieldMetaData().fieldName)) {
+                        return FieldMasker.builder()
+                                          .addMasker(String.class, s -> s + '+')
+                                          .build();
+                    }
+                    return FieldMasker.noMask();
+                })));
+        final TMaskingSerializer serializer = new TMaskingSerializer(ThriftProtocolFactories.json(), cache);
+        final String ser = serializer.toString(fooStruct());
+        assertThatJson(ser).node("17.lst[1]").isEqualTo(2);
+        assertThatJson(ser).node("17.lst[2].[1]").isEqualTo(2);
+        assertThatJson(ser).node("17.lst[2].[2].1.str").isEqualTo("lval1+");
+        assertThatJson(ser).node("17.lst[2].[3].1.str").isEqualTo("lval2+");
+        assertThatJson(ser).node("17.lst[3].[2].1.str").isEqualTo("lval3+");
+        assertThatJson(ser).node("17.lst[3].[3].1.str").isEqualTo("lval4+");
+    }
+
+    @Test
+    void maskSetOfSets() throws Exception {
+        final TBaseSelectorCache cache =
+                new TBaseSelectorCache(ImmutableList.of(ThriftFieldMaskerSelector.of(info -> {
+                    if ("stringVal".equals(info.fieldMetaData().fieldName)) {
+                        return FieldMasker.builder()
+                                          .addMasker(String.class, s -> s + '+')
+                                          .build();
+                    }
+                    return FieldMasker.noMask();
+                })));
+        final TMaskingSerializer serializer = new TMaskingSerializer(ThriftProtocolFactories.json(), cache);
+        final String ser = serializer.toString(fooStruct());
+        assertThatJson(ser).node("17.set[1]").isEqualTo(2);
+        assertThatJson(ser).node("17.set[2].[1]").isEqualTo(2);
+        assertThatJson(ser).node("17.set[2].[2].1.str").isEqualTo("lval1+");
+        assertThatJson(ser).node("17.set[2].[3].1.str").isEqualTo("lval2+");
+        assertThatJson(ser).node("17.set[3].[2].1.str").isEqualTo("lval3+");
+        assertThatJson(ser).node("17.set[3].[3].1.str").isEqualTo("lval4+");
+    }
+
+    private static Stream<Arguments> collectionMutationNotAllowed() {
+        return Stream.of(
+                Arguments.of(FieldMasker.builder().addMasker(Map.class, m -> {
+                    m.put(1, 2);
+                    return m;
+                }).build()),
+                Arguments.of(FieldMasker.builder().addMasker(Map.class, m -> ImmutableMap.of()).build()),
+                Arguments.of(FieldMasker.builder().addMasker(List.class, l -> {
+                    l.add(1);
+                    return l;
+                }).build()),
+                Arguments.of(FieldMasker.builder().addMasker(List.class, l -> ImmutableList.of()).build()),
+                Arguments.of(FieldMasker.builder().addMasker(Set.class, s -> {
+                    s.add(1);
+                    return s;
+                }).build()),
+                Arguments.of(FieldMasker.builder().addMasker(Set.class, s -> ImmutableSet.of()).build())
+        );
     }
 
     @ParameterizedTest
-    @MethodSource("typedefJsonProtocolComparison_args")
-    void typedefJsonProtocolComparison(TBase<?, ?> tBase) throws Exception {
-        final TSerializer tSerializer = new TSerializer(ThriftProtocolFactories.json());
-        final TBaseSelectorCache cache = new TBaseSelectorCache(ImmutableList.of());
+    @MethodSource
+    void collectionMutationNotAllowed(FieldMasker masker) throws Exception {
+        final TBaseSelectorCache cache =
+                new TBaseSelectorCache(ImmutableList.of(ThriftFieldMaskerSelector.of(info -> masker)));
         final TMaskingSerializer serializer = new TMaskingSerializer(ThriftProtocolFactories.json(), cache);
-        final String upstreamSer = tSerializer.toString(tBase);
-        final String ser = serializer.toString(tBase);
-        assertThatJson(ser).isEqualTo(upstreamSer);
+        assertThatThrownBy(() -> serializer.serialize(fooStruct()))
+                .isInstanceOfAny(UnsupportedOperationException.class, IllegalArgumentException.class);
     }
 }

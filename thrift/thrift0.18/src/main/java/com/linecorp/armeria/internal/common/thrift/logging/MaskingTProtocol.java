@@ -16,18 +16,11 @@
 
 package com.linecorp.armeria.internal.common.thrift.logging;
 
-import java.nio.ByteBuffer;
 import java.util.UUID;
 
 import org.apache.thrift.TBase;
 import org.apache.thrift.TException;
-import org.apache.thrift.protocol.TField;
-import org.apache.thrift.protocol.TList;
-import org.apache.thrift.protocol.TMap;
-import org.apache.thrift.protocol.TMessage;
 import org.apache.thrift.protocol.TProtocol;
-import org.apache.thrift.protocol.TSet;
-import org.apache.thrift.protocol.TStruct;
 
 final class MaskingTProtocol extends AbstractMaskingTProtocol {
 
@@ -38,112 +31,19 @@ final class MaskingTProtocol extends AbstractMaskingTProtocol {
     }
 
     @Override
-    public TMessage readMessageBegin() throws TException {
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public void readMessageEnd() throws TException {
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public TStruct readStructBegin() throws TException {
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public void readStructEnd() throws TException {
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public TField readFieldBegin() throws TException {
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public void readFieldEnd() throws TException {
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public TMap readMapBegin() throws TException {
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public void readMapEnd() throws TException {
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public TList readListBegin() throws TException {
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public void readListEnd() throws TException {
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public TSet readSetBegin() throws TException {
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public void readSetEnd() throws TException {
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public boolean readBool() throws TException {
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public byte readByte() throws TException {
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public short readI16() throws TException {
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public int readI32() throws TException {
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public long readI64() throws TException {
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
     public UUID readUuid() throws TException {
         throw new UnsupportedOperationException();
     }
 
     @Override
-    public double readDouble() throws TException {
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public String readString() throws TException {
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public ByteBuffer readBinary() throws TException {
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
     public void writeUuid(UUID uuid) throws TException {
-        delegate().writeUuid(uuid);
+        final Context context = stack().getFirst().resolve();
+        if (context instanceof IgnoreContext) {
+            return;
+        }
+        assert context instanceof PojoMaskingContext;
+        final PojoMaskingContext pojoMaskingContext = (PojoMaskingContext) context;
+        final TProtocol delegate = delegate();
+        maybeMask(uuid, DEFAULT_UUID, pojoMaskingContext, delegate::writeUuid, delegate);
     }
 }

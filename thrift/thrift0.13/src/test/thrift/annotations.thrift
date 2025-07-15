@@ -2,9 +2,18 @@ namespace java testing.thrift.main
 
 include "main.thrift"
 
-typedef map<string, main.TypedefedInnerFooStruct> InnerFooStructMap
-typedef list<main.TypedefedInnerFooStruct> InnerFooStructList
-typedef set<main.TypedefedInnerFooStruct> InnerFooStructSet
+struct InnerFooStruct {
+    1: string stringVal,
+}
+
+typedef main.FooUnion              TypedefedUnion
+typedef set<main.FooUnion>         TypedefedSetUnion
+typedef InnerFooStruct        TypedefedInnerFooStruct
+
+typedef map<string, main.FooEnum> TypedefedEnumMap
+typedef map<string, TypedefedInnerFooStruct> InnerFooStructMap
+typedef list<TypedefedInnerFooStruct> InnerFooStructList
+typedef set<TypedefedInnerFooStruct> InnerFooStructSet
 
 struct NormalFooStruct {
     1: bool boolVal,
@@ -21,11 +30,11 @@ struct NormalFooStruct {
     12: map<string, main.FooEnum> mapVal,
     13: set<main.FooUnion> setVal,
     14: list<string> listVal,
-    15: optional main.FooStruct selfRef,
-    16: main.InnerFooStruct innerFooStruct,
-    17: list<list<main.InnerFooStruct>> listOfLists,
-    18: set<set<main.InnerFooStruct>> setOfSets,
-    19: map<string, map<string, main.InnerFooStruct>> mapOfMaps,
+    15: optional NormalFooStruct selfRef,
+    16: InnerFooStruct innerFooStruct,
+    17: list<list<InnerFooStruct>> listOfLists,
+    18: set<set<InnerFooStruct>> setOfSets,
+    19: map<string, map<string, InnerFooStruct>> mapOfMaps,
 }
 
 struct OptionalFooStruct {
@@ -44,10 +53,10 @@ struct OptionalFooStruct {
     13: optional set<main.FooUnion> setVal,
     14: optional list<string> listVal,
     15: optional OptionalFooStruct selfRef,
-    16: optional main.InnerFooStruct innerFooStruct,
-    17: optional list<list<main.InnerFooStruct>> listOfLists,
-    18: optional set<set<main.InnerFooStruct>> setOfSets,
-    19: optional map<string, map<string, main.InnerFooStruct>> mapOfMaps,
+    16: optional InnerFooStruct innerFooStruct,
+    17: optional list<list<InnerFooStruct>> listOfLists,
+    18: optional set<set<InnerFooStruct>> setOfSets,
+    19: optional map<string, map<string, InnerFooStruct>> mapOfMaps,
 }
 
 struct RequiredFooStruct {
@@ -65,15 +74,15 @@ struct RequiredFooStruct {
     12: required map<string, main.FooEnum> mapVal,
     13: required set<main.FooUnion> setVal,
     14: required list<string> listVal,
-    16: required main.InnerFooStruct innerFooStruct,
-    17: required list<list<main.InnerFooStruct>> listOfLists,
-    18: required set<set<main.InnerFooStruct>> setOfSets,
-    19: required map<string, map<string, main.InnerFooStruct>> mapOfMaps,
+    16: required InnerFooStruct innerFooStruct,
+    17: required list<list<InnerFooStruct>> listOfLists,
+    18: required set<set<InnerFooStruct>> setOfSets,
+    19: required map<string, map<string, InnerFooStruct>> mapOfMaps,
 }
 
-typedef list<list<main.InnerFooStruct>> TypedefedListOfLists
-typedef set<set<main.InnerFooStruct>> TypedefedSetOfSets
-typedef map<string, map<string, main.InnerFooStruct>> TypedefedMapOfMaps
+typedef list<list<InnerFooStruct>> TypedefedListOfLists
+typedef set<set<InnerFooStruct>> TypedefedSetOfSets
+typedef map<string, map<string, InnerFooStruct>> TypedefedMapOfMaps
 
 struct TypedefedFooStruct {
     1: main.TypedefedBool boolVal,
@@ -86,11 +95,11 @@ struct TypedefedFooStruct {
     8: main.TypedefedBinary binaryVal,
     /* 9: slist slistVal, */
     10: main.TypedefedEnum enumVal,
-    11: main.TypedefedUnion unionVal,
-    12: main.TypedefedEnumMap mapVal,
-    13: main.TypedefedSetUnion setVal,
+    11: TypedefedUnion unionVal,
+    12: TypedefedEnumMap mapVal,
+    13: TypedefedSetUnion setVal,
     14: main.TypedefedListString listVal,
-    16: main.TypedefedInnerFooStruct innerFooStruct,
+    16: TypedefedInnerFooStruct innerFooStruct,
     17: TypedefedListOfLists listOfLists,
     18: TypedefedSetOfSets setOfSets,
     19: TypedefedMapOfMaps mapOfMaps,
@@ -101,13 +110,13 @@ struct TypedefedFooStruct {
 struct SecretStruct {
     1: string hello;
     2: string secret (grade = "red");
-    3: main.InnerFooStruct innerFooStruct;
-    4: main.TypedefedInnerFooStruct typedefedInnerFooStruct;
-    5: map<string, main.InnerFooStruct> innerFooStructMap;
+    3: InnerFooStruct innerFooStruct;
+    4: TypedefedInnerFooStruct typedefedInnerFooStruct;
+    5: map<string, InnerFooStruct> innerFooStructMap;
     6: InnerFooStructMap typedefedInnerFooStructMap;
-    7: list<main.InnerFooStruct> innerFooStructList;
+    7: list<InnerFooStruct> innerFooStructList;
     8: InnerFooStructList typedefedInnerFooStructList;
-    9: set<main.InnerFooStruct> innerFooStructSet;
+    9: set<InnerFooStruct> innerFooStructSet;
     10: InnerFooStructSet typedefedInnerFooStructSet;
     11: NormalFooStruct fooStruct;
     12: TypedefedFooStruct typedefedFooStruct;

@@ -66,11 +66,15 @@ abstract class AbstractMaskingTProtocol extends TProtocol {
         super(delegate.getTransport());
         this.delegate = delegate;
         this.selectorCache = selectorCache;
-        stack.push(new TBaseMaskingContext(base, FieldMasker.noMask(), 0));
+        stack.push(new TBaseMaskingContext(base, FieldMasker.noMask()));
     }
 
     TProtocol delegate() {
         return delegate;
+    }
+
+    Deque<Context> stack() {
+        return stack;
     }
 
     @Override
@@ -85,7 +89,6 @@ abstract class AbstractMaskingTProtocol extends TProtocol {
 
     @Override
     public void writeStructBegin(TStruct tStruct) throws TException {
-        // write IgnoreFixedContext or TBaseMaskingContext
         final Context context = stack.getFirst().resolve();
         if (context instanceof IgnoreContext) {
             stack.push(IgnoreContext.INSTANCE);
@@ -116,14 +119,14 @@ abstract class AbstractMaskingTProtocol extends TProtocol {
         if (masked != tBase) {
             final TBase<?, ?> maskedTBase = (TBase<?, ?>) masked;
             // push a context with noMask to ensure that masking isn't done recursively
-            stack.push(new TBaseMaskingContext(maskedTBase, FieldMasker.noMask(), stack.size()));
+            stack.push(new TBaseMaskingContext(maskedTBase, FieldMasker.noMask()));
             maskedTBase.write(this);
             stack.pop();
             stack.push(IgnoreContext.INSTANCE);
             return;
         }
         delegate.writeStructBegin(tStruct);
-        stack.push(tBaseContext.withDepth(stack.size()));
+        stack.push(tBaseContext);
     }
 
     @Override
@@ -132,8 +135,6 @@ abstract class AbstractMaskingTProtocol extends TProtocol {
         if (context instanceof IgnoreContext) {
             return;
         }
-        checkState(context.depth() == stack.size(), "Depth for context <%s> does not match the stack <%s>",
-                   context, stack);
         delegate.writeStructEnd();
     }
 
@@ -155,7 +156,7 @@ abstract class AbstractMaskingTProtocol extends TProtocol {
         checkArgument(origValue != null, "Trying to write field <%s> which is 'null' for <%s>",
                       tFieldIdEnum, tBaseContext);
         final FieldMasker mapper = selectorCache.getMapper(tFieldIdEnum, fieldMetaData);
-        stack.push(MaskingContext.of(origValue, mapper, stack.size()));
+        stack.push(MaskingContext.of(origValue, mapper));
         delegate.writeFieldBegin(tField);
     }
 
@@ -165,8 +166,6 @@ abstract class AbstractMaskingTProtocol extends TProtocol {
         if (context instanceof IgnoreContext) {
             return;
         }
-        checkState(context.depth() == stack.size(), "Depth for context <%s> does not match the stack <%s>",
-                   context, stack);
         delegate.writeFieldEnd();
     }
 
@@ -200,7 +199,7 @@ abstract class AbstractMaskingTProtocol extends TProtocol {
                       "Masking to map <%s> is not allowed. Use one of 'FieldMasker.nullify()'," +
                       " 'FieldMasker.noMask()', or 'FieldMasker.fallthrough()' instead.", maskedMap);
         delegate.writeMapBegin(tMap);
-        stack.push(new MultiMaskingContext(origMap, pojoMaskingContext.masker(), stack.size()));
+        stack.push(new MultiMaskingContext(origMap, pojoMaskingContext.masker()));
     }
 
     @Override
@@ -212,8 +211,6 @@ abstract class AbstractMaskingTProtocol extends TProtocol {
         delegate.writeMapEnd();
         assert context instanceof MultiMaskingContext;
         final MultiMaskingContext multiMaskingContext = (MultiMaskingContext) context;
-        checkState(multiMaskingContext.depth() == stack.size(),
-                   "Depth for context <%s> does not match the stack <%s>", context, stack);
         checkState(multiMaskingContext.done(), "Context <%s> is not fully consumed with stack: <%s>",
                    context, stack);
     }
@@ -242,8 +239,7 @@ abstract class AbstractMaskingTProtocol extends TProtocol {
                       "Masking to list <%s> is not allowed. Use one of 'FieldMasker.nullify()'," +
                       " 'FieldMasker.noMask()', or 'FieldMasker.fallthrough()' instead.", maskedList);
         delegate.writeListBegin(tList);
-        final MultiMaskingContext childContext =
-                new MultiMaskingContext(origList, pojoMaskingContext.masker(), stack.size());
+        final MultiMaskingContext childContext = new MultiMaskingContext(origList, pojoMaskingContext.masker());
         stack.push(childContext);
     }
 
@@ -256,8 +252,6 @@ abstract class AbstractMaskingTProtocol extends TProtocol {
         delegate.writeListEnd();
         assert context instanceof MultiMaskingContext;
         final MultiMaskingContext multiMaskingContext = (MultiMaskingContext) context;
-        checkState(multiMaskingContext.depth() == stack.size(),
-                   "Depth for context <%s> does not match the stack <%s>", context, stack);
         checkState(multiMaskingContext.done(), "Context <%s> is not fully consumed with stack: <%s>",
                    context, stack);
     }
@@ -286,7 +280,7 @@ abstract class AbstractMaskingTProtocol extends TProtocol {
                       "Masking to set <%s> is not allowed. Use one of 'FieldMasker.nullify()'," +
                       " 'FieldMasker.noMask()', or 'FieldMasker.fallthrough()' instead.", maskedSet);
         delegate.writeSetBegin(tSet);
-        stack.push(new MultiMaskingContext(origSet, pojoMaskingContext.masker(), stack.size()));
+        stack.push(new MultiMaskingContext(origSet, pojoMaskingContext.masker()));
     }
 
     @Override
@@ -298,8 +292,6 @@ abstract class AbstractMaskingTProtocol extends TProtocol {
         delegate.writeSetEnd();
         assert context instanceof MultiMaskingContext;
         final MultiMaskingContext multiMaskingContext = (MultiMaskingContext) context;
-        checkState(multiMaskingContext.depth() == stack.size(),
-                   "Depth for context <%s> does not match the stack <%s>", context, stack);
         checkState(multiMaskingContext.done(), "Context <%s> is not fully consumed with stack: <%s>",
                    context, stack);
     }
@@ -392,7 +384,7 @@ abstract class AbstractMaskingTProtocol extends TProtocol {
         maybeMask(byteBuffer, EMPTY, pojoMaskingContext, delegate::writeBinary, delegate);
     }
 
-    private interface ThrowingConsumer<T> {
+    interface ThrowingConsumer<T> {
         void accept(T t) throws TException;
     }
 
@@ -418,26 +410,26 @@ abstract class AbstractMaskingTProtocol extends TProtocol {
     }
 
     interface Context {
+
         Context resolve();
 
         Object getObj();
-
-        int depth();
     }
 
     private interface MaskingContext extends Context {
 
         FieldMasker masker();
 
-        static MaskingContext of(Object obj, FieldMasker masker, int depth) {
+        static MaskingContext of(Object obj, FieldMasker masker) {
             if (obj instanceof TBase) {
-                return new TBaseMaskingContext((TBase<?, ?>) obj, masker, depth);
+                return new TBaseMaskingContext((TBase<?, ?>) obj, masker);
             }
-            return new PojoMaskingContext(obj, masker, depth);
+            return new PojoMaskingContext(obj, masker);
         }
     }
 
-    private static class IgnoreContext implements Context {
+    static class IgnoreContext implements Context {
+
         private static final IgnoreContext INSTANCE = new IgnoreContext();
 
         @Override
@@ -449,24 +441,17 @@ abstract class AbstractMaskingTProtocol extends TProtocol {
         public Object getObj() {
             throw new UnsupportedOperationException();
         }
-
-        @Override
-        public int depth() {
-            return -1;
-        }
     }
 
     private static class TBaseMaskingContext implements MaskingContext {
 
         private final TBase<?, ?> tBase;
         private final FieldMasker masker;
-        private final int depth;
         private final Map<? extends TFieldIdEnum, FieldMetaData> metadataMap;
 
-        TBaseMaskingContext(TBase<?, ?> tBase, FieldMasker masker, int depth) {
+        TBaseMaskingContext(TBase<?, ?> tBase, FieldMasker masker) {
             this.tBase = tBase;
             this.masker = masker;
-            this.depth = depth;
             metadataMap = ThriftMetadataAccess.getStructMetaDataMap(tBase.getClass());
         }
 
@@ -482,11 +467,6 @@ abstract class AbstractMaskingTProtocol extends TProtocol {
         }
 
         @Override
-        public int depth() {
-            return depth;
-        }
-
-        @Override
         public FieldMasker masker() {
             return masker;
         }
@@ -494,22 +474,16 @@ abstract class AbstractMaskingTProtocol extends TProtocol {
         Map<? extends TFieldIdEnum, FieldMetaData> metadataMap() {
             return metadataMap;
         }
-
-        TBaseMaskingContext withDepth(int depth) {
-            return new TBaseMaskingContext(tBase, masker, depth);
-        }
     }
 
     static class PojoMaskingContext implements MaskingContext {
 
         private final Object obj;
         private final FieldMasker masker;
-        private final int depth;
 
-        PojoMaskingContext(Object obj, FieldMasker masker, int depth) {
+        PojoMaskingContext(Object obj, FieldMasker masker) {
             this.obj = obj;
             this.masker = masker;
-            this.depth = depth;
         }
 
         @Override
@@ -523,11 +497,6 @@ abstract class AbstractMaskingTProtocol extends TProtocol {
         }
 
         @Override
-        public int depth() {
-            return depth;
-        }
-
-        @Override
         public FieldMasker masker() {
             return masker;
         }
@@ -535,27 +504,24 @@ abstract class AbstractMaskingTProtocol extends TProtocol {
 
     private static class MultiMaskingContext implements MaskingContext {
         private final FieldMasker masker;
-        private final int depth;
         private int index;
         private final List<MaskingContext> contexts;
 
-        MultiMaskingContext(Collection<Object> objs, FieldMasker masker, int depth) {
+        MultiMaskingContext(Collection<Object> objs, FieldMasker masker) {
             this.masker = masker;
-            this.depth = depth;
             final ImmutableList.Builder<MaskingContext> builder = ImmutableList.builder();
             for (Object o : objs) {
-                builder.add(MaskingContext.of(o, masker, depth));
+                builder.add(MaskingContext.of(o, masker));
             }
             contexts = builder.build();
         }
 
-        MultiMaskingContext(Map<Object, Object> m, FieldMasker masker, int depth) {
+        MultiMaskingContext(Map<Object, Object> m, FieldMasker masker) {
             this.masker = masker;
-            this.depth = depth;
             final ImmutableList.Builder<MaskingContext> builder = ImmutableList.builder();
             for (Entry<Object, Object> o : m.entrySet()) {
-                builder.add(MaskingContext.of(o.getKey(), masker, depth));
-                builder.add(MaskingContext.of(o.getValue(), masker, depth));
+                builder.add(MaskingContext.of(o.getKey(), masker));
+                builder.add(MaskingContext.of(o.getValue(), masker));
             }
             contexts = builder.build();
         }
@@ -575,13 +541,110 @@ abstract class AbstractMaskingTProtocol extends TProtocol {
             throw new UnsupportedOperationException();
         }
 
-        @Override
-        public int depth() {
-            return depth;
-        }
-
         boolean done() {
             return index == contexts.size();
         }
+    }
+
+    // Unsupported read operations from this point
+
+    @Override
+    public TMessage readMessageBegin() throws TException {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public void readMessageEnd() throws TException {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public TStruct readStructBegin() throws TException {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public void readStructEnd() throws TException {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public TField readFieldBegin() throws TException {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public void readFieldEnd() throws TException {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public TMap readMapBegin() throws TException {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public void readMapEnd() throws TException {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public TList readListBegin() throws TException {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public void readListEnd() throws TException {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public TSet readSetBegin() throws TException {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public void readSetEnd() throws TException {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public boolean readBool() throws TException {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public byte readByte() throws TException {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public short readI16() throws TException {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public int readI32() throws TException {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public long readI64() throws TException {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public double readDouble() throws TException {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public String readString() throws TException {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public ByteBuffer readBinary() throws TException {
+        throw new UnsupportedOperationException();
     }
 }
