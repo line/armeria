@@ -42,22 +42,13 @@ public final class HttpFilterFactoryRegistry {
         factories = factoriesBuilder.build();
     }
 
-    private static final HttpFilterFactoryRegistry INSTANCE = new HttpFilterFactoryRegistry();
-
-    /**
-     * Returns the singleton {@link HttpFilterFactoryRegistry} instance.
-     */
-    public static HttpFilterFactoryRegistry of() {
-        return INSTANCE;
-    }
-
     /**
      * Returns the registered {@link HttpFilterFactory}.
      *
      * @param name the name of the filter represented by {@link HttpFilter#getName()}
      */
     @Nullable
-    public HttpFilterFactory<?> filterFactory(String name) {
+    public static HttpFilterFactory<?> filterFactory(String name) {
         return factories.get(name);
     }
 

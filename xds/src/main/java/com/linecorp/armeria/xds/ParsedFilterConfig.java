@@ -80,7 +80,7 @@ public final class ParsedFilterConfig {
     private final boolean disabled;
 
     private ParsedFilterConfig(String filterName, Any config, boolean optional, boolean disabled) {
-        final HttpFilterFactory<?> filterFactory = HttpFilterFactoryRegistry.of().filterFactory(filterName);
+        final HttpFilterFactory<?> filterFactory = HttpFilterFactoryRegistry.filterFactory(filterName);
         if (filterFactory == null) {
             if (!optional) {
                 throw new IllegalArgumentException("Filter config for filter '" + filterName +

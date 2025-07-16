@@ -92,7 +92,7 @@ final class FilterUtil {
     private static XdsFilter xdsHttpFilter(HttpFilter httpFilter,
                                            @Nullable ConfigSupplier overrideConfigSupplier) {
         final HttpFilterFactory<?> filterFactory =
-                HttpFilterFactoryRegistry.of().filterFactory(httpFilter.getName());
+                HttpFilterFactoryRegistry.filterFactory(httpFilter.getName());
         if (filterFactory == null) {
             if (httpFilter.getIsOptional()) {
                 return null;
