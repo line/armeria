@@ -143,9 +143,9 @@ class ArmeriaHttp2HeadersTest {
 
         headers.add("withSpaces", " true ");
         headers.add("withSpaces", "  FALSE  ");
-        assertThat(headers.getBoolean("withSpaces")).isTrue();
-        assertThat(headers.containsBoolean("withSpaces", true)).isTrue();
-        assertThat(headers.containsBoolean("withSpaces", false)).isTrue();
+        assertThat(headers.getBoolean("withSpaces")).isNull();
+        assertThat(headers.containsBoolean("withSpaces", true)).isFalse();
+        assertThat(headers.containsBoolean("withSpaces", false)).isFalse();
     }
 
     // Tests forked from io.netty.handler.codec.DefaultHeadersTest

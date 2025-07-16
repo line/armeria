@@ -159,10 +159,10 @@ class HttpHeadersBaseTest {
 
         headers.add("withSpaces", " true ");
         headers.add("withSpaces", "  FALSE  ");
-        assertThat(headers.getBoolean("withSpaces")).isTrue();
-        assertThat(headers.getLastBoolean("withSpaces")).isFalse();
-        assertThat(headers.containsBoolean("withSpaces", true)).isTrue();
-        assertThat(headers.containsBoolean("withSpaces", false)).isTrue();
+        assertThat(headers.getBoolean("withSpaces")).isNull();
+        assertThat(headers.getLastBoolean("withSpaces")).isNull();
+        assertThat(headers.containsBoolean("withSpaces", true)).isFalse();
+        assertThat(headers.containsBoolean("withSpaces", false)).isFalse();
 
         headers.add("numberCase", "1");
         headers.add("numberCase", "0");
