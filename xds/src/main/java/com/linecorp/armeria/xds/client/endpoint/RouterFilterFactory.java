@@ -34,16 +34,11 @@ import io.envoyproxy.envoy.extensions.filters.http.router.v3.Router;
 public final class RouterFilterFactory implements HttpFilterFactory<Router> {
 
     private static final String NAME = "envoy.filters.http.router";
-    private static final RouterFilterFactory INSTANCE = new RouterFilterFactory();
 
     /**
-     * The singleton instance of {@link RouterFilterFactory}.
+     * Creates an instance of a {@link HttpFilterFactory} for {@link Router}.
      */
-    public static RouterFilterFactory of() {
-        return INSTANCE;
-    }
-
-    private RouterFilterFactory() {}
+    public RouterFilterFactory() {}
 
     @Override
     public RpcPreprocessor rpcPreprocessor(Router config) {
