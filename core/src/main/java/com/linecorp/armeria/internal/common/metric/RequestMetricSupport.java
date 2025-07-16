@@ -105,6 +105,8 @@ public final class RequestMetricSupport {
                     ServiceRequestMetrics.class,
                     (reg, idp) -> new DefaultServiceRequestMetrics(reg, idp, distributionStatisticConfig));
             updateMetrics(log, metrics, isSuccess);
+            metrics.requestFullyReceivedDuration().record(
+                    log.requestReceivedDurationNanos(), TimeUnit.NANOSECONDS);
             if (log.responseCause() instanceof RequestTimeoutException) {
                 metrics.requestTimeouts().increment();
             }
@@ -234,6 +236,8 @@ public final class RequestMetricSupport {
 
     private interface ServiceRequestMetrics extends RequestMetrics {
         Counter requestTimeouts();
+
+        Timer requestFullyReceivedDuration();
     }
 
     private static final class ActiveRequestMetrics extends LongAdder {}
@@ -436,17 +440,25 @@ public final class RequestMetricSupport {
             extends AbstractRequestMetrics implements ServiceRequestMetrics {
 
         private final Counter requestTimeouts;
+        private final Timer requestFullyReceivedDuration;
 
         DefaultServiceRequestMetrics(MeterRegistry parent, MeterIdPrefix idPrefix,
                                      DistributionStatisticConfig distributionStatisticConfig) {
             super(parent, idPrefix, distributionStatisticConfig);
             requestTimeouts = parent.counter(idPrefix.name("timeouts"),
                                              idPrefix.tags("cause", "RequestTimeoutException"));
+            requestFullyReceivedDuration = parent.timer(idPrefix.name("request.received.duration"),
+                                                        idPrefix.tags());
         }
 
         @Override
         public Counter requestTimeouts() {
             return requestTimeouts;
+        }
+
+        @Override
+        public Timer requestFullyReceivedDuration() {
+            return requestFullyReceivedDuration;
         }
     }
 }
