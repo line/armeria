@@ -28,6 +28,7 @@ import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.util.SystemInfo;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.logging.AccessLogWriter;
@@ -442,4 +443,11 @@ public interface RequestLogBuilder extends RequestLogAccess {
      * in the child log will be propagated immediately.
      */
     void endResponseWithLastChild();
+
+    /**
+     * Fills the response-side logs from the specified child. Note that already collected properties
+     * in the child log will be propagated immediately.
+     */
+    @UnstableApi
+    void endResponseWithChild(RequestLogAccess child);
 }
