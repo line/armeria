@@ -17,7 +17,6 @@
 package com.linecorp.armeria.internal.common.thrift.logging;
 
 import java.io.ByteArrayOutputStream;
-import java.io.UnsupportedEncodingException;
 import java.nio.charset.StandardCharsets;
 
 import org.apache.thrift.TBase;
@@ -44,14 +43,6 @@ final class TMaskingSerializer extends TSerializer {
         final MaskingTProtocol tProtocol = new MaskingTProtocol(protocol, base, selectorCache);
         base.write(tProtocol);
         return baos.toByteArray();
-    }
-
-    public String toString(TBase base, String charset) throws TException {
-        try {
-            return new String(serialize(base), charset);
-        } catch (UnsupportedEncodingException e) {
-            throw new TException(e.getMessage(), e);
-        }
     }
 
     @Override

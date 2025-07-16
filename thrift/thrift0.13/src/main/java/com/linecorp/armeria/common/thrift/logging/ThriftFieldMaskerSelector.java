@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.common.thrift.logging;
 
+import static java.util.Objects.requireNonNull;
+
 import java.util.function.Function;
 
 import com.linecorp.armeria.common.annotation.UnstableApi;
@@ -37,8 +39,6 @@ import com.linecorp.armeria.common.logging.FieldMaskerSelector;
  *         });
  * }</pre>
  * Note that the {@code annotations_as_metadata} thrift compiler option must be used to use field annotations.
- * Additionally, {@code typedef} fields may not be serialized or deserialized correctly when using thrift
- * runtime with a version less than 0.19.
  */
 @UnstableApi
 @FunctionalInterface
@@ -48,6 +48,7 @@ public interface ThriftFieldMaskerSelector extends FieldMaskerSelector<ThriftFie
      * A helper method to create a {@link ThriftFieldMaskerSelector}.
      */
     static ThriftFieldMaskerSelector of(Function<ThriftFieldInfo, FieldMasker> fieldMaskerFunction) {
+        requireNonNull(fieldMaskerFunction, "fieldMaskerFunction");
         return fieldMaskerFunction::apply;
     }
 
@@ -56,6 +57,7 @@ public interface ThriftFieldMaskerSelector extends FieldMaskerSelector<ThriftFie
      * if the current {@link ThriftFieldMaskerSelector} returns {@link FieldMasker#fallthrough()}.
      */
     default ThriftFieldMaskerSelector orElse(ThriftFieldMaskerSelector other) {
+        requireNonNull(other, "other");
         return fieldInfo -> {
             final FieldMasker fieldMasker = fieldMasker(fieldInfo);
             if (fieldMasker != FieldMasker.fallthrough()) {

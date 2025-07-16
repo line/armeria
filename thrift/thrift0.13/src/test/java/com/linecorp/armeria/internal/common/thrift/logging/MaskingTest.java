@@ -383,12 +383,12 @@ class MaskingTest {
                 })));
         final TMaskingSerializer serializer = new TMaskingSerializer(ThriftProtocolFactories.json(), cache);
         final String ser = serializer.toString(fooStruct());
-        assertThatJson(ser).node("17.set[1]").isEqualTo(2);
-        assertThatJson(ser).node("17.set[2].[1]").isEqualTo(2);
-        assertThatJson(ser).node("17.set[2].[2].1.str").isEqualTo("lval1+");
-        assertThatJson(ser).node("17.set[2].[3].1.str").isEqualTo("lval2+");
-        assertThatJson(ser).node("17.set[3].[2].1.str").isEqualTo("lval3+");
-        assertThatJson(ser).node("17.set[3].[3].1.str").isEqualTo("lval4+");
+        assertThatJson(ser).node("18.set[1]").isEqualTo(2);
+        assertThatJson(ser).node("18.set[2].[1]").isEqualTo(2);
+        assertThatJson(ser).node("18.set[2].[2].1.str").isEqualTo("lval1+");
+        assertThatJson(ser).node("18.set[2].[3].1.str").isEqualTo("lval2+");
+        assertThatJson(ser).node("18.set[3].[2].1.str").isEqualTo("lval3+");
+        assertThatJson(ser).node("18.set[3].[3].1.str").isEqualTo("lval4+");
     }
 
     private static Stream<Arguments> collectionMutationNotAllowed() {

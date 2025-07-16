@@ -90,12 +90,12 @@ struct FooStruct {
     15: optional FooStruct selfRef
 }
 
-typedef string               TypedefedString
-typedef FooStruct            TypedefedStruct
-typedef FooEnum              TypedefedEnum
-typedef map<string, string>  TypedefedMap
-typedef list<string>         TypedefedList
-typedef set<string>          TypedefedSet
+typedef string              TypedefedString
+typedef FooStruct           TypedefedStruct
+typedef FooEnum             TypedefedEnum
+typedef map<string, string> TypedefedMap
+typedef list<string>        TypedefedList
+typedef set<string>         TypedefedSet
 typedef list<list<TypedefedStruct>> NestedTypedefedStructs
 
 service FooService {

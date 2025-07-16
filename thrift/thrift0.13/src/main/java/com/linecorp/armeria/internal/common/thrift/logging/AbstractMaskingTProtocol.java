@@ -54,10 +54,6 @@ abstract class AbstractMaskingTProtocol extends TProtocol {
 
     private static final ByteBuffer EMPTY = ByteBuffer.wrap(new byte[] {});
 
-    public int getMinSerializedSize(byte type) throws TException {
-        return 0;
-    }
-
     private final TProtocol delegate;
     private final Deque<Context> stack = new ArrayDeque<>();
     private final TBaseSelectorCache selectorCache;
@@ -67,14 +63,6 @@ abstract class AbstractMaskingTProtocol extends TProtocol {
         this.delegate = delegate;
         this.selectorCache = selectorCache;
         stack.push(new TBaseMaskingContext(base, FieldMasker.noMask()));
-    }
-
-    TProtocol delegate() {
-        return delegate;
-    }
-
-    Deque<Context> stack() {
-        return stack;
     }
 
     @Override
@@ -544,6 +532,20 @@ abstract class AbstractMaskingTProtocol extends TProtocol {
         boolean done() {
             return index == contexts.size();
         }
+    }
+
+    // Methods for backwards compatibility across thrift versions
+
+    public int getMinSerializedSize(byte type) throws TException {
+        return 0;
+    }
+
+    TProtocol delegate() {
+        return delegate;
+    }
+
+    Deque<Context> stack() {
+        return stack;
     }
 
     // Unsupported read operations from this point
