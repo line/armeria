@@ -31,7 +31,7 @@ import com.linecorp.armeria.common.logging.FieldMaskerSelector;
  *
  * ThriftFieldMaskSelector selector =
  *         ThriftFieldMaskSelector.of(fieldInfo -> {
- *             Map<String, String> annotations = info.fieldMetaData().getFieldAnnotations()
+ *             Map<String, String> annotations = fieldInfo.fieldMetaData().getFieldAnnotations()
  *             if (!annotations.containsKey("sensitive")) {
  *                 return FieldMasker.fallthrough();
  *             }

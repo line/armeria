@@ -31,9 +31,15 @@ import com.linecorp.armeria.common.thrift.ThriftProtocolFactories;
 final class TBaseSerializer extends JsonSerializer<TBase> {
 
     private final TBaseSelectorCache selectorCache;
+    private final TMaskingSerializer tMaskingSerializer;
 
     TBaseSerializer(TBaseSelectorCache selectorCache) {
         this.selectorCache = selectorCache;
+        try {
+            tMaskingSerializer = new TMaskingSerializer(ThriftProtocolFactories.json(), selectorCache);
+        } catch (TException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     @Override
@@ -45,11 +51,10 @@ final class TBaseSerializer extends JsonSerializer<TBase> {
     public void serialize(TBase tBase, JsonGenerator gen, SerializerProvider prov)
             throws IOException {
         try {
-            final String serialized =
-                    new TMaskingSerializer(ThriftProtocolFactories.json(), selectorCache).toString(tBase);
+            final String serialized = tMaskingSerializer.toString(tBase);
             gen.writeRaw(serialized);
         } catch (TException e) {
-            prov.reportMappingProblem("Failed to serialize TBase: " + tBase, e);
+            prov.reportMappingProblem("Failed to serialize TBase: " + tBase.getClass(), e);
         }
     }
 }
