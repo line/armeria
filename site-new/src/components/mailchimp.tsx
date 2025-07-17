@@ -85,7 +85,7 @@ const Mailchimp: React.FC<MailchimpProps> = (givenProps) => {
                     // eslint-disable-next-line react/no-danger
                     dangerouslySetInnerHTML={{
                       __html: DOMPurify.sanitize(
-                        data.msg ||
+                        data?.msg ||
                           'Failed to sign up. Please try again later.',
                       ),
                     }}
