@@ -194,14 +194,24 @@ class JsonRpcServiceTest {
     }
 
     @Test
-    void buildFinalResponse_whenNotificationWithResult_thenReturnsInternalError() {
-        final JsonRpcRequest notificationRequest = JsonRpcRequest.of(null, "hello");
-        final JsonRpcResponse resultResponse = JsonRpcResponse.of("world");
+    void buildFinalResponse_whenInvalidResult_thenReturnsInternalError() {
+        final JsonRpcRequest request = JsonRpcRequest.of(1, "hello");
+        final JsonRpcResponse invalidResponse = new JsonRpcResponse() {
+                @Override
+                public Object result() {
+                        return "result";
+                }
+
+                @Override
+                public JsonRpcError error() {
+                        return JsonRpcError.INTERNAL_ERROR;
+                }
+        };
 
         final DefaultJsonRpcResponse actualResponse =
-                jsonRpcService.buildFinalResponse(notificationRequest, resultResponse);
+                jsonRpcService.buildFinalResponse(request, invalidResponse);
         final DefaultJsonRpcResponse expectedResponse =
-                new DefaultJsonRpcResponse(notificationRequest.id(), JsonRpcError.INTERNAL_ERROR
+                new DefaultJsonRpcResponse(request.id(), JsonRpcError.INTERNAL_ERROR
                         .withData("A response cannot have both or neither 'result' and 'error' fields."));
 
         assertThat(actualResponse).isEqualTo(expectedResponse);
