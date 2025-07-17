@@ -48,6 +48,8 @@ public final class BeanFieldMaskerSelectorProvider
         module.setDeserializerModifier(new MaskingBeanDeserializerModifier(maskerCache));
         module.addSerializer(new AnnotatedRequestJsonSerializer(maskerCache));
         module.addSerializer(new AnnotatedResponseJsonSerializer(maskerCache));
+        module.addSerializer(RpcRequestSerializer.INSTANCE);
+        module.addSerializer(RpcResponseSerializer.INSTANCE);
         customizeWellKnownSerializers(module);
         objectMapper.registerModule(module);
         // default to logging "{}" instead of throwing an exception for beans not intended for jackson
