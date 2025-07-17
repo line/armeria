@@ -24,6 +24,8 @@ date: 2020-02-25
 - Client-side options API (`ClientOption` and `ClientFactoryOption`) has been revamped. #2523
   - `ClientOptions.get()` and `ClientFactoryOptions.get()` never throw an exception. A default value is returned for an unspecified option. Therefore, other getter methods such as `getOrElse()` have been removed.
 
+{/* truncate */}
+
 ## 📈 Improvements
 
 - You'll now get a `ClosedStreamException` instead of `Http2Exception` when your HTTP/2 connection was closed due to an `RST_STREAM` frame. #2508

@@ -77,6 +77,8 @@ date: 2024-04-12
 - [AccessLogWriter#log(RequestLog)](type) is now called with the [ServiceRequestContext](type) set on the calling thread. #5500
 - You can now pass [RequestOnlyLog#authenticatedUser()](type) to Logback's MDC easily using `authenticated.user`. #5499
 
+{/* truncate */}
+
 ## 🛠️ Bug fixes
 
 - Specifying [WebClientBuilder#followRedirects()](type) now correctly throws an exception when a cyclic redirection occurs. #5491 #5548

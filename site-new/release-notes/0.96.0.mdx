@@ -102,6 +102,8 @@ date: 2019-11-23
   ```
 - You can now disable Armeria's Netty-based asynchronous DNS resolver by specifying `-Dcom.linecorp.armeria.useJdkDnsResolver=true` JVM option. Use it only when the default resolver does not work. #2261
 
+{/* truncate */}
+
 ## 💪 Improvements
 
 - Armeria client does not block a request anymore when DNS resolution takes long time. #2017 #2217 #2231
