@@ -75,15 +75,12 @@ final class DefaultJsonRpcRequest implements JsonRpcRequest {
             @JsonProperty("method") String method,
             @JsonProperty("params") @Nullable Object params,
             @JsonProperty("jsonrpc") String version) {
-        if (params == null) {
-            return new DefaultJsonRpcRequest(id, method, ImmutableList.of());
-        }
-
         if (params instanceof Iterable) {
             return new DefaultJsonRpcRequest(id, method, (Iterable<?>) params);
         }
 
-        return new DefaultJsonRpcRequest(id, method, ImmutableList.of(params));
+        return new DefaultJsonRpcRequest(id, method, params == null ? ImmutableList.of()
+                                                                    : ImmutableList.of(params));
     }
 
     private static List<Object> copyParams(Iterable<?> params) {
