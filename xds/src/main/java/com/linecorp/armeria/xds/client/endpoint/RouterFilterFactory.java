@@ -34,6 +34,10 @@ import io.envoyproxy.envoy.extensions.filters.http.router.v3.Router;
 public final class RouterFilterFactory implements HttpFilterFactory<Router> {
 
     private static final String NAME = "envoy.filters.http.router";
+    private static final RouterFilter<RpcRequest, RpcResponse>
+            rpcFilter = new RouterFilter<>(RpcResponse::from);
+    private static final RouterFilter<HttpRequest, HttpResponse>
+            httpFilter = new RouterFilter<>(HttpResponse::of);
 
     /**
      * Creates an instance of a {@link HttpFilterFactory} for {@link Router}.
@@ -42,14 +46,12 @@ public final class RouterFilterFactory implements HttpFilterFactory<Router> {
 
     @Override
     public RpcPreprocessor rpcPreprocessor(Router config) {
-        return (delegate, ctx, req) -> new RouterFilter<RpcRequest, RpcResponse>(RpcResponse::from)
-                .execute(delegate, ctx, req);
+        return rpcFilter::execute;
     }
 
     @Override
     public HttpPreprocessor httpPreprocessor(Router config) {
-        return (delegate, ctx, req) -> new RouterFilter<HttpRequest, HttpResponse>(HttpResponse::of)
-                .execute(delegate, ctx, req);
+        return httpFilter::execute;
     }
 
     @Override

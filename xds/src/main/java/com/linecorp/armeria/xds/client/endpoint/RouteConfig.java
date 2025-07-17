@@ -40,6 +40,7 @@ final class RouteConfig {
     private final HttpPreClient httpPreClient;
     private final RpcPreClient rpcPreClient;
     private final Map<IndexPair, SelectedRoute> precomputedRoutes;
+    private static final IndexPair firstPair = new IndexPair(0, 0);
 
     RouteConfig(ListenerSnapshot listenerSnapshot) {
         this.listenerSnapshot = listenerSnapshot;
@@ -62,7 +63,13 @@ final class RouteConfig {
                 final RouteEntry routeEntry = virtualHostSnapshot.routeEntries().get(j);
                 final SelectedRoute selectedRoute = new SelectedRoute(listenerSnapshot, routeSnapshot,
                                                                       virtualHostSnapshot, routeEntry);
-                builder.put(new IndexPair(i, j), selectedRoute);
+                final IndexPair pair;
+                if (i == 0 && j == 0) {
+                    pair = firstPair;
+                } else {
+                    pair = new IndexPair(i, j);
+                }
+                builder.put(pair, selectedRoute);
             }
         }
         return builder.build();
@@ -81,7 +88,7 @@ final class RouteConfig {
     }
 
     @Nullable
-    SelectedRoute select(@Nullable HttpRequest req, PreClientRequestContext ctx) {
+    SelectedRoute select(PreClientRequestContext ctx, @Nullable HttpRequest req) {
         final RouteSnapshot routeSnapshot = listenerSnapshot.routeSnapshot();
         if (routeSnapshot == null) {
             return null;
@@ -98,6 +105,9 @@ final class RouteConfig {
                     continue;
                 }
                 ctx.setAttr(ROUTE_METADATA_MATCH, routeEntry.route().getRoute().getMetadataMatch());
+                if (i == 0 && j == 0) {
+                    return precomputedRoutes.get(firstPair);
+                }
                 return precomputedRoutes.get(new IndexPair(i, j));
             }
         }

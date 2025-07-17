@@ -58,7 +58,7 @@ final class RouterFilter<I extends Request, O extends Response> implements Prepr
                     "please make sure to use ctx.newDerivedContext()."));
         }
         final HttpRequest httpReq = ctx.request();
-        final SelectedRoute selectedRoute = routeConfig.select(httpReq, ctx);
+        final SelectedRoute selectedRoute = routeConfig.select(ctx, httpReq);
         if (selectedRoute == null) {
             throw UnprocessedRequestException.of(new IllegalArgumentException(
                     "No route has been selected for listener '" + routeConfig.listenerSnapshot() + "'."));
