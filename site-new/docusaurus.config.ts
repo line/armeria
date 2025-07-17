@@ -195,6 +195,29 @@ const config: Config = {
     ],
     './src/plugins/tutorial.ts',
     [
+      '@docusaurus/plugin-content-blog',
+      {
+        id: 'release-notes',
+        routeBasePath: '/release-notes',
+        path: 'release-notes',
+        blogTitle: 'Armeria Release Notes',
+        blogDescription:
+          'The Armeria Release Notes offer detailed information on the latest updates, features, and bug fixes.',
+        blogSidebarTitle: ' ',
+        blogSidebarCount: 'ALL',
+        showReadingTime: false,
+        feedOptions: {
+          type: ['rss', 'atom'],
+          xslt: true,
+        },
+        editUrl: 'https://github.com/line/armeria/edit/main/site/',
+        onInlineTags: 'warn',
+        onInlineAuthors: 'warn',
+        onUntruncatedBlogPosts: 'warn',
+        remarkPlugins: [remarkApiLink, remarkGithub],
+      },
+    ],
+    [
       '@docusaurus/plugin-client-redirects',
       {
         redirects: [
