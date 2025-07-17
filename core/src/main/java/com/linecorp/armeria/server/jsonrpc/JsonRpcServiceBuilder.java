@@ -27,7 +27,7 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
  */
 @UnstableApi
 public class JsonRpcServiceBuilder {
-    private Map<String, JsonRpcHandler> methodHandlers = new HashMap<>();
+    private final Map<String, JsonRpcHandler> methodHandlers = new HashMap<>();
     private boolean useSse;
 
     JsonRpcServiceBuilder() {}
