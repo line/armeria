@@ -50,11 +50,14 @@ task generateSources(type: Copy) {
         exclude '**/MaskingTProtocol.java'
         exclude '**/common/thrift/package-info.java'
         exclude '**/server/thrift/package-info.java'
+        exclude '**/common/thrift/logging/package-info.java'
+        exclude '**/ThriftFieldMaskerSelector.java'
     }
     from("${thrift014ProjectDir}/src/main/java") {
         exclude '**/internal/common/thrift/package-info.java'
     }
     from "${thrift018ProjectDir}/src/main/java"
+    from "${thrift019ProjectDir}/src/main/java"
     from "${thrift021ProjectDir}/src/main/java"
     into "${project.ext.genSrcDir}/main/java"
 }
