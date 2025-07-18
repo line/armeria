@@ -28,9 +28,7 @@ import org.junit.jupiter.api.Test;
 import com.linecorp.armeria.client.BlockingWebClient;
 import com.linecorp.armeria.client.DecoratingHttpClientFunction;
 import com.linecorp.armeria.client.WebClient;
-import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.common.HttpResponse;
-import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.xds.XdsBootstrap;
 
 import io.envoyproxy.envoy.config.bootstrap.v3.Bootstrap;
@@ -65,10 +63,10 @@ class StrictDnsIntegrationTest {
 
         final Bootstrap bootstrap = staticBootstrap(listener, cluster);
         try (XdsBootstrap xdsBootstrap = XdsBootstrap.of(bootstrap);
-             EndpointGroup endpointGroup = XdsEndpointGroup.of("listener", xdsBootstrap)) {
+             XdsHttpPreprocessor httpPreprocessor = XdsHttpPreprocessor.ofListener("listener", xdsBootstrap)) {
             final DecoratingHttpClientFunction decorator =
                     (delegate, ctx, req) -> HttpResponse.of(String.valueOf(ctx.endpoint().weight()));
-            final BlockingWebClient client = WebClient.builder(SessionProtocol.HTTP, endpointGroup)
+            final BlockingWebClient client = WebClient.builder(httpPreprocessor)
                                                       .decorator(decorator)
                                                       .build()
                                                       .blocking();
