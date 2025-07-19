@@ -109,7 +109,7 @@ public final class VirtualHostContextPathServicesBuilder
     }
 
     @Override
-    public VirtualHostContextPathServicesBuilder contextPaths(Set<String> paths, Consumer<VirtualHostContextPathServicesBuilder> context) {
+    public VirtualHostContextPathServicesBuilder contextPath(Set<String> paths, Consumer<VirtualHostContextPathServicesBuilder> context) {
         final VirtualHostContextPathServicesBuilder child =
                 new VirtualHostContextPathServicesBuilder(parent(),
                                                           virtualHostBuilder(),

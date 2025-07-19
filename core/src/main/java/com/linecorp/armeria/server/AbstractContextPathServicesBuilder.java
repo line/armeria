@@ -43,6 +43,20 @@ abstract class AbstractContextPathServicesBuilder<SELF extends AbstractContextPa
     private final VirtualHostBuilder virtualHostBuilder;
 
     AbstractContextPathServicesBuilder(T parent, VirtualHostBuilder virtualHostBuilder,
+                                       Set<String> contextPaths, boolean allowEmptyContextPaths) {
+        if (!allowEmptyContextPaths) {
+            checkArgument(!contextPaths.isEmpty(), "At least one context path is required");
+            for (String contextPath: contextPaths) {
+                RouteUtil.ensureAbsolutePath(contextPath, "contextPath");
+            }
+        }
+
+        this.parent = parent;
+        this.contextPaths = ImmutableSet.copyOf(contextPaths);
+        this.virtualHostBuilder = virtualHostBuilder;
+    }
+
+    AbstractContextPathServicesBuilder(T parent, VirtualHostBuilder virtualHostBuilder,
                                        Set<String> contextPaths) {
         checkArgument(!contextPaths.isEmpty(), "At least one context path is required");
         for (String contextPath: contextPaths) {
@@ -437,5 +451,5 @@ abstract class AbstractContextPathServicesBuilder<SELF extends AbstractContextPa
      * @param context
      * @return
      */
-    public abstract SELF contextPaths(Set<String> paths, Consumer<SELF> context);
+    public abstract SELF contextPath(Set<String> paths, Consumer<SELF> context);
 }

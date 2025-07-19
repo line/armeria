@@ -42,9 +42,8 @@ public final class ContextPathServicesBuilder
         extends AbstractContextPathServicesBuilder<ContextPathServicesBuilder, ServerBuilder> {
 
     ContextPathServicesBuilder(ServerBuilder parent, VirtualHostBuilder virtualHostBuilder,
-                               Set<String> contextPaths, Consumer<ContextPathServicesBuilder> context) {
-        this(parent, virtualHostBuilder, contextPaths);
-        context.accept(this);
+                               Set<String> contextPaths, boolean allowEmptyPaths) {
+        super(parent, virtualHostBuilder, contextPaths, allowEmptyPaths);
     }
 
     ContextPathServicesBuilder(ServerBuilder parent, VirtualHostBuilder virtualHostBuilder,
@@ -108,7 +107,7 @@ public final class ContextPathServicesBuilder
     }
 
     @Override
-    public ContextPathServicesBuilder contextPaths(Set<String> paths, Consumer<ContextPathServicesBuilder> context) {
+    public ContextPathServicesBuilder contextPath(Set<String> paths, Consumer<ContextPathServicesBuilder> context) {
         final ContextPathServicesBuilder child =
                 new ContextPathServicesBuilder(parent(),
                                                virtualHostBuilder(),
