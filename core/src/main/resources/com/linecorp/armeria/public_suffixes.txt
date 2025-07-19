@@ -187,7 +187,6 @@
 *.transurl.nl
 *.triton.zone
 *.tst.site
-*.uberspace.de
 *.upsun.app
 *.us-east-1.airflow.amazonaws.com
 *.us-east-2.airflow.amazonaws.com
