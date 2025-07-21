@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.client.retry.limiter;
 
+import static com.google.common.base.Preconditions.checkArgument;
+
 import java.util.Collection;
 import java.util.Objects;
 import java.util.Set;
@@ -44,6 +46,10 @@ import com.linecorp.armeria.internal.common.InternalGrpcWebTrailers;
  * <p>In Grpc implementation, the threshold is hardcoded as half the capacity of the bucket but you can set your
  * own threshold here.
  *
+ * <p>Internally, the implementation stores all values multiplied by 1000, some manipulation is required as
+ * max tokens can be odd, and when setting the threshold to half of max tokens, rounding will be needed, this
+ * way we keep full precision.
+ *
  * <p>The implementation is heavily based on GRPC Java <a href="https://github.com/grpc/grpc-java/blob/94532a6b56076c56fb9278e9195bba1190a9260d/core/src/main/java/io/grpc/internal/RetriableStream.java#L1463">implementation</a>.
  */
 public class GrpcRetryLimiter implements RetryLimiter {
@@ -51,19 +57,18 @@ public class GrpcRetryLimiter implements RetryLimiter {
     private static final int THREE_DECIMAL_PLACES_SCALE_UP = 1000;
 
     /**
-     * 1000 times the maxTokens field of the retryThrottling policy in service config.
-     * The number of tokens starts at maxTokens. The token_count will always be between 0 and
-     * maxTokens.
+     * 1000 times the maxTokens.
+     * The number of tokens starts at maxTokens. The token_count will always be between 0 and maxTokens.
      */
     final int maxTokens;
 
     /**
-     * Half of {@code maxTokens}.
+     * Half of {@code maxTokens} or 1000 times the threshold
      */
     final int threshold;
 
     /**
-     * 1000 times the tokenRatio field of the retryThrottling policy in service config.
+     * 1000 times the tokenRatio field.
      */
     final int tokenRatio;
 
@@ -99,18 +104,16 @@ public class GrpcRetryLimiter implements RetryLimiter {
     public GrpcRetryLimiter(int maxTokens, int tokenRatio, int threshold,
                             Collection<Integer> retryableStatuses) {
         // Validate inputs
-        if (maxTokens <= 0 || tokenRatio <= 0 || threshold <= 0) {
-            throw new IllegalArgumentException("maxTokens, tokenRatio, and threshold must be positive: " +
-                                               "maxTokens=" + maxTokens + ", tokenRatio=" + tokenRatio +
-                                               ", threshold=" + threshold);
-        }
-        if (threshold > maxTokens) {
-            throw new IllegalArgumentException("threshold must be less than or equal to maxTokens: " +
-                                               threshold + " > " + maxTokens);
-        }
-        if (retryableStatuses == null || retryableStatuses.isEmpty()) {
-            throw new IllegalArgumentException("retryableStatuses cannot be null or empty");
-        }
+        checkArgument(
+                maxTokens > 0 || tokenRatio > 0 || threshold >= 0,
+                "maxTokens, tokenRatio, and threshold must be positive: " + "maxTokens=" + maxTokens
+                + ", tokenRatio=" + tokenRatio + ", threshold=" + threshold
+        );
+        checkArgument(threshold <= maxTokens,
+                      "threshold must be less than or equal to maxTokens: " + threshold + " > " + maxTokens
+        );
+        checkArgument(retryableStatuses != null && !retryableStatuses.isEmpty(),
+                      "retryableStatuses cannot be null or empty: " + retryableStatuses);
 
         // tokenRatio is up to 3 decimal places
         this.tokenRatio = tokenRatio * THREE_DECIMAL_PLACES_SCALE_UP;

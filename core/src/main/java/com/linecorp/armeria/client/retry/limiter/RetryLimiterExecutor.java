@@ -66,7 +66,9 @@ public final class RetryLimiterExecutor {
                 return true;
             }
         } catch (Throwable t) {
-            logger.error("Failed to execute retry limiter", t);
+            logger.error(
+                    "Failed to execute retry limiter, limiter: " + limiter + " attempts: " + numAttemptsSoFar,
+                    t);
             return true;
         }
     }
@@ -85,13 +87,15 @@ public final class RetryLimiterExecutor {
      * @param numAttemptsSoFar the number of attempts made so far (0-based)
      */
     public static void onCompletedAttempt(@Nullable RetryLimiter limiter, ClientRequestContext ctx,
-                                   RequestLog requestLog, int numAttemptsSoFar) {
+                                          RequestLog requestLog, int numAttemptsSoFar) {
         try {
             if (limiter != null) {
                 limiter.onCompletedAttempt(ctx, requestLog, numAttemptsSoFar);
             }
         } catch (Throwable t) {
-            logger.error("Failed to execute retry limiter", t);
+            logger.error(
+                    "Failed to execute retry limiter, limiter: " + limiter + " attempts: " + numAttemptsSoFar,
+                    t);
         }
     }
 }
