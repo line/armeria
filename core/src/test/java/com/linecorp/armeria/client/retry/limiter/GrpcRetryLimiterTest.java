@@ -267,14 +267,14 @@ class GrpcRetryLimiterTest {
     void constructor_withNullRetryableStatuses() {
         assertThatThrownBy(() -> new GrpcRetryLimiter(10, 1, 5, null))
                 .isInstanceOf(IllegalArgumentException.class)
-                .hasMessage("retryableStatuses cannot be null or empty");
+                .hasMessage("retryableStatuses cannot be null or empty: null");
     }
 
     @Test
     void constructor_withEmptyRetryableStatuses() {
         assertThatThrownBy(() -> new GrpcRetryLimiter(10, 1, 5, Collections.emptyList()))
                 .isInstanceOf(IllegalArgumentException.class)
-                .hasMessage("retryableStatuses cannot be null or empty");
+                .hasMessage("retryableStatuses cannot be null or empty: []");
     }
 
     @Test
@@ -310,10 +310,10 @@ class GrpcRetryLimiterTest {
     }
 
     @Test
-    void constructor_withZeroThreshold() {
+    void constructor_withNegativeThreshold() {
         final String error =
-                "maxTokens, tokenRatio, and threshold must be positive: maxTokens=1, tokenRatio=1, threshold=0";
-        assertThatThrownBy(() -> new GrpcRetryLimiter(1, 1, 0, Collections.singletonList(14)))
+            "maxTokens, tokenRatio, and threshold must be positive: maxTokens=1, tokenRatio=1, threshold=-1";
+        assertThatThrownBy(() -> new GrpcRetryLimiter(1, 1, -1, Collections.singletonList(14)))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessage(error);
     }

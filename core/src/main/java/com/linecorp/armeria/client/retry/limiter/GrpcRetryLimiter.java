@@ -63,7 +63,7 @@ public class GrpcRetryLimiter implements RetryLimiter {
     final int maxTokens;
 
     /**
-     * Half of {@code maxTokens} or 1000 times the threshold
+     * Half of {@code maxTokens} or 1000 times the threshold.
      */
     final int threshold;
 
@@ -105,9 +105,9 @@ public class GrpcRetryLimiter implements RetryLimiter {
                             Collection<Integer> retryableStatuses) {
         // Validate inputs
         checkArgument(
-                maxTokens > 0 || tokenRatio > 0 || threshold >= 0,
-                "maxTokens, tokenRatio, and threshold must be positive: " + "maxTokens=" + maxTokens
-                + ", tokenRatio=" + tokenRatio + ", threshold=" + threshold
+                maxTokens > 0 && tokenRatio > 0 && threshold >= 0,
+                "maxTokens, tokenRatio, and threshold must be positive: " + "maxTokens=" + maxTokens +
+                ", tokenRatio=" + tokenRatio + ", threshold=" + threshold
         );
         checkArgument(threshold <= maxTokens,
                       "threshold must be less than or equal to maxTokens: " + threshold + " > " + maxTokens
