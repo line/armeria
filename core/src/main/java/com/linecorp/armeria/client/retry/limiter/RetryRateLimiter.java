@@ -22,8 +22,8 @@ import com.linecorp.armeria.client.ClientRequestContext;
 
 /**
  * A Retry limiter implementation that limits based on a rate limiter.
- * </p>
- * This limiter allows a flat number of retries per second
+ *
+ * <p>This limiter allows a flat number of retries per second
  */
 public class RetryRateLimiter implements RetryLimiter {
 
