@@ -30,6 +30,7 @@ import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.SimpleDecoratingClient;
 import com.linecorp.armeria.client.retry.limiter.RetryLimiter;
+import com.linecorp.armeria.client.retry.limiter.RetryLimiterExecutor;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.Request;
@@ -240,7 +241,7 @@ public abstract class AbstractRetryingClient<I extends Request, O extends Respon
             return -1;
         }
 
-        if (limiter != null && !limiter.shouldRetry(ctx, currentAttemptNo)) {
+        if (!RetryLimiterExecutor.shouldRetry(limiter, ctx, currentAttemptNo)) {
             return -1;
         }
         return nextDelay;

@@ -33,6 +33,7 @@ import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.client.ResponseTimeoutException;
 import com.linecorp.armeria.client.retry.limiter.RetryLimiter;
+import com.linecorp.armeria.client.retry.limiter.RetryLimiterExecutor;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.AggregationOptions;
 import com.linecorp.armeria.common.HttpHeaderNames;
@@ -331,9 +332,8 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
 
         final RetryConfig<HttpResponse> config = mappedRetryConfig(ctx);
         if (!ctx.exchangeType().isResponseStreaming() || config.requiresResponseTrailers()) {
-            if (config.retryLimiter() != null) {
-                config.retryLimiter().onCompletedAttempt(ctx, ctx.log().partial(), totalAttempts);
-            }
+            RetryLimiterExecutor.onCompletedAttempt(config.retryLimiter(), ctx, ctx.log().partial(),
+                                                    totalAttempts);
             response.aggregate().handle((aggregated, cause) -> {
                 if (cause != null) {
                     derivedCtx.logBuilder().endRequest(cause);
@@ -350,9 +350,8 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
                 return null;
             });
         } else {
-            if (config.retryLimiter() != null) {
-                config.retryLimiter().onCompletedAttempt(ctx, ctx.log().partial(), totalAttempts);
-            }
+            RetryLimiterExecutor.onCompletedAttempt(config.retryLimiter(), ctx, ctx.log().partial(),
+                                                    totalAttempts);
             handleStreamingResponse(config, ctx, rootReqDuplicator, originalReq, returnedRes,
                                     future, derivedCtx, response);
         }

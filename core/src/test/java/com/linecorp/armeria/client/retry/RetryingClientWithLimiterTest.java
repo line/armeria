@@ -14,7 +14,7 @@
  * under the License.
  */
 
-package com.linecorp.armeria.client.retry.limiter;
+package com.linecorp.armeria.client.retry;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
@@ -33,18 +33,13 @@ import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
 import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.client.ResponseTimeoutException;
 import com.linecorp.armeria.client.WebClient;
-import com.linecorp.armeria.client.retry.RetryConfig;
-import com.linecorp.armeria.client.retry.RetryConfigMapping;
-import com.linecorp.armeria.client.retry.RetryRule;
-import com.linecorp.armeria.client.retry.RetryRuleWithContent;
-import com.linecorp.armeria.client.retry.RetryingClient;
+import com.linecorp.armeria.client.retry.limiter.RetryLimiter;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
@@ -53,10 +48,8 @@ import com.linecorp.armeria.server.AbstractHttpService;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
-import com.linecorp.armeria.client.ClientRequestContext;
-import com.linecorp.armeria.common.logging.RequestLog;
 
-class RetryLimiterIntegrationTest {
+class RetryingClientWithLimiterTest {
 
     private static ClientFactory clientFactory;
 
@@ -156,47 +149,47 @@ class RetryLimiterIntegrationTest {
 
     private static RetryConfig<HttpResponse> createRetryConfig(RetryRule rule, RetryLimiter limiter) {
         return RetryConfig.builder(rule)
-                         .limiter(limiter)
-                         .build();
+                          .limiter(limiter)
+                          .build();
     }
 
     private static RetryConfig<HttpResponse> createRetryConfig(RetryRuleWithContent<HttpResponse> rule,
                                                                RetryLimiter limiter) {
         return RetryConfig.builder(rule)
-                         .limiter(limiter)
-                         .maxContentLength(1024)
-                         .build();
+                          .limiter(limiter)
+                          .maxContentLength(1024)
+                          .build();
     }
 
     private static RetryConfig<HttpResponse> createRetryConfig(RetryRule rule, RetryLimiter limiter,
                                                                int maxTotalAttempts) {
         return RetryConfig.builder(rule)
-                         .limiter(limiter)
-                         .maxTotalAttempts(maxTotalAttempts)
-                         .build();
+                          .limiter(limiter)
+                          .maxTotalAttempts(maxTotalAttempts)
+                          .build();
     }
 
     private static RetryConfig<HttpResponse> createTimeoutRetryConfig(RetryLimiter limiter) {
         return RetryConfig.builder(RetryRule.builder()
-                                           .onException(ResponseTimeoutException.class)
-                                           .thenBackoff())
-                         .limiter(limiter)
-                         .responseTimeoutMillisForEachAttempt(500)
-                         .build();
+                                            .onException(ResponseTimeoutException.class)
+                                            .thenBackoff())
+                          .limiter(limiter)
+                          .responseTimeoutMillisForEachAttempt(500)
+                          .build();
     }
 
     private WebClient createClient(RetryConfig<HttpResponse> retryConfig) {
         return WebClient.builder(server.httpUri())
-                       .factory(clientFactory)
-                       .decorator(RetryingClient.builder(retryConfig).newDecorator())
-                       .build();
+                        .factory(clientFactory)
+                        .decorator(RetryingClient.builder(retryConfig).newDecorator())
+                        .build();
     }
 
     private WebClient createClientWithMapping(RetryConfigMapping<HttpResponse> mapping) {
         return WebClient.builder(server.httpUri())
-                       .factory(clientFactory)
-                       .decorator(RetryingClient.builderWithMapping(mapping).newDecorator())
-                       .build();
+                        .factory(clientFactory)
+                        .decorator(RetryingClient.builderWithMapping(mapping).newDecorator())
+                        .build();
     }
 
     private static void verifyOnCompletedAttemptCalls(RetryLimiter limiter, int expectedCalls) {
@@ -227,8 +220,9 @@ class RetryLimiterIntegrationTest {
         final RetryLimiter mockLimiter = createMockLimiter(true);
         final RetryConfig<HttpResponse> retryConfig = createRetryConfig(
                 RetryRuleWithContent.<HttpResponse>builder()
-                        .onServerErrorStatus()
-                        .thenBackoff(), mockLimiter);
+                                    .onServerErrorStatus()
+                                    .thenBackoff(),
+                mockLimiter);
         final WebClient client = createClient(retryConfig);
 
         final AggregatedHttpResponse res = client.get("/500-then-success").aggregate().join();
@@ -243,8 +237,9 @@ class RetryLimiterIntegrationTest {
         final RetryLimiter mockLimiter = createMockLimiter(false);
         final RetryConfig<HttpResponse> retryConfig = createRetryConfig(
                 RetryRuleWithContent.<HttpResponse>builder()
-                        .onServerErrorStatus()
-                        .thenBackoff(), mockLimiter);
+                                    .onServerErrorStatus()
+                                    .thenBackoff(),
+                mockLimiter);
         final WebClient client = createClient(retryConfig);
 
         final AggregatedHttpResponse res = client.get("/always-500").aggregate().join();
@@ -259,8 +254,9 @@ class RetryLimiterIntegrationTest {
         final RetryLimiter mockLimiter = mock(RetryLimiter.class);
         final RetryConfig<HttpResponse> retryConfig = createRetryConfig(
                 RetryRule.builder()
-                        .onServerErrorStatus()
-                        .thenBackoff(), mockLimiter);
+                         .onServerErrorStatus()
+                         .thenBackoff(),
+                mockLimiter);
         final WebClient client = createClient(retryConfig);
 
         final AggregatedHttpResponse res = client.get("/immediate-success").aggregate().join();
@@ -288,8 +284,9 @@ class RetryLimiterIntegrationTest {
         final RetryLimiter mockLimiter = createMockLimiter(true);
         final RetryConfig<HttpResponse> retryConfig = createRetryConfig(
                 RetryRule.builder()
-                        .onServerErrorStatus()
-                        .thenBackoff(), mockLimiter);
+                         .onServerErrorStatus()
+                         .thenBackoff(),
+                mockLimiter);
         final WebClient client = createClient(retryConfig);
 
         final AggregatedHttpResponse res = client.get("/exception-then-success").aggregate().join();
@@ -304,8 +301,10 @@ class RetryLimiterIntegrationTest {
         final RetryLimiter mockLimiter = createMockLimiter(true);
         final RetryConfig<HttpResponse> retryConfig = createRetryConfig(
                 RetryRule.builder()
-                        .onServerErrorStatus()
-                        .thenBackoff(), mockLimiter, 3);
+                         .onServerErrorStatus()
+                         .thenBackoff(),
+                mockLimiter,
+                3);
         final WebClient client = createClient(retryConfig);
 
         final AggregatedHttpResponse res = client.get("/always-500").aggregate().join();
@@ -320,8 +319,10 @@ class RetryLimiterIntegrationTest {
         final RetryLimiter mockLimiter = createMockLimiter(true);
         final RetryConfig<HttpResponse> retryConfig = createRetryConfig(
                 RetryRule.builder()
-                        .onServerErrorStatus()
-                        .thenBackoff(), mockLimiter, 2);
+                         .onServerErrorStatus()
+                         .thenBackoff(),
+                mockLimiter,
+                2);
         final WebClient client = createClient(retryConfig);
 
         final AggregatedHttpResponse res = client.get("/always-500").aggregate().join();
@@ -336,8 +337,9 @@ class RetryLimiterIntegrationTest {
         final RetryLimiter mockLimiter = createMockLimiter(true);
         final RetryConfig<HttpResponse> retryConfig = createRetryConfig(
                 RetryRule.builder()
-                        .onServerErrorStatus()
-                        .thenBackoff(), mockLimiter);
+                         .onServerErrorStatus()
+                         .thenBackoff(),
+                mockLimiter);
         final WebClient client = createClient(retryConfig);
 
         final AggregatedHttpResponse res = client.get("/503-then-success").aggregate().join();
@@ -352,8 +354,9 @@ class RetryLimiterIntegrationTest {
         final RetryLimiter mockLimiter = createMockLimiter(true);
         final RetryConfig<HttpResponse> retryConfig = createRetryConfig(
                 RetryRuleWithContent.<HttpResponse>builder()
-                        .onServerErrorStatus()
-                        .thenBackoff(), mockLimiter);
+                                    .onServerErrorStatus()
+                                    .thenBackoff(),
+                mockLimiter);
         final WebClient client = createClient(retryConfig);
 
         final AggregatedHttpResponse res = client.get("/503-then-success").aggregate().join();
@@ -368,8 +371,9 @@ class RetryLimiterIntegrationTest {
         final RetryLimiter mockLimiter = mock(RetryLimiter.class);
         final RetryConfig<HttpResponse> retryConfig = createRetryConfig(
                 RetryRule.builder()
-                        .onStatus(HttpStatus.BAD_REQUEST) // Won't match 500
-                        .thenBackoff(), mockLimiter);
+                         .onStatus(HttpStatus.BAD_REQUEST) // Won't match 500
+                         .thenBackoff(),
+                mockLimiter);
         final WebClient client = createClient(retryConfig);
 
         final AggregatedHttpResponse res = client.get("/always-500").aggregate().join();
@@ -384,8 +388,9 @@ class RetryLimiterIntegrationTest {
         final RetryLimiter mockLimiter = createMockLimiter(true);
         final RetryConfig<HttpResponse> retryConfig = createRetryConfig(
                 RetryRule.builder()
-                        .onServerErrorStatus()
-                        .thenBackoff(), mockLimiter);
+                         .onServerErrorStatus()
+                         .thenBackoff(),
+                mockLimiter);
         final WebClient client = createClient(retryConfig);
 
         final AggregatedHttpResponse res = client.get("/500-then-success").aggregate().join();
@@ -399,8 +404,10 @@ class RetryLimiterIntegrationTest {
         final RetryLimiter mockLimiter = createMockLimiter(true);
         final RetryConfig<HttpResponse> retryConfig = createRetryConfig(
                 RetryRule.builder()
-                        .onServerErrorStatus()
-                        .thenBackoff(), mockLimiter, 4);
+                         .onServerErrorStatus()
+                         .thenBackoff(),
+                mockLimiter,
+                4);
         final WebClient client = createClient(retryConfig);
 
         // Reset counter to simulate multiple failures
@@ -420,8 +427,10 @@ class RetryLimiterIntegrationTest {
                 (ctx, req) -> "test-key",
                 (ctx, req) -> createRetryConfig(
                         RetryRule.builder()
-                                .onServerErrorStatus()
-                                .thenBackoff(), mockLimiter, 2)
+                                 .onServerErrorStatus()
+                                 .thenBackoff(),
+                        mockLimiter,
+                        2)
         );
         final WebClient client = createClientWithMapping(mapping);
 
@@ -432,26 +441,25 @@ class RetryLimiterIntegrationTest {
         verifyShouldRetryCalls(mockLimiter, 1, 1);
     }
 
-    @Disabled
     @Test
     void retryLimiterShouldHandleExceptionInShouldRetry() {
         final RetryLimiter mockLimiter = mock(RetryLimiter.class);
         when(mockLimiter.shouldRetry(any(), anyInt())).thenThrow(new RuntimeException("Limiter exception"));
         final RetryConfig<HttpResponse> retryConfig = createRetryConfig(
                 RetryRule.builder()
-                        .onServerErrorStatus()
-                        .thenBackoff(), mockLimiter);
+                         .onServerErrorStatus()
+                         .thenBackoff(),
+                mockLimiter);
         final WebClient client = createClient(retryConfig);
 
-        // The exception from shouldRetry should prevent the retry
+        // The exception from shouldRetry should not prevent the retry
         final AggregatedHttpResponse res = client.get("/500-then-success").aggregate().join();
-        assertThat(res.status()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
+        assertThat(res.contentUtf8()).isEqualTo("Succeeded after retry");
 
-        verifyOnCompletedAttemptCalls(mockLimiter, 1, 1);
+        verifyOnCompletedAttemptCalls(mockLimiter, 2);
         verifyShouldRetryCalls(mockLimiter, 1, 1);
     }
 
-    @Disabled
     @Test
     void retryLimiterShouldHandleExceptionInOnCompletedAttempt() {
         final RetryLimiter mockLimiter = createMockLimiter(true);
@@ -459,8 +467,10 @@ class RetryLimiterIntegrationTest {
                 .when(mockLimiter).onCompletedAttempt(any(), any(), anyInt());
         final RetryConfig<HttpResponse> retryConfig = createRetryConfig(
                 RetryRule.builder()
-                        .onServerErrorStatus()
-                        .thenBackoff(), mockLimiter);
+                         .onServerErrorStatus()
+                         .thenBackoff(),
+                mockLimiter,
+                2);
         final WebClient client = createClient(retryConfig);
 
         // The exception from onCompletedAttempt should not prevent the retry

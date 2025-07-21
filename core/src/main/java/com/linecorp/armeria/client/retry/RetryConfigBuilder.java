@@ -130,7 +130,8 @@ public final class RetryConfigBuilder<T extends Response> {
      */
     public RetryConfig<T> build() {
         if (retryRule != null) {
-            return new RetryConfig<>(retryRule, retryLimiter, maxTotalAttempts, responseTimeoutMillisForEachAttempt);
+            return new RetryConfig<>(retryRule, retryLimiter, maxTotalAttempts,
+                                     responseTimeoutMillisForEachAttempt);
         }
         assert retryRuleWithContent != null;
         return new RetryConfig<>(

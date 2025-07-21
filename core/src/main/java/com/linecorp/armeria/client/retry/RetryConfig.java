@@ -144,7 +144,7 @@ public final class RetryConfig<T extends Response> {
      * Converts this {@link RetryConfig} to a mutable {@link RetryConfigBuilder}.
      */
     public RetryConfigBuilder<T> toBuilder() {
-        RetryConfigBuilder<T> builder;
+        final RetryConfigBuilder<T> builder;
         if (retryRuleWithContent != null) {
             builder = builder0(retryRuleWithContent).maxContentLength(
                     maxContentLength);

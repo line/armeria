@@ -26,6 +26,7 @@ import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.ResponseTimeoutException;
 import com.linecorp.armeria.client.RpcClient;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
+import com.linecorp.armeria.client.retry.limiter.RetryLimiterExecutor;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RpcRequest;
@@ -195,9 +196,8 @@ public final class RetryingRpcClient extends AbstractRetryingClient<RpcRequest, 
         res.handle((unused1, cause) -> {
             try {
                 assert retryRule != null;
-                if (retryConfig.retryLimiter() != null) {
-                    retryConfig.retryLimiter().onCompletedAttempt(ctx, ctx.log().partial(), totalAttempts);
-                }
+                RetryLimiterExecutor.onCompletedAttempt(retryConfig.retryLimiter(), ctx, ctx.log().partial(),
+                                                        totalAttempts);
                 retryRule.shouldRetry(derivedCtx, res, cause).handle((decision, unused3) -> {
                     final Backoff backoff = decision != null ? decision.backoff() : null;
                     if (backoff != null) {
