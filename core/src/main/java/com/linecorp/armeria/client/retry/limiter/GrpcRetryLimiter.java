@@ -80,18 +80,36 @@ public class GrpcRetryLimiter implements RetryLimiter {
      * Default retry limiter based on GRPC implementation as described
      * <a href="https://github.com/grpc/proposal/blob/master/A6-client-retries.md#throttling-retry-attempts-and-hedged-rpcs">here</a>
      *
-     * <p>It is configured to only ever retry on UNAVAILABLE when the bucket is at least half filled.
+     * <p>This constructor builds a limiter configured to only ever allow retries when the bucket is at least
+     * half filled, and only decrements tokens when the response status is UNAVAILABLE.
+     *
+     * <p>maxTokens and tokenRatio are multiplied by 1000 and converted to int for the internal
+     * operations
      *
      * @param maxTokens Initial token count
      * @param tokenRatio Number of tokens a successful request increments
      */
-    public GrpcRetryLimiter(int maxTokens, int tokenRatio) {
+    public GrpcRetryLimiter(float maxTokens, float tokenRatio) {
+        // Validate inputs
+        checkArgument(
+                maxTokens > 0 && tokenRatio > 0,
+                "maxTokens and tokenRatio must be positive: " + "maxTokens=" + maxTokens +
+                ", tokenRatio=" + tokenRatio
+        );
+        // tokenRatio is up to 3 decimal places
+        this.tokenRatio = (int) (tokenRatio * THREE_DECIMAL_PLACES_SCALE_UP);
+        this.maxTokens = (int) (maxTokens * THREE_DECIMAL_PLACES_SCALE_UP);
+        threshold = this.maxTokens / 2;
         // The default gRPC retry configuration only considers UNAVAILABLE(14) as a retriable error
-        this(maxTokens, tokenRatio, maxTokens / 2, ImmutableSet.of(14));
+        retryableStatuses = ImmutableSet.of("14");
+        tokenCount.set(this.maxTokens);
     }
 
     /**
      * Constructs a {@link GrpcRetryLimiter} with the specified parameters.
+     *
+     * <p>maxTokens, tokenRatio and threshold are multiplied by 1000 and converted to int for the internal
+     * operations
      *
      * @param maxTokens the initial token count (must be positive)
      * @param tokenRatio the number of tokens a successful request increments (must be positive)
@@ -101,7 +119,7 @@ public class GrpcRetryLimiter implements RetryLimiter {
      *     retryable (must not be null or empty)
      * @throws IllegalArgumentException if any argument is invalid
      */
-    public GrpcRetryLimiter(int maxTokens, int tokenRatio, int threshold,
+    public GrpcRetryLimiter(float maxTokens, float tokenRatio, float threshold,
                             Collection<Integer> retryableStatuses) {
         // Validate inputs
         checkArgument(
@@ -116,9 +134,9 @@ public class GrpcRetryLimiter implements RetryLimiter {
                       "retryableStatuses cannot be null or empty: " + retryableStatuses);
 
         // tokenRatio is up to 3 decimal places
-        this.tokenRatio = tokenRatio * THREE_DECIMAL_PLACES_SCALE_UP;
-        this.maxTokens = maxTokens * THREE_DECIMAL_PLACES_SCALE_UP;
-        this.threshold = threshold * THREE_DECIMAL_PLACES_SCALE_UP;
+        this.tokenRatio = (int) (tokenRatio * THREE_DECIMAL_PLACES_SCALE_UP);
+        this.maxTokens = (int) (maxTokens * THREE_DECIMAL_PLACES_SCALE_UP);
+        this.threshold = (int) (threshold * THREE_DECIMAL_PLACES_SCALE_UP);
         // Convert statuses to String so we can use them later
         this.retryableStatuses = retryableStatuses.stream()
                                                   .filter(Objects::nonNull)

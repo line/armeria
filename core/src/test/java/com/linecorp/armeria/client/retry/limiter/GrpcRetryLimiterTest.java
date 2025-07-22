@@ -59,9 +59,13 @@ class GrpcRetryLimiterTest {
         return ResponseHeaders.of(200);
     }
 
+    // ============================================================================
+    // Constructor Tests
+    // ============================================================================
+
     @Test
     void defaultConstructor() {
-        final GrpcRetryLimiter limiter = new GrpcRetryLimiter(10, 1);
+        final GrpcRetryLimiter limiter = new GrpcRetryLimiter(10.0f, 1.0f);
 
         assertThat(limiter.maxTokens).isEqualTo(10000); // 10 * 1000
         assertThat(limiter.threshold).isEqualTo(5000); // 10 / 2 * 1000
@@ -71,8 +75,19 @@ class GrpcRetryLimiterTest {
     }
 
     @Test
+    void defaultConstructor_withFloatValues() {
+        final GrpcRetryLimiter limiter = new GrpcRetryLimiter(10.5f, 1.25f);
+
+        assertThat(limiter.maxTokens).isEqualTo(10500); // 10.5 * 1000
+        assertThat(limiter.threshold).isEqualTo(5250); // 10.5 / 2 * 1000
+        assertThat(limiter.tokenRatio).isEqualTo(1250); // 1.25 * 1000
+        assertThat(limiter.retryableStatuses).containsExactly("14"); // UNAVAILABLE
+        assertThat(limiter.tokenCount.get()).isEqualTo(10500); // maxTokens
+    }
+
+    @Test
     void customConstructor() {
-        final GrpcRetryLimiter limiter = new GrpcRetryLimiter(20, 2, 8, Arrays.asList(14, 13));
+        final GrpcRetryLimiter limiter = new GrpcRetryLimiter(20.0f, 2.0f, 8.0f, Arrays.asList(14, 13));
 
         assertThat(limiter.maxTokens).isEqualTo(20000); // 20 * 1000
         assertThat(limiter.threshold).isEqualTo(8000);
@@ -82,8 +97,123 @@ class GrpcRetryLimiterTest {
     }
 
     @Test
+    void customConstructor_withFloatValues() {
+        final GrpcRetryLimiter limiter = new GrpcRetryLimiter(20.5f, 2.25f, 8.75f, Arrays.asList(14, 13));
+
+        assertThat(limiter.maxTokens).isEqualTo(20500); // 20.5 * 1000
+        assertThat(limiter.threshold).isEqualTo(8750); // 8.75 * 1000
+        assertThat(limiter.tokenRatio).isEqualTo(2250); // 2.25 * 1000
+        assertThat(limiter.retryableStatuses).containsExactlyInAnyOrder("14", "13");
+        assertThat(limiter.tokenCount.get()).isEqualTo(20500); // maxTokens
+    }
+
+    @Test
+    void constructor_withThresholdEqualToMaxTokens() {
+        // This should be valid
+        final GrpcRetryLimiter limiter = new GrpcRetryLimiter(10.0f, 1.0f, 10.0f,
+                                                              Collections.singletonList(14));
+        assertThat(limiter).isNotNull();
+        assertThat(limiter.maxTokens).isEqualTo(10000);
+        assertThat(limiter.threshold).isEqualTo(10000);
+    }
+
+    // ============================================================================
+    // Constructor Validation Tests
+    // ============================================================================
+
+    @Test
+    void defaultConstructor_withZeroMaxTokens() {
+        final String error =
+                "maxTokens and tokenRatio must be positive: maxTokens=0.0, tokenRatio=1.0";
+        assertThatThrownBy(() -> new GrpcRetryLimiter(0.0f, 1.0f))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage(error);
+    }
+
+    @Test
+    void defaultConstructor_withZeroTokenRatio() {
+        final String error =
+                "maxTokens and tokenRatio must be positive: maxTokens=1.0, tokenRatio=0.0";
+        assertThatThrownBy(() -> new GrpcRetryLimiter(1.0f, 0.0f))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage(error);
+    }
+
+    @Test
+    void defaultConstructor_withNegativeTokenRatio() {
+        final String error =
+                "maxTokens and tokenRatio must be positive: maxTokens=1.0, tokenRatio=-1.0";
+        assertThatThrownBy(() -> new GrpcRetryLimiter(1.0f, -1.0f))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage(error);
+    }
+
+    @Test
+    void constructor_withZeroMaxTokens() {
+        final String error = "maxTokens, tokenRatio, and threshold must be positive:";
+        assertThatThrownBy(() -> new GrpcRetryLimiter(0.0f, 1.0f, 5.0f, Collections.singletonList(14)))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining(error);
+    }
+
+    @Test
+    void constructor_withZeroTokenRatio() {
+        final String error = "maxTokens, tokenRatio, and threshold must be positive:";
+        assertThatThrownBy(() -> new GrpcRetryLimiter(1.0f, 0.0f, 5.0f, Collections.singletonList(14)))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining(error);
+    }
+
+    @Test
+    void constructor_withNegativeThreshold() {
+        final String error = "maxTokens, tokenRatio, and threshold must be positive:";
+        assertThatThrownBy(() -> new GrpcRetryLimiter(1.0f, 1.0f, -1.0f, Collections.singletonList(14)))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining(error);
+    }
+
+    @Test
+    void constructor_withThresholdGreaterThanMaxTokens() {
+        assertThatThrownBy(() -> new GrpcRetryLimiter(10.0f, 1.0f, 15.0f, Collections.singletonList(14)))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("threshold must be less than or equal to maxTokens: 15.0 > 10.0");
+    }
+
+    @Test
+    void constructor_withNullRetryableStatuses() {
+        assertThatThrownBy(() -> new GrpcRetryLimiter(10.0f, 1.0f, 5.0f, null))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("retryableStatuses cannot be null or empty: null");
+    }
+
+    @Test
+    void constructor_withEmptyRetryableStatuses() {
+        assertThatThrownBy(() -> new GrpcRetryLimiter(10.0f, 1.0f, 5.0f, Collections.emptyList()))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("retryableStatuses cannot be null or empty: []");
+    }
+
+    @Test
+    void constructor_withNullValuesInRetryableStatuses() {
+        final GrpcRetryLimiter limiter = new GrpcRetryLimiter(10.0f, 1.0f, 5.0f, Arrays.asList(14, null, 13));
+
+        assertThat(limiter.retryableStatuses).containsExactlyInAnyOrder("14", "13");
+    }
+
+    @Test
+    void constructor_withOnlyNullValuesInRetryableStatuses() {
+        assertThatThrownBy(() -> new GrpcRetryLimiter(10.0f, 1.0f, 5.0f, Arrays.asList(null, null)))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("retryableStatuses cannot contain only null values");
+    }
+
+    // ============================================================================
+    // shouldRetry Tests
+    // ============================================================================
+
+    @Test
     void retryAllowed_whenTokensAboveThreshold() {
-        final GrpcRetryLimiter limiter = new GrpcRetryLimiter(10, 1);
+        final GrpcRetryLimiter limiter = new GrpcRetryLimiter(10.0f, 1.0f);
 
         // Token count starts at maxTokens (10000), threshold is 5
         assertThat(limiter.shouldRetry(ctx, 2)).isTrue();
@@ -92,27 +222,31 @@ class GrpcRetryLimiterTest {
 
     @Test
     void retryNotAllowed_whenTokensAtThreshold() {
-        final GrpcRetryLimiter limiter = new GrpcRetryLimiter(10, 1, 5, Collections.singletonList(14));
+        final GrpcRetryLimiter limiter = new GrpcRetryLimiter(10.0f, 1.0f, 5.0f, Collections.singletonList(14));
 
         // Set token count to threshold
-        limiter.tokenCount.set(5);
+        limiter.tokenCount.set(5000);
 
         assertThat(limiter.shouldRetry(ctx, 2)).isFalse();
     }
 
     @Test
     void retryNotAllowed_whenTokensBelowThreshold() {
-        final GrpcRetryLimiter limiter = new GrpcRetryLimiter(10, 1, 5, Collections.singletonList(14));
+        final GrpcRetryLimiter limiter = new GrpcRetryLimiter(10.0f, 1.0f, 5.0f, Collections.singletonList(14));
 
         // Set token count below threshold
-        limiter.tokenCount.set(4);
+        limiter.tokenCount.set(4000);
 
         assertThat(limiter.shouldRetry(ctx, 2)).isFalse();
     }
 
+    // ============================================================================
+    // onCompletedAttempt Tests
+    // ============================================================================
+
     @Test
     void onCompletedAttempt_withRetryableStatus_decrementsTokens() {
-        final GrpcRetryLimiter limiter = new GrpcRetryLimiter(10, 1);
+        final GrpcRetryLimiter limiter = new GrpcRetryLimiter(10.0f, 1.0f);
         final RequestLog requestLog = mock(RequestLog.class);
         final HttpHeaders headers = createGrpcHeaders("14"); // UNAVAILABLE
 
@@ -127,7 +261,7 @@ class GrpcRetryLimiterTest {
 
     @Test
     void onCompletedAttempt_withNonRetryableStatus_incrementsTokens() {
-        final GrpcRetryLimiter limiter = new GrpcRetryLimiter(10, 1);
+        final GrpcRetryLimiter limiter = new GrpcRetryLimiter(10.0f, 1.0f);
         final RequestLog requestLog = mock(RequestLog.class);
         final HttpHeaders headers = createGrpcHeaders("0"); // OK
 
@@ -145,7 +279,7 @@ class GrpcRetryLimiterTest {
 
     @Test
     void onCompletedAttempt_withException_doesNotChangeTokens() {
-        final GrpcRetryLimiter limiter = new GrpcRetryLimiter(10, 1);
+        final GrpcRetryLimiter limiter = new GrpcRetryLimiter(10.0f, 1.0f);
         final RequestLog requestLog = mock(RequestLog.class);
         final Exception exception = new RuntimeException("Test exception");
 
@@ -159,7 +293,7 @@ class GrpcRetryLimiterTest {
 
     @Test
     void onCompletedAttempt_withNoGrpcStatus_doesNotChangeTokens() {
-        final GrpcRetryLimiter limiter = new GrpcRetryLimiter(10, 1);
+        final GrpcRetryLimiter limiter = new GrpcRetryLimiter(10.0f, 1.0f);
         final RequestLog requestLog = mock(RequestLog.class);
         final HttpHeaders headers = createEmptyHeaders(); // No grpc-status
 
@@ -175,7 +309,7 @@ class GrpcRetryLimiterTest {
 
     @Test
     void onCompletedAttempt_withGrpcStatusInHeaders() {
-        final GrpcRetryLimiter limiter = new GrpcRetryLimiter(10, 1);
+        final GrpcRetryLimiter limiter = new GrpcRetryLimiter(10.0f, 1.0f);
         final RequestLog requestLog = mock(RequestLog.class);
         final HttpHeaders trailers = createEmptyHeaders(); // No grpc-status in trailers
         final ResponseHeaders headers = createResponseHeaders("14"); // UNAVAILABLE in headers
@@ -192,7 +326,7 @@ class GrpcRetryLimiterTest {
 
     @Test
     void onCompletedAttempt_tokenCountNeverGoesBelowZero() {
-        final GrpcRetryLimiter limiter = new GrpcRetryLimiter(10, 1);
+        final GrpcRetryLimiter limiter = new GrpcRetryLimiter(10.0f, 1.0f);
         final RequestLog requestLog = mock(RequestLog.class);
         final HttpHeaders headers = createGrpcHeaders("14"); // UNAVAILABLE
 
@@ -209,7 +343,7 @@ class GrpcRetryLimiterTest {
 
     @Test
     void onCompletedAttempt_tokenCountNeverExceedsMaxTokens() {
-        final GrpcRetryLimiter limiter = new GrpcRetryLimiter(10, 1);
+        final GrpcRetryLimiter limiter = new GrpcRetryLimiter(10.0f, 1.0f);
         final RequestLog requestLog = mock(RequestLog.class);
         final HttpHeaders headers = createGrpcHeaders("0"); // OK
 
@@ -224,9 +358,13 @@ class GrpcRetryLimiterTest {
         assertThat(limiter.tokenCount.get()).isEqualTo(limiter.maxTokens);
     }
 
+    // ============================================================================
+    // Concurrency Tests
+    // ============================================================================
+
     @Test
     void onCompletedAttempt_concurrentAccess() throws InterruptedException {
-        final GrpcRetryLimiter limiter = new GrpcRetryLimiter(10, 1);
+        final GrpcRetryLimiter limiter = new GrpcRetryLimiter(10.0f, 1.0f);
         final RequestLog requestLog = mock(RequestLog.class);
         final HttpHeaders headers = createGrpcHeaders("14"); // UNAVAILABLE
 
@@ -261,76 +399,5 @@ class GrpcRetryLimiterTest {
         // Verify final token count is correct (maxTokens - 1000 * threadCount * attemptsPerThread)
         final int expectedTokens = limiter.maxTokens - (1000 * threadCount * attemptsPerThread);
         assertThat(limiter.tokenCount.get()).isEqualTo(Math.max(0, expectedTokens));
-    }
-
-    @Test
-    void constructor_withNullRetryableStatuses() {
-        assertThatThrownBy(() -> new GrpcRetryLimiter(10, 1, 5, null))
-                .isInstanceOf(IllegalArgumentException.class)
-                .hasMessage("retryableStatuses cannot be null or empty: null");
-    }
-
-    @Test
-    void constructor_withEmptyRetryableStatuses() {
-        assertThatThrownBy(() -> new GrpcRetryLimiter(10, 1, 5, Collections.emptyList()))
-                .isInstanceOf(IllegalArgumentException.class)
-                .hasMessage("retryableStatuses cannot be null or empty: []");
-    }
-
-    @Test
-    void constructor_withNullValuesInRetryableStatuses() {
-        final GrpcRetryLimiter limiter = new GrpcRetryLimiter(10, 1, 5, Arrays.asList(14, null, 13));
-
-        assertThat(limiter.retryableStatuses).containsExactlyInAnyOrder("14", "13");
-    }
-
-    @Test
-    void constructor_withOnlyNullValuesInRetryableStatuses() {
-        assertThatThrownBy(() -> new GrpcRetryLimiter(10, 1, 5, Arrays.asList(null, null)))
-                .isInstanceOf(IllegalArgumentException.class)
-                .hasMessage("retryableStatuses cannot contain only null values");
-    }
-
-    @Test
-    void constructor_withZeroMaxTokens() {
-        final String error =
-                "maxTokens, tokenRatio, and threshold must be positive: maxTokens=0, tokenRatio=1, threshold=5";
-        assertThatThrownBy(() -> new GrpcRetryLimiter(0, 1, 5, Collections.singletonList(14)))
-                .isInstanceOf(IllegalArgumentException.class)
-                .hasMessage(error);
-    }
-
-    @Test
-    void constructor_withZeroTokenRatio() {
-        final String error =
-                "maxTokens, tokenRatio, and threshold must be positive: maxTokens=1, tokenRatio=0, threshold=5";
-        assertThatThrownBy(() -> new GrpcRetryLimiter(1, 0, 5, Collections.singletonList(14)))
-                .isInstanceOf(IllegalArgumentException.class)
-                .hasMessage(error);
-    }
-
-    @Test
-    void constructor_withNegativeThreshold() {
-        final String error =
-            "maxTokens, tokenRatio, and threshold must be positive: maxTokens=1, tokenRatio=1, threshold=-1";
-        assertThatThrownBy(() -> new GrpcRetryLimiter(1, 1, -1, Collections.singletonList(14)))
-                .isInstanceOf(IllegalArgumentException.class)
-                .hasMessage(error);
-    }
-
-    @Test
-    void constructor_withThresholdGreaterThanMaxTokens() {
-        assertThatThrownBy(() -> new GrpcRetryLimiter(10, 1, 15, Collections.singletonList(14)))
-                .isInstanceOf(IllegalArgumentException.class)
-                .hasMessage("threshold must be less than or equal to maxTokens: 15 > 10");
-    }
-
-    @Test
-    void constructor_withThresholdEqualToMaxTokens() {
-        // This should be valid
-        final GrpcRetryLimiter limiter = new GrpcRetryLimiter(10, 1, 10, Collections.singletonList(14));
-        assertThat(limiter).isNotNull();
-        assertThat(limiter.maxTokens).isEqualTo(10000);
-        assertThat(limiter.threshold).isEqualTo(10000);
     }
 }
