@@ -95,7 +95,11 @@ public final class ParsedFilterConfig {
         this.disabled = disabled;
     }
 
+    @Nullable
     private static <T extends Message> T maybeParseConfig(Any config, Class<? extends T> clazz) {
+        if (config == Any.getDefaultInstance()) {
+            return null;
+        }
         try {
             return config.unpack(clazz);
         } catch (InvalidProtocolBufferException e) {

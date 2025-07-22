@@ -620,6 +620,8 @@ javadocs = "https://fasterxml.github.io/jackson-modules-java8/javadoc/datatypes/
 [libraries.jackson-datatype-jsr310]
 module = "com.fasterxml.jackson.datatype:jackson-datatype-jsr310"
 javadocs = "https://fasterxml.github.io/jackson-modules-java8/javadoc/datetime/2.14/"
+[libraries.jackson-dataformat-yaml]
+module = "com.fasterxml.jackson.dataformat:jackson-dataformat-yaml"
 [libraries.jackson-kotlin]
 module = "com.fasterxml.jackson.module:jackson-module-kotlin"
 [libraries.jackson-scala_v212]
