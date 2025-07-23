@@ -99,7 +99,8 @@ final class FilterUtil {
             }
             throw new IllegalArgumentException("Couldn't find filter factory: " + httpFilter.getName());
         }
-        checkArgument(httpFilter.getConfigTypeCase() == ConfigTypeCase.TYPED_CONFIG,
+        checkArgument(httpFilter.getConfigTypeCase() == ConfigTypeCase.TYPED_CONFIG ||
+                      httpFilter.getConfigTypeCase() == ConfigTypeCase.CONFIGTYPE_NOT_SET,
                       "Only 'typed_config' is supported, but '%s' was supplied",
                       httpFilter.getConfigTypeCase());
         return new DefaultXdsFilter<>(filterFactory, httpFilter, overrideConfigSupplier);
