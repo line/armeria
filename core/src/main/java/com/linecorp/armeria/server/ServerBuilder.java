@@ -95,7 +95,6 @@ import com.linecorp.armeria.common.util.SystemInfo;
 import com.linecorp.armeria.common.util.ThreadFactories;
 import com.linecorp.armeria.common.util.TlsEngineType;
 import com.linecorp.armeria.internal.common.BuiltInDependencyInjector;
-import com.linecorp.armeria.internal.common.ReflectiveDependencyInjector;
 import com.linecorp.armeria.internal.common.RequestContextUtil;
 import com.linecorp.armeria.internal.common.util.ChannelUtil;
 import com.linecorp.armeria.internal.server.RouteDecoratingService;
@@ -1178,6 +1177,10 @@ public final class ServerBuilder implements TlsSetters, ServiceConfigsBuilder<Se
         requireNonNull(tlsProvider, "tlsProvider");
         this.tlsProvider = tlsProvider;
         tlsConfig = null;
+
+        if (tlsProvider.autoClose()) {
+            shutdownSupports.add(ShutdownSupport.of(tlsProvider));
+        }
         return this;
     }
 
@@ -1211,6 +1214,10 @@ public final class ServerBuilder implements TlsSetters, ServiceConfigsBuilder<Se
     public ServerBuilder tlsProvider(TlsProvider tlsProvider, ServerTlsConfig tlsConfig) {
         tlsProvider(tlsProvider);
         this.tlsConfig = requireNonNull(tlsConfig, "tlsConfig");
+
+        if (tlsProvider.autoClose()) {
+            shutdownSupports.add(ShutdownSupport.of(tlsProvider));
+        }
         return this;
     }
 
@@ -2485,7 +2492,7 @@ public final class ServerBuilder implements TlsSetters, ServiceConfigsBuilder<Se
         if (dependencyInjector != null) {
             return dependencyInjector;
         }
-        final ReflectiveDependencyInjector reflectiveDependencyInjector = new ReflectiveDependencyInjector();
+        final DependencyInjector reflectiveDependencyInjector = DependencyInjector.ofReflective();
         shutdownSupports.add(ShutdownSupport.of(reflectiveDependencyInjector));
         return reflectiveDependencyInjector;
     }
