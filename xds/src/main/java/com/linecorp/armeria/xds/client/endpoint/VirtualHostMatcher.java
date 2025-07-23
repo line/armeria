@@ -36,8 +36,6 @@ import com.linecorp.armeria.xds.VirtualHostSnapshot;
 
 final class VirtualHostMatcher {
 
-    private static final Comparator<String> KEY_LENGTH_COMPARATOR = Comparator.comparingInt(String::length);
-
     private final Map<String, VirtualHostSnapshot> exactMatch;
     // This can be optimized by keeping an additional map of each length
     // To reduce complexity, for now just iterate and match
