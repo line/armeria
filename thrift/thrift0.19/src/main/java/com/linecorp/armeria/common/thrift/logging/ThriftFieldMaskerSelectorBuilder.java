@@ -24,6 +24,7 @@ import java.util.Map;
 import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.logging.FieldMasker;
 
 /**
@@ -40,28 +41,8 @@ import com.linecorp.armeria.common.logging.FieldMasker;
  *   .build();
  * }</pre>
  */
+@UnstableApi
 public final class ThriftFieldMaskerSelectorBuilder {
-
-    private static final class AnnotationAndMasker {
-
-        private final String annotation;
-        @Nullable
-        private final String value;
-        private final FieldMasker masker;
-
-        private AnnotationAndMasker(String annotation, @Nullable String value, FieldMasker masker) {
-            this.annotation = annotation;
-            this.value = value;
-            this.masker = masker;
-        }
-
-        private boolean matches(Map<String, String> fieldAnnotations) {
-            if (value == null) {
-                return fieldAnnotations.containsKey(annotation);
-            }
-            return value.equals(fieldAnnotations.get(annotation));
-        }
-    }
 
     private final ImmutableList.Builder<AnnotationAndMasker> rulesBuilder = ImmutableList.builder();
 
@@ -107,5 +88,26 @@ public final class ThriftFieldMaskerSelectorBuilder {
                 return FieldMasker.fallthrough();
             }
         };
+    }
+
+    static final class AnnotationAndMasker {
+
+        private final String annotation;
+        @Nullable
+        private final String value;
+        private final FieldMasker masker;
+
+        private AnnotationAndMasker(String annotation, @Nullable String value, FieldMasker masker) {
+            this.annotation = annotation;
+            this.value = value;
+            this.masker = masker;
+        }
+
+        private boolean matches(Map<String, String> fieldAnnotations) {
+            if (value == null) {
+                return fieldAnnotations.containsKey(annotation);
+            }
+            return value.equals(fieldAnnotations.get(annotation));
+        }
     }
 }

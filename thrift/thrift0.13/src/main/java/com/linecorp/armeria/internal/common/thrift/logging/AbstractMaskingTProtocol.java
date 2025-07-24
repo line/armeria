@@ -18,7 +18,6 @@ package com.linecorp.armeria.internal.common.thrift.logging;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkState;
-import static com.google.common.base.Strings.lenientFormat;
 
 import java.nio.ByteBuffer;
 import java.util.ArrayDeque;
@@ -372,6 +371,7 @@ abstract class AbstractMaskingTProtocol extends TProtocol {
         maybeMask(byteBuffer, EMPTY, pojoMaskingContext, delegate::writeBinary, delegate);
     }
 
+    @FunctionalInterface
     interface ThrowingConsumer<T> {
         void accept(T t) throws TException;
     }
@@ -392,7 +392,7 @@ abstract class AbstractMaskingTProtocol extends TProtocol {
             delegate.writeString((String) maybeMasked);
             return;
         }
-        throw new IllegalArgumentException(lenientFormat(
+        throw new IllegalArgumentException(String.format(
                 "The masked class <%s> should match the original class <%s> or be a <String>",
                 maybeMasked.getClass(), obj.getClass()));
     }

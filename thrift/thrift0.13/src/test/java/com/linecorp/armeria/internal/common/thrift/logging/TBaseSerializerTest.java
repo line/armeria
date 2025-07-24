@@ -21,20 +21,28 @@ import static com.linecorp.armeria.internal.common.thrift.logging.ThriftMaskingS
 import static com.linecorp.armeria.internal.common.thrift.logging.ThriftMaskingStructs.requiredFooStruct;
 import static com.linecorp.armeria.internal.common.thrift.logging.ThriftMaskingStructs.typedefedFooStruct;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.util.List;
 import java.util.stream.Stream;
 
 import org.apache.thrift.TBase;
 import org.apache.thrift.TSerializer;
+import org.apache.thrift.protocol.TProtocolException;
 import org.apache.thrift.protocol.TProtocolFactory;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 
+import com.fasterxml.jackson.databind.JsonMappingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 
+import com.linecorp.armeria.common.logging.ContentSanitizer;
 import com.linecorp.armeria.common.thrift.ThriftProtocolFactories;
+import com.linecorp.armeria.common.thrift.logging.ThriftFieldMaskerSelector;
+import com.linecorp.armeria.common.util.Exceptions;
 
 import testing.thrift.main.FooStruct;
 import testing.thrift.main.OptionalFooStruct;
@@ -70,5 +78,18 @@ class TBaseSerializerTest {
         final String upstreamSer = tSerializer.toString(tBase);
         final String ser = maskingSerializer.toString(tBase);
         assertThat(ser).isEqualTo(upstreamSer);
+    }
+
+    @Test
+    void serializationFailure() throws Exception {
+        final TProtocolException tException = new TProtocolException("test");
+        final ObjectMapper om = ContentSanitizer.builder().fieldMaskerSelector(
+                ThriftFieldMaskerSelector.of(info -> Exceptions.throwUnsafely(tException))).buildObjectMapper();
+        assertThatThrownBy(() -> om.writeValueAsString(fooStruct()))
+                .isInstanceOf(JsonMappingException.class)
+                .cause()
+                .isInstanceOf(RuntimeException.class)
+                .hasMessageStartingWith("Failed to serialize TBase")
+                .hasCause(tException);
     }
 }

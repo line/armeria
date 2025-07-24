@@ -21,32 +21,29 @@ import java.nio.charset.StandardCharsets;
 
 import org.apache.thrift.TBase;
 import org.apache.thrift.TException;
-import org.apache.thrift.TSerializer;
 import org.apache.thrift.protocol.TProtocol;
 import org.apache.thrift.protocol.TProtocolFactory;
 import org.apache.thrift.transport.TIOStreamTransport;
 
-final class TMaskingSerializer extends TSerializer {
+final class TMaskingSerializer {
 
     private final TProtocolFactory protocolFactory;
     private final TBaseSelectorCache selectorCache;
 
-    TMaskingSerializer(TProtocolFactory protocolFactory, TBaseSelectorCache selectorCache) throws TException {
+    TMaskingSerializer(TProtocolFactory protocolFactory, TBaseSelectorCache selectorCache) {
         this.protocolFactory = protocolFactory;
         this.selectorCache = selectorCache;
     }
 
-    @Override
-    public byte[] serialize(TBase base) throws TException {
-        final ByteArrayOutputStream baos = new ByteArrayOutputStream();
+    byte[] serialize(TBase<?, ?> base) throws TException {
+        final ByteArrayOutputStream baos = new ByteArrayOutputStream(512);
         final TProtocol protocol = protocolFactory.getProtocol(new TIOStreamTransport(baos));
         final MaskingTProtocol tProtocol = new MaskingTProtocol(protocol, base, selectorCache);
         base.write(tProtocol);
         return baos.toByteArray();
     }
 
-    @Override
-    public String toString(TBase base) throws TException {
+    String toString(TBase<?, ?> base) throws TException {
         return new String(serialize(base), StandardCharsets.UTF_8);
     }
 }

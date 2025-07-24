@@ -27,6 +27,7 @@ import com.linecorp.armeria.common.logging.FieldMasker;
  * via {@link FieldMasker}.
  */
 @UnstableApi
+@FunctionalInterface
 public interface ThriftFieldInfo {
 
     /**

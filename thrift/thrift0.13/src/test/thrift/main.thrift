@@ -71,7 +71,6 @@ union FooUnion {
     2: FooEnum enumVal,
 }
 
-
 struct FooStruct {
     1: bool boolVal,
     2: i8 byteVal,

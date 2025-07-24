@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.internal.common.thrift.logging;
 
+import static com.google.common.base.Preconditions.checkArgument;
+
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -41,7 +43,9 @@ final class TBaseSelectorCache {
             final ThriftFieldInfo holder = new DefaultThriftFieldInfo(fieldMetaData);
             for (ThriftFieldMaskerSelector selector : selectors) {
                 final FieldMasker masker = selector.fieldMasker(holder);
-                if (masker != null) {
+                checkArgument(masker != null, "%s.fieldMasker() returned null for (%s)",
+                              selector.getClass().getName(), holder);
+                if (masker != FieldMasker.fallthrough()) {
                     return masker;
                 }
             }
