@@ -4,12 +4,43 @@ import type { Config } from '@docusaurus/types';
 import type * as Preset from '@docusaurus/preset-classic';
 import remarkApiLink from './src/remark/remark-api-link';
 import {
+  compareVersions,
   sortReleaseNoteSidebarItems,
-  getLatestNewsletterPath,
-  getLatestReleaseNotePath,
-} from './newsNavUtils';
+} from './releaseNotesSidebarUtils';
+import fs from 'fs/promises';
+import path from 'path';
 
 // This runs in Node.js - Don't use client-side code here (browser APIs, JSX...)
+
+async function getLatestFilePath(
+  directory: string,
+  sortFunc: (a: string, b: string) => number,
+): Promise<string> {
+  const extension = '.mdx';
+  const directoryPath = path.join(__dirname, directory);
+  const files = await fs.readdir(directoryPath);
+  const filteredFiles = files.filter((file) => file.endsWith(extension));
+  const identifiers = filteredFiles.map((file) =>
+    path.basename(file, extension),
+  );
+
+  if (identifiers.length === 0) {
+    throw new Error(
+      `No files found in ${directory} with extension ${extension}.`,
+    );
+  }
+
+  const latestIdentifier = identifiers.sort(sortFunc)[0];
+  return `/${directory}/${latestIdentifier}`;
+}
+
+async function getLatestNewsletterPath() {
+  return getLatestFilePath('news', (a, b) => b.localeCompare(a));
+}
+
+async function getLatestReleaseNotePath() {
+  return getLatestFilePath('release-notes', compareVersions);
+}
 
 export default async function createConfigAsync() {
   const config: Config = {

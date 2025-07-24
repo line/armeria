@@ -1,6 +1,6 @@
 import type { SidebarsConfig } from '@docusaurus/plugin-content-docs';
-import fs from 'fs/promises';
-import path from 'path';
+
+const LATEST_DISPLAY_COUNT = 10;
 
 const sidebars: SidebarsConfig = {
   releasenotesSidebar: [
@@ -62,7 +62,9 @@ function compareVersions(a: string, b: string): number {
 function sortReleaseNoteSidebarItems(items: any[]): any[] {
   const updatedSidebar = [...(sidebars.releasenotesSidebar as any[])];
 
-  const docItems = items.filter((item) => item.type === 'doc');
+  const docItems = items.filter(
+    (item) => item.type === 'doc' && !item.id.startsWith('index-version-'),
+  );
   const sortedDocItems = docItems.sort((a, b) => compareVersions(a.id, b.id));
 
   const recentReleasesIndex = updatedSidebar.findIndex(
@@ -70,8 +72,8 @@ function sortReleaseNoteSidebarItems(items: any[]): any[] {
   );
 
   if (recentReleasesIndex !== -1) {
-    const recentReleases = sortedDocItems.slice(0, 16);
-    const pastReleases = sortedDocItems.slice(16);
+    const recentReleases = sortedDocItems.slice(0, LATEST_DISPLAY_COUNT);
+    const pastReleases = sortedDocItems.slice(LATEST_DISPLAY_COUNT);
 
     updatedSidebar.splice(recentReleasesIndex + 1, 0, ...recentReleases);
 
@@ -100,8 +102,8 @@ function sortReleaseNoteSidebarItems(items: any[]): any[] {
             label: `Version ${majorVersion}`,
             collapsed: true,
             link: {
-              type: 'generated-index',
-              title: `Version ${majorVersion}`,
+              type: 'doc',
+              id: `index-version-${majorVersion}`,
             },
             items: versionItems,
           });
@@ -113,38 +115,4 @@ function sortReleaseNoteSidebarItems(items: any[]): any[] {
   return updatedSidebar;
 }
 
-async function getLatestFilePath(
-  directory: string,
-  sortFunc: (a: string, b: string) => number,
-): Promise<string> {
-  const extension = '.mdx';
-  const directoryPath = path.join(__dirname, directory);
-  const files = await fs.readdir(directoryPath);
-  const filteredFiles = files.filter((file) => file.endsWith(extension));
-  const identifiers = filteredFiles.map((file) =>
-    path.basename(file, extension),
-  );
-
-  if (identifiers.length === 0) {
-    throw new Error(
-      `No files found in ${directory} with extension ${extension}.`,
-    );
-  }
-
-  const latestIdentifier = identifiers.sort(sortFunc)[0];
-  return `/${directory}/${latestIdentifier}`;
-}
-
-async function getLatestNewsletterPath() {
-  return getLatestFilePath('news', (a, b) => b.localeCompare(a));
-}
-
-async function getLatestReleaseNotePath() {
-  return getLatestFilePath('release-notes', compareVersions);
-}
-
-export {
-  sortReleaseNoteSidebarItems,
-  getLatestNewsletterPath,
-  getLatestReleaseNotePath,
-};
+export { compareVersions, sortReleaseNoteSidebarItems, LATEST_DISPLAY_COUNT };
