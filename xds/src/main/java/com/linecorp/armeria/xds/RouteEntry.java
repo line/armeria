@@ -16,6 +16,9 @@
 
 package com.linecorp.armeria.xds;
 
+import static com.linecorp.armeria.xds.FilterUtil.toParsedFilterConfigs;
+
+import java.util.Map;
 import java.util.Objects;
 
 import com.google.common.base.MoreObjects;
@@ -24,6 +27,7 @@ import com.linecorp.armeria.common.annotation.Nullable;
 
 import io.envoyproxy.envoy.config.route.v3.Route;
 import io.envoyproxy.envoy.config.route.v3.RouteAction;
+import io.envoyproxy.envoy.extensions.filters.network.http_connection_manager.v3.HttpFilter;
 
 /**
  * Represents a {@link Route}.
@@ -33,10 +37,12 @@ public final class RouteEntry {
     private final Route route;
     @Nullable
     private final ClusterSnapshot clusterSnapshot;
+    private final Map<String, ParsedFilterConfig> filterConfigs;
 
     RouteEntry(Route route, @Nullable ClusterSnapshot clusterSnapshot) {
         this.route = route;
         this.clusterSnapshot = clusterSnapshot;
+        filterConfigs = toParsedFilterConfigs(route.getTypedPerFilterConfigMap());
     }
 
     /**
@@ -53,6 +59,16 @@ public final class RouteEntry {
     @Nullable
     public ClusterSnapshot clusterSnapshot() {
         return clusterSnapshot;
+    }
+
+    /**
+     * Returns the parsed {@link Route#getTypedPerFilterConfigMap()}.
+     *
+     * @param filterName the filter name represented by {@link HttpFilter#getName()}
+     */
+    @Nullable
+    public ParsedFilterConfig filterConfig(String filterName) {
+        return filterConfigs.get(filterName);
     }
 
     @Override
