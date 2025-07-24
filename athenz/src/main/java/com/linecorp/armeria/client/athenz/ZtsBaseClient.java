@@ -57,7 +57,6 @@ import com.linecorp.armeria.common.util.SafeCloseable;
  *     .keyPair("/var/lib/athenz/service.key.pem", "/var/lib/athenz/service.cert.pem")
  *     .build();
  * }</pre>
- * </p>
  */
 @UnstableApi
 public final class ZtsBaseClient implements SafeCloseable {
