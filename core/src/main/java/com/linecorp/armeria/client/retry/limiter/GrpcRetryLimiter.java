@@ -24,6 +24,7 @@ import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
+import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableSet;
 
 import com.linecorp.armeria.client.ClientRequestContext;
@@ -222,5 +223,16 @@ public class GrpcRetryLimiter implements RetryLimiter {
                 break;
             }
         }
+    }
+
+    @Override
+    public String toString() {
+        return MoreObjects.toStringHelper(this)
+                .add("maxTokens", maxTokens / (double) THREE_DECIMAL_PLACES_SCALE_UP)
+                .add("threshold", threshold / (double) THREE_DECIMAL_PLACES_SCALE_UP)
+                .add("tokenRatio", tokenRatio / (double) THREE_DECIMAL_PLACES_SCALE_UP)
+                .add("retryableStatuses", retryableStatuses)
+                .add("currentTokenCount", tokenCount.get() / (double) THREE_DECIMAL_PLACES_SCALE_UP)
+                .toString();
     }
 }

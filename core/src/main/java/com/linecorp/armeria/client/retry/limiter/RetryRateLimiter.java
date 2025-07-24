@@ -16,6 +16,9 @@
 
 package com.linecorp.armeria.client.retry.limiter;
 
+import static com.google.common.base.Preconditions.checkArgument;
+
+import com.google.common.base.MoreObjects;
 import com.google.common.util.concurrent.RateLimiter;
 
 import com.linecorp.armeria.client.ClientRequestContext;
@@ -35,6 +38,7 @@ public class RetryRateLimiter implements RetryLimiter {
      * @param permitsPerSecond the number of retry permits allowed per second; must be positive
      */
     public RetryRateLimiter(double permitsPerSecond) {
+        checkArgument(permitsPerSecond > 0, "permitsPerSecond must be positive: %s", permitsPerSecond);
         rateLimiter = RateLimiter.create(permitsPerSecond);
     }
 
@@ -49,5 +53,12 @@ public class RetryRateLimiter implements RetryLimiter {
     @Override
     public boolean shouldRetry(ClientRequestContext ctx, int numAttemptsSoFar) {
         return rateLimiter.tryAcquire();
+    }
+
+    @Override
+    public String toString() {
+        return MoreObjects.toStringHelper(this)
+                .add("permitsPerSecond", rateLimiter.getRate())
+                .toString();
     }
 }

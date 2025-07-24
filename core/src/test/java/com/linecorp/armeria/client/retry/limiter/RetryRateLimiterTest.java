@@ -120,7 +120,7 @@ class RetryRateLimiterTest {
             executor.submit(() -> {
                 try {
                     for (int j = 0; j < attemptsPerThread; j++) {
-                        if (limiter.shouldRetry(ctx, j + 2)) {
+                        if (limiter.shouldRetry(ctx, j)) {
                             successfulRetries.incrementAndGet();
                         } else {
                             failedRetries.incrementAndGet();

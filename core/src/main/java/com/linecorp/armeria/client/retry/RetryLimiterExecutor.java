@@ -14,12 +14,13 @@
  * under the License.
  */
 
-package com.linecorp.armeria.client.retry.limiter;
+package com.linecorp.armeria.client.retry;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.linecorp.armeria.client.ClientRequestContext;
+import com.linecorp.armeria.client.retry.limiter.RetryLimiter;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.logging.RequestLog;
 
@@ -36,7 +37,7 @@ import com.linecorp.armeria.common.logging.RequestLog;
  * and doing nothing for {@link #onCompletedAttempt}).
  * </p>
  */
-public final class RetryLimiterExecutor {
+final class RetryLimiterExecutor {
 
     private RetryLimiterExecutor() {}
 
@@ -66,9 +67,8 @@ public final class RetryLimiterExecutor {
                 return true;
             }
         } catch (Throwable t) {
-            logger.error(
-                    "Failed to execute retry limiter, limiter: " + limiter + " attempts: " + numAttemptsSoFar,
-                    t);
+            logger.error("Failed to execute RetryLimiter.shouldRetry: limiter={}, attempts={}", limiter,
+                         numAttemptsSoFar, t);
             return true;
         }
     }
@@ -93,9 +93,8 @@ public final class RetryLimiterExecutor {
                 limiter.onCompletedAttempt(ctx, requestLog, numAttemptsSoFar);
             }
         } catch (Throwable t) {
-            logger.error(
-                    "Failed to execute retry limiter, limiter: " + limiter + " attempts: " + numAttemptsSoFar,
-                    t);
+            logger.error("Failed to execute RetryLimiter.onCompletedAttempt: limiter={}, attempts={}", limiter,
+                         numAttemptsSoFar, t);
         }
     }
 }

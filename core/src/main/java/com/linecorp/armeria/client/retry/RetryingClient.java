@@ -33,7 +33,6 @@ import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.client.ResponseTimeoutException;
 import com.linecorp.armeria.client.retry.limiter.RetryLimiter;
-import com.linecorp.armeria.client.retry.limiter.RetryLimiterExecutor;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.AggregationOptions;
 import com.linecorp.armeria.common.HttpHeaderNames;

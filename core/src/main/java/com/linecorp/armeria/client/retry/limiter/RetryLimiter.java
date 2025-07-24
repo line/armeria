@@ -43,7 +43,7 @@ public interface RetryLimiter {
      * @param maxTokens the initial token count (must be positive)
      * @param tokenRatio the number of tokens a successful request increments (must be positive)
      */
-    static RetryLimiter ofGrpc(int maxTokens, int tokenRatio) {
+    static RetryLimiter ofGrpc(float maxTokens, float tokenRatio) {
         return new GrpcRetryLimiter(maxTokens, tokenRatio);
     }
 
@@ -57,7 +57,7 @@ public interface RetryLimiter {
      * @param retryableStatuses the collection of gRPC status codes that are considered retryable(must not be
      *     null or empty)
      */
-    static RetryLimiter ofGrpc(int maxTokens, int tokenRatio, int threshold,
+    static RetryLimiter ofGrpc(float maxTokens, float tokenRatio, float threshold,
                                Collection<Integer> retryableStatuses) {
         return new GrpcRetryLimiter(maxTokens, tokenRatio, threshold, retryableStatuses);
     }

@@ -14,7 +14,7 @@
  * under the License.
  */
 
-package com.linecorp.armeria.client.retry.limiter;
+package com.linecorp.armeria.client.retry;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
@@ -29,6 +29,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import com.linecorp.armeria.client.ClientRequestContext;
+import com.linecorp.armeria.client.retry.limiter.RetryLimiter;
 import com.linecorp.armeria.common.logging.RequestLog;
 
 class RetryLimiterExecutorTest {
