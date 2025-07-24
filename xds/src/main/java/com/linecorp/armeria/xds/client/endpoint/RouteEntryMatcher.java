@@ -1,0 +1,357 @@
+/*
+ * Copyright 2025 LY Corporation
+ *
+ * LY Corporation licenses this file to you under the Apache License,
+ * version 2.0 (the "License"); you may not use this file except in compliance
+ * with the License. You may obtain a copy of the License at:
+ *
+ *   https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations
+ * under the License.
+ */
+
+package com.linecorp.armeria.xds.client.endpoint;
+
+import static com.google.common.base.Preconditions.checkArgument;
+
+import java.util.List;
+import java.util.function.BiPredicate;
+
+import com.google.common.base.Ascii;
+import com.google.common.base.Joiner;
+import com.google.common.base.Predicate;
+import com.google.common.collect.ImmutableList;
+import com.google.re2j.Pattern;
+
+import com.linecorp.armeria.client.ClientRequestContext;
+import com.linecorp.armeria.common.HttpHeaders;
+import com.linecorp.armeria.common.HttpMethod;
+import com.linecorp.armeria.common.HttpRequest;
+import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.common.QueryParams;
+import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.xds.RouteEntry;
+
+import io.envoyproxy.envoy.config.route.v3.HeaderMatcher;
+import io.envoyproxy.envoy.config.route.v3.HeaderMatcher.HeaderMatchSpecifierCase;
+import io.envoyproxy.envoy.config.route.v3.QueryParameterMatcher;
+import io.envoyproxy.envoy.config.route.v3.QueryParameterMatcher.QueryParameterMatchSpecifierCase;
+import io.envoyproxy.envoy.config.route.v3.RouteMatch;
+import io.envoyproxy.envoy.config.route.v3.RouteMatch.PathSpecifierCase;
+import io.envoyproxy.envoy.type.matcher.v3.RegexMatcher;
+import io.envoyproxy.envoy.type.matcher.v3.StringMatcher;
+import io.envoyproxy.envoy.type.matcher.v3.StringMatcher.MatchPatternCase;
+import io.envoyproxy.envoy.type.v3.Int64Range;
+
+final class RouteEntryMatcher {
+
+    private final List<HeaderMatcherImpl> headerMatchers;
+    private final List<QueryParamsMatcherImpl> queryParamsMatchers;
+    private final PathMatcherImpl pathMatcher;
+    private final RouteMatch routeMatch;
+
+    RouteEntryMatcher(RouteEntry routeEntry) {
+        routeMatch = routeEntry.route().getMatch();
+        headerMatchers = HeaderMatcherImpl.fromHeaderMatchers(routeMatch.getHeadersList());
+        queryParamsMatchers =
+                QueryParamsMatcherImpl.fromQueryParamsMatchers(routeMatch.getQueryParametersList());
+        pathMatcher = new PathMatcherImpl(routeMatch);
+        final PathSpecifierCase pathSpecifierCase = routeMatch.getPathSpecifierCase();
+
+        checkArgument(pathSpecifierCase == PathSpecifierCase.PREFIX ||
+                      pathSpecifierCase == PathSpecifierCase.PATH ||
+                      pathSpecifierCase == PathSpecifierCase.SAFE_REGEX ||
+                      pathSpecifierCase == PathSpecifierCase.CONNECT_MATCHER ||
+                      pathSpecifierCase == PathSpecifierCase.PATH_SEPARATED_PREFIX,
+                      "pathSpecifierCase (%s) not supported", pathSpecifierCase);
+    }
+
+    boolean matches(ClientRequestContext ctx) {
+        final HttpRequest req = ctx.request();
+        if (routeMatch.hasGrpc()) {
+            if (!isGrpcRequest(req)) {
+                return false;
+            }
+        }
+
+        for (HeaderMatcherImpl headerMatcher : headerMatchers) {
+            if (!headerMatcher.matches(ctx)) {
+                return false;
+            }
+        }
+
+        if (!queryParamsMatchers.isEmpty()) {
+            final QueryParams queryParams = QueryParamsMatcherImpl.fromContext(ctx);
+            for (QueryParamsMatcherImpl queryParamsMatcher : queryParamsMatchers) {
+                if (!queryParamsMatcher.matches(queryParams)) {
+                    return false;
+                }
+            }
+        }
+
+        return pathMatcher.match(ctx);
+    }
+
+    static boolean isGrpcRequest(@Nullable HttpRequest req) {
+        if (req == null) {
+            return false;
+        }
+        final MediaType contentType = req.contentType();
+        if (contentType == null) {
+            return false;
+        }
+        final String subtype = contentType.subtype();
+        return "grpc".equals(subtype) || subtype.startsWith("grpc+");
+    }
+
+    static class QueryParamsMatcherImpl {
+
+        static List<QueryParamsMatcherImpl> fromQueryParamsMatchers(List<QueryParameterMatcher> paramMatchers) {
+            final ImmutableList.Builder<QueryParamsMatcherImpl> builder = ImmutableList.builder();
+            for (QueryParameterMatcher paramMatcher : paramMatchers) {
+                builder.add(new QueryParamsMatcherImpl(paramMatcher));
+            }
+            return builder.build();
+        }
+
+        private final Predicate<QueryParams> predicate;
+
+        QueryParamsMatcherImpl(QueryParameterMatcher matcher) {
+            final QueryParameterMatchSpecifierCase matchCase =
+                    matcher.getQueryParameterMatchSpecifierCase();
+            if (matchCase == QueryParameterMatchSpecifierCase.PRESENT_MATCH) {
+                predicate = params -> params.contains(matcher.getName()) == matcher.getPresentMatch();
+            } else if (matchCase == QueryParameterMatchSpecifierCase.STRING_MATCH) {
+                final StringMatcherImpl stringMatcher = new StringMatcherImpl(matcher.getStringMatch());
+                predicate = params -> {
+                    final String value = params.get(matcher.getName());
+                    if (value == null) {
+                        return false;
+                    }
+                    return stringMatcher.match(value);
+                };
+            } else {
+                throw new IllegalArgumentException("Unsupported query parameter matcher: " + matcher);
+            }
+        }
+
+        static QueryParams fromContext(ClientRequestContext ctx) {
+            final String query = ctx.query();
+            final QueryParams queryParams;
+            if (query == null) {
+                queryParams = QueryParams.of();
+            } else {
+                queryParams = QueryParams.fromQueryString(query);
+            }
+            return queryParams;
+        }
+
+        boolean matches(QueryParams queryParams) {
+            return predicate.test(queryParams);
+        }
+    }
+
+    static class HeaderMatcherImpl {
+
+        private final BiPredicate<ClientRequestContext, HttpHeaders> matcher;
+        private final HeaderMatcher headerMatcher;
+        private static final Joiner COMMA_JOINER = Joiner.on(",");
+
+        static List<HeaderMatcherImpl> fromHeaderMatchers(List<HeaderMatcher> headerMatchers) {
+            final ImmutableList.Builder<HeaderMatcherImpl> builder = ImmutableList.builder();
+            for (HeaderMatcher headerMatcher : headerMatchers) {
+                builder.add(new HeaderMatcherImpl(headerMatcher));
+            }
+            return builder.build();
+        }
+
+        HeaderMatcherImpl(HeaderMatcher headerMatcher) {
+            this.headerMatcher = headerMatcher;
+
+            final HeaderMatchSpecifierCase matchCase = headerMatcher.getHeaderMatchSpecifierCase();
+            if (matchCase == HeaderMatchSpecifierCase.EXACT_MATCH ||
+                matchCase == HeaderMatchSpecifierCase.SAFE_REGEX_MATCH ||
+                matchCase == HeaderMatchSpecifierCase.PREFIX_MATCH ||
+                matchCase == HeaderMatchSpecifierCase.SUFFIX_MATCH ||
+                matchCase == HeaderMatchSpecifierCase.CONTAINS_MATCH) {
+                throw new IllegalArgumentException("Using deprecated field: " + matchCase +
+                                                   ". Use 'STRING_MATCH' instead.");
+            }
+            if (matchCase == HeaderMatchSpecifierCase.PRESENT_MATCH ||
+                matchCase == HeaderMatchSpecifierCase.HEADERMATCHSPECIFIER_NOT_SET) {
+                final boolean presentMatch = headerMatcher.hasPresentMatch() ?
+                                             headerMatcher.getPresentMatch() : true;
+                matcher = (ctx, headers) -> {
+                    if (headerMatcher.getTreatMissingHeaderAsEmpty()) {
+                        return presentMatch;
+                    }
+                    return headers.contains(headerMatcher.getName()) == presentMatch;
+                };
+            } else if (matchCase == HeaderMatchSpecifierCase.RANGE_MATCH) {
+                matcher = (ctx, headers) -> {
+                    final Long value = headers.getLong(headerMatcher.getName());
+                    if (value == null) {
+                        return false;
+                    }
+                    final Int64Range rangeMatch = headerMatcher.getRangeMatch();
+                    return value >= rangeMatch.getStart() && value < rangeMatch.getEnd();
+                };
+            } else if (matchCase == HeaderMatchSpecifierCase.STRING_MATCH) {
+                final StringMatcherImpl stringMatcher = new StringMatcherImpl(headerMatcher.getStringMatch());
+                matcher = (ctx, headers) -> {
+                    final List<String> allHeaders = headers.getAll(headerMatcher.getName());
+                    if (allHeaders.isEmpty()) {
+                        if (headerMatcher.getTreatMissingHeaderAsEmpty()) {
+                            return stringMatcher.match("");
+                        } else {
+                            return false;
+                        }
+                    }
+                    if (allHeaders.size() == 1) {
+                        // happy path for most cases
+                        return stringMatcher.match(allHeaders.get(0));
+                    }
+                    final String joined = COMMA_JOINER.join(allHeaders);
+                    return stringMatcher.match(joined);
+                };
+            } else {
+                throw new IllegalArgumentException("Unsupported header matchCase: " + matchCase + '.');
+            }
+        }
+
+        boolean matches(ClientRequestContext ctx) {
+            final HttpRequest req = ctx.request();
+            final HttpHeaders headers;
+            if (req == null) {
+                headers = HttpHeaders.of();
+            } else {
+                headers = req.headers();
+            }
+            return matcher.test(ctx, headers) != headerMatcher.getInvertMatch();
+        }
+    }
+
+    static class PathMatcherImpl {
+
+        private final Predicate<ClientRequestContext> predicate;
+
+        PathMatcherImpl(RouteMatch routeMatch) {
+            final PathSpecifierCase pathSpecifierCase = routeMatch.getPathSpecifierCase();
+            final boolean caseSensitive = routeMatch.getCaseSensitive().getValue();
+            if (pathSpecifierCase == PathSpecifierCase.PREFIX) {
+                final StringMatcher matcher = StringMatcher.newBuilder()
+                                                           .setPrefix(routeMatch.getPrefix())
+                                                           .setIgnoreCase(!caseSensitive)
+                                                           .build();
+                final StringMatcherImpl matcherImpl = new StringMatcherImpl(matcher);
+                predicate = ctx -> matcherImpl.match(ctx.path());
+            } else if (pathSpecifierCase == PathSpecifierCase.PATH) {
+                final StringMatcher matcher = StringMatcher.newBuilder()
+                                                           .setExact(routeMatch.getPath())
+                                                           .setIgnoreCase(!caseSensitive)
+                                                           .build();
+                final StringMatcherImpl matcherImpl = new StringMatcherImpl(matcher);
+                predicate = ctx -> matcherImpl.match(ctx.path());
+            } else if (pathSpecifierCase == PathSpecifierCase.SAFE_REGEX) {
+                final StringMatcher matcher = StringMatcher.newBuilder()
+                                                           .setSafeRegex(routeMatch.getSafeRegex())
+                                                           .build();
+                final StringMatcherImpl matcherImpl = new StringMatcherImpl(matcher);
+                predicate = ctx -> matcherImpl.match(ctx.path());
+            } else if (pathSpecifierCase == PathSpecifierCase.CONNECT_MATCHER) {
+                predicate = ctx -> ctx.method() == HttpMethod.CONNECT;
+            } else if (pathSpecifierCase == PathSpecifierCase.PATH_SEPARATED_PREFIX) {
+                final StringMatcher matcher = StringMatcher.newBuilder()
+                                                           .setPrefix(routeMatch.getPathSeparatedPrefix())
+                                                           .setIgnoreCase(!caseSensitive)
+                                                           .build();
+                final StringMatcherImpl matcherImpl = new StringMatcherImpl(matcher);
+                predicate = ctx -> {
+                    final String path = ctx.path();
+                    final String pathSeparatedPrefix = routeMatch.getPathSeparatedPrefix();
+                    if (path.length() < pathSeparatedPrefix.length()) {
+                        return false;
+                    }
+                    if (!matcherImpl.match(path)) {
+                        return false;
+                    }
+                    if (path.length() == pathSeparatedPrefix.length()) {
+                        return true;
+                    }
+                    return path.charAt(pathSeparatedPrefix.length()) == '/';
+                };
+            } else {
+                throw new IllegalArgumentException("Unsupported pathSpecifierCase: " + pathSpecifierCase);
+            }
+        }
+
+        boolean match(ClientRequestContext ctx) {
+            return predicate.test(ctx);
+        }
+    }
+
+    private static class StringMatcherImpl {
+
+        private final boolean ignoreCase;
+        private final MatchPatternCase patternCase;
+        private final Predicate<String> predicate;
+
+        StringMatcherImpl(StringMatcher stringMatcher) {
+            ignoreCase = stringMatcher.getIgnoreCase();
+            patternCase = stringMatcher.getMatchPatternCase();
+            if (patternCase == MatchPatternCase.EXACT) {
+                final String exact;
+                if (ignoreCase) {
+                    exact = Ascii.toLowerCase(stringMatcher.getExact());
+                } else {
+                    exact = stringMatcher.getExact();
+                }
+                predicate = str -> str.equals(exact);
+            } else if (patternCase == MatchPatternCase.PREFIX) {
+                final String prefix;
+                if (ignoreCase) {
+                    prefix = Ascii.toLowerCase(stringMatcher.getPrefix());
+                } else {
+                    prefix = stringMatcher.getPrefix();
+                }
+                predicate = str -> str.startsWith(prefix);
+            } else if (patternCase == MatchPatternCase.SUFFIX) {
+                final String suffix;
+                if (ignoreCase) {
+                    suffix = Ascii.toLowerCase(stringMatcher.getSuffix());
+                } else {
+                    suffix = stringMatcher.getSuffix();
+                }
+                predicate = str -> str.endsWith(suffix);
+            } else if (patternCase == MatchPatternCase.SAFE_REGEX) {
+                final RegexMatcher safeRegex = stringMatcher.getSafeRegex();
+                final Pattern pattern = Pattern.compile(safeRegex.getRegex());
+                predicate = pattern::matches;
+            } else if (patternCase == MatchPatternCase.CONTAINS) {
+                final String contains;
+                if (ignoreCase) {
+                    contains = Ascii.toLowerCase(stringMatcher.getContains());
+                } else {
+                    contains = stringMatcher.getContains();
+                }
+                predicate = str -> str.contains(contains);
+            } else {
+                throw new IllegalArgumentException("Unsupported string matcher patternCase: " + patternCase);
+            }
+        }
+
+        boolean match(@Nullable String input) {
+            if (input == null) {
+                return false;
+            }
+            if (ignoreCase && patternCase != MatchPatternCase.SAFE_REGEX) {
+                input = Ascii.toLowerCase(input);
+            }
+            return predicate.test(input);
+        }
+    }
+}
