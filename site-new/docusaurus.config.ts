@@ -236,6 +236,10 @@ export default async function createConfigAsync() {
         },
       ],
     ],
+
+    future: {
+      v4: true,
+    },
   };
   return config;
 }
