@@ -1,0 +1,51 @@
+.wrapper {
+  line-height: 0;
+  max-width: 580px;
+}
+
+.wrapper .avatar {
+  display: inline-block;
+  position: relative;
+  overflow: hidden;
+  transition: transform 300ms ease;
+}
+
+.wrapper .avatar img {
+  display: inline-block;
+  overflow: hidden;
+  line-height: 1em; /* For alt text */
+}
+
+.wrapper .avatar:after {
+  content: '';
+  position: absolute;
+  top: -110%;
+  left: -210%;
+  width: 200%;
+  height: 200%;
+  opacity: 0;
+  transform: rotate(30deg);
+  pointer-events: none;
+
+  background: rgba(255, 255, 255, 0.13);
+  background: linear-gradient(
+    to right,
+    rgba(255, 255, 255, 0.13) 0%,
+    rgba(255, 255, 255, 0.13) 77%,
+    rgba(255, 255, 255, 0.5) 92%,
+    rgba(255, 255, 255, 0) 100%
+  );
+}
+
+.wrapper .avatar:hover:after {
+  opacity: 1;
+  top: -30%;
+  left: -30%;
+  transition-property: left, top, opacity;
+  transition-duration: 0.7s, 0.7s, 0.15s;
+  transition-timing-function: ease;
+}
+
+.wrapper .avatar:active:after {
+  opacity: 0;
+}
