@@ -24,6 +24,13 @@ import com.linecorp.armeria.common.logging.RequestLog;
 /**
  * A strategy interface for limiting retries in Armeria clients.
  * Implementations decide whether a retry should be allowed and can update internal state after each attempt.
+ *
+ * <p>Implementations should be thread-safe and designed to handle concurrent calls to both methods.
+ * They can be called concurrently by multiple threads if there are multiple calls using the same client
+ * instance or if the limiter is shared across multiple clients.
+ *
+ * <p>Handle your errors carefully. If the implementation throws an exception it will be logged and the retry
+ * will be allowed.
  */
 @FunctionalInterface
 public interface RetryLimiter {

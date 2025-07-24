@@ -400,4 +400,21 @@ class GrpcRetryLimiterTest {
         final int expectedTokens = limiter.maxTokens - (1000 * threadCount * attemptsPerThread);
         assertThat(limiter.tokenCount.get()).isEqualTo(Math.max(0, expectedTokens));
     }
+
+    @Test
+    void grpcRetryLimiter_toString() {
+        final GrpcRetryLimiter limiter = new GrpcRetryLimiter(10.5f, 1.25f, 5.75f, Arrays.asList(14));
+        final String toString = limiter.toString();
+
+        assertThat(toString).contains("GrpcRetryLimiter");
+        assertThat(toString).contains("maxTokens=10.5");
+        assertThat(toString).contains("threshold=5.75");
+        assertThat(toString).contains("tokenRatio=1.25");
+        assertThat(toString).contains("retryableStatuses=[14]");
+        assertThat(toString).contains("currentTokenCount=10.5");
+        // After some token changes (simulate by directly setting)
+        limiter.tokenCount.set(5500); // 5.5 tokens
+        final String updatedToString = limiter.toString();
+        assertThat(updatedToString).contains("currentTokenCount=5.5");
+    }
 }

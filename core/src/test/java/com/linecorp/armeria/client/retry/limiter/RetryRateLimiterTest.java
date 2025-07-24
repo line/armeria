@@ -95,8 +95,9 @@ class RetryRateLimiterTest {
         // Second retry immediately after should be denied
         assertThat(limiter.shouldRetry(ctx, 3)).isFalse();
 
-        // Wait for 0.5 seconds to allow rate limiter to refill (2 permits per second = 0.5 seconds per permit)
-        Thread.sleep(600);
+        // Wait for 0.5 seconds + some tolerance to allow rate limiter to refill
+        //(2 permits per second = 0.5 seconds per permit)
+        Thread.sleep(500 + 100);
 
         // Should allow one more retry after waiting
         assertThat(limiter.shouldRetry(ctx, 4)).isTrue();
@@ -152,9 +153,10 @@ class RetryRateLimiterTest {
         // Second retry immediately after should be denied due to rate limiting
         assertThat(limiter.shouldRetry(ctx, 3)).isFalse();
 
-        // Wait for 2 seconds to allow rate limiter to refill (0.5 permits per second = 2 seconds per permit)
+        // Wait for 2 seconds + some tolerance to allow rate limiter to refill
+        //(0.5 permits per second = 2 seconds per permit)
         try {
-            Thread.sleep(2100);
+            Thread.sleep(2000 + 100);
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
         }
