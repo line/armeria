@@ -213,8 +213,9 @@ public class AthenzExtension extends AbstractAllOrEachExtension {
 
     public URI ztsUri() {
         if (ztsUri == null) {
+            final String serviceHost = composeContainer.getServiceHost(ZTS_SERVICE_NAME, ZTS_PORT);
             final int servicePort = composeContainer.getServicePort(ZTS_SERVICE_NAME, ZTS_PORT);
-            ztsUri = URI.create("https://localhost:" + servicePort);
+            ztsUri = URI.create("https://" + serviceHost + ':' + servicePort);
         }
         return ztsUri;
     }
@@ -235,15 +236,17 @@ public class AthenzExtension extends AbstractAllOrEachExtension {
         }
     }
 
-    private ZMSClient newZmsClient() {
-        final String zmsUrl = "https://localhost:" + composeContainer.getServicePort(ZMS_SERVICE_NAME,
-                                                                                     ZMS_PORT);
+    private static ZMSClient newZmsClient() {
+        final String serviceHost = composeContainer.getServiceHost(ZMS_SERVICE_NAME, ZMS_PORT);
+        final int servicePort = composeContainer.getServicePort(ZMS_SERVICE_NAME, ZMS_PORT);
+        final String zmsUrl = "https://" + serviceHost + ':' + servicePort;
         return new ZMSClient(zmsUrl, getSslContext("domain-admin"));
     }
 
-    private ZTSClient newZtsClient(String serviceName) {
-        final String ztsUrl = "https://localhost:" + composeContainer.getServicePort(ZTS_SERVICE_NAME,
-                                                                                     ZTS_PORT);
+    private static ZTSClient newZtsClient(String serviceName) {
+        final String serviceHost = composeContainer.getServiceHost(ZTS_SERVICE_NAME, ZTS_PORT);
+        final Integer servicePort = composeContainer.getServicePort(ZTS_SERVICE_NAME, ZTS_PORT);
+        final String ztsUrl = "https://" + serviceHost + ':' + servicePort;
         return new ZTSClient(ztsUrl, getSslContext(serviceName));
     }
 

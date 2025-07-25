@@ -4,9 +4,9 @@ services:
   zms-db:
     image: athenz/athenz-zms-db:latest
     hostname: athenz-zms-db
+    networks:
+      - athenz
     restart: unless-stopped
-    ports:
-      - "3306:3306"
     environment:
       MYSQL_ROOT_PASSWORD: mariadb
       MYSQL_DATABASE: zms_server
@@ -25,12 +25,12 @@ services:
   zms-server:
     image: athenz/athenz-zms-server:latest
     hostname: athenz-zms-server
+    networks:
+      - athenz
     restart: unless-stopped
     depends_on:
       zms-db:
         condition: service_healthy
-    ports:
-      - "4443:4443"
     user: "10001:1001"
     environment:
       ZMS_DB_ADMIN_PASS: mariadbmariadb
@@ -52,9 +52,9 @@ services:
   zts-db:
     image: athenz/athenz-zms-db:latest
     hostname: athenz-zts-db
+    networks:
+      - athenz
     restart: unless-stopped
-    ports:
-      - "3307:3306"
     environment:
       MYSQL_ROOT_PASSWORD: mariadb
     volumes:
@@ -69,14 +69,14 @@ services:
   zts-server:
     image: athenz/athenz-zts-server:latest
     hostname: athenz-zts-server
+    networks:
+      - athenz
     restart: unless-stopped
     depends_on:
       zts-db:
         condition: service_healthy
       zms-server:
         condition: service_healthy
-    ports:
-      - "8443:8443"
     user: "10001:1001"
     environment:
       ZTS_DB_ADMIN_PASS: mariadbmariadb
@@ -97,3 +97,7 @@ services:
       interval: 5s
       timeout: 3s
       retries: 20
+
+networks:
+  athenz:
+    driver: bridge
