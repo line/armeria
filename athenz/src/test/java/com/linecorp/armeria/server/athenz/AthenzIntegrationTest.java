@@ -28,7 +28,7 @@ import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
-import org.testcontainers.junit.jupiter.Testcontainers;
+import org.testcontainers.junit.jupiter.EnabledIfDockerAvailable;
 
 import com.linecorp.armeria.client.BlockingWebClient;
 import com.linecorp.armeria.client.ClientRequestContext;
@@ -48,7 +48,7 @@ import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServerListener;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
-@Testcontainers(disabledWithoutDocker = true)
+@EnabledIfDockerAvailable
 class AthenzIntegrationTest {
 
     @Order(1)

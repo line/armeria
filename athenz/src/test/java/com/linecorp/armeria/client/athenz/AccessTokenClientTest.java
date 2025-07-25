@@ -29,13 +29,13 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
-import org.testcontainers.junit.jupiter.Testcontainers;
+import org.testcontainers.junit.jupiter.EnabledIfDockerAvailable;
 import org.testcontainers.shaded.com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.common.TlsKeyPair;
 import com.linecorp.armeria.server.athenz.AthenzExtension;
 
-@Testcontainers(disabledWithoutDocker = true)
+@EnabledIfDockerAvailable
 class AccessTokenClientTest {
 
     @RegisterExtension

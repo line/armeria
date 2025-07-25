@@ -30,7 +30,7 @@ import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
-import org.testcontainers.junit.jupiter.Testcontainers;
+import org.testcontainers.junit.jupiter.EnabledIfDockerAvailable;
 import org.testcontainers.shaded.com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.client.BlockingWebClient;
@@ -48,7 +48,7 @@ import com.linecorp.armeria.server.annotation.Get;
 import com.linecorp.armeria.server.annotation.ProducesJson;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
-@Testcontainers(disabledWithoutDocker = true)
+@EnabledIfDockerAvailable
 class AthenzAnnotatedServiceTest {
 
     @Order(1)

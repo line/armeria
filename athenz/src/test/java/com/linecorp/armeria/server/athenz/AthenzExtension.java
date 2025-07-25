@@ -31,6 +31,7 @@ import javax.net.ssl.SSLContext;
 import org.junit.jupiter.api.extension.ExtensionContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.testcontainers.DockerClientFactory;
 import org.testcontainers.containers.ComposeContainer;
 import org.testcontainers.containers.wait.strategy.Wait;
 
@@ -82,9 +83,18 @@ public class AthenzExtension extends AbstractAllOrEachExtension {
                     .withExposedService(ZTS_SERVICE_NAME, ZTS_PORT, Wait.forHealthcheck());
 
     static {
-        logger.info("Starting Docker compose container for Athenz tests");
-        // The compose container will be destroyed on JVM exit.
-        composeContainer.start();
+        boolean isDockerAvailable;
+        try {
+            DockerClientFactory.instance().client();
+            isDockerAvailable = true;
+        } catch (Throwable ex) {
+            isDockerAvailable = false;
+        }
+        if (isDockerAvailable) {
+            logger.info("Starting Docker compose container for Athenz tests");
+            // The compose container will be destroyed on JVM exit.
+            composeContainer.start();
+        }
     }
 
     @Nullable
@@ -276,4 +286,5 @@ public class AthenzExtension extends AbstractAllOrEachExtension {
             throw new IllegalStateException("Failed to read file: " + fileName, e);
         }
     }
+
 }

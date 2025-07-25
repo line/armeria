@@ -29,7 +29,7 @@ import java.util.List;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
-import org.testcontainers.junit.jupiter.Testcontainers;
+import org.testcontainers.junit.jupiter.EnabledIfDockerAvailable;
 import org.testcontainers.shaded.com.google.common.collect.ImmutableList;
 import org.testcontainers.shaded.com.google.common.collect.ImmutableMap;
 
@@ -38,7 +38,7 @@ import com.yahoo.rdl.Struct;
 
 import com.linecorp.armeria.client.athenz.ZtsBaseClient;
 
-@Testcontainers(disabledWithoutDocker = true)
+@EnabledIfDockerAvailable
 class AthenzPolicyLoaderTest {
 
     @RegisterExtension
@@ -47,24 +47,25 @@ class AthenzPolicyLoaderTest {
     @ValueSource(booleans = { true, false })
     @ParameterizedTest
     void loadPolicyFiles(boolean jwsPolicySupport) throws Exception {
-        final ZtsBaseClient baseClient = athenzExtension.newZtsBaseClient(TEST_SERVICE);
-        final PublicKeyStore publicKeyStore = new AthenzPublicKeyProvider(baseClient,
-                                                                          Duration.ofSeconds(10));
-        final AthenzPolicyConfig policyConfig = new AthenzPolicyConfig(ImmutableList.of(TEST_DOMAIN_NAME),
-                                                                       ImmutableMap.of(), jwsPolicySupport,
-                                                                       Duration.ofSeconds(10));
+        try (ZtsBaseClient baseClient = athenzExtension.newZtsBaseClient(TEST_SERVICE)) {
+            final PublicKeyStore publicKeyStore = new AthenzPublicKeyProvider(baseClient,
+                                                                              Duration.ofSeconds(10));
+            final AthenzPolicyConfig policyConfig = new AthenzPolicyConfig(ImmutableList.of(TEST_DOMAIN_NAME),
+                                                                           ImmutableMap.of(), jwsPolicySupport,
+                                                                           Duration.ofSeconds(10));
 
-        final AthenzPolicyLoader policyLoader = new AthenzPolicyLoader(baseClient, TEST_DOMAIN_NAME,
-                                                                       policyConfig, publicKeyStore);
+            final AthenzPolicyLoader policyLoader = new AthenzPolicyLoader(baseClient, TEST_DOMAIN_NAME,
+                                                                           policyConfig, publicKeyStore);
 
-        assertThatThrownBy(policyLoader::getNow)
-                .isInstanceOf(IllegalStateException.class)
-                .hasMessageContaining("Policy data is not initialized yet");
-        policyLoader.init();
-        final AthenzAssertions assertions = policyLoader.getNow();
-        final List<Struct> adminPolicy = assertions.roleStandardAllowMap().get(ADMIN_ROLE);
-        assertThat(adminPolicy).satisfiesOnlyOnce(struct -> {
-            assertThat(struct.get("polname")).isEqualTo(TEST_DOMAIN_NAME + ":policy." + ADMIN_POLICY);
-        });
+            assertThatThrownBy(policyLoader::getNow)
+                    .isInstanceOf(IllegalStateException.class)
+                    .hasMessageContaining("Policy data is not initialized yet");
+            policyLoader.init();
+            final AthenzAssertions assertions = policyLoader.getNow();
+            final List<Struct> adminPolicy = assertions.roleStandardAllowMap().get(ADMIN_ROLE);
+            assertThat(adminPolicy).satisfiesOnlyOnce(struct -> {
+                assertThat(struct.get("polname")).isEqualTo(TEST_DOMAIN_NAME + ":policy." + ADMIN_POLICY);
+            });
+        }
     }
 }
