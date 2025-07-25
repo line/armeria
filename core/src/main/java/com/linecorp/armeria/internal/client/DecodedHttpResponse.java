@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.internal.client;
 
+import com.google.common.annotations.VisibleForTesting;
+
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.annotation.Nullable;
@@ -31,6 +33,7 @@ public final class DecodedHttpResponse extends DefaultHttpResponse {
     @Nullable
     private InboundTrafficController inboundTrafficController;
     private long writtenBytes;
+    private int id = -1;
 
     public DecodedHttpResponse(EventLoop eventLoop) {
         this.eventLoop = eventLoop;
@@ -40,6 +43,10 @@ public final class DecodedHttpResponse extends DefaultHttpResponse {
         this.inboundTrafficController = inboundTrafficController;
     }
 
+    public void setId(int id) {
+        this.id = id;
+    }
+
     public long writtenBytes() {
         return writtenBytes;
     }
@@ -47,6 +54,12 @@ public final class DecodedHttpResponse extends DefaultHttpResponse {
     @Override
     public EventExecutor defaultSubscriberExecutor() {
         return eventLoop;
+    }
+
+    @VisibleForTesting
+    @Nullable
+    public InboundTrafficController inboundTrafficController() {
+        return inboundTrafficController;
     }
 
     @Override
@@ -66,7 +79,8 @@ public final class DecodedHttpResponse extends DefaultHttpResponse {
         if (obj instanceof HttpData) {
             final int length = ((HttpData) obj).length();
             assert inboundTrafficController != null;
-            inboundTrafficController.dec(length);
+            assert id > -1 : "id must be set before consuming HttpData";
+            inboundTrafficController.dec(id, length);
         }
     }
 }

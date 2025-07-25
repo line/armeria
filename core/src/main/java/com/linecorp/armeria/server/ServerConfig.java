@@ -198,6 +198,15 @@ public interface ServerConfig {
     int http2InitialStreamWindowSize();
 
     /**
+     * Returns the threshold ratio of the HTTP/2 stream flow-control window at which a
+     * <a href="https://datatracker.ietf.org/doc/html/rfc7540#section-6.9">WINDOW_UPDATE</a> frame will be sent.
+     * When the size of the flow-control window drops below the specified ratio (relative to the initial window
+     * size), a {@code WINDOW_UPDATE} frame is triggered to replenish the window.
+     */
+    @UnstableApi
+    float http2StreamWindowSizeRatio();
+
+    /**
      * Returns the maximum number of concurrent streams per HTTP/2 connection.
      */
     long http2MaxStreamsPerConnection();

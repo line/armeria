@@ -44,6 +44,7 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.EventLoop;
 import io.netty.handler.codec.http2.Http2Connection;
+import io.netty.handler.codec.http2.Http2ConnectionDecoder;
 import io.netty.handler.codec.http2.Http2ConnectionEncoder;
 import io.netty.handler.codec.http2.Http2Error;
 import io.netty.handler.codec.http2.Http2Exception;
@@ -63,10 +64,12 @@ final class Http2ResponseDecoder extends AbstractHttpResponseDecoder implements 
     private final Http2GoAwayHandler goAwayHandler;
     private final KeepAliveHandler keepAliveHandler;
 
-    Http2ResponseDecoder(Channel channel, Http2ConnectionEncoder encoder, HttpClientFactory clientFactory,
+    Http2ResponseDecoder(Channel channel, Http2ConnectionEncoder encoder, Http2ConnectionDecoder decoder,
+                         HttpClientFactory clientFactory,
                          KeepAliveHandler keepAliveHandler) {
         super(channel,
-              InboundTrafficController.ofHttp2(channel, clientFactory.http2InitialConnectionWindowSize()));
+              InboundTrafficController.ofHttp2(channel, decoder,
+                                               clientFactory.http2InitialConnectionWindowSize()));
         conn = encoder.connection();
         this.encoder = encoder;
         assert keepAliveHandler instanceof Http2ClientKeepAliveHandler ||
@@ -284,8 +287,8 @@ final class Http2ResponseDecoder extends AbstractHttpResponseDecoder implements 
             res.close();
         }
 
-        // All bytes have been processed.
-        return dataLength + padding;
+        // The data length will be reported to InboundTrafficController upon consumption for flow control.
+        return padding;
     }
 
     /**

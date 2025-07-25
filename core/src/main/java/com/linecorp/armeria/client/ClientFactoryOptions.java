@@ -161,6 +161,17 @@ public final class ClientFactoryOptions
                                        Flags.defaultHttp2InitialStreamWindowSize());
 
     /**
+     * The threshold ratio of the HTTP/2 stream flow-control window at which a
+     * <a href="https://datatracker.ietf.org/doc/html/rfc7540#section-6.9">WINDOW_UPDATE</a> frame will be sent.
+     * When the size of the flow-control window drops below the specified ratio (relative to the initial window
+     * size), a {@code WINDOW_UPDATE} frame is triggered to replenish the window.
+     */
+    @UnstableApi
+    public static final ClientFactoryOption<Float> HTTP2_STREAM_WINDOW_UPDATE_RATIO =
+            ClientFactoryOption.define("HTTP2_STREAM_WINDOW_UPDATE_RATIO",
+                                       Flags.defaultHttp2StreamWindowUpdateRatio());
+
+    /**
      * The <a href="https://datatracker.ietf.org/doc/html/rfc7540#section-6.5.2">SETTINGS_MAX_FRAME_SIZE</a>
      * that indicates the size of the largest frame payload that this client is willing to receive.
      */
@@ -502,6 +513,17 @@ public final class ClientFactoryOptions
      */
     public int http2InitialStreamWindowSize() {
         return get(HTTP2_INITIAL_STREAM_WINDOW_SIZE);
+    }
+
+    /**
+     * Returns the threshold ratio of the HTTP/2 stream flow-control window at which a
+     * <a href="https://datatracker.ietf.org/doc/html/rfc7540#section-6.9">WINDOW_UPDATE</a> frame will be sent.
+     * When the size of the flow-control window drops below the specified ratio (relative to the initial window
+     * size), a {@code WINDOW_UPDATE} frame is triggered to replenish the window.
+     */
+    @UnstableApi
+    public float http2StreamWindowUpdateRatio() {
+        return get(HTTP2_STREAM_WINDOW_UPDATE_RATIO);
     }
 
     /**
