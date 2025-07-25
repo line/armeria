@@ -45,12 +45,15 @@ task generateSources(type: Copy) {
         exclude '**/ThriftCallService.java'
         exclude '**/ThriftFunction.java'
         exclude '**/ThriftServiceMetadata.java'
+        exclude '**/MaskingTProtocol.java'
+        exclude '**/UnMaskingTProtocol.java'
         exclude '**/common/thrift/package-info.java'
         exclude '**/server/thrift/package-info.java'
     }
     from("${thrift014ProjectDir}/src/main/java") {
         exclude '**/internal/common/thrift/package-info.java'
     }
+    from "${thrift018ProjectDir}/src/main/java"
     into "${project.ext.genSrcDir}/main/java"
 }
 
@@ -73,6 +76,7 @@ ext {
     thriftVersion = thriftFullVersion.substring(0, thriftFullVersion.lastIndexOf('.'));
     testThriftSrcDirs = ["$thrift013ProjectDir/src/test/thrift", "$projectDir/src/test/thrift",
                          "$thrift018ProjectDir/src/test/thrift"]
+    enableAnnotationsAsMetadata()
 }
 
 tasks.generateSources.dependsOn(generateTestSources)
