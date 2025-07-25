@@ -122,7 +122,8 @@ final class DefaultAsyncLoader<T> implements AsyncLoader<T> {
                     cause = Exceptions.peel(cause);
                     handleException(cause, cache, future);
                 } else {
-                    logger.debug("Loaded a new value: {}", newValue);
+                    // Specify the loader name
+                    logger.debug("Loaded a new value");
                     cacheEntry = new CacheEntry<>(newValue);
                     future.complete(newValue);
                 }
@@ -141,9 +142,9 @@ final class DefaultAsyncLoader<T> implements AsyncLoader<T> {
         assert !isValid || cacheEntry != null;
         final T cache = cacheEntry != null ? cacheEntry.value : null;
         if (isValid) {
-            logger.debug("Pre-fetching a new value. cache: {}, loader: {}", cache, loader);
+            logger.debug("Pre-fetching a new value. loader: {}", loader);
         } else {
-            logger.debug("Loading a new value. cache: {}, loader: {}", cache, loader);
+            logger.debug("Loading a new value. loader: {}", loader);
         }
 
         load(cache, newFuture);
@@ -221,8 +222,8 @@ final class DefaultAsyncLoader<T> implements AsyncLoader<T> {
             final long elapsed = System.nanoTime() - cacheEntry.cachedAtNanos;
             if (elapsed >= expireAfterLoadNanos) {
                 if (logger.isDebugEnabled()) {
-                    logger.debug("The cached value expired after {} ms. cache: {}",
-                                 TimeUnit.NANOSECONDS.toMillis(expireAfterLoadNanos), cacheEntry.value);
+                    logger.debug("The cached value expired after {} ms.",
+                                 TimeUnit.NANOSECONDS.toMillis(expireAfterLoadNanos));
                 }
                 return false;
             }
@@ -230,8 +231,7 @@ final class DefaultAsyncLoader<T> implements AsyncLoader<T> {
 
         try {
             if (expireIf != null && expireIf.test(cacheEntry.value)) {
-                logger.debug("The cached value expired due to 'expireIf' condition. cache: {}",
-                             cacheEntry.value);
+                logger.debug("The cached value expired due to 'expireIf' condition.");
                 return false;
             }
         } catch (Exception e) {
