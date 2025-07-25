@@ -1,0 +1,16 @@
+---
+date: 2019-08-12
+---
+
+# v0.90.1
+
+## Bug fixes
+
+- Armeria does not fail to initialize `SSLContext` anymore when JRE does not support TLSv1.3 and OpenSSL support is missing. #1984 #1986
+- `HealthCheckedEndpointGroup` does not fail with `ConcurrentModificationException` anymore in a certain situation. #1989 #1990 #1992
+
+{/* truncate */}
+
+## Thank you
+
+<ThankYou usernames={['anuraaga', 'ikhoon', 'minwoox', 'rmohta', 'trustin']} />

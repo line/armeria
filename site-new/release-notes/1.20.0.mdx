@@ -1,0 +1,159 @@
+---
+date: 2022-10-05
+---
+
+# v1.20.0
+
+## 🌟 New features
+
+- You can now handle a GraphQL error using [GraphqlErrorHandler](type). #4435
+  ```java
+  GraphqlErrorHandler errorHandler = new GraphqlErrorHandler() {
+    @Override
+    public HttpResponse handle(ServiceRequestContext ctx, ExecutionInput input,
+                               ExecutionResult result, @Nullable Throwable cause) {
+      final List<GraphQLError> errors = result.getErrors();
+      if (errors.stream().map(GraphQLError::getMessage)
+                .anyMatch(m -> m.startsWith("Unauthorized"))) {
+        return HttpResponse.of(HttpStatus.UNAUTHORIZED);
+      }
+      ...
+    }
+  };
+  GraphqlService
+    .builder()
+    .schemaFile(...)
+    .runtimeWiring(...)
+    .errorHandler(errorHandler) // 👈👈👈
+    .build();
+  ```
+
+- You can now easily configure client-side TLS key and certificates to support mTLS via
+  [ClientFactoryBuilder#tls(File,File)](type). #4410
+  ```java
+  File keyCertChainFile = ...;
+  File keyFile = ...;
+  ClientFactory factory =
+    ClientFactory
+      .builder()
+      .tls(keyCertChainFile, keyFile)
+      .build();
+  WebClient
+    .builder()
+    .factory(factory)
+    .build();
+  ```
+
+- gRPC HTTP/JSON transcoding endpoint can now handle both the snake case and camel case query parameters
+  using [HttpJsonTranscodingOptions](type). #4428
+  ```java
+  HttpJsonTranscodingOptions options =
+    HttpJsonTranscodingOptions
+      .builder()
+      // Try the original field name and camel case
+      // if it's not found via the original name.
+      .queryParamMatchRules(LOWER_CAMEL_CASE,
+                            ORIGINAL_FIELD)
+                            ...
+                            .build();
+  GrpcService
+    .builder()
+    .enableHttpJsonTranscoding(options)
+    .build();
+  ```
+
+- You can now use `OutputStream` to write data to a [StreamMessage](type) using
+  [StreamMessage#fromOutputStream(Consumer)](type). #4402
+  ```java
+  StreamMessage.fromOutputStream(os -> {
+    // perform blocking operation
+    HttpData data0 = readDataFromBlockingDB(0);
+    os.write(data0);
+    HttpData data1 = readDataFromBlockingDB(1);
+    os.write(data1);
+    os.close();
+  }
+  ```
+
+- You can now convert an [AggregatedHttpRequest](type) to an [HttpRequest](type) with new headers. #4441
+  ```java
+  AggregatedHttpRequest req = ...
+  HttpRequest httpRequest = req.toHttpRequest(newHeaders);
+  ```
+
+{/* truncate */}
+
+## 📈 Improvements
+
+- N/A
+
+## 🛠️ Bug fixes
+
+- [GraphQlService](type) now respects the accept header correctly. #4451
+- [GrpcService](type) and [THttpService](type) no longer throw double subscription exceptions when
+  the request is aggregated in a decorator. #4449
+- The content-length header is automatically removed from [ResponseHeaders](type) for a server
+  streaming response in [GrpcService](type). #4460
+- You no longer see a `NullPointerException` when using [EndpointSelectionStrategy#rampingUp()](type). #4448
+- [DocService](type) no longer throw an exception when a protobuf message doesn't have any fields. #4436
+- You no longer see a 500 response when an empty multipart request is sent. #4432
+- The service name generated from a CGLIB-enhanced class no longer has a synthetic suffix in
+  [DocService](type). #4430
+- Users can now use [ProtobufRequestConverterFunctionProvider](type) without encountering a potential
+  `ClassCastException`. #4429
+- Fixed a regression where `thrift0.9` is incompatible with Thrift 0.9.1 since Armeria 1.17.0. #4427
+- `enable-auto-injection` property is correctly added to the generated `spring-configuration-metadata.json`
+  file. #4425
+
+## 📃 Documentation
+
+- N/A
+
+## 🏚️ Deprecations
+
+- [HttpRequest#aggregateWithPooledObjects(ByteBufAllocator)](type) and
+  [HttpResponse#aggregateWithPooledObjects(ByteBufAllocator)](type) are deprecated. #4449
+  - Use [HttpRequest#aggregate(AggregationOptions)](type) with
+    [AggregationOptions#usePooledObjects(ByteBufAllocator)](type).
+- [GrpcServiceBuilder#httpJsonTranscodingErrorHandler(UnframedGrpcErrorHandler)](type) is deprecated. #4428
+  - Use [HttpJsonTranscodingOptionsBuilder#errorHandler(UnframedGrpcErrorHandler)](type).
+
+## ☢️ Breaking changes
+
+- N/A
+
+## ⛓ Dependencies
+
+You can use Thrift 0.17 with Armeria.
+- Brave 5.13.11 → 5.14.0
+- Dropwizard2 2.1.1 → 2.1.2
+- GraphQL Java 19.0 → 19.2
+- GraphQL Kotlin 6.2.2 → 6.2.5
+- gRPC Java 1.49.0 → 1.49.1
+- Kafka 3.2.1 → 3.3.0
+- Kotlin 1.7.10 → 1.7.20
+- Micrometer 1.9.3 → 1.9.4
+- Netty 4.1.79.Final → 4.1.82.Final
+  - io_uring 0.0.14.Final → 0.0.15.Final
+- Reactor 3.4.22 → 3.4.23
+- Sangria GraphQL 3.2.0 → 3.3.0
+- Scala 2.12.16 → 2.12.17, 2.13.8 → 2.13.9
+- Spring Boot 2.7.3 → 2.7.4
+- Thrift 0.17.0 is added
+
+## 🙇 Thank you
+
+<ThankYou usernames={[
+  'Bogyie',
+  'chungonn',
+  'heowc',
+  'ikhoon',
+  'injae-kim',
+  'jrhee17',
+  'ks-yim',
+  'minwoox',
+  'mscheong01',
+  'takezoe',
+  'tobias-',
+  'trustin'
+]} />
