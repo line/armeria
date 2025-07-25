@@ -140,6 +140,20 @@ public final class ContentPreviewingService extends SimpleDecoratingHttpService 
         this.responsePreviewSanitizer = responsePreviewSanitizer;
     }
 
+    /**
+     * Returns the specified {@link ContentPreviewerFactory}.
+     */
+    public ContentPreviewerFactory contentPreviewerFactory() {
+        return contentPreviewerFactory;
+    }
+
+    /**
+     * Returns the specified {@link BiFunction} that sanitizes the request content preview.
+     */
+    public BiFunction<? super RequestContext, String, ? extends @Nullable Object> responsePreviewSanitizer() {
+        return responsePreviewSanitizer;
+    }
+
     @Override
     public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
         final Boolean settingContentPreview = ctx.attr(SETTING_CONTENT_PREVIEW);
@@ -161,7 +175,6 @@ public final class ContentPreviewingService extends SimpleDecoratingHttpService 
             final HttpResponse res = unwrap().serve(ctx, req);
             return setUpResponseContentPreviewer(contentPreviewerFactory, ctx, res, responsePreviewSanitizer);
         } catch (Throwable t) {
-            ctx.logBuilder().responseContentPreview(null);
             return HttpResponse.ofFailure(t);
         }
     }
