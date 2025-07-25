@@ -77,6 +77,7 @@ public class AthenzExtension extends AbstractAllOrEachExtension {
 
     private static final ComposeContainer composeContainer =
             new ComposeContainer(new File("src/test/resources/docker/docker-compose.yml"))
+                    .withLocalCompose(true)
                     .withExposedService(ZMS_SERVICE_NAME, ZMS_PORT, Wait.forHealthcheck())
                     .withExposedService(ZTS_SERVICE_NAME, ZTS_PORT, Wait.forHealthcheck());
 
