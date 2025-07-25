@@ -36,7 +36,6 @@ import io.netty.util.AsciiString;
 
 final class Http2ServerConnectionHandler extends AbstractHttp2ConnectionHandler {
 
-    private final ServerConfig cfg;
     private final GracefulShutdownSupport gracefulShutdownSupport;
     private final Http2RequestDecoder requestDecoder;
     @Nullable
@@ -51,13 +50,12 @@ final class Http2ServerConnectionHandler extends AbstractHttp2ConnectionHandler 
 
         super(decoder, encoder, initialSettings, newKeepAliveHandler(encoder, channel, cfg, keepAliveTimer));
 
-        this.cfg = cfg;
         this.gracefulShutdownSupport = gracefulShutdownSupport;
 
         gracefulConnectionShutdownHandler = new Http2GracefulConnectionShutdownHandler(
                 cfg.connectionDrainDurationMicros());
 
-        requestDecoder = new Http2RequestDecoder(cfg, channel, scheme, keepAliveHandler());
+        requestDecoder = new Http2RequestDecoder(cfg, channel, scheme, keepAliveHandler(), decoder);
         connection().addListener(requestDecoder);
         decoder().frameListener(requestDecoder);
     }

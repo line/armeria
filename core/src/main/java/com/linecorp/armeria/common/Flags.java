@@ -297,6 +297,10 @@ public final class Flags {
             getValue(FlagsProvider::defaultHttp2InitialStreamWindowSize,
                      "defaultHttp2InitialStreamWindowSize", value -> value > 0);
 
+    private static final float DEFAULT_HTTP2_STREAM_WINDOW_UPDATE_RATIO =
+            getValue(FlagsProvider::defaultHttp2StreamWindowUpdateRatio,
+                     "defaultHttp2InitialStreamWindowSize", value -> value > 0 && value <= 1.0f);
+
     private static final int DEFAULT_HTTP2_MAX_FRAME_SIZE =
             getValue(FlagsProvider::defaultHttp2MaxFrameSize, "defaultHttp2MaxFrameSize",
                      value -> value >= Http2CodecUtil.MAX_FRAME_SIZE_LOWER_BOUND &&
@@ -1110,6 +1114,23 @@ public final class Flags {
      */
     public static int defaultHttp2InitialStreamWindowSize() {
         return DEFAULT_HTTP2_INITIAL_STREAM_WINDOW_SIZE;
+    }
+
+    /**
+     * Returns the default value of the {@link ServerBuilder#http2StreamWindowUpdateRatio(float)} and
+     * {@link ClientFactoryBuilder#http2StreamWindowUpdateRatio(float)}.
+     * Note that this flag has no effect if a user specified the value explicitly via
+     * {@link ServerBuilder#http2StreamWindowUpdateRatio(float)} or
+     * {@link ClientFactoryBuilder#http2StreamWindowUpdateRatio(float)}.
+     *
+     * <p>The default value of this flag is
+     * {@value DefaultFlagsProvider#DEFAULT_HTTP2_STREAM_WINDOW_UPDATE_RATIO}.
+     * Specify the {@code -Dcom.linecorp.armeria.defaultHttp2StreamWindowUpdateRatio=<float>} JVM option
+     * to override the default value.
+     */
+    @UnstableApi
+    public static Float defaultHttp2StreamWindowUpdateRatio() {
+        return DEFAULT_HTTP2_STREAM_WINDOW_UPDATE_RATIO;
     }
 
     /**
