@@ -27,7 +27,6 @@ import com.linecorp.armeria.client.PreClient;
 import com.linecorp.armeria.client.PreClientRequestContext;
 import com.linecorp.armeria.client.Preprocessor;
 import com.linecorp.armeria.client.UnprocessedRequestException;
-import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.SessionProtocol;
@@ -57,8 +56,7 @@ final class RouterFilter<I extends Request, O extends Response> implements Prepr
                     "RouteConfig is not set for the ctx. If a new ctx has been used, " +
                     "please make sure to use ctx.newDerivedContext()."));
         }
-        final HttpRequest httpReq = ctx.request();
-        final SelectedRoute selectedRoute = routeConfig.select(ctx, httpReq);
+        final SelectedRoute selectedRoute = routeConfig.select(ctx);
         if (selectedRoute == null) {
             throw UnprocessedRequestException.of(new IllegalArgumentException(
                     "No route has been selected for listener '" + routeConfig.listenerSnapshot() + "'."));
