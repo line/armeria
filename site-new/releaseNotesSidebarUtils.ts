@@ -1,32 +1,8 @@
 import type { SidebarsConfig } from '@docusaurus/plugin-content-docs';
 
-const LATEST_DISPLAY_COUNT = 10;
-
 const sidebars: SidebarsConfig = {
   releasenotesSidebar: [
-    {
-      type: 'html',
-      value: 'Recent releases',
-      defaultStyle: true,
-      className: 'sidebar-title',
-    },
-    // Recent release notes are added here
-    // '1.31.3',
-    // '1.31.2',
-    // ...
-    {
-      type: 'html',
-      value: '<hr>',
-      defaultStyle: true,
-      className: 'sidebar-divider',
-    },
-    {
-      type: 'html',
-      value: 'Past releases',
-      defaultStyle: true,
-      className: 'sidebar-title',
-    },
-    // Past release note categories are added here
+    // Release note categories are added here
     // {
     //   type: 'category',
     //   label: 'Version 1',
@@ -60,59 +36,42 @@ function compareVersions(a: string, b: string): number {
 }
 
 function sortReleaseNoteSidebarItems(items: any[]): any[] {
-  const updatedSidebar = [...(sidebars.releasenotesSidebar as any[])];
+  const newSideBars = [...(sidebars.releasenotesSidebar as any[])];
 
   const docItems = items.filter(
     (item) => item.type === 'doc' && !item.id.startsWith('index-version-'),
   );
   const sortedDocItems = docItems.sort((a, b) => compareVersions(a.id, b.id));
 
-  const recentReleasesIndex = updatedSidebar.findIndex(
-    (item) => item.type === 'html' && item.value === 'Recent releases',
+  const releasesByMajorVersion: { [key: string]: any[] } = {};
+
+  sortedDocItems.forEach((release) => {
+    const majorVersion = release.id.split('.')[0];
+    if (!releasesByMajorVersion[majorVersion]) {
+      releasesByMajorVersion[majorVersion] = [];
+    }
+    releasesByMajorVersion[majorVersion].push({
+      type: 'doc',
+      id: release.id,
+    });
+  });
+
+  Object.entries(releasesByMajorVersion).forEach(
+    ([majorVersion, versionItems]) => {
+      newSideBars.splice(0, 0, {
+        type: 'category',
+        label: `Version ${majorVersion}`,
+        collapsed: true,
+        link: {
+          type: 'doc',
+          id: `index-version-${majorVersion}`,
+        },
+        items: versionItems,
+      });
+    },
   );
 
-  if (recentReleasesIndex !== -1) {
-    const recentReleases = sortedDocItems.slice(0, LATEST_DISPLAY_COUNT);
-    const pastReleases = sortedDocItems.slice(LATEST_DISPLAY_COUNT);
-
-    updatedSidebar.splice(recentReleasesIndex + 1, 0, ...recentReleases);
-
-    const pastReleasesByMajorVersion: { [key: string]: any[] } = {};
-
-    pastReleases.forEach((release) => {
-      const majorVersion = release.id.split('.')[0];
-      if (!pastReleasesByMajorVersion[majorVersion]) {
-        pastReleasesByMajorVersion[majorVersion] = [];
-      }
-      pastReleasesByMajorVersion[majorVersion].push({
-        type: 'doc',
-        id: release.id,
-      });
-    });
-
-    const pastReleasesIndex = updatedSidebar.findIndex(
-      (item) => item.type === 'html' && item.value === 'Past releases',
-    );
-
-    if (pastReleasesIndex !== -1) {
-      Object.entries(pastReleasesByMajorVersion).forEach(
-        ([majorVersion, versionItems]) => {
-          updatedSidebar.splice(pastReleasesIndex + 1, 0, {
-            type: 'category',
-            label: `Version ${majorVersion}`,
-            collapsed: true,
-            link: {
-              type: 'doc',
-              id: `index-version-${majorVersion}`,
-            },
-            items: versionItems,
-          });
-        },
-      );
-    }
-  }
-
-  return updatedSidebar;
+  return newSideBars;
 }
 
-export { compareVersions, sortReleaseNoteSidebarItems, LATEST_DISPLAY_COUNT };
+export { compareVersions, sortReleaseNoteSidebarItems };
