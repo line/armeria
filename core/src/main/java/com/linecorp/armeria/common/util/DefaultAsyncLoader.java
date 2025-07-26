@@ -48,6 +48,7 @@ final class DefaultAsyncLoader<T> implements AsyncLoader<T> {
     private final long expireAfterLoadNanos;
     @Nullable
     private final Predicate<? super T> expireIf;
+    private final long refreshAfterLoadNanos;
     @Nullable
     private final Predicate<? super T> refreshIf;
     @Nullable
@@ -61,6 +62,7 @@ final class DefaultAsyncLoader<T> implements AsyncLoader<T> {
     DefaultAsyncLoader(Function<@Nullable T, CompletableFuture<T>> loader,
                        @Nullable Duration expireAfterLoad,
                        @Nullable Predicate<? super T> expireIf,
+                       @Nullable Duration refreshAfterLoad,
                        @Nullable Predicate<? super T> refreshIf,
                        @Nullable BiFunction<? super Throwable, ? super @Nullable T,
                                ? extends @Nullable CompletableFuture<T>> exceptionHandler) {
@@ -68,12 +70,13 @@ final class DefaultAsyncLoader<T> implements AsyncLoader<T> {
         this.loader = loader;
         expireAfterLoadNanos = expireAfterLoad != null ? expireAfterLoad.toNanos() : 0;
         this.expireIf = expireIf;
+        refreshAfterLoadNanos = refreshAfterLoad != null ? refreshAfterLoad.toNanos() : 0;
         this.refreshIf = refreshIf;
         this.exceptionHandler = exceptionHandler;
     }
 
     @Override
-    public CompletableFuture<T> load() {
+    public CompletableFuture<T> load(boolean force) {
         final CompletableFuture<T> loadingFuture = this.loadingFuture;
         if (!loadingFuture.isDone()) {
             // A load is in progress.
@@ -82,7 +85,14 @@ final class DefaultAsyncLoader<T> implements AsyncLoader<T> {
 
         // A new `cacheEntry` is set before `loadingFuture` is completed.
         final CacheEntry<T> cacheEntry = this.cacheEntry;
-        final boolean isValid = isValid(cacheEntry);
+
+        final boolean isValid;
+        if (force) {
+            // Force to load a new value.
+            isValid = false;
+        } else {
+            isValid = isValid(cacheEntry);
+        }
         final boolean tryLoad;
         if (isValid) {
             assert cacheEntry != null;
@@ -109,11 +119,11 @@ final class DefaultAsyncLoader<T> implements AsyncLoader<T> {
         try {
             loader.apply(cache).handle((newValue, cause) -> {
                 if (cause != null) {
-                    logger.warn("Failed to load a new value from loader: {}. cache: {}",
-                                loader, cache, cause);
+                    cause = Exceptions.peel(cause);
                     handleException(cause, cache, future);
                 } else {
-                    logger.debug("Loaded a new value: {}", newValue);
+                    // Specify the loader name
+                    logger.debug("Loaded a new value");
                     cacheEntry = new CacheEntry<>(newValue);
                     future.complete(newValue);
                 }
@@ -132,9 +142,9 @@ final class DefaultAsyncLoader<T> implements AsyncLoader<T> {
         assert !isValid || cacheEntry != null;
         final T cache = cacheEntry != null ? cacheEntry.value : null;
         if (isValid) {
-            logger.debug("Pre-fetching a new value. cache: {}, loader: {}", cache, loader);
+            logger.debug("Pre-fetching a new value. loader: {}", loader);
         } else {
-            logger.debug("Loading a new value. cache: {}, loader: {}", cache, loader);
+            logger.debug("Loading a new value. loader: {}", loader);
         }
 
         load(cache, newFuture);
@@ -156,8 +166,15 @@ final class DefaultAsyncLoader<T> implements AsyncLoader<T> {
     }
 
     private boolean needsRefresh(CacheEntry<T> cacheEntry) {
-        boolean refresh = false;
         final T cache = cacheEntry.value;
+        if (refreshAfterLoadNanos > 0) {
+            final long elapsed = System.nanoTime() - cacheEntry.cachedAtNanos;
+            if (elapsed >= refreshAfterLoadNanos) {
+                return true;
+            }
+        }
+
+        boolean refresh = false;
         try {
             refresh = refreshIf != null && refreshIf.test(cache);
         } catch (Exception e) {
@@ -183,8 +200,6 @@ final class DefaultAsyncLoader<T> implements AsyncLoader<T> {
 
             fallback.handle((newValue, cause0) -> {
                 if (cause0 != null) {
-                    logger.warn("Failed to load a new value from exceptionHandler: {}. " +
-                                "cache: {}", exceptionHandler, cache, cause0);
                     future.completeExceptionally(cause0);
                 } else {
                     cacheEntry = new CacheEntry<>(newValue);
@@ -193,7 +208,6 @@ final class DefaultAsyncLoader<T> implements AsyncLoader<T> {
                 return null;
             });
         } catch (Exception e) {
-            logger.warn("Unexpected exception from exceptionHandler.apply()", e);
             future.completeExceptionally(cause);
         }
     }
@@ -208,8 +222,8 @@ final class DefaultAsyncLoader<T> implements AsyncLoader<T> {
             final long elapsed = System.nanoTime() - cacheEntry.cachedAtNanos;
             if (elapsed >= expireAfterLoadNanos) {
                 if (logger.isDebugEnabled()) {
-                    logger.debug("The cached value expired after {} ms. cache: {}",
-                                 TimeUnit.NANOSECONDS.toMillis(expireAfterLoadNanos), cacheEntry.value);
+                    logger.debug("The cached value expired after {} ms.",
+                                 TimeUnit.NANOSECONDS.toMillis(expireAfterLoadNanos));
                 }
                 return false;
             }
@@ -217,8 +231,7 @@ final class DefaultAsyncLoader<T> implements AsyncLoader<T> {
 
         try {
             if (expireIf != null && expireIf.test(cacheEntry.value)) {
-                logger.debug("The cached value expired due to 'expireIf' condition. cache: {}",
-                             cacheEntry.value);
+                logger.debug("The cached value expired due to 'expireIf' condition.");
                 return false;
             }
         } catch (Exception e) {

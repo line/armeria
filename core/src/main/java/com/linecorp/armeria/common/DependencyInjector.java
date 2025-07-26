@@ -22,6 +22,7 @@ import com.google.common.collect.ImmutableList;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.util.SafeCloseable;
+import com.linecorp.armeria.internal.common.ReflectiveDependencyInjector;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.annotation.Decorator;
 import com.linecorp.armeria.server.annotation.DecoratorFactory;
@@ -55,6 +56,13 @@ public interface DependencyInjector extends SafeCloseable {
      */
     static DependencyInjector ofSingletons(Iterable<Object> singletons) {
         return new DefaultDependencyInjector(singletons);
+    }
+
+    /**
+     * Returns a {@link DependencyInjector} that creates dependencies using reflection and injects them.
+     */
+    static DependencyInjector ofReflective() {
+        return new ReflectiveDependencyInjector();
     }
 
     /**

@@ -1,0 +1,45 @@
+{
+    "services" : {
+        "athenz.ci-test": {
+            "allowedOperations": [
+                { "name": "putrole" },
+                { "name": "putmembership",
+                  "items": {
+                    "role" : [
+                        "athenz_dev_test_role",
+                        "athenz_eng_test_role"
+                    ]
+                  }
+                }
+            ]
+        },
+        "athenz.ui-server": {
+            "allowedOperations": [
+                { "name":"putmembership" },
+                { "name":"deletemembership" },
+                { "name":"posttopleveldomain" },
+                { "name":"postuserdomain" },
+                { "name":"postsubdomain" },
+                { "name":"deletesubdomain" },
+                { "name":"deleterole" },
+                { "name":"putrole" },
+                { "name":"putpolicy" },
+                { "name":"deletepolicy" },
+                { "name":"putassertion" },
+                { "name":"deleteassertion" },
+                { "name":"putserviceidentity" },
+                { "name":"deleteserviceidentity" },
+                { "name":"putpublickeyentry" },
+                { "name":"deletepublickeyentry" },
+                { "name":"putdomainmeta" },
+                { "name":"putdomainsystemmeta" },
+                { "name":"putdomaintemplate" },
+                { "name":"putrolemeta" },
+                { "name":"putmembershipdecision" },
+                { "name":"putrolereview" },
+                { "name":"deletedomainrolemember" },
+                { "name":"deletependingmembership" }
+            ]
+        }
+    }
+}

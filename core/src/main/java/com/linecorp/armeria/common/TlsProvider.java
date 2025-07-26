@@ -19,17 +19,25 @@ package com.linecorp.armeria.common;
 import static java.util.Objects.requireNonNull;
 
 import java.security.cert.X509Certificate;
+import java.time.Duration;
 import java.util.List;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.function.Consumer;
+import java.util.function.Supplier;
 
+import com.google.common.collect.ImmutableList;
+
+import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
+import com.linecorp.armeria.server.Server;
 
 /**
  * Provides {@link TlsKeyPair}s for TLS handshakes.
  */
 @UnstableApi
 @FunctionalInterface
-public interface TlsProvider {
+public interface TlsProvider extends AutoCloseable {
 
     /**
      * Returns a {@link TlsProvider} which always returns the specified {@link TlsKeyPair}.
@@ -37,6 +45,59 @@ public interface TlsProvider {
     static TlsProvider of(TlsKeyPair tlsKeyPair) {
         requireNonNull(tlsKeyPair, "tlsKeyPair");
         return builder().keyPair(tlsKeyPair).build();
+    }
+
+    /**
+     * Returns a {@link TlsProvider} that periodically refreshes the {@link TlsKeyPair} based on the given
+     * {@code interval}.
+     *
+     * <p>Note that the key pair supplier is also invoked during the initialization of the returned
+     * {@link TlsProvider}, so this factory method should not be called from an event loop thread.
+     */
+    static TlsProvider ofScheduled(Supplier<TlsKeyPair> keyPairSupplier, Duration interval) {
+        return ofScheduled(keyPairSupplier, interval, CommonPools.blockingTaskExecutor());
+    }
+
+    /**
+     * Returns a {@link TlsProvider} that periodically refreshes the {@link TlsKeyPair} based on the given
+     * {@code interval} using the specified {@link ScheduledExecutorService}.
+     *
+     * <p>Note that the key pair supplier is also invoked during the initialization of the returned
+     * {@link TlsProvider}, so this factory method should not be called from an event loop thread.
+     */
+    static TlsProvider ofScheduled(Supplier<TlsKeyPair> keyPairSupplier, Duration interval,
+                                   ScheduledExecutorService executor) {
+        return ofScheduled(keyPairSupplier, ImmutableList.of(), null, interval, executor);
+    }
+
+    /**
+     * Returns a {@link TlsProvider} that periodically refreshes the {@link TlsKeyPair} based on the given
+     * {@code interval} using the specified {@link ScheduledExecutorService}.
+     *
+     * <p>Note that the key pair supplier is also invoked during the initialization of the returned
+     * {@link TlsProvider}, so this factory method should not be called from an event loop thread.
+     *
+     * @param keyPairSupplier the supplier of {@link TlsKeyPair} to be used for TLS handshakes.
+     * @param certificates the trusted {@link X509Certificate}s to be used for verifying the remote endpoint's
+     *                     certificate.
+     * @param onKeyPairUpdated a {@link Consumer} that is invoked when the {@link TlsKeyPair} is updated.
+     * @param interval the interval at which the {@code keyPairSupplier} is invoked to refresh the
+     *                 {@link TlsKeyPair}.
+     * @param executor the {@link ScheduledExecutorService} that is used to schedule the periodic refresh.
+     */
+    static TlsProvider ofScheduled(Supplier<TlsKeyPair> keyPairSupplier,
+                                   Iterable<? extends X509Certificate> certificates,
+                                   @Nullable Consumer<TlsKeyPair> onKeyPairUpdated,
+                                   Duration interval, ScheduledExecutorService executor) {
+        requireNonNull(keyPairSupplier, "keyPairSupplier");
+        requireNonNull(certificates, "certificates");
+        requireNonNull(interval, "interval");
+        requireNonNull(executor, "executor");
+        if (interval.isNegative() || interval.isZero()) {
+            throw new IllegalArgumentException("interval: " + interval + " (expected: > 0)");
+        }
+        return new RefreshingTlsProvider(keyPairSupplier, ImmutableList.copyOf(certificates),
+                                         onKeyPairUpdated, interval, executor);
     }
 
     /**
@@ -83,5 +144,24 @@ public interface TlsProvider {
     @Nullable
     default List<X509Certificate> trustedCertificates(String hostname) {
         return null;
+    }
+
+    /**
+     * Returns whether this {@link TlsProvider} should be automatically closed when the {@link Server} or
+     * {@link ClientFactory} that this {@link TlsProvider} is associated with is closed.
+     *
+     * <p>This options is enabled by default.
+     */
+    default boolean autoClose() {
+        return true;
+    }
+
+    /**
+     * Closes this {@link TlsProvider} and releases any resources it holds.
+     */
+    @Override
+    default void close() {
+        // No-op by default.
+        // Implementations can override this method to release resources.
     }
 }
