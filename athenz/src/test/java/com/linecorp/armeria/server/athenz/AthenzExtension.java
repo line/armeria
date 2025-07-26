@@ -286,5 +286,4 @@ public class AthenzExtension extends AbstractAllOrEachExtension {
             throw new IllegalStateException("Failed to read file: " + fileName, e);
         }
     }
-
 }
