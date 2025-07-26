@@ -31,7 +31,6 @@ import javax.net.ssl.SSLContext;
 import org.junit.jupiter.api.extension.ExtensionContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.testcontainers.DockerClientFactory;
 import org.testcontainers.containers.ComposeContainer;
 import org.testcontainers.containers.wait.strategy.Wait;
 
@@ -46,7 +45,6 @@ import com.yahoo.athenz.zms.Role;
 import com.yahoo.athenz.zms.ServiceIdentity;
 import com.yahoo.athenz.zms.TopLevelDomain;
 import com.yahoo.athenz.zms.ZMSClient;
-import com.yahoo.athenz.zms.ZMSClientException;
 import com.yahoo.athenz.zts.ZTSClient;
 
 import com.linecorp.armeria.client.athenz.ZtsBaseClient;
@@ -76,31 +74,20 @@ public class AthenzExtension extends AbstractAllOrEachExtension {
     public static final String ADMIN_POLICY = "admin-policy";
     public static final String USER_POLICY = "user-policy";
 
-    private static final ComposeContainer composeContainer =
-            new ComposeContainer(new File("src/test/resources/docker/docker-compose.yml"))
-                    .withLocalCompose(true)
-                    .withExposedService(ZMS_SERVICE_NAME, ZMS_PORT, Wait.forHealthcheck())
-                    .withExposedService(ZTS_SERVICE_NAME, ZTS_PORT, Wait.forHealthcheck());
-
-    static {
-        boolean isDockerAvailable;
-        try {
-            DockerClientFactory.instance().client();
-            isDockerAvailable = true;
-        } catch (Throwable ex) {
-            isDockerAvailable = false;
-        }
-        if (isDockerAvailable) {
-            logger.info("Starting Docker compose container for Athenz tests");
-            // The compose container will be destroyed on JVM exit.
-            composeContainer.start();
-        }
-    }
+    private final ComposeContainer composeContainer;
 
     @Nullable
     private URI ztsUri;
     @Nullable
     private ZMSClient zmsClient;
+
+    public AthenzExtension() {
+        composeContainer =
+                new ComposeContainer(new File("src/test/resources/docker/docker-compose.yml"))
+                        .withLocalCompose(true)
+                        .withExposedService(ZMS_SERVICE_NAME, ZMS_PORT, Wait.forHealthcheck())
+                        .withExposedService(ZTS_SERVICE_NAME, ZTS_PORT, Wait.forHealthcheck());
+    }
 
     private ZMSClient zmsClient() {
         if (zmsClient == null) {
@@ -111,16 +98,15 @@ public class AthenzExtension extends AbstractAllOrEachExtension {
 
     @Override
     protected void before(ExtensionContext context) throws Exception {
+        composeContainer.start();
+        logger.info("Starting Docker compose container for Athenz tests");
         defaultScaffold();
         scaffold(zmsClient());
     }
 
     @Override
     public void after(ExtensionContext context) throws Exception {
-        if (zmsClient != null) {
-            zmsClient.deleteTopLevelDomain(TEST_DOMAIN_NAME, "delete-domain-audit-ref");
-            zmsClient.close();
-        }
+        composeContainer.stop();
     }
 
     /**
@@ -129,15 +115,6 @@ public class AthenzExtension extends AbstractAllOrEachExtension {
     protected void scaffold(ZMSClient zmsClient) {}
 
     private void defaultScaffold() {
-        try {
-            zmsClient().deleteTopLevelDomain(TEST_DOMAIN_NAME, "delete-domain-audit-ref");
-        } catch (ZMSClientException e) {
-            // Ignore if the domain does not exist.
-            if (e.getCode() != 404) {
-                throw e;
-            }
-        }
-
         // Create test domain
         createDomain();
         // Create test service
@@ -247,14 +224,14 @@ public class AthenzExtension extends AbstractAllOrEachExtension {
         }
     }
 
-    private static ZMSClient newZmsClient() {
+    private ZMSClient newZmsClient() {
         final String serviceHost = composeContainer.getServiceHost(ZMS_SERVICE_NAME, ZMS_PORT);
         final int servicePort = composeContainer.getServicePort(ZMS_SERVICE_NAME, ZMS_PORT);
         final String zmsUrl = "https://" + serviceHost + ':' + servicePort;
         return new ZMSClient(zmsUrl, getSslContext("domain-admin"));
     }
 
-    private static ZTSClient newZtsClient(String serviceName) {
+    private ZTSClient newZtsClient(String serviceName) {
         final String serviceHost = composeContainer.getServiceHost(ZTS_SERVICE_NAME, ZTS_PORT);
         final Integer servicePort = composeContainer.getServicePort(ZTS_SERVICE_NAME, ZTS_PORT);
         final String ztsUrl = "https://" + serviceHost + ':' + servicePort;

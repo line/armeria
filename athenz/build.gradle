@@ -24,8 +24,3 @@ dependencies {
     testImplementation libs.jwt
     testImplementation libs.testcontainers.junit.jupiter
 }
-
-tasks.withType(Test).configureEach {
-    // Disabling parallel test execution to launch the compose container once.
-    maxParallelForks = 1
-}
