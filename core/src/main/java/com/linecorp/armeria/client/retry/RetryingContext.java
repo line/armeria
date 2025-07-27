@@ -22,6 +22,8 @@ import static com.linecorp.armeria.internal.client.ClientUtil.initContextAndExec
 
 import java.util.concurrent.CompletableFuture;
 
+import com.google.common.base.MoreObjects;
+
 import com.linecorp.armeria.client.Client;
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.ResponseTimeoutException;
@@ -232,5 +234,19 @@ class RetryingContext {
         }
 
         return false;
+    }
+
+    @Override
+    public String toString() {
+        return MoreObjects
+                .toStringHelper(this)
+                .add("ctx", ctx)
+                .add("retryConfig", retryConfig)
+                .add("res", res)
+                .add("resFuture", resFuture)
+                .add("req", req)
+                .add("state", state)
+                .add("reqDuplicator", reqDuplicator)
+                .toString();
     }
 }

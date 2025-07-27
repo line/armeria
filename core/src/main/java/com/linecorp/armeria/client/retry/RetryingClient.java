@@ -221,8 +221,9 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
         final CompletableFuture<HttpResponse> resFuture = new CompletableFuture<>();
         final HttpResponse res = HttpResponse.of(resFuture, ctx.eventLoop());
         final RetryingContext rctx = new RetryingContext(ctx, mappedRetryConfig(ctx), res, resFuture, req);
-        rctx.init().handle((initSuccessful, unused) -> {
+        rctx.init().handle((initSuccessful, initCause) -> {
             if (!initSuccessful) {
+                logger.debug("RetryingContext initialization failed, not retrying: {}", rctx);
                 return null;
             }
 
