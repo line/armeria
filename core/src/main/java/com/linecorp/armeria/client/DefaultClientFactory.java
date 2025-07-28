@@ -38,6 +38,7 @@ import com.google.common.collect.Streams;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.common.Scheme;
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.TlsProvider;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.AsyncCloseableSupport;
 import com.linecorp.armeria.common.util.ReleasableHolder;
@@ -257,6 +258,10 @@ final class DefaultClientFactory implements ClientFactory {
     private void closeAsync(CompletableFuture<?> future) {
         if (leakTracker != null) {
             leakTracker.close(this);
+        }
+        final TlsProvider tlsProvider = options().tlsProvider();
+        if (tlsProvider.autoClose()) {
+            tlsProvider.close();
         }
 
         final CompletableFuture<?>[] delegateCloseFutures =
