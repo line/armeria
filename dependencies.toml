@@ -8,7 +8,7 @@ asm = "9.7.1"
 assertj = "3.27.3"
 awaitility = "4.3.0"
 blockhound = "1.0.11.RELEASE"
-bouncycastle = "1.70"
+bouncycastle = "1.81"
 brave5 = "5.18.1"
 brave6 = "6.1.0"
 brotli4j = "1.18.0"
@@ -241,15 +241,15 @@ module = "io.projectreactor.tools:blockhound"
 version.ref = "blockhound"
 
 [libraries.bouncycastle-bcpkix]
-module = "org.bouncycastle:bcpkix-jdk15on"
+module = "org.bouncycastle:bcpkix-jdk18on"
 version.ref = "bouncycastle"
 relocations = { from = "org.bouncycastle", to = "com.linecorp.armeria.internal.shaded.bouncycastle" }
 [libraries.bouncycastle-bcprov]
-module = "org.bouncycastle:bcprov-jdk15on"
+module = "org.bouncycastle:bcprov-jdk18on"
 version.ref = "bouncycastle"
 relocations = { from = "org.bouncycastle", to = "com.linecorp.armeria.internal.shaded.bouncycastle" }
 [libraries.bouncycastle-bcutil]
-module = "org.bouncycastle:bcutil-jdk15on"
+module = "org.bouncycastle:bcutil-jdk18on"
 version.ref = "bouncycastle"
 relocations = { from = "org.bouncycastle", to = "com.linecorp.armeria.internal.shaded.bouncycastle" }
 
