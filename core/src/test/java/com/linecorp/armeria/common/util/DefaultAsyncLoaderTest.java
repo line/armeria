@@ -679,4 +679,24 @@ class DefaultAsyncLoaderTest {
         source.set(2);
         assertThat(asyncLoader.load().join()).isOne();
     }
+
+    @Test
+    void testRefreshAfterLoad() throws InterruptedException {
+        final AtomicInteger source = new AtomicInteger(0);
+        final AsyncLoader<Integer> asyncLoader =
+                AsyncLoader.<Integer>builder(unused -> UnmodifiableFuture.completedFuture(source.get()))
+                           .name("test")
+                           .refreshAfterLoad(Duration.ofSeconds(1))
+                           .build();
+
+        assertThat(asyncLoader.load().join()).isZero();
+        source.set(1);
+        // The cached value should not be updated.
+        assertThat(asyncLoader.load().join()).isZero();
+        Thread.sleep(1500);
+        assertThat(asyncLoader.load().join()).isZero();
+        await().untilAsserted(() -> {
+            assertThat(asyncLoader.load().join()).isOne();
+        });
+    }
 }

@@ -16,10 +16,9 @@
 
 package com.linecorp.armeria.common.util;
 
-import static java.util.Objects.requireNonNull;
-
 import java.time.Duration;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 import java.util.function.BiFunction;
@@ -33,6 +32,7 @@ import org.slf4j.LoggerFactory;
 
 import com.google.common.base.MoreObjects;
 
+import com.linecorp.armeria.common.CommonPools;
 import com.linecorp.armeria.common.annotation.Nullable;
 
 final class DefaultAsyncLoader<T> implements AsyncLoader<T> {
@@ -44,6 +44,7 @@ final class DefaultAsyncLoader<T> implements AsyncLoader<T> {
             DefaultAsyncLoader, CompletableFuture> loadFutureUpdater = AtomicReferenceFieldUpdater
             .newUpdater(DefaultAsyncLoader.class, CompletableFuture.class, "loadingFuture");
 
+    private final Executor executor;
     private final Function<@Nullable T, CompletableFuture<T>> loader;
     private final String name;
     private final long expireAfterLoadNanos;
@@ -68,7 +69,7 @@ final class DefaultAsyncLoader<T> implements AsyncLoader<T> {
                        @Nullable Predicate<? super T> refreshIf,
                        @Nullable BiFunction<? super Throwable, ? super @Nullable T,
                                ? extends @Nullable CompletableFuture<T>> exceptionHandler) {
-        requireNonNull(loader, "loader");
+        executor = CommonPools.blockingTaskExecutor();
         this.loader = loader;
         if (name == null) {
             name = "AsyncLoader-" + Integer.toHexString(System.identityHashCode(this));
@@ -123,7 +124,7 @@ final class DefaultAsyncLoader<T> implements AsyncLoader<T> {
 
     private void load(@Nullable T cache, CompletableFuture<T> future) {
         try {
-            loader.apply(cache).handle((newValue, cause) -> {
+            loader.apply(cache).handleAsync((newValue, cause) -> {
                 if (cause != null) {
                     cause = Exceptions.peel(cause);
                     handleException(cause, cache, future);
@@ -134,7 +135,8 @@ final class DefaultAsyncLoader<T> implements AsyncLoader<T> {
                     future.complete(newValue);
                 }
                 return null;
-            });
+                // Use handleAsync() to prevent RequestContext leakage when using Armeria client.
+            }, executor);
         } catch (Exception e) {
             logger.warn("[{}] Unexpected exception from loader.apply()", name, e);
             handleException(e, cache, future);
