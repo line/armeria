@@ -16,7 +16,6 @@
 
 package com.linecorp.armeria.client.auth.oauth2;
 
-import static com.linecorp.armeria.internal.common.ArmeriaHttpUtil.concatPaths;
 import static java.util.Objects.requireNonNull;
 
 import java.time.Instant;
@@ -69,8 +68,8 @@ class DefaultOAuth2AuthorizationGrant implements OAuth2AuthorizationGrant {
         this.requestSupplier = requestSupplier;
         this.fallbackTokenProvider = fallbackTokenProvider;
         this.newTokenConsumer = newTokenConsumer;
-        final String name = "oauth2-token-loader/" + concatPaths(accessTokenEndpoint.uri().toString(),
-                                                                 accessTokenEndpointPath);
+        final String name = "oauth2-token-loader/" + concatPath(accessTokenEndpoint.uri().toString(),
+                                                          accessTokenEndpointPath);
         final AsyncLoaderBuilder<GrantedOAuth2AccessToken> loaderBuilder =
                 AsyncLoader.builder(this::loadToken)
                            .name(name)
@@ -79,6 +78,27 @@ class DefaultOAuth2AuthorizationGrant implements OAuth2AuthorizationGrant {
             loaderBuilder.refreshIf(refreshIf);
         }
         tokenLoader = loaderBuilder.build();
+    }
+
+    private String concatPath(String uri, String path) {
+        requireNonNull(uri, "uri");
+        requireNonNull(path, "path");
+
+        if (uri.charAt(uri.length() - 1) == '/') {
+            if (path.charAt(0) == '/') {
+                // Deduplicate double slash
+                return uri + path.substring(1);
+            } else {
+                return uri + path;
+            }
+        } else {
+            if (path.charAt(0) == '/') {
+                return uri + path;
+            } else {
+                // Add a slash between uri and path
+                return uri + '/' + path;
+            }
+        }
     }
 
     private CompletableFuture<GrantedOAuth2AccessToken> loadToken(@Nullable GrantedOAuth2AccessToken token) {
