@@ -40,6 +40,7 @@ import com.linecorp.armeria.xds.client.endpoint.XdsHttpPreprocessor;
 
 class VirtualHostRoutingTest {
 
+    //language=YAML
     private static final String virtualHostRoutingBootstrap =
             """
                 static_resources:
@@ -148,6 +149,7 @@ class VirtualHostRoutingTest {
         }
     }
 
+    //language=YAML
     private static final String ignorePortBootstrap =
             """
                 static_resources:
@@ -233,6 +235,7 @@ class VirtualHostRoutingTest {
         }
     }
 
+    //language=YAML
     private static final String noMatchBootstrap =
             """
             static_resources:
