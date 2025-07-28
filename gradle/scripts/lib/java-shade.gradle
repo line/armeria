@@ -24,7 +24,6 @@ configure(relocatedProjects) {
             description: 'Builds the shaded main JAR.',
             dependsOn: tasks.classes) {
 
-        logger.info("Configuring shaded JAR for project: ${project.path}")
         configureShadowTask(project, delegate, true)
         archiveBaseName.set("${project.archivesBaseName}-shaded")
 

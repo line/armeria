@@ -45,6 +45,7 @@ final class DefaultAsyncLoader<T> implements AsyncLoader<T> {
             .newUpdater(DefaultAsyncLoader.class, CompletableFuture.class, "loadingFuture");
 
     private final Function<@Nullable T, CompletableFuture<T>> loader;
+    private final String name;
     private final long expireAfterLoadNanos;
     @Nullable
     private final Predicate<? super T> expireIf;
@@ -60,6 +61,7 @@ final class DefaultAsyncLoader<T> implements AsyncLoader<T> {
     private volatile CompletableFuture<T> loadingFuture = UnmodifiableFuture.completedFuture(null);
 
     DefaultAsyncLoader(Function<@Nullable T, CompletableFuture<T>> loader,
+                       @Nullable String name,
                        @Nullable Duration expireAfterLoad,
                        @Nullable Predicate<? super T> expireIf,
                        @Nullable Duration refreshAfterLoad,
@@ -68,6 +70,10 @@ final class DefaultAsyncLoader<T> implements AsyncLoader<T> {
                                ? extends @Nullable CompletableFuture<T>> exceptionHandler) {
         requireNonNull(loader, "loader");
         this.loader = loader;
+        if (name == null) {
+            name = "AsyncLoader-" + Integer.toHexString(System.identityHashCode(this));
+        }
+        this.name = name;
         expireAfterLoadNanos = expireAfterLoad != null ? expireAfterLoad.toNanos() : 0;
         this.expireIf = expireIf;
         refreshAfterLoadNanos = refreshAfterLoad != null ? refreshAfterLoad.toNanos() : 0;
@@ -123,14 +129,14 @@ final class DefaultAsyncLoader<T> implements AsyncLoader<T> {
                     handleException(cause, cache, future);
                 } else {
                     // Specify the loader name
-                    logger.debug("Loaded a new value");
+                    logger.debug("[{}] Loaded a new value", name);
                     cacheEntry = new CacheEntry<>(newValue);
                     future.complete(newValue);
                 }
                 return null;
             });
         } catch (Exception e) {
-            logger.warn("Unexpected exception from loader.apply()", e);
+            logger.warn("[{}] Unexpected exception from loader.apply()", name, e);
             handleException(e, cache, future);
         }
     }
@@ -142,9 +148,9 @@ final class DefaultAsyncLoader<T> implements AsyncLoader<T> {
         assert !isValid || cacheEntry != null;
         final T cache = cacheEntry != null ? cacheEntry.value : null;
         if (isValid) {
-            logger.debug("Pre-fetching a new value. loader: {}", loader);
+            logger.debug("[{}] Pre-fetching a new value...", name);
         } else {
-            logger.debug("Loading a new value. loader: {}", loader);
+            logger.debug("[{}] Loading a new value...", name);
         }
 
         load(cache, newFuture);
@@ -178,7 +184,7 @@ final class DefaultAsyncLoader<T> implements AsyncLoader<T> {
         try {
             refresh = refreshIf != null && refreshIf.test(cache);
         } catch (Exception e) {
-            logger.warn("Unexpected exception from refreshIf.test()", e);
+            logger.warn("[{}] Unexpected exception from refreshIf.test()", name, e);
         }
 
         return refresh;
@@ -222,7 +228,7 @@ final class DefaultAsyncLoader<T> implements AsyncLoader<T> {
             final long elapsed = System.nanoTime() - cacheEntry.cachedAtNanos;
             if (elapsed >= expireAfterLoadNanos) {
                 if (logger.isDebugEnabled()) {
-                    logger.debug("The cached value expired after {} ms.",
+                    logger.debug("[{}] The cached value expired after {} ms.", name,
                                  TimeUnit.NANOSECONDS.toMillis(expireAfterLoadNanos));
                 }
                 return false;
@@ -231,11 +237,11 @@ final class DefaultAsyncLoader<T> implements AsyncLoader<T> {
 
         try {
             if (expireIf != null && expireIf.test(cacheEntry.value)) {
-                logger.debug("The cached value expired due to 'expireIf' condition.");
+                logger.debug("[{}] The cached value expired due to 'expireIf' condition.", name);
                 return false;
             }
         } catch (Exception e) {
-            logger.warn("Unexpected exception from expireIf.test()", e);
+            logger.warn("[{}] Unexpected exception from expireIf.test()", name, e);
         }
 
         return true;

@@ -36,6 +36,8 @@ public final class AsyncLoaderBuilder<T> {
 
     private final Function<@Nullable T, CompletableFuture<T>> loader;
     @Nullable
+    private String name;
+    @Nullable
     private Duration expireAfterLoad;
     @Nullable
     private Predicate<? super T> expireIf;
@@ -50,6 +52,16 @@ public final class AsyncLoaderBuilder<T> {
     AsyncLoaderBuilder(Function<@Nullable T, CompletableFuture<T>> loader) {
         requireNonNull(loader, "loader");
         this.loader = loader;
+    }
+
+    /**
+     * Sets the name of the {@link AsyncLoader} to be created.
+     * The name is used for logging and debugging purposes.
+     */
+    public AsyncLoaderBuilder<T> name(String name) {
+        requireNonNull(name, "name");
+        this.name = name;
+        return this;
     }
 
     /**
@@ -129,7 +141,7 @@ public final class AsyncLoaderBuilder<T> {
      * Returns a newly created {@link AsyncLoader} with the entries in this builder.
      */
     public AsyncLoader<T> build() {
-        return new DefaultAsyncLoader<>(loader, expireAfterLoad, expireIf, refreshAfterLoad, refreshIf,
+        return new DefaultAsyncLoader<>(loader, name, expireAfterLoad, expireIf, refreshAfterLoad, refreshIf,
                                         exceptionHandler);
     }
 }

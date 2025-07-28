@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.client.auth.oauth2;
 
+import static com.linecorp.armeria.internal.common.ArmeriaHttpUtil.concatPaths;
 import static java.util.Objects.requireNonNull;
 
 import java.time.Instant;
@@ -68,8 +69,11 @@ class DefaultOAuth2AuthorizationGrant implements OAuth2AuthorizationGrant {
         this.requestSupplier = requestSupplier;
         this.fallbackTokenProvider = fallbackTokenProvider;
         this.newTokenConsumer = newTokenConsumer;
+        final String name = "oauth2-token-loader/" + concatPaths(accessTokenEndpoint.uri().toString(),
+                                                                 accessTokenEndpointPath);
         final AsyncLoaderBuilder<GrantedOAuth2AccessToken> loaderBuilder =
                 AsyncLoader.builder(this::loadToken)
+                           .name(name)
                            .expireIf(token -> !isValidToken(token));
         if (refreshIf != null) {
             loaderBuilder.refreshIf(refreshIf);

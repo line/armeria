@@ -59,9 +59,11 @@ final class AthenzPublicKeyProvider implements PublicKeyStore {
         minRetryInterval = refreshInterval.toMillis() / 4;
         webClient = ztsBaseClient.webClient();
         ztsKeyLoader = AsyncLoader.<Map<String, CompletableFuture<PublicKey>>>builder(k -> fetchZtsKeys())
+                                  .name("athenz-zts-key-loader")
                                   .refreshAfterLoad(refreshInterval)
                                   .build();
         zmsKeyLoader = AsyncLoader.<Map<String, CompletableFuture<PublicKey>>>builder(k -> fetchZmsKeys())
+                                  .name("athenz-zms-key-loader")
                                   .refreshAfterLoad(refreshInterval)
                                   .build();
         ztsKeyLoader.load();

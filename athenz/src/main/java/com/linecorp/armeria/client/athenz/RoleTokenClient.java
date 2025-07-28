@@ -50,6 +50,7 @@ final class RoleTokenClient implements TokenClient {
         this.roleNames = ROLE_JOINER.join(roleNames);
         refreshBeforeSec = refreshBefore.toMillis() / 1000;
         tokenLoader = AsyncLoader.<RoleToken>builder(unused -> fetchRoleToken())
+                                 .name("athenz-role-token/" + domainName + '/' + this.roleNames)
                                  .exceptionHandler(this::errorHandler)
                                  .refreshIf(token -> remainingTimeSec(token) < refreshBeforeSec)
                                  .expireIf(token -> remainingTimeSec(token) == 0)

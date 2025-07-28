@@ -61,6 +61,7 @@ final class AthenzPolicyLoader {
 
         policyHandler = new AthenzPolicyHandler(publicKeyStore);
         policyLoader = AsyncLoader.<AthenzAssertions>builder(unused -> loadPolicyData())
+                                  .name("athenz-policy-loader/" + targetDomain)
                                   .refreshAfterLoad(updaterConfig.refreshInterval())
                                   .build();
         initialPolicyData = policyLoader.load();

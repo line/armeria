@@ -662,4 +662,20 @@ class DefaultAsyncLoaderTest {
         assertThat(loader.load().join()).isOne();
         assertThat(refreshCounter).hasValue(1);
     }
+
+    @Test
+    void testForceReload() {
+        final AtomicInteger source = new AtomicInteger(0);
+        final AsyncLoader<Integer> asyncLoader =
+                AsyncLoader.<Integer>builder(unused -> UnmodifiableFuture.completedFuture(source.get()))
+                           .build();
+
+        assertThat(asyncLoader.load().join()).isZero();
+        source.set(1);
+        // The cached value should not be updated.
+        assertThat(asyncLoader.load().join()).isZero();
+        assertThat(asyncLoader.load(true).join()).isOne();
+        source.set(2);
+        assertThat(asyncLoader.load().join()).isOne();
+    }
 }
