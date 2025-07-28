@@ -16,10 +16,9 @@
 
 package com.linecorp.armeria.common.util;
 
-import static java.util.Objects.requireNonNull;
-
 import java.time.Duration;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 import java.util.function.BiFunction;
@@ -33,6 +32,7 @@ import org.slf4j.LoggerFactory;
 
 import com.google.common.base.MoreObjects;
 
+import com.linecorp.armeria.common.CommonPools;
 import com.linecorp.armeria.common.annotation.Nullable;
 
 final class DefaultAsyncLoader<T> implements AsyncLoader<T> {
@@ -44,10 +44,13 @@ final class DefaultAsyncLoader<T> implements AsyncLoader<T> {
             DefaultAsyncLoader, CompletableFuture> loadFutureUpdater = AtomicReferenceFieldUpdater
             .newUpdater(DefaultAsyncLoader.class, CompletableFuture.class, "loadingFuture");
 
+    private final Executor executor;
     private final Function<@Nullable T, CompletableFuture<T>> loader;
+    private final String name;
     private final long expireAfterLoadNanos;
     @Nullable
     private final Predicate<? super T> expireIf;
+    private final long refreshAfterLoadNanos;
     @Nullable
     private final Predicate<? super T> refreshIf;
     @Nullable
@@ -59,21 +62,28 @@ final class DefaultAsyncLoader<T> implements AsyncLoader<T> {
     private volatile CompletableFuture<T> loadingFuture = UnmodifiableFuture.completedFuture(null);
 
     DefaultAsyncLoader(Function<@Nullable T, CompletableFuture<T>> loader,
+                       @Nullable String name,
                        @Nullable Duration expireAfterLoad,
                        @Nullable Predicate<? super T> expireIf,
+                       @Nullable Duration refreshAfterLoad,
                        @Nullable Predicate<? super T> refreshIf,
                        @Nullable BiFunction<? super Throwable, ? super @Nullable T,
                                ? extends @Nullable CompletableFuture<T>> exceptionHandler) {
-        requireNonNull(loader, "loader");
+        executor = CommonPools.blockingTaskExecutor();
         this.loader = loader;
+        if (name == null) {
+            name = "AsyncLoader-" + Integer.toHexString(System.identityHashCode(this));
+        }
+        this.name = name;
         expireAfterLoadNanos = expireAfterLoad != null ? expireAfterLoad.toNanos() : 0;
         this.expireIf = expireIf;
+        refreshAfterLoadNanos = refreshAfterLoad != null ? refreshAfterLoad.toNanos() : 0;
         this.refreshIf = refreshIf;
         this.exceptionHandler = exceptionHandler;
     }
 
     @Override
-    public CompletableFuture<T> load() {
+    public CompletableFuture<T> load(boolean force) {
         final CompletableFuture<T> loadingFuture = this.loadingFuture;
         if (!loadingFuture.isDone()) {
             // A load is in progress.
@@ -82,7 +92,14 @@ final class DefaultAsyncLoader<T> implements AsyncLoader<T> {
 
         // A new `cacheEntry` is set before `loadingFuture` is completed.
         final CacheEntry<T> cacheEntry = this.cacheEntry;
-        final boolean isValid = isValid(cacheEntry);
+
+        final boolean isValid;
+        if (force) {
+            // Force to load a new value.
+            isValid = false;
+        } else {
+            isValid = isValid(cacheEntry);
+        }
         final boolean tryLoad;
         if (isValid) {
             assert cacheEntry != null;
@@ -107,20 +124,21 @@ final class DefaultAsyncLoader<T> implements AsyncLoader<T> {
 
     private void load(@Nullable T cache, CompletableFuture<T> future) {
         try {
-            loader.apply(cache).handle((newValue, cause) -> {
+            loader.apply(cache).handleAsync((newValue, cause) -> {
                 if (cause != null) {
-                    logger.warn("Failed to load a new value from loader: {}. cache: {}",
-                                loader, cache, cause);
+                    cause = Exceptions.peel(cause);
                     handleException(cause, cache, future);
                 } else {
-                    logger.debug("Loaded a new value: {}", newValue);
+                    // Specify the loader name
+                    logger.debug("[{}] Loaded a new value", name);
                     cacheEntry = new CacheEntry<>(newValue);
                     future.complete(newValue);
                 }
                 return null;
-            });
+                // Use handleAsync() to prevent RequestContext leakage when using Armeria client.
+            }, executor);
         } catch (Exception e) {
-            logger.warn("Unexpected exception from loader.apply()", e);
+            logger.warn("[{}] Unexpected exception from loader.apply()", name, e);
             handleException(e, cache, future);
         }
     }
@@ -132,9 +150,9 @@ final class DefaultAsyncLoader<T> implements AsyncLoader<T> {
         assert !isValid || cacheEntry != null;
         final T cache = cacheEntry != null ? cacheEntry.value : null;
         if (isValid) {
-            logger.debug("Pre-fetching a new value. cache: {}, loader: {}", cache, loader);
+            logger.debug("[{}] Pre-fetching a new value...", name);
         } else {
-            logger.debug("Loading a new value. cache: {}, loader: {}", cache, loader);
+            logger.debug("[{}] Loading a new value...", name);
         }
 
         load(cache, newFuture);
@@ -156,12 +174,19 @@ final class DefaultAsyncLoader<T> implements AsyncLoader<T> {
     }
 
     private boolean needsRefresh(CacheEntry<T> cacheEntry) {
-        boolean refresh = false;
         final T cache = cacheEntry.value;
+        if (refreshAfterLoadNanos > 0) {
+            final long elapsed = System.nanoTime() - cacheEntry.cachedAtNanos;
+            if (elapsed >= refreshAfterLoadNanos) {
+                return true;
+            }
+        }
+
+        boolean refresh = false;
         try {
             refresh = refreshIf != null && refreshIf.test(cache);
         } catch (Exception e) {
-            logger.warn("Unexpected exception from refreshIf.test()", e);
+            logger.warn("[{}] Unexpected exception from refreshIf.test()", name, e);
         }
 
         return refresh;
@@ -183,8 +208,6 @@ final class DefaultAsyncLoader<T> implements AsyncLoader<T> {
 
             fallback.handle((newValue, cause0) -> {
                 if (cause0 != null) {
-                    logger.warn("Failed to load a new value from exceptionHandler: {}. " +
-                                "cache: {}", exceptionHandler, cache, cause0);
                     future.completeExceptionally(cause0);
                 } else {
                     cacheEntry = new CacheEntry<>(newValue);
@@ -193,7 +216,6 @@ final class DefaultAsyncLoader<T> implements AsyncLoader<T> {
                 return null;
             });
         } catch (Exception e) {
-            logger.warn("Unexpected exception from exceptionHandler.apply()", e);
             future.completeExceptionally(cause);
         }
     }
@@ -208,8 +230,8 @@ final class DefaultAsyncLoader<T> implements AsyncLoader<T> {
             final long elapsed = System.nanoTime() - cacheEntry.cachedAtNanos;
             if (elapsed >= expireAfterLoadNanos) {
                 if (logger.isDebugEnabled()) {
-                    logger.debug("The cached value expired after {} ms. cache: {}",
-                                 TimeUnit.NANOSECONDS.toMillis(expireAfterLoadNanos), cacheEntry.value);
+                    logger.debug("[{}] The cached value expired after {} ms.", name,
+                                 TimeUnit.NANOSECONDS.toMillis(expireAfterLoadNanos));
                 }
                 return false;
             }
@@ -217,12 +239,11 @@ final class DefaultAsyncLoader<T> implements AsyncLoader<T> {
 
         try {
             if (expireIf != null && expireIf.test(cacheEntry.value)) {
-                logger.debug("The cached value expired due to 'expireIf' condition. cache: {}",
-                             cacheEntry.value);
+                logger.debug("[{}] The cached value expired due to 'expireIf' condition.", name);
                 return false;
             }
         } catch (Exception e) {
-            logger.warn("Unexpected exception from expireIf.test()", e);
+            logger.warn("[{}] Unexpected exception from expireIf.test()", name, e);
         }
 
         return true;
