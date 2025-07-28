@@ -80,8 +80,9 @@ public final class ThriftFieldMaskerSelectorBuilder {
         return new ThriftFieldMaskerSelector() {
             @Override
             public FieldMasker fieldMasker(ThriftFieldInfo info) {
+                final Map<String, String> annotations = info.fieldMetaData().getFieldAnnotations();
                 for (AnnotationAndMasker rule : rules) {
-                    if (rule.matches(info.fieldMetaData().getFieldAnnotations())) {
+                    if (rule.matches(annotations)) {
                         return rule.masker;
                     }
                 }

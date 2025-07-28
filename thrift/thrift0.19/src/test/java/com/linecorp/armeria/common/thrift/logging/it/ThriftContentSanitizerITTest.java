@@ -50,7 +50,17 @@ class ThriftContentSanitizerITTest {
 
     @Test
     void basicCase() throws Exception {
-        final ContentSanitizer<String> contentSanitizer = commonContentSanitizer();
+        final ContentSanitizer<String> contentSanitizer =
+                ContentSanitizer.builder()
+                                .fieldMaskerSelector(ThriftFieldMaskerSelector.of(info -> {
+                                    final Map<String, String> annotations =
+                                            info.fieldMetaData().getFieldAnnotations();
+                                    if ("red".equals(annotations.get("grade"))) {
+                                        return FieldMasker.nullify();
+                                    }
+                                    return FieldMasker.noMask();
+                                }))
+                                .buildForText();
         final TestLogWriter logWriter = new TestLogWriter(contentSanitizer);
 
         server.server().reconfigure(sb -> {
@@ -81,16 +91,43 @@ class ThriftContentSanitizerITTest {
         assertThat(requestLog).doesNotContain("secret");
     }
 
-    private static ContentSanitizer<String> commonContentSanitizer() {
-        return ContentSanitizer.builder()
-                               .fieldMaskerSelector(ThriftFieldMaskerSelector.of(info -> {
-                                   final Map<String, String> annotations =
-                                           info.fieldMetaData().getFieldAnnotations();
-                                   if ("red".equals(annotations.get("grade"))) {
-                                       return FieldMasker.nullify();
-                                   }
-                                   return FieldMasker.noMask();
-                               }))
-                               .buildForText();
+    @Test
+    void builderTest() throws Exception {
+        final ThriftFieldMaskerSelector selector =
+                ThriftFieldMaskerSelector.builder()
+                                         .onFieldAnnotation("grade", "red",
+                                                            FieldMasker.nullify())
+                                         .build();
+        final ContentSanitizer<String> contentSanitizer = ContentSanitizer.builder()
+                                                                          .fieldMaskerSelector(selector)
+                                                                          .buildForText();
+        final TestLogWriter logWriter = new TestLogWriter(contentSanitizer);
+
+        server.server().reconfigure(sb -> {
+            sb.decorator(LoggingService.builder().logWriter(logWriter).newDecorator());
+            sb.service("/", THttpService.builder()
+                                        .addService(new SecretService.Iface() {
+                                            @Override
+                                            public SecretStruct hello(SecretStruct req) throws TException {
+                                                return req;
+                                            }
+                                        })
+                                        .build());
+        });
+
+        final SecretService.Iface iface = ThriftClients.newClient(server.httpUri(), SecretService.Iface.class);
+        final SecretStruct req = new SecretStruct().setSecret("secret").setHello("hello");
+        final SecretStruct res = iface.hello(req);
+        assertThat(res).isEqualTo(req);
+
+        await().untilAsserted(() -> assertThat(logWriter.blockingDeque()).hasSize(2));
+
+        final String requestLog = logWriter.blockingDeque().takeFirst();
+        assertThat(requestLog).contains("hello");
+        assertThat(requestLog).doesNotContain("secret");
+
+        final String responseLog = logWriter.blockingDeque().takeFirst();
+        assertThat(responseLog).contains("hello");
+        assertThat(requestLog).doesNotContain("secret");
     }
 }

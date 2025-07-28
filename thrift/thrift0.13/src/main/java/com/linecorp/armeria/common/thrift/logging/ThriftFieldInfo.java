@@ -22,7 +22,7 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.logging.FieldMasker;
 
 /**
- * Holds information about a thrift struct field.
+ * Holds information about a Thrift struct field.
  * Users may use the information conveyed in this object to decide whether to mask a field
  * via {@link FieldMasker}.
  */
