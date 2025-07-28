@@ -24,6 +24,8 @@ import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
@@ -41,6 +43,7 @@ class HttpServerHandlerTest {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
             sb.accessLogWriter(logHolder::set, true);
+            sb.clientAddressTrustedProxyFilter(address -> true);
             sb.route()
               .get("/hello")
               .build((ctx, req) -> HttpResponse.of(200));
@@ -71,6 +74,31 @@ class HttpServerHandlerTest {
             assertThat(logHolder.get().requestHeaders().path()).isEqualTo("/hello");
         });
         assertThat(logHolder.get().requestCause()).isNull();
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {
+            "/..",
+            "/..,for=192.0.2.61",
+            " ,for=192.0.2.61",
+            "some-random-junk",
+            "for=, /.., foo=bar,for=10.0.0.1"
+    })
+    void invalidForwardedHeaderShouldReturnBadRequest(String header) {
+        final WebClient client = WebClient.of(server.httpUri());
+        final AggregatedHttpResponse res = client.prepare()
+                .header("Forwarded", header)
+                .get("/hello")
+                .execute()
+                .aggregate()
+                .join();
+        final String responseContent = res.contentUtf8();
+
+        assertThat(res.status())
+                .isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThat(responseContent)
+                .contains("Status: 400")
+                .contains("Invalid proxied address");
     }
 
     @Test

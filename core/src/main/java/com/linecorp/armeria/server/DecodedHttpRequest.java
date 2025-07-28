@@ -54,7 +54,7 @@ interface DecodedHttpRequest extends HttpRequest {
                     return new StreamingDecodedHttpRequest(
                             eventLoop, id, streamId, headers, keepAlive, inboundTrafficController,
                             config.maxRequestLength(), routingCtx, exchangeType,
-                            requestStartTimeNanos, requestStartTimeMicros, false, false);
+                            requestStartTimeNanos, requestStartTimeMicros, false);
                 } else {
                     return new AggregatingDecodedHttpRequest(
                             eventLoop, id, streamId, headers, keepAlive, config.maxRequestLength(), routingCtx,

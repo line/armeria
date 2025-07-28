@@ -6,7 +6,7 @@ plugins {
     // automatically download one based on the foojay Disco API.
     // https://docs.gradle.org/8.1.1/userguide/toolchains.html#sec:provisioning
     id 'org.gradle.toolchains.foojay-resolver-convention' version '0.6.0'
-    id 'com.gradle.develocity' version '4.0.2'
+    id 'com.gradle.develocity' version '4.1'
     // adds additional metadata to build scans
     id 'com.gradle.common-custom-user-data-gradle-plugin' version '2.3'
 }
@@ -190,6 +190,8 @@ includeWithFlags ':thrift0.20',                          'java11', 'publish', 'r
 project(':thrift0.20').projectDir = file('thrift/thrift0.20')
 includeWithFlags ':thrift0.21',                          'java11', 'publish', 'relocate', 'no_aggregation', 'native'
 project(':thrift0.21').projectDir = file('thrift/thrift0.21')
+includeWithFlags ':thrift0.22',                          'java11', 'publish', 'relocate', 'no_aggregation', 'native'
+project(':thrift0.22').projectDir = file('thrift/thrift0.22')
 includeWithFlags ':tomcat8',                             'java', 'publish', 'relocate', 'no_aggregation'
 includeWithFlags ':tomcat9',                             'java', 'publish', 'relocate', 'no_aggregation'
 includeWithFlags ':tomcat10',                            'java11', 'publish', 'relocate'
@@ -243,6 +245,7 @@ includeWithFlags ':it:thrift-fullcamel',                       'java', 'relocate
 includeWithFlags ':it:thrift0.9.1',                            'java', 'relocate'
 includeWithFlags ':it:trace-context-leak',                     'java', 'relocate'
 includeWithFlags ':it:websocket',                              'java11', 'relocate'
+includeWithFlags ':it:xds-client',                             'java17'
 includeWithFlags ':jetty9.3',                                  'java', 'relocate'
 project(':jetty9.3').projectDir = file('jetty/jetty9.3')
 includeWithFlags ':testing-internal',                          'java', 'relocate'

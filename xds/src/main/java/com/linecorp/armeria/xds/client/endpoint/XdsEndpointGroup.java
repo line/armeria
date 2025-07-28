@@ -63,8 +63,11 @@ import io.envoyproxy.envoy.config.endpoint.v3.ClusterLoadAssignment;
  * or locality based load balancing are not supported yet.
  * Note that it is important to shut down the endpoint group to clean up resources
  * for the provided {@link XdsBootstrap}.
+ *
+ * @deprecated use {@link XdsHttpPreprocessor} for HTTP and gRPC or {@link XdsRpcPreprocessor} for Thrift.
  */
 @UnstableApi
+@Deprecated
 public final class XdsEndpointGroup extends AbstractListenable<List<Endpoint>>
         implements EndpointGroup, SnapshotWatcher<ListenerSnapshot>, Consumer<List<Endpoint>> {
 
