@@ -668,6 +668,7 @@ class DefaultAsyncLoaderTest {
         final AtomicInteger source = new AtomicInteger(0);
         final AsyncLoader<Integer> asyncLoader =
                 AsyncLoader.<Integer>builder(unused -> UnmodifiableFuture.completedFuture(source.get()))
+                           .name("test")
                            .build();
 
         assertThat(asyncLoader.load().join()).isZero();
