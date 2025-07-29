@@ -63,9 +63,9 @@ class ClientCertificateMetricsTest {
                 final Map<String, Double> metrics = MoreMeters.measureAll(meterRegistry);
                 assertThat(metrics)
                         .containsEntry(
-                                "armeria.client.tls.certificate.validity.days#value{common.name=armeria.dev}",
+                                "armeria.client.tls.certificate.validity.days#value{hostname=armeria.dev}",
                                 9.0)
-                        .containsEntry("armeria.client.tls.certificate.validity#value{common.name=armeria.dev}",
+                        .containsEntry("armeria.client.tls.certificate.validity#value{hostname=armeria.dev}",
                                        1.0);
                 factory.close();
             } finally {
@@ -108,7 +108,7 @@ class ClientCertificateMetricsTest {
 
     private static AbstractDoubleAssert<?> assertThatGauge(MeterRegistry meterRegistry, String gaugeName,
                                                            String cn, String... tags) {
-        final Gauge gauge = meterRegistry.find(gaugeName).tag("common.name", cn).tags(tags).gauge();
+        final Gauge gauge = meterRegistry.find(gaugeName).tag("hostname", cn).tags(tags).gauge();
         assertThat(gauge).isNotNull();
         return assertThat(gauge.value());
     }

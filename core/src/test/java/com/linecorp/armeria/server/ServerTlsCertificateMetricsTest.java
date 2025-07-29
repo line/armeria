@@ -120,19 +120,19 @@ public class ServerTlsCertificateMetricsTest {
         assertThat(daysValidityGauges.size()).isEqualTo(2);
 
         assertThat(meterRegistry.find(CERT_VALIDITY_GAUGE_NAME)
-                                .tag("common.name", commonName)
+                                .tag("hostname", commonName)
                                 .tag("hostname.pattern", "*") // default virtual host
                                 .gauge().value()).isOne();
         assertThat(meterRegistry.find(CERT_VALIDITY_GAUGE_NAME)
-                                .tag("common.name", commonName)
+                                .tag("hostname", commonName)
                                 .tag("hostname.pattern", hostnamePattern) // non-default virtual host
                                 .gauge().value()).isOne();
         assertThat(meterRegistry.find(CERT_VALIDITY_DAYS_GAUGE_NAME)
-                                .tag("common.name", commonName)
+                                .tag("hostname", commonName)
                                 .tag("hostname.pattern", "*") // default virtual host
                                 .gauge().value()).isPositive();
         assertThat(meterRegistry.find(CERT_VALIDITY_DAYS_GAUGE_NAME)
-                                .tag("common.name", commonName)
+                                .tag("hostname", commonName)
                                 .tag("hostname.pattern", hostnamePattern) // non-default virtual host
                                 .gauge().value()).isPositive();
     }
@@ -219,7 +219,7 @@ public class ServerTlsCertificateMetricsTest {
 
     private static AbstractDoubleAssert<?> assertThatGauge(MeterRegistry meterRegistry, String gaugeName,
                                                            String cn) {
-        final Gauge gauge = meterRegistry.find(gaugeName).tag("common.name", cn).gauge();
+        final Gauge gauge = meterRegistry.find(gaugeName).tag("hostname", cn).gauge();
         assertThat(gauge).isNotNull();
         return assertThat(gauge.value());
     }
