@@ -80,18 +80,18 @@ class ClientTlsProviderTest {
             sb.https(0)
               .tlsProvider(tlsProvider, tlsConfig)
               .service("/", (ctx, req) -> {
-                  final String commonName = CertificateUtil.getCommonName(ctx.sslSession());
+                  final String commonName = CertificateUtil.getHostname(ctx.sslSession());
                   return HttpResponse.of("default:" + commonName);
               })
               .virtualHost("foo.com")
               .service("/", (ctx, req) -> {
-                  final String commonName = CertificateUtil.getCommonName(ctx.sslSession());
+                  final String commonName = CertificateUtil.getHostname(ctx.sslSession());
                   return HttpResponse.of("foo:" + commonName);
               })
               .and()
               .virtualHost("sub.foo.com")
               .service("/", (ctx, req) -> {
-                  final String commonName = CertificateUtil.getCommonName(ctx.sslSession());
+                  final String commonName = CertificateUtil.getHostname(ctx.sslSession());
                   return HttpResponse.of("sub.foo:" + commonName);
               });
         }
@@ -114,12 +114,12 @@ class ClientTlsProviderTest {
             sb.https(0)
               .tlsProvider(tlsProvider, tlsConfig)
               .service("/", (ctx, req) -> {
-                  final String commonName = CertificateUtil.getCommonName(ctx.sslSession());
+                  final String commonName = CertificateUtil.getHostname(ctx.sslSession());
                   return HttpResponse.of("default:" + commonName);
               })
               .virtualHost("bar.com")
               .service("/", (ctx, req) -> {
-                  final String commonName = CertificateUtil.getCommonName(ctx.sslSession());
+                  final String commonName = CertificateUtil.getHostname(ctx.sslSession());
                   return HttpResponse.of("virtual:" + commonName);
               });
         }
@@ -138,12 +138,12 @@ class ClientTlsProviderTest {
             sb.https(0)
               .tlsProvider(tlsProvider)
               .service("/", (ctx, req) -> {
-                  final String commonName = CertificateUtil.getCommonName(ctx.sslSession());
+                  final String commonName = CertificateUtil.getHostname(ctx.sslSession());
                   return HttpResponse.of("default:" + commonName);
               })
               .virtualHost("bar.com")
               .service("/", (ctx, req) -> {
-                  final String commonName = CertificateUtil.getCommonName(ctx.sslSession());
+                  final String commonName = CertificateUtil.getHostname(ctx.sslSession());
                   return HttpResponse.of("virtual:" + commonName);
               });
         }
