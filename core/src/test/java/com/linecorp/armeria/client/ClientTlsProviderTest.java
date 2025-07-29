@@ -190,10 +190,10 @@ class ClientTlsProviderTest {
             await().untilAsserted(() -> {
                 final Map<String, Double> metrics = MoreMeters.measureAll(meterRegistry);
                 // Make sure that the metrics for the certificates generated from TlsProvider are exported.
-                assertThat(metrics.get("armeria.client.tls.certificate.validity#value{common.name=foo.com}"))
+                assertThat(metrics.get("armeria.client.tls.certificate.validity#value{hostname=foo.com}"))
                         .isEqualTo(1.0);
                 assertThat(
-                        metrics.get("armeria.client.tls.certificate.validity#value{common.name=sub.foo.com}"))
+                        metrics.get("armeria.client.tls.certificate.validity#value{hostname=sub.foo.com}"))
                         .isEqualTo(1.0);
             });
         }
@@ -201,9 +201,9 @@ class ClientTlsProviderTest {
         await().untilAsserted(() -> {
             final Map<String, Double> metrics = MoreMeters.measureAll(meterRegistry);
             // The metrics for the certificates should be closed when the associated connections are closed.
-            assertThat(metrics.get("armeria.client.tls.certificate.validity#value{common.name=foo.com}"))
+            assertThat(metrics.get("armeria.client.tls.certificate.validity#value{hostname=foo.com}"))
                     .isNull();
-            assertThat(metrics.get("armeria.client.tls.certificate.validity#value{common.name=sub.foo.com}"))
+            assertThat(metrics.get("armeria.client.tls.certificate.validity#value{hostname=sub.foo.com}"))
                     .isNull();
         });
     }
