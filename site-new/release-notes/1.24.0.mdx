@@ -93,12 +93,12 @@ date: 2023-06-15
     }  
   }
   ``` 
-  <Tip>
+  :::tip
   
   Note that a custom `CoroutineContextProvider` should be registered via Java SPI to 
   `META-INF/services/com.linecorp.armeria.common.kotlin.CoroutineContextProvider`.
  
-  </Tip>
+  :::
 - **Retrieving CallOptions with GrpcCallOptions**: With [GrpcCallOptions](type) in Armeria, you can now easily
   retrieve `CallOptions` from a given [RequestContext](type). #4776 #4822
   ```java
@@ -196,8 +196,8 @@ date: 2023-06-15
 
 ## 📃 Documentation
 
-- Added documentation for setting [request timeouts](/docs/server-timeouts) at the server side. #4595 #4860
-- Added documentation for [Kotlin integration](/docs/advanced-kotlin) with Armeria. #4866
+- Added documentation for setting [request timeouts](/docs/server/timeouts) at the server side. #4595 #4860
+- Added documentation for [Kotlin integration](/docs/advanced/kotlin) with Armeria. #4866
 - Mentioned [http4s-armeria](https://github.com/http4s/http4s-armeria) as a part of the Scala integration. #4919 #4920
 
 ## 🏚️ Deprecations

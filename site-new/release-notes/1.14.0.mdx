@@ -7,11 +7,11 @@ date: 2022-01-27
 ## 🌟 New features
 
 - You can now use [Scala 3](https://dotty.epfl.ch/) for `armeria-scala` and `armeria-scalapb`. #3614 #4036
-  <Tip>
+  :::tip
 
   Scala 3 modules are currently experimental. We're looking forward to your feedback.
 
-  </Tip>
+  :::
 
 - You can now fluently convert an [HttpResponse](type) into a desired type using [WebClient](type). #4021
   ```java
@@ -31,12 +31,12 @@ date: 2022-01-27
           .asJson(MyObject.class)
           .execute();
   ``` 
-  <Tip>
+  :::tip
 
   Note that you should never use this client in an `EventLoop` thread.
   Use it from a non-`EventLoop` thread such as [BlockingTaskExecutor](type).
  
-  </Tip>
+  :::
 - You can now fluently build a gRPC client with various options using
   [GrpcClientBuilder](type). #3981 #3999 #3964 #3975
   ```java
