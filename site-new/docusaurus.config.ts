@@ -114,6 +114,7 @@ export default async function createConfigAsync() {
       image: 'img/og-image.jpg',
       navbar: {
         title: 'Armeria',
+        style: 'dark',
         logo: {
           alt: 'Armeria Logo',
           src: 'img/logo.svg',
