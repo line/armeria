@@ -5,6 +5,7 @@ import remarkGithub from 'remark-github';
 import type { Config } from '@docusaurus/types';
 import type * as Preset from '@docusaurus/preset-classic';
 import remarkApiLink from './src/remark/remark-api-link';
+import remarkReleaseDate from './src/remark/remark-release-date';
 import {
   compareVersions,
   sortReleaseNoteSidebarItems,
@@ -245,7 +246,7 @@ export default async function createConfigAsync() {
             const sidebarItems = await defaultSidebarItemsGenerator(args);
             return sortReleaseNoteSidebarItems(sidebarItems);
           },
-          remarkPlugins: [remarkApiLink, remarkGithub],
+          remarkPlugins: [remarkApiLink, remarkGithub, remarkReleaseDate],
         },
       ],
       [
