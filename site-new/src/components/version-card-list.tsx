@@ -1,4 +1,4 @@
-import React, { ReactNode } from 'react';
+import React from 'react';
 import { usePluginData } from '@docusaurus/useGlobalData';
 import Link from '@docusaurus/Link';
 import { compareVersions } from '@site/releaseNotesSidebarUtils';
@@ -19,13 +19,13 @@ interface DocItem {
   path?: string;
 }
 
-function VersionCardItem({ id, path }: DocItem): ReactNode {
+const VersionCardItem: React.FC<DocItem> = ({ id, path }) => {
   return (
     <div className={`${styles.versionCardItem} col col--3`}>
       <Link to={path}>📄️ {id}</Link>
     </div>
   );
-}
+};
 
 const VersionCardList: React.FC<VersionCardListProps> = ({ version }) => {
   const pluginData: PluginData = usePluginData(
@@ -37,7 +37,7 @@ const VersionCardList: React.FC<VersionCardListProps> = ({ version }) => {
     .sort((a, b) => compareVersions(a.id, b.id));
 
   return (
-    <div className={`row`}>
+    <div className="row">
       {versionItems.map((doc) => (
         <VersionCardItem key={doc.id} id={doc.id} path={doc.path} />
       ))}

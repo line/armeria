@@ -101,7 +101,7 @@ const Mailchimp: React.FC<MailchimpProps> = (givenProps) => {
               }
             });
           },
-          [email, props.botCode, props.url],
+          [email, props.botCode, props.url, messageApi],
         )}
       />
     </>

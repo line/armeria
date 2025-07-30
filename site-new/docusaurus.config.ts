@@ -1,3 +1,5 @@
+import fs from 'fs/promises';
+import path from 'path';
 import { themes as prismThemes } from 'prism-react-renderer';
 import remarkGithub from 'remark-github';
 import type { Config } from '@docusaurus/types';
@@ -7,8 +9,6 @@ import {
   compareVersions,
   sortReleaseNoteSidebarItems,
 } from './releaseNotesSidebarUtils';
-import fs from 'fs/promises';
-import path from 'path';
 
 // This runs in Node.js - Don't use client-side code here (browser APIs, JSX...)
 
