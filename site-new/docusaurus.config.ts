@@ -272,6 +272,10 @@ export default async function createConfigAsync() {
     future: {
       v4: true,
     },
+
+    customFields: {
+      latestReleaseNotePath: await getLatestReleaseNotePath(),
+    },
   };
   return config;
 }
