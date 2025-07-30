@@ -47,16 +47,5 @@ public final class XdsResourceReader {
         return bootstrapBuilder.build();
     }
 
-    public static Bootstrap fromJson(String json) {
-        final Bootstrap.Builder bootstrapBuilder = Bootstrap.newBuilder();
-        try {
-            final JsonNode jsonNode = mapper.reader().readTree(json);
-            parser.merge(jsonNode.toString(), bootstrapBuilder);
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        }
-        return bootstrapBuilder.build();
-    }
-
     private XdsResourceReader() {}
 }

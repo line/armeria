@@ -47,61 +47,6 @@ import io.envoyproxy.envoy.type.v3.Int64Range;
 
 class RouteEntryMatcherTest {
 
-    private static Stream<Arguments> deprecatedHeaderMatcher_args() {
-        return Stream.of(
-                // EXACT_MATCH (deprecated)
-                Arguments.of(
-                        HeaderMatcher.newBuilder()
-                                     .setName("header-a")
-                                     .setExactMatch("value-a")
-                                     .build()
-                ),
-                // PREFIX_MATCH (deprecated)
-                Arguments.of(
-                        HeaderMatcher.newBuilder()
-                                     .setName("header-a")
-                                     .setPrefixMatch("prefix-")
-                                     .build()
-                ),
-                // SUFFIX_MATCH (deprecated)
-                Arguments.of(
-                        HeaderMatcher.newBuilder()
-                                     .setName("header-a")
-                                     .setSuffixMatch("-suffix")
-                                     .build()
-                ),
-                // CONTAINS_MATCH (deprecated)
-                Arguments.of(
-                        HeaderMatcher.newBuilder()
-                                     .setName("header-a")
-                                     .setContainsMatch("contains")
-                                     .build()
-                ),
-                // SAFE_REGEX_MATCH (deprecated)
-                Arguments.of(
-                        HeaderMatcher.newBuilder()
-                                     .setName("header-a")
-                                     .setSafeRegexMatch(RegexMatcher.newBuilder()
-                                                                    .setRegex("value-\\d+")
-                                                                    .build())
-                                     .build()
-                )
-        );
-    }
-
-    /**
-     * Tests that deprecated header matcher values throw IllegalArgumentException.
-     */
-    @ParameterizedTest
-    @MethodSource("deprecatedHeaderMatcher_args")
-    @DisplayName("Test that deprecated HeaderMatcher values throw IllegalArgumentException")
-    void deprecatedHeaderMatcher(HeaderMatcher headerMatcher) {
-        assertThatThrownBy(() -> new HeaderMatcherImpl(headerMatcher))
-                .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("Using deprecated field")
-                .hasMessageContaining("Use 'STRING_MATCH' instead");
-    }
-
     /**
      * Provides test cases for header matching.
      */
@@ -546,71 +491,6 @@ class RouteEntryMatcherTest {
     }
 
     /**
-     * Tests path matching functionality.
-     */
-    @ParameterizedTest
-    @MethodSource("pathMatch_args")
-    void pathMatch(String path, RouteMatch routeMatch, boolean expectedResult) {
-        // Create a client request context with the test path
-        final HttpRequest req = HttpRequest.of(RequestHeaders.of(HttpMethod.GET, path));
-        final ClientRequestContext ctx = ClientRequestContext.of(req);
-
-        // Create the PathMatcherImpl directly without reflection
-        final RouteEntryMatcher.PathMatcherImpl pathMatcher = new RouteEntryMatcher.PathMatcherImpl(routeMatch);
-
-        // Call the match method to test if the path matches
-        assertThat(pathMatcher.match(ctx)).isEqualTo(expectedResult);
-    }
-
-    /**
-     * Tests query parameter matching directly by creating QueryParams and testing against matcher.
-     */
-    @ParameterizedTest
-    @MethodSource("queryMatch_args")
-    @DisplayName("Test query parameter matching")
-    void queryMatch(String queryString, QueryParameterMatcher queryMatcher, boolean expectedResult) {
-        // Parse the QueryParams from the query string
-        final QueryParams queryParams = QueryParams.fromQueryString(queryString);
-
-        // Test the QueryParameterMatcher using the QueryParamsMatcherImpl class
-        final QueryParamsMatcherImpl matcher = new QueryParamsMatcherImpl(queryMatcher);
-        assertThat(matcher.matches(queryParams)).isEqualTo(expectedResult);
-    }
-
-    /**
-     * Tests isGrpcRequest method with different content types.
-     */
-    @Test
-    @DisplayName("Test isGrpcRequest method with various content types")
-    void isGrpcRequestTest() {
-        // Test with null request
-        assertThat(RouteEntryMatcher.isGrpcRequest(null)).isFalse();
-
-        // Test with request that has no content type header
-        final HttpRequest requestWithoutContentType =
-                HttpRequest.of(RequestHeaders.of(HttpMethod.POST, "/api"));
-        assertThat(RouteEntryMatcher.isGrpcRequest(requestWithoutContentType)).isFalse();
-
-        // Test with exact "grpc" subtype
-        final HttpRequest grpcRequest =
-                HttpRequest.of(RequestHeaders.of(HttpMethod.POST, "/api",
-                                                 HttpHeaderNames.CONTENT_TYPE, "application/grpc"));
-        assertThat(RouteEntryMatcher.isGrpcRequest(grpcRequest)).isTrue();
-
-        // Test with "grpc+" prefix subtype
-        final HttpRequest grpcPlusRequest =
-                HttpRequest.of(RequestHeaders.of(HttpMethod.POST, "/api",
-                                                 HttpHeaderNames.CONTENT_TYPE, "application/grpc+proto"));
-        assertThat(RouteEntryMatcher.isGrpcRequest(grpcPlusRequest)).isTrue();
-
-        // Test with non-grpc subtype that looks similar (grpc-web)
-        final HttpRequest nonGrpcRequest =
-                HttpRequest.of(RequestHeaders.of(HttpMethod.POST, "/api",
-                                                 HttpHeaderNames.CONTENT_TYPE, "application/grpc-web"));
-        assertThat(RouteEntryMatcher.isGrpcRequest(nonGrpcRequest)).isFalse();
-    }
-
-    /**
      * Provides test cases for path matching.
      */
     private static Stream<Arguments> pathMatch_args() {
@@ -720,6 +600,23 @@ class RouteEntryMatcherTest {
     }
 
     /**
+     * Tests path matching functionality.
+     */
+    @ParameterizedTest
+    @MethodSource("pathMatch_args")
+    void pathMatch(String path, RouteMatch routeMatch, boolean expectedResult) {
+        // Create a client request context with the test path
+        final HttpRequest req = HttpRequest.of(RequestHeaders.of(HttpMethod.GET, path));
+        final ClientRequestContext ctx = ClientRequestContext.of(req);
+
+        // Create the PathMatcherImpl directly without reflection
+        final RouteEntryMatcher.PathMatcherImpl pathMatcher = new RouteEntryMatcher.PathMatcherImpl(routeMatch);
+
+        // Call the match method to test if the path matches
+        assertThat(pathMatcher.match(ctx)).isEqualTo(expectedResult);
+    }
+
+    /**
      * Provides test cases for query parameter matching.
      */
     private static Stream<Arguments> queryMatch_args() {
@@ -809,5 +706,108 @@ class RouteEntryMatcherTest {
                         true
                 )
         );
+    }
+
+    /**
+     * Tests query parameter matching directly by creating QueryParams and testing against matcher.
+     */
+    @ParameterizedTest
+    @MethodSource("queryMatch_args")
+    @DisplayName("Test query parameter matching")
+    void queryMatch(String queryString, QueryParameterMatcher queryMatcher, boolean expectedResult) {
+        // Parse the QueryParams from the query string
+        final QueryParams queryParams = QueryParams.fromQueryString(queryString);
+
+        // Test the QueryParameterMatcher using the QueryParamsMatcherImpl class
+        final QueryParamsMatcherImpl matcher = new QueryParamsMatcherImpl(queryMatcher);
+        assertThat(matcher.matches(queryParams)).isEqualTo(expectedResult);
+    }
+
+    /**
+     * Tests isGrpcRequest method with different content types.
+     */
+    @Test
+    @DisplayName("Test isGrpcRequest method with various content types")
+    void isGrpcRequestTest() {
+        // Test with null request
+        assertThat(RouteEntryMatcher.isGrpcRequest(null)).isFalse();
+
+        // Test with request that has no content type header
+        final HttpRequest requestWithoutContentType =
+                HttpRequest.of(RequestHeaders.of(HttpMethod.POST, "/api"));
+        assertThat(RouteEntryMatcher.isGrpcRequest(requestWithoutContentType)).isFalse();
+
+        // Test with exact "grpc" subtype
+        final HttpRequest grpcRequest =
+                HttpRequest.of(RequestHeaders.of(HttpMethod.POST, "/api",
+                                                 HttpHeaderNames.CONTENT_TYPE, "application/grpc"));
+        assertThat(RouteEntryMatcher.isGrpcRequest(grpcRequest)).isTrue();
+
+        // Test with "grpc+" prefix subtype
+        final HttpRequest grpcPlusRequest =
+                HttpRequest.of(RequestHeaders.of(HttpMethod.POST, "/api",
+                                                 HttpHeaderNames.CONTENT_TYPE, "application/grpc+proto"));
+        assertThat(RouteEntryMatcher.isGrpcRequest(grpcPlusRequest)).isTrue();
+
+        // Test with non-grpc subtype that looks similar (grpc-web)
+        final HttpRequest nonGrpcRequest =
+                HttpRequest.of(RequestHeaders.of(HttpMethod.POST, "/api",
+                                                 HttpHeaderNames.CONTENT_TYPE, "application/grpc-web"));
+        assertThat(RouteEntryMatcher.isGrpcRequest(nonGrpcRequest)).isFalse();
+    }
+
+    private static Stream<Arguments> deprecatedHeaderMatcher_args() {
+        return Stream.of(
+                // EXACT_MATCH (deprecated)
+                Arguments.of(
+                        HeaderMatcher.newBuilder()
+                                     .setName("header-a")
+                                     .setExactMatch("value-a")
+                                     .build()
+                ),
+                // PREFIX_MATCH (deprecated)
+                Arguments.of(
+                        HeaderMatcher.newBuilder()
+                                     .setName("header-a")
+                                     .setPrefixMatch("prefix-")
+                                     .build()
+                ),
+                // SUFFIX_MATCH (deprecated)
+                Arguments.of(
+                        HeaderMatcher.newBuilder()
+                                     .setName("header-a")
+                                     .setSuffixMatch("-suffix")
+                                     .build()
+                ),
+                // CONTAINS_MATCH (deprecated)
+                Arguments.of(
+                        HeaderMatcher.newBuilder()
+                                     .setName("header-a")
+                                     .setContainsMatch("contains")
+                                     .build()
+                ),
+                // SAFE_REGEX_MATCH (deprecated)
+                Arguments.of(
+                        HeaderMatcher.newBuilder()
+                                     .setName("header-a")
+                                     .setSafeRegexMatch(RegexMatcher.newBuilder()
+                                                                    .setRegex("value-\\d+")
+                                                                    .build())
+                                     .build()
+                )
+        );
+    }
+
+    /**
+     * Tests that deprecated header matcher values throw IllegalArgumentException.
+     */
+    @ParameterizedTest
+    @MethodSource("deprecatedHeaderMatcher_args")
+    @DisplayName("Test that deprecated HeaderMatcher values throw IllegalArgumentException")
+    void deprecatedHeaderMatcher(HeaderMatcher headerMatcher) {
+        assertThatThrownBy(() -> new HeaderMatcherImpl(headerMatcher))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("Using deprecated field")
+                .hasMessageContaining("Use 'STRING_MATCH' instead");
     }
 }
