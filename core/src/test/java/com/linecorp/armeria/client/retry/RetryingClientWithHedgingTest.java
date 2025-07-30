@@ -1,0 +1,842 @@
+/*
+ * Copyright 2025 LY Corporation
+ *
+ * LY Corporation licenses this file to you under the Apache License,
+ * version 2.0 (the "License"); you may not use this file except in compliance
+ * with the License. You may obtain a copy of the License at:
+ *
+ *   https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations
+ * under the License.
+ */
+
+package com.linecorp.armeria.client.retry;
+
+import static com.linecorp.armeria.client.retry.AbstractRetryingClient.ARMERIA_RETRY_COUNT;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.fail;
+import static org.awaitility.Awaitility.await;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+
+import java.nio.charset.Charset;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.BiFunction;
+import java.util.function.Consumer;
+import java.util.function.Function;
+
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
+
+import com.linecorp.armeria.client.ClientFactory;
+import com.linecorp.armeria.client.ClientRequestContext;
+import com.linecorp.armeria.client.ClientRequestContextCaptor;
+import com.linecorp.armeria.client.Clients;
+import com.linecorp.armeria.client.ResponseCancellationException;
+import com.linecorp.armeria.client.ResponseTimeoutException;
+import com.linecorp.armeria.client.WebClient;
+import com.linecorp.armeria.client.WebClientBuilder;
+import com.linecorp.armeria.client.endpoint.EndpointGroup;
+import com.linecorp.armeria.client.endpoint.EndpointSelectionStrategy;
+import com.linecorp.armeria.client.logging.LoggingClient;
+import com.linecorp.armeria.client.retry.AbstractRetryingClient.State;
+import com.linecorp.armeria.client.retry.AbstractRetryingClient.State.Attempt;
+import com.linecorp.armeria.common.AggregatedHttpResponse;
+import com.linecorp.armeria.common.ExchangeType;
+import com.linecorp.armeria.common.HttpRequest;
+import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.HttpStatus;
+import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.logging.RequestLog;
+import com.linecorp.armeria.common.logging.RequestLogAccess;
+import com.linecorp.armeria.common.logging.RequestLogProperty;
+import com.linecorp.armeria.common.util.Exceptions;
+import com.linecorp.armeria.server.HttpService;
+import com.linecorp.armeria.server.RoutingContext;
+import com.linecorp.armeria.server.ServerBuilder;
+import com.linecorp.armeria.server.ServiceRequestContext;
+import com.linecorp.armeria.server.logging.LoggingService;
+import com.linecorp.armeria.testing.junit5.server.ServerExtension;
+
+class RetryingClientWithHedgingTest {
+    private static class TestServer extends ServerExtension {
+        private CountDownLatch responseLatch = new CountDownLatch(1);
+        private final AtomicInteger numRequests = new AtomicInteger();
+        private HttpService helloService = mock(HttpService.class);
+
+        TestServer() {
+            super(true);
+        }
+
+        @Override
+        protected void configure(ServerBuilder sb) throws Exception {
+            sb.decorator(LoggingService.newDecorator());
+            sb.blockingTaskExecutor(5);
+
+            sb.service("/hello",
+                       new HttpService() {
+                           @Override
+                           public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req)
+                                   throws Exception {
+
+                               final CompletableFuture<HttpResponse> responseFuture = new CompletableFuture<>();
+                               final HttpResponse res = HttpResponse.of(responseFuture);
+
+                               // We are using a blocking task executor to not block the event loop so we are
+                               // able to receive request cancellations.
+                               ctx.blockingTaskExecutor().execute(() -> {
+                                   if (numRequests.incrementAndGet() != 1) {
+                                       responseFuture.completeExceptionally(new IllegalStateException(
+                                               "Expected only one request, but got: " + numRequests.get()));
+                                       return;
+                                   }
+
+                                   try {
+                                       responseLatch.await();
+                                   } catch (InterruptedException e) {
+                                       responseFuture.completeExceptionally(e);
+                                       fail(e);
+                                   }
+
+                                   try {
+                                       responseFuture.complete(helloService.serve(ctx, req));
+                                   } catch (Exception e) {
+                                       responseFuture.completeExceptionally(e);
+                                   }
+                               });
+
+                               return res;
+                           }
+
+                           @Override
+                           public ExchangeType exchangeType(RoutingContext routingContext) {
+                               return ExchangeType.UNARY;
+                           }
+                       });
+        }
+
+        private void reset() {
+            helloService = mock(HttpService.class);
+            responseLatch = new CountDownLatch(1);
+            numRequests.set(0);
+        }
+
+        public HttpService getHelloService() {
+            return helloService;
+        }
+
+        public int getNumRequests() {
+            return numRequests.get();
+        }
+
+        public void unlatchResponse() {
+            responseLatch.countDown();
+        }
+    }
+
+    private static final String SERVER1_RESPONSE = "s1";
+    private static final String SERVER2_RESPONSE = "s2#";
+    private static final String SERVER3_RESPONSE = "s3##";
+
+    @RegisterExtension
+    private static final TestServer server1 = new TestServer();
+    @RegisterExtension
+    private static final TestServer server2 = new TestServer();
+    @RegisterExtension
+    private static final TestServer server3 = new TestServer();
+
+    private @Nullable ClientRequestContext ctx;
+    private static ClientFactory clientFactory;
+    private static final RetryRule NO_RETRY_RULE = RetryRule.builder().thenNoRetry();
+
+    @BeforeAll
+    static void beforeAll() {
+        // use different eventLoop from server's so that clients don't hang when the eventLoop in server hangs
+        clientFactory = ClientFactory.builder()
+                                     .workerGroup(5).build();
+    }
+
+    @AfterAll
+    static void afterAll() {
+        clientFactory.closeAsync();
+    }
+
+    @BeforeEach
+    void beforeEach() {
+        server1.reset();
+        server2.reset();
+        server3.reset();
+    }
+
+    @AfterEach
+    void afterEach() {
+        server1.unlatchResponse();
+        server2.unlatchResponse();
+        server3.unlatchResponse();
+    }
+
+    @Test
+    void firstServerWins() throws Exception {
+        when(server1.getHelloService().serve(any(), any())).thenReturn(HttpResponse.of(SERVER1_RESPONSE));
+
+        final RetryConfig<HttpResponse> hedgingNoRetryConfig = RetryConfig
+                .builder(NO_RETRY_RULE)
+                .maxTotalAttempts(3)
+                .hedgingDelayMillis(500)
+                .build();
+
+        final WebClient client = client(hedgingNoRetryConfig);
+
+        final CompletableFuture<AggregatedHttpResponse> responseFuture;
+        try (ClientRequestContextCaptor captor = Clients.newContextCaptor()) {
+            responseFuture = client.get("/hello").aggregate();
+            ctx = captor.get();
+        }
+
+        server1.unlatchResponse();
+
+        await().untilAsserted(() -> {
+            assertValidAggregatedResponse(responseFuture, SERVER1_RESPONSE);
+            assertValidClientRequestContext(
+                    ctx, GET_VERIFY_RESPONSE_HAS_CONTENT.apply(SERVER1_RESPONSE),
+                    GET_VERIFY_RESPONSE_HAS_CONTENT.apply(SERVER1_RESPONSE), null, null);
+
+            assertValidServerRequestContext(server1, 1, false);
+            assertNoServerRequestContext(server2);
+            assertNoServerRequestContext(server3);
+        });
+    }
+
+    @Test
+    void secondServerWins() throws Exception {
+        when(server2.getHelloService().serve(any(), any())).thenReturn(HttpResponse.of(SERVER2_RESPONSE));
+
+        final RetryConfig<HttpResponse> hedgingNoRetryConfig = RetryConfig
+                .builder(NO_RETRY_RULE)
+                .maxTotalAttempts(3)
+                .hedgingDelayMillis(500)
+                .build();
+
+        final WebClient client = client(hedgingNoRetryConfig);
+
+        final CompletableFuture<AggregatedHttpResponse> responseFuture;
+        try (ClientRequestContextCaptor captor = Clients.newContextCaptor()) {
+            responseFuture = client.get("/hello").aggregate();
+            ctx = captor.get();
+        }
+
+        await().untilAsserted(() -> {
+            assertThat(server1.getNumRequests()).isOne();
+            assertThat(server3.getNumRequests()).isOne();
+        });
+
+        server2.unlatchResponse();
+
+        await()
+                .untilAsserted(() -> {
+                    assertValidAggregatedResponse(responseFuture, SERVER2_RESPONSE);
+
+                    assertValidClientRequestContext(
+                            ctx, GET_VERIFY_RESPONSE_HAS_CONTENT.apply(SERVER2_RESPONSE),
+                            VERIFY_REQUEST_CANCELLED,
+                            GET_VERIFY_RESPONSE_HAS_CONTENT.apply(SERVER2_RESPONSE),
+                            VERIFY_REQUEST_CANCELLED
+                    );
+
+                    assertValidServerRequestContext(server1, 1, true);
+                    assertValidServerRequestContext(server2, 2, false);
+                    assertValidServerRequestContext(server3, 3, true);
+                });
+    }
+
+    @Test
+    void thirdServerWins() throws Exception {
+        when(server3.getHelloService().serve(any(), any())).thenReturn(HttpResponse.of(SERVER3_RESPONSE));
+
+        final RetryConfig<HttpResponse> hedgingNoRetryConfig = RetryConfig
+                .builder(NO_RETRY_RULE)
+                .maxTotalAttempts(3)
+                .hedgingDelayMillis(500)
+                .build();
+
+        final WebClient client = client(hedgingNoRetryConfig);
+
+        final CompletableFuture<AggregatedHttpResponse> responseFuture;
+        try (ClientRequestContextCaptor captor = Clients.newContextCaptor()) {
+            responseFuture = client.get("/hello").aggregate();
+            ctx = captor.get();
+        }
+
+        await().untilAsserted(() -> {
+            assertThat(server1.getNumRequests()).isOne();
+            assertThat(server2.getNumRequests()).isOne();
+        });
+
+        server3.unlatchResponse();
+
+        await()
+                .untilAsserted(() -> {
+                    assertValidAggregatedResponse(responseFuture, SERVER3_RESPONSE);
+                    assertValidClientRequestContext(
+                            ctx, GET_VERIFY_RESPONSE_HAS_CONTENT.apply(SERVER3_RESPONSE),
+                            VERIFY_REQUEST_CANCELLED,
+                            VERIFY_REQUEST_CANCELLED,
+                            GET_VERIFY_RESPONSE_HAS_CONTENT.apply(SERVER3_RESPONSE)
+                    );
+
+                    assertValidServerRequestContext(server1, 1, true);
+                    assertValidServerRequestContext(server2, 2, true);
+                    assertValidServerRequestContext(server3, 3, false);
+                });
+    }
+
+    @Test
+    void respectsShorterBackoffTriggeringFasterRetry() throws Exception {
+        when(server1.getHelloService().serve(any(), any()))
+                .thenReturn(HttpResponse.of(HttpStatus.TOO_MANY_REQUESTS, MediaType.PLAIN_TEXT,
+                                            SERVER1_RESPONSE));
+        when(server2.getHelloService().serve(any(), any()))
+                .thenReturn(HttpResponse.of(HttpStatus.TOO_MANY_REQUESTS, MediaType.PLAIN_TEXT,
+                                            SERVER2_RESPONSE));
+        when(server3.getHelloService().serve(any(), any()))
+                .thenReturn(HttpResponse.of(HttpStatus.TOO_MANY_REQUESTS, MediaType.PLAIN_TEXT,
+                                            SERVER3_RESPONSE));
+
+        class SpyableAttemptLimitingBackoff implements Backoff {
+            private final Backoff delegate = Backoff.withoutDelay().withMaxAttempts(2);
+
+            @Override
+            public long nextDelayMillis(int numAttemptsSoFar) {
+                return delegate.nextDelayMillis(numAttemptsSoFar);
+            }
+        }
+
+        final Backoff backoff = spy(new SpyableAttemptLimitingBackoff());
+
+        final RetryConfig<HttpResponse> config = RetryConfig
+                .builder(RetryRule.of(
+                        RetryRule
+                                .builder()
+                                .onStatus(HttpStatus.TOO_MANY_REQUESTS)
+                                .thenBackoff(backoff),
+                        NO_RETRY_RULE
+                ))
+                .maxTotalAttempts(3)
+                .hedgingDelayMillis(500)
+                .build();
+
+        final WebClient client = client(config);
+        final CompletableFuture<AggregatedHttpResponse> responseFuture;
+        try (ClientRequestContextCaptor captor = Clients.newContextCaptor()) {
+            responseFuture = client.get("/hello").aggregate();
+            ctx = captor.get();
+        }
+
+        server2.unlatchResponse();
+        server3.unlatchResponse();
+
+        // 500ms for the hedging request to server 2 and 250ms tolerance.
+        await().atMost(500 + 250, TimeUnit.MILLISECONDS).untilAsserted(() -> {
+            assertThat(server1.getNumRequests()).isOne();
+            // Server 1 is blocking, after 500ms hedging request to server 2 will come to the rescue.
+            assertThat(server2.getNumRequests()).isOne();
+            // Server 2 responds immediately, backoff will order retry immediately.
+            // This cancels the hedging request that came with the request to server 2.
+            assertThat(server3.getNumRequests()).isOne();
+            // The hedged request to server 3 will not be issued because we are out of total attempts.
+            // Server 3 responds immediately, but we will not continue as we are out of attempts.
+
+            verify(backoff, times(1)).nextDelayMillis(1);
+        });
+
+        // Should be enough for the client to receive and process the two responses from server
+        // 2 and server 3.
+        Thread.sleep(500);
+        // Server 1 answers, again with TOO_MANY_REQUESTS, and it tries to retry.
+        // We exceeded the number of attempts _of the backoff_ so we should stop retrying and take the last
+        // response which is the response from server 1.
+        server1.unlatchResponse();
+
+        await().untilAsserted(() -> {
+            assertValidAggregatedResponse(responseFuture, HttpStatus.TOO_MANY_REQUESTS, SERVER1_RESPONSE);
+            assertValidClientRequestContext(
+                    ctx, GET_VERIFY_RESPONSE_HAS_CONTENT_AND_STATUS.apply(SERVER1_RESPONSE,
+                                                                          HttpStatus.TOO_MANY_REQUESTS),
+                    GET_VERIFY_RESPONSE_HAS_CONTENT_AND_STATUS.apply(SERVER1_RESPONSE,
+                                                                     HttpStatus.TOO_MANY_REQUESTS),
+                    GET_VERIFY_RESPONSE_HAS_CONTENT_AND_STATUS.apply(SERVER2_RESPONSE,
+                                                                     HttpStatus.TOO_MANY_REQUESTS),
+                    GET_VERIFY_RESPONSE_HAS_CONTENT_AND_STATUS.apply(SERVER3_RESPONSE,
+                                                                     HttpStatus.TOO_MANY_REQUESTS)
+            );
+
+            assertValidServerRequestContext(server1, 1, false);
+            assertValidServerRequestContext(server2, 2, false);
+            assertValidServerRequestContext(server3, 3, false);
+        });
+    }
+
+    @Test
+    void allServerLosePickLastResponse() throws Exception {
+        when(server1.getHelloService().serve(any(), any()))
+                .thenReturn(HttpResponse.of(HttpStatus.TOO_MANY_REQUESTS, MediaType.PLAIN_TEXT,
+                                            SERVER1_RESPONSE));
+        when(server2.getHelloService().serve(any(), any()))
+                .thenReturn(HttpResponse.of(HttpStatus.TOO_MANY_REQUESTS, MediaType.PLAIN_TEXT,
+                                            SERVER2_RESPONSE));
+        when(server3.getHelloService().serve(any(), any()))
+                .thenReturn(HttpResponse.of(HttpStatus.TOO_MANY_REQUESTS, MediaType.PLAIN_TEXT,
+                                            SERVER3_RESPONSE));
+
+        final RetryConfig<HttpResponse> config = RetryConfig
+                .builder(RetryRule.of(
+                        RetryRule
+                                .builder()
+                                .onStatus(HttpStatus.TOO_MANY_REQUESTS)
+                                .thenBackoff(Backoff.fixed(10_000)),
+                        NO_RETRY_RULE
+                ))
+                .maxTotalAttempts(3)
+                .hedgingDelayMillis(500)
+                .build();
+
+        final WebClient client = client(config);
+        final CompletableFuture<AggregatedHttpResponse> responseFuture;
+        try (ClientRequestContextCaptor captor = Clients.newContextCaptor()) {
+            responseFuture = client.get("/hello").aggregate();
+            ctx = captor.get();
+        }
+
+        server1.unlatchResponse();
+        server2.unlatchResponse();
+        server3.unlatchResponse();
+
+        await().untilAsserted(() -> {
+            assertValidAggregatedResponse(responseFuture, HttpStatus.TOO_MANY_REQUESTS, SERVER3_RESPONSE);
+            assertValidClientRequestContext(ctx,
+                                            GET_VERIFY_RESPONSE_HAS_CONTENT_AND_STATUS.apply(
+                                                    SERVER3_RESPONSE,
+                                                    HttpStatus.TOO_MANY_REQUESTS
+                                            ),
+                                            GET_VERIFY_RESPONSE_HAS_CONTENT_AND_STATUS.apply(
+                                                    SERVER1_RESPONSE,
+                                                    HttpStatus.TOO_MANY_REQUESTS
+                                            ),
+                                            GET_VERIFY_RESPONSE_HAS_CONTENT_AND_STATUS.apply(
+                                                    SERVER2_RESPONSE,
+                                                    HttpStatus.TOO_MANY_REQUESTS
+                                            ),
+                                            GET_VERIFY_RESPONSE_HAS_CONTENT_AND_STATUS.apply(
+                                                    SERVER3_RESPONSE,
+                                                    HttpStatus.TOO_MANY_REQUESTS
+                                            )
+            );
+
+            assertValidServerRequestContext(server1, 1, false);
+            assertValidServerRequestContext(server2, 2, false);
+            assertValidServerRequestContext(server3, 3, false);
+        });
+    }
+
+    @Test
+    void thirdServerWinsEvenAfterPerAttemptTimeout() throws Exception {
+        when(server1.getHelloService().serve(any(), any())).thenReturn(HttpResponse.of(SERVER1_RESPONSE));
+        when(server2.getHelloService().serve(any(), any())).thenReturn(HttpResponse.of(SERVER2_RESPONSE));
+        when(server3.getHelloService().serve(any(), any())).thenReturn(HttpResponse.of(SERVER3_RESPONSE));
+
+        final RetryConfig<HttpResponse> hedgingNoRetryConfig = RetryConfig
+                .builder(RetryRule.builder().onTimeoutException().thenBackoff(Backoff.fixed(10_000))) // should
+                // be always overtaken by hedging task
+                .maxTotalAttempts(3)
+                .responseTimeoutMillisForEachAttempt(100)
+                .hedgingDelayMillis(200)
+                .build();
+
+        final WebClient client = clientBuilder()
+                .decorator(
+                        RetryingClient.newDecorator(hedgingNoRetryConfig)
+                )
+                .build();
+
+        final CompletableFuture<AggregatedHttpResponse> responseFuture;
+        try (ClientRequestContextCaptor captor = Clients.newContextCaptor()) {
+            responseFuture = client.get("/hello").aggregate();
+            ctx = captor.get();
+        }
+
+        await().pollInterval(25, TimeUnit.MILLISECONDS).untilAsserted(() -> {
+            assertThat(server3.getNumRequests()).isOne();
+        });
+
+        // As we know that the third server received a request, we know that
+        // we are at >= T + 400. This means that:
+        server1.unlatchResponse(); // issued at T (timed out)
+        server2.unlatchResponse(); // issued at T + 200 (timed out)
+        server3.unlatchResponse(); // issued at T + 400 (hopefully not timed out yet)
+
+        await()
+                .untilAsserted(() -> {
+                    assertValidServerRequestContext(server1, 1, true);
+                    assertValidServerRequestContext(server2, 2, true);
+                    assertValidServerRequestContext(server3, 3, false);
+
+                    assertValidAggregatedResponse(responseFuture, SERVER3_RESPONSE);
+                    assertValidClientRequestContext(
+                            ctx, GET_VERIFY_RESPONSE_HAS_CONTENT.apply(SERVER3_RESPONSE),
+                            VERIFY_REQUEST_TIMED_OUT,
+                            VERIFY_REQUEST_TIMED_OUT, GET_VERIFY_RESPONSE_HAS_CONTENT.apply(SERVER3_RESPONSE)
+                    );
+                });
+    }
+
+    @Test
+    void thirdServerWinsEvenAfterRetriableResponse() throws Exception {
+        when(server1.getHelloService().serve(any(), any()))
+                .thenReturn(HttpResponse.of(HttpStatus.TOO_MANY_REQUESTS, MediaType.PLAIN_TEXT,
+                                            SERVER1_RESPONSE));
+        when(server2.getHelloService().serve(any(), any()))
+                .thenReturn(HttpResponse.of(HttpStatus.TOO_MANY_REQUESTS, MediaType.PLAIN_TEXT,
+                                            SERVER2_RESPONSE));
+        when(server3.getHelloService().serve(any(), any()))
+                .thenReturn(HttpResponse.of(SERVER3_RESPONSE));
+
+        final RetryConfig<HttpResponse> config = RetryConfig
+                .builder(RetryRule.of(
+                        RetryRule
+                                .builder()
+                                .onStatus(HttpStatus.TOO_MANY_REQUESTS)
+                                .thenBackoff(Backoff.withoutDelay()),
+                        NO_RETRY_RULE
+                ))
+                .maxTotalAttempts(3)
+                .hedgingDelayMillis(200)
+                .build();
+
+        final WebClient client = client(config);
+
+        final CompletableFuture<AggregatedHttpResponse> responseFuture;
+        try (ClientRequestContextCaptor captor = Clients.newContextCaptor()) {
+            responseFuture = client.get("/hello").aggregate();
+            ctx = captor.get();
+        }
+
+        server1.unlatchResponse();
+        server2.unlatchResponse();
+        server3.unlatchResponse();
+
+        await().untilAsserted(() -> {
+            assertThat(server1.getNumRequests()).isOne();
+            assertThat(server2.getNumRequests()).isOne();
+            assertThat(server3.getNumRequests()).isOne();
+        });
+
+        await().untilAsserted(() -> {
+            assertValidServerRequestContext(server1, 1);
+            assertValidServerRequestContext(server2, 2);
+            assertValidServerRequestContext(server3, 3);
+
+            assertValidAggregatedResponse(responseFuture, SERVER3_RESPONSE);
+            assertValidClientRequestContext(
+                    ctx, GET_VERIFY_RESPONSE_HAS_CONTENT.apply(SERVER3_RESPONSE),
+                    GET_VERIFY_RESPONSE_HAS_CONTENT_AND_STATUS.apply(SERVER1_RESPONSE,
+                                                                     HttpStatus.TOO_MANY_REQUESTS),
+                    GET_VERIFY_RESPONSE_HAS_CONTENT_AND_STATUS.apply(SERVER2_RESPONSE,
+                                                                     HttpStatus.TOO_MANY_REQUESTS),
+                    GET_VERIFY_RESPONSE_HAS_CONTENT.apply(SERVER3_RESPONSE)
+            );
+        });
+    }
+
+    @Test
+    void loosesAfterNonRetriableResponse() throws Exception {
+        when(server1.getHelloService().serve(any(), any()))
+                .thenReturn(HttpResponse.of(SERVER1_RESPONSE));
+        when(server2.getHelloService().serve(any(), any()))
+                .thenReturn(HttpResponse.of(HttpStatus.INTERNAL_SERVER_ERROR, MediaType.PLAIN_TEXT,
+                                            SERVER2_RESPONSE));
+
+        final RetryConfig<HttpResponse> config = RetryConfig
+                .builder(NO_RETRY_RULE)
+                .maxTotalAttempts(3)
+                // Should be long enough so we can complete the second request before we continue issuing
+                // a third request to the third server.
+                .hedgingDelayMillis(500)
+                .build();
+
+        final WebClient client = client(config);
+
+        final CompletableFuture<AggregatedHttpResponse> responseFuture;
+        try (ClientRequestContextCaptor captor = Clients.newContextCaptor()) {
+            responseFuture = client.get("/hello").aggregate();
+            ctx = captor.get();
+        }
+
+        await().untilAsserted(() -> assertThat(server1.getNumRequests()).isEqualTo(1));
+
+        server2.unlatchResponse();
+
+        await().untilAsserted(() -> {
+            assertThat(server2.getNumRequests()).isOne();
+        });
+
+        Thread.sleep(500);
+        server1.unlatchResponse();
+        server2.unlatchResponse();
+
+        await().untilAsserted(() -> {
+            assertValidServerRequestContext(server1, 1, true);
+            assertValidServerRequestContext(server2, 2, false);
+            assertNoServerRequestContext(server3);
+
+            assertValidAggregatedResponse(responseFuture, HttpStatus.INTERNAL_SERVER_ERROR, SERVER2_RESPONSE);
+            assertValidClientRequestContext(
+                    ctx, GET_VERIFY_RESPONSE_HAS_CONTENT_AND_STATUS.apply(SERVER2_RESPONSE,
+                                                                          HttpStatus.INTERNAL_SERVER_ERROR),
+                    VERIFY_REQUEST_CANCELLED,
+                    GET_VERIFY_RESPONSE_HAS_CONTENT_AND_STATUS.apply(SERVER2_RESPONSE,
+                                                                     HttpStatus.INTERNAL_SERVER_ERROR), null
+            );
+        });
+    }
+
+    @Test
+    void loosesAfterResponseTimeout() throws Exception {
+        final RetryConfig<HttpResponse> config = RetryConfig
+                .builder(NO_RETRY_RULE)
+                .maxTotalAttempts(3)
+                .hedgingDelayMillis(0)
+                .build();
+
+        final WebClient client = clientBuilder()
+                .responseTimeoutMillis(500)
+                .decorator(
+                        RetryingClient.newDecorator(config)
+                ).build();
+
+        final CompletableFuture<AggregatedHttpResponse> responseFuture;
+        try (ClientRequestContextCaptor captor = Clients.newContextCaptor()) {
+            responseFuture = client.get("/hello").aggregate();
+            ctx = captor.get();
+        }
+
+        await().untilAsserted(() -> {
+            assertThat(responseFuture).isCompletedExceptionally();
+            assertThatThrownBy(responseFuture::get).satisfies(throwable -> {
+                final Throwable rootCause = Exceptions.peel(throwable);
+                assertThat(rootCause).isInstanceOf(ResponseTimeoutException.class);
+            });
+
+            final List<Throwable> childLogExceptions = new ArrayList<>();
+
+            final RequestLogVerifier catchException = log -> {
+                assertThat(log.responseCause()).isNotNull();
+                childLogExceptions.add(log.responseCause());
+            };
+
+            assertValidClientRequestContext(ctx, VERIFY_RESPONSE_TIMEOUT, catchException, catchException,
+                                            catchException);
+
+            int numTimeouts = 0;
+            int numCancelled = 0;
+
+            for (final @Nullable Throwable childException : childLogExceptions) {
+                if (childException instanceof ResponseTimeoutException) {
+                    numTimeouts++;
+                } else if (childException instanceof ResponseCancellationException) {
+                    numCancelled++;
+                } else {
+                    fail("Unexpected exception: " + childException);
+                }
+            }
+
+            assertThat(numTimeouts + numCancelled).isEqualTo(3);
+            // At least one attempt needs to time out.
+            assertThat(numTimeouts).isPositive();
+
+            assertValidServerRequestContext(server1, 1, true);
+            assertValidServerRequestContext(server2, 2, true);
+            assertValidServerRequestContext(server3, 3, true);
+        });
+    }
+
+    // todo(szymon): test being able to set different hedging delays for different servers
+
+    private static WebClientBuilder clientBuilder() {
+        return WebClient.builder(SessionProtocol.H2C,
+                                 EndpointGroup.of(EndpointSelectionStrategy.roundRobin(),
+                                                  server1.httpEndpoint(),
+                                                  server2.httpEndpoint(),
+                                                  server3.httpEndpoint()))
+                        .requestAutoAbortDelayMillis(0)
+                        .decorator(LoggingClient.newDecorator())
+                        .factory(clientFactory);
+    }
+
+    private static WebClient client(RetryConfig<HttpResponse> config) {
+        return clientBuilder()
+                .decorator(RetryingClient.newDecorator(config)).build();
+    }
+
+    private static String getResponseContent(AggregatedHttpResponse response) {
+        return response.content().toString(Charset.defaultCharset());
+    }
+
+    private static void assertValidAggregatedResponse(CompletableFuture<AggregatedHttpResponse> resFuture,
+                                                      String expectedContent) {
+        assertThat(resFuture.isDone()).isTrue();
+        final AggregatedHttpResponse res = resFuture.getNow(null);
+        assertThat(res.status()).isEqualTo(HttpStatus.OK);
+        assertThat(getResponseContent(res)).isEqualTo(expectedContent);
+    }
+
+    private static void assertValidAggregatedResponse(CompletableFuture<AggregatedHttpResponse> resFuture,
+                                                      HttpStatus expectedStatus, String expectedContent) {
+        assertThat(resFuture.isDone()).isTrue();
+        final AggregatedHttpResponse res = resFuture.getNow(null);
+        assertThat(getResponseContent(res)).isEqualTo(expectedContent);
+        assertThat(res.status()).isEqualTo(expectedStatus);
+    }
+
+    private static void assertValidRootClientRequestContext(ClientRequestContext ctx,
+                                                            RequestLogVerifier logVerifierCtx,
+                                                            int expectedNumChildren) {
+        assertThat(ctx.log().isComplete()).isTrue();
+        assertThat(ctx.log().children()).hasSize(expectedNumChildren);
+        final RequestLog log = ctx.log().getIfAvailable(RequestLogProperty.RESPONSE_CONTENT,
+                                                        RequestLogProperty.RESPONSE_CAUSE,
+                                                        RequestLogProperty.REQUEST_HEADERS);
+        assertThat(log).isNotNull();
+        logVerifierCtx.accept(log);
+    }
+
+    private static void assertValidRetryingState(ClientRequestContext ctx, int expectedAttempts) {
+        final State<HttpResponse> state = AbstractRetryingClient.state(ctx);
+        assertThat(state.isRetryingComplete()).isTrue();
+
+        final List<Attempt<HttpResponse>> startedAttempts = state.startedAttempts();
+        assertThat(startedAttempts).hasSize(expectedAttempts);
+        for (Attempt<HttpResponse> attempt : startedAttempts) {
+            assertThat(attempt.attemptRes().isComplete()).isTrue();
+        }
+    }
+
+    private static void assertValidClientRequestContext(ClientRequestContext ctx,
+                                                        RequestLogVerifier logVerifierCtx,
+                                                        RequestLogVerifier logVerifierServer1,
+                                                        @Nullable RequestLogVerifier logVerifierServer2,
+                                                        @Nullable RequestLogVerifier logVerifierServer3
+    ) {
+        final int expectedAttempts = 1 + (logVerifierServer2 == null ? 0 : 1) +
+                                     (logVerifierServer3 == null ? 0 : 1);
+
+        assertValidRootClientRequestContext(ctx, logVerifierCtx, expectedAttempts);
+        assertValidChildLog(ctx.log().children().get(0), 1, logVerifierServer1);
+        if (logVerifierServer2 != null) {
+            assertValidChildLog(ctx.log().children().get(1), 2, logVerifierServer2);
+        }
+
+        if (logVerifierServer3 != null) {
+            assertValidChildLog(ctx.log().children().get(2), 3, logVerifierServer3);
+        }
+
+        assertValidRetryingState(ctx, expectedAttempts);
+    }
+
+    private static void assertValidChildLog(RequestLogAccess logAccess, int attemptNumber,
+                                            RequestLogVerifier requestLogVerifier) {
+        assertThat(logAccess.isComplete()).isTrue();
+        // After the check right above, all properties of the RequestLog should be available.
+        final @Nullable RequestLog log = logAccess.getIfAvailable(RequestLogProperty.RESPONSE_CONTENT,
+                                                                  RequestLogProperty.RESPONSE_CAUSE,
+                                                                  RequestLogProperty.REQUEST_HEADERS);
+        assertThat(log).isNotNull();
+
+        if (attemptNumber > 1) {
+            assertThat(log.requestHeaders().getInt(ARMERIA_RETRY_COUNT)).isEqualTo(attemptNumber - 1);
+        } else {
+            assertThat(log.requestHeaders().contains(ARMERIA_RETRY_COUNT)).isFalse();
+        }
+
+        requestLogVerifier.accept(log);
+    }
+
+    private static void assertValidServerRequestContext(ServerExtension server, int attemptNumber) {
+        assertValidServerRequestContext(server, attemptNumber, false);
+    }
+
+    private static void assertValidServerRequestContext(ServerExtension server, int attemptNumber,
+                                                        boolean expectCancelled) {
+        assertThat(server.requestContextCaptor().size()).isEqualTo(1);
+
+        final ServiceRequestContext sctx = server.requestContextCaptor().peek();
+        assertThat(sctx).isNotNull();
+        assertThat(sctx.log().isComplete()).isTrue();
+
+        assertThat(sctx.isCancelled()).isEqualTo(expectCancelled);
+
+        final RequestLog slog = sctx.log().getIfAvailable(RequestLogProperty.REQUEST_HEADERS,
+                                                          RequestLogProperty.REQUEST_CONTENT);
+
+        assertThat(slog).isNotNull();
+        if (attemptNumber > 1) {
+            assertThat(slog.requestHeaders().getInt(ARMERIA_RETRY_COUNT)).isEqualTo(attemptNumber - 1);
+        } else {
+            assertThat(slog.requestHeaders().contains(ARMERIA_RETRY_COUNT)).isFalse();
+        }
+
+        assertThat(slog.requestHeaders().path()).contains("hello");
+    }
+
+    private static void assertNoServerRequestContext(ServerExtension server) {
+        assertThat(server.requestContextCaptor().size()).isEqualTo(0);
+    }
+
+    @FunctionalInterface
+    private interface RequestLogVerifier extends Consumer<RequestLog> {}
+
+    private static final RequestLogVerifier VERIFY_REQUEST_CANCELLED =
+            log -> {
+                assertThat(log.responseCause()).isInstanceOf(ResponseCancellationException.class);
+            };
+
+    private static final RequestLogVerifier VERIFY_REQUEST_TIMED_OUT =
+            log -> {
+                assertThat(log.responseCause()).isInstanceOf(ResponseTimeoutException.class);
+            };
+    //
+    private static final RequestLogVerifier VERIFY_RESPONSE_TIMEOUT =
+            log -> {
+                assertThat(log.responseCause()).isInstanceOf(ResponseTimeoutException.class);
+            };
+
+    private static final BiFunction<String, HttpStatus, RequestLogVerifier>
+            GET_VERIFY_RESPONSE_HAS_CONTENT_AND_STATUS =
+            (expectedResponseContent, expectedStatus) -> log -> {
+                assertThat(log.responseLength()).isEqualTo(expectedResponseContent.length());
+                assertThat(log.responseStatus()).isEqualTo(expectedStatus);
+            };
+
+    private static final Function<String, RequestLogVerifier> GET_VERIFY_RESPONSE_HAS_CONTENT =
+            expectedResponseContent -> GET_VERIFY_RESPONSE_HAS_CONTENT_AND_STATUS.apply(expectedResponseContent,
+                                                                                        HttpStatus.OK);
+}
