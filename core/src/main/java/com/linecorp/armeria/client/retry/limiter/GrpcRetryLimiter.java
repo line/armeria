@@ -30,6 +30,7 @@ import com.google.common.collect.ImmutableSet;
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.logging.RequestLog;
+import com.linecorp.armeria.common.logging.RequestLogProperty;
 import com.linecorp.armeria.internal.common.InternalGrpcWebTrailers;
 
 /**
@@ -178,10 +179,11 @@ public class GrpcRetryLimiter implements RetryLimiter {
      */
     @Override
     public void onCompletedAttempt(ClientRequestContext ctx, RequestLog requestLog, int numAttemptsSoFar) {
-        // Exception flow, no response available, do nothing.
-        if (requestLog.responseCause() != null) {
+        // Check if response headers and trailers are available if not we don't have a valid response
+        if (!requestLog.isAvailable(RequestLogProperty.RESPONSE_HEADERS, RequestLogProperty.RESPONSE_TRAILERS)) {
             return;
         }
+
         // Extract the headers to be able to evaluate the gRPC status
         // Check HTTP trailers first, because most gRPC responses have non-empty payload + trailers.
         HttpHeaders maybeGrpcTrailers = requestLog.responseTrailers();
@@ -203,9 +205,9 @@ public class GrpcRetryLimiter implements RetryLimiter {
         final String status = maybeGrpcTrailers.get("grpc-status");
         final boolean decrement = retryableStatuses.contains(status);
 
-        while (true) {
+        boolean updated;
+        do {
             final int currentCount = tokenCount.get();
-            final boolean updated;
             if (decrement) {
                 if (currentCount == 0) {
                     break;
@@ -219,10 +221,7 @@ public class GrpcRetryLimiter implements RetryLimiter {
                 final int incremented = currentCount + tokenRatio;
                 updated = tokenCount.compareAndSet(currentCount, Math.min(incremented, maxTokens));
             }
-            if (updated) {
-                break;
-            }
-        }
+        } while (!updated);
     }
 
     @Override

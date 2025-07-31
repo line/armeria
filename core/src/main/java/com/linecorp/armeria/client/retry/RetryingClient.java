@@ -331,8 +331,6 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
 
         final RetryConfig<HttpResponse> config = mappedRetryConfig(ctx);
         if (!ctx.exchangeType().isResponseStreaming() || config.requiresResponseTrailers()) {
-            RetryLimiterExecutor.onCompletedAttempt(config.retryLimiter(), ctx, ctx.log().partial(),
-                                                    totalAttempts);
             response.aggregate().handle((aggregated, cause) -> {
                 if (cause != null) {
                     derivedCtx.logBuilder().endRequest(cause);
@@ -349,8 +347,6 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
                 return null;
             });
         } else {
-            RetryLimiterExecutor.onCompletedAttempt(config.retryLimiter(), ctx, ctx.log().partial(),
-                                                    totalAttempts);
             handleStreamingResponse(config, ctx, rootReqDuplicator, originalReq, returnedRes,
                                     future, derivedCtx, response);
         }
@@ -533,6 +529,11 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
                                      HttpRequestDuplicator rootReqDuplicator, HttpRequest originalReq,
                                      HttpResponse returnedRes, CompletableFuture<HttpResponse> future,
                                      HttpResponse originalRes) {
+        // Notify the retry limiter that this attempt has completed
+        final RetryConfig<HttpResponse> config = mappedRetryConfig(ctx);
+        RetryLimiterExecutor.onCompletedAttempt(config.retryLimiter(), ctx, derivedCtx.log().partial(),
+                                                getTotalAttempts(ctx));
+
         final Backoff backoff = decision != null ? decision.backoff() : null;
         if (backoff != null) {
             final long millisAfter = useRetryAfter ? getRetryAfterMillis(derivedCtx) : -1;
