@@ -252,7 +252,8 @@ class GrpcRetryLimiterTest {
         final HttpHeaders headers = createGrpcHeaders("14"); // UNAVAILABLE
 
         when(requestLog.responseTrailers()).thenReturn(headers);
-        when(requestLog.isAvailable(RequestLogProperty.RESPONSE_HEADERS, RequestLogProperty.RESPONSE_TRAILERS)).thenReturn(true);
+        when(requestLog.isAvailable(RequestLogProperty.RESPONSE_HEADERS, RequestLogProperty.RESPONSE_TRAILERS))
+                .thenReturn(true);
 
         final int initialTokens = limiter.tokenCount.get();
         limiter.onCompletedAttempt(ctx, requestLog, 1);
@@ -267,7 +268,8 @@ class GrpcRetryLimiterTest {
         final HttpHeaders headers = createGrpcHeaders("0"); // OK
 
         when(requestLog.responseTrailers()).thenReturn(headers);
-        when(requestLog.isAvailable(RequestLogProperty.RESPONSE_HEADERS, RequestLogProperty.RESPONSE_TRAILERS)).thenReturn(true);
+        when(requestLog.isAvailable(RequestLogProperty.RESPONSE_HEADERS, RequestLogProperty.RESPONSE_TRAILERS))
+                .thenReturn(true);
 
         // Set token count to less than max to allow increment
         limiter.tokenCount.set(5000);
@@ -282,7 +284,8 @@ class GrpcRetryLimiterTest {
     void onCompletedAttempt_withException_doesNotChangeTokens() {
         final GrpcRetryLimiter limiter = new GrpcRetryLimiter(10.0f, 1.0f);
         final RequestLog requestLog = mock(RequestLog.class);
-        when(requestLog.isAvailable(RequestLogProperty.RESPONSE_HEADERS, RequestLogProperty.RESPONSE_TRAILERS)).thenReturn(false);
+        when(requestLog.isAvailable(RequestLogProperty.RESPONSE_HEADERS, RequestLogProperty.RESPONSE_TRAILERS))
+                .thenReturn(false);
 
         final int initialTokens = limiter.tokenCount.get();
         limiter.onCompletedAttempt(ctx, requestLog, 1);
@@ -298,7 +301,8 @@ class GrpcRetryLimiterTest {
 
         when(requestLog.responseTrailers()).thenReturn(headers);
         when(requestLog.responseHeaders()).thenReturn(createEmptyResponseHeaders());
-        when(requestLog.isAvailable(RequestLogProperty.RESPONSE_HEADERS, RequestLogProperty.RESPONSE_TRAILERS)).thenReturn(true);
+        when(requestLog.isAvailable(RequestLogProperty.RESPONSE_HEADERS, RequestLogProperty.RESPONSE_TRAILERS))
+                .thenReturn(true);
 
         final int initialTokens = limiter.tokenCount.get();
         limiter.onCompletedAttempt(ctx, requestLog, 1);
@@ -315,7 +319,8 @@ class GrpcRetryLimiterTest {
 
         when(requestLog.responseTrailers()).thenReturn(trailers);
         when(requestLog.responseHeaders()).thenReturn(headers);
-        when(requestLog.isAvailable(RequestLogProperty.RESPONSE_HEADERS, RequestLogProperty.RESPONSE_TRAILERS)).thenReturn(true);
+        when(requestLog.isAvailable(RequestLogProperty.RESPONSE_HEADERS, RequestLogProperty.RESPONSE_TRAILERS))
+                .thenReturn(true);
 
         final int initialTokens = limiter.tokenCount.get();
         limiter.onCompletedAttempt(ctx, requestLog, 1);
@@ -330,7 +335,8 @@ class GrpcRetryLimiterTest {
         final HttpHeaders headers = createGrpcHeaders("14"); // UNAVAILABLE
 
         when(requestLog.responseTrailers()).thenReturn(headers);
-        when(requestLog.isAvailable(RequestLogProperty.RESPONSE_HEADERS, RequestLogProperty.RESPONSE_TRAILERS)).thenReturn(true);
+        when(requestLog.isAvailable(RequestLogProperty.RESPONSE_HEADERS, RequestLogProperty.RESPONSE_TRAILERS))
+                .thenReturn(true);
 
         // Set token count to 0
         limiter.tokenCount.set(0);
@@ -347,7 +353,8 @@ class GrpcRetryLimiterTest {
         final HttpHeaders headers = createGrpcHeaders("0"); // OK
 
         when(requestLog.responseTrailers()).thenReturn(headers);
-        when(requestLog.isAvailable(RequestLogProperty.RESPONSE_HEADERS, RequestLogProperty.RESPONSE_TRAILERS)).thenReturn(true);
+        when(requestLog.isAvailable(RequestLogProperty.RESPONSE_HEADERS, RequestLogProperty.RESPONSE_TRAILERS))
+                .thenReturn(true);
 
         // Set token count to max
         limiter.tokenCount.set(limiter.maxTokens);
@@ -368,7 +375,8 @@ class GrpcRetryLimiterTest {
         final HttpHeaders headers = createGrpcHeaders("14"); // UNAVAILABLE
 
         when(requestLog.responseTrailers()).thenReturn(headers);
-        when(requestLog.isAvailable(RequestLogProperty.RESPONSE_HEADERS, RequestLogProperty.RESPONSE_TRAILERS)).thenReturn(true);
+        when(requestLog.isAvailable(RequestLogProperty.RESPONSE_HEADERS, RequestLogProperty.RESPONSE_TRAILERS))
+                .thenReturn(true);
 
         // Start with max tokens
         limiter.tokenCount.set(limiter.maxTokens);

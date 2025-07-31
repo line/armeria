@@ -17,6 +17,8 @@
 package com.linecorp.armeria.client.retry.limiter;
 
 import static com.google.common.base.Preconditions.checkArgument;
+import static com.linecorp.armeria.common.logging.RequestLogProperty.RESPONSE_HEADERS;
+import static com.linecorp.armeria.common.logging.RequestLogProperty.RESPONSE_TRAILERS;
 
 import java.util.Collection;
 import java.util.Objects;
@@ -30,7 +32,6 @@ import com.google.common.collect.ImmutableSet;
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.logging.RequestLog;
-import com.linecorp.armeria.common.logging.RequestLogProperty;
 import com.linecorp.armeria.internal.common.InternalGrpcWebTrailers;
 
 /**
@@ -180,7 +181,7 @@ public class GrpcRetryLimiter implements RetryLimiter {
     @Override
     public void onCompletedAttempt(ClientRequestContext ctx, RequestLog requestLog, int numAttemptsSoFar) {
         // Check if response headers and trailers are available if not we don't have a valid response
-        if (!requestLog.isAvailable(RequestLogProperty.RESPONSE_HEADERS, RequestLogProperty.RESPONSE_TRAILERS)) {
+        if (!requestLog.isAvailable(RESPONSE_HEADERS, RESPONSE_TRAILERS)) {
             return;
         }
 
