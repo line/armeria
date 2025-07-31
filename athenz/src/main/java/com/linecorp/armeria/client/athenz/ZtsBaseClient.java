@@ -44,10 +44,12 @@ import com.linecorp.armeria.common.logging.LogLevel;
 import com.linecorp.armeria.common.logging.LogWriter;
 import com.linecorp.armeria.common.util.AbstractListenable;
 import com.linecorp.armeria.common.util.SafeCloseable;
+import com.linecorp.armeria.server.athenz.AthenzService;
 
 /**
  * A base client for Athenz ZTS (ZMS) that provides common functionality such as {@link TlsKeyPair} management
- * and {@link WebClient} configuration.
+ * and {@link WebClient} configuration. It is recommended to create a new instance and share it across multiple
+ * {@link AthenzClient} and {@link AthenzService}.
  *
  * <p>Example:
  * <pre>{@code
