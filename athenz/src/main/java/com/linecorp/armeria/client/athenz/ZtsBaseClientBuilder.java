@@ -39,11 +39,13 @@ import com.linecorp.armeria.client.proxy.ConnectProxyConfig;
 import com.linecorp.armeria.client.proxy.ProxyConfig;
 import com.linecorp.armeria.common.TlsKeyPair;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.internal.common.util.CertificateUtil;
 
 /**
  * A builder for creating a {@link ZtsBaseClient} instance.
  */
+@UnstableApi
 public final class ZtsBaseClientBuilder {
 
     private final URI ztsUri;
@@ -67,6 +69,8 @@ public final class ZtsBaseClientBuilder {
      * Sets the Athenz private and public key files for mutual TLS authentication.
      */
     public ZtsBaseClientBuilder keyPair(String athenzPrivateKeyPath, String athenzPublicKeyPath) {
+        requireNonNull(athenzPrivateKeyPath, "athenzPrivateKeyPath");
+        requireNonNull(athenzPublicKeyPath, "athenzPublicKeyPath");
         return keyPair(new File(athenzPrivateKeyPath), new File(athenzPublicKeyPath));
     }
 

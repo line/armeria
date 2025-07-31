@@ -48,7 +48,7 @@ final class RoleTokenClient implements TokenClient {
         webClient = ztsBaseClient.webClient();
         this.domainName = domainName;
         this.roleNames = ROLE_JOINER.join(roleNames);
-        refreshBeforeSec = refreshBefore.toMillis() / 1000;
+        refreshBeforeSec = refreshBefore.getSeconds();
         tokenLoader = AsyncLoader.<RoleToken>builder(unused -> fetchRoleToken())
                                  .name("athenz-role-token/" + domainName + '/' + this.roleNames)
                                  .exceptionHandler(this::errorHandler)

@@ -80,8 +80,8 @@ final class AthenzPublicKeyProvider implements PublicKeyStore {
         return getKey(zmsKeyLoader, keyId, false).join();
     }
 
-    public CompletableFuture<PublicKey> getKey(AsyncLoader<Map<String, CompletableFuture<PublicKey>>> keyLoader,
-                                               String keyId, boolean zts) {
+    private CompletableFuture<PublicKey> getKey(
+            AsyncLoader<Map<String, CompletableFuture<PublicKey>>> keyLoader, String keyId, boolean zts) {
         return keyLoader.load().thenCompose(keys -> {
             final CompletableFuture<PublicKey> publicKey = keys.get(keyId);
             if (publicKey != null) {
@@ -119,7 +119,7 @@ final class AthenzPublicKeyProvider implements PublicKeyStore {
                         try {
                             builder.put(key.getKid(), completedFuture(key.getPublicKey()));
                         } catch (Exception ex) {
-                            logger.warn("Unable to generate json web key for key-id {}", key.getKid(), ex);
+                            logger.warn("Unable to generate JSON Web Key for key-id {}", key.getKid(), ex);
                         }
                     }
                     lastReloadZtsJwkTime = System.currentTimeMillis();

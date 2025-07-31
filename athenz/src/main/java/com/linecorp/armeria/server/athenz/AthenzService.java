@@ -61,6 +61,14 @@ import com.linecorp.armeria.server.athenz.MinifiedAuthZpeClient.AccessCheckStatu
  *                 .policyConfig(new AthenzPolicyConfig("my-domain"))
  *                 .newDecorator());
  * }</pre>
+ *
+ * <p>Note: {@link AthenzService} is executed in a blocking task executor because
+ * the upstream Athenz Java client uses a blocking API. Some logic in this service
+ * relies on the Athenz Java implementation, and blocking operations may occur
+ * when a public key is not available.
+ *
+ * <p>However, such situations are rare and should not have a significant impact on the service.
+ * These blocking operations will be refactored in the future to adopt a non-blocking approach.
  */
 @UnstableApi
 public final class AthenzService extends SimpleDecoratingHttpService {

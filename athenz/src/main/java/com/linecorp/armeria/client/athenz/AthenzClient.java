@@ -93,8 +93,7 @@ public final class AthenzClient extends SimpleDecoratingHttpClient {
     public static Function<HttpClient, AthenzClient> newDecorator(ZtsBaseClient ztsBaseClient,
                                                                   String domainName, String roleName,
                                                                   TokenType tokenType) {
-        return delegate -> new AthenzClient(delegate, ztsBaseClient, domainName, ImmutableList.of(roleName),
-                                            tokenType, DEFAULT_REFRESH_BEFORE);
+        return newDecorator(ztsBaseClient, domainName, ImmutableList.of(roleName), tokenType);
     }
 
     /**
@@ -109,8 +108,7 @@ public final class AthenzClient extends SimpleDecoratingHttpClient {
     public static Function<HttpClient, AthenzClient> newDecorator(ZtsBaseClient ztsBaseClient,
                                                                   String domainName, List<String> roleNames,
                                                                   TokenType tokenType) {
-        return delegate -> new AthenzClient(delegate, ztsBaseClient, domainName, roleNames, tokenType,
-                                            DEFAULT_REFRESH_BEFORE);
+        return newDecorator(ztsBaseClient, domainName, roleNames, tokenType, DEFAULT_REFRESH_BEFORE);
     }
 
     /**
@@ -129,10 +127,11 @@ public final class AthenzClient extends SimpleDecoratingHttpClient {
         requireNonNull(ztsBaseClient, "ztsBaseClient");
         requireNonNull(domainName, "domainName");
         requireNonNull(roleNames, "roleNames");
+        final ImmutableList<String> roleNames0 = ImmutableList.copyOf(roleNames);
         requireNonNull(tokenType, "tokenType");
         requireNonNull(refreshBefore, "refreshBefore");
-        return delegate -> new AthenzClient(delegate, ztsBaseClient, domainName, roleNames, tokenType,
-                                            refreshBefore);
+        return delegate -> new AthenzClient(delegate, ztsBaseClient, domainName, roleNames0,
+                                            tokenType, refreshBefore);
     }
 
     private final TokenType tokenType;

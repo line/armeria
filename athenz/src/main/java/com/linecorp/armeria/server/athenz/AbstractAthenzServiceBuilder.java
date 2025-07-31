@@ -82,8 +82,7 @@ public abstract class AbstractAthenzServiceBuilder<SELF extends AbstractAthenzSe
     }
 
     MinifiedAuthZpeClient buildAuthZpeClient() {
-        checkState(policyConfig != null, "policyConfig is not set");
-        requireNonNull(policyConfig, "policyConfig must be set before building the service");
+        checkState(policyConfig != null, "policyConfig must be set before building the service");
         final PublicKeyStore publicKeyStore = new AthenzPublicKeyProvider(ztsBaseClient,
                                                                           oauth2KeysRefreshInterval);
         final ZpeClient zpeClient = new AthenzPolicyClient(ztsBaseClient, policyConfig, publicKeyStore,

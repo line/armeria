@@ -16,10 +16,10 @@
 
 package com.linecorp.armeria.server.athenz;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.TreeMap;
 
 import com.google.common.base.MoreObjects;
 import com.yahoo.rdl.Struct;
@@ -27,10 +27,10 @@ import com.yahoo.rdl.Struct;
 final class AthenzAssertions {
     static final AthenzAssertions EMPTY = new AthenzAssertions();
 
-    private final Map<String, List<Struct>> roleStandardAllowMap = new TreeMap<>();
-    private final Map<String, List<Struct>> roleWildcardAllowMap = new TreeMap<>();
-    private final Map<String, List<Struct>> roleStandardDenyMap = new TreeMap<>();
-    private final Map<String, List<Struct>> roleWildcardDenyMap = new TreeMap<>();
+    private final Map<String, List<Struct>> roleStandardAllowMap = new HashMap<>();
+    private final Map<String, List<Struct>> roleWildcardAllowMap = new HashMap<>();
+    private final Map<String, List<Struct>> roleStandardDenyMap = new HashMap<>();
+    private final Map<String, List<Struct>> roleWildcardDenyMap = new HashMap<>();
 
     Map<String, List<Struct>> roleStandardAllowMap() {
         return roleStandardAllowMap;
