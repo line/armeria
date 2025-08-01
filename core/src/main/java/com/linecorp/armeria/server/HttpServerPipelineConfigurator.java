@@ -616,11 +616,11 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
 
             final SSLSession sslSession = ChannelUtil.findSslSession(ch);
             final String protocolText = protocol != null ? protocol.uriText() : "";
-            final String commonName;
+            final String hostname;
             String cipherSuite;
             String tlsProtocol;
             if (sslSession != null) {
-                commonName = firstNonNull(CertificateUtil.getCommonName(sslSession), "");
+                hostname = firstNonNull(CertificateUtil.getHostname(sslSession), "");
                 cipherSuite = sslSession.getCipherSuite();
                 if (cipherSuite == null || DUMMY_CIPHER_SUITE.equals(cipherSuite)) {
                     cipherSuite = "";
@@ -633,14 +633,14 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
                 }
             } else {
                 cipherSuite = "";
-                commonName = "";
+                hostname = "";
                 tlsProtocol = "";
             }
 
             // Create or find the TLS handshake counter and increment it.
             Counter.builder("armeria.server.tls.handshakes")
                    .tags("cipher.suite", cipherSuite,
-                         "common.name", commonName,
+                         "hostname", hostname,
                          "protocol", protocolText,
                          "result", success ? "success" : "failure",
                          "tls.protocol", tlsProtocol)

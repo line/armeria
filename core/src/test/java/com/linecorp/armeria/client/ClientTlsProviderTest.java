@@ -80,18 +80,18 @@ class ClientTlsProviderTest {
             sb.https(0)
               .tlsProvider(tlsProvider, tlsConfig)
               .service("/", (ctx, req) -> {
-                  final String commonName = CertificateUtil.getCommonName(ctx.sslSession());
+                  final String commonName = CertificateUtil.getHostname(ctx.sslSession());
                   return HttpResponse.of("default:" + commonName);
               })
               .virtualHost("foo.com")
               .service("/", (ctx, req) -> {
-                  final String commonName = CertificateUtil.getCommonName(ctx.sslSession());
+                  final String commonName = CertificateUtil.getHostname(ctx.sslSession());
                   return HttpResponse.of("foo:" + commonName);
               })
               .and()
               .virtualHost("sub.foo.com")
               .service("/", (ctx, req) -> {
-                  final String commonName = CertificateUtil.getCommonName(ctx.sslSession());
+                  final String commonName = CertificateUtil.getHostname(ctx.sslSession());
                   return HttpResponse.of("sub.foo:" + commonName);
               });
         }
@@ -114,12 +114,12 @@ class ClientTlsProviderTest {
             sb.https(0)
               .tlsProvider(tlsProvider, tlsConfig)
               .service("/", (ctx, req) -> {
-                  final String commonName = CertificateUtil.getCommonName(ctx.sslSession());
+                  final String commonName = CertificateUtil.getHostname(ctx.sslSession());
                   return HttpResponse.of("default:" + commonName);
               })
               .virtualHost("bar.com")
               .service("/", (ctx, req) -> {
-                  final String commonName = CertificateUtil.getCommonName(ctx.sslSession());
+                  final String commonName = CertificateUtil.getHostname(ctx.sslSession());
                   return HttpResponse.of("virtual:" + commonName);
               });
         }
@@ -138,12 +138,12 @@ class ClientTlsProviderTest {
             sb.https(0)
               .tlsProvider(tlsProvider)
               .service("/", (ctx, req) -> {
-                  final String commonName = CertificateUtil.getCommonName(ctx.sslSession());
+                  final String commonName = CertificateUtil.getHostname(ctx.sslSession());
                   return HttpResponse.of("default:" + commonName);
               })
               .virtualHost("bar.com")
               .service("/", (ctx, req) -> {
-                  final String commonName = CertificateUtil.getCommonName(ctx.sslSession());
+                  final String commonName = CertificateUtil.getHostname(ctx.sslSession());
                   return HttpResponse.of("virtual:" + commonName);
               });
         }
@@ -190,10 +190,10 @@ class ClientTlsProviderTest {
             await().untilAsserted(() -> {
                 final Map<String, Double> metrics = MoreMeters.measureAll(meterRegistry);
                 // Make sure that the metrics for the certificates generated from TlsProvider are exported.
-                assertThat(metrics.get("armeria.client.tls.certificate.validity#value{common.name=foo.com}"))
+                assertThat(metrics.get("armeria.client.tls.certificate.validity#value{hostname=foo.com}"))
                         .isEqualTo(1.0);
                 assertThat(
-                        metrics.get("armeria.client.tls.certificate.validity#value{common.name=sub.foo.com}"))
+                        metrics.get("armeria.client.tls.certificate.validity#value{hostname=sub.foo.com}"))
                         .isEqualTo(1.0);
             });
         }
@@ -201,9 +201,9 @@ class ClientTlsProviderTest {
         await().untilAsserted(() -> {
             final Map<String, Double> metrics = MoreMeters.measureAll(meterRegistry);
             // The metrics for the certificates should be closed when the associated connections are closed.
-            assertThat(metrics.get("armeria.client.tls.certificate.validity#value{common.name=foo.com}"))
+            assertThat(metrics.get("armeria.client.tls.certificate.validity#value{hostname=foo.com}"))
                     .isNull();
-            assertThat(metrics.get("armeria.client.tls.certificate.validity#value{common.name=sub.foo.com}"))
+            assertThat(metrics.get("armeria.client.tls.certificate.validity#value{hostname=sub.foo.com}"))
                     .isNull();
         });
     }

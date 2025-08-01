@@ -59,7 +59,7 @@ public final class CertificateMetrics extends AbstractCloseableMeterBinder {
     public void bindTo(MeterRegistry registry) {
         final List<Gauge> meters = new ArrayList<>(certificates.size() * 2);
         for (X509Certificate certificate : certificates) {
-            final String commonName = firstNonNull(CertificateUtil.getCommonName(certificate), "");
+            final String hostname = firstNonNull(CertificateUtil.getHostname(certificate), "");
 
             final Gauge validityMeter =
                     Gauge.builder(meterIdPrefix.name("tls.certificate.validity"), certificate, x509Cert -> {
@@ -73,7 +73,7 @@ public final class CertificateMetrics extends AbstractCloseableMeterBinder {
                          .description(
                                  "1 if TLS certificate is in validity period, 0 if certificate is not in " +
                                  "validity period")
-                         .tags("common.name", commonName)
+                         .tags("hostname", hostname)
                          .tags(meterIdPrefix.tags())
                          .register(registry);
             meters.add(validityMeter);
@@ -88,7 +88,7 @@ public final class CertificateMetrics extends AbstractCloseableMeterBinder {
                                   })
                          .description("Duration in days before TLS certificate expires, which becomes -1 " +
                                       "if certificate is expired")
-                         .tags("common.name", commonName)
+                         .tags("hostname", hostname)
                          .tags(meterIdPrefix.tags())
                          .register(registry);
             meters.add(validityDaysMeter);
