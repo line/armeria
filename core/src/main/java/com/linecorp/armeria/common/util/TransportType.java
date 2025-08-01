@@ -92,25 +92,15 @@ public enum TransportType {
         return provider.socketChannelType();
     }
 
-
     /**
      * Returns whether the specified {@link EventLoopGroup} supports Unix domain sockets or not.
-     * @deprecated Use {@link #supportsDomainSockets(IoEventLoopGroup)} instead.
      */
-    @Deprecated
     public static boolean supportsDomainSockets(EventLoopGroup eventLoopGroup) {
         requireNonNull(eventLoopGroup, "eventLoopGroup");
         if (!(eventLoopGroup instanceof IoEventLoopGroup)) {
             return false;
         }
-        return supportsDomainSockets((IoEventLoopGroup) eventLoopGroup);
-    }
-    /**
-     * Returns whether the specified {@link EventLoopGroup} supports Unix domain sockets or not.
-     */
-    public static boolean supportsDomainSockets(IoEventLoopGroup eventLoopGroup) {
-        requireNonNull(eventLoopGroup, "eventLoopGroup");
-        final TransportType found = findOrNull(eventLoopGroup);
+        final TransportType found = findOrNull((IoEventLoopGroup) eventLoopGroup);
         return found != null ? found.supportsDomainSockets() : false;
     }
 
