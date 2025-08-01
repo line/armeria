@@ -20,6 +20,7 @@ import static java.util.Objects.requireNonNull;
 
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
+import java.lang.invoke.MethodType;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ThreadFactory;
@@ -35,10 +36,13 @@ import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.common.util.TransportType;
 
-import io.netty.channel.EventLoop;
-import io.netty.channel.EventLoopGroup;
-import io.netty.channel.nio.NioEventLoop;
-import io.netty.channel.nio.NioEventLoopGroup;
+import io.netty.channel.IoEventLoopGroup;
+import io.netty.channel.IoHandle;
+import io.netty.channel.IoHandler;
+import io.netty.channel.IoHandlerFactory;
+import io.netty.channel.MultiThreadIoEventLoopGroup;
+import io.netty.channel.nio.NioIoHandle;
+import io.netty.channel.nio.NioIoHandler;
 import io.netty.channel.socket.DatagramChannel;
 import io.netty.channel.socket.ServerSocketChannel;
 import io.netty.channel.socket.SocketChannel;
@@ -96,7 +100,9 @@ public final class TransportTypeProvider {
 
     public static final TransportTypeProvider NIO = new TransportTypeProvider(
             "NIO", NioServerSocketChannel.class, NioSocketChannel.class, null, null, NioDatagramChannel.class,
-            NioEventLoopGroup.class, NioEventLoop.class, NioEventLoopGroup::new, null);
+            NioIoHandle.class, (nThreads, threadFactory) -> {
+        return new MultiThreadIoEventLoopGroup(nThreads, threadFactory, NioIoHandler.newFactory());
+    }, null);
 
     public static final TransportTypeProvider EPOLL = of(
             "EPOLL",
@@ -107,8 +113,8 @@ public final class TransportTypeProvider {
             ".epoll.EpollServerDomainSocketChannel",
             ".epoll.EpollDomainSocketChannel",
             ".epoll.EpollDatagramChannel",
-            ".epoll.EpollEventLoopGroup",
-            ".epoll.EpollEventLoop");
+            ".epoll.EpollIoHandle",
+            ".epoll.EpollIoHandler");
 
     public static final TransportTypeProvider KQUEUE = of(
             "KQUEUE",
@@ -119,30 +125,30 @@ public final class TransportTypeProvider {
             ".kqueue.KQueueServerDomainSocketChannel",
             ".kqueue.KQueueDomainSocketChannel",
             ".kqueue.KQueueDatagramChannel",
-            ".kqueue.KQueueEventLoopGroup",
-            ".kqueue.KQueueEventLoop");
+            ".kqueue.KQueueIoHandle",
+            ".kqueue.KQueueIoHandler");
 
     public static final TransportTypeProvider IO_URING = of(
             "IO_URING",
-            ChannelUtil.incubatorChannelPackageName(),
-            ".uring.IOUring",
-            ".uring.IOUringServerSocketChannel",
-            ".uring.IOUringSocketChannel",
-            null, null,
-            ".uring.IOUringDatagramChannel",
-            ".uring.IOUringEventLoopGroup",
-            ".uring.IOUringEventLoop");
+            ChannelUtil.channelPackageName(),
+            ".uring.IoUring",
+            ".uring.IoUringServerSocketChannel",
+            ".uring.IoUringSocketChannel",
+            ".uring.IoUringServerDomainSocketChannel", ".uring.IoUringDomainSocketChannel",
+            ".uring.IoUringDatagramChannel",
+            ".uring.IoUringIoHandle",
+            ".uring.IoUringIoHandler");
 
     private static TransportTypeProvider of(
             String name, @Nullable String channelPackageName, String entryPointTypeName,
             String serverSocketChannelTypeName, String socketChannelTypeName,
             @Nullable String domainServerSocketChannelTypeName, @Nullable String domainSocketChannelTypeName,
             String datagramChannelTypeName,
-            String eventLoopGroupTypeName, String eventLoopTypeName) {
+            String ioHandleTypeName, String ioHandlerTypeName) {
 
         if (channelPackageName == null) {
             return new TransportTypeProvider(
-                    name, null, null, null, null, null, null, null, null,
+                    name, null, null, null, null, null, null, null,
                     new IllegalStateException("Failed to determine the shaded package name"));
         }
 
@@ -151,7 +157,7 @@ public final class TransportTypeProvider {
         if ("IO_URING".equals(name) && !"io_uring".equals(Ascii.toLowerCase(
                 System.getProperty("com.linecorp.armeria.transportType", "")))) {
             return new TransportTypeProvider(
-                    name, null, null, null, null, null, null, null, null,
+                    name, null, null, null, null, null, null, null,
                     new IllegalStateException("io_uring not enabled explicitly"));
         }
 
@@ -189,16 +195,17 @@ public final class TransportTypeProvider {
             final Class<? extends DatagramChannel> dc =
                     findClass(channelPackageName, datagramChannelTypeName);
 
-            final Class<? extends EventLoopGroup> elg =
-                    findClass(channelPackageName, eventLoopGroupTypeName);
-            final Class<? extends EventLoop> el =
-                    findClass(channelPackageName, eventLoopTypeName);
-            final BiFunction<Integer, ThreadFactory, ? extends EventLoopGroup> elgc =
-                    findEventLoopGroupConstructor(elg);
+            final Class<? extends IoHandle> ioHandleType =
+                    findClass(channelPackageName, ioHandleTypeName);
+            final Class<? extends IoHandler> ioHandlerType =
+                    findClass(channelPackageName, ioHandlerTypeName);
 
-            return new TransportTypeProvider(name, ssc, sc, sdsc, dsc, dc, elg, el, elgc, null);
+            final BiFunction<Integer, ThreadFactory, ? extends IoEventLoopGroup> elgf =
+                    findEventLoopGroupFactory(ioHandlerType);
+
+            return new TransportTypeProvider(name, ssc, sc, sdsc, dsc, dc, ioHandleType, elgf, null);
         } catch (Throwable cause) {
-            return new TransportTypeProvider(name, null, null, null, null, null, null, null, null,
+            return new TransportTypeProvider(name, null, null, null, null, null, null, null,
                                              Exceptions.peel(cause));
         }
     }
@@ -209,16 +216,19 @@ public final class TransportTypeProvider {
                                         TransportTypeProvider.class.getClassLoader());
     }
 
-    private static BiFunction<Integer, ThreadFactory, ? extends EventLoopGroup> findEventLoopGroupConstructor(
-            Class<? extends EventLoopGroup> eventLoopGroupType) throws Exception {
-        requireNonNull(eventLoopGroupType, "eventLoopGroupType");
-        final MethodHandle constructor =
-                MethodHandles.lookup().unreflectConstructor(
-                        eventLoopGroupType.getConstructor(int.class, ThreadFactory.class));
+    private static BiFunction<Integer, ThreadFactory, ? extends IoEventLoopGroup> findEventLoopGroupFactory(
+            Class<? extends IoHandler> ioHandlerType) throws Exception {
+        requireNonNull(ioHandlerType, "ioHandlerType");
 
+        // Create a new IoHandlerFactory by invoking the factory methods in the ioHandlerType such as
+        // EpollIoHandler.newFactory().
+        final MethodHandle factoryMethod =
+                MethodHandles.lookup().findStatic(ioHandlerType, "newFactory",
+                                                  MethodType.methodType(IoHandlerFactory.class));
         return (nThreads, threadFactory) -> {
             try {
-                return (EventLoopGroup) constructor.invoke(nThreads, threadFactory);
+                final IoHandlerFactory ioHandlerFactory = (IoHandlerFactory) factoryMethod.invoke();
+                return new MultiThreadIoEventLoopGroup(nThreads, threadFactory, ioHandlerFactory);
             } catch (Throwable t) {
                 return Exceptions.throwUnsafely(Exceptions.peel(t));
             }
@@ -237,11 +247,9 @@ public final class TransportTypeProvider {
     @Nullable
     private final Class<? extends DatagramChannel> datagramChannelType;
     @Nullable
-    private final Class<? extends EventLoopGroup> eventLoopGroupType;
+    private final Class<? extends IoHandle> ioHandleType;
     @Nullable
-    private final Class<? extends EventLoop> eventLoopType;
-    @Nullable
-    private final BiFunction<Integer, ThreadFactory, ? extends EventLoopGroup> eventLoopGroupConstructor;
+    private final BiFunction<Integer, ThreadFactory, ? extends IoEventLoopGroup> eventLoopGroupFactory;
     @Nullable
     private final Throwable unavailabilityCause;
 
@@ -258,11 +266,9 @@ public final class TransportTypeProvider {
             @Nullable
             Class<? extends DatagramChannel> datagramChannelType,
             @Nullable
-            Class<? extends EventLoopGroup> eventLoopGroupType,
+            Class<? extends IoHandle> ioHandleType,
             @Nullable
-            Class<? extends EventLoop> eventLoopType,
-            @Nullable
-            BiFunction<Integer, ThreadFactory, ? extends EventLoopGroup> eventLoopGroupConstructor,
+            BiFunction<Integer, ThreadFactory, ? extends IoEventLoopGroup> eventLoopGroupFactory,
             @Nullable
             Throwable unavailabilityCause) {
 
@@ -271,16 +277,14 @@ public final class TransportTypeProvider {
                 domainServerChannelType == null &&
                 domainSocketChannelType == null &&
                 datagramChannelType == null &&
-                eventLoopGroupType == null &&
-                eventLoopType == null &&
-                eventLoopGroupConstructor == null &&
+                ioHandleType == null &&
+                eventLoopGroupFactory == null &&
                 unavailabilityCause != null) ||
                (serverChannelType != null &&
                 socketChannelType != null &&
                 datagramChannelType != null &&
-                eventLoopGroupType != null &&
-                eventLoopType != null &&
-                eventLoopGroupConstructor != null &&
+                ioHandleType != null &&
+                eventLoopGroupFactory != null &&
                 unavailabilityCause == null);
 
         assert domainServerChannelType != null && domainSocketChannelType != null ||
@@ -293,9 +297,8 @@ public final class TransportTypeProvider {
         this.domainServerChannelType = domainServerChannelType;
         this.domainSocketChannelType = domainSocketChannelType;
         this.datagramChannelType = datagramChannelType;
-        this.eventLoopGroupType = eventLoopGroupType;
-        this.eventLoopType = eventLoopType;
-        this.eventLoopGroupConstructor = eventLoopGroupConstructor;
+        this.ioHandleType = ioHandleType;
+        this.eventLoopGroupFactory = eventLoopGroupFactory;
         this.unavailabilityCause = unavailabilityCause;
     }
 
@@ -323,16 +326,12 @@ public final class TransportTypeProvider {
         return ensureSupported(datagramChannelType);
     }
 
-    public Class<? extends EventLoopGroup> eventLoopGroupType() {
-        return ensureSupported(eventLoopGroupType);
+    public Class<? extends IoHandle> ioHandleType() {
+        return ensureSupported(ioHandleType);
     }
 
-    public Class<? extends EventLoop> eventLoopType() {
-        return ensureSupported(eventLoopType);
-    }
-
-    public BiFunction<Integer, ThreadFactory, ? extends EventLoopGroup> eventLoopGroupConstructor() {
-        return ensureSupported(eventLoopGroupConstructor);
+    public BiFunction<Integer, ThreadFactory, ? extends IoEventLoopGroup> eventLoopGroupFactory() {
+        return ensureSupported(eventLoopGroupFactory);
     }
 
     @Nullable

@@ -99,7 +99,7 @@ includeWithFlags ':eureka',                              'java', 'publish', 'rel
 includeWithFlags ':grpc',                                'java', 'publish', 'relocate', 'native'
 includeWithFlags ':grpc-kotlin',                         'java', 'publish', 'relocate', 'kotlin-grpc', 'kotlin', 'native'
 includeWithFlags ':grpc-protocol',                       'java', 'publish', 'relocate', 'native'
-includeWithFlags ':graphql',                             'java', 'publish', 'relocate', 'native'
+includeWithFlags ':graphql',                             'java11', 'publish', 'relocate', 'native'
 includeWithFlags ':graphql-protocol',                    'java', 'publish', 'relocate', 'native'
 includeWithFlags ':jetty9',                              'java', 'publish', 'relocate', 'no_aggregation'
 project(':jetty9').projectDir = file('jetty/jetty9')

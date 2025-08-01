@@ -27,6 +27,7 @@ import com.linecorp.armeria.internal.common.util.TransportTypeProvider;
 
 import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
+import io.netty.channel.IoEventLoopGroup;
 import io.netty.channel.ServerChannel;
 import io.netty.channel.socket.DatagramChannel;
 import io.netty.channel.socket.SocketChannel;
@@ -91,10 +92,23 @@ public enum TransportType {
         return provider.socketChannelType();
     }
 
+
+    /**
+     * Returns whether the specified {@link EventLoopGroup} supports Unix domain sockets or not.
+     * @deprecated Use {@link #supportsDomainSockets(IoEventLoopGroup)} instead.
+     */
+    @Deprecated
+    public static boolean supportsDomainSockets(EventLoopGroup eventLoopGroup) {
+        requireNonNull(eventLoopGroup, "eventLoopGroup");
+        if (!(eventLoopGroup instanceof IoEventLoopGroup)) {
+            return false;
+        }
+        return supportsDomainSockets((IoEventLoopGroup) eventLoopGroup);
+    }
     /**
      * Returns whether the specified {@link EventLoopGroup} supports Unix domain sockets or not.
      */
-    public static boolean supportsDomainSockets(EventLoopGroup eventLoopGroup) {
+    public static boolean supportsDomainSockets(IoEventLoopGroup eventLoopGroup) {
         requireNonNull(eventLoopGroup, "eventLoopGroup");
         final TransportType found = findOrNull(eventLoopGroup);
         return found != null ? found.supportsDomainSockets() : false;
@@ -144,6 +158,20 @@ public enum TransportType {
     }
 
     /**
+     * Returns the available {@link DomainSocketChannel} class that is compatible with the specified
+     * {@link EventLoopGroup}.
+     *
+     * @throws IllegalStateException if the specified {@link EventLoopGroup} is not supported or
+     *                               its {@link TransportType} is not currently available or
+     *                               doesn't support Unix domain sockets.
+     */
+    public static Class<? extends DomainSocketChannel> domainSocketChannelType(
+            IoEventLoopGroup eventLoopGroup) {
+        requireNonNull(eventLoopGroup, "eventLoopGroup");
+        return find(eventLoopGroup).domainSocketChannelType();
+    }
+
+    /**
      * Returns the {@link DomainSocketChannel} class that is available for this transport type.
      *
      * @throws IllegalStateException if this {@link TransportType} is not currently available.
@@ -185,12 +213,20 @@ public enum TransportType {
                 return false;
             }
         }
-        final TransportType found = findOrNull(eventLoopGroup);
+
+        if (!(eventLoopGroup instanceof IoEventLoopGroup)) {
+            return false;
+        }
+        final TransportType found = findOrNull((IoEventLoopGroup) eventLoopGroup);
         return found != null && found.isAvailable();
     }
 
     private static TransportType find(EventLoopGroup eventLoopGroup) {
-        final TransportType found = findOrNull(eventLoopGroup);
+        if (!(eventLoopGroup instanceof IoEventLoopGroup)) {
+            throw unsupportedEventLoopType(eventLoopGroup);
+        }
+
+        final TransportType found = findOrNull((IoEventLoopGroup) eventLoopGroup);
         if (found == null) {
             throw unsupportedEventLoopType(eventLoopGroup);
         }
@@ -198,12 +234,9 @@ public enum TransportType {
     }
 
     @Nullable
-    private static TransportType findOrNull(EventLoopGroup eventLoopGroup) {
-        final Class<? extends EventLoopGroup> eventLoopGroupType = eventLoopGroup.getClass();
+    private static TransportType findOrNull(IoEventLoopGroup eventLoopGroup) {
         for (TransportType type : values()) {
-            if (type.isAvailable() &&
-                (type.provider.eventLoopGroupType().isAssignableFrom(eventLoopGroupType) ||
-                 type.provider.eventLoopType().isAssignableFrom(eventLoopGroupType))) {
+            if (type.isAvailable() && eventLoopGroup.isCompatible(type.provider.ioHandleType())) {
                 return type;
             }
         }
@@ -249,7 +282,7 @@ public enum TransportType {
     public EventLoopGroup newEventLoopGroup(int nThreads,
                                             Function<TransportType, ThreadFactory> threadFactoryFactory) {
         final ThreadFactory threadFactory = threadFactoryFactory.apply(this);
-        return provider.eventLoopGroupConstructor().apply(nThreads, threadFactory);
+        return provider.eventLoopGroupFactory().apply(nThreads, threadFactory);
     }
 
     private static IllegalStateException unsupportedEventLoopType(EventLoopGroup eventLoopGroup) {

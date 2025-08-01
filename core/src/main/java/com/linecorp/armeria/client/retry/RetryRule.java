@@ -347,7 +347,7 @@ public interface RetryRule {
      * Returns a {@link RetryRule} that combines all the {@link RetryRule} of
      * the {@code retryRules}.
      */
-    @SuppressWarnings("OptionalGetWithoutIsPresent")
+    @SuppressWarnings({ "OptionalGetWithoutIsPresent", "NullAway" })
     static RetryRule of(Iterable<? extends RetryRule> retryRules) {
         requireNonNull(retryRules, "retryRules");
         checkArgument(!Iterables.isEmpty(retryRules), "retryRules can't be empty.");
