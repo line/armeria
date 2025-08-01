@@ -36,6 +36,7 @@ final class SelectedRoute implements ConfigSupplier {
     private final HttpClient httpClient;
     @Nullable
     private final RpcClient rpcClient;
+    private final RouteEntryMatcher routeEntryMatcher;
 
     SelectedRoute(ListenerSnapshot listenerSnapshot, RouteSnapshot routeSnapshot,
                   VirtualHostSnapshot virtualHostSnapshot, RouteEntry routeEntry) {
@@ -51,6 +52,11 @@ final class SelectedRoute implements ConfigSupplier {
             httpClient = upstreamFilter.decorate(DelegatingHttpClient.INSTANCE);
             rpcClient = upstreamFilter.rpcDecorate(DelegatingRpcClient.INSTANCE);
         }
+        routeEntryMatcher = new RouteEntryMatcher(routeEntry);
+    }
+
+    RouteEntryMatcher routeEntryMatcher() {
+        return routeEntryMatcher;
     }
 
     @Override
