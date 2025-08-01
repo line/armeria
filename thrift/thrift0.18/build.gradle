@@ -41,6 +41,7 @@ task generateSources(type: Copy) {
         exclude '**/TByteBufTransport.java'
         exclude '**/common/thrift/package-info.java'
         exclude '**/MaskingTProtocol.java'
+        exclude '**/UnMaskingTProtocol.java'
         exclude '**/common/thrift/logging/package-info.java'
     }
     from "${thrift014ProjectDir}/src/main/java"

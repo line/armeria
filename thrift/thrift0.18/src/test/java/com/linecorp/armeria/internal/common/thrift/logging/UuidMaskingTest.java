@@ -17,9 +17,11 @@
 package com.linecorp.armeria.internal.common.thrift.logging;
 
 import static net.javacrumbs.jsonunit.fluent.JsonFluentAssert.assertThatJson;
+import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.UUID;
 
+import org.apache.thrift.TBase;
 import org.apache.thrift.TException;
 import org.junit.jupiter.api.Test;
 
@@ -46,5 +48,30 @@ class UuidMaskingTest {
         final TMaskingSerializer serializer = new TMaskingSerializer(ThriftProtocolFactories.json(), cache);
         final String ser = serializer.toString(message);
         assertThatJson(ser).node("1.uid").isStringEqualTo("00000000-0000-0000-0000-000000000000");
+    }
+
+    @Test
+    void unmaskUuid() throws Exception {
+        final UUID originalUuid = UUID.randomUUID();
+        final UuidMessage message = new UuidMessage().setId(originalUuid);
+        final TBaseSelectorCache cache =
+                new TBaseSelectorCache(ImmutableList.of(ThriftFieldMaskerSelector.of(info -> {
+                    if ("id".equals(info.fieldMetaData().fieldName)) {
+                        return FieldMasker.builder()
+                                .addMasker(UUID.class, uuid -> "masked", str -> originalUuid)
+                                .build();
+                    }
+                    return FieldMasker.noMask();
+                })));
+        final TMaskingSerializer serializer = new TMaskingSerializer(ThriftProtocolFactories.json(), cache);
+        final String ser = serializer.toString(message);
+        assertThatJson(ser).node("1.uid").isStringEqualTo("masked");
+
+        final TMaskingDeserializer deserializer =
+                new TMaskingDeserializer(ThriftProtocolFactories.json(), cache);
+        final TBase<?, ?> copied = message.deepCopy();
+        copied.clear();
+        deserializer.fromString(copied, ser);
+        assertThat(copied).isEqualTo(message);
     }
 }
