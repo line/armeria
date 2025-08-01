@@ -42,8 +42,6 @@ configure(projectsWithFlags('kotlin')) {
             reporters {
                 reporter "html"
             }
-            // https://github.com/pinterest/ktlint/issues/527
-            disabledRules = ["import-ordering"]
 
             filter {
                 exclude { it.file.path.contains("gen-src/") }

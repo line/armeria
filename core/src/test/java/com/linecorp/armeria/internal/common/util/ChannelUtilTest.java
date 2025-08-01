@@ -33,7 +33,7 @@ import com.linecorp.armeria.common.util.TransportType;
 
 import io.netty.channel.ChannelOption;
 import io.netty.channel.epoll.EpollChannelOption;
-import io.netty.incubator.channel.uring.IOUringChannelOption;
+import io.netty.channel.uring.IoUringChannelOption;
 
 public class ChannelUtilTest {
 
@@ -52,7 +52,7 @@ public class ChannelUtilTest {
     private static Stream<Arguments> tcpUserTimeout_arguments() {
         return Stream.of(
                 Arguments.of(TransportType.EPOLL, EpollChannelOption.TCP_USER_TIMEOUT),
-                Arguments.of(TransportType.IO_URING, IOUringChannelOption.TCP_USER_TIMEOUT)
+                Arguments.of(TransportType.IO_URING, IoUringChannelOption.TCP_USER_TIMEOUT)
         );
     }
 
@@ -144,8 +144,8 @@ public class ChannelUtilTest {
         } else if (type == TransportType.IO_URING) {
             assertThat(newOptions).containsOnly(entry(ChannelOption.SO_LINGER, lingerMillis),
                                                 entry(ChannelOption.SO_KEEPALIVE, true),
-                                                entry(IOUringChannelOption.TCP_KEEPINTVL, pingIntervalMillis),
-                                                entry(IOUringChannelOption.TCP_KEEPIDLE, pingIntervalMillis));
+                                                entry(IoUringChannelOption.TCP_KEEPINTVL, pingIntervalMillis),
+                                                entry(IoUringChannelOption.TCP_KEEPIDLE, pingIntervalMillis));
         } else {
             assertThat(newOptions).containsExactlyEntriesOf(options);
         }

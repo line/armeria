@@ -92,7 +92,6 @@ import com.linecorp.armeria.server.ServiceRequestContext;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import io.netty.buffer.ByteBufAllocator;
-import io.netty.buffer.PooledByteBufAllocator;
 import io.netty.channel.Channel;
 import io.netty.channel.EventLoop;
 import io.netty.handler.codec.http.HttpHeaderValues;
@@ -799,7 +798,7 @@ public final class DefaultClientRequestContext
     @Override
     public ByteBufAllocator alloc() {
         final Channel channel = channel();
-        return channel != null ? channel.alloc() : PooledByteBufAllocator.DEFAULT;
+        return channel != null ? channel.alloc() : ByteBufAllocator.DEFAULT;
     }
 
     @Nullable

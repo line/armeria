@@ -379,6 +379,7 @@ final class HandlerRegistry {
                     final Class<?> type = entry.type();
                     if (type != null) {
                         final String methodName = methodNameConverter.convert(bareMethodName);
+                        assert methodName != null : "methodName must not be null: " + bareMethodName;
                         final Optional<Method> method =
                                 InternalReflectionUtils.getAllSortedMethods(type, withModifier(Modifier.PUBLIC))
                                                        .stream()

@@ -26,8 +26,8 @@ import com.linecorp.armeria.common.Bytes;
 import com.linecorp.armeria.internal.common.util.TemporaryThreadLocals;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.ByteBufUtil;
-import io.netty.buffer.PooledByteBufAllocator;
 import io.netty.buffer.Unpooled;
 import it.unimi.dsi.fastutil.io.FastByteArrayInputStream;
 
@@ -145,7 +145,7 @@ public class ByteArrayBytes implements Bytes {
     }
 
     private static ByteBuf newDirectByteBuf(int length) {
-        return PooledByteBufAllocator.DEFAULT.directBuffer(length);
+        return ByteBufAllocator.DEFAULT.directBuffer(length);
     }
 
     @Override
