@@ -158,20 +158,6 @@ public enum TransportType {
     }
 
     /**
-     * Returns the available {@link DomainSocketChannel} class that is compatible with the specified
-     * {@link EventLoopGroup}.
-     *
-     * @throws IllegalStateException if the specified {@link EventLoopGroup} is not supported or
-     *                               its {@link TransportType} is not currently available or
-     *                               doesn't support Unix domain sockets.
-     */
-    public static Class<? extends DomainSocketChannel> domainSocketChannelType(
-            IoEventLoopGroup eventLoopGroup) {
-        requireNonNull(eventLoopGroup, "eventLoopGroup");
-        return find(eventLoopGroup).domainSocketChannelType();
-    }
-
-    /**
      * Returns the {@link DomainSocketChannel} class that is available for this transport type.
      *
      * @throws IllegalStateException if this {@link TransportType} is not currently available.
