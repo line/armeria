@@ -1,14 +1,15 @@
+import fs from 'fs/promises';
+import path from 'path';
 import { themes as prismThemes } from 'prism-react-renderer';
 import remarkGithub from 'remark-github';
 import type { Config } from '@docusaurus/types';
 import type * as Preset from '@docusaurus/preset-classic';
 import remarkApiLink from './src/remark/remark-api-link';
+import remarkReleaseDate from './src/remark/remark-release-date';
 import {
   compareVersions,
   sortReleaseNoteSidebarItems,
 } from './releaseNotesSidebarUtils';
-import fs from 'fs/promises';
-import path from 'path';
 
 // This runs in Node.js - Don't use client-side code here (browser APIs, JSX...)
 
@@ -114,6 +115,7 @@ export default async function createConfigAsync() {
       image: 'img/og-image.jpg',
       navbar: {
         title: 'Armeria',
+        style: 'dark',
         logo: {
           alt: 'Armeria Logo',
           src: 'img/logo.svg',
@@ -244,7 +246,7 @@ export default async function createConfigAsync() {
             const sidebarItems = await defaultSidebarItemsGenerator(args);
             return sortReleaseNoteSidebarItems(sidebarItems);
           },
-          remarkPlugins: [remarkApiLink, remarkGithub],
+          remarkPlugins: [remarkApiLink, remarkGithub, remarkReleaseDate],
         },
       ],
       [
@@ -270,6 +272,10 @@ export default async function createConfigAsync() {
 
     future: {
       v4: true,
+    },
+
+    customFields: {
+      latestReleaseNotePath: await getLatestReleaseNotePath(),
     },
   };
   return config;

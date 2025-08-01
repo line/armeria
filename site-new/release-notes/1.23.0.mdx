@@ -243,7 +243,7 @@ final RetryRule rule =
     - `armeria.path.cache{type=server}`
 - Armeria client doesn't normalize consecutive slashes (e.g. `foo//bar`) in a client request path anymore. #4789
 
-  <Tip>
+  :::tip
 
     Please make sure your server or service is capable of handling consecutive slashes (`//`) in request paths
     correctly prior to upgrading. In some instances, consecutive slashes may cause unexpected behavior or
@@ -252,7 +252,7 @@ final RetryRule rule =
     Fortunately, Armeria server automatically cleans up and normalizes request paths containing
     consecutive slashes for you.
 
-  </Tip>
+  :::
 
 ## ⛓ Dependencies
 

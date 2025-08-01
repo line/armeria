@@ -144,7 +144,7 @@ const ThankYou: React.FC<ThankYouProps> = (props) => {
       const numRows = Math.ceil(usernames.length / numColumns);
 
       setWrapperDimensions({
-        width: width,
+        width,
         height: numRows * size,
       });
     };
@@ -197,7 +197,7 @@ const ThankYou: React.FC<ThankYouProps> = (props) => {
             </div>
           );
         }}
-        dynamicDirection={'off'}
+        dynamicDirection="off"
         transitionDuration={300}
       />
     </>
