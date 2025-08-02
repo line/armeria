@@ -1,5 +1,5 @@
 /*
- * Copyright 2024 LINE Corporation
+ * Copyright 2025 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -18,7 +18,6 @@ package com.linecorp.armeria.common.stream;
 
 import static java.util.Objects.requireNonNull;
 
-import java.time.Duration;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 
@@ -33,33 +32,31 @@ import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.ScheduledFuture;
 
 /**
- * This class provides timeout functionality to a base StreamMessage.
- * If data is not received within the specified time, a {@link StreamTimeoutException} is thrown.
+ * This class provides timeout functionality to a base {@link StreamMessage}.
+ * The provided {@link StreamTimeoutStrategy} is used to evaluate timeouts,
+ * and if a timeout is detected, a {@link StreamTimeoutException} is thrown.
  *
  * <p>The timeout functionality helps to release resources and throw appropriate exceptions
- * if the stream becomes inactive or data is not received within a certain time frame,
- * thereby improving system efficiency.
+ * if the stream becomes inactive or data is delayed, thereby improving system efficiency.</p>
  *
  * @param <T> the type of the elements signaled
  */
 final class TimeoutStreamMessage<T> implements StreamMessage<T> {
 
     private final StreamMessage<? extends T> delegate;
-    private final Duration timeoutDuration;
-    private final StreamTimeoutMode timeoutMode;
+
+    private final StreamTimeoutStrategy timeoutStrategy;
 
     /**
-     * Creates a new TimeoutStreamMessage with the specified base stream message and timeout settings.
+     * Creates a new {@link TimeoutStreamMessage} with the specified base stream message
+     * and a strategy for evaluating timeouts.
      *
      * @param delegate the original stream message
-     * @param timeoutDuration the duration before a timeout occurs
-     * @param timeoutMode the mode in which the timeout is applied (see {@link StreamTimeoutMode} for details)
+     * @param timeoutStrategy the strategy used to determine timeout behavior
      */
-    TimeoutStreamMessage(StreamMessage<? extends T> delegate, Duration timeoutDuration,
-                         StreamTimeoutMode timeoutMode) {
+    TimeoutStreamMessage(StreamMessage<? extends T> delegate, StreamTimeoutStrategy timeoutStrategy) {
         this.delegate = requireNonNull(delegate, "delegate");
-        this.timeoutDuration = requireNonNull(timeoutDuration, "timeoutDuration");
-        this.timeoutMode = requireNonNull(timeoutMode, "timeoutMode");
+        this.timeoutStrategy = requireNonNull(timeoutStrategy, "timeoutStrategy");
     }
 
     @Override
@@ -83,7 +80,8 @@ final class TimeoutStreamMessage<T> implements StreamMessage<T> {
     }
 
     /**
-     * Subscribes the given subscriber to this stream with timeout logic applied.
+     * Subscribes the given subscriber to this stream with timeout behavior applied
+     * using the configured {@link StreamTimeoutStrategy}.
      *
      * @param subscriber the subscriber to this stream
      * @param executor the executor for running timeout tasks and stream operations
@@ -93,7 +91,7 @@ final class TimeoutStreamMessage<T> implements StreamMessage<T> {
     @Override
     public void subscribe(Subscriber<? super T> subscriber, EventExecutor executor,
                           SubscriptionOption... options) {
-        delegate.subscribe(new TimeoutSubscriber<>(subscriber, executor, timeoutDuration, timeoutMode),
+        delegate.subscribe(new TimeoutSubscriber<>(subscriber, executor, timeoutStrategy),
                            executor, options);
     }
 
@@ -108,13 +106,10 @@ final class TimeoutStreamMessage<T> implements StreamMessage<T> {
     }
 
     static final class TimeoutSubscriber<T> implements Runnable, Subscriber<T>, Subscription {
-
-        private static final String TIMEOUT_MESSAGE = "Stream timed out after %d ms (timeout mode: %s)";
         private final Subscriber<? super T> delegate;
         private final EventExecutor executor;
-        private final StreamTimeoutMode timeoutMode;
-        private final Duration timeoutDuration;
-        private final long timeoutNanos;
+        private final StreamTimeoutStrategy timeoutStrategy;
+
         @Nullable
         private ScheduledFuture<?> timeoutFuture;
         @Nullable
@@ -123,13 +118,28 @@ final class TimeoutStreamMessage<T> implements StreamMessage<T> {
         private boolean completed;
         private volatile boolean canceled;
 
-        TimeoutSubscriber(Subscriber<? super T> delegate, EventExecutor executor, Duration timeoutDuration,
-                          StreamTimeoutMode timeoutMode) {
+        TimeoutSubscriber(Subscriber<? super T> delegate, EventExecutor executor,
+                          StreamTimeoutStrategy timeoutStrategy) {
             this.delegate = requireNonNull(delegate, "delegate");
             this.executor = requireNonNull(executor, "executor");
-            this.timeoutDuration = requireNonNull(timeoutDuration, "timeoutDuration");
-            timeoutNanos = timeoutDuration.toNanos();
-            this.timeoutMode = requireNonNull(timeoutMode, "timeoutMode");
+            this.timeoutStrategy = requireNonNull(timeoutStrategy, "timeoutStrategy");
+        }
+
+        private void handleTimeoutDecision(StreamTimeoutDecision decision) {
+            if (decision.timedOut()) {
+                completed = true;
+                delegate.onError(timeoutStrategy.newTimeoutException());
+                assert subscription != null;
+                subscription.cancel();
+                return;
+            }
+
+            if (decision.nextDelayNanos() == 0) {
+                timeoutFuture = null;
+                return;
+            }
+
+            timeoutFuture = scheduleTimeout(decision.nextDelayNanos());
         }
 
         private ScheduledFuture<?> scheduleTimeout(long delay) {
@@ -144,21 +154,10 @@ final class TimeoutStreamMessage<T> implements StreamMessage<T> {
 
         @Override
         public void run() {
-            if (timeoutMode == StreamTimeoutMode.UNTIL_NEXT) {
-                final long currentTimeNanos = System.nanoTime();
-                final long elapsedNanos = currentTimeNanos - lastEventTimeNanos;
-
-                if (elapsedNanos < timeoutNanos) {
-                    final long delayNanos = timeoutNanos - elapsedNanos;
-                    timeoutFuture = scheduleTimeout(delayNanos);
-                    return;
-                }
-            }
-            completed = true;
-            delegate.onError(new StreamTimeoutException(
-                    String.format(TIMEOUT_MESSAGE, timeoutDuration.toMillis(), timeoutMode)));
-            assert subscription != null;
-            subscription.cancel();
+            final long currentTimeNanos = System.nanoTime();
+            final StreamTimeoutDecision decision =
+                    timeoutStrategy.evaluateTimeout(currentTimeNanos, lastEventTimeNanos);
+            handleTimeoutDecision(decision);
         }
 
         @Override
@@ -169,7 +168,8 @@ final class TimeoutStreamMessage<T> implements StreamMessage<T> {
                 return;
             }
             lastEventTimeNanos = System.nanoTime();
-            timeoutFuture = scheduleTimeout(timeoutNanos);
+            final StreamTimeoutDecision decision = timeoutStrategy.initialDecision();
+            handleTimeoutDecision(decision);
         }
 
         @Override
@@ -178,17 +178,7 @@ final class TimeoutStreamMessage<T> implements StreamMessage<T> {
                 PooledObjects.close(t);
                 return;
             }
-            switch (timeoutMode) {
-                case UNTIL_NEXT:
-                    lastEventTimeNanos = System.nanoTime();
-                    break;
-                case UNTIL_FIRST:
-                    cancelSchedule();
-                    timeoutFuture = null;
-                    break;
-                case UNTIL_EOS:
-                    break;
-            }
+            lastEventTimeNanos = System.nanoTime();
             delegate.onNext(t);
         }
 
