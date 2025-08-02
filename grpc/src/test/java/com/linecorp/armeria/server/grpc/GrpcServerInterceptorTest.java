@@ -21,6 +21,7 @@ import static org.assertj.core.api.Assertions.catchThrowable;
 
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.atomic.AtomicReference;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
@@ -31,6 +32,8 @@ import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
+import io.grpc.ClientInterceptor;
+import io.grpc.ForwardingServerCall.SimpleForwardingServerCall;
 import io.grpc.Metadata;
 import io.grpc.ServerCall;
 import io.grpc.ServerCall.Listener;
@@ -38,9 +41,13 @@ import io.grpc.ServerCallHandler;
 import io.grpc.ServerInterceptor;
 import io.grpc.Status;
 import io.grpc.StatusRuntimeException;
+import io.grpc.stub.MetadataUtils;
+import io.grpc.stub.StreamObserver;
 import testing.grpc.EmptyProtos.Empty;
 import testing.grpc.Messages.SimpleRequest;
+import testing.grpc.Messages.SimpleResponse;
 import testing.grpc.TestServiceGrpc.TestServiceBlockingStub;
+import testing.grpc.TestServiceGrpc.TestServiceImplBase;
 
 class GrpcServerInterceptorTest {
 
@@ -64,6 +71,11 @@ class GrpcServerInterceptorTest {
                                                     .intercept(new BlockingInterceptor())
                                                     .useBlockingTaskExecutor(true)
                                                     .build());
+
+            sb.serviceUnder("/annotated", GrpcService.builder()
+                                                     .addService(new AnnotatedInterceptorServiceImpl())
+                                                     .intercept(new InterceptorAddFoo())
+                                                     .build());
         }
     };
 
@@ -90,6 +102,26 @@ class GrpcServerInterceptorTest {
                            .pathPrefix("/blocking")
                            .build(TestServiceBlockingStub.class);
         blocking.emptyCall(Empty.getDefaultInstance());
+    }
+
+    @Test
+    void annotatedInterceptorShouldWork() {
+        final AtomicReference<Metadata> headersCapture = new AtomicReference<>();
+        final AtomicReference<Metadata> trailersCapture = new AtomicReference<>();
+        final ClientInterceptor clientInterceptor = MetadataUtils.newCaptureMetadataInterceptor(headersCapture,
+                                                                                          trailersCapture);
+        final TestServiceBlockingStub client =
+                GrpcClients.builder(server.httpUri())
+                           .pathPrefix("/annotated")
+                           .intercept(clientInterceptor)
+                           .build(TestServiceBlockingStub.class);
+        final SimpleRequest request = SimpleRequest.newBuilder().build();
+        client.unaryCall(request);
+        // Header order is the response order. Thus, first `foo` is called and later `bar` and `qux`.
+        assertThat(headersCapture.get().get(TEST_HEADER)).isEqualTo("quxbarfoo");
+
+        client.unaryCall2(request);
+        assertThat(headersCapture.get().get(TEST_HEADER)).isEqualTo("barfoo");
     }
 
     private static class NoPassInterceptor implements ServerInterceptor {
@@ -129,6 +161,69 @@ class GrpcServerInterceptorTest {
             final ServiceRequestContext ctx = ServiceRequestContext.current();
             assertThat(ctx.eventLoop().inEventLoop()).isTrue();
             return next.startCall(call, metadata);
+        }
+    }
+
+    private static final Metadata.Key<String> TEST_HEADER = Metadata.Key.of("test",
+                                                                            Metadata.ASCII_STRING_MARSHALLER);
+
+    private static <REQ, RESP> ServerCall<REQ, RESP> addToHeader(String suffix, ServerCall<REQ, RESP> call) {
+        return new SimpleForwardingServerCall<REQ, RESP>(call) {
+            @Override
+            public void sendHeaders(Metadata responseHeaders) {
+                final String testHeader;
+                if (responseHeaders.get(TEST_HEADER) != null) {
+                    testHeader = responseHeaders.get(TEST_HEADER);
+                } else {
+                    testHeader = "";
+                }
+
+                responseHeaders.put(TEST_HEADER, testHeader + suffix);
+                super.sendHeaders(responseHeaders);
+            }
+        };
+    }
+
+    private static class InterceptorAddFoo implements ServerInterceptor {
+        @Override
+        public <REQ, RESP> Listener<REQ> interceptCall(ServerCall<REQ, RESP> call, Metadata headers,
+                                                       ServerCallHandler<REQ, RESP> next) {
+            return next.startCall(addToHeader("foo", call), headers);
+        }
+    }
+
+    private static class InterceptorAddBar implements ServerInterceptor {
+        @Override
+        public <REQ, RESP> Listener<REQ> interceptCall(ServerCall<REQ, RESP> call, Metadata headers,
+                                                       ServerCallHandler<REQ, RESP> next) {
+
+            return next.startCall(addToHeader("bar", call), headers);
+        }
+    }
+
+    private static class InterceptorAddQux implements ServerInterceptor {
+        @Override
+        public <REQ, RESP> Listener<REQ> interceptCall(ServerCall<REQ, RESP> call, Metadata headers,
+                                                       ServerCallHandler<REQ, RESP> next) {
+
+            return next.startCall(addToHeader("qux", call), headers);
+        }
+    }
+
+    @GrpcInterceptor(InterceptorAddBar.class)
+    private static class AnnotatedInterceptorServiceImpl extends TestServiceImplBase {
+
+        @Override
+        @GrpcInterceptor(InterceptorAddQux.class)
+        public void unaryCall(SimpleRequest request, StreamObserver<SimpleResponse> responseObserver) {
+            responseObserver.onNext(SimpleResponse.newBuilder().build());
+            responseObserver.onCompleted();
+        }
+
+        @Override
+        public void unaryCall2(SimpleRequest request, StreamObserver<SimpleResponse> responseObserver) {
+            responseObserver.onNext(SimpleResponse.newBuilder() .build());
+            responseObserver.onCompleted();
         }
     }
 }

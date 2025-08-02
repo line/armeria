@@ -58,7 +58,6 @@ import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.VirtualHost;
 import com.linecorp.armeria.server.VirtualHostBuilder;
 import com.linecorp.armeria.server.encoding.EncodingService;
-import com.linecorp.armeria.server.grpc.HandlerRegistry.Entry;
 import com.linecorp.armeria.unsafe.grpc.GrpcUnsafeBufferUtil;
 
 import io.grpc.BindableService;
@@ -989,7 +988,6 @@ public final class GrpcServiceBuilder {
      * without interfering with other services.
      */
     public GrpcService build() {
-        final HandlerRegistry handlerRegistry;
         if (USE_COROUTINE_CONTEXT_INTERCEPTOR) {
             final ServerInterceptor coroutineContextInterceptor =
                     new ArmeriaCoroutineContextInterceptor(useBlockingTaskExecutor);
@@ -1027,23 +1025,12 @@ public final class GrpcServiceBuilder {
         }
         registryBuilder.setDefaultExceptionHandler(grpcExceptionHandler);
 
-        if (interceptors != null) {
-            final HandlerRegistry.Builder newRegistryBuilder = new HandlerRegistry.Builder();
-            final ImmutableList<ServerInterceptor> interceptors = this.interceptors.build();
-            for (Entry entry : registryBuilder.entries()) {
-                final MethodDescriptor<?, ?> methodDescriptor = entry.method();
-                final ServerServiceDefinition intercepted =
-                        ServerInterceptors.intercept(entry.service(), interceptors);
-                newRegistryBuilder.addService(entry.path(), intercepted, methodDescriptor, entry.type(),
-                                              entry.additionalDecorators());
-            }
-            if (grpcExceptionHandler != null) {
-                newRegistryBuilder.setDefaultExceptionHandler(grpcExceptionHandler);
-            }
-            handlerRegistry = newRegistryBuilder.build();
-        } else {
-            handlerRegistry = registryBuilder.build();
+        // Interceptors passed via the grpc service builder.
+        if (this.interceptors != null) {
+            registryBuilder.addInterceptors(this.interceptors.build());
         }
+
+        final HandlerRegistry handlerRegistry = registryBuilder.build();
 
         GrpcService grpcService = new FramedGrpcService(
                 handlerRegistry,
