@@ -102,7 +102,10 @@ public abstract class AbstractRetryingClient<I extends Request, O extends Respon
 
     /**
      * This should be called when retrying is finished.
+     *
+     * @deprecated Call ctx.logBuilder().endResponseWithLastChild(); instead of this method.
      */
+    @Deprecated
     protected static void onRetryingComplete(ClientRequestContext ctx) {
         ctx.logBuilder().endResponseWithLastChild();
     }
@@ -175,8 +178,7 @@ public abstract class AbstractRetryingClient<I extends Request, O extends Respon
      *
      * @return {@code true} if the response timeout is set, {@code false} if it can't be set due to the timeout
      */
-    @SuppressWarnings("MethodMayBeStatic") // Intentionally left non-static for better user experience.
-    protected final boolean setResponseTimeout(ClientRequestContext ctx) {
+    protected static boolean setResponseTimeout(ClientRequestContext ctx) {
         requireNonNull(ctx, "ctx");
         final long responseTimeoutMillis = state(ctx).responseTimeoutMillis();
         if (responseTimeoutMillis < 0) {
@@ -255,8 +257,24 @@ public abstract class AbstractRetryingClient<I extends Request, O extends Respon
     /**
      * Creates a new derived {@link ClientRequestContext}, replacing the requests.
      * If {@link ClientRequestContext#endpointGroup()} exists, a new {@link Endpoint} will be selected.
+     *
+     * @deprecated Use {@link #newAttemptContext(ClientRequestContext, HttpRequest, RpcRequest, boolean)}
+     *             instead.
      */
+    @Deprecated
     protected static ClientRequestContext newDerivedContext(ClientRequestContext ctx,
+                                                            @Nullable HttpRequest req,
+                                                            @Nullable RpcRequest rpcReq,
+                                                            boolean initialAttempt) {
+        return newAttemptContext(ctx, req, rpcReq, initialAttempt);
+    }
+
+    /**
+     * Creates a new {@link ClientRequestContext} for a retry attempt by replacing the request in
+     * {@link ClientRequestContext} with {@code req} or {@code rpcReq}.
+     * If {@link ClientRequestContext#endpointGroup()} exists, a new {@link Endpoint} will be selected.
+     */
+    protected static ClientRequestContext newAttemptContext(ClientRequestContext ctx,
                                                             @Nullable HttpRequest req,
                                                             @Nullable RpcRequest rpcReq,
                                                             boolean initialAttempt) {
