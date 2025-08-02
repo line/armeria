@@ -191,4 +191,37 @@ class GrpcDocServiceJsonSchemaTest {
         assertThatJson(jsonSchema).node("properties.nested_nested_self.properties.nested_self.$ref").isEqualTo(
                 "#/properties/nested_self");
     }
+
+    @Test
+    void testWellKnownTypes() throws Exception {
+        final JsonNode jsonSchema = getJsonSchemas().get(0);
+
+        assertThatJson(jsonSchema).node("properties.bool_value.type").isEqualTo("boolean");
+
+        assertThatJson(jsonSchema).node("properties.double_value.type").isEqualTo("number");
+        assertThatJson(jsonSchema).node("properties.float_value.type").isEqualTo("number");
+        assertThatJson(jsonSchema).node("properties.int32_value.type").isEqualTo("number");
+        assertThatJson(jsonSchema).node("properties.int64_value.type").isEqualTo("number");
+        assertThatJson(jsonSchema).node("properties.uint32_value.type").isEqualTo("number");
+        assertThatJson(jsonSchema).node("properties.uint64_value.type").isEqualTo("number");
+
+        assertThatJson(jsonSchema).node("properties.bytes_value.type").isEqualTo("string");
+        assertThatJson(jsonSchema).node("properties.string_value.type").isEqualTo("string");
+        assertThatJson(jsonSchema).node("properties.duration.type").isEqualTo("string");
+        assertThatJson(jsonSchema).node("properties.timestamp.type").isEqualTo("string");
+        assertThatJson(jsonSchema).node("properties.field_mask.type").isEqualTo("string");
+
+        assertThatJson(jsonSchema).node("properties.list_value.type").isEqualTo("array");
+
+        assertThatJson(jsonSchema).node("properties.any.type").isEqualTo("object");
+        assertThatJson(jsonSchema).node("properties.any.properties").isAbsent();
+        assertThatJson(jsonSchema).node("properties.struct.type").isEqualTo("object");
+        assertThatJson(jsonSchema).node("properties.struct.properties").isAbsent();
+        assertThatJson(jsonSchema).node("properties.empty.type").isEqualTo("object");
+        assertThatJson(jsonSchema).node("properties.empty.properties").isAbsent();
+
+        assertThatJson(jsonSchema).node("properties.null_value.type").isStringEqualTo("null");
+
+        assertThatJson(jsonSchema).node("properties.value.type").isAbsent();
+    }
 }
