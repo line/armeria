@@ -94,7 +94,7 @@ public final class ContentPreviewingService extends SimpleDecoratingHttpService 
      *
      * @param maxLength the maximum length of the preview
      * @param defaultCharset the default charset used when a charset is not specified in the
-     * {@code "content-type"} header
+     *                       {@code "content-type"} header
      */
     public static Function<? super HttpService, ContentPreviewingService> newDecorator(
             int maxLength, Charset defaultCharset) {
