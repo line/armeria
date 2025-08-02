@@ -32,6 +32,7 @@ import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.logging.ContentPreviewer;
 import com.linecorp.armeria.common.logging.ContentPreviewerFactory;
 import com.linecorp.armeria.common.logging.RequestLog;
@@ -93,7 +94,7 @@ public final class ContentPreviewingService extends SimpleDecoratingHttpService 
      *
      * @param maxLength the maximum length of the preview
      * @param defaultCharset the default charset used when a charset is not specified in the
-     *                       {@code "content-type"} header
+     * {@code "content-type"} header
      */
     public static Function<? super HttpService, ContentPreviewingService> newDecorator(
             int maxLength, Charset defaultCharset) {
@@ -143,6 +144,7 @@ public final class ContentPreviewingService extends SimpleDecoratingHttpService 
     /**
      * Returns the specified {@link ContentPreviewerFactory}.
      */
+    @UnstableApi
     public ContentPreviewerFactory contentPreviewerFactory() {
         return contentPreviewerFactory;
     }
@@ -150,6 +152,7 @@ public final class ContentPreviewingService extends SimpleDecoratingHttpService 
     /**
      * Returns the specified {@link BiFunction} that sanitizes the request content preview.
      */
+    @UnstableApi
     public BiFunction<? super RequestContext, String, ? extends @Nullable Object> responsePreviewSanitizer() {
         return responsePreviewSanitizer;
     }
