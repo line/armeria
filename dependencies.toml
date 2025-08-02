@@ -8,7 +8,7 @@ asm = "9.7.1"
 assertj = "3.27.3"
 awaitility = "4.3.0"
 blockhound = "1.0.11.RELEASE"
-bouncycastle = "1.70"
+bouncycastle = "1.81"
 brave5 = "5.18.1"
 brave6 = "6.1.0"
 brotli4j = "1.18.0"
@@ -168,6 +168,7 @@ thrift018 = { strictly = "0.18.1" }
 thrift019 = { strictly = "0.19.0" }
 thrift020 = { strictly = "0.20.0" }
 thrift021 = { strictly = "0.21.0" }
+thrift022 = { strictly = "0.22.0" }
 tomcat8 = "8.5.100"
 tomcat9 = "9.0.96"
 tomcat10 = "10.1.31"
@@ -240,15 +241,15 @@ module = "io.projectreactor.tools:blockhound"
 version.ref = "blockhound"
 
 [libraries.bouncycastle-bcpkix]
-module = "org.bouncycastle:bcpkix-jdk15on"
+module = "org.bouncycastle:bcpkix-jdk18on"
 version.ref = "bouncycastle"
 relocations = { from = "org.bouncycastle", to = "com.linecorp.armeria.internal.shaded.bouncycastle" }
 [libraries.bouncycastle-bcprov]
-module = "org.bouncycastle:bcprov-jdk15on"
+module = "org.bouncycastle:bcprov-jdk18on"
 version.ref = "bouncycastle"
 relocations = { from = "org.bouncycastle", to = "com.linecorp.armeria.internal.shaded.bouncycastle" }
 [libraries.bouncycastle-bcutil]
-module = "org.bouncycastle:bcutil-jdk15on"
+module = "org.bouncycastle:bcutil-jdk18on"
 version.ref = "bouncycastle"
 relocations = { from = "org.bouncycastle", to = "com.linecorp.armeria.internal.shaded.bouncycastle" }
 
@@ -619,6 +620,8 @@ javadocs = "https://fasterxml.github.io/jackson-modules-java8/javadoc/datatypes/
 [libraries.jackson-datatype-jsr310]
 module = "com.fasterxml.jackson.datatype:jackson-datatype-jsr310"
 javadocs = "https://fasterxml.github.io/jackson-modules-java8/javadoc/datetime/2.14/"
+[libraries.jackson-dataformat-yaml]
+module = "com.fasterxml.jackson.dataformat:jackson-dataformat-yaml"
 [libraries.jackson-kotlin]
 module = "com.fasterxml.jackson.module:jackson-module-kotlin"
 [libraries.jackson-scala_v212]
@@ -1385,6 +1388,14 @@ exclusions = [
 module = "org.apache.thrift:libthrift"
 version.ref = "thrift021"
 javadocs = "https://www.javadoc.io/doc/org.apache.thrift/libthrift/0.21.0/"
+exclusions = [
+    "javax.annotation:javax.annotation-api",
+    "org.apache.httpcomponents:httpcore",
+    "org.apache.httpcomponents:httpclient"]
+[libraries.thrift022]
+module = "org.apache.thrift:libthrift"
+version.ref = "thrift022"
+javadocs = "https://www.javadoc.io/doc/org.apache.thrift/libthrift/0.22.0/"
 exclusions = [
     "javax.annotation:javax.annotation-api",
     "org.apache.httpcomponents:httpcore",
