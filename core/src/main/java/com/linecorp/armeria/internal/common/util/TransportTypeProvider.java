@@ -15,23 +15,16 @@
  */
 package com.linecorp.armeria.internal.common.util;
 
-import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static java.util.Objects.requireNonNull;
 
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.MethodType;
-import java.util.Map;
-import java.util.Set;
 import java.util.concurrent.ThreadFactory;
 import java.util.function.BiFunction;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import com.google.common.base.Ascii;
 
-import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.common.util.TransportType;
@@ -51,7 +44,6 @@ import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.channel.unix.DomainSocketChannel;
 import io.netty.channel.unix.ServerDomainSocketChannel;
-import io.netty.util.Version;
 
 /**
  * Provides the properties required by {@link TransportType} by loading /dev/epoll and io_uring transport
@@ -59,44 +51,6 @@ import io.netty.util.Version;
  * See: <a href="https://github.com/line/armeria/issues/3243">line/armeria#3243</a>
  */
 public final class TransportTypeProvider {
-
-    private static final Logger logger = LoggerFactory.getLogger(TransportTypeProvider.class);
-
-    static {
-        if (Flags.warnNettyVersions()) {
-            final String howToDisableWarning =
-                    "This means 1) you specified Netty versions inconsistently in your build or " +
-                    "2) the Netty JARs in the classpath were repackaged or shaded incorrectly. " +
-                    "Specify the '-Dcom.linecorp.armeria.warnNettyVersions=false' JVM option to " +
-                    "disable this warning at the risk of unexpected Netty behavior, if you think " +
-                    "it is a false positive.";
-
-            final Map<String, Version> nettyVersions =
-                    Version.identify(TransportTypeProvider.class.getClassLoader());
-
-            final Set<String> distinctNettyVersions = nettyVersions.values().stream().filter(v -> {
-                final String artifactId = v.artifactId();
-                return artifactId != null &&
-                       artifactId.startsWith("netty") &&
-                       !artifactId.startsWith("netty-incubator") &&
-                       !artifactId.startsWith("netty-tcnative");
-            }).map(Version::artifactVersion).collect(toImmutableSet());
-
-            switch (distinctNettyVersions.size()) {
-                case 0:
-                    logger.warn("Using Netty with unknown version. {}", howToDisableWarning);
-                    break;
-                case 1:
-                    if (logger.isDebugEnabled()) {
-                        logger.debug("Using Netty {}", distinctNettyVersions.iterator().next());
-                    }
-                    break;
-                default:
-                    logger.warn("Inconsistent Netty versions detected: {} {}",
-                                nettyVersions, howToDisableWarning);
-            }
-        }
-    }
 
     public static final TransportTypeProvider NIO = new TransportTypeProvider(
             "NIO", NioServerSocketChannel.class, NioSocketChannel.class, null, null, NioDatagramChannel.class,
