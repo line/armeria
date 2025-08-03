@@ -1550,6 +1550,7 @@ co.cm
 co.com
 co.cr
 co.cz
+co.de
 co.dk
 co.dm
 co.education
