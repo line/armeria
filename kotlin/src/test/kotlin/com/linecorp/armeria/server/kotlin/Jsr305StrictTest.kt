@@ -24,7 +24,8 @@ class Jsr305StrictTest {
     fun shouldAllowReturningNulls() {
         // Make sure the code compiles with `-Xjsr305=strict`
         // See: https://github.com/line/armeria/issues/2793#issuecomment-892325587
-        LogFormatter.builderForText()
+        LogFormatter
+            .builderForText()
             .requestHeadersSanitizer { _, _ -> null }
             .responseHeadersSanitizer { _, _ -> null }
             .requestTrailersSanitizer { _, _ -> null }
@@ -34,7 +35,8 @@ class Jsr305StrictTest {
             .responseContentSanitizer { _, _ -> null }
             .contentSanitizer { _, _ -> null }
 
-        LogFormatter.builderForJson()
+        LogFormatter
+            .builderForJson()
             .requestHeadersSanitizer { _, _ -> null }
             .responseHeadersSanitizer { _, _ -> null }
             .requestTrailersSanitizer { _, _ -> null }
