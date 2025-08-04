@@ -150,7 +150,7 @@ public final class ContentPreviewingService extends SimpleDecoratingHttpService 
     }
 
     /**
-     * Returns the specified {@link BiFunction} that sanitizes the request content preview.
+     * Returns the specified {@link BiFunction} that sanitizes the response content preview.
      */
     @UnstableApi
     public BiFunction<? super RequestContext, String, ? extends @Nullable Object> responsePreviewSanitizer() {
