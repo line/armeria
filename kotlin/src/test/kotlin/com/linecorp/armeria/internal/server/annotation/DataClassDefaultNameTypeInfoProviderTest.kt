@@ -40,27 +40,33 @@ class DataClassDefaultNameTypeInfoProviderTest {
         assertThat(struct.descriptionInfo()).isEqualTo(DescriptionInfo.of("Class description"))
 
         assertThat(struct.fields()).containsExactlyInAnyOrder(
-            FieldInfo.builder("required", STRING)
+            FieldInfo
+                .builder("required", STRING)
                 .requirement(FieldRequirement.REQUIRED)
                 .descriptionInfo(DescriptionInfo.of("required description"))
                 .build(),
-            FieldInfo.builder("optional", STRING)
+            FieldInfo
+                .builder("optional", STRING)
                 .requirement(FieldRequirement.OPTIONAL)
                 .descriptionInfo(DescriptionInfo.of("optional description"))
                 .build(),
-            FieldInfo.builder("defaultValue", STRING)
+            FieldInfo
+                .builder("defaultValue", STRING)
                 .requirement(FieldRequirement.REQUIRED)
                 .descriptionInfo(DescriptionInfo.of("default value description"))
                 .build(),
-            FieldInfo.builder("defaultValue2", STRING)
+            FieldInfo
+                .builder("defaultValue2", STRING)
                 .requirement(FieldRequirement.REQUIRED)
                 .descriptionInfo(DescriptionInfo.of("default value 2 description"))
                 .build(),
-            FieldInfo.builder("renamedNonnull", STRING)
+            FieldInfo
+                .builder("renamedNonnull", STRING)
                 .requirement(FieldRequirement.REQUIRED)
                 .descriptionInfo(DescriptionInfo.of("renamed nonnull description"))
                 .build(),
-            FieldInfo.builder("renamedNullable", STRING)
+            FieldInfo
+                .builder("renamedNullable", STRING)
                 .requirement(FieldRequirement.OPTIONAL)
                 .descriptionInfo(DescriptionInfo.of("renamed nullable description"))
                 .build(),

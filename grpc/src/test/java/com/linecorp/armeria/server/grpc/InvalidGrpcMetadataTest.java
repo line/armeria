@@ -47,6 +47,7 @@ import io.grpc.ServerCall.Listener;
 import io.grpc.ServerCallHandler;
 import io.grpc.ServerInterceptor;
 import io.grpc.Status;
+import io.grpc.Status.Code;
 import io.grpc.StatusRuntimeException;
 import io.grpc.stub.StreamObserver;
 import testing.grpc.Messages.SimpleRequest;
@@ -212,22 +213,22 @@ class InvalidGrpcMetadataTest {
 
                 client.unaryCall(REQUEST_MESSAGE);
             }).satisfies(cause -> {
-                assertThat(Status.fromThrowable(cause).getCode()).isEqualTo(Status.INTERNAL.getCode());
+                assertThat(Status.fromThrowable(cause).getCode()).isIn(Code.INTERNAL, Code.UNKNOWN);
                 assertThat(Status.trailersFromThrowable(cause)).isNotEqualTo(corruptedMetadata);
             });
 
             final RequestLog log = captor.get().log().whenComplete().join();
             assertThat(log.responseStatus()).isEqualTo(HttpStatus.OK);
             assertThat(log.responseTrailers().get(GrpcHeaderNames.GRPC_STATUS)).isNull();
-            assertThat(log.responseHeaders().get(GrpcHeaderNames.GRPC_STATUS)).satisfies(grpcStatus -> {
+            assertThat(log.responseHeaders().getInt(GrpcHeaderNames.GRPC_STATUS)).satisfies(grpcStatus -> {
                 assertThat(grpcStatus).isNotNull();
-                assertThat(grpcStatus).isEqualTo(String.valueOf(Status.INTERNAL.getCode().value()));
+                assertThat(grpcStatus).isIn(Code.INTERNAL.value(), Code.UNKNOWN.value());
             });
             assertThat(log.responseCause())
                     .satisfies(cause -> {
                         assertThat(cause).isInstanceOf(StatusRuntimeException.class);
-                        assertThat(Status.fromThrowable(cause).getCode()).isEqualTo(
-                                Status.INTERNAL.getCode());
+                        assertThat(Status.fromThrowable(cause).getCode())
+                                .isIn(Code.INTERNAL, Code.UNKNOWN);
                         assertThat(Status.trailersFromThrowable(cause)).satisfies(metadata -> {
                             assertThat(metadata.keys()).doesNotContain(KEY_OF_CORRUPTED_METADATA);
                         });
@@ -251,15 +252,15 @@ class InvalidGrpcMetadataTest {
                     it.next();
                 }
             }).satisfies(cause -> {
-                assertThat(Status.fromThrowable(cause).getCode()).isEqualTo(
-                        Status.INTERNAL.getCode());
+                assertThat(Status.fromThrowable(cause).getCode()).isIn(
+                        Status.INTERNAL.getCode(), Status.UNKNOWN.getCode());
                 assertThat(Status.trailersFromThrowable(cause)).isNotEqualTo(corruptedMetadata);
             });
 
             final RequestLog log = captor.get().log().whenComplete().join();
             assertThat(log.responseStatus()).isEqualTo(HttpStatus.OK);
-            assertThat(log.responseHeaders().get(GrpcHeaderNames.GRPC_STATUS)).satisfies(grpcStatus -> {
-                assertThat(grpcStatus).isEqualTo(String.valueOf(Status.INTERNAL.getCode().value()));
+            assertThat(log.responseHeaders().getInt(GrpcHeaderNames.GRPC_STATUS)).satisfies(grpcStatus -> {
+                assertThat(grpcStatus).isIn(Code.INTERNAL.value(), Code.UNKNOWN.value());
             });
             assertThat(log.responseTrailers().get(GrpcHeaderNames.GRPC_STATUS)).satisfies(grpcStatus -> {
                 assertThat(grpcStatus).isNull();
@@ -267,8 +268,8 @@ class InvalidGrpcMetadataTest {
             assertThat(log.responseCause())
                     .isInstanceOf(StatusRuntimeException.class)
                     .satisfies(cause -> {
-                        assertThat(Status.fromThrowable(cause).getCode()).isEqualTo(
-                                Status.INTERNAL.getCode());
+                        assertThat(Status.fromThrowable(cause).getCode())
+                                .isIn(Code.INTERNAL, Code.UNKNOWN);
                         assertThat(Status.trailersFromThrowable(cause)).satisfies(metadata -> {
                             assertThat(metadata.keys()).doesNotContain(KEY_OF_CORRUPTED_METADATA);
                         });

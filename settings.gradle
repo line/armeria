@@ -100,7 +100,8 @@ includeWithFlags ':eureka',                              'java', 'publish', 'rel
 includeWithFlags ':grpc',                                'java', 'publish', 'relocate', 'native'
 includeWithFlags ':grpc-kotlin',                         'java', 'publish', 'relocate', 'kotlin-grpc', 'kotlin', 'native'
 includeWithFlags ':grpc-protocol',                       'java', 'publish', 'relocate', 'native'
-includeWithFlags ':graphql',                             'java', 'publish', 'relocate', 'native'
+// GraphQL-Java requires Java 11+.
+includeWithFlags ':graphql',                             'java11', 'publish', 'relocate', 'native'
 includeWithFlags ':graphql-protocol',                    'java', 'publish', 'relocate', 'native'
 includeWithFlags ':jetty9',                              'java', 'publish', 'relocate', 'no_aggregation'
 project(':jetty9').projectDir = file('jetty/jetty9')
@@ -230,6 +231,7 @@ includeWithFlags ':it:logback1.4',                             'java11', 'reloca
 includeWithFlags ':it:logback1.5',                             'java11', 'relocate', 'no_aggregation'
 includeWithFlags ':it:multipart',                              'java17', 'relocate'
 includeWithFlags ':it:nio',                                    'java', 'relocate'
+includeWithFlags ':it:no-unsafe',                              'java', 'relocate'
 includeWithFlags ':it:okhttp',                                 'java', 'relocate'
 includeWithFlags ':it:resilience4j',                           'java17', 'relocate'
 includeWithFlags ':it:server',                                 'java', 'relocate'

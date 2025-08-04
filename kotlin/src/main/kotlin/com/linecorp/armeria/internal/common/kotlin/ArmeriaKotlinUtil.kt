@@ -34,9 +34,7 @@ import kotlin.reflect.jvm.kotlinProperty
 /**
  * Returns true if a method can be represented by a Kotlin function.
  */
-internal fun isKFunction(method: Method): Boolean {
-    return method.kotlinFunction != null
-}
+internal fun isKFunction(method: Method): Boolean = method.kotlinFunction != null
 
 /**
  * Returns true if a method is a suspending function.
@@ -80,8 +78,8 @@ internal fun kFunctionGenericReturnType(method: Method): Type =
 /**
  * Returns true if the [element]'s type is marked nullable.
  */
-internal fun isMarkedNullable(element: AnnotatedElement): Boolean {
-    return when (element) {
+internal fun isMarkedNullable(element: AnnotatedElement): Boolean =
+    when (element) {
         is Field -> element.kotlinProperty?.returnType?.isMarkedNullable ?: false
         is Parameter -> {
             val executable = element.declaringExecutable
@@ -111,7 +109,6 @@ internal fun isMarkedNullable(element: AnnotatedElement): Boolean {
         is Method -> element.kotlinFunction?.returnType?.isMarkedNullable ?: false
         else -> false
     }
-}
 
 /**
  * Returns true if the [Class] is a Kotlin data class.
