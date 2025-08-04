@@ -27,7 +27,6 @@ import com.google.common.collect.ImmutableMap;
 import com.yahoo.athenz.zpe.pkey.PublicKeyStore;
 import com.yahoo.athenz.zts.DomainSignedPolicyData;
 import com.yahoo.athenz.zts.JWSPolicyData;
-import com.yahoo.athenz.zts.PolicyData;
 
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.client.athenz.ZtsBaseClient;
@@ -93,11 +92,7 @@ final class AthenzPolicyLoader {
                      .asJson(JWSPolicyData.class)
                      .execute()
                      .thenApplyAsync(entity -> {
-                         final PolicyData policyData = policyHandler.getJWSPolicyData(entity.content());
-                         if (policyData == null) {
-                             return AthenzAssertions.EMPTY;
-                         }
-                         return toAssertions(policyData);
+                         return toAssertions(policyHandler.getJWSPolicyData(entity.content()));
                      }, CommonPools.blockingTaskExecutor());
     }
 
@@ -108,11 +103,7 @@ final class AthenzPolicyLoader {
                      .asJson(DomainSignedPolicyData.class)
                      .execute()
                      .thenApplyAsync(entity -> {
-                         final PolicyData policyData = policyHandler.getSignedPolicyData(entity.content());
-                         if (policyData == null) {
-                             return AthenzAssertions.EMPTY;
-                         }
-                         return toAssertions(policyData);
+                         return toAssertions(policyHandler.getSignedPolicyData(entity.content()));
                      }, CommonPools.blockingTaskExecutor());
     }
 }

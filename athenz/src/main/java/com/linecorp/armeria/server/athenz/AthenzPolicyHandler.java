@@ -104,7 +104,6 @@ final class AthenzPolicyHandler {
         return match;
     }
 
-    @Nullable
     PolicyData getJWSPolicyData(JWSPolicyData jwsPolicyData) {
 
         // first we're going to assume that our signature was provided in P1363 format
@@ -120,8 +119,7 @@ final class AthenzPolicyHandler {
 
             if (!Crypto.validateJWSDocument(jwsPolicyData.getProtectedHeader(), jwsPolicyData.getPayload(),
                                             jwsPolicyData.getSignature(), publicKeyStore::getZtsKey)) {
-                logger.warn("zts signature validation failed");
-                return null;
+                throw new AthenzPolicyException("ZTS signature validation failed");
             }
         }
 
@@ -131,8 +129,7 @@ final class AthenzPolicyHandler {
             final SignedPolicyData signedPolicyData = mapper.readValue(payload, SignedPolicyData.class);
             return signedPolicyData.getPolicyData();
         } catch (IOException e) {
-            logger.warn("Unable to parse jws policy data payload, ", e);
-            return null;
+            throw new AthenzPolicyException("Unable to parse jws policy data payload, ", e);
         }
     }
 
@@ -171,7 +168,6 @@ final class AthenzPolicyHandler {
         }
     }
 
-    @Nullable
     PolicyData getSignedPolicyData(DomainSignedPolicyData domainSignedPolicyData) {
         // we already verified that the object has policy data present
 
@@ -184,19 +180,16 @@ final class AthenzPolicyHandler {
 
         final PublicKey ztsPublicKey = publicKeyStore.getZtsKey(ztsKeyId);
         if (ztsPublicKey == null) {
-            logger.warn("unable to fetch zts public key for id: {}", ztsKeyId);
-            return null;
+            throw new AthenzPolicyException("Unable to fetch zts public key for id: " + ztsKeyId);
         }
 
         if (!Crypto.verify(SignUtils.asCanonicalString(signedPolicyData), ztsPublicKey, ztsSignature)) {
-            logger.warn("zts signature validation failed");
-            return null;
+            throw new AthenzPolicyException("ZTS signature validation failed");
         }
 
         final PolicyData policyData = signedPolicyData.getPolicyData();
         if (policyData == null) {
-            logger.warn("missing policy data");
-            return null;
+            throw new AthenzPolicyException("Missing policy data");
         }
 
         // now let's verify that the ZMS signature for our policy file
@@ -211,13 +204,11 @@ final class AthenzPolicyHandler {
 
             final PublicKey zmsPublicKey = publicKeyStore.getZmsKey(zmsKeyId);
             if (zmsPublicKey == null) {
-                logger.warn("unable to fetch zms public key for id: {}", zmsKeyId);
-                return null;
+                throw new AthenzPolicyException("unable to fetch zms public key for id: " + zmsKeyId);
             }
 
             if (!Crypto.verify(SignUtils.asCanonicalString(policyData), zmsPublicKey, zmsSignature)) {
-                logger.warn("zms signature validation failed");
-                return null;
+                throw new AthenzPolicyException("ZMS signature validation failed");
             }
         }
         return policyData;

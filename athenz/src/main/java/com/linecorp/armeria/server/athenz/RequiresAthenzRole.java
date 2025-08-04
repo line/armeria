@@ -44,7 +44,7 @@ import com.linecorp.armeria.server.annotation.DecoratorFactory;
  * // 2. Create a `ZtsBaseClient` and `AthenzServiceDecoratorFactory` to use Athenz.
  * ZtsBaseClient ztsBaseClient =
  *   ZtsBaseClient
- *     .builder("https://athenz.example.com:4443/zts/v1")
+ *     .builder("https://athenz.example.com:8443/zts/v1")
  *     .keyPair("/var/lib/athenz/service.key.pem", "/var/lib/athenz/service.cert.pem")
  *     .build();
  * final AthenzServiceDecoratorFactory athenzDecoratorFactory =

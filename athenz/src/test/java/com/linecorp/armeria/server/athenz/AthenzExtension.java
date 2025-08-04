@@ -25,6 +25,7 @@ import java.io.InputStream;
 import java.net.URI;
 import java.util.Collections;
 import java.util.List;
+import java.util.function.Consumer;
 
 import javax.net.ssl.SSLContext;
 
@@ -47,6 +48,7 @@ import com.yahoo.athenz.zms.TopLevelDomain;
 import com.yahoo.athenz.zms.ZMSClient;
 import com.yahoo.athenz.zts.ZTSClient;
 
+import com.linecorp.armeria.client.WebClientBuilder;
 import com.linecorp.armeria.client.athenz.ZtsBaseClient;
 import com.linecorp.armeria.common.TlsKeyPair;
 import com.linecorp.armeria.common.annotation.Nullable;
@@ -209,6 +211,11 @@ public class AthenzExtension extends AbstractAllOrEachExtension {
     }
 
     public ZtsBaseClient newZtsBaseClient(String serviceName) {
+        return newZtsBaseClient(serviceName, webClientBuilder -> {});
+    }
+
+    public ZtsBaseClient newZtsBaseClient(String serviceName,
+                                          Consumer<WebClientBuilder> webClientConfigurer) {
         final String serviceKeyFile = ATHENZ_CERTS + serviceName + "/key.pem";
         final String serviceCertFile = ATHENZ_CERTS + serviceName + "/cert.pem";
         try (InputStream serviceKey = AthenzExtension.class.getResourceAsStream(serviceKeyFile);
@@ -218,6 +225,7 @@ public class AthenzExtension extends AbstractAllOrEachExtension {
             return ZtsBaseClient.builder(ztsUri())
                                 .keyPair(() -> tlsKeyPair)
                                 .trustedCertificate(caCert)
+                                .configureWebClient(webClientConfigurer)
                                 .build();
         } catch (IOException e) {
             throw new RuntimeException(e);

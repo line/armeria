@@ -72,7 +72,7 @@ final class AthenzPolicyClient implements ZpeClient {
             try {
                 loader.init();
             } catch (Exception e) {
-                throw new RuntimeException(e);
+                throw new IllegalStateException(e);
             }
         }
     }
@@ -93,7 +93,7 @@ final class AthenzPolicyClient implements ZpeClient {
     private AthenzAssertions assertionGroup(String domain) {
         final AthenzPolicyLoader policyLoader = policyLoaders.get(domain);
         if (policyLoader == null) {
-            return AthenzAssertions.EMPTY;
+            throw new AthenzPolicyException("No policy loader found for domain: " + domain);
         } else {
             return policyLoader.getNow();
         }

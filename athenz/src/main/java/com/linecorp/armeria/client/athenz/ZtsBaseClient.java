@@ -47,7 +47,7 @@ import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.server.athenz.AthenzService;
 
 /**
- * A base client for Athenz ZTS (ZMS) that provides common functionality such as {@link TlsKeyPair} management
+ * A base client for Athenz ZTS that provides common functionality such as {@link TlsKeyPair} management
  * and {@link WebClient} configuration. It is recommended to create a new instance and share it across multiple
  * {@link AthenzClient} and {@link AthenzService}.
  *
@@ -55,7 +55,7 @@ import com.linecorp.armeria.server.athenz.AthenzService;
  * <pre>{@code
  * ZtsBaseClient ztsBaseClient =
  *   ZtsBaseClient
- *     .builder("https://athenz.example.com:4443/zts/v1")
+ *     .builder("https://athenz.example.com:8443/zts/v1")
  *     .keyPair("/var/lib/athenz/service.key.pem", "/var/lib/athenz/service.cert.pem")
  *     .build();
  * }</pre>

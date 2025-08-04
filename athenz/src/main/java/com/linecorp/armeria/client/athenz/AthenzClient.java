@@ -51,7 +51,7 @@ import com.linecorp.armeria.common.util.Exceptions;
  *
  * ZtsBaseClient ztsBaseClient =
  *   ZtsBaseClient
- *     .builder("https://athenz.example.com:4443/zts/v1")
+ *     .builder("https://athenz.example.com:8443/zts/v1")
  *     .keyPair("/var/lib/athenz/service.key.pem", "/var/lib/athenz/service.cert.pem")
  *     .build();
  *

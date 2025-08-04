@@ -25,7 +25,6 @@ import com.google.common.base.MoreObjects;
 import com.yahoo.rdl.Struct;
 
 final class AthenzAssertions {
-    static final AthenzAssertions EMPTY = new AthenzAssertions();
 
     private final Map<String, List<Struct>> roleStandardAllowMap = new HashMap<>();
     private final Map<String, List<Struct>> roleWildcardAllowMap = new HashMap<>();
