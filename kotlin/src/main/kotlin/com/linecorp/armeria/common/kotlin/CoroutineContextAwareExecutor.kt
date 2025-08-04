@@ -26,6 +26,5 @@ import kotlin.coroutines.CoroutineContext
  * The returned [CoroutineContext] also contains an [ArmeriaRequestCoroutineContext] that automatically
  * propagates the [ContextAwareExecutor.context] when the coroutine is resumed on a thread.
  */
-fun ContextAwareExecutor.asCoroutineDispatcher(): CoroutineContext {
-    return this.withoutContext().asCoroutineDispatcher() + context().asCoroutineContext()
-}
+fun ContextAwareExecutor.asCoroutineDispatcher(): CoroutineContext =
+    this.withoutContext().asCoroutineDispatcher() + context().asCoroutineContext()

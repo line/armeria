@@ -54,9 +54,10 @@ class TestServiceTest {
             repeat(30) {
                 launch {
                     val message =
-                        helloService.shortBlockingHello(
-                            HelloRequest.newBuilder().setName("$it Armeria").build(),
-                        ).message
+                        helloService
+                            .shortBlockingHello(
+                                HelloRequest.newBuilder().setName("$it Armeria").build(),
+                            ).message
                     assertThat(message).isEqualTo("Hello, $it Armeria!")
                 }
             }
@@ -69,7 +70,8 @@ class TestServiceTest {
             repeat(30) {
                 launch {
                     var sequence = 0
-                    service.blockingLotsOfReplies(HelloRequest.newBuilder().setName("Armeria").build())
+                    service
+                        .blockingLotsOfReplies(HelloRequest.newBuilder().setName("Armeria").build())
                         .collect {
                             assertThat(it.message).isEqualTo("Hello, Armeria! (sequence: ${++sequence})")
                         }
@@ -85,10 +87,10 @@ class TestServiceTest {
             repeat(30) {
                 launch {
                     var sequence = 0
-                    service.shortBlockingLotsOfReplies(
-                        HelloRequest.newBuilder().setName("Armeria").build(),
-                    )
-                        .collect {
+                    service
+                        .shortBlockingLotsOfReplies(
+                            HelloRequest.newBuilder().setName("Armeria").build(),
+                        ).collect {
                             assertThat(it.message).isEqualTo("Hello, Armeria! (sequence: ${++sequence})")
                         }
                     assertThat(sequence).isEqualTo(5)
@@ -127,15 +129,16 @@ class TestServiceTest {
     fun shouldReportCloseExactlyOnceWithNonOK(uri: String) {
         val closeCalled = AtomicInteger()
         val helloService =
-            GrpcClients.newClient(uri, TestServiceCoroutineStub::class.java)
+            GrpcClients
+                .newClient(uri, TestServiceCoroutineStub::class.java)
                 .withInterceptors(
                     object : ClientInterceptor {
                         override fun <I, O> interceptCall(
                             method: MethodDescriptor<I, O>,
                             options: CallOptions,
                             next: Channel,
-                        ): ClientCall<I, O> {
-                            return object : SimpleForwardingClientCall<I, O>(next.newCall(method, options)) {
+                        ): ClientCall<I, O> =
+                            object : SimpleForwardingClientCall<I, O>(next.newCall(method, options)) {
                                 override fun start(
                                     responseListener: Listener<O>,
                                     headers: Metadata,
@@ -154,7 +157,6 @@ class TestServiceTest {
                                     )
                                 }
                             }
-                        }
                     },
                 )
 
@@ -200,11 +202,13 @@ class TestServiceTest {
         private fun newServer(
             httpPort: Int,
             useBlockingTaskExecutor: Boolean = false,
-        ): Server {
-            return Server.builder()
+        ): Server =
+            Server
+                .builder()
                 .http(httpPort)
                 .service(
-                    GrpcService.builder()
+                    GrpcService
+                        .builder()
                         .addService(TestServiceImpl())
                         .exceptionHandler { _, _, throwable, _ ->
                             when (throwable) {
@@ -215,27 +219,16 @@ class TestServiceTest {
                                 }
                                 else -> null
                             }
-                        }
-                        .useBlockingTaskExecutor(useBlockingTaskExecutor)
+                        }.useBlockingTaskExecutor(useBlockingTaskExecutor)
                         .build(),
-                )
-                .build()
-        }
+                ).build()
 
-        private fun protoUri(): String {
-            return "gproto+http://127.0.0.1:${server.activeLocalPort()}/"
-        }
+        private fun protoUri(): String = "gproto+http://127.0.0.1:${server.activeLocalPort()}/"
 
-        private fun jsonUri(): String {
-            return "gjson+http://127.0.0.1:${server.activeLocalPort()}/"
-        }
+        private fun jsonUri(): String = "gjson+http://127.0.0.1:${server.activeLocalPort()}/"
 
-        private fun blockingProtoUri(): String {
-            return "gproto+http://127.0.0.1:${blockingServer.activeLocalPort()}/"
-        }
+        private fun blockingProtoUri(): String = "gproto+http://127.0.0.1:${blockingServer.activeLocalPort()}/"
 
-        private fun blockingJsonUri(): String {
-            return "gjson+http://127.0.0.1:${blockingServer.activeLocalPort()}/"
-        }
+        private fun blockingJsonUri(): String = "gjson+http://127.0.0.1:${blockingServer.activeLocalPort()}/"
     }
 }

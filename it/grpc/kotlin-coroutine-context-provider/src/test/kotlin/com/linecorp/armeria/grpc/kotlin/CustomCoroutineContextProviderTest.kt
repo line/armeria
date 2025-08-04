@@ -35,7 +35,8 @@ class CustomCoroutineContextProviderTest {
             object : ServerExtension() {
                 override fun configure(sb: ServerBuilder) {
                     sb.service(
-                        GrpcService.builder()
+                        GrpcService
+                            .builder()
                             .addService(TestServiceImpl())
                             .build(),
                     )
@@ -48,9 +49,16 @@ class CustomCoroutineContextProviderTest {
         runBlocking {
             val client =
                 GrpcClients.newClient(server.httpUri(), TestServiceGrpcKt.TestServiceCoroutineStub::class.java)
-            GrpcClients.builder(server.httpUri())
+            GrpcClients
+                .builder(server.httpUri())
                 .intercept()
-            val response = client.hello(Hello.HelloRequest.newBuilder().setName("Armeria").build())
+            val response =
+                client.hello(
+                    Hello.HelloRequest
+                        .newBuilder()
+                        .setName("Armeria")
+                        .build(),
+                )
             assertThat(response.message).startsWith("Executed in custom-kotlin-grpc-worker")
         }
     }

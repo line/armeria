@@ -80,7 +80,8 @@ internal class CoroutineServerInterceptorTest {
     fun authorizedUnaryRequest(path: String) {
         runTest {
             val client =
-                GrpcClients.builder(server.httpUri())
+                GrpcClients
+                    .builder(server.httpUri())
                     .auth(AuthToken.ofOAuth2(TOKEN))
                     .pathPrefix(path)
                     .build(TestServiceGrpcKt.TestServiceCoroutineStub::class.java)
@@ -96,7 +97,8 @@ internal class CoroutineServerInterceptorTest {
     fun unauthorizedUnaryRequest(path: String) {
         runTest {
             val client =
-                GrpcClients.builder(server.httpUri())
+                GrpcClients
+                    .builder(server.httpUri())
                     .pathPrefix(path)
                     .build(TestServiceGrpcKt.TestServiceCoroutineStub::class.java)
 
@@ -114,7 +116,8 @@ internal class CoroutineServerInterceptorTest {
     fun authorizedStreamingOutputCall(path: String) {
         runTest {
             val client =
-                GrpcClients.builder(server.httpUri())
+                GrpcClients
+                    .builder(server.httpUri())
                     .auth(AuthToken.ofOAuth2(TOKEN))
                     .pathPrefix(path)
                     .build(TestServiceGrpcKt.TestServiceCoroutineStub::class.java)
@@ -131,7 +134,8 @@ internal class CoroutineServerInterceptorTest {
     fun unauthorizedStreamingOutputCall(path: String) {
         runTest {
             val client =
-                GrpcClients.builder(server.httpUri())
+                GrpcClients
+                    .builder(server.httpUri())
                     .pathPrefix(path)
                     .build(TestServiceGrpcKt.TestServiceCoroutineStub::class.java)
 
@@ -151,15 +155,17 @@ internal class CoroutineServerInterceptorTest {
     fun authorizedStreamingInputCall(path: String) {
         runTest {
             val client =
-                GrpcClients.builder(server.httpUri())
+                GrpcClients
+                    .builder(server.httpUri())
                     .auth(AuthToken.ofOAuth2(TOKEN))
                     .pathPrefix(path)
                     .build(TestServiceGrpcKt.TestServiceCoroutineStub::class.java)
 
             assertThat(
-                client.streamingInputCall(
-                    listOf(StreamingInputCallRequest.getDefaultInstance()).asFlow(),
-                ).aggregatedPayloadSize,
+                client
+                    .streamingInputCall(
+                        listOf(StreamingInputCallRequest.getDefaultInstance()).asFlow(),
+                    ).aggregatedPayloadSize,
             ).isEqualTo(1)
         }
     }
@@ -170,7 +176,8 @@ internal class CoroutineServerInterceptorTest {
     fun unauthorizedStreamingInputCall(path: String) {
         runTest {
             val client =
-                GrpcClients.builder(server.httpUri())
+                GrpcClients
+                    .builder(server.httpUri())
                     .pathPrefix(path)
                     .build(TestServiceGrpcKt.TestServiceCoroutineStub::class.java)
 
@@ -190,7 +197,8 @@ internal class CoroutineServerInterceptorTest {
     fun authorizedFullDuplexCall(path: String) {
         runTest {
             val client =
-                GrpcClients.builder(server.httpUri())
+                GrpcClients
+                    .builder(server.httpUri())
                     .auth(AuthToken.ofOAuth2(TOKEN))
                     .pathPrefix(path)
                     .build(TestServiceGrpcKt.TestServiceCoroutineStub::class.java)
@@ -207,13 +215,15 @@ internal class CoroutineServerInterceptorTest {
     fun unauthorizedFullDuplexCall(path: String) {
         runTest {
             val client =
-                GrpcClients.builder(server.httpUri())
+                GrpcClients
+                    .builder(server.httpUri())
                     .pathPrefix(path)
                     .build(TestServiceGrpcKt.TestServiceCoroutineStub::class.java)
 
             assertThatThrownBy {
                 runBlocking {
-                    client.fullDuplexCall(listOf(StreamingOutputCallRequest.getDefaultInstance()).asFlow())
+                    client
+                        .fullDuplexCall(listOf(StreamingOutputCallRequest.getDefaultInstance()).asFlow())
                         .collect()
                 }
             }.isInstanceOfSatisfying(StatusException::class.java) {
@@ -229,10 +239,10 @@ internal class CoroutineServerInterceptorTest {
                 override fun configure(sb: ServerBuilder) {
                     val exceptionHandler =
                         GrpcExceptionHandlerFunction {
-                                _: RequestContext,
-                                _: Status,
-                                throwable: Throwable,
-                                _: Metadata,
+                            _: RequestContext,
+                            _: Status,
+                            throwable: Throwable,
+                            _: Metadata,
                             ->
                             if (throwable is AnticipatedException && throwable.message == "Invalid access") {
                                 return@GrpcExceptionHandlerFunction Status.UNAUTHENTICATED
@@ -245,7 +255,8 @@ internal class CoroutineServerInterceptorTest {
                     val coroutineNameInterceptor = CoroutineNameInterceptor()
                     sb.serviceUnder(
                         "/non-blocking",
-                        GrpcService.builder()
+                        GrpcService
+                            .builder()
                             .exceptionHandler(exceptionHandler)
                             // applying order is "MyAsyncInterceptor -> coroutineNameInterceptor ->
                             // authInterceptor -> threadLocalInterceptor -> MyAsyncInterceptor"
@@ -255,13 +266,13 @@ internal class CoroutineServerInterceptorTest {
                                 authInterceptor,
                                 coroutineNameInterceptor,
                                 MyAsyncInterceptor(),
-                            )
-                            .addService(TestService())
+                            ).addService(TestService())
                             .build(),
                     )
                     sb.serviceUnder(
                         "/blocking",
-                        GrpcService.builder()
+                        GrpcService
+                            .builder()
                             .addService(TestService())
                             .exceptionHandler(exceptionHandler)
                             // applying order is "MyAsyncInterceptor -> coroutineNameInterceptor ->
@@ -272,8 +283,7 @@ internal class CoroutineServerInterceptorTest {
                                 authInterceptor,
                                 coroutineNameInterceptor,
                                 MyAsyncInterceptor(),
-                            )
-                            .useBlockingTaskExecutor(true)
+                            ).useBlockingTaskExecutor(true)
                             .build(),
                     )
                 }
@@ -283,9 +293,10 @@ internal class CoroutineServerInterceptorTest {
         private const val TOKEN = "token-1234"
 
         private val executorDispatcher =
-            Executors.newSingleThreadExecutor(
-                ThreadFactoryBuilder().setNameFormat("my-executor").build(),
-            ).asCoroutineDispatcher()
+            Executors
+                .newSingleThreadExecutor(
+                    ThreadFactoryBuilder().setNameFormat("my-executor").build(),
+                ).asCoroutineDispatcher()
 
         private class AuthInterceptor : CoroutineServerInterceptor {
             private val authorizer =
@@ -342,18 +353,14 @@ internal class CoroutineServerInterceptorTest {
             override fun coroutineContext(
                 call: ServerCall<*, *>,
                 headers: Metadata,
-            ): CoroutineContext {
-                return CoroutineName("my-coroutine-name")
-            }
+            ): CoroutineContext = CoroutineName("my-coroutine-name")
         }
 
         private class ThreadLocalInterceptor : CoroutineContextServerInterceptor() {
             override fun coroutineContext(
                 call: ServerCall<*, *>,
                 headers: Metadata,
-            ): CoroutineContext {
-                return THREAD_LOCAL.asContextElement(value = "thread-local-value")
-            }
+            ): CoroutineContext = THREAD_LOCAL.asContextElement(value = "thread-local-value")
 
             companion object {
                 val THREAD_LOCAL = ThreadLocal<String>()
@@ -401,15 +408,14 @@ internal class CoroutineServerInterceptorTest {
 
             override fun streamingOutputCall(
                 request: StreamingOutputCallRequest,
-            ): Flow<StreamingOutputCallResponse> {
-                return flow {
+            ): Flow<StreamingOutputCallResponse> =
+                flow {
                     for (i in 1..5) {
                         delay(500)
                         assertContextPropagation()
                         emit(buildReply(USER_NAME))
                     }
                 }
-            }
 
             override suspend fun streamingInputCall(
                 requests: Flow<StreamingInputCallRequest>,
@@ -423,15 +429,14 @@ internal class CoroutineServerInterceptorTest {
 
             override fun fullDuplexCall(
                 requests: Flow<StreamingOutputCallRequest>,
-            ): Flow<StreamingOutputCallResponse> {
-                return flow {
+            ): Flow<StreamingOutputCallResponse> =
+                flow {
                     requests.collect {
                         delay(500)
                         assertContextPropagation()
                         emit(buildReply(USER_NAME))
                     }
                 }
-            }
 
             private suspend fun assertContextPropagation() {
                 assertThat(ServiceRequestContext.currentOrNull()).isNotNull()
@@ -442,15 +447,17 @@ internal class CoroutineServerInterceptorTest {
         }
 
         private fun buildReply(message: String): StreamingOutputCallResponse =
-            StreamingOutputCallResponse.newBuilder()
+            StreamingOutputCallResponse
+                .newBuilder()
                 .setPayload(
-                    Payload.newBuilder()
+                    Payload
+                        .newBuilder()
                         .setBody(ByteString.copyFrom(message.toByteArray())),
-                )
-                .build()
+                ).build()
 
         private fun buildReply(message: List<String>): StreamingInputCallResponse =
-            StreamingInputCallResponse.newBuilder()
+            StreamingInputCallResponse
+                .newBuilder()
                 .setAggregatedPayloadSize(message.size)
                 .build()
     }

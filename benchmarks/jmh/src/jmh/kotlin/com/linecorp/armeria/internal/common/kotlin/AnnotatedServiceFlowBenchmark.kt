@@ -43,7 +43,8 @@ open class AnnotatedServiceFlowBenchmark {
     @Setup
     open fun setup() {
         server =
-            Server.builder()
+            Server
+                .builder()
                 .annotatedService(
                     "/benchmark",
                     object {
@@ -61,8 +62,7 @@ open class AnnotatedServiceFlowBenchmark {
                         fun publisherBm(): Publisher<String> =
                             Flux.fromStream(IntStream.range(0, 1000).mapToObj { it.toString() })
                     },
-                )
-                .build()
+                ).build()
                 .also { it.start().join() }
 
         client = WebClient.of("h2c://127.0.0.1:${server.activeLocalPort()}")

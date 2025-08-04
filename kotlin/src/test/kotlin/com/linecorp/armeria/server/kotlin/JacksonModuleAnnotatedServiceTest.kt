@@ -38,10 +38,13 @@ class JacksonModuleAnnotatedServiceTest {
         val client = WebClient.of(server.httpUri())
         val json = """{"x": 10, "y":"hello"}"""
         val response =
-            client.prepare()
+            client
+                .prepare()
                 .post(path)
                 .content(MediaType.JSON, json)
-                .execute().aggregate().join()
+                .execute()
+                .aggregate()
+                .join()
         assertThatJson(response.contentUtf8()).isEqualTo(json)
     }
 
@@ -51,10 +54,13 @@ class JacksonModuleAnnotatedServiceTest {
         val client = WebClient.of(server.httpUri())
         val json = """{"x": 10}"""
         val response =
-            client.prepare()
+            client
+                .prepare()
                 .post(path)
                 .content(MediaType.JSON, json)
-                .execute().aggregate().join()
+                .execute()
+                .aggregate()
+                .join()
         if (path == "/echo") {
             assertThat(response.status()).isEqualTo(HttpStatus.BAD_REQUEST)
         } else {
@@ -76,18 +82,20 @@ class JacksonModuleAnnotatedServiceTest {
     class ServiceWithDataClass {
         @ProducesJson
         @Post("/echo")
-        fun echo(foo: Foo): Foo {
-            return foo
-        }
+        fun echo(foo: Foo): Foo = foo
 
         @ProducesJson
         @Post("/echo-nullable")
-        fun echo(foo: FooWithNullableType): FooWithNullableType {
-            return foo
-        }
+        fun echo(foo: FooWithNullableType): FooWithNullableType = foo
     }
 
-    data class Foo(val x: Int, val y: String)
+    data class Foo(
+        val x: Int,
+        val y: String,
+    )
 
-    data class FooWithNullableType(val x: Int, val y: String?)
+    data class FooWithNullableType(
+        val x: Int,
+        val y: String?,
+    )
 }
