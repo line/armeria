@@ -59,7 +59,6 @@ public class ChannelUtilTest {
         return builder.build();
     }
 
-
     @Test
     void disabledDefaultChannelOptions() {
         final Map<ChannelOption<?>, Object> options = ImmutableMap.of(
