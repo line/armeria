@@ -298,7 +298,8 @@ internal class FlowAnnotatedServiceTest {
                     else -> throw IllegalStateException()
                 }
             }
-        StepVerifier.create(pub)
+        StepVerifier
+            .create(pub)
             .expectNext(HttpStatus.OK)
             .expectNextSequence(expected)
             .verifyComplete()

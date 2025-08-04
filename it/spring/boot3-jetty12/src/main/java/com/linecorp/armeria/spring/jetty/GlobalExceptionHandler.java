@@ -30,7 +30,7 @@ class GlobalExceptionHandler {
 
     @ExceptionHandler(GlobalBaseException.class)
     public ResponseEntity<Map<String, Object>> onGlobalBaseException(Throwable t) {
-        final String message = t.getMessage();
+        final String message = t.getMessage() != null ? t.getMessage() : "An error occurred";
         final Map<String, Object> body = ImmutableMap.of("status", HttpStatus.INTERNAL_SERVER_ERROR.value(),
                                                          "message", message);
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(body);

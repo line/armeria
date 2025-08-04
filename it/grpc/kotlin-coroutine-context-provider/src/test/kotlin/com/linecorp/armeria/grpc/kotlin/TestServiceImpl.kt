@@ -24,7 +24,8 @@ class TestServiceImpl : TestServiceGrpcKt.TestServiceCoroutineImplBase() {
     override suspend fun hello(request: Hello.HelloRequest): Hello.HelloReply {
         val threadName = Thread.currentThread().name
         assertThat(threadName).startsWith("custom-kotlin-grpc-worker")
-        return Hello.HelloReply.newBuilder()
+        return Hello.HelloReply
+            .newBuilder()
             .setMessage("Executed in $threadName")
             .build()
     }

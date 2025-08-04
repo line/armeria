@@ -62,7 +62,6 @@ import com.linecorp.armeria.internal.common.grpc.protocol.StatusCodes;
 import com.linecorp.armeria.internal.common.grpc.protocol.UnaryGrpcSerializationFormats;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.PooledByteBufAllocator;
 import io.netty.handler.codec.http.HttpHeaderValues;
 
 /**
@@ -140,7 +139,7 @@ public final class UnaryGrpcClient {
                 HttpData.wrap(payload));
         return webClient.execute(request, REQUEST_OPTIONS).aggregate(
                                 AggregationOptions.builder()
-                                                  .usePooledObjects(PooledByteBufAllocator.DEFAULT)
+                                                  .usePooledObjects()
                                                   .build())
                         .thenApply(msg -> {
                             try (HttpData content = msg.content()) {

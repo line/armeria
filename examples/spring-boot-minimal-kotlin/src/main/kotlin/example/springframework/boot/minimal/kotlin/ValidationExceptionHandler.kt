@@ -16,8 +16,8 @@ class ValidationExceptionHandler : ExceptionHandlerFunction {
         ctx: ServiceRequestContext,
         req: HttpRequest,
         cause: Throwable,
-    ): HttpResponse {
-        return if (cause is ValidationException) {
+    ): HttpResponse =
+        if (cause is ValidationException) {
             val status = HttpStatus.BAD_REQUEST
             HttpResponse.ofJson(
                 status,
@@ -32,7 +32,6 @@ class ValidationExceptionHandler : ExceptionHandlerFunction {
         } else {
             ExceptionHandlerFunction.fallthrough()
         }
-    }
 }
 
 /**

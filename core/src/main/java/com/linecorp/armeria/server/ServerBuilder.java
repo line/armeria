@@ -95,7 +95,6 @@ import com.linecorp.armeria.common.util.SystemInfo;
 import com.linecorp.armeria.common.util.ThreadFactories;
 import com.linecorp.armeria.common.util.TlsEngineType;
 import com.linecorp.armeria.internal.common.BuiltInDependencyInjector;
-import com.linecorp.armeria.internal.common.ReflectiveDependencyInjector;
 import com.linecorp.armeria.internal.common.RequestContextUtil;
 import com.linecorp.armeria.internal.common.util.ChannelUtil;
 import com.linecorp.armeria.internal.server.RouteDecoratingService;
@@ -2321,6 +2320,11 @@ public final class ServerBuilder implements TlsSetters, ServiceConfigsBuilder<Se
             unloggedExceptionsReporter = null;
         }
 
+        final TlsProvider tlsProvider = this.tlsProvider;
+        if (tlsProvider != null && tlsProvider.autoClose()) {
+            shutdownSupports.add(ShutdownSupport.of(tlsProvider));
+        }
+
         final ServerErrorHandler errorHandler =
                 new CorsServerErrorHandler(
                         this.errorHandler == null ? ServerErrorHandler.ofDefault()
@@ -2504,7 +2508,7 @@ public final class ServerBuilder implements TlsSetters, ServiceConfigsBuilder<Se
         if (dependencyInjector != null) {
             return dependencyInjector;
         }
-        final ReflectiveDependencyInjector reflectiveDependencyInjector = new ReflectiveDependencyInjector();
+        final DependencyInjector reflectiveDependencyInjector = DependencyInjector.ofReflective();
         shutdownSupports.add(ShutdownSupport.of(reflectiveDependencyInjector));
         return reflectiveDependencyInjector;
     }
