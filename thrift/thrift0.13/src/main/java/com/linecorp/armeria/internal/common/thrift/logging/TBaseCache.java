@@ -16,29 +16,26 @@
 
 package com.linecorp.armeria.internal.common.thrift.logging;
 
-import org.apache.thrift.meta_data.FieldMetaData;
+import java.util.concurrent.ConcurrentHashMap;
 
-import com.google.common.base.MoreObjects;
+import org.apache.thrift.TBase;
 
-import com.linecorp.armeria.common.thrift.logging.ThriftFieldInfo;
+final class TBaseCache {
 
-final class DefaultThriftFieldInfo implements ThriftFieldInfo {
+    static final TBaseCache INSTANCE = new TBaseCache();
 
-    private final FieldMetaData fieldMetaData;
+    private final ConcurrentHashMap<Class<?>, TBase<?, ?>> cache = new ConcurrentHashMap<>();
 
-    DefaultThriftFieldInfo(FieldMetaData fieldMetaData) {
-        this.fieldMetaData = fieldMetaData;
+    @SuppressWarnings("unchecked")
+    <T extends TBase<?, ?>> T newInstance(Class<T> structClass) {
+        return (T) cache.computeIfAbsent(structClass, ignored -> {
+            try {
+                return structClass.getDeclaredConstructor().newInstance();
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+        }).deepCopy();
     }
 
-    @Override
-    public FieldMetaData fieldMetaData() {
-        return fieldMetaData;
-    }
-
-    @Override
-    public String toString() {
-        return MoreObjects.toStringHelper(this)
-                          .add("fieldMetaData", fieldMetaData)
-                          .toString();
-    }
+    private TBaseCache() {}
 }

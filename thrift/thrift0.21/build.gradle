@@ -46,6 +46,7 @@ task generateSources(type: Copy) {
         exclude '**/ThriftFunction.java'
         exclude '**/ThriftServiceMetadata.java'
         exclude '**/MaskingTProtocol.java'
+        exclude '**/UnMaskingTProtocol.java'
         exclude '**/common/thrift/package-info.java'
         exclude '**/server/thrift/package-info.java'
         exclude '**/common/thrift/logging/package-info.java'
