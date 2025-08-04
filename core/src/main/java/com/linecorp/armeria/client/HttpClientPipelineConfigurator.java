@@ -36,7 +36,6 @@ import java.util.function.Consumer;
 
 import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLException;
-import javax.net.ssl.SSLParameters;
 
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
@@ -240,7 +239,7 @@ final class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
         }
         final ClientConnectionTimingsBuilder timingsBuilder = ch.attr(TIMINGS_BUILDER_KEY).get();
         final SslHandler sslHandler = new ClientSslHandler(sslEngine, timingsBuilder);
-        p.addLast(configureSslHandler(sslHandler));
+        p.addLast(sslHandler);
         p.addLast(TrafficLoggingHandler.CLIENT);
         p.addLast(new ChannelInboundHandlerAdapter() {
             @Nullable
@@ -336,20 +335,6 @@ final class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
      */
     private SocketAddress remoteAddress(ChannelHandlerContext ctx) {
         return firstNonNull(ctx.channel().remoteAddress(), remoteAddress);
-    }
-
-    /**
-     * Configures the specified {@link SslHandler} with common settings.
-     */
-    private static SslHandler configureSslHandler(SslHandler sslHandler) {
-        // Set endpoint identification algorithm so that JDK's default X509TrustManager implementation
-        // performs host name checks. Without this, the X509TrustManager implementation will never raise
-        // a CertificateException even if the domain name or IP address mismatches.
-        final SSLEngine engine = sslHandler.engine();
-        final SSLParameters params = engine.getSSLParameters();
-        params.setEndpointIdentificationAlgorithm("HTTPS");
-        engine.setSSLParameters(params);
-        return sslHandler;
     }
 
     private boolean attemptUpgrade() {
