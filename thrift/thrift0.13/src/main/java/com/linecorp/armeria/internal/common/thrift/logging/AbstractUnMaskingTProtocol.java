@@ -218,8 +218,7 @@ abstract class AbstractUnMaskingTProtocol extends TProtocol {
             final FieldValueMetaData metaData = overwriteContext.valueMetaData();
             final Object obj = overwriteContext.getObj();
             if (metaData instanceof ListMetaData && obj instanceof List) {
-                stack.push(new MultiOverrideMetadataContext((List<?>) obj, (ListMetaData) metaData
-                ));
+                stack.push(new MultiOverrideMetadataContext((List<?>) obj, (ListMetaData) metaData));
                 return new TList(((ListMetaData) metaData).elemMetaData.type, ((List<?>) obj).size());
             }
             // the context has been lost
@@ -295,7 +294,7 @@ abstract class AbstractUnMaskingTProtocol extends TProtocol {
         final MetadataContext context = stack.getFirst().resolve();
         if (context instanceof OverwriteMetadataContext) {
             final OverwriteMetadataContext overwriteMetadataContext = (OverwriteMetadataContext) context;
-            return (Boolean) overwriteMetadataContext.getObj();
+            return (boolean) overwriteMetadataContext.getObj();
         }
         if (!(context instanceof PojoMetadataContext)) {
             return delegate.readBool();
@@ -309,7 +308,7 @@ abstract class AbstractUnMaskingTProtocol extends TProtocol {
         final MetadataContext context = stack.getFirst().resolve();
         if (context instanceof OverwriteMetadataContext) {
             final OverwriteMetadataContext overwriteMetadataContext = (OverwriteMetadataContext) context;
-            return (Byte) overwriteMetadataContext.getObj();
+            return (byte) overwriteMetadataContext.getObj();
         }
         if (!(context instanceof PojoMetadataContext)) {
             return delegate.readByte();
@@ -323,7 +322,7 @@ abstract class AbstractUnMaskingTProtocol extends TProtocol {
         final MetadataContext context = stack.getFirst().resolve();
         if (context instanceof OverwriteMetadataContext) {
             final OverwriteMetadataContext overwriteMetadataContext = (OverwriteMetadataContext) context;
-            return (Short) overwriteMetadataContext.getObj();
+            return (short) overwriteMetadataContext.getObj();
         }
         if (!(context instanceof PojoMetadataContext)) {
             return delegate.readI16();
@@ -337,7 +336,7 @@ abstract class AbstractUnMaskingTProtocol extends TProtocol {
         final MetadataContext context = stack.getFirst().resolve();
         if (context instanceof OverwriteMetadataContext) {
             final OverwriteMetadataContext overwriteMetadataContext = (OverwriteMetadataContext) context;
-            return (Integer) overwriteMetadataContext.getObj();
+            return (int) overwriteMetadataContext.getObj();
         }
         if (!(context instanceof PojoMetadataContext)) {
             return delegate.readI32();
@@ -351,7 +350,7 @@ abstract class AbstractUnMaskingTProtocol extends TProtocol {
         final MetadataContext context = stack.getFirst().resolve();
         if (context instanceof OverwriteMetadataContext) {
             final OverwriteMetadataContext overwriteMetadataContext = (OverwriteMetadataContext) context;
-            return (Long) overwriteMetadataContext.getObj();
+            return (long) overwriteMetadataContext.getObj();
         }
         if (!(context instanceof PojoMetadataContext)) {
             return delegate.readI64();
@@ -365,7 +364,7 @@ abstract class AbstractUnMaskingTProtocol extends TProtocol {
         final MetadataContext context = stack.getFirst().resolve();
         if (context instanceof OverwriteMetadataContext) {
             final OverwriteMetadataContext overwriteMetadataContext = (OverwriteMetadataContext) context;
-            return (Double) overwriteMetadataContext.getObj();
+            return (double) overwriteMetadataContext.getObj();
         }
         if (!(context instanceof PojoMetadataContext)) {
             return delegate.readDouble();

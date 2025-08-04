@@ -66,10 +66,12 @@ public final class ThriftFieldMaskerSelectorProvider
         public JsonDeserializer<?> findBeanDeserializer(JavaType type, DeserializationConfig config,
                                                         BeanDescription beanDesc) throws JsonMappingException {
             if (type.isTypeOrSubTypeOf(TBase.class)) {
-                @SuppressWarnings({"rawtypes", "unchecked"})
-                final Class<? extends TBase> tbaseType = (Class<? extends TBase>) type.getRawClass();
                 return deserializerCache
-                        .computeIfAbsent(type, ignored -> new TJsonDeserializer<>(tbaseType, selectorCache));
+                        .computeIfAbsent(type, ignored -> {
+                            @SuppressWarnings({"rawtypes", "unchecked"})
+                            final Class<? extends TBase> tType = (Class<? extends TBase>) type.getRawClass();
+                            return new TJsonDeserializer<>(tType, selectorCache);
+                        });
             }
             return super.findBeanDeserializer(type, config, beanDesc);
         }

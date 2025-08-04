@@ -24,6 +24,8 @@ import org.apache.thrift.protocol.TProtocol;
 import org.apache.thrift.protocol.TProtocolFactory;
 import org.apache.thrift.transport.TMemoryInputTransport;
 
+import com.google.common.annotations.VisibleForTesting;
+
 @SuppressWarnings("rawtypes")
 final class TMaskingDeserializer {
 
@@ -35,7 +37,7 @@ final class TMaskingDeserializer {
         this.selectorCache = selectorCache;
     }
 
-    public void deserialize(TBase base, byte[] bytes) throws TException {
+    private void deserialize(TBase base, byte[] bytes) throws TException {
         final TMemoryInputTransport transport = new TMemoryInputTransport();
         transport.reset(bytes, 0, bytes.length);
         try {
@@ -47,7 +49,8 @@ final class TMaskingDeserializer {
         }
     }
 
-    public void fromString(TBase base, String data) throws TException {
+    @VisibleForTesting
+    void fromString(TBase base, String data) throws TException {
         deserialize(base, data.getBytes(StandardCharsets.UTF_8));
     }
 }

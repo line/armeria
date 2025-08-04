@@ -31,6 +31,13 @@ import com.linecorp.armeria.common.logging.FieldMasker;
 public interface ThriftFieldInfo {
 
     /**
+     * Returns the name of the field represented by this {@link ThriftFieldInfo}.
+     */
+    default String fieldName() {
+        return fieldMetaData().fieldName;
+    }
+
+    /**
      * The {@link FieldMetaData} for a field that can be obtained via
      * {@link FieldMetaData#getStructMetaDataMap(Class)}.
      */
