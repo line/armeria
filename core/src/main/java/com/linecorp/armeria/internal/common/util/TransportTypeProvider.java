@@ -123,9 +123,7 @@ public final class TransportTypeProvider {
                         name, null, null, null, null, null, null, null,
                         new IllegalStateException("Java 9+ is required to use " + name + " transport"));
             }
-
         }
-
 
         try {
             // Make sure the native libraries were loaded.
