@@ -29,6 +29,7 @@ import org.junit.jupiter.params.provider.MethodSource;
 
 import com.google.common.collect.ImmutableMap;
 
+import com.linecorp.armeria.common.util.SystemInfo;
 import com.linecorp.armeria.common.util.TransportType;
 
 import io.netty.channel.ChannelOption;
@@ -50,11 +51,14 @@ public class ChannelUtilTest {
     }
 
     private static Stream<Arguments> tcpUserTimeout_arguments() {
-        return Stream.of(
-                Arguments.of(TransportType.EPOLL, EpollChannelOption.TCP_USER_TIMEOUT),
-                Arguments.of(TransportType.IO_URING, IoUringChannelOption.TCP_USER_TIMEOUT)
-        );
+        final Stream.Builder<Arguments> builder = Stream.builder();
+        builder.add(Arguments.of(TransportType.EPOLL, EpollChannelOption.TCP_USER_TIMEOUT));
+        if (SystemInfo.javaVersion() >= 9) {
+            builder.add(Arguments.of(TransportType.IO_URING, IoUringChannelOption.TCP_USER_TIMEOUT));
+        }
+        return builder.build();
     }
+
 
     @Test
     void disabledDefaultChannelOptions() {
@@ -142,10 +146,14 @@ public class ChannelUtilTest {
                                                 entry(EpollChannelOption.TCP_KEEPINTVL, pingIntervalMillis),
                                                 entry(EpollChannelOption.TCP_KEEPIDLE, pingIntervalMillis));
         } else if (type == TransportType.IO_URING) {
-            assertThat(newOptions).containsOnly(entry(ChannelOption.SO_LINGER, lingerMillis),
-                                                entry(ChannelOption.SO_KEEPALIVE, true),
-                                                entry(IoUringChannelOption.TCP_KEEPINTVL, pingIntervalMillis),
-                                                entry(IoUringChannelOption.TCP_KEEPIDLE, pingIntervalMillis));
+            if (SystemInfo.javaVersion() >= 9) {
+                assertThat(newOptions).containsOnly(entry(ChannelOption.SO_LINGER, lingerMillis),
+                                                    entry(ChannelOption.SO_KEEPALIVE, true),
+                                                    entry(IoUringChannelOption.TCP_KEEPINTVL,
+                                                          pingIntervalMillis),
+                                                    entry(IoUringChannelOption.TCP_KEEPIDLE,
+                                                          pingIntervalMillis));
+            }
         } else {
             assertThat(newOptions).containsExactlyEntriesOf(options);
         }
@@ -156,5 +164,15 @@ public class ChannelUtilTest {
         newOptions = ChannelUtil.applyDefaultChannelOptions(
                 true, type, userDefinedOptions, 0, pingIntervalMillis);
         assertThat(newOptions).containsExactlyInAnyOrderEntriesOf(userDefinedOptions);
+    }
+
+    private static Stream<Arguments> transportTypeProvider() {
+        final Stream.Builder<Arguments> builder = Stream.builder();
+        for (final TransportType value : TransportType.values()) {
+            if (value.isAvailable()) {
+                builder.add(Arguments.of(value));
+            }
+        }
+        return builder.build();
     }
 }
