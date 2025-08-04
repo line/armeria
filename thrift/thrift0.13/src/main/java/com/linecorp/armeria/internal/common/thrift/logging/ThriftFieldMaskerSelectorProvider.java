@@ -17,8 +17,18 @@
 package com.linecorp.armeria.internal.common.thrift.logging;
 
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
+import org.apache.thrift.TBase;
+
+import com.fasterxml.jackson.databind.BeanDescription;
+import com.fasterxml.jackson.databind.DeserializationConfig;
+import com.fasterxml.jackson.databind.JavaType;
+import com.fasterxml.jackson.databind.JsonDeserializer;
+import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.module.SimpleDeserializers;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 
 import com.linecorp.armeria.common.thrift.logging.ThriftFieldMaskerSelector;
@@ -37,6 +47,33 @@ public final class ThriftFieldMaskerSelectorProvider
         final SimpleModule module = new SimpleModule("thrift-serde");
         final TBaseSelectorCache selectorCache = new TBaseSelectorCache(selectors);
         module.addSerializer(new TBaseSerializer(selectorCache));
+        module.setDeserializers(new TBaseDeserializers(selectorCache));
         objectMapper.registerModule(module);
+    }
+
+    private static class TBaseDeserializers extends SimpleDeserializers {
+
+        private static final long serialVersionUID = -1334570127816081095L;
+        private static final Map<JavaType, JsonDeserializer<?>> deserializerCache = new ConcurrentHashMap<>();
+
+        private final TBaseSelectorCache selectorCache;
+
+        TBaseDeserializers(TBaseSelectorCache selectorCache) {
+            this.selectorCache = selectorCache;
+        }
+
+        @Override
+        public JsonDeserializer<?> findBeanDeserializer(JavaType type, DeserializationConfig config,
+                                                        BeanDescription beanDesc) throws JsonMappingException {
+            if (type.isTypeOrSubTypeOf(TBase.class)) {
+                return deserializerCache
+                        .computeIfAbsent(type, ignored -> {
+                            @SuppressWarnings({"rawtypes", "unchecked"})
+                            final Class<? extends TBase> tType = (Class<? extends TBase>) type.getRawClass();
+                            return new TJsonDeserializer<>(tType, selectorCache);
+                        });
+            }
+            return super.findBeanDeserializer(type, config, beanDesc);
+        }
     }
 }

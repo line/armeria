@@ -27,6 +27,7 @@ import com.google.common.base.Ascii;
 
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.Exceptions;
+import com.linecorp.armeria.common.util.SystemInfo;
 import com.linecorp.armeria.common.util.TransportType;
 
 import io.netty.channel.IoEventLoopGroup;
@@ -108,11 +109,20 @@ public final class TransportTypeProvider {
 
         // TODO(trustin): Do not try to load io_uring unless explicitly specified so JVM doesn't crash.
         //                https://github.com/netty/netty-incubator-transport-io_uring/issues/92
-        if ("IO_URING".equals(name) && !"io_uring".equals(Ascii.toLowerCase(
-                System.getProperty("com.linecorp.armeria.transportType", "")))) {
-            return new TransportTypeProvider(
-                    name, null, null, null, null, null, null, null,
-                    new IllegalStateException("io_uring not enabled explicitly"));
+        if ("IO_URING".equals(name)) {
+            if (!"io_uring".equals(Ascii.toLowerCase(
+                    System.getProperty("com.linecorp.armeria.transportType", "")))) {
+                return new TransportTypeProvider(
+                        name, null, null, null, null, null, null, null,
+                        new IllegalStateException("io_uring not enabled explicitly"));
+            }
+            // Require Java 9+ for io_uring transport.
+            // See: https://github.com/netty/netty/pull/14962
+            if (SystemInfo.javaVersion() < 9) {
+                return new TransportTypeProvider(
+                        name, null, null, null, null, null, null, null,
+                        new IllegalStateException("Java 9+ is required to use " + name + " transport"));
+            }
         }
 
         try {
