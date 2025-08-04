@@ -16,8 +16,6 @@
 
 package com.linecorp.armeria.xds.client.endpoint;
 
-import static com.linecorp.armeria.xds.client.endpoint.XdsAttributeKeys.ROUTE_METADATA_MATCH;
-
 import java.util.List;
 
 import com.google.common.collect.ImmutableList;
@@ -98,12 +96,14 @@ final class RouteConfig {
         if (virtualHostSnapshot == null) {
             return null;
         }
-        final List<RouteEntry> routeEntries = virtualHostSnapshot.routeEntries();
-        if (routeEntries.isEmpty()) {
-            return null;
+        final List<SelectedRoute> selectedRoutes = precomputedRoutes.get(virtualHostSnapshot.index());
+        for (SelectedRoute selectedRoute : selectedRoutes) {
+            if (selectedRoute.routeEntryMatcher().matches(ctx)) {
+                ctx.setAttr(XdsAttributeKeys.ROUTE_METADATA_MATCH,
+                            selectedRoute.routeEntry().route().getRoute().getMetadataMatch());
+                return selectedRoute;
+            }
         }
-        final RouteEntry routeEntry = routeEntries.get(0);
-        ctx.setAttr(ROUTE_METADATA_MATCH, routeEntry.route().getRoute().getMetadataMatch());
-        return precomputedRoutes.get(virtualHostSnapshot.index()).get(routeEntry.index());
+        return null;
     }
 }

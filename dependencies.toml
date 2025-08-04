@@ -119,6 +119,7 @@ protobuf = "3.25.5"
 protobuf4 = "4.29.3"
 protobuf-gradle-plugin = "0.8.19"
 protobuf-jackson = "2.7.0"
+re2j = "1.8"
 reactive-grpc = "1.2.4"
 reactive-streams = "1.0.4"
 reactor = "3.7.8"
@@ -1009,6 +1010,10 @@ javadocs = "https://developers.curioswitch.org/apidocs/java/"
 [libraries.protobuf4-bom]
 module = "com.google.protobuf:protobuf-bom"
 version.ref = "protobuf4"
+
+[libraries.re2j]
+module = "com.google.re2j:re2j"
+version.ref = "re2j"
 
 [libraries.reactor-core]
 module = "io.projectreactor:reactor-core"
