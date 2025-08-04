@@ -99,6 +99,7 @@ includeWithFlags ':eureka',                              'java', 'publish', 'rel
 includeWithFlags ':grpc',                                'java', 'publish', 'relocate', 'native'
 includeWithFlags ':grpc-kotlin',                         'java', 'publish', 'relocate', 'kotlin-grpc', 'kotlin', 'native'
 includeWithFlags ':grpc-protocol',                       'java', 'publish', 'relocate', 'native'
+// GraphQL-Java requires Java 11+.
 includeWithFlags ':graphql',                             'java11', 'publish', 'relocate', 'native'
 includeWithFlags ':graphql-protocol',                    'java', 'publish', 'relocate', 'native'
 includeWithFlags ':jetty9',                              'java', 'publish', 'relocate', 'no_aggregation'
