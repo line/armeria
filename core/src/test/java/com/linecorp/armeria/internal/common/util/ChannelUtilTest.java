@@ -165,14 +165,4 @@ public class ChannelUtilTest {
                 true, type, userDefinedOptions, 0, pingIntervalMillis);
         assertThat(newOptions).containsExactlyInAnyOrderEntriesOf(userDefinedOptions);
     }
-
-    private static Stream<Arguments> transportTypeProvider() {
-        final Stream.Builder<Arguments> builder = Stream.builder();
-        for (final TransportType value : TransportType.values()) {
-            if (value.isAvailable()) {
-                builder.add(Arguments.of(value));
-            }
-        }
-        return builder.build();
-    }
 }
