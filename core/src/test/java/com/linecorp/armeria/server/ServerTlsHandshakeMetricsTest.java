@@ -97,7 +97,7 @@ class ServerTlsHandshakeMetricsTest {
             final Counter counter =
                     meterRegistry.find("armeria.server.tls.handshakes")
                                  .tag("cipher.suite", value -> value.startsWith("TLS_"))
-                                 .tag("common.name", server.server().defaultHostname())
+                                 .tag("hostname", server.server().defaultHostname())
                                  .tag("protocol", expectedProtocol)
                                  .tag("result", "success")
                                  .tag("tls.protocol", tlsProtocol)
@@ -134,7 +134,7 @@ class ServerTlsHandshakeMetricsTest {
         final Counter counter =
                 meterRegistry.find("armeria.server.tls.handshakes")
                              .tag("cipher.suite", "")
-                             .tag("common.name", server.server().defaultHostname())
+                             .tag("hostname", server.server().defaultHostname())
                              .tag("protocol", "")
                              .tag("result", "failure")
                              .tag("tls.protocol", "")

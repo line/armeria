@@ -2328,6 +2328,11 @@ public final class ServerBuilder implements TlsSetters, ServiceConfigsBuilder<Se
             unloggedExceptionsReporter = null;
         }
 
+        final TlsProvider tlsProvider = this.tlsProvider;
+        if (tlsProvider != null && tlsProvider.autoClose()) {
+            shutdownSupports.add(ShutdownSupport.of(tlsProvider));
+        }
+
         final ServerErrorHandler errorHandler =
                 new CorsServerErrorHandler(
                         this.errorHandler == null ? ServerErrorHandler.ofDefault()

@@ -23,12 +23,11 @@ class GraphqlServiceTest {
                 }
             }
 
-        private fun client(): GraphqlArmeriaClient {
-            return GraphqlArmeriaClient(
+        private fun client(): GraphqlArmeriaClient =
+            GraphqlArmeriaClient(
                 uri = server.httpUri().resolve("/graphql"),
                 serializer = GraphQLClientJacksonSerializer(),
             )
-        }
     }
 
     @ParameterizedTest
@@ -47,9 +46,13 @@ class GraphqlServiceTest {
         }
     }
 
-    data class UserNameResult(val userById: User)
+    data class UserNameResult(
+        val userById: User,
+    )
 
-    class UserNameQuery(id: String) : GraphQLClientRequest<UserNameResult> {
+    class UserNameQuery(
+        id: String,
+    ) : GraphQLClientRequest<UserNameResult> {
         override val query: String = "query {userById(id: $id) {name}}"
         override val operationName: String? = null
 

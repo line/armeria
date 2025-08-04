@@ -58,6 +58,7 @@ final class RefreshingTlsProvider implements TlsProvider {
         this.executor = executor;
 
         keyPair = keyPairSupplier.get();
+        requireNonNull(keyPair, "keyPairSupplier returned null");
         scheduledFuture = executor.scheduleAtFixedRate(() -> {
             try {
                 final TlsKeyPair newKeyPair = keyPairSupplier.get();

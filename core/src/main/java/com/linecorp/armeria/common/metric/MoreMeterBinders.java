@@ -31,7 +31,8 @@ import com.linecorp.armeria.internal.common.util.CertificateUtil;
 
 import io.micrometer.core.instrument.binder.MeterBinder;
 import io.micrometer.core.instrument.binder.netty4.NettyAllocatorMetrics;
-import io.netty.buffer.PooledByteBufAllocator;
+import io.netty.buffer.ByteBufAllocator;
+import io.netty.buffer.ByteBufAllocatorMetricProvider;
 import io.netty.channel.EventLoopGroup;
 
 /**
@@ -41,8 +42,11 @@ public final class MoreMeterBinders {
 
     static {
         // Bind the default Netty allocator metrics to the default MeterRegistry.
-        new NettyAllocatorMetrics(PooledByteBufAllocator.DEFAULT)
-                .bindTo(Flags.meterRegistry());
+        final ByteBufAllocator alloc = ByteBufAllocator.DEFAULT;
+        if (alloc instanceof ByteBufAllocatorMetricProvider) {
+            new NettyAllocatorMetrics((ByteBufAllocatorMetricProvider) alloc)
+                    .bindTo(Flags.meterRegistry());
+        }
     }
 
     /**

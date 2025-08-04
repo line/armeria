@@ -742,19 +742,27 @@ final class HttpJsonTranscodingService extends AbstractUnframedGrpcService
 
     @Nullable
     private static JsonNode getBodyContent(AggregatedHttpRequest request) {
-        @Nullable
-        final MediaType contentType = request.contentType();
-        if (contentType == null || !contentType.isJson()) {
-            if (request.content().isEmpty()) {
-                return null;
+        @Nullable final MediaType contentType = request.contentType();
+        final HttpData bodyContent = request.content();
+        final boolean hasBodyContent = !bodyContent.isEmpty();
+
+        if (contentType != null && contentType.isJson()) {
+            if (!hasBodyContent) {
+                return mapper.createObjectNode();
             }
+
+            try {
+                return mapper.readTree(bodyContent.toStringUtf8());
+            } catch (JsonProcessingException e) {
+                throw new IllegalArgumentException("Failed to parse JSON request.", e);
+            }
+        }
+
+        if (hasBodyContent) {
             throw new IllegalArgumentException("Missing or invalid content-type in JSON request.");
         }
-        try {
-            return mapper.readTree(request.contentUtf8());
-        } catch (JsonProcessingException e) {
-            throw new IllegalArgumentException("Failed to parse JSON request.", e);
-        }
+
+        return null;
     }
 
     @VisibleForTesting

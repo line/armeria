@@ -53,7 +53,8 @@ class HelloServiceTest {
     fun lotsOfReplies() {
         runBlocking {
             var sequence = 0
-            helloService.lotsOfReplies(HelloRequest("Armeria"))
+            helloService
+                .lotsOfReplies(HelloRequest("Armeria"))
                 .collect {
                     assertThat(it.message).isEqualTo("Hello, Armeria! (sequence: ${++sequence})")
                 }
@@ -65,7 +66,8 @@ class HelloServiceTest {
     fun blockForLotsOfReplies() {
         runBlocking {
             val replies = ArrayList<HelloReply>()
-            helloService.lotsOfReplies(HelloRequest("Armeria"))
+            helloService
+                .lotsOfReplies(HelloRequest("Armeria"))
                 .collect { replies.add(it) }
             for ((sequence, reply) in replies.withIndex()) {
                 assertThat(reply.message).isEqualTo("Hello, Armeria! (sequence: ${sequence + 1})")
@@ -126,20 +128,14 @@ class HelloServiceTest {
             listOf(protoUri(), jsonUri(), blockingProtoUri(), blockingJsonUri())
                 .map { Arguments.of(it) }
 
-        private fun protoUri(): String {
-            return "gproto+http://127.0.0.1:" + server.activeLocalPort() + '/'
-        }
+        private fun protoUri(): String = "gproto+http://127.0.0.1:" + server.activeLocalPort() + '/'
 
-        private fun jsonUri(): String {
-            return "gjson+http://127.0.0.1:" + server.activeLocalPort() + '/'
-        }
+        private fun jsonUri(): String = "gjson+http://127.0.0.1:" + server.activeLocalPort() + '/'
 
-        private fun blockingProtoUri(): String {
-            return "gproto+http://127.0.0.1:" + blockingServer.activeLocalPort() + '/'
-        }
+        private fun blockingProtoUri(): String =
+            "gproto+http://127.0.0.1:" + blockingServer.activeLocalPort() + '/'
 
-        private fun blockingJsonUri(): String {
-            return "gjson+http://127.0.0.1:" + blockingServer.activeLocalPort() + '/'
-        }
+        private fun blockingJsonUri(): String =
+            "gjson+http://127.0.0.1:" + blockingServer.activeLocalPort() + '/'
     }
 }
