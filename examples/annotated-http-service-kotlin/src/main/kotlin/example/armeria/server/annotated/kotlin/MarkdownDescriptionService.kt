@@ -63,13 +63,12 @@ class MarkdownDescriptionService {
         @Description("param3 description")
         @Param
         param3: MarkdownEnumParam,
-    ): MarkdownDescriptionResult {
-        return MarkdownDescriptionResult(
+    ): MarkdownDescriptionResult =
+        MarkdownDescriptionResult(
             result1 = param1,
             result2 = param2,
             result3 = param3.name,
         )
-    }
 
     @Description(
         value = """

@@ -20,46 +20,58 @@ class KotlinAnnotatedServiceTest {
                 }
             }
 
-        fun client(): WebClient {
-            return WebClient.of(server.httpUri())
-        }
+        fun client(): WebClient = WebClient.of(server.httpUri())
     }
 
     @Test
     fun testContextAwareService() {
-        val res = client().prepare().get("/contextAware/foo?name=armeria&id=100").asString().execute().join()
+        val res =
+            client()
+                .prepare()
+                .get("/contextAware/foo?name=armeria&id=100")
+                .asString()
+                .execute()
+                .join()
         assertThat(res.status()).isEqualTo(HttpStatus.OK)
         assertThatJson(res.content())
-            .node("id").isEqualTo(100)
-            .node("name").isEqualTo("armeria")
+            .node("id")
+            .isEqualTo(100)
+            .node("name")
+            .isEqualTo("armeria")
     }
 
     @Test
     fun testDecoratingService() {
         val client = client()
-        client.prepare()
+        client
+            .prepare()
             .get("/decorating/foo")
             .asString()
             .execute()
-            .join().let {
+            .join()
+            .let {
                 assertThat(it.status()).isEqualTo(HttpStatus.OK)
                 assertThat(it.content()).isEqualTo("OK")
             }
 
-        client.prepare()
+        client
+            .prepare()
             .get("/decorating/bar")
             .asString()
             .execute()
-            .join().let {
+            .join()
+            .let {
                 assertThat(it.status()).isEqualTo(HttpStatus.OK)
                 assertThat(it.content()).isEqualTo("OK")
             }
 
-        client.prepare()
+        client
+            .prepare()
             .get("/decorating/blocking")
             .asString()
             .execute()
-            .join().let {
+            .join()
+            .let {
                 assertThat(it.status()).isEqualTo(HttpStatus.OK)
                 assertThat(it.content()).isEqualTo("OK")
             }

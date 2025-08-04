@@ -246,7 +246,6 @@ class BraveIntegrationTest {
     private static Tracing newTracing(String name) {
         final CurrentTraceContext currentTraceContext =
                 RequestContextCurrentTraceContext.builder()
-                                                 .nonRequestThread("nonrequest-")
                                                  .addScopeDecorator(StrictScopeDecorator.create())
                                                  .build();
         return Tracing.newBuilder()
@@ -540,21 +539,16 @@ class BraveIntegrationTest {
 
     @Test
     void testNoRequestContextTraceable() throws Exception {
-        RequestContextCurrentTraceContext.setCurrentThreadNotRequestThread(true);
-        try {
-            final Tracing tracing = newTracing("no-request");
-            final ScopedSpan span1 = tracing.tracer().startScopedSpan("span1");
-            final ScopedSpan span2 = tracing.tracer().startScopedSpan("span2");
+        final Tracing tracing = newTracing("no-request");
+        final ScopedSpan span1 = tracing.tracer().startScopedSpan("span1");
+        final ScopedSpan span2 = tracing.tracer().startScopedSpan("span2");
 
-            assertThat(span2.context().traceId()).isEqualTo(span1.context().traceId());
+        assertThat(span2.context().traceId()).isEqualTo(span1.context().traceId());
 
-            span2.finish();
-            span1.finish();
+        span2.finish();
+        span1.finish();
 
-            spanHandler.take(2);
-        } finally {
-            RequestContextCurrentTraceContext.setCurrentThreadNotRequestThread(false);
-        }
+        spanHandler.take(2);
     }
 
     @Test

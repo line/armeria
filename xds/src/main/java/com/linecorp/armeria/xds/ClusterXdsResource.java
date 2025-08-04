@@ -1,7 +1,7 @@
 /*
- * Copyright 2023 LINE Corporation
+ * Copyright 2025 LY Corporation
  *
- * LINE Corporation licenses this file to you under the Apache License,
+ * LY Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
@@ -31,37 +31,19 @@ import io.envoyproxy.envoy.extensions.transport_sockets.tls.v3.UpstreamTlsContex
  * A resource object for a {@link Cluster}.
  */
 @UnstableApi
-public final class ClusterXdsResource extends XdsResourceWithPrimer<ClusterXdsResource> {
+public final class ClusterXdsResource implements XdsResource {
 
     private final Cluster cluster;
     @Nullable
-    private final XdsResource primer;
+    UpstreamTlsContext upstreamTlsContext;
 
     ClusterXdsResource(Cluster cluster) {
-        this(cluster, null);
-    }
-
-    ClusterXdsResource(Cluster cluster, @Nullable XdsResource primer) {
         this.cluster = cluster;
-        this.primer = primer;
-    }
-
-    @Override
-    ClusterXdsResource withPrimer(@Nullable XdsResource primer) {
-        if (primer == null) {
-            return this;
-        }
-        return new ClusterXdsResource(cluster, primer);
+        upstreamTlsContext = upstreamTlsContext(cluster);
     }
 
     @Nullable
-    @Override
-    XdsResource primer() {
-        return primer;
-    }
-
-    @Nullable
-    UpstreamTlsContext upstreamTlsContext() {
+    private static UpstreamTlsContext upstreamTlsContext(Cluster cluster) {
         if (cluster.hasTransportSocket()) {
             final String transportSocketName = cluster.getTransportSocket().getName();
             checkArgument("envoy.transport_sockets.tls".equals(transportSocketName),
@@ -74,6 +56,15 @@ public final class ClusterXdsResource extends XdsResourceWithPrimer<ClusterXdsRe
             }
         }
         return null;
+    }
+
+    /**
+     * The upstream TLS context extracted from {@link Cluster#getTransportSocket()}.
+     */
+    @Nullable
+    @UnstableApi
+    public UpstreamTlsContext upstreamTlsContext() {
+        return upstreamTlsContext;
     }
 
     @Override
@@ -100,20 +91,18 @@ public final class ClusterXdsResource extends XdsResourceWithPrimer<ClusterXdsRe
             return false;
         }
         final ClusterXdsResource that = (ClusterXdsResource) object;
-        return Objects.equal(cluster, that.cluster) && Objects.equal(
-                primer, that.primer);
+        return Objects.equal(cluster, that.cluster);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hashCode(cluster, primer);
+        return Objects.hashCode(cluster);
     }
 
     @Override
     public String toString() {
         return MoreObjects.toStringHelper(this)
                           .add("cluster", cluster)
-                          .add("primer", primer)
                           .toString();
     }
 }

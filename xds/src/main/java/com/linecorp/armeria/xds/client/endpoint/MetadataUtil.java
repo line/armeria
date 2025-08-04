@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.xds.client.endpoint;
 
+import static com.linecorp.armeria.xds.client.endpoint.XdsAttributeKeys.ROUTE_METADATA_MATCH;
 import static com.linecorp.armeria.xds.client.endpoint.XdsConstants.SUBSET_LOAD_BALANCING_FILTER_NAME;
 
 import com.google.protobuf.Struct;
@@ -26,13 +27,13 @@ import io.envoyproxy.envoy.config.core.v3.Metadata;
 
 final class MetadataUtil {
 
-    static Struct filterMetadata(ClientRequestContext ctx, Struct defaultMetadata) {
-        final Metadata metadataMatch = ctx.attr(XdsAttributeKeys.ROUTE_METADATA_MATCH);
+    static Struct filterMetadata(ClientRequestContext ctx) {
+        final Metadata metadataMatch = ctx.attr(ROUTE_METADATA_MATCH);
         if (metadataMatch == null) {
-            return defaultMetadata;
+            return Struct.getDefaultInstance();
         }
         return metadataMatch.getFilterMetadataOrDefault(SUBSET_LOAD_BALANCING_FILTER_NAME,
-                                                        defaultMetadata);
+                                                        Struct.getDefaultInstance());
     }
 
     private MetadataUtil() {}

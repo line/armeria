@@ -96,9 +96,8 @@ class TestServiceImpl : TestServiceGrpcKt.TestServiceCoroutineImplBase() {
      * Throws an [AuthError], and the exception will be handled
      * by [com.linecorp.armeria.common.grpc.GrpcExceptionHandlerFunction].
      */
-    override suspend fun helloError(request: HelloRequest): HelloReply {
+    override suspend fun helloError(request: HelloRequest): HelloReply =
         throw AuthError("${request.name} is unauthenticated")
-    }
 
     companion object {
         fun armeriaBlockingDispatcher(): CoroutineDispatcher =
@@ -112,15 +111,19 @@ class TestServiceImpl : TestServiceGrpcKt.TestServiceCoroutineImplBase() {
             withContext(ServiceRequestContext.current().blockingTaskExecutor().asCoroutineDispatcher(), block)
 
         private fun buildReply(message: String): HelloReply =
-            HelloReply.newBuilder().setMessage(
-                message,
-            ).build()
+            HelloReply
+                .newBuilder()
+                .setMessage(
+                    message,
+                ).build()
 
         private fun toMessage(message: String): String = "Hello, $message!"
     }
 }
 
-class AuthError(override val message: String) : RuntimeException() {
+class AuthError(
+    override val message: String,
+) : RuntimeException() {
     companion object {
         @Serial
         private const val serialVersionUID: Long = 2540197703864104385L

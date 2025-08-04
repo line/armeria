@@ -41,7 +41,8 @@ class ClientCoroutineTest {
     @PostConstruct
     fun setUp() {
         client =
-            WebClient.builder()
+            WebClient
+                .builder()
                 .baseUrl("http://127.0.0.1:$port")
                 .clientConnector(connector)
                 .build()
@@ -51,13 +52,15 @@ class ClientCoroutineTest {
     fun shouldRaiseWebClientResponseException() {
         runBlocking {
             try {
-                client.get()
+                client
+                    .get()
                     .uri("/abnormal")
                     .retrieve()
                     .awaitBody<Abnormal>()
             } catch (ex: WebClientResponseException) {
                 assertThat(ex.rawStatusCode).isEqualTo(200)
-                assertThat(ex.cause).isInstanceOf(UnsupportedMediaTypeException::class.java)
+                assertThat(ex.cause)
+                    .isInstanceOf(UnsupportedMediaTypeException::class.java)
                     .hasMessageContaining(
                         "Content type 'text/plain;charset=utf-8' not supported for " +
                             "bodyType=com.linecorp.armeria.spring.kotlin.Abnormal",

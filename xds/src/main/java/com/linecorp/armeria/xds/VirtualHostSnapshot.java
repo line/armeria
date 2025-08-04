@@ -1,7 +1,7 @@
 /*
- * Copyright 2025 LINE Corporation
+ * Copyright 2025 LY Corporation
  *
- * LINE Corporation licenses this file to you under the Apache License,
+ * LY Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
@@ -17,14 +17,14 @@
 package com.linecorp.armeria.xds;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 
 import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableList;
 
-import com.linecorp.armeria.common.annotation.Nullable;
-
 import io.envoyproxy.envoy.config.route.v3.Route;
+import io.envoyproxy.envoy.config.route.v3.RouteConfiguration;
 import io.envoyproxy.envoy.config.route.v3.VirtualHost;
 
 /**
@@ -37,16 +37,19 @@ public final class VirtualHostSnapshot implements Snapshot<VirtualHostXdsResourc
     private final int index;
 
     VirtualHostSnapshot(VirtualHostXdsResource virtualHostXdsResource,
-                        List<@Nullable ClusterSnapshot> clusterSnapshots, int index) {
+                        Map<String, ClusterSnapshot> clusterSnapshots, int index) {
         this.virtualHostXdsResource = virtualHostXdsResource;
         final VirtualHost virtualHost = virtualHostXdsResource.resource();
-        assert clusterSnapshots.size() == virtualHost.getRoutesCount();
 
         final ImmutableList.Builder<RouteEntry> routeEntriesBuilder = ImmutableList.builder();
-        for (int i = 0; i < clusterSnapshots.size(); i++) {
-            final ClusterSnapshot clusterSnapshot = clusterSnapshots.get(i);
-            final Route route = virtualHost.getRoutes(i);
-            routeEntriesBuilder.add(new RouteEntry(route, clusterSnapshot));
+        final List<Route> routes = virtualHost.getRoutesList();
+        for (int i = 0; i < routes.size(); i++) {
+            final Route route = routes.get(i);
+            ClusterSnapshot clusterSnapshot = null;
+            if (route.getRoute().hasCluster()) {
+                clusterSnapshot = clusterSnapshots.get(route.getRoute().getCluster());
+            }
+            routeEntriesBuilder.add(new RouteEntry(route, clusterSnapshot, i));
         }
         routeEntries = routeEntriesBuilder.build();
         this.index = index;
@@ -64,7 +67,10 @@ public final class VirtualHostSnapshot implements Snapshot<VirtualHostXdsResourc
         return routeEntries;
     }
 
-    int index() {
+    /**
+     * The index of this route within a {@link RouteConfiguration}.
+     */
+    public int index() {
         return index;
     }
 

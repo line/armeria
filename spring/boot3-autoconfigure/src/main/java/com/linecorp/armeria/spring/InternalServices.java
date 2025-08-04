@@ -122,12 +122,14 @@ public final class InternalServices {
 
             final String legacyPrometheusMeterRegistryClassName =
                     "io.micrometer.prometheus.PrometheusMeterRegistry";
-            final boolean hasLegacyPrometheus = hasAllClasses(
-                    legacyPrometheusMeterRegistryClassName,
-                    "io.prometheus.client.CollectorRegistry");
+            if (expositionService == null) {
+                final boolean hasLegacyPrometheus = hasAllClasses(
+                        legacyPrometheusMeterRegistryClassName,
+                        "io.prometheus.client.CollectorRegistry");
 
-            if (hasLegacyPrometheus) {
-                expositionService = PrometheusLegacySupport.newExpositionService(meterRegistry);
+                if (hasLegacyPrometheus) {
+                    expositionService = PrometheusLegacySupport.newExpositionService(meterRegistry);
+                }
             }
 
             final String dropwizardMeterRegistryClassName =
@@ -142,9 +144,9 @@ public final class InternalServices {
                 }
             }
             if (expositionService == null) {
-                logger.debug("Failed to expose metrics to '{}' with {} (expected: either {} or {})",
-                             settings.getMetricsPath(), meterRegistry, legacyPrometheusMeterRegistryClassName,
-                             dropwizardMeterRegistryClassName);
+                logger.debug("Failed to expose metrics to '{}' with {} (expected: one of [{}, {}, {}])",
+                             settings.getMetricsPath(), meterRegistry, prometheusMeterRegistryClassName,
+                             legacyPrometheusMeterRegistryClassName, dropwizardMeterRegistryClassName);
             }
         }
 

@@ -18,7 +18,7 @@ configure(projectsWithFlags('kotlin')) {
             (name.startsWith("compile") || name.startsWith("kaptGenerateStubs")) && name.endsWith("Kotlin")
         }.each { task ->
             task.kotlinOptions.jvmTarget = target
-            task.kotlinOptions.freeCompilerArgs = compilerArgs
+            task.kotlinOptions.freeCompilerArgs += compilerArgs
             if (kotlinTargetVersion != null) {
                 task.kotlinOptions.languageVersion = kotlinTargetVersion
                 task.kotlinOptions.apiVersion = kotlinTargetVersion
@@ -42,8 +42,6 @@ configure(projectsWithFlags('kotlin')) {
             reporters {
                 reporter "html"
             }
-            // https://github.com/pinterest/ktlint/issues/527
-            disabledRules = ["import-ordering"]
 
             filter {
                 exclude { it.file.path.contains("gen-src/") }

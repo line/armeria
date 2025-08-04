@@ -107,6 +107,7 @@ dependencies {
 
     // Micrometer and other metric-related stuff
     api libs.micrometer.core
+    api libs.context.propagation
     optionalApi libs.micrometer.prometheus.legacy
     optionalApi libs.dropwizard.metrics.core
     optionalApi libs.prometheus.legacy
@@ -135,9 +136,6 @@ dependencies {
 
     // TestNG
     testRuntimeOnly libs.junit.testng.engine
-
-    // JUnit Pioneer
-    testImplementation libs.junit.pioneer
 
     // Reactor for registering EventLoop as a non blocking thread.
     optionalImplementation libs.reactor.core

@@ -95,7 +95,6 @@ import com.linecorp.armeria.common.util.SystemInfo;
 import com.linecorp.armeria.common.util.ThreadFactories;
 import com.linecorp.armeria.common.util.TlsEngineType;
 import com.linecorp.armeria.internal.common.BuiltInDependencyInjector;
-import com.linecorp.armeria.internal.common.ReflectiveDependencyInjector;
 import com.linecorp.armeria.internal.common.RequestContextUtil;
 import com.linecorp.armeria.internal.common.util.ChannelUtil;
 import com.linecorp.armeria.internal.server.RouteDecoratingService;
@@ -111,6 +110,7 @@ import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.EventLoopGroup;
+import io.netty.handler.codec.http2.DefaultHttp2LocalFlowController;
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.util.Mapping;
@@ -210,6 +210,7 @@ public final class ServerBuilder implements TlsSetters, ServiceConfigsBuilder<Se
     private int maxNumRequestsPerConnection = Flags.defaultMaxServerNumRequestsPerConnection();
     private int http2InitialConnectionWindowSize = Flags.defaultHttp2InitialConnectionWindowSize();
     private int http2InitialStreamWindowSize = Flags.defaultHttp2InitialStreamWindowSize();
+    private float http2StreamWindowUpdateRatio = Flags.defaultHttp2StreamWindowUpdateRatio();
     private long http2MaxStreamsPerConnection = Flags.defaultHttp2MaxStreamsPerConnection();
     private int http2MaxFrameSize = Flags.defaultHttp2MaxFrameSize();
     private long http2MaxHeaderListSize = Flags.defaultHttp2MaxHeaderListSize();
@@ -794,6 +795,23 @@ public final class ServerBuilder implements TlsSetters, ServiceConfigsBuilder<Se
                       "http2InitialStreamWindowSize: %s (expected: > 0)",
                       http2InitialStreamWindowSize);
         this.http2InitialStreamWindowSize = http2InitialStreamWindowSize;
+        return this;
+    }
+
+    /**
+     * Sets the threshold ratio of the HTTP/2 stream flow-control window at which a
+     * <a href="https://datatracker.ietf.org/doc/html/rfc7540#section-6.9">WINDOW_UPDATE</a> frame will be sent.
+     * When the size of the flow-control window drops below the specified ratio (relative to the initial window
+     * size), a {@code WINDOW_UPDATE} frame is triggered to replenish the window.
+     *
+     * <p>The default value is {@value DefaultHttp2LocalFlowController#DEFAULT_WINDOW_UPDATE_RATIO}.
+     * The value must be greater than 0 and less than 1.0.
+     */
+    public ServerBuilder http2StreamWindowUpdateRatio(float http2StreamWindowUpdateRatio) {
+        checkArgument(http2StreamWindowUpdateRatio > 0 && http2StreamWindowUpdateRatio < 1.0f,
+                      "http2StreamWindowUpdateRatio: %s (expected: > 0 and < 1.0)",
+                      http2StreamWindowUpdateRatio);
+        this.http2StreamWindowUpdateRatio = http2StreamWindowUpdateRatio;
         return this;
     }
 
@@ -2302,6 +2320,11 @@ public final class ServerBuilder implements TlsSetters, ServiceConfigsBuilder<Se
             unloggedExceptionsReporter = null;
         }
 
+        final TlsProvider tlsProvider = this.tlsProvider;
+        if (tlsProvider != null && tlsProvider.autoClose()) {
+            shutdownSupports.add(ShutdownSupport.of(tlsProvider));
+        }
+
         final ServerErrorHandler errorHandler = ServerErrorHandlerDecorators.decorate(
                 this.errorHandler == null ? ServerErrorHandler.ofDefault()
                                           : this.errorHandler.orElse(ServerErrorHandler.ofDefault()));
@@ -2416,7 +2439,7 @@ public final class ServerBuilder implements TlsSetters, ServiceConfigsBuilder<Se
                 idleTimeoutMillis, keepAliveOnPing, pingIntervalMillis, maxConnectionAgeMillis,
                 maxNumRequestsPerConnection,
                 connectionDrainDurationMicros, http2InitialConnectionWindowSize,
-                http2InitialStreamWindowSize, http2MaxStreamsPerConnection,
+                http2InitialStreamWindowSize, http2StreamWindowUpdateRatio, http2MaxStreamsPerConnection,
                 http2MaxFrameSize, http2MaxHeaderListSize,
                 http2MaxResetFramesPerWindow, http2MaxResetFramesWindowSeconds,
                 http1MaxInitialLineLength, http1MaxHeaderSize,
@@ -2484,7 +2507,7 @@ public final class ServerBuilder implements TlsSetters, ServiceConfigsBuilder<Se
         if (dependencyInjector != null) {
             return dependencyInjector;
         }
-        final ReflectiveDependencyInjector reflectiveDependencyInjector = new ReflectiveDependencyInjector();
+        final DependencyInjector reflectiveDependencyInjector = DependencyInjector.ofReflective();
         shutdownSupports.add(ShutdownSupport.of(reflectiveDependencyInjector));
         return reflectiveDependencyInjector;
     }

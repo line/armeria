@@ -26,7 +26,8 @@ class AnnotatedServiceErrorMessageTest {
     @Test
     fun test() {
         val serverBuilder: ServerBuilder =
-            Server.builder()
+            Server
+                .builder()
                 .annotatedService(MyAnnotatedService())
 
         assertThatThrownBy { serverBuilder.build() }

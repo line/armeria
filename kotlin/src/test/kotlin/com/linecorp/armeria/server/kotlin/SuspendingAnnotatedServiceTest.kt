@@ -183,8 +183,7 @@ class SuspendingAnnotatedServiceTest {
                             emptyList(),
                             listOf(customJacksonResponseConverterFunction()),
                             listOf(exceptionHandlerFunction()),
-                        )
-                        .annotatedService(
+                        ).annotatedService(
                             "/default",
                             object {
                                 @Get("/string")
@@ -254,8 +253,7 @@ class SuspendingAnnotatedServiceTest {
                                     return "OK"
                                 }
                             },
-                        )
-                        .annotatedService(
+                        ).annotatedService(
                             "/customContext",
                             object {
                                 @Get("/foo")
@@ -265,14 +263,12 @@ class SuspendingAnnotatedServiceTest {
                                     return "OK"
                                 }
                             },
-                        )
-                        .decoratorUnder(
+                        ).decoratorUnder(
                             "/customContext",
                             CoroutineContextService.newDecorator {
                                 Dispatchers.Default + CoroutineName("test")
                             },
-                        )
-                        .annotatedService(
+                        ).annotatedService(
                             "/blocking",
                             object {
                                 @Blocking
@@ -285,8 +281,7 @@ class SuspendingAnnotatedServiceTest {
                                     return "OK"
                                 }
                             },
-                        )
-                        .annotatedService(
+                        ).annotatedService(
                             "/downstream-cancellation",
                             object {
                                 @Get("/long-running-suspend-fun")
@@ -312,8 +307,7 @@ class SuspendingAnnotatedServiceTest {
                                     return response
                                 }
                             },
-                        )
-                        .annotatedService(
+                        ).annotatedService(
                             "/response-converter-spi",
                             object {
                                 @Get("/bar")
@@ -333,17 +327,13 @@ class SuspendingAnnotatedServiceTest {
                                         Bar(),
                                     )
                             },
-                        )
-                        .annotatedService(
+                        ).annotatedService(
                             "/return-nothing-suspend-fun",
                             object {
                                 @Get("/throw-error")
-                                suspend fun returnNothingSuspendFun(): Nothing {
-                                    throw NotImplementedError()
-                                }
+                                suspend fun returnNothingSuspendFun(): Nothing = throw NotImplementedError()
                             },
-                        )
-                        .decorator(LoggingService.newDecorator())
+                        ).decorator(LoggingService.newDecorator())
                         .requestTimeoutMillis(500L) // to test cancellation
                 }
             }
@@ -380,7 +370,10 @@ class SuspendingAnnotatedServiceTest {
             ).isTrue()
         }
 
-        private data class MyResponse(val a: String, val b: Int)
+        private data class MyResponse(
+            val a: String,
+            val b: Int,
+        )
     }
 
     internal class BarResponseConverterFunctionProvider : DelegatingResponseConverterFunctionProvider {

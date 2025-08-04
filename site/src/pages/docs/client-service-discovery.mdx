@@ -263,7 +263,7 @@ The <type://ZooKeeperEndpointGroup> is used to fetch the binary representation o
 The <type://ZooKeeperDiscoverySpec> converts the binary representation to an <type://Endpoint>.
 
 <type://ZooKeeperDiscoverySpec#curator(String)> uses the format of
-[Curator Service Discovery](https://curator.apache.org/curator-x-discovery/index.html) which is compatible
+[Curator Service Discovery](https://curator.apache.org/docs/service-discovery/) which is compatible
 with [Spring Cloud Zookeeper](https://cloud.spring.io/spring-cloud-zookeeper/reference/html/). If you
 registered your server with <type://ZooKeeperRegistrationSpec#curator(String)>, you must use
 <type://ZooKeeperDiscoverySpec#curator(String)>.
@@ -319,7 +319,7 @@ use <type://EurekaEndpointGroupBuilder>:
 import com.linecorp.armeria.client.eureka.EurekaEndpointGroupBuilder;
 
 EurekaEndpointGroupBuilder builder =
-        EurekaEndpointGroup.builder("https://eureka.com:8001/eureka/v2");
+        EurekaEndpointGroup.builder("https://eureka.com:8001/eureka/v2")
                            .regions("aws")
                            .appName("myApplication");
 EurekaEndpointGroup eurekaEndpointGroup = builder.build();
@@ -361,10 +361,9 @@ If you want to get the information of certain [datacenter](https://www.consul.io
 import com.linecorp.armeria.client.consul.ConsulEndpointGroupBuilder;
 
 ConsulEndpointGroupBuilder builder =
-        ConsulEndpointGroup.builder("http://my-consul.com:8500", "my-service");
+        ConsulEndpointGroup.builder("http://my-consul.com:8500", "my-service")
                            .datacenter("ds1")
-                           .filter("ServicePort == 8080")
-                           .build();
+                           .filter("ServicePort == 8080");
 ConsulEndpointGroup consulEndpointGroup = builder.build();
 ```
 
