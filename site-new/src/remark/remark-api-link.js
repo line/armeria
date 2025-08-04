@@ -1,6 +1,10 @@
 import { visit } from 'unist-util-visit';
 import apiIndex from '../../gen-src-temp/api-index.json';
 
+/**
+ * A remark plugin that appends API links to type links.
+ * It turns `[RequestContext](type)` into `[RequestContext](type://https://actual-javadoc-link-here.html)`.
+ */
 // eslint-disable-next-line no-unused-vars
 const plugin = (options) => {
   const transformer = (markdownAST) => {

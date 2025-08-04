@@ -51,12 +51,12 @@ date: 2022-03-24
       .matchesParam("!casual || casual!=true") // 👈👈👈
       .build(ctx, req) -> HttpResponse.of("Hello!"))  
   ```
-  <Tip>
+  :::tip
   
-  You can use the same syntax in [annotated services](/docs/server-annotated-service)
+  You can use the same syntax in [annotated services](/docs/server/annotated-service)
   using [@MatchesParam](type) and [@MatchesHeader](type).
-  
-  </Tip>
+
+  :::
 - You can now enable [gRPC health check protocol](https://github.com/grpc/grpc/blob/master/src/proto/grpc/health/v1/health.proto)
   with [GrpcHealthCheckService](type) #3146 #3963
   ```java
