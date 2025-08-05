@@ -17,6 +17,7 @@
 package com.linecorp.armeria.common.athenz;
 
 import com.linecorp.armeria.common.HttpHeaderNames;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.internal.common.athenz.AthenzHeaderNames;
 
@@ -28,24 +29,52 @@ import io.netty.util.AsciiString;
 @UnstableApi
 public enum TokenType {
     /**
-     * Athenz role token.
-     */
-    ROLE_TOKEN(AthenzHeaderNames.YAHOO_ROLE_AUTH),
-    /**
      * Athenz access token.
      */
-    ACCESS_TOKEN(HttpHeaderNames.AUTHORIZATION);
+    ACCESS_TOKEN(HttpHeaderNames.AUTHORIZATION, false, "Bearer"),
+    /**
+     * Athenz role token. {@value "Athenz-Role-Auth"} is used as the header name for this token type.
+     */
+    ATHENZ_ROLE_TOKEN(AthenzHeaderNames.ATHENZ_ROLE_AUTH, true, null),
+    /**
+     * The legacy Athenz role token used by Yahoo. {@value "Yahoo-Role-Auth"} is used as the
+     * header name for this token type.
+     */
+    YAHOO_ROLE_TOKEN(AthenzHeaderNames.YAHOO_ROLE_AUTH, true, null);
 
-    TokenType(AsciiString headerName) {
+    TokenType(AsciiString headerName, boolean isRoleToken, @Nullable String authScheme) {
         this.headerName = headerName;
+        this.isRoleToken = isRoleToken;
+        this.authScheme = authScheme;
     }
 
     private final AsciiString headerName;
+    private final boolean isRoleToken;
+    @Nullable
+    private final String authScheme;
 
     /**
      * Returns the header name used to pass the token.
      */
     public AsciiString headerName() {
         return headerName;
+    }
+
+    /**
+     * Returns whether this token type is a role token.
+     */
+    public boolean isRoleToken() {
+        return isRoleToken;
+    }
+
+    /**
+     * Returns the authentication scheme used for this token type, or {@code null} if not applicable.
+     * For example, {@link TokenType#ACCESS_TOKEN} uses "Bearer" as the authentication scheme,
+     * while {@link TokenType#YAHOO_ROLE_TOKEN} and {@link TokenType#ATHENZ_ROLE_TOKEN} do not use
+     * any authentication scheme.
+     */
+    @Nullable
+    public String authScheme() {
+        return authScheme;
     }
 }

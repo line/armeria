@@ -22,7 +22,9 @@ import io.netty.util.AsciiString;
 
 public final class AthenzHeaderNames {
 
-    public static final AsciiString YAHOO_ROLE_AUTH = HttpHeaderNames.of("yahoo-role-auth");
+    public static final AsciiString YAHOO_ROLE_AUTH = HttpHeaderNames.of("Yahoo-Role-Auth");
+
+    public static final AsciiString ATHENZ_ROLE_AUTH = HttpHeaderNames.of("Athenz-Role-Auth");
 
     private AthenzHeaderNames() {}
 }

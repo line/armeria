@@ -81,7 +81,9 @@ public @interface RequiresAthenzRole {
     /**
      * The required {@link TokenType}.
      */
-    TokenType[] tokenType() default { TokenType.ROLE_TOKEN, TokenType.ACCESS_TOKEN };
+    TokenType[] tokenType() default {
+            TokenType.ACCESS_TOKEN, TokenType.ATHENZ_ROLE_TOKEN, TokenType.YAHOO_ROLE_TOKEN
+    };
 
     /**
      * A special parameter in order to specify the order of a {@link Decorator}.
