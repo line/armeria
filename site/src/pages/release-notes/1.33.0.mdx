@@ -46,7 +46,7 @@ date: 2025-08-05
     WebClient
       .builder()
       .decorator(AthenzClient.newDecorator(ztsBaseClient, "my-domain",
-                                           TokenType.ROLE_TOKEN)
+                                           TokenType.ACCESS_TOKEN))
       ...
       .build();
     ```
