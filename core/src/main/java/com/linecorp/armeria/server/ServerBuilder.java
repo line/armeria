@@ -1196,6 +1196,10 @@ public final class ServerBuilder implements TlsSetters, ServiceConfigsBuilder<Se
         requireNonNull(tlsProvider, "tlsProvider");
         this.tlsProvider = tlsProvider;
         tlsConfig = null;
+
+        if (tlsProvider.autoClose()) {
+            shutdownSupports.add(ShutdownSupport.of(tlsProvider));
+        }
         return this;
     }
 
@@ -1229,6 +1233,10 @@ public final class ServerBuilder implements TlsSetters, ServiceConfigsBuilder<Se
     public ServerBuilder tlsProvider(TlsProvider tlsProvider, ServerTlsConfig tlsConfig) {
         tlsProvider(tlsProvider);
         this.tlsConfig = requireNonNull(tlsConfig, "tlsConfig");
+
+        if (tlsProvider.autoClose()) {
+            shutdownSupports.add(ShutdownSupport.of(tlsProvider));
+        }
         return this;
     }
 

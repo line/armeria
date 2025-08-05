@@ -90,6 +90,7 @@ project(':version-catalog').with {
 
 // Published Java projects
 includeWithFlags ':annotation-processor',                'java', 'publish', 'relocate'
+includeWithFlags ':athenz',                              'java11', 'publish', 'relocate', 'native'
 includeWithFlags ':brave5',                              'java', 'publish', 'relocate', 'no_aggregation'
 project(':brave5').projectDir = file('brave/brave5')
 includeWithFlags ':brave6',                              'java', 'publish', 'relocate', 'native'

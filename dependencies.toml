@@ -6,6 +6,7 @@ apache-httpclient5 = "5.5"
 apache-httpclient4 = "4.5.14"
 asm = "9.8"
 assertj = "3.27.3"
+athenz = "1.12.21"
 awaitility = "4.3.0"
 blockhound = "1.0.13.RELEASE"
 bouncycastle = "1.81"
@@ -225,6 +226,16 @@ version.ref = "asm"
 [libraries.assertj]
 module = "org.assertj:assertj-core"
 version.ref = "assertj"
+
+[libraries.athenz-zms-client]
+module = "com.yahoo.athenz:athenz-zms-java-client"
+version.ref = "athenz"
+[libraries.athenz-zpe-client]
+module = "com.yahoo.athenz:athenz-zpe-java-client"
+version.ref = "athenz"
+[libraries.athenz-zts-client]
+module = "com.yahoo.athenz:athenz-zts-java-client"
+version.ref = "athenz"
 
 [libraries.awaitility]
 module = "org.awaitility:awaitility"
