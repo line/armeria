@@ -54,6 +54,7 @@ class RefreshingTlsProviderTest {
         final TlsKeyPair newKeyPair = tlsProvider.keyPair("*");
         assertThat(counter.get()).isGreaterThanOrEqualTo(2);
         assertThat(newKeyPair).isNotSameAs(initialKeyPair);
+        tlsProvider.close();
     }
 
     @Test
