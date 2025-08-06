@@ -76,9 +76,11 @@ class AthenzAnnotatedServiceTest {
     };
 
     @CsvSource({
-            "foo-service, ROLE_TOKEN",
+            "foo-service, YAHOO_ROLE_TOKEN",
+            "foo-service, ATHENZ_ROLE_TOKEN",
             "foo-service, ACCESS_TOKEN",
-            "test-service, ROLE_TOKEN",
+            "test-service, YAHOO_ROLE_TOKEN",
+            "test-service, ATHENZ_ROLE_TOKEN",
             "test-service, ACCESS_TOKEN"
     })
     @ParameterizedTest
@@ -98,9 +100,11 @@ class AthenzAnnotatedServiceTest {
     }
 
     @CsvSource({
-            "foo-service, ROLE_TOKEN, false",
+            "foo-service, YAHOO_ROLE_TOKEN, false",
+            "foo-service, ATHENZ_ROLE_TOKEN, false",
             "foo-service, ACCESS_TOKEN, false",
-            "test-service, ROLE_TOKEN, true",
+            "test-service, YAHOO_ROLE_TOKEN, true",
+            "test-service, ATHENZ_ROLE_TOKEN, true",
             "test-service, ACCESS_TOKEN, true"
     })
     @ParameterizedTest
@@ -122,7 +126,7 @@ class AthenzAnnotatedServiceTest {
                         .isInstanceOf(AccessDeniedException.class)
                         .hasMessage("Failed to obtain an Athenz %s token. " +
                                     "(domain: testing, roles: test_role_admin)",
-                                    tokenType == TokenType.ROLE_TOKEN ? "role" : "access");
+                                    tokenType.isRoleToken() ? "role" : "access");
             }
         }
     }

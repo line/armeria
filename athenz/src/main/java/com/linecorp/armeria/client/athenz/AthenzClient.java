@@ -16,7 +16,6 @@
 
 package com.linecorp.armeria.client.athenz;
 
-import static com.linecorp.armeria.internal.common.athenz.AthenzHeaderNames.YAHOO_ROLE_AUTH;
 import static java.util.Objects.requireNonNull;
 
 import java.time.Duration;
@@ -29,7 +28,6 @@ import com.google.common.collect.ImmutableList;
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.client.SimpleDecoratingHttpClient;
-import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.RequestHeadersBuilder;
@@ -39,7 +37,7 @@ import com.linecorp.armeria.common.util.Exceptions;
 
 /**
  * An {@link HttpClient} that adds an Athenz token to the request headers.
- * {@link TokenType#ACCESS_TOKEN} and {@link TokenType#ROLE_TOKEN} are supported.
+ * {@link TokenType#ACCESS_TOKEN} and {@link TokenType#YAHOO_ROLE_TOKEN} are supported.
  *
  * <p>The acquired token is cached and automatically refreshed before it expires based on the specified
  * duration. If not specified, the default refresh duration is 10 minutes before the token expires.
@@ -141,15 +139,10 @@ public final class AthenzClient extends SimpleDecoratingHttpClient {
                          List<String> roleNames, TokenType tokenType, Duration refreshBefore) {
         super(delegate);
         this.tokenType = tokenType;
-        switch (tokenType) {
-            case ROLE_TOKEN:
-                tokenClient = new RoleTokenClient(ztsBaseClient, domainName, roleNames, refreshBefore);
-                break;
-            case ACCESS_TOKEN:
-                tokenClient = new AccessTokenClient(ztsBaseClient, domainName, roleNames, refreshBefore);
-                break;
-            default:
-                throw new Error("unknown auth type: " + tokenType);
+        if (tokenType.isRoleToken()) {
+            tokenClient = new RoleTokenClient(ztsBaseClient, domainName, roleNames, refreshBefore);
+        } else {
+            tokenClient = new AccessTokenClient(ztsBaseClient, domainName, roleNames, refreshBefore);
         }
     }
 
@@ -158,11 +151,11 @@ public final class AthenzClient extends SimpleDecoratingHttpClient {
         final CompletableFuture<HttpResponse> future = tokenClient.getToken().thenApply(token -> {
             final HttpRequest newReq = req.mapHeaders(headers -> {
                 final RequestHeadersBuilder builder = headers.toBuilder();
-                if (tokenType == TokenType.ROLE_TOKEN) {
-                    builder.set(YAHOO_ROLE_AUTH, token);
-                } else {
-                    builder.set(HttpHeaderNames.AUTHORIZATION, "Bearer " + token);
+                String token0 = token;
+                if (tokenType.authScheme() != null) {
+                    token0 = tokenType.authScheme() + ' ' + token0;
                 }
+                builder.set(tokenType.headerName(), token0);
                 return builder.build();
             });
             ctx.updateRequest(newReq);

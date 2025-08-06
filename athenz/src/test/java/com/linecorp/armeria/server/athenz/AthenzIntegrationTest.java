@@ -74,6 +74,10 @@ class AthenzIntegrationTest {
                 if (!authorization.isEmpty()) {
                     return HttpResponse.of("YahooRoleAuth " + authorization);
                 }
+                authorization = req.headers().get(AthenzHeaderNames.ATHENZ_ROLE_AUTH, "");
+                if (!authorization.isEmpty()) {
+                    return HttpResponse.of("AthenzRoleAuth " + authorization);
+                }
                 // Should not reach here.
                 return HttpResponse.of(HttpStatus.INTERNAL_SERVER_ERROR);
             });
@@ -92,6 +96,10 @@ class AthenzIntegrationTest {
                 authorization = req.headers().get(AthenzHeaderNames.YAHOO_ROLE_AUTH, "");
                 if (!authorization.isEmpty()) {
                     return HttpResponse.of("YahooRoleAuth " + authorization);
+                }
+                authorization = req.headers().get(AthenzHeaderNames.ATHENZ_ROLE_AUTH, "");
+                if (!authorization.isEmpty()) {
+                    return HttpResponse.of("AthenzRoleAuth " + authorization);
                 }
                 // Should not reach here.
                 return HttpResponse.of(HttpStatus.INTERNAL_SERVER_ERROR);
@@ -119,8 +127,11 @@ class AthenzIntegrationTest {
             final AggregatedHttpResponse response = client.get("/admin");
             assertThat(response.status()).isEqualTo(HttpStatus.OK);
             switch (tokenType) {
-                case ROLE_TOKEN:
+                case YAHOO_ROLE_TOKEN:
                     assertThat(response.contentUtf8()).startsWith("YahooRoleAuth ");
+                    break;
+                case ATHENZ_ROLE_TOKEN:
+                    assertThat(response.contentUtf8()).startsWith("AthenzRoleAuth ");
                     break;
                 case ACCESS_TOKEN:
                     assertThat(response.contentUtf8()).startsWith("Authorization ");
@@ -144,7 +155,7 @@ class AthenzIntegrationTest {
                     client.get("/admin");
                 }).isInstanceOf(AccessDeniedException.class)
                   .hasMessage("Failed to obtain an Athenz " +
-                              (tokenType == TokenType.ROLE_TOKEN ? "role" : "access") +
+                              (tokenType.isRoleToken() ? "role" : "access") +
                               " token. (domain: testing, roles: test_role_admin)");
                 final ClientRequestContext ctx = captor.get();
                 // Make sure the RequestLog is completed when the request was rejected by the decorator.
