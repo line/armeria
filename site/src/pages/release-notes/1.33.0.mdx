@@ -1,5 +1,5 @@
 ---
-date: 2025-08-05
+date: 2025-08-06
 ---
 
 ## 🌟 New features
@@ -50,7 +50,7 @@ date: 2025-08-05
       ...
       .build();
     ```
-  - **Content Sanitization for Logs**: You can now mask sensitive information for <type://AnnotatedService> and
+- **Content Sanitization for Logs**: You can now mask sensitive information for <type://AnnotatedService> and
     <type://THttpService> using the flexible <type://ContentSanitizer>. #6311 #6268
     ```java
     // For annotated services, use a custom annotation
@@ -143,7 +143,7 @@ date: 2025-08-05
   ```
 - **Default Content Logging for AnnotatedService**: <type://AnnotatedService> now sets request content and
   response content to <type://RequestLog> by default. #5711 #6231
-    - You can disable this behavior by specifying `-Dcom.linecorp.armeria.annotatedServiceContentLogging=false` JVM option.
+  - You can disable this behavior by specifying `-Dcom.linecorp.armeria.annotatedServiceContentLogging=false` JVM option.
 - **Periodic TLS Key Pair Refresh**: You can now periodically refresh a <type://TlsKeyPair> using the new
   <type://TlsProvider#ofScheduled(Supplier,Duration)> method. #6331
   ```java 
@@ -166,7 +166,7 @@ date: 2025-08-05
  
       return delegate.execute(ctx, req);
     })
-    .build(MyGrpcStub.class)
+    .build(MyGrpcStub.class);
   ```
 - **Composable Connection Pool Listeners**: You can now compose multiple <typeplural://ConnectionPoolListener> together
   using <type://ConnectionPoolListener#andThen(ConnectionPoolListener)> #5159 #6207
