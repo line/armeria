@@ -69,5 +69,7 @@ public final class CoreBlockHoundIntegration implements BlockHoundIntegration {
                 "java.util.concurrent.FutureTask", "handlePossibleCancellationInterrupt");
         // SecureRandom.nextBytes() can be called
         builder.allowBlockingCallsInside("io.netty.handler.ssl.SslContext", "buildKeyStore");
+        // StampedLock.writeLock() can be called
+        builder.allowBlockingCallsInside("io.netty.buffer.AdaptivePoolingAllocator", "allocate");
     }
 }
