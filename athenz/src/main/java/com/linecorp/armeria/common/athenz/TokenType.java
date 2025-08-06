@@ -33,11 +33,11 @@ public enum TokenType {
      */
     ACCESS_TOKEN(HttpHeaderNames.AUTHORIZATION, false, "Bearer"),
     /**
-     * Athenz role token. {@value "Athenz-Role-Auth"} is used as the header name for this token type.
+     * Athenz role token. {@code "Athenz-Role-Auth"} is used as the header name for this token type.
      */
     ATHENZ_ROLE_TOKEN(AthenzHeaderNames.ATHENZ_ROLE_AUTH, true, null),
     /**
-     * The legacy Athenz role token used by Yahoo. {@value "Yahoo-Role-Auth"} is used as the
+     * The legacy Athenz role token used by Yahoo. {@code "Yahoo-Role-Auth"} is used as the
      * header name for this token type.
      */
     YAHOO_ROLE_TOKEN(AthenzHeaderNames.YAHOO_ROLE_AUTH, true, null);
