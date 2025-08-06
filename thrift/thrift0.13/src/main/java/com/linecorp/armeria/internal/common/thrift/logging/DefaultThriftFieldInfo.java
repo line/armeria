@@ -38,6 +38,7 @@ final class DefaultThriftFieldInfo implements ThriftFieldInfo {
     @Override
     public String toString() {
         return MoreObjects.toStringHelper(this)
+                          .add("fieldName", fieldName())
                           .add("fieldMetaData", fieldMetaData)
                           .toString();
     }
