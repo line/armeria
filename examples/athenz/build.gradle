@@ -32,3 +32,4 @@ task copyTestResources(type: Copy) {
 
 tasks.compileJava.dependsOn(tasks.copyTestResources)
 tasks.processResources.dependsOn(tasks.copyTestResources)
+tasks.sourcesJar.dependsOn(tasks.copyTestResources)
