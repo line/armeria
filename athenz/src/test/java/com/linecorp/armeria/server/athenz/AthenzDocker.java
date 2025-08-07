@@ -78,6 +78,7 @@ public class AthenzDocker implements SafeCloseable {
     private URI ztsUri;
     @Nullable
     private ZMSClient zmsClient;
+    private boolean initialized;
 
     public AthenzDocker(File dockerComposeFile) {
         composeContainer =
@@ -94,10 +95,24 @@ public class AthenzDocker implements SafeCloseable {
         return zmsClient;
     }
 
-    public void initialize() {
-        logger.info("Starting Docker compose for Athenz tests...");
-        composeContainer.start();
-        defaultScaffold();
+    public boolean initialize() {
+        if (initialized) {
+            return true;
+        }
+
+        try {
+            logger.info("Starting Docker compose for Athenz tests...");
+            composeContainer.start();
+            defaultScaffold();
+            return initialized = true;
+        } catch (Exception e) {
+            logger.warn("Failed to initialize Athenz Docker container", e);
+            return initialized = false;
+        }
+    }
+
+    public boolean isInitialized() {
+        return initialized;
     }
 
     /**

@@ -6,6 +6,7 @@ import static example.armeria.athenz.Main.configureServices;
 import static example.armeria.athenz.Main.newAthenzDocker;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.Assumptions.assumeThat;
 
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
@@ -34,12 +35,13 @@ import io.grpc.StatusRuntimeException;
 @EnabledIfDockerAvailable
 class AthenzTest {
 
-    static AthenzDocker athenzDocker = newAthenzDocker();
+    private static final AthenzDocker athenzDocker = newAthenzDocker();
 
     @RegisterExtension
     static ServerExtension server = new ServerExtension() {
         @Override
         protected void configure(ServerBuilder sb) {
+            athenzDocker.initialize();
             configureServices(sb);
             configureAthenz(sb, athenzDocker.ztsUri());
         }
@@ -49,6 +51,7 @@ class AthenzTest {
 
     @BeforeAll
     static void beforeAll() {
+        assumeThat(athenzDocker.isInitialized()).isTrue();
         final String tenantKeyFile = "gen-src/main/resources/docker/certs/foo-service/key.pem";
         final String tenantCertFile = "gen-src/main/resources/docker/certs/foo-service/cert.pem";
         final String caCertFile = "gen-src/main/resources/docker/certs/CAs/athenz_ca_cert.pem";

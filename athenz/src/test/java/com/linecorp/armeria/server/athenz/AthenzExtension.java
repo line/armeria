@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.server.athenz;
 
+import static org.assertj.core.api.Assumptions.assumeThat;
+
 import java.io.File;
 import java.net.URI;
 import java.util.function.Consumer;
@@ -56,7 +58,7 @@ public class AthenzExtension extends AbstractAllOrEachExtension {
 
     @Override
     protected void before(ExtensionContext context) throws Exception {
-        delegate.initialize();
+        assumeThat(delegate.initialize()).isTrue();
     }
 
     @Override

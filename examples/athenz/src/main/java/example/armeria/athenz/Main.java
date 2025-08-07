@@ -32,7 +32,10 @@ public final class Main {
     private static final Logger logger = LoggerFactory.getLogger(Main.class);
 
     public static void main(String[] args) throws Exception {
+        // Assuming you have Docker installed and running, this example will start a
+        // ZTS (ZMS and ZTS) server using Docker Compose.
         final AthenzDocker athenzDocker = newAthenzDocker();
+        athenzDocker.initialize();
         final Server server = newServer(8080, 8443, athenzDocker.ztsUri());
 
         server.closeOnJvmShutdown(athenzDocker::close);
@@ -54,18 +57,15 @@ public final class Main {
     }
 
     static AthenzDocker newAthenzDocker() {
-        final AthenzDocker athenzDocker =
-                new AthenzDocker(new File("gen-src/main/resources/docker/docker-compose.yml")) {
-                    @Override
-                    protected void scaffold(ZMSClient zmsClient) {
-                        createRole("test_role",
-                                   ImmutableList.of(TEST_DOMAIN_NAME + '.' + TEST_SERVICE,
-                                                    TEST_DOMAIN_NAME + '.' + FOO_SERVICE));
-                        createPolicy("greeting-policy", "test_role", "greeting", "hello");
-                    }
-                };
-        athenzDocker.initialize();
-        return athenzDocker;
+        return new AthenzDocker(new File("gen-src/main/resources/docker/docker-compose.yml")) {
+            @Override
+            protected void scaffold(ZMSClient zmsClient) {
+                createRole("test_role",
+                           ImmutableList.of(TEST_DOMAIN_NAME + '.' + TEST_SERVICE,
+                                            TEST_DOMAIN_NAME + '.' + FOO_SERVICE));
+                createPolicy("greeting-policy", "test_role", "greeting", "hello");
+            }
+        };
     }
 
     static void configureAthenz(ServerBuilder sb, URI ztsUri) {
