@@ -54,7 +54,8 @@ class AthenzTest {
         final String caCertFile = "gen-src/main/resources/docker/certs/CAs/athenz_ca_cert.pem";
         ztsBaseClient = ZtsBaseClient.builder(athenzDocker.ztsUri())
                                      .keyPair(tenantKeyFile, tenantCertFile)
-                                     // caCertFile may not be necessary in production, but it is required for testing.
+                                     // caCertFile may not be necessary in production,
+                                     // but it is required for testing.
                                      .trustedCertificate(caCertFile)
                                      .build();
     }
