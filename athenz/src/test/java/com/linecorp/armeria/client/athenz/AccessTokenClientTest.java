@@ -16,10 +16,10 @@
 
 package com.linecorp.armeria.client.athenz;
 
-import static com.linecorp.armeria.server.athenz.AthenzExtension.ATHENZ_CERTS;
-import static com.linecorp.armeria.server.athenz.AthenzExtension.CA_CERT_FILE;
-import static com.linecorp.armeria.server.athenz.AthenzExtension.TEST_DOMAIN_NAME;
-import static com.linecorp.armeria.server.athenz.AthenzExtension.USER_ROLE;
+import static com.linecorp.armeria.server.athenz.AthenzDocker.ATHENZ_CERTS;
+import static com.linecorp.armeria.server.athenz.AthenzDocker.CA_CERT_FILE;
+import static com.linecorp.armeria.server.athenz.AthenzDocker.TEST_DOMAIN_NAME;
+import static com.linecorp.armeria.server.athenz.AthenzDocker.USER_ROLE;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.io.InputStream;

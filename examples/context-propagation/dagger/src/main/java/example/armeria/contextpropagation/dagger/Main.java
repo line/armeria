@@ -19,7 +19,7 @@ import dagger.Module;
 import dagger.Provides;
 import dagger.producers.Production;
 
-public class Main {
+public final class Main {
 
     @Module(subcomponents = MainGraph.Component.class)
     abstract static class MainModule {
