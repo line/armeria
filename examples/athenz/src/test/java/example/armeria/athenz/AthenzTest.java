@@ -8,7 +8,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.testcontainers.junit.jupiter.EnabledIfDockerAvailable;
@@ -45,10 +45,10 @@ class AthenzTest {
         }
     };
 
-    private ZtsBaseClient ztsBaseClient;
+    private static ZtsBaseClient ztsBaseClient;
 
-    @BeforeEach
-    void setUp() {
+    @BeforeAll
+    static void beforeAll() {
         final String tenantKeyFile = "gen-src/main/resources/docker/certs/foo-service/key.pem";
         final String tenantCertFile = "gen-src/main/resources/docker/certs/foo-service/cert.pem";
         final String caCertFile = "gen-src/main/resources/docker/certs/CAs/athenz_ca_cert.pem";
@@ -62,6 +62,7 @@ class AthenzTest {
 
     @AfterAll
     static void afterAll() {
+        ztsBaseClient.close();
         athenzDocker.close();
     }
 
