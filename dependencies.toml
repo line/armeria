@@ -1316,6 +1316,8 @@ exclusions = "org.springframework.boot:spring-boot-starter-reactor-netty"
 module = "org.springframework.boot:spring-boot-configuration-processor"
 version.ref = "spring-boot3"
 
+[libraries.testcontainers-core]
+module = "org.testcontainers:testcontainers"
 [libraries.testcontainers-consul]
 module = "org.testcontainers:consul"
 [libraries.testcontainers-junit-jupiter]

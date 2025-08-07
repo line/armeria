@@ -16,10 +16,10 @@
 
 package com.linecorp.armeria.server.athenz;
 
-import static com.linecorp.armeria.server.athenz.AthenzExtension.ADMIN_ROLE;
-import static com.linecorp.armeria.server.athenz.AthenzExtension.TEST_DOMAIN_NAME;
-import static com.linecorp.armeria.server.athenz.AthenzExtension.TEST_SERVICE;
-import static com.linecorp.armeria.server.athenz.AthenzExtension.USER_ROLE;
+import static com.linecorp.armeria.server.athenz.AthenzDocker.ADMIN_ROLE;
+import static com.linecorp.armeria.server.athenz.AthenzDocker.TEST_DOMAIN_NAME;
+import static com.linecorp.armeria.server.athenz.AthenzDocker.TEST_SERVICE;
+import static com.linecorp.armeria.server.athenz.AthenzDocker.USER_ROLE;
 import static net.javacrumbs.jsonunit.fluent.JsonFluentAssert.assertThatJson;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;

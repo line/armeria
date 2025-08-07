@@ -263,6 +263,8 @@ includeWithFlags ':site'
 // Examples
 includeWithFlags ':examples:annotated-http-service',               'java11'
 includeWithFlags ':examples:annotated-http-service-kotlin',        'java11', 'kotlin'
+includeWithFlags ':examples:athenz-example',                       'java11'
+project(':examples:athenz-example').projectDir = file('examples/athenz')
 includeWithFlags ':examples:context-propagation-dagger-example',   'java11'
 project(':examples:context-propagation-dagger-example').projectDir = file('examples/context-propagation/dagger')
 includeWithFlags ':examples:context-propagation-kotlin-example',   'java11', 'kotlin'

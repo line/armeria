@@ -16,8 +16,8 @@
 
 package com.linecorp.armeria.server.athenz;
 
-import static com.linecorp.armeria.server.athenz.AthenzExtension.TEST_DOMAIN_NAME;
-import static com.linecorp.armeria.server.athenz.AthenzExtension.TEST_SERVICE;
+import static com.linecorp.armeria.server.athenz.AthenzDocker.TEST_DOMAIN_NAME;
+import static com.linecorp.armeria.server.athenz.AthenzDocker.TEST_SERVICE;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import org.junit.jupiter.api.Test;
