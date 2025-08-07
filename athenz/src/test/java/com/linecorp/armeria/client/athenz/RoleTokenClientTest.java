@@ -96,9 +96,9 @@ class RoleTokenClientTest {
     @Test
     void shouldRefreshTokenBeforeExpiry() throws Exception {
         final TlsKeyPair tlsKeyPair = TlsKeyPair.ofSelfSigned();
-        try(ZtsBaseClient ztsBaseClient = ZtsBaseClient.builder(mockServer.httpUri())
-                                                         .keyPair(() -> tlsKeyPair)
-                                                         .build()) {
+        try (ZtsBaseClient ztsBaseClient = ZtsBaseClient.builder(mockServer.httpUri())
+                                                        .keyPair(() -> tlsKeyPair)
+                                                        .build()) {
             final RoleTokenClient roleTokenClient = new RoleTokenClient(ztsBaseClient, "test",
                                                                         ImmutableList.of("role1", "role2"),
                                                                         Duration.ofSeconds(10));
