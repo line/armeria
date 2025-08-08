@@ -42,6 +42,7 @@ task generateSources(type: Copy) {
         // NB: Update `copyBoot3Sources` task in boot2-webflux-autoconfigure if a new file is added.
 
         // Copy from /internal/spring package.
+        include '**/AthenzSupport.java'
         include '**/ArmeriaConfigurationNetUtil.java'
         include '**/ArmeriaConfigurationSettingsUtil.java'
         include '**/ArmeriaConfigurationUtil.java'

@@ -15,7 +15,11 @@
  */
 package com.linecorp.armeria.spring;
 
+import static java.util.Objects.requireNonNull;
+
+import java.io.File;
 import java.net.InetAddress;
+import java.net.URI;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
@@ -30,6 +34,7 @@ import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerBuilder;
@@ -62,13 +67,18 @@ import io.netty.channel.EventLoopGroup;
  *     trust-store-password: "changeme"
  *   compression:
  *     enabled: true
- *     mime-types: text/*, application/json
+ *     mime-types: "text/*", "application/json"
  *     excluded-user-agents: some-user-agent, another-user-agent
  *     min-response-size: 1KB
  *   internal-services:
  *     port: 18080
  *     include: docs, health, metrics
  *   enable-auto-injection: true
+ *   athenz:
+ *     zts-uri: https://zts.example.com:4443
+ *     domains: my-athenz-provider-domain
+ *     athenz-private-key: /path/to/athenz_private.pem
+ *     athenz-public-key: /path/to/athenz_public.pem
  * }</pre>
  */
 @ConfigurationProperties(prefix = "armeria")
@@ -418,6 +428,220 @@ public class ArmeriaSettings {
     }
 
     /**
+     * Configuration for a Athenz provider.
+     * If this is set, you can use `@RequiresAthenzRole` annotation to secure your service methods.
+     */
+    @UnstableApi
+    public static class AthenzConfig {
+        /**
+         * The URI of the ZTS server that the Athenz client connects to.
+         *
+         * <p>Mandatory: This field must be set to use Athenz.
+         */
+        @Nullable
+        private URI ztsUri;
+
+        /**
+         * The proxy URI for the ZTS client.
+         * Default is {@code null}, which means no proxy.
+         */
+        @Nullable
+        private URI proxyUri;
+
+        /**
+         * The Athenz service private key file for mutual TLS authentication.
+         *
+         * <p>Mandatory: This field must be set to use Athenz.
+         */
+        @Nullable
+        private File athenzPrivateKey;
+
+        /**
+         * The Athenz service public key file for mutual TLS authentication.
+         *
+         * <p>Mandatory: This field must be set to use Athenz.
+         */
+        @Nullable
+        private File athenzPublicKey;
+
+        /**
+         * The Athenz CA certificate file for verifying the ZTS server's certificate.
+         * If not set, the default system CA certificates will be used.
+         */
+        @Nullable
+        private File athenzCaCert;
+
+        /**
+         * The list of domains to fetch Athenz policies for.
+         *
+         * <p>Mandatory: This field must be set to use Athenz.
+         */
+        private List<String> domains = new ArrayList<>();
+
+        /**
+         * Whether to support JWS policy.
+         * The default is {@code true}.
+         */
+        private boolean jwsPolicySupport = true;
+
+        /**
+         * The interval for refreshing the Athenz policy data.
+         * The default is 1 hour.
+         */
+        private Duration policyRefreshInterval = Duration.ofHours(1);
+
+        /**
+         * Returns the URI of the ZTS server that the Athenz client connects to.
+         */
+        @Nullable
+        public URI getZtsUri() {
+            return ztsUri;
+        }
+
+        /**
+         * Sets the URI of the ZTS server that the Athenz client connects to.
+         *
+         * <p>Mandatory: This field must be set to use Athenz.
+         */
+        public void setZtsUri(URI ztsUri) {
+            this.ztsUri = requireNonNull(ztsUri, "ztsUri");
+        }
+
+        /**
+         * Returns the proxy URI for the ZTS client.
+         */
+        @Nullable
+        public URI getProxyUri() {
+            return proxyUri;
+        }
+
+        /**
+         * Sets the proxy URI for the ZTS client.
+         */
+        public void setProxyUri(@Nullable URI proxyUri) {
+            this.proxyUri = proxyUri;
+        }
+
+        /**
+         * Returns the Athenz service private key file for mutual TLS authentication.
+         */
+        @Nullable
+        public File getAthenzPrivateKey() {
+            return athenzPrivateKey;
+        }
+
+        /**
+         * Sets the Athenz service private key file for mutual TLS authentication.
+         *
+         * <p>Mandatory: This field must be set to use Athenz.
+         */
+        public void setAthenzPrivateKey(File athenzPrivateKey) {
+            this.athenzPrivateKey = requireNonNull(athenzPrivateKey, "athenzPrivateKey");
+        }
+
+        /**
+         * Returns the Athenz service public key file for mutual TLS authentication.
+         */
+        @Nullable
+        public File getAthenzPublicKey() {
+            return athenzPublicKey;
+        }
+
+        /**
+         * Sets the Athenz service public key file for mutual TLS authentication.
+         *
+         * <p>Mandatory: This field must be set to use Athenz.
+         */
+        public void setAthenzPublicKey(File athenzPublicKey) {
+            this.athenzPublicKey = requireNonNull(athenzPublicKey, "athenzPublicKey");
+        }
+
+        /**
+         * Returns the Athenz CA certificate file for verifying the ZTS server's certificate.
+         * If not set, the default system CA certificates will be used.
+         */
+        @Nullable
+        public File getAthenzCaCert() {
+            return athenzCaCert;
+        }
+
+        /**
+         * Sets the Athenz CA certificate file for verifying the ZTS server's certificate.
+         * If not set, the default system CA certificates will be used.
+         */
+        public void setAthenzCaCert(@Nullable File athenzCaCert) {
+            this.athenzCaCert = athenzCaCert;
+        }
+
+        /**
+         * Returns the list of domains to fetch Athenz policies for.
+         */
+        public List<String> getDomains() {
+            return domains;
+        }
+
+        /**
+         * Sets the list of domains to fetch Athenz policies for.
+         *
+         * <p>Mandatory: This field must be set to use Athenz.
+         */
+        public void setDomains(List<String> domains) {
+            requireNonNull(domains, "domains");
+            if (domains.isEmpty()) {
+                throw new IllegalArgumentException("domains must not be empty");
+            }
+            this.domains = domains;
+        }
+
+        /**
+         * Returns whether JWS policy support is enabled.
+         * The default is {@code true}.
+         */
+        public boolean isJwsPolicySupport() {
+            return jwsPolicySupport;
+        }
+
+        /**
+         * Sets whether JWS policy support is enabled.
+         * The default is {@code true}.
+         */
+        public void setJwsPolicySupport(boolean jwsPolicySupport) {
+            this.jwsPolicySupport = jwsPolicySupport;
+        }
+
+        /**
+         * Returns the interval for refreshing the Athenz policy data.
+         * The default is 1 hour.
+         */
+        public Duration getPolicyRefreshInterval() {
+            return policyRefreshInterval;
+        }
+
+        /**
+         * Sets the interval for refreshing the Athenz policy data.
+         * The default is 1 hour.
+         */
+        public void setPolicyRefreshInterval(Duration policyRefreshInterval) {
+            this.policyRefreshInterval = requireNonNull(policyRefreshInterval);
+        }
+
+        @Override
+        public String toString() {
+            return MoreObjects.toStringHelper(this)
+                              .omitNullValues()
+                              .add("ztsUri", ztsUri)
+                              .add("proxyUri", proxyUri)
+                              .add("athenzPrivateKey", athenzPrivateKey)
+                              .add("athenzPublicKey", athenzPublicKey)
+                              .add("athenzCaCert", athenzCaCert)
+                              .add("domains", domains)
+                              .add("jwsPolicySupport", jwsPolicySupport)
+                              .add("policyRefreshInterval", policyRefreshInterval)
+                              .toString();
+        }
+    }
+
+    /**
      * Whether to auto configure and start the Armeria server.
      * The default is {@code true}.
      */
@@ -627,6 +851,12 @@ public class ArmeriaSettings {
      * Whether to inject dependencies in annotated services using {@link SpringDependencyInjector}.
      */
     private boolean enableAutoInjection;
+
+    /**
+     * The Athenz configuration for the server.
+     */
+    @Nullable
+    private AthenzConfig athenz;
 
     /**
      * Returns the {@link Port}s of the {@link Server}.
@@ -1120,5 +1350,22 @@ public class ArmeriaSettings {
      */
     public void setEnableAutoInjection(boolean enableAutoInjection) {
         this.enableAutoInjection = enableAutoInjection;
+    }
+
+    /**
+     * Returns the Athenz configuration for the server.
+     * If not set, Athenz will not be configured.
+     */
+    @Nullable
+    public AthenzConfig getAthenz() {
+        return athenz;
+    }
+
+    /**
+     * Sets the Athenz configuration for the server.
+     * If not set, Athenz will not be configured.
+     */
+    public void setAthenz(@Nullable AthenzConfig athenz) {
+        this.athenz = athenz;
     }
 }
