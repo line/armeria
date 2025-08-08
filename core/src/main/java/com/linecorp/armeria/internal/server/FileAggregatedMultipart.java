@@ -25,6 +25,7 @@ import java.util.Map.Entry;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.function.Predicate;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -35,6 +36,8 @@ import com.google.common.collect.Maps;
 
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpRequest;
+import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.multipart.BodyPart;
 import com.linecorp.armeria.common.multipart.Multipart;
 import com.linecorp.armeria.common.multipart.MultipartFile;
 import com.linecorp.armeria.server.ServiceRequestContext;
@@ -61,16 +64,20 @@ public final class FileAggregatedMultipart {
         return files;
     }
 
-    public static CompletableFuture<FileAggregatedMultipart> aggregateMultipart(ServiceRequestContext ctx,
-                                                                                HttpRequest req) {
+    public static CompletableFuture<FileAggregatedMultipart> aggregateMultipart(
+            ServiceRequestContext ctx, HttpRequest req) {
+        return aggregateMultipart(ctx, req, null);
+    }
+
+    public static CompletableFuture<FileAggregatedMultipart> aggregateMultipart(
+            ServiceRequestContext ctx, HttpRequest req, @Nullable Predicate<BodyPart> predicate) {
         final Path destination = ctx.config().multipartUploadsLocation();
         return Multipart.from(req).collect(bodyPart -> {
             final String name = bodyPart.name();
             assert name != null;
             final String filename = bodyPart.filename();
             final EventLoop eventLoop = ctx.eventLoop();
-
-            if (filename != null) {
+            if (filename != null && (predicate == null || predicate.test(bodyPart))) {
                 final Path incompleteDir = destination.resolve("incomplete");
                 final ScheduledExecutorService executor = ctx.blockingTaskExecutor().withoutContext();
 
