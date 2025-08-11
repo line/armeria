@@ -1,0 +1,25 @@
+---
+date: 2025-08-11
+---
+
+## 🌟 New features
+
+- You can now use <type://@RequiresAthenzRole> when `armeria.athenz` is configured in Spring integration.
+  ```yaml 
+  // in application.yml
+  armeria:
+    athenz:
+      zts-uri: https://athenz.example.com:8443/zts/v1
+      domains: my-athenz-provider-domain
+      athenz-private-key: /path/to/athenz_private.pem
+      athenz-public-key: /path/to/athenz_public.pem
+  ```
+
+## 🙇 Thank you
+
+<ThankYou usernames={[
+  'ikhoon',
+  'jrhee17',
+  'minwoox',
+  'trustin'
+]} />
