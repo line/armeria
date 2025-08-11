@@ -47,6 +47,7 @@ final class TimeoutStreamMessage<T> implements StreamMessage<T> {
     private final StreamMessage<? extends T> delegate;
     private final Duration timeoutDuration;
     private final StreamTimeoutMode timeoutMode;
+    private final CompletableFuture<Void> completionFuture = new CompletableFuture<>();
 
     /**
      * Creates a new TimeoutStreamMessage with the specified base stream message and timeout settings.
@@ -60,6 +61,17 @@ final class TimeoutStreamMessage<T> implements StreamMessage<T> {
         this.delegate = requireNonNull(delegate, "delegate");
         this.timeoutDuration = requireNonNull(timeoutDuration, "timeoutDuration");
         this.timeoutMode = requireNonNull(timeoutMode, "timeoutMode");
+
+        delegate.whenComplete().whenComplete((unused, cause) -> {
+            if (completionFuture.isDone()) {
+                return;
+            }
+            if (cause == null) {
+                completionFuture.complete(null);
+            } else {
+                completionFuture.completeExceptionally(cause);
+            }
+        });
     }
 
     @Override
@@ -79,7 +91,7 @@ final class TimeoutStreamMessage<T> implements StreamMessage<T> {
 
     @Override
     public CompletableFuture<Void> whenComplete() {
-        return delegate.whenComplete();
+        return completionFuture;
     }
 
     /**
@@ -93,7 +105,7 @@ final class TimeoutStreamMessage<T> implements StreamMessage<T> {
     @Override
     public void subscribe(Subscriber<? super T> subscriber, EventExecutor executor,
                           SubscriptionOption... options) {
-        delegate.subscribe(new TimeoutSubscriber<>(subscriber, executor, timeoutDuration, timeoutMode),
+        delegate.subscribe(new TimeoutSubscriber<>(subscriber, executor, timeoutDuration, timeoutMode, completionFuture),
                            executor, options);
     }
 
@@ -122,14 +134,16 @@ final class TimeoutStreamMessage<T> implements StreamMessage<T> {
         private long lastEventTimeNanos;
         private boolean completed;
         private volatile boolean canceled;
+        private final CompletableFuture<Void> completionFuture;
 
         TimeoutSubscriber(Subscriber<? super T> delegate, EventExecutor executor, Duration timeoutDuration,
-                          StreamTimeoutMode timeoutMode) {
+                          StreamTimeoutMode timeoutMode, CompletableFuture<Void> completionFuture) {
             this.delegate = requireNonNull(delegate, "delegate");
             this.executor = requireNonNull(executor, "executor");
             this.timeoutDuration = requireNonNull(timeoutDuration, "timeoutDuration");
             timeoutNanos = timeoutDuration.toNanos();
             this.timeoutMode = requireNonNull(timeoutMode, "timeoutMode");
+            this.completionFuture = requireNonNull(completionFuture, "completionFuture");
         }
 
         private ScheduledFuture<?> scheduleTimeout(long delay) {
@@ -155,8 +169,12 @@ final class TimeoutStreamMessage<T> implements StreamMessage<T> {
                 }
             }
             completed = true;
-            delegate.onError(new StreamTimeoutException(
-                    String.format(TIMEOUT_MESSAGE, timeoutDuration.toMillis(), timeoutMode)));
+
+            final StreamTimeoutException ex = new StreamTimeoutException(
+                    String.format(TIMEOUT_MESSAGE, timeoutDuration.toMillis(), timeoutMode));
+
+            completionFuture.completeExceptionally(ex);
+            delegate.onError(ex);
             assert subscription != null;
             subscription.cancel();
         }
@@ -199,6 +217,7 @@ final class TimeoutStreamMessage<T> implements StreamMessage<T> {
             }
             completed = true;
             cancelSchedule();
+            completionFuture.completeExceptionally(throwable);
             delegate.onError(throwable);
         }
 
@@ -209,6 +228,7 @@ final class TimeoutStreamMessage<T> implements StreamMessage<T> {
             }
             completed = true;
             cancelSchedule();
+            completionFuture.complete(null);
             delegate.onComplete();
         }
 

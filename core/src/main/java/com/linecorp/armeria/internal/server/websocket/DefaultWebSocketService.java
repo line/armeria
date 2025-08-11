@@ -20,6 +20,7 @@ import static com.linecorp.armeria.internal.common.websocket.WebSocketUtil.isHtt
 import static com.linecorp.armeria.internal.common.websocket.WebSocketUtil.isHttp2WebSocketUpgradeRequest;
 import static com.linecorp.armeria.internal.common.websocket.WebSocketUtil.newCloseWebSocketFrame;
 
+import java.time.Duration;
 import java.util.Set;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
@@ -31,6 +32,7 @@ import com.google.common.base.Ascii;
 import com.google.common.base.Splitter;
 import com.google.common.net.HostAndPort;
 
+import com.linecorp.armeria.common.CancellationException;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpMethod;
@@ -43,6 +45,8 @@ import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.ResponseHeadersBuilder;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.stream.AbortedStreamException;
+import com.linecorp.armeria.common.stream.CancelledSubscriptionException;
 import com.linecorp.armeria.common.stream.ClosedStreamException;
 import com.linecorp.armeria.common.stream.StreamMessage;
 import com.linecorp.armeria.common.util.TimeoutMode;
@@ -100,13 +104,16 @@ public final class DefaultWebSocketService implements WebSocketService, WebSocke
     private final Predicate<? super String> originPredicate;
     private final boolean aggregateContinuation;
     private final ServiceOptions serviceOptions;
+    @Nullable
+    private final Duration streamTimeout;
 
-    public DefaultWebSocketService(WebSocketServiceHandler handler, @Nullable HttpService fallbackService,
-                                   int maxFramePayloadLength, boolean allowMaskMismatch,
-                                   Set<String> subprotocols, boolean allowAnyOrigin,
-                                   @Nullable Predicate<? super String> originPredicate,
+    public DefaultWebSocketService(WebSocketServiceHandler handler, @Nullable Duration streamTimeout,
+                                   @Nullable HttpService fallbackService, int maxFramePayloadLength,
+                                   boolean allowMaskMismatch, Set<String> subprotocols,
+                                   boolean allowAnyOrigin, @Nullable Predicate<? super String> originPredicate,
                                    boolean aggregateContinuation, ServiceOptions serviceOptions) {
         this.handler = handler;
+        this.streamTimeout = streamTimeout;
         this.fallbackService = fallbackService;
         this.maxFramePayloadLength = maxFramePayloadLength;
         this.allowMaskMismatch = allowMaskMismatch;
@@ -119,7 +126,22 @@ public final class DefaultWebSocketService implements WebSocketService, WebSocke
 
     @Override
     public WebSocket serve(ServiceRequestContext ctx, WebSocket in) throws Exception {
-        return handler.handle(ctx, in);
+        final WebSocket inbound = (streamTimeout != null) ? in.timeout(streamTimeout) : in;
+        final WebSocket outbound = handler.handle(ctx, inbound);
+
+        inbound.whenComplete().handle((unused, cause) -> {
+           if (cause == null) {
+               return null;
+           }
+
+           if (cause instanceof CancelledSubscriptionException || cause instanceof AbortedStreamException) {
+               outbound.abort(new CancellationException("Inbound was cancelled or aborted → cancelling outbound as well"));
+           } else {
+               outbound.abort(cause);
+           }
+           return null;
+        });
+        return outbound;
     }
 
     @Override

@@ -20,6 +20,7 @@ import static com.google.common.base.Preconditions.checkState;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static java.util.Objects.requireNonNull;
 
+import java.time.Duration;
 import java.util.Set;
 import java.util.function.Predicate;
 import java.util.regex.Pattern;
@@ -82,6 +83,8 @@ public final class WebSocketServiceBuilder {
     @Nullable
     private HttpService fallbackService;
     private ServiceOptions serviceOptions = DEFAULT_OPTIONS;
+    @Nullable
+    private Duration streamTimeout;
 
     WebSocketServiceBuilder(WebSocketServiceHandler handler) {
         this.handler = requireNonNull(handler, "handler");
@@ -232,6 +235,12 @@ public final class WebSocketServiceBuilder {
         return this;
     }
 
+    public WebSocketServiceBuilder streamTimeout(Duration streamTimeout) {
+        requireNonNull(streamTimeout, "streamTimeout");
+        this.streamTimeout = streamTimeout;
+        return this;
+    }
+
     /**
      * Returns a newly-created {@link WebSocketService} with the properties set so far.
      */
@@ -245,7 +254,7 @@ public final class WebSocketServiceBuilder {
             allowAnyOrigin = false;
             originPredicate = this.originPredicate;
         }
-        return new DefaultWebSocketService(handler, fallbackService, maxFramePayloadLength, allowMaskMismatch,
+        return new DefaultWebSocketService(handler, streamTimeout, fallbackService, maxFramePayloadLength, allowMaskMismatch,
                                            subprotocols, allowAnyOrigin, originPredicate, aggregateContinuation,
                                            serviceOptions);
     }
