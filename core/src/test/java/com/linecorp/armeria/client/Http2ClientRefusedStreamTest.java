@@ -24,7 +24,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
 import com.linecorp.armeria.common.SessionProtocol;
-import com.linecorp.armeria.common.stream.ClosedStreamException;
 import com.linecorp.armeria.internal.testing.NettyServerExtension;
 
 import io.netty.channel.Channel;
@@ -53,7 +52,7 @@ class Http2ClientRefusedStreamTest {
                      .get("/").aggregate().join();
         }).isInstanceOf(CompletionException.class)
           .hasCauseInstanceOf(UnprocessedRequestException.class)
-          .hasRootCauseInstanceOf(ClosedStreamException.class);
+          .hasRootCauseInstanceOf(RefusedStreamException.class);
     }
 
     private static final class RefusedStreamH2CHandler extends SimpleH2CServerHandler {

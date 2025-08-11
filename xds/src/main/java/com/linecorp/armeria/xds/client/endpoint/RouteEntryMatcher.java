@@ -17,7 +17,6 @@
 package com.linecorp.armeria.xds.client.endpoint;
 
 import java.util.List;
-import java.util.function.BiPredicate;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Ascii;
@@ -30,7 +29,6 @@ import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
-import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.QueryParams;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.xds.RouteEntry;
@@ -64,13 +62,13 @@ final class RouteEntryMatcher {
     boolean matches(ClientRequestContext ctx) {
         final HttpRequest req = ctx.request();
         if (routeMatch.hasGrpc()) {
-            if (!isGrpcRequest(req)) {
+            if (!XdsCommonUtil.isGrpcRequest(req)) {
                 return false;
             }
         }
 
         for (HeaderMatcherImpl headerMatcher : headerMatchers) {
-            if (!headerMatcher.matches(ctx)) {
+            if (!headerMatcher.matches(req)) {
                 return false;
             }
         }
@@ -85,19 +83,6 @@ final class RouteEntryMatcher {
         }
 
         return pathMatcher.match(ctx);
-    }
-
-    @VisibleForTesting
-    static boolean isGrpcRequest(@Nullable HttpRequest req) {
-        if (req == null) {
-            return false;
-        }
-        final MediaType contentType = req.contentType();
-        if (contentType == null) {
-            return false;
-        }
-        final String subtype = contentType.subtype();
-        return "grpc".equals(subtype) || subtype.startsWith("grpc+");
     }
 
     @VisibleForTesting
@@ -151,10 +136,9 @@ final class RouteEntryMatcher {
         }
     }
 
-    @VisibleForTesting
     static class HeaderMatcherImpl {
 
-        private final BiPredicate<ClientRequestContext, HttpHeaders> matcher;
+        private final Predicate<HttpHeaders> matcher;
         private final HeaderMatcher headerMatcher;
         private static final Joiner COMMA_JOINER = Joiner.on(",");
 
@@ -182,7 +166,7 @@ final class RouteEntryMatcher {
                 case HEADERMATCHSPECIFIER_NOT_SET:
                     final boolean presentMatch = headerMatcher.hasPresentMatch() ?
                                                  headerMatcher.getPresentMatch() : true;
-                    matcher = (ctx, headers) -> {
+                    matcher = headers -> {
                         if (headerMatcher.getTreatMissingHeaderAsEmpty()) {
                             return presentMatch;
                         }
@@ -190,7 +174,7 @@ final class RouteEntryMatcher {
                     };
                     break;
                 case RANGE_MATCH:
-                    matcher = (ctx, headers) -> {
+                    matcher = headers -> {
                         final Long value = headers.getLong(headerMatcher.getName());
                         if (value == null) {
                             return false;
@@ -202,7 +186,7 @@ final class RouteEntryMatcher {
                 case STRING_MATCH:
                     final StringMatcherImpl stringMatcher =
                             new StringMatcherImpl(headerMatcher.getStringMatch());
-                    matcher = (ctx, headers) -> {
+                    matcher = headers -> {
                         final List<String> allHeaders = headers.getAll(headerMatcher.getName());
                         if (allHeaders.isEmpty()) {
                             if (headerMatcher.getTreatMissingHeaderAsEmpty()) {
@@ -224,15 +208,16 @@ final class RouteEntryMatcher {
             }
         }
 
-        boolean matches(ClientRequestContext ctx) {
-            final HttpRequest req = ctx.request();
-            final HttpHeaders headers;
+        boolean matches(@Nullable HttpRequest req) {
             if (req == null) {
-                headers = HttpHeaders.of();
+                return matches(HttpHeaders.of());
             } else {
-                headers = req.headers();
+                return matches(req.headers());
             }
-            return matcher.test(ctx, headers) != headerMatcher.getInvertMatch();
+        }
+
+        boolean matches(HttpHeaders headers) {
+            return matcher.test(headers) != headerMatcher.getInvertMatch();
         }
     }
 
