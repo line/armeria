@@ -166,6 +166,21 @@ WebClient
   .build();
 ```
 
+## Integrating with Spring Boot
+
+If you are using Spring Boot, you can enable the <type://@RequiresAthenzRole> annotation
+by configuring Athenz properties in `application.yml`.
+
+```yaml
+// in application.yml
+armeria:
+  athenz:
+    zts-uri: https://athenz.example.com:8443/zts/v1
+    domains: my-athenz-provider-domain
+    athenz-private-key: /path/to/athenz_private.pem
+    athenz-public-key: /path/to/athenz_public.pem
+```
+
 <Tip>
 
 Visit [athenz-example](https://github.com/line/armeria/tree/main/examples/athenz) to check out a fully working example.
