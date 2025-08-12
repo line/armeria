@@ -49,6 +49,7 @@ task copyBoot3Sources(type: Copy) {
         include '**/*ArmeriaBeanPostProcessor*.java'
         include '**/ArmeriaServerConfigurator.java'
         include '**/ArmeriaSettings.java'
+        include '**/AthenzConfig.java'
         include '**/DocServiceConfigurator.java'
         include '**/DropwizardExpositionService.java'
         include '**/DropwizardSupport.java'
