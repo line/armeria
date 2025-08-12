@@ -25,6 +25,9 @@ import com.google.common.collect.ImmutableMap;
 
 import com.linecorp.armeria.client.athenz.ZtsBaseClient;
 import com.linecorp.armeria.client.athenz.ZtsBaseClientBuilder;
+import com.linecorp.armeria.server.Server;
+import com.linecorp.armeria.server.ServerBuilder;
+import com.linecorp.armeria.server.ServerListenerAdapter;
 import com.linecorp.armeria.server.athenz.AthenzPolicyConfig;
 import com.linecorp.armeria.server.athenz.AthenzServiceDecoratorFactory;
 
@@ -35,8 +38,9 @@ import com.linecorp.armeria.server.athenz.AthenzServiceDecoratorFactory;
 public final class AthenzServiceDecoratorFactoryProvider {
 
     public static AthenzServiceDecoratorFactory create(
-            URI ztsUri, File athenzPrivateKey, File athenzPublicKey, URI proxyUri, File athenzCaCert,
-            List<String> domains, boolean jwsPolicySupport, Duration policyRefreshInterval) {
+            ServerBuilder sb, URI ztsUri, File athenzPrivateKey, File athenzPublicKey,
+            URI proxyUri, File athenzCaCert, List<String> domains, boolean jwsPolicySupport,
+            Duration policyRefreshInterval) {
 
         final ZtsBaseClientBuilder clientBuilder =
                 ZtsBaseClient.builder(ztsUri)
@@ -52,6 +56,12 @@ public final class AthenzServiceDecoratorFactoryProvider {
                                                                              jwsPolicySupport,
                                                                              policyRefreshInterval);
         final ZtsBaseClient ztsBaseClient = clientBuilder.build();
+        sb.serverListener(new ServerListenerAdapter() {
+            @Override
+            public void serverStopped(Server server) throws Exception {
+                ztsBaseClient.close();
+            }
+        });
         return AthenzServiceDecoratorFactory
                 .builder(ztsBaseClient)
                 .policyConfig(athenzPolicyConfig)

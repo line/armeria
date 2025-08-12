@@ -236,7 +236,7 @@ public final class ArmeriaConfigurationUtil {
         if (settings.getAthenz() != null) {
             final String athenzServiceClass = "com.linecorp.armeria.server.athenz.AthenzService";
             if (hasClass(athenzServiceClass)) {
-                dependencyInjector = AthenzSupport.injectAthenzDecorator(settings.getAthenz(),
+                dependencyInjector = AthenzSupport.injectAthenzDecorator(server, settings.getAthenz(),
                                                                          dependencyInjector);
             } else {
                 throw new IllegalStateException(

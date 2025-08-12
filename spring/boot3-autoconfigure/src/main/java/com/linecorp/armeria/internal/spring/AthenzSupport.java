@@ -26,11 +26,12 @@ import java.util.List;
 
 import com.linecorp.armeria.common.DependencyInjector;
 import com.linecorp.armeria.common.annotation.Nullable;
-import com.linecorp.armeria.spring.ArmeriaSettings.AthenzConfig;
+import com.linecorp.armeria.server.ServerBuilder;
+import com.linecorp.armeria.spring.AthenzConfig;
 
 final class AthenzSupport {
 
-    static DependencyInjector injectAthenzDecorator(AthenzConfig athenzConfig,
+    static DependencyInjector injectAthenzDecorator(ServerBuilder sb, AthenzConfig athenzConfig,
                                                     @Nullable DependencyInjector dependencyInjector) {
         final URI ztsUri = athenzConfig.getZtsUri();
         final File athenzPrivateKey = athenzConfig.getAthenzPrivateKey();
@@ -57,10 +58,10 @@ final class AthenzSupport {
         try {
             final Class<?> factoryProvider = Class.forName(
                     "com.linecorp.armeria.internal.server.athenz.AthenzServiceDecoratorFactoryProvider");
-            final Method createMethod = factoryProvider.getMethod("create", URI.class, File.class, File.class,
-                                                                  URI.class, File.class,
-                                                                  List.class, boolean.class, Duration.class);
-            final Object athenzServiceDecoratorFactory = createMethod.invoke(null, ztsUri, athenzPrivateKey,
+            final Method createMethod = factoryProvider.getMethod(
+                    "create", ServerBuilder.class, URI.class, File.class, File.class,
+                    URI.class, File.class, List.class, boolean.class, Duration.class);
+            final Object athenzServiceDecoratorFactory = createMethod.invoke(null, sb, ztsUri, athenzPrivateKey,
                                                                              athenzPublicKey, proxyUri,
                                                                              athenzCaCert,
                                                                              domains, jwsPolicySupport,
