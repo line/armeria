@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<configuration scan="true">
+
+  <property name="LOG_DIR" value="logs/zts_server" />
+
+  <!--Daily rolling file appender -->
+  <appender name="FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+
+    <file>${LOG_DIR}/server.log</file>
+    <append>true</append>
+
+    <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+      <fileNamePattern>${LOG_DIR}/server.%d.log</fileNamePattern>
+      <maxHistory>7</maxHistory>
+      <cleanHistoryOnStart>true</cleanHistoryOnStart>
+    </rollingPolicy>
+
+    <encoder>
+      <pattern>%d{HH:mm:ss.SSS} [%thread] %-5level %logger{35} - %msg%n</pattern>
+    </encoder>
+  </appender>
+
+  <!-- Logger used exclusively for audit logging -->
+  <appender name="AUDIT" class="ch.qos.logback.core.rolling.RollingFileAppender">
+
+    <file>${LOG_DIR}/audit.log</file>
+    <append>true</append>
+
+    <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+      <fileNamePattern>${LOG_DIR}/audit.%d.log</fileNamePattern>
+      <maxHistory>30</maxHistory>
+      <cleanHistoryOnStart>true</cleanHistoryOnStart>
+    </rollingPolicy>
+
+    <encoder>
+      <pattern>%d{HH:mm:ss.SSS} [%thread] %-5level %logger{35} - %msg%n</pattern>
+    </encoder>
+  </appender>
+
+  <logger name="org.eclipse" level="INFO"/>
+  <logger name="AuditSoxLogger" level="INFO" additivity="false">
+    <appender-ref ref="AUDIT" />
+  </logger>
+
+  <root>
+    <level value="DEBUG" />
+    <appender-ref ref="FILE" />
+  </root>
+</configuration>

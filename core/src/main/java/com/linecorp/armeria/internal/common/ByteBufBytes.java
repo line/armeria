@@ -27,9 +27,9 @@ import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.internal.common.util.TemporaryThreadLocals;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.ByteBufInputStream;
 import io.netty.buffer.ByteBufUtil;
-import io.netty.buffer.PooledByteBufAllocator;
 import io.netty.util.IllegalReferenceCountException;
 import io.netty.util.ResourceLeakHint;
 import it.unimi.dsi.fastutil.io.FastByteArrayInputStream;
@@ -214,7 +214,7 @@ public class ByteBufBytes implements Bytes, ResourceLeakHint {
     }
 
     private static ByteBuf newDirectByteBuf(int length) {
-        return PooledByteBufAllocator.DEFAULT.directBuffer(length);
+        return ByteBufAllocator.DEFAULT.directBuffer(length);
     }
 
     @Override

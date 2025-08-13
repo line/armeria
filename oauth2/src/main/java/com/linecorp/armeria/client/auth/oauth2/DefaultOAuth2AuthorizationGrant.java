@@ -18,12 +18,12 @@ package com.linecorp.armeria.client.auth.oauth2;
 
 import static java.util.Objects.requireNonNull;
 
-import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.function.Consumer;
+import java.util.function.Predicate;
 import java.util.function.Supplier;
 
 import org.slf4j.Logger;
@@ -50,7 +50,6 @@ class DefaultOAuth2AuthorizationGrant implements OAuth2AuthorizationGrant {
 
     private final OAuth2Endpoint<GrantedOAuth2AccessToken> oAuth2Endpoint;
     private final Supplier<AccessTokenRequest> requestSupplier;
-    private final Duration refreshBefore;
     @Nullable
     private final Supplier<CompletableFuture<? extends GrantedOAuth2AccessToken>> fallbackTokenProvider;
     @Nullable
@@ -61,22 +60,45 @@ class DefaultOAuth2AuthorizationGrant implements OAuth2AuthorizationGrant {
             WebClient accessTokenEndpoint, String accessTokenEndpointPath,
             Supplier<AccessTokenRequest> requestSupplier,
             OAuth2ResponseHandler<GrantedOAuth2AccessToken> responseHandler,
-            Duration refreshBefore,
+            @Nullable Predicate<? super GrantedOAuth2AccessToken> refreshIf,
             @Nullable Supplier<CompletableFuture<? extends GrantedOAuth2AccessToken>> fallbackTokenProvider,
             @Nullable Consumer<? super GrantedOAuth2AccessToken> newTokenConsumer) {
 
         oAuth2Endpoint = new OAuth2Endpoint<>(accessTokenEndpoint, accessTokenEndpointPath, responseHandler);
         this.requestSupplier = requestSupplier;
-        this.refreshBefore = refreshBefore;
         this.fallbackTokenProvider = fallbackTokenProvider;
         this.newTokenConsumer = newTokenConsumer;
+        final String name = "oauth2-token-loader/" + concatPath(accessTokenEndpoint.uri().toString(),
+                                                          accessTokenEndpointPath);
         final AsyncLoaderBuilder<GrantedOAuth2AccessToken> loaderBuilder =
                 AsyncLoader.builder(this::loadToken)
+                           .name(name)
                            .expireIf(token -> !isValidToken(token));
-        if (!refreshBefore.isZero()) {
-            loaderBuilder.refreshIf(this::shouldRefresh);
+        if (refreshIf != null) {
+            loaderBuilder.refreshIf(refreshIf);
         }
         tokenLoader = loaderBuilder.build();
+    }
+
+    private String concatPath(String uri, String path) {
+        requireNonNull(uri, "uri");
+        requireNonNull(path, "path");
+
+        if (uri.charAt(uri.length() - 1) == '/') {
+            if (path.charAt(0) == '/') {
+                // Deduplicate double slash
+                return uri + path.substring(1);
+            } else {
+                return uri + path;
+            }
+        } else {
+            if (path.charAt(0) == '/') {
+                return uri + path;
+            } else {
+                // Add a slash between uri and path
+                return uri + '/' + path;
+            }
+        }
     }
 
     private CompletableFuture<GrantedOAuth2AccessToken> loadToken(@Nullable GrantedOAuth2AccessToken token) {
@@ -135,10 +157,6 @@ class DefaultOAuth2AuthorizationGrant implements OAuth2AuthorizationGrant {
 
     private static boolean isValidToken(@Nullable GrantedOAuth2AccessToken token) {
         return token != null && token.isValid(Instant.now());
-    }
-
-    private boolean shouldRefresh(GrantedOAuth2AccessToken token) {
-        return !token.isValid(Instant.now().plus(refreshBefore));
     }
 
     private void obtainAccessToken(CompletableFuture<GrantedOAuth2AccessToken> future) {

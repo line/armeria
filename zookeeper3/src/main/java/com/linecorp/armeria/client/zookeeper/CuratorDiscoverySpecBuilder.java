@@ -28,7 +28,7 @@ import com.linecorp.armeria.common.annotation.Nullable;
 
 /**
  * Builds a {@link ZooKeeperDiscoverySpec} for
- * <a href="https://curator.apache.org/curator-x-discovery/index.html">Curator Service Discovery</a>.
+ * <a href="https://curator.apache.org/docs/service-discovery/">Curator Service Discovery</a>.
  */
 public final class CuratorDiscoverySpecBuilder {
 

@@ -32,6 +32,7 @@ import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.logging.ContentPreviewer;
 import com.linecorp.armeria.common.logging.ContentPreviewerFactory;
 import com.linecorp.armeria.common.logging.RequestLog;
@@ -140,6 +141,22 @@ public final class ContentPreviewingService extends SimpleDecoratingHttpService 
         this.responsePreviewSanitizer = responsePreviewSanitizer;
     }
 
+    /**
+     * Returns the specified {@link ContentPreviewerFactory}.
+     */
+    @UnstableApi
+    public ContentPreviewerFactory contentPreviewerFactory() {
+        return contentPreviewerFactory;
+    }
+
+    /**
+     * Returns the specified {@link BiFunction} that sanitizes the response content preview.
+     */
+    @UnstableApi
+    public BiFunction<? super RequestContext, String, ? extends @Nullable Object> responsePreviewSanitizer() {
+        return responsePreviewSanitizer;
+    }
+
     @Override
     public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
         final Boolean settingContentPreview = ctx.attr(SETTING_CONTENT_PREVIEW);
@@ -161,7 +178,6 @@ public final class ContentPreviewingService extends SimpleDecoratingHttpService 
             final HttpResponse res = unwrap().serve(ctx, req);
             return setUpResponseContentPreviewer(contentPreviewerFactory, ctx, res, responsePreviewSanitizer);
         } catch (Throwable t) {
-            ctx.logBuilder().responseContentPreview(null);
             return HttpResponse.ofFailure(t);
         }
     }

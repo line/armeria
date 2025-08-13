@@ -77,6 +77,13 @@ public final class XdsTestResources {
 
     private XdsTestResources() {}
 
+    public static TransportSocket upstreamTls() {
+        return TransportSocket.newBuilder()
+                              .setName(TLS_TRANSPORT_SOCKET_NAME)
+                              .setTypedConfig(Any.pack(UpstreamTlsContext.getDefaultInstance()))
+                              .build();
+    }
+
     public static LbEndpoint endpoint(String address, int port) {
         return endpoint(address, port, Metadata.getDefaultInstance(), 1,
                         HealthStatus.HEALTHY);

@@ -38,6 +38,17 @@ configure(relocatedProjects) {
         // Exclude the module metadata that'll become invalid after relocation.
         exclude '**/module-info.class'
 
+        // Exclude the MRJARs files that are not compatible with the target Java version.
+        exclude { details ->
+            def path = details.path  // e.g., META-INF/versions/15/com/example/Foo.class
+            def matcher = path =~ /^META-INF\/versions\/(\d+)\/.*$/
+            if (matcher.matches()) {
+                def version = matcher[0][1].toInteger()
+                return version > project.ext.targetJavaVersion
+            }
+            return false
+        }
+
         def shadowExclusions = []
         if (rootProject.hasProperty('shadowExclusions')) {
             shadowExclusions = rootProject.findProperty('shadowExclusions').split(",")

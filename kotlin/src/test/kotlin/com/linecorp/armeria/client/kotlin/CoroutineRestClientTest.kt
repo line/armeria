@@ -85,5 +85,9 @@ class CoroutineRestClientTest {
             }
     }
 
-    data class RestResponse(val id: String, val method: String, val content: String)
+    data class RestResponse(
+        val id: String,
+        val method: String,
+        val content: String,
+    )
 }

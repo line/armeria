@@ -115,7 +115,7 @@ Clients.builder(grpcUrl)
 
 ## Changing the default distribution summary config
 
-A [distribution summary](https://micrometer.io/docs/concepts#_distribution_summaries) is used to track
+A [distribution summary](https://docs.micrometer.io/micrometer/reference/concepts/distribution-summaries) is used to track
 the distribution of events. Armeria provides a sensible default
 [DistributionStatisticConfig](https://javadoc.io/doc/io.micrometer/micrometer-core/latest/io/micrometer/core/instrument/distribution/DistributionStatisticConfig.html)
 for measuring the following metrics:
@@ -147,7 +147,7 @@ MoreMeters.setDistributionStatisticConfig(myDistStatCfg);
 
 ## Excluding certain meters created by Armeria
 
-Micrometer's `MeterRegistry` can be configured with [meter filters](https://micrometer.io/docs/concepts#_meter_filters).
+Micrometer's `MeterRegistry` can be configured with [meter filters](https://docs.micrometer.io/micrometer/reference/concepts/meter-filters).
 If you need to control the exported meters, you can apply sophisticated filters to the `MeterRegistry`.
 
 ```java

@@ -35,17 +35,18 @@ class CoroutineHttpServiceTest {
         val server =
             object : ServerExtension() {
                 override fun configure(sb: ServerBuilder) {
-                    sb.service(
-                        "/hello",
-                        CoroutineHttpService { ctx, req ->
-                            assertContextPropagation()
-                            HttpResponse.of("hello world")
-                        },
-                    ).decorator(
-                        CoroutineContextService.newDecorator { ctx ->
-                            CoroutineName("my-coroutine-name")
-                        },
-                    )
+                    sb
+                        .service(
+                            "/hello",
+                            CoroutineHttpService { ctx, req ->
+                                assertContextPropagation()
+                                HttpResponse.of("hello world")
+                            },
+                        ).decorator(
+                            CoroutineContextService.newDecorator { ctx ->
+                                CoroutineName("my-coroutine-name")
+                            },
+                        )
                 }
             }
 

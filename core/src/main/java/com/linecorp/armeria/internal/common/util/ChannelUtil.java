@@ -155,7 +155,7 @@ public final class ChannelUtil {
 
             try {
                 final Class<?> clazz = Class.forName(
-                        INCUBATOR_CHANNEL_PACKAGE_NAME + ".uring.IOUringChannelOption", false,
+                        CHANNEL_PACKAGE_NAME + ".uring.IoUringChannelOption", false,
                         ChannelUtil.class.getClassLoader());
                 //noinspection unchecked
                 ioUringTcpUserTimeout = (ChannelOption<Integer>) findChannelOption(clazz, "TCP_USER_TIMEOUT");

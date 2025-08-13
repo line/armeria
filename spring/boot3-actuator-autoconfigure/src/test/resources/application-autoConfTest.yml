@@ -17,3 +17,6 @@ management:
       base-path: /internal/actuator
       path-mapping:
         info: custom-info
+  endpoint:
+    heapdump:
+      access: unrestricted
