@@ -30,6 +30,7 @@ import static org.mockito.Mockito.when;
 
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CancellationException;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedTransferQueue;
 import java.util.concurrent.TimeUnit;
@@ -51,6 +52,7 @@ import com.linecorp.armeria.client.retry.RetryRuleWithContent;
 import com.linecorp.armeria.client.retry.RetryingRpcClient;
 import com.linecorp.armeria.client.thrift.ThriftClients;
 import com.linecorp.armeria.common.HttpRequest;
+import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.RpcResponse;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.util.UnmodifiableFuture;
@@ -332,6 +334,20 @@ class RetryingRpcClientTest {
         final HelloService.Iface client =
                 ThriftClients.builder(server.httpUri())
                              .path("/thrift")
+                             .decorator((delegate, ctx, req) -> {
+                                 final CompletableFuture<HttpResponse> future = new CompletableFuture<>();
+                                 final HttpResponse response = HttpResponse.of(future);
+                                 // Add a delay to simulate a response was cancelled
+                                 // before the request is sent.
+                                 ctx.eventLoop().schedule(() -> {
+                                     try {
+                                         future.complete(delegate.execute(ctx, req));
+                                     } catch (Exception e) {
+                                         future.completeExceptionally(e);
+                                     }
+                                 }, 500, TimeUnit.MILLISECONDS);
+                                 return response;
+                             })
                              .rpcDecorator(RetryingRpcClient.builder(retryAlways).newDecorator())
                              .rpcDecorator((delegate, ctx, req) -> {
                                  context.set(ctx);
