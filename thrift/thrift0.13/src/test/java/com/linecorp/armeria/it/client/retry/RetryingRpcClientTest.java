@@ -16,6 +16,13 @@
 package com.linecorp.armeria.it.client.retry;
 
 import static com.linecorp.armeria.client.retry.AbstractRetryingClient.ARMERIA_RETRY_COUNT;
+import static com.linecorp.armeria.internal.testing.RequestContextUtils.assertValidRequestContext;
+import static com.linecorp.armeria.internal.testing.RequestContextUtils.verifyAllVerifierValid;
+import static com.linecorp.armeria.internal.testing.RequestContextUtils.verifyLastChildHasSameHttpRequest;
+import static com.linecorp.armeria.internal.testing.RequestContextUtils.verifyRequestCause;
+import static com.linecorp.armeria.internal.testing.RequestContextUtils.verifyRequestExistsAndCompleted;
+import static com.linecorp.armeria.internal.testing.RequestContextUtils.verifyResponseCause;
+import static com.linecorp.armeria.internal.testing.RequestContextUtils.verifyStatusCode;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.catchThrowable;
@@ -28,10 +35,8 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.Executors;
-import java.util.concurrent.LinkedTransferQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
@@ -42,6 +47,8 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 
 import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.client.ClientRequestContext;
+import com.linecorp.armeria.client.ClientRequestContextCaptor;
+import com.linecorp.armeria.client.Clients;
 import com.linecorp.armeria.client.UnprocessedRequestException;
 import com.linecorp.armeria.client.retry.Backoff;
 import com.linecorp.armeria.client.retry.RetryConfig;
@@ -50,10 +57,12 @@ import com.linecorp.armeria.client.retry.RetryDecision;
 import com.linecorp.armeria.client.retry.RetryRuleWithContent;
 import com.linecorp.armeria.client.retry.RetryingRpcClient;
 import com.linecorp.armeria.client.thrift.ThriftClients;
-import com.linecorp.armeria.common.HttpRequest;
+import com.linecorp.armeria.common.CompletableRpcResponse;
+import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.RpcResponse;
-import com.linecorp.armeria.common.logging.RequestLog;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.UnmodifiableFuture;
+import com.linecorp.armeria.internal.testing.RequestContextUtils.RequestLogVerifier;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.thrift.THttpService;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
@@ -73,6 +82,8 @@ class RetryingRpcClientTest {
     private final HelloService.Iface serviceHandler = mock(HelloService.Iface.class);
     private final DevNullService.Iface devNullServiceHandler = mock(DevNullService.Iface.class);
     private final AtomicInteger serviceRetryCount = new AtomicInteger();
+
+    private ClientRequestContext ctx;
 
     @RegisterExtension
     final ServerExtension server = new ServerExtension() {
@@ -99,10 +110,15 @@ class RetryingRpcClientTest {
     @Test
     void execute() throws Exception {
         final HelloService.Iface client = helloClient(retryOnException, 100);
+
         when(serviceHandler.hello(anyString())).thenReturn("world");
 
-        assertThat(client.hello("hello")).isEqualTo("world");
+        try (ClientRequestContextCaptor captor = Clients.newContextCaptor()) {
+            assertThat(client.hello("hello")).isEqualTo("world");
+            ctx = captor.get();
+        }
         verify(serviceHandler, only()).hello("hello");
+        awaitValidClientRequestContext(ctx, verifyResponse("world"));
     }
 
     @Test
@@ -127,8 +143,15 @@ class RetryingRpcClientTest {
                 .thenThrow(new IllegalArgumentException())
                 .thenReturn("Hey");
         serviceRetryCount.set(0);
-        assertThat(client.hello("Alice")).isEqualTo("Hey");
+        try (ClientRequestContextCaptor captor = Clients.newContextCaptor()) {
+            assertThat(client.hello("Alice")).isEqualTo("Hey");
+            ctx = captor.get();
+        }
         verify(serviceHandler, times(3)).hello("Alice");
+        awaitValidClientRequestContext(ctx,
+                                       verifyResponseException(),
+                                       verifyResponseException(),
+                                       verifyResponse("Hey"));
 
         when(serviceHandler.hello(anyString()))
                 .thenThrow(new IllegalArgumentException())
@@ -139,6 +162,10 @@ class RetryingRpcClientTest {
         serviceRetryCount.set(0);
         assertThat(client.hello("Bob")).isEqualTo("Hey");
         verify(serviceHandler, times(5)).hello("Bob");
+        awaitValidClientRequestContext(ctx,
+                                       verifyResponseException(),
+                                       verifyResponseException(),
+                                       verifyResponse("Hey"));
     }
 
     @Test
@@ -159,10 +186,15 @@ class RetryingRpcClientTest {
                 .thenThrow(new IllegalArgumentException())
                 .thenReturn("Hey");
 
-        assertThat(client.hello("Alice")).isEqualTo("Hey");
+        try (ClientRequestContextCaptor captor = Clients.newContextCaptor()) {
+            assertThat(client.hello("Alice")).isEqualTo("Hey");
+            ctx = captor.get();
+        }
         // 1 logical request; 3 retries
         assertThat(evaluations.get()).isEqualTo(1);
         verify(serviceHandler, times(3)).hello("Alice");
+        awaitValidClientRequestContext(ctx, verifyResponseException(), verifyResponseException(),
+                                       verifyResponse("Hey"));
 
         serviceRetryCount.set(0);
 
@@ -171,10 +203,15 @@ class RetryingRpcClientTest {
                 .thenThrow(new IllegalArgumentException())
                 .thenReturn("Hey");
 
-        assertThat(client.hello("Alice")).isEqualTo("Hey");
+        try (ClientRequestContextCaptor captor = Clients.newContextCaptor()) {
+            assertThat(client.hello("Alice")).isEqualTo("Hey");
+            ctx = captor.get();
+        }
         // 2 logical requests total; 6 retries total
         assertThat(evaluations.get()).isEqualTo(2);
         verify(serviceHandler, times(6)).hello("Alice");
+        awaitValidClientRequestContext(ctx, verifyResponseException(), verifyResponseException(),
+                                       verifyResponse("Hey"));
     }
 
     @Test
@@ -185,8 +222,13 @@ class RetryingRpcClientTest {
                 .thenThrow(new IllegalArgumentException())
                 .thenReturn("world");
 
-        assertThat(client.hello("hello")).isEqualTo("world");
+        try (ClientRequestContextCaptor captor = Clients.newContextCaptor()) {
+            assertThat(client.hello("hello")).isEqualTo("world");
+            ctx = captor.get();
+        }
         verify(serviceHandler, times(3)).hello("hello");
+        awaitValidClientRequestContext(ctx, verifyResponseException(),
+                                       verifyResponseException(), verifyResponse("world"));
     }
 
     @Test
@@ -194,31 +236,33 @@ class RetryingRpcClientTest {
         final HelloService.Iface client = helloClient(retryAlways, 2);
         when(serviceHandler.hello(anyString())).thenThrow(new IllegalArgumentException());
 
-        final Throwable thrown = catchThrowable(() -> client.hello("hello"));
+        final Throwable thrown;
+        try (ClientRequestContextCaptor captor = Clients.newContextCaptor()) {
+            thrown = catchThrowable(() -> client.hello("hello"));
+            ctx = captor.get();
+        }
         assertThat(thrown).isInstanceOf(TApplicationException.class);
         assertThat(((TApplicationException) thrown).getType()).isEqualTo(TApplicationException.INTERNAL_ERROR);
         verify(serviceHandler, times(2)).hello("hello");
+        awaitValidClientRequestContext(ctx, verifyResponseException(), verifyResponseException());
     }
 
     @Test
     void propagateLastResponseWhenNextRetryIsAfterTimeout() throws Exception {
-        final BlockingQueue<RequestLog> logQueue = new LinkedTransferQueue<>();
         final RetryRuleWithContent<RpcResponse> rule =
                 (ctx, response, cause) -> UnmodifiableFuture.completedFuture(
                         RetryDecision.retry(Backoff.fixed(10000000)));
-        final HelloService.Iface client = helloClient(rule, 100, logQueue);
+        final HelloService.Iface client = helloClient(rule, 100);
         when(serviceHandler.hello(anyString())).thenThrow(new IllegalArgumentException());
-        final Throwable thrown = catchThrowable(() -> client.hello("hello"));
+        final Throwable thrown;
+        try (ClientRequestContextCaptor captor = Clients.newContextCaptor()) {
+            thrown = catchThrowable(() -> client.hello("hello"));
+            ctx = captor.get();
+        }
         assertThat(thrown).isInstanceOf(TApplicationException.class);
         assertThat(((TApplicationException) thrown).getType()).isEqualTo(TApplicationException.INTERNAL_ERROR);
         verify(serviceHandler, only()).hello("hello");
-
-        // Make sure the last HTTP request is set to the parent's HTTP request.
-        final RequestLog log = logQueue.poll(10, TimeUnit.SECONDS);
-        assertThat(log).isNotNull();
-        assertThat(log.children()).isNotEmpty();
-        final HttpRequest lastHttpReq = log.children().get(log.children().size() - 1).context().request();
-        assertThat(lastHttpReq).isSameAs(log.context().request());
+        awaitValidClientRequestContext(ctx, verifyResponseException());
     }
 
     @Test
@@ -228,7 +272,18 @@ class RetryingRpcClientTest {
             throw exception;
         }, Integer.MAX_VALUE);
 
-        assertThatThrownBy(() -> client.hello("bar")).isSameAs(exception);
+        try (ClientRequestContextCaptor captor = Clients.newContextCaptor()) {
+            assertThatThrownBy(() -> client.hello("bar")).isSameAs(exception);
+            ctx = captor.get();
+        }
+
+        awaitValidRequestContextWithParentLogVerifier(ctx,
+                                                      verifyAllVerifierValid(
+                                                              verifyStatusCode(HttpStatus.UNKNOWN),
+                                                              verifyResponseCause(exception)
+                                                      ),
+                                                      verifyResponseException(
+                                                              TApplicationException.MISSING_RESULT));
     }
 
     private HelloService.Iface helloClient(RetryConfigMapping<RpcResponse> mapping) {
@@ -249,20 +304,6 @@ class RetryingRpcClientTest {
                             .build(HelloService.Iface.class);
     }
 
-    private HelloService.Iface helloClient(RetryRuleWithContent<RpcResponse> rule, int maxAttempts,
-                                           BlockingQueue<RequestLog> logQueue) {
-        return ThriftClients.builder(server.httpUri())
-                            .path("/thrift")
-                            .rpcDecorator(RetryingRpcClient.builder(rule)
-                                                           .maxTotalAttempts(maxAttempts)
-                                                           .newDecorator())
-                            .rpcDecorator((delegate, ctx, req) -> {
-                                ctx.log().whenComplete().thenAccept(logQueue::add);
-                                return delegate.execute(ctx, req);
-                            })
-                            .build(HelloService.Iface.class);
-    }
-
     @Test
     void execute_void() throws Exception {
         final DevNullService.Iface client =
@@ -277,8 +318,14 @@ class RetryingRpcClientTest {
                 .doThrow(new IllegalArgumentException())
                 .doNothing()
                 .when(devNullServiceHandler).consume(anyString());
-        client.consume("hello");
+        try (ClientRequestContextCaptor captor = Clients.newContextCaptor()) {
+            client.consume("hello");
+            ctx = captor.get();
+        }
         verify(devNullServiceHandler, times(3)).consume("hello");
+        awaitValidClientRequestContext(ctx, verifyResponseException(),
+                                       verifyResponseException(), verifyResponse(null)
+        );
     }
 
     @Test
@@ -315,11 +362,32 @@ class RetryingRpcClientTest {
         // 3 - In HttpClientDelegate, addressResolverGroup.getResolver(eventLoop) can raise
         //     IllegalStateException("executor not accepting a task").
         //
-        Throwable t = catchThrowable(() -> client.hello("hello"));
+        Throwable t;
+        try (ClientRequestContextCaptor captor = Clients.newContextCaptor()) {
+            t = catchThrowable(() -> client.hello("hello"));
+            ctx = captor.get();
+        }
         if (t instanceof UnprocessedRequestException) {
             final Throwable cause = t.getCause();
             assertThat(cause).isInstanceOf(IllegalStateException.class);
             t = cause;
+            awaitValidClientRequestContext(ctx, verifyAllVerifierValid(
+                    // We cannot be sure that we set
+                    // the request cause so we are not checking
+                    // with verifyRequestException/
+                    // verifyRequestCause().
+                    verifyStatusCode(HttpStatus.UNKNOWN),
+                    verifyResponseCause(t)
+            ));
+        } else {
+            awaitValidRequestContextWithParentLogVerifier(ctx,
+                                                          verifyAllVerifierValid(
+                                                                  verifyStatusCode(HttpStatus.UNKNOWN),
+                                                                  verifyResponseCause(t)
+                                                          ),
+                                                          verifyResponseException(
+                                                                  TApplicationException.INTERNAL_ERROR)
+            );
         }
         assertThat(t).isInstanceOf(IllegalStateException.class)
                      .satisfies(cause -> assertThat(cause.getMessage()).matches(
@@ -342,19 +410,78 @@ class RetryingRpcClientTest {
                              .build(HelloService.Iface.class);
         when(serviceHandler.hello(anyString())).thenThrow(new IllegalArgumentException());
 
-        assertThatThrownBy(() -> client.hello("hello")).isInstanceOf(CancellationException.class);
+        try (ClientRequestContextCaptor captor = Clients.newContextCaptor()) {
+            assertThatThrownBy(() -> client.hello("hello")).isInstanceOf(CancellationException.class);
+            ctx = captor.get();
+        }
 
         await().untilAsserted(() -> {
             verify(serviceHandler, only()).hello("hello");
         });
-        final RequestLog log = context.get().log().whenComplete().join();
-
-        // ClientUtil.completeLogIfIncomplete() records exceptions caused by response cancellations.
-        assertThat(log.requestCause()).isExactlyInstanceOf(CancellationException.class);
-        assertThat(log.responseCause()).isExactlyInstanceOf(CancellationException.class);
-
         // Sleep 1 second more to check if there was another retry.
         TimeUnit.SECONDS.sleep(1);
         verify(serviceHandler, only()).hello("hello");
+        assertValidRequestContext(
+                ctx,
+                // ClientUtil.completeLogIfIncomplete() records exceptions caused by response cancellations.
+                verifyRequestException(CancellationException.class),
+                verifyResponseException(TApplicationException.INTERNAL_ERROR));
+    }
+
+    private static void awaitValidClientRequestContext(ClientRequestContext ctx,
+                                                       RequestLogVerifier... childLogVerifiers) {
+        await().untilAsserted(() -> assertValidRequestContext(ctx,
+                                                              verifyAllVerifierValid(
+                                                                      verifyRequestExistsAndCompleted(),
+                                                                      verifyLastChildHasSameHttpRequest()
+                                                              ),
+                                                              childLogVerifiers)
+        );
+    }
+
+    private static void awaitValidRequestContextWithParentLogVerifier(ClientRequestContext ctx,
+                                                                      RequestLogVerifier parentLogVerifier,
+                                                                      RequestLogVerifier... childLogVerifiers) {
+        await().untilAsserted(() -> assertValidRequestContext(
+                ctx, parentLogVerifier, childLogVerifiers));
+    }
+
+    private static RequestLogVerifier verifyRequestException(Class<?> causeClass) {
+        return verifyAllVerifierValid(
+                verifyStatusCode(HttpStatus.UNKNOWN),
+                verifyRequestCause(causeClass),
+                verifyResponseCause(causeClass)
+        );
+    }
+
+    private static RequestLogVerifier verifyResponseException() {
+        return verifyResponseException(TApplicationException.INTERNAL_ERROR);
+    }
+
+    private static RequestLogVerifier verifyResponseException(int type) {
+        return verifyAllVerifierValid(
+                verifyStatusCode(HttpStatus.OK),
+                verifyResponseCause(TApplicationException.class),
+                childLog -> {
+                    final TApplicationException responseCause =
+                            (TApplicationException) childLog.responseCause();
+
+                    assertThat(responseCause.getType()).isEqualTo(type);
+                }
+        );
+    }
+
+    private static RequestLogVerifier verifyResponse(@Nullable String expectedResponse) {
+        return verifyAllVerifierValid(
+                verifyStatusCode(HttpStatus.OK),
+                childLog -> {
+                    assertThat(childLog.responseContent()).isExactlyInstanceOf(CompletableRpcResponse.class);
+                    final CompletableRpcResponse rpcResponse =
+                            (CompletableRpcResponse) childLog.responseContent();
+                    assertThat(rpcResponse.isDone()).isTrue();
+                    assertThat(rpcResponse.isCompletedExceptionally()).isFalse();
+                    assertThat(rpcResponse.getNow("should-not-be-returned")).isEqualTo(expectedResponse);
+                }
+        );
     }
 }
