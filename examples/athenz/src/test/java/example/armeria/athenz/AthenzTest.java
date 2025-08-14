@@ -41,7 +41,7 @@ class AthenzTest {
     static ServerExtension server = new ServerExtension() {
         @Override
         protected void configure(ServerBuilder sb) {
-            athenzDocker.initialize();
+            assumeThat(athenzDocker.initialize()).isTrue();
             configureServices(sb);
             configureAthenz(sb, athenzDocker.ztsUri());
         }
@@ -51,7 +51,6 @@ class AthenzTest {
 
     @BeforeAll
     static void beforeAll() {
-        assumeThat(athenzDocker.isInitialized()).isTrue();
         final String tenantKeyFile = "gen-src/main/resources/docker/certs/foo-service/key.pem";
         final String tenantCertFile = "gen-src/main/resources/docker/certs/foo-service/cert.pem";
         final String caCertFile = "gen-src/main/resources/docker/certs/CAs/athenz_ca_cert.pem";
