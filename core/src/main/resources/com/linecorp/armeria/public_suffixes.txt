@@ -110,6 +110,7 @@
 *.hosted.app
 *.hosting.myjino.ru
 *.hosting.ovh.net
+*.icp.net
 *.id.pub
 *.il-central-1.airflow.amazonaws.com
 *.in.futurecms.at
@@ -160,6 +161,8 @@
 *.platformsh.site
 *.private.repost.aws
 *.privatelink.snowflake.app
+*.qualyhqpartner.com
+*.qualyhqportal.com
 *.quipelements.com
 *.r.appspot.com
 *.raw.icp0.io
@@ -9881,6 +9884,7 @@ za.bz
 za.com
 za.net
 za.org
+zabc.net
 zachpomor.pl
 zagan.pl
 zakarpattia.ua
