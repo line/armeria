@@ -62,13 +62,18 @@ import io.netty.channel.EventLoopGroup;
  *     trust-store-password: "changeme"
  *   compression:
  *     enabled: true
- *     mime-types: text/*, application/json
+ *     mime-types: "text/*", "application/json"
  *     excluded-user-agents: some-user-agent, another-user-agent
  *     min-response-size: 1KB
  *   internal-services:
  *     port: 18080
  *     include: docs, health, metrics
  *   enable-auto-injection: true
+ *   athenz:
+ *     zts-uri: https://zts.example.com:4443
+ *     domains: my-athenz-provider-domain
+ *     athenz-private-key: /path/to/athenz_private.pem
+ *     athenz-public-key: /path/to/athenz_public.pem
  * }</pre>
  */
 @ConfigurationProperties(prefix = "armeria")
@@ -629,6 +634,13 @@ public class ArmeriaSettings {
     private boolean enableAutoInjection;
 
     /**
+     * The Athenz configuration for the server.
+     */
+    @Nullable
+    @NestedConfigurationProperty
+    private AthenzConfig athenz;
+
+    /**
      * Returns the {@link Port}s of the {@link Server}.
      */
     public List<Port> getPorts() {
@@ -1120,5 +1132,22 @@ public class ArmeriaSettings {
      */
     public void setEnableAutoInjection(boolean enableAutoInjection) {
         this.enableAutoInjection = enableAutoInjection;
+    }
+
+    /**
+     * Returns the Athenz configuration for the server.
+     * If not set, Athenz will not be configured.
+     */
+    @Nullable
+    public AthenzConfig getAthenz() {
+        return athenz;
+    }
+
+    /**
+     * Sets the Athenz configuration for the server.
+     * If not set, Athenz will not be configured.
+     */
+    public void setAthenz(@Nullable AthenzConfig athenz) {
+        this.athenz = athenz;
     }
 }

@@ -35,7 +35,11 @@ public class AthenzExtension extends AbstractAllOrEachExtension {
     private final AthenzDocker delegate;
 
     public AthenzExtension() {
-        delegate = new AthenzDocker(new File("src/test/resources/docker/docker-compose.yml")) {
+        this(new File("src/test/resources/docker/docker-compose.yml"));
+    }
+
+    public AthenzExtension(File dockerComposeFile) {
+        delegate = new AthenzDocker(dockerComposeFile) {
             @Override
             protected void scaffold(ZMSClient zmsClient) {
                 AthenzExtension.this.scaffold(zmsClient);

@@ -196,14 +196,8 @@ public final class ArmeriaConfigurationUtil {
                                      internalServiceIds, false);
         }
 
-        // dependencyInjectors from beans are added first, which will be used first thing,
-        // then from armeriaServerConfigurators and armeriaServerBuilderConsumers.
-        dependencyInjectors.forEach(injector -> {
-            server.dependencyInjector(injector, false); // The injector is closed by Spring.
-        });
-        if (settings.isEnableAutoInjection()) {
-            server.dependencyInjector(SpringDependencyInjector.of(beanFactory), false);
-        }
+        configureDependencyInjector(server, settings, dependencyInjectors, beanFactory);
+
         // serverErrorHandlers from beans are added first, which will be used first thing,
         // then from armeriaServerConfigurators and armeriaServerBuilderConsumers.
         serverErrorHandlers.forEach(server::errorHandler);
@@ -212,6 +206,48 @@ public final class ArmeriaConfigurationUtil {
         // via ArmeriaSettings.
         armeriaServerConfigurators.forEach(configurator -> configurator.configure(server));
         armeriaServerBuilderConsumers.forEach(consumer -> consumer.accept(server));
+    }
+
+    private static void configureDependencyInjector(
+            ServerBuilder server, ArmeriaSettings settings,
+            List<DependencyInjector> dependencyInjectors, BeanFactory beanFactory) {
+
+        DependencyInjector dependencyInjector = null;
+        if (!dependencyInjectors.isEmpty()) {
+            // dependencyInjectors from beans are added first, which will be used first thing,
+            // then from armeriaServerConfigurators and armeriaServerBuilderConsumers.
+            for (DependencyInjector injector : dependencyInjectors) {
+                if (dependencyInjector == null) {
+                    dependencyInjector = injector;
+                } else {
+                    dependencyInjector.orElse(injector);
+                }
+            }
+        }
+
+        if (settings.isEnableAutoInjection()) {
+            if (dependencyInjector == null) {
+                dependencyInjector = SpringDependencyInjector.of(beanFactory);
+            } else {
+                dependencyInjector = dependencyInjector.orElse(SpringDependencyInjector.of(beanFactory));
+            }
+        }
+
+        if (settings.getAthenz() != null) {
+            final String athenzServiceClass = "com.linecorp.armeria.server.athenz.AthenzService";
+            if (hasClass(athenzServiceClass)) {
+                dependencyInjector = AthenzSupport.injectAthenzDecorator(server, settings.getAthenz(),
+                                                                         dependencyInjector);
+            } else {
+                throw new IllegalStateException(
+                        "'armeria.athenz' setting is defined but '" + athenzServiceClass + "' class is not " +
+                        "found. Please add the 'armeria-athenz' dependency to your project.");
+            }
+        }
+
+        if (dependencyInjector != null) {
+            server.dependencyInjector(dependencyInjector, false); // The injector is closed by Spring.
+        }
     }
 
     private static void configureInternalService(ServerBuilder server, InternalServiceId serviceId,
@@ -508,6 +544,15 @@ public final class ArmeriaConfigurationUtil {
             }
         }
         return ImmutableList.copyOf(dedupedList);
+    }
+
+    private static boolean hasClass(String className) {
+        try {
+            Class.forName(className, false, ArmeriaConfigurationUtil.class.getClassLoader());
+            return true;
+        } catch (Throwable t) {
+            return false;
+        }
     }
 
     private ArmeriaConfigurationUtil() {}
