@@ -58,6 +58,7 @@ import com.linecorp.armeria.common.HttpResponseWriter;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.ResponseHeaders;
+import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.stream.StreamWriter;
 import com.linecorp.armeria.common.util.EventLoopGroups;
 import com.linecorp.armeria.common.util.Exceptions;
@@ -140,7 +141,7 @@ class HttpServerStreamingTest {
 
     @ParameterizedTest
     @ArgumentsSource(ClientProvider.class)
-    void testTooLargeContent(WebClient client) throws Exception {
+    void testTooLargeContent(SessionProtocol protocol, WebClient client) throws Exception {
         final int maxContentLength = 65536;
         serverMaxRequestLength = maxContentLength;
 
@@ -158,7 +159,7 @@ class HttpServerStreamingTest {
 
     @ParameterizedTest
     @ArgumentsSource(ClientProvider.class)
-    void testTooLargeContentToNonExistentService(WebClient client) throws Exception {
+    void testTooLargeContentToNonExistentService(SessionProtocol protocol, WebClient client) throws Exception {
         final int maxContentLength = 65536;
         serverMaxRequestLength = maxContentLength;
 
@@ -170,19 +171,25 @@ class HttpServerStreamingTest {
 
     @ParameterizedTest
     @ArgumentsSource(ClientProvider.class)
-    void testStreamingRequest(WebClient client) throws Exception {
+    void testStreamingRequest(SessionProtocol protocol, WebClient client) throws Exception {
         runStreamingRequestTest(client, "/count");
     }
 
     @ParameterizedTest
     @ArgumentsSource(ClientProvider.class)
-    void testStreamingRequestWithSlowService(WebClient client) throws Exception {
+    void testStreamingRequestWithSlowService(SessionProtocol protocol, WebClient client) throws Exception {
         final int oldNumDeferredReads = InboundTrafficController.numDeferredReads();
         runStreamingRequestTest(client, "/slow_count");
-        // The connection's inbound traffic must be suspended due to overwhelming traffic from client.
-        // If the number of deferred reads did not increase and the testStreaming() above did not fail,
-        // it probably means the client failed to produce enough amount of traffic.
-        assertThat(InboundTrafficController.numDeferredReads()).isGreaterThan(oldNumDeferredReads);
+        if (protocol.isMultiplex()) {
+            // The inbound traffic will be suspended by HTTP/2 flow control so the number of deferred reads in
+            // InboundTrafficController is not expected to increase.
+            assertThat(InboundTrafficController.numDeferredReads()).isEqualTo(oldNumDeferredReads);
+        } else {
+            // The connection's inbound traffic must be suspended due to overwhelming traffic from client.
+            // If the number of deferred reads did not increase and the testStreaming() above did not fail,
+            // it probably means the client failed to produce enough amount of traffic.
+            assertThat(InboundTrafficController.numDeferredReads()).isGreaterThan(oldNumDeferredReads);
+        }
     }
 
     private static void runStreamingRequestTest(WebClient client, String path)
@@ -211,19 +218,25 @@ class HttpServerStreamingTest {
 
     @ParameterizedTest
     @ArgumentsSource(ClientProvider.class)
-    void testStreamingResponse(WebClient client) throws Exception {
+    void testStreamingResponse(SessionProtocol protocol, WebClient client) throws Exception {
         runStreamingResponseTest(client, false);
     }
 
     @ParameterizedTest
     @ArgumentsSource(ClientProvider.class)
-    void testStreamingResponseWithSlowClient(WebClient client) throws Exception {
+    void testStreamingResponseWithSlowClient(SessionProtocol protocol, WebClient client) throws Exception {
         final int oldNumDeferredReads = InboundTrafficController.numDeferredReads();
         runStreamingResponseTest(client, true);
-        // The connection's inbound traffic must be suspended due to overwhelming traffic from client.
-        // If the number of deferred reads did not increase and the testStreaming() above did not fail,
-        // it probably means the client failed to produce enough amount of traffic.
-        assertThat(InboundTrafficController.numDeferredReads()).isGreaterThan(oldNumDeferredReads);
+        if (protocol.isMultiplex()) {
+            // The inbound traffic will be suspended by HTTP/2 flow control so the number of deferred reads in
+            // InboundTrafficController is not expected to increase.
+            assertThat(InboundTrafficController.numDeferredReads()).isEqualTo(oldNumDeferredReads);
+        } else {
+            // The connection's inbound traffic must be suspended due to overwhelming traffic from client.
+            // If the number of deferred reads did not increase and the testStreaming() above did not fail,
+            // it probably means the client failed to produce enough amount of traffic.
+            assertThat(InboundTrafficController.numDeferredReads()).isGreaterThan(oldNumDeferredReads);
+        }
     }
 
     private static void runStreamingResponseTest(WebClient client, boolean slowClient)
@@ -292,9 +305,9 @@ class HttpServerStreamingTest {
                              builder.responseTimeoutMillis(0);
                              builder.maxResponseLength(0);
 
-                             return builder.build();
-                         })
-                         .map(Arguments::of);
+                             final WebClient client = builder.build();
+                             return Arguments.of(protocol, client);
+                         });
         }
     }
 

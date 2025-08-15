@@ -95,7 +95,7 @@ final class XdsEndpointUtil {
                 break;
             default:
                 throw new UnsupportedOperationException(
-                        "Cluster (" + cluster.getName() + ") is attempting to use an" +
+                        "Cluster (" + cluster.getName() + ") is attempting to use an " +
                         "unsupported cluster type: (" + cluster.getType() + "). " +
                         "Only (STATIC, STRICT_DNS, EDS) are supported.");
         }
