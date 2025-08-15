@@ -57,6 +57,7 @@ final class LoginClient extends SimpleDecoratingHttpClient {
 
     private final AsyncLoader<LoginResult> tokenLoader =
             AsyncLoader.<LoginResult>builder(cache -> loginInternal())
+                       .name("nacos-login")
                        .expireIf(LoginResult::isExpired)
                        .build();
 

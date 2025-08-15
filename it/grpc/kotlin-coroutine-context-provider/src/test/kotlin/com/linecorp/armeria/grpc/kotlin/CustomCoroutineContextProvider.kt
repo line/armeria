@@ -30,7 +30,8 @@ class CustomCoroutineContextProvider : CoroutineContextProvider {
 
         init {
             val executor: BlockingTaskExecutor =
-                BlockingTaskExecutor.builder()
+                BlockingTaskExecutor
+                    .builder()
                     .threadNamePrefix("custom-kotlin-grpc-worker")
                     .numThreads(1)
                     .build()
@@ -39,7 +40,5 @@ class CustomCoroutineContextProvider : CoroutineContextProvider {
         }
     }
 
-    override fun provide(ctx: ServiceRequestContext): CoroutineContext {
-        return dispatcher
-    }
+    override fun provide(ctx: ServiceRequestContext): CoroutineContext = dispatcher
 }

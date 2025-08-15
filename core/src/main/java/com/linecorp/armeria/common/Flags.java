@@ -15,6 +15,8 @@
  */
 package com.linecorp.armeria.common;
 
+import static com.google.common.collect.ImmutableSet.toImmutableSet;
+
 import java.io.IOException;
 import java.net.InetAddress;
 import java.nio.channels.ClosedChannelException;
@@ -23,6 +25,7 @@ import java.time.Duration;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
 import java.util.ServiceLoader;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
@@ -59,6 +62,7 @@ import com.linecorp.armeria.common.util.TlsEngineType;
 import com.linecorp.armeria.common.util.TransportType;
 import com.linecorp.armeria.internal.common.FlagsLoaded;
 import com.linecorp.armeria.internal.common.util.SslContextUtil;
+import com.linecorp.armeria.internal.common.util.TransportTypeProvider;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.MultipartRemovalStrategy;
 import com.linecorp.armeria.server.ServerBuilder;
@@ -91,6 +95,7 @@ import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.resolver.DefaultAddressResolverGroup;
 import io.netty.resolver.dns.DnsNameResolverTimeoutException;
 import io.netty.util.ReferenceCountUtil;
+import io.netty.util.Version;
 
 /**
  * The system properties that affect Armeria's runtime behavior. The priority or each flag is determined
@@ -1821,5 +1826,39 @@ public final class Flags {
     // to ensure that all static variables defined beforehand are initialized.
     static {
         FlagsLoaded.set();
+
+        if (warnNettyVersions()) {
+            final String howToDisableWarning =
+                    "This means 1) you specified Netty versions inconsistently in your build or " +
+                    "2) the Netty JARs in the classpath were repackaged or shaded incorrectly. " +
+                    "Specify the '-Dcom.linecorp.armeria.warnNettyVersions=false' JVM option to " +
+                    "disable this warning at the risk of unexpected Netty behavior, if you think " +
+                    "it is a false positive.";
+
+            final Map<String, Version> nettyVersions =
+                    Version.identify(TransportTypeProvider.class.getClassLoader());
+
+            final Set<String> distinctNettyVersions = nettyVersions.values().stream().filter(v -> {
+                final String artifactId = v.artifactId();
+                return artifactId != null &&
+                       artifactId.startsWith("netty") &&
+                       !artifactId.startsWith("netty-incubator") &&
+                       !artifactId.startsWith("netty-tcnative");
+            }).map(Version::artifactVersion).collect(toImmutableSet());
+
+            switch (distinctNettyVersions.size()) {
+                case 0:
+                    logger.warn("Using Netty with unknown version. {}", howToDisableWarning);
+                    break;
+                case 1:
+                    if (logger.isDebugEnabled()) {
+                        logger.debug("Using Netty {}", distinctNettyVersions.iterator().next());
+                    }
+                    break;
+                default:
+                    logger.warn("Inconsistent Netty versions detected: {} {}",
+                                nettyVersions, howToDisableWarning);
+            }
+        }
     }
 }

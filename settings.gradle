@@ -90,6 +90,7 @@ project(':version-catalog').with {
 
 // Published Java projects
 includeWithFlags ':annotation-processor',                'java', 'publish', 'relocate'
+includeWithFlags ':athenz',                              'java11', 'publish', 'relocate', 'native'
 includeWithFlags ':brave5',                              'java', 'publish', 'relocate', 'no_aggregation'
 project(':brave5').projectDir = file('brave/brave5')
 includeWithFlags ':brave6',                              'java', 'publish', 'relocate', 'native'
@@ -99,7 +100,8 @@ includeWithFlags ':eureka',                              'java', 'publish', 'rel
 includeWithFlags ':grpc',                                'java', 'publish', 'relocate', 'native'
 includeWithFlags ':grpc-kotlin',                         'java', 'publish', 'relocate', 'kotlin-grpc', 'kotlin', 'native'
 includeWithFlags ':grpc-protocol',                       'java', 'publish', 'relocate', 'native'
-includeWithFlags ':graphql',                             'java', 'publish', 'relocate', 'native'
+// GraphQL-Java requires Java 11+.
+includeWithFlags ':graphql',                             'java11', 'publish', 'relocate', 'native'
 includeWithFlags ':graphql-protocol',                    'java', 'publish', 'relocate', 'native'
 includeWithFlags ':jetty9',                              'java', 'publish', 'relocate', 'no_aggregation'
 project(':jetty9').projectDir = file('jetty/jetty9')
@@ -229,10 +231,12 @@ includeWithFlags ':it:logback1.4',                             'java11', 'reloca
 includeWithFlags ':it:logback1.5',                             'java11', 'relocate', 'no_aggregation'
 includeWithFlags ':it:multipart',                              'java17', 'relocate'
 includeWithFlags ':it:nio',                                    'java', 'relocate'
+includeWithFlags ':it:no-unsafe',                              'java', 'relocate'
 includeWithFlags ':it:okhttp',                                 'java', 'relocate'
 includeWithFlags ':it:resilience4j',                           'java17', 'relocate'
 includeWithFlags ':it:server',                                 'java', 'relocate'
 includeWithFlags ':it:server-allow-semicolon',                 'java'
+includeWithFlags ':it:spring:boot3-athenz',                    'java17', 'relocate'
 includeWithFlags ':it:spring:boot3-jetty12',                   'java17', 'relocate'
 includeWithFlags ':it:spring:boot3-kotlin',                    'java17', 'relocate', 'kotlin'
 includeWithFlags ':it:spring:boot3-mixed',                     'java17', 'relocate'
@@ -260,6 +264,8 @@ includeWithFlags ':site'
 // Examples
 includeWithFlags ':examples:annotated-http-service',               'java11'
 includeWithFlags ':examples:annotated-http-service-kotlin',        'java11', 'kotlin'
+includeWithFlags ':examples:athenz-example',                       'java11'
+project(':examples:athenz-example').projectDir = file('examples/athenz')
 includeWithFlags ':examples:context-propagation-dagger-example',   'java11'
 project(':examples:context-propagation-dagger-example').projectDir = file('examples/context-propagation/dagger')
 includeWithFlags ':examples:context-propagation-kotlin-example',   'java11', 'kotlin'

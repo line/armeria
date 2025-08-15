@@ -16,18 +16,14 @@
 
 package com.linecorp.armeria.xds.client.endpoint;
 
-import static com.linecorp.armeria.xds.client.endpoint.XdsAttributeKeys.ROUTE_METADATA_MATCH;
+import java.util.List;
 
-import java.util.Map;
-import java.util.Objects;
-
-import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.client.ClientPreprocessors;
 import com.linecorp.armeria.client.HttpPreClient;
 import com.linecorp.armeria.client.PreClientRequestContext;
 import com.linecorp.armeria.client.RpcPreClient;
-import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.xds.ListenerSnapshot;
 import com.linecorp.armeria.xds.RouteEntry;
@@ -39,40 +35,43 @@ final class RouteConfig {
 
     private final HttpPreClient httpPreClient;
     private final RpcPreClient rpcPreClient;
-    private final Map<IndexPair, SelectedRoute> precomputedRoutes;
-    private static final IndexPair firstPair = new IndexPair(0, 0);
+    private final List<List<SelectedRoute>> precomputedRoutes;
+    private final VirtualHostMatcher virtualHostMatcher;
 
     RouteConfig(ListenerSnapshot listenerSnapshot) {
         this.listenerSnapshot = listenerSnapshot;
         final ClientPreprocessors preprocessors = FilterUtil.buildDownstreamFilter(listenerSnapshot);
         httpPreClient = preprocessors.decorate(DelegatingHttpClient.INSTANCE);
         rpcPreClient = preprocessors.rpcDecorate(DelegatingRpcClient.INSTANCE);
-        precomputedRoutes = routeEntries(listenerSnapshot);
+        precomputedRoutes = precomputeRoutes(listenerSnapshot);
+        virtualHostMatcher = new VirtualHostMatcher(listenerSnapshot);
     }
 
-    private static Map<IndexPair, SelectedRoute> routeEntries(ListenerSnapshot listenerSnapshot) {
+    private static List<List<SelectedRoute>> precomputeRoutes(ListenerSnapshot listenerSnapshot) {
         final RouteSnapshot routeSnapshot = listenerSnapshot.routeSnapshot();
         if (routeSnapshot == null) {
-            return ImmutableMap.of();
+            return ImmutableList.of();
         }
 
-        final ImmutableMap.Builder<IndexPair, SelectedRoute> builder = ImmutableMap.builder();
-        for (int i = 0; i < routeSnapshot.virtualHostSnapshots().size(); i++) {
+        final int vhostsSz = routeSnapshot.virtualHostSnapshots().size();
+        final ImmutableList.Builder<List<SelectedRoute>> vHostsListBuilder =
+                ImmutableList.builderWithExpectedSize(vhostsSz);
+        for (int i = 0; i < vhostsSz; i++) {
             final VirtualHostSnapshot virtualHostSnapshot = routeSnapshot.virtualHostSnapshots().get(i);
-            for (int j = 0; j < virtualHostSnapshot.routeEntries().size(); j++) {
+            assert virtualHostSnapshot.index() == i;
+            final int routesSz = virtualHostSnapshot.routeEntries().size();
+            final ImmutableList.Builder<SelectedRoute> routesListBuilder =
+                    ImmutableList.builderWithExpectedSize(routesSz);
+            for (int j = 0; j < routesSz; j++) {
                 final RouteEntry routeEntry = virtualHostSnapshot.routeEntries().get(j);
+                assert j == routeEntry.index();
                 final SelectedRoute selectedRoute = new SelectedRoute(listenerSnapshot, routeSnapshot,
                                                                       virtualHostSnapshot, routeEntry);
-                final IndexPair pair;
-                if (i == 0 && j == 0) {
-                    pair = firstPair;
-                } else {
-                    pair = new IndexPair(i, j);
-                }
-                builder.put(pair, selectedRoute);
+                routesListBuilder.add(selectedRoute);
             }
+            vHostsListBuilder.add(routesListBuilder.build());
         }
-        return builder.build();
+        return vHostsListBuilder.build();
     }
 
     ListenerSnapshot listenerSnapshot() {
@@ -88,66 +87,23 @@ final class RouteConfig {
     }
 
     @Nullable
-    SelectedRoute select(PreClientRequestContext ctx, @Nullable HttpRequest req) {
+    SelectedRoute select(PreClientRequestContext ctx) {
         final RouteSnapshot routeSnapshot = listenerSnapshot.routeSnapshot();
         if (routeSnapshot == null) {
             return null;
         }
-
-        for (int i = 0; i < routeSnapshot.virtualHostSnapshots().size(); i++) {
-            final VirtualHostSnapshot virtualHostSnapshot = routeSnapshot.virtualHostSnapshots().get(i);
-            if (!matches(req, virtualHostSnapshot)) {
-                continue;
-            }
-            for (int j = 0; j < virtualHostSnapshot.routeEntries().size(); j++) {
-                final RouteEntry routeEntry = virtualHostSnapshot.routeEntries().get(j);
-                if (!matches(req, routeEntry)) {
-                    continue;
-                }
-                ctx.setAttr(ROUTE_METADATA_MATCH, routeEntry.route().getRoute().getMetadataMatch());
-                if (i == 0 && j == 0) {
-                    return precomputedRoutes.get(firstPair);
-                }
-                return precomputedRoutes.get(new IndexPair(i, j));
+        final VirtualHostSnapshot virtualHostSnapshot = virtualHostMatcher.find(ctx);
+        if (virtualHostSnapshot == null) {
+            return null;
+        }
+        final List<SelectedRoute> selectedRoutes = precomputedRoutes.get(virtualHostSnapshot.index());
+        for (SelectedRoute selectedRoute : selectedRoutes) {
+            if (selectedRoute.routeEntryMatcher().matches(ctx)) {
+                ctx.setAttr(XdsAttributeKeys.ROUTE_METADATA_MATCH,
+                            selectedRoute.routeEntry().route().getRoute().getMetadataMatch());
+                return selectedRoute;
             }
         }
         return null;
-    }
-
-    private static boolean matches(@Nullable HttpRequest req, RouteEntry routeEntry) {
-        // matches the first entry for now
-        return true;
-    }
-
-    private static boolean matches(@Nullable HttpRequest req, VirtualHostSnapshot virtualHostSnapshot) {
-        // matches the first entry for now
-        return true;
-    }
-
-    private static final class IndexPair {
-        private final int virtualHostIndex;
-        private final int clusterIndex;
-
-        private IndexPair(int virtualHostIndex, int clusterIndex) {
-            this.virtualHostIndex = virtualHostIndex;
-            this.clusterIndex = clusterIndex;
-        }
-
-        @Override
-        public boolean equals(Object o) {
-            if (this == o) {
-                return true;
-            }
-            if (o == null || getClass() != o.getClass()) {
-                return false;
-            }
-            final IndexPair indexPair = (IndexPair) o;
-            return virtualHostIndex == indexPair.virtualHostIndex && clusterIndex == indexPair.clusterIndex;
-        }
-
-        @Override
-        public int hashCode() {
-            return Objects.hash(virtualHostIndex, clusterIndex);
-        }
     }
 }

@@ -917,7 +917,7 @@ public class HttpJsonTranscodingTest {
     }
 
     @Test
-    void shouldDenyEmptyJson() {
+    void shouldAcceptEmptyJson() {
         final String emptyJson = "";
         final RequestHeaders headers = RequestHeaders.builder()
                                                      .method(HttpMethod.POST)
@@ -925,7 +925,19 @@ public class HttpJsonTranscodingTest {
                                                      .contentType(MediaType.JSON)
                                                      .build();
         final AggregatedHttpResponse response = webClient.execute(headers, emptyJson).aggregate().join();
-        assertThat(response.status()).isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThat(response.status()).isEqualTo(HttpStatus.OK);
+    }
+
+    @Test
+    void shouldAcceptEmptyContentBody() {
+        final HttpData emptyContentBody = HttpData.empty();
+        final RequestHeaders headers = RequestHeaders.builder()
+                .method(HttpMethod.POST)
+                .path("/v1/echo/response_body/repeated")
+                .contentType(MediaType.JSON)
+                .build();
+        final AggregatedHttpResponse response = webClient.execute(headers, emptyContentBody).aggregate().join();
+        assertThat(response.status()).isEqualTo(HttpStatus.OK);
     }
 
     @Test

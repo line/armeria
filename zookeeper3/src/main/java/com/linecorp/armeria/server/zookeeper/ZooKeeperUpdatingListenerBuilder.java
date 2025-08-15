@@ -36,7 +36,7 @@ import com.linecorp.armeria.server.Server;
  * sb.serverListener(listener);
  * }</pre>
  * This registers the {@link Server} using the format compatible with
- * <a href="https://curator.apache.org/curator-x-discovery/index.html">Curator Service Discovery</a>.
+ * <a href="https://curator.apache.org/docs/service-discovery/">Curator Service Discovery</a>.
  *
  * <p>You can also specify the {@link CuratorFramework} instance to use. In this case,
  * invoking {@link #connectTimeout(Duration)}, {@link #connectTimeoutMillis(long)},
