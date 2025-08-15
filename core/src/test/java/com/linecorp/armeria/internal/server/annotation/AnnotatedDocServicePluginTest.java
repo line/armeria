@@ -19,14 +19,14 @@ package com.linecorp.armeria.internal.server.annotation;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
-import static com.linecorp.armeria.internal.server.annotation.AnnotatedDocServicePlugin.LONG;
-import static com.linecorp.armeria.internal.server.annotation.AnnotatedDocServicePlugin.STRING;
-import static com.linecorp.armeria.internal.server.annotation.AnnotatedDocServicePlugin.VOID;
 import static com.linecorp.armeria.internal.server.annotation.AnnotatedDocServicePlugin.endpointInfo;
 import static com.linecorp.armeria.internal.server.annotation.AnnotatedDocServicePlugin.newDescriptiveTypeInfo;
-import static com.linecorp.armeria.internal.server.annotation.AnnotatedDocServicePlugin.toTypeSignature;
 import static com.linecorp.armeria.internal.server.annotation.DefaultDescriptiveTypeInfoProviderTest.REQUEST_STRUCT_INFO_PROVIDER;
 import static com.linecorp.armeria.internal.server.docs.DocServiceUtil.unifyFilter;
+import static com.linecorp.armeria.server.docs.DocServiceTypeUtil.LONG;
+import static com.linecorp.armeria.server.docs.DocServiceTypeUtil.STRING;
+import static com.linecorp.armeria.server.docs.DocServiceTypeUtil.VOID;
+import static com.linecorp.armeria.server.docs.DocServiceTypeUtil.toTypeSignature;
 import static com.linecorp.armeria.server.docs.FieldLocation.HEADER;
 import static com.linecorp.armeria.server.docs.FieldLocation.QUERY;
 import static com.linecorp.armeria.server.docs.FieldRequirement.REQUIRED;
@@ -79,6 +79,119 @@ class AnnotatedDocServicePluginTest {
     private static final String BAR_NAME = BarClass.class.getName();
 
     private static final AnnotatedDocServicePlugin plugin = new AnnotatedDocServicePlugin();
+
+    private static Route withMethodAndTypes(RouteBuilder builder) {
+        return builder.methods(HttpMethod.GET)
+                      .consumes(MediaType.PLAIN_TEXT_UTF_8)
+                      .produces(MediaType.JSON_UTF_8)
+                      .build();
+    }
+
+    private static void checkFooService(ServiceInfo fooServiceInfo) {
+        assertThat(fooServiceInfo.exampleHeaders()).isEmpty();
+        final Map<String, MethodInfo> methods =
+                fooServiceInfo.methods().stream()
+                              .collect(toImmutableMap(MethodInfo::name, Function.identity()));
+        assertThat(methods).containsKeys("fooMethod", "foo2Method");
+
+        final MethodInfo fooMethod = methods.get("fooMethod");
+        assertThat(fooMethod.exampleHeaders()).isEmpty();
+        assertThat(fooMethod.exampleRequests()).isEmpty();
+
+        assertThat(fooMethod.parameters()).hasSize(2);
+        assertThat(fooMethod.parameters()).containsExactlyInAnyOrder(
+                FieldInfo.builder("foo", STRING).requirement(REQUIRED)
+                         .location(QUERY)
+                         .build(),
+                FieldInfo.builder("foo1", LONG).requirement(REQUIRED)
+                         .location(HEADER)
+                         .build());
+
+        assertThat(fooMethod.returnTypeSignature()).isEqualTo(VOID);
+
+        assertThat(fooMethod.endpoints()).containsExactly(EndpointInfo.builder("*", "exact:/foo")
+                                                                      .defaultMimeType(MediaType.JSON)
+                                                                      .build());
+    }
+
+    private static void checkBarService(ServiceInfo barServiceInfo) {
+        assertThat(barServiceInfo.exampleHeaders()).isEmpty();
+        final Map<String, MethodInfo> methods =
+                barServiceInfo.methods().stream()
+                              .collect(toImmutableMap(MethodInfo::name, Function.identity()));
+        assertThat(methods).containsKeys("barMethod");
+
+        final MethodInfo barMethod = methods.get("barMethod");
+        assertThat(barMethod.exampleHeaders()).isEmpty();
+        assertThat(barMethod.exampleRequests()).isEmpty();
+        assertThat(barMethod.returnTypeSignature()).isEqualTo(VOID);
+
+        assertThat(barMethod.endpoints()).containsExactly(EndpointInfo.builder("*", "exact:/bar")
+                                                                      .defaultMimeType(MediaType.JSON)
+                                                                      .build());
+
+        final FieldInfo bar = FieldInfo.builder("bar", STRING).requirement(REQUIRED)
+                                       .location(QUERY)
+                                       .build();
+        final List<FieldInfo> fieldInfos = barMethod.parameters();
+        assertThat(fieldInfos).hasSize(2);
+        assertThat(fieldInfos).contains(bar);
+        final Optional<FieldInfo> compositeBean =
+                fieldInfos.stream()
+                          .filter(fieldInfo -> "compositeBean".equals(fieldInfo.name()))
+                          .findFirst();
+        assertThat(compositeBean).isPresent();
+        final StructInfo expected = new StructInfo(
+                CompositeBean.class.getName(),
+                ImmutableList.of(createBean("bean1", RequestBean1.class),
+                                 createBean("bean2", RequestBean2.class)));
+        final DescriptiveTypeInfo actual = newDescriptiveTypeInfo(
+                (DescriptiveTypeSignature) compositeBean.get().typeSignature(), REQUEST_STRUCT_INFO_PROVIDER,
+                ImmutableSet.of());
+        assertThat(actual).isEqualTo(expected);
+    }
+
+    private static Map<String, ServiceInfo> services(Object... services) {
+        final DocServiceFilter include = (plugin, service, method) -> true;
+        final DocServiceFilter exclude = (plugin, service, method) -> false;
+        return services(include, exclude, services);
+    }
+
+    private static Map<String, ServiceInfo> services(DocServiceFilter include,
+                                                     DocServiceFilter exclude,
+                                                     Object... services) {
+        final ServerBuilder builder = Server.builder();
+        Arrays.stream(services).forEach(builder::annotatedService);
+        final Server server = builder.build();
+        final ServiceSpecification specification =
+                plugin.generateSpecification(ImmutableSet.copyOf(server.serviceConfigs()),
+                                             unifyFilter(include, exclude), typeDescriptor -> null);
+        return specification.services()
+                            .stream()
+                            .collect(toImmutableMap(ServiceInfo::name, Function.identity()));
+    }
+
+    private static List<String> methods(Map<String, ServiceInfo> services) {
+        return services.get(FOO_NAME).methods()
+                       .stream()
+                       .map(MethodInfo::name)
+                       .collect(toImmutableList());
+    }
+
+    static FieldInfo compositeBean() {
+        return FieldInfo.builder("compositeBean",
+                                 new RequestObjectTypeSignature(TypeSignatureType.STRUCT,
+                                                                CompositeBean.class.getName(),
+                                                                CompositeBean.class, ImmutableList.of()))
+                        .requirement(REQUIRED)
+                        .build();
+    }
+
+    private static FieldInfo createBean(String name, Class<?> type) {
+        return FieldInfo.builder(name, TypeSignature.ofStruct(type))
+                        .requirement(REQUIRED)
+                        .build();
+    }
 
     @Test
     void testToTypeSignature() throws Exception {
@@ -224,13 +337,6 @@ class AnnotatedDocServicePluginTest {
                             .build());
     }
 
-    private static Route withMethodAndTypes(RouteBuilder builder) {
-        return builder.methods(HttpMethod.GET)
-                      .consumes(MediaType.PLAIN_TEXT_UTF_8)
-                      .produces(MediaType.JSON_UTF_8)
-                      .build();
-    }
-
     @Test
     void testGenerateSpecification() {
         final Map<String, ServiceInfo> services = services((plugin, service, method) -> true,
@@ -312,112 +418,6 @@ class AnnotatedDocServicePluginTest {
         assertThat(paths).containsOnly("exact:/path1", "exact:/path2");
     }
 
-    private static void checkFooService(ServiceInfo fooServiceInfo) {
-        assertThat(fooServiceInfo.exampleHeaders()).isEmpty();
-        final Map<String, MethodInfo> methods =
-                fooServiceInfo.methods().stream()
-                              .collect(toImmutableMap(MethodInfo::name, Function.identity()));
-        assertThat(methods).containsKeys("fooMethod", "foo2Method");
-
-        final MethodInfo fooMethod = methods.get("fooMethod");
-        assertThat(fooMethod.exampleHeaders()).isEmpty();
-        assertThat(fooMethod.exampleRequests()).isEmpty();
-
-        assertThat(fooMethod.parameters()).hasSize(2);
-        assertThat(fooMethod.parameters()).containsExactlyInAnyOrder(
-                FieldInfo.builder("foo", STRING).requirement(REQUIRED)
-                         .location(QUERY)
-                         .build(),
-                FieldInfo.builder("foo1", LONG).requirement(REQUIRED)
-                         .location(HEADER)
-                         .build());
-
-        assertThat(fooMethod.returnTypeSignature()).isEqualTo(VOID);
-
-        assertThat(fooMethod.endpoints()).containsExactly(EndpointInfo.builder("*", "exact:/foo")
-                                                                      .defaultMimeType(MediaType.JSON)
-                                                                      .build());
-    }
-
-    private static void checkBarService(ServiceInfo barServiceInfo) {
-        assertThat(barServiceInfo.exampleHeaders()).isEmpty();
-        final Map<String, MethodInfo> methods =
-                barServiceInfo.methods().stream()
-                              .collect(toImmutableMap(MethodInfo::name, Function.identity()));
-        assertThat(methods).containsKeys("barMethod");
-
-        final MethodInfo barMethod = methods.get("barMethod");
-        assertThat(barMethod.exampleHeaders()).isEmpty();
-        assertThat(barMethod.exampleRequests()).isEmpty();
-        assertThat(barMethod.returnTypeSignature()).isEqualTo(VOID);
-
-        assertThat(barMethod.endpoints()).containsExactly(EndpointInfo.builder("*", "exact:/bar")
-                                                                      .defaultMimeType(MediaType.JSON)
-                                                                      .build());
-
-        final FieldInfo bar = FieldInfo.builder("bar", STRING).requirement(REQUIRED)
-                                       .location(QUERY)
-                                       .build();
-        final List<FieldInfo> fieldInfos = barMethod.parameters();
-        assertThat(fieldInfos).hasSize(2);
-        assertThat(fieldInfos).contains(bar);
-        final Optional<FieldInfo> compositeBean =
-                fieldInfos.stream()
-                          .filter(fieldInfo -> "compositeBean".equals(fieldInfo.name()))
-                          .findFirst();
-        assertThat(compositeBean).isPresent();
-        final StructInfo expected = new StructInfo(
-                CompositeBean.class.getName(),
-                ImmutableList.of(createBean("bean1", RequestBean1.class),
-                                 createBean("bean2", RequestBean2.class)));
-        final DescriptiveTypeInfo actual = newDescriptiveTypeInfo(
-                (DescriptiveTypeSignature) compositeBean.get().typeSignature(), REQUEST_STRUCT_INFO_PROVIDER,
-                ImmutableSet.of());
-        assertThat(actual).isEqualTo(expected);
-    }
-
-    private static Map<String, ServiceInfo> services(Object... services) {
-        final DocServiceFilter include = (plugin, service, method) -> true;
-        final DocServiceFilter exclude = (plugin, service, method) -> false;
-        return services(include, exclude, services);
-    }
-
-    private static Map<String, ServiceInfo> services(DocServiceFilter include,
-                                                     DocServiceFilter exclude,
-                                                     Object... services) {
-        final ServerBuilder builder = Server.builder();
-        Arrays.stream(services).forEach(builder::annotatedService);
-        final Server server = builder.build();
-        final ServiceSpecification specification =
-                plugin.generateSpecification(ImmutableSet.copyOf(server.serviceConfigs()),
-                                             unifyFilter(include, exclude), typeDescriptor -> null);
-        return specification.services()
-                            .stream()
-                            .collect(toImmutableMap(ServiceInfo::name, Function.identity()));
-    }
-
-    private static List<String> methods(Map<String, ServiceInfo> services) {
-        return services.get(FOO_NAME).methods()
-                       .stream()
-                       .map(MethodInfo::name)
-                       .collect(toImmutableList());
-    }
-
-    static FieldInfo compositeBean() {
-        return FieldInfo.builder("compositeBean",
-                                 new RequestObjectTypeSignature(TypeSignatureType.STRUCT,
-                                                                CompositeBean.class.getName(),
-                                                                CompositeBean.class, ImmutableList.of()))
-                        .requirement(REQUIRED)
-                        .build();
-    }
-
-    private static FieldInfo createBean(String name, Class<?> type) {
-        return FieldInfo.builder(name, TypeSignature.ofStruct(type))
-                        .requirement(REQUIRED)
-                        .build();
-    }
-
     private static class FieldContainer<T> {
         T typeVariable;
         List<String> list;
@@ -468,7 +468,7 @@ class AnnotatedDocServicePluginTest {
         private Long seqNum;
 
         @JsonProperty
-        private String uid;
+        private final String uid;
 
         @Nullable
         private String notPopulatedStr;

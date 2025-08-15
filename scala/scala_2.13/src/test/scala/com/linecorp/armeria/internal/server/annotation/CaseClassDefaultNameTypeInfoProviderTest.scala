@@ -15,8 +15,7 @@
  */
 
 package com.linecorp.armeria.internal.server.annotation
-
-import com.linecorp.armeria.internal.server.annotation.AnnotatedDocServicePlugin.STRING
+import com.linecorp.armeria.server.docs.DocServiceTypeUtil.STRING
 import com.linecorp.armeria.internal.testing.GenerateNativeImageTrace
 import com.linecorp.armeria.scala.implicits._
 import com.linecorp.armeria.server.annotation.Description

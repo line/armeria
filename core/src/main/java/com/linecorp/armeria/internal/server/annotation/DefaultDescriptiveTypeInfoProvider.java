@@ -18,8 +18,8 @@ package com.linecorp.armeria.internal.server.annotation;
 
 import static com.google.common.base.MoreObjects.firstNonNull;
 import static com.google.common.collect.ImmutableList.toImmutableList;
-import static com.linecorp.armeria.internal.server.annotation.AnnotatedDocServicePlugin.toTypeSignature;
 import static com.linecorp.armeria.internal.server.annotation.AnnotatedValueResolver.isAnnotatedNullable;
+import static com.linecorp.armeria.server.docs.DocServiceTypeUtil.toTypeSignature;
 import static java.util.Objects.requireNonNull;
 
 import java.lang.reflect.AnnotatedElement;
@@ -74,29 +74,6 @@ public final class DefaultDescriptiveTypeInfoProvider implements DescriptiveType
         this.request = request;
     }
 
-    @Nullable
-    @Override
-    public DescriptiveTypeInfo newDescriptiveTypeInfo(Object typeDescriptor) {
-        requireNonNull(typeDescriptor, "typeDescriptor");
-        if (!(typeDescriptor instanceof Class)) {
-            return null;
-        }
-        final Class<?> clazz = (Class<?>) typeDescriptor;
-        if (clazz.isEnum()) {
-            return newEnumInfo(clazz);
-        }
-
-        if (HttpResponse.class.isAssignableFrom(clazz)) {
-            return HTTP_RESPONSE_INFO;
-        }
-
-        if (request) {
-            return requestStructInfo(clazz);
-        } else {
-            return responseStructInfo(clazz);
-        }
-    }
-
     private static EnumInfo newEnumInfo(Class<?> enumClass) {
         final String name = enumClass.getName();
 
@@ -118,123 +95,6 @@ public final class DefaultDescriptiveTypeInfoProvider implements DescriptiveType
         return new EnumInfo(name, values, classDescriptionInfo(enumClass));
     }
 
-    private StructInfo requestStructInfo(Class<?> type) {
-        final JavaType javaType = mapper.constructType(type);
-        if (!mapper.canDeserialize(javaType)) {
-            return newReflectiveStructInfo(type);
-        }
-        return new StructInfo(type.getName(), requestFieldInfos(javaType),
-                              classDescriptionInfo(javaType.getRawClass()));
-    }
-
-    private List<FieldInfo> requestFieldInfos(JavaType javaType) {
-        if (!mapper.canDeserialize(javaType)) {
-            return ImmutableList.of();
-        }
-
-        final BeanDescription description = mapper.getDeserializationConfig().introspect(javaType);
-        final List<BeanPropertyDefinition> properties = description.findProperties();
-        if (properties.isEmpty()) {
-            return newReflectiveStructInfo(javaType.getRawClass()).fields();
-        }
-
-        return properties.stream()
-                         .map(property -> fieldInfos(javaType,
-                                                     property.getName(),
-                                                     property.getInternalName(),
-                                                     property.getPrimaryType()))
-                         .collect(toImmutableList());
-    }
-
-    private StructInfo responseStructInfo(Class<?> type) {
-        if (!mapper.canSerialize(type)) {
-            return newReflectiveStructInfo(type);
-        }
-        final JavaType javaType = mapper.constructType(type);
-        return new StructInfo(type.getName(), responseFieldInfos(javaType), classDescriptionInfo(type));
-    }
-
-    private List<FieldInfo> responseFieldInfos(JavaType javaType) {
-        if (!mapper.canSerialize(javaType.getRawClass())) {
-            return ImmutableList.of();
-        }
-
-        final BeanDescription description = mapper.getSerializationConfig().introspect(javaType);
-        final List<BeanPropertyDefinition> properties = description.findProperties();
-        if (properties.isEmpty()) {
-            return newReflectiveStructInfo(javaType.getRawClass()).fields();
-        }
-
-        return properties.stream()
-                         .map(property -> fieldInfos(javaType,
-                                                     property.getName(),
-                                                     property.getInternalName(),
-                                                     property.getPrimaryType()))
-                         .collect(toImmutableList());
-    }
-
-    private FieldInfo fieldInfos(JavaType javaType, String name, String internalName, JavaType fieldType) {
-        TypeSignature typeSignature = toTypeSignature(fieldType);
-        final FieldRequirement fieldRequirement;
-        if (typeSignature.type() == TypeSignatureType.OPTIONAL) {
-            typeSignature = ((ContainerTypeSignature) typeSignature).typeParameters().get(0);
-            if (typeSignature.type().hasTypeDescriptor()) {
-                final Object descriptor =
-                        ((DescriptiveTypeSignature) typeSignature).descriptor();
-                if (descriptor instanceof Class) {
-                    fieldType = mapper.constructType((Class<?>) descriptor);
-                }
-            }
-            fieldRequirement = FieldRequirement.OPTIONAL;
-        } else {
-            fieldRequirement = fieldRequirement(javaType, fieldType, internalName);
-        }
-
-        final DescriptionInfo descriptionInfo = fieldDescriptionInfo(javaType, fieldType, internalName);
-        return FieldInfo.builder(name, typeSignature)
-                        .requirement(fieldRequirement)
-                        .descriptionInfo(descriptionInfo)
-                        .build();
-    }
-
-    private FieldRequirement fieldRequirement(JavaType classType, JavaType fieldType, String fieldName) {
-        if (fieldType.isPrimitive()) {
-            return FieldRequirement.REQUIRED;
-        }
-
-        if (KotlinUtil.isData(classType.getRawClass())) {
-            // Only the parameters in the constructor of data classes correctly provide
-            // `isMarkedNullable` information.
-            final FieldRequirement requirement =
-                    extractFromConstructor(classType, fieldType, fieldName, parameter -> {
-                        if (isNullable(parameter)) {
-                            return FieldRequirement.OPTIONAL;
-                        } else {
-                            return FieldRequirement.REQUIRED;
-                        }
-                    });
-            if (requirement != null) {
-                return requirement;
-            }
-        }
-
-        final FieldRequirement requirement =
-                extractFieldMeta(classType, fieldType, fieldName, element -> {
-                    if (request) {
-                        if (element instanceof Method) {
-                            // Use the first parameter information for the setter method
-                            element = ((Method) element).getParameters()[0];
-                        }
-                    }
-                    if (isNullable(element)) {
-                        return FieldRequirement.OPTIONAL;
-                    }
-                    return FieldRequirement.REQUIRED;
-                });
-
-        return firstNonNull(requirement, FieldRequirement.UNSPECIFIED);
-    }
-
     static boolean isNullable(AnnotatedElement element) {
         return isAnnotatedNullable(element) || KotlinUtil.isMarkedNullable(element);
     }
@@ -245,28 +105,6 @@ public final class DefaultDescriptiveTypeInfoProvider implements DescriptiveType
             return DescriptionInfo.from(description);
         } else {
             return DescriptionInfo.empty();
-        }
-    }
-
-    private DescriptionInfo fieldDescriptionInfo(JavaType classType, JavaType fieldType, String fieldName) {
-        final Description description = extractFieldMeta(classType, fieldType, fieldName, element -> {
-            return AnnotationUtil.findFirst(element, Description.class);
-        });
-
-        if (description != null) {
-            return DescriptionInfo.from(description);
-        } else {
-            return DescriptionInfo.empty();
-        }
-    }
-
-    @Nullable
-    private <T> T extractFieldMeta(JavaType classType, JavaType fieldType, String fieldName,
-                                   Function<AnnotatedElement, @Nullable T> extractor) {
-        if (request) {
-            return extractRequestFieldMeta(classType, fieldType, fieldName, extractor);
-        } else {
-            return extractResponseFieldMeta(classType, fieldType, fieldName, extractor);
         }
     }
 
@@ -429,5 +267,167 @@ public final class DefaultDescriptiveTypeInfoProvider implements DescriptiveType
 
     private static StructInfo newReflectiveStructInfo(Class<?> clazz) {
         return (StructInfo) ReflectiveDescriptiveTypeInfoProvider.INSTANCE.newDescriptiveTypeInfo(clazz);
+    }
+
+    @Nullable
+    @Override
+    public DescriptiveTypeInfo newDescriptiveTypeInfo(Object typeDescriptor) {
+        requireNonNull(typeDescriptor, "typeDescriptor");
+        if (!(typeDescriptor instanceof Class)) {
+            return null;
+        }
+        final Class<?> clazz = (Class<?>) typeDescriptor;
+        if (clazz.isEnum()) {
+            return newEnumInfo(clazz);
+        }
+
+        if (HttpResponse.class.isAssignableFrom(clazz)) {
+            return HTTP_RESPONSE_INFO;
+        }
+
+        if (request) {
+            return requestStructInfo(clazz);
+        } else {
+            return responseStructInfo(clazz);
+        }
+    }
+
+    private StructInfo requestStructInfo(Class<?> type) {
+        final JavaType javaType = mapper.constructType(type);
+        if (!mapper.canDeserialize(javaType)) {
+            return newReflectiveStructInfo(type);
+        }
+        return new StructInfo(type.getName(), requestFieldInfos(javaType),
+                              classDescriptionInfo(javaType.getRawClass()));
+    }
+
+    private List<FieldInfo> requestFieldInfos(JavaType javaType) {
+        if (!mapper.canDeserialize(javaType)) {
+            return ImmutableList.of();
+        }
+
+        final BeanDescription description = mapper.getDeserializationConfig().introspect(javaType);
+        final List<BeanPropertyDefinition> properties = description.findProperties();
+        if (properties.isEmpty()) {
+            return newReflectiveStructInfo(javaType.getRawClass()).fields();
+        }
+
+        return properties.stream()
+                         .map(property -> fieldInfos(javaType,
+                                                     property.getName(),
+                                                     property.getInternalName(),
+                                                     property.getPrimaryType()))
+                         .collect(toImmutableList());
+    }
+
+    private StructInfo responseStructInfo(Class<?> type) {
+        if (!mapper.canSerialize(type)) {
+            return newReflectiveStructInfo(type);
+        }
+        final JavaType javaType = mapper.constructType(type);
+        return new StructInfo(type.getName(), responseFieldInfos(javaType), classDescriptionInfo(type));
+    }
+
+    private List<FieldInfo> responseFieldInfos(JavaType javaType) {
+        if (!mapper.canSerialize(javaType.getRawClass())) {
+            return ImmutableList.of();
+        }
+
+        final BeanDescription description = mapper.getSerializationConfig().introspect(javaType);
+        final List<BeanPropertyDefinition> properties = description.findProperties();
+        if (properties.isEmpty()) {
+            return newReflectiveStructInfo(javaType.getRawClass()).fields();
+        }
+
+        return properties.stream()
+                         .map(property -> fieldInfos(javaType,
+                                                     property.getName(),
+                                                     property.getInternalName(),
+                                                     property.getPrimaryType()))
+                         .collect(toImmutableList());
+    }
+
+    private FieldInfo fieldInfos(JavaType javaType, String name, String internalName, JavaType fieldType) {
+        TypeSignature typeSignature = toTypeSignature(fieldType);
+        final FieldRequirement fieldRequirement;
+        if (typeSignature.type() == TypeSignatureType.OPTIONAL) {
+            typeSignature = ((ContainerTypeSignature) typeSignature).typeParameters().get(0);
+            if (typeSignature.type().hasTypeDescriptor()) {
+                final Object descriptor =
+                        ((DescriptiveTypeSignature) typeSignature).descriptor();
+                if (descriptor instanceof Class) {
+                    fieldType = mapper.constructType((Class<?>) descriptor);
+                }
+            }
+            fieldRequirement = FieldRequirement.OPTIONAL;
+        } else {
+            fieldRequirement = fieldRequirement(javaType, fieldType, internalName);
+        }
+
+        final DescriptionInfo descriptionInfo = fieldDescriptionInfo(javaType, fieldType, internalName);
+        return FieldInfo.builder(name, typeSignature)
+                        .requirement(fieldRequirement)
+                        .descriptionInfo(descriptionInfo)
+                        .build();
+    }
+
+    private FieldRequirement fieldRequirement(JavaType classType, JavaType fieldType, String fieldName) {
+        if (fieldType.isPrimitive()) {
+            return FieldRequirement.REQUIRED;
+        }
+
+        if (KotlinUtil.isData(classType.getRawClass())) {
+            // Only the parameters in the constructor of data classes correctly provide
+            // `isMarkedNullable` information.
+            final FieldRequirement requirement =
+                    extractFromConstructor(classType, fieldType, fieldName, parameter -> {
+                        if (isNullable(parameter)) {
+                            return FieldRequirement.OPTIONAL;
+                        } else {
+                            return FieldRequirement.REQUIRED;
+                        }
+                    });
+            if (requirement != null) {
+                return requirement;
+            }
+        }
+
+        final FieldRequirement requirement =
+                extractFieldMeta(classType, fieldType, fieldName, element -> {
+                    if (request) {
+                        if (element instanceof Method) {
+                            // Use the first parameter information for the setter method
+                            element = ((Method) element).getParameters()[0];
+                        }
+                    }
+                    if (isNullable(element)) {
+                        return FieldRequirement.OPTIONAL;
+                    }
+                    return FieldRequirement.REQUIRED;
+                });
+
+        return firstNonNull(requirement, FieldRequirement.UNSPECIFIED);
+    }
+
+    private DescriptionInfo fieldDescriptionInfo(JavaType classType, JavaType fieldType, String fieldName) {
+        final Description description = extractFieldMeta(classType, fieldType, fieldName, element -> {
+            return AnnotationUtil.findFirst(element, Description.class);
+        });
+
+        if (description != null) {
+            return DescriptionInfo.from(description);
+        } else {
+            return DescriptionInfo.empty();
+        }
+    }
+
+    @Nullable
+    private <T> T extractFieldMeta(JavaType classType, JavaType fieldType, String fieldName,
+                                   Function<AnnotatedElement, @Nullable T> extractor) {
+        if (request) {
+            return extractRequestFieldMeta(classType, fieldType, fieldName, extractor);
+        } else {
+            return extractResponseFieldMeta(classType, fieldType, fieldName, extractor);
+        }
     }
 }
