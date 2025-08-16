@@ -14,7 +14,7 @@
  * under the License.
  */
 
-package com.linecorp.armeria.server.websocket;
+package com.linecorp.armeria.client.websocket;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -22,15 +22,14 @@ import java.net.URI;
 import java.time.Duration;
 import java.util.List;
 import java.util.Objects;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
-import org.reactivestreams.Subscriber;
-import org.reactivestreams.Subscription;
 
-import com.linecorp.armeria.client.websocket.WebSocketClient;
-import com.linecorp.armeria.client.websocket.WebSocketSession;
+import com.linecorp.armeria.client.ClientRequestContext;
+
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.StreamTimeoutException;
 import com.linecorp.armeria.common.logging.RequestLog;
@@ -41,89 +40,81 @@ import com.linecorp.armeria.common.websocket.WebSocketFrameType;
 import com.linecorp.armeria.common.websocket.WebSocketWriter;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServiceRequestContext;
+import com.linecorp.armeria.server.websocket.WebSocketService;
+import com.linecorp.armeria.server.websocket.WebSocketServiceHandler;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
 import io.netty.channel.Channel;
+import io.netty.util.AttributeKey;
 
-class WebSocketServiceStreamTimeoutTest {
+class WebSocketClientStreamTimeoutTest {
+    private static final AttributeKey<CompletableFuture<List<WebSocketFrame>>> FRAMES_FUT =
+            AttributeKey.valueOf("framesFuture");
+
     @RegisterExtension
     static final ServerExtension server = new ServerExtension() {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
-            sb.service("/timeout",
-                       WebSocketService.builder(new Handler())
-                               .streamTimeout(Duration.ofSeconds(1))
-                               .build());
+            sb.service("/test", WebSocketService.of(new Handler()));
         }
     };
 
     @Test
-    void streamTimeoutH2EmitsCloseAndLogsCauses() throws InterruptedException {
+    void clientStreamTimeoutH2EmitsCloseAndLogsCauses() throws InterruptedException {
         final URI uri = server.uri(SessionProtocol.H2C);
-        final WebSocketClient client = WebSocketClient.of(uri);
-        final WebSocketSession session = client.connect("/timeout").join();
+        final WebSocketClient client = WebSocketClient.builder(uri)
+                                                      .streamTimeout(Duration.ofSeconds(1))
+                                                      .build();
+        final WebSocketSession session = client.connect("/test").join();
+        session.outbound();
+        try {
+            session.inbound().collect().join();
+        } catch (Exception ignore) {}
 
-        final List<WebSocketFrame> frames = session.inbound().collect().join();
-
+        final ServiceRequestContext sCtx = server.requestContextCaptor().take();
+        final List<WebSocketFrame> frames = Objects.requireNonNull(sCtx.attr(FRAMES_FUT)).join();
         assertThat(frames).isNotEmpty();
         assertThat(frames.get(frames.size() - 1).type()).isSameAs(WebSocketFrameType.CLOSE);
 
-        final ServiceRequestContext ctx = server.requestContextCaptor().take();
+        final ClientRequestContext ctx = session.context();
         final RequestLog log = ctx.log().whenComplete().join();
-
-        assertThat(Objects.requireNonNull(log.requestCause())).isInstanceOf(StreamTimeoutException.class);
         assertThat(Objects.requireNonNull(log.responseCause())).isInstanceOf(StreamTimeoutException.class);
+        assertThat(Objects.requireNonNull(log.requestCause())).isInstanceOf(StreamTimeoutException.class);
     }
 
     @Test
-    void streamTimeoutH1ClosesChannel() throws InterruptedException {
+    void clientStreamTimeoutH1ClosesChannel() {
         final URI uri = server.uri(SessionProtocol.H1C);
-        final WebSocketClient client = WebSocketClient.of(uri);
-        final WebSocketSession session = client.connect("/timeout").join();
-        final WebSocketWriter cWriter = session.outbound();
-        session.inbound().subscribe(new Subscriber<WebSocketFrame>() {
-            @Override
-            public void onSubscribe(Subscription s) {
-                s.request(Long.MAX_VALUE);
-            }
+        final WebSocketClient client = WebSocketClient.builder(uri)
+                                                      .streamTimeout(Duration.ofSeconds(1))
+                                                      .build();
+        final WebSocketSession session = client.connect("/test").join();
+        session.outbound();
+        try {
+            session.inbound().collect().join();
+        } catch (Exception ignore) {}
 
-            @Override
-            public void onNext(WebSocketFrame f) {
-                if (f.type() == WebSocketFrameType.CLOSE) {
-                    cWriter.close();
-                }
-            }
-
-            @Override
-            public void onError(Throwable throwable) {}
-
-            @Override
-            public void onComplete() {}
-        });
-
-        final ServiceRequestContext ctx = server.requestContextCaptor().take();
+        final ClientRequestContext ctx = session.context();
         final Channel ch = ctx.log().whenAvailable(RequestLogProperty.SESSION).join().channel();
-        assertThat(Objects.requireNonNull(ch).closeFuture()).succeedsWithin(20, TimeUnit.SECONDS);
+
+        assertThat(Objects.requireNonNull(ch).closeFuture()).succeedsWithin(10, TimeUnit.SECONDS);
     }
 
     static final class Handler implements WebSocketServiceHandler {
         @Override
         public WebSocket handle(ServiceRequestContext ctx, WebSocket in) {
             final WebSocketWriter writer = WebSocket.streaming();
-            in.subscribe(new Subscriber<WebSocketFrame>() {
-                @Override
-                public void onSubscribe(Subscription s) {
-                    s.request(Long.MAX_VALUE);
-                }
 
-                @Override
-                public void onNext(WebSocketFrame frame) {}
+            final CompletableFuture<List<WebSocketFrame>> fut = new CompletableFuture<>();
+            ctx.setAttr(FRAMES_FUT, fut);
 
-                @Override
-                public void onError(Throwable t) {}
-
-                @Override
-                public void onComplete() { writer.close();}
+            in.collect().whenComplete((webSocketFrames, cause) -> {
+               if (cause == null) {
+                   fut.complete(webSocketFrames);
+               } else {
+                   fut.completeExceptionally(cause);
+               }
+               writer.close();
             });
 
             return writer;

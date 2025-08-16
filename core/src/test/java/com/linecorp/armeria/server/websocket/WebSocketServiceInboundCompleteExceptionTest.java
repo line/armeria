@@ -18,11 +18,8 @@ package com.linecorp.armeria.server.websocket;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import java.net.URI;
-import java.time.Duration;
 import java.util.List;
 import java.util.Objects;
-import java.util.concurrent.TimeUnit;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
@@ -31,10 +28,9 @@ import org.reactivestreams.Subscription;
 
 import com.linecorp.armeria.client.websocket.WebSocketClient;
 import com.linecorp.armeria.client.websocket.WebSocketSession;
+import com.linecorp.armeria.common.InboundCompleteException;
 import com.linecorp.armeria.common.SessionProtocol;
-import com.linecorp.armeria.common.StreamTimeoutException;
 import com.linecorp.armeria.common.logging.RequestLog;
-import com.linecorp.armeria.common.logging.RequestLogProperty;
 import com.linecorp.armeria.common.websocket.WebSocket;
 import com.linecorp.armeria.common.websocket.WebSocketFrame;
 import com.linecorp.armeria.common.websocket.WebSocketFrameType;
@@ -43,90 +39,95 @@ import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
-import io.netty.channel.Channel;
-
-class WebSocketServiceStreamTimeoutTest {
+class WebSocketServiceInboundCompleteExceptionTest {
     @RegisterExtension
     static final ServerExtension server = new ServerExtension() {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
-            sb.service("/timeout",
-                       WebSocketService.builder(new Handler())
-                               .streamTimeout(Duration.ofSeconds(1))
-                               .build());
+            sb.service("/cancel",
+                       WebSocketService.of(new CancelImmediatelyHandler()));
+            sb.service("/abort",
+                       WebSocketService.of(new AbortImmediatelyHandler()));
         }
     };
 
     @Test
-    void streamTimeoutH2EmitsCloseAndLogsCauses() throws InterruptedException {
-        final URI uri = server.uri(SessionProtocol.H2C);
-        final WebSocketClient client = WebSocketClient.of(uri);
-        final WebSocketSession session = client.connect("/timeout").join();
+    void inboundCancelAbortsOutboundWithMappedCauseAndSendsClose() throws InterruptedException {
+        final WebSocketClient client = WebSocketClient.of(server.uri(SessionProtocol.H2C));
+        final WebSocketSession session = client.connect("/cancel").join();
 
         final List<WebSocketFrame> frames = session.inbound().collect().join();
-
         assertThat(frames).isNotEmpty();
         assertThat(frames.get(frames.size() - 1).type()).isSameAs(WebSocketFrameType.CLOSE);
 
         final ServiceRequestContext ctx = server.requestContextCaptor().take();
         final RequestLog log = ctx.log().whenComplete().join();
-
-        assertThat(Objects.requireNonNull(log.requestCause())).isInstanceOf(StreamTimeoutException.class);
-        assertThat(Objects.requireNonNull(log.responseCause())).isInstanceOf(StreamTimeoutException.class);
+        assertThat(Objects.requireNonNull(log.responseCause())).isInstanceOf(InboundCompleteException.class);
     }
 
     @Test
-    void streamTimeoutH1ClosesChannel() throws InterruptedException {
-        final URI uri = server.uri(SessionProtocol.H1C);
-        final WebSocketClient client = WebSocketClient.of(uri);
-        final WebSocketSession session = client.connect("/timeout").join();
-        final WebSocketWriter cWriter = session.outbound();
-        session.inbound().subscribe(new Subscriber<WebSocketFrame>() {
-            @Override
-            public void onSubscribe(Subscription s) {
-                s.request(Long.MAX_VALUE);
-            }
+    void inboundAbortAbortsOutboundWithMappedCauseAndSendsClose() throws InterruptedException {
+        final WebSocketClient client = WebSocketClient.of(server.uri(SessionProtocol.H2C));
+        final WebSocketSession session = client.connect("/abort").join();
 
-            @Override
-            public void onNext(WebSocketFrame f) {
-                if (f.type() == WebSocketFrameType.CLOSE) {
-                    cWriter.close();
-                }
-            }
-
-            @Override
-            public void onError(Throwable throwable) {}
-
-            @Override
-            public void onComplete() {}
-        });
+        final List<WebSocketFrame> frames = session.inbound().collect().join();
+        assertThat(frames).isNotEmpty();
+        assertThat(frames.get(frames.size() - 1).type()).isSameAs(WebSocketFrameType.CLOSE);
 
         final ServiceRequestContext ctx = server.requestContextCaptor().take();
-        final Channel ch = ctx.log().whenAvailable(RequestLogProperty.SESSION).join().channel();
-        assertThat(Objects.requireNonNull(ch).closeFuture()).succeedsWithin(20, TimeUnit.SECONDS);
+        final RequestLog log = ctx.log().whenComplete().join();
+        assertThat(Objects.requireNonNull(log.responseCause())).isInstanceOf(InboundCompleteException.class);
     }
 
-    static final class Handler implements WebSocketServiceHandler {
+    public static final class CancelImmediatelyHandler implements WebSocketServiceHandler {
         @Override
         public WebSocket handle(ServiceRequestContext ctx, WebSocket in) {
-            final WebSocketWriter writer = WebSocket.streaming();
+            final WebSocketWriter out = WebSocket.streaming();
             in.subscribe(new Subscriber<WebSocketFrame>() {
                 @Override
                 public void onSubscribe(Subscription s) {
                     s.request(Long.MAX_VALUE);
+                    s.cancel();
                 }
 
                 @Override
                 public void onNext(WebSocketFrame frame) {}
 
                 @Override
-                public void onError(Throwable t) {}
+                public void onError(Throwable throwable) {}
 
                 @Override
-                public void onComplete() { writer.close();}
+                public void onComplete() {
+                    out.close();
+                }
             });
+            return out;
+        }
+    }
 
-            return writer;
+    static final class AbortImmediatelyHandler implements WebSocketServiceHandler {
+        @Override
+        public WebSocket handle(ServiceRequestContext ctx, WebSocket in) {
+            final WebSocketWriter out = WebSocket.streaming();
+            in.subscribe(new Subscriber<WebSocketFrame>() {
+                @Override
+                public void onSubscribe(Subscription s) {
+                    s.request(Long.MAX_VALUE);
+                    in.abort();
+                }
+
+                @Override
+                public void onNext(WebSocketFrame frame) {}
+
+                @Override
+                public void onError(Throwable throwable) {}
+
+                @Override
+                public void onComplete() {
+                    out.close();
+                }
+            });
+            return out;
         }
     }
 }
