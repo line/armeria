@@ -76,8 +76,8 @@ final class DefaultWebSocketClient implements WebSocketClient {
     @Nullable
     private final Duration streamTimeout;
 
-    DefaultWebSocketClient(WebClient webClient, @Nullable Duration streamTimeout, int maxFramePayloadLength, boolean allowMaskMismatch,
-                           List<String> subprotocols, boolean aggregateContinuation) {
+    DefaultWebSocketClient(WebClient webClient, @Nullable Duration streamTimeout, int maxFramePayloadLength,
+                           boolean allowMaskMismatch, List<String> subprotocols, boolean aggregateContinuation) {
         this.webClient = webClient;
         this.streamTimeout = streamTimeout;
         this.maxFramePayloadLength = maxFramePayloadLength;
@@ -129,7 +129,8 @@ final class DefaultWebSocketClient implements WebSocketClient {
             final WebSocketClientFrameDecoder decoder =
                     new WebSocketClientFrameDecoder(ctx, maxFramePayloadLength, allowMaskMismatch,
                                                     aggregateContinuation);
-            final WebSocketWrapper baseInbound = new WebSocketWrapper(split.body().decode(decoder, ctx.alloc()));
+            final WebSocketWrapper baseInbound =
+                    new WebSocketWrapper(split.body().decode(decoder, ctx.alloc()));
             final WebSocket inbound = streamTimeout != null ? baseInbound.timeout(streamTimeout) : baseInbound;
 
             result.complete(new WebSocketSession(ctx, responseHeaders, inbound, outboundFuture, encoder));

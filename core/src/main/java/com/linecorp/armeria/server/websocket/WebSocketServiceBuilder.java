@@ -267,8 +267,8 @@ public final class WebSocketServiceBuilder {
             allowAnyOrigin = false;
             originPredicate = this.originPredicate;
         }
-        return new DefaultWebSocketService(handler, streamTimeout, fallbackService, maxFramePayloadLength, allowMaskMismatch,
-                                           subprotocols, allowAnyOrigin, originPredicate, aggregateContinuation,
-                                           serviceOptions);
+        return new DefaultWebSocketService(handler, streamTimeout, fallbackService, maxFramePayloadLength,
+                                           allowMaskMismatch, subprotocols, allowAnyOrigin, originPredicate,
+                                           aggregateContinuation, serviceOptions);
     }
 }

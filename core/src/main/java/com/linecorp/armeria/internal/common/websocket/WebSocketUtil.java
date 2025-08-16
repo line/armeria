@@ -153,7 +153,7 @@ public final class WebSocketUtil {
 
     public static CloseWebSocketFrame newClientCloseWebSocketFrame(Throwable cause) {
         final WebSocketCloseStatus closeStatus;
-        if(cause instanceof WebSocketProtocolViolationException) {
+        if (cause instanceof WebSocketProtocolViolationException) {
             closeStatus = ((WebSocketProtocolViolationException) cause).closeStatus();
         } else {
             closeStatus = WebSocketCloseStatus.NORMAL_CLOSURE;

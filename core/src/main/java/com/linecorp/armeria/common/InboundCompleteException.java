@@ -18,9 +18,15 @@ package com.linecorp.armeria.common;
 
 import com.linecorp.armeria.common.annotation.Nullable;
 
+/**
+ * A {@link CancellationException} raised when an inbound stream is cancelled or aborted and completes.
+ */
 public class InboundCompleteException extends CancellationException {
     private static final long serialVersionUID = -5231663021153944677L;
 
+    /**
+     * Creates a new instance with the specified {@code message}.
+     */
     public InboundCompleteException(@Nullable String message) {
         super(message);
     }

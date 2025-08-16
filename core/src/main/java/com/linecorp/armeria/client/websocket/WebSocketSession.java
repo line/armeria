@@ -146,8 +146,8 @@ public final class WebSocketSession {
             }
 
             final Throwable mapped =
-                    (cause instanceof CancelledSubscriptionException || cause instanceof AbortedStreamException)
-                    ? new InboundCompleteException("Closing outbound (inbound stream was cancelled/aborted)")
+                    (cause instanceof CancelledSubscriptionException || cause instanceof AbortedStreamException) ?
+                    new InboundCompleteException("Closing outbound (inbound stream was cancelled/aborted)")
                     : cause;
 
             data.abort(mapped);

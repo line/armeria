@@ -236,8 +236,8 @@ public final class WebSocketClientBuilder extends AbstractWebClientBuilder {
      */
     public WebSocketClient build() {
         final WebClient webClient = buildWebClient();
-        return new DefaultWebSocketClient(webClient, streamTimeout, maxFramePayloadLength, allowMaskMismatch, subprotocols,
-                                          aggregateContinuation);
+        return new DefaultWebSocketClient(webClient, streamTimeout, maxFramePayloadLength, allowMaskMismatch,
+                                          subprotocols, aggregateContinuation);
     }
 
     // Override the return type of the chaining methods in the superclass.
