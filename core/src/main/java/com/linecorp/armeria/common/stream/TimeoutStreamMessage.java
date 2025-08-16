@@ -243,6 +243,7 @@ final class TimeoutStreamMessage<T> implements StreamMessage<T> {
             canceled = true;
             cancelSchedule();
             assert subscription != null;
+            completionFuture.completeExceptionally(CancelledSubscriptionException.get());
             subscription.cancel();
         }
     }
