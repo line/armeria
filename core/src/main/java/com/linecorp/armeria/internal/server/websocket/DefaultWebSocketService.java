@@ -32,13 +32,13 @@ import com.google.common.base.Ascii;
 import com.google.common.base.Splitter;
 import com.google.common.net.HostAndPort;
 
-import com.linecorp.armeria.common.CancellationException;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
+import com.linecorp.armeria.common.InboundCompleteException;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.ResponseHeaders;
@@ -134,11 +134,12 @@ public final class DefaultWebSocketService implements WebSocketService, WebSocke
                return null;
            }
 
-           if (cause instanceof CancelledSubscriptionException || cause instanceof AbortedStreamException) {
-               outbound.abort(new CancellationException("Inbound was cancelled or aborted → cancelling outbound as well"));
-           } else {
-               outbound.abort(cause);
-           }
+           final Throwable mapped =
+                   (cause instanceof CancelledSubscriptionException || cause instanceof AbortedStreamException)
+                   ? new InboundCompleteException("Closing outbound (inbound stream was cancelled/aborted)")
+                   : cause;
+
+           outbound.abort(mapped);
            return null;
         });
         return outbound;
