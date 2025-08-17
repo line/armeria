@@ -129,17 +129,13 @@ public final class DefaultWebSocketService implements WebSocketService, WebSocke
         final WebSocket inbound = (streamTimeout != null) ? in.timeout(streamTimeout) : in;
         final WebSocket outbound = handler.handle(ctx, inbound);
 
-        inbound.whenComplete().handle((unused, cause) -> {
-           if (cause == null) {
-               return null;
-           }
-
-           final Throwable mapped = (cause instanceof CancelledSubscriptionException ||
+        inbound.whenComplete().exceptionally(cause -> {
+            final Throwable mapped = (cause instanceof CancelledSubscriptionException ||
                                      cause instanceof AbortedStreamException) ?
                                     new InboundCompleteException("inbound stream was cancelled") : cause;
 
-           outbound.abort(mapped);
-           return null;
+            outbound.abort(mapped);
+            return null;
         });
         return outbound;
     }

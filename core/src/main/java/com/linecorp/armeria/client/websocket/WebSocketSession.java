@@ -140,11 +140,7 @@ public final class WebSocketSession {
                                ctx, newClientCloseWebSocketFrame(cause))));
                         });
 
-        inbound.whenComplete().handle((unused, cause) -> {
-            if (cause == null) {
-                return null;
-            }
-
+        inbound.whenComplete().exceptionally(cause -> {
             final Throwable mapped = (cause instanceof CancelledSubscriptionException ||
                                       cause instanceof AbortedStreamException) ?
                                      new InboundCompleteException("inbound stream was cancelled") : cause;
