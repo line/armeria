@@ -52,8 +52,8 @@ class WebSocketServiceStreamTimeoutTest {
         protected void configure(ServerBuilder sb) throws Exception {
             sb.service("/timeout",
                        WebSocketService.builder(new Handler())
-                               .streamTimeout(Duration.ofSeconds(1))
-                               .build());
+                                       .streamTimeout(Duration.ofSeconds(1))
+                                       .build());
         }
     };
 
@@ -95,10 +95,12 @@ class WebSocketServiceStreamTimeoutTest {
             }
 
             @Override
-            public void onError(Throwable throwable) {}
+            public void onError(Throwable throwable) {
+            }
 
             @Override
-            public void onComplete() {}
+            public void onComplete() {
+            }
         });
 
         final ServiceRequestContext ctx = server.requestContextCaptor().take();
@@ -117,13 +119,17 @@ class WebSocketServiceStreamTimeoutTest {
                 }
 
                 @Override
-                public void onNext(WebSocketFrame frame) {}
+                public void onNext(WebSocketFrame frame) {
+                }
 
                 @Override
-                public void onError(Throwable t) {}
+                public void onError(Throwable t) {
+                }
 
                 @Override
-                public void onComplete() { writer.close();}
+                public void onComplete() {
+                    writer.close();
+                }
             });
 
             return writer;

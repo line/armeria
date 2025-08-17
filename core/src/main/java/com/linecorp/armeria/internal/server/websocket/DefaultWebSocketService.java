@@ -134,10 +134,9 @@ public final class DefaultWebSocketService implements WebSocketService, WebSocke
                return null;
            }
 
-           final Throwable mapped =
-                   (cause instanceof CancelledSubscriptionException || cause instanceof AbortedStreamException)
-                   ? new InboundCompleteException("Closing outbound (inbound stream was cancelled/aborted)")
-                   : cause;
+           final Throwable mapped = (cause instanceof CancelledSubscriptionException ||
+                                     cause instanceof AbortedStreamException) ?
+                                    new InboundCompleteException("inbound stream was cancelled") : cause;
 
            outbound.abort(mapped);
            return null;

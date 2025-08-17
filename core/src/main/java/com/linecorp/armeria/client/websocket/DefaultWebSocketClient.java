@@ -77,7 +77,8 @@ final class DefaultWebSocketClient implements WebSocketClient {
     private final Duration streamTimeout;
 
     DefaultWebSocketClient(WebClient webClient, @Nullable Duration streamTimeout, int maxFramePayloadLength,
-                           boolean allowMaskMismatch, List<String> subprotocols, boolean aggregateContinuation) {
+                           boolean allowMaskMismatch, List<String> subprotocols,
+                           boolean aggregateContinuation) {
         this.webClient = webClient;
         this.streamTimeout = streamTimeout;
         this.maxFramePayloadLength = maxFramePayloadLength;

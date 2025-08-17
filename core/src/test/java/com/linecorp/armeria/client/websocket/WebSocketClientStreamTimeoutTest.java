@@ -29,7 +29,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
 import com.linecorp.armeria.client.ClientRequestContext;
-
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.StreamTimeoutException;
 import com.linecorp.armeria.common.logging.RequestLog;
@@ -69,7 +68,9 @@ class WebSocketClientStreamTimeoutTest {
         session.outbound();
         try {
             session.inbound().collect().join();
-        } catch (Exception ignore) {}
+        } catch (Exception ignore) {
+            // expected: stream timeout
+        }
 
         final ServiceRequestContext sCtx = server.requestContextCaptor().take();
         final List<WebSocketFrame> frames = Objects.requireNonNull(sCtx.attr(FRAMES_FUT)).join();
@@ -92,7 +93,9 @@ class WebSocketClientStreamTimeoutTest {
         session.outbound();
         try {
             session.inbound().collect().join();
-        } catch (Exception ignore) {}
+        } catch (Exception ignore) {
+            // expected: stream timeout
+        }
 
         final ClientRequestContext ctx = session.context();
         final Channel ch = ctx.log().whenAvailable(RequestLogProperty.SESSION).join().channel();
