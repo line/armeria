@@ -3056,7 +3056,6 @@ glass
 gle
 gleeze.com
 gliding.aero
-glitch.me
 gliwice.pl
 global
 global.prod.fastly.net
@@ -7549,6 +7548,8 @@ saloon.jp
 saltdal.no
 salud.bo
 salvador.br
+same-app.com
+same-preview.com
 samegawa.fukushima.jp
 samnanger.no
 sampa.br
