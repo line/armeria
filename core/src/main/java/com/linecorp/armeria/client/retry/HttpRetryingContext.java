@@ -55,7 +55,6 @@ final class HttpRetryingContext implements RetryingContext<HttpRequest, HttpResp
         UNINITIALIZED,
         INITIALIZING,
         INITIALIZED,
-        COMPLETING,
         COMPLETED
     }
 
@@ -137,6 +136,31 @@ final class HttpRetryingContext implements RetryingContext<HttpRequest, HttpResp
                });
         }
 
+        initFuture.whenComplete((initSuccessful, initCause) -> {
+            assert state == State.INITIALIZED || state == State.COMPLETED;
+            if (!initSuccessful || initCause != null) {
+                return;
+            }
+
+            req.whenComplete().handle((unused, cause) -> {
+                if (cause != null) {
+                    abort(cause);
+                }
+                return null;
+            });
+
+            res.whenComplete().handle((result, cause) -> {
+                final Throwable abortCause;
+                if (cause != null) {
+                    abortCause = cause;
+                } else {
+                    abortCause = AbortedStreamException.get();
+                }
+                abort(abortCause);
+                return null;
+            });
+        });
+
         return initFuture;
     }
 
@@ -144,10 +168,6 @@ final class HttpRetryingContext implements RetryingContext<HttpRequest, HttpResp
     @Nullable
     public HttpRetryAttempt executeAttempt(@Nullable Backoff backoff,
                                            Client<HttpRequest, HttpResponse> delegate) {
-        if (isCompleted()) {
-            return null;
-        }
-
         assert state == State.INITIALIZED;
         assert reqDuplicator != null;
 
@@ -261,7 +281,7 @@ final class HttpRetryingContext implements RetryingContext<HttpRequest, HttpResp
 
     @Override
     public void abort(HttpRetryAttempt attempt) {
-        assert state == State.INITIALIZED || state == State.COMPLETING || state == State.COMPLETED;
+        assert state == State.INITIALIZED || state == State.COMPLETED;
         attempt.abort();
     }
 
@@ -272,7 +292,7 @@ final class HttpRetryingContext implements RetryingContext<HttpRequest, HttpResp
             return;
         }
 
-        assert state == State.INITIALIZED || state == State.COMPLETING;
+        assert state == State.INITIALIZED;
         assert reqDuplicator != null;
         state = State.COMPLETED;
 
@@ -290,42 +310,6 @@ final class HttpRetryingContext implements RetryingContext<HttpRequest, HttpResp
         ctx.logBuilder().endResponse(cause);
 
         resFuture.completeExceptionally(cause);
-    }
-
-    private boolean isCompleted() {
-        if (state == State.COMPLETING || state == State.COMPLETED) {
-            return true;
-        }
-
-        assert state == State.INITIALIZED;
-
-        // The request or response has been aborted by the client before it receives a response,
-        // so stop retrying.
-        if (req.whenComplete().isCompletedExceptionally()) {
-            state = State.COMPLETING;
-            req.whenComplete().handle((unused, cause) -> {
-                abort(cause);
-                return null;
-            });
-            return true;
-        }
-
-        if (res.isComplete()) {
-            state = State.COMPLETING;
-            res.whenComplete().handle((result, cause) -> {
-                final Throwable abortCause;
-                if (cause != null) {
-                    abortCause = cause;
-                } else {
-                    abortCause = AbortedStreamException.get();
-                }
-                abort(abortCause);
-                return null;
-            });
-            return true;
-        }
-
-        return false;
     }
 
     @Override

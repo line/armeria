@@ -40,6 +40,7 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.RpcResponse;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.stream.AbortedStreamException;
 import com.linecorp.armeria.common.util.TimeoutMode;
 import com.linecorp.armeria.common.util.UnmodifiableFuture;
 import com.linecorp.armeria.internal.client.ClientPendingThrowableUtil;
@@ -97,7 +98,18 @@ final class RpcRetryingContext implements RetryingContext<RpcRequest, RpcRespons
     @Override
     public CompletableFuture<Boolean> init() {
         assert state == State.INITIALIZED;
-        // Nothing special to initialize for RPC retrying.
+
+        res.whenComplete().handle((result, cause) -> {
+            final Throwable abortCause;
+            if (cause != null) {
+                abortCause = cause;
+            } else {
+                abortCause = AbortedStreamException.get();
+            }
+            abort(abortCause);
+            return null;
+        });
+
         return UnmodifiableFuture.completedFuture(true);
     }
 
@@ -105,10 +117,6 @@ final class RpcRetryingContext implements RetryingContext<RpcRequest, RpcRespons
     @Nullable
     public RpcRetryAttempt executeAttempt(@Nullable Backoff backoff,
                                           Client<RpcRequest, RpcResponse> delegate) {
-        if (res.isDone()) {
-            return null;
-        }
-
         assert state == State.INITIALIZED;
 
         retryCounter.recordAttemptWith(backoff);
