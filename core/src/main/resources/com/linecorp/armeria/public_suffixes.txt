@@ -3678,6 +3678,7 @@ hoylandet.no
 hr
 hr.eu.org
 hra.health
+hrsn.au
 hrsn.dev
 hs.kr
 hsbc
@@ -8017,6 +8018,7 @@ sos.pl
 sosa.chiba.jp
 sosnowiec.pl
 soundcast.me
+sourcecraft.site
 sowa.ibaraki.jp
 soy
 sp.gov.br
@@ -9067,6 +9069,7 @@ vp4.me
 vpndns.net
 vpnplus.to
 vps-host.net
+vps.hrsn.au
 vps.mcdir.ru
 vr.it
 vs.it
