@@ -63,15 +63,10 @@ final class RpcRetryingContext implements RetryingContext<RpcRequest, RpcRespons
     private final CompletableFuture<RpcResponse> resFuture;
     private final RpcResponse res;
     private final RpcRequest req;
-
-    private int numberAttemptsSoFar;
+    private final RetryCounter retryCounter;
 
     private final long deadlineTimeNanos;
     private final boolean hasDeadline;
-
-    @Nullable
-    private Backoff lastBackoff;
-    private int numberAttemptsWithBackoffSoFar;
 
     List<RpcRetryAttempt> attemptsSoFar;
 
@@ -86,8 +81,7 @@ final class RpcRetryingContext implements RetryingContext<RpcRequest, RpcRespons
         this.resFuture = resFuture;
         this.res = res;
         this.req = req;
-
-        numberAttemptsSoFar = 0;
+        retryCounter = new RetryCounter(retryConfig.maxTotalAttempts());
 
         final long responseTimeoutMillis = ctx.responseTimeoutMillis();
         if (responseTimeoutMillis <= 0 || responseTimeoutMillis == Long.MAX_VALUE) {
@@ -97,9 +91,6 @@ final class RpcRetryingContext implements RetryingContext<RpcRequest, RpcRespons
             deadlineTimeNanos = System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(responseTimeoutMillis);
             hasDeadline = true;
         }
-
-        lastBackoff = null;
-        numberAttemptsWithBackoffSoFar = 0;
 
         attemptsSoFar = new LinkedList<>();
     }
@@ -121,21 +112,9 @@ final class RpcRetryingContext implements RetryingContext<RpcRequest, RpcRespons
 
         assert state == State.INITIALIZED;
 
-        if (numberAttemptsSoFar >= retryConfig.maxTotalAttempts()) {
-            throw new IllegalStateException(
-                    "Exceeded the maximum number of attempts: " + retryConfig.maxTotalAttempts());
-        }
+        retryCounter.recordAttemptWith(backoff);
 
-        final int attemptNumber = ++numberAttemptsSoFar;
-
-        if (backoff != null) {
-            if (lastBackoff != backoff) {
-                lastBackoff = backoff;
-                numberAttemptsWithBackoffSoFar = 0;
-            }
-            numberAttemptsWithBackoffSoFar++;
-        }
-
+        final int attemptNumber = retryCounter.attemptNumber();
         final boolean isInitialAttempt = attemptNumber <= 1;
 
         if (!setResponseTimeout()) {
@@ -178,19 +157,14 @@ final class RpcRetryingContext implements RetryingContext<RpcRequest, RpcRespons
             return Long.MAX_VALUE;
         }
 
-        if (numberAttemptsSoFar >= retryConfig.maxTotalAttempts()) {
+        if (retryCounter.hasReachedMaxAttempts()) {
             logger.debug("Exceeded the default number of max attempt: {}", retryConfig.maxTotalAttempts());
             return Long.MAX_VALUE;
         }
 
-        final int numberAttemptsWithThisBackoffSoFar;
-        if (lastBackoff != backoff) {
-            numberAttemptsWithThisBackoffSoFar = 1;
-        } else {
-            numberAttemptsWithThisBackoffSoFar = numberAttemptsWithBackoffSoFar;
-        }
+        final long nextRetryDelayMillis = backoff.nextDelayMillis(
+                retryCounter.attemptNumberForBackoff(backoff) + 1);
 
-        final long nextRetryDelayMillis = backoff.nextDelayMillis(numberAttemptsWithThisBackoffSoFar);
         if (nextRetryDelayMillis < 0) {
             logger.debug("Exceeded the number of max attempts in the backoff: {}", backoff);
             return Long.MAX_VALUE;
@@ -333,9 +307,7 @@ final class RpcRetryingContext implements RetryingContext<RpcRequest, RpcRespons
                 .add("res", res)
                 .add("deadlineTimeNanos", deadlineTimeNanos)
                 .add("hasDeadline", hasDeadline)
-                .add("lastBackoff", lastBackoff)
-                .add("numberAttemptsSoFar", numberAttemptsSoFar)
-                .add("numberAttemptsWithBackoffSoFar", numberAttemptsWithBackoffSoFar)
+                .add("retryCounter", retryCounter)
                 .toString();
     }
 }

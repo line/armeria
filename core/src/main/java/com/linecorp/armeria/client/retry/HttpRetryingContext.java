@@ -70,15 +70,10 @@ final class HttpRetryingContext implements RetryingContext<HttpRequest, HttpResp
     private final HttpRequest req;
     @Nullable
     private HttpRequestDuplicator reqDuplicator;
-
-    private int numberAttemptsSoFar;
+    private final RetryCounter retryCounter;
 
     private final long deadlineTimeNanos;
     private final boolean hasDeadline;
-
-    @Nullable
-    private Backoff lastBackoff;
-    private int numberAttemptsWithBackoffSoFar;
 
     private final boolean useRetryAfter;
     List<HttpRetryAttempt> attemptsSoFar;
@@ -97,8 +92,7 @@ final class HttpRetryingContext implements RetryingContext<HttpRequest, HttpResp
         this.res = res;
         this.req = req;
         reqDuplicator = null; // will be initialized in init().
-
-        numberAttemptsSoFar = 0;
+        retryCounter = new RetryCounter(retryConfig.maxTotalAttempts());
 
         final long responseTimeoutMillis = ctx.responseTimeoutMillis();
         if (responseTimeoutMillis <= 0 || responseTimeoutMillis == Long.MAX_VALUE) {
@@ -108,9 +102,6 @@ final class HttpRetryingContext implements RetryingContext<HttpRequest, HttpResp
             deadlineTimeNanos = System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(responseTimeoutMillis);
             hasDeadline = true;
         }
-
-        lastBackoff = null;
-        numberAttemptsWithBackoffSoFar = 0;
 
         this.useRetryAfter = useRetryAfter;
         attemptsSoFar = new LinkedList<>();
@@ -161,21 +152,9 @@ final class HttpRetryingContext implements RetryingContext<HttpRequest, HttpResp
         assert state == State.INITIALIZED;
         assert reqDuplicator != null;
 
-        if (numberAttemptsSoFar >= retryConfig.maxTotalAttempts()) {
-            throw new IllegalStateException(
-                    "Exceeded the maximum number of attempts: " + retryConfig.maxTotalAttempts());
-        }
+        retryCounter.recordAttemptWith(backoff);
 
-        final int attemptNumber = ++numberAttemptsSoFar;
-
-        if (backoff != null) {
-            if (lastBackoff != backoff) {
-                lastBackoff = backoff;
-                numberAttemptsWithBackoffSoFar = 0;
-            }
-            numberAttemptsWithBackoffSoFar++;
-        }
-
+        final int attemptNumber = retryCounter.attemptNumber();
         final boolean isInitialAttempt = attemptNumber <= 1;
 
         if (!setResponseTimeout()) {
@@ -225,25 +204,21 @@ final class HttpRetryingContext implements RetryingContext<HttpRequest, HttpResp
             return Long.MAX_VALUE;
         }
 
-        if (numberAttemptsSoFar >= retryConfig.maxTotalAttempts()) {
+        if (retryCounter.hasReachedMaxAttempts()) {
             logger.debug("Exceeded the default number of max attempt: {}", retryConfig.maxTotalAttempts());
             return Long.MAX_VALUE;
         }
 
-        final int numberAttemptsWithThisBackoffSoFar;
-        if (lastBackoff != backoff) {
-            numberAttemptsWithThisBackoffSoFar = 1;
-        } else {
-            numberAttemptsWithThisBackoffSoFar = numberAttemptsWithBackoffSoFar;
-        }
+        final long nextRetryDelayForBackoffMillis = backoff.nextDelayMillis(
+                retryCounter.attemptNumberForBackoff(backoff) + 1);
 
-        long nextRetryDelayMillis = backoff.nextDelayMillis(numberAttemptsWithThisBackoffSoFar);
-        if (nextRetryDelayMillis < 0) {
+        if (nextRetryDelayForBackoffMillis < 0) {
             logger.debug("Exceeded the number of max attempts in the backoff: {}", backoff);
             return Long.MAX_VALUE;
         }
 
-        nextRetryDelayMillis = Math.max(nextRetryDelayMillis, useRetryAfter ? attempt.retryAfterMillis() : -1);
+        final long nextRetryDelayMillis = Math.max(nextRetryDelayForBackoffMillis,
+                                                   useRetryAfter ? attempt.retryAfterMillis() : -1);
         final long nextDelayTimeNanos = System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(nextRetryDelayMillis);
 
         if (hasDeadline && nextDelayTimeNanos > deadlineTimeNanos) {
@@ -430,9 +405,7 @@ final class HttpRetryingContext implements RetryingContext<HttpRequest, HttpResp
                 .add("res", res)
                 .add("deadlineTimeNanos", deadlineTimeNanos)
                 .add("hasDeadline", hasDeadline)
-                .add("lastBackoff", lastBackoff)
-                .add("numberAttemptsSoFar", numberAttemptsSoFar)
-                .add("numberAttemptsWithBackoffSoFar", numberAttemptsWithBackoffSoFar)
+                .add("retryCounter", retryCounter)
                 .toString();
     }
 }
