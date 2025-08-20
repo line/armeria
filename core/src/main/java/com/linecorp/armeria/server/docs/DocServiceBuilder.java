@@ -44,6 +44,10 @@ public final class DocServiceBuilder {
 
     static final DocServiceFilter NO_SERVICE = (plugin, service, method) -> false;
 
+    private static final String WEB_APP_TITLE_KEY = "webAppTitle";
+
+    private static final int WEB_APP_TITLE_MAX_SIZE = 50;
+
     private DocServiceFilter includeFilter = ALL_SERVICES;
 
     private DocServiceFilter excludeFilter = NO_SERVICE;
@@ -558,13 +562,11 @@ public final class DocServiceBuilder {
      * @return The current {@link DocServiceBuilder} instance for method chaining.
      */
     public DocServiceBuilder webAppTitle(String webAppTitle) {
-        final String webAppTitleKey = "webAppTitle";
-        final Integer webAppTitleMaxSize = 50;
-        requireNonNull(webAppTitle, webAppTitleKey);
-        checkArgument(!webAppTitle.trim().isEmpty(), "%s is empty.", webAppTitleKey);
-        checkArgument(webAppTitle.length() <= webAppTitleMaxSize,
-                      "%s length exceeds %s.", webAppTitleKey, webAppTitleMaxSize);
-        docServiceExtraInfo.putIfAbsent(webAppTitleKey, webAppTitle);
+        requireNonNull(webAppTitle, WEB_APP_TITLE_KEY);
+        checkArgument(!webAppTitle.trim().isEmpty(), "%s is empty.", WEB_APP_TITLE_KEY);
+        checkArgument(webAppTitle.length() <= WEB_APP_TITLE_MAX_SIZE,
+                      "%s length exceeds %s.", WEB_APP_TITLE_KEY, WEB_APP_TITLE_MAX_SIZE);
+        docServiceExtraInfo.putIfAbsent(WEB_APP_TITLE_KEY, webAppTitle);
         return this;
     }
 
