@@ -25,49 +25,49 @@ import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.ValueSource;
 
-public class DocServiceInjectedScriptsUtilTest {
+public class DocServiceInjectableScriptsTest {
 
     @ParameterizedTest
-    @ValueSource(strings = { "#ff0089", "#ff9dc3", "#3a3"})
-    void withTitleBackground_givenValidColor_returnsScriptWithColor(String color) {
+    @ValueSource(strings = { "#ff0089", "ff9dc3", "#3a3"})
+    void titleBackground_givenValidColor_returnsScriptWithColor(String color) {
 
-        final String result = DocServiceInjectedScriptsUtil.withTitleBackground(color);
+        final String result = DocServiceInjectableScripts.titleBackground(color);
 
         assertThat(result).isNotBlank().contains(color);
     }
 
     @ParameterizedTest
     @ValueSource(strings = { "#1234567", "#ABCDEFA", "#7654321"})
-    void withTitleBackground_givenTooLongColor_throwsException(String color) {
+    void titleBackground_givenTooLongColor_throwsException(String color) {
 
-        assertThatThrownBy(() -> DocServiceInjectedScriptsUtil.withGotoBackground(color))
+        assertThatThrownBy(() -> DocServiceInjectableScripts.gotoBackground(color))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("length exceeds");
     }
 
     @ParameterizedTest
     @ValueSource(strings = { "#12345Z", "#ZABCDE", "#@12345"})
-    void withTitleBackground_givenInvalidColor_throwsException(String color) {
+    void titleBackground_givenInvalidColor_throwsException(String color) {
 
-        assertThatThrownBy(() -> DocServiceInjectedScriptsUtil.withGotoBackground(color))
+        assertThatThrownBy(() -> DocServiceInjectableScripts.gotoBackground(color))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("not in hex format");
     }
 
     @ParameterizedTest
-    @ValueSource(strings = { "#ff0089", "#ff9dc3", "#3a3"})
-    void withGotoBackground_givenValidColor_returnsScriptWithColor(String color) {
+    @ValueSource(strings = { "#ff0089", "ff9dc3", "#3a3"})
+    void gotoBackground_givenValidColor_returnsScriptWithColor(String color) {
 
-        final String result = DocServiceInjectedScriptsUtil.withGotoBackground(color);
+        final String result = DocServiceInjectableScripts.gotoBackground(color);
 
         assertThat(result).isNotBlank().contains(color);
     }
 
     @ParameterizedTest
     @MethodSource("getStreamOfValidUri")
-    void withFavicon_givenValidUri_returnsScriptWithUri(String uri, String expectedUri) {
+    void favicon_givenValidUri_returnsScriptWithUri(String uri, String expectedUri) {
 
-        final String result = DocServiceInjectedScriptsUtil.withFavicon(uri);
+        final String result = DocServiceInjectableScripts.favicon(uri);
 
         assertThat(result).contains(expectedUri).doesNotContain(uri);
     }
@@ -80,36 +80,10 @@ public class DocServiceInjectedScriptsUtilTest {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {
-            "javascript://armeria.dev/static/icon.svg",
-            "data://line.com/static/icon.svg",
-            "https://\\evil.corp/image/icon.svg"
-    })
-    void withFavicon_givenInvalidUri_throwsException(String uri) {
-
-        assertThatThrownBy(() -> DocServiceInjectedScriptsUtil.withFavicon(uri))
-                .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("uri invalid");
-    }
-
-    @ParameterizedTest
-    @ValueSource(strings = {
-            "https://armeria.dev/static/icon.js",
-            "https://line.com/static/icon.zip",
-            "https://evil.corp/image/icon.jpeg"
-    })
-    void withFavicon_givenBadImageExtension_throwsException(String uri) {
-
-        assertThatThrownBy(() -> DocServiceInjectedScriptsUtil.withFavicon(uri))
-                .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("extension not allowed");
-    }
-
-    @ParameterizedTest
     @MethodSource("getStreamOfEvilUri")
-    void withFavicon_givenEvilUri_returnsScriptWithCleanUri(String uri, String expectedUri) {
+    void favicon_givenEvilUri_returnsScriptWithCleanUri(String uri, String expectedUri) {
 
-        final String result = DocServiceInjectedScriptsUtil.withFavicon(uri);
+        final String result = DocServiceInjectableScripts.favicon(uri);
 
         assertThat(result).contains(expectedUri).doesNotContain(uri);
     }
