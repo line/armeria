@@ -33,7 +33,6 @@ import org.slf4j.LoggerFactory;
 import com.google.common.base.MoreObjects;
 
 import com.linecorp.armeria.client.Client;
-import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.ResponseTimeoutException;
 import com.linecorp.armeria.common.AggregationOptions;
@@ -48,8 +47,6 @@ import com.linecorp.armeria.internal.client.AggregatedHttpRequestDuplicator;
 import com.linecorp.armeria.internal.client.ClientPendingThrowableUtil;
 import com.linecorp.armeria.internal.client.ClientRequestContextExtension;
 import com.linecorp.armeria.internal.client.ClientUtil;
-
-import io.netty.util.concurrent.ScheduledFuture;
 
 final class HttpRetryingContext implements RetryingContext<HttpRequest, HttpResponse, HttpRetryAttempt> {
     private static final Logger logger = LoggerFactory.getLogger(HttpRetryingContext.class);
@@ -71,6 +68,7 @@ final class HttpRetryingContext implements RetryingContext<HttpRequest, HttpResp
     @Nullable
     private HttpRequestDuplicator reqDuplicator;
     private final RetryCounter retryCounter;
+    private final RetryScheduler scheduler;
 
     private final long deadlineTimeNanos;
     private final boolean hasDeadline;
@@ -93,6 +91,7 @@ final class HttpRetryingContext implements RetryingContext<HttpRequest, HttpResp
         this.req = req;
         reqDuplicator = null; // will be initialized in init().
         retryCounter = new RetryCounter(retryConfig.maxTotalAttempts());
+        scheduler = new RetryScheduler(ctx);
 
         final long responseTimeoutMillis = ctx.responseTimeoutMillis();
         if (responseTimeoutMillis <= 0 || responseTimeoutMillis == Long.MAX_VALUE) {
@@ -232,29 +231,7 @@ final class HttpRetryingContext implements RetryingContext<HttpRequest, HttpResp
     @Override
     public void scheduleNextRetry(long nextRetryTimeNanos, Runnable retryTask,
                                   Consumer<? super Throwable> exceptionHandler) {
-        try {
-            final long nextRetryDelayMillis = TimeUnit.NANOSECONDS.toMillis(
-                    nextRetryTimeNanos - System.nanoTime());
-            if (nextRetryDelayMillis <= 0) {
-                ctx.eventLoop().execute(retryTask);
-            } else {
-                @SuppressWarnings("unchecked")
-                final ScheduledFuture<Void> scheduledFuture = (ScheduledFuture<Void>) ctx
-                        .eventLoop().schedule(retryTask, nextRetryDelayMillis, TimeUnit.MILLISECONDS);
-                scheduledFuture.addListener(future -> {
-                    if (future.isCancelled()) {
-                        // future is cancelled when the client factory is closed.
-                        exceptionHandler.accept(new IllegalStateException(
-                                ClientFactory.class.getSimpleName() + " has been closed."));
-                    } else if (future.cause() != null) {
-                        // Other unexpected exceptions.
-                        exceptionHandler.accept(future.cause());
-                    }
-                });
-            }
-        } catch (Throwable t) {
-            exceptionHandler.accept(t);
-        }
+        scheduler.scheduleNextRetry(nextRetryTimeNanos, retryTask, exceptionHandler);
     }
 
     @Override
