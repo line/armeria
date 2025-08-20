@@ -1,0 +1,56 @@
+.title {
+  margin-top: 0;
+  font-size: var(--ifm-font-size-base);
+
+  a {
+    color: inherit;
+  }
+}
+
+.author {
+  font-weight: normal;
+  font-size: 66%;
+  white-space: nowrap;
+}
+
+.link {
+  display: block;
+  margin: -0.4rem 0 0.75rem;
+  overflow-x: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  color: var(--ifm-link-color);
+  font-size: 87.5%;
+}
+
+.externalIcon > svg {
+  float: right;
+}
+
+.articleCardItem {
+  margin-bottom: 1rem;
+  position: relative;
+}
+
+.articleCardItem a {
+  --ifm-link-color: var(--ifm-color-emphasis-800);
+  --ifm-link-hover-color: var(--ifm-color-emphasis-700);
+  --ifm-link-hover-decoration: none;
+
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  text-decoration: none;
+  padding: 15px;
+  box-shadow: var(--ifm-global-shadow-lw);
+  border: 1px solid var(--ifm-color-emphasis-200);
+  border-radius: var(--ifm-card-border-radius);
+  transition: all var(--ifm-transition-fast) ease;
+  transition-property: border, box-shadow;
+  background-color: var(--ifm-card-background-color);
+}
+
+.articleCardItem a:hover {
+  border-color: var(--ifm-color-primary);
+  box-shadow: 0 3px 6px 0 rgb(0 0 0 / 20%);
+}

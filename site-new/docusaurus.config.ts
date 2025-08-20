@@ -122,19 +122,9 @@ export default async function createConfigAsync() {
         },
         items: [
           {
-            type: 'dropdown',
             label: 'News',
             position: 'left',
-            items: [
-              {
-                label: 'Newsletter',
-                to: await getLatestNewsletterPath(),
-              },
-              {
-                label: 'Release notes',
-                to: await getLatestReleaseNotePath(),
-              },
-            ],
+            to: await getLatestNewsletterPath(),
           },
           {
             type: 'docSidebar',
@@ -143,9 +133,26 @@ export default async function createConfigAsync() {
             label: 'Documentation',
           },
           {
-            to: '/community',
-            label: 'Community',
+            type: 'docSidebar',
+            sidebarId: 'communitySidebar',
+            docsPluginId: 'community',
             position: 'left',
+            label: 'Community',
+          },
+          {
+            type: 'dropdown',
+            label: 'More',
+            position: 'left',
+            items: [
+              {
+                label: 'Blog',
+                to: '/blog',
+              },
+              {
+                label: 'Release notes',
+                to: await getLatestReleaseNotePath(),
+              },
+            ],
           },
           {
             href: 'https://github.com/facebook/docusaurus',
@@ -158,43 +165,12 @@ export default async function createConfigAsync() {
         style: 'dark',
         links: [
           {
-            title: 'Docs',
-            items: [
-              {
-                label: 'Tutorial',
-                to: '/docs/intro',
-              },
-            ],
+            label: 'LY Corporation Tech Blog',
+            href: 'https://techblog.lycorp.co.jp/en',
           },
           {
-            title: 'Community',
-            items: [
-              {
-                label: 'Stack Overflow',
-                href: 'https://stackoverflow.com/questions/tagged/docusaurus',
-              },
-              {
-                label: 'Discord',
-                href: 'https://discordapp.com/invite/docusaurus',
-              },
-              {
-                label: 'X',
-                href: 'https://x.com/docusaurus',
-              },
-            ],
-          },
-          {
-            title: 'More',
-            items: [
-              {
-                label: 'Blog',
-                to: '/blog',
-              },
-              {
-                label: 'GitHub',
-                href: 'https://github.com/facebook/docusaurus',
-              },
-            ],
+            label: 'Privacy policy',
+            href: 'https://terms.line.me/line_rules?lang=en',
           },
         ],
         copyright: `Copyright © ${new Date().getFullYear()} My Project, Inc. Built with Docusaurus.`,
@@ -247,6 +223,51 @@ export default async function createConfigAsync() {
             return sortReleaseNoteSidebarItems(sidebarItems);
           },
           remarkPlugins: [remarkApiLink, remarkGithub, remarkReleaseDate],
+        },
+      ],
+      [
+        '@docusaurus/plugin-content-blog',
+        {
+          id: 'blog',
+          path: 'blog/en',
+          routeBasePath: 'blog',
+          postsPerPage: 12,
+          showReadingTime: true,
+          blogSidebarCount: 'ALL',
+          blogSidebarTitle: ' ',
+          // authorsMapPath: '../blog/authors.yaml',
+          editUrl: 'https://github.com/line/armeria/edit/main/site/',
+          // TODO
+        },
+      ],
+      [
+        '@docusaurus/plugin-content-blog',
+        {
+          id: 'blog-ja',
+          path: 'blog/ja',
+          routeBasePath: 'blog/ja',
+          postsPerPage: 12,
+          showReadingTime: true,
+          blogSidebarCount: 10,
+          blogSidebarTitle: ' ',
+          // authorsMapPath: '../blog/authors.yaml',
+          editUrl: 'https://github.com/line/armeria/edit/main/site/',
+          // TODO
+        },
+      ],
+      [
+        '@docusaurus/plugin-content-blog',
+        {
+          id: 'blog-ko',
+          path: 'blog/ko',
+          routeBasePath: 'blog/ko',
+          postsPerPage: 12,
+          showReadingTime: true,
+          blogSidebarCount: 10,
+          blogSidebarTitle: ' ',
+          // authorsMapPath: '../blog/authors.yaml',
+          editUrl: 'https://github.com/line/armeria/edit/main/site/',
+          // TODO
         },
       ],
       [

@@ -1,20 +1,204 @@
+import ArticleList from '@site/src/components/article-list';
+
 # Articles and slides
 
 :::tip
 
 Got some articles or slides to share? 😊
-Send a pull request by editing [this page](https://github.com/line/armeria/edit/main/site/src/pages/community/articles.mdx).
+Send a pull request by editing [this page](https://github.com/line/armeria/edit/main/site/community/articles.mdx).
 
 :::
 
-<Tabs>
-  <TabItem value="english" label="English" default>
-    // TODO: Add external English slides and videos (14) and articles (3) here
-  </TabItem>
-  <TabItem value="japanese" label="Japanese">
-    // TODO: Add external Japanese slides and videos (5) and articles (9) here
-  </TabItem>
-  <TabItem value="korean" label="Korean">
-    // TODO: Add external Korean slides and videos (5) and articles (14) here
-  </TabItem>
-</Tabs>
+## English
+
+### Slides and videos
+
+<ArticleList
+  articles={[
+    {
+      title: 'gRPC supercharged with Armeria',
+      url: 'https://www.youtube.com/watch?v=g_z_Pbjd0v0',
+      author: 'Trustin Lee',
+      date: '20231005',
+      type: 'video',
+      description: `
+        This talk introduces Armeria's gRPC support as well as the core microservice features of Armeria,
+        including service discovery, automatic retries, circuit breakers, distributed tracing and DocService.
+        You'll learn how to have the best available gRPC experience by using such feature.
+    `,
+    },
+    {
+      title: 'Hello Armeria, Bye Spring',
+      url: 'https://www.slideshare.net/GihwanKim10/hello-armeria-bye-spring',
+      author: 'Gihwan Kim and Kyeongsu Yim',
+      date: '20220414',
+      type: 'slides',
+      description: `
+        Learn about the 3 steps for migrating your traditional Spring MVC application to Armeria.
+        This talk also gives a performance highlight on the LINE Channel's migration that enabled
+        the team to build a large payload download API without any concern about thread exhaustion
+        or OutOfMemoryException.
+    `,
+    },
+    {
+      title: 'Building an Authentication Microservice at LINE',
+      url: 'https://drive.google.com/file/d/1M2W75eYsd8Vk2LCh2BYpbRRWGZBXw6fP/view',
+      author: 'Dohan Kim',
+      date: '20220414',
+      type: 'slides',
+      description: `
+        This talk unveils Doorkeeper, the authentication microservice that is responsible for
+        the server-to-server authentication between the microservices in LINE's messaging system.
+        It shows how Doorkeeper leverages the Armeria features such as gRPC, DocService, AuthService,
+        client-side load-balancing and Logback integration.
+    `,
+    },
+    {
+      title: 'Introducting Armeria (or Three Principles of a Good Framework)',
+      url: 'https://speakerdeck.com/trustin/introducing-armeria-or-three-principles-of-a-good-framework',
+      author: 'Trustin Lee',
+      date: '20220414',
+      type: 'slides',
+      description: `
+        This talk introduces the three core principles behind how Trustin Lee and his team designed and
+        implemented Armeria and how they run their community to build the best web and RPC framework.
+        You'll find this talk useful if you are curious to know what Armeria is or what you should focus on
+        to build a good framework.
+    `,
+    },
+    {
+      title:
+        'Talking Kotlin Podcast: Systems design and Kotlin as a backend language',
+      url: 'https://www.youtube.com/watch?v=XTeEIJ170KE',
+      author: 'Matt Anger',
+      date: '20210710',
+      type: 'video',
+      description: `
+        Learn how DoorDash uses Armeria to build their next generation servers with Kotlin.
+    `,
+    },
+    {
+      title: 'Openchat Journey with Armeria',
+      url: 'https://www.slideshare.net/JulieKim1/armeriaworkshop2019-openchat-julie',
+      author: 'Julie Kim',
+      date: '20211105',
+      type: 'slides',
+      description: `
+        Learn how the LINE Openchat uses Armeria and listen to an episode while adopting Armeria.
+    `,
+    },
+    {
+      title: 'Filibuster demo: Auto-instrumentation for Java applications',
+      url: 'https://www.youtube.com/watch?v=BhZLHpxQ7mI',
+      author: 'Christopher Meiklejohn',
+      date: '20211028',
+      type: 'video',
+      description: `
+        This demo video shows building an application with Armeria and then using Filibuster for automatically
+        testing the failure scenarios caused by remote services and dependencies.
+    `,
+    },
+    {
+      title: 'Writing a Java library with better experience',
+      url: 'https://www.youtube.com/watch?v=0eQbsVLxmMk',
+      author: 'Trustin Lee',
+      date: '20200702',
+      type: ['video', 'slides'],
+    },
+    {
+      title: 'Armeria at talk-server',
+      url: 'https://speakerdeck.com/delegacy/armeria-at-talk-server',
+      author: 'YoungTae Seok',
+      date: '20191118',
+      type: 'slides',
+      description: `
+        Learn how the core platform of LINE messenger uses Armeria and how they made improvements
+        on push notification using Armeria client.
+    `,
+    },
+    {
+      title: 'LINE Bot API with Armeria',
+      url: 'https://sookiwi.com/resources/LINE-Bot-API-with-Armeria.pdf',
+      author: 'Soo Kim',
+      date: '20191117',
+      type: 'slides',
+    },
+    {
+      title: 'Armeria: A microservice framework well-suited everywhere',
+      url: 'https://youtu.be/Vr-0GKUmzo8',
+      author: 'Trustin Lee',
+      date: '20191026',
+      type: ['video', 'slides'],
+    },
+    {
+      title:
+        "Lesson learned from the adoption of Armeria to LINE's authentication system",
+      url: 'https://speakerdeck.com/line_developers/lesson-learned-from-the-adoption-of-armeria-to-lines-authentication-system',
+      author: 'Masahiro Ide',
+      date: '20190815',
+      type: 'slides',
+    },
+    {
+      title: 'gRPC for the Thrifty: gRPC at Slack',
+      url: 'https://static.sched.com/hosted_files/grpconf19/ff/gRPC%20for%20the%20Thrifty.pdf',
+      author: 'Josh Wills',
+      date: '20190321',
+      type: 'slides',
+    },
+    {
+      title: "Armeria: LINE's next generation RPC layer",
+      url: 'https://speakerdeck.com/trustin/armeria-lines-next-generation-rpc-layer',
+      author: 'Trustin Lee',
+      date: '20160216',
+      type: 'slides',
+    },
+  ]}
+/>
+
+### Articles
+
+<ArticleList
+  articles={[
+    {
+      title: 'Building an authorization framework with Armeria - a case study',
+      url: 'https://blog.dogac.dev/building-an-authorization-framework-with-armeria/',
+      author: 'Doğaç Eldenk',
+      date: '20240603',
+      type: 'article',
+      description: `
+        Learn how to utilize Armeria decorators and Java/Kotlin annotations to build a flexible authentication and
+        authorization framework for your application.
+    `,
+    },
+    {
+      title: 'A Bootiful Podcast: Netty and Armeria founder Trustin Lee',
+      url: 'https://spring.io/blog/2021/01/07/a-bootiful-podcast-netty-and-armeria-founder-trustin-lee',
+      author: 'Josh Long and Trustin Lee',
+      date: '20210107',
+      type: 'article',
+      description: `
+        Josh Long interviews Netty and Armeria founder Trustin Lee.
+    `,
+    },
+    {
+      title: 'Effective gRPC',
+      url: 'https://medium.com/dev-genius/effective-grpc-9152bea2cf50',
+      author: 'Viktor Taranenko',
+      date: '20200718',
+      type: 'article',
+      description: `
+        Learn the best practices for working with gRPC and find out how Armeria simplifies your setup with its
+        out-of-the-box gRPC-Web support and auto-generated online debug tool, removing the needs for proxy servers
+        such as Envoy.
+    `,
+    },
+  ]}
+/>
+
+## Japanese
+
+// TODO
+
+## Korean
+
+// TODO
