@@ -45,7 +45,14 @@ const BlogLanguageSelector: React.FC = () => {
   };
 
   return (
-    <Dropdown menu={{ items, onClick: handleMenuClick }}>
+    <Dropdown
+      menu={{
+        items,
+        onClick: handleMenuClick,
+        selectable: true,
+        defaultSelectedKeys: [selected?.key],
+      }}
+    >
       <Button
         onClick={(e) => e.preventDefault()}
         size="small"
