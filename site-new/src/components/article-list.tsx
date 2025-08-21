@@ -66,18 +66,24 @@ function getTypeLabel(type: ArticleType | ArticleType[] | undefined): string {
   return typesLabel;
 }
 
-const Article: React.FC<ArticleProps> = (article) => {
-  const typeIcons = Array.isArray(article.type)
-    ? article.type.map((type) => type2icon[type])
-    : type2icon[article.type || 'article'];
-  const typesLabel = getTypeLabel(article.type);
-  const isExternalUrl =
-    article.url.startsWith('http://') || article.url.startsWith('https://');
+const Article: React.FC<ArticleProps> = ({
+  title,
+  url,
+  author,
+  date,
+  type,
+  description,
+}) => {
+  const typeIcons = Array.isArray(type)
+    ? type.map((typeItem) => type2icon[typeItem])
+    : type2icon[type || 'article'];
+  const typesLabel = getTypeLabel(type);
+  const isExternalUrl = url.startsWith('http://') || url.startsWith('https://');
 
   return (
     <div className={`${styles.articleCardItem} col col--12`}>
       <Link
-        href={article.url}
+        href={url}
         className="padding-top--lg padding-left--lg padding-right--lg"
       >
         <Heading as="h3">
@@ -86,15 +92,15 @@ const Article: React.FC<ArticleProps> = (article) => {
               <IconExternalLink />
             </span>
           )}
-          {typeIcons} {article.title}
+          {typeIcons} {title}
         </Heading>
         <p>
           <span>
-            {typesLabel} by {article.author},{' '}
+            {typesLabel} by {author},{' '}
           </span>{' '}
-          <span>{dayjs(article.date).fromNow()}</span>
+          <span>{dayjs(date).fromNow()}</span>
         </p>
-        {article.description && <p>{article.description}</p>}
+        {description && <p>{description}</p>}
       </Link>
     </div>
   );
