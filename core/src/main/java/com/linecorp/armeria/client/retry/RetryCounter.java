@@ -28,7 +28,7 @@ final class RetryCounter {
     private int numberAttemptsSoFar;
     @Nullable
     private Backoff lastBackoff;
-    private int numberAttemptsForLastBackoff;
+    private int numberAttemptsSoFarForLastBackoff;
 
     RetryCounter(int maxAttempts) {
         if (maxAttempts <= 0) {
@@ -37,7 +37,7 @@ final class RetryCounter {
         this.maxAttempts = maxAttempts;
         numberAttemptsSoFar = 0;
         lastBackoff = null;
-        numberAttemptsForLastBackoff = 0;
+        numberAttemptsSoFarForLastBackoff = 0;
     }
 
     void recordAttemptWith(@Nullable Backoff backoff) {
@@ -50,9 +50,9 @@ final class RetryCounter {
         if (backoff != null) {
             if (lastBackoff != backoff) {
                 lastBackoff = backoff;
-                numberAttemptsForLastBackoff = 0;
+                numberAttemptsSoFarForLastBackoff = 0;
             }
-            numberAttemptsForLastBackoff++;
+            numberAttemptsSoFarForLastBackoff++;
         }
     }
 
@@ -65,7 +65,7 @@ final class RetryCounter {
         if (lastBackoff != backoff) {
             return 0;
         } else {
-            return numberAttemptsForLastBackoff;
+            return numberAttemptsSoFarForLastBackoff;
         }
     }
 
@@ -80,7 +80,7 @@ final class RetryCounter {
                 .add("maxAttempts", maxAttempts)
                 .add("numberAttemptsSoFar", numberAttemptsSoFar)
                 .add("lastBackoff", lastBackoff)
-                .add("numberAttemptsWithThisBackoffSoFar", numberAttemptsForLastBackoff)
+                .add("numberAttemptsSoFarForLastBackoff", numberAttemptsSoFarForLastBackoff)
                 .toString();
     }
 }
