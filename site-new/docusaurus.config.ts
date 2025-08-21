@@ -122,9 +122,19 @@ export default async function createConfigAsync() {
         },
         items: [
           {
+            type: 'dropdown',
             label: 'News',
             position: 'left',
-            to: await getLatestNewsletterPath(),
+            items: [
+              {
+                label: 'Newsletter',
+                to: await getLatestNewsletterPath(),
+              },
+              {
+                label: 'Release notes',
+                to: await getLatestReleaseNotePath(),
+              },
+            ],
           },
           {
             type: 'docSidebar',
@@ -140,19 +150,9 @@ export default async function createConfigAsync() {
             label: 'Community',
           },
           {
-            type: 'dropdown',
-            label: 'More',
+            label: 'Blog',
             position: 'left',
-            items: [
-              {
-                label: 'Blog',
-                to: '/blog',
-              },
-              {
-                label: 'Release notes',
-                to: await getLatestReleaseNotePath(),
-              },
-            ],
+            to: '/blog',
           },
           {
             href: 'https://github.com/facebook/docusaurus',
