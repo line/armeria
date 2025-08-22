@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.client.retry;
 
+import static com.google.common.base.Preconditions.checkArgument;
+import static com.google.common.base.Preconditions.checkState;
 import static java.util.Objects.requireNonNull;
 
 import com.google.common.base.MoreObjects;
@@ -31,9 +33,7 @@ final class RetryCounter {
     private int numberAttemptsSoFarForLastBackoff;
 
     RetryCounter(int maxAttempts) {
-        if (maxAttempts <= 0) {
-            throw new IllegalArgumentException("maxAttempts: " + maxAttempts + " (expected: > 0)");
-        }
+        checkArgument(maxAttempts > 0, "maxAttempts: %s (expected: > 0)", maxAttempts);
         this.maxAttempts = maxAttempts;
         numberAttemptsSoFar = 0;
         lastBackoff = null;
@@ -41,9 +41,7 @@ final class RetryCounter {
     }
 
     void recordAttemptWith(@Nullable Backoff backoff) {
-        if (hasReachedMaxAttempts()) {
-            throw new IllegalStateException("Exceeded the maximum number of attempts: " + maxAttempts);
-        }
+        checkState(!hasReachedMaxAttempts(), "Exceeded the maximum number of attempts: %s", maxAttempts);
 
         ++numberAttemptsSoFar;
 
