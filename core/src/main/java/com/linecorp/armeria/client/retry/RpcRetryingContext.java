@@ -54,6 +54,8 @@ final class RpcRetryingContext implements RetryingContext<RpcRequest, RpcRespons
         COMPLETED
     }
 
+    private final Object lock = new Object();
+
     private State state;
     private final ClientRequestContext ctx;
     private final RetryConfig<RpcResponse> config;
@@ -97,153 +99,169 @@ final class RpcRetryingContext implements RetryingContext<RpcRequest, RpcRespons
 
     @Override
     public CompletableFuture<Boolean> init() {
-        checkState(state == State.INITIALIZED);
+        synchronized (lock) {
+            checkState(state == State.INITIALIZED);
 
-        res.whenComplete().handle((result, cause) -> {
-            final Throwable abortCause;
-            if (cause != null) {
-                abortCause = cause;
-            } else {
-                abortCause = AbortedStreamException.get();
-            }
-            abort(abortCause);
-            return null;
-        });
+            res.whenComplete().handle((result, cause) -> {
+                final Throwable abortCause;
+                if (cause != null) {
+                    abortCause = cause;
+                } else {
+                    abortCause = AbortedStreamException.get();
+                }
+                abort(abortCause);
+                return null;
+            });
 
-        return UnmodifiableFuture.completedFuture(true);
+            return UnmodifiableFuture.completedFuture(true);
+        }
     }
 
     @Override
     public CompletableFuture<@Nullable RetryDecision> executeAttempt(@Nullable Backoff backoff,
                                                                      Client<RpcRequest, RpcResponse> delegate) {
-        checkState(state == State.INITIALIZED);
-        assert currentAttempt == null;
+        synchronized (lock) {
+            checkState(state == State.INITIALIZED);
+            assert currentAttempt == null;
 
-        if (!setResponseTimeout()) {
-            return UnmodifiableFuture.exceptionallyCompletedFuture(ResponseTimeoutException.get());
+            if (!setResponseTimeout()) {
+                return UnmodifiableFuture.exceptionallyCompletedFuture(ResponseTimeoutException.get());
+            }
+
+            state = State.EXECUTING;
+
+            counter.recordAttemptWith(backoff);
+
+            final int attemptNumber = counter.attemptNumber();
+            final boolean isInitialAttempt = attemptNumber <= 1;
+
+            final ClientRequestContext attemptCtx = ClientUtil.newDerivedContext(ctx, null, req,
+                                                                                 isInitialAttempt);
+
+            if (!isInitialAttempt) {
+                attemptCtx.mutateAdditionalRequestHeaders(
+                        mutator -> mutator.add(ARMERIA_RETRY_COUNT, Integer.toString(attemptNumber - 1)));
+            }
+
+            final RpcResponse attemptRes;
+            final ClientRequestContextExtension attemptCtxExtension =
+                    attemptCtx.as(ClientRequestContextExtension.class);
+            final EndpointGroup endpointGroup = attemptCtx.endpointGroup();
+            if (!isInitialAttempt && attemptCtxExtension != null &&
+                endpointGroup != null && attemptCtx.endpoint() == null) {
+                // Clear the pending throwable to retry endpoint selection
+                ClientPendingThrowableUtil.removePendingThrowable(attemptCtx);
+                // Initialize the context with a new endpoint/event loop if not selected yet
+                attemptRes = initContextAndExecuteWithFallback(delegate, attemptCtxExtension, RpcResponse::from,
+                                                               (unused, cause) -> RpcResponse.ofFailure(cause),
+                                                               req, true);
+            } else {
+                attemptRes = executeWithFallback(delegate, attemptCtx,
+                                                 (unused, cause) -> RpcResponse.ofFailure(cause),
+                                                 req, true);
+            }
+
+            final RpcRetryAttempt attempt = new RpcRetryAttempt(this, attemptCtx, attemptRes);
+            currentAttempt = attempt;
+            return attempt.whenDecided();
         }
-
-        state = State.EXECUTING;
-
-        counter.recordAttemptWith(backoff);
-
-        final int attemptNumber = counter.attemptNumber();
-        final boolean isInitialAttempt = attemptNumber <= 1;
-
-        final ClientRequestContext attemptCtx = ClientUtil.newDerivedContext(ctx, null, req, isInitialAttempt);
-
-        if (!isInitialAttempt) {
-            attemptCtx.mutateAdditionalRequestHeaders(
-                    mutator -> mutator.add(ARMERIA_RETRY_COUNT, Integer.toString(attemptNumber - 1)));
-        }
-
-        final RpcResponse attemptRes;
-        final ClientRequestContextExtension attemptCtxExtension =
-                attemptCtx.as(ClientRequestContextExtension.class);
-        final EndpointGroup endpointGroup = attemptCtx.endpointGroup();
-        if (!isInitialAttempt && attemptCtxExtension != null &&
-            endpointGroup != null && attemptCtx.endpoint() == null) {
-            // Clear the pending throwable to retry endpoint selection
-            ClientPendingThrowableUtil.removePendingThrowable(attemptCtx);
-            // Initialize the context with a new endpoint/event loop if not selected yet
-            attemptRes = initContextAndExecuteWithFallback(delegate, attemptCtxExtension, RpcResponse::from,
-                                                           (unused, cause) -> RpcResponse.ofFailure(cause),
-                                                           req, true);
-        } else {
-            attemptRes = executeWithFallback(delegate, attemptCtx,
-                                             (unused, cause) -> RpcResponse.ofFailure(cause),
-                                             req, true);
-        }
-
-        final RpcRetryAttempt attempt = new RpcRetryAttempt(this, attemptCtx, attemptRes);
-        currentAttempt = attempt;
-        return attempt.whenDecided();
     }
 
     @Override
     public long nextRetryTimeNanos(Backoff backoff) {
-        if (state != State.EXECUTING) {
-            return Long.MAX_VALUE;
-        }
+        synchronized (lock) {
+            if (state != State.EXECUTING) {
+                return Long.MAX_VALUE;
+            }
 
-        if (counter.hasReachedMaxAttempts()) {
-            logger.debug("Exceeded the default number of max attempt: {}", config.maxTotalAttempts());
-            return Long.MAX_VALUE;
-        }
+            if (counter.hasReachedMaxAttempts()) {
+                logger.debug("Exceeded the default number of max attempt: {}", config.maxTotalAttempts());
+                return Long.MAX_VALUE;
+            }
 
-        final long nextRetryDelayMillis = backoff.nextDelayMillis(
-                counter.attemptNumberForBackoff(backoff) + 1);
+            final long nextRetryDelayMillis = backoff.nextDelayMillis(
+                    counter.attemptNumberForBackoff(backoff) + 1);
 
-        if (nextRetryDelayMillis < 0) {
-            logger.debug("Exceeded the number of max attempts in the backoff: {}", backoff);
-            return Long.MAX_VALUE;
-        }
+            if (nextRetryDelayMillis < 0) {
+                logger.debug("Exceeded the number of max attempts in the backoff: {}", backoff);
+                return Long.MAX_VALUE;
+            }
 
-        final long nextDelayTimeNanos = System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(nextRetryDelayMillis);
-        if (hasDeadline && nextDelayTimeNanos > deadlineTimeNanos) {
-            // The next retry will be after the response deadline. So return just Long.MAX_VALUE.
-            return Long.MAX_VALUE;
+            final long nextDelayTimeNanos = System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(
+                    nextRetryDelayMillis);
+            if (hasDeadline && nextDelayTimeNanos > deadlineTimeNanos) {
+                // The next retry will be after the response deadline. So return just Long.MAX_VALUE.
+                return Long.MAX_VALUE;
+            }
+            return nextDelayTimeNanos;
         }
-        return nextDelayTimeNanos;
     }
 
     @Override
     public void scheduleNextRetry(long nextRetryTimeNanos, Runnable retryTask,
                                   Consumer<? super Throwable> exceptionHandler) {
-        checkState(state == State.INITIALIZED);
-        assert currentAttempt == null;
-        scheduler.scheduleNextRetry(nextRetryTimeNanos, retryTask, exceptionHandler);
+        synchronized (lock) {
+            checkState(state == State.INITIALIZED);
+            assert currentAttempt == null;
+            scheduler.scheduleNextRetry(nextRetryTimeNanos, retryTask, exceptionHandler);
+        }
     }
 
     @Override
     public void commit() {
-        if (state == State.COMPLETED) {
-            // Already completed, so just return.
-            return;
-        }
-        checkState(state == State.EXECUTING);
-        assert currentAttempt != null;
-        checkState(currentAttempt.state() == RpcRetryAttempt.State.DECIDED);
+        synchronized (lock) {
+            if (state == State.COMPLETED) {
+                // Already completed, so just return.
+                return;
+            }
+            checkState(state == State.EXECUTING);
+            assert currentAttempt != null;
+            checkState(currentAttempt.state() == RpcRetryAttempt.State.DECIDED);
 
-        state = State.COMPLETED;
+            state = State.COMPLETED;
 
-        final RpcResponse attemptRes = currentAttempt.commit();
-        ctx.logBuilder().endResponseWithChild(currentAttempt.ctx().log());
-        final HttpRequest attemptReq = currentAttempt.ctx().request();
-        if (attemptReq != null) {
-            ctx.updateRequest(attemptReq);
+            final RpcResponse attemptRes = currentAttempt.commit();
+            ctx.logBuilder().endResponseWithChild(currentAttempt.ctx().log());
+            final HttpRequest attemptReq = currentAttempt.ctx().request();
+            if (attemptReq != null) {
+                ctx.updateRequest(attemptReq);
+            }
+            resFuture.complete(attemptRes);
         }
-        resFuture.complete(attemptRes);
     }
 
     @Override
     public void abortAttempt() {
-        checkState(state == State.EXECUTING);
-        assert currentAttempt != null;
-        // Can be called in any state.
-        currentAttempt.abort();
-        currentAttempt = null;
-        state = State.INITIALIZED;
+        synchronized (lock) {
+            checkState(state == State.EXECUTING);
+            assert currentAttempt != null;
+            // Can be called in any state.
+            currentAttempt.abort();
+            currentAttempt = null;
+            state = State.INITIALIZED;
+        }
     }
 
     @Override
     public void abort(Throwable cause) {
-        if (state == State.COMPLETED) {
-            return;
-        }
+        synchronized (lock) {
+            if (state == State.COMPLETED) {
+                return;
+            }
 
-        if (state == State.EXECUTING) {
-            assert currentAttempt != null;
-            currentAttempt.abort();
-        }
+            if (state == State.EXECUTING) {
+                assert currentAttempt != null;
+                currentAttempt.abort();
+            }
 
-        state = State.COMPLETED;
+            state = State.COMPLETED;
 
-        if (!ctx.log().isRequestComplete()) {
-            ctx.logBuilder().endRequest(cause);
+            if (!ctx.log().isRequestComplete()) {
+                ctx.logBuilder().endRequest(cause);
+            }
+            ctx.logBuilder().endResponse(cause);
+            resFuture.completeExceptionally(cause);
         }
-        ctx.logBuilder().endResponse(cause);
-        resFuture.completeExceptionally(cause);
     }
 
     private boolean setResponseTimeout() {
@@ -285,17 +303,19 @@ final class RpcRetryingContext implements RetryingContext<RpcRequest, RpcRespons
 
     @Override
     public String toString() {
-        return MoreObjects
-                .toStringHelper(this)
-                .add("ctx", ctx)
-                .add("retryConfig", config)
-                .add("req", req)
-                .add("res", res)
-                .add("deadlineTimeNanos", deadlineTimeNanos)
-                .add("hasDeadline", hasDeadline)
-                .add("counter", counter)
-                .add("scheduler", scheduler)
-                .add("currentAttempt", currentAttempt)
-                .toString();
+        synchronized (lock) {
+            return MoreObjects
+                    .toStringHelper(this)
+                    .add("ctx", ctx)
+                    .add("state", state)
+                    .add("req", req)
+                    .add("res", res)
+                    .add("deadlineTimeNanos", deadlineTimeNanos)
+                    .add("hasDeadline", hasDeadline)
+                    .add("counter", counter)
+                    .add("scheduler", scheduler)
+                    .add("currentAttempt", currentAttempt)
+                    .toString();
+        }
     }
 }
