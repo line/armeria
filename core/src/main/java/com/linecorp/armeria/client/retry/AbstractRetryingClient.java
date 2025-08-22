@@ -73,7 +73,7 @@ public abstract class AbstractRetryingClient
         final R rctx = getRetryingContext(ctx, retryConfigForReq, req);
         rctx.init().handle((initSuccessful, initCause) -> {
             if (!initSuccessful || initCause != null) {
-                // todo(szymon): comment here.
+                rctx.abort(initCause);
                 logger.debug("RetryingContext initialization failed, not retrying: {}", rctx, initCause);
                 return null;
             }

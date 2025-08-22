@@ -27,7 +27,6 @@ import com.linecorp.armeria.common.RpcResponse;
 import com.linecorp.armeria.common.annotation.Nullable;
 
 final class RpcRetryAttempt {
-    // todo(szymon): doc
     enum State {
         EXECUTING,
         DECIDING,

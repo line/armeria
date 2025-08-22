@@ -51,17 +51,10 @@ final class HttpRetryAttempt {
     private static final Logger logger = LoggerFactory.getLogger(HttpRetryAttempt.class);
 
     enum State {
-        // Initial state after constructing an `Attempt`.
-        // The attempt response is underway but did not complete yet.
         EXECUTING,
-        // todo(szymon): doc
         DECIDING,
-        // todo(szymon): doc
         DECIDED,
-        // State after a call to `commit`. Terminal state, caller cannot make further calls.
         COMMITTED,
-        // State after a call to `abort`. Terminal state, caller cannot make further calls.
-        // `res` is aborted.
         ABORTED
     }
 
@@ -249,8 +242,6 @@ final class HttpRetryAttempt {
                     final HttpResponseDuplicator resDuplicator =
                             unsplitRes.toDuplicator(ctx.eventLoop().withoutContext(),
                                                     ctx.maxResponseLength());
-                    // todo(szymon): We do not call duplicator.abort(cause); but res.abort on an exception.
-                    //   Is this okay?
                     final HttpResponse duplicatedRes = resDuplicator.duplicate();
                     final TruncatingHttpResponse truncatingAttemptRes =
                             new TruncatingHttpResponse(resDuplicator.duplicate(),

@@ -294,7 +294,6 @@ final class HttpRetryingContext implements RetryingContext<HttpRequest, HttpResp
             state = State.COMPLETED;
 
             final HttpResponse attemptRes = currentAttempt.commit();
-            // todo(szymon): replace with endResponseWithChild
             ctx.logBuilder().endResponseWithChild(currentAttempt.ctx().log());
             resFuture.complete(attemptRes);
             reqDuplicator.close();

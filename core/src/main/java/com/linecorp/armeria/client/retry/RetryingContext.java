@@ -20,10 +20,41 @@ import java.util.concurrent.CompletableFuture;
 import java.util.function.Consumer;
 
 import com.linecorp.armeria.client.Client;
+import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.annotation.Nullable;
 
+/**
+ * Handle used by {@link AbstractRetryingClient} to drive the retrying process of a request.
+ * In particular, it provides methods to
+ *
+ * <ul>
+ *     <li>initialize the retrying process ({@link #init()}),</li>
+ *     <li>execute a request attempt ({@link #executeAttempt(Backoff, Client)}),</li>
+ *     <li>decide to abort the attempt and schedule a new one ({@link #abortAttempt()} and
+ *     {@link #scheduleNextRetry(long, Runnable, Consumer)}) or to</li>
+ *     <li>accept the response attempt as the final response of the request ({@link #commit()}).</li>
+ * </ul>
+ *
+ * <p>
+ *      Notes:
+ *      <ul>
+ *          <li>
+ *              Calls to methods of this interface must be in a certain order. The method call order
+ *              can be "seen" in {@link AbstractRetryingClient#execute(ClientRequestContext, Request)}. <br>
+ *              Note that {@link #abort(Throwable)} and {@link #res()}
+ *              can be called at any point, even before a call to {@link #init()}.
+ *          </li>
+ *          <li>Implementors of this interface must be thread-safe.</li>
+ *      </ul>
+ * </p>
+ *
+ * @param <I> the {@link Request} type
+ * @param <O> the {@link Response} type
+ * @see HttpRetryingContext
+ * @see RpcRetryingContext
+ */
 interface RetryingContext<I extends Request, O extends Response> {
     CompletableFuture<Boolean> init();
 
