@@ -58,3 +58,23 @@
     }
   }
 }
+
+.ant-dropdown
+  .ant-dropdown-menu
+  .ant-dropdown-menu-item
+  .ant-dropdown-menu-title-content
+  a {
+  font-family: var(--ifm-font-family-base);
+  font-size: 12px;
+  color: var(--ifm-font-color-base);
+  text-decoration: none;
+}
+
+[data-theme='dark'] {
+  .ant-dropdown .ant-dropdown-menu {
+    background-color: var(--ifm-background-color);
+  }
+  .ant-dropdown .ant-dropdown-menu .ant-dropdown-menu-item:hover {
+    background-color: var(--ifm-color-emphasis-200);
+  }
+}
