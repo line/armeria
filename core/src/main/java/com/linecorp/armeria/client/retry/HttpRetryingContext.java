@@ -21,8 +21,6 @@ import static com.linecorp.armeria.client.retry.AbstractRetryingClient.ARMERIA_R
 import static com.linecorp.armeria.internal.client.ClientUtil.executeWithFallback;
 import static com.linecorp.armeria.internal.client.ClientUtil.initContextAndExecuteWithFallback;
 
-import java.util.LinkedList;
-import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
@@ -43,40 +41,43 @@ import com.linecorp.armeria.common.RequestHeadersBuilder;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.stream.AbortedStreamException;
 import com.linecorp.armeria.common.util.TimeoutMode;
+import com.linecorp.armeria.common.util.UnmodifiableFuture;
 import com.linecorp.armeria.internal.client.AggregatedHttpRequestDuplicator;
 import com.linecorp.armeria.internal.client.ClientPendingThrowableUtil;
 import com.linecorp.armeria.internal.client.ClientRequestContextExtension;
 import com.linecorp.armeria.internal.client.ClientUtil;
 
-final class HttpRetryingContext implements RetryingContext<HttpRequest, HttpResponse, HttpRetryAttempt> {
+final class HttpRetryingContext implements RetryingContext<HttpRequest, HttpResponse> {
     private static final Logger logger = LoggerFactory.getLogger(HttpRetryingContext.class);
 
     private enum State {
         UNINITIALIZED,
         INITIALIZING,
         INITIALIZED,
+        EXECUTING,
         COMPLETED
     }
 
     private State state;
     private final ClientRequestContext ctx;
-    private final RetryConfig<HttpResponse> retryConfig;
+    private final RetryConfig<HttpResponse> config;
     private final HttpResponse res;
     private final CompletableFuture<HttpResponse> resFuture;
     private final HttpRequest req;
     @Nullable
     private HttpRequestDuplicator reqDuplicator;
-    private final RetryCounter retryCounter;
+    private final RetryCounter counter;
     private final RetryScheduler scheduler;
 
     private final long deadlineTimeNanos;
     private final boolean hasDeadline;
 
     private final boolean useRetryAfter;
-    List<HttpRetryAttempt> attemptsSoFar;
+    @Nullable
+    HttpRetryAttempt currentAttempt;
 
     HttpRetryingContext(ClientRequestContext ctx,
-                        RetryConfig<HttpResponse> retryConfig,
+                        RetryConfig<HttpResponse> config,
                         HttpResponse res,
                         CompletableFuture<HttpResponse> resFuture,
                         HttpRequest req,
@@ -84,12 +85,12 @@ final class HttpRetryingContext implements RetryingContext<HttpRequest, HttpResp
 
         state = State.UNINITIALIZED;
         this.ctx = ctx;
-        this.retryConfig = retryConfig;
+        this.config = config;
         this.resFuture = resFuture;
         this.res = res;
         this.req = req;
         reqDuplicator = null; // will be initialized in init().
-        retryCounter = new RetryCounter(retryConfig.maxTotalAttempts());
+        counter = new RetryCounter(config.maxTotalAttempts());
         scheduler = new RetryScheduler(ctx);
 
         final long responseTimeoutMillis = ctx.responseTimeoutMillis();
@@ -102,12 +103,12 @@ final class HttpRetryingContext implements RetryingContext<HttpRequest, HttpResp
         }
 
         this.useRetryAfter = useRetryAfter;
-        attemptsSoFar = new LinkedList<>();
+        currentAttempt = null;
     }
 
     @Override
     public CompletableFuture<Boolean> init() {
-        assert state == State.UNINITIALIZED;
+        checkState(state == State.UNINITIALIZED);
         state = State.INITIALIZING;
         final CompletableFuture<Boolean> initFuture = new CompletableFuture<>();
 
@@ -165,20 +166,26 @@ final class HttpRetryingContext implements RetryingContext<HttpRequest, HttpResp
     }
 
     @Override
-    @Nullable
-    public HttpRetryAttempt executeAttempt(@Nullable Backoff backoff,
-                                           Client<HttpRequest, HttpResponse> delegate) {
-        assert state == State.INITIALIZED;
+    public CompletableFuture<@Nullable RetryDecision> executeAttempt(
+            @Nullable Backoff backoff,
+            Client<HttpRequest, HttpResponse> delegate) {
+        checkState(state == State.INITIALIZED);
         assert reqDuplicator != null;
-
-        retryCounter.recordAttemptWith(backoff);
-
-        final int attemptNumber = retryCounter.attemptNumber();
-        final boolean isInitialAttempt = attemptNumber <= 1;
+        // We are not supporting concurrent attempts (yet).
+        // As such, we expect the previous attempt (if any) to be aborted before
+        // (abortion sets this field to null).
+        // assert state != State.EXECUTING;
+        assert currentAttempt == null;
 
         if (!setResponseTimeout()) {
-            throw ResponseTimeoutException.get();
+            return UnmodifiableFuture.exceptionallyCompletedFuture(ResponseTimeoutException.get());
         }
+
+        state = State.EXECUTING;
+        counter.recordAttemptWith(backoff);
+
+        final int attemptNumber = counter.attemptNumber();
+        final boolean isInitialAttempt = attemptNumber <= 1;
 
         final HttpRequest attemptReq;
         final ClientRequestContext attemptCtx;
@@ -212,24 +219,24 @@ final class HttpRetryingContext implements RetryingContext<HttpRequest, HttpResp
 
         final HttpRetryAttempt attempt = new HttpRetryAttempt(this, attemptCtx, attemptRes,
                                                               ctx.exchangeType().isResponseStreaming());
-        attemptsSoFar.add(attempt);
-        return attempt;
+        currentAttempt = attempt;
+        return attempt.whenDecided();
     }
 
     // returns Long.MAX_VALUE if no retry is possible.
     @Override
-    public long nextRetryTimeNanos(HttpRetryAttempt attempt, Backoff backoff) {
-        if (state != State.INITIALIZED) {
-            return Long.MAX_VALUE;
-        }
+    public long nextRetryTimeNanos(Backoff backoff) {
+        checkState(state == State.EXECUTING);
+        assert currentAttempt != null;
+        checkState(currentAttempt.state() == HttpRetryAttempt.State.DECIDED);
 
-        if (retryCounter.hasReachedMaxAttempts()) {
-            logger.debug("Exceeded the default number of max attempt: {}", retryConfig.maxTotalAttempts());
+        if (counter.hasReachedMaxAttempts()) {
+            logger.debug("Exceeded the default number of max attempt: {}", config.maxTotalAttempts());
             return Long.MAX_VALUE;
         }
 
         final long nextRetryDelayForBackoffMillis = backoff.nextDelayMillis(
-                retryCounter.attemptNumberForBackoff(backoff) + 1);
+                counter.attemptNumberForBackoff(backoff) + 1);
 
         if (nextRetryDelayForBackoffMillis < 0) {
             logger.debug("Exceeded the number of max attempts in the backoff: {}", backoff);
@@ -237,7 +244,7 @@ final class HttpRetryingContext implements RetryingContext<HttpRequest, HttpResp
         }
 
         final long nextRetryDelayMillis = Math.max(nextRetryDelayForBackoffMillis,
-                                                   useRetryAfter ? attempt.retryAfterMillis() : -1);
+                                                   useRetryAfter ? currentAttempt.retryAfterMillis() : -1);
         final long nextDelayTimeNanos = System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(nextRetryDelayMillis);
 
         if (hasDeadline && nextDelayTimeNanos > deadlineTimeNanos) {
@@ -251,38 +258,38 @@ final class HttpRetryingContext implements RetryingContext<HttpRequest, HttpResp
     @Override
     public void scheduleNextRetry(long nextRetryTimeNanos, Runnable retryTask,
                                   Consumer<? super Throwable> exceptionHandler) {
+        checkState(state == State.INITIALIZED);
+        assert currentAttempt == null;
         scheduler.scheduleNextRetry(nextRetryTimeNanos, retryTask, exceptionHandler);
     }
 
     @Override
-    public void commit(HttpRetryAttempt attemptToCommit) {
+    public void commit() {
         if (state == State.COMPLETED) {
             // Already completed.
             return;
         }
-        checkState(attemptToCommit.state() == HttpRetryAttempt.State.DECIDED);
-        assert state == State.INITIALIZED;
+        checkState(state == State.EXECUTING);
         assert reqDuplicator != null;
+        assert currentAttempt != null;
+        checkState(currentAttempt.state() == HttpRetryAttempt.State.DECIDED);
+
         state = State.COMPLETED;
 
-        for (final HttpRetryAttempt attempt : attemptsSoFar) {
-            if (attempt != attemptToCommit) {
-                // todo(szymon): check state.
-                attempt.abort();
-            }
-        }
-
-        final HttpResponse attemptRes = attemptToCommit.commit();
+        final HttpResponse attemptRes = currentAttempt.commit();
         // todo(szymon): replace with endResponseWithChild
-        ctx.logBuilder().endResponseWithChild(attemptToCommit.ctx().log());
+        ctx.logBuilder().endResponseWithChild(currentAttempt.ctx().log());
         resFuture.complete(attemptRes);
         reqDuplicator.close();
     }
 
     @Override
-    public void abort(HttpRetryAttempt attempt) {
-        assert state == State.INITIALIZED || state == State.COMPLETED;
-        attempt.abort();
+    public void abortAttempt() {
+        checkState(state == State.EXECUTING);
+        checkState(currentAttempt != null, "No active attempt to abort");
+        currentAttempt.abort();
+        state = State.INITIALIZED;
+        currentAttempt = null;
     }
 
     @Override
@@ -292,18 +299,17 @@ final class HttpRetryingContext implements RetryingContext<HttpRequest, HttpResp
             return;
         }
 
-        assert state == State.INITIALIZED;
-        assert reqDuplicator != null;
-        state = State.COMPLETED;
-
-        for (final HttpRetryAttempt attempt : attemptsSoFar) {
-            // todo(szymon): check state.
-            attempt.abort();
+        if (state == State.EXECUTING) {
+            assert currentAttempt != null;
+            currentAttempt.abort();
         }
 
-        reqDuplicator.abort(cause);
+        state = State.COMPLETED;
 
-        // todo(szymon): verify that this safe to do so we can avoid isInitialAttempt check
+        if (reqDuplicator != null) {
+            reqDuplicator.abort(cause);
+        }
+
         if (!ctx.log().isRequestComplete()) {
             ctx.logBuilder().endRequest(cause);
         }
@@ -318,10 +324,10 @@ final class HttpRetryingContext implements RetryingContext<HttpRequest, HttpResp
     }
 
     RetryConfig<HttpResponse> config() {
-        return retryConfig;
+        return config;
     }
 
-    public boolean setResponseTimeout() {
+    private boolean setResponseTimeout() {
         final long responseTimeoutMillis = responseTimeoutMillis();
         if (responseTimeoutMillis < 0) {
             return false;
@@ -336,7 +342,7 @@ final class HttpRetryingContext implements RetryingContext<HttpRequest, HttpResp
 
     private long responseTimeoutMillis() {
         if (!hasDeadline) {
-            return retryConfig.responseTimeoutMillisForEachAttempt();
+            return config.responseTimeoutMillisForEachAttempt();
         }
 
         final long remainingTimeUntilDeadlineMillis = TimeUnit.NANOSECONDS.toMillis(
@@ -347,8 +353,8 @@ final class HttpRetryingContext implements RetryingContext<HttpRequest, HttpResp
             return -1;
         }
 
-        if (retryConfig.responseTimeoutMillisForEachAttempt() > 0) {
-            return Math.min(retryConfig.responseTimeoutMillisForEachAttempt(),
+        if (config.responseTimeoutMillisForEachAttempt() > 0) {
+            return Math.min(config.responseTimeoutMillisForEachAttempt(),
                             remainingTimeUntilDeadlineMillis);
         }
 
@@ -361,12 +367,15 @@ final class HttpRetryingContext implements RetryingContext<HttpRequest, HttpResp
                 .toStringHelper(this)
                 .add("state", state)
                 .add("ctx", ctx)
-                .add("retryConfig", retryConfig)
+                .add("config", config)
                 .add("req", req)
                 .add("res", res)
+                .add("useRetryAfter", useRetryAfter)
                 .add("deadlineTimeNanos", deadlineTimeNanos)
                 .add("hasDeadline", hasDeadline)
-                .add("retryCounter", retryCounter)
+                .add("counter", counter)
+                .add("scheduler", scheduler)
+                .add("currentAttempt", currentAttempt)
                 .toString();
     }
 }

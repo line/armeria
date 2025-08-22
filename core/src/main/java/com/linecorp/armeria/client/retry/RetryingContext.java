@@ -24,20 +24,19 @@ import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.annotation.Nullable;
 
-interface RetryingContext<I extends Request, O extends Response, A extends RetryAttempt<O>> {
+interface RetryingContext<I extends Request, O extends Response> {
     CompletableFuture<Boolean> init();
 
-    @Nullable
-    A executeAttempt(@Nullable Backoff backoff, Client<I, O> delegate);
+    CompletableFuture<@Nullable RetryDecision> executeAttempt(@Nullable Backoff backoff, Client<I, O> delegate);
 
-    long nextRetryTimeNanos(A attempt, Backoff backoff);
+    long nextRetryTimeNanos(Backoff backoff);
 
     void scheduleNextRetry(long retryTimeNanos, Runnable retryTask,
                            Consumer<? super Throwable> exceptionHandler);
 
-    void commit(A attempt);
+    void commit();
 
-    void abort(A attempt);
+    void abortAttempt();
 
     void abort(Throwable cause);
 

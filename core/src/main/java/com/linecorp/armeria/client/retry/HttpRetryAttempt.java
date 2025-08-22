@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.client.retry;
 
+import static com.google.common.base.Preconditions.checkState;
+
 import java.time.Duration;
 import java.util.Date;
 import java.util.concurrent.CompletableFuture;
@@ -45,7 +47,7 @@ import com.linecorp.armeria.internal.client.TruncatingHttpResponse;
 
 import io.netty.handler.codec.DateFormatter;
 
-class HttpRetryAttempt implements RetryAttempt<HttpResponse> {
+final class HttpRetryAttempt {
     private static final Logger logger = LoggerFactory.getLogger(HttpRetryAttempt.class);
 
     enum State {
@@ -123,7 +125,7 @@ class HttpRetryAttempt implements RetryAttempt<HttpResponse> {
             return res;
         }
 
-        assert state == State.DECIDED;
+        checkState(state == State.DECIDED);
         state = State.COMMITTED;
 
         if (resWithContent != null) {
@@ -138,11 +140,11 @@ class HttpRetryAttempt implements RetryAttempt<HttpResponse> {
     }
 
     public void abort(Throwable cause) {
-        if (state == State.ABORTED || state == State.COMMITTED) {
+        if (state == State.ABORTED) {
             return;
         }
 
-        assert state == State.EXECUTING || state == State.DECIDED;
+        checkState(state == State.EXECUTING || state == State.DECIDING || state == State.DECIDED);
         state = State.ABORTED;
 
         if (resWithContent != null) {
@@ -158,8 +160,7 @@ class HttpRetryAttempt implements RetryAttempt<HttpResponse> {
         whenDecidedFuture.completeExceptionally(cause);
     }
 
-    @Override
-    public CompletableFuture<@Nullable RetryDecision> whenDecided() {
+    CompletableFuture<@Nullable RetryDecision> whenDecided() {
         return whenDecidedFuture;
     }
 
@@ -209,8 +210,6 @@ class HttpRetryAttempt implements RetryAttempt<HttpResponse> {
         assert state == State.EXECUTING;
 
         res.aggregate().handle((aggRes, resCause) -> {
-            assert state == State.EXECUTING;
-
             if (resCause != null) {
                 ctx.logBuilder().endRequest(resCause);
                 ctx.logBuilder().endResponse(resCause);
@@ -375,10 +374,10 @@ class HttpRetryAttempt implements RetryAttempt<HttpResponse> {
 
     @Override
     public String toString() {
+        // We omit `rctx` to keep the representation compact.
         return MoreObjects
                 .toStringHelper(this)
                 .add("state", state)
-                .add("rctx", rctx)
                 .add("ctx", ctx)
                 .add("res", res)
                 .add("resCause", resCause)

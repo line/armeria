@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.client.retry;
 
+import static com.google.common.base.Preconditions.checkState;
+
 import java.util.concurrent.CompletableFuture;
 
 import com.google.common.base.MoreObjects;
@@ -24,7 +26,7 @@ import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.common.RpcResponse;
 import com.linecorp.armeria.common.annotation.Nullable;
 
-final class RpcRetryAttempt implements RetryAttempt<RpcResponse> {
+final class RpcRetryAttempt {
     // todo(szymon): doc
     enum State {
         EXECUTING,
@@ -92,7 +94,7 @@ final class RpcRetryAttempt implements RetryAttempt<RpcResponse> {
             return res;
         }
 
-        assert state == State.DECIDED;
+        checkState(state == State.DECIDED);
         state = State.COMMITTED;
         return res;
     }
@@ -102,12 +104,11 @@ final class RpcRetryAttempt implements RetryAttempt<RpcResponse> {
             return;
         }
 
-        assert state == State.DECIDED;
+        checkState(state == State.EXECUTING || state == State.DECIDING || state == State.DECIDED);
         state = State.ABORTED;
     }
 
-    @Override
-    public CompletableFuture<@Nullable RetryDecision> whenDecided() {
+    CompletableFuture<@Nullable RetryDecision> whenDecided() {
         return whenDecidedFuture;
     }
 
@@ -121,10 +122,10 @@ final class RpcRetryAttempt implements RetryAttempt<RpcResponse> {
 
     @Override
     public String toString() {
+        // We omit `rctx` to keep the representation compact.
         return MoreObjects
                 .toStringHelper(this)
                 .add("state", state)
-                .add("rctx", rctx)
                 .add("ctx", ctx)
                 .add("res", res)
                 .add("resCause", resCause)

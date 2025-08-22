@@ -53,6 +53,8 @@ final class RetryCounter {
                 numberAttemptsSoFarForLastBackoff = 0;
             }
             numberAttemptsSoFarForLastBackoff++;
+        } else {
+            assert lastBackoff == null;
         }
     }
 

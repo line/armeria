@@ -32,7 +32,7 @@ import com.linecorp.armeria.common.annotation.Nullable;
  * An {@link HttpClient} decorator that handles failures of an invocation and retries HTTP requests.
  */
 public final class RetryingClient
-        extends AbstractRetryingClient<HttpRequest, HttpResponse, HttpRetryAttempt, HttpRetryingContext>
+        extends AbstractRetryingClient<HttpRequest, HttpResponse, HttpRetryingContext>
         implements HttpClient {
     /**
      * Returns a new {@link RetryingClientBuilder} with the specified {@link RetryConfig}.

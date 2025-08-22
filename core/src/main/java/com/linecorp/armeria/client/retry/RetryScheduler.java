@@ -59,4 +59,6 @@ final class RetryScheduler {
             exceptionHandler.accept(t);
         }
     }
+
+    // TODO: toString() method with info about current retry task.
 }

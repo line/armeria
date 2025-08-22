@@ -21,8 +21,6 @@ import static com.linecorp.armeria.client.retry.AbstractRetryingClient.ARMERIA_R
 import static com.linecorp.armeria.internal.client.ClientUtil.executeWithFallback;
 import static com.linecorp.armeria.internal.client.ClientUtil.initContextAndExecuteWithFallback;
 
-import java.util.LinkedList;
-import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
@@ -47,40 +45,42 @@ import com.linecorp.armeria.internal.client.ClientPendingThrowableUtil;
 import com.linecorp.armeria.internal.client.ClientRequestContextExtension;
 import com.linecorp.armeria.internal.client.ClientUtil;
 
-final class RpcRetryingContext implements RetryingContext<RpcRequest, RpcResponse, RpcRetryAttempt> {
+final class RpcRetryingContext implements RetryingContext<RpcRequest, RpcResponse> {
     private static final Logger logger = LoggerFactory.getLogger(RpcRetryingContext.class);
 
     private enum State {
         INITIALIZED,
+        EXECUTING,
         COMPLETED
     }
 
     private State state;
     private final ClientRequestContext ctx;
-    private final RetryConfig<RpcResponse> retryConfig;
+    private final RetryConfig<RpcResponse> config;
     private final CompletableFuture<RpcResponse> resFuture;
     private final RpcResponse res;
     private final RpcRequest req;
-    private final RetryCounter retryCounter;
+    private final RetryCounter counter;
     private final RetryScheduler scheduler;
 
     private final long deadlineTimeNanos;
     private final boolean hasDeadline;
 
-    List<RpcRetryAttempt> attemptsSoFar;
+    @Nullable
+    RpcRetryAttempt currentAttempt;
 
     RpcRetryingContext(ClientRequestContext ctx,
-                       RetryConfig<RpcResponse> retryConfig,
+                       RetryConfig<RpcResponse> config,
                        CompletableFuture<RpcResponse> resFuture,
                        RpcResponse res,
                        RpcRequest req) {
         state = State.INITIALIZED;
         this.ctx = ctx;
-        this.retryConfig = retryConfig;
+        this.config = config;
         this.resFuture = resFuture;
         this.res = res;
         this.req = req;
-        retryCounter = new RetryCounter(retryConfig.maxTotalAttempts());
+        counter = new RetryCounter(config.maxTotalAttempts());
         scheduler = new RetryScheduler(ctx);
 
         final long responseTimeoutMillis = ctx.responseTimeoutMillis();
@@ -92,12 +92,12 @@ final class RpcRetryingContext implements RetryingContext<RpcRequest, RpcRespons
             hasDeadline = true;
         }
 
-        attemptsSoFar = new LinkedList<>();
+        currentAttempt = null;
     }
 
     @Override
     public CompletableFuture<Boolean> init() {
-        assert state == State.INITIALIZED;
+        checkState(state == State.INITIALIZED);
 
         res.whenComplete().handle((result, cause) -> {
             final Throwable abortCause;
@@ -114,19 +114,21 @@ final class RpcRetryingContext implements RetryingContext<RpcRequest, RpcRespons
     }
 
     @Override
-    @Nullable
-    public RpcRetryAttempt executeAttempt(@Nullable Backoff backoff,
-                                          Client<RpcRequest, RpcResponse> delegate) {
-        assert state == State.INITIALIZED;
-
-        retryCounter.recordAttemptWith(backoff);
-
-        final int attemptNumber = retryCounter.attemptNumber();
-        final boolean isInitialAttempt = attemptNumber <= 1;
+    public CompletableFuture<@Nullable RetryDecision> executeAttempt(@Nullable Backoff backoff,
+                                                                     Client<RpcRequest, RpcResponse> delegate) {
+        checkState(state == State.INITIALIZED);
+        assert currentAttempt == null;
 
         if (!setResponseTimeout()) {
-            throw ResponseTimeoutException.get();
+            return UnmodifiableFuture.exceptionallyCompletedFuture(ResponseTimeoutException.get());
         }
+
+        state = State.EXECUTING;
+
+        counter.recordAttemptWith(backoff);
+
+        final int attemptNumber = counter.attemptNumber();
+        final boolean isInitialAttempt = attemptNumber <= 1;
 
         final ClientRequestContext attemptCtx = ClientUtil.newDerivedContext(ctx, null, req, isInitialAttempt);
 
@@ -154,23 +156,23 @@ final class RpcRetryingContext implements RetryingContext<RpcRequest, RpcRespons
         }
 
         final RpcRetryAttempt attempt = new RpcRetryAttempt(this, attemptCtx, attemptRes);
-        attemptsSoFar.add(attempt);
-        return attempt;
+        currentAttempt = attempt;
+        return attempt.whenDecided();
     }
 
     @Override
-    public long nextRetryTimeNanos(RpcRetryAttempt attempt, Backoff backoff) {
-        if (state != State.INITIALIZED) {
+    public long nextRetryTimeNanos(Backoff backoff) {
+        if (state != State.EXECUTING) {
             return Long.MAX_VALUE;
         }
 
-        if (retryCounter.hasReachedMaxAttempts()) {
-            logger.debug("Exceeded the default number of max attempt: {}", retryConfig.maxTotalAttempts());
+        if (counter.hasReachedMaxAttempts()) {
+            logger.debug("Exceeded the default number of max attempt: {}", config.maxTotalAttempts());
             return Long.MAX_VALUE;
         }
 
         final long nextRetryDelayMillis = backoff.nextDelayMillis(
-                retryCounter.attemptNumberForBackoff(backoff) + 1);
+                counter.attemptNumberForBackoff(backoff) + 1);
 
         if (nextRetryDelayMillis < 0) {
             logger.debug("Exceeded the number of max attempts in the backoff: {}", backoff);
@@ -188,30 +190,26 @@ final class RpcRetryingContext implements RetryingContext<RpcRequest, RpcRespons
     @Override
     public void scheduleNextRetry(long nextRetryTimeNanos, Runnable retryTask,
                                   Consumer<? super Throwable> exceptionHandler) {
+        checkState(state == State.INITIALIZED);
+        assert currentAttempt == null;
         scheduler.scheduleNextRetry(nextRetryTimeNanos, retryTask, exceptionHandler);
     }
 
     @Override
-    public void commit(RpcRetryAttempt attemptToCommit) {
+    public void commit() {
         if (state == State.COMPLETED) {
             // Already completed, so just return.
             return;
         }
-        checkState(attemptToCommit.state() == RpcRetryAttempt.State.DECIDED);
-        assert state == State.INITIALIZED;
+        checkState(state == State.EXECUTING);
+        assert currentAttempt != null;
+        checkState(currentAttempt.state() == RpcRetryAttempt.State.DECIDED);
+
         state = State.COMPLETED;
 
-        for (final RpcRetryAttempt attempt : attemptsSoFar) {
-            if (attempt != attemptToCommit) {
-                // todo(szymon): check state.
-                attempt.abort();
-            }
-        }
-
-        final RpcResponse attemptRes = attemptToCommit.commit();
-
-        ctx.logBuilder().endResponseWithChild(attemptToCommit.ctx().log());
-        final HttpRequest attemptReq = attemptToCommit.ctx().request();
+        final RpcResponse attemptRes = currentAttempt.commit();
+        ctx.logBuilder().endResponseWithChild(currentAttempt.ctx().log());
+        final HttpRequest attemptReq = currentAttempt.ctx().request();
         if (attemptReq != null) {
             ctx.updateRequest(attemptReq);
         }
@@ -219,9 +217,13 @@ final class RpcRetryingContext implements RetryingContext<RpcRequest, RpcRespons
     }
 
     @Override
-    public void abort(RpcRetryAttempt attempt) {
+    public void abortAttempt() {
+        checkState(state == State.EXECUTING);
+        assert currentAttempt != null;
         // Can be called in any state.
-        attempt.abort();
+        currentAttempt.abort();
+        currentAttempt = null;
+        state = State.INITIALIZED;
     }
 
     @Override
@@ -230,30 +232,18 @@ final class RpcRetryingContext implements RetryingContext<RpcRequest, RpcRespons
             return;
         }
 
-        assert state == State.INITIALIZED;
-        state = State.COMPLETED;
-
-        for (final RpcRetryAttempt attempt : attemptsSoFar) {
-            // todo(szymon): check state.
-            attempt.abort();
+        if (state == State.EXECUTING) {
+            assert currentAttempt != null;
+            currentAttempt.abort();
         }
 
-        // todo(szymon): verify that this safe to do so we can avoid isInitialAttempt check
+        state = State.COMPLETED;
+
         if (!ctx.log().isRequestComplete()) {
             ctx.logBuilder().endRequest(cause);
         }
         ctx.logBuilder().endResponse(cause);
-
         resFuture.completeExceptionally(cause);
-    }
-
-    @Override
-    public RpcResponse res() {
-        return res;
-    }
-
-    RetryConfig<RpcResponse> config() {
-        return retryConfig;
     }
 
     private boolean setResponseTimeout() {
@@ -271,17 +261,26 @@ final class RpcRetryingContext implements RetryingContext<RpcRequest, RpcRespons
 
     private long responseTimeoutMillis() {
         if (!hasDeadline) {
-            return retryConfig.responseTimeoutMillisForEachAttempt();
+            return config.responseTimeoutMillisForEachAttempt();
         }
 
         final long remaining = TimeUnit.NANOSECONDS.toMillis(deadlineTimeNanos - System.nanoTime());
         if (remaining <= 0) {
             return -1;
         }
-        if (retryConfig.responseTimeoutMillisForEachAttempt() > 0) {
-            return Math.min(retryConfig.responseTimeoutMillisForEachAttempt(), remaining);
+        if (config.responseTimeoutMillisForEachAttempt() > 0) {
+            return Math.min(config.responseTimeoutMillisForEachAttempt(), remaining);
         }
         return remaining;
+    }
+
+    @Override
+    public RpcResponse res() {
+        return res;
+    }
+
+    RetryConfig<RpcResponse> config() {
+        return config;
     }
 
     @Override
@@ -289,12 +288,14 @@ final class RpcRetryingContext implements RetryingContext<RpcRequest, RpcRespons
         return MoreObjects
                 .toStringHelper(this)
                 .add("ctx", ctx)
-                .add("retryConfig", retryConfig)
+                .add("retryConfig", config)
                 .add("req", req)
                 .add("res", res)
                 .add("deadlineTimeNanos", deadlineTimeNanos)
                 .add("hasDeadline", hasDeadline)
-                .add("retryCounter", retryCounter)
+                .add("counter", counter)
+                .add("scheduler", scheduler)
+                .add("currentAttempt", currentAttempt)
                 .toString();
     }
 }

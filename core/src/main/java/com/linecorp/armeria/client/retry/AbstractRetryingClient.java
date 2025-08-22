@@ -37,7 +37,7 @@ import io.netty.util.AsciiString;
  * @param <O> the {@link Response} type
  */
 public abstract class AbstractRetryingClient
-        <I extends Request, O extends Response, A extends RetryAttempt<O>, R extends RetryingContext<I, O, A>>
+        <I extends Request, O extends Response, R extends RetryingContext<I, O>>
         extends SimpleDecoratingClient<I, O> {
 
     private static final Logger logger = LoggerFactory.getLogger(AbstractRetryingClient.class);
@@ -88,42 +88,33 @@ public abstract class AbstractRetryingClient
     abstract R getRetryingContext(ClientRequestContext ctx, RetryConfig<O> config, I req);
 
     private void executeAttempt(@Nullable Backoff lastBackoff, R rctx) {
-        @Nullable
-        final A attempt = rctx.executeAttempt(lastBackoff, unwrap());
+        rctx.executeAttempt(lastBackoff, unwrap())
+            .handle((decision, decisionCause) -> {
+                if (decisionCause != null) {
+                    rctx.abort(decisionCause);
+                    return null;
+                }
 
-        if (attempt == null) {
-            // Retrying completed already, error handling
-            // is done inside `RetryingContext`.
-            return;
-        }
+                final Backoff backoff = decision != null ? decision.backoff() : null;
+                final long nextRetryTimeNanos;
+                if (backoff != null) {
+                    nextRetryTimeNanos = rctx.nextRetryTimeNanos(backoff);
+                } else {
+                    nextRetryTimeNanos = Long.MAX_VALUE;
+                }
 
-        attempt.whenDecided()
-               .handle((decision, decisionCause) -> {
-                   if (decisionCause != null) {
-                       rctx.abort(decisionCause);
-                       return null;
-                   }
+                if (nextRetryTimeNanos < Long.MAX_VALUE) {
+                    rctx.abortAttempt();
+                    rctx.scheduleNextRetry(
+                            nextRetryTimeNanos,
+                            () -> executeAttempt(backoff, rctx),
+                            rctx::abort
+                    );
+                } else {
+                    rctx.commit();
+                }
 
-                   final Backoff backoff = decision != null ? decision.backoff() : null;
-                   final long nextRetryTimeNanos;
-                   if (backoff != null) {
-                       nextRetryTimeNanos = rctx.nextRetryTimeNanos(attempt, backoff);
-                   } else {
-                       nextRetryTimeNanos = Long.MAX_VALUE;
-                   }
-
-                   if (nextRetryTimeNanos < Long.MAX_VALUE) {
-                       rctx.abort(attempt);
-                       rctx.scheduleNextRetry(
-                               nextRetryTimeNanos,
-                               () -> executeAttempt(backoff, rctx),
-                               rctx::abort
-                       );
-                   } else {
-                       rctx.commit(attempt);
-                   }
-
-                   return null;
-               });
+                return null;
+            });
     }
 }

@@ -28,7 +28,7 @@ import com.linecorp.armeria.common.RpcResponse;
  * An {@link RpcClient} decorator that handles failures of an invocation and retries RPC requests.
  */
 public final class RetryingRpcClient
-        extends AbstractRetryingClient<RpcRequest, RpcResponse, RpcRetryAttempt, RpcRetryingContext>
+        extends AbstractRetryingClient<RpcRequest, RpcResponse, RpcRetryingContext>
         implements RpcClient {
 
     /**
