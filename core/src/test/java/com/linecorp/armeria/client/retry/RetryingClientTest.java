@@ -21,6 +21,7 @@ import static com.linecorp.armeria.common.util.Exceptions.peel;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.catchThrowable;
+import static org.awaitility.Awaitility.await;
 
 import java.time.Duration;
 import java.util.Arrays;
@@ -55,6 +56,8 @@ import com.google.common.base.Stopwatch;
 
 import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.client.ClientRequestContext;
+import com.linecorp.armeria.client.ClientRequestContextCaptor;
+import com.linecorp.armeria.client.Clients;
 import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.client.ResponseTimeoutException;
 import com.linecorp.armeria.client.UnprocessedRequestException;
@@ -526,15 +529,15 @@ class RetryingClientTest {
     void evaluatesMappingOnce() {
         final AtomicInteger evaluations = new AtomicInteger(0);
         final RetryConfigMapping<HttpResponse> mapping =
-            (ctx, req) -> {
-                evaluations.incrementAndGet();
-                return RetryConfig
-                        .<HttpResponse>builder0(RetryRule.builder()
-                                                         .onStatus(HttpStatus.valueOf(500))
-                                                         .thenBackoff())
-                        .maxTotalAttempts(2)
-                        .build();
-            };
+                (ctx, req) -> {
+                    evaluations.incrementAndGet();
+                    return RetryConfig
+                            .<HttpResponse>builder0(RetryRule.builder()
+                                                             .onStatus(HttpStatus.valueOf(500))
+                                                             .thenBackoff())
+                            .maxTotalAttempts(2)
+                            .build();
+                };
 
         final WebClient client = client(mapping);
 
@@ -712,11 +715,24 @@ class RetryingClientTest {
     @Test
     void doNotRetryWhenSubscriberIsCancelled() throws Exception {
         final WebClient client = client(retryAlways);
-        client.get("/subscriber-cancel").subscribe(
+        final AtomicInteger subscriberCancelServiceCallCounterWhenCancelled = new AtomicInteger(-1);
+
+        final HttpResponse res;
+        final ClientRequestContext ctx;
+        try (ClientRequestContextCaptor captor = Clients.newContextCaptor()) {
+            res = client.get("/subscriber-cancel");
+            ctx = captor.get();
+        }
+
+        res.subscribe(
                 new Subscriber<HttpObject>() {
                     @Override
                     public void onSubscribe(Subscription s) {
-                        s.cancel(); // Cancel as soon as getting the subscription.
+                        ctx.eventLoop().schedule(() -> {
+                            subscriberCancelServiceCallCounterWhenCancelled.set(
+                                    subscriberCancelServiceCallCounter.get());
+                            s.cancel();
+                        }, 1000, TimeUnit.MILLISECONDS);
                     }
 
                     @Override
@@ -729,8 +745,13 @@ class RetryingClientTest {
                     public void onComplete() {}
                 });
 
-        TimeUnit.SECONDS.sleep(1L); // Sleep to check if there's a retry.
-        assertThat(subscriberCancelServiceCallCounter.get()).isEqualTo(1);
+        await().untilAsserted(() -> {
+            // We should have made at least one service call during the second.
+            assertThat(subscriberCancelServiceCallCounter.get()).isGreaterThanOrEqualTo(1);
+            // After we cancelled we do not expect further service calls.
+            assertThat(subscriberCancelServiceCallCounterWhenCancelled.get()).isEqualTo(
+                    subscriberCancelServiceCallCounter.get());
+        });
     }
 
     @Test
