@@ -153,6 +153,8 @@ class RouteMatcherTest {
                                   cluster: my-cluster2
                         http_filters:
                         - name: envoy.filters.http.router
+                          typed_config:
+                            "@type": type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
                   clusters:
                   - name: my-cluster1
                     type: STATIC

@@ -20,9 +20,10 @@ import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.util.Sampler;
 
 /**
- * A {@link RuntimeException} raised when a server set
+ * A {@link RuntimeException} raised when 1) a server set
  * HTTP/2 <a href="https://datatracker.ietf.org/doc/html/rfc7540#section-5.1.2">{@code MAX_CONCURRENT_STREAMS}</a>
- * to 0, which means a client can't send anything.
+ * to 0 which means a client can't send anything 2) or when a server sent a
+ * <a href="https://datatracker.ietf.org/doc/html/rfc7540#section-8.1.4">REFUSED_STREAM</a> frame.
  */
 public final class RefusedStreamException extends RuntimeException {
 

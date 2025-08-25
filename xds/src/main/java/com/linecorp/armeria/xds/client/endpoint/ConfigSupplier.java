@@ -16,6 +16,9 @@
 
 package com.linecorp.armeria.xds.client.endpoint;
 
+import java.util.function.Function;
+
+import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.xds.ClusterSnapshot;
 import com.linecorp.armeria.xds.ListenerSnapshot;
@@ -49,4 +52,8 @@ interface ConfigSupplier {
     ClusterSnapshot clusterSnapshot();
 
     RouteEntry routeEntry();
+
+    @Nullable Function<? super HttpClient, ? extends HttpClient> retryingDecorator();
+
+    long responseTimeoutMillis();
 }
