@@ -44,6 +44,10 @@ public final class DocServiceBuilder {
 
     static final DocServiceFilter NO_SERVICE = (plugin, service, method) -> false;
 
+    private static final String WEB_APP_TITLE_KEY = "webAppTitle";
+
+    private static final int WEB_APP_TITLE_MAX_SIZE = 50;
+
     private DocServiceFilter includeFilter = ALL_SERVICES;
 
     private DocServiceFilter excludeFilter = NO_SERVICE;
@@ -61,6 +65,7 @@ public final class DocServiceBuilder {
     private final Map<String, ListMultimap<String, String>> exampleQueries = new HashMap<>();
     private final List<BiFunction<ServiceRequestContext, HttpRequest, String>> injectedScriptSuppliers =
             new ArrayList<>();
+    private final Map<String, String> docServiceExtraInfo = new HashMap<>();
 
     @Nullable
     private DescriptiveTypeInfoProvider descriptiveTypeInfoProvider;
@@ -552,11 +557,25 @@ public final class DocServiceBuilder {
     }
 
     /**
+     * Sets the title of the web application to be used in the documentation service.
+     * @param webAppTitle  * The title cannot be null, empty, or exceed a maximum length of 50 characters.
+     * @return The current {@link DocServiceBuilder} instance for method chaining.
+     */
+    public DocServiceBuilder webAppTitle(String webAppTitle) {
+        requireNonNull(webAppTitle, WEB_APP_TITLE_KEY);
+        checkArgument(!webAppTitle.trim().isEmpty(), "%s is empty.", WEB_APP_TITLE_KEY);
+        checkArgument(webAppTitle.length() <= WEB_APP_TITLE_MAX_SIZE,
+                      "%s length exceeds %s.", WEB_APP_TITLE_KEY, WEB_APP_TITLE_MAX_SIZE);
+        docServiceExtraInfo.putIfAbsent(WEB_APP_TITLE_KEY, webAppTitle);
+        return this;
+    }
+
+    /**
      * Returns a newly-created {@link DocService} based on the properties of this builder.
      */
     public DocService build() {
         return new DocService(exampleHeaders, exampleRequests, examplePaths, exampleQueries,
                               injectedScriptSuppliers, unifyFilter(includeFilter, excludeFilter),
-                              descriptiveTypeInfoProvider);
+                              descriptiveTypeInfoProvider, docServiceExtraInfo);
     }
 }
