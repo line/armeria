@@ -33,7 +33,7 @@ public final class DecodedHttpResponse extends DefaultHttpResponse {
     @Nullable
     private InboundTrafficController inboundTrafficController;
     private long writtenBytes;
-    private int id = -1;
+    private int streamId = -1;
 
     public DecodedHttpResponse(EventLoop eventLoop) {
         this.eventLoop = eventLoop;
@@ -43,8 +43,8 @@ public final class DecodedHttpResponse extends DefaultHttpResponse {
         this.inboundTrafficController = inboundTrafficController;
     }
 
-    public void setId(int id) {
-        this.id = id;
+    public void setStreamId(int streamId) {
+        this.streamId = streamId;
     }
 
     public long writtenBytes() {
@@ -79,8 +79,12 @@ public final class DecodedHttpResponse extends DefaultHttpResponse {
         if (obj instanceof HttpData) {
             final int length = ((HttpData) obj).length();
             assert inboundTrafficController != null;
-            assert id > -1 : "id must be set before consuming HttpData";
-            inboundTrafficController.dec(id, length);
+            assert streamId > -1 : "id must be set before consuming HttpData";
+            if (streamId == 0) {
+                // The stream ID 0 is used for an HTTP/1 upgrade request.
+            } else {
+                inboundTrafficController.dec(streamId, length);
+            }
         }
     }
 }
