@@ -139,7 +139,6 @@ public class HttpServerFlowControlTest {
                     return HttpResponse.of(future);
                 }
             });
-
         }
     };
 
@@ -190,7 +189,7 @@ public class HttpServerFlowControlTest {
 
             final CompletableFuture<AggregatedHttpResponse> res2 =
                     client.prepare()
-                          .post(PATH)
+                          .post("/stream")
                           .content(MediaType.OCTET_STREAM, HttpData.wrap(new byte[DATA_SIZE]))
                           // Make the request fail before increasing the request ID.
                           .header(HttpHeaderNames.EXPECT, "invalid")
