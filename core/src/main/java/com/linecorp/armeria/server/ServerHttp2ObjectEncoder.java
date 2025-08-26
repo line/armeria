@@ -56,7 +56,7 @@ final class ServerHttp2ObjectEncoder extends Http2ObjectEncoder implements Serve
             // - Server tried to send a response HEADERS frame twice.
             return newFailedFuture(ClosedStreamException.get());
         }
-
+        maybeSetFinalFrameSent(streamId, endStream);
         final Http2Headers converted = convertHeaders(headers, isTrailersEmpty);
         onKeepAliveReadOrWrite();
         return encoder().writeHeaders(ctx(), streamId, converted, 0, endStream, ctx().newPromise());
@@ -96,6 +96,7 @@ final class ServerHttp2ObjectEncoder extends Http2ObjectEncoder implements Serve
             return newFailedFuture(ClosedStreamException.get());
         }
 
+        maybeSetFinalFrameSent(streamId, true);
         final Http2Headers converted = ArmeriaHttpUtil.toNettyHttp2ServerTrailers(headers);
         onKeepAliveReadOrWrite();
         return encoder().writeHeaders(ctx(), streamId, converted, 0, true, ctx().newPromise());
@@ -143,7 +144,7 @@ final class ServerHttp2ObjectEncoder extends Http2ObjectEncoder implements Serve
         if (stream == null) {
             return;
         }
-        if (stream.state().remoteSideOpen()) {
+        if (!isFinalFrameSent(stream)) {
             encoder().writeRstStream(ctx(), streamId, http2Error.code(), ctx().voidPromise());
             ctx().flush();
         }

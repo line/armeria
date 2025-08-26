@@ -55,6 +55,7 @@ final class ClientHttp2ObjectEncoder extends Http2ObjectEncoder implements Clien
                                         ChannelPromise promise) {
         final Http2Connection conn = encoder().connection();
         if (isStreamPresentAndWritable(streamId)) {
+            maybeSetFinalFrameSent(streamId, endStream);
             keepAliveHandler().onReadOrWrite();
             return encoder().writeHeaders(ctx(), streamId, convertHeaders(headers), 0,
                                           endStream, promise);
@@ -93,6 +94,7 @@ final class ClientHttp2ObjectEncoder extends Http2ObjectEncoder implements Clien
     @Override
     public ChannelFuture doWriteTrailers(int id, int streamId, HttpHeaders headers) {
         if (isStreamPresentAndWritable(streamId)) {
+            maybeSetFinalFrameSent(streamId, true);
             keepAliveHandler().onReadOrWrite();
             return encoder().writeHeaders(ctx(), streamId, ArmeriaHttpUtil.toNettyHttp2ClientTrailers(headers),
                                           0, true, ctx().newPromise());

@@ -24,6 +24,7 @@ import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.handler.codec.http2.Http2Connection.PropertyKey;
 import io.netty.handler.codec.http2.Http2ConnectionEncoder;
 import io.netty.handler.codec.http2.Http2Error;
 import io.netty.handler.codec.http2.Http2Stream;
@@ -32,6 +33,7 @@ public abstract class Http2ObjectEncoder implements HttpObjectEncoder {
     private final ChannelHandlerContext ctx;
     private final Http2ConnectionEncoder encoder;
     private final KeepAliveHandler keepAliveHandler;
+    private final PropertyKey finalFrameSent;
     private volatile boolean closed;
 
     protected Http2ObjectEncoder(ChannelHandlerContext connectionHandlerCtx,
@@ -39,6 +41,7 @@ public abstract class Http2ObjectEncoder implements HttpObjectEncoder {
         ctx = connectionHandlerCtx;
         encoder = connectionHandler.encoder();
         keepAliveHandler = connectionHandler.keepAliveHandler();
+        finalFrameSent = connectionHandler.connection().newKey();
     }
 
     @Override
@@ -65,6 +68,7 @@ public abstract class Http2ObjectEncoder implements HttpObjectEncoder {
             final KeepAliveHandler keepAliveHandler = keepAliveHandler();
             keepAliveHandler.onReadOrWrite();
             // Write to an existing stream.
+            maybeSetFinalFrameSent(streamId, endStream);
             return encoder.writeData(ctx, streamId, toByteBuf(data), 0, endStream, ctx.newPromise());
         }
 
@@ -84,10 +88,9 @@ public abstract class Http2ObjectEncoder implements HttpObjectEncoder {
 
     @Override
     public final ChannelFuture doWriteReset(int id, int streamId, Http2Error error) {
-        final Http2Stream stream = encoder.connection().stream(streamId);
-
         // Send a RST_STREAM frame only for an active stream which did not send a RST_STREAM frame already.
-        if (stream != null && !stream.isResetSent()) {
+        if (isWritable(id, streamId)) {
+            maybeSetFinalFrameSent(streamId, true);
             return encoder.writeRstStream(ctx, streamId, error.code(), ctx.newPromise());
         }
 
@@ -106,6 +109,9 @@ public abstract class Http2ObjectEncoder implements HttpObjectEncoder {
     protected final boolean isStreamPresentAndWritable(int streamId) {
         final Http2Stream stream = encoder.connection().stream(streamId);
         if (stream == null) {
+            return false;
+        }
+        if (isFinalFrameSent(stream)) {
             return false;
         }
 
@@ -129,5 +135,20 @@ public abstract class Http2ObjectEncoder implements HttpObjectEncoder {
     @Override
     public boolean isClosed() {
         return closed || !channel().isActive();
+    }
+
+    protected boolean isFinalFrameSent(Http2Stream stream) {
+        return stream.getProperty(finalFrameSent) != null;
+    }
+
+    protected void maybeSetFinalFrameSent(int streamId, boolean endStream) {
+        if (!endStream) {
+            return;
+        }
+        final Http2Stream stream = encoder.connection().stream(streamId);
+        if (stream == null) {
+            return;
+        }
+        stream.setProperty(finalFrameSent, true);
     }
 }
