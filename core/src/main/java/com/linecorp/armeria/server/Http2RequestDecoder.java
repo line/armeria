@@ -240,16 +240,16 @@ final class Http2RequestDecoder extends Http2EventAdapter {
         }
     }
 
-    private static int streamIdToId(int streamId) {
-        return (streamId - 1) >>> 1;
-    }
-
     @Override
     public void onHeadersRead(
             ChannelHandlerContext ctx, int streamId, Http2Headers headers,
             int streamDependency, short weight, boolean exclusive, int padding,
             boolean endOfStream) throws Http2Exception {
         onHeadersRead(ctx, streamId, headers, padding, endOfStream);
+    }
+
+    private static int streamIdToId(int streamId) {
+        return (streamId - 1) >>> 1;
     }
 
     private boolean handle100Continue(int streamId, Http2Headers headers, HttpMethod method) {
