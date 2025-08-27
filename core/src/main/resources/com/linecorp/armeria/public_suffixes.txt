@@ -609,6 +609,7 @@ ap.leg.br
 ap.ngrok.io
 aparecida.br
 apartments
+api.br
 api.gov.uk
 api.lp.dev
 api.stdlib.com
@@ -3706,6 +3707,7 @@ i.ng
 i.ph
 i.se
 i234.me
+ia.br
 ia.us
 iamallama.com
 ibara.okayama.jp
@@ -4803,7 +4805,6 @@ lib.ca.us
 lib.co.us
 lib.ct.us
 lib.dc.us
-lib.de.us
 lib.ee
 lib.fl.us
 lib.ga.us
@@ -7977,6 +7978,7 @@ soc.srcf.net
 soccer
 sochi.su
 social
+social.br
 soctrang.vn
 sodegaura.chiba.jp
 soeda.fukuoka.jp
@@ -9762,6 +9764,7 @@ xx.kg
 xxx
 xxx.ec
 xyz
+xyz.br
 xz.cn
 y.bg
 y.se
