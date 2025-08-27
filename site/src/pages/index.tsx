@@ -358,6 +358,7 @@ const IndexPage = (props: RouteComponentProps): JSX.Element => {
           </Paragraph>
         </MarketingBlock>
         <MarketingBlock>
+          
           <CodeBlock language="java">
             {`
             EndpointGroup group =
@@ -377,7 +378,7 @@ const IndexPage = (props: RouteComponentProps): JSX.Element => {
           </CodeBlock>
         </MarketingBlock>
       </Marketing>
-      <Marketing className={styles.getStarted}>
+      <Marketing className={styles.getStarted}>{/* TODO */}
         <MarketingBlock>
           <Title level={3}>
             Build your service with

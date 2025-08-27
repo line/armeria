@@ -1,8 +1,3 @@
-/**
- * Less files with the .module.less suffix will be treated as Less modules
- * and scoped locally.
- */
-
 .heroBanner {
   padding: 4rem 0;
   text-align: center;
@@ -22,4 +17,39 @@
   display: flex;
   align-items: center;
   justify-content: center;
+}
+
+/* Hide unnecessary space below images. */
+.docServiceCarousel :global(.slick-slide) {
+  line-height: 0;
+}
+
+.docServiceCarousel :global(.slick-dots) {
+  margin-bottom: 0;
+  bottom: -8px;
+}
+
+.docServiceCarousel :global(.slick-dots) li {
+  width: 32px;
+  height: 4px;
+  border-radius: 1px;
+  background: #ccc;
+}
+
+.docServiceCarousel :global(.slick-dots) li > button {
+  background: #ccc;
+}
+
+.docServiceCarousel :global(.slick-dots) :global(li.slick-active) {
+  width: 64px;
+}
+
+.docServiceCarousel :global(.slick-dots) :global(li.slick-active::after) {
+  background: #999;
+}
+.docServiceCarousel
+  :global(.slick-dots)
+  :global(li.slick-active::after)
+  > button {
+  background: #999;
 }

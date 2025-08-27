@@ -1,0 +1,159 @@
+/* TODO: 미디어 쿼리의 breakpoint 값(@screen-sm-max, @screen-md-min, @screen-two-column-min)은 변경 */
+
+:root {
+  --marketing-margin: 80px;
+  --marketing-margin-sm: 40px;
+  --marketing-block-width: 532px;
+  --marketing-block-margin: 100px;
+  --layout-header-height: 64px;
+}
+
+.wrapper {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-around;
+  padding: var(--marketing-margin) 0 0;
+  max-width: 100%;
+}
+
+.wrapper:first-child {
+  padding-top: calc(var(--marketing-margin) - var(--layout-header-height) / 4);
+}
+
+.wrapper:last-child {
+  padding-bottom: var(--marketing-margin);
+}
+
+@media (max-width: 768px) {
+  .wrapper {
+    padding: var(--marketing-margin-sm);
+    padding-bottom: 0;
+  }
+
+  .wrapper:first-child {
+    padding-top: calc(
+      var(--marketing-margin-sm) - var(--layout-header-height) / 4
+    );
+  }
+
+  .wrapper:last-child {
+    padding-bottom: var(--marketing-margin-sm);
+  }
+}
+
+.wrapper .blockList {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  align-content: flex-start;
+  align-items: center;
+  overflow: visible;
+}
+
+.wrapper .blockList .block {
+  flex-grow: 1;
+  flex-basis: 0;
+}
+
+/* Small display, single column */
+@media (max-width: 768px) {
+  .wrapper .blockList .block {
+    width: var(--marketing-block-width);
+    max-width: 100%;
+    margin: 0 auto;
+  }
+}
+
+/* Medium display, single column */
+@media (min-width: 992px) {
+  .wrapper .blockList {
+    min-width: 0;
+    max-width: 100%;
+    margin: 0 auto;
+  }
+
+  .wrapper .blockList .block {
+    width: var(--marketing-block-width);
+    max-width: var(--marketing-block-width);
+  }
+}
+
+/* Use 2-column layout for a large display. */
+@media (min-width: 1200px) {
+  .wrapper .blockList {
+    flex-direction: row;
+  }
+
+  .wrapper .blockList .block {
+    min-width: var(--marketing-block-width);
+    width: var(--marketing-block-width);
+    max-width: var(--marketing-block-width);
+  }
+
+  .wrapper .blockList .block:nth-child(odd) {
+    margin: 0 calc(var(--marketing-block-margin) / 2) 0 0;
+  }
+
+  .wrapper .blockList .block:nth-child(even) {
+    margin: 0 0 0 calc(var(--marketing-block-margin) / 2);
+  }
+}
+
+.wrapper .blockListReverse {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  align-content: flex-start;
+  align-items: center;
+  overflow: visible;
+}
+
+.wrapper .blockListReverse .block {
+  flex-grow: 1;
+  flex-basis: 0;
+}
+
+@media (max-width: 768px) {
+  .wrapper .blockListReverse .block {
+    width: var(--marketing-block-width);
+    max-width: 100%;
+    margin: 0 auto;
+  }
+}
+
+@media (min-width: 992px) {
+  .wrapper .blockListReverse {
+    min-width: 0;
+    max-width: 100%;
+    margin: 0 auto;
+  }
+
+  .wrapper .blockListReverse .block {
+    width: var(--marketing-block-width);
+    max-width: var(--marketing-block-width);
+  }
+}
+
+/* Allow reversing only on 2-column layout. */
+@media (min-width: 1200px) {
+  .wrapper .blockListReverse {
+    flex-direction: row-reverse;
+  }
+
+  .wrapper .blockListReverse .block:nth-child(odd) {
+    margin: 0 auto 0 calc(var(--marketing-block-margin) / 2);
+  }
+
+  .wrapper .blockListReverse .block:nth-child(even) {
+    margin: 0 calc(var(--marketing-block-margin) / 2) 0 auto;
+  }
+}
+
+.highlight {
+  color: var(--armeria-magenta);
+}
+
+.highlightNoWrap {
+  color: var(--armeria-magenta);
+  white-space: nowrap;
+}
