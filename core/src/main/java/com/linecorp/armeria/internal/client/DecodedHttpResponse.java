@@ -80,8 +80,8 @@ public final class DecodedHttpResponse extends DefaultHttpResponse {
             final int length = ((HttpData) obj).length();
             assert inboundTrafficController != null;
             assert streamId > -1 : "id must be set before consuming HttpData";
-            if (streamId == 0) {
-                // The stream ID 0 is used for an HTTP/1 upgrade request.
+            if (streamId == 1) {
+                // The stream ID 1 is used for an HTTP/1 upgrade request.
             } else {
                 inboundTrafficController.dec(streamId, length);
             }
