@@ -172,7 +172,7 @@ final class StreamingDecodedHttpRequest extends DefaultHttpRequest implements De
     protected void onRemoval(HttpObject obj) {
         if (obj instanceof HttpData) {
             final int length = ((HttpData) obj).length();
-            inboundTrafficController.dec(id, length);
+            inboundTrafficController.dec(streamId, length);
         }
     }
 

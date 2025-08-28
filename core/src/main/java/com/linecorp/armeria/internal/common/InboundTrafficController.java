@@ -100,13 +100,13 @@ public final class InboundTrafficController extends AtomicInteger {
         }
     }
 
-    public void dec(int id, int numConsumedBytes) {
+    public void dec(int streamId, int numConsumedBytes) {
         if (decoder != null) {
             assert channel != null;
             if (channel.eventLoop().inEventLoop()) {
-                consumeHttp2Bytes(id, numConsumedBytes);
+                consumeHttp2Bytes(streamId, numConsumedBytes);
             } else {
-                channel.eventLoop().execute(() -> consumeHttp2Bytes(id, numConsumedBytes));
+                channel.eventLoop().execute(() -> consumeHttp2Bytes(streamId, numConsumedBytes));
             }
         }
         final int oldValue = getAndAdd(-numConsumedBytes);
@@ -119,8 +119,7 @@ public final class InboundTrafficController extends AtomicInteger {
         }
     }
 
-    private void consumeHttp2Bytes(int id, int numConsumedBytes) {
-        final int streamId = streamId(id);
+    private void consumeHttp2Bytes(int streamId, int numConsumedBytes) {
         assert decoder != null && channel != null;
         final Http2Stream stream = decoder.connection().stream(streamId);
         if (stream != null) {
@@ -145,10 +144,6 @@ public final class InboundTrafficController extends AtomicInteger {
     @VisibleForTesting
     public boolean isSuspended() {
         return suspended;
-    }
-
-    private static int streamId(int id) {
-        return (id << 1) + 1;
     }
 
     @Override
