@@ -24,6 +24,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import org.assertj.core.data.Percentage;
 import org.hamcrest.Matchers;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -36,6 +37,7 @@ import com.linecorp.armeria.common.AggregatedHttpRequest;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.ExchangeType;
 import com.linecorp.armeria.common.HttpData;
+import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
@@ -67,8 +69,14 @@ public class HttpServerFlowControlTest {
     @RegisterExtension
     static final ServerExtension server = new ServerExtension() {
         @Override
+        protected boolean runForEachTest() {
+            return true;
+        }
+
+        @Override
         protected void configure(ServerBuilder sb) {
             sb.decorator(LoggingService.newDecorator());
+            sb.http2StreamWindowUpdateRatio(0.9f);
             sb.http2InitialConnectionWindowSize(CONNECTION_WINDOW);
             sb.http2InitialStreamWindowSize(STREAM_WINDOW);
             sb.service(PATH, (ctx, req) -> {
@@ -91,6 +99,16 @@ public class HttpServerFlowControlTest {
                         throw new RuntimeException(e);
                     }
 
+                    final AggregatedHttpRequest aggReq = req.aggregate().join();
+                    return HttpResponse.of(HttpStatus.OK, MediaType.PLAIN_TEXT,
+                                           "Received: " + aggReq.content().length());
+                }, ctx.blockingTaskExecutor());
+
+                return HttpResponse.of(future);
+            });
+
+            sb.service("/stream", (ctx, req) -> {
+                final CompletableFuture<HttpResponse> future = CompletableFuture.supplyAsync(() -> {
                     final AggregatedHttpRequest aggReq = req.aggregate().join();
                     return HttpResponse.of(HttpStatus.OK, MediaType.PLAIN_TEXT,
                                            "Received: " + aggReq.content().length());
@@ -160,6 +178,39 @@ public class HttpServerFlowControlTest {
         assertThat(aggRes2.contentUtf8()).isEqualTo("Received: " + DATA_SIZE);
 
         assertThat(flowController.windowSize(connection.connectionStream())).isGreaterThan(0);
+    }
+
+    @Test
+    void flowControl_with_rejected_streams() throws Exception {
+        final WebClient client = WebClient.of(server.uri(SessionProtocol.H2C));
+        for (int i = 0; i < 10; i++) {
+            final CompletableFuture<AggregatedHttpResponse> res1 =
+                    client.post("/stream", HttpData.wrap(new byte[DATA_SIZE])).aggregate();
+
+            final CompletableFuture<AggregatedHttpResponse> res2 =
+                    client.prepare()
+                          .post("/stream")
+                          .content(MediaType.OCTET_STREAM, HttpData.wrap(new byte[DATA_SIZE]))
+                          // Make the request fail before increasing the request ID.
+                          .header(HttpHeaderNames.EXPECT, "invalid")
+                          .execute()
+                          .aggregate();
+
+            final AggregatedHttpResponse aggRes1 = res1.join();
+            assertThat(aggRes1.status()).isEqualTo(HttpStatus.OK);
+            assertThat(aggRes1.contentUtf8()).isEqualTo("Received: " + DATA_SIZE);
+
+            final AggregatedHttpResponse aggRes2 = res2.join();
+            assertThat(aggRes2.status()).isEqualTo(HttpStatus.EXPECTATION_FAILED);
+        }
+
+        final ServiceRequestContext sctx = server.requestContextCaptor().take();
+        final StreamingDecodedHttpRequest decodedServerReq = (StreamingDecodedHttpRequest) sctx.request();
+        final Http2ConnectionDecoder decoder = decodedServerReq.inboundTrafficController().decoder();
+        final Http2LocalFlowController flowController = decoder.flowController();
+        final Http2Connection connection = decoder.connection();
+        assertThat(flowController.windowSize(connection.connectionStream()))
+                .isCloseTo(CONNECTION_WINDOW, Percentage.withPercentage(10));
     }
 
     @Test
