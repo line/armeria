@@ -250,6 +250,8 @@ public final class WebSocketServiceBuilder {
      */
     public WebSocketServiceBuilder streamTimeout(Duration streamTimeout) {
         requireNonNull(streamTimeout, "streamTimeout");
+        checkArgument(!streamTimeout.isNegative(),
+                      "streamTimeout: %s (expected: >= 0)", "streamTimeout");
         this.streamTimeout = streamTimeout;
         return this;
     }

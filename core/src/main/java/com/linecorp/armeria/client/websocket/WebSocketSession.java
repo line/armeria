@@ -31,8 +31,6 @@ import com.linecorp.armeria.common.InboundCompleteException;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
-import com.linecorp.armeria.common.stream.AbortedStreamException;
-import com.linecorp.armeria.common.stream.CancelledSubscriptionException;
 import com.linecorp.armeria.common.stream.ClosedStreamException;
 import com.linecorp.armeria.common.stream.PublisherBasedStreamMessage;
 import com.linecorp.armeria.common.stream.StreamMessage;
@@ -135,24 +133,21 @@ public final class WebSocketSession {
                                 return StreamMessage.aborted(cause);
                             }
                             ctx.logBuilder().endRequest(cause);
-                            ctx.logBuilder().endResponse(cause);
+                            ctx.logBuilder().responseCause(cause);
                             return StreamMessage.of(HttpData.wrap(encoder.encode(
                                ctx, newClientCloseWebSocketFrame(cause))));
                         });
-
-        inbound.whenComplete().exceptionally(cause -> {
-            final Throwable mapped = (cause instanceof CancelledSubscriptionException ||
-                                      cause instanceof AbortedStreamException) ?
-                                     new InboundCompleteException("inbound stream was cancelled") : cause;
-
-            data.abort(mapped);
-            return null;
-        });
 
         if (!outboundFuture.complete(data)) {
             data.abort();
             throw new IllegalStateException("outbound() or setOutbound() has been already called.");
         }
+
+        inbound.whenComplete().exceptionally(cause -> {
+            final Throwable mapped = new InboundCompleteException("inbound stream was cancelled", cause);
+            data.abort(mapped);
+            return null;
+        });
     }
 
     @Override

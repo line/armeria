@@ -45,8 +45,6 @@ import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.ResponseHeadersBuilder;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
-import com.linecorp.armeria.common.stream.AbortedStreamException;
-import com.linecorp.armeria.common.stream.CancelledSubscriptionException;
 import com.linecorp.armeria.common.stream.ClosedStreamException;
 import com.linecorp.armeria.common.stream.StreamMessage;
 import com.linecorp.armeria.common.util.TimeoutMode;
@@ -130,10 +128,7 @@ public final class DefaultWebSocketService implements WebSocketService, WebSocke
         final WebSocket outbound = handler.handle(ctx, inbound);
 
         inbound.whenComplete().exceptionally(cause -> {
-            final Throwable mapped = (cause instanceof CancelledSubscriptionException ||
-                                     cause instanceof AbortedStreamException) ?
-                                    new InboundCompleteException("inbound stream was cancelled") : cause;
-
+            final Throwable mapped = new InboundCompleteException("inbound stream was cancelled", cause);
             outbound.abort(mapped);
             return null;
         });

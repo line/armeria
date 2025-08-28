@@ -227,6 +227,9 @@ public final class WebSocketClientBuilder extends AbstractWebClientBuilder {
      * @param streamTimeout maximum idle time between frames
      */
     public WebSocketClientBuilder streamTimeout(Duration streamTimeout) {
+        requireNonNull(streamTimeout, "streamTimeout");
+        checkArgument(!streamTimeout.isNegative(),
+                      "streamTimeout: %s (expected: >= 0)", "streamTimeout");
         this.streamTimeout = streamTimeout;
         return this;
     }

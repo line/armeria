@@ -47,7 +47,6 @@ final class TimeoutStreamMessage<T> implements StreamMessage<T> {
     private final StreamMessage<? extends T> delegate;
     private final Duration timeoutDuration;
     private final StreamTimeoutMode timeoutMode;
-    private final CompletableFuture<Void> completionFuture = new CompletableFuture<>();
 
     /**
      * Creates a new TimeoutStreamMessage with the specified base stream message and timeout settings.
@@ -61,17 +60,6 @@ final class TimeoutStreamMessage<T> implements StreamMessage<T> {
         this.delegate = requireNonNull(delegate, "delegate");
         this.timeoutDuration = requireNonNull(timeoutDuration, "timeoutDuration");
         this.timeoutMode = requireNonNull(timeoutMode, "timeoutMode");
-
-        delegate.whenComplete().whenComplete((unused, cause) -> {
-            if (completionFuture.isDone()) {
-                return;
-            }
-            if (cause == null) {
-                completionFuture.complete(null);
-            } else {
-                completionFuture.completeExceptionally(cause);
-            }
-        });
     }
 
     @Override
@@ -91,7 +79,7 @@ final class TimeoutStreamMessage<T> implements StreamMessage<T> {
 
     @Override
     public CompletableFuture<Void> whenComplete() {
-        return completionFuture;
+        return delegate.whenComplete();
     }
 
     /**
@@ -106,7 +94,7 @@ final class TimeoutStreamMessage<T> implements StreamMessage<T> {
     public void subscribe(Subscriber<? super T> subscriber, EventExecutor executor,
                           SubscriptionOption... options) {
         delegate.subscribe(new TimeoutSubscriber<>(subscriber, executor, timeoutDuration, timeoutMode,
-                                                   completionFuture), executor, options);
+                                                   delegate.whenComplete()), executor, options);
     }
 
     @Override

@@ -79,8 +79,11 @@ class WebSocketClientStreamTimeoutTest {
 
         final ClientRequestContext ctx = session.context();
         final RequestLog log = ctx.log().whenComplete().join();
-        assertThat(Objects.requireNonNull(log.responseCause())).isInstanceOf(StreamTimeoutException.class);
-        assertThat(Objects.requireNonNull(log.requestCause())).isInstanceOf(StreamTimeoutException.class);
+
+        assertThat(Objects.requireNonNull(Objects.requireNonNull(log.responseCause()).getCause()))
+                .isInstanceOf(StreamTimeoutException.class);
+        assertThat(Objects.requireNonNull(Objects.requireNonNull(log.requestCause()).getCause()))
+                .isInstanceOf(StreamTimeoutException.class);
     }
 
     @Test

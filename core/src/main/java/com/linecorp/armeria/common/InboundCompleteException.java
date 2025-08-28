@@ -30,4 +30,11 @@ public class InboundCompleteException extends CancellationException {
     public InboundCompleteException(@Nullable String message) {
         super(message);
     }
+
+    /**
+     * Creates a new instance with the specified {@code message} and {@code cause}.
+     */
+    public InboundCompleteException(@Nullable String message, @Nullable Throwable cause) {
+        super(message, cause);
+    }
 }
