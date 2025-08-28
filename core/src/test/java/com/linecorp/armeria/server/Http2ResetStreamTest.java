@@ -144,14 +144,17 @@ class Http2ResetStreamTest {
             Http2Frame frame = stream.take();
             assertThat(frame).isInstanceOf(Http2HeadersFrame.class);
             assertThat(((Http2HeadersFrame) frame).headers().status()).asString().isEqualTo("200");
+            ReferenceCountUtil.release(frame);
 
             frame = stream.take();
             assertThat(frame).isInstanceOf(Http2DataFrame.class);
             assertThat(((Http2DataFrame) frame).content().toString(StandardCharsets.UTF_8)).endsWith("Bye");
+            ReferenceCountUtil.release(frame);
 
             frame = stream.take();
             assertThat(frame).isInstanceOf(Http2DataFrame.class);
             assertThat(((Http2DataFrame) frame).isEndStream()).isTrue();
+            ReferenceCountUtil.release(frame);
 
             Thread.sleep(1000);
             assertThat(rstStreamFrames).isEmpty();
