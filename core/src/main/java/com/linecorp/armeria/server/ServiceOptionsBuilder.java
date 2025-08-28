@@ -30,11 +30,12 @@ public final class ServiceOptionsBuilder {
     private long requestTimeoutMillis = -1;
     private long maxRequestLength = -1;
     private long requestAutoAbortDelayMillis = -1;
+    private long closeHttp2StreamDelayMillis;
 
     ServiceOptionsBuilder() {}
 
     /**
-     * Returns the server-side timeout of a request in milliseconds.
+     * Sets the server-side timeout of a request in milliseconds.
      */
     public ServiceOptionsBuilder requestTimeoutMillis(long requestTimeoutMillis) {
         checkArgument(requestTimeoutMillis >= 0, "requestTimeoutMillis: %s (expected: >= 0)",
@@ -44,7 +45,7 @@ public final class ServiceOptionsBuilder {
     }
 
     /**
-     * Returns the server-side maximum length of a request.
+     * Sets the server-side maximum length of a request.
      */
     public ServiceOptionsBuilder maxRequestLength(long maxRequestLength) {
         checkArgument(maxRequestLength >= 0, "maxRequestLength: %s (expected: >= 0)", maxRequestLength);
@@ -64,9 +65,22 @@ public final class ServiceOptionsBuilder {
     }
 
     /**
+     * Sets the amount of time to wait after an {@link HttpRequest} and {@link HttpResponse}
+     * is complete before closing the underlying HTTP2 stream. This value will default to {@code 0},
+     * which closes the stream immediately. If negative, the delay is disabled.
+     * This may be useful for protocols which have a separate lifecycle from the underlying
+     * HTTP2 stream such as WebSockets.
+     */
+    public ServiceOptionsBuilder closeHttp2StreamDelayMillis(long closeHttp2StreamDelayMillis) {
+        this.closeHttp2StreamDelayMillis = closeHttp2StreamDelayMillis;
+        return this;
+    }
+
+    /**
      * Returns a newly created {@link ServiceOptions} based on the properties of this builder.
      */
     public ServiceOptions build() {
-        return new ServiceOptions(requestTimeoutMillis, maxRequestLength, requestAutoAbortDelayMillis);
+        return new ServiceOptions(requestTimeoutMillis, maxRequestLength, requestAutoAbortDelayMillis,
+                                  closeHttp2StreamDelayMillis);
     }
 }
