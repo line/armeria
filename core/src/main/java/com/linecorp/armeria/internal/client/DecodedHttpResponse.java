@@ -68,7 +68,11 @@ public final class DecodedHttpResponse extends DefaultHttpResponse {
         if (published && obj instanceof HttpData) {
             final int length = ((HttpData) obj).length();
             assert inboundTrafficController != null;
-            inboundTrafficController.inc(length);
+            if (streamId == 1) {
+                // The stream ID 1 is used for an HTTP/1 upgrade request.
+            } else {
+                inboundTrafficController.inc(length);
+            }
             writtenBytes += length;
         }
         return published;
