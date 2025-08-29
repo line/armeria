@@ -51,7 +51,8 @@ import com.linecorp.armeria.spring.ArmeriaServerConfigurator;
 
 import reactor.core.publisher.Mono;
 
-@SpringBootTest(webEnvironment = WebEnvironment.RANDOM_PORT)
+@SpringBootTest(webEnvironment = WebEnvironment.RANDOM_PORT,
+        properties = "armeria.graceful-shutdown-quiet-period-millis=0")
 class ReactiveWebServerCompressionLeakTest {
 
     private static final BlockingQueue<NettyDataBuffer> nettyData = new LinkedTransferQueue<>();

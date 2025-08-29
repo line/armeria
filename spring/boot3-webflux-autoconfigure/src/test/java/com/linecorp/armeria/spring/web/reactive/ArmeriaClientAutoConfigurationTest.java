@@ -31,7 +31,8 @@ import com.linecorp.armeria.common.AggregatedHttpResponse;
 
 import reactor.core.publisher.Mono;
 
-@SpringBootTest(webEnvironment = WebEnvironment.RANDOM_PORT)
+@SpringBootTest(webEnvironment = WebEnvironment.RANDOM_PORT,
+        properties = "armeria.graceful-shutdown-quiet-period-millis=0")
 class ArmeriaClientAutoConfigurationTest {
 
     @SpringBootApplication

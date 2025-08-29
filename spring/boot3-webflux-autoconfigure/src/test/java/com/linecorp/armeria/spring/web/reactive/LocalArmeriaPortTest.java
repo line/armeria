@@ -28,7 +28,8 @@ import com.linecorp.armeria.spring.LocalArmeriaPort;
 /**
  * Tests for {@link LocalArmeriaPort}.
  */
-@SpringBootTest(webEnvironment = WebEnvironment.RANDOM_PORT)
+@SpringBootTest(webEnvironment = WebEnvironment.RANDOM_PORT,
+        properties = "armeria.graceful-shutdown-quiet-period-millis=0")
 class LocalArmeriaPortTest {
 
     @SpringBootApplication

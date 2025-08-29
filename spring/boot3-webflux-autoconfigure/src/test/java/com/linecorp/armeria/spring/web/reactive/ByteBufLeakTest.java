@@ -47,7 +47,8 @@ import io.netty.util.NetUtil;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
-@SpringBootTest(webEnvironment = WebEnvironment.RANDOM_PORT)
+@SpringBootTest(webEnvironment = WebEnvironment.RANDOM_PORT,
+        properties = "armeria.graceful-shutdown-quiet-period-millis=0")
 @Timeout(10)
 class ByteBufLeakTest {
 

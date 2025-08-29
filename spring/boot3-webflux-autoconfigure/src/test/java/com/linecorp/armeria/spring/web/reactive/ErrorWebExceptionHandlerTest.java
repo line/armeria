@@ -55,7 +55,8 @@ import reactor.core.publisher.Mono;
         ServerProperties.class,
         WebProperties.class
 })
-@SpringBootTest(webEnvironment = WebEnvironment.RANDOM_PORT)
+@SpringBootTest(webEnvironment = WebEnvironment.RANDOM_PORT,
+        properties = "armeria.graceful-shutdown-quiet-period-millis=0")
 class ErrorWebExceptionHandlerTest {
 
     @RegisterExtension

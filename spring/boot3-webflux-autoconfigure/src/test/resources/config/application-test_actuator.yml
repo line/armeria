@@ -2,6 +2,8 @@ armeria:
   ports:
     - port: 0
       protocols: HTTP
+  # Set graceful shutdown timeout to 0 to stop the server immediately.
+  graceful-shutdown-quiet-period-millis: 0
 
 management:
   endpoints:
