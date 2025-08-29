@@ -110,7 +110,7 @@ public final class ListenerXdsResource implements XdsResource {
             return null;
         }
         final HttpFilter lastHttpFilter = httpFilters.get(httpFilters.size() - 1);
-        if (!ROUTER_TYPE_URL.equals(lastHttpFilter.getName())) {
+        if (!ROUTER_TYPE_URL.equals(lastHttpFilter.getTypedConfig().getTypeUrl())) {
             // the router should be the last/terminal filter
             return null;
         }
