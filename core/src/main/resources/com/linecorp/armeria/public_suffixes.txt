@@ -4187,6 +4187,7 @@ jor.br
 jorpeland.no
 joso.ibaraki.jp
 jot
+jote.cloud
 jotelulu.cloud
 journal.aero
 journalist.aero
@@ -7012,7 +7013,6 @@ recreation.aero
 red
 red.sv
 redirectme.net
-redstone
 redumbrella
 reed.replit.dev
 reg.dk
