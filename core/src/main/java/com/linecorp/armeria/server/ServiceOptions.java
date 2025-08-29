@@ -49,11 +49,14 @@ public final class ServiceOptions {
     private final long requestTimeoutMillis;
     private final long maxRequestLength;
     private final long requestAutoAbortDelayMillis;
+    private final long closeHttp2StreamDelayMillis;
 
-    ServiceOptions(long requestTimeoutMillis, long maxRequestLength, long requestAutoAbortDelayMillis) {
+    ServiceOptions(long requestTimeoutMillis, long maxRequestLength, long requestAutoAbortDelayMillis,
+                   long closeHttp2StreamDelayMillis) {
         this.requestTimeoutMillis = requestTimeoutMillis;
         this.maxRequestLength = maxRequestLength;
         this.requestAutoAbortDelayMillis = requestAutoAbortDelayMillis;
+        this.closeHttp2StreamDelayMillis = closeHttp2StreamDelayMillis;
     }
 
     /**
@@ -78,6 +81,17 @@ public final class ServiceOptions {
         return requestAutoAbortDelayMillis;
     }
 
+    /**
+     * Sets the amount of time to wait after an {@link HttpRequest} and {@link HttpResponse}
+     * is complete before closing the underlying HTTP2 stream. This value will default to {@code 0},
+     * which closes the stream immediately. If negative, the delay is disabled.
+     * This may be useful for protocols which have a separate lifecycle from the underlying
+     * HTTP2 stream such as WebSockets.
+     */
+    public long closeHttp2StreamDelayMillis() {
+        return closeHttp2StreamDelayMillis;
+    }
+
     @Override
     public boolean equals(Object o) {
         if (this == o) {
@@ -91,12 +105,14 @@ public final class ServiceOptions {
 
         return requestTimeoutMillis == that.requestTimeoutMillis &&
                maxRequestLength == that.maxRequestLength &&
-               requestAutoAbortDelayMillis == that.requestAutoAbortDelayMillis;
+               requestAutoAbortDelayMillis == that.requestAutoAbortDelayMillis &&
+               closeHttp2StreamDelayMillis == that.closeHttp2StreamDelayMillis;
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(requestTimeoutMillis, maxRequestLength, requestAutoAbortDelayMillis);
+        return Objects.hash(requestTimeoutMillis, maxRequestLength, requestAutoAbortDelayMillis,
+                            closeHttp2StreamDelayMillis);
     }
 
     @Override
@@ -105,6 +121,7 @@ public final class ServiceOptions {
                           .add("requestTimeoutMillis", requestTimeoutMillis)
                           .add("maxRequestLength", maxRequestLength)
                           .add("requestAutoAbortDelayMillis", requestAutoAbortDelayMillis)
+                          .add("closeHttp2StreamDelayMillis", closeHttp2StreamDelayMillis)
                           .toString();
     }
 }
