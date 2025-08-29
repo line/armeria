@@ -36,11 +36,15 @@ import com.linecorp.armeria.spring.ArmeriaSettings;
 @ConditionalOnClass(Server.class)
 @EnableConfigurationProperties({ ServerProperties.class, ArmeriaSettings.class })
 @Import(DataBufferFactoryWrapperConfiguration.class)
-public class RetryableArmeriaReactiveWebServerConfiguration {
+public class ArmeriaReactiveWebServerConfiguration {
 
     @Bean
     public ArmeriaReactiveWebServerFactory armeriaReactiveWebServerFactory(
             ConfigurableListableBeanFactory beanFactory, Environment environment) {
-        return new RetryableArmeriaReactiveWebServerFactory(beanFactory, environment);
+        final ArmeriaReactiveWebServerFactory serverFactory =
+                new ArmeriaReactiveWebServerFactory(beanFactory, environment);
+        // Set to 0 to avoid port conflict during tests.
+        serverFactory.setPort(0);
+        return serverFactory;
     }
 }

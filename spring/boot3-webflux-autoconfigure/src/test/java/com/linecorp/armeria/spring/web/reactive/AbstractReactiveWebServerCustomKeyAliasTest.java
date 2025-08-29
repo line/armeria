@@ -35,7 +35,8 @@ import com.linecorp.armeria.client.WebClient;
 
 import io.netty.handler.ssl.util.SimpleTrustManagerFactory;
 
-@SpringBootTest(webEnvironment = WebEnvironment.RANDOM_PORT)
+@SpringBootTest(webEnvironment = WebEnvironment.RANDOM_PORT,
+        properties = "armeria.graceful-shutdown-quiet-period-millis=0")
 abstract class AbstractReactiveWebServerCustomKeyAliasTest {
 
     static final X509Certificate[] EMPTY_CERTIFICATES = new X509Certificate[0];
