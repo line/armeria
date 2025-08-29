@@ -48,7 +48,7 @@ class MaxResetFramesTest {
         @Override
         protected void configure(ServerBuilder sb) {
             sb.idleTimeoutMillis(0);
-            sb.http2MaxResetFramesPerWindow(10, 60);
+            sb.http2MaxResetFramesPerWindow(2, 60);
             sb.service("/", (ctx, req) -> {
                 return HttpResponse.of(req.aggregate().thenApply(unused -> HttpResponse.of(200)));
             });
@@ -66,7 +66,7 @@ class MaxResetFramesTest {
                                               .factory(factory)
                                               .build();
             final List<CompletableFuture<AggregatedHttpResponse>> futures =
-                    IntStream.range(0, 11)
+                    IntStream.range(0, 6)
                              .mapToObj(unused -> HttpRequest.of(RequestHeaders.of(HttpMethod.POST, "/"),
                                                                 StreamMessage.of(InvalidHttpObject.INSTANCE)))
                              .map(client::execute)
@@ -74,8 +74,8 @@ class MaxResetFramesTest {
                              .collect(toImmutableList());
 
             CompletableFutures.successfulAsList(futures, cause -> null).join();
-            assertThat(listener.opened()).isEqualTo(1);
-            await().untilAsserted(() -> assertThat(listener.closed()).isEqualTo(1));
+            assertThat(listener.opened()).isEqualTo(2);
+            await().untilAsserted(() -> assertThat(listener.closed()).isEqualTo(2));
         }
     }
 
