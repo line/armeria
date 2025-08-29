@@ -609,6 +609,7 @@ ap.leg.br
 ap.ngrok.io
 aparecida.br
 apartments
+api.br
 api.gov.uk
 api.lp.dev
 api.stdlib.com
@@ -3706,6 +3707,7 @@ i.ng
 i.ph
 i.se
 i234.me
+ia.br
 ia.us
 iamallama.com
 ibara.okayama.jp
@@ -4803,7 +4805,6 @@ lib.ca.us
 lib.co.us
 lib.ct.us
 lib.dc.us
-lib.de.us
 lib.ee
 lib.fl.us
 lib.ga.us
@@ -6996,6 +6997,7 @@ readymade.jp
 realestate
 realestate.pl
 realm.cz
+realtime.supabase.co
 realtor
 realty
 rebun.hokkaido.jp
@@ -7649,7 +7651,6 @@ school.ge
 school.nz
 school.za
 schoolbus.jp
-schools.nsw.edu.au
 schuldock.de
 schule
 schulplattform.de
@@ -7978,6 +7979,7 @@ soc.srcf.net
 soccer
 sochi.su
 social
+social.br
 soctrang.vn
 sodegaura.chiba.jp
 soeda.fukuoka.jp
@@ -8094,6 +8096,7 @@ stockholm
 stokke.no
 stor-elvdal.no
 storage
+storage.supabase.co
 storage.yandexcloud.net
 stord.no
 stordal.no
@@ -9099,6 +9102,7 @@ wakayama.wakayama.jp
 wake.okayama.jp
 wakkanai.hokkaido.jp
 wakuya.miyagi.jp
+wal.app
 walbrzych.pl
 wales
 walmart
@@ -9763,6 +9767,7 @@ xx.kg
 xxx
 xxx.ec
 xyz
+xyz.br
 xz.cn
 y.bg
 y.se
