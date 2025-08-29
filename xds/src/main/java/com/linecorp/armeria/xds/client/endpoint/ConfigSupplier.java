@@ -19,6 +19,7 @@ package com.linecorp.armeria.xds.client.endpoint;
 import java.util.function.Function;
 
 import com.linecorp.armeria.client.HttpClient;
+import com.linecorp.armeria.client.retry.RetryingClient;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.xds.ClusterSnapshot;
 import com.linecorp.armeria.xds.ListenerSnapshot;
@@ -53,7 +54,7 @@ interface ConfigSupplier {
 
     RouteEntry routeEntry();
 
-    @Nullable Function<? super HttpClient, ? extends HttpClient> retryingDecorator();
+    @Nullable Function<? super HttpClient, RetryingClient> retryingDecorator();
 
     long responseTimeoutMillis();
 }

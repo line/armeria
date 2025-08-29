@@ -23,6 +23,7 @@ import com.google.protobuf.Duration;
 import com.linecorp.armeria.client.ClientDecoration;
 import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.client.RpcClient;
+import com.linecorp.armeria.client.retry.RetryingClient;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.xds.ClusterSnapshot;
 import com.linecorp.armeria.xds.ListenerSnapshot;
@@ -48,7 +49,7 @@ final class SelectedRoute implements ConfigSupplier {
     private final RpcClient rpcClient;
     private final RouteEntryMatcher routeEntryMatcher;
     @Nullable
-    private final Function<? super HttpClient, ? extends HttpClient> retryingDecorator;
+    private final Function<? super HttpClient, RetryingClient> retryingDecorator;
     private final long responseTimeoutMillis;
 
     SelectedRoute(ListenerSnapshot listenerSnapshot, RouteSnapshot routeSnapshot,
@@ -159,7 +160,7 @@ final class SelectedRoute implements ConfigSupplier {
     }
 
     @Override
-    public @Nullable Function<? super HttpClient, ? extends HttpClient> retryingDecorator() {
+    public @Nullable Function<? super HttpClient, RetryingClient> retryingDecorator() {
         return retryingDecorator;
     }
 

@@ -24,9 +24,13 @@ import java.util.concurrent.CompletionStage;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Sets;
 
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.HttpClient;
@@ -39,6 +43,7 @@ import com.linecorp.armeria.client.retry.RetryConfigMapping;
 import com.linecorp.armeria.client.retry.RetryDecision;
 import com.linecorp.armeria.client.retry.RetryRule;
 import com.linecorp.armeria.client.retry.RetryingClient;
+import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
@@ -56,18 +61,21 @@ import io.envoyproxy.envoy.config.route.v3.RetryPolicy.RateLimitedRetryBackOff;
 import io.envoyproxy.envoy.config.route.v3.RetryPolicy.ResetHeader;
 import io.envoyproxy.envoy.config.route.v3.RetryPolicy.RetryBackOff;
 import io.grpc.Status;
+import io.netty.util.AsciiString;
 
 final class RetryStateFactory {
 
-    private static final String REQUEST_HEADER_GRPC_RETRY_ON = "x-envoy-retry-grpc-on";
-    private static final String REQUEST_HEADER_RETRY_ON = "x-envoy-retry-on";
-    private static final String REQUEST_HEADER_MAX_RETRIES = "x-envoy-max-retries";
-    private static final String REQUEST_HEADER_RETRIABLE_STATUS_CODES = "x-envoy-retriable-status-codes";
-    private static final String REQUEST_HEADER_RETRIABLE_HEADER_NAMES = "x-envoy-retriable-header-names";
-    private static final String RESPONSE_HEADER_X_ENVOY_RATELIMITED = "x-envoy-ratelimited";
-    private static final String RESPONSE_HEADER_GRPC_STATUS = "grpc-status";
+    private static final Logger logger = LoggerFactory.getLogger(RetryStateFactory.class);
 
-    private static final Set<String> REQUEST_RETRY_HEADER_NAMES =
+    private static final AsciiString REQUEST_HEADER_GRPC_RETRY_ON = HttpHeaderNames.of("x-envoy-retry-grpc-on");
+    private static final AsciiString REQUEST_HEADER_RETRY_ON = HttpHeaderNames.of("x-envoy-retry-on");
+    private static final AsciiString REQUEST_HEADER_MAX_RETRIES = HttpHeaderNames.of("x-envoy-max-retries");
+    private static final AsciiString REQUEST_HEADER_RETRIABLE_STATUS_CODES = HttpHeaderNames.of("x-envoy-retriable-status-codes");
+    private static final AsciiString REQUEST_HEADER_RETRIABLE_HEADER_NAMES = HttpHeaderNames.of("x-envoy-retriable-header-names");
+    private static final AsciiString RESPONSE_HEADER_X_ENVOY_RATELIMITED = HttpHeaderNames.of("x-envoy-ratelimited");
+    private static final AsciiString RESPONSE_HEADER_GRPC_STATUS = HttpHeaderNames.of("grpc-status");
+
+    private static final Set<AsciiString> REQUEST_RETRY_HEADER_NAMES =
             ImmutableSet.of(REQUEST_HEADER_GRPC_RETRY_ON, REQUEST_HEADER_RETRY_ON,
                             REQUEST_HEADER_MAX_RETRIES, REQUEST_HEADER_RETRIABLE_STATUS_CODES,
                             REQUEST_HEADER_RETRIABLE_HEADER_NAMES);
@@ -77,7 +85,7 @@ final class RetryStateFactory {
     private final RetryConfig<HttpResponse> defaultRetryConfig;
 
     RetryStateFactory(RetryPolicy retryPolicy) {
-        final Set<RetryPolicyTypes> policies = ImmutableSet.copyOf(parseRetryOn(retryPolicy.getRetryOn()));
+        final Set<RetryPolicyTypes> policies = parseRetryOn(retryPolicy.getRetryOn());
         final List<HeaderMatcherImpl> retriableResponseHeaderMatchers =
                 retryPolicy.getRetriableHeadersList().stream().map(HeaderMatcherImpl::new)
                            .collect(ImmutableList.toImmutableList());
@@ -103,10 +111,10 @@ final class RetryStateFactory {
         return builder.build();
     }
 
-    Function<? super HttpClient, ? extends HttpClient> retryingDecorator() {
+    Function<? super HttpClient, RetryingClient> retryingDecorator() {
         final RetryConfigMapping<HttpResponse> mapping = (ctx, req0) -> {
             final HttpRequest req = (HttpRequest) req0;
-            for (String headerName: REQUEST_RETRY_HEADER_NAMES) {
+            for (AsciiString headerName: REQUEST_RETRY_HEADER_NAMES) {
                 if (req.headers().contains(headerName)) {
                     final RetryStateImpl retryState = createRetryState(req.headers(), defaultRetryState,
                                                                        retriableRequestHeadersMatchers);
@@ -123,34 +131,7 @@ final class RetryStateFactory {
                                                    List<HeaderMatcherImpl> retriableRequestHeadersMatchers) {
         Set<RetryPolicyTypes> policies = defaultRetryState.policies;
 
-        final String retryOn = requestHeaders.get(REQUEST_HEADER_RETRY_ON);
-        if (retryOn != null) {
-            final ImmutableSet.Builder<RetryPolicyTypes> tempPolicies = ImmutableSet.builder();
-            tempPolicies.addAll(policies);
-            tempPolicies.addAll(parseRetryOn(retryOn));
-            policies = ImmutableSet.copyOf(tempPolicies.build());
-        }
-
-        final String grpcRetryOn = requestHeaders.get(REQUEST_HEADER_GRPC_RETRY_ON);
-        if (grpcRetryOn != null) {
-            final ImmutableSet.Builder<RetryPolicyTypes> tempPolicies = ImmutableSet.builder();
-            tempPolicies.addAll(policies);
-            tempPolicies.addAll(parseRetryOn(grpcRetryOn));
-            policies = ImmutableSet.copyOf(tempPolicies.build());
-        }
-
-        if (!retriableRequestHeadersMatchers.isEmpty()) {
-            boolean shouldRetry = false;
-            for (HeaderMatcherImpl headerMatcher: retriableRequestHeadersMatchers) {
-                if (headerMatcher.matches(requestHeaders)) {
-                    shouldRetry = true;
-                    break;
-                }
-            }
-            if (!shouldRetry) {
-                policies = ImmutableSet.of();
-            }
-        }
+        policies = retryPoliciesFromRequestHeader(requestHeaders, retriableRequestHeadersMatchers, policies);
 
         int numRetries = defaultRetryState.numRetries;
         if (!policies.isEmpty()) {
@@ -161,8 +142,8 @@ final class RetryStateFactory {
         }
 
         Set<Integer> retriableStatusCodes = defaultRetryState.retriableStatusCodes;
-        final String headerStatusCodes = requestHeaders.get(REQUEST_HEADER_RETRIABLE_STATUS_CODES);
-        if (headerStatusCodes != null) {
+        final String headerStatusCodes = requestHeaders.get(REQUEST_HEADER_RETRIABLE_STATUS_CODES, "");
+        if (!headerStatusCodes.isEmpty()) {
             final String[] splitStatusCodes = headerStatusCodes.split(",");
             final int expectedSize = splitStatusCodes.length + retriableStatusCodes.size();
             final ImmutableSet.Builder<Integer> builder = ImmutableSet.builderWithExpectedSize(expectedSize);
@@ -179,8 +160,8 @@ final class RetryStateFactory {
 
         List<HeaderMatcherImpl> retriableResponseHeaderMatchers =
                 defaultRetryState.retriableResponseHeaderMatchers;
-        final String retriableHeaderNames = requestHeaders.get(REQUEST_HEADER_RETRIABLE_HEADER_NAMES);
-        if (retriableHeaderNames != null) {
+        final String retriableHeaderNames = requestHeaders.get(REQUEST_HEADER_RETRIABLE_HEADER_NAMES, "");
+        if (!retriableHeaderNames.isEmpty()) {
             final String[] splitHeaderNames = retriableHeaderNames.split(",");
             final int expectedSize = splitHeaderNames.length + retriableResponseHeaderMatchers.size();
             final ImmutableList.Builder<HeaderMatcherImpl> builder =
@@ -197,6 +178,39 @@ final class RetryStateFactory {
                                   retriableResponseHeaderMatchers);
     }
 
+    private static Set<RetryPolicyTypes> retryPoliciesFromRequestHeader(
+            RequestHeaders requestHeaders, List<HeaderMatcherImpl> retriableRequestHeadersMatchers,
+            Set<RetryPolicyTypes> policies) {
+        if (!retriableRequestHeadersMatchers.isEmpty()) {
+            boolean shouldRetry = false;
+            for (HeaderMatcherImpl headerMatcher: retriableRequestHeadersMatchers) {
+                if (headerMatcher.matches(requestHeaders)) {
+                    shouldRetry = true;
+                    break;
+                }
+            }
+            if (!shouldRetry) {
+                return ImmutableSet.of();
+            }
+        }
+
+        final String retryOn = requestHeaders.get(REQUEST_HEADER_RETRY_ON, "");
+        final String grpcRetryOn = requestHeaders.get(REQUEST_HEADER_GRPC_RETRY_ON, "");
+        if (retryOn.isEmpty() && grpcRetryOn.isEmpty()) {
+            return policies;
+        }
+
+        final ImmutableSet.Builder<RetryPolicyTypes> newPolicies = ImmutableSet.builder();
+        newPolicies.addAll(policies);
+        if (!retryOn.isEmpty()) {
+            newPolicies.addAll(parseRetryOn(retryOn));
+        }
+        if (!grpcRetryOn.isEmpty()) {
+            newPolicies.addAll(parseRetryOn(grpcRetryOn));
+        }
+        return Sets.immutableEnumSet(newPolicies.build());
+    }
+
     private static Set<RetryPolicyTypes> parseRetryOn(String retryOn) {
         if (retryOn.isEmpty()) {
             return ImmutableSet.of();
@@ -206,9 +220,11 @@ final class RetryStateFactory {
             final RetryPolicyTypes policy = RetryPolicyTypes.fromPolicyName(policyName);
             if (policy != null) {
                 policies.add(policy);
+            } else {
+                logger.warn("Ignoring unknown retry policy: {}.", policyName);
             }
         }
-        return ImmutableSet.copyOf(policies.build());
+        return Sets.immutableEnumSet(policies.build());
     }
 
     private static class RetryStateImpl implements RetryRule {
@@ -344,8 +360,8 @@ final class RetryStateFactory {
             final RateLimitedRetryBackOff backOff = retryPolicy.getRateLimitedRetryBackOff();
             final long maxIntervalMillis = XdsCommonUtil.durationToMillis(backOff.getMaxInterval(), 300_000);
             for (ResetHeader resetHeader: backOff.getResetHeadersList()) {
-                final String headerValue = responseHeaders.get(resetHeader.getName());
-                if (headerValue == null) {
+                final String headerValue = responseHeaders.get(resetHeader.getName(), "");
+                if (headerValue.isEmpty()) {
                     continue;
                 }
                 final Long seconds = XdsCommonUtil.simpleAtol(headerValue);
