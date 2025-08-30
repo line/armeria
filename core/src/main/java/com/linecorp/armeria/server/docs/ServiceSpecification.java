@@ -92,37 +92,6 @@ public final class ServiceSpecification {
         return new ServiceSpecification(services, enums.values(), structs.values(), exceptions.values());
     }
 
-    private static void generateDescriptiveTypeInfos(
-            Function<DescriptiveTypeSignature, ? extends DescriptiveTypeInfo> descriptiveTypeInfoFactory,
-            Map<String, EnumInfo> enums, Map<String, StructInfo> structs,
-            Map<String, ExceptionInfo> exceptions, Set<DescriptiveTypeSignature> descriptiveTypes) {
-
-        descriptiveTypes.forEach(type -> {
-            final String typeName = type.name();
-            if (enums.containsKey(typeName) ||
-                structs.containsKey(typeName) ||
-                exceptions.containsKey(typeName)) {
-                return;
-            }
-
-            final DescriptiveTypeInfo newInfo = descriptiveTypeInfoFactory.apply(type);
-            if (newInfo instanceof EnumInfo) {
-                enums.put(newInfo.name(), (EnumInfo) newInfo);
-                return;
-            }
-            if (newInfo instanceof StructInfo) {
-                structs.put(newInfo.name(), (StructInfo) newInfo);
-            } else if (newInfo instanceof ExceptionInfo) {
-                exceptions.put(newInfo.name(), (ExceptionInfo) newInfo);
-            } else {
-                throw new Error(); // Should never reach here.
-            }
-
-            generateDescriptiveTypeInfos(descriptiveTypeInfoFactory, enums, structs, exceptions,
-                                         newInfo.findDescriptiveTypes());
-        });
-    }
-
     private final Set<ServiceInfo> services;
     private final Set<EnumInfo> enums;
     private final Set<StructInfo> structs;
@@ -175,6 +144,37 @@ public final class ServiceSpecification {
         } else {
             this.docServiceRoute = null;
         }
+    }
+
+    private static void generateDescriptiveTypeInfos(
+            Function<DescriptiveTypeSignature, ? extends DescriptiveTypeInfo> descriptiveTypeInfoFactory,
+            Map<String, EnumInfo> enums, Map<String, StructInfo> structs,
+            Map<String, ExceptionInfo> exceptions, Set<DescriptiveTypeSignature> descriptiveTypes) {
+
+        descriptiveTypes.forEach(type -> {
+            final String typeName = type.name();
+            if (enums.containsKey(typeName) ||
+                structs.containsKey(typeName) ||
+                exceptions.containsKey(typeName)) {
+                return;
+            }
+
+            final DescriptiveTypeInfo newInfo = descriptiveTypeInfoFactory.apply(type);
+            if (newInfo instanceof EnumInfo) {
+                enums.put(newInfo.name(), (EnumInfo) newInfo);
+                return;
+            }
+            if (newInfo instanceof StructInfo) {
+                structs.put(newInfo.name(), (StructInfo) newInfo);
+            } else if (newInfo instanceof ExceptionInfo) {
+                exceptions.put(newInfo.name(), (ExceptionInfo) newInfo);
+            } else {
+                throw new Error(); // Should never reach here.
+            }
+
+            generateDescriptiveTypeInfos(descriptiveTypeInfoFactory, enums, structs, exceptions,
+                                         newInfo.findDescriptiveTypes());
+        });
     }
 
     private static <T extends DescriptiveTypeInfo> Set<T> collectDescriptiveTypeInfo(

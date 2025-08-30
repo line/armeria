@@ -99,7 +99,7 @@ class TestServiceTest {
                 GrpcClients.newClient(uri(), TestServiceBlockingStub.class);
         final Stopwatch watch = Stopwatch.createStarted();
         assertThat(TestService.blockingHello(HelloRequest.newBuilder().setName("Armeria").build())
-                               .getMessage()).isEqualTo("Hello, Armeria!");
+                              .getMessage()).isEqualTo("Hello, Armeria!");
         assertThat(watch.elapsed(TimeUnit.SECONDS)).isGreaterThanOrEqualTo(3);
     }
 

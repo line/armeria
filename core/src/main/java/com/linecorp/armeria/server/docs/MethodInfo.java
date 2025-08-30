@@ -169,6 +169,16 @@ public final class MethodInfo {
         this.descriptionInfo = requireNonNull(descriptionInfo, "descriptionInfo");
     }
 
+    private static String createId(String serviceName, String name, int overloadId, HttpMethod httpMethod) {
+        final String methodName;
+        if (overloadId > 0) {
+            methodName = name + '-' + overloadId;
+        } else {
+            methodName = name;
+        }
+        return serviceName + '/' + methodName + '/' + httpMethod.name();
+    }
+
     /**
      * Returns the id of this function. It's a form of {@code serviceName/methodName/httpMethod}.
      * The {@code methodName} might have {@code -x} suffix if the method is overloaded.
@@ -350,15 +360,5 @@ public final class MethodInfo {
                           .add("httpMethod", httpMethod())
                           .add("descriptionInfo", descriptionInfo())
                           .toString();
-    }
-
-    private static String createId(String serviceName, String name, int overloadId, HttpMethod httpMethod) {
-        final String methodName;
-        if (overloadId > 0) {
-            methodName = name + '-' + overloadId;
-        } else {
-            methodName = name;
-        }
-        return serviceName + '/' + methodName + '/' + httpMethod.name();
     }
 }

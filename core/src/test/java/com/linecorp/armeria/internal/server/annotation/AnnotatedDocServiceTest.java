@@ -16,11 +16,11 @@
 
 package com.linecorp.armeria.internal.server.annotation;
 
-import static com.linecorp.armeria.internal.server.annotation.AnnotatedDocServicePlugin.INT;
-import static com.linecorp.armeria.internal.server.annotation.AnnotatedDocServicePlugin.LONG;
-import static com.linecorp.armeria.internal.server.annotation.AnnotatedDocServicePlugin.STRING;
-import static com.linecorp.armeria.internal.server.annotation.AnnotatedDocServicePlugin.toTypeSignature;
 import static com.linecorp.armeria.internal.server.annotation.AnnotatedDocServicePluginTest.compositeBean;
+import static com.linecorp.armeria.server.docs.DocServiceTypeUtil.INT;
+import static com.linecorp.armeria.server.docs.DocServiceTypeUtil.LONG;
+import static com.linecorp.armeria.server.docs.DocServiceTypeUtil.STRING;
+import static com.linecorp.armeria.server.docs.DocServiceTypeUtil.toTypeSignature;
 import static com.linecorp.armeria.server.docs.FieldLocation.PATH;
 import static com.linecorp.armeria.server.docs.FieldLocation.QUERY;
 import static com.linecorp.armeria.server.docs.FieldRequirement.REQUIRED;
@@ -152,47 +152,6 @@ class AnnotatedDocServiceTest {
                                                       .build());
         }
     };
-
-    @Test
-    void jsonSpecification() throws Exception {
-        if (TestUtil.isDocServiceDemoMode()) {
-            Thread.sleep(Long.MAX_VALUE);
-        }
-        final Map<Class<?>, Set<MethodInfo>> methodInfos = new HashMap<>();
-        addFooMethodInfo(methodInfos);
-        addAllMethodsMethodInfos(methodInfos);
-        addIntsMethodInfo(methodInfos);
-        addPathParamsMethodInfo(methodInfos);
-        addPathParamsWithQueriesMethodInfo(methodInfos);
-        addRegexMethodInfo(methodInfos);
-        addPrefixMethodInfo(methodInfos);
-        addConsumesMethodInfo(methodInfos);
-        addBeanMethodInfo(methodInfos);
-        addMultiMethodInfo(methodInfos);
-        addJsonMethodInfo(methodInfos);
-        addOverloadMethodInfo(methodInfos);
-        addOverload2MethodInfo(methodInfos);
-        addMarkdownDescriptionMethodInfo(methodInfos);
-        addMermaidDescriptionMethodInfo(methodInfos);
-        addImplicitRequestObjectMethodInfo(methodInfos);
-        addJsonLinesMethodInfo(methodInfos);
-
-        final Map<Class<?>, DescriptionInfo> serviceDescription = ImmutableMap.of(
-                MyService.class, DescriptionInfo.of("My service class"));
-
-        final JsonNode expectedJson = mapper.valueToTree(AnnotatedDocServicePlugin.generate(
-                serviceDescription, methodInfos, typeDescriptor -> null));
-        addExamples(expectedJson);
-
-        final WebClient client = WebClient.of(server.httpUri());
-        final AggregatedHttpResponse res = client.get("/docs/specification.json").aggregate().join();
-        assertThat(res.status()).isEqualTo(HttpStatus.OK);
-        assertThat(res.headers().get(HttpHeaderNames.CACHE_CONTROL))
-                .isEqualTo("no-cache, max-age=0, must-revalidate");
-        assertThatJson(res.contentUtf8()).when(IGNORING_ARRAY_ORDER)
-                                         .whenIgnoringPaths("structs", "docServiceRoute")
-                                         .isEqualTo(expectedJson);
-    }
 
     private static void addFooMethodInfo(Map<Class<?>, Set<MethodInfo>> methodInfos) {
         final EndpointInfo endpoint = EndpointInfo.builder("*", "exact:/service/foo")
@@ -499,6 +458,47 @@ class AnnotatedDocServiceTest {
     }
 
     @Test
+    void jsonSpecification() throws Exception {
+        if (TestUtil.isDocServiceDemoMode()) {
+            Thread.sleep(Long.MAX_VALUE);
+        }
+        final Map<Class<?>, Set<MethodInfo>> methodInfos = new HashMap<>();
+        addFooMethodInfo(methodInfos);
+        addAllMethodsMethodInfos(methodInfos);
+        addIntsMethodInfo(methodInfos);
+        addPathParamsMethodInfo(methodInfos);
+        addPathParamsWithQueriesMethodInfo(methodInfos);
+        addRegexMethodInfo(methodInfos);
+        addPrefixMethodInfo(methodInfos);
+        addConsumesMethodInfo(methodInfos);
+        addBeanMethodInfo(methodInfos);
+        addMultiMethodInfo(methodInfos);
+        addJsonMethodInfo(methodInfos);
+        addOverloadMethodInfo(methodInfos);
+        addOverload2MethodInfo(methodInfos);
+        addMarkdownDescriptionMethodInfo(methodInfos);
+        addMermaidDescriptionMethodInfo(methodInfos);
+        addImplicitRequestObjectMethodInfo(methodInfos);
+        addJsonLinesMethodInfo(methodInfos);
+
+        final Map<Class<?>, DescriptionInfo> serviceDescription = ImmutableMap.of(
+                MyService.class, DescriptionInfo.of("My service class"));
+
+        final JsonNode expectedJson = mapper.valueToTree(AnnotatedDocServicePlugin.generate(
+                serviceDescription, methodInfos, typeDescriptor -> null));
+        addExamples(expectedJson);
+
+        final WebClient client = WebClient.of(server.httpUri());
+        final AggregatedHttpResponse res = client.get("/docs/specification.json").aggregate().join();
+        assertThat(res.status()).isEqualTo(HttpStatus.OK);
+        assertThat(res.headers().get(HttpHeaderNames.CACHE_CONTROL))
+                .isEqualTo("no-cache, max-age=0, must-revalidate");
+        assertThatJson(res.contentUtf8()).when(IGNORING_ARRAY_ORDER)
+                                         .whenIgnoringPaths("structs", "docServiceRoute")
+                                         .isEqualTo(expectedJson);
+    }
+
+    @Test
     void excludeAllServices() throws IOException {
         final WebClient client = WebClient.of(server.httpUri());
         final AggregatedHttpResponse res = client.get("/excludeAll/specification.json").aggregate().join();
@@ -524,6 +524,22 @@ class AnnotatedDocServiceTest {
         final JsonNode specificationJson = mapper.readTree(specification);
         assertThatJson(specificationJson).node("docServiceRoute.pathType").isEqualTo("PREFIX");
         assertThatJson(specificationJson).node("docServiceRoute.patternString").isEqualTo("/docs/*");
+    }
+
+    private enum MyEnum {
+        A,
+        B,
+        C
+    }
+
+    @Description("DESCRIPTION ENUM")
+    private enum DescriptionEnum {
+        @Description(value = "MARKDOWN DESCRIPTION `A`", markup = Markup.MARKDOWN)
+        DESCRIPTION_A,
+        @Description("NONE MARKDOWN DESCRIPTION B\nMultiline")
+        DESCRIPTION_B,
+        @Description("NONE MARKDOWN DESCRIPTION C")
+        DESCRIPTION_C
     }
 
     private static final class ProxyService implements HttpService {
@@ -692,22 +708,6 @@ class AnnotatedDocServiceTest {
         public HttpResponse implicitRequestObject(byte[] body) {
             return HttpResponse.of(HttpStatus.OK, MediaType.OCTET_STREAM, body);
         }
-    }
-
-    private enum MyEnum {
-        A,
-        B,
-        C
-    }
-
-    @Description("DESCRIPTION ENUM")
-    private enum DescriptionEnum {
-        @Description(value = "MARKDOWN DESCRIPTION `A`", markup = Markup.MARKDOWN)
-        DESCRIPTION_A,
-        @Description("NONE MARKDOWN DESCRIPTION B\nMultiline")
-        DESCRIPTION_B,
-        @Description("NONE MARKDOWN DESCRIPTION C")
-        DESCRIPTION_C
     }
 
     private static class JsonRequest {

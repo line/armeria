@@ -85,6 +85,13 @@ public final class EnumInfo implements DescriptiveTypeInfo {
         this.descriptionInfo = requireNonNull(descriptionInfo, "descriptionInfo");
     }
 
+    private static List<EnumValueInfo> toEnumValues(Class<? extends Enum<?>> enumType) {
+        final Class<?> rawEnumType = requireNonNull(enumType, "enumType");
+        @SuppressWarnings({ "unchecked", "rawtypes" })
+        final Set<Enum> values = EnumSet.allOf((Class<Enum>) rawEnumType);
+        return values.stream().map(e -> new EnumValueInfo(e.name())).collect(toImmutableList());
+    }
+
     @Override
     public String name() {
         return name;
@@ -130,13 +137,6 @@ public final class EnumInfo implements DescriptiveTypeInfo {
         }
 
         return new EnumInfo(name, values, descriptionInfo);
-    }
-
-    private static List<EnumValueInfo> toEnumValues(Class<? extends Enum<?>> enumType) {
-        final Class<?> rawEnumType = requireNonNull(enumType, "enumType");
-        @SuppressWarnings({ "unchecked", "rawtypes" })
-        final Set<Enum> values = EnumSet.allOf((Class<Enum>) rawEnumType);
-        return values.stream().map(e -> new EnumValueInfo(e.name())).collect(toImmutableList());
     }
 
     @Override
