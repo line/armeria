@@ -864,7 +864,8 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
                 }
 
                 if (!isNeedsDisconnection() && responseEncoder instanceof ServerHttp2ObjectEncoder) {
-                    maybeResetStream((ServerHttp2ObjectEncoder) responseEncoder);
+                    ((ServerHttp2ObjectEncoder) responseEncoder)
+                            .maybeResetStream(req.streamId(), Http2Error.CANCEL, closeHttp2StreamDelayMillis);
                 }
 
                 final boolean needsDisconnection = ctx.channel().isActive() &&
@@ -896,16 +897,6 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
                 }
             } catch (Throwable t) {
                 logger.warn("Unexpected exception:", t);
-            }
-        }
-
-        private void maybeResetStream(ServerHttp2ObjectEncoder responseEncoder) {
-            if (closeHttp2StreamDelayMillis == 0) {
-                responseEncoder.maybeResetStream(req.streamId(), Http2Error.CANCEL);
-            } else if (closeHttp2StreamDelayMillis > 0) {
-                ctx.channel().eventLoop().schedule(() -> {
-                    responseEncoder.maybeResetStream(req.streamId(), Http2Error.CANCEL);
-                },  closeHttp2StreamDelayMillis, TimeUnit.MILLISECONDS);
             }
         }
 
