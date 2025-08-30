@@ -1,7 +1,7 @@
 /*
- * Copyright 2020 LINE Corporation
+ * Copyright 2025 LY Corporation
  *
- * LINE Corporation licenses this file to you under the Apache License,
+ * LY Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
@@ -16,11 +16,17 @@
 
 package com.linecorp.armeria.client.retry;
 
+import static com.linecorp.armeria.internal.common.RequestContextUtil.host;
+import static com.linecorp.armeria.internal.common.RequestContextUtil.method;
+import static com.linecorp.armeria.internal.common.RequestContextUtil.path;
 import static java.util.Objects.requireNonNull;
+import static java.util.stream.Collectors.joining;
 
+import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.function.BiFunction;
+import java.util.stream.Stream;
 
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.common.Request;
@@ -36,6 +42,27 @@ final class KeyedRetryConfigMapping<T extends Response> implements RetryConfigMa
             BiFunction<? super ClientRequestContext, Request, RetryConfig<T>> retryConfigFactory) {
         this.keyFactory = requireNonNull(keyFactory, "keyFactory");
         this.retryConfigFactory = requireNonNull(retryConfigFactory, "retryConfigFactory");
+    }
+
+    KeyedRetryConfigMapping(
+            boolean perHost, boolean perMethod, boolean perPath, RetryConfigFactory retryConfigFactory) {
+        requireNonNull(retryConfigFactory, "retryConfigFactory");
+
+        keyFactory = (ctx, req) -> {
+            final String host = perHost ? host(ctx) : null;
+            final String method = perMethod ? method(ctx) : null;
+            final String path = perPath ? path(ctx) : null;
+            return Stream.of(host, method, path)
+                         .filter(Objects::nonNull)
+                         .collect(joining("#"));
+        };
+
+        this.retryConfigFactory = (ctx, req) -> {
+            final String host = perHost ? host(ctx) : null;
+            final String method = perMethod ? method(ctx) : null;
+            final String path = perPath ? path(ctx) : null;
+            return retryConfigFactory.apply(host, method, path);
+        };
     }
 
     @Override
