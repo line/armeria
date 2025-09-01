@@ -320,12 +320,12 @@ final class Http2ResponseDecoder extends AbstractHttpResponseDecoder implements 
         }
 
         final Http2Error http2Error = Http2Error.valueOf(errorCode);
-        final ClosedStreamException cause =
-                new ClosedStreamException("received a RST_STREAM frame: " + http2Error);
 
         if (http2Error == Http2Error.REFUSED_STREAM) {
-            res.close(UnprocessedRequestException.of(cause));
+            res.close(UnprocessedRequestException.of(RefusedStreamException.get()));
         } else {
+            final ClosedStreamException cause =
+                    new ClosedStreamException("received a RST_STREAM frame: " + http2Error);
             res.close(cause);
         }
     }
