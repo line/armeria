@@ -132,7 +132,7 @@ public final class WebSocketSession {
                             if (cause instanceof ClosedStreamException) {
                                 return StreamMessage.aborted(cause);
                             }
-                            ctx.logBuilder().endRequest(cause);
+                            ctx.logBuilder().requestCause(cause);
                             ctx.logBuilder().responseCause(cause);
                             return StreamMessage.of(HttpData.wrap(encoder.encode(
                                ctx, newClientCloseWebSocketFrame(cause))));
