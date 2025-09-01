@@ -70,9 +70,12 @@ final class RetryStateFactory {
     private static final AsciiString REQUEST_HEADER_GRPC_RETRY_ON = HttpHeaderNames.of("x-envoy-retry-grpc-on");
     private static final AsciiString REQUEST_HEADER_RETRY_ON = HttpHeaderNames.of("x-envoy-retry-on");
     private static final AsciiString REQUEST_HEADER_MAX_RETRIES = HttpHeaderNames.of("x-envoy-max-retries");
-    private static final AsciiString REQUEST_HEADER_RETRIABLE_STATUS_CODES = HttpHeaderNames.of("x-envoy-retriable-status-codes");
-    private static final AsciiString REQUEST_HEADER_RETRIABLE_HEADER_NAMES = HttpHeaderNames.of("x-envoy-retriable-header-names");
-    private static final AsciiString RESPONSE_HEADER_X_ENVOY_RATELIMITED = HttpHeaderNames.of("x-envoy-ratelimited");
+    private static final AsciiString REQUEST_HEADER_RETRIABLE_STATUS_CODES =
+            HttpHeaderNames.of("x-envoy-retriable-status-codes");
+    private static final AsciiString REQUEST_HEADER_RETRIABLE_HEADER_NAMES =
+            HttpHeaderNames.of("x-envoy-retriable-header-names");
+    private static final AsciiString RESPONSE_HEADER_X_ENVOY_RATELIMITED =
+            HttpHeaderNames.of("x-envoy-ratelimited");
     private static final AsciiString RESPONSE_HEADER_GRPC_STATUS = HttpHeaderNames.of("grpc-status");
 
     private static final Set<AsciiString> REQUEST_RETRY_HEADER_NAMES =
