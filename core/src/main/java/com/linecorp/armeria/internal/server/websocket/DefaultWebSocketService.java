@@ -128,8 +128,8 @@ public final class DefaultWebSocketService implements WebSocketService, WebSocke
         final WebSocket outbound = handler.handle(ctx, inbound);
 
         inbound.whenComplete().exceptionally(cause -> {
-            final Throwable mapped = new InboundCompleteException("inbound stream was cancelled", cause);
-            outbound.abort(mapped);
+            final Throwable wrapped = new InboundCompleteException("inbound stream was cancelled", cause);
+            outbound.abort(wrapped);
             return null;
         });
         return outbound;

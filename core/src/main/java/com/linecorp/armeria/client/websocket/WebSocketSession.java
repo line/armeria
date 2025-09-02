@@ -144,8 +144,8 @@ public final class WebSocketSession {
         }
 
         inbound.whenComplete().exceptionally(cause -> {
-            final Throwable mapped = new InboundCompleteException("inbound stream was cancelled", cause);
-            data.abort(mapped);
+            final Throwable wrapped = new InboundCompleteException("inbound stream was cancelled", cause);
+            data.abort(wrapped);
             return null;
         });
     }
