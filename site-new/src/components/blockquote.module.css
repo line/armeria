@@ -7,89 +7,89 @@
 
   .backgroundPattern1 {
     position: absolute;
-    left: -115px;
+    left: -175px;
     bottom: 0;
   }
 
   .backgroundPattern1Reverse {
     position: absolute;
-    left: -145px;
+    left: -205px;
     bottom: 0;
   }
 
   .backgroundPattern2 {
     position: absolute;
-    right: -190px;
+    right: -250px;
     top: 0;
   }
 
   .backgroundPattern2Reverse {
     position: absolute;
     top: -40px;
-    right: -120px;
+    right: -180px;
   }
-
-  /* Adjust the position of the quote responsively. */
-  /* .quotePosition {
-    @media (max-width: @screen-sm-max) {
-      left: @border-radius-base * 2;
-    }
-
-    @media (min-width: @screen-md-min) and (max-width: @screen-md-max) {
-      left: calc(@border-radius-base * 2 + (100vw - @screen-md-min) / 5);
-    }
-
-    @media (min-width: @screen-lg-min) {
-      left: 50px;
-    }
-  } */
 
   .body {
     position: relative;
     margin: 0;
     border: 2px solid var(--armeria-magenta);
-    border-radius: var(--ifm-global-radius) * 4;
+    border-radius: var(--ifm-global-radius);
     padding: 1rem 1.4rem;
     z-index: 3;
 
     &:after {
-      /* .quotePosition; */
-
       content: '';
       position: absolute;
       border: 2px solid var(--armeria-magenta);
       border-radius: 0 50px 0 0;
       width: 60px;
       height: 60px;
-      bottom: -60px;
-      left: 50px;
+      bottom: -62px;
       border-bottom: none;
       border-left: none;
       z-index: 1;
     }
 
-    .quote {
-      /* .quotePosition; */
+    @media (max-width: 996px) {
+      &:after {
+        left: calc(var(--ifm-global-radius) * 2);
+      }
+    }
 
+    @media (min-width: calc(996px + 1px)) {
+      &:after {
+        left: 50px;
+      }
+    }
+
+    .quote {
       content: '';
       position: absolute;
       width: 80px;
-      border-width: 1.8px;
+      border-width: 3px;
       border-style: solid;
       bottom: -2.2px;
       z-index: 0;
+
+      @media (max-width: 996px) {
+        left: calc(var(--ifm-global-radius) * 2);
+      }
+
+      @media (min-width: calc(996px + 1px)) {
+        left: 50px;
+      }
     }
   }
 
   .author {
-    /* .quotePosition; */
-
     position: relative;
     z-index: 3;
     margin-left: 106px;
+    margin-top: 20px;
     top: -10px;
 
-    a {
+    > a,
+    > span > a {
       color: inherit;
     }
 
@@ -101,6 +101,14 @@
     .separator {
       font-weight: normal;
       color: var(--ifm-font-color-secondary);
+    }
+
+    @media (max-width: 996px) {
+      left: calc(var(--ifm-global-radius) * 2);
+    }
+
+    @media (min-width: calc(996px + 1px)) {
+      left: 50px;
     }
   }
 }

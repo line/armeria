@@ -378,7 +378,7 @@ const IndexPage = (props: RouteComponentProps): JSX.Element => {
           </CodeBlock>
         </MarketingBlock>
       </Marketing>
-      <Marketing className={styles.getStarted}>{/* TODO */}
+      <Marketing className={styles.getStarted}>
         <MarketingBlock>
           <Title level={3}>
             Build your service with

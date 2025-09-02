@@ -1,11 +1,9 @@
-import { Typography } from 'antd';
 import React from 'react';
-
+import Heading from '@theme/Heading';
 import Pattern1 from '@site/static/img/pattern-1.svg';
 import Pattern2 from '@site/static/img/pattern-2.svg';
-import styles from './blockquote.module.css';
 
-const { Title, Paragraph } = Typography;
+import styles from './blockquote.module.css';
 
 interface BlockquoteProps {
   author: React.ReactNode;
@@ -46,22 +44,19 @@ const Blockquote: React.FC<BlockquoteProps> = (props) => {
           aria-hidden
         />
       )}
-      <Paragraph
-        className={styles.body}
-        style={{ backgroundColor: props.bgColor1 }}
-      >
+      <p className={styles.body} style={{ backgroundColor: props.bgColor1 }}>
         {props.children}
         <span
           className={styles.quote}
           style={{ borderColor: props.bgColor2 }}
         />
-      </Paragraph>
-      <Title level={4} className={styles.author}>
+      </p>
+      <Heading as="h4" className={styles.author}>
         <span className={styles.separator}>&mdash; </span>
         {props.author}
         <br />
         <span className={styles.from}>{props.from}</span>
-      </Title>
+      </Heading>
     </blockquote>
   );
 };

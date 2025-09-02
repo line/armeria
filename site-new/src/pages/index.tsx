@@ -56,6 +56,17 @@ const HomepageHeader = () => {
   return (
     <header className={clsx('hero', styles.heroBanner)}>
       <div className="container">
+        <Logo
+          className={styles.sloganBackgroundImage}
+          width="768px"
+          height="768px"
+          primaryColor="rgba(255, 255, 255, 1.0)"
+          secondaryColor="rgba(255, 255, 255, 0.55)"
+          tertiaryColor="transparent"
+          label=" "
+          notext
+          ariaHidden
+        />
         <Heading as="h1" className="hero__title">
           Build a reactive microservice <br />
           <NoWrap>
@@ -72,7 +83,7 @@ const HomepageHeader = () => {
           favorite technologies, including gRPC, Thrift, Kotlin, Retrofit,
           Reactive Streams, Spring Boot and Dropwizard.
         </p>
-        <p className="hero__subtitle">
+        <p className={clsx('hero__subtitle', styles.indented)}>
           &ldquo; Brought to you by the creator of{' '}
           <Tooltip title="The most popular non-blocking I/O client-server framework in Java ecosystem">
             <Link href="https://netty.io/">Netty</Link>
@@ -389,7 +400,7 @@ client.get("/path");
               />
               today!
             </Heading>
-            {renderGetStartedButtons(false)}
+            <div>{renderGetStartedButtons(false)}</div>
             <div className={styles.badges}>
               <ProjectBadge
                 url={`https://img.shields.io/github/contributors/line/armeria.svg?link=${encodeURIComponent(

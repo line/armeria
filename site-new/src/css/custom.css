@@ -53,6 +53,7 @@
 
 .navbar--dark {
   --ifm-navbar-background-color: var(--armeria-darkgray);
+  box-shadow: none;
 }
 
 .footer--dark {
@@ -116,4 +117,8 @@ li {
   .showOnReducedMotion {
     display: initial;
   }
+}
+
+.here .container {
+  max-width: 650px;
 }
