@@ -38,7 +38,8 @@ import reactor.core.publisher.Flux;
 /**
  * Integration test for <a href="https://docs.spring.io/spring-framework/reference/web/webflux/controller/ann-methods/matrix-variables.html">Matrix Variables</a>.
  */
-@SpringBootTest(webEnvironment = WebEnvironment.RANDOM_PORT)
+@SpringBootTest(webEnvironment = WebEnvironment.RANDOM_PORT,
+        properties = "armeria.graceful-shutdown-quiet-period-millis=0")
 class MatrixVariablesTest {
 
     @SpringBootApplication

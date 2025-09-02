@@ -19,6 +19,7 @@ package com.linecorp.armeria.xds.client.endpoint;
 import static com.google.common.base.Preconditions.checkArgument;
 
 import java.util.List;
+import java.util.function.Function;
 
 import com.google.protobuf.Message;
 
@@ -28,8 +29,10 @@ import com.linecorp.armeria.client.ClientPreprocessors;
 import com.linecorp.armeria.client.ClientPreprocessorsBuilder;
 import com.linecorp.armeria.client.DecoratingHttpClientFunction;
 import com.linecorp.armeria.client.DecoratingRpcClientFunction;
+import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.client.HttpPreprocessor;
 import com.linecorp.armeria.client.RpcPreprocessor;
+import com.linecorp.armeria.client.retry.RetryingClient;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.xds.ListenerSnapshot;
 import com.linecorp.armeria.xds.ParsedFilterConfig;
@@ -84,6 +87,12 @@ final class FilterUtil {
             }
             builder.add(xdsFilter.httpDecorator());
             builder.addRpc(xdsFilter.rpcDecorator());
+        }
+        final Function<? super HttpClient, RetryingClient> retryingDecorator =
+                configSupplier.retryingDecorator();
+        if (retryingDecorator != null) {
+            // add the retrying decorator as the first (outermost) decorator if exists
+            builder.add(retryingDecorator);
         }
         return builder.build();
     }

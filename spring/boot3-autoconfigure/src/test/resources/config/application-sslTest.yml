@@ -10,3 +10,5 @@ armeria:
   internal-services:
     include: all
     port: 0
+  # Set graceful shutdown timeout to 0 to stop the server immediately.
+  graceful-shutdown-quiet-period-millis: 0

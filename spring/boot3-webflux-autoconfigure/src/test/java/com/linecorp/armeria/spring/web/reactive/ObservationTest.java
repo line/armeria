@@ -44,7 +44,8 @@ import io.micrometer.observation.Observation.Context;
 import io.micrometer.observation.ObservationHandler;
 import reactor.core.publisher.Mono;
 
-@SpringBootTest(webEnvironment = WebEnvironment.RANDOM_PORT)
+@SpringBootTest(webEnvironment = WebEnvironment.RANDOM_PORT,
+        properties = "armeria.graceful-shutdown-quiet-period-millis=0")
 class ObservationTest {
 
     private static final AtomicReference<String> ctxStatusRef = new AtomicReference<>();

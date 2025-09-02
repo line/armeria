@@ -13,3 +13,5 @@ armeria:
     key-store-type: PKCS12
     key-store-password: mystorepass
     key-alias: key1
+  # Set graceful shutdown timeout to 0 to stop the server immediately.
+  graceful-shutdown-quiet-period-millis: 0
