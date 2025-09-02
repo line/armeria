@@ -16,7 +16,6 @@
 
 package com.linecorp.armeria.server;
 
-import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
@@ -30,6 +29,7 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http2.Http2ConnectionEncoder;
 import io.netty.handler.codec.http2.Http2Error;
 import io.netty.handler.codec.http2.Http2Stream;
+import io.netty.util.collection.IntObjectHashMap;
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.ScheduledFuture;
 
@@ -43,7 +43,7 @@ final class Http2StreamLifecycleHandler implements SafeCloseable {
     private final Http2ConnectionEncoder encoder;
     private final ChannelHandlerContext ctx;
 
-    private final Map<Integer, ScheduledFuture<?>> streamResetFutures = new HashMap<>();
+    private final Map<Integer, ScheduledFuture<?>> streamResetFutures = new IntObjectHashMap<>();
 
     Http2StreamLifecycleHandler(ChannelHandlerContext ctx,
                                 AbstractHttp2ConnectionHandler handler) {
@@ -56,28 +56,36 @@ final class Http2StreamLifecycleHandler implements SafeCloseable {
      * are closed.
      */
     void maybeResetStream(int streamId, Http2Error http2Error, long delayMillis) {
+        if (!canResetStream(streamId)) {
+            return;
+        }
         if (delayMillis == 0) {
             maybeResetStream0(streamId, http2Error);
         } else if (delayMillis > 0) {
             final ScheduledFuture<?> scheduled = ctx.executor().schedule(() -> {
-                maybeResetStream0(streamId, Http2Error.CANCEL);
+                maybeResetStream0(streamId, http2Error);
             }, delayMillis, TimeUnit.MILLISECONDS);
             streamResetFutures.put(streamId, scheduled);
         }
     }
 
     private void maybeResetStream0(int streamId, Http2Error http2Error) {
-        if (!ctx.channel().isActive()) {
+        if (!canResetStream(streamId)) {
             return;
+        }
+        encoder.writeRstStream(ctx, streamId, http2Error.code(), ctx.voidPromise());
+        ctx.flush();
+    }
+
+    private boolean canResetStream(int streamId) {
+        if (!ctx.channel().isActive()) {
+            return false;
         }
         final Http2Stream stream = encoder.connection().stream(streamId);
         if (stream == null) {
-            return;
+            return false;
         }
-        if (stream.state().remoteSideOpen()) {
-            encoder.writeRstStream(ctx, streamId, http2Error.code(), ctx.voidPromise());
-            ctx.flush();
-        }
+        return stream.state().remoteSideOpen();
     }
 
     /**
