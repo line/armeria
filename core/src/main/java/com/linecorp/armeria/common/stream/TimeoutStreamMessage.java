@@ -44,42 +44,42 @@ import io.netty.util.concurrent.ScheduledFuture;
  */
 final class TimeoutStreamMessage<T> implements StreamMessage<T> {
 
-    private final StreamMessage<? extends T> delegate;
+    private final StreamMessage<? extends T> upstream;
     private final Duration timeoutDuration;
     private final StreamTimeoutMode timeoutMode;
 
     /**
      * Creates a new TimeoutStreamMessage with the specified base stream message and timeout settings.
      *
-     * @param delegate the original stream message
+     * @param upstream the original stream message
      * @param timeoutDuration the duration before a timeout occurs
      * @param timeoutMode the mode in which the timeout is applied (see {@link StreamTimeoutMode} for details)
      */
-    TimeoutStreamMessage(StreamMessage<? extends T> delegate, Duration timeoutDuration,
+    TimeoutStreamMessage(StreamMessage<? extends T> upstream, Duration timeoutDuration,
                          StreamTimeoutMode timeoutMode) {
-        this.delegate = requireNonNull(delegate, "delegate");
+        this.upstream = requireNonNull(upstream, "upstream");
         this.timeoutDuration = requireNonNull(timeoutDuration, "timeoutDuration");
         this.timeoutMode = requireNonNull(timeoutMode, "timeoutMode");
     }
 
     @Override
     public boolean isOpen() {
-        return delegate.isOpen();
+        return upstream.isOpen();
     }
 
     @Override
     public boolean isEmpty() {
-        return delegate.isEmpty();
+        return upstream.isEmpty();
     }
 
     @Override
     public long demand() {
-        return delegate.demand();
+        return upstream.demand();
     }
 
     @Override
     public CompletableFuture<Void> whenComplete() {
-        return delegate.whenComplete();
+        return upstream.whenComplete();
     }
 
     /**
@@ -93,24 +93,24 @@ final class TimeoutStreamMessage<T> implements StreamMessage<T> {
     @Override
     public void subscribe(Subscriber<? super T> subscriber, EventExecutor executor,
                           SubscriptionOption... options) {
-        delegate.subscribe(new TimeoutSubscriber<>(subscriber, executor, timeoutDuration, timeoutMode,
-                                                   delegate.whenComplete()), executor, options);
+        upstream.subscribe(new TimeoutSubscriber<>(subscriber, executor, timeoutDuration, timeoutMode,
+                                                   upstream.whenComplete()), executor, options);
     }
 
     @Override
     public void abort() {
-        delegate.abort();
+        upstream.abort();
     }
 
     @Override
     public void abort(Throwable cause) {
-        delegate.abort(cause);
+        upstream.abort(cause);
     }
 
     static final class TimeoutSubscriber<T> implements Runnable, Subscriber<T>, Subscription {
 
         private static final String TIMEOUT_MESSAGE = "Stream timed out after %d ms (timeout mode: %s)";
-        private final Subscriber<? super T> delegate;
+        private final Subscriber<? super T> downstream;
         private final EventExecutor executor;
         private final StreamTimeoutMode timeoutMode;
         private final Duration timeoutDuration;
@@ -124,9 +124,9 @@ final class TimeoutStreamMessage<T> implements StreamMessage<T> {
         private volatile boolean canceled;
         private final CompletableFuture<Void> completionFuture;
 
-        TimeoutSubscriber(Subscriber<? super T> delegate, EventExecutor executor, Duration timeoutDuration,
+        TimeoutSubscriber(Subscriber<? super T> downstream, EventExecutor executor, Duration timeoutDuration,
                           StreamTimeoutMode timeoutMode, CompletableFuture<Void> completionFuture) {
-            this.delegate = requireNonNull(delegate, "delegate");
+            this.downstream = requireNonNull(downstream, "downstream");
             this.executor = requireNonNull(executor, "executor");
             this.timeoutDuration = requireNonNull(timeoutDuration, "timeoutDuration");
             timeoutNanos = timeoutDuration.toNanos();
@@ -162,7 +162,7 @@ final class TimeoutStreamMessage<T> implements StreamMessage<T> {
                     String.format(TIMEOUT_MESSAGE, timeoutDuration.toMillis(), timeoutMode));
 
             completionFuture.completeExceptionally(ex);
-            delegate.onError(ex);
+            downstream.onError(ex);
             assert subscription != null;
             subscription.cancel();
         }
@@ -170,7 +170,7 @@ final class TimeoutStreamMessage<T> implements StreamMessage<T> {
         @Override
         public void onSubscribe(Subscription s) {
             subscription = s;
-            delegate.onSubscribe(this);
+            downstream.onSubscribe(this);
             if (completed || canceled) {
                 return;
             }
@@ -195,7 +195,7 @@ final class TimeoutStreamMessage<T> implements StreamMessage<T> {
                 case UNTIL_EOS:
                     break;
             }
-            delegate.onNext(t);
+            downstream.onNext(t);
         }
 
         @Override
@@ -206,7 +206,7 @@ final class TimeoutStreamMessage<T> implements StreamMessage<T> {
             completed = true;
             cancelSchedule();
             completionFuture.completeExceptionally(throwable);
-            delegate.onError(throwable);
+            downstream.onError(throwable);
         }
 
         @Override
@@ -217,7 +217,7 @@ final class TimeoutStreamMessage<T> implements StreamMessage<T> {
             completed = true;
             cancelSchedule();
             completionFuture.complete(null);
-            delegate.onComplete();
+            downstream.onComplete();
         }
 
         @Override
