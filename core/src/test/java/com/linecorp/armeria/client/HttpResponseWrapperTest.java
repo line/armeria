@@ -159,8 +159,10 @@ class HttpResponseWrapperTest {
         assertThat(channel).isNotNull();
         final TestHttpResponseDecoder decoder = new TestHttpResponseDecoder(channel, controller);
 
+        final int id = 1;
+        res.setStreamId(id);
         res.init(controller);
-        return decoder.addResponse(null, 1, res, cctx, cctx.eventLoop());
+        return decoder.addResponse(null, id, res, cctx, cctx.eventLoop());
     }
 
     private static class TestHttpResponseDecoder extends AbstractHttpResponseDecoder {

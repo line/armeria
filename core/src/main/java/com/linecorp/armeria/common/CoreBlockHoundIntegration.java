@@ -67,5 +67,9 @@ public final class CoreBlockHoundIntegration implements BlockHoundIntegration {
         // Thread.yield can be called
         builder.allowBlockingCallsInside(
                 "java.util.concurrent.FutureTask", "handlePossibleCancellationInterrupt");
+        // SecureRandom.nextBytes() can be called
+        builder.allowBlockingCallsInside("io.netty.handler.ssl.SslContext", "buildKeyStore");
+        // StampedLock.writeLock() can be called
+        builder.allowBlockingCallsInside("io.netty.buffer.AdaptivePoolingAllocator", "allocate");
     }
 }

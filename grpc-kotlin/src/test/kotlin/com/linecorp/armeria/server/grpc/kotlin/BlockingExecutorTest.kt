@@ -34,14 +34,16 @@ internal class BlockingExecutorTest {
     fun blockingTest() {
         runTest {
             val blockingClient =
-                GrpcClients.builder(server.httpUri())
+                GrpcClients
+                    .builder(server.httpUri())
                     .pathPrefix("/blocking")
                     .build(TestServiceGrpcKt.TestServiceCoroutineStub::class.java)
 
             blockingClient.unaryCall(SimpleRequest.getDefaultInstance())
 
             val nonBlockingClient =
-                GrpcClients.builder(server.httpUri())
+                GrpcClients
+                    .builder(server.httpUri())
                     .pathPrefix("/nonblocking")
                     .build(TestServiceGrpcKt.TestServiceCoroutineStub::class.java)
 
@@ -49,8 +51,7 @@ internal class BlockingExecutorTest {
         }
     }
 
-    class ExampleGrpcServiceBlocking :
-        TestServiceGrpcKt.TestServiceCoroutineImplBase() {
+    class ExampleGrpcServiceBlocking : TestServiceGrpcKt.TestServiceCoroutineImplBase() {
         @Blocking
         override suspend fun unaryCall(request: SimpleRequest): SimpleResponse {
             val isInEventLoop = ServiceRequestContext.current().eventLoop().inEventLoop()
@@ -59,8 +60,7 @@ internal class BlockingExecutorTest {
         }
     }
 
-    class ExampleGrpcServiceNonBlocking :
-        TestServiceGrpcKt.TestServiceCoroutineImplBase() {
+    class ExampleGrpcServiceNonBlocking : TestServiceGrpcKt.TestServiceCoroutineImplBase() {
         override suspend fun unaryCall(request: SimpleRequest): SimpleResponse {
             val isInEventLoop = ServiceRequestContext.current().eventLoop().inEventLoop()
             assertThat(isInEventLoop).isTrue()
@@ -75,13 +75,15 @@ internal class BlockingExecutorTest {
                 override fun configure(sb: ServerBuilder) {
                     sb.serviceUnder(
                         "/blocking",
-                        GrpcService.builder()
+                        GrpcService
+                            .builder()
                             .addService(ExampleGrpcServiceBlocking())
                             .build(),
                     )
                     sb.serviceUnder(
                         "/nonblocking",
-                        GrpcService.builder()
+                        GrpcService
+                            .builder()
                             .addService(ExampleGrpcServiceNonBlocking())
                             .build(),
                     )

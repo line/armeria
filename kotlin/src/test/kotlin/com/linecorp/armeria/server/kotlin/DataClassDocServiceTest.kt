@@ -36,7 +36,8 @@ class DataClassDocServiceTest {
     fun dataClassParamSpecification() {
         val client = WebClient.of(server.httpUri()).blocking()
         val jsonNode =
-            client.prepare()
+            client
+                .prepare()
                 .get("/docs/specification.json")
                 .asJson(JsonNode::class.java)
                 .execute()
@@ -68,7 +69,8 @@ class DataClassDocServiceTest {
         val server =
             object : ServerExtension() {
                 override fun configure(sb: ServerBuilder) {
-                    sb.annotatedService()
+                    sb
+                        .annotatedService()
                         .requestConverters()
                     sb.annotatedService(MyKotlinService())
                     sb.serviceUnder("/docs", DocService())
@@ -80,16 +82,12 @@ class DataClassDocServiceTest {
         @Get("/example1")
         fun getIdV1(
             @Suppress("UNUSED_PARAMETER") queries: ExampleQueries1,
-        ): String {
-            return "example"
-        }
+        ): String = "example"
 
         @Get("/example2")
         fun getIdV2(
             @Suppress("UNUSED_PARAMETER") queries: ExampleQueries2,
-        ): String {
-            return "example"
-        }
+        ): String = "example"
     }
 
     data class ExampleQueries1(

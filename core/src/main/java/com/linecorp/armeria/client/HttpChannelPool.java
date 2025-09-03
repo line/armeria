@@ -161,7 +161,8 @@ final class HttpChannelPool implements AsyncCloseable {
 
         if (proxyConfig instanceof ConnectProxyConfig && ((ConnectProxyConfig) proxyConfig).useTls()) {
             final SslContext sslCtx = bootstraps.getOrCreateSslContext(proxyAddress, desiredProtocol);
-            ch.pipeline().addFirst(sslCtx.newHandler(ch.alloc()));
+            ch.pipeline().addFirst(sslCtx.newHandler(ch.alloc(), proxyAddress.getHostString(),
+                                                     proxyAddress.getPort()));
             if (bootstraps.shouldReleaseSslContext(sslCtx)) {
                 ch.closeFuture().addListener(unused -> bootstraps.releaseSslContext(sslCtx));
             }

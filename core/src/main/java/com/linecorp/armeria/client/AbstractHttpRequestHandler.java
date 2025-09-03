@@ -187,6 +187,7 @@ abstract class AbstractHttpRequestHandler implements ChannelFutureListener {
         }
 
         this.session = session;
+        originalRes.setStreamId(streamId());
         responseWrapper = responseDecoder.addResponse(this, id, originalRes, ctx, ch.eventLoop());
 
         if (timeoutMillis > 0) {

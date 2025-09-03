@@ -48,6 +48,7 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.EventLoop;
 import io.netty.handler.codec.http.HttpHeaderValues;
+import io.netty.handler.codec.http2.Http2ConnectionDecoder;
 import io.netty.handler.codec.http2.Http2Error;
 import io.netty.handler.codec.http2.Http2EventAdapter;
 import io.netty.handler.codec.http2.Http2Exception;
@@ -75,10 +76,9 @@ final class Http2RequestDecoder extends Http2EventAdapter {
     private final KeepAliveHandler keepAliveHandler;
     private final Http2GoAwayHandler goAwayHandler;
     private final IntObjectMap<@Nullable DecodedHttpRequest> requests = new IntObjectHashMap<>();
-    private int nextId;
 
-    Http2RequestDecoder(ServerConfig cfg, Channel channel,
-                        AsciiString scheme, KeepAliveHandler keepAliveHandler) {
+    Http2RequestDecoder(ServerConfig cfg, Channel channel, AsciiString scheme,
+                        KeepAliveHandler keepAliveHandler, Http2ConnectionDecoder decoder) {
         this.cfg = cfg;
         this.channel = channel;
         final ServerPortMetric serverPortMetric = channel.attr(SERVER_PORT_METRIC).get();
@@ -86,7 +86,7 @@ final class Http2RequestDecoder extends Http2EventAdapter {
         this.serverPortMetric = serverPortMetric;
         this.scheme = scheme;
         inboundTrafficController =
-                InboundTrafficController.ofHttp2(channel, cfg.http2InitialConnectionWindowSize());
+                InboundTrafficController.ofHttp2(channel, decoder, cfg.http2InitialConnectionWindowSize());
         this.keepAliveHandler = keepAliveHandler;
         goAwayHandler = new Http2GoAwayHandler();
     }
@@ -207,7 +207,8 @@ final class Http2RequestDecoder extends Http2EventAdapter {
                 }
             }
 
-            final int id = ++nextId;
+            // Derive the request ID from the stream ID.
+            final int id = streamIdToId(streamId);
             final EventLoop eventLoop = ctx.channel().eventLoop();
             req = DecodedHttpRequest.of(endOfStream, eventLoop, id, streamId, headers, true,
                                         inboundTrafficController, routingCtx);
@@ -245,6 +246,10 @@ final class Http2RequestDecoder extends Http2EventAdapter {
             int streamDependency, short weight, boolean exclusive, int padding,
             boolean endOfStream) throws Http2Exception {
         onHeadersRead(ctx, streamId, headers, padding, endOfStream);
+    }
+
+    private static int streamIdToId(int streamId) {
+        return (streamId - 1) >>> 1;
     }
 
     private boolean handle100Continue(int streamId, Http2Headers headers, HttpMethod method) {
@@ -342,19 +347,24 @@ final class Http2RequestDecoder extends Http2EventAdapter {
             }
         }
 
-        // All bytes have been processed.
-        return dataLength + padding;
+        if (decodedReq instanceof AggregatingDecodedHttpRequest) {
+            // All bytes have been processed.
+            return dataLength + padding;
+        } else {
+            // The data length will be reported to InboundTrafficController upon consumption for flow control.
+            return padding;
+        }
     }
 
     private void abortLargeRequest(DecodedHttpRequest decodedReq, boolean isEarlyRejection) {
         assert encoder != null;
         final ContentTooLargeException cause =
                 ContentTooLargeException.builder()
-                        .maxContentLength(decodedReq.maxRequestLength())
-                        .contentLength(decodedReq.headers())
-                        .transferred(decodedReq.transferredBytes())
-                        .earlyRejection(isEarlyRejection)
-                        .build();
+                                        .maxContentLength(decodedReq.maxRequestLength())
+                                        .contentLength(decodedReq.headers())
+                                        .transferred(decodedReq.transferredBytes())
+                                        .earlyRejection(isEarlyRejection)
+                                        .build();
 
         final HttpStatusException httpStatusException =
                 HttpStatusException.of(HttpStatus.REQUEST_ENTITY_TOO_LARGE, cause);
