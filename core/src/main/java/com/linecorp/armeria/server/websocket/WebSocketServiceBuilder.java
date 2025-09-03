@@ -67,7 +67,7 @@ public final class WebSocketServiceBuilder {
             .requestTimeoutMillis(WebSocketUtil.DEFAULT_REQUEST_RESPONSE_TIMEOUT_MILLIS)
             .maxRequestLength(WebSocketUtil.DEFAULT_MAX_REQUEST_RESPONSE_LENGTH)
             .requestAutoAbortDelayMillis(WebSocketUtil.DEFAULT_REQUEST_AUTO_ABORT_DELAY_MILLIS)
-            .closeHttp2StreamDelayMillis(10_000) // follows netty's forceCloseTimeoutMillis default
+            .closeHttp2StreamDelayMillis(WebSocketUtil.DEFAULT_CLOSE_HTTP2_STREAM_DELAY_MILLIS)
             .build();
 
     private final WebSocketServiceHandler handler;
