@@ -130,7 +130,7 @@ const ThankYou: React.FC<ThankYouProps> = (props) => {
 
     return (
       avatarUrl || `https://github.com/${username}.png?size=${upscaledSize}`
-    ); // TODO: fallback
+    );
   }
 
   // Calculate wrapper dimensions based on window size and number of usernames.

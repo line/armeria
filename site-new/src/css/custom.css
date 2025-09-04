@@ -53,6 +53,7 @@
 
 .navbar--dark {
   --ifm-navbar-background-color: var(--armeria-darkgray);
+  box-shadow: none;
 }
 
 .footer--dark {
@@ -100,4 +101,24 @@ li {
       }
     }
   }
+}
+
+.hideOnReducedMotion {
+  display: initial;
+}
+.showOnReducedMotion {
+  display: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hideOnReducedMotion {
+    display: none;
+  }
+  .showOnReducedMotion {
+    display: initial;
+  }
+}
+
+.here .container {
+  max-width: 650px;
 }
