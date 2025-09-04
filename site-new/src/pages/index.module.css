@@ -82,6 +82,10 @@
   display: inline-block;
   margin: 8px;
 
+  &.primary {
+    color: var(--armeria-white);
+  }
+
   @media (max-width: 996px) {
     margin-left: 0;
     margin-right: 16px;

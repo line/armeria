@@ -36,6 +36,7 @@
     border-radius: var(--ifm-global-radius);
     padding: 1rem 1.4rem;
     z-index: 3;
+    background-color: rgba(255, 255, 255, 0.5);
 
     &:after {
       content: '';
@@ -70,6 +71,7 @@
       border-style: solid;
       bottom: -2.2px;
       z-index: 0;
+      border-color: white;
 
       @media (max-width: 996px) {
         left: calc(var(--ifm-global-radius) * 2);
@@ -111,4 +113,12 @@
       left: 50px;
     }
   }
+}
+
+html[data-theme='dark'] .blockquote .body {
+  background-color: rgba(27, 27, 29, 0.5);
+}
+
+html[data-theme='dark'] .blockquote .quote {
+  border-color: var(--ifm-background-color);
 }

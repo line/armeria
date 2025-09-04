@@ -32,6 +32,7 @@ const renderGetStartedButtons = (responsive: boolean) => (
         'button--primary',
         'button--lg',
         styles.getStartedButton,
+        styles.primary,
         responsive && styles.responsive,
       )}
     >
@@ -206,8 +207,6 @@ const Home: React.FC = (): ReactNode => {
                 <Link to="https://github.com/renaudb">Renaud Bourassa</Link>
               }
               from={<Link to="https://slack.engineering/">Slack</Link>}
-              bgColor1="rgba(255, 255, 255, 0.5)"
-              bgColor2="white"
             >
               Armeria was pivotal in our effort to refactor core components of
               our search system into separate services. Decorators make reusing
@@ -307,8 +306,6 @@ const Home: React.FC = (): ReactNode => {
                   Afterpay
                 </Link>
               }
-              bgColor1="rgba(255, 255, 255, 0.5)"
-              bgColor2="white"
               reverse
             >
               Armeria has eased our adoption of gRPC at Afterpay. Serving gRPC,

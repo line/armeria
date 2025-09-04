@@ -8,8 +8,6 @@ import styles from './blockquote.module.css';
 interface BlockquoteProps {
   author: React.ReactNode;
   from: React.ReactNode;
-  bgColor1: string;
-  bgColor2: string;
   reverse?: boolean;
   children: React.ReactNode;
 }
@@ -44,12 +42,9 @@ const Blockquote: React.FC<BlockquoteProps> = (props) => {
           aria-hidden
         />
       )}
-      <p className={styles.body} style={{ backgroundColor: props.bgColor1 }}>
+      <p className={styles.body}>
         {props.children}
-        <span
-          className={styles.quote}
-          style={{ borderColor: props.bgColor2 }}
-        />
+        <span className={styles.quote} />
       </p>
       <Heading as="h4" className={styles.author}>
         <span className={styles.separator}>&mdash; </span>
