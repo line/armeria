@@ -89,6 +89,7 @@ export default async function createConfigAsync() {
             blogSidebarTitle: ' ',
             blogSidebarCount: 'ALL',
             showReadingTime: false,
+            blogListComponent: '@site/src/components/news-redirect',
             feedOptions: {
               type: ['rss', 'atom'],
               xslt: true,
@@ -301,6 +302,7 @@ export default async function createConfigAsync() {
 
     customFields: {
       latestReleaseNotePath: await getLatestReleaseNotePath(),
+      latestNewsPath: await getLatestNewsletterPath(),
       buildDate: new Date().toISOString(),
     },
   };
