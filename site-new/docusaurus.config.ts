@@ -287,14 +287,6 @@ export default async function createConfigAsync() {
         {
           redirects: [
             {
-              from: '/s/discord',
-              to: 'https://discord.gg/7FH8c6npmg',
-            },
-            {
-              from: '/news',
-              to: await getLatestNewsletterPath(),
-            },
-            {
               from: '/release-notes',
               to: await getLatestReleaseNotePath(),
             },
