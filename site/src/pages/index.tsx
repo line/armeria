@@ -358,7 +358,6 @@ const IndexPage = (props: RouteComponentProps): JSX.Element => {
           </Paragraph>
         </MarketingBlock>
         <MarketingBlock>
-          
           <CodeBlock language="java">
             {`
             EndpointGroup group =
