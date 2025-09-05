@@ -181,11 +181,11 @@ export default async function createConfigAsync() {
             href: 'https://techblog.lycorp.co.jp/en',
           },
           {
-            label: 'Privacy policy',
+            label: 'Privacy Policy',
             href: 'https://terms.line.me/line_rules?lang=en',
           },
         ],
-        copyright: `© ${new Date().getFullYear()} LY Corporation`, // See src/theme/Footer/Copyright/index.tsx
+        copyright: `© LY Corporation`, // See src/theme/Footer/Copyright/index.tsx
       },
       prism: {
         theme: prismThemes.github,
