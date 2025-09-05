@@ -186,7 +186,7 @@ export default async function createConfigAsync() {
             href: 'https://terms.line.me/line_rules?lang=en',
           },
         ],
-        copyright: `Copyright © ${new Date().getFullYear()} My Project, Inc. Built with Docusaurus.`,
+        copyright: `© ${new Date().getFullYear()} LY Corporation`, // See src/theme/Footer/Copyright/index.tsx
       },
       prism: {
         theme: prismThemes.github,
@@ -310,6 +310,7 @@ export default async function createConfigAsync() {
 
     customFields: {
       latestReleaseNotePath: await getLatestReleaseNotePath(),
+      buildDate: new Date().toISOString(),
     },
   };
   return config;
