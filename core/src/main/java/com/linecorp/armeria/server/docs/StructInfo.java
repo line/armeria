@@ -46,29 +46,47 @@ public final class StructInfo implements DescriptiveTypeInfo {
     private final List<FieldInfo> fields;
     private final DescriptionInfo descriptionInfo;
 
+    private final List<TypeSignature> oneOf;
+    @Nullable
+    private final DiscriminatorInfo discriminator;
+
     /**
      * Creates a new instance.
      */
     public StructInfo(String name, Iterable<FieldInfo> fields) {
-        this(name, null, fields, DescriptionInfo.empty());
+        this(name, null, fields, DescriptionInfo.empty(), ImmutableList.of(), null);
     }
 
     /**
      * Creates a new instance.
      */
     public StructInfo(String name, Iterable<FieldInfo> fields, DescriptionInfo descriptionInfo) {
-        this(name, null, fields, descriptionInfo);
+        this(name, null, fields, descriptionInfo, ImmutableList.of(), null);
+    }
+
+    /**
+     * Creates a new instance.
+     * @deprecated Use {@link #StructInfo(String, String, Iterable,
+     * DescriptionInfo, Iterable, DiscriminatorInfo)}
+     */
+    @Deprecated
+    public StructInfo(String name, @Nullable String alias, Iterable<FieldInfo> fields,
+                      DescriptionInfo descriptionInfo) {
+        this(name, alias, fields, descriptionInfo, ImmutableList.of(), null);
     }
 
     /**
      * Creates a new instance.
      */
     public StructInfo(String name, @Nullable String alias, Iterable<FieldInfo> fields,
-                      DescriptionInfo descriptionInfo) {
+                      DescriptionInfo descriptionInfo, Iterable<TypeSignature> oneOf,
+                      @Nullable DiscriminatorInfo discriminator) {
         this.name = requireNonNull(name, "name");
         this.alias = alias;
         this.fields = ImmutableList.copyOf(requireNonNull(fields, "fields"));
         this.descriptionInfo = requireNonNull(descriptionInfo, "descriptionInfo");
+        this.oneOf = ImmutableList.copyOf(requireNonNull(oneOf, "oneOf"));
+        this.discriminator = discriminator;
     }
 
     @Override
@@ -102,7 +120,7 @@ public final class StructInfo implements DescriptiveTypeInfo {
             return this;
         }
 
-        return new StructInfo(name, alias, fields, descriptionInfo);
+        return new StructInfo(name, alias, fields, descriptionInfo, oneOf, discriminator);
     }
 
     /**
@@ -123,7 +141,7 @@ public final class StructInfo implements DescriptiveTypeInfo {
             return this;
         }
 
-        return new StructInfo(name, alias, fields, descriptionInfo);
+        return new StructInfo(name, alias, fields, descriptionInfo, oneOf, discriminator);
     }
 
     /**
@@ -145,13 +163,39 @@ public final class StructInfo implements DescriptiveTypeInfo {
             return this;
         }
 
-        return new StructInfo(name, alias, fields, descriptionInfo);
+        return new StructInfo(name, alias, fields, descriptionInfo, oneOf, discriminator);
+    }
+
+    /**
+     * Returns the list of subtypes for polymorphism. This corresponds to the {@code oneOf} keyword
+     * in the OpenAPI Specification.
+     *
+     * @return a list of {@link TypeSignature}s for the possible subtypes.
+     */
+    @JsonProperty
+    @JsonInclude(Include.NON_EMPTY)
+    public List<TypeSignature> oneOf() {
+        return oneOf;
+    }
+
+    /**
+     * Returns the discriminator information for polymorphism. This corresponds to the {@code discriminator}
+     * object in the OpenAPI Specification.
+     *
+     * @return the {@link DiscriminatorInfo} object, or {@code null} if not defined.
+     */
+    @JsonProperty
+    @JsonInclude(Include.NON_NULL)
+    @Nullable
+    public DiscriminatorInfo discriminator() {
+        return discriminator;
     }
 
     @Override
     public Set<DescriptiveTypeSignature> findDescriptiveTypes() {
         final Set<DescriptiveTypeSignature> collectedDescriptiveTypes = new HashSet<>();
         fields().forEach(f -> ServiceInfo.findDescriptiveTypes(collectedDescriptiveTypes, f.typeSignature()));
+        oneOf().forEach(t -> ServiceInfo.findDescriptiveTypes(collectedDescriptiveTypes, t)); // oneOf 타입 추가
         return ImmutableSortedSet.copyOf(comparing(TypeSignature::name), collectedDescriptiveTypes);
     }
 
@@ -169,12 +213,14 @@ public final class StructInfo implements DescriptiveTypeInfo {
         return name.equals(that.name) &&
                Objects.equals(alias, that.alias) &&
                fields.equals(that.fields) &&
-               descriptionInfo.equals(that.descriptionInfo);
+               descriptionInfo.equals(that.descriptionInfo) &&
+               oneOf.equals(that.oneOf) &&
+               Objects.equals(discriminator, that.discriminator);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(name, alias, fields, descriptionInfo);
+        return Objects.hash(name, alias, fields, descriptionInfo, oneOf, discriminator);
     }
 
     @Override
@@ -185,6 +231,8 @@ public final class StructInfo implements DescriptiveTypeInfo {
                           .add("alias", alias)
                           .add("fields", fields)
                           .add("descriptionInfo", descriptionInfo)
+                          .add("oneOf",oneOf.isEmpty() ? null : oneOf)
+                          .add("discriminator", discriminator)
                           .toString();
     }
 }
