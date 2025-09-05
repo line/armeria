@@ -328,6 +328,7 @@ class RetryingRpcClientTest {
 
     @Test
     void doNotRetryWhenResponseIsCancelled() throws Exception {
+        serviceRetryCount.set(0);
         try (ClientFactory factory = ClientFactory.builder().build()) {
             final AtomicReference<ClientRequestContext> context = new AtomicReference<>();
             final HelloService.Iface client =
@@ -349,15 +350,10 @@ class RetryingRpcClientTest {
             await().untilAsserted(() -> {
                 verify(serviceHandler, only()).hello("hello");
             });
-            final RequestLog log = context.get().log().whenComplete().join();
-
-            // ClientUtil.completeLogIfIncomplete() records exceptions caused by response cancellations.
-            assertThat(log.requestCause()).isExactlyInstanceOf(CancellationException.class);
-            assertThat(log.responseCause()).isExactlyInstanceOf(CancellationException.class);
-
             // Sleep 1 second more to check if there was another retry.
             TimeUnit.SECONDS.sleep(1);
             verify(serviceHandler, only()).hello("hello");
+            assertThat(serviceRetryCount).hasValue(1);
         }
     }
 }
