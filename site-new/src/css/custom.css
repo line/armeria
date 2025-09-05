@@ -36,7 +36,7 @@
   --ifm-heading-font-family: Merriweather, var(--armeria-font-family);
   --ifm-code-font-size: 95%;
 
-  --ifm-navbar-height: 60px;
+  --ifm-navbar-height: 70px;
 }
 
 /* For readability concerns, you should choose a lighter palette in dark mode. */
