@@ -93,8 +93,8 @@ final class TimeoutStreamMessage<T> implements StreamMessage<T> {
     @Override
     public void subscribe(Subscriber<? super T> subscriber, EventExecutor executor,
                           SubscriptionOption... options) {
-        delegate.subscribe(new TimeoutSubscriber<>(subscriber, executor, timeoutDuration, timeoutMode),
-                           executor, options);
+        delegate.subscribe(new TimeoutSubscriber<>(subscriber, executor, timeoutDuration, timeoutMode,
+                                                   delegate.whenComplete()), executor, options);
     }
 
     @Override
@@ -122,14 +122,16 @@ final class TimeoutStreamMessage<T> implements StreamMessage<T> {
         private long lastEventTimeNanos;
         private boolean completed;
         private volatile boolean canceled;
+        private final CompletableFuture<Void> completionFuture;
 
         TimeoutSubscriber(Subscriber<? super T> delegate, EventExecutor executor, Duration timeoutDuration,
-                          StreamTimeoutMode timeoutMode) {
+                          StreamTimeoutMode timeoutMode, CompletableFuture<Void> completionFuture) {
             this.delegate = requireNonNull(delegate, "delegate");
             this.executor = requireNonNull(executor, "executor");
             this.timeoutDuration = requireNonNull(timeoutDuration, "timeoutDuration");
             timeoutNanos = timeoutDuration.toNanos();
             this.timeoutMode = requireNonNull(timeoutMode, "timeoutMode");
+            this.completionFuture = requireNonNull(completionFuture, "completionFuture");
         }
 
         private ScheduledFuture<?> scheduleTimeout(long delay) {
@@ -155,8 +157,12 @@ final class TimeoutStreamMessage<T> implements StreamMessage<T> {
                 }
             }
             completed = true;
-            delegate.onError(new StreamTimeoutException(
-                    String.format(TIMEOUT_MESSAGE, timeoutDuration.toMillis(), timeoutMode)));
+
+            final StreamTimeoutException ex = new StreamTimeoutException(
+                    String.format(TIMEOUT_MESSAGE, timeoutDuration.toMillis(), timeoutMode));
+
+            completionFuture.completeExceptionally(ex);
+            delegate.onError(ex);
             assert subscription != null;
             subscription.cancel();
         }
@@ -199,6 +205,7 @@ final class TimeoutStreamMessage<T> implements StreamMessage<T> {
             }
             completed = true;
             cancelSchedule();
+            completionFuture.completeExceptionally(throwable);
             delegate.onError(throwable);
         }
 
@@ -209,6 +216,7 @@ final class TimeoutStreamMessage<T> implements StreamMessage<T> {
             }
             completed = true;
             cancelSchedule();
+            completionFuture.complete(null);
             delegate.onComplete();
         }
 
@@ -223,6 +231,7 @@ final class TimeoutStreamMessage<T> implements StreamMessage<T> {
             canceled = true;
             cancelSchedule();
             assert subscription != null;
+            completionFuture.completeExceptionally(CancelledSubscriptionException.get());
             subscription.cancel();
         }
     }
