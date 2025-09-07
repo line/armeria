@@ -239,19 +239,19 @@ final class RpcRetryAttempt {
 
         final ClientRequestContextExtension ctxExt =
                 ctx.as(ClientRequestContextExtension.class);
-        if (!isInitialAttempt && ctxExt != null && ctx.endpoint() == null) {
+        if (!isInitialAttempt && ctxExt != null && ctx.endpointGroup() != null && ctx.endpoint() == null) {
             // clear the pending throwable to retry endpoint selection
             ClientPendingThrowableUtil.removePendingThrowable(ctx);
             // if the endpoint hasn't been selected,
             // try to initialize the attempCtx with a new endpoint/event loop
             return initContextAndExecuteWithFallback(
-                    delegate, ctxExt, RpcResponse::of,
+                    delegate, ctxExt, RpcResponse::from,
                     (context, cause) ->
-                            RpcResponse.ofFailure(cause), req, false);
+                            RpcResponse.ofFailure(cause), req, true);
         } else {
             return executeWithFallback(delegate, ctx,
                                        (context, cause) ->
-                                               RpcResponse.ofFailure(cause), req, false);
+                                               RpcResponse.ofFailure(cause), req, true);
         }
     }
 
