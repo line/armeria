@@ -16,71 +16,40 @@
 
 package com.linecorp.armeria.client.retry;
 
-import static com.google.common.base.Preconditions.checkArgument;
-import static com.google.common.base.Preconditions.checkState;
-import static java.util.Objects.requireNonNull;
-
-import com.google.common.base.MoreObjects;
-
 import com.linecorp.armeria.common.annotation.Nullable;
 
-final class RetryCounter {
-    private final int maxAttempts;
+/**
+ * A counter that keeps track of the number of attempts made so far for a {@link RetryingClient}.
+ * In particular, it keeps track of the total number of attempts but also
+ * the number of attempts made with each {@link Backoff}.
+ *
+ * <p>
+ *     Implementors do not need to be thread-safe.
+ * </p>
+ */
+interface RetryCounter {
+    /**
+     * Records an attempt in that it increases the total number of attempts by one. If {@code backoff} is not
+     * {@code null}, the number of attempts for that {@code backoff} is increased as well.
+     *
+     * @param backoff the backoff used for the attempt, or {@code null} if no backoff was used.
+     */
+    void consumeAttemptFrom(@Nullable Backoff backoff);
 
-    private int numberAttemptsSoFar;
-    @Nullable
-    private Backoff lastBackoff;
-    private int numberAttemptsSoFarForLastBackoff;
+    /**
+     * Returns the number of attempts executed so far with {@code backoff}.
+     *
+     * @param backoff the backoff whose number of attempts is requested
+     * @return the number of attempts executed so far with {@code backoff}
+     */
+    int attemptsSoFarWithBackoff(Backoff backoff);
 
-    RetryCounter(int maxAttempts) {
-        checkArgument(maxAttempts > 0, "maxAttempts: %s (expected: > 0)", maxAttempts);
-        this.maxAttempts = maxAttempts;
-        numberAttemptsSoFar = 0;
-        lastBackoff = null;
-        numberAttemptsSoFarForLastBackoff = 0;
-    }
-
-    void recordAttemptWith(@Nullable Backoff backoff) {
-        checkState(!hasReachedMaxAttempts(), "Exceeded the maximum number of attempts: %s", maxAttempts);
-
-        ++numberAttemptsSoFar;
-
-        if (backoff != null) {
-            if (lastBackoff != backoff) {
-                lastBackoff = backoff;
-                numberAttemptsSoFarForLastBackoff = 0;
-            }
-            numberAttemptsSoFarForLastBackoff++;
-        } else {
-            assert lastBackoff == null;
-        }
-    }
-
-    int attemptNumber() {
-        return numberAttemptsSoFar;
-    }
-
-    int attemptNumberForBackoff(Backoff backoff) {
-        requireNonNull(backoff, "backoff");
-        if (lastBackoff != backoff) {
-            return 0;
-        } else {
-            return numberAttemptsSoFarForLastBackoff;
-        }
-    }
-
-    boolean hasReachedMaxAttempts() {
-        return numberAttemptsSoFar >= maxAttempts;
-    }
-
-    @Override
-    public String toString() {
-        return MoreObjects
-                .toStringHelper(this)
-                .add("maxAttempts", maxAttempts)
-                .add("numberAttemptsSoFar", numberAttemptsSoFar)
-                .add("lastBackoff", lastBackoff)
-                .add("numberAttemptsSoFarForLastBackoff", numberAttemptsSoFarForLastBackoff)
-                .toString();
-    }
+    /**
+     * Returns {@code true} if the total number of attempts has reached the maximum number of attempts
+     * configured in the {@link RetryConfig}.
+     *
+     * @return {@code true} if the total number of attempts has reached the maximum number of attempts
+     *         configured in the {@link RetryConfig}
+     */
+    boolean hasReachedMaxAttempts();
 }

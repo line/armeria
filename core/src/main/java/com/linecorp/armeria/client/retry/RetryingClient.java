@@ -21,8 +21,10 @@ import static com.google.common.base.Preconditions.checkArgument;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
 
+import com.linecorp.armeria.client.Client;
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.HttpClient;
+import com.linecorp.armeria.common.ContextAwareEventLoop;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.Request;
@@ -31,8 +33,7 @@ import com.linecorp.armeria.common.annotation.Nullable;
 /**
  * An {@link HttpClient} decorator that handles failures of an invocation and retries HTTP requests.
  */
-public final class RetryingClient
-        extends AbstractRetryingClient<HttpRequest, HttpResponse, HttpRetryingContext>
+public final class RetryingClient extends AbstractRetryingClient<HttpRequest, HttpResponse>
         implements HttpClient {
     /**
      * Returns a new {@link RetryingClientBuilder} with the specified {@link RetryConfig}.
@@ -210,10 +211,27 @@ public final class RetryingClient
     }
 
     @Override
-    HttpRetryingContext getRetryingContext(ClientRequestContext ctx, RetryConfig<HttpResponse> config,
-                                           HttpRequest req) {
+    RetryContext newRetryContext(
+            Client<HttpRequest, HttpResponse> delegate,
+            ClientRequestContext ctx,
+            HttpRequest req,
+            RetryConfig<HttpResponse> config) {
         final CompletableFuture<HttpResponse> resFuture = new CompletableFuture<>();
         final HttpResponse res = HttpResponse.of(resFuture, ctx.eventLoop());
-        return new HttpRetryingContext(ctx, config, res, resFuture, req, useRetryAfter);
+
+        final ContextAwareEventLoop retryEventLoop = ctx.eventLoop();
+
+        final RetriedHttpRequest request = new RetriedHttpRequest(
+                retryEventLoop, config, ctx, req, res, resFuture, useRetryAfter
+        );
+
+        final RetryScheduler scheduler = new DefaultRetryScheduler(
+                retryEventLoop,
+                request.deadlineTimeNanos()
+        );
+
+        final RetryCounter counter = new DefaultRetryCounter(config.maxTotalAttempts());
+
+        return new RetryContext(ctx.eventLoop(), request, scheduler, counter, delegate);
     }
 }

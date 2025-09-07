@@ -15,9 +15,9 @@
  */
 package com.linecorp.armeria.client.retry;
 
-import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
 
+import com.linecorp.armeria.client.Client;
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.RpcClient;
 import com.linecorp.armeria.common.Request;
@@ -28,7 +28,7 @@ import com.linecorp.armeria.common.RpcResponse;
  * An {@link RpcClient} decorator that handles failures of an invocation and retries RPC requests.
  */
 public final class RetryingRpcClient
-        extends AbstractRetryingClient<RpcRequest, RpcResponse, RpcRetryingContext>
+        extends AbstractRetryingClient<RpcRequest, RpcResponse>
         implements RpcClient {
 
     /**
@@ -132,10 +132,11 @@ public final class RetryingRpcClient
     }
 
     @Override
-    RpcRetryingContext getRetryingContext(
-            ClientRequestContext ctx, RetryConfig<RpcResponse> retryConfig, RpcRequest req) {
-        final CompletableFuture<RpcResponse> resFuture = new CompletableFuture<>();
-        final RpcResponse res = RpcResponse.from(resFuture);
-        return new RpcRetryingContext(ctx, retryConfig, resFuture, res, req);
+    RetryContext newRetryContext(
+            Client<RpcRequest, RpcResponse> delegate,
+            ClientRequestContext ctx,
+            RpcRequest req,
+            RetryConfig<RpcResponse> config) {
+        throw new UnsupportedOperationException();
     }
 }
