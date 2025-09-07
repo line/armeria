@@ -15,11 +15,13 @@
  */
 package com.linecorp.armeria.client.retry;
 
+import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
 
 import com.linecorp.armeria.client.Client;
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.RpcClient;
+import com.linecorp.armeria.common.ContextAwareEventLoop;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.RpcResponse;
@@ -137,6 +139,22 @@ public final class RetryingRpcClient
             ClientRequestContext ctx,
             RpcRequest req,
             RetryConfig<RpcResponse> config) {
-        throw new UnsupportedOperationException();
+        final CompletableFuture<RpcResponse> resFuture = new CompletableFuture<>();
+        final RpcResponse res = RpcResponse.from(resFuture);
+
+        final ContextAwareEventLoop retryEventLoop = ctx.eventLoop();
+
+        final RetriedRpcRequest request = new RetriedRpcRequest(
+                retryEventLoop, config, ctx, req, res, resFuture
+        );
+
+        final RetryScheduler scheduler = new DefaultRetryScheduler(
+                retryEventLoop,
+                request.deadlineTimeNanos()
+        );
+
+        final RetryCounter counter = new DefaultRetryCounter(config.maxTotalAttempts());
+
+        return new RetryContext(retryEventLoop, request, scheduler, counter, delegate);
     }
 }
