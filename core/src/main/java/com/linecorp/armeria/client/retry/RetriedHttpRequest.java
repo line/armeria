@@ -35,7 +35,6 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.RequestHeadersBuilder;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.stream.AbortedStreamException;
-import com.linecorp.armeria.common.util.TimeoutMode;
 import com.linecorp.armeria.common.util.UnmodifiableFuture;
 import com.linecorp.armeria.internal.client.AggregatedHttpRequestDuplicator;
 import com.linecorp.armeria.internal.client.ClientUtil;
@@ -230,7 +229,8 @@ class RetriedHttpRequest implements RetriedRequest<HttpRequest, HttpResponse> {
         assert attemptNumber == attempts.size() + 1 : attemptNumber + ", " + attempts.size();
         assert attemptNumber <= config.maxTotalAttempts() : attemptNumber + ", " + config.maxTotalAttempts();
 
-        if (!checkAndSetResponseTimeout()) {
+        if (!ClientUtil.checkAndSetResponseTimeout(ctx, deadlineTimeNanos,
+                                                   config.responseTimeoutMillisForEachAttempt())) {
             final ResponseTimeoutException timeoutException = ResponseTimeoutException.get();
             abort(timeoutException);
             return UnmodifiableFuture.exceptionallyCompletedFuture(timeoutException);
@@ -339,13 +339,9 @@ class RetriedHttpRequest implements RetriedRequest<HttpRequest, HttpResponse> {
         }
 
         checkState(state == State.PENDING);
-        checkArgument(attemptNumber >= 1);
         checkArgument(attemptNumber <= attempts.size());
 
         attemptToAbort = attempts.get(attemptNumber - 1);
-
-        checkState(attemptToAbort != null);
-
         attemptToAbort.abort(cause);
     }
 
@@ -369,34 +365,5 @@ class RetriedHttpRequest implements RetriedRequest<HttpRequest, HttpResponse> {
 
     public long deadlineTimeNanos() {
         return deadlineTimeNanos;
-    }
-
-    private boolean checkAndSetResponseTimeout() {
-        long remainingTimeUntilDeadlineMillis = Long.MAX_VALUE;
-        boolean hasTimeout = false;
-
-        if (deadlineTimeNanos < Long.MAX_VALUE) {
-            hasTimeout = true;
-            remainingTimeUntilDeadlineMillis = TimeUnit.NANOSECONDS.toMillis(
-                    deadlineTimeNanos - System.nanoTime());
-        }
-
-        if (config.responseTimeoutMillisForEachAttempt() != 0) {
-            hasTimeout = true;
-            remainingTimeUntilDeadlineMillis =
-                    Math.min(remainingTimeUntilDeadlineMillis, config.responseTimeoutMillisForEachAttempt());
-        }
-
-        if (hasTimeout) {
-            if (remainingTimeUntilDeadlineMillis > 0) {
-                ctx.setResponseTimeoutMillis(TimeoutMode.SET_FROM_NOW, remainingTimeUntilDeadlineMillis);
-                return true;
-            } else {
-                return false;
-            }
-        } else {
-            ctx.clearResponseTimeout();
-            return true;
-        }
     }
 }

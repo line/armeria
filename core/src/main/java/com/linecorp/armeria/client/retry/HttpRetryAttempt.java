@@ -150,11 +150,12 @@ final class HttpRetryAttempt {
          */
         DECIDED,
         /**
-         * The attempt was committed via {@link #commit()}. This is a terminal state.
+         * The attempt was committed via {@link #commit()}. This is a terminal state and the response
+         * is final.
          */
         COMMITTED,
         /**
-         * The attempt was aborted via {@link #abort(Throwable)}. The response is *going to be*
+         * The attempt was aborted via {@link #abort(Throwable)}. The response is
          * aborted via the same cause. In this state and only in this state {@link #cause} is not-{@code null}.
          * This is a terminal state.
          */
@@ -558,7 +559,7 @@ final class HttpRetryAttempt {
      * @param resForRule the response to be delivered to the {@link RetryRule} for decision.
      * @param causeForRule the cause to be delivered to the {@link RetryRule} for decision.
      * @return a future that will be completed with the {@link RetryDecision} or an exception if failed during
-     *        the decision.
+     *        the decision. The future will be completed on the retry event loop.
      */
     private CompletableFuture<RetryDecision> decide(@Nullable HttpResponse resForRule,
                                                     @Nullable Throwable causeForRule) {
@@ -601,6 +602,10 @@ final class HttpRetryAttempt {
         );
     }
 
+    /**
+     * Ensures the given {@link CompletionStage} completes on the retry event loop.
+     * If already on the retry event loop, completes directly; otherwise schedules completion.
+     */
     private <T> CompletableFuture<T> withCompletionOnRetryEventLoop(CompletionStage<T> future) {
         final CompletableFuture<T> futureOnTheRetryEventLoop = new CompletableFuture<>();
         future.whenComplete((result, cause) -> {

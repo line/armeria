@@ -26,8 +26,8 @@ import com.linecorp.armeria.common.logging.RequestLog;
  * A retried request that manages multiple retry attempts.
  *
  * <p>
- *  NOTE: All methods of {@link RetryScheduler} must be invoked from the
- *  {@code retryEventLoop}. Implementations of {@link RetriedRequest} therefore do not need to be thread-safe.
+ *  NOTE: All methods of {@link RetriedRequest} must be invoked from a single-threaded event loop.
+ *  Implementations of {@link RetriedRequest} therefore do not need to be thread-safe.
  * </p>
  *
  * @param <I> the {@link Request} type
@@ -92,9 +92,8 @@ interface RetriedRequest<I extends Request, O extends Response> {
      * </p>
      *
      * <p>
-     * It completed exceptionally in case something unexpected happened during the attempt execution.
-     * In particular, it completes exceptionally with a {@link AbortedAttemptException} if the attempt
-     * was aborted by the {@link RetriedRequest}. This could happen if the {@link RetriedRequest} completes
+     * It completes exceptionally with a {@link AbortedAttemptException} if the attempt
+     * was aborted by the {@link RetriedRequest}. This can happen when the {@link RetriedRequest} completes
      * concurrently while the attempt is being executed.
      * </p>
      *
@@ -107,7 +106,7 @@ interface RetriedRequest<I extends Request, O extends Response> {
     /**
      * Commits the attempt with the specified {@code attemptNumber}. Committing an attempt includes:
      * <ul>
-     *     <li>completing the original request with the attempt's response,</li>
+     *     <li>completing the original request future with the attempt's response,</li>
      *     <li>aborting all other pending attempts, and</li>
      *     <li>marking the {@link RetriedRequest} as completed.</li>
      * </ul>
@@ -118,13 +117,13 @@ interface RetriedRequest<I extends Request, O extends Response> {
     void commit(int attemptNumber);
 
     /**
-     * Aborts the attempt identified by the given {@code attemptNumber}.
+     * Aborts a specific attempt that was previously started via {@link #executeAttempt(Client)}.
      *
-     * <p>The attempt must have been previously started via
-     * {@link #executeAttempt(Client)}. Aborting an attempt ensures that its
-     * response and {@link RequestLog}
-     * complete, but that it will not be committed as the final result of the
-     * {@link RetriedRequest}.</p>
+     * <p>
+     *  The attempt must have been previously started via
+     *  {@link #executeAttempt(Client)}. Aborting an attempt ensures that the attempt's
+     *  response and {@link RequestLog} are completed but not set as the original request's response or log.
+     * </p>
      *
      * <p>If the {@link RetriedRequest} is already completed, this method has no effect.
      * If the specified attempt has not been started, an {@link IllegalStateException} is thrown.</p>
@@ -142,9 +141,8 @@ interface RetriedRequest<I extends Request, O extends Response> {
     void abort(Throwable cause);
 
     /**
-     * Returns the original {@link Response} that is completed when the {@link RetriedRequest} is completed.
-     * @return the {@link Response} with either a committed attempt's response or with an exception from a call
-     *         to {@link #abort(Throwable)} or from an unexpected error during the processing of an attempt.
+     * Returns the original {@link Response}. In case of a call to {@link #abort(Throwable)}, the returned
+     * {@link Response} is completed exceptionally with the same {@code cause}.
      */
     O res();
 }

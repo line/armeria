@@ -21,6 +21,7 @@ import java.net.URI;
 import java.time.Duration;
 import java.util.Date;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 
@@ -50,6 +51,7 @@ import com.linecorp.armeria.common.logging.RequestLogProperty;
 import com.linecorp.armeria.common.stream.StreamMessage;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.common.util.SafeCloseable;
+import com.linecorp.armeria.common.util.TimeoutMode;
 
 import io.netty.handler.codec.DateFormatter;
 
@@ -328,6 +330,54 @@ public final class ClientUtil {
         }
 
         return -1;
+    }
+
+    /**
+     * Sets the response timeout on a {@link ClientRequestContext} based on the minimum of a deadline
+     * and response timeout, or clears the timeout if neither is specified.
+     *
+     * <p>This method respects both absolute deadlines (in nanoseconds) and relative response timeouts
+     * (in milliseconds), using whichever is more restrictive. If the calculated timeout has already
+     * expired, the method returns {@code false} to indicate the request should be considered timed out.
+     *
+     * @param ctx the {@link ClientRequestContext} to configure
+     * @param deadlineTimeNanos absolute deadline in nanoseconds from {@link System#nanoTime()},
+     *                          or {@link Long#MAX_VALUE} if no deadline is set
+     * @param responseTimeoutMillis relative timeout in milliseconds, or {@code 0} if no timeout is set
+     * @return {@code true} if the timeout was successfully set/cleared and the request is still valid,
+     *         {@code false} if the request has already exceeded the calculated timeout
+     *
+     * @see ClientRequestContext#setResponseTimeoutMillis(TimeoutMode, long)
+     * @see ClientRequestContext#clearResponseTimeout()
+     */
+    public static boolean checkAndSetResponseTimeout(ClientRequestContext ctx, long deadlineTimeNanos,
+                                                     long responseTimeoutMillis) {
+        long remainingTimeUntilDeadlineMillis = Long.MAX_VALUE;
+        boolean hasTimeout = false;
+
+        if (deadlineTimeNanos < Long.MAX_VALUE) {
+            hasTimeout = true;
+            remainingTimeUntilDeadlineMillis = TimeUnit.NANOSECONDS.toMillis(
+                    deadlineTimeNanos - System.nanoTime());
+        }
+
+        if (responseTimeoutMillis != 0) {
+            hasTimeout = true;
+            remainingTimeUntilDeadlineMillis =
+                    Math.min(remainingTimeUntilDeadlineMillis, responseTimeoutMillis);
+        }
+
+        if (hasTimeout) {
+            if (remainingTimeUntilDeadlineMillis > 0) {
+                ctx.setResponseTimeoutMillis(TimeoutMode.SET_FROM_NOW, remainingTimeUntilDeadlineMillis);
+                return true;
+            } else {
+                return false;
+            }
+        } else {
+            ctx.clearResponseTimeout();
+            return true;
+        }
     }
 
     private ClientUtil() {}

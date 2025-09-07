@@ -232,6 +232,6 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
 
         final RetryCounter counter = new DefaultRetryCounter(config.maxTotalAttempts());
 
-        return new RetryContext(ctx.eventLoop(), request, scheduler, counter, delegate);
+        return new RetryContext(retryEventLoop, request, scheduler, counter, delegate);
     }
 }
