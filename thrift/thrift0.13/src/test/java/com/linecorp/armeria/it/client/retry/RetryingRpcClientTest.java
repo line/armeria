@@ -329,7 +329,7 @@ class RetryingRpcClientTest {
     }
 
     @Test
-    void doNotRetryWhenResponseIsCancelledAfterRequestComplete() throws Exception {
+    void doNotRetryWhenResponseIsCancelledAfterRequestCompletes() throws Exception {
         final AtomicInteger subscriberCancelServiceCallCounterWhenCancelled = new AtomicInteger(-1);
 
         try (ClientFactory factory = ClientFactory.builder().build()) {
@@ -368,8 +368,9 @@ class RetryingRpcClientTest {
             await().untilAsserted(() -> {
                 assertThat(serviceRetryCount.get()).isGreaterThanOrEqualTo(1);
                 // After we cancelled we do not expect further service calls.
+                // We allow an additional request in case we cancelled concurrently with an outgoing request.
                 assertThat(subscriberCancelServiceCallCounterWhenCancelled.get()).isIn(
-                        serviceRetryCount.get(), serviceRetryCount.get() + 1);
+                        serviceRetryCount.get() - 1, serviceRetryCount.get());
                 verify(serviceHandler, times(serviceRetryCount.get())).hello("hello");
             });
 
@@ -386,7 +387,7 @@ class RetryingRpcClientTest {
     }
 
     @Test
-    void doNotRetryWhenResponseIsCancelledBeforeRequestComplete() throws Exception {
+    void doNotRetryWhenResponseIsCancelledBeforeRequestCompletes() throws Exception {
         final AtomicInteger subscriberCancelServiceCallCounterWhenCancelled = new AtomicInteger(-1);
 
         try (ClientFactory factory = ClientFactory.builder().build()) {
