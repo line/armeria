@@ -38,6 +38,7 @@ final class AthenzSupport {
         final File athenzPublicKey = athenzConfig.getAthenzPublicKey();
         final URI proxyUri = athenzConfig.getProxyUri();
         final File athenzCaCert = athenzConfig.getAthenzCaCert();
+        final String oauth2KeyPath = athenzConfig.getOauth2KeysPath();
         final List<String> domains = athenzConfig.getDomains();
         final boolean jwsPolicySupport = athenzConfig.isJwsPolicySupport();
         final Duration policyRefreshInterval = athenzConfig.getPolicyRefreshInterval();
@@ -64,6 +65,7 @@ final class AthenzSupport {
             final Object athenzServiceDecoratorFactory = createMethod.invoke(null, sb, ztsUri, athenzPrivateKey,
                                                                              athenzPublicKey, proxyUri,
                                                                              athenzCaCert,
+                                                                             oauth2KeyPath,
                                                                              domains, jwsPolicySupport,
                                                                              policyRefreshInterval);
             assert "com.linecorp.armeria.server.athenz.AthenzServiceDecoratorFactory"
