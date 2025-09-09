@@ -197,6 +197,12 @@ public final class FileService extends AbstractHttpService {
         return findFile(ctx, req).asService().serve(ctx, req);
     }
 
+    @Override
+    protected HttpResponse doHead(ServiceRequestContext ctx, HttpRequest req) throws Exception {
+        // responds to https://datatracker.ietf.org/doc/html/rfc9110#name-range-requests
+        return HttpResponse.of(200);
+    }
+
     private HttpFile findFile(ServiceRequestContext ctx, HttpRequest req) {
         final EnumSet<ContentEncoding> encodings = EnumSet.noneOf(ContentEncoding.class);
 

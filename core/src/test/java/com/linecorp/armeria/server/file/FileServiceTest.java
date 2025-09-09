@@ -58,6 +58,7 @@ import com.google.common.io.Resources;
 import com.linecorp.armeria.client.BlockingWebClient;
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
+import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.annotation.Nullable;
@@ -670,6 +671,17 @@ class FileServiceTest {
         response = client.get("/extension/decompress/foo");
         assertThat(response.status()).isEqualTo(HttpStatus.OK);
         assertThat(response.contentUtf8()).isEqualTo("foo");
+    }
+
+    @Test
+    void rangeNotSupported() {
+        // not returning Accept-Ranges implies ranges are not supported
+        AggregatedHttpResponse res = server.blockingWebClient().head("/cached/fs/");
+        assertThat(res.status().code()).isEqualTo(200);
+        assertThat(res.headers().get(HttpHeaderNames.ACCEPT_RANGES)).isNull();
+        res = server.blockingWebClient().head("/cached/fs/auto_index");
+        assertThat(res.status().code()).isEqualTo(200);
+        assertThat(res.headers().get(HttpHeaderNames.ACCEPT_RANGES)).isNull();
     }
 
     private static void writeFile(Path path, String content) throws Exception {
