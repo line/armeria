@@ -28,6 +28,7 @@ import java.util.concurrent.LinkedBlockingQueue;
 import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
+import org.testcontainers.junit.jupiter.EnabledIfDockerAvailable;
 
 import com.linecorp.armeria.client.BlockingWebClient;
 import com.linecorp.armeria.client.ClientRequestContext;
@@ -50,6 +51,7 @@ import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
 import io.netty.handler.ssl.ClientAuth;
 
+@EnabledIfDockerAvailable
 class OAuth2KeysTest {
 
     private static final BlockingQueue<ClientRequestContext> athenzCtxs = new LinkedBlockingQueue<>();
