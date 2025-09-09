@@ -59,12 +59,17 @@ interface RetryScheduler {
     void close();
 
     /**
-     * Returns a future that is completed
+     * Returns a future that is completed when the scheduler is closed. It completes
      * <ul>
      *     <li>normally, when the scheduler is closed after a successful call to {@link #close()}, or</li>
-     *     <li>exceptionally, when it is not possible to run a retry task once it was meant to be scheduled</li>
-     * </ul>.
-     * The future is guaranteed to be completed on the {@code retryEventLoop}.
+     *     <li>exceptionally, when it is not possible to run a retry task once it was meant to be scheduled.
+     *     </li>
+     * </ul>
+     *
+     * <p>
+     *  The future is guaranteed to be completed on the {@code retryEventLoop}.
+     *  This method must not throw an {@link Exception}.
+     * </p>
      *
      * @return a future that is completed when the scheduler is closed
      */
