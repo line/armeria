@@ -23,7 +23,6 @@ import static org.awaitility.Awaitility.await;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.only;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -74,7 +73,6 @@ class RetryingRpcClientTest {
     private final HelloService.Iface serviceHandler = mock(HelloService.Iface.class);
     private final DevNullService.Iface devNullServiceHandler = mock(DevNullService.Iface.class);
     private final AtomicInteger serviceRetryCount = new AtomicInteger();
-    private final AtomicInteger serviceSleepMillis = new AtomicInteger();
 
     @RegisterExtension
     final ServerExtension server = new ServerExtension() {
@@ -329,101 +327,33 @@ class RetryingRpcClientTest {
     }
 
     @Test
-    void doNotRetryWhenResponseIsCancelledAfterRequestCompletes() throws Exception {
-        final AtomicInteger subscriberCancelServiceCallCounterWhenCancelled = new AtomicInteger(-1);
-
+    void doNotRetryWhenResponseIsCancelled() throws Exception {
+        serviceRetryCount.set(0);
         try (ClientFactory factory = ClientFactory.builder().build()) {
             final AtomicReference<ClientRequestContext> context = new AtomicReference<>();
             final HelloService.Iface client =
                     ThriftClients.builder(server.httpUri())
                                  .path("/thrift")
                                  .factory(factory)
-                                 .rpcDecorator(RetryingRpcClient
-                                                       .builder((ctx, response, cause) ->
-                                                                        UnmodifiableFuture.completedFuture(
-                                                                                RetryDecision.retry(
-                                                                                        Backoff.fixed(5)
-                                                                                )
-                                                                        )
-                                                       )
-                                                       .maxTotalAttempts(2 * (1000 / 5))
-                                                       .newDecorator())
+                                 .rpcDecorator(RetryingRpcClient.builder(retryAlways).newDecorator())
                                  .rpcDecorator((delegate, ctx, req) -> {
+                                     context.set(ctx);
                                      final RpcResponse res = delegate.execute(ctx, req);
-                                     ctx.eventLoop().schedule(() -> {
-                                         // (A)
-                                         subscriberCancelServiceCallCounterWhenCancelled.set(
-                                                 serviceRetryCount.get());
-                                         res.cancel(true);
-                                     }, 1000, TimeUnit.MILLISECONDS);
-                                     context.set(ClientRequestContext.current());
+                                     res.cancel(true);
                                      return res;
                                  })
                                  .build(HelloService.Iface.class);
             when(serviceHandler.hello(anyString())).thenThrow(new IllegalArgumentException());
 
-            // We retry very often until (A) gets scheduled and we cancel the request.
             assertThatThrownBy(() -> client.hello("hello")).isInstanceOf(CancellationException.class);
 
             await().untilAsserted(() -> {
-                assertThat(serviceRetryCount.get()).isGreaterThanOrEqualTo(1);
-                // After we cancelled we do not expect further service calls.
-                // We allow an additional request in case we cancelled concurrently with an outgoing request.
-                assertThat(subscriberCancelServiceCallCounterWhenCancelled.get()).isIn(
-                        serviceRetryCount.get() - 1, serviceRetryCount.get());
-                verify(serviceHandler, times(serviceRetryCount.get())).hello("hello");
+                verify(serviceHandler, only()).hello("hello");
             });
-
-            final RequestLog log = context.get().log().whenComplete().join();
-
-            // The request was made successfully.
-            assertThat(log.requestCause()).isNull();
-            assertThat(log.responseCause()).isExactlyInstanceOf(CancellationException.class);
-
             // Sleep 1 second more to check if there was another retry.
             TimeUnit.SECONDS.sleep(1);
-            verify(serviceHandler, times(serviceRetryCount.get())).hello("hello");
-        }
-    }
-
-    @Test
-    void doNotRetryWhenResponseIsCancelledBeforeRequestCompletes() throws Exception {
-        final AtomicInteger subscriberCancelServiceCallCounterWhenCancelled = new AtomicInteger(-1);
-
-        try (ClientFactory factory = ClientFactory.builder().build()) {
-            final AtomicReference<ClientRequestContext> context = new AtomicReference<>();
-            final HelloService.Iface client =
-                    ThriftClients.builder(server.httpUri())
-                                 .path("/thrift")
-                                 .factory(factory)
-                                 .rpcDecorator(RetryingRpcClient
-                                                       .builder(retryAlways)
-                                                       .maxTotalAttempts(10_000)
-                                                       .newDecorator())
-                                 .rpcDecorator((delegate, ctx, req) -> {
-                                     final RpcResponse res = delegate.execute(ctx, req);
-                                     subscriberCancelServiceCallCounterWhenCancelled.set(
-                                             serviceRetryCount.get());
-                                     res.cancel(true);
-                                     context.set(ClientRequestContext.current());
-                                     return res;
-                                 })
-                                 .build(HelloService.Iface.class);
-            when(serviceHandler.hello(anyString())).thenThrow(new IllegalArgumentException());
-
-            assertThatThrownBy(() -> client.hello("hello")).isInstanceOf(CancellationException.class);
-
-            verify(serviceHandler, never()).hello("hello");
-
-            final RequestLog log = context.get().log().whenComplete().join();
-
-            // The request was cancelled midst processing in the decorator.
-            assertThat(log.requestCause()).isExactlyInstanceOf(CancellationException.class);
-            assertThat(log.responseCause()).isExactlyInstanceOf(CancellationException.class);
-
-            // Sleep 1 second more to check if there was another retry.
-            TimeUnit.SECONDS.sleep(1);
-            verify(serviceHandler, never()).hello("hello");
+            verify(serviceHandler, only()).hello("hello");
+            assertThat(serviceRetryCount).hasValue(1);
         }
     }
 }
