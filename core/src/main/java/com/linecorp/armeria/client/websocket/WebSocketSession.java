@@ -15,7 +15,7 @@
  */
 package com.linecorp.armeria.client.websocket;
 
-import static com.linecorp.armeria.internal.common.websocket.WebSocketUtil.newClientCloseWebSocketFrame;
+import static com.linecorp.armeria.internal.common.websocket.WebSocketUtil.newCloseWebSocketFrame;
 import static java.util.Objects.requireNonNull;
 
 import java.util.concurrent.CompletableFuture;
@@ -128,14 +128,16 @@ public final class WebSocketSession {
 
         final StreamMessage<HttpData> data =
                 streamMessage.map(webSocketFrame -> HttpData.wrap(encoder.encode(ctx, webSocketFrame)))
-                        .recoverAndResume(cause -> {
-                            if (cause instanceof ClosedStreamException) {
-                                return StreamMessage.aborted(cause);
-                            }
-                            ctx.logBuilder().requestCause(cause);
-                            ctx.logBuilder().responseCause(cause);
-                            return StreamMessage.of(HttpData.wrap(encoder.encode(
-                               ctx, newClientCloseWebSocketFrame(cause))));
+                        .endWith(cause -> {
+                           if (cause == null) {
+                               return null;
+                           }
+                           if (cause instanceof ClosedStreamException) {
+                               return null;
+                           }
+                           ctx.logBuilder().requestCause(cause);
+                           ctx.logBuilder().responseCause(cause);
+                           return HttpData.wrap(encoder.encode(ctx, newCloseWebSocketFrame(cause)));
                         });
 
         if (!outboundFuture.complete(data)) {
@@ -145,7 +147,7 @@ public final class WebSocketSession {
 
         inbound.whenComplete().exceptionally(cause -> {
             final Throwable wrapped = new InboundCompleteException("inbound stream was cancelled", cause);
-            data.abort(wrapped);
+            streamMessage.abort(wrapped);
             return null;
         });
     }

@@ -148,27 +148,13 @@ public final class WebSocketUtil {
         } else {
             closeStatus = WebSocketCloseStatus.INTERNAL_SERVER_ERROR;
         }
-        return WebSocketFrame.ofClose(closeStatus, closeReason(cause, closeStatus));
-    }
-
-    public static CloseWebSocketFrame newClientCloseWebSocketFrame(Throwable cause) {
-        final WebSocketCloseStatus closeStatus;
-        if (cause instanceof WebSocketProtocolViolationException) {
-            closeStatus = ((WebSocketProtocolViolationException) cause).closeStatus();
-        } else {
-            closeStatus = WebSocketCloseStatus.NORMAL_CLOSURE;
-        }
-        return WebSocketFrame.ofClose(closeStatus, closeReason(cause, closeStatus));
-    }
-
-    private static String closeReason(Throwable cause, WebSocketCloseStatus closeStatus) {
         // If the length of the phrase exceeds 125 characters, it is truncated to satisfy the
         // <a href="https://datatracker.ietf.org/doc/html/rfc6455#section-5.5">specification</a>.
         String reasonPhrase = maybeTruncate(cause.getMessage());
         if (reasonPhrase == null) {
             reasonPhrase = closeStatus.reasonPhrase();
         }
-        return reasonPhrase;
+        return WebSocketFrame.ofClose(closeStatus, reasonPhrase);
     }
 
     @Nullable

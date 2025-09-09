@@ -420,12 +420,15 @@ public final class DefaultWebSocketService implements WebSocketService, WebSocke
         assert decoder != null;
         decoder.setOutboundWebSocket(out);
         final StreamMessage<HttpData> data =
-                out.recoverAndResume(cause -> {
-                       if (cause instanceof ClosedStreamException) {
-                           return StreamMessage.aborted(cause);
-                       }
+                out.endWith(cause -> {
+                    if (cause == null) {
+                        return null;
+                    }
+                    if (cause instanceof ClosedStreamException) {
+                        return null;
+                    }
                        ctx.logBuilder().responseCause(cause);
-                       return StreamMessage.of(newCloseWebSocketFrame(cause));
+                       return newCloseWebSocketFrame(cause);
                    })
                    .map(frame -> HttpData.wrap(encoder.encode(ctx, frame)));
         return HttpResponse.of(responseHeadersBuilder.build(), data);
