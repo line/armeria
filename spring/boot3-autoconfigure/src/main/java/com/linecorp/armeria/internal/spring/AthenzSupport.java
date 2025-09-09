@@ -61,7 +61,7 @@ final class AthenzSupport {
                     "com.linecorp.armeria.internal.server.athenz.AthenzServiceDecoratorFactoryProvider");
             final Method createMethod = factoryProvider.getMethod(
                     "create", ServerBuilder.class, URI.class, File.class, File.class,
-                    URI.class, File.class, List.class, boolean.class, Duration.class);
+                    URI.class, File.class, String.class, List.class, boolean.class, Duration.class);
             final Object athenzServiceDecoratorFactory = createMethod.invoke(null, sb, ztsUri, athenzPrivateKey,
                                                                              athenzPublicKey, proxyUri,
                                                                              athenzCaCert,
