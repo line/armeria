@@ -3392,6 +3392,7 @@ hachijo.tokyo.jp
 hachinohe.aomori.jp
 hachioji.tokyo.jp
 hachirogata.akita.jp
+hackclub.app
 hacker.replit.dev
 hadano.kanagawa.jp
 hadsel.no
@@ -4824,7 +4825,6 @@ lib.me.us
 lib.mi.us
 lib.mn.us
 lib.mo.us
-lib.ms.us
 lib.mt.us
 lib.nc.us
 lib.nd.us
@@ -7866,6 +7866,7 @@ shonai.fukuoka.jp
 shonai.yamagata.jp
 shoo.okayama.jp
 shop
+shop.brendly.ba
 shop.brendly.hr
 shop.brendly.rs
 shop.ht
