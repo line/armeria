@@ -22,8 +22,6 @@ import static com.linecorp.armeria.server.athenz.AthenzDocker.TEST_SERVICE;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.List;
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.LinkedBlockingQueue;
 
 import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Test;
@@ -31,7 +29,6 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 import org.testcontainers.junit.jupiter.EnabledIfDockerAvailable;
 
 import com.linecorp.armeria.client.BlockingWebClient;
-import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.client.athenz.AthenzClient;
 import com.linecorp.armeria.client.athenz.ZtsBaseClient;
@@ -53,8 +50,6 @@ import io.netty.handler.ssl.ClientAuth;
 
 @EnabledIfDockerAvailable
 class OAuth2KeysTest {
-
-    private static final BlockingQueue<ClientRequestContext> athenzCtxs = new LinkedBlockingQueue<>();
 
     @Order(0)
     @RegisterExtension
@@ -86,10 +81,6 @@ class OAuth2KeysTest {
             sb.tlsProvider(tlsProvider, serverTlsConfig);
             final ZtsBaseClient ztsBaseClient = athenzExtension.newZtsBaseClient(TEST_SERVICE);
             final WebClient webClient = ztsBaseClient.webClient(cb -> {
-                cb.decorator((delegate, ctx, req) -> {
-                    athenzCtxs.add(ctx);
-                    return delegate.execute(ctx, req);
-                });
                 cb.decorator(LoggingClient.newDecorator());
             });
             sb.service(Route.ofCatchAll(), (ctx, req) -> {
