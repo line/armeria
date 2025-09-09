@@ -17,8 +17,7 @@ package com.linecorp.armeria.client.retry;
 
 import static java.util.Objects.requireNonNull;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import java.util.concurrent.CompletableFuture;
 
 import com.linecorp.armeria.client.Client;
 import com.linecorp.armeria.client.ClientRequestContext;
@@ -41,8 +40,6 @@ import io.netty.util.AsciiString;
 public abstract class AbstractRetryingClient
         <I extends Request, O extends Response>
         extends SimpleDecoratingClient<I, O> {
-    private static final Logger logger = LoggerFactory.getLogger(AbstractRetryingClient.class);
-
     /**
      * The header which indicates the retry count of a {@link Request}.
      * The server might use this value to reject excessive retries, etc.
@@ -78,18 +75,61 @@ public abstract class AbstractRetryingClient
                                                      "retryMapping.get() returned null");
         final RetryContext rctx = newRetryContext(unwrap(), ctx, req, config);
 
+        if (rctx.retryEventLoop().inEventLoop()) {
+            prepareAndRetry(rctx);
+        } else {
+            rctx.retryEventLoop().execute(() -> prepareAndRetry(rctx));
+        }
+
+        return rctx.res();
+    }
+
+    private void prepareAndRetry(RetryContext rctx) {
+        assert rctx.retryEventLoop().inEventLoop();
+
+        try {
+            prepareRetry(rctx);
+        } catch (Throwable cause) {
+            handleUnexpectedException(rctx, cause);
+            return;
+        }
+
+        // retry() does not throw.
+        retry(rctx, null);
+    }
+
+    private void prepareRetry(RetryContext rctx) {
+        rctx.res().whenComplete().handle((result, cause) -> {
+            final Throwable abortCause;
+            if (cause != null) {
+                abortCause = cause;
+            } else {
+                abortCause = AbortedStreamException.get();
+            }
+            if (rctx.retryEventLoop().inEventLoop()) {
+                rctx.req().abort(abortCause);
+            } else {
+                rctx.retryEventLoop().execute(() -> rctx.req().abort(abortCause));
+            }
+            return null;
+        });
+
         // The request could complete at any moment.
         // In that case, let us make sure that we close the scheduler so we
         // do not run any retry task unnecessarily.
         // That said, running retry() even with a completed response is handled by
         // rctx.request().executeAttempt() which throws an AbortedAttemptException which we handle gracefully.
-        rctx.request().res().whenComplete().handle((unused, cause) -> {
+        rctx.req().whenComplete().handle((res, cause) -> {
+            assert rctx.retryEventLoop().inEventLoop();
             // Make sure we do not unnecessarily run any retry task.
-            if (rctx.retryEventLoop().inEventLoop()) {
-                rctx.scheduler().close();
+            rctx.scheduler().close();
+
+            if (cause != null) {
+                rctx.resFuture().completeExceptionally(cause);
             } else {
-                rctx.retryEventLoop().execute(rctx.scheduler()::close);
+                rctx.resFuture().complete(res);
             }
+
             return null;
         });
 
@@ -104,20 +144,13 @@ public abstract class AbstractRetryingClient
                         "retry scheduler was closed before the request was completed");
             }
 
-            rctx.request().abort(cause);
+            rctx.req().abort(cause);
             return null;
         });
-
-        if (rctx.retryEventLoop().inEventLoop()) {
-            retry(rctx, null);
-        } else {
-            rctx.retryEventLoop().execute(() -> retry(rctx, null));
-        }
-
-        return rctx.request().res();
     }
 
     // NOTE:
+    // - Does not throw.
     // - Must run on the retryEventLoop.
     // - The first call must be done from execute() above.
     // - Subsequent calls must only be issued in the retry task scheduled by `rctx.scheduler()`.
@@ -126,56 +159,64 @@ public abstract class AbstractRetryingClient
             RetryContext rctx,
             @Nullable Backoff previousBackoff
     ) {
-        // First record the execution of the following attempt. This increases the attempt count
-        // and the attempt count for the backoff. Also see (A) for a correctness argument.
-        rctx.counter().consumeAttemptFrom(previousBackoff);
+        try {
+            // First record the execution of the following attempt. This increases the attempt count
+            // and the attempt count for the backoff. Also see (A) for a correctness argument.
+            rctx.counter().consumeAttemptFrom(previousBackoff);
 
-        rctx.request()
-            .executeAttempt(rctx.delegate())
-            .handle((executionResult, cause) -> {
-                assert rctx.retryEventLoop().inEventLoop();
+            rctx.req()
+                .executeAttempt(rctx.delegate())
+                .handle((executionResult, cause) -> {
+                    assert rctx.retryEventLoop().inEventLoop();
 
-                if (cause != null) {
-                    if (cause instanceof AbortedAttemptException) {
-                        // The attempt was aborted in the course of executing it. This can happen when
-                        // we execute an attempt on a completed request or when the request is completed while
-                        // RetriedRequest is waiting for the response of the attempt.
+                    if (cause != null) {
+                        rctx.req().abort(
+                                new IllegalStateException("expected RetriedRequest to be completed"));
+
+                        if (cause instanceof AbortedAttemptException) {
+                            // The attempt was aborted in the course of executing it. This can happen when
+                            // we execute an attempt on a completed request or when the request is completed
+                            // while RetriedRequest is waiting for the response of the attempt.
+                            return null;
+                        }
+
                         return null;
                     }
-                    // Make sure we complete the request with the exception. We could have been aborted because
-                    // another attempt already completed the request but this is not an issue as the call to
-                    // `request.abort()` has no effect then.
-                    rctx.request().abort(
-                            cause != null ? cause : new IllegalStateException("executionResult is null"));
+
+                    // An empty backoff means that the RetryRule to commit this attempt.
+                    if (executionResult.decision().backoff() == null) {
+                        rctx.req().commit(executionResult.attemptNumber());
+                        return null;
+                    }
+
+                    // Note that applying the pushback needs to be done before the call
+                    // to tryScheduleRetryAfter`.
+                    if (executionResult.minimumBackoffMillis() > 0) {
+                        rctx.scheduler().applyMinimumBackoffMillisForNextRetry(
+                                executionResult.minimumBackoffMillis());
+                    }
+
+                    tryScheduleRetryAfter(rctx, executionResult.decision().backoff());
+
+                    if (!rctx.scheduler().hasNextRetryTask()) {
+                        // We are not going to retry again so we are the last attempt. Let us commit it even if
+                        // the response was deemed to be unsatisfactory by the RetryRule (backoff != null).
+                        rctx.req().commit(executionResult.attemptNumber());
+                    } else {
+                        // The responsibility of aborting the RetriedRequest is now with the retry
+                        // scheduled by `tryScheduleRetryAfter()`. Thus, we can safely abort this attempt now.
+                        rctx.req().abort(executionResult.attemptNumber(), AbortedStreamException.get());
+                    }
+
                     return null;
-                }
-
-                // An empty backoff means that the RetryRule to commit this attempt.
-                if (executionResult.decision().backoff() == null) {
-                    rctx.request().commit(executionResult.attemptNumber());
+                })
+                .exceptionally(cause -> {
+                    handleUnexpectedException(rctx, cause);
                     return null;
-                }
-
-                // Note that applying the pushback needs to be done before the call to tryScheduleRetryAfter`.
-                if (executionResult.minimumBackoffMillis() > 0) {
-                    rctx.scheduler().applyMinimumBackoffMillisForNextRetry(
-                            executionResult.minimumBackoffMillis());
-                }
-
-                tryScheduleRetryAfter(rctx, executionResult.decision().backoff());
-
-                if (!rctx.scheduler().hasNextRetryTask()) {
-                    // We are not going to retry again so we are the last attempt. Let us commit it even if
-                    // the response was deemed to be unsatisfactory by the RetryRule (backoff != null).
-                    rctx.request().commit(executionResult.attemptNumber());
-                } else {
-                    // The responsibility of aborting the RetriedRequest is now with the retry task scheduled
-                    // by `tryScheduleRetryAfter()`. Thus, we can safely abort this attempt now.
-                    rctx.request().abort(executionResult.attemptNumber(), AbortedStreamException.get());
-                }
-
-                return null;
-            });
+                });
+        } catch (Throwable cause) {
+            handleUnexpectedException(rctx, cause);
+        }
     }
 
     // NOTE: Must run on the retryEventLoop.
@@ -208,29 +249,48 @@ public abstract class AbstractRetryingClient
                                                       nextRetryDelayMillisFromBackoff);
     }
 
-    protected final class RetryContext {
+    private void handleUnexpectedException(RetryContext rctx, Throwable cause) {
+        assert rctx.retryEventLoop().inEventLoop();
+        // Aborting the request will trigger the cleanup logic in prepareRetry().
+        rctx.req().abort(new IllegalStateException("Unexpected exception during retrying", cause));
+    }
 
+    protected final class RetryContext {
         final EventLoop retryEventLoop;
-        final RetriedRequest<I, O> request;
+        final RetriedRequest<I, O> req;
         final RetryScheduler scheduler;
         final RetryCounter counter;
         final Client<I, O> delegate;
+        final O res;
+        final CompletableFuture<O> resFuture;
 
-        RetryContext(EventLoop retryEventLoop, RetriedRequest<I, O> request,
-                     RetryScheduler scheduler, RetryCounter counter, Client<I, O> delegate) {
+        RetryContext(EventLoop retryEventLoop, RetriedRequest<I, O> req,
+                     RetryScheduler scheduler, RetryCounter counter, Client<I, O> delegate,
+                     O res,
+                     CompletableFuture<O> resFuture) {
             this.retryEventLoop = retryEventLoop;
-            this.request = request;
+            this.req = req;
             this.scheduler = scheduler;
             this.counter = counter;
             this.delegate = delegate;
+            this.res = res;
+            this.resFuture = resFuture;
         }
 
         EventLoop retryEventLoop() {
             return retryEventLoop;
         }
 
-        RetriedRequest<I, O> request() {
-            return request;
+        RetriedRequest<I, O> req() {
+            return req;
+        }
+
+        O res() {
+            return res;
+        }
+
+        CompletableFuture<O> resFuture() {
+            return resFuture;
         }
 
         RetryScheduler scheduler() {

@@ -21,7 +21,6 @@ import static com.google.common.base.Preconditions.checkState;
 import java.util.ArrayList;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
-import java.util.concurrent.TimeUnit;
 
 import com.linecorp.armeria.client.Client;
 import com.linecorp.armeria.client.ClientRequestContext;
@@ -31,7 +30,6 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.RpcResponse;
 import com.linecorp.armeria.common.annotation.Nullable;
-import com.linecorp.armeria.common.stream.AbortedStreamException;
 import com.linecorp.armeria.common.util.UnmodifiableFuture;
 import com.linecorp.armeria.internal.client.ClientUtil;
 
@@ -55,6 +53,7 @@ class RetriedRpcRequest implements RetriedRequest<RpcRequest, RpcResponse> {
          * Terminal state. Either {@link #commit(int)} or {@link #abort(Throwable)} was called.
          * {@link RetriedRpcRequest} will not execute any more attempts in that it completes every call
          * to {@link #executeAttempt(Client)} with an {@link AbortedAttemptException}.
+         * {@link #completedFuture} is completed.
          */
         COMPLETED
     }
@@ -62,9 +61,8 @@ class RetriedRpcRequest implements RetriedRequest<RpcRequest, RpcResponse> {
     private final ContextAwareEventLoop retryEventLoop;
     private final RetryConfig<RpcResponse> config;
     private final ClientRequestContext ctx;
-    private final RpcResponse res;
-    private final CompletableFuture<RpcResponse> resFuture;
     private final RpcRequest req;
+    private final CompletableFuture<RpcResponse> completedFuture;
 
     private final long deadlineTimeNanos;
 
@@ -79,21 +77,14 @@ class RetriedRpcRequest implements RetriedRequest<RpcRequest, RpcResponse> {
             RetryConfig<RpcResponse> config,
             ClientRequestContext ctx,
             RpcRequest req,
-            RpcResponse res, CompletableFuture<RpcResponse> resFuture
+            long deadlineTimeNanos
     ) {
         this.retryEventLoop = retryEventLoop;
         this.ctx = ctx;
-        this.res = res;
-        this.resFuture = resFuture;
         this.req = req;
         this.config = config;
-
-        final long responseTimeoutMillis = ctx.responseTimeoutMillis();
-        if (responseTimeoutMillis <= 0 || responseTimeoutMillis == Long.MAX_VALUE) {
-            deadlineTimeNanos = Long.MAX_VALUE;
-        } else {
-            deadlineTimeNanos = System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(responseTimeoutMillis);
-        }
+        this.deadlineTimeNanos = deadlineTimeNanos;
+        completedFuture = new CompletableFuture<>();
 
         state = State.IDLE;
         previousAttemptNumber = 0;
@@ -104,48 +95,14 @@ class RetriedRpcRequest implements RetriedRequest<RpcRequest, RpcResponse> {
     @Override
     public CompletionStage<AttemptExecutionResult> executeAttempt(
             Client<RpcRequest, RpcResponse> delegate) {
-        checkState(ctx.eventLoop().inEventLoop());
-        init();
-        return executeAttemptAfterInit(delegate);
-    }
-
-    /**
-     * Initializes the {@link RetriedRpcRequest}. This method is idempotent.
-     * Initialization mean subscribing to the original {@link RpcResponse} so that we can
-     * abort all attempts when the original {@link RpcResponse} is completed.
-     */
-    private void init() {
-        assert ctx.eventLoop().inEventLoop();
-
-        if (state == State.PENDING || state == State.COMPLETED) {
-            return;
-        }
-
-        assert state == State.IDLE : state;
-        state = State.PENDING;
-
-        res.whenComplete().handle((result, cause) -> {
-            final Throwable abortCause;
-            if (cause != null) {
-                abortCause = cause;
-            } else {
-                abortCause = AbortedStreamException.get();
-            }
-            if (retryEventLoop.inEventLoop()) {
-                abort(abortCause);
-            } else {
-                retryEventLoop.execute(() -> abort(abortCause));
-            }
-            return null;
-        });
-    }
-
-    private CompletionStage<AttemptExecutionResult> executeAttemptAfterInit(
-            Client<RpcRequest, RpcResponse> delegate) {
-        assert retryEventLoop.inEventLoop();
+        checkState(retryEventLoop.inEventLoop());
 
         if (state == State.COMPLETED) {
             return UnmodifiableFuture.exceptionallyCompletedFuture(AbortedAttemptException.get());
+        }
+
+        if (state == State.IDLE) {
+            state = State.PENDING;
         }
 
         // We need to be initialized/ the reqDuplicator must be present.
@@ -220,7 +177,8 @@ class RetriedRpcRequest implements RetriedRequest<RpcRequest, RpcResponse> {
         if (attemptReq != null) {
             ctx.updateRequest(attemptReq);
         }
-        resFuture.complete(attemptRes);
+
+        completedFuture.complete(attemptRes);
     }
 
     @Override
@@ -231,6 +189,8 @@ class RetriedRpcRequest implements RetriedRequest<RpcRequest, RpcResponse> {
             return;
         }
 
+        assert !completedFuture.isDone();
+
         state = State.COMPLETED;
 
         abortAllExcept(null);
@@ -239,7 +199,8 @@ class RetriedRpcRequest implements RetriedRequest<RpcRequest, RpcResponse> {
             ctx.logBuilder().endRequest(cause);
         }
         ctx.logBuilder().endResponse(cause);
-        resFuture.completeExceptionally(cause);
+
+        completedFuture.completeExceptionally(cause);
     }
 
     @Override
@@ -273,11 +234,7 @@ class RetriedRpcRequest implements RetriedRequest<RpcRequest, RpcResponse> {
     }
 
     @Override
-    public RpcResponse res() {
-        return res;
-    }
-
-    public long deadlineTimeNanos() {
-        return deadlineTimeNanos;
+    public CompletableFuture<RpcResponse> whenComplete() {
+        return completedFuture;
     }
 }

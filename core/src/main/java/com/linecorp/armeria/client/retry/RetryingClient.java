@@ -29,6 +29,7 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.internal.client.ClientUtil;
 
 /**
  * An {@link HttpClient} decorator that handles failures of an invocation and retries HTTP requests.
@@ -221,17 +222,18 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
 
         final ContextAwareEventLoop retryEventLoop = ctx.eventLoop();
 
-        final RetriedHttpRequest request = new RetriedHttpRequest(
-                retryEventLoop, config, ctx, req, res, resFuture, useRetryAfter
+        final long deadlineTimeNanos = ClientUtil.deadlineTimeNanos(ctx);
+        final RetriedHttpRequest retriedReq = new RetriedHttpRequest(
+                retryEventLoop, config, ctx, req, deadlineTimeNanos, useRetryAfter
         );
 
         final RetryScheduler scheduler = new DefaultRetryScheduler(
                 retryEventLoop,
-                request.deadlineTimeNanos()
+                deadlineTimeNanos
         );
 
         final RetryCounter counter = new DefaultRetryCounter(config.maxTotalAttempts());
 
-        return new RetryContext(retryEventLoop, request, scheduler, counter, delegate);
+        return new RetryContext(retryEventLoop, retriedReq, scheduler, counter, delegate, res, resFuture);
     }
 }

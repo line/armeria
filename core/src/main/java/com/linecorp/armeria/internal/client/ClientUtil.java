@@ -333,6 +333,22 @@ public final class ClientUtil {
     }
 
     /**
+     * Returns the deadline in nanoseconds for the given {@link ClientRequestContext} based on its
+     * response timeout. If no response timeout is set, {@link Long#MAX_VALUE} will be returned.
+     *
+     * @param ctx the {@link ClientRequestContext} to get the response timeout from
+     * @return the deadline in nanoseconds, or {@link Long#MAX_VALUE} if no response timeout is set
+     */
+    public static long deadlineTimeNanos(ClientRequestContext ctx) {
+        final long responseTimeoutMillis = ctx.responseTimeoutMillis();
+        if (responseTimeoutMillis <= 0 || responseTimeoutMillis == Long.MAX_VALUE) {
+            return Long.MAX_VALUE;
+        } else {
+            return System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(responseTimeoutMillis);
+        }
+    }
+
+    /**
      * Sets the response timeout on a {@link ClientRequestContext} based on the minimum of a deadline
      * and response timeout, or clears the timeout if neither is specified.
      *

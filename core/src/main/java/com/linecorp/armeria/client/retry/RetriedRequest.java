@@ -15,6 +15,7 @@
  */
 package com.linecorp.armeria.client.retry;
 
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 
 import com.linecorp.armeria.client.Client;
@@ -26,7 +27,8 @@ import com.linecorp.armeria.common.logging.RequestLog;
  * A retried request that manages multiple retry attempts.
  *
  * <p>
- *  NOTE: All methods of {@link RetriedRequest} must be invoked from a single-threaded event loop.
+ *  NOTE: All methods of {@link RetriedRequest} must be invoked from a single-threaded event loop ("retry event
+ *  loop").
  *  Implementations of {@link RetriedRequest} therefore do not need to be thread-safe.
  * </p>
  *
@@ -141,8 +143,15 @@ interface RetriedRequest<I extends Request, O extends Response> {
     void abort(Throwable cause);
 
     /**
-     * Returns the original {@link Response}. In case of a call to {@link #abort(Throwable)}, the returned
-     * {@link Response} is completed exceptionally with the same {@code cause}.
+     * Returns a future that completes when this {@link RetriedRequest} is completed.
+     * <ul>
+     *     <li>Completes successfully with the response of the attempt committed by {@link #commit(int)}</li>
+     *     <li>Completes exceptionally with the cause from {@link #abort(Throwable)}</li>
+     * </ul>
+     * Note: {@link #abort(Throwable)} may be called internally when unexpected errors occur.
+     *
+     * @return a future that completes successfully with the committed attempt's response or
+     *         exceptionally with the abort cause. It is guaranteed to be completed on the retry event loop.
      */
-    O res();
+    CompletableFuture<O> whenComplete();
 }

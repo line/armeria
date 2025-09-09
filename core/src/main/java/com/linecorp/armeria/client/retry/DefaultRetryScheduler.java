@@ -69,6 +69,8 @@ final class DefaultRetryScheduler implements RetryScheduler {
             try {
                 retryTaskToRun.run();
             } catch (Throwable t) {
+                // Normally we are running retry() which does not throw an exception
+                // but let us be defensive here.
                 closeExceptionally(t);
             }
         }

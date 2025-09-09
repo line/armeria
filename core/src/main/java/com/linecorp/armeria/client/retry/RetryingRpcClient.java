@@ -25,6 +25,7 @@ import com.linecorp.armeria.common.ContextAwareEventLoop;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.RpcResponse;
+import com.linecorp.armeria.internal.client.ClientUtil;
 
 /**
  * An {@link RpcClient} decorator that handles failures of an invocation and retries RPC requests.
@@ -144,17 +145,19 @@ public final class RetryingRpcClient
 
         final ContextAwareEventLoop retryEventLoop = ctx.eventLoop();
 
-        final RetriedRpcRequest request = new RetriedRpcRequest(
-                retryEventLoop, config, ctx, req, res, resFuture
+        final long deadlineTimeNanos = ClientUtil.deadlineTimeNanos(ctx);
+
+        final RetriedRpcRequest retriedReq = new RetriedRpcRequest(
+                retryEventLoop, config, ctx, req, deadlineTimeNanos
         );
 
         final RetryScheduler scheduler = new DefaultRetryScheduler(
                 retryEventLoop,
-                request.deadlineTimeNanos()
+                deadlineTimeNanos
         );
 
         final RetryCounter counter = new DefaultRetryCounter(config.maxTotalAttempts());
 
-        return new RetryContext(retryEventLoop, request, scheduler, counter, delegate);
+        return new RetryContext(retryEventLoop, retriedReq, scheduler, counter, delegate, res, resFuture);
     }
 }

@@ -68,7 +68,6 @@ interface RetryScheduler {
      *
      * <p>
      *  The future is guaranteed to be completed on the {@code retryEventLoop}.
-     *  This method must not throw an {@link Exception}.
      * </p>
      *
      * @return a future that is completed when the scheduler is closed

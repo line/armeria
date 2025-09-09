@@ -22,7 +22,6 @@ import static com.linecorp.armeria.client.retry.AbstractRetryingClient.ARMERIA_R
 import java.util.ArrayList;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
-import java.util.concurrent.TimeUnit;
 
 import com.linecorp.armeria.client.Client;
 import com.linecorp.armeria.client.ClientRequestContext;
@@ -34,7 +33,6 @@ import com.linecorp.armeria.common.HttpRequestDuplicator;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.RequestHeadersBuilder;
 import com.linecorp.armeria.common.annotation.Nullable;
-import com.linecorp.armeria.common.stream.AbortedStreamException;
 import com.linecorp.armeria.common.util.UnmodifiableFuture;
 import com.linecorp.armeria.internal.client.AggregatedHttpRequestDuplicator;
 import com.linecorp.armeria.internal.client.ClientUtil;
@@ -58,6 +56,7 @@ class RetriedHttpRequest implements RetriedRequest<HttpRequest, HttpResponse> {
          * Terminal state. Either {@link #commit(int)} or {@link #abort(Throwable)} was called.
          * {@link RetriedHttpRequest} will not execute any more attempts in that it completes every call
          * to {@link #executeAttempt(Client)} exceptionally with an {@link AbortedAttemptException}.
+         * {@link #completedFuture} is completed.
          */
         COMPLETED
     }
@@ -65,12 +64,11 @@ class RetriedHttpRequest implements RetriedRequest<HttpRequest, HttpResponse> {
     private final ContextAwareEventLoop retryEventLoop;
     private final RetryConfig<HttpResponse> config;
     private final ClientRequestContext ctx;
-    private final HttpResponse res;
-    private final CompletableFuture<HttpResponse> resFuture;
     private final HttpRequest req;
 
     private final long deadlineTimeNanos;
     private final boolean useRetryAfter;
+    private final CompletableFuture<HttpResponse> completedFuture;
 
     private State state;
 
@@ -94,23 +92,18 @@ class RetriedHttpRequest implements RetriedRequest<HttpRequest, HttpResponse> {
             RetryConfig<HttpResponse> config,
             ClientRequestContext ctx,
             HttpRequest req,
-            HttpResponse res, CompletableFuture<HttpResponse> resFuture, boolean useRetryAfter
+            long deadlineTimeNanos,
+            boolean useRetryAfter
     ) {
         this.retryEventLoop = retryEventLoop;
         this.ctx = ctx;
-        this.res = res;
-        this.resFuture = resFuture;
         this.req = req;
         this.config = config;
         this.useRetryAfter = useRetryAfter;
-        initFuture = new CompletableFuture<>();
+        this.deadlineTimeNanos = deadlineTimeNanos;
 
-        final long responseTimeoutMillis = ctx.responseTimeoutMillis();
-        if (responseTimeoutMillis <= 0 || responseTimeoutMillis == Long.MAX_VALUE) {
-            deadlineTimeNanos = Long.MAX_VALUE;
-        } else {
-            deadlineTimeNanos = System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(responseTimeoutMillis);
-        }
+        completedFuture = new CompletableFuture<>();
+        initFuture = new CompletableFuture<>();
 
         state = State.IDLE;
         previousAttemptNumber = 0;
@@ -130,7 +123,6 @@ class RetriedHttpRequest implements RetriedRequest<HttpRequest, HttpResponse> {
      * Initializes the {@link RetriedHttpRequest}. This method is idempotent.
      * Initialization includes
      *      - subscribing to {@link #req} to initiate abortion in case its fails,
-     *      - subscribing to {@link #res} to initiate abortion in case it fails or completes, and
      *      - building and setting {@link #reqDuplicator}.
      *
      * @return a future that completes when the initialization is done. After the future completes
@@ -155,21 +147,6 @@ class RetriedHttpRequest implements RetriedRequest<HttpRequest, HttpResponse> {
                 } else {
                     retryEventLoop.execute(() -> abort(cause));
                 }
-            }
-            return null;
-        });
-
-        res.whenComplete().handle((result, cause) -> {
-            final Throwable abortCause;
-            if (cause != null) {
-                abortCause = cause;
-            } else {
-                abortCause = AbortedStreamException.get();
-            }
-            if (retryEventLoop.inEventLoop()) {
-                abort(abortCause);
-            } else {
-                retryEventLoop.execute(() -> abort(abortCause));
             }
             return null;
         });
@@ -286,23 +263,25 @@ class RetriedHttpRequest implements RetriedRequest<HttpRequest, HttpResponse> {
         }
         checkState(state == State.PENDING);
         assert reqDuplicator != null;
+        assert !completedFuture.isDone();
 
         checkArgument(attemptNumber >= 1);
         checkArgument(attemptNumber <= attempts.size());
 
         final HttpRetryAttempt attemptToCommit = attempts.get(attemptNumber - 1);
 
-        checkState(attemptToCommit != null);
         checkState(attemptToCommit.state() == HttpRetryAttempt.State.DECIDED);
 
         state = State.COMPLETED;
 
         abortAllExcept(attemptToCommit);
 
+        final HttpResponse res = attemptToCommit.commit();
+
         reqDuplicator.close();
-        final HttpResponse attemptRes = attemptToCommit.commit();
         ctx.logBuilder().endResponseWithChild(attemptToCommit.ctx().log());
-        resFuture.complete(attemptRes);
+
+        completedFuture.complete(res);
     }
 
     @Override
@@ -312,6 +291,7 @@ class RetriedHttpRequest implements RetriedRequest<HttpRequest, HttpResponse> {
         if (state == State.COMPLETED) {
             return;
         }
+        assert !completedFuture.isDone();
 
         state = State.COMPLETED;
 
@@ -325,7 +305,7 @@ class RetriedHttpRequest implements RetriedRequest<HttpRequest, HttpResponse> {
             ctx.logBuilder().endRequest(cause);
         }
         ctx.logBuilder().endResponse(cause);
-        resFuture.completeExceptionally(cause);
+        completedFuture.completeExceptionally(cause);
     }
 
     @Override
@@ -359,11 +339,7 @@ class RetriedHttpRequest implements RetriedRequest<HttpRequest, HttpResponse> {
     }
 
     @Override
-    public HttpResponse res() {
-        return res;
-    }
-
-    public long deadlineTimeNanos() {
-        return deadlineTimeNanos;
+    public CompletableFuture<HttpResponse> whenComplete() {
+        return completedFuture;
     }
 }
