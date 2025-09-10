@@ -74,6 +74,13 @@ public final class AthenzConfig {
     private File athenzCaCert;
 
     /**
+     * The path of the Athenz JWKS endpoint used for OAuth2 token verification.
+     * Defaults to {@code "/oauth2/keys?rfc=true"} if not specified.
+     */
+    @Nullable
+    private String oauth2KeysPath;
+
+    /**
      * The list of domains to fetch Athenz policies for.
      *
      * <p>Mandatory: This field must be set to use Athenz.
@@ -173,6 +180,23 @@ public final class AthenzConfig {
      */
     public void setAthenzCaCert(@Nullable File athenzCaCert) {
         this.athenzCaCert = athenzCaCert;
+    }
+
+    /**
+     * Returns the path of the Athenz JWKS endpoint used for OAuth2 token verification.
+     * Defaults to {@code "/oauth2/keys?rfc=true"} if not specified.
+     */
+    @Nullable
+    public String getOauth2KeysPath() {
+        return oauth2KeysPath;
+    }
+
+    /**
+     * Sets the path of the Athenz JWKS endpoint used for OAuth2 token verification.
+     * Defaults to {@code "/oauth2/keys?rfc=true"} if not specified.
+     */
+    public void setOauth2KeysPath(@Nullable String oauth2KeysPath) {
+        this.oauth2KeysPath = oauth2KeysPath;
     }
 
     /**

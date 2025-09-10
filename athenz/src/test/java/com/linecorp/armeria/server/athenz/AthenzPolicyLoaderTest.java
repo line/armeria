@@ -49,7 +49,8 @@ class AthenzPolicyLoaderTest {
     void loadPolicyFiles(boolean jwsPolicySupport) throws Exception {
         try (ZtsBaseClient baseClient = athenzExtension.newZtsBaseClient(TEST_SERVICE)) {
             final PublicKeyStore publicKeyStore = new AthenzPublicKeyProvider(baseClient,
-                                                                              Duration.ofSeconds(10));
+                                                                              Duration.ofSeconds(10),
+                                                                              "/oauth2/keys?rfc=true");
             final AthenzPolicyConfig policyConfig = new AthenzPolicyConfig(ImmutableList.of(TEST_DOMAIN_NAME),
                                                                            ImmutableMap.of(), jwsPolicySupport,
                                                                            Duration.ofSeconds(10));
