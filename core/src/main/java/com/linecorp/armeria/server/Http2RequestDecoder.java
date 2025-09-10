@@ -282,6 +282,10 @@ final class Http2RequestDecoder extends Http2EventAdapter {
             // Ignored if the stream has already been closed.
             req.close(ClosedStreamException.get());
         }
+        final ServerHttp2ObjectEncoder encoder = this.encoder;
+        if (encoder != null) {
+            encoder.notifyStreamClosed(stream.id());
+        }
     }
 
     @Override

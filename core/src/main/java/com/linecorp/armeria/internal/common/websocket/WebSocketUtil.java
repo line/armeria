@@ -45,6 +45,7 @@ public final class WebSocketUtil {
     public static final long DEFAULT_REQUEST_RESPONSE_TIMEOUT_MILLIS = 0;
     public static final long DEFAULT_MAX_REQUEST_RESPONSE_LENGTH = 0;
     public static final long DEFAULT_REQUEST_AUTO_ABORT_DELAY_MILLIS = 5000;
+    public static final long DEFAULT_CLOSE_HTTP2_STREAM_DELAY_MILLIS = 10_000;
 
     public static boolean isHttp1WebSocketUpgradeRequest(RequestHeaders headers) {
         requireNonNull(headers, "headers");
