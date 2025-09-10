@@ -36,6 +36,7 @@
   right: -128px;
   transform: rotate(-10deg);
   opacity: 0.1;
+  pointer-events: none;
 }
 
 .testimonial {
