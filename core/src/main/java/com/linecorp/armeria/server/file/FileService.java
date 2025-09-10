@@ -199,8 +199,7 @@ public final class FileService extends AbstractHttpService {
 
     @Override
     protected HttpResponse doHead(ServiceRequestContext ctx, HttpRequest req) throws Exception {
-        // responds to https://datatracker.ietf.org/doc/html/rfc9110#name-range-requests
-        return HttpResponse.of(200);
+        return findFile(ctx, req).asService().serve(ctx, req);
     }
 
     private HttpFile findFile(ServiceRequestContext ctx, HttpRequest req) {

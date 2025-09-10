@@ -674,14 +674,18 @@ class FileServiceTest {
     }
 
     @Test
-    void rangeNotSupported() {
-        // not returning Accept-Ranges implies ranges are not supported
+    void headTest() throws Exception {
         AggregatedHttpResponse res = server.blockingWebClient().head("/cached/fs/");
         assertThat(res.status().code()).isEqualTo(200);
-        assertThat(res.headers().get(HttpHeaderNames.ACCEPT_RANGES)).isNull();
-        res = server.blockingWebClient().head("/cached/fs/auto_index");
+
+        final Path barFile = tmpDir.resolve("bar.html");
+        final String content = "<html/>";
+        writeFile(barFile, content);
+        res = server.blockingWebClient().head("/cached/fs/bar.html");
         assertThat(res.status().code()).isEqualTo(200);
-        assertThat(res.headers().get(HttpHeaderNames.ACCEPT_RANGES)).isNull();
+
+        res = server.blockingWebClient().head("/cached/fs/missing.html");
+        assertThat(res.status().code()).isEqualTo(404);
     }
 
     private static void writeFile(Path path, String content) throws Exception {
