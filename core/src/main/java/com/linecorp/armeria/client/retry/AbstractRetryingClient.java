@@ -94,8 +94,8 @@ public abstract class AbstractRetryingClient
             return;
         }
 
-        // retry() does not throw.
-        retry(rctx, null);
+        // Let us execute retry() through the scheduler so that it sees the first retry task.
+        assert rctx.scheduler().trySchedule(() -> retry(rctx, null), 0);
     }
 
     private void prepareRetry(RetryContext rctx) {
@@ -152,7 +152,7 @@ public abstract class AbstractRetryingClient
     // NOTE:
     // - Does not throw.
     // - Must run on the retryEventLoop.
-    // - The first call must be done from execute() above.
+    // - The first call must be done from prepareAndRetry() above.
     // - Subsequent calls must only be issued in the retry task scheduled by `rctx.scheduler()`.
     //   The corresponding `scheduler.schedule()` calls must all be done from ´tryScheduleRetryAfter()´ below.
     private void retry(
@@ -196,9 +196,10 @@ public abstract class AbstractRetryingClient
                                 executionResult.minimumBackoffMillis());
                     }
 
-                    tryScheduleRetryAfter(rctx, executionResult.decision().backoff());
+                    final boolean isNextRetryScheduledOrExecuted =
+                            tryScheduleRetryAfter(rctx, executionResult.decision().backoff());
 
-                    if (!rctx.scheduler().hasNextRetryTask()) {
+                    if (!isNextRetryScheduledOrExecuted) {
                         // We are not going to retry again so we are the last attempt. Let us commit it even if
                         // the response was deemed to be unsatisfactory by the RetryRule (backoff != null).
                         rctx.req().commit(executionResult.attemptNumber());
@@ -220,9 +221,9 @@ public abstract class AbstractRetryingClient
     }
 
     // NOTE: Must run on the retryEventLoop.
-    private void tryScheduleRetryAfter(RetryContext rctx, Backoff nextBackoff) {
+    private boolean tryScheduleRetryAfter(RetryContext rctx, Backoff nextBackoff) {
         if (rctx.counter().hasReachedMaxAttempts()) {
-            return;
+            return false;
         }
 
         final long nextRetryDelayMillisFromBackoff = nextBackoff.nextDelayMillis(
@@ -234,7 +235,7 @@ public abstract class AbstractRetryingClient
 
         if (nextRetryDelayMillisFromBackoff < 0) {
             // We exceeded the attempt limit for the backoff.
-            return;
+            return false;
         }
 
         // (A): We are under `maxAttempts` have also not exceeded the backoff attempt limit so let us
@@ -245,8 +246,8 @@ public abstract class AbstractRetryingClient
         //   are the same.
         // 2. Based on 1., the delay we use to schedule the retry task is indeed the one we consume in the retry
         //    task via `counter.consumeAttemptFrom(nextBackoff)`.
-        rctx.scheduler().trySchedule(/* retry task */ () -> retry(rctx, nextBackoff),
-                                                      nextRetryDelayMillisFromBackoff);
+        return rctx.scheduler().trySchedule(/* retry task */ () -> retry(rctx, nextBackoff),
+                                                             nextRetryDelayMillisFromBackoff);
     }
 
     private void handleUnexpectedException(RetryContext rctx, Throwable cause) {

@@ -90,11 +90,11 @@ final class DefaultRetryScheduler implements RetryScheduler {
     }
 
     @Override
-    public void trySchedule(Runnable retryTask, long delayMillis) {
+    public boolean trySchedule(Runnable retryTask, long delayMillis) {
         checkInRetryEventLoop();
 
         if (isClosed()) {
-            return;
+            return false;
         }
 
         // We are a sequential scheduler there must not be a nextRetryTask already set.
@@ -107,7 +107,7 @@ final class DefaultRetryScheduler implements RetryScheduler {
         final long retryTimeNanos = Math.max(System.nanoTime() + delayNanos, earliestRetryTimeNanos);
 
         if (retryTimeNanos > deadlineTimeNanos) {
-            return;
+            return false;
         }
 
         try {
@@ -116,8 +116,9 @@ final class DefaultRetryScheduler implements RetryScheduler {
 
             nextRetryTask = retryTask;
             if (nextRetryDelayMillis <= 0) {
+                // Run immediately.
                 nextRetryTaskFuture = null;
-                retryEventLoop.execute(retryTaskWrapper);
+                retryTaskWrapper.run();
             } else {
                 nextRetryTaskFuture = retryEventLoop.schedule(
                         retryTaskWrapper, nextRetryDelayMillis,
@@ -137,8 +138,11 @@ final class DefaultRetryScheduler implements RetryScheduler {
                     }
                 });
             }
+
+            return true;
         } catch (Throwable t) {
             closeExceptionally(t);
+            return false;
         }
     }
 
@@ -161,8 +165,7 @@ final class DefaultRetryScheduler implements RetryScheduler {
         );
     }
 
-    @Override
-    public boolean hasNextRetryTask() {
+    private boolean hasNextRetryTask() {
         checkInRetryEventLoop();
         // NOTE: nextRetryTask is null when scheduler is closed.
         return nextRetryTask != null;
