@@ -19,7 +19,6 @@ import static com.linecorp.armeria.client.retry.AbstractRetryingClient.ARMERIA_R
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.catchThrowable;
-import static org.assertj.core.api.Fail.fail;
 import static org.awaitility.Awaitility.await;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doThrow;
@@ -60,6 +59,7 @@ import com.linecorp.armeria.common.RpcResponse;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.util.TimeoutMode;
 import com.linecorp.armeria.common.util.UnmodifiableFuture;
+import com.linecorp.armeria.internal.testing.BlockingUtils;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.thrift.THttpService;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
@@ -384,11 +384,9 @@ class RetryingRpcClientTest {
                                      // make sure you are executing (prepare)Retry() on the retry event loop and
                                      // that the retry event loop is ctx.eventLoop().
                                      ctx.eventLoop().execute(() -> {
-                                         try {
+                                         BlockingUtils.blockingRun(() -> {
                                              canRetry.await();
-                                         } catch (InterruptedException e) {
-                                             fail(e);
-                                         }
+                                         });
                                      });
 
                                      return delegate.execute(ctx, req);
