@@ -1,7 +1,7 @@
 /*
- * Copyright 2020 LINE Corporation
+ * Copyright 2025 LY Corporation
  *
- * LINE Corporation licenses this file to you under the Apache License,
+ * LY Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
@@ -16,7 +16,10 @@
 
 package com.linecorp.armeria.client.retry;
 
+import static java.util.Objects.requireNonNull;
+
 import java.util.function.BiFunction;
+import java.util.function.Function;
 
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.common.Request;
@@ -24,7 +27,7 @@ import com.linecorp.armeria.common.Response;
 
 /**
  * Returns a {@link RetryConfig} given the {@link ClientRequestContext}.
- * Allows users to change retry behavior according to any context element, like host, method, path ...etc.
+ * Allows users to change retry behavior according to any context element, like host, method, path, etc.
  */
 @FunctionalInterface
 public interface RetryConfigMapping<T extends Response> {
@@ -54,6 +57,40 @@ public interface RetryConfigMapping<T extends Response> {
             BiFunction<? super ClientRequestContext, Request, String> keyFactory,
             BiFunction<? super ClientRequestContext, Request, RetryConfig<T>> retryConfigFactory) {
         return new KeyedRetryConfigMapping<>(keyFactory, retryConfigFactory);
+    }
+
+    static <T extends Response> RetryConfigMappingBuilder<T> builder() {
+        return new RetryConfigMappingBuilder<>();
+    }
+
+    static <T extends Response> RetryConfigMapping<T> perMethod(Function<String, RetryConfig<T>> factory) {
+        requireNonNull(factory, "factory");
+        return RetryConfigMapping.<T>builder()
+                                 .perMethod()
+                                 .build((host, method, path) -> factory.apply(method));
+    }
+
+    static <T extends Response> RetryConfigMapping<T> perHost(Function<String, RetryConfig<T>> factory) {
+        requireNonNull(factory, "factory");
+        return RetryConfigMapping.<T>builder()
+                                 .perHost()
+                                 .build((host, method, path) -> factory.apply(host));
+    }
+
+    static <T extends Response> RetryConfigMapping<T> perPath(Function<String, RetryConfig<T>> factory) {
+        requireNonNull(factory, "factory");
+        return RetryConfigMapping.<T>builder()
+                                 .perPath()
+                                 .build((host, method, path) -> factory.apply(path));
+    }
+
+    static <T extends Response> RetryConfigMapping<T> perHostAndMethod(
+            BiFunction<String, String, RetryConfig<T>> factory) {
+        requireNonNull(factory, "factory");
+        return RetryConfigMapping.<T>builder()
+                                 .perHost()
+                                 .perMethod()
+                                 .build((host, method, path) -> factory.apply(host, method));
     }
 
     /**

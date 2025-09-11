@@ -1,7 +1,7 @@
 /*
- * Copyright 2017 LINE Corporation
+ * Copyright 2025 LY Corporation
  *
- * LINE Corporation licenses this file to you under the Apache License,
+ * LY Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
@@ -664,6 +664,21 @@ class RetryingClientTest {
     }
 
     @Test
+    void doNotRetryWhenNoRetryConfigIsGiven() throws InterruptedException {
+        // test with /500-then-success. check response code and retry count
+        final WebClient client = client(RetryConfig.noRetry(), 10000);
+        final AggregatedHttpResponse res = client.get("/retry-after-with-http-date").aggregate().join();
+
+        assertThat(res.status()).isEqualTo(HttpStatus.SERVICE_UNAVAILABLE);
+        assertThat(reqCount.get()).isEqualTo(1);
+
+        // Sleep 1 second more to check if there was another retry.
+        Thread.sleep(1000);
+
+        assertThat(reqCount.get()).isEqualTo(1);
+    }
+
+    @Test
     void doNotRetryWhenResponseIsAborted() throws Exception {
         final List<Throwable> abortCauses =
                 Arrays.asList(null, new IllegalStateException("abort stream with a specified cause"));
@@ -852,36 +867,36 @@ class RetryingClientTest {
 
     private WebClient client(RetryRule retryRule, long responseTimeoutMillis,
                              long responseTimeoutForEach, int maxTotalAttempts) {
-        final Function<? super HttpClient, RetryingClient> retryingDecorator =
-                RetryingClient.builder(
-                                      RetryConfig.<HttpResponse>builder0(retryRule)
-                                                 .responseTimeoutMillisForEachAttempt(responseTimeoutForEach)
-                                                 .maxTotalAttempts(maxTotalAttempts)
-                                                 .build())
-                              .useRetryAfter(true)
-                              .newDecorator();
-
-        return WebClient.builder(server.httpUri())
-                        .factory(clientFactory)
-                        .responseTimeoutMillis(responseTimeoutMillis)
-                        .decorator(retryingDecorator)
-                        .build();
+        return client(
+                RetryConfig.builder(retryRule)
+                        .responseTimeoutMillisForEachAttempt(responseTimeoutForEach)
+                        .maxTotalAttempts(maxTotalAttempts)
+                        .build()
+                , responseTimeoutMillis
+        );
     }
 
     private WebClient client(RetryRuleWithContent<HttpResponse> retryRuleWithContent,
                              long responseTimeoutMillis,
                              long responseTimeoutForEach, int maxTotalAttempts) {
+        return client(
+                RetryConfig.builder(retryRuleWithContent)
+                        .responseTimeoutMillisForEachAttempt(responseTimeoutForEach)
+                        .maxTotalAttempts(maxTotalAttempts)
+                        .build()
+                , responseTimeoutMillis
+        );
+    }
+
+    private WebClient client(RetryConfig<HttpResponse> retryConfig, long responseTimeoutMillis) {
         final Function<? super HttpClient, RetryingClient> retryingDecorator =
-                RetryingClient.builder(retryRuleWithContent)
-                              .responseTimeoutMillisForEachAttempt(responseTimeoutForEach)
+                RetryingClient.builder(retryConfig)
                               .useRetryAfter(true)
-                              .maxTotalAttempts(maxTotalAttempts)
                               .newDecorator();
 
         return WebClient.builder(server.httpUri())
                         .factory(clientFactory)
                         .responseTimeoutMillis(responseTimeoutMillis)
-                        .decorator(LoggingClient.newDecorator())
                         .decorator(retryingDecorator)
                         .build();
     }
