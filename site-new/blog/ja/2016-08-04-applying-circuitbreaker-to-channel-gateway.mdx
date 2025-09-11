@@ -1,0 +1,173 @@
+---
+authors:
+  - shinjonghun
+---
+
+# チャネルゲートウェイへのCircuitBreakerの適用
+
+## はじめに
+
+[Circuit Breakerの紹介記事](../../../ja/blog/detail/76)を先に読むことを推奨します。
+
+## チャネルゲートウェイにCircuitBreakerを適用する
+
+チャネルゲートウェイサーバは、LINEの多様なサーバの機能をCP(Contents Provider)に提供する役割を担っています。そのため、チャネルゲートウェイサーバは接続されているサーバに大きく影響されます。なお、そうした影響はチャネルゲートウェイサーバ全体に容易に拡散します。
+
+![](https://engineering.linecorp.com/wp-content/uploads/2016/08/channel-gateway.png)
+
+{/* truncate */}
+
+この問題の解決に悩んでいたところ、CircuitBreakerに関する内容を聞きました。特定のサーバに障害が発生した場合、CircuitBreakerがそれを検知してそのサーバに投げられるリクエストを遮断すれば、問題を十分解決できると思いました。そのため、チャネルゲートウェイにCircuitBreakerを適用することを決めました。
+
+チャネルゲートウェイ用のCircuitBreakerを直接実装することもできましたが、[Armeria](http://line.github.io/armeria/)にすでに見事なCircuit Breakerが実装されていました。ArmeriaのCircuitBreakerは、様々なオプションをニーズに合わせて設定し、`CircuitBreakerBuilder`で実装されたCircuitBreakerオブジェクトを得ることができます。このオブジェクトによってチャネルゲートウェイに合わせてカスタマイズできるようになっているので、簡単に適用することができました。
+
+## CircuitBreakerのアノテーションの使用
+
+talk-channel-gatewayソースコードにおいてCircuitBreakerは、`@CircuitBreakable`アノテーションを使用して適用できます。
+
+```
+@CircuitBreakable(CircuitBreakerGroup.HBASE_CLIENT_USER_SETTINGS)
+public ChannelSettings findBy(String mid) {
+    ...
+}
+```
+
+上記のように適用した場合、`findBy()`メソッドが呼び出される度に成功/失敗を監視し、その結果によってCircuitBreakerが開閉します。HBASE_CLIENT_USER_SETTINGSはCircuitBreakerで束ねるグループを指定するもので、各メソッドの失敗率を計算する際もグループ全体の呼び出し回数に対する失敗回数で計算し、CircuitBreakerの開閉時も一緒に開閉します。
+
+CircuitBreakerの設定は、`CircuitBreakerGroup`というenumオブジェクトで次のように設定できます。
+
+```
+public enum CircuitBreakerGroup implements ExceptionFilter {
+    SAMPLE_DEFAULT {
+    },
+    SAMPLE_API {
+        @Override
+        protected ExceptionFilter exceptionFilter() {
+            return cause -> !(cause instanceof AuthenticationException
+                              || cause instanceof ApiPermissionException
+                              || cause instanceof ImproperRequestException);
+        }
+    },
+    HBASE_CLIENT_CHANNEL_MATRIX {
+    },
+    HBASE_CLIENT_USER_SETTINGS {
+    };
+
+    protected ExceptionFilter exceptionFilter() {
+        return cause -> true;
+    }
+
+    public CircuitBreaker circuitBreaker(CircuitBreakerListener listener) {
+        return new `CircuitBreakerBuilder`(name()).exceptionFilter(exceptionFilter())
+                                                .listener(listener)
+                                                .build();
+    }
+
+    @Override
+    public boolean shouldDealWith(Throwable throwable) throws Exception {
+        return exceptionFilter().shouldDealWith(throwable);
+    }
+}
+```
+
+チャネルゲートウェイでは`ExceptionFilter`をカスタマイズして使用しました。それ以外のオプションは、Armeriaのデフォルトオプションをそのまま使用しました。もし、他のオプションを変更して使いたい場合は、`circuitBreaker()`メソッドを修正して使用できるでしょう。
+
+Armeriaでは、どんなものであってもExceptionが発生した場合は基本的に失敗とみなすようになっています。しかし、チャネルゲートウェイでは、権限がない場合などをExceptionとして処理して返すので、それを区分する必要がありました。そのため、`ExceptionFilter`をカスタマイズして使用しました。そして、CircuitBreakerのステータスが変わる度にログを蓄積できるように、チャネルゲートウェイのためのListenerも追加しました。
+
+アノテーションに適用するグループはenumオブジェクトで指定でき、enumオブジェクトを実装部においてグループごとに設定を変えられるようにしました。
+
+## CircuitBreakerにおけるproceed()の実装
+
+[Aspect](https://en.wikipedia.org/wiki/AspectJ) オブジェクトの`proceed()`コードは以下のとおりです。
+
+```
+public class CircuitBreakerAspect implements Ordered {
+
+    private final Map&lt;CircuitBreakerGroup, CircuitBreaker>
+    circuitBreakers = new EnumMap&lt;>(CircuitBreakerGroup.class);
+
+    @PostConstruct
+    public void initialize() {
+
+        final CircuitBreakerListener listener = new
+        CircuitBreakerListenerImpl(circuitBreakerLogger);
+        for (CircuitBreakerGroup group : CircuitBreakerGroup.values()) {
+            circuitBreakers.put(group, group.circuitBreaker(listener));
+        }
+    }
+
+    public Object proceed(final ProceedingJoinPoint pjp, final CircuitBreakable
+    circuitBreakable) throws Throwable {
+
+        final CircuitBreakerGroup group = circuitBreakable.value();
+        final CircuitBreaker circuitBreaker = circuitBreakers.get(group);
+
+        if (circuitBreaker.canRequest()) {
+            final Object result;
+
+            try {
+                result = pjp.proceed();
+            } catch (Throwable e) {
+                if (group.shouldDealWith(e)) {
+                    circuitBreaker.onFailure(e);
+                } else {
+                    circuitBreaker.onSuccess();
+                }
+                throw e;
+            }
+
+            circuitBreaker.onSuccess();
+            return result;
+        } else {
+            throw CircuitBreakerException.circuitBroken();
+        }
+    }
+}
+```
+
+コードは比較的に簡単です。`CircuitBreaker.canRequest()`によってCircuitBreakerが開放されている場合は、Exceptionを発生させます。そうでない場合は、メソッドを正常に呼び出します。呼び出した結果Exceptionが発生し、そのExceptionを失敗として処理すべき場合は、CircuitBreakerに失敗したと知らせます。そうでない場合は、CircuitBreakerに成功したと知らせるだけで済みます。
+
+ちなみに、実際に適用したコードにはCircuitBreakerが正しく適用されたかどうかを確認するためにIMON Logger※注と関連するコードが入っています。しかし、ここではCircuitBreaker部分に集中できるように省略しました。
+
+※注：IMONは、社内の多様なサービスをモニタリングするためのシステムです。IMON Loggerは、対象サービスの統計指標とログを取りまとめてIMONに送る機能を果たしています。
+
+## CircuitBreakerの設定変更メソッド
+
+CircuitBreakerオブジェクトを作ってくれる`CircuitBreakerBuilder`は、CircuitBreakerの設定を変更できる様々なメソッドを提供しています。なるべくデフォルトの設定をそのまま使用することを推奨しますが、CircuitBreakerの設定について、もっと分かりやすく説明しておきたいと思います。
+
+| Method                      | Parameter              | Default                             | Description                                                                                                                                                                                                                                                                                                                                                                                                                              |
+| --------------------------- | ---------------------- | ----------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| failureRateThreshold        | double                 | 0.8                                 | CircuitBreakerの開閉を判断する際に使用するための失敗率です。`counterSlidingWindow`期間中の失敗率がこの値を上回る場合はCircuitBreakerが開放されます。デフォルト値をそのまま使用する場合、80%以上失敗するとCircuitBreakerが開放されます。つまり、成功率が20%未満ならCircuitBreakerが開放されるわけです。                                                                                                                                   |
+| minimumRequestThreshold     | long                   | 10                                  | CircuitBreakerを開閉を判断するための最低呼び出し回数です。`counterSlidingWindow`期間中の呼び出し回数がこの値を下回る場合は CircuitBreakerの開閉を判断しません。                                                                                                                                                                                                                                                                          |
+| circuitOpenWindow           | Duration               | 10 seconds                          | CircuitBreakerがOpen状態になってからHalf-Open状態に変わるまでの時間です。CircuitBreakerの開放後は、`circuitOpenWindow`期間だけの時間が過ぎてからHalf-Open状態に変わり、リクエストをテストします。                                                                                                                                                                                                                                        |
+| circuitOpenWindowMillis     | long                   | 10000                               |
+| trialRequestInterval        | Duration               | 3 seconds                           | Half-Open状態で投げたリクエストがClosed応答を返さなかった場合、リクエストをリトライするための待ち時間です。`trialRequestInterval`時間以内に応答が返ってきた場合は、その結果によってClosedまたはOpen状態に変わります。もし、Open状態になった場合は、再度`circuitOpenWindow`期間だけ待機してからリクエストをテストします。しかし、投げたリクエストが`trialRequestInterval`期間中に何も応答も返さなかった場合、リクエストをリトライします。 |
+| trialRequestIntervalMillis  | long                   | 3000                                |
+| counterSlidingWindow        | Duration               | 20 seconds                          | CircuitBreakerの開閉を判断する際、最近の`counterSlidingWindow`期間分の記録をもって判断します。デフォルト値をそのまま使用すれば、ここ20秒間のリクエスト結果だけで判断するようになります。                                                                                                                                                                                                                                                 |
+| counterSlidingWindowMillis  | long                   | 20000                               |
+| counterUpdateInterval       | Duration               | 1 second                            | CircuitBreakerでは、リクエストの結果を`SlidingWindowCounter`によって保管していますが、ここで保管する単位となる時間を意味します。デフォルト値をそのまま使用すると、1秒単位で記録を保持します。例えば、ここ20秒前=成功20回、失敗0回 / ここ19秒前=成功25回、失敗1回 / … / ここ1秒前=成功21回、失敗0回などの記録を保持します。この1秒単位の記録で`counterSlidingWindow`期間分を計算し、失敗率を出します。                                    |
+| counterUpdateIntervalMillis | long                   | 1000                                |
+| exceptionFilter             | ExceptionFilter        | すべてのExceptionを失敗としてみなす | Exceptionが発生した場合、そのExceptionを失敗としてみなすかどうかを返すオブジェクトです。デフォルト値をそのまま使用すれば、すべてのExceptionを失敗とみなします。                                                                                                                                                                                                                                                                          |
+| listener                    | CircuitBreakerListener |                                     | CircuitBreakerのStateが変わった場合、`counterUpdateInterval`の時間が過ぎた場合、CircuitBreakerが開放されてリクエストがリジェクトされた場合に対するイベントを受信できるListenerです。                                                                                                                                                                                                                                                     |
+
+## まとめ
+
+これまでは、チャネルゲートウェイの一部で障害が発生すると、対応する前にすでに大きな被害が出ていました。一部で発生した障害がThread Full現象をまねき、結局はサービス全体に影響を与えたためです。しかし、これからはCircuitBreakerがそのような部分を遮断してくれるので、より余裕を持って対応できるようになるでしょう。
+
+最後に、上述の設定を利用してCircuitBreakerの動作方法を説明します。
+
+- CircuitBreakerの初期状態は*Closed*です。
+- _Closed_ : リクエストを遂行した後、`ExceptionFilter`によって次のように動作します。
+  - 結果が成功なら、成功したという記録を残し、*Closed*状態に変わります。
+  - 結果が失敗なら、`counterSlidingWindow`期間分のリクエスト結果を確認して
+    - minimumRequestThreshold数より多く、失敗率がfailureRateThreshold以上であれば、*Open*状態に変わります。
+    - そうでない場合は、Closed状態が維持されます。
+- _Open_ : `circuitOpenWindow`期間が過ぎれば、*Half-Open*状態に変わります。
+- _Half-Open_ : 最初に入ってくるリクエストを遂行した後、`ExceptionFilter`によって次のように動作します。
+  - 結果が成功なら、*Closed*状態に変わります。
+  - 結果が成功なら、*Open*状態に変わります。
+  - `trialRequestInterval`の時間以内に応答がなければ、*Half-Open*状態でその次に入ってくる最初のリクエストの結果によって分岐処理します。
+
+## 作成者の紹介
+
+Shin Jong Hun：面倒なことが大嫌いで、面倒を減らすために悩み続けています。これがプログラミングが好きになった理由なのですが、なんだかやることが増えた気がするのは自分だけでしょうかね？

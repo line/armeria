@@ -1,0 +1,195 @@
+---
+authors:
+  - shinjonghun
+---
+
+# Applying CircuitBreaker to Channel Gateway
+
+## Before reading
+
+If you have yet to read the introductory article to circuit breakers, I recommend you read the following article first: [Circuit Breakers for distributed services](../../../en/blog/detail/76)
+
+## Applying CircuitBreaker to Channel Gateway
+
+Channel Gateway servers provide various LINE server features to content providers.
+This is why Channel Gateway servers are highly affected by the servers they are connected to, with the effects easily spreading across all Channel Gateway servers.
+
+![](https://engineering.linecorp.com/wp-content/uploads/2016/08/channel-gateway.png)
+
+{/* truncate */}
+
+It was when I was struggling to think of a solution to this problem that I first heard about circuit breakers.
+Circuit breakers seem to be what I was looking for since they are able to detect a problem in certain servers, blocking all requests that the server would have otherwise received.
+With that in mind, I decided to apply circuit breakers on Channel Gateway.
+
+While I could have implemented my own circuit breakers on Channel Gateway, there were already excellent circuit breakers on [Armeria](http://line.github.io/armeria).
+Armeria enables you to set various options on circuit breakers when you implement them using `CircuitBreakerBuilder`, generating your own `CircuitBreaker` object as a result.
+I was able to easily apply a customized circuit breaker on Channel Gateway thanks to this system.
+
+## Annotation for CircuitBreaker
+
+I was able to apply `CircuitBreaker` to the talk-channel-gateway source code with a `@CircuitBreakable` annotation.
+
+```
+@CircuitBreakable(CircuitBreakerGroup.HBASE_CLIENT_USER_SETTINGS)
+public ChannelSettings findBy(String mid) {
+    ...
+}
+```
+
+If applied like the example above, `CircuitBreaker` opens and closes depending on the results gathered while monitoring the successful/failed call attempts on the findBy() method.
+HBASE_CLIENT_USER_SETTINGS is used to specify the groups grouped by `CircuitBreaker`, calculating the group's percentage of failed calls out of the successful calls on methods, and opening and closing along with `CircuitBreaker`.
+You can change the options for `CircuitBreaker` with the enum object called `CircuitBreakerGroup` as shown below.
+
+```
+public enum CircuitBreakerGroup implements ExceptionFilter {
+
+    SAMPLE_DEFAULT {
+    },
+    SAMPLE_API {
+        @Override
+        protected ExceptionFilter exceptionFilter() {
+            return cause -> !(cause instanceof AuthenticationException
+                              || cause instanceof ApiPermissionException
+                              || cause instanceof ImproperRequestException);
+        }
+    },
+    HBASE_CLIENT_CHANNEL_MATRIX {
+    },
+    HBASE_CLIENT_USER_SETTINGS {
+    };
+
+    protected ExceptionFilter exceptionFilter() {
+        return cause -> true;
+    }
+
+    public CircuitBreaker circuitBreaker(CircuitBreakerListener listener) {
+        return new `CircuitBreakerBuilder`(name()).exceptionFilter(exceptionFilter())
+                                                .listener(listener)
+                                                .build();
+    }
+
+    @Override
+    public boolean shouldDealWith(Throwable throwable) throws Exception {
+        return exceptionFilter().shouldDealWith(throwable);
+    }
+}
+```
+
+I used a customized `ExceptionFilter` on Channel Gateway, while other options were kept at their default values from Armeria.
+You can change options to your needs by modifying the `circuitBreaker()` method.
+
+The default Armeria settings are set to identify any exception as a failure.
+However, Channel Gateway also treats any unauthorized accesses as exceptions, and there needed to be a distinction between these and the relevant exceptions.
+That's why I had to customize `ExceptionFilter`.
+I also added an event listener for Channel Gateway so that logs would be recorded each time a change is detected in `CircuitBreaker`.
+
+The groups applied to annotations can be specified using the enum object, and you can set different settings for each group when implementing the enum object.
+
+## Implementing proceed() for CircuitBreaker
+
+The `proceed()` code for the [Aspect](https://en.wikipedia.org/wiki/aspectj) object is as shown below.
+
+```
+public class CircuitBreakerAspect implements Ordered {
+
+    private final Map&lt;CircuitBreakerGroup, CircuitBreaker>
+    circuitBreakers = new EnumMap&lt;>(CircuitBreakerGroup.class);
+
+    @PostConstruct
+    public void initialize() {
+
+        final CircuitBreakerListener listener = new
+        CircuitBreakerListenerImpl(circuitBreakerLogger);
+        for (CircuitBreakerGroup group : CircuitBreakerGroup.values()) {
+            circuitBreakers.put(group, group.circuitBreaker(listener));
+        }
+    }
+
+    public Object proceed(final ProceedingJoinPoint pjp, final CircuitBreakable
+    circuitBreakable) throws Throwable {
+
+        final CircuitBreakerGroup group = circuitBreakable.value();
+        final CircuitBreaker circuitBreaker = circuitBreakers.get(group);
+
+        if (circuitBreaker.canRequest()) {
+            final Object result;
+
+            try {
+                result = pjp.proceed();
+            } catch (Throwable e) {
+                if (group.shouldDealWith(e)) {
+                    circuitBreaker.onFailure(e);
+                } else {
+                    circuitBreaker.onSuccess();
+                }
+                throw e;
+            }
+
+            circuitBreaker.onSuccess();
+            return result;
+        } else {
+            throw CircuitBreakerException.circuitBroken();
+        }
+    }
+}
+```
+
+The code itself is quite simple.
+If `CircuitBreaker` is open through `CircuitBreaker.canRequest()`, an exception occurs.
+If not, the method is called normally.
+If the result of the call caused an exception, and the exception is identified as a failure, `CircuitBreaker` is notified that it's a failure.
+If not, `CircuitBreaker` is notified that it's a success.
+
+For you information, the actual code has code related to IMON Logger1 to check if `CircuitBreaker` is working as intended.
+I omitted that feature from this article to focus more on `CircuitBreaker` only.
+
+_1 IMON Logger: IMON is a system LINE engineers use to monitor various company services.
+IMON Logger collects the statistics and logs from these services and sends them to IMON._
+
+## Methods used to change settings for CircuitBreaker
+
+`CircuitBreakerBuilder` provides many methods that you can use to build your own customized `CircuitBreaker`.
+While I recommend using the default settings, here are some details for each setting to help you get a better idea about them.
+
+| Method                      | Parameter              | Default       | Description                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| --------------------------- | ---------------------- | ------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| failureRateThreshold        | double                 | 0.8           | This is the failure rate used to determine whether CircuitBreaker should open or not. If the failure rate (during the duration of `counterSlidingWindow`) is higher than this value, CircuitBreaker opens. The default value is set to open CircuitBreaker if the failure rate is above 80%. In other words, CircuitBreaker opens if the success rate is below 20%.                                                                                                          |
+| minimumRequestThreshold     | long                   | 10            | The minimum amount of call requests required to determine whether CircuitBreaker should open or not. If the number of requests (during the duration of `counterSlidingWindow`) is lower than this value, CircuitBreaker does not change its status.                                                                                                                                                                                                                          |
+| circuitOpenWindow           | Duration               | 10 seconds    | The amount of time CircuitBreaker stays open before going into the half-open state. After CircuitBreaker has been open for the duration of `circuitOpenWindow`, CircuitBreaker will change its state to half-open and test requests again.                                                                                                                                                                                                                                   |
+| circuitOpenWindowMillis     | long                   | 10000         |
+| trialRequestInterval        | Duration               | 3 seconds     | The amount of time before a request is reattempted in the half-open state when the request does not get a closed response. If there is a response during `trialRequestInterval`, CircuitBreaker will change its state to open or closed depending on the result. If CircuitBreaker goes into the open state, the request will be reattempted after `circuitOpenWindow`. If the request does not get a response during `trialRequestInterval`, it will be reattempted.        |
+| trialRequestIntervalMillis  | long                   | 3000          |
+| counterSlidingWindow        | Duration               | 20 seconds    | Recent `counterSlidngWindow` values are used to determine whether CircuitBreaker should open or not. The default value is set to only recognize the requests received in the last 20 seconds.                                                                                                                                                                                                                                                                                |
+| counterSlidingWindowMillis  | long                   | 20000         |
+| counterUpdateInterval       | Duration               | 1 second      | CircuitBreaker stores request results through `SlidingWindowCounter`, and `counterUpdateInterval` is the unit of time stored. The default value is set to keep records per each second. An example of this would look like this: 20 second(s) before = Success 20, Failure 0 / 19 second(s) before = Success 25, Failure 1 / ... / 1 second(s) before = Success 21, Failure 0. The failure rate is calculated using these records from the duration of counterSlidingWindow. |
+| counterUpdateIntervalMillis | long                   | 1000          |
+| exceptionFilter             | ExceptionFilter        | cause -> true | An object that returns whether or not an exception is identified as a failure. The default value is set to identify all exceptions as failures.                                                                                                                                                                                                                                                                                                                              |
+| listener                    | CircuitBreakerListener |               | A listener that receives events whenever the state of CircuitBreaker changes, when `counterUpdateInterval` expires, or when an open CircuitBreaker rejects a request.                                                                                                                                                                                                                                                                                                        |
+
+## Closing words
+
+Up until recently, whenever there was a problem somewhere in Channel Gateway the damage was already done by the time we could actually do something about it.
+A partial outage could cause the entire thread to be full, eventually affecting all services.
+Now that we have `CircuitBreaker` blocking the problematic parts from the rest of the system, we have a wider time window to work with.
+
+To wrap up this article, I'd like to go through how `CircuitBreaker` works step by step.
+
+- The initial state of `CircuitBreaker` is _Closed_.
+- _Closed_: Depending on `ExceptionFilter` settings, the following will happen after a request is processed.
+  - If the result is a success, it will be logged as a success and the state changes to _Closed_.
+  - If the result is a failure, the requests during the duration of `counterSlidingWindow` are checked and
+    - If requests are more than `minimumRequestThreshold`, and the failure rate is above `failureRateThreshold`, the state changes to _Open_.
+    - If not, the state remains _Closed_.
+- _Open_: After the duration of `circuitOpenWindow` passes, the state changes to _Half-Open_.
+- _Half-Open_: Depending on `ExceptionFilter` settings, the following will happen after processing the first request received.
+  - If the result is a success, the state changes to _Closed_.
+  - If the result is a failure, the state changes to _Open_.
+  - If there is no response during the duration of `trialRequestInterval`, a branch will occur depending on the result of the first request received during the _Half-Open_ state.
+
+## About the author
+
+Shin, Jong Hun: I don't like being inconvenienced.
+One of the focal points of my work is to reduce these inconveniences so I have more time to focus on what matters.
+I think that's why I like programming.
+Although I can't really figure out why I seem to be getting busier with time...

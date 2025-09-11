@@ -1,0 +1,203 @@
+---
+authors:
+  - onoyuichi
+---
+
+# Circuit breakers for distributed services
+
+Hello, my name is Ono and I'm a LINE engineer.
+In this blog post, I'd like to talk about "circuit breakers" which we use with our LINE servers.
+
+## What is a Circuit Breaker?
+
+The backend server systems for various web services and apps including LINE consist of networks that have several services connected with each other through APIs and RPCs.
+
+What would happen if one of these networks suddenly failed to respond?
+The downed services would be blocked until they time-out, and all other services that rely on the blocked service would start a chain reaction of failures.
+If no one has been keeping an eye on the entire network, it will take a long time to figure out which service is the root cause.
+
+![](https://engineering.linecorp.com/wp-content/uploads/2016/07/cascading_failure1.png)
+
+{/* truncate */}
+
+These chain reaction failures should be prevented at all costs.
+At the least, the core features must be protected from these failures.
+To achieve that, we must block off access to the downed service before it affects another.
+
+![](https://engineering.linecorp.com/wp-content/uploads/2016/07/fail_fast1.png)
+
+Circuit breakers are used to automate this whole process.
+
+[http://martinfowler.com/bliki/CircuitBreaker.html]
+
+The in-depth details behind the system can be found in the post above by Martin Fowler, but I'll keep it brief here.
+
+A circuit breaker is a system that automatically blocks off access when the number of failed remote access attempts exceeds the failure rate.
+
+Circuit breakers can be seen as state machines.
+They can automatically detect failures and determine when they're restored by continuously updating access success and failure events.
+
+![](https://engineering.linecorp.com/wp-content/uploads/2016/07/graphviz-924165e152ab51bc31fe59687c64e67792df8a4b.png)
+
+Below are details for each state and their conditions.
+
+**CLOSED**  
+Initial state.
+All accesses are treated normally.
+
+**OPEN**  
+The state changes to OPEN once the number of failures exceeds the failure rate.
+All accesses are blocked off (fail fast).
+
+**HALF_OPEN**  
+After a certain amount of time in the OPEN state, it changes into the HALF_OPEN state.
+If an attempted access succeeds, the state changes to CLOSED.
+If access fails, the state changes to OPEN.
+
+## Circuit breakers for Armeria
+
+[Armeria](http://line.github.io/armeria/) is an asynchronous Thrift client/server library based on Netty, released as a LINE open source project.
+One of Armeria's many key features is its ability to expand features using decorators.
+
+Starting with version 0.13.0 of Armeria, it is possible to add circuit breakers using decorators.
+
+Below is an example of initializing a Thrift client using a circuit breaker.
+
+```
+Iface helloClient = new ClientBuilder("tbinary+http://127.0.0.1:8080/hello")
+                     .decorator(
+                      CircuitBreakerClient.newDecorator(
+                          new CircuitBreakerBuilder("hello").build()
+                      )
+                     )
+                     .build(Iface.class);
+```
+
+Easy, right?
+
+Below is the code for calling this Thrift client.
+
+```
+try {
+    helloClient.hello("line");
+} catch (TException e) {
+    // error handling
+} catch (FailFastException e) {
+   // fallback code
+}
+```
+
+As you can see in the example above, when the circuit breaker detects a failure, the Thrift client will send a FailFastException, running the appropriate fallback code.
+It can be used in the same way for an asynchronous client.
+
+```
+helloClient.hello("line", new AsyncMethodCallback() {
+  public void onComplete(Object response) {
+     // response handling
+  }
+  public void onError(Exception e) {
+     if (e instanceof TException) {
+         // error handling
+     } else if (e instanceof FailFastException) {
+         // fallback code
+     }
+ }
+});
+```
+
+## Grouping
+
+In the example above, a single circuit breaker was allocated for each Thrift service.
+In this case, if a single method causes a problem in a service, all other methods will be blocked when the circuit breaker becomes active.
+This would only spread the failure to more parts, and isn't something that is recommended.
+
+That's why Armeria lets its users group the range of circuit breaker instances in a variety of ways.
+
+Below are the grouping conditions.
+
+**Per Host**  
+A single circuit breaker is allocated for each remote host.
+
+**Per Method**  
+A single circuit breaker is allocated for each method.
+
+**Per Host and Method**  
+A single circuit breaker is allocated each method in each host.
+
+![](https://engineering.linecorp.com/wp-content/uploads/2016/07/cb_grouping.png)
+
+## Failure Rate
+
+When using circuit breakers, it's important to clearly define the conditions for a failure.
+
+Failures in Armeria are when the number of failed requests (failure rate) exceeds the _Failure Rate Threshold_.
+
+However, in cases where there are too few requests, (such as right after launching) the failure rate will be too irregular and the system may incorrectly assess the situation as a failure.
+To resolve this, you can set a _Minimum Request Threshold_ so that the system only begins to detect failures when the number of requests is at least at a certain amount.
+
+The duration of the time where detection begins can also be adjusted with the _Sliding Window_.
+
+The correlation between the failure rate and the sliding window can be seen in the figure below.
+
+![](https://engineering.linecorp.com/wp-content/uploads/2016/07/failure_rate.png)
+
+## Monitoring
+
+You can monitor the status of circuit breakers by adding a listener.
+
+Below is sample code using a listener based on Dropwizard Metrics provided by Armeria.
+You can implement listeners that match your customized monitoring system.
+
+```
+MetricRegistry registry = new MetricRegistry();
+
+Iface helloClient = new ClientBuilder("tbinary+http://127.0.0.1:8080/hello")
+       .decorator(
+        CircuitBreakerClient.newDecorator(
+          new CircuitBreakerBuilder("hello")
+            .listener(new DropwizardMetricsCircuitBreakerListener(registry, "hello"))
+            .build()
+        )
+       )
+       .build(Iface.class);
+```
+
+## Using Armeria's circuit breaker independently
+
+Up to this point, I've talked about how you can combine the Armeria thrift client and circuit breaker package, but it's also possible to use the circuit breaker package independently.
+
+When using the circuit breaker package independently, keep the following 3 APIs in mind.
+
+**CircuitBreaker#canRequest()**  
+Checks the status of the circuit breaker.
+If the circuit is blocked off, the returned value will be "false."
+
+**CircuitBreaker#onSuccess()**  
+Records successful access attempts to a service.
+
+**CircuitBreaker#onFailure() or CircuitBreaker#onFailure(Throwable t)**  
+Records failed access attempts to a service.
+
+In the sample code below, canRequest() checks the status of the circuit and runs remote service access if there are no problems detected.
+Depending on the result, the API will call onSuccess or onFailure.
+
+The trigger condition for this sample was set to "whether or not exceptions were detected," but you can change the condition to whatever fits your needs.
+For example, you can make it so that it counts as an error if remote service access took a certain amount of time even if there were no exceptions detected.
+
+```
+if (circuitBreaker.canRequest()) {
+   try {
+       // remote service access
+
+       circuitBreaker.onSuccess();
+   } catch (Exception e) {
+       circuitBreaker.onFailure(e);
+   }
+} else {
+   // fail fast
+}
+```
+
+This concludes my introduction to the circuit breaker feature in Armeria.
+
+In a future post, I plan to give you some real-life use cases from inside LINE.

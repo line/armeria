@@ -248,7 +248,7 @@ export default async function createConfigAsync() {
           showReadingTime: true,
           blogSidebarCount: 'ALL',
           blogSidebarTitle: ' ',
-          // authorsMapPath: '../blog/authors.yaml',
+          onUntruncatedBlogPosts: 'warn',
           editUrl: 'https://github.com/line/armeria/edit/main/site/',
           // TODO
         },
@@ -263,7 +263,7 @@ export default async function createConfigAsync() {
           showReadingTime: true,
           blogSidebarCount: 10,
           blogSidebarTitle: ' ',
-          // authorsMapPath: '../blog/authors.yaml',
+          onUntruncatedBlogPosts: 'warn',
           editUrl: 'https://github.com/line/armeria/edit/main/site/',
           // TODO
         },
@@ -278,7 +278,7 @@ export default async function createConfigAsync() {
           showReadingTime: true,
           blogSidebarCount: 10,
           blogSidebarTitle: ' ',
-          // authorsMapPath: '../blog/authors.yaml',
+          onUntruncatedBlogPosts: 'warn',
           editUrl: 'https://github.com/line/armeria/edit/main/site/',
           // TODO
         },

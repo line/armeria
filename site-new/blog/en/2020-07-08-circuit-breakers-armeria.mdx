@@ -1,0 +1,196 @@
+---
+authors:
+  - seunghwanjoo
+---
+
+# Using Circuit Breakers with Armeria
+
+## What is a circuit breaker?
+
+Suppose an unexpected failure occurs (For example, a network issue or a server crash) and a remote server is unable to respond to the request.
+If so, the client who made the request to the remote server will either wait for a response until a timeout occurs, consume resources, or eventually continue to send unnecessary requests.
+And on a Microservice Architecture (MSA), this client can also be a server for other services.
+In the end, clients of this server will have the same problem.
+
+{/* truncate */}
+
+This continuous propagation of failures results in the failure of one remote server having a significant impact on all systems.
+The concept that emerged to solve this problem is known as the circuit breaker.
+
+In other words, circuit breakers are a fast method of failing a request from a client to a remote server when the failure rate exceeds a certain threshold, self-diagnosing that there is a problem with the server, and no longer sending unnecessary requests.
+Using circuit breakers allows us to avoid the aforementioned problems and minimize the size of failure.
+
+You can read more about the concept of circuit breakers in this article previously posted on the blog: [Circuit breakers for distributed services](https://engineering.linecorp.com/en/blog/circuit-breakers-for-distributed-services/)
+
+## Status of a circuit breaker
+
+A circuit breaker can be in one of the following three states.
+
+![](https://engineering.linecorp.com/wp-content/uploads/2020/04/circuitbreaker1.png)
+
+- `CLOSED`: The failure rate of the request is lower than the configured threshold. This is the initial and default state.
+- `OPEN`: The failure rate of the request is beyond the configured threshold. Errors occur immediately without sending the actual request (Fails fast).
+- `HALF_OPEN`: A status where the response is successful by sending a request once in the middle of the `OPEN` state. If successful, the state switches back to `CLOSED`. Upon failure, the state is left `OPEN`.
+
+## Armeria's circuit breaker
+
+[Armeria](https://github.com/line/armeria) is an open-source asynchronous microservice framework based on [Netty](https://netty.io/) that is maintained by LINE engineers, which can implement and provide circuit breakers directly.
+Let me show you how circuit breakers work with Armeria.
+
+### Preparation
+
+First, let's launch two simple servers (Server1, Server2) to send and receive requests.
+Server1 sends a `/world` request to Server2 when a `/hello` request is received from the Client.
+When you receive a response from Server2, you return the response back to the client.
+Server1 is a server, but it is also a client of Server2.
+
+![](https://engineering.linecorp.com/wp-content/uploads/2020/04/circuitbreaker2.png)
+
+#### Server2 implementation code
+
+First, here is the implementation of Server2 which will receive the response of Server1.
+In response to requests coming into `/world`, success (200) and failure (500) are simply implemented to return.
+
+**Server2Application.java**
+
+```
+@SpringBootApplication
+public class Server2Application {
+
+    private static final AtomicInteger REQ_CNT = new AtomicInteger();
+
+    public static void main(String[] args) {
+        ServerBuilder sb = Server.builder();
+        sb.http(5008);
+        sb.decorator(LoggingService.newDecorator());
+
+        sb.service("/world", (ctx, res) -> {
+            if (REQ_CNT.addAndGet(1) % 2 == 0) {
+                return HttpResponse.of(HttpStatus.INTERNAL_SERVER_ERROR);
+            }
+            return HttpResponse.of(HttpStatus.OK);
+        });
+
+        Server server = sb.build();
+        CompletableFuture<Void> future = server.start();
+        future.join();
+    }
+}
+```
+
+#### Server1 implementation code
+
+Here is the implementation of Server1.
+Unlike the simple one using `ServerBuilder` on Server2, you can find the Service bean that receives requests from the client and the Client bean that sends requests to Server2.
+
+**Server1Application.java**
+
+```
+@SpringBootApplication
+@Import(Server1Context.class)
+public class Server1Application {
+
+    public static void main(String[] args) {
+        SpringApplication.run(Server1Application.class, args);
+    }
+}
+```
+
+**Server1Context.java**
+
+```
+@Configuration
+public class Server1Context {
+
+    @Bean
+    public HttpServiceRegistrationBean httpService(WebClient webClient) {
+        return new HttpServiceRegistrationBean()
+                .setService((ctx, req) -> webClient.get("/world"))
+                .setServiceName("httpService")
+                .setRoute(Route.builder()
+                               .path("/hello")
+                               .methods(HttpMethod.GET)
+                               .build());
+    }
+
+    @Bean
+    public WebClient webClient() {
+        CircuitBreakerStrategy strategy = CircuitBreakerStrategy.onServerErrorStatus();
+
+        // CircuitBreaker ì¤ì !!!
+        CircuitBreaker circuitBreaker = CircuitBreaker
+                .builder("test-circuit-breaker")
+                .counterSlidingWindow(Duration.ofSeconds(10))
+                .circuitOpenWindow(Duration.ofSeconds(5))
+                .failureRateThreshold(0.3)
+                .minimumRequestThreshold(5)
+                .trialRequestInterval(Duration.ofSeconds(3))
+                .build();
+
+        return WebClient
+                .builder("http://localhost:5008")
+                .decorator(LoggingClient.newDecorator())
+                .decorator(CircuitBreakerHttpClient.newDecorator(circuitBreaker, strategy))
+                .build();
+    }
+}
+```
+
+Pay attention to the fact that a Client object has its own `CircuitBreaker` when you use `CircuitBreaker` in Armeria.
+In other words, if a new Client object is created for each request to Server2 and is extinguished after the request is completed, the `CircuitBreaker` connected to the Client would eventually become useless.
+
+Therefore, we need a `WebClient` bean that sends requests to Server2 to reuse the same `WebClient` object for the requests to all Server2.
+And we can apply `CircuitBreaker` to the `WebClient` object using the [Decorator](https://armeria.dev/docs/client-decorator) provided by Armeria.
+
+Let's take a look at each field of the `CircuitBreaker` settings above.
+
+- `counterSlidingWindow` (10s): The time interval between measuring the number of successful/failed requests in `CircuitBreaker`. It is used to determine what state to transition or maintain based on a 10-second aggregate.
+- `circuitOpenWindow`(5s): The duration that `CircuitBreaker` is kept `OPEN`. Throws an error right away without asking the external server for 5 seconds once in an `OPEN` state (`FailFastException`).
+- `failureRateThreshold`(0.3): The rate of failure of the request required to switch to an `OPEN` state. Requests greater than 0.3 (30%) must fail during the `circuitOpenWindow` time to enter the `OPEN` state.
+- `minimumRequestThreshold`(5): Minimum number of requests required for measurement. Even if the failure rate is higher than `failureRateThreshold`, it must be the result of at least five requests before it becomes `OPEN`.
+- `trialRequestInterval`(s): Time to remain in the `HALF_OPEN` state. For 3 seconds, it throws a `FailFastException` error as it did when it was `OPEN`, while sending requests to external servers to check if the server returned to normal. If the response to the request sent in these 3 seconds is successful, it immediately switches to the `CLOSED` state; if all fails, it goes back to the `OPEN` state.
+
+### Testing
+
+Now let's send requests from the terminal to Server1 using the [loadtest](https://www.npmjs.com/package/loadtest) library.
+
+```
+$ loadtest http://127.0.0.1:5007/hello --rps 1
+```
+
+The log of Server1 provides information on the behavior of `CircuitBreaker`.
+
+![](https://engineering.linecorp.com/wp-content/uploads/2020/04/circuitbreaker3.png)
+
+When the server first started, the initial state of `CircuitBreaker` was `CLOSED`.
+
+At 03:03:41.830 - Of the total 5 requests measured, the number of failures was 2, so the failure rate was 2/5 = 0.4.
+Thus, the failure rate was greater than the previously set failure rate of 0.3 (`failureRateThreshold`) and the number of requests used in the measurement was greater than 5 (`minimumRequestThreshold`), so `CircuitBreaker` switched to the `OPEN` state.
+
+![](https://engineering.linecorp.com/wp-content/uploads/2020/04/circuitbreaker4.png)
+
+From 03:03:41.830 to 03:03:47.824 - `FailFastException` errors continued to occur during subsequent periods, in approximately 5 seconds (`circuitOpenWindow`). (If you check the logs on Server2, you can see that the request was not received at that time.)
+
+![](https://engineering.linecorp.com/wp-content/uploads/2020/04/circuitbreaker5.png)
+
+At 03:03:47.824 - the transition is made to the `HALF_OPEN` state, where requests from clients were actually sent to Server2.
+At this point, the transmitted request luckily received a 200 response and then `CircuitBreaker` switched to the `CLOSED` state.
+
+![](https://engineering.linecorp.com/wp-content/uploads/2020/04/circuitbreaker6.png)
+
+This process is repeated again because it is `CLOSED` again.
+From 03:03:47.827 to 03:03:56.824 - The failure rate was measured for approximately 10 seconds (`counterSlidingWindow`), and the failure rate measured this time was 4/8 = 0.5, so `CircuitBreaker` switched back to the `OPEN` state.
+
+![](https://engineering.linecorp.com/wp-content/uploads/2020/04/circuitbreaker7.png)
+
+We've taken a look at Armeria's circuit breaker in action with the simple test above.
+I hope you now have a better understanding of what the various configurations and operations are for, and how easy it is to implement a circuit breaker client for yourself.
+
+> For more information on Armeria's circuit breakers, please take a look at the [official Armeria documentation on circuit breakers](https://line.github.io/armeria/client-circuit-breaker.html).
+
+## Conclusion
+
+Armeria provides several features useful to running an MSA in addition to circuit breakers.
+These features include client-side load balancing and auto-retry.
+We use Armeria ourselves in our own OpenChat server development, and are enjoying the many benefits its features bring to our daily work.
+I dedicate this post to the open-source Armeria development team who are working day and night to make requested features a reality.

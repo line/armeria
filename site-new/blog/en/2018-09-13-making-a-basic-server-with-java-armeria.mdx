@@ -1,0 +1,216 @@
+---
+authors:
+  - inseong
+---
+
+# Making a basic server with Java & Armeria
+
+As some of you know already, LINE has been actively open-sourcing projects including [Armeria](https://line.github.io/armeria/) and [Central Dogma](https://line.github.io/centraldogma/).
+Today, I'd like to share a bit about Armeria and setting up a simple web server using Armeria.
+To follow the instructions, you need to have Java and IntelliJ IDEA installed, which can be downloaded from the following links:
+
+- [Java Development Kit](https://www.oracle.com/technetwork/java/javase/downloads/index.html)
+- [IntelliJ IDEA](https://www.jetbrains.com/idea/)
+
+{/* truncate */}
+
+## Create a project
+
+Let us begin by creating a project.
+First, run IntelliJ IDEA and click the **Create New Project** button.
+The New Project dialog pops up.
+
+![](https://engineering.linecorp.com/wp-content/uploads/2018/8/8/1533704989761.png)
+
+On the New Project dialog, click the **Gradle** menu from the left panel, and then check the box for **Java**, and click the Next button.
+The dialog displays the fields required for project configuration.
+
+![](https://engineering.linecorp.com/wp-content/uploads/2018/8/8/1533704996634.png)
+
+Configure the fields as instructed below.
+
+- **GroupId**: We will skip this field. This field is optional anyway.
+- **ArtifactId**: Enter a name to represent your project. For this post, I named it 'hello-armeria'.
+- **Version**: Use the default value already in the input field.
+
+![](https://engineering.linecorp.com/wp-content/uploads/2018/8/8/1533705002244.png)
+
+Once you are done with filling in, click the **Next** button.
+Continue with the rest of the step until you see the **Finish** button.
+
+## Configure Gradle
+
+Once a project is created, open the `build.gradle` file, which you can find from the **Project** panel on the left-hand side.
+You will see a few lines of code like below.
+Add the line marked with comments I've left, and save the file.
+This makes Gradle automatically configure — download and build — the Armeria library for you.
+It may take sometime for the process to be completed.
+
+```
+plugins {
+    id 'java'
+}
+
+version '1.0-SNAPSHOT'
+
+sourceCompatibility = 1.8
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    // Add the following line of code
+    // <Group Name>:<Artifact Id>:<Version>
+    compile "com.linecorp.armeria:armeria:0.71.1"
+}
+```
+
+## Hello Armeria!
+
+Now, let's make a class.
+Go to **src > main**, right-click on **java**, and click **New > Java Class**.
+We'll name the class `ServerMain.java` and make it print, `"Hello, Armeria!"`.
+
+![](https://engineering.linecorp.com/wp-content/uploads/2018/8/8/1533705007976.png)
+
+First, we will create an instance of the `ServerBuilder` class and run the server, in the following steps:
+
+1. Set the port using the `http()` method.
+2. Configure the server with the `service()` method.
+3. Create an instance of `Server`.
+4. Call the `start()` method.
+
+Here is the actual code:
+
+```
+import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.HttpStatus;
+import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.server.Server;
+import com.linecorp.armeria.server.ServerBuilder;
+import java.util.concurrent.CompletableFuture;
+
+public class ServerMain {
+    public static void main(String[] args) {
+        ServerBuilder sb = new ServerBuilder();
+        sb.http(8080);
+        sb.service("/hello", (ctx, res) ->
+            HttpResponse.of(
+                HttpStatus.OK,
+                MediaType.HTML_UTF_8,
+                "<h1>Hello Armeria...!</h1>"));
+        Server server = sb.build();
+        CompletableFuture<Void> future = server.start();
+        future.join();
+    }
+}
+```
+
+To those who are unfamiliar with IntelliJ IDEA, here is a little tip on importing classes.
+When you enter the name of a class in your code and the class needs to be imported — in our case, `ServerBuilder` and `HttpResponse` — press **ALT + Enter**.
+You will see the context menu with options available for the given class.
+Select **Import class** from the menu which will automatically add an import statement for the specified class on the file.
+
+![](https://engineering.linecorp.com/wp-content/uploads/2018/8/8/1533705014192.png)
+
+Note that if you select the **Import class** option on `MediaType`, available options are as follows:
+
+- `MediaType (com.google.common.net)`
+- `MediaType (com.linecorp.armeria.common)`
+
+Since we are using Armeria, select `com.linecorp.armeria.common`.
+
+![](https://engineering.linecorp.com/wp-content/uploads/2018/8/8/1533713350297.png)
+
+## Run a web server for starters
+
+To run a web server from IntelliJ IDEA, go to **Run > Run \<file_name\>**.
+You may see warnings on SLF4J (a library for printing out logs) that it cannot find a suitable logger implementation, but that's not important at the moment.
+Let's focus on getting our Armeria server up and running.Open a web browser, enter the URL, http://127.0.0.1:8080/hello, and you will be greeted with `"Hello, Armeria...!"`.
+
+![](https://engineering.linecorp.com/wp-content/uploads/2018/8/8/1533705025527.png)
+
+So, that was it!
+Making a web server with Java couldn't be simpler than this, right?
+You've only seen the tip of the iceberg; there is much more to Armeria than this.
+Just to show you a little bit more, let's move onto routing, the most basic and the core feature of web servers.
+
+## Routing
+
+Create a Java class and name it `CustomService` or any other name you like.
+Copy and paste the following code in the class.
+In addition to `HttpResponse.of()`, I've added annotations for routing.
+To keep things simple, I did not add this configuration in the `build.gradle` file, but instead, passed a parameter, `@Param("number") int number`.
+You can enter parameters like `@Param int number`, if you add `-parameters` in the compile option for `build.gradle`.
+
+Using annotations, we set up routing; set `methodA()` to be called via `GET "/"`.
+Likewise, `methodB()` is to be called via `GET "/page/<number>"`.
+
+```
+import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.HttpStatus;
+import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.server.annotation.Get;
+import com.linecorp.armeria.server.annotation.Param;
+
+public class CustomService {
+    @Get("/")
+    public HttpResponse methodA() {
+        return HttpResponse.of(
+            HttpStatus.OK,
+            MediaType.HTML_UTF_8,
+            "<h1>Hello Custom Service...!</h1>");
+    }
+
+    @Get("/page/:number")
+    public HttpResponse methodB(@Param("number") int number) {
+        return HttpResponse.of(
+            HttpStatus.OK,
+            MediaType.HTML_UTF_8,
+            "<h1>Hello %d...!</h1>", number);
+    }
+}
+```
+
+The next step is to modify our class, `ServerMain`.
+We need to pass the instance of the `CustomService` class.
+To do so, call the `annotatedService()` method and pass the instance as the parameter.
+
+```
+import com.linecorp.armeria.server.Server;
+import com.linecorp.armeria.server.ServerBuilder;
+import java.util.concurrent.CompletableFuture;
+
+public class ServerMain {
+    public static void main(String[] args) {
+        ServerBuilder sb = new ServerBuilder();
+        sb.http(8080);
+
+        sb.annotatedService(new CustomService());
+
+        Server server = sb.build();
+        CompletableFuture<Void> future = server.start();
+        future.join();
+    }
+}
+```
+
+## Run again!
+
+Now run the code and open http://127.0.0.1:8080/.
+You will see `"Hello Custom Service...!"` printed on the page.
+
+![](https://engineering.linecorp.com/wp-content/uploads/2018/8/8/1533705031334.png)
+
+This time, add `/page/10` to the URL to make it http://127.0.0.1:8080/page/10, and open the page.
+You will see `"Hello 10...!"` instead.
+
+![](https://engineering.linecorp.com/wp-content/uploads/2018/8/8/1533705036541.png)
+
+Using Armeria, implementing routing is a piece of cake!
+Today, we've looked through the most basic way of using Armeria.
+Armeria supports serving static files, running and calling Thrift services, structured logging with Kafka and many others.
+Visit the [official Armeria site](https://line.github.io/armeria/) and the [GitHub repository](https://github.com/line/armeria) to learn more about Armeria.
+
+![](https://engineering.linecorp.com/wp-content/uploads/2018/8/8/1533705042656.png)

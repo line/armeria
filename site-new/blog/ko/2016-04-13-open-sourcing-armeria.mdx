@@ -1,0 +1,141 @@
+---
+authors:
+  - trustin
+---
+
+# Armeria 오픈소스화 이야기
+
+[Armeria](http://line.github.io/armeria/)는 Java 8 및 [Netty](http://netty.io/) 상에 비동기 RPC/API 클라이언트-서버를 구현한 것입니다.
+LINE은 작년 11월 Armeria를 Apache License 2.0이 적용되는 오픈소스 프로젝트로 배포했습니다.
+Armeria는 HTTP/2를 세션 레이어 프로토콜로 사용하는 고성능의 비동기 Thrift 클라이언트/서버를 구축하기 위해 만든 프로젝트이지만, 기본적으로 프로토콜의 제약을 받지 않으며 확장성이 뛰어납니다. (예를 들어, HTTP/2를 통해 정적 파일 디렉토리를 처리하는 동시에 Java EE 웹 애플리케이션을 실행할 수 있습니다.)
+
+이 블로그에서는 기술적 측면에 초점을 맞추기 보다는 내부 프로젝트를 오픈소스로 만들어가면서 겪었던 과정을 소개하고자 합니다.
+Armeria의 기술적 내용을 알고 싶으시다면 지난 2월 개발자들을 대상으로 개최한 제14회 LINE Developer Meetup에서 발표한 슬라이드 자료를 참고 바랍니다.
+
+{/* truncate */}
+
+## 프로젝트 이력 정리
+
+내부 프로젝트를 작업하다 보면 공개 프로젝트라면 결코 노출하지 않을 아래와 같은 변경 이력이 다수 포함되기 마련입니다.
+
+- 기밀 정보(이슈 번호, 호스트명, 내부 URL 등)
+- 무의미하거나 불확실하게 작성된 커밋 메시지(“blah blah”, “WIP”, “WTF” 등)
+- 저작권 고지 헤더
+
+리포지토리에 이런 문구를 수정하는 커밋을 추가한다 하더라도 프로젝트의 이력이 온전히 남기 때문에 그러한 작업은 아무 소용이 없습니다. 따라서 이력 내용을 '청소'해야 정보가 예기치 않게 유출되는 상황을 피할 수 있습니다. 이를 위해 선택 가능한 방법은 두 가지입니다.
+
+한 가지 방법은 변경 이력을 일일이 검토하면서 수정하는 것입니다. 이 경우 [`git filter-branch`](https://git-scm.com/docs/git-filter-branch) 같은 명령어를 사용해서 자동화하면 일을 어느 정도 줄일 수 있지만 변경 이력을 하나씩 꼼꼼하게 살펴봐야만 합니다.
+
+또 다른 방법은 외부에 공개하면 안되는 정보를 모두 숨기고 여러 변경 이력을 하나의 커밋으로 압축하는 것입니다. 이 방법은 첫 번째 방법보다 간단하긴 하지만 모든 이력을 잃게 됩니다. 기존 이력이 모두 없어지기 때문에 나중에 코드를 왜 이렇게 썼는지 기억나지 않아도 알아낼 방도가 없습니다.
+
+프로젝트 이력이 비교적 짧고 잘 정의된 코딩 스타일 가이드에 맞춰 코드를 작성했다면 첫 번째 방법을 선택할 수 있습니다. 하지만 시간은 부족하고 검토할 분량이 너무 많다면 저희가 그랬던 것처럼 모든 이력을 단 하나의 커밋으로 줄이는 최후의 방법을 선택할 것입니다.
+
+하지만 요즘은 코드를 한 사람이 작성하지 않기 때문에 이 방법도 문제가 있습니다. 커밋을 하나만 남겨두면 훌륭한 기량을 발휘하여 협업에 기여한 여러 사람들의 노력과 공로를 어떻게 인정할 수 있겠습니까? 저희는 결국 아래처럼 커밋 메시지를 남기는 방식으로 감사를 표시할 수 밖에 없었습니다.
+
+```
+Subject: Initial import
+
+This commit contains the collective work of the following enthusiastic
+contributors at LINE Corporation:
+- Anuraag Agrawal  @anuraaga
+- Heon Jeong       @blmarket
+- Young-tae Seok   @delegacy
+- Su-ahn Lee       @inch772
+- Woo-jung Choi    @sophiechoi
+- Trustin Lee      @trustin
+- Yuichi Ono
+```
+
+지금 돌이켜보면 커밋 메시지에 제 감사의 마음을 좀더 적극적으로 표현했어야 했다는 생각이 듭니다. 이 글을 통해 모든 분들의 도움에 다시 한번 진심으로 감사드립니다!
+
+## API 문서 작성
+
+프로젝트를 백지 상태에서 처음 시작할 때에는, 특히 선례로 삼을 만한 템플릿이 없는 경우에는, 코드를 신속하게 작성해서 빠른 시일 내에 공개할 필요가 있습니다. 그래야만 설계 이슈나 버그를 초반에 발견할 수 있습니다. 그런데 이 단계를 반복하는 과정에서 API 변경이 끊임없이 발생하게 되는데, 이를 구현하는 데 집중하다 보면 API 문서화 작업은 뒤로 미루게 되고 언젠가는 메워야 하는 구멍으로 남게 됩니다. (사실 문서를 작성하는 일보다 코드를 쓰는 게 훨씬 더 재미있기도 하고요.)
+
+하지만 적절한 문서화는 오픈소스 프로젝트에서 아주 중요합니다. 사람들은 아주 절박하지 않은 한 문서가 제공되지 않는 오픈소스 소프트웨어를 사용하려 하지 않습니다. 문서화가 제대로 되어 있지 않다면 누가 그런 오픈소스를 선택하겠습니까? 이 세상에는 유사한 프로젝트가 이미 많이 있으니까요!
+
+결국은 나중에 우리 스스로가 남겨두었던 구멍을 모두 메워야 했습니다. 저희는 그걸 '기술 부채(technical debt)'라는 용어를 본따 '문서화 부채(documentation debt)'라 불렀습니다. 솔직하게 고백하자면 그 빚을 갚는 일은 결코 유쾌한 경험이 아니었습니다. 하지만 일단 제대로 문서화 작업을 해놓고 나니 빚을 최소한으로 유지하는 일이 수월해졌습니다. 이제는 퍼블릭 메서드나 클래스를 새로 쓰고 나면 리뷰를 진행하면서 문서화 작업을 함께 하면 됩니다. 이건 균형잡힌 몸매를 유지하는 것과 비슷합니다. 일단 좋은 몸매가 다듬어지면 그 다음부터는 쉬워지는 원리입니다.
+
+## 웹사이트 구축
+
+Github는 프로젝트를 제공하기에 적합한 공간이지만 가능하면 전용 웹사이트를 활용하는 것이 더 낫습니다. 프로젝트 웹사이트가 있으면 원하는 정보를 원하는 방식으로 구성하고 제공할 수 있으며 프로젝트의 성격을 한층 더 시각적이고 효과적으로 알릴 수 있습니다.
+
+하지만 웹사이트 구축은 간단한 작업이 아닙니다. 그래서 코드 몇 줄 적어넣는 것 이상의 시간을 투자하지 않으면서도 확장 가능한 방식으로 웹사이트를 개발, 유지 관리할 수 있는 수단을 찾아 보았습니다.
+
+다행히 몇몇 엔지니어가 제공한 훌륭한 오픈소스 웹사이트 생성 툴이 있었습니다. 이 툴 덕분에 디자이너를 덜 괴롭히면서 HTML, CSS를 직접 다룰 수 있었습니다.
+Armeria의 경우는 [Sphinx](http://www.sphinx-doc.org/en/stable/)를 선택했고 이와 더불어 [sphinx-maven-plugin](http://trustin.github.io/sphinx-maven-plugin/)과 [Read the Docs theme](http://read-the-docs.readthedocs.org/en/latest/)을 사용함으로써 빌드 프로세스에 웹사이트 생성까지 포함했습니다. 이밖에도 [Awestruct](http://awestruct.org/), [Jekyll](https://jekyllrb.com/) 같은 유사한 용도의 툴이 다양하게 있습니다. 웹사이트 구축에 관심있는 분들은 이런 툴을 사용해 본다면 본인에게 적합한 것을 선택하는 데 많은 도움이 될 것입니다.
+
+## 로고 제작
+
+![](https://engineering.linecorp.com/wp-content/uploads/2016/04/armeria.png)
+
+Armeria의 로고
+
+로고는 프로젝트의 정수입니다. 로고는 그 프로젝트가 무엇을 위한 것인지, 어떤 방향으로 나아갈 것인지 시각적으로 그리고 상징적으로 알려주는 수단입니다. 또한 사람들이 프로젝트를 더 잘 기억하게 만드는 연상 효과도 있습니다.
+
+이처럼 프로젝트에 중대한 영향을 미치기 때문에 디자이너는 여러 측면을 신중하게 검토하고 프로토타입을 많이 만들어 봐야 합니다. 운좋게도 산업 디자인까지 전공한 동료가 때맞춰 입사한 덕분에 도움을 받을 수 있었습니다. 본인의 업무로 바쁘신 와중에도 시간을 내어 도와주셔서 너무 고마웠습니다. 다음에도 이번 못지 않게 뛰어난 로고를 만들어 주실거라 믿습니다.
+
+## 라이선스의 법적 효력과 책임에 대한 검토
+
+오픈소스 소프트웨어에 대한 개념은 컴퓨팅 기술의 시초부터 존재해 왔습니다. 하지만 사람들이 오픈소스 라이선스에 관심을 가지게 된 건 최근입니다. 어떤 사람들은 무료로 사용 가능한 프로젝트라 하더라도 누군가에게 소유권이 있다는 사실을 간과하는 것 같습니다.
+Armeria 프로젝트에서는 법적 문제가 발생할 소지를 방지하기 위해 Armeria에 사용된 오픈소스 소프트웨어의 라이선스 규정을 위반하지 않도록 각별히 주의를 기울였습니다.
+
+그 일환으로 프로젝트 리포지토리에 모든 라이선스 규정 파일과 요약문을 포함해서 Armeria가 어떤 소프트웨어로부터 도움을 받았는지 이용자에게 확실히 밝히고 있습니다. 또한 Armeria 내에서 이러한 오픈소스 소프트웨어의 어떤 부분을 수정했고 재배포했는지 구체적으로 명시하고 있습니다.
+
+Armeria는 소유 주체가 있는 오픈소스 프로젝트이기 때문에 공정하고 명확한 규정에 의거하여 라이선스를 부여하고 있습니다. 다음과 같은 특징을 감안하여 여러 라이선스 중에서 [Apache License 2.0](<https://tldrlegal.com/license/apache-license-2.0-(apache-2.0)>)을 선택했습니다.
+
+- Apache License 2.0 라이선스를 사용하는 소프트웨어는 무료로 사용, 재생산, 수정, 배포, 판매할 수 있으며 원본 소스 코드를 포함할 필요가 없습니다.
+- 오픈소스의 특허 라이선스 부여 및 특허 침해에 관한 조항(Grant of Patent License)이 명시되어 있습니다.
+
+사람들이 종종 간과하는 또 다른 중요한 부분은 CLA(Contributor License Agreement)입니다.
+CLA는 외부인으로부터 도움을 받을 때 필요합니다. 예를 들어, 외부인이 어떤 기능을 제안하는 pull request를 보냈는데 여러분의 프로젝트에 병합하고 싶다면 해당 제출자로부터 이 서약에 동의하는 서명을 받아야 합니다.
+CLA는 이 블로그의 주제에서 벗어나는 내용이므로 여기에서 자세히 설명하지는 않겠습니다. 대신 관련 정보를 제공하는 사이트를 소개합니다. [OSS Watch](http://oss-watch.ac.uk/resources/cla) 및 [CLAHub](https://www.clahub.com/pages/why_cla) 링크를 참고해 주세요.
+
+법적 검토를 거치는 과정은 어려워 보이기도 하고 시간이 많이 걸릴 것 같지만 실상은 그렇지 않습니다. 대부분 한 번만 완수하면 되는 작업이고 법무 부서의 동료 직원이 우리를 대신해서 성심성의껏 골치 아픈 법적 문제를 처리해 줍니다. 조금이라도 석연치 않은 점이 있다면 바로 법무 부서를 방문하여 전문가에게 도움을 구하세요.
+
+## 다양한 오픈소스 프로젝트 간의 협업
+
+오픈소스 프로젝트를 이용하다 보면 버그를 발견할 수 있습니다. 버그를 발견한 당사자가 스스로 해결책을 강구할 수도 있지만 그렇지 못한 경우도 있습니다. 원래 프로젝트에서 여러분만의 프로젝트 포크(fork)를 만들어 직접 수정하고 관리할 수도 있습니다. 하지만 그것보다 업스트림(upstream)에 변경을 제안하는 것이 언제나 더 나은 접근법입니다. 그렇지 않으면 여러분이 지속적으로 프로젝트를 관리해야 합니다. 또한 업스트림에 기여하면 오픈소스 업계에서 본인의 활동을 알릴 수 있고 다른 사람들과 협업하면서 더욱 재미를 찾을 수도 있습니다. 둘 다 여러분의 경력에 매우 긍정적인 효과를 줄 것입니다.
+
+이번에 Armeria를 개발하는 동안 Netty 프로젝트에서 발견한 여러 이슈를 보고하고 일부 이슈의 경우 수정 작업을 돕기도 했습니다.
+
+- HTTP/1과 2
+  - [#4785](https://github.com/netty/netty/pull/4785) - Fix missing trailing data on HTTP client upgrade
+  - [#4582](https://github.com/netty/netty/pull/4582) - Revamp InboundHttp2ToHttpAdapter builder API
+  - [#4574](https://github.com/netty/netty/pull/4574) - Revamp the Http2ConnectionHandler builder API
+  - [#4525](https://github.com/netty/netty/pull/4525) - Fix the incorrect usage/value of "Connection: upgrade"
+  - [#4524](https://github.com/netty/netty/pull/4524) - Fix IllegalReferenceCountException caused by HttpClientCodec.upgradeFrom()
+  - [#4523](https://github.com/netty/netty/pull/4523) - Relax the sanity check in HttpClientUpgradeHandler
+  - [#4428](https://github.com/netty/netty/pull/4428) - Reject the first SETTINGS ack on HTTP/2 Preface
+  - [#4210](https://github.com/netty/netty/pull/4210) - Http2ConnectionHandler does not close the stream 1 (HTTP_UPGRADE_STREAM_ID)
+  - [#3876](https://github.com/netty/netty/pull/3876) - Lazily instantiate HttpServerUpgradeHandler.UpgradeCodec
+- DNS
+  - [#4946](https://github.com/netty/netty/pull/4946) - Fix potential infinite loop when resolving CNAME records
+  - [#4837](https://github.com/netty/netty/pull/4837) - Preserve the host name of address when parsing /etc/hosts file
+  - [#4665](https://github.com/netty/netty/pull/4665) - Netty's DNS resolution should take into account system domain name
+  - [#4541](https://github.com/netty/netty/pull/4541) - Don't cycle dns servers while cycling dns record types.
+- 기타
+  - [#4547](https://github.com/netty/netty/pull/4547) - NPE in PooledByteBufAllocator.newDirectBuffer()
+  - [#4419](https://github.com/netty/netty/pull/4419) - Fix a bug where DefaultPromise.toString() says "incomplete" when it's done
+
+여러 프로젝트의 개발자들과 함께 작업한 덕분에 Armeria에서 사용한 오픈소스의 프로젝트 포크를 별도로 유지 관리하는 부담을 줄일 수 있었고, 오픈소스 커뮤니티에서 Armeria 프로젝트뿐 아니라 프로젝트에 참여한 구성원의 활동을 널리 알리는 기회를 누릴 수 있었습니다.
+
+## 도전자를 찾습니다!
+
+개발 성과물을 공유하며 커뮤니티에 기여하고 다양한 프로젝트 개발자들과 협업하는 과정이 즐거워 보이지 않으십니까?
+Armeria는 아직 프로젝트 초기 단계이기 때문에 로드맵에 따라 향후 새로운 기능을 추가할 예정입니다. 현재 구상 중인 기능은 다음과 같습니다.
+
+- 클라이언트 기반의 로드 밸런싱
+- Reactive Streams을 통한 대용량 컨텐트 스트리밍
+- Redis, MySQL 등 더욱 다양한 프로토콜 지원
+- 관리와 모니터링을 통합적으로 수행하는 웹 콘솔
+- 문서화와 코드 생성을 더욱 효율적으로 할 수 있는 새로운 Thrift 컴파일러
+
+LINE은 다른 프로젝트들도 오픈소스로 배포하기 위해 준비하고 있습니다. 또한 LINE 엔지니어는 회사의 이익을 추구하는 데 그치지 않고 장기적으로 많은 이들에게 도움을 되는 일을 목표로 삼고 있습니다.
+LINE에 지원하여 함께 프로젝트를 만들고 세상이 놀랄 만한 일에 도전해 보세요!
+
+[채용 정보](http://recruit.linepluscorp.com/lineplus/career/detail/20000312)
+
+## 저자 소개
+
+[이희승(Trustin)님](https://github.com/trustin)은 [Netty 프로젝트](http://netty.io/) 창시자이자 [Apache MINA 프로젝트](http://mina.apache.org/) 공동 창시자로서, 현재 LINE에서 플랫폼 소프트웨어 엔지니어로 재직 중입니다.

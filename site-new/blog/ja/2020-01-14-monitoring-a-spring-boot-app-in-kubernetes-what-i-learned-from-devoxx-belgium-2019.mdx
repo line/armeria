@@ -1,0 +1,428 @@
+---
+authors:
+  - teo
+---
+
+# Devoxx Belgiumで学んだ方法でKubernetes上のSpring Bootをモニタリングする
+
+[_原文(投稿日:2019/12/23)はこちら_](https://engineering.linecorp.com/en/blog/monitoring-a-spring-boot-app-in-kubernetes-what-i-learned-from-devoxx-belgium-2019/)
+
+こんにちは、LINE FukuokaでサーバーサイドエンジニアをやっているTeodorです。  
+11月にLINE Shopチーム(スタンプショップ、着せかえショップ、LINE STOREを開発)の他の3人のメンバーと一緒に、ベルギーのアントワープで開催されたDevoxx Belgium 2019に参加してきました。アントワープはDevoxx発祥の地で、ベルギー最大の都市でもあります。
+
+![](https://engineering.linecorp.com/wp-content/uploads/2019/12/devoxx_belgium-1024x682.jpg)
+
+{/* truncate */}
+
+[Devoxx](https://en.wikipedia.org/wiki/Devoxx) は2001年に始まった開発者コミュニティによるカンファレンスで、あっという間にベンダー非依存としては世界最大規模のJavaカンファレンスに成長しました。 最近では、Devoxxはフランス、イギリス、ポーランド、ウクライナ、モロッコでも開催されています。
+
+Deboxx Belgiumはヨーロッパで最大規模の映画館「Kinepolis」で開催されます。登壇者の映像やスライドは4Kの巨大なシネマスクリーンに投影され、THX音響が使われます。見映えは最高！
+
+|     |     |     |
+| --- | --- | --- |
+|     |     |     |
+
+このブログではDevoxxで学んだことを使って、Kubernetesで動くSpring Bootアプリケーションのモニタリングを行う、小さなハンズオンを行いたいと思います。 ここでは次のような事柄を説明します。
+
+- Spring Bootアプリケーションの準備
+- DockerとKubernetesのインストール
+- Dockerイメージの作成
+- Kubernetesへのデプロイ
+- Kubernetes内のアプリケーションのモニタリング
+
+## モニタリングサンプル - Kubernetes上のSpring Bootアプリケーション
+
+### 1. Spring Bootアプリケーションの準備
+
+このサンプルでは、[Armeria](https://line.github.io/armeria/)を使った「Hello World」Spring Bootアプリケーションを使います。 LINE Shopチームでは、Armeriaを使ってハイパフォーマンスな非同期マイクロサービスを開発し、セッション層のプロトコルにはHTTP/2を使っています。  
+このサンプルでも、独自のメトリクスエンドポイントをexposeしPrometheusがそこからメトリクスを参照する方法を示すためにArmeriaを使いたいと思います。Armeriaの始め方のサンプルは[こちら](https://github.com/line/armeria-examples)です。 今回のサンプルで使ったソースコードはこちらの[GitHub](https://github.com/nirvanarsc/k8s-monitoring-sample)で公開しています。動作確認はmacOSで行なっています。
+
+まずは[gRPCサービス](https://github.com/nirvanarsc/k8s-monitoring-sample/blob/master/src/main/java/com/github/nirvanarsc/k8s/monitoring/sample/service/GreetingService.java#L17)と、`/internal/docs`でアクセスできる[HTTPサービス](https://github.com/nirvanarsc/k8s-monitoring-sample/blob/master/src/main/java/com/github/nirvanarsc/k8s/monitoring/sample/service/SampleService.java#L11) をセットアップします。DocServiceは、サービスの一覧を表示しテストできるようにするArmeriaが生成したシングルページのWebアプリケーションです。詳しくは[Armeriaの公式ドキュメント](https://line.github.io/armeria/server-docservice.html) で説明されています。
+
+![](https://engineering.linecorp.com/wp-content/uploads/2019/12/docs-1-1024x753.png)
+
+### 2. DockerとKubernetesのインストール
+
+#### Docker
+
+Kubernetesを使う前にDockerの[インストール](https://docs.docker.com/install/)が必要です。もしDockerが本当に初めてなら、オフィシャルの[クイックスタート](https://docs.docker.com/get-started/) が便利です。ここではアプリケーションのイメージをパブリックレジストリにプッシュしていきます。[ここ](https://hub.docker.com/signup)で登録してGUIか次のコマンドでDockerにログインしてください。
+
+```
+$ docker login
+```
+
+ここでログインでUsernameとして使うものに混乱するかもしれません。メールアドレスを使ってはいけません。サインアップで作成したDocker IDを使ってください。Docker IDは[Docker Hub](https://hub.docker.com/)にログインしたときに右上に表示されます。
+
+![](https://engineering.linecorp.com/wp-content/uploads/2019/12/docker_login-1024x458.png)
+
+#### Kubernetes
+
+オーケー、Kubernetesをインストールしましょう。このサンプルでは、Docker内のKubernetesを有効にするだけです。
+
+![](https://engineering.linecorp.com/wp-content/uploads/2019/12/enable_k8s-1024x845.png)
+
+docker-desktop以外にローカルKubernetesクラスタを動かす手段には次のようなものがあります。
+
+- [minikube](https://github.com/kubernetes/minikube)
+- [kind](https://github.com/kubernetes-sigs/kind)
+
+### 3. Dockerイメージのビルド
+
+ここまで来れば、次のコマンドが動かせるはずです。
+
+```
+$ kubectl cluster-info
+```
+
+そうすると、次のように表示されます。
+
+```
+Kubernetes master is running at https://kubernetes.docker.internal:6443
+KubeDNS is running at https://kubernetes.docker.internal:6443/api/v1/namespaces/kube-system/services/kube-dns:dns/proxy
+
+To further debug and diagnose cluster problems, use 'kubectl cluster-info dump'.
+```
+
+ここまではいい感じ。  
+それでは、Spring BootアプリのDockerイメージを作りましょう。やる必要があることは、Dockerのベストプラクティス的には、docker-fileを書いてDockerデーモンを起動することです。[このガイド](https://spring.io/guides/topicals/spring-boot-docker/) の最初のパートに従うとよさそうです。
+
+#### Jib
+
+もしくは、Jibだけでできそうです。[Jib](https://github.com/GoogleContainerTools/jib)はGoogleが開発した、Dockerデーモンを使わずにJavaアプリケーションのDockerイメージを構築するツールです。そして、Dockerのベストプラクティスを深く知る必要もありません。  
+やる必要があるのは、`build.gradle`ファイルに次のような部分を追加することだけです。
+
+```
+plugins {
+    ..
+    id 'com.google.cloud.tools.jib' version '1.8.0'
+}
+
+jib.to.image = 'docker_id/image_name'
+```
+
+今回のサンプルではパブリックなDockerレジストリを使っていますが、Jibではイメージをプライベートレジストリにアップロードするようにも設定できます。  
+くわしくはこちらの[Jibのドキュメント](https://github.com/GoogleContainerTools/jib/tree/master/jib-gradle-plugin#authentication-methods)を参照してください。
+
+Jibプラグインを設定すると、Dockerイメージの作成は次のように単純になります。
+
+```
+$ ./gradlew jib
+```
+
+すべて完了して[Docker Hub](https://hub.docker.com/)へログインすると、今回のイメージがトップに現れます。
+
+![](https://engineering.linecorp.com/wp-content/uploads/2019/12/jibbed-1024x522.png)
+
+イメージのURLは`docker.io/docker_id/image_name`という形になります。
+
+### 4. Kubernetesへのデプロイ
+
+次はイメージをKubernetesにデプロイしましょう。そのために、YAMLの設定ファイルを書く必要があります。[IBM](https://developer.ibm.com/tutorials/yaml-basics-and-usage-in-kubernetes/)や[Mirantis](https://www.mirantis.com/blog/introduction-to-yaml-creating-a-kubernetes-deployment/)のチュートリアルが参考になりますが、基本的な.yamlファイルだけでも正しく書くのは大変な作業です。  
+とはいえ、とても簡単に始める方法をDevoxxの[このセッション](https://www.youtube.com/watch?v=c16oOeTfFXM)でみつけました。
+
+このようにする代わりに
+
+```
+$ kubectl create deployment my-app --image docker.io/nirvanarsc/my-app
+```
+
+`--dry-run`オプションをこのように追加します。
+
+```
+$ kubectl create deployment my-app --image docker.io/nirvanarsc/my-app --dry-run -oyaml
+```
+
+これで、指定したイメージをデプロイするために必要なYAMLの設定が表示されます。
+
+```
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  creationTimestamp: null
+  labels:
+    app: my-app
+  name: my-app
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: my-app
+  strategy: {}
+  template:
+    metadata:
+      creationTimestamp: null
+      labels:
+        app: my-app
+    spec:
+      containers:
+      - image: docker.io/nirvanarsc/my-app
+        name: my-app
+        resources: {}
+status: {}
+```
+
+ここで必要なのは、レプリカを1から3に増やすことです。(サンプルアプリケーションのインスタンス数を3にします)  
+同じ方法で、今回のサービスの初期設定を得ることができます。
+
+```
+$ kubectl create service clusterip my-app --tcp=8080:8080 --dry-run -oyaml
+```
+
+これを実行すると、次のように表示されます。
+
+```
+apiVersion: v1
+kind: Service
+metadata:
+  creationTimestamp: null
+  labels:
+    app: my-app
+  name: my-app
+spec:
+  ports:
+  - name: 8080-8080
+    port: 8080
+    protocol: TCP
+    targetPort: 8080
+  selector:
+    app: my-app
+  type: ClusterIP
+status:
+  loadBalancer: {}
+```
+
+それでは、両方の設定をそれぞれのファイルに保存しましょう。`k8s`フォルダを作成して、次のコマンドを実行します。
+
+```
+$ kubectl create deployment my-app --image docker.io/nirvanarsc/my-app --dry-run -oyaml > k8s/deployment.yaml
+$ kubectl create service clusterip my-app --tcp=8080:8080 --dry-run -oyaml > k8s/service.yaml
+```
+
+これで、今回のアプリケーションのデプロイは次のように簡単になります。
+
+```
+$ kubectl apply -f k8s
+```
+
+アプリケーションにアクセスするには、外部トラフィックからKubernetesクラスタにアクセスできるようにする必要があります。
+
+この記事ではIngress / LoadBalancer / NodePortなどには対処しません。おそらく[この投稿](https://medium.com/google-cloud/kubernetes-nodeport-vs-loadbalancer-vs-ingress-when-should-i-use-what-922f010849e0)が概要をつかむためにいいと思います。
+
+ここでは代わりに、ローカルポートをクラスタのポートにフォワードするよう、次のようにします。
+
+```
+$ kubectl port-forward svc/my-app 8080:8080
+```
+
+これで、`internal/docs`エンドポイントや`internal/metrics`エンドポイントに`http://localhost:8080`からアクセスできるようになります。
+
+![](https://engineering.linecorp.com/wp-content/uploads/2019/12/docs-2-1024x753.png)
+![](https://engineering.linecorp.com/wp-content/uploads/2019/12/metrics-1024x522.png)
+
+### 5. Kubernetes内のアプリケーションのモニタリング
+
+オーケイ、ついにモニタリングの話ができるところまでやってきました。最初にPrometheusとGrafanaについて少し。
+
+Prometheusはモニタリングとアラーティングのシステムです。2012年にSoundCloudで開発が始まりましたが、オープンソース化されて、今ではCNCFの一部になっています。 PrometheusはGoogleのBorgMonにインスパイアされています。BorgMonはGoogle内部で使われるモニタリング技術で、Borgで動くサービスをモニタするのに使われていました。BorgはGoogle内部クラスタのスケジューラで、Kubernetesの発想元になっています。ということで、PrometheusとKubernetesは両方ともGoogle内部の技術に由来して着想されています。
+
+Grafanaはオープンソースの分析とモニタリングのシステムです。 PrometheusとGrafanaはデファクトの基本的なモニタリングソリューションになりました。GrafanaとKibanaを混同してはいけません。KibanaはElasticsearchの上で動き、ログメッセージの分析に使われます。Shopチームでも私たちはPrometheusとGrafanaをモニタリングソリューションとして使っています。
+
+Prometheusを外部インスタンスで動かしてKubernetes内の今回のアプリケーションを認識しメトリクスを取得することも可能ですが、今回のサンプルでは、PrometheusとGrafanaのインスタンスをクラスタ内にインストールして、Prometheusがアプリケーションを認識してメトリクスを取ってくるようにします。
+
+PrometheusとGrafanaを今回のクラスタにインストールするために、[Helm](https://helm.sh/)を使うことにしました。 HelmはKubernetes用のパッケージマネージャです。Kubernetes向けのnpmやaptのようなものと考えましょう。 使い始めるために[オフィシャルドキュメント](https://helm.sh/docs/intro/quickstart/)を確認しますが、このサンプルで必要な設定は次の通りです。
+
+```
+$ brew install helm
+```
+
+```
+$ helm repo add stable https://kubernetes-charts.storage.googleapis.com/
+```
+
+#### Prometheusのインストール
+
+Prometeusをクラスタにインストールするには次のコマンドを実行します。
+
+```
+$ helm install my-prometheus stable/prometheus
+```
+
+これには次のような出力があるはずです。
+
+```
+NAME: my-prometheus
+LAST DEPLOYED: Thu Dec  5 15:29:58 2019
+NAMESPACE: default
+STATUS: deployed
+REVISION: 1
+TEST SUITE: None
+NOTES:
+The Prometheus server can be accessed via port 80 on the following DNS name from within your cluster:
+my-prometheus-server.default.svc.cluster.local
+
+Get the Prometheus server URL by running these commands in the same shell:
+  export POD_NAME=$(kubectl get pods --namespace default -l "app=prometheus,component=server" -o jsonpath="{.items[0].metadata.name}")
+  kubectl --namespace default port-forward $POD_NAME 9090
+
+The Prometheus alertmanager can be accessed via port 80 on the following DNS name from within your cluster:
+my-prometheus-alertmanager.default.svc.cluster.local
+
+Get the Alertmanager URL by running these commands in the same shell:
+  export POD_NAME=$(kubectl get pods --namespace default -l "app=prometheus,component=alertmanager" -o jsonpath="{.items[0].metadata.name}")
+  kubectl --namespace default port-forward $POD_NAME 9093
+
+The Prometheus PushGateway can be accessed via port 9091 on the following DNS name from within your cluster:
+my-prometheus-pushgateway.default.svc.cluster.local
+
+Get the PushGateway URL by running these commands in the same shell:
+  export POD_NAME=$(kubectl get pods --namespace default -l "app=prometheus,component=pushgateway" -o jsonpath="{.items[0].metadata.name}")
+  kubectl --namespace default port-forward $POD_NAME 9091
+
+For more information on running Prometheus, visit:
+https://prometheus.io/
+```
+
+そして次のように実行します。
+
+```
+$ export POD_NAME=$(kubectl get pods --namespace default -l "app=prometheus,component=server" -o jsonpath="{.items[0].metadata.name}")
+  kubectl --namespace default port-forward $POD_NAME 9090
+```
+
+そうするとPrometheusサーバーに`localhost:9090`でアクセスできるはずです。
+
+しかし、`status/targets`に移動すると、Prometheusがアプリケーションの認識に失敗していることがわかります。
+
+![](https://engineering.linecorp.com/wp-content/uploads/2019/12/prometheus-1024x646.png)
+
+ここでは、問題を解決するために2通りの方法があります。一つ目として、Helm経由でPrometheus Chartをインストールするときに[追加の設定](https://github.com/helm/charts/blob/master/stable/prometheus/values.yaml#L1316)を使えます。  
+次のような設定の`extraScrapeConfigs.yaml`というファイルを作ることができます。
+
+```
+extraScrapeConfigs: |
+  - job_name: 'armeria-metrics'
+    scrape_interval: 1s
+    metrics_path: /internal/metrics
+    kubernetes_sd_configs:
+      - role: endpoints
+```
+
+そして、次のように実行してPrometheus Chartの設定を更新します。
+
+```
+$ helm upgrade --install my-prometheus --set-file extraScrapeConfigs=prometheus/extraScrapeConfigs.yaml stable/prometheus
+```
+
+けれども、`deployment.yaml`ファイルを変更して、Prometheusが今回のアプリケーションからメトリクスを引っ張ってこれるように次の設定を追加することをお勧めします。
+
+```
+spec.template.metadata.annotations:
+  prometheus.io/scrape: "true"
+  prometheus.io/port: "8080"
+  prometheus.io/path: /internal/metrics
+```
+
+そうすると、`deployment.yaml`ファイルはこのようになるはずです。
+
+```
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  creationTimestamp: null
+  labels:
+    app: my-app
+  name: my-app
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: my-app
+  strategy: {}
+  template:
+    metadata:
+      creationTimestamp: null
+      labels:
+        app: my-app
+      annotations:                               ### here
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8080"
+        prometheus.io/path: /internal/metrics
+    spec:
+      containers:
+      - image: docker.io/nirvanarsc/my-app
+        name: my-app
+        resources: {}
+status: {}
+```
+
+それから、更新された設定でアプリケーションをデプロイしなおす必要があります。
+
+```
+$ kubectl delete deploy/my-app svc/my-app
+$ kubectl apply -f k8s
+$ kubectl port-forward svc/my-app 8080:8080
+```
+
+ここで`status/targets`にアクセスすると、今回のアプリケーションの3 podが見えるはずです。また、メトリクスへのクエリも可能になっているはずです。
+
+![](https://engineering.linecorp.com/wp-content/uploads/2019/12/prometheus2-1024x665.png)
+![](https://engineering.linecorp.com/wp-content/uploads/2019/12/prometheus3-1024x396.png)
+
+#### Grafanaのインストール
+
+最後に、Grafanaをインストールしてメトリクスを可視化します。
+
+```
+$ helm install my-grafana stable/grafana
+```
+
+```
+NAME: my-grafana
+LAST DEPLOYED: Thu Dec  5 16:03:33 2019
+NAMESPACE: default
+STATUS: deployed
+REVISION: 1
+NOTES:
+1. Get your 'admin' user password by running:
+
+   kubectl get secret --namespace default my-grafana -o jsonpath="{.data.admin-password}" | base64 --decode ; echo
+
+2. The Grafana server can be accessed via port 80 on the following DNS name from within your cluster:
+
+   my-grafana.default.svc.cluster.local
+
+   Get the Grafana URL to visit by running these commands in the same shell:
+
+     export POD_NAME=$(kubectl get pods --namespace default -l "app=grafana,release=my-grafana" -o jsonpath="{.items[0].metadata.name}")
+     kubectl --namespace default port-forward $POD_NAME 3000
+
+3. Login with the password from step 1 and the username: admin
+```
+
+続けて、上記の手順でGrafanaに`localhost:3000`でログインできるはずです。 そうすると、PrometheusをData Sourceとして追加して、今回のアプリケーションのメトリクスのダッシュボードを作れるようになります。
+
+![](https://engineering.linecorp.com/wp-content/uploads/2019/12/grafana1-1024x723.png)
+![](https://engineering.linecorp.com/wp-content/uploads/2019/12/grafana2-1024x317.png)
+
+以上です！PrometheusとGrafanaをうまく使って今回のアプリケーションのメトリクスを可視化するダッシュボードが構成できました。
+
+## まとめ
+
+Kubernetesを始めることはとてもチャレンジングでしょう。その理由として3つが考えられます。
+
+- yamlファイルをうまく書くのが難しい
+- ネットワークの何らかの知識が要求される
+- 相互に結びついた小さな要素がたくさんある (Docker, Pods, Services, ReplicaSets)
+
+このブログでKubernetesでの開発を始めることが簡単になれば幸いです。
+
+Happy coding!
+
+---
+
+DevoxxでのKubernetesに関する役立ちそうなセッションの一覧
+
+- [Best Practices to Spring to Kubernetes Easier and Faster by Ray Tsang - YouTube](https://www.youtube.com/watch?v=c16oOeTfFXM)
+- [Develop and Deploy to Kubernetes like a Googler by David Gageot - YouTube](https://www.youtube.com/watch?v=YYJ4RZFw4j8)
+- [Helm your way with Kubernetes by Ana Maria Mihalceanu - YouTube](https://www.youtube.com/watch?v=YiXf4Pqyl0A)
+- [Crash course in Kubernetes monitoring by Robert Munteanu - YouTube](https://www.youtube.com/watch?v=dId543PzSsU)

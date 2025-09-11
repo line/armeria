@@ -1,0 +1,289 @@
+---
+authors:
+  - seunghwanjoo
+---
+
+# Customizing Armeria metrics
+
+In my last post, [Monitoring Prometheus metrics from Armeria](https://engineering.linecorp.com/en/blog/monitoring-prometheus-metrics-from-armeria/), we took a look at how you can monitor Armeria metrics using Grafana.
+In this post, I would like to show you how you can customize Armeria metrics to suit your needs.
+
+{/* truncate */}
+
+> The sample code in this post uses the same sample code from [Monitoring Prometheus metrics from Armeria](https://engineering.linecorp.com/en/blog/monitoring-prometheus-metrics-from-armeria/).
+
+## Customizing metrics prefixes using MeterIdPrefixFunction
+
+In the last post I mentioned that you can customize the default prefix appended to metrics by using the [`MeterIdPrefixFunction#ofDefault`](<https://javadoc.io/static/com.linecorp.armeria/armeria-javadoc/1.8.0/com/linecorp/armeria/common/metric/MeterIdPrefixFunction.html#ofDefault(java.lang.String)>) function.
+You can further customize these prefixes by using the [`MeterIdPrefixFunction#andThen`](<https://javadoc.io/static/com.linecorp.armeria/armeria-javadoc/1.8.0/com/linecorp/armeria/common/metric/MeterIdPrefixFunction.html#andThen(com.linecorp.armeria.common.metric.MeterIdPrefixFunctionCustomizer)>) function.
+
+Let's assume you want to add an HTTP method name as your prefix.
+
+- AS-IS: `my_http_service`
+- TO-BE: `my_http_service_{HTTP method}`
+
+First you must generate a class that implements [`MeterIdPrefixFunctionCustomizer`](https://javadoc.io/doc/com.linecorp.armeria/armeria-javadoc/1.8.0/com/linecorp/armeria/common/metric/MeterIdPrefixFunctionCustomizer.html).
+You can add your HTTP method name to your existing `MeterIdPrefix` in the `MeterIdPrefixFunctionCustomizer#apply` function.
+
+While doing so, you can use [`RequestLog#requestHeaders`](<https://javadoc.io/doc/com.linecorp.armeria/armeria-javadoc/1.8.0/com/linecorp/armeria/common/logging/RequestOnlyLog.html#requestHeaders()>) to get the request's HTTP method name.
+Various other information generated while processing a single request gets collected on [`RequestLog`](https://javadoc.io/doc/com.linecorp.armeria/armeria-javadoc/1.8.0/com/linecorp/armeria/common/logging/RequestLog.html).
+For more information about this, please refer to the [Official Armeria documentation](https://armeria.dev/docs/advanced-structured-logging/).
+
+**MeterIdPrefixFunctionCustomizer.java**
+
+```
+public class MyMeterIdPrefixFunction implements MeterIdPrefixFunctionCustomizer {
+
+    @Override
+    public MeterIdPrefix apply(MeterRegistry registry, RequestOnlyLog log, MeterIdPrefix meterIdPrefix) {
+        return meterIdPrefix.append(log.requestHeaders().method().name());
+    }
+}
+```
+
+Next we insert the class's instance using the [`MeterIdPrefixFunction#andThen`](<https://javadoc.io/static/com.linecorp.armeria/armeria-javadoc/1.8.0/com/linecorp/armeria/common/metric/MeterIdPrefixFunction.html#andThen(com.linecorp.armeria.common.metric.MeterIdPrefixFunctionCustomizer)>) function.
+
+**ArmeriaPrometheusApplication.java**
+
+```
+ServerBuilder sb = Server.builder();
+                         .http(8083)
+                         .meterRegistry(meterRegistry);
+sb.annotatedService(...);
+sb.service("/metrics", ...);
+sb.decorator(MetricCollectingService.builder(MeterIdPrefixFunction.ofDefault("my.http.service")
+                                                                  // add
+                                                                  .andThen(new MyMeterIdPrefixFunction()))
+                                                                  .newDecorator());
+Server server = sb.build();
+// ...
+```
+
+After restarting the server, you can see that the HTTP method name has been appended to the front of your metrics.
+
+```
+$ curl -s http://localhost:8083/metrics | grep "my_http_service_"
+# HELP my_http_service_GET_timeouts_total
+# TYPE my_http_service_GET_timeouts_total counter
+my_http_service_GET_timeouts_total{cause="RequestTimeoutException",hostname_pattern="*",http_status="500",method="hello",service="com.example.armeria_prometheus.MyAnnotatedService",} 0.0
+my_http_service_GET_timeouts_total{cause="RequestTimeoutException",hostname_pattern="*",http_status="200",method="hello",service="com.example.armeria_prometheus.MyAnnotatedService",} 0.0
+# HELP my_http_service_GET_active_requests
+# TYPE my_http_service_GET_active_requests gauge
+my_http_service_GET_active_requests{hostname_pattern="*",method="hello",service="com.example.armeria_prometheus.MyAnnotatedService",} 0.0
+...
+```
+
+For an alternative method of doing this, you can use lambda expressions that have been introduced in Java 8.
+
+**ArmeriaPrometheusApplication.java**
+
+```
+MeterIdPrefixFunction.ofDefault("my.http.service")
+                     .andThen((registry, log, prefix) -> prefix.append(log.requestHeaders().method().name())))
+```
+
+## Customizing HTTP API response success predicate
+
+Armeria's default settings are set to recognize HTTP API response status codes smaller than 100 or larger than 400 as failures.
+However, you can use `MetricCollectingServiceBuilder#successFunction` to customize this predicate.
+
+Let's assume the API has received a 404 status code response.
+
+**MyAnnotatedService.java**
+
+```
+public class MyAnnotatedService {
+
+    @Get("/hello/{seq}")
+    public HttpResponse hello(@Param("seq") int seq) {
+        if (seq % 5 == 0) {
+            return HttpResponse.of(HttpStatus.NOT_FOUND);
+        }
+        // ...
+    }
+}
+```
+
+```
+$ curl http://localhost:8083/hello/5
+404 Not Found
+
+$ curl -s http://localhost:8083/metrics | grep "my_http_service_GET_requests_total" | grep "404"
+my_http_service_GET_requests_total{hostname_pattern="*",http_status="404",method="hello",result="success",service="com.example.armeria_prometheus.MyAnnotatedService",} 0.0
+my_http_service_GET_requests_total{hostname_pattern="*",http_status="404",method="hello",result="failure",service="com.example.armeria_prometheus.MyAnnotatedService",} 1.0
+```
+
+If you wish to change a 404 status code from a failure to a success, get the HTTP status from [`RequestLog#responseHeaders`](<https://javadoc.io/static/com.linecorp.armeria/armeria-javadoc/1.8.0/com/linecorp/armeria/common/logging/RequestLog.html#responseHeaders()>) and implement [`MetricCollectingServiceBuilder#successFunction`](<https://javadoc.io/static/com.linecorp.armeria/armeria-javadoc/1.8.0/com/linecorp/armeria/server/metric/MetricCollectingServiceBuilder.html#successFunction(java.util.function.BiPredicate)>) as follows.
+
+**ArmeriaPrometheusApplication.java**
+
+```
+// ...
+sb.decorator(MetricCollectingService.builder(MeterIdPrefixFunction.ofDefault("my.http.service")
+                                                                  .andThen(new MyMeterIdPrefixFunction()))
+                                     // add
+                                     .successFunction((context, log) -> {
+                                        final int statusCode = log.responseHeaders().status().code();
+                                        return (statusCode >= 200 && statusCode < 400) || statusCode == 404;
+                                     })
+                                     .newDecorator());
+// ...
+```
+
+You can see that the test results below show the 404 status code response as a success.
+
+```
+$ curl -s http://localhost:8083/metrics | grep "my_http_service_GET_requests_total" | grep "404"
+my_http_service_GET_requests_total{hostname_pattern="*",http_status="404",method="hello",result="success",service="com.example.armeria_prometheus.MyAnnotatedService",} 1.0
+my_http_service_GET_requests_total{hostname_pattern="*",http_status="404",method="hello",result="failure",service="com.example.armeria_prometheus.MyAnnotatedService",} 0.0
+```
+
+## Filtering metrics
+
+You can filter out unwanted metrics from your logs by using MeterFilter.
+For example, if you wish to remove JVM metrics from your logs, configure [`MeterFilter`](https://www.javadoc.io/doc/io.micrometer/micrometer-core/latest/io/micrometer/core/instrument/config/MeterFilter.html) as follows.
+
+**ArmeriaPrometheusApplication.java**
+
+```
+public static void main(String[] args) {
+        PrometheusMeterRegistry meterRegistry = new PrometheusMeterRegistry(PrometheusConfig.DEFAULT);
+        meterRegistry.config()
+                     .meterFilter(MeterFilter.denyNameStartsWith("jvm"));
+        ServerBuilder sb = Server.builder();
+                                 .http(8083)
+                                 .meterRegistry(meterRegistry);
+        // ...
+```
+
+You can see that all `jvm_` metrics have been removed.
+
+```
+$ curl -s http://localhost:8083/metrics | grep "^jvm"
+```
+
+## Collecting gRPC metrics
+
+Using Armeria's [`GrpcMeterIdPrefixFunction`](https://javadoc.io/doc/com.linecorp.armeria/armeria-javadoc/1.8.0/com/linecorp/armeria/common/grpc/GrpcMeterIdPrefixFunction.html), you can collect metrics related to [gRPC status codes](https://grpc.github.io/grpc/core/md_doc_statuscodes.html).
+To do this, add armeria-grpc to your dependencies as follows.
+
+**build.gradle**
+
+```
+dependencies {
+
+    // Armeria
+    implementation "com.linecorp.armeria:armeria:1.8.0"
+    implementation "com.linecorp.armeria:armeria-logback:1.8.0"
+    implementation "com.linecorp.armeria:armeria-grpc:1.8.0" // add
+
+    // ...
+}
+```
+
+For testing purposes, I've created a simple gRPC service as follows.
+
+**hello.proto**
+
+```
+syntax = "proto3";
+
+package com.example.armeria_prometheus;
+
+option java_package = "com.example.armeria_prometheus.grpc";
+
+service HelloService {
+  rpc Hello (HelloRequest) returns (HelloReply) {}
+}
+
+message HelloRequest {
+  int32 seq = 1;
+}
+
+message HelloReply {
+  string message = 1;
+}
+```
+
+**MyGrpcService.java**
+
+```
+public class MyGrpcService extends HelloServiceGrpc.HelloServiceImplBase {
+
+    @Override
+    public void hello(HelloRequest request, StreamObserver<HelloReply> responseObserver) {
+        if (request.getSeq() % 3 != 0) {
+            HelloReply reply = HelloReply.newBuilder()
+                                         .setMessage("Success")
+                                         .build();
+            responseObserver.onNext(reply);
+            responseObserver.onCompleted();
+            return;
+        }
+        responseObserver.onError(Status.INTERNAL.asException());
+    }
+}
+```
+
+I've added the gRPC service created above as a new service.
+In order to prevent affecting existing HTTP metric collection, I've applied a [`MetricCollectingService`](https://javadoc.io/doc/com.linecorp.armeria/armeria-javadoc/1.8.0/com/linecorp/armeria/server/metric/MetricCollectingService.html) decorator to each service.
+
+**ArmeriaPrometheusApplication.java**
+
+```
+// ...
+sb.annotatedService(new MyAnnotatedService(),
+                    MetricCollectingService.builder(MeterIdPrefixFunction.ofDefault("my.http.service")
+                                                                          // ... ìëµ ...
+sb.service(GrpcService.builder()
+                      .addService(new MyGrpcService())
+                      .build(),
+           MetricCollectingService.newDecorator(GrpcMeterIdPrefixFunction.of("my.grpc.service")));
+sb.service("/metrics", PrometheusExpositionService.of(meterRegistry.getPrometheusRegistry()));
+// ...
+```
+
+For easier testing, I've added client code that triggers multiple gRPC requests.
+Writing client code is also made easier when you're using Armeria.
+
+**RpcClientApplication.java**
+
+```
+public class RpcClientApplication {
+
+    private static final Logger logger = LoggerFactory.getLogger(RpcClientApplication.class);
+
+    public static void main(String[] args) {
+        HelloServiceBlockingStub helloService = Clients
+                .newClient("gproto+http://127.0.0.1:8083/", HelloServiceBlockingStub.class);
+        for (int i = 0; i < 100; i++) {
+            try {
+                HelloRequest request = HelloRequest.newBuilder().setSeq(i).build();
+                HelloReply reply = helloService.hello(request);
+                logger.info(reply.getMessage());
+            } catch (Exception e) {
+                logger.error("Error", e);
+            }
+        }
+    }
+}
+```
+
+Restart your server and run the client code.
+
+```
+$ curl -s http://localhost:8083/metrics | grep "my_grpc_service_requests_total"
+# HELP my_grpc_service_requests_total
+# TYPE my_grpc_service_requests_total counter
+my_grpc_service_requests_total{grpc_status="13",hostname_pattern="*",http_status="200",method="Hello",result="success",service="com.example.armeria_prometheus.HelloService",} 0.0
+my_grpc_service_requests_total{grpc_status="13",hostname_pattern="*",http_status="200",method="Hello",result="failure",service="com.example.armeria_prometheus.HelloService",} 34.0
+my_grpc_service_requests_total{grpc_status="0",hostname_pattern="*",http_status="200",method="Hello",result="failure",service="com.example.armeria_prometheus.HelloService",} 0.0
+my_grpc_service_requests_total{grpc_status="0",hostname_pattern="*",http_status="200",method="Hello",result="success",service="com.example.armeria_prometheus.HelloService",} 66.0
+```
+
+You can see that the [gRPC status code](https://grpc.github.io/grpc/core/md_doc_statuscodes.html) metrics are collected and displayed.
+
+## Conclusion
+
+Armeria also provides features that various users can use for collecting metrics.
+I hope many server engineers find these features useful and make their monitoring efforts more productive.

@@ -1,0 +1,179 @@
+---
+authors:
+  - onoyuichi
+---
+
+# 분산 서비스 환경에 대한 Circuit Breaker 적용
+
+LINE의 엔지니어 Ono입니다.
+이번 블로그에서는 LINE의 서버에서 실제로 도입을 시작한 'Circuit Breaker'라는 시스템에 대해 소개하겠습니다.
+
+## Circuit Breaker란?
+
+LINE을 비롯한 최근의 Web 및 App의 백엔드 서버 시스템은 여러 개의 서비스가 API나 RPC로 연결된 네트워크로 구성되어 있습니다.
+만약 이 네트워크 중 하나가 갑자기 전혀 응답하지 않게 되는 상황이 발생하면 어떻게 될까요?
+동작하지 않는 서비스 접속 시 타임아웃될 때까지 차단되어, 의존성이 있는 서비스까지 연쇄적으로 멈출 가능성이 있습니다.
+만약 네트워크 전체를 파악하고 있는 사람이 아무도 없다면, 근본적인 원인이 어느 서비스에 있는지를 알아내기까지 시간이 걸리게 됩니다.
+
+![](https://engineering.linecorp.com/wp-content/uploads/2016/07/cascading_failure.png)
+
+{/* truncate */}
+
+우리는 이러한 연쇄적인 장애 발생을 막아야 합니다.
+적어도 가장 중요한 기능에 영향이 가지 않도록 해야 하는데, 그러기 위해서는 장애가 발생한 서비스에 대한 접속 차단이 필요합니다.
+
+![](https://engineering.linecorp.com/wp-content/uploads/2016/07/fail_fast.png)
+
+이 시스템을 자동화한 것이 바로 Circuit Breaker입니다.
+http://martinfowler.com/bliki/CircuitBreaker.html
+
+위 링크에 있는 마틴 파울러의 글에 자세한 설명이 있으니 여기서는 간단하게만 소개하겠습니다.
+
+Circuit Breaker란, 원격 접속의 성공/실패를 카운트하여 에러율(failure rate)이 임계치를 넘어섰을 때 자동적으로 접속을 차단하는 시스템입니다.
+Circuit Breaker는 상태 머신(State Machine)으로 나타낼 수 있습니다. 접속 성공과 실패 이벤트가 발생할 때마다 내부 상태를 업데이트하여 자동적으로 장애를 검출하고 복구 여부를 판단합니다.
+
+![](https://engineering.linecorp.com/wp-content/uploads/2016/07/3.png)
+
+각각의 상태와 이동 조건은 아래와 같습니다.
+
+**CLOSED**
+
+초기 상태입니다. 모든 접속은 평소와 같이 실행됩니다.
+
+**OPEN**
+
+에러율이 임계치를 넘어서면 OPEN 상태가 됩니다. 모든 접속은 차단(fail fast)됩니다.
+
+**HALF_OPEN**
+
+OPEN 후 일정 시간이 지나면 HALF_OPEN 상태가 됩니다. 접속을 시도하여 성공하면 CLOSED, 실패하면 OPEN으로 되돌아갑니다.
+
+## Circuit Breaker for Armeria
+
+[Armeria](http://line.github.io/armeria/)는 LINE이 오픈소스로 공개한 Netty 기반의 비동기 Thrift 클라이언트/서버 라이브러리입니다.
+Armeria의 장점은 decorator를 통해 기능을 간편하게 확장할 수 있다는 점입니다. 그리고 Armeria 0.13.0부터 Circuit Breaker를 decorator로 추가할 수 있게 되었습니다.
+
+Circuit Breaker를 사용한 Thrift Client 초기화는 아래와 같이 진행합니다.
+
+```
+Iface helloClient = new ClientBuilder("tbinary+http://127.0.0.1:8080/hello")
+                     .decorator(
+                      CircuitBreakerClient.newDecorator(
+                          new CircuitBreakerBuilder("hello").build()
+                      )
+                     )
+                     .build(Iface.class);
+```
+
+쉽게 초기화를 할 수 있습니다. 그리고 이 Thrift Client를 호출하는 코드는 아래와 같습니다.
+
+```
+try {
+    helloClient.hello("line");
+} catch (TException e) {
+    // error handling
+} catch (FailFastException e) {
+   // fallback code
+}
+```
+
+Circuit Breaker가 장애를 감지하면 Thrift Client가 FailFastException을 전송하므로, 적절한 대체(fallback) 코드를 실행합니다. 비동기 Client의 경우도 동일합니다.
+
+```
+helloClient.hello("line", new AsyncMethodCallback() {
+  public void onComplete(Object response) {
+     // response handling
+  }
+  public void onError(Exception e) {
+     if (e instanceof TException) {
+         // error handling
+     } else if (e instanceof FailFastException) {
+         // fallback code
+     }
+ }
+});
+```
+
+## Grouping
+
+위 예시에서는 하나의 Thrift 서비스에 하나의 Circuit Breaker를 할당했습니다. 이 경우, 동일한 서비스 중 하나의 메서드가 원인이 되어 Circuit이 차단되었을 때 다른 모든 메서드도 차단되게 됩니다. 이는 오히려 장애 범위를 확대시키게 되므로 바람직한 동작이 아닙니다. 따라서 Armeria에서는 Circuit Breaker의 인스턴스를 할당할 범위를 선택할 수 있는 그룹핑 기능을 제공하고 있습니다.
+
+그룹핑에는 다음의 3종류가 있습니다.
+
+**Per Method**
+
+메서드별로 하나의 Circuit Breaker를 할당합니다.
+
+**Per Host**
+
+원격 호스트별로 하나의 Circuit Breaker를 할당합니다.
+
+**Per Host and Method**
+
+원격 호스트와 메서드별로 하나의 Circuit Breaker를 할당합니다.
+
+![](https://engineering.linecorp.com/wp-content/uploads/2016/07/Per-Host-and-Method.png)
+
+## Failure Rate
+
+Circuit Breaker를 운용할 때는 어떤 상태를 장애로 간주할 것인지 조건을 명확하게 정의해야 합니다.
+Armeria에서는 일정 시간 내에 처리한 리퀘스트 중 에러율(Failure Rate)이 < Failure Rate Threshold > 이상인 경우를 장애 상태로 취급합니다. 단, 리퀘스트 수가 너무 적을 경우(실행 직후의 과도 상태 등)에는 에러율이 안정적이지 않아서 장애를 오감지하게 될 가능성이 있습니다. 따라서 리퀘스트 수가 < Minimum Request Threshold > 이하인 경우에는 장애 판정을 하지 않도록 설정할 수 있습니다. 그리고 에러 비율을 카운트하는 시간의 길이는 < Sliding Window >로 설정합니다.
+Failure Rate와 Sliding Window의 관계는 아래 그림으로 나타낼 수 있습니다.
+
+![](https://engineering.linecorp.com/wp-content/uploads/2016/07/Failure-Rate.png)
+
+## Monitoring
+
+Circuit Breaker Listener를 통해 Circuit Breaker의 상태 변화를 모니터링할 수 있습니다. 아래의 코드는 Armeria가 제공하는 Dropwizard Metrics 기반의 Listener를 사용한 예입니다. 물론 커스터마이즈된 모니터링 시스템에 맞춘 Listener를 구현하는 것도 가능합니다.
+
+```
+MetricRegistry registry = new MetricRegistry();
+
+Iface helloClient = new ClientBuilder("tbinary+http://127.0.0.1:8080/hello")
+       .decorator(
+        CircuitBreakerClient.newDecorator(
+          new CircuitBreakerBuilder("hello")
+            .listener(new DropwizardMetricsCircuitBreakerListener(registry, "hello"))
+            .build()
+        )
+       )
+       .build(Iface.class);
+```
+
+## Armeria의 Circuit Breaker를 단독으로 사용하기
+
+지금까지는 Armeria의 Thrift Client와 Circuit Breaker 패키지를 조합해서 사용하는 방법을 소개했는데, Circuit Breaker 패키지를 단독으로 사용하는 것도 가능합니다.
+
+Circuit Breaker 패키지를 단독으로 사용할 경우, 중요한 API는 아래의 3가지입니다.
+
+**CircuitBreaker#canRequest()**
+
+Circuit Breaker의 상태를 확인합니다.
+Circuit이 차단되어 있는 경우에는 false를 반환합니다.
+
+**CircuitBreaker#onSuccess()**
+
+서비스 접속이 정상적으로 이루어졌음을 기록합니다.
+
+**CircuitBreaker#onFailure() 또는 CircuitBreaker#onFailure(Throwable t)**
+
+서비스 접속이 실패했음을 기록합니다.
+
+아래의 샘플 코드에서는 먼저 canRequest()로 Circuit의 상황을 확인하고, 문제가 없으면 remote service access를 실행합니다. 그리고 그 결과에 따라 onSuccess 또는 onFailure를 호출합니다. 여기에서는 예외 발생 여부를 결과의 조건으로 설정했는데, 이 조건은 상황에 맞춰 자유롭게 정의할 수 있습니다. 예를 들어, remote service access가 일정 시간 이상 걸린 경우에는 예외가 발생하지 않았더라도 에러로 카운트하도록 할 수도 있습니다.
+
+```
+if (circuitBreaker.canRequest()) {
+   try {
+       // remote service access
+
+       circuitBreaker.onSuccess();
+   } catch (Exception e) {
+       circuitBreaker.onFailure(e);
+   }
+} else {
+   // fail fast
+}
+```
+
+이상으로 Armeria의 Circuit Breaker 기능에 대한 소개를 마치겠습니다.
+LINE 내에서의 실제 사례도 조만간 소개하도록 하겠습니다.
