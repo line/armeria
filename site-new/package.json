@@ -47,6 +47,7 @@
     "prism-react-renderer": "^2.3.0",
     "react": "^19.0.0",
     "react-awesome-reveal": "^4.3.1",
+    "react-cookie-consent": "^9.0.0",
     "react-dom": "^19.0.0",
     "react-easy-emoji": "^1.8.1",
     "react-mixitup": "^4.0.6",

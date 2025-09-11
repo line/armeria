@@ -1,0 +1,18 @@
+.cookieConsentContainer {
+  justify-content: flex-end !important;
+}
+
+.cookieConsentContent {
+  flex-basis: 100% !important;
+  margin: 0 !important;
+  padding: 16px;
+}
+
+.cookieConsentAcceptButton {
+  margin: 0 16px 16px 0;
+}
+
+.cookieConsentDeclineButton {
+  margin: 0 16px 16px 0;
+  margin-left: auto;
+}
