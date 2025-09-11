@@ -1,8 +1,10 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { DownOutlined } from '@ant-design/icons';
 import type { MenuProps } from 'antd';
 import { Button, Dropdown } from 'antd';
 import Link from '@docusaurus/Link';
+import { useLocation } from '@docusaurus/router';
+import useIsBrowser from '@docusaurus/useIsBrowser';
 
 import styles from './blog-language-selector.module.css';
 
@@ -23,10 +25,13 @@ const items: MenuProps['items'] = [
 
 const BlogLanguageSelector: React.FC = () => {
   const [selected, setSelected] = React.useState(items[0]);
+  const isBrowser = useIsBrowser();
+  const location = useLocation();
 
-  React.useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const path = window.location.pathname;
+  useEffect(() => {
+    if (isBrowser) {
+      const path = location.pathname;
+      console.log(path);
       if (path.startsWith('/blog/ja')) {
         setSelected(items[1]);
       } else if (path.startsWith('/blog/ko')) {
@@ -35,7 +40,7 @@ const BlogLanguageSelector: React.FC = () => {
         setSelected(items[0]);
       }
     }
-  }, []);
+  }, [location, isBrowser]);
 
   const handleMenuClick: MenuProps['onClick'] = (e) => {
     const found = items.find((item) => item?.key === e.key);
