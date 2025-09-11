@@ -90,15 +90,16 @@ public abstract class AbstractHttpMessageBuilder implements HttpMessageSetters {
 
     @Override
     public AbstractHttpMessageBuilder content(String content) {
-        return content(MediaType.PLAIN_TEXT_UTF_8, content);
+        requireNonNull(content, "content");
+        return content(HttpData.of(MediaType.PLAIN_TEXT_UTF_8.charset(StandardCharsets.UTF_8),
+                content));
     }
 
     @Override
     public AbstractHttpMessageBuilder content(MediaType contentType, CharSequence content) {
         requireNonNull(contentType, "contentType");
         requireNonNull(content, "content");
-        return content(contentType,
-                       HttpData.of(contentType.charset(StandardCharsets.UTF_8),
+        return content(contentType, HttpData.of(contentType.charset(StandardCharsets.UTF_8),
                                    content));
     }
 
@@ -107,13 +108,16 @@ public abstract class AbstractHttpMessageBuilder implements HttpMessageSetters {
         requireNonNull(contentType, "contentType");
         requireNonNull(content, "content");
         return content(contentType, HttpData.of(contentType.charset(StandardCharsets.UTF_8),
-                                                content));
+                                   content));
     }
 
     @Override
     @FormatMethod
     public AbstractHttpMessageBuilder content(@FormatString String format, Object... content) {
-        return content(MediaType.PLAIN_TEXT_UTF_8, format, content);
+        requireNonNull(format, "format");
+        requireNonNull(content, "content");
+        return content(HttpData.of(MediaType.PLAIN_TEXT_UTF_8.charset(StandardCharsets.UTF_8),
+                format, content));
     }
 
     @Override
@@ -131,6 +135,14 @@ public abstract class AbstractHttpMessageBuilder implements HttpMessageSetters {
     public AbstractHttpMessageBuilder content(MediaType contentType, byte[] content) {
         requireNonNull(content, "content");
         return content(contentType, HttpData.wrap(content));
+    }
+
+    @Override
+    public AbstractHttpMessageBuilder content(HttpData content) {
+        requireNonNull(content, "content");
+        checkState(publisher == null, "publisher has been set already");
+        this.content = content;
+        return this;
     }
 
     @Override
