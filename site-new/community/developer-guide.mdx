@@ -53,9 +53,9 @@ After importing the project, import the IDE settings as well:
 
 - [`settings.jar`](https://github.com/line/armeria/raw/main/settings/intellij_idea/settings.jar) -
   See [Import settings from a ZIP archive](https://www.jetbrains.com/help/idea/sharing-your-ide-settings.html#7a4f08b8).
-- Make sure to use 'LINE OSS' code style and inspection profile.
-  - Go to `Preferences` > `Editors` > `Code Style` and set `Scheme` option to `LINE OSS`.
-  - Go to `Preferences` > `Editors` > `Inspections` and set `Profile` option to `LINE OSS`.
+- Make sure to use 'LY OSS' code style and inspection profile.
+  - Go to `Preferences` > `Editors` > `Code Style` and set `Scheme` option to `LY OSS`.
+  - Go to `Preferences` > `Editors` > `Inspections` and set `Profile` option to `LY OSS`.
 
 </TabItem>
 <TabItem label="Eclipse" value="eclipse">
@@ -108,6 +108,10 @@ License for the specific language governing permissions and limitations
 under the License.
 ```
 
+Please avoid introducing noise into your PRs by changing the date (`$today.year`) for every file you modify.
+In IntelliJ, make sure you
+[disable](https://www.jetbrains.com/help/idea/copyright.html#update-copyright-on-save) automatic copyright header updates.
+
 ## Add Javadoc
 
 All public classes and public or protected methods must have Javadoc,
@@ -116,8 +120,8 @@ an internal API from a public API will trigger build failures.
 
 ## Check the warnings from the inspection profile
 
-- Make sure you are using 'LINE OSS' code style and inspection profile.
-- Evaluate all warnings emitted by the 'LINE OSS' inspection profile.
+- Make sure you are using 'LY OSS' code style and inspection profile.
+- Evaluate all warnings emitted by the 'LY OSS' inspection profile.
   - Try to fix them all and use the `@SuppressWarnings` annotation if it's a false positive.
 
 ## Avoid redundancy

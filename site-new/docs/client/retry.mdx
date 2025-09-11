@@ -221,7 +221,10 @@ the maximum number of total attempts to 10 by default. You can change this value
 `maxTotalAttempts` when you build a [RetryingClient](type):
 
 ```java
-RetryingClient.newDecorator(rule, maxTotalAttempts);
+RetryConfig config = RetryConfig.builder(rule)
+    .maxTotalAttempts(maxTotalAttempts)
+    .build();
+RetryingClient.newDecorator(config);
 ```
 
 Or, you can override the default value of 10 using the JVM system property
@@ -246,8 +249,11 @@ Second, it occurs when the time of individual attempt in retry has passed the ti
 You can configure it when you create the decorator:
 
 ```java
-RetryingClient.newDecorator(rule, maxTotalAttempts,
-                            responseTimeoutMillisForEachAttempt);
+RetryConfig config = RetryConfig.builder(rule)
+    .maxTotalAttempts(maxTotalAttempts)
+    .responseTimeoutMillisForEachAttempt(responseTimeoutMillisForEachAttempt)
+    .build();
+RetryingClient.newDecorator(config);
 ```
 
 You can retry on this [ResponseTimeoutException](type).

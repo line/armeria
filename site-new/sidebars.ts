@@ -85,6 +85,7 @@ const sidebars: SidebarsConfig = {
         'advanced/unit-testing',
         'advanced/production-checklist',
         'advanced/saml',
+        'advanced/athenz',
         'advanced/spring-boot-integration',
         'advanced/spring-webflux-integration',
         'advanced/dropwizard-integration',
