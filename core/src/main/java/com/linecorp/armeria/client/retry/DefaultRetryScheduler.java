@@ -58,6 +58,7 @@ final class DefaultRetryScheduler implements RetryScheduler {
 
             if (System.nanoTime() > deadlineTimeNanos) {
                 logger.debug("Tried to run a retry task after the deadline. Skipping this task.");
+                return;
             }
 
             assert nextRetryTask != null;
