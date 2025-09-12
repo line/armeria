@@ -44,7 +44,6 @@ import org.junit.jupiter.api.Test;
 
 import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.internal.testing.AnticipatedException;
-import com.linecorp.armeria.internal.testing.BlockingUtils;
 
 import io.netty.channel.DefaultEventLoop;
 
@@ -53,12 +52,14 @@ class RetrySchedulerTest {
         private final Consumer<MockRetryTask> runnable;
         private final int retryTaskNumber;
         private final AtomicBoolean executed;
+        private final AtomicLong scheduledTimeNanos;
         private final AtomicLong executionTimeNanos;
 
         MockRetryTask(Consumer<MockRetryTask> runnable, int retryTaskNumber) {
             this.runnable = runnable;
             this.retryTaskNumber = retryTaskNumber;
             executed = new AtomicBoolean(false);
+            scheduledTimeNanos = new AtomicLong(System.nanoTime());
             executionTimeNanos = new AtomicLong();
         }
 
@@ -68,6 +69,14 @@ class RetrySchedulerTest {
             executed.set(true);
             executionTimeNanos.set(System.nanoTime());
             runnable.accept(this);
+        }
+
+        void setScheduledTimeNanos() {
+            scheduledTimeNanos.set(System.nanoTime());
+        }
+
+        long scheduledTimeNanos() {
+            return scheduledTimeNanos.get();
         }
 
         long executionTimeNanos() {
@@ -125,11 +134,10 @@ class RetrySchedulerTest {
         );
 
         runOnRetryEventLoop(() -> {
-            final long now = System.nanoTime();
             assertThat(scheduler.trySchedule(nextRetryTask(), 0)).isTrue();
             assertThat(scheduler.whenClosed()).isNotDone();
 
-            assertRetryTaskExecutionsAt(now);
+            assertRetryTaskExecutionsAt(0);
 
             scheduler.close();
             assertThat(scheduler.whenClosed()).isCompleted();
@@ -145,19 +153,13 @@ class RetrySchedulerTest {
                                                                           TimeUnit.SECONDS.toNanos(5)
         );
 
-        final AtomicLong schedulingTimeNanos = new AtomicLong();
-        final long delayMillis = 200L;
-
         runOnRetryEventLoop(() -> {
-            schedulingTimeNanos.set(System.nanoTime());
-            assertThat(scheduler.trySchedule(nextRetryTask(), delayMillis)).isTrue();
+            assertThat(scheduler.trySchedule(nextRetryTask(), 200L)).isTrue();
             assertThat(scheduler.whenClosed()).isNotDone();
         });
 
         await().untilAsserted(
-                () -> assertRetryTaskExecutionsAt(
-                        schedulingTimeNanos.get() +
-                        TimeUnit.MILLISECONDS.toNanos(delayMillis))
+                () -> assertRetryTaskExecutionsAt(200L)
         );
 
         runOnRetryEventLoop(() -> {
@@ -201,8 +203,7 @@ class RetrySchedulerTest {
 
         Thread.sleep(1_000 + RETRY_TASK_EXECUTION_TIME_TOLERANCE + 100);
 
-        assertRetryTaskExecutionsAt(schedulingTimeNanos.get() +
-                                    TimeUnit.MILLISECONDS.toNanos(1_000));
+        assertRetryTaskExecutionsAt(1_000);
 
         assertNoExceptionsOnRetryEventLoop();
     }
@@ -220,16 +221,16 @@ class RetrySchedulerTest {
         final AtomicLong schedulingTimeNanos = new AtomicLong();
 
         final int numberOfAttempts = 10;
-        final List<Long> retryDelaysMillis = Collections.synchronizedList(new ArrayList<>());
+        final List<Long> expectedDelaysMillis = Collections.synchronizedList(new ArrayList<>());
         final List<MockRetryTask> tasks = Collections.synchronizedList(new ArrayList<>());
 
         final Random random = new Random();
 
         for (int i = 0; i < numberOfAttempts; i++) {
             if (random.nextBoolean()) {
-                retryDelaysMillis.add(0L);
+                expectedDelaysMillis.add(0L);
             } else {
-                retryDelaysMillis.add((long) random.nextInt(300));
+                expectedDelaysMillis.add((long) random.nextInt(300));
             }
         }
 
@@ -237,7 +238,7 @@ class RetrySchedulerTest {
             final int attemptIndex = i;
             tasks.add(nextRetryTask(() -> {
                 final MockRetryTask nextRetryTask = tasks.get(attemptIndex + 1);
-                final long nextDelayMillis = retryDelaysMillis.get(attemptIndex + 1);
+                final long nextDelayMillis = expectedDelaysMillis.get(attemptIndex + 1);
                 final long nextDelayMillisForCall;
 
                 if (random.nextInt(3) < 2) {
@@ -258,6 +259,7 @@ class RetrySchedulerTest {
                     nextDelayMillisForCall = nextDelayMillis;
                 }
 
+                nextRetryTask.setScheduledTimeNanos();
                 // In the end we expect to execute that retry task after nextDelayMillis.
                 assertThat(scheduler.trySchedule(nextRetryTask, nextDelayMillisForCall)).isTrue();
             }));
@@ -266,30 +268,20 @@ class RetrySchedulerTest {
 
         runOnRetryEventLoop(() -> {
             schedulingTimeNanos.set(System.nanoTime());
-            assertThat(scheduler.trySchedule(tasks.get(0), retryDelaysMillis.get(0))).isTrue();
+            tasks.get(0).setScheduledTimeNanos();
+            assertThat(scheduler.trySchedule(tasks.get(0), expectedDelaysMillis.get(0))).isTrue();
             assertThat(scheduler.whenClosed()).isNotDone();
         });
 
         await().until(() -> retryDone.getCount() == 0);
 
-        final List<Long> expectedRetryTaskExecutionTimes = new ArrayList<>();
-        long cumulativeDelayMillis = 0L;
-
-        for (final Long delayMillis : retryDelaysMillis) {
-            cumulativeDelayMillis += delayMillis;
-            expectedRetryTaskExecutionTimes.add(
-                    schedulingTimeNanos.get() +
-                    TimeUnit.MILLISECONDS.toNanos(cumulativeDelayMillis)
-            );
-        }
-
         await().untilAsserted(
                 () -> {
-                    assertRetryTaskExecutionsAt(expectedRetryTaskExecutionTimes);
+                    assertRetryTaskExecutionsAt(expectedDelaysMillis);
                 });
 
         Thread.sleep(RETRY_TASK_EXECUTION_TIME_TOLERANCE + 1_000);
-        assertRetryTaskExecutionsAt(expectedRetryTaskExecutionTimes);
+        assertRetryTaskExecutionsAt(expectedDelaysMillis);
         assertNoExceptionsOnRetryEventLoop();
     }
 
@@ -301,7 +293,6 @@ class RetrySchedulerTest {
                 TimeUnit.SECONDS.toNanos(5)
         );
 
-        final AtomicLong schedulingTimeNanos = new AtomicLong();
         final long minimumBackoffMillis = 200L;
         final long delayMillis = minimumBackoffMillis +
                                  RETRY_TASK_EXECUTION_TIME_TOLERANCE +
@@ -309,7 +300,6 @@ class RetrySchedulerTest {
                                  200L;
 
         runOnRetryEventLoop(() -> {
-            schedulingTimeNanos.set(System.nanoTime());
             scheduler.applyMinimumBackoffMillisForNextRetry(Long.MIN_VALUE);
             scheduler.applyMinimumBackoffMillisForNextRetry(-1);
             scheduler.applyMinimumBackoffMillisForNextRetry(0);
@@ -321,9 +311,7 @@ class RetrySchedulerTest {
         });
 
         await().untilAsserted(
-                () -> assertRetryTaskExecutionsAt(
-                        schedulingTimeNanos.get() +
-                        TimeUnit.MILLISECONDS.toNanos(delayMillis))
+                () -> assertRetryTaskExecutionsAt(delayMillis)
         );
 
         runOnRetryEventLoop(() -> {
@@ -342,7 +330,6 @@ class RetrySchedulerTest {
                 TimeUnit.SECONDS.toNanos(5)
         );
 
-        final AtomicLong schedulingTimeNanos = new AtomicLong();
         final long delayMillis = 200L;
         final long minimumBackoffMillis = delayMillis +
                                           RETRY_TASK_EXECUTION_TIME_TOLERANCE +
@@ -350,16 +337,13 @@ class RetrySchedulerTest {
                                           200L;
 
         runOnRetryEventLoop(() -> {
-            schedulingTimeNanos.set(System.nanoTime());
             scheduler.applyMinimumBackoffMillisForNextRetry(minimumBackoffMillis);
             assertThat(scheduler.trySchedule(nextRetryTask(), delayMillis)).isTrue();
             assertThat(scheduler.whenClosed()).isNotDone();
         });
 
         await().untilAsserted(
-                () -> assertRetryTaskExecutionsAt(
-                        schedulingTimeNanos.get() +
-                        TimeUnit.MILLISECONDS.toNanos(minimumBackoffMillis))
+                () -> assertRetryTaskExecutionsAt(minimumBackoffMillis)
         );
 
         runOnRetryEventLoop(() -> {
@@ -404,16 +388,13 @@ class RetrySchedulerTest {
         );
 
         final AtomicReference<CompletableFuture<Void>> whenClosedRef = new AtomicReference<>();
-        final AtomicLong schedulingTimeNanos = new AtomicLong();
-        final long delayMillis = 200L;
 
         runOnRetryEventLoop(() -> {
-            schedulingTimeNanos.set(System.nanoTime());
             assertThat(scheduler.trySchedule(
                     nextRetryTask(() -> {
                         throw new AnticipatedException("bad task");
                     }),
-                    delayMillis)).isTrue();
+                    200L)).isTrue();
             assertThat(scheduler.whenClosed()).isNotDone();
             whenClosedRef.set(scheduler.whenClosed());
         });
@@ -429,41 +410,39 @@ class RetrySchedulerTest {
             }
         });
 
-        assertRetryTaskExecutionsAt(schedulingTimeNanos.get() +
-                                    TimeUnit.MILLISECONDS.toNanos(delayMillis));
+        assertRetryTaskExecutionsAt(200L);
 
         assertNoExceptionsOnRetryEventLoop();
     }
 
     @Test
-    void schedule_closeRetryEventLoop_closeExceptionally() throws InterruptedException {
+    void schedule_closeRetryEventLoop_closeExceptionally() throws Exception {
         final DefaultRetryScheduler scheduler = new DefaultRetryScheduler(
                 retryEventLoop,
                 System.nanoTime() +
                 TimeUnit.SECONDS.toNanos(5)
         );
 
+        final AtomicReference<CompletableFuture<Void>> whenClosedRef = new AtomicReference<>();
+
         runOnRetryEventLoop(() -> {
             assertThat(scheduler.trySchedule(nextRetryTask(), 1_000)).isTrue();
             assertThat(scheduler.whenClosed()).isNotDone();
+            whenClosedRef.set(scheduler.whenClosed());
         });
 
         // Close the event loop before the task is executed.
-        retryEventLoop.shutdownGracefully(0, 500, TimeUnit.MILLISECONDS);
+        retryEventLoop.shutdownGracefully(0, 500, TimeUnit.MILLISECONDS).get();
 
-        runOnRetryEventLoop(() -> {
-            assertThat(scheduler.whenClosed()).isCompletedExceptionally();
-            try {
-                BlockingUtils.blockingRun(() -> {
-                    scheduler.whenClosed().get();
-                });
-                fail();
-            } catch (Throwable e) {
-                assertThat(e.getCause()).isInstanceOf(IllegalStateException.class)
-                                        .hasMessageContaining(ClientFactory.class.getName())
-                                        .hasMessageContaining("has been closed.");
-            }
-        });
+        assertThat(whenClosedRef.get()).isCompletedExceptionally();
+        try {
+            whenClosedRef.get().get();
+            fail();
+        } catch (Throwable e) {
+            assertThat(e.getCause()).isInstanceOf(IllegalStateException.class)
+                                    .hasMessageContaining(ClientFactory.class.getSimpleName())
+                                    .hasMessageContaining("has been closed");
+        }
 
         Thread.sleep(1_000 + RETRY_TASK_EXECUTION_TIME_TOLERANCE + 100);
 
@@ -479,10 +458,7 @@ class RetrySchedulerTest {
                 TimeUnit.SECONDS.toNanos(5)
         );
 
-        final AtomicLong schedulingTimeNanos = new AtomicLong();
-
         runOnRetryEventLoop(() -> {
-            schedulingTimeNanos.set(System.nanoTime());
             assertThat(scheduler.trySchedule(nextRetryTask(), 1_000)).isTrue();
             assertThat(scheduler.whenClosed()).isNotDone();
         });
@@ -497,8 +473,7 @@ class RetrySchedulerTest {
 
         Thread.sleep(800 + RETRY_TASK_EXECUTION_TIME_TOLERANCE + 100);
 
-        assertRetryTaskExecutionsAt(schedulingTimeNanos.get() +
-                                    TimeUnit.MILLISECONDS.toNanos(1_000));
+        assertRetryTaskExecutionsAt(1_000L);
 
         runOnRetryEventLoop(() -> {
             assertThat(scheduler.whenClosed()).isNotDone();
@@ -687,27 +662,36 @@ class RetrySchedulerTest {
         assertRetryTaskExecutionsAt();
     }
 
-    private void assertRetryTaskExecutionsAt(long... expectedExecutionTimesNanos) {
+    private void assertRetryTaskExecutionsAt(long... expectedDelaysMillis) {
         assertRetryTaskExecutionsAt(
-                expectedExecutionTimesNanos == null ?
+                expectedDelaysMillis == null ?
                 Collections.emptyList()
-                                                    : LongStream.of(expectedExecutionTimesNanos).boxed()
-                                                                .collect(Collectors.toList())
+                                             : LongStream.of(expectedDelaysMillis).boxed()
+                                                         .collect(Collectors.toList())
         );
     }
 
-    private void assertRetryTaskExecutionsAt(List<Long> expectedExecutionTimesNanos) {
-        assertThat(executedRetryTasks).hasSize(expectedExecutionTimesNanos.size());
-        for (int expectedRetryTaskNumber = 0; expectedRetryTaskNumber < expectedExecutionTimesNanos.size();
+    private void assertRetryTaskExecutionsAt(List<Long> expectedDelaysMillis) {
+        assertThat(executedRetryTasks).hasSize(expectedDelaysMillis.size());
+
+        if (expectedDelaysMillis.isEmpty()) {
+            return;
+        }
+
+        for (int expectedRetryTaskNumber = 0; expectedRetryTaskNumber < expectedDelaysMillis.size();
              expectedRetryTaskNumber++) {
             final MockRetryTask task = executedRetryTasks.get(expectedRetryTaskNumber);
+
             assertThat(task.nextRetryTaskNumber()).isEqualTo(expectedRetryTaskNumber);
-            final long schedulingDifferenceMillis = TimeUnit.NANOSECONDS.toMillis(
-                    task.executionTimeNanos() -
-                    expectedExecutionTimesNanos.get(expectedRetryTaskNumber));
-            assertThat(schedulingDifferenceMillis)
-                    .as("Retry task %d executed at the expected time", expectedRetryTaskNumber)
-                    .isCloseTo(0, within(RETRY_TASK_EXECUTION_TIME_TOLERANCE));
+
+            final long actualDelayMillis = TimeUnit.NANOSECONDS.toMillis(
+                    task.executionTimeNanos() - task.scheduledTimeNanos()
+            );
+            final long expectedDelayMillis = expectedDelaysMillis.get(expectedRetryTaskNumber);
+
+            assertThat(actualDelayMillis)
+                    .as("Retry task %d being delayed appropriately", expectedRetryTaskNumber)
+                    .isCloseTo(expectedDelayMillis, within(RETRY_TASK_EXECUTION_TIME_TOLERANCE));
         }
     }
 
