@@ -23,7 +23,10 @@ import java.util.concurrent.TimeUnit;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.common.math.LongMath;
+
 import com.linecorp.armeria.client.ClientFactory;
+import com.linecorp.armeria.client.ResponseTimeoutException;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.UnmodifiableFuture;
 
@@ -45,19 +48,20 @@ final class DefaultRetryScheduler implements RetryScheduler {
     private ScheduledFuture<?> nextRetryTaskFuture;
     // Long.MIN_VALUE if not set.
     private long earliestRetryTimeNanos;
+    private boolean isClosed;
 
     private final class RetryTaskWrapper implements Runnable {
         @Override
         public void run() {
             assert retryEventLoop.inEventLoop();
 
-            if (closedFuture.isDone()) {
+            if (isClosed) {
                 logger.debug("Tried to run a retry task after the scheduler was closed. Skipping this task.");
                 return;
             }
 
             if (System.nanoTime() > deadlineTimeNanos) {
-                logger.debug("Tried to run a retry task after the deadline. Skipping this task.");
+                closeExceptionally(ResponseTimeoutException.get());
                 return;
             }
 
@@ -87,13 +91,14 @@ final class DefaultRetryScheduler implements RetryScheduler {
         nextRetryTask = null;
         nextRetryTaskFuture = null;
         earliestRetryTimeNanos = Long.MIN_VALUE;
+        isClosed = false;
     }
 
     @Override
     public boolean trySchedule(Runnable retryTask, long delayMillis) {
         checkInRetryEventLoop();
 
-        if (isClosed()) {
+        if (isClosed) {
             return false;
         }
 
@@ -103,10 +108,15 @@ final class DefaultRetryScheduler implements RetryScheduler {
         assert nextRetryTask == null;
         assert nextRetryTaskFuture == null;
 
-        final long delayNanos = TimeUnit.MILLISECONDS.toNanos(delayMillis);
-        final long retryTimeNanos = Math.max(System.nanoTime() + delayNanos, earliestRetryTimeNanos);
+        final long retryTimeNanos = Math.max(
+                LongMath.saturatedAdd(
+                        System.nanoTime(),
+                        TimeUnit.MILLISECONDS.toNanos(delayMillis)
+                ),
+                earliestRetryTimeNanos
+        );
 
-        if (retryTimeNanos > deadlineTimeNanos) {
+        if (retryTimeNanos >= deadlineTimeNanos) {
             return false;
         }
 
@@ -124,7 +134,7 @@ final class DefaultRetryScheduler implements RetryScheduler {
                         retryTaskWrapper, nextRetryDelayMillis,
                         TimeUnit.MILLISECONDS);
                 nextRetryTaskFuture.addListener(future -> {
-                    if (isClosed()) {
+                    if (isClosed) {
                         return;
                     }
 
@@ -150,7 +160,7 @@ final class DefaultRetryScheduler implements RetryScheduler {
     public void applyMinimumBackoffMillisForNextRetry(long minimumBackoffMillis) {
         checkInRetryEventLoop();
 
-        if (isClosed()) {
+        if (isClosed) {
             return;
         }
 
@@ -159,10 +169,15 @@ final class DefaultRetryScheduler implements RetryScheduler {
         checkState(!hasNextRetryTask(),
                    "cannot apply minimum backoff when a retry task is scheduled");
 
-        earliestRetryTimeNanos = Math.max(earliestRetryTimeNanos,
-                                          System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(
-                                                  minimumBackoffMillis)
-        );
+        earliestRetryTimeNanos =
+                Math.min(
+                        Math.max(earliestRetryTimeNanos,
+                                 LongMath.saturatedAdd(System.nanoTime(),
+                                                       TimeUnit.MILLISECONDS.toNanos(
+                                                               minimumBackoffMillis))
+                        ),
+                        deadlineTimeNanos
+                );
     }
 
     private boolean hasNextRetryTask() {
@@ -175,26 +190,30 @@ final class DefaultRetryScheduler implements RetryScheduler {
     public void close() {
         checkInRetryEventLoop();
 
-        if (isClosed()) {
+        if (isClosed) {
             return;
         }
 
+        isClosed = true;
         clearRetryTaskIfExists();
         closedFuture.complete(null);
     }
 
-    @Override
-    public CompletableFuture<Void> whenClosed() {
-        return UnmodifiableFuture.wrap(closedFuture);
-    }
-
     private void closeExceptionally(Throwable cause) {
-        if (isClosed()) {
+        if (isClosed) {
             return;
         }
 
+        isClosed = true;
         clearRetryTaskIfExists();
         closedFuture.completeExceptionally(cause);
+    }
+
+    @Override
+    public CompletableFuture<Void> whenClosed() {
+        checkInRetryEventLoop();
+
+        return UnmodifiableFuture.wrap(closedFuture);
     }
 
     private void clearRetryTaskIfExists() {
@@ -204,10 +223,6 @@ final class DefaultRetryScheduler implements RetryScheduler {
         nextRetryTaskFuture = null;
         earliestRetryTimeNanos = Long.MIN_VALUE;
         nextRetryTask = null;
-    }
-
-    private boolean isClosed() {
-        return closedFuture.isDone();
     }
 
     private void checkInRetryEventLoop() {
