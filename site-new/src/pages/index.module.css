@@ -1,25 +1,141 @@
-/**
- * Less files with the .module.less suffix will be treated as Less modules
- * and scoped locally.
- */
-
 .heroBanner {
   padding: 4rem 0;
   text-align: center;
   position: relative;
   overflow: hidden;
   background-color: var(--armeria-darkgray);
+  background-image: linear-gradient(180deg, var(--armeria-darkgray), #212121);
   color: var(--armeria-white);
-}
 
-@media screen and (max-width: 996px) {
-  .heroBanner {
+  > div > h1 {
+    font-size: calc(var(--ifm-h1-font-size) * 1.25);
+  }
+
+  > div > p {
+    font-size: var(--ifm-font-size-base);
+  }
+
+  > div {
+    min-width: 0;
+    width: 650px;
+    max-width: 100%;
+    margin-right: 0;
+    margin: 0 auto;
+  }
+
+  @media (max-width: 996px) {
     padding: 2rem;
+    text-align: left;
   }
 }
 
-.buttons {
-  display: flex;
-  align-items: center;
-  justify-content: center;
+.sloganBackgroundImage {
+  position: absolute;
+  z-index: 0;
+  top: -16px;
+  right: -128px;
+  transform: rotate(-10deg);
+  opacity: 0.1;
+  pointer-events: none;
+}
+
+.testimonial {
+  position: relative;
+  margin-top: 24px;
+  margin-bottom: -16px;
+  overflow: hidden;
+
+  > div > div {
+    min-width: 0 !important;
+    max-width: 100% !important;
+    text-align: left !important;
+
+    @media (min-width: 1224px) {
+      width: 992px !important;
+    }
+  }
+}
+
+.getStarted {
+  text-align: center;
+  min-width: 0;
+  width: 650px;
+  max-width: 100%;
+  margin-right: 0;
+  margin: 0 auto;
+
+  .badges {
+    margin: 36px 0 auto;
+    height: 26px;
+    max-height: 52px;
+
+    > span {
+      margin: 0 3px;
+
+      @media (max-width: 996px) {
+        margin: 0 5px 0 0;
+      }
+    }
+  }
+}
+
+.getStartedButton {
+  display: inline-block;
+  margin: 8px;
+
+  &.primary {
+    color: var(--armeria-white);
+  }
+
+  @media (max-width: 996px) {
+    margin-left: 0;
+    margin-right: 16px;
+  }
+}
+
+.docServiceCarousel {
+  /* Hide unnecessary space below images. */
+  :global(.slick-slide) {
+    line-height: 0;
+  }
+
+  :global(.slick-dots) {
+    margin-bottom: 0;
+    bottom: -8px;
+
+    > li {
+      width: 32px;
+      height: 4px;
+      border-radius: 1px;
+      background: #ccc;
+
+      > button {
+        background: #ccc;
+      }
+    }
+
+    > :global(li.slick-active) {
+      width: 64px;
+    }
+
+    > :global(li.slick-active::after) {
+      background: #999;
+
+      > button {
+        background: #999;
+      }
+    }
+  }
+}
+
+@media (max-width: 996px) {
+  .indented {
+    text-indent: -0.6125rem;
+  }
+}
+
+@media (max-width: calc(532px + 100px)) {
+  .hideIfShrunk {
+    display: none;
+  }
 }
