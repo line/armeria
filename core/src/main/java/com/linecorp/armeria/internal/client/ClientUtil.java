@@ -28,6 +28,8 @@ import java.util.function.Function;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.common.math.LongMath;
+
 import com.linecorp.armeria.client.Client;
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.Endpoint;
@@ -341,10 +343,11 @@ public final class ClientUtil {
      */
     public static long deadlineTimeNanos(ClientRequestContext ctx) {
         final long responseTimeoutMillis = ctx.responseTimeoutMillis();
-        if (responseTimeoutMillis <= 0 || responseTimeoutMillis == Long.MAX_VALUE) {
+        if (responseTimeoutMillis <= 0) {
             return Long.MAX_VALUE;
         } else {
-            return System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(responseTimeoutMillis);
+            return LongMath.saturatedAdd(System.nanoTime(),
+                                         TimeUnit.MILLISECONDS.toNanos(responseTimeoutMillis));
         }
     }
 
@@ -374,7 +377,8 @@ public final class ClientUtil {
         if (deadlineTimeNanos < Long.MAX_VALUE) {
             hasTimeout = true;
             remainingTimeUntilDeadlineMillis = TimeUnit.NANOSECONDS.toMillis(
-                    deadlineTimeNanos - System.nanoTime());
+                    LongMath.saturatedSubtract(deadlineTimeNanos, System.nanoTime())
+            );
         }
 
         if (responseTimeoutMillis != 0) {
