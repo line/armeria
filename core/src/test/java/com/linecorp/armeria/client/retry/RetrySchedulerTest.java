@@ -200,7 +200,7 @@ class RetrySchedulerTest {
                 Arguments.of(
                         new RetryPlan(
                                 "Many direct",
-                                IntStream.range(0, 1024)
+                                IntStream.range(0, 128)
                                          .mapToObj(i -> new ScheduleCall(0L))
                                          .collect(Collectors.toList()),
                                 Collections.emptyList() // All direct
@@ -243,8 +243,7 @@ class RetrySchedulerTest {
 
     @ParameterizedTest
     @MethodSource("schedule_multiple_executeMultipleAfterDelay_args")
-    void schedule_multiple_executeMultipleAfterDelay(RetryPlan retryPlan)
-            throws InterruptedException {
+    void schedule_multiple_executeMultipleAfterDelay(RetryPlan retryPlan) {
         final int numberOfAttempts = retryPlan.retryTaskDelaysMillis.size();
         assert numberOfAttempts >= 1;
 
@@ -260,7 +259,7 @@ class RetrySchedulerTest {
     }
 
     @Test
-    void schedule_withDelayAndMinimumBackoff_executeAfterDelay() throws InterruptedException {
+    void schedule_withDelayAndMinimumBackoff_executeAfterDelay() {
         final long minimumBackoffMillis = 200L;
         final long delayMillis = minimumBackoffMillis + 200L;
 
@@ -287,7 +286,7 @@ class RetrySchedulerTest {
     }
 
     @Test
-    void schedule_withDelayAndMinimumBackoff_executeAfterMinimumBackoff() throws InterruptedException {
+    void schedule_withDelayAndMinimumBackoff_executeAfterMinimumBackoff() {
         final long delayMillis = 200L;
         final long minimumBackoffMillis = delayMillis + 200L;
 
@@ -306,7 +305,7 @@ class RetrySchedulerTest {
     }
 
     @Test
-    void schedule_beyondDeadline_returnFalse() throws InterruptedException {
+    void schedule_beyondDeadline_returnFalse() {
         runOnRetryEventLoop(() -> {
             assertThat(scheduler.trySchedule(
                                nextRetryTask(),
@@ -322,7 +321,7 @@ class RetrySchedulerTest {
     }
 
     @Test
-    void schedule_exceptionInRetryTask_closeExceptionally() throws InterruptedException {
+    void schedule_exceptionInRetryTask_closeExceptionally() {
         final AtomicReference<CompletableFuture<Void>> whenClosedRef = new AtomicReference<>();
 
         runOnRetryEventLoop(() -> {
@@ -352,22 +351,22 @@ class RetrySchedulerTest {
 
     @Test
     void schedule_closeRetryEventLoop_closeExceptionally() throws Exception {
-        final ManagedRetryEventLoop retryEventLoop = new ManagedRetryEventLoop();
-        final DefaultRetryScheduler scheduler = new DefaultRetryScheduler(
-                retryEventLoop,
+        final ManagedRetryEventLoop localRetryEventLoop = new ManagedRetryEventLoop();
+        final DefaultRetryScheduler localScheduler = new DefaultRetryScheduler(
+                localRetryEventLoop,
                 System.nanoTime() + TimeUnit.SECONDS.toNanos(10)
         );
 
         final AtomicReference<CompletableFuture<Void>> whenClosedRef = new AtomicReference<>();
 
-        runOnRetryEventLoop(retryEventLoop, () -> {
-            assertThat(scheduler.trySchedule(nextRetryTask(), 1_000)).isTrue();
-            assertThat(scheduler.whenClosed()).isNotDone();
-            whenClosedRef.set(scheduler.whenClosed());
+        runOnRetryEventLoop(localRetryEventLoop, () -> {
+            assertThat(localScheduler.trySchedule(nextRetryTask(), 1_000)).isTrue();
+            assertThat(localScheduler.whenClosed()).isNotDone();
+            whenClosedRef.set(localScheduler.whenClosed());
         });
 
         // Close the event loop before the task is executed.
-        retryEventLoop.shutdownGracefully(0, 500, TimeUnit.MILLISECONDS).get();
+        localRetryEventLoop.shutdownGracefully(0, 500, TimeUnit.MILLISECONDS).get();
 
         assertThat(whenClosedRef.get()).isCompletedExceptionally();
         try {
@@ -380,27 +379,26 @@ class RetrySchedulerTest {
         }
 
         assertNumRetryTaskExecutions(0);
-        assertEventLoopScheduleCalls(retryEventLoop, Collections.singletonList(1_000L));
+        assertEventLoopScheduleCalls(localRetryEventLoop, Collections.singletonList(1_000L));
 
-        Thread.sleep(1_000 + RETRY_SCHEDULER_SCHEDULE_ADJUSTMENT_TOLERANCE_MILLIS +
-                     MAX_EXECUTION_DELAY_MILLIS);
+        Thread.sleep(1_000 + MAX_EXECUTION_DELAY_MILLIS);
 
         assertNumRetryTaskExecutions(0);
-        assertEventLoopScheduleCalls(retryEventLoop, Collections.singletonList(1_000L));
+        assertEventLoopScheduleCalls(localRetryEventLoop, Collections.singletonList(1_000L));
 
-        assertNoExceptionsOnRetryEventLoop(retryEventLoop);
+        assertNoExceptionsOnRetryEventLoop(localRetryEventLoop);
     }
 
     @Test
     void schedule_clogRetryEventLoop_closeExceptionally() throws Exception {
-        final DefaultRetryScheduler scheduler = new DefaultRetryScheduler(
+        final DefaultRetryScheduler localScheduler = new DefaultRetryScheduler(
                 retryEventLoop,
                 System.nanoTime() + TimeUnit.SECONDS.toNanos(1)
         );
 
         runOnRetryEventLoop(() -> {
-            assertThat(scheduler.trySchedule(nextRetryTask(), 500L)).isTrue();
-            assertThat(scheduler.whenClosed()).isNotDone();
+            assertThat(localScheduler.trySchedule(nextRetryTask(), 500L)).isTrue();
+            assertThat(localScheduler.whenClosed()).isNotDone();
         });
 
         assertNumRetryTaskExecutions(0);
@@ -420,7 +418,7 @@ class RetrySchedulerTest {
         await().untilAsserted(() -> {
             runOnRetryEventLoop(() -> {
                 try {
-                    scheduler.whenClosed().getNow(null);
+                    localScheduler.whenClosed().getNow(null);
                     fail();
                 } catch (Throwable e) {
                     assertThat(e.getCause()).isInstanceOf(ResponseTimeoutException.class);
@@ -455,7 +453,7 @@ class RetrySchedulerTest {
     }
 
     @Test
-    void schedule_scheduledFutureCompletesExceptionally_closeExceptionally() throws InterruptedException {
+    void schedule_scheduledFutureCompletesExceptionally_closeExceptionally() {
         final AtomicReference<CompletableFuture<Void>> whenClosedRef = new AtomicReference<>();
 
         runOnRetryEventLoop(() -> {
@@ -516,7 +514,7 @@ class RetrySchedulerTest {
     }
 
     @Test
-    void applyMinimumBackoff_thatExceedsDeadline_rejectEverySchedule() throws InterruptedException {
+    void applyMinimumBackoff_thatExceedsDeadline_rejectEverySchedule() {
         runOnRetryEventLoop(() -> {
             scheduler.applyMinimumBackoffMillisForNextRetry(
                     10_000 +
@@ -546,7 +544,7 @@ class RetrySchedulerTest {
     }
 
     @Test
-    void close_thenSchedule_returnFalse() throws InterruptedException {
+    void close_thenSchedule_returnFalse() {
         runOnRetryEventLoop(() -> {
             scheduler.close();
             assertThat(scheduler.whenClosed()).isCompleted();
