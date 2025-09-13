@@ -16,6 +16,7 @@
 package com.linecorp.armeria.client.retry;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
+import static com.linecorp.armeria.client.retry.AbstractRetryingClient.ARMERIA_RETRY_COUNT;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.net.InetSocketAddress;
@@ -104,8 +105,10 @@ class RetryingClientLoadBalancingTest {
                 status = null;
             }
 
+            final boolean isRetry = ctx.request().headers().contains(ARMERIA_RETRY_COUNT);
+
             // Retry only once on failure.
-            if (!HttpStatus.OK.equals(status) && AbstractRetryingClient.getTotalAttempts(ctx) <= 1) {
+            if (!HttpStatus.OK.equals(status) && !isRetry) {
                 return UnmodifiableFuture.completedFuture(RetryDecision.retry(Backoff.withoutDelay()));
             } else {
                 return UnmodifiableFuture.completedFuture(RetryDecision.noRetry());
@@ -127,9 +130,9 @@ class RetryingClientLoadBalancingTest {
             case FAILURE:
                 final List<Integer> expectedPortsWhenRetried =
                         ImmutableList.<Integer>builder()
-                                .addAll(expectedPorts)
-                                .addAll(expectedPorts)
-                                .build();
+                                     .addAll(expectedPorts)
+                                     .addAll(expectedPorts)
+                                     .build();
                 assertThat(accessedPorts).isEqualTo(expectedPortsWhenRetried);
                 break;
         }
