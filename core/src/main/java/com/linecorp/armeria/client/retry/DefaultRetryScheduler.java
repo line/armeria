@@ -56,6 +56,8 @@ final class DefaultRetryScheduler implements RetryScheduler {
             assert retryEventLoop.inEventLoop();
 
             if (isClosed) {
+                // Very unexpected as we would cancel this future on the same event loop here in the scheduler
+                // upon close() or closeExceptionally().
                 logger.debug("Tried to run a retry task after the scheduler was closed. Skipping this task.");
                 return;
             }
