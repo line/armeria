@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.server.encoding;
 
+import java.util.Set;
 import java.util.function.Function;
 import java.util.function.Predicate;
 
@@ -24,6 +25,7 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.RequestHeaders;
+import com.linecorp.armeria.internal.common.encoding.StreamEncoderFactories;
 import com.linecorp.armeria.internal.common.encoding.StreamEncoderFactory;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.RoutingContext;
@@ -45,6 +47,7 @@ public final class EncodingService extends SimpleDecoratingHttpService {
     private final Predicate<MediaType> encodableContentTypePredicate;
     private final Predicate<? super RequestHeaders> encodableRequestHeadersPredicate;
     private final long minBytesToForceChunkedAndEncoding;
+    private final Set<StreamEncoderFactories> encoderFactoryAllowList;
 
     /**
      * Returns a new {@link EncodingServiceBuilder}.
@@ -66,11 +69,14 @@ public final class EncodingService extends SimpleDecoratingHttpService {
     EncodingService(HttpService delegate,
                     Predicate<MediaType> encodableContentTypePredicate,
                     Predicate<? super RequestHeaders> encodableRequestHeadersPredicate,
-                    long minBytesToForceChunkedAndEncoding) {
+                    long minBytesToForceChunkedAndEncoding,
+                    Set<StreamEncoderFactories> encoderFactoryAllowList
+    ) {
         super(delegate);
         this.encodableContentTypePredicate = encodableContentTypePredicate;
         this.encodableRequestHeadersPredicate = encodableRequestHeadersPredicate;
         this.minBytesToForceChunkedAndEncoding = minBytesToForceChunkedAndEncoding;
+        this.encoderFactoryAllowList = encoderFactoryAllowList;
     }
 
     @Override
@@ -81,7 +87,8 @@ public final class EncodingService extends SimpleDecoratingHttpService {
 
     @Override
     public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
-        final StreamEncoderFactory encoderFactory = HttpEncoders.getEncoderFactory(req.headers());
+        final StreamEncoderFactory encoderFactory = HttpEncoders.getEncoderFactory(req.headers(),
+                                                                                   encoderFactoryAllowList);
         final HttpResponse delegateResponse = unwrap().serve(ctx, req);
         if (encoderFactory == null || !encodableRequestHeadersPredicate.test(req.headers())) {
             return delegateResponse;

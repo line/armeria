@@ -17,9 +17,11 @@
 package com.linecorp.armeria.server.encoding;
 
 import java.util.Collections;
+import java.util.EnumSet;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Set;
 
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.RequestHeaders;
@@ -39,18 +41,29 @@ final class HttpEncoders {
         Brotli.isAvailable();
     }
 
+    static final Set<StreamEncoderFactories> ALL_ENCODER_FACTORIES =
+            Collections.unmodifiableSet(EnumSet.allOf(StreamEncoderFactories.class));
+
     @Nullable
-    static StreamEncoderFactory getEncoderFactory(RequestHeaders headers) {
+    public static StreamEncoderFactory getEncoderFactory(RequestHeaders headers) {
+        return getEncoderFactory(headers, ALL_ENCODER_FACTORIES);
+    }
+
+    @Nullable
+    public static StreamEncoderFactory getEncoderFactory(
+            RequestHeaders headers, Set<StreamEncoderFactories> encoderFactoryAllowList
+    ) {
         final String acceptEncoding = headers.get(HttpHeaderNames.ACCEPT_ENCODING);
         if (acceptEncoding == null) {
             return null;
         }
-        return determineEncoder(acceptEncoding);
+        return determineEncoder(encoderFactoryAllowList, acceptEncoding);
     }
 
     // Copied from netty's HttpContentCompressor.
     @Nullable
-    private static StreamEncoderFactory determineEncoder(String acceptEncoding) {
+    private static StreamEncoderFactory determineEncoder(Set<StreamEncoderFactories> encoderFactoryAllowList,
+                                                         String acceptEncoding) {
         float starQ = -1.0f;
         final Map<StreamEncoderFactory, Float> encodings = new LinkedHashMap<>();
         for (String encoding : acceptEncoding.split(",")) {
@@ -77,6 +90,8 @@ final class HttpEncoders {
             }
         }
 
+        encodings.keySet().retainAll(encoderFactoryAllowList);
+
         if (!encodings.isEmpty()) {
             final Entry<StreamEncoderFactory, Float> entry = Collections.max(encodings.entrySet(),
                                                                              Entry.comparingByValue());
@@ -84,17 +99,22 @@ final class HttpEncoders {
                 return entry.getKey();
             }
         }
+
         if (starQ > 0.0f) {
-            if (!encodings.containsKey(StreamEncoderFactories.BROTLI) && Brotli.isAvailable()) {
+            if (encoderFactoryAllowList.contains(StreamEncoderFactories.BROTLI) &&
+                !encodings.containsKey(StreamEncoderFactories.BROTLI) && Brotli.isAvailable()) {
                 return StreamEncoderFactories.BROTLI;
             }
-            if (!encodings.containsKey(StreamEncoderFactories.GZIP)) {
+            if (encoderFactoryAllowList.contains(StreamEncoderFactories.GZIP) &&
+                !encodings.containsKey(StreamEncoderFactories.GZIP)) {
                 return StreamEncoderFactories.GZIP;
             }
-            if (!encodings.containsKey(StreamEncoderFactories.DEFLATE)) {
+            if (encoderFactoryAllowList.contains(StreamEncoderFactories.DEFLATE) &&
+                !encodings.containsKey(StreamEncoderFactories.DEFLATE)) {
                 return StreamEncoderFactories.DEFLATE;
             }
-            if (!encodings.containsKey(StreamEncoderFactories.SNAPPY)) {
+            if (encoderFactoryAllowList.contains(StreamEncoderFactories.SNAPPY) &&
+                !encodings.containsKey(StreamEncoderFactories.SNAPPY)) {
                 return StreamEncoderFactories.SNAPPY;
             }
         }

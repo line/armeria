@@ -32,6 +32,7 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.ResponseHeaders;
+import com.linecorp.armeria.internal.common.encoding.StreamEncoderFactories;
 import com.linecorp.armeria.server.HttpService;
 
 /**
@@ -63,6 +64,8 @@ public final class EncodingServiceBuilder {
     private Predicate<? super RequestHeaders> encodableRequestHeadersPredicate = headers -> true;
 
     private int minBytesToForceChunkedAndEncoding = DEFAULT_MIN_BYTES_TO_FORCE_CHUNKED_AND_ENCODING;
+
+    private Set<StreamEncoderFactories> encoderFactoryAllowList = HttpEncoders.ALL_ENCODER_FACTORIES;
 
     EncodingServiceBuilder() {}
 
@@ -121,11 +124,35 @@ public final class EncodingServiceBuilder {
     }
 
     /**
+     * Sets the specified {@link StreamEncoderFactories} that should be considered for encoding.
+     * The default is {@link HttpEncoders#ALL_ENCODER_FACTORIES}.
+     *
+     * @param encoderFactoryAllowList the allowed {@link StreamEncoderFactories}s
+     */
+    public EncodingServiceBuilder encoderFactoryAllowList(StreamEncoderFactories... encoderFactoryAllowList) {
+        return encoderFactoryAllowList(ImmutableSet.copyOf(
+                requireNonNull(encoderFactoryAllowList, "encoderFactoryAllowList")));
+    }
+
+    /**
+     * Sets the specified {@link StreamEncoderFactories} that should be considered for encoding.
+     * The default is {@link HttpEncoders#ALL_ENCODER_FACTORIES}.
+     *
+     * @param encoderFactoryAllowList the allowed {@link StreamEncoderFactories}s
+     */
+    public EncodingServiceBuilder encoderFactoryAllowList(
+            Iterable<StreamEncoderFactories> encoderFactoryAllowList) {
+        this.encoderFactoryAllowList = ImmutableSet.copyOf(
+                requireNonNull(encoderFactoryAllowList, "encoderFactoryAllowList"));
+        return this;
+    }
+
+    /**
      * Returns a newly-created {@link EncodingService} based on the properties of this builder.
      */
     public EncodingService build(HttpService delegate) {
         return new EncodingService(delegate, encodableContentTypePredicate, encodableRequestHeadersPredicate,
-                                   minBytesToForceChunkedAndEncoding);
+                                   minBytesToForceChunkedAndEncoding, encoderFactoryAllowList);
     }
 
     /**
