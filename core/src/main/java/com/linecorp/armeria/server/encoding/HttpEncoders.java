@@ -45,12 +45,7 @@ final class HttpEncoders {
             Collections.unmodifiableSet(EnumSet.allOf(StreamEncoderFactories.class));
 
     @Nullable
-    public static StreamEncoderFactory getEncoderFactory(RequestHeaders headers) {
-        return getEncoderFactory(headers, ALL_ENCODER_FACTORIES);
-    }
-
-    @Nullable
-    public static StreamEncoderFactory getEncoderFactory(
+    static StreamEncoderFactory getEncoderFactory(
             RequestHeaders headers, Set<StreamEncoderFactories> encoderFactoryAllowList
     ) {
         final String acceptEncoding = headers.get(HttpHeaderNames.ACCEPT_ENCODING);

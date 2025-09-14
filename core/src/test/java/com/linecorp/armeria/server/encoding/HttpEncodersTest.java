@@ -34,7 +34,6 @@ class HttpEncodersTest {
     @Test
     void noAcceptEncoding() {
         final RequestHeaders headers = RequestHeaders.of(HttpMethod.GET, "/");
-        assertThat(HttpEncoders.getEncoderFactory(headers)).isNull();
         assertThat(HttpEncoders.getEncoderFactory(headers, HttpEncoders.ALL_ENCODER_FACTORIES)).isNull();
         assertThat(HttpEncoders.getEncoderFactory(headers, ImmutableSet.of())).isNull();
         assertThat(HttpEncoders.getEncoderFactory(
@@ -47,7 +46,6 @@ class HttpEncodersTest {
     void acceptEncodingGzip() {
         final RequestHeaders headers = RequestHeaders.of(HttpMethod.GET, "/",
                                                          HttpHeaderNames.ACCEPT_ENCODING, "gzip");
-        assertThat(HttpEncoders.getEncoderFactory(headers)).isEqualTo(StreamEncoderFactories.GZIP);
         assertThat(HttpEncoders.getEncoderFactory(
                 headers, ImmutableSet.of(StreamEncoderFactories.GZIP, StreamEncoderFactories.SNAPPY)
         )).isEqualTo(StreamEncoderFactories.GZIP);
@@ -65,7 +63,6 @@ class HttpEncodersTest {
     void acceptEncodingDeflate() {
         final RequestHeaders headers = RequestHeaders.of(HttpMethod.GET, "/",
                                                          HttpHeaderNames.ACCEPT_ENCODING, "deflate");
-        assertThat(HttpEncoders.getEncoderFactory(headers)).isEqualTo(StreamEncoderFactories.DEFLATE);
         assertThat(HttpEncoders.getEncoderFactory(headers, ImmutableSet.of(StreamEncoderFactories.DEFLATE)
         )).isEqualTo(StreamEncoderFactories.DEFLATE);
         assertThat(HttpEncoders.getEncoderFactory(
@@ -89,7 +86,6 @@ class HttpEncodersTest {
         final StreamEncoderFactories expectedBrotliFactory =
                 Brotli.isAvailable() ? StreamEncoderFactories.BROTLI : null;
 
-        assertThat(HttpEncoders.getEncoderFactory(headers)).isEqualTo(expectedBrotliFactory);
         assertThat(HttpEncoders.getEncoderFactory(
                 headers, ImmutableSet.of(StreamEncoderFactories.BROTLI, StreamEncoderFactories.SNAPPY)
         )).isEqualTo(expectedBrotliFactory);
@@ -108,7 +104,6 @@ class HttpEncodersTest {
         final RequestHeaders headers = RequestHeaders.of(HttpMethod.GET, "/",
                                                          HttpHeaderNames.ACCEPT_ENCODING, "x-snappy-framed");
 
-        assertThat(HttpEncoders.getEncoderFactory(headers)).isEqualTo(StreamEncoderFactories.SNAPPY);
         assertThat(HttpEncoders.getEncoderFactory(
                 headers, ImmutableSet.of(StreamEncoderFactories.SNAPPY, StreamEncoderFactories.GZIP)
         )).isEqualTo(StreamEncoderFactories.SNAPPY);
@@ -127,7 +122,6 @@ class HttpEncodersTest {
         final RequestHeaders headers = RequestHeaders.of(HttpMethod.GET, "/",
                                                          HttpHeaderNames.ACCEPT_ENCODING,
                                                          "gzip, deflate, br");
-        assertThat(HttpEncoders.getEncoderFactory(headers)).isEqualTo(StreamEncoderFactories.GZIP);
         assertThat(HttpEncoders.getEncoderFactory(headers, ImmutableSet.of(StreamEncoderFactories.GZIP,
                                                                            StreamEncoderFactories.DEFLATE,
                                                                            StreamEncoderFactories.BROTLI)
@@ -157,7 +151,6 @@ class HttpEncodersTest {
     void acceptEncodingBoth() {
         final RequestHeaders headers = RequestHeaders.of(HttpMethod.GET, "/",
                                                          HttpHeaderNames.ACCEPT_ENCODING, "gzip, deflate");
-        assertThat(HttpEncoders.getEncoderFactory(headers)).isEqualTo(StreamEncoderFactories.GZIP);
         assertThat(HttpEncoders.getEncoderFactory(headers, ImmutableSet.of(StreamEncoderFactories.GZIP,
                                                                            StreamEncoderFactories.DEFLATE)
         )).isEqualTo(StreamEncoderFactories.GZIP);
@@ -184,7 +177,6 @@ class HttpEncodersTest {
     void acceptEncodingUnknown() {
         final RequestHeaders headers = RequestHeaders.of(HttpMethod.GET, "/",
                                                          HttpHeaderNames.ACCEPT_ENCODING, "piedpiper");
-        assertThat(HttpEncoders.getEncoderFactory(headers)).isNull();
         // All are on the allow list.
         assertThat(HttpEncoders.getEncoderFactory(headers, HttpEncoders.ALL_ENCODER_FACTORIES)).isNull();
     }
@@ -194,7 +186,6 @@ class HttpEncodersTest {
         final RequestHeaders headers = RequestHeaders.of(HttpMethod.GET, "/",
                                                          HttpHeaderNames.ACCEPT_ENCODING,
                                                          "br;q=0.8, deflate, gzip;q=0.7, *;q=0.1");
-        assertThat(HttpEncoders.getEncoderFactory(headers)).isEqualTo(StreamEncoderFactories.DEFLATE);
         assertThat(HttpEncoders.getEncoderFactory(headers, ImmutableSet.of(StreamEncoderFactories.GZIP,
                                                                            StreamEncoderFactories.DEFLATE,
                                                                            StreamEncoderFactories.BROTLI)
@@ -223,7 +214,6 @@ class HttpEncodersTest {
         final RequestHeaders headers = RequestHeaders.of(HttpMethod.GET, "/",
                                                          HttpHeaderNames.ACCEPT_ENCODING,
                                                          "deflate;q=0.5, gzip;q=0.9, br;q=0.9");
-        assertThat(HttpEncoders.getEncoderFactory(headers)).isEqualTo(StreamEncoderFactories.GZIP);
         assertThat(HttpEncoders.getEncoderFactory(headers, ImmutableSet.of(StreamEncoderFactories.GZIP,
                                                                            StreamEncoderFactories.DEFLATE,
                                                                            StreamEncoderFactories.BROTLI)
@@ -252,7 +242,6 @@ class HttpEncodersTest {
                                                          HttpHeaderNames.ACCEPT_ENCODING,
                                                          "gzip;q=0.0, br;q=0.0, *;q=0.1");
 
-        assertThat(HttpEncoders.getEncoderFactory(headers)).isEqualTo(StreamEncoderFactories.DEFLATE);
         assertThat(HttpEncoders.getEncoderFactory(headers, ImmutableSet.of(StreamEncoderFactories.GZIP,
                                                                            StreamEncoderFactories.DEFLATE,
                                                                            StreamEncoderFactories.BROTLI)
