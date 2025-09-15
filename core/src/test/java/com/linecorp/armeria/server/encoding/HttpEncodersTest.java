@@ -34,10 +34,10 @@ class HttpEncodersTest {
     @Test
     void noAcceptEncoding() {
         final RequestHeaders headers = RequestHeaders.of(HttpMethod.GET, "/");
-        assertThat(HttpEncoders.getEncoderFactory(headers, HttpEncoders.ALL_ENCODER_FACTORIES)).isNull();
+        assertThat(HttpEncoders.getEncoderFactory(headers, EncodingServiceBuilder.ALL_ENCODINGS)).isNull();
         assertThat(HttpEncoders.getEncoderFactory(headers, ImmutableSet.of())).isNull();
         assertThat(HttpEncoders.getEncoderFactory(
-                           headers, ImmutableSet.of(StreamEncoderFactories.SNAPPY)
+                           headers, ImmutableSet.of(Encoding.SNAPPY)
                    )
         ).isNull();
     }
@@ -47,11 +47,11 @@ class HttpEncodersTest {
         final RequestHeaders headers = RequestHeaders.of(HttpMethod.GET, "/",
                                                          HttpHeaderNames.ACCEPT_ENCODING, "gzip");
         assertThat(HttpEncoders.getEncoderFactory(
-                headers, ImmutableSet.of(StreamEncoderFactories.GZIP, StreamEncoderFactories.SNAPPY)
+                headers, ImmutableSet.of(Encoding.GZIP, Encoding.SNAPPY)
         )).isEqualTo(StreamEncoderFactories.GZIP);
         // GZIP is not in the allow list.
         assertThat(HttpEncoders.getEncoderFactory(
-                headers, ImmutableSet.of(StreamEncoderFactories.SNAPPY, StreamEncoderFactories.DEFLATE)
+                headers, ImmutableSet.of(Encoding.SNAPPY, Encoding.DEFLATE)
         )).isNull();
         // None is in the allow list.
         assertThat(HttpEncoders.getEncoderFactory(
@@ -63,14 +63,14 @@ class HttpEncodersTest {
     void acceptEncodingDeflate() {
         final RequestHeaders headers = RequestHeaders.of(HttpMethod.GET, "/",
                                                          HttpHeaderNames.ACCEPT_ENCODING, "deflate");
-        assertThat(HttpEncoders.getEncoderFactory(headers, ImmutableSet.of(StreamEncoderFactories.DEFLATE)
+        assertThat(HttpEncoders.getEncoderFactory(headers, ImmutableSet.of(Encoding.DEFLATE)
         )).isEqualTo(StreamEncoderFactories.DEFLATE);
         assertThat(HttpEncoders.getEncoderFactory(
-                headers, ImmutableSet.of(StreamEncoderFactories.DEFLATE, StreamEncoderFactories.SNAPPY)
+                headers, ImmutableSet.of(Encoding.DEFLATE, Encoding.SNAPPY)
         )).isEqualTo(StreamEncoderFactories.DEFLATE);
         // DEFLATE is not in the allow list.
         assertThat(HttpEncoders.getEncoderFactory(
-                headers, ImmutableSet.of(StreamEncoderFactories.SNAPPY, StreamEncoderFactories.GZIP)
+                headers, ImmutableSet.of(Encoding.SNAPPY, Encoding.GZIP)
         )).isNull();
         // None is in the allow list.
         assertThat(HttpEncoders.getEncoderFactory(
@@ -87,11 +87,11 @@ class HttpEncodersTest {
                 Brotli.isAvailable() ? StreamEncoderFactories.BROTLI : null;
 
         assertThat(HttpEncoders.getEncoderFactory(
-                headers, ImmutableSet.of(StreamEncoderFactories.BROTLI, StreamEncoderFactories.SNAPPY)
+                headers, ImmutableSet.of(Encoding.BROTLI, Encoding.SNAPPY)
         )).isEqualTo(expectedBrotliFactory);
         // BROTLI is not in the allow list.
         assertThat(HttpEncoders.getEncoderFactory(
-                headers, ImmutableSet.of(StreamEncoderFactories.SNAPPY, StreamEncoderFactories.GZIP)
+                headers, ImmutableSet.of(Encoding.SNAPPY, Encoding.GZIP)
         )).isNull();
         // None is in the allow list.
         assertThat(HttpEncoders.getEncoderFactory(
@@ -105,11 +105,11 @@ class HttpEncodersTest {
                                                          HttpHeaderNames.ACCEPT_ENCODING, "x-snappy-framed");
 
         assertThat(HttpEncoders.getEncoderFactory(
-                headers, ImmutableSet.of(StreamEncoderFactories.SNAPPY, StreamEncoderFactories.GZIP)
+                headers, ImmutableSet.of(Encoding.SNAPPY, Encoding.GZIP)
         )).isEqualTo(StreamEncoderFactories.SNAPPY);
         // SNAPPY is not in the allow list.
         assertThat(HttpEncoders.getEncoderFactory(
-                headers, ImmutableSet.of(StreamEncoderFactories.GZIP, StreamEncoderFactories.DEFLATE)
+                headers, ImmutableSet.of(Encoding.GZIP, Encoding.DEFLATE)
         )).isNull();
         // None is in the allow list.
         assertThat(HttpEncoders.getEncoderFactory(
@@ -122,28 +122,28 @@ class HttpEncodersTest {
         final RequestHeaders headers = RequestHeaders.of(HttpMethod.GET, "/",
                                                          HttpHeaderNames.ACCEPT_ENCODING,
                                                          "gzip, deflate, br");
-        assertThat(HttpEncoders.getEncoderFactory(headers, ImmutableSet.of(StreamEncoderFactories.GZIP,
-                                                                           StreamEncoderFactories.DEFLATE,
-                                                                           StreamEncoderFactories.BROTLI)
+        assertThat(HttpEncoders.getEncoderFactory(headers, ImmutableSet.of(Encoding.GZIP,
+                                                                           Encoding.DEFLATE,
+                                                                           Encoding.BROTLI)
         )).isEqualTo(StreamEncoderFactories.GZIP);
         // GZIP is not in the allow list.
         assertThat(HttpEncoders.getEncoderFactory(
-                headers, ImmutableSet.of(StreamEncoderFactories.DEFLATE, StreamEncoderFactories.BROTLI)
+                headers, ImmutableSet.of(Encoding.DEFLATE, Encoding.BROTLI)
         )).isEqualTo(StreamEncoderFactories.DEFLATE);
         // GZIP and BROTLI are not in the allow list.
         assertThat(HttpEncoders.getEncoderFactory(
-                headers, ImmutableSet.of(StreamEncoderFactories.DEFLATE)
+                headers, ImmutableSet.of(Encoding.DEFLATE)
         )).isEqualTo(StreamEncoderFactories.DEFLATE);
         // GZIP and DEFLATE are not in the allow list.
         assertThat(HttpEncoders.getEncoderFactory(
-                headers, ImmutableSet.of(StreamEncoderFactories.BROTLI)
+                headers, ImmutableSet.of(Encoding.BROTLI)
         )).isEqualTo(Brotli.isAvailable() ? StreamEncoderFactories.BROTLI : null);
         // None is in the allow list.
         assertThat(HttpEncoders.getEncoderFactory(
                 headers, ImmutableSet.of()
         )).isNull();
         assertThat(HttpEncoders.getEncoderFactory(
-                headers, ImmutableSet.of(StreamEncoderFactories.SNAPPY)
+                headers, ImmutableSet.of(Encoding.SNAPPY)
         )).isNull();
     }
 
@@ -151,17 +151,17 @@ class HttpEncodersTest {
     void acceptEncodingBoth() {
         final RequestHeaders headers = RequestHeaders.of(HttpMethod.GET, "/",
                                                          HttpHeaderNames.ACCEPT_ENCODING, "gzip, deflate");
-        assertThat(HttpEncoders.getEncoderFactory(headers, ImmutableSet.of(StreamEncoderFactories.GZIP,
-                                                                           StreamEncoderFactories.DEFLATE)
+        assertThat(HttpEncoders.getEncoderFactory(headers, ImmutableSet.of(Encoding.GZIP,
+                                                                           Encoding.DEFLATE)
         )).isEqualTo(StreamEncoderFactories.GZIP);
         // Only GZIP is in the allow list.
         assertThat(HttpEncoders.getEncoderFactory(
-                headers, ImmutableSet.of(StreamEncoderFactories.GZIP)
+                headers, ImmutableSet.of(Encoding.GZIP)
         )).isEqualTo(StreamEncoderFactories.GZIP);
 
         // GZIP is not in the allow list.
         assertThat(HttpEncoders.getEncoderFactory(
-                headers, ImmutableSet.of(StreamEncoderFactories.DEFLATE)
+                headers, ImmutableSet.of(Encoding.DEFLATE)
         )).isEqualTo(StreamEncoderFactories.DEFLATE);
 
         // None is in the allow list.
@@ -169,7 +169,7 @@ class HttpEncodersTest {
                 headers, ImmutableSet.of()
         )).isNull();
         assertThat(HttpEncoders.getEncoderFactory(
-                headers, ImmutableSet.of(StreamEncoderFactories.SNAPPY)
+                headers, ImmutableSet.of(Encoding.SNAPPY)
         )).isNull();
     }
 
@@ -178,7 +178,7 @@ class HttpEncodersTest {
         final RequestHeaders headers = RequestHeaders.of(HttpMethod.GET, "/",
                                                          HttpHeaderNames.ACCEPT_ENCODING, "piedpiper");
         // All are on the allow list.
-        assertThat(HttpEncoders.getEncoderFactory(headers, HttpEncoders.ALL_ENCODER_FACTORIES)).isNull();
+        assertThat(HttpEncoders.getEncoderFactory(headers, EncodingServiceBuilder.ALL_ENCODINGS)).isNull();
     }
 
     @Test
@@ -186,22 +186,22 @@ class HttpEncodersTest {
         final RequestHeaders headers = RequestHeaders.of(HttpMethod.GET, "/",
                                                          HttpHeaderNames.ACCEPT_ENCODING,
                                                          "br;q=0.8, deflate, gzip;q=0.7, *;q=0.1");
-        assertThat(HttpEncoders.getEncoderFactory(headers, ImmutableSet.of(StreamEncoderFactories.GZIP,
-                                                                           StreamEncoderFactories.DEFLATE,
-                                                                           StreamEncoderFactories.BROTLI)
+        assertThat(HttpEncoders.getEncoderFactory(headers, ImmutableSet.of(Encoding.GZIP,
+                                                                           Encoding.DEFLATE,
+                                                                           Encoding.BROTLI)
         )).isEqualTo(StreamEncoderFactories.DEFLATE);
         // DEFLATE is not in the allow list.
         assertThat(HttpEncoders.getEncoderFactory(
-                headers, ImmutableSet.of(StreamEncoderFactories.GZIP, StreamEncoderFactories.BROTLI)
+                headers, ImmutableSet.of(Encoding.GZIP, Encoding.BROTLI)
         )).isEqualTo(
                 Brotli.isAvailable() ? StreamEncoderFactories.BROTLI : StreamEncoderFactories.GZIP);
         // DEFLATE and BROTLI are not in the allow list.
         assertThat(HttpEncoders.getEncoderFactory(
-                headers, ImmutableSet.of(StreamEncoderFactories.GZIP)
+                headers, ImmutableSet.of(Encoding.GZIP)
         )).isEqualTo(StreamEncoderFactories.GZIP);
         // SNAPPY is in the allow list and selected by wildcard.
         assertThat(HttpEncoders.getEncoderFactory(
-                headers, ImmutableSet.of(StreamEncoderFactories.SNAPPY)
+                headers, ImmutableSet.of(Encoding.SNAPPY)
         )).isEqualTo(StreamEncoderFactories.SNAPPY);
         // None is in the allow list.
         assertThat(HttpEncoders.getEncoderFactory(
@@ -214,21 +214,21 @@ class HttpEncodersTest {
         final RequestHeaders headers = RequestHeaders.of(HttpMethod.GET, "/",
                                                          HttpHeaderNames.ACCEPT_ENCODING,
                                                          "deflate;q=0.5, gzip;q=0.9, br;q=0.9");
-        assertThat(HttpEncoders.getEncoderFactory(headers, ImmutableSet.of(StreamEncoderFactories.GZIP,
-                                                                           StreamEncoderFactories.DEFLATE,
-                                                                           StreamEncoderFactories.BROTLI)
+        assertThat(HttpEncoders.getEncoderFactory(headers, ImmutableSet.of(Encoding.GZIP,
+                                                                           Encoding.DEFLATE,
+                                                                           Encoding.BROTLI)
         )).isEqualTo(StreamEncoderFactories.GZIP);
         // GZIP is not in the allow list.
         assertThat(HttpEncoders.getEncoderFactory(
-                headers, ImmutableSet.of(StreamEncoderFactories.DEFLATE, StreamEncoderFactories.BROTLI)
+                headers, ImmutableSet.of(Encoding.DEFLATE, Encoding.BROTLI)
         )).isEqualTo(StreamEncoderFactories.BROTLI);
         // GZIP and BROTLI are not in the allow list.
         assertThat(HttpEncoders.getEncoderFactory(
-                headers, ImmutableSet.of(StreamEncoderFactories.DEFLATE)
+                headers, ImmutableSet.of(Encoding.DEFLATE)
         )).isEqualTo(StreamEncoderFactories.DEFLATE);
         // SNAPPY is in the allow list and not selected as there is no wildcard.
         assertThat(HttpEncoders.getEncoderFactory(
-                headers, ImmutableSet.of(StreamEncoderFactories.SNAPPY)
+                headers, ImmutableSet.of(Encoding.SNAPPY)
         )).isNull();
         // None is in the allow list.
         assertThat(HttpEncoders.getEncoderFactory(
@@ -242,25 +242,25 @@ class HttpEncodersTest {
                                                          HttpHeaderNames.ACCEPT_ENCODING,
                                                          "gzip;q=0.0, br;q=0.0, *;q=0.1");
 
-        assertThat(HttpEncoders.getEncoderFactory(headers, ImmutableSet.of(StreamEncoderFactories.GZIP,
-                                                                           StreamEncoderFactories.DEFLATE,
-                                                                           StreamEncoderFactories.BROTLI)
+        assertThat(HttpEncoders.getEncoderFactory(headers, ImmutableSet.of(Encoding.GZIP,
+                                                                           Encoding.DEFLATE,
+                                                                           Encoding.BROTLI)
         )).isEqualTo(StreamEncoderFactories.DEFLATE);
         // GZIP is not in the allow list.
         assertThat(HttpEncoders.getEncoderFactory(
-                headers, ImmutableSet.of(StreamEncoderFactories.DEFLATE, StreamEncoderFactories.BROTLI)
+                headers, ImmutableSet.of(Encoding.DEFLATE, Encoding.BROTLI)
         )).isEqualTo(StreamEncoderFactories.DEFLATE);
         // SNAPPY and DEFLATE are in the allow list and both could be selected by wildcard.
         assertThat(HttpEncoders.getEncoderFactory(
-                headers, ImmutableSet.of(StreamEncoderFactories.SNAPPY, StreamEncoderFactories.DEFLATE)
+                headers, ImmutableSet.of(Encoding.SNAPPY, Encoding.DEFLATE)
         )).isIn(StreamEncoderFactories.SNAPPY, StreamEncoderFactories.DEFLATE);
         // Only BROTLI is in the allow list but not selected as its quality value is 0.
         assertThat(HttpEncoders.getEncoderFactory(
-                headers, ImmutableSet.of(StreamEncoderFactories.BROTLI)
+                headers, ImmutableSet.of(Encoding.BROTLI)
         )).isNull();
         // Only SNAPPY is in the allow list and selected by wildcard.
         assertThat(HttpEncoders.getEncoderFactory(
-                headers, ImmutableSet.of(StreamEncoderFactories.SNAPPY)
+                headers, ImmutableSet.of(Encoding.SNAPPY)
         )).isEqualTo(StreamEncoderFactories.SNAPPY);
         // None is in the allow list.
         assertThat(HttpEncoders.getEncoderFactory(

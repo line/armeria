@@ -19,6 +19,8 @@ package com.linecorp.armeria.server.encoding;
 import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
 
+import java.util.Collections;
+import java.util.EnumSet;
 import java.util.List;
 import java.util.Set;
 import java.util.function.Function;
@@ -32,7 +34,6 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.ResponseHeaders;
-import com.linecorp.armeria.internal.common.encoding.StreamEncoderFactories;
 import com.linecorp.armeria.server.HttpService;
 
 /**
@@ -59,13 +60,16 @@ public final class EncodingServiceBuilder {
 
     private static final int DEFAULT_MIN_BYTES_TO_FORCE_CHUNKED_AND_ENCODING = 1024;
 
+    public static final Set<Encoding> ALL_ENCODINGS =
+            Collections.unmodifiableSet(EnumSet.allOf(Encoding.class));
+
     private Predicate<MediaType> encodableContentTypePredicate = defaultEncodableContentTypePredicate;
 
     private Predicate<? super RequestHeaders> encodableRequestHeadersPredicate = headers -> true;
 
     private int minBytesToForceChunkedAndEncoding = DEFAULT_MIN_BYTES_TO_FORCE_CHUNKED_AND_ENCODING;
 
-    private Set<StreamEncoderFactories> encoderFactoryAllowList = HttpEncoders.ALL_ENCODER_FACTORIES;
+    private Set<Encoding> enabledEncodings = ALL_ENCODINGS;
 
     EncodingServiceBuilder() {}
 
@@ -124,26 +128,26 @@ public final class EncodingServiceBuilder {
     }
 
     /**
-     * Sets the specified {@link StreamEncoderFactories} that should be considered for encoding.
-     * The default is {@link HttpEncoders#ALL_ENCODER_FACTORIES}.
+     * Sets the specified {@link Encoding}s for the {@link EncodingService} should enable/support.
+     * The default is {@link EncodingServiceBuilder#ALL_ENCODINGS}.
      *
-     * @param encoderFactoryAllowList the allowed {@link StreamEncoderFactories}s
+     * @param encodings the {@link Encoding}s to enable
      */
-    public EncodingServiceBuilder encoderFactoryAllowList(StreamEncoderFactories... encoderFactoryAllowList) {
-        return encoderFactoryAllowList(ImmutableSet.copyOf(
-                requireNonNull(encoderFactoryAllowList, "encoderFactoryAllowList")));
+    public EncodingServiceBuilder enabledEncodings(Encoding... encodings) {
+        return enabledEncodings(ImmutableSet.copyOf(
+                requireNonNull(encodings, "encodings")));
     }
 
     /**
-     * Sets the specified {@link StreamEncoderFactories} that should be considered for encoding.
-     * The default is {@link HttpEncoders#ALL_ENCODER_FACTORIES}.
+     * Sets the specified {@link Encoding}s for the {@link EncodingService} should enable/support.
+     * The default is {@link EncodingServiceBuilder#ALL_ENCODINGS}.
      *
-     * @param encoderFactoryAllowList the allowed {@link StreamEncoderFactories}s
+     * @param encodings the {@link Encoding}s to enable
      */
-    public EncodingServiceBuilder encoderFactoryAllowList(
-            Iterable<StreamEncoderFactories> encoderFactoryAllowList) {
-        this.encoderFactoryAllowList = ImmutableSet.copyOf(
-                requireNonNull(encoderFactoryAllowList, "encoderFactoryAllowList"));
+    public EncodingServiceBuilder enabledEncodings(
+            Iterable<Encoding> encodings) {
+        enabledEncodings = ImmutableSet.copyOf(
+                requireNonNull(encodings, "encodings"));
         return this;
     }
 
@@ -152,7 +156,7 @@ public final class EncodingServiceBuilder {
      */
     public EncodingService build(HttpService delegate) {
         return new EncodingService(delegate, encodableContentTypePredicate, encodableRequestHeadersPredicate,
-                                   minBytesToForceChunkedAndEncoding, encoderFactoryAllowList);
+                                   minBytesToForceChunkedAndEncoding, enabledEncodings);
     }
 
     /**
