@@ -15,14 +15,14 @@ LINE을 비롯한 최근의 Web 및 App의 백엔드 서버 시스템은 여러 
 동작하지 않는 서비스 접속 시 타임아웃될 때까지 차단되어, 의존성이 있는 서비스까지 연쇄적으로 멈출 가능성이 있습니다.
 만약 네트워크 전체를 파악하고 있는 사람이 아무도 없다면, 근본적인 원인이 어느 서비스에 있는지를 알아내기까지 시간이 걸리게 됩니다.
 
-![](/img/circuit-breakers-for-distributed-services-1.png)
+![-BG-](/img/circuit-breakers-for-distributed-services-1.png)
 
 {/* truncate */}
 
 우리는 이러한 연쇄적인 장애 발생을 막아야 합니다.
 적어도 가장 중요한 기능에 영향이 가지 않도록 해야 하는데, 그러기 위해서는 장애가 발생한 서비스에 대한 접속 차단이 필요합니다.
 
-![](/img/circuit-breakers-for-distributed-services-2.png)
+![-BG-](/img/circuit-breakers-for-distributed-services-2.png)
 
 이 시스템을 자동화한 것이 바로 Circuit Breaker입니다.
 http://martinfowler.com/bliki/CircuitBreaker.html
@@ -112,7 +112,7 @@ helloClient.hello("line", new AsyncMethodCallback() {
 
 원격 호스트와 메서드별로 하나의 Circuit Breaker를 할당합니다.
 
-![](/img/circuit-breakers-for-distributed-services-4.png)
+![-BG-](/img/circuit-breakers-for-distributed-services-4.png)
 
 ## Failure Rate
 
@@ -120,7 +120,7 @@ Circuit Breaker를 운용할 때는 어떤 상태를 장애로 간주할 것인�
 Armeria에서는 일정 시간 내에 처리한 리퀘스트 중 에러율(Failure Rate)이 < Failure Rate Threshold > 이상인 경우를 장애 상태로 취급합니다. 단, 리퀘스트 수가 너무 적을 경우(실행 직후의 과도 상태 등)에는 에러율이 안정적이지 않아서 장애를 오감지하게 될 가능성이 있습니다. 따라서 리퀘스트 수가 < Minimum Request Threshold > 이하인 경우에는 장애 판정을 하지 않도록 설정할 수 있습니다. 그리고 에러 비율을 카운트하는 시간의 길이는 < Sliding Window >로 설정합니다.
 Failure Rate와 Sliding Window의 관계는 아래 그림으로 나타낼 수 있습니다.
 
-![](/img/circuit-breakers-for-distributed-services-5.png)
+![-BG-](/img/circuit-breakers-for-distributed-services-5.png)
 
 ## Monitoring
 

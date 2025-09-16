@@ -77,4 +77,8 @@
   .ant-dropdown .ant-dropdown-menu .ant-dropdown-menu-item:hover {
     background-color: var(--ifm-color-emphasis-200);
   }
+
+  .ant-dropdown .ant-dropdown-menu .ant-dropdown-menu-item.ant-dropdown-menu-item-selected {
+    background-color: var(--ifm-color-emphasis-300);
+  }
 }

@@ -160,3 +160,8 @@ li {
   width: 24px;
   mask-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 24 24' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M17.53 3H21.5l-7.16 7.72L23 21h-7.19l-5.7-6.44L3.47 21H-.5l7.59-8.19L1 3h7.28l5.18 5.85L17.53 3zm-1.13 16h2.13l-6.06-6.85-1.5 1.62L16.4 19zM4.6 5l6.07 6.85 1.5-1.62L7.6 5H4.6z'/%3E%3C/svg%3E");
 }
+
+/* Add white background to images for dark-mode support */
+img[alt='-BG-'] {
+  background-color: var(--armeria-white);
+}

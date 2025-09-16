@@ -31,7 +31,6 @@ const BlogLanguageSelector: React.FC = () => {
   useEffect(() => {
     if (isBrowser) {
       const path = location.pathname;
-      console.log(path);
       if (path.startsWith('/blog/ja')) {
         setSelected(items[1]);
       } else if (path.startsWith('/blog/ko')) {
@@ -60,7 +59,7 @@ const BlogLanguageSelector: React.FC = () => {
     >
       <Button
         onClick={(e) => e.preventDefault()}
-        size="small"
+        size="large"
         className={styles.blogLanguageSelector}
       >
         {selected?.label}
