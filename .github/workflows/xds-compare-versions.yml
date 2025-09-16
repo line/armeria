@@ -1,0 +1,53 @@
+name: Compare upstream envoy versions
+
+permissions:
+  contents: read
+
+on:
+  workflow_call:
+    outputs:
+      target_version:
+        description: "Envoy version we need to update to"
+        value: ${{ jobs.compare-envoy-versions.outputs.target_version }}
+      should_update:
+        description: "Whether the apis should be updated"
+        value: ${{ jobs.compare-envoy-versions.outputs.should_update }}
+
+jobs:
+  compare-envoy-versions:
+    runs-on: ubuntu-latest
+    outputs:
+      target_version: ${{ steps.latest-envoy-version.outputs.version }}
+      should_update: ${{ steps.compare.outputs.should_update }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Fetch latest Envoy version
+        id: latest-envoy-version
+        run: |
+          version=$(curl -s https://api.github.com/repos/envoyproxy/envoy/releases/latest | jq -r '.tag_name')
+          echo "version=$version" >> $GITHUB_OUTPUT
+      - name: Read current Envoy version
+        id: current-envoy-version
+        run: |
+          version=$(cat ./xds-api/tools/envoy_release)
+          echo "version=$version" >> $GITHUB_OUTPUT
+      - name: Compare latest to current
+        id: compare
+        run: |
+          latest="${{ steps.latest-envoy-version.outputs.version }}"
+          current="${{ steps.current-envoy-version.outputs.version }}"
+
+          # Remove 'v' prefix if present
+          latest_clean=${latest#v}
+          current_clean=${current#v}
+
+          # Function to compare semantic versions
+          version_greater() {
+            printf '%s\n%s\n' "$1" "$2" | sort -V | head -n1 | grep -q "^$2$"
+          }
+
+          if version_greater "$latest_clean" "$current_clean"; then
+            echo "should_update=true" >> $GITHUB_OUTPUT
+          else
+            echo "should_update=false" >> $GITHUB_OUTPUT
+          fi

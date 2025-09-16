@@ -1,0 +1,29 @@
+protobuf {
+    // the last protoc assignment wins
+    // https://github.com/google/protobuf-gradle-plugin/blob/894f2d25e2b511bc11661f4d23e47ee0671e82ad/README.md?plain=1#L162
+    protoc {
+        artifact = "com.google.protobuf:protoc:${libs.versions.protobuf4.get()}"
+    }
+}
+
+dependencies {
+    configurations.configureEach {
+        resolutionStrategy {
+            force "com.google.protobuf:protobuf-java:${libs.versions.protobuf4.get()}"
+        }
+    }
+
+    compileOnly libs.protobuf.java
+    compileOnly libs.protobuf.java.util
+    compileOnly project(":grpc")
+    compileOnly libs.protoc.gen.validate
+    compileOnly libs.protoc.pgv.java.stub
+
+    testImplementation libs.protobuf.java
+    testImplementation libs.protobuf.java.util
+    testImplementation (libs.protoc.pgv.java.stub)
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.forkOptions.memoryMaximumSize = '1g'
+}

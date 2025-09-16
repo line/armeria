@@ -1,0 +1,48 @@
+name: Apply xDS API updates from upstream
+
+permissions:
+  contents: read
+
+on:
+  workflow_call:
+    inputs:
+      target_version:
+        description: 'Envoy version to update to'
+        required: true
+        type: string
+
+jobs:
+  update-protobuf:
+    permissions:
+      contents: write
+      pull-requests: write
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run scripts
+        working-directory: ./xds-api/tools/
+        run: |
+          if ! ./upstream-patch.sh --target ${{ inputs.target_version }}; then
+            echo "❌ Automatic update failed due to conflicts."
+            echo ""
+            echo "To resolve manually:"
+            echo "1. Run locally: ./xds-api/tools/upstream-patch.sh --target ${{ inputs.target_version }}"
+            echo "2. Resolve any conflicts shown in the output"
+            echo "3. Commit and push the changes"
+            exit 1
+          fi
+      - name: Create Pull Request
+        uses: peter-evans/create-pull-request@v7
+        with:
+          branch: update-protobuf-to-${{ inputs.target_version }}
+          base: main
+          author: Meri Kim <dl_armeria@linecorp.com>
+          committer: Meri Kim <dl_armeria@linecorp.com>
+          signoff: true
+          delete-branch: true
+          title: '[xds] Update protobuf definitions to ${{ inputs.target_version }}'
+          commit-message: |
+            [xds] Update protobuf definitions to ${{ inputs.target_version }}
+          body: |
+            This is an automatic PR created by github action workflow:
+            - Updated protobuf files
