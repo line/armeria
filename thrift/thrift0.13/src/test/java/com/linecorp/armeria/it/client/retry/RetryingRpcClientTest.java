@@ -422,7 +422,7 @@ class RetryingRpcClientTest {
                                  })
                                  .rpcDecorator((delegate, ctx, req) -> {
                                      context.set(ctx);
-                                     // Make sure we do not get cancelled while delaying the cancel.
+                                     // Make sure we do not time out while delaying the cancel.
                                      ctx.setResponseTimeout(
                                              TimeoutMode.EXTEND,
                                              Duration.ofMillis(param.cancelDelayMillis + 5000)
@@ -456,11 +456,15 @@ class RetryingRpcClientTest {
 
             // Sleep 1 second more to check if there was another retry.
             TimeUnit.SECONDS.sleep(1);
+
             if (param.ensureCancelBeforeFirstRequest) {
+                assertThat(serviceRetryCountWhenCancelled.get()).isZero();
                 assertThat(serviceRetryCount.get()).isZero();
+            } else if (param.cancelDelayMillis > 0) {
+                assertThat(serviceRetryCountWhenCancelled.get()).isIn(serviceRetryCount.get() - 1,
+                                                                      serviceRetryCount.get());
             }
-            assertThat(serviceRetryCountWhenCancelled.get()).isIn(serviceRetryCount.get(),
-                                                                  serviceRetryCount.get() - 1);
+
             verify(serviceHandler, times(serviceRetryCount.get())).hello("hello");
         }
     }
