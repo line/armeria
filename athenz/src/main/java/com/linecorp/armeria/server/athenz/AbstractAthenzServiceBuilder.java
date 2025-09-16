@@ -20,9 +20,11 @@ import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkState;
 import static java.util.Objects.requireNonNull;
 
+import java.net.URI;
 import java.time.Duration;
 
 import com.yahoo.athenz.zpe.ZpeClient;
+import com.yahoo.athenz.zpe.ZpeConsts;
 import com.yahoo.athenz.zpe.pkey.PublicKeyStore;
 
 import com.linecorp.armeria.client.athenz.ZtsBaseClient;
@@ -36,6 +38,7 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
 public abstract class AbstractAthenzServiceBuilder<SELF extends AbstractAthenzServiceBuilder<SELF>> {
 
     private static final Duration DEFAULT_OAUTH2_KEYS_REFRESH_INTERVAL = Duration.ofHours(1);
+    private static final String DEFAULT_OAUTH2_KEY_PATH = "/oauth2/keys?rfc=true";
     private static final int MAX_TOKEN_CACHE_SIZE = 10240;
 
     private Duration oauth2KeysRefreshInterval = DEFAULT_OAUTH2_KEYS_REFRESH_INTERVAL;
@@ -43,6 +46,7 @@ public abstract class AbstractAthenzServiceBuilder<SELF extends AbstractAthenzSe
     private final ZtsBaseClient ztsBaseClient;
     @Nullable
     private AthenzPolicyConfig policyConfig;
+    private String oauth2KeysPath = DEFAULT_OAUTH2_KEY_PATH;
     private int maxTokenCacheSize = MAX_TOKEN_CACHE_SIZE;
 
     AbstractAthenzServiceBuilder(ZtsBaseClient ztsBaseClient) {
@@ -71,6 +75,22 @@ public abstract class AbstractAthenzServiceBuilder<SELF extends AbstractAthenzSe
     }
 
     /**
+     * Sets the URI to fetch OAuth2 keys (JWK) from the ZTS server. The path is relative to the base {@link URI}
+     * of {@link ZtsBaseClient}.
+     * If not set, defaults to {@value #DEFAULT_OAUTH2_KEY_PATH}.
+     * If {@value ZpeConsts#ZPE_PROP_JWK_URI} is set as a system property, this option is ignored.
+     */
+    public SELF oauth2KeysPath(String oauth2KeysPath) {
+        requireNonNull(oauth2KeysPath, "oauth2KeysPath");
+        checkArgument(!oauth2KeysPath.isEmpty(), "oauth2KeysPath must not be empty");
+        checkArgument(oauth2KeysPath.charAt(0) == '/',
+                      "oauth2KeysPath: %s (expected: a relative path starting with '/')",
+                      oauth2KeysPath);
+        this.oauth2KeysPath = oauth2KeysPath;
+        return self();
+    }
+
+    /**
      * Set the limit of role and access tokens that are cached to improve the performance of validating
      * signatures since the tokens must be re-used by clients until they're about to be expired.
      * If not set, defaults to {@value MAX_TOKEN_CACHE_SIZE}.
@@ -83,13 +103,13 @@ public abstract class AbstractAthenzServiceBuilder<SELF extends AbstractAthenzSe
 
     MinifiedAuthZpeClient buildAuthZpeClient() {
         checkState(policyConfig != null, "policyConfig must be set before building the service");
-        final PublicKeyStore publicKeyStore = new AthenzPublicKeyProvider(ztsBaseClient,
-                                                                          oauth2KeysRefreshInterval);
+        final PublicKeyStore publicKeyStore = new AthenzPublicKeyProvider(
+                ztsBaseClient, oauth2KeysRefreshInterval, oauth2KeysPath);
         final ZpeClient zpeClient = new AthenzPolicyClient(ztsBaseClient, policyConfig, publicKeyStore,
                                                            maxTokenCacheSize);
         // NB: zpeClient.init() will block until the initial policy data is loaded.
         zpeClient.init(null);
-        return new MinifiedAuthZpeClient(ztsBaseClient, publicKeyStore, zpeClient);
+        return new MinifiedAuthZpeClient(ztsBaseClient, publicKeyStore, zpeClient, oauth2KeysPath);
     }
 
     @SuppressWarnings("unchecked")
