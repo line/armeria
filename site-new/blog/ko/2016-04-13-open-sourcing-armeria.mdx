@@ -7,10 +7,6 @@ import Head from '@docusaurus/Head';
 
 # Armeria 오픈소스화 이야기
 
-<Head>
-  <script defer className="speakerdeck-embed" data-id="8d645c29ce33400e8360e61fd0250f91" data-ratio="1.6" src="//speakerdeck.com/assets/embed.js"></script>
-</Head>
-
 [Armeria](http://line.github.io/armeria/)는 Java 8 및 [Netty](http://netty.io/) 상에 비동기 RPC/API 클라이언트-서버를 구현한 것입니다.
 LINE은 작년 11월 Armeria를 Apache License 2.0이 적용되는 오픈소스 프로젝트로 배포했습니다.
 Armeria는 HTTP/2를 세션 레이어 프로토콜로 사용하는 고성능의 비동기 Thrift 클라이언트/서버를 구축하기 위해 만든 프로젝트이지만, 기본적으로 프로토콜의 제약을 받지 않으며 확장성이 뛰어납니다. (예를 들어, HTTP/2를 통해 정적 파일 디렉토리를 처리하는 동시에 Java EE 웹 애플리케이션을 실행할 수 있습니다.)
@@ -20,6 +16,9 @@ Armeria는 HTTP/2를 세션 레이어 프로토콜로 사용하는 고성능의 
 이 블로그에서는 기술적 측면에 초점을 맞추기 보다는 내부 프로젝트를 오픈소스로 만들어가면서 겪었던 과정을 소개하고자 합니다.
 Armeria의 기술적 내용을 알고 싶으시다면 지난 2월 개발자들을 대상으로 개최한 제14회 LINE Developer Meetup에서 발표한 슬라이드 자료를 참고 바랍니다.
 
+<Head>
+  <script async className="speakerdeck-embed-script" src="https://speakerdeck.com/assets/embed.js"></script>
+</Head>
 <div className="deck-embed js-deck-embed" style={{ aspectRatio: '1024/640' }} data-ratio="1.6" data-state="processed">
   <div className="speakerdeck-embed" data-title="false" data-skip-resize="true" data-id="8d645c29ce33400e8360e61fd0250f91" data-name="Armeria: LINE's next generation RPC layer" data-ratio="1.6" data-host="speakerdeck.com" />
 </div>
