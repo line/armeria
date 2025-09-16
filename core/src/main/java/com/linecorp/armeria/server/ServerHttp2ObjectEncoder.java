@@ -39,11 +39,14 @@ import io.netty.handler.codec.http2.Http2Stream;
 
 final class ServerHttp2ObjectEncoder extends Http2ObjectEncoder implements ServerHttpObjectEncoder {
 
+    final Http2StreamLifecycleHandler streamLifecycleHandler;
+
     ServerHttp2ObjectEncoder(ChannelHandlerContext connectionHandlerCtx,
                              AbstractHttp2ConnectionHandler connectionHandler) {
         super(connectionHandlerCtx, connectionHandler);
         assert keepAliveHandler() instanceof Http2ServerKeepAliveHandler ||
                keepAliveHandler() instanceof NoopKeepAliveHandler;
+        streamLifecycleHandler = new  Http2StreamLifecycleHandler(connectionHandlerCtx, connectionHandler);
     }
 
     @Override
@@ -138,14 +141,17 @@ final class ServerHttp2ObjectEncoder extends Http2ObjectEncoder implements Serve
         return future;
     }
 
-    public void maybeResetStream(int streamId, Http2Error http2Error) {
-        final Http2Stream stream = encoder().connection().stream(streamId);
-        if (stream == null) {
-            return;
-        }
-        if (stream.state().remoteSideOpen()) {
-            encoder().writeRstStream(ctx(), streamId, http2Error.code(), ctx().voidPromise());
-            ctx().flush();
-        }
+    void maybeResetStream(int streamId, Http2Error http2Error, long delayMillis) {
+        streamLifecycleHandler.maybeResetStream(streamId, http2Error, delayMillis);
+    }
+
+    void notifyStreamClosed(int streamId) {
+        streamLifecycleHandler.notifyStreamClosed(streamId);
+    }
+
+    @Override
+    public void close(Throwable unused) {
+        super.close(unused);
+        streamLifecycleHandler.close();
     }
 }
