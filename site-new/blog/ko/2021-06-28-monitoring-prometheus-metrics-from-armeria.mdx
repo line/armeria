@@ -20,9 +20,7 @@ Armeria를 처음 사용해 보시는 분들도 쉽게 따라 할 수 있도록 
 
 Armeria 서버의 Prometheus 지표를 수집하기 위해 'build.gradle' 파일에 아래와 같은 디펜던시를 정의했습니다.
 
-- **build.gradle**
-
-```
+```groovy title="build.gradle"
 dependencies {
 
     // Armeria
@@ -38,9 +36,7 @@ dependencies {
 
 또한 실습을 위해 아래와 같이 `/hello/{seq}`로 GET 요청을 전송하면 성공 혹은 실패로 응답하는 간단한 REST API를 하나 준비했습니다.
 
-- **MyAnnotatedService.java**
-
-```
+```java title="MyAnnotatedService.java"
 public class MyAnnotatedService {
 
     @Get("/hello/{seq}")
@@ -55,9 +51,7 @@ public class MyAnnotatedService {
 
 아래는 Armeria 서버를 실행하기 위한 `main()` 함수 코드입니다.
 
-- **ArmeriaPrometheusApplication.java**
-
-```
+```java title="ArmeriaPrometheusApplication.java"
 public class ArmeriaPrometheusApplication {
 
     public static void main(String[] args) {
@@ -80,9 +74,7 @@ public class ArmeriaPrometheusApplication {
 
 서비스 지표를 수집하기 위해서는 반드시 아래와 같이 [MetricCollectingService](https://javadoc.io/doc/com.linecorp.armeria/armeria-javadoc/1.8.0/com/linecorp/armeria/server/metric/MetricCollectingService.html)를 `decorator`로 추가해야 합니다(자세한 방법은 [공식 문서](https://armeria.dev/docs/advanced-metrics/)를 참고하시기 바랍니다). `MeterIdPrefixFunction.ofDefault()` 함수의 인자 값을 이용하면 지표의 기본 프리픽스 이름을 원하는 대로 설정할 수 있습니다.
 
-- **ArmeriaPrometheusApplication.java**
-
-```
+```java title="ArmeriaPrometheusApplication.java"
 .decorator(new MyAnnotatedService(),
            MetricCollectingService.builder(MeterIdPrefixFunction.ofDefault("my.http.service"))
                                   .newDecorator())
@@ -90,9 +82,7 @@ public class ArmeriaPrometheusApplication {
 
 [PrometheusExpositionService](https://javadoc.io/doc/com.linecorp.armeria/armeria-javadoc/1.8.0/com/linecorp/armeria/server/metric/PrometheusExpositionService.html)를 이용해 Prometheus 지표를 노출할 경로를 설정합니다.
 
-- **ArmeriaPrometheusApplication.java**
-
-```
+```java title="ArmeriaPrometheusApplication.java"
 .service("/metrics", PrometheusExpositionService.of(meterRegistry.getPrometheusRegistry()))
 ```
 
@@ -134,9 +124,7 @@ $ vi $(brew --prefix)/etc/prometheus.yml
 
 설정 파일에 Prometheus 지표를 수집할 수 있는 경로와 포트를 정확하게 기입합니다.
 
-- **prometheus.yml**
-
-```
+```yaml title="prometheus.yml"
 global:
   scrape_interval: 10s
 
@@ -199,9 +187,7 @@ Grafana에서 Prometheus 메트릭을 그래프로 표시할 수 있도록, 앞�
 
 이제 아래 클라이언트 코드를 실행해 API 요청을 100번 보내겠습니다(Armeria의 [WebClient](https://javadoc.io/doc/com.linecorp.armeria/armeria-javadoc/latest/com/linecorp/armeria/client/WebClient.html)를 사용했습니다).
 
-- **HttpClientApplication.java**
-
-```
+```java title="HttpClientApplication.java"
 public class HttpClientApplication {
 
     private static final Logger logger = LoggerFactory.getLogger(HttpClientApplication.class);

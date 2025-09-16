@@ -19,9 +19,7 @@ Let's now take a look at how you should install and configure Gradle, Prometheus
 
 I've defined the following dependencies on the 'build.gradle' file to collect the Prometheus metrics from the Armeria server.
 
-- **build.gradle**
-
-```
+```groovy title="build.gradle"
 dependencies {
 
     // Armeria
@@ -37,9 +35,7 @@ dependencies {
 
 I've also prepared a simple REST API that responds to a `/hello/{seq}`GET request with "Success" or "Failure" for the purpose of our exercise.
 
-- **MyAnnotatedService.java**
-
-```
+```java title="MyAnnotatedService.java"
 public class MyAnnotatedService {
 
     @Get("/hello/{seq}")
@@ -54,9 +50,7 @@ public class MyAnnotatedService {
 
 Below is the `main()` function code for running an Armeria server
 
-- **ArmeriaPrometheusApplication.java**
-
-```
+```java title="ArmeriaPrometheusApplication.java"
 public class ArmeriaPrometheusApplication {
 
     public static void main(String[] args) {
@@ -80,9 +74,7 @@ public class ArmeriaPrometheusApplication {
 You must always add [MetricCollectingService](https://javadoc.io/doc/com.linecorp.armeria/armeria-javadoc/1.8.0/com/linecorp/armeria/server/metric/MetricCollectingService.html) as a `decorator` if you want to collect service metrics. (You can find more on how to do this in the [official Armeria documentation](https://armeria.dev/docs/advanced-metrics/).).
 You can customize the default prefix of the metrics by specifying the parameter of the `MeterIdPrefixFunction.ofDefault()` function.
 
-- **ArmeriaPrometheusApplication.java**
-
-```
+```java title="ArmeriaPrometheusApplication.java"
 .decorator(new MyAnnotatedService(),
            MetricCollectingService.builder(MeterIdPrefixFunction.ofDefault("my.http.service"))
                                   .newDecorator())
@@ -90,9 +82,7 @@ You can customize the default prefix of the metrics by specifying the parameter 
 
 Use [PrometheusExpositionService](https://javadoc.io/doc/com.linecorp.armeria/armeria-javadoc/1.8.0/com/linecorp/armeria/server/metric/PrometheusExpositionService.html) to configure the path to output the Prometheus metrics.
 
-- **ArmeriaPrometheusApplication.java**
-
-```
+```java title="ArmeriaPrometheusApplication.java"
 .service("/metrics", PrometheusExpositionService.of(meterRegistry.getPrometheusRegistry()))
 ```
 
@@ -135,9 +125,7 @@ $ vi $(brew --prefix)/etc/prometheus.yml
 
 Carefully enter the paths and ports for collecting the Prometheus metrics in the configuration file.
 
-- **prometheus.yml**
-
-```
+```yaml title="prometheus.yml"
 global:
   scrape_interval: 10s
 
@@ -207,9 +195,7 @@ For this purpose, you can use the [increase()](https://prometheus.io/docs/promet
 
 Let's now run the client code below to send 100 API requests. (We used Armeria's [WebClient](https://javadoc.io/doc/com.linecorp.armeria/armeria-javadoc/latest/com/linecorp/armeria/client/WebClient.html))
 
-- **HttpClientApplication.java**
-
-```
+```java title="HttpClientApplication.java"
 public class HttpClientApplication {
 
     private static final Logger logger = LoggerFactory.getLogger(HttpClientApplication.class);

@@ -31,9 +31,7 @@ In particular, I'd like to talk about:
 
 ## Monitoring Example - Spring Boot application in Kubernetes
 
-### 1.
-
-Preparing a Spring Boot application
+### 1. Preparing a Spring Boot application
 
 For this example, I'm going to use a sample "Hello World" Spring Boot application that uses [Armeria](https://line.github.io/armeria/).
 On the Shop team we use Armeria to develop high-performance asynchronous microservices that use HTTP/2 as a session layer protocol.
@@ -48,9 +46,7 @@ More about it can be found on [Armeria's official documentation](https://line.gi
 
 ![](/img/monitoring-a-spring-boot-app-in-kubernetes-what-i-learned-from-devoxx-belgium-2019-5.png)
 
-### 2.
-
-Installing Docker & Kubernetes
+### 2. Installing Docker & Kubernetes
 
 #### Docker
 
@@ -81,9 +77,7 @@ Alternatives to docker-desktop for running a local Kubernetes cluster include:
 - [minikube](https://github.com/kubernetes/minikube)
 - [kind](https://github.com/kubernetes-sigs/kind)
 
-### 3.
-
-Building an Image
+### 3. Building an Image
 
 If you've got this far you should be able to run:
 
@@ -134,9 +128,7 @@ If all is well after logging in to [Docker Hub](https://hub.docker.com/) you sho
 
 The url for your image should be of the form `docker.io/docker_id/image_name`
 
-### 4.
-
-Deploying to Kubernetes
+### 4. Deploying to Kubernetes
 
 Next, let's deploy our image to Kubernetes.
 To do this, we need to write YAML configuration files, and as you can see in these tutorials from [IBM](https://developer.ibm.com/tutorials/yaml-basics-and-usage-in-kubernetes/) and [Mirantis](https://www.mirantis.com/blog/introduction-to-yaml-creating-a-kubernetes-deployment/), writing even a basic .yaml file correctly can be a daunting task.
@@ -244,9 +236,7 @@ Now we can access our `internal/docs` endpoint and our `internal/metrics` endpoi
 
 ![](/img/monitoring-a-spring-boot-app-in-kubernetes-what-i-learned-from-devoxx-belgium-2019-10.png)
 
-### 5.
-
-Monitoring our application inside Kubernetes
+### 5. Monitoring our application inside Kubernetes
 
 Finally, we can talk about monitoring.
 First a few words about Prometheus and Grafana.

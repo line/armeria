@@ -3,15 +3,25 @@ authors:
   - trustin
 ---
 
+import Head from '@docusaurus/Head';
+
 # Open-sourcing Armeria
+
+<Head>
+  <script defer className="speakerdeck-embed" data-id="8d645c29ce33400e8360e61fd0250f91" data-ratio="1.6" src="//speakerdeck.com/assets/embed.js"></script>
+</Head>
 
 [Armeria](http://line.github.io/armeria/) is an asynchronous RPC/API client-server implementation built on top of Java 8 and [Netty](http://netty.io/) that went open-source last November under Apache License 2.0 by LINE Corporation.
 Its primary goal is to help engineers build high-performance asynchronous Thrift clients and servers that use HTTP/2 as a session layer protocol, although it is designed to be protocol-agnostic and highly extensible (for example, you can serve a directory of static files via HTTP/2 and run Java EE web applications).
 
+{/* truncate */}
+
 In this post, I'd like to focus on the steps that were taken to open-source an internal project rather than the technical aspect.
 If you are interested in the technical details of Armeria, you might want to check out the following slides presented last February during the 14th LINE Developer Meetup:
 
-{/* truncate */}
+<div className="deck-embed js-deck-embed" style={{ aspectRatio: '1024/640' }} data-ratio="1.6" data-state="processed">
+  <div className="speakerdeck-embed" data-title="false" data-skip-resize="true" data-id="8d645c29ce33400e8360e61fd0250f91" data-name="Armeria: LINE's next generation RPC layer" data-ratio="1.6" data-host="speakerdeck.com" />
+</div>
 
 ## Cleaning up the project history
 

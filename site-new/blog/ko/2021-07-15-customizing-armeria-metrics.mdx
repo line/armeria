@@ -27,9 +27,7 @@ HTTP 메서드 이름을 메트릭의 프리픽스 이름으로 추가하고 싶
 
 이때 [RequestLog#requestHeaders](<https://javadoc.io/doc/com.linecorp.armeria/armeria-javadoc/1.8.0/com/linecorp/armeria/common/logging/RequestOnlyLog.html#requestHeaders()>)를 통해 요청 HTTP 메서드 이름을 가져올 수 있습니다. [RequestLog](https://javadoc.io/doc/com.linecorp.armeria/armeria-javadoc/1.8.0/com/linecorp/armeria/common/logging/RequestLog.html)에는 이외에도 하나의 요청을 처리하면서 발생하는 다양한 정보들이 수집되는데요. 자세한 내용은 [Armeria 공식 블로그](https://armeria.dev/docs/advanced-structured-logging/)에서 확인하실 수 있습니다.
 
-**MeterIdPrefixFunctionCustomizer.java**
-
-```
+```java title="MeterIdPrefixFunctionCustomizer.java"
 public class MyMeterIdPrefixFunction implements MeterIdPrefixFunctionCustomizer {
 
     @Override
@@ -41,9 +39,7 @@ public class MyMeterIdPrefixFunction implements MeterIdPrefixFunctionCustomizer 
 
 다음으로 `MeterIdPrefixFunction#andThen` 함수로 이 클래스의 인스턴스를 넣습니다.
 
-**ArmeriaPrometheusApplication.java**
-
-```
+```java title="ArmeriaPrometheusApplication.java"
 ServerBuilder sb = Server.builder();
                          .http(8083)
                          .meterRegistry(meterRegistry);
@@ -73,9 +69,7 @@ my_http_service_GET_active_requests{hostname_pattern="*",method="hello",service=
 
 다른 방법으로, 아래와 같이 Java 8부터 지원되는 람다(lambda) 표현식을 이용해 바로 추가할 수도 있습니다.
 
-**ArmeriaPrometheusApplication.java**
-
-```
+```java title="ArmeriaPrometheusApplication.java"
 MeterIdPrefixFunction.ofDefault("my.http.service")
                      .andThen((registry, log, prefix) -> prefix.append(log.requestHeaders().method().name())))
 ```
@@ -86,9 +80,7 @@ Armeria에서는 기본적으로 HTTP API의 응답 상태 코드가 100보다 �
 
 먼저 API에서 404 상태 코드로 응답한 상황을 가정해 보겠습니다.
 
-**MyAnnotatedService.java**
-
-```
+```java title="MyAnnotatedService.java"
 public class MyAnnotatedService {
 
     @Get("/hello/{seq}")
@@ -112,9 +104,7 @@ my_http_service_GET_requests_total{hostname_pattern="*",http_status="404",method
 
 만약 404 상태 코드를 실패가 아닌 성공으로 처리하고 싶다면, [RequestLog#responseHeaders](<https://javadoc.io/static/com.linecorp.armeria/armeria-javadoc/1.8.0/com/linecorp/armeria/common/logging/RequestLog.html#responseHeaders()>)에서 HTTP 상태를 가져와서 아래와 같이 `MetricCollectingServiceBuilder#successFunction`을 구현하면 됩니다.
 
-**ArmeriaPrometheusApplication.java**
-
-```
+```java title="ArmeriaPrometheusApplication.java"
 // ... 생략 ...
 sb.decorator(MetricCollectingService.builder(MeterIdPrefixFunction.ofDefault("my.http.service")
                                                                   .andThen(new MyMeterIdPrefixFunction()))
@@ -139,9 +129,7 @@ my_http_service_GET_requests_total{hostname_pattern="*",http_status="404",method
 
 `MeterFilter`를 이용하면 내가 원하지 않는 지표를 집계에서 제외할 수 있습니다. 예를 들어, JVM 지표들을 집계에서 제외하고 싶다면, 아래와 같이 `MeterFilter`를 설정하면 됩니다.
 
-**ArmeriaPrometheusApplication.java**
-
-```
+```java title="ArmeriaPrometheusApplication.java"
 public static void main(String[] args) {
         PrometheusMeterRegistry meterRegistry = new PrometheusMeterRegistry(PrometheusConfig.DEFAULT);
         meterRegistry.config()
@@ -162,9 +150,7 @@ $ curl -s http://localhost:8083/metrics | grep "^jvm"
 
 Armeria의 [GrpcMeterIdPrefixFunction](https://javadoc.io/doc/com.linecorp.armeria/armeria-javadoc/1.8.0/com/linecorp/armeria/common/grpc/GrpcMeterIdPrefixFunction.html)를 이용해 [gRPC 상태 코드](https://grpc.github.io/grpc/core/md_doc_statuscodes.html)에 대한 지표도 수집할 수 있습니다. 지표를 수집하기 위해서는 먼저 아래와 같이 `armeria-grpc`를 디펜던시에 추가해야 합니다.
 
-**build.gradle**
-
-```
+```groovy title="build.gradle"
 dependencies {
 
     // Armeria
@@ -178,9 +164,7 @@ dependencies {
 
 테스트하기 위해 아래와 같이 간단한 gRPC 서비스를 하나 생성했습니다.
 
-**hello.proto**
-
-```
+```protobuf title="hello.proto"
 syntax = "proto3";
 
 package com.example.armeria_prometheus;
@@ -200,9 +184,7 @@ message HelloReply {
 }
 ```
 
-**MyGrpcService.java**
-
-```
+```java title="MyGrpcService.java"
 public class MyGrpcService extends HelloServiceGrpc.HelloServiceImplBase {
 
     @Override
@@ -222,9 +204,7 @@ public class MyGrpcService extends HelloServiceGrpc.HelloServiceImplBase {
 
 위에서 만든 gRPC 서비스를 새로운 서비스로 추가합니다. 기존의 HTTP 지표 수집에 영향을 주지 않도록 각 서비스에 `MetricCollectingService` `decorator`를 적용하는 형태로 변경했습니다.
 
-**ArmeriaPrometheusApplication.java**
-
-```
+```java title="ArmeriaPrometheusApplication.java"
 // ... 생략 ...
 sb.annotatedService(new MyAnnotatedService(),
                     MetricCollectingService.builder(MeterIdPrefixFunction.ofDefault("my.http.service")
@@ -239,9 +219,7 @@ sb.service("/metrics", PrometheusExpositionService.of(meterRegistry.getPrometheu
 
 간편하게 테스트를 진행하기 위해 복수 개의 gRPC 요청을 발생시키는 클라이언트 코드도 작성했습니다(클라이언트 역시 Armeria를 이용하면 쉽게 작성할 수 있습니다).
 
-**RpcClientApplication.java**
-
-```
+```java title="RpcClientApplication.java"
 public class RpcClientApplication {
 
     private static final Logger logger = LoggerFactory.getLogger(RpcClientApplication.class);

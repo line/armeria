@@ -45,9 +45,7 @@ Server1은 클라이언트의 서버이면서 Server2의 클라이언트이기�
 
 상대적으로 구현이 간단한, Server1의 응답을 받을 Server2의 구현 코드부터 보겠습니다. `/world`로 전송된 요청에 대한 응답으로 성공(200)과 실패(500)를 번갈아 반환하도록 간단하게 구현했습니다.
 
-**Server2Application.java**
-
-```
+```java title="Server2Application.java"
 @SpringBootApplication
 public class Server2Application {
 
@@ -77,9 +75,7 @@ public class Server2Application {
 Server1의 구현 코드입니다.
 Server2는 `ServerBuilder`를 이용하여 간단하게 구현한 후, Server1은 클라이언트의 요청을 받을 서비스와 Server2로 요청을 보낼 클라이언트를 모두 빈(bean)으로 만들어 사용합니다.
 
-**Server1Application.java**
-
-```
+```java title="Server1Application.java"
 @SpringBootApplication
 @Import(Server1Context.class)
 public class Server1Application {
@@ -90,9 +86,7 @@ public class Server1Application {
 }
 ```
 
-**Server1Context.java**
-
-```
+```java title="Server1Context.java"
 @Configuration
 public class Server1Context {
 

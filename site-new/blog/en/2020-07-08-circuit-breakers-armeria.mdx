@@ -51,9 +51,7 @@ Server1 is a server, but it is also a client of Server2.
 First, here is the implementation of Server2 which will receive the response of Server1.
 In response to requests coming into `/world`, success (200) and failure (500) are simply implemented to return.
 
-**Server2Application.java**
-
-```
+```java title="Server2Application.java"
 @SpringBootApplication
 public class Server2Application {
 
@@ -83,9 +81,7 @@ public class Server2Application {
 Here is the implementation of Server1.
 Unlike the simple one using `ServerBuilder` on Server2, you can find the Service bean that receives requests from the client and the Client bean that sends requests to Server2.
 
-**Server1Application.java**
-
-```
+```java title="Server1Application.java"
 @SpringBootApplication
 @Import(Server1Context.class)
 public class Server1Application {
@@ -96,9 +92,7 @@ public class Server1Application {
 }
 ```
 
-**Server1Context.java**
-
-```
+```java title="Server1Context.java"
 @Configuration
 public class Server1Context {
 
