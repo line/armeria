@@ -17,7 +17,7 @@ authors:
 
 マイクロサービスという言葉が流行り始めてからもう数年が過ぎますが、LINEでは早くからマイクロサービスアーキテクチャを取り入れていて、スタンプショップや着せかえショップの内部も細かいサービスに切り出されています。例えば、スタンプメッセージをやり取りする際に必要なバリデーションなどは、LINEの根幹となるメッセージ送信サーバーでは行なわず、マイクロサービスとして切り出して私達のチームで管理していますし、[昨年のAdvent Calendar](https://engineering.linecorp.com/ja/blog/detail/99)で紹介したように、ショップ向けの検索やランキングリスト向けのCache＋Queryを行うサーバーは別なサーバーとして動作しています。
 
-![LINE Shop Architecture](https://engineering.linecorp.com/wp-content/uploads/2017/12/1/1512120583172.png 'LINE Shopのアーキテクチャ（かなり簡略化されています）')
+![LINE Shop Architecture](/img/asynchronous-micro-service-in-rxjava-2-armeria-1.png) 'LINE Shopのアーキテクチャ（かなり簡略化されています）'
 
 ### マイクロサービス化した場合に問題になりそうなこと
 
@@ -35,7 +35,7 @@ authors:
 
 このような場合、よくRPCやDBアクセスを何らかの方法で並列化すると思います。RPCを行うためにスレッドを作って並列化することで、それぞれの段階を並列化することができます。上記の例では、理論上最短でレイテンシを20msに短縮することができます。Javaであれば、通常ThreadPoolExecutorを利用するのではないでしょうか。その他の言語であっても、最近では簡単にマルチスレッドでプログラムを実行することができるようになっています。
 
-![Sync API](https://engineering.linecorp.com/wp-content/uploads/2017/12/1/1512121044318.png '同期API＋スレッドプール')
+![Sync API](/img/asynchronous-micro-service-in-rxjava-2-armeria-2.png) '同期API＋スレッドプール'
 
 スレッドプールを利用した例
 
@@ -57,7 +57,7 @@ RPCを行う際の同期的なAPIの問題点は何でしょうか。それは�
 
 以下は、[Zipkin](https://github.com/openzipkin/zipkin)を利用して、DBやそれぞれのマイクロサービスをまたいで、LINE Shop内部のサーバーのリクエストの流れを可視化した図です。この例は、購入済み商品の一覧を取得する、実際に動作しているAPIの内部フローです。1つのAPIリクエストで、3つのマイクロサービスを経由して、MongoDBとRedis Cacheに複数回アクセスしていることがわかります。この例では画像の縦サイズの都合上、DBへのアクセスはそれほど多くありませんが、それでも、同期的APIを利用した場合は1リクエストあたり多くのスレッドが必要であることがわかると思います。
 
-![Armeria Zipkin Integration](https://engineering.linecorp.com/wp-content/uploads/2017/12/1/1512120616381.png 'Armeria Zipkin Integration')
+![Armeria Zipkin Integration](/img/asynchronous-micro-service-in-rxjava-2-armeria-3.png) 'Armeria Zipkin Integration'
 
 もっとたくさんスレッドを作ればいいじゃないかと思うかもしれませんが、スレッドをたくさん作る事自体がコストになりますし、スレッドプールを使ったとしてもその数を大きくしすぎると、コンテキストスイッチのコストが大きく効率的ではありません。通常は私達のチームでは、1つのスレッドプールの上限は多くても1000程度に設定しています。
 
@@ -73,7 +73,7 @@ RPCやDBへのアクセスは、ただリクエストを投げてそれが返っ
 
 このようなサービスのために、たくさんのサーバーを使いたくないですし、なるべくたくさんのリクエストを同時に、かつ効率的に、できれば、そのマシンが耐えうるネットワーク帯域幅の限界まで処理を受け付けられるようにしたいのです。マイクロサービス化すると、必然的にそれぞれのサービスでやることは分散され小さくなるので、いかに多くのリクエストをそれぞれのサーバーで処理できるかが、無駄なリソースを減らすために重要になってきます。
 
-![Async API](https://engineering.linecorp.com/wp-content/uploads/2017/12/1/1512120689631.png '非同期API＋イベントループ')
+![Async API](/img/asynchronous-micro-service-in-rxjava-2-armeria-4.png) '非同期API＋イベントループ'
 
 非同期API＋イベントループの例
 
@@ -144,11 +144,11 @@ service ShopService {
 
 Armeriaを使うと、ThriftやgRPCを利用するサーバー・クライアントをすべて非同期化することができます。LINE Shopでは、ほぼすべてのサービスでArmeriaを利用して、サービスの基礎となるネットワーク通信部分から、その先のRPCコールまでを非同期APIで結んでいます。社内でも、Armeriaを使っているプロジェクトはまだまだ多くないのですが、これからもっと増やしていこうと、パイロットプロジェクト的なものになっています（実際にはそんなきれい事ではなくて、多数のバグや障害を率先的に踏み抜いていく役目です）。まだまだ、大規模なAPIの変更などがあったり、メトリック出力用のライブラリが突然[Dropwizard Metrics](http://metrics.dropwizard.io/)から[Micrometer](https://micrometer.io/)に変わったりしていますが、LINE Shopやその他いくつかのチームではプロダクション環境で本気で使っていますし、基本的な部分に関しては最近は安定しているので、使ってくれる仲間を募集中です。
 
-![Armeria Documentation Service](https://engineering.linecorp.com/wp-content/uploads/2017/12/1/1512120666121.png 'Armeria Documentation Service')
+![Armeria Documentation Service](/img/asynchronous-micro-service-in-rxjava-2-armeria-5.png) 'Armeria Documentation Service'
 
 Armeria Documentation Service
 
-![Shop Grafana Dashboard](https://engineering.linecorp.com/wp-content/uploads/2017/12/1/1512120656714.png 'Shop Grafana Dashboard')
+![Shop Grafana Dashboard](/img/asynchronous-micro-service-in-rxjava-2-armeria-6.png) 'Shop Grafana Dashboard'
 
 Prometheus＋Grafanaを利用したメトリック出力
 

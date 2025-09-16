@@ -10,7 +10,7 @@ authors:
 こんにちは、LINE FukuokaでサーバーサイドエンジニアをやっているTeodorです。  
 11月にLINE Shopチーム(スタンプショップ、着せかえショップ、LINE STOREを開発)の他の3人のメンバーと一緒に、ベルギーのアントワープで開催されたDevoxx Belgium 2019に参加してきました。アントワープはDevoxx発祥の地で、ベルギー最大の都市でもあります。
 
-![](https://engineering.linecorp.com/wp-content/uploads/2019/12/devoxx_belgium-1024x682.jpg)
+![](/img/monitoring-a-spring-boot-app-in-kubernetes-what-i-learned-from-devoxx-belgium-2019-1.jpg)
 
 {/* truncate */}
 
@@ -18,9 +18,7 @@ authors:
 
 Deboxx Belgiumはヨーロッパで最大規模の映画館「Kinepolis」で開催されます。登壇者の映像やスライドは4Kの巨大なシネマスクリーンに投影され、THX音響が使われます。見映えは最高！
 
-|     |     |     |
-| --- | --- | --- |
-|     |     |     |
+![](/img/monitoring-a-spring-boot-app-in-kubernetes-what-i-learned-from-devoxx-belgium-2019-2.jpg)![](/img/monitoring-a-spring-boot-app-in-kubernetes-what-i-learned-from-devoxx-belgium-2019-3.jpg) ![](/img/monitoring-a-spring-boot-app-in-kubernetes-what-i-learned-from-devoxx-belgium-2019-4.jpg)
 
 このブログではDevoxxで学んだことを使って、Kubernetesで動くSpring Bootアプリケーションのモニタリングを行う、小さなハンズオンを行いたいと思います。 ここでは次のような事柄を説明します。
 
@@ -39,7 +37,7 @@ Deboxx Belgiumはヨーロッパで最大規模の映画館「Kinepolis」で開
 
 まずは[gRPCサービス](https://github.com/nirvanarsc/k8s-monitoring-sample/blob/master/src/main/java/com/github/nirvanarsc/k8s/monitoring/sample/service/GreetingService.java#L17)と、`/internal/docs`でアクセスできる[HTTPサービス](https://github.com/nirvanarsc/k8s-monitoring-sample/blob/master/src/main/java/com/github/nirvanarsc/k8s/monitoring/sample/service/SampleService.java#L11) をセットアップします。DocServiceは、サービスの一覧を表示しテストできるようにするArmeriaが生成したシングルページのWebアプリケーションです。詳しくは[Armeriaの公式ドキュメント](https://line.github.io/armeria/server-docservice.html) で説明されています。
 
-![](https://engineering.linecorp.com/wp-content/uploads/2019/12/docs-1-1024x753.png)
+![](/img/monitoring-a-spring-boot-app-in-kubernetes-what-i-learned-from-devoxx-belgium-2019-5.png)
 
 ### 2. DockerとKubernetesのインストール
 
@@ -53,13 +51,13 @@ $ docker login
 
 ここでログインでUsernameとして使うものに混乱するかもしれません。メールアドレスを使ってはいけません。サインアップで作成したDocker IDを使ってください。Docker IDは[Docker Hub](https://hub.docker.com/)にログインしたときに右上に表示されます。
 
-![](https://engineering.linecorp.com/wp-content/uploads/2019/12/docker_login-1024x458.png)
+![](/img/monitoring-a-spring-boot-app-in-kubernetes-what-i-learned-from-devoxx-belgium-2019-6.png)
 
 #### Kubernetes
 
 オーケー、Kubernetesをインストールしましょう。このサンプルでは、Docker内のKubernetesを有効にするだけです。
 
-![](https://engineering.linecorp.com/wp-content/uploads/2019/12/enable_k8s-1024x845.png)
+![](/img/monitoring-a-spring-boot-app-in-kubernetes-what-i-learned-from-devoxx-belgium-2019-7.png)
 
 docker-desktop以外にローカルKubernetesクラスタを動かす手段には次のようなものがあります。
 
@@ -111,7 +109,7 @@ $ ./gradlew jib
 
 すべて完了して[Docker Hub](https://hub.docker.com/)へログインすると、今回のイメージがトップに現れます。
 
-![](https://engineering.linecorp.com/wp-content/uploads/2019/12/jibbed-1024x522.png)
+![](/img/monitoring-a-spring-boot-app-in-kubernetes-what-i-learned-from-devoxx-belgium-2019-8.png)
 
 イメージのURLは`docker.io/docker_id/image_name`という形になります。
 
@@ -216,8 +214,9 @@ $ kubectl port-forward svc/my-app 8080:8080
 
 これで、`internal/docs`エンドポイントや`internal/metrics`エンドポイントに`http://localhost:8080`からアクセスできるようになります。
 
-![](https://engineering.linecorp.com/wp-content/uploads/2019/12/docs-2-1024x753.png)
-![](https://engineering.linecorp.com/wp-content/uploads/2019/12/metrics-1024x522.png)
+![](/img/monitoring-a-spring-boot-app-in-kubernetes-what-i-learned-from-devoxx-belgium-2019-9.png)
+
+![](/img/monitoring-a-spring-boot-app-in-kubernetes-what-i-learned-from-devoxx-belgium-2019-10.png)
 
 ### 5. Kubernetes内のアプリケーションのモニタリング
 
@@ -293,7 +292,7 @@ $ export POD_NAME=$(kubectl get pods --namespace default -l "app=prometheus,comp
 
 しかし、`status/targets`に移動すると、Prometheusがアプリケーションの認識に失敗していることがわかります。
 
-![](https://engineering.linecorp.com/wp-content/uploads/2019/12/prometheus-1024x646.png)
+![](/img/monitoring-a-spring-boot-app-in-kubernetes-what-i-learned-from-devoxx-belgium-2019-11.png)
 
 ここでは、問題を解決するために2通りの方法があります。一つ目として、Helm経由でPrometheus Chartをインストールするときに[追加の設定](https://github.com/helm/charts/blob/master/stable/prometheus/values.yaml#L1316)を使えます。  
 次のような設定の`extraScrapeConfigs.yaml`というファイルを作ることができます。
@@ -365,8 +364,9 @@ $ kubectl port-forward svc/my-app 8080:8080
 
 ここで`status/targets`にアクセスすると、今回のアプリケーションの3 podが見えるはずです。また、メトリクスへのクエリも可能になっているはずです。
 
-![](https://engineering.linecorp.com/wp-content/uploads/2019/12/prometheus2-1024x665.png)
-![](https://engineering.linecorp.com/wp-content/uploads/2019/12/prometheus3-1024x396.png)
+![](/img/monitoring-a-spring-boot-app-in-kubernetes-what-i-learned-from-devoxx-belgium-2019-12.png)
+
+![](/img/monitoring-a-spring-boot-app-in-kubernetes-what-i-learned-from-devoxx-belgium-2019-13.png)
 
 #### Grafanaのインストール
 
@@ -401,8 +401,9 @@ NOTES:
 
 続けて、上記の手順でGrafanaに`localhost:3000`でログインできるはずです。 そうすると、PrometheusをData Sourceとして追加して、今回のアプリケーションのメトリクスのダッシュボードを作れるようになります。
 
-![](https://engineering.linecorp.com/wp-content/uploads/2019/12/grafana1-1024x723.png)
-![](https://engineering.linecorp.com/wp-content/uploads/2019/12/grafana2-1024x317.png)
+![](/img/monitoring-a-spring-boot-app-in-kubernetes-what-i-learned-from-devoxx-belgium-2019-14.png)
+
+![](/img/monitoring-a-spring-boot-app-in-kubernetes-what-i-learned-from-devoxx-belgium-2019-15.png)
 
 以上です！PrometheusとGrafanaをうまく使って今回のアプリケーションのメトリクスを可視化するダッシュボードが構成できました。
 

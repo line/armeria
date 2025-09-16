@@ -16,7 +16,7 @@ What would happen if one of these networks suddenly failed to respond?
 The downed services would be blocked until they time-out, and all other services that rely on the blocked service would start a chain reaction of failures.
 If no one has been keeping an eye on the entire network, it will take a long time to figure out which service is the root cause.
 
-![](https://engineering.linecorp.com/wp-content/uploads/2016/07/cascading_failure1.png)
+![](/img/circuit-breakers-for-distributed-services-1.png)
 
 {/* truncate */}
 
@@ -24,7 +24,7 @@ These chain reaction failures should be prevented at all costs.
 At the least, the core features must be protected from these failures.
 To achieve that, we must block off access to the downed service before it affects another.
 
-![](https://engineering.linecorp.com/wp-content/uploads/2016/07/fail_fast1.png)
+![](/img/circuit-breakers-for-distributed-services-2.png)
 
 Circuit breakers are used to automate this whole process.
 
@@ -37,7 +37,7 @@ A circuit breaker is a system that automatically blocks off access when the numb
 Circuit breakers can be seen as state machines.
 They can automatically detect failures and determine when they're restored by continuously updating access success and failure events.
 
-![](https://engineering.linecorp.com/wp-content/uploads/2016/07/graphviz-924165e152ab51bc31fe59687c64e67792df8a4b.png)
+![](/img/circuit-breakers-for-distributed-services-3.png)
 
 Below are details for each state and their conditions.
 
@@ -124,7 +124,7 @@ A single circuit breaker is allocated for each method.
 **Per Host and Method**  
 A single circuit breaker is allocated each method in each host.
 
-![](https://engineering.linecorp.com/wp-content/uploads/2016/07/cb_grouping.png)
+![](/img/circuit-breakers-for-distributed-services-4.png)
 
 ## Failure Rate
 
@@ -139,7 +139,7 @@ The duration of the time where detection begins can also be adjusted with the _S
 
 The correlation between the failure rate and the sliding window can be seen in the figure below.
 
-![](https://engineering.linecorp.com/wp-content/uploads/2016/07/failure_rate.png)
+![](/img/circuit-breakers-for-distributed-services-5.png)
 
 ## Monitoring
 

@@ -155,15 +155,15 @@ $ brew services start prometheus
 
 Prometheus가 사용하는 기본 포트는 `9090`입니다. 웹 브라우저에서 `http://localhost:9090` 주소로 접속하면 아래 화면을 볼 수 있습니다.
 
-![](https://engineering.linecorp.com/wp-content/uploads/2021/06/armeriaPrometheus1-1024x317.png)
+![](/img/monitoring-prometheus-metrics-from-armeria-1.png)
 
 셀렉트 박스를 클릭해 Armeria 관련 지표가 Prometheus 서버에서 잘 수집됐는지 확인합니다.
 
-![](https://engineering.linecorp.com/wp-content/uploads/2021/06/armeriaPrometheus2-1024x388.png)
+![](/img/monitoring-prometheus-metrics-from-armeria-2.png)
 
 `/hello/{seq}` API를 몇 번 요청한 뒤 `my_http_service_requests_total` 지표가 잘 증가하는지 그래프에서 확인합니다.
 
-![](https://engineering.linecorp.com/wp-content/uploads/2021/06/armeriaPrometheus3-1024x475.png)
+![](/img/monitoring-prometheus-metrics-from-armeria-3.png)
 
 ### Grafana 설치 및 설정
 
@@ -176,17 +176,17 @@ $ brew services start grafana
 
 Grafana의 기본 포트는 `3000`입니다. 브라우저에서 `http://localhost:3000` 주소로 접속하면 아래 로그인 페이지를 만나게 됩니다.
 
-![](https://engineering.linecorp.com/wp-content/uploads/2021/06/armeriaPrometheus4-1024x528.png)
+![](/img/monitoring-prometheus-metrics-from-armeria-4.png)
 
 '계정을 만든 적이 없는데...?'라고 당황하지 마시고 침착하게 **Email or username**과 **Password**에 'admin'을 입력하면 로그인할 수 있습니다. 이름에서 알 수 있듯이 admin은 기본 계정이므로 실제 서비스에서 사용할 때는 보안을 위해 반드시 계정을 새로 만들어야 합니다.
 
 Grafana에서 Prometheus 메트릭을 그래프로 표시할 수 있도록, 앞에서 설정한 Prometheus 경로를 **Data Source**로 추가해야 합니다.
 
-![](https://engineering.linecorp.com/wp-content/uploads/2021/06/armeriaPrometheus5.png)
+![](/img/monitoring-prometheus-metrics-from-armeria-5.png)
 
 다음으로 대시보드를 하나 생성한 후, `/hello/{seq}` API의 성공과 실패 횟수를 모니터링할 수 있는 패널을 하나 생성하겠습니다.
 
-![](https://engineering.linecorp.com/wp-content/uploads/2021/06/armeriaPrometheus6-1024x581.png)
+![](/img/monitoring-prometheus-metrics-from-armeria-6.png)
 
 쿼리는 아래와 같이 작성했습니다.
 
@@ -218,11 +218,9 @@ public class HttpClientApplication {
 
 Grafana에서 `/hello/{seq}` API의 성공과 실패 횟수가 아름답게 그래프로 표시되는 것을 확인할 수 있습니다.
 
-![](https://engineering.linecorp.com/wp-content/uploads/2021/06/armeriaPrometheus7-1024x377.png)
+![](/img/monitoring-prometheus-metrics-from-armeria-7.png)
 
 ## 마치며
 
 이번 글에서는 Armeria 서버를 실행해서 수집한 Prometheus 지표와 Grafana 대시보드를 이용해 모니터링하는 방법을 살펴보았습니다.
 Armeria에서는 현재 지표 수집과 관련한 다양한 기능을 제공하고 있습니다. 다음 글에서는 이 기능을 이용해 Armeria에서 수집된 지표를 내 입맛에 맞게 커스터마이징해 보겠습니다.
-
-![](https://engineering.linecorp.com/wp-content/uploads/2021/06/armeriaPrometheusOG.png)

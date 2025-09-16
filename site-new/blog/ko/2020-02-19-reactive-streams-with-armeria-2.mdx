@@ -19,7 +19,7 @@ Armeria는 경량(Lightweight) 마이크로 서비스 프레임워크지만 지�
 
 ### 지원하는 프로토콜
 
-![](https://engineering.linecorp.com/wp-content/uploads/2020/02/reactivestreams2-1.png)
+![](/img/reactive-streams-armeria-2-1.png)
 
 Armeria에서는 HTTP/1과 HTTP/2를 모두 지원하고, 이 두 개의 프로토콜은 [cleartext](https://simple.wikipedia.org/wiki/Cleartext)와 TLS(Transport Layer Security) 암호화 통신을 모두 지원합니다.
 HTTP/1에서 HTTP/2로의 호환성을 지원하기 위한 프로토콜 업그레이드 면에선, HTTP/2의 'connection preface'와 HTTP/1의 'upgrade request'를 모두 지원하고 있습니다.
@@ -94,7 +94,7 @@ Armeria에서는 [separation of concerns](https://en.wikipedia.org/wiki/Separati
 
 또한 기본 제공 외에 다른 decorator가 필요하다면, 직접 손쉽게 구현해서 특정 경로나 서비스에 바인딩해서 사용할 수도 있습니다. 예를 들어 아래 그림에서 구현한 `AuthService`같은 경우에는 `request`에 인증 정보가 포함되어 있을 때만 서비스를 호출하고, 그렇지 않으면 '401 unauthorized' 에러를 발생시키도록 했습니다.
 
-![](https://engineering.linecorp.com/wp-content/uploads/2020/02/reactivestreams2-2.png)
+![](/img/reactive-streams-armeria-2-2.png)
 
 다음으로 Armeria에서 Reactive Streams를 어떻게 지원하고 있는지 알아보겠습니다.
 
@@ -103,7 +103,7 @@ Armeria에서는 [separation of concerns](https://en.wikipedia.org/wiki/Separati
 스트림(stream)은 흐르는 물과 같이 유기적으로 계속 연결되어 있어야 합니다. 어느 한곳만 뚫려있고 나머지가 막혀 있다면 곧 넘쳐 버립니다.
 Armeria에서는 데이터의 흐름을 유기적으로 제어하기 위해서 서버 내에선 Reactive Streams의 백 프레셔를 이용해 트래픽을 제어합니다. 또한 [WINDOW_UPDATE](https://http2.github.io/http2-spec/#WINDOW_UPDATE)를 이용한 [HTTP/2 stream flow control](https://tools.ietf.org/html/rfc7540#section-5.2)로, 백 프레셔가 하위 네트워크 레이어에서 Armeria 서버와 여러분이 구현한 서비스, 그리고 데이터 저장소까지 유기적으로 연결할 수 있도록 만들었습니다.
 
-![](https://engineering.linecorp.com/wp-content/uploads/2020/02/reactivestreams2-3.png)
+![](/img/reactive-streams-armeria-2-3.png)
 
 만약 서비스에서 사용하는 서버를 Armeria의 Reactive 서버로 당장 바꾸기 어렵다면, 아래와 같이 Armeria를 Reactive 프락시 서버로 활용할 수도 있습니다([참고](https://github.com/line/armeria-examples/tree/master/proxy-server)).
 
@@ -118,7 +118,7 @@ var server = Server.builder()
 
 Armeria 프락시 서버를 앞에 두면 여러분의 서버를 험난한 외부 인터넷으로부터 안전하게 보호할 수 있습니다.
 
-![](https://engineering.linecorp.com/wp-content/uploads/2020/02/reactivestreams2-5.png)
+![](/img/reactive-streams-armeria-2-4.png)
 
 ## Reactive Streams와 Armeria의 통합
 
@@ -196,14 +196,14 @@ class RxJavaService {
 Armeria에선 현재 연결된 프로토콜에 따라 알아서 적합한 형태의 데이터로 전송합니다.
 HTTP/2의 경우에는 [Data frame](https://http2.github.io/http2-spec/#DATA)안에 JSON 데이터를 나누어서 보내고, HTTP/1의 경우에는 [chunked transfer encoding](https://en.wikipedia.org/wiki/Chunked_transfer_encoding)을 이용하여 나누어서 보냅니다.
 
-![](https://engineering.linecorp.com/wp-content/uploads/2020/02/reactivestreams2-6.png)
+![](/img/reactive-streams-armeria-2-5.png)
 
 ## Spring WebFlux 통합
 
 Armeria는 다양한 라이브러리 및 프레임워크와의 연동을 지원합니다.
 Reactive Streams를 사용하기 위해서 이미 [Spring WebFlux](https://docs.spring.io/spring/docs/current/spring-framework-reference/web-reactive.html)를 사용하고 있다면, 별도의 코드 수정 없이 'armeria-spring-boot-webflux-starter'를 의존성에 추가([참고](https://line.github.io/armeria/advanced-spring-webflux-integration.html))하는 것만으로 Armeria로의 마이그레이션을 끝낼 수 있습니다. 이런 방식으로 WebFlux의 네트워크 레이어인 [Reactor-Netty](https://github.com/reactor/reactor-netty)를 Armeria의 Reactive 엔진으로 교체할 수 있습니다.
 
-![](https://engineering.linecorp.com/wp-content/uploads/2020/02/reactivestreams2-7.png)
+![](/img/reactive-streams-armeria-2-6.png)
 
 단순히 엔진만 교체하는 거라면 '그냥 WebFlux만 사용하면 되지 않을까?'라는 의문이 생길 수도 있는데요. 과연 어떤 이점이 있는 걸까요?
 
@@ -328,7 +328,7 @@ Armeria를 통해 Reactive Streams를 활용하면 많은 양의 데이터와 �
 - 로그를 확인할 때 분산된 서버에 접근하지 않고도 확인할 수 있도록 Kafka로 접속 로그를 전송합니다.
 - Micrometer를 활용해서 필요한 수치를 설정, 수집하여 Prometheus나 Netflix의 Atlas와 같은 애플리케이션 모니터링 툴로 전송할 수 있습니다.
 
-![](https://engineering.linecorp.com/wp-content/uploads/2020/02/reactivestreams2-8.png)
+![](/img/reactive-streams-armeria-2-7.png)
 
 ## 마치며
 

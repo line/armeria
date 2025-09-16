@@ -21,7 +21,7 @@ MSA(Microservice Architecture)에서는 이 클라이언트가 또 다른 누군
 
 서킷 브레이커에는 총 3가지 상태가 있습니다.
 
-![](https://engineering.linecorp.com/wp-content/uploads/2020/04/circuitbreaker1.png)
+![](/img/circuit-breakers-armeria-1.png)
 
 - `CLOSED`: 요청의 실패율이 정해 놓은 임계치보다 낮은 정상적인 상태.
 - `OPEN`: 요청의 실패율이 정해 놓은 임계치를 넘어선 상태. 요청을 전송하지 않고 바로 에러를 발생시킴(fail fast).
@@ -39,7 +39,7 @@ LINE에서 운영하는 [Netty](https://netty.io/) 기반의 비동기 마이크
 Server2가 Server1으로 응답을 보내면 Server1은 그 응답을 다시 클라이언트에게 반환합니다.
 Server1은 클라이언트의 서버이면서 Server2의 클라이언트이기도 합니다.
 
-![](https://engineering.linecorp.com/wp-content/uploads/2020/04/circuitbreaker2.png)
+![](/img/circuit-breakers-armeria-2.png)
 
 #### Server2 구현 코드
 
@@ -150,23 +150,23 @@ $ loadtest http://127.0.0.1:5007/hello --rps 1
 
 Server1의 로그를 살펴보면 서킷 브레이커의 동작을 눈으로 확인할 수 있습니다. 서버가 처음 실행될 때는 서킷 브레이커의 초기 상태가 `CLOSED`입니다.
 
-![](https://engineering.linecorp.com/wp-content/uploads/2020/04/circuitbreaker3.png)
+![](/img/circuit-breakers-armeria-3.png)
 
 _03:03:41.830_ 초에 측정된 전체 5개의 요청 중 실패한 요청 수는 두 개이고, 실패율은 2/5 = 0.4입니다. 실패율이 앞서 설정한 0.3(`failureRateThreshold`)보다 크고, 측정에 사용한 요청 수도 5(`minimumRequestThreshold`) 이상이므로 서킷 브레이커는 `OPEN` 상태로 전환됩니다.
 
-![](https://engineering.linecorp.com/wp-content/uploads/2020/04/circuitbreaker4.png)
+![](/img/circuit-breakers-armeria-4.png)
 
 이후 _03:03:41.830_ ~ _03:03:47.824_, 약 5초(`circuitOpenWindow`) 간 Server2로 요청이 전송되지 않고 `FailFastException` 에러가 계속 발생합니다(Server2의 로그를 보면 해당 시간에 요청이 들어오지 않은 것을 확인할 수 있습니다).
 
-![](https://engineering.linecorp.com/wp-content/uploads/2020/04/circuitbreaker5.png)
+![](/img/circuit-breakers-armeria-5.png)
 
 _03:03:47.824_ 초에 `HALF_OPEN` 상태로 전환되고, 클라이언트가 보낸 요청이 Server2로 전송됩니다. 이때 전송된 요청이 운 좋게 200 응답을 받으면서 `CLOSED` 상태로 전환됩니다.
 
-![](https://engineering.linecorp.com/wp-content/uploads/2020/04/circuitbreaker6.png)
+![](/img/circuit-breakers-armeria-6.png)
 
 다시 `CLOSED`가 되어서 이 과정을 또 반복합니다. _03:03:47.827_ ~ _03:03:56.824_, 약 10초(`counterSlidingWindow`) 동안 실패율을 측정합니다. 이번에 측정한 실패율은 4/8 = 0.5이므로, 서킷 브레이커는 다시 `OPEN` 상태로 전환됩니다.
 
-![](https://engineering.linecorp.com/wp-content/uploads/2020/04/circuitbreaker7.png)
+![](/img/circuit-breakers-armeria-7.png)
 
 위와 같이 간단한 테스트를 통해 Armeria 서킷 브레이커의 동작을 직접 확인해 보면서, 여러 설정 옵션의 의미와 그에 따른 동작을 보다 쉽게 이해할 수 있었습니다. 또한 간단한 설정으로도 완벽히 동작하는 서킷 브레이커 클라이언트를 구현할 수 있다는 점도 알게 되었습니다.
 

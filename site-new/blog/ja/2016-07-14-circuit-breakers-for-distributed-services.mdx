@@ -13,13 +13,13 @@ LINEをはじめとする昨今のWebやアプリのバックエンドサーバ�
 
 もしこのネットワークの中の1つが突然全く応答を返さなくなったらどうなるでしょうか？ ダウンしたサービスに対するアクセスがタイムアウトするまでブロックすることにより、依存するサービスまでもが連鎖的にダウンしてしまう可能性があります。 もしネットワークの全容を誰も把握できていなかったら、根本の原因がどのサービスにあるのか発見するのに時間がかかってしまうでしょう。
 
-![](https://engineering.linecorp.com/wp-content/uploads/2016/07/cascading_failure.png)
+![](/img/circuit-breakers-for-distributed-services-1.png)
 
 {/* truncate */}
 
 我々はこのような障害の連鎖を防がなくてはいけません。少なくとも、最も重要な機能が影響を受けないようにする必要があります。 そのためには、障害がおきたサービスへのアクセスを遮断しなければなりません。
 
-![](https://engineering.linecorp.com/wp-content/uploads/2016/07/fail_fast.png)
+![](/img/circuit-breakers-for-distributed-services-2.png)
 
 この仕組みを自動化したものが、Circuit Breakerです。 http://martinfowler.com/bliki/CircuitBreaker.html
 
@@ -27,7 +27,7 @@ LINEをはじめとする昨今のWebやアプリのバックエンドサーバ�
 Circuit Breakerとは、リモートアクセスの成功／失敗をカウントし、 エラー率(failure rate)が閾値を超えたときに自動的にアクセスを遮断する仕組みです。  
 Circuit Breakerはステートマシンとして表現できます。 アクセス成功や失敗といったイベントが発生するたびに内部状態を更新し、障害の検出と復旧の判断を自動的に行います。
 
-![](https://engineering.linecorp.com/wp-content/uploads/2016/07/3.png)
+![](/img/circuit-breakers-for-distributed-services-3.png)
 
 それぞれの状態と遷移の条件は以下の通りです。  
 **CLOSED**  
@@ -97,7 +97,7 @@ helloClient.hello("line", new AsyncMethodCallback() {
 **Per Host and Method**  
 リモートホストとメソッドごとにひとつのcircuit Breakerを割り当てる
 
-![](https://engineering.linecorp.com/wp-content/uploads/2016/07/Per-Host-and-Method.png)
+![](/img/circuit-breakers-for-distributed-services-4.png)
 
 ## Failure Rate
 
@@ -109,7 +109,7 @@ Armeriaでは、一定時間内に処理したリクエストのうち、エラ�
 
 Failure RateとSliding Windowの関係は以下の図で表されます。
 
-![](https://engineering.linecorp.com/wp-content/uploads/2016/07/Failure-Rate.png)
+![](/img/circuit-breakers-for-distributed-services-5.png)
 
 ## Monitoring
 
@@ -164,7 +164,3 @@ if (circuitBreaker.canRequest()) {
 以上、ArmeriaのCircuit Breaker機能について紹介いたしました。
 
 LINEにおける実際の事例については、次の機会にご紹介できればと思います。
-
-**ご意見やご感想はこちらから！**
-
-[![Download_on_the_App_Store_JP_135x40](https://engineering.linecorp.com/wp-content/uploads/2016/06/twitter-line.png)](https://twitter.com/LINE_DEV)

@@ -19,7 +19,7 @@ Let's first take a look at some prerequisite knowledge for setting up a Reactive
 
 ### Supported protocols
 
-![](https://engineering.linecorp.com/wp-content/uploads/2020/02/reactivestreams2-1.png)
+![](/img/reactive-streams-armeria-2-1.png)
 
 Armeria supports both HTTP/1 and HTTP/2, and these protocols both support [cleartext](https://simple.wikipedia.org/wiki/Cleartext) and TLS (Transport Layer Security) cryptographic protocols.
 To ensure compatibility between HTTP/1 and HTTP/2, Armeria supports both HTTP/2's connection preface and HTTP/1's upgrade request.
@@ -106,7 +106,7 @@ You can use a separate [decorator](https://armeria.dev/docs/server-decorator) to
 If you wish to add an additional decorator, you can always manually implement and bind one to a specific path or service.
 For example, `AuthService`in the figure below only calls the service when a `request` includes authentication info, and returns a "401 unauthorized" error if not.
 
-![](https://engineering.linecorp.com/wp-content/uploads/2020/02/reactivestreams2-2.png)
+![](/img/reactive-streams-armeria-2-2.png)
 
 Next, let's take a look at how Armeria works with Reactive Streams.
 
@@ -117,7 +117,7 @@ If there is only one opening while everywhere else is closed, it will lead to an
 Armeria uses the back pressure feature of Reactive Streams to dynamically control data flow inside servers.
 Also, back pressure that utilizes [HTTP/2 stream flow control](https://tools.ietf.org/html/rfc7540#section-5.2) using [WINDOW_UPDATE](https://http2.github.io/http2-spec/#WINDOW_UPDATE) allows you to dynamically connect the Armeria server with your services and repositories from subnetwork layers.
 
-![](https://engineering.linecorp.com/wp-content/uploads/2020/02/reactivestreams2-3.png)
+![](/img/reactive-streams-armeria-2-3.png)
 
 If converting your service's server to an Armeria Reactive server is difficult at the moment, you could use an Armeria Reactive proxy server by following the sample code and [instructions available on the repository](https://github.com/line/armeria-examples/tree/master/proxy-server).
 
@@ -132,7 +132,7 @@ var server = Server.builder()
 
 With an Armeria proxy server at the forefront, you can keep your server safe from any external threats on the internet.
 
-![](https://engineering.linecorp.com/wp-content/uploads/2020/02/reactivestreams2-5.png)
+![](/img/reactive-streams-armeria-2-4.png)
 
 ## Consolidating Reactive Streams and Armeria
 
@@ -215,7 +215,7 @@ Depending on the protocol, different operations are required when sending data t
 Armeria automatically finds the appropriate format according to the currently connected protocol.
 JSON data is divided inside the [Data frame](https://http2.github.io/http2-spec/#DATA) for HTTP/2, and [chunked transfer encoding](https://en.wikipedia.org/wiki/Chunked_transfer_encoding) is used for HTTP/1.
 
-![](https://engineering.linecorp.com/wp-content/uploads/2020/02/reactivestreams2-6.png)
+![](/img/reactive-streams-armeria-2-5.png)
 
 ## Migrating Spring WebFlux
 
@@ -223,7 +223,7 @@ Armeria supports various libraries and frameworks.
 If you are already using [Spring WebFlux](https://docs.spring.io/spring/docs/current/spring-framework-reference/web-reactive.html) to use Reactive Streams, you only need to [add](https://armeria.dev/docs/advanced-spring-webflux-integration)`armeria-spring-boot-webflux-starter`[to your dependencies](https://armeria.dev/docs/advanced-spring-webflux-integration) to complete migration to Armeria.
 You can replace [Reactor-Netty](https://github.com/reactor/reactor-netty), a WebFlux network layer, with Armeria's Reactive engine with this way.
 
-![](https://engineering.linecorp.com/wp-content/uploads/2020/02/reactivestreams2-7.png)
+![](/img/reactive-streams-armeria-2-6.png)
 
 You may be thinking to yourself "Shouldn't I just use WebFlux if I only want to replace the engine?" What advantages are there to going through the process above?
 
@@ -356,7 +356,7 @@ In addition, here are some more features catered towards microservices:
 - Automatic access logging to Kafka without the need to access distributed servers.
 - Easy transfer of metrics to application monitoring tools such as Netflix's Atlas and Prometheus through Micrometer's filters.
 
-![](https://engineering.linecorp.com/wp-content/uploads/2020/02/reactivestreams2-8.png)
+![](/img/reactive-streams-armeria-2-7.png)
 
 ## Conclusion
 

@@ -26,7 +26,7 @@ You can read more about the concept of circuit breakers in this article previous
 
 A circuit breaker can be in one of the following three states.
 
-![](https://engineering.linecorp.com/wp-content/uploads/2020/04/circuitbreaker1.png)
+![](/img/circuit-breakers-armeria-1.png)
 
 - `CLOSED`: The failure rate of the request is lower than the configured threshold. This is the initial and default state.
 - `OPEN`: The failure rate of the request is beyond the configured threshold. Errors occur immediately without sending the actual request (Fails fast).
@@ -44,7 +44,7 @@ Server1 sends a `/world` request to Server2 when a `/hello` request is received 
 When you receive a response from Server2, you return the response back to the client.
 Server1 is a server, but it is also a client of Server2.
 
-![](https://engineering.linecorp.com/wp-content/uploads/2020/04/circuitbreaker2.png)
+![](/img/circuit-breakers-armeria-2.png)
 
 #### Server2 implementation code
 
@@ -160,28 +160,28 @@ $ loadtest http://127.0.0.1:5007/hello --rps 1
 
 The log of Server1 provides information on the behavior of `CircuitBreaker`.
 
-![](https://engineering.linecorp.com/wp-content/uploads/2020/04/circuitbreaker3.png)
+![](/img/circuit-breakers-armeria-3.png)
 
 When the server first started, the initial state of `CircuitBreaker` was `CLOSED`.
 
 At 03:03:41.830 - Of the total 5 requests measured, the number of failures was 2, so the failure rate was 2/5 = 0.4.
 Thus, the failure rate was greater than the previously set failure rate of 0.3 (`failureRateThreshold`) and the number of requests used in the measurement was greater than 5 (`minimumRequestThreshold`), so `CircuitBreaker` switched to the `OPEN` state.
 
-![](https://engineering.linecorp.com/wp-content/uploads/2020/04/circuitbreaker4.png)
+![](/img/circuit-breakers-armeria-4.png)
 
 From 03:03:41.830 to 03:03:47.824 - `FailFastException` errors continued to occur during subsequent periods, in approximately 5 seconds (`circuitOpenWindow`). (If you check the logs on Server2, you can see that the request was not received at that time.)
 
-![](https://engineering.linecorp.com/wp-content/uploads/2020/04/circuitbreaker5.png)
+![](/img/circuit-breakers-armeria-5.png)
 
 At 03:03:47.824 - the transition is made to the `HALF_OPEN` state, where requests from clients were actually sent to Server2.
 At this point, the transmitted request luckily received a 200 response and then `CircuitBreaker` switched to the `CLOSED` state.
 
-![](https://engineering.linecorp.com/wp-content/uploads/2020/04/circuitbreaker6.png)
+![](/img/circuit-breakers-armeria-6.png)
 
 This process is repeated again because it is `CLOSED` again.
 From 03:03:47.827 to 03:03:56.824 - The failure rate was measured for approximately 10 seconds (`counterSlidingWindow`), and the failure rate measured this time was 4/8 = 0.5, so `CircuitBreaker` switched back to the `OPEN` state.
 
-![](https://engineering.linecorp.com/wp-content/uploads/2020/04/circuitbreaker7.png)
+![](/img/circuit-breakers-armeria-7.png)
 
 We've taken a look at Armeria's circuit breaker in action with the simple test above.
 I hope you now have a better understanding of what the various configurations and operations are for, and how easy it is to implement a circuit breaker client for yourself.

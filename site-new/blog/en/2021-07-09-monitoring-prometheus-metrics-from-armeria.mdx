@@ -157,15 +157,15 @@ $ brew services start prometheus
 Prometheus uses the 9090 port by default.
 Navigate to [http://localhost:9090](http://localhost:9090/) on your browser and you will see the screen shown below.
 
-![](https://engineering.linecorp.com/wp-content/uploads/2021/06/armeriaPrometheus1-1024x317.png)
+![](/img/monitoring-prometheus-metrics-from-armeria-1.png)
 
 Enter "Armeria" into the search field to check if the related metrics have been properly collected from the Prometheus server.
 
-![](https://engineering.linecorp.com/wp-content/uploads/2021/06/armeriaPrometheus2-1024x388.png)
+![](/img/monitoring-prometheus-metrics-from-armeria-2.png)
 
 Try sending multiple `/hello/{seq}` API requests and see if the `my_http_service_requests_total` metric properly increases.
 
-![](https://engineering.linecorp.com/wp-content/uploads/2021/06/armeriaPrometheus3-1024x475.png)
+![](/img/monitoring-prometheus-metrics-from-armeria-3.png)
 
 ### Installing and configuring Grafana
 
@@ -179,7 +179,7 @@ $ brew services start grafana
 Grafana uses the 3000 port by default.
 Navigate to [http://localhost:3000](http://localhost:3000/) on your browser and you will see the login screen shown below.
 
-![](https://engineering.linecorp.com/wp-content/uploads/2021/06/armeriaPrometheus4-1024x528.png)
+![](/img/monitoring-prometheus-metrics-from-armeria-4.png)
 
 Don't worry if you have never created an account.
 You can enter 'admin' on both the **Email or username** and **Password** field to log in.
@@ -187,11 +187,11 @@ As you can probably tell from the name, "admin" is a very basic account, and you
 
 Enter the path to Prometheus in the **Data Source** field to display the Prometheus metrics as a graph on Grafana.
 
-![](https://engineering.linecorp.com/wp-content/uploads/2021/06/armeriaPrometheus5.png)
+![](/img/monitoring-prometheus-metrics-from-armeria-5.png)
 
 Next, create a dashboard and then add a panel where you can monitor the number of successful and unsuccessful attempts of the `/hello/{seq}` API.
 
-![](https://engineering.linecorp.com/wp-content/uploads/2021/06/armeriaPrometheus6-1024x581.png)
+![](/img/monitoring-prometheus-metrics-from-armeria-6.png)
 
 The queries are as follows.
 
@@ -226,11 +226,10 @@ public class HttpClientApplication {
 
 You can see the results of calling the `/hello/{seq}` API being expressed as a beautiful graph on Grafana.
 
-![](https://engineering.linecorp.com/wp-content/uploads/2021/06/armeriaPrometheus7-1024x377.png)
+![](/img/monitoring-prometheus-metrics-from-armeria-7.png)
 
 ## Closing words
 
 In this post, we took a look at how you can monitor Prometheus metrics collected from running an Armeria server, using a Grafana dashboard.
 Armeria provides various features for collecting metrics, and in our next post we will take a look at how you can customize the metrics you collect from Armeria to your needs.
 
-![](https://engineering-org.line-apps.com/ko/armeriaprometheusog/)

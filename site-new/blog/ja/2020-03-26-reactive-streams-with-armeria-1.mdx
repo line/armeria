@@ -21,7 +21,7 @@ Reactive Streamsは、公式ホームページである[reactive-streams.org](ht
 
 下図は通常のデータ処理とストリーム処理を比較したものです。
 
-![](https://engineering.linecorp.com/wp-content/uploads/2020/03/ReactiveStreams-1--1024x577.png)
+![](/img/reactive-streams-armeria-1-1.png)
 
 左の通常のデータ処理では、データ処理のリクエストが来ると、ペイロード（payload）をすべてアプリケーションのメモリーに保存してから次の処理を行います。追加で必要なデータもリポジトリから取得して、メモリーにロードします。この方式の問題点は、送信されたデータはもちろん、リポジトリから取得したデータまですべてのデータがアプリケーションのメモリーにロードされてから、応答メッセージを作成できるということです。もし必要なデータのサイズがメモリーのサイズより大きければ、「out of memory」というエラーが発生します。また、サービスを運用してみると、個別のリクエストが「out of memory」を発生させなくても、一瞬多くのリクエストが殺到してしまい、多量のGC（Garbage Collection）が発生してサーバーが正常に応答できない場合が多々発生します。
 
@@ -31,7 +31,7 @@ Reactive Streamsは、公式ホームページである[reactive-streams.org](ht
 
 非同期方式については、同期（synchronous）方式と比較しながら説明します。下図は、同期方式と非同期方式の処理過程を示したものです。
 
-![](https://engineering.linecorp.com/wp-content/uploads/2020/03/ReactiveStreams-2-1024x574.png)
+![](/img/reactive-streams-armeria-1-2.png)
 
 同期方式では、クライアントがサーバーにリクエストを送ると、応答を受けるまでブロッキング（blocking）されます。ブロッキングされるということは、現在のスレッド（thread）は、他のタスクを処理せずに、現在のタスクが終わるのを待っていることを意味します。そのため、2つのリクエストをAとBのサーバーに送るとしたら、Aの応答が終わって、ようやくBにリクエストを送ることができます。しかし、非同期方式では、現在のスレッドがブロッキングされないため、他のタスクを続けることができます。Aにリクエストを送った後に他のタスクを処理することや、あるいはBに他のリクエストを送ることもできます。同期方式と比較して非同期方式のメリットをまとめると以下のようになります。
 
@@ -44,24 +44,24 @@ Reactive Streamsは、公式ホームページである[reactive-streams.org](ht
 
 #### プッシュ型
 
-![](https://engineering.linecorp.com/wp-content/uploads/2020/03/ReactiveStreams-3-1024x503.png)
+![](/img/reactive-streams-armeria-1-3.png)
 
 Observerパターンでは、発行者（publisher）が購読者（subscriber）にプッシュする形でデータが送信されます。発行者は購読者の状態を考慮せず、データを送信するだけです。仮に、発行者が１秒に100個のメッセージを送るのに、購読者は1秒に10個しか処理できないとしたら、どうすればいいでしょうか。購読者が処理できないメッセージ（待機中のイベント）を、キュー（queue）を利用して保存するしかありません。
 
-![](https://engineering.linecorp.com/wp-content/uploads/2020/03/ReactiveStreams-4-1024x446.png)
+![](/img/reactive-streams-armeria-1-4.png)
 
 サーバーが使えるメモリーは限られています。仮に、1秒に100個のメモリーを続けてプッシュするとしたら、バッファは一瞬で使い切られるはずです。バッファを使い切ってオーバーフロー（overflow）が発生すると、どうなるでしょうか。固定長バッファと可変長バッファで、発生する事象が異なります。
 
 - 固定長バッファ：オーバーフロー（overflow）が発生すると、新規で受信したメッセージを拒否します。拒否されたメッセージは再びリクエストすることになりますが、再リクエストの過程でネットワークとCPU演算のコストが追加で発生します。  
-  ![](https://engineering.linecorp.com/wp-content/uploads/2020/03/ReactiveStreams-5-1024x518.png)
+  ![](/img/reactive-streams-armeria-1-5.png)
 - 可変長バッファ：オーバーフロー（overflow）が発生すると、イベントを保存するときに「out of memory」エラーが発生し、サーバークラッシュ（crash）が発生します。「誰がそのように実装するんだ？」と思いがちですが、Javaで多く使用されるListが可変長データ構造型です。例えば、SQLで多量のデータを問い合わせすると、DBMSは発行者になり、皆さんのサーバーが購読者になります。そうなると、Listデーター構造型にデータを全部入れ込もうとして多量のGCが発生するため、サーバーが正常に応答できない状態になることがあります。  
-  ![](https://engineering.linecorp.com/wp-content/uploads/2020/03/ReactiveStreams-6-1024x505.png)
+  ![](/img/reactive-streams-armeria-1-6.png)
 
 この問題をどう解決できるでしょうか。発行者がデータを送信する際、購読者に必要なデータだけを送ることができれば、解決できるのではないでしょうか。これが、バックプレッシャーの基本原理です。
 
 #### プル型
 
-![](https://engineering.linecorp.com/wp-content/uploads/2020/03/ReactiveStreams-7-1024x433.png)
+![](/img/reactive-streams-armeria-1-7.png)
 
 プル型では、購読者が10個を処理できるとしたら、発行者に10個だけリクエストします。発行者はリクエストされた分だけ送信し、購読者はそれ以上「out of memory」エラーを心配しなくて済みます。
 
@@ -75,7 +75,7 @@ Reactive Streamsは、2013年にNetflixとPivotal、Lightbendのエンジニア�
 
 Reactive Streamsでは、2015年4月にJVMで使用するための[Reactive Streams 1.0.0](https://www.reactive-streams.org/announce-1.0.0)をリリースしました。そして、2017年9月にReactive StreamsのAPIと仕様、プル（pull）型の使用原則をそのままポーティングして、[Flow API](https://docs.oracle.com/javase/9/docs/api/java/util/concurrent/Flow.html)という名前で、java.util.concurrentパッケージの下に含めたJava 9がリリースされました。これは、コミュニティや一部の企業でリードして開発していたReactive Streamsが、Javaの公式機能になったことを意味します。さらに3か月後、Reactive StreamsでFlowと相互変換が可能なアダプターをリリースし、Flow APIで既存のライブラリーを使用できるようになりました。
 
-![](https://engineering.linecorp.com/wp-content/uploads/2020/03/ReactiveStreams-8-1024x570.png)
+![](/img/reactive-streams-armeria-1-8.png)
 
 ## Reactive Streams API
 
@@ -107,7 +107,7 @@ public interface Subscription {
 
 1. Subscriberが、subscribe関数を使用してPublisherに購読をリクエストします。
 2. Publisherは、onSubscribe関数を使用してSubscriberにSubscriptionを送信します。  
-   ![](https://engineering.linecorp.com/wp-content/uploads/2020/03/ReactiveStreams-9-1024x572.png)
+   ![](/img/reactive-streams-armeria-1-9.png)
 3. これからSubscriberは、SubscriberとPublisher間の通信を媒介します。Subscriberは、Publisherに直接データをリクエストしません。Subscriptionのrequest関数により、Publisherに送信します。
 4. Publisherは、SubscriptionによりSubscriberのonNextにデータを送信し、完了するとonCompleteを、エラーが発生するとonErrorシグナルを送信します。
 5. SubscriberとPublisher、Subscriptionの3つがお互い有機的に繋がって通信をやり取りし、subscribeからonCompleteまで繋がります。このようにバックプレッシャーが完成されます。
@@ -116,7 +116,7 @@ public interface Subscription {
 
 では、直接実装して使用すればいいでしょうか。前述のルール通りPublisherインターフェースを実装し、それを購読する際にSubscriptionを作成して送信するように実装することはできます。しかし、これがすべてではありません。Reactive Streamsでは、API以外にも[仕様書](https://github.com/reactive-streams/reactive-streams-jvm#specification)があります。この仕様書には、シンプルなインターフェースとは違って、実装の際に従うべき複雑なルールが示されています。
 
-![](https://engineering.linecorp.com/wp-content/uploads/2020/03/ReactiveStreams-10-1024x574.png)
+![](/img/reactive-streams-armeria-1-10.png)
 
 この仕様に従って直接実装した機能は、[Reative Streams TCK](https://github.com/reactive-streams/reactive-streams-jvm/tree/master/tck)というツールで検証できます。当該分野の専門家でなければ、すべてのルールを満たすように実装するのはなかなか厳しいことです。特に、Publisherを実装するのが難しいです。Javaの有名なReactive Streams実装の1つである[Project Reactor](https://projectreactor.io/)のGitHubに登録されている課題（Issue）を見てみると、あるユーザーが自分が作ったカスタムPublisherがFluxとうまく繋がらないという内容で登録した課題があります（[参照](https://github.com/reactor/reactor-core/issues/482)）。これに対してProject Reactorからは、「作らないでください！」ときっぱりと回答しています。学習の意味で、ミニプロジェクトとして作るのはお勧めします。勉強にもなりますし、いいと思います。しかし、実際の運用に使用するコードであれば、検証されてないコードよりは、Flux.create()のような作成者関数を活用してPublisherを作ったほうがいいと思います。Reactive Streamsを使用するためには、直接実装するよりは既にきちんと作られて検証までされている実装を使用することをお勧めします。では、このような実装には、どのようなものがあるでしょう。
 
@@ -132,8 +132,8 @@ Reactive Streamsには[さまざまな実装](https://en.wikipedia.org/wiki/Reac
 
 ### Reactive Streamの相互運用
 
-![](https://engineering.linecorp.com/wp-content/uploads/2020/03/ReactiveStreams-11-1024x565.png)
-![](https://engineering.linecorp.com/wp-content/uploads/2020/03/ReactiveStreams-12-1024x447.png)
+![](/img/reactive-streams-armeria-1-11.png)
+![](/img/reactive-streams-armeria-1-12.png)
 
 RxJavaのObservableは、Reactive Streamsにより、ArmeriaのHttpResponseやProject ReactorのFluxに変換できます。また、MongoDBのDataPublisherはAkka StreamsのSourceによってストリーム演算ができます。
 

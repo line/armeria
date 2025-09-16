@@ -7,7 +7,7 @@ authors:
 
 This November, accompanied by 3 other members of the Shop team, I attended Devoxx Belgium 2019, held in Antwerp, Belgium - the birthplace of Devoxx and most populous city of Belgium.
 
-![](https://engineering.linecorp.com/wp-content/uploads/2019/12/devoxx_belgium-1024x682.jpg)
+![](/img/monitoring-a-spring-boot-app-in-kubernetes-what-i-learned-from-devoxx-belgium-2019-1.jpg)
 
 {/* truncate */}
 
@@ -18,7 +18,7 @@ Devoxx Belgium took place in "Kinepolis," one of the largest cinemas in Europe.
 The speakers' video and slides were projected on the huge cinema screens in 4K using the available THX audio setup.
 The view was great!
 
-![](https://engineering.linecorp.com/wp-content/uploads/2019/12/kinepolis-1024x768.jpg) ![](https://engineering.linecorp.com/wp-content/uploads/2019/12/this_is_fine-1024x768.jpg) ![](https://engineering.linecorp.com/wp-content/uploads/2019/12/antwerp-768x1024.jpg)
+![](/img/monitoring-a-spring-boot-app-in-kubernetes-what-i-learned-from-devoxx-belgium-2019-2.jpg) ![](/img/monitoring-a-spring-boot-app-in-kubernetes-what-i-learned-from-devoxx-belgium-2019-3.jpg) ![](/img/monitoring-a-spring-boot-app-in-kubernetes-what-i-learned-from-devoxx-belgium-2019-4.jpg)
 
 In this blog post, I'd like to present a small hands-on example on monitoring a Spring Boot application in Kubernetes using what I learned at Devoxx.
 In particular, I'd like to talk about:
@@ -46,7 +46,7 @@ I have set up a [gRPC Service](https://github.com/nirvanarsc/k8s-monitoring-samp
 DocService is a single-page web application that comes out of the box with Armeria listing all of our services and allowing us to call test them.
 More about it can be found on [Armeria's official documentation](https://line.github.io/armeria/server-docservice.html).
 
-![](https://engineering.linecorp.com/wp-content/uploads/2019/12/docs-1-1024x753.png)
+![](/img/monitoring-a-spring-boot-app-in-kubernetes-what-i-learned-from-devoxx-belgium-2019-5.png)
 
 ### 2.
 
@@ -67,14 +67,14 @@ Do not use your email!
 Use the Docker ID you chose when signing up.
 You can find your Docker ID in the upper right corner after logging in to [Docker Hub](https://hub.docker.com/).
 
-![](https://engineering.linecorp.com/wp-content/uploads/2019/12/docker_login-1024x458.png)
+![](/img/monitoring-a-spring-boot-app-in-kubernetes-what-i-learned-from-devoxx-belgium-2019-6.png)
 
 #### Kubernetes
 
 Okay now let's install Kubernetes.
 For this example, we're just going to enable Kubernetes inside Docker.
 
-![](https://engineering.linecorp.com/wp-content/uploads/2019/12/enable_k8s-1024x845.png)
+![](/img/monitoring-a-spring-boot-app-in-kubernetes-what-i-learned-from-devoxx-belgium-2019-7.png)
 
 Alternatives to docker-desktop for running a local Kubernetes cluster include:
 
@@ -130,7 +130,7 @@ $ ./gradlew jib
 
 If all is well after logging in to [Docker Hub](https://hub.docker.com/) you should see your image on top.
 
-![](https://engineering.linecorp.com/wp-content/uploads/2019/12/jibbed-1024x522.png)
+![](/img/monitoring-a-spring-boot-app-in-kubernetes-what-i-learned-from-devoxx-belgium-2019-8.png)
 
 The url for your image should be of the form `docker.io/docker_id/image_name`
 
@@ -240,9 +240,9 @@ $ kubectl port-forward svc/my-app 8080:8080
 
 Now we can access our `internal/docs` endpoint and our `internal/metrics` endpoint at `http://localhost:8080`.
 
-![](https://engineering.linecorp.com/wp-content/uploads/2019/12/docs-2-1024x753.png)
+![](/img/monitoring-a-spring-boot-app-in-kubernetes-what-i-learned-from-devoxx-belgium-2019-9.png)
 
-![](https://engineering.linecorp.com/wp-content/uploads/2019/12/metrics-1024x522.png)
+![](/img/monitoring-a-spring-boot-app-in-kubernetes-what-i-learned-from-devoxx-belgium-2019-10.png)
 
 ### 5.
 
@@ -331,7 +331,7 @@ We should be able to access the Prometheus server at `localhost:9090`
 
 But if we navigate to status/targets, we will see that Prometheus fails to discover our application.
 
-![](https://engineering.linecorp.com/wp-content/uploads/2019/12/prometheus-1024x646.png)
+![](/img/monitoring-a-spring-boot-app-in-kubernetes-what-i-learned-from-devoxx-belgium-2019-11.png)
 
 There's two ways to fix this.
 First we can use an [additional argument](https://github.com/helm/charts/blob/master/stable/prometheus/values.yaml#L1316) when installing the Prometheus chart through Helm -  
@@ -405,9 +405,9 @@ $ kubectl port-forward svc/my-app 8080:8080
 If we navigate to status/targets now, we should see the 3 pods of our application.
 We should also be able to query our metrics.
 
-![](https://engineering.linecorp.com/wp-content/uploads/2019/12/prometheus2-1024x665.png)
+![](/img/monitoring-a-spring-boot-app-in-kubernetes-what-i-learned-from-devoxx-belgium-2019-12.png)
 
-![](https://engineering.linecorp.com/wp-content/uploads/2019/12/prometheus3-1024x396.png)
+![](/img/monitoring-a-spring-boot-app-in-kubernetes-what-i-learned-from-devoxx-belgium-2019-13.png)
 
 #### Installing Grafana
 
@@ -443,9 +443,9 @@ NOTES:
 Following the instructions above we should be able to log in to Grafana at `localhost:3000`.
 Then we can add Prometheus as a data source and create a dashboard with our applications metrics.
 
-![](https://engineering.linecorp.com/wp-content/uploads/2019/12/grafana1-1024x723.png)
+![](/img/monitoring-a-spring-boot-app-in-kubernetes-what-i-learned-from-devoxx-belgium-2019-14.png)
 
-![](https://engineering.linecorp.com/wp-content/uploads/2019/12/grafana2-1024x317.png)
+![](/img/monitoring-a-spring-boot-app-in-kubernetes-what-i-learned-from-devoxx-belgium-2019-15.png)
 
 And that's it!
 We have successfully used Prometheus and Grafana to build a dashboard visualizing our app's metrics.

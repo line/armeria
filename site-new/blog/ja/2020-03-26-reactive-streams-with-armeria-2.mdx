@@ -17,7 +17,7 @@ Armeria は、Java 8 および Netty、Thrift、gRPC をベースにしたオー
 
 ### サポートするプロトコル
 
-![](https://engineering.linecorp.com/wp-content/uploads/2020/03/ReactiveStreams-13-1024x496.png)
+![](/img/reactive-streams-armeria-2-1.png)
 
 Armeria では、HTTP/1 と HTTP/2 を両方ともサポートしており、この 2 つのプロトコルは[cleartext](https://simple.wikipedia.org/wiki/Cleartext)と TLS（Transport Layer Security）暗号化通信をすべてサポートしています。HTTP/1 から HTTP/2 への互換性をサポートするためのプロトコルアップグレードについては、HTTP/2 の「connection preface」と HTTP/1 の「upgrade request」を両方ともサポートしています。
 
@@ -89,7 +89,7 @@ var server = Server.builder()
 
 また、標準で提供されていない decorator が必要であれば、直接簡単に実装し、特定経路やサービスにバインディングして使用することもできます。例えば、下図で実装した AuthService では、request に認証情報が含まれているときのみサービスを呼び出し、そうでなければ「401 unauthorized」エラーを発生させるようにしました。
 
-![](https://engineering.linecorp.com/wp-content/uploads/2020/03/ReactiveStreams-14-1024x510.png)
+![](/img/reactive-streams-armeria-2-2.png)
 
 次に、Armeria で Reactive Streams をどのようにサポートしているかを説明します。
 
@@ -97,7 +97,7 @@ var server = Server.builder()
 
 ストリーム（stream）は流れている水のように、有機的に繋がり続ける必要があります。ある 1 か所だけ開いていて他のところは詰まっていると、すぐ溢れてしまいます。Armeria では、データの流れを有機的にコントロールするために、サーバー内では Reactive Streams のバックプレッシャーを利用してトラフィックをコントロールします。また、[WINDOW_UPDATE](https://http2.github.io/http2-spec/#WINDOW_UPDATE)を利用した[HTTP/2 stream flow control](https://tools.ietf.org/html/rfc7540#section-5.2)で、バックプレッシャーが配下のネットワークレイヤーで Armeria のサーバーと皆さんが実装したサービス、そしてデータのリポジトリまで有機的に繋げられるようにしました。
 
-![](https://engineering.linecorp.com/wp-content/uploads/2020/03/ReactiveStreams-15-1024x550.png)
+![](/img/reactive-streams-armeria-2-3.png)
 
 もし皆さんのサービスで使用しているサーバーを、今すぐ Armeria の Reactive サーバーに取り換えることができない事情があるなら、以下のように Armeria を Reactive プロキシサーバーとして活用することもできます（[参照](https://github.com/line/armeria-examples/tree/master/proxy-server)）。
 
@@ -112,7 +112,7 @@ var server = Server.builder()
 
 Armeria プロキシサーバーを前に配置すると、皆さんのサーバーを厳しい外部のインターネットから安全に保護できます。
 
-![](https://engineering.linecorp.com/wp-content/uploads/2020/03/ReactiveStreams-16-1024x317.png)
+![](/img/reactive-streams-armeria-2-4.png)
 
 ## Reactive Streams と Armeria の統合
 
@@ -186,13 +186,13 @@ class RxJavaService {
 
 以下のように「JsonTextSequences」でエンコードすると、JSON 文字列の最初と最後のところにレコード分離文字（separator）とラインフィード（line feed）が追加されます。また、現在のプロトコルによって HTTP/1 や HTTP/2 に送信される際、違う動作になるべきです。Armeria では現在繋がっているプロトコルに従って、適したタイプのデータを送信します。HTTP/2 の場合は、[Data frame](https://http2.github.io/http2-spec/#DATA)の中に JSON データを分けて送り、HTTP/1 の場合は[chunked transfer encoding](https://en.wikipedia.org/wiki/Chunked_transfer_encoding)を利用して分けて送ります。
 
-![](https://engineering.linecorp.com/wp-content/uploads/2020/03/ReactiveStreams-17-1024x568.png)
+![](/img/reactive-streams-armeria-2-5.png)
 
 ## Spring WebFlux の統合
 
 Armeria は、さまざまなライブラリーおよびフレームワークとの連携をサポートします。Reactive Streams を使用するために、すでに[Spring WebFlux](https://docs.spring.io/spring/docs/current/spring-framework-reference/web-reactive.html)を使用している場合は、コードを別途修正せずに「armeria-spring-boot-webflux-starter」を依存性に追加（[参照](http://wiki.linecorp.com/)）するだけで、Armeria へのマイグレーションを完了できます。このような方法で、WebFlux のネットワークレイヤーである[Reactor-Netty](https://github.com/reactor/reactor-netty)を Armeria の Reactive エンジンに取り換えることができます。
 
-![](https://engineering.linecorp.com/wp-content/uploads/2020/03/ReactiveStreams-18-1024x442.png)
+![](/img/reactive-streams-armeria-2-6.png)
 
 単にエンジンを取り換えるだけなら「ただ WebFlux だけ使用すればいいんじゃないか」という疑問が湧くかもしれません。エンジンを取り換えることに、果たしてどのようなメリットがあるのでしょう。
 
@@ -316,7 +316,7 @@ Armeria により Reactive Streams を活用すると、大量のデータとト
 - [L7](https://www.nginx.com/resources/glossary/layer-7-load-balancing/)ではないクライアントが、直接サーバーの状態をチェックできます。
 - ログを確認する際、分散されたサーバーにアクセスせずに確認できるように、Kafka でアクセスログを送信します。
 - Micrometer を活用して必要な数値を設定・収集し、Prometheus や Netflix の Atlas のようなアプリケーションモニタリングツールで送信できます。  
-  ![](https://engineering.linecorp.com/wp-content/uploads/2020/03/ReactiveStreams-19-1024x475.png)
+  ![](/img/reactive-streams-armeria-2-7.png)
 
 ## おわりに
 

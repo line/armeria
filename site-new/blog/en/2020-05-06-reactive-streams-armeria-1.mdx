@@ -22,7 +22,7 @@ Let's take a closer look at what they mean by "processing in a streaming fashion
 
 The figure below compares traditional data processing against stream processing.
 
-![](https://engineering.linecorp.com/wp-content/uploads/2020/02/reactivestreams1-1.png)
+![](/img/reactive-streams-armeria-1-1.png)
 
 The traditional method of data processing depicted on the left requires the payload to be stored on an application's memory once there is a data processing request.
 Any additional data that may be required must also be looked up and stored on memory.
@@ -40,7 +40,7 @@ Server processing data with this method will be able to process large amounts of
 Let's compare the asynchronous method with the synchronous method.
 The figure below depicts the processes of both methods.
 
-![](https://engineering.linecorp.com/wp-content/uploads/2020/02/reactivestreams1-2.png)
+![](/img/reactive-streams-armeria-1-2.png)
 
 In the synchronous method, a request sent by the client is blocked until the server sends a response.
 Being "blocked" means that the current thread cannot perform another task and must wait.
@@ -58,14 +58,14 @@ Before we go into more detail about "back pressure," let's take a look into the 
 
 #### Push method
 
-![](https://engineering.linecorp.com/wp-content/uploads/2020/02/reactivestreams1-3.png)
+![](/img/reactive-streams-armeria-1-3.png)
 
 In an observer pattern, a publisher transfers data by pushing it to a subscriber.
 A subscriber is not concerned with what state the subscriber is in, and is only concerned with transferring data.
 If the publisher sends 100 messages in the span of 1 second, and the subscriber can only process 10 messages in 1 second, what will happen?
 The subscriber will have to store the pending events in a queue.
 
-![](https://engineering.linecorp.com/wp-content/uploads/2020/02/reactivestreams1-4.png)
+![](/img/reactive-streams-armeria-1-4.png)
 
 The amount of memory allotted to the server is limited.
 If 100 messages per second is sent to the server, the buffer will fill up instantly.
@@ -74,11 +74,11 @@ Let's see what would happen to a static buffer and a variable-length buffer.
 
 - Static buffer: Newly received messages are rejected. Rejected messages will send requests again, which will cause additional processing load on the network and CPU.
 
-![](https://engineering.linecorp.com/wp-content/uploads/2020/02/reactivestreams1-5.png)
+![](/img/reactive-streams-armeria-1-5.png)
 
 - Variable-length buffer: The server will crash with an "out of memory" error while trying to store the events. While you might think "who would make it like this?", the data structure of Java `list`s are variable-length. For example, when querying for a large amount of data with SQL, DBMS is the publisher and your servers become subscribers. When your servers attempt to store all the data in a `list` data structure, it will trigger a large amount of GC, preventing your server from responding normally.
 
-![](https://engineering.linecorp.com/wp-content/uploads/2020/02/reactivestreams1-6.png)
+![](/img/reactive-streams-armeria-1-6.png)
 
 How can we solve this problem?
 Could we solve it by having the publisher only send an amount of messages that the subscriber can handle?
@@ -89,7 +89,7 @@ This is the fundamental workings behind back pressure.
 With the pull method, a subscriber that can process 10 operations at a time will only request 10 operations to the publisher.
 The publisher can then send the requested amount, and the subscriber is safe from any "out of memory" errors.
 
-![](https://engineering.linecorp.com/wp-content/uploads/2020/02/reactivestreams1-7.png)
+![](/img/reactive-streams-armeria-1-7.png)
 
 Furthermore, if the same subscriber is currently processing 8 operations, it can request 2 more operations so that the number of messages do not exceed the limits of what it can process.
 With the pull method, subscribers have the freedom to choose the size of the data they receive.
@@ -111,7 +111,7 @@ In September, 2017, Java 9 added [Flow API](https://docs.oracle.com/javase/9/doc
 Reactive Streams, which was a shared effort between community members and a few companies, has been officially recognized and added as an official part of Java.
 Three months later, Reactive Streams released an adapter that is compatible with Flow, allowing existing libraries to be used.
 
-![](https://engineering.linecorp.com/wp-content/uploads/2020/02/reactivestreams1-8.png)
+![](/img/reactive-streams-armeria-1-8.png)
 
 ## Reactive Streams API
 
@@ -144,13 +144,13 @@ Now let's take a look at how the API above is used in Reactive Streams.
 1. A `subscriber` uses the `subscribe` function to request a subscription to the `publisher`.
 2. The `publisher` uses the `onSubscribe` function to send the `subscription` to the `subscriber`.
 
-![](https://engineering.linecorp.com/wp-content/uploads/2020/02/reactivestreams1-9.png)
+![](/img/reactive-streams-armeria-1-9.png)
 
 3. The `subscription` now acts as a medium between a `subscriber` and `publisher`. `Subscribers` do not directly request data from `publishers`. Requests are sent to `publishers` using the `request` function of the `subscription`.
 4. The `publisher`, using `subscription`, sends data with `onNext`, `onComplete` for completed tasks, and `onError` for errors.
 5. The `subscriber`, `publisher`, and `subscription` all form an organic connection, communicating with each other; starting from `subscribe` all the way to `onComplete`. This completes the back pressure structure.
 
-![](https://engineering.linecorp.com/wp-content/uploads/2020/02/reactivestreams1-10.png)
+![](/img/reactive-streams-armeria-1-10.png)
 
 So back pressure seems useful, but how do you actually use it?
 The interface you see above is all of Reactive Streams API available on its official [GitHub repo](https://github.com/reactive-streams/reactive-streams-jvm/tree/master/api/src/main/java/org/reactivestreams).
@@ -161,7 +161,7 @@ You can in fact implement a `publisher` interface and generate a `subscription` 
 However, this is not all.
 Reactive Streams comes with its own [specifications](https://github.com/reactive-streams/reactive-streams-jvm#specification), and unlike a simple interface, these specifications present rules that must be followed during implementation.
 
-![](https://engineering.linecorp.com/wp-content/uploads/2020/02/reactivestreams1-11.png)
+![](/img/reactive-streams-armeria-1-11.png)
 
 Once you follow the specifications and have an implementation, you can validate it using a tool called [Reactive Streams TCK](https://github.com/reactive-streams/reactive-streams-jvm/tree/master/tck).
 Unless you're a skilled expert in the field, it's difficult to have an implementation that satisfies all of the given rules.
@@ -187,7 +187,7 @@ All these different implementations can communicate each other through Reactive 
 
 ### Interoperating Reactive Streams
 
-![](https://engineering.linecorp.com/wp-content/uploads/2020/02/reactivestreams1-12.png)
+![](/img/reactive-streams-armeria-1-12.png)
 
 `Observable` in RxJava can be converted to Aremeria's `HttpResponse` or Project Reactor's `Flux` through Reactive Streams.
 MongoDB's `DataPublisher` can stream compute through Akka Streams' `Source`.

@@ -20,12 +20,12 @@ Let us begin by creating a project.
 First, run IntelliJ IDEA and click the **Create New Project** button.
 The New Project dialog pops up.
 
-![](https://engineering.linecorp.com/wp-content/uploads/2018/8/8/1533704989761.png)
+![](/img/making-a-basic-server-with-java-armeria-1.png)
 
 On the New Project dialog, click the **Gradle** menu from the left panel, and then check the box for **Java**, and click the Next button.
 The dialog displays the fields required for project configuration.
 
-![](https://engineering.linecorp.com/wp-content/uploads/2018/8/8/1533704996634.png)
+![](/img/making-a-basic-server-with-java-armeria-2.png)
 
 Configure the fields as instructed below.
 
@@ -33,7 +33,7 @@ Configure the fields as instructed below.
 - **ArtifactId**: Enter a name to represent your project. For this post, I named it 'hello-armeria'.
 - **Version**: Use the default value already in the input field.
 
-![](https://engineering.linecorp.com/wp-content/uploads/2018/8/8/1533705002244.png)
+![](/img/making-a-basic-server-with-java-armeria-3.png)
 
 Once you are done with filling in, click the **Next** button.
 Continue with the rest of the step until you see the **Finish** button.
@@ -72,7 +72,7 @@ Now, let's make a class.
 Go to **src > main**, right-click on **java**, and click **New > Java Class**.
 We'll name the class `ServerMain.java` and make it print, `"Hello, Armeria!"`.
 
-![](https://engineering.linecorp.com/wp-content/uploads/2018/8/8/1533705007976.png)
+![](/img/making-a-basic-server-with-java-armeria-4.png)
 
 First, we will create an instance of the `ServerBuilder` class and run the server, in the following steps:
 
@@ -112,7 +112,7 @@ When you enter the name of a class in your code and the class needs to be import
 You will see the context menu with options available for the given class.
 Select **Import class** from the menu which will automatically add an import statement for the specified class on the file.
 
-![](https://engineering.linecorp.com/wp-content/uploads/2018/8/8/1533705014192.png)
+![](/img/making-a-basic-server-with-java-armeria-5.png)
 
 Note that if you select the **Import class** option on `MediaType`, available options are as follows:
 
@@ -121,7 +121,7 @@ Note that if you select the **Import class** option on `MediaType`, available op
 
 Since we are using Armeria, select `com.linecorp.armeria.common`.
 
-![](https://engineering.linecorp.com/wp-content/uploads/2018/8/8/1533713350297.png)
+![](/img/making-a-basic-server-with-java-armeria-6.png)
 
 ## Run a web server for starters
 
@@ -129,7 +129,7 @@ To run a web server from IntelliJ IDEA, go to **Run > Run \<file_name\>**.
 You may see warnings on SLF4J (a library for printing out logs) that it cannot find a suitable logger implementation, but that's not important at the moment.
 Let's focus on getting our Armeria server up and running.Open a web browser, enter the URL, http://127.0.0.1:8080/hello, and you will be greeted with `"Hello, Armeria...!"`.
 
-![](https://engineering.linecorp.com/wp-content/uploads/2018/8/8/1533705025527.png)
+![](/img/making-a-basic-server-with-java-armeria-7.png)
 
 So, that was it!
 Making a web server with Java couldn't be simpler than this, right?
@@ -201,16 +201,16 @@ public class ServerMain {
 Now run the code and open http://127.0.0.1:8080/.
 You will see `"Hello Custom Service...!"` printed on the page.
 
-![](https://engineering.linecorp.com/wp-content/uploads/2018/8/8/1533705031334.png)
+![](/img/making-a-basic-server-with-java-armeria-8.png)
 
 This time, add `/page/10` to the URL to make it http://127.0.0.1:8080/page/10, and open the page.
 You will see `"Hello 10...!"` instead.
 
-![](https://engineering.linecorp.com/wp-content/uploads/2018/8/8/1533705036541.png)
+![](/img/making-a-basic-server-with-java-armeria-9.png)
 
 Using Armeria, implementing routing is a piece of cake!
 Today, we've looked through the most basic way of using Armeria.
 Armeria supports serving static files, running and calling Thrift services, structured logging with Kafka and many others.
 Visit the [official Armeria site](https://line.github.io/armeria/) and the [GitHub repository](https://github.com/line/armeria) to learn more about Armeria.
 
-![](https://engineering.linecorp.com/wp-content/uploads/2018/8/8/1533705042656.png)
+![](/img/making-a-basic-server-with-java-armeria-10.png)
