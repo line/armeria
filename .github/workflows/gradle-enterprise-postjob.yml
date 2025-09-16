@@ -33,7 +33,7 @@ jobs:
 
       - name: Download artifact
         id: download-artifact
-        uses: dawidd6/action-download-artifact@v5
+        uses: dawidd6/action-download-artifact@v7
         with:
           workflow_conclusion: ""
           run_id: ${{ env.RUN_ID }}
@@ -56,7 +56,7 @@ jobs:
         shell: bash
 
       - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v3
+        uses: gradle/actions/setup-gradle@v4
 
       - id: upload-build-scans
         name: Upload build scans
@@ -106,35 +106,3 @@ jobs:
         env:
           BUILD_SCANS: ${{ steps.upload-build-scans.outputs.BUILD_SCANS }}
           PR_NUMBER: ${{ steps.get-pr-number.outputs.PR_NUMBER }}
-
-  upload-build-cache:
-    if: github.repository == 'line/armeria'
-    runs-on: ${{ matrix.on }}
-    timeout-minutes: 120
-    strategy:
-      fail-fast: false
-      matrix:
-        on: [ ubuntu-latest, macos-12, windows-latest ]
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          ref: ${{ env.COMMIT_SHA }}
-
-      - id: setup-build-jdk
-        name: Set up build JDK ${{ env.BUILD_JDK_VERSION }}
-        uses: actions/setup-java@v4
-        with:
-          distribution: 'temurin'
-          java-version: ${{ env.BUILD_JDK_VERSION }}
-
-      - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v3
-
-      - name: Build with Gradle
-        run: |
-          ./gradlew --no-daemon --stacktrace --build-cache build \
-          --max-workers=2 --parallel \
-          -PbuildJdkVersion=${{ env.BUILD_JDK_VERSION }} \
-          -Pretry=true -PfailOnPassedAfterRetry=false \
-          -Porg.gradle.java.installations.paths=${{ steps.setup-build-jdk.outputs.path }}
-        shell: bash

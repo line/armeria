@@ -21,7 +21,7 @@ jobs:
           java-version: '21'
 
       - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v3
+        uses: gradle/actions/setup-gradle@v4
 
       - name: Update public suffix list
         run: |
@@ -37,7 +37,7 @@ jobs:
           git_commit_gpgsign: true
 
       - name: Create pull request
-        uses: peter-evans/create-pull-request@v6
+        uses: peter-evans/create-pull-request@v7
         with:
           # The title of the pull request.
           title: Update public suffix list
