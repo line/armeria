@@ -6,7 +6,7 @@ authors:
 
 # Let's Play with Reactive Streams on Armeria - Part 2
 
-In the [first part of this blog post](https://engineering.linecorp.com/en/blog/reactive-streams-with-armeria-1/), we took a look at the basic concepts of Reactive Streams.
+In the [first part of this blog post](/blog/2020/05/06/reactive-streams-armeria-1), we took a look at the basic concepts of Reactive Streams.
 In part 2 of this blog post, I'd like to tell you about how we use Reactive Streams with Armeria.
 
 {/* truncate */}
@@ -87,7 +87,7 @@ class HelloService {
 
 Armeria also comes with special features that allow you to serve multiple RPC protocols simultaneously.
 You can provide REST API, gRPC, and Thrift on a single server, allowing you to flexibly adapt to any business requirements or architecture changes.
-The single port design enables you to efficiently use resources, minimize unnecessary exposure, and reduce potential maintenance costs.[1](#1)
+The single port design enables you to efficiently use resources, minimize unnecessary exposure, and reduce potential maintenance costs. [[1]](#footnotes)
 
 ```
 var server = Server.builder()
@@ -102,7 +102,7 @@ var server = Server.builder()
 
 Enterprise software developers would all agree that they've spent countless hours coming up with ways to efficiently process authentication and logging.
 With Armeria, you can put those worries aside.
-You can use a separate [decorator](https://armeria.dev/docs/server-decorator) to manage this [separation of concerns](https://en.wikipedia.org/wiki/Separation_of_concerns).[2](#2)
+You can use a separate [decorator](https://armeria.dev/docs/server-decorator) to manage this [separation of concerns](https://en.wikipedia.org/wiki/Separation_of_concerns).[[2]](#footnotes)
 
 If you wish to add an additional decorator, you can always manually implement and bind one to a specific path or service.
 For example, `AuthService`in the figure below only calls the service when a `request` includes authentication info, and returns a "401 unauthorized" error if not.
@@ -374,6 +374,8 @@ For more information on what Armeria can do for you, refer to the [official webs
 - Armeria examples: [line/armeria-examples](https://github.com/line/armeria-examples)
 
 ---
+
+#### Footnotes
 
 1. Refer to [Running a gRPC service](https://armeria.dev/docs/server-grpc) and [Running a Thrift service](https://armeria.dev/docs/server-thrift).
 2. For more information on the various decorators provided with Armeria, refer to the Armeria and Javadoc official documentation.

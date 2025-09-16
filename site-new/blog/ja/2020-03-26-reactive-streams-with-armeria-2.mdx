@@ -6,7 +6,7 @@ authors:
 
 # Let’s play Reactive Streams with Armeria vol.2
 
-こんにちは。LINE Plus でオープンソースソフトウェアの Armeria と Central Dogma を開発している UM IKHUN です。[前回の記事](https://engineering.linecorp.com/ja/blog/reactive-streams-with-armeria-1/)では、Reactive Streams の概念を解説しました。今回の記事では、Reactive Streams をオープンソース非同期の HTTP/2、RPC、REST クライアント／サーバーライブラリーである Armeria で使用する方法について紹介したいと思います。
+こんにちは。LINE Plus でオープンソースソフトウェアの Armeria と Central Dogma を開発している UM IKHUN です。[前回の記事](/blog/ja/2020/03/26/reactive-streams-with-armeria-1)では、Reactive Streams の概念を解説しました。今回の記事では、Reactive Streams をオープンソース非同期の HTTP/2、RPC、REST クライアント／サーバーライブラリーである Armeria で使用する方法について紹介したいと思います。
 
 {/* truncate */}
 
@@ -73,7 +73,7 @@ class HelloService {
 }
 ```
 
-Armeria には、他の種類の RPC プロトコルを同時に扱える特別な機能もあります。1 つのサーバーで REST API と gRPC、Thrift をすべて提供できるため、ビジネスの要望やアーキテクチャの変化に柔軟に対応できます。また、単一ポートで提供しているので、リソースを効率よく使用してセキュリティの面で不要な露出を最低限に抑え、管理ポイントを削減できるメリットがあります。[1](#one)
+Armeria には、他の種類の RPC プロトコルを同時に扱える特別な機能もあります。1 つのサーバーで REST API と gRPC、Thrift をすべて提供できるため、ビジネスの要望やアーキテクチャの変化に柔軟に対応できます。また、単一ポートで提供しているので、リソースを効率よく使用してセキュリティの面で不要な露出を最低限に抑え、管理ポイントを削減できるメリットがあります。[[1]](#footnotes)
 
 ```
 var server = Server.builder()
@@ -86,7 +86,7 @@ var server = Server.builder()
    .build();
 ```
 
-エンタープライズソフトウェアの開発者は一般的に、認証やロギングなどをいかに効率よく処理できるかに関心を持って悩むと思います。Armeria では、[separation of concerns](https://en.wikipedia.org/wiki/Separation_of_concerns)と呼んでいるこのような部分を別途[decorator](https://line.github.io/armeria/server-decorator.html)で管理できる機能を提供しています。[2](#two)
+エンタープライズソフトウェアの開発者は一般的に、認証やロギングなどをいかに効率よく処理できるかに関心を持って悩むと思います。Armeria では、[separation of concerns](https://en.wikipedia.org/wiki/Separation_of_concerns)と呼んでいるこのような部分を別途[decorator](https://line.github.io/armeria/server-decorator.html)で管理できる機能を提供しています。[[2]](#footnotes)
 
 また、標準で提供されていない decorator が必要であれば、直接簡単に実装し、特定経路やサービスにバインディングして使用することもできます。例えば、下図で実装した AuthService では、request に認証情報が含まれているときのみサービスを呼び出し、そうでなければ「401 unauthorized」エラーを発生させるようにしました。
 
@@ -332,6 +332,8 @@ Armeria では、記事で触れた機能以外にもさらに多くの機能を
 - Armeria examples: [line/armeria-examples](https://github.com/line/armeria-examples)
 
 ---
+
+#### Footnotes
 
 1. [gRPC サーバーを Armeria で起動する方法](https://line.github.io/armeria/server-grpc.html)と[Thrift サーバーを Armeria で起動する方法](https://line.github.io/armeria/server-thrift.html)をご参照ください。
 
