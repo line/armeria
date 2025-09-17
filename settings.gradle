@@ -6,7 +6,7 @@ plugins {
     // automatically download one based on the foojay Disco API.
     // https://docs.gradle.org/8.1.1/userguide/toolchains.html#sec:provisioning
     id 'org.gradle.toolchains.foojay-resolver-convention' version '0.6.0'
-    id 'com.gradle.develocity' version '4.1'
+    id 'com.gradle.develocity' version '4.1.1'
     // adds additional metadata to build scans
     id 'com.gradle.common-custom-user-data-gradle-plugin' version '2.3'
 }
@@ -236,6 +236,7 @@ includeWithFlags ':it:okhttp',                                 'java', 'relocate
 includeWithFlags ':it:resilience4j',                           'java17', 'relocate'
 includeWithFlags ':it:server',                                 'java', 'relocate'
 includeWithFlags ':it:server-allow-semicolon',                 'java'
+includeWithFlags ':it:spring:boot3-athenz',                    'java17', 'relocate'
 includeWithFlags ':it:spring:boot3-jetty12',                   'java17', 'relocate'
 includeWithFlags ':it:spring:boot3-kotlin',                    'java17', 'relocate', 'kotlin'
 includeWithFlags ':it:spring:boot3-mixed',                     'java17', 'relocate'

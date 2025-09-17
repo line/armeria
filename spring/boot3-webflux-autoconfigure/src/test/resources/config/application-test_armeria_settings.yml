@@ -15,3 +15,5 @@ armeria:
   request-timeout: 8000
   max-request-length: 0
   verbose-responses: true
+  # Set graceful shutdown timeout to 0 to stop the server immediately.
+  graceful-shutdown-quiet-period-millis: 0

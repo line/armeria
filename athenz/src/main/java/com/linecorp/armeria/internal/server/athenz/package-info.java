@@ -14,17 +14,12 @@
  * under the License.
  */
 
-package com.linecorp.armeria.internal.common.athenz;
+/**
+ * Internal classes for Athenz integration.
+ */
+@UnstableApi
+@NonNullByDefault
+package com.linecorp.armeria.internal.server.athenz;
 
-import com.linecorp.armeria.common.HttpHeaderNames;
-
-import io.netty.util.AsciiString;
-
-public final class AthenzHeaderNames {
-
-    public static final AsciiString YAHOO_ROLE_AUTH = HttpHeaderNames.of("Yahoo-Role-Auth");
-
-    public static final AsciiString ATHENZ_ROLE_AUTH = HttpHeaderNames.of("Athenz-Role-Auth");
-
-    private AthenzHeaderNames() {}
-}
+import com.linecorp.armeria.common.annotation.NonNullByDefault;
+import com.linecorp.armeria.common.annotation.UnstableApi;

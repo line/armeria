@@ -110,6 +110,7 @@
 *.hosted.app
 *.hosting.myjino.ru
 *.hosting.ovh.net
+*.icp.net
 *.id.pub
 *.il-central-1.airflow.amazonaws.com
 *.in.futurecms.at
@@ -160,6 +161,8 @@
 *.platformsh.site
 *.private.repost.aws
 *.privatelink.snowflake.app
+*.qualyhqpartner.com
+*.qualyhqportal.com
 *.quipelements.com
 *.r.appspot.com
 *.raw.icp0.io
@@ -606,6 +609,7 @@ ap.leg.br
 ap.ngrok.io
 aparecida.br
 apartments
+api.br
 api.gov.uk
 api.lp.dev
 api.stdlib.com
@@ -2508,6 +2512,7 @@ erimo.hokkaido.jp
 erni
 erotica.hu
 erotika.hu
+erp.dev
 es
 es-1.axarnet.cloud
 es.eu.org
@@ -3052,7 +3057,6 @@ glass
 gle
 gleeze.com
 gliding.aero
-glitch.me
 gliwice.pl
 global
 global.prod.fastly.net
@@ -3176,6 +3180,7 @@ gov.cn
 gov.co
 gov.cx
 gov.cy
+gov.cz
 gov.dm
 gov.do
 gov.dz
@@ -3387,6 +3392,7 @@ hachijo.tokyo.jp
 hachinohe.aomori.jp
 hachioji.tokyo.jp
 hachirogata.akita.jp
+hackclub.app
 hacker.replit.dev
 hadano.kanagawa.jp
 hadsel.no
@@ -3674,6 +3680,7 @@ hoylandet.no
 hr
 hr.eu.org
 hra.health
+hrsn.au
 hrsn.dev
 hs.kr
 hsbc
@@ -3701,6 +3708,7 @@ i.ng
 i.ph
 i.se
 i234.me
+ia.br
 ia.us
 iamallama.com
 ibara.okayama.jp
@@ -4180,6 +4188,7 @@ jor.br
 jorpeland.no
 joso.ibaraki.jp
 jot
+jote.cloud
 jotelulu.cloud
 journal.aero
 journalist.aero
@@ -4798,7 +4807,6 @@ lib.ca.us
 lib.co.us
 lib.ct.us
 lib.dc.us
-lib.de.us
 lib.ee
 lib.fl.us
 lib.ga.us
@@ -4817,7 +4825,6 @@ lib.me.us
 lib.mi.us
 lib.mn.us
 lib.mo.us
-lib.ms.us
 lib.mt.us
 lib.nc.us
 lib.nd.us
@@ -5538,7 +5545,6 @@ mydns.jp
 mydns.tw
 mydns.vc
 mydobiss.com
-mydrobo.com
 myds.me
 myeffect.net
 myfast.host
@@ -6991,6 +6997,7 @@ readymade.jp
 realestate
 realestate.pl
 realm.cz
+realtime.supabase.co
 realtor
 realty
 rebun.hokkaido.jp
@@ -7005,7 +7012,6 @@ recreation.aero
 red
 red.sv
 redirectme.net
-redstone
 redumbrella
 reed.replit.dev
 reg.dk
@@ -7544,6 +7550,8 @@ saloon.jp
 saltdal.no
 salud.bo
 salvador.br
+same-app.com
+same-preview.com
 samegawa.fukushima.jp
 samnanger.no
 sampa.br
@@ -7642,7 +7650,6 @@ school.ge
 school.nz
 school.za
 schoolbus.jp
-schools.nsw.edu.au
 schuldock.de
 schule
 schulplattform.de
@@ -7735,7 +7742,6 @@ servepics.com
 servequake.com
 server-on.net
 servername.us
-servers.run
 servesarcasm.com
 service.gov.scot
 service.gov.uk
@@ -7858,6 +7864,7 @@ shonai.fukuoka.jp
 shonai.yamagata.jp
 shoo.okayama.jp
 shop
+shop.brendly.ba
 shop.brendly.hr
 shop.brendly.rs
 shop.ht
@@ -7971,6 +7978,7 @@ soc.srcf.net
 soccer
 sochi.su
 social
+social.br
 soctrang.vn
 sodegaura.chiba.jp
 soeda.fukuoka.jp
@@ -8011,6 +8019,7 @@ sos.pl
 sosa.chiba.jp
 sosnowiec.pl
 soundcast.me
+sourcecraft.site
 sowa.ibaraki.jp
 soy
 sp.gov.br
@@ -8086,6 +8095,7 @@ stockholm
 stokke.no
 stor-elvdal.no
 storage
+storage.supabase.co
 storage.yandexcloud.net
 stord.no
 stordal.no
@@ -9061,6 +9071,7 @@ vp4.me
 vpndns.net
 vpnplus.to
 vps-host.net
+vps.hrsn.au
 vps.mcdir.ru
 vr.it
 vs.it
@@ -9090,6 +9101,7 @@ wakayama.wakayama.jp
 wake.okayama.jp
 wakkanai.hokkaido.jp
 wakuya.miyagi.jp
+wal.app
 walbrzych.pl
 wales
 walmart
@@ -9116,6 +9128,7 @@ weatherchannel
 web.app
 web.bo
 web.do
+web.erp.dev
 web.gu
 web.id
 web.in
@@ -9753,6 +9766,7 @@ xx.kg
 xxx
 xxx.ec
 xyz
+xyz.br
 xz.cn
 y.bg
 y.se
@@ -9879,6 +9893,7 @@ za.bz
 za.com
 za.net
 za.org
+zabc.net
 zachpomor.pl
 zagan.pl
 zakarpattia.ua

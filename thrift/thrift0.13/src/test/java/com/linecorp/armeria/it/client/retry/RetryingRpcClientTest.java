@@ -328,33 +328,32 @@ class RetryingRpcClientTest {
 
     @Test
     void doNotRetryWhenResponseIsCancelled() throws Exception {
-        final AtomicReference<ClientRequestContext> context = new AtomicReference<>();
-        final HelloService.Iface client =
-                ThriftClients.builder(server.httpUri())
-                             .path("/thrift")
-                             .rpcDecorator(RetryingRpcClient.builder(retryAlways).newDecorator())
-                             .rpcDecorator((delegate, ctx, req) -> {
-                                 context.set(ctx);
-                                 final RpcResponse res = delegate.execute(ctx, req);
-                                 res.cancel(true);
-                                 return res;
-                             })
-                             .build(HelloService.Iface.class);
-        when(serviceHandler.hello(anyString())).thenThrow(new IllegalArgumentException());
+        serviceRetryCount.set(0);
+        try (ClientFactory factory = ClientFactory.builder().build()) {
+            final AtomicReference<ClientRequestContext> context = new AtomicReference<>();
+            final HelloService.Iface client =
+                    ThriftClients.builder(server.httpUri())
+                                 .path("/thrift")
+                                 .factory(factory)
+                                 .rpcDecorator(RetryingRpcClient.builder(retryAlways).newDecorator())
+                                 .rpcDecorator((delegate, ctx, req) -> {
+                                     context.set(ctx);
+                                     final RpcResponse res = delegate.execute(ctx, req);
+                                     res.cancel(true);
+                                     return res;
+                                 })
+                                 .build(HelloService.Iface.class);
+            when(serviceHandler.hello(anyString())).thenThrow(new IllegalArgumentException());
 
-        assertThatThrownBy(() -> client.hello("hello")).isInstanceOf(CancellationException.class);
+            assertThatThrownBy(() -> client.hello("hello")).isInstanceOf(CancellationException.class);
 
-        await().untilAsserted(() -> {
+            await().untilAsserted(() -> {
+                verify(serviceHandler, only()).hello("hello");
+            });
+            // Sleep 1 second more to check if there was another retry.
+            TimeUnit.SECONDS.sleep(1);
             verify(serviceHandler, only()).hello("hello");
-        });
-        final RequestLog log = context.get().log().whenComplete().join();
-
-        // ClientUtil.completeLogIfIncomplete() records exceptions caused by response cancellations.
-        assertThat(log.requestCause()).isExactlyInstanceOf(CancellationException.class);
-        assertThat(log.responseCause()).isExactlyInstanceOf(CancellationException.class);
-
-        // Sleep 1 second more to check if there was another retry.
-        TimeUnit.SECONDS.sleep(1);
-        verify(serviceHandler, only()).hello("hello");
+            assertThat(serviceRetryCount).hasValue(1);
+        }
     }
 }

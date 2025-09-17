@@ -19,7 +19,6 @@ package com.linecorp.armeria.common.athenz;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
-import com.linecorp.armeria.internal.common.athenz.AthenzHeaderNames;
 
 import io.netty.util.AsciiString;
 
@@ -35,12 +34,12 @@ public enum TokenType {
     /**
      * Athenz role token. {@code "Athenz-Role-Auth"} is used as the header name for this token type.
      */
-    ATHENZ_ROLE_TOKEN(AthenzHeaderNames.ATHENZ_ROLE_AUTH, true, null),
+    ATHENZ_ROLE_TOKEN(HttpHeaderNames.ATHENZ_ROLE_AUTH, true, null),
     /**
      * The legacy Athenz role token used by Yahoo. {@code "Yahoo-Role-Auth"} is used as the
      * header name for this token type.
      */
-    YAHOO_ROLE_TOKEN(AthenzHeaderNames.YAHOO_ROLE_AUTH, true, null);
+    YAHOO_ROLE_TOKEN(HttpHeaderNames.YAHOO_ROLE_AUTH, true, null);
 
     TokenType(AsciiString headerName, boolean isRoleToken, @Nullable String authScheme) {
         this.headerName = headerName;

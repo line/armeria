@@ -24,6 +24,7 @@ import java.util.function.Consumer;
 
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -37,6 +38,8 @@ import org.springframework.boot.autoconfigure.ImportAutoConfiguration;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.context.SpringBootTest.WebEnvironment;
+import org.springframework.boot.test.web.server.LocalManagementPort;
+import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.boot.web.reactive.server.ReactiveWebServerFactory;
 import org.springframework.boot.web.server.Compression;
 import org.springframework.boot.web.server.Ssl;
@@ -93,7 +96,11 @@ class ArmeriaReactiveWebServerFactoryTest {
     private static ClientFactory clientFactory;
 
     private static ArmeriaReactiveWebServerFactory factory(ConfigurableListableBeanFactory beanFactory) {
-        return new RetryableArmeriaReactiveWebServerFactory(beanFactory, new MockEnvironment());
+        final ArmeriaReactiveWebServerFactory serverFactory =
+                new ArmeriaReactiveWebServerFactory(beanFactory, new MockEnvironment());
+        // Set to 0 to avoid port conflict during tests.
+        serverFactory.setPort(0);
+        return serverFactory;
     }
 
     private ArmeriaReactiveWebServerFactory factory() {
@@ -112,6 +119,14 @@ class ArmeriaReactiveWebServerFactoryTest {
     @AfterAll
     static void afterAll() {
         clientFactory.closeAsync();
+    }
+
+    @BeforeEach
+    void beforeEach() {
+        final ArmeriaSettings armeriaSettings = new ArmeriaSettings();
+        armeriaSettings.setGracefulShutdownQuietPeriodMillis(0);
+        beanFactory.registerSingleton("armeriaSettings", armeriaSettings);
+        registerInternalServices(beanFactory);
     }
 
     private static WebClient httpsClient(WebServer server) {
@@ -148,6 +163,7 @@ class ArmeriaReactiveWebServerFactoryTest {
                 if (i < 2) {
                     continue;
                 }
+                throw ex;
             }
         }
     }
@@ -313,10 +329,8 @@ class ArmeriaReactiveWebServerFactoryTest {
     void testMultipleBeansRegistered_TooManyMeterRegistryBeans() {
         final ArmeriaReactiveWebServerFactory factory = factory();
 
-        RootBeanDefinition rbd = new RootBeanDefinition(ArmeriaSettings.class);
-        beanFactory.registerBeanDefinition("armeriaSettings", rbd);
-
-        rbd = new RootBeanDefinition(MeterRegistry.class, PrometheusMeterRegistries::newRegistry);
+        RootBeanDefinition rbd =
+                new RootBeanDefinition(MeterRegistry.class, PrometheusMeterRegistries::newRegistry);
         beanFactory.registerBeanDefinition("meterRegistry1", rbd);
 
         rbd = new RootBeanDefinition(MeterRegistry.class, PrometheusMeterRegistries::newRegistry);
@@ -330,17 +344,13 @@ class ArmeriaReactiveWebServerFactoryTest {
     void testMultipleBeansRegistered_shouldUsePrimaryBean() {
         final ArmeriaReactiveWebServerFactory factory = factory();
 
-        RootBeanDefinition rbd = new RootBeanDefinition(ArmeriaSettings.class);
-        beanFactory.registerBeanDefinition("armeriaSettings", rbd);
-
-        rbd = new RootBeanDefinition(MeterRegistry.class, PrometheusMeterRegistries::newRegistry);
+        RootBeanDefinition rbd =
+                new RootBeanDefinition(MeterRegistry.class, PrometheusMeterRegistries::newRegistry);
         beanFactory.registerBeanDefinition("meterRegistry1", rbd);
 
         rbd = new RootBeanDefinition(MeterRegistry.class, PrometheusMeterRegistries::newRegistry);
         rbd.setPrimary(true);
         beanFactory.registerBeanDefinition("meterRegistry2", rbd);
-
-        registerInternalServices(beanFactory);
 
         runEchoServer(factory, server -> {
             final WebClient client = httpClient(server);
@@ -356,10 +366,7 @@ class ArmeriaReactiveWebServerFactoryTest {
     void testDocServiceConfigurator_withDocServiceConfigurator() {
         final ArmeriaReactiveWebServerFactory factory = factory();
 
-        RootBeanDefinition rbd = new RootBeanDefinition(ArmeriaSettings.class);
-        beanFactory.registerBeanDefinition("armeriaSettings", rbd);
-
-        rbd = new RootBeanDefinition(ArmeriaServerConfigurator.class,
+        RootBeanDefinition rbd = new RootBeanDefinition(ArmeriaServerConfigurator.class,
                                      () -> builder -> builder.annotatedService()
                                                              .build(new HelloService()));
         beanFactory.registerBeanDefinition("armeriaServerConfigurator", rbd);
@@ -371,8 +378,6 @@ class ArmeriaReactiveWebServerFactoryTest {
                                                                      "/hello/foo")
                                                              .build());
         beanFactory.registerBeanDefinition("docServiceConfigurator", rbd);
-
-        registerInternalServices(beanFactory);
 
         runEchoServer(factory, server -> {
             final WebClient client = httpClient(server);
@@ -401,15 +406,10 @@ class ArmeriaReactiveWebServerFactoryTest {
     void testDocServiceConfigurator_withoutDocServiceConfigurator() {
         final ArmeriaReactiveWebServerFactory factory = factory();
 
-        RootBeanDefinition rbd = new RootBeanDefinition(ArmeriaSettings.class);
-        beanFactory.registerBeanDefinition("armeriaSettings", rbd);
-
-        rbd = new RootBeanDefinition(ArmeriaServerConfigurator.class,
-                                     () -> builder -> builder.annotatedService()
-                                                             .build(new HelloService()));
+        final RootBeanDefinition rbd =
+                new RootBeanDefinition(ArmeriaServerConfigurator.class,
+                                       () -> builder -> builder.annotatedService().build(new HelloService()));
         beanFactory.registerBeanDefinition("armeriaServerConfigurator", rbd);
-
-        registerInternalServices(beanFactory);
 
         runEchoServer(factory, server -> {
             final WebClient client = httpClient(server);
@@ -437,14 +437,9 @@ class ArmeriaReactiveWebServerFactoryTest {
     void testHealthCheckServiceConfigurator() {
         final ArmeriaReactiveWebServerFactory factory = factory();
 
-        RootBeanDefinition rbd = new RootBeanDefinition(ArmeriaSettings.class);
-        beanFactory.registerBeanDefinition("armeriaSettings", rbd);
-
-        rbd = new RootBeanDefinition(HealthCheckServiceConfigurator.class,
-                                     () -> builder -> builder.updatable(true));
+        final RootBeanDefinition rbd = new RootBeanDefinition(HealthCheckServiceConfigurator.class,
+                                                              () -> builder -> builder.updatable(true));
         beanFactory.registerBeanDefinition("healthCheckServiceConfigurator", rbd);
-
-        registerInternalServices(beanFactory);
 
         runEchoServer(factory, server -> {
             final WebClient client = httpClient(server);
@@ -520,19 +515,25 @@ class ArmeriaReactiveWebServerFactoryTest {
     }
 
     @Nested
-    @SpringBootTest(webEnvironment = WebEnvironment.DEFINED_PORT,
+    @SpringBootTest(webEnvironment = WebEnvironment.RANDOM_PORT,
             classes = ArmeriaReactiveWebServerFactoryWithManagementServerPortTestConfiguration.class,
-            properties = "management.server.port=18080")
+            properties = {
+                    "management.server.port=0",
+                    "armeria.graceful-shutdown-quiet-period-millis=0"
+            })
     @EnableAutoConfiguration
     @ImportAutoConfiguration(ArmeriaSpringActuatorAutoConfiguration.class)
     class ArmeriaReactiveWebServerFactoryWithManagementServerPortTest {
 
-        private static final int SERVER_PORT = 8080;
-        private static final int MANAGEMENT_PORT = 18080;
+        @LocalServerPort
+        private int serverPort;
+
+        @LocalManagementPort
+        private int managementPort;
 
         @Test
         void testServerPort() {
-            final WebClient client = WebClient.builder("http://127.0.0.1:" + SERVER_PORT)
+            final WebClient client = WebClient.builder("http://127.0.0.1:" + serverPort)
                                               .factory(clientFactory)
                                               .build();
 
@@ -551,7 +552,7 @@ class ArmeriaReactiveWebServerFactoryTest {
 
         @Test
         void testManagementPort() throws JsonProcessingException {
-            final WebClient client = WebClient.builder("http://127.0.0.1:" + MANAGEMENT_PORT)
+            final WebClient client = WebClient.builder("http://127.0.0.1:" + managementPort)
                                               .factory(clientFactory)
                                               .build();
             final AggregatedHttpResponse res = client.get("/internal/docs/specification.json")
@@ -573,9 +574,6 @@ class ArmeriaReactiveWebServerFactoryTest {
 
     @Test
     void testServerErrorHandlerRegistration() {
-        beanFactory.registerBeanDefinition("armeriaSettings", new RootBeanDefinition(ArmeriaSettings.class));
-        registerInternalServices(beanFactory);
-
         // Add ServerErrorHandler @Bean which handles all exceptions and returns 200 with empty string content.
         final ServerErrorHandler handler = (ctx, req) -> HttpResponse.of("");
         final BeanDefinition rbd2 = new RootBeanDefinition(ServerErrorHandler.class, () -> handler);
