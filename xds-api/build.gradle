@@ -1,15 +1,7 @@
-protobuf {
-    // the last protoc assignment wins
-    // https://github.com/google/protobuf-gradle-plugin/blob/894f2d25e2b511bc11661f4d23e47ee0671e82ad/README.md?plain=1#L162
-    protoc {
-        artifact = "com.google.protobuf:protoc:${libs.versions.protobuf4.get()}"
-    }
-}
-
 dependencies {
     configurations.configureEach {
         resolutionStrategy {
-            force "com.google.protobuf:protobuf-java:${libs.versions.protobuf4.get()}"
+            force "com.google.protobuf:protobuf-java:${libs.versions.protobuf.asProvider().get()}"
         }
     }
 
