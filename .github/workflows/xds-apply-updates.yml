@@ -19,6 +19,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Configure git
+        run: |
+          git config user.email "dl_armeria@linecorp.com"
+          git config user.name "Meri Kim"
       - name: Run scripts
         working-directory: ./xds-api/tools/
         run: |

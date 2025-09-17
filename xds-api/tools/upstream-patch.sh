@@ -54,9 +54,6 @@ trap cleanup EXIT
 build_snapshot() {
   local wt_dir="$1" ver="$2" label="$3"
   
-  git -C "$wt_dir" config user.email "dl_armeria@linecorp.com"
-  git -C "$wt_dir" config user.name "Meri Kim"
-  
   pushd "$wt_dir/xds-api" >/dev/null
 
   # Optional: ensure a clean tree in the areas update-api.sh touches.
