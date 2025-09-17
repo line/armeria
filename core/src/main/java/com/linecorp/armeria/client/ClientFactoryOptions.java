@@ -25,6 +25,7 @@ import java.util.Arrays;
 import java.util.Map;
 import java.util.function.Consumer;
 import java.util.function.Function;
+import java.util.function.Predicate;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -135,6 +136,15 @@ public final class ClientFactoryOptions
                                        eventLoopGroup -> new DnsResolverGroupBuilder().build(eventLoopGroup));
 
     /**
+     * The {@link Predicate} which validates the IP address of a remote server.
+     * If the predicate returns {@code false}, the request to the server will be rejected.
+     * By default, all IP addresses are accepted.
+     */
+    @UnstableApi
+    public static final ClientFactoryOption<Predicate<? super InetSocketAddress>> IP_ADDRESS_FILTER =
+            ClientFactoryOption.define("IP_ADDRESS_FILTER", addr -> true);
+
+    /**
      * The HTTP/2 <a href="https://datatracker.ietf.org/doc/html/rfc7540#section-6.9.2">initial connection flow-control
      * window size</a>.
      */
@@ -149,6 +159,17 @@ public final class ClientFactoryOptions
     public static final ClientFactoryOption<Integer> HTTP2_INITIAL_STREAM_WINDOW_SIZE =
             ClientFactoryOption.define("HTTP2_INITIAL_STREAM_WINDOW_SIZE",
                                        Flags.defaultHttp2InitialStreamWindowSize());
+
+    /**
+     * The threshold ratio of the HTTP/2 stream flow-control window at which a
+     * <a href="https://datatracker.ietf.org/doc/html/rfc7540#section-6.9">WINDOW_UPDATE</a> frame will be sent.
+     * When the size of the flow-control window drops below the specified ratio (relative to the initial window
+     * size), a {@code WINDOW_UPDATE} frame is triggered to replenish the window.
+     */
+    @UnstableApi
+    public static final ClientFactoryOption<Float> HTTP2_STREAM_WINDOW_UPDATE_RATIO =
+            ClientFactoryOption.define("HTTP2_STREAM_WINDOW_UPDATE_RATIO",
+                                       Flags.defaultHttp2StreamWindowUpdateRatio());
 
     /**
      * The <a href="https://datatracker.ietf.org/doc/html/rfc7540#section-6.5.2">SETTINGS_MAX_FRAME_SIZE</a>
@@ -470,6 +491,15 @@ public final class ClientFactoryOptions
     }
 
     /**
+     * Returns the {@link Predicate} which validates the IP address of a remote server.
+     */
+    @UnstableApi
+    public Predicate<InetSocketAddress> ipAddressFilter() {
+        //noinspection unchecked
+        return (Predicate<InetSocketAddress>) get(IP_ADDRESS_FILTER);
+    }
+
+    /**
      * Returns the HTTP/2 <a href="https://datatracker.ietf.org/doc/html/rfc7540#section-6.9.2">initial connection
      * flow-control window size</a>.
      */
@@ -483,6 +513,17 @@ public final class ClientFactoryOptions
      */
     public int http2InitialStreamWindowSize() {
         return get(HTTP2_INITIAL_STREAM_WINDOW_SIZE);
+    }
+
+    /**
+     * Returns the threshold ratio of the HTTP/2 stream flow-control window at which a
+     * <a href="https://datatracker.ietf.org/doc/html/rfc7540#section-6.9">WINDOW_UPDATE</a> frame will be sent.
+     * When the size of the flow-control window drops below the specified ratio (relative to the initial window
+     * size), a {@code WINDOW_UPDATE} frame is triggered to replenish the window.
+     */
+    @UnstableApi
+    public float http2StreamWindowUpdateRatio() {
+        return get(HTTP2_STREAM_WINDOW_UPDATE_RATIO);
     }
 
     /**

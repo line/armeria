@@ -82,6 +82,7 @@ final class DefaultServerConfig implements ServerConfig {
 
     private final int http2InitialConnectionWindowSize;
     private final int http2InitialStreamWindowSize;
+    private final float http2StreamWindowUpdateRatio;
     private final long http2MaxStreamsPerConnection;
     private final int http2MaxFrameSize;
     private final long http2MaxHeaderListSize;
@@ -118,7 +119,7 @@ final class DefaultServerConfig implements ServerConfig {
 
     @Nullable
     private final Mapping<String, SslContext> sslContexts;
-    private final ServerMetrics serverMetrics = new ServerMetrics();
+    private final ServerMetrics serverMetrics;
 
     @Nullable
     private String strVal;
@@ -131,8 +132,8 @@ final class DefaultServerConfig implements ServerConfig {
             long maxConnectionAgeMillis,
             int maxNumRequestsPerConnection, long connectionDrainDurationMicros,
             int http2InitialConnectionWindowSize, int http2InitialStreamWindowSize,
-            long http2MaxStreamsPerConnection, int http2MaxFrameSize, long http2MaxHeaderListSize,
-            int http2MaxResetFramesPerWindow, int http2MaxResetFramesWindowSeconds,
+            float http2StreamWindowUpdateRatio, long http2MaxStreamsPerConnection, int http2MaxFrameSize,
+            long http2MaxHeaderListSize, int http2MaxResetFramesPerWindow, int http2MaxResetFramesWindowSeconds,
             int http1MaxInitialLineLength, int http1MaxHeaderSize,
             int http1MaxChunkSize, GracefulShutdown gracefulShutdown,
             BlockingTaskExecutor blockingTaskExecutor,
@@ -171,6 +172,7 @@ final class DefaultServerConfig implements ServerConfig {
                                                                  "connectionDrainDurationMicros");
         this.http2InitialConnectionWindowSize = http2InitialConnectionWindowSize;
         this.http2InitialStreamWindowSize = http2InitialStreamWindowSize;
+        this.http2StreamWindowUpdateRatio = http2StreamWindowUpdateRatio;
         this.http2MaxStreamsPerConnection = http2MaxStreamsPerConnection;
         this.http2MaxFrameSize = http2MaxFrameSize;
         this.http2MaxHeaderListSize = http2MaxHeaderListSize;
@@ -266,6 +268,7 @@ final class DefaultServerConfig implements ServerConfig {
         this.absoluteUriTransformer = castAbsoluteUriTransformer;
         this.unloggedExceptionsReportIntervalMillis = unloggedExceptionsReportIntervalMillis;
         this.shutdownSupports = ImmutableList.copyOf(requireNonNull(shutdownSupports, "shutdownSupports"));
+        serverMetrics = new ServerMetrics(meterRegistry);
     }
 
     private static Int2ObjectMap<Mapping<String, VirtualHost>> buildDomainAndPortMapping(
@@ -543,6 +546,11 @@ final class DefaultServerConfig implements ServerConfig {
     @Override
     public int http2InitialStreamWindowSize() {
         return http2InitialStreamWindowSize;
+    }
+
+    @Override
+    public float http2StreamWindowSizeRatio() {
+        return http2StreamWindowUpdateRatio;
     }
 
     @Override

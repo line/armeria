@@ -56,6 +56,7 @@ import com.linecorp.armeria.common.util.ReleasableHolder;
 import com.linecorp.armeria.common.util.ShutdownHooks;
 import com.linecorp.armeria.common.util.TlsEngineType;
 import com.linecorp.armeria.common.util.TransportType;
+import com.linecorp.armeria.internal.client.ClientBuilderParamsUtil;
 import com.linecorp.armeria.internal.common.RequestTargetCache;
 import com.linecorp.armeria.internal.common.SslContextFactory;
 import com.linecorp.armeria.internal.common.util.ChannelUtil;
@@ -110,6 +111,7 @@ final class HttpClientFactory implements ClientFactory {
     private final AddressResolverGroup<InetSocketAddress> addressResolverGroup;
     private final int http2InitialConnectionWindowSize;
     private final int http2InitialStreamWindowSize;
+    private final float http2StreamWindowUpdateRatio;
     private final int http2MaxFrameSize;
     private final long http2MaxHeaderListSize;
     private final int http1MaxInitialLineLength;
@@ -207,6 +209,7 @@ final class HttpClientFactory implements ClientFactory {
 
         http2InitialConnectionWindowSize = options.http2InitialConnectionWindowSize();
         http2InitialStreamWindowSize = options.http2InitialStreamWindowSize();
+        http2StreamWindowUpdateRatio = options.http2StreamWindowUpdateRatio();
         http2MaxFrameSize = options.http2MaxFrameSize();
         http2MaxHeaderListSize = options.http2MaxHeaderListSize();
         pingIntervalMillis = options.pingIntervalMillis();
@@ -262,6 +265,10 @@ final class HttpClientFactory implements ClientFactory {
 
     int http2InitialStreamWindowSize() {
         return http2InitialStreamWindowSize;
+    }
+
+    float http2StreamWindowUpdateRatio() {
+        return http2StreamWindowUpdateRatio;
     }
 
     int http2MaxFrameSize() {
@@ -427,6 +434,26 @@ final class HttpClientFactory implements ClientFactory {
         }
 
         return clientType;
+    }
+
+    @Override
+    public ClientBuilderParams validateParams(ClientBuilderParams params) {
+        if (ClientBuilderParamsUtil.isPreprocessorUri(params.uri()) &&
+            params.options().clientPreprocessors().preprocessors().isEmpty()) {
+            // - HttpClient may be created for an RPC-based client
+            // - A default WebClient functions without preprocessors
+            if (params.clientType() != HttpClient.class) {
+                throw new IllegalArgumentException(
+                        "At least one preprocessor must be specified for http-based clients " +
+                        "with sessionProtocol '" + params.scheme().sessionProtocol() +
+                        "' and clientType '" + params.clientType() + "'.");
+            }
+        }
+        if (Clients.isUndefinedUri(params.uri()) && !"/".equals(params.absolutePathRef())) {
+            throw new IllegalArgumentException(
+                    "Cannot set a prefix path for clients created by 'WebClient.of().'");
+        }
+        return ClientFactory.super.validateParams(params);
     }
 
     @Override

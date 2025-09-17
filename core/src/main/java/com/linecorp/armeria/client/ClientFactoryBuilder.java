@@ -40,6 +40,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.function.Consumer;
 import java.util.function.Function;
+import java.util.function.Predicate;
 import java.util.function.ToIntFunction;
 
 import javax.net.ssl.KeyManagerFactory;
@@ -75,6 +76,7 @@ import io.micrometer.core.instrument.MeterRegistry;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
+import io.netty.handler.codec.http2.DefaultHttp2LocalFlowController;
 import io.netty.handler.codec.http2.Http2CodecUtil;
 import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
@@ -589,6 +591,17 @@ public final class ClientFactoryBuilder implements TlsSetters {
     }
 
     /**
+     * Sets the specified {@link Predicate} to validate the IP address of a remote server.
+     * If the predicate returns {@code false}, the request to the server will be rejected.
+     * By default, all IP addresses are accepted.
+     */
+    @UnstableApi
+    public ClientFactoryBuilder ipAddressFilter(Predicate<? super InetSocketAddress> ipAddressFilter) {
+        option(ClientFactoryOptions.IP_ADDRESS_FILTER, ipAddressFilter);
+        return this;
+    }
+
+    /**
      * Sets the
      * <a href="https://datatracker.ietf.org/doc/html/rfc7540#section-6.9.2">initial connection flow-control
      * window size</a>. The HTTP/2 connection is first established with
@@ -619,6 +632,26 @@ public final class ClientFactoryBuilder implements TlsSetters {
                       "http2InitialStreamWindowSize: %s (expected: > 0 and <= %s)",
                       http2InitialStreamWindowSize, MAX_INITIAL_WINDOW_SIZE);
         option(ClientFactoryOptions.HTTP2_INITIAL_STREAM_WINDOW_SIZE, http2InitialStreamWindowSize);
+        return this;
+    }
+
+    /**
+     * Sets the threshold ratio of the HTTP/2 stream flow-control window at which a
+     * <a href="https://datatracker.ietf.org/doc/html/rfc7540#section-6.9">WINDOW_UPDATE</a> frame will be sent.
+     * When the size of the flow-control window drops below the specified ratio (relative to the initial window
+     * size), a {@code WINDOW_UPDATE} frame is triggered to replenish the window.
+     *
+     * <p>The default value is {@value DefaultHttp2LocalFlowController#DEFAULT_WINDOW_UPDATE_RATIO}.
+     * The value must be greater than 0 and less than 1.0.
+     *
+     * <p>Note: Do not change this value unless you know what you are doing.
+     */
+    @UnstableApi
+    public ClientFactoryBuilder http2StreamWindowUpdateRatio(float http2StreamWindowUpdateRatio) {
+        checkArgument(http2StreamWindowUpdateRatio > 0 && http2StreamWindowUpdateRatio < 1.0f,
+                      "http2StreamWindowUpdateRatio: %s (expected: > 0 and < 1.0)",
+                      http2StreamWindowUpdateRatio);
+        option(ClientFactoryOptions.HTTP2_STREAM_WINDOW_UPDATE_RATIO, http2StreamWindowUpdateRatio);
         return this;
     }
 

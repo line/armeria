@@ -20,6 +20,7 @@ import static com.google.common.base.Preconditions.checkArgument;
 import static com.linecorp.armeria.internal.server.annotation.ResponseConverterFunctionUtil.newResponseConverter;
 import static java.util.Objects.requireNonNull;
 
+import java.lang.annotation.Annotation;
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
 import java.lang.reflect.Method;
@@ -50,6 +51,8 @@ import com.linecorp.armeria.common.ResponseEntity;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.ResponseHeadersBuilder;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.logging.BeanFieldInfo;
+import com.linecorp.armeria.common.logging.RequestLogProperty;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.common.util.UnmodifiableFuture;
@@ -115,6 +118,8 @@ final class DefaultAnnotatedService implements AnnotatedService {
     private final String name;
 
     private final ServiceOptions options;
+    private final List<BeanFieldInfo> paramBeanFieldInfos;
+    private final BeanFieldInfo retBeanFieldInfo;
 
     DefaultAnnotatedService(Object object, Method method,
                             int overloadId, List<AnnotatedValueResolver> resolvers,
@@ -168,10 +173,7 @@ final class DefaultAnnotatedService implements AnnotatedService {
         }
         callKotlinSuspendingMethod = KotlinUtil.getCallKotlinSuspendingMethod();
 
-        ServiceName serviceName = AnnotationUtil.findFirst(method, ServiceName.class);
-        if (serviceName == null) {
-            serviceName = AnnotationUtil.findFirst(object.getClass(), ServiceName.class);
-        }
+        final ServiceName serviceName = getFirstAnnotation(object, method, ServiceName.class);
         if (serviceName != null) {
             name = serviceName.value();
         } else {
@@ -182,15 +184,27 @@ final class DefaultAnnotatedService implements AnnotatedService {
         // following must be called only after method.setAccessible(true)
         methodHandle = asMethodHandle(method, object);
 
-        ServiceOption serviceOption = AnnotationUtil.findFirst(method, ServiceOption.class);
-        if (serviceOption == null) {
-            serviceOption = AnnotationUtil.findFirst(object.getClass(), ServiceOption.class);
-        }
+        final ServiceOption serviceOption = getFirstAnnotation(object, method, ServiceOption.class);
         if (serviceOption != null) {
             options = buildServiceOptions(serviceOption);
         } else {
             options = ServiceOptions.of();
         }
+
+        paramBeanFieldInfos = resolvers.stream().map(AnnotatedValueResolver::beanFieldInfo)
+                                       .collect(ImmutableList.toImmutableList());
+        retBeanFieldInfo = new AnnotatedBeanFieldInfo(method, returnType, method.getName());
+    }
+
+    @Nullable
+    private static <T extends Annotation> T getFirstAnnotation(Object object, Method method,
+                                                               Class<T> annotationClass) {
+        @Nullable
+        T annotation = AnnotationUtil.findFirst(method, annotationClass);
+        if (annotation == null) {
+            annotation = AnnotationUtil.findFirst(object.getClass(), annotationClass);
+        }
+        return annotation;
     }
 
     private static Type getActualReturnType(Method method) {
@@ -337,7 +351,22 @@ final class DefaultAnnotatedService implements AnnotatedService {
             }
         }
 
+        deferRequestContent(ctx, req);
+
         return HttpResponse.of(serve1(ctx, req, aggregationType));
+    }
+
+    private static void deferRequestContent(ServiceRequestContext ctx, HttpRequest req) {
+        if (!Flags.annotatedServiceContentLogging()) {
+            return;
+        }
+        // the deferred content is always set when either:
+        // 1) invoke is called 2) or the request completes exceptionally
+        ctx.logBuilder().defer(RequestLogProperty.REQUEST_CONTENT);
+        req.whenComplete().exceptionally(e -> {
+            ctx.logBuilder().requestContent(null, null);
+            return null;
+        });
     }
 
     /**
@@ -395,6 +424,21 @@ final class DefaultAnnotatedService implements AnnotatedService {
         }
     }
 
+    private void maybeLogRequestContent(ServiceRequestContext ctx, Object[] arguments) {
+        if (!Flags.annotatedServiceContentLogging()) {
+            return;
+        }
+        ctx.logBuilder().requestContent(new AnnotatedRequest(arguments, paramBeanFieldInfos), arguments);
+    }
+
+    private void maybeLogResponseContent(ServiceRequestContext ctx, @Nullable Object value) {
+        if (!Flags.annotatedServiceContentLogging()) {
+            return;
+        }
+        final AnnotatedResponse responseContent = new AnnotatedResponse(value, retBeanFieldInfo);
+        ctx.logBuilder().responseContent(responseContent, value);
+    }
+
     /**
      * Invokes the service method with arguments.
      */
@@ -403,6 +447,9 @@ final class DefaultAnnotatedService implements AnnotatedService {
         try (SafeCloseable ignored = ctx.push()) {
             final ResolverContext resolverContext = new ResolverContext(ctx, req, aggregatedResult);
             final Object[] arguments = AnnotatedValueResolver.toArguments(resolvers, resolverContext);
+            maybeLogRequestContent(ctx, arguments);
+
+            final Object res;
             if (isKotlinSuspendingMethod) {
                 assert callKotlinSuspendingMethod != null;
                 final ScheduledExecutorService executor;
@@ -412,14 +459,20 @@ final class DefaultAnnotatedService implements AnnotatedService {
                 } else {
                     executor = ctx.eventLoop().withoutContext();
                 }
-                return callKotlinSuspendingMethod.invoke(
+                res = callKotlinSuspendingMethod.invoke(
                         method, object, arguments,
                         executor,
                         ctx);
             } else {
-                return methodHandle.invoke(arguments);
+                res = methodHandle.invoke(arguments);
             }
+            maybeLogResponseContent(ctx, res);
+            return res;
         } catch (Throwable cause) {
+            // just in case the deferred log is never completed
+            ctx.logBuilder().requestContent(null, null);
+            // no need to log the failed HttpResponse as content
+            maybeLogResponseContent(ctx, null);
             return HttpResponse.ofFailure(cause);
         }
     }

@@ -22,6 +22,7 @@ import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.annotation.UnstableApi;
+import com.linecorp.armeria.common.loadbalancer.WeightTransition;
 
 /**
  * {@link Endpoint} selection strategy that creates a {@link EndpointSelector}.
@@ -53,7 +54,7 @@ public interface EndpointSelectionStrategy {
 
     /**
      * Returns a weight ramping up {@link EndpointSelectionStrategy} which ramps the weight of newly added
-     * {@link Endpoint}s using {@link EndpointWeightTransition#linear()}. The {@link Endpoint} is selected
+     * {@link Endpoint}s using {@link WeightTransition#linear()}. The {@link Endpoint} is selected
      * using weighted random distribution.
      * The weights of {@link Endpoint}s are ramped up by 10 percent every 2 seconds up to 100 percent
      * by default. If you want to customize the parameters, use {@link #builderForRampingUp()}.

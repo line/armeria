@@ -17,54 +17,27 @@
 package com.linecorp.armeria.client.endpoint;
 
 import java.util.List;
-import java.util.concurrent.atomic.AtomicInteger;
-
-import com.google.common.base.MoreObjects;
 
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.Endpoint;
+import com.linecorp.armeria.client.endpoint.DefaultEndpointSelector.LoadBalancerFactory;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.loadbalancer.LoadBalancer;
 
-final class RoundRobinStrategy implements EndpointSelectionStrategy {
+enum RoundRobinStrategy
+        implements EndpointSelectionStrategy,
+                   LoadBalancerFactory<LoadBalancer<Endpoint, ClientRequestContext>> {
 
-    static final RoundRobinStrategy INSTANCE = new RoundRobinStrategy();
-
-    private RoundRobinStrategy() {}
+    INSTANCE;
 
     @Override
     public EndpointSelector newSelector(EndpointGroup endpointGroup) {
-        return new RoundRobinSelector(endpointGroup);
+        return new DefaultEndpointSelector<>(endpointGroup, this);
     }
 
-    /**
-     * A round robin select strategy.
-     *
-     * <p>For example, with node a, b and c, then select result is abc abc ...
-     */
-    static class RoundRobinSelector extends AbstractEndpointSelector {
-        private final AtomicInteger sequence = new AtomicInteger();
-
-        RoundRobinSelector(EndpointGroup endpointGroup) {
-            super(endpointGroup);
-            initialize();
-        }
-
-        @Nullable
-        @Override
-        public Endpoint selectNow(ClientRequestContext ctx) {
-            final List<Endpoint> endpoints = group().endpoints();
-            if (endpoints.isEmpty()) {
-                return null;
-            }
-            final int currentSequence = sequence.getAndIncrement();
-            return endpoints.get(Math.abs(currentSequence % endpoints.size()));
-        }
-
-        @Override
-        public String toString() {
-            return MoreObjects.toStringHelper(this)
-                              .add("endpoints", group().endpoints())
-                              .toString();
-        }
+    @Override
+    public LoadBalancer<Endpoint, ClientRequestContext> newLoadBalancer(
+            @Nullable LoadBalancer<Endpoint, ClientRequestContext> oldLoadBalancer, List<Endpoint> candidates) {
+        return unsafeCast(LoadBalancer.ofRoundRobin(candidates));
     }
 }

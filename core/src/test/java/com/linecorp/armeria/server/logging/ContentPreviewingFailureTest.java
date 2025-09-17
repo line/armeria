@@ -96,9 +96,7 @@ class ContentPreviewingFailureTest {
                         .hasMessage("with-status");
                 break;
             case "/unexpected-exception":
-                assertThat(log.requestCause())
-                        .isInstanceOf(IllegalStateException.class)
-                        .hasMessage("Oops!");
+                assertThat(log.requestCause()).isNull();
                 assertThat(log.responseCause())
                         .isInstanceOf(IllegalStateException.class)
                         .hasMessage("Oops!");

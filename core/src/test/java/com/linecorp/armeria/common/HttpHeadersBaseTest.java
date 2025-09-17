@@ -143,8 +143,40 @@ class HttpHeadersBaseTest {
         assertThat(headers.containsBoolean("upperCase", true)).isTrue();
         assertThat(headers.containsBoolean("upperCase", false)).isTrue();
 
+        headers.add("capitalizedCase", "True");
+        headers.add("capitalizedCase", "False");
+        assertThat(headers.getBoolean("capitalizedCase")).isTrue();
+        assertThat(headers.getLastBoolean("capitalizedCase")).isFalse();
+        assertThat(headers.containsBoolean("capitalizedCase", true)).isTrue();
+        assertThat(headers.containsBoolean("capitalizedCase", false)).isTrue();
+
+        headers.add("mixedCase", "tRUE");
+        headers.add("mixedCase", "FaLsE");
+        assertThat(headers.getBoolean("mixedCase")).isNull();
+        assertThat(headers.getLastBoolean("mixedCase")).isNull();
+        assertThat(headers.containsBoolean("mixedCase", true)).isFalse();
+        assertThat(headers.containsBoolean("mixedCase", false)).isFalse();
+
+        headers.add("withSpaces", " true ");
+        headers.add("withSpaces", "  FALSE  ");
+        assertThat(headers.getBoolean("withSpaces")).isNull();
+        assertThat(headers.getLastBoolean("withSpaces")).isNull();
+        assertThat(headers.containsBoolean("withSpaces", true)).isFalse();
+        assertThat(headers.containsBoolean("withSpaces", false)).isFalse();
+
+        headers.add("numberCase", "1");
+        headers.add("numberCase", "0");
+        assertThat(headers.getBoolean("numberCase")).isTrue();
+        assertThat(headers.getLastBoolean("numberCase")).isFalse();
+        assertThat(headers.containsBoolean("numberCase", true)).isTrue();
+        assertThat(headers.containsBoolean("numberCase", false)).isTrue();
+
         headers.add("unsupported", "tRUE");
         headers.add("unsupported", "FaLsE");
+        headers.add("unsupported", "yes");
+        headers.add("unsupported", "no");
+        headers.add("unsupported", " true ");
+        headers.add("unsupported", " false ");
         assertThat(headers.getBoolean("unsupported")).isNull();
         assertThat(headers.getLastBoolean("unsupported")).isNull();
         assertThat(headers.containsBoolean("unsupported", true)).isFalse();

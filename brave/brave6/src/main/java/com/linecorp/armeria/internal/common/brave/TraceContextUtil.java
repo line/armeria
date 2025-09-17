@@ -18,6 +18,11 @@ package com.linecorp.armeria.internal.common.brave;
 
 import static java.util.Objects.requireNonNull;
 
+import java.util.Objects;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.google.common.annotations.VisibleForTesting;
 
 import com.linecorp.armeria.common.RequestContext;
@@ -31,15 +36,26 @@ import io.netty.util.AttributeKey;
 
 public final class TraceContextUtil {
 
+    private static final Logger logger = LoggerFactory.getLogger(TraceContextUtil.class);
+
     private static final AttributeKey<TraceContext> TRACE_CONTEXT_KEY =
             AttributeKey.valueOf(TraceContextUtil.class, "TRACE_CONTEXT");
+    private static boolean logTraceContextOverwrite;
 
     @Nullable
     public static TraceContext traceContext(RequestContext ctx) {
         return ctx.attr(TRACE_CONTEXT_KEY);
     }
 
-    public static void setTraceContext(RequestContext ctx, @Nullable TraceContext traceContext) {
+    public static void setTraceContext(RequestContext ctx, TraceContext traceContext) {
+        if (!logTraceContextOverwrite) {
+            final TraceContext prevTraceContext = ctx.ownAttr(TRACE_CONTEXT_KEY);
+            if (prevTraceContext != null && !Objects.equals(traceContext, prevTraceContext)) {
+                logTraceContextOverwrite = true;
+                logger.warn("Overriding traceContext<{}> with new traceContext<{}> for RequestContext<{}>.",
+                            prevTraceContext, traceContext, ctx.id());
+            }
+        }
         ctx.setAttr(TRACE_CONTEXT_KEY, traceContext);
     }
 

@@ -71,7 +71,6 @@ import com.google.common.collect.ImmutableSet;
 import com.linecorp.armeria.common.DependencyInjector;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.grpc.GrpcExceptionHandlerFunction;
-import com.linecorp.armeria.internal.common.ReflectiveDependencyInjector;
 import com.linecorp.armeria.internal.common.grpc.InternalGrpcExceptionHandler;
 import com.linecorp.armeria.internal.server.annotation.AnnotationUtil;
 import com.linecorp.armeria.internal.server.annotation.DecoratorAnnotationUtil;
@@ -312,7 +311,7 @@ final class HandlerRegistry {
                     ImmutableSet.builder();
             final ImmutableMap.Builder<ServerMethodDefinition<?, ?>, GrpcExceptionHandlerFunction>
                     grpcExceptionHandlersBuilder = ImmutableMap.builder();
-            final DependencyInjector dependencyInjector = new ReflectiveDependencyInjector();
+            final DependencyInjector dependencyInjector = DependencyInjector.ofReflective();
             for (Entry entry : entries) {
                 final ServerServiceDefinition service = entry.service();
                 final String path = entry.path();
@@ -379,6 +378,7 @@ final class HandlerRegistry {
                     final Class<?> type = entry.type();
                     if (type != null) {
                         final String methodName = methodNameConverter.convert(bareMethodName);
+                        assert methodName != null : "methodName must not be null: " + bareMethodName;
                         final Optional<Method> method =
                                 InternalReflectionUtils.getAllSortedMethods(type, withModifier(Modifier.PUBLIC))
                                                        .stream()

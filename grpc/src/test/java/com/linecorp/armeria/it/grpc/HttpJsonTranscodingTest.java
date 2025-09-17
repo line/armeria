@@ -71,6 +71,7 @@ import com.linecorp.armeria.server.grpc.GrpcService;
 import com.linecorp.armeria.server.grpc.GrpcServiceBuilder;
 import com.linecorp.armeria.server.grpc.HttpJsonTranscodingOptions;
 import com.linecorp.armeria.server.grpc.HttpJsonTranscodingQueryParamMatchRule;
+import com.linecorp.armeria.server.logging.LoggingService;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
 import io.grpc.Status.Code;
@@ -358,16 +359,17 @@ public class HttpJsonTranscodingTest {
     }
 
     @RegisterExtension
-    static final ServerExtension server = createServer(false, false, true);
+    static final ServerExtension server = createServer(false, false, true, false);
 
     @RegisterExtension
-    static final ServerExtension serverPreservingProtoFieldNames = createServer(true, false, true);
+    static final ServerExtension serverPreservingProtoFieldNames = createServer(true, false, true, false);
 
     @RegisterExtension
-    static final ServerExtension serverCamelCaseQueryOnlyParameters = createServer(false, true, false);
+    static final ServerExtension serverCamelCaseQueryOnlyParameters = createServer(false, true, false, false);
 
     @RegisterExtension
-    static final ServerExtension serverCamelCaseQueryAndOriginalParameters = createServer(false, true, true);
+    static final ServerExtension serverCamelCaseQueryAndOriginalParameters = createServer(false, true, true,
+                                                                                          true);
 
     private final ObjectMapper mapper = JacksonUtil.newDefaultObjectMapper();
 
@@ -383,7 +385,7 @@ public class HttpJsonTranscodingTest {
             serverCamelCaseQueryAndOriginalParameters.blockingWebClient();
 
     static ServerExtension createServer(boolean preservingProtoFieldNames, boolean camelCaseQueryParams,
-                                        boolean protoFieldNameQueryParams) {
+                                        boolean protoFieldNameQueryParams, boolean jsonNameQueryParams) {
         final ImmutableList.Builder<HttpJsonTranscodingQueryParamMatchRule> queryParamMatchRules =
                 ImmutableList.builder();
         if (camelCaseQueryParams) {
@@ -391,6 +393,9 @@ public class HttpJsonTranscodingTest {
         }
         if (protoFieldNameQueryParams) {
             queryParamMatchRules.add(HttpJsonTranscodingQueryParamMatchRule.ORIGINAL_FIELD);
+        }
+        if (jsonNameQueryParams) {
+            queryParamMatchRules.add(HttpJsonTranscodingQueryParamMatchRule.JSON_NAME);
         }
         final HttpJsonTranscodingOptions options =
                 HttpJsonTranscodingOptions.builder()
@@ -412,6 +417,7 @@ public class HttpJsonTranscodingTest {
                 final GrpcService grpcService = grpcServiceBuilder.build();
                 sb.service(grpcService)
                   .requestTimeout(Duration.ZERO)
+                  .decorator(LoggingService.newDecorator())
                   .serviceUnder("/foo", grpcService)
                   .serviceUnder("/docs", DocService.builder().build());
             }
@@ -911,7 +917,7 @@ public class HttpJsonTranscodingTest {
     }
 
     @Test
-    void shouldDenyEmptyJson() {
+    void shouldAcceptEmptyJson() {
         final String emptyJson = "";
         final RequestHeaders headers = RequestHeaders.builder()
                                                      .method(HttpMethod.POST)
@@ -919,7 +925,19 @@ public class HttpJsonTranscodingTest {
                                                      .contentType(MediaType.JSON)
                                                      .build();
         final AggregatedHttpResponse response = webClient.execute(headers, emptyJson).aggregate().join();
-        assertThat(response.status()).isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThat(response.status()).isEqualTo(HttpStatus.OK);
+    }
+
+    @Test
+    void shouldAcceptEmptyContentBody() {
+        final HttpData emptyContentBody = HttpData.empty();
+        final RequestHeaders headers = RequestHeaders.builder()
+                .method(HttpMethod.POST)
+                .path("/v1/echo/response_body/repeated")
+                .contentType(MediaType.JSON)
+                .build();
+        final AggregatedHttpResponse response = webClient.execute(headers, emptyContentBody).aggregate().join();
+        assertThat(response.status()).isEqualTo(HttpStatus.OK);
     }
 
     @Test
@@ -1076,6 +1094,7 @@ public class HttpJsonTranscodingTest {
 
         final JsonNode response =
                 webClientCamelCaseQueryAndOriginalParameters.prepare()
+                                                            .responseTimeoutMillis(0)
                                                             .get("/v5/messages/1")
                                                             .queryParams(query)
                                                             .asJson(JsonNode.class)

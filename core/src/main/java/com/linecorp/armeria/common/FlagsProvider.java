@@ -53,9 +53,11 @@ import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.ServiceWithRoutes;
 import com.linecorp.armeria.server.TransientService;
 import com.linecorp.armeria.server.TransientServiceOption;
+import com.linecorp.armeria.server.annotation.AnnotatedService;
 import com.linecorp.armeria.server.file.FileService;
 import com.linecorp.armeria.server.file.FileServiceBuilder;
 import com.linecorp.armeria.server.file.HttpFile;
+import com.linecorp.armeria.server.logging.LoggingService;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Metrics;
@@ -701,6 +703,23 @@ public interface FlagsProvider {
     }
 
     /**
+     * Returns the default value of the {@link ServerBuilder#http2StreamWindowUpdateRatio(float)} and
+     * {@link ClientFactoryBuilder#http2StreamWindowUpdateRatio(float)}.
+     * Note that this flag has no effect if a user specified the value explicitly via
+     * {@link ServerBuilder#http2StreamWindowUpdateRatio(float)} or
+     * {@link ClientFactoryBuilder#http2StreamWindowUpdateRatio(float)}.
+     *
+     * <p>The default value of this flag is
+     * {@value DefaultFlagsProvider#DEFAULT_HTTP2_STREAM_WINDOW_UPDATE_RATIO}.
+     * Specify the {@code -Dcom.linecorp.armeria.defaultHttp2StreamWindowUpdateRatio=<float>} JVM option
+     * to override the default value.
+     */
+    @Nullable
+    default Float defaultHttp2StreamWindowUpdateRatio() {
+        return null;
+    }
+
+    /**
      * Returns the default value of the {@link ServerBuilder#http2MaxFrameSize(int)} and
      * {@link ClientFactoryBuilder#http2MaxFrameSize(int)} option.
      * Note that this flag has no effect if a user specified the value explicitly via
@@ -1247,6 +1266,20 @@ public interface FlagsProvider {
     @Nullable
     @UnstableApi
     default ResponseTimeoutMode responseTimeoutMode() {
+        return null;
+    }
+
+    /**
+     * Returns whether {@link AnnotatedService} should leave request/response content logs
+     * by default when a {@link LoggingService} is added.
+     *
+     * <p>By default, this option is enabled. Specify the
+     * {@code -Dcom.linecorp.armeria.annotatedServiceContentLogging=false} JVM option to
+     * override the default value.
+     */
+    @Nullable
+    @UnstableApi
+    default Boolean annotatedServiceContentLogging() {
         return null;
     }
 }

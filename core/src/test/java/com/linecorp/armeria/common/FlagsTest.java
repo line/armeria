@@ -302,6 +302,24 @@ class FlagsTest {
         assertThat(flagsApis).hasSameElementsAs(armeriaOptionsProviderApis);
     }
 
+    @Test
+    @ClearSystemProperty(key = "com.linecorp.armeria.defaultPreferHttp1")
+    void defaultValueOfDefaultUseHttp1Preface() throws Throwable {
+        assertFlags("defaultPreferHttp1").isEqualTo(false);
+    }
+
+    @Test
+    @SetSystemProperty(key = "com.linecorp.armeria.preferHttp1", value = "true")
+    void defaultPreferHttp1BackwardCompatible() throws Throwable {
+        assertFlags("defaultPreferHttp1").isEqualTo(true);
+    }
+
+    @Test
+    @SetSystemProperty(key = "com.linecorp.armeria.defaultPreferHttp1", value = "true")
+    void defaultPreferHttp1() throws Throwable {
+        assertFlags("defaultPreferHttp1").isEqualTo(true);
+    }
+
     private ObjectAssert<Object> assertFlags(String flagsMethod) throws Throwable {
         final Lookup lookup = MethodHandles.publicLookup();
         Class<?> rtype = Flags.class.getMethod(flagsMethod).getReturnType();

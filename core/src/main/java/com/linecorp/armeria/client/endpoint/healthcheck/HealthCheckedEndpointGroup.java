@@ -23,10 +23,12 @@ import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Deque;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Queue;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.locks.ReentrantLock;
@@ -226,14 +228,17 @@ public final class HealthCheckedEndpointGroup extends DynamicEndpointGroup {
                 return ImmutableList.of();
             }
 
+            // newGroup.candidates() might have duplicate endpoints, so we need to use list instead of set.
             final List<Endpoint> allEndpoints = new ArrayList<>(newGroup.candidates());
+            // This set is used to check if endpoints from old group are already added to allEndpoints.
+            final Set<Endpoint> addedEndpoints = new HashSet<>(newGroup.candidates());
 
             for (HealthCheckContextGroup oldGroup : contextGroupChain) {
                 if (oldGroup == newGroup) {
                     break;
                 }
                 for (Endpoint candidate : oldGroup.candidates()) {
-                    if (!allEndpoints.contains(candidate)) {
+                    if (addedEndpoints.add(candidate)) {
                         // Add old Endpoints that do not exist in newGroup. When the first check for newGroup is
                         // completed, the old Endpoints will be removed.
                         allEndpoints.add(candidate);
@@ -292,8 +297,6 @@ public final class HealthCheckedEndpointGroup extends DynamicEndpointGroup {
 
     private void updateHealth(Endpoint endpoint, boolean health) {
         if (isClosing()) {
-            logger.debug("HealthCheckedEndpointGroup is closed. Ignoring health update for: {}. (healthy: {})",
-                         endpoint, health);
             return;
         }
 

@@ -18,7 +18,7 @@ package com.linecorp.armeria.xds;
 
 import static com.linecorp.armeria.xds.XdsTestResources.BOOTSTRAP_CLUSTER_NAME;
 import static com.linecorp.armeria.xds.XdsTestResources.bootstrapCluster;
-import static com.linecorp.armeria.xds.XdsTestResources.createCluster;
+import static com.linecorp.armeria.xds.XdsTestResources.createStaticCluster;
 import static com.linecorp.armeria.xds.XdsTestResources.loadAssignment;
 import static com.linecorp.armeria.xds.XdsTestResources.staticResourceListener;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -58,10 +58,11 @@ class MostlyStaticWithDynamicEdsTest {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
             final V3DiscoveryServer v3DiscoveryServer = new V3DiscoveryServer(cache);
+            final Cluster cdsCluster = createStaticCluster("cluster", loadAssignment("cluster"));
             cache.setSnapshot(
                     GROUP,
-                    Snapshot.create(ImmutableList.of(),
-                                    ImmutableList.of(loadAssignment("cluster", "127.0.0.1", 8080)),
+                    Snapshot.create(ImmutableList.of(cdsCluster),
+                                    ImmutableList.of(),
                                     ImmutableList.of(),
                                     ImmutableList.of(),
                                     ImmutableList.of(), "1"));
@@ -79,10 +80,12 @@ class MostlyStaticWithDynamicEdsTest {
     void basicCase() throws Exception {
         final ConfigSource configSource = XdsTestResources.basicConfigSource(BOOTSTRAP_CLUSTER_NAME);
         final Cluster bootstrapCluster = bootstrapCluster(server.httpUri(), BOOTSTRAP_CLUSTER_NAME);
-        final Cluster staticCluster = createCluster("cluster");
         final Listener listener = staticResourceListener();
+        final ClusterLoadAssignment loadAssignment =
+                loadAssignment("cluster", "127.0.0.1", 8080);
+        final Cluster cluster = createStaticCluster("cluster", loadAssignment);
         final Bootstrap bootstrap = XdsTestResources.bootstrap(configSource, listener,
-                                                               bootstrapCluster, staticCluster);
+                                                               bootstrapCluster, cluster);
         try (XdsBootstrapImpl xdsBootstrap = new XdsBootstrapImpl(bootstrap)) {
             final ListenerRoot listenerRoot = xdsBootstrap.listenerRoot("listener");
             final TestResourceWatcher watcher = new TestResourceWatcher();
@@ -99,12 +102,17 @@ class MostlyStaticWithDynamicEdsTest {
             final RouteSnapshot routeSnapshot = listenerSnapshot.routeSnapshot();
             assertThat(routeSnapshot.xdsResource().resource()).isEqualTo(expectedRoute);
 
-            final ClusterSnapshot clusterSnapshot = routeSnapshot.clusterSnapshots().get(0);
-            assertThat(clusterSnapshot.xdsResource().resource()).isEqualTo(staticCluster);
-            final ClusterLoadAssignment expectedEndpoint =
-                    cache.getSnapshot(GROUP).endpoints().resources().get("cluster");
+            final ClusterSnapshot clusterSnapshot = routeSnapshot.virtualHostSnapshots().get(0)
+                                                                 .routeEntries().get(0).clusterSnapshot();
+            final Cluster cdsCluster = cache.getSnapshot(GROUP).clusters().resources().get("cluster");
+            assertThat(clusterSnapshot.xdsResource().resource()).isNotEqualTo(cdsCluster);
+            assertThat(clusterSnapshot.xdsResource().resource()).isEqualTo(cluster);
+
             final EndpointSnapshot endpointSnapshot = clusterSnapshot.endpointSnapshot();
-            assertThat(endpointSnapshot.xdsResource().resource()).isEqualTo(expectedEndpoint);
+            final ClusterLoadAssignment cdsEndpoint =
+                    cache.getSnapshot(GROUP).endpoints().resources().get("cluster");
+            assertThat(endpointSnapshot.xdsResource().resource()).isNotEqualTo(cdsEndpoint);
+            assertThat(endpointSnapshot.xdsResource().resource()).isEqualTo(loadAssignment);
         }
     }
 }

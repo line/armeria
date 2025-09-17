@@ -19,6 +19,7 @@ import static com.linecorp.armeria.client.retry.AbstractRetryingClient.ARMERIA_R
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.catchThrowable;
+import static org.awaitility.Awaitility.await;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
@@ -327,29 +328,32 @@ class RetryingRpcClientTest {
 
     @Test
     void doNotRetryWhenResponseIsCancelled() throws Exception {
-        final AtomicReference<ClientRequestContext> context = new AtomicReference<>();
-        final HelloService.Iface client =
-                ThriftClients.builder(server.httpUri())
-                             .path("/thrift")
-                             .rpcDecorator(RetryingRpcClient.builder(retryAlways).newDecorator())
-                             .rpcDecorator((delegate, ctx, req) -> {
-                                 context.set(ctx);
-                                 final RpcResponse res = delegate.execute(ctx, req);
-                                 res.cancel(true);
-                                 return res;
-                             })
-                             .build(HelloService.Iface.class);
-        when(serviceHandler.hello(anyString())).thenThrow(new IllegalArgumentException());
+        serviceRetryCount.set(0);
+        try (ClientFactory factory = ClientFactory.builder().build()) {
+            final AtomicReference<ClientRequestContext> context = new AtomicReference<>();
+            final HelloService.Iface client =
+                    ThriftClients.builder(server.httpUri())
+                                 .path("/thrift")
+                                 .factory(factory)
+                                 .rpcDecorator(RetryingRpcClient.builder(retryAlways).newDecorator())
+                                 .rpcDecorator((delegate, ctx, req) -> {
+                                     context.set(ctx);
+                                     final RpcResponse res = delegate.execute(ctx, req);
+                                     res.cancel(true);
+                                     return res;
+                                 })
+                                 .build(HelloService.Iface.class);
+            when(serviceHandler.hello(anyString())).thenThrow(new IllegalArgumentException());
 
-        assertThatThrownBy(() -> client.hello("hello")).isInstanceOf(CancellationException.class);
+            assertThatThrownBy(() -> client.hello("hello")).isInstanceOf(CancellationException.class);
 
-        final RequestLog log = context.get().log().whenComplete().join();
-        verify(serviceHandler, only()).hello("hello");
-        assertThat(log.requestCause()).isNull();
-        assertThat(log.responseCause()).isExactlyInstanceOf(CancellationException.class);
-
-        // Sleep 1 second more to check if there was another retry.
-        TimeUnit.SECONDS.sleep(1);
-        verify(serviceHandler, only()).hello("hello");
+            await().untilAsserted(() -> {
+                verify(serviceHandler, only()).hello("hello");
+            });
+            // Sleep 1 second more to check if there was another retry.
+            TimeUnit.SECONDS.sleep(1);
+            verify(serviceHandler, only()).hello("hello");
+            assertThat(serviceRetryCount).hasValue(1);
+        }
     }
 }

@@ -3,6 +3,8 @@ on:
   push:
     branches:
       - "**"
+      # Exclude branches to avoid running the same tests twice.
+      - '!dependabot/**'
     tags-ignore:
       # The release versions will be verified by 'publish-release.yml'
       - armeria-*
@@ -178,7 +180,7 @@ jobs:
 
       - name: Upload the coverage report to Codecov
         if: ${{ matrix.coverage }}
-        uses: codecov/codecov-action@v3
+        uses: codecov/codecov-action@v5
 
       - name: Fail the run if any threads were blocked
         if: ${{ matrix.blockhound }}

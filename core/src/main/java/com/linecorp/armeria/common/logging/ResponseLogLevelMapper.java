@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.common.logging;
 
+import static com.linecorp.armeria.common.logging.DefaultLogWriter.isSuccess;
 import static java.util.Objects.requireNonNull;
 
 import java.util.function.Function;
@@ -43,7 +44,7 @@ public interface ResponseLogLevelMapper extends Function<RequestLog, LogLevel> {
      * {@code failureResponseLogLevel} if failure.
      */
     static ResponseLogLevelMapper of(LogLevel successfulResponseLogLevel, LogLevel failureResponseLogLevel) {
-        return log -> log.responseCause() == null ? successfulResponseLogLevel : failureResponseLogLevel;
+        return log -> isSuccess(log) ? successfulResponseLogLevel : failureResponseLogLevel;
     }
 
     /**

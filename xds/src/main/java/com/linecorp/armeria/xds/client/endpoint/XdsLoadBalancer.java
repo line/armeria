@@ -1,5 +1,5 @@
 /*
- * Copyright 2024 LINE Corporation
+ * Copyright 2025 LY Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -16,16 +16,57 @@
 
 package com.linecorp.armeria.xds.client.endpoint;
 
-import com.google.common.annotations.VisibleForTesting;
+import java.util.List;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.function.Consumer;
 
+import com.linecorp.armeria.client.ClientRequestContext;
+import com.linecorp.armeria.client.Endpoint;
+import com.linecorp.armeria.client.endpoint.EndpointSelector;
 import com.linecorp.armeria.common.annotation.Nullable;
-import com.linecorp.armeria.xds.client.endpoint.LocalityRoutingStateFactory.LocalityRoutingState;
+import com.linecorp.armeria.common.annotation.UnstableApi;
+import com.linecorp.armeria.xds.ClusterSnapshot;
 
-interface XdsLoadBalancer extends LoadBalancer {
+import io.envoyproxy.envoy.config.core.v3.Locality;
+import io.netty.util.concurrent.EventExecutor;
 
-    PrioritySet prioritySet();
+/**
+ * A load balancer which allows users to select an {@link Endpoint} based on a {@link ClientRequestContext}.
+ * A {@link XdsLoadBalancer} is bound to a {@link ClusterSnapshot} and can be accessed via
+ * {@link ClusterSnapshot#loadBalancer()}.
+ */
+@UnstableApi
+public interface XdsLoadBalancer extends EndpointSelector {
 
-    @Nullable
-    @VisibleForTesting
-    LocalityRoutingState localityRoutingState();
+    /**
+     * Creates a {@link UpdatableXdsLoadBalancer} based on the input parameters.
+     * Rather than instantiating a {@link XdsLoadBalancer} directly, users are encouraged
+     * to use the load balancer provided by {@link ClusterSnapshot#loadBalancer()} to select
+     * {@link Endpoint}s.
+     */
+    static UpdatableXdsLoadBalancer of(EventExecutor eventLoop, Locality locality,
+                                       @Nullable XdsLoadBalancer localLoadBalancer) {
+        return new DefaultXdsLoadBalancer(eventLoop, locality, localLoadBalancer);
+    }
+
+    @Override
+    CompletableFuture<Endpoint> select(ClientRequestContext ctx, ScheduledExecutorService executor,
+                                       long timeoutMillis);
+
+    /**
+     * Adds a listener which is notified of the list of endpoints when there is a change.
+     *
+     * @deprecated do not use.
+     */
+    @Deprecated
+    void addEndpointsListener(Consumer<? super List<Endpoint>> listener);
+
+    /**
+     * Removes a listener.
+     *
+     * @deprecated do not use.
+     */
+    @Deprecated
+    void removeEndpointsListener(Consumer<? super List<Endpoint>> listener);
 }

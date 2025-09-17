@@ -50,6 +50,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.handler.codec.dns.DatagramDnsQuery;
 import io.netty.handler.codec.dns.DefaultDnsQuestion;
 import io.netty.handler.codec.dns.DefaultDnsRawRecord;
@@ -57,6 +58,7 @@ import io.netty.handler.codec.dns.DefaultDnsResponse;
 import io.netty.handler.codec.dns.DnsRecord;
 import io.netty.handler.codec.dns.DnsSection;
 import io.netty.resolver.ResolvedAddressTypes;
+import io.netty.resolver.dns.DnsNameResolverChannelStrategy;
 import io.netty.util.NetUtil;
 import io.netty.util.ReferenceCountUtil;
 
@@ -608,6 +610,40 @@ class DnsAddressEndpointGroupTest {
                                                 .build()) {
                 await().timeout(Duration.ofSeconds(1))
                         .untilAsserted(() -> assertThat(success.get()).isTrue());
+            }
+        }
+    }
+
+    @Test
+    void experimentalSettingsYieldCorrectResults() {
+        try (TestDnsServer server = new TestDnsServer(ImmutableMap.of(
+                new DefaultDnsQuestion("baz.com.", A),
+                new DefaultDnsResponse(0).addRecord(ANSWER, newAddressRecord("baz.com.", "1.1.1.1"))))) {
+            final AtomicBoolean success = new AtomicBoolean(false);
+            final DnsQueryListener listener = new DnsQueryListener() {
+                @Override
+                public void onSuccess(List<DnsRecord> oldRecords,
+                                      List<DnsRecord> newRecords, String logPrefix) {
+                    success.set(true);
+                }
+
+                @Override
+                public void onFailure(List<DnsRecord> oldRecords,
+                                      Throwable cause, String logPrefix, long delayMillis, int attemptsSoFar) {
+                }
+            };
+            try (DnsAddressEndpointGroup group =
+                         DnsAddressEndpointGroup.builder("baz.com")
+                                                .port(8080)
+                                                .serverAddresses(server.addr())
+                                                .dnsCache(NoopDnsCache.INSTANCE)
+                                                .addDnsQueryListeners(listener)
+                                                .datagramChannelStrategy(
+                                                        DnsNameResolverChannelStrategy.ChannelPerResolution)
+                                                .socketChannelType(NioSocketChannel.class, true)
+                                                .build()) {
+                await().timeout(Duration.ofSeconds(1))
+                       .untilAsserted(() -> assertThat(success.get()).isTrue());
             }
         }
     }

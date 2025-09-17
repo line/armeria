@@ -66,6 +66,8 @@ public final class ServerPort implements Comparable<ServerPort> {
     private final Set<SessionProtocol> protocols;
     private final long portGroup;
     private int hashCode;
+    @Nullable
+    private ServerPortMetric serverPortMetric;
 
     @Nullable
     private String strVal;
@@ -226,6 +228,16 @@ public final class ServerPort implements Comparable<ServerPort> {
         return portGroup;
     }
 
+    @Nullable
+    ServerPortMetric serverPortMetric() {
+        return serverPortMetric;
+    }
+
+    void setServerPortMetric(ServerPortMetric serverPortMetric) {
+        this.serverPortMetric = serverPortMetric;
+    }
+
+    // Do not take account into serverPortMetric for equality and hashCode.
     @Override
     public int hashCode() {
         int hashCode = this.hashCode;

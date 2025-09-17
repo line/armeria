@@ -26,7 +26,9 @@ import com.google.common.primitives.Ints;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.common.annotation.Nullable;
-import com.linecorp.armeria.internal.client.endpoint.WeightedRandomDistributionSelector;
+import com.linecorp.armeria.common.loadbalancer.LoadBalancer;
+import com.linecorp.armeria.common.loadbalancer.SimpleLoadBalancer;
+import com.linecorp.armeria.internal.common.loadbalancer.WeightedObject;
 
 import io.envoyproxy.envoy.config.core.v3.Locality;
 import io.envoyproxy.envoy.config.endpoint.v3.ClusterLoadAssignment;
@@ -36,8 +38,8 @@ final class HostSet {
     private final boolean weightedPriorityHealth;
     private final int overProvisioningFactor;
 
-    private final WeightedRandomDistributionSelector<LocalityEntry> healthyLocalitySelector;
-    private final WeightedRandomDistributionSelector<LocalityEntry> degradedLocalitySelector;
+    private final SimpleLoadBalancer<WeightedObject<Locality>> healthyLocalitySelector;
+    private final SimpleLoadBalancer<WeightedObject<Locality>> degradedLocalitySelector;
 
     private final EndpointGroup hostsEndpointGroup;
     private final EndpointGroup healthyHostsEndpointGroup;
@@ -116,21 +118,22 @@ final class HostSet {
                           .toString();
     }
 
-    private static WeightedRandomDistributionSelector<LocalityEntry> rebuildLocalityScheduler(
+    private static SimpleLoadBalancer<WeightedObject<Locality>> rebuildLocalityScheduler(
             Map<Locality, EndpointGroup> eligibleHostsPerLocality,
             Map<Locality, EndpointGroup> allHostsPerLocality,
             Map<Locality, Integer> localityWeightsMap,
             int overProvisioningFactor) {
-        final ImmutableList.Builder<LocalityEntry> localityWeightsBuilder = ImmutableList.builder();
+        final ImmutableList.Builder<WeightedObject<Locality>> localityWeightsBuilder = ImmutableList.builder();
         for (Locality locality : allHostsPerLocality.keySet()) {
             final double effectiveWeight =
                     effectiveLocalityWeight(locality, eligibleHostsPerLocality, allHostsPerLocality,
                                             localityWeightsMap, overProvisioningFactor);
             if (effectiveWeight > 0) {
-                localityWeightsBuilder.add(new LocalityEntry(locality, effectiveWeight));
+                final int weight = Ints.saturatedCast(Math.round(effectiveWeight));
+                localityWeightsBuilder.add(new WeightedObject<>(locality, weight));
             }
         }
-        return new WeightedRandomDistributionSelector<>(localityWeightsBuilder.build());
+        return LoadBalancer.ofWeightedRandom(localityWeightsBuilder.build());
     }
 
     static double effectiveLocalityWeight(Locality locality,
@@ -156,35 +159,19 @@ final class HostSet {
 
     @Nullable
     Locality chooseDegradedLocality() {
-        final LocalityEntry localityEntry = degradedLocalitySelector.select();
+        final WeightedObject<Locality> localityEntry = degradedLocalitySelector.pick();
         if (localityEntry == null) {
             return null;
         }
-        return localityEntry.locality;
+        return localityEntry.get();
     }
 
     @Nullable
     Locality chooseHealthyLocality() {
-        final LocalityEntry localityEntry = healthyLocalitySelector.select();
+        final WeightedObject<Locality> localityEntry = healthyLocalitySelector.pick();
         if (localityEntry == null) {
             return null;
         }
-        return localityEntry.locality;
-    }
-
-    static class LocalityEntry extends WeightedRandomDistributionSelector.AbstractEntry {
-
-        private final Locality locality;
-        private final int weight;
-
-        LocalityEntry(Locality locality, double weight) {
-            this.locality = locality;
-            this.weight = Ints.saturatedCast(Math.round(weight));
-        }
-
-        @Override
-        public int weight() {
-            return weight;
-        }
+        return localityEntry.get();
     }
 }

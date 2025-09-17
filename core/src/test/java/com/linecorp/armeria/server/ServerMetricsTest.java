@@ -23,7 +23,6 @@ import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
 import org.assertj.core.api.Condition;
-import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
@@ -137,46 +136,6 @@ class ServerMetricsTest {
         }
     };
 
-    @Test
-    void pendingRequests() {
-        final ServerMetrics serverMetrics = new ServerMetrics();
-
-        serverMetrics.increasePendingHttp1Requests();
-        assertThat(serverMetrics.pendingRequests()).isEqualTo(1);
-
-        serverMetrics.increasePendingHttp2Requests();
-        assertThat(serverMetrics.pendingRequests()).isEqualTo(2);
-
-        serverMetrics.decreasePendingHttp1Requests();
-        assertThat(serverMetrics.pendingRequests()).isEqualTo(1);
-
-        serverMetrics.decreasePendingHttp2Requests();
-        assertThat(serverMetrics.pendingRequests()).isZero();
-    }
-
-    @Test
-    void activeRequests() {
-        final ServerMetrics serverMetrics = new ServerMetrics();
-
-        serverMetrics.increaseActiveHttp1Requests();
-        assertThat(serverMetrics.activeRequests()).isEqualTo(1);
-
-        serverMetrics.increaseActiveHttp1WebSocketRequests();
-        assertThat(serverMetrics.activeRequests()).isEqualTo(2);
-
-        serverMetrics.increaseActiveHttp2Requests();
-        assertThat(serverMetrics.activeRequests()).isEqualTo(3);
-
-        serverMetrics.decreaseActiveHttp1WebSocketRequests();
-        assertThat(serverMetrics.activeRequests()).isEqualTo(2);
-
-        serverMetrics.decreaseActiveHttp1Requests();
-        assertThat(serverMetrics.activeRequests()).isEqualTo(1);
-
-        serverMetrics.decreaseActiveHttp2Requests();
-        assertThat(serverMetrics.activeRequests()).isZero();
-    }
-
     @CsvSource({ "H1C, 1, 0", "H2C, 0, 1" })
     @ParameterizedTest
     void checkWhenOk(SessionProtocol sessionProtocol, long expectedPendingHttp1Request,
@@ -238,9 +197,11 @@ class ServerMetricsTest {
             final AggregatedHttpResponse result = response.join();
 
             assertThat(result.status()).isSameAs(HttpStatus.INTERNAL_SERVER_ERROR);
-            assertThat(serverMetrics.pendingRequests()).isZero();
-            assertThat(serverMetrics.activeRequests()).isZero();
-            await().until(() -> serverMetrics.activeConnections() == 0);
+            await().untilAsserted(() -> {
+                assertThat(serverMetrics.pendingRequests()).isZero();
+                assertThat(serverMetrics.activeRequests()).isZero();
+                assertThat(serverMetrics.activeConnections()).isZero();
+            });
         }
     }
 
@@ -296,10 +257,10 @@ class ServerMetricsTest {
 
             final String protocolName = protocol == SessionProtocol.H1C ? "http1" : "http2";
             // armeria.server.active.requests.all#value is measured by ServerMetrics
-            assertThat(meters).containsKey("armeria.server.all.requests#value{protocol=" + protocolName +
-                                           ",state=active}");
-            assertThat(meters).containsKey("armeria.server.all.requests#value{protocol=" + protocolName +
-                                           ",state=pending}");
+            assertThat(meters).containsKey("armeria.server.all.requests#value{port=" + server.httpPort() +
+                                           ",protocol=" + protocolName + ",state=active}");
+            assertThat(meters).containsKey("armeria.server.all.requests#value{port=" + server.httpPort() +
+                                           ",protocol=" + protocolName + ",state=pending}");
         });
     }
 }

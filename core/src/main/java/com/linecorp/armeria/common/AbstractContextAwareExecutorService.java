@@ -27,6 +27,8 @@ import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
+import com.linecorp.armeria.internal.common.context.ArmeriaContextPropagation;
+
 abstract class AbstractContextAwareExecutorService<ES extends ExecutorService>
         extends AbstractContextAwareExecutor<ES> implements ExecutorService {
 
@@ -101,7 +103,10 @@ abstract class AbstractContextAwareExecutorService<ES extends ExecutorService>
 
     final <T> Callable<T> makeContextAware(Callable<T> task) {
         final RequestContext context = contextOrNull();
-        return context == null ? task : context.makeContextAware(task);
+        if (context != null) {
+            return context.makeContextAware(task);
+        }
+        return ArmeriaContextPropagation.captureAll().wrap(task);
     }
 
     private <T> Collection<? extends Callable<T>> makeContextAware(

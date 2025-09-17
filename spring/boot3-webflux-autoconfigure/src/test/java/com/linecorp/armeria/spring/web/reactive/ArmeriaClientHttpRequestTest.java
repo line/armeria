@@ -24,7 +24,6 @@ import java.util.Map.Entry;
 
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.RegisterExtension;
 import org.springframework.core.io.buffer.DataBuffer;
 import org.springframework.http.HttpCookie;
 import org.springframework.http.HttpMethod;
@@ -36,11 +35,8 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.RequestHeaders;
-import com.linecorp.armeria.server.Route;
-import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.spring.internal.client.ArmeriaClientHttpRequest;
 import com.linecorp.armeria.spring.internal.common.DataBufferFactoryWrapper;
-import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -50,21 +46,12 @@ class ArmeriaClientHttpRequestTest {
 
     private static final String TEST_PATH_AND_QUERY = "/index.html?q=1";
 
-    @RegisterExtension
-    static final ServerExtension server = new ServerExtension() {
-        @Override
-        protected void configure(ServerBuilder sb) {
-            sb.service(Route.ofCatchAll(), (ctx, req) -> HttpResponse.of(HttpStatus.OK));
-        }
-    };
     static WebClient webClient;
 
     @BeforeAll
     public static void beforeClass() {
         webClient = WebClient.builder()
-                .decorator((delegate, ctx, req) -> {
-                    return HttpResponse.of(HttpStatus.OK);
-                })
+                .decorator((delegate, ctx, req) -> HttpResponse.of(HttpStatus.OK))
                 .build();
     }
 

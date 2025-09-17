@@ -23,11 +23,12 @@ import java.util.function.BiFunction;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
 
 import com.linecorp.armeria.common.RequestContext;
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.internal.common.JacksonUtil;
+import com.linecorp.armeria.internal.server.annotation.AnnotatedServiceLogUtil;
 
 /**
  * A builder implementation for {@link JsonLogFormatter}.
@@ -36,10 +37,14 @@ import com.linecorp.armeria.internal.common.JacksonUtil;
 public final class JsonLogFormatterBuilder
         extends AbstractLogFormatterBuilder<JsonLogFormatterBuilder, JsonNode> {
 
-    @Nullable
     private ObjectMapper objectMapper;
 
-    JsonLogFormatterBuilder() {}
+    JsonLogFormatterBuilder() {
+        objectMapper = JacksonUtil.newDefaultObjectMapper();
+        // AnnotatedService can easily have parameters that are not readily serializable
+        objectMapper.disable(SerializationFeature.FAIL_ON_EMPTY_BEANS);
+        AnnotatedServiceLogUtil.customize(objectMapper);
+    }
 
     /**
      * Sets the {@link ObjectMapper} that will be used to convert an object into a JSON format message.
@@ -53,8 +58,7 @@ public final class JsonLogFormatterBuilder
      * Returns a newly-created JSON {@link LogFormatter} based on the properties of this builder.
      */
     public LogFormatter build() {
-        final ObjectMapper objectMapper = this.objectMapper != null ?
-                                          this.objectMapper : JacksonUtil.newDefaultObjectMapper();
+        final ObjectMapper objectMapper = this.objectMapper;
         final HeadersSanitizer<JsonNode> defaultHeadersSanitizer =
                 defaultHeadersSanitizer(objectMapper);
         final BiFunction<? super RequestContext, Object, JsonNode> defaultContentSanitizer =

@@ -100,7 +100,7 @@ class LoggingServiceTest {
                 LoggingService.builder()
                               .logWriter(LogWriter.of(logger))
                               .newDecorator().apply(delegate);
-
+        ctx.logBuilder().responseHeaders(ResponseHeaders.of(200));
         service.serve(ctx, ctx.request());
         verify(logger, times(2)).isDebugEnabled();
     }
@@ -128,14 +128,24 @@ class LoggingServiceTest {
 
     @MethodSource("expectedException")
     @ParameterizedTest
-    void shouldNotLogHttpStatusAndResponseExceptions(Exception exception) throws Exception {
+    void shouldLogHttpStatusAndResponseExceptionsWhenServerError(Exception exception) throws Exception {
         final ServiceRequestContext ctx = serviceRequestContext();
         final Logger logger = LoggingTestUtil.newMockLogger(ctx, capturedCause);
         final Throwable cause = exception.getCause();
+
+        if (exception instanceof HttpResponseException) {
+            // Set the response headers because this test case doesn't use HttpResponseSubscriber which
+            // sets the response headers.
+            ctx.logBuilder().responseHeaders(ResponseHeaders.of(200));
+        }
+
         ctx.logBuilder().endResponse(exception);
 
         if (cause == null) {
             when(logger.isDebugEnabled()).thenReturn(true);
+            if (exception instanceof HttpStatusException) {
+                when(logger.isWarnEnabled()).thenReturn(true);
+            }
         } else {
             when(logger.isWarnEnabled()).thenReturn(true);
         }
@@ -146,10 +156,18 @@ class LoggingServiceTest {
 
         service.serve(ctx, ctx.request());
 
+        // cause != null => failure response
+        // 500 status (HttpStatusException) => failure response
+
         if (cause == null) {
             // Log a response without an HttpResponseException or HttpStatusException
             verify(logger).debug(matches(".*Request:.*headers=\\[:method=GET, :path=/].*"));
-            verify(logger).debug(matches(".*Response:.*"));
+            if (exception instanceof HttpStatusException) {
+                // 500 status code
+                verify(logger).warn(matches(".*Response:.*"));
+            } else {
+                verify(logger).debug(matches(".*Response:.*"));
+            }
         } else {
             verify(logger).warn(matches(".*Request:.*headers=\\[:method=GET, :path=/].*"));
             verify(logger).warn(matches(".*Response:.*cause=" + cause.getClass().getName() + ".*"),
@@ -215,7 +233,7 @@ class LoggingServiceTest {
         // Check if logs at WARN level if there are headers we're looking for.
         service.serve(ctx, ctx.request());
         verify(logger, never()).isInfoEnabled();
-        verify(logger, times(2)).isWarnEnabled();
+        verify(logger, times(3)).isWarnEnabled();
         verify(logger).warn(matches(".*Request:.*headers=\\[:method=GET, :path=/, x-req=test, x-res=test].*"));
         verify(logger).warn(matches(".*Response:.*"));
         verifyNoMoreInteractions(logger);
@@ -251,7 +269,7 @@ class LoggingServiceTest {
 
         // Check if logs at INFO level if there are no headers we're looking for.
         service.serve(ctx, ctx.request());
-        verify(logger, times(2)).isInfoEnabled();
+        verify(logger, times(3)).isInfoEnabled();
         verify(logger, never()).isWarnEnabled();
         verify(logger).info(matches(".*Request:.*headers=\\[:method=GET, :path=/].*"));
         verify(logger).info(matches(".*Response:.*"));
@@ -515,10 +533,10 @@ class LoggingServiceTest {
 
         service.serve(ctx, ctx.request());
 
-        // Ensure the request content (the phone number 333-490-4499) is sanitized.
-        verify(logger, times(2)).isInfoEnabled();
+        verify(logger, times(3)).isInfoEnabled();
 
         // verify request and response log
+        // Ensure the request content (the phone number 333-490-4499) is sanitized.
         verify(logger, times(2)).info(argThat((String text) -> !text.contains("333-490-4499")));
         verifyNoMoreInteractions(logger);
     }
@@ -556,10 +574,10 @@ class LoggingServiceTest {
 
         service.serve(ctx, ctx.request());
 
-        // Ensure the request content (the phone number 333-490-4499) is sanitized.
-        verify(logger, times(2)).isInfoEnabled();
+        verify(logger, times(3)).isInfoEnabled();
 
         // verify request and response log
+        // Ensure the request content (the phone number 333-490-4499) is sanitized.
         verify(logger, times(2)).info(argThat((String text) -> !text.contains("333-490-4499")));
         verifyNoMoreInteractions(logger);
     }

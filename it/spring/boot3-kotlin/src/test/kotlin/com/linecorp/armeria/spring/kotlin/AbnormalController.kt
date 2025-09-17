@@ -25,13 +25,18 @@ import org.springframework.web.bind.annotation.ResponseBody
  * This controller returns a JSON with an incorrect content type header.
  */
 @Controller
-class AbnormalController(private val objectMapper: ObjectMapper) {
+class AbnormalController(
+    private val objectMapper: ObjectMapper,
+) {
     @GetMapping(value = ["/abnormal"], produces = ["text/plain;charset=utf-8"])
     @ResponseBody
-    fun abnormal(): ResponseEntity<String> {
-        return ResponseEntity.ok()
+    fun abnormal(): ResponseEntity<String> =
+        ResponseEntity
+            .ok()
             .body(objectMapper.writeValueAsString(Abnormal(abnormal = true, dummyText = "output")))
-    }
 }
 
-data class Abnormal(val abnormal: Boolean, val dummyText: String)
+data class Abnormal(
+    val abnormal: Boolean,
+    val dummyText: String,
+)

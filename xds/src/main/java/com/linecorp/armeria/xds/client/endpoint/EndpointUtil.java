@@ -23,10 +23,10 @@ import com.google.protobuf.Duration;
 
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.endpoint.EndpointSelectionStrategy;
-import com.linecorp.armeria.client.endpoint.EndpointWeightTransition;
 import com.linecorp.armeria.client.endpoint.WeightRampingUpStrategyBuilder;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.loadbalancer.WeightTransition;
 import com.linecorp.armeria.internal.client.endpoint.EndpointAttributeKeys;
 
 import io.envoyproxy.envoy.config.cluster.v3.Cluster;
@@ -99,8 +99,9 @@ final class EndpointUtil {
             if (slowStartConfig.hasMinWeightPercent()) {
                 minWeightPercent = slowStartConfig.getMinWeightPercent().getValue();
             }
-            builder.transition(EndpointWeightTransition.aggression(aggression, minWeightPercent));
+            builder.weightTransition(WeightTransition.aggression(aggression, minWeightPercent));
         }
+        builder.timestampFunction(EndpointAttributeKeys::createdAtNanos);
         return builder.build();
     }
 

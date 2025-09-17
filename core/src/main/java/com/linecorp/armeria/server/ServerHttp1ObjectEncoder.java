@@ -181,7 +181,7 @@ final class ServerHttp1ObjectEncoder extends Http1ObjectEncoder implements Serve
                 // Response headers were written already. This may occur Http1RequestDecoder sends an error
                 // response while HttpResponseSubscriber writes a response headers and then waits for bodies.
                 ReferenceCountUtil.release(obj);
-                return writeReset(currentId, 1, Http2Error.PROTOCOL_ERROR, false);
+                return writeReset(currentId, 1, Http2Error.PROTOCOL_ERROR);
             }
             if (webSocketUpgraded ||
                 ((HttpResponse) obj).status().codeClass() != HttpStatusClass.INFORMATIONAL) {

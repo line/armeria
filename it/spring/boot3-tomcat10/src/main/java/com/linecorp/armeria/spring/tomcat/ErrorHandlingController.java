@@ -63,10 +63,12 @@ public class ErrorHandlingController {
 
     @ExceptionHandler(BaseException.class)
     public ResponseEntity<Map<String, Object>> onBaseException(Throwable t) {
-        final Map<String, Object> body = ImmutableMap.<String, Object>builder()
-                                                     .put("status", HttpStatus.INTERNAL_SERVER_ERROR.value())
-                                                     .put("message", t.getMessage())
-                                                     .build();
+        final String message = t.getMessage();
+        final Map<String, Object> body =
+                ImmutableMap.<String, Object>builder()
+                            .put("status", HttpStatus.INTERNAL_SERVER_ERROR.value())
+                            .put("message", message != null ? message : "An error occurred")
+                            .build();
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(body);
     }
 }

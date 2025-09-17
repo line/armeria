@@ -21,14 +21,20 @@ import static java.util.Objects.requireNonNull;
 import java.util.function.BiConsumer;
 
 import com.linecorp.armeria.common.util.SafeCloseable;
+import com.linecorp.armeria.internal.common.context.ArmeriaContextPropagation;
+
+import io.micrometer.context.ContextSnapshot;
+import io.micrometer.context.ContextSnapshot.Scope;
 
 final class DefaultContextAwareBiConsumer<T, U> implements ContextAwareBiConsumer<T, U> {
     private final RequestContext context;
     private final BiConsumer<T, U> action;
+    private final ContextSnapshot contextSnapshot;
 
     DefaultContextAwareBiConsumer(RequestContext context, BiConsumer<T, U> action) {
         this.context = requireNonNull(context, "context");
         this.action = requireNonNull(action, "action");
+        contextSnapshot = ArmeriaContextPropagation.captureAll();
     }
 
     @Override
@@ -44,7 +50,9 @@ final class DefaultContextAwareBiConsumer<T, U> implements ContextAwareBiConsume
     @Override
     public void accept(T t, U u) {
         try (SafeCloseable ignored = context.push()) {
-            action.accept(t, u);
+            try (Scope ignored2 = contextSnapshot.setThreadLocals()) {
+                action.accept(t, u);
+            }
         }
     }
 }

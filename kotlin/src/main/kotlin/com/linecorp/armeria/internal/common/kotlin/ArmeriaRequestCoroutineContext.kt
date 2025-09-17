@@ -31,12 +31,11 @@ import kotlin.coroutines.CoroutineContext
 )
 class ArmeriaRequestCoroutineContext(
     private val requestContext: ServiceRequestContext,
-) : ThreadContextElement<SafeCloseable>, AbstractCoroutineContextElement(Key) {
+) : AbstractCoroutineContextElement(Key),
+    ThreadContextElement<SafeCloseable> {
     companion object Key : CoroutineContext.Key<ArmeriaRequestCoroutineContext>
 
-    override fun updateThreadContext(context: CoroutineContext): SafeCloseable {
-        return requestContext.push()
-    }
+    override fun updateThreadContext(context: CoroutineContext): SafeCloseable = requestContext.push()
 
     override fun restoreThreadContext(
         context: CoroutineContext,

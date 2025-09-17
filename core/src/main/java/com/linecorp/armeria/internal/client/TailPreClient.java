@@ -35,26 +35,31 @@ import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.RpcResponse;
 
-public final class TailPreClient<I extends Request, O extends Response> implements PreClient<I, O> {
+public final class TailPreClient<I extends Request, O extends Response, C extends Client<I, O>>
+        implements PreClient<I, O> {
 
-    private final Client<I, O> delegate;
+    private final C delegate;
     private final Function<CompletableFuture<O>, O> futureConverter;
     private final BiFunction<ClientRequestContext, Throwable, O> errorResponseFactory;
+    private final BiFunction<ClientRequestContextExtension, C, C> clientCustomizer;
 
-    private TailPreClient(Client<I, O> delegate,
+    private TailPreClient(C delegate,
                           Function<CompletableFuture<O>, O> futureConverter,
-                          BiFunction<ClientRequestContext, Throwable, O> errorResponseFactory) {
+                          BiFunction<ClientRequestContext, Throwable, O> errorResponseFactory,
+                          BiFunction<ClientRequestContextExtension, C, C> clientCustomizer) {
         this.delegate = delegate;
         this.futureConverter = futureConverter;
         this.errorResponseFactory = errorResponseFactory;
+        this.clientCustomizer = clientCustomizer;
     }
 
     public static HttpPreClient of(
             HttpClient httpClient,
             Function<CompletableFuture<HttpResponse>, HttpResponse> futureConverter,
             BiFunction<ClientRequestContext, Throwable, HttpResponse> errorResponseFactory) {
-        final TailPreClient<HttpRequest, HttpResponse> tail =
-                new TailPreClient<>(httpClient, futureConverter, errorResponseFactory);
+        final TailPreClient<HttpRequest, HttpResponse, HttpClient> tail =
+                new TailPreClient<>(httpClient, futureConverter, errorResponseFactory,
+                                    (ctx, delegate) -> ctx.httpClientCustomizer().apply(delegate));
         return tail::execute;
     }
 
@@ -62,8 +67,9 @@ public final class TailPreClient<I extends Request, O extends Response> implemen
             RpcClient rpcClient,
             Function<CompletableFuture<RpcResponse>, RpcResponse> futureConverter,
             BiFunction<ClientRequestContext, Throwable, RpcResponse> errorResponseFactory) {
-        final TailPreClient<RpcRequest, RpcResponse> tail =
-                new TailPreClient<>(rpcClient, futureConverter, errorResponseFactory);
+        final TailPreClient<RpcRequest, RpcResponse, RpcClient> tail =
+                new TailPreClient<>(rpcClient, futureConverter, errorResponseFactory,
+                                    (ctx, delegate) -> ctx.rpcClientCustomizer().apply(delegate));
         return tail::execute;
     }
 
@@ -71,7 +77,8 @@ public final class TailPreClient<I extends Request, O extends Response> implemen
     public O execute(PreClientRequestContext ctx, I req) {
         final ClientRequestContextExtension ctxExt = ctx.as(ClientRequestContextExtension.class);
         assert ctxExt != null;
-        return ClientUtil.initContextAndExecuteWithFallback(delegate, ctxExt,
-                                                            futureConverter, errorResponseFactory, req);
+        final Client<I, O> delegate0 = clientCustomizer.apply(ctxExt, delegate);
+        return ClientUtil.initContextAndExecuteWithFallback(delegate0, ctxExt,
+                                                            futureConverter, errorResponseFactory, req, true);
     }
 }

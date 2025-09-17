@@ -25,6 +25,7 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
 /**
  * A naming rule to map {@link QueryParams} of an {@link HttpRequest} to fields in a {@link Message} for
  * HTTP-JSON transcoding endpoint.
+ * If multiple rules are specified, the first rule is tried first, then the second rule, and so on.
  */
 @UnstableApi
 public enum HttpJsonTranscodingQueryParamMatchRule {
@@ -42,5 +43,10 @@ public enum HttpJsonTranscodingQueryParamMatchRule {
     /**
      * Uses the original fields in .proto files to match {@link QueryParams} of an {@link HttpRequest}.
      */
-    ORIGINAL_FIELD
+    ORIGINAL_FIELD,
+    /**
+     * Uses the {@code json_name} field option in .proto files if exists to match {@link QueryParams} of an
+     * {@link HttpRequest}.
+     */
+    JSON_NAME
 }

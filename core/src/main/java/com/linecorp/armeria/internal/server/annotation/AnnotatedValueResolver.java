@@ -48,6 +48,7 @@ import java.util.EnumSet;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.ServiceLoader;
@@ -63,6 +64,7 @@ import com.google.common.base.Ascii;
 import com.google.common.base.MoreObjects;
 import com.google.common.base.Splitter;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.primitives.Primitives;
 
@@ -458,6 +460,18 @@ final class AnnotatedValueResolver {
         final Param param = annotatedElement.getAnnotation(Param.class);
         if (param != null) {
             final String name = findName(typeElement, param.value());
+            // If the parameter is of type Map and the @Param annotation does not specify a value,
+            // map all query parameters into the Map.
+            if (Map.class.isAssignableFrom(type)) {
+                if (DefaultValues.isSpecified(param.value())) {
+                    throw new IllegalArgumentException(
+                            String.format("Invalid @Param annotation on Map parameter: '%s'. " +
+                                          "The @Param annotation specifies a value ('%s'), " +
+                                          "which is not allowed. ",
+                                          annotatedElement, param.value()));
+                }
+                return ofQueryParamMap(name, annotatedElement, typeElement, type, description);
+            }
             if (type == File.class || type == Path.class || type == MultipartFile.class) {
                 return ofFileParam(name, annotatedElement, typeElement, type, description);
             }
@@ -582,6 +596,67 @@ final class AnnotatedValueResolver {
                 .resolver(resolver(ctx -> ctx.queryParams().getAll(name),
                                    () -> "Cannot resolve a value from a query parameter: " + name,
                                    queryDelimiter))
+                .build();
+    }
+
+    private static AnnotatedValueResolver ofQueryParamMap(String name,
+                                                          AnnotatedElement annotatedElement,
+                                                          AnnotatedElement typeElement, Class<?> type,
+                                                          DescriptionInfo description) {
+        final Type valueType = ((ParameterizedType) ((Parameter) typeElement).getParameterizedType())
+                .getActualTypeArguments()[1];
+        final Class<?> rawValueType = ClassUtil.typeToClass(valueType);
+        assert rawValueType != null;
+
+        if (valueType instanceof ParameterizedType && !(List.class.isAssignableFrom(rawValueType) ||
+                                                        Set.class.isAssignableFrom(rawValueType))) {
+            throw new IllegalArgumentException(
+                    "Invalid parameterized map value type: " + rawValueType +
+                    " (expected List or Set)");
+        }
+
+        final BiFunction<AnnotatedValueResolver, ResolverContext, Object> biFunction;
+
+        if (Set.class.isAssignableFrom(rawValueType)) {
+            biFunction = (resolver, ctx) -> ctx.queryParams().stream()
+                                               .collect(toImmutableMap(
+                                                       Entry::getKey,
+                                                       e -> ImmutableSet.of(e.getValue()),
+                                                       (existing, replacement) ->
+                                                               ImmutableSet.<String>builder()
+                                                                           .addAll(existing)
+                                                                           .addAll(replacement)
+                                                                           .build()
+                                               ));
+        } else if (List.class.isAssignableFrom(rawValueType) ||
+                   Collection.class.isAssignableFrom(rawValueType) ||
+                   Iterable.class.isAssignableFrom(rawValueType)
+        ) {
+            biFunction = (resolver, ctx) -> ctx.queryParams().stream()
+                                               .collect(toImmutableMap(
+                                                       Entry::getKey,
+                                                       e -> ImmutableList.of(e.getValue()),
+                                                       (existing, replacement) ->
+                                                               ImmutableList.<String>builder()
+                                                                            .addAll(existing)
+                                                                            .addAll(replacement)
+                                                                            .build()
+                                               ));
+        } else {
+            biFunction = (resolver, ctx) -> ctx.queryParams().stream()
+                                               .collect(toImmutableMap(
+                                                       Entry::getKey,
+                                                       Entry::getValue,
+                                                       (existing, replacement) -> replacement
+                                               ));
+        }
+
+        return new Builder(annotatedElement, type, name)
+                .annotationType(Param.class)
+                .typeElement(typeElement)
+                .description(description)
+                .aggregation(AggregationStrategy.FOR_FORM_DATA)
+                .resolver(biFunction)
                 .build();
     }
 
@@ -982,6 +1057,7 @@ final class AnnotatedValueResolver {
 
     @Nullable
     private final EnumConverter<?> enumConverter;
+    private final AnnotatedBeanFieldInfo beanFieldInfo;
 
     @Nullable
     private final BeanFactoryId beanFactoryId;
@@ -999,7 +1075,8 @@ final class AnnotatedValueResolver {
                                    DescriptionInfo description,
                                    BiFunction<AnnotatedValueResolver, ResolverContext, Object> resolver,
                                    @Nullable BeanFactoryId beanFactoryId,
-                                   AggregationStrategy aggregationStrategy) {
+                                   AggregationStrategy aggregationStrategy,
+                                   AnnotatedBeanFieldInfo beanFieldInfo) {
         this.annotationType = annotationType;
         this.httpElementName = httpElementName;
         this.isPathVariable = isPathVariable;
@@ -1014,6 +1091,7 @@ final class AnnotatedValueResolver {
         this.beanFactoryId = beanFactoryId;
         this.aggregationStrategy = requireNonNull(aggregationStrategy, "aggregationStrategy");
         enumConverter = enumConverter(elementType);
+        this.beanFieldInfo = beanFieldInfo;
 
         // Must be called after initializing 'enumConverter'.
         this.defaultValue = defaultValue != null ? convert(defaultValue, elementType, enumConverter)
@@ -1135,6 +1213,10 @@ final class AnnotatedValueResolver {
                                            httpElementName);
     }
 
+    AnnotatedBeanFieldInfo beanFieldInfo() {
+        return beanFieldInfo;
+    }
+
     @Override
     public String toString() {
         return MoreObjects.toStringHelper(this).omitNullValues()
@@ -1158,7 +1240,7 @@ final class AnnotatedValueResolver {
 
     private static final class Builder {
         private final AnnotatedElement annotatedElement;
-        private final Type type;
+        private final Class<?> type;
         private final String httpElementName;
         private AnnotatedElement typeElement;
         @Nullable
@@ -1174,7 +1256,7 @@ final class AnnotatedValueResolver {
         private AggregationStrategy aggregation = AggregationStrategy.NONE;
         private boolean warnedRedundantUse;
 
-        private Builder(AnnotatedElement annotatedElement, Type type, String name) {
+        private Builder(AnnotatedElement annotatedElement, Class<?> type, String name) {
             this.annotatedElement = requireNonNull(annotatedElement, "annotatedElement");
             this.type = requireNonNull(type, "type");
             httpElementName = requireNonNull(name, "name");
@@ -1355,10 +1437,12 @@ final class AnnotatedValueResolver {
                 }
             }
 
+            final AnnotatedBeanFieldInfo beanFieldInfo =
+                    new AnnotatedBeanFieldInfo(typeElement, type, httpElementName);
             return new AnnotatedValueResolver(annotationType, httpElementName, pathVariable, shouldExist,
                                               isOptional, containerType, elementType, rawType,
                                               parameterizedElementType, defaultValue, description, resolver,
-                                              beanFactoryId, aggregation);
+                                              beanFactoryId, aggregation, beanFieldInfo);
         }
 
         private void warnRedundantUse(String whatWasUsed1, @Nullable String whatWasUsed2) {

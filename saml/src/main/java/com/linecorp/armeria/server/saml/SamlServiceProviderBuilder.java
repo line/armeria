@@ -378,10 +378,9 @@ public final class SamlServiceProviderBuilder {
                                      new SamlAssertionConsumerConfigBuilder(
                                              this, ofHttpRedirect("/saml/acs/redirect")).build());
         } else {
-            // If there is only one ACS, it will be automatically a default ACS.
-            if (acsConfigBuilders.size() == 1) {
-                acsConfigBuilders.get(0).asDefault();
-            }
+            // Make the first ACS endpoint as default since there's no way to specify a default ACS endpoint
+            // at the moment.
+            acsConfigBuilders.get(0).asDefault();
 
             assertionConsumerConfigs = acsConfigBuilders.stream()
                                                         .map(SamlAssertionConsumerConfigBuilder::build)

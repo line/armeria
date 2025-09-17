@@ -155,8 +155,10 @@ class MultiConfigSourceTest {
             // Updates are propagated for the initial value
             final ClusterLoadAssignment expected =
                     cache2.getSnapshot(GROUP).endpoints().resources().get("cluster1");
-            assertThat(listenerSnapshot.routeSnapshot().clusterSnapshots()
-                                       .get(0).endpointSnapshot().xdsResource().resource()).isEqualTo(expected);
+            assertThat(listenerSnapshot.routeSnapshot().virtualHostSnapshots().get(0)
+                                       .routeEntries().get(0)
+                                       .clusterSnapshot()
+                                       .endpointSnapshot().xdsResource().resource()).isEqualTo(expected);
 
             await().pollDelay(100, TimeUnit.MILLISECONDS)
                    .untilAsserted(() -> assertThat(watcher.events()).isEmpty());
@@ -175,8 +177,10 @@ class MultiConfigSourceTest {
             // Updates are propagated for the initial value
             final ClusterLoadAssignment expected =
                     cache1.getSnapshot(GROUP).endpoints().resources().get("self-cluster1");
-            assertThat(listenerSnapshot.routeSnapshot().clusterSnapshots()
-                                       .get(0).endpointSnapshot().xdsResource().resource()).isEqualTo(expected);
+            assertThat(listenerSnapshot.routeSnapshot()
+                                       .virtualHostSnapshots().get(0)
+                                       .routeEntries().get(0).clusterSnapshot()
+                                       .endpointSnapshot().xdsResource().resource()).isEqualTo(expected);
 
             await().pollDelay(100, TimeUnit.MILLISECONDS)
                    .untilAsserted(() -> assertThat(watcher.events()).isEmpty());
@@ -195,8 +199,10 @@ class MultiConfigSourceTest {
             // Updates are propagated for the initial value
             final ClusterLoadAssignment expected =
                     cache2.getSnapshot(GROUP).endpoints().resources().get("self-cluster2");
-            assertThat(listenerSnapshot.routeSnapshot().clusterSnapshots()
-                                       .get(0).endpointSnapshot().xdsResource().resource()).isEqualTo(expected);
+            assertThat(listenerSnapshot.routeSnapshot()
+                                       .virtualHostSnapshots().get(0)
+                                       .routeEntries().get(0).clusterSnapshot()
+                                       .endpointSnapshot().xdsResource().resource()).isEqualTo(expected);
 
             await().pollDelay(100, TimeUnit.MILLISECONDS)
                    .untilAsserted(() -> assertThat(watcher.events()).isEmpty());

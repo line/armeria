@@ -15,6 +15,8 @@
  */
 package com.linecorp.armeria.common;
 
+import static com.google.common.collect.ImmutableSet.toImmutableSet;
+
 import java.io.IOException;
 import java.net.InetAddress;
 import java.nio.channels.ClosedChannelException;
@@ -23,6 +25,7 @@ import java.time.Duration;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
 import java.util.ServiceLoader;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
@@ -59,6 +62,7 @@ import com.linecorp.armeria.common.util.TlsEngineType;
 import com.linecorp.armeria.common.util.TransportType;
 import com.linecorp.armeria.internal.common.FlagsLoaded;
 import com.linecorp.armeria.internal.common.util.SslContextUtil;
+import com.linecorp.armeria.internal.common.util.TransportTypeProvider;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.MultipartRemovalStrategy;
 import com.linecorp.armeria.server.ServerBuilder;
@@ -68,6 +72,7 @@ import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.ServiceWithRoutes;
 import com.linecorp.armeria.server.TransientService;
 import com.linecorp.armeria.server.TransientServiceOption;
+import com.linecorp.armeria.server.annotation.AnnotatedService;
 import com.linecorp.armeria.server.annotation.ExceptionHandler;
 import com.linecorp.armeria.server.annotation.ExceptionVerbosity;
 import com.linecorp.armeria.server.file.FileService;
@@ -90,6 +95,7 @@ import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.resolver.DefaultAddressResolverGroup;
 import io.netty.resolver.dns.DnsNameResolverTimeoutException;
 import io.netty.util.ReferenceCountUtil;
+import io.netty.util.Version;
 
 /**
  * The system properties that affect Armeria's runtime behavior. The priority or each flag is determined
@@ -296,6 +302,10 @@ public final class Flags {
             getValue(FlagsProvider::defaultHttp2InitialStreamWindowSize,
                      "defaultHttp2InitialStreamWindowSize", value -> value > 0);
 
+    private static final float DEFAULT_HTTP2_STREAM_WINDOW_UPDATE_RATIO =
+            getValue(FlagsProvider::defaultHttp2StreamWindowUpdateRatio,
+                     "defaultHttp2InitialStreamWindowSize", value -> value > 0 && value <= 1.0f);
+
     private static final int DEFAULT_HTTP2_MAX_FRAME_SIZE =
             getValue(FlagsProvider::defaultHttp2MaxFrameSize, "defaultHttp2MaxFrameSize",
                      value -> value >= Http2CodecUtil.MAX_FRAME_SIZE_LOWER_BOUND &&
@@ -442,6 +452,9 @@ public final class Flags {
 
     private static final ResponseTimeoutMode RESPONSE_TIMEOUT_MODE =
             getValue(FlagsProvider::responseTimeoutMode, "responseTimeoutMode");
+
+    private static final boolean ANNOTATED_SERVICE_CONTENT_LOGGING =
+            getValue(FlagsProvider::annotatedServiceContentLogging, "annotatedServiceContentLogging");
 
     /**
      * Returns the specification of the {@link Sampler} that determines whether to retain the stack
@@ -1109,6 +1122,23 @@ public final class Flags {
     }
 
     /**
+     * Returns the default value of the {@link ServerBuilder#http2StreamWindowUpdateRatio(float)} and
+     * {@link ClientFactoryBuilder#http2StreamWindowUpdateRatio(float)}.
+     * Note that this flag has no effect if a user specified the value explicitly via
+     * {@link ServerBuilder#http2StreamWindowUpdateRatio(float)} or
+     * {@link ClientFactoryBuilder#http2StreamWindowUpdateRatio(float)}.
+     *
+     * <p>The default value of this flag is
+     * {@value DefaultFlagsProvider#DEFAULT_HTTP2_STREAM_WINDOW_UPDATE_RATIO}.
+     * Specify the {@code -Dcom.linecorp.armeria.defaultHttp2StreamWindowUpdateRatio=<float>} JVM option
+     * to override the default value.
+     */
+    @UnstableApi
+    public static Float defaultHttp2StreamWindowUpdateRatio() {
+        return DEFAULT_HTTP2_STREAM_WINDOW_UPDATE_RATIO;
+    }
+
+    /**
      * Returns the default value of the {@link ServerBuilder#http2MaxFrameSize(int)} and
      * {@link ClientFactoryBuilder#http2MaxFrameSize(int)} option.
      * Note that this flag has no effect if a user specified the value explicitly via
@@ -1661,6 +1691,18 @@ public final class Flags {
         return RESPONSE_TIMEOUT_MODE;
     }
 
+    /**
+     * Returns whether {@link AnnotatedService} should leave request/response content logs
+     * by default when a {@link LoggingService} is added.
+     *
+     * <p>By default, this option is enabled. Specify the
+     * {@code -Dcom.linecorp.armeria.annotatedServiceContentLogging=false} JVM option to
+     * override the default value.
+     */
+    public static boolean annotatedServiceContentLogging() {
+        return ANNOTATED_SERVICE_CONTENT_LOGGING;
+    }
+
     @Nullable
     private static String nullableCaffeineSpec(Function<FlagsProvider, String> method, String flagName) {
         return caffeineSpec(method, flagName, true);
@@ -1784,5 +1826,39 @@ public final class Flags {
     // to ensure that all static variables defined beforehand are initialized.
     static {
         FlagsLoaded.set();
+
+        if (warnNettyVersions()) {
+            final String howToDisableWarning =
+                    "This means 1) you specified Netty versions inconsistently in your build or " +
+                    "2) the Netty JARs in the classpath were repackaged or shaded incorrectly. " +
+                    "Specify the '-Dcom.linecorp.armeria.warnNettyVersions=false' JVM option to " +
+                    "disable this warning at the risk of unexpected Netty behavior, if you think " +
+                    "it is a false positive.";
+
+            final Map<String, Version> nettyVersions =
+                    Version.identify(TransportTypeProvider.class.getClassLoader());
+
+            final Set<String> distinctNettyVersions = nettyVersions.values().stream().filter(v -> {
+                final String artifactId = v.artifactId();
+                return artifactId != null &&
+                       artifactId.startsWith("netty") &&
+                       !artifactId.startsWith("netty-incubator") &&
+                       !artifactId.startsWith("netty-tcnative");
+            }).map(Version::artifactVersion).collect(toImmutableSet());
+
+            switch (distinctNettyVersions.size()) {
+                case 0:
+                    logger.warn("Using Netty with unknown version. {}", howToDisableWarning);
+                    break;
+                case 1:
+                    if (logger.isDebugEnabled()) {
+                        logger.debug("Using Netty {}", distinctNettyVersions.iterator().next());
+                    }
+                    break;
+                default:
+                    logger.warn("Inconsistent Netty versions detected: {} {}",
+                                nettyVersions, howToDisableWarning);
+            }
+        }
     }
 }

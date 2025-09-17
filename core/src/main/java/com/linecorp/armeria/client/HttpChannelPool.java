@@ -161,7 +161,8 @@ final class HttpChannelPool implements AsyncCloseable {
 
         if (proxyConfig instanceof ConnectProxyConfig && ((ConnectProxyConfig) proxyConfig).useTls()) {
             final SslContext sslCtx = bootstraps.getOrCreateSslContext(proxyAddress, desiredProtocol);
-            ch.pipeline().addFirst(sslCtx.newHandler(ch.alloc()));
+            ch.pipeline().addFirst(sslCtx.newHandler(ch.alloc(), proxyAddress.getHostString(),
+                                                     proxyAddress.getPort()));
             if (bootstraps.shouldReleaseSslContext(sslCtx)) {
                 ch.closeFuture().addListener(unused -> bootstraps.releaseSslContext(sslCtx));
             }
@@ -356,7 +357,9 @@ final class HttpChannelPool implements AsyncCloseable {
             notifyConnect(desiredProtocol, key,
                           eventLoop.newFailedFuture(
                                   new SessionProtocolNegotiationException(
-                                          desiredProtocol, "previously failed negotiation")),
+                                          desiredProtocol,
+                                          "previously failed negotiation (remoteAddress: " +
+                                          remoteAddress + ')')),
                           promise, timingsBuilder);
             return;
         }

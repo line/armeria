@@ -1192,7 +1192,7 @@ public interface StreamMessage<T> extends Publisher<T> {
      */
     @UnstableApi
     default StreamMessage<T> endWith(Function<@Nullable Throwable, ? extends @Nullable T> finalizer) {
-        return new SurroundingPublisher<>(null, this, finalizer);
+        return SurroundingPublisher.of(null, this, finalizer);
     }
 
     /**

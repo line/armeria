@@ -110,7 +110,7 @@ public interface CircuitBreakerRuleWithContent<T extends Response> {
      * Returns a {@link CircuitBreakerRuleWithContent} that combines the specified
      * {@link CircuitBreakerRuleWithContent}s.
      */
-    @SuppressWarnings("OptionalGetWithoutIsPresent")
+    @SuppressWarnings({ "OptionalGetWithoutIsPresent", "NullAway" })
     static <T extends Response> CircuitBreakerRuleWithContent<T> of(
             Iterable<? extends CircuitBreakerRuleWithContent<T>> circuitBreakerRules) {
         requireNonNull(circuitBreakerRules, "circuitBreakerRules");

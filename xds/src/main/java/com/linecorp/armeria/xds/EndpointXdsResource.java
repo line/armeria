@@ -1,7 +1,7 @@
 /*
- * Copyright 2023 LINE Corporation
+ * Copyright 2025 LY Corporation
  *
- * LINE Corporation licenses this file to you under the Apache License,
+ * LY Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
@@ -19,7 +19,6 @@ package com.linecorp.armeria.xds;
 import com.google.common.base.MoreObjects;
 import com.google.common.base.Objects;
 
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 
 import io.envoyproxy.envoy.config.endpoint.v3.ClusterLoadAssignment;
@@ -28,20 +27,12 @@ import io.envoyproxy.envoy.config.endpoint.v3.ClusterLoadAssignment;
  * A resource object for a {@link ClusterLoadAssignment}.
  */
 @UnstableApi
-public final class EndpointXdsResource extends XdsResourceWithPrimer<EndpointXdsResource> {
+public final class EndpointXdsResource implements XdsResource {
 
     private final ClusterLoadAssignment clusterLoadAssignment;
-    @Nullable
-    private final XdsResource primer;
 
     EndpointXdsResource(ClusterLoadAssignment clusterLoadAssignment) {
         this.clusterLoadAssignment = clusterLoadAssignment;
-        primer = null;
-    }
-
-    EndpointXdsResource(ClusterLoadAssignment clusterLoadAssignment, XdsResource primer) {
-        this.clusterLoadAssignment = clusterLoadAssignment;
-        this.primer = primer;
     }
 
     @Override
@@ -60,20 +51,6 @@ public final class EndpointXdsResource extends XdsResourceWithPrimer<EndpointXds
     }
 
     @Override
-    EndpointXdsResource withPrimer(@Nullable XdsResource primer) {
-        if (primer == null) {
-            return this;
-        }
-        return new EndpointXdsResource(clusterLoadAssignment, primer);
-    }
-
-    @Override
-    @Nullable
-    XdsResource primer() {
-        return primer;
-    }
-
-    @Override
     public boolean equals(Object object) {
         if (this == object) {
             return true;
@@ -82,20 +59,18 @@ public final class EndpointXdsResource extends XdsResourceWithPrimer<EndpointXds
             return false;
         }
         final EndpointXdsResource resource = (EndpointXdsResource) object;
-        return Objects.equal(clusterLoadAssignment, resource.clusterLoadAssignment) &&
-               Objects.equal(primer, resource.primer);
+        return Objects.equal(clusterLoadAssignment, resource.clusterLoadAssignment);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hashCode(clusterLoadAssignment, primer);
+        return Objects.hashCode(clusterLoadAssignment);
     }
 
     @Override
     public String toString() {
         return MoreObjects.toStringHelper(this)
                           .add("clusterLoadAssignment", clusterLoadAssignment)
-                          .add("primer", primer)
                           .toString();
     }
 }

@@ -31,6 +31,19 @@ class ExponentialBackoffTest {
         assertThat(backoff.nextDelayMillis(5)).isEqualTo(120);
         assertThat(backoff.nextDelayMillis(6)).isEqualTo(120);
         assertThat(backoff.nextDelayMillis(7)).isEqualTo(120);
+
+        final Backoff backoff2 = Backoff.builderForExponential()
+                .initialDelayMillis(10)
+                .maxDelayMillis(120)
+                .multiplier(3.0)
+                .build();
+        assertThat(backoff2.nextDelayMillis(1)).isEqualTo(10);
+        assertThat(backoff2.nextDelayMillis(2)).isEqualTo(30);
+        assertThat(backoff2.nextDelayMillis(3)).isEqualTo(90);
+        assertThat(backoff2.nextDelayMillis(4)).isEqualTo(120);
+        assertThat(backoff2.nextDelayMillis(5)).isEqualTo(120);
+        assertThat(backoff2.nextDelayMillis(6)).isEqualTo(120);
+        assertThat(backoff2.nextDelayMillis(7)).isEqualTo(120);
     }
 
     @Test
@@ -42,6 +55,17 @@ class ExponentialBackoffTest {
         assertThat(backoff.nextDelayMillis(30)).isEqualTo(5368709120L);
         // Not precomputed, should fallback to computation and return a correct value.
         assertThat(backoff.nextDelayMillis(31)).isEqualTo(10737418240L);
+
+        final Backoff backoff2 = Backoff.builderForExponential()
+                .initialDelayMillis(10)
+                .maxDelayMillis(Long.MAX_VALUE)
+                .multiplier(2.0)
+                .build();
+        assertThat(backoff2.nextDelayMillis(1)).isEqualTo(10);
+        assertThat(backoff2.nextDelayMillis(2)).isEqualTo(20);
+        assertThat(backoff2.nextDelayMillis(3)).isEqualTo(40);
+        assertThat(backoff2.nextDelayMillis(30)).isEqualTo(5368709120L);
+        assertThat(backoff2.nextDelayMillis(31)).isEqualTo(10737418240L);
     }
 
     @Test
@@ -51,5 +75,15 @@ class ExponentialBackoffTest {
         assertThat(backoff.nextDelayMillis(2)).isEqualTo((long) (Long.MAX_VALUE / 3 * 2.0));
         assertThat(backoff.nextDelayMillis(3)).isEqualTo(Long.MAX_VALUE);
         assertThat(backoff.nextDelayMillis(4)).isEqualTo(Long.MAX_VALUE);
+
+        final Backoff backoff2 = Backoff.builderForExponential()
+                .initialDelayMillis(Long.MAX_VALUE / 3)
+                .maxDelayMillis(Long.MAX_VALUE)
+                .multiplier(2.0)
+                .build();
+        assertThat(backoff2.nextDelayMillis(1)).isEqualTo(Long.MAX_VALUE / 3);
+        assertThat(backoff2.nextDelayMillis(2)).isEqualTo((long) (Long.MAX_VALUE / 3 * 2.0));
+        assertThat(backoff2.nextDelayMillis(3)).isEqualTo(Long.MAX_VALUE);
+        assertThat(backoff2.nextDelayMillis(4)).isEqualTo(Long.MAX_VALUE);
     }
 }

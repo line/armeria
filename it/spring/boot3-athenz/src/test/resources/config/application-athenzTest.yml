@@ -1,0 +1,13 @@
+armeria:
+  ports:
+    - port: 0
+      protocols: HTTP
+  athenz:
+    domains: "testing"
+    # zts-uri will by injected by TestContainerTest
+    # zts-uri: "https://localhost:<port>/zts/v1"
+    athenz-private-key: "gen-src/test/resources/docker/certs/test-service/key.pem"
+    athenz-public-key: "gen-src/test/resources/docker/certs/test-service/cert.pem"
+    athenz-ca-cert: "gen-src/test/resources/docker/certs/CAs/athenz_ca_cert.pem"
+  # Set graceful shutdown timeout to 0 to stop the server immediately.
+  graceful-shutdown-quiet-period-millis: 0

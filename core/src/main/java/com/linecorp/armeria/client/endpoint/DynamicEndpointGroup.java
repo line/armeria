@@ -319,6 +319,15 @@ public class DynamicEndpointGroup extends AbstractEndpointGroup implements Liste
         }
     }
 
+    /**
+     * Fails the initialization of this {@link DynamicEndpointGroup} with the specified {@link Throwable}.
+     */
+    @UnstableApi
+    protected final void failInit(Throwable cause) {
+        requireNonNull(cause, "cause");
+        initialEndpointsFuture.completeExceptionally(cause);
+    }
+
     private void maybeCompleteInitialEndpointsFuture(List<Endpoint> endpoints) {
         if (endpoints != UNINITIALIZED_ENDPOINTS && !initialEndpointsFuture.isDone()) {
             initialEndpointsFuture.complete(endpoints);

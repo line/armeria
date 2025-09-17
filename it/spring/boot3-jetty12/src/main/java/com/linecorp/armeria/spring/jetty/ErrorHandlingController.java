@@ -63,9 +63,10 @@ public class ErrorHandlingController {
 
     @ExceptionHandler(BaseException.class)
     public ResponseEntity<Map<String, Object>> onBaseException(Throwable t) {
+        final String message = t.getMessage() != null ? t.getMessage() : "An error occurred";
         final Map<String, Object> body = ImmutableMap.<String, Object>builder()
                                                      .put("status", HttpStatus.INTERNAL_SERVER_ERROR.value())
-                                                     .put("message", t.getMessage())
+                                                     .put("message", message)
                                                      .build();
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(body);
     }

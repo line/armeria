@@ -487,6 +487,13 @@ public final class MediaType {
     public static final MediaType APPLICATION_BINARY = createConstant(APPLICATION_TYPE, "binary");
 
     /**
+     * As described in <a href="https://www.rfc-editor.org/rfc/rfc8949.html">RFC 8949</a>, this
+     * constant ({@code application/cbor}) is used for the Concise Binary Object Representation (CBOR)
+     * data format.
+     */
+    public static final MediaType CBOR = createConstant(APPLICATION_TYPE, "cbor");
+
+    /**
      * <a href="https://datatracker.ietf.org/doc/rfc7946/">GeoJSON Format</a>, a geospatial data interchange format
      * based on JSON.
      */

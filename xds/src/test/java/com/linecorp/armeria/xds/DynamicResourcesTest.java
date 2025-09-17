@@ -114,7 +114,8 @@ class DynamicResourcesTest {
 
             final Cluster expectedCluster =
                     cache.getSnapshot(GROUP).clusters().resources().get(clusterName);
-            final ClusterSnapshot clusterSnapshot = routeSnapshot.clusterSnapshots().get(0);
+            final ClusterSnapshot clusterSnapshot = routeSnapshot.virtualHostSnapshots().get(0)
+                                                                 .routeEntries().get(0).clusterSnapshot();
             assertThat(clusterSnapshot.xdsResource().resource()).isEqualTo(expectedCluster);
 
             final ClusterLoadAssignment expectedEndpoint =

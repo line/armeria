@@ -41,7 +41,7 @@ import io.fabric8.kubernetes.client.server.mock.EnableKubernetesMockClient;
 
 @EnableKubernetesMockClient(
         crud = true,
-        kubernetesClientBuilderCustomizer = TestKubernetesClientBuilderCustomizer.class)
+        kubernetesClientBuilderCustomizer = FaultInjectingKubernetesClientBuilderCustomizer.class)
 class KubernetesEndpointGroupFaultToleranceTest {
 
     private KubernetesClient client;
@@ -81,7 +81,7 @@ class KubernetesEndpointGroupFaultToleranceTest {
             );
         });
 
-        TestKubernetesClientBuilderCustomizer.injectFault(true);
+        FaultInjectingKubernetesClientBuilderCustomizer.injectFault(true);
         // Add a new pod
         client.pods().resource(pods.get(2)).create();
 
@@ -92,7 +92,7 @@ class KubernetesEndpointGroupFaultToleranceTest {
                 Endpoint.of("2.2.2.2", nodePort)
         );
 
-        TestKubernetesClientBuilderCustomizer.injectFault(false);
+        FaultInjectingKubernetesClientBuilderCustomizer.injectFault(false);
         // Make sure the new pod is added when the fault is recovered.
         await().untilAsserted(() -> {
             final List<Endpoint> endpoints = endpointGroup.endpoints();

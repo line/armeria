@@ -79,6 +79,7 @@ import io.netty.handler.codec.http2.DefaultHttp2ConnectionDecoder;
 import io.netty.handler.codec.http2.DefaultHttp2ConnectionEncoder;
 import io.netty.handler.codec.http2.DefaultHttp2FrameReader;
 import io.netty.handler.codec.http2.DefaultHttp2FrameWriter;
+import io.netty.handler.codec.http2.DefaultHttp2LocalFlowController;
 import io.netty.handler.codec.http2.Http2CodecUtil;
 import io.netty.handler.codec.http2.Http2Connection;
 import io.netty.handler.codec.http2.Http2ConnectionDecoder;
@@ -88,6 +89,7 @@ import io.netty.handler.codec.http2.Http2FrameLogger;
 import io.netty.handler.codec.http2.Http2FrameReader;
 import io.netty.handler.codec.http2.Http2FrameWriter;
 import io.netty.handler.codec.http2.Http2InboundFrameLogger;
+import io.netty.handler.codec.http2.Http2LocalFlowController;
 import io.netty.handler.codec.http2.Http2OutboundFrameLogger;
 import io.netty.handler.codec.http2.Http2Settings;
 import io.netty.handler.flush.FlushConsolidationHandler;
@@ -216,7 +218,7 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
                 p.channel(), H1C, keepAliveHandler, config.http1HeaderNaming()
         );
         p.addLast(TrafficLoggingHandler.SERVER);
-        final HttpServerHandler httpServerHandler = new HttpServerHandler(config,
+        final HttpServerHandler httpServerHandler = new HttpServerHandler(config, p.channel(),
                                                                           gracefulShutdownSupport,
                                                                           responseEncoder,
                                                                           H1C, proxiedAddresses);
@@ -275,6 +277,9 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
                 /* validateHeaders */ true, config.http2MaxHeaderListSize());
         Http2FrameReader reader = new DefaultHttp2FrameReader(headersDecoder);
         reader = new Http2InboundFrameLogger(reader, frameLogger);
+        final Http2LocalFlowController flowController =
+                new DefaultHttp2LocalFlowController(connection, config.http2StreamWindowSizeRatio(), false);
+        connection.local().flowController(flowController);
         return new DefaultHttp2ConnectionDecoder(connection, encoder, reader);
     }
 
@@ -511,7 +516,7 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
         private void addHttp2Handlers(ChannelHandlerContext ctx) {
             final ChannelPipeline p = ctx.pipeline();
             p.addLast(newHttp2ConnectionHandler(p, SCHEME_HTTPS));
-            p.addLast(new HttpServerHandler(config,
+            p.addLast(new HttpServerHandler(config, p.channel(),
                                             gracefulShutdownSupport,
                                             null, H2, proxiedAddresses));
         }
@@ -541,7 +546,7 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
                     config.http1MaxInitialLineLength(),
                     config.http1MaxHeaderSize(),
                     config.http1MaxChunkSize()));
-            final HttpServerHandler httpServerHandler = new HttpServerHandler(config,
+            final HttpServerHandler httpServerHandler = new HttpServerHandler(config, ch,
                                                                               gracefulShutdownSupport,
                                                                               encoder, H1, proxiedAddresses);
             p.addLast(new Http1RequestDecoder(config, ch, SCHEME_HTTPS, encoder, httpServerHandler));
@@ -611,11 +616,11 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
 
             final SSLSession sslSession = ChannelUtil.findSslSession(ch);
             final String protocolText = protocol != null ? protocol.uriText() : "";
-            final String commonName;
+            final String hostname;
             String cipherSuite;
             String tlsProtocol;
             if (sslSession != null) {
-                commonName = firstNonNull(CertificateUtil.getCommonName(sslSession), "");
+                hostname = firstNonNull(CertificateUtil.getHostname(sslSession), "");
                 cipherSuite = sslSession.getCipherSuite();
                 if (cipherSuite == null || DUMMY_CIPHER_SUITE.equals(cipherSuite)) {
                     cipherSuite = "";
@@ -628,14 +633,14 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
                 }
             } else {
                 cipherSuite = "";
-                commonName = "";
+                hostname = "";
                 tlsProtocol = "";
             }
 
             // Create or find the TLS handshake counter and increment it.
             Counter.builder("armeria.server.tls.handshakes")
                    .tags("cipher.suite", cipherSuite,
-                         "common.name", commonName,
+                         "hostname", hostname,
                          "protocol", protocolText,
                          "result", success ? "success" : "failure",
                          "tls.protocol", tlsProtocol)

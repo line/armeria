@@ -257,8 +257,7 @@ public abstract class AbstractRuleBuilder<SELF extends AbstractRuleBuilder<SELF>
             if (ctx.isTimedOut()) {
                 return true;
             }
-            return ex instanceof TimeoutException ||
-                   ex instanceof UnprocessedRequestException && ex.getCause() instanceof TimeoutException;
+            return TimeoutExceptionPredicate.isTimeoutException(ex);
         });
     }
 

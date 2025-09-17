@@ -24,7 +24,9 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 
+import com.linecorp.armeria.client.HttpPreprocessor;
 import com.linecorp.armeria.common.ExchangeType;
+import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.internal.common.grpc.TestServiceImpl;
 import com.linecorp.armeria.server.ServerBuilder;
@@ -69,6 +71,19 @@ class GrpcServicePathTest {
         final TestServiceBlockingStub client = GrpcClients.builder(server.httpUri())
                                                           .pathPrefix(path)
                                                           .build(TestServiceBlockingStub.class);
+        final SimpleResponse response = client.unaryCall(SimpleRequest.newBuilder()
+                                                                      .setResponseSize(10)
+                                                                      .build());
+        assertThat(response.getPayload().getBody().size()).isEqualTo(10);
+    }
+
+    @CsvSource({ "/grpc", "/grpc/" })
+    @ParameterizedTest
+    void preprocessorPrefix(String path) {
+        final TestServiceBlockingStub client =
+                GrpcClients.builder(HttpPreprocessor.of(SessionProtocol.HTTP, server.httpEndpoint()))
+                           .pathPrefix(path)
+                           .build(TestServiceBlockingStub.class);
         final SimpleResponse response = client.unaryCall(SimpleRequest.newBuilder()
                                                                       .setResponseSize(10)
                                                                       .build());

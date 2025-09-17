@@ -17,14 +17,19 @@
 package com.linecorp.armeria.common.brave;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.awaitility.Awaitility.await;
 import static org.mockito.Mockito.when;
+
+import java.util.concurrent.atomic.AtomicReference;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
 
+import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.RequestContext;
@@ -32,6 +37,7 @@ import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.internal.common.brave.TraceContextUtil;
 import com.linecorp.armeria.internal.common.brave.TraceContextUtil.PingPongExtra;
 import com.linecorp.armeria.server.ServiceRequestContext;
+import com.linecorp.armeria.testing.junit5.common.EventLoopExtension;
 
 import brave.propagation.CurrentTraceContext;
 import brave.propagation.CurrentTraceContext.Scope;
@@ -48,6 +54,9 @@ class RequestContextCurrentTraceContextTest {
     private static final CurrentTraceContext currentTraceContext =
             RequestContextCurrentTraceContext.ofDefault();
     private static final TraceContext traceContext = TraceContext.newBuilder().traceId(1).spanId(1).build();
+
+    @RegisterExtension
+    static final EventLoopExtension eventLoopExtension = new EventLoopExtension();
 
     @BeforeEach
     void setUp() {
@@ -83,7 +92,6 @@ class RequestContextCurrentTraceContextTest {
     public void newScope_appliesWhenCurrentRequestContext() {
         try (SafeCloseable requestContextScope = ctx.push()) {
             try (Scope traceContextScope = currentTraceContext.newScope(traceContext)) {
-                assertThat(traceContextScope).hasToString("InitialRequestScope");
                 assertThat(currentTraceContext.get()).isEqualTo(traceContext);
             }
         }
@@ -92,14 +100,13 @@ class RequestContextCurrentTraceContextTest {
     @Test
     public void newScope_closeDoesntClearFirstScope() {
         final TraceContext traceContext2 = TraceContext.newBuilder().traceId(1).spanId(2).build();
+        TraceContextUtil.setTraceContext(ctx, traceContext);
 
         try (SafeCloseable requestContextScope = ctx.push()) {
             try (Scope traceContextScope = currentTraceContext.newScope(traceContext)) {
-                assertThat(traceContextScope).hasToString("InitialRequestScope");
                 assertThat(currentTraceContext.get()).isEqualTo(traceContext);
 
                 try (Scope traceContextScope2 = currentTraceContext.newScope(traceContext2)) {
-                    assertThat(traceContextScope2).hasToString("RequestContextTraceContextScope");
                     assertThat(currentTraceContext.get()).isEqualTo(traceContext2);
                 }
                 assertThat(currentTraceContext.get()).isEqualTo(traceContext);
@@ -112,10 +119,10 @@ class RequestContextCurrentTraceContextTest {
     @Test
     public void newScope_notOnEventLoop() {
         final TraceContext traceContext2 = TraceContext.newBuilder().traceId(1).spanId(2).build();
+        TraceContextUtil.setTraceContext(ctx, traceContext);
 
         try (SafeCloseable requestContextScope = ctx.push()) {
             try (Scope traceContextScope = currentTraceContext.newScope(traceContext)) {
-                assertThat(traceContextScope).hasToString("InitialRequestScope");
                 assertThat(currentTraceContext.get()).isEqualTo(traceContext);
 
                 when(eventLoop.inEventLoop()).thenReturn(false);
@@ -165,5 +172,35 @@ class RequestContextCurrentTraceContextTest {
         TraceContextUtil.PingPongExtra.maybeSetPong(context);
 
         assertThat(extra.isPong()).isTrue();
+    }
+
+    @Test
+    void nonEventLoopPropagation() {
+        final AtomicReference<TraceContext> ref = new AtomicReference<>();
+        final RequestContext ctx = ClientRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
+        try (Scope scope = currentTraceContext.newScope(traceContext)) {
+            ctx.makeContextAware(eventLoopExtension.get()).submit(() -> {
+                final TraceContext traceContext = currentTraceContext.get();
+                ref.set(traceContext);
+            });
+        }
+        await().untilAsserted(() -> assertThat(ref).doesNotHaveNullValue());
+        assertThat(ref.get()).isSameAs(traceContext);
+    }
+
+    @Test
+    void nonEventLoopFallback() {
+        final AtomicReference<TraceContext> ref = new AtomicReference<>();
+        final RequestContext ctx = ClientRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
+        // fallback to the last context set to the RequestContext manually
+        TraceContextUtil.setTraceContext(ctx, traceContext);
+
+        ctx.makeContextAware(eventLoopExtension.get()).submit(() -> {
+            final TraceContext traceContext = currentTraceContext.get();
+            ref.set(traceContext);
+        });
+
+        await().untilAsserted(() -> assertThat(ref).doesNotHaveNullValue());
+        assertThat(ref.get()).isSameAs(traceContext);
     }
 }

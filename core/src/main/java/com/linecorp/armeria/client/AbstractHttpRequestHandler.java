@@ -187,6 +187,7 @@ abstract class AbstractHttpRequestHandler implements ChannelFutureListener {
         }
 
         this.session = session;
+        originalRes.setStreamId(streamId());
         responseWrapper = responseDecoder.addResponse(this, id, originalRes, ctx, ch.eventLoop());
 
         if (timeoutMillis > 0) {
@@ -424,13 +425,12 @@ abstract class AbstractHttpRequestHandler implements ChannelFutureListener {
             state = State.DONE;
             cancel();
             logBuilder.endRequest(cause);
-            return;
+        } else {
+            fail(cause);
         }
 
-        fail(cause);
-
         final Http2Error error;
-        if (Exceptions.isStreamCancelling(cause)) {
+        if (cause instanceof ResponseCompleteException || Exceptions.isStreamCancelling(cause)) {
             error = Http2Error.CANCEL;
         } else {
             error = Http2Error.INTERNAL_ERROR;
@@ -443,7 +443,7 @@ abstract class AbstractHttpRequestHandler implements ChannelFutureListener {
         }
 
         if (ch.isActive()) {
-            encoder.writeReset(id, streamId(), error, false);
+            encoder.writeReset(id, streamId(), error);
             ch.flush();
         }
     }

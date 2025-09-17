@@ -1,14 +1,20 @@
-
-# this builds a thrift binary without library support (only for code generation)
-# because Apache thrift official repo no longer maintain a binary distribution
-FROM centos:centos7 as builder
+# This builds a Thrift binary without library support (only for code generation),
+# because the Apache Thrift official repo no longer maintains a binary distribution
+FROM centos:centos7 AS builder
 
 ENV DEBIAN_FRONTEND=noninteractive
 
-# see https://archive.apache.org/dist/thrift/
-ENV THRIFT_VERSION=0.20.0
+# Since CentOS 7 has reached End of Life, we need to update the mirrors,
+# see https://www.redhat.com/en/blog/centos-linux-has-reached-its-end-life-eol
+# and https://serverfault.com/a/1161847
+RUN sed -i s/mirror.centos.org/vault.centos.org/g /etc/yum.repos.d/CentOS-*.repo && \
+  sed -i s/^#.*baseurl=http/baseurl=http/g /etc/yum.repos.d/CentOS-*.repo && \
+  sed -i s/^mirrorlist=http/#mirrorlist=http/g /etc/yum.repos.d/CentOS-*.repo
 
-# see https://thrift.apache.org/docs/install/centos.html
+# See https://archive.apache.org/dist/thrift/
+ENV THRIFT_VERSION=0.22.0
+
+# See https://thrift.apache.org/docs/install/centos.html
 RUN yum update -y -q && \
   yum -y groupinstall "Development Tools" && \
   yum install -y \
@@ -26,7 +32,7 @@ RUN yum update -y -q && \
 
 ADD https://archive.apache.org/dist/thrift/${THRIFT_VERSION}/thrift-${THRIFT_VERSION}.tar.gz /tmp/thrift.tar.gz
 
-RUN echo "b5d8311a779470e1502c027f428a1db542f5c051c8e1280ccd2163fa935ff2d6 /tmp/thrift.tar.gz" | sha256sum -c && \
+RUN echo "794a0e455787960d9f27ab92c38e34da27e8deeda7a5db0e59dc64a00df8a1e5 /tmp/thrift.tar.gz" | sha256sum -c && \
   tar xzf /tmp/thrift.tar.gz -C /tmp
 
 RUN cd /tmp/thrift-${THRIFT_VERSION} && \

@@ -28,17 +28,21 @@ import io.netty.channel.EventLoop;
 
 /**
  * An HTTP-based preprocessor that intercepts an outgoing request and allows users to
- * customize certain properties before entering the decorating chain. The following
- * illustrates a sample use-case:
+ * customize certain properties before entering the decorating chain.
+ * The following illustrates a sample use-case:
  * <pre>{@code
- * HttpPreprocessor preprocessor = (delegate, ctx, req) -> {
+ * HttpPreprocessor preprocessor1 = (delegate, ctx, req) -> {
+ *     ctx.setSessionProtocol(SessionProtocol.HTTP);
  *     ctx.setEndpointGroup(Endpoint.of("overriding-host"));
  *     return delegate.execute(ctx, req);
  * };
- * WebClient client = WebClient.builder()
- *                             .preprocessor(preprocessor)
+ * HttpPreprocessor preprocessor2 = ...
+ * WebClient client = WebClient.builder(preprocessor1)
+ *                             .preprocessor(preprocessor2)
  *                             .build();
  * }</pre>
+ * Note that clients created solely using a {@link HttpPreprocessor} must set the {@link SessionProtocol}
+ * and {@link EndpointGroup} at the very least.
  */
 @UnstableApi
 @FunctionalInterface

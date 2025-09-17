@@ -215,8 +215,8 @@ class BraveServiceTest {
                                        .build();
 
         final HttpTracing httpTracing = HttpTracing.newBuilder(tracing)
-                                                   .serverRequestParser(ArmeriaHttpServerParser.get())
-                                                   .serverResponseParser(ArmeriaHttpServerParser.get())
+                                                   .serverRequestParser(BraveService.defaultRequestParser)
+                                                   .serverResponseParser(BraveService.defaultResponseParser)
                                                    .build();
 
         final HttpRequest req = HttpRequest.of(RequestHeaders.of(HttpMethod.POST, "/hello/trustin",

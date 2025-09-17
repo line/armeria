@@ -22,6 +22,7 @@ import static com.linecorp.armeria.xds.XdsTestResources.createStaticCluster;
 import static com.linecorp.armeria.xds.XdsTestResources.endpoint;
 import static com.linecorp.armeria.xds.XdsTestResources.localityLbEndpoints;
 import static com.linecorp.armeria.xds.XdsTestResources.staticResourceListener;
+import static com.linecorp.armeria.xds.XdsTestUtil.pollLoadBalancer;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 
@@ -38,7 +39,6 @@ import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.Endpoint;
-import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.common.CommonPools;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
@@ -51,6 +51,7 @@ import com.linecorp.armeria.server.healthcheck.HealthCheckService;
 import com.linecorp.armeria.server.healthcheck.SettableHealthChecker;
 import com.linecorp.armeria.server.logging.LoggingService;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
+import com.linecorp.armeria.xds.ListenerRoot;
 import com.linecorp.armeria.xds.XdsBootstrap;
 import com.linecorp.armeria.xds.XdsTestResources;
 
@@ -166,10 +167,12 @@ class DynamicHealthCheckTest {
                                                  ImmutableList.of(listener), ImmutableList.of(),
                                                  ImmutableList.of(), "v1"));
         try (XdsBootstrap xdsBootstrap = XdsBootstrap.of(bootstrap);
-             EndpointGroup endpointGroup = XdsEndpointGroup.of("listener", xdsBootstrap)) {
-            endpointGroup.whenReady().get();
+             ListenerRoot root = xdsBootstrap.listenerRoot("listener")) {
+
+            final XdsLoadBalancer loadBalancer1 = pollLoadBalancer(root, "cluster", cluster);
+            assertThat(loadBalancer1).isNotNull();
             final ClientRequestContext ctx = ClientRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
-            final Endpoint endpoint = endpointGroup.select(ctx, CommonPools.workerGroup()).get();
+            final Endpoint endpoint = loadBalancer1.select(ctx, ctx.eventLoop()).join();
             assertThat(endpoint.port()).isEqualTo(server1.httpPort());
 
             // now update the health check path
@@ -179,13 +182,14 @@ class DynamicHealthCheckTest {
                                .setHttpHealthCheck(HttpHealthCheck.newBuilder()
                                                                   .setPath("/monitor/healthcheck2"))
                                .build();
-            cluster = createStaticCluster("cluster", loadAssignment).toBuilder().addHealthChecks(hc2).build();
+            cluster = createStaticCluster("cluster", loadAssignment)
+                    .toBuilder().addHealthChecks(hc2).build();
             cache.setSnapshot(GROUP, Snapshot.create(ImmutableList.of(cluster), ImmutableList.of(),
                                                      ImmutableList.of(listener), ImmutableList.of(),
                                                      ImmutableList.of(), "v2"));
 
-            await().untilAsserted(() -> assertThat(endpointGroup.select(ctx, CommonPools.workerGroup())
-                                                                .get().port())
+            final XdsLoadBalancer loadBalancer2 = pollLoadBalancer(root, "cluster", cluster);
+            await().untilAsserted(() -> assertThat(loadBalancer2.select(ctx, ctx.eventLoop()).join().port())
                     .isEqualTo(server2.httpPort()));
 
             await().untilAsserted(() -> {
@@ -193,8 +197,8 @@ class DynamicHealthCheckTest {
                 // trying 4 times should be more than enough
                 for (int i = 0; i < 4; i++) {
                     // after the hc to the first server is updated, requests should only be routed to server2
-                    assertThat(endpointGroup.select(ctx, CommonPools.workerGroup())
-                                            .get().port()).isEqualTo(server2.httpPort());
+                    assertThat(loadBalancer2.select(ctx, ctx.eventLoop()).join().port())
+                            .isEqualTo(server2.httpPort());
                 }
             });
         }
@@ -229,13 +233,13 @@ class DynamicHealthCheckTest {
                                                  ImmutableList.of(listener), ImmutableList.of(),
                                                  ImmutableList.of(), "v3"));
         try (XdsBootstrap xdsBootstrap = XdsBootstrap.of(bootstrap);
-             EndpointGroup endpointGroup = XdsEndpointGroup.of("listener", xdsBootstrap)) {
-            endpointGroup.whenReady().get();
+             ListenerRoot root = xdsBootstrap.listenerRoot("listener")) {
+            final XdsLoadBalancer loadBalancer = pollLoadBalancer(root, "cluster", cluster);
             final ClientRequestContext ctx = ClientRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
             // WeightRampingUpStrategy guarantees that all endpoints will be considered, so
             // trying 4 times should be more than enough
             for (int i = 0; i < 4; i++) {
-                final Endpoint endpoint = endpointGroup.select(ctx, CommonPools.workerGroup()).get();
+                final Endpoint endpoint = loadBalancer.select(ctx, CommonPools.workerGroup()).get();
                 assertThat(endpoint.port()).isEqualTo(server1.httpPort());
             }
             assertThat(server1Hc2CtxRef).hasNullValue();
@@ -256,9 +260,10 @@ class DynamicHealthCheckTest {
                                                      ImmutableList.of(listener), ImmutableList.of(),
                                                      ImmutableList.of(), "v4"));
 
+            final XdsLoadBalancer loadBalancer2 = pollLoadBalancer(root, "cluster", cluster);
             // wait until server 2 is also selected
             await().untilAsserted(() -> {
-                final Endpoint endpoint = endpointGroup.select(ctx, CommonPools.workerGroup()).get();
+                final Endpoint endpoint = loadBalancer2.select(ctx, CommonPools.workerGroup()).get();
                 assertThat(endpoint.port()).isEqualTo(server2.httpPort());
             });
 
@@ -310,14 +315,14 @@ class DynamicHealthCheckTest {
                                                  ImmutableList.of(listener), ImmutableList.of(),
                                                  ImmutableList.of(), "v3"));
         try (XdsBootstrap xdsBootstrap = XdsBootstrap.of(bootstrap);
-             EndpointGroup endpointGroup = XdsEndpointGroup.of("listener", xdsBootstrap)) {
-            endpointGroup.whenReady().get();
+             ListenerRoot root = xdsBootstrap.listenerRoot("listener")) {
+            final XdsLoadBalancer loadBalancer = pollLoadBalancer(root, "cluster", cluster);
             final ClientRequestContext ctx = ClientRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
             // WeightRampingUpStrategy guarantees that all endpoints will be considered, so
             // trying 4 times should be more than enough
             final Set<Integer> healthyPorts = new HashSet<>();
             for (int i = 0; i < 4; i++) {
-                final Endpoint endpoint = endpointGroup.select(ctx, CommonPools.workerGroup()).get();
+                final Endpoint endpoint = loadBalancer.select(ctx, CommonPools.workerGroup()).get();
                 healthyPorts.add(endpoint.port());
             }
             assertThat(healthyPorts).containsExactlyInAnyOrder(server1.httpPort(), server2.httpPort());

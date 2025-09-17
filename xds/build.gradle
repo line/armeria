@@ -2,6 +2,8 @@ dependencies {
     api project(':grpc')
     api libs.controlplane.api
 
+    implementation libs.re2j
+
     testImplementation libs.controlplane.server
     testImplementation libs.controlplane.cache
 }

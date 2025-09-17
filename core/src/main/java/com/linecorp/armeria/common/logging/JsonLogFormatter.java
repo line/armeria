@@ -104,17 +104,18 @@ final class JsonLogFormatter implements LogFormatter {
                 sanitizedHeaders = null;
             }
 
+            JsonNode sanitizedPreview = null;
+            if (RequestLogProperty.REQUEST_CONTENT_PREVIEW.isAvailable(flags)) {
+                final String contentPreview = log.requestContentPreview();
+                if (contentPreview != null) {
+                    sanitizedPreview = requestContentSanitizer.apply(ctx, contentPreview);
+                }
+            }
             JsonNode sanitizedContent = null;
             if (RequestLogProperty.REQUEST_CONTENT.isAvailable(flags)) {
                 final Object content = log.requestContent();
                 if (content != null) {
                     sanitizedContent = requestContentSanitizer.apply(ctx, content);
-                }
-            }
-            if (sanitizedContent == null && RequestLogProperty.REQUEST_CONTENT_PREVIEW.isAvailable(flags)) {
-                final String contentPreview = log.requestContentPreview();
-                if (contentPreview != null) {
-                    sanitizedContent = requestContentSanitizer.apply(ctx, contentPreview);
                 }
             }
 
@@ -169,6 +170,10 @@ final class JsonLogFormatter implements LogFormatter {
 
             if (sanitizedHeaders != null) {
                 objectNode.set("headers", sanitizedHeaders);
+            }
+
+            if (sanitizedPreview != null) {
+                objectNode.set("preview", sanitizedPreview);
             }
 
             if (sanitizedContent != null) {
@@ -270,17 +275,18 @@ final class JsonLogFormatter implements LogFormatter {
                 sanitizedHeaders = null;
             }
 
+            JsonNode sanitizedPreview = null;
+            if (RequestLogProperty.RESPONSE_CONTENT_PREVIEW.isAvailable(flags)) {
+                final String contentPreview = log.responseContentPreview();
+                if (contentPreview != null) {
+                    sanitizedPreview = responseContentSanitizer.apply(ctx, contentPreview);
+                }
+            }
             JsonNode sanitizedContent = null;
             if (RequestLogProperty.RESPONSE_CONTENT.isAvailable(flags)) {
                 final Object content = log.responseContent();
                 if (content != null) {
                     sanitizedContent = responseContentSanitizer.apply(ctx, content);
-                }
-            }
-            if (sanitizedContent == null && RequestLogProperty.RESPONSE_CONTENT_PREVIEW.isAvailable(flags)) {
-                final String contentPreview = log.responseContentPreview();
-                if (contentPreview != null) {
-                    sanitizedContent = responseContentSanitizer.apply(ctx, contentPreview);
                 }
             }
 
@@ -313,6 +319,10 @@ final class JsonLogFormatter implements LogFormatter {
 
             if (sanitizedHeaders != null) {
                 objectNode.set("headers", sanitizedHeaders);
+            }
+
+            if (sanitizedPreview != null) {
+                objectNode.set("preview", sanitizedPreview);
             }
 
             if (sanitizedContent != null) {

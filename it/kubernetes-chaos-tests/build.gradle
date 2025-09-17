@@ -4,7 +4,7 @@ plugins {
 
 dependencies {
     implementation(project(':kubernetes'))
-    implementation(libs.logback13)
+    implementation(libs.logback15)
     implementation(libs.picocli)
     testImplementation(libs.kubernetes.junit.jupiter)
 }

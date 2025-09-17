@@ -56,7 +56,7 @@ import {
   ServiceType,
 } from '../../lib/specification';
 import { TRANSPORTS } from '../../lib/transports';
-import { SelectOption } from '../../lib/types';
+import { ResponseData, SelectOption } from '../../lib/types';
 import DebugInputs from './DebugInputs';
 
 const useStyles = makeStyles((theme: Theme) =>
@@ -128,6 +128,58 @@ const toggle = (prev: boolean, override: unknown) => {
   return !prev;
 };
 
+const getStatusColor = (status?: number): string | undefined => {
+  if (typeof status !== 'number') return undefined;
+  return status >= 200 && status < 300 ? 'green' : 'red';
+};
+
+const ResponseStatusBar: React.FC<{
+  responseMetaData: ResponseData | null;
+}> = ({ responseMetaData }) => {
+  if (!responseMetaData) {
+    return null;
+  }
+  const color = getStatusColor(responseMetaData.status);
+  return (
+    <Grid
+      item
+      xs={12}
+      style={{
+        display: 'flex',
+        flexWrap: 'wrap',
+        justifyContent: 'flex-end',
+        alignItems: 'center',
+        gap: '4px 16px',
+        overflow: 'hidden',
+        wordBreak: 'break-word',
+      }}
+    >
+      <Typography
+        variant="body2"
+        style={{
+          display: 'flex',
+          flexWrap: 'wrap',
+        }}
+      >
+        <span style={{ marginLeft: 16, color }}>
+          <strong>Status</strong>: {responseMetaData.status ?? '–'}
+        </span>
+        <span style={{ marginLeft: 16 }}>
+          <strong>Execution Time</strong>:{' '}
+          {responseMetaData.executionTime ?? '–'} ms
+        </span>
+        <span style={{ marginLeft: 16 }}>
+          <strong>Response Size</strong>: {responseMetaData.size ?? '–'} B
+        </span>
+        <span style={{ marginLeft: 16 }}>
+          <strong>Execution Timestamp</strong> :{' '}
+          {responseMetaData.timestamp ?? '-'}
+        </span>
+      </Typography>
+    </Grid>
+  );
+};
+
 const escapeSingleQuote = (text: string) => text.replace(/'/g, "'\\''");
 
 const DebugPage: React.FunctionComponent<Props> = ({
@@ -147,8 +199,8 @@ const DebugPage: React.FunctionComponent<Props> = ({
   docServiceRoute,
 }) => {
   const [requestBody, setRequestBody] = useState('');
-  const [debugResponse, setDebugResponse] = useState('');
   const [additionalQueries, setAdditionalQueries] = useState('');
+  const [responseData, setResponseData] = useState<ResponseData | null>(null);
   const [additionalPath, setAdditionalPath] = useState('');
   const [additionalHeaders, setAdditionalHeaders] = useState('');
   const [stickyHeaders, toggleStickyHeaders] = useReducer(toggle, false);
@@ -159,12 +211,29 @@ const DebugPage: React.FunctionComponent<Props> = ({
     false,
   );
 
+  const [currentApiId, setCurrentApiId] = useState<string>(method.id);
+  const [responseCache, setResponseCache] = useState<
+    Record<string, ResponseData>
+  >({});
+
   const classes = useStyles();
 
   const transport = TRANSPORTS.getDebugTransport(method);
   if (!transport) {
     throw new Error("This method doesn't have a debug transport.");
   }
+
+  useEffect(() => {
+    const apiId = method.id;
+    if (apiId !== currentApiId) {
+      setCurrentApiId(apiId);
+      if (responseCache[apiId]) {
+        setResponseData(responseCache[apiId]);
+      } else {
+        setResponseData(null);
+      }
+    }
+  }, [method, currentApiId, responseCache]);
 
   useEffect(() => {
     const urlParams = new URLSearchParams(location.search);
@@ -201,7 +270,7 @@ const DebugPage: React.FunctionComponent<Props> = ({
       serviceType === ServiceType.HTTP ? urlParams.get('queries') ?? '' : '';
 
     if (!keepDebugResponse) {
-      setDebugResponse('');
+      setResponseData(null);
       toggleKeepDebugResponse(false);
     }
     setSnackbarOpen(false);
@@ -335,9 +404,16 @@ const DebugPage: React.FunctionComponent<Props> = ({
       showSnackbar('The curl command has been copied to the clipboard.');
     } catch (e) {
       if (e instanceof Object) {
-        setDebugResponse(e.toString());
+        setResponseData({
+          body: e.toString?.() ?? '<unknown>',
+          headers: [],
+          status: undefined,
+          executionTime: 0,
+          size: 0,
+          timestamp: new Date().toLocaleString(),
+        });
       } else {
-        setDebugResponse('<unknown>');
+        setResponseData(null);
       }
     }
   }, [
@@ -355,15 +431,15 @@ const DebugPage: React.FunctionComponent<Props> = ({
   ]);
 
   const onCopy = useCallback(() => {
-    const response = debugResponse;
+    const response = responseData?.body ?? '';
     if (response.length > 0) {
       copyTextToClipboard(response);
       showSnackbar('The response has been copied to the clipboard.');
     }
-  }, [debugResponse, showSnackbar]);
+  }, [responseData, showSnackbar]);
 
   const onClear = useCallback(() => {
-    setDebugResponse('');
+    setResponseData(null);
   }, []);
 
   const executeRequest = useCallback(
@@ -390,9 +466,8 @@ const DebugPage: React.FunctionComponent<Props> = ({
       const headersText = params.get('headers');
       const headers = headersText ? JSON.parse(headersText) : {};
 
-      let executedDebugResponse;
       try {
-        executedDebugResponse = await transport.send(
+        const debugResponseData = await transport.send(
           method,
           headers,
           parseServerRootPath(docServiceRoute),
@@ -400,14 +475,14 @@ const DebugPage: React.FunctionComponent<Props> = ({
           executedEndpointPath,
           queries,
         );
+        setResponseData(debugResponseData);
+        setResponseCache((prev) => ({
+          ...prev,
+          [currentApiId]: debugResponseData,
+        }));
       } catch (e) {
-        if (e instanceof Object) {
-          executedDebugResponse = e.toString();
-        } else {
-          executedDebugResponse = '<unknown>';
-        }
+        setResponseData(null);
       }
-      setDebugResponse(executedDebugResponse);
     },
     [
       useRequestBody,
@@ -416,12 +491,11 @@ const DebugPage: React.FunctionComponent<Props> = ({
       method,
       transport,
       docServiceRoute,
+      currentApiId,
     ],
   );
 
   const onSubmit = useCallback(async () => {
-    setDebugResponse('');
-
     const queries = additionalQueries;
     const headers = additionalHeaders;
     const params = new URLSearchParams(location.search);
@@ -468,9 +542,16 @@ const DebugPage: React.FunctionComponent<Props> = ({
       }
     } catch (e) {
       if (e instanceof Object) {
-        setDebugResponse(e.toString());
+        setResponseData({
+          body: e.toString?.() ?? '<unknown>',
+          headers: [],
+          status: undefined,
+          executionTime: 0,
+          size: 0,
+          timestamp: new Date().toLocaleString(),
+        });
       } else {
-        setDebugResponse('<unknown>');
+        setResponseData(null);
       }
       return;
     }
@@ -520,6 +601,11 @@ const DebugPage: React.FunctionComponent<Props> = ({
     });
   }, [serviceType, transport, method, examplePaths]);
 
+  const responseBody = responseData?.body;
+  const responseHeadersString =
+    Array.isArray(responseData?.headers) && responseData.headers.length > 0
+      ? responseData.headers.join('\n')
+      : '';
   return (
     <>
       <Section>
@@ -572,11 +658,11 @@ const DebugPage: React.FunctionComponent<Props> = ({
             <Grid item xs={12} sm={6}>
               <Grid container spacing={1}>
                 <Grid item xs="auto">
-                  <Tooltip title="Copy response">
+                  <Tooltip title="Copy response body">
                     <div>
                       <IconButton
                         onClick={onCopy}
-                        disabled={debugResponse.length === 0}
+                        disabled={!responseData?.body}
                       >
                         <FileCopyIcon />
                       </IconButton>
@@ -588,21 +674,46 @@ const DebugPage: React.FunctionComponent<Props> = ({
                     <div>
                       <IconButton
                         onClick={onClear}
-                        disabled={debugResponse.length === 0}
+                        disabled={!responseData?.body}
                       >
                         <DeleteSweepIcon />
                       </IconButton>
                     </div>
                   </Tooltip>
                 </Grid>
+                <ResponseStatusBar responseMetaData={responseData} />
               </Grid>
-              <SyntaxHighlighter
-                language="json"
-                style={githubGist}
-                wrapLines={false}
-              >
-                {debugResponse}
-              </SyntaxHighlighter>
+              {responseBody && (
+                <>
+                  {responseHeadersString && (
+                    <>
+                      <Typography
+                        variant="subtitle1"
+                        style={{ marginTop: '1rem' }}
+                      >
+                        Response Headers:
+                      </Typography>
+                      <SyntaxHighlighter
+                        language="text"
+                        style={githubGist}
+                        wrapLines={false}
+                      >
+                        {responseHeadersString}
+                      </SyntaxHighlighter>
+                    </>
+                  )}
+                  <Typography variant="subtitle1" style={{ marginTop: '1rem' }}>
+                    Response Body:
+                  </Typography>
+                  <SyntaxHighlighter
+                    language="json"
+                    style={githubGist}
+                    wrapLines={false}
+                  >
+                    {responseBody}
+                  </SyntaxHighlighter>
+                </>
+              )}
             </Grid>
           </Grid>
           <Snackbar
@@ -664,7 +775,7 @@ const DebugPage: React.FunctionComponent<Props> = ({
                       <div>
                         <IconButton
                           onClick={onCopy}
-                          disabled={debugResponse.length === 0}
+                          disabled={!responseData?.body}
                         >
                           <FileCopyIcon />
                         </IconButton>
@@ -676,21 +787,49 @@ const DebugPage: React.FunctionComponent<Props> = ({
                       <div>
                         <IconButton
                           onClick={onClear}
-                          disabled={debugResponse.length === 0}
+                          disabled={!responseData?.body}
                         >
                           <DeleteSweepIcon />
                         </IconButton>
                       </div>
                     </Tooltip>
                   </Grid>
+                  <ResponseStatusBar responseMetaData={responseData} />
                 </Grid>
-                <SyntaxHighlighter
-                  language="json"
-                  style={githubGist}
-                  wrapLines={false}
-                >
-                  {debugResponse}
-                </SyntaxHighlighter>
+                {responseBody && (
+                  <>
+                    {responseHeadersString && (
+                      <>
+                        <Typography
+                          variant="subtitle1"
+                          style={{ marginTop: '1rem' }}
+                        >
+                          Response Headers:
+                        </Typography>
+                        <SyntaxHighlighter
+                          language="text"
+                          style={githubGist}
+                          wrapLines={false}
+                        >
+                          {responseHeadersString}
+                        </SyntaxHighlighter>
+                      </>
+                    )}
+                    <Typography
+                      variant="subtitle1"
+                      style={{ marginTop: '1rem' }}
+                    >
+                      Response Body:
+                    </Typography>
+                    <SyntaxHighlighter
+                      language="json"
+                      style={githubGist}
+                      wrapLines={false}
+                    >
+                      {responseBody}
+                    </SyntaxHighlighter>
+                  </>
+                )}
               </Grid>
             </Grid>
             <Snackbar

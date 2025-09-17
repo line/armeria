@@ -19,6 +19,7 @@ package com.linecorp.armeria.internal.testing;
 import static com.google.common.base.Preconditions.checkState;
 
 import java.net.InetSocketAddress;
+import java.net.URI;
 
 import org.junit.jupiter.api.extension.ExtensionContext;
 
@@ -52,6 +53,10 @@ public abstract class NettyServerExtension extends AbstractAllOrEachExtension {
 
     public final Endpoint endpoint() {
         return Endpoint.unsafeCreate(address().getHostString(), address().getPort());
+    }
+
+    public final URI httpUri() {
+        return URI.create("http://" + address().getHostString() + ':' + address().getPort());
     }
 
     protected abstract void configure(Channel ch) throws Exception;

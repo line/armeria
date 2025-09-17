@@ -70,6 +70,10 @@ public final class RestClientBuilder extends AbstractWebClientBuilder {
         super(sessionProtocol, endpointGroup, path);
     }
 
+    RestClientBuilder(HttpPreprocessor preprocessor, @Nullable String path) {
+        super(preprocessor, path);
+    }
+
     /**
      * Returns a newly-created web client based on the properties of this builder.
      *

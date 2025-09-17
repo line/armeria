@@ -134,3 +134,11 @@ export function isValidJsonMimeType(applicationType: string | null) {
   }
   return applicationType.indexOf('json') >= 0;
 }
+
+export function extractHeaderLines(headers: Headers): string[] {
+  const headerLines: string[] = [];
+  headers.forEach((value, name) => {
+    headerLines.push(`${name}: ${value}`);
+  });
+  return headerLines;
+}

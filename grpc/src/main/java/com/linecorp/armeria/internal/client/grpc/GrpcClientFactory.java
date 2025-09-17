@@ -56,6 +56,7 @@ import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.grpc.GrpcJsonMarshaller;
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
 import com.linecorp.armeria.common.util.Unwrappable;
+import com.linecorp.armeria.internal.client.ClientBuilderParamsUtil;
 
 import io.grpc.Channel;
 import io.grpc.ClientInterceptor;
@@ -186,6 +187,17 @@ final class GrpcClientFactory extends DecoratingClientFactory {
         return clientStub;
     }
 
+    @Override
+    public ClientBuilderParams validateParams(ClientBuilderParams params) {
+        if (ClientBuilderParamsUtil.isPreprocessorUri(params.uri()) &&
+            params.options().clientPreprocessors().preprocessors().isEmpty()) {
+            throw new IllegalArgumentException(
+                    "At least one preprocessor must be specified for http-based clients " +
+                    "with sessionProtocol '" + params.scheme().sessionProtocol() + "'.");
+        }
+        return super.validateParams(params);
+    }
+
     /**
      * Adds the {@link GrpcWebTrailersExtractor} if the specified {@link SerializationFormat} is a gRPC-Web and
      * {@link RetryingClient} exists in the {@link ClientDecoration}.
@@ -223,9 +235,9 @@ final class GrpcClientFactory extends DecoratingClientFactory {
 
         decorators.forEach(optionsBuilder::decorator);
 
-        return ClientBuilderParams.of(
-                params.scheme(), params.endpointGroup(), params.absolutePathRef(),
-                params.clientType(), optionsBuilder.build());
+        return params.paramsBuilder()
+                     .options(optionsBuilder.build())
+                     .build();
     }
 
     @Nullable

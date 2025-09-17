@@ -17,10 +17,12 @@ package com.linecorp.armeria.client.endpoint;
 
 import static java.util.Objects.requireNonNull;
 
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 
 import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableList;
@@ -40,7 +42,6 @@ final class CompositeEndpointGroup extends AbstractEndpointGroup implements List
     private final List<EndpointGroup> endpointGroups;
 
     private final CompletableFuture<List<Endpoint>> initialEndpointsFuture;
-    private final AtomicBoolean dirty;
 
     private final EndpointSelectionStrategy selectionStrategy;
     private final EndpointSelector selector;
@@ -48,23 +49,19 @@ final class CompositeEndpointGroup extends AbstractEndpointGroup implements List
 
     private final AsyncCloseableSupport closeable = AsyncCloseableSupport.of(this::closeAsync);
 
-    private volatile List<Endpoint> merged = ImmutableList.of();
+    private final AtomicReference<List<Endpoint>> merged = new AtomicReference<>();
 
     /**
      * Constructs a new {@link CompositeEndpointGroup} that merges all the given {@code endpointGroups}.
      */
     CompositeEndpointGroup(EndpointSelectionStrategy selectionStrategy,
                            Iterable<EndpointGroup> endpointGroups) {
-
         this.endpointGroups = ImmutableList.copyOf(requireNonNull(endpointGroups, "endpointGroups"));
-        dirty = new AtomicBoolean(true);
+        merged.set(ImmutableList.of());
 
         long selectionTimeoutMillis = 0;
         for (EndpointGroup endpointGroup : endpointGroups) {
-            endpointGroup.addListener(unused -> {
-                dirty.set(true);
-                notifyListeners(endpoints());
-            });
+            endpointGroup.addListener(unused -> notifyListeners(rebuildEndpoints()));
             selectionTimeoutMillis = Math.max(selectionTimeoutMillis,
                                               endpointGroup.selectionTimeoutMillis());
         }
@@ -74,7 +71,7 @@ final class CompositeEndpointGroup extends AbstractEndpointGroup implements List
                 CompletableFuture.anyOf(this.endpointGroups.stream()
                                                            .map(EndpointGroup::whenReady)
                                                            .toArray(CompletableFuture[]::new))
-                                 .thenApply(unused -> endpoints());
+                                 .thenApply(unused -> rebuildEndpoints());
 
         this.selectionStrategy = requireNonNull(selectionStrategy, "selectionStrategy");
         selector = requireNonNull(selectionStrategy, "selectionStrategy").newSelector(this);
@@ -82,22 +79,26 @@ final class CompositeEndpointGroup extends AbstractEndpointGroup implements List
 
     @Override
     public List<Endpoint> endpoints() {
-        if (!dirty.get()) {
-            return merged;
-        }
+        final List<Endpoint> endpoints = merged.get();
+        assert endpoints != null;
+        return endpoints;
+    }
 
-        if (!dirty.compareAndSet(true, false)) {
-            // Another thread might be updating merged at this time, but endpoint groups are allowed to take a
-            // little bit of time to reflect updates.
-            return merged;
+    private List<Endpoint> rebuildEndpoints() {
+        for (;;) {
+            // Get the current endpoints before making a new endpoints list.
+            final List<Endpoint> oldEndpoints = merged.get();
+            final List<Endpoint> newEndpoints = new ArrayList<>();
+            for (EndpointGroup endpointGroup : endpointGroups) {
+                newEndpoints.addAll(endpointGroup.endpoints());
+            }
+            // Do not use ImmutableList because the empty ImmutableList uses a singleton instance.
+            final List<Endpoint> endpoints = Collections.unmodifiableList(newEndpoints);
+            if (merged.compareAndSet(oldEndpoints, endpoints)) {
+                return endpoints;
+            }
+            // Changed by another thread while we were building a new one. Try again.
         }
-
-        final ImmutableList.Builder<Endpoint> newEndpoints = ImmutableList.builder();
-        for (EndpointGroup endpointGroup : endpointGroups) {
-            newEndpoints.addAll(endpointGroup.endpoints());
-        }
-
-        return merged = newEndpoints.build();
     }
 
     @Override
