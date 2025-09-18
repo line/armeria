@@ -16,27 +16,45 @@
 
 package com.linecorp.armeria.xds;
 
+import com.linecorp.armeria.common.metric.MeterIdPrefix;
+
+import io.micrometer.core.instrument.MeterRegistry;
 import io.netty.util.concurrent.EventExecutor;
 
-final class DefaultSubscriptionContext implements SubscriptionContext {
+final class DefaultBootstrapContext implements BootstrapContext {
 
     private final EventExecutor eventLoop;
     private final XdsClusterManager clusterManager;
     private final ConfigSourceMapper configSourceMapper;
     private final ControlPlaneClientManager controlPlaneClientManager;
+    private final MeterRegistry meterRegistry;
+    private final MeterIdPrefix meterIdPrefix;
 
-    DefaultSubscriptionContext(EventExecutor eventLoop, XdsClusterManager clusterManager,
-                               ConfigSourceMapper configSourceMapper,
-                               ControlPlaneClientManager controlPlaneClientManager) {
+    DefaultBootstrapContext(EventExecutor eventLoop, XdsClusterManager clusterManager,
+                            ConfigSourceMapper configSourceMapper,
+                            ControlPlaneClientManager controlPlaneClientManager,
+                            MeterRegistry meterRegistry, MeterIdPrefix meterIdPrefix) {
         this.eventLoop = eventLoop;
         this.clusterManager = clusterManager;
         this.configSourceMapper = configSourceMapper;
         this.controlPlaneClientManager = controlPlaneClientManager;
+        this.meterRegistry = meterRegistry;
+        this.meterIdPrefix = meterIdPrefix;
     }
 
     @Override
     public EventExecutor eventLoop() {
         return eventLoop;
+    }
+
+    @Override
+    public MeterRegistry meterRegistry() {
+        return meterRegistry;
+    }
+
+    @Override
+    public MeterIdPrefix meterIdPrefix() {
+        return meterIdPrefix;
     }
 
     @Override

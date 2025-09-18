@@ -14,7 +14,7 @@
  * under the License.
  */
 
-package com.linecorp.armeria.xds.client.endpoint;
+package com.linecorp.armeria.xds;
 
 import java.time.Instant;
 import java.util.List;
@@ -53,7 +53,8 @@ import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogProperty;
 import com.linecorp.armeria.common.util.UnmodifiableFuture;
-import com.linecorp.armeria.xds.client.endpoint.RouteEntryMatcher.HeaderMatcherImpl;
+import com.linecorp.armeria.xds.RouteEntryMatcher.HeaderMatcherImpl;
+import com.linecorp.armeria.xds.internal.XdsCommonUtil;
 
 import io.envoyproxy.envoy.config.route.v3.HeaderMatcher;
 import io.envoyproxy.envoy.config.route.v3.RetryPolicy;

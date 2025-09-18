@@ -225,7 +225,7 @@ class RampingUpTest {
                 SlowStartConfig.newBuilder()
                                .setSlowStartWindow(window)
                                .build();
-        return XdsTestResources.createCluster(clusterName, 0)
+        return XdsTestResources.createCluster(clusterName, 1)
                                .toBuilder()
                                .setLbPolicy(LbPolicy.ROUND_ROBIN)
                                .setRoundRobinLbConfig(RoundRobinLbConfig.newBuilder()

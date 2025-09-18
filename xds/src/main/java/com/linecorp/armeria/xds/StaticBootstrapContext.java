@@ -16,14 +16,21 @@
 
 package com.linecorp.armeria.xds;
 
+import com.linecorp.armeria.common.metric.MeterIdPrefix;
+
+import io.micrometer.core.instrument.MeterRegistry;
 import io.netty.util.concurrent.EventExecutor;
 
-final class StaticSubscriptionContext implements SubscriptionContext {
+final class StaticBootstrapContext implements BootstrapContext {
 
     private final EventExecutor eventLoop;
+    private final MeterRegistry meterRegistry;
+    private final MeterIdPrefix meterIdPrefix;
 
-    StaticSubscriptionContext(EventExecutor eventLoop) {
+    StaticBootstrapContext(EventExecutor eventLoop, MeterRegistry meterRegistry, MeterIdPrefix meterIdPrefix) {
         this.eventLoop = eventLoop;
+        this.meterRegistry = meterRegistry;
+        this.meterIdPrefix = meterIdPrefix;
     }
 
     @Override
@@ -36,6 +43,16 @@ final class StaticSubscriptionContext implements SubscriptionContext {
     @Override
     public EventExecutor eventLoop() {
         return eventLoop;
+    }
+
+    @Override
+    public MeterRegistry meterRegistry() {
+        return meterRegistry;
+    }
+
+    @Override
+    public MeterIdPrefix meterIdPrefix() {
+        return meterIdPrefix;
     }
 
     @Override

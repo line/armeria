@@ -27,7 +27,6 @@ import java.util.Set;
 import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.common.annotation.Nullable;
-import com.linecorp.armeria.common.util.SafeCloseable;
 
 import io.envoyproxy.envoy.config.core.v3.ConfigSource;
 import io.envoyproxy.envoy.config.route.v3.RouteConfiguration;
@@ -40,7 +39,7 @@ final class RouteResourceNode extends AbstractResourceNode<RouteXdsResource, Rou
     private VirtualHostSnapshotWatcher snapshotWatcher;
 
     RouteResourceNode(@Nullable ConfigSource configSource, String resourceName,
-                      SubscriptionContext context, SnapshotWatcher<RouteSnapshot> parentWatcher,
+                      BootstrapContext context, SnapshotWatcher<RouteSnapshot> parentWatcher,
                       ResourceNodeType resourceNodeType) {
         super(context, configSource, ROUTE, resourceName, parentWatcher, resourceNodeType);
     }
@@ -48,10 +47,22 @@ final class RouteResourceNode extends AbstractResourceNode<RouteXdsResource, Rou
     @Override
     public void doOnChanged(RouteXdsResource resource) {
         final VirtualHostSnapshotWatcher previousWatcher = snapshotWatcher;
+        if (previousWatcher != null) {
+            previousWatcher.preClose();
+        }
         snapshotWatcher = new VirtualHostSnapshotWatcher(resource, context(), this);
         if (previousWatcher != null) {
             previousWatcher.close();
         }
+    }
+
+    @Override
+    void preClose() {
+        final VirtualHostSnapshotWatcher snapshotWatcher = this.snapshotWatcher;
+        if (snapshotWatcher != null) {
+            snapshotWatcher.preClose();
+        }
+        super.preClose();
     }
 
     @Override
@@ -63,17 +74,15 @@ final class RouteResourceNode extends AbstractResourceNode<RouteXdsResource, Rou
         super.close();
     }
 
-    private static class VirtualHostSnapshotWatcher
-            implements SnapshotWatcher<VirtualHostSnapshot>, SafeCloseable {
+    private static class VirtualHostSnapshotWatcher extends AbstractNodeSnapshotWatcher<VirtualHostSnapshot> {
 
         private final List<VirtualHostSnapshot> virtualHostSnapshots = new ArrayList<>();
         private final Set<Integer> pending = new HashSet<>();
         private final RouteXdsResource resource;
         private final RouteResourceNode parentNode;
         private final List<VirtualHostResourceNode> nodes;
-        private boolean closed;
 
-        VirtualHostSnapshotWatcher(RouteXdsResource resource, SubscriptionContext context,
+        VirtualHostSnapshotWatcher(RouteXdsResource resource, BootstrapContext context,
                                    RouteResourceNode parentNode) {
             this.resource = resource;
             this.parentNode = parentNode;
@@ -86,7 +95,8 @@ final class RouteResourceNode extends AbstractResourceNode<RouteXdsResource, Rou
                 final VirtualHost virtualHost = routeConfiguration.getVirtualHostsList().get(i);
                 final VirtualHostResourceNode childNode =
                         StaticResourceUtils.staticVirtualHost(context, virtualHost.getName(),
-                                                              this, i, virtualHost);
+                                                              this, i, virtualHost,
+                                                              resource.version(), resource.revision());
                 nodesBuilder.add(childNode);
             }
             nodes = nodesBuilder.build();
@@ -96,10 +106,7 @@ final class RouteResourceNode extends AbstractResourceNode<RouteXdsResource, Rou
         }
 
         @Override
-        public void snapshotUpdated(VirtualHostSnapshot newSnapshot) {
-            if (closed) {
-                return;
-            }
+        protected void doSnapshotUpdated(VirtualHostSnapshot newSnapshot) {
             virtualHostSnapshots.set(newSnapshot.index(), newSnapshot);
             pending.remove(newSnapshot.index());
             // checks if all clusters for the route have reported a snapshot
@@ -110,24 +117,24 @@ final class RouteResourceNode extends AbstractResourceNode<RouteXdsResource, Rou
         }
 
         @Override
-        public void onError(XdsType type, Status status) {
-            if (closed) {
-                return;
-            }
-            parentNode.notifyOnError(type, status);
+        protected void doOnError(XdsType type, String resourceName, Status status) {
+            parentNode.notifyOnError(type, resourceName, status);
         }
 
         @Override
-        public void onMissing(XdsType type, String resourceName) {
-            if (closed) {
-                return;
-            }
+        protected void doOnMissing(XdsType type, String resourceName) {
             parentNode.notifyOnMissing(type, resourceName);
         }
 
         @Override
-        public void close() {
-            closed = true;
+        protected void doPreClose() {
+            for (VirtualHostResourceNode childNode : nodes) {
+                childNode.preClose();
+            }
+        }
+
+        @Override
+        protected void doClose() {
             for (VirtualHostResourceNode childNode : nodes) {
                 childNode.close();
             }

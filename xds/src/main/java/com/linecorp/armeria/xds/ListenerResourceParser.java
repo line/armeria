@@ -27,8 +27,8 @@ final class ListenerResourceParser extends ResourceParser<Listener, ListenerXdsR
     private ListenerResourceParser() {}
 
     @Override
-    ListenerXdsResource parse(Listener message) {
-        final ListenerXdsResource resource = new ListenerXdsResource(message);
+    ListenerXdsResource parse(Listener message, String version, long revision) {
+        final ListenerXdsResource resource = new ListenerXdsResource(message, version, revision);
         final HttpConnectionManager connectionManager = resource.connectionManager();
         if (connectionManager != null) {
             if (connectionManager.hasRds()) {

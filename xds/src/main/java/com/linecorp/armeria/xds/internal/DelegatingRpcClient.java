@@ -14,9 +14,9 @@
  * under the License.
  */
 
-package com.linecorp.armeria.xds.client.endpoint;
+package com.linecorp.armeria.xds.internal;
 
-import static com.linecorp.armeria.xds.client.endpoint.DelegatingHttpClient.missingDelegateException;
+import static com.linecorp.armeria.xds.internal.DelegatingHttpClient.missingDelegateException;
 
 import com.linecorp.armeria.client.Client;
 import com.linecorp.armeria.client.ClientRequestContext;
@@ -29,9 +29,9 @@ import com.linecorp.armeria.common.RpcResponse;
 
 import io.netty.util.AttributeKey;
 
-final class DelegatingRpcClient implements RpcClient, RpcPreClient {
+public final class DelegatingRpcClient implements RpcClient, RpcPreClient {
 
-    static final DelegatingRpcClient INSTANCE = new DelegatingRpcClient();
+    private static final DelegatingRpcClient INSTANCE = new DelegatingRpcClient();
 
     private static final AttributeKey<Client<RpcRequest, RpcResponse>> CLIENT_DELEGATE_KEY =
             AttributeKey.valueOf(DelegatingRpcClient.class, "DELEGATE_KEY");
@@ -39,11 +39,15 @@ final class DelegatingRpcClient implements RpcClient, RpcPreClient {
     private static final AttributeKey<PreClient<RpcRequest, RpcResponse>> PRECLIENT_DELEGATE_KEY =
             AttributeKey.valueOf(DelegatingRpcClient.class, "DELEGATE_KEY");
 
-    static void setDelegate(ClientRequestContext ctx, RpcClient delegate) {
+    public static DelegatingRpcClient of() {
+        return INSTANCE;
+    }
+
+    public static void setDelegate(ClientRequestContext ctx, RpcClient delegate) {
         ctx.setAttr(CLIENT_DELEGATE_KEY, delegate);
     }
 
-    static void setDelegate(PreClientRequestContext ctx, PreClient<RpcRequest, RpcResponse> delegate) {
+    public static void setDelegate(PreClientRequestContext ctx, PreClient<RpcRequest, RpcResponse> delegate) {
         ctx.setAttr(PRECLIENT_DELEGATE_KEY, delegate);
     }
 
