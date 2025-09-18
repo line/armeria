@@ -18,8 +18,8 @@ async function getLatestFilePath(
   sortFunc: (a: string, b: string) => number,
 ): Promise<string> {
   const extension = '.mdx';
-  const directoryPath = path.join(__dirname, directory);
-  const files = await fs.readdir(directoryPath);
+  const fullPath = path.join(__dirname, 'src/content', directory);
+  const files = await fs.readdir(fullPath);
   const filteredFiles = files.filter((file) => file.endsWith(extension));
   const identifiers = filteredFiles.map((file) =>
     path.basename(file, extension),
@@ -27,7 +27,7 @@ async function getLatestFilePath(
 
   if (identifiers.length === 0) {
     throw new Error(
-      `No files found in ${directory} with extension ${extension}.`,
+      `No files found in ${fullPath} with extension ${extension}.`,
     );
   }
 
@@ -77,12 +77,13 @@ export default async function createConfigAsync() {
         {
           docs: {
             sidebarPath: './sidebars.ts',
+            path: 'src/content/docs',
             editUrl: 'https://github.com/line/armeria/edit/main/site/',
             remarkPlugins: [remarkApiLink, remarkGithub],
           },
           blog: {
             routeBasePath: '/news',
-            path: 'news',
+            path: 'src/content/news',
             blogTitle: 'Armeria Newsletter',
             blogDescription:
               'The Armeria Newsletter provides the latest insights, updates, and best practices to help you maximize the potential of Armeria.',
@@ -216,7 +217,7 @@ export default async function createConfigAsync() {
         '@docusaurus/plugin-content-docs',
         {
           id: 'community',
-          path: 'community',
+          path: 'src/content/community',
           routeBasePath: 'community',
           sidebarPath: './sidebarsCommunity.ts',
         },
@@ -226,7 +227,7 @@ export default async function createConfigAsync() {
         '@docusaurus/plugin-content-docs',
         {
           id: 'release-notes',
-          path: 'release-notes',
+          path: 'src/content/release-notes',
           routeBasePath: 'release-notes',
           async sidebarItemsGenerator({
             defaultSidebarItemsGenerator,
@@ -242,7 +243,7 @@ export default async function createConfigAsync() {
         '@docusaurus/plugin-content-blog',
         {
           id: 'blog',
-          path: 'blog/en',
+          path: 'src/content/blog/en',
           routeBasePath: 'blog',
           postsPerPage: 12,
           showReadingTime: true,
@@ -257,7 +258,7 @@ export default async function createConfigAsync() {
         '@docusaurus/plugin-content-blog',
         {
           id: 'blog-ja',
-          path: 'blog/ja',
+          path: 'src/content/blog/ja',
           routeBasePath: 'blog/ja',
           postsPerPage: 12,
           showReadingTime: true,
@@ -272,7 +273,7 @@ export default async function createConfigAsync() {
         '@docusaurus/plugin-content-blog',
         {
           id: 'blog-ko',
-          path: 'blog/ko',
+          path: 'src/content/blog/ko',
           routeBasePath: 'blog/ko',
           postsPerPage: 12,
           showReadingTime: true,

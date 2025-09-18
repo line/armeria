@@ -9,7 +9,7 @@ export default function TutorialPlugin(context: LoadContext): Plugin<void> {
   return {
     name: 'tutorial-plugin',
     async loadContent() {
-      const docsDir = path.join(context.siteDir, 'docs/tutorials');
+      const docsDir = path.join(context.siteDir, 'src/content/docs/tutorials');
 
       // Recursively collect Markdown files
       const collectMarkdownFiles = (dir: string): string[] => {
