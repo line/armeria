@@ -19,21 +19,26 @@ package com.linecorp.armeria.xds;
 import com.linecorp.armeria.common.metric.MeterIdPrefix;
 
 import io.micrometer.core.instrument.MeterRegistry;
-import io.netty.util.concurrent.EventExecutor;
 
-interface SubscriptionContext {
+final class StatContext {
 
-    EventExecutor eventLoop();
+    private final MeterRegistry meterRegistry;
+    private final MeterIdPrefix meterIdPrefix;
 
-    MeterRegistry meterRegistry();
+    StatContext(MeterRegistry meterRegistry, MeterIdPrefix meterIdPrefix) {
+        this.meterRegistry = meterRegistry;
+        this.meterIdPrefix = meterIdPrefix;
+    }
 
-    MeterIdPrefix meterIdPrefix();
+    MeterIdPrefix meterIdPrefix() {
+        return meterIdPrefix;
+    }
 
-    void subscribe(ResourceNode<?> node);
+    StatContext withTags(String... tags) {
+        return new StatContext(meterRegistry, meterIdPrefix.withTags(tags));
+    }
 
-    void unsubscribe(ResourceNode<?> node);
-
-    ConfigSourceMapper configSourceMapper();
-
-    XdsClusterManager clusterManager();
+    MeterRegistry meterRegistry() {
+        return meterRegistry;
+    }
 }

@@ -25,7 +25,6 @@ import java.util.function.Function;
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.ResponseTimeoutException;
 import com.linecorp.armeria.client.RpcClient;
-import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RpcRequest;
@@ -173,9 +172,7 @@ public final class RetryingRpcClient extends AbstractRetryingClient<RpcRequest, 
         final RpcResponse res;
 
         final ClientRequestContextExtension ctxExtension = derivedCtx.as(ClientRequestContextExtension.class);
-        final EndpointGroup endpointGroup = derivedCtx.endpointGroup();
-        if (!initialAttempt && ctxExtension != null &&
-            endpointGroup != null && derivedCtx.endpoint() == null) {
+        if (!initialAttempt && ctxExtension != null && !ctxExtension.initialized()) {
             // clear the pending throwable to retry endpoint selection
             ClientPendingThrowableUtil.removePendingThrowable(derivedCtx);
             // if the endpoint hasn't been selected, try to initialize the ctx with a new endpoint/event loop

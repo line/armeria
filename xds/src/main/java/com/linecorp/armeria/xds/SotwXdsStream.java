@@ -64,17 +64,20 @@ final class SotwXdsStream implements XdsStream, XdsStreamState {
     ActualStream actualStream;
 
     private final Set<XdsType> targetTypes;
+    private final ConfigSourceLifecycleObserver lifecycleObserver;
 
     SotwXdsStream(SotwDiscoveryStub stub, Node node, Backoff backoff,
                   EventExecutor eventLoop, XdsResponseHandler responseHandler,
-                  SubscriberStorage subscriberStorage) {
+                  SubscriberStorage subscriberStorage,
+                  ConfigSourceLifecycleObserver lifecycleObserver) {
         this(stub, node, backoff, eventLoop, responseHandler, subscriberStorage,
-             XdsType.discoverableTypes());
+             XdsType.discoverableTypes(), lifecycleObserver);
     }
 
     SotwXdsStream(SotwDiscoveryStub stub, Node node, Backoff backoff,
                   EventExecutor eventLoop, XdsResponseHandler responseHandler,
-                  SubscriberStorage subscriberStorage, Set<XdsType> targetTypes) {
+                  SubscriberStorage subscriberStorage, Set<XdsType> targetTypes,
+                  ConfigSourceLifecycleObserver lifecycleObserver) {
         this.stub = requireNonNull(stub, "stub");
         this.node = requireNonNull(node, "node");
         this.backoff = requireNonNull(backoff, "backoff");
@@ -82,6 +85,7 @@ final class SotwXdsStream implements XdsStream, XdsStreamState {
         this.responseHandler = requireNonNull(responseHandler, "responseHandler");
         this.subscriberStorage = requireNonNull(subscriberStorage, "subscriberStorage");
         this.targetTypes = targetTypes;
+        this.lifecycleObserver = lifecycleObserver;
     }
 
     @VisibleForTesting
@@ -129,6 +133,7 @@ final class SotwXdsStream implements XdsStream, XdsStreamState {
     @Override
     public void close() {
         stop();
+        lifecycleObserver.close();
     }
 
     @Override
@@ -139,7 +144,7 @@ final class SotwXdsStream implements XdsStream, XdsStreamState {
     private ActualStream actualStream() {
         if (actualStream == null) {
             actualStream = new ActualStream(stub, this, versionManager, eventLoop,
-                                            responseHandler, backoff, node);
+                                            lifecycleObserver, responseHandler, backoff, node);
         }
         return actualStream;
     }
@@ -179,6 +184,7 @@ final class SotwXdsStream implements XdsStream, XdsStreamState {
         private final XdsStreamState xdsStreamState;
         private final VersionManager versionManager;
         private final EventExecutor eventLoop;
+        private final ConfigSourceLifecycleObserver lifecycleObserver;
         private final XdsResponseHandler responseHandler;
         private final Backoff backoff;
         private final Node node;
@@ -188,14 +194,17 @@ final class SotwXdsStream implements XdsStream, XdsStreamState {
         boolean completed;
 
         ActualStream(SotwDiscoveryStub stub, XdsStreamState xdsStreamState, VersionManager versionManager,
-                     EventExecutor eventLoop, XdsResponseHandler responseHandler, Backoff backoff, Node node) {
+                     EventExecutor eventLoop, ConfigSourceLifecycleObserver lifecycleObserver,
+                     XdsResponseHandler responseHandler, Backoff backoff, Node node) {
             this.xdsStreamState = xdsStreamState;
             this.versionManager = versionManager;
             this.eventLoop = eventLoop;
+            this.lifecycleObserver = lifecycleObserver;
             this.responseHandler = responseHandler;
             this.backoff = backoff;
             this.node = node;
             requestObserver = stub.stream(this);
+            lifecycleObserver.streamOpened();
         }
 
         void ackResponse(XdsType type, String versionInfo, String nonce) {
@@ -252,6 +261,7 @@ final class SotwXdsStream implements XdsStream, XdsStreamState {
                                                             .build());
             }
             final DiscoveryRequest request = builder.build();
+            lifecycleObserver.requestSent(request);
             requestObserver.onNext(request);
         }
 
@@ -264,6 +274,7 @@ final class SotwXdsStream implements XdsStream, XdsStreamState {
             if (completed) {
                 return;
             }
+            lifecycleObserver.responseReceived(value);
 
             final ResourceParser<?, ?> resourceParser = fromTypeUrl(value.getTypeUrl());
             if (resourceParser == null) {
@@ -271,7 +282,7 @@ final class SotwXdsStream implements XdsStream, XdsStreamState {
                 return;
             }
             noncesMap.put(resourceParser.type(), value.getNonce());
-            responseHandler.handleResponse(resourceParser, value, this);
+            responseHandler.handleResponse(resourceParser, value, this, lifecycleObserver);
         }
 
         @Override
@@ -281,6 +292,7 @@ final class SotwXdsStream implements XdsStream, XdsStreamState {
                 return;
             }
             completed = true;
+            lifecycleObserver.streamError(throwable);
             xdsStreamState.retryOrClose(true);
         }
 
@@ -291,6 +303,7 @@ final class SotwXdsStream implements XdsStream, XdsStreamState {
                 return;
             }
             completed = true;
+            lifecycleObserver.streamCompleted();
             xdsStreamState.retryOrClose(false);
         }
     }

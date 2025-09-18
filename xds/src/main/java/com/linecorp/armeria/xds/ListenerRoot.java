@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.xds;
 
+import static com.linecorp.armeria.xds.WatcherUtil.safeRunnable;
+
 import com.linecorp.armeria.common.annotation.UnstableApi;
 
 import io.envoyproxy.envoy.config.listener.v3.Listener;
@@ -32,8 +34,9 @@ public final class ListenerRoot extends AbstractRoot<ListenerSnapshot> {
     private final String resourceName;
     private final ListenerManager listenerManager;
 
-    ListenerRoot(SubscriptionContext context, String resourceName, ListenerManager listenerManager) {
-        super(context.eventLoop());
+    ListenerRoot(SubscriptionContext context, String resourceName, ListenerManager listenerManager,
+                 SnapshotWatcher<Object> defaultWatcher) {
+        super(context.eventLoop(), defaultWatcher);
         this.resourceName = resourceName;
         this.listenerManager = listenerManager;
         context.eventLoop().execute(

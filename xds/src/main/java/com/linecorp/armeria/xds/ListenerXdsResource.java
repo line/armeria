@@ -63,6 +63,7 @@ public final class ListenerXdsResource extends AbstractXdsResource {
         } else {
             connectionManager = null;
         }
+
         router = router(connectionManager);
     }
 
