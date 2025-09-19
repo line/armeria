@@ -21,6 +21,7 @@ import static java.util.Objects.requireNonNull;
 import java.time.Duration;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Consumer;
 
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
@@ -94,7 +95,7 @@ final class TimeoutStreamMessage<T> implements StreamMessage<T> {
     public void subscribe(Subscriber<? super T> subscriber, EventExecutor executor,
                           SubscriptionOption... options) {
         upstream.subscribe(new TimeoutSubscriber<>(subscriber, executor, timeoutDuration, timeoutMode,
-                                                   upstream.whenComplete()), executor, options);
+                                                   this::abort), executor, options);
     }
 
     @Override
@@ -122,16 +123,16 @@ final class TimeoutStreamMessage<T> implements StreamMessage<T> {
         private long lastEventTimeNanos;
         private boolean completed;
         private volatile boolean canceled;
-        private final CompletableFuture<Void> completionFuture;
+        private final Consumer<Throwable> upstreamAbort;
 
         TimeoutSubscriber(Subscriber<? super T> downstream, EventExecutor executor, Duration timeoutDuration,
-                          StreamTimeoutMode timeoutMode, CompletableFuture<Void> completionFuture) {
+                          StreamTimeoutMode timeoutMode, Consumer<Throwable> upstreamAbort) {
             this.downstream = requireNonNull(downstream, "downstream");
             this.executor = requireNonNull(executor, "executor");
             this.timeoutDuration = requireNonNull(timeoutDuration, "timeoutDuration");
             timeoutNanos = timeoutDuration.toNanos();
             this.timeoutMode = requireNonNull(timeoutMode, "timeoutMode");
-            this.completionFuture = requireNonNull(completionFuture, "completionFuture");
+            this.upstreamAbort = requireNonNull(upstreamAbort, "upstreamAbort");
         }
 
         private ScheduledFuture<?> scheduleTimeout(long delay) {
@@ -161,10 +162,8 @@ final class TimeoutStreamMessage<T> implements StreamMessage<T> {
             final StreamTimeoutException ex = new StreamTimeoutException(
                     String.format(TIMEOUT_MESSAGE, timeoutDuration.toMillis(), timeoutMode));
 
-            completionFuture.completeExceptionally(ex);
             downstream.onError(ex);
-            assert subscription != null;
-            subscription.cancel();
+            upstreamAbort.accept(ex);
         }
 
         @Override
@@ -205,7 +204,6 @@ final class TimeoutStreamMessage<T> implements StreamMessage<T> {
             }
             completed = true;
             cancelSchedule();
-            completionFuture.completeExceptionally(throwable);
             downstream.onError(throwable);
         }
 
@@ -216,7 +214,6 @@ final class TimeoutStreamMessage<T> implements StreamMessage<T> {
             }
             completed = true;
             cancelSchedule();
-            completionFuture.complete(null);
             downstream.onComplete();
         }
 
@@ -231,7 +228,6 @@ final class TimeoutStreamMessage<T> implements StreamMessage<T> {
             canceled = true;
             cancelSchedule();
             assert subscription != null;
-            completionFuture.completeExceptionally(CancelledSubscriptionException.get());
             subscription.cancel();
         }
     }
