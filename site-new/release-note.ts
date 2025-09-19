@@ -220,9 +220,13 @@ async function getIssueReporters(issue: number): Promise<string> {
   return pr.data.user.login;
 }
 
-function renderReleaseNotes(pullRequests: PullRequest[]): string {
+function renderReleaseNotes(
+  pullRequests: PullRequest[],
+  version: string,
+): string {
   const builder: string[] = [];
   builder.push('---', `date: ${today()}`, '---', '');
+  builder.push(`# v${version}`, '');
 
   for (const category of Object.values(Category)) {
     const changes: PullRequest[] = pullRequests.filter((pr) => {
@@ -261,7 +265,7 @@ function renderReleaseNotes(pullRequests: PullRequest[]): string {
     .flatMap((pr) => pr.users)
     .sortBy()
     .uniq()
-    .filter((user) => user !== 'CLAassistant')
+    .filter((user) => user !== 'CLAassistant' && user !== 'dependabot[bot]')
     .map((user) => `  '${user}'`)
     .join(',\n')
     .value();
@@ -317,7 +321,7 @@ async function main() {
   console.log(`🎬 Generating a skeletal release note for ${version} ...`);
   const milestoneId: number = await getMilestoneId(version);
   const pullRequests: PullRequest[] = await getAllPullRequests(milestoneId);
-  const notes: string = renderReleaseNotes(pullRequests);
+  const notes: string = renderReleaseNotes(pullRequests, version);
 
   const path = `${__dirname}/src/content/release-notes/${version}.mdx`;
   fs.writeFileSync(path, notes);
