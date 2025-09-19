@@ -20,7 +20,8 @@
     "serve": "docusaurus serve",
     "write-translations": "docusaurus write-translations",
     "write-heading-ids": "docusaurus write-heading-ids",
-    "typecheck": "tsc"
+    "typecheck": "tsc",
+    "release-note": "tsx release-note.ts"
   },
   "dependencies": {
     "@ant-design/icons": "^6.0.0",
@@ -61,6 +62,7 @@
     "@docusaurus/module-type-aliases": "3.8.1",
     "@docusaurus/tsconfig": "3.8.1",
     "@docusaurus/types": "3.8.1",
+    "@octokit/core": "^7.0.4",
     "@typescript-eslint/eslint-plugin": "^5.62.0",
     "@typescript-eslint/parser": "^5.62.0",
     "eslint": "^8.57.1",
@@ -74,7 +76,10 @@
     "eslint-plugin-prettier": "^5.0.0",
     "eslint-plugin-react": "^7.37.4",
     "eslint-plugin-react-hooks": "^4.6.2",
+    "lodash": "^4.17.21",
+    "node-fetch": "^3.3.2",
     "prettier": "^3.5.0",
+    "tsx": "^4.20.5",
     "typescript": ">=5.1.0 <5.2.0"
   },
   "browserslist": {
