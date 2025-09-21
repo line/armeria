@@ -19,8 +19,6 @@ package com.linecorp.armeria.server.encoding;
 import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
 
-import java.util.Collections;
-import java.util.EnumSet;
 import java.util.List;
 import java.util.Set;
 import java.util.function.Function;
@@ -29,11 +27,13 @@ import java.util.function.Predicate;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 
+import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.ResponseHeaders;
+import com.linecorp.armeria.common.encoding.StreamEncoderFactory;
 import com.linecorp.armeria.server.HttpService;
 
 /**
@@ -60,8 +60,7 @@ public final class EncodingServiceBuilder {
 
     private static final int DEFAULT_MIN_BYTES_TO_FORCE_CHUNKED_AND_ENCODING = 1024;
 
-    public static final Set<Encoding> ALL_ENCODINGS =
-            Collections.unmodifiableSet(EnumSet.allOf(Encoding.class));
+    private List<StreamEncoderFactory> encoderFactories = StreamEncoderFactory.all();
 
     private Predicate<MediaType> encodableContentTypePredicate = defaultEncodableContentTypePredicate;
 
@@ -69,9 +68,24 @@ public final class EncodingServiceBuilder {
 
     private int minBytesToForceChunkedAndEncoding = DEFAULT_MIN_BYTES_TO_FORCE_CHUNKED_AND_ENCODING;
 
-    private Set<Encoding> enabledEncodings = ALL_ENCODINGS;
-
     EncodingServiceBuilder() {}
+
+    /**
+     * Sets the {@link StreamEncoderFactory}s to use. If not specified, {@link StreamEncoderFactory#all()}
+     * is used by default.
+     *
+     * <p>
+     *     The configured {@link EncodingService} decides on a {@link StreamEncoderFactory}
+     *     depending on the weight of their {@link StreamEncoderFactory#encodingHeaderValue()} in the
+     *     {@link HttpHeaderNames#ACCEPT_ENCODING} header.
+     *     See <a href="https://datatracker.ietf.org/doc/html/rfc7231#section-5.3.4">RFC 7231</a> for details.
+     * </p>
+     */
+    public EncodingServiceBuilder encoderFactories(Iterable<? extends StreamEncoderFactory> encoderFactories) {
+        requireNonNull(encoderFactories, "encoderFactories");
+        this.encoderFactories = ImmutableList.copyOf(encoderFactories);
+        return this;
+    }
 
     /**
      * Sets the specified {@link MediaType}s to evaluate whether the content type of the {@link HttpResponse}
@@ -128,35 +142,12 @@ public final class EncodingServiceBuilder {
     }
 
     /**
-     * Sets the specified {@link Encoding}s for the {@link EncodingService} should enable/support.
-     * The default is {@link EncodingServiceBuilder#ALL_ENCODINGS}.
-     *
-     * @param encodings the {@link Encoding}s to enable
-     */
-    public EncodingServiceBuilder enabledEncodings(Encoding... encodings) {
-        return enabledEncodings(ImmutableSet.copyOf(
-                requireNonNull(encodings, "encodings")));
-    }
-
-    /**
-     * Sets the specified {@link Encoding}s for the {@link EncodingService} should enable/support.
-     * The default is {@link EncodingServiceBuilder#ALL_ENCODINGS}.
-     *
-     * @param encodings the {@link Encoding}s to enable
-     */
-    public EncodingServiceBuilder enabledEncodings(
-            Iterable<Encoding> encodings) {
-        enabledEncodings = ImmutableSet.copyOf(
-                requireNonNull(encodings, "encodings"));
-        return this;
-    }
-
-    /**
      * Returns a newly-created {@link EncodingService} based on the properties of this builder.
      */
     public EncodingService build(HttpService delegate) {
-        return new EncodingService(delegate, encodableContentTypePredicate, encodableRequestHeadersPredicate,
-                                   minBytesToForceChunkedAndEncoding, enabledEncodings);
+        return new EncodingService(delegate, encoderFactories, encodableContentTypePredicate,
+                                   encodableRequestHeadersPredicate,
+                                   minBytesToForceChunkedAndEncoding);
     }
 
     /**

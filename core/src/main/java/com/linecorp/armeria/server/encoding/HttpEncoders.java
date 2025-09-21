@@ -20,15 +20,11 @@ import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.Set;
-
-import com.google.common.collect.ImmutableSet;
 
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.annotation.Nullable;
-import com.linecorp.armeria.internal.common.encoding.StreamEncoderFactories;
-import com.linecorp.armeria.internal.common.encoding.StreamEncoderFactory;
+import com.linecorp.armeria.common.encoding.StreamEncoderFactory;
 
 import io.netty.handler.codec.compression.Brotli;
 
@@ -43,89 +39,99 @@ final class HttpEncoders {
     }
 
     @Nullable
-    static StreamEncoderFactory getEncoderFactory(
-            RequestHeaders headers, Set<Encoding> enabledEncodings
+    static StreamEncoderFactory determineEncoder(
+            Map<String, StreamEncoderFactory> headerToEncoderFactory, RequestHeaders headers
     ) {
         final String acceptEncoding = headers.get(HttpHeaderNames.ACCEPT_ENCODING);
         if (acceptEncoding == null) {
             return null;
         }
 
-        final ImmutableSet<Encoding> enabledEncodingsCopy = enabledEncodings
-                .stream()
-                .filter(encoding ->
-                                encoding != Encoding.BROTLI ||
-                                Brotli.isAvailable())
-                .collect(ImmutableSet.toImmutableSet());
-
-        return determineEncoder(enabledEncodingsCopy, acceptEncoding);
+        return determineEncoder(headerToEncoderFactory, acceptEncoding);
     }
 
-    // Copied from netty's HttpContentCompressor.
+    // Adapted from netty's HttpContentCompressor.
+    /*
+        // https://datatracker.ietf.org/doc/html/rfc7231#section-5.3.4
+        // OWS is optional whitespace, i.e. *( SP / HTAB )
+        Accept-Encoding = [
+            ( "," / ( codings [ OWS ";" OWS "q=" qvalue ] ) )
+            *( OWS "," [ OWS ( codings [ OWS ";" OWS "q=" qvalue ] ) ] )
+        ]
+     */
     @Nullable
-    private static StreamEncoderFactory determineEncoder(Set<Encoding> enabledEncodings,
-                                                         String acceptEncoding) {
+    private static StreamEncoderFactory determineEncoder(
+            Map<String, StreamEncoderFactory> headerToEncoderFactory,
+            String acceptEncoding) {
         float starQ = -1.0f;
-        final Map<Encoding, Float> encodings = new LinkedHashMap<>();
-        for (String encoding : acceptEncoding.split(",")) {
-            float q = 1.0f;
-            final int equalsPos = encoding.indexOf('=');
-            if (equalsPos != -1) {
-                try {
-                    q = Float.parseFloat(encoding.substring(equalsPos + 1));
-                } catch (NumberFormatException e) {
-                    // Ignore encoding
-                    q = 0.0f;
+        final Map<StreamEncoderFactory, Float> encoderFactoryToQ = new LinkedHashMap<>();
+
+        for (String acceptEncodingElement : acceptEncoding.split(",")) {
+            // https://datatracker.ietf.org/doc/html/rfc7231#section-3.1.2.1
+            // codings = content-coding / "identity" / "*"
+            final String codings;
+            // https://datatracker.ietf.org/doc/html/rfc7231#section-5.3.1
+            // qvalue = ( "0" [ "." 0*3DIGIT ] ) / ( "1" [ "." 0*3("0") ] )
+            float qValue;
+
+            // https://datatracker.ietf.org/doc/html/rfc7231#section-5.3.4
+            // codings [ OWS ";" OWS "q=" qvalue ]
+            final int codingWeightSepIndex = acceptEncodingElement.indexOf(';');
+            if (codingWeightSepIndex != -1) {
+                codings = acceptEncodingElement.substring(0, codingWeightSepIndex).trim();
+
+                // "q=" qvalue
+                final String weightRightPart = acceptEncodingElement
+                        .substring(codingWeightSepIndex + 1)
+                        .trim();
+                final int equalsPos = weightRightPart.indexOf('=');
+                if (equalsPos != -1) {
+                    try {
+                        qValue = Float.parseFloat(weightRightPart.substring(equalsPos + 1));
+                    } catch (NumberFormatException e) {
+                        // Ignore encoding
+                        qValue = 0.0f;
+                    }
+                } else {
+                    qValue = 0.0f;
                 }
+            } else {
+                codings = acceptEncodingElement.trim();
+                qValue = 1.0f;
             }
-            if (encoding.contains("*")) {
-                starQ = q;
-            } else if (enabledEncodings.contains(Encoding.BROTLI) && encoding.contains("br")) {
-                encodings.put(Encoding.BROTLI, q);
-            } else if (enabledEncodings.contains(Encoding.GZIP) && encoding.contains("gzip")) {
-                encodings.put(Encoding.GZIP, q);
-            } else if (enabledEncodings.contains(Encoding.DEFLATE) && encoding.contains("deflate")) {
-                encodings.put(Encoding.DEFLATE, q);
-            } else if (enabledEncodings.contains(Encoding.SNAPPY) && encoding.contains("x-snappy-framed")) {
-                encodings.put(Encoding.SNAPPY, q);
+
+            if (codings.isEmpty()) {
+                continue;
+            }
+
+            if (codings.contains("*")) {
+                starQ = qValue;
+            } else {
+                final StreamEncoderFactory encodingFactory = headerToEncoderFactory.get(codings);
+
+                if (encodingFactory != null) {
+                    encoderFactoryToQ.put(encodingFactory, qValue);
+                }
             }
         }
 
-        if (!encodings.isEmpty()) {
-            final Entry<Encoding, Float> entry = Collections.max(encodings.entrySet(),
-                                                                 Entry.comparingByValue());
+        if (!encoderFactoryToQ.isEmpty()) {
+            final Entry<StreamEncoderFactory, Float> entry = Collections.max(encoderFactoryToQ.entrySet(),
+                                                                             Entry.comparingByValue());
             if (entry.getValue() > 0.0f) {
-                return getFactoryForEncoding(entry.getKey());
+                return entry.getKey();
             }
         }
 
         if (starQ > 0.0f) {
-            for (Encoding enabledEncoding : enabledEncodings) {
-                if (!encodings.containsKey(enabledEncoding)) {
-                    return getFactoryForEncoding(enabledEncoding);
+            for (final StreamEncoderFactory encoderFactory : headerToEncoderFactory.values()) {
+                if (!encoderFactoryToQ.containsKey(encoderFactory)) {
+                    return encoderFactory;
                 }
             }
-        } else {
-            return null;
         }
 
         return null;
-    }
-
-    private static StreamEncoderFactories getFactoryForEncoding(Encoding encoding) {
-        switch (encoding) {
-            case GZIP:
-                return StreamEncoderFactories.GZIP;
-            case DEFLATE:
-                return StreamEncoderFactories.DEFLATE;
-            case BROTLI:
-                return StreamEncoderFactories.BROTLI;
-            case SNAPPY:
-                return StreamEncoderFactories.SNAPPY;
-            default:
-                // Should never reach here.
-                throw new Error();
-        }
     }
 
     private HttpEncoders() {}

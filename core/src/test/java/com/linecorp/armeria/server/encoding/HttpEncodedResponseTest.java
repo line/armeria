@@ -41,12 +41,12 @@ import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.encoding.StreamDecoder;
 import com.linecorp.armeria.common.encoding.StreamDecoderFactory;
+import com.linecorp.armeria.common.encoding.StreamEncoderFactories;
+import com.linecorp.armeria.common.encoding.StreamEncoderFactory;
 import com.linecorp.armeria.common.stream.AbortedStreamException;
 import com.linecorp.armeria.common.stream.CancelledSubscriptionException;
 import com.linecorp.armeria.common.stream.NoopSubscriber;
 import com.linecorp.armeria.common.stream.SubscriptionOption;
-import com.linecorp.armeria.internal.common.encoding.StreamEncoderFactories;
-import com.linecorp.armeria.internal.common.encoding.StreamEncoderFactory;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
