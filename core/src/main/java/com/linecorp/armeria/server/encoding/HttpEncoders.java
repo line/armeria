@@ -51,14 +51,6 @@ final class HttpEncoders {
     }
 
     // Adapted from netty's HttpContentCompressor.
-    /*
-        // https://datatracker.ietf.org/doc/html/rfc7231#section-5.3.4
-        // OWS is optional whitespace, i.e. *( SP / HTAB )
-        Accept-Encoding = [
-            ( "," / ( codings [ OWS ";" OWS "q=" qvalue ] ) )
-            *( OWS "," [ OWS ( codings [ OWS ";" OWS "q=" qvalue ] ) ] )
-        ]
-     */
     @Nullable
     private static StreamEncoderFactory determineEncoder(
             Map<String, StreamEncoderFactory> headerToEncoderFactory,
@@ -66,21 +58,22 @@ final class HttpEncoders {
         float starQ = -1.0f;
         final Map<StreamEncoderFactory, Float> encoderFactoryToQ = new LinkedHashMap<>();
 
+        /*
+            // https://datatracker.ietf.org/doc/html/rfc7231#section-5.3.4
+            // OWS is optional whitespace, i.e. *( SP / HTAB )
+            Accept-Encoding = [
+                ( "," / ( codings [ OWS ";" OWS "q=" qvalue ] ) )
+                *( OWS "," [ OWS ( codings [ OWS ";" OWS "q=" qvalue ] ) ] )
+            ]
+        */
         for (String acceptEncodingElement : acceptEncoding.split(",")) {
-            // https://datatracker.ietf.org/doc/html/rfc7231#section-3.1.2.1
-            // codings = content-coding / "identity" / "*"
             final String codings;
-            // https://datatracker.ietf.org/doc/html/rfc7231#section-5.3.1
-            // qvalue = ( "0" [ "." 0*3DIGIT ] ) / ( "1" [ "." 0*3("0") ] )
             float qValue;
 
-            // https://datatracker.ietf.org/doc/html/rfc7231#section-5.3.4
-            // codings [ OWS ";" OWS "q=" qvalue ]
             final int codingWeightSepIndex = acceptEncodingElement.indexOf(';');
             if (codingWeightSepIndex != -1) {
                 codings = acceptEncodingElement.substring(0, codingWeightSepIndex).trim();
 
-                // "q=" qvalue
                 final String weightRightPart = acceptEncodingElement
                         .substring(codingWeightSepIndex + 1)
                         .trim();
