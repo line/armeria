@@ -66,17 +66,19 @@ final class HttpEncoders {
                 *( OWS "," [ OWS ( codings [ OWS ";" OWS "q=" qvalue ] ) ] )
             ]
         */
+
         for (String acceptEncodingElement : acceptEncoding.split(",")) {
             final String codings;
             float qValue;
 
             final int codingWeightSepIndex = acceptEncodingElement.indexOf(';');
             if (codingWeightSepIndex != -1) {
+                // i.e. " \t br;  q=0.8"
                 codings = acceptEncodingElement.substring(0, codingWeightSepIndex).trim();
 
+                // We do not need to trim here. Float.parseFloat() will do it for us.
                 final String weightRightPart = acceptEncodingElement
-                        .substring(codingWeightSepIndex + 1)
-                        .trim();
+                        .substring(codingWeightSepIndex + 1);
                 final int equalsPos = weightRightPart.indexOf('=');
                 if (equalsPos != -1) {
                     try {
@@ -89,17 +91,17 @@ final class HttpEncoders {
                     qValue = 0.0f;
                 }
             } else {
+                // i.e. "  deflate\t" or "" because we have a leading comma
                 codings = acceptEncodingElement.trim();
                 qValue = 1.0f;
-            }
-
-            if (codings.isEmpty()) {
-                continue;
             }
 
             if (codings.contains("*")) {
                 starQ = qValue;
             } else {
+                if (codings.isEmpty()) {
+                    continue;
+                }
                 final StreamEncoderFactory encodingFactory = headerToEncoderFactory.get(codings);
 
                 if (encodingFactory != null) {
