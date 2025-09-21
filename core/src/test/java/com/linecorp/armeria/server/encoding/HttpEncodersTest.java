@@ -276,36 +276,6 @@ class HttpEncodersTest {
         )).isNull();
     }
 
-    static Stream<Arguments> equivalentAcceptEncodingHeaders() {
-        return Stream.of(
-                // Leading comma, compact
-                Arguments.of(
-                        ",deflate;q=0.5,gzip;q=0.9,br;q=0.9",
-                        "deflate;q=0.5, gzip;q=0.9, br;q=0.9"
-                ),
-                // Leading comma
-                Arguments.of(
-                        " , \t deflate;q=0.5,gzip;\t \tq=0.9, br  ; \t\t q=0.9",
-                        "deflate;q=0.5, gzip;q=0.9, br;q=0.9"
-                ),
-                // Single encoding without quality value
-                Arguments.of(
-                        " , \t deflate \t",
-                        "deflate"
-                ),
-                // Single encoding with quality value
-                Arguments.of(
-                        " , \t deflate ;     \t    q=0.5 \t",
-                        "deflate;q=0.5"
-                ),
-                // Unknown encoding
-                Arguments.of(
-                        " , \t\t piedpiper,piperpied;q=0.999 \t",
-                        "piedpiper,piperpied"
-                )
-        );
-    }
-
     @Test
     void acceptEncodingWithZeroValues() {
         final RequestHeaders headers = RequestHeaders.of(HttpMethod.GET, "/",
@@ -374,6 +344,36 @@ class HttpEncodersTest {
         assert HttpEncoders
                 .determineEncoder(encodingFactories, headers)
                 .equals(customBrotliFactory);
+    }
+
+    static Stream<Arguments> equivalentAcceptEncodingHeaders() {
+        return Stream.of(
+                // Leading comma, compact
+                Arguments.of(
+                        ",deflate;q=0.5,gzip;q=0.9,br;q=0.9",
+                        "deflate;q=0.5, gzip;q=0.9, br;q=0.9"
+                ),
+                // Leading comma
+                Arguments.of(
+                        " , \t deflate;q=0.5,gzip;\t \tq=0.9, br  ; \t\t q=0.9",
+                        "deflate;q=0.5, gzip;q=0.9, br;q=0.9"
+                ),
+                // Single encoding without quality value
+                Arguments.of(
+                        " , \t deflate \t",
+                        "deflate"
+                ),
+                // Single encoding with quality value
+                Arguments.of(
+                        " , \t deflate ;     \t    q=0.5 \t",
+                        "deflate;q=0.5"
+                ),
+                // Unknown encoding
+                Arguments.of(
+                        " , \t\t piedpiper,piperpied;q=0.999 \t",
+                        "piedpiper,piperpied"
+                )
+        );
     }
 
     @ParameterizedTest
