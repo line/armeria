@@ -26,18 +26,10 @@ import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.encoding.StreamEncoderFactory;
 
-import io.netty.handler.codec.compression.Brotli;
-
 /**
  * Support utilities for dealing with HTTP encoding (e.g., gzip).
  */
 final class HttpEncoders {
-
-    static {
-        // Invoke to load Brotli native binary.
-        Brotli.isAvailable();
-    }
-
     @Nullable
     static StreamEncoderFactory determineEncoder(
             Map<String, StreamEncoderFactory> headerToEncoderFactory, RequestHeaders headers
