@@ -81,6 +81,22 @@ public final class EncodingServiceBuilder {
      *     See <a href="https://datatracker.ietf.org/doc/html/rfc7231#section-5.3.4">RFC 7231</a> for details.
      * </p>
      */
+    public EncodingServiceBuilder encoderFactories(StreamEncoderFactory... encoderFactories) {
+        requireNonNull(encoderFactories, "encoderFactories");
+        return encoderFactories(ImmutableList.copyOf(encoderFactories));
+    }
+
+    /**
+     * Sets the {@link StreamEncoderFactory}s to use. If not specified, {@link StreamEncoderFactory#all()}
+     * is used by default.
+     *
+     * <p>
+     *     The configured {@link EncodingService} decides on a {@link StreamEncoderFactory}
+     *     depending on the weight of their {@link StreamEncoderFactory#encodingHeaderValue()} in the
+     *     {@link HttpHeaderNames#ACCEPT_ENCODING} header.
+     *     See <a href="https://datatracker.ietf.org/doc/html/rfc7231#section-5.3.4">RFC 7231</a> for details.
+     * </p>
+     */
     public EncodingServiceBuilder encoderFactories(Iterable<? extends StreamEncoderFactory> encoderFactories) {
         requireNonNull(encoderFactories, "encoderFactories");
         this.encoderFactories = ImmutableList.copyOf(encoderFactories);
