@@ -50,7 +50,7 @@ export default async function createConfigAsync() {
     favicon: 'img/favicon.svg',
 
     // Set the production url of your site here
-    url: 'https://your-docusaurus-site.example.com',
+    url: 'https://armeria.dev',
     // Set the /<baseUrl>/ pathname under which your site is served
     // For GitHub pages deployment, it is often '/<projectName>/'
     baseUrl: '/',
@@ -82,21 +82,20 @@ export default async function createConfigAsync() {
             remarkPlugins: [remarkApiLink, remarkGithub],
           },
           blog: {
-            routeBasePath: '/news',
             path: 'src/content/news',
+            routeBasePath: '/news',
             blogTitle: 'Armeria Newsletter',
             blogDescription:
               'The Armeria Newsletter provides the latest insights, updates, and best practices to help you maximize the potential of Armeria.',
             blogSidebarTitle: ' ',
             blogSidebarCount: 'ALL',
             showReadingTime: false,
-            blogListComponent: '@site/src/components/news-redirect',
+            blogListComponent: '@site/src/components/news-redirect', // Redirect to the latest newsletter when accessing /news
             feedOptions: {
               type: ['rss', 'atom'],
               xslt: true,
             },
             editUrl: 'https://github.com/line/armeria/edit/main/site/',
-            // Useful options to enforce blogging best practices
             onInlineTags: 'warn',
             onInlineAuthors: 'warn',
             onUntruncatedBlogPosts: 'warn',
@@ -177,17 +176,7 @@ export default async function createConfigAsync() {
       },
       footer: {
         style: 'dark',
-        links: [
-          {
-            label: 'LY Corporation Tech Blog',
-            href: 'https://techblog.lycorp.co.jp/en',
-          },
-          {
-            label: 'Privacy Policy',
-            href: 'https://terms.line.me/line_rules?lang=en',
-          },
-        ],
-        copyright: `© LY Corporation`, // See src/theme/Footer/Copyright/index.tsx
+        // See src/theme/Footer/index.tsx for the footer implementation
       },
       prism: {
         theme: prismThemes.github,
@@ -220,9 +209,10 @@ export default async function createConfigAsync() {
           path: 'src/content/community',
           routeBasePath: 'community',
           sidebarPath: './sidebarsCommunity.ts',
+          editUrl: 'https://github.com/line/armeria/edit/main/site/',
+          remarkPlugins: [remarkApiLink, remarkGithub],
         },
       ],
-      './src/plugins/tutorial.ts',
       [
         '@docusaurus/plugin-content-docs',
         {
@@ -236,6 +226,7 @@ export default async function createConfigAsync() {
             const sidebarItems = await defaultSidebarItemsGenerator(args);
             return sortReleaseNoteSidebarItems(sidebarItems);
           },
+          editUrl: 'https://github.com/line/armeria/edit/main/site/',
           remarkPlugins: [remarkApiLink, remarkGithub, remarkReleaseDate],
         },
       ],
@@ -245,13 +236,21 @@ export default async function createConfigAsync() {
           id: 'blog',
           path: 'src/content/blog/en',
           routeBasePath: 'blog',
-          postsPerPage: 12,
-          showReadingTime: true,
-          blogSidebarCount: 'ALL',
+          blogTitle: 'Armeria Blog',
+          blogDescription:
+            'Discover stories, insights, and experiences in building modern microservices with Armeria — from gRPC to Spring Boot, with metrics, tracing, and more.',
           blogSidebarTitle: ' ',
-          onUntruncatedBlogPosts: 'warn',
+          blogSidebarCount: 'ALL',
+          showReadingTime: true,
+          feedOptions: {
+            // TODO
+            type: ['rss', 'atom'],
+            xslt: true,
+          },
           editUrl: 'https://github.com/line/armeria/edit/main/site/',
-          // TODO
+          onInlineTags: 'warn',
+          onInlineAuthors: 'warn',
+          onUntruncatedBlogPosts: 'throw',
         },
       ],
       [
@@ -260,13 +259,21 @@ export default async function createConfigAsync() {
           id: 'blog-ja',
           path: 'src/content/blog/ja',
           routeBasePath: 'blog/ja',
-          postsPerPage: 12,
-          showReadingTime: true,
-          blogSidebarCount: 'ALL',
+          blogTitle: 'Armeria Blog',
+          blogDescription:
+            'Discover stories, insights, and experiences in building modern microservices with Armeria — from gRPC to Spring Boot, with metrics, tracing, and more.',
           blogSidebarTitle: ' ',
-          onUntruncatedBlogPosts: 'warn',
+          blogSidebarCount: 'ALL',
+          showReadingTime: true,
+          feedOptions: {
+            // TODO
+            type: ['rss', 'atom'],
+            xslt: true,
+          },
           editUrl: 'https://github.com/line/armeria/edit/main/site/',
-          // TODO
+          onInlineTags: 'warn',
+          onInlineAuthors: 'warn',
+          onUntruncatedBlogPosts: 'throw',
         },
       ],
       [
@@ -275,13 +282,21 @@ export default async function createConfigAsync() {
           id: 'blog-ko',
           path: 'src/content/blog/ko',
           routeBasePath: 'blog/ko',
-          postsPerPage: 12,
-          showReadingTime: true,
-          blogSidebarCount: 'ALL',
+          blogTitle: 'Armeria Blog',
+          blogDescription:
+            'Discover stories, insights, and experiences in building modern microservices with Armeria — from gRPC to Spring Boot, with metrics, tracing, and more.',
           blogSidebarTitle: ' ',
-          onUntruncatedBlogPosts: 'warn',
+          blogSidebarCount: 'ALL',
+          showReadingTime: true,
+          feedOptions: {
+            // TODO
+            type: ['rss', 'atom'],
+            xslt: true,
+          },
           editUrl: 'https://github.com/line/armeria/edit/main/site/',
-          // TODO
+          onInlineTags: 'warn',
+          onInlineAuthors: 'warn',
+          onUntruncatedBlogPosts: 'throw',
         },
       ],
       [
@@ -295,6 +310,7 @@ export default async function createConfigAsync() {
           ],
         },
       ],
+      './src/plugins/tutorial.ts',
     ],
 
     future: {
