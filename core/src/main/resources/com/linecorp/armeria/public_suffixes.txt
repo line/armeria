@@ -450,9 +450,6 @@ air-traffic-control.aero
 airbus
 aircraft.aero
 airforce
-airkitapps-au.com
-airkitapps.com
-airkitapps.eu
 airline.aero
 airport.aero
 airtel
@@ -2161,6 +2158,7 @@ dynvpn.de
 dyroy.no
 dz
 e.bg
+e.id
 e.se
 e12.ve
 e164.arpa
