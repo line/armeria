@@ -48,7 +48,7 @@ import io.netty.util.concurrent.ScheduledFuture;
  * @param <I> the {@link Request} type
  * @param <O> the {@link Response} type
  */
-public abstract class AbstractRetryingClient<I extends Request, O extends Response>
+abstract class AbstractRetryingClient<I extends Request, O extends Response>
         extends SimpleDecoratingClient<I, O> {
 
     private static final Logger logger = LoggerFactory.getLogger(AbstractRetryingClient.class);
