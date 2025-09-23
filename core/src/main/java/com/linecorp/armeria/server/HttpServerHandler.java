@@ -774,6 +774,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
         private final ChannelHandlerContext ctx;
         private final DecodedHttpRequest req;
         private final boolean isTransientService;
+        private final long closeHttp2StreamDelayMillis;
 
         RequestAndResponseCompleteHandler(EventLoop eventLoop, ChannelHandlerContext ctx,
                                           ServiceRequestContext reqCtx, DecodedHttpRequest req,
@@ -781,6 +782,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
             this.ctx = ctx;
             this.req = req;
             this.isTransientService = isTransientService;
+            closeHttp2StreamDelayMillis = reqCtx.config().service().options().closeHttp2StreamDelayMillis();
 
             assert responseEncoder != null;
 
@@ -863,7 +865,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
 
                 if (!isNeedsDisconnection() && responseEncoder instanceof ServerHttp2ObjectEncoder) {
                     ((ServerHttp2ObjectEncoder) responseEncoder)
-                            .maybeResetStream(req.streamId(), Http2Error.CANCEL);
+                            .maybeResetStream(req.streamId(), Http2Error.CANCEL, closeHttp2StreamDelayMillis);
                 }
 
                 final boolean needsDisconnection = ctx.channel().isActive() &&

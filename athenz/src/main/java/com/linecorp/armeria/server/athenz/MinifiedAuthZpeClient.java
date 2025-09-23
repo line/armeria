@@ -180,7 +180,8 @@ final class MinifiedAuthZpeClient {
         }
     }
 
-    MinifiedAuthZpeClient(ZtsBaseClient ztsBaseClient, PublicKeyStore publicKeyStore, ZpeClient zpeClt) {
+    MinifiedAuthZpeClient(ZtsBaseClient ztsBaseClient, PublicKeyStore publicKeyStore, ZpeClient zpeClt,
+                          String oauth2KeysPath) {
         this.publicKeyStore = publicKeyStore;
         this.zpeClt = zpeClt;
 
@@ -190,7 +191,7 @@ final class MinifiedAuthZpeClient {
 
         // initialize the access token signing key resolver
 
-        initializeAccessTokenSignKeyResolver(ztsBaseClient);
+        initializeAccessTokenSignKeyResolver(ztsBaseClient, oauth2KeysPath);
 
         // save the last zts api call time, and the allowed interval between api calls
 
@@ -198,13 +199,13 @@ final class MinifiedAuthZpeClient {
                 System.getProperty(ZPE_PROP_MILLIS_BETWEEN_ZTS_CALLS, Long.toString(30 * 1000 * 60))));
     }
 
-    private void initializeAccessTokenSignKeyResolver(ZtsBaseClient ztsBaseClient) {
+    private void initializeAccessTokenSignKeyResolver(ZtsBaseClient ztsBaseClient, String oauth2KeysPath) {
         final String serverUrl = System.getProperty(ZpeConsts.ZPE_PROP_JWK_URI);
         if (serverUrl == null || serverUrl.isEmpty()) {
-            accessSignKeyResolver = newDefaultJwtsSigningKeyResolver(ztsBaseClient);
+            accessSignKeyResolver = newDefaultJwtsSigningKeyResolver(ztsBaseClient, oauth2KeysPath);
             ztsBaseClient.addTlsKeyPairListener(tlsKeyPair -> {
                 // Refresh the JwtsSigningKeyResolver when the TLS key pair changes
-                accessSignKeyResolver = newDefaultJwtsSigningKeyResolver(ztsBaseClient);
+                accessSignKeyResolver = newDefaultJwtsSigningKeyResolver(ztsBaseClient, oauth2KeysPath);
             });
             return;
         }
@@ -222,13 +223,15 @@ final class MinifiedAuthZpeClient {
                 logger.warn("Unable to initialize key refresher: {}", ex.getMessage());
             }
         }
-        accessSignKeyResolver = new JwtsSigningKeyResolver(serverUrl, sslContext, null);
+        final URI proxyUri = ztsBaseClient.proxyUri();
+        accessSignKeyResolver = new JwtsSigningKeyResolver(serverUrl, sslContext,
+                                                           proxyUri != null ? proxyUri.toString() : null);
     }
 
-    private static JwtsSigningKeyResolver newDefaultJwtsSigningKeyResolver(ZtsBaseClient ztsBaseClient) {
+    private static JwtsSigningKeyResolver newDefaultJwtsSigningKeyResolver(ZtsBaseClient ztsBaseClient,
+                                                                           String oauth2KeysPath) {
         final URI ztsUri = ztsBaseClient.ztsUri();
         final URI proxyUri = ztsBaseClient.proxyUri();
-        logger.debug("No JWK URI specified, using {}", ztsUri);
         String proxyUriStr = null;
         if (proxyUri != null) {
             proxyUriStr = proxyUri.toString();
@@ -239,7 +242,7 @@ final class MinifiedAuthZpeClient {
                                                                           null, clientFactory.meterRegistry());
         final JdkSslContext sslContext = (JdkSslContext) sslContextFactory.getOrCreate(SslContextMode.CLIENT,
                                                                                        "*");
-        return new JwtsSigningKeyResolver(ztsUri + "/oauth2/keys", sslContext.context(), proxyUriStr);
+        return new JwtsSigningKeyResolver(ztsUri + oauth2KeysPath, sslContext.context(), proxyUriStr);
     }
 
     /**

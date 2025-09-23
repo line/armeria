@@ -18,11 +18,14 @@ package com.linecorp.armeria.testing.server;
 
 import static java.util.Objects.requireNonNull;
 
+import java.util.List;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 import java.util.function.Predicate;
+
+import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
@@ -171,6 +174,16 @@ public final class ServiceRequestContextCaptor {
     @Nullable
     public ServiceRequestContext poll(long timeout, TimeUnit unit) throws InterruptedException {
         return serviceContexts.poll(timeout, unit);
+    }
+
+    /**
+     * Returns all the captured {@link ServiceRequestContext}s and clears them.
+     */
+    public List<ServiceRequestContext> all() throws InterruptedException {
+        final ImmutableList<ServiceRequestContext> copied =
+                ImmutableList.copyOf(serviceContexts);
+        serviceContexts.clear();
+        return copied;
     }
 
     /**

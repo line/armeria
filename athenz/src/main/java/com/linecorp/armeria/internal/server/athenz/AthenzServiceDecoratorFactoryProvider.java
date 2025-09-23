@@ -25,11 +25,13 @@ import com.google.common.collect.ImmutableMap;
 
 import com.linecorp.armeria.client.athenz.ZtsBaseClient;
 import com.linecorp.armeria.client.athenz.ZtsBaseClientBuilder;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServerListenerAdapter;
 import com.linecorp.armeria.server.athenz.AthenzPolicyConfig;
 import com.linecorp.armeria.server.athenz.AthenzServiceDecoratorFactory;
+import com.linecorp.armeria.server.athenz.AthenzServiceDecoratorFactoryBuilder;
 
 /**
  * A helper class to create an {@link AthenzServiceDecoratorFactory} instance.
@@ -39,7 +41,9 @@ public final class AthenzServiceDecoratorFactoryProvider {
 
     public static AthenzServiceDecoratorFactory create(
             ServerBuilder sb, URI ztsUri, File athenzPrivateKey, File athenzPublicKey,
-            URI proxyUri, File athenzCaCert, List<String> domains, boolean jwsPolicySupport,
+            @Nullable URI proxyUri, @Nullable File athenzCaCert, @Nullable String oauth2KeysPath,
+            List<String> domains,
+            boolean jwsPolicySupport,
             Duration policyRefreshInterval) {
 
         final ZtsBaseClientBuilder clientBuilder =
@@ -62,8 +66,13 @@ public final class AthenzServiceDecoratorFactoryProvider {
                 ztsBaseClient.close();
             }
         });
-        return AthenzServiceDecoratorFactory
-                .builder(ztsBaseClient)
+        final AthenzServiceDecoratorFactoryBuilder factoryBuilder =
+                AthenzServiceDecoratorFactory
+                        .builder(ztsBaseClient);
+        if (oauth2KeysPath != null) {
+            factoryBuilder.oauth2KeysPath(oauth2KeysPath);
+        }
+        return factoryBuilder
                 .policyConfig(athenzPolicyConfig)
                 .build();
     }
