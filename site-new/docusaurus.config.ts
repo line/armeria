@@ -311,6 +311,17 @@ export default async function createConfigAsync() {
         },
       ],
       './src/plugins/tutorial.ts',
+      [
+        './src/plugins/short-url.ts',
+        {
+          shortUrls: [
+            {
+              name: 'discord',
+              href: 'https://discord.gg/7FH8c6npmg',
+            },
+          ],
+        },
+      ],
     ],
 
     future: {
