@@ -75,6 +75,8 @@ cp -r cel-spec-*/proto/cel/expr/* "${protodir}/cel/expr"
 # proto2 syntax is not fully supported by javapgv
 # protoc: stdout: . stderr: group types are deprecated and unsupported. Use an embedded message instead.
 #  --javapgv_out: protoc-gen-javapgv: Plugin failed with status code 1.
+# Since the conformance directory is not imported by envoy APIs and it is used for integration testing within the
+# cel specification repo, deleting this directory for now
 rm -r "${protodir}/cel/expr/conformance"
 
 popd >/dev/null
