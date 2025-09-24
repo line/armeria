@@ -8376,6 +8376,7 @@ tel
 tel.tr
 telebit.app
 telebit.io
+teleport.sh
 temasek
 temp-dns.com
 tempio-olbia.it
