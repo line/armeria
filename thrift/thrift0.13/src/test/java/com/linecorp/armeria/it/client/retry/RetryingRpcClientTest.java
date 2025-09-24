@@ -1,7 +1,7 @@
 /*
- * Copyright 2017 LINE Corporation
+ * Copyright 2025 LY Corporation
  *
- * LINE Corporation licenses this file to you under the Apache License,
+ * LY Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
@@ -239,15 +239,18 @@ class RetryingRpcClientTest {
     }
 
     private HelloService.Iface helloClient(RetryRuleWithContent<RpcResponse> rule, int maxAttempts) {
+        return helloClient(RetryConfig.builderForRpc(rule)
+                                      .maxTotalAttempts(maxAttempts)
+                                      .build());
+    }
+
+    private HelloService.Iface helloClient(RetryConfig<RpcResponse> retryConfig) {
         return ThriftClients.builder(server.httpUri())
                             .path("/thrift")
-                            .rpcDecorator(
-                                    RetryingRpcClient.builder(RetryConfig.builderForRpc(rule)
-                                                                         .maxTotalAttempts(maxAttempts)
-                                                                         .build())
-                                                     .newDecorator())
+                            .rpcDecorator(RetryingRpcClient.newDecorator(retryConfig))
                             .build(HelloService.Iface.class);
     }
+
 
     private HelloService.Iface helloClient(RetryRuleWithContent<RpcResponse> rule, int maxAttempts,
                                            BlockingQueue<RequestLog> logQueue) {
@@ -324,6 +327,29 @@ class RetryingRpcClientTest {
         assertThat(t).isInstanceOf(IllegalStateException.class)
                      .satisfies(cause -> assertThat(cause.getMessage()).matches(
                              "(?i).*(factory has been closed|not accepting a task).*"));
+    }
+
+    @Test
+    void doNotRetryWhenNoRetryConfigIsGiven() throws Exception {
+        final HelloService.Iface client = helloClient(RetryConfig.noRetry());
+
+        when(serviceHandler.hello(anyString()))
+                .thenThrow(new IllegalArgumentException())
+                .thenReturn("world");
+
+
+        final Throwable t = catchThrowable(() -> client.hello("hello"));
+
+        assertThat(t).isInstanceOf(TApplicationException.class);
+        assertThat(((TApplicationException) t).getType()).isEqualTo(TApplicationException.INTERNAL_ERROR);
+
+        // Verify that the service was called only once.
+        verify(serviceHandler, only()).hello("hello");
+
+        // Sleep for 1 second to check if there was another retry.
+        TimeUnit.SECONDS.sleep(1);
+
+        verify(serviceHandler, only()).hello("hello");
     }
 
     @Test
