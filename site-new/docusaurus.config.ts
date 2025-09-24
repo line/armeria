@@ -108,6 +108,10 @@ export default async function createConfigAsync() {
               require.resolve('react-tweet/theme.css'),
             ],
           },
+          gtag: {
+            trackingID: 'G-CY9YHLJ0K6',
+            anonymizeIP: true,
+          },
         } satisfies Preset.Options,
       ],
     ],
