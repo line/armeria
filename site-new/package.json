@@ -12,6 +12,7 @@
     "docusaurus": "docusaurus",
     "start": "docusaurus start --no-open",
     "build": "docusaurus build",
+    "build:dev": "docusaurus build --dev",
     "swizzle": "docusaurus swizzle",
     "lint": "eslint .",
     "lint:fix": "eslint --fix .",
