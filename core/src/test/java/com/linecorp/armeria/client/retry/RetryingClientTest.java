@@ -16,8 +16,8 @@
 
 package com.linecorp.armeria.client.retry;
 
-import static com.linecorp.armeria.client.retry.AbstractRetryingClient.ARMERIA_RETRY_COUNT;
 import static com.linecorp.armeria.common.util.Exceptions.peel;
+import static com.linecorp.armeria.internal.client.ClientUtil.ARMERIA_RETRY_COUNT;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.catchThrowable;
@@ -526,15 +526,15 @@ class RetryingClientTest {
     void evaluatesMappingOnce() {
         final AtomicInteger evaluations = new AtomicInteger(0);
         final RetryConfigMapping<HttpResponse> mapping =
-            (ctx, req) -> {
-                evaluations.incrementAndGet();
-                return RetryConfig
-                        .<HttpResponse>builder0(RetryRule.builder()
-                                                         .onStatus(HttpStatus.valueOf(500))
-                                                         .thenBackoff())
-                        .maxTotalAttempts(2)
-                        .build();
-            };
+                (ctx, req) -> {
+                    evaluations.incrementAndGet();
+                    return RetryConfig
+                            .<HttpResponse>builder0(RetryRule.builder()
+                                                             .onStatus(HttpStatus.valueOf(500))
+                                                             .thenBackoff())
+                            .maxTotalAttempts(2)
+                            .build();
+                };
 
         final WebClient client = client(mapping);
 

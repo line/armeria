@@ -105,7 +105,7 @@ class RetryingClientLoadBalancingTest {
             }
 
             // Retry only once on failure.
-            if (!HttpStatus.OK.equals(status) && AbstractRetryingClient.getTotalAttempts(ctx) <= 1) {
+            if (!HttpStatus.OK.equals(status) && ctx.log().partial().currentAttempt() <= 1) {
                 return UnmodifiableFuture.completedFuture(RetryDecision.retry(Backoff.withoutDelay()));
             } else {
                 return UnmodifiableFuture.completedFuture(RetryDecision.noRetry());
@@ -127,9 +127,9 @@ class RetryingClientLoadBalancingTest {
             case FAILURE:
                 final List<Integer> expectedPortsWhenRetried =
                         ImmutableList.<Integer>builder()
-                                .addAll(expectedPorts)
-                                .addAll(expectedPorts)
-                                .build();
+                                     .addAll(expectedPorts)
+                                     .addAll(expectedPorts)
+                                     .build();
                 assertThat(accessedPorts).isEqualTo(expectedPortsWhenRetried);
                 break;
         }
