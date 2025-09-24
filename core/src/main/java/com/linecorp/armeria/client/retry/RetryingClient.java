@@ -310,26 +310,46 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
             return;
         }
 
-        if (!rctx.ctx().exchangeType().isResponseStreaming() || rctx.config().requiresResponseTrailers()) {
-            attempt.res().aggregate().handle((aggregated, cause) -> {
-                if (cause != null) {
-                    attempt.ctx().logBuilder().endRequest(cause);
-                    attempt.ctx().logBuilder().endResponse(cause);
-                    handleResponseWithoutContent(rctx,
-                                                 attempt.setRes(HttpResponse.ofFailure(cause)), cause);
-                } else {
-                    completeLogIfBytesNotTransferred(attempt.ctx(), aggregated);
-                    final RetryAttempt<HttpResponse> aggregatedAttempt = attempt.setRes(
-                            aggregated.toHttpResponse());
-                    attempt.ctx().log().whenAvailable(RequestLogProperty.RESPONSE_END_TIME).thenRun(() -> {
-                        handleAggregatedResponse(rctx, aggregatedAttempt);
-                    });
-                }
-                return null;
-            });
+        if (rctx.ctx().exchangeType().isResponseStreaming() && !rctx.config().requiresResponseTrailers()) {
+            handleStreamingAttemptResponse(rctx, attempt);
         } else {
-            handleStreamingResponse(rctx, attempt);
+            handleAggregatedAttemptResponse(rctx, attempt);
         }
+    }
+
+    private void handleAggregatedAttemptResponse(HttpRetryContext rctx, RetryAttempt<HttpResponse> attempt) {
+        attempt.res().aggregate().handle((aggAttemptRes, cause) -> {
+            if (cause != null) {
+                attempt.ctx().logBuilder().endRequest(cause);
+                attempt.ctx().logBuilder().endResponse(cause);
+                handleResponseWithoutContent(rctx,
+                                             attempt.setRes(HttpResponse.ofFailure(cause)), cause);
+            } else {
+                completeLogIfBytesNotTransferred(attempt.ctx(), aggAttemptRes);
+                attempt.ctx().log().whenAvailable(RequestLogProperty.RESPONSE_END_TIME).thenRun(() -> {
+                    if (rctx.config().needsContentInRule()) {
+                        final RetryRuleWithContent<HttpResponse> ruleWithContent =
+                                rctx.config().retryRuleWithContent();
+                        assert ruleWithContent != null;
+                        try {
+                            ruleWithContent.shouldRetry(attempt.ctx(), aggAttemptRes.toHttpResponse(), null)
+                                           .handle((decision, cause3) -> {
+                                               warnIfExceptionIsRaised(ruleWithContent, cause3);
+                                               handleRetryDecision(decision, rctx, attempt.setRes(
+                                                       aggAttemptRes.toHttpResponse()));
+                                               return null;
+                                           });
+                        } catch (Throwable cause2) {
+                            handleException(rctx, cause2, false);
+                        }
+                        return;
+                    }
+                    handleResponseWithoutContent(rctx, attempt.setRes(
+                            aggAttemptRes.toHttpResponse()), null);
+                });
+            }
+            return null;
+        });
     }
 
     @Nullable
@@ -387,14 +407,13 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
                          return null;
                      });
         } catch (Throwable cause) {
-            // TODO: abortAttempt(attempt);
-            attempt.res().abort();
+            abortAttempt(attempt);
             handleException(rctx, cause, false);
         }
     }
 
-    private void handleStreamingResponse(HttpRetryContext rctx,
-                                         RetryAttempt<HttpResponse> attempt) {
+    private void handleStreamingAttemptResponse(HttpRetryContext rctx,
+                                                RetryAttempt<HttpResponse> attempt) {
         final SplitHttpResponse splitAttemptRes = attempt.res().split();
         splitAttemptRes.headers().handle((headers, headersCause) -> {
             final Throwable responseCause;
@@ -443,32 +462,12 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
                     } else {
                         handleResponseWithoutContent(rctx,
                                                      attempt.setRes(splitAttemptRes.unsplit()),
-                                                     responseCause);
+                                                     null);
                     }
                 }
             });
             return null;
         });
-    }
-
-    private void handleAggregatedResponse(HttpRetryContext rctx,
-                                          RetryAttempt<HttpResponse> attempt) {
-        if (rctx.config().needsContentInRule()) {
-            final RetryRuleWithContent<HttpResponse> ruleWithContent = rctx.config().retryRuleWithContent();
-            assert ruleWithContent != null;
-            try {
-                ruleWithContent.shouldRetry(attempt.ctx(), attempt.res(), null)
-                               .handle((decision, cause) -> {
-                                   warnIfExceptionIsRaised(ruleWithContent, cause);
-                                   handleRetryDecision(decision, rctx, attempt);
-                                   return null;
-                               });
-            } catch (Throwable cause) {
-                handleException(rctx, cause, false);
-            }
-            return;
-        }
-        handleResponseWithoutContent(rctx, attempt, null);
     }
 
     private static void completeLogIfBytesNotTransferred(
