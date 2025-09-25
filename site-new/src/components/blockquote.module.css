@@ -7,26 +7,26 @@
 
   .backgroundPattern1 {
     position: absolute;
-    left: -175px;
+    left: -120px;
     bottom: 0;
   }
 
   .backgroundPattern1Reverse {
     position: absolute;
-    left: -205px;
+    left: -155px;
     bottom: 0;
   }
 
   .backgroundPattern2 {
     position: absolute;
-    right: -250px;
+    right: -160px;
     top: 0;
   }
 
   .backgroundPattern2Reverse {
     position: absolute;
     top: -40px;
-    right: -180px;
+    right: -120px;
   }
 
   .body {
