@@ -1825,8 +1825,6 @@ public final class Flags {
     // This static block is defined at the end of this file deliberately
     // to ensure that all static variables defined beforehand are initialized.
     static {
-        FlagsLoaded.set();
-
         if (warnNettyVersions()) {
             final String howToDisableWarning =
                     "This means 1) you specified Netty versions inconsistently in your build or " +
@@ -1859,6 +1857,8 @@ public final class Flags {
                     logger.warn("Inconsistent Netty versions detected: {} {}",
                                 nettyVersions, howToDisableWarning);
             }
+
+            FlagsLoaded.set();
         }
     }
 }
