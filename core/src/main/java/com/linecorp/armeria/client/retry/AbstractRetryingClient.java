@@ -15,32 +15,21 @@
  */
 package com.linecorp.armeria.client.retry;
 
-import static com.google.common.base.Preconditions.checkState;
 import static java.util.Objects.requireNonNull;
 
-import java.util.concurrent.TimeUnit;
-import java.util.function.Consumer;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import java.util.concurrent.CompletableFuture;
 
 import com.linecorp.armeria.client.Client;
-import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.client.ClientRequestContext;
-import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.SimpleDecoratingClient;
 import com.linecorp.armeria.common.HttpHeaderNames;
-import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.Response;
-import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.annotation.Nullable;
-import com.linecorp.armeria.common.util.TimeoutMode;
-import com.linecorp.armeria.internal.client.ClientUtil;
+import com.linecorp.armeria.common.stream.AbortedStreamException;
 
+import io.netty.channel.EventLoop;
 import io.netty.util.AsciiString;
-import io.netty.util.AttributeKey;
-import io.netty.util.concurrent.ScheduledFuture;
 
 /**
  * A {@link Client} decorator that handles failures of remote invocation and retries requests.
@@ -48,21 +37,16 @@ import io.netty.util.concurrent.ScheduledFuture;
  * @param <I> the {@link Request} type
  * @param <O> the {@link Response} type
  */
-public abstract class AbstractRetryingClient<I extends Request, O extends Response>
+public abstract class AbstractRetryingClient
+        <I extends Request, O extends Response>
         extends SimpleDecoratingClient<I, O> {
-
-    private static final Logger logger = LoggerFactory.getLogger(AbstractRetryingClient.class);
-
     /**
      * The header which indicates the retry count of a {@link Request}.
      * The server might use this value to reject excessive retries, etc.
      */
     public static final AsciiString ARMERIA_RETRY_COUNT = HttpHeaderNames.of("armeria-retry-count");
 
-    private static final AttributeKey<State> STATE =
-            AttributeKey.valueOf(AbstractRetryingClient.class, "STATE");
-
-    private final RetryConfigMapping<O> mapping;
+    private final RetryConfigMapping<O> retryMapping;
 
     @Nullable
     private final RetryConfig<O> retryConfig;
@@ -71,271 +55,255 @@ public abstract class AbstractRetryingClient<I extends Request, O extends Respon
      * Creates a new instance that decorates the specified {@link Client}.
      */
     AbstractRetryingClient(
-            Client<I, O> delegate, RetryConfigMapping<O> mapping, @Nullable RetryConfig<O> retryConfig) {
+            Client<I, O> delegate, RetryConfigMapping<O> retryMapping, @Nullable RetryConfig<O> retryConfig) {
         super(delegate);
-        this.mapping = requireNonNull(mapping, "mapping");
+        this.retryMapping = requireNonNull(retryMapping, "retryMapping");
         this.retryConfig = retryConfig;
     }
 
+    abstract RetryContext newRetryContext(
+            Client<I, O> delegate,
+            ClientRequestContext ctx,
+            I req,
+            RetryConfig<O> config);
+
     @Override
     public final O execute(ClientRequestContext ctx, I req) throws Exception {
-        final RetryConfig<O> config = mapping.get(ctx, req);
-        requireNonNull(config, "mapping.get() returned null");
+        final RetryConfig<O> config =
+                retryConfig != null ? retryConfig
+                                    : requireNonNull(retryMapping.get(ctx, req),
+                                                     "retryMapping.get() returned null");
+        final RetryContext rctx = newRetryContext(unwrap(), ctx, req, config);
 
-        final State state = new State(config, ctx.responseTimeoutMillis());
-        ctx.setAttr(STATE, state);
-        return doExecute(ctx, req);
-    }
-
-    /**
-     * Returns the current {@link RetryConfigMapping} set for this client.
-     */
-    protected final RetryConfigMapping<O> mapping() {
-        return mapping;
-    }
-
-    /**
-     * Invoked by {@link #execute(ClientRequestContext, Request)}
-     * after the deadline for response timeout is set.
-     */
-    protected abstract O doExecute(ClientRequestContext ctx, I req) throws Exception;
-
-    /**
-     * This should be called when retrying is finished.
-     */
-    protected static void onRetryingComplete(ClientRequestContext ctx) {
-        ctx.logBuilder().endResponseWithLastChild();
-    }
-
-    /**
-     * Returns the {@link RetryRule}.
-     *
-     * @throws IllegalStateException if the {@link RetryRule} is not set
-     */
-    protected final RetryRule retryRule() {
-        checkState(retryConfig != null, "No retryRule set. Are you using RetryConfigMapping?");
-        final RetryRule retryRule = retryConfig.retryRule();
-        checkState(retryRule != null, "retryRule is not set.");
-        return retryRule;
-    }
-
-    /**
-     * Fetches the {@link RetryConfig} that was mapped by the configured {@link RetryConfigMapping} for a given
-     * logical request.
-     */
-    final RetryConfig<O> mappedRetryConfig(ClientRequestContext ctx) {
-        @SuppressWarnings("unchecked")
-        final RetryConfig<O> config = (RetryConfig<O>) state(ctx).config;
-        return config;
-    }
-
-    /**
-     * Returns the {@link RetryRuleWithContent}.
-     *
-     * @throws IllegalStateException if the {@link RetryRuleWithContent} is not set
-     */
-    protected final RetryRuleWithContent<O> retryRuleWithContent() {
-        checkState(retryConfig != null, "No retryRuleWithContent set. Are you using RetryConfigMapping?");
-        final RetryRuleWithContent<O> retryRuleWithContent = retryConfig.retryRuleWithContent();
-        checkState(retryRuleWithContent != null, "retryRuleWithContent is not set.");
-        return retryRuleWithContent;
-    }
-
-    /**
-     * Schedules next retry.
-     */
-    protected static void scheduleNextRetry(ClientRequestContext ctx,
-                                            Consumer<? super Throwable> actionOnException,
-                                            Runnable retryTask, long nextDelayMillis) {
-        try {
-            if (nextDelayMillis == 0) {
-                ctx.eventLoop().execute(retryTask);
-            } else {
-                @SuppressWarnings("unchecked")
-                final ScheduledFuture<Void> scheduledFuture = (ScheduledFuture<Void>) ctx
-                        .eventLoop().schedule(retryTask, nextDelayMillis, TimeUnit.MILLISECONDS);
-                scheduledFuture.addListener(future -> {
-                    if (future.isCancelled()) {
-                        // future is cancelled when the client factory is closed.
-                        actionOnException.accept(new IllegalStateException(
-                                ClientFactory.class.getSimpleName() + " has been closed."));
-                    } else if (future.cause() != null) {
-                        // Other unexpected exceptions.
-                        actionOnException.accept(future.cause());
-                    }
-                });
-            }
-        } catch (Throwable t) {
-            actionOnException.accept(t);
-        }
-    }
-
-    /**
-     * Resets the {@link ClientRequestContext#responseTimeoutMillis()}.
-     *
-     * @return {@code true} if the response timeout is set, {@code false} if it can't be set due to the timeout
-     */
-    @SuppressWarnings("MethodMayBeStatic") // Intentionally left non-static for better user experience.
-    protected final boolean setResponseTimeout(ClientRequestContext ctx) {
-        requireNonNull(ctx, "ctx");
-        final long responseTimeoutMillis = state(ctx).responseTimeoutMillis();
-        if (responseTimeoutMillis < 0) {
-            return false;
-        } else if (responseTimeoutMillis == 0) {
-            ctx.clearResponseTimeout();
-            return true;
+        if (rctx.retryEventLoop().inEventLoop()) {
+            prepareAndRetry(rctx);
         } else {
-            ctx.setResponseTimeoutMillis(TimeoutMode.SET_FROM_NOW, responseTimeoutMillis);
-            return true;
-        }
-    }
-
-    /**
-     * Returns the next delay which retry will be made after. The delay will be:
-     *
-     * <p>{@code Math.min(responseTimeoutMillis, Backoff.nextDelayMillis(int))}
-     *
-     * @return the number of milliseconds to wait for before attempting a retry. -1 if the
-     *         {@code currentAttemptNo} exceeds the {@code maxAttempts} or the {@code nextDelay} is after
-     *         the moment which timeout happens.
-     */
-    protected final long getNextDelay(ClientRequestContext ctx, Backoff backoff) {
-        return getNextDelay(ctx, backoff, -1);
-    }
-
-    /**
-     * Returns the next delay which retry will be made after. The delay will be:
-     *
-     * <p>{@code Math.min(responseTimeoutMillis, Math.max(Backoff.nextDelayMillis(int),
-     * millisAfterFromServer))}
-     *
-     * @return the number of milliseconds to wait for before attempting a retry. -1 if the
-     *         {@code currentAttemptNo} exceeds the {@code maxAttempts} or the {@code nextDelay} is after
-     *         the moment which timeout happens.
-     */
-    @SuppressWarnings("MethodMayBeStatic") // Intentionally left non-static for better user experience.
-    protected final long getNextDelay(ClientRequestContext ctx, Backoff backoff, long millisAfterFromServer) {
-        requireNonNull(ctx, "ctx");
-        requireNonNull(backoff, "backoff");
-        final State state = state(ctx);
-        final int currentAttemptNo = state.currentAttemptNoWith(backoff);
-
-        if (currentAttemptNo < 0) {
-            logger.debug("Exceeded the default number of max attempt: {}", state.config.maxTotalAttempts());
-            return -1;
+            rctx.retryEventLoop().execute(() -> prepareAndRetry(rctx));
         }
 
-        long nextDelay = backoff.nextDelayMillis(currentAttemptNo);
-        if (nextDelay < 0) {
-            logger.debug("Exceeded the number of max attempts in the backoff: {}", backoff);
-            return -1;
+        return rctx.res();
+    }
+
+    private void prepareAndRetry(RetryContext rctx) {
+        assert rctx.retryEventLoop().inEventLoop();
+
+        try {
+            prepareRetry(rctx);
+        } catch (Throwable cause) {
+            handleUnexpectedException(rctx, cause);
+            return;
         }
 
-        nextDelay = Math.max(nextDelay, millisAfterFromServer);
-        if (state.timeoutForWholeRetryEnabled() && nextDelay > state.actualResponseTimeoutMillis()) {
-            // The nextDelay will be after the moment which timeout will happen. So return just -1.
-            return -1;
-        }
-
-        return nextDelay;
+        // Let us execute retry() through the scheduler so that it sees the first retry task.
+        assert rctx.scheduler().trySchedule(() -> retry(rctx, null), 0);
     }
 
-    /**
-     * Returns the total number of attempts of the current request represented by the specified
-     * {@link ClientRequestContext}.
-     */
-    protected static int getTotalAttempts(ClientRequestContext ctx) {
-        final State state = ctx.attr(STATE);
-        if (state == null) {
-            return 0;
-        }
-        return state.totalAttemptNo;
-    }
-
-    /**
-     * Creates a new derived {@link ClientRequestContext}, replacing the requests.
-     * If {@link ClientRequestContext#endpointGroup()} exists, a new {@link Endpoint} will be selected.
-     */
-    protected static ClientRequestContext newDerivedContext(ClientRequestContext ctx,
-                                                            @Nullable HttpRequest req,
-                                                            @Nullable RpcRequest rpcReq,
-                                                            boolean initialAttempt) {
-        return ClientUtil.newDerivedContext(ctx, req, rpcReq, initialAttempt);
-    }
-
-    private static State state(ClientRequestContext ctx) {
-        final State state = ctx.attr(STATE);
-        assert state != null;
-        return state;
-    }
-
-    private static final class State {
-
-        private final RetryConfig<?> config;
-        private final long deadlineNanos;
-        private final boolean isTimeoutEnabled;
-
-        @Nullable
-        private Backoff lastBackoff;
-        private int currentAttemptNoWithLastBackoff;
-        private int totalAttemptNo;
-
-        State(RetryConfig<?> config, long responseTimeoutMillis) {
-            this.config = config;
-
-            if (responseTimeoutMillis <= 0 || responseTimeoutMillis == Long.MAX_VALUE) {
-                deadlineNanos = 0;
-                isTimeoutEnabled = false;
+    private void prepareRetry(RetryContext rctx) {
+        rctx.res().whenComplete().handle((result, cause) -> {
+            final Throwable abortCause;
+            if (cause != null) {
+                abortCause = cause;
             } else {
-                deadlineNanos = System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(responseTimeoutMillis);
-                isTimeoutEnabled = true;
+                abortCause = AbortedStreamException.get();
             }
-            totalAttemptNo = 1;
+            if (rctx.retryEventLoop().inEventLoop()) {
+                rctx.req().abort(abortCause);
+            } else {
+                rctx.retryEventLoop().execute(() -> rctx.req().abort(abortCause));
+            }
+            return null;
+        });
+
+        // The request could complete at any moment.
+        // In that case, let us make sure that we close the scheduler so we
+        // do not run any retry task unnecessarily.
+        // That said, running retry() even with a completed response is handled by
+        // rctx.request().executeAttempt() which throws an AbortedAttemptException which we handle gracefully.
+        rctx.req().whenComplete().handle((res, cause) -> {
+            assert rctx.retryEventLoop().inEventLoop();
+            // Make sure we do not unnecessarily run any retry task.
+            rctx.scheduler().close();
+
+            if (cause != null) {
+                rctx.resFuture().completeExceptionally(cause);
+            } else {
+                rctx.resFuture().complete(res);
+            }
+
+            return null;
+        });
+
+        // If something goes wrong with the scheduler, e.g. when the ClientFactory closes and the scheduler is
+        // unable to schedule retry tasks, we want to make sure we gracefully abort the request with that
+        // exception.
+        rctx.scheduler().whenClosed().handle((unused, cause) -> {
+            assert rctx.retryEventLoop().inEventLoop();
+
+            if (cause == null) {
+                cause = new IllegalStateException(
+                        "retry scheduler was closed before the request was completed");
+            }
+
+            rctx.req().abort(cause);
+            return null;
+        });
+    }
+
+    // NOTE:
+    // - Does not throw.
+    // - Must run on the retryEventLoop.
+    // - The first call must be done from prepareAndRetry() above.
+    // - Subsequent calls must only be issued in the retry task scheduled by `rctx.scheduler()`.
+    //   The corresponding `scheduler.schedule()` calls must all be done from ´tryScheduleRetryAfter()´ below.
+    private void retry(
+            RetryContext rctx,
+            @Nullable Backoff previousBackoff
+    ) {
+        try {
+            // First record the execution of the following attempt. This increases the attempt count
+            // and the attempt count for the backoff. Also see (A) for a correctness argument.
+            rctx.counter().consumeAttemptFrom(previousBackoff);
+
+            rctx.req()
+                .executeAttempt(rctx.delegate())
+                .handle((executionResult, cause) -> {
+                    assert rctx.retryEventLoop().inEventLoop();
+
+                    if (cause != null) {
+                        rctx.req().abort(
+                                new IllegalStateException("expected RetriedRequest to be completed"));
+
+                        if (cause instanceof AbortedAttemptException) {
+                            // The attempt was aborted in the course of executing it. This can happen when
+                            // we execute an attempt on a completed request or when the request is completed
+                            // while RetriedRequest is waiting for the response of the attempt.
+                            return null;
+                        }
+
+                        return null;
+                    }
+
+                    // An empty backoff means that the RetryRule to commit this attempt.
+                    if (executionResult.decision().backoff() == null) {
+                        rctx.req().commit(executionResult.attemptNumber());
+                        return null;
+                    }
+
+                    // Note that applying the pushback needs to be done before the call
+                    // to tryScheduleRetryAfter`.
+                    if (executionResult.minimumBackoffMillis() > 0) {
+                        rctx.scheduler().applyMinimumBackoffMillisForNextRetry(
+                                executionResult.minimumBackoffMillis());
+                    }
+
+                    final boolean isNextRetryScheduledOrExecuted =
+                            tryScheduleRetryAfter(rctx, executionResult.decision().backoff());
+
+                    if (!isNextRetryScheduledOrExecuted) {
+                        // We are not going to retry again so we are the last attempt. Let us commit it even if
+                        // the response was deemed to be unsatisfactory by the RetryRule (backoff != null).
+                        rctx.req().commit(executionResult.attemptNumber());
+                    } else {
+                        // The responsibility of aborting the RetriedRequest is now with the retry
+                        // scheduled by `tryScheduleRetryAfter()`. Thus, we can safely abort this attempt now.
+                        rctx.req().abort(executionResult.attemptNumber(), AbortedStreamException.get());
+                    }
+
+                    return null;
+                })
+                .exceptionally(cause -> {
+                    handleUnexpectedException(rctx, cause);
+                    return null;
+                });
+        } catch (Throwable cause) {
+            handleUnexpectedException(rctx, cause);
+        }
+    }
+
+    // NOTE: Must run on the retryEventLoop.
+    private boolean tryScheduleRetryAfter(RetryContext rctx, Backoff nextBackoff) {
+        if (rctx.counter().hasReachedMaxAttempts()) {
+            return false;
         }
 
-        /**
-         * Returns the smaller value between {@link RetryConfig#responseTimeoutMillisForEachAttempt()} and
-         * remaining {@link #responseTimeoutMillis}.
-         *
-         * @return 0 if the response timeout for both of each request and whole retry is disabled or
-         *         -1 if the elapsed time from the first request has passed {@code responseTimeoutMillis}
-         */
-        long responseTimeoutMillis() {
-            if (!timeoutForWholeRetryEnabled()) {
-                return config.responseTimeoutMillisForEachAttempt();
-            }
+        final long nextRetryDelayMillisFromBackoff = nextBackoff.nextDelayMillis(
+                // NOTE: `attemptsSoFarWithBackoff` is read-only and in particular it does not increase
+                // the attempt count for the backoff.
+                // +1 because nextDelayMillis counts the original request as one attempt for the backoff.
+                rctx.counter().attemptsSoFarWithBackoff(nextBackoff) + 1
+        );
 
-            final long actualResponseTimeoutMillis = actualResponseTimeoutMillis();
-
-            // Consider 0 or less than 0 of actualResponseTimeoutMillis as timed out.
-            if (actualResponseTimeoutMillis <= 0) {
-                return -1;
-            }
-
-            if (config.responseTimeoutMillisForEachAttempt() > 0) {
-                return Math.min(config.responseTimeoutMillisForEachAttempt(), actualResponseTimeoutMillis);
-            }
-
-            return actualResponseTimeoutMillis;
+        if (nextRetryDelayMillisFromBackoff < 0) {
+            // We exceeded the attempt limit for the backoff.
+            return false;
         }
 
-        boolean timeoutForWholeRetryEnabled() {
-            return isTimeoutEnabled;
+        // (A): We are under `maxAttempts` have also not exceeded the backoff attempt limit so let us
+        // try to schedule the next retry task.
+        // NOTE: The scheduler guarantees *if* we run this retry task, there will be no retry task run between
+        // this call and the execution of the retry task. This guarantees two things:
+        // 1. The attempt number and the attempt number for the backoff now and upon execution of the retry task
+        //   are the same.
+        // 2. Based on 1., the delay we use to schedule the retry task is indeed the one we consume in the retry
+        //    task via `counter.consumeAttemptFrom(nextBackoff)`.
+        return rctx.scheduler().trySchedule(/* retry task */ () -> retry(rctx, nextBackoff),
+                                                             nextRetryDelayMillisFromBackoff);
+    }
+
+    private void handleUnexpectedException(RetryContext rctx, Throwable cause) {
+        assert rctx.retryEventLoop().inEventLoop();
+        // Aborting the request will trigger the cleanup logic in prepareRetry().
+        rctx.req().abort(new IllegalStateException("Unexpected exception during retrying", cause));
+    }
+
+    protected final class RetryContext {
+        final EventLoop retryEventLoop;
+        final RetriedRequest<I, O> req;
+        final RetryScheduler scheduler;
+        final RetryCounter counter;
+        final Client<I, O> delegate;
+        final O res;
+        final CompletableFuture<O> resFuture;
+
+        RetryContext(EventLoop retryEventLoop, RetriedRequest<I, O> req,
+                     RetryScheduler scheduler, RetryCounter counter, Client<I, O> delegate,
+                     O res,
+                     CompletableFuture<O> resFuture) {
+            this.retryEventLoop = retryEventLoop;
+            this.req = req;
+            this.scheduler = scheduler;
+            this.counter = counter;
+            this.delegate = delegate;
+            this.res = res;
+            this.resFuture = resFuture;
         }
 
-        long actualResponseTimeoutMillis() {
-            return TimeUnit.NANOSECONDS.toMillis(deadlineNanos - System.nanoTime());
+        EventLoop retryEventLoop() {
+            return retryEventLoop;
         }
 
-        int currentAttemptNoWith(Backoff backoff) {
-            if (totalAttemptNo++ >= config.maxTotalAttempts()) {
-                return -1;
-            }
-            if (lastBackoff != backoff) {
-                lastBackoff = backoff;
-                currentAttemptNoWithLastBackoff = 1;
-            }
-            return currentAttemptNoWithLastBackoff++;
+        RetriedRequest<I, O> req() {
+            return req;
+        }
+
+        O res() {
+            return res;
+        }
+
+        CompletableFuture<O> resFuture() {
+            return resFuture;
+        }
+
+        RetryScheduler scheduler() {
+            return scheduler;
+        }
+
+        RetryCounter counter() {
+            return counter;
+        }
+
+        Client<I, O> delegate() {
+            return delegate;
         }
     }
 }

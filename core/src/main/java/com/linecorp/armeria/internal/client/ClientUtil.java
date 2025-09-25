@@ -18,9 +18,17 @@ package com.linecorp.armeria.internal.client;
 import static java.util.Objects.requireNonNull;
 
 import java.net.URI;
+import java.time.Duration;
+import java.util.Date;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
 import java.util.function.BiFunction;
 import java.util.function.Function;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import com.google.common.math.LongMath;
 
 import com.linecorp.armeria.client.Client;
 import com.linecorp.armeria.client.ClientRequestContext;
@@ -30,6 +38,7 @@ import com.linecorp.armeria.client.PreClientRequestContext;
 import com.linecorp.armeria.client.UnprocessedRequestException;
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
+import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RequestId;
@@ -44,8 +53,12 @@ import com.linecorp.armeria.common.logging.RequestLogProperty;
 import com.linecorp.armeria.common.stream.StreamMessage;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.common.util.SafeCloseable;
+import com.linecorp.armeria.common.util.TimeoutMode;
+
+import io.netty.handler.codec.DateFormatter;
 
 public final class ClientUtil {
+    private static final Logger logger = LoggerFactory.getLogger(ClientUtil.class);
 
     /**
      * An undefined {@link URI} to create {@link WebClient} without specifying {@link URI}.
@@ -279,6 +292,112 @@ public final class ClientUtil {
         }
         ctx.logBuilder().addChild(derived.log());
         return derived;
+    }
+
+    /**
+     * Tries to parse the {@code "Retry-After"} response header from the given {@link RequestLogAccess}.
+     * If the header is present and valid, returns the number of milliseconds after which a retry
+     * should be attempted. Otherwise, returns {@code -1}.
+     *
+     * @param log the {@link RequestLogAccess} which may contain the {@code "Retry-After"} header
+     * @return the number of milliseconds after which a retry should be attempted, or {@code -1} if
+     *         the header is not present or invalid
+     */
+    public static long retryAfterMillis(RequestLogAccess log) {
+        final String retryAfterValue;
+        final RequestLog requestLog = log.getIfAvailable(RequestLogProperty.RESPONSE_HEADERS);
+        retryAfterValue = requestLog != null ?
+                          requestLog.responseHeaders().get(HttpHeaderNames.RETRY_AFTER) : null;
+
+        if (retryAfterValue != null) {
+            try {
+                return Duration.ofSeconds(Integer.parseInt(retryAfterValue)).toMillis();
+            } catch (Exception ignored) {
+                // Not a second value.
+            }
+
+            try {
+                @SuppressWarnings("UseOfObsoleteDateTimeApi")
+                final Date retryAfterDate = DateFormatter.parseHttpDate(retryAfterValue);
+                if (retryAfterDate != null) {
+                    return retryAfterDate.getTime() - System.currentTimeMillis();
+                }
+            } catch (Exception ignored) {
+                // `parseHttpDate()` can raise an exception rather than returning `null`
+                // when the given value has more than 64 characters.
+            }
+
+            logger.debug("The retryAfter: {}, from the server is neither an HTTP date nor a second.",
+                         retryAfterValue);
+        }
+
+        return -1;
+    }
+
+    /**
+     * Returns the deadline in nanoseconds for the given {@link ClientRequestContext} based on its
+     * response timeout. If no response timeout is set, {@link Long#MAX_VALUE} will be returned.
+     *
+     * @param ctx the {@link ClientRequestContext} to get the response timeout from
+     * @return the deadline in nanoseconds, or {@link Long#MAX_VALUE} if no response timeout is set
+     */
+    public static long deadlineTimeNanos(ClientRequestContext ctx) {
+        final long responseTimeoutMillis = ctx.responseTimeoutMillis();
+        if (responseTimeoutMillis <= 0) {
+            return Long.MAX_VALUE;
+        } else {
+            return LongMath.saturatedAdd(System.nanoTime(),
+                                         TimeUnit.MILLISECONDS.toNanos(responseTimeoutMillis));
+        }
+    }
+
+    /**
+     * Sets the response timeout on a {@link ClientRequestContext} based on the minimum of a deadline
+     * and response timeout, or clears the timeout if neither is specified.
+     *
+     * <p>This method respects both absolute deadlines (in nanoseconds) and relative response timeouts
+     * (in milliseconds), using whichever is more restrictive. If the calculated timeout has already
+     * expired, the method returns {@code false} to indicate the request should be considered timed out.
+     *
+     * @param ctx the {@link ClientRequestContext} to configure
+     * @param deadlineTimeNanos absolute deadline in nanoseconds from {@link System#nanoTime()},
+     *                          or {@link Long#MAX_VALUE} if no deadline is set
+     * @param responseTimeoutMillis relative timeout in milliseconds, or {@code 0} if no timeout is set
+     * @return {@code true} if the timeout was successfully set/cleared and the request is still valid,
+     *         {@code false} if the request has already exceeded the calculated timeout
+     *
+     * @see ClientRequestContext#setResponseTimeoutMillis(TimeoutMode, long)
+     * @see ClientRequestContext#clearResponseTimeout()
+     */
+    public static boolean checkAndSetResponseTimeout(ClientRequestContext ctx, long deadlineTimeNanos,
+                                                     long responseTimeoutMillis) {
+        long remainingTimeUntilDeadlineMillis = Long.MAX_VALUE;
+        boolean hasTimeout = false;
+
+        if (deadlineTimeNanos < Long.MAX_VALUE) {
+            hasTimeout = true;
+            remainingTimeUntilDeadlineMillis = TimeUnit.NANOSECONDS.toMillis(
+                    LongMath.saturatedSubtract(deadlineTimeNanos, System.nanoTime())
+            );
+        }
+
+        if (responseTimeoutMillis != 0) {
+            hasTimeout = true;
+            remainingTimeUntilDeadlineMillis =
+                    Math.min(remainingTimeUntilDeadlineMillis, responseTimeoutMillis);
+        }
+
+        if (hasTimeout) {
+            if (remainingTimeUntilDeadlineMillis > 0) {
+                ctx.setResponseTimeoutMillis(TimeoutMode.SET_FROM_NOW, remainingTimeUntilDeadlineMillis);
+                return true;
+            } else {
+                return false;
+            }
+        } else {
+            ctx.clearResponseTimeout();
+            return true;
+        }
     }
 
     private ClientUtil() {}
