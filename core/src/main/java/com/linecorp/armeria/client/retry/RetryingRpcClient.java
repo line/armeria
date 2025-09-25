@@ -152,7 +152,7 @@ public final class RetryingRpcClient extends AbstractRetryingClient<RpcRequest, 
                             RpcResponse returnedRes, CompletableFuture<RpcResponse> future) {
         final int totalAttempts = getTotalAttempts(ctx);
         final boolean initialAttempt = totalAttempts <= 1;
-        if (returnedRes.isDone()) {
+        if (ctx.isCancelled() || returnedRes.isDone()) {
             // The response has been cancelled by the client before it receives a response, so stop retrying.
             handleException(ctx, future, new CancellationException(
                     "the response returned to the client has been cancelled"), initialAttempt);
