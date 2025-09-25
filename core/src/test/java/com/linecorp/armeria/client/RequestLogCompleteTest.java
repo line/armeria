@@ -17,6 +17,7 @@
 package com.linecorp.armeria.client;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
@@ -80,6 +81,9 @@ class RequestLogCompleteTest {
             final ClientRequestContext ctx = captor.get();
             // The log should be completed.
             ctx.log().whenComplete().join();
+            assertThatThrownBy(() -> httpResponse.whenComplete().join())
+                    .hasCauseInstanceOf(AbortedStreamException.class);
+            // The log is completed with the same exception as the response.
             assertThat(ctx.log().ensureComplete().responseCause()).isInstanceOf(AbortedStreamException.class);
         }
         executor.shutdown();
