@@ -20,7 +20,9 @@ import static com.google.common.base.Preconditions.checkArgument;
 import static com.linecorp.armeria.server.ServerBuilder.decorate;
 import static java.util.Objects.requireNonNull;
 
+import java.util.HashSet;
 import java.util.Set;
+import java.util.function.Consumer;
 import java.util.function.Function;
 
 import com.google.common.collect.ImmutableList;
@@ -39,6 +41,20 @@ abstract class AbstractContextPathServicesBuilder<SELF extends AbstractContextPa
     private final Set<String> contextPaths;
     private final T parent;
     private final VirtualHostBuilder virtualHostBuilder;
+
+    AbstractContextPathServicesBuilder(T parent, VirtualHostBuilder virtualHostBuilder,
+                                       Set<String> contextPaths, boolean allowEmptyContextPaths) {
+        if (!allowEmptyContextPaths) {
+            checkArgument(!contextPaths.isEmpty(), "At least one context path is required");
+            for (String contextPath: contextPaths) {
+                RouteUtil.ensureAbsolutePath(contextPath, "contextPath");
+            }
+        }
+
+        this.parent = parent;
+        this.contextPaths = ImmutableSet.copyOf(contextPaths);
+        this.virtualHostBuilder = virtualHostBuilder;
+    }
 
     AbstractContextPathServicesBuilder(T parent, VirtualHostBuilder virtualHostBuilder,
                                        Set<String> contextPaths) {
@@ -409,4 +425,31 @@ abstract class AbstractContextPathServicesBuilder<SELF extends AbstractContextPa
     final Set<String> contextPaths() {
         return contextPaths;
     }
+
+    VirtualHostBuilder virtualHostBuilder() {
+        return this.virtualHostBuilder;
+    }
+
+    T parent() {
+        return parent;
+    }
+
+    final Set<String> mergedContextPaths(Set<String> paths) {
+        final Set<String> mergedContextPaths = new HashSet<>();
+        for (String currentContextPath : contextPaths()) {
+            for (String childContextPath : paths) {
+                final String mergedContextPath = currentContextPath + childContextPath;
+                mergedContextPaths.add(mergedContextPath);
+            }
+        }
+        return mergedContextPaths;
+    }
+
+    /**
+     * TBD
+     * @param paths
+     * @param context
+     * @return
+     */
+    public abstract SELF contextPath(Set<String> paths, Consumer<SELF> context);
 }
