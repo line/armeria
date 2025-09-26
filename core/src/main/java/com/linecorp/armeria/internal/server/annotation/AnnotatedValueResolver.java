@@ -472,7 +472,7 @@ final class AnnotatedValueResolver {
                 }
                 return ofQueryParamMap(name, annotatedElement, typeElement, type, description);
             }
-            if (type == File.class || type == Path.class || type == MultipartFile.class) {
+            if (type == File.class || type == Path.class || type == MultipartFile.class || isListOfFiles(annotatedElement)) {
                 return ofFileParam(name, annotatedElement, typeElement, type, description);
             }
             if (pathParams.contains(name)) {
@@ -526,6 +526,31 @@ final class AnnotatedValueResolver {
         }
 
         return null;
+    }
+
+    private static boolean isListOfFiles(AnnotatedElement typeElement) {
+        if(!(typeElement instanceof Parameter)) {
+            return false;
+        }
+        final Type parameter = ((Parameter) typeElement).getParameterizedType();
+        if(! (parameter instanceof ParameterizedType)) {
+            return false;
+        }
+        final ParameterizedType parameterizedType = (ParameterizedType) parameter;
+        final Type raw = parameterizedType.getRawType();
+        if(!(raw instanceof  Class<?>)) {
+            return false;
+        }
+        final Class<?> rawClass =  (Class<?>) raw;
+        if (!List.class.isAssignableFrom(rawClass) && !Set.class.isAssignableFrom(rawClass)) {
+            return false;
+        }
+        final Type[] args = parameterizedType.getActualTypeArguments();
+        if (args.length != 1) {
+            return false;
+        }
+        final Type arg = args[0];
+        return arg == File.class || arg == Path.class || arg == MultipartFile.class;
     }
 
     static List<RequestObjectResolver> addToFirstIfExists(List<RequestObjectResolver> resolvers,
