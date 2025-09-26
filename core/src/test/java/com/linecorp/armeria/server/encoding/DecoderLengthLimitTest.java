@@ -33,7 +33,7 @@ import com.linecorp.armeria.common.ContentTooLargeException;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.encoding.StreamDecoder;
 import com.linecorp.armeria.common.encoding.StreamDecoderFactory;
-import com.linecorp.armeria.internal.common.encoding.StreamEncoderFactories;
+import com.linecorp.armeria.common.encoding.StreamEncoderFactories;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
