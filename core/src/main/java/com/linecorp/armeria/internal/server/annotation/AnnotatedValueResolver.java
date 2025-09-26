@@ -472,8 +472,8 @@ final class AnnotatedValueResolver {
                 }
                 return ofQueryParamMap(name, annotatedElement, typeElement, type, description);
             }
-            if (type == File.class || type == Path.class || type == MultipartFile.class
-                || isListOfFiles(annotatedElement)) {
+            if (type == File.class || type == Path.class || type == MultipartFile.class ||
+                isListOfFiles(annotatedElement)) {
                 return ofFileParam(name, annotatedElement, typeElement, type, description);
             }
             if (pathParams.contains(name)) {
@@ -530,16 +530,16 @@ final class AnnotatedValueResolver {
     }
 
     private static boolean isListOfFiles(AnnotatedElement typeElement) {
-        if( !(typeElement instanceof Parameter)) {
+        if (!(typeElement instanceof Parameter)) {
             return false;
         }
         final Type parameter = ((Parameter) typeElement).getParameterizedType();
-        if( !(parameter instanceof ParameterizedType)) {
+        if (!(parameter instanceof ParameterizedType)) {
             return false;
         }
         final ParameterizedType parameterizedType = (ParameterizedType) parameter;
         final Type raw = parameterizedType.getRawType();
-        if(!(raw instanceof  Class<?>)) {
+        if (!(raw instanceof Class<?>)) {
             return false;
         }
         final Class<?> rawClass =  (Class<?>) raw;
