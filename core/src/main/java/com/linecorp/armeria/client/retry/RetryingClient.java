@@ -257,23 +257,18 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
 
                     // The request or attemptRes has been aborted by the client before it receives a attemptRes,
                     // so stop retrying.
-                    rctx.req().whenComplete().handle((unused, reqCause) -> {
-                        if (reqCause != null) {
+                    rctx.req().whenComplete()
+                        .exceptionally(reqCause -> {
                             handleException(rctx, reqCause, true);
-                        }
-                        return null;
-                    });
+                            return null;
+                        });
 
-                    rctx.res().whenComplete().handle((result, resCause) -> {
-                        final Throwable abortCause;
-                        if (resCause != null) {
-                            abortCause = resCause;
-                        } else {
-                            abortCause = AbortedStreamException.get();
-                        }
-                        handleException(rctx, abortCause, true);
-                        return null;
-                    });
+                    rctx.res().whenComplete()
+                        .handle((result, resCause) -> {
+                            handleException(rctx, resCause == null ? AbortedStreamException.get() : resCause,
+                                            true);
+                            return null;
+                        });
 
                     rctx.counter().consumeAttemptFrom(null);
                     retry(rctx);
@@ -481,9 +476,10 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
     }
 
     private boolean isRetryCompleted(HttpRetryContext rctx) {
-        return rctx.ctx().isCancelled() || rctx.req().whenComplete().isCompletedExceptionally() || rctx.res()
-                                                                                                       .whenComplete()
-                                                                                                       .isDone();
+        return rctx.ctx().isCancelled() || rctx.req().whenComplete().isCompletedExceptionally() ||
+               rctx.res()
+                   .whenComplete()
+                   .isDone();
     }
 
     private static void completeLogIfBytesNotTransferred(
