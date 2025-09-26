@@ -63,11 +63,14 @@ public final class RetryRuleWithContentBuilder<T extends Response>
         return build(RetryDecision.noRetry());
     }
 
-    RetryRuleWithContent<T> build(RetryDecision decision) {
+    /**
+     * Returns a newly created {@link RetryRuleWithContent} based on the {@link RetryDecision}.
+     */
+    public RetryRuleWithContent<T> build(RetryDecision decision) {
         final BiFunction<? super ClientRequestContext, ? super T,
                 ? extends CompletionStage<Boolean>> responseFilter = responseFilter();
         final boolean hasResponseFilter = responseFilter != null;
-        if (decision != RetryDecision.noRetry() && exceptionFilter() == null &&
+        if (decision.backoff() != null && exceptionFilter() == null &&
             responseHeadersFilter() == null && responseTrailersFilter() == null &&
             grpcTrailersFilter() == null && !hasResponseFilter) {
             throw new IllegalStateException("Should set at least one retry rule if a backoff was set.");
