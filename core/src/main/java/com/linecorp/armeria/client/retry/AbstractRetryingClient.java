@@ -81,13 +81,6 @@ abstract class AbstractRetryingClient<I extends Request, O extends Response>
     protected abstract O doExecute(ClientRequestContext ctx, I req, RetryConfig<O> config) throws Exception;
 
     /**
-     * This should be called when retrying is finished.
-     */
-    protected static void onRetryingComplete(ClientRequestContext ctx) {
-        ctx.logBuilder().endResponseWithLastChild();
-    }
-
-    /**
      * Returns the {@link RetryRule}.
      *
      * @throws IllegalStateException if the {@link RetryRule} is not set

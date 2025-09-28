@@ -398,7 +398,7 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
                 return;
             }
         }
-        onRetryingComplete(rctx.ctx());
+        rctx.ctx().logBuilder().endResponseWithLastChild();
         rctx.resFuture().complete(attempt.res());
         rctx.reqDuplicator().close();
     }
