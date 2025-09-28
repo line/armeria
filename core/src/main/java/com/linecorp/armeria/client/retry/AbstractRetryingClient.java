@@ -68,13 +68,6 @@ abstract class AbstractRetryingClient<I extends Request, O extends Response>
     }
 
     /**
-     * Returns the current {@link RetryConfigMapping} set for this client.
-     */
-    protected final RetryConfigMapping<O> mapping() {
-        return mapping;
-    }
-
-    /**
      * Invoked by {@link #execute(ClientRequestContext, Request)}
      * after the deadline for response timeout is set.
      */
