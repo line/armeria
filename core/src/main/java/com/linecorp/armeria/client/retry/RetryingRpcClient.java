@@ -149,14 +149,14 @@ public final class RetryingRpcClient extends AbstractRetryingClient<RpcRequest, 
         final RetryContext<RpcRequest, RpcResponse> rctx =
                 new RetryContext<>(ctx, req, res, resFuture, config, ctx.responseTimeoutMillis());
         rctx.counter().consumeAttemptFrom(null);
-        doExecute0(rctx);
+        retry(rctx);
         return res;
     }
 
-    private void doExecute0(RetryContext<RpcRequest, RpcResponse> rctx) {
+    private void retry(RetryContext<RpcRequest, RpcResponse> rctx) {
         final int totalAttempts = rctx.counter().numberAttemptsSoFar();
         final boolean initialAttempt = totalAttempts <= 1;
-        if (rctx.res().isDone()) {
+        if (rctx.ctx().isCancelled() || rctx.res().isDone()) {
             // The response has been cancelled by the client before it receives a response, so stop retrying.
             handleException(rctx, new CancellationException(
                     "the response returned to the client has been cancelled"), initialAttempt);
@@ -185,7 +185,7 @@ public final class RetryingRpcClient extends AbstractRetryingClient<RpcRequest, 
                         }
 
                         scheduleNextRetry(rctx.ctx(), cause0 -> handleException(rctx, cause0, false),
-                                          () -> doExecute0(rctx), nextDelay);
+                                          () -> retry(rctx), nextDelay);
                     } else {
                         onRetryComplete(rctx, attempt);
                     }

@@ -511,7 +511,7 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
     }
 
     private boolean isRequestCompletedExternally(HttpRetryContext rctx) {
-        return rctx.ctx().isCancelled() || rctx.req().whenComplete().isCompletedExceptionally() ||
+        return rctx.req().whenComplete().isCompletedExceptionally() ||
                rctx.res()
                    .whenComplete()
                    .isDone();
