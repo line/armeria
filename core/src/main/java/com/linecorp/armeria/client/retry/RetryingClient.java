@@ -268,7 +268,11 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
 
                     rctx.res().whenComplete()
                         .handle((result, resCause) -> {
-                            handleException(rctx, resCause == null ? AbortedStreamException.get() : resCause);
+                            if (!rctx.resFuture().isDone()) {
+                                // We are still retrying: we were not the ones completing rctx.res().
+                                handleException(rctx,
+                                                resCause == null ? AbortedStreamException.get() : resCause);
+                            }
                             return null;
                         });
 
@@ -282,7 +286,7 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
     }
 
     private void retry(HttpRetryContext rctx) {
-        if (isRetryCompleted(rctx)) {
+        if (isRequestCompletedExternally(rctx)) {
             return;
         }
 
@@ -396,18 +400,18 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
         }
         onRetryingComplete(rctx.ctx());
         rctx.resFuture().complete(attempt.res());
-        rctx.requestDuplicator().close();
+        rctx.reqDuplicator().close();
     }
 
     private RetryAttempt<HttpResponse> executeAttempt(HttpRetryContext rctx) {
         final boolean isInitialAttempt = rctx.counter().numberAttemptsSoFar() <= 1;
         final HttpRequest duplicateReq;
         if (isInitialAttempt) {
-            duplicateReq = rctx.requestDuplicator().duplicate();
+            duplicateReq = rctx.reqDuplicator().duplicate();
         } else {
             final RequestHeadersBuilder newHeaders = rctx.req().headers().toBuilder();
             newHeaders.setInt(ClientUtil.ARMERIA_RETRY_COUNT, rctx.counter().numberAttemptsSoFar() - 1);
-            duplicateReq = rctx.requestDuplicator().duplicate(newHeaders.build());
+            duplicateReq = rctx.reqDuplicator().duplicate(newHeaders.build());
         }
 
         final ClientRequestContext attemptCtx;
@@ -505,7 +509,7 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
         }
     }
 
-    private boolean isRetryCompleted(HttpRetryContext rctx) {
+    private boolean isRequestCompletedExternally(HttpRetryContext rctx) {
         return rctx.ctx().isCancelled() || rctx.req().whenComplete().isCompletedExceptionally() ||
                rctx.res()
                    .whenComplete()
@@ -558,7 +562,7 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
 
     private static void handleException(HttpRetryContext rctx, Throwable cause) {
         rctx.resFuture().completeExceptionally(cause);
-        rctx.requestDuplicator().abort(cause);
+        rctx.reqDuplicator().abort(cause);
         if (!rctx.ctx().logBuilder().isRequestComplete()) {
             rctx.ctx().logBuilder().endRequest(cause);
         }
@@ -615,18 +619,18 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
     }
 
     private static final class HttpRetryContext extends RetryContext<HttpRequest, HttpResponse> {
-        private final HttpRequestDuplicator requestDuplicator;
+        private final HttpRequestDuplicator reqDuplicator;
 
         HttpRetryContext(ClientRequestContext ctx, HttpRequest req,
-                         HttpRequestDuplicator requestDuplicator,
+                         HttpRequestDuplicator reqDuplicator,
                          HttpResponse res, CompletableFuture<HttpResponse> resFuture,
                          RetryConfig<HttpResponse> config, long responseTimeoutMillis) {
             super(ctx, req, res, resFuture, config, responseTimeoutMillis);
-            this.requestDuplicator = requestDuplicator;
+            this.reqDuplicator = reqDuplicator;
         }
 
-        HttpRequestDuplicator requestDuplicator() {
-            return requestDuplicator;
+        HttpRequestDuplicator reqDuplicator() {
+            return reqDuplicator;
         }
     }
 }
