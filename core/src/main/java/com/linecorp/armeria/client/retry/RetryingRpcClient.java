@@ -201,7 +201,8 @@ public final class RetryingRpcClient extends AbstractRetryingClient<RpcRequest, 
     private RetryAttempt<RpcResponse> executeAttempt(RetryContext<RpcRequest, RpcResponse> rctx) {
         final int totalAttempts = rctx.counter().numberAttemptsSoFar();
         final boolean initialAttempt = totalAttempts <= 1;
-        final ClientRequestContext attemptCtx = newDerivedContext(rctx.ctx(), null, rctx.req(), initialAttempt);
+        final ClientRequestContext attemptCtx = ClientUtil.newDerivedContext(rctx.ctx(), null, rctx.req(),
+                                                                             initialAttempt);
 
         if (!initialAttempt) {
             attemptCtx.mutateAdditionalRequestHeaders(

@@ -27,14 +27,10 @@ import org.slf4j.LoggerFactory;
 import com.linecorp.armeria.client.Client;
 import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.client.ClientRequestContext;
-import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.SimpleDecoratingClient;
-import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.Response;
-import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.annotation.Nullable;
-import com.linecorp.armeria.internal.client.ClientUtil;
 
 import io.netty.util.concurrent.ScheduledFuture;
 
@@ -163,16 +159,5 @@ abstract class AbstractRetryingClient<I extends Request, O extends Response>
         }
 
         return nextDelay;
-    }
-
-    /**
-     * Creates a new derived {@link ClientRequestContext}, replacing the requests.
-     * If {@link ClientRequestContext#endpointGroup()} exists, a new {@link Endpoint} will be selected.
-     */
-    protected static ClientRequestContext newDerivedContext(ClientRequestContext ctx,
-                                                            @Nullable HttpRequest req,
-                                                            @Nullable RpcRequest rpcReq,
-                                                            boolean initialAttempt) {
-        return ClientUtil.newDerivedContext(ctx, req, rpcReq, initialAttempt);
     }
 }
