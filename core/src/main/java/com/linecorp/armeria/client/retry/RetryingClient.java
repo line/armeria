@@ -238,7 +238,7 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
             RetryConfigMapping<HttpResponse> mapping,
             @Nullable RetryConfig<HttpResponse> retryConfig,
             boolean useRetryAfter) {
-        super(delegate, mapping, retryConfig);
+        super(delegate, retryConfig != null ? (ctx, req) -> retryConfig : mapping);
         this.useRetryAfter = useRetryAfter;
     }
 

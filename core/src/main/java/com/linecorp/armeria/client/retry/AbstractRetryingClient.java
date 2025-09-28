@@ -15,7 +15,6 @@
  */
 package com.linecorp.armeria.client.retry;
 
-import static com.google.common.base.Preconditions.checkState;
 import static java.util.Objects.requireNonNull;
 
 import java.util.concurrent.TimeUnit;
@@ -30,7 +29,6 @@ import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.SimpleDecoratingClient;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.Response;
-import com.linecorp.armeria.common.annotation.Nullable;
 
 import io.netty.util.concurrent.ScheduledFuture;
 
@@ -45,24 +43,20 @@ abstract class AbstractRetryingClient<I extends Request, O extends Response>
 
     private static final Logger logger = LoggerFactory.getLogger(AbstractRetryingClient.class);
 
-    private final RetryConfigMapping<O> mapping;
-
-    @Nullable
-    private final RetryConfig<O> retryConfig;
+    private final RetryConfigMapping<O> retryConfigMapping;
 
     /**
      * Creates a new instance that decorates the specified {@link Client}.
      */
     AbstractRetryingClient(
-            Client<I, O> delegate, RetryConfigMapping<O> mapping, @Nullable RetryConfig<O> retryConfig) {
+            Client<I, O> delegate, RetryConfigMapping<O> retryConfigMapping) {
         super(delegate);
-        this.mapping = requireNonNull(mapping, "mapping");
-        this.retryConfig = retryConfig;
+        this.retryConfigMapping = requireNonNull(retryConfigMapping, "mapping");
     }
 
     @Override
     public final O execute(ClientRequestContext ctx, I req) throws Exception {
-        final RetryConfig<O> config = mapping.get(ctx, req);
+        final RetryConfig<O> config = retryConfigMapping.get(ctx, req);
         requireNonNull(config, "mapping.get() returned null");
         return doExecute(ctx, req, config);
     }
@@ -72,18 +66,6 @@ abstract class AbstractRetryingClient<I extends Request, O extends Response>
      * after the deadline for response timeout is set.
      */
     protected abstract O doExecute(ClientRequestContext ctx, I req, RetryConfig<O> config) throws Exception;
-
-    /**
-     * Returns the {@link RetryRule}.
-     *
-     * @throws IllegalStateException if the {@link RetryRule} is not set
-     */
-    protected final RetryRule retryRule() {
-        checkState(retryConfig != null, "No retryRule set. Are you using RetryConfigMapping?");
-        final RetryRule retryRule = retryConfig.retryRule();
-        checkState(retryRule != null, "retryRule is not set.");
-        return retryRule;
-    }
 
     /**
      * Schedules next retry.
