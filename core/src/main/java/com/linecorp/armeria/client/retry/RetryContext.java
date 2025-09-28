@@ -39,22 +39,12 @@ class RetryContext<I extends Request, O extends Response> {
             CompletableFuture<O> resFuture,
             RetryConfig<O> config, long responseTimeoutMillis
     ) {
-        this(ctx, req, res, resFuture, config, responseTimeoutMillis,
-             new RetryCounter(config.maxTotalAttempts()));
-    }
-
-    RetryContext(
-            ClientRequestContext ctx, I req, O res,
-            CompletableFuture<O> resFuture,
-            RetryConfig<O> config, long responseTimeoutMillis,
-            RetryCounter counter
-    ) {
         this.ctx = ctx;
         this.req = req;
         this.res = res;
         this.resFuture = resFuture;
         this.config = config;
-        this.counter = counter;
+        counter = new RetryCounter(config.maxTotalAttempts());
 
         if (responseTimeoutMillis <= 0 || responseTimeoutMillis == Long.MAX_VALUE) {
             deadlineNanos = 0;
