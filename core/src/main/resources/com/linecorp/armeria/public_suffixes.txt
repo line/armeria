@@ -210,6 +210,7 @@
 *.webhare.dev
 *.webpaas.ovh.net
 *.wf.crm.dev
+*.xenonconnect.de
 *.xmit.co
 *.yokohama.jp
 *.zerops.app
@@ -1246,6 +1247,7 @@ canon
 cantho.vn
 canva-apps.cn
 canva-apps.com
+canva.run
 caobang.vn
 capetown
 capital
@@ -7072,6 +7074,7 @@ ri.it
 ri.us
 ribeirao.br
 ric.jelastic.vps-host.net
+rice-labs.com
 rich
 richardli
 ricoh
@@ -8376,6 +8379,7 @@ tel
 tel.tr
 telebit.app
 telebit.io
+teleport.sh
 temasek
 temp-dns.com
 tempio-olbia.it
