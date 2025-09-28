@@ -316,7 +316,7 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
                 attempt.ctx().logBuilder().endRequest(cause);
                 attempt.ctx().logBuilder().endResponse(cause);
                 decideAndHandleDecision(rctx, attempt.setRes(HttpResponse.ofFailure(cause)),
-                                        HttpResponse.ofFailure(cause), null);
+                                        HttpResponse.ofFailure(cause), cause);
             } else {
                 completeLogIfBytesNotTransferred(attempt.ctx(), aggAttemptRes);
                 attempt.ctx().log().whenAvailable(RequestLogProperty.RESPONSE_END_TIME).thenRun(() -> {
@@ -335,7 +335,7 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
         decide(rctx, attempt, resToDecide, causeToDecide)
                 .handle((decision, decisionCause) -> {
                     if (resToDecide != null) {
-                        // resToDecide.abort();
+                        resToDecide.abort();
                     }
 
                     if (decisionCause != null) {
