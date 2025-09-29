@@ -1099,6 +1099,7 @@ boldlygoingnowhere.org
 boleslawiec.pl
 bolivia.bo
 bologna.it
+bolt.host
 bolt.hu
 bolzano-altoadige.it
 bolzano.it
@@ -4764,6 +4765,9 @@ lds
 le.it
 leadpages.co
 leangaviika.no
+leapcell.app
+leapcell.dev
+leapcell.online
 lease
 leasing.aero
 lebesby.no
