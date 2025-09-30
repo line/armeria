@@ -32,8 +32,7 @@ import com.linecorp.armeria.common.encoding.StreamEncoderFactory;
 final class HttpEncoders {
     @Nullable
     static StreamEncoderFactory determineEncoder(
-            Map<String, StreamEncoderFactory> headerToEncoderFactory, RequestHeaders headers
-    ) {
+            Map<String, StreamEncoderFactory> headerToEncoderFactory, RequestHeaders headers) {
         final String acceptEncoding = headers.get(HttpHeaderNames.ACCEPT_ENCODING);
         if (acceptEncoding == null) {
             return null;
@@ -50,14 +49,12 @@ final class HttpEncoders {
         float starQ = -1.0f;
         final Map<StreamEncoderFactory, Float> encoderFactoryToQ = new LinkedHashMap<>();
 
-        /*
-            // https://datatracker.ietf.org/doc/html/rfc7231#section-5.3.4
-            // OWS is optional whitespace, i.e. *( SP / HTAB )
-            Accept-Encoding = [
-                ( "," / ( codings [ OWS ";" OWS "q=" qvalue ] ) )
-                *( OWS "," [ OWS ( codings [ OWS ";" OWS "q=" qvalue ] ) ] )
-            ]
-        */
+        // https://datatracker.ietf.org/doc/html/rfc7231#section-5.3.4
+        // OWS is optional whitespace, i.e. *( SP / HTAB )
+        // Accept-Encoding = [
+        //  ( "," / ( codings [ OWS ";" OWS "q=" qvalue ] ) )
+        //  *( OWS "," [ OWS ( codings [ OWS ";" OWS "q=" qvalue ] ) ] )
+        // ]
 
         for (String acceptEncodingElement : acceptEncoding.split(",")) {
             final String codings;
@@ -65,7 +62,7 @@ final class HttpEncoders {
 
             final int codingWeightSepIndex = acceptEncodingElement.indexOf(';');
             if (codingWeightSepIndex != -1) {
-                // i.e. " \t br;  q=0.8"
+                // e.g. " \t br;  q=0.8"
                 codings = acceptEncodingElement.substring(0, codingWeightSepIndex).trim();
 
                 // We do not need to trim here. Float.parseFloat() will do it for us.
@@ -83,7 +80,7 @@ final class HttpEncoders {
                     qValue = 0.0f;
                 }
             } else {
-                // i.e. "  deflate\t" or "" because we have a leading comma
+                // e.g. "  deflate\t" or "" because we have a leading comma
                 codings = acceptEncodingElement.trim();
                 qValue = 1.0f;
             }

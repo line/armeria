@@ -26,12 +26,15 @@ import com.aayushatharva.brotli4j.encoder.BrotliOutputStream;
 import com.aayushatharva.brotli4j.encoder.Encoder;
 import com.google.common.collect.ImmutableList;
 
+import com.linecorp.armeria.common.annotation.UnstableApi;
+
 import io.netty.buffer.ByteBufOutputStream;
 import io.netty.handler.codec.compression.Brotli;
 
 /**
  * A {@link StreamEncoderFactory} implementation which provides built-in stream encoders.
  */
+@UnstableApi
 public enum StreamEncoderFactories implements StreamEncoderFactory {
     BROTLI {
         @Override

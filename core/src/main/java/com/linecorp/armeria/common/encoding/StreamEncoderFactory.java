@@ -28,13 +28,13 @@ import io.netty.buffer.ByteBufOutputStream;
  * An interface specifying for which {@link HttpHeaderNames#ACCEPT_ENCODING} header value
  * this factory creates a new {@link OutputStream} that applies the corresponding encoding.
  */
+@UnstableApi
 public interface StreamEncoderFactory {
     /**
      * Returns all available {@link StreamDecoderFactory}s.
      *
      * @see StreamEncoderFactories#ALL
      */
-    @UnstableApi
     static List<StreamEncoderFactory> all() {
         return StreamEncoderFactories.ALL;
     }
