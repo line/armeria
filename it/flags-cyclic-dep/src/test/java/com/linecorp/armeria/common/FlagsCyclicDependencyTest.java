@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.common;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 
 import java.util.concurrent.CountDownLatch;
@@ -25,6 +26,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import org.junit.jupiter.api.Test;
 
+import com.linecorp.armeria.internal.common.FlagsLoaded;
 import com.linecorp.armeria.internal.common.RequestContextUtil;
 
 class FlagsCyclicDependencyTest {
@@ -58,5 +60,8 @@ class FlagsCyclicDependencyTest {
         });
         latch.countDown();
         await().until(() -> counter.get() == 2);
+
+        // Flags should be loaded
+        assertThat(FlagsLoaded.get()).isTrue();
     }
 }
