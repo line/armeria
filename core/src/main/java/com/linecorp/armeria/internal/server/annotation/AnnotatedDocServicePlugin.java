@@ -22,6 +22,7 @@ import static com.linecorp.armeria.internal.server.annotation.KotlinUtil.isKFunc
 import static com.linecorp.armeria.internal.server.annotation.KotlinUtil.isReturnTypeNothing;
 import static com.linecorp.armeria.internal.server.annotation.KotlinUtil.kFunctionGenericReturnType;
 import static com.linecorp.armeria.internal.server.annotation.KotlinUtil.kFunctionReturnType;
+import static com.linecorp.armeria.server.docs.FieldLocation.BODY;
 import static com.linecorp.armeria.server.docs.FieldLocation.HEADER;
 import static com.linecorp.armeria.server.docs.FieldLocation.PATH;
 import static com.linecorp.armeria.server.docs.FieldLocation.QUERY;
@@ -53,6 +54,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableList.Builder;
 import com.google.common.collect.ImmutableSet;
 
+import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.internal.common.JacksonUtil;
@@ -173,17 +175,45 @@ public final class AnnotatedDocServicePlugin implements DocServicePlugin {
         final Method method = service.method();
         final int overloadId = service.overloadId();
         final TypeSignature returnTypeSignature = getReturnTypeSignature(method);
-        final List<FieldInfo> fieldInfos = fieldInfos(service.annotatedValueResolvers());
-        route.methods().forEach(
-                httpMethod -> {
-                    final MethodInfo methodInfo = new MethodInfo(
-                            serviceClass.getName(), method.getName(), overloadId, returnTypeSignature,
-                            fieldInfos, ImmutableList.of(),
-                            ImmutableList.of(endpoint), httpMethod,
-                            AnnotatedServiceFactory.findDescription(method));
+        List<FieldInfo> fieldInfos = fieldInfos(service.annotatedValueResolvers());
+        boolean useParamaterAsRoot = false;
+        // Support debug form schema when there is a body parameter.
+        for (int i = 0; i < fieldInfos.size(); i++) {
+            final FieldInfo field = fieldInfos.get(i);
+            // Currently body parameters are generally UNSPECIFIED.
+            if (field.location() != UNSPECIFIED && field.location() != BODY) {
+                continue;
+            }
+            useParamaterAsRoot = true;
+            if (i != 0) {
+                // Move root parameter to front.
+                final ImmutableList.Builder<FieldInfo> moved =
+                        ImmutableList.builderWithExpectedSize(fieldInfos.size());
+                moved.add(field);
+                moved.addAll(fieldInfos.subList(0, i));
+                moved.addAll(fieldInfos.subList(i + 1, fieldInfos.size()));
+                fieldInfos = moved.build();
+            }
+        }
 
-                    methodInfos.computeIfAbsent(serviceClass, unused -> new HashSet<>()).add(methodInfo);
-                });
+        for (HttpMethod httpMethod : route.methods()) {
+            final MethodInfo methodInfo = new MethodInfo(
+                    serviceClass.getName(), method.getName(),
+                    returnTypeSignature,
+                    fieldInfos,
+                    useParamaterAsRoot,
+                    ImmutableList.of(),
+                    ImmutableList.of(endpoint),
+                    ImmutableList.of(),
+                    ImmutableList.of(),
+                    ImmutableList.of(),
+                    ImmutableList.of(),
+                    httpMethod,
+                    AnnotatedServiceFactory.findDescription(method),
+                    overloadId);
+
+            methodInfos.computeIfAbsent(serviceClass, unused -> new HashSet<>()).add(methodInfo);
+        }
     }
 
     private static TypeSignature getReturnTypeSignature(Method method) {
