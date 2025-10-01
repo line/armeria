@@ -17,7 +17,7 @@
 package com.linecorp.armeria.internal.server.annotation
 
 import com.fasterxml.jackson.annotation.JsonProperty
-import com.linecorp.armeria.internal.server.annotation.AnnotatedDocServicePlugin.STRING
+import com.linecorp.armeria.internal.server.docs.DocServiceTypeUtil.STRING
 import com.linecorp.armeria.server.annotation.Description
 import com.linecorp.armeria.server.docs.DescriptionInfo
 import com.linecorp.armeria.server.docs.EnumInfo
