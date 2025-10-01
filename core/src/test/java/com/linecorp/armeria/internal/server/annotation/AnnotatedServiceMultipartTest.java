@@ -23,13 +23,16 @@ import static org.assertj.core.api.Assertions.assertThat;
 import java.io.File;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.util.List;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.io.Files;
 
@@ -87,6 +90,36 @@ class AnnotatedServiceMultipartTest {
                            "\"multipartFile1\":\"qux.txt_qux (application/octet-stream)\"," +
                            "\"multipartFile2\":\"quz.txt_quz (text/plain)\"," +
                            "\"param1\":\"armeria\"}");
+    }
+
+    @Test
+    void testUploadMultipleFilesWithSameName() {
+        final Multipart multipart = Multipart.of(
+                BodyPart.of(ContentDisposition.of("form-data", "files", "bar.txt"), "bar"),
+                BodyPart.of(ContentDisposition.of("form-data", "files", "qux.txt"), "qux"),
+                BodyPart.of(ContentDisposition.of("form-data", "files", "quz.txt"), MediaType.PLAIN_TEXT,
+                            "quz"),
+                BodyPart.of(ContentDisposition.of("form-data", "params"), "hello"),
+                BodyPart.of(ContentDisposition.of("form-data", "params"), "armeria")
+
+        );
+
+        final AggregatedHttpResponse response =
+                server.blockingWebClient().execute(multipart.toHttpRequest("/uploadWithFileParamSameName"));
+
+        final ImmutableMap<String, List<String>> expected = ImmutableMap.of(
+                "files", ImmutableList.of(
+                        "fileName bar.txt data bar contentType application/octet-stream",
+                        "fileName qux.txt data qux contentType application/octet-stream",
+                        "fileName quz.txt data quz contentType text/plain"
+                ),
+                "params", ImmutableList.of(
+                        "hello",
+                        "armeria"
+                )
+        );
+
+        assertThatJson(response.contentUtf8()).isEqualTo(expected);
     }
 
     @Test
@@ -189,6 +222,34 @@ class AnnotatedServiceMultipartTest {
                         }));
                 return HttpResponse.ofJson(body);
             }));
+        }
+
+        @Blocking
+        @Post
+        @Path("/uploadWithFileParamSameName")
+        public HttpResponse uploadWithFileParamSameName(
+                @Param("params") List<String> params,
+                @Param("files") List<MultipartFile> files
+        ) {
+            final List<String> fileData = files
+                    .stream()
+                    .map(multipartFile -> {
+                        try {
+                            final String data = Files.asCharSource(multipartFile.file(),
+                                                                   StandardCharsets.UTF_8)
+                                                     .read();
+                            return String.format("fileName %s data %s contentType %s",
+                                                 multipartFile.filename(), data,
+                                                 multipartFile.headers().contentType());
+                        } catch (IOException e) {
+                            throw new RuntimeException(e);
+                        }
+                    }).collect(Collectors.toList());
+            final ImmutableMap<String, List<String>> content =
+                    ImmutableMap.of(
+                            "files", fileData,
+                            "params", params);
+            return HttpResponse.ofJson(content);
         }
     }
 }
