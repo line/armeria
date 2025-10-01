@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.internal.server.annotation;
 
+import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static net.javacrumbs.jsonunit.fluent.JsonFluentAssert.assertThatJson;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -25,7 +26,6 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.function.Function;
-import java.util.stream.Collectors;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
@@ -101,24 +101,19 @@ class AnnotatedServiceMultipartTest {
                             "quz"),
                 BodyPart.of(ContentDisposition.of("form-data", "params"), "hello"),
                 BodyPart.of(ContentDisposition.of("form-data", "params"), "armeria")
-
         );
 
         final AggregatedHttpResponse response =
                 server.blockingWebClient().execute(multipart.toHttpRequest("/uploadWithFileParamSameName"));
 
         final ImmutableMap<String, List<String>> expected = ImmutableMap.of(
-                "files", ImmutableList.of(
-                        "fileName bar.txt data bar contentType application/octet-stream",
-                        "fileName qux.txt data qux contentType application/octet-stream",
-                        "fileName quz.txt data quz contentType text/plain"
-                ),
-                "params", ImmutableList.of(
-                        "hello",
-                        "armeria"
+                "files", ImmutableList.of("fileName bar.txt data bar contentType application/octet-stream",
+                                          "fileName qux.txt data qux contentType application/octet-stream",
+                                          "fileName quz.txt data quz contentType text/plain"),
+                "params", ImmutableList.of("hello",
+                                           "armeria"
                 )
         );
-
         assertThatJson(response.contentUtf8()).isEqualTo(expected);
     }
 
@@ -229,8 +224,7 @@ class AnnotatedServiceMultipartTest {
         @Path("/uploadWithFileParamSameName")
         public HttpResponse uploadWithFileParamSameName(
                 @Param("params") List<String> params,
-                @Param("files") List<MultipartFile> files
-        ) {
+                @Param("files") List<MultipartFile> files) {
             final List<String> fileData = files
                     .stream()
                     .map(multipartFile -> {
@@ -244,11 +238,10 @@ class AnnotatedServiceMultipartTest {
                         } catch (IOException e) {
                             throw new RuntimeException(e);
                         }
-                    }).collect(Collectors.toList());
+                    }).collect(toImmutableList());
             final ImmutableMap<String, List<String>> content =
-                    ImmutableMap.of(
-                            "files", fileData,
-                            "params", params);
+                    ImmutableMap.of("files", fileData,
+                                    "params", params);
             return HttpResponse.ofJson(content);
         }
     }

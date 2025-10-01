@@ -542,7 +542,7 @@ final class AnnotatedValueResolver {
         if (!(raw instanceof Class<?>)) {
             return false;
         }
-        final Class<?> rawClass =  (Class<?>) raw;
+        final Class<?> rawClass = (Class<?>) raw;
         if (!List.class.isAssignableFrom(rawClass) && !Set.class.isAssignableFrom(rawClass)) {
             return false;
         }
