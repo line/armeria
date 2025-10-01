@@ -24,6 +24,7 @@ import java.time.Duration;
 import com.google.common.base.MoreObjects;
 import com.google.common.base.MoreObjects.ToStringHelper;
 
+import com.linecorp.armeria.client.retry.limiter.RetryLimiter;
 import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.annotation.Nullable;
@@ -37,6 +38,8 @@ public final class RetryConfigBuilder<T extends Response> {
     private int maxTotalAttempts = Flags.defaultMaxTotalAttempts();
     private long responseTimeoutMillisForEachAttempt = Flags.defaultResponseTimeoutMillis();
     private int maxContentLength;
+    @Nullable
+    private RetryLimiter retryLimiter;
 
     @Nullable
     private final RetryRule retryRule;
@@ -50,6 +53,7 @@ public final class RetryConfigBuilder<T extends Response> {
         this.retryRule = requireNonNull(retryRule, "retryRule");
         retryRuleWithContent = null;
         maxContentLength = 0;
+        retryLimiter = null;
     }
 
     /**
@@ -59,6 +63,7 @@ public final class RetryConfigBuilder<T extends Response> {
         retryRule = null;
         this.retryRuleWithContent = requireNonNull(retryRuleWithContent, "retryRuleWithContent");
         maxContentLength = Integer.MAX_VALUE;
+        retryLimiter = null;
     }
 
     /**
@@ -112,15 +117,26 @@ public final class RetryConfigBuilder<T extends Response> {
     }
 
     /**
+     * Sets the specified {@link RetryLimiter} to be used for retry budgeting.
+     */
+    public RetryConfigBuilder<T> limiter(RetryLimiter retryLimiter) {
+        requireNonNull(retryLimiter, "retryLimiter");
+        this.retryLimiter = retryLimiter;
+        return this;
+    }
+
+    /**
      * Returns a newly-created {@link RetryConfig} from this {@link RetryConfigBuilder}'s values.
      */
     public RetryConfig<T> build() {
         if (retryRule != null) {
-            return new RetryConfig<>(retryRule, maxTotalAttempts, responseTimeoutMillisForEachAttempt);
+            return new RetryConfig<>(retryRule, retryLimiter, maxTotalAttempts,
+                                     responseTimeoutMillisForEachAttempt);
         }
         assert retryRuleWithContent != null;
         return new RetryConfig<>(
                 retryRuleWithContent,
+                retryLimiter,
                 maxContentLength,
                 maxTotalAttempts,
                 responseTimeoutMillisForEachAttempt);
@@ -139,6 +155,7 @@ public final class RetryConfigBuilder<T extends Response> {
                 .add("retryRuleWithContent", retryRuleWithContent)
                 .add("maxTotalAttempts", maxTotalAttempts)
                 .add("responseTimeoutMillisForEachAttempt", responseTimeoutMillisForEachAttempt)
-                .add("maxContentLength", maxContentLength);
+                .add("maxContentLength", maxContentLength)
+                .add("retryLimiter", retryLimiter);
     }
 }
