@@ -1,0 +1,124 @@
+/**
+ * Any CSS included here will be global. The classic template
+ * bundles Infima by default. Infima is a CSS framework designed to
+ * work well for content-centric websites.
+ */
+@import url('https://fonts.googleapis.com/css?family=Lato:400,400i,700,700i|Merriweather:400,400i,700,700i&display=swap');
+@import url('https://cdn.jsdelivr.net/npm/hack-font@3.3.0/build/web/hack-subset.css');
+
+/* You can override the default Infima variables here. */
+:root {
+  /* --ifm-color-primary: #2e8555; */
+  /* --ifm-color-primary-dark: #29784c; */
+  /* --ifm-color-primary-darker: #277148; */
+  /* --ifm-color-primary-darkest: #205d3b; */
+  /* --ifm-color-primary-light: #33925d; */
+  /* --ifm-color-primary-lighter: #359962; */
+  /* --ifm-color-primary-lightest: #3cad6e; */
+  --docusaurus-highlighted-code-line-bg: rgba(0, 0, 0, 0.1);
+  --armeria-magenta: #ff0089;
+  --armeria-pink: #ff9dc3;
+  --armeria-white: #ffffff;
+  --armeria-gray: rgba(255, 255, 255, 0.55);
+  --armeria-darkgray: #3a3a3a;
+
+  --armeria-emoji-family:
+    'Twemoji Mozilla', 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol',
+    'Noto Color Emoji';
+  --armeria-font-family:
+    Lato, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
+    'Helvetica Neue', Arial, 'Noto Sans', sans-serif,
+    var(--armeria-emoji-family);
+  --ifm-font-family-base: var(--armeria-font-family);
+  --ifm-font-family-monospace:
+    Hack, 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, Courier,
+    monospace, var(--armeria-emoji-family);
+  --ifm-heading-font-family: Merriweather, var(--armeria-font-family);
+  --ifm-code-font-size: 95%;
+
+  --ifm-navbar-height: 60px;
+}
+
+/* For readability concerns, you should choose a lighter palette in dark mode. */
+[data-theme='dark'] {
+  /* --ifm-color-primary: #25c2a0; */
+  /* --ifm-color-primary-dark: #21af90; */
+  /* --ifm-color-primary-darker: #1fa588; */
+  /* --ifm-color-primary-darkest: #1a8870; */
+  /* --ifm-color-primary-light: #29d5b0; */
+  /* --ifm-color-primary-lighter: #32d8b4; */
+  /* --ifm-color-primary-lightest: #4fddbf; */
+  --docusaurus-highlighted-code-line-bg: rgba(0, 0, 0, 0.3);
+}
+
+.navbar--dark {
+  --ifm-navbar-background-color: var(--armeria-darkgray);
+  box-shadow: none;
+}
+
+.footer--dark {
+  --ifm-footer-background-color: var(--armeria-darkgray);
+}
+
+li {
+  &.sidebar-title {
+    text-transform: uppercase;
+    font-weight: var(--ifm-font-weight-bold);
+    font-size: 0.86rem;
+  }
+
+  &.sidebar-divider hr {
+    margin: 0.5rem 0 0 0;
+    background-color: var(--ifm-color-gray-300);
+  }
+}
+
+.doc-card-list-expanded {
+  h2,
+  p {
+    overflow: visible;
+    white-space: normal;
+    text-overflow: initial;
+  }
+}
+
+.doc-card-list-no-description p {
+  display: none;
+}
+
+.noBullet {
+  > ol,
+  > ul {
+    list-style: none;
+    margin-left: 0;
+    padding-left: 0;
+    > li {
+      margin-left: 0;
+      padding-left: 0;
+      > ol,
+      > ul {
+        margin-left: 24px;
+      }
+    }
+  }
+}
+
+.hideOnReducedMotion {
+  display: initial;
+}
+.showOnReducedMotion {
+  display: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hideOnReducedMotion {
+    display: none;
+  }
+  .showOnReducedMotion {
+    display: initial;
+  }
+}
+
+.here .container {
+  max-width: 650px;
+}
