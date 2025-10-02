@@ -33,6 +33,7 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.ResponseHeaders;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.encoding.StreamEncoderFactory;
 import com.linecorp.armeria.server.HttpService;
 
@@ -81,6 +82,7 @@ public final class EncodingServiceBuilder {
      *     See <a href="https://datatracker.ietf.org/doc/html/rfc7231#section-5.3.4">RFC 7231</a> for details.
      * </p>
      */
+    @UnstableApi
     public EncodingServiceBuilder encoderFactories(StreamEncoderFactory... encoderFactories) {
         requireNonNull(encoderFactories, "encoderFactories");
         return encoderFactories(ImmutableList.copyOf(encoderFactories));
@@ -97,6 +99,7 @@ public final class EncodingServiceBuilder {
      *     See <a href="https://datatracker.ietf.org/doc/html/rfc7231#section-5.3.4">RFC 7231</a> for details.
      * </p>
      */
+    @UnstableApi
     public EncodingServiceBuilder encoderFactories(Iterable<? extends StreamEncoderFactory> encoderFactories) {
         requireNonNull(encoderFactories, "encoderFactories");
         this.encoderFactories = ImmutableList.copyOf(encoderFactories);
