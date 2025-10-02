@@ -32,6 +32,7 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.RequestHeaders;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.encoding.StreamEncoderFactory;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.RoutingContext;
@@ -132,7 +133,27 @@ public final class EncodingService extends SimpleDecoratingHttpService {
 
     /**
      * Creates a new instance.
+     *
+     * @deprecated Use
+     *             {@link EncodingService#EncodingService(HttpService, Iterable, Predicate, Predicate, long)}
+     *             with {@link StreamEncoderFactory#all()} instead or build with {@link EncodingServiceBuilder}.
      */
+    @Deprecated
+    EncodingService(HttpService delegate,
+                    Predicate<MediaType> encodableContentTypePredicate,
+                    Predicate<? super RequestHeaders> encodableRequestHeadersPredicate,
+                    long minBytesToForceChunkedAndEncoding
+    ) {
+        this(
+                delegate, StreamEncoderFactory.all(), encodableContentTypePredicate,
+                encodableRequestHeadersPredicate, minBytesToForceChunkedAndEncoding
+        );
+    }
+
+    /**
+     * Creates a new instance.
+     */
+    @UnstableApi
     EncodingService(HttpService delegate,
                     Iterable<? extends StreamEncoderFactory> encoderFactories,
                     Predicate<MediaType> encodableContentTypePredicate,
