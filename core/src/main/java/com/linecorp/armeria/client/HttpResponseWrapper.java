@@ -240,12 +240,31 @@ class HttpResponseWrapper implements StreamWriter<HttpObject> {
         final boolean closed;
         if (cause != null) {
             closed = delegate.tryClose(cause);
-            ctx.logBuilder().endResponse(cause);
+            if (closed) {
+                ctx.logBuilder().endResponse(cause);
+            } else {
+                endResponseLogUsingDelegate();
+            }
         } else {
             closed = delegate.tryClose();
-            ctx.logBuilder().endResponse();
+            if (closed) {
+                ctx.logBuilder().endResponse();
+            } else {
+                endResponseLogUsingDelegate();
+            }
         }
         return closed;
+    }
+
+    private void endResponseLogUsingDelegate() {
+        delegate.whenComplete().handle((unused, t) -> {
+            if (t != null) {
+                ctx.logBuilder().endResponse(t);
+            } else {
+                ctx.logBuilder().endResponse();
+            }
+            return null;
+        });
     }
 
     private void cancelAction(@Nullable Throwable cause) {
@@ -270,7 +289,7 @@ class HttpResponseWrapper implements StreamWriter<HttpObject> {
         }
 
         // don't log if the cause will be exposed via the response/log
-        if (delegate.isOpen() && closeAction(cause)) {
+        if (closeAction(cause)) {
             return;
         }
 

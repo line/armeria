@@ -96,7 +96,7 @@ micrometer-docs-generator = "1.0.2"
 mockito = "4.11.0"
 monix = "3.4.1"
 munit = "1.1.1"
-netty = "4.2.4.Final"
+netty = "4.2.6.Final"
 nexus-publish = "2.0.0"
 node-gradle-plugin = "7.1.0"
 nullaway = "0.12.7"
@@ -109,6 +109,7 @@ opensaml = "3.4.6"
 osdetector = "1.7.3"
 # Used for kubernetes-chaos-tests
 picocli = "4.7.7"
+protoc-gen-validate = "1.2.1"
 proguard = "7.5.0"
 prometheus = "1.3.10"
 prometheus-legacy = "0.16.0"
@@ -344,9 +345,6 @@ version.ref = "checkstyle"
 module = "io.micrometer:context-propagation"
 version.ref = "context-propagation"
 
-[libraries.controlplane-api]
-module = "io.envoyproxy.controlplane:api"
-version.ref = "controlplane"
 [libraries.controlplane-cache]
 module = "io.envoyproxy.controlplane:cache"
 version.ref = "controlplane"
@@ -993,6 +991,13 @@ javadocs = "https://prometheus.github.io/client_java/"
 [libraries.prometheus-legacy]
 module = "io.prometheus:simpleclient_common"
 version.ref = "prometheus-legacy"
+
+[libraries.protoc-pgv-java-stub]
+module = "build.buf.protoc-gen-validate:pgv-java-stub"
+version.ref = "protoc-gen-validate"
+[libraries.protoc-gen-validate]
+module = "build.buf.protoc-gen-validate:protoc-gen-validate"
+version.ref = "protoc-gen-validate"
 
 [libraries.protobuf-java]
 module = "com.google.protobuf:protobuf-java"

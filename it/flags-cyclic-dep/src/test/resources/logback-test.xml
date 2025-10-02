@@ -26,9 +26,7 @@
     <export>remote.ip</export>
   </appender>
 
-  <logger name="com.linecorp.armeria" level="DEBUG" />
-
-  <root level="WARN">
+  <root level="DEBUG">
     <appender-ref ref="STDOUT" />
     <appender-ref ref="RCEA" />
   </root>
