@@ -133,12 +133,7 @@ public final class EncodingService extends SimpleDecoratingHttpService {
 
     /**
      * Creates a new instance.
-     *
-     * @deprecated Use
-     *             {@link EncodingService#EncodingService(HttpService, Iterable, Predicate, Predicate, long)}
-     *             with {@link StreamEncoderFactory#all()} instead or build with {@link EncodingServiceBuilder}.
      */
-    @Deprecated
     EncodingService(HttpService delegate,
                     Predicate<MediaType> encodableContentTypePredicate,
                     Predicate<? super RequestHeaders> encodableRequestHeadersPredicate,
