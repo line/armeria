@@ -139,10 +139,8 @@ public final class EncodingService extends SimpleDecoratingHttpService {
                     Predicate<? super RequestHeaders> encodableRequestHeadersPredicate,
                     long minBytesToForceChunkedAndEncoding
     ) {
-        this(
-                delegate, StreamEncoderFactory.all(), encodableContentTypePredicate,
-                encodableRequestHeadersPredicate, minBytesToForceChunkedAndEncoding
-        );
+        this(delegate, StreamEncoderFactory.all(), encodableContentTypePredicate,
+             encodableRequestHeadersPredicate, minBytesToForceChunkedAndEncoding);
     }
 
     /**
