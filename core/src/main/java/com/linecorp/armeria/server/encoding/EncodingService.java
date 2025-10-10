@@ -146,7 +146,6 @@ public final class EncodingService extends SimpleDecoratingHttpService {
     /**
      * Creates a new instance.
      */
-    @UnstableApi
     EncodingService(HttpService delegate,
                     Iterable<? extends StreamEncoderFactory> encoderFactories,
                     Predicate<MediaType> encodableContentTypePredicate,
