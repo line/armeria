@@ -194,7 +194,7 @@ message Metric {
   string description = 2;
 
   // unit in which the metric value is reported. Follows the format
-  // described by http://unitsofmeasure.org/ucum.html.
+  // described by https://unitsofmeasure.org/ucum.html.
   string unit = 3;
 
   // Data determines the aggregation type (if any) of the metric, what is the
@@ -266,7 +266,7 @@ message ExponentialHistogram {
 
 // Summary metric data are used to convey quantile summaries,
 // a Prometheus (see: https://prometheus.io/docs/concepts/metric_types/#summary)
-// and OpenMetrics (see: https://github.com/OpenObservability/OpenMetrics/blob/4dbf6075567ab43296eed941037c12951faafb92/protos/prometheus.proto#L45)
+// and OpenMetrics (see: https://github.com/prometheus/OpenMetrics/blob/4dbf6075567ab43296eed941037c12951faafb92/protos/prometheus.proto#L45)
 // data type. These data points cannot always be merged in a meaningful way.
 // While they can be useful in some applications, histogram data points are
 // recommended for new applications.
@@ -461,7 +461,9 @@ message HistogramDataPoint {
   // The sum of the bucket_counts must equal the value in the count field.
   //
   // The number of elements in bucket_counts array must be by one greater than
-  // the number of elements in explicit_bounds array.
+  // the number of elements in explicit_bounds array. The exception to this rule
+  // is when the length of bucket_counts is 0, then the length of explicit_bounds
+  // must also be 0.
   repeated fixed64 bucket_counts = 6;
 
   // explicit_bounds specifies buckets with explicitly defined bounds for values.
@@ -477,6 +479,9 @@ message HistogramDataPoint {
   // Histogram buckets are inclusive of their upper boundary, except the last
   // bucket where the boundary is at infinity. This format is intentionally
   // compatible with the OpenMetrics histogram definition.
+  //
+  // If bucket_counts length is 0 then explicit_bounds length must also be 0,
+  // otherwise the data point is invalid.
   repeated double explicit_bounds = 7;
 
   // (Optional) List of exemplars collected from
@@ -533,7 +538,7 @@ message ExponentialHistogramDataPoint {
   // doing so.  This is specifically to enforce compatibility w/ OpenMetrics,
   // see: https://github.com/prometheus/OpenMetrics/blob/v1.0.0/specification/OpenMetrics.md#histogram
   optional double sum = 5;
-  
+
   // scale describes the resolution of the histogram.  Boundaries are
   // located at powers of the base, where:
   //
@@ -571,7 +576,7 @@ message ExponentialHistogramDataPoint {
   // of counts.
   message Buckets {
     // Offset is the bucket index of the first entry in the bucket_counts array.
-    // 
+    //
     // Note: This uses a varint encoding as a simple form of compression.
     sint32 offset = 1;
 
@@ -585,7 +590,7 @@ message ExponentialHistogramDataPoint {
     // especially zeros, so uint64 has been selected to ensure
     // varint encoding.
     repeated uint64 bucket_counts = 2;
-  } 
+  }
 
   // Flags that apply to this specific data point.  See DataPointFlags
   // for the available flags and their meaning.

@@ -20,7 +20,7 @@ option go_package = "github.com/cncf/xds/go/xds/type/matcher/v3";
 //
 //   The match is ``true``, iff the result of the evaluation is a bool AND true.
 //   In all other cases, the match is ``false``, including but not limited to: non-bool types,
-//   ``false``, ``null``,`` int(1)``, etc.
+//   ``false``, ``null``, ``int(1)``, etc.
 //   In case CEL expression raises an error, the result of the evaluation is interpreted "no match".
 //
 // Refer to :ref:`Unified Matcher API <envoy_v3_api_msg_.xds.type.matcher.v3.Matcher>` documentation
