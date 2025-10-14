@@ -93,7 +93,7 @@ class AnnotatedServiceMultipartTest {
     }
 
     @Test
-    void testUploadMultipleFilesWithSameName() {
+    void testUploadMultipleFilesWithSameNameMultipart() {
         final Multipart multipart = Multipart.of(
                 BodyPart.of(ContentDisposition.of("form-data", "files", "bar.txt"), "bar"),
                 BodyPart.of(ContentDisposition.of("form-data", "files", "qux.txt"), "qux"),
@@ -104,7 +104,9 @@ class AnnotatedServiceMultipartTest {
         );
 
         final AggregatedHttpResponse response =
-                server.blockingWebClient().execute(multipart.toHttpRequest("/uploadWithFileParamSameName"));
+                server.blockingWebClient().execute(
+                        multipart.toHttpRequest("/uploadWithFileParamSameNameMultipart")
+                );
 
         final ImmutableMap<String, List<String>> expected = ImmutableMap.of(
                 "files", ImmutableList.of("fileName bar.txt data bar contentType application/octet-stream",
@@ -113,6 +115,53 @@ class AnnotatedServiceMultipartTest {
                 "params", ImmutableList.of("hello",
                                            "armeria"
                 )
+        );
+        assertThatJson(response.contentUtf8()).isEqualTo(expected);
+    }
+
+    @Test
+    void testUploadMultipleFilesWithSameNamePath() {
+        final Multipart multipart = Multipart.of(
+                BodyPart.of(ContentDisposition.of("form-data", "files", "bar.txt"), "bar"),
+                BodyPart.of(ContentDisposition.of("form-data", "files", "qux.txt"), "qux"),
+                BodyPart.of(ContentDisposition.of("form-data", "files", "quz.txt"), MediaType.PLAIN_TEXT,
+                            "quz"),
+                BodyPart.of(ContentDisposition.of("form-data", "params"), "hello"),
+                BodyPart.of(ContentDisposition.of("form-data", "params"), "armeria")
+        );
+
+        final AggregatedHttpResponse response =
+                server.blockingWebClient().execute(
+                        multipart.toHttpRequest("/uploadWithFileParamSameNamePath")
+                );
+
+        final ImmutableMap<String, List<String>> expected = ImmutableMap.of(
+                "files", ImmutableList.of("data bar", "data qux", "data quz"),
+                "params", ImmutableList.of("hello", "armeria"
+                )
+        );
+        assertThatJson(response.contentUtf8()).isEqualTo(expected);
+    }
+
+    @Test
+    void testUploadMultipleFilesWithSameNameFile() {
+        final Multipart multipart = Multipart.of(
+                BodyPart.of(ContentDisposition.of("form-data", "files", "bar.txt"), "bar"),
+                BodyPart.of(ContentDisposition.of("form-data", "files", "qux.txt"), "qux"),
+                BodyPart.of(ContentDisposition.of("form-data", "files", "quz.txt"), MediaType.PLAIN_TEXT,
+                            "quz"),
+                BodyPart.of(ContentDisposition.of("form-data", "params"), "hello"),
+                BodyPart.of(ContentDisposition.of("form-data", "params"), "armeria")
+        );
+
+        final AggregatedHttpResponse response =
+                server.blockingWebClient().execute(
+                        multipart.toHttpRequest("/uploadWithFileParamSameNameFile")
+                );
+
+        final ImmutableMap<String, List<String>> expected = ImmutableMap.of(
+                "files", ImmutableList.of("data bar", "data qux", "data quz"),
+                "params", ImmutableList.of("hello", "armeria")
         );
         assertThatJson(response.contentUtf8()).isEqualTo(expected);
     }
@@ -221,8 +270,8 @@ class AnnotatedServiceMultipartTest {
 
         @Blocking
         @Post
-        @Path("/uploadWithFileParamSameName")
-        public HttpResponse uploadWithFileParamSameName(
+        @Path("/uploadWithFileParamSameNameMultipart")
+        public HttpResponse uploadWithFileParamSameNameMultipart(
                 @Param("params") List<String> params,
                 @Param("files") List<MultipartFile> files) {
             final List<String> fileData = files
@@ -235,6 +284,53 @@ class AnnotatedServiceMultipartTest {
                             return String.format("fileName %s data %s contentType %s",
                                                  multipartFile.filename(), data,
                                                  multipartFile.headers().contentType());
+                        } catch (IOException e) {
+                            throw new RuntimeException(e);
+                        }
+                    }).collect(toImmutableList());
+            final ImmutableMap<String, List<String>> content =
+                    ImmutableMap.of("files", fileData,
+                                    "params", params);
+            return HttpResponse.ofJson(content);
+        }
+
+        @Blocking
+        @Post
+        @Path("/uploadWithFileParamSameNamePath")
+        public HttpResponse uploadWithFileParamSameNamePath(
+                @Param("params") List<String> params,
+                @Param("files") List<java.nio.file.Path> files) {
+            final List<String> fileData = files
+                    .stream()
+                    .map(path -> {
+                        try {
+                            final String data = Files.asCharSource(path.toFile(), StandardCharsets.UTF_8)
+                                                     .read();
+                            return String.format("data %s", data);
+                        } catch (IOException e) {
+                            throw new RuntimeException(e);
+                        }
+                    }).collect(toImmutableList());
+            final ImmutableMap<String, List<String>> content =
+                    ImmutableMap.of("files", fileData,
+                                    "params", params);
+            return HttpResponse.ofJson(content);
+        }
+
+        @Blocking
+        @Post
+        @Path("/uploadWithFileParamSameNameFile")
+        public HttpResponse uploadWithFileParamSameNameFile(
+                @Param("params") List<String> params,
+                @Param("files") List<File> files,
+                RequestHeaders headers) {
+            final List<String> fileData = files
+                    .stream()
+                    .map(file -> {
+                        try {
+                            final String data = Files.asCharSource(file, StandardCharsets.UTF_8)
+                                                     .read();
+                            return String.format("data %s", data);
                         } catch (IOException e) {
                             throw new RuntimeException(e);
                         }

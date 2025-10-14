@@ -127,6 +127,8 @@ final class AnnotatedValueResolver {
 
     private static final List<RequestObjectResolver> defaultRequestObjectResolvers;
 
+    private static final Set<Type> fileTypes = ImmutableSet.of(File.class, Path.class, MultipartFile.class);
+
     static {
         final ImmutableList.Builder<RequestObjectResolver> builder = ImmutableList.builderWithExpectedSize(4);
         builder.add((resolverContext, expectedResultType, expectedParameterizedResultType, beanFactoryId) -> {
@@ -472,8 +474,7 @@ final class AnnotatedValueResolver {
                 }
                 return ofQueryParamMap(name, annotatedElement, typeElement, type, description);
             }
-            if (type == File.class || type == Path.class || type == MultipartFile.class ||
-                isListOfFiles(annotatedElement)) {
+            if (fileTypes.contains(type) || isListOfFiles(annotatedElement)) {
                 return ofFileParam(name, annotatedElement, typeElement, type, description);
             }
             if (pathParams.contains(name)) {
@@ -551,7 +552,7 @@ final class AnnotatedValueResolver {
             return false;
         }
         final Type arg = args[0];
-        return arg == File.class || arg == Path.class || arg == MultipartFile.class;
+        return fileTypes.contains(arg);
     }
 
     static List<RequestObjectResolver> addToFirstIfExists(List<RequestObjectResolver> resolvers,
