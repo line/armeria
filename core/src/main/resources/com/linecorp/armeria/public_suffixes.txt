@@ -2561,6 +2561,7 @@ eu.ngrok.io
 eu.org
 eu.platform.sh
 eu.pythonanywhere.com
+eu1-plenit.com
 eun.eg
 eurodir.ru
 eurovision
@@ -4194,8 +4195,6 @@ jor.br
 jorpeland.no
 joso.ibaraki.jp
 jot
-jote-dr-lt1.com
-jote-rd-lt1.com
 jote.cloud
 jotelulu.cloud
 journal.aero
@@ -4713,6 +4712,7 @@ l.se
 la
 la-spezia.it
 la.us
+la1-plenit.com
 laakesvuemie.no
 labeling.ap-northeast-1.sagemaker.aws
 labeling.ap-northeast-2.sagemaker.aws
@@ -8883,6 +8883,7 @@ us.org
 us.platform.sh
 us.reclaim.cloud
 us.ug
+us1-plenit.com
 usa.oita.jp
 user.aseinet.ne.jp
 user.party.eus
