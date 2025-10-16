@@ -55,6 +55,6 @@ class HelloIntegrationTest {
     void healthCheck() throws Exception {
         final AggregatedHttpResponse res = client.get("/internal/healthcheck").aggregate().join();
         assertThat(res.status()).isEqualTo(HttpStatus.OK);
-        assertThat(res.contentUtf8()).isEqualTo("{\"healthy\":true}");
+        assertThat(res.contentUtf8()).isEqualTo("{\"healthy\":true,\"status\":\"HEALTHY\"}");
     }
 }

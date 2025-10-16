@@ -27,7 +27,7 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
  */
 @UnstableApi
 public final class HealthCheckStatus {
-    private final boolean isHealthy;
+    private final HealthStatus healthStatus;
     private final long ttlMillis;
 
     /**
@@ -37,8 +37,18 @@ public final class HealthCheckStatus {
      * @param ttlMillis interval for scheduling the next check
      */
     public HealthCheckStatus(boolean isHealthy, long ttlMillis) {
+        this(isHealthy ? HealthStatus.HEALTHY : HealthStatus.UNHEALTHY, ttlMillis);
+    }
+
+    /**
+     * Create the result of the health check.
+     *
+     * @param healthStatus health check result
+     * @param ttlMillis interval for scheduling the next check
+     */
+    public HealthCheckStatus(HealthStatus healthStatus, long ttlMillis) {
         checkArgument(ttlMillis > 0, "ttlMillis: %s (expected: > 0)", ttlMillis);
-        this.isHealthy = isHealthy;
+        this.healthStatus = healthStatus;
         this.ttlMillis = ttlMillis;
     }
 
@@ -46,7 +56,15 @@ public final class HealthCheckStatus {
      * Return the result of health check.
      */
     public boolean isHealthy() {
-        return isHealthy;
+        return healthStatus.isHealthy();
+    }
+
+    /**
+     * Return the result of health check.
+     */
+    @UnstableApi
+    public HealthStatus healthStatus() {
+        return healthStatus;
     }
 
     /**
@@ -59,7 +77,7 @@ public final class HealthCheckStatus {
     @Override
     public String toString() {
         return MoreObjects.toStringHelper(this)
-                          .add("isHealthy", isHealthy)
+                          .add("healthStatus", healthStatus)
                           .add("ttlMillis", ttlMillis)
                           .toString();
     }
