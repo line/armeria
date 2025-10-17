@@ -24,7 +24,7 @@ import static org.awaitility.Awaitility.await;
 
 import java.net.InetSocketAddress;
 import java.util.List;
-import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.junit.jupiter.api.Test;
 
@@ -183,7 +183,7 @@ class DnsResolutionWithConnectionPoolTest {
      * A test observer that tracks DNS query events directly without using metrics.
      */
     private static class CountingDnsQueryObserverFactory implements DnsQueryLifecycleObserverFactory {
-        private final List<String> successfulQueries = new CopyOnWriteArrayList<>();
+        private final AtomicInteger successfulQueries = new AtomicInteger(0);
 
         @Override
         public DnsQueryLifecycleObserver newDnsQueryLifecycleObserver(DnsQuestion question) {
@@ -214,17 +214,13 @@ class DnsResolutionWithConnectionPoolTest {
 
                 @Override
                 public void querySucceed() {
-                    successfulQueries.add(question.name());
+                    successfulQueries.incrementAndGet();
                 }
             };
         }
 
         int queryCount() {
-            return successfulQueries.size();
-        }
-
-        List<String> queries() {
-            return successfulQueries;
+            return successfulQueries.get();
         }
     }
 }
