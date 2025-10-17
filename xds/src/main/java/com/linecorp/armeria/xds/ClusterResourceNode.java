@@ -21,6 +21,7 @@ import static com.linecorp.armeria.xds.XdsType.CLUSTER;
 
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.SafeCloseable;
+import com.linecorp.armeria.xds.client.endpoint.UpdatableXdsLoadBalancer;
 
 import io.envoyproxy.envoy.config.cluster.v3.Cluster;
 import io.envoyproxy.envoy.config.cluster.v3.Cluster.EdsClusterConfig;
@@ -32,17 +33,19 @@ final class ClusterResourceNode extends AbstractResourceNode<ClusterXdsResource,
 
     @Nullable
     private EndpointSnapshotWatcher snapshotWatcher;
+    private final UpdatableXdsLoadBalancer loadBalancer;
 
     ClusterResourceNode(@Nullable ConfigSource configSource,
                         String resourceName, SubscriptionContext context,
-                        ResourceNodeType resourceNodeType) {
+                        ResourceNodeType resourceNodeType, UpdatableXdsLoadBalancer loadBalancer) {
         super(context, configSource, CLUSTER, resourceName, resourceNodeType);
+        this.loadBalancer = loadBalancer;
     }
 
     @Override
     public void doOnChanged(ClusterXdsResource resource) {
         final EndpointSnapshotWatcher previousWatcher = snapshotWatcher;
-        snapshotWatcher = new EndpointSnapshotWatcher(resource, context(), this, configSource());
+        snapshotWatcher = new EndpointSnapshotWatcher(resource, context(), this, configSource(), loadBalancer);
         if (previousWatcher != null) {
             previousWatcher.close();
         }
@@ -63,13 +66,16 @@ final class ClusterResourceNode extends AbstractResourceNode<ClusterXdsResource,
         private final ClusterResourceNode parentNode;
         @Nullable
         private final EndpointResourceNode node;
+        private final UpdatableXdsLoadBalancer loadBalancer;
 
         private boolean closed;
 
         EndpointSnapshotWatcher(ClusterXdsResource resource, SubscriptionContext context,
-                                ClusterResourceNode parentNode, @Nullable ConfigSource parentConfigSource) {
+                                ClusterResourceNode parentNode, @Nullable ConfigSource parentConfigSource,
+                                UpdatableXdsLoadBalancer loadBalancer) {
             this.resource = resource;
             this.parentNode = parentNode;
+            this.loadBalancer = loadBalancer;
 
             EndpointResourceNode node = null;
             final Cluster cluster = resource.resource();
@@ -99,7 +105,7 @@ final class ClusterResourceNode extends AbstractResourceNode<ClusterXdsResource,
             if (closed) {
                 return;
             }
-            parentNode.notifyOnChanged(new ClusterSnapshot(resource, newSnapshot));
+            parentNode.notifyOnChanged(ClusterSnapshot.of(resource, newSnapshot, loadBalancer));
         }
 
         @Override

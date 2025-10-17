@@ -58,8 +58,12 @@ public final class ClusterXdsResource implements XdsResource {
         return null;
     }
 
+    /**
+     * The upstream TLS context extracted from {@link Cluster#getTransportSocket()}.
+     */
     @Nullable
-    UpstreamTlsContext upstreamTlsContext() {
+    @UnstableApi
+    public UpstreamTlsContext upstreamTlsContext() {
         return upstreamTlsContext;
     }
 

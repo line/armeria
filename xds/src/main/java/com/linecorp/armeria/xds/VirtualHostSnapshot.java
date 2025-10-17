@@ -24,6 +24,7 @@ import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableList;
 
 import io.envoyproxy.envoy.config.route.v3.Route;
+import io.envoyproxy.envoy.config.route.v3.RouteConfiguration;
 import io.envoyproxy.envoy.config.route.v3.VirtualHost;
 
 /**
@@ -41,12 +42,14 @@ public final class VirtualHostSnapshot implements Snapshot<VirtualHostXdsResourc
         final VirtualHost virtualHost = virtualHostXdsResource.resource();
 
         final ImmutableList.Builder<RouteEntry> routeEntriesBuilder = ImmutableList.builder();
-        for (Route route: virtualHost.getRoutesList()) {
+        final List<Route> routes = virtualHost.getRoutesList();
+        for (int i = 0; i < routes.size(); i++) {
+            final Route route = routes.get(i);
             ClusterSnapshot clusterSnapshot = null;
             if (route.getRoute().hasCluster()) {
                 clusterSnapshot = clusterSnapshots.get(route.getRoute().getCluster());
             }
-            routeEntriesBuilder.add(new RouteEntry(route, clusterSnapshot));
+            routeEntriesBuilder.add(new RouteEntry(route, clusterSnapshot, i));
         }
         routeEntries = routeEntriesBuilder.build();
         this.index = index;
@@ -64,7 +67,10 @@ public final class VirtualHostSnapshot implements Snapshot<VirtualHostXdsResourc
         return routeEntries;
     }
 
-    int index() {
+    /**
+     * The index of this route within a {@link RouteConfiguration}.
+     */
+    public int index() {
         return index;
     }
 

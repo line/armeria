@@ -20,6 +20,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.xds.client.endpoint.XdsLoadBalancer;
 
 import io.envoyproxy.envoy.config.bootstrap.v3.Bootstrap;
 import io.envoyproxy.envoy.config.cluster.v3.Cluster;
@@ -68,6 +69,15 @@ final class BootstrapClusters implements SnapshotWatcher<ClusterSnapshot> {
     @Nullable
     ClusterSnapshot clusterSnapshot(String clusterName) {
         return clusterSnapshots.get(clusterName);
+    }
+
+    @Nullable
+    XdsLoadBalancer loadBalancer(String clusterName) {
+        final ClusterSnapshot snapshot = clusterSnapshots.get(clusterName);
+        if (snapshot == null) {
+            return null;
+        }
+        return snapshot.loadBalancer();
     }
 
     @Override

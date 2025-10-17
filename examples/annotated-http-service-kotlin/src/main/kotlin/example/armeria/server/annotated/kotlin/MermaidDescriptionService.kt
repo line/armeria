@@ -40,7 +40,5 @@ class MermaidDescriptionService {
     @Get("/mermaid")
     fun mermaid(
         @Param param1: String,
-    ): HttpResponse {
-        return HttpResponse.of(200)
-    }
+    ): HttpResponse = HttpResponse.of(200)
 }

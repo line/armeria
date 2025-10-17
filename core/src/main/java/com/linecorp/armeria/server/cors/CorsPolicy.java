@@ -146,6 +146,7 @@ public final class CorsPolicy {
      *
      * @deprecated Use {@link #originPredicate()} to check if an origin is allowed.
      */
+    @SuppressWarnings("NullAway")
     @Deprecated
     public String origin() {
         return Iterables.getFirst(origins, CorsHeaderUtil.ANY_ORIGIN);

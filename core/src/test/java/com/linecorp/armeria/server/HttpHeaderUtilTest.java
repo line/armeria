@@ -90,6 +90,31 @@ class HttpHeaderUtilTest {
         // The unknown identifier
         assertThat(forwarded("for=unknown;proto=http;by=203.0.113.43,for=192.0.2.61"))
                 .containsExactly(new InetSocketAddress("192.0.2.61", 0));
+
+        // Malformed chunk
+        assertThatThrownBy(() ->
+                forwarded("/.."))
+                .isInstanceOf(IllegalArgumentException.class);
+
+        // Malformed chunk
+        assertThatThrownBy(() ->
+                forwarded("/..,for=192.0.2.61"))
+                .isInstanceOf(IllegalArgumentException.class);
+
+        // Empty chunk
+        assertThatThrownBy(() ->
+                forwarded(" ,for=192.0.2.61"))
+                .isInstanceOf(IllegalArgumentException.class);
+
+        // Totally malformed string
+        assertThatThrownBy(() ->
+                forwarded("some-random-junk"))
+                .isInstanceOf(IllegalArgumentException.class);
+
+        // Multiple mixed chunks, one invalid
+        assertThatThrownBy(() ->
+                forwarded("for=, /.., foo=bar,for=10.0.0.1"))
+                .isInstanceOf(IllegalArgumentException.class);
     }
 
     @Nullable
@@ -221,6 +246,36 @@ class HttpHeaderUtilTest {
                 HttpHeaders.of(HttpHeaderNames.FORWARDED, "for=10.0.0.1,for=10.0.0.2"),
                 ClientAddressSource.DEFAULT_SOURCES, null, remoteAddr, ACCEPT_ANY))
                 .isEqualTo(proxiedAddresses);
+
+        assertThatThrownBy(() ->
+                HttpHeaderUtil.determineProxiedAddresses(
+                        HttpHeaders.of(HttpHeaderNames.FORWARDED, "/.."),
+                        ClientAddressSource.DEFAULT_SOURCES, null, remoteAddr, ACCEPT_ANY))
+                .isInstanceOf(IllegalArgumentException.class);
+
+        assertThatThrownBy(() ->
+                HttpHeaderUtil.determineProxiedAddresses(
+                        HttpHeaders.of(HttpHeaderNames.FORWARDED, "/..,for=192.0.2.61"),
+                        ClientAddressSource.DEFAULT_SOURCES, null, remoteAddr, ACCEPT_ANY))
+                .isInstanceOf(IllegalArgumentException.class);
+
+        assertThatThrownBy(() ->
+                HttpHeaderUtil.determineProxiedAddresses(
+                        HttpHeaders.of(HttpHeaderNames.FORWARDED, " ,for=192.0.2.61"),
+                        ClientAddressSource.DEFAULT_SOURCES, null, remoteAddr, ACCEPT_ANY))
+                .isInstanceOf(IllegalArgumentException.class);
+
+        assertThatThrownBy(() ->
+                HttpHeaderUtil.determineProxiedAddresses(
+                        HttpHeaders.of(HttpHeaderNames.FORWARDED, "some-random-junk"),
+                        ClientAddressSource.DEFAULT_SOURCES, null, remoteAddr, ACCEPT_ANY))
+                .isInstanceOf(IllegalArgumentException.class);
+
+        assertThatThrownBy(() ->
+                HttpHeaderUtil.determineProxiedAddresses(
+                        HttpHeaders.of(HttpHeaderNames.FORWARDED, "for=, /.., foo=bar,for=10.0.0.1"),
+                        ClientAddressSource.DEFAULT_SOURCES, null, remoteAddr, ACCEPT_ANY))
+                .isInstanceOf(IllegalArgumentException.class);
     }
 
     @Test

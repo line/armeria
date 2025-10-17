@@ -77,5 +77,14 @@ public interface AsyncLoader<T> {
      * Returns a {@link CompletableFuture} which will be completed with the loaded value.
      * A new value is fetched by the loader only if nothing is cached or the cache value has expired.
      */
-    CompletableFuture<T> load();
+    default CompletableFuture<T> load() {
+        return load(false);
+    }
+
+    /**
+     * Returns a {@link CompletableFuture} which will be completed with the loaded value.
+     * If {@code forceLoad} is {@code true}, a new value is always fetched by the loader.
+     * Otherwise, a new value is fetched only if nothing is cached or the cache value has expired.
+     */
+    CompletableFuture<T> load(boolean forceLoad);
 }

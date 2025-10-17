@@ -88,6 +88,16 @@ configure(projectsWithFlags('java')) {
                         }
                     }
                 }
+
+                def validateVersion = managedVersions['build.buf.protoc-gen-validate:protoc-gen-validate']
+                if (validateVersion != null) {
+                    plugins {
+                        javapgv {
+                            artifact = "build.buf.protoc-gen-validate:protoc-gen-validate:${validateVersion}"
+                        }
+                    }
+                }
+
                 generateProtoTasks {
                     all()*.plugins {
                         if (project.ext.hasFlag('scala-grpc_2.13') && managedVersions.containsKey('com.thesamet.scalapb:scalapb-runtime_2.13')) {
@@ -112,6 +122,11 @@ configure(projectsWithFlags('java')) {
                             }
                             if (project.ext.hasFlag('akka-grpc_2.13') && managedVersions.containsKey('com.lightbend.akka.grpc:akka-grpc-runtime_2.13')) {
                                 akkaGrpc {}
+                            }
+                        }
+                        if (project.ext.hasFlag('javapgv')) {
+                            javapgv {
+                                option "lang=java"
                             }
                         }
                     }

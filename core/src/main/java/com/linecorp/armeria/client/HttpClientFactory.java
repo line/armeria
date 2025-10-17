@@ -111,6 +111,7 @@ final class HttpClientFactory implements ClientFactory {
     private final AddressResolverGroup<InetSocketAddress> addressResolverGroup;
     private final int http2InitialConnectionWindowSize;
     private final int http2InitialStreamWindowSize;
+    private final float http2StreamWindowUpdateRatio;
     private final int http2MaxFrameSize;
     private final long http2MaxHeaderListSize;
     private final int http1MaxInitialLineLength;
@@ -208,6 +209,7 @@ final class HttpClientFactory implements ClientFactory {
 
         http2InitialConnectionWindowSize = options.http2InitialConnectionWindowSize();
         http2InitialStreamWindowSize = options.http2InitialStreamWindowSize();
+        http2StreamWindowUpdateRatio = options.http2StreamWindowUpdateRatio();
         http2MaxFrameSize = options.http2MaxFrameSize();
         http2MaxHeaderListSize = options.http2MaxHeaderListSize();
         pingIntervalMillis = options.pingIntervalMillis();
@@ -263,6 +265,10 @@ final class HttpClientFactory implements ClientFactory {
 
     int http2InitialStreamWindowSize() {
         return http2InitialStreamWindowSize;
+    }
+
+    float http2StreamWindowUpdateRatio() {
+        return http2StreamWindowUpdateRatio;
     }
 
     int http2MaxFrameSize() {

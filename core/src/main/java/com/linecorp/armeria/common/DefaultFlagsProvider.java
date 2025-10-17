@@ -36,6 +36,7 @@ import com.linecorp.armeria.server.TransientServiceOption;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Metrics;
 import io.micrometer.core.instrument.distribution.DistributionStatisticConfig;
+import io.netty.handler.codec.http2.DefaultHttp2LocalFlowController;
 
 /**
  * Implementation of {@link FlagsProvider} which provides default values to {@link Flags}.
@@ -81,6 +82,8 @@ final class DefaultFlagsProvider implements FlagsProvider {
     static final long DEFAULT_CLIENT_HTTP2_GRACEFUL_SHUTDOWN_TIMEOUT_MILLIS = 1000;
     static final int DEFAULT_HTTP2_INITIAL_CONNECTION_WINDOW_SIZE = 1024 * 1024; // 1MiB
     static final int DEFAULT_HTTP2_INITIAL_STREAM_WINDOW_SIZE = 1024 * 1024; // 1MiB
+    static final float DEFAULT_HTTP2_STREAM_WINDOW_UPDATE_RATIO =
+            DefaultHttp2LocalFlowController.DEFAULT_WINDOW_UPDATE_RATIO; // 0.5f
     static final int DEFAULT_HTTP2_MAX_FRAME_SIZE = 16384; // From HTTP/2 specification
 
     // Can't use 0xFFFFFFFFL because some implementations use a signed 32-bit integer to store HTTP/2 SETTINGS
@@ -328,6 +331,11 @@ final class DefaultFlagsProvider implements FlagsProvider {
     @Override
     public Integer defaultHttp2InitialStreamWindowSize() {
         return DEFAULT_HTTP2_INITIAL_STREAM_WINDOW_SIZE;
+    }
+
+    @Override
+    public Float defaultHttp2StreamWindowUpdateRatio() {
+        return DEFAULT_HTTP2_STREAM_WINDOW_UPDATE_RATIO;
     }
 
     @Override

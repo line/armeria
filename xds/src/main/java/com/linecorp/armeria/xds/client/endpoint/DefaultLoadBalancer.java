@@ -28,24 +28,21 @@ import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.common.annotation.Nullable;
-import com.linecorp.armeria.xds.client.endpoint.ClusterManager.LocalCluster;
 import com.linecorp.armeria.xds.client.endpoint.DefaultLbStateFactory.DefaultLbState;
 import com.linecorp.armeria.xds.client.endpoint.LocalityRoutingStateFactory.LocalityRoutingState;
 import com.linecorp.armeria.xds.client.endpoint.LocalityRoutingStateFactory.State;
 
 import io.envoyproxy.envoy.config.core.v3.Locality;
 
-final class DefaultLoadBalancer implements XdsLoadBalancer {
+final class DefaultLoadBalancer implements LoadBalancer {
 
     private final DefaultLbStateFactory.DefaultLbState lbState;
-    private final PrioritySet prioritySet;
     @Nullable
     private final LocalityRoutingState localityRoutingState;
 
     DefaultLoadBalancer(PrioritySet prioritySet, @Nullable LocalCluster localCluster,
                         @Nullable PrioritySet localPrioritySet) {
         lbState = DefaultLbStateFactory.newInstance(prioritySet);
-        this.prioritySet = prioritySet;
         if (localCluster != null && localPrioritySet != null) {
             localityRoutingState = localCluster.stateFactory().create(prioritySet, localPrioritySet);
         } else {
@@ -184,11 +181,6 @@ final class DefaultLoadBalancer implements XdsLoadBalancer {
                 throw new Error();
         }
         return sourceType;
-    }
-
-    @Override
-    public PrioritySet prioritySet() {
-        return prioritySet;
     }
 
     static class PriorityAndAvailability {

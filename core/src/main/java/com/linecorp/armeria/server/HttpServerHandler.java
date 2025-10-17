@@ -407,12 +407,21 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
         }
 
         final Channel channel = ctx.channel();
-        final RequestHeaders headers = req.headers();
-        final ProxiedAddresses proxiedAddresses = determineProxiedAddresses(headers);
-        final InetAddress clientAddress = config.clientAddressMapper().apply(proxiedAddresses).getAddress();
         final EventLoop channelEventLoop = channel.eventLoop();
-
         final RoutingContext routingCtx = req.routingContext();
+        final RequestHeaders headers = req.headers();
+        // `determineProxiedAddresses` could throw IllegalArgumentException if the headers are invalid.
+        // If it does, we will return a 400 Bad Request response.
+        // We need to get the ServiceConfig before responding, hence, we store the exception first.
+        ProxiedAddresses proxiedAddresses = (this.proxiedAddresses != null) ?
+                this.proxiedAddresses : ProxiedAddresses.of(remoteAddress);
+        IllegalArgumentException invalidProxiedAddressesException = null;
+        try {
+            proxiedAddresses = determineProxiedAddresses(headers);
+        } catch (IllegalArgumentException e) {
+            invalidProxiedAddressesException = e;
+        }
+        final InetAddress clientAddress = config.clientAddressMapper().apply(proxiedAddresses).getAddress();
         final RoutingStatus routingStatus = routingCtx.status();
         if (!routingStatus.routeMustExist()) {
             final ServiceRequestContext reqCtx = newEarlyRespondingRequestContext(
@@ -436,6 +445,15 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
         final RoutingResult routingResult = routed.routingResult();
         final ServiceConfig serviceCfg = routed.value();
         final HttpService service = serviceCfg.service();
+        // Respond BAD_REQUEST if the proxied addresses are invalid.
+        if (invalidProxiedAddressesException != null) {
+            responseEncoder.writeErrorResponse(req.id(), req.streamId(), serviceCfg, headers,
+                    HttpStatus.BAD_REQUEST, "Invalid proxied address",
+                    invalidProxiedAddressesException);
+            req.abort(invalidProxiedAddressesException);
+            decreasePendingRequests();
+            return;
+        }
         final EventLoop serviceEventLoop;
         final EventLoopGroup serviceWorkerGroup = serviceCfg.serviceWorkerGroup();
         if (serviceWorkerGroup == config.workerGroup()) {
@@ -756,6 +774,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
         private final ChannelHandlerContext ctx;
         private final DecodedHttpRequest req;
         private final boolean isTransientService;
+        private final long closeHttp2StreamDelayMillis;
 
         RequestAndResponseCompleteHandler(EventLoop eventLoop, ChannelHandlerContext ctx,
                                           ServiceRequestContext reqCtx, DecodedHttpRequest req,
@@ -763,6 +782,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
             this.ctx = ctx;
             this.req = req;
             this.isTransientService = isTransientService;
+            closeHttp2StreamDelayMillis = reqCtx.config().service().options().closeHttp2StreamDelayMillis();
 
             assert responseEncoder != null;
 
@@ -845,7 +865,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
 
                 if (!isNeedsDisconnection() && responseEncoder instanceof ServerHttp2ObjectEncoder) {
                     ((ServerHttp2ObjectEncoder) responseEncoder)
-                            .maybeResetStream(req.streamId(), Http2Error.CANCEL);
+                            .maybeResetStream(req.streamId(), Http2Error.CANCEL, closeHttp2StreamDelayMillis);
                 }
 
                 final boolean needsDisconnection = ctx.channel().isActive() &&

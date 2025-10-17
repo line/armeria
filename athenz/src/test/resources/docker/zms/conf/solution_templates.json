@@ -1,0 +1,216 @@
+{
+    "templates" : {
+        "user_provisioning": {
+            "roles": [
+                {
+                    "name": "_domain_:role.user",
+                    "modified": "1970-01-01T00:00:00.000Z"
+                },
+                {
+                    "name": "_domain_:role.superuser",
+                    "modified": "1970-01-01T00:00:00.000Z"
+                },
+                {
+                    "name": "_domain_:role.builders",
+                    "roleMembers": [
+                        {
+                            "memberName": "sys.builder"
+                        }
+                    ],
+                    "modified": "1970-01-01T00:00:00.000Z"
+                }
+            ],
+            "policies": [
+                {
+                    "name": "_domain_:policy.user",
+                    "modified": "1970-01-01T00:00:00.000Z",
+                    "assertions": [
+                        {
+                            "resource": "_domain_:node.*",
+                            "role": "_domain_:role.user",
+                            "action": "node_user"
+                        }
+                    ]
+                },
+                {
+                    "name": "_domain_:policy.superuser",
+                    "modified": "1970-01-01T00:00:00.000Z",
+                    "assertions": [
+                        {
+                            "resource": "_domain_:node.*",
+                            "role": "_domain_:role.superuser",
+                            "action": "node_sudo"
+                        }
+                    ]
+                },
+                {
+                    "name": "_domain_:policy.builders",
+                    "modified": "1970-01-01T00:00:00.000Z",
+                    "assertions": [
+                        {
+                            "resource": "_domain_:build",
+                            "role": "_domain_:role.builders",
+                            "action": "read"
+                        },
+                        {
+                            "resource": "_domain_:build",
+                            "role": "_domain_:role.builders",
+                            "action": "delete"
+                        }
+                    ]
+                }
+            ]
+        },
+        "zts_instance_launch_provider": {
+            "metadata":
+            {
+                "latestVersion": 1,
+                "timestamp": "2020-06-16T00:00:00.000Z",
+                "description": "ZTS instance launch provider template",
+                "keywordsToReplace": "_service_",
+                "autoUpdate": false
+            },
+            "roles": [
+                {
+                    "name": "_domain_:role.zts_instance_launch_provider",
+                    "modified": "1970-01-01T00:00:00.000Z",
+                    "roleMembers": [
+                        {
+                            "memberName": "sys.auth.zts"
+                        }
+                    ]
+                }
+            ],
+            "policies": [
+                {
+                    "name": "_domain_:policy.zts_instance_launch_provider",
+                    "modified": "1970-01-01T00:00:00.000Z",
+                    "assertions": [
+                        {
+                            "resource": "_domain_:service._service_",
+                            "role": "_domain_:role.zts_instance_launch_provider",
+                            "action": "launch"
+                        }
+                    ]
+                }
+            ]
+        },
+        "aws_instance_launch_provider": {
+            "metadata":
+            {
+                "latestVersion": 1,
+                "timestamp": "2020-06-16T00:00:00.000Z",
+                "description": "AWS instance launch provider template",
+                "keywordsToReplace": "_service_",
+                "autoUpdate": false
+            },
+            "roles": [
+                {
+                    "name": "_domain_:role.aws_instance_launch_provider",
+                    "modified": "1970-01-01T00:00:00.000Z",
+                    "roleMembers": [
+                        {
+                            "memberName": "athenz.aws.*"
+                        }
+                    ]
+                },
+                {
+                    "name": "_domain_:role.aws.ssh_login",
+                    "modified": "1970-01-01T00:00:00.000Z"
+                }
+            ],
+            "policies": [
+                {
+                    "name": "_domain_:policy.aws_instance_launch_provider",
+                    "modified": "1970-01-01T00:00:00.000Z",
+                    "assertions": [
+                        {
+                            "resource": "_domain_:service._service_",
+                            "role": "_domain_:role.aws_instance_launch_provider",
+                            "action": "launch"
+                        }
+                    ]
+                },
+                {
+                    "name": "_domain_:policy.aws.ssh_login",
+                    "modified": "1970-01-01T00:00:00.000Z",
+                    "assertions": [
+                        {
+                            "resource": "_domain_:aws._service_.*",
+                            "role": "_domain_:role.aws.ssh_login",
+                            "action": "ssh_login"
+                        }
+                    ]
+                }
+            ]
+        },
+        "aws_ecs_instance_launch_provider": {
+            "metadata":
+            {
+                "latestVersion": 1,
+                "timestamp": "2020-06-16T00:00:00.000Z",
+                "description": "AWS ECS instance launch provider template",
+                "keywordsToReplace": "_service_",
+                "autoUpdate": false
+            },
+            "roles": [
+                {
+                    "name": "_domain_:role.aws_ecs_instance_launch_provider",
+                    "modified": "1970-01-01T00:00:00.000Z",
+                    "roleMembers": [
+                        {
+                            "memberName": "athenz.aws-ecs.*"
+                        }
+                    ]
+                }
+            ],
+            "policies": [
+                {
+                    "name": "_domain_:policy.aws_ecs_instance_launch_provider",
+                    "modified": "1970-01-01T00:00:00.000Z",
+                    "assertions": [
+                        {
+                            "resource": "_domain_:service._service_",
+                            "role": "_domain_:role.aws_ecs_instance_launch_provider",
+                            "action": "launch"
+                        }
+                    ]
+                }
+            ]
+        },
+        "aws_lambda_instance_launch_provider": {
+            "metadata":
+            {
+                "latestVersion": 1,
+                "timestamp": "2020-06-16T00:00:00.000Z",
+                "description": "AWS lambda instance launch provider template",
+                "keywordsToReplace": "_service_",
+                "autoUpdate": false
+            },
+            "roles": [
+                {
+                    "name": "_domain_:role.aws_lambda_instance_launch_provider",
+                    "modified": "1970-01-01T00:00:00.000Z",
+                    "roleMembers": [
+                        {
+                            "memberName": "athenz.aws-lambda.*"
+                        }
+                    ]
+                }
+            ],
+            "policies": [
+                {
+                    "name": "_domain_:policy.aws_lambda_instance_launch_provider",
+                    "modified": "1970-01-01T00:00:00.000Z",
+                    "assertions": [
+                        {
+                            "resource": "_domain_:service._service_",
+                            "role": "_domain_:role.aws_lambda_instance_launch_provider",
+                            "action": "launch"
+                        }
+                    ]
+                }
+            ]
+        }
+    }
+}

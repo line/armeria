@@ -141,10 +141,24 @@ public final class MinifiedBouncyCastleProvider extends Provider implements Conf
     }
 
     @Override
+    public void addAlgorithm(String key, String value, Map<String, String> attributes) {
+        addAlgorithm(key, value);
+        addAttributes(key, attributes);
+    }
+
+    @Override
     public void addAlgorithm(String type, ASN1ObjectIdentifier oid, String className) {
         checkClassName(className);
         addAlgorithm(type + '.' + oid, className);
         addAlgorithm(type + ".OID." + oid, className);
+    }
+
+    @Override
+    public void addAlgorithm(String type, ASN1ObjectIdentifier oid, String className,
+                             Map<String, String> attributes) {
+        addAlgorithm(type, oid, className);
+        addAttributes(type + '.' + oid, attributes);
+        addAttributes(type + ".OID." + oid, attributes);
     }
 
     private static void checkClassName(String className) {
