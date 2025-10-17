@@ -26,33 +26,25 @@ import com.linecorp.armeria.client.ClientRequestContext;
 
 final class TokenBasedRetryLimiter implements RetryLimiter {
 
-    private static final int THREE_DECIMAL_PLACES_SCALE_UP = 1000;
-
     /**
-     * 1000 times the maxTokens.
      * The number of tokens starts at maxTokens. The token_count will always be between 0 and maxTokens.
      */
     private final int maxTokens;
 
     /**
-     * Half of {@code maxTokens} or 1000 times the threshold.
+     * The threshold. Retries are allowed if the token count is greater than the threshold
      */
     private final int threshold;
 
-    /**
-     * 1000 times the tokenRatio field.
-     */
-    private final int tokenRatio;
+    final AtomicInteger tokenCount;
 
-    final AtomicInteger tokenCount = new AtomicInteger();
-
-    TokenBasedRetryLimiter(float maxTokens, float tokenRatio) {
+    TokenBasedRetryLimiter(int maxTokens, int threshold) {
         checkArgument(maxTokens > 0, "maxTokens must be positive: %s.", maxTokens);
-        checkArgument(tokenRatio > 0, "tokenRatio must be positive: %s", tokenRatio);
-        this.tokenRatio = (int) (tokenRatio * THREE_DECIMAL_PLACES_SCALE_UP);
-        this.maxTokens = (int) (maxTokens * THREE_DECIMAL_PLACES_SCALE_UP);
-        threshold = this.maxTokens / 2;
-        tokenCount.set(this.maxTokens);
+        checkArgument(threshold >= 0 && threshold < maxTokens,
+                      "invalid threshold: %s (>=0 && <%s)", threshold, maxTokens);
+        this.maxTokens = maxTokens;
+        this.threshold = threshold;
+        tokenCount = new AtomicInteger(maxTokens);
     }
 
     @Override
@@ -62,25 +54,16 @@ final class TokenBasedRetryLimiter implements RetryLimiter {
 
     @Override
     public void handleDecision(ClientRequestContext ctx, RetryDecision decision) {
-        boolean updated;
-        final double permits = decision.permits();
+        final int permits = (int) decision.permits();
         if (permits == 0) {
             return;
         }
+        boolean updated;
         do {
             final int currentCount = tokenCount.get();
-            final int newCount;
-            if (permits > 0) {
-                if (currentCount == 0) {
-                    break;
-                }
-                newCount = Math.max(currentCount - THREE_DECIMAL_PLACES_SCALE_UP, 0);
-            } else {
-                if (currentCount == maxTokens) {
-                    break;
-                }
-                newCount = Math.min(currentCount + tokenRatio, maxTokens);
-            }
+            int newCount = currentCount - permits;
+            newCount = Math.max(newCount, 0);
+            newCount = Math.min(newCount, maxTokens);
             updated = tokenCount.compareAndSet(currentCount, newCount);
         } while (!updated);
     }
@@ -90,7 +73,6 @@ final class TokenBasedRetryLimiter implements RetryLimiter {
         return MoreObjects.toStringHelper(this)
                           .add("maxTokens", maxTokens)
                           .add("threshold", threshold)
-                          .add("tokenRatio", tokenRatio)
                           .add("tokenCount", tokenCount)
                           .toString();
     }

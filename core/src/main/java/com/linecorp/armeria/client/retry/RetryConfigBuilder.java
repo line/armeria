@@ -24,7 +24,7 @@ import java.time.Duration;
 import com.google.common.base.MoreObjects;
 import com.google.common.base.MoreObjects.ToStringHelper;
 
-import com.linecorp.armeria.client.retry.RetryLimiters.NoopRetryLimiter;
+import com.linecorp.armeria.client.retry.RetryLimiters.AlwaysRetryLimiter;
 import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.annotation.Nullable;
@@ -43,7 +43,7 @@ public final class RetryConfigBuilder<T extends Response> {
     private final RetryRule retryRule;
     @Nullable
     private final RetryRuleWithContent<T> retryRuleWithContent;
-    private RetryLimiter retryLimiter = NoopRetryLimiter.INSTANCE;
+    private RetryLimiter retryLimiter = AlwaysRetryLimiter.INSTANCE;
 
     /**
      * Creates a {@link RetryConfigBuilder} with this {@link RetryRule}.

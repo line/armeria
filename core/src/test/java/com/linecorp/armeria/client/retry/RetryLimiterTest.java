@@ -67,7 +67,7 @@ class RetryLimiterTest {
 
     @Test
     void tokenBasedInitiallyAllowsRetries() {
-        final RetryLimiter limiter = RetryLimiter.tokenBased(10.0f, 0.1f);
+        final RetryLimiter limiter = RetryLimiter.tokenBased(10, 1);
         final ClientRequestContext ctx = ctx();
 
         assertThat(limiter.shouldRetry(ctx)).isTrue();
@@ -75,7 +75,7 @@ class RetryLimiterTest {
 
     @Test
     void tokenBasedBlocksWhenTokensExhausted() {
-        final RetryLimiter limiter = RetryLimiter.tokenBased(10.0f, 0.1f);
+        final RetryLimiter limiter = RetryLimiter.tokenBased(10, 5);
         final ClientRequestContext ctx = ctx();
         final RetryDecision positiveDecision = RetryDecision.retry(Backoff.ofDefault(), 1.0);
 
@@ -89,7 +89,7 @@ class RetryLimiterTest {
 
     @Test
     void tokenBasedReplenishesTokens() {
-        final RetryLimiter limiter = RetryLimiter.tokenBased(10.0f, 1.0f);
+        final RetryLimiter limiter = RetryLimiter.tokenBased(10, 5);
         final ClientRequestContext ctx = ctx();
         final RetryDecision positiveDecision = RetryDecision.retry(Backoff.ofDefault(), 1.0);
         final RetryDecision negativeDecision = RetryDecision.retry(Backoff.ofDefault(), -1.0);
@@ -108,7 +108,7 @@ class RetryLimiterTest {
 
     @Test
     void tokenBasedIgnoresZeroPermits() {
-        final RetryLimiter limiter = RetryLimiter.tokenBased(2.0f, 0.1f);
+        final RetryLimiter limiter = RetryLimiter.tokenBased(2, 1);
         final ClientRequestContext ctx = ctx();
         final RetryDecision zeroDecision = RetryDecision.retry(Backoff.ofDefault(), 0.0);
 

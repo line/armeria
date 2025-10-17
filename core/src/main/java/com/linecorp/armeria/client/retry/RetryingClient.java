@@ -32,7 +32,6 @@ import org.slf4j.LoggerFactory;
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.client.ResponseTimeoutException;
-import com.linecorp.armeria.client.UnprocessedRequestException;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.AggregationOptions;
 import com.linecorp.armeria.common.HttpHeaderNames;
@@ -317,8 +316,7 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
         if (!initialAttempt) {
             final boolean shouldRetry = config.retryLimiter().shouldRetry(derivedCtx);
             if (!shouldRetry) {
-                handleException(ctx, rootReqDuplicator, future,
-                                UnprocessedRequestException.of(RetryLimitedException.of()), initialAttempt);
+                handleException(ctx, rootReqDuplicator, future, RetryLimitedException.of(), initialAttempt);
                 return;
             }
         }

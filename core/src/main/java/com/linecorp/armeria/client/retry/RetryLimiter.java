@@ -17,6 +17,7 @@
 package com.linecorp.armeria.client.retry;
 
 import com.linecorp.armeria.client.ClientRequestContext;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 
 /**
  * Provides a way to limit the number of retries.
@@ -38,6 +39,7 @@ import com.linecorp.armeria.client.ClientRequestContext;
  * var decorator = RetryingClient.newDecorator(config)
  * }</pre>
  */
+@UnstableApi
 public interface RetryLimiter {
 
     /**
@@ -49,17 +51,13 @@ public interface RetryLimiter {
     }
 
     /**
-     * A token based {@link RetryLimiter} based on gRPC's retry throttling algorithm.
-     * Given {@code maxTokens} amount of tokens, each positive {@link RetryDecision#permits()} will
-     * increment available tokens by {@code tokenRatio}, and each negative {@link RetryDecision#permits()} will
-     * decrement available tokens by {@code 1}. Retries will be limited if half or less of
-     * {code maxTokens} remains. Only the sign of the {@link RetryDecision#permits()} is considered.
-     * Refer to
-     * <a href="https://github.com/grpc/proposal/blob/master/A6-client-retries.md#throttling-retry-attempts-and-hedged-rpcs">gRPC's documentation</a>
-     * for more details.
+     * A token based {@link RetryLimiter} influenced by gRPC's retry throttling algorithm.
+     * Given {@code maxTokens} amount of tokens, each retry will consume {@link RetryDecision#permits()}
+     * amount of tokens. Negative {@link RetryDecision#permits()} will replenish tokens.
+     * Retries will be allowed if more than {@code threshold} amount of tokens are available.
      */
-    static RetryLimiter tokenBased(float maxTokens, float tokenRatio) {
-        return new TokenBasedRetryLimiter(maxTokens, tokenRatio);
+    static RetryLimiter tokenBased(int maxTokens, int threshold) {
+        return new TokenBasedRetryLimiter(maxTokens, threshold);
     }
 
     /**
@@ -78,5 +76,5 @@ public interface RetryLimiter {
      * @param ctx the {@link ClientRequestContext} of the request used to derive the {@link RetryDecision}
      * @param decision the computed {@link RetryDecision}
      */
-    void handleDecision(ClientRequestContext ctx, RetryDecision decision);
+    default void handleDecision(ClientRequestContext ctx, RetryDecision decision) {}
 }

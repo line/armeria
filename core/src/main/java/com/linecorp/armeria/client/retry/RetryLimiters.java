@@ -39,7 +39,7 @@ final class RetryLimiters {
                 return delegate.shouldRetry(ctx);
             } catch (Exception e) {
                 logger.warn("Unexpected error when invoking RetryLimiter.shouldRetry: ", e);
-                return true;
+                return false;
             }
         }
 
@@ -53,17 +53,13 @@ final class RetryLimiters {
         }
     }
 
-    static final class NoopRetryLimiter implements RetryLimiter {
+    static final class AlwaysRetryLimiter implements RetryLimiter {
 
-        static final RetryLimiter INSTANCE = new NoopRetryLimiter();
+        static final RetryLimiter INSTANCE = new AlwaysRetryLimiter();
 
         @Override
         public boolean shouldRetry(ClientRequestContext ctx) {
             return true;
-        }
-
-        @Override
-        public void handleDecision(ClientRequestContext ctx, RetryDecision decision) {
         }
     }
 }

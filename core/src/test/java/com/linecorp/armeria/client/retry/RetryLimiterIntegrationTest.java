@@ -26,7 +26,6 @@ import org.junit.jupiter.api.Test;
 
 import com.linecorp.armeria.client.BlockingWebClient;
 import com.linecorp.armeria.client.ClientRequestContext;
-import com.linecorp.armeria.client.UnprocessedRequestException;
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
@@ -64,8 +63,7 @@ class RetryLimiterIntegrationTest {
             deque.add(client.get("/"));
         }
 
-        assertThatThrownBy(() -> client.blocking().get("/")).isInstanceOf(UnprocessedRequestException.class)
-                                                            .hasCauseInstanceOf(RetryLimitedException.class);
+        assertThatThrownBy(() -> client.blocking().get("/")).isInstanceOf(RetryLimitedException.class);
         while (!deque.isEmpty()) {
             deque.poll().abort();
         }
@@ -100,8 +98,7 @@ class RetryLimiterIntegrationTest {
                          .decorator(RetryingClient.newDecorator(config))
                          .build()
                          .blocking();
-        assertThatThrownBy(() -> client.get("/")).isInstanceOf(UnprocessedRequestException.class)
-                                                 .hasCauseInstanceOf(RetryLimitedException.class);
+        assertThatThrownBy(() -> client.get("/")).isInstanceOf(RetryLimitedException.class);
         assertThat(counter).hasValue(2);
     }
 
@@ -139,7 +136,7 @@ class RetryLimiterIntegrationTest {
                          .decorator(RetryingClient.newDecorator(config))
                          .build().blocking();
 
-        assertThat(client.get("/").status().code()).isEqualTo(200);
-        assertThat(counter).hasValue(maxRequests);
+        assertThatThrownBy(() -> client.get("/")).isInstanceOf(RetryLimitedException.class);
+        assertThat(counter).hasValue(1);
     }
 }
