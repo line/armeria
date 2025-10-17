@@ -38,7 +38,7 @@ jobs:
       - name: Create Pull Request
         uses: peter-evans/create-pull-request@v7
         with:
-          branch: update-protobuf-to-${{ inputs.target_version }}
+          branch: update-xds-protobuf
           base: main
           author: Meri Kim <dl_armeria@linecorp.com>
           committer: Meri Kim <dl_armeria@linecorp.com>

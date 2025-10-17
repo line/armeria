@@ -5,8 +5,8 @@ permissions:
 
 on:
   schedule:
-    # every day at 10
-    - cron:  '0 10 * * *'
+    # every monday at 10:00 am (KST)
+    - cron:  '0 1 * * 1'
 
 jobs:
   envoy-versions:
