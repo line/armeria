@@ -30,6 +30,7 @@ import org.junit.jupiter.api.Test;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+
 import com.linecorp.armeria.client.endpoint.dns.TestDnsServer;
 
 import io.netty.channel.ChannelFuture;
@@ -59,7 +60,10 @@ class DnsResolutionWithConnectionPoolTest {
         try (com.linecorp.armeria.server.Server httpServer =
                      com.linecorp.armeria.server.Server.builder()
                                                        .http(0)
-                                                       .service("/", (ctx, req) -> com.linecorp.armeria.common.HttpResponse.of(200))
+                                                       .service("/",
+                                                                (ctx, req) ->
+                                                                        com.linecorp.armeria.common
+                                                                                .HttpResponse.of(200))
                                                        .build()) {
             httpServer.start().join();
             final int port = httpServer.activeLocalPort();
@@ -136,7 +140,10 @@ class DnsResolutionWithConnectionPoolTest {
         try (com.linecorp.armeria.server.Server httpServer =
                      com.linecorp.armeria.server.Server.builder()
                                                        .http(0)
-                                                       .service("/", (ctx, req) -> com.linecorp.armeria.common.HttpResponse.of(200))
+                                                       .service("/",
+                                                                (ctx, req) ->
+                                                                        com.linecorp.armeria.common
+                                                                                .HttpResponse.of(200))
                                                        .build()) {
             httpServer.start().join();
             final int port = httpServer.activeLocalPort();
