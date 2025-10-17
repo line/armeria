@@ -210,6 +210,7 @@
 *.webhare.dev
 *.webpaas.ovh.net
 *.wf.crm.dev
+*.xenonconnect.de
 *.xmit.co
 *.yokohama.jp
 *.zerops.app
@@ -302,6 +303,7 @@ able
 abo.pa
 abogado
 abr.it
+abrdns.com
 abruzzo.it
 abu.yamaguchi.jp
 abudhabi
@@ -450,9 +452,6 @@ air-traffic-control.aero
 airbus
 aircraft.aero
 airforce
-airkitapps-au.com
-airkitapps.com
-airkitapps.eu
 airline.aero
 airport.aero
 airtel
@@ -1101,6 +1100,7 @@ boldlygoingnowhere.org
 boleslawiec.pl
 bolivia.bo
 bologna.it
+bolt.host
 bolt.hu
 bolzano-altoadige.it
 bolzano.it
@@ -1219,6 +1219,7 @@ cab
 cable-modem.org
 cafe
 caffeine.site
+caffeine.xyz
 cafjs.com
 cagliari.it
 cahcesuolo.no
@@ -1249,6 +1250,9 @@ canon
 cantho.vn
 canva-apps.cn
 canva-apps.com
+canva-hosted-embed.com
+canva.run
+canvacode.com
 caobang.vn
 capetown
 capital
@@ -1480,6 +1484,7 @@ clinique
 clothing
 cloud
 cloud-ip.biz
+cloud-ip.cc
 cloud.fedoraproject.org
 cloud.goog
 cloud.interhostsolutions.be
@@ -2161,6 +2166,7 @@ dynvpn.de
 dyroy.no
 dz
 e.bg
+e.id
 e.se
 e12.ve
 e164.arpa
@@ -2555,6 +2561,7 @@ eu.ngrok.io
 eu.org
 eu.platform.sh
 eu.pythonanywhere.com
+eu1-plenit.com
 eun.eg
 eurodir.ru
 eurovision
@@ -4705,6 +4712,7 @@ l.se
 la
 la-spezia.it
 la.us
+la1-plenit.com
 laakesvuemie.no
 labeling.ap-northeast-1.sagemaker.aws
 labeling.ap-northeast-2.sagemaker.aws
@@ -4762,6 +4770,9 @@ lds
 le.it
 leadpages.co
 leangaviika.no
+leapcell.app
+leapcell.dev
+leapcell.online
 lease
 leasing.aero
 lebesby.no
@@ -7072,6 +7083,7 @@ ri.it
 ri.us
 ribeirao.br
 ric.jelastic.vps-host.net
+rice-labs.com
 rich
 richardli
 ricoh
@@ -8194,6 +8206,7 @@ supersale.jp
 supplies
 supply
 support
+support.site
 surf
 surgery
 surnadal.no
@@ -8375,6 +8388,7 @@ tel
 tel.tr
 telebit.app
 telebit.io
+teleport.sh
 temasek
 temp-dns.com
 tempio-olbia.it
@@ -8869,6 +8883,7 @@ us.org
 us.platform.sh
 us.reclaim.cloud
 us.ug
+us1-plenit.com
 usa.oita.jp
 user.aseinet.ne.jp
 user.party.eus

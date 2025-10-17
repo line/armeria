@@ -448,7 +448,7 @@ public final class Flags {
 
     private static final long DEFAULT_HTTP1_CONNECTION_CLOSE_DELAY_MILLIS =
             getValue(FlagsProvider::defaultHttp1ConnectionCloseDelayMillis,
-                    "defaultHttp1ConnectionCloseDelayMillis", value -> value >= 0);
+                     "defaultHttp1ConnectionCloseDelayMillis", value -> value >= 0);
 
     private static final ResponseTimeoutMode RESPONSE_TIMEOUT_MODE =
             getValue(FlagsProvider::responseTimeoutMode, "responseTimeoutMode");
@@ -1822,11 +1822,7 @@ public final class Flags {
 
     private Flags() {}
 
-    // This static block is defined at the end of this file deliberately
-    // to ensure that all static variables defined beforehand are initialized.
     static {
-        FlagsLoaded.set();
-
         if (warnNettyVersions()) {
             final String howToDisableWarning =
                     "This means 1) you specified Netty versions inconsistently in your build or " +
@@ -1860,5 +1856,11 @@ public final class Flags {
                                 nettyVersions, howToDisableWarning);
             }
         }
+    }
+
+    // This static block is defined at the end of this file deliberately
+    // to ensure that all static variables defined beforehand are initialized.
+    static {
+        FlagsLoaded.set();
     }
 }
