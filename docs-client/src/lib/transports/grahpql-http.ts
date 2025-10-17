@@ -14,10 +14,9 @@
  * under the License.
  */
 
-import Transport from './transport';
+import { Transport } from './transport';
 import { Method } from '../specification';
-import { extractHeaderLines, validateJsonObject } from '../json-util';
-import { ResponseData } from '../types';
+import { validateJsonObject } from '../json-util';
 
 export const GRAPHQL_HTTP_MIME_TYPE = 'application/graphql+json';
 
@@ -32,13 +31,12 @@ export default class GraphqlHttpTransport extends Transport {
 
   protected async doSend(
     method: Method,
-    headers: { [name: string]: string },
+    headers: { [p: string]: string },
     pathPrefix: string,
     bodyJson?: string,
     endpointPath?: string,
     queries?: string,
-  ): Promise<ResponseData> {
-    const start = performance.now();
+  ): Promise<Response> {
     const endpoint = this.getDebugMimeTypeEndpoint(method);
 
     const hdrs = new Headers();
@@ -61,23 +59,10 @@ export default class GraphqlHttpTransport extends Transport {
     }
     newPath = pathPrefix + newPath;
 
-    const response = await fetch(encodeURI(newPath), {
+    return fetch(encodeURI(newPath), {
       headers: hdrs,
       method: method.httpMethod,
       body: bodyJson,
     });
-
-    const responseHeaders = extractHeaderLines(response.headers);
-    const responseText = await response.text();
-    const duration = Math.round(performance.now() - start);
-    const timestamp = new Date().toLocaleString();
-    return {
-      body: responseText,
-      headers: responseHeaders,
-      status: response.status,
-      executionTime: duration,
-      size: responseText.length,
-      timestamp,
-    };
   }
 }

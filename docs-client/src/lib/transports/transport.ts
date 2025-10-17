@@ -13,14 +13,24 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
+import JSONbig from 'json-bigint';
+import { jsonPrettify } from '../json-util';
 import { docServiceDebug, providers } from '../header-provider';
 import { Endpoint, Method } from '../specification';
 import { ResponseData } from '../types';
 
-export default abstract class Transport {
+export abstract class Transport {
   public abstract supportsMimeType(mimeType: string): boolean;
 
   public abstract getDebugMimeType(): string;
+
+  private toHeaderLines(headers: Headers): string[] {
+    const headerLines: string[] = [];
+    headers.forEach((value, name) => {
+      headerLines.push(`${name}: ${value}`);
+    });
+    return headerLines;
+  }
 
   public async send(
     method: Method,
@@ -59,13 +69,28 @@ export default abstract class Transport {
       endpointPath,
       queries,
     );
-    const responseHeaders = httpResponse.headers;
-    const responseText = httpResponse.body;
+
+    const responseHeaders = this.toHeaderLines(httpResponse.headers);
+    const responseText = await httpResponse.text();
+    const applicationType = httpResponse.headers.get('content-type') || '';
+    let responseBody: string = responseText;
+    if (applicationType.indexOf('json') >= 0) {
+      try {
+        const json = JSONbig.parse(responseText);
+        const prettified = jsonPrettify(JSONbig.stringify(json));
+        if (prettified.length > 0) {
+          responseBody = prettified;
+        }
+      } catch (ignored) {
+        /* empty */
+      }
+    }
     const duration = Math.round(performance.now() - start);
     const timestamp = new Date().toLocaleString();
+
     if (responseText.length > 0) {
       return {
-        body: responseText,
+        body: responseBody,
         headers: responseHeaders,
         status: httpResponse.status,
         executionTime: duration,
@@ -78,7 +103,7 @@ export default abstract class Transport {
       headers: responseHeaders,
       status: httpResponse.status,
       executionTime: duration,
-      size: responseText.length,
+      size: 0,
       timestamp,
     };
   }
@@ -159,10 +184,10 @@ export default abstract class Transport {
 
   protected abstract doSend(
     method: Method,
-    headers: { [name: string]: string },
+    headers: { [p: string]: string },
     pathPrefix: string,
     bodyJson?: string,
     endpointPath?: string,
     queries?: string,
-  ): Promise<ResponseData>;
+  ): Promise<Response>;
 }

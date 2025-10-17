@@ -15,9 +15,8 @@
  */
 import { Method } from '../specification';
 
-import Transport from './transport';
-import { extractHeaderLines, validateJsonObject } from '../json-util';
-import { ResponseData } from '../types';
+import { Transport } from './transport';
+import { validateJsonObject } from '../json-util';
 
 export const GRPC_UNFRAMED_MIME_TYPE =
   'application/json; charset=utf-8; protocol=gRPC';
@@ -37,11 +36,10 @@ export default class GrpcUnframedTransport extends Transport {
     pathPrefix: string,
     bodyJson?: string,
     endpointPath?: string,
-  ): Promise<ResponseData> {
+  ): Promise<Response> {
     if (!bodyJson) {
       throw new Error('A gRPC request must have body.');
     }
-    const start = performance.now();
     const endpoint = this.getDebugMimeTypeEndpoint(method, endpointPath);
 
     const hdrs = new Headers();
@@ -58,23 +56,10 @@ export default class GrpcUnframedTransport extends Transport {
     }
 
     const newPath = pathPrefix + (endpointPath ?? endpoint.pathMapping);
-    const response = await fetch(newPath, {
+    return fetch(newPath, {
       headers: hdrs,
       method: 'POST',
       body: bodyJson,
     });
-
-    const responseHeaders = extractHeaderLines(response.headers);
-    const responseText = await response.text();
-    const duration = Math.round(performance.now() - start);
-    const timestamp = new Date().toLocaleString();
-    return {
-      body: responseText,
-      headers: responseHeaders,
-      status: response.status,
-      executionTime: duration,
-      size: responseText.length,
-      timestamp,
-    };
   }
 }

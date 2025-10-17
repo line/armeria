@@ -16,9 +16,8 @@
 
 import { Endpoint, Method } from '../specification';
 
-import Transport from './transport';
-import { extractHeaderLines, validateJsonObject } from '../json-util';
-import { ResponseData } from '../types';
+import { Transport } from './transport';
+import { validateJsonObject } from '../json-util';
 
 export const TTEXT_MIME_TYPE = 'application/x-thrift; protocol=TTEXT';
 
@@ -48,11 +47,10 @@ export default class ThriftTransport extends Transport {
     pathPrefix: string,
     bodyJson?: string,
     endpointPath?: string,
-  ): Promise<ResponseData> {
+  ): Promise<Response> {
     if (!bodyJson) {
       throw new Error('A Thrift request must have body.');
     }
-    const start = performance.now();
     const endpoint = this.getDebugMimeTypeEndpoint(method, endpointPath);
 
     const thriftMethod = ThriftTransport.thriftMethod(endpoint, method);
@@ -68,23 +66,10 @@ export default class ThriftTransport extends Transport {
 
     const newPath = pathPrefix + (endpointPath ?? endpoint.pathMapping);
 
-    const response = await fetch(newPath, {
+    return fetch(newPath, {
       headers: hdrs,
       method: 'POST',
       body: `{"method": "${thriftMethod}", "type": "CALL", "args": ${bodyJson}}`,
     });
-
-    const responseHeaders = extractHeaderLines(response.headers);
-    const responseText = await response.text();
-    const duration = Math.round(performance.now() - start);
-    const timestamp = new Date().toLocaleString();
-    return {
-      body: responseText,
-      headers: responseHeaders,
-      status: response.status,
-      executionTime: duration,
-      size: responseText.length,
-      timestamp,
-    };
   }
 }
