@@ -23,19 +23,23 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 
 import java.net.InetSocketAddress;
+import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 import org.junit.jupiter.api.Test;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.linecorp.armeria.client.endpoint.dns.TestDnsServer;
-import com.linecorp.armeria.common.metric.MoreMeters;
 
-import io.micrometer.core.instrument.MeterRegistry;
-import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
+import io.netty.channel.ChannelFuture;
 import io.netty.handler.codec.dns.DefaultDnsQuestion;
 import io.netty.handler.codec.dns.DefaultDnsResponse;
+import io.netty.handler.codec.dns.DnsQuestion;
+import io.netty.handler.codec.dns.DnsResponseCode;
 import io.netty.resolver.ResolvedAddressTypes;
+import io.netty.resolver.dns.DnsQueryLifecycleObserver;
+import io.netty.resolver.dns.DnsQueryLifecycleObserverFactory;
 import io.netty.resolver.dns.DnsServerAddressStreamProvider;
 import io.netty.resolver.dns.DnsServerAddresses;
 
@@ -48,7 +52,7 @@ class DnsResolutionWithConnectionPoolTest {
 
     @Test
     void dnsResolvedBeforePoolLookup() throws Exception {
-        // This test uses DNS metrics to count resolution attempts and demonstrates that
+        // This test uses a DNS observer to count resolution attempts and demonstrates that
         // DNS is resolved for every request, even when a pooled connection exists
 
         // Start an HTTP server that will actually accept connections
@@ -64,7 +68,7 @@ class DnsResolutionWithConnectionPoolTest {
                     new DefaultDnsQuestion("foo.com.", A),
                     new DefaultDnsResponse(0).addRecord(ANSWER, newAddressRecord("foo.com.", "127.0.0.1"))
             ))) {
-                final MeterRegistry meterRegistry = new SimpleMeterRegistry();
+                final CountingDnsQueryObserverFactory dnsObserver = new CountingDnsQueryObserverFactory();
                 final CountingConnectionPoolListener poolListener = new CountingConnectionPoolListener();
 
                 try (ClientFactory factory =
@@ -75,8 +79,9 @@ class DnsResolutionWithConnectionPoolTest {
                                               // Disable DNS caches to make the issue more obvious
                                               // This disables both the DnsCache and the address resolver cache
                                               builder.cacheSpec("maximumSize=0");
+                                              // Use our custom observer to track DNS queries directly
+                                              builder.dnsQueryLifecycleObserverFactory(dnsObserver);
                                           })
-                                          .meterRegistry(meterRegistry)
                                           .connectionPoolListener(poolListener)
                                           .build()) {
 
@@ -84,15 +89,11 @@ class DnsResolutionWithConnectionPoolTest {
                                                       .factory(factory)
                                                       .build();
 
-                    final String queryMetricKey =
-                            "armeria.client.dns.queries#count{cause=none,name=foo.com.,result=success}";
-
                     // First request - should resolve DNS and create a connection
                     client.get("http://foo.com:" + port + "/").aggregate().join();
 
                     await().untilAsserted(() -> {
-                        assertThat(MoreMeters.measureAll(meterRegistry))
-                                .containsEntry(queryMetricKey, 1.0);
+                        assertThat(dnsObserver.queryCount()).isEqualTo(1);
                     });
                     assertThat(poolListener.opened()).isEqualTo(1);
 
@@ -102,8 +103,7 @@ class DnsResolutionWithConnectionPoolTest {
                     await().untilAsserted(() -> {
                         // This demonstrates the issue: DNS is resolved again (count = 2)
                         // even though we have a pooled connection available
-                        assertThat(MoreMeters.measureAll(meterRegistry))
-                                .containsEntry(queryMetricKey, 2.0);
+                        assertThat(dnsObserver.queryCount()).isEqualTo(2);
                     });
                     // But the connection is reused (count stays at 1)
                     assertThat(poolListener.opened()).isEqualTo(1);
@@ -113,8 +113,7 @@ class DnsResolutionWithConnectionPoolTest {
 
                     await().untilAsserted(() -> {
                         // DNS resolved for the third time
-                        assertThat(MoreMeters.measureAll(meterRegistry))
-                                .containsEntry(queryMetricKey, 3.0);
+                        assertThat(dnsObserver.queryCount()).isEqualTo(3);
                     });
                     // Connection still reused
                     assertThat(poolListener.opened()).isEqualTo(1);
@@ -143,7 +142,7 @@ class DnsResolutionWithConnectionPoolTest {
             final int port = httpServer.activeLocalPort();
 
             try (TestDnsServer dnsServer = new TestDnsServer(ImmutableMap.of())) {
-                final MeterRegistry meterRegistry = new SimpleMeterRegistry();
+                final CountingDnsQueryObserverFactory dnsObserver = new CountingDnsQueryObserverFactory();
                 final CountingConnectionPoolListener poolListener = new CountingConnectionPoolListener();
 
                 try (ClientFactory factory =
@@ -152,8 +151,8 @@ class DnsResolutionWithConnectionPoolTest {
                                               builder.serverAddressStreamProvider(dnsServerList(dnsServer));
                                               builder.resolvedAddressTypes(ResolvedAddressTypes.IPV4_ONLY);
                                               builder.cacheSpec("maximumSize=0");
+                                              builder.dnsQueryLifecycleObserverFactory(dnsObserver);
                                           })
-                                          .meterRegistry(meterRegistry)
                                           .connectionPoolListener(poolListener)
                                           .build()) {
 
@@ -167,8 +166,7 @@ class DnsResolutionWithConnectionPoolTest {
                     client.get("http://127.0.0.1:" + port + "/").aggregate().join();
 
                     // Verify no DNS queries were made (because endpoint.hasIpAddr() returns true)
-                    assertThat(MoreMeters.measureAll(meterRegistry))
-                            .doesNotContainKey("armeria.client.dns.queries#count");
+                    assertThat(dnsObserver.queryCount()).isEqualTo(0);
                     // And connection was created and reused
                     assertThat(poolListener.opened()).isEqualTo(1);
                 }
@@ -179,6 +177,55 @@ class DnsResolutionWithConnectionPoolTest {
     private static DnsServerAddressStreamProvider dnsServerList(TestDnsServer dnsServer) {
         final InetSocketAddress dnsServerAddr = dnsServer.addr();
         return hostname -> DnsServerAddresses.sequential(ImmutableList.of(dnsServerAddr)).stream();
+    }
+
+    /**
+     * A test observer that tracks DNS query events directly without using metrics.
+     */
+    private static class CountingDnsQueryObserverFactory implements DnsQueryLifecycleObserverFactory {
+        private final List<String> successfulQueries = new CopyOnWriteArrayList<>();
+
+        @Override
+        public DnsQueryLifecycleObserver newDnsQueryLifecycleObserver(DnsQuestion question) {
+            return new DnsQueryLifecycleObserver() {
+                @Override
+                public void queryWritten(InetSocketAddress dnsServerAddress, ChannelFuture future) {}
+
+                @Override
+                public void queryCancelled(int queriesRemaining) {}
+
+                @Override
+                public DnsQueryLifecycleObserver queryRedirected(List<InetSocketAddress> nameServers) {
+                    return this;
+                }
+
+                @Override
+                public DnsQueryLifecycleObserver queryCNAMEd(DnsQuestion cnameQuestion) {
+                    return this;
+                }
+
+                @Override
+                public DnsQueryLifecycleObserver queryNoAnswer(DnsResponseCode code) {
+                    return this;
+                }
+
+                @Override
+                public void queryFailed(Throwable cause) {}
+
+                @Override
+                public void querySucceed() {
+                    successfulQueries.add(question.name());
+                }
+            };
+        }
+
+        int queryCount() {
+            return successfulQueries.size();
+        }
+
+        List<String> queries() {
+            return successfulQueries;
+        }
     }
 }
 
