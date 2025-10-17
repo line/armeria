@@ -27,13 +27,15 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 
 import com.linecorp.armeria.client.endpoint.dns.TestDnsServer;
 import com.linecorp.armeria.common.HttpResponse;
-import com.linecorp.armeria.server.Server;
+import com.linecorp.armeria.server.ServerBuilder;
+import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
 import io.netty.channel.ChannelFuture;
 import io.netty.handler.codec.dns.DefaultDnsQuestion;
@@ -53,78 +55,79 @@ import io.netty.resolver.dns.DnsServerAddresses;
  */
 class DnsResolutionWithConnectionPoolTest {
 
+    @RegisterExtension
+    static final ServerExtension server = new ServerExtension() {
+        @Override
+        protected void configure(ServerBuilder sb) {
+            sb.service("/", (ctx, req) -> HttpResponse.of(200));
+        }
+    };
+
     @Test
     void dnsResolvedBeforePoolLookup() throws Exception {
         // This test uses a DNS observer to count resolution attempts and demonstrates that
         // DNS is resolved for every request, even when a pooled connection exists
 
-        // Start an HTTP server that will actually accept connections
-        try (Server httpServer = Server.builder()
-                                        .http(0)
-                                        .service("/", (ctx, req) -> HttpResponse.of(200))
-                                        .build()) {
-            httpServer.start().join();
-            final int port = httpServer.activeLocalPort();
+        final int port = server.httpPort();
 
-            try (TestDnsServer dnsServer = new TestDnsServer(ImmutableMap.of(
-                    new DefaultDnsQuestion("foo.com.", A),
-                    new DefaultDnsResponse(0).addRecord(ANSWER, newAddressRecord("foo.com.", "127.0.0.1"))
-            ))) {
-                final CountingDnsQueryObserverFactory dnsObserver = new CountingDnsQueryObserverFactory();
-                final CountingConnectionPoolListener poolListener = new CountingConnectionPoolListener();
+        try (TestDnsServer dnsServer = new TestDnsServer(ImmutableMap.of(
+                new DefaultDnsQuestion("foo.com.", A),
+                new DefaultDnsResponse(0).addRecord(ANSWER, newAddressRecord("foo.com.", "127.0.0.1"))
+        ))) {
+            final CountingDnsQueryObserverFactory dnsObserver = new CountingDnsQueryObserverFactory();
+            final CountingConnectionPoolListener poolListener = new CountingConnectionPoolListener();
 
-                try (ClientFactory factory =
-                             ClientFactory.builder()
-                                          .domainNameResolverCustomizer(builder -> {
-                                              builder.serverAddressStreamProvider(dnsServerList(dnsServer));
-                                              builder.resolvedAddressTypes(ResolvedAddressTypes.IPV4_ONLY);
-                                              // Disable DNS caches to make the issue more obvious
-                                              // This disables both the DnsCache and the address resolver cache
-                                              builder.cacheSpec("maximumSize=0");
-                                              // Use our custom observer to track DNS queries directly
-                                              builder.dnsQueryLifecycleObserverFactory(dnsObserver);
-                                          })
-                                          .connectionPoolListener(poolListener)
-                                          .build()) {
+            try (ClientFactory factory =
+                         ClientFactory.builder()
+                                      .domainNameResolverCustomizer(builder -> {
+                                          builder.serverAddressStreamProvider(dnsServerList(dnsServer));
+                                          builder.resolvedAddressTypes(ResolvedAddressTypes.IPV4_ONLY);
+                                          // Disable DNS caches to make the issue more obvious
+                                          // This disables both the DnsCache and the address resolver cache
+                                          builder.cacheSpec("maximumSize=0");
+                                          // Use our custom observer to track DNS queries directly
+                                          builder.dnsQueryLifecycleObserverFactory(dnsObserver);
+                                      })
+                                      .connectionPoolListener(poolListener)
+                                      .build()) {
 
-                    final WebClient client = WebClient.builder()
-                                                      .factory(factory)
-                                                      .build();
+                final WebClient client = WebClient.builder()
+                                                  .factory(factory)
+                                                  .build();
 
-                    // First request - should resolve DNS and create a connection
-                    client.get("http://foo.com:" + port + "/").aggregate().join();
+                // First request - should resolve DNS and create a connection
+                client.get("http://foo.com:" + port + "/").aggregate().join();
 
-                    await().untilAsserted(() -> {
-                        assertThat(dnsObserver.queryCount()).isEqualTo(1);
-                    });
-                    assertThat(poolListener.opened()).isEqualTo(1);
+                await().untilAsserted(() -> {
+                    assertThat(dnsObserver.queryCount()).isEqualTo(1);
+                });
+                assertThat(poolListener.opened()).isEqualTo(1);
 
-                    // Second request - should reuse connection but currently still resolves DNS
-                    client.get("http://foo.com:" + port + "/").aggregate().join();
+                // Second request - should reuse connection but currently still resolves DNS
+                client.get("http://foo.com:" + port + "/").aggregate().join();
 
-                    await().untilAsserted(() -> {
-                        // This demonstrates the issue: DNS is resolved again (count = 2)
-                        // even though we have a pooled connection available
-                        assertThat(dnsObserver.queryCount()).isEqualTo(2);
-                    });
-                    // But the connection is reused (count stays at 1)
-                    assertThat(poolListener.opened()).isEqualTo(1);
+                await().untilAsserted(() -> {
+                    // This demonstrates the issue: DNS is resolved again (count = 2)
+                    // even though we have a pooled connection available
+                    assertThat(dnsObserver.queryCount()).isEqualTo(2);
+                });
+                // But the connection is reused (count stays at 1)
+                assertThat(poolListener.opened()).isEqualTo(1);
 
-                    // Third request - same pattern continues
-                    client.get("http://foo.com:" + port + "/").aggregate().join();
+                // Third request - same pattern continues
+                client.get("http://foo.com:" + port + "/").aggregate().join();
 
-                    await().untilAsserted(() -> {
-                        // DNS resolved for the third time
-                        assertThat(dnsObserver.queryCount()).isEqualTo(3);
-                    });
-                    // Connection still reused
-                    assertThat(poolListener.opened()).isEqualTo(1);
+                await().untilAsserted(() -> {
+                    // DNS resolved for the third time
+                    assertThat(dnsObserver.queryCount()).isEqualTo(3);
+                });
+                // Connection still reused
+                assertThat(poolListener.opened()).isEqualTo(1);
 
-                    // The inefficiency: We're resolving DNS 3 times for 3 requests
-                    // even though we only created 1 connection that could be reused.
-                    // This happens because HttpClientDelegate.execute() calls resolveAddress()
-                    // BEFORE checking if there's a pooled connection available.
-                }
+                // The inefficiency: We're resolving DNS 3 times for 3 requests
+                // even though we only created 1 connection that could be reused.
+                // This happens because HttpClientDelegate.execute() calls resolveAddress()
+                // BEFORE checking if there's a pooled connection available.
             }
         }
     }
@@ -134,43 +137,36 @@ class DnsResolutionWithConnectionPoolTest {
         // This test verifies that when using an IP address directly,
         // DNS resolution is skipped entirely as expected
 
-        // Start an HTTP server that will actually accept connections
-        try (Server httpServer = Server.builder()
-                                        .http(0)
-                                        .service("/", (ctx, req) -> HttpResponse.of(200))
-                                        .build()) {
-            httpServer.start().join();
-            final int port = httpServer.activeLocalPort();
+        final int port = server.httpPort();
 
-            try (TestDnsServer dnsServer = new TestDnsServer(ImmutableMap.of())) {
-                final CountingDnsQueryObserverFactory dnsObserver = new CountingDnsQueryObserverFactory();
-                final CountingConnectionPoolListener poolListener = new CountingConnectionPoolListener();
+        try (TestDnsServer dnsServer = new TestDnsServer(ImmutableMap.of())) {
+            final CountingDnsQueryObserverFactory dnsObserver = new CountingDnsQueryObserverFactory();
+            final CountingConnectionPoolListener poolListener = new CountingConnectionPoolListener();
 
-                try (ClientFactory factory =
-                             ClientFactory.builder()
-                                          .domainNameResolverCustomizer(builder -> {
-                                              builder.serverAddressStreamProvider(dnsServerList(dnsServer));
-                                              builder.resolvedAddressTypes(ResolvedAddressTypes.IPV4_ONLY);
-                                              builder.cacheSpec("maximumSize=0");
-                                              builder.dnsQueryLifecycleObserverFactory(dnsObserver);
-                                          })
-                                          .connectionPoolListener(poolListener)
-                                          .build()) {
+            try (ClientFactory factory =
+                         ClientFactory.builder()
+                                      .domainNameResolverCustomizer(builder -> {
+                                          builder.serverAddressStreamProvider(dnsServerList(dnsServer));
+                                          builder.resolvedAddressTypes(ResolvedAddressTypes.IPV4_ONLY);
+                                          builder.cacheSpec("maximumSize=0");
+                                          builder.dnsQueryLifecycleObserverFactory(dnsObserver);
+                                      })
+                                      .connectionPoolListener(poolListener)
+                                      .build()) {
 
-                    final WebClient client = WebClient.builder()
-                                                      .factory(factory)
-                                                      .build();
+                final WebClient client = WebClient.builder()
+                                                  .factory(factory)
+                                                  .build();
 
-                    // Use an IP address directly - should skip DNS resolution entirely
-                    client.get("http://127.0.0.1:" + port + "/").aggregate().join();
-                    client.get("http://127.0.0.1:" + port + "/").aggregate().join();
-                    client.get("http://127.0.0.1:" + port + "/").aggregate().join();
+                // Use an IP address directly - should skip DNS resolution entirely
+                client.get("http://127.0.0.1:" + port + "/").aggregate().join();
+                client.get("http://127.0.0.1:" + port + "/").aggregate().join();
+                client.get("http://127.0.0.1:" + port + "/").aggregate().join();
 
-                    // Verify no DNS queries were made (because endpoint.hasIpAddr() returns true)
-                    assertThat(dnsObserver.queryCount()).isEqualTo(0);
-                    // And connection was created and reused
-                    assertThat(poolListener.opened()).isEqualTo(1);
-                }
+                // Verify no DNS queries were made (because endpoint.hasIpAddr() returns true)
+                assertThat(dnsObserver.queryCount()).isEqualTo(0);
+                // And connection was created and reused
+                assertThat(poolListener.opened()).isEqualTo(1);
             }
         }
     }
