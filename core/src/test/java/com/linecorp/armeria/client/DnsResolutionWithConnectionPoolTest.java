@@ -72,8 +72,9 @@ class DnsResolutionWithConnectionPoolTest {
                                           .domainNameResolverCustomizer(builder -> {
                                               builder.serverAddressStreamProvider(dnsServerList(dnsServer));
                                               builder.resolvedAddressTypes(ResolvedAddressTypes.IPV4_ONLY);
-                                              // Disable DNS cache to make the issue more obvious
-                                              builder.dnsCache(NoopDnsCache.INSTANCE);
+                                              // Disable DNS caches to make the issue more obvious
+                                              // This disables both the DnsCache and the address resolver cache
+                                              builder.cacheSpec("maximumSize=0");
                                           })
                                           .meterRegistry(meterRegistry)
                                           .connectionPoolListener(poolListener)
@@ -150,7 +151,7 @@ class DnsResolutionWithConnectionPoolTest {
                                           .domainNameResolverCustomizer(builder -> {
                                               builder.serverAddressStreamProvider(dnsServerList(dnsServer));
                                               builder.resolvedAddressTypes(ResolvedAddressTypes.IPV4_ONLY);
-                                              builder.dnsCache(NoopDnsCache.INSTANCE);
+                                              builder.cacheSpec("maximumSize=0");
                                           })
                                           .meterRegistry(meterRegistry)
                                           .connectionPoolListener(poolListener)
