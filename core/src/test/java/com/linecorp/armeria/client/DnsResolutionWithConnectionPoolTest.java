@@ -32,6 +32,8 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 
 import com.linecorp.armeria.client.endpoint.dns.TestDnsServer;
+import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.server.Server;
 
 import io.netty.channel.ChannelFuture;
 import io.netty.handler.codec.dns.DefaultDnsQuestion;
@@ -57,14 +59,10 @@ class DnsResolutionWithConnectionPoolTest {
         // DNS is resolved for every request, even when a pooled connection exists
 
         // Start an HTTP server that will actually accept connections
-        try (com.linecorp.armeria.server.Server httpServer =
-                     com.linecorp.armeria.server.Server.builder()
-                                                       .http(0)
-                                                       .service("/",
-                                                                (ctx, req) ->
-                                                                        com.linecorp.armeria.common
-                                                                                .HttpResponse.of(200))
-                                                       .build()) {
+        try (Server httpServer = Server.builder()
+                                        .http(0)
+                                        .service("/", (ctx, req) -> HttpResponse.of(200))
+                                        .build()) {
             httpServer.start().join();
             final int port = httpServer.activeLocalPort();
 
@@ -137,14 +135,10 @@ class DnsResolutionWithConnectionPoolTest {
         // DNS resolution is skipped entirely as expected
 
         // Start an HTTP server that will actually accept connections
-        try (com.linecorp.armeria.server.Server httpServer =
-                     com.linecorp.armeria.server.Server.builder()
-                                                       .http(0)
-                                                       .service("/",
-                                                                (ctx, req) ->
-                                                                        com.linecorp.armeria.common
-                                                                                .HttpResponse.of(200))
-                                                       .build()) {
+        try (Server httpServer = Server.builder()
+                                        .http(0)
+                                        .service("/", (ctx, req) -> HttpResponse.of(200))
+                                        .build()) {
             httpServer.start().join();
             final int port = httpServer.activeLocalPort();
 
