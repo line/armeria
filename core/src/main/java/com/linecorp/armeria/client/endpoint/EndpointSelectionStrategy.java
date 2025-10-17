@@ -53,6 +53,13 @@ public interface EndpointSelectionStrategy {
     }
 
     /**
+     * Returns a ring-hash strategy.
+     */
+    static EndpointSelectionStrategy ringHash() {
+        return RingHashEndpointSelectionStrategy.INSTANCE;
+    }
+
+    /**
      * Returns a weight ramping up {@link EndpointSelectionStrategy} which ramps the weight of newly added
      * {@link Endpoint}s using {@link WeightTransition#linear()}. The {@link Endpoint} is selected
      * using weighted random distribution.
