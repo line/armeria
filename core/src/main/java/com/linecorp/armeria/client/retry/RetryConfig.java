@@ -78,6 +78,7 @@ public final class RetryConfig<T extends Response> {
     private final int maxTotalAttempts;
     private final long responseTimeoutMillisForEachAttempt;
     private final int maxContentLength;
+    private final RetryLimiter retryLimiter;
 
     @Nullable
     private final RetryRule retryRule;
@@ -88,9 +89,10 @@ public final class RetryConfig<T extends Response> {
     @Nullable
     private RetryRuleWithContent<T> fromRetryRule;
 
-    RetryConfig(RetryRule retryRule, int maxTotalAttempts, long responseTimeoutMillisForEachAttempt) {
+    RetryConfig(RetryRule retryRule, int maxTotalAttempts, long responseTimeoutMillisForEachAttempt,
+                RetryLimiter retryLimiter) {
         this(requireNonNull(retryRule, "retryRule"), null,
-                maxTotalAttempts, responseTimeoutMillisForEachAttempt, 0);
+                maxTotalAttempts, responseTimeoutMillisForEachAttempt, 0, retryLimiter);
         checkArguments(maxTotalAttempts, responseTimeoutMillisForEachAttempt);
     }
 
@@ -98,9 +100,10 @@ public final class RetryConfig<T extends Response> {
             RetryRuleWithContent<T> retryRuleWithContent,
             int maxContentLength,
             int maxTotalAttempts,
-            long responseTimeoutMillisForEachAttempt) {
+            long responseTimeoutMillisForEachAttempt,
+            RetryLimiter retryLimiter) {
         this(null, requireNonNull(retryRuleWithContent, "retryRuleWithContent"),
-                maxTotalAttempts, responseTimeoutMillisForEachAttempt, maxContentLength);
+                maxTotalAttempts, responseTimeoutMillisForEachAttempt, maxContentLength, retryLimiter);
     }
 
     private RetryConfig(
@@ -108,7 +111,8 @@ public final class RetryConfig<T extends Response> {
             @Nullable RetryRuleWithContent<T> retryRuleWithContent,
             int maxTotalAttempts,
             long responseTimeoutMillisForEachAttempt,
-            int maxContentLength) {
+            int maxContentLength, RetryLimiter retryLimiter) {
+        this.retryLimiter = new RetryLimiters.CatchingRetryLimiter(retryLimiter);
         checkArguments(maxTotalAttempts, responseTimeoutMillisForEachAttempt);
         this.retryRule = retryRule;
         this.retryRuleWithContent = retryRuleWithContent;
@@ -147,7 +151,8 @@ public final class RetryConfig<T extends Response> {
         }
         return builder
                 .maxTotalAttempts(maxTotalAttempts)
-                .responseTimeoutMillisForEachAttempt(responseTimeoutMillisForEachAttempt);
+                .responseTimeoutMillisForEachAttempt(responseTimeoutMillisForEachAttempt)
+                .retryLimiter(retryLimiter);
     }
 
     /**
@@ -195,6 +200,13 @@ public final class RetryConfig<T extends Response> {
      */
     public boolean needsContentInRule() {
         return retryRuleWithContent != null;
+    }
+
+    /**
+     * Returns the configured {@link RetryLimiter}.
+     */
+    public RetryLimiter retryLimiter() {
+        return retryLimiter;
     }
 
     /**
