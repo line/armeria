@@ -1,0 +1,494 @@
+import ArticleList from '@site/src/components/article-list';
+
+# Articles and slides
+
+:::tip
+
+Got some articles or slides to share? 😊
+Send a pull request by editing [this page](https://github.com/line/armeria/edit/main/site/community/articles.mdx).
+
+:::
+
+## English
+
+### Slides and videos
+
+<ArticleList
+  articles={[
+    {
+      title: 'gRPC supercharged with Armeria',
+      url: 'https://www.youtube.com/watch?v=g_z_Pbjd0v0',
+      author: 'Trustin Lee',
+      date: '20231005',
+      type: 'video',
+      description: `
+        This talk introduces Armeria's gRPC support as well as the core microservice features of Armeria,
+        including service discovery, automatic retries, circuit breakers, distributed tracing and DocService.
+        You'll learn how to have the best available gRPC experience by using such feature.
+    `,
+    },
+    {
+      title: 'Hello Armeria, Bye Spring',
+      url: 'https://www.slideshare.net/GihwanKim10/hello-armeria-bye-spring',
+      author: 'Gihwan Kim and Kyeongsu Yim',
+      date: '20220414',
+      type: 'slides',
+      description: `
+        Learn about the 3 steps for migrating your traditional Spring MVC application to Armeria.
+        This talk also gives a performance highlight on the LINE Channel's migration that enabled
+        the team to build a large payload download API without any concern about thread exhaustion
+        or OutOfMemoryException.
+    `,
+    },
+    {
+      title: 'Building an Authentication Microservice at LINE',
+      url: 'https://drive.google.com/file/d/1M2W75eYsd8Vk2LCh2BYpbRRWGZBXw6fP/view',
+      author: 'Dohan Kim',
+      date: '20220414',
+      type: 'slides',
+      description: `
+        This talk unveils Doorkeeper, the authentication microservice that is responsible for
+        the server-to-server authentication between the microservices in LINE's messaging system.
+        It shows how Doorkeeper leverages the Armeria features such as gRPC, DocService, AuthService,
+        client-side load-balancing and Logback integration.
+    `,
+    },
+    {
+      title: 'Introducting Armeria (or Three Principles of a Good Framework)',
+      url: 'https://speakerdeck.com/trustin/introducing-armeria-or-three-principles-of-a-good-framework',
+      author: 'Trustin Lee',
+      date: '20220414',
+      type: 'slides',
+      description: `
+        This talk introduces the three core principles behind how Trustin Lee and his team designed and
+        implemented Armeria and how they run their community to build the best web and RPC framework.
+        You'll find this talk useful if you are curious to know what Armeria is or what you should focus on
+        to build a good framework.
+    `,
+    },
+    {
+      title:
+        'Talking Kotlin Podcast: Systems design and Kotlin as a backend language',
+      url: 'https://www.youtube.com/watch?v=XTeEIJ170KE',
+      author: 'Matt Anger',
+      date: '20210710',
+      type: 'video',
+      description: `
+        Learn how DoorDash uses Armeria to build their next generation servers with Kotlin.
+    `,
+    },
+    {
+      title: 'Openchat Journey with Armeria',
+      url: 'https://www.slideshare.net/JulieKim1/armeriaworkshop2019-openchat-julie',
+      author: 'Julie Kim',
+      date: '20211105',
+      type: 'slides',
+      description: `
+        Learn how the LINE Openchat uses Armeria and listen to an episode while adopting Armeria.
+    `,
+    },
+    {
+      title: 'Filibuster demo: Auto-instrumentation for Java applications',
+      url: 'https://www.youtube.com/watch?v=BhZLHpxQ7mI',
+      author: 'Christopher Meiklejohn',
+      date: '20211028',
+      type: 'video',
+      description: `
+        This demo video shows building an application with Armeria and then using Filibuster for automatically
+        testing the failure scenarios caused by remote services and dependencies.
+    `,
+    },
+    {
+      title: 'Writing a Java library with better experience',
+      url: 'https://www.youtube.com/watch?v=0eQbsVLxmMk',
+      author: 'Trustin Lee',
+      date: '20200702',
+      type: ['video', 'slides'],
+    },
+    {
+      title: 'Armeria at talk-server',
+      url: 'https://speakerdeck.com/delegacy/armeria-at-talk-server',
+      author: 'YoungTae Seok',
+      date: '20191118',
+      type: 'slides',
+      description: `
+        Learn how the core platform of LINE messenger uses Armeria and how they made improvements
+        on push notification using Armeria client.
+    `,
+    },
+    {
+      title: 'LINE Bot API with Armeria',
+      url: 'https://sookiwi.com/resources/LINE-Bot-API-with-Armeria.pdf',
+      author: 'Soo Kim',
+      date: '20191117',
+      type: 'slides',
+    },
+    {
+      title: 'Armeria: A microservice framework well-suited everywhere',
+      url: 'https://youtu.be/Vr-0GKUmzo8',
+      author: 'Trustin Lee',
+      date: '20191026',
+      type: ['video', 'slides'],
+    },
+    {
+      title:
+        "Lesson learned from the adoption of Armeria to LINE's authentication system",
+      url: 'https://speakerdeck.com/line_developers/lesson-learned-from-the-adoption-of-armeria-to-lines-authentication-system',
+      author: 'Masahiro Ide',
+      date: '20190815',
+      type: 'slides',
+    },
+    {
+      title: 'gRPC for the Thrifty: gRPC at Slack',
+      url: 'https://static.sched.com/hosted_files/grpconf19/ff/gRPC%20for%20the%20Thrifty.pdf',
+      author: 'Josh Wills',
+      date: '20190321',
+      type: 'slides',
+    },
+    {
+      title: "Armeria: LINE's next generation RPC layer",
+      url: 'https://speakerdeck.com/trustin/armeria-lines-next-generation-rpc-layer',
+      author: 'Trustin Lee',
+      date: '20160216',
+      type: 'slides',
+    },
+  ]}
+/>
+
+### Articles
+
+<ArticleList
+  articles={[
+    {
+      title: 'Building an authorization framework with Armeria - a case study',
+      url: 'https://blog.dogac.dev/building-an-authorization-framework-with-armeria/',
+      author: 'Doğaç Eldenk',
+      date: '20240603',
+      type: 'article',
+      description: `
+        Learn how to utilize Armeria decorators and Java/Kotlin annotations to build a flexible authentication and
+        authorization framework for your application.
+    `,
+    },
+    {
+      title: 'A Bootiful Podcast: Netty and Armeria founder Trustin Lee',
+      url: 'https://spring.io/blog/2021/01/07/a-bootiful-podcast-netty-and-armeria-founder-trustin-lee',
+      author: 'Josh Long and Trustin Lee',
+      date: '20210107',
+      type: 'article',
+      description: `
+        Josh Long interviews Netty and Armeria founder Trustin Lee.
+    `,
+    },
+    {
+      title: 'Effective gRPC',
+      url: 'https://medium.com/dev-genius/effective-grpc-9152bea2cf50',
+      author: 'Viktor Taranenko',
+      date: '20200718',
+      type: 'article',
+      description: `
+        Learn the best practices for working with gRPC and find out how Armeria simplifies your setup with its
+        out-of-the-box gRPC-Web support and auto-generated online debug tool, removing the needs for proxy servers
+        such as Envoy.
+    `,
+    },
+  ]}
+/>
+
+## Japanese
+
+### Slides and videos
+
+<ArticleList
+  articles={[
+    {
+      title: 'Spring Web MVCのマイクロサービス化の経緯と今 (Spring Fest 2021)',
+      url: 'https://youtu.be/_btrKTahk20',
+      author: '平井一史',
+      date: '20211203',
+      type: ['slides', 'video'],
+      description: `
+        <a href='https://store.line.me/'>LINE STORE</a>の課題をArmeriaを使って、どう改善してきたかを説明しています。
+        <ul>
+          <li>Armeria tomcatを使ったSpring Web MVCとの連携</li>
+          <li>Armeria clientを使ったバックエンドAPIサーバとの連携</li>
+        </ul>
+      `,
+    },
+    {
+      title: 'Spring BootユーザのためのArmeria入門',
+      url: 'https://matsumana.info/blog/2020/07/30/introduce-to-armeria-for-spring-users/',
+      author: '松﨑学',
+      date: '20200730',
+      type: ['slides', 'video', 'article'],
+      description: `
+        Spring Bootユーザ向けに、以下の内容について説明されています。
+        <ul>
+          <li>Armeriaが提供する機能、その中でもSREの観点で特に嬉しい機能</li>
+          <li>ArmeriaをSpring BootとIntegrationして使う場合のコード例</li>
+          <li>Spring Bootで実装されている既存のサービスへのArmeria導入シナリオ例</li>
+        </ul>
+      `,
+    },
+    {
+      title: 'gRPC at OA Dev team (LINE Developer Meetup #66)',
+      url: 'https://youtu.be/eLPWgw45QyY?t=953',
+      author: '奥山裕也',
+      date: '20200729',
+      type: ['video', 'slides'],
+      description: `
+        LINE Official Account 開発室での gRPC サーバー開発について紹介するセッションの中で,
+        gRPC フレームワークとして Armeria を選定した理由や Armeria であれば gRPC
+        サーバーで欲しい機能が簡単に実装できることが取り上げられています.
+      `,
+    },
+    {
+      title: 'ArmeriaとCentral Dogmaから学ぶ、マイクロサービスに必要な機能',
+      url: 'https://matsumana.info/blog/2019/07/31/learn-from-armeria-and-central-dogma/',
+      author: '松﨑学',
+      date: '20190731',
+      type: ['slides', 'article'],
+    },
+    {
+      title: 'LINE スタンプショップにおける Zipkin 利用事例',
+      url: 'https://www.slideshare.net/linecorp/line-zipkin',
+      author: '林康司, 川田裕貴',
+      date: '20180523',
+      type: 'slides',
+    },
+  ]}
+/>
+
+### Articles
+
+<ArticleList
+  articles={[
+    {
+      title: 'Reactive Streamsでマイクロサービスを繋ぐ (gRPC, RSocket)',
+      url: 'https://blog.aanrii.me/entry/2020/08/30/210000',
+      author: '小林杏理',
+      date: '20200830',
+      description: `
+        Reactive Streamsで相互に繋がり、双方向通信するアプリケーションの実装をしてみます.
+        gRPCとRSocket、それぞれで実装し、Backpressureによる流速制御を試します.
+      `,
+    },
+    {
+      title: 'Spring BootとArmeriaでHTTP/2のh2cを試す',
+      url: 'https://hirakida29.hatenablog.com/entry/2019/11/30/231927',
+      author: '開田陽介',
+      date: '20191130',
+    },
+    {
+      title:
+        'Armeriaで始めるDNSのSRV Recordを使った クライアントサイドロードバランシング',
+      url: 'https://progret.hatenadiary.com/entry/2019/06/26/144923',
+      author: 'wreulicke',
+      date: '20190626',
+    },
+    {
+      title: 'ArmeriaアプリをCentral Dogmaと連携させてKubernetes上で動かす',
+      url: 'https://matsumana.info/blog/2018/11/12/armeria-with-centraldogma-on-k8s/',
+      author: '松﨑学',
+      date: '20181112',
+    },
+    {
+      title:
+        '実践マイクロサービス — コンポーネント分割やトラブル回避の考え方をLINEの導入事例に学ぶ',
+      url: 'https://employment.en-japan.com/engineerhub/entry/2018/10/09/110000',
+      author: '佐藤春旗',
+      date: '20181019',
+    },
+    {
+      title: 'ArmeriaのCircuit Breaker',
+      url: 'https://matsumana.info/blog/2018/09/29/armeria-circuit-breaker/',
+      author: '松﨑学',
+      date: '20180929',
+    },
+    {
+      title: 'Armeria w/ Zipkin',
+      url: 'https://matsumana.info/blog/2018/09/04/armeria-with-zipkin/',
+      author: '松﨑学',
+      date: '20180904',
+    },
+    {
+      title: 'Getting started Armeria w/ Spring Boot',
+      url: 'https://matsumana.info/blog/2018/08/20/getting-started-armeria-with-spring-boot/',
+      author: '松﨑学',
+      date: '20180820',
+    },
+    {
+      title: 'マイクロサービスフレームワークArmeriaを始める',
+      url: 'https://nowokay.hatenablog.com/entry/20180409/1523306612',
+      author: '岸田哉生',
+      date: '20180409',
+    },
+  ]}
+/>
+
+## Korean
+
+### Slides and videos
+
+<ArticleList
+  articles={[
+    {
+      title: 'Armeria를 소개합니다',
+      url: 'https://youtu.be/jlKb61lHOOw',
+      author: '이희승',
+      date: '20220415',
+      type: ['video', 'slides'],
+    },
+    {
+      title: '인증 마이크로서비스 Armeria로 개발하기',
+      url: 'https://youtu.be/k1xh2rC_MbI',
+      author: '김도한',
+      date: '20220415',
+      type: ['video', 'slides'],
+    },
+    {
+      title: '라인 개발자들이 Spring 대신 Armeria 쓴 이유는?',
+      url: 'https://youtu.be/aoQO_bkYW94',
+      author: '김기환, 임경수',
+      date: '20220415',
+      type: ['video', 'slides'],
+    },
+    {
+      title: '비동기 서버 그까이꺼, Request Scoping만 알면 끝!',
+      url: 'https://tv.naver.com/v/16974450',
+      author: '송민우',
+      date: '20201127',
+      type: ['video', 'slides'],
+    },
+    {
+      title: 'Armeria: 어디서나 잘 어울리는 마이크로서비스 프레임워크',
+      url: 'https://tv.naver.com/v/11267414',
+      author: '이희승',
+      date: '20191026',
+      type: 'video',
+    },
+  ]}
+/>
+
+### Articles
+
+<ArticleList
+  articles={[
+    {
+      title: 'Armeria의 WebClient를 더 쉽게 테스트하기',
+      url: 'https://easywritten.com/post/easy-test-with-armeria-webclient/',
+      author: '최영서',
+      date: '20230703',
+      description: `
+        Armeria의 WebClient API를 예제와 함께 소개하고, 좀 더 나은 테스트 편의성을 위해 AssertJ 스타일의 테스트용 클라이언트
+        API를 디자인한 경험을 공유합니다.
+      `,
+    },
+    {
+      title: 'Armeria와 Spring Boot Actuator 연동 중 겪은 버그 해결하기',
+      url: 'https://easywritten.com/post/challenging-integration-of-armeria-with-spring-boot-actuator/',
+      author: '최영서',
+      date: '20230701',
+      description: `
+        Armeria의 Spring Boot Actuator 연동 기능에서 버그를 발견하고, 원인을 분석한 경험을 공유합니다.
+      `,
+    },
+    {
+      title: 'Armeria로 WebSocket 서비스 만들기',
+      url: 'https://easywritten.com/post/using-websocket-protocol-with-armeria/',
+      author: '최영서',
+      date: '20230623',
+      description: `
+        Armeria 1.24.0에서 추가된 WebSocket API를 분석하고, Armeria로 WebSocket 서버를 직접 작성하고 테스트해 봅니다.
+      `,
+    },
+    {
+      title: 'Armeria & Spring Boot에서 Prometheus 지표 수집하기',
+      url: 'https://easywritten.com/post/prometheus-monitoring-with-armeria-and-spring-boot/',
+      author: '최영서',
+      date: '20230604',
+      description: `
+        Armeria의 성능 지표를 Prometheus로 수집하는 방법을 구체적인 코드와 함께 소개합니다. 그 외에 Spring Boot Actuator와의
+        연동 기능도 보여줍니다.
+      `,
+    },
+    {
+      title: 'Armeria와 Spring Boot 연동하기',
+      url: 'https://easywritten.com/post/using-armeria-with-spring-boot/',
+      author: '최영서',
+      date: '20230527',
+      description: `
+        Armeria와 Spring Boot를 연동하면 좋은 점을 소개하고 구체적인 연동 방법을 보여줍니다.
+        간단한 형태의 REST 서비스도 Armeria로 구현해 봅니다.
+      `,
+    },
+    {
+      title: '오픈 소스에 숟가락 얹기 (Armeria 문서에 기여하기)',
+      url: 'https://easywritten.com/post/easy-way-to-contribute-to-open-source/',
+      author: '최영서',
+      date: '20230506',
+      description: `
+        Armeria 문서화에 기여한 경험담을 공유합니다.
+      `,
+    },
+    {
+      title: 'Kotlin + Armeria + gRPC 사용기 - Protocol Buffers 편',
+      url: 'https://dgahn.tistory.com/6',
+      author: '안덕기',
+      date: '20210814',
+      description: `
+        Kotlin과 Armeria, gRPC를 이용해 구현한 RPC 서비스와 어노테이션 기반의 REST 서비스를 구현해 보고 둘을 비교합니다.
+      `,
+    },
+    {
+      title: 'Kotlin + Armeria + gRPC 사용기 - gRPC 스트림편',
+      url: 'https://dgahn.tistory.com/5',
+      author: '안덕기',
+      date: '20210813',
+      description: `
+        Kotlin과 Armeria, gRPC를 이용해 스트리밍 RPC를 구현하고 테스트 코드도 작성해 봅니다.
+      `,
+    },
+    {
+      title: '[실습] Kotlin + Armeria + gRPC 사용기 - 기본편',
+      url: 'https://dgahn.tistory.com/4',
+      author: '안덕기',
+      date: '20210812',
+      description: `
+        간단한 예제를 통해 Kotlin과 Armeria를 이용해 IntelliJ IDEA 개발 환경 하에서 gRPC 서버를 구현하고 DocService로 호출해
+        봅니다.
+      `,
+    },
+    {
+      title: 'Spring WebFlux와 Armeria 살펴보기 (Mono, Flux, gRPC, Thrift)',
+      url: 'https://sjh836.tistory.com/176',
+      author: '빨간색소년',
+      date: '20200619',
+    },
+    {
+      title:
+        'Spring WebFlux와 Armeria를 이용하여 Microservice에 필요한 Reactive + RPC 동시에 잡기',
+      url: 'https://d2.naver.com/helloworld/6080222',
+      author: '이준행',
+      date: '20200219',
+    },
+    {
+      title: '2019 컨트리뷰톤 (feat. Armeria)',
+      url: 'https://heowc.dev/2019/11/04/2019-contributon-feat-armeria/',
+      author: '허원철',
+      date: '20191104',
+    },
+    {
+      title: 'Armeria 컨트리뷰션 회고',
+      url: 'https://junojunho.github.io/review-contribution-on-armeria/',
+      author: '김준호',
+      date: '20190621',
+    },
+    {
+      title: '첫 오픈 소스 컨트리뷰션 경험기',
+      url: 'https://jongmin92.github.io/2019/05/18/Etc/open-source-experience/',
+      author: '김종민',
+      date: '20190518',
+    },
+  ]}
+/>

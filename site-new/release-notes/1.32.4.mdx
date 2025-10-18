@@ -1,0 +1,16 @@
+---
+date: 2025-04-08
+---
+
+# v1.32.4
+
+## 🛠️ Bug fixes
+
+- Fixed a potential deadlock in [RetryingClient](type) caused by an incomplete [RequestLog](type). #5714
+- Fixed a bug where [RequestLog](type) is not completed when the HTTP response is fully consumed on the client. #5714
+- Handled race conditions between `onSubscribe` and `onError` when aborting a [StreamMessage](type). #6168
+- Resolved memory pressure issues caused by incomplete HTTP/2 streams. #6166
+- Properly logs remote peer information when an unexpected request failure occurs on the client side. #6189
+- Improved slow endpoint updates in [HealthCheckedEndpointGroup](type). #6190
+
+<ThankYou usernames={['ikhoon', 'jrhee17', 'minwoox', 'trustin']} />
