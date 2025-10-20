@@ -14,7 +14,7 @@
  * under the License.
  */
 
-package com.linecorp.armeria.internal.common.encoding;
+package com.linecorp.armeria.common.encoding;
 
 import java.io.IOException;
 import java.io.OutputStream;

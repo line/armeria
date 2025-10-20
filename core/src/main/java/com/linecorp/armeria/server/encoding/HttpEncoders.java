@@ -24,80 +24,97 @@ import java.util.Map.Entry;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.annotation.Nullable;
-import com.linecorp.armeria.internal.common.encoding.StreamEncoderFactories;
-import com.linecorp.armeria.internal.common.encoding.StreamEncoderFactory;
-
-import io.netty.handler.codec.compression.Brotli;
+import com.linecorp.armeria.common.encoding.StreamEncoderFactory;
 
 /**
  * Support utilities for dealing with HTTP encoding (e.g., gzip).
  */
 final class HttpEncoders {
-
-    static {
-        // Invoke to load Brotli native binary.
-        Brotli.isAvailable();
-    }
-
     @Nullable
-    static StreamEncoderFactory getEncoderFactory(RequestHeaders headers) {
+    static StreamEncoderFactory determineEncoder(
+            Map<String, StreamEncoderFactory> headerToEncoderFactory, RequestHeaders headers) {
         final String acceptEncoding = headers.get(HttpHeaderNames.ACCEPT_ENCODING);
         if (acceptEncoding == null) {
             return null;
         }
-        return determineEncoder(acceptEncoding);
+
+        return determineEncoder(headerToEncoderFactory, acceptEncoding);
     }
 
-    // Copied from netty's HttpContentCompressor.
+    // Adapted from netty's HttpContentCompressor.
     @Nullable
-    private static StreamEncoderFactory determineEncoder(String acceptEncoding) {
+    private static StreamEncoderFactory determineEncoder(
+            Map<String, StreamEncoderFactory> headerToEncoderFactory,
+            String acceptEncoding) {
         float starQ = -1.0f;
-        final Map<StreamEncoderFactory, Float> encodings = new LinkedHashMap<>();
-        for (String encoding : acceptEncoding.split(",")) {
-            float q = 1.0f;
-            final int equalsPos = encoding.indexOf('=');
-            if (equalsPos != -1) {
-                try {
-                    q = Float.parseFloat(encoding.substring(equalsPos + 1));
-                } catch (NumberFormatException e) {
-                    // Ignore encoding
-                    q = 0.0f;
+        final Map<StreamEncoderFactory, Float> encoderFactoryToQ = new LinkedHashMap<>();
+
+        // https://datatracker.ietf.org/doc/html/rfc7231#section-5.3.4
+        // OWS is optional whitespace, i.e. *( SP / HTAB )
+        // Accept-Encoding = [
+        //  ( "," / ( codings [ OWS ";" OWS "q=" qvalue ] ) )
+        //  *( OWS "," [ OWS ( codings [ OWS ";" OWS "q=" qvalue ] ) ] )
+        // ]
+
+        for (String acceptEncodingElement : acceptEncoding.split(",")) {
+            final String codings;
+            float qValue;
+
+            final int codingWeightSepIndex = acceptEncodingElement.indexOf(';');
+            if (codingWeightSepIndex != -1) {
+                // e.g. " \t br;  q=0.8"
+                codings = acceptEncodingElement.substring(0, codingWeightSepIndex).trim();
+
+                // We do not need to trim here. Float.parseFloat() will do it for us.
+                final String weightRightPart = acceptEncodingElement
+                        .substring(codingWeightSepIndex + 1);
+                final int equalsPos = weightRightPart.indexOf('=');
+                if (equalsPos != -1) {
+                    try {
+                        qValue = Float.parseFloat(weightRightPart.substring(equalsPos + 1));
+                    } catch (NumberFormatException e) {
+                        // Ignore encoding
+                        qValue = 0.0f;
+                    }
+                } else {
+                    qValue = 0.0f;
                 }
+            } else {
+                // e.g. "  deflate\t" or "" because we have a leading comma
+                codings = acceptEncodingElement.trim();
+                qValue = 1.0f;
             }
-            if (encoding.contains("*")) {
-                starQ = q;
-            } else if (encoding.contains("br") && Brotli.isAvailable()) {
-                encodings.put(StreamEncoderFactories.BROTLI, q);
-            } else if (encoding.contains("gzip")) {
-                encodings.put(StreamEncoderFactories.GZIP, q);
-            } else if (encoding.contains("deflate")) {
-                encodings.put(StreamEncoderFactories.DEFLATE, q);
-            } else if (encoding.contains("x-snappy-framed")) {
-                encodings.put(StreamEncoderFactories.SNAPPY, q);
+
+            if (codings.contains("*")) {
+                starQ = qValue;
+            } else {
+                if (codings.isEmpty()) {
+                    continue;
+                }
+                final StreamEncoderFactory encodingFactory = headerToEncoderFactory.get(codings);
+
+                if (encodingFactory != null) {
+                    encoderFactoryToQ.put(encodingFactory, qValue);
+                }
             }
         }
 
-        if (!encodings.isEmpty()) {
-            final Entry<StreamEncoderFactory, Float> entry = Collections.max(encodings.entrySet(),
+        if (!encoderFactoryToQ.isEmpty()) {
+            final Entry<StreamEncoderFactory, Float> entry = Collections.max(encoderFactoryToQ.entrySet(),
                                                                              Entry.comparingByValue());
             if (entry.getValue() > 0.0f) {
                 return entry.getKey();
             }
         }
+
         if (starQ > 0.0f) {
-            if (!encodings.containsKey(StreamEncoderFactories.BROTLI) && Brotli.isAvailable()) {
-                return StreamEncoderFactories.BROTLI;
-            }
-            if (!encodings.containsKey(StreamEncoderFactories.GZIP)) {
-                return StreamEncoderFactories.GZIP;
-            }
-            if (!encodings.containsKey(StreamEncoderFactories.DEFLATE)) {
-                return StreamEncoderFactories.DEFLATE;
-            }
-            if (!encodings.containsKey(StreamEncoderFactories.SNAPPY)) {
-                return StreamEncoderFactories.SNAPPY;
+            for (final StreamEncoderFactory encoderFactory : headerToEncoderFactory.values()) {
+                if (!encoderFactoryToQ.containsKey(encoderFactory)) {
+                    return encoderFactory;
+                }
             }
         }
+
         return null;
     }
 

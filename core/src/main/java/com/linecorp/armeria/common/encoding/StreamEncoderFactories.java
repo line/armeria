@@ -14,21 +14,27 @@
  * under the License.
  */
 
-package com.linecorp.armeria.internal.common.encoding;
+package com.linecorp.armeria.common.encoding;
 
 import java.io.IOException;
 import java.io.OutputStream;
+import java.util.List;
 import java.util.zip.DeflaterOutputStream;
 import java.util.zip.GZIPOutputStream;
 
 import com.aayushatharva.brotli4j.encoder.BrotliOutputStream;
 import com.aayushatharva.brotli4j.encoder.Encoder;
+import com.google.common.collect.ImmutableList;
 
-import com.linecorp.armeria.common.encoding.StreamDecoderFactory;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 
 import io.netty.buffer.ByteBufOutputStream;
 import io.netty.handler.codec.compression.Brotli;
 
+/**
+ * A {@link StreamEncoderFactory} implementation which provides built-in stream encoders.
+ */
+@UnstableApi
 public enum StreamEncoderFactories implements StreamEncoderFactory {
     BROTLI {
         @Override
@@ -88,10 +94,16 @@ public enum StreamEncoderFactories implements StreamEncoderFactory {
         }
     };
 
-    static {
-        // Invoke to load Brotli native binary.
-        Brotli.isAvailable();
-    }
-
     private static final Encoder.Parameters BROTLI_PARAMETERS = new Encoder.Parameters().setQuality(4);
+
+    static final List<StreamEncoderFactory> ALL;
+
+    static {
+        // Invoke `ìsAvailable` also to load Brotli native binary.
+        if (Brotli.isAvailable()) {
+            ALL = ImmutableList.copyOf(values());
+        } else {
+            ALL = ImmutableList.of(GZIP, DEFLATE, SNAPPY);
+        }
+    }
 }
