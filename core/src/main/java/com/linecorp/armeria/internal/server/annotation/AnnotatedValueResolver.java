@@ -474,7 +474,7 @@ final class AnnotatedValueResolver {
                 }
                 return ofQueryParamMap(name, annotatedElement, typeElement, type, description);
             }
-            if (fileTypes.contains(type) || isListOfFiles(annotatedElement)) {
+            if (fileTypes.contains(type) || isListOfFiles(typeElement)) {
                 return ofFileParam(name, annotatedElement, typeElement, type, description);
             }
             if (pathParams.contains(name)) {
