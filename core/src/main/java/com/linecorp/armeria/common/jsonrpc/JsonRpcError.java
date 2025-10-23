@@ -93,7 +93,7 @@ public final class JsonRpcError {
      * Creates a new {@link JsonRpcError} instance with the same code and message as this instance.
      */
     public JsonRpcError withData(@Nullable Object data) {
-        if (data == null) {
+        if (Objects.equals(data, this.data)) {
             return this;
         }
 

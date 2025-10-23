@@ -20,6 +20,7 @@ import static java.util.Objects.requireNonNull;
 
 import java.util.List;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.google.common.collect.ImmutableList;
@@ -77,6 +78,14 @@ public interface JsonRpcRequest {
     }
 
     /**
+     * Returns {@code true} if this request is a notification.
+     */
+    @JsonIgnore
+    default boolean isNotification() {
+        return id() == null;
+    }
+
+    /**
     * Returns the ID of the JSON-RPC request.
     * type must be Number or String
     */
@@ -91,10 +100,10 @@ public interface JsonRpcRequest {
     /**
      * Returns the parameters for the JSON-RPC method.
      */
-    List<Object> params();
+    JsonRpcParameter params();
 
     /**
      * Returns the JSON-RPC version.
      */
-    String version();
+    JsonRpcVersion version();
 }

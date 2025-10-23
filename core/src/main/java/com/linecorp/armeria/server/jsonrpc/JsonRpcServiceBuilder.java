@@ -28,7 +28,6 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
 @UnstableApi
 public class JsonRpcServiceBuilder {
     private final Map<String, JsonRpcHandler> methodHandlers = new HashMap<>();
-    private boolean useSse;
 
     JsonRpcServiceBuilder() {}
 
@@ -43,17 +42,9 @@ public class JsonRpcServiceBuilder {
     }
 
     /**
-     * Use Sever-Sent Event (SSE) to send batched responses.
-     */
-    public JsonRpcServiceBuilder useSse(boolean useSse) {
-        this.useSse = useSse;
-        return this;
-    }
-
-    /**
      * Constructs a new {@link JsonRpcService}.
      */
     public JsonRpcService build() {
-        return new JsonRpcService(useSse, methodHandlers);
+        return new JsonRpcService(methodHandlers);
     }
 }

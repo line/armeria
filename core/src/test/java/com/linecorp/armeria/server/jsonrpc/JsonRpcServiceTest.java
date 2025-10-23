@@ -16,11 +16,10 @@
 package com.linecorp.armeria.server.jsonrpc;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.Assert.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
-import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
@@ -28,26 +27,23 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.AggregatedHttpRequest;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpData;
-import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpMethod;
-import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.HttpRequest;
-import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.jsonrpc.JsonRpcError;
+import com.linecorp.armeria.common.jsonrpc.JsonRpcParameter;
 import com.linecorp.armeria.common.jsonrpc.JsonRpcRequest;
 import com.linecorp.armeria.common.jsonrpc.JsonRpcResponse;
-import com.linecorp.armeria.common.sse.ServerSentEvent;
 import com.linecorp.armeria.common.util.UnmodifiableFuture;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServiceRequestContext;
@@ -77,17 +73,11 @@ class JsonRpcServiceTest {
             .addHandler("fail", new FailingHandler())
             .build();
 
-    private static final JsonRpcService sseJsonRpcService = JsonRpcService.builder()
-            .addHandler("echo", new EchoHandler())
-            .useSse(true)
-            .build();
-
     @RegisterExtension
     static final ServerExtension server = new ServerExtension() {
         @Override
         protected void configure(ServerBuilder sb) {
             sb.service("/json-rpc", jsonRpcService);
-            sb.service("/json-rpc-sse", sseJsonRpcService);
             sb.requestTimeoutMillis(0);
         }
     };
@@ -162,9 +152,11 @@ class JsonRpcServiceTest {
         final JsonRpcRequest jsonRpcRequest = JsonRpcRequest.of(1, "hello");
         final JsonNode jsonNode = objectMapper.valueToTree(jsonRpcRequest);
         final JsonRpcRequest actualRequest = JsonRpcService.parseNodeAsRpcRequest(jsonNode);
-        final JsonRpcRequest expectedRequest = JsonRpcRequest.of(jsonNode);
 
-        assertThat(actualRequest).isEqualTo(expectedRequest);
+        assertThat(actualRequest.id()).isEqualTo(jsonRpcRequest.id());
+        assertThat(actualRequest.method()).isEqualTo(jsonRpcRequest.method());
+        assertThat(actualRequest.params().asList()).isEmpty();
+        assertThat(actualRequest.version()).isEqualTo(jsonRpcRequest.version());
     }
 
     @Test
@@ -218,17 +210,6 @@ class JsonRpcServiceTest {
     }
 
     @Test
-    void toServerSentEvent_whenValidResponse_thenConvertsSuccessfully() throws JsonProcessingException {
-        final DefaultJsonRpcResponse jsonRpcResponse = new DefaultJsonRpcResponse(1, "hello");
-
-        final ServerSentEvent actualServerSentEvent = JsonRpcService.toServerSentEvent(jsonRpcResponse);
-        final ServerSentEvent expectedServerSentEvent =
-                ServerSentEvent.ofData(objectMapper.writeValueAsString(jsonRpcResponse));
-
-        assertThat(actualServerSentEvent).isEqualTo(expectedServerSentEvent);
-    }
-
-    @Test
     void invokeMethod_whenNotificationRequest_thenReturnsNull() {
         final JsonRpcRequest notificationRequest = JsonRpcRequest.of(null, "echo", "hello");
 
@@ -251,14 +232,30 @@ class JsonRpcServiceTest {
     }
 
     @Test
-    void invokeMethod_whenValidRequest_thenSucceeds() {
-        final JsonRpcRequest validRequest = JsonRpcRequest.of(1, "echo", "hello");
-
+    void invokeMethod_whenPosParams_thenSucceeds() {
+        final JsonRpcRequest validRequest = JsonRpcRequest.of(1, "echo", 1, 2, 3, 4);
         final DefaultJsonRpcResponse actualResponse = jsonRpcService.invokeMethod(null, validRequest).join();
-        final DefaultJsonRpcResponse expectedResponse =
-                new DefaultJsonRpcResponse(1, ImmutableList.of("hello"));
 
-        assertThat(actualResponse).isEqualTo(expectedResponse);
+        assertThat(actualResponse.id()).isEqualTo(validRequest.id());
+        assertThat(actualResponse.result()).isInstanceOf(JsonRpcParameter.class);
+        assertTrue(((JsonRpcParameter) actualResponse.result()).isPositional());
+        assertThat(((JsonRpcParameter) actualResponse.result()).asList()).containsExactly(1, 2, 3, 4);
+        assertThat(actualResponse.version()).isEqualTo(validRequest.version());
+    }
+
+    @Test
+    void invokeMethod_whenNamedParams_thenSucceeds() throws JsonProcessingException {
+        final String json =
+                    "{\"jsonrpc\": \"2.0\", \"method\": \"echo\", \"params\": {\"subtrahend\": 23}, \"id\": 3}";
+        final JsonNode node = objectMapper.readTree(json);
+        final JsonRpcRequest validRequest = JsonRpcRequest.of(node);
+        final DefaultJsonRpcResponse actualResponse = jsonRpcService.invokeMethod(null, validRequest).join();
+
+        assertThat(actualResponse.id()).isEqualTo(validRequest.id());
+        assertThat(actualResponse.result()).isInstanceOf(JsonRpcParameter.class);
+        assertTrue(((JsonRpcParameter) actualResponse.result()).isNamed());
+        assertThat(((JsonRpcParameter) actualResponse.result()).asMap()).containsEntry("subtrahend", 23);
+        assertThat(actualResponse.version()).isEqualTo(validRequest.version());
     }
 
     @Test
@@ -283,17 +280,6 @@ class JsonRpcServiceTest {
     }
 
     @Test
-    void executeRpcCall_whenValidRequest_thenSucceeds() {
-        final JsonNode requestNode = objectMapper.valueToTree(JsonRpcRequest.of(1, "echo", "hello"));
-
-        final DefaultJsonRpcResponse actualResponse = jsonRpcService.executeRpcCall(null, requestNode).join();
-        final DefaultJsonRpcResponse expectedResponse =
-                new DefaultJsonRpcResponse(1, ImmutableList.of("hello"));
-
-        assertThat(actualResponse).isEqualTo(expectedResponse);
-    }
-
-    @Test
     void executeRpcCall_whenHandlerThrowsException_thenReturnsInternalError() {
         final JsonNode requestNode = objectMapper.valueToTree(JsonRpcRequest.of(1, "fail"));
 
@@ -306,8 +292,8 @@ class JsonRpcServiceTest {
     }
 
     @Test
-    void dispatchRequest_whenUnaryRequest_thenHandlesSuccessfully() throws JsonProcessingException {
-        final JsonNode requestNode = objectMapper.valueToTree(JsonRpcRequest.of(1, "echo", "hello"));
+    void dispatchRequest_whenUnaryPosRequest_thenHandlesSuccessfully() throws JsonProcessingException {
+        final JsonNode requestNode = objectMapper.valueToTree(JsonRpcRequest.of(1, "echo", 1, 2, 3, 4));
 
         final AggregatedHttpResponse aggregatedHttpResponse =
                 jsonRpcService.dispatchRequest(null, requestNode)
@@ -315,7 +301,24 @@ class JsonRpcServiceTest {
 
         final JsonNode actualNode = objectMapper.readTree(aggregatedHttpResponse.contentUtf8());
         final JsonNode expectedNode =
-                objectMapper.valueToTree(new DefaultJsonRpcResponse(1, ImmutableList.of("hello")));
+                objectMapper.valueToTree(new DefaultJsonRpcResponse(1, ImmutableList.of(1, 2, 3, 4)));
+
+        assertThat(actualNode).isEqualTo(expectedNode);
+    }
+
+    @Test
+    void dispatchRequest_whenUnaryNamedRequest_thenHandlesSuccessfully() throws JsonProcessingException {
+        final String json =
+                    "{\"jsonrpc\": \"2.0\", \"method\": \"echo\", \"params\": {\"subtrahend\": 23}, \"id\": 1}";
+        final JsonNode requestNode = objectMapper.readTree(json);
+
+        final AggregatedHttpResponse aggregatedHttpResponse =
+                jsonRpcService.dispatchRequest(null, requestNode)
+                        .aggregate().join();
+
+        final JsonNode actualNode = objectMapper.readTree(aggregatedHttpResponse.contentUtf8());
+        final JsonNode expectedNode =
+                objectMapper.valueToTree(new DefaultJsonRpcResponse(1, ImmutableMap.of("subtrahend", 23)));
 
         assertThat(actualNode).isEqualTo(expectedNode);
     }
@@ -328,64 +331,8 @@ class JsonRpcServiceTest {
                 jsonRpcService.dispatchRequest(null, requestNode)
                         .aggregate().join();
 
+        assertThat(aggregatedHttpResponse.status()).isEqualTo(HttpStatus.ACCEPTED);
         assertThat(aggregatedHttpResponse.contentUtf8()).isEmpty();
-    }
-
-    @Test
-    void dispatchRequest_whenBatchRequest_thenHandlesSuccessfully() throws JsonProcessingException {
-        final List<JsonRpcRequest> jsonRpcRequests = Arrays.asList(
-                JsonRpcRequest.of(1, "echo", "hello"),
-                JsonRpcRequest.of(2, "echo", Arrays.asList(1, 2)),
-                JsonRpcRequest.of(null, "echo", "hello")
-        );
-
-        final JsonNode requestNode = objectMapper.valueToTree(jsonRpcRequests);
-
-        final AggregatedHttpResponse aggregatedHttpResponse =
-                jsonRpcService.dispatchRequest(null, requestNode)
-                        .aggregate().join();
-
-        final JsonNode actualNode = objectMapper.readTree(aggregatedHttpResponse.contentUtf8());
-
-        final List<DefaultJsonRpcResponse> expectedResponses = Arrays.asList(
-                new DefaultJsonRpcResponse(1, ImmutableList.of("hello")),
-                new DefaultJsonRpcResponse(2, Arrays.asList(1, 2))
-                // Notification
-        );
-        final JsonNode expectedNode = objectMapper.valueToTree(expectedResponses);
-
-        assertThat(actualNode).isEqualTo(expectedNode);
-    }
-
-    @Test
-    void dispatchRequest_whenBatchRequestWithSse_thenHandlesSuccessfully() throws JsonProcessingException {
-        final List<JsonRpcRequest> jsonRpcRequests = Arrays.asList(
-                JsonRpcRequest.of(1, "echo", "hello"),
-                JsonRpcRequest.of(2, "echo", Arrays.asList(1, 2)),
-                JsonRpcRequest.of(null, "echo", "hello"));
-
-        final JsonNode requestNode = objectMapper.valueToTree(jsonRpcRequests);
-
-        final HttpResponse httpResponse = sseJsonRpcService.dispatchRequest(null, requestNode);
-
-        final List<HttpObject> httpObjects = new ArrayList<>();
-        final CompletableFuture<Void> completionFuture = httpResponse.peek(httpObjects::add).subscribe();
-        completionFuture.join();
-
-        final Iterator<HttpObject> httpObjectIterator = httpObjects.iterator();
-
-        final HttpHeaders httpHeaders = (HttpHeaders) httpObjectIterator.next();
-        assertThat(httpHeaders.contentType()).isEqualTo(MediaType.EVENT_STREAM);
-
-        final String actualSseData1 = ((HttpData) httpObjectIterator.next()).toStringUtf8();
-        final String expectedSseJson1 =
-                objectMapper.writeValueAsString(new DefaultJsonRpcResponse(1, ImmutableList.of("hello")));
-        assertThat(actualSseData1).contains(expectedSseJson1);
-
-        final String actualSseData2 = ((HttpData) httpObjectIterator.next()).toStringUtf8();
-        final String expectedSseJson2 =
-                objectMapper.writeValueAsString(new DefaultJsonRpcResponse(2, Arrays.asList(1, 2)));
-        assertThat(actualSseData2).contains(expectedSseJson2);
     }
 
     @Test
@@ -411,12 +358,13 @@ class JsonRpcServiceTest {
                 .aggregate().join();
 
         assertThat(aggregatedHttpResponse.status()).isEqualTo(HttpStatus.BAD_REQUEST);
-        assertThat(aggregatedHttpResponse.content().toStringUtf8()).contains("Invalid JSON format");
+        assertThat(aggregatedHttpResponse.content().toStringUtf8()).contains(
+                        objectMapper.valueToTree(JsonRpcError.PARSE_ERROR).toString());
     }
 
     @Test
-    void serve_whenUnaryRequest_thenHandlesSuccessfully() throws JsonProcessingException {
-        final JsonRpcRequest request = JsonRpcRequest.of(1, "echo", "hello");
+    void serve_whenUnaryPosRequest_thenHandlesSuccessfully() throws JsonProcessingException {
+        final JsonRpcRequest request = JsonRpcRequest.of(1, "echo", 1, 2, 3, 4);
         final AggregatedHttpResponse aggregatedHttpResponse = client().execute(
                 HttpRequest.builder()
                            .post("/json-rpc")
@@ -428,7 +376,30 @@ class JsonRpcServiceTest {
 
         final JsonNode actualNode = objectMapper.readTree(aggregatedHttpResponse.contentUtf8());
         final JsonNode expectedNode =
-                objectMapper.valueToTree(new DefaultJsonRpcResponse(1, ImmutableList.of("hello")));
+                objectMapper.valueToTree(new DefaultJsonRpcResponse(1, ImmutableList.of(1, 2, 3, 4)));
+
+        assertThat(actualNode).isEqualTo(expectedNode);
+    }
+
+    @Test
+    void serve_whenUnaryNamedRequest_thenHandlesSuccessfully() throws JsonProcessingException {
+        final String json =
+                "{\"jsonrpc\": \"2.0\", \"method\": \"echo\", \"params\": {\"subtrahend\": 23}, \"id\": 1}";
+        final JsonNode node = objectMapper.readTree(json);
+        final JsonRpcRequest request = JsonRpcRequest.of(node);
+
+        final AggregatedHttpResponse aggregatedHttpResponse = client().execute(
+                        HttpRequest.builder()
+                                        .post("/json-rpc")
+                                        .content(MediaType.JSON_UTF_8, objectMapper.writeValueAsString(request))
+                                        .build())
+                        .aggregate().join();
+
+        assertThat(aggregatedHttpResponse.status()).isEqualTo(HttpStatus.OK);
+
+        final JsonNode actualNode = objectMapper.readTree(aggregatedHttpResponse.contentUtf8());
+        final JsonNode expectedNode =
+                objectMapper.valueToTree(new DefaultJsonRpcResponse(1, ImmutableMap.of("subtrahend", 23)));
 
         assertThat(actualNode).isEqualTo(expectedNode);
     }
@@ -443,69 +414,33 @@ class JsonRpcServiceTest {
                            .build())
                 .aggregate().join();
 
-        assertThat(response.status()).isEqualTo(HttpStatus.OK);
+        assertThat(response.status()).isEqualTo(HttpStatus.ACCEPTED);
         assertThat(response.contentUtf8()).isEmpty();
     }
 
     @Test
-    void serve_whenBatchRequest_thenHandlesSuccessfully() throws JsonMappingException, JsonProcessingException {
-        final List<JsonRpcRequest> jsonRpcRequests = Arrays.asList(
-                JsonRpcRequest.of(1, "echo", "hello"),
-                JsonRpcRequest.of(2, "echo", Arrays.asList(1, 2, null)),
-                JsonRpcRequest.of(null, "echo", "hello"));
-
-        final AggregatedHttpResponse aggregatedHttpResponse = client().execute(
+    void serve_whenGetRequest_thenReturnsMethodNotAllowed() throws JsonProcessingException {
+        final JsonRpcRequest request = JsonRpcRequest.of(null, "echo", "hello");
+        final AggregatedHttpResponse response = client().execute(
                 HttpRequest.builder()
-                        .post("/json-rpc")
-                        .content(MediaType.JSON_UTF_8, objectMapper.writeValueAsString(jsonRpcRequests))
+                        .get("/json-rpc")
+                        .content(MediaType.JSON_UTF_8, objectMapper.writeValueAsString(request))
                         .build())
                 .aggregate().join();
 
-        assertThat(aggregatedHttpResponse.status()).isEqualTo(HttpStatus.OK);
-
-        final JsonNode actualNode = objectMapper.readTree(aggregatedHttpResponse.contentUtf8());
-        final List<DefaultJsonRpcResponse> expectedResponses = Arrays.asList(
-                new DefaultJsonRpcResponse(1, ImmutableList.of("hello")),
-                new DefaultJsonRpcResponse(2, Arrays.asList(1, 2, null))
-                // Notification
-        );
-        final JsonNode expectedNode = objectMapper.valueToTree(expectedResponses);
-
-        assertThat(actualNode).isEqualTo(expectedNode);
+        assertThat(response.status()).isEqualTo(HttpStatus.METHOD_NOT_ALLOWED);
     }
 
     @Test
-    void serve_whenBatchRequestWithSse_thenHandlesSuccessfully() throws JsonProcessingException {
-        final List<JsonRpcRequest> jsonRpcRequests = Arrays.asList(
-                JsonRpcRequest.of(1, "echo", "hello"),
-                JsonRpcRequest.of(2, "echo", Arrays.asList(1, 2)),
-                JsonRpcRequest.of(null, "echo", "hello"));
-
-        final HttpResponse httpResponse = client().execute(
+    void serve_whenUnsupportedMediaType_thenReturnsUnsupportedMediaType() throws JsonProcessingException {
+        final JsonRpcRequest request = JsonRpcRequest.of(null, "echo", "hello");
+        final AggregatedHttpResponse response = client().execute(
                 HttpRequest.builder()
-                        .post("/json-rpc-sse")
-                        .content(MediaType.JSON_UTF_8, objectMapper.writeValueAsString(jsonRpcRequests))
-                        .build());
+                        .post("/json-rpc")
+                        .content(MediaType.PLAIN_TEXT, objectMapper.writeValueAsString(request))
+                        .build())
+                .aggregate().join();
 
-        final List<HttpObject> httpObjects = new ArrayList<>();
-        final CompletableFuture<Void> completionFuture = httpResponse.peek(httpObjects::add).subscribe();
-        completionFuture.join();
-
-        final Iterator<HttpObject> httpObjectIterator = httpObjects.iterator();
-
-        final HttpHeaders httpHeaders = (HttpHeaders) httpObjectIterator.next();
-        assertThat(httpHeaders.contentType()).isEqualTo(MediaType.EVENT_STREAM);
-
-        final String actualSseData1 = ((HttpData) httpObjectIterator.next()).toStringUtf8();
-        final String expectedSseJson1 =
-                objectMapper.writeValueAsString(new DefaultJsonRpcResponse(1, ImmutableList.of("hello")));
-        assertThat(actualSseData1).contains(expectedSseJson1);
-
-        final String actualSseData2 = ((HttpData) httpObjectIterator.next()).toStringUtf8();
-        final String expectedSseJson2 =
-                objectMapper.writeValueAsString(new DefaultJsonRpcResponse(2, Arrays.asList(1, 2)));
-        assertThat(actualSseData2).contains(expectedSseJson2);
-
-        assertThat(httpObjectIterator.next().isEndOfStream()).isTrue();
+        assertThat(response.status()).isEqualTo(HttpStatus.UNSUPPORTED_MEDIA_TYPE);
     }
 }

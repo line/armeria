@@ -26,8 +26,8 @@ import com.google.common.base.MoreObjects;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.jsonrpc.AbstractJsonRpcResponse;
-import com.linecorp.armeria.common.jsonrpc.JsonRpcConstants;
 import com.linecorp.armeria.common.jsonrpc.JsonRpcError;
+import com.linecorp.armeria.common.jsonrpc.JsonRpcVersion;
 
 @UnstableApi
 @JsonInclude(JsonInclude.Include.NON_NULL)
@@ -51,8 +51,8 @@ final class DefaultJsonRpcResponse extends AbstractJsonRpcResponse {
     }
 
     @JsonProperty("jsonrpc")
-    public String version() {
-        return JsonRpcConstants.JSON_RPC_VERSION;
+    public JsonRpcVersion version() {
+        return JsonRpcVersion.JSON_RPC_2_0;
     }
 
     @Override

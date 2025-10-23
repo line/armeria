@@ -23,7 +23,7 @@ import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 
 /**
- * The base for {@link SimpleJsonRpcResponse} and {@link DefaultJsonRpcResponse}.
+ * The base for JsonRpcResponse.
  */
 @UnstableApi
 public abstract class AbstractJsonRpcResponse implements JsonRpcResponse {

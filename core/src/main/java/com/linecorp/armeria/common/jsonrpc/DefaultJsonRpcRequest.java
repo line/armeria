@@ -41,23 +41,23 @@ final class DefaultJsonRpcRequest implements JsonRpcRequest {
     @Nullable
     private final Object id;
     private final String method;
-    private final List<Object> params;
-    private final String version;
+    private final JsonRpcParameter params;
+    private final JsonRpcVersion version;
 
     DefaultJsonRpcRequest(@Nullable Object id, String method, Iterable<?> params) {
-        this(id, method, copyParams(params), JsonRpcConstants.JSON_RPC_VERSION);
+        this(id, method, copyParams(params), JsonRpcVersion.JSON_RPC_2_0.getVersion());
     }
 
     DefaultJsonRpcRequest(@Nullable Object id, String method, Object... params) {
-        this(id, method, copyParams(params), JsonRpcConstants.JSON_RPC_VERSION);
+        this(id, method, copyParams(params), JsonRpcVersion.JSON_RPC_2_0.getVersion());
     }
 
     private DefaultJsonRpcRequest(
             @Nullable Object id,
             String method,
-            List<Object> params,
+            Object params,
             String version) {
-        checkArgument(JsonRpcConstants.JSON_RPC_VERSION.equals(version),
+        checkArgument(JsonRpcVersion.JSON_RPC_2_0.getVersion().equals(version),
             "jsonrpc: %s (expected: 2.0)", version);
         checkArgument(id == null || id instanceof Number || id instanceof String,
             "id type: %s (expected: Null or Number or String)",
@@ -65,8 +65,8 @@ final class DefaultJsonRpcRequest implements JsonRpcRequest {
 
         this.id = id;
         this.method = requireNonNull(method, "method");
-        this.params = requireNonNull(params, "params");
-        this.version = version;
+        this.params = JsonRpcParameter.of(params);
+        this.version = JsonRpcVersion.JSON_RPC_2_0;
     }
 
     @JsonCreator
@@ -75,12 +75,16 @@ final class DefaultJsonRpcRequest implements JsonRpcRequest {
             @JsonProperty("method") String method,
             @JsonProperty("params") @Nullable Object params,
             @JsonProperty("jsonrpc") String version) {
+
+        if (params == null) {
+            return new DefaultJsonRpcRequest(id, method, ImmutableList.of());
+        }
+
         if (params instanceof Iterable) {
             return new DefaultJsonRpcRequest(id, method, (Iterable<?>) params);
         }
 
-        return new DefaultJsonRpcRequest(id, method, params == null ? ImmutableList.of()
-                                                                    : ImmutableList.of(params));
+        return new DefaultJsonRpcRequest(id, method, params, version);
     }
 
     private static List<Object> copyParams(Iterable<?> params) {
@@ -130,13 +134,13 @@ final class DefaultJsonRpcRequest implements JsonRpcRequest {
 
     @Override
     @JsonProperty
-    public List<Object> params() {
+    public JsonRpcParameter params() {
         return params;
     }
 
     @Override
     @JsonProperty("jsonrpc")
-    public String version() {
+    public JsonRpcVersion version() {
         return version;
     }
 

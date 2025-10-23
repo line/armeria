@@ -15,14 +15,29 @@
  */
 package com.linecorp.armeria.common.jsonrpc;
 
+import com.fasterxml.jackson.annotation.JsonValue;
+
 import com.linecorp.armeria.common.annotation.UnstableApi;
 
 /**
- * JSON-RPC constants.
+ * The version of the JSON-RPC specification.
+ * @see <a href="https://www.jsonrpc.org/specification">JSON-RPC 2.0 Specification</a>
  */
 @UnstableApi
-public final class JsonRpcConstants {
-    public static final String JSON_RPC_VERSION = "2.0";
+public enum JsonRpcVersion {
+    JSON_RPC_2_0("2.0");
 
-    private JsonRpcConstants() {}
+    private final String version;
+
+    JsonRpcVersion(String version) {
+        this.version = version;
+    }
+
+    /**
+     * Returns the string representation of the JSON-RPC version.
+     */
+    @JsonValue
+    public String getVersion() {
+        return version;
+    }
 }

@@ -17,6 +17,7 @@ package com.linecorp.armeria.common.jsonrpc;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.junit.Assert.assertTrue;
 
 import java.util.Arrays;
 import java.util.Collections;
@@ -41,19 +42,20 @@ class JsonRpcRequestTest {
 
         assertThat(req.id()).isEqualTo("1");
         assertThat(req.method()).isEqualTo("subtract");
-        assertThat(req.params()).isEmpty();
-        assertThat(req.version()).isEqualTo("2.0");
+        assertTrue(req.params().isPositional());
+        assertThat(req.params().asList()).isEmpty();
+        assertThat(req.version()).isEqualTo(JsonRpcVersion.JSON_RPC_2_0);
     }
 
     @Test
     void of_withSingleParam() {
-        final List<Integer> singleParam = Arrays.asList(42, 23);
-        final JsonRpcRequest req = JsonRpcRequest.of(2, "subtract", singleParam);
+        final JsonRpcRequest req = JsonRpcRequest.of(2, "subtract", "param");
 
         assertThat(req.id()).isEqualTo(2);
         assertThat(req.method()).isEqualTo("subtract");
-        assertThat(req.params()).containsExactly(42, 23);
-        assertThat(req.version()).isEqualTo("2.0");
+        assertTrue(req.params().isPositional());
+        assertThat(req.params().asList()).containsExactly("param");
+        assertThat(req.version()).isEqualTo(JsonRpcVersion.JSON_RPC_2_0);
     }
 
     @Test
@@ -62,8 +64,9 @@ class JsonRpcRequestTest {
 
         assertThat(req.id()).isEqualTo(3);
         assertThat(req.method()).isEqualTo("subtract");
-        assertThat(req.params()).isEmpty();
-        assertThat(req.version()).isEqualTo("2.0");
+        assertTrue(req.params().isPositional());
+        assertThat(req.params().asList()).isEmpty();
+        assertThat(req.version()).isEqualTo(JsonRpcVersion.JSON_RPC_2_0);
     }
 
     @Test
@@ -73,8 +76,9 @@ class JsonRpcRequestTest {
 
         assertThat(req.id()).isEqualTo("abc-123");
         assertThat(req.method()).isEqualTo("update");
-        assertThat(req.params()).isEqualTo(params);
-        assertThat(req.version()).isEqualTo("2.0");
+        assertTrue(req.params().isPositional());
+        assertThat(req.params().asList()).isEqualTo(params);
+        assertThat(req.version()).isEqualTo(JsonRpcVersion.JSON_RPC_2_0);
     }
 
     @Test
@@ -83,8 +87,9 @@ class JsonRpcRequestTest {
 
         assertThat(req.id()).isEqualTo(4);
         assertThat(req.method()).isEqualTo("get_data");
-        assertThat(req.params()).isEmpty();
-        assertThat(req.version()).isEqualTo("2.0");
+        assertTrue(req.params().isPositional());
+        assertThat(req.params().asList()).isEmpty();
+        assertThat(req.version()).isEqualTo(JsonRpcVersion.JSON_RPC_2_0);
     }
 
     @Test
@@ -93,8 +98,9 @@ class JsonRpcRequestTest {
 
         assertThat(req.id()).isNull();
         assertThat(req.method()).isEqualTo("sum");
-        assertThat(req.params()).containsExactly(1, 2, 4);
-        assertThat(req.version()).isEqualTo("2.0");
+        assertTrue(req.params().isPositional());
+        assertThat(req.params().asList()).containsExactly(1, 2, 4);
+        assertThat(req.version()).isEqualTo(JsonRpcVersion.JSON_RPC_2_0);
     }
 
     @Test
@@ -107,8 +113,9 @@ class JsonRpcRequestTest {
 
         assertThat(req.id()).isEqualTo(1);
         assertThat(req.method()).isEqualTo("subtract");
-        assertThat(req.params()).containsExactly(42, 23);
-        assertThat(req.version()).isEqualTo("2.0");
+        assertTrue(req.params().isPositional());
+        assertThat(req.params().asList()).containsExactly(42, 23);
+        assertThat(req.version()).isEqualTo(JsonRpcVersion.JSON_RPC_2_0);
     }
 
     @Test
@@ -121,8 +128,9 @@ class JsonRpcRequestTest {
 
         assertThat(req.id()).isEqualTo(1);
         assertThat(req.method()).isEqualTo("subtract");
-        assertThat(req.params()).isEmpty();
-        assertThat(req.version()).isEqualTo("2.0");
+        assertTrue(req.params().isPositional());
+        assertThat(req.params().asList()).isEmpty();
+        assertThat(req.version()).isEqualTo(JsonRpcVersion.JSON_RPC_2_0);
     }
 
     @Test
@@ -130,15 +138,13 @@ class JsonRpcRequestTest {
         final String json =
             "{\"jsonrpc\": \"2.0\", \"method\": \"subtract\", \"params\": {\"subtrahend\": 23}, \"id\": 3}";
         final JsonNode node = mapper.readTree(json);
-        final JsonNode paramsNode = node.get("params");
-
         final JsonRpcRequest req = JsonRpcRequest.of(node);
 
         assertThat(req.id()).isEqualTo(3);
         assertThat(req.method()).isEqualTo("subtract");
-        assertThat(req.params()).hasSize(1);
-        assertThat(req.params().get(0)).isEqualTo(mapper.treeToValue(paramsNode, Object.class));
-        assertThat(req.version()).isEqualTo("2.0");
+        assertTrue(req.params().isNamed());
+        assertThat(req.params().asMap()).containsEntry("subtrahend", 23);
+        assertThat(req.version()).isEqualTo(JsonRpcVersion.JSON_RPC_2_0);
     }
 
     @Test
@@ -150,8 +156,9 @@ class JsonRpcRequestTest {
 
         assertThat(req.id()).isNull();
         assertThat(req.method()).isEqualTo("update");
-        assertThat(req.params()).containsExactly(1, 2, 3, 4, 5);
-        assertThat(req.version()).isEqualTo("2.0");
+        assertTrue(req.params().isPositional());
+        assertThat(req.params().asList()).containsExactly(1, 2, 3, 4, 5);
+        assertThat(req.version()).isEqualTo(JsonRpcVersion.JSON_RPC_2_0);
     }
 
     @Test
