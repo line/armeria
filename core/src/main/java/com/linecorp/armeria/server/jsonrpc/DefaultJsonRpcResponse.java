@@ -71,7 +71,8 @@ final class DefaultJsonRpcResponse extends AbstractJsonRpcResponse {
         final DefaultJsonRpcResponse that = (DefaultJsonRpcResponse) obj;
         return Objects.equals(id(), that.id()) &&
                Objects.equals(result(), that.result()) &&
-               Objects.equals(error(), that.error());
+               Objects.equals(error(), that.error()) &&
+               Objects.equals(version(), that.version());
     }
 
     @Override
@@ -79,6 +80,7 @@ final class DefaultJsonRpcResponse extends AbstractJsonRpcResponse {
         return MoreObjects.toStringHelper(this)
                           .add("id", id())
                           .add("result", result())
-                          .add("error", error()).toString();
+                          .add("error", error())
+                          .add("version", version()).toString();
     }
 }
