@@ -24,12 +24,10 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.MoreObjects;
 
 import com.linecorp.armeria.common.annotation.Nullable;
-import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.jsonrpc.AbstractJsonRpcResponse;
 import com.linecorp.armeria.common.jsonrpc.JsonRpcError;
 import com.linecorp.armeria.common.jsonrpc.JsonRpcVersion;
 
-@UnstableApi
 @JsonInclude(JsonInclude.Include.NON_NULL)
 final class DefaultJsonRpcResponse extends AbstractJsonRpcResponse {
     @Nullable

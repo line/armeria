@@ -17,8 +17,7 @@ package com.linecorp.armeria.server.jsonrpc;
 
 import static java.util.Objects.requireNonNull;
 
-import java.util.HashMap;
-import java.util.Map;
+import com.google.common.collect.ImmutableMap;
 
 import com.linecorp.armeria.common.annotation.UnstableApi;
 
@@ -27,7 +26,7 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
  */
 @UnstableApi
 public class JsonRpcServiceBuilder {
-    private final Map<String, JsonRpcHandler> methodHandlers = new HashMap<>();
+    private final ImmutableMap.Builder<String, JsonRpcHandler> methodHandlers = ImmutableMap.builder();
 
     JsonRpcServiceBuilder() {}
 
@@ -45,6 +44,6 @@ public class JsonRpcServiceBuilder {
      * Constructs a new {@link JsonRpcService}.
      */
     public JsonRpcService build() {
-        return new JsonRpcService(methodHandlers);
+        return new JsonRpcService(methodHandlers.build());
     }
 }

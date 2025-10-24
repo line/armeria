@@ -27,7 +27,6 @@ import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
-import com.linecorp.armeria.internal.common.JacksonUtil;
 
 /**
  * A Json-RPC request.
@@ -74,7 +73,7 @@ public interface JsonRpcRequest {
     static JsonRpcRequest of(JsonNode node) throws JsonProcessingException {
         requireNonNull(node, "node");
         checkArgument(node.isObject(), "node.isObject(): %s (expected: true)", node.isObject());
-        return JacksonUtil.newDefaultObjectMapper().treeToValue(node, DefaultJsonRpcRequest.class);
+        return DefaultJsonRpcRequest.objectMapper.treeToValue(node, DefaultJsonRpcRequest.class);
     }
 
     /**

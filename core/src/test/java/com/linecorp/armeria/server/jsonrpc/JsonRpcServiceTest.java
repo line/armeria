@@ -68,9 +68,17 @@ class JsonRpcServiceTest {
         }
     }
 
+    private static final class ExceptionHandler implements JsonRpcHandler {
+        @Override
+        public CompletableFuture<JsonRpcResponse> handle(ServiceRequestContext ctx, JsonRpcRequest request) {
+            throw new RuntimeException("error");
+        }
+    }
+
     private static final JsonRpcService jsonRpcService = JsonRpcService.builder()
             .addHandler("echo", new EchoHandler())
             .addHandler("fail", new FailingHandler())
+            .addHandler("exception", new ExceptionHandler())
             .build();
 
     @RegisterExtension
@@ -442,5 +450,19 @@ class JsonRpcServiceTest {
                 .aggregate().join();
 
         assertThat(response.status()).isEqualTo(HttpStatus.UNSUPPORTED_MEDIA_TYPE);
+    }
+
+    @Test
+    void serve_whenRequestTriggersException_thenReturnsInternalServerError() throws JsonProcessingException {
+        final JsonRpcRequest request = JsonRpcRequest.of(1, "exception");
+        final AggregatedHttpResponse response = client().execute(
+                HttpRequest.builder()
+                        .post("/json-rpc")
+                        .content(MediaType.JSON_UTF_8, objectMapper.writeValueAsString(request))
+                        .build())
+                .aggregate().join();
+
+        assertThat(response.status()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
+        assertThat(response.contentUtf8()).contains("error");
     }
 }

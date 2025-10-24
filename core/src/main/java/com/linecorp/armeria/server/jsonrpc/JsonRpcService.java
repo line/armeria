@@ -30,7 +30,7 @@ import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
-import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.jsonrpc.JsonRpcError;
 import com.linecorp.armeria.common.jsonrpc.JsonRpcRequest;
@@ -72,15 +72,24 @@ public final class JsonRpcService implements HttpService {
 
         return HttpResponse.of(
             req.aggregate()
-               .thenApply(JsonRpcService::parseRequestContentAsJson)
-               .thenApply(json -> dispatchRequest(ctx, json))
-               .exceptionally(e -> {
-                    if (e.getCause() instanceof IllegalArgumentException) {
-                        return HttpResponse.ofJson(HttpStatus.BAD_REQUEST, JsonRpcError.PARSE_ERROR);
+               .handle((aggregate, throwable) -> {
+                    if (throwable != null) {
+                        return HttpResponse.ofJson(HttpStatus.INTERNAL_SERVER_ERROR,
+                            JsonRpcError.INTERNAL_ERROR.withData(throwable.getMessage()));
                     }
-                    return HttpResponse.ofJson(HttpStatus.BAD_REQUEST,
-                        JsonRpcError.INTERNAL_ERROR.withData(e.getMessage()));
-                })
+
+                    try {
+                        final JsonNode parsedJson = parseRequestContentAsJson(aggregate);
+                        return dispatchRequest(ctx, parsedJson);
+                    } catch (Exception e) {
+                        if (e instanceof IllegalArgumentException) {
+                            return HttpResponse.ofJson(HttpStatus.BAD_REQUEST,
+                                JsonRpcError.PARSE_ERROR);
+                        }
+                        return HttpResponse.ofJson(HttpStatus.INTERNAL_SERVER_ERROR,
+                            JsonRpcError.INTERNAL_ERROR.withData(e.getMessage()));
+                    }
+               })
             );
     }
 
@@ -98,7 +107,8 @@ public final class JsonRpcService implements HttpService {
         if (rawRequest.isObject()) {
             return handleUnaryRequest(ctx, rawRequest);
         } else {
-            return HttpResponse.ofJson(HttpStatus.BAD_REQUEST, JsonRpcError.PARSE_ERROR);
+            return HttpResponse.ofJson(HttpStatus.BAD_REQUEST,
+                JsonRpcError.INVALID_REQUEST.withData("Batch requests are not supported by this server."));
         }
     }
 
@@ -110,10 +120,14 @@ public final class JsonRpcService implements HttpService {
 
     private HttpResponse toHttpResponse(DefaultJsonRpcResponse response) {
         if (response == null) {
-            return HttpResponse.of(HttpStatus.ACCEPTED, MediaType.PLAIN_TEXT_UTF_8, "");
+            return HttpResponse.of(ResponseHeaders.of(HttpStatus.ACCEPTED));
         }
 
         if (response.error() != null) {
+            if (response.error().code() == JsonRpcError.INTERNAL_ERROR.code()) {
+                return HttpResponse.ofJson(HttpStatus.INTERNAL_SERVER_ERROR, response);
+            }
+
             return HttpResponse.ofJson(HttpStatus.BAD_REQUEST, response);
         }
 
@@ -154,7 +168,8 @@ public final class JsonRpcService implements HttpService {
         // Notification
         if (req.id() == null) {
             if (handler != null) {
-                handler.handle(ctx, req);
+                handler.handle(ctx, req)
+                       .thenApply(res -> null);
             }
             return UnmodifiableFuture.completedFuture(null);
         }

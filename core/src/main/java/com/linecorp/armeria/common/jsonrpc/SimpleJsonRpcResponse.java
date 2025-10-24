@@ -20,9 +20,7 @@ import java.util.Objects;
 import com.google.common.base.MoreObjects;
 
 import com.linecorp.armeria.common.annotation.Nullable;
-import com.linecorp.armeria.common.annotation.UnstableApi;
 
-@UnstableApi
 final class SimpleJsonRpcResponse extends AbstractJsonRpcResponse {
     SimpleJsonRpcResponse(Object result) {
         super(result);

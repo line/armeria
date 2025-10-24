@@ -22,11 +22,14 @@ import java.util.Map;
 
 import com.fasterxml.jackson.annotation.JsonValue;
 
+import com.linecorp.armeria.common.annotation.UnstableApi;
+
 /**
  * A wrapper for
  * <a href="https://www.jsonrpc.org/specification#parameter_structures">JSON-RPC 2.0 parameters</a>.
  * The parameters can be either positional (a {@link List}) or named (a {@link Map}).
  */
+@UnstableApi
 public final class JsonRpcParameter {
     @JsonValue
     private final Object value;

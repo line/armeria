@@ -27,17 +27,19 @@ import java.util.Optional;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.common.annotation.Nullable;
-import com.linecorp.armeria.common.annotation.UnstableApi;
+import com.linecorp.armeria.internal.common.JacksonUtil;
 
 /**
  * Default {@link JsonRpcRequest} implementation.
  */
-@UnstableApi
 final class DefaultJsonRpcRequest implements JsonRpcRequest {
+    static final ObjectMapper objectMapper = JacksonUtil.newDefaultObjectMapper();
+
     @Nullable
     private final Object id;
     private final String method;
