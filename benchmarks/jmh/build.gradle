@@ -25,6 +25,11 @@ dependencies {
 
 tasks.sourcesJar.dependsOn(tasks.compileJmhThrift)
 
+configurations.named('jmhCompileProtoPath').configure {
+    extendsFrom configurations.compileClasspath
+     extendsFrom configurations.jmhCompileClasspath
+}
+
 jmh {
     duplicateClassesStrategy = DuplicatesStrategy.EXCLUDE
     jmhVersion = libs.versions.jmh.core.get()
@@ -87,11 +92,11 @@ tasks.jmh.outputs.upToDateWhen {
     false
 }
 
-// Workaround a bug where the conflict of output path between 'benchmarks.jmh' and 'benchmarks.test' in IDEA
-project.afterEvaluate {
-    idea {
-        module {
-            testSourceDirs = []
-        }
-    }
-}
+//// Workaround a bug where the conflict of output path between 'benchmarks.jmh' and 'benchmarks.test' in IDEA
+//project.afterEvaluate {
+//    idea {
+//        module {
+//            testSourceDirs = []
+//        }
+//    }
+//}

@@ -9,7 +9,7 @@ buildscript {
         google()
     }
     dependencies {
-        classpath "gradle.plugin.com.github.johnrengelman:shadow:${managedVersions['gradle.plugin.com.github.johnrengelman:shadow']}"
+        classpath "com.gradleup.shadow:com.gradleup.shadow.gradle.plugin:${managedVersions['com.gradleup.shadow:com.gradleup.shadow.gradle.plugin']}"
         classpath "com.guardsquare:proguard-gradle:${managedVersions['com.guardsquare:proguard-gradle']}"
     }
 }
@@ -25,7 +25,7 @@ configure(relocatedProjects) {
             dependsOn: tasks.classes) {
 
         configureShadowTask(project, delegate, true)
-        archiveBaseName.set("${project.archivesBaseName}-shaded")
+        archiveClassifier.set('shaded')
 
         // Exclude the legacy file listing.
         exclude '/META-INF/INDEX.LIST'
@@ -148,14 +148,36 @@ configure(relocatedProjects) {
 
             def proguardLibraryConfigs = []
             relocatedProjects.each { p ->
+
                 if (!p.hasFlags('no_aggregation')) {
+                    configure(p) {
+                        configurations {
+                            proguardLibraryJarsElements {
+                                canBeConsumed = true
+                                canBeResolved = false
+                                extendsFrom configurations.dependencyManagement
+                                extendsFrom configurations.runtimeClasspath
+                                attributes {
+                                    attribute(Usage.USAGE_ATTRIBUTE, objects.named(Usage, Usage.JAVA_RUNTIME))
+                                }
+                            }
+                        }
+                    }
+
                     def configName = "proguardLibraryJars_${p.path.replace(':', '_')}"
                     def proguardLibraryJars = configurations.create(configName) {
-                        extendsFrom(p.configurations.dependencyManagement)
+                        canBeConsumed = false
+                        canBeResolved = true
+                        // add attributes to match producer if you set any
+                        attributes {
+                            attribute(Usage.USAGE_ATTRIBUTE, objects.named(Usage, Usage.JAVA_RUNTIME))
+                        }
                     }
 
                     proguardLibraryConfigs.add(proguardLibraryJars)
-                    dependencies.add(proguardLibraryJars.getName(), dependencies.project([path: p.path]))
+                    dependencies {
+                        add(proguardLibraryJars.getName(), project(path: p.path, configuration: 'proguardLibraryJarsElements'))
+                    }
                 }
             }
 
@@ -316,7 +338,7 @@ private void configureShadowTask(Project project, ShadowJar task, boolean isMain
         dependencies {
             if (project.hasFlags('shade')) {
                 // Shade the relocated dependencies only.
-                exclude(dependency({ dep ->
+                exclude { dep ->
                     if (!relocations.find { dep.name.startsWith("${it['name']}:") }) {
                         // Do not shade the dependencies not listed in 'relocations'.
                         return true
@@ -326,19 +348,18 @@ private void configureShadowTask(Project project, ShadowJar task, boolean isMain
                         return false
                     } else {
                         // Do not shade the dependencies which is already shaded for 'main'.
-                        return project.configurations.compileClasspath.allDependencies.find { compileDep ->
+                        return project.configurations.compileClasspath.allDependencies.any { compileDep ->
                             compileDep.group == dep.moduleGroup && compileDep.name == dep.moduleName
                         }
                     }
-                }))
+                }
             } else { // hasFlags('relocate')
                 // Only want to rewrite source references, not bundle dependencies.
-                exclude(dependency({ true }))
+                exclude { true }
             }
         }
     }
 }
-
 
 /**
  * Finds the dependencies of {@code project} recursively and adds the found dependencies to
@@ -368,7 +389,7 @@ private Configuration configureShadedTestImplementConfiguration(
     def targetConfigurationName
     if (project == recursedProject) {
         targetConfigurationName = 'testRuntimeClasspath'
-    }  else {
+    } else {
         targetConfigurationName = 'runtimeClasspath'
     }
     def projectDependencies = []
@@ -377,7 +398,7 @@ private Configuration configureShadedTestImplementConfiguration(
     }.each { cfg ->
         cfg.allDependencies.each { dep ->
             if (dep instanceof ProjectDependency) {
-                if (!dep.dependencyProject.hasFlag('java')) {
+                if (!rootProject.findProject(dep.path).ext.hasFlag('java')) {
                     // Do not add the dependencies of non-Java projects.
                     return
                 }
@@ -412,7 +433,8 @@ private Configuration configureShadedTestImplementConfiguration(
 
     // Recurse into the project dependencies.
     projectDependencies.each { ProjectDependency dep ->
-        if (!dep.dependencyProject.hasFlag('relocate')) {
+        def dependencyProject = rootProject.findProject(dep.path)
+        if (!dependencyProject.ext.hasFlag('relocate')) {
             shadedJarTestImplementation.dependencies.add(
                     project.dependencies.project(path: dep.dependencyProject.path))
             recursedProjectRelocated = false
@@ -420,7 +442,7 @@ private Configuration configureShadedTestImplementConfiguration(
             recursedProjectRelocated = true
         }
         configureShadedTestImplementConfiguration(
-                project, dep.dependencyProject,
+                project, dependencyProject,
                 excludeRules + dep.excludeRules, visitedProjects, recursedProjectRelocated)
     }
 

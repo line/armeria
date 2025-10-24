@@ -33,7 +33,7 @@ configure(scala212 + scala213 + scala3) {
     }
 
     if (!rootProject.hasProperty('noLint')) {
-        apply plugin: 'cz.alenkacz.gradle.scalafmt'
+        apply plugin: 'cz.augi.gradle.scalafmt'
         // Run `scalafmt` to automatically format scala code from source sets
         // https://github.com/alenkacz/gradle-scalafmt#tasks
         project.ext.getLintTask().dependsOn tasks.checkScalafmt

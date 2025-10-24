@@ -23,7 +23,6 @@ import java.io.IOException;
 import java.io.InputStream;
 
 import org.apache.tools.ant.filters.StringInputStream;
-import org.jetbrains.annotations.Nullable;
 import org.junit.jupiter.api.Test;
 
 import com.google.api.client.testing.util.TestableByteArrayOutputStream;
@@ -50,7 +49,6 @@ class GsonGrpcJsonMarshallerBuilderTest {
                     return Messages.SimpleRequest.class;
                 }
 
-                @Nullable
                 @Override
                 public Messages.SimpleRequest getMessagePrototype() {
                     return Messages.SimpleRequest.getDefaultInstance();
