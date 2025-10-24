@@ -17,8 +17,11 @@
 package com.linecorp.armeria.internal.common.util;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 class StringUtilTest {
     @Test
@@ -31,5 +34,51 @@ class StringUtilTest {
         // non-cached
         assertThat(StringUtil.toString(-1001)).isEqualTo("-1001");
         assertThat(StringUtil.toString(1001)).isEqualTo("1001");
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"true", "TRUE", "True", "1"})
+    void testToBooleanTrue(String input) {
+        assertThat(StringUtil.toBoolean(input)).isTrue();
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"false", "FALSE", "False", "0"})
+    void testToBooleanFalse(String input) {
+        assertThat(StringUtil.toBoolean(input)).isFalse();
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"tRUE", "FaLsE", "yes", "no", "TrUe", " false ", " true ", "", " 0 "})
+    void testToBooleanInvalid(String input) {
+        assertThatThrownBy(() -> StringUtil.toBoolean(input)).isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    void testToBooleanNull() {
+        assertThatThrownBy(() -> StringUtil.toBoolean(null)).isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"true", "TRUE", "True", "1"})
+    void testToBooleanOrNullTrue(String input) {
+        assertThat(StringUtil.toBooleanOrNull(input)).isTrue();
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"false", "FALSE", "False", "0"})
+    void testToBooleanOrNullFalse(String input) {
+        assertThat(StringUtil.toBooleanOrNull(input)).isFalse();
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"tRUE", "FaLsE", "yes", "no", "TrUe", " false ", " true ", "", " 0 "})
+    void testToBooleanOrNullInvalid(String input) {
+        assertThat(StringUtil.toBooleanOrNull(input)).isNull();
+    }
+
+    @Test
+    void testToBooleanOrNullNull() {
+        assertThat(StringUtil.toBooleanOrNull(null)).isNull();
     }
 }

@@ -6,9 +6,9 @@ plugins {
     // automatically download one based on the foojay Disco API.
     // https://docs.gradle.org/8.1.1/userguide/toolchains.html#sec:provisioning
     id 'org.gradle.toolchains.foojay-resolver-convention' version '0.6.0'
-    id 'com.gradle.develocity' version '4.0.2'
+    id 'com.gradle.develocity' version '4.2.2'
     // adds additional metadata to build scans
-    id 'com.gradle.common-custom-user-data-gradle-plugin' version '2.3'
+    id 'com.gradle.common-custom-user-data-gradle-plugin' version '2.4.0'
 }
 
 import com.gradle.develocity.agent.gradle.scan.PublishedBuildScan
@@ -90,6 +90,7 @@ project(':version-catalog').with {
 
 // Published Java projects
 includeWithFlags ':annotation-processor',                'java', 'publish', 'relocate'
+includeWithFlags ':athenz',                              'java11', 'publish', 'relocate', 'native'
 includeWithFlags ':brave5',                              'java', 'publish', 'relocate', 'no_aggregation'
 project(':brave5').projectDir = file('brave/brave5')
 includeWithFlags ':brave6',                              'java', 'publish', 'relocate', 'native'
@@ -99,7 +100,8 @@ includeWithFlags ':eureka',                              'java', 'publish', 'rel
 includeWithFlags ':grpc',                                'java', 'publish', 'relocate', 'native'
 includeWithFlags ':grpc-kotlin',                         'java', 'publish', 'relocate', 'kotlin-grpc', 'kotlin', 'native'
 includeWithFlags ':grpc-protocol',                       'java', 'publish', 'relocate', 'native'
-includeWithFlags ':graphql',                             'java', 'publish', 'relocate', 'native'
+// GraphQL-Java requires Java 11+.
+includeWithFlags ':graphql',                             'java11', 'publish', 'relocate', 'native'
 includeWithFlags ':graphql-protocol',                    'java', 'publish', 'relocate', 'native'
 includeWithFlags ':jetty9',                              'java', 'publish', 'relocate', 'no_aggregation'
 project(':jetty9').projectDir = file('jetty/jetty9')
@@ -189,10 +191,13 @@ includeWithFlags ':thrift0.20',                          'java11', 'publish', 'r
 project(':thrift0.20').projectDir = file('thrift/thrift0.20')
 includeWithFlags ':thrift0.21',                          'java11', 'publish', 'relocate', 'no_aggregation', 'native'
 project(':thrift0.21').projectDir = file('thrift/thrift0.21')
+includeWithFlags ':thrift0.22',                          'java11', 'publish', 'relocate', 'no_aggregation', 'native'
+project(':thrift0.22').projectDir = file('thrift/thrift0.22')
 includeWithFlags ':tomcat8',                             'java', 'publish', 'relocate', 'no_aggregation'
 includeWithFlags ':tomcat9',                             'java', 'publish', 'relocate', 'no_aggregation'
 includeWithFlags ':tomcat10',                            'java11', 'publish', 'relocate'
 includeWithFlags ':xds',                                 'java', 'publish', 'relocate'
+includeWithFlags ':xds-api',                             'java', 'publish', 'relocate', 'javapgv'
 includeWithFlags ':zookeeper3',                          'java', 'publish', 'relocate', 'native'
 includeWithFlags ':saml',                                'java', 'publish', 'relocate', 'native'
 includeWithFlags ':bucket4j',                            'java', 'publish', 'relocate', 'native'
@@ -227,10 +232,12 @@ includeWithFlags ':it:logback1.4',                             'java11', 'reloca
 includeWithFlags ':it:logback1.5',                             'java11', 'relocate', 'no_aggregation'
 includeWithFlags ':it:multipart',                              'java17', 'relocate'
 includeWithFlags ':it:nio',                                    'java', 'relocate'
+includeWithFlags ':it:no-unsafe',                              'java', 'relocate'
 includeWithFlags ':it:okhttp',                                 'java', 'relocate'
 includeWithFlags ':it:resilience4j',                           'java17', 'relocate'
 includeWithFlags ':it:server',                                 'java', 'relocate'
 includeWithFlags ':it:server-allow-semicolon',                 'java'
+includeWithFlags ':it:spring:boot3-athenz',                    'java17', 'relocate'
 includeWithFlags ':it:spring:boot3-jetty12',                   'java17', 'relocate'
 includeWithFlags ':it:spring:boot3-kotlin',                    'java17', 'relocate', 'kotlin'
 includeWithFlags ':it:spring:boot3-mixed',                     'java17', 'relocate'
@@ -242,6 +249,7 @@ includeWithFlags ':it:thrift-fullcamel',                       'java', 'relocate
 includeWithFlags ':it:thrift0.9.1',                            'java', 'relocate'
 includeWithFlags ':it:trace-context-leak',                     'java', 'relocate'
 includeWithFlags ':it:websocket',                              'java11', 'relocate'
+includeWithFlags ':it:xds-client',                             'java17'
 includeWithFlags ':jetty9.3',                                  'java', 'relocate'
 project(':jetty9.3').projectDir = file('jetty/jetty9.3')
 includeWithFlags ':testing-internal',                          'java', 'relocate'
@@ -257,6 +265,8 @@ includeWithFlags ':site'
 // Examples
 includeWithFlags ':examples:annotated-http-service',               'java11'
 includeWithFlags ':examples:annotated-http-service-kotlin',        'java11', 'kotlin'
+includeWithFlags ':examples:athenz-example',                       'java11'
+project(':examples:athenz-example').projectDir = file('examples/athenz')
 includeWithFlags ':examples:context-propagation-dagger-example',   'java11'
 project(':examples:context-propagation-dagger-example').projectDir = file('examples/context-propagation/dagger')
 includeWithFlags ':examples:context-propagation-kotlin-example',   'java11', 'kotlin'

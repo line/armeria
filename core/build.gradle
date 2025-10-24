@@ -137,9 +137,6 @@ dependencies {
     // TestNG
     testRuntimeOnly libs.junit.testng.engine
 
-    // JUnit Pioneer
-    testImplementation libs.junit.pioneer
-
     // Reactor for registering EventLoop as a non blocking thread.
     optionalImplementation libs.reactor.core
 

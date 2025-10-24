@@ -45,12 +45,13 @@ class DecoratingService {
 @DecoratorFactory(CoroutineNameDecoratorFactory::class)
 @Target(AnnotationTarget.CLASS, AnnotationTarget.FUNCTION)
 @Retention(AnnotationRetention.RUNTIME)
-annotation class CoroutineNameDecorator(val name: String)
+annotation class CoroutineNameDecorator(
+    val name: String,
+)
 
 class CoroutineNameDecoratorFactory : DecoratorFactoryFunction<CoroutineNameDecorator> {
-    override fun newDecorator(parameter: CoroutineNameDecorator): Function<in HttpService, out HttpService> {
-        return CoroutineContextService.newDecorator {
+    override fun newDecorator(parameter: CoroutineNameDecorator): Function<in HttpService, out HttpService> =
+        CoroutineContextService.newDecorator {
             CoroutineName(name = parameter.name)
         }
-    }
 }

@@ -36,9 +36,13 @@ public final class AsyncLoaderBuilder<T> {
 
     private final Function<@Nullable T, CompletableFuture<T>> loader;
     @Nullable
+    private String name;
+    @Nullable
     private Duration expireAfterLoad;
     @Nullable
     private Predicate<? super T> expireIf;
+    @Nullable
+    private Duration refreshAfterLoad;
     @Nullable
     private Predicate<? super T> refreshIf;
     @Nullable
@@ -48,6 +52,16 @@ public final class AsyncLoaderBuilder<T> {
     AsyncLoaderBuilder(Function<@Nullable T, CompletableFuture<T>> loader) {
         requireNonNull(loader, "loader");
         this.loader = loader;
+    }
+
+    /**
+     * Sets the name of the {@link AsyncLoader} to be created.
+     * The name is used for logging and debugging purposes.
+     */
+    public AsyncLoaderBuilder<T> name(String name) {
+        requireNonNull(name, "name");
+        this.name = name;
+        return this;
     }
 
     /**
@@ -83,6 +97,26 @@ public final class AsyncLoaderBuilder<T> {
     }
 
     /**
+     * Refreshes the loaded value after the given duration since it was loaded.
+     */
+    public AsyncLoaderBuilder<T> refreshAfterLoad(Duration refreshAfterLoad) {
+        requireNonNull(refreshAfterLoad, "refreshAfterLoad");
+        checkState(!refreshAfterLoad.isNegative(), "refreshAfterLoad: %s (expected: >= 0)", refreshAfterLoad);
+        this.refreshAfterLoad = refreshAfterLoad;
+        return this;
+    }
+
+    /**
+     * Refreshes the loaded value after the given milliseconds since it was loaded.
+     */
+    public AsyncLoaderBuilder<T> refreshAfterLoadMillis(long refreshAfterLoadMillis) {
+        checkState(refreshAfterLoadMillis >= 0,
+                   "refreshAfterLoadMillis: %s (expected: >= 0)", refreshAfterLoadMillis);
+        refreshAfterLoad = Duration.ofMillis(refreshAfterLoadMillis);
+        return this;
+    }
+
+    /**
      * Asynchronously refreshes the loaded value which has not yet expired if the predicate matches.
      * This pre-fetch strategy can remove an additional loading time on a cache miss.
      */
@@ -107,6 +141,7 @@ public final class AsyncLoaderBuilder<T> {
      * Returns a newly created {@link AsyncLoader} with the entries in this builder.
      */
     public AsyncLoader<T> build() {
-        return new DefaultAsyncLoader<>(loader, expireAfterLoad, expireIf, refreshIf, exceptionHandler);
+        return new DefaultAsyncLoader<>(loader, name, expireAfterLoad, expireIf, refreshAfterLoad, refreshIf,
+                                        exceptionHandler);
     }
 }

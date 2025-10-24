@@ -14,7 +14,7 @@
  * under the License.
  */
 
-import Transport from './transport';
+import { Transport } from './transport';
 import { Method } from '../specification';
 import { validateJsonObject } from '../json-util';
 
@@ -31,7 +31,7 @@ export default class GraphqlHttpTransport extends Transport {
 
   protected async doSend(
     method: Method,
-    headers: { [name: string]: string },
+    headers: { [p: string]: string },
     pathPrefix: string,
     bodyJson?: string,
     endpointPath?: string,

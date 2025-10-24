@@ -1,7 +1,7 @@
 /*
- * Copyright 2023 LINE Corporation
+ * Copyright 2025 LY Corporation
  *
- * LINE Corporation licenses this file to you under the Apache License,
+ * LY Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
@@ -16,6 +16,10 @@
 
 package com.linecorp.armeria.xds;
 
+import static com.linecorp.armeria.xds.FilterUtil.toParsedFilterConfigs;
+
+import java.util.Map;
+
 import com.google.common.base.MoreObjects;
 import com.google.common.base.Objects;
 
@@ -23,26 +27,20 @@ import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 
 import io.envoyproxy.envoy.config.route.v3.RouteConfiguration;
+import io.envoyproxy.envoy.extensions.filters.network.http_connection_manager.v3.HttpFilter;
 
 /**
  * A resource object for a {@link RouteConfiguration}.
  */
 @UnstableApi
-public final class RouteXdsResource extends XdsResourceWithPrimer<RouteXdsResource> {
+public final class RouteXdsResource implements XdsResource {
 
     private final RouteConfiguration routeConfiguration;
-
-    @Nullable
-    private final XdsResource primer;
+    private final Map<String, ParsedFilterConfig> filterConfigs;
 
     RouteXdsResource(RouteConfiguration routeConfiguration) {
         this.routeConfiguration = routeConfiguration;
-        primer = null;
-    }
-
-    RouteXdsResource(RouteConfiguration routeConfiguration, XdsResource primer) {
-        this.routeConfiguration = routeConfiguration;
-        this.primer = primer;
+        filterConfigs = toParsedFilterConfigs(routeConfiguration.getTypedPerFilterConfigMap());
     }
 
     @Override
@@ -60,18 +58,14 @@ public final class RouteXdsResource extends XdsResourceWithPrimer<RouteXdsResour
         return routeConfiguration.getName();
     }
 
-    @Override
-    RouteXdsResource withPrimer(@Nullable XdsResource primer) {
-        if (primer == null) {
-            return this;
-        }
-        return new RouteXdsResource(routeConfiguration, primer);
-    }
-
-    @Override
+    /**
+     * Returns the parsed {@link RouteConfiguration#getTypedPerFilterConfigMap()}.
+     *
+     * @param filterName the filter name represented by {@link HttpFilter#getName()}
+     */
     @Nullable
-    XdsResource primer() {
-        return primer;
+    public ParsedFilterConfig filterConfig(String filterName) {
+        return filterConfigs.get(filterName);
     }
 
     @Override
@@ -83,20 +77,18 @@ public final class RouteXdsResource extends XdsResourceWithPrimer<RouteXdsResour
             return false;
         }
         final RouteXdsResource that = (RouteXdsResource) object;
-        return Objects.equal(routeConfiguration, that.routeConfiguration) &&
-               Objects.equal(primer, that.primer);
+        return Objects.equal(routeConfiguration, that.routeConfiguration);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hashCode(routeConfiguration, primer);
+        return routeConfiguration.hashCode();
     }
 
     @Override
     public String toString() {
         return MoreObjects.toStringHelper(this)
                           .add("routeConfiguration", routeConfiguration)
-                          .add("primer", primer)
                           .toString();
     }
 }

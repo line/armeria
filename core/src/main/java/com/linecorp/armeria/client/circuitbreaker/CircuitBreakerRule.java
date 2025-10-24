@@ -202,7 +202,7 @@ public interface CircuitBreakerRule {
     /**
      * Returns a {@link CircuitBreakerRule} that combines the specified {@link CircuitBreakerRule}s.
      */
-    @SuppressWarnings("OptionalGetWithoutIsPresent")
+    @SuppressWarnings({ "OptionalGetWithoutIsPresent", "NullAway" })
     static CircuitBreakerRule of(Iterable<? extends CircuitBreakerRule> circuitBreakerRules) {
         requireNonNull(circuitBreakerRules, "circuitBreakerRules");
         checkArgument(!Iterables.isEmpty(circuitBreakerRules), "circuitBreakerRules can't be empty.");

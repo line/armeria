@@ -1,7 +1,7 @@
 /*
- * Copyright 2025 LINE Corporation
+ * Copyright 2025 LY Corporation
  *
- * LINE Corporation licenses this file to you under the Apache License,
+ * LY Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
@@ -16,29 +16,40 @@
 
 package com.linecorp.armeria.xds;
 
+import static com.linecorp.armeria.xds.FilterUtil.toParsedFilterConfigs;
+
+import java.util.Map;
+
 import com.google.common.base.MoreObjects;
 
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 
 import io.envoyproxy.envoy.config.route.v3.VirtualHost;
+import io.envoyproxy.envoy.extensions.filters.network.http_connection_manager.v3.HttpFilter;
 
 /**
  * A resource object for a {@link VirtualHost}.
  */
-public final class VirtualHostXdsResource extends XdsResourceWithPrimer<VirtualHostXdsResource> {
+public final class VirtualHostXdsResource implements XdsResource {
 
     private final VirtualHost virtualHost;
-    @Nullable
-    private final XdsResource primer;
+    private final Map<String, ParsedFilterConfig> virtualHostFilterConfigs;
 
     VirtualHostXdsResource(VirtualHost virtualHost) {
         this.virtualHost = virtualHost;
-        primer = null;
+        virtualHostFilterConfigs = toParsedFilterConfigs(virtualHost.getTypedPerFilterConfigMap());
     }
 
-    private VirtualHostXdsResource(VirtualHost virtualHost, @Nullable XdsResource primer) {
-        this.virtualHost = virtualHost;
-        this.primer = primer;
+    /**
+     * Returns the parsed {@link VirtualHost#getTypedPerFilterConfigMap()}.
+     *
+     * @param filterName the filter name represented by {@link HttpFilter#getName()}
+     */
+    @Nullable
+    @UnstableApi
+    public ParsedFilterConfig filterConfig(String filterName) {
+        return virtualHostFilterConfigs.get(filterName);
     }
 
     @Override
@@ -57,21 +68,9 @@ public final class VirtualHostXdsResource extends XdsResourceWithPrimer<VirtualH
     }
 
     @Override
-    VirtualHostXdsResource withPrimer(@Nullable XdsResource primer) {
-        return new VirtualHostXdsResource(virtualHost, primer);
-    }
-
-    @Nullable
-    @Override
-    XdsResource primer() {
-        return primer;
-    }
-
-    @Override
     public String toString() {
         return MoreObjects.toStringHelper(this)
                           .add("virtualHost", virtualHost)
-                          .add("primer", primer)
                           .toString();
     }
 }

@@ -1,0 +1,23 @@
+name: Sync xDS APIs with upstream
+
+permissions:
+  contents: read
+
+on:
+  schedule:
+    # every monday at 10:00 am (KST)
+    - cron:  '0 1 * * 1'
+
+jobs:
+  envoy-versions:
+    uses: ./.github/workflows/xds-compare-versions.yml
+
+  call-update-protobuf:
+    permissions:
+      contents: write
+      pull-requests: write
+    needs: envoy-versions
+    if: ${{ needs.envoy-versions.outputs.should_update == 'true' }}
+    uses: ./.github/workflows/xds-apply-updates.yml
+    with:
+      target_version: ${{ needs.envoy-versions.outputs.target_version }}

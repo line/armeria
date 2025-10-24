@@ -46,6 +46,7 @@ tasks.processTestResources.from "${rootProject.projectDir}/thrift/thrift0.13/src
 def thriftFullVersion = libs.thrift012.get().versionConstraint.requiredVersion
 ext {
     thriftVersion = thriftFullVersion.substring(0, thriftFullVersion.lastIndexOf('.'))
+    testThriftSrcDirs = ["${rootProject.projectDir}/thrift/thrift0.13/src/test/thrift"]
 }
 
 // Disable checkstyle because it's checked by ':thrift0.13'.

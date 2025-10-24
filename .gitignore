@@ -141,3 +141,6 @@ typings/
 
 # macOS folder metadata
 .DS_Store
+
+# Claude
+CLAUDE.md

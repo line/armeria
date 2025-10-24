@@ -39,7 +39,9 @@ import java.util.concurrent.CompletableFuture
 import java.util.function.Supplier
 import java.util.stream.Collectors
 
-class MainService(private val backendClient: WebClient) : HttpService {
+class MainService(
+    private val backendClient: WebClient,
+) : HttpService {
     override fun serve(
         ctx: ServiceRequestContext,
         req: HttpRequest,
@@ -56,14 +58,15 @@ class MainService(private val backendClient: WebClient) : HttpService {
 
                 val backendResponses =
                     awaitAll(
-                        *nums.map { num ->
-                            // The context is mounted in a thread-local, meaning it is available to all logic such
-                            // as tracing.
-                            require(ServiceRequestContext.current() === ctx)
-                            require(ctx.eventLoop().inEventLoop())
+                        *nums
+                            .map { num ->
+                                // The context is mounted in a thread-local, meaning it is available to all logic such
+                                // as tracing.
+                                require(ServiceRequestContext.current() === ctx)
+                                require(ctx.eventLoop().inEventLoop())
 
-                            backendClient.get("/square/$num").aggregate().asDeferred()
-                        }.toTypedArray(),
+                                backendClient.get("/square/$num").aggregate().asDeferred()
+                            }.toTypedArray(),
                     ).toList()
 
                 // The context is mounted in a thread-local, meaning it is available to all logic such as tracing.
@@ -71,7 +74,8 @@ class MainService(private val backendClient: WebClient) : HttpService {
                 require(ctx.eventLoop().inEventLoop())
 
                 HttpResponse.of(
-                    backendResponses.stream()
+                    backendResponses
+                        .stream()
                         .map(AggregatedHttpResponse::contentUtf8)
                         .collect(Collectors.joining("\n")),
                 )
@@ -118,21 +122,22 @@ class MainService(private val backendClient: WebClient) : HttpService {
 
         // This logic mimics using a blocking method, which would usually be something like a MySQL
         // database query using JDBC.
-        return CompletableFuture.supplyAsync(
-            Supplier {
-                // The context is mounted in a thread-local, meaning it is available to all logic such
-                // as tracing.
-                require(ServiceRequestContext.current() === ctx)
-                require(!ctx.eventLoop().inEventLoop())
+        return CompletableFuture
+            .supplyAsync(
+                Supplier {
+                    // The context is mounted in a thread-local, meaning it is available to all logic such
+                    // as tracing.
+                    require(ServiceRequestContext.current() === ctx)
+                    require(!ctx.eventLoop().inEventLoop())
 
-                sleepUninterruptibly(Duration.ofMillis(50))
-                listOf(23L, -23L)
-            },
-            // Always run blocking logic on the blocking task executor. By using
-            // ServiceRequestContext.blockingTaskExecutor, you also ensure the context is mounted inside the
-            // logic (e.g., your DB call will be traced!).
-            ctx.blockingTaskExecutor(),
-        ).await()
+                    sleepUninterruptibly(Duration.ofMillis(50))
+                    listOf(23L, -23L)
+                },
+                // Always run blocking logic on the blocking task executor. By using
+                // ServiceRequestContext.blockingTaskExecutor, you also ensure the context is mounted inside the
+                // logic (e.g., your DB call will be traced!).
+                ctx.blockingTaskExecutor(),
+            ).await()
     }
 
     companion object {

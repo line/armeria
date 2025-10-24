@@ -56,18 +56,18 @@ class ServerTlsProviderTest {
             sb.https(0)
               .tlsProvider(tlsProvider)
               .service("/", (ctx, req) -> {
-                  final String commonName = CertificateUtil.getCommonName(ctx.sslSession());
+                  final String commonName = CertificateUtil.getHostname(ctx.sslSession());
                   return HttpResponse.of("default:" + commonName);
               })
               .virtualHost("api.example.com")
               .service("/", (ctx, req) -> {
-                  final String commonName = CertificateUtil.getCommonName(ctx.sslSession());
+                  final String commonName = CertificateUtil.getHostname(ctx.sslSession());
                   return HttpResponse.of("nested:" + commonName);
               })
               .and()
               .virtualHost("*.example.com")
               .service("/", (ctx, req) -> {
-                  final String commonName = CertificateUtil.getCommonName(ctx.sslSession());
+                  final String commonName = CertificateUtil.getHostname(ctx.sslSession());
                   return HttpResponse.of("wild:" + commonName);
               });
         }
@@ -79,7 +79,7 @@ class ServerTlsProviderTest {
         protected void configure(ServerBuilder sb) {
             sb.tlsProvider(settableTlsProvider);
             sb.service("/", (ctx, req) -> {
-                final String commonName = CertificateUtil.getCommonName(ctx.sslSession());
+                final String commonName = CertificateUtil.getHostname(ctx.sslSession());
                 return HttpResponse.of(commonName);
             });
         }

@@ -30,6 +30,8 @@
  */
 package com.linecorp.armeria.internal.common.util;
 
+import static com.google.common.base.Preconditions.checkArgument;
+import static java.util.Objects.requireNonNull;
 import static org.bouncycastle.asn1.x509.Extension.subjectAlternativeName;
 import static org.bouncycastle.asn1.x509.GeneralName.dNSName;
 import static org.bouncycastle.asn1.x509.GeneralName.iPAddress;
@@ -67,6 +69,9 @@ import org.bouncycastle.operator.ContentSigner;
 import org.bouncycastle.operator.jcajce.JcaContentSignerBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Iterables;
 
 import com.linecorp.armeria.common.util.Exceptions;
 
@@ -121,6 +126,11 @@ public final class SelfSignedCertificate {
      */
     private static final int DEFAULT_KEY_LENGTH_BITS =
             SystemPropertyUtil.getInt("io.netty.handler.ssl.util.selfSignedKeyStrength", 2048);
+
+    private static final ImmutableList<SelfSingedCertificateNameType>
+            DEFAULT_CERTIFICATE_NAME_TYPES =
+            ImmutableList.of(SelfSingedCertificateNameType.COMMON_NAME,
+                             SelfSingedCertificateNameType.SUBJECT_ALTERNATIVE_NAME);
 
     private final File certificate;
     private final File privateKey;
@@ -264,10 +274,30 @@ public final class SelfSignedCertificate {
      */
     public SelfSignedCertificate(String fqdn, Random random, int bits, Date notBefore, Date notAfter,
                                  String algorithm) throws CertificateException {
+        this(fqdn, random, bits, notBefore, notAfter, algorithm,
+             DEFAULT_CERTIFICATE_NAME_TYPES);
+    }
 
+    /**
+     * Creates a new instance.
+     *
+     * @param fqdn      a fully qualified domain name
+     * @param random    the {@link Random} to use
+     * @param bits      the number of bits of the generated private key
+     * @param notBefore Certificate is not valid before this time
+     * @param notAfter  Certificate is not valid after this time
+     * @param algorithm Key pair algorithm
+     */
+    public SelfSignedCertificate(String fqdn, Random random, int bits, Date notBefore, Date notAfter,
+                                 String algorithm, Iterable<SelfSingedCertificateNameType> certificateNameTypes)
+            throws CertificateException {
         if (!"EC".equalsIgnoreCase(algorithm) && !"RSA".equalsIgnoreCase(algorithm)) {
             throw new IllegalArgumentException("Algorithm not valid: " + algorithm);
         }
+
+        requireNonNull(certificateNameTypes, "certificateNameTypes");
+        checkArgument(!Iterables.isEmpty(certificateNameTypes), "certificateNameTypes must not be empty");
+        final List<SelfSingedCertificateNameType> nameTypes = ImmutableList.copyOf(certificateNameTypes);
 
         final KeyPair keypair;
         try {
@@ -282,7 +312,7 @@ public final class SelfSignedCertificate {
         final String[] paths = MinifiedBouncyCastleProvider.call(() -> {
             try {
                 return generate(
-                        fqdn, keypair, random, notBefore, notAfter, algorithm);
+                        fqdn, keypair, random, notBefore, notAfter, algorithm, nameTypes);
             } catch (Throwable cause) {
                 return Exceptions.throwUnsafely(new CertificateException(
                         "Failed to generate a self-signed X.509 certificate: " + cause,
@@ -350,36 +380,45 @@ public final class SelfSignedCertificate {
     }
 
     private static String[] generate(String fqdn, KeyPair keypair, Random random,
-                                     Date notBefore, Date notAfter, String algorithm) throws Exception {
+                                     Date notBefore, Date notAfter, String algorithm,
+                                     List<SelfSingedCertificateNameType> nameTypes) throws Exception {
 
         final PrivateKey key = keypair.getPrivate();
 
         // Prepare the information required for generating an X.509 certificate.
-        final X500Name owner = new X500Name("CN=" + fqdn);
+        final X500Name owner;
+        if (nameTypes.contains(SelfSingedCertificateNameType.COMMON_NAME)) {
+            owner = new X500Name("CN=" + fqdn);
+        } else {
+            // Add a dummy OU as an empty DN is not allowed.
+            owner = new X500Name("OU=SelfSigned");
+        }
         final X509v3CertificateBuilder builder = new JcaX509v3CertificateBuilder(
                 owner, new BigInteger(64, random), notBefore, notAfter, owner, keypair.getPublic());
 
-        final List<GeneralName> names = new ArrayList<>();
-        // Add fqdn as Subject Alternative Name too for clients that don't use CN when validating such as
-        // OkHttp.
-        if (NetUtil.isValidIpV4Address(fqdn) || NetUtil.isValidIpV6Address(fqdn)) {
-            names.add(new GeneralName(iPAddress, fqdn));
-        } else {
-            names.add(new GeneralName(dNSName, fqdn));
-        }
+        if (nameTypes.contains(SelfSingedCertificateNameType.SUBJECT_ALTERNATIVE_NAME)) {
+            // Add fqdn as Subject Alternative Name too for clients that don't use CN when validating such as
+            // OkHttp.
+            final List<GeneralName> names = new ArrayList<>();
+            if (NetUtil.isValidIpV4Address(fqdn) || NetUtil.isValidIpV6Address(fqdn)) {
+                names.add(new GeneralName(iPAddress, fqdn));
+            } else {
+                names.add(new GeneralName(dNSName, fqdn));
+            }
 
-        // Support request with IP or domain for local connections.
-        if ("localhost".equals(fqdn)) {
-            names.add(new GeneralName(iPAddress, "127.0.0.1"));
-            names.add(new GeneralName(iPAddress, "::1"));
-        } else if ("127.0.0.1".equals(fqdn)) {
-            names.add(new GeneralName(dNSName, "localhost"));
-            names.add(new GeneralName(iPAddress, "::1"));
-        }
+            // Support request with IP or domain for local connections.
+            if ("localhost".equals(fqdn)) {
+                names.add(new GeneralName(iPAddress, "127.0.0.1"));
+                names.add(new GeneralName(iPAddress, "::1"));
+            } else if ("127.0.0.1".equals(fqdn)) {
+                names.add(new GeneralName(dNSName, "localhost"));
+                names.add(new GeneralName(iPAddress, "::1"));
+            }
 
-        builder.addExtension(subjectAlternativeName,
-                             false,
-                             new GeneralNames(names.toArray(new GeneralName[0])));
+            builder.addExtension(subjectAlternativeName,
+                                 false,
+                                 new GeneralNames(names.toArray(new GeneralName[0])));
+        }
 
         final ContentSigner signer = new JcaContentSignerBuilder(
                 "EC".equalsIgnoreCase(algorithm) ? "SHA256withECDSA" : "SHA256WithRSAEncryption").build(key);

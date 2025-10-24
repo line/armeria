@@ -1057,6 +1057,7 @@ final class AnnotatedValueResolver {
 
     @Nullable
     private final EnumConverter<?> enumConverter;
+    private final AnnotatedBeanFieldInfo beanFieldInfo;
 
     @Nullable
     private final BeanFactoryId beanFactoryId;
@@ -1074,7 +1075,8 @@ final class AnnotatedValueResolver {
                                    DescriptionInfo description,
                                    BiFunction<AnnotatedValueResolver, ResolverContext, Object> resolver,
                                    @Nullable BeanFactoryId beanFactoryId,
-                                   AggregationStrategy aggregationStrategy) {
+                                   AggregationStrategy aggregationStrategy,
+                                   AnnotatedBeanFieldInfo beanFieldInfo) {
         this.annotationType = annotationType;
         this.httpElementName = httpElementName;
         this.isPathVariable = isPathVariable;
@@ -1089,6 +1091,7 @@ final class AnnotatedValueResolver {
         this.beanFactoryId = beanFactoryId;
         this.aggregationStrategy = requireNonNull(aggregationStrategy, "aggregationStrategy");
         enumConverter = enumConverter(elementType);
+        this.beanFieldInfo = beanFieldInfo;
 
         // Must be called after initializing 'enumConverter'.
         this.defaultValue = defaultValue != null ? convert(defaultValue, elementType, enumConverter)
@@ -1210,6 +1213,10 @@ final class AnnotatedValueResolver {
                                            httpElementName);
     }
 
+    AnnotatedBeanFieldInfo beanFieldInfo() {
+        return beanFieldInfo;
+    }
+
     @Override
     public String toString() {
         return MoreObjects.toStringHelper(this).omitNullValues()
@@ -1233,7 +1240,7 @@ final class AnnotatedValueResolver {
 
     private static final class Builder {
         private final AnnotatedElement annotatedElement;
-        private final Type type;
+        private final Class<?> type;
         private final String httpElementName;
         private AnnotatedElement typeElement;
         @Nullable
@@ -1249,7 +1256,7 @@ final class AnnotatedValueResolver {
         private AggregationStrategy aggregation = AggregationStrategy.NONE;
         private boolean warnedRedundantUse;
 
-        private Builder(AnnotatedElement annotatedElement, Type type, String name) {
+        private Builder(AnnotatedElement annotatedElement, Class<?> type, String name) {
             this.annotatedElement = requireNonNull(annotatedElement, "annotatedElement");
             this.type = requireNonNull(type, "type");
             httpElementName = requireNonNull(name, "name");
@@ -1430,10 +1437,12 @@ final class AnnotatedValueResolver {
                 }
             }
 
+            final AnnotatedBeanFieldInfo beanFieldInfo =
+                    new AnnotatedBeanFieldInfo(typeElement, type, httpElementName);
             return new AnnotatedValueResolver(annotationType, httpElementName, pathVariable, shouldExist,
                                               isOptional, containerType, elementType, rawType,
                                               parameterizedElementType, defaultValue, description, resolver,
-                                              beanFactoryId, aggregation);
+                                              beanFactoryId, aggregation, beanFieldInfo);
         }
 
         private void warnRedundantUse(String whatWasUsed1, @Nullable String whatWasUsed2) {
