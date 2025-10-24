@@ -19,7 +19,7 @@ import { Method } from '../specification';
 import AnnotatedHttpTransport from './annotated-http';
 import GrpcUnframedTransport from './grpc-unframed';
 import ThriftTransport from './thrift';
-import Transport from './transport';
+import { Transport } from './transport';
 import GraphqlHttpTransport from './grahpql-http';
 
 const grpcUnframedTransport = new GrpcUnframedTransport();

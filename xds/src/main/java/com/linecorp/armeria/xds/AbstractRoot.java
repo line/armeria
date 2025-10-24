@@ -1,7 +1,7 @@
 /*
- * Copyright 2023 LINE Corporation
+ * Copyright 2025 LY Corporation
  *
- * LINE Corporation licenses this file to you under the Apache License,
+ * LY Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
@@ -80,23 +80,6 @@ abstract class AbstractRoot<T extends Snapshot<? extends XdsResource>>
         }
     }
 
-    /**
-     * Removes a watcher which waits for a snapshot update.
-     */
-    public void removeSnapshotWatcher(SnapshotWatcher<? super T> watcher) {
-        requireNonNull(watcher, "watcher");
-        checkState(!closed, "Watcher %s can't be removed since %s is already closed.",
-                   watcher, getClass().getSimpleName());
-        if (!eventLoop.inEventLoop()) {
-            eventLoop.execute(() -> removeSnapshotWatcher(watcher));
-            return;
-        }
-        if (closed) {
-            return;
-        }
-        snapshotWatchers.remove(watcher);
-    }
-
     @Override
     public void snapshotUpdated(T newSnapshot) {
         if (closed) {
@@ -143,6 +126,12 @@ abstract class AbstractRoot<T extends Snapshot<? extends XdsResource>>
                             watcher.getClass().getSimpleName(), methodName, t);
             }
         }
+    }
+
+    @Nullable
+    @VisibleForTesting
+    T current() {
+        return snapshot;
     }
 
     @VisibleForTesting

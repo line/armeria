@@ -29,16 +29,21 @@ private fun newServer(port: Int): Server {
 fun configureService(sb: ServerBuilder) {
     sb.service(
         "/graphql",
-        GraphqlService.builder().schema(
-            toSchema(
-                config = SchemaGeneratorConfig(listOf("example.armeria.server.graphql.kotlin")),
-                queries = listOf(TopLevelObject(UserQuery())),
-            ),
-        ).build(),
+        GraphqlService
+            .builder()
+            .schema(
+                toSchema(
+                    config = SchemaGeneratorConfig(listOf("example.armeria.server.graphql.kotlin")),
+                    queries = listOf(TopLevelObject(UserQuery())),
+                ),
+            ).build(),
     )
 }
 
-data class User(val id: Int, val name: String)
+data class User(
+    val id: Int,
+    val name: String,
+)
 
 class UserQuery {
     private val data =
@@ -54,9 +59,7 @@ class UserQuery {
      * See [Fetching Data][https://opensource.expediagroup.com/graphql-kotlin/docs/schema-generator/execution/fetching-data/]
      * for details.
      */
-    fun userById(id: Int): User? {
-        return data[id]
-    }
+    fun userById(id: Int): User? = data[id]
 }
 
 private val logger = LoggerFactory.getLogger("Main")

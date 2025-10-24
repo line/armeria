@@ -29,14 +29,14 @@ private fun newServer(port: Int): Server {
 }
 
 fun configureServices(sb: ServerBuilder) {
-    sb.annotatedService()
+    sb
+        .annotatedService()
         .pathPrefix("/contextAware")
         .decorator(
             CoroutineContextService.newDecorator { ctx ->
                 CoroutineName(ctx.config().defaultServiceNaming().serviceName(ctx) ?: "name")
             },
-        )
-        .applyCommonDecorator()
+        ).applyCommonDecorator()
         .build(ContextAwareService())
         // DecoratingService
         .annotatedService()
@@ -51,18 +51,18 @@ fun configureServices(sb: ServerBuilder) {
         .annotatedService(MermaidDescriptionService())
 }
 
-private fun AnnotatedServiceBindingBuilder.applyCommonDecorator(): AnnotatedServiceBindingBuilder {
-    return this
+private fun AnnotatedServiceBindingBuilder.applyCommonDecorator(): AnnotatedServiceBindingBuilder =
+    this
         .decorator(
-            LoggingService.builder()
+            LoggingService
+                .builder()
                 .logWriter(
-                    LogWriter.builder()
+                    LogWriter
+                        .builder()
                         .requestLogLevel(LogLevel.INFO)
                         .successfulResponseLogLevel(LogLevel.INFO)
                         .build(),
-                )
-                .newDecorator(),
+                ).newDecorator(),
         )
-}
 
 private val log = LoggerFactory.getLogger("Main")

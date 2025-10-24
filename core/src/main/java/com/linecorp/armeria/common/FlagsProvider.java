@@ -703,6 +703,23 @@ public interface FlagsProvider {
     }
 
     /**
+     * Returns the default value of the {@link ServerBuilder#http2StreamWindowUpdateRatio(float)} and
+     * {@link ClientFactoryBuilder#http2StreamWindowUpdateRatio(float)}.
+     * Note that this flag has no effect if a user specified the value explicitly via
+     * {@link ServerBuilder#http2StreamWindowUpdateRatio(float)} or
+     * {@link ClientFactoryBuilder#http2StreamWindowUpdateRatio(float)}.
+     *
+     * <p>The default value of this flag is
+     * {@value DefaultFlagsProvider#DEFAULT_HTTP2_STREAM_WINDOW_UPDATE_RATIO}.
+     * Specify the {@code -Dcom.linecorp.armeria.defaultHttp2StreamWindowUpdateRatio=<float>} JVM option
+     * to override the default value.
+     */
+    @Nullable
+    default Float defaultHttp2StreamWindowUpdateRatio() {
+        return null;
+    }
+
+    /**
      * Returns the default value of the {@link ServerBuilder#http2MaxFrameSize(int)} and
      * {@link ClientFactoryBuilder#http2MaxFrameSize(int)} option.
      * Note that this flag has no effect if a user specified the value explicitly via

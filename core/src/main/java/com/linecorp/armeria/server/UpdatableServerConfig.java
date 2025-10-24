@@ -206,6 +206,11 @@ final class UpdatableServerConfig implements ServerConfig {
     }
 
     @Override
+    public float http2StreamWindowSizeRatio() {
+        return delegate.http2StreamWindowSizeRatio();
+    }
+
+    @Override
     public long http2MaxStreamsPerConnection() {
         return delegate.http2MaxStreamsPerConnection();
     }

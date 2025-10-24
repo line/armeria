@@ -42,9 +42,11 @@ import org.slf4j.LoggerFactory;
 import com.linecorp.armeria.client.ClientOptions;
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.Endpoint;
+import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.client.PreClientRequestContext;
 import com.linecorp.armeria.client.RequestOptions;
 import com.linecorp.armeria.client.ResponseTimeoutMode;
+import com.linecorp.armeria.client.RpcClient;
 import com.linecorp.armeria.client.UnprocessedRequestException;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.common.AttributesGetters;
@@ -90,7 +92,6 @@ import com.linecorp.armeria.server.ServiceRequestContext;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import io.netty.buffer.ByteBufAllocator;
-import io.netty.buffer.PooledByteBufAllocator;
 import io.netty.channel.Channel;
 import io.netty.channel.EventLoop;
 import io.netty.handler.codec.http.HttpHeaderValues;
@@ -173,6 +174,8 @@ public final class DefaultClientRequestContext
     private volatile CompletableFuture<Boolean> whenInitialized;
 
     private final ResponseTimeoutMode responseTimeoutMode;
+    private Function<HttpClient, HttpClient> httpClientCustomizer = Function.identity();
+    private Function<RpcClient, RpcClient> rpcClientCustomizer = Function.identity();
 
     public DefaultClientRequestContext(SessionProtocol sessionProtocol, HttpRequest httpRequest,
                                        @Nullable RpcRequest rpcRequest, RequestTarget requestTarget,
@@ -506,6 +509,26 @@ public final class DefaultClientRequestContext
         }
     }
 
+    @Override
+    public void httpClientCustomizer(Function<HttpClient, HttpClient> httpClientCustomizer) {
+        this.httpClientCustomizer = this.httpClientCustomizer.andThen(httpClientCustomizer);
+    }
+
+    @Override
+    public Function<HttpClient, HttpClient> httpClientCustomizer() {
+        return httpClientCustomizer;
+    }
+
+    @Override
+    public void rpcClientCustomizer(Function<RpcClient, RpcClient> rpcClientCustomizer) {
+        this.rpcClientCustomizer = this.rpcClientCustomizer.andThen(rpcClientCustomizer);
+    }
+
+    @Override
+    public Function<RpcClient, RpcClient> rpcClientCustomizer() {
+        return rpcClientCustomizer;
+    }
+
     private void failEarly(Throwable cause) {
         final UnprocessedRequestException wrapped = UnprocessedRequestException.of(cause);
         final HttpRequest req = request();
@@ -775,7 +798,7 @@ public final class DefaultClientRequestContext
     @Override
     public ByteBufAllocator alloc() {
         final Channel channel = channel();
-        return channel != null ? channel.alloc() : PooledByteBufAllocator.DEFAULT;
+        return channel != null ? channel.alloc() : ByteBufAllocator.DEFAULT;
     }
 
     @Nullable

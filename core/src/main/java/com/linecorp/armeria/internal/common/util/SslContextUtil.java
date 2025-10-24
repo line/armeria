@@ -40,7 +40,7 @@ import com.google.common.collect.ImmutableSet;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.TlsEngineType;
 
-import io.netty.buffer.PooledByteBufAllocator;
+import io.netty.buffer.ByteBufAllocator;
 import io.netty.handler.codec.http2.Http2SecurityUtil;
 import io.netty.handler.ssl.ApplicationProtocolConfig;
 import io.netty.handler.ssl.ApplicationProtocolConfig.Protocol;
@@ -124,6 +124,9 @@ public final class SslContextUtil {
                 }
             }
 
+            // Set endpoint identification algorithm so that JDK's default X509TrustManager implementation
+            // performs host name checks. This options is effective only for clients.
+            builder.endpointIdentificationAlgorithm("HTTPS");
             builder.protocols(protocols.toArray(EmptyArrays.EMPTY_STRINGS))
                    .ciphers(DEFAULT_CIPHERS, SupportedCipherSuiteFilter.INSTANCE);
 
@@ -194,7 +197,7 @@ public final class SslContextUtil {
         SSLEngine engine = null;
         try {
             ctx = builder.build();
-            engine = ctx.newEngine(PooledByteBufAllocator.DEFAULT);
+            engine = ctx.newEngine(ByteBufAllocator.DEFAULT);
             return ImmutableSet.copyOf(engine.getSupportedProtocols());
         } catch (Exception e) {
             throw new IllegalStateException(

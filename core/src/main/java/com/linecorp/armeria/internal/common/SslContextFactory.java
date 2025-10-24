@@ -191,6 +191,7 @@ public final class SslContextFactory {
             return createSslContext(
                     () -> {
                         final SslContextBuilder contextBuilder = SslContextBuilder.forClient();
+                        contextBuilder.endpointIdentificationAlgorithm("HTTPS");
                         if (tlsKeyPair != null) {
                             contextBuilder.keyManager(tlsKeyPair.privateKey(), tlsKeyPair.certificateChain());
                         }

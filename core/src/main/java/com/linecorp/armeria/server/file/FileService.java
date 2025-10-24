@@ -197,6 +197,11 @@ public final class FileService extends AbstractHttpService {
         return findFile(ctx, req).asService().serve(ctx, req);
     }
 
+    @Override
+    protected HttpResponse doHead(ServiceRequestContext ctx, HttpRequest req) throws Exception {
+        return findFile(ctx, req).asService().serve(ctx, req);
+    }
+
     private HttpFile findFile(ServiceRequestContext ctx, HttpRequest req) {
         final EnumSet<ContentEncoding> encodings = EnumSet.noneOf(ContentEncoding.class);
 

@@ -305,7 +305,7 @@ public interface RetryRuleWithContent<T extends Response> {
      * Returns a {@link RetryRuleWithContent} that combines all the {@link RetryRuleWithContent} of
      * the {@code retryRules}.
      */
-    @SuppressWarnings("OptionalGetWithoutIsPresent")
+    @SuppressWarnings({ "OptionalGetWithoutIsPresent", "NullAway" })
     static <T extends Response> RetryRuleWithContent<T> of(
             Iterable<? extends RetryRuleWithContent<T>> retryRules) {
         requireNonNull(retryRules, "retryRules");

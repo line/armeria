@@ -16,30 +16,42 @@
 
 package com.linecorp.armeria.internal.server.annotation;
 
-import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+import static com.linecorp.armeria.internal.server.annotation.AnnotatedServiceLogUtil.maybeUnwrapFuture;
+
 import com.google.common.base.MoreObjects;
 
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.logging.BeanFieldInfo;
 
-@JsonSerialize(using = AnnotatedResponseJsonSerializer.class)
 final class AnnotatedResponse {
 
     @Nullable
-    private final Object value;
+    private final Object rawValue;
+    private final BeanFieldInfo beanFieldInfo;
 
-    AnnotatedResponse(@Nullable Object value) {
-        this.value = value;
+    AnnotatedResponse(@Nullable Object rawValue, BeanFieldInfo beanFieldInfo) {
+        this.rawValue = rawValue;
+        this.beanFieldInfo = beanFieldInfo;
     }
 
     @Nullable
-    public Object value() {
-        return value;
+    Object rawValue() {
+        return rawValue;
+    }
+
+    @Nullable
+    Object value() {
+        return maybeUnwrapFuture(rawValue);
+    }
+
+    BeanFieldInfo beanFieldInfo() {
+        return beanFieldInfo;
     }
 
     @Override
     public String toString() {
         return MoreObjects.toStringHelper(this)
-                          .add("value", value)
+                          .add("value", value())
                           .toString();
     }
 }

@@ -31,8 +31,6 @@ import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 
 import com.linecorp.armeria.client.ClientRequestContext;
-import com.linecorp.armeria.client.ClientRequestContextCaptor;
-import com.linecorp.armeria.client.Clients;
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
@@ -109,15 +107,13 @@ class WebSocketServiceHttp2RequestCompleteTest {
         final HttpRequestWriter requestWriter =
                 HttpRequest.streaming(webSocketUpgradeHeaders("/2000MillisTimeout"));
         final BodySubscriber bodySubscriber = new BodySubscriber();
-        try (ClientRequestContextCaptor captor = Clients.newContextCaptor()) {
-            final SplitHttpResponse split = client.execute(requestWriter).split();
-            split.headers().thenAccept(headers -> {
-                assertThat(headers.status()).isSameAs(HttpStatus.OK);
-                // Update the request to prevent the request from being completed.
-                captor.get().updateRequest(HttpRequest.of(HttpMethod.GET, "/"));
-            });
-            split.body().subscribe(bodySubscriber);
-        }
+        final SplitHttpResponse split = WebClient.builder(client.uri())
+                                                 // Not to send the close frame from the client.
+                                                 .requestAutoAbortDelayMillis(Long.MAX_VALUE)
+                                                 .build()
+                                                 .execute(requestWriter).split();
+        assertThat(split.headers().join().status()).isSameAs(HttpStatus.OK);
+        split.body().subscribe(bodySubscriber);
 
         final ServiceRequestContext sctx = server.requestContextCaptor().take();
         await().atLeast(1000, TimeUnit.MILLISECONDS) // buffer 1000 milliseconds

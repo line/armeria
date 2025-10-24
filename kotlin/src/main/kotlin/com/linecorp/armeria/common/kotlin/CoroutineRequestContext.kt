@@ -27,21 +27,18 @@ import kotlin.coroutines.CoroutineContext
  * propagates the [RequestContext]. The propagation is done by [RequestContext.push] when the coroutine is
  * resumed on a thread.
  */
-fun RequestContext.asCoroutineContext(): ArmeriaRequestCoroutineContext {
-    return ArmeriaRequestCoroutineContext(this)
-}
+fun RequestContext.asCoroutineContext(): ArmeriaRequestCoroutineContext = ArmeriaRequestCoroutineContext(this)
 
 /**
  * Propagates [RequestContext] over coroutines.
  */
 class ArmeriaRequestCoroutineContext internal constructor(
     private val requestContext: RequestContext,
-) : ThreadContextElement<SafeCloseable>, AbstractCoroutineContextElement(Key) {
+) : AbstractCoroutineContextElement(Key),
+    ThreadContextElement<SafeCloseable> {
     companion object Key : CoroutineContext.Key<ArmeriaRequestCoroutineContext>
 
-    override fun updateThreadContext(context: CoroutineContext): SafeCloseable {
-        return requestContext.push()
-    }
+    override fun updateThreadContext(context: CoroutineContext): SafeCloseable = requestContext.push()
 
     override fun restoreThreadContext(
         context: CoroutineContext,

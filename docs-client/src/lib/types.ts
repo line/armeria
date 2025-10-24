@@ -24,3 +24,12 @@ export enum SpecLoadingStatus {
   FAILED,
   SUCCESS,
 }
+
+export interface ResponseData {
+  body: string;
+  headers: string[];
+  status?: number;
+  executionTime: number;
+  size: number;
+  timestamp?: string;
+}

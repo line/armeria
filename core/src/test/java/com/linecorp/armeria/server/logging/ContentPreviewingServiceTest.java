@@ -161,6 +161,15 @@ class ContentPreviewingServiceTest {
                                                  .responsePreviewSanitizer(FAILING_CONTENT_SANITIZER)
                                                  .newDecorator());
 
+            sb.service("/disabledContentPreviewer", httpService);
+            sb.decorator("/disabledContentPreviewer",
+                         ContentPreviewingService.builder(ContentPreviewerFactory
+                                                                  .builder()
+                                                                  .disable(MediaType.PLAIN_TEXT)
+                                                                  .disable(MediaType.PLAIN_TEXT_UTF_8)
+                                                                  .build())
+                                                 .newDecorator());
+
             sb.decoratorUnder("/", (delegate, ctx, req) -> {
                 contextCaptor.set(ctx);
                 return delegate.serve(ctx, req);
@@ -354,6 +363,18 @@ class ContentPreviewingServiceTest {
         final RequestLog requestLog = contextCaptor.get().log().whenComplete().join();
         assertThat(requestLog.requestContentPreview()).isEqualTo("Armeria");
         assertThat(requestLog.responseContentPreview()).isEqualTo("Hello Armeria!");
+    }
+
+    @Test
+    void disabledContentPreviewer() {
+        final WebClient client = WebClient.of(server.httpUri());
+        final RequestHeaders headers = RequestHeaders.of(HttpMethod.POST, "/disabledContentPreviewer",
+                                                         HttpHeaderNames.CONTENT_TYPE, "text/plain");
+        assertThat(client.execute(headers, "Armeria").aggregate().join().contentUtf8())
+                .isEqualTo("Hello Armeria!");
+        final RequestLog requestLog = contextCaptor.get().log().whenComplete().join();
+        assertThat(requestLog.requestContentPreview()).isNull();
+        assertThat(requestLog.responseContentPreview()).isNull();
     }
 
     private static ContentPreviewer contentPreviewer() {

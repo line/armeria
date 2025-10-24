@@ -1,6 +1,15 @@
 dependencies {
+    // use protobuf3 for now
+    configurations.configureEach {
+        resolutionStrategy {
+            force "com.google.protobuf:protobuf-java:${libs.versions.protobuf.asProvider().get()}"
+        }
+    }
+
     api project(':grpc')
-    api libs.controlplane.api
+    api project(':xds-api')
+
+    implementation libs.re2j
 
     testImplementation libs.controlplane.server
     testImplementation libs.controlplane.cache

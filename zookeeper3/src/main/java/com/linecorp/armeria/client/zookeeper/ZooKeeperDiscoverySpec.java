@@ -34,7 +34,7 @@ public interface ZooKeeperDiscoverySpec {
 
     /**
      * Returns a {@link ZooKeeperDiscoverySpec} that is compatible with
-     * <a href="https://curator.apache.org/curator-x-discovery/index.html">Curator Service Discovery</a>.
+     * <a href="https://curator.apache.org/docs/service-discovery/">Curator Service Discovery</a>.
      * This is also compatible with
      * <a href="https://cloud.spring.io/spring-cloud-zookeeper/reference/html/">Spring Cloud Zookeeper</a>.
      *
@@ -46,7 +46,7 @@ public interface ZooKeeperDiscoverySpec {
 
     /**
      * Returns a new {@link CuratorDiscoverySpecBuilder}. The specification is compatible with
-     * <a href="https://curator.apache.org/curator-x-discovery/index.html">Curator Service Discovery</a> and
+     * <a href="https://curator.apache.org/docs/service-discovery/">Curator Service Discovery</a> and
      * <a href="https://cloud.spring.io/spring-cloud-zookeeper/reference/html/">Spring Cloud Zookeeper</a>.
      *
      * @see ZooKeeperRegistrationSpec#builderForCurator(String)

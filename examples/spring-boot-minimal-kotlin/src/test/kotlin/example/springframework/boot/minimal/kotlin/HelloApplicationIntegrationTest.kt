@@ -19,7 +19,13 @@ class HelloApplicationIntegrationTest(
 
     @Test
     fun success() {
-        val response = client.prepare().get("/hello/Spring").asString().execute().join()
+        val response =
+            client
+                .prepare()
+                .get("/hello/Spring")
+                .asString()
+                .execute()
+                .join()
         assertThat(response.status()).isEqualTo(HttpStatus.OK)
         assertThat(response.content())
             .isEqualTo("Hello, Spring! This message is from Armeria annotated service!")
@@ -27,9 +33,16 @@ class HelloApplicationIntegrationTest(
 
     @Test
     fun failure() {
-        val response = client.prepare().get("/hello/a").asString().execute().join()
+        val response =
+            client
+                .prepare()
+                .get("/hello/a")
+                .asString()
+                .execute()
+                .join()
         assertThat(response.status()).isEqualTo(HttpStatus.BAD_REQUEST)
-        assertThatJson(response.content()).node("message")
+        assertThatJson(response.content())
+            .node("message")
             .isEqualTo("hello.name: name should have between 3 and 10 characters")
     }
 }

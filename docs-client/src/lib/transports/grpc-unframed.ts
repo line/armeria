@@ -15,7 +15,7 @@
  */
 import { Method } from '../specification';
 
-import Transport from './transport';
+import { Transport } from './transport';
 import { validateJsonObject } from '../json-util';
 
 export const GRPC_UNFRAMED_MIME_TYPE =
@@ -56,7 +56,6 @@ export default class GrpcUnframedTransport extends Transport {
     }
 
     const newPath = pathPrefix + (endpointPath ?? endpoint.pathMapping);
-
     return fetch(newPath, {
       headers: hdrs,
       method: 'POST',
