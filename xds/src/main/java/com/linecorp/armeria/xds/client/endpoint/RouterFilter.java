@@ -83,6 +83,11 @@ final class RouterFilter<I extends Request, O extends Response> implements Prepr
             }
         }
 
+        final long responseTimeoutMillis = selectedRoute.responseTimeoutMillis();
+        if (responseTimeoutMillis > 0) {
+            ctx.setResponseTimeoutMillis(responseTimeoutMillis);
+        }
+
         final UpstreamTlsContext tlsContext = clusterSnapshot.xdsResource().upstreamTlsContext();
         if (tlsContext != null) {
             ctx.setSessionProtocol(SessionProtocol.HTTPS);

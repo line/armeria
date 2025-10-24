@@ -5,3 +5,7 @@
 dependencies {
     implementation project(':logback')
 }
+
+tasks.withType(Test).configureEach {
+    jvmArgs += '-Dcom.linecorp.armeria.warnNettyVersions=false'
+}

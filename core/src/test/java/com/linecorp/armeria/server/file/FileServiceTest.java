@@ -672,6 +672,21 @@ class FileServiceTest {
         assertThat(response.contentUtf8()).isEqualTo("foo");
     }
 
+    @Test
+    void headTest() throws Exception {
+        AggregatedHttpResponse res = server.blockingWebClient().head("/cached/fs/");
+        assertThat(res.status().code()).isEqualTo(200);
+
+        final Path barFile = tmpDir.resolve("bar.html");
+        final String content = "<html/>";
+        writeFile(barFile, content);
+        res = server.blockingWebClient().head("/cached/fs/bar.html");
+        assertThat(res.status().code()).isEqualTo(200);
+
+        res = server.blockingWebClient().head("/cached/fs/missing.html");
+        assertThat(res.status().code()).isEqualTo(404);
+    }
+
     private static void writeFile(Path path, String content) throws Exception {
         // Retry to work around the `AccessDeniedException` in Windows.
         for (int i = 9; i >= 0; i--) {

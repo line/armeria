@@ -950,6 +950,20 @@ public final class HttpHeaderNames {
      */
     public static final AsciiString ALT_SVC = create("Alt-Svc");
 
+    /**
+     * The HTTP {@code "Yahoo-Role-Auth"} header field name used by Yahoo to authenticate roles
+     * in the Athenz service.
+     */
+    @UnstableApi
+    public static final AsciiString YAHOO_ROLE_AUTH = create("Yahoo-Role-Auth");
+
+    /**
+     * The HTTP {@code "Athenz-Role-Auth"} header field name used to authenticate roles
+     * in the Athenz service.
+     */
+    @UnstableApi
+    public static final AsciiString ATHENZ_ROLE_AUTH = create("Athenz-Role-Auth");
+
     private static final Map<CharSequence, AsciiString> map;
     private static final Map<AsciiString, String> inverseMap;
 

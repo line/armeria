@@ -76,7 +76,6 @@ final class Http2RequestDecoder extends Http2EventAdapter {
     private final KeepAliveHandler keepAliveHandler;
     private final Http2GoAwayHandler goAwayHandler;
     private final IntObjectMap<@Nullable DecodedHttpRequest> requests = new IntObjectHashMap<>();
-    private int nextId;
 
     Http2RequestDecoder(ServerConfig cfg, Channel channel, AsciiString scheme,
                         KeepAliveHandler keepAliveHandler, Http2ConnectionDecoder decoder) {
@@ -208,7 +207,8 @@ final class Http2RequestDecoder extends Http2EventAdapter {
                 }
             }
 
-            final int id = ++nextId;
+            // Derive the request ID from the stream ID.
+            final int id = streamIdToId(streamId);
             final EventLoop eventLoop = ctx.channel().eventLoop();
             req = DecodedHttpRequest.of(endOfStream, eventLoop, id, streamId, headers, true,
                                         inboundTrafficController, routingCtx);
@@ -248,6 +248,10 @@ final class Http2RequestDecoder extends Http2EventAdapter {
         onHeadersRead(ctx, streamId, headers, padding, endOfStream);
     }
 
+    private static int streamIdToId(int streamId) {
+        return (streamId - 1) >>> 1;
+    }
+
     private boolean handle100Continue(int streamId, Http2Headers headers, HttpMethod method) {
         final CharSequence expectValue = headers.get(HttpHeaderNames.EXPECT);
         if (expectValue == null) {
@@ -277,6 +281,10 @@ final class Http2RequestDecoder extends Http2EventAdapter {
         if (req != null && !req.isComplete()) {
             // Ignored if the stream has already been closed.
             req.close(ClosedStreamException.get());
+        }
+        final ServerHttp2ObjectEncoder encoder = this.encoder;
+        if (encoder != null) {
+            encoder.notifyStreamClosed(stream.id());
         }
     }
 

@@ -6,9 +6,9 @@ plugins {
     // automatically download one based on the foojay Disco API.
     // https://docs.gradle.org/8.1.1/userguide/toolchains.html#sec:provisioning
     id 'org.gradle.toolchains.foojay-resolver-convention' version '0.6.0'
-    id 'com.gradle.develocity' version '4.1'
+    id 'com.gradle.develocity' version '4.2.2'
     // adds additional metadata to build scans
-    id 'com.gradle.common-custom-user-data-gradle-plugin' version '2.3'
+    id 'com.gradle.common-custom-user-data-gradle-plugin' version '2.4.0'
 }
 
 import com.gradle.develocity.agent.gradle.scan.PublishedBuildScan
@@ -197,6 +197,7 @@ includeWithFlags ':tomcat8',                             'java', 'publish', 'rel
 includeWithFlags ':tomcat9',                             'java', 'publish', 'relocate', 'no_aggregation'
 includeWithFlags ':tomcat10',                            'java11', 'publish', 'relocate'
 includeWithFlags ':xds',                                 'java', 'publish', 'relocate'
+includeWithFlags ':xds-api',                             'java', 'publish', 'relocate', 'javapgv'
 includeWithFlags ':zookeeper3',                          'java', 'publish', 'relocate', 'native'
 includeWithFlags ':saml',                                'java', 'publish', 'relocate', 'native'
 includeWithFlags ':bucket4j',                            'java', 'publish', 'relocate', 'native'
@@ -236,6 +237,7 @@ includeWithFlags ':it:okhttp',                                 'java', 'relocate
 includeWithFlags ':it:resilience4j',                           'java17', 'relocate'
 includeWithFlags ':it:server',                                 'java', 'relocate'
 includeWithFlags ':it:server-allow-semicolon',                 'java'
+includeWithFlags ':it:spring:boot3-athenz',                    'java17', 'relocate'
 includeWithFlags ':it:spring:boot3-jetty12',                   'java17', 'relocate'
 includeWithFlags ':it:spring:boot3-kotlin',                    'java17', 'relocate', 'kotlin'
 includeWithFlags ':it:spring:boot3-mixed',                     'java17', 'relocate'
@@ -263,6 +265,8 @@ includeWithFlags ':site'
 // Examples
 includeWithFlags ':examples:annotated-http-service',               'java11'
 includeWithFlags ':examples:annotated-http-service-kotlin',        'java11', 'kotlin'
+includeWithFlags ':examples:athenz-example',                       'java11'
+project(':examples:athenz-example').projectDir = file('examples/athenz')
 includeWithFlags ':examples:context-propagation-dagger-example',   'java11'
 project(':examples:context-propagation-dagger-example').projectDir = file('examples/context-propagation/dagger')
 includeWithFlags ':examples:context-propagation-kotlin-example',   'java11', 'kotlin'

@@ -485,9 +485,7 @@ class RouteEntryMatcherTest {
     @MethodSource("headerMatch_args")
     void headerMatch(HeaderMatcher headerMatcher, RequestHeaders requestHeaders, boolean expectedResult) {
         final HeaderMatcherImpl matcher = new HeaderMatcherImpl(headerMatcher);
-        final HttpRequest req = HttpRequest.of(requestHeaders);
-        final ClientRequestContext ctx = ClientRequestContext.of(req);
-        assertThat(matcher.matches(ctx)).isEqualTo(expectedResult);
+        assertThat(matcher.matches(requestHeaders)).isEqualTo(expectedResult);
     }
 
     /**
@@ -730,30 +728,30 @@ class RouteEntryMatcherTest {
     @DisplayName("Test isGrpcRequest method with various content types")
     void isGrpcRequestTest() {
         // Test with null request
-        assertThat(RouteEntryMatcher.isGrpcRequest(null)).isFalse();
+        assertThat(XdsCommonUtil.isGrpcRequest(null)).isFalse();
 
         // Test with request that has no content type header
         final HttpRequest requestWithoutContentType =
                 HttpRequest.of(RequestHeaders.of(HttpMethod.POST, "/api"));
-        assertThat(RouteEntryMatcher.isGrpcRequest(requestWithoutContentType)).isFalse();
+        assertThat(XdsCommonUtil.isGrpcRequest(requestWithoutContentType)).isFalse();
 
         // Test with exact "grpc" subtype
         final HttpRequest grpcRequest =
                 HttpRequest.of(RequestHeaders.of(HttpMethod.POST, "/api",
                                                  HttpHeaderNames.CONTENT_TYPE, "application/grpc"));
-        assertThat(RouteEntryMatcher.isGrpcRequest(grpcRequest)).isTrue();
+        assertThat(XdsCommonUtil.isGrpcRequest(grpcRequest)).isTrue();
 
         // Test with "grpc+" prefix subtype
         final HttpRequest grpcPlusRequest =
                 HttpRequest.of(RequestHeaders.of(HttpMethod.POST, "/api",
                                                  HttpHeaderNames.CONTENT_TYPE, "application/grpc+proto"));
-        assertThat(RouteEntryMatcher.isGrpcRequest(grpcPlusRequest)).isTrue();
+        assertThat(XdsCommonUtil.isGrpcRequest(grpcPlusRequest)).isTrue();
 
         // Test with non-grpc subtype that looks similar (grpc-web)
         final HttpRequest nonGrpcRequest =
                 HttpRequest.of(RequestHeaders.of(HttpMethod.POST, "/api",
                                                  HttpHeaderNames.CONTENT_TYPE, "application/grpc-web"));
-        assertThat(RouteEntryMatcher.isGrpcRequest(nonGrpcRequest)).isFalse();
+        assertThat(XdsCommonUtil.isGrpcRequest(nonGrpcRequest)).isFalse();
     }
 
     private static Stream<Arguments> deprecatedHeaderMatcher_args() {

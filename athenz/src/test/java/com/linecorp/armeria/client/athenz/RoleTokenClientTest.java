@@ -96,22 +96,23 @@ class RoleTokenClientTest {
     @Test
     void shouldRefreshTokenBeforeExpiry() throws Exception {
         final TlsKeyPair tlsKeyPair = TlsKeyPair.ofSelfSigned();
-        final ZtsBaseClient ztsBaseClient = ZtsBaseClient.builder(mockServer.httpUri())
-                                                         .keyPair(() -> tlsKeyPair)
-                                                         .build();
-        final RoleTokenClient roleTokenClient = new RoleTokenClient(ztsBaseClient, "test",
-                                                                    ImmutableList.of("role1", "role2"),
-                                                                    Duration.ofSeconds(10));
-        final RoleToken roleToken = new RoleToken();
-        roleToken.setToken("test-token");
-        roleToken.setExpiryTime(Instant.now().plusSeconds(5).getEpochSecond());
-        roleTokenRef.set(roleToken);
-        final String token0 = roleTokenClient.getToken().join();
-        assertThat(token0).isEqualTo("test-token");
-        roleToken.setToken("test-token1");
-        roleToken.setExpiryTime(Instant.now().plusSeconds(5).getEpochSecond());
-        // Should return the cached token immediately and refresh it in the background.
-        assertThat(roleTokenClient.getToken().join()).isEqualTo(token0);
-        await().untilAtomic(requestCount, Matchers.is(2));
+        try (ZtsBaseClient ztsBaseClient = ZtsBaseClient.builder(mockServer.httpUri())
+                                                        .keyPair(() -> tlsKeyPair)
+                                                        .build()) {
+            final RoleTokenClient roleTokenClient = new RoleTokenClient(ztsBaseClient, "test",
+                                                                        ImmutableList.of("role1", "role2"),
+                                                                        Duration.ofSeconds(10));
+            final RoleToken roleToken = new RoleToken();
+            roleToken.setToken("test-token");
+            roleToken.setExpiryTime(Instant.now().plusSeconds(5).getEpochSecond());
+            roleTokenRef.set(roleToken);
+            final String token0 = roleTokenClient.getToken().join();
+            assertThat(token0).isEqualTo("test-token");
+            roleToken.setToken("test-token1");
+            roleToken.setExpiryTime(Instant.now().plusSeconds(5).getEpochSecond());
+            // Should return the cached token immediately and refresh it in the background.
+            assertThat(roleTokenClient.getToken().join()).isEqualTo(token0);
+            await().untilAtomic(requestCount, Matchers.is(2));
+        }
     }
 }

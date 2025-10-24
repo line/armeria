@@ -4,9 +4,9 @@ date: 2025-08-06
 
 ## 🌟 New features
 
-- **Athenz integration**: You can now use the new `armeria-athenz` module to easily obtain and validate Athenz
+- **Athenz Integration**: You can now use the new `armeria-athenz` module to easily obtain and validate Athenz
   tokens for secure service-to-service communication. #6050 #6321
-  - Server-side validation: Use <type://RequiresAthenzRole> to protect your annotated service endpoints.
+  - Server-side validation: Use <type://@RequiresAthenzRole> to protect your annotated service endpoints.
     ```java
     // Prepare a `ZtsBaseClient` to communicate with
     // the Athenz ZTS server.
@@ -51,56 +51,56 @@ date: 2025-08-06
       .build();
     ```
 - **Content Sanitization for Logs**: You can now mask sensitive information for <type://AnnotatedService> and
-    <type://THttpService> using the flexible <type://ContentSanitizer>. #6311 #6268
-    ```java
-    // For annotated services, use a custom annotation
-    // and mark sensitive fields.
-    @Retention(RetentionPolicy.RUNTIME)
-    @interface Sensitive {}
+  <type://THttpService> using the flexible <type://ContentSanitizer>. #6311 #6268
+  ```java
+  // For annotated services, use a custom annotation
+  // and mark sensitive fields.
+  @Retention(RetentionPolicy.RUNTIME)
+  @interface Sensitive {}
 
-    class UserRequest {
-        private String name;
-        @Sensitive // This field will be masked in logs.
-        private String phoneNumber;
-        ...
-    }
+  class UserRequest {
+      private String name;
+      @Sensitive // This field will be masked in logs.
+      private String phoneNumber;
+      ...
+  }
 
-    // For Thrift services, set an annotation to the field.
-    struct SecretStruct {
-      1: string hello;
-      2: string secret (sensitive = "");
-    }
+  // For Thrift services, set an annotation to the field.
+  struct SecretStruct {
+    1: string hello;
+    2: string secret (sensitive = "");
+  }
 
-    // Create `FieldMaskerSelector`s for both types.
-    BeanFieldMaskerSelector beanMasker =
-       FieldMaskerSelector.ofBean(fieldInfo -> {
-           Sensitive sensitive = fieldInfo.getAnnotation(Sensitive.class);
-           if (sensitive != null) {
-               return FieldMasker.nullify();  // 👈👈👈
-           } else {
-               return FieldMasker.fallthrough();
-           }
-       });
+  // Create `FieldMaskerSelector`s for both types.
+  BeanFieldMaskerSelector beanMasker =
+     FieldMaskerSelector.ofBean(fieldInfo -> {
+         Sensitive sensitive = fieldInfo.getAnnotation(Sensitive.class);
+         if (sensitive != null) {
+             return FieldMasker.nullify();  // 👈👈👈
+         } else {
+             return FieldMasker.fallthrough();
+         }
+     });
 
-    ThriftFieldMaskerSelector thriftMasker =
-      ThriftFieldMaskerSelector
-         .builder()
-         .onFieldAnnotation("sensitive", FieldMasker.nullify())  // 👈👈👈
-         .build();
+  ThriftFieldMaskerSelector thriftMasker =
+    ThriftFieldMaskerSelector
+       .builder()
+       .onFieldAnnotation("sensitive", FieldMasker.nullify())  // 👈👈👈
+       .build();
 
-    // Build a `ContentSanitizer` and add it to your `LogFormatter`.
-    ContentSanitizer<String> sanitizer =
-      ContentSanitizer.builder()
-                      .fieldMaskerSelector(beanMasker)
-                      .fieldMaskerSelector(thriftMasker)
-                      .buildForText();
-    LogFormatter formatter = LogFormatter.builderForText()
-                                        .contentSanitizer(contentSanitizer)
-                                        .build();
+  // Build a `ContentSanitizer` and add it to your `LogFormatter`.
+  ContentSanitizer<String> sanitizer =
+    ContentSanitizer.builder()
+                    .fieldMaskerSelector(beanMasker)
+                    .fieldMaskerSelector(thriftMasker)
+                    .buildForText();
+  LogFormatter formatter = LogFormatter.builderForText()
+                                      .contentSanitizer(contentSanitizer)
+                                      .build();
 
-    // Use the formatter in `LoggingService`.
-    ...
-    ```
+  // Use the formatter in `LoggingService`.
+  ...
+  ```
 - **XDS-based Client Preprocessors**: You can now use <type://XdsHttpPreprocessor> and <type://XdsRpcPreprocessor>
   to create clients that route requests according to your xDS configuration. #6299
   ```java
@@ -225,7 +225,9 @@ date: 2025-08-06
 - Control plane 1.0.48 → 1.0.49
 - Curator 5.7.1 → 5.9.0
 - Dropwizard Metrics 4.2.28 → 4.2.33
-- Eureka 4.1.0 → 4.3.0
+- Eureka 2.0.4 → 2.0.5
+- Graphql-Java 20.4 → 24.2
+- gRPC-Java 1.70.0 → 1.74.0
 - Jackson 2.18.2 → 2.19.2
 - Jetty 11.0.24 → 11.0.25,, 12.0.14 → 12.0.23
 - JUnit 5.12.0 → 5.13.4
@@ -236,8 +238,8 @@ date: 2025-08-06
 - Micrometer Tracing 1.4.3 → 1.5.2
 - Netty 4.1.118 → 4.2.3
 - Prometheus 1.3.6 → 1.3.10
-- Reactor 3.7.3 → 3.7.10
-- Retrofit 2.11.0 → 2..12.0
+- Reactor 3.7.3 → 3.7.8
+- Retrofit 2.11.0 → 2.12.0
 - RxJava 3.1.10 → 3.1.11
 - Sangria 4.2.5 → 4.2.10
 - Scala 3.6.1 → 3.7.1

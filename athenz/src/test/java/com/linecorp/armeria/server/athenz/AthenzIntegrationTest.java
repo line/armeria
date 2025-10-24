@@ -16,11 +16,11 @@
 
 package com.linecorp.armeria.server.athenz;
 
-import static com.linecorp.armeria.server.athenz.AthenzExtension.ADMIN_ROLE;
-import static com.linecorp.armeria.server.athenz.AthenzExtension.FOO_SERVICE;
-import static com.linecorp.armeria.server.athenz.AthenzExtension.TEST_DOMAIN_NAME;
-import static com.linecorp.armeria.server.athenz.AthenzExtension.TEST_SERVICE;
-import static com.linecorp.armeria.server.athenz.AthenzExtension.USER_ROLE;
+import static com.linecorp.armeria.server.athenz.AthenzDocker.ADMIN_ROLE;
+import static com.linecorp.armeria.server.athenz.AthenzDocker.FOO_SERVICE;
+import static com.linecorp.armeria.server.athenz.AthenzDocker.TEST_DOMAIN_NAME;
+import static com.linecorp.armeria.server.athenz.AthenzDocker.TEST_SERVICE;
+import static com.linecorp.armeria.server.athenz.AthenzDocker.USER_ROLE;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -43,7 +43,6 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.athenz.AccessDeniedException;
 import com.linecorp.armeria.common.athenz.TokenType;
-import com.linecorp.armeria.internal.common.athenz.AthenzHeaderNames;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServerListener;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
@@ -70,11 +69,11 @@ class AthenzIntegrationTest {
                 if (!authorization.isEmpty()) {
                     return HttpResponse.of("Authorization " + authorization);
                 }
-                authorization = req.headers().get(AthenzHeaderNames.YAHOO_ROLE_AUTH, "");
+                authorization = req.headers().get(HttpHeaderNames.YAHOO_ROLE_AUTH, "");
                 if (!authorization.isEmpty()) {
                     return HttpResponse.of("YahooRoleAuth " + authorization);
                 }
-                authorization = req.headers().get(AthenzHeaderNames.ATHENZ_ROLE_AUTH, "");
+                authorization = req.headers().get(HttpHeaderNames.ATHENZ_ROLE_AUTH, "");
                 if (!authorization.isEmpty()) {
                     return HttpResponse.of("AthenzRoleAuth " + authorization);
                 }
@@ -93,11 +92,11 @@ class AthenzIntegrationTest {
                 if (!authorization.isEmpty()) {
                     return HttpResponse.of("Authorization " + authorization);
                 }
-                authorization = req.headers().get(AthenzHeaderNames.YAHOO_ROLE_AUTH, "");
+                authorization = req.headers().get(HttpHeaderNames.YAHOO_ROLE_AUTH, "");
                 if (!authorization.isEmpty()) {
                     return HttpResponse.of("YahooRoleAuth " + authorization);
                 }
-                authorization = req.headers().get(AthenzHeaderNames.ATHENZ_ROLE_AUTH, "");
+                authorization = req.headers().get(HttpHeaderNames.ATHENZ_ROLE_AUTH, "");
                 if (!authorization.isEmpty()) {
                     return HttpResponse.of("AthenzRoleAuth " + authorization);
                 }

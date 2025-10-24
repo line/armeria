@@ -16,10 +16,10 @@
 
 package com.linecorp.armeria.server.athenz;
 
-import static com.linecorp.armeria.server.athenz.AthenzExtension.ADMIN_POLICY;
-import static com.linecorp.armeria.server.athenz.AthenzExtension.ADMIN_ROLE;
-import static com.linecorp.armeria.server.athenz.AthenzExtension.TEST_DOMAIN_NAME;
-import static com.linecorp.armeria.server.athenz.AthenzExtension.TEST_SERVICE;
+import static com.linecorp.armeria.server.athenz.AthenzDocker.ADMIN_POLICY;
+import static com.linecorp.armeria.server.athenz.AthenzDocker.ADMIN_ROLE;
+import static com.linecorp.armeria.server.athenz.AthenzDocker.TEST_DOMAIN_NAME;
+import static com.linecorp.armeria.server.athenz.AthenzDocker.TEST_SERVICE;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -49,7 +49,8 @@ class AthenzPolicyLoaderTest {
     void loadPolicyFiles(boolean jwsPolicySupport) throws Exception {
         try (ZtsBaseClient baseClient = athenzExtension.newZtsBaseClient(TEST_SERVICE)) {
             final PublicKeyStore publicKeyStore = new AthenzPublicKeyProvider(baseClient,
-                                                                              Duration.ofSeconds(10));
+                                                                              Duration.ofSeconds(10),
+                                                                              "/oauth2/keys?rfc=true");
             final AthenzPolicyConfig policyConfig = new AthenzPolicyConfig(ImmutableList.of(TEST_DOMAIN_NAME),
                                                                            ImmutableMap.of(), jwsPolicySupport,
                                                                            Duration.ofSeconds(10));
