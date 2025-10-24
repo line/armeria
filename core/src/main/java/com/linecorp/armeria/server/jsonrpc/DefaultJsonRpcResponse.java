@@ -55,7 +55,7 @@ final class DefaultJsonRpcResponse extends AbstractJsonRpcResponse {
 
     @Override
     public int hashCode() {
-        return Objects.hash(id(), result(), error());
+        return Objects.hash(id(), result(), error(), version());
     }
 
     @Override
