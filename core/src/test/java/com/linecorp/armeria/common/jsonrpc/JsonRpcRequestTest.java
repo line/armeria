@@ -22,12 +22,14 @@ import static org.junit.Assert.assertTrue;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 
 import org.junit.jupiter.api.Test;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.ImmutableMap;
 
 /**
  * A test for {@link JsonRpcRequest}.
@@ -104,6 +106,18 @@ class JsonRpcRequestTest {
     }
 
     @Test
+    void of_withNamedParam() {
+        final Map<String, Object> params = ImmutableMap.of("subtrahend", 23);
+        final JsonRpcRequest req = JsonRpcRequest.of(1, "subtract", params);
+
+        assertThat(req.id()).isEqualTo(1);
+        assertThat(req.method()).isEqualTo("subtract");
+        assertTrue(req.params().isNamed());
+        assertThat(req.params().asMap()).isEqualTo(params);
+        assertThat(req.version()).isEqualTo(JsonRpcVersion.JSON_RPC_2_0);
+    }
+
+    @Test
     void of_fromJsonNode() throws JsonProcessingException {
         final String json =
                 "{\"jsonrpc\": \"2.0\", \"method\": \"subtract\", \"params\": [42, 23], \"id\": 1}";
@@ -136,7 +150,7 @@ class JsonRpcRequestTest {
     @Test
     void of_fromJsonNode_withNamedParams() throws JsonProcessingException {
         final String json =
-            "{\"jsonrpc\": \"2.0\", \"method\": \"subtract\", \"params\": {\"subtrahend\": 23}, \"id\": 3}";
+                "{\"jsonrpc\": \"2.0\", \"method\": \"subtract\", \"params\": {\"subtrahend\": 23}, \"id\": 3}";
         final JsonNode node = mapper.readTree(json);
         final JsonRpcRequest req = JsonRpcRequest.of(node);
 

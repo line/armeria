@@ -22,6 +22,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 
@@ -54,20 +55,32 @@ final class DefaultJsonRpcRequest implements JsonRpcRequest {
         this(id, method, copyParams(params), JsonRpcVersion.JSON_RPC_2_0.getVersion());
     }
 
+    DefaultJsonRpcRequest(@Nullable Object id, String method, Map<String, Object> params) {
+        this(id, method, params, JsonRpcVersion.JSON_RPC_2_0.getVersion());
+    }
+
     private DefaultJsonRpcRequest(
             @Nullable Object id,
             String method,
             Object params,
             String version) {
         checkArgument(JsonRpcVersion.JSON_RPC_2_0.getVersion().equals(version),
-            "jsonrpc: %s (expected: 2.0)", version);
+                "jsonrpc: %s (expected: 2.0)", version);
         checkArgument(id == null || id instanceof Number || id instanceof String,
-            "id type: %s (expected: Null or Number or String)",
-            Optional.ofNullable(id).map(Object::getClass).orElse(null));
+                "id type: %s (expected: Null or Number or String)",
+                Optional.ofNullable(id).map(Object::getClass).orElse(null));
+        checkArgument(params instanceof List || params instanceof Map,
+                "params type: %s (expected: List or Map)",
+                params != null ? params.getClass().getName() : "null");
+
+        @SuppressWarnings("unchecked")
+        final JsonRpcParameter rpcParams =
+                params instanceof List ? JsonRpcParameter.of((List<Object>) params)
+                        : JsonRpcParameter.of((Map<String, Object>) params);
 
         this.id = id;
         this.method = requireNonNull(method, "method");
-        this.params = JsonRpcParameter.of(params);
+        this.params = rpcParams;
         this.version = JsonRpcVersion.JSON_RPC_2_0;
     }
 
@@ -148,7 +161,7 @@ final class DefaultJsonRpcRequest implements JsonRpcRequest {
 
     @Override
     public int hashCode() {
-        return Objects.hash(id, method, params);
+        return Objects.hash(id, method, params, version);
     }
 
     @Override
@@ -163,16 +176,17 @@ final class DefaultJsonRpcRequest implements JsonRpcRequest {
 
         final JsonRpcRequest that = (JsonRpcRequest) obj;
         return Objects.equals(id, that.id()) &&
-               Objects.equals(method, that.method()) &&
-               Objects.equals(params, that.params());
+                Objects.equals(method, that.method()) &&
+                Objects.equals(params, that.params()) &&
+                Objects.equals(version, that.version());
     }
 
     @Override
     public String toString() {
         return MoreObjects.toStringHelper(this)
-                          .add("id", id())
-                          .add("method", method())
-                          .add("params", params())
-                          .add("jsonrpc", version()).toString();
+                .add("id", id())
+                .add("method", method())
+                .add("params", params())
+                .add("jsonrpc", version()).toString();
     }
 }

@@ -19,6 +19,7 @@ import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
 
 import java.util.List;
+import java.util.Map;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -45,7 +46,7 @@ public interface JsonRpcRequest {
      */
     static JsonRpcRequest of(@Nullable Object id, String method, @Nullable Object parameter) {
         final List<Object> parameters = parameter == null ? ImmutableList.of()
-                                                          : ImmutableList.of(parameter);
+                : ImmutableList.of(parameter);
         return new DefaultJsonRpcRequest(id, requireNonNull(method, "method"), parameters);
     }
 
@@ -65,6 +66,15 @@ public interface JsonRpcRequest {
         return new DefaultJsonRpcRequest(id,
                 requireNonNull(method, "method"),
                 requireNonNull(params, "params"));
+    }
+
+    /**
+     * Creates a new instance with the named parameter.
+     */
+    static JsonRpcRequest of(@Nullable Object id, String method, Map<String, Object> parameter) {
+        return new DefaultJsonRpcRequest(id,
+                requireNonNull(method, "method"),
+                requireNonNull(parameter, "param"));
     }
 
     /**

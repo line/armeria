@@ -15,13 +15,14 @@
  */
 package com.linecorp.armeria.common.jsonrpc;
 
-import static com.google.common.base.Preconditions.checkArgument;
-
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 import com.fasterxml.jackson.annotation.JsonValue;
+import com.google.common.base.MoreObjects;
 
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 
 /**
@@ -31,56 +32,107 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
  */
 @UnstableApi
 public final class JsonRpcParameter {
-    @JsonValue
-    private final Object value;
+    @Nullable
+    private final List<Object> positional;
 
-    private JsonRpcParameter(Object value) {
-        this.value = value;
+    @Nullable
+    private final Map<String, Object> named;
+
+    private JsonRpcParameter(List<Object> positional) {
+        this.positional = positional;
+        this.named = null;
+    }
+
+    private JsonRpcParameter(Map<String, Object> named) {
+        this.positional = null;
+        this.named = named;
     }
 
     /**
-     * Creates a new {@link JsonRpcParameter} instance from the parsed parameter object.
+     * Creates a new {@link JsonRpcParameter} instance from positional parameters.
      */
-    public static JsonRpcParameter of(Object parsedParams) {
-        checkArgument(parsedParams instanceof List || parsedParams instanceof Map,
-                "params type: %s (expected: List or Map)",
-                parsedParams != null ? parsedParams.getClass().getName() : "null");
-        return new JsonRpcParameter(parsedParams);
+    public static JsonRpcParameter of(List<Object> positionalParams) {
+        return new JsonRpcParameter(positionalParams);
     }
 
     /**
-    * Returns {@code true} if this Parameter is a Positional.
-    */
+     * Creates a new {@link JsonRpcParameter} instance from named parameters.
+     */
+    public static JsonRpcParameter of(Map<String, Object> namedParams) {
+        return new JsonRpcParameter(namedParams);
+    }
+
+    /**
+     * Returns {@code true} if this parameter is a positional.
+     */
     public boolean isPositional() {
-        return value instanceof List;
+        return positional != null;
     }
 
     /**
-    * Returns {@code true} if this Parameter is a Named.
-    */
+     * Returns {@code true} if this parameter is a named.
+     */
     public boolean isNamed() {
-        return value instanceof Map;
+        return named != null;
     }
 
     /**
      * Returns the parameters as a {@link List}.
      */
-    @SuppressWarnings("unchecked")
     public List<Object> asList() {
-        if (!isPositional()) {
+        if (positional == null) {
             throw new IllegalStateException("Not positional parameters.");
         }
-        return (List<Object>) value;
+        return positional;
     }
 
     /**
      * Returns the parameters as a {@link Map}.
      */
-    @SuppressWarnings("unchecked")
     public Map<String, Object> asMap() {
-        if (!isNamed()) {
+        if (named == null) {
             throw new IllegalStateException("Not named parameters.");
         }
-        return (Map<String, Object>) value;
+        return named;
+    }
+
+    /**
+     * Jackson uses this method to serialize the object.
+     * It returns the non-null parameter (either positional List or named Map).
+     */
+    @JsonValue
+    private Object value() {
+        if (positional != null) {
+            return positional;
+        } else {
+            return Objects.requireNonNull(named);
+        }
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(positional, named);
+    }
+
+    @Override
+    public boolean equals(@Nullable Object obj) {
+        if (this == obj) {
+            return true;
+        }
+
+        if (!(obj instanceof JsonRpcParameter)) {
+            return false;
+        }
+
+        final JsonRpcParameter that = (JsonRpcParameter) obj;
+        return Objects.equals(positional, that.positional) &&
+                Objects.equals(named, that.named);
+    }
+
+    @Override
+    public String toString() {
+        return MoreObjects.toStringHelper(this)
+                .add("positional", positional)
+                .add("named", named).toString();
     }
 }

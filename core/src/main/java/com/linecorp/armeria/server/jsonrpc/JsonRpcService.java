@@ -26,6 +26,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
 
 import com.linecorp.armeria.common.AggregatedHttpRequest;
+import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
@@ -71,26 +72,25 @@ public final class JsonRpcService implements HttpService {
         }
 
         return HttpResponse.of(
-            req.aggregate()
-               .handle((aggregate, throwable) -> {
-                    if (throwable != null) {
-                        return HttpResponse.ofJson(HttpStatus.INTERNAL_SERVER_ERROR,
-                            JsonRpcError.INTERNAL_ERROR.withData(throwable.getMessage()));
-                    }
+                req.aggregate()
+                        .handle((aggregate, throwable) -> {
+                            if (throwable != null) {
+                                return HttpResponse.ofJson(HttpStatus.INTERNAL_SERVER_ERROR,
+                                        JsonRpcError.INTERNAL_ERROR.withData(throwable.getMessage()));
+                            }
 
-                    try {
-                        final JsonNode parsedJson = parseRequestContentAsJson(aggregate);
-                        return dispatchRequest(ctx, parsedJson);
-                    } catch (Exception e) {
-                        if (e instanceof IllegalArgumentException) {
-                            return HttpResponse.ofJson(HttpStatus.BAD_REQUEST,
-                                JsonRpcError.PARSE_ERROR);
-                        }
-                        return HttpResponse.ofJson(HttpStatus.INTERNAL_SERVER_ERROR,
-                            JsonRpcError.INTERNAL_ERROR.withData(e.getMessage()));
-                    }
-               })
-            );
+                            try {
+                                final JsonNode parsedJson = parseRequestContentAsJson(aggregate);
+                                return dispatchRequest(ctx, parsedJson);
+                            } catch (Exception e) {
+                                if (e instanceof IllegalArgumentException) {
+                                    return HttpResponse.ofJson(HttpStatus.BAD_REQUEST,
+                                            JsonRpcError.PARSE_ERROR);
+                                }
+                                return HttpResponse.ofJson(HttpStatus.INTERNAL_SERVER_ERROR,
+                                        JsonRpcError.INTERNAL_ERROR.withData(e.getMessage()));
+                            }
+                        }));
     }
 
     @VisibleForTesting
@@ -108,14 +108,14 @@ public final class JsonRpcService implements HttpService {
             return handleUnaryRequest(ctx, rawRequest);
         } else {
             return HttpResponse.ofJson(HttpStatus.BAD_REQUEST,
-                JsonRpcError.INVALID_REQUEST.withData("Batch requests are not supported by this server."));
+                    JsonRpcError.INVALID_REQUEST.withData("Batch requests are not supported by this server."));
         }
     }
 
     private HttpResponse handleUnaryRequest(ServiceRequestContext ctx, JsonNode unary) {
         return HttpResponse.of(
                 executeRpcCall(ctx, unary)
-                    .thenApply(this::toHttpResponse));
+                        .thenApply(this::toHttpResponse));
     }
 
     private HttpResponse toHttpResponse(DefaultJsonRpcResponse response) {
@@ -139,6 +139,7 @@ public final class JsonRpcService implements HttpService {
         final JsonRpcRequest request;
         try {
             request = parseNodeAsRpcRequest(node);
+            maybeLogRequestContent(ctx, request, node);
         } catch (IllegalArgumentException e) {
             return UnmodifiableFuture.completedFuture(
                     new DefaultJsonRpcResponse(null, JsonRpcError.PARSE_ERROR.withData(e.getMessage())));
@@ -151,6 +152,16 @@ public final class JsonRpcService implements HttpService {
                 });
     }
 
+    private static void maybeLogRequestContent(ServiceRequestContext ctx,
+            JsonRpcRequest request,
+            JsonNode node) {
+        if (!Flags.jsonRpcServiceContentLogging()) {
+            return;
+        }
+
+        ctx.logBuilder().requestContent(request, node);
+    }
+
     @VisibleForTesting
     static JsonRpcRequest parseNodeAsRpcRequest(JsonNode node) {
         try {
@@ -161,25 +172,38 @@ public final class JsonRpcService implements HttpService {
     }
 
     @VisibleForTesting
-    CompletableFuture<DefaultJsonRpcResponse> invokeMethod(ServiceRequestContext ctx,
-                                                                   JsonRpcRequest req) {
+    CompletableFuture<DefaultJsonRpcResponse> invokeMethod(ServiceRequestContext ctx, JsonRpcRequest req) {
         final JsonRpcHandler handler = methodHandlers.get(req.method());
 
         // Notification
         if (req.id() == null) {
             if (handler != null) {
                 handler.handle(ctx, req)
-                       .thenApply(res -> null);
+                        .thenApply(res -> null);
             }
             return UnmodifiableFuture.completedFuture(null);
         }
 
         if (handler == null) {
             return UnmodifiableFuture.completedFuture(
-                new DefaultJsonRpcResponse(req.id(), JsonRpcError.METHOD_NOT_FOUND));
+                    new DefaultJsonRpcResponse(req.id(), JsonRpcError.METHOD_NOT_FOUND));
         }
         return handler.handle(ctx, req)
-                .thenApply(res -> buildFinalResponse(req, res));
+                .thenApply(res -> {
+                    final DefaultJsonRpcResponse finalResponse = buildFinalResponse(req, res);
+                    maybeLogResponseContent(ctx, finalResponse, res);
+                    return finalResponse;
+                });
+    }
+
+    private static void maybeLogResponseContent(ServiceRequestContext ctx,
+            DefaultJsonRpcResponse response,
+            JsonRpcResponse originalResponse) {
+        if (!Flags.jsonRpcServiceContentLogging()) {
+            return;
+        }
+
+        ctx.logBuilder().responseContent(response, originalResponse);
     }
 
     @VisibleForTesting
@@ -195,7 +219,7 @@ public final class JsonRpcService implements HttpService {
             return new DefaultJsonRpcResponse(request.id(), response.error());
         }
         return new DefaultJsonRpcResponse(request.id(),
-            JsonRpcError.INTERNAL_ERROR
-                    .withData("A response cannot have both or neither 'result' and 'error' fields."));
+                JsonRpcError.INTERNAL_ERROR
+                        .withData("A response cannot have both or neither 'result' and 'error' fields."));
     }
 }

@@ -197,15 +197,15 @@ class JsonRpcServiceTest {
     void buildFinalResponse_whenInvalidResult_thenReturnsInternalError() {
         final JsonRpcRequest request = JsonRpcRequest.of(1, "hello");
         final JsonRpcResponse invalidResponse = new JsonRpcResponse() {
-                @Override
-                public Object result() {
-                        return "result";
-                }
+            @Override
+            public Object result() {
+                return "result";
+            }
 
-                @Override
-                public JsonRpcError error() {
-                        return JsonRpcError.INTERNAL_ERROR;
-                }
+            @Override
+            public JsonRpcError error() {
+                return JsonRpcError.INTERNAL_ERROR;
+            }
         };
 
         final DefaultJsonRpcResponse actualResponse =
@@ -220,7 +220,6 @@ class JsonRpcServiceTest {
     @Test
     void invokeMethod_whenNotificationRequest_thenReturnsNull() {
         final JsonRpcRequest notificationRequest = JsonRpcRequest.of(null, "echo", "hello");
-
         final DefaultJsonRpcResponse actualResponse =
                 jsonRpcService.invokeMethod(null, notificationRequest).join();
 
@@ -242,7 +241,8 @@ class JsonRpcServiceTest {
     @Test
     void invokeMethod_whenPosParams_thenSucceeds() {
         final JsonRpcRequest validRequest = JsonRpcRequest.of(1, "echo", 1, 2, 3, 4);
-        final DefaultJsonRpcResponse actualResponse = jsonRpcService.invokeMethod(null, validRequest).join();
+        final DefaultJsonRpcResponse actualResponse =
+                jsonRpcService.invokeMethod(newCtx(), validRequest).join();
 
         assertThat(actualResponse.id()).isEqualTo(validRequest.id());
         assertThat(actualResponse.result()).isInstanceOf(JsonRpcParameter.class);
@@ -254,10 +254,11 @@ class JsonRpcServiceTest {
     @Test
     void invokeMethod_whenNamedParams_thenSucceeds() throws JsonProcessingException {
         final String json =
-                    "{\"jsonrpc\": \"2.0\", \"method\": \"echo\", \"params\": {\"subtrahend\": 23}, \"id\": 3}";
+                "{\"jsonrpc\": \"2.0\", \"method\": \"echo\", \"params\": {\"subtrahend\": 23}, \"id\": 3}";
         final JsonNode node = objectMapper.readTree(json);
         final JsonRpcRequest validRequest = JsonRpcRequest.of(node);
-        final DefaultJsonRpcResponse actualResponse = jsonRpcService.invokeMethod(null, validRequest).join();
+        final DefaultJsonRpcResponse actualResponse =
+                jsonRpcService.invokeMethod(newCtx(), validRequest).join();
 
         assertThat(actualResponse.id()).isEqualTo(validRequest.id());
         assertThat(actualResponse.result()).isInstanceOf(JsonRpcParameter.class);
@@ -291,7 +292,8 @@ class JsonRpcServiceTest {
     void executeRpcCall_whenHandlerThrowsException_thenReturnsInternalError() {
         final JsonNode requestNode = objectMapper.valueToTree(JsonRpcRequest.of(1, "fail"));
 
-        final DefaultJsonRpcResponse actualResponse = jsonRpcService.executeRpcCall(null, requestNode).join();
+        final DefaultJsonRpcResponse actualResponse =
+                jsonRpcService.executeRpcCall(newCtx(), requestNode).join();
 
         assertThat(actualResponse.id()).isEqualTo(1);
         assertThat(actualResponse.error().code()).isEqualTo(JsonRpcError.INTERNAL_ERROR.code());
@@ -304,7 +306,7 @@ class JsonRpcServiceTest {
         final JsonNode requestNode = objectMapper.valueToTree(JsonRpcRequest.of(1, "echo", 1, 2, 3, 4));
 
         final AggregatedHttpResponse aggregatedHttpResponse =
-                jsonRpcService.dispatchRequest(null, requestNode)
+                jsonRpcService.dispatchRequest(newCtx(), requestNode)
                         .aggregate().join();
 
         final JsonNode actualNode = objectMapper.readTree(aggregatedHttpResponse.contentUtf8());
@@ -317,11 +319,11 @@ class JsonRpcServiceTest {
     @Test
     void dispatchRequest_whenUnaryNamedRequest_thenHandlesSuccessfully() throws JsonProcessingException {
         final String json =
-                    "{\"jsonrpc\": \"2.0\", \"method\": \"echo\", \"params\": {\"subtrahend\": 23}, \"id\": 1}";
+                "{\"jsonrpc\": \"2.0\", \"method\": \"echo\", \"params\": {\"subtrahend\": 23}, \"id\": 1}";
         final JsonNode requestNode = objectMapper.readTree(json);
 
         final AggregatedHttpResponse aggregatedHttpResponse =
-                jsonRpcService.dispatchRequest(null, requestNode)
+                jsonRpcService.dispatchRequest(newCtx(), requestNode)
                         .aggregate().join();
 
         final JsonNode actualNode = objectMapper.readTree(aggregatedHttpResponse.contentUtf8());
@@ -336,7 +338,7 @@ class JsonRpcServiceTest {
         final JsonNode requestNode = objectMapper.valueToTree(JsonRpcRequest.of(null, "echo", "hello"));
 
         final AggregatedHttpResponse aggregatedHttpResponse =
-                jsonRpcService.dispatchRequest(null, requestNode)
+                jsonRpcService.dispatchRequest(newCtx(), requestNode)
                         .aggregate().join();
 
         assertThat(aggregatedHttpResponse.status()).isEqualTo(HttpStatus.ACCEPTED);
@@ -360,14 +362,14 @@ class JsonRpcServiceTest {
         final String invalidJson = "{\"jsonrpc\": \"2.0\", \"method\": \"echo\"]";
         final AggregatedHttpResponse aggregatedHttpResponse = client().execute(
                 HttpRequest.builder()
-                           .post("/json-rpc")
-                           .content(MediaType.JSON_UTF_8, invalidJson)
-                           .build())
+                        .post("/json-rpc")
+                        .content(MediaType.JSON_UTF_8, invalidJson)
+                        .build())
                 .aggregate().join();
 
         assertThat(aggregatedHttpResponse.status()).isEqualTo(HttpStatus.BAD_REQUEST);
         assertThat(aggregatedHttpResponse.content().toStringUtf8()).contains(
-                        objectMapper.valueToTree(JsonRpcError.PARSE_ERROR).toString());
+                objectMapper.valueToTree(JsonRpcError.PARSE_ERROR).toString());
     }
 
     @Test
@@ -375,9 +377,9 @@ class JsonRpcServiceTest {
         final JsonRpcRequest request = JsonRpcRequest.of(1, "echo", 1, 2, 3, 4);
         final AggregatedHttpResponse aggregatedHttpResponse = client().execute(
                 HttpRequest.builder()
-                           .post("/json-rpc")
-                           .content(MediaType.JSON_UTF_8, objectMapper.writeValueAsString(request))
-                           .build())
+                        .post("/json-rpc")
+                        .content(MediaType.JSON_UTF_8, objectMapper.writeValueAsString(request))
+                        .build())
                 .aggregate().join();
 
         assertThat(aggregatedHttpResponse.status()).isEqualTo(HttpStatus.OK);
@@ -397,11 +399,11 @@ class JsonRpcServiceTest {
         final JsonRpcRequest request = JsonRpcRequest.of(node);
 
         final AggregatedHttpResponse aggregatedHttpResponse = client().execute(
-                        HttpRequest.builder()
-                                        .post("/json-rpc")
-                                        .content(MediaType.JSON_UTF_8, objectMapper.writeValueAsString(request))
-                                        .build())
-                        .aggregate().join();
+                HttpRequest.builder()
+                        .post("/json-rpc")
+                        .content(MediaType.JSON_UTF_8, objectMapper.writeValueAsString(request))
+                        .build())
+                .aggregate().join();
 
         assertThat(aggregatedHttpResponse.status()).isEqualTo(HttpStatus.OK);
 
@@ -417,9 +419,9 @@ class JsonRpcServiceTest {
         final JsonRpcRequest request = JsonRpcRequest.of(null, "echo", "hello");
         final AggregatedHttpResponse response = client().execute(
                 HttpRequest.builder()
-                           .post("/json-rpc")
-                           .content(MediaType.JSON_UTF_8, objectMapper.writeValueAsString(request))
-                           .build())
+                        .post("/json-rpc")
+                        .content(MediaType.JSON_UTF_8, objectMapper.writeValueAsString(request))
+                        .build())
                 .aggregate().join();
 
         assertThat(response.status()).isEqualTo(HttpStatus.ACCEPTED);
@@ -464,5 +466,10 @@ class JsonRpcServiceTest {
 
         assertThat(response.status()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
         assertThat(response.contentUtf8()).contains("error");
+    }
+
+    private static ServiceRequestContext newCtx() {
+        return ServiceRequestContext.builder(HttpRequest.of(HttpMethod.GET, "/"))
+                .build();
     }
 }

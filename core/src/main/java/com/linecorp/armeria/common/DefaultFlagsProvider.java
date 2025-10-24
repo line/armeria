@@ -46,8 +46,8 @@ final class DefaultFlagsProvider implements FlagsProvider {
     static final DefaultFlagsProvider INSTANCE = new DefaultFlagsProvider();
 
     static final String VERBOSE_EXCEPTION_SAMPLER_SPEC = "rate-limit=10";
-    static final Sampler<Class<? extends Throwable>>
-            VERBOSE_EXCEPTION_SAMPLER = new ExceptionSampler(VERBOSE_EXCEPTION_SAMPLER_SPEC);
+    static final Sampler<Class<? extends Throwable>> VERBOSE_EXCEPTION_SAMPLER =
+            new ExceptionSampler(VERBOSE_EXCEPTION_SAMPLER_SPEC);
 
     static final int MAX_NUM_CONNECTIONS = Integer.MAX_VALUE;
     static final int NUM_COMMON_BLOCKING_TASK_THREADS = 200; // from Tomcat default maxThreads
@@ -396,8 +396,8 @@ final class DefaultFlagsProvider implements FlagsProvider {
     @Override
     public List<String> cachedHeaders() {
         return Splitter.on(',').trimResults()
-                       .omitEmptyStrings()
-                       .splitToList(CACHED_HEADERS);
+                .omitEmptyStrings()
+                .splitToList(CACHED_HEADERS);
     }
 
     @Override
@@ -483,8 +483,8 @@ final class DefaultFlagsProvider implements FlagsProvider {
     @Override
     public Path defaultMultipartUploadsLocation() {
         return Paths.get(System.getProperty("java.io.tmpdir") +
-                         File.separatorChar + "armeria" +
-                         File.separatorChar + "multipart-uploads");
+                File.separatorChar + "armeria" +
+                File.separatorChar + "multipart-uploads");
     }
 
     @Override
@@ -529,6 +529,11 @@ final class DefaultFlagsProvider implements FlagsProvider {
 
     @Override
     public Boolean annotatedServiceContentLogging() {
+        return true;
+    }
+
+    @Override
+    public Boolean jsonRpcServiceContentLogging() {
         return true;
     }
 }

@@ -34,17 +34,17 @@ public abstract class AbstractJsonRpcResponse implements JsonRpcResponse {
     private final JsonRpcError error;
 
     /**
-    * Creates a new instance with result.
-    */
-    public AbstractJsonRpcResponse(Object result) {
+     * Creates a new instance with result.
+     */
+    protected AbstractJsonRpcResponse(Object result) {
         this.result = requireNonNull(result, "result");
         this.error = null;
     }
 
     /**
-    * Creates a new instance with error.
-    */
-    public AbstractJsonRpcResponse(JsonRpcError error) {
+     * Creates a new instance with error.
+     */
+    protected AbstractJsonRpcResponse(JsonRpcError error) {
         this.result = null;
         this.error = requireNonNull(error, "error");
     }

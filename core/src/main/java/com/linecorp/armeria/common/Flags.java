@@ -78,6 +78,7 @@ import com.linecorp.armeria.server.annotation.ExceptionVerbosity;
 import com.linecorp.armeria.server.file.FileService;
 import com.linecorp.armeria.server.file.FileServiceBuilder;
 import com.linecorp.armeria.server.file.HttpFile;
+import com.linecorp.armeria.server.jsonrpc.JsonRpcService;
 import com.linecorp.armeria.server.logging.LoggingService;
 
 import io.micrometer.core.instrument.DistributionSummary;
@@ -113,9 +114,9 @@ public final class Flags {
     static {
         final List<FlagsProvider> flagsProviders =
                 ImmutableList.copyOf(ServiceLoader.load(FlagsProvider.class, Flags.class.getClassLoader()))
-                             .stream()
-                             .sorted(Comparator.comparingInt(FlagsProvider::priority).reversed())
-                             .collect(Collectors.toList());
+                        .stream()
+                        .sorted(Comparator.comparingInt(FlagsProvider::priority).reversed())
+                        .collect(Collectors.toList());
         flagsProviders.add(0, SystemPropertyFlagsProvider.INSTANCE);
         FLAGS_PROVIDERS = ImmutableList.copyOf(flagsProviders);
     }
@@ -129,7 +130,7 @@ public final class Flags {
 
     static {
         final String strSpec = getNormalized("verboseExceptions",
-                                             DefaultFlagsProvider.VERBOSE_EXCEPTION_SAMPLER_SPEC, val -> {
+                DefaultFlagsProvider.VERBOSE_EXCEPTION_SAMPLER_SPEC, val -> {
                     try {
                         Sampler.of(val);
                         return true;
@@ -154,7 +155,7 @@ public final class Flags {
         } else {
             DEFAULT_UNLOGGED_EXCEPTIONS_REPORT_INTERVAL_MILLIS =
                     getValue(FlagsProvider::defaultUnhandledExceptionsReportIntervalMillis,
-                             "defaultUnhandledExceptionsReportIntervalMillis", value -> value >= 0);
+                            "defaultUnhandledExceptionsReportIntervalMillis", value -> value >= 0);
         }
     }
 
@@ -175,8 +176,8 @@ public final class Flags {
 
     private static final boolean DEFAULT_USE_EPOLL = TransportType.EPOLL.isAvailable();
     private static final boolean USE_EPOLL = getBoolean("useEpoll",
-                                                        DEFAULT_USE_EPOLL,
-                                                        value -> TransportType.EPOLL.isAvailable() || !value);
+            DEFAULT_USE_EPOLL,
+            value -> TransportType.EPOLL.isAvailable() || !value);
 
     private static final Predicate<TransportType> TRANSPORT_TYPE_VALIDATOR = transportType -> {
         switch (transportType) {
@@ -222,118 +223,118 @@ public final class Flags {
 
     private static final int NUM_COMMON_WORKERS =
             getValue(provider -> provider.numCommonWorkers(TRANSPORT_TYPE),
-                     "numCommonWorkers", value -> value > 0);
+                    "numCommonWorkers", value -> value > 0);
 
     private static final int NUM_COMMON_BLOCKING_TASK_THREADS =
             getValue(FlagsProvider::numCommonBlockingTaskThreads, "numCommonBlockingTaskThreads",
-                     value -> value > 0);
+                    value -> value > 0);
 
     private static final long DEFAULT_MAX_REQUEST_LENGTH =
             getValue(FlagsProvider::defaultMaxRequestLength, "defaultMaxRequestLength",
-                     value -> value >= 0);
+                    value -> value >= 0);
 
     private static final long DEFAULT_MAX_RESPONSE_LENGTH =
             getValue(FlagsProvider::defaultMaxResponseLength, "defaultMaxResponseLength",
-                     value -> value >= 0);
+                    value -> value >= 0);
 
     private static final long DEFAULT_REQUEST_TIMEOUT_MILLIS =
             getValue(FlagsProvider::defaultRequestTimeoutMillis, "defaultRequestTimeoutMillis",
-                     value -> value >= 0);
+                    value -> value >= 0);
 
     private static final long DEFAULT_RESPONSE_TIMEOUT_MILLIS =
             getValue(FlagsProvider::defaultResponseTimeoutMillis, "defaultResponseTimeoutMillis",
-                     value -> value >= 0);
+                    value -> value >= 0);
 
     private static final long DEFAULT_CONNECT_TIMEOUT_MILLIS =
             getValue(FlagsProvider::defaultConnectTimeoutMillis, "defaultConnectTimeoutMillis",
-                     value -> value > 0);
+                    value -> value > 0);
 
     private static final long DEFAULT_WRITE_TIMEOUT_MILLIS =
             getValue(FlagsProvider::defaultWriteTimeoutMillis, "defaultWriteTimeoutMillis",
-                     value -> value >= 0);
+                    value -> value >= 0);
 
     private static final long DEFAULT_SERVER_IDLE_TIMEOUT_MILLIS =
             getValue(FlagsProvider::defaultServerIdleTimeoutMillis, "defaultServerIdleTimeoutMillis",
-                     value -> value >= 0);
+                    value -> value >= 0);
 
     private static final boolean DEFAULT_SERVER_KEEP_ALIVE_ON_PING =
             getValue(FlagsProvider::defaultServerKeepAliveOnPing, "defaultServerKeepAliveOnPing");
 
     private static final long DEFAULT_CLIENT_IDLE_TIMEOUT_MILLIS =
             getValue(FlagsProvider::defaultClientIdleTimeoutMillis, "defaultClientIdleTimeoutMillis",
-                     value -> value >= 0);
+                    value -> value >= 0);
 
     private static final boolean DEFAULT_CLIENT_KEEP_ALIVE_ON_PING =
             getValue(FlagsProvider::defaultClientKeepAliveOnPing, "defaultClientKeepAliveOnPing");
 
     private static final long DEFAULT_PING_INTERVAL_MILLIS =
             getValue(FlagsProvider::defaultPingIntervalMillis, "defaultPingIntervalMillis",
-                     value -> value >= 0);
+                    value -> value >= 0);
 
     private static final int DEFAULT_MAX_SERVER_NUM_REQUESTS_PER_CONNECTION =
             getValue(FlagsProvider::defaultMaxServerNumRequestsPerConnection,
-                     "defaultMaxServerNumRequestsPerConnection", value -> value >= 0);
+                    "defaultMaxServerNumRequestsPerConnection", value -> value >= 0);
 
     private static final int DEFAULT_MAX_CLIENT_NUM_REQUESTS_PER_CONNECTION =
             getValue(FlagsProvider::defaultMaxClientNumRequestsPerConnection,
-                     "defaultMaxClientNumRequestsPerConnection", value -> value >= 0);
+                    "defaultMaxClientNumRequestsPerConnection", value -> value >= 0);
 
     private static final long DEFAULT_MAX_SERVER_CONNECTION_AGE_MILLIS =
             getValue(FlagsProvider::defaultMaxServerConnectionAgeMillis,
-                     "defaultMaxServerConnectionAgeMillis", value -> value >= 0);
+                    "defaultMaxServerConnectionAgeMillis", value -> value >= 0);
 
     private static final long DEFAULT_MAX_CLIENT_CONNECTION_AGE_MILLIS =
             getValue(FlagsProvider::defaultMaxClientConnectionAgeMillis,
-                     "defaultMaxClientConnectionAgeMillis", value -> value >= 0);
+                    "defaultMaxClientConnectionAgeMillis", value -> value >= 0);
 
     private static final long DEFAULT_SERVER_CONNECTION_DRAIN_DURATION_MICROS =
             getValue(FlagsProvider::defaultServerConnectionDrainDurationMicros,
-                     "defaultServerConnectionDrainDurationMicros", value -> value >= 0);
+                    "defaultServerConnectionDrainDurationMicros", value -> value >= 0);
 
     private static final long DEFAULT_CLIENT_HTTP2_GRACEFUL_SHUTDOWN_TIMEOUT_MILLIS =
             getValue(FlagsProvider::defaultClientHttp2GracefulShutdownTimeoutMillis,
-                     "defaultClientHttp2GracefulShutdownTimeoutMillis", value -> value >= 0);
+                    "defaultClientHttp2GracefulShutdownTimeoutMillis", value -> value >= 0);
 
     private static final int DEFAULT_HTTP2_INITIAL_CONNECTION_WINDOW_SIZE =
             getValue(FlagsProvider::defaultHttp2InitialConnectionWindowSize,
-                     "defaultHttp2InitialConnectionWindowSize", value -> value > 0);
+                    "defaultHttp2InitialConnectionWindowSize", value -> value > 0);
 
     private static final int DEFAULT_HTTP2_INITIAL_STREAM_WINDOW_SIZE =
             getValue(FlagsProvider::defaultHttp2InitialStreamWindowSize,
-                     "defaultHttp2InitialStreamWindowSize", value -> value > 0);
+                    "defaultHttp2InitialStreamWindowSize", value -> value > 0);
 
     private static final float DEFAULT_HTTP2_STREAM_WINDOW_UPDATE_RATIO =
             getValue(FlagsProvider::defaultHttp2StreamWindowUpdateRatio,
-                     "defaultHttp2InitialStreamWindowSize", value -> value > 0 && value <= 1.0f);
+                    "defaultHttp2InitialStreamWindowSize", value -> value > 0 && value <= 1.0f);
 
     private static final int DEFAULT_HTTP2_MAX_FRAME_SIZE =
             getValue(FlagsProvider::defaultHttp2MaxFrameSize, "defaultHttp2MaxFrameSize",
-                     value -> value >= Http2CodecUtil.MAX_FRAME_SIZE_LOWER_BOUND &&
-                              value <= Http2CodecUtil.MAX_FRAME_SIZE_UPPER_BOUND);
+                    value -> value >= Http2CodecUtil.MAX_FRAME_SIZE_LOWER_BOUND &&
+                            value <= Http2CodecUtil.MAX_FRAME_SIZE_UPPER_BOUND);
 
     private static final long DEFAULT_HTTP2_MAX_STREAMS_PER_CONNECTION =
             getValue(FlagsProvider::defaultHttp2MaxStreamsPerConnection, "defaultHttp2MaxStreamsPerConnection",
-                     value -> value > 0 && value <= 0xFFFFFFFFL);
+                    value -> value > 0 && value <= 0xFFFFFFFFL);
 
     private static final long DEFAULT_HTTP2_MAX_HEADER_LIST_SIZE =
             getValue(FlagsProvider::defaultHttp2MaxHeaderListSize, "defaultHttp2MaxHeaderListSize",
-                     value -> value > 0 && value <= 0xFFFFFFFFL);
+                    value -> value > 0 && value <= 0xFFFFFFFFL);
 
     private static final int DEFAULT_SERVER_HTTP2_MAX_RESET_FRAMES_PER_MINUTE =
             getValue(FlagsProvider::defaultServerHttp2MaxResetFramesPerMinute,
-                     "defaultServerHttp2MaxResetFramesPerMinute", value -> value >= 0);
+                    "defaultServerHttp2MaxResetFramesPerMinute", value -> value >= 0);
 
     private static final int DEFAULT_MAX_HTTP1_INITIAL_LINE_LENGTH =
             getValue(FlagsProvider::defaultHttp1MaxInitialLineLength, "defaultHttp1MaxInitialLineLength",
-                     value -> value >= 0);
+                    value -> value >= 0);
 
     private static final int DEFAULT_MAX_HTTP1_HEADER_SIZE =
             getValue(FlagsProvider::defaultHttp1MaxHeaderSize,
-                     "defaultHttp1MaxHeaderSize", value -> value >= 0);
+                    "defaultHttp1MaxHeaderSize", value -> value >= 0);
 
     private static final int DEFAULT_HTTP1_MAX_CHUNK_SIZE =
             getValue(FlagsProvider::defaultHttp1MaxChunkSize,
-                     "defaultHttp1MaxChunkSize", value -> value >= 0);
+                    "defaultHttp1MaxChunkSize", value -> value >= 0);
 
     private static final boolean DEFAULT_USE_HTTP2_PREFACE =
             getValue(FlagsProvider::defaultUseHttp2Preface, "defaultUseHttp2Preface");
@@ -382,7 +383,7 @@ public final class Flags {
 
     private static final List<String> CACHED_HEADERS =
             getValue(FlagsProvider::cachedHeaders, "cachedHeaders",
-                     list -> list.stream().allMatch(CharMatcher.ascii()::matchesAllOf));
+                    list -> list.stream().allMatch(CharMatcher.ascii()::matchesAllOf));
 
     @Nullable
     private static final String FILE_SERVICE_CACHE_SPEC =
@@ -394,7 +395,7 @@ public final class Flags {
     private static final String DEFAULT_ANNOTATED_SERVICE_EXCEPTION_VERBOSITY = "unhandled";
     private static final ExceptionVerbosity ANNOTATED_SERVICE_EXCEPTION_VERBOSITY =
             exceptionLoggingMode("annotatedServiceExceptionVerbosity",
-                                 DEFAULT_ANNOTATED_SERVICE_EXCEPTION_VERBOSITY);
+                    DEFAULT_ANNOTATED_SERVICE_EXCEPTION_VERBOSITY);
 
     private static final boolean USE_JDK_DNS_RESOLVER =
             getValue(FlagsProvider::useJdkDnsResolver, "useJdkDnsResolver");
@@ -414,7 +415,7 @@ public final class Flags {
     // Maximum 16MiB https://datatracker.ietf.org/doc/html/rfc5246#section-7.4
     private static final int DEFAULT_MAX_CLIENT_HELLO_LENGTH =
             getValue(FlagsProvider::defaultMaxClientHelloLength, "defaultMaxClientHelloLength",
-                     value -> value >= 0 && value <= 16777216); // 16MiB
+                    value -> value >= 0 && value <= 16777216); // 16MiB
 
     private static final Set<TransientServiceOption> TRANSIENT_SERVICE_OPTIONS =
             getValue(FlagsProvider::transientServiceOptions, "transientServiceOptions");
@@ -448,13 +449,16 @@ public final class Flags {
 
     private static final long DEFAULT_HTTP1_CONNECTION_CLOSE_DELAY_MILLIS =
             getValue(FlagsProvider::defaultHttp1ConnectionCloseDelayMillis,
-                     "defaultHttp1ConnectionCloseDelayMillis", value -> value >= 0);
+                    "defaultHttp1ConnectionCloseDelayMillis", value -> value >= 0);
 
     private static final ResponseTimeoutMode RESPONSE_TIMEOUT_MODE =
             getValue(FlagsProvider::responseTimeoutMode, "responseTimeoutMode");
 
     private static final boolean ANNOTATED_SERVICE_CONTENT_LOGGING =
             getValue(FlagsProvider::annotatedServiceContentLogging, "annotatedServiceContentLogging");
+
+    private static final boolean JSON_RPC_SERVICE_CONTENT_LOGGING =
+            getValue(FlagsProvider::jsonRpcServiceContentLogging, "jsonRpcServiceContentLogging");
 
     /**
      * Returns the specification of the {@link Sampler} that determines whether to retain the stack
@@ -612,13 +616,13 @@ public final class Flags {
     private static void detectTlsEngineAndDumpOpenSslInfo() {
 
         final Boolean useOpenSsl = getUserValue(FlagsProvider::useOpenSsl, "useOpenSsl",
-                                                ignored -> true);
+                ignored -> true);
         final TlsEngineType tlsEngineTypeValue = getUserValue(FlagsProvider::tlsEngineType,
-                                                              "tlsEngineType", ignored -> true);
+                "tlsEngineType", ignored -> true);
 
         if (useOpenSsl != null && (useOpenSsl != (tlsEngineTypeValue == TlsEngineType.OPENSSL))) {
             logger.warn("useOpenSsl({}) and tlsEngineType({}) are incompatible, tlsEngineType will be used",
-                        useOpenSsl, tlsEngineTypeValue);
+                    useOpenSsl, tlsEngineTypeValue);
         }
 
         TlsEngineType preferredTlsEngineType = null;
@@ -646,7 +650,7 @@ public final class Flags {
         }
 
         logger.info("Using Tls engine: OpenSSL {}, 0x{}", OpenSsl.versionString(),
-                    Long.toHexString(OpenSsl.version() & 0xFFFFFFFFL));
+                Long.toHexString(OpenSsl.version() & 0xFFFFFFFFL));
         dumpOpenSslInfo = getValue(FlagsProvider::dumpOpenSslInfo, "dumpOpenSslInfo");
         if (dumpOpenSslInfo) {
             final SSLEngine engine = SslContextUtil.createSslContext(
@@ -656,7 +660,7 @@ public final class Flags {
                     /* tlsAllowUnsafeCiphers */ false,
                     null, null).newEngine(ByteBufAllocator.DEFAULT);
             logger.info("All available SSL protocols: {}",
-                        ImmutableList.copyOf(engine.getSupportedProtocols()));
+                    ImmutableList.copyOf(engine.getSupportedProtocols()));
             logger.info("Default enabled SSL protocols: {}", SslContextUtil.DEFAULT_PROTOCOLS);
             ReferenceCountUtil.release(engine);
             logger.info("All available SSL ciphers: {}", OpenSsl.availableJavaCipherSuites());
@@ -1703,6 +1707,18 @@ public final class Flags {
         return ANNOTATED_SERVICE_CONTENT_LOGGING;
     }
 
+    /**
+     * Returns whether {@link JsonRpcService} should leave request/response content logs
+     * by default when a {@link LoggingService} is added.
+     *
+     * <p>By default, this option is enabled. Specify the
+     * {@code -Dcom.linecorp.armeria.jsonRpcServiceContentLogging=false} JVM option to
+     * override the default value.
+     */
+    public static boolean jsonRpcServiceContentLogging() {
+        return JSON_RPC_SERVICE_CONTENT_LOGGING;
+    }
+
     @Nullable
     private static String nullableCaffeineSpec(Function<FlagsProvider, String> method, String flagName) {
         return caffeineSpec(method, flagName, true);
@@ -1716,7 +1732,7 @@ public final class Flags {
 
     @Nullable
     private static String caffeineSpec(Function<FlagsProvider, String> method, String flagName,
-                                       boolean allowOff) {
+            boolean allowOff) {
         final String spec = getValue(method, flagName, value -> {
             try {
                 if ("off".equals(value)) {
@@ -1743,8 +1759,8 @@ public final class Flags {
 
     private static ExceptionVerbosity exceptionLoggingMode(String name, String defaultValue) {
         final String mode = getNormalized(name, defaultValue,
-                                          value -> Arrays.stream(ExceptionVerbosity.values())
-                                                         .anyMatch(v -> v.name().equalsIgnoreCase(value)));
+                value -> Arrays.stream(ExceptionVerbosity.values())
+                        .anyMatch(v -> v.name().equalsIgnoreCase(value)));
         return ExceptionVerbosity.valueOf(Ascii.toUpperCase(mode));
     }
 
@@ -1763,7 +1779,7 @@ public final class Flags {
     }
 
     private static String getNormalized(String name, String defaultValue,
-                                        Predicate<String> validator) {
+            Predicate<String> validator) {
         final String fullName = PREFIX + name;
         String value = System.getProperty(fullName);
         if (value != null) {
@@ -1786,7 +1802,7 @@ public final class Flags {
     }
 
     private static <T> T getValue(Function<FlagsProvider, @Nullable T> method,
-                                  String flagName, Predicate<T> validator) {
+            String flagName, Predicate<T> validator) {
         final T t = getUserValue(method, flagName, validator);
         if (t != null) {
             return t;
@@ -1797,7 +1813,7 @@ public final class Flags {
 
     @Nullable
     private static <T> T getUserValue(Function<FlagsProvider, @Nullable T> method, String flagName,
-                                      Predicate<T> validator) {
+            Predicate<T> validator) {
         for (FlagsProvider provider : FLAGS_PROVIDERS) {
             try {
                 final T value = method.apply(provider);
@@ -1826,10 +1842,10 @@ public final class Flags {
         if (warnNettyVersions()) {
             final String howToDisableWarning =
                     "This means 1) you specified Netty versions inconsistently in your build or " +
-                    "2) the Netty JARs in the classpath were repackaged or shaded incorrectly. " +
-                    "Specify the '-Dcom.linecorp.armeria.warnNettyVersions=false' JVM option to " +
-                    "disable this warning at the risk of unexpected Netty behavior, if you think " +
-                    "it is a false positive.";
+                            "2) the Netty JARs in the classpath were repackaged or shaded incorrectly. " +
+                            "Specify the '-Dcom.linecorp.armeria.warnNettyVersions=false' JVM option to " +
+                            "disable this warning at the risk of unexpected Netty behavior, if you think " +
+                            "it is a false positive.";
 
             final Map<String, Version> nettyVersions =
                     Version.identify(TransportTypeProvider.class.getClassLoader());
@@ -1837,9 +1853,9 @@ public final class Flags {
             final Set<String> distinctNettyVersions = nettyVersions.values().stream().filter(v -> {
                 final String artifactId = v.artifactId();
                 return artifactId != null &&
-                       artifactId.startsWith("netty") &&
-                       !artifactId.startsWith("netty-incubator") &&
-                       !artifactId.startsWith("netty-tcnative");
+                        artifactId.startsWith("netty") &&
+                        !artifactId.startsWith("netty-incubator") &&
+                        !artifactId.startsWith("netty-tcnative");
             }).map(Version::artifactVersion).collect(toImmutableSet());
 
             switch (distinctNettyVersions.size()) {
@@ -1853,7 +1869,7 @@ public final class Flags {
                     break;
                 default:
                     logger.warn("Inconsistent Netty versions detected: {} {}",
-                                nettyVersions, howToDisableWarning);
+                            nettyVersions, howToDisableWarning);
             }
         }
     }
