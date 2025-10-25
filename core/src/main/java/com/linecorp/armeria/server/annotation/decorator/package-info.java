@@ -17,7 +17,7 @@
 /**
  * Decorators for the annotated HTTP service.
  */
-@NonNullByDefault
+@NullMarked
 package com.linecorp.armeria.server.annotation.decorator;
 
-import com.linecorp.armeria.common.annotation.NonNullByDefault;
+import org.jspecify.annotations.NullMarked;

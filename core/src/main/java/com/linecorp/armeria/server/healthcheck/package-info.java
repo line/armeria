@@ -17,7 +17,7 @@
 /**
  * HTTP health check service for load balancers.
  */
-@NonNullByDefault
+@NullMarked
 package com.linecorp.armeria.server.healthcheck;
 
-import com.linecorp.armeria.common.annotation.NonNullByDefault;
+import org.jspecify.annotations.NullMarked;

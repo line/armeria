@@ -17,7 +17,7 @@
 /**
  * Web application service testing utilities.
  */
-@NonNullByDefault
+@NullMarked
 package com.linecorp.armeria.internal.testing.webapp;
 
-import com.linecorp.armeria.common.annotation.NonNullByDefault;
+import org.jspecify.annotations.NullMarked;

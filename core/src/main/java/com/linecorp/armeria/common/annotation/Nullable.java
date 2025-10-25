@@ -30,6 +30,7 @@ import javax.annotation.meta.When;
  * Indicates the return values, parameters and fields are nullable.
  * @see NonNullByDefault
  */
+@Deprecated
 @Documented
 @TypeQualifierNickname
 @Nonnull(when = When.MAYBE)

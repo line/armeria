@@ -17,7 +17,7 @@
 /**
  * Common testing utilities.
  */
-@NonNullByDefault
+@NullMarked
 package com.linecorp.armeria.testing.junit5.common;
 
-import com.linecorp.armeria.common.annotation.NonNullByDefault;
+import org.jspecify.annotations.NullMarked;

@@ -17,7 +17,7 @@
 /**
  * Testing utilities.
  */
-@NonNullByDefault
+@NullMarked
 package com.linecorp.armeria.testing.server;
 
-import com.linecorp.armeria.common.annotation.NonNullByDefault;
+import org.jspecify.annotations.NullMarked;

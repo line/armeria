@@ -23,7 +23,7 @@
  *   <li>{@link com.linecorp.armeria.common.stream.StreamWriter}</li>
  * </ul>
  */
-@NonNullByDefault
+@NullMarked
 package com.linecorp.armeria.common.stream;
 
-import com.linecorp.armeria.common.annotation.NonNullByDefault;
+import org.jspecify.annotations.NullMarked;

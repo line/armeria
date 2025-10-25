@@ -17,8 +17,8 @@
  * Internal common classes for handling the GraphQL protocol.
  */
 @UnstableApi
-@NonNullByDefault
+@NullMarked
 package com.linecorp.armeria.internal.server.graphql.protocol;
 
-import com.linecorp.armeria.common.annotation.NonNullByDefault;
+import org.jspecify.annotations.NullMarked;
 import com.linecorp.armeria.common.annotation.UnstableApi;

@@ -17,7 +17,7 @@
 /**
  * Fabric8 Kubernetes client based on <a href="https://armeria.dev">Armeria</a>.
  */
-@NonNullByDefault
+@NullMarked
 package com.linecorp.armeria.client.kubernetes;
 
-import com.linecorp.armeria.common.annotation.NonNullByDefault;
+import org.jspecify.annotations.NullMarked;

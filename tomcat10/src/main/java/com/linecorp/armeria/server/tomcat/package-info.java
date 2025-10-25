@@ -17,7 +17,7 @@
 /**
  * Embedded <a href="https://tomcat.apache.org/">Tomcat</a> service.
  */
-@NonNullByDefault
+@NullMarked
 package com.linecorp.armeria.server.tomcat;
 
-import com.linecorp.armeria.common.annotation.NonNullByDefault;
+import org.jspecify.annotations.NullMarked;

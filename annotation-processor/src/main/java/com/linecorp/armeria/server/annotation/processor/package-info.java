@@ -17,7 +17,7 @@
 /**
  * Annotation processors for annotated services.
  */
-@NonNullByDefault
+@NullMarked
 package com.linecorp.armeria.server.annotation.processor;
 
-import com.linecorp.armeria.common.annotation.NonNullByDefault;
+import org.jspecify.annotations.NullMarked;

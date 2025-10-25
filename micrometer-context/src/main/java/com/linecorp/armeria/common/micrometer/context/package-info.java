@@ -19,8 +19,8 @@
  * during Reactor operations.
  */
 @UnstableApi
-@NonNullByDefault
+@NullMarked
 package com.linecorp.armeria.common.micrometer.context;
 
-import com.linecorp.armeria.common.annotation.NonNullByDefault;
+import org.jspecify.annotations.NullMarked;
 import com.linecorp.armeria.common.annotation.UnstableApi;

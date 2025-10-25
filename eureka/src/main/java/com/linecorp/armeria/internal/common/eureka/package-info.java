@@ -16,7 +16,7 @@
 /**
  * <a href="https://github.com/Netflix/eureka/">Eureka</a>-related common classes.
  */
-@NonNullByDefault
+@NullMarked
 package com.linecorp.armeria.internal.common.eureka;
 
-import com.linecorp.armeria.common.annotation.NonNullByDefault;
+import org.jspecify.annotations.NullMarked;

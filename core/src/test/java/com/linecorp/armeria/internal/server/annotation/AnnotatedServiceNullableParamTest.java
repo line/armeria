@@ -89,6 +89,8 @@ class AnnotatedServiceNullableParamTest {
                     return nullable(value);
                 }
 
+                // TODO(vince): add test for TYPE_USE @Nullable
+
                 @Get("/default")
                 public String defaultValue(@Header @Default("unspecified") String value) {
                     return value;

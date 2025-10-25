@@ -21,9 +21,9 @@
  *
  * @see com.linecorp.armeria.unsafe.PooledObjects
  */
-@NonNullByDefault
+@NullMarked
 @UnstableApi
 package com.linecorp.armeria.unsafe;
 
-import com.linecorp.armeria.common.annotation.NonNullByDefault;
+import org.jspecify.annotations.NullMarked;
 import com.linecorp.armeria.common.annotation.UnstableApi;

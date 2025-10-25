@@ -17,7 +17,7 @@
 /**
  * Request throttling service decorators and strategies.
  */
-@NonNullByDefault
+@NullMarked
 package com.linecorp.armeria.server.throttling;
 
-import com.linecorp.armeria.common.annotation.NonNullByDefault;
+import org.jspecify.annotations.NullMarked;

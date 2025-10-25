@@ -17,8 +17,8 @@
  * Internal common classes for handling the gRPC wire protocol.
  */
 @UnstableApi
-@NonNullByDefault
+@NullMarked
 package com.linecorp.armeria.internal.client.grpc.protocol;
 
-import com.linecorp.armeria.common.annotation.NonNullByDefault;
+import org.jspecify.annotations.NullMarked;
 import com.linecorp.armeria.common.annotation.UnstableApi;

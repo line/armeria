@@ -19,8 +19,8 @@
  * implementation.
  */
 @UnstableApi
-@NonNullByDefault
+@NullMarked
 package com.linecorp.armeria.common.auth.oauth2;
 
-import com.linecorp.armeria.common.annotation.NonNullByDefault;
+import org.jspecify.annotations.NullMarked;
 import com.linecorp.armeria.common.annotation.UnstableApi;

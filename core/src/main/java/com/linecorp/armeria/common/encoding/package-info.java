@@ -17,7 +17,7 @@
 /**
  * Provides the common classes for HTTP content encoding.
  */
-@NonNullByDefault
+@NullMarked
 package com.linecorp.armeria.common.encoding;
 
-import com.linecorp.armeria.common.annotation.NonNullByDefault;
+import org.jspecify.annotations.NullMarked;
