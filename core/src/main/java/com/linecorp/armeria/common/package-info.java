@@ -22,7 +22,7 @@
  *   <li>{@link com.linecorp.armeria.common.RequestContext}</li>
  * </ul>
  */
-@NonNullByDefault
+@NullMarked
 package com.linecorp.armeria.common;
 
-import com.linecorp.armeria.common.annotation.NonNullByDefault;
+import org.jspecify.annotations.NullMarked;

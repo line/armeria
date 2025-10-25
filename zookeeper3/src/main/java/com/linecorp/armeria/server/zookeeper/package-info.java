@@ -16,7 +16,7 @@
 /**
  * <a href="https://zookeeper.apache.org/">ZooKeeper</a>-based automatic service registration.
  */
-@NonNullByDefault
+@NullMarked
 package com.linecorp.armeria.server.zookeeper;
 
-import com.linecorp.armeria.common.annotation.NonNullByDefault;
+import org.jspecify.annotations.NullMarked;

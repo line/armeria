@@ -16,7 +16,7 @@
 /**
  * <a href="https://github.com/Netflix/eureka/">Eureka</a>-based automatic service registration.
  */
-@NonNullByDefault
+@NullMarked
 package com.linecorp.armeria.server.eureka;
 
-import com.linecorp.armeria.common.annotation.NonNullByDefault;
+import org.jspecify.annotations.NullMarked;

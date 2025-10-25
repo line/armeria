@@ -17,7 +17,7 @@
 /**
  * <a href="https://square.github.io/retrofit/">Retrofit2</a> adapter for Armeria.
  */
-@NonNullByDefault
+@NullMarked
 package com.linecorp.armeria.client.retrofit2;
 
-import com.linecorp.armeria.common.annotation.NonNullByDefault;
+import org.jspecify.annotations.NullMarked;

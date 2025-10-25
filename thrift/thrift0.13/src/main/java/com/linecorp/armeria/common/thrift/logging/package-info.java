@@ -17,7 +17,7 @@
 /**
  * Thrift-related classes for logging.
  */
-@NonNullByDefault
+@NullMarked
 package com.linecorp.armeria.common.thrift.logging;
 
-import com.linecorp.armeria.common.annotation.NonNullByDefault;
+import org.jspecify.annotations.NullMarked;

@@ -17,7 +17,7 @@
 /**
  * Supports streaming responses from {@link org.reactivestreams.Publisher} or {@link java.util.stream.Stream}.
  */
-@NonNullByDefault
+@NullMarked
 package com.linecorp.armeria.server.streaming;
 
-import com.linecorp.armeria.common.annotation.NonNullByDefault;
+import org.jspecify.annotations.NullMarked;

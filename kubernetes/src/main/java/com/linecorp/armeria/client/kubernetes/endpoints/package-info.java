@@ -17,7 +17,7 @@
 /**
  * {@link com.linecorp.armeria.client.endpoint.EndpointGroup} for Kubernetes services.
  */
-@NonNullByDefault
+@NullMarked
 package com.linecorp.armeria.client.kubernetes.endpoints;
 
-import com.linecorp.armeria.common.annotation.NonNullByDefault;
+import org.jspecify.annotations.NullMarked;

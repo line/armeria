@@ -19,8 +19,9 @@
  * <a href="https://en.wikipedia.org/wiki/OAuth#OAuth_2.0">OAuth 2.0</a> implementation artifacts.
  */
 @UnstableApi
-@NonNullByDefault
+@NullMarked
 package com.linecorp.armeria.internal.client.auth.oauth2;
 
-import com.linecorp.armeria.common.annotation.NonNullByDefault;
+import org.jspecify.annotations.NullMarked;
+
 import com.linecorp.armeria.common.annotation.UnstableApi;

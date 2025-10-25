@@ -16,7 +16,7 @@
 
 package com.linecorp.armeria.common.auth;
 
-import com.linecorp.armeria.common.annotation.Nullable;
+import org.jspecify.annotations.Nullable;
 
 final class AuthUtil {
 

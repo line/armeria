@@ -17,7 +17,7 @@
 /**
  * Decorators for Kotlin coroutines.
  */
-@NonNullByDefault
+@NullMarked
 package com.linecorp.armeria.server.kotlin;
 
-import com.linecorp.armeria.common.annotation.NonNullByDefault;
+import org.jspecify.annotations.NullMarked;

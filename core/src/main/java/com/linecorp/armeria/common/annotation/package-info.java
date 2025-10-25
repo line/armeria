@@ -17,5 +17,7 @@
 /**
  * Common annotations.
  */
-@NonNullByDefault
+@NullMarked
 package com.linecorp.armeria.common.annotation;
+
+import org.jspecify.annotations.NullMarked;

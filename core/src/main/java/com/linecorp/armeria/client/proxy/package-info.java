@@ -17,7 +17,7 @@
 /**
  * Proxy configuration.
  */
-@NonNullByDefault
+@NullMarked
 package com.linecorp.armeria.client.proxy;
 
-import com.linecorp.armeria.common.annotation.NonNullByDefault;
+import org.jspecify.annotations.NullMarked;

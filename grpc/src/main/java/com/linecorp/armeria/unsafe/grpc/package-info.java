@@ -19,9 +19,10 @@
  * when dealing with large buffers but require careful memory management or there will be memory leaks. Only use
  * these methods if you really know what you're doing.
  */
-@NonNullByDefault
+@NullMarked
 @UnstableApi
 package com.linecorp.armeria.unsafe.grpc;
 
-import com.linecorp.armeria.common.annotation.NonNullByDefault;
+import org.jspecify.annotations.NullMarked;
+
 import com.linecorp.armeria.common.annotation.UnstableApi;

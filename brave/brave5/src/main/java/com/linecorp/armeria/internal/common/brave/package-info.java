@@ -23,7 +23,7 @@
  *             1.28 Breaking Changes</a> for more information.
  */
 @Deprecated
-@NonNullByDefault
+@NullMarked
 package com.linecorp.armeria.internal.common.brave;
 
-import com.linecorp.armeria.common.annotation.NonNullByDefault;
+import org.jspecify.annotations.NullMarked;

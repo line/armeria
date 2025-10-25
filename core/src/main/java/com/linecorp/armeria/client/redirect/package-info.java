@@ -17,7 +17,7 @@
 /**
  * <a href="https://datatracker.ietf.org/doc/html/rfc7231#section-6.4">automatic redirection</a>.
  */
-@NonNullByDefault
+@NullMarked
 package com.linecorp.armeria.client.redirect;
 
-import com.linecorp.armeria.common.annotation.NonNullByDefault;
+import org.jspecify.annotations.NullMarked;

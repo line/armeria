@@ -23,7 +23,7 @@
  *   <li>{@link com.linecorp.armeria.client.ClientBuilder}</li>
  * </ul>
  */
-@NonNullByDefault
+@NullMarked
 package com.linecorp.armeria.client;
 
-import com.linecorp.armeria.common.annotation.NonNullByDefault;
+import org.jspecify.annotations.NullMarked;

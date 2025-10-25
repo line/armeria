@@ -17,7 +17,7 @@
 /**
  * Logging and metric-collecting service decorators.
  */
-@NonNullByDefault
+@NullMarked
 package com.linecorp.armeria.server.logging;
 
-import com.linecorp.armeria.common.annotation.NonNullByDefault;
+import org.jspecify.annotations.NullMarked;

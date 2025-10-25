@@ -17,7 +17,7 @@
 /**
  * Kotlin-related common classes.
  */
-@NonNullByDefault
+@NullMarked
 package com.linecorp.armeria.common.kotlin;
 
-import com.linecorp.armeria.common.annotation.NonNullByDefault;
+import org.jspecify.annotations.NullMarked;

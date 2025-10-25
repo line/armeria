@@ -17,7 +17,7 @@
 /**
  * Provides the common classes for {@link com.linecorp.armeria.client.circuitbreaker.CircuitBreaker}.
  */
-@NonNullByDefault
+@NullMarked
 package com.linecorp.armeria.common.circuitbreaker;
 
-import com.linecorp.armeria.common.annotation.NonNullByDefault;
+import org.jspecify.annotations.NullMarked;

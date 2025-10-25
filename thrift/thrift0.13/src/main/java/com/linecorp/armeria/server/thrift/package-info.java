@@ -17,7 +17,7 @@
 /**
  * Thrift service.
  */
-@NonNullByDefault
+@NullMarked
 package com.linecorp.armeria.server.thrift;
 
-import com.linecorp.armeria.common.annotation.NonNullByDefault;
+import org.jspecify.annotations.NullMarked;

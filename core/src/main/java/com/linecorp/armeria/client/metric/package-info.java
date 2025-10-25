@@ -17,7 +17,7 @@
 /**
  * Metric-collecting client decorators.
  */
-@NonNullByDefault
+@NullMarked
 package com.linecorp.armeria.client.metric;
 
-import com.linecorp.armeria.common.annotation.NonNullByDefault;
+import org.jspecify.annotations.NullMarked;

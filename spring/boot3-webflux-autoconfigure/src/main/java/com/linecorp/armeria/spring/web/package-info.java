@@ -17,7 +17,7 @@
 /**
  * <a href="https://projects.spring.io/spring-boot/">Spring Boot</a> integration.
  */
-@NonNullByDefault
+@NullMarked
 package com.linecorp.armeria.spring.web;
 
-import com.linecorp.armeria.common.annotation.NonNullByDefault;
+import org.jspecify.annotations.NullMarked;

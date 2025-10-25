@@ -18,7 +18,7 @@
  * <a href="https://en.wikipedia.org/wiki/Security_Assertion_Markup_Language">SAML</a>-based single sign-on
  * service.
  */
-@NonNullByDefault
+@NullMarked
 package com.linecorp.armeria.server.saml;
 
-import com.linecorp.armeria.common.annotation.NonNullByDefault;
+import org.jspecify.annotations.NullMarked;
