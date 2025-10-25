@@ -100,4 +100,15 @@ public final class ContextPathServicesBuilder
     public ContextPathAnnotatedServiceConfigSetters annotatedService() {
         return new ContextPathAnnotatedServiceConfigSetters(this);
     }
+
+    @Override
+    public ContextPathServicesBuilder contextPath(Iterable<String> paths,
+                                                  Consumer<ContextPathServicesBuilder> customizer) {
+        final ContextPathServicesBuilder child =
+                new ContextPathServicesBuilder(parent(),
+                                               virtualHostBuilder(),
+                                               mergedContextPaths(paths));
+        customizer.accept(child);
+        return this;
+    }
 }
