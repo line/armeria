@@ -33,10 +33,9 @@ package com.linecorp.armeria.common.thrift.text;
 
 import org.apache.thrift.TException;
 import org.apache.thrift.protocol.TField;
+import org.jspecify.annotations.Nullable;
 
 import com.fasterxml.jackson.databind.JsonNode;
-
-import com.linecorp.armeria.common.annotation.Nullable;
 
 /**
  * A base parsing context. Used as a root level parsing context for

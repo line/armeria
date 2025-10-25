@@ -16,7 +16,8 @@
 
 package com.linecorp.armeria.internal.server.grpc;
 
-import com.linecorp.armeria.common.annotation.Nullable;
+import org.jspecify.annotations.Nullable;
+
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.server.Route;
 import com.linecorp.armeria.server.docs.DocService;

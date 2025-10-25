@@ -18,9 +18,10 @@ package com.linecorp.armeria.client;
 
 import java.util.Iterator;
 
+import org.jspecify.annotations.Nullable;
+
 import com.linecorp.armeria.common.ContentTooLargeException;
 import com.linecorp.armeria.common.ContentTooLargeExceptionBuilder;
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.internal.client.DecodedHttpResponse;
 import com.linecorp.armeria.internal.client.HttpSession;
 import com.linecorp.armeria.internal.common.InboundTrafficController;

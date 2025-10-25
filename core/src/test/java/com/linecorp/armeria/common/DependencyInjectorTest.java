@@ -27,10 +27,10 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
 
 import org.eclipse.jetty.util.BlockingArrayQueue;
+import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.internal.testing.AnticipatedException;
 import com.linecorp.armeria.server.DecoratingHttpServiceFunction;
 import com.linecorp.armeria.server.HttpService;

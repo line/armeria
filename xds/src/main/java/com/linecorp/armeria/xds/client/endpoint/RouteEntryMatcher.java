@@ -18,6 +18,8 @@ package com.linecorp.armeria.xds.client.endpoint;
 
 import java.util.List;
 
+import org.jspecify.annotations.Nullable;
+
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Ascii;
 import com.google.common.base.Joiner;
@@ -30,7 +32,6 @@ import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.QueryParams;
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.xds.RouteEntry;
 
 import io.envoyproxy.envoy.config.route.v3.HeaderMatcher;

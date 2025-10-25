@@ -37,6 +37,7 @@ import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -46,7 +47,6 @@ import org.reactivestreams.Subscription;
 import com.google.common.base.Charsets;
 
 import com.linecorp.armeria.common.HttpData;
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.stream.DefaultStreamMessageDuplicator.DownstreamSubscription;
 import com.linecorp.armeria.common.stream.DefaultStreamMessageDuplicator.SignalQueue;
 import com.linecorp.armeria.common.stream.DefaultStreamMessageDuplicator.StreamMessageProcessor;

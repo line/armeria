@@ -15,7 +15,7 @@
  */
 package com.linecorp.armeria.internal.testing.netty;
 
-import com.linecorp.armeria.common.annotation.Nullable;
+import org.jspecify.annotations.Nullable;
 
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;

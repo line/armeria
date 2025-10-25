@@ -36,8 +36,7 @@ import org.apache.catalina.core.StandardServer;
 import org.apache.catalina.core.StandardService;
 import org.apache.catalina.realm.NullRealm;
 import org.apache.catalina.startup.Tomcat;
-
-import com.linecorp.armeria.common.annotation.Nullable;
+import org.jspecify.annotations.Nullable;
 
 /**
  * Builds a {@link TomcatService}. Use the factory methods in {@link TomcatService} if you do not override

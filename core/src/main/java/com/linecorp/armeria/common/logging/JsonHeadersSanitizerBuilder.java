@@ -18,10 +18,11 @@ package com.linecorp.armeria.common.logging;
 
 import static java.util.Objects.requireNonNull;
 
+import org.jspecify.annotations.Nullable;
+
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.internal.common.JacksonUtil;
 
 /**

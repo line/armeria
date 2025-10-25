@@ -28,11 +28,11 @@ import org.apache.curator.framework.CuratorFrameworkFactory;
 import org.apache.curator.framework.CuratorFrameworkFactory.Builder;
 import org.apache.curator.retry.ExponentialBackoffRetry;
 import org.apache.zookeeper.common.PathUtils;
+import org.jspecify.annotations.Nullable;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.primitives.Ints;
 
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 
 /**

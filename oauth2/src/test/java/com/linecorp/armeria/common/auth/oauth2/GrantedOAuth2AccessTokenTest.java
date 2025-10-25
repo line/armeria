@@ -24,9 +24,8 @@ import java.time.Instant;
 import java.util.Collections;
 import java.util.Map;
 
+import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.Test;
-
-import com.linecorp.armeria.common.annotation.Nullable;
 
 public class GrantedOAuth2AccessTokenTest {
 

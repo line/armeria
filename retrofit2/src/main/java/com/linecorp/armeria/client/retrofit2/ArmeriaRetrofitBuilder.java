@@ -28,6 +28,8 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
+import org.jspecify.annotations.Nullable;
+
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.google.common.base.MoreObjects;
@@ -55,7 +57,6 @@ import com.linecorp.armeria.common.CommonPools;
 import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.SuccessFunction;
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.auth.AuthToken;
 import com.linecorp.armeria.common.auth.BasicToken;
 import com.linecorp.armeria.common.auth.OAuth1aToken;

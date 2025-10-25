@@ -21,11 +21,11 @@ import static org.assertj.core.api.Assertions.assertThat;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
 import com.linecorp.armeria.common.CustomRequestContextStorageProvider.CustomRequestContextStorage;
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.common.util.ThreadFactories;
 import com.linecorp.armeria.server.ServiceRequestContext;

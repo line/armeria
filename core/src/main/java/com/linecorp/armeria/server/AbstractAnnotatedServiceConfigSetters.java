@@ -30,13 +30,14 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
+import org.jspecify.annotations.Nullable;
+
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableList.Builder;
 
 import com.linecorp.armeria.common.DependencyInjector;
 import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.SuccessFunction;
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.util.BlockingTaskExecutor;
 import com.linecorp.armeria.internal.server.annotation.AnnotatedServiceElement;

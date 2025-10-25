@@ -20,6 +20,7 @@ import static com.linecorp.armeria.grpc.shared.GithubApiService.SEARCH_RESPONSE;
 
 import java.util.concurrent.TimeUnit;
 
+import org.jspecify.annotations.Nullable;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.Param;
 import org.openjdk.jmh.annotations.Scope;
@@ -32,7 +33,6 @@ import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.protobuf.Empty;
 
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.grpc.GithubApi.SearchResponse;
 import com.linecorp.armeria.grpc.GithubServiceGrpc;
 import com.linecorp.armeria.grpc.GithubServiceGrpc.GithubServiceBlockingStub;

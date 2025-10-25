@@ -17,7 +17,8 @@ package com.linecorp.armeria.common;
 
 import java.util.function.Function;
 
-import com.linecorp.armeria.common.annotation.Nullable;
+import org.jspecify.annotations.Nullable;
+
 import com.linecorp.armeria.common.util.AbstractUnwrappable;
 
 /**

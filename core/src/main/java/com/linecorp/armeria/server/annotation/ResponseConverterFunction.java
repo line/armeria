@@ -19,6 +19,8 @@ package com.linecorp.armeria.server.annotation;
 import java.lang.reflect.Type;
 import java.util.function.Consumer;
 
+import org.jspecify.annotations.Nullable;
+
 import com.google.errorprone.annotations.CheckReturnValue;
 
 import com.linecorp.armeria.common.HttpHeaders;
@@ -27,7 +29,6 @@ import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.ResponseEntity;
 import com.linecorp.armeria.common.ResponseHeaders;
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.server.ServiceRequestContext;
 

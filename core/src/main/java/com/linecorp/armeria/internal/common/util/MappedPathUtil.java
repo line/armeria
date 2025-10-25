@@ -16,8 +16,9 @@
 
 package com.linecorp.armeria.internal.common.util;
 
+import org.jspecify.annotations.Nullable;
+
 import com.linecorp.armeria.common.RequestTarget;
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 public final class MappedPathUtil {

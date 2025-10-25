@@ -23,6 +23,8 @@ import java.util.EnumMap;
 import java.util.Map;
 import java.util.function.BiFunction;
 
+import org.jspecify.annotations.Nullable;
+
 import com.google.common.base.Strings;
 import com.google.common.collect.Maps;
 
@@ -46,7 +48,6 @@ import com.linecorp.armeria.common.RequestTarget;
 import com.linecorp.armeria.common.Scheme;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.grpc.GrpcJsonMarshaller;
 import com.linecorp.armeria.common.logging.RequestLogProperty;
 import com.linecorp.armeria.common.util.SystemInfo;

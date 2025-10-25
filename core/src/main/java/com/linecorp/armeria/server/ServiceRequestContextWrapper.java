@@ -26,6 +26,8 @@ import java.util.function.Supplier;
 
 import javax.annotation.Nonnull;
 
+import org.jspecify.annotations.Nullable;
+
 import com.linecorp.armeria.common.ContextAwareBlockingTaskExecutor;
 import com.linecorp.armeria.common.ExchangeType;
 import com.linecorp.armeria.common.HttpHeaders;
@@ -34,7 +36,6 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.QueryParams;
 import com.linecorp.armeria.common.RequestContextWrapper;
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.TimeoutMode;
 
 /**

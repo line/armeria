@@ -34,6 +34,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
 
+import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -50,7 +51,6 @@ import com.linecorp.armeria.common.ClosedSessionException;
 import com.linecorp.armeria.common.NonBlocking;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.logging.ClientConnectionTimingsBuilder;
 import com.linecorp.armeria.common.util.AsyncCloseable;
 import com.linecorp.armeria.common.util.AsyncCloseableSupport;

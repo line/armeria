@@ -21,11 +21,12 @@ import java.net.URI;
 import java.time.Duration;
 import java.util.List;
 
+import org.jspecify.annotations.Nullable;
+
 import com.google.common.collect.ImmutableMap;
 
 import com.linecorp.armeria.client.athenz.ZtsBaseClient;
 import com.linecorp.armeria.client.athenz.ZtsBaseClientBuilder;
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServerListenerAdapter;

@@ -26,6 +26,7 @@ import java.util.function.Consumer;
 
 import javax.net.ssl.SSLContext;
 
+import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.testcontainers.containers.ComposeContainer;
@@ -47,7 +48,6 @@ import com.yahoo.athenz.zts.ZTSClient;
 import com.linecorp.armeria.client.WebClientBuilder;
 import com.linecorp.armeria.client.athenz.ZtsBaseClient;
 import com.linecorp.armeria.common.TlsKeyPair;
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.SafeCloseable;
 
 import io.micrometer.core.instrument.util.IOUtils;

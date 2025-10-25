@@ -18,6 +18,7 @@ package com.linecorp.armeria.internal.common.stream;
 
 import static java.util.Objects.requireNonNull;
 
+import org.jspecify.annotations.Nullable;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 
@@ -27,7 +28,6 @@ import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.ResponseHeaders;
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.stream.AbortedStreamException;
 import com.linecorp.armeria.common.stream.CancelledSubscriptionException;

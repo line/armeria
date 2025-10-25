@@ -21,6 +21,7 @@ import java.util.Collection;
 import java.util.Map;
 import java.util.function.Function;
 
+import org.jspecify.annotations.Nullable;
 import org.opensaml.security.credential.Credential;
 import org.opensaml.xmlsec.signature.support.SignatureConstants;
 
@@ -29,7 +30,6 @@ import com.google.common.collect.ImmutableMap;
 
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.SessionProtocol;
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.HttpServiceWithRoutes;
 import com.linecorp.armeria.server.Route;

@@ -26,13 +26,12 @@ import java.lang.reflect.Method;
 import java.util.List;
 import java.util.function.DoubleSupplier;
 
+import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
-
-import com.linecorp.armeria.common.annotation.Nullable;
 
 /**
  * A {@link HealthChecker} that reports as unhealthy when the current

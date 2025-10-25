@@ -18,10 +18,10 @@ package com.linecorp.armeria.internal.common.stream;
 
 import java.lang.reflect.Field;
 
+import org.jspecify.annotations.Nullable;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.stream.AbortedStreamException;
 
 public final class AbortingSubscriber<T> implements Subscriber<T> {

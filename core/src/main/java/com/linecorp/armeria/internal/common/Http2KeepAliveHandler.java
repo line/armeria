@@ -22,6 +22,7 @@ import java.util.concurrent.Future;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 
+import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -29,7 +30,6 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Stopwatch;
 
 import com.linecorp.armeria.common.Flags;
-import com.linecorp.armeria.common.annotation.Nullable;
 
 import io.micrometer.core.instrument.Timer;
 import io.netty.channel.Channel;

@@ -19,6 +19,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import javax.inject.Inject;
 
+import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
@@ -32,7 +33,6 @@ import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.SessionProtocol;
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.internal.testing.MockAddressResolverGroup;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.spring.ArmeriaSslConfigurationTest.TestConfiguration;

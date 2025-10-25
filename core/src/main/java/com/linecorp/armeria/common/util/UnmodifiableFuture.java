@@ -21,9 +21,10 @@ import java.util.List;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
 
+import org.jspecify.annotations.Nullable;
+
 import com.google.common.collect.ImmutableList;
 
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 
 import io.netty.util.concurrent.Future;

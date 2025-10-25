@@ -24,6 +24,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.IntStream;
 
+import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.Test;
 
 import com.google.common.base.Stopwatch;
@@ -36,7 +37,6 @@ import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.SessionProtocol;
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.Exceptions;
 
 class AbstractEndpointSelectorTest {

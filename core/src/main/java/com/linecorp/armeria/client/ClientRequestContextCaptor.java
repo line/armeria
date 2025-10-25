@@ -19,7 +19,8 @@ import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.function.Supplier;
 
-import com.linecorp.armeria.common.annotation.Nullable;
+import org.jspecify.annotations.Nullable;
+
 import com.linecorp.armeria.common.util.SafeCloseable;
 
 /**

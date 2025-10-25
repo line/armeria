@@ -18,7 +18,8 @@ package com.linecorp.armeria.server;
 
 import static com.linecorp.armeria.internal.common.KeepAliveHandlerUtil.needsKeepAliveHandler;
 
-import com.linecorp.armeria.common.annotation.Nullable;
+import org.jspecify.annotations.Nullable;
+
 import com.linecorp.armeria.internal.common.AbstractHttp2ConnectionHandler;
 import com.linecorp.armeria.internal.common.GracefulConnectionShutdownHandler;
 import com.linecorp.armeria.internal.common.InitiateConnectionShutdown;

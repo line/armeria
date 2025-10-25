@@ -18,9 +18,10 @@ package com.linecorp.armeria.internal.server.annotation;
 
 import static com.linecorp.armeria.internal.server.annotation.AnnotatedServiceLogUtil.maybeUnwrapFuture;
 
+import org.jspecify.annotations.Nullable;
+
 import com.google.common.base.MoreObjects;
 
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.logging.BeanFieldInfo;
 
 final class AnnotatedResponse {

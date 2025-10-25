@@ -23,10 +23,11 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.jspecify.annotations.Nullable;
+
 import com.google.common.base.Ascii;
 
 import com.linecorp.armeria.common.MediaType;
-import com.linecorp.armeria.common.annotation.Nullable;
 
 enum DefaultMediaTypeResolver implements MediaTypeResolver {
     INSTANCE;

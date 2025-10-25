@@ -16,9 +16,10 @@
 
 package com.linecorp.armeria.client;
 
+import org.jspecify.annotations.Nullable;
+
 import com.linecorp.armeria.common.TlsKeyPair;
 import com.linecorp.armeria.common.TlsProvider;
-import com.linecorp.armeria.common.annotation.Nullable;
 
 enum NullTlsProvider implements TlsProvider {
     INSTANCE;

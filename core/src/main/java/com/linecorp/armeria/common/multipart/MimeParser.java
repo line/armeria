@@ -34,13 +34,13 @@ import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.util.regex.Pattern;
 
+import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpHeadersBuilder;
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.multipart.MultipartDecoder.BodyPartPublisher;
 import com.linecorp.armeria.common.stream.StreamDecoderInput;
 import com.linecorp.armeria.common.stream.StreamDecoderOutput;

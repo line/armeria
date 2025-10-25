@@ -37,10 +37,9 @@ import java.util.List;
 
 import javax.net.ssl.SSLSession;
 
+import org.jspecify.annotations.Nullable;
 import org.springframework.http.server.reactive.SslInfo;
 import org.springframework.util.Assert;
-
-import com.linecorp.armeria.common.annotation.Nullable;
 
 /**
  * Default implementation of {@link SslInfo}.

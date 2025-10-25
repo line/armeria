@@ -21,6 +21,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.util.stream.Stream;
 
+import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
@@ -34,7 +35,6 @@ import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.RequestHeaders;
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.xds.XdsBootstrap;
 import com.linecorp.armeria.xds.client.endpoint.XdsHttpPreprocessor;
 

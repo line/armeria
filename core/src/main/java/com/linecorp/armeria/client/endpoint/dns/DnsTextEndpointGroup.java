@@ -19,6 +19,8 @@ package com.linecorp.armeria.client.endpoint.dns;
 import java.util.List;
 import java.util.function.Function;
 
+import org.jspecify.annotations.Nullable;
+
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSortedSet;
 
@@ -27,7 +29,6 @@ import com.linecorp.armeria.client.endpoint.DynamicEndpointGroup;
 import com.linecorp.armeria.client.endpoint.EndpointSelectionStrategy;
 import com.linecorp.armeria.client.retry.Backoff;
 import com.linecorp.armeria.common.CommonPools;
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.internal.client.dns.ByteArrayDnsRecord;
 import com.linecorp.armeria.internal.client.dns.DefaultDnsResolver;
 import com.linecorp.armeria.internal.client.dns.DnsQuestionWithoutTrailingDot;

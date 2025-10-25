@@ -18,11 +18,10 @@ package com.linecorp.armeria.spring.web.reactive;
 
 import java.net.URI;
 
+import org.jspecify.annotations.Nullable;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.server.reactive.AbstractServerHttpRequest;
 import org.springframework.util.MultiValueMap;
-
-import com.linecorp.armeria.common.annotation.Nullable;
 
 /**
  * A version specific {@link AbstractServerHttpRequest} which implements the APIs that only exists in Spring 6.

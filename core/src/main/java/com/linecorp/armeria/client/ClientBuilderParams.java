@@ -20,9 +20,10 @@ import static java.util.Objects.requireNonNull;
 
 import java.net.URI;
 
+import org.jspecify.annotations.Nullable;
+
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.common.Scheme;
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 
 /**

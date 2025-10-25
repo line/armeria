@@ -18,6 +18,7 @@ package com.linecorp.armeria.resilience4j.circuitbreaker.client;
 
 import static java.util.Objects.requireNonNull;
 
+import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -27,7 +28,6 @@ import com.linecorp.armeria.client.circuitbreaker.CircuitBreakerClientHandler;
 import com.linecorp.armeria.client.circuitbreaker.CircuitBreakerMapping;
 import com.linecorp.armeria.client.circuitbreaker.ClientCircuitBreakerGenerator;
 import com.linecorp.armeria.common.Request;
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.circuitbreaker.CircuitBreakerCallback;
 

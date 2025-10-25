@@ -29,7 +29,7 @@ import javax.net.ssl.TrustManager;
 import javax.net.ssl.TrustManagerFactory;
 import javax.net.ssl.X509TrustManager;
 
-import com.linecorp.armeria.common.annotation.Nullable;
+import org.jspecify.annotations.Nullable;
 
 import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.handler.ssl.util.SimpleTrustManagerFactory;

@@ -35,10 +35,10 @@ import org.jboss.resteasy.specimpl.ResteasyHttpHeaders;
 import org.jboss.resteasy.specimpl.ResteasyUriInfo;
 import org.jboss.resteasy.spi.NotImplementedYetException;
 import org.jboss.resteasy.spi.ResteasyAsynchronousContext;
+import org.jspecify.annotations.Nullable;
 
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.RequestHeaders;
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.internal.common.resteasy.CookieConverter;
 import com.linecorp.armeria.server.ServiceRequestContext;
 

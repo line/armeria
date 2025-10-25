@@ -20,11 +20,12 @@ import static java.util.Objects.requireNonNull;
 import java.util.EnumSet;
 import java.util.Set;
 
+import org.jspecify.annotations.Nullable;
+
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
 
 import com.linecorp.armeria.common.Flags;
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.server.TransientServiceBuilder;
 import com.linecorp.armeria.server.TransientServiceOption;
 

@@ -26,6 +26,7 @@ import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.imps.CuratorFrameworkState;
 import org.apache.curator.framework.recipes.cache.PathChildrenCache;
 import org.apache.curator.framework.recipes.cache.PathChildrenCacheEvent;
+import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -33,7 +34,6 @@ import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.endpoint.DynamicEndpointGroup;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.client.endpoint.EndpointSelectionStrategy;
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.ThreadFactories;
 import com.linecorp.armeria.server.zookeeper.ZooKeeperUpdatingListener;
 

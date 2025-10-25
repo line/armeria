@@ -25,8 +25,7 @@ import org.apache.tomcat.util.net.SSLHostConfig;
 import org.apache.tomcat.util.net.SocketEvent;
 import org.apache.tomcat.util.net.SocketProcessorBase;
 import org.apache.tomcat.util.net.SocketWrapperBase;
-
-import com.linecorp.armeria.common.annotation.Nullable;
+import org.jspecify.annotations.Nullable;
 
 /**
  * A fake {@link AbstractEndpoint}.

@@ -19,13 +19,14 @@ package com.linecorp.armeria.xds.client.endpoint;
 import java.util.List;
 import java.util.Map;
 
+import org.jspecify.annotations.Nullable;
+
 import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableList;
 import com.google.common.primitives.Ints;
 
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.loadbalancer.LoadBalancer;
 import com.linecorp.armeria.common.loadbalancer.SimpleLoadBalancer;
 import com.linecorp.armeria.internal.common.loadbalancer.WeightedObject;

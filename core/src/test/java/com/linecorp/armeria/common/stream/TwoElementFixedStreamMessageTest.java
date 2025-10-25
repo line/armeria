@@ -18,12 +18,12 @@ package com.linecorp.armeria.common.stream;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.Test;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 
 import com.linecorp.armeria.common.HttpData;
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.EventLoopGroups;
 import com.linecorp.armeria.internal.common.stream.TwoElementFixedStreamMessage;
 

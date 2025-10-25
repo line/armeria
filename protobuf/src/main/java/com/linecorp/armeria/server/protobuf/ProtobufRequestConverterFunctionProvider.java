@@ -22,9 +22,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import org.jspecify.annotations.Nullable;
+
 import com.google.protobuf.Message;
 
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.server.annotation.RequestConverterFunction;
 import com.linecorp.armeria.server.annotation.RequestConverterFunctionProvider;

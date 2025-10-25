@@ -30,6 +30,7 @@ import java.util.function.Supplier;
 import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLException;
 
+import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -37,7 +38,6 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.TlsEngineType;
 
 import io.netty.buffer.ByteBufAllocator;

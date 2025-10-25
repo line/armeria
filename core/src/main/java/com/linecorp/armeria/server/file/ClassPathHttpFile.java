@@ -26,10 +26,11 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 import java.util.function.BiFunction;
 
+import org.jspecify.annotations.Nullable;
+
 import com.google.common.base.MoreObjects;
 
 import com.linecorp.armeria.common.HttpHeaders;
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.Exceptions;
 
 import io.netty.buffer.ByteBuf;

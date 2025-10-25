@@ -20,10 +20,10 @@ import static java.util.Objects.requireNonNull;
 import java.util.concurrent.Executor;
 import java.util.function.Supplier;
 
+import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.internal.common.context.ArmeriaContextPropagation;
 
 abstract class AbstractContextAwareExecutor<E extends Executor> implements Executor {

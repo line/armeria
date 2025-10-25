@@ -25,12 +25,13 @@ import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 import java.util.Iterator;
 
+import org.jspecify.annotations.Nullable;
+
 import com.google.common.hash.Hashing;
 
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.RequestHeaders;
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.websocket.CloseWebSocketFrame;
 import com.linecorp.armeria.common.websocket.WebSocketCloseStatus;
 import com.linecorp.armeria.common.websocket.WebSocketFrame;

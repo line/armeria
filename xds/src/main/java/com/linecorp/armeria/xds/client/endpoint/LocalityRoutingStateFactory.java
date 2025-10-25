@@ -22,13 +22,14 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.stream.Collectors;
 
+import org.jspecify.annotations.Nullable;
+
 import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.protobuf.AbstractMessage;
 
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.xds.client.endpoint.XdsRandom.RandomHint;
 
 import io.envoyproxy.envoy.config.core.v3.Locality;

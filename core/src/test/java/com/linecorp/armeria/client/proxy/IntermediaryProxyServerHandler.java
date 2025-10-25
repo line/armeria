@@ -21,9 +21,9 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.function.Consumer;
 
-import com.google.common.collect.ImmutableMap;
+import org.jspecify.annotations.Nullable;
 
-import com.linecorp.armeria.common.annotation.Nullable;
+import com.google.common.collect.ImmutableMap;
 
 import io.netty.bootstrap.Bootstrap;
 import io.netty.buffer.ByteBuf;

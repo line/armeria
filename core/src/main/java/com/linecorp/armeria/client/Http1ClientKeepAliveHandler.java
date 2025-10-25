@@ -18,10 +18,11 @@ package com.linecorp.armeria.client;
 
 import static java.util.Objects.requireNonNull;
 
+import org.jspecify.annotations.Nullable;
+
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.RequestHeaders;
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.internal.client.HttpSession;
 import com.linecorp.armeria.internal.client.UserAgentUtil;
 import com.linecorp.armeria.internal.common.Http1KeepAliveHandler;

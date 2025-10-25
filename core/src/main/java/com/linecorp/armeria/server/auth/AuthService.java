@@ -21,6 +21,7 @@ import static java.util.Objects.requireNonNull;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 
+import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -28,7 +29,6 @@ import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.metric.MeterIdPrefix;
 import com.linecorp.armeria.common.metric.MoreMeters;
 import com.linecorp.armeria.common.util.Exceptions;

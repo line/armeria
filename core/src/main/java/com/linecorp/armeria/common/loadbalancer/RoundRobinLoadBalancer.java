@@ -19,10 +19,10 @@ package com.linecorp.armeria.common.loadbalancer;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import org.jspecify.annotations.Nullable;
+
 import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableList;
-
-import com.linecorp.armeria.common.annotation.Nullable;
 
 /**
  * A round robin {@link LoadBalancer}.

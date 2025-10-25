@@ -28,13 +28,13 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
 import org.hamcrest.Matchers;
+import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
 import com.google.common.base.Stopwatch;
 import com.google.common.collect.ImmutableList;
 
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.internal.client.dns.ByteArrayDnsRecord;
 import com.linecorp.armeria.internal.client.dns.DnsQuestionWithoutTrailingDot;
 

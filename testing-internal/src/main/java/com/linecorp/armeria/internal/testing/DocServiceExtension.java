@@ -15,6 +15,7 @@
  */
 package com.linecorp.armeria.internal.testing;
 
+import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.extension.AfterTestExecutionCallback;
 import org.junit.jupiter.api.extension.BeforeTestExecutionCallback;
@@ -22,7 +23,6 @@ import org.junit.jupiter.api.extension.ExtensionContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.server.docs.DocService;
 
 /**

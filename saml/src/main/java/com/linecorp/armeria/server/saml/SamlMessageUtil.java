@@ -23,6 +23,7 @@ import java.io.InputStream;
 
 import javax.xml.namespace.QName;
 
+import org.jspecify.annotations.Nullable;
 import org.opensaml.core.xml.XMLObject;
 import org.opensaml.core.xml.XMLObjectBuilderFactory;
 import org.opensaml.core.xml.config.XMLObjectProviderRegistrySupport;
@@ -47,8 +48,6 @@ import org.w3c.dom.Element;
 
 import net.shibboleth.utilities.java.support.xml.ParserPool;
 import net.shibboleth.utilities.java.support.xml.XMLParserException;
-
-import com.linecorp.armeria.common.annotation.Nullable;
 
 /**
  * A utility class for SAML messages.

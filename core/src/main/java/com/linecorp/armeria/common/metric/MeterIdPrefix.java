@@ -24,9 +24,9 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 
-import com.google.common.collect.ImmutableList;
+import org.jspecify.annotations.Nullable;
 
-import com.linecorp.armeria.common.annotation.Nullable;
+import com.google.common.collect.ImmutableList;
 
 import io.micrometer.core.instrument.Meter;
 import io.micrometer.core.instrument.Tag;

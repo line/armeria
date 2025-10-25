@@ -25,13 +25,13 @@ import java.util.Random;
 import java.util.Set;
 import java.util.concurrent.ThreadLocalRandom;
 
+import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.Test;
 
 import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.common.SessionProtocol;
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.ReleasableHolder;
 
 import io.netty.channel.DefaultEventLoopGroup;

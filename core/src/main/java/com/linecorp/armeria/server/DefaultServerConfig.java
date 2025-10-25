@@ -34,12 +34,13 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
 
+import org.jspecify.annotations.Nullable;
+
 import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.common.DependencyInjector;
 import com.linecorp.armeria.common.Http1HeaderNaming;
 import com.linecorp.armeria.common.RequestId;
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.BlockingTaskExecutor;
 
 import io.micrometer.core.instrument.MeterRegistry;

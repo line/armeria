@@ -50,6 +50,8 @@ import java.util.Map.Entry;
 import java.util.function.Function;
 import java.util.stream.Stream;
 
+import org.jspecify.annotations.Nullable;
+
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.google.common.base.Ascii;
@@ -64,7 +66,6 @@ import com.google.common.collect.Maps;
 import com.google.common.collect.Multimap;
 import com.google.common.collect.Multimaps;
 
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 
 /**

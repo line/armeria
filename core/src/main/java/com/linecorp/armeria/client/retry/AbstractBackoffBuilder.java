@@ -21,7 +21,7 @@ import java.util.Random;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.function.Supplier;
 
-import com.linecorp.armeria.common.annotation.Nullable;
+import org.jspecify.annotations.Nullable;
 
 /**
  * A skeletal builder implementation for {@link Backoff}.

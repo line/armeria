@@ -22,6 +22,7 @@ import java.util.function.BiPredicate;
 import java.util.function.Function;
 import java.util.function.Predicate;
 
+import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -29,7 +30,6 @@ import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.HttpStatusClass;
 import com.linecorp.armeria.common.RequestContext;
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 
 /**

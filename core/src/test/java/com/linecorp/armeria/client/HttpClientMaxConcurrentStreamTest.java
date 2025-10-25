@@ -31,6 +31,7 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -40,7 +41,6 @@ import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.ClosedSessionException;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.SessionProtocol;
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.logging.ClientConnectionTimings;
 import com.linecorp.armeria.common.logging.RequestLogProperty;
 import com.linecorp.armeria.internal.testing.BlockingUtils;

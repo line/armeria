@@ -27,6 +27,7 @@ import static org.mockito.Mockito.when;
 
 import java.util.function.BiFunction;
 
+import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -42,7 +43,6 @@ import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.HttpStatusClass;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.ResponseHeaders;
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.internal.testing.AnticipatedException;
 import com.linecorp.armeria.server.ServiceRequestContext;
 

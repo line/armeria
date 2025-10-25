@@ -27,6 +27,7 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Stream;
 
+import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -38,7 +39,6 @@ import com.google.protobuf.DescriptorProtos.FileDescriptorProto;
 import com.google.protobuf.DescriptorProtos.FileDescriptorSet;
 import com.google.protobuf.DescriptorProtos.ServiceDescriptorProto;
 
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.server.docs.DocService;
 import com.linecorp.armeria.server.docs.DocStringExtractor;
 

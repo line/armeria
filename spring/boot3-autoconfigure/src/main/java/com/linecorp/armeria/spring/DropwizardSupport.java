@@ -17,12 +17,12 @@ package com.linecorp.armeria.spring;
 
 import java.util.concurrent.TimeUnit;
 
+import org.jspecify.annotations.Nullable;
+
 import com.codahale.metrics.MetricRegistry;
 import com.codahale.metrics.json.MetricsModule;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
-
-import com.linecorp.armeria.common.annotation.Nullable;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.dropwizard.DropwizardMeterRegistry;

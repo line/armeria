@@ -23,6 +23,7 @@ import static com.linecorp.armeria.server.ServiceRouteUtil.newRoutingContext;
 
 import java.net.URISyntaxException;
 
+import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -40,7 +41,6 @@ import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.RequestTarget;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.SessionProtocol;
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.SystemInfo;
 import com.linecorp.armeria.internal.common.ArmeriaHttpUtil;
 import com.linecorp.armeria.internal.common.InboundTrafficController;

@@ -18,11 +18,12 @@ package com.linecorp.armeria.server;
 
 import java.util.function.Consumer;
 
+import org.jspecify.annotations.Nullable;
+
 import com.google.common.base.MoreObjects;
 
 import com.linecorp.armeria.common.AbstractTlsConfig;
 import com.linecorp.armeria.common.TlsProvider;
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.metric.MeterIdPrefix;
 

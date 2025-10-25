@@ -26,10 +26,10 @@ import java.io.UncheckedIOException;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.jspecify.annotations.Nullable;
+
 import com.google.common.base.Ascii;
 import com.google.common.base.CharMatcher;
-
-import com.linecorp.armeria.common.annotation.Nullable;
 
 /**
  * Utility class to determine if a domain is a public suffix. List of rules taken from

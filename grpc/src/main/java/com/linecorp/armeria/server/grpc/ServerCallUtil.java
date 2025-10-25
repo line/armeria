@@ -20,7 +20,8 @@ import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
 import java.lang.reflect.Method;
 
-import com.linecorp.armeria.common.annotation.Nullable;
+import org.jspecify.annotations.Nullable;
+
 import com.linecorp.armeria.internal.server.grpc.AbstractServerCall;
 import com.linecorp.armeria.server.ServiceRequestContext;
 

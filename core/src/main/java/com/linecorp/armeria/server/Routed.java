@@ -18,9 +18,9 @@ package com.linecorp.armeria.server;
 
 import static java.util.Objects.requireNonNull;
 
-import com.google.common.base.MoreObjects;
+import org.jspecify.annotations.Nullable;
 
-import com.linecorp.armeria.common.annotation.Nullable;
+import com.google.common.base.MoreObjects;
 
 /**
  * A value mapped by {@link Router}.

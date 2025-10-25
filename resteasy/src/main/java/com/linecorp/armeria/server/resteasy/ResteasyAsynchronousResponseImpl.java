@@ -27,9 +27,9 @@ import javax.ws.rs.core.Response;
 
 import org.jboss.resteasy.core.AbstractAsynchronousResponse;
 import org.jboss.resteasy.core.SynchronousDispatcher;
+import org.jspecify.annotations.Nullable;
 
 import com.linecorp.armeria.common.TimeoutException;
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 /**

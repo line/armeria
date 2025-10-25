@@ -24,6 +24,7 @@ import java.util.Map.Entry;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Stream;
 
+import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtensionContext;
 import org.junit.jupiter.api.extension.RegisterExtension;
@@ -35,7 +36,6 @@ import org.junit.jupiter.params.provider.ArgumentsSource;
 import com.google.common.collect.ImmutableMap;
 
 import com.linecorp.armeria.client.grpc.GrpcClients;
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;

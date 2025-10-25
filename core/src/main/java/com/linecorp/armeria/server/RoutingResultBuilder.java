@@ -20,10 +20,11 @@ import static com.google.common.base.Preconditions.checkArgument;
 import static com.linecorp.armeria.server.RoutingResult.LOWEST_SCORE;
 import static java.util.Objects.requireNonNull;
 
+import org.jspecify.annotations.Nullable;
+
 import com.google.common.collect.ImmutableMap;
 
 import com.linecorp.armeria.common.MediaType;
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.internal.common.ArmeriaHttpUtil;
 
 /**

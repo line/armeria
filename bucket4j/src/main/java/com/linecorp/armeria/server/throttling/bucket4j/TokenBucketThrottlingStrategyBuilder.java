@@ -21,8 +21,9 @@ import static java.util.Objects.requireNonNull;
 
 import java.time.Duration;
 
+import org.jspecify.annotations.Nullable;
+
 import com.linecorp.armeria.common.Request;
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.throttling.ThrottlingHeaders;
 

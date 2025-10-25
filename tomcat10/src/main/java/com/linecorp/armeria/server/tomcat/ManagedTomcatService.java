@@ -25,12 +25,12 @@ import org.apache.catalina.Engine;
 import org.apache.catalina.LifecycleState;
 import org.apache.catalina.Service;
 import org.apache.catalina.connector.Connector;
+import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.collect.Sets;
 
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerListener;
 import com.linecorp.armeria.server.ServerListenerAdapter;

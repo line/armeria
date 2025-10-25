@@ -30,6 +30,7 @@ import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 import java.util.function.BiFunction;
 
+import org.jspecify.annotations.Nullable;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 import org.slf4j.Logger;
@@ -45,7 +46,6 @@ import com.linecorp.armeria.common.HttpRequestWriter;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.RequestHeadersBuilder;
 import com.linecorp.armeria.common.SerializationFormat;
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.grpc.GrpcJsonMarshaller;
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
 import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageFramer;

@@ -16,7 +16,7 @@
 
 package com.linecorp.armeria.internal.testing;
 
-import com.linecorp.armeria.common.annotation.Nullable;
+import org.jspecify.annotations.Nullable;
 
 /**
  * A {@link RuntimeException} which is expected to be raised during a test.

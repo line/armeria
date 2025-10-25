@@ -20,6 +20,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.Optional;
 
+import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
@@ -27,7 +28,6 @@ import org.junit.jupiter.params.provider.CsvSource;
 import com.linecorp.armeria.client.BlockingWebClient;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.RequestHeaders;
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.annotation.Default;
 import com.linecorp.armeria.server.annotation.Get;

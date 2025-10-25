@@ -28,12 +28,11 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
+import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.base.MoreObjects;
-
-import com.linecorp.armeria.common.annotation.Nullable;
 
 final class RefreshingTlsProvider implements TlsProvider {
 

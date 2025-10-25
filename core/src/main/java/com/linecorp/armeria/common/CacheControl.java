@@ -15,7 +15,7 @@
  */
 package com.linecorp.armeria.common;
 
-import com.linecorp.armeria.common.annotation.Nullable;
+import org.jspecify.annotations.Nullable;
 
 /**
  * Directives for HTTP caching mechanisms in requests or responses. Use {@link ServerCacheControl} for

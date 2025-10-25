@@ -20,8 +20,7 @@ import static java.util.Objects.requireNonNull;
 
 import org.apache.thrift.transport.TTransport;
 import org.apache.thrift.transport.TTransportException;
-
-import com.linecorp.armeria.common.annotation.Nullable;
+import org.jspecify.annotations.Nullable;
 
 import io.netty.buffer.ByteBuf;
 

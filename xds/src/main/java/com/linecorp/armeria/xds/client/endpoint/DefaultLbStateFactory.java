@@ -20,6 +20,7 @@ import java.util.Collections;
 import java.util.Map;
 import java.util.SortedSet;
 
+import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -30,7 +31,6 @@ import com.google.common.math.IntMath;
 import com.google.common.math.LongMath;
 
 import com.linecorp.armeria.client.Endpoint;
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.xds.client.endpoint.DefaultLoadBalancer.DistributeLoadState;
 import com.linecorp.armeria.xds.client.endpoint.DefaultLoadBalancer.HostAvailability;
 import com.linecorp.armeria.xds.client.endpoint.DefaultLoadBalancer.PriorityAndAvailability;

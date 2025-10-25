@@ -20,11 +20,12 @@ import static java.util.Objects.requireNonNull;
 
 import java.util.concurrent.CompletionStage;
 
+import org.jspecify.annotations.Nullable;
+
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.util.concurrent.RateLimiter;
 
 import com.linecorp.armeria.common.Request;
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.UnmodifiableFuture;
 import com.linecorp.armeria.server.ServiceRequestContext;
 

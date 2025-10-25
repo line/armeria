@@ -18,6 +18,7 @@ package com.linecorp.armeria.client.websocket;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
@@ -26,7 +27,6 @@ import com.linecorp.armeria.client.websocket.WebSocketClientTest.WebSocketServic
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.websocket.WebSocket;
 import com.linecorp.armeria.common.websocket.WebSocketWriter;
 import com.linecorp.armeria.server.ServerBuilder;

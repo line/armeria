@@ -22,6 +22,8 @@ import static java.util.Objects.requireNonNull;
 import java.io.IOException;
 import java.io.InputStream;
 
+import org.jspecify.annotations.Nullable;
+
 import com.google.common.io.ByteStreams;
 import com.google.protobuf.CodedInputStream;
 import com.google.protobuf.CodedOutputStream;
@@ -30,7 +32,6 @@ import com.google.protobuf.Message;
 import com.google.protobuf.UnsafeByteOperations;
 
 import com.linecorp.armeria.common.SerializationFormat;
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.grpc.GrpcJsonMarshaller;
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
 import com.linecorp.armeria.common.grpc.protocol.DeframedMessage;

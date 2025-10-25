@@ -21,9 +21,9 @@ import static java.util.Objects.requireNonNull;
 import java.nio.charset.StandardCharsets;
 import java.util.Objects;
 
-import com.google.common.base.MoreObjects.ToStringHelper;
+import org.jspecify.annotations.Nullable;
 
-import com.linecorp.armeria.common.annotation.Nullable;
+import com.google.common.base.MoreObjects.ToStringHelper;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;

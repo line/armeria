@@ -20,7 +20,8 @@ import static com.google.common.base.Preconditions.checkArgument;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
-import com.linecorp.armeria.common.annotation.Nullable;
+import org.jspecify.annotations.Nullable;
+
 import com.linecorp.armeria.internal.common.util.TargetLengthBasedClassNameAbbreviator;
 
 final class LengthBasedServiceNaming implements ServiceNaming {

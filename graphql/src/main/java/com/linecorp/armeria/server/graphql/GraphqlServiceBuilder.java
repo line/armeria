@@ -35,13 +35,13 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 
 import org.dataloader.DataLoaderRegistry;
+import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Streams;
 
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.internal.common.util.ResourceUtil;
 import com.linecorp.armeria.server.ServiceRequestContext;

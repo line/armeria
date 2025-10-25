@@ -25,8 +25,7 @@ import org.apache.coyote.Adapter;
 import org.apache.coyote.ProtocolHandler;
 import org.apache.coyote.UpgradeProtocol;
 import org.apache.tomcat.util.net.SSLHostConfig;
-
-import com.linecorp.armeria.common.annotation.Nullable;
+import org.jspecify.annotations.Nullable;
 
 /**
  * A {@link ProtocolHandler} for Tomcat 8.5 and above.

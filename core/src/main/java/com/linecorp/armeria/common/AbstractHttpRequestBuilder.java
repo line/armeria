@@ -26,12 +26,12 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
 
+import org.jspecify.annotations.Nullable;
 import org.reactivestreams.Publisher;
 
 import com.google.errorprone.annotations.FormatMethod;
 import com.google.errorprone.annotations.FormatString;
 
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.stream.StreamMessage;
 import com.linecorp.armeria.internal.common.util.TemporaryThreadLocals;
 

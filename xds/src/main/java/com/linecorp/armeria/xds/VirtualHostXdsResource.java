@@ -20,9 +20,10 @@ import static com.linecorp.armeria.xds.FilterUtil.toParsedFilterConfigs;
 
 import java.util.Map;
 
+import org.jspecify.annotations.Nullable;
+
 import com.google.common.base.MoreObjects;
 
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 
 import io.envoyproxy.envoy.config.route.v3.VirtualHost;

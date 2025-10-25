@@ -18,9 +18,9 @@ package com.linecorp.armeria.common;
 
 import java.util.Objects;
 
-import com.google.common.base.MoreObjects;
+import org.jspecify.annotations.Nullable;
 
-import com.linecorp.armeria.common.annotation.Nullable;
+import com.google.common.base.MoreObjects;
 
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.util.concurrent.EventExecutor;

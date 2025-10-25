@@ -20,6 +20,7 @@ import static java.util.Objects.requireNonNull;
 
 import java.util.function.BiFunction;
 
+import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -32,7 +33,6 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.ResponseHeaders;
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.logging.ContentPreviewer;
 import com.linecorp.armeria.common.logging.ContentPreviewerFactory;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;

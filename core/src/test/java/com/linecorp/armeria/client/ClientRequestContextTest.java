@@ -21,6 +21,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import java.util.function.Function;
 import java.util.stream.Stream;
 
+import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtensionContext;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -34,7 +35,6 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.TimeoutException;
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.server.ServiceRequestContext;
 

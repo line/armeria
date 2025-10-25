@@ -23,8 +23,9 @@ import java.util.Random;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.function.Supplier;
 
+import org.jspecify.annotations.Nullable;
+
 import com.linecorp.armeria.common.Flags;
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.util.Unwrappable;
 

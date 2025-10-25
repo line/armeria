@@ -16,8 +16,9 @@
 
 package com.linecorp.armeria.resilience4j.circuitbreaker;
 
+import org.jspecify.annotations.Nullable;
+
 import com.linecorp.armeria.client.circuitbreaker.CircuitBreakerClientHandler;
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 
 import io.github.resilience4j.circuitbreaker.CircuitBreaker;

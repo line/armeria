@@ -24,8 +24,7 @@ import java.util.UUID;
 import org.apache.curator.x.discovery.ServiceInstance;
 import org.apache.curator.x.discovery.ServiceType;
 import org.apache.curator.x.discovery.UriSpec;
-
-import com.linecorp.armeria.common.annotation.Nullable;
+import org.jspecify.annotations.Nullable;
 
 /**
  * Builds a {@link ZooKeeperRegistrationSpec} for

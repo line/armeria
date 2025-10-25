@@ -16,13 +16,14 @@
 
 package com.linecorp.armeria.xds.client.endpoint;
 
+import org.jspecify.annotations.Nullable;
+
 import com.google.common.primitives.Ints;
 import com.google.protobuf.Duration;
 import com.google.protobuf.UInt32Value;
 
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.MediaType;
-import com.linecorp.armeria.common.annotation.Nullable;
 
 final class XdsCommonUtil {
 

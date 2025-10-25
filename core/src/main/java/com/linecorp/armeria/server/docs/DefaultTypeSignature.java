@@ -22,7 +22,8 @@ import static java.util.Objects.requireNonNull;
 import java.util.Objects;
 import java.util.regex.Pattern;
 
-import com.linecorp.armeria.common.annotation.Nullable;
+import org.jspecify.annotations.Nullable;
+
 import com.linecorp.armeria.common.annotation.UnstableApi;
 
 /**

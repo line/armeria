@@ -38,6 +38,7 @@ import javax.net.ssl.SSLSession;
 
 import org.apache.thrift.protocol.TMessage;
 import org.apache.thrift.protocol.TMessageType;
+import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
@@ -58,7 +59,6 @@ import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.RpcResponse;
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.logging.BuiltInProperty;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
 import com.linecorp.armeria.common.thrift.ThriftCall;

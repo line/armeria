@@ -20,10 +20,10 @@ import static java.util.Objects.requireNonNull;
 
 import java.util.Map;
 
+import org.jspecify.annotations.Nullable;
+
 import com.google.common.base.Ascii;
 import com.google.common.collect.ImmutableMap;
-
-import com.linecorp.armeria.common.annotation.Nullable;
 
 /**
  * A pair of {@link SerializationFormat} and {@link SessionProtocol}.

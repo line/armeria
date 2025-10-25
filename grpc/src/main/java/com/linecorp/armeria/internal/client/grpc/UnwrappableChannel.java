@@ -16,7 +16,8 @@
 
 package com.linecorp.armeria.internal.client.grpc;
 
-import com.linecorp.armeria.common.annotation.Nullable;
+import org.jspecify.annotations.Nullable;
+
 import com.linecorp.armeria.common.util.Unwrappable;
 
 import io.grpc.CallOptions;

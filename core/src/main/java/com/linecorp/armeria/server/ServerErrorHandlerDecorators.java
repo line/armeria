@@ -18,13 +18,14 @@ package com.linecorp.armeria.server;
 
 import java.util.List;
 
+import org.jspecify.annotations.Nullable;
+
 import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.RequestHeaders;
-import com.linecorp.armeria.common.annotation.Nullable;
 
 final class ServerErrorHandlerDecorators {
 

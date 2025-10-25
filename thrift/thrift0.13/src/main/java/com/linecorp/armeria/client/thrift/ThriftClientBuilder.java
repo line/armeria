@@ -31,6 +31,7 @@ import java.util.function.Supplier;
 
 import org.apache.thrift.protocol.TBinaryProtocol;
 import org.apache.thrift.protocol.TCompactProtocol;
+import org.jspecify.annotations.Nullable;
 
 import com.linecorp.armeria.client.AbstractClientOptionsBuilder;
 import com.linecorp.armeria.client.ClientBuilderParams;
@@ -54,7 +55,6 @@ import com.linecorp.armeria.common.Scheme;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.SuccessFunction;
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.auth.AuthToken;
 import com.linecorp.armeria.common.auth.BasicToken;

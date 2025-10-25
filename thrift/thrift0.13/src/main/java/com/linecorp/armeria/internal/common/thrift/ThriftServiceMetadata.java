@@ -30,13 +30,13 @@ import org.apache.thrift.AsyncProcessFunction;
 import org.apache.thrift.ProcessFunction;
 import org.apache.thrift.TBaseAsyncProcessor;
 import org.apache.thrift.TBaseProcessor;
+import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.internal.common.util.Types;
 
 /**

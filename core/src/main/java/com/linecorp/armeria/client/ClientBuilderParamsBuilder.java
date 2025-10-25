@@ -22,11 +22,12 @@ import static java.util.Objects.requireNonNull;
 import java.net.URI;
 import java.net.URISyntaxException;
 
+import org.jspecify.annotations.Nullable;
+
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.common.Scheme;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.internal.client.ClientBuilderParamsUtil;
 import com.linecorp.armeria.internal.client.endpoint.UndefinedEndpointGroup;

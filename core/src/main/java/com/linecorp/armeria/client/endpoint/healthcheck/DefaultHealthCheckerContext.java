@@ -31,6 +31,8 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.BiConsumer;
 
+import org.jspecify.annotations.Nullable;
+
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableList;
@@ -44,7 +46,6 @@ import com.linecorp.armeria.client.retry.Backoff;
 import com.linecorp.armeria.common.Attributes;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.SessionProtocol;
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.AsyncCloseable;
 import com.linecorp.armeria.common.util.EventLoopCheckingFuture;
 import com.linecorp.armeria.internal.common.util.ReentrantShortLock;

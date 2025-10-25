@@ -26,13 +26,14 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicLong;
 
+import org.jspecify.annotations.Nullable;
+
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.RequestContext;
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.logging.ExportGroupBuilder.ExportEntry;
 
 import io.netty.util.AsciiString;

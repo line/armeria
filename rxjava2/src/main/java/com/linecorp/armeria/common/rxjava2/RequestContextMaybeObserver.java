@@ -16,8 +16,9 @@
 
 package com.linecorp.armeria.common.rxjava2;
 
+import org.jspecify.annotations.Nullable;
+
 import com.linecorp.armeria.common.RequestContext;
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.SafeCloseable;
 
 import io.reactivex.MaybeObserver;

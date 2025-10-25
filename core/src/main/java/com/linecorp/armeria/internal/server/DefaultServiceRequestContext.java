@@ -36,6 +36,8 @@ import java.util.function.Supplier;
 import javax.annotation.Nonnull;
 import javax.net.ssl.SSLSession;
 
+import org.jspecify.annotations.Nullable;
+
 import com.linecorp.armeria.common.ContextAwareBlockingTaskExecutor;
 import com.linecorp.armeria.common.ContextAwareEventLoop;
 import com.linecorp.armeria.common.ExchangeType;
@@ -50,7 +52,6 @@ import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.RequestTarget;
 import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.SessionProtocol;
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogAccess;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;

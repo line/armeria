@@ -17,7 +17,7 @@ package com.linecorp.armeria.common.util;
 
 import static java.util.Objects.requireNonNull;
 
-import com.linecorp.armeria.common.annotation.Nullable;
+import org.jspecify.annotations.Nullable;
 
 /**
  * Skeletal {@link Unwrappable} implementation.

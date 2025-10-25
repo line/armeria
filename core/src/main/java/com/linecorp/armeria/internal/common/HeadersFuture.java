@@ -16,8 +16,9 @@
 
 package com.linecorp.armeria.internal.common;
 
+import org.jspecify.annotations.Nullable;
+
 import com.linecorp.armeria.common.HttpHeaders;
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.UnmodifiableFuture;
 
 final class HeadersFuture<T extends HttpHeaders> extends UnmodifiableFuture<T> {

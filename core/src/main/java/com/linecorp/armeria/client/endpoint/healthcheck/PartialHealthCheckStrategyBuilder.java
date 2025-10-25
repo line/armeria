@@ -17,8 +17,9 @@ package com.linecorp.armeria.client.endpoint.healthcheck;
 
 import static com.google.common.base.Preconditions.checkArgument;
 
+import org.jspecify.annotations.Nullable;
+
 import com.linecorp.armeria.client.endpoint.healthcheck.PartialHealthCheckStrategy.EndpointLimitingFunction;
-import com.linecorp.armeria.common.annotation.Nullable;
 
 /**
  * A builder for creating a new {@link PartialHealthCheckStrategy}.

@@ -22,6 +22,8 @@ import static java.util.Objects.requireNonNull;
 
 import java.util.List;
 
+import org.jspecify.annotations.Nullable;
+
 import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpMethod;
@@ -31,7 +33,6 @@ import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.RequestTarget;
 import com.linecorp.armeria.common.RequestTargetForm;
 import com.linecorp.armeria.common.SessionProtocol;
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.internal.common.DefaultRequestTarget;
 

@@ -25,6 +25,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 
+import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -35,7 +36,6 @@ import com.google.protobuf.Struct;
 
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.Endpoint;
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.xds.ClusterSnapshot;
 
 import io.envoyproxy.envoy.config.cluster.v3.Cluster;

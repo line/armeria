@@ -21,11 +21,10 @@ import static java.util.Objects.requireNonNull;
 import java.util.concurrent.CompletionException;
 
 import org.apache.thrift.async.AsyncMethodCallback;
+import org.jspecify.annotations.Nullable;
 
 import com.google.common.util.concurrent.AbstractFuture;
 import com.google.common.util.concurrent.ListenableFuture;
-
-import com.linecorp.armeria.common.annotation.Nullable;
 
 /**
  * A {@link ListenableFuture} that can be passed in as an {@link AsyncMethodCallback}

@@ -20,11 +20,12 @@ import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.function.Consumer;
 
+import org.jspecify.annotations.Nullable;
+
 import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.ClientRequestContextCaptor;
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.SafeCloseable;
 
 import io.netty.util.concurrent.FastThreadLocal;

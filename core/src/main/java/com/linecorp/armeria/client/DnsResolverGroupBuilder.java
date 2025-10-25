@@ -22,8 +22,9 @@ import static java.util.Objects.requireNonNull;
 import java.time.Duration;
 import java.util.function.ToLongFunction;
 
+import org.jspecify.annotations.Nullable;
+
 import com.linecorp.armeria.client.retry.Backoff;
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 
 import io.micrometer.core.instrument.MeterRegistry;

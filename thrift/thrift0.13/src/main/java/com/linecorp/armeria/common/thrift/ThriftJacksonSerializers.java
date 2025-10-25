@@ -26,6 +26,7 @@ import org.apache.thrift.protocol.TMessage;
 import org.apache.thrift.protocol.TProtocol;
 import org.apache.thrift.protocol.TProtocolFactory;
 import org.apache.thrift.transport.TMemoryBuffer;
+import org.jspecify.annotations.Nullable;
 
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.databind.BeanDescription;
@@ -36,7 +37,6 @@ import com.fasterxml.jackson.databind.SerializerProvider;
 import com.fasterxml.jackson.databind.ser.Serializers;
 import com.fasterxml.jackson.databind.ser.std.StdSerializer;
 
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.Exceptions;
 
 final class ThriftJacksonSerializers extends Serializers.Base implements Serializable {

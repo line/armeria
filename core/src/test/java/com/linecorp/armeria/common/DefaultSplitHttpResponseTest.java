@@ -26,6 +26,7 @@ import java.util.concurrent.CompletionException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
+import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.reactivestreams.Subscriber;
@@ -35,7 +36,6 @@ import com.google.common.base.Strings;
 
 import com.linecorp.armeria.client.ResponseTimeoutException;
 import com.linecorp.armeria.client.WebClient;
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.stream.AbortedStreamException;
 import com.linecorp.armeria.common.stream.CancelledSubscriptionException;
 import com.linecorp.armeria.common.stream.StreamMessage;

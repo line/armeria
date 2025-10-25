@@ -21,6 +21,7 @@ import static com.linecorp.armeria.spring.actuate.ArmeriaSpringActuatorAutoConfi
 import java.util.List;
 import java.util.Set;
 
+import org.jspecify.annotations.Nullable;
 import org.springframework.boot.actuate.endpoint.OperationArgumentResolver;
 import org.springframework.boot.actuate.endpoint.web.ExposableWebEndpoint;
 import org.springframework.boot.actuate.endpoint.web.WebOperation;
@@ -34,7 +35,6 @@ import org.springframework.boot.actuate.health.HttpCodeStatusMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.cors.CorsServiceBuilder;
 

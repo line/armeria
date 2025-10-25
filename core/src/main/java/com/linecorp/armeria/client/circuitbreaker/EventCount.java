@@ -18,7 +18,7 @@ package com.linecorp.armeria.client.circuitbreaker;
 
 import static com.google.common.base.Preconditions.checkArgument;
 
-import com.linecorp.armeria.common.annotation.Nullable;
+import org.jspecify.annotations.Nullable;
 
 /**
  * An immutable object that stores the count of events.

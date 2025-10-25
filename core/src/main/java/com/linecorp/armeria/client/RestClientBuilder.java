@@ -23,12 +23,13 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
+import org.jspecify.annotations.Nullable;
+
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.client.redirect.RedirectConfig;
 import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.SuccessFunction;
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.auth.AuthToken;
 import com.linecorp.armeria.common.auth.BasicToken;

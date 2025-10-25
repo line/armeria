@@ -21,12 +21,12 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import java.io.File;
 import java.net.URL;
 
+import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 
 import com.linecorp.armeria.common.TlsKeyPair;
-import com.linecorp.armeria.common.annotation.Nullable;
 
 class KeyStoreUtilTest {
     // The key store files used in this test case were generated with the following commands:

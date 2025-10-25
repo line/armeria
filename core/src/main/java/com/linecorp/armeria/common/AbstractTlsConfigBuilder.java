@@ -23,7 +23,8 @@ import java.util.function.Consumer;
 import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.TrustManagerFactory;
 
-import com.linecorp.armeria.common.annotation.Nullable;
+import org.jspecify.annotations.Nullable;
+
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.metric.MeterIdPrefix;
 

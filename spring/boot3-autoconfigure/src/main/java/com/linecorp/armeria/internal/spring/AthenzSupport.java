@@ -24,8 +24,9 @@ import java.net.URI;
 import java.time.Duration;
 import java.util.List;
 
+import org.jspecify.annotations.Nullable;
+
 import com.linecorp.armeria.common.DependencyInjector;
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.spring.AthenzConfig;
 

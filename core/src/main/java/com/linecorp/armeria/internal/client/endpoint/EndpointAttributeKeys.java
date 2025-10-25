@@ -21,9 +21,10 @@ import static com.google.common.base.Preconditions.checkState;
 import java.util.Map;
 import java.util.Objects;
 
+import org.jspecify.annotations.Nullable;
+
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.common.Attributes;
-import com.linecorp.armeria.common.annotation.Nullable;
 
 import io.netty.util.AttributeKey;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;

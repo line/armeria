@@ -23,8 +23,9 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.function.Supplier;
 
+import org.jspecify.annotations.Nullable;
+
 import com.linecorp.armeria.client.WebClient;
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.auth.oauth2.ClientAuthentication;
 
 /**

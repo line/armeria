@@ -17,6 +17,7 @@ package com.linecorp.armeria.server.saml;
 
 import java.util.concurrent.CompletionStage;
 
+import org.jspecify.annotations.Nullable;
 import org.opensaml.messaging.context.MessageContext;
 import org.opensaml.saml.saml2.core.AuthnRequest;
 import org.opensaml.saml.saml2.core.Response;
@@ -27,7 +28,6 @@ import com.linecorp.armeria.common.AggregatedHttpRequest;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.Request;
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.UnmodifiableFuture;
 import com.linecorp.armeria.server.ServiceRequestContext;
 

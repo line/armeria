@@ -21,12 +21,11 @@ import static com.google.common.base.Preconditions.checkArgument;
 import java.util.HashSet;
 import java.util.Set;
 
+import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.base.MoreObjects;
-
-import com.linecorp.armeria.common.annotation.Nullable;
 
 import io.envoyproxy.envoy.config.core.v3.ConfigSource;
 import io.grpc.Status;

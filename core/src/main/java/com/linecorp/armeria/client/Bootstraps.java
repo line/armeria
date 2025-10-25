@@ -23,9 +23,10 @@ import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.util.Set;
 
+import org.jspecify.annotations.Nullable;
+
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.internal.common.SslContextFactory;
 import com.linecorp.armeria.internal.common.SslContextFactory.SslContextMode;
 

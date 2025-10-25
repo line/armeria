@@ -20,6 +20,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 
+import org.jspecify.annotations.Nullable;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.Scope;
 import org.openjdk.jmh.annotations.Setup;
@@ -29,7 +30,6 @@ import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.client.endpoint.EndpointSelectionStrategy;
 import com.linecorp.armeria.client.endpoint.EndpointSelector;
-import com.linecorp.armeria.common.annotation.Nullable;
 
 /**
  * Microbenchmarks of different {@link EndpointSelector} configurations.

@@ -19,11 +19,12 @@ package com.linecorp.armeria.internal.server.annotation;
 import java.io.IOException;
 import java.util.function.BiFunction;
 
+import org.jspecify.annotations.Nullable;
+
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.databind.JsonSerializer;
 import com.fasterxml.jackson.databind.SerializerProvider;
 
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.logging.BeanFieldInfo;
 
 final class AnnotatedRequestJsonSerializer extends JsonSerializer<AnnotatedRequest> {

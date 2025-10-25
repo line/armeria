@@ -20,13 +20,14 @@ import java.time.Duration;
 import java.util.function.BiFunction;
 import java.util.function.BiPredicate;
 
+import org.jspecify.annotations.Nullable;
+
 import com.linecorp.armeria.client.AbstractRuleBuilder;
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.ResponseHeaders;
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogProperty;
 import com.linecorp.armeria.common.util.Exceptions;

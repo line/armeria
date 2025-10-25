@@ -17,8 +17,9 @@ package com.linecorp.armeria.server.annotation;
 
 import java.lang.reflect.Type;
 
+import org.jspecify.annotations.Nullable;
+
 import com.linecorp.armeria.common.HttpResponse;
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.server.ServerBuilder;
 

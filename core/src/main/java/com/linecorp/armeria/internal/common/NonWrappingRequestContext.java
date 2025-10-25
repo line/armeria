@@ -26,6 +26,8 @@ import java.util.Map.Entry;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 import java.util.function.Supplier;
 
+import org.jspecify.annotations.Nullable;
+
 import com.linecorp.armeria.common.AttributesGetters;
 import com.linecorp.armeria.common.ConcurrentAttributes;
 import com.linecorp.armeria.common.ExchangeType;
@@ -39,7 +41,6 @@ import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.RequestTarget;
 import com.linecorp.armeria.common.RequestTargetForm;
 import com.linecorp.armeria.common.RpcRequest;
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 
 import io.micrometer.core.instrument.MeterRegistry;

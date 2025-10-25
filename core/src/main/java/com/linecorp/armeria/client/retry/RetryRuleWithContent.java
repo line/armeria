@@ -23,6 +23,8 @@ import java.util.concurrent.CompletionStage;
 import java.util.function.BiFunction;
 import java.util.function.BiPredicate;
 
+import org.jspecify.annotations.Nullable;
+
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
@@ -36,7 +38,6 @@ import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.HttpStatusClass;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.Response;
-import com.linecorp.armeria.common.annotation.Nullable;
 
 /**
  * Determines whether a failed request should be retried using the content of a {@link Response}.

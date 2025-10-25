@@ -21,9 +21,10 @@ import static java.util.Objects.requireNonNull;
 
 import java.util.Set;
 
+import org.jspecify.annotations.Nullable;
+
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.auth.oauth2.OAuth2TokenDescriptor;
 import com.linecorp.armeria.server.ServiceRequestContext;
 

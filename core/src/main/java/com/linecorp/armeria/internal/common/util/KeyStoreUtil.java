@@ -30,11 +30,12 @@ import java.util.Arrays;
 import java.util.Enumeration;
 import java.util.List;
 
+import org.jspecify.annotations.Nullable;
+
 import com.google.common.collect.ImmutableList;
 import com.google.common.io.ByteStreams;
 
 import com.linecorp.armeria.common.TlsKeyPair;
-import com.linecorp.armeria.common.annotation.Nullable;
 
 public final class KeyStoreUtil {
     public static TlsKeyPair load(File keyStoreFile,

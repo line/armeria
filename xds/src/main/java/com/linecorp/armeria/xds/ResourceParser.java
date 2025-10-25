@@ -18,6 +18,8 @@ package com.linecorp.armeria.xds;
 
 import java.util.List;
 
+import org.jspecify.annotations.Nullable;
+
 import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -25,8 +27,6 @@ import com.google.common.collect.ImmutableSet;
 import com.google.protobuf.Any;
 import com.google.protobuf.InvalidProtocolBufferException;
 import com.google.protobuf.Message;
-
-import com.linecorp.armeria.common.annotation.Nullable;
 
 abstract class ResourceParser<I extends Message, O extends XdsResource> {
 

@@ -18,7 +18,8 @@ package com.linecorp.armeria.internal.testing;
 
 import java.util.concurrent.ThreadFactory;
 
-import com.linecorp.armeria.common.annotation.Nullable;
+import org.jspecify.annotations.Nullable;
+
 import com.linecorp.armeria.common.util.EventLoopGroups;
 
 import io.netty.channel.EventLoopGroup;

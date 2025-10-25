@@ -4,6 +4,7 @@ import static com.linecorp.armeria.server.saml.SamlUtil.getNameId;
 
 import java.util.concurrent.CompletionStage;
 
+import org.jspecify.annotations.Nullable;
 import org.opensaml.messaging.context.MessageContext;
 import org.opensaml.saml.saml2.core.NameID;
 import org.opensaml.saml.saml2.core.Response;
@@ -21,7 +22,6 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.ResponseHeaders;
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.UnmodifiableFuture;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.auth.Authorizer;

@@ -20,11 +20,11 @@ import static java.util.Objects.requireNonNull;
 
 import java.util.Map;
 
+import org.jspecify.annotations.Nullable;
 import org.springframework.web.bind.annotation.RequestAttribute;
 
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.RequestOptionsBuilder;
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 
 import io.netty.util.AttributeKey;

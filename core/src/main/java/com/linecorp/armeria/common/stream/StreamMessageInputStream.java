@@ -23,11 +23,11 @@ import java.io.InputStream;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
 
+import org.jspecify.annotations.Nullable;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 
 import com.linecorp.armeria.common.HttpData;
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.internal.common.stream.ByteBufsInputStream;
 import com.linecorp.armeria.internal.common.stream.StreamMessageUtil;
 

@@ -18,7 +18,7 @@ package com.linecorp.armeria.internal.common.util;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 
-import com.linecorp.armeria.common.annotation.Nullable;
+import org.jspecify.annotations.Nullable;
 
 import io.netty.util.NetUtil;
 

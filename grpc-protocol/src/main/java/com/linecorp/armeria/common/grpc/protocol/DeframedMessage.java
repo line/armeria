@@ -22,9 +22,10 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.Objects;
 
+import org.jspecify.annotations.Nullable;
+
 import com.google.common.annotations.VisibleForTesting;
 
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.util.SafeCloseable;
 

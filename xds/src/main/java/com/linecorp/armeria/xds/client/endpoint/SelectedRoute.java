@@ -18,13 +18,14 @@ package com.linecorp.armeria.xds.client.endpoint;
 
 import java.util.function.Function;
 
+import org.jspecify.annotations.Nullable;
+
 import com.google.protobuf.Duration;
 
 import com.linecorp.armeria.client.ClientDecoration;
 import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.client.RpcClient;
 import com.linecorp.armeria.client.retry.RetryingClient;
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.xds.ClusterSnapshot;
 import com.linecorp.armeria.xds.ListenerSnapshot;
 import com.linecorp.armeria.xds.RouteEntry;

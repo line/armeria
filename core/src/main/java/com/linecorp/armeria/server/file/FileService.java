@@ -31,6 +31,7 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.function.BiFunction;
 
+import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -45,7 +46,6 @@ import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.MediaType;
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.encoding.StreamDecoder;
 import com.linecorp.armeria.common.encoding.StreamDecoderFactory;
 import com.linecorp.armeria.common.metric.MeterIdPrefix;

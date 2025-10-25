@@ -31,10 +31,10 @@ import org.eclipse.jetty.server.SessionIdManager;
 import org.eclipse.jetty.server.handler.HandlerWrapper;
 import org.eclipse.jetty.util.component.Container;
 import org.eclipse.jetty.util.component.LifeCycle;
+import org.jspecify.annotations.Nullable;
 
 import com.google.common.collect.ImmutableList;
 
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.BlockingTaskExecutor;
 
 /**

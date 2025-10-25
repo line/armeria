@@ -23,9 +23,8 @@ import java.lang.reflect.Type;
 import java.util.concurrent.CompletionStage;
 import java.util.function.Predicate;
 
+import org.jspecify.annotations.Nullable;
 import org.reactivestreams.Publisher;
-
-import com.linecorp.armeria.common.annotation.Nullable;
 
 public final class ClassUtil {
 

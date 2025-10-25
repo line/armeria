@@ -21,6 +21,8 @@ import static java.util.Objects.requireNonNull;
 import java.net.URI;
 import java.nio.charset.Charset;
 
+import org.jspecify.annotations.Nullable;
+
 import com.linecorp.armeria.common.AggregatedHttpRequest;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpData;
@@ -30,7 +32,6 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.QueryParams;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.SessionProtocol;
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.util.BlockingTaskExecutor;
 import com.linecorp.armeria.common.util.Unwrappable;

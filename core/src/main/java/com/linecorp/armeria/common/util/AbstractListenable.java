@@ -21,9 +21,10 @@ import java.util.Set;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Consumer;
 
+import org.jspecify.annotations.Nullable;
+
 import com.google.errorprone.annotations.concurrent.GuardedBy;
 
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.internal.common.util.IdentityHashStrategy;
 import com.linecorp.armeria.internal.common.util.ReentrantShortLock;
 
