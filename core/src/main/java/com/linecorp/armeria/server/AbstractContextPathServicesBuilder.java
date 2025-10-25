@@ -434,7 +434,7 @@ abstract class AbstractContextPathServicesBuilder<SELF extends AbstractContextPa
         return parent;
     }
 
-    final Set<String> mergedContextPaths(Set<String> paths) {
+    final Set<String> mergedContextPaths(Iterable<String> paths) {
         final Set<String> mergedContextPaths = new HashSet<>();
         for (String currentContextPath : contextPaths()) {
             for (String childContextPath : paths) {
@@ -442,14 +442,14 @@ abstract class AbstractContextPathServicesBuilder<SELF extends AbstractContextPa
                 mergedContextPaths.add(mergedContextPath);
             }
         }
-        return mergedContextPaths;
+        return ImmutableSet.copyOf(mergedContextPaths);
     }
 
     /**
-     * TBD
-     * @param paths
-     * @param context
-     * @return
+     * TBD.
+     * @param paths TBD
+     * @param customizer TBD
+     * @return TBD
      */
-    public abstract SELF contextPath(Set<String> paths, Consumer<SELF> context);
+    public abstract SELF contextPath(Iterable<String> paths, Consumer<SELF> customizer);
 }

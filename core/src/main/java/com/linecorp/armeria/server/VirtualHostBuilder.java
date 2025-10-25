@@ -464,17 +464,18 @@ public final class VirtualHostBuilder implements TlsSetters, ServiceConfigsBuild
     }
 
     /**
-     * TBD
-     * @param contextPaths
-     * @param context
-     * @return
+     * TBD.
+     * @param contextPaths TBD
+     * @param customizer TBD
+     * @return TBD
      */
     @UnstableApi
-    public VirtualHostContextPathServicesBuilder contextPath(Iterable<String> contextPaths,
-                                                             Consumer<VirtualHostContextPathServicesBuilder> context) {
+    public VirtualHostContextPathServicesBuilder contextPath(
+            Iterable<String> contextPaths,
+            Consumer<VirtualHostContextPathServicesBuilder> customizer) {
         requireNonNull(contextPaths, "contextPaths");
         return new VirtualHostContextPathServicesBuilder(this, this, ImmutableSet.copyOf(contextPaths),
-                                                         context);
+                                                         customizer);
     }
 
     /**

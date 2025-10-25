@@ -42,8 +42,10 @@ import com.linecorp.armeria.server.annotation.ResponseConverterFunction;
 public final class VirtualHostContextPathServicesBuilder
         extends AbstractContextPathServicesBuilder<VirtualHostContextPathServicesBuilder, VirtualHostBuilder> {
 
-    VirtualHostContextPathServicesBuilder(VirtualHostBuilder parent, VirtualHostBuilder virtualHostBuilder,
-                                          Set<String> contextPaths, Consumer<VirtualHostContextPathServicesBuilder> context) {
+    VirtualHostContextPathServicesBuilder(VirtualHostBuilder parent,
+                                          VirtualHostBuilder virtualHostBuilder,
+                                          Set<String> contextPaths,
+                                          Consumer<VirtualHostContextPathServicesBuilder> context) {
         this(parent, virtualHostBuilder, contextPaths);
         context.accept(this);
     }
@@ -109,13 +111,14 @@ public final class VirtualHostContextPathServicesBuilder
     }
 
     @Override
-    public VirtualHostContextPathServicesBuilder contextPath(Set<String> paths, Consumer<VirtualHostContextPathServicesBuilder> context) {
+    public VirtualHostContextPathServicesBuilder contextPath(
+            Iterable<String> paths,
+            Consumer<VirtualHostContextPathServicesBuilder> customizer) {
         final VirtualHostContextPathServicesBuilder child =
                 new VirtualHostContextPathServicesBuilder(parent(),
                                                           virtualHostBuilder(),
                                                           mergedContextPaths(paths));
-        context.accept(child);
+        customizer.accept(child);
         return this;
     }
-
 }
