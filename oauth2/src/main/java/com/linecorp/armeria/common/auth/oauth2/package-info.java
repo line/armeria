@@ -23,4 +23,5 @@
 package com.linecorp.armeria.common.auth.oauth2;
 
 import org.jspecify.annotations.NullMarked;
+
 import com.linecorp.armeria.common.annotation.UnstableApi;

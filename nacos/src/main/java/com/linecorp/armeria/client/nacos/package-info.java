@@ -22,4 +22,5 @@
 package com.linecorp.armeria.client.nacos;
 
 import org.jspecify.annotations.NullMarked;
+
 import com.linecorp.armeria.common.annotation.UnstableApi;

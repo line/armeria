@@ -22,4 +22,5 @@
 package com.linecorp.armeria.common.graphql.scalar;
 
 import org.jspecify.annotations.NullMarked;
+
 import com.linecorp.armeria.common.annotation.UnstableApi;

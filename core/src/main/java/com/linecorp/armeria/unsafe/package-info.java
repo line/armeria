@@ -26,4 +26,5 @@
 package com.linecorp.armeria.unsafe;
 
 import org.jspecify.annotations.NullMarked;
+
 import com.linecorp.armeria.common.annotation.UnstableApi;

@@ -24,4 +24,5 @@
 package com.linecorp.armeria.server.throttling.bucket4j;
 
 import org.jspecify.annotations.NullMarked;
+
 import com.linecorp.armeria.common.annotation.UnstableApi;
