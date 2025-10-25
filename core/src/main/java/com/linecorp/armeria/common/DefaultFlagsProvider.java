@@ -531,4 +531,9 @@ final class DefaultFlagsProvider implements FlagsProvider {
     public Boolean annotatedServiceContentLogging() {
         return true;
     }
+
+    @Override
+    public Boolean jsonRpcServiceContentLogging() {
+        return true;
+    }
 }

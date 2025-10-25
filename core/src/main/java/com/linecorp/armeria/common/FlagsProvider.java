@@ -57,6 +57,7 @@ import com.linecorp.armeria.server.annotation.AnnotatedService;
 import com.linecorp.armeria.server.file.FileService;
 import com.linecorp.armeria.server.file.FileServiceBuilder;
 import com.linecorp.armeria.server.file.HttpFile;
+import com.linecorp.armeria.server.jsonrpc.JsonRpcService;
 import com.linecorp.armeria.server.logging.LoggingService;
 
 import io.micrometer.core.instrument.MeterRegistry;
@@ -1280,6 +1281,20 @@ public interface FlagsProvider {
     @Nullable
     @UnstableApi
     default Boolean annotatedServiceContentLogging() {
+        return null;
+    }
+
+    /**
+     * Returns whether {@link JsonRpcService} should leave request/response content logs
+     * by default when a {@link LoggingService} is added.
+     *
+     * <p>By default, this option is enabled. Specify the
+     * {@code -Dcom.linecorp.armeria.jsonRpcServiceContentLogging=false} JVM option to
+     * override the default value.
+     */
+    @Nullable
+    @UnstableApi
+    default Boolean jsonRpcServiceContentLogging() {
         return null;
     }
 }
