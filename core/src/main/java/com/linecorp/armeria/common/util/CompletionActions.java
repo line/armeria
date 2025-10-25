@@ -18,10 +18,9 @@ package com.linecorp.armeria.common.util;
 
 import java.util.concurrent.CompletionStage;
 
+import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import com.linecorp.armeria.common.annotation.Nullable;
 
 /**
  * Provides the common actions that are useful when handling a {@link CompletionStage}.

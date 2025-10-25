@@ -18,7 +18,7 @@
  * <a href="https://docs.spring.io/spring-framework/reference/integration/rest-clients.html#rest-http-interface">
  * Spring 6 HTTP interface</a> integration.
  */
-@NonNullByDefault
+@NullMarked
 package com.linecorp.armeria.spring.client;
 
-import com.linecorp.armeria.common.annotation.NonNullByDefault;
+import org.jspecify.annotations.NullMarked;

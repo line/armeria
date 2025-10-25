@@ -17,7 +17,7 @@
 /**
  * <a href="https://datatracker.ietf.org/doc/html/rfc1341#page-28">Multiple part messages</a> support.
  */
-@NonNullByDefault
+@NullMarked
 package com.linecorp.armeria.common.multipart;
 
-import com.linecorp.armeria.common.annotation.NonNullByDefault;
+import org.jspecify.annotations.NullMarked;

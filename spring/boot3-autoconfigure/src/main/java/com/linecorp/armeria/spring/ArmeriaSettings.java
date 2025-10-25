@@ -20,6 +20,7 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.jspecify.annotations.Nullable;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.context.properties.NestedConfigurationProperty;
 import org.springframework.validation.annotation.Validated;
@@ -29,7 +30,6 @@ import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.common.SessionProtocol;
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerBuilder;
@@ -243,8 +243,7 @@ public class ArmeriaSettings {
         /**
          * The {@code "user-agent"} header values which are not applicable for the HTTP content encoding.
          */
-        @Nullable
-        private String[] excludedUserAgents;
+        private String @Nullable [] excludedUserAgents;
 
         /**
          * The minimum bytes for encoding the content of an HTTP response.
@@ -283,8 +282,7 @@ public class ArmeriaSettings {
          * Returns the {@code "user-agent"} header values which are not applicable for the HTTP content
          * encoding.
          */
-        @Nullable
-        public String[] getExcludedUserAgents() {
+        public String @Nullable [] getExcludedUserAgents() {
             return excludedUserAgents;
         }
 

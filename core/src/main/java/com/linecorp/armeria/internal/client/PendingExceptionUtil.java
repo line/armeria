@@ -16,10 +16,9 @@
 
 package com.linecorp.armeria.internal.client;
 
+import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import com.linecorp.armeria.common.annotation.Nullable;
 
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;

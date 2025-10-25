@@ -16,7 +16,7 @@
 
 package com.linecorp.armeria.server.auth;
 
-import com.linecorp.armeria.common.annotation.Nullable;
+import org.jspecify.annotations.Nullable;
 
 /**
  * Implements {@link AuthorizationStatus}.

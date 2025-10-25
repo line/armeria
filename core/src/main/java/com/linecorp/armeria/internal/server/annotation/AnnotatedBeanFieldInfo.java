@@ -21,10 +21,11 @@ import java.lang.reflect.AnnotatedElement;
 import java.util.Map;
 import java.util.function.Function;
 
+import org.jspecify.annotations.Nullable;
+
 import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableMap;
 
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.logging.BeanFieldInfo;
 
 final class AnnotatedBeanFieldInfo implements BeanFieldInfo {

@@ -19,7 +19,8 @@ import java.net.URI;
 
 import javax.net.ssl.SSLException;
 
-import com.linecorp.armeria.common.annotation.Nullable;
+import org.jspecify.annotations.Nullable;
+
 import com.linecorp.armeria.common.util.SafeCloseable;
 
 import io.netty.bootstrap.Bootstrap;

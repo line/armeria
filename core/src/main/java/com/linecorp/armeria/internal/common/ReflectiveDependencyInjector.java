@@ -23,6 +23,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.locks.ReentrantLock;
 
+import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -30,7 +31,6 @@ import com.google.common.base.MoreObjects;
 import com.google.common.collect.Iterables;
 
 import com.linecorp.armeria.common.DependencyInjector;
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.internal.common.util.ReentrantShortLock;
 
 public final class ReflectiveDependencyInjector implements DependencyInjector {

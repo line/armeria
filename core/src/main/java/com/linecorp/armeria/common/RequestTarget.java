@@ -17,7 +17,8 @@ package com.linecorp.armeria.common;
 
 import static java.util.Objects.requireNonNull;
 
-import com.linecorp.armeria.common.annotation.Nullable;
+import org.jspecify.annotations.Nullable;
+
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.internal.common.DefaultRequestTarget;
 import com.linecorp.armeria.internal.common.util.TemporaryThreadLocals;

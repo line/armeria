@@ -21,12 +21,13 @@ import static com.linecorp.armeria.internal.common.auth.oauth2.OAuth2Constants.C
 
 import java.util.Objects;
 
+import org.jspecify.annotations.Nullable;
+
 import com.google.common.base.MoreObjects;
 
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeadersBuilder;
 import com.linecorp.armeria.common.QueryParamsBuilder;
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.auth.AuthToken;
 
 final class ClientPasswordClientAuthentication implements ClientAuthentication {

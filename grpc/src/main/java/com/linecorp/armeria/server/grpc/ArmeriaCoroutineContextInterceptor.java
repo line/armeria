@@ -26,13 +26,13 @@ import java.util.List;
 import java.util.ServiceLoader;
 import java.util.concurrent.ScheduledExecutorService;
 
+import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.common.RequestContext;
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 import io.grpc.Metadata;

@@ -35,9 +35,9 @@ import static java.util.Objects.requireNonNull;
 import java.util.EnumSet;
 import java.util.Set;
 
-import com.google.common.collect.Sets;
+import org.jspecify.annotations.Nullable;
 
-import com.linecorp.armeria.common.annotation.Nullable;
+import com.google.common.collect.Sets;
 
 /**
  * HTTP request method.

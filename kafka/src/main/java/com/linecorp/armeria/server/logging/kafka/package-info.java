@@ -17,7 +17,7 @@
 /**
  * Kafka backend integration support for request/response logging.
  */
-@NonNullByDefault
+@NullMarked
 package com.linecorp.armeria.server.logging.kafka;
 
-import com.linecorp.armeria.common.annotation.NonNullByDefault;
+import org.jspecify.annotations.NullMarked;

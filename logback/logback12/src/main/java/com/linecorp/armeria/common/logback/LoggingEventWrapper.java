@@ -18,9 +18,8 @@ package com.linecorp.armeria.common.logback;
 import java.time.Instant;
 import java.util.Map;
 
+import org.jspecify.annotations.Nullable;
 import org.slf4j.Marker;
-
-import com.linecorp.armeria.common.annotation.Nullable;
 
 import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.spi.ILoggingEvent;

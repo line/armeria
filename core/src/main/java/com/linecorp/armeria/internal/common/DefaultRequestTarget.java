@@ -23,10 +23,11 @@ import static java.util.Objects.requireNonNull;
 import java.util.BitSet;
 import java.util.Objects;
 
+import org.jspecify.annotations.Nullable;
+
 import com.linecorp.armeria.common.RequestTarget;
 import com.linecorp.armeria.common.RequestTargetForm;
 import com.linecorp.armeria.common.Scheme;
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.internal.common.util.TemporaryThreadLocals;
 
 import it.unimi.dsi.fastutil.Arrays;

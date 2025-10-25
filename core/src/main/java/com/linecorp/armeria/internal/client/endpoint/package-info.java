@@ -17,7 +17,7 @@
 /**
  * Various classes used internally. Anything in this package can be changed or removed at any time.
  */
-@NonNullByDefault
+@NullMarked
 package com.linecorp.armeria.internal.client.endpoint;
 
-import com.linecorp.armeria.common.annotation.NonNullByDefault;
+import org.jspecify.annotations.NullMarked;

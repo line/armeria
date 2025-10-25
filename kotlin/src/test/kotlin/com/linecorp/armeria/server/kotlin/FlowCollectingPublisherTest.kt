@@ -62,7 +62,7 @@ internal class FlowCollectingPublisherTest : PublisherVerification<Long>(TestEnv
         val queue: BlockingQueue<Any> = LinkedTransferQueue()
         lateinit var subscription: Subscription
 
-        FlowCollectingPublisher(
+        FlowCollectingPublisher<Int>(
             flow {
                 (0 until 3).forEach {
                     emit(it)
@@ -147,7 +147,7 @@ internal class FlowCollectingPublisherTest : PublisherVerification<Long>(TestEnv
         val context = CoroutineName("custom-context")
         val coroutineNameCaptor = AtomicReference<CoroutineName>()
 
-        FlowCollectingPublisher(
+        FlowCollectingPublisher<Int>(
             flow {
                 coroutineNameCaptor.set(currentCoroutineContext()[CoroutineName])
                 emit(1)

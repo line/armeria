@@ -15,9 +15,10 @@
  */
 package com.linecorp.armeria.client.endpoint;
 
+import org.jspecify.annotations.Nullable;
+
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.common.Flags;
-import com.linecorp.armeria.common.annotation.Nullable;
 
 /**
  * An {@link EndpointGroupException} raised when the resolution of an {@link EndpointGroup} fails

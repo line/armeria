@@ -21,12 +21,13 @@ import static java.util.Objects.requireNonNull;
 
 import java.time.Duration;
 
+import org.jspecify.annotations.Nullable;
+
 import com.google.common.base.MoreObjects;
 import com.google.common.base.MoreObjects.ToStringHelper;
 
 import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.Response;
-import com.linecorp.armeria.common.annotation.Nullable;
 
 /**
  * Builds a {@link RetryConfig}.

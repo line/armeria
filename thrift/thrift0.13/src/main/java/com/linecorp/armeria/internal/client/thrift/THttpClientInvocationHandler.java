@@ -25,6 +25,7 @@ import java.util.Arrays;
 import java.util.concurrent.ExecutionException;
 
 import org.apache.thrift.async.AsyncMethodCallback;
+import org.jspecify.annotations.Nullable;
 
 import com.linecorp.armeria.client.ClientBuilderParams;
 import com.linecorp.armeria.client.ClientOptions;
@@ -35,7 +36,6 @@ import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.client.thrift.THttpClient;
 import com.linecorp.armeria.common.RpcResponse;
 import com.linecorp.armeria.common.Scheme;
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.AbstractUnwrappable;
 import com.linecorp.armeria.common.util.CompletionActions;
 import com.linecorp.armeria.common.util.Exceptions;
@@ -113,7 +113,7 @@ final class THttpClientInvocationHandler
     }
 
     @Nullable
-    private Object invokeClientMethod(Method method, @Nullable Object[] args) throws Throwable {
+    private Object invokeClientMethod(Method method, Object @Nullable [] args) throws Throwable {
         final AsyncMethodCallback<Object> callback;
         if (args == null) {
             args = NO_ARGS;

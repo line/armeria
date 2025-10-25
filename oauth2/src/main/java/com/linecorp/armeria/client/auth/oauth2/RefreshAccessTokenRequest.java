@@ -21,8 +21,9 @@ import static com.linecorp.armeria.internal.common.auth.oauth2.OAuth2Constants.R
 import java.util.List;
 import java.util.Objects;
 
+import org.jspecify.annotations.Nullable;
+
 import com.linecorp.armeria.common.QueryParamsBuilder;
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.auth.oauth2.ClientAuthentication;
 
 /**

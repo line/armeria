@@ -21,9 +21,10 @@ import static java.util.Objects.requireNonNull;
 import java.net.UnknownHostException;
 import java.util.List;
 
+import org.jspecify.annotations.Nullable;
+
 import com.google.common.collect.ImmutableList;
 
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 
 import io.netty.handler.codec.dns.DnsQuestion;

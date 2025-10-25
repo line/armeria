@@ -27,13 +27,13 @@ import java.util.function.Predicate;
 
 import javax.annotation.Nonnull;
 
+import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.base.MoreObjects;
 
 import com.linecorp.armeria.common.CommonPools;
-import com.linecorp.armeria.common.annotation.Nullable;
 
 final class DefaultAsyncLoader<T> implements AsyncLoader<T> {
 

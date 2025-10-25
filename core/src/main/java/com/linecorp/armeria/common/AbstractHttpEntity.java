@@ -16,11 +16,11 @@
 
 package com.linecorp.armeria.common;
 
+import org.jspecify.annotations.Nullable;
+
 import com.google.common.base.MoreObjects;
 import com.google.common.base.MoreObjects.ToStringHelper;
 import com.google.common.base.Objects;
-
-import com.linecorp.armeria.common.annotation.Nullable;
 
 abstract class AbstractHttpEntity<T> implements HttpEntity<T> {
 

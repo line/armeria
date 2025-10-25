@@ -17,7 +17,7 @@
 /**
  * Provides a <a href="https://dropwizard.io/">Dropwizard</a> Bundle for Armeria.
  */
-@NonNullByDefault
+@NullMarked
 package com.linecorp.armeria.dropwizard;
 
-import com.linecorp.armeria.common.annotation.NonNullByDefault;
+import org.jspecify.annotations.NullMarked;

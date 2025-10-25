@@ -19,7 +19,8 @@ package com.linecorp.armeria.client;
 import java.net.UnknownHostException;
 import java.util.List;
 
-import com.linecorp.armeria.common.annotation.Nullable;
+import org.jspecify.annotations.Nullable;
+
 import com.linecorp.armeria.common.annotation.UnstableApi;
 
 import io.netty.handler.codec.dns.DnsQuestion;

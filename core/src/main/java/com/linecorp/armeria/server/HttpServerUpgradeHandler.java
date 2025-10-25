@@ -41,10 +41,11 @@ import static io.netty.util.internal.ObjectUtil.checkNotNull;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 
+import org.jspecify.annotations.Nullable;
+
 import com.google.common.base.Splitter;
 
 import com.linecorp.armeria.common.SessionProtocol;
-import com.linecorp.armeria.common.annotation.Nullable;
 
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelFuture;

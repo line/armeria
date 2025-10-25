@@ -21,7 +21,8 @@ import static com.google.common.base.Preconditions.checkState;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Supplier;
 
-import com.linecorp.armeria.common.annotation.Nullable;
+import org.jspecify.annotations.Nullable;
+
 import com.linecorp.armeria.internal.common.util.ReentrantShortLock;
 
 /**

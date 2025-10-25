@@ -16,9 +16,10 @@
 
 package com.linecorp.armeria.common.grpc;
 
+import org.jspecify.annotations.Nullable;
+
 import com.linecorp.armeria.client.grpc.GrpcClientCall;
 import com.linecorp.armeria.common.RequestContext;
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 
 import io.grpc.CallOptions;

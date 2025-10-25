@@ -18,7 +18,7 @@
  * CircuitBreaker related classes used internally.
  * Anything in this package can be changed or removed at any time.
  */
-@NonNullByDefault
+@NullMarked
 package com.linecorp.armeria.internal.common.circuitbreaker;
 
-import com.linecorp.armeria.common.annotation.NonNullByDefault;
+import org.jspecify.annotations.NullMarked;

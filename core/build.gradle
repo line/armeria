@@ -167,6 +167,9 @@ dependencies {
     optionalImplementation libs.brotli4j.osx.aarch64
     optionalImplementation libs.brotli4j.windows
 
+    // Nullability Support
+    api libs.jspecify
+
     // for testing the observation API with tracing
     testImplementation (libs.micrometer.tracing.integration.test) {
         exclude group: "org.mockito"

@@ -23,6 +23,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 import java.util.stream.Stream;
 
+import org.jspecify.annotations.Nullable;
 import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
@@ -30,7 +31,6 @@ import org.reactivestreams.Subscription;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableList.Builder;
 
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.stream.StreamMessage;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
@@ -135,8 +135,7 @@ public final class ObjectCollectingUtil {
     }
 
     private static class CollectingMultipleObjectsSubscriber<T> extends AbstractCollectingSubscriber<T> {
-        @Nullable
-        private ImmutableList.Builder<T> collector;
+        private ImmutableList.@Nullable Builder<T> collector;
 
         CollectingMultipleObjectsSubscriber(CompletableFuture<Object> future, ServiceRequestContext ctx) {
             super(future, ctx);

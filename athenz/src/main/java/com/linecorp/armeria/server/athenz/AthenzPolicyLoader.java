@@ -23,6 +23,8 @@ import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 
+import org.jspecify.annotations.Nullable;
+
 import com.google.common.collect.ImmutableMap;
 import com.yahoo.athenz.zpe.pkey.PublicKeyStore;
 import com.yahoo.athenz.zts.DomainSignedPolicyData;
@@ -31,7 +33,6 @@ import com.yahoo.athenz.zts.JWSPolicyData;
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.client.athenz.ZtsBaseClient;
 import com.linecorp.armeria.common.CommonPools;
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.AsyncLoader;
 
 final class AthenzPolicyLoader {

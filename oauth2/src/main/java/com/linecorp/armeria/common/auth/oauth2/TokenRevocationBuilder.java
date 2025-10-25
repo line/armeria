@@ -21,8 +21,9 @@ import static java.util.Objects.requireNonNull;
 import java.util.Map;
 import java.util.function.Supplier;
 
+import org.jspecify.annotations.Nullable;
+
 import com.linecorp.armeria.client.WebClient;
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.internal.common.auth.oauth2.OAuth2Endpoint;
 

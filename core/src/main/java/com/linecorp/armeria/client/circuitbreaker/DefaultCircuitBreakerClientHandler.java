@@ -18,12 +18,12 @@ package com.linecorp.armeria.client.circuitbreaker;
 
 import static java.util.Objects.requireNonNull;
 
+import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.common.Request;
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.circuitbreaker.CircuitBreakerCallback;
 
 final class DefaultCircuitBreakerClientHandler implements CircuitBreakerClientHandler {

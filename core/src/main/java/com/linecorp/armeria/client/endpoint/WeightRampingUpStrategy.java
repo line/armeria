@@ -22,10 +22,11 @@ import java.util.List;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
+import org.jspecify.annotations.Nullable;
+
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.endpoint.DefaultEndpointSelector.LoadBalancerFactory;
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.loadbalancer.LoadBalancer;
 import com.linecorp.armeria.common.loadbalancer.UpdatableLoadBalancer;
 import com.linecorp.armeria.common.loadbalancer.WeightTransition;

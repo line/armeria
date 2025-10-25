@@ -18,7 +18,7 @@ package com.linecorp.armeria.server.saml;
 import static com.google.common.base.Preconditions.checkState;
 import static java.util.Objects.requireNonNull;
 
-import com.linecorp.armeria.common.annotation.Nullable;
+import org.jspecify.annotations.Nullable;
 
 /**
  * A builder which builds a {@link SamlAssertionConsumerConfig}.

@@ -25,6 +25,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
+import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -32,7 +33,6 @@ import com.google.common.collect.MapMaker;
 
 import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.NonBlocking;
-import com.linecorp.armeria.common.annotation.Nullable;
 
 /**
  * A {@link CompletableFuture} that warns the user if they call a method that blocks the event loop.

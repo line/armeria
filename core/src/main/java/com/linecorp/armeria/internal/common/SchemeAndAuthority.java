@@ -24,10 +24,10 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.BitSet;
 
+import org.jspecify.annotations.Nullable;
+
 import com.google.common.base.Strings;
 import com.google.common.net.HostAndPort;
-
-import com.linecorp.armeria.common.annotation.Nullable;
 
 public final class SchemeAndAuthority {
 

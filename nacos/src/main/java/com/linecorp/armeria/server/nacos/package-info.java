@@ -17,9 +17,10 @@
 /**
  * Automatic service registration and discovery with <a href="https://nacos.io/">Nacos</a>.
  **/
-@NonNullByDefault
+@NullMarked
 @UnstableApi
 package com.linecorp.armeria.server.nacos;
 
-import com.linecorp.armeria.common.annotation.NonNullByDefault;
+import org.jspecify.annotations.NullMarked;
+
 import com.linecorp.armeria.common.annotation.UnstableApi;

@@ -18,8 +18,9 @@
  * Provides the client-side classes and interfaces for <a href="https://www.athenz.io/">Athenz</a> integration.
  */
 @UnstableApi
-@NonNullByDefault
+@NullMarked
 package com.linecorp.armeria.client.athenz;
 
-import com.linecorp.armeria.common.annotation.NonNullByDefault;
+import org.jspecify.annotations.NullMarked;
+
 import com.linecorp.armeria.common.annotation.UnstableApi;

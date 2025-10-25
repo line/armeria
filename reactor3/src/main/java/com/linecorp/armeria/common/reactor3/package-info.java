@@ -17,7 +17,7 @@
 /**
  * Reactor plugins to help keep {@link com.linecorp.armeria.common.RequestContext} during Reactor operations.
  */
-@NonNullByDefault
+@NullMarked
 package com.linecorp.armeria.common.reactor3;
 
-import com.linecorp.armeria.common.annotation.NonNullByDefault;
+import org.jspecify.annotations.NullMarked;

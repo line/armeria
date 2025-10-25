@@ -17,6 +17,7 @@ package com.linecorp.armeria.unsafe;
 
 import java.util.concurrent.Executor;
 
+import org.jspecify.annotations.Nullable;
 import org.reactivestreams.Subscriber;
 
 import com.linecorp.armeria.common.AggregationOptions;
@@ -24,7 +25,6 @@ import com.linecorp.armeria.common.Bytes;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.stream.StreamMessage;
 import com.linecorp.armeria.common.stream.SubscriptionOption;
