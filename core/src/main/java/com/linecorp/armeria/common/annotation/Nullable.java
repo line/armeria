@@ -29,6 +29,8 @@ import javax.annotation.meta.When;
 /**
  * Indicates the return values, parameters and fields are nullable.
  * @see NonNullByDefault
+ *
+ * @deprecated use {@link org.jspecify.annotations.Nullable}
  */
 @Deprecated
 @Documented
