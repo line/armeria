@@ -359,7 +359,7 @@ class DefaultDescriptiveTypeInfoProviderTest {
 
     private static final class ParamService {
         @Get("/param/{id}")
-        public CompletableFuture<String> param(@Param ParamId id, @Param @Nullable ParamQuery query) {
+        public CompletableFuture<String> param(@Param ParamId id, @Param @javax.annotation.Nullable ParamQuery query) {
             return UnmodifiableFuture.completedFuture(null);
         }
     }

@@ -124,7 +124,7 @@ class AnnotatedServiceRequestConverterTest {
 
         @Post("/convert4")
         @RequestConverter(NullReturningConverter.class)
-        public void convert4(Optional<String> optional, @Nullable String nullable) {
+        public void convert4(Optional<String> optional, @javax.annotation.Nullable String nullable) {
             assertThat(optional).isEmpty();
             assertThat(nullable).isNull();
         }
