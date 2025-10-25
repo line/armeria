@@ -29,4 +29,5 @@
 package com.linecorp.armeria.client.grpc.protocol;
 
 import org.jspecify.annotations.NullMarked;
+
 import com.linecorp.armeria.common.annotation.UnstableApi;

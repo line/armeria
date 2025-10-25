@@ -22,4 +22,5 @@
 package com.linecorp.armeria.internal.common.resteasy;
 
 import org.jspecify.annotations.NullMarked;
+
 import com.linecorp.armeria.common.annotation.UnstableApi;

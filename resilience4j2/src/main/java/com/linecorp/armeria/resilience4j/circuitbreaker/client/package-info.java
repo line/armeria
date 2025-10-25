@@ -23,4 +23,5 @@
 package com.linecorp.armeria.resilience4j.circuitbreaker.client;
 
 import org.jspecify.annotations.NullMarked;
+
 import com.linecorp.armeria.common.annotation.UnstableApi;
