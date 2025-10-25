@@ -412,8 +412,7 @@ final class Routers {
 
         private final class RouteCandidateCollectingNodeProcessor implements NodeProcessor<V> {
             private final RoutingContext routingCtx;
-            @Nullable
-            private ImmutableList.Builder<Routed<V>> routeCollector;
+            private ImmutableList.@Nullable Builder<Routed<V>> routeCollector;
 
             private RouteCandidateCollectingNodeProcessor(RoutingContext routingCtx) {
                 this.routingCtx = routingCtx;

@@ -65,8 +65,7 @@ public final class FileServiceBuilder {
     HttpHeadersBuilder headers;
     MediaTypeResolver mediaTypeResolver = MediaTypeResolver.ofDefault();
 
-    @Nullable
-    private ImmutableList.Builder<String> fallbackFileExtensions;
+    private ImmutableList.@Nullable Builder<String> fallbackFileExtensions;
 
     FileServiceBuilder(HttpVfs vfs) {
         this.vfs = requireNonNull(vfs, "vfs");

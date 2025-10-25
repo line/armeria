@@ -36,8 +36,7 @@ final class StreamMessageCollector<T> implements Subscriber<T> {
     private final CompletableFuture<List<T>> future = new CompletableFuture<>();
     private final boolean withPooledObjects;
 
-    @Nullable
-    private ImmutableList.Builder<T> elementsBuilder = ImmutableList.builder();
+    private ImmutableList.@Nullable Builder<T> elementsBuilder = ImmutableList.builder();
 
     StreamMessageCollector(SubscriptionOption... options) {
         withPooledObjects = containsWithPooledObjects(options);

@@ -388,7 +388,7 @@ public final class ChannelUtil {
 
     @Nullable
     private static DomainSocketAddress toArmeriaDomainSocketAddress(
-            @Nullable io.netty.channel.unix.DomainSocketAddress addr) {
+            io.netty.channel.unix.@Nullable DomainSocketAddress addr) {
         if (addr != null) {
             final String path = addr.path();
             if (!Strings.isNullOrEmpty(path)) {

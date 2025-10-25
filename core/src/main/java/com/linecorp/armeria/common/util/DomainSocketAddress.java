@@ -99,9 +99,8 @@ public final class DomainSocketAddress extends InetSocketAddress {
     private String authority;
     @Nullable
     private Endpoint endpoint;
-    @Nullable
     @SuppressWarnings("NullableOnContainingClass") // ErrorProne false positive
-    private io.netty.channel.unix.DomainSocketAddress nettyAddress;
+    private io.netty.channel.unix.@Nullable DomainSocketAddress nettyAddress;
 
     private DomainSocketAddress(String path) {
         super(DomainSocketUtil.toInetAddress(requireNonNull(path, "path")),
