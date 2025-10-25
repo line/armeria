@@ -69,9 +69,8 @@ abstract class AbstractTByteBufTransport extends TTransport {
         this.buf.writeBytes(buf, off, len);
     }
 
-    @Nullable
     @Override
-    public byte[] getBuffer() {
+    public byte @Nullable [] getBuffer() {
         final ByteBuf buf = this.buf;
         if (!buf.hasArray())  {
             return null;

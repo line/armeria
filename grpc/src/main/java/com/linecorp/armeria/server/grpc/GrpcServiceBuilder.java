@@ -118,8 +118,7 @@ public final class GrpcServiceBuilder {
     @Nullable
     private GrpcExceptionHandlerFunction exceptionHandler;
 
-    @Nullable
-    private ImmutableList.Builder<ServerInterceptor> interceptors;
+    private ImmutableList.@Nullable Builder<ServerInterceptor> interceptors;
 
     @Nullable
     private UnframedGrpcErrorHandler unframedGrpcErrorHandler;

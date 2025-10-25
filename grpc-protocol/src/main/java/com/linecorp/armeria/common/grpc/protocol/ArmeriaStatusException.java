@@ -30,8 +30,7 @@ public final class ArmeriaStatusException extends RuntimeException {
 
     private final int code;
 
-    @Nullable
-    private final byte[] grpcStatusDetailsBin;
+    private final byte @Nullable [] grpcStatusDetailsBin;
 
     /**
      * Constructs an {@link ArmeriaStatusException} for the given gRPC status code and message.
@@ -46,7 +45,7 @@ public final class ArmeriaStatusException extends RuntimeException {
      * {@code com.google.rpc.Status} to follow the
      * <a href="https://github.com/grpc/grpc/issues/24007">unofficial specification</a>.
      */
-    public ArmeriaStatusException(int code, @Nullable String message, @Nullable byte[] grpcStatusDetailsBin) {
+    public ArmeriaStatusException(int code, @Nullable String message, byte @Nullable [] grpcStatusDetailsBin) {
         this(code, message, grpcStatusDetailsBin, null);
     }
 
@@ -63,7 +62,7 @@ public final class ArmeriaStatusException extends RuntimeException {
      * {@code com.google.rpc.Status} to follow the
      * <a href="https://github.com/grpc/grpc/issues/24007">unofficial specification</a>.
      */
-    public ArmeriaStatusException(int code, @Nullable String message, @Nullable byte[] grpcStatusDetailsBin,
+    public ArmeriaStatusException(int code, @Nullable String message, byte @Nullable [] grpcStatusDetailsBin,
                                   @Nullable Throwable cause) {
         super(message, cause);
         this.code = code;
@@ -80,8 +79,7 @@ public final class ArmeriaStatusException extends RuntimeException {
     /**
      * Returns the gRPC details binary for this {@link ArmeriaStatusException}.
      */
-    @Nullable
-    public byte[] getGrpcStatusDetailsBin() {
+    public byte @Nullable [] getGrpcStatusDetailsBin() {
         return grpcStatusDetailsBin;
     }
 }

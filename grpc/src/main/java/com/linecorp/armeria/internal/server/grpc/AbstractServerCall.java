@@ -118,8 +118,7 @@ public abstract class AbstractServerCall<I, O> extends ServerCall<I, O> {
     private final InternalGrpcExceptionHandler exceptionHandler;
 
     // Only set once.
-    @Nullable
-    private ServerCall.Listener<I> listener;
+    private ServerCall.@Nullable Listener<I> listener;
 
     // Message compression defaults to being enabled unless a user disables it using a server interceptor.
     private boolean messageCompression = true;

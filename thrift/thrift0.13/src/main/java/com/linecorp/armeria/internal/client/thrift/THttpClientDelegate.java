@@ -320,7 +320,7 @@ final class THttpClientDelegate extends DecoratingClient<HttpRequest, HttpRespon
         handleException(ctx, reply, null, decodedCause);
     }
 
-    static Exception decodeException(Throwable cause, @Nullable Class<?>[] declaredThrowableExceptions) {
+    static Exception decodeException(Throwable cause, Class<?> @Nullable [] declaredThrowableExceptions) {
         if (cause instanceof TException ||
             cause instanceof UnprocessedRequestException ||
             cause instanceof FailFastException) {

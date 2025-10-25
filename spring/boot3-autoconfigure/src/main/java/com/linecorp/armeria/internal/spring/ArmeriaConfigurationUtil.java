@@ -434,7 +434,7 @@ public final class ArmeriaConfigurationUtil {
      * Configures a decorator for encoding the content of the HTTP responses sent from the server.
      */
     public static Function<? super HttpService, EncodingService> contentEncodingDecorator(
-            @Nullable String[] mimeTypes, @Nullable String[] excludedUserAgents,
+            String @Nullable [] mimeTypes, String @Nullable [] excludedUserAgents,
             int minBytesToForceChunkedAndEncoding) {
         final Predicate<MediaType> encodableContentTypePredicate;
         if (mimeTypes == null || mimeTypes.length == 0) {

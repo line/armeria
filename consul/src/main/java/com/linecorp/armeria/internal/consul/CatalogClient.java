@@ -158,9 +158,8 @@ final class CatalogClient {
         @JsonProperty("ServiceTaggedAddresses")
         Map<String, Object> serviceTaggedAddresses;
 
-        @Nullable
         @JsonProperty("ServiceTags")
-        String[] serviceTags;
+        String @Nullable [] serviceTags;
 
         @Nullable
         @JsonProperty("ServiceProxy")

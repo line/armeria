@@ -43,8 +43,7 @@ public class ByteBufBytes implements Bytes, ResourceLeakHint {
     private final ByteBuf buf;
     private final boolean pooled;
     private boolean closed;
-    @Nullable
-    private byte[] array;
+    private byte @Nullable [] array;
 
     /**
      * Creates a new instance.

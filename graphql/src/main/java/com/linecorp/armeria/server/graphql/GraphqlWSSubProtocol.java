@@ -86,7 +86,6 @@ class GraphqlWSSubProtocol {
     /**
      * Called when a binary frame is received. Binary frames are not supported by the graphql-ws protocol.
      */
-    @Nullable
     public void handleBinary(WebSocketWriter out) {
         out.close(WebSocketCloseStatus.INVALID_MESSAGE_TYPE, "Binary frames are not supported");
     }
@@ -94,7 +93,6 @@ class GraphqlWSSubProtocol {
     /**
      * Receives an event and returns a response if one should be sent.
      */
-    @Nullable
     public void handleText(String event, WebSocketWriter out) {
         if (!out.isOpen()) {
             return;

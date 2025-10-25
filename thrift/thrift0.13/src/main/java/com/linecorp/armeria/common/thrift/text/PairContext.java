@@ -58,8 +58,7 @@ class PairContext extends BaseContext {
     @Nullable
     private final Iterator<Map.Entry<String, JsonNode>> children;
     private boolean lhs;
-    @Nullable
-    private Map.Entry<String, JsonNode> currentChild;
+    private Map.@Nullable Entry<String, JsonNode> currentChild;
 
     /**
      * Creates an iterator over this object's children.

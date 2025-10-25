@@ -46,7 +46,7 @@ public final class GrpcTrailersUtil {
      */
     public static void addStatusMessageToTrailers(
             HttpHeadersBuilder trailersBuilder, int code, @Nullable String message,
-            @Nullable byte[] details) {
+            byte @Nullable [] details) {
         trailersBuilder.endOfStream(true);
         trailersBuilder.add(GrpcHeaderNames.GRPC_STATUS, StringUtil.toString(code));
         if (message != null) {

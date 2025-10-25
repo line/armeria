@@ -57,13 +57,11 @@ public final class Check {
     @JsonProperty("DeregisterCriticalServiceAfter")
     private String deregisterCriticalServiceAfter;
 
-    @Nullable
     @JsonProperty("Args")
-    private String[] args;
+    private String @Nullable [] args;
 
-    @Nullable
     @JsonProperty("AliasNode")
-    private String[] aliasNode;
+    private String @Nullable [] aliasNode;
 
     @Nullable
     @JsonProperty("DockerContainerID")
@@ -181,8 +179,7 @@ public final class Check {
         this.deregisterCriticalServiceAfter = deregisterCriticalServiceAfter;
     }
 
-    @Nullable
-    public String[] getArgs() {
+    public String @Nullable [] getArgs() {
         return args;
     }
 
@@ -190,8 +187,7 @@ public final class Check {
         this.args = args;
     }
 
-    @Nullable
-    public String[] getAliasNode() {
+    public String @Nullable [] getAliasNode() {
         return aliasNode;
     }
 
