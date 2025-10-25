@@ -15,6 +15,8 @@
  */
 package com.linecorp.armeria.common.jsonrpc;
 
+import static java.util.Objects.requireNonNull;
+
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -52,14 +54,14 @@ public final class JsonRpcParameter {
      * Creates a new {@link JsonRpcParameter} instance from positional parameters.
      */
     public static JsonRpcParameter of(List<Object> positionalParams) {
-        return new JsonRpcParameter(positionalParams);
+        return new JsonRpcParameter(requireNonNull(positionalParams, "positionalParams"));
     }
 
     /**
      * Creates a new {@link JsonRpcParameter} instance from named parameters.
      */
     public static JsonRpcParameter of(Map<String, Object> namedParams) {
-        return new JsonRpcParameter(namedParams);
+        return new JsonRpcParameter(requireNonNull(namedParams, "namedParams"));
     }
 
     /**

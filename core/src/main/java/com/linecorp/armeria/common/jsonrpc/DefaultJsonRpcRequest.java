@@ -21,6 +21,7 @@ import static java.util.Objects.requireNonNull;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -56,7 +57,7 @@ final class DefaultJsonRpcRequest implements JsonRpcRequest {
     }
 
     DefaultJsonRpcRequest(@Nullable Object id, String method, Map<String, Object> params) {
-        this(id, method, params, JsonRpcVersion.JSON_RPC_2_0.getVersion());
+        this(id, method, copyParams(params), JsonRpcVersion.JSON_RPC_2_0.getVersion());
     }
 
     private DefaultJsonRpcRequest(
@@ -133,6 +134,11 @@ final class DefaultJsonRpcRequest implements JsonRpcRequest {
         final List<Object> copy = new ArrayList<>(params.length);
         Collections.addAll(copy, params);
         return Collections.unmodifiableList(copy);
+    }
+
+    private static Map<String, Object> copyParams(Map<String, Object> params) {
+        requireNonNull(params, "params");
+        return Collections.unmodifiableMap(new HashMap<>(params));
     }
 
     @Override
