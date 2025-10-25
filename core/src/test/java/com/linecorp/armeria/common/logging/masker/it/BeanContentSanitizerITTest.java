@@ -187,13 +187,15 @@ class BeanContentSanitizerITTest {
                   public CompletableFuture<SimpleFoo> hello(SimpleFoo foo, @Param String param, HttpRequest req,
                                                             AggregatedHttpRequest areq,
                                                             ServiceRequestContext sctx,
-                                                            @javax.annotation.Nullable @Param String nullParam,
+                                                            @com.linecorp.armeria.common.annotation.Nullable
+                                                            @Param String nullParam,
                                                             @Masker SimpleFoo maskedFoo,
                                                             @Masker @Param String maskedParam,
                                                             @Masker HttpRequest maskedReq,
                                                             @Masker AggregatedHttpRequest maskedAggReq,
                                                             @Masker ServiceRequestContext maskedCtx,
-                                                            @javax.annotation.Nullable @Param String maskedNullParam,
+                                                            @com.linecorp.armeria.common.annotation.Nullable
+                                                            @Param String maskedNullParam,
                                                             // handled automatically by Jdk8Module
                                                             @Param Optional<String> optionalParam,
                                                             QueryParams queryParams,
