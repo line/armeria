@@ -358,6 +358,7 @@ class DefaultDescriptiveTypeInfoProviderTest {
     }
 
     private static final class ParamService {
+        @SuppressWarnings("LineLength")
         @Get("/param/{id}")
         public CompletableFuture<String> param(@Param ParamId id,
                                                @Param
