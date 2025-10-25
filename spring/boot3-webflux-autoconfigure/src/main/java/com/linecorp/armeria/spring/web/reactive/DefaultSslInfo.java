@@ -54,8 +54,7 @@ final class DefaultSslInfo implements SslInfo {
     @Nullable
     private final String sessionId;
 
-    @Nullable
-    private final X509Certificate[] peerCertificates;
+    private final X509Certificate @Nullable [] peerCertificates;
 
     DefaultSslInfo(SSLSession session) {
         Assert.notNull(session, "SSLSession is required");
@@ -70,8 +69,7 @@ final class DefaultSslInfo implements SslInfo {
     }
 
     @Override
-    @Nullable
-    public X509Certificate[] getPeerCertificates() {
+    public X509Certificate @Nullable [] getPeerCertificates() {
         return peerCertificates;
     }
 
@@ -96,8 +94,7 @@ final class DefaultSslInfo implements SslInfo {
         return sb.toString();
     }
 
-    @Nullable
-    private static X509Certificate[] initCertificates(SSLSession session) {
+    private static X509Certificate @Nullable [] initCertificates(SSLSession session) {
         final Certificate[] certificates;
         try {
             certificates = session.getPeerCertificates();

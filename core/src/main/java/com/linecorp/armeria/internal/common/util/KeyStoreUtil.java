@@ -143,8 +143,8 @@ public final class KeyStoreUtil {
         return null;
     }
 
-    @Nullable
-    private static char[] keyPassword(@Nullable String keyStorePassword, @Nullable String keyPassword) {
+    private static char @Nullable [] keyPassword(@Nullable String keyStorePassword,
+                                                 @Nullable String keyPassword) {
         if (keyPassword != null) {
             return keyPassword.toCharArray();
         }

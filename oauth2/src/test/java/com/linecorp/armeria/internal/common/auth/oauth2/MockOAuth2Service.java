@@ -54,8 +54,7 @@ public abstract class MockOAuth2Service {
             "\\s*(?i)basic\\s+(?<credential>\\S+)\\s*");
     private static final String WWW_AUTHENTICATE_RESPONSE = "Basic realm=\"%s\"";
 
-    @Nullable
-    private static Map.Entry<String, String> decodeClientCredentials(String clientCredential) {
+    private static Map.@Nullable Entry<String, String> decodeClientCredentials(String clientCredential) {
         final String decodedCredential = new String(Base64.getDecoder().decode(clientCredential),
                                                     StandardCharsets.UTF_8);
         final Matcher matcher = CREDENTIALS_PATTERN.matcher(decodedCredential);
@@ -137,7 +136,7 @@ public abstract class MockOAuth2Service {
         return clientSecret.equals(authorizedClients.get(clientId));
     }
 
-    protected boolean isAuthorizedClient(@Nullable Map.Entry<String, String> clientCredential) {
+    protected boolean isAuthorizedClient(Map.@Nullable Entry<String, String> clientCredential) {
         return (clientCredential != null) &&
                isAuthorizedClient(clientCredential.getKey(), clientCredential.getValue());
     }

@@ -135,8 +135,7 @@ public final class ObjectCollectingUtil {
     }
 
     private static class CollectingMultipleObjectsSubscriber<T> extends AbstractCollectingSubscriber<T> {
-        @Nullable
-        private ImmutableList.Builder<T> collector;
+        private ImmutableList.@Nullable Builder<T> collector;
 
         CollectingMultipleObjectsSubscriber(CompletableFuture<Object> future, ServiceRequestContext ctx) {
             super(future, ctx);

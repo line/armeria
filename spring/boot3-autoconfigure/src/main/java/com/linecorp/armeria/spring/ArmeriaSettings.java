@@ -243,8 +243,7 @@ public class ArmeriaSettings {
         /**
          * The {@code "user-agent"} header values which are not applicable for the HTTP content encoding.
          */
-        @Nullable
-        private String[] excludedUserAgents;
+        private String @Nullable [] excludedUserAgents;
 
         /**
          * The minimum bytes for encoding the content of an HTTP response.
@@ -283,8 +282,7 @@ public class ArmeriaSettings {
          * Returns the {@code "user-agent"} header values which are not applicable for the HTTP content
          * encoding.
          */
-        @Nullable
-        public String[] getExcludedUserAgents() {
+        public String @Nullable [] getExcludedUserAgents() {
             return excludedUserAgents;
         }
 

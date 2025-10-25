@@ -62,15 +62,11 @@ public final class RequestContextExporter {
 
     @Nullable
     private final BuiltInProperties builtInProperties;
-    @Nullable
-    private final ExportEntry<BuiltInProperty>[] builtInPropertyArray;
-    @Nullable
-    private final ExportEntry<AttributeKey<?>>[] attrs;
+    private final ExportEntry<BuiltInProperty> @Nullable [] builtInPropertyArray;
+    private final ExportEntry<AttributeKey<?>> @Nullable [] attrs;
     private final int numAttrs;
-    @Nullable
-    private final ExportEntry<AsciiString>[] reqHeaders;
-    @Nullable
-    private final ExportEntry<AsciiString>[] resHeaders;
+    private final ExportEntry<AsciiString> @Nullable [] reqHeaders;
+    private final ExportEntry<AsciiString> @Nullable [] resHeaders;
 
     RequestContextExporter(Set<ExportEntry<BuiltInProperty>> builtInPropertySet,
                            Set<ExportEntry<AttributeKey<?>>> attrs,
@@ -330,8 +326,7 @@ public final class RequestContextExporter {
         private static final long serialVersionUID = -7084248226635055988L;
 
         int availabilityStamp = -1;
-        @Nullable
-        final Object[] attrValues;
+        final Object @Nullable [] attrValues;
 
         State(int numAttrs) {
             attrValues = numAttrs != 0 ? new Object[numAttrs] : null;

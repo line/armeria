@@ -92,8 +92,7 @@ final class Inet4AddressBlock implements Predicate<InetAddress> {
      * Returns IPv4 byte representation of the specified {@link Inet6Address}. {@code null} is returned
      * if the specified {@link Inet6Address} is not able to be converted to IPv4.
      */
-    @Nullable
-    static byte[] ipv6ToIpv4Address(Inet6Address address) {
+    static byte @Nullable [] ipv6ToIpv4Address(Inet6Address address) {
         final byte[] addr = address.getAddress();
         assert addr.length == 16
                 : "the length of " + address.getClass().getSimpleName() + ": " + addr.length;

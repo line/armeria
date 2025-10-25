@@ -72,8 +72,8 @@ public final class HttpHeaderNames {
     private static final String[] PROHIBITED_NAME_CHAR_NAMES;
     private static final byte LAST_PROHIBITED_NAME_CHAR;
 
-    @Nullable
-    private static ImmutableMap.Builder<AsciiString, String> inverseMapBuilder = ImmutableMap.builder();
+    private static ImmutableMap.@Nullable Builder<AsciiString, String> inverseMapBuilder =
+            ImmutableMap.builder();
 
     static {
         PROHIBITED_NAME_CHARS = new BitSet();

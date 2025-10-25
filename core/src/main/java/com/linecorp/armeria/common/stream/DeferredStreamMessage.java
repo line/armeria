@@ -102,8 +102,7 @@ public class DeferredStreamMessage<T> extends CancellableStreamMessage<T> {
     @Nullable
     private volatile CompletableFuture<List<T>> collectingFuture;
 
-    @Nullable
-    private SubscriptionOption[] collectionOptions;
+    private SubscriptionOption @Nullable [] collectionOptions;
     @Nullable
     private EventExecutor collectingExecutor;
 

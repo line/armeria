@@ -887,9 +887,8 @@ public class DefaultStreamMessageDuplicator<T> implements StreamMessageDuplicato
 
         private final SignalLengthGetter<Object> signalLengthGetter;
 
-        @Nullable
         @VisibleForTesting
-        volatile Object[] elements;
+        volatile Object @Nullable [] elements;
         private volatile int head;
         private volatile int tail;
         private volatile int size;

@@ -440,8 +440,7 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
         }
     }
 
-    @Nullable
-    private RequestLogFuture[] removeSatisfiedFutures(List<RequestLogFuture> pendingFutures) {
+    private RequestLogFuture @Nullable [] removeSatisfiedFutures(List<RequestLogFuture> pendingFutures) {
         if (pendingFutures.isEmpty()) {
             return null;
         }

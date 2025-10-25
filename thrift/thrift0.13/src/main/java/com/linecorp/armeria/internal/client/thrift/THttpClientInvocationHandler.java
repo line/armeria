@@ -113,7 +113,7 @@ final class THttpClientInvocationHandler
     }
 
     @Nullable
-    private Object invokeClientMethod(Method method, @Nullable Object[] args) throws Throwable {
+    private Object invokeClientMethod(Method method, Object @Nullable [] args) throws Throwable {
         final AsyncMethodCallback<Object> callback;
         if (args == null) {
             args = NO_ARGS;

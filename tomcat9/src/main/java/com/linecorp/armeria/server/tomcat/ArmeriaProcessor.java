@@ -98,9 +98,8 @@ final class ArmeriaProcessor extends AbstractProcessor {
         throw new UnsupportedOperationException();
     }
 
-    @Nullable
     @Override
-    protected AbstractEndpoint.Handler.SocketState service(SocketWrapperBase<?> socketWrapper)
+    protected AbstractEndpoint.Handler.@Nullable SocketState service(SocketWrapperBase<?> socketWrapper)
             throws IOException {
         // Doesn't seem to be used.
         return null;

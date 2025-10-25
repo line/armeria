@@ -180,9 +180,8 @@ final class HealthClient {
         @JsonProperty("Service")
         String service;
 
-        @Nullable
         @JsonProperty("Tags")
-        String[] tags;
+        String @Nullable [] tags;
 
         @Nullable
         @JsonProperty("Address")
