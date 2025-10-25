@@ -20,9 +20,10 @@ import static com.linecorp.armeria.internal.common.stream.StreamMessageUtil.touc
 
 import java.util.List;
 
+import org.jspecify.annotations.Nullable;
+
 import com.google.common.collect.ImmutableList;
 
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 
 import io.netty.util.concurrent.EventExecutor;

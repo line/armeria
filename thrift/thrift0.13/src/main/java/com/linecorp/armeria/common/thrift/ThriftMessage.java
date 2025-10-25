@@ -20,8 +20,7 @@ import static java.util.Objects.requireNonNull;
 
 import org.apache.thrift.protocol.TMessage;
 import org.apache.thrift.protocol.TMessageType;
-
-import com.linecorp.armeria.common.annotation.Nullable;
+import org.jspecify.annotations.Nullable;
 
 /**
  * A container of a Thrift message produced by Apache Thrift.

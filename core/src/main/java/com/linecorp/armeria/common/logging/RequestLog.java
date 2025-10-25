@@ -20,6 +20,8 @@ import static java.util.Objects.requireNonNull;
 
 import java.util.function.BiFunction;
 
+import org.jspecify.annotations.Nullable;
+
 import com.linecorp.armeria.client.Client;
 import com.linecorp.armeria.client.logging.ContentPreviewingClient;
 import com.linecorp.armeria.common.HttpHeaders;
@@ -30,7 +32,6 @@ import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.RpcResponse;
 import com.linecorp.armeria.common.SerializationFormat;
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.Functions;
 import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.logging.ContentPreviewingService;

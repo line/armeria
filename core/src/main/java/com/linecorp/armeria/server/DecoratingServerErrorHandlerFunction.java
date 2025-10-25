@@ -16,8 +16,9 @@
 
 package com.linecorp.armeria.server;
 
+import org.jspecify.annotations.Nullable;
+
 import com.linecorp.armeria.common.HttpResponse;
-import com.linecorp.armeria.common.annotation.Nullable;
 
 /**
  * A function to decorate a {@link ServerErrorHandler} with additional behavior. It is typically used to inject

@@ -19,6 +19,7 @@ package com.linecorp.armeria.internal.common.stream;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.LongStream;
 
+import org.jspecify.annotations.Nullable;
 import org.reactivestreams.Subscription;
 import org.reactivestreams.tck.TestEnvironment;
 import org.reactivestreams.tck.flow.support.PublisherVerificationRules;
@@ -27,7 +28,6 @@ import org.testng.annotations.Test;
 
 import com.google.common.math.LongMath;
 
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.stream.StreamMessage;
 import com.linecorp.armeria.common.stream.StreamMessageVerification;
 

@@ -16,7 +16,7 @@
 
 package com.linecorp.armeria.client.endpoint;
 
-import com.linecorp.armeria.common.annotation.Nullable;
+import org.jspecify.annotations.Nullable;
 
 /**
  * A {@link RuntimeException} raised when the resolution of an {@link EndpointGroup} fails.

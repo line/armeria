@@ -22,9 +22,9 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Locale.LanguageRange;
 
-import com.google.common.collect.ImmutableList;
+import org.jspecify.annotations.Nullable;
 
-import com.linecorp.armeria.common.annotation.Nullable;
+import com.google.common.collect.ImmutableList;
 
 /**
  * Provides the getter methods to {@link RequestHeaders} and {@link RequestHeadersBuilder}.

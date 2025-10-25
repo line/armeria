@@ -31,6 +31,8 @@ import java.util.concurrent.locks.Lock;
 
 import javax.net.ssl.SSLSession;
 
+import org.jspecify.annotations.Nullable;
+
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.errorprone.annotations.concurrent.GuardedBy;
@@ -49,7 +51,6 @@ import com.linecorp.armeria.common.RpcResponse;
 import com.linecorp.armeria.common.Scheme;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.EventLoopCheckingFuture;
 import com.linecorp.armeria.common.util.SystemInfo;
 import com.linecorp.armeria.common.util.UnmodifiableFuture;

@@ -19,7 +19,8 @@ package com.linecorp.armeria.xds;
 import java.util.HashMap;
 import java.util.Map;
 
-import com.linecorp.armeria.common.annotation.Nullable;
+import org.jspecify.annotations.Nullable;
+
 import com.linecorp.armeria.xds.client.endpoint.XdsLoadBalancer;
 
 import io.envoyproxy.envoy.config.bootstrap.v3.Bootstrap;

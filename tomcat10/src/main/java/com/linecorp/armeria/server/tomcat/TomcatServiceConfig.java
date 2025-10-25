@@ -24,10 +24,9 @@ import org.apache.catalina.Realm;
 import org.apache.catalina.core.StandardEngine;
 import org.apache.catalina.core.StandardServer;
 import org.apache.catalina.core.StandardService;
+import org.jspecify.annotations.Nullable;
 
 import com.google.common.base.MoreObjects;
-
-import com.linecorp.armeria.common.annotation.Nullable;
 
 /**
  * {@link TomcatService} configuration.

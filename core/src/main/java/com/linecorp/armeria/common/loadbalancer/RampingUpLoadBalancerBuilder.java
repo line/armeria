@@ -19,10 +19,11 @@ package com.linecorp.armeria.common.loadbalancer;
 import java.util.List;
 import java.util.function.ToIntFunction;
 
+import org.jspecify.annotations.Nullable;
+
 import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.common.CommonPools;
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 
 import io.netty.util.concurrent.EventExecutor;

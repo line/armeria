@@ -24,11 +24,10 @@ import org.eclipse.jetty.server.Handler;
 import org.eclipse.jetty.server.HttpConfiguration;
 import org.eclipse.jetty.server.RequestLog;
 import org.eclipse.jetty.server.Server;
+import org.jspecify.annotations.Nullable;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-
-import com.linecorp.armeria.common.annotation.Nullable;
 
 /**
  * A skeletal builder implementation for {@link JettyServiceBuilder} in Jetty 9 and Jetty 10+ modules.

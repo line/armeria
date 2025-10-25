@@ -18,7 +18,7 @@ package com.linecorp.armeria.xds;
 
 import static com.google.common.base.Preconditions.checkArgument;
 
-import com.linecorp.armeria.common.annotation.Nullable;
+import org.jspecify.annotations.Nullable;
 
 import io.envoyproxy.envoy.config.core.v3.ApiConfigSource;
 import io.envoyproxy.envoy.config.core.v3.ApiConfigSource.ApiType;

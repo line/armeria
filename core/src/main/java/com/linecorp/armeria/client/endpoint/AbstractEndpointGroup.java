@@ -18,8 +18,9 @@ package com.linecorp.armeria.client.endpoint;
 
 import java.util.List;
 
+import org.jspecify.annotations.Nullable;
+
 import com.linecorp.armeria.client.Endpoint;
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.AbstractListenable;
 
 abstract class AbstractEndpointGroup extends AbstractListenable<List<Endpoint>> implements EndpointGroup {

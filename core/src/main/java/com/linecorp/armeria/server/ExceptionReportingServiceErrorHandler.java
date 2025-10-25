@@ -16,11 +16,12 @@
 
 package com.linecorp.armeria.server;
 
+import org.jspecify.annotations.Nullable;
+
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.RequestHeaders;
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.Exceptions;
 
 final class ExceptionReportingServiceErrorHandler implements ServiceErrorHandler {

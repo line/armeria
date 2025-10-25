@@ -21,6 +21,8 @@ import static com.linecorp.armeria.internal.common.logging.MaskerAttributeKeys.R
 
 import java.io.IOException;
 
+import org.jspecify.annotations.Nullable;
+
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.databind.BeanDescription;
 import com.fasterxml.jackson.databind.BeanProperty;
@@ -33,7 +35,6 @@ import com.fasterxml.jackson.databind.ser.ContextualSerializer;
 import com.fasterxml.jackson.databind.ser.ResolvableSerializer;
 
 import com.linecorp.armeria.common.RequestContext;
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.logging.FieldMasker;
 
 final class MaskingBeanSerializerModifier extends BeanSerializerModifier {

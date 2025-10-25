@@ -17,7 +17,8 @@ package com.linecorp.armeria.server.auth;
 
 import java.util.concurrent.CompletionStage;
 
-import com.linecorp.armeria.common.annotation.Nullable;
+import org.jspecify.annotations.Nullable;
+
 import com.linecorp.armeria.common.util.UnmodifiableFuture;
 import com.linecorp.armeria.server.ServiceRequestContext;
 

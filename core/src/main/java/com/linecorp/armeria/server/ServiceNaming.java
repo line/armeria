@@ -17,8 +17,9 @@ package com.linecorp.armeria.server;
 
 import static java.util.Objects.requireNonNull;
 
+import org.jspecify.annotations.Nullable;
+
 import com.linecorp.armeria.common.RpcRequest;
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.logging.RequestOnlyLog;
 import com.linecorp.armeria.internal.common.util.ServiceNamingUtil;
 

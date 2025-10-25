@@ -18,8 +18,9 @@ package com.linecorp.armeria.server;
 
 import static com.linecorp.armeria.internal.logging.ContentPreviewingUtil.setUpResponseContentPreviewer;
 
+import org.jspecify.annotations.Nullable;
+
 import com.linecorp.armeria.common.HttpResponse;
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.server.logging.ContentPreviewingService;
 
 final class ContentPreviewServerErrorHandler implements DecoratingServerErrorHandlerFunction {

@@ -22,13 +22,13 @@ import java.net.InetSocketAddress;
 import java.util.Map;
 import java.util.Map.Entry;
 
+import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.collect.ImmutableMap;
 
 import com.linecorp.armeria.common.CommonPools;
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.TransportType;
 
 import io.netty.bootstrap.Bootstrap;

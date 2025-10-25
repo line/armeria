@@ -17,8 +17,7 @@ package com.linecorp.armeria.internal.common.thrift;
 
 import org.apache.thrift.TConfiguration;
 import org.apache.thrift.transport.TTransportException;
-
-import com.linecorp.armeria.common.annotation.Nullable;
+import org.jspecify.annotations.Nullable;
 
 import io.netty.buffer.ByteBuf;
 

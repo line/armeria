@@ -21,6 +21,8 @@ import java.util.List;
 import java.util.function.Consumer;
 import java.util.function.ToLongFunction;
 
+import org.jspecify.annotations.Nullable;
+
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.github.benmanes.caffeine.cache.RemovalListener;
@@ -30,7 +32,6 @@ import com.google.common.collect.ImmutableList.Builder;
 
 import com.linecorp.armeria.client.RefreshingAddressResolver.CacheEntry;
 import com.linecorp.armeria.client.retry.Backoff;
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.SystemInfo;
 import com.linecorp.armeria.internal.client.dns.DefaultDnsResolver;
 

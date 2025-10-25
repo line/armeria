@@ -18,7 +18,7 @@ package com.linecorp.armeria.client;
 
 import java.net.InetAddress;
 
-import com.linecorp.armeria.common.annotation.Nullable;
+import org.jspecify.annotations.Nullable;
 
 import io.netty.resolver.HostsFileEntriesResolver;
 import io.netty.resolver.ResolvedAddressTypes;

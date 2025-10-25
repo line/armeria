@@ -26,10 +26,10 @@ import org.eclipse.jetty.io.EndPoint;
 import org.eclipse.jetty.io.FillInterest;
 import org.eclipse.jetty.io.WriteFlusher;
 import org.eclipse.jetty.util.Callback;
+import org.jspecify.annotations.Nullable;
 
 import com.google.common.base.MoreObjects;
 
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 abstract class AbstractArmeriaEndPoint implements EndPoint {

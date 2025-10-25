@@ -18,7 +18,7 @@ package com.linecorp.armeria.server;
 import java.util.List;
 import java.util.Set;
 
-import com.linecorp.armeria.common.annotation.Nullable;
+import org.jspecify.annotations.Nullable;
 
 /**
  * Matches the absolute path part of a URI and extracts path parameters from it.

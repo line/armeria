@@ -21,10 +21,11 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
+import org.jspecify.annotations.Nullable;
+
 import com.google.common.collect.ImmutableSet;
 
 import com.linecorp.armeria.common.DependencyInjector;
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.server.annotation.ServerSentEventResponseConverterFunction;
 import com.linecorp.armeria.server.annotation.decorator.LoggingDecoratorFactoryFunction;
 import com.linecorp.armeria.server.annotation.decorator.RateLimitingDecoratorFactoryFunction;

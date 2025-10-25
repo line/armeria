@@ -15,9 +15,10 @@
  */
 package com.linecorp.armeria.internal.consul;
 
+import org.jspecify.annotations.Nullable;
+
 import com.linecorp.armeria.common.QueryParams;
 import com.linecorp.armeria.common.QueryParamsBuilder;
-import com.linecorp.armeria.common.annotation.Nullable;
 
 /**
  * Utility methods related to Consul clients.

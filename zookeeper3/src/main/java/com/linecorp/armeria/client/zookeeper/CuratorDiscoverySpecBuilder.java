@@ -22,9 +22,9 @@ import static java.util.Objects.requireNonNull;
 import java.util.function.Function;
 
 import org.apache.curator.x.discovery.ServiceInstance;
+import org.jspecify.annotations.Nullable;
 
 import com.linecorp.armeria.client.Endpoint;
-import com.linecorp.armeria.common.annotation.Nullable;
 
 /**
  * Builds a {@link ZooKeeperDiscoverySpec} for

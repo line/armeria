@@ -20,6 +20,8 @@ import static java.util.Objects.requireNonNull;
 
 import javax.annotation.Nonnull;
 
+import org.jspecify.annotations.Nullable;
+
 import com.linecorp.armeria.client.encoding.StreamDecoder;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
@@ -28,7 +30,6 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.ResponseHeadersBuilder;
-import com.linecorp.armeria.common.annotation.Nullable;
 
 /**
  * An {@link HttpResponse} that applies HTTP decoding using the {@link StreamDecoder} created with this.

@@ -15,7 +15,7 @@
  */
 package com.linecorp.armeria.common;
 
-import com.linecorp.armeria.common.annotation.Nullable;
+import org.jspecify.annotations.Nullable;
 
 @SuppressWarnings({ "checkstyle:EqualsHashCode", "EqualsAndHashcode" })
 final class DefaultQueryParams extends QueryParamsBase implements QueryParams {

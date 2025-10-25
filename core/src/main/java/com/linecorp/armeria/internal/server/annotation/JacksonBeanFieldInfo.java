@@ -20,12 +20,13 @@ import static java.util.Objects.requireNonNull;
 
 import java.lang.annotation.Annotation;
 
+import org.jspecify.annotations.Nullable;
+
 import com.fasterxml.jackson.databind.BeanDescription;
 import com.fasterxml.jackson.databind.BeanProperty;
 import com.google.common.base.MoreObjects;
 import com.google.common.base.Objects;
 
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.logging.BeanFieldInfo;
 
 final class JacksonBeanFieldInfo implements BeanFieldInfo {

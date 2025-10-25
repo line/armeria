@@ -25,6 +25,7 @@ import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 
 import org.joda.time.DateTime;
+import org.jspecify.annotations.Nullable;
 import org.opensaml.messaging.context.MessageContext;
 import org.opensaml.saml.common.messaging.context.SAMLBindingContext;
 import org.opensaml.saml.saml2.core.Assertion;
@@ -51,7 +52,6 @@ import com.google.common.collect.ImmutableList;
 import com.linecorp.armeria.common.AggregatedHttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.RequestTarget;
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 /**

@@ -20,6 +20,8 @@ import java.util.function.Function;
 
 import javax.net.ssl.SSLSession;
 
+import org.jspecify.annotations.Nullable;
+
 import com.linecorp.armeria.client.Client;
 import com.linecorp.armeria.client.logging.ContentPreviewingClient;
 import com.linecorp.armeria.common.HttpHeaders;
@@ -29,7 +31,6 @@ import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.Scheme;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.Functions;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.Service;

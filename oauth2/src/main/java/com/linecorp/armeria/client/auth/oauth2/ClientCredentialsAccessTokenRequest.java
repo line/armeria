@@ -20,8 +20,9 @@ import static com.linecorp.armeria.internal.common.auth.oauth2.OAuth2Constants.C
 
 import java.util.List;
 
+import org.jspecify.annotations.Nullable;
+
 import com.linecorp.armeria.common.QueryParamsBuilder;
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.auth.oauth2.ClientAuthentication;
 
 final class ClientCredentialsAccessTokenRequest extends AbstractAccessTokenRequest {

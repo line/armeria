@@ -16,9 +16,10 @@
 
 package com.linecorp.armeria.common.encoding;
 
+import org.jspecify.annotations.Nullable;
+
 import com.linecorp.armeria.common.ContentTooLargeException;
 import com.linecorp.armeria.common.HttpData;
-import com.linecorp.armeria.common.annotation.Nullable;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;

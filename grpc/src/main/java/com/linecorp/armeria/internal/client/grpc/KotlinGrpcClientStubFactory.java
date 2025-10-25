@@ -23,8 +23,9 @@ import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 
+import org.jspecify.annotations.Nullable;
+
 import com.linecorp.armeria.client.grpc.GrpcClientStubFactory;
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.Exceptions;
 
 import io.grpc.BindableService;

@@ -23,12 +23,12 @@ import static java.util.Objects.requireNonNull;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
+import org.jspecify.annotations.Nullable;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 
 import com.google.common.collect.ImmutableList;
 
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.internal.common.stream.StreamMessageUtil;
 
 final class StreamMessageCollector<T> implements Subscriber<T> {

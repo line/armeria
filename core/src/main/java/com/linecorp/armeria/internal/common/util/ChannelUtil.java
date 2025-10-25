@@ -28,6 +28,8 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import javax.net.ssl.SSLSession;
 
+import org.jspecify.annotations.Nullable;
+
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
@@ -37,7 +39,6 @@ import com.google.common.primitives.Ints;
 
 import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.SessionProtocol;
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.DomainSocketAddress;
 import com.linecorp.armeria.common.util.TransportType;
 import com.linecorp.armeria.common.util.UnmodifiableFuture;

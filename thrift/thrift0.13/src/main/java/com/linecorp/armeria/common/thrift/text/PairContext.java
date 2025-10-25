@@ -33,10 +33,10 @@ package com.linecorp.armeria.common.thrift.text;
 import java.util.Iterator;
 import java.util.Map;
 
+import org.jspecify.annotations.Nullable;
+
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.TextNode;
-
-import com.linecorp.armeria.common.annotation.Nullable;
 
 /**
  * A map parsing context that tracks if we are parsing a key, which

@@ -35,6 +35,7 @@ import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
 import java.lang.reflect.ParameterizedType
 
+// TODO(vince): add test for TYPE_USE @Nullable
 @GenerateNativeImageTrace
 class NullableTypeSupportTest {
     @ParameterizedTest

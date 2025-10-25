@@ -24,6 +24,7 @@ import java.util.Objects;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.atomic.AtomicReference;
 
+import org.jspecify.annotations.Nullable;
 import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscription;
 import org.reactivestreams.tck.PublisherVerification;
@@ -35,7 +36,6 @@ import org.testng.SkipException;
 import org.testng.annotations.Test;
 
 import com.linecorp.armeria.common.SplitHttpResponse;
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.internal.common.stream.FixedStreamMessage;
 
 public abstract class StreamMessageVerification<T> extends PublisherVerification<T> {

@@ -40,6 +40,7 @@ import java.util.Base64;
 import java.util.List;
 import java.util.Map;
 
+import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -62,8 +63,6 @@ import com.yahoo.athenz.zts.Policy;
 import com.yahoo.athenz.zts.PolicyData;
 import com.yahoo.athenz.zts.SignedPolicyData;
 import com.yahoo.rdl.Struct;
-
-import com.linecorp.armeria.common.annotation.Nullable;
 
 final class AthenzPolicyHandler {
 

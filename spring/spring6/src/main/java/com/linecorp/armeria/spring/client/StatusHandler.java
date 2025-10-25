@@ -21,9 +21,10 @@ import static java.util.Objects.requireNonNull;
 
 import java.util.function.Function;
 
+import org.jspecify.annotations.Nullable;
+
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.common.HttpStatus;
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 
 /**

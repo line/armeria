@@ -20,8 +20,8 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 
 import org.dataloader.DataLoaderRegistry;
+import org.jspecify.annotations.Nullable;
 
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.websocket.WebSocket;
 import com.linecorp.armeria.common.websocket.WebSocketWriter;
 import com.linecorp.armeria.server.ServiceOptions;

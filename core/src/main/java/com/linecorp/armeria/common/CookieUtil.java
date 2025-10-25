@@ -37,12 +37,11 @@ import java.util.BitSet;
 import java.util.Iterator;
 import java.util.List;
 
+import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
-
-import com.linecorp.armeria.common.annotation.Nullable;
 
 import io.netty.handler.codec.http.HttpConstants;
 import io.netty.util.internal.InternalThreadLocalMap;

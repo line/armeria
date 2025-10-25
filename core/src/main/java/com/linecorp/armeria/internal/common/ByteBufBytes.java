@@ -21,9 +21,10 @@ import static java.util.Objects.requireNonNull;
 import java.io.InputStream;
 import java.nio.charset.Charset;
 
+import org.jspecify.annotations.Nullable;
+
 import com.linecorp.armeria.common.ByteBufAccessMode;
 import com.linecorp.armeria.common.Bytes;
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.internal.common.util.TemporaryThreadLocals;
 
 import io.netty.buffer.ByteBuf;
