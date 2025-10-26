@@ -956,6 +956,7 @@ be
 be.eu.org
 beagleboard.io
 bearalvahki.no
+bearblog.dev
 beardu.no
 beats
 beauty
@@ -2113,7 +2114,6 @@ dtwh.nl-ams.scw.cloud
 dtwh.pl-waw.scw.cloud
 dubai
 duckdns.org
-dunlop
 dupont
 durban
 durumis.com
