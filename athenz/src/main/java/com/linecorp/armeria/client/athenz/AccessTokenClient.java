@@ -36,7 +36,7 @@ import com.linecorp.armeria.common.auth.oauth2.ClientAuthentication;
 import com.linecorp.armeria.common.auth.oauth2.GrantedOAuth2AccessToken;
 import com.linecorp.armeria.common.util.Exceptions;
 
-public class AccessTokenClient implements TokenClient {
+public final class AccessTokenClient implements TokenClient {
 
     private final AtomicBoolean tlsKeyPairUpdated = new AtomicBoolean();
 
