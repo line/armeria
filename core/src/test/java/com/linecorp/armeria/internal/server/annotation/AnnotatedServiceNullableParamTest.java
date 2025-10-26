@@ -113,7 +113,9 @@ class AnnotatedServiceNullableParamTest {
     };
 
     @ParameterizedTest
-    @CsvSource({ "/nullable", "/jsr305_nullable", "/other_nullable", "/default", "/optional", "type_use_nullable" })
+    @CsvSource({
+            "/nullable", "/jsr305_nullable", "/other_nullable", "/default", "/optional", "type_use_nullable"
+    })
     void params(String path) {
         final BlockingWebClient client = BlockingWebClient.of(server.httpUri().resolve("/params"));
         assertThat(client.get(path + "?value=foo").contentUtf8()).isEqualTo("foo");
@@ -121,7 +123,9 @@ class AnnotatedServiceNullableParamTest {
     }
 
     @ParameterizedTest
-    @CsvSource({ "/nullable", "/jsr305_nullable", "/other_nullable", "/default", "/optional", "/type_use_nullable" })
+    @CsvSource({
+            "/nullable", "/jsr305_nullable", "/other_nullable", "/default", "/optional", "/type_use_nullable"
+    })
     void headers(String path) {
         final BlockingWebClient client = BlockingWebClient.of(server.httpUri().resolve("/headers"));
         assertThat(client.execute(RequestHeaders.of(HttpMethod.GET, path, "value", "foo"))
