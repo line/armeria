@@ -59,7 +59,6 @@
 *.awdev.ca
 *.awsapprunner.com
 *.azurecontainer.io
-*.bd
 *.beget.app
 *.build.run
 *.builder.code.com
@@ -310,6 +309,7 @@ abudhabi
 ac
 ac.ae
 ac.at
+ac.bd
 ac.be
 ac.bw
 ac.ci
@@ -435,6 +435,7 @@ aguni.okinawa.jp
 ah.cn
 ah.no
 ai
+ai.bd
 ai.in
 ai.jo
 ai.kr
@@ -951,6 +952,7 @@ bbva
 bc.ca
 bcg
 bcn
+bd
 bd.se
 be
 be.eu.org
@@ -1544,6 +1546,7 @@ co.ao
 co.at
 co.az
 co.bb
+co.bd
 co.bi
 co.biz.ng
 co.bj
@@ -1647,6 +1650,7 @@ com.aw
 com.az
 com.ba
 com.bb
+com.bd
 com.bh
 com.bi
 com.bj
@@ -2219,6 +2223,7 @@ edu.au
 edu.az
 edu.ba
 edu.bb
+edu.bd
 edu.bh
 edu.bi
 edu.bj
@@ -3170,6 +3175,7 @@ gov.au
 gov.az
 gov.ba
 gov.bb
+gov.bd
 gov.bf
 gov.bh
 gov.bm
@@ -3746,6 +3752,7 @@ icu
 icurus.jp
 id
 id.au
+id.bd
 id.cv
 id.firewalledreplit.co
 id.forgerock.io
@@ -3871,6 +3878,7 @@ info
 info.at
 info.az
 info.bb
+info.bd
 info.bj
 info.bo
 info.cx
@@ -4080,6 +4088,7 @@ istmein.de
 isumi.chiba.jp
 it
 it.ao
+it.bd
 it.com
 it.eu.org
 it.kr
@@ -5226,6 +5235,7 @@ mil.al
 mil.ar
 mil.az
 mil.ba
+mil.bd
 mil.bo
 mil.br
 mil.by
@@ -5779,6 +5789,7 @@ net.au
 net.az
 net.ba
 net.bb
+net.bd
 net.bh
 net.bj
 net.bm
@@ -6391,6 +6402,7 @@ org.au
 org.az
 org.ba
 org.bb
+org.bd
 org.bh
 org.bi
 org.bj
@@ -7642,6 +7654,7 @@ scbl.fr-par.scw.cloud
 scbl.nl-ams.scw.cloud
 scbl.pl-waw.scw.cloud
 sch.ae
+sch.bd
 sch.id
 sch.ir
 sch.jo
@@ -8742,6 +8755,7 @@ tuxfamily.org
 tuyenquang.vn
 tv
 tv.bb
+tv.bd
 tv.bo
 tv.br
 tv.eg
