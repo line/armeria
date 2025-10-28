@@ -149,8 +149,9 @@ public final class WebSocketSession {
 
         inbound.whenComplete().exceptionally(cause -> {
             Throwable finalCause = cause;
-            if(finalCause instanceof StreamTimeoutException) {
-                finalCause = new WebSocketIdleTimeoutException("WebSocket inbound idle-timeout exceeded", cause);
+            if (finalCause instanceof StreamTimeoutException) {
+                finalCause = new WebSocketIdleTimeoutException("WebSocket inbound idle-timeout exceeded",
+                                                               cause);
             }
             final Throwable wrapped = new InboundCompleteException("inbound stream was cancelled", finalCause);
             streamMessage.abort(wrapped);
