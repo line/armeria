@@ -249,12 +249,14 @@ public final class WebSocketServiceBuilder {
      * <p>If the next frame does not arrive within {@code streamTimeout} after the previous one,
      * the stream is terminated with {@link StreamTimeoutException}.</p>
      *
+     * <p>By default, no idle-timeout is applied.</p>
+     *
      * @param streamTimeout maximum idle time between frames
      */
     public WebSocketServiceBuilder streamTimeout(Duration streamTimeout) {
         requireNonNull(streamTimeout, "streamTimeout");
-        checkArgument(!streamTimeout.isNegative(),
-                      "streamTimeout: %s (expected: >= 0)", "streamTimeout");
+        checkArgument(!streamTimeout.isNegative() && !streamTimeout.isZero(),
+                      "streamTimeout: %s (expected: > 0)", "streamTimeout");
         this.streamTimeout = streamTimeout;
         return this;
     }

@@ -186,6 +186,7 @@ public interface RequestLogBuilder extends RequestLogAccess {
      * If you want to end the request log right away when an exception is raised,
      * please use {@link #endRequest(Throwable)}.
      */
+    @UnstableApi
     void requestCause(Throwable cause);
 
     /**

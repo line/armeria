@@ -44,11 +44,13 @@ import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.ResponseHeadersBuilder;
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.StreamTimeoutException;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.stream.ClosedStreamException;
 import com.linecorp.armeria.common.stream.StreamMessage;
 import com.linecorp.armeria.common.util.TimeoutMode;
 import com.linecorp.armeria.common.websocket.WebSocket;
+import com.linecorp.armeria.common.websocket.WebSocketIdleTimeoutException;
 import com.linecorp.armeria.internal.common.websocket.WebSocketFrameEncoder;
 import com.linecorp.armeria.internal.common.websocket.WebSocketWrapper;
 import com.linecorp.armeria.server.HttpService;
@@ -128,7 +130,11 @@ public final class DefaultWebSocketService implements WebSocketService, WebSocke
         final WebSocket outbound = handler.handle(ctx, inbound);
 
         inbound.whenComplete().exceptionally(cause -> {
-            final Throwable wrapped = new InboundCompleteException("inbound stream was cancelled", cause);
+            Throwable finalCause = cause;
+            if(finalCause instanceof StreamTimeoutException) {
+                finalCause = new WebSocketIdleTimeoutException("WebSocket inbound idle-timeout exceeded", cause);
+            }
+            final Throwable wrapped = new InboundCompleteException("Inbound stream was cancelled", finalCause);
             outbound.abort(wrapped);
             return null;
         });
@@ -427,8 +433,8 @@ public final class DefaultWebSocketService implements WebSocketService, WebSocke
                     if (cause instanceof ClosedStreamException) {
                         return null;
                     }
-                       ctx.logBuilder().responseCause(cause);
-                       return newCloseWebSocketFrame(cause);
+                    ctx.logBuilder().responseCause(cause);
+                    return newCloseWebSocketFrame(cause);
                    })
                    .map(frame -> HttpData.wrap(encoder.encode(ctx, frame)));
         return HttpResponse.of(responseHeadersBuilder.build(), data);

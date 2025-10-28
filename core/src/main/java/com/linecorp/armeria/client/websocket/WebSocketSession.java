@@ -29,6 +29,7 @@ import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.InboundCompleteException;
 import com.linecorp.armeria.common.ResponseHeaders;
+import com.linecorp.armeria.common.StreamTimeoutException;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.stream.ClosedStreamException;
@@ -36,6 +37,7 @@ import com.linecorp.armeria.common.stream.PublisherBasedStreamMessage;
 import com.linecorp.armeria.common.stream.StreamMessage;
 import com.linecorp.armeria.common.websocket.WebSocket;
 import com.linecorp.armeria.common.websocket.WebSocketFrame;
+import com.linecorp.armeria.common.websocket.WebSocketIdleTimeoutException;
 import com.linecorp.armeria.common.websocket.WebSocketWriter;
 import com.linecorp.armeria.internal.common.websocket.WebSocketFrameEncoder;
 
@@ -146,7 +148,11 @@ public final class WebSocketSession {
         }
 
         inbound.whenComplete().exceptionally(cause -> {
-            final Throwable wrapped = new InboundCompleteException("inbound stream was cancelled", cause);
+            Throwable finalCause = cause;
+            if(finalCause instanceof StreamTimeoutException) {
+                finalCause = new WebSocketIdleTimeoutException("WebSocket inbound idle-timeout exceeded", cause);
+            }
+            final Throwable wrapped = new InboundCompleteException("inbound stream was cancelled", finalCause);
             streamMessage.abort(wrapped);
             return null;
         });

@@ -1253,8 +1253,8 @@ public interface StreamMessage<T> extends Publisher<T> {
     @UnstableApi
     default StreamMessage<T> timeout(Duration timeoutDuration, StreamTimeoutMode timeoutMode) {
         requireNonNull(timeoutDuration, "timeoutDuration");
-        checkArgument(!timeoutDuration.isNegative(),
-                      "timeoutDuration: %s (expected: >= 0)", "timeoutDuration");
+        checkArgument(!timeoutDuration.isNegative() && !timeoutDuration.isZero(),
+                      "timeoutDuration: %s (expected: > 0)", "timeoutDuration");
         requireNonNull(timeoutMode, "timeoutMode");
         return new TimeoutStreamMessage<>(this, timeoutDuration, timeoutMode);
     }
