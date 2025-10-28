@@ -16,12 +16,15 @@
 
 package com.linecorp.armeria.internal.server;
 
+import static com.linecorp.armeria.server.MultipartRemovalStrategy.ON_RESPONSE_COMPLETION;
+
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.util.Map.Entry;
+import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ScheduledExecutorService;
@@ -74,7 +77,7 @@ public final class FileAggregatedMultipart {
                 final Path incompleteDir = destination.resolve("incomplete");
                 final ScheduledExecutorService executor = ctx.blockingTaskExecutor().withoutContext();
 
-                return resolveTmpFile(incompleteDir, filename, executor).thenCompose(path -> {
+                return resolveTmpFile(incompleteDir, executor).thenCompose(path -> {
                     return bodyPart.writeTo(path, eventLoop, executor).thenCompose(ignore -> {
                         final Path completeDir = destination.resolve("complete");
                         return moveFile(path, completeDir, executor, ctx);
@@ -112,8 +115,16 @@ public final class FileAggregatedMultipart {
         return CompletableFuture.supplyAsync(() -> {
             try {
                 Files.createDirectories(targetDirectory);
-                // Avoid name duplication, create new file at target place and replace it.
-                final Path tempFile = createRemovableTempFile(targetDirectory, blockingExecutorService, ctx);
+                final Path tempFile = Files.createFile(targetDirectory.resolve(file.getFileName()));
+                if (ctx.config().multipartRemovalStrategy() == ON_RESPONSE_COMPLETION) {
+                    ctx.log().whenComplete().thenAcceptAsync(unused -> {
+                        try {
+                            Files.deleteIfExists(tempFile);
+                        } catch (IOException e) {
+                            logger.warn("Failed to delete a temporary file: {}", tempFile, e);
+                        }
+                    }, blockingExecutorService);
+                }
                 return Files.move(file, tempFile, StandardCopyOption.REPLACE_EXISTING);
             } catch (IOException e) {
                 throw new UncheckedIOException(e);
@@ -121,33 +132,12 @@ public final class FileAggregatedMultipart {
         }, blockingExecutorService);
     }
 
-    private static Path createRemovableTempFile(Path targetDirectory,
-                                                ExecutorService blockingExecutorService,
-                                                ServiceRequestContext ctx) throws IOException {
-        final Path tempFile = Files.createTempFile(targetDirectory, null, ".multipart");
-        switch (ctx.config().multipartRemovalStrategy()) {
-            case NEVER:
-                break;
-            case ON_RESPONSE_COMPLETION:
-                ctx.log().whenComplete().thenAcceptAsync(unused -> {
-                    try {
-                        Files.deleteIfExists(tempFile);
-                    } catch (IOException e) {
-                        logger.warn("Failed to delete a temporary file: {}", tempFile, e);
-                    }
-                }, blockingExecutorService);
-                break;
-        }
-        return tempFile;
-    }
-
     private static CompletableFuture<Path> resolveTmpFile(Path directory,
-                                                          String filename,
                                                           ExecutorService blockingExecutorService) {
         return CompletableFuture.supplyAsync(() -> {
             try {
                 Files.createDirectories(directory);
-                return Files.createTempFile(directory, null, '-' + filename);
+                return Files.createFile(directory.resolve(UUID.randomUUID() + ".multipart"));
             } catch (IOException e) {
                 throw new UncheckedIOException(e);
             }

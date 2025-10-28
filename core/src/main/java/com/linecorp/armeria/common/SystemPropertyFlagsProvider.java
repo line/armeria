@@ -38,6 +38,7 @@ import com.google.common.collect.Streams;
 
 import com.linecorp.armeria.client.ResponseTimeoutMode;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.multipart.MultipartDecodingMode;
 import com.linecorp.armeria.common.util.InetAddressPredicates;
 import com.linecorp.armeria.common.util.Sampler;
 import com.linecorp.armeria.common.util.TlsEngineType;
@@ -549,6 +550,26 @@ final class SystemPropertyFlagsProvider implements FlagsProvider {
     @Override
     public Boolean allowSemicolonInPathComponent() {
         return getBoolean("allowSemicolonInPathComponent");
+    }
+
+    @Nullable
+    @Override
+    public MultipartDecodingMode defaultMultipartDecodingMode() {
+        final String defaultMultipartDecodingMode = getNormalized("defaultMultipartDecodingMode");
+        if (defaultMultipartDecodingMode == null) {
+            return null;
+        }
+        switch (defaultMultipartDecodingMode) {
+            case "utf_8":
+                return MultipartDecodingMode.UTF_8;
+            case "iso_8859_1":
+                return MultipartDecodingMode.ISO_8859_1;
+            case "url_decoding":
+                return MultipartDecodingMode.URL_DECODING;
+            default:
+                throw new IllegalArgumentException(
+                        defaultMultipartDecodingMode + " isn't a MultipartDecodingMode");
+        }
     }
 
     @Nullable
