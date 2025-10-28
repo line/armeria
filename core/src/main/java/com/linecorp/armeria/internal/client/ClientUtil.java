@@ -179,6 +179,9 @@ public final class ClientUtil {
         try {
             return execution.execute(ctx, req);
         } catch (Exception e) {
+            if (ctxExt != null && !ctxExt.initializationTriggered()) {
+                ctxExt.initAndFail(e);
+            }
             fail(ctx, e);
             return errorResponseFactory.apply(ctx, e);
         }

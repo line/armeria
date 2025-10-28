@@ -66,6 +66,18 @@ public interface ClientRequestContextExtension extends ClientRequestContext, Req
     void finishInitialization(boolean success);
 
     /**
+     * Initializes and fails the context immediately. This method can be thought of as a combination of
+     * {@link #init()} and {@link #finishInitialization(boolean)}.
+     * Returns true if this call initialized and failed the context.
+     */
+    boolean initAndFail(Throwable cause);
+
+    /**
+     * Unlike {@link #whenInitialized()}, returns whether an initialization is triggered.
+     */
+    boolean initializationTriggered();
+
+    /**
      * A set of internal headers which are set by armeria internally.
      * These headers are merged with the lowest priority before getting sent over the wire.
      * <ol>
