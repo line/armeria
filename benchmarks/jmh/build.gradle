@@ -91,12 +91,3 @@ jmh {
 tasks.jmh.outputs.upToDateWhen {
     false
 }
-
-//// Workaround a bug where the conflict of output path between 'benchmarks.jmh' and 'benchmarks.test' in IDEA
-//project.afterEvaluate {
-//    idea {
-//        module {
-//            testSourceDirs = []
-//        }
-//    }
-//}
