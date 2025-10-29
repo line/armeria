@@ -22,6 +22,9 @@ configure(projectsWithFlags('publish', 'java')) {
                 if (jarOverrideFile != null) {
                     // For some reason this needs to be in afterEvaluate or dependencies are lost from the POM.
                     gradle.projectsEvaluated {
+                        // Drop any artifact whose classifier is 'optional'
+                        pub.artifacts.removeIf { it.classifier == 'optional' }
+
                         def unshaded = pub.artifacts.find { it.classifier == null && it.extension == 'jar' }
                         pub.artifacts.remove(unshaded)
                         pub.artifact(jarOverrideFile).builtBy(jarOverrideTask)

@@ -163,6 +163,8 @@ configure(projectsWithFlags('java')) {
         testImplementation {
             extendsFrom configurations.optionalApi, configurations.optionalImplementation
         }
+
+
     }
 
     // Set the sensible compiler options.
