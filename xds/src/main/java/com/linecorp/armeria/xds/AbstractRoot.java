@@ -143,4 +143,14 @@ abstract class AbstractRoot<T extends Snapshot<? extends XdsResource>>
     public void close() {
         closed = true;
     }
+
+    static Runnable safeRunnable(Runnable runnable, Consumer<Throwable> onError) {
+        return () -> {
+            try {
+                runnable.run();
+            } catch (Throwable t) {
+                onError.accept(t);
+            }
+        };
+    }
 }

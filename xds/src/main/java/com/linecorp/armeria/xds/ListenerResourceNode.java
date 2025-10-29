@@ -38,6 +38,11 @@ final class ListenerResourceNode extends AbstractResourceNode<ListenerXdsResourc
         super(context, configSource, LISTENER, resourceName, parentWatcher, resourceNodeType);
     }
 
+    ListenerResourceNode(@Nullable ConfigSource configSource,
+                         String resourceName, SubscriptionContext context, ResourceNodeType resourceNodeType) {
+        super(context, configSource, LISTENER, resourceName, resourceNodeType);
+    }
+
     @Override
     public void doOnChanged(ListenerXdsResource resource) {
         final RouteSnapshotWatcher previousWatcher = snapshotWatcher;
@@ -81,8 +86,8 @@ final class ListenerResourceNode extends AbstractResourceNode<ListenerXdsResourc
                     final Rds rds = connectionManager.getRds();
                     final String routeName = rds.getRouteConfigName();
                     final ConfigSource configSource =
-                            context.configSourceMapper().withParentConfigSource(parentConfigSource)
-                                   .rdsConfigSource(rds.getConfigSource(), routeName);
+                            context.configSourceMapper()
+                                   .configSource(rds.getConfigSource(), parentConfigSource, routeName);
                     node = new RouteResourceNode(configSource, routeName, context,
                                                  this, ResourceNodeType.DYNAMIC);
                     context.subscribe(node);
