@@ -50,9 +50,9 @@ public final class RouteSnapshot implements Snapshot<RouteXdsResource> {
                                     .collect(ImmutableList.toImmutableList());
     }
 
-    RouteSnapshot(RouteXdsResource routeXdsResource, List<HttpFilter> upstreamFilters,
-                  Map<String, ParsedFilterConfig> filterConfigs,
-                  List<VirtualHostSnapshot> virtualHostSnapshots) {
+    private RouteSnapshot(RouteXdsResource routeXdsResource, List<HttpFilter> upstreamFilters,
+                          Map<String, ParsedFilterConfig> filterConfigs,
+                          List<VirtualHostSnapshot> virtualHostSnapshots) {
         this.routeXdsResource = routeXdsResource;
         this.filterConfigs = filterConfigs;
         this.virtualHostSnapshots =

@@ -31,6 +31,7 @@ import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.client.RpcClient;
 import com.linecorp.armeria.client.retry.RetryingClient;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.internal.client.ClientRequestContextExtension;
 import com.linecorp.armeria.xds.internal.DelegatingHttpClient;
 import com.linecorp.armeria.xds.internal.DelegatingRpcClient;
@@ -137,6 +138,7 @@ public final class RouteEntry {
     /**
      * Applies upstream filters to a request corresponding to the supplied {@link ClientRequestContext}.
      */
+    @UnstableApi
     public void applyUpstreamFilter(ClientRequestContext ctx) {
         final ClientRequestContextExtension ctxExt = ctx.as(ClientRequestContextExtension.class);
         if (ctxExt == null) {
