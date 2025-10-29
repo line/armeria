@@ -48,7 +48,7 @@ services:
       retries: 20
 
   zts-db:
-    image: athenz/athenz-zms-db:latest
+    image: athenz/athenz-zts-db:latest
     hostname: athenz-zts-db
     networks:
       - athenz
