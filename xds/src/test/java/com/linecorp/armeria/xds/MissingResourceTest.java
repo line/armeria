@@ -89,7 +89,7 @@ class MissingResourceTest {
         cache.setSnapshot(
                 GROUP,
                 Snapshot.create(
-                        ImmutableList.of(XdsTestResources.createCluster("cluster1", 0)),
+                        ImmutableList.of(XdsTestResources.createCluster("cluster1", 1)),
                         ImmutableList.of(XdsTestResources.loadAssignment("cluster1", "127.0.0.1", 8080)),
                         ImmutableList.of(),
                         ImmutableList.of(),
