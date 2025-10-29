@@ -43,4 +43,15 @@ public interface XdsResource {
      * Returns the resource name.
      */
     String name();
+
+    /**
+     * The version of this resource.
+     * An empty string is returned if this resource is not associated with a version.
+     */
+    String version();
+
+    /**
+     * A revision counter which is incremented with each new version.
+     */
+    long revision();
 }

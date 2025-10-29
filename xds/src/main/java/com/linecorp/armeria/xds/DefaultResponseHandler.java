@@ -21,6 +21,8 @@ import java.util.Map;
 import com.google.common.base.Joiner;
 import com.google.protobuf.Message;
 
+import com.linecorp.armeria.xds.SotwXdsStream.ActualStream;
+
 import io.envoyproxy.envoy.service.discovery.v3.DiscoveryResponse;
 import io.grpc.Status;
 
@@ -35,15 +37,26 @@ final class DefaultResponseHandler implements XdsResponseHandler {
 
     @Override
     public <I extends Message, O extends XdsResource> void handleResponse(
-            ResourceParser<I, O> resourceParser, DiscoveryResponse response, SotwXdsStream sender) {
-        final ParsedResourcesHolder<O> holder =
-                resourceParser.parseResources(response.getResourcesList());
-        String errorDetail = null;
+            ResourceParser<I, O> resourceParser, DiscoveryResponse response, ActualStream sender) {
+        final long nextRevision = sender.versionManager()
+                                        .nextRevision(resourceParser.type(), response.getVersionInfo());
+        final ParsedResourcesHolder holder =
+                resourceParser.parseResources(response.getResourcesList(), response.getVersionInfo(),
+                                              nextRevision);
+        final String errorDetails;
         if (holder.errors().isEmpty()) {
             sender.ackResponse(resourceParser.type(), response.getVersionInfo(), response.getNonce());
+            // The version was updated, so we always update the cache in case a late watcher subscribed.
+            // 1) A subscriber is added, and a stream is created.
+            // 2) Immediately, the subscriber is removed but a response later updates the version.
+            //    At this step, subscribers cannot be notified as there are no watchers
+            //    and the value isn't cached.
+            // 3) Afterward, a new subscriber is added - this subscriber doesn't see any cached values so the
+            //    subscriber is in an indefinite waiting state until the version is incremented.
+            storage.updateCache(resourceParser.type(), holder.parsedResources());
         } else {
-            errorDetail = errorMessageJoiner.join(holder.errors());
-            sender.nackResponse(resourceParser.type(), response.getNonce(), errorDetail);
+            errorDetails = errorMessageJoiner.join(holder.errors());
+            sender.nackResponse(resourceParser.type(), response.getNonce(), errorDetails);
         }
 
         final Map<String, XdsStreamSubscriber<O>> subscribedResources =
@@ -54,22 +67,18 @@ final class DefaultResponseHandler implements XdsResponseHandler {
 
             if (holder.parsedResources().containsKey(resourceName)) {
                 // Happy path: the resource updated successfully. Notify the watchers of the update.
-                subscriber.onData(holder.parsedResources().get(resourceName));
+                notifyOnData(subscriber, holder, resourceName);
                 continue;
             }
 
-            // Nothing else to do for incremental ADS resources.
+            final Throwable errorCause = holder.invalidResources().get(resourceName);
+            if (errorCause != null) {
+                subscriber.onError(resourceName, Status.UNAVAILABLE.withCause(errorCause));
+                continue;
+            }
+
+            // Handle State of the World ADS
             if (!resourceParser.isFullStateOfTheWorld()) {
-                continue;
-            }
-
-            // Handle State of the World ADS: invalid resources.
-            if (holder.invalidResources().contains(resourceName)) {
-                // The resource is missing. Reuse the cached resource if possible.
-                if (subscriber.data() == null) {
-                    // No cached resource. Notify the watchers of an invalid update.
-                    subscriber.onError(Status.UNAVAILABLE.withDescription(errorDetail));
-                }
                 continue;
             }
 
@@ -78,5 +87,13 @@ final class DefaultResponseHandler implements XdsResponseHandler {
             // the same xDS server that the ResourceSubscriber is subscribed to.
             subscriber.onAbsent();
         }
+    }
+
+    @SuppressWarnings("unchecked")
+    private <O extends XdsResource> void notifyOnData(XdsStreamSubscriber<O> subscriber,
+                                                      ParsedResourcesHolder holder, String resourceName) {
+        final O data = (O) holder.parsedResources().get(resourceName);
+        assert data != null;
+        subscriber.onData(data);
     }
 }

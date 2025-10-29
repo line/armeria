@@ -98,14 +98,14 @@ abstract class AbstractResourceNode<T extends XdsResource, S extends Snapshot<T>
     }
 
     @Override
-    public final void onError(XdsType type, Status error) {
-        notifyOnError(type, error);
+    public final void onError(XdsType type, String resourceName, Status error) {
+        notifyOnError(type, resourceName, error);
     }
 
-    final void notifyOnError(XdsType type, Status error) {
+    final void notifyOnError(XdsType type, String resourceName, Status error) {
         for (SnapshotWatcher<S> watcher : watchers) {
             try {
-                watcher.onError(type, error);
+                watcher.onError(type, resourceName, error);
             } catch (Exception e) {
                 logger.warn("Unexpected exception notifying <{}> for 'onError' <{},{}> for error <{}> e: ",
                             watcher, resourceName, type, error, e);

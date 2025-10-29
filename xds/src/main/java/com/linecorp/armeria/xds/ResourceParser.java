@@ -19,28 +19,21 @@ package com.linecorp.armeria.xds;
 import java.util.List;
 
 import com.google.common.base.MoreObjects;
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
 import com.google.protobuf.Any;
-import com.google.protobuf.InvalidProtocolBufferException;
 import com.google.protobuf.Message;
-
-import com.linecorp.armeria.common.annotation.Nullable;
 
 abstract class ResourceParser<I extends Message, O extends XdsResource> {
 
-    @Nullable
     abstract String name(I message);
 
     abstract Class<I> clazz();
 
-    abstract O parse(I message);
+    abstract O parse(I message, String version, long revision);
 
-    ParsedResourcesHolder<O> parseResources(List<Any> resources) {
-        final ImmutableMap.Builder<String, O> parsedResources = ImmutableMap.builder();
-        final ImmutableSet.Builder<String> invalidResources = ImmutableSet.builder();
-        final ImmutableList.Builder<String> errors = ImmutableList.builder();
+    ParsedResourcesHolder parseResources(List<Any> resources, String version, long revision) {
+        final ImmutableMap.Builder<String, Object> parsedResources = ImmutableMap.builder();
+        final ImmutableMap.Builder<String, Throwable> invalidResources = ImmutableMap.builder();
 
         for (int i = 0; i < resources.size(); i++) {
             final Any resource = resources.get(i);
@@ -48,33 +41,17 @@ abstract class ResourceParser<I extends Message, O extends XdsResource> {
             final I unpackedMessage;
             try {
                 unpackedMessage = resource.unpack(clazz());
-            } catch (InvalidProtocolBufferException e) {
-                errors.add(String.format("Resource (%s: %s) cannot be unpacked to (%s) due to %s",
-                                         i, resource, clazz().getSimpleName(), e));
-                continue;
-            }
-            final String name;
-            try {
-                name = name(unpackedMessage);
             } catch (Exception e) {
-                errors.add(String.format("Cannot determine name of (%s: %s) with type %s due to %s",
-                                         i, resource, clazz().getSimpleName(), e));
+                final String genName = String.format("generated_%s_%s", i, clazz().getSimpleName());
+                invalidResources.put(genName,e);
                 continue;
             }
-
-            if (name == null) {
-                errors.add(String.format("Resource (%s: %s) cannot be processed as (%s) due to null name",
-                                         i, resource, clazz().getSimpleName()));
-                continue;
-            }
-
+            final String name = name(unpackedMessage);
             final O resourceUpdate;
             try {
-                resourceUpdate = parse(unpackedMessage);
+                resourceUpdate = parse(unpackedMessage, version, revision);
             } catch (Exception e) {
-                errors.add(String.format("Resource (%s: %s) cannot be parsed as (%s) due to %s",
-                                         i, resource, clazz().getSimpleName(), e));
-                invalidResources.add(name);
+                invalidResources.put(name, e);
                 continue;
             }
 
@@ -82,7 +59,8 @@ abstract class ResourceParser<I extends Message, O extends XdsResource> {
             parsedResources.put(name, resourceUpdate);
         }
 
-        return new ParsedResourcesHolder<>(parsedResources.build(), invalidResources.build(), errors.build());
+        return new ParsedResourcesHolder(parsedResources.buildKeepingLast(),
+                                         invalidResources.buildKeepingLast());
     }
 
     // Do not confuse with the SotW approach: it is the mechanism in which the client must specify all

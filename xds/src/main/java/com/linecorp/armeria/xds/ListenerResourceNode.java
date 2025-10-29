@@ -76,7 +76,8 @@ final class ListenerResourceNode extends AbstractResourceNode<ListenerXdsResourc
                 if (connectionManager.hasRouteConfig()) {
                     final RouteConfiguration routeConfig = connectionManager.getRouteConfig();
                     node = StaticResourceUtils.staticRoute(context, routeConfig.getName(),
-                                                           this, routeConfig);
+                                                           this, routeConfig, resource.version(),
+                                                           resource.revision());
                 } else if (connectionManager.hasRds()) {
                     final Rds rds = connectionManager.getRds();
                     final String routeName = rds.getRouteConfigName();
@@ -111,11 +112,11 @@ final class ListenerResourceNode extends AbstractResourceNode<ListenerXdsResourc
         }
 
         @Override
-        public void onError(XdsType type, Status status) {
+        public void onError(XdsType type, String resourceName, Status status) {
             if (closed) {
                 return;
             }
-            parentNode.notifyOnError(type, status);
+            parentNode.notifyOnError(type, resourceName, status);
         }
 
         @Override

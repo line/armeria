@@ -1,7 +1,7 @@
 /*
- * Copyright 2023 LINE Corporation
+ * Copyright 2025 LY Corporation
  *
- * LINE Corporation licenses this file to you under the Apache License,
+ * LY Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
@@ -16,17 +16,13 @@
 
 package com.linecorp.armeria.xds;
 
-import com.google.protobuf.Message;
+import java.util.Collection;
 
-import com.linecorp.armeria.xds.SotwXdsStream.ActualStream;
+import io.grpc.Status;
 
-import io.envoyproxy.envoy.service.discovery.v3.DiscoveryResponse;
+interface XdsStreamState {
 
-/**
- * Handles callbacks for {@link SotwXdsStream}.
- */
-interface XdsResponseHandler {
+    void retryOrClose(Status status, boolean closedByError);
 
-    <I extends Message, O extends XdsResource> void handleResponse(
-            ResourceParser<I, O> resourceParser, DiscoveryResponse value, ActualStream sender);
+    Collection<String> watchedResources(XdsType type);
 }
