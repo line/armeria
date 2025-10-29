@@ -1499,6 +1499,7 @@ cloudapp.net
 cloudapps.digital
 cloudbeesusercontent.io
 cloudflare-ipfs.com
+cloudflare.app
 cloudflare.net
 cloudfront.net
 cloudfunctions.net
