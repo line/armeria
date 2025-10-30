@@ -36,7 +36,7 @@ final class TokenBasedRetryLimiter implements RetryLimiter {
      */
     private final int threshold;
 
-    final AtomicInteger tokenCount;
+    private final AtomicInteger tokenCount;
 
     TokenBasedRetryLimiter(int maxTokens, int threshold) {
         checkArgument(maxTokens > 0, "maxTokens must be positive: %s.", maxTokens);

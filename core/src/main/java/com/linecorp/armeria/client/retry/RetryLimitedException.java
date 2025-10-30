@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.client.retry;
 
+import com.linecorp.armeria.common.Flags;
+
 /**
  * An exception thrown when a retry is limited by a {@link RetryLimiter}.
  */
@@ -23,19 +25,20 @@ public final class RetryLimitedException extends RuntimeException {
 
     private static final long serialVersionUID = 7203512016805562689L;
 
-    private static final RetryLimitedException INSTANCE = new RetryLimitedException();
+    private static final RetryLimitedException INSTANCE = new RetryLimitedException(false);
 
     /**
-     * Returns an instance of {@link RetryLimitedException}.
+     * Returns an instance of {@link RetryLimitedException} sampled by {@link Flags#verboseExceptionSampler()}.
      */
     public static RetryLimitedException of() {
-        return INSTANCE;
+        return isSampled() ? new RetryLimitedException(true) : INSTANCE;
     }
 
-    private RetryLimitedException() {}
+    private RetryLimitedException(boolean enableSuppression) {
+        super(null, null, enableSuppression, isSampled());
+    }
 
-    @Override
-    public Throwable fillInStackTrace() {
-        return this;
+    private static boolean isSampled() {
+        return Flags.verboseExceptionSampler().isSampled(RetryLimitedException.class);
     }
 }

@@ -30,7 +30,7 @@ final class ConcurrencyBasedRetryLimiter implements RetryLimiter {
     private final AtomicLong activeRequests = new AtomicLong();
 
     ConcurrencyBasedRetryLimiter(long maxRequests) {
-        checkArgument(maxRequests > 0, "threshold must be positive: %s.", maxRequests);
+        checkArgument(maxRequests > 0, "maxRequests must be positive: %s.", maxRequests);
         this.maxRequests = maxRequests;
     }
 
@@ -43,10 +43,6 @@ final class ConcurrencyBasedRetryLimiter implements RetryLimiter {
         }
         ctx.log().whenComplete().thenRun(activeRequests::decrementAndGet);
         return true;
-    }
-
-    @Override
-    public void handleDecision(ClientRequestContext ctx, RetryDecision decision) {
     }
 
     @Override
