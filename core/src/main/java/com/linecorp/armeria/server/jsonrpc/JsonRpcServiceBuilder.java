@@ -15,6 +15,8 @@
  */
 package com.linecorp.armeria.server.jsonrpc;
 
+import static com.google.common.base.Preconditions.checkArgument;
+import static com.google.common.base.Preconditions.checkState;
 import static java.util.Objects.requireNonNull;
 
 import com.google.common.collect.ImmutableMap;
@@ -22,7 +24,7 @@ import com.google.common.collect.ImmutableMap;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 
 /**
- * Constructs a {@link JsonRpcService} to serve Json-RPC services.
+ * Constructs a {@link JsonRpcService} to serve JSON-RPC services.
  */
 @UnstableApi
 public class JsonRpcServiceBuilder {
@@ -31,11 +33,13 @@ public class JsonRpcServiceBuilder {
     JsonRpcServiceBuilder() {}
 
     /**
-    * Adds a Json-RPC {@link JsonRpcHandler} to this {@link JsonRpcServiceBuilder}.
+    * Adds a JSON-RPC {@link JsonRpcHandler} to this {@link JsonRpcServiceBuilder}.
     */
     public JsonRpcServiceBuilder addHandler(String methodName, JsonRpcHandler handler) {
         requireNonNull(methodName, "methodName");
+        checkArgument(!methodName.isEmpty(), "methodName must not be empty");
         requireNonNull(handler, "handler");
+
         methodHandlers.put(methodName, handler);
         return this;
     }
@@ -44,6 +48,9 @@ public class JsonRpcServiceBuilder {
      * Constructs a new {@link JsonRpcService}.
      */
     public JsonRpcService build() {
-        return new JsonRpcService(methodHandlers.build());
+        final ImmutableMap<String, JsonRpcHandler> handlers = methodHandlers.build();
+        checkState(!handlers.isEmpty(), "no handlers were added");
+
+        return new JsonRpcService(handlers);
     }
 }

@@ -22,7 +22,7 @@ import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 
 /**
- * A Json-RPC.
+ * A JSON-RPC response.
  */
 @UnstableApi
 public interface JsonRpcResponse {

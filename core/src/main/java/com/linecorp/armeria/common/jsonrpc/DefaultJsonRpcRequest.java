@@ -25,7 +25,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Optional;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -69,7 +68,7 @@ final class DefaultJsonRpcRequest implements JsonRpcRequest {
                 "jsonrpc: %s (expected: 2.0)", version);
         checkArgument(id == null || id instanceof Number || id instanceof String,
                 "id type: %s (expected: Null or Number or String)",
-                Optional.ofNullable(id).map(Object::getClass).orElse(null));
+                id != null ? id.getClass().getName() : "null");
         checkArgument(params instanceof List || params instanceof Map,
                 "params type: %s (expected: List or Map)",
                 params != null ? params.getClass().getName() : "null");
@@ -138,6 +137,10 @@ final class DefaultJsonRpcRequest implements JsonRpcRequest {
 
     private static Map<String, Object> copyParams(Map<String, Object> params) {
         requireNonNull(params, "params");
+        if (params.isEmpty()) {
+            return Collections.emptyMap();
+        }
+
         return Collections.unmodifiableMap(new HashMap<>(params));
     }
 

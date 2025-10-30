@@ -30,7 +30,7 @@ import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 
 /**
- * A Json-RPC request.
+ * A JSON-RPC request.
  */
 @UnstableApi
 public interface JsonRpcRequest {
@@ -74,7 +74,7 @@ public interface JsonRpcRequest {
     static JsonRpcRequest of(@Nullable Object id, String method, Map<String, Object> parameter) {
         return new DefaultJsonRpcRequest(id,
                 requireNonNull(method, "method"),
-                requireNonNull(parameter, "param"));
+                requireNonNull(parameter, "parameter"));
     }
 
     /**
@@ -96,7 +96,7 @@ public interface JsonRpcRequest {
 
     /**
     * Returns the ID of the JSON-RPC request.
-    * type must be Number or String
+    * The type must be {@link Number} or {@link String}.
     */
     @Nullable
     Object id();

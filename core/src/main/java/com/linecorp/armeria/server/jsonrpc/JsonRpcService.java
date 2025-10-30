@@ -155,7 +155,7 @@ public final class JsonRpcService implements HttpService {
     private static void maybeLogRequestContent(ServiceRequestContext ctx,
             JsonRpcRequest request,
             JsonNode node) {
-        if (!Flags.jsonRpcServiceContentLogging()) {
+        if (!Flags.annotatedServiceContentLogging()) {
             return;
         }
 
@@ -199,7 +199,7 @@ public final class JsonRpcService implements HttpService {
     private static void maybeLogResponseContent(ServiceRequestContext ctx,
             DefaultJsonRpcResponse response,
             JsonRpcResponse originalResponse) {
-        if (!Flags.jsonRpcServiceContentLogging()) {
+        if (!Flags.annotatedServiceContentLogging()) {
             return;
         }
 
