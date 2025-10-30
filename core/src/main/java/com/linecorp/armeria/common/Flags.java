@@ -78,7 +78,6 @@ import com.linecorp.armeria.server.annotation.ExceptionVerbosity;
 import com.linecorp.armeria.server.file.FileService;
 import com.linecorp.armeria.server.file.FileServiceBuilder;
 import com.linecorp.armeria.server.file.HttpFile;
-import com.linecorp.armeria.server.jsonrpc.JsonRpcService;
 import com.linecorp.armeria.server.logging.LoggingService;
 
 import io.micrometer.core.instrument.DistributionSummary;
@@ -456,9 +455,6 @@ public final class Flags {
 
     private static final boolean ANNOTATED_SERVICE_CONTENT_LOGGING =
             getValue(FlagsProvider::annotatedServiceContentLogging, "annotatedServiceContentLogging");
-
-    private static final boolean JSON_RPC_SERVICE_CONTENT_LOGGING =
-            getValue(FlagsProvider::jsonRpcServiceContentLogging, "jsonRpcServiceContentLogging");
 
     /**
      * Returns the specification of the {@link Sampler} that determines whether to retain the stack
@@ -1705,18 +1701,6 @@ public final class Flags {
      */
     public static boolean annotatedServiceContentLogging() {
         return ANNOTATED_SERVICE_CONTENT_LOGGING;
-    }
-
-    /**
-     * Returns whether {@link JsonRpcService} should leave request/response content logs
-     * by default when a {@link LoggingService} is added.
-     *
-     * <p>By default, this option is enabled. Specify the
-     * {@code -Dcom.linecorp.armeria.jsonRpcServiceContentLogging=false} JVM option to
-     * override the default value.
-     */
-    public static boolean jsonRpcServiceContentLogging() {
-        return JSON_RPC_SERVICE_CONTENT_LOGGING;
     }
 
     @Nullable
