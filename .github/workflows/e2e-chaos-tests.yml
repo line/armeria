@@ -1,15 +1,13 @@
 name: E2E Tests
 
-# Disable Kubernetes Chaos test workflow until jkube supports Gradle 9.
-# https://github.com/eclipse-jkube/jkube/pull/3779
-#on:
-#  push:
-#    branches:
-#      - main
-#    tags-ignore:
-#      # The release versions will be verified by 'publish-release.yml'
-#      - armeria-*
-#  pull_request:
+on:
+  push:
+    branches:
+      - main
+    tags-ignore:
+      # The release versions will be verified by 'publish-release.yml'
+      - armeria-*
+  pull_request:
 
 concurrency:
   group: ci-e2e-chaos-tests-${{ github.event.pull_request.number || github.sha }}
