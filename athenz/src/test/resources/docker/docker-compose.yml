@@ -44,7 +44,7 @@ services:
     healthcheck:
       test: [ "CMD", "curl", "-k", "--fail", "https://localhost:4443/zms/v1/status" ]
       interval: 5s
-      timeout: 3s
+      timeout: 5s
       retries: 20
 
   zts-db:
@@ -89,12 +89,12 @@ services:
       - ./zts/var:/opt/athenz/zts/var
       - ./zts/conf:/opt/athenz/zts/conf/zts_server
       # Uncomment the following line to see ZTS logs locally.
-      - ./logs/zts:/opt/athenz/zts/logs/zts_server
-#    healthcheck:
-#      test: ["CMD", "curl", "-k", "--fail", "https://localhost:8443/zts/v1/status"]
-#      interval: 5s
-#      timeout: 3s
-#      retries: 20
+      # - ./logs/zts:/opt/athenz/zts/logs/zts_server
+    healthcheck:
+      test: ["CMD", "curl", "-k", "--fail", "https://localhost:8443/zts/v1/status"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
 
 networks:
   athenz:
