@@ -27,6 +27,7 @@ import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.xds.client.endpoint.UpdatableXdsLoadBalancer;
 import com.linecorp.armeria.xds.client.endpoint.XdsLoadBalancer;
+import com.linecorp.armeria.xds.client.endpoint.XdsLoadBalancerLifecycleObserver;
 
 import io.envoyproxy.envoy.config.bootstrap.v3.Bootstrap;
 import io.envoyproxy.envoy.config.cluster.v3.Cluster;
@@ -34,6 +35,8 @@ import io.envoyproxy.envoy.config.core.v3.ConfigSource;
 import io.netty.util.concurrent.EventExecutor;
 
 final class XdsClusterManager implements SafeCloseable {
+
+    private static final XdsLoadBalancerLifecycleObserver observer = new XdsLoadBalancerLifecycleObserver() {};
 
     private final Map<String, ClusterResourceNode> nodes = new HashMap<>();
     private boolean closed;
@@ -50,7 +53,8 @@ final class XdsClusterManager implements SafeCloseable {
         this.bootstrap = bootstrap;
         localClusterName = bootstrap.getClusterManager().getLocalClusterName();
         if (!Strings.isNullOrEmpty(localClusterName) && bootstrap.getNode().hasLocality()) {
-            localLoadBalancer = XdsLoadBalancer.of(eventLoop, bootstrap.getNode().getLocality(), null);
+            localLoadBalancer = XdsLoadBalancer.of(eventLoop, bootstrap.getNode().getLocality(),
+                                                   null, observer);
         } else {
             localLoadBalancer = null;
         }
@@ -64,7 +68,7 @@ final class XdsClusterManager implements SafeCloseable {
             loadBalancer = localLoadBalancer;
         } else {
             loadBalancer = XdsLoadBalancer.of(eventLoop, bootstrap.getNode().getLocality(),
-                                              localLoadBalancer);
+                                              localLoadBalancer, observer);
         }
         final ClusterResourceNode node =
                 StaticResourceUtils.staticCluster(context, cluster.getName(), cluster, loadBalancer);
@@ -79,7 +83,8 @@ final class XdsClusterManager implements SafeCloseable {
         final ClusterResourceNode node = nodes.computeIfAbsent(name, ignored -> {
             // on-demand cds if not already registered
             final UpdatableXdsLoadBalancer loadBalancer =
-                    XdsLoadBalancer.of(eventLoop, bootstrap.getNode().getLocality(), localLoadBalancer);
+                    XdsLoadBalancer.of(eventLoop, bootstrap.getNode().getLocality(),
+                                       localLoadBalancer, observer);
             final ConfigSource configSource = context.configSourceMapper().cdsConfigSource(name);
             final ClusterResourceNode dynamicNode =
                     new ClusterResourceNode(configSource, name, context,
