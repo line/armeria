@@ -16,18 +16,12 @@
 
 package com.linecorp.armeria.xds;
 
-import static com.linecorp.armeria.xds.FilterUtil.toParsedFilterConfigs;
-
-import java.util.Map;
-
 import com.google.common.base.MoreObjects;
 import com.google.common.base.Objects;
 
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 
 import io.envoyproxy.envoy.config.route.v3.RouteConfiguration;
-import io.envoyproxy.envoy.extensions.filters.network.http_connection_manager.v3.HttpFilter;
 
 /**
  * A resource object for a {@link RouteConfiguration}.
@@ -36,11 +30,9 @@ import io.envoyproxy.envoy.extensions.filters.network.http_connection_manager.v3
 public final class RouteXdsResource implements XdsResource {
 
     private final RouteConfiguration routeConfiguration;
-    private final Map<String, ParsedFilterConfig> filterConfigs;
 
     RouteXdsResource(RouteConfiguration routeConfiguration) {
         this.routeConfiguration = routeConfiguration;
-        filterConfigs = toParsedFilterConfigs(routeConfiguration.getTypedPerFilterConfigMap());
     }
 
     @Override
@@ -56,16 +48,6 @@ public final class RouteXdsResource implements XdsResource {
     @Override
     public String name() {
         return routeConfiguration.getName();
-    }
-
-    /**
-     * Returns the parsed {@link RouteConfiguration#getTypedPerFilterConfigMap()}.
-     *
-     * @param filterName the filter name represented by {@link HttpFilter#getName()}
-     */
-    @Nullable
-    public ParsedFilterConfig filterConfig(String filterName) {
-        return filterConfigs.get(filterName);
     }
 
     @Override
