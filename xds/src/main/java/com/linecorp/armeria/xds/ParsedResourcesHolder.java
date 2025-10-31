@@ -18,26 +18,28 @@ package com.linecorp.armeria.xds;
 
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
-final class ParsedResourcesHolder<T extends XdsResource> {
-    private final Map<String, T> parsedResources;
-    private final Set<String> invalidResources;
+import com.google.common.collect.ImmutableList;
+
+final class ParsedResourcesHolder {
+    private final Map<String, Object> parsedResources;
+    private final Map<String, Throwable> invalidResources;
     private final List<String> errors;
 
-    ParsedResourcesHolder(Map<String, T> parsedResources,
-                          Set<String> invalidResources,
-                          List<String> errors) {
+    ParsedResourcesHolder(Map<String, Object> parsedResources,
+                          Map<String, Throwable> invalidResources) {
         this.parsedResources = parsedResources;
         this.invalidResources = invalidResources;
-        this.errors = errors;
+        errors = invalidResources.values().stream()
+                                 .map(Throwable::getMessage)
+                                 .collect(ImmutableList.toImmutableList());
     }
 
-    Map<String, T> parsedResources() {
+    Map<String, Object> parsedResources() {
         return parsedResources;
     }
 
-    Set<String> invalidResources() {
+    Map<String, Throwable> invalidResources() {
         return invalidResources;
     }
 

@@ -26,8 +26,8 @@ final class ClusterResourceParser extends ResourceParser<Cluster, ClusterXdsReso
     private ClusterResourceParser() {}
 
     @Override
-    ClusterXdsResource parse(Cluster cluster) {
-        final ClusterXdsResource resource = new ClusterXdsResource(cluster);
+    ClusterXdsResource parse(Cluster cluster, String version, long revision) {
+        final ClusterXdsResource resource = new ClusterXdsResource(cluster, version, revision);
         if (cluster.hasEdsClusterConfig()) {
             final EdsClusterConfig eds = cluster.getEdsClusterConfig();
             XdsConverterUtil.validateConfigSource(eds.getEdsConfig());

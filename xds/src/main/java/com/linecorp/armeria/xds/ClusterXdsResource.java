@@ -18,9 +18,6 @@ package com.linecorp.armeria.xds;
 
 import static com.google.common.base.Preconditions.checkArgument;
 
-import com.google.common.base.MoreObjects;
-import com.google.common.base.Objects;
-
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 
@@ -31,13 +28,14 @@ import io.envoyproxy.envoy.extensions.transport_sockets.tls.v3.UpstreamTlsContex
  * A resource object for a {@link Cluster}.
  */
 @UnstableApi
-public final class ClusterXdsResource implements XdsResource {
+public final class ClusterXdsResource extends AbstractXdsResource {
 
     private final Cluster cluster;
     @Nullable
     UpstreamTlsContext upstreamTlsContext;
 
-    ClusterXdsResource(Cluster cluster) {
+    ClusterXdsResource(Cluster cluster, String version, long revision) {
+        super(version, revision);
         this.cluster = cluster;
         upstreamTlsContext = upstreamTlsContext(cluster);
     }
@@ -80,29 +78,5 @@ public final class ClusterXdsResource implements XdsResource {
     @Override
     public String name() {
         return cluster.getName();
-    }
-
-    @Override
-    public boolean equals(Object object) {
-        if (this == object) {
-            return true;
-        }
-        if (object == null || getClass() != object.getClass()) {
-            return false;
-        }
-        final ClusterXdsResource that = (ClusterXdsResource) object;
-        return Objects.equal(cluster, that.cluster);
-    }
-
-    @Override
-    public int hashCode() {
-        return Objects.hashCode(cluster);
-    }
-
-    @Override
-    public String toString() {
-        return MoreObjects.toStringHelper(this)
-                          .add("cluster", cluster)
-                          .toString();
     }
 }

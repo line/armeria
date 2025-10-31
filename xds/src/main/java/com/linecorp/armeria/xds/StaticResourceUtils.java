@@ -31,10 +31,10 @@ final class StaticResourceUtils {
 
     static RouteResourceNode staticRoute(SubscriptionContext context, String resourceName,
                                          SnapshotWatcher<RouteSnapshot> parentWatcher,
-                                         RouteConfiguration routeConfiguration) {
+                                         RouteConfiguration routeConfiguration, String version, long revision) {
         final RouteResourceParser resourceParser =
                 (RouteResourceParser) XdsResourceParserUtil.fromType(XdsType.ROUTE);
-        final RouteXdsResource parsed = resourceParser.parse(routeConfiguration);
+        final RouteXdsResource parsed = resourceParser.parse(routeConfiguration, version, revision);
         final RouteResourceNode node = new RouteResourceNode(null, resourceName, context,
                                                              parentWatcher, STATIC);
         node.onChanged(parsed);
@@ -44,35 +44,38 @@ final class StaticResourceUtils {
     static VirtualHostResourceNode staticVirtualHost(
             SubscriptionContext context, String resourceName,
             SnapshotWatcher<VirtualHostSnapshot> parentWatcher,
-            int index, VirtualHost virtualHost) {
+            int index, VirtualHost virtualHost, String version, long revision) {
         final VirtualHostResourceNode node =
                 new VirtualHostResourceNode(null, resourceName, context, parentWatcher, index, STATIC);
-        final VirtualHostXdsResource resource = new VirtualHostXdsResource(virtualHost);
+        final VirtualHostXdsResource resource = new VirtualHostXdsResource(virtualHost, version, revision);
         node.onChanged(resource);
         return node;
     }
 
     static ClusterResourceNode staticCluster(SubscriptionContext context, String resourceName,
-                                             Cluster cluster, UpdatableXdsLoadBalancer loadBalancer) {
+                                             Cluster cluster, UpdatableXdsLoadBalancer loadBalancer,
+                                             String version, long revision) {
         final ClusterResourceNode node = new ClusterResourceNode(null, resourceName, context, STATIC,
                                                                  loadBalancer);
-        setClusterXdsResourceToNode(cluster, node);
+        setClusterXdsResourceToNode(cluster, node, version, revision);
         return node;
     }
 
-    private static void setClusterXdsResourceToNode(Cluster cluster, ClusterResourceNode node) {
+    private static void setClusterXdsResourceToNode(Cluster cluster, ClusterResourceNode node,
+                                                    String version, long revision) {
         final ClusterResourceParser resourceParser =
                 (ClusterResourceParser) XdsResourceParserUtil.fromType(XdsType.CLUSTER);
-        final ClusterXdsResource parsed = resourceParser.parse(cluster);
+        final ClusterXdsResource parsed = resourceParser.parse(cluster, version, revision);
         node.onChanged(parsed);
     }
 
     static EndpointResourceNode staticEndpoint(SubscriptionContext context, String resourceName,
                                                SnapshotWatcher<EndpointSnapshot> parentWatcher,
-                                               ClusterLoadAssignment clusterLoadAssignment) {
+                                               ClusterLoadAssignment clusterLoadAssignment, String version,
+                                               long revision) {
         final EndpointResourceParser resourceParser =
                 (EndpointResourceParser) XdsResourceParserUtil.fromType(XdsType.ENDPOINT);
-        final EndpointXdsResource parsed = resourceParser.parse(clusterLoadAssignment);
+        final EndpointXdsResource parsed = resourceParser.parse(clusterLoadAssignment, version, revision);
         final EndpointResourceNode node = new EndpointResourceNode(null, resourceName, context,
                                                                    parentWatcher, STATIC);
         node.onChanged(parsed);

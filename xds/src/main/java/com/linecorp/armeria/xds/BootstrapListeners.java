@@ -32,7 +32,8 @@ final class BootstrapListeners {
         if (bootstrap.hasStaticResources()) {
             final StaticResources staticResources = bootstrap.getStaticResources();
             for (Listener listener: staticResources.getListenersList()) {
-                final ListenerXdsResource listenerResource = ListenerResourceParser.INSTANCE.parse(listener);
+                final ListenerXdsResource listenerResource =
+                        ListenerResourceParser.INSTANCE.parse(listener, "", 0);
                 builder.put(listener.getName(), listenerResource);
             }
         }

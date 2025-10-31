@@ -20,9 +20,6 @@ import static com.linecorp.armeria.xds.FilterUtil.toParsedFilterConfigs;
 
 import java.util.Map;
 
-import com.google.common.base.MoreObjects;
-import com.google.common.base.Objects;
-
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 
@@ -33,12 +30,13 @@ import io.envoyproxy.envoy.extensions.filters.network.http_connection_manager.v3
  * A resource object for a {@link RouteConfiguration}.
  */
 @UnstableApi
-public final class RouteXdsResource implements XdsResource {
+public final class RouteXdsResource extends AbstractXdsResource {
 
     private final RouteConfiguration routeConfiguration;
     private final Map<String, ParsedFilterConfig> filterConfigs;
 
-    RouteXdsResource(RouteConfiguration routeConfiguration) {
+    RouteXdsResource(RouteConfiguration routeConfiguration, String version, long revision) {
+        super(version, revision);
         this.routeConfiguration = routeConfiguration;
         filterConfigs = toParsedFilterConfigs(routeConfiguration.getTypedPerFilterConfigMap());
     }
@@ -66,29 +64,5 @@ public final class RouteXdsResource implements XdsResource {
     @Nullable
     public ParsedFilterConfig filterConfig(String filterName) {
         return filterConfigs.get(filterName);
-    }
-
-    @Override
-    public boolean equals(Object object) {
-        if (this == object) {
-            return true;
-        }
-        if (object == null || getClass() != object.getClass()) {
-            return false;
-        }
-        final RouteXdsResource that = (RouteXdsResource) object;
-        return Objects.equal(routeConfiguration, that.routeConfiguration);
-    }
-
-    @Override
-    public int hashCode() {
-        return routeConfiguration.hashCode();
-    }
-
-    @Override
-    public String toString() {
-        return MoreObjects.toStringHelper(this)
-                          .add("routeConfiguration", routeConfiguration)
-                          .toString();
     }
 }

@@ -87,7 +87,7 @@ final class BootstrapClusters implements SnapshotWatcher<ClusterSnapshot> {
     }
 
     @Override
-    public void onError(XdsType type, Status status) {
+    public void onError(XdsType type, String resourceName, Status status) {
         throw new IllegalArgumentException("Unexpected error for bootstrap cluster with type: '" +
                                            type + '\'', status.asException());
     }

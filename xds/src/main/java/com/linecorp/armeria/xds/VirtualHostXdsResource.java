@@ -20,8 +20,6 @@ import static com.linecorp.armeria.xds.FilterUtil.toParsedFilterConfigs;
 
 import java.util.Map;
 
-import com.google.common.base.MoreObjects;
-
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 
@@ -31,12 +29,13 @@ import io.envoyproxy.envoy.extensions.filters.network.http_connection_manager.v3
 /**
  * A resource object for a {@link VirtualHost}.
  */
-public final class VirtualHostXdsResource implements XdsResource {
+public final class VirtualHostXdsResource extends AbstractXdsResource {
 
     private final VirtualHost virtualHost;
     private final Map<String, ParsedFilterConfig> virtualHostFilterConfigs;
 
-    VirtualHostXdsResource(VirtualHost virtualHost) {
+    VirtualHostXdsResource(VirtualHost virtualHost, String version, long revision) {
+        super(version, revision);
         this.virtualHost = virtualHost;
         virtualHostFilterConfigs = toParsedFilterConfigs(virtualHost.getTypedPerFilterConfigMap());
     }
@@ -65,12 +64,5 @@ public final class VirtualHostXdsResource implements XdsResource {
     @Override
     public String name() {
         return virtualHost.getName();
-    }
-
-    @Override
-    public String toString() {
-        return MoreObjects.toStringHelper(this)
-                          .add("virtualHost", virtualHost)
-                          .toString();
     }
 }
