@@ -34,7 +34,6 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.CountingConnectionPoolListener;
-import com.linecorp.armeria.common.InboundCompleteException;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.StreamTimeoutException;
 import com.linecorp.armeria.common.logging.RequestLog;
@@ -88,11 +87,11 @@ class WebSocketClientStreamTimeoutTest {
         final RequestLog log = ctx.log().whenComplete().join();
 
         assertThat(Objects.requireNonNull(Objects.requireNonNull(log.responseCause())))
-                .isInstanceOf(InboundCompleteException.class)
-                .hasCauseInstanceOf(WebSocketIdleTimeoutException.class);
+                .isInstanceOf(WebSocketIdleTimeoutException.class)
+                .hasCauseInstanceOf(StreamTimeoutException.class);
         assertThat(Objects.requireNonNull(Objects.requireNonNull(log.requestCause())))
-                .isInstanceOf(InboundCompleteException.class)
-                .hasCauseInstanceOf(WebSocketIdleTimeoutException.class);
+                .isInstanceOf(WebSocketIdleTimeoutException.class)
+                .hasCauseInstanceOf(StreamTimeoutException.class);
     }
 
     @Test
@@ -133,7 +132,7 @@ class WebSocketClientStreamTimeoutTest {
     void sessionIsKeptAliveWhenFramesArriveWithinIdleTimeout() {
         final URI uri = server.uri(SessionProtocol.H2C);
         final WebSocketClient client = WebSocketClient.builder(uri)
-                                                      .streamTimeout(Duration.ofMillis(300))
+                                                      .streamTimeout(Duration.ofSeconds(2))
                                                       .build();
 
         final WebSocketSession session = client.connect("/keepalive").join();
@@ -175,11 +174,11 @@ class WebSocketClientStreamTimeoutTest {
         public WebSocket handle(ServiceRequestContext ctx, WebSocket in) {
             final WebSocketWriter writer = WebSocket.streaming();
             ctx.eventLoop().schedule(() -> writer.write(WebSocketFrame.ofText("tick-1")),
-                                     100, TimeUnit.MILLISECONDS);
+                                     1, TimeUnit.SECONDS);
             ctx.eventLoop().schedule(() -> writer.write(WebSocketFrame.ofText("tick-2")),
-                                     250, TimeUnit.MILLISECONDS);
+                                     2, TimeUnit.SECONDS);
             ctx.eventLoop().schedule(() -> writer.close(),
-                                     400, TimeUnit.MILLISECONDS);
+                                     3, TimeUnit.SECONDS);
             return writer;
         }
     }

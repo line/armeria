@@ -130,12 +130,13 @@ public final class DefaultWebSocketService implements WebSocketService, WebSocke
         final WebSocket outbound = handler.handle(ctx, inbound);
 
         inbound.whenComplete().exceptionally(cause -> {
-            Throwable finalCause = cause;
-            if (finalCause instanceof StreamTimeoutException) {
-                finalCause = new WebSocketIdleTimeoutException("WebSocket inbound idle-timeout exceeded",
+            final Throwable wrapped;
+            if (cause instanceof StreamTimeoutException) {
+                wrapped = new WebSocketIdleTimeoutException("WebSocket inbound idle-timeout exceeded",
                                                                cause);
+            } else {
+                wrapped = new InboundCompleteException("Inbound stream was cancelled", cause);
             }
-            final Throwable wrapped = new InboundCompleteException("Inbound stream was cancelled", finalCause);
             outbound.abort(wrapped);
             return null;
         });

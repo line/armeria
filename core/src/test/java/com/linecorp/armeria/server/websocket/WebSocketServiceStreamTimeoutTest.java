@@ -66,7 +66,7 @@ class WebSocketServiceStreamTimeoutTest {
                                        .build());
             sb.service("/keepalive",
                        WebSocketService.builder(new Handler())
-                                       .streamTimeout(Duration.ofMillis(300))
+                                       .streamTimeout(Duration.ofSeconds(2))
                                        .build());
         }
     };
@@ -87,10 +87,12 @@ class WebSocketServiceStreamTimeoutTest {
                 .hasCauseInstanceOf(StreamTimeoutException.class);
 
         final RequestLog log = ctx.log().whenComplete().join();
-        assertThat(Objects.requireNonNull(Objects.requireNonNull(log.requestCause()).getCause()))
-                .isInstanceOf(WebSocketIdleTimeoutException.class);
-        assertThat(Objects.requireNonNull(Objects.requireNonNull(log.responseCause()).getCause()))
-                .isInstanceOf(WebSocketIdleTimeoutException.class);
+        assertThat(Objects.requireNonNull(Objects.requireNonNull(log.requestCause())))
+                .isInstanceOf(WebSocketIdleTimeoutException.class)
+                .hasCauseInstanceOf(StreamTimeoutException.class);
+        assertThat(Objects.requireNonNull(Objects.requireNonNull(log.responseCause())))
+                .isInstanceOf(WebSocketIdleTimeoutException.class)
+                .hasCauseInstanceOf(StreamTimeoutException.class);
     }
 
     @Test
@@ -149,11 +151,11 @@ class WebSocketServiceStreamTimeoutTest {
 
         final WebSocketWriter cWriter = session.outbound();
         session.context().eventLoop().schedule(() -> cWriter.write(WebSocketFrame.ofText("tick-1")),
-                                               100, TimeUnit.MILLISECONDS);
+                                               1, TimeUnit.SECONDS);
         session.context().eventLoop().schedule(() -> cWriter.write(WebSocketFrame.ofText("tick-2")),
-                                               250, TimeUnit.MILLISECONDS);
+                                               2, TimeUnit.SECONDS);
         session.context().eventLoop().schedule(() -> cWriter.close(),
-                                               400, TimeUnit.MILLISECONDS);
+                                               3, TimeUnit.SECONDS);
 
         final ServiceRequestContext ctx = server.requestContextCaptor().take();
         assertThat(Objects.requireNonNull(ctx.attr(INBOUND_CAUSE_FUT)).join()).isNull();

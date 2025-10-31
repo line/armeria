@@ -18,12 +18,14 @@ package com.linecorp.armeria.common.websocket;
 
 import com.linecorp.armeria.common.TimeoutException;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 
 /**
  * A {@link TimeoutException} raised when a WebSocket exceeds the configured idle timeout.
  *
  * <p>Specifically, this indicates that no inbound frame was received within the configured idle interval.</p>
  */
+@UnstableApi
 public class WebSocketIdleTimeoutException extends TimeoutException {
     private static final long serialVersionUID = 216107322771109906L;
 
