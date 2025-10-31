@@ -13,11 +13,7 @@ buildscript {
         // TODO(trustin): Use platform(libs.boms.jackson) once Gradle supports platform() for build dependencies.
         //                https://github.com/gradle/gradle/issues/21788
         val jacksonDatabind: ModuleVersionSelector = libs.jackson.databind.get()
-        classpath(
-            group = jacksonDatabind.group,
-            name = jacksonDatabind.name,
-            version = libs.boms.jackson.get().version
-        )
+        classpath("${jacksonDatabind.group}:${jacksonDatabind.name}:${libs.boms.jackson.get().version}")
     }
 }
 

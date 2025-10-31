@@ -191,7 +191,7 @@ configure(projectsWithFlags('java')) {
         }
 
         tasks.withType(JavaCompile) {
-            options.errorprone.excludedPaths = '.*/gen-src/.*'
+            options.errorprone.excludedPaths = '.*/(gen-src|build)/.*'
             options.errorprone.nullaway {
                 if (name.contains("Test") || name.contains("Jmh")) {
                     // Disable NullAway for tests and benchmarks for now.
@@ -300,6 +300,7 @@ allprojects {
             group 'Client', 'com.linecorp.armeria.client*'
             group 'Common', 'com.linecorp.armeria.common*'
 
+            include 'com/linecorp/armeria/**'
             // Exclude the machine-generated or internal-only classes
             exclude '**/Tomcat*ProtocolHandler.java'
             exclude '**/internal/**'
@@ -457,8 +458,8 @@ configure(relocatedProjects) {
         if (numConfiguredRelocatedProjects.incrementAndGet() == relocatedProjects.size()) {
             relocatedProjects.each { p ->
                 if (projectsWithNativeImageSupport.contains(p)) {
-                    p.tasks.getByName('nativeImageTrace').configure {
-                        classpath += p.files(p.configurations.getByName('shadedJarTestRuntime').resolve())
+                    p.tasks.getByName('nativeImageTrace').configure { t ->
+                        t.classpath.from(p.configurations.named('shadedJarTestRuntime'))
                     }
                 }
             }
