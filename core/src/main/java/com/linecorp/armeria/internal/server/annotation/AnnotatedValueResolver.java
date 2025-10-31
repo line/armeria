@@ -1023,6 +1023,23 @@ final class AnnotatedValueResolver {
                                            element.getClass().getSimpleName());
     }
 
+    /**
+     * Return if the given {@link AnnotatedElement} is annotated with {@code @Nullable} annotation.
+     * This method checks both declaration annotation and type-use annotation.
+     *
+     * <p>For example:
+     * <pre>{@code
+     * @Nullable // declaration annotation
+     * public String declarationAnnotatedMethod() {
+     *     return null;
+     * }
+     *
+     * // type-use annotation
+     * public @Nullable String typeUseAnnotatedMethod() {
+     *     return null;
+     * }
+     * }</pre>
+     */
     static boolean isAnnotatedNullable(AnnotatedElement annotatedElement) {
         // 1) declaration annotation
         for (Annotation a : annotatedElement.getAnnotations()) {
