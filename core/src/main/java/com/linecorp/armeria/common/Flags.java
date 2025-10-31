@@ -55,6 +55,7 @@ import com.linecorp.armeria.client.retry.RetryingClient;
 import com.linecorp.armeria.client.retry.RetryingRpcClient;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
+import com.linecorp.armeria.common.multipart.MultipartDecodingMode;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.common.util.Sampler;
 import com.linecorp.armeria.common.util.SystemInfo;
@@ -430,6 +431,9 @@ public final class Flags {
 
     private static final boolean ALLOW_SEMICOLON_IN_PATH_COMPONENT =
             getValue(FlagsProvider::allowSemicolonInPathComponent, "allowSemicolonInPathComponent");
+
+    private static final MultipartDecodingMode DEFAULT_MULTIPART_DECODING_MODE =
+            getValue(FlagsProvider::defaultMultipartDecodingMode, "defaultMultipartDecodingMode");
 
     private static final Path DEFAULT_MULTIPART_UPLOADS_LOCATION =
             getValue(FlagsProvider::defaultMultipartUploadsLocation, "defaultMultipartUploadsLocation");
@@ -1530,6 +1534,28 @@ public final class Flags {
      */
     public static boolean useLegacyRouteDecoratorOrdering() {
         return USE_LEGACY_ROUTE_DECORATOR_ORDERING;
+    }
+
+    /**
+     * Returns the default decoding mode for a {@code filename} parameter in a
+     * {@link HttpHeaderNames#CONTENT_DISPOSITION} header of a multipart request.
+     *
+     * <p>This flag determines how a server interprets the raw bytes of a {@code filename} parameter when it
+     * contains non-ASCII characters.
+     * <ul>
+     *   <li>{@link MultipartDecodingMode#UTF_8}: (Default) Interprets the filename as a raw UTF-8 string</li>
+     *   <li>{@link MultipartDecodingMode#ISO_8859_1}: Interprets the filename as a raw ISO-8859-1 string</li>
+     *   <li>{@link MultipartDecodingMode#URL_DECODING}: URL-decodes the filename using the UTF-8 charset.
+     *       Use this for compatibility with clients that percent-encode the filename.</li>
+     * </ul>
+     *
+     * <p>The default value of this flag is {@link MultipartDecodingMode#UTF_8}.
+     * Specify the {@code -Dcom.linecorp.armeria.defaultMultipartDecodingMode=<UTF_8|ISO_8859_1|URL_DECODING>}
+     * JVM option to override the default value.
+     */
+    @UnstableApi
+    public static MultipartDecodingMode defaultMultipartDecodingMode() {
+        return DEFAULT_MULTIPART_DECODING_MODE;
     }
 
     /**
