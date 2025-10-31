@@ -14,19 +14,31 @@
  * under the License.
  */
 
-package com.linecorp.armeria.xds;
+package com.linecorp.armeria.xds.client.endpoint;
 
-import io.netty.util.concurrent.EventExecutor;
+import com.linecorp.armeria.common.loadbalancer.Weighted;
 
-interface SubscriptionContext {
+import io.envoyproxy.envoy.config.core.v3.Locality;
 
-    EventExecutor eventLoop();
+/**
+ * A weighted locality that implements the {@link Weighted} interface.
+ */
+public final class WeightedLocality implements Weighted {
 
-    void subscribe(ResourceNode<?> node);
+    private final Locality locality;
+    private final int weight;
 
-    void unsubscribe(ResourceNode<?> node);
+    WeightedLocality(Locality locality, int weight) {
+        this.locality = locality;
+        this.weight = weight;
+    }
 
-    ConfigSourceMapper configSourceMapper();
+    Locality locality() {
+        return locality;
+    }
 
-    XdsClusterManager clusterManager();
+    @Override
+    public int weight() {
+        return weight;
+    }
 }

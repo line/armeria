@@ -52,6 +52,7 @@ class StrictDnsIntegrationTest {
         final ClusterLoadAssignment loadAssignment =
                 ClusterLoadAssignment
                         .newBuilder()
+                        .setClusterName("cluster")
                         .addEndpoints(localityLbEndpoints(Locality.getDefaultInstance(), lbEndpoint))
                         .setPolicy(Policy.newBuilder()
                                          .setWeightedPriorityHealth(true))

@@ -14,7 +14,7 @@
  * under the License.
  */
 
-package com.linecorp.armeria.xds.client.endpoint;
+package com.linecorp.armeria.xds;
 
 import java.util.List;
 
@@ -31,7 +31,7 @@ import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.QueryParams;
 import com.linecorp.armeria.common.annotation.Nullable;
-import com.linecorp.armeria.xds.RouteEntry;
+import com.linecorp.armeria.xds.internal.XdsCommonUtil;
 
 import io.envoyproxy.envoy.config.route.v3.HeaderMatcher;
 import io.envoyproxy.envoy.config.route.v3.HeaderMatcher.HeaderMatchSpecifierCase;
@@ -51,8 +51,8 @@ final class RouteEntryMatcher {
     private final PathMatcherImpl pathMatcher;
     private final RouteMatch routeMatch;
 
-    RouteEntryMatcher(RouteEntry routeEntry) {
-        routeMatch = routeEntry.route().getMatch();
+    RouteEntryMatcher(RouteMatch routeMatch) {
+        this.routeMatch = routeMatch;
         headerMatchers = HeaderMatcherImpl.fromHeaderMatchers(routeMatch.getHeadersList());
         queryParamsMatchers =
                 QueryParamsMatcherImpl.fromQueryParamsMatchers(routeMatch.getQueryParametersList());

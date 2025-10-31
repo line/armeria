@@ -25,6 +25,7 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.xds.XdsBootstrap;
+import com.linecorp.armeria.xds.internal.DelegatingHttpClient;
 
 /**
  * An {@link HttpPreprocessor} implementation which allows clients to execute requests based on

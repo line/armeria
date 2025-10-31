@@ -25,7 +25,7 @@ import io.envoyproxy.envoy.config.core.v3.ConfigSource;
 final class EndpointResourceNode extends AbstractResourceNode<EndpointXdsResource, EndpointSnapshot> {
 
     EndpointResourceNode(@Nullable ConfigSource configSource,
-                         String resourceName, SubscriptionContext context,
+                         String resourceName, BootstrapContext context,
                          SnapshotWatcher<EndpointSnapshot> parentWatcher, ResourceNodeType resourceNodeType) {
         super(context, configSource, ENDPOINT, resourceName, parentWatcher, resourceNodeType);
     }

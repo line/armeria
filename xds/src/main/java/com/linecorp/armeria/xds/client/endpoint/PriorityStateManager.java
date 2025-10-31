@@ -53,9 +53,9 @@ final class PriorityStateManager {
         builder.addEndpoint(endpoint);
     }
 
-    PrioritySet build() {
-        final PrioritySet.PrioritySetBuilder prioritySetBuilder =
-                new PrioritySet.PrioritySetBuilder(clusterSnapshot, origEndpoints);
+    DefaultPrioritySet build() {
+        final DefaultPrioritySet.PrioritySetBuilder prioritySetBuilder =
+                new DefaultPrioritySet.PrioritySetBuilder(clusterSnapshot, origEndpoints);
         for (Entry<Integer, PriorityState.PriorityStateBuilder> entry: priorityStateMap.entrySet()) {
             final Integer priority = entry.getKey();
             final PriorityState priorityState = entry.getValue().build();

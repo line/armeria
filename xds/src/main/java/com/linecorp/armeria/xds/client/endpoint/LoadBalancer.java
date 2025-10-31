@@ -20,7 +20,7 @@ import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.common.annotation.Nullable;
 
-interface LoadBalancer {
+interface LoadBalancer extends LoadBalancerState {
 
     @Nullable
     Endpoint selectNow(ClientRequestContext ctx);

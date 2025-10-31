@@ -23,6 +23,8 @@ import static com.linecorp.armeria.xds.client.endpoint.XdsRandom.RandomHint.ROUT
 import java.util.Map;
 
 import com.google.common.base.MoreObjects;
+import com.google.common.collect.ImmutableMap;
+import com.google.protobuf.Struct;
 
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.Endpoint;
@@ -40,8 +42,8 @@ final class DefaultLoadBalancer implements LoadBalancer {
     @Nullable
     private final LocalityRoutingState localityRoutingState;
 
-    DefaultLoadBalancer(PrioritySet prioritySet, @Nullable LocalCluster localCluster,
-                        @Nullable PrioritySet localPrioritySet) {
+    DefaultLoadBalancer(DefaultPrioritySet prioritySet, @Nullable LocalCluster localCluster,
+                        @Nullable DefaultPrioritySet localPrioritySet) {
         lbState = DefaultLbStateFactory.newInstance(prioritySet);
         if (localCluster != null && localPrioritySet != null) {
             localityRoutingState = localCluster.stateFactory().create(prioritySet, localPrioritySet);
@@ -53,7 +55,7 @@ final class DefaultLoadBalancer implements LoadBalancer {
     @Override
     @Nullable
     public Endpoint selectNow(ClientRequestContext ctx) {
-        final PrioritySet prioritySet = lbState.prioritySet();
+        final DefaultPrioritySet prioritySet = lbState.prioritySet();
         if (prioritySet.priorities().isEmpty()) {
             return null;
         }
@@ -108,7 +110,7 @@ final class DefaultLoadBalancer implements LoadBalancer {
         if (priorityAndAvailability == null) {
             return null;
         }
-        final PrioritySet prioritySet = lbState.prioritySet();
+        final DefaultPrioritySet prioritySet = lbState.prioritySet();
         final int priority = priorityAndAvailability.priority;
         final HostSet hostSet = prioritySet.hostSets().get(priority);
         assert hostSet != null;
@@ -122,14 +124,14 @@ final class DefaultLoadBalancer implements LoadBalancer {
         }
 
         if (prioritySet.localityWeightedBalancing()) {
-            final Locality locality;
+            final WeightedLocality locality;
             if (hostAvailability == HostAvailability.DEGRADED) {
-                locality = hostSet.chooseDegradedLocality();
+                locality = hostSet.degradedLocalitySelector().pick();
             } else {
-                locality = hostSet.chooseHealthyLocality();
+                locality = hostSet.healthyLocalitySelector().pick();
             }
             if (locality != null) {
-                return new HostsSource(priority, localitySourceType(hostAvailability), locality);
+                return new HostsSource(priority, localitySourceType(hostAvailability), locality.locality());
             }
         }
 
@@ -181,6 +183,45 @@ final class DefaultLoadBalancer implements LoadBalancer {
                 throw new Error();
         }
         return sourceType;
+    }
+
+    @Override
+    public Map<Integer, HostSet> hostSets() {
+        return lbState.prioritySet().hostSets();
+    }
+
+    @Override
+    public Map<Integer, Boolean> perPriorityPanic() {
+        return lbState.perPriorityPanic().perPriorityPanic;
+    }
+
+    @Override
+    public Map<Integer, Integer> healthyPriorityLoad() {
+        return lbState.perPriorityLoad().healthyPriorityLoad;
+    }
+
+    @Override
+    public Map<Integer, Integer> degradedPriorityLoad() {
+        return lbState.perPriorityLoad().degradedPriorityLoad;
+    }
+
+    @Override
+    public Map<Locality, Double> zarResidualPercentages() {
+        final LocalityRoutingState localityRoutingState = this.localityRoutingState;
+        if (localityRoutingState == null) {
+            return ImmutableMap.of();
+        }
+        return localityRoutingState.residualPercentages();
+    }
+
+    @Override
+    public double zarLocalPercentage() {
+        return localityRoutingState == null ? 0 : localityRoutingState.localPercentage();
+    }
+
+    @Override
+    public Map<Struct, LoadBalancerState> subsetStates() {
+        return ImmutableMap.of();
     }
 
     static class PriorityAndAvailability {

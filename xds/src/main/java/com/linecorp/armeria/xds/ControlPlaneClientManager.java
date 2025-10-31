@@ -23,11 +23,13 @@ import java.util.Map;
 import java.util.function.Consumer;
 
 import com.linecorp.armeria.client.grpc.GrpcClientBuilder;
+import com.linecorp.armeria.common.metric.MeterIdPrefix;
 import com.linecorp.armeria.common.util.SafeCloseable;
 
 import io.envoyproxy.envoy.config.bootstrap.v3.Bootstrap;
 import io.envoyproxy.envoy.config.core.v3.ConfigSource;
 import io.envoyproxy.envoy.config.core.v3.Node;
+import io.micrometer.core.instrument.MeterRegistry;
 import io.netty.util.concurrent.EventExecutor;
 
 final class ControlPlaneClientManager implements SafeCloseable {
@@ -35,16 +37,24 @@ final class ControlPlaneClientManager implements SafeCloseable {
     private final EventExecutor eventLoop;
     private final Consumer<GrpcClientBuilder> configClientCustomizer;
     private final BootstrapClusters bootstrapClusters;
+    private final ConfigSourceMapper configSourceMapper;
+    private final MeterRegistry meterRegistry;
+    private final MeterIdPrefix meterIdPrefix;
     private final Map<ConfigSource, ConfigSourceClient> clientMap = new HashMap<>();
     private boolean closed;
 
     ControlPlaneClientManager(Bootstrap bootstrap, EventExecutor eventLoop,
                               Consumer<GrpcClientBuilder> configClientCustomizer,
-                              BootstrapClusters bootstrapClusters) {
+                              BootstrapClusters bootstrapClusters,
+                              ConfigSourceMapper configSourceMapper,
+                              MeterRegistry meterRegistry, MeterIdPrefix meterIdPrefix) {
         bootstrapNode = bootstrap.getNode();
         this.eventLoop = eventLoop;
         this.configClientCustomizer = configClientCustomizer;
         this.bootstrapClusters = bootstrapClusters;
+        this.configSourceMapper = configSourceMapper;
+        this.meterRegistry = meterRegistry;
+        this.meterIdPrefix = meterIdPrefix;
     }
 
     void subscribe(ResourceNode<?> node) {
@@ -58,8 +68,10 @@ final class ControlPlaneClientManager implements SafeCloseable {
         checkArgument(configSource != null, "Cannot subscribe to a node without a configSource");
 
         final ConfigSourceClient client = clientMap.computeIfAbsent(
-                configSource, ignored -> new ConfigSourceClient(configSource, eventLoop, bootstrapNode,
-                                                                configClientCustomizer, bootstrapClusters));
+                configSource, ignored -> new ConfigSourceClient(
+                        configSource, eventLoop, bootstrapNode,
+                        configClientCustomizer, bootstrapClusters, configSourceMapper,
+                        meterRegistry, meterIdPrefix));
         client.addSubscriber(type, name, node);
     }
 

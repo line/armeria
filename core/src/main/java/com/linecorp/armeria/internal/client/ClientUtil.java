@@ -208,6 +208,10 @@ public final class ClientUtil {
     }
 
     private static void fail(ClientRequestContext ctx, Throwable cause) {
+        final ClientRequestContextExtension ctxExt = ctx.as(ClientRequestContextExtension.class);
+        if (ctxExt != null && !ctxExt.initialized()) {
+            ctxExt.initAndFail(cause);
+        }
         final HttpRequest req = ctx.request();
         if (req != null) {
             req.abort(cause);
