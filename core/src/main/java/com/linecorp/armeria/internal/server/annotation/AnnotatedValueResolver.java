@@ -30,6 +30,7 @@ import static java.util.Objects.requireNonNull;
 import java.io.File;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.AnnotatedElement;
+import java.lang.reflect.AnnotatedType;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Executable;
 import java.lang.reflect.Field;
@@ -1022,13 +1023,59 @@ final class AnnotatedValueResolver {
                                            element.getClass().getSimpleName());
     }
 
+    /**
+     * Return if the given {@link AnnotatedElement} is annotated with {@code @Nullable} annotation.
+     * This method checks both declaration annotation and type-use annotation.
+     *
+     * <p>For example:
+     * <pre>{@code
+     * @Nullable // declaration annotation
+     * public String declarationAnnotatedMethod() {
+     *     return null;
+     * }
+     *
+     * // type-use annotation
+     * public @Nullable String typeUseAnnotatedMethod() {
+     *     return null;
+     * }
+     * }</pre>
+     */
     static boolean isAnnotatedNullable(AnnotatedElement annotatedElement) {
+        // 1) declaration annotation
         for (Annotation a : annotatedElement.getAnnotations()) {
             final String annotationTypeName = a.annotationType().getName();
             if (annotationTypeName.endsWith(".Nullable")) {
                 return true;
             }
         }
+
+        // 2) type-use annotation
+        if (annotatedElement instanceof Field) {
+            final Field field = (Field) annotatedElement;
+            final AnnotatedType annotatedType = field.getAnnotatedType();
+            return isAnnotatedNullableType(annotatedType);
+        }
+        if (annotatedElement instanceof Method) {
+            final Method method = (Method) annotatedElement;
+            final AnnotatedType annotatedType = method.getAnnotatedReturnType();
+            return isAnnotatedNullableType(annotatedType);
+        }
+        if (annotatedElement instanceof Parameter) {
+            final Parameter parameter = (Parameter) annotatedElement;
+            final AnnotatedType annotatedType = parameter.getAnnotatedType();
+            return isAnnotatedNullableType(annotatedType);
+        }
+
+        return false;
+    }
+
+    private static boolean isAnnotatedNullableType(AnnotatedType annotatedType) {
+        for (Annotation a : annotatedType.getAnnotations()) {
+            if (a.annotationType().getName().endsWith(".Nullable")) {
+                return true;
+            }
+        }
+
         return false;
     }
 
