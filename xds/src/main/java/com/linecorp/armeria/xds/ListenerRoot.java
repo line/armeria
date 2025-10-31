@@ -18,8 +18,8 @@ package com.linecorp.armeria.xds;
 
 import com.linecorp.armeria.common.annotation.UnstableApi;
 
-import io.envoyproxy.envoy.config.core.v3.ConfigSource;
 import io.envoyproxy.envoy.config.listener.v3.Listener;
+import io.grpc.Status;
 
 /**
  * A root node representing a {@link Listener}.
@@ -29,30 +29,22 @@ import io.envoyproxy.envoy.config.listener.v3.Listener;
 @UnstableApi
 public final class ListenerRoot extends AbstractRoot<ListenerSnapshot> {
 
-    private final ListenerResourceNode node;
-    final SubscriptionContext context;
+    private final String resourceName;
+    private final ListenerManager listenerManager;
 
-    ListenerRoot(SubscriptionContext context, String resourceName, BootstrapListeners bootstrapListeners) {
+    ListenerRoot(SubscriptionContext context, String resourceName, ListenerManager listenerManager) {
         super(context.eventLoop());
-        this.context = context;
-        final ListenerXdsResource listenerXdsResource = bootstrapListeners.staticListeners().get(resourceName);
-        if (listenerXdsResource != null) {
-            node = new ListenerResourceNode(null, resourceName, context,
-                                            this, ResourceNodeType.STATIC);
-            eventLoop().execute(() -> node.onChanged(listenerXdsResource));
-        } else {
-            final ConfigSource configSource = context.configSourceMapper()
-                                                     .ldsConfigSource(resourceName);
-            node = new ListenerResourceNode(configSource, resourceName, context,
-                                            this, ResourceNodeType.DYNAMIC);
-            eventLoop().execute(() -> context.subscribe(node));
-        }
+        this.resourceName = resourceName;
+        this.listenerManager = listenerManager;
+        context.eventLoop().execute(
+                safeRunnable(() -> listenerManager.register(resourceName, context, this),
+                             t -> onError(XdsType.LISTENER, Status.fromThrowable(t))));
     }
 
     @Override
     public void close() {
         eventLoop().execute(() -> {
-            node.close();
+            listenerManager.unregister(resourceName, this);
             super.close();
         });
     }

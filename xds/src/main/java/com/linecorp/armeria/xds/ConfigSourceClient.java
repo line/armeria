@@ -44,14 +44,21 @@ final class ConfigSourceClient implements SafeCloseable {
     ConfigSourceClient(ConfigSource configSource,
                        EventExecutor eventLoop,
                        Node node, Consumer<GrpcClientBuilder> clientCustomizer,
-                       BootstrapClusters bootstrapClusters) {
-        checkArgument(configSource.hasApiConfigSource(),
-                      "No api config source available in %s", configSource);
+                       BootstrapClusters bootstrapClusters,
+                       ConfigSourceMapper configSourceMapper) {
+        final ApiConfigSource apiConfigSource;
+        if (configSource.hasAds()) {
+            apiConfigSource = configSourceMapper.bootstrapAdsConfig();
+        } else if (configSource.hasApiConfigSource()) {
+            apiConfigSource = configSource.getApiConfigSource();
+        } else {
+            throw new IllegalArgumentException("Unsupported config source: " + configSource);
+        }
+
         final long fetchTimeoutMillis = initialFetchTimeoutMillis(configSource);
         subscriberStorage = new SubscriberStorage(eventLoop, fetchTimeoutMillis);
         final XdsResponseHandler handler = new DefaultResponseHandler(subscriberStorage);
 
-        final ApiConfigSource apiConfigSource = configSource.getApiConfigSource();
         final List<GrpcService> grpcServices = apiConfigSource.getGrpcServicesList();
         checkArgument(!grpcServices.isEmpty(),
                       "At least one GrpcService should be specified for '%s'", configSource);

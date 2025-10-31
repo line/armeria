@@ -117,7 +117,8 @@ class ConfigSourceGrpcServiceTest {
                 XdsTestResources.createStaticCluster(
                         BOOTSTRAP_CLUSTER_NAME, loadAssignment(BOOTSTRAP_CLUSTER_NAME,
                                                                                 server.httpUri()));
-        final Bootstrap bootstrap = XdsTestResources.bootstrap(adsConfigSource, null, bootstrap1);
+        final ConfigSource basicConfigSource = XdsTestResources.adsConfigSource();
+        final Bootstrap bootstrap = XdsTestResources.bootstrap(adsConfigSource, basicConfigSource, bootstrap1);
         try (XdsBootstrap xdsBootstrap = XdsBootstrap.of(bootstrap)) {
             final ListenerRoot listenerRoot = xdsBootstrap.listenerRoot(listenerName);
             final TestResourceWatcher watcher = new TestResourceWatcher();
