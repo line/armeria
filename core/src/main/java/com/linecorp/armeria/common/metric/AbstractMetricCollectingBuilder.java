@@ -19,10 +19,11 @@ import static java.util.Objects.requireNonNull;
 
 import java.util.function.BiPredicate;
 
+import org.jspecify.annotations.Nullable;
+
 import com.linecorp.armeria.client.ClientBuilder;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.SuccessFunction;
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.server.ServerBuilder;
 

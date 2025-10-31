@@ -20,8 +20,9 @@ import static java.util.Objects.requireNonNull;
 
 import java.net.URI;
 
+import org.jspecify.annotations.Nullable;
+
 import com.linecorp.armeria.client.Endpoint;
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.nacos.NacosConfigSetters;
 import com.linecorp.armeria.internal.nacos.NacosClient;

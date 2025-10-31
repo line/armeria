@@ -20,6 +20,8 @@ import static com.google.common.base.MoreObjects.firstNonNull;
 
 import java.net.InetSocketAddress;
 
+import org.jspecify.annotations.Nullable;
+
 import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.client.ClientRequestContext;
@@ -27,7 +29,6 @@ import com.linecorp.armeria.client.observation.HttpClientObservationDocumentatio
 import com.linecorp.armeria.client.observation.HttpClientObservationDocumentation.LowCardinalityKeys;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogAccess;
 import com.linecorp.armeria.common.logging.RequestLogProperty;

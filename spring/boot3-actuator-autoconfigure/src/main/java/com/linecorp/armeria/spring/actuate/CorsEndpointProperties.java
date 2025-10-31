@@ -36,10 +36,9 @@ import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.jspecify.annotations.Nullable;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.convert.DurationUnit;
-
-import com.linecorp.armeria.common.annotation.Nullable;
 
 /**
  * Fork of <a href="https://github.com/spring-projects/spring-boot/blob/12c5cdceb18fd2f64d55d1855b78b50b50151f4f/spring-boot-project/spring-boot-actuator-autoconfigure/src/main/java/org/springframework/boot/actuate/autoconfigure/endpoint/web/CorsEndpointProperties.java>

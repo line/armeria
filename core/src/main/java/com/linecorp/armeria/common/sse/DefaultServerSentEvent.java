@@ -18,9 +18,9 @@ package com.linecorp.armeria.common.sse;
 import java.time.Duration;
 import java.util.Objects;
 
-import com.google.common.base.MoreObjects;
+import org.jspecify.annotations.Nullable;
 
-import com.linecorp.armeria.common.annotation.Nullable;
+import com.google.common.base.MoreObjects;
 
 /**
  * A default implementation of the {@link ServerSentEvent} interface.

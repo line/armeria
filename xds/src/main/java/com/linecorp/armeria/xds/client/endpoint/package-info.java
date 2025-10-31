@@ -17,9 +17,10 @@
 /**
  * Provides client-side {@link com.linecorp.armeria.client.Endpoint} related integrations with xDS.
  */
-@NonNullByDefault
+@NullMarked
 @UnstableApi
 package com.linecorp.armeria.xds.client.endpoint;
 
-import com.linecorp.armeria.common.annotation.NonNullByDefault;
+import org.jspecify.annotations.NullMarked;
+
 import com.linecorp.armeria.common.annotation.UnstableApi;

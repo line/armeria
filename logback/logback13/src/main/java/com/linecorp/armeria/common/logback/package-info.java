@@ -20,7 +20,7 @@
  * <p>Read '<a href="https://armeria.dev/docs/server-basics">Logging contextual information</a>'
  * for more information.
  */
-@NonNullByDefault
+@NullMarked
 package com.linecorp.armeria.common.logback;
 
-import com.linecorp.armeria.common.annotation.NonNullByDefault;
+import org.jspecify.annotations.NullMarked;

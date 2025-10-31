@@ -17,8 +17,9 @@ package com.linecorp.armeria.client;
 
 import static java.util.Objects.requireNonNull;
 
+import org.jspecify.annotations.Nullable;
+
 import com.linecorp.armeria.common.QueryParams;
-import com.linecorp.armeria.common.annotation.Nullable;
 
 final class WebClientUtil {
 

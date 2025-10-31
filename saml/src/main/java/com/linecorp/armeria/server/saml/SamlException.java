@@ -15,8 +15,9 @@
  */
 package com.linecorp.armeria.server.saml;
 
+import org.jspecify.annotations.Nullable;
+
 import com.linecorp.armeria.common.Flags;
-import com.linecorp.armeria.common.annotation.Nullable;
 
 /**
  * Indicates that an error occurred while processing a SAML request.

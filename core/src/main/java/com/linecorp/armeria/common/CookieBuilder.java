@@ -20,7 +20,7 @@ import static java.util.Objects.requireNonNull;
 
 import java.util.BitSet;
 
-import com.linecorp.armeria.common.annotation.Nullable;
+import org.jspecify.annotations.Nullable;
 
 /**
  * Builds a {@link Cookie}.

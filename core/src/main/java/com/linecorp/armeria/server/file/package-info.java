@@ -17,7 +17,7 @@
 /**
  * HTTP static file service.
  */
-@NonNullByDefault
+@NullMarked
 package com.linecorp.armeria.server.file;
 
-import com.linecorp.armeria.common.annotation.NonNullByDefault;
+import org.jspecify.annotations.NullMarked;

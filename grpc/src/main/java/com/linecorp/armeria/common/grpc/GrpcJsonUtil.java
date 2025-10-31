@@ -20,10 +20,9 @@ import java.util.List;
 import java.util.function.Consumer;
 
 import org.curioswitch.common.protobuf.json.MessageMarshaller;
+import org.jspecify.annotations.Nullable;
 
 import com.google.protobuf.Message;
-
-import com.linecorp.armeria.common.annotation.Nullable;
 
 import io.grpc.MethodDescriptor;
 import io.grpc.MethodDescriptor.Marshaller;

@@ -21,10 +21,11 @@ import static com.linecorp.armeria.internal.common.auth.oauth2.OAuth2Constants.T
 
 import java.util.Objects;
 
+import org.jspecify.annotations.Nullable;
+
 import com.google.common.base.MoreObjects;
 
 import com.linecorp.armeria.common.QueryParamsBuilder;
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.internal.common.auth.oauth2.AbstractOAuth2Request;
 
 final class DefaultTokenOperationRequest extends AbstractOAuth2Request implements TokenOperationRequest {

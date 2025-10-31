@@ -15,7 +15,8 @@
  */
 package com.linecorp.armeria.server.jetty;
 
-import com.linecorp.armeria.common.annotation.Nullable;
+import org.jspecify.annotations.Nullable;
+
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 final class ArmeriaEndPoint extends AbstractArmeriaEndPoint {

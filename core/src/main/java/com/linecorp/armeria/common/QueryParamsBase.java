@@ -29,7 +29,7 @@
  */
 package com.linecorp.armeria.common;
 
-import com.linecorp.armeria.common.annotation.Nullable;
+import org.jspecify.annotations.Nullable;
 
 /**
  * The base container implementation of {@link QueryParams} and {@link QueryParamsBuilder}.

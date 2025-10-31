@@ -17,9 +17,10 @@
 /**
  * Nacos-based {@link com.linecorp.armeria.client.endpoint.EndpointGroup} implementation.
  */
-@NonNullByDefault
+@NullMarked
 @UnstableApi
 package com.linecorp.armeria.client.nacos;
 
-import com.linecorp.armeria.common.annotation.NonNullByDefault;
+import org.jspecify.annotations.NullMarked;
+
 import com.linecorp.armeria.common.annotation.UnstableApi;

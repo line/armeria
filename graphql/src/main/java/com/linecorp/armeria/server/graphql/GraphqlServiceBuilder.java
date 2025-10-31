@@ -35,13 +35,13 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 
 import org.dataloader.DataLoaderRegistry;
+import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Streams;
 
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.internal.common.util.ResourceUtil;
 import com.linecorp.armeria.server.ServiceRequestContext;
@@ -76,24 +76,18 @@ public final class GraphqlServiceBuilder {
     // Fields for building a graphql
     @Nullable
     private ExecutionIdGenerator executionIdGenerator;
-    @Nullable
-    private ImmutableList.Builder<Instrumentation> instrumentations;
-    @Nullable
-    private ImmutableList.Builder<GraphqlConfigurator> graphqlBuilderConsumers;
+    private ImmutableList.@Nullable Builder<Instrumentation> instrumentations;
+    private ImmutableList.@Nullable Builder<GraphqlConfigurator> graphqlBuilderConsumers;
 
     // Fields for building a schema in a graphql
     @Nullable
     private GraphQLSchema schema;
-    @Nullable
-    private ImmutableList.Builder<URL> schemaUrls;
-    @Nullable
-    private ImmutableList.Builder<RuntimeWiringConfigurator> runtimeWiringConfigurators;
-    @Nullable
-    private ImmutableList.Builder<GraphQLTypeVisitor> typeVisitors;
+    private ImmutableList.@Nullable Builder<URL> schemaUrls;
+    private ImmutableList.@Nullable Builder<RuntimeWiringConfigurator> runtimeWiringConfigurators;
+    private ImmutableList.@Nullable Builder<GraphQLTypeVisitor> typeVisitors;
 
     // Fields for building a DataLoaderRegistry
-    @Nullable
-    private ImmutableList.Builder<Consumer<? super DataLoaderRegistry>> dataLoaderRegistryConsumers;
+    private ImmutableList.@Nullable Builder<Consumer<? super DataLoaderRegistry>> dataLoaderRegistryConsumers;
     @Nullable
     private Function<? super ServiceRequestContext, ? extends DataLoaderRegistry> dataLoaderRegistryFactory;
 

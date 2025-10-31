@@ -18,13 +18,13 @@ package com.linecorp.armeria.client.zookeeper;
 import java.util.function.Function;
 
 import org.apache.curator.x.discovery.ServiceInstance;
+import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.base.MoreObjects;
 
 import com.linecorp.armeria.client.Endpoint;
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.internal.common.zookeeper.CuratorXNodeValueCodec;
 
 final class CuratorDiscoverySpec implements ZooKeeperDiscoverySpec {

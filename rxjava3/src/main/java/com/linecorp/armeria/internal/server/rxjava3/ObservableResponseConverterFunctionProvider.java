@@ -18,7 +18,8 @@ package com.linecorp.armeria.internal.server.rxjava3;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 
-import com.linecorp.armeria.common.annotation.Nullable;
+import org.jspecify.annotations.Nullable;
+
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.server.annotation.DelegatingResponseConverterFunctionProvider;
 import com.linecorp.armeria.server.annotation.ResponseConverterFunction;

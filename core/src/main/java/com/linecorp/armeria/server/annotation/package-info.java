@@ -17,7 +17,7 @@
 /**
  * Annotations for building a RESTful service.
  */
-@NonNullByDefault
+@NullMarked
 package com.linecorp.armeria.server.annotation;
 
-import com.linecorp.armeria.common.annotation.NonNullByDefault;
+import org.jspecify.annotations.NullMarked;

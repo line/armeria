@@ -17,7 +17,7 @@
 /**
  * Prometheus version 1 metrics.
  */
-@NonNullByDefault
+@NullMarked
 package com.linecorp.armeria.common.prometheus;
 
-import com.linecorp.armeria.common.annotation.NonNullByDefault;
+import org.jspecify.annotations.NullMarked;

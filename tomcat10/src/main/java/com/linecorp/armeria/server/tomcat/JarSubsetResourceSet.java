@@ -44,8 +44,8 @@ import java.util.jar.JarFile;
 import org.apache.catalina.WebResourceRoot;
 import org.apache.catalina.webresources.AbstractArchiveResourceSet;
 import org.apache.catalina.webresources.JarResourceSet;
+import org.jspecify.annotations.Nullable;
 
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.Exceptions;
 
 final class JarSubsetResourceSet extends JarResourceSet {

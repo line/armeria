@@ -16,8 +16,9 @@
 
 package com.linecorp.armeria.common.stream;
 
+import org.jspecify.annotations.Nullable;
+
 import com.linecorp.armeria.common.Flags;
-import com.linecorp.armeria.common.annotation.Nullable;
 
 /**
  * A {@link RuntimeException} that is raised when a {@link StreamMessage} or an HTTP/2 stream

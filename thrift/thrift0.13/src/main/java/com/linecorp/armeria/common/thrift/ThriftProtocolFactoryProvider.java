@@ -20,11 +20,11 @@ import static java.util.Objects.requireNonNull;
 import java.util.Set;
 
 import org.apache.thrift.protocol.TProtocolFactory;
+import org.jspecify.annotations.Nullable;
 
 import com.google.common.base.MoreObjects;
 
 import com.linecorp.armeria.common.SerializationFormat;
-import com.linecorp.armeria.common.annotation.Nullable;
 
 /**
  * SPI Provider for links from {@link SerializationFormat} to {@link TProtocolFactory}.

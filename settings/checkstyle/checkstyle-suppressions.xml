@@ -9,8 +9,8 @@
   <suppress checks="JavadocPackage" files="[\\/](examples|it|jmh|ghz|test)[\\/]" />
   <!-- Suppress JavadocPackage for tomcat8.0. -->
   <suppress checks="MissingJavadocPackage" files="tomcat[0-9]" />
-  <!-- Enable 'NonNullByDefaultAnnotation' for package-info.java only. -->
-  <suppress id="NonNullByDefaultAnnotation" files="(?&lt;![\\/]package-info\.java)$" />
+  <!-- Enable 'NullMarked' for package-info.java only. -->
+  <suppress id="NullMarkedAnnotation" files="(?&lt;![\\/]package-info\.java)$" />
   <!-- Suppress checks related with main method in integration tests and examples. -->
   <suppress checks="UncommentedMain|HideUtilityClassConstructor" files="[\\/](it|ghz|examples)[\\/]"/>
   <!-- Enable 'NoCopyrightHeader' for examples only. -->

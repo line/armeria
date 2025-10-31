@@ -35,6 +35,7 @@ import org.apache.thrift.protocol.TProtocol;
 import org.apache.thrift.protocol.TProtocolFactory;
 import org.apache.thrift.transport.TTransport;
 import org.apache.thrift.transport.TTransportException;
+import org.jspecify.annotations.Nullable;
 
 import com.google.common.base.Strings;
 import com.google.common.primitives.Ints;
@@ -59,7 +60,6 @@ import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.RpcResponse;
 import com.linecorp.armeria.common.SerializationFormat;
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.logging.RequestLogProperty;
 import com.linecorp.armeria.common.thrift.ThriftCall;
 import com.linecorp.armeria.common.thrift.ThriftReply;
@@ -320,7 +320,7 @@ final class THttpClientDelegate extends DecoratingClient<HttpRequest, HttpRespon
         handleException(ctx, reply, null, decodedCause);
     }
 
-    static Exception decodeException(Throwable cause, @Nullable Class<?>[] declaredThrowableExceptions) {
+    static Exception decodeException(Throwable cause, Class<?> @Nullable [] declaredThrowableExceptions) {
         if (cause instanceof TException ||
             cause instanceof UnprocessedRequestException ||
             cause instanceof FailFastException) {

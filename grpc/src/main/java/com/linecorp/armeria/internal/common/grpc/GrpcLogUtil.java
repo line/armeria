@@ -16,11 +16,12 @@
 
 package com.linecorp.armeria.internal.common.grpc;
 
+import org.jspecify.annotations.Nullable;
+
 import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.RpcResponse;
-import com.linecorp.armeria.common.annotation.Nullable;
 
 import io.grpc.MethodDescriptor;
 import io.grpc.Status;

@@ -18,9 +18,9 @@ package com.linecorp.armeria.common.sse;
 import java.time.Duration;
 import java.util.stream.Stream;
 
+import org.jspecify.annotations.Nullable;
 import org.reactivestreams.Publisher;
 
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.server.annotation.ProducesEventStream;
 import com.linecorp.armeria.server.annotation.ServerSentEventResponseConverterFunction;
 

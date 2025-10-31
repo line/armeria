@@ -18,9 +18,10 @@ package com.linecorp.armeria.common.outlier;
 
 import java.time.Duration;
 
+import org.jspecify.annotations.Nullable;
+
 import com.google.common.base.MoreObjects;
 
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.EventCount;
 import com.linecorp.armeria.common.util.EventCounter;
 import com.linecorp.armeria.common.util.Ticker;

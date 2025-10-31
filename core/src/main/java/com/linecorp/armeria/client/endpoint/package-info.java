@@ -22,7 +22,7 @@
  *   <li>{@link com.linecorp.armeria.client.endpoint.EndpointGroup}</li>
  * </ul>
  */
-@NonNullByDefault
+@NullMarked
 package com.linecorp.armeria.client.endpoint;
 
-import com.linecorp.armeria.common.annotation.NonNullByDefault;
+import org.jspecify.annotations.NullMarked;

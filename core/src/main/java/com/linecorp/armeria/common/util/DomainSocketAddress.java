@@ -25,8 +25,9 @@ import java.nio.file.Path;
 import java.util.Map;
 import java.util.Set;
 
+import org.jspecify.annotations.Nullable;
+
 import com.linecorp.armeria.client.Endpoint;
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.internal.common.util.DomainSocketUtil;
 
@@ -98,9 +99,8 @@ public final class DomainSocketAddress extends InetSocketAddress {
     private String authority;
     @Nullable
     private Endpoint endpoint;
-    @Nullable
     @SuppressWarnings("NullableOnContainingClass") // ErrorProne false positive
-    private io.netty.channel.unix.DomainSocketAddress nettyAddress;
+    private io.netty.channel.unix.@Nullable DomainSocketAddress nettyAddress;
 
     private DomainSocketAddress(String path) {
         super(DomainSocketUtil.toInetAddress(requireNonNull(path, "path")),

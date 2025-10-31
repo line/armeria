@@ -15,10 +15,9 @@
  */
 package com.linecorp.armeria.spring.web.reactive;
 
+import org.jspecify.annotations.Nullable;
 import org.springframework.core.io.buffer.DataBufferFactory;
 import org.springframework.http.HttpStatus;
-
-import com.linecorp.armeria.common.annotation.Nullable;
 
 /**
  * A version specific {@link AbstractServerHttpResponse} which implements the APIs that only exists in

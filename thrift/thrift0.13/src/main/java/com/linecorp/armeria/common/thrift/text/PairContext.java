@@ -33,10 +33,10 @@ package com.linecorp.armeria.common.thrift.text;
 import java.util.Iterator;
 import java.util.Map;
 
+import org.jspecify.annotations.Nullable;
+
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.TextNode;
-
-import com.linecorp.armeria.common.annotation.Nullable;
 
 /**
  * A map parsing context that tracks if we are parsing a key, which
@@ -58,8 +58,7 @@ class PairContext extends BaseContext {
     @Nullable
     private final Iterator<Map.Entry<String, JsonNode>> children;
     private boolean lhs;
-    @Nullable
-    private Map.Entry<String, JsonNode> currentChild;
+    private Map.@Nullable Entry<String, JsonNode> currentChild;
 
     /**
      * Creates an iterator over this object's children.

@@ -21,10 +21,10 @@ import static com.google.common.base.Preconditions.checkState;
 import java.net.InetSocketAddress;
 import java.net.URI;
 
+import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.extension.ExtensionContext;
 
 import com.linecorp.armeria.client.Endpoint;
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.testing.junit5.common.AbstractAllOrEachExtension;
 
 import io.netty.bootstrap.ServerBootstrap;

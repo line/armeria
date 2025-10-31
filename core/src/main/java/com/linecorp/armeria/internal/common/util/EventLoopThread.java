@@ -15,8 +15,9 @@
  */
 package com.linecorp.armeria.internal.common.util;
 
+import org.jspecify.annotations.Nullable;
+
 import com.linecorp.armeria.common.NonBlocking;
-import com.linecorp.armeria.common.annotation.Nullable;
 
 import io.netty.util.concurrent.FastThreadLocal;
 import io.netty.util.concurrent.FastThreadLocalThread;

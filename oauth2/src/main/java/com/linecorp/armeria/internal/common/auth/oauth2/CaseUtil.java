@@ -16,9 +16,9 @@
 
 package com.linecorp.armeria.internal.common.auth.oauth2;
 
-import com.google.common.base.Ascii;
+import org.jspecify.annotations.Nullable;
 
-import com.linecorp.armeria.common.annotation.Nullable;
+import com.google.common.base.Ascii;
 
 public final class CaseUtil {
 

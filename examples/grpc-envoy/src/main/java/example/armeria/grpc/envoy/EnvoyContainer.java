@@ -1,5 +1,6 @@
 package example.armeria.grpc.envoy;
 
+import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.testcontainers.containers.BindMode;
@@ -7,8 +8,6 @@ import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.containers.output.Slf4jLogConsumer;
 
 import com.github.dockerjava.api.command.InspectContainerResponse;
-
-import com.linecorp.armeria.common.annotation.Nullable;
 
 // https://github.com/envoyproxy/java-control-plane/blob/eaca1a4380e53b4b6339db4e9ffe0ada5e0b7f8f/server/src/test/java/io/envoyproxy/controlplane/server/EnvoyContainer.java
 class EnvoyContainer extends GenericContainer<EnvoyContainer> {

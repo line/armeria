@@ -24,11 +24,12 @@ import static java.util.Objects.requireNonNull;
 import java.net.URI;
 import java.util.function.Function;
 
+import org.jspecify.annotations.Nullable;
+
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.common.Scheme;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
-import com.linecorp.armeria.common.annotation.Nullable;
 
 /**
  * A skeletal builder implementation for {@link WebClient}.

@@ -25,11 +25,11 @@ import java.util.function.BiConsumer;
 import javax.net.ssl.SSLPeerUnverifiedException;
 import javax.net.ssl.SSLSession;
 
+import org.jspecify.annotations.Nullable;
+
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 import com.google.common.io.BaseEncoding;
-
-import com.linecorp.armeria.common.annotation.Nullable;
 
 import io.netty.util.internal.EmptyArrays;
 

@@ -38,10 +38,9 @@ import static io.netty.handler.codec.http2.Http2FrameTypes.SETTINGS;
 import java.nio.CharBuffer;
 import java.util.List;
 
+import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import com.linecorp.armeria.common.annotation.Nullable;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufUtil;

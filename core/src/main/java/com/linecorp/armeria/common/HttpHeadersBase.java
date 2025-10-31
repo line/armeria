@@ -49,13 +49,14 @@ import java.util.Map;
 import java.util.StringJoiner;
 import java.util.function.Function;
 
+import org.jspecify.annotations.Nullable;
+
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Splitter;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.math.IntMath;
 
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.internal.common.util.StringUtil;
 import com.linecorp.armeria.internal.common.util.TemporaryThreadLocals;
 

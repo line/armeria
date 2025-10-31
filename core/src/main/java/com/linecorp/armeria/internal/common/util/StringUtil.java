@@ -18,9 +18,9 @@ package com.linecorp.armeria.internal.common.util;
 
 import java.util.Map;
 
-import com.google.common.collect.ImmutableMap;
+import org.jspecify.annotations.Nullable;
 
-import com.linecorp.armeria.common.annotation.Nullable;
+import com.google.common.collect.ImmutableMap;
 
 public final class StringUtil {
     private static final int MAX_NUM = 1000;

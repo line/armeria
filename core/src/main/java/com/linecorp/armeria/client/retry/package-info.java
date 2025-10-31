@@ -17,7 +17,7 @@
 /**
  * A {@link com.linecorp.armeria.client.Client} decorator that handles failures and retries requests.
  */
-@NonNullByDefault
+@NullMarked
 package com.linecorp.armeria.client.retry;
 
-import com.linecorp.armeria.common.annotation.NonNullByDefault;
+import org.jspecify.annotations.NullMarked;

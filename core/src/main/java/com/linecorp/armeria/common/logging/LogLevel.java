@@ -17,9 +17,8 @@ package com.linecorp.armeria.common.logging;
 
 import static java.util.Objects.requireNonNull;
 
+import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
-
-import com.linecorp.armeria.common.annotation.Nullable;
 
 /**
  * Log level.
