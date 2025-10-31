@@ -1499,6 +1499,7 @@ cloudapp.net
 cloudapps.digital
 cloudbeesusercontent.io
 cloudflare-ipfs.com
+cloudflare.app
 cloudflare.net
 cloudfront.net
 cloudfunctions.net
@@ -2023,6 +2024,7 @@ direct
 direct.quickconnect.cn
 direct.quickconnect.to
 directory
+directwp.eu
 disco.ec
 discordsays.com
 discordsez.com
@@ -3049,6 +3051,7 @@ giske.no
 git-pages.rit.edu
 git-repos.de
 gitapp.si
+gitbook.io
 github.app
 github.io
 githubpreview.dev
@@ -3723,6 +3726,7 @@ i.se
 i234.me
 ia.br
 ia.us
+ia.ve
 iamallama.com
 ibara.okayama.jp
 ibaraki.ibaraki.jp
@@ -8108,6 +8112,7 @@ stathelle.no
 static-access.net
 static.hf.space
 static.observableusercontent.com
+statichost.page
 stavanger.no
 stavern.no
 stc
@@ -9143,6 +9148,7 @@ warabi.saitama.jp
 warmia.pl
 warszawa.pl
 washtenaw.mi.us
+wasmer.app
 wassamu.hokkaido.jp
 watarai.mie.jp
 watari.miyagi.jp
