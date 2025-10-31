@@ -71,7 +71,8 @@ public final class CertificateUtil {
                                 return commonName;
                             }
 
-                            logger.warn("No common name or subject alternative name found " +
+                            // Public root CA certificates may not have both CN and SAN.
+                            logger.debug("No common name or subject alternative name found " +
                                         "in certificate: {}", cert);
                             return null;
                         } catch (Exception e) {
