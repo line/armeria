@@ -225,6 +225,7 @@ class RouteMetadataSubsetTest {
         final ClusterLoadAssignment loadAssignment =
                 ClusterLoadAssignment
                         .newBuilder()
+                        .setClusterName("cluster")
                         .addEndpoints(localityLbEndpoints(Locality.getDefaultInstance(), lbEndpoints0, 0))
                         .addEndpoints(localityLbEndpoints(Locality.getDefaultInstance(), lbEndpoints1, 1))
                         .build();

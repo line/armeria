@@ -37,6 +37,7 @@ public final class VirtualHostXdsResource implements XdsResource {
     private final Map<String, ParsedFilterConfig> virtualHostFilterConfigs;
 
     VirtualHostXdsResource(VirtualHost virtualHost) {
+        XdsValidatorIndex.of().assertValid(virtualHost);
         this.virtualHost = virtualHost;
         virtualHostFilterConfigs = toParsedFilterConfigs(virtualHost.getTypedPerFilterConfigMap());
     }

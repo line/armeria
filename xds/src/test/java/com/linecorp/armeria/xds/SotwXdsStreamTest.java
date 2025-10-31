@@ -73,7 +73,7 @@ class SotwXdsStreamTest {
         cache.setSnapshot(
                 GROUP,
                 Snapshot.create(
-                        ImmutableList.of(createCluster(clusterName, 0)),
+                        ImmutableList.of(createCluster(clusterName, 1)),
                         ImmutableList.of(),
                         ImmutableList.of(),
                         ImmutableList.of(),

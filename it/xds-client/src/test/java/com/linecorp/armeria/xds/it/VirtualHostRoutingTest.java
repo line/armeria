@@ -50,6 +50,7 @@ class VirtualHostRoutingTest {
                       api_listener:
                         "@type": type.googleapis.com/envoy.extensions.filters.network.http_connection_manager\
                 .v3.HttpConnectionManager
+                        stat_prefix: http
                         route_config:
                           name: local_route
                           virtual_hosts:
@@ -75,6 +76,7 @@ class VirtualHostRoutingTest {
                   - name: my-cluster1
                     type: STATIC
                     load_assignment:
+                      cluster_name: my-cluster1
                       endpoints:
                       - lb_endpoints:
                         - endpoint:
@@ -85,6 +87,7 @@ class VirtualHostRoutingTest {
                   - name: my-cluster2
                     type: STATIC
                     load_assignment:
+                      cluster_name: my-cluster2
                       endpoints:
                       - lb_endpoints:
                         - endpoint:
@@ -161,6 +164,7 @@ class VirtualHostRoutingTest {
                       api_listener:
                         "@type": type.googleapis.com/envoy.extensions.filters.network.http_connection_manager\
                 .v3.HttpConnectionManager
+                        stat_prefix: http
                         route_config:
                           name: local_route
                           ignore_port_in_host_matching: true
@@ -185,6 +189,7 @@ class VirtualHostRoutingTest {
                   - name: my-cluster1
                     type: STATIC
                     load_assignment:
+                      cluster_name: my-cluster1
                       endpoints:
                       - lb_endpoints:
                         - endpoint:
@@ -195,6 +200,7 @@ class VirtualHostRoutingTest {
                   - name: my-cluster2
                     type: STATIC
                     load_assignment:
+                      cluster_name: my-cluster2
                       endpoints:
                       - lb_endpoints:
                         - endpoint:
@@ -247,6 +253,7 @@ class VirtualHostRoutingTest {
                   api_listener:
                     "@type": type.googleapis.com/envoy.extensions.filters.network.http_connection_manager\
             .v3.HttpConnectionManager
+                    stat_prefix: http
                     route_config:
                       name: local_route
                       virtual_hosts:

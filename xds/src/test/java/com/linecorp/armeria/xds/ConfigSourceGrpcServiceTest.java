@@ -100,7 +100,7 @@ class ConfigSourceGrpcServiceTest {
         cache.setSnapshot(
                 GROUP,
                 Snapshot.create(
-                        ImmutableList.of(createCluster("cluster1", 0)),
+                        ImmutableList.of(createCluster("cluster1", 1)),
                         ImmutableList.of(loadAssignment("cluster1", URI.create("http://a.b"))),
                         ImmutableList.of(exampleListener("listener1", httpConnectionManager)),
                         ImmutableList.of(routeConfiguration("route1", "cluster1")),

@@ -2,4 +2,5 @@ dependencies {
     testImplementation project(':xds')
     testImplementation libs.jackson.dataformat.yaml
     testImplementation libs.protobuf.java.util
+    testImplementation libs.protoc.pgv.java.stub
 }

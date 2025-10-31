@@ -39,6 +39,7 @@ public final class RouteXdsResource implements XdsResource {
     private final Map<String, ParsedFilterConfig> filterConfigs;
 
     RouteXdsResource(RouteConfiguration routeConfiguration) {
+        XdsValidatorIndex.of().assertValid(routeConfiguration);
         this.routeConfiguration = routeConfiguration;
         filterConfigs = toParsedFilterConfigs(routeConfiguration.getTypedPerFilterConfigMap());
     }
