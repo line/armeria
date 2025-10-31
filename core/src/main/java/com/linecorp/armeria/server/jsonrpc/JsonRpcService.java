@@ -43,6 +43,23 @@ import com.linecorp.armeria.server.ServiceRequestContext;
 
 /**
  * A JSON-RPC {@link HttpService}.
+ *
+ * <p>Example:
+ * <pre>{@code
+ * class EchoHandler implements JsonRpcHandler {
+ *  @Override
+ *  public CompletableFuture<JsonRpcResponse> handle(ServiceRequestContext ctx, JsonRpcRequest request) {
+ *      return UnmodifiableFuture.completedFuture(JsonRpcResponse.of(request.params()));
+ *  }
+ * }
+ *
+ * JsonRpcService jsonRpcService = JsonRpcService.builder()
+ *                                               .addHandler("echo", new EchoHandler())
+ *                                               .build();
+ *
+ * ServerBuilder sb = Server.builder();
+ * sb.service("/json-rpc", jsonRpcService);
+ * }</pre>
  */
 @UnstableApi
 public final class JsonRpcService implements HttpService {
