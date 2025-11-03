@@ -32,6 +32,7 @@ import com.linecorp.armeria.client.ClientRequestContextCaptor;
 import com.linecorp.armeria.client.Clients;
 import com.linecorp.armeria.client.UnprocessedRequestException;
 import com.linecorp.armeria.client.WebClient;
+import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.TimeoutException;
 import com.linecorp.armeria.internal.client.DefaultClientRequestContext;
 import com.linecorp.armeria.xds.XdsBootstrap;
@@ -58,6 +59,7 @@ class PreprocessorErrorTest {
                               endpoints:
                               - lb_endpoints:
                         """,
+                        Flags.defaultConnectTimeoutMillis(),
                         TimeoutException.class,
                         "Couldn't select a snapshot for listener 'my-listener'."
                 ),
@@ -94,6 +96,7 @@ class PreprocessorErrorTest {
                                         address: 127.0.0.1
                                         port_value: 8081
                         """,
+                        Flags.defaultConnectTimeoutMillis(),
                         IllegalArgumentException.class,
                         "No route has been selected for listener "
                 ),
@@ -125,6 +128,7 @@ class PreprocessorErrorTest {
                               endpoints:
                               - lb_endpoints:
                         """,
+                        10,
                         TimeoutException.class,
                         "Failed to select an endpoint"
                 )
@@ -133,12 +137,15 @@ class PreprocessorErrorTest {
 
     @ParameterizedTest
     @MethodSource("testCases")
-    void testPreprocessorErrors(String bootstrapYaml, Class<? extends Throwable> expectedType,
+    void testPreprocessorErrors(String bootstrapYaml, long connectTimeoutMillis,
+                                Class<? extends Throwable> expectedType,
                                 String expectedMessage) {
         try (XdsBootstrap bootstrap = XdsBootstrap.of(XdsResourceReader.fromYaml(bootstrapYaml));
              XdsHttpPreprocessor preprocessor = XdsHttpPreprocessor.ofListener("my-listener", bootstrap);
              ClientRequestContextCaptor captor = Clients.newContextCaptor();
-             ClientFactory cf = ClientFactory.builder().connectTimeoutMillis(10).build()) {
+             ClientFactory cf = ClientFactory.builder()
+                                             .connectTimeoutMillis(connectTimeoutMillis)
+                                             .build()) {
             final BlockingWebClient client = WebClient.builder(preprocessor)
                                                       .factory(cf)
                                                       .responseTimeoutMillis(10)
