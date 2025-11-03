@@ -133,7 +133,7 @@ public final class DefaultWebSocketService implements WebSocketService, WebSocke
             final Throwable wrapped;
             if (cause instanceof StreamTimeoutException) {
                 wrapped = new WebSocketIdleTimeoutException("WebSocket inbound idle-timeout exceeded",
-                                                               cause);
+                                                            cause);
             } else {
                 wrapped = new InboundCompleteException("Inbound stream was cancelled", cause);
             }
