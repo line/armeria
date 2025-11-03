@@ -94,7 +94,7 @@ class RetryingClientContextLeakTest {
 
         @Get("/")
         public CompletionStage<String> myMethod() {
-            // Execute an in non-context aware thread to make ClientRequestContext.root() return null.
+            // Execute in a non-context aware thread to make ClientRequestContext.root() return null.
             return CompletableFutures.supplyAsyncCompose(() -> backendClient.get("/").aggregate())
                                      .thenApply(AggregatedHttpResponse::contentUtf8);
         }
