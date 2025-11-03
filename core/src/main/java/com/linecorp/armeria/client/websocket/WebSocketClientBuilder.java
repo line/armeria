@@ -222,7 +222,7 @@ public final class WebSocketClientBuilder extends AbstractWebClientBuilder {
      * {@link StreamTimeoutMode#UNTIL_NEXT} mode.
      *
      * <p>If the next frame does not arrive within {@code streamTimeout} after the previous one,
-     * the stream is terminated with {@link StreamTimeoutException}.</p>
+     * the stream is terminated with {@link WebSocketIdleTimeoutException}.</p>
      *
      * <p>By default, no idle-timeout is applied.</p>
      *
