@@ -1,0 +1,264 @@
+---
+date: 2024-06-12
+---
+
+# v1.29.0
+
+## 🌟 New features
+
+- Armeria [HTTP/JSON to GRPC transcoding](https://cloud.google.com/endpoints/docs/grpc/transcoding) service now
+  supports [Custom methods](https://cloud.google.com/apis/design/custom_methods). #5613
+  ```protobuf
+  rpc Watch(WatchRequest) returns (WatchResponse) {
+    option (google.api.http) = {
+      post: "/v1:watch" // 👈👈👈
+      body: "*"
+    };
+  }
+  ```
+- You can now specify when to remove multipart temporary files using [MultipartRemovalStrategy](type). #5652 #5653
+  ```java
+  Server
+    .builder()
+    .multipartRemovalStrategy(
+      MultipartRemovalStrategy.ON_RESPONSE_COMPLETION)
+    ...
+  ```
+  - The default value is now [MultipartRemovalStrategy#ON_RESPONSE_COMPLETION](type) which removes
+    the temporary files when the response is completed.
+- A [ClientConnectionTimings](type) now includes the time spent on the TLS handshake. #3647 #5647
+  ```java
+  ClientConnectionTimings timings = ...
+  assert timings.tlsHandshakeDurationNanos() > 0;
+  ```
+- You can now configure [TlsEngineType](type) using [ClientFactoryBuilder](type) or [ServerBuilder](type). #4962
+  ```java
+  ClientFactory
+    .builder()
+    .tlsEngineType(TlsEngineType.OPENSSL) // 👈👈👈
+    .build();
+  ```
+- You can now easily find both dynamic and static decorators that handle a request
+  via [ServiceRequestContext#findService(Class)](type). #5670
+  ```java
+  ServerBuilder sb = ...
+  sb.decorator(CorsService.builderForAnyOrigin().newDecorator());
+  ...
+  ServiceRequestContext ctx = ...
+  CorsService corsService = ctx.findService(CorsService.class);
+  assert corsService.config().isAnyOriginSupported();
+  ```
+- You can now use the marshaller specified by gRPC `MethodDescriptor` by setting
+  [GrpcClientBuilder#useMethodMarshaller(boolean)](type) and
+  [GrpcServiceBuilder#useMethodMarshaller(boolean)](type). #5103 #5630
+  ```java
+  GrpcClientBuilder builder = ...
+  builder.useMethodMarshaller(true); // 👈👈👈
+
+  GrpcServiceBuilder builder = ...
+  builder.useMethodMarshaller(true); // 👈👈👈
+  ```
+- You can now programmatically retrieve the server side metrics via [ServerMetrics](type). #4992 #5627
+  ```java
+  ServerMetrics metrics = serverConfig.serverMetrics();
+  metrics.activeConnections();
+  metrics.pendingRequests();
+  metrics.activeRequests();
+  ```
+- You can now use a [CoroutineHttpService](type) that runs your service in a coroutine scope. #5442 #5603
+  ```kotlin
+  ServerBuilder sb = ...
+  sb.service(
+    "/hello",
+    CoroutineHttpService { ctx, req ->
+      HttpResponse.of("hello world")
+    })
+  ```
+- You can now specify options for an [HttpService](type) via [ServiceOptions](type). #5071 #5574
+  ```java
+  static final ServiceOptions SERVICE_OPTIONS =
+    ServiceOptions
+      .builder()
+      .requestTimeoutMillis(5000)
+      .maxRequestLength(1024)
+      .requestAutoAbortDelayMillis(1000)
+      .build();
+
+  HttpService httpService = new HttpService() {
+    ...
+    @Override
+    public ServiceOptions options() {
+      return SERVICE_OPTIONS;
+    }
+  };
+
+  // Or use annotation for an annotated service.
+  class MyService {
+      @ServiceOption(requestTimeoutMillis = 5000, maxRequestLength = 1024)
+      @Get("/hello")
+      public HttpResponse hello() {
+          return HttpResponse.of("Hello!");
+      }
+  }
+  ```
+- You can now inject a custom attribute from a [ServiceRequestContext](type) to an annotated service
+  using [@Attribute](type) annotation. #5514 #5547
+  ```java
+  class MyAttributes {
+    public static final AttributeKey<String> USERNAME =
+      AttributeKey.valueOf(MyAttributes.class, "USERNAME");
+  }
+
+  class MyAnnotatedService {
+
+    @Get("/hello")
+    public HttpResponse hello(
+      @Attribute(prefix = MyAttributes.class, value = "USERNAME") // 👈👈👈
+      String username) { ... }
+  }
+  ```
+- You can now specify a graceful shutdown timeout for an HTTP/2 connection in [ClientFactory](type). #5470 #5489
+  ```java
+  ClientFactory
+    .builder()
+    .http2GracefulShutdownTimeoutMillis(1000)
+    .build();
+  ```
+- You can now specify an [EndpointGroup](type) when building a [ClientRequestContext](type). #5292 #5298
+  ```java
+  ClientRequestContext ctx =
+    ClientRequestContext
+      .builder(request)
+      .endpointGroup(endpointGroup)
+      .build();
+  ```
+- You can now set a `GraphQL` instance directly to the [GraphqlServiceBuilder](type). #5269
+  ```java
+  GraphQL graphQL = new GraphQL.Builder(graphqlSchema).build();
+  GraphqlServiceBuilder builder = ...
+  builder.graphql(graphQL);
+- You can now specify a delay to close an HTTP/1.1 connection from the server side, allowing the client an
+  opportunity for active closing. #4849 #5616
+- You can now configure the maximum length of a TLS client hello message that a server allows by using the
+  `-Dcom.linecorp.armeria.defaultMaxClientHelloLength=<integer>` JVM option. #5747
+
+{/* truncate */}
+
+## 📈 Improvements
+
+- [XdsEndpointGroup](type) now supports [Slow start mode](https://www.envoyproxy.io/docs/envoy/latest/intro/arch_overview/upstream/load_balancing/slow_start). #5688 #5693
+- Priority and locality based load balancing is now available for an [XdsEndpointGroup](type). #5610
+- You can now view connection related information in the request logs. #5730
+- CORS headers are added to responses even if an exception is raised while handling a request. #5632
+- [AnnotatedService](type) is now available through a public API. #5382 #5628
+- The metrics for failed requests while retrying now include the cause of the failure. #5405 #5583
+- The [RequestLog](type) from a retrying client now includes the current attempt number. #5716 #5719
+- A colon is now allowed in the path for binding a service. #4577 #5676
+- Timer histogram metrics now repects user-provided `serviceLevelObjectives`. #5661
+- [ServiceErrorHandler#renderStatus(ServiceRequestContext,RequestHeaders,HttpStatus,String,Throwable)](type)
+  can now access the current [ServiceRequestContext](type) if available. #5634
+- [SamlSingleSignOnHandler#loginFailed(ServiceRequestContext,AggregatedHttpRequest,MessageContext,Throwable)](type)
+  can now access the [MessageContext](type) for error handling if available. #5401 #5622
+- The copied cURL command from a doc service, is now quoted correctly. #5566
+
+## 🛠️ Bug fixes
+
+- Fixed a bug where [RetryingClient](type) gets to deadlock when [OAuth2Client](type) fails to obtain
+  an access token. #5715
+- Armeria client always uses HTTP/2 connection preface for `h2c`, regardless of
+  the value of [ClientFactoryOptions#useHttp2Preface()](type). #5706
+- [ArmeriaServerConfigurator](type) now properly overrides the properties set by [ArmeriaSettings](type). #5009 #5692
+- Armeria server now returns a 408 status if a service didn't receive the request fully and
+  the request times out. #5579 #5680
+- A `NullPointerException` isn't raised anymore when running Armeria with a self-signed certificate. #5669
+  It happened when the following conditions are all met:
+  - DEBUG-level logging of JDK security event is enabled.
+  - A user has no Bouncy Castle dependency.
+- [@Description](type) annotations at the super class or interface are now used for the parameter description. #5195 #5562
+- The specfied `ObjectMapper` to [WebClientRequestPreparation#asJson(Class,ObjectMapper)](type) isn't
+  ignored anymore. #5454 #5512
+- [GrpcExceptionHandlerFunction](type) is now applied to convert a gRPC cancellations. #5329 #5398
+- In Spring integration, the default [ClientFactory](type) is now gracefully closed after the server shuts down. #5742
+- A connection is not reused anymore after a [WriteTimeoutException](type) is raised. #5738
+- [ServiceRequestContext](type) is now correctly propagated when
+  [ServerErrorHandler#onServiceException(ServiceRequestContext,Throwable)](type) is invoked. #5746
+
+## 🏚️ Deprecations
+
+- [PrometheusMeterRegistries](type) and [PrometheusExpositionService](type) are deprecated. #5698
+  - Use the same classes in the `armeria-prometheus1` module.
+- [HttpResult](type) is deprecated. Use [ResponseEntity](type) instead. #4910 #5586
+- [GraphqlConfigurator](type) and various setter methods for building a `GraphQL` instance are deprecated.
+  - Use [GraphqlServiceBuilder#graphql(GraphQL)](type) instead. #5269
+
+## ☢️ Breaking changes
+
+- We updated Micrometer to 1.13.0 that has breaking changes in its Prometheus support. #5698
+  - If you want to keep the old behavior that uses Prometheus Java client 0.x,
+    use the `io.micrometer:micrometer-registry-prometheus-simpleclient:1.13.0` module.
+  - If you want to use Prometheus Java client 1.x, add `com.linecorp.armeria:armeria-prometheus1` module.
+  - More details can be found in the [Micrometer migration guide](https://github.com/micrometer-metrics/micrometer/wiki/1.13-Migration-Guide).
+- [AbstractEndpointSelector#updateNewEndpoints(List)](type) now returns a `CompletableFuture`. #5752
+- The following builder classes now have the `SELF` type parameter. #5733
+  - [AbstractDnsResolverBuilder](type)
+  - [AbstractRuleBuilder](type)
+  - [AbstractRuleWithContentBuilder](type)
+  - [AbstractCircuitBreakerMappingBuilder](type)
+  - [AbstractDynamicEndpointGroupBuilder](type)
+  - [DynamicEndpointGroupSetters](type)
+  - [AbstractCuratorFrameworkBuilder](type)
+
+## ⛓ Dependencies
+
+- Blockhound 1.0.8.RELEASE → 1.0.9.RELEASE
+- Control Plane 1.0.44 → 1.0.45
+- GraphQL Kotlin 7.0.2 → 7.1.1
+- gRPC Java 1.63.0 → 1.64.0
+- Jackson 2.17.0 → 2.17.1
+- Kotlin Coroutine 1.8.0 → 1.8.1
+- Kubernetes client 6.11.0 → 6.12.1
+- Mircometer 1.12.4 → 1.13.0
+- Netty 4.1.108.Final → 4.1.110.Final
+- Reactor 3.6.4 → 3.6.6
+- Scala2.13 2.13.13 → 2.13.14
+- Scala Collection compat 2.11.0 → 2.12.0 
+- Spring 6.1.5 → 6.1.8
+- Spring Boot 3.2.4 → 3.3.0
+
+## 🙇 Thank you
+
+<ThankYou usernames={[
+  'ahnyujin',
+  'Be-poz',
+  'Dogacel',
+  'ChangguHan',
+  'chickenchickenlove',
+  'cj848',
+  'dachshu',
+  'efaurie',
+  'HappyHacker123',
+  'ikhoon',
+  'imasahiro',
+  'injae-kim',
+  'jaeseung-bae',
+  'jrhee17',
+  'KarboniteKream',
+  'ks-yim',
+  'Leewongi0731',
+  'minwoox',
+  'moromin',
+  'my4-dev',
+  'pinest94',
+  'ribafish',
+  'runningcode',
+  'sato9818',
+  'seonWKim',
+  'seongbeenkim',
+  'SeungWook-Han',
+  'sh-cho',
+  'sjy982',
+  'taisey',
+  'trustin',
+  'YangSiJun528',
+  'yeojin-dev'
+]} />
