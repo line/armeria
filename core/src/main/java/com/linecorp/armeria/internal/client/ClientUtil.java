@@ -176,15 +176,19 @@ public final class ClientUtil {
         if (ctxExt != null) {
             ctxExt.runContextCustomizer();
         }
+        O res;
         try {
-            return execution.execute(ctx, req);
+            res = execution.execute(ctx, req);
         } catch (Exception e) {
             if (ctxExt != null && !ctxExt.initializationTriggered()) {
                 ctxExt.initAndFail(e);
             }
             fail(ctx, e);
-            return errorResponseFactory.apply(ctx, e);
+            res = errorResponseFactory.apply(ctx, e);
         }
+
+        completeLogIfIncomplete(ctx, res);
+        return res;
     }
 
     private static <I extends Request, O extends Response, U extends Client<I, O>>

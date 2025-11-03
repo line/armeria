@@ -425,6 +425,7 @@ public final class DefaultClientRequestContext
     private CompletableFuture<Boolean> initEndpoint(Endpoint endpoint) {
         updateEndpoint(endpoint);
         acquireEventLoop(endpoint);
+        maybeInitializeResponseCancellationScheduler();
         return initFuture(true, null);
     }
 
@@ -434,6 +435,7 @@ public final class DefaultClientRequestContext
         if (endpoint != null) {
             updateEndpoint(endpoint);
             acquireEventLoop(endpointGroup);
+            maybeInitializeResponseCancellationScheduler();
             return initFuture(true, null);
         }
 
@@ -442,6 +444,7 @@ public final class DefaultClientRequestContext
         return endpointGroup.select(this, temporaryEventLoop).handle((e, cause) -> {
             updateEndpoint(e);
             acquireEventLoop(endpointGroup);
+            maybeInitializeResponseCancellationScheduler();
 
             final boolean success;
             if (cause != null) {
@@ -518,7 +521,6 @@ public final class DefaultClientRequestContext
                     options().factory().acquireEventLoop(sessionProtocol(), endpointGroup, endpoint);
             eventLoop = releasableEventLoop.get();
             log.whenComplete().thenAccept(unused -> releasableEventLoop.release());
-            initializeResponseCancellationScheduler();
         }
     }
 
@@ -658,13 +660,16 @@ public final class DefaultClientRequestContext
         // the root context.
         if (endpoint == null || ctx.endpoint() == endpoint && ctx.log.children().isEmpty()) {
             eventLoop = ctx.eventLoop().withoutContext();
-            initializeResponseCancellationScheduler();
         } else {
             acquireEventLoop(endpoint);
         }
+        maybeInitializeResponseCancellationScheduler();
     }
 
-    private void initializeResponseCancellationScheduler() {
+    private void maybeInitializeResponseCancellationScheduler() {
+        if (responseCancellationScheduler.hasEventLoop()) {
+            return;
+        }
         final CancellationTask cancellationTask = cause -> {
             try (SafeCloseable ignored = RequestContextUtil.pop()) {
                 final HttpRequest request = request();
@@ -830,7 +835,6 @@ public final class DefaultClientRequestContext
         checkState(!initializationTriggered(), "Cannot update eventLoop after initialization");
         checkState(this.eventLoop == null, "eventLoop can be updated only once");
         this.eventLoop = requireNonNull(eventLoop, "eventLoop");
-        initializeResponseCancellationScheduler();
     }
 
     @Override
