@@ -61,9 +61,8 @@ final class XdsBootstrapImpl implements XdsBootstrap {
         subscriptionContext = new DefaultSubscriptionContext(
                 eventLoop, clusterManager, configSourceMapper, controlPlaneClientManager);
 
-        listenerManager = new ListenerManager(eventLoop);
         bootstrapClusters.initializeSecondary(subscriptionContext);
-        listenerManager.initializeBootstrap(bootstrap, subscriptionContext);
+        listenerManager = new ListenerManager(eventLoop, bootstrap, subscriptionContext);
     }
 
     @Override

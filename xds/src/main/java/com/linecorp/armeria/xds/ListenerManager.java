@@ -40,12 +40,15 @@ final class ListenerManager implements SafeCloseable, SnapshotWatcher<ListenerSn
     private boolean closed;
     private final List<SnapshotWatcher<? super ListenerSnapshot>> watchers;
 
-    ListenerManager(EventExecutor eventLoop) {
+    ListenerManager(EventExecutor eventLoop, Bootstrap bootstrap, SubscriptionContext subscriptionContext) {
         this.eventLoop = eventLoop;
+        // the manager is added as default for static resources so they are never unregistered
+        // unless the bootstrap is closed
         watchers = ImmutableList.of(this);
+        initializeBootstrap(bootstrap, subscriptionContext);
     }
 
-    void initializeBootstrap(Bootstrap bootstrap, SubscriptionContext bootstrapContext) {
+    private void initializeBootstrap(Bootstrap bootstrap, SubscriptionContext bootstrapContext) {
         if (bootstrap.hasStaticResources()) {
             final StaticResources staticResources = bootstrap.getStaticResources();
             for (Listener listener: staticResources.getListenersList()) {
