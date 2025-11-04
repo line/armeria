@@ -31,6 +31,7 @@ import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
+import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.jsonrpc.JsonRpcError;
@@ -84,30 +85,32 @@ public final class JsonRpcService implements HttpService {
             return HttpResponse.of(HttpStatus.METHOD_NOT_ALLOWED);
         }
 
-        if (req.contentType() == null || !req.contentType().isJson()) {
+        final MediaType contentType = req.contentType();
+        if (contentType == null || !contentType.isJson()) {
             return HttpResponse.of(HttpStatus.UNSUPPORTED_MEDIA_TYPE);
         }
 
         return HttpResponse.of(
                 req.aggregate()
-                        .handle((aggregate, throwable) -> {
-                            if (throwable != null) {
-                                return HttpResponse.ofJson(HttpStatus.INTERNAL_SERVER_ERROR,
-                                        JsonRpcError.INTERNAL_ERROR.withData(throwable.getMessage()));
-                            }
+                   .handle((aggregate, throwable) -> {
+                       if (throwable != null) {
+                           return HttpResponse.ofJson(HttpStatus.INTERNAL_SERVER_ERROR,
+                                                      JsonRpcError.INTERNAL_ERROR.withData(
+                                                              throwable.getMessage()));
+                       }
 
-                            try {
-                                final JsonNode parsedJson = parseRequestContentAsJson(aggregate);
-                                return dispatchRequest(ctx, parsedJson);
-                            } catch (Exception e) {
-                                if (e instanceof IllegalArgumentException) {
-                                    return HttpResponse.ofJson(HttpStatus.BAD_REQUEST,
-                                            JsonRpcError.PARSE_ERROR);
-                                }
-                                return HttpResponse.ofJson(HttpStatus.INTERNAL_SERVER_ERROR,
-                                        JsonRpcError.INTERNAL_ERROR.withData(e.getMessage()));
-                            }
-                        }));
+                       try {
+                           final JsonNode parsedJson = parseRequestContentAsJson(aggregate);
+                           return dispatchRequest(ctx, parsedJson);
+                       } catch (Exception e) {
+                           if (e instanceof IllegalArgumentException) {
+                               return HttpResponse.ofJson(HttpStatus.BAD_REQUEST,
+                                                          JsonRpcError.PARSE_ERROR);
+                           }
+                           return HttpResponse.ofJson(HttpStatus.INTERNAL_SERVER_ERROR,
+                                                      JsonRpcError.INTERNAL_ERROR.withData(e.getMessage()));
+                       }
+                   }));
     }
 
     @VisibleForTesting
@@ -130,12 +133,10 @@ public final class JsonRpcService implements HttpService {
     }
 
     private HttpResponse handleUnaryRequest(ServiceRequestContext ctx, JsonNode unary) {
-        return HttpResponse.of(
-                executeRpcCall(ctx, unary)
-                        .thenApply(this::toHttpResponse));
+        return HttpResponse.of(executeRpcCall(ctx, unary).thenApply(JsonRpcService::toHttpResponse));
     }
 
-    private HttpResponse toHttpResponse(DefaultJsonRpcResponse response) {
+    private static HttpResponse toHttpResponse(DefaultJsonRpcResponse response) {
         if (response == null) {
             return HttpResponse.of(ResponseHeaders.of(HttpStatus.ACCEPTED));
         }
@@ -165,13 +166,14 @@ public final class JsonRpcService implements HttpService {
         return invokeMethod(ctx, request)
                 .exceptionally(e -> {
                     return new DefaultJsonRpcResponse(request.id(),
-                            JsonRpcError.INTERNAL_ERROR.withData(e.getMessage()));
+                                                      JsonRpcError.INTERNAL_ERROR.withData(e.getMessage()));
                 });
     }
 
-    private static void maybeLogRequestContent(ServiceRequestContext ctx,
-            JsonRpcRequest request,
-            JsonNode node) {
+    private static void maybeLogRequestContent(ServiceRequestContext ctx, JsonRpcRequest request,
+                                               JsonNode node) {
+        // Introduce another flag or add a property to the builder instead of using
+        // the annotatedServiceContentLogging flag.
         if (!Flags.annotatedServiceContentLogging()) {
             return;
         }
@@ -195,8 +197,8 @@ public final class JsonRpcService implements HttpService {
         // Notification
         if (req.id() == null) {
             if (handler != null) {
-                handler.handle(ctx, req)
-                        .thenApply(res -> null);
+                return handler.handle(ctx, req)
+                              .thenApply(res -> null);
             }
             return UnmodifiableFuture.completedFuture(null);
         }
@@ -206,16 +208,16 @@ public final class JsonRpcService implements HttpService {
                     new DefaultJsonRpcResponse(req.id(), JsonRpcError.METHOD_NOT_FOUND));
         }
         return handler.handle(ctx, req)
-                .thenApply(res -> {
-                    final DefaultJsonRpcResponse finalResponse = buildFinalResponse(req, res);
-                    maybeLogResponseContent(ctx, finalResponse, res);
-                    return finalResponse;
-                });
+                      .thenApply(res -> {
+                          final DefaultJsonRpcResponse finalResponse = buildFinalResponse(req, res);
+                          maybeLogResponseContent(ctx, finalResponse, res);
+                          return finalResponse;
+                      });
     }
 
     private static void maybeLogResponseContent(ServiceRequestContext ctx,
-            DefaultJsonRpcResponse response,
-            JsonRpcResponse originalResponse) {
+                                                DefaultJsonRpcResponse response,
+                                                JsonRpcResponse originalResponse) {
         if (!Flags.annotatedServiceContentLogging()) {
             return;
         }
@@ -229,14 +231,20 @@ public final class JsonRpcService implements HttpService {
             return (DefaultJsonRpcResponse) response;
         }
 
-        if (request.id() != null && response.result() != null && response.error() == null) {
-            return new DefaultJsonRpcResponse(request.id(), response.result());
+        final Object id = request.id();
+        final Object result = response.result();
+        final JsonRpcError error = response.error();
+        if (id != null && result != null && error == null) {
+            return new DefaultJsonRpcResponse(id, result);
         }
-        if (response.error() != null && response.result() == null) {
-            return new DefaultJsonRpcResponse(request.id(), response.error());
+        if (error != null && result == null) {
+            return new DefaultJsonRpcResponse(id, error);
         }
-        return new DefaultJsonRpcResponse(request.id(),
-                JsonRpcError.INTERNAL_ERROR
-                        .withData("A response cannot have both or neither 'result' and 'error' fields."));
+        return new DefaultJsonRpcResponse(
+                id,
+                // Leave a warning message instead of sending this error response to the client
+                // because the server-side handler implementation is faulty.
+                JsonRpcError.INTERNAL_ERROR.withData(
+                        "A response cannot have both or neither 'result' and 'error' fields."));
     }
 }

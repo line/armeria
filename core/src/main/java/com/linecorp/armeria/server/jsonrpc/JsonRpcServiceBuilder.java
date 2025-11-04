@@ -27,7 +27,8 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
  * Constructs a {@link JsonRpcService} to serve JSON-RPC services.
  */
 @UnstableApi
-public class JsonRpcServiceBuilder {
+public final class JsonRpcServiceBuilder {
+
     private final ImmutableMap.Builder<String, JsonRpcHandler> methodHandlers = ImmutableMap.builder();
 
     JsonRpcServiceBuilder() {}

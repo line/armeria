@@ -75,8 +75,8 @@ public final class JsonRpcError {
      */
     @JsonCreator
     public JsonRpcError(@JsonProperty("code") int code,
-            @JsonProperty("message") String message,
-            @JsonProperty("data") @Nullable Object data) {
+                        @JsonProperty("message") String message,
+                        @JsonProperty("data") @Nullable Object data) {
         this.code = code;
         this.message = requireNonNull(message, "message");
         this.data = data;
@@ -97,7 +97,7 @@ public final class JsonRpcError {
             return this;
         }
 
-        return new JsonRpcError(this.code, this.message, data);
+        return new JsonRpcError(code, message, data);
     }
 
     /**
