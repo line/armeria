@@ -1,0 +1,124 @@
+/* From https://codepen.io/jupago/pen/GPxqLX */
+.blockquote {
+  position: relative;
+  margin: 0;
+  border-left: none;
+  padding: 0;
+
+  .backgroundPattern1 {
+    position: absolute;
+    left: -175px;
+    bottom: 0;
+  }
+
+  .backgroundPattern1Reverse {
+    position: absolute;
+    left: -205px;
+    bottom: 0;
+  }
+
+  .backgroundPattern2 {
+    position: absolute;
+    right: -250px;
+    top: 0;
+  }
+
+  .backgroundPattern2Reverse {
+    position: absolute;
+    top: -40px;
+    right: -180px;
+  }
+
+  .body {
+    position: relative;
+    margin: 0;
+    border: 2px solid var(--armeria-magenta);
+    border-radius: var(--ifm-global-radius);
+    padding: 1rem 1.4rem;
+    z-index: 3;
+    background-color: rgba(255, 255, 255, 0.5);
+
+    &:after {
+      content: '';
+      position: absolute;
+      border: 2px solid var(--armeria-magenta);
+      border-radius: 0 50px 0 0;
+      width: 60px;
+      height: 60px;
+      bottom: -62px;
+      border-bottom: none;
+      border-left: none;
+      z-index: 1;
+    }
+
+    @media (max-width: 996px) {
+      &:after {
+        left: calc(var(--ifm-global-radius) * 2);
+      }
+    }
+
+    @media (min-width: calc(996px + 1px)) {
+      &:after {
+        left: 50px;
+      }
+    }
+
+    .quote {
+      content: '';
+      position: absolute;
+      width: 80px;
+      border-width: 3px;
+      border-style: solid;
+      bottom: -2.2px;
+      z-index: 0;
+      border-color: white;
+
+      @media (max-width: 996px) {
+        left: calc(var(--ifm-global-radius) * 2);
+      }
+
+      @media (min-width: calc(996px + 1px)) {
+        left: 50px;
+      }
+    }
+  }
+
+  .author {
+    position: relative;
+    z-index: 3;
+    margin-left: 106px;
+    margin-top: 20px;
+    top: -10px;
+
+    > a,
+    > span > a {
+      color: inherit;
+    }
+
+    &:first-letter {
+      margin-left: -26px;
+    }
+
+    .from,
+    .separator {
+      font-weight: normal;
+      color: var(--ifm-font-color-secondary);
+    }
+
+    @media (max-width: 996px) {
+      left: calc(var(--ifm-global-radius) * 2);
+    }
+
+    @media (min-width: calc(996px + 1px)) {
+      left: 50px;
+    }
+  }
+}
+
+html[data-theme='dark'] .blockquote .body {
+  background-color: rgba(27, 27, 29, 0.5);
+}
+
+html[data-theme='dark'] .blockquote .quote {
+  border-color: var(--ifm-background-color);
+}

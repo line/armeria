@@ -1,0 +1,9 @@
+.blogLanguageSelector {
+  background-color: var(--ifm-background-color) !important;
+  border: 1px solid var(--ifm-color-emphasis-200);
+  color: var(--ifm-font-color-base);
+}
+
+.blogLanguageSelector a {
+  font-size: 12px;
+}
