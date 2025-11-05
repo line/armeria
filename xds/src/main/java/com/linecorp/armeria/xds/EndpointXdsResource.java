@@ -32,6 +32,7 @@ public final class EndpointXdsResource implements XdsResource {
     private final ClusterLoadAssignment clusterLoadAssignment;
 
     EndpointXdsResource(ClusterLoadAssignment clusterLoadAssignment) {
+        XdsValidatorIndex.of().assertValid(clusterLoadAssignment);
         this.clusterLoadAssignment = clusterLoadAssignment;
     }
 

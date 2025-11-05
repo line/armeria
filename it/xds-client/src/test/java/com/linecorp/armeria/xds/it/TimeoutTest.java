@@ -51,6 +51,7 @@ class TimeoutTest {
                         "@type": type.googleapis.com/envoy.extensions.filters.network.http_connection_manager\
                 .v3.HttpConnectionManager
                         common_http_protocol_options: %s
+                        stat_prefix: http
                         route_config:
                           name: local_route
                           virtual_hosts:
@@ -68,6 +69,7 @@ class TimeoutTest {
                   - name: my-cluster
                     type: STATIC
                     load_assignment:
+                      cluster_name: my-cluster
                       endpoints:
                       - lb_endpoints:
                         - endpoint:
