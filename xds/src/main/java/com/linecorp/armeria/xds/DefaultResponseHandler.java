@@ -90,8 +90,9 @@ final class DefaultResponseHandler implements XdsResponseHandler {
     }
 
     @SuppressWarnings("unchecked")
-    private <O extends XdsResource> void notifyOnData(XdsStreamSubscriber<O> subscriber,
-                                                      ParsedResourcesHolder holder, String resourceName) {
+    private static <O extends XdsResource> void notifyOnData(XdsStreamSubscriber<O> subscriber,
+                                                             ParsedResourcesHolder holder,
+                                                             String resourceName) {
         final O data = (O) holder.parsedResources().get(resourceName);
         assert data != null;
         subscriber.onData(data);

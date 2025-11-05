@@ -22,7 +22,6 @@ import static java.util.Objects.requireNonNull;
 import java.util.Collection;
 import java.util.EnumMap;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
@@ -30,6 +29,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.MoreObjects;
+import com.google.common.base.Objects;
 import com.google.rpc.Code;
 
 import com.linecorp.armeria.client.retry.Backoff;
@@ -144,9 +145,9 @@ final class SotwXdsStream implements XdsStream, XdsStreamState {
     }
 
     @Override
-    public void retryOrClose(Status status, boolean closedByError) {
+    public void retryOrClose(boolean closedByError) {
         if (!eventLoop.inEventLoop()) {
-            eventLoop.execute(() -> retryOrClose(status, closedByError));
+            eventLoop.execute(() -> retryOrClose(closedByError));
             return;
         }
         if (stopped) {
@@ -280,8 +281,7 @@ final class SotwXdsStream implements XdsStream, XdsStreamState {
                 return;
             }
             completed = true;
-            requireNonNull(throwable, "throwable");
-            xdsStreamState.retryOrClose(Status.fromThrowable(throwable), false);
+            xdsStreamState.retryOrClose(true);
         }
 
         @Override
@@ -291,36 +291,71 @@ final class SotwXdsStream implements XdsStream, XdsStreamState {
                 return;
             }
             completed = true;
-            xdsStreamState.retryOrClose(Status.UNAVAILABLE.withDescription("Closed by server"), true);
+            xdsStreamState.retryOrClose(false);
         }
     }
 
     static class VersionManager {
 
-        private final Map<XdsType, String> versionMap = new EnumMap<>(XdsType.class);
-        private final Map<XdsType, Long> updatedCounts = new EnumMap<>(XdsType.class);
+        private final Map<XdsType, VersionInfo> versionMap = new EnumMap<>(XdsType.class);
 
         void updateVersion(XdsType type, String version) {
-            final String prevVersion = versionMap.get(type);
-            if (Objects.equals(prevVersion, version)) {
+            final VersionInfo prevVersion = versionMap.get(type);
+            if (prevVersion != null && prevVersion.version.equals(version)) {
                 return;
             }
-            versionMap.put(type, version);
-            updatedCounts.put(type, updatedCounts.getOrDefault(type, 0L) + 1);
+            final long revision = prevVersion != null ? prevVersion.revision + 1 : 1;
+            versionMap.put(type, new VersionInfo(version, revision));
         }
 
         @Nullable
         String getVersion(XdsType type) {
-            return versionMap.get(type);
+            final VersionInfo versionInfo = versionMap.get(type);
+            if (versionInfo == null) {
+                return null;
+            }
+            return versionInfo.version;
         }
 
         long nextRevision(XdsType type, String version) {
-            final String prevVersion = versionMap.get(type);
-            final long revision = updatedCounts.getOrDefault(type, 0L);
-            if (Objects.equals(prevVersion, version)) {
-                return revision;
+            final VersionInfo prevVersion = versionMap.get(type);
+            if (prevVersion != null && Objects.equal(prevVersion.version, version)) {
+                return prevVersion.revision;
             }
-            return revision + 1;
+            return prevVersion != null ? prevVersion.revision + 1 : 1;
+        }
+
+        private static final class VersionInfo {
+
+            private final String version;
+            private final long revision;
+
+            private VersionInfo(String version, long revision) {
+                this.version = version;
+                this.revision = revision;
+            }
+
+            @Override
+            public boolean equals(Object o) {
+                if (o == null || getClass() != o.getClass()) {
+                    return false;
+                }
+                final VersionInfo that = (VersionInfo) o;
+                return revision == that.revision && Objects.equal(version, that.version);
+            }
+
+            @Override
+            public int hashCode() {
+                return Objects.hashCode(version, revision);
+            }
+
+            @Override
+            public String toString() {
+                return MoreObjects.toStringHelper(this)
+                                  .add("version", version)
+                                  .add("revision", revision)
+                                  .toString();
+            }
         }
     }
 }

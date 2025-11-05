@@ -18,11 +18,9 @@ package com.linecorp.armeria.xds;
 
 import java.util.Collection;
 
-import io.grpc.Status;
-
 interface XdsStreamState {
 
-    void retryOrClose(Status status, boolean closedByError);
+    void retryOrClose(boolean closedByError);
 
     Collection<String> watchedResources(XdsType type);
 }

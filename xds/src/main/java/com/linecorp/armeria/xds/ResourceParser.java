@@ -43,7 +43,7 @@ abstract class ResourceParser<I extends Message, O extends XdsResource> {
                 unpackedMessage = resource.unpack(clazz());
             } catch (Exception e) {
                 final String genName = String.format("generated_%s_%s", i, clazz().getSimpleName());
-                invalidResources.put(genName,e);
+                invalidResources.put(genName, e);
                 continue;
             }
             final String name = name(unpackedMessage);
