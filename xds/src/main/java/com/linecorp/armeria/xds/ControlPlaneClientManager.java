@@ -35,16 +35,19 @@ final class ControlPlaneClientManager implements SafeCloseable {
     private final EventExecutor eventLoop;
     private final Consumer<GrpcClientBuilder> configClientCustomizer;
     private final BootstrapClusters bootstrapClusters;
+    private final ConfigSourceMapper configSourceMapper;
     private final Map<ConfigSource, ConfigSourceClient> clientMap = new HashMap<>();
     private boolean closed;
 
     ControlPlaneClientManager(Bootstrap bootstrap, EventExecutor eventLoop,
                               Consumer<GrpcClientBuilder> configClientCustomizer,
-                              BootstrapClusters bootstrapClusters) {
+                              BootstrapClusters bootstrapClusters,
+                              ConfigSourceMapper configSourceMapper) {
         bootstrapNode = bootstrap.getNode();
         this.eventLoop = eventLoop;
         this.configClientCustomizer = configClientCustomizer;
         this.bootstrapClusters = bootstrapClusters;
+        this.configSourceMapper = configSourceMapper;
     }
 
     void subscribe(ResourceNode<?> node) {
@@ -59,7 +62,8 @@ final class ControlPlaneClientManager implements SafeCloseable {
 
         final ConfigSourceClient client = clientMap.computeIfAbsent(
                 configSource, ignored -> new ConfigSourceClient(configSource, eventLoop, bootstrapNode,
-                                                                configClientCustomizer, bootstrapClusters));
+                                                                configClientCustomizer, bootstrapClusters,
+                                                                configSourceMapper));
         client.addSubscriber(type, name, node);
     }
 

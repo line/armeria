@@ -224,6 +224,7 @@ public final class XdsTestResources {
                 .setDynamicResources(DynamicResources
                                              .newBuilder()
                                              .setCdsConfig(configSource)
+                                             .setLdsConfig(configSource)
                                              .setAdsConfig(configSource.getApiConfigSource())
                 )
                 .build();
