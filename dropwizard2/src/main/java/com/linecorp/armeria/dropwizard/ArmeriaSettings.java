@@ -35,11 +35,12 @@ import java.util.List;
 import java.util.Objects;
 import java.util.stream.Stream;
 
+import org.jspecify.annotations.Nullable;
+
 import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.SessionProtocol;
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.VirtualHostBuilder;
 
@@ -759,8 +760,7 @@ class ArmeriaSettings {
         /**
          * The {@code "user-agent"} header values which are not applicable for the HTTP content encoding.
          */
-        @Nullable
-        private String[] excludedUserAgents;
+        private String @Nullable [] excludedUserAgents;
 
         /**
          * The minimum bytes for encoding the content of an HTTP response.
@@ -776,7 +776,6 @@ class ArmeriaSettings {
             this.enabled = enabled;
         }
 
-        @Nullable
         String[] getMimeTypes() {
             return mimeTypes;
         }
@@ -785,8 +784,7 @@ class ArmeriaSettings {
             this.mimeTypes = mimeTypes;
         }
 
-        @Nullable
-        String[] getExcludedUserAgents() {
+        String @Nullable [] getExcludedUserAgents() {
             return excludedUserAgents;
         }
 

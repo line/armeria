@@ -18,9 +18,9 @@ package com.linecorp.armeria.common;
 import java.util.List;
 import java.util.ServiceLoader;
 
-import com.google.common.collect.ImmutableList;
+import org.jspecify.annotations.Nullable;
 
-import com.linecorp.armeria.common.annotation.Nullable;
+import com.google.common.collect.ImmutableList;
 
 final class FlagsUtil {
 

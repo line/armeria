@@ -31,6 +31,8 @@ import java.util.List;
 import java.util.function.Function;
 import java.util.stream.Stream;
 
+import org.jspecify.annotations.Nullable;
+
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.BeanDescription;
 import com.fasterxml.jackson.databind.JavaType;
@@ -40,7 +42,6 @@ import com.google.common.base.CaseFormat;
 import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.common.HttpResponse;
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.internal.common.JacksonUtil;
 import com.linecorp.armeria.server.annotation.Description;
 import com.linecorp.armeria.server.docs.ContainerTypeSignature;

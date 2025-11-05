@@ -28,6 +28,7 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import org.dataloader.DataLoaderRegistry;
+import org.jspecify.annotations.Nullable;
 import org.reactivestreams.Publisher;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -38,7 +39,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.stream.StreamMessage;
 import com.linecorp.armeria.common.websocket.WebSocketCloseStatus;
 import com.linecorp.armeria.common.websocket.WebSocketWriter;
@@ -86,7 +86,6 @@ class GraphqlWSSubProtocol {
     /**
      * Called when a binary frame is received. Binary frames are not supported by the graphql-ws protocol.
      */
-    @Nullable
     public void handleBinary(WebSocketWriter out) {
         out.close(WebSocketCloseStatus.INVALID_MESSAGE_TYPE, "Binary frames are not supported");
     }
@@ -94,7 +93,6 @@ class GraphqlWSSubProtocol {
     /**
      * Receives an event and returns a response if one should be sent.
      */
-    @Nullable
     public void handleText(String event, WebSocketWriter out) {
         if (!out.isOpen()) {
             return;

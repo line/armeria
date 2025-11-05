@@ -18,8 +18,9 @@
  * Integration with <a href="https://resteasy.github.io/">RESTEasy</a> server and client.
  */
 @UnstableApi
-@NonNullByDefault
+@NullMarked
 package com.linecorp.armeria.internal.common.resteasy;
 
-import com.linecorp.armeria.common.annotation.NonNullByDefault;
+import org.jspecify.annotations.NullMarked;
+
 import com.linecorp.armeria.common.annotation.UnstableApi;

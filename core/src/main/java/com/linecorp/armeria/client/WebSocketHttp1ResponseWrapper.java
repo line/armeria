@@ -16,8 +16,9 @@
 
 package com.linecorp.armeria.client;
 
+import org.jspecify.annotations.Nullable;
+
 import com.linecorp.armeria.common.ClosedSessionException;
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.internal.client.DecodedHttpResponse;
 import com.linecorp.armeria.internal.client.websocket.WebSocketClientUtil;
 

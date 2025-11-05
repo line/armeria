@@ -20,8 +20,9 @@
  * libraries.
  */
 @UnstableApi
-@NonNullByDefault
+@NullMarked
 package com.linecorp.armeria.server.graphql.protocol;
 
-import com.linecorp.armeria.common.annotation.NonNullByDefault;
+import org.jspecify.annotations.NullMarked;
+
 import com.linecorp.armeria.common.annotation.UnstableApi;

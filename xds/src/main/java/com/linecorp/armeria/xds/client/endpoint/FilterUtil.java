@@ -21,6 +21,8 @@ import static com.google.common.base.Preconditions.checkArgument;
 import java.util.List;
 import java.util.function.Function;
 
+import org.jspecify.annotations.Nullable;
+
 import com.google.protobuf.Message;
 
 import com.linecorp.armeria.client.ClientDecoration;
@@ -33,7 +35,6 @@ import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.client.HttpPreprocessor;
 import com.linecorp.armeria.client.RpcPreprocessor;
 import com.linecorp.armeria.client.retry.RetryingClient;
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.xds.ListenerSnapshot;
 import com.linecorp.armeria.xds.ParsedFilterConfig;
 import com.linecorp.armeria.xds.filter.HttpFilterFactory;

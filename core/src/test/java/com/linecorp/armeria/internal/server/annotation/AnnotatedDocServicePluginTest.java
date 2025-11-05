@@ -41,6 +41,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 
+import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.Test;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -50,7 +51,6 @@ import com.google.common.collect.ImmutableSet;
 
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.MediaType;
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.server.Route;
 import com.linecorp.armeria.server.RouteBuilder;
 import com.linecorp.armeria.server.Server;

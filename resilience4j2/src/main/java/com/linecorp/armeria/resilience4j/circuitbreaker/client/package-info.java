@@ -18,9 +18,10 @@
  * {@code Resilience4j}'s {@link io.github.resilience4j.circuitbreaker.CircuitBreaker}
  * integration with Armeria clients.
  */
-@NonNullByDefault
+@NullMarked
 @UnstableApi
 package com.linecorp.armeria.resilience4j.circuitbreaker.client;
 
-import com.linecorp.armeria.common.annotation.NonNullByDefault;
+import org.jspecify.annotations.NullMarked;
+
 import com.linecorp.armeria.common.annotation.UnstableApi;

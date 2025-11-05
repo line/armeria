@@ -20,8 +20,7 @@ import static java.util.Objects.requireNonNull;
 
 import org.apache.catalina.connector.Connector;
 import org.apache.catalina.startup.Tomcat;
-
-import com.linecorp.armeria.common.annotation.Nullable;
+import org.jspecify.annotations.Nullable;
 
 final class UnmanagedTomcatService extends TomcatService {
 

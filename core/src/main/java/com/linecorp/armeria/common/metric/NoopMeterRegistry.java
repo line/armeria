@@ -20,7 +20,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.ToDoubleFunction;
 import java.util.function.ToLongFunction;
 
-import com.linecorp.armeria.common.annotation.Nullable;
+import org.jspecify.annotations.Nullable;
 
 import io.micrometer.core.instrument.Clock;
 import io.micrometer.core.instrument.Counter;

@@ -17,7 +17,7 @@
 /**
  * <a href="https://www.w3.org/TR/eventsource/">Server-Sent Events</a> support.
  */
-@NonNullByDefault
+@NullMarked
 package com.linecorp.armeria.common.sse;
 
-import com.linecorp.armeria.common.annotation.NonNullByDefault;
+import org.jspecify.annotations.NullMarked;

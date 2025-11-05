@@ -20,8 +20,9 @@ import static com.linecorp.armeria.internal.client.grpc.InternalGrpcClientCall.G
 import static com.linecorp.armeria.internal.client.grpc.InternalGrpcClientCall.GRPC_METHOD_DESCRIPTOR;
 import static java.util.Objects.requireNonNull;
 
+import org.jspecify.annotations.Nullable;
+
 import com.linecorp.armeria.common.RequestContext;
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 
 import io.grpc.CallOptions;

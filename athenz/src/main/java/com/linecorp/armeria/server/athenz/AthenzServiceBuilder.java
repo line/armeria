@@ -23,12 +23,13 @@ import static java.util.Objects.requireNonNull;
 import java.util.List;
 import java.util.function.Function;
 
+import org.jspecify.annotations.Nullable;
+
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 
 import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.client.athenz.ZtsBaseClient;
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.athenz.TokenType;
 import com.linecorp.armeria.server.HttpService;

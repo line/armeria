@@ -44,7 +44,7 @@
  *     <li>Miscellaneous style cleanups</li>
  * </ul>
  */
-@NonNullByDefault
+@NullMarked
 package com.linecorp.armeria.common.thrift.text;
 
-import com.linecorp.armeria.common.annotation.NonNullByDefault;
+import org.jspecify.annotations.NullMarked;

@@ -18,10 +18,11 @@ package com.linecorp.armeria.common.rxjava2;
 
 import java.util.concurrent.Callable;
 
+import org.jspecify.annotations.Nullable;
+
 import com.google.errorprone.annotations.concurrent.GuardedBy;
 
 import com.linecorp.armeria.common.RequestContext;
-import com.linecorp.armeria.common.annotation.Nullable;
 
 import io.reactivex.Completable;
 import io.reactivex.Flowable;

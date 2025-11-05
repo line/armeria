@@ -14,7 +14,7 @@
  * under the License.
  */
 
-@NonNullByDefault
+@NullMarked
 package com.linecorp.armeria.spring.jetty;
 
-import com.linecorp.armeria.common.annotation.NonNullByDefault;
+import org.jspecify.annotations.NullMarked;

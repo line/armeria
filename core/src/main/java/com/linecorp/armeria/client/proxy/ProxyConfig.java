@@ -22,9 +22,10 @@ import static java.util.Objects.requireNonNull;
 
 import java.net.InetSocketAddress;
 
+import org.jspecify.annotations.Nullable;
+
 import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.common.HttpHeaders;
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.server.ServiceRequestContext;
 

@@ -24,11 +24,12 @@ import java.util.List;
 import java.util.Set;
 import java.util.regex.Pattern;
 
+import org.jspecify.annotations.Nullable;
+
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 
 import com.linecorp.armeria.common.Flags;
-import com.linecorp.armeria.common.annotation.Nullable;
 
 final class ExactPathMapping extends AbstractPathMapping {
 

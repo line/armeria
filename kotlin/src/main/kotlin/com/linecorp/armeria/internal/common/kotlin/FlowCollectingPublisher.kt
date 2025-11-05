@@ -32,7 +32,7 @@ import kotlin.coroutines.EmptyCoroutineContext
  * [Publisher] implementation which emits values collected from [Flow].
  * Reactive streams back-pressure works on its backing [flow] too.
  */
-internal class FlowCollectingPublisher<T>(
+internal class FlowCollectingPublisher<T : Any>(
     private val flow: Flow<T>,
     private val executor: EventExecutor,
     private val context: CoroutineContext = EmptyCoroutineContext,
@@ -44,7 +44,7 @@ internal class FlowCollectingPublisher<T>(
             GlobalScope.launch(context) {
                 try {
                     flow.collect {
-                        delegate.write(it!!)
+                        delegate.write(it)
                         delegate.whenConsumed().await()
                     }
                 } catch (e: Throwable) {

@@ -34,6 +34,8 @@ import static java.util.Objects.requireNonNull;
 
 import java.util.Map;
 
+import org.jspecify.annotations.Nullable;
+
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.google.common.base.MoreObjects;
@@ -41,7 +43,6 @@ import com.google.common.base.Objects;
 import com.google.common.collect.ImmutableMap;
 
 import com.linecorp.armeria.client.Endpoint;
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.zookeeper.ServerSetsInstanceConverter.FinagleServiceInstanceDeserializer;
 import com.linecorp.armeria.common.zookeeper.ServerSetsInstanceConverter.FinagleServiceInstanceSerializer;
 

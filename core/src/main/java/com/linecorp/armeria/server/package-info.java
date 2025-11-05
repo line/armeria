@@ -24,7 +24,7 @@
  *   <li>{@link com.linecorp.armeria.server.Service}</li>
  * </ul>
  */
-@NonNullByDefault
+@NullMarked
 package com.linecorp.armeria.server;
 
-import com.linecorp.armeria.common.annotation.NonNullByDefault;
+import org.jspecify.annotations.NullMarked;

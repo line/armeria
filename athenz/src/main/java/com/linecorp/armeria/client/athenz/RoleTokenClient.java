@@ -20,6 +20,8 @@ import java.time.Duration;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
+import org.jspecify.annotations.Nullable;
+
 import com.google.common.base.Joiner;
 import com.yahoo.athenz.zts.RoleToken;
 
@@ -27,7 +29,6 @@ import com.linecorp.armeria.client.InvalidHttpResponseException;
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.client.WebClientRequestPreparation;
 import com.linecorp.armeria.common.HttpStatus;
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.athenz.AccessDeniedException;
 import com.linecorp.armeria.common.util.AsyncLoader;
 import com.linecorp.armeria.common.util.Exceptions;

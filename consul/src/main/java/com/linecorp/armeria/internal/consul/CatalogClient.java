@@ -23,6 +23,8 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 
+import org.jspecify.annotations.Nullable;
+
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.type.TypeReference;
@@ -34,7 +36,6 @@ import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.HttpEntity;
 import com.linecorp.armeria.common.QueryParams;
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.internal.common.PercentEncoder;
 
 /**
@@ -157,9 +158,8 @@ final class CatalogClient {
         @JsonProperty("ServiceTaggedAddresses")
         Map<String, Object> serviceTaggedAddresses;
 
-        @Nullable
         @JsonProperty("ServiceTags")
-        String[] serviceTags;
+        String @Nullable [] serviceTags;
 
         @Nullable
         @JsonProperty("ServiceProxy")

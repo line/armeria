@@ -16,11 +16,12 @@
 
 package com.linecorp.armeria.internal.client;
 
+import org.jspecify.annotations.Nullable;
+
 import com.google.common.annotations.VisibleForTesting;
 
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpObject;
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.internal.common.DefaultHttpResponse;
 import com.linecorp.armeria.internal.common.InboundTrafficController;
 

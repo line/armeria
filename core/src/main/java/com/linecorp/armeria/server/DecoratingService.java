@@ -16,9 +16,10 @@
 
 package com.linecorp.armeria.server;
 
+import org.jspecify.annotations.Nullable;
+
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.Response;
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.AbstractUnwrappable;
 
 /**

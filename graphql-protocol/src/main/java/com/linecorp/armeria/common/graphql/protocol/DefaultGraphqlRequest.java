@@ -19,9 +19,9 @@ package com.linecorp.armeria.common.graphql.protocol;
 import java.util.Map;
 import java.util.Objects;
 
-import com.google.common.base.MoreObjects;
+import org.jspecify.annotations.Nullable;
 
-import com.linecorp.armeria.common.annotation.Nullable;
+import com.google.common.base.MoreObjects;
 
 final class DefaultGraphqlRequest implements GraphqlRequest {
 

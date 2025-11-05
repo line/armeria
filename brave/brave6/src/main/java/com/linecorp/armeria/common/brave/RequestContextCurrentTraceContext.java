@@ -18,9 +18,10 @@ package com.linecorp.armeria.common.brave;
 
 import static com.linecorp.armeria.internal.common.brave.TraceContextUtil.traceContext;
 
+import org.jspecify.annotations.Nullable;
+
 import com.linecorp.armeria.client.brave.BraveClient;
 import com.linecorp.armeria.common.RequestContext;
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.internal.common.brave.InternalTraceContextUtil;
 import com.linecorp.armeria.internal.common.brave.TraceContextUtil;

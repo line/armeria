@@ -26,10 +26,10 @@ import java.util.List;
 import java.util.Set;
 
 import org.curioswitch.common.protobuf.json.MessageMarshaller;
+import org.jspecify.annotations.Nullable;
 
 import com.google.protobuf.Message;
 
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 
 /**

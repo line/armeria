@@ -18,8 +18,9 @@
  * Common throttling artifacts used by throttling implementation.
  */
 @UnstableApi
-@NonNullByDefault
+@NullMarked
 package com.linecorp.armeria.common.throttling;
 
-import com.linecorp.armeria.common.annotation.NonNullByDefault;
+import org.jspecify.annotations.NullMarked;
+
 import com.linecorp.armeria.common.annotation.UnstableApi;

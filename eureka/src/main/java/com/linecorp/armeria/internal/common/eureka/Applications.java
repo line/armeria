@@ -19,11 +19,11 @@ import static java.util.Objects.requireNonNull;
 
 import java.util.Set;
 
+import org.jspecify.annotations.Nullable;
+
 import com.fasterxml.jackson.annotation.JsonRootName;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.google.common.collect.ImmutableSet;
-
-import com.linecorp.armeria.common.annotation.Nullable;
 
 /**
  * A {@link Set} of {@link Application}s.

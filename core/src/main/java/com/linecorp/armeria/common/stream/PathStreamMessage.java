@@ -32,6 +32,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 
+import org.jspecify.annotations.Nullable;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 import org.slf4j.Logger;
@@ -42,7 +43,6 @@ import com.google.common.math.LongMath;
 import com.google.common.primitives.Ints;
 
 import com.linecorp.armeria.common.HttpData;
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.EventLoopCheckingFuture;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.internal.common.stream.NoopSubscription;

@@ -21,6 +21,8 @@ import static java.util.Objects.requireNonNull;
 
 import java.net.URI;
 
+import org.jspecify.annotations.Nullable;
+
 import com.google.common.base.Strings;
 
 import com.linecorp.armeria.client.ClientPreprocessors;
@@ -30,7 +32,6 @@ import com.linecorp.armeria.client.Preprocessor;
 import com.linecorp.armeria.common.Scheme;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
-import com.linecorp.armeria.common.annotation.Nullable;
 
 public final class ClientBuilderParamsUtil {
 

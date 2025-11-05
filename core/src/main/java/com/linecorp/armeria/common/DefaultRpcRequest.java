@@ -23,10 +23,10 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 
+import org.jspecify.annotations.Nullable;
+
 import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableList;
-
-import com.linecorp.armeria.common.annotation.Nullable;
 
 /**
  * Default {@link RpcRequest} implementation.

@@ -74,6 +74,7 @@ joor = "0.9.15"
 # Don't upgrade json-unit to 3.0.0 that requires Java 17
 json-unit = "2.38.0"
 jsoup = "1.21.1"
+jspecify = "1.0.0"
 junit4 = "4.13.2"
 junit5 = "5.13.4"
 # Don't upgrade junit-pioneer to 2.x.x that requires Java 11
@@ -781,6 +782,10 @@ version.ref = "json-unit"
 [libraries.jsoup]
 module = "org.jsoup:jsoup"
 version.ref = "jsoup"
+
+[libraries.jspecify]
+module = "org.jspecify:jspecify"
+version.ref = "jspecify"
 
 [libraries.junit4]
 module = "junit:junit"

@@ -17,7 +17,7 @@
 /**
  * <a href="https://projects.spring.io/spring-boot/">Spring Boot</a> actuator integration.
  */
-@NonNullByDefault
+@NullMarked
 package com.linecorp.armeria.spring.actuate;
 
-import com.linecorp.armeria.common.annotation.NonNullByDefault;
+import org.jspecify.annotations.NullMarked;

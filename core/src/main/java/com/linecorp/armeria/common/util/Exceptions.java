@@ -33,6 +33,7 @@ import java.util.function.Supplier;
 
 import javax.net.ssl.SSLException;
 
+import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -43,7 +44,6 @@ import com.linecorp.armeria.client.UnprocessedRequestException;
 import com.linecorp.armeria.common.ClosedSessionException;
 import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.SessionProtocol;
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.internal.common.util.ExceptionClassifier;
 
 import io.netty.channel.Channel;

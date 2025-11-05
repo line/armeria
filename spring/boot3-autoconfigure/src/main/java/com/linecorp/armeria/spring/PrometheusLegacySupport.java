@@ -20,7 +20,8 @@ import static com.linecorp.armeria.spring.PrometheusSupport.find;
 import java.util.Optional;
 import java.util.Set;
 
-import com.linecorp.armeria.common.annotation.Nullable;
+import org.jspecify.annotations.Nullable;
+
 import com.linecorp.armeria.server.metric.PrometheusExpositionService;
 
 import io.micrometer.core.instrument.MeterRegistry;

@@ -22,6 +22,7 @@ import static org.mockito.Mockito.when;
 
 import java.util.List;
 
+import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.Test;
 
 import com.linecorp.armeria.common.HttpHeaderNames;
@@ -30,7 +31,6 @@ import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.RequestTarget;
 import com.linecorp.armeria.common.SessionProtocol;
-import com.linecorp.armeria.common.annotation.Nullable;
 
 class RoutingContextTest {
 

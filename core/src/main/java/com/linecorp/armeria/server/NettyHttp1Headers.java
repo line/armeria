@@ -22,12 +22,13 @@ import java.util.Map.Entry;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import org.jspecify.annotations.Nullable;
+
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Maps;
 
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.RequestHeadersBuilder;
-import com.linecorp.armeria.common.annotation.Nullable;
 
 import io.netty.handler.codec.CharSequenceValueConverter;
 import io.netty.handler.codec.DefaultHeaders.NameValidator;

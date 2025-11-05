@@ -21,9 +21,10 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
+import org.jspecify.annotations.Nullable;
+
 import com.google.common.base.MoreObjects;
 
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.logging.BeanFieldInfo;
 
 final class AnnotatedRequest {

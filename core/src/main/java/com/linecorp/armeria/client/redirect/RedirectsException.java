@@ -15,7 +15,8 @@
  */
 package com.linecorp.armeria.client.redirect;
 
-import com.linecorp.armeria.common.annotation.Nullable;
+import org.jspecify.annotations.Nullable;
+
 import com.linecorp.armeria.common.annotation.UnstableApi;
 
 /**

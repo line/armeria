@@ -18,6 +18,7 @@ package com.linecorp.armeria.spring.internal.client;
 import static com.linecorp.armeria.internal.common.ArmeriaHttpUtil.toHttp1Headers;
 import static java.util.Objects.requireNonNull;
 
+import org.jspecify.annotations.Nullable;
 import org.springframework.core.io.buffer.DataBuffer;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
@@ -31,7 +32,6 @@ import com.google.common.base.MoreObjects;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.SplitHttpResponse;
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.spring.internal.common.DataBufferFactoryWrapper;
 
 import io.netty.handler.codec.http.cookie.ClientCookieDecoder;

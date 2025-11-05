@@ -18,7 +18,7 @@ package com.linecorp.armeria.client.proxy;
 
 import java.net.InetSocketAddress;
 
-import com.linecorp.armeria.common.annotation.Nullable;
+import org.jspecify.annotations.Nullable;
 
 /**
  * Represents a direct connection without a proxy.

@@ -17,7 +17,7 @@
 /**
  * Generic utility classes.
  */
-@NonNullByDefault
+@NullMarked
 package com.linecorp.armeria.common.util;
 
-import com.linecorp.armeria.common.annotation.NonNullByDefault;
+import org.jspecify.annotations.NullMarked;

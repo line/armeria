@@ -19,7 +19,7 @@
  * <a href="https://github.com/openzipkin/brave">Brave</a>, a Java tracing library compatible with
  * <a href="http://zipkin.io/">Zipkin</a>.
  */
-@NonNullByDefault
+@NullMarked
 package com.linecorp.armeria.common.brave;
 
-import com.linecorp.armeria.common.annotation.NonNullByDefault;
+import org.jspecify.annotations.NullMarked;

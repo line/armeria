@@ -27,7 +27,8 @@ import java.util.concurrent.CompletableFuture;
 
 import javax.net.ssl.SSLSession;
 
-import com.linecorp.armeria.common.annotation.Nullable;
+import org.jspecify.annotations.Nullable;
+
 import com.linecorp.armeria.common.logging.RequestLogAccess;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
 import com.linecorp.armeria.common.util.AbstractUnwrappable;

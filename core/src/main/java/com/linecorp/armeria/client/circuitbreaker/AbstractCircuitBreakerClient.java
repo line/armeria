@@ -23,6 +23,8 @@ import static java.util.Objects.requireNonNull;
 import java.util.concurrent.CompletionStage;
 import java.util.function.BiFunction;
 
+import org.jspecify.annotations.Nullable;
+
 import com.google.common.base.MoreObjects;
 
 import com.linecorp.armeria.client.Client;
@@ -30,7 +32,6 @@ import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.SimpleDecoratingClient;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.Response;
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.circuitbreaker.CircuitBreakerCallback;
 import com.linecorp.armeria.common.util.CompletionActions;
 

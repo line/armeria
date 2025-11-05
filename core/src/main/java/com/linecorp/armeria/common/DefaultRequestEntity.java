@@ -16,7 +16,7 @@
 
 package com.linecorp.armeria.common;
 
-import com.linecorp.armeria.common.annotation.Nullable;
+import org.jspecify.annotations.Nullable;
 
 final class DefaultRequestEntity<T> extends AbstractHttpEntity<T> implements RequestEntity<T> {
 

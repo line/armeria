@@ -19,10 +19,11 @@ package com.linecorp.armeria.client.proxy;
 import java.net.InetSocketAddress;
 import java.util.Objects;
 
+import org.jspecify.annotations.Nullable;
+
 import com.google.common.base.MoreObjects;
 
 import com.linecorp.armeria.common.HttpHeaders;
-import com.linecorp.armeria.common.annotation.Nullable;
 
 /**
  * CONNECT proxy configuration.
