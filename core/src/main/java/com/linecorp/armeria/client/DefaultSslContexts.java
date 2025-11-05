@@ -19,29 +19,37 @@ package com.linecorp.armeria.client;
 import static com.google.common.base.Preconditions.checkArgument;
 
 import java.util.Map;
+import java.util.Set;
 
 import com.google.common.collect.ImmutableMap;
 
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.TlsPeerVerifierFactory;
 import com.linecorp.armeria.internal.common.SslContextFactory;
 
 import io.netty.handler.ssl.SslContext;
 
-final class BootstrapSslContexts {
+final class DefaultSslContexts {
 
     private final Map<SessionProtocol, ClientTlsSpec> tlsSpecs;
     private final Map<SessionProtocol, SslContext> contexts;
 
-    BootstrapSslContexts(ClientTlsSpec baseClientTlsSpec, ClientFactoryOptions options,
-                         SslContextFactory sslContextFactory) {
+    DefaultSslContexts(ClientFactoryOptions options, boolean tlsNoVerifySet, Set<String> insecureHosts,
+                       SslContextFactory sslContextFactory) {
         final ImmutableMap.Builder<SessionProtocol, ClientTlsSpec> tlsSpecsBuilder = ImmutableMap.builder();
         final ImmutableMap.Builder<SessionProtocol, SslContext> sslContextsBuilder = ImmutableMap.builder();
         for (SessionProtocol sessionProtocol: SessionProtocol.httpsValues()) {
-            final ClientTlsSpec tlsSpec = baseClientTlsSpec.toBuilder()
-                                                           .engineType(options.tlsEngineType())
-                                                           .alpnProtocols(sessionProtocol)
-                                                           .tlsCustomizer(options.tlsCustomizer())
-                                                           .build();
+            final ClientTlsSpecBuilder tlsSpecBuilder = options.clientTlsSpec()
+                                                               .toBuilder()
+                                                               .engineType(options.tlsEngineType())
+                                                               .alpnProtocols(sessionProtocol)
+                                                               .tlsCustomizer(options.tlsCustomizer());
+            if (tlsNoVerifySet) {
+                tlsSpecBuilder.verifierFactories(TlsPeerVerifierFactory.noVerify());
+            } else if (!insecureHosts.isEmpty()) {
+                tlsSpecBuilder.verifierFactories(TlsPeerVerifierFactory.insecureHosts(insecureHosts));
+            }
+            final ClientTlsSpec tlsSpec = tlsSpecBuilder.build();
             tlsSpecsBuilder.put(sessionProtocol, tlsSpec);
             sslContextsBuilder.put(sessionProtocol, sslContextFactory.getOrCreate(tlsSpec));
         }

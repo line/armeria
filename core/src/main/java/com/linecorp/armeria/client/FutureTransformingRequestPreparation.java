@@ -423,4 +423,11 @@ public final class FutureTransformingRequestPreparation<T>
         delegate.responseTimeoutMode(responseTimeoutMode);
         return this;
     }
+
+    @Override
+    @UnstableApi
+    public FutureTransformingRequestPreparation clientTlsSpec(ClientTlsSpec clientTlsSpec) {
+        delegate.clientTlsSpec(clientTlsSpec);
+        return this;
+    }
 }

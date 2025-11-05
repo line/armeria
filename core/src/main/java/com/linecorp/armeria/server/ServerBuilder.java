@@ -88,6 +88,7 @@ import com.linecorp.armeria.common.TlsSetters;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.logging.RequestOnlyLog;
+import com.linecorp.armeria.common.metric.MeterIdPrefix;
 import com.linecorp.armeria.common.util.BlockingTaskExecutor;
 import com.linecorp.armeria.common.util.DomainSocketAddress;
 import com.linecorp.armeria.common.util.EventLoopGroups;
@@ -96,6 +97,7 @@ import com.linecorp.armeria.common.util.ThreadFactories;
 import com.linecorp.armeria.common.util.TlsEngineType;
 import com.linecorp.armeria.internal.common.BuiltInDependencyInjector;
 import com.linecorp.armeria.internal.common.RequestContextUtil;
+import com.linecorp.armeria.internal.common.SslContextFactory;
 import com.linecorp.armeria.internal.common.util.ChannelUtil;
 import com.linecorp.armeria.internal.server.RouteDecoratingService;
 import com.linecorp.armeria.internal.server.annotation.AnnotatedServiceExtensions;
@@ -2336,13 +2338,17 @@ public final class ServerBuilder implements TlsSetters, ServiceConfigsBuilder<Se
         final ServerErrorHandler errorHandler = ServerErrorHandlerDecorators.decorate(
                 this.errorHandler == null ? ServerErrorHandler.ofDefault()
                                           : this.errorHandler.orElse(ServerErrorHandler.ofDefault()));
+        final MeterIdPrefix meterIdPrefix = tlsConfig != null ? tlsConfig.meterIdPrefix() : null;
+        final SslContextFactory sslContextFactory = new SslContextFactory(meterIdPrefix, meterRegistry);
         final VirtualHost defaultVirtualHost =
                 defaultVirtualHostBuilder.build(virtualHostTemplate, dependencyInjector,
-                                                unloggedExceptionsReporter, errorHandler, tlsProvider);
+                                                unloggedExceptionsReporter, errorHandler,
+                                                tlsProvider, sslContextFactory);
         final List<VirtualHost> virtualHosts =
                 virtualHostBuilders.stream()
                                    .map(vhb -> vhb.build(virtualHostTemplate, dependencyInjector,
-                                                         unloggedExceptionsReporter, errorHandler, tlsProvider))
+                                                         unloggedExceptionsReporter, errorHandler,
+                                                         tlsProvider, sslContextFactory))
                                    .collect(toImmutableList());
         // Pre-populate the domain name mapping for later matching.
         final Mapping<String, SslContext> sslContexts;
@@ -2419,7 +2425,7 @@ public final class ServerBuilder implements TlsSetters, ServiceConfigsBuilder<Se
                 final TlsEngineType tlsEngineType = defaultVirtualHost.tlsEngineType();
                 assert tlsEngineType != null;
                 assert tlsProvider != null;
-                sslContexts = new TlsProviderMapping(tlsProvider, tlsEngineType, tlsConfig, meterRegistry);
+                sslContexts = new TlsProviderMapping(tlsProvider, tlsEngineType, tlsConfig, sslContextFactory);
             }
         }
         if (pingIntervalMillis > 0) {

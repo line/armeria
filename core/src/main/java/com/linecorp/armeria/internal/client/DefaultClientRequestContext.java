@@ -42,6 +42,7 @@ import org.slf4j.LoggerFactory;
 
 import com.linecorp.armeria.client.ClientOptions;
 import com.linecorp.armeria.client.ClientRequestContext;
+import com.linecorp.armeria.client.ClientTlsSpec;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.client.PreClientRequestContext;
@@ -181,6 +182,8 @@ public final class DefaultClientRequestContext
     private final ResponseTimeoutMode responseTimeoutMode;
     private Function<HttpClient, HttpClient> httpClientCustomizer = Function.identity();
     private Function<RpcClient, RpcClient> rpcClientCustomizer = Function.identity();
+    @Nullable
+    private ClientTlsSpec clientTlsSpec;
 
     public DefaultClientRequestContext(SessionProtocol sessionProtocol, HttpRequest httpRequest,
                                        @Nullable RpcRequest rpcRequest, RequestTarget requestTarget,
@@ -281,6 +284,7 @@ public final class DefaultClientRequestContext
         this.options = requireNonNull(options, "options");
         this.root = root;
         this.endpointGroup = endpointGroup;
+        clientTlsSpec = requestOptions.clientTlsSpec();
 
         log = RequestLog.builder(this);
         log.startRequest(requestStartTimeNanos, requestStartTimeMicros);
@@ -1086,6 +1090,14 @@ public final class DefaultClientRequestContext
     @Override
     public CompletableFuture<Void> whenResponseTimedOut() {
         return whenResponseCancelled().handle((v, e) -> null);
+    }
+
+    /**
+     * The request-specific TLS configuration for this request.
+     */
+    @Override
+    public @Nullable ClientTlsSpec clientTlsSpec() {
+        return clientTlsSpec;
     }
 
     @Override

@@ -319,4 +319,11 @@ public final class RestClientPreparation implements RequestPreparationSetters {
         delegate.responseTimeoutMode(responseTimeoutMode);
         return this;
     }
+
+    @Override
+    @UnstableApi
+    public RestClientPreparation clientTlsSpec(ClientTlsSpec clientTlsSpec) {
+        delegate.clientTlsSpec(clientTlsSpec);
+        return this;
+    }
 }
