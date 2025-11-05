@@ -1,0 +1,290 @@
+---
+date: 2025-08-06
+---
+
+# v1.33.0
+
+## 🌟 New features
+
+- **Athenz Integration**: You can now use the new `armeria-athenz` module to easily obtain and validate Athenz
+  tokens for secure service-to-service communication. #6050 #6321
+  - Server-side validation: Use [@RequiresAthenzRole](type) to protect your annotated service endpoints.
+
+    ```java
+    // Prepare a `ZtsBaseClient` to communicate with
+    // the Athenz ZTS server.
+    ZtsBaseClient ztsBaseClient =
+      ZtsBaseClient
+        .builder("https://athenz.example.com:4443/zts/v1")
+        .keyPair("/var/lib/athenz/service.key.pem",
+                 "/var/lib/athenz/service.cert.pem")
+        .build();
+
+    // Create and register `AthenzServiceDecoratorFactory`.
+    final AthenzServiceDecoratorFactory athenzDecoratorFactory =
+      AthenzServiceDecoratorFactory
+        .builder(ztsBaseClient)
+        .policyConfig(new AthenzPolicyConfig("my-domain"))
+        .build();
+    final DependencyInjector di =
+      DependencyInjector.ofSingletons(athenzDecoratorFactory)
+                        .orElse(DependencyInjector.ofReflective());
+    serverBuilder.dependencyInjector(di, true);
+
+    // Decorate methods with `RequiresAthenzRole` to check Athenz role.
+    class MyService {
+      @RequiresAthenzRole(resource = "user", action = "get")
+      @ProducesJson
+      @Get("/user")
+      public CompletableFuture<User> getUser() {
+         ...
+      }
+    }
+    serverBuilder.annotatedService(new MyService());
+    ```
+
+  - Client-side token management: Automatically cache and attach Athenz tokens to outgoing requests.
+    ```java
+    // Decorate the `WebClient` with `AthenzClient` to automatically
+    // obtain and attach Athenz tokens.
+    WebClient
+      .builder()
+      .decorator(AthenzClient.newDecorator(ztsBaseClient, "my-domain",
+                                           TokenType.ACCESS_TOKEN))
+      ...
+      .build();
+    ```
+
+- **Content Sanitization for Logs**: You can now mask sensitive information for [AnnotatedService](type) and
+  [THttpService](type) using the flexible [ContentSanitizer](type). #6311 #6268
+
+  ```java
+  // For annotated services, use a custom annotation
+  // and mark sensitive fields.
+  @Retention(RetentionPolicy.RUNTIME)
+  @interface Sensitive {}
+
+  class UserRequest {
+      private String name;
+      @Sensitive // This field will be masked in logs.
+      private String phoneNumber;
+      ...
+  }
+
+  // For Thrift services, set an annotation to the field.
+  struct SecretStruct {
+    1: string hello;
+    2: string secret (sensitive = "");
+  }
+
+  // Create `FieldMaskerSelector`s for both types.
+  BeanFieldMaskerSelector beanMasker =
+     FieldMaskerSelector.ofBean(fieldInfo -> {
+         Sensitive sensitive = fieldInfo.getAnnotation(Sensitive.class);
+         if (sensitive != null) {
+             return FieldMasker.nullify();  // 👈👈👈
+         } else {
+             return FieldMasker.fallthrough();
+         }
+     });
+
+  ThriftFieldMaskerSelector thriftMasker =
+    ThriftFieldMaskerSelector
+       .builder()
+       .onFieldAnnotation("sensitive", FieldMasker.nullify())  // 👈👈👈
+       .build();
+
+  // Build a `ContentSanitizer` and add it to your `LogFormatter`.
+  ContentSanitizer<String> sanitizer =
+    ContentSanitizer.builder()
+                    .fieldMaskerSelector(beanMasker)
+                    .fieldMaskerSelector(thriftMasker)
+                    .buildForText();
+  LogFormatter formatter = LogFormatter.builderForText()
+                                      .contentSanitizer(contentSanitizer)
+                                      .build();
+
+  // Use the formatter in `LoggingService`.
+  ...
+  ```
+
+- **XDS-based Client Preprocessors**: You can now use [XdsHttpPreprocessor](type) and [XdsRpcPreprocessor](type)
+  to create clients that route requests according to your xDS configuration. #6299
+  ```java
+  XdsBootstrap bootstrap = XdsBootstrap.of(...);
+  XdsHttpPreprocessor xdsProcessor =
+     XdsHttpPreprocessor.ofListener("my-listener", bootstrap);
+  WebClient client = WebClient.of(xdsProcessor); // 👈👈👈
+  // This request is routed based on the 'my-listener' configuration.
+  client.get("/api/v1/resource");
+  ```
+- **Preprocessor-based Clients**: It is now possible to create a client solely from a [Preprocessor](type),
+  which allows for dynamic, per-request configuration of the protocol and endpoint. #6060
+  ```java
+  HttpPreprocessor preprocessor = (delegate, ctx, req) -> {
+     // Dynamically set the session protocol and endpoint group.
+     ctx.setSessionProtocol(SessionProtocol.HTTP);
+     ctx.setEndpointGroup(Endpoint.of("endpoint.example.com", 8080));
+     return delegate.execute(ctx, req);
+  };
+  WebClient client = WebClient.of(preprocessor);
+  ```
+- **Enhanced RPC Tracing with Brave**: You can now use [BraveRpcService](type) to apply fine-grained sampling,
+  tags and annotations based on [RpcRequest](type) and [RpcResponse](type) content. #6084 #6115
+  ```java
+  RpcTracing rpcTracing =
+    RpcTracing
+      .newBuilder(tracing)
+      .serverSampler(req -> {
+          ServiceRequestContext ctx = (ServiceRequestContext) req.unwrap();
+          RpcRequest rpcRequest = ctx.rpcRequest();
+          if (rpcRequest != null &&
+              "SlowService".equals(rpcRequest.serviceName())) {
+              // Always sample requests to the SlowService.
+              return true;
+          }
+          return null;
+      })
+      .build();
+  BraveRpcService.newDecorator(tracing);
+  ```
+- **Default Content Logging for AnnotatedService**: [AnnotatedService](type) now sets request content and
+  response content to [RequestLog](type) by default. #5711 #6231
+  - You can disable this behavior by specifying `-Dcom.linecorp.armeria.annotatedServiceContentLogging=false` JVM option.
+- **Periodic TLS Key Pair Refresh**: You can now periodically refresh a [TlsKeyPair](type) using the new
+  [TlsProvider#ofScheduled(Supplier,Duration)](type) method. #6331
+  ```java
+  File keyFile = ...;
+  Fie certFile = ...;
+  TlsProvider.ofScheduled(() -> {
+    return TlsKeyPair.of(keyFile, certFile);
+  }, Duration.ofHours(1));
+  ```
+- **Access gRPC Call Details in Decorators**: [GrpcClientCall](type) allows you to access `MethodDescriptor`
+  and `CallOptions` of a gRPC call within the client decorators. #6291
+
+  ```java
+  GrpcClients
+    .builder(grpcServerUri)
+    .decorator((delegate, ctx, req) -> {
+      CallOptions options = GrpcClientCall.callOptions(ctx);  // 👈👈👈
+      MethodDescriptor descriptor = GrpcClientCall.methodDescriptor(ctx);
+      boolean retryable = descriptor.isIdempotent() || descriptor.isSafe()
+      ...
+
+      return delegate.execute(ctx, req);
+    })
+    .build(MyGrpcStub.class);
+  ```
+
+- **Composable Connection Pool Listeners**: You can now compose multiple [ConnectionPoolListener](typeplural) together
+  using [ConnectionPoolListener#andThen(ConnectionPoolListener)](type) #5159 #6207
+- **Response Headers in DocsService**: The debug console in [DocsService](type) now exposes response headers. #6191
+- **Multi-value Query Parameters in Annotated Service**: You can now use `@Param Map<String, List<?>>` in
+  [AnnotatedService](type) to collect multi-value query parameters. #6118
+
+## 📈 Improvements
+
+- The xDS integration has been enhanced to support routing requests based on the :authority header, as well as the path, headers, and query parameters. #6322 #6333
+- Boolean values such as `"True"` and `"False"` in HTTP headers and query parameters are now correctly parsed. #6301 #6302
+- xDS resources are now cached per [XdsBootstrap](type) to improve performance and reduce resource usage. #6288
+- [BraveClient](type) and [BraveService](type) now ensure a span is not lost when [RequestContext](type) is
+  pushed. #6139
+- You can now forcibly refresh the cached value when using [AsyncLoader#load(boolean)?full](type). #6328
+- [RequestLog](type) can now be completed with an arbitrary child log via [RequestLogBuilder#endResponseWithChild(RequestLogAccess)](type). #6294
+- `VirtualHost.normalizeHostnamePattern()` has been optimized to improve performance by skipping unnecessary processing for wildcard patterns. #6208
+
+## 🛠️ Bug fixes
+
+- Fixed a bug where HTTP/2 flow control did not work properly, and stream-level windowing was ignored. #6253 #6266
+- Fixed a regression introduced in version 1.32.4 where [RetryingClient](type) would drop trailers from
+  streaming responses. #6213 #6307
+- An unnecessary `RST_STREAM` frame is no longer sent by the server after an `endStream` frame has already been
+  sent. #6279
+- [CertificateMetrics](type) now prefers the subject alternative name over the common name for the `hostname`
+  tag. #6332
+- Fixes a bug that a recovered [HttpResponse](type) does not produce response content preview. #3969 #6269
+- Thrift [DocService](type) now skips a Thrift-JSON generated file that does not have `namespaces`. #6248
+- Fixed a bug where `WatcherException: too old resource version` was thrown when
+  using [KubernetesEndpointGroup](type). #6305
+- [DnsCache](type) no longer retains references to closed DNS resolvers. #6173 #6174
+- [HttpJsonTranscodingService](type) now correctly handles requests with an empty content body. #6319 #6325
+- Fixed [GsonGrpcJsonMarshallerBulider](type) to correctly customize `JsonFormat.Parser` and `JsonFormat.Printer`. #6146
+- [CompositeEndpointGroup](type) now handles concurrent updates correctly. #6220
+- WebSocket upgrade requests with multiple `Connection` header values are now handled correctly. #5957 #5958
+- Armeria now gracefully rejects invalid `Forwarded` header chunks with 404 Bad request. #6284 #6285
+
+## 🏚️ Deprecations
+
+- [GrpcCallOptions](type) has been deprecated in favor of [GrpcClientCall](type). #6291
+
+## ☢️ Breaking changes
+
+- Netty 4.1.x is no longer supported. Please upgrade to Netty 4.2.x. #6335
+- `armeria-kubernetes` module now requires Java 11 or later. #6271
+- `armeria-graphql` module now requires Java 11 or later. #6335
+- [io_uring](https://unixism.net/loti/what_is_io_uring.html) transport now requires Java 9 or later. #6339
+- The `common.name` tag in [CertificateMetrics](type) is renamed to `hostname`. #6332
+
+## ⛓ Dependencies
+
+- Blockhound 1.0.10 → 1.0.13
+- Brave 6.1.0 → 6.3.0
+- Micrometer context propagation 1.1.2 → 1.1.3
+- Control plane 1.0.48 → 1.0.49
+- Curator 5.7.1 → 5.9.0
+- Dropwizard Metrics 4.2.28 → 4.2.33
+- Eureka 2.0.4 → 2.0.5
+- Graphql-Java 20.4 → 24.2
+- gRPC-Java 1.70.0 → 1.74.0
+- Jackson 2.18.2 → 2.19.2
+- Jetty 11.0.24 → 11.0.25,, 12.0.14 → 12.0.23
+- JUnit 5.12.0 → 5.13.4
+- Kubernetes client 6.13.5 -> 7.3.1
+- krotodc 1.1.1 → 1.2.0
+- Logback 1.5.16 → 1.5.18
+- Micrometer 1.14.4 → 1.15.2
+- Micrometer Tracing 1.4.3 → 1.5.2
+- Netty 4.1.118 → 4.2.3
+- Prometheus 1.3.6 → 1.3.10
+- Reactor 3.7.3 → 3.7.8
+- Retrofit 2.11.0 → 2.12.0
+- RxJava 3.1.10 → 3.1.11
+- Sangria 4.2.5 → 4.2.10
+- Scala 3.6.1 → 3.7.1
+- Snappy 1.1.10.7 → 1.1.10.8
+- Spring 6.2.3 → 6.2.9
+- Spring Boot 3.4.3 → 3.5.4
+- Thrift 0.21.1, 0.22.0
+- Zookeeper 3.9.2 → 3.9.3
+
+## 🙇 Thank you
+
+<ThankYou
+  usernames={[
+    '0x1306e6d',
+    'AnyRoad',
+    'DongHyukki',
+    'Ivan-Montes',
+    'KarboniteKream',
+    'anuraaga',
+    'blue-hope',
+    'codefromthecrypt',
+    'divijvaidya',
+    'friscoMad',
+    'haneepark',
+    'hyunw9',
+    'icepeppermint',
+    'ikhoon',
+    'jrhee17',
+    'kojilin',
+    'kwondh5217',
+    'minwoox',
+    'pppurple',
+    'rickyma',
+    'schiemon',
+    'sh-cho',
+    'trustin',
+    'yzfeng2020',
+  ]}
+/>

@@ -96,10 +96,10 @@ class XdsPreprocessorTest {
 
     @BeforeEach
     void beforeEach() {
-        final Cluster httpCluster = XdsTestResources.createCluster(clusterName, 0);
+        final Cluster httpCluster = XdsTestResources.createCluster(clusterName, 1);
 
         final Cluster httpsCluster = XdsTestResources
-                .createCluster(httpsClusterName, 0)
+                .createCluster(httpsClusterName, 1)
                 .toBuilder()
                 .setTransportSocket(upstreamTls())
                 .build();

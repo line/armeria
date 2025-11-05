@@ -23,7 +23,6 @@ import java.util.List;
 import com.google.common.base.MoreObjects;
 import com.google.common.base.Objects;
 import com.google.protobuf.Any;
-import com.google.protobuf.InvalidProtocolBufferException;
 
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
@@ -52,17 +51,16 @@ public final class ListenerXdsResource implements XdsResource {
     private final Router router;
 
     ListenerXdsResource(Listener listener) {
+        XdsValidatorIndex.of().assertValid(listener);
         this.listener = listener;
 
-        final Any apiListener = listener.getApiListener().getApiListener();
-        if (HTTP_CONNECTION_MANAGER_TYPE_URL.equals(apiListener.getTypeUrl())) {
-            try {
-                connectionManager = apiListener.unpack(HttpConnectionManager.class);
-            } catch (InvalidProtocolBufferException e) {
-                throw new IllegalArgumentException(e);
+        if (listener.getApiListener().hasApiListener()) {
+            final Any apiListener = listener.getApiListener().getApiListener();
+            if (HTTP_CONNECTION_MANAGER_TYPE_URL.equals(apiListener.getTypeUrl())) {
+                connectionManager = XdsValidatorIndex.of().unpack(apiListener, HttpConnectionManager.class);
+            } else {
+                throw new IllegalArgumentException("Unsupported api listener: " + apiListener);
             }
-            checkArgument(connectionManager.hasRds() || connectionManager.hasRouteConfig(),
-                          "connectionManager should have an RDS or RouteConfig");
         } else {
             connectionManager = null;
         }
@@ -115,11 +113,7 @@ public final class ListenerXdsResource implements XdsResource {
             return null;
         }
         checkArgument(lastHttpFilter.hasTypedConfig(), "Only typedConfig is supported for 'Router'.");
-        try {
-            return lastHttpFilter.getTypedConfig().unpack(Router.class);
-        } catch (InvalidProtocolBufferException e) {
-            throw new RuntimeException("Failed to unpack 'Router'.", e);
-        }
+        return XdsValidatorIndex.of().unpack(lastHttpFilter.getTypedConfig(), Router.class);
     }
 
     @Override

@@ -490,6 +490,7 @@ const App: React.FunctionComponent<Props> = (props) => {
         });
         setSpecification(initialSpecification);
       } catch (e) {
+        // eslint-disable-next-line no-console
         console.log(e);
         setSpecLoadingStatus(SpecLoadingStatus.FAILED);
         return;

@@ -39,6 +39,8 @@ import org.junit.jupiter.params.provider.EnumSource;
 import org.junit.jupiter.params.provider.MethodSource;
 
 import com.google.common.collect.ImmutableList;
+import com.google.protobuf.UInt32Value;
+import com.google.protobuf.util.Durations;
 
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.Endpoint;
@@ -113,6 +115,7 @@ class HealthCheckedTest {
         final ClusterLoadAssignment loadAssignment =
                 ClusterLoadAssignment
                         .newBuilder()
+                        .setClusterName("cluster")
                         .addEndpoints(localityLbEndpoints(Locality.getDefaultInstance(), allEndpoints))
                         .setPolicy(Policy.newBuilder().setWeightedPriorityHealth(true))
                         .build();
@@ -122,7 +125,11 @@ class HealthCheckedTest {
         final Cluster cluster = createStaticCluster("cluster", loadAssignment)
                 .toBuilder()
                 .addHealthChecks(HealthCheck.newBuilder()
-                                            .setHttpHealthCheck(httpHealthCheck))
+                                            .setHttpHealthCheck(httpHealthCheck)
+                                            .setTimeout(Durations.fromSeconds(5))
+                                            .setInterval(Durations.fromSeconds(10))
+                                            .setUnhealthyThreshold(UInt32Value.of(3))
+                                            .setHealthyThreshold(UInt32Value.of(2)))
                 .build();
 
         final Bootstrap bootstrap = staticBootstrap(listener, cluster);
@@ -171,6 +178,7 @@ class HealthCheckedTest {
         final ClusterLoadAssignment loadAssignment =
                 ClusterLoadAssignment
                         .newBuilder()
+                        .setClusterName("cluster")
                         .addEndpoints(localityLbEndpoints(Locality.getDefaultInstance(), allEndpoints))
                         .setPolicy(Policy.newBuilder().setWeightedPriorityHealth(true))
                         .build();
@@ -184,6 +192,10 @@ class HealthCheckedTest {
                 HealthCheck.newBuilder()
                            .setHttpHealthCheck(HttpHealthCheck.newBuilder()
                                                               .setPath("/monitor/healthcheck"))
+                           .setTimeout(Durations.fromSeconds(5))
+                           .setInterval(Durations.fromSeconds(10))
+                           .setUnhealthyThreshold(UInt32Value.of(3))
+                           .setHealthyThreshold(UInt32Value.of(2))
                            .build();
         final Cluster cluster = createStaticCluster("cluster", loadAssignment)
                 .toBuilder()
@@ -249,6 +261,7 @@ class HealthCheckedTest {
         final ClusterLoadAssignment loadAssignment =
                 ClusterLoadAssignment
                         .newBuilder()
+                        .setClusterName("cluster")
                         .addEndpoints(localityLbEndpoints(Locality.getDefaultInstance(), allEndpoints))
                         .setPolicy(Policy.newBuilder().setWeightedPriorityHealth(true))
                         .build();
@@ -257,7 +270,12 @@ class HealthCheckedTest {
                                                                .build();
         final Cluster cluster = createStaticCluster("cluster", loadAssignment)
                 .toBuilder()
-                .addHealthChecks(HealthCheck.newBuilder().setHttpHealthCheck(httpHealthCheck))
+                .addHealthChecks(HealthCheck.newBuilder()
+                                            .setHttpHealthCheck(httpHealthCheck)
+                                            .setTimeout(Durations.fromSeconds(5))
+                                            .setInterval(Durations.fromSeconds(10))
+                                            .setUnhealthyThreshold(UInt32Value.of(3))
+                                            .setHealthyThreshold(UInt32Value.of(2)))
                 .setCommonLbConfig(CommonLbConfig.newBuilder()
                                                  .setHealthyPanicThreshold(Percent.newBuilder().setValue(0)))
                 .build();

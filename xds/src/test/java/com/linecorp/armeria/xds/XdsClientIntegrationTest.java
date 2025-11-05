@@ -28,6 +28,7 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 
 import com.google.common.collect.ImmutableList;
 
+import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.grpc.GrpcService;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 import com.linecorp.armeria.testing.server.ServiceRequestContextCaptor;
@@ -46,7 +47,7 @@ class XdsClientIntegrationTest {
     @RegisterExtension
     static final ServerExtension server = new ServerExtension() {
         @Override
-        protected void configure(com.linecorp.armeria.server.ServerBuilder sb) throws Exception {
+        protected void configure(ServerBuilder sb) throws Exception {
             final V3DiscoveryServer v3DiscoveryServer = new V3DiscoveryServer(cache);
             sb.service(GrpcService.builder()
                                   .addService(v3DiscoveryServer.getAggregatedDiscoveryServiceImpl())
@@ -63,7 +64,7 @@ class XdsClientIntegrationTest {
         cache.setSnapshot(
                 GROUP,
                 Snapshot.create(
-                        ImmutableList.of(XdsTestResources.createCluster("cluster1", 0)),
+                        ImmutableList.of(XdsTestResources.createCluster("cluster1", 1)),
                         ImmutableList.of(XdsTestResources.loadAssignment("cluster1", URI.create("http://a.b"))),
                         ImmutableList.of(), ImmutableList.of(), ImmutableList.of(), "1"));
     }
@@ -86,8 +87,9 @@ class XdsClientIntegrationTest {
             cache.setSnapshot(
                     GROUP,
                     Snapshot.create(
-                            ImmutableList.of(XdsTestResources.createCluster(clusterName, 1)),
-                            ImmutableList.of(), ImmutableList.of(), ImmutableList.of(),
+                            ImmutableList.of(XdsTestResources.createCluster(clusterName, 2)),
+                            ImmutableList.of(XdsTestResources.loadAssignment("cluster1", URI.create("http://a.b"))),
+                            ImmutableList.of(), ImmutableList.of(),
                             ImmutableList.of(), "2"));
             clusterSnapshot = watcher.blockingChanged(ClusterSnapshot.class);
             final Cluster expectedCluster2 = cache.getSnapshot(GROUP).clusters().resources().get(clusterName);
@@ -98,7 +100,7 @@ class XdsClientIntegrationTest {
             cache.setSnapshot(
                     GROUP,
                     Snapshot.create(
-                            ImmutableList.of(XdsTestResources.createCluster(clusterName, 2)),
+                            ImmutableList.of(XdsTestResources.createCluster(clusterName, 3)),
                             ImmutableList.of(), ImmutableList.of(), ImmutableList.of(),
                             ImmutableList.of(), "2"));
 
@@ -124,8 +126,8 @@ class XdsClientIntegrationTest {
             cache.setSnapshot(
                     GROUP,
                     Snapshot.create(
-                            ImmutableList.of(XdsTestResources.createCluster("cluster1", 1),
-                                             XdsTestResources.createCluster("cluster2", 1)),
+                            ImmutableList.of(XdsTestResources.createCluster("cluster1", 2),
+                                             XdsTestResources.createCluster("cluster2", 2)),
                             ImmutableList.of(XdsTestResources.loadAssignment("cluster1", URI.create("http://a.b")),
                                              XdsTestResources.loadAssignment("cluster2", URI.create("http://c.d"))),
                             ImmutableList.of(), ImmutableList.of(), ImmutableList.of(), "2"));
@@ -146,15 +148,14 @@ class XdsClientIntegrationTest {
             cache.setSnapshot(
                     GROUP,
                     Snapshot.create(
-                            ImmutableList.of(XdsTestResources.createCluster("cluster1", 2),
-                                             XdsTestResources.createCluster("cluster2", 2)),
+                            ImmutableList.of(XdsTestResources.createCluster("cluster1", 3),
+                                             XdsTestResources.createCluster("cluster2", 3)),
                             ImmutableList.of(XdsTestResources.loadAssignment("cluster1", URI.create("http://a.b")),
                                              XdsTestResources.loadAssignment("cluster2", URI.create("http://c.d"))),
                             ImmutableList.of(), ImmutableList.of(), ImmutableList.of(), "3"));
             clusterSnapshot = watcher.blockingChanged(ClusterSnapshot.class);
             final Cluster expectedCluster4 = cache.getSnapshot(GROUP).clusters().resources().get("cluster2");
             assertThat(clusterSnapshot.xdsResource().resource()).isEqualTo(expectedCluster4);
-
             await().pollDelay(100, TimeUnit.MILLISECONDS)
                    .untilAsserted(() -> assertThat(watcher.events()).isEmpty());
         }
@@ -207,8 +208,9 @@ class XdsClientIntegrationTest {
             cache.setSnapshot(
                     GROUP,
                     Snapshot.create(
-                            ImmutableList.of(XdsTestResources.createCluster("cluster1", 1)),
-                            ImmutableList.of(), ImmutableList.of(), ImmutableList.of(),
+                            ImmutableList.of(XdsTestResources.createCluster("cluster1", 2)),
+                            ImmutableList.of(XdsTestResources.loadAssignment("cluster1", URI.create("http://a.b"))),
+                            ImmutableList.of(), ImmutableList.of(),
                             ImmutableList.of(), "2"));
             clusterSnapshot = watcher.blockingChanged(ClusterSnapshot.class);
             final Cluster expectedCluster2 = cache.getSnapshot(GROUP).clusters().resources().get("cluster1");
