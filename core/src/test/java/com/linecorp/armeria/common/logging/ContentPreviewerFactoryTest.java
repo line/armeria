@@ -77,9 +77,14 @@ class ContentPreviewerFactoryTest {
         contentPreviewer = factory.requestContentPreviewer(
                 ctx, RequestHeaders.of(HttpMethod.POST, "/",
                                        HttpHeaderNames.CONTENT_TYPE, "my/type; charset=UTF-8"));
-        checkProduced(contentPreviewer);
+        assertThat(contentPreviewer.produce()).isNull();
 
         contentPreviewer = factory.requestContentPreviewer(ctx, reqHeaders(MediaType.BASIC_AUDIO));
+        contentPreviewer.onData(HttpData.ofUtf8("hello!"));
+        assertThat(contentPreviewer.produce()).isNull();
+
+        contentPreviewer = factory.requestContentPreviewer(
+                ctx, reqHeaders(MediaType.PNG.withCharset(StandardCharsets.UTF_8)));
         contentPreviewer.onData(HttpData.ofUtf8("hello!"));
         assertThat(contentPreviewer.produce()).isNull();
     }
