@@ -51,6 +51,7 @@ import com.google.common.base.MoreObjects;
 import com.google.common.base.MoreObjects.ToStringHelper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.primitives.Ints;
 
 import com.linecorp.armeria.client.proxy.ProxyConfig;
@@ -68,7 +69,6 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.outlier.OutlierDetection;
 import com.linecorp.armeria.common.util.EventLoopGroups;
 import com.linecorp.armeria.common.util.TlsEngineType;
-import com.linecorp.armeria.internal.common.IgnoreHostsTrustManager;
 import com.linecorp.armeria.internal.common.RequestContextUtil;
 import com.linecorp.armeria.internal.common.util.ChannelUtil;
 
@@ -132,6 +132,7 @@ public final class ClientFactoryBuilder implements TlsSetters {
     private TlsProvider tlsProvider;
     @Nullable
     private ClientTlsConfig tlsConfig;
+    private ClientTlsSpec clientTlsSpec = ClientTlsSpec.of();
     private boolean staticTlsSettingsSet;
     private boolean autoCloseConnectionPoolListener = true;
 
@@ -421,8 +422,10 @@ public final class ClientFactoryBuilder implements TlsSetters {
     @Override
     public ClientFactoryBuilder tls(TlsKeyPair tlsKeyPair) {
         requireNonNull(tlsKeyPair, "tlsKeyPair");
-        return tlsCustomizer(customizer -> customizer.keyManager(tlsKeyPair.privateKey(),
-                                                                 tlsKeyPair.certificateChain()));
+        ensureNoTlsProvider();
+        staticTlsSettingsSet = true;
+        clientTlsSpec = clientTlsSpec.toBuilder().tlsKeyPair(tlsKeyPair).build();
+        return this;
     }
 
     /**
@@ -431,7 +434,10 @@ public final class ClientFactoryBuilder implements TlsSetters {
     @Override
     public ClientFactoryBuilder tls(KeyManagerFactory keyManagerFactory) {
         requireNonNull(keyManagerFactory, "keyManagerFactory");
-        return tlsCustomizer(customizer -> customizer.keyManager(keyManagerFactory));
+        ensureNoTlsProvider();
+        staticTlsSettingsSet = true;
+        clientTlsSpec = clientTlsSpec.toBuilder().keyManagerFactory(keyManagerFactory).build();
+        return this;
     }
 
     /**
@@ -1073,13 +1079,8 @@ public final class ClientFactoryBuilder implements TlsSetters {
             if (tlsConfig != null) {
                 option(ClientFactoryOptions.TLS_CONFIG, tlsConfig);
             }
-        } else {
-            if (tlsNoVerifySet) {
-                tlsCustomizer(b -> b.trustManager(InsecureTrustManagerFactory.INSTANCE));
-            } else if (!insecureHosts.isEmpty()) {
-                tlsCustomizer(b -> b.trustManager(IgnoreHostsTrustManager.of(insecureHosts)));
-            }
         }
+        option(ClientFactoryOptions.CLIENT_TLS_SPEC, clientTlsSpec);
 
         final ClientFactoryOptions newOptions = ClientFactoryOptions.of(options.values());
         final long maxConnectionAgeMillis = newOptions.maxConnectionAgeMillis();
@@ -1124,7 +1125,9 @@ public final class ClientFactoryBuilder implements TlsSetters {
      * Returns a newly-created {@link ClientFactory} based on the properties of this builder.
      */
     public ClientFactory build() {
-        return new DefaultClientFactory(new HttpClientFactory(buildOptions(), autoCloseConnectionPoolListener));
+        final ClientFactoryOptions options = buildOptions();
+        return new DefaultClientFactory(new HttpClientFactory(
+                options, autoCloseConnectionPoolListener, tlsNoVerifySet, ImmutableSet.copyOf(insecureHosts)));
     }
 
     @Override

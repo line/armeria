@@ -165,4 +165,11 @@ public interface RequestOptionsSetters {
      * @see ResponseTimeoutMode
      */
     RequestOptionsSetters responseTimeoutMode(ResponseTimeoutMode responseTimeoutMode);
+
+    /**
+     * Sets the request-specific TLS configuration for this request.
+     * If not set, the {@link ClientFactory} default TLS configurations will be used.
+     */
+    @UnstableApi
+    RequestOptionsSetters clientTlsSpec(ClientTlsSpec clientTlsSpec);
 }

@@ -21,10 +21,11 @@ import static org.awaitility.Awaitility.await;
 
 import java.io.InputStream;
 import java.security.cert.CertificateException;
-import java.sql.Date;
+import java.time.Duration;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.Calendar;
+import java.util.Date;
 import java.util.Map;
 
 import org.assertj.core.api.AbstractDoubleAssert;
@@ -48,7 +49,7 @@ class ClientCertificateMetricsTest {
     @Test
     void shouldMeasureClientCertValidityInClientFactory() {
         // If the test runs at 11:59:59 PM, it could fail.
-        await().untilAsserted(() -> {
+        await().pollInterval(Duration.ofSeconds(1)).untilAsserted(() -> {
             final Instant now = Instant.now();
             final Instant notAfter = now.plus(10, ChronoUnit.DAYS);
             final SelfSignedCertificate ssc = new SelfSignedCertificate("armeria.dev", Date.from(now),
@@ -60,6 +61,7 @@ class ClientCertificateMetricsTest {
                                      .tls(ssc.certificate(), ssc.privateKey())
                                      .meterRegistry(meterRegistry)
                                      .build();
+                WebClient.builder("https://armeria.dev").factory(factory).build().blocking().get("/");
                 final Map<String, Double> metrics = MoreMeters.measureAll(meterRegistry);
                 assertThat(metrics)
                         .containsEntry(

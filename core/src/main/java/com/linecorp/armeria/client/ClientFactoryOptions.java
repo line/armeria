@@ -374,6 +374,10 @@ public final class ClientFactoryOptions
     public static final ClientFactoryOption<Consumer<? super ChannelPipeline>> CHANNEL_PIPELINE_CUSTOMIZER =
             ClientFactoryOption.define("CHANNEL_PIPELINE_CUSTOMIZER", v -> { /* no-op */ });
 
+    @UnstableApi
+    public static final ClientFactoryOption<ClientTlsSpec> CLIENT_TLS_SPEC =
+            ClientFactoryOption.define("CLIENT_TLS_SPEC", ClientTlsSpec.of());
+
     private static final ClientFactoryOptions EMPTY = new ClientFactoryOptions(ImmutableList.of());
 
     /**
@@ -743,5 +747,13 @@ public final class ClientFactoryOptions
     @UnstableApi
     public Consumer<? super ChannelPipeline> channelPipelineCustomizer() {
         return get(CHANNEL_PIPELINE_CUSTOMIZER);
+    }
+
+    /**
+     * Returns the default {@link ClientTlsSpec}.
+     */
+    @UnstableApi
+    public ClientTlsSpec clientTlsSpec() {
+        return get(CLIENT_TLS_SPEC);
     }
 }
