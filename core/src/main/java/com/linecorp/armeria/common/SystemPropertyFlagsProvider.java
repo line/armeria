@@ -38,7 +38,7 @@ import com.google.common.collect.Streams;
 
 import com.linecorp.armeria.client.ResponseTimeoutMode;
 import com.linecorp.armeria.common.annotation.Nullable;
-import com.linecorp.armeria.common.multipart.MultipartDecodingMode;
+import com.linecorp.armeria.common.multipart.MultipartFilenameDecodingMode;
 import com.linecorp.armeria.common.util.InetAddressPredicates;
 import com.linecorp.armeria.common.util.Sampler;
 import com.linecorp.armeria.common.util.TlsEngineType;
@@ -554,21 +554,22 @@ final class SystemPropertyFlagsProvider implements FlagsProvider {
 
     @Nullable
     @Override
-    public MultipartDecodingMode defaultMultipartDecodingMode() {
-        final String defaultMultipartDecodingMode = getNormalized("defaultMultipartDecodingMode");
-        if (defaultMultipartDecodingMode == null) {
+    public MultipartFilenameDecodingMode defaultMultipartFilenameDecodingMode() {
+        final String defaultMultipartFilenameDecodingMode =
+                getNormalized("defaultMultipartFilenameDecodingMode");
+        if (defaultMultipartFilenameDecodingMode == null) {
             return null;
         }
-        switch (defaultMultipartDecodingMode) {
+        switch (defaultMultipartFilenameDecodingMode) {
             case "utf_8":
-                return MultipartDecodingMode.UTF_8;
+                return MultipartFilenameDecodingMode.UTF_8;
             case "iso_8859_1":
-                return MultipartDecodingMode.ISO_8859_1;
+                return MultipartFilenameDecodingMode.ISO_8859_1;
             case "url_decoding":
-                return MultipartDecodingMode.URL_DECODING;
+                return MultipartFilenameDecodingMode.URL_DECODING;
             default:
                 throw new IllegalArgumentException(
-                        defaultMultipartDecodingMode + " isn't a MultipartDecodingMode");
+                        defaultMultipartFilenameDecodingMode + " isn't a MultipartFilenameDecodingMode");
         }
     }
 

@@ -17,16 +17,15 @@ package com.linecorp.armeria.common.multipart;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
+import org.junitpioneer.jupiter.SetSystemProperty;
 
-import com.linecorp.armeria.common.AggregatedHttpRequest;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.ContentDisposition;
-import com.linecorp.armeria.common.HttpData;
-import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
@@ -35,7 +34,8 @@ import com.linecorp.armeria.server.annotation.Param;
 import com.linecorp.armeria.server.annotation.Post;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
-class MultipartDecodingModeTest {
+@SetSystemProperty(key = "com.linecorp.armeria.defaultMultipartFilenameDecodingMode", value = "URL_DECODING")
+class MultipartFilenameDecodingModeTest {
 
     @RegisterExtension
     static ServerExtension server = new ServerExtension() {
@@ -51,25 +51,13 @@ class MultipartDecodingModeTest {
     };
 
     @Test
-    void utf8() {
+    void urlDecoding() {
+        final String encoded = URLEncoder.encode("한글.txt", StandardCharsets.UTF_8);
+        assertThat(encoded).isEqualTo("%ED%95%9C%EA%B8%80.txt");
         final Multipart multipart = Multipart.of(
-                BodyPart.of(ContentDisposition.of("form-data", "multipartFileFoo", "한글.txt"), "qux"));
+                BodyPart.of(ContentDisposition.of("form-data", "multipartFileFoo", encoded), "qux"));
         final AggregatedHttpResponse response =
                 server.blockingWebClient().execute(multipart.toHttpRequest("/multipart"));
         assertThat(response.contentUtf8()).isEqualTo("한글.txt");
-    }
-
-    @Test
-    void iso_8859_1IsntDecoded() {
-        final Multipart multipart = Multipart.of(
-                BodyPart.of(ContentDisposition.of("form-data", "multipartFileFoo", "résumé.pdf"), "qux"));
-        final HttpRequest httpRequest = multipart.toHttpRequest("/multipart");
-        final AggregatedHttpRequest join = httpRequest.aggregate().join();
-        final AggregatedHttpResponse response =
-                server.blockingWebClient().execute(HttpRequest.of(join.headers(),
-                                                                  HttpData.of(StandardCharsets.ISO_8859_1,
-                                                                              join.contentUtf8())));
-        // Because the default decoding mode is UTF-8, the filename is misdecoded to 'r�sum�.pdf'.
-        assertThat(response.contentUtf8()).isNotEqualTo("résumé.pdf");
     }
 }

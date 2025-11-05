@@ -40,7 +40,7 @@ import com.linecorp.armeria.client.retry.RetryingClient;
 import com.linecorp.armeria.client.retry.RetryingRpcClient;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
-import com.linecorp.armeria.common.multipart.MultipartDecodingMode;
+import com.linecorp.armeria.common.multipart.MultipartFilenameDecodingMode;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.common.util.Sampler;
 import com.linecorp.armeria.common.util.SystemInfo;
@@ -1140,11 +1140,11 @@ public interface FlagsProvider {
     }
 
     /**
-     * Returns the {@link MultipartDecodingMode} that is used to determine how to decode
+     * Returns the {@link MultipartFilenameDecodingMode} that is used to determine how to decode
      * a {@code filename} parameter in a {@link HttpHeaderNames#CONTENT_DISPOSITION} header.
      */
     @Nullable
-    default MultipartDecodingMode defaultMultipartDecodingMode() {
+    default MultipartFilenameDecodingMode defaultMultipartFilenameDecodingMode() {
         return null;
     }
 

@@ -23,7 +23,7 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
  * a {@link HttpHeaderNames#CONTENT_DISPOSITION} header.
  */
 @UnstableApi
-public enum MultipartDecodingMode {
+public enum MultipartFilenameDecodingMode {
 
     /**
      * Decodes the filename as a raw UTF-8 string. This is the default.
