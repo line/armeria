@@ -27,10 +27,10 @@
   "dependencies": {
     "@ant-design/icons": "^6.0.0",
     "@ant-design/v5-patch-for-react-19": "^1.0.3",
-    "@docusaurus/core": "^3.9.0",
-    "@docusaurus/plugin-client-redirects": "^3.9.0",
-    "@docusaurus/plugin-pwa": "^3.9.0",
-    "@docusaurus/preset-classic": "^3.9.0",
+    "@docusaurus/core": "^3.9.2",
+    "@docusaurus/plugin-client-redirects": "^3.9.2",
+    "@docusaurus/plugin-pwa": "^3.9.2",
+    "@docusaurus/preset-classic": "^3.9.2",
     "@emotion/react": "^11.14.0",
     "@eslint/eslintrc": "^3.2.0",
     "@eslint/js": "^9.20.0",
@@ -61,9 +61,9 @@
     "unist-util-visit": "^5.0.0"
   },
   "devDependencies": {
-    "@docusaurus/module-type-aliases": "^3.9.0",
-    "@docusaurus/tsconfig": "^3.9.0",
-    "@docusaurus/types": "^3.9.0",
+    "@docusaurus/module-type-aliases": "^3.9.2",
+    "@docusaurus/tsconfig": "^3.9.2",
+    "@docusaurus/types": "^3.9.2",
     "@octokit/core": "^7.0.4",
     "@typescript-eslint/eslint-plugin": "^5.62.0",
     "@typescript-eslint/parser": "^5.62.0",
