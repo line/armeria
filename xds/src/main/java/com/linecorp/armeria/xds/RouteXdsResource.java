@@ -37,6 +37,7 @@ public final class RouteXdsResource extends AbstractXdsResource {
 
     RouteXdsResource(RouteConfiguration routeConfiguration, String version, long revision) {
         super(version, revision);
+        XdsValidatorIndex.of().assertValid(routeConfiguration);
         this.routeConfiguration = routeConfiguration;
         filterConfigs = toParsedFilterConfigs(routeConfiguration.getTypedPerFilterConfigMap());
     }

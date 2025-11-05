@@ -34,9 +34,8 @@ final class XdsBootstrapImpl implements XdsBootstrap {
     private final Bootstrap bootstrap;
     private final EventExecutor eventLoop;
 
-    private final BootstrapListeners bootstrapListeners;
-    private final BootstrapClusters bootstrapClusters;
     private final XdsClusterManager clusterManager;
+    private final ListenerManager listenerManager;
     private final ControlPlaneClientManager controlPlaneClientManager;
     private final SubscriptionContext subscriptionContext;
 
@@ -54,22 +53,22 @@ final class XdsBootstrapImpl implements XdsBootstrap {
         this.bootstrap = bootstrap;
         this.eventLoop = requireNonNull(eventLoop, "eventLoop");
         clusterManager = new XdsClusterManager(eventLoop, bootstrap);
-        bootstrapClusters = new BootstrapClusters(bootstrap, eventLoop, clusterManager);
-        bootstrapListeners = new BootstrapListeners(bootstrap);
+        final BootstrapClusters bootstrapClusters = new BootstrapClusters(bootstrap, eventLoop, clusterManager);
+        final ConfigSourceMapper configSourceMapper = new ConfigSourceMapper(bootstrap);
         controlPlaneClientManager = new ControlPlaneClientManager(bootstrap, eventLoop,
-                                                                  configClientCustomizer, bootstrapClusters);
+                                                                  configClientCustomizer, bootstrapClusters,
+                                                                  configSourceMapper);
         subscriptionContext = new DefaultSubscriptionContext(
-                eventLoop, clusterManager, new ConfigSourceMapper(bootstrap), controlPlaneClientManager);
+                eventLoop, clusterManager, configSourceMapper, controlPlaneClientManager);
 
-        eventLoop.execute(() -> {
-            bootstrapClusters.initializeSecondary(subscriptionContext);
-        });
+        bootstrapClusters.initializeSecondary(subscriptionContext);
+        listenerManager = new ListenerManager(eventLoop, bootstrap, subscriptionContext);
     }
 
     @Override
     public ListenerRoot listenerRoot(String resourceName) {
         requireNonNull(resourceName, "resourceName");
-        return new ListenerRoot(subscriptionContext, resourceName, bootstrapListeners);
+        return new ListenerRoot(subscriptionContext, resourceName, listenerManager);
     }
 
     @Override

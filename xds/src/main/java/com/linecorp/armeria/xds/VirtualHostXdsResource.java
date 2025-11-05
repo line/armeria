@@ -36,6 +36,7 @@ public final class VirtualHostXdsResource extends AbstractXdsResource {
 
     VirtualHostXdsResource(VirtualHost virtualHost, String version, long revision) {
         super(version, revision);
+        XdsValidatorIndex.of().assertValid(virtualHost);
         this.virtualHost = virtualHost;
         virtualHostFilterConfigs = toParsedFilterConfigs(virtualHost.getTypedPerFilterConfigMap());
     }

@@ -36,6 +36,7 @@ public final class ClusterXdsResource extends AbstractXdsResource {
 
     ClusterXdsResource(Cluster cluster, String version, long revision) {
         super(version, revision);
+        XdsValidatorIndex.of().assertValid(cluster);
         this.cluster = cluster;
         upstreamTlsContext = upstreamTlsContext(cluster);
     }
@@ -46,12 +47,8 @@ public final class ClusterXdsResource extends AbstractXdsResource {
             final String transportSocketName = cluster.getTransportSocket().getName();
             checkArgument("envoy.transport_sockets.tls".equals(transportSocketName),
                           "Unexpected tls transport socket name '%s'", transportSocketName);
-            try {
-                return cluster.getTransportSocket().getTypedConfig()
-                              .unpack(UpstreamTlsContext.class);
-            } catch (Exception e) {
-                throw new IllegalArgumentException("Error unpacking tls context", e);
-            }
+            return XdsValidatorIndex.of().unpack(cluster.getTransportSocket().getTypedConfig(),
+                                                 UpstreamTlsContext.class);
         }
         return null;
     }
