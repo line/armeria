@@ -162,7 +162,7 @@ final class LocalityRoutingStateFactory {
                                                  if (rc.offset <= 0) {
                                                      return 0d;
                                                  }
-                                                 return 1.0 * rc.offset /  lastResidualCapacity;
+                                                 return 1.0 * rc.offset / lastResidualCapacity;
                                              }));
         }
 
