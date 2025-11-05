@@ -107,7 +107,6 @@ const Home: React.FC = (): ReactNode => {
   const docServiceImages = [docServiceCarousel1, docServiceCarousel2];
   return (
     <Layout
-      title="Armeria - Your go-to microservice framework"
       description={
         'Armeria is your go-to microservice framework for any situation. ' +
         'You can build any type of microservice leveraging your favorite technologies, ' +

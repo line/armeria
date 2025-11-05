@@ -118,6 +118,17 @@ export default async function createConfigAsync() {
 
     themeConfig: {
       image: 'img/og-image.jpg',
+      metadata: [
+        {
+          name: 'og:site_name',
+          content: 'Armeria - Your go-to microservice framework',
+        },
+        { name: 'og:type', content: 'website' },
+        { name: 'og:image:width', content: '1280' },
+        { name: 'og:image:height', content: '640' },
+        { name: 'twitter:site', content: '@armeria_project' },
+        { name: 'twitter:creator', content: '@armeria_project' },
+      ],
       navbar: {
         style: 'dark',
         logo: {
@@ -310,6 +321,24 @@ export default async function createConfigAsync() {
             {
               from: '/release-notes',
               to: await getLatestReleaseNotePath(),
+            },
+          ],
+        },
+      ],
+      [
+        '@docusaurus/plugin-pwa',
+        {
+          debug: false,
+          offlineModeActivationStrategies: [
+            'appInstalled',
+            'standalone',
+            'queryString',
+          ],
+          pwaHead: [
+            {
+              tagName: 'link',
+              rel: 'manifest',
+              href: '/manifest.json',
             },
           ],
         },
