@@ -132,11 +132,11 @@ final class DefaultHostSet implements HostSet {
         return LoadBalancer.ofWeightedRandom(localityWeightsBuilder.build());
     }
 
-    static double effectiveLocalityWeight(Locality locality,
-                                          Map<Locality, EndpointGroup> eligibleHostsPerLocality,
-                                          Map<Locality, EndpointGroup> allHostsPerLocality,
-                                          Map<Locality, Integer> localityWeightsMap,
-                                          int overProvisioningFactor) {
+    private static double effectiveLocalityWeight(Locality locality,
+                                                  Map<Locality, EndpointGroup> eligibleHostsPerLocality,
+                                                  Map<Locality, EndpointGroup> allHostsPerLocality,
+                                                  Map<Locality, Integer> localityWeightsMap,
+                                                  int overProvisioningFactor) {
         final EndpointGroup localityEligibleHosts =
                 eligibleHostsPerLocality.getOrDefault(locality, EndpointGroup.of());
         final int hostCount = allHostsPerLocality.getOrDefault(locality, EndpointGroup.of()).endpoints().size();

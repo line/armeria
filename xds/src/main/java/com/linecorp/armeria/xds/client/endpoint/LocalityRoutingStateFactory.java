@@ -107,7 +107,7 @@ final class LocalityRoutingStateFactory {
             return MoreObjects.toStringHelper(this)
                               .add("locality", locality)
                               .add("capacity", capacity)
-                              .add("percentage", offset)
+                              .add("offset", offset)
                               .toString();
         }
     }

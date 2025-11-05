@@ -89,7 +89,8 @@ final class DefaultXdsLoadBalancer implements UpdatableXdsLoadBalancer {
         observer.resourceUpdated(clusterSnapshot);
         // Set the new clusterSnapshot
         endpointGroup = XdsEndpointUtil.convertEndpointGroup(clusterSnapshot);
-        updateEndpointsCallback = endpoints0 -> updateEndpoints(clusterSnapshot, endpoints0);
+        updateEndpointsCallback =
+                endpoints0 -> eventLoop.execute(() -> updateEndpoints(clusterSnapshot, endpoints0));
         endpointGroup.addListener(updateEndpointsCallback, true);
     }
 
