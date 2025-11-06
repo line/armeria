@@ -13,23 +13,51 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
+
 package com.linecorp.armeria.server.jsonrpc;
 
 import java.util.concurrent.CompletableFuture;
 
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
+import com.linecorp.armeria.common.jsonrpc.JsonRpcError;
+import com.linecorp.armeria.common.jsonrpc.JsonRpcMessage;
+import com.linecorp.armeria.common.jsonrpc.JsonRpcNotification;
 import com.linecorp.armeria.common.jsonrpc.JsonRpcRequest;
 import com.linecorp.armeria.common.jsonrpc.JsonRpcResponse;
+import com.linecorp.armeria.common.util.UnmodifiableFuture;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
-/**
- * Implement this interface to handle incoming {@link JsonRpcRequest}.
- */
 @UnstableApi
 @FunctionalInterface
 public interface JsonRpcHandler {
+
     /**
-    * Handles the incoming {@link JsonRpcRequest} and returns {@link JsonRpcResponse}.
-    */
-    CompletableFuture<JsonRpcResponse> handle(ServiceRequestContext ctx, JsonRpcRequest request);
+     * Returns a fallback {@link JsonRpcHandler} that handles unregistered methods by returning a
+     * {@link JsonRpcError#METHOD_NOT_FOUND} error response for {@link JsonRpcRequest}s,
+     * and ignoring {@link JsonRpcNotification}s and {@link JsonRpcResponse}s.
+     */
+    static JsonRpcHandler ofFallback() {
+        return (ctx, message) -> {
+            if (message instanceof JsonRpcNotification || message instanceof JsonRpcResponse) {
+                // Just ignore notifications and responses.
+                return UnmodifiableFuture.completedFuture(null);
+            }
+
+            final JsonRpcRequest request = (JsonRpcRequest) message;
+            return UnmodifiableFuture.completedFuture(
+                    JsonRpcResponse.ofFailure(request.id(), JsonRpcError.METHOD_NOT_FOUND));
+        };
+    }
+
+    /**
+     * Handles incoming {@link JsonRpcRequest} or {@link JsonRpcNotification} whose {@code method} is not
+     * registered with the {@link JsonRpcService},
+     * and also processes {@link JsonRpcResponse} messages that may be received as input.
+     *
+     * <p>Note that when the input is a {@link JsonRpcNotification} or {@link JsonRpcResponse},
+     * the returned {@link CompletableFuture} must be completed with null, as any returned value will be
+     * ignored otherwise.
+     */
+    CompletableFuture<@Nullable JsonRpcResponse> handleRpcCall(ServiceRequestContext ctx, JsonRpcMessage message);
 }

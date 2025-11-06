@@ -15,35 +15,87 @@
  */
 package com.linecorp.armeria.common.jsonrpc;
 
+import static net.javacrumbs.jsonunit.fluent.JsonFluentAssert.assertThatJson;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import org.junit.jupiter.api.Test;
 
-public class JsonRpcResponseTest {
-    @Test
-    void of_withObject() {
-        final Object result = "hello";
-        final JsonRpcResponse res = JsonRpcResponse.of(result);
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
+public class JsonRpcResponseTest {
+
+    private static final ObjectMapper mapper = new ObjectMapper();
+
+    @Test
+    void withObject() throws JsonProcessingException {
+        final Object result = "hello";
+        final JsonRpcResponse res = JsonRpcResponse.ofSuccess(result);
+
+        assertThat(res.id()).isNull();
         assertThat(res.result()).isEqualTo(result);
         assertThat(res.error()).isNull();
+        final String json = mapper.writeValueAsString(res);
+        assertThatJson(json).isEqualTo("{\"jsonrpc\":\"2.0\",\"result\":\"hello\"}");
     }
 
     @Test
-    void of_withJsonRpcError() {
-        assertThatThrownBy(() -> JsonRpcResponse.of(JsonRpcError.INVALID_PARAMS))
+    void withObjectId() throws JsonProcessingException {
+        final Object result = "hello";
+        final JsonRpcResponse res = JsonRpcResponse.ofSuccess("my-id", result);
+
+        assertThat(res.id()).isEqualTo("my-id");
+        assertThat(res.result()).isEqualTo(result);
+        assertThat(res.error()).isNull();
+        final String json = mapper.writeValueAsString(res);
+        assertThatJson(json).isEqualTo("{\"id\":\"my-id\",\"jsonrpc\":\"2.0\",\"result\":\"hello\"}");
+    }
+
+    @Test
+    void invalidObjectType() {
+        assertThatThrownBy(() -> JsonRpcResponse.ofSuccess(JsonRpcError.INVALID_PARAMS))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining(
-                    String.format("result.class: %s (expected: not JsonRpcError)",JsonRpcError.class));
+                        String.format("result.class: %s (expected: not JsonRpcError)", JsonRpcError.class));
     }
 
     @Test
-    void ofError() {
-        final JsonRpcError error = JsonRpcError.INTERNAL_ERROR;
-        final JsonRpcResponse res = JsonRpcResponse.ofError(error);
+    void withJsonRpcError() throws JsonProcessingException {
+        final JsonRpcError error = JsonRpcError.INTERNAL_ERROR.withData("invalid status");
+        final JsonRpcResponse res = JsonRpcResponse.ofFailure(error);
 
         assertThat(res.result()).isNull();
         assertThat(res.error()).isEqualTo(error);
+
+        final String json = mapper.writeValueAsString(res);
+        assertThatJson(json).isEqualTo(
+                "{\"error\":{\"code\":-32603,\"message\":\"Internal error\","
+                + "\"data\":\"invalid status\"},\"jsonrpc\":\"2.0\"}");
+    }
+
+    @Test
+    void withJsonRpcErrorId() throws JsonProcessingException {
+        final JsonRpcError error = JsonRpcError.INTERNAL_ERROR.withData("invalid status");
+        final JsonRpcResponse res = JsonRpcResponse.ofFailure("my-id", error);
+
+        assertThat(res.id()).isEqualTo("my-id");
+        assertThat(res.result()).isNull();
+        assertThat(res.error()).isEqualTo(error);
+
+        final String json = mapper.writeValueAsString(res);
+        assertThatJson(json).isEqualTo(
+                "{\"id\":\"my-id\",\"error\":{\"code\":-32603,\"message\":\"Internal error\","
+                + "\"data\":\"invalid status\"},\"jsonrpc\":\"2.0\"}");
+    }
+
+    @Test
+    void withId() {
+        final Object result = "hello";
+        final JsonRpcResponse res = JsonRpcResponse.ofSuccess(result);
+        assertThat(res.id()).isNull();
+        final JsonRpcResponse resWithId = res.withId("id");
+        assertThat(resWithId.id()).isEqualTo("id");
+        assertThat(res.id()).isNull();
     }
 }
