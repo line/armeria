@@ -16,9 +16,6 @@
 
 package com.linecorp.armeria.xds;
 
-import com.google.common.base.MoreObjects;
-import com.google.common.base.Objects;
-
 import com.linecorp.armeria.common.annotation.UnstableApi;
 
 import io.envoyproxy.envoy.config.route.v3.RouteConfiguration;
@@ -27,11 +24,13 @@ import io.envoyproxy.envoy.config.route.v3.RouteConfiguration;
  * A resource object for a {@link RouteConfiguration}.
  */
 @UnstableApi
-public final class RouteXdsResource implements XdsResource {
+public final class RouteXdsResource extends AbstractXdsResource {
 
     private final RouteConfiguration routeConfiguration;
 
-    RouteXdsResource(RouteConfiguration routeConfiguration) {
+    RouteXdsResource(RouteConfiguration routeConfiguration, String version, long revision) {
+        super(version, revision);
+        XdsValidatorIndex.of().assertValid(routeConfiguration);
         this.routeConfiguration = routeConfiguration;
     }
 
@@ -48,29 +47,5 @@ public final class RouteXdsResource implements XdsResource {
     @Override
     public String name() {
         return routeConfiguration.getName();
-    }
-
-    @Override
-    public boolean equals(Object object) {
-        if (this == object) {
-            return true;
-        }
-        if (object == null || getClass() != object.getClass()) {
-            return false;
-        }
-        final RouteXdsResource that = (RouteXdsResource) object;
-        return Objects.equal(routeConfiguration, that.routeConfiguration);
-    }
-
-    @Override
-    public int hashCode() {
-        return routeConfiguration.hashCode();
-    }
-
-    @Override
-    public String toString() {
-        return MoreObjects.toStringHelper(this)
-                          .add("routeConfiguration", routeConfiguration)
-                          .toString();
     }
 }

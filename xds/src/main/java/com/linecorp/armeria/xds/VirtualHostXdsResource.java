@@ -16,18 +16,18 @@
 
 package com.linecorp.armeria.xds;
 
-import com.google.common.base.MoreObjects;
-
 import io.envoyproxy.envoy.config.route.v3.VirtualHost;
 
 /**
  * A resource object for a {@link VirtualHost}.
  */
-public final class VirtualHostXdsResource implements XdsResource {
+public final class VirtualHostXdsResource extends AbstractXdsResource {
 
     private final VirtualHost virtualHost;
 
-    VirtualHostXdsResource(VirtualHost virtualHost) {
+    VirtualHostXdsResource(VirtualHost virtualHost, String version, long revision) {
+        super(version, revision);
+        XdsValidatorIndex.of().assertValid(virtualHost);
         this.virtualHost = virtualHost;
     }
 
@@ -44,12 +44,5 @@ public final class VirtualHostXdsResource implements XdsResource {
     @Override
     public String name() {
         return virtualHost.getName();
-    }
-
-    @Override
-    public String toString() {
-        return MoreObjects.toStringHelper(this)
-                          .add("virtualHost", virtualHost)
-                          .toString();
     }
 }
