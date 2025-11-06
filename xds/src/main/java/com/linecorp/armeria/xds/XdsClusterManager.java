@@ -67,7 +67,7 @@ final class XdsClusterManager implements SafeCloseable {
                                               localLoadBalancer);
         }
         final ClusterResourceNode node =
-                StaticResourceUtils.staticCluster(context, cluster.getName(), cluster, loadBalancer);
+                StaticResourceUtils.staticCluster(context, cluster.getName(), cluster, loadBalancer, "", 0);
         node.addWatcher(watcher);
         nodes.put(cluster.getName(), node);
     }

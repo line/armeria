@@ -106,15 +106,15 @@ abstract class AbstractRoot<T extends Snapshot<? extends XdsResource>>
     }
 
     @Override
-    public void onError(XdsType type, Status status) {
+    public void onError(XdsType type, String resourceName, Status status) {
         if (closed) {
             return;
         }
         if (!eventLoop.inEventLoop()) {
-            eventLoop.execute(() -> onError(type, status));
+            eventLoop.execute(() -> onError(type, resourceName, status));
             return;
         }
-        notifyWatchers("onError", watcher -> watcher.onError(type, status));
+        notifyWatchers("onError", watcher -> watcher.onError(type, resourceName, status));
     }
 
     private void notifyWatchers(String methodName, Consumer<SnapshotWatcher<? super T>> consumer) {
@@ -142,5 +142,15 @@ abstract class AbstractRoot<T extends Snapshot<? extends XdsResource>>
     @Override
     public void close() {
         closed = true;
+    }
+
+    static Runnable safeRunnable(Runnable runnable, Consumer<Throwable> onError) {
+        return () -> {
+            try {
+                runnable.run();
+            } catch (Throwable t) {
+                onError.accept(t);
+            }
+        };
     }
 }

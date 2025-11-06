@@ -68,6 +68,7 @@ class LocalityTest {
         final ClusterLoadAssignment loadAssignment =
                 ClusterLoadAssignment
                         .newBuilder()
+                        .setClusterName("cluster")
                         .addEndpoints(localityLbEndpoints(locality("regionA"), lbEndpointsA, 0, 9))
                         .addEndpoints(localityLbEndpoints(locality("regionB"), lbEndpointsB, 0, 1))
                         .build();
@@ -105,6 +106,7 @@ class LocalityTest {
                                  endpoint("127.0.0.1", 8081));
         final ClusterLoadAssignment loadAssignment =
                 ClusterLoadAssignment.newBuilder()
+                                     .setClusterName("cluster")
                                      .addEndpoints(localityLbEndpoints(locality("regionA"), lbEndpointsA))
                                      .addEndpoints(localityLbEndpoints(locality("regionB"), lbEndpointsB))
                                      .build();
@@ -137,6 +139,7 @@ class LocalityTest {
         final ClusterLoadAssignment loadAssignment =
                 ClusterLoadAssignment
                         .newBuilder()
+                        .setClusterName("cluster")
                         .addEndpoints(localityLbEndpoints(locality("regionA"), lbEndpointsA, 0, 9))
                         .addEndpoints(localityLbEndpoints(locality("regionB"), lbEndpointsB, 0, 1000))
                         .addEndpoints(localityLbEndpoints(locality("regionC"), lbEndpointsC, 0, 1))

@@ -33,8 +33,9 @@ import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.TimeoutException;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.Exceptions;
-import com.linecorp.armeria.internal.client.ClientRequestContextExtension;
 import com.linecorp.armeria.xds.ClusterSnapshot;
+import com.linecorp.armeria.xds.RouteEntry;
+import com.linecorp.armeria.xds.internal.XdsCommonUtil;
 
 import io.envoyproxy.envoy.extensions.transport_sockets.tls.v3.UpstreamTlsContext;
 import io.netty.channel.ChannelOption;
@@ -59,7 +60,7 @@ final class RouterFilter<I extends Request, O extends Response> implements Prepr
             ctx.cancel(e);
             throw e;
         }
-        final SelectedRoute selectedRoute = routeConfig.select(ctx);
+        final RouteEntry selectedRoute = routeConfig.select(ctx);
         if (selectedRoute == null) {
             final UnprocessedRequestException e = UnprocessedRequestException.of(
                     new IllegalArgumentException("No route has been selected for listener '" +
@@ -71,28 +72,14 @@ final class RouterFilter<I extends Request, O extends Response> implements Prepr
         if (clusterSnapshot == null) {
             final UnprocessedRequestException e = UnprocessedRequestException.of(
                     new IllegalArgumentException("No cluster is specified for selected route '" +
-                                                 selectedRoute.routeEntry() + "'."));
+                                                 selectedRoute + "'."));
             ctx.cancel(e);
             throw e;
         }
+        selectedRoute.applyUpstreamFilter(ctx);
 
-        final ClientRequestContextExtension ctxExt = ctx.as(ClientRequestContextExtension.class);
-        if (ctxExt != null) {
-            if (selectedRoute.rpcClient() != null) {
-                ctxExt.rpcClientCustomizer(actualClient -> {
-                    DelegatingRpcClient.setDelegate(ctx, actualClient);
-                    return selectedRoute.rpcClient();
-                });
-            }
-            if (selectedRoute.httpClient() != null) {
-                ctxExt.httpClientCustomizer(actualClient -> {
-                    DelegatingHttpClient.setDelegate(ctx, actualClient);
-                    return selectedRoute.httpClient();
-                });
-            }
-        }
-
-        final long responseTimeoutMillis = selectedRoute.responseTimeoutMillis();
+        final long responseTimeoutMillis =
+                XdsCommonUtil.durationToMillis(selectedRoute.route().getRoute().getTimeout(), -1);
         if (responseTimeoutMillis > 0) {
             ctx.setResponseTimeoutMillis(responseTimeoutMillis);
         }
