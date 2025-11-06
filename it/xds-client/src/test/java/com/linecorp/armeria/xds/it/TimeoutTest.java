@@ -50,7 +50,6 @@ class TimeoutTest {
                       api_listener:
                         "@type": type.googleapis.com/envoy.extensions.filters.network.http_connection_manager\
                 .v3.HttpConnectionManager
-                        common_http_protocol_options: %s
                         stat_prefix: http
                         route_config:
                           name: local_route
@@ -81,122 +80,23 @@ class TimeoutTest {
 
     public static Stream<Arguments> responseTimeout_args() {
         return Stream.of(
-                // Test conn mgr max_stream_duration only
+                // Test route timeout
                 Arguments.of("""
-                             { max_stream_duration: 123s }
-                             """, """
-                             { cluster: my-cluster }
-                             """, 123_000),
-                // Test route timeout only
-                Arguments.of("""
-                             {}
-                             """, """
                              {
                                cluster: my-cluster,
                                timeout: 123s
                              }
                              """, 123_000),
-                // Test route max_stream_duration only
+                // Test route no timeout
                 Arguments.of("""
-                             {}
-                             """, """
                              {
                                cluster: my-cluster,
-                               max_stream_duration: { max_stream_duration: 123s }
                              }
-                             """, 123_000),
-                // Test conn mgr max_stream_duration + route timeout (route timeout wins)
-                Arguments.of("""
-                             { max_stream_duration: 321s }
-                             """, """
-                             {
-                               cluster: my-cluster,
-                               timeout: 123s
-                             }
-                             """, 123_000),
-                // Test conn mgr max_stream_duration + route max_stream_duration (route wins)
-                Arguments.of("""
-                             { max_stream_duration: 321s }
-                             """, """
-                             {
-                               cluster: my-cluster,
-                               max_stream_duration: { max_stream_duration: 123s }
-                             }
-                             """, 123_000),
-                // Test route timeout + route max_stream_duration (max_stream_duration wins)
-                Arguments.of("""
-                             {}
-                             """, """
-                             {
-                               cluster: my-cluster,
-                               timeout: 123s,
-                               max_stream_duration: { max_stream_duration: 321s }
-                             }
-                             """, 123_000),
-                // Test all three configs: max_stream_duration wins over timeout
-                Arguments.of("""
-                             { max_stream_duration: 999s }
-                             """, """
-                             {
-                               cluster: my-cluster,
-                               timeout: 123s,
-                               max_stream_duration: { max_stream_duration: 321s }
-                             }
-                             """, 123_000),
-                // Test precedence: route max_stream_duration wins over route timeout
-                Arguments.of("""
-                             { max_stream_duration: 50s }
-                             """, """
-                             {
-                               cluster: my-cluster,
-                               timeout: 321s,
-                               max_stream_duration: { max_stream_duration: 123s }
-                             }
-                             """, 123_000),
-                // Test no timeouts specified - should use default
-                Arguments.of("""
-                             {}
-                             """, """
-                             { cluster: my-cluster }
                              """, DEFAULT_RESPONSE_TIMEOUT_MILLIS),
-                // Test zero timeouts
                 Arguments.of("""
-                             { max_stream_duration: 0s }
-                             """, """
-                             { cluster: my-cluster }
-                             """, 0),
-                Arguments.of("""
-                             {}
-                             """, """
                              {
                                cluster: my-cluster,
                                timeout: 0s
-                             }
-                             """, 0),
-                Arguments.of("""
-                             {}
-                             """, """
-                             {
-                               cluster: my-cluster,
-                               max_stream_duration: { max_stream_duration: 0s }
-                             }
-                             """, 0),
-                // Test zero route timeout wins over non-zero conn mgr max_stream_duration
-                Arguments.of("""
-                             { max_stream_duration: 123s }
-                             """, """
-                             {
-                               cluster: my-cluster,
-                               timeout: 0s
-                             }
-                             """, 0),
-                // Test zero route max_stream_duration with non-zero conn mgr max_stream_duration
-                Arguments.of("""
-                             { max_stream_duration: 123s }
-                             """, """
-                             {
-                               cluster: my-cluster,
-                               max_stream_duration: { max_stream_duration: 0s }
                              }
                              """, 0)
         );
@@ -204,8 +104,8 @@ class TimeoutTest {
 
     @ParameterizedTest
     @MethodSource("responseTimeout_args")
-    void responseTimeout(String connManagerOptions, String routeOptions, long expectedMillis) {
-        final String yamlBootstrap = connManagerBootstrap.formatted(connManagerOptions, routeOptions);
+    void responseTimeout(String routeOptions, long expectedMillis) {
+        final String yamlBootstrap = connManagerBootstrap.formatted(routeOptions);
         try (XdsBootstrap xdsBootstrap = XdsBootstrap.of(XdsResourceReader.fromYaml(yamlBootstrap));
              XdsHttpPreprocessor preprocessor = XdsHttpPreprocessor.ofListener("my-listener", xdsBootstrap)) {
             final ClientRequestContext ctx;

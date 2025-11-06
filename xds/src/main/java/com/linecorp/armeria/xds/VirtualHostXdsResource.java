@@ -16,15 +16,7 @@
 
 package com.linecorp.armeria.xds;
 
-import static com.linecorp.armeria.xds.FilterUtil.toParsedFilterConfigs;
-
-import java.util.Map;
-
-import com.linecorp.armeria.common.annotation.Nullable;
-import com.linecorp.armeria.common.annotation.UnstableApi;
-
 import io.envoyproxy.envoy.config.route.v3.VirtualHost;
-import io.envoyproxy.envoy.extensions.filters.network.http_connection_manager.v3.HttpFilter;
 
 /**
  * A resource object for a {@link VirtualHost}.
@@ -32,24 +24,11 @@ import io.envoyproxy.envoy.extensions.filters.network.http_connection_manager.v3
 public final class VirtualHostXdsResource extends AbstractXdsResource {
 
     private final VirtualHost virtualHost;
-    private final Map<String, ParsedFilterConfig> virtualHostFilterConfigs;
 
     VirtualHostXdsResource(VirtualHost virtualHost, String version, long revision) {
         super(version, revision);
         XdsValidatorIndex.of().assertValid(virtualHost);
         this.virtualHost = virtualHost;
-        virtualHostFilterConfigs = toParsedFilterConfigs(virtualHost.getTypedPerFilterConfigMap());
-    }
-
-    /**
-     * Returns the parsed {@link VirtualHost#getTypedPerFilterConfigMap()}.
-     *
-     * @param filterName the filter name represented by {@link HttpFilter#getName()}
-     */
-    @Nullable
-    @UnstableApi
-    public ParsedFilterConfig filterConfig(String filterName) {
-        return virtualHostFilterConfigs.get(filterName);
     }
 
     @Override

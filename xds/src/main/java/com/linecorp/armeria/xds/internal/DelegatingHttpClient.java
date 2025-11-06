@@ -14,7 +14,7 @@
  * under the License.
  */
 
-package com.linecorp.armeria.xds.client.endpoint;
+package com.linecorp.armeria.xds.internal;
 
 import com.linecorp.armeria.client.Client;
 import com.linecorp.armeria.client.ClientRequestContext;
@@ -28,20 +28,24 @@ import com.linecorp.armeria.common.HttpResponse;
 
 import io.netty.util.AttributeKey;
 
-final class DelegatingHttpClient implements HttpClient, HttpPreClient {
+public final class DelegatingHttpClient implements HttpClient, HttpPreClient {
 
-    static final DelegatingHttpClient INSTANCE = new DelegatingHttpClient();
+    private static final DelegatingHttpClient INSTANCE = new DelegatingHttpClient();
 
     private static final AttributeKey<Client<HttpRequest, HttpResponse>> CLIENT_DELEGATE_KEY =
             AttributeKey.valueOf(DelegatingHttpClient.class, "DELEGATE_KEY");
     private static final AttributeKey<PreClient<HttpRequest, HttpResponse>> PRECLIENT_DELEGATE_KEY =
             AttributeKey.valueOf(DelegatingHttpClient.class, "DELEGATE_KEY");
 
-    static void setDelegate(ClientRequestContext ctx, HttpClient delegate) {
+    public static DelegatingHttpClient of() {
+        return INSTANCE;
+    }
+
+    public static void setDelegate(ClientRequestContext ctx, HttpClient delegate) {
         ctx.setAttr(CLIENT_DELEGATE_KEY, delegate);
     }
 
-    static void setDelegate(PreClientRequestContext ctx, PreClient<HttpRequest, HttpResponse> delegate) {
+    public static void setDelegate(PreClientRequestContext ctx, PreClient<HttpRequest, HttpResponse> delegate) {
         ctx.setAttr(PRECLIENT_DELEGATE_KEY, delegate);
     }
 
