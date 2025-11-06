@@ -38,7 +38,7 @@ public final class ListenerRoot extends AbstractRoot<ListenerSnapshot> {
         this.listenerManager = listenerManager;
         context.eventLoop().execute(
                 safeRunnable(() -> listenerManager.register(resourceName, context, this),
-                             t -> onError(XdsType.LISTENER, Status.fromThrowable(t))));
+                             t -> onError(XdsType.LISTENER, resourceName, Status.fromThrowable(t))));
     }
 
     @Override

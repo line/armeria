@@ -26,7 +26,7 @@ import io.grpc.Status;
 @FunctionalInterface
 interface ResourceWatcher<T extends XdsResource> {
 
-    default void onError(XdsType type, Status error) {}
+    default void onError(XdsType type, String resourceName, Status error) {}
 
     default void onResourceDoesNotExist(XdsType type, String resourceName) {}
 

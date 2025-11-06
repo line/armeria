@@ -37,7 +37,7 @@ public final class ClusterRoot extends AbstractRoot<ClusterSnapshot> {
         this.context = context;
         this.resourceName = resourceName;
         eventLoop().execute(safeRunnable(() -> context.clusterManager().register(resourceName, context, this),
-                                         t -> onError(XdsType.CLUSTER, Status.fromThrowable(t))));
+                                         t -> onError(XdsType.CLUSTER, resourceName, Status.fromThrowable(t))));
     }
 
     @Override
