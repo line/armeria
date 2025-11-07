@@ -23,7 +23,7 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
  * A {@link CancellationException} raised when an inbound stream is cancelled or aborted and completes.
  */
 @UnstableApi
-public class InboundCompleteException extends CancellationException {
+public final class InboundCompleteException extends CancellationException {
     private static final long serialVersionUID = -5231663021153944677L;
 
     /**
