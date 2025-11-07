@@ -32,13 +32,13 @@ import org.slf4j.LoggerFactory;
 import com.google.common.base.Ascii;
 import com.google.common.collect.ImmutableSet;
 
-import com.linecorp.armeria.common.StreamTimeoutException;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.stream.StreamMessage;
 import com.linecorp.armeria.common.stream.StreamTimeoutMode;
 import com.linecorp.armeria.common.websocket.WebSocketCloseStatus;
 import com.linecorp.armeria.common.websocket.WebSocketFrameType;
+import com.linecorp.armeria.common.websocket.WebSocketIdleTimeoutException;
 import com.linecorp.armeria.internal.common.websocket.WebSocketUtil;
 import com.linecorp.armeria.internal.server.websocket.DefaultWebSocketService;
 import com.linecorp.armeria.server.HttpService;
@@ -247,7 +247,7 @@ public final class WebSocketServiceBuilder {
      * {@link StreamTimeoutMode#UNTIL_NEXT} mode.
      *
      * <p>If the next frame does not arrive within {@code streamTimeout} after the previous one,
-     * the stream is terminated with {@link StreamTimeoutException}.</p>
+     * the stream is terminated with {@link WebSocketIdleTimeoutException}.</p>
      *
      * <p>By default, no idle-timeout is applied.</p>
      *
