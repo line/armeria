@@ -26,7 +26,7 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
  * <p>Specifically, this indicates that no inbound frame was received within the configured idle interval.</p>
  */
 @UnstableApi
-public class WebSocketIdleTimeoutException extends TimeoutException {
+public final class WebSocketIdleTimeoutException extends TimeoutException {
     private static final long serialVersionUID = 216107322771109906L;
 
     /**
