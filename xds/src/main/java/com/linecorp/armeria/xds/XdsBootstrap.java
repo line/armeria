@@ -64,6 +64,13 @@ public interface XdsBootstrap extends SafeCloseable {
     }
 
     /**
+     * Returns a {@link XdsBootstrapBuilder} which can be used to fluently create an {@link XdsBootstrap}.
+     */
+    static XdsBootstrapBuilder builder(Bootstrap bootstrap) {
+        return new XdsBootstrapBuilder(bootstrap);
+    }
+
+    /**
      * Represents a {@link Listener} root node of a bootstrap.
      * Users may hook watchers to the root node to listen to events.
      */
