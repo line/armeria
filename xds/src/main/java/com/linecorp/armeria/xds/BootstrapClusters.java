@@ -20,11 +20,13 @@ import java.util.HashMap;
 import java.util.Map;
 
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.metric.MeterIdPrefix;
 import com.linecorp.armeria.xds.client.endpoint.XdsLoadBalancer;
 
 import io.envoyproxy.envoy.config.bootstrap.v3.Bootstrap;
 import io.envoyproxy.envoy.config.cluster.v3.Cluster;
 import io.grpc.Status;
+import io.micrometer.core.instrument.MeterRegistry;
 import io.netty.util.concurrent.EventExecutor;
 
 final class BootstrapClusters implements SnapshotWatcher<ClusterSnapshot> {
@@ -34,15 +36,18 @@ final class BootstrapClusters implements SnapshotWatcher<ClusterSnapshot> {
     private final EventExecutor eventLoop;
     private final XdsClusterManager clusterManager;
 
-    BootstrapClusters(Bootstrap bootstrap, EventExecutor eventLoop, XdsClusterManager clusterManager) {
+    BootstrapClusters(Bootstrap bootstrap, EventExecutor eventLoop, XdsClusterManager clusterManager,
+                      MeterRegistry meterRegistry, MeterIdPrefix meterIdPrefix) {
         this.bootstrap = bootstrap;
         this.eventLoop = eventLoop;
         this.clusterManager = clusterManager;
-        initializePrimary(bootstrap);
+        initializePrimary(bootstrap, meterRegistry, meterIdPrefix);
     }
 
-    private void initializePrimary(Bootstrap bootstrap) {
-        final StaticSubscriptionContext context = new StaticSubscriptionContext(eventLoop);
+    private void initializePrimary(Bootstrap bootstrap, MeterRegistry meterRegistry,
+                                   MeterIdPrefix meterIdPrefix) {
+        final StaticSubscriptionContext context =
+                new StaticSubscriptionContext(eventLoop, meterRegistry, meterIdPrefix);
         for (Cluster cluster: bootstrap.getStaticResources().getClustersList()) {
             if (!cluster.hasLoadAssignment()) {
                 continue;
