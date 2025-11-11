@@ -39,7 +39,7 @@ import com.linecorp.armeria.common.jsonrpc.JsonRpcResponse;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
-class JsonRpcFallbackHandlerTest {
+class JsonRpcHandlerTest {
 
     @RegisterExtension
     static ServerExtension server = new ServerExtension() {

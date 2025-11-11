@@ -28,6 +28,12 @@ import com.linecorp.armeria.common.jsonrpc.JsonRpcResponse;
 import com.linecorp.armeria.common.util.UnmodifiableFuture;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
+/**
+ * A handler that handles all incoming {@link JsonRpcRequest}, {@link JsonRpcNotification} and
+ * {@link JsonRpcResponse}.
+ * If both a method-specific {@link JsonRpcMethodHandler} and a {@link JsonRpcHandler} are set,
+ * the method-specific handler takes precedence.
+ */
 @UnstableApi
 @FunctionalInterface
 public interface JsonRpcHandler {
@@ -52,12 +58,13 @@ public interface JsonRpcHandler {
 
     /**
      * Handles incoming {@link JsonRpcRequest} or {@link JsonRpcNotification} whose {@code method} is not
-     * registered with the {@link JsonRpcService},
-     * and also processes {@link JsonRpcResponse} messages that may be received as input.
+     * registered with the {@link JsonRpcService}, and also processes {@link JsonRpcResponse} messages that
+     * may be received as an input.
      *
      * <p>Note that when the input is a {@link JsonRpcNotification} or {@link JsonRpcResponse},
      * the returned {@link CompletableFuture} must be completed with null, as any returned value will be
      * ignored otherwise.
      */
-    CompletableFuture<@Nullable JsonRpcResponse> handleRpcCall(ServiceRequestContext ctx, JsonRpcMessage message);
+    CompletableFuture<@Nullable JsonRpcResponse> handleRpcCall(ServiceRequestContext ctx,
+                                                               JsonRpcMessage message);
 }

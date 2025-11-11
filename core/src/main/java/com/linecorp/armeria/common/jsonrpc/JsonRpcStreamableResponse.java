@@ -17,6 +17,7 @@
 package com.linecorp.armeria.common.jsonrpc;
 
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.sse.ServerSentEvent;
 import com.linecorp.armeria.common.stream.ClosedStreamException;
 import com.linecorp.armeria.common.stream.StreamWriter;
@@ -24,13 +25,14 @@ import com.linecorp.armeria.common.stream.StreamWriter;
 /**
  * A streamable JSON-RPC response that lets you write multiple {@link JsonRpcRequest}s
  * and {@link JsonRpcNotification}s, then close the stream after emitting a final {@link JsonRpcResponse}.
- * Use {@link JsonRpcResponse#streaming()} to create a new instance.
+ * A new instance can be created using {@link JsonRpcResponse#streaming()}.
  *
  * <p>This response is designed to be converted into Server-Sent Events (SSE) over HTTP, enabling streamable
  * HTTP responses in the Model Context Protocol (MCP).
  * See <a href="https://modelcontextprotocol.io/specification/2025-06-18/basic/transports#sending-messages-to-the-server">the MCP specification</a>
  * for more information.
  */
+@UnstableApi
 public interface JsonRpcStreamableResponse extends StreamWriter<JsonRpcMessage>, JsonRpcResponse {
 
     /**

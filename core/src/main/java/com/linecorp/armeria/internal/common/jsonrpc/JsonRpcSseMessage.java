@@ -79,6 +79,7 @@ public final class JsonRpcSseMessage implements JsonRpcMessage {
     @Override
     public String toString() {
         return MoreObjects.toStringHelper(this)
+                          .omitNullValues()
                           .add("delegate", delegate)
                           .add("messageId", messageId)
                           .add("eventType", eventType)

@@ -39,7 +39,7 @@ final class DefaultJsonRpcStreamableResponse extends DefaultStreamMessage<JsonRp
     public boolean tryWrite(JsonRpcMessage message, @Nullable String messageId, @Nullable String eventType) {
         requireNonNull(message, "message");
         JsonRpcMessage maybeWrapped = message;
-        if (messageId != null) {
+        if (messageId != null || eventType != null) {
             maybeWrapped = new JsonRpcSseMessage(message, messageId, eventType);
         }
         if (message instanceof JsonRpcResponse) {
