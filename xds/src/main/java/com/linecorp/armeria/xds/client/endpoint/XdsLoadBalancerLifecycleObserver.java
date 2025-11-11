@@ -19,12 +19,14 @@ package com.linecorp.armeria.xds.client.endpoint;
 import java.util.List;
 
 import com.linecorp.armeria.client.Endpoint;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.xds.ClusterSnapshot;
 
 /**
  * Event handler for xDS load balancer updates.
  */
+@UnstableApi
 public interface XdsLoadBalancerLifecycleObserver extends SafeCloseable {
 
     /**

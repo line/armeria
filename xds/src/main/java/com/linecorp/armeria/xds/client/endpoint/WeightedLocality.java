@@ -16,6 +16,9 @@
 
 package com.linecorp.armeria.xds.client.endpoint;
 
+import com.google.common.base.MoreObjects;
+import com.google.common.base.Objects;
+
 import com.linecorp.armeria.common.loadbalancer.Weighted;
 
 import io.envoyproxy.envoy.config.core.v3.Locality;
@@ -40,5 +43,27 @@ public final class WeightedLocality implements Weighted {
     @Override
     public int weight() {
         return weight;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (o == null || getClass() != o.getClass()) {
+            return false;
+        }
+        final WeightedLocality that = (WeightedLocality) o;
+        return weight == that.weight && Objects.equal(locality, that.locality);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hashCode(locality, weight);
+    }
+
+    @Override
+    public String toString() {
+        return MoreObjects.toStringHelper(this)
+                          .add("locality", locality)
+                          .add("weight", weight)
+                          .toString();
     }
 }
