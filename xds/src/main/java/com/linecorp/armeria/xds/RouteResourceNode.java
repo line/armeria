@@ -86,7 +86,8 @@ final class RouteResourceNode extends AbstractResourceNode<RouteXdsResource, Rou
                 final VirtualHost virtualHost = routeConfiguration.getVirtualHostsList().get(i);
                 final VirtualHostResourceNode childNode =
                         StaticResourceUtils.staticVirtualHost(context, virtualHost.getName(),
-                                                              this, i, virtualHost);
+                                                              this, i, virtualHost,
+                                                              resource.version(), resource.revision());
                 nodesBuilder.add(childNode);
             }
             nodes = nodesBuilder.build();
@@ -110,11 +111,11 @@ final class RouteResourceNode extends AbstractResourceNode<RouteXdsResource, Rou
         }
 
         @Override
-        public void onError(XdsType type, Status status) {
+        public void onError(XdsType type, String resourceName, Status status) {
             if (closed) {
                 return;
             }
-            parentNode.notifyOnError(type, status);
+            parentNode.notifyOnError(type, resourceName, status);
         }
 
         @Override

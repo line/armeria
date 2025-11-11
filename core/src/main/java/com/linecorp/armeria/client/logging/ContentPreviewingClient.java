@@ -68,7 +68,6 @@ public final class ContentPreviewingClient extends SimpleDecoratingHttpClient {
      * {@link RequestHeaders} or {@link ResponseHeaders} meets any of the following conditions:
      * <ul>
      *     <li>when it matches {@code text/*} or {@code application/x-www-form-urlencoded}</li>
-     *     <li>when its charset has been specified</li>
      *     <li>when its subtype is {@code "xml"} or {@code "json"}</li>
      *     <li>when its subtype ends with {@code "+xml"} or {@code "+json"}</li>
      * </ul>
@@ -86,7 +85,6 @@ public final class ContentPreviewingClient extends SimpleDecoratingHttpClient {
      * {@link RequestHeaders} or {@link ResponseHeaders} meets any of the following conditions:
      * <ul>
      *     <li>when it matches {@code text/*} or {@code application/x-www-form-urlencoded}</li>
-     *     <li>when its charset has been specified</li>
      *     <li>when its subtype is {@code "xml"} or {@code "json"}</li>
      *     <li>when its subtype ends with {@code "+xml"} or {@code "+json"}</li>
      * </ul>
