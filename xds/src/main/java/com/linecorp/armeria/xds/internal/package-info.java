@@ -1,7 +1,7 @@
 /*
- * Copyright 2024 LINE Corporation
- *
- * LINE Corporation licenses this file to you under the Apache License,
+ * Copyright 2024 LY Corporation
+
+ * LY Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
@@ -14,14 +14,10 @@
  * under the License.
  */
 
-package com.linecorp.armeria.xds.client.endpoint;
+/**
+ * Various classes used internally. Anything in this package can be changed or removed at any time.
+ */
+@NonNullByDefault
+package com.linecorp.armeria.xds.internal;
 
-import com.linecorp.armeria.client.ClientRequestContext;
-import com.linecorp.armeria.client.Endpoint;
-import com.linecorp.armeria.common.annotation.Nullable;
-
-interface LoadBalancer extends LoadBalancerState {
-
-    @Nullable
-    Endpoint selectNow(ClientRequestContext ctx);
-}
+import com.linecorp.armeria.common.annotation.NonNullByDefault;

@@ -26,6 +26,7 @@ import com.google.common.collect.ImmutableList;
 import io.envoyproxy.envoy.config.route.v3.Route;
 import io.envoyproxy.envoy.config.route.v3.RouteConfiguration;
 import io.envoyproxy.envoy.config.route.v3.VirtualHost;
+import io.envoyproxy.envoy.extensions.filters.network.http_connection_manager.v3.HttpFilter;
 
 /**
  * A snapshot of a {@link VirtualHost}.
@@ -33,6 +34,7 @@ import io.envoyproxy.envoy.config.route.v3.VirtualHost;
 public final class VirtualHostSnapshot implements Snapshot<VirtualHostXdsResource> {
 
     private final VirtualHostXdsResource virtualHostXdsResource;
+    private final Map<String, ParsedFilterConfig> filterConfigs;
     private final List<RouteEntry> routeEntries;
     private final int index;
 
@@ -40,6 +42,7 @@ public final class VirtualHostSnapshot implements Snapshot<VirtualHostXdsResourc
                         Map<String, ClusterSnapshot> clusterSnapshots, int index) {
         this.virtualHostXdsResource = virtualHostXdsResource;
         final VirtualHost virtualHost = virtualHostXdsResource.resource();
+        filterConfigs = FilterUtil.toParsedFilterConfigs(virtualHost.getTypedPerFilterConfigMap());
 
         final ImmutableList.Builder<RouteEntry> routeEntriesBuilder = ImmutableList.builder();
         final List<Route> routes = virtualHost.getRoutesList();
@@ -52,6 +55,15 @@ public final class VirtualHostSnapshot implements Snapshot<VirtualHostXdsResourc
             routeEntriesBuilder.add(new RouteEntry(route, clusterSnapshot, i));
         }
         routeEntries = routeEntriesBuilder.build();
+        this.index = index;
+    }
+
+    private VirtualHostSnapshot(VirtualHostXdsResource virtualHostXdsResource,
+                                List<RouteEntry> routeEntries, Map<String, ParsedFilterConfig> filterConfigs,
+                                int index) {
+        this.virtualHostXdsResource = virtualHostXdsResource;
+        this.routeEntries = routeEntries;
+        this.filterConfigs = filterConfigs;
         this.index = index;
     }
 
@@ -72,6 +84,17 @@ public final class VirtualHostSnapshot implements Snapshot<VirtualHostXdsResourc
      */
     public int index() {
         return index;
+    }
+
+    VirtualHostSnapshot withFilterConfigs(Map<String, ParsedFilterConfig> parentFilterConfigs,
+                                          List<HttpFilter> upstreamFilters) {
+        final Map<String, ParsedFilterConfig> mergedFilterConfigs =
+                FilterUtil.mergeFilterConfigs(parentFilterConfigs, filterConfigs);
+        final List<RouteEntry> routeEntries =
+                this.routeEntries.stream().map(routeEntry -> routeEntry.withFilterConfigs(mergedFilterConfigs,
+                                                                                          upstreamFilters))
+                                 .collect(ImmutableList.toImmutableList());
+        return new VirtualHostSnapshot(virtualHostXdsResource, routeEntries, mergedFilterConfigs, index);
     }
 
     @Override

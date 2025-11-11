@@ -14,7 +14,7 @@
  * under the License.
  */
 
-package com.linecorp.armeria.xds.client.endpoint;
+package com.linecorp.armeria.xds.internal;
 
 import com.google.common.primitives.Ints;
 import com.google.protobuf.Duration;
@@ -24,20 +24,24 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.annotation.Nullable;
 
-final class XdsCommonUtil {
+public final class XdsCommonUtil {
 
-    static long durationToMillis(Duration duration, long defaultValue) {
+    public static long durationToMillis(Duration duration, long defaultValue) {
         if (duration == Duration.getDefaultInstance()) {
             return defaultValue;
         }
         return durationToMillis(duration);
     }
 
-    static long durationToMillis(Duration duration) {
-        return java.time.Duration.ofSeconds(duration.getSeconds(), duration.getNanos()).toMillis();
+    public static long durationToMillis(Duration duration) {
+        final long millis = java.time.Duration.ofSeconds(duration.getSeconds(), duration.getNanos()).toMillis();
+        if (millis == 0) {
+            return Long.MAX_VALUE;
+        }
+        return millis;
     }
 
-    static int uint32ValueToInt(UInt32Value uInt32Value, int defaultValue) {
+    public static int uint32ValueToInt(UInt32Value uInt32Value, int defaultValue) {
         if (uInt32Value == UInt32Value.getDefaultInstance()) {
             return defaultValue;
         }
@@ -45,7 +49,7 @@ final class XdsCommonUtil {
     }
 
     @Nullable
-    static Integer simpleAtoi(String value) {
+    public static Integer simpleAtoi(String value) {
         try {
             return Integer.parseInt(value);
         } catch (NumberFormatException e) {
@@ -54,7 +58,7 @@ final class XdsCommonUtil {
     }
 
     @Nullable
-    static Long simpleAtol(String value) {
+    public static Long simpleAtol(String value) {
         try {
             return Long.parseLong(value);
         } catch (NumberFormatException e) {
@@ -62,7 +66,7 @@ final class XdsCommonUtil {
         }
     }
 
-    static boolean isGrpcRequest(@Nullable HttpRequest req) {
+    public static boolean isGrpcRequest(@Nullable HttpRequest req) {
         if (req == null) {
             return false;
         }

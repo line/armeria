@@ -19,3 +19,7 @@ dependencies {
 tasks.withType(JavaCompile).configureEach {
     options.forkOptions.memoryMaximumSize = '1g'
 }
+
+tasks.withType(Javadoc).configureEach {
+    enabled = false
+}

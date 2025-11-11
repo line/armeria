@@ -14,7 +14,7 @@
  * under the License.
  */
 
-package com.linecorp.armeria.xds.client.endpoint;
+package com.linecorp.armeria.xds;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -35,8 +35,9 @@ import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.QueryParams;
 import com.linecorp.armeria.common.RequestHeaders;
-import com.linecorp.armeria.xds.client.endpoint.RouteEntryMatcher.HeaderMatcherImpl;
-import com.linecorp.armeria.xds.client.endpoint.RouteEntryMatcher.QueryParamsMatcherImpl;
+import com.linecorp.armeria.xds.RouteEntryMatcher.HeaderMatcherImpl;
+import com.linecorp.armeria.xds.RouteEntryMatcher.QueryParamsMatcherImpl;
+import com.linecorp.armeria.xds.internal.XdsCommonUtil;
 
 import io.envoyproxy.envoy.config.route.v3.HeaderMatcher;
 import io.envoyproxy.envoy.config.route.v3.QueryParameterMatcher;

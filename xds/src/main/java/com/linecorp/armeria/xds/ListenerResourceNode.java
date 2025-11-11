@@ -38,6 +38,11 @@ final class ListenerResourceNode extends AbstractResourceNode<ListenerXdsResourc
         super(context, configSource, LISTENER, resourceName, parentWatcher, resourceNodeType);
     }
 
+    ListenerResourceNode(@Nullable ConfigSource configSource,
+                         String resourceName, SubscriptionContext context, ResourceNodeType resourceNodeType) {
+        super(context, configSource, LISTENER, resourceName, resourceNodeType);
+    }
+
     @Override
     public void doOnChanged(ListenerXdsResource resource) {
         final RouteSnapshotWatcher previousWatcher = snapshotWatcher;
@@ -76,13 +81,14 @@ final class ListenerResourceNode extends AbstractResourceNode<ListenerXdsResourc
                 if (connectionManager.hasRouteConfig()) {
                     final RouteConfiguration routeConfig = connectionManager.getRouteConfig();
                     node = StaticResourceUtils.staticRoute(context, routeConfig.getName(),
-                                                           this, routeConfig);
+                                                           this, routeConfig, resource.version(),
+                                                           resource.revision());
                 } else if (connectionManager.hasRds()) {
                     final Rds rds = connectionManager.getRds();
                     final String routeName = rds.getRouteConfigName();
                     final ConfigSource configSource =
-                            context.configSourceMapper().withParentConfigSource(parentConfigSource)
-                                   .rdsConfigSource(rds.getConfigSource(), routeName);
+                            context.configSourceMapper()
+                                   .configSource(rds.getConfigSource(), parentConfigSource, routeName);
                     node = new RouteResourceNode(configSource, routeName, context,
                                                  this, ResourceNodeType.DYNAMIC);
                     context.subscribe(node);
@@ -111,11 +117,11 @@ final class ListenerResourceNode extends AbstractResourceNode<ListenerXdsResourc
         }
 
         @Override
-        public void onError(XdsType type, Status status) {
+        public void onError(XdsType type, String resourceName, Status status) {
             if (closed) {
                 return;
             }
-            parentNode.notifyOnError(type, status);
+            parentNode.notifyOnError(type, resourceName, status);
         }
 
         @Override
