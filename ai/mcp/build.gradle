@@ -1,0 +1,5 @@
+dependencies {
+    api libs.mcp.core
+    testImplementation libs.mcp.test
+    testImplementation libs.mcp.spring.webflux
+}
