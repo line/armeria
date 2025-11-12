@@ -27,7 +27,7 @@ tasks.sourcesJar.dependsOn(tasks.compileJmhThrift)
 
 configurations.named('jmhCompileProtoPath').configure {
     extendsFrom configurations.compileClasspath
-     extendsFrom configurations.jmhCompileClasspath
+    extendsFrom configurations.jmhCompileClasspath
 }
 
 jmh {

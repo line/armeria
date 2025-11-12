@@ -14,7 +14,6 @@ configure(projectsWithFlags('java')) {
     if (project.ext.hasSourceDirectory('proto')) {
         apply plugin: com.google.protobuf.gradle.ProtobufPlugin
 
-        // TODO(ikhoon): Upgrade protobuf-gradle-plugin
         configurations {
             // A workaround for "Could not resolve all files for configuration ':grpc:compileProtoPath'"
             // - https://github.com/gradle/gradle/issues/12126

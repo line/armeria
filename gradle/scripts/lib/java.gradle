@@ -67,14 +67,14 @@ configure(projectsWithFlags('java')) {
         minimumJavaVersion = Integer.valueOf(String.valueOf(project.findProperty('minimumJavaVersion')))
         if (minimumJavaVersion < 8) {
             throw new IllegalArgumentException("'minimumJavaVersion' cannot be smaller than 8. " +
-                    "minimumJavaVersion: ${minimumJavaVersion}")
+                                               "minimumJavaVersion: ${minimumJavaVersion}")
         }
     }
     // parse flags for the targetJavaVersion
     def targetJavaVersion = extractTargetJavaVersion(project)
     if (targetJavaVersion != null && targetJavaVersion < 8) {
         throw new IllegalArgumentException("The minimum target Java version ${version} specified " +
-                "for '${project.path}' cannot be smaller than 8")
+                                           "for '${project.path}' cannot be smaller than 8")
     }
 
     if (minimumJavaVersion != null && (targetJavaVersion == null || targetJavaVersion < minimumJavaVersion)) {
@@ -163,8 +163,6 @@ configure(projectsWithFlags('java')) {
         testImplementation {
             extendsFrom configurations.optionalApi, configurations.optionalImplementation
         }
-
-
     }
 
     // Set the sensible compiler options.
@@ -218,8 +216,8 @@ configure(projectsWithFlags('java')) {
         // disable tests for projects which target a higher java version
         if (project.ext.testJavaVersion < project.ext.targetJavaVersion) {
             project.logger.lifecycle("Skipping tests for ${project.path} since the " +
-                    "testJavaVersion(${project.ext.testJavaVersion}) is smaller than the " +
-                    "targetJavaVersion(${project.ext.targetJavaVersion})")
+                                     "testJavaVersion(${project.ext.testJavaVersion}) is smaller than the " +
+                                     "targetJavaVersion(${project.ext.targetJavaVersion})")
             testTask.enabled = false
         }
         if (testTask.enabled) {
