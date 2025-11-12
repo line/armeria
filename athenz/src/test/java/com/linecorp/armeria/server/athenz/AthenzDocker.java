@@ -260,8 +260,7 @@ public class AthenzDocker implements SafeCloseable {
     }
 
     public ZtsBaseClient newZtsBaseClient(String serviceName) {
-        return newZtsBaseClient(serviceName, webClientBuilder -> {
-        });
+        return newZtsBaseClient(serviceName, webClientBuilder -> {});
     }
 
     public ZtsBaseClient newZtsBaseClient(String serviceName,
