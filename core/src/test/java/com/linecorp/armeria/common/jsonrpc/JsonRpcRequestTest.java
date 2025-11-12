@@ -32,6 +32,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 
+import com.linecorp.armeria.server.jsonrpc.JsonRpcParseException;
+
 /**
  * A test for {@link JsonRpcRequest}.
  */
@@ -156,7 +158,7 @@ class JsonRpcRequestTest {
         final JsonNode node = mapper.readTree("[]");
 
         assertThatThrownBy(() -> JsonRpcRequest.fromJson(node))
-                .isInstanceOf(IllegalArgumentException.class)
+                .isInstanceOf(JsonRpcParseException.class)
                 .hasMessageContaining("Cannot deserialize value of type");
     }
 
@@ -166,7 +168,7 @@ class JsonRpcRequestTest {
         final JsonNode node = mapper.readTree(json);
 
         assertThatThrownBy(() -> JsonRpcRequest.fromJson(node))
-                .isInstanceOf(IllegalArgumentException.class);
+                .isInstanceOf(JsonRpcParseException.class);
     }
 
     @Test
