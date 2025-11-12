@@ -100,15 +100,19 @@ public class AthenzDocker implements SafeCloseable {
             return true;
         }
 
-        try {
-            logger.info("Starting Docker compose for Athenz tests...");
-            composeContainer.start();
-            defaultScaffold();
-            return initialized = true;
-        } catch (Exception e) {
-            logger.warn("Failed to initialize Athenz Docker container", e);
-            return initialized = false;
+        final int maxAttempts = 5;
+        for (int attempt = 1; attempt <= maxAttempts; attempt++) {
+            try {
+                logger.info("Initializing Athenz Docker container (attempt {}/{})...", attempt, maxAttempts);
+                composeContainer.start();
+                defaultScaffold();
+                return true;
+            } catch (Exception e) {
+                logger.warn("Attempt {}/{} to initialize Athenz Docker container failed.",
+                            attempt, maxAttempts, e);
+            }
         }
+        return false;
     }
 
     public boolean isInitialized() {
@@ -256,7 +260,8 @@ public class AthenzDocker implements SafeCloseable {
     }
 
     public ZtsBaseClient newZtsBaseClient(String serviceName) {
-        return newZtsBaseClient(serviceName, webClientBuilder -> {});
+        return newZtsBaseClient(serviceName, webClientBuilder -> {
+        });
     }
 
     public ZtsBaseClient newZtsBaseClient(String serviceName,
