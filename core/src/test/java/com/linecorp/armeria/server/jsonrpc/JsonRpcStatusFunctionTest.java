@@ -31,6 +31,7 @@ import com.linecorp.armeria.common.jsonrpc.JsonRpcError;
 import com.linecorp.armeria.common.jsonrpc.JsonRpcMessage;
 import com.linecorp.armeria.common.jsonrpc.JsonRpcRequest;
 import com.linecorp.armeria.common.jsonrpc.JsonRpcResponse;
+import com.linecorp.armeria.common.util.UnmodifiableFuture;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
@@ -116,36 +117,36 @@ class JsonRpcStatusFunctionTest {
         public CompletableFuture<@Nullable JsonRpcResponse> handleRpcCall(ServiceRequestContext ctx,
                                                                           JsonRpcMessage message) {
             if (!(message instanceof JsonRpcRequest)) {
-                return CompletableFuture.completedFuture(null);
+                return UnmodifiableFuture.completedFuture(null);
             }
             final JsonRpcRequest req = (JsonRpcRequest) message;
             final String method = req.method();
             switch (method) {
                 case "invalidRequest":
-                    return CompletableFuture.completedFuture(
+                    return UnmodifiableFuture.completedFuture(
                             JsonRpcResponse.ofFailure(JsonRpcError.INVALID_REQUEST));
                 case "methodNotFound":
-                    return CompletableFuture.completedFuture(
+                    return UnmodifiableFuture.completedFuture(
                             JsonRpcResponse.ofFailure(JsonRpcError.METHOD_NOT_FOUND));
                 case "invalidParams":
-                    return CompletableFuture.completedFuture(
+                    return UnmodifiableFuture.completedFuture(
                             JsonRpcResponse.ofFailure(JsonRpcError.INVALID_PARAMS));
                 case "parseError":
-                    return CompletableFuture.completedFuture(
+                    return UnmodifiableFuture.completedFuture(
                             JsonRpcResponse.ofFailure(JsonRpcError.PARSE_ERROR));
                 case "internalError":
-                    return CompletableFuture.completedFuture(
+                    return UnmodifiableFuture.completedFuture(
                             JsonRpcResponse.ofFailure(JsonRpcError.INTERNAL_ERROR));
                 case "reservedCustom":
-                    return CompletableFuture.completedFuture(
+                    return UnmodifiableFuture.completedFuture(
                             JsonRpcResponse.ofFailure(new JsonRpcError(-32001, "Reserved custom")));
                 case "other":
-                    return CompletableFuture.completedFuture(
+                    return UnmodifiableFuture.completedFuture(
                             JsonRpcResponse.ofFailure(new JsonRpcError(123, "App error")));
                 case "success":
-                    return CompletableFuture.completedFuture(JsonRpcResponse.ofSuccess("ok"));
+                    return UnmodifiableFuture.completedFuture(JsonRpcResponse.ofSuccess("ok"));
                 default:
-                    return CompletableFuture.completedFuture(
+                    return UnmodifiableFuture.completedFuture(
                             JsonRpcResponse.ofFailure(JsonRpcError.METHOD_NOT_FOUND));
             }
         }

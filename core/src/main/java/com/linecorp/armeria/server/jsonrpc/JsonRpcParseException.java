@@ -20,6 +20,7 @@ package com.linecorp.armeria.server.jsonrpc;
  * An exception that is thrown when a JSON-RPC message could not be parsed.
  */
 public class JsonRpcParseException extends RuntimeException {
+
     private static final long serialVersionUID = 8580893994105273217L;
 
     /**
@@ -42,5 +43,4 @@ public class JsonRpcParseException extends RuntimeException {
     public JsonRpcParseException(String message, Throwable cause) {
         super(message, cause);
     }
-
 }

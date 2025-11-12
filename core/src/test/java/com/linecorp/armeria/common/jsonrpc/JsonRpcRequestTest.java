@@ -45,7 +45,7 @@ class JsonRpcRequestTest {
     void testEquals() {
         final JsonRpcRequest req0 = JsonRpcRequest.of("1", "store", ImmutableMap.of("key", "value"));
         final JsonRpcRequest req1 = JsonRpcRequest.of("1", "store", ImmutableMap.of("key", "value"));
-        assertThat(req0).isEqualTo(req1) ;
+        assertThat(req0).isEqualTo(req1);
 
         final JsonRpcRequest req2 = JsonRpcRequest.of("2", "put", ImmutableList.of("a", "b"));
         final JsonRpcRequest req3 = JsonRpcRequest.of("2", "put", ImmutableList.of("a", "b"));

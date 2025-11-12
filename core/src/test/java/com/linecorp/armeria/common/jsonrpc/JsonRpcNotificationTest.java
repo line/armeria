@@ -35,13 +35,13 @@ class JsonRpcNotificationTest {
     void testEquals() {
         final JsonRpcNotification noti0 = JsonRpcNotification.of("store", ImmutableMap.of("key", "value"));
         final JsonRpcNotification noti1 = JsonRpcNotification.of("store", ImmutableMap.of("key", "value"));
-        assertThat(noti0).isEqualTo(noti1) ;
+        assertThat(noti0).isEqualTo(noti1);
 
         final JsonRpcNotification noti2 = JsonRpcNotification.of("put", ImmutableList.of("a", "b"));
         final JsonRpcNotification noti3 = JsonRpcNotification.of("put", ImmutableList.of("a", "b"));
         assertThat(noti2).isEqualTo(noti3);
     }
-    
+
     @Test
     void positional() {
         final JsonRpcNotification noti = JsonRpcNotification.of("update", ImmutableList.of(1, 2, 3, 4, 5));
@@ -78,8 +78,8 @@ class JsonRpcNotificationTest {
         final JsonRpcNotification noti = JsonRpcNotification.of("subtract", ImmutableList.of(42, 23));
         final String json = mapper.writeValueAsString(noti);
 
-        assertThatJson(json).isEqualTo(
-                "{\"jsonrpc\":\"2.0\",\"method\":\"subtract\",\"params\":[42,23]}");
+        assertThatJson(json)
+                .isEqualTo("{\"jsonrpc\":\"2.0\",\"method\":\"subtract\",\"params\":[42,23]}");
     }
 
     @Test

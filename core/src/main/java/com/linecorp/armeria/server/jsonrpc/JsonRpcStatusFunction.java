@@ -47,6 +47,10 @@ public interface JsonRpcStatusFunction {
     HttpStatus toHttpStatus(ServiceRequestContext ctx, JsonRpcRequest request, JsonRpcResponse response,
                             JsonRpcError error);
 
+    /**
+     * Returns a composed {@link JsonRpcStatusFunction} that tries this function first, and if it returns
+     * {@code null}, tries the {@code next} function.
+     */
     default JsonRpcStatusFunction orElse(JsonRpcStatusFunction next) {
         requireNonNull(next, "next");
         return (ctx, request, response, error) -> {

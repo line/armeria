@@ -15,14 +15,15 @@
  */
 package com.linecorp.armeria.server.jsonrpc;
 
+import static com.google.common.base.Preconditions.checkArgument;
+import static java.util.Objects.requireNonNull;
+
 import com.google.common.collect.ImmutableMap;
+
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.server.HttpService;
-
-import static com.google.common.base.Preconditions.checkArgument;
-import static java.util.Objects.requireNonNull;
 
 /**
  * Constructs a {@link JsonRpcService} to serve JSON-RPC services.
@@ -71,7 +72,7 @@ public final class JsonRpcServiceBuilder {
      *        MyHandler handler = handlers.get(request.method());
      *        ... // Custom handling logic
      *      } else {
-     *         return CompletableFuture.completedFuture(null); // Ignore notifications and responses
+     *         return UnmodifiableFuture.completedFuture(null); // Ignore notifications and responses
      *      }
      *    }
      * }
@@ -114,6 +115,9 @@ public final class JsonRpcServiceBuilder {
         return this;
     }
 
+    /**
+     * Adds the {@link JsonRpcStatusFunction} that customizes the HTTP status code of JSON-RPC error responses.
+     */
     public JsonRpcServiceBuilder statusFunction(JsonRpcStatusFunction statusFunction) {
         requireNonNull(statusFunction, "statusFunction");
         if (this.statusFunction == null) {

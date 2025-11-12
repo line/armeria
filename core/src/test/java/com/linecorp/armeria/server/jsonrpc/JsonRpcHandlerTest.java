@@ -19,7 +19,6 @@ package com.linecorp.armeria.server.jsonrpc;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.List;
-import java.util.concurrent.CompletableFuture;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -36,6 +35,7 @@ import com.linecorp.armeria.common.jsonrpc.JsonRpcMessage;
 import com.linecorp.armeria.common.jsonrpc.JsonRpcNotification;
 import com.linecorp.armeria.common.jsonrpc.JsonRpcRequest;
 import com.linecorp.armeria.common.jsonrpc.JsonRpcResponse;
+import com.linecorp.armeria.common.util.UnmodifiableFuture;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
@@ -48,7 +48,7 @@ class JsonRpcHandlerTest {
             final JsonRpcService jsonRpcService =
                     JsonRpcService.builder()
                             .methodHandler("echo", (ctx, req) ->
-                                    CompletableFuture.completedFuture(
+                                    UnmodifiableFuture.completedFuture(
                                             JsonRpcResponse.ofSuccess(req.id(), req.params())))
                                   .build();
             sb.service("/json-rpc", jsonRpcService);

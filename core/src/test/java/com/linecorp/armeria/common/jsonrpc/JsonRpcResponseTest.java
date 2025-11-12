@@ -69,9 +69,9 @@ public class JsonRpcResponseTest {
         assertThat(res.error()).isEqualTo(error);
 
         final String json = mapper.writeValueAsString(res);
-        assertThatJson(json).isEqualTo(
-                "{\"error\":{\"code\":-32603,\"message\":\"Internal error\","
-                + "\"data\":\"invalid status\"},\"jsonrpc\":\"2.0\"}");
+        assertThatJson(json)
+                .isEqualTo("{\"error\":{\"code\":-32603,\"message\":\"Internal error\"," +
+                           "\"data\":\"invalid status\"},\"jsonrpc\":\"2.0\"}");
     }
 
     @Test
@@ -84,9 +84,9 @@ public class JsonRpcResponseTest {
         assertThat(res.error()).isEqualTo(error);
 
         final String json = mapper.writeValueAsString(res);
-        assertThatJson(json).isEqualTo(
-                "{\"id\":\"my-id\",\"error\":{\"code\":-32603,\"message\":\"Internal error\","
-                + "\"data\":\"invalid status\"},\"jsonrpc\":\"2.0\"}");
+        assertThatJson(json)
+                .isEqualTo("{\"id\":\"my-id\",\"error\":{\"code\":-32603,\"message\":\"Internal error\"," +
+                           "\"data\":\"invalid status\"},\"jsonrpc\":\"2.0\"}");
     }
 
     @Test

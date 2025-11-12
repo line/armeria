@@ -43,7 +43,8 @@ public interface JsonRpcStreamableResponse extends StreamWriter<JsonRpcMessage>,
     }
 
     /**
-     * Tries to write the specified {@link JsonRpcMessage} to this stream with an optional message ID and event type.
+     * Tries to write the specified {@link JsonRpcMessage} to this stream with an optional message ID and
+     * event type.
      *
      * @param message the JSON-RPC message to write.
      *                The message will be set as the {@link ServerSentEvent#data()}
@@ -51,7 +52,7 @@ public interface JsonRpcStreamableResponse extends StreamWriter<JsonRpcMessage>,
      *                  The message ID will be set as the {@link ServerSentEvent#id()}
      *                  when converted to SSE.
      * @param eventType the event type of the JSON-RPC message.
-     *                 The event type will be set as the {@link ServerSentEvent#event()}
+     *                  The event type will be set as the {@link ServerSentEvent#event()}
      */
     boolean tryWrite(JsonRpcMessage message, @Nullable String messageId, @Nullable String eventType);
 
@@ -64,7 +65,7 @@ public interface JsonRpcStreamableResponse extends StreamWriter<JsonRpcMessage>,
      *                  The message ID will be set as the {@link ServerSentEvent#id()}
      *                  when converted to SSE.
      * @param eventType the event type of the JSON-RPC message.
-     *                 The event type will be set as the {@link ServerSentEvent#event()}
+     *                  The event type will be set as the {@link ServerSentEvent#event()}
      * @throws ClosedStreamException if the stream was already closed
      */
     default void write(JsonRpcMessage message, @Nullable String messageId, @Nullable String eventType) {
@@ -72,6 +73,7 @@ public interface JsonRpcStreamableResponse extends StreamWriter<JsonRpcMessage>,
             throw ClosedStreamException.get();
         }
     }
+
     /**
      * Closes this stream after writing the specified {@link JsonRpcResponse}.
      */
@@ -80,7 +82,8 @@ public interface JsonRpcStreamableResponse extends StreamWriter<JsonRpcMessage>,
     }
 
     /**
-     * Closes this stream after writing the specified {@link JsonRpcResponse} and an optional message ID and event type.
+     * Closes this stream after writing the specified {@link JsonRpcResponse} and an optional message ID and
+     * event type.
      *
      * @param response the final JSON-RPC response to write.
      *                 The response will be set as the {@link ServerSentEvent#data()}
@@ -88,7 +91,7 @@ public interface JsonRpcStreamableResponse extends StreamWriter<JsonRpcMessage>,
      *                  The message ID will be set as the {@link ServerSentEvent#id()}
      *                  when converted to SSE.
      * @param eventType the event type of the JSON-RPC message.
-     *                 The event type will be set as the {@link ServerSentEvent#event()}
+     *                  The event type will be set as the {@link ServerSentEvent#event()}
      */
     void close(JsonRpcResponse response, @Nullable String messageId, @Nullable String eventType);
 
@@ -102,8 +105,8 @@ public interface JsonRpcStreamableResponse extends StreamWriter<JsonRpcMessage>,
     /**
      * {@inheritDoc}
      *
-     * <p>Note that this method will throw an {@link IllegalStateException} if the stream has not been closed with
-     * {@link #close(JsonRpcResponse)}. So make sure to call that method before invoking this method.
+     * <p>Note that this method will throw an {@link IllegalStateException} if the stream has not been closed
+     * with {@link #close(JsonRpcResponse)}. So make sure to call that method before invoking this method.
      * You can also use {@link #hasFinalResponse()} to check if the final response has been written.
      *
      * <pre>{@code
@@ -125,8 +128,8 @@ public interface JsonRpcStreamableResponse extends StreamWriter<JsonRpcMessage>,
     /**
      * {@inheritDoc}
      *
-     * <p>Note that this method will throw an {@link IllegalStateException} if the stream has not been closed with
-     * {@link #close(JsonRpcResponse)}. So make sure to call that method before invoking this method.
+     * <p>Note that this method will throw an {@link IllegalStateException} if the stream has not been closed
+     * with {@link #close(JsonRpcResponse)}. So make sure to call that method before invoking this method.
      * You can also use {@link #hasFinalResponse()} to check if the final response has been written.
      */
     @Override
@@ -137,8 +140,8 @@ public interface JsonRpcStreamableResponse extends StreamWriter<JsonRpcMessage>,
     /**
      * {@inheritDoc}
      *
-     * <p>Note that this method will throw an {@link IllegalStateException} if the stream has not been closed with
-     * {@link #close(JsonRpcResponse)}. So make sure to call that method before invoking this method.
+     * <p>Note that this method will throw an {@link IllegalStateException} if the stream has not been closed
+     * with {@link #close(JsonRpcResponse)}. So make sure to call that method before invoking this method.
      * You can also use {@link #hasFinalResponse()} to check if the final response has been written.
      */
     @Override
@@ -149,8 +152,8 @@ public interface JsonRpcStreamableResponse extends StreamWriter<JsonRpcMessage>,
     /**
      * {@inheritDoc}
      *
-     * <p>Note that this method will throw an {@link IllegalStateException} if the stream has not been closed with
-     * {@link #close(JsonRpcResponse)}. So make sure to call that method before invoking this method.
+     * <p>Note that this method will throw an {@link IllegalStateException} if the stream has not been closed
+     * with {@link #close(JsonRpcResponse)}. So make sure to call that method before invoking this method.
      * You can also use {@link #hasFinalResponse()} to check if the final response has been written.
      */
     @Override
@@ -159,8 +162,8 @@ public interface JsonRpcStreamableResponse extends StreamWriter<JsonRpcMessage>,
     /**
      * {@inheritDoc}
      *
-     * <p>Note that this method will throw an {@link IllegalStateException} if the stream has not been closed with
-     * {@link #close(JsonRpcResponse)}. So make sure to call that method before invoking this method.
+     * <p>Note that this method will throw an {@link IllegalStateException} if the stream has not been closed
+     * with {@link #close(JsonRpcResponse)}. So make sure to call that method before invoking this method.
      * You can also use {@link #hasFinalResponse()} to check if the final response has been written.
      */
     @Override
@@ -170,8 +173,8 @@ public interface JsonRpcStreamableResponse extends StreamWriter<JsonRpcMessage>,
     /**
      * {@inheritDoc}
      *
-     * <p>Note that this method will throw an {@link IllegalStateException} if the stream has not been closed with
-     * {@link #close(JsonRpcResponse)}. So make sure to call that method before invoking this method.
+     * <p>Note that this method will throw an {@link IllegalStateException} if the stream has not been closed
+     * with {@link #close(JsonRpcResponse)}. So make sure to call that method before invoking this method.
      * You can also use {@link #hasFinalResponse()} to check if the final response has been written.
      */
     @Override
@@ -182,8 +185,8 @@ public interface JsonRpcStreamableResponse extends StreamWriter<JsonRpcMessage>,
     /**
      * {@inheritDoc}
      *
-     * <p>Note that this method will throw an {@link IllegalStateException} if the stream has not been closed with
-     * {@link #close(JsonRpcResponse)}. So make sure to call that method before invoking this method.
+     * <p>Note that this method will throw an {@link IllegalStateException} if the stream has not been closed
+     * with {@link #close(JsonRpcResponse)}. So make sure to call that method before invoking this method.
      * You can also use {@link #hasFinalResponse()} to check if the final response has been written.
      */
     @Override
@@ -194,8 +197,8 @@ public interface JsonRpcStreamableResponse extends StreamWriter<JsonRpcMessage>,
     /**
      * {@inheritDoc}
      *
-     * <p>Note that this method will throw an {@link IllegalStateException} if the stream has not been closed with
-     * {@link #close(JsonRpcResponse)}. So make sure to call that method before invoking this method.
+     * <p>Note that this method will throw an {@link IllegalStateException} if the stream has not been closed
+     * with {@link #close(JsonRpcResponse)}. So make sure to call that method before invoking this method.
      * You can also use {@link #hasFinalResponse()} to check if the final response has been written.
      */
     @Override
@@ -205,8 +208,8 @@ public interface JsonRpcStreamableResponse extends StreamWriter<JsonRpcMessage>,
     /**
      * {@inheritDoc}
      *
-     * <p>Note that this method will throw an {@link IllegalStateException} if the stream has not been closed with
-     * {@link #close(JsonRpcResponse)}. So make sure to call that method before invoking this method.
+     * <p>Note that this method will throw an {@link IllegalStateException} if the stream has not been closed
+     * with {@link #close(JsonRpcResponse)}. So make sure to call that method before invoking this method.
      * You can also use {@link #hasFinalResponse()} to check if the final response has been written.
      */
     @Override

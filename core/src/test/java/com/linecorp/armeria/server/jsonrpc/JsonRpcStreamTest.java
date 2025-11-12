@@ -16,11 +16,30 @@
 
 package com.linecorp.armeria.server.jsonrpc;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+
+import java.util.List;
+import java.util.concurrent.CompletableFuture;
+
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
+
 import com.google.common.collect.ImmutableList;
+
 import com.linecorp.armeria.client.BlockingWebClient;
 import com.linecorp.armeria.client.WebClient;
-import com.linecorp.armeria.common.*;
-import com.linecorp.armeria.common.jsonrpc.*;
+import com.linecorp.armeria.common.AggregatedHttpResponse;
+import com.linecorp.armeria.common.HttpData;
+import com.linecorp.armeria.common.HttpHeaderNames;
+import com.linecorp.armeria.common.HttpStatus;
+import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.common.SplitHttpResponse;
+import com.linecorp.armeria.common.jsonrpc.JsonRpcError;
+import com.linecorp.armeria.common.jsonrpc.JsonRpcNotification;
+import com.linecorp.armeria.common.jsonrpc.JsonRpcRequest;
+import com.linecorp.armeria.common.jsonrpc.JsonRpcResponse;
+import com.linecorp.armeria.common.jsonrpc.JsonRpcStreamableResponse;
 import com.linecorp.armeria.common.sse.ServerSentEvent;
 import com.linecorp.armeria.common.sse.ServerSentEventBuilder;
 import com.linecorp.armeria.common.stream.ClosedStreamException;
@@ -28,15 +47,8 @@ import com.linecorp.armeria.internal.testing.AnticipatedException;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.RegisterExtension;
+
 import reactor.test.StepVerifier;
-
-import java.util.List;
-import java.util.concurrent.CompletableFuture;
-
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class JsonRpcStreamTest {
 

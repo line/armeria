@@ -32,6 +32,9 @@ import com.linecorp.armeria.server.ServiceRequestContext;
 @FunctionalInterface
 public interface JsonRpcExceptionHandler {
 
+    /**
+     * Returns a default {@link JsonRpcExceptionHandler} instance.
+     */
     static JsonRpcExceptionHandler of() {
         return DefaultJsonRpcExceptionHandler.INSTANCE;
     }
@@ -46,6 +49,10 @@ public interface JsonRpcExceptionHandler {
     JsonRpcResponse handleException(ServiceRequestContext ctx, @Nullable JsonRpcMessage input,
                                     Throwable cause);
 
+    /**
+     * Returns a composed {@link JsonRpcExceptionHandler} that first applies this handler, and if it
+     * returns {@code null}, applies the {@code next} handler.
+     */
     default JsonRpcExceptionHandler orElse(JsonRpcExceptionHandler next) {
         requireNonNull(next, "next");
         return (ctx, input, cause) -> {

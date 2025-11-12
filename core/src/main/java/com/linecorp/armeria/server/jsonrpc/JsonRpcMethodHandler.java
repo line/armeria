@@ -21,6 +21,7 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.jsonrpc.JsonRpcNotification;
 import com.linecorp.armeria.common.jsonrpc.JsonRpcRequest;
 import com.linecorp.armeria.common.jsonrpc.JsonRpcResponse;
+import com.linecorp.armeria.common.util.UnmodifiableFuture;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 /**
@@ -37,7 +38,8 @@ public interface JsonRpcMethodHandler {
     /**
      * Handles the incoming {@link JsonRpcNotification}.
      */
-    default CompletableFuture<Void> onNotification(ServiceRequestContext ctx, JsonRpcNotification notification) {
-        return CompletableFuture.completedFuture(null);
+    default CompletableFuture<Void> onNotification(ServiceRequestContext ctx,
+                                                   JsonRpcNotification notification) {
+        return UnmodifiableFuture.completedFuture(null);
     }
 }

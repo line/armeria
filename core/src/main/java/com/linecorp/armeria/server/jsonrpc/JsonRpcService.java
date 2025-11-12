@@ -15,14 +15,38 @@
  */
 package com.linecorp.armeria.server.jsonrpc;
 
+import static com.google.common.base.Preconditions.checkState;
+import static java.util.Objects.requireNonNull;
+
+import java.io.IOException;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.CompletableFuture;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
-import com.linecorp.armeria.common.*;
+
+import com.linecorp.armeria.common.HttpMethod;
+import com.linecorp.armeria.common.HttpRequest;
+import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.HttpStatus;
+import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.common.RequestHeaders;
+import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
-import com.linecorp.armeria.common.jsonrpc.*;
+import com.linecorp.armeria.common.jsonrpc.JsonRpcError;
+import com.linecorp.armeria.common.jsonrpc.JsonRpcMessage;
+import com.linecorp.armeria.common.jsonrpc.JsonRpcMethodInvokable;
+import com.linecorp.armeria.common.jsonrpc.JsonRpcNotification;
+import com.linecorp.armeria.common.jsonrpc.JsonRpcRequest;
+import com.linecorp.armeria.common.jsonrpc.JsonRpcResponse;
+import com.linecorp.armeria.common.jsonrpc.JsonRpcStreamableResponse;
 import com.linecorp.armeria.common.sse.ServerSentEvent;
 import com.linecorp.armeria.common.sse.ServerSentEventBuilder;
 import com.linecorp.armeria.common.stream.StreamMessage;
@@ -33,17 +57,8 @@ import com.linecorp.armeria.internal.common.jsonrpc.JsonRpcSseMessage;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.streaming.ServerSentEvents;
+
 import io.netty.util.AttributeKey;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import java.io.IOException;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.CompletableFuture;
-
-import static com.google.common.base.Preconditions.checkState;
-import static java.util.Objects.requireNonNull;
 
 /**
  * A JSON-RPC {@link HttpService}.

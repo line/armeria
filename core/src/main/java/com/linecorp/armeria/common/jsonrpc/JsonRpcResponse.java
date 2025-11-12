@@ -22,7 +22,6 @@ import static java.util.Objects.requireNonNull;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
-import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -35,7 +34,7 @@ import com.linecorp.armeria.server.jsonrpc.JsonRpcService;
 /**
  * A JSON-RPC response.
  */
-@JsonInclude(Include.NON_NULL)
+@JsonInclude(JsonInclude.Include.NON_NULL)
 @UnstableApi
 public interface JsonRpcResponse extends JsonRpcMessage {
 
@@ -105,7 +104,7 @@ public interface JsonRpcResponse extends JsonRpcMessage {
     }
 
     /**
-     * Returns a new {@link JsonRpcStreamableResponse} for a streamable JSON-RPC response.
+     * Returns a new {@link JsonRpcStreamableResponse} to stream multiple JSON-RPC messages.
      */
     static JsonRpcStreamableResponse streaming() {
         return new DefaultJsonRpcStreamableResponse();
@@ -171,6 +170,9 @@ public interface JsonRpcResponse extends JsonRpcMessage {
     @JsonProperty
     JsonRpcError error();
 
+    /**
+     * Returns {@code true} if this response has an error.
+     */
     @JsonIgnore
     default boolean hasError() {
         return error() != null;
