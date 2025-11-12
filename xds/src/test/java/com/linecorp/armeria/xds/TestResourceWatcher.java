@@ -20,6 +20,7 @@ import java.util.List;
 import java.util.concurrent.BlockingDeque;
 import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Consumer;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -34,7 +35,7 @@ class TestResourceWatcher implements SnapshotWatcher<Snapshot<?>> {
     private final LinkedBlockingDeque<List<Object>> events = new LinkedBlockingDeque<>();
 
     @Override
-    public void onError(XdsType type, Status error) {
+    public void onError(XdsType type, String resourceName, Status error) {
         logger.info("onError: {}", error);
         events.add(ImmutableList.of("onError", error));
     }
@@ -54,6 +55,16 @@ class TestResourceWatcher implements SnapshotWatcher<Snapshot<?>> {
     List<Object> blockingMissing() {
         //noinspection unchecked
         return blockingFirst("onMissing", List.class);
+    }
+
+    <T> void batchAssertChanged(Class<T> clazz, Consumer<List<T>> assertion) throws Exception {
+        Thread.sleep(1000);
+        final ImmutableList.Builder<T> builder = ImmutableList.builder();
+        while (!events.isEmpty()) {
+            final T obj = blockingFirst("snapshotUpdated", clazz);
+            builder.add(obj);
+        }
+        assertion.accept(builder.build());
     }
 
     <T> T blockingChanged(Class<T> clazz) {

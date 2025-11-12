@@ -16,14 +16,20 @@
 
 package com.linecorp.armeria.xds;
 
+import static com.linecorp.armeria.xds.FilterUtil.toParsedFilterConfigs;
+
 import java.util.List;
+import java.util.Map;
 
 import com.google.common.base.MoreObjects;
 import com.google.common.base.Objects;
+import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.common.annotation.UnstableApi;
 
 import io.envoyproxy.envoy.config.route.v3.RouteConfiguration;
+import io.envoyproxy.envoy.extensions.filters.http.router.v3.Router;
+import io.envoyproxy.envoy.extensions.filters.network.http_connection_manager.v3.HttpFilter;
 
 /**
  * A snapshot of a {@link RouteConfiguration} resource.
@@ -33,10 +39,30 @@ public final class RouteSnapshot implements Snapshot<RouteXdsResource> {
 
     private final RouteXdsResource routeXdsResource;
     private final List<VirtualHostSnapshot> virtualHostSnapshots;
+    private final Map<String, ParsedFilterConfig> filterConfigs;
 
     RouteSnapshot(RouteXdsResource routeXdsResource, List<VirtualHostSnapshot> virtualHostSnapshots) {
         this.routeXdsResource = routeXdsResource;
-        this.virtualHostSnapshots = virtualHostSnapshots;
+        filterConfigs = toParsedFilterConfigs(routeXdsResource.resource().getTypedPerFilterConfigMap());
+        this.virtualHostSnapshots =
+                virtualHostSnapshots.stream().map(vhs -> vhs.withFilterConfigs(filterConfigs,
+                                                                               ImmutableList.of()))
+                                    .collect(ImmutableList.toImmutableList());
+    }
+
+    private RouteSnapshot(RouteXdsResource routeXdsResource, List<HttpFilter> upstreamFilters,
+                          Map<String, ParsedFilterConfig> filterConfigs,
+                          List<VirtualHostSnapshot> virtualHostSnapshots) {
+        this.routeXdsResource = routeXdsResource;
+        this.filterConfigs = filterConfigs;
+        this.virtualHostSnapshots =
+                virtualHostSnapshots.stream().map(vhs -> vhs.withFilterConfigs(filterConfigs, upstreamFilters))
+                                    .collect(ImmutableList.toImmutableList());
+    }
+
+    RouteSnapshot withRouter(Router router) {
+        return new RouteSnapshot(routeXdsResource, router.getUpstreamHttpFiltersList(),
+                                 filterConfigs, virtualHostSnapshots);
     }
 
     @Override
