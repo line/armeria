@@ -67,9 +67,7 @@ jetty12 = "12.0.23"
 jetty93 = "9.3.30.v20211001"
 jetty94 = "9.4.55.v20240627"
 jetty-alpn-api = "1.1.3.v20160715"
-# TODO(ikhoon) Upgrade jkube version to 1.19.0 to support Gradle 9
-# https://github.com/eclipse-jkube/jkube/pull/3779
-jkube = "1.18.1"
+jkube = "1.18.2"
 jmh-core = "1.37"
 jmh-gradle-plugin = "0.7.3"
 joor = "0.9.15"
