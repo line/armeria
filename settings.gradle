@@ -89,6 +89,7 @@ project(':version-catalog').with {
 }
 
 // Published Java projects
+includeWithFlags ':ai:mcp',                              'java17', 'publish', 'relocate'
 includeWithFlags ':annotation-processor',                'java', 'publish', 'relocate'
 includeWithFlags ':athenz',                              'java11', 'publish', 'relocate', 'native'
 includeWithFlags ':brave5',                              'java', 'publish', 'relocate', 'no_aggregation'
