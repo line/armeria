@@ -1244,6 +1244,19 @@ public final class ServerBuilder implements TlsSetters, ServiceConfigsBuilder<Se
     }
 
     /**
+     * TBD.
+     * @param contextPath TBD
+     * @param customizer TBD
+     * @return TBD
+     */
+    public ServerBuilder contextPath(String contextPath,
+                                     Consumer<ContextPathServicesBuilder> customizer) {
+        requireNonNull(contextPath, "contextPath");
+        contextPath(ImmutableSet.of(contextPath), customizer);
+        return this;
+    }
+
+    /**
      * Configures an {@link HttpService} of the default {@link VirtualHost} with the {@code customizer}.
      */
     public ServerBuilder withRoute(Consumer<? super ServiceBindingBuilder> customizer) {

@@ -438,6 +438,7 @@ abstract class AbstractContextPathServicesBuilder<SELF extends AbstractContextPa
         final Set<String> mergedContextPaths = new HashSet<>();
         for (String currentContextPath : contextPaths()) {
             for (String childContextPath : paths) {
+                RouteUtil.ensureAbsolutePath(childContextPath, "contextPath");
                 final String mergedContextPath = currentContextPath + childContextPath;
                 mergedContextPaths.add(mergedContextPath);
             }
@@ -452,4 +453,12 @@ abstract class AbstractContextPathServicesBuilder<SELF extends AbstractContextPa
      * @return TBD
      */
     public abstract SELF contextPath(Iterable<String> paths, Consumer<SELF> customizer);
+
+    /**
+     * TBD.
+     * @param path TBD
+     * @param customizer TBD
+     * @return TBD
+     */
+    public abstract SELF contextPath(String path, Consumer<SELF> customizer);
 }
