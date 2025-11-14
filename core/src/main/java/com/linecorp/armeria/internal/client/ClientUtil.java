@@ -30,6 +30,7 @@ import com.linecorp.armeria.client.PreClientRequestContext;
 import com.linecorp.armeria.client.UnprocessedRequestException;
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
+import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RequestId;
@@ -45,6 +46,8 @@ import com.linecorp.armeria.common.stream.StreamMessage;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.common.util.SafeCloseable;
 
+import io.netty.util.AsciiString;
+
 public final class ClientUtil {
 
     /**
@@ -52,6 +55,12 @@ public final class ClientUtil {
      */
     public static final URI UNDEFINED_URI =
             URI.create("http://" + ClientBuilderParamsUtil.UNDEFINED_URI_AUTHORITY);
+
+    /**
+     * The header which indicates the retry count of a {@link Request}.
+     * The server might use this value to reject excessive retries, etc.
+     */
+    public static final AsciiString ARMERIA_RETRY_COUNT = HttpHeaderNames.of("armeria-retry-count");
 
     public static <I extends Request, O extends Response, U extends Client<I, O>>
     O initContextAndExecuteWithFallback(
