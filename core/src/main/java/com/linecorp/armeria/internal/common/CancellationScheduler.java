@@ -133,6 +133,8 @@ public interface CancellationScheduler {
     @VisibleForTesting
     State state();
 
+    boolean hasEventLoop();
+
     enum State {
         INIT,
         SCHEDULED,

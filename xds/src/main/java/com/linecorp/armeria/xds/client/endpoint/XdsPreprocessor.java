@@ -69,6 +69,7 @@ abstract class XdsPreprocessor<I extends Request, O extends Response>
                                        try {
                                            return execute0(delegate, ctx, req, routeConfig0);
                                        } catch (Exception e) {
+                                           ctx.cancel(e);
                                            return Exceptions.throwUnsafely(e);
                                        }
                                    });

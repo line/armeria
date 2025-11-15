@@ -316,7 +316,7 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
         assert ctxReq != null;
         final HttpResponse response;
         final ClientRequestContextExtension ctxExtension = derivedCtx.as(ClientRequestContextExtension.class);
-        if (!initialAttempt && ctxExtension != null && derivedCtx.endpoint() == null) {
+        if (!initialAttempt && ctxExtension != null && !ctxExtension.initializationTriggered()) {
             // clear the pending throwable to retry endpoint selection
             ClientPendingThrowableUtil.removePendingThrowable(derivedCtx);
             // if the endpoint hasn't been selected, try to initialize the ctx with a new endpoint/event loop
