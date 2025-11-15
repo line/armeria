@@ -60,7 +60,8 @@ final class XdsClusterManager implements SafeCloseable {
         }
     }
 
-    void register(Cluster cluster, SubscriptionContext context, SnapshotWatcher<ClusterSnapshot> watcher) {
+    void register(Cluster cluster, SubscriptionContext context,
+                  Iterable<SnapshotWatcher<? super ClusterSnapshot>> watchers) {
         checkArgument(!nodes.containsKey(cluster.getName()),
                       "Static cluster with name '%s' already registered", cluster.getName());
         final UpdatableXdsLoadBalancer loadBalancer;
@@ -72,7 +73,9 @@ final class XdsClusterManager implements SafeCloseable {
         }
         final ClusterResourceNode node =
                 StaticResourceUtils.staticCluster(context, cluster.getName(), cluster, loadBalancer, "", 0);
-        node.addWatcher(watcher);
+        for (SnapshotWatcher<? super ClusterSnapshot> watcher: watchers) {
+            node.addWatcher(watcher);
+        }
         nodes.put(cluster.getName(), node);
     }
 

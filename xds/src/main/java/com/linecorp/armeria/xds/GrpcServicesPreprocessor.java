@@ -45,6 +45,12 @@ final class GrpcServicesPreprocessor implements HttpPreprocessor {
     GrpcServicesPreprocessor(List<GrpcService> services, BootstrapClusters bootstrapClusters) {
         this.services = services;
         this.bootstrapClusters = bootstrapClusters;
+        for (GrpcService service : services) {
+            final XdsLoadBalancer loadBalancer = bootstrapClusters.loadBalancer(
+                    service.getEnvoyGrpc().getClusterName());
+            checkState(loadBalancer != null,
+                       "Cannot find endpoints for '%s' in bootstrap clusters '%s'", service, bootstrapClusters);
+        }
     }
 
     @Override
@@ -68,8 +74,7 @@ final class GrpcServicesPreprocessor implements HttpPreprocessor {
         }
 
         final XdsLoadBalancer loadBalancer = bootstrapClusters.loadBalancer(clusterName);
-        checkState(loadBalancer != null,
-                   "Bootstrap static cluster '%s' has not specified endpoints.", clusterName);
+        assert loadBalancer != null;
         final Endpoint endpoint = loadBalancer.selectNow(ctx);
         if (endpoint != null) {
             ctx.setEndpointGroup(endpoint);
