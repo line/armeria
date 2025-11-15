@@ -43,20 +43,6 @@ abstract class AbstractContextPathServicesBuilder<SELF extends AbstractContextPa
     private final VirtualHostBuilder virtualHostBuilder;
 
     AbstractContextPathServicesBuilder(T parent, VirtualHostBuilder virtualHostBuilder,
-                                       Set<String> contextPaths, boolean allowEmptyContextPaths) {
-        if (!allowEmptyContextPaths) {
-            checkArgument(!contextPaths.isEmpty(), "At least one context path is required");
-            for (String contextPath: contextPaths) {
-                RouteUtil.ensureAbsolutePath(contextPath, "contextPath");
-            }
-        }
-
-        this.parent = parent;
-        this.contextPaths = ImmutableSet.copyOf(contextPaths);
-        this.virtualHostBuilder = virtualHostBuilder;
-    }
-
-    AbstractContextPathServicesBuilder(T parent, VirtualHostBuilder virtualHostBuilder,
                                        Set<String> contextPaths) {
         checkArgument(!contextPaths.isEmpty(), "At least one context path is required");
         for (String contextPath: contextPaths) {
@@ -447,18 +433,39 @@ abstract class AbstractContextPathServicesBuilder<SELF extends AbstractContextPa
     }
 
     /**
-     * TBD.
-     * @param paths TBD
-     * @param customizer TBD
-     * @return TBD
+     * Applies the specified {@code customizer} to a new child builder rooted at the concatenation
+     * of this builder's context paths and the given {@code paths}.
+     *
+     * <p>The effective child context paths are the <em>Cartesian product</em> of the current
+     * context paths and {@code paths}. Each element in {@code paths} must be an absolute path
+     * (start with {@code '/'}). The {@code customizer} can register services and further nested
+     * context paths relative to the child builder.</p>
+     *
+     * <p>Example:</p>
+     * <pre>{@code
+     * ctx.contextPath("/v1", c1 -> {
+     *     c1.service("/ping", pingService);
+     *     c1.contextPath(Set.of("/users", "/projects"), c2 -> {
+     *         c2.service("/list", listService);
+     *     });
+     * });
+     * }</pre>
+     *
+     * @param paths the child context paths; must be non-empty and absolute
+     * @param customizer the action that configures services/nesting under the child paths
+     * @return this builder for chaining
+     * @throws IllegalArgumentException if {@code paths} is empty or contains a relative (non-absolute) path
+     * @see #contextPath(String, Consumer)
      */
     public abstract SELF contextPath(Iterable<String> paths, Consumer<SELF> customizer);
 
     /**
-     * TBD.
-     * @param path TBD
-     * @param customizer TBD
-     * @return TBD
+     * A convenience overload of {@link #contextPath(Iterable, Consumer)} for a single child path.
+     * @param path the child context path; must be absolute
+     * @param customizer the action that configures services/nesting under the child paths
+     * @return this builder for chaining
+     * @throws IllegalArgumentException if {@code paths} is empty or contains a relative (non-absolute) path
+     * @see #contextPath(Iterable, Consumer)
      */
     public abstract SELF contextPath(String path, Consumer<SELF> customizer);
 }

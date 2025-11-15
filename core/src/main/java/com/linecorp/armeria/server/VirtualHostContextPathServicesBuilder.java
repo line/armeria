@@ -44,14 +44,6 @@ import com.linecorp.armeria.server.annotation.ResponseConverterFunction;
 public final class VirtualHostContextPathServicesBuilder
         extends AbstractContextPathServicesBuilder<VirtualHostContextPathServicesBuilder, VirtualHostBuilder> {
 
-    VirtualHostContextPathServicesBuilder(VirtualHostBuilder parent,
-                                          VirtualHostBuilder virtualHostBuilder,
-                                          Set<String> contextPaths,
-                                          Consumer<VirtualHostContextPathServicesBuilder> context) {
-        this(parent, virtualHostBuilder, contextPaths);
-        context.accept(this);
-    }
-
     VirtualHostContextPathServicesBuilder(VirtualHostBuilder parent, VirtualHostBuilder virtualHostBuilder,
                                           Set<String> contextPaths) {
         super(parent, virtualHostBuilder, contextPaths);
