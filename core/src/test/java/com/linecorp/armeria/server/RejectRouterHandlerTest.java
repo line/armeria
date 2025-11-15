@@ -81,6 +81,18 @@ public class RejectRouterHandlerTest {
         ).isInstanceOf(IllegalStateException.class);
     }
 
+    @Test
+    void fail_route_handler_do_not_consider_decorator_in_same_path() {
+        assertThatCode(() -> serverBuilderWithDecorator()
+                .rejectedRouteHandler(RejectedRouteHandler.FAIL)
+                .build()).doesNotThrowAnyException();
+
+        assertThatCode(() -> virtualServerBuilderWithDecorator()
+                .rejectedRouteHandler(RejectedRouteHandler.FAIL)
+                .and()
+                .build()).doesNotThrowAnyException();
+    }
+
     private VirtualHostBuilder duplicatedRouteVirtualHostBuilder() {
         return Server.builder()
                      .virtualHost("foo.com")
@@ -88,9 +100,22 @@ public class RejectRouterHandlerTest {
                      .service("/foo", (ctx, req) -> HttpResponse.of("duplicate"));
     }
 
+    private VirtualHostBuilder virtualServerBuilderWithDecorator() {
+        return Server.builder()
+                     .virtualHost("foo.com")
+                     .service("/foo", (ctx, req) -> HttpResponse.of("ok"))
+                     .decorator("/foo", (delegate, ctx, req) -> HttpResponse.of("duplicate"));
+    }
+
     private ServerBuilder duplicateRouteServerBuilder() {
         return Server.builder()
                      .service("/foo", (ctx, req) -> HttpResponse.of("ok"))
                      .service("/foo", (ctx, req) -> HttpResponse.of("duplicate"));
+    }
+
+    private ServerBuilder serverBuilderWithDecorator() {
+        return Server.builder()
+                     .service("/foo", (ctx, req) -> HttpResponse.of("ok"))
+                     .decorator("/foo", (delegate, ctx, req) -> HttpResponse.of("duplicate"));
     }
 }
