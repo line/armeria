@@ -17,8 +17,8 @@ services:
       # This check ensures the DB is ready before ZMS starts.
       test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-pmariadb"]
       interval: 10s
-      timeout: 5s
-      retries: 5
+      timeout: 10s
+      retries: 10
 
   zms-server:
     image: athenz/athenz-zms-server:latest
@@ -61,8 +61,8 @@ services:
     healthcheck:
       test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-pmariadb"]
       interval: 10s
-      timeout: 5s
-      retries: 5
+      timeout: 10s
+      retries: 10
 
   zts-server:
     image: athenz/athenz-zts-server:latest
