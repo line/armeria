@@ -11,3 +11,7 @@ dependencies {
     api libs.mockito.junit.jupiter
     api libs.reactor.test
 }
+
+tasks.withType(Test).configureEach {
+    failOnNoDiscoveredTests = false
+}

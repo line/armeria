@@ -33,6 +33,7 @@ class ArmeriaRequestCoroutineContext(
     private val requestContext: ServiceRequestContext,
 ) : AbstractCoroutineContextElement(Key),
     ThreadContextElement<SafeCloseable> {
+    @Suppress("DEPRECATION")
     companion object Key : CoroutineContext.Key<ArmeriaRequestCoroutineContext>
 
     override fun updateThreadContext(context: CoroutineContext): SafeCloseable = requestContext.push()

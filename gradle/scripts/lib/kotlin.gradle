@@ -45,6 +45,7 @@ configure(projectsWithFlags('kotlin')) {
 
             filter {
                 exclude { it.file.path.contains("gen-src/") }
+                exclude { it.file.path.contains("build/") }
             }
         }
 

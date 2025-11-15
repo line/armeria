@@ -88,7 +88,11 @@ configure(rootProject) {
             sourceDirectories.from = files(projectsWithFlags('java').inject([], { a, b ->
                 a + b.sourceSets.main.java.srcDirs.findAll { File srcDir ->
                     // Exclude generated sources.
-                    return !srcDir.path.contains('/gen-src/') && !srcDir.path.contains('\\gen-src\\')
+                    def path = srcDir.path
+                    return !path.contains('/gen-src/') &&
+                           !path.contains('\\gen-src\\') &&
+                           !path.contains('/build/') &&
+                           !path.contains('\\build\\')
                 }
             }))
             classDirectories.from = files(projectsWithFlags('java').inject([], { a, b ->

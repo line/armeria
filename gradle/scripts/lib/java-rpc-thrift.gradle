@@ -83,7 +83,11 @@ configure(projectsWithFlags('java')) {
 }
 
 @CacheableTask
-class CompileThriftTask extends DefaultTask {
+abstract class CompileThriftTask extends DefaultTask {
+
+    @javax.inject.Inject
+    protected abstract ExecOperations getExecOperations()
+
     @Override
     String getGroup() {
         return 'build'
@@ -155,7 +159,7 @@ class CompileThriftTask extends DefaultTask {
                 if (annotationsAsMetadata) {
                     javaGenerator += ':annotations_as_metadata'
                 }
-                project.exec {
+                execOperations.exec {
                     commandLine actualThriftPath
                     args '-gen', javaGenerator, '-out', javaOutputDir
                     includeDirs.each {
@@ -167,7 +171,7 @@ class CompileThriftTask extends DefaultTask {
                     logger.info("Using ${actualThriftPath} to generate JSON from ${sourceFile}")
                     def outDir = "${jsonOutputDir}/META-INF/armeria/thrift"
                     project.mkdir(outDir)
-                    project.exec {
+                    execOperations.exec {
                         commandLine actualThriftPath
                         args '-gen', 'json', '-out', outDir
                         includeDirs.each {

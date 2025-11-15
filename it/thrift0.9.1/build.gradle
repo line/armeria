@@ -8,13 +8,24 @@ dependencies {
 
     testImplementation 'org.apache.thrift:libthrift:0.9.1'
 
+    testImplementation(project(":prometheus1"))
+
+    // thrift api depends on httpclient4
+    testImplementation libs.apache.httpclient4
+
     // Jetty, for testing TServlet interoperability.
     testImplementation libs.jetty94.webapp
     testImplementation libs.jetty94.http2.server
 
     // Dropwizard and Prometheus, for testing metrics integration
     testImplementation libs.dropwizard.metrics.core
-    testImplementation libs.micrometer.prometheus
+    testImplementation libs.prometheus.metrics.exposition.formats
+
+    // micrometer tracing
+    testImplementation (libs.micrometer.tracing.integration.test) {
+        exclude group: "org.mockito"
+    }
+    testImplementation libs.brave6.instrumentation.http.tests
 }
 
 def suffix = rootProject.osdetector.classifier
@@ -27,7 +38,7 @@ ext {
 }
 
 task generateSources(type: Copy) {
-    from("${rootProject.projectDir}/thrift0.13/src/test") {
+    from("${rootProject.projectDir}/thrift/thrift0.13/src/test") {
         exclude '**/TTextProtocolTest.java'
         exclude '**/ThriftTreeStructureTest.java'
         exclude '**/AbstractThriftOverHttpTest.java'
@@ -37,6 +48,10 @@ task generateSources(type: Copy) {
         exclude '**/ThriftServiceLengthLimitTest.java'
         exclude '**/ThriftDescriptiveTypeInfoProviderTest.java'
         exclude '**/ThriftOverHttpClientTest.java'
+        exclude '**/ThriftMaskingStructs.java'
+        exclude '**/ThriftRequiredFieldVerboseTest.java'
+        exclude '**/ThriftDocStringExtractorTest.java'
+        exclude '**/internal/common/thrift/logging/'
         exclude '**/META-INF/services/'
         exclude '**/*.thrift'
     }

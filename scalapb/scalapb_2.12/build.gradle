@@ -27,7 +27,7 @@ tasks.compileTestScala.source "${scalapb213ProjectDir}/src/test/scala"
 tasks.processTestResources.from "${scalapb213ProjectDir}/src/test/resources"
 // Use the source code generated from :scalapb_2.13/src/test/proto/*.proto.
 tasks.compileTestScala.dependsOn(":scalapb_2.13:generateTestProto")
-tasks.compileTestScala.source "${scalapb213ProjectDir}/gen-src/test/scalapb"
+tasks.compileTestScala.source "${scalapb213ProjectDir}/build/generated/sources/proto/test/scalapb"
 
 tasks.sourcesJar.from "${scalapb213ProjectDir}/src/main/scala"
 tasks.sourcesJar.from "${scalapb213ProjectDir}/src/main/scala_2"

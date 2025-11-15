@@ -139,14 +139,29 @@ configure(projectsWithFlags('java')) {
         // Adds an optional configuration that can be used to define optional dependencies. While it's more
         // idiomatic to define features for each set of optional dependencies (e.g., "prometheus",
         // "dropwizard"), it's convenient to have a single one to fallback to.
+        sourceSets { optional }
         registerFeature('optional') {
-            usingSourceSet(sourceSets.main)
+            // The main source set is reserved and it no longer be used for features.
+            // https://discuss.gradle.org/t/gradle-9-deprecation-and-optional-dependencies/48639
+            usingSourceSet(sourceSets.optional)
         }
 
         // Do not let Gradle infer the module path if automatic module name is enabled,
         // because it means the JAR will rely on JDK's automatic module metadata generation.
         if (project.ext.automaticModuleName != null) {
             modularity.inferModulePath = false
+        }
+    }
+
+    // A workaround for the issue where the main source set is reserved for production code and should not be
+    // used for features. https://discuss.gradle.org/t/gradle-9-deprecation-and-optional-dependencies/48639
+    configurations {
+        compileOnly {
+            extendsFrom configurations.optionalApi, configurations.optionalImplementation
+        }
+        // Make test compile against the optional feature deps
+        testImplementation {
+            extendsFrom configurations.optionalApi, configurations.optionalImplementation
         }
     }
 
