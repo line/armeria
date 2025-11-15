@@ -72,6 +72,8 @@ final class Routers {
         final BiConsumer<Route, Route> rejectionConsumer = (route, existingRoute) -> {
             try {
                 rejectionHandler.handleDuplicateRoute(virtualHost, route, existingRoute);
+            } catch (IllegalStateException shouldFailException) {
+                throw shouldFailException;
             } catch (Exception e) {
                 logger.warn("Unexpected exception from a {}:",
                             RejectedRouteHandler.class.getSimpleName(), e);
