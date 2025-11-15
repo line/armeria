@@ -109,7 +109,7 @@ final class HttpClientExpect100HeaderTest {
             final CompletableFuture<AggregatedHttpResponse> future =
                     client.prepare()
                           .post("/")
-                          .content("foo\n")
+                          .content(MediaType.PLAIN_TEXT_UTF_8, "foo\n")
                           .header(HttpHeaderNames.EXPECT, HttpHeaderValues.CONTINUE)
                           .execute()
                           .aggregate();
@@ -167,7 +167,7 @@ final class HttpClientExpect100HeaderTest {
             final CompletableFuture<AggregatedHttpResponse> future =
                     client.prepare()
                           .post("/")
-                          .content("foo")
+                          .content(MediaType.PLAIN_TEXT_UTF_8, "foo")
                           .header(HttpHeaderNames.EXPECT, HttpHeaderValues.CONTINUE)
                           .execute()
                           .aggregate();
@@ -217,7 +217,7 @@ final class HttpClientExpect100HeaderTest {
             final CompletableFuture<AggregatedHttpResponse> future =
                     client.prepare()
                           .post("/")
-                          .content("foo\n")
+                          .content(MediaType.PLAIN_TEXT_UTF_8, "foo\n")
                           .header(HttpHeaderNames.EXPECT, HttpHeaderValues.CONTINUE)
                           .execute()
                           .aggregate();
@@ -268,7 +268,7 @@ final class HttpClientExpect100HeaderTest {
             final CompletableFuture<AggregatedHttpResponse> future =
                     client.prepare()
                           .post("/")
-                          .content("foo")
+                          .content(MediaType.PLAIN_TEXT_UTF_8, "foo")
                           .header(HttpHeaderNames.EXPECT, HttpHeaderValues.CONTINUE)
                           .execute()
                           .aggregate();
@@ -314,7 +314,7 @@ final class HttpClientExpect100HeaderTest {
             final CompletableFuture<AggregatedHttpResponse> future =
                     client.prepare()
                           .post("/")
-                          .content("foo\n")
+                          .content(MediaType.PLAIN_TEXT_UTF_8, "foo\n")
                           .header(HttpHeaderNames.EXPECT, HttpHeaderValues.CONTINUE)
                           .execute()
                           .aggregate();
@@ -369,7 +369,7 @@ final class HttpClientExpect100HeaderTest {
             final CompletableFuture<AggregatedHttpResponse> future =
                     client.prepare()
                           .post("/")
-                          .content("foo")
+                          .content(MediaType.PLAIN_TEXT_UTF_8, "foo")
                           .header(HttpHeaderNames.EXPECT, HttpHeaderValues.CONTINUE)
                           .execute()
                           .aggregate();
@@ -411,7 +411,7 @@ final class HttpClientExpect100HeaderTest {
             final CompletableFuture<AggregatedHttpResponse> future =
                     client.prepare()
                           .post("/")
-                          .content("foo\n")
+                          .content(MediaType.PLAIN_TEXT_UTF_8, "foo\n")
                           .header(HttpHeaderNames.EXPECT, HttpHeaderValues.CONTINUE)
                           .execute()
                           .aggregate();
