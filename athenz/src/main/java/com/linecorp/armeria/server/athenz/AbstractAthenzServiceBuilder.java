@@ -92,7 +92,7 @@ public abstract class AbstractAthenzServiceBuilder<SELF extends AbstractAthenzSe
 
     /**
      * Set the limit of role and access tokens that are cached to improve the performance of validating
-     * signatures since the tokens must be re-used by clients until they're about to be expired.
+     * signatures since the tokens must be reused by clients until they're about to be expired.
      * If not set, defaults to {@value MAX_TOKEN_CACHE_SIZE}.
      */
     public SELF maxTokenCacheSize(int maxTokenCacheSize) {
