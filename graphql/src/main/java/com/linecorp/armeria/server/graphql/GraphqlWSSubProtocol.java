@@ -39,6 +39,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.stream.ClosedStreamException;
 import com.linecorp.armeria.common.stream.StreamMessage;
 import com.linecorp.armeria.common.websocket.WebSocketCloseStatus;
 import com.linecorp.armeria.common.websocket.WebSocketWriter;
@@ -337,11 +338,11 @@ class GraphqlWSSubProtocol {
     }
 
     private static void writePong(WebSocketWriter out) {
-        out.tryWrite("{\"type\":\"pong\"}");
+        out.write("{\"type\":\"pong\"}");
     }
 
     private static void writeConnectionAck(WebSocketWriter out) {
-        out.tryWrite("{\"type\":\"connection_ack\"}");
+        out.write("{\"type\":\"connection_ack\"}");
     }
 
     private static void writeNext(WebSocketWriter out, String operationId, ExecutionResult executionResult)
@@ -352,7 +353,7 @@ class GraphqlWSSubProtocol {
                 "payload", executionResult.toSpecification());
         final String event = serializeToJson(response);
         logger.trace("NEXT: {}", event);
-        out.tryWrite(event);
+        out.write(event);
     }
 
     private static void writeError(WebSocketWriter out, String operationId, List<GraphQLError> errors)
@@ -365,10 +366,13 @@ class GraphqlWSSubProtocol {
                 "payload", errorSpecifications);
         final String event = serializeToJson(errorResponse);
         logger.trace("ERROR: {}", event);
-        out.tryWrite(event);
+        out.write(event);
     }
 
     private static void writeError(WebSocketWriter out, String operationId, Throwable t) {
+        if (t instanceof ClosedStreamException) {
+            return;
+        }
         final Map<String, Object> errorResponse = ImmutableMap.of(
                 "type", "error",
                 "id", operationId,
@@ -394,7 +398,7 @@ class GraphqlWSSubProtocol {
         try {
             final String event = serializeToJson(errorResponse);
             logger.trace("ERROR: {}", event);
-            out.tryWrite(event);
+            out.write(event);
         } catch (JsonProcessingException e) {
             logger.warn("Error serializing error event", e);
             out.close(e);
@@ -404,7 +408,7 @@ class GraphqlWSSubProtocol {
     private static void writeComplete(WebSocketWriter out, String operationId) {
         try {
             final String json = serializeToJson(ImmutableMap.of("type", "complete", "id", operationId));
-            out.tryWrite(json);
+            out.write(json);
         } catch (JsonProcessingException e) {
             logger.warn("Unexpected exception while serializing complete event. operationId: {}",
                         operationId, e);
