@@ -30,6 +30,7 @@ import java.util.Map.Entry;
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 import java.util.function.Consumer;
 import java.util.function.Function;
@@ -116,6 +117,10 @@ public final class DefaultClientRequestContext
             whenInitializedUpdater = AtomicReferenceFieldUpdater.newUpdater(
             DefaultClientRequestContext.class, CompletableFuture.class, "whenInitialized");
 
+    private static final AtomicIntegerFieldUpdater<DefaultClientRequestContext>
+            initializedUpdater = AtomicIntegerFieldUpdater.newUpdater(
+            DefaultClientRequestContext.class, "initialized");
+
     private static SessionProtocol desiredSessionProtocol(SessionProtocol protocol, ClientOptions options) {
         if (!options.factory().options().preferHttp1()) {
             return protocol;
@@ -134,7 +139,8 @@ public final class DefaultClientRequestContext
     private static final short STR_PARENT_LOG_AVAILABILITY = 1 << 1;
     private static boolean warnedNullRequestId;
 
-    private boolean initialized;
+    // 0: not initialized, 1: initialized
+    private volatile int initialized;
     @Nullable
     private EventLoop eventLoop;
     private EndpointGroup endpointGroup;
@@ -358,9 +364,10 @@ public final class DefaultClientRequestContext
 
     @Override
     public CompletableFuture<Boolean> init() {
+        if (!initializedUpdater.compareAndSet(this, 0, 1)) {
+            return whenInitialized();
+        }
         assert endpoint == null : endpoint;
-        assert !initialized;
-        initialized = true;
 
         final Throwable cancellationCause = cancellationCause();
         if (cancellationCause != null) {
@@ -381,6 +388,28 @@ public final class DefaultClientRequestContext
             failEarly(t);
             return initFuture(false, null);
         }
+    }
+
+    @Override
+    public void initAndFail(Throwable cause) {
+        if (!initializedUpdater.compareAndSet(this, 0, 1)) {
+            return;
+        }
+        acquireEventLoop(endpointGroup);
+        failEarly(cause);
+        finishInitialization(false);
+    }
+
+    private void initNow() {
+        if (!initializedUpdater.compareAndSet(this, 0, 1)) {
+            return;
+        }
+        finishInitialization(false);
+    }
+
+    @Override
+    public boolean initialized() {
+        return initialized == 1;
     }
 
     private EndpointGroup mapEndpoint(EndpointGroup endpointGroup) {
@@ -616,6 +645,9 @@ public final class DefaultClientRequestContext
 
         this.endpointGroup = endpointGroup;
         updateEndpoint(endpoint);
+        if (endpoint != null) {
+            initNow();
+        }
         // We don't need to acquire an EventLoop for the initial attempt because it's already acquired by
         // the root context.
         if (endpoint == null || ctx.endpoint() == endpoint && ctx.log.children().isEmpty()) {
@@ -683,7 +715,7 @@ public final class DefaultClientRequestContext
 
     @Override
     public void setSessionProtocol(SessionProtocol sessionProtocol) {
-        checkState(!initialized, "Cannot update sessionProtocol after initialization");
+        checkState(!initialized(), "Cannot update sessionProtocol after initialization");
         this.sessionProtocol = desiredSessionProtocol(requireNonNull(sessionProtocol, "sessionProtocol"),
                                                       options);
     }
@@ -789,7 +821,7 @@ public final class DefaultClientRequestContext
 
     @Override
     public void setEventLoop(EventLoop eventLoop) {
-        checkState(!initialized, "Cannot update eventLoop after initialization");
+        checkState(!initialized(), "Cannot update eventLoop after initialization");
         checkState(this.eventLoop == null, "eventLoop can be updated only once");
         this.eventLoop = requireNonNull(eventLoop, "eventLoop");
         initializeResponseCancellationScheduler();
@@ -820,7 +852,7 @@ public final class DefaultClientRequestContext
 
     @Override
     public void setEndpointGroup(EndpointGroup endpointGroup) {
-        checkState(!initialized, "Cannot update endpointGroup after initialization");
+        checkState(!initialized(), "Cannot update endpointGroup after initialization");
         this.endpointGroup = requireNonNull(endpointGroup, "endpointGroup");
     }
 
