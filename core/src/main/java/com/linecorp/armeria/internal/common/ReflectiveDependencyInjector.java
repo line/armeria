@@ -96,7 +96,7 @@ public final class ReflectiveDependencyInjector implements DependencyInjector {
                     try {
                         ((AutoCloseable) instance).close();
                     } catch (Exception e) {
-                        logger.warn("Unexpected exception while closing {}", instance);
+                        logger.warn("Unexpected exception while closing {}", instance, e);
                     }
                 }
             }
