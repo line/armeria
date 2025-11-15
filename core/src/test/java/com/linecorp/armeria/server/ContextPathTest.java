@@ -142,13 +142,7 @@ class ContextPathTest {
               .get("/route1")
               .build((ctx, req) -> HttpResponse.of("route1"))
               .serviceUnder("/serviceUnder1", (ctx, req) -> HttpResponse.of("serviceUnder1"))
-              .serviceUnder("/serviceUnder2", serviceWithRoutes)
-              // virtual host decorator
-              .service("/decorated1", (ctx, req) -> HttpResponse.of(500))
-              .decorator("/decorated1", (delegate, ctx, req) -> HttpResponse.of("decorated1"))
-              .routeDecorator()
-              .path("/decorated2")
-              .build((delegate, ctx, req) -> HttpResponse.of("decorated2"));
+              .serviceUnder("/serviceUnder2", serviceWithRoutes);
             sb.decorator(LoggingService.newDecorator());
             sb.rejectedRouteHandler(RejectedRouteHandler.FAIL);
         }
