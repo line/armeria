@@ -22,6 +22,8 @@ import java.util.Set;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
+import com.google.common.collect.ImmutableSet;
+
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.server.annotation.ExceptionHandlerFunction;
 import com.linecorp.armeria.server.annotation.RequestConverterFunction;
@@ -99,5 +101,23 @@ public final class ContextPathServicesBuilder
     @Override
     public ContextPathAnnotatedServiceConfigSetters annotatedService() {
         return new ContextPathAnnotatedServiceConfigSetters(this);
+    }
+
+    @Override
+    public ContextPathServicesBuilder contextPath(Iterable<String> paths,
+                                                  Consumer<ContextPathServicesBuilder> customizer) {
+        final ContextPathServicesBuilder child =
+                new ContextPathServicesBuilder(parent(),
+                                               virtualHostBuilder(),
+                                               mergedContextPaths(paths));
+        customizer.accept(child);
+        return this;
+    }
+
+    @Override
+    public ContextPathServicesBuilder contextPath(String path,
+                                                  Consumer<ContextPathServicesBuilder> customizer) {
+        contextPath(ImmutableSet.of(path), customizer);
+        return this;
     }
 }

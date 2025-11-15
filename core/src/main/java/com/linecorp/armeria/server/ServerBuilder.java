@@ -1346,6 +1346,43 @@ public final class ServerBuilder implements TlsSetters, ServiceConfigsBuilder<Se
     }
 
     /**
+     * Applies the specified {@code customizer} to a {@link ContextPathServicesBuilder} rooted at the
+     * given {@code contextPaths} of the default {@link VirtualHost}.
+     * @param contextPaths the context paths to group services under; must be non-empty and absolute
+     * @param customizer the action that configures services/nesting under the context paths
+     * @return this builder for chaining
+     * @throws IllegalArgumentException if {@code contextPaths} is empty or contains a relative path
+     *
+     * @see #contextPath(String, Consumer)
+     * @see #baseContextPath(String)
+     */
+    @UnstableApi
+    public ServerBuilder contextPath(Iterable<String> contextPaths,
+                                     Consumer<ContextPathServicesBuilder> customizer) {
+        requireNonNull(contextPaths, "contextPaths");
+        requireNonNull(customizer, "customizer");
+        customizer.accept(contextPath(contextPaths));
+        return this;
+    }
+
+    /**
+     * A convenience overload of {@link #contextPath(Iterable, Consumer)} for a single context path.
+     *
+     * @param contextPath the context path to group services under; must be absolute
+     * @param customizer the action that configures services/nesting under the context path
+     * @return this builder for chaining
+     * @throws IllegalArgumentException if {@code contextPath} is relative (non-absolute)
+     * @see #contextPath(Iterable, Consumer)
+     */
+    @UnstableApi
+    public ServerBuilder contextPath(String contextPath,
+                                     Consumer<ContextPathServicesBuilder> customizer) {
+        requireNonNull(contextPath, "contextPath");
+        contextPath(ImmutableSet.of(contextPath), customizer);
+        return this;
+    }
+
+    /**
      * Configures an {@link HttpService} of the default {@link VirtualHost} with the {@code customizer}.
      */
     public ServerBuilder withRoute(Consumer<? super ServiceBindingBuilder> customizer) {
