@@ -26,7 +26,10 @@ import java.io.OutputStream;
 import java.net.Socket;
 import java.nio.charset.StandardCharsets;
 
+import org.apache.catalina.Context;
+import org.apache.catalina.Wrapper;
 import org.apache.catalina.connector.Connector;
+import org.apache.catalina.servlets.WebdavServlet;
 import org.apache.catalina.startup.Tomcat;
 import org.apache.hc.client5.http.classic.methods.HttpGet;
 import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
@@ -46,6 +49,7 @@ class UnmanagedTomcatServiceTest {
 
     private static Tomcat tomcatWithWebApp;
     private static Tomcat tomcatWithoutWebApp;
+    private static Tomcat tomcatWithPropfind;
 
     @RegisterExtension
     static final ServerExtension server = new ServerExtension() {
@@ -66,16 +70,32 @@ class UnmanagedTomcatServiceTest {
                                            "tomcat-" + UnmanagedTomcatServiceTest.class.getSimpleName() + "-2");
             assertThat(TomcatUtil.engine(tomcatWithoutWebApp.getService(), "bar")).isNotNull();
 
+            tomcatWithPropfind = new Tomcat();
+            tomcatWithPropfind.setPort(0);
+
+            Context ctx = tomcatWithPropfind.addContext("", "build" + File.separatorChar +
+                                                                               "tomcat-" + UnmanagedTomcatServiceTest.class.getSimpleName() + "-3");
+
+            Wrapper webdavServlet = Tomcat.addServlet(ctx, "webdav", new WebdavServlet());
+            webdavServlet.addInitParameter("readonly", "false");
+            webdavServlet.addInitParameter("listings", "true");
+
+            ctx.addServletMappingDecoded("/*", "webdav");
+            assertThat(TomcatUtil.engine(tomcatWithPropfind.getService(), "foobar")).isNotNull();
+
             // Start the Tomcats.
             tomcatWithWebApp.start();
             tomcatWithoutWebApp.start();
+            tomcatWithPropfind.start();
 
             // Bind them to the Server.
             sb.serviceUnder("/empty/", TomcatService.of(new Connector(), "someHost"))
               .serviceUnder("/some-webapp-nohostname/",
                             TomcatService.of(tomcatWithWebApp.getConnector()))
               .serviceUnder("/no-webapp/", TomcatService.of(tomcatWithoutWebApp))
-              .serviceUnder("/some-webapp/", TomcatService.of(tomcatWithWebApp));
+              .serviceUnder("/some-webapp/", TomcatService.of(tomcatWithWebApp))
+              .serviceUnder("/propfind/", TomcatService.of(tomcatWithPropfind))
+              .additionalAllowedHttpMethods("PROPFIND");
         }
     };
 
@@ -88,6 +108,10 @@ class UnmanagedTomcatServiceTest {
         if (tomcatWithoutWebApp != null) {
             tomcatWithoutWebApp.stop();
             tomcatWithoutWebApp.destroy();
+        }
+        if (tomcatWithPropfind != null) {
+            tomcatWithPropfind.stop();
+            tomcatWithPropfind.destroy();
         }
     }
 
@@ -139,6 +163,22 @@ class UnmanagedTomcatServiceTest {
             final InputStream in = s.getInputStream();
             final OutputStream out = s.getOutputStream();
             out.write(("GET /some-webapp/ HTTP/1.1\r\n" +
+                       "Content-Length: 0\r\n" +
+                       "Connection: close\r\n\r\n").getBytes(StandardCharsets.US_ASCII));
+
+            try (BufferedReader br = new BufferedReader(new InputStreamReader(in))) {
+                assertThat(br.readLine()).isEqualTo("HTTP/1.1 200 OK");
+            }
+        }
+    }
+
+    @Test
+    void okWithCustomMethod() throws Exception {
+        final int port = server.httpPort();
+        try (Socket s = new Socket(NetUtil.LOCALHOST, port)) {
+            final InputStream in = s.getInputStream();
+            final OutputStream out = s.getOutputStream();
+            out.write(("PROPFIND /propfind/ HTTP/1.1\r\n" +
                        "Content-Length: 0\r\n" +
                        "Connection: close\r\n\r\n").getBytes(StandardCharsets.US_ASCII));
 

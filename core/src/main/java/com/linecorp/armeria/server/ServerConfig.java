@@ -345,6 +345,11 @@ public interface ServerConfig {
     Http1HeaderNaming http1HeaderNaming();
 
     /**
+     * Returns the list of HTTP methods that are allowed to be used in addition to the standard HTTP methods.
+     */
+    List<String> additionalAllowedHttpMethods();
+
+    /**
      * Returns the {@link DependencyInjector} that injects dependencies in annotations.
      */
     DependencyInjector dependencyInjector();
