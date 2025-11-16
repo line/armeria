@@ -38,17 +38,25 @@ import static java.util.Objects.requireNonNull;
 
 import java.io.ByteArrayOutputStream;
 import java.io.UnsupportedEncodingException;
+import java.net.URLDecoder;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
+import java.util.Base64;
+import java.util.BitSet;
 import java.util.List;
-import java.util.Map;
+import java.util.Locale;
 import java.util.Objects;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.google.common.base.Ascii;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.multipart.MultipartFilenameDecodingMode;
 import com.linecorp.armeria.internal.common.util.TemporaryThreadLocals;
 
 /**
@@ -62,12 +70,34 @@ import com.linecorp.armeria.internal.common.util.TemporaryThreadLocals;
  */
 public final class ContentDisposition {
 
-    // Forked from https://github.com/spring-projects/spring-framework/blob/d9ccd618ea9cbf339eb5639d24d5a5fabe8157b5/spring-web/src/main/java/org/springframework/http/ContentDisposition.java
+    // Forked from https://github.com/spring-projects/spring-framework/blob/e5fccd1fbbf09f1e253b10ebfc12ad339d0196b5/spring-web/src/main/java/org/springframework/http/ContentDisposition.java
+
+    private static final Logger logger = LoggerFactory.getLogger(ContentDisposition.class);
 
     private static final ContentDisposition EMPTY = new ContentDisposition("", null, null, null);
 
-    private static final Map<String, Charset> supportedCharsets =
-            ImmutableMap.of("utf-8", UTF_8, "iso-8859-1", ISO_8859_1);
+    private static final Pattern BASE64_ENCODED_PATTERN =
+            Pattern.compile("=\\?([0-9a-zA-Z-_]+)\\?B\\?([+/0-9a-zA-Z]+=*)\\?=");
+
+    // Printable ASCII other than "?" or SPACE
+    private static final Pattern QUOTED_PRINTABLE_ENCODED_PATTERN =
+            Pattern.compile("=\\?([0-9a-zA-Z-_]+)\\?Q\\?([!->@-~]+)\\?=");
+
+    private static final MultipartFilenameDecodingMode MULTIPART_FILENAME_DECODING_MODE =
+            Flags.defaultMultipartFilenameDecodingMode();
+
+    private static final BitSet PRINTABLE = new BitSet(256);
+
+    static {
+        // RFC 2045, Section 6.7, and RFC 2047, Section 4.2
+        for (int i = 33; i <= 126; i++) {
+            PRINTABLE.set(i);
+        }
+        PRINTABLE.set(34, false); // "
+        PRINTABLE.set(61, false); // =
+        PRINTABLE.set(63, false); // ?
+        PRINTABLE.set(95, false); // _
+    }
 
     /**
      * Returns a new {@link ContentDispositionBuilder} with the specified {@code type}.
@@ -146,7 +176,7 @@ public final class ContentDisposition {
             final String part = parts.get(i);
             final int eqIndex = part.indexOf('=');
             if (eqIndex != -1) {
-                final String attribute = part.substring(0, eqIndex);
+                final String attribute = part.substring(0, eqIndex).toLowerCase(Locale.ROOT);
                 final String value;
                 if (part.startsWith("\"", eqIndex + 1) && part.endsWith("\"")) {
                     value = part.substring(eqIndex + 2, part.length() - 1);
@@ -161,14 +191,61 @@ public final class ContentDisposition {
                     final int idx2 = value.indexOf('\'', idx1 + 1);
                     if (idx1 != -1 && idx2 != -1) {
                         final String charsetString = value.substring(0, idx1).trim();
-                        charset = supportedCharsets.getOrDefault(Ascii.toLowerCase(charsetString), ISO_8859_1);
+                        charset = Charset.forName(charsetString);
+                        if (UTF_8 != charset && ISO_8859_1 != charset) {
+                            throw new IllegalArgumentException("Charset must be UTF-8 or ISO-8859-1" +
+                                                               " for filename*: " + charsetString);
+                        }
+
                         filename = decodeFilename(value.substring(idx2 + 1), charset);
                     } else {
                         // US ASCII
                         filename = decodeFilename(value, StandardCharsets.US_ASCII);
                     }
                 } else if ("filename".equals(attribute) && (filename == null)) {
-                    filename = value;
+                    if (value.startsWith("=?")) {
+                        Matcher matcher = BASE64_ENCODED_PATTERN.matcher(value);
+                        if (matcher.find()) {
+                            final Base64.Decoder decoder = Base64.getDecoder();
+                            final StringBuilder builder = new StringBuilder();
+                            do {
+                                charset = Charset.forName(matcher.group(1));
+                                final byte[] decoded = decoder.decode(matcher.group(2));
+                                builder.append(new String(decoded, charset));
+                            }
+                            while (matcher.find());
+
+                            filename = builder.toString();
+                        } else {
+                            matcher = QUOTED_PRINTABLE_ENCODED_PATTERN.matcher(value);
+                            if (matcher.find()) {
+                                final StringBuilder builder = new StringBuilder();
+                                do {
+                                    charset = Charset.forName(matcher.group(1));
+                                    final String decoded =
+                                            decodeQuotedPrintableFilename(matcher.group(2), charset);
+                                    builder.append(decoded);
+                                }
+                                while (matcher.find());
+
+                                filename = builder.toString();
+                            } else {
+                                filename = value;
+                            }
+                        }
+                    } else if (value.indexOf('\\') != -1) {
+                        filename = decodeQuotedPairs(value);
+                    } else if (MULTIPART_FILENAME_DECODING_MODE == MultipartFilenameDecodingMode.URL_DECODING) {
+                        try {
+                            filename = URLDecoder.decode(value, "UTF-8");
+                        } catch (Exception e) {
+                            logger.debug("Failed to URL decode filename: {}, contentDisposition: {}",
+                                         value, contentDisposition, e);
+                            filename = value;
+                        }
+                    } else {
+                        filename = value;
+                    }
                 }
             } else {
                 throw new IllegalArgumentException("Invalid content disposition format: " + contentDisposition);
@@ -303,6 +380,10 @@ public final class ContentDisposition {
                         filename + " (charset: " + charset + ')');
             }
         }
+        return copyToString(baos, charset);
+    }
+
+    private static String copyToString(ByteArrayOutputStream baos, Charset charset) {
         try {
             return baos.toString(charset.name());
         } catch (UnsupportedEncodingException e) {
@@ -364,6 +445,46 @@ public final class ContentDisposition {
         }
     }
 
+    private static String decodeQuotedPrintableFilename(String filename, Charset charset) {
+        final byte[] value = filename.getBytes(StandardCharsets.US_ASCII);
+        final ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        int index = 0;
+        while (index < value.length) {
+            final byte b = value[index];
+            if (b == '_') { // RFC 2047, section 4.2, rule (2)
+                baos.write(' ');
+                index++;
+            } else if (b == '=' && index < value.length - 2) {
+                final char[] array = {(char) value[index + 1], (char) value[index + 2]};
+                baos.write(Integer.parseInt(String.valueOf(array), 16));
+                index += 3;
+            } else {
+                baos.write(b);
+                index++;
+            }
+        }
+        return copyToString(baos, charset);
+    }
+
+    private static String decodeQuotedPairs(String filename) {
+        final StringBuilder sb = new StringBuilder();
+        final int length = filename.length();
+        for (int i = 0; i < length; i++) {
+            final char c = filename.charAt(i);
+            if (filename.charAt(i) == '\\' && i + 1 < length) {
+                i++;
+                final char next = filename.charAt(i);
+                if (next != '"' && next != '\\') {
+                    sb.append(c);
+                }
+                sb.append(next);
+            } else {
+                sb.append(c);
+            }
+        }
+        return sb.toString();
+    }
+
     @Override
     public boolean equals(@Nullable Object other) {
         if (this == other) {
@@ -405,15 +526,85 @@ public final class ContentDisposition {
             if (filename != null) {
                 if (charset == null || StandardCharsets.US_ASCII.equals(charset)) {
                     sb.append("; filename=\"");
-                    escapeQuotationsInFilename(sb, filename);
-                    sb.append('\"');
+                    sb.append(encodeQuotedPairs(this.filename)).append('\"');
                 } else {
+                    sb.append("; filename=\"");
+                    sb.append(encodeQuotedPrintableFilename(filename, charset)).append('\"');
                     sb.append("; filename*=");
-                    encodeFilename(sb, filename, charset);
+                    sb.append(encodeRfc5987Filename(filename, charset));
                 }
             }
             return strVal = sb.toString();
         }
+    }
+
+    private static String encodeQuotedPairs(String filename) {
+        if (filename.indexOf('"') == -1 && filename.indexOf('\\') == -1) {
+            return filename;
+        }
+        final StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < filename.length(); i++) {
+            final char c = filename.charAt(i);
+            if (c == '"' || c == '\\') {
+                sb.append('\\');
+            }
+            sb.append(c);
+        }
+        return sb.toString();
+    }
+
+    /**
+     * Encode the given header field param as described in RFC 2047.
+     *
+     * @see <a href="https://datatracker.ietf.org/doc/html/rfc2047">RFC 2047</a>
+     */
+    private static String encodeQuotedPrintableFilename(String filename, Charset charset) {
+        final byte[] source = filename.getBytes(charset);
+        final StringBuilder sb = new StringBuilder(source.length << 1);
+        sb.append("=?");
+        sb.append(charset.name());
+        sb.append("?Q?");
+        for (byte b : source) {
+            if (b == 32) { // RFC 2047, section 4.2, rule (2)
+                sb.append('_');
+            } else if (isPrintable(b)) {
+                sb.append((char) b);
+            } else {
+                sb.append('=');
+                sb.append(String.format("%02X", b));
+            }
+        }
+        sb.append("?=");
+        return sb.toString();
+    }
+
+    private static boolean isPrintable(byte c) {
+        int b = c;
+        if (b < 0) {
+            b = 256 + b;
+        }
+        return PRINTABLE.get(b);
+    }
+
+    /**
+     * Encode the given header field param as describe in RFC 5987.
+     *
+     * @see <a href="https://datatracker.ietf.org/doc/html/rfc5987">RFC 5987</a>
+     */
+    private static String encodeRfc5987Filename(String input, Charset charset) {
+        final byte[] source = input.getBytes(charset);
+        final StringBuilder sb = new StringBuilder(source.length << 1);
+        sb.append(charset.name());
+        sb.append("''");
+        for (byte b : source) {
+            if (isRFC5987AttrChar(b)) {
+                sb.append((char) b);
+            } else {
+                sb.append('%');
+                sb.append(String.format("%02X", b));
+            }
+        }
+        return sb.toString();
     }
 
     /**

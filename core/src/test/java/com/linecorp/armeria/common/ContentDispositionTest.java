@@ -33,6 +33,7 @@ package com.linecorp.armeria.common;
 
 import static com.linecorp.armeria.common.ContentDisposition.parse;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.nio.charset.StandardCharsets;
@@ -47,7 +48,15 @@ import org.junit.jupiter.api.Test;
  */
 class ContentDispositionTest {
 
-    // Forked from https://github.com/spring-projects/spring-framework/blob/d9ccd618ea9cbf339eb5639d24d5a5fabe8157b5/spring-web/src/test/java/org/springframework/http/ContentDispositionTests.java
+    // Forked from https://github.com/spring-projects/spring-framework/blob/e5fccd1fbbf09f1e253b10ebfc12ad339d0196b5/spring-web/src/test/java/org/springframework/http/ContentDispositionTests.java
+
+    @Test
+    void parseFilenameQuoted() {
+        assertThat(parse("form-data; filename=\"foo.txt\""))
+                .isEqualTo(ContentDisposition.builder("form-data")
+                                             .filename("foo.txt")
+                                             .build());
+    }
 
     @Test
     void parseFilenameUnquoted() {
@@ -84,6 +93,51 @@ class ContentDispositionTest {
                                              .build());
     }
 
+    @Test  // gh-26463
+    void parseBase64EncodedFilename() {
+        final String input = "attachment; filename=\"=?UTF-8?B?5pel5pys6KqeLmNzdg==?=\"";
+        assertThat(parse(input).filename()).isEqualTo("日本語.csv");
+    }
+
+    @Test
+    void parseBase64EncodedFilenameMultipleSegments() {
+        final String input =
+                "attachment; " +
+                "filename=\"=?utf-8?B?U3ByaW5n5qGG5p625Li65Z+65LqOSmF2YeeahOeOsOS7o+S8geS4muW6lA==?= " +
+                "=?utf-8?B?55So56iL5bqP5o+Q5L6b5LqG5YWo6Z2i55qE57yW56iL5ZKM6YWN572u5qih?= " +
+                "=?utf-8?B?5Z6LLnR4dA==?=\"";
+        assertThat(parse(input).filename()).isEqualTo("Spring框架为基于Java的现代企业应用程序提供了全面的编程和配置模型.txt");
+    }
+
+    @Test  // gh-26463
+    void parseBase64EncodedShiftJISFilename() {
+        final String input = "attachment; filename=\"=?SHIFT_JIS?B?k/qWe4zqLmNzdg==?=\"";
+        assertThat(parse(input).filename()).isEqualTo("日本語.csv");
+    }
+
+    @Test
+    void parseQuotedPrintableFilename() {
+        final String input = "attachment; filename=\"=?UTF-8?Q?=E6=97=A5=E6=9C=AC=E8=AA=9E.csv?=\"";
+        assertThat(parse(input).filename()).isEqualTo("日本語.csv");
+    }
+
+    @Test
+    void parseQuotedPrintableFilenameMultipleSegments() {
+        final String input =
+                "attachment; filename=\"=?utf-8?Q?Spring=E6=A1=86=E6=9E=B6=E4=B8=BA=E5=9F=BA=E4=BA=8E?=" +
+                "=?utf-8?Q?Java=E7=9A=84=E7=8E=B0=E4=BB=A3=E4=BC=81=E4=B8=9A=E5=BA=94?=" +
+                "=?utf-8?Q?=E7=94=A8=E7=A8=8B=E5=BA=8F=E6=8F=90=E4=BE=9B=E4=BA=86=E5=85=A8?=" +
+                "=?utf-8?Q?=E9=9D=A2=E7=9A=84=E7=BC=96=E7=A8=8B=E5=92=8C=E9=85=8D=E7=BD=AE?=" +
+                "=?utf-8?Q?=E6=A8=A1=E5=9E=8B.txt?=\"";
+        assertThat(parse(input).filename()).isEqualTo("Spring框架为基于Java的现代企业应用程序提供了全面的编程和配置模型.txt");
+    }
+
+    @Test
+    void parseQuotedPrintableShiftJISFilename() {
+        final String input = "attachment; filename=\"=?SHIFT_JIS?Q?=93=FA=96{=8C=EA.csv?=\"";
+        assertThat(parse(input).filename()).isEqualTo("日本語.csv");
+    }
+
     @Test
     void parseEncodedFilenameWithoutCharset() {
         assertThat(parse("form-data; name=\"name\"; filename*=test.txt"))
@@ -94,11 +148,9 @@ class ContentDispositionTest {
     }
 
     @Test
-    void fallbackInvalidCharsetTo_ISO_8859_1() {
-        final ContentDisposition contentDisposition =
-                parse("form-data; name=\"name\"; filename*=UTF-16''test%A9.txt");
-        assertThat(contentDisposition.filename().getBytes(StandardCharsets.ISO_8859_1))
-                .isEqualTo("test©.txt".getBytes(StandardCharsets.ISO_8859_1));
+    void parseEncodedFilenameWithInvalidCharset() {
+        assertThatIllegalArgumentException()
+                .isThrownBy(() -> parse("form-data; name=\"name\"; filename*=UTF-16''test.txt"));
     }
 
     @Test
@@ -116,34 +168,34 @@ class ContentDispositionTest {
                         "%A.txt (charset: UTF-8)");
     }
 
-    // gh-23077
     @Test
-    void parseWithEscapedQuote() {
-        final BiConsumer<String, String> tester = (description, filename) -> {
-            assertThat(parse("form-data; name=\"file\"; filename=\"" + filename + '"'))
-                    .as(description)
-                    .isEqualTo(ContentDisposition.builder("form-data")
-                                                 .name("file")
-                                                 .filename(filename)
-                                                 .build());
-        };
+    void parseBackslash() {
+        final String s = "form-data; name=\"foo\"; filename=\"foo\\\\bar \\\"baz\\\" qux \\\\\\\" quux.txt\"";
+        final ContentDisposition cd = parse(s);
+        assertThat(cd.name()).isEqualTo("foo");
+        assertThat(cd.filename()).isEqualTo("foo\\bar \"baz\" qux \\\" quux.txt");
+        assertThat(cd.toString()).isEqualTo(s);
+    }
 
-        tester.accept("Escaped quotes should be ignored",
-                      "\\\"The Twilight Zone\\\".txt");
+    @Test
+    void parseBackslashInLastPosition() {
+        final ContentDisposition cd = parse("form-data; name=\"foo\"; filename=\"bar\\\"");
+        assertThat(cd.name()).isEqualTo("foo");
+        assertThat(cd.filename()).isEqualTo("bar\\");
+        assertThat(cd.toString()).isEqualTo("form-data; name=\"foo\"; filename=\"bar\\\\\"");
+    }
 
-        tester.accept("Escaped quotes preceded by escaped backslashes should be ignored",
-                      "\\\\\\\"The Twilight Zone\\\\\\\".txt");
-
-        tester.accept("Escaped backslashes should not suppress quote",
-                      "The Twilight Zone \\\\");
-
-        tester.accept("Escaped backslashes should not suppress quote",
-                      "The Twilight Zone \\\\\\\\");
+    @Test
+    void parseWindowsPath() {
+        final ContentDisposition cd = parse("form-data; name=\"foo\"; filename=\"D:\\foo\\bar.txt\"");
+        assertThat(cd.name()).isEqualTo("foo");
+        assertThat(cd.filename()).isEqualTo("D:\\foo\\bar.txt");
+        assertThat(cd.toString()).isEqualTo("form-data; name=\"foo\"; filename=\"D:\\\\foo\\\\bar.txt\"");
     }
 
     @Test
     void parseWithExtraSemicolons() {
-        assertThat(parse("form-data; name=\"foo\";; ; filename=\"foo.txt\""))
+        assertThat(parse("form-data; name=\"foo\";; ; filename=\"foo.txt\";"))
                 .isEqualTo(ContentDisposition.builder("form-data")
                                              .name("foo")
                                              .filename("foo.txt")
@@ -151,24 +203,26 @@ class ContentDispositionTest {
     }
 
     @Test
+    void parseAttributesCaseInsensitively() {
+        final ContentDisposition cd = parse("form-data; Name=\"foo\"; FileName=\"bar.txt\"");
+        assertThat(cd.name()).isEqualTo("foo");
+        assertThat(cd.filename()).isEqualTo("bar.txt");
+        assertThat(cd.toString()).isEqualTo("form-data; name=\"foo\"; filename=\"bar.txt\"");
+    }
+
+    @Test
     void parseEmpty() {
-        assertThatThrownBy(() -> parse(""))
-                .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("Content-Disposition header must not be empty");
+        assertThatIllegalArgumentException().isThrownBy(() -> parse(""));
     }
 
     @Test
     void parseNoType() {
-        assertThatThrownBy(() -> parse(";"))
-                .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("Content-Disposition header must not be empty");
+        assertThatIllegalArgumentException().isThrownBy(() -> parse(";"));
     }
 
     @Test
     void parseInvalidParameter() {
-        assertThatThrownBy(() -> parse("foo;bar"))
-                .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("Invalid content disposition format");
+        assertThatIllegalArgumentException().isThrownBy(() -> parse("foo;bar"));
     }
 
     @Test
@@ -186,7 +240,9 @@ class ContentDispositionTest {
                                      .name("name")
                                      .filename("中文.txt", StandardCharsets.UTF_8)
                                      .build().toString())
-                .isEqualTo("form-data; name=\"name\"; filename*=UTF-8''%E4%B8%AD%E6%96%87.txt");
+                .isEqualTo("form-data; name=\"name\"; " +
+                           "filename=\"=?UTF-8?Q?=E4=B8=AD=E6=96=87.txt?=\"; " +
+                           "filename*=UTF-8''%E4%B8%AD%E6%96%87.txt");
     }
 
     @Test
@@ -199,70 +255,87 @@ class ContentDispositionTest {
                 .isEqualTo("form-data; name=\"name\"; filename=\"test.txt\"");
     }
 
-    // gh-24220
-    @Test
+    @Test  // gh-24220
     void formatWithFilenameWithQuotes() {
         final BiConsumer<String, String> tester = (input, output) -> {
-            assertThat(ContentDisposition.builder("form-data")
-                                         .filename(input)
-                                         .build()
-                                         .toString())
+            assertThat(ContentDisposition.builder("form-data").filename(input).build().toString())
                     .isEqualTo("form-data; filename=\"" + output + '"');
-
             assertThat(ContentDisposition.builder("form-data")
-                                         .filename(input, StandardCharsets.US_ASCII)
-                                         .build()
-                                         .toString())
+                                         .filename(input, StandardCharsets.US_ASCII).build().toString())
                     .isEqualTo("form-data; filename=\"" + output + '"');
         };
 
         String filename = "\"foo.txt";
-        tester.accept(filename, '\\' + filename);
+        tester.accept(filename, "\\\"foo.txt");
 
         filename = "\\\"foo.txt";
-        tester.accept(filename, filename);
+        tester.accept(filename, "\\\\\\\"foo.txt");
 
         filename = "\\\\\"foo.txt";
-        tester.accept(filename, '\\' + filename);
+        tester.accept(filename, "\\\\\\\\\\\"foo.txt");
 
         filename = "\\\\\\\"foo.txt";
-        tester.accept(filename, filename);
+        tester.accept(filename, "\\\\\\\\\\\\\\\"foo.txt");
 
         filename = "\\\\\\\\\"foo.txt";
-        tester.accept(filename, '\\' + filename);
+        tester.accept(filename, "\\\\\\\\\\\\\\\\\\\"foo.txt");
 
         tester.accept("\"\"foo.txt", "\\\"\\\"foo.txt");
         tester.accept("\"\"\"foo.txt", "\\\"\\\"\\\"foo.txt");
 
-        tester.accept("foo.txt\\", "foo.txt");
-        tester.accept("foo.txt\\\\", "foo.txt\\\\");
-        tester.accept("foo.txt\\\\\\", "foo.txt\\\\");
+        tester.accept("foo.txt\\", "foo.txt\\\\");
+        tester.accept("foo.txt\\\\", "foo.txt\\\\\\\\");
+        tester.accept("foo.txt\\\\\\", "foo.txt\\\\\\\\\\\\");
+    }
+
+    @Test
+    void formatWithUtf8FilenameWithQuotes() {
+        final String filename = "\"中文.txt";
+        assertThat(ContentDisposition.builder("form-data").filename(filename, StandardCharsets.UTF_8)
+                                     .build().toString())
+                .isEqualTo("form-data; filename=\"=?UTF-8?Q?=22=E4=B8=AD=E6=96=87.txt?=\"; " +
+                           "filename*=UTF-8''%22%E4%B8%AD%E6%96%87.txt");
     }
 
     @Test
     void formatWithEncodedFilenameUsingInvalidCharset() {
-        assertThatThrownBy(() -> {
-            ContentDisposition.builder("form-data")
-                              .name("name")
-                              .filename("test.txt", StandardCharsets.UTF_16);
-        }).isInstanceOf(IllegalArgumentException.class)
-          .hasMessageContaining("Charset: UTF-16 (expected: US-ASCII, UTF-8 or ISO-8859-1)");
+        assertThatIllegalArgumentException().isThrownBy(
+                () -> ContentDisposition.builder("form-data")
+                                        .name("name")
+                                        .filename("test.txt", StandardCharsets.UTF_16)
+                                        .build()
+                                        .toString());
     }
 
     @Test
-    void testFactory() {
-        assertThat(ContentDisposition.of("typeA"))
-                .isEqualTo(ContentDisposition.builder("typeA").build());
+    void parseFormatted() {
+        final ContentDisposition cd = ContentDisposition.builder("form-data")
+                                                        .name("foo")
+                                                        .filename("foo\\bar \"baz\" qux \\\" quux.txt").build();
+        final ContentDisposition parsed = parse(cd.toString());
+        assertThat(parsed).isEqualTo(cd);
+        assertThat(parsed.toString()).isEqualTo(cd.toString());
+    }
 
-        assertThat(ContentDisposition.of("typeB", "nameB"))
-                .isEqualTo(ContentDisposition.builder("typeB")
-                                             .name("nameB")
-                                             .build());
+    @Test // gh-30252
+    void parseFormattedWithQuestionMark() {
+        final String filename = "filename with ?问号.txt";
+        final ContentDisposition cd = ContentDisposition.builder("attachment")
+                                                        .filename(filename, StandardCharsets.UTF_8)
+                                                        .build();
+        final String result = cd.toString();
+        assertThat(result).isEqualTo("attachment; " +
+                                     "filename=\"=?UTF-8?Q?filename_with_=3F=E9=97=AE=E5=8F=B7.txt?=\"; " +
+                                     "filename*=UTF-8''filename%20with%20%3F%E9%97%AE%E5%8F%B7.txt");
 
-        assertThat(ContentDisposition.of("typeC", "nameC", "file.txt"))
-                .isEqualTo(ContentDisposition.builder("typeC")
-                                             .name("nameC")
-                                             .filename("file.txt")
-                                             .build());
+        final String[] parts = result.split("; ");
+
+        final String quotedPrintableFilename = parts[0] + "; " + parts[1];
+        assertThat(parse(quotedPrintableFilename).filename())
+                .isEqualTo(filename);
+
+        final String rfc5987Filename = parts[0] + "; " + parts[2];
+        assertThat(parse(rfc5987Filename).filename())
+                .isEqualTo(filename);
     }
 }
