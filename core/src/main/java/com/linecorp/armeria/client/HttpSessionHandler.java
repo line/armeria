@@ -34,6 +34,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.linecorp.armeria.client.HttpChannelPool.PoolKey;
+import com.linecorp.armeria.client.endpoint.EndpointGroup;
+import com.linecorp.armeria.client.metric.ClientMetrics;
 import com.linecorp.armeria.client.proxy.ProxyType;
 import com.linecorp.armeria.common.AggregationOptions;
 import com.linecorp.armeria.common.ClosedSessionException;
@@ -240,8 +242,12 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
             pooledChannel.release();
             return;
         }
-
         final long writeTimeoutMillis = ctx.writeTimeoutMillis();
+        final EndpointGroup endpointGroup = ctx.endpointGroup();
+        final ClientMetrics clientMetrics = clientFactory.clientMetrics();
+        clientMetrics.incrementActiveRequest(endpointGroup);
+        ctx.log().whenComplete()
+                .whenComplete((unusedLog, unusedCause) -> clientMetrics.decrementActiveRequest(endpointGroup));
 
         assert protocol != null;
         assert requestEncoder != null;
