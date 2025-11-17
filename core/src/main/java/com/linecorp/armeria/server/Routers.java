@@ -47,6 +47,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
 
+import com.linecorp.armeria.client.DuplicateRouteException;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.internal.server.RouteDecoratingService;
 import com.linecorp.armeria.server.RoutingTrie.Node;
@@ -72,8 +73,8 @@ final class Routers {
         final BiConsumer<Route, Route> rejectionConsumer = (route, existingRoute) -> {
             try {
                 rejectionHandler.handleDuplicateRoute(virtualHost, route, existingRoute);
-            } catch (IllegalStateException shouldFailException) {
-                throw shouldFailException;
+            } catch (DuplicateRouteException duplicateRouteException) {
+                throw duplicateRouteException;
             } catch (Exception e) {
                 logger.warn("Unexpected exception from a {}:",
                             RejectedRouteHandler.class.getSimpleName(), e);

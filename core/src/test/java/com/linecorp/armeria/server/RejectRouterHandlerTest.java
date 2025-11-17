@@ -25,6 +25,7 @@ import org.junit.jupiter.api.Test;
 
 import com.google.common.collect.ImmutableList;
 
+import com.linecorp.armeria.client.DuplicateRouteException;
 import com.linecorp.armeria.common.HttpResponse;
 
 public class RejectRouterHandlerTest {
@@ -51,7 +52,7 @@ public class RejectRouterHandlerTest {
                 () -> duplicateRouteServerBuilder()
                         .rejectedRouteHandler(RejectedRouteHandler.FAIL)
                         .build()
-        ).isInstanceOf(IllegalStateException.class);
+        ).isInstanceOf(DuplicateRouteException.class);
     }
 
     @Test
@@ -78,7 +79,7 @@ public class RejectRouterHandlerTest {
                         .rejectedRouteHandler(RejectedRouteHandler.FAIL)
                         .and()
                         .build()
-        ).isInstanceOf(IllegalStateException.class);
+        ).isInstanceOf(DuplicateRouteException.class);
     }
 
     @Test
