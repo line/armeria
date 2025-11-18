@@ -25,10 +25,9 @@ import org.junit.jupiter.api.Test;
 
 import com.google.common.collect.ImmutableList;
 
-import com.linecorp.armeria.client.DuplicateRouteException;
 import com.linecorp.armeria.common.HttpResponse;
 
-public class RejectRouterHandlerTest {
+class RejectRouterHandlerTest {
 
     @Test
     void when_duplicate_route_exists_then_server_builder_should_ignore_or_warn() {

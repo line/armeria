@@ -18,8 +18,6 @@ package com.linecorp.armeria.server;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.linecorp.armeria.client.DuplicateRouteException;
-
 /**
  * A handler that is invoked when a {@link ServerBuilder} rejects to bind an {@link HttpService} at
  * a certain {@link Route}. For example, the following code will trigger this handler:

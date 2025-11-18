@@ -14,7 +14,9 @@
  * under the License.
  */
 
-package com.linecorp.armeria.client;
+package com.linecorp.armeria.server;
+
+import com.linecorp.armeria.common.annotation.UnstableApi;
 
 /**
  * A {@link RuntimeException} thrown when attempting to register a route
@@ -23,6 +25,7 @@ package com.linecorp.armeria.client;
  * <p>This exception is raised when multiple routes share an identical path
  * and thus cannot be uniquely distinguished.</p>
  */
+@UnstableApi
 public final class DuplicateRouteException extends RuntimeException {
 
     private static final long serialVersionUID = 4679512839761213302L;
