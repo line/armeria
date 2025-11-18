@@ -1378,6 +1378,7 @@ public final class ServerBuilder implements TlsSetters, ServiceConfigsBuilder<Se
     public ServerBuilder contextPath(String contextPath,
                                      Consumer<ContextPathServicesBuilder> customizer) {
         requireNonNull(contextPath, "contextPath");
+        requireNonNull(customizer, "customizer");
         contextPath(ImmutableSet.of(contextPath), customizer);
         return this;
     }

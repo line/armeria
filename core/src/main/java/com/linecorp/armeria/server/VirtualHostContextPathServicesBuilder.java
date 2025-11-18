@@ -108,6 +108,8 @@ public final class VirtualHostContextPathServicesBuilder
     public VirtualHostContextPathServicesBuilder contextPath(
             Iterable<String> paths,
             Consumer<VirtualHostContextPathServicesBuilder> customizer) {
+        requireNonNull(paths, "contextPaths");
+        requireNonNull(customizer, "customizer");
         final VirtualHostContextPathServicesBuilder child =
                 new VirtualHostContextPathServicesBuilder(parent(),
                                                           virtualHostBuilder(),
@@ -121,6 +123,8 @@ public final class VirtualHostContextPathServicesBuilder
             String path,
             Consumer<VirtualHostContextPathServicesBuilder> customizer
     ) {
+        requireNonNull(path, "contextPath");
+        requireNonNull(customizer, "customizer");
         contextPath(ImmutableSet.of(path), customizer);
         return this;
     }

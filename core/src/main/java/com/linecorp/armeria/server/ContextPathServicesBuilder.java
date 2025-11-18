@@ -106,6 +106,8 @@ public final class ContextPathServicesBuilder
     @Override
     public ContextPathServicesBuilder contextPath(Iterable<String> paths,
                                                   Consumer<ContextPathServicesBuilder> customizer) {
+        requireNonNull(paths, "contextPaths");
+        requireNonNull(customizer, "customizer");
         final ContextPathServicesBuilder child =
                 new ContextPathServicesBuilder(parent(),
                                                virtualHostBuilder(),
@@ -117,6 +119,8 @@ public final class ContextPathServicesBuilder
     @Override
     public ContextPathServicesBuilder contextPath(String path,
                                                   Consumer<ContextPathServicesBuilder> customizer) {
+        requireNonNull(path, "contextPath");
+        requireNonNull(customizer, "customizer");
         contextPath(ImmutableSet.of(path), customizer);
         return this;
     }

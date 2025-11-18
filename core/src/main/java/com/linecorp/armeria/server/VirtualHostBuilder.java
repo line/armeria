@@ -497,6 +497,7 @@ public final class VirtualHostBuilder implements TlsSetters, ServiceConfigsBuild
             String contextPath,
             Consumer<VirtualHostContextPathServicesBuilder> customizer) {
         requireNonNull(contextPath, "contextPath");
+        requireNonNull(customizer, "customizer");
         contextPath(ImmutableSet.of(contextPath), customizer);
         return this;
     }
