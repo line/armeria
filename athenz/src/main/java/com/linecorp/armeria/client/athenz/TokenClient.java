@@ -40,11 +40,11 @@ public interface TokenClient {
         requireNonNull(roleNames, "roleNames");
         requireNonNull(tokenType, "tokenType");
         requireNonNull(refreshBefore, "refreshBefore");
-        final ImmutableList<String> roleNames0 = ImmutableList.copyOf(roleNames);
+        final ImmutableList<String> immutableRoleNames = ImmutableList.copyOf(roleNames);
         if (tokenType.isRoleToken()) {
-            return new RoleTokenClient(ztsBaseClient, domainName, roleNames0, refreshBefore);
+            return new RoleTokenClient(ztsBaseClient, domainName, immutableRoleNames, refreshBefore);
         } else {
-            return new AccessTokenClient(ztsBaseClient, domainName, roleNames0, refreshBefore);
+            return new AccessTokenClient(ztsBaseClient, domainName, immutableRoleNames, refreshBefore);
         }
     }
 }
