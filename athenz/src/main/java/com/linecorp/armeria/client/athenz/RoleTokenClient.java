@@ -33,7 +33,7 @@ import com.linecorp.armeria.common.util.AsyncLoader;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.common.util.UnmodifiableFuture;
 
-public final class RoleTokenClient implements TokenClient {
+final class RoleTokenClient implements TokenClient {
 
     static final Joiner ROLE_JOINER = Joiner.on(",");
 
