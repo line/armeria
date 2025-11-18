@@ -16,10 +16,35 @@
 
 package com.linecorp.armeria.client.athenz;
 
+import static java.util.Objects.requireNonNull;
+
+import java.time.Duration;
+import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
+import com.google.common.collect.ImmutableList;
+
+import com.linecorp.armeria.common.annotation.UnstableApi;
+import com.linecorp.armeria.common.athenz.TokenType;
+
+@UnstableApi
 @FunctionalInterface
-interface TokenClient {
+public interface TokenClient {
 
     CompletableFuture<String> getToken();
+
+    static TokenClient of(ZtsBaseClient ztsBaseClient, String domainName, List<String> roleNames,
+                          TokenType tokenType, Duration refreshBefore) {
+        requireNonNull(ztsBaseClient, "ztsBaseClient");
+        requireNonNull(domainName, "domainName");
+        requireNonNull(roleNames, "roleNames");
+        requireNonNull(tokenType, "tokenType");
+        requireNonNull(refreshBefore, "refreshBefore");
+        final ImmutableList<String> roleNames0 = ImmutableList.copyOf(roleNames);
+        if (tokenType.isRoleToken()) {
+            return new RoleTokenClient(ztsBaseClient, domainName, roleNames0, refreshBefore);
+        } else {
+            return new AccessTokenClient(ztsBaseClient, domainName, roleNames0, refreshBefore);
+        }
+    }
 }
