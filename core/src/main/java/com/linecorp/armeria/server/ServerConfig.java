@@ -198,6 +198,15 @@ public interface ServerConfig {
     int http2InitialStreamWindowSize();
 
     /**
+     * Returns the threshold ratio of the HTTP/2 stream flow-control window at which a
+     * <a href="https://datatracker.ietf.org/doc/html/rfc7540#section-6.9">WINDOW_UPDATE</a> frame will be sent.
+     * When the size of the flow-control window drops below the specified ratio (relative to the initial window
+     * size), a {@code WINDOW_UPDATE} frame is triggered to replenish the window.
+     */
+    @UnstableApi
+    float http2StreamWindowSizeRatio();
+
+    /**
      * Returns the maximum number of concurrent streams per HTTP/2 connection.
      */
     long http2MaxStreamsPerConnection();
@@ -229,14 +238,26 @@ public interface ServerConfig {
     /**
      * Returns the number of milliseconds to wait for active requests to go end before shutting down.
      * {@code 0} means the server will stop right away without waiting.
+     *
+     * @deprecated Use {@link #gracefulShutdown()} and {@link GracefulShutdown#quietPeriod()} instead.
      */
+    @Deprecated
     Duration gracefulShutdownQuietPeriod();
 
     /**
      * Returns the number of milliseconds to wait before shutting down the server regardless of active
      * requests.
+     *
+     * @deprecated Use {@link #gracefulShutdown()} and {@link GracefulShutdown#timeout()} instead.
      */
+    @Deprecated
     Duration gracefulShutdownTimeout();
+
+    /**
+     * Returns the {@link GracefulShutdown} that is used to gracefully shut down the {@link Server}.
+     */
+    @UnstableApi
+    GracefulShutdown gracefulShutdown();
 
     /**
      * Returns the {@link BlockingTaskExecutor} dedicated to the execution of blocking tasks or invocations.

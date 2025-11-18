@@ -21,6 +21,7 @@ import static java.util.Objects.requireNonNull;
 import java.io.IOException;
 import java.net.URI;
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 import java.util.StringJoiner;
 import java.util.concurrent.CompletableFuture;
@@ -41,6 +42,7 @@ import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.ClientRequestContextCaptor;
 import com.linecorp.armeria.client.Clients;
 import com.linecorp.armeria.client.Endpoint;
+import com.linecorp.armeria.client.HttpPreprocessor;
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.client.endpoint.DynamicEndpointGroup;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
@@ -57,11 +59,12 @@ import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.RequestHeadersBuilder;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.annotation.UnstableApi;
+import com.linecorp.armeria.common.eureka.InstanceInfo;
+import com.linecorp.armeria.common.eureka.InstanceInfo.InstanceStatus;
+import com.linecorp.armeria.common.eureka.InstanceInfo.PortWrapper;
 import com.linecorp.armeria.internal.common.eureka.Application;
 import com.linecorp.armeria.internal.common.eureka.Applications;
-import com.linecorp.armeria.internal.common.eureka.InstanceInfo;
-import com.linecorp.armeria.internal.common.eureka.InstanceInfo.InstanceStatus;
-import com.linecorp.armeria.internal.common.eureka.InstanceInfo.PortWrapper;
 import com.linecorp.armeria.server.eureka.EurekaUpdatingListener;
 
 import io.netty.channel.EventLoop;
@@ -124,6 +127,24 @@ public final class EurekaEndpointGroup extends DynamicEndpointGroup {
     }
 
     /**
+     * Returns a new {@link EurekaEndpointGroup} that retrieves the {@link Endpoint} list from the specified
+     * {@link HttpPreprocessor}.
+     */
+    @UnstableApi
+    public static EurekaEndpointGroup of(HttpPreprocessor preprocessor) {
+        return new EurekaEndpointGroupBuilder(preprocessor, null).build();
+    }
+
+    /**
+     * Returns a new {@link EurekaEndpointGroup} that retrieves the {@link Endpoint} list from the specified
+     * {@link HttpPreprocessor} under the specified {@code path}.
+     */
+    @UnstableApi
+    public static EurekaEndpointGroup of(HttpPreprocessor preprocessor, String path) {
+        return new EurekaEndpointGroupBuilder(preprocessor, requireNonNull(path, "path")).build();
+    }
+
+    /**
      * Returns a new {@link EurekaEndpointGroupBuilder} created with the specified {@code eurekaUri}.
      */
     public static EurekaEndpointGroupBuilder builder(String eurekaUri) {
@@ -153,6 +174,23 @@ public final class EurekaEndpointGroup extends DynamicEndpointGroup {
     public static EurekaEndpointGroupBuilder builder(
             SessionProtocol sessionProtocol, EndpointGroup endpointGroup, String path) {
         return new EurekaEndpointGroupBuilder(sessionProtocol, endpointGroup, requireNonNull(path, "path"));
+    }
+
+    /**
+     * Returns a new {@link EurekaEndpointGroupBuilder} created with the specified {@link HttpPreprocessor}.
+     */
+    @UnstableApi
+    public static EurekaEndpointGroupBuilder builder(HttpPreprocessor preprocessor) {
+        return new EurekaEndpointGroupBuilder(preprocessor, null);
+    }
+
+    /**
+     * Returns a new {@link EurekaEndpointGroupBuilder} created with the specified {@link HttpPreprocessor}
+     * and path.
+     */
+    @UnstableApi
+    public static EurekaEndpointGroupBuilder builder(HttpPreprocessor preprocessor, String path) {
+        return new EurekaEndpointGroupBuilder(preprocessor, requireNonNull(path, "path"));
     }
 
     private final long registryFetchIntervalMillis;
@@ -284,7 +322,7 @@ public final class EurekaEndpointGroup extends DynamicEndpointGroup {
                 } else if (appName != null) {
                     filter = instanceInfo -> appName.equals(instanceInfo.getAppName());
                 } else {
-                    filter = instanceInfo -> instanceId.equals(instanceInfo.getInstanceId());
+                    filter = instanceInfo -> Objects.equals(instanceId, instanceInfo.getInstanceId());
                 }
             }
             final StringJoiner joiner = new StringJoiner(",");
@@ -414,7 +452,7 @@ public final class EurekaEndpointGroup extends DynamicEndpointGroup {
         if (ipAddr != null && hostname != ipAddr) {
             endpoint = endpoint.withIpAddr(ipAddr);
         }
-        return endpoint;
+        return InstanceInfo.setInstanceInfo(endpoint, instanceInfo);
     }
 
     @Override

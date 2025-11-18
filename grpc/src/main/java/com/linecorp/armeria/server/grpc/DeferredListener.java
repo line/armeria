@@ -69,6 +69,7 @@ final class DeferredListener<I> extends ServerCall.Listener<I> {
             }
 
             this.delegate = delegate;
+            assert pendingQueue != null;
             try {
                 for (;;) {
                     final Consumer<Listener<I>> task = pendingQueue.poll();
@@ -142,6 +143,7 @@ final class DeferredListener<I> extends ServerCall.Listener<I> {
     }
 
     private void addPendingTask(Consumer<ServerCall.Listener<I>> task) {
+        assert pendingQueue != null;
         pendingQueue.add(task);
     }
 

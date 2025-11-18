@@ -64,6 +64,7 @@ class ArmeriaServerFactory extends AbstractServerFactory {
     public static final String TYPE = "armeria";
     private static final Logger logger = LoggerFactory.getLogger(ArmeriaServerFactory.class);
 
+    @Nullable
     @JsonUnwrapped
     private @Valid ArmeriaSettings armeriaSettings;
 
@@ -80,6 +81,7 @@ class ArmeriaServerFactory extends AbstractServerFactory {
     @JsonProperty
     private boolean jerseyEnabled = true;
 
+    @Nullable
     @JsonIgnore
     public ServerBuilder getServerBuilder() {
         return serverBuilder;
@@ -184,6 +186,7 @@ class ArmeriaServerFactory extends AbstractServerFactory {
         return blockingTaskExecutor;
     }
 
+    @Nullable
     ArmeriaSettings getArmeriaSettings() {
         return armeriaSettings;
     }

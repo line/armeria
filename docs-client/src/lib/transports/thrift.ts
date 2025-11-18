@@ -16,7 +16,7 @@
 
 import { Endpoint, Method } from '../specification';
 
-import Transport from './transport';
+import { Transport } from './transport';
 import { validateJsonObject } from '../json-util';
 
 export const TTEXT_MIME_TYPE = 'application/x-thrift; protocol=TTEXT';

@@ -173,7 +173,7 @@ final class ScalaPbRequestConverterFunction private (jsonParser: Parser, resultT
    */
   private def jsonToScalaPbMessage(expectedResultType: Class[_], json: String): Any with Serializable = {
     val messageType = extractGeneratedMessageType(expectedResultType)
-    val message: GeneratedMessage = jsonParser.fromJsonString(json)(getCompanion(messageType))
+    val message: GeneratedMessage = jsonParser.fromJsonString(json)(using getCompanion(messageType))
     toGenerateMessageOrOneof(expectedResultType, message)
   }
 }

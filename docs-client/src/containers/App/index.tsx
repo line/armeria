@@ -86,6 +86,7 @@ const useStyles = makeStyles((theme: Theme) =>
         width: '80%',
       },
       height: '100vh',
+      maxWidth: '40vw',
       overflowY: 'auto',
     },
     content: {
@@ -250,6 +251,9 @@ const AppDrawer: React.FunctionComponent<AppDrawerProps> = ({
                           <ListItemText
                             primaryTypographyProps={{
                               variant: 'body2',
+                              style: {
+                                wordBreak: 'break-all',
+                              },
                             }}
                           >
                             <code>{`${method.name}()`}</code>
@@ -259,6 +263,9 @@ const AppDrawer: React.FunctionComponent<AppDrawerProps> = ({
                               key={`${endpoint.pathMapping}`}
                               primaryTypographyProps={{
                                 variant: 'caption',
+                                style: {
+                                  wordBreak: 'break-all',
+                                },
                               }}
                             >
                               {endpoint.pathMapping}
@@ -294,6 +301,9 @@ const AppDrawer: React.FunctionComponent<AppDrawerProps> = ({
                   inset
                   primaryTypographyProps={{
                     variant: 'body2',
+                    style: {
+                      wordBreak: 'break-all',
+                    },
                   }}
                 >
                   {specification.hasUniqueEnumNames() ? (
@@ -329,6 +339,9 @@ const AppDrawer: React.FunctionComponent<AppDrawerProps> = ({
                   inset
                   primaryTypographyProps={{
                     variant: 'body2',
+                    style: {
+                      wordBreak: 'break-all',
+                    },
                   }}
                 >
                   {specification.hasUniqueStructNames() ? (
@@ -364,6 +377,9 @@ const AppDrawer: React.FunctionComponent<AppDrawerProps> = ({
                   inset
                   primaryTypographyProps={{
                     variant: 'body2',
+                    style: {
+                      wordBreak: 'break-all',
+                    },
                   }}
                 >
                   {specification.hasUniqueStructNames() ? (
@@ -474,6 +490,7 @@ const App: React.FunctionComponent<Props> = (props) => {
         });
         setSpecification(initialSpecification);
       } catch (e) {
+        // eslint-disable-next-line no-console
         console.log(e);
         setSpecLoadingStatus(SpecLoadingStatus.FAILED);
         return;

@@ -90,15 +90,15 @@ class DefaultAggregatedHttpResponseTest {
     }
 
     @Test
-    void errorWhenContentShouldBeEmpty() {
-        contentShouldBeEmpty(HttpStatus.NO_CONTENT, HttpData.ofUtf8("bob"));
-        contentShouldBeEmpty(HttpStatus.RESET_CONTENT, HttpData.ofUtf8("bob"));
-        contentShouldBeEmpty(HttpStatus.NOT_MODIFIED, HttpData.ofUtf8("bob"));
+    void contentBecomesEmpty() {
+        contentBecomesEmpty(HttpStatus.NO_CONTENT, HttpData.ofUtf8("bob"));
+        contentBecomesEmpty(HttpStatus.RESET_CONTENT, HttpData.ofUtf8("bob"));
+        contentBecomesEmpty(HttpStatus.NOT_MODIFIED, HttpData.ofUtf8("bob"));
     }
 
-    private static void contentShouldBeEmpty(HttpStatus status, HttpData content) {
-        assertThatThrownBy(() -> AggregatedHttpResponse.of(status, PLAIN_TEXT_UTF_8, content))
-                .isInstanceOf(IllegalArgumentException.class);
+    private static void contentBecomesEmpty(HttpStatus status, HttpData content) {
+        final AggregatedHttpResponse res = AggregatedHttpResponse.of(status, PLAIN_TEXT_UTF_8, content);
+        assertThat(res.content().isEmpty()).isTrue();
     }
 
     @Test

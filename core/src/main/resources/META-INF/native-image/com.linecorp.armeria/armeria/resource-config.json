@@ -1,6 +1,16 @@
 {
   "resources" : {
     "includes" : [ {
+      "pattern" : "\\QMETA-INF/services/ch.qos.logback.classic.spi.Configurator\\E"
+    }, {
+      "pattern" : "\\QMETA-INF/services/org.slf4j.spi.SLF4JServiceProvider\\E"
+    }, {
+      "pattern" : "\\Qcom/linecorp/armeria/internal/common/thrift/thrift-options.properties\\E"
+    }, {
+      "pattern" : "\\Qlogback.scmo\\E"
+    }, {
+      "pattern" : "\\Qprometheus.properties\\E"
+    }, {
       "pattern" : "^META-INF/[^/]+\\.versions\\.properties$"
     }, {
       "pattern" : "^META-INF/armeria/grpc/.*$"

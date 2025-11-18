@@ -28,11 +28,14 @@ import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ActiveProfiles;
 
 import com.linecorp.armeria.common.DependencyInjector;
+import com.linecorp.armeria.common.HttpMethod;
+import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerConfig;
 import com.linecorp.armeria.server.ServerErrorHandler;
+import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.VirtualHost;
 import com.linecorp.armeria.spring.ArmeriaSettingsConfigurationTest.TestConfiguration;
 
@@ -115,10 +118,13 @@ class ArmeriaSettingsConfigurationTest {
         assertThat(defaultVirtualHost.verboseResponses()).isTrue();
 
         // ArmeriaServerConfigurator overrides the properties from ArmeriaSettings.
-        assertThat(config.gracefulShutdownTimeout().toMillis()).isEqualTo(10000);
-        assertThat(config.gracefulShutdownQuietPeriod().toMillis()).isEqualTo(1000);
+        assertThat(config.gracefulShutdown().timeout().toMillis()).isEqualTo(10000);
+        assertThat(config.gracefulShutdown().quietPeriod().toMillis()).isEqualTo(1000);
 
         assertThat(config.dependencyInjector().getInstance(Object.class)).isSameAs(dummyObject);
-        assertThat(config.errorHandler().onServiceException(null, null)).isSameAs(dummyResponse);
+        final ServiceRequestContext ctx = ServiceRequestContext.of(
+                HttpRequest.of(HttpMethod.GET, "/"));
+        assertThat(config.errorHandler().onServiceException(ctx, new RuntimeException()))
+                .isSameAs(dummyResponse);
     }
 }

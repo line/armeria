@@ -155,8 +155,10 @@ class MultiConfigSourceTest {
             // Updates are propagated for the initial value
             final ClusterLoadAssignment expected =
                     cache2.getSnapshot(GROUP).endpoints().resources().get("cluster1");
-            assertThat(listenerSnapshot.routeSnapshot().clusterSnapshots()
-                                       .get(0).endpointSnapshot().xdsResource().resource()).isEqualTo(expected);
+            assertThat(listenerSnapshot.routeSnapshot().virtualHostSnapshots().get(0)
+                                       .routeEntries().get(0)
+                                       .clusterSnapshot()
+                                       .endpointSnapshot().xdsResource().resource()).isEqualTo(expected);
 
             await().pollDelay(100, TimeUnit.MILLISECONDS)
                    .untilAsserted(() -> assertThat(watcher.events()).isEmpty());
@@ -165,7 +167,7 @@ class MultiConfigSourceTest {
 
     @Test
     void basicSelfConfigSource() {
-        final Bootstrap bootstrap = bootstrap(true, false);
+        final Bootstrap bootstrap = bootstrap(false);
         try (XdsBootstrap xdsBootstrap = XdsBootstrap.of(bootstrap)) {
             final TestResourceWatcher watcher = new TestResourceWatcher();
             final ListenerRoot listenerRoot = xdsBootstrap.listenerRoot("self-listener1");
@@ -175,8 +177,10 @@ class MultiConfigSourceTest {
             // Updates are propagated for the initial value
             final ClusterLoadAssignment expected =
                     cache1.getSnapshot(GROUP).endpoints().resources().get("self-cluster1");
-            assertThat(listenerSnapshot.routeSnapshot().clusterSnapshots()
-                                       .get(0).endpointSnapshot().xdsResource().resource()).isEqualTo(expected);
+            assertThat(listenerSnapshot.routeSnapshot()
+                                       .virtualHostSnapshots().get(0)
+                                       .routeEntries().get(0).clusterSnapshot()
+                                       .endpointSnapshot().xdsResource().resource()).isEqualTo(expected);
 
             await().pollDelay(100, TimeUnit.MILLISECONDS)
                    .untilAsserted(() -> assertThat(watcher.events()).isEmpty());
@@ -185,7 +189,7 @@ class MultiConfigSourceTest {
 
     @Test
     void adsSelfConfigSource() {
-        final Bootstrap bootstrap = bootstrap(false, true);
+        final Bootstrap bootstrap = bootstrap(true);
         try (XdsBootstrap xdsBootstrap = XdsBootstrap.of(bootstrap)) {
             final TestResourceWatcher watcher = new TestResourceWatcher();
             final ListenerRoot listenerRoot = xdsBootstrap.listenerRoot("self-listener2");
@@ -195,8 +199,10 @@ class MultiConfigSourceTest {
             // Updates are propagated for the initial value
             final ClusterLoadAssignment expected =
                     cache2.getSnapshot(GROUP).endpoints().resources().get("self-cluster2");
-            assertThat(listenerSnapshot.routeSnapshot().clusterSnapshots()
-                                       .get(0).endpointSnapshot().xdsResource().resource()).isEqualTo(expected);
+            assertThat(listenerSnapshot.routeSnapshot()
+                                       .virtualHostSnapshots().get(0)
+                                       .routeEntries().get(0).clusterSnapshot()
+                                       .endpointSnapshot().xdsResource().resource()).isEqualTo(expected);
 
             await().pollDelay(100, TimeUnit.MILLISECONDS)
                    .untilAsserted(() -> assertThat(watcher.events()).isEmpty());
@@ -204,10 +210,10 @@ class MultiConfigSourceTest {
     }
 
     private static Bootstrap bootstrap() {
-        return bootstrap(true, true);
+        return bootstrap(false);
     }
 
-    private static Bootstrap bootstrap(boolean enableBasic, boolean enableAds) {
+    private static Bootstrap bootstrap(boolean enableAds) {
         final ClusterLoadAssignment loadAssignment1 =
                 XdsTestResources.loadAssignment(bootstrapClusterName1,
                                                 server1.httpUri().getHost(), server1.httpPort());
@@ -219,15 +225,16 @@ class MultiConfigSourceTest {
         final Cluster staticCluster2 = XdsTestResources.createStaticCluster(bootstrapClusterName2,
                                                                             loadAssignment2);
         final DynamicResources.Builder dynamicResourcesBuilder =
-                DynamicResources.newBuilder();
-        if (enableBasic) {
+                DynamicResources.newBuilder()
+                                .setAdsConfig(XdsTestResources.apiConfigSource(bootstrapClusterName2,
+                                                                               ApiType.AGGREGATED_GRPC));
+        if (!enableAds) {
             dynamicResourcesBuilder
                     .setCdsConfig(XdsTestResources.basicConfigSource(bootstrapClusterName1))
                     .setLdsConfig(XdsTestResources.basicConfigSource(bootstrapClusterName1));
-        }
-        if (enableAds) {
-            dynamicResourcesBuilder.setAdsConfig(XdsTestResources.apiConfigSource(
-                    bootstrapClusterName2, ApiType.AGGREGATED_GRPC));
+        } else {
+            dynamicResourcesBuilder.setCdsConfig(XdsTestResources.adsConfigSource())
+                                   .setLdsConfig(XdsTestResources.adsConfigSource());
         }
         return Bootstrap
                 .newBuilder()

@@ -22,6 +22,8 @@ import java.util.Map;
 
 import javax.annotation.Nonnull;
 
+import com.google.common.collect.ImmutableMap;
+
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
@@ -42,7 +44,7 @@ enum DefaultGraphqlErrorHandler implements GraphqlErrorHandler {
     public HttpResponse handle(
             ServiceRequestContext ctx,
             ExecutionInput input,
-            ExecutionResult result,
+            @Nullable ExecutionResult result,
             @Nullable Throwable cause) {
 
         final MediaType produceType = GraphqlUtil.produceType(ctx.request().headers());
@@ -60,11 +62,11 @@ enum DefaultGraphqlErrorHandler implements GraphqlErrorHandler {
             return HttpResponse.ofJson(HttpStatus.INTERNAL_SERVER_ERROR, produceType, specification);
         }
 
-        if (result.getErrors().stream().anyMatch(ValidationError.class::isInstance)) {
+        if (result != null && result.getErrors().stream().anyMatch(ValidationError.class::isInstance)) {
             return HttpResponse.ofJson(HttpStatus.BAD_REQUEST, produceType, result.toSpecification());
         }
 
-        return HttpResponse.ofJson(produceType, result.toSpecification());
+        return HttpResponse.ofJson(produceType, result != null ? result.toSpecification() : ImmutableMap.of());
     }
 
     private static Map<String, Object> toSpecification(Throwable cause) {

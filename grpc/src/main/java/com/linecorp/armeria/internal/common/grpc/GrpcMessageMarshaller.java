@@ -103,6 +103,7 @@ public final class GrpcMessageMarshaller<I, O> {
                             ByteStreams.copy(is, os);
                         }
                     } else {
+                        assert jsonMarshaller != null;
                         jsonMarshaller.serializeMessage(requestMarshaller, message, os);
                     }
                 }
@@ -133,10 +134,13 @@ public final class GrpcMessageMarshaller<I, O> {
                 }
             }
         }
+
+        assert messageStream != null;
         try (InputStream msg = messageStream) {
             if (isProto) {
                 return method.parseRequest(msg);
             } else {
+                assert jsonMarshaller != null;
                 return jsonMarshaller.deserializeMessage(requestMarshaller, msg);
             }
         }
@@ -157,6 +161,7 @@ public final class GrpcMessageMarshaller<I, O> {
                             ByteStreams.copy(is, os);
                         }
                     } else {
+                        assert jsonMarshaller != null;
                         jsonMarshaller.serializeMessage(responseMarshaller, message, os);
                     }
                 }
@@ -188,10 +193,13 @@ public final class GrpcMessageMarshaller<I, O> {
                 }
             }
         }
+
+        assert messageStream != null;
         try (InputStream msg = messageStream) {
             if (isProto) {
                 return method.parseResponse(msg);
             } else {
+                assert jsonMarshaller != null;
                 return jsonMarshaller.deserializeMessage(responseMarshaller, msg);
             }
         }
@@ -231,6 +239,7 @@ public final class GrpcMessageMarshaller<I, O> {
             try (ByteBufOutputStream os = new ByteBufOutputStream(buf)) {
                 @SuppressWarnings("unchecked")
                 final T cast = (T) message;
+                assert jsonMarshaller != null;
                 jsonMarshaller.serializeMessage(marshaller, cast, os);
                 success = true;
             } finally {
@@ -275,6 +284,7 @@ public final class GrpcMessageMarshaller<I, O> {
             }
         } else {
             try (ByteBufInputStream is = new ByteBufInputStream(buf, /* releaseOnClose */ false)) {
+                assert jsonMarshaller != null;
                 return (Message) jsonMarshaller.deserializeMessage(marshaller, is);
             }
         }

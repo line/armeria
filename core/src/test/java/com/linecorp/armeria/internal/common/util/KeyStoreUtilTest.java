@@ -25,8 +25,8 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 
+import com.linecorp.armeria.common.TlsKeyPair;
 import com.linecorp.armeria.common.annotation.Nullable;
-import com.linecorp.armeria.internal.common.util.KeyStoreUtil.KeyPair;
 
 class KeyStoreUtilTest {
     // The key store files used in this test case were generated with the following commands:
@@ -73,10 +73,10 @@ class KeyStoreUtilTest {
     void shouldLoadKeyStoreWithOneKeyPair(String filename,
                                           @Nullable String keyStorePassword,
                                           @Nullable String keyPassword) throws Exception {
-        final KeyPair keyPair = KeyStoreUtil.load(getFile(filename),
-                                                  underscoreToNull(keyStorePassword),
-                                                  underscoreToNull(keyPassword),
-                                                  null /* no alias */);
+        final TlsKeyPair keyPair = KeyStoreUtil.load(getFile(filename),
+                                                     underscoreToNull(keyStorePassword),
+                                                     underscoreToNull(keyPassword),
+                                                     null /* no alias */);
         assertThat(keyPair.certificateChain()).hasSize(1).allSatisfy(cert -> {
             assertThat(cert.getSubjectX500Principal().getName()).isEqualTo("CN=foo.com");
         });
@@ -85,7 +85,7 @@ class KeyStoreUtilTest {
     @ParameterizedTest
     @CsvSource({"first, foo.com", "second, bar.com"})
     void shouldLoadKeyStoreWithTwoKeyPairsIfAliasIsGiven(String alias, String expectedCN) throws Exception {
-        final KeyPair keyPair = KeyStoreUtil.load(getFile("keystore-two-keys.p12"),
+        final TlsKeyPair keyPair = KeyStoreUtil.load(getFile("keystore-two-keys.p12"),
                                                   "my-second-password",
                                                   null,
                                                   alias);

@@ -16,122 +16,56 @@
 
 package com.linecorp.armeria.xds;
 
+import static com.google.common.base.Preconditions.checkArgument;
+
 import com.linecorp.armeria.common.annotation.Nullable;
 
 import io.envoyproxy.envoy.config.bootstrap.v3.Bootstrap;
-import io.envoyproxy.envoy.config.bootstrap.v3.Bootstrap.DynamicResources;
+import io.envoyproxy.envoy.config.core.v3.ApiConfigSource;
 import io.envoyproxy.envoy.config.core.v3.ConfigSource;
 
 final class ConfigSourceMapper {
 
-    private final Bootstrap bootstrap;
-    @Nullable
     private final ConfigSource bootstrapCdsConfig;
-    @Nullable
     private final ConfigSource bootstrapLdsConfig;
-    @Nullable
-    private final ConfigSource bootstrapAdsConfig;
-    @Nullable
-    private ConfigSource parentConfigSource;
+    private final ApiConfigSource bootstrapAdsConfig;
 
     ConfigSourceMapper(Bootstrap bootstrap) {
-        this(bootstrap, null);
+        bootstrapCdsConfig = bootstrap.getDynamicResources().getCdsConfig();
+        bootstrapLdsConfig = bootstrap.getDynamicResources().getLdsConfig();
+        bootstrapAdsConfig = bootstrap.getDynamicResources().getAdsConfig();
     }
 
-    ConfigSourceMapper(Bootstrap bootstrap, @Nullable ConfigSource parentConfigSource) {
-        this.bootstrap = bootstrap;
-        if (this.bootstrap.hasDynamicResources()) {
-            final DynamicResources dynamicResources = bootstrap.getDynamicResources();
-            bootstrapCdsConfig = dynamicResources.getCdsConfig();
-            if (dynamicResources.hasAdsConfig()) {
-                bootstrapAdsConfig = ConfigSource.newBuilder()
-                                                 .setApiConfigSource(dynamicResources.getAdsConfig())
-                                                 .build();
-            } else {
-                bootstrapAdsConfig = null;
-            }
-            bootstrapLdsConfig = dynamicResources.getLdsConfig();
-        } else {
-            bootstrapCdsConfig = null;
-            bootstrapLdsConfig = null;
-            bootstrapAdsConfig = null;
+    ConfigSource configSource(ConfigSource configSource, @Nullable ConfigSource parentConfigSource,
+                              String resourceName) {
+        if (configSource.hasAds() || configSource.hasApiConfigSource()) {
+            return configSource;
         }
-        this.parentConfigSource = parentConfigSource;
+        if (configSource.hasSelf()) {
+            checkArgument(parentConfigSource != null,
+                          "parentConfigSource not available for '%s' when fetching '%s'",
+                          configSource, resourceName);
+            return parentConfigSource;
+        }
+        throw new IllegalArgumentException("Unsupported config source: '" + configSource +
+                                           "' when fetching resource '" + resourceName + '\'');
     }
 
-    ConfigSourceMapper withParentConfigSource(@Nullable ConfigSource parentConfigSource) {
-        return new ConfigSourceMapper(bootstrap, parentConfigSource);
+    ConfigSource cdsConfigSource(String resourceName) {
+        checkArgument(bootstrapCdsConfig.hasApiConfigSource() || bootstrapCdsConfig.hasAds(),
+                      "Unsupported CDS config source '%s' when fetching '%s'",
+                      bootstrapCdsConfig, resourceName);
+        return bootstrapCdsConfig;
     }
 
-    ConfigSource edsConfigSource(@Nullable ConfigSource configSource, String resourceName) {
-        if (configSource != null) {
-            if (configSource.hasApiConfigSource()) {
-                return configSource;
-            }
-            if (configSource.hasSelf() && parentConfigSource != null) {
-                return parentConfigSource;
-            }
-        }
-        if (bootstrapAdsConfig != null) {
-            return bootstrapAdsConfig;
-        }
-        throw new IllegalArgumentException("Cannot find an EDS config source for " + resourceName);
+    ConfigSource ldsConfigSource(String resourceName) {
+        checkArgument(bootstrapLdsConfig.hasApiConfigSource() || bootstrapLdsConfig.hasAds(),
+                      "Unsupported LDS config source '%s' when fetching '%s'",
+                      bootstrapLdsConfig, resourceName);
+        return bootstrapLdsConfig;
     }
 
-    ConfigSource cdsConfigSource(@Nullable ConfigSource configSource, String resourceName) {
-        if (configSource != null) {
-            if (configSource.hasApiConfigSource()) {
-                return configSource;
-            }
-            if (configSource.hasSelf() && parentConfigSource != null) {
-                return parentConfigSource;
-            }
-            if (configSource.hasAds() && bootstrapAdsConfig != null) {
-                return bootstrapAdsConfig;
-            }
-        }
-        if (bootstrapCdsConfig != null && bootstrapCdsConfig.hasApiConfigSource()) {
-            return bootstrapCdsConfig;
-        }
-        if (bootstrapAdsConfig != null) {
-            return bootstrapAdsConfig;
-        }
-        throw new IllegalArgumentException("Cannot find a CDS config source for route: " + resourceName);
-    }
-
-    ConfigSource rdsConfigSource(@Nullable ConfigSource configSource, String resourceName) {
-        if (configSource != null) {
-            if (configSource.hasApiConfigSource()) {
-                return configSource;
-            }
-            if (configSource.hasSelf() && parentConfigSource != null) {
-                return parentConfigSource;
-            }
-        }
-        if (bootstrapAdsConfig != null) {
-            return bootstrapAdsConfig;
-        }
-        throw new IllegalArgumentException("Cannot find an RDS config source for route: " + resourceName);
-    }
-
-    ConfigSource ldsConfigSource(@Nullable ConfigSource configSource, String resourceName) {
-        if (configSource != null) {
-            if (configSource.hasApiConfigSource()) {
-                return configSource;
-            }
-            if (configSource.hasSelf() && parentConfigSource != null) {
-                return parentConfigSource;
-            }
-            if (configSource.hasAds() && bootstrapAdsConfig != null) {
-                return bootstrapAdsConfig;
-            }
-        }
-        if (bootstrapLdsConfig != null && bootstrapLdsConfig.hasApiConfigSource()) {
-            return bootstrapLdsConfig;
-        }
-        if (bootstrapAdsConfig != null) {
-            return bootstrapAdsConfig;
-        }
-        throw new IllegalArgumentException("Cannot find an LDS config source for listener: " + resourceName);
+    ApiConfigSource bootstrapAdsConfig() {
+        return bootstrapAdsConfig;
     }
 }

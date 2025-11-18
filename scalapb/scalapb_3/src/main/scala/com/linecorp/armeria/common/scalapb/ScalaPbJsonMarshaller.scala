@@ -58,7 +58,7 @@ final class ScalaPbJsonMarshaller private (
   override def deserializeMessage[A](marshaller: Marshaller[A], in: InputStream): A = {
     val companion = getMessageCompanion(marshaller)
     val jsonString = Source.fromInputStream(in)(Codec.UTF8).mkString
-    val message = jsonParser.fromJsonString(jsonString)(companion)
+    val message = jsonParser.fromJsonString(jsonString)(using companion)
     marshaller match {
       case marshaller: TypeMappedMarshaller[_, _] =>
         val method = typeMapperMethodCache.computeIfAbsent(

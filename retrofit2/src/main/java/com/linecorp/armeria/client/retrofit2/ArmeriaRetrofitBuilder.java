@@ -34,6 +34,7 @@ import com.google.common.base.MoreObjects;
 import com.google.common.collect.Maps;
 
 import com.linecorp.armeria.client.AbstractClientOptionsBuilder;
+import com.linecorp.armeria.client.ClientBuilderParams;
 import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.client.ClientOption;
 import com.linecorp.armeria.client.ClientOptionValue;
@@ -43,7 +44,10 @@ import com.linecorp.armeria.client.DecoratingHttpClientFunction;
 import com.linecorp.armeria.client.DecoratingRpcClientFunction;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.HttpClient;
+import com.linecorp.armeria.client.HttpPreprocessor;
+import com.linecorp.armeria.client.ResponseTimeoutMode;
 import com.linecorp.armeria.client.RpcClient;
+import com.linecorp.armeria.client.RpcPreprocessor;
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.client.redirect.RedirectConfig;
@@ -215,13 +219,13 @@ public final class ArmeriaRetrofitBuilder extends AbstractClientOptionsBuilder {
      * Returns a newly-created {@link Retrofit} based on the properties of this builder.
      */
     public Retrofit build() {
-        final SessionProtocol protocol = webClient.scheme().sessionProtocol();
-
         final ClientOptions retrofitOptions = buildOptions(webClient.options());
+        final ClientBuilderParams params = webClient.paramsBuilder()
+                                                    .absolutePathRef("/")
+                                                    .options(retrofitOptions)
+                                                    .build();
         // Re-create the base client without a path, because Retrofit will always provide a full path.
-        final WebClient baseWebClient = WebClient.builder(protocol, webClient.endpointGroup())
-                                                 .options(retrofitOptions)
-                                                 .build();
+        final WebClient baseWebClient = (WebClient) retrofitOptions.factory().newClient(params);
 
         if (nonBaseClientFactory == null) {
             nonBaseClientFactory =
@@ -449,5 +453,20 @@ public final class ArmeriaRetrofitBuilder extends AbstractClientOptionsBuilder {
     public ArmeriaRetrofitBuilder contextCustomizer(
             Consumer<? super ClientRequestContext> contextCustomizer) {
         return (ArmeriaRetrofitBuilder) super.contextCustomizer(contextCustomizer);
+    }
+
+    @Override
+    public ArmeriaRetrofitBuilder responseTimeoutMode(ResponseTimeoutMode responseTimeoutMode) {
+        return (ArmeriaRetrofitBuilder) super.responseTimeoutMode(responseTimeoutMode);
+    }
+
+    @Override
+    public ArmeriaRetrofitBuilder preprocessor(HttpPreprocessor decorator) {
+        return (ArmeriaRetrofitBuilder) super.preprocessor(decorator);
+    }
+
+    @Override
+    public ArmeriaRetrofitBuilder rpcPreprocessor(RpcPreprocessor decorator) {
+        return (ArmeriaRetrofitBuilder) super.rpcPreprocessor(decorator);
     }
 }

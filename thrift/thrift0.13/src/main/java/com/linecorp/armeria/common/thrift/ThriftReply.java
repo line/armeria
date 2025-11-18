@@ -88,6 +88,7 @@ public final class ThriftReply extends ThriftMessage {
         if (isException()) {
             throw new IllegalStateException("not a reply but an exception");
         }
+        assert result != null;
         return result;
     }
 
@@ -100,6 +101,7 @@ public final class ThriftReply extends ThriftMessage {
         if (!isException()) {
             throw new IllegalStateException("not an exception but a reply");
         }
+        assert exception != null;
         return exception;
     }
 

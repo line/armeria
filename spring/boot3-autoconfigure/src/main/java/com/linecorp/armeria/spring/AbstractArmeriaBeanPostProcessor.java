@@ -82,6 +82,8 @@ abstract class AbstractArmeriaBeanPostProcessor {
                 }
             }
         }
+
+        assert metadata != null;
         return metadata;
     }
 

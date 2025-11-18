@@ -26,7 +26,7 @@ import io.netty.util.AttributeMap;
 /**
  * A {@link ConnectionPoolListener} to count the number of connections which have been open and closed.
  */
-public final class CountingConnectionPoolListener implements ConnectionPoolListener {
+public class CountingConnectionPoolListener implements ConnectionPoolListener {
 
     private final AtomicInteger opened = new AtomicInteger();
     private final AtomicInteger closed = new AtomicInteger();

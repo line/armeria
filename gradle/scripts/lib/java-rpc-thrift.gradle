@@ -3,12 +3,14 @@ def libDir = buildscript.sourceFile.parentFile
 configure(projectsWithFlags('java')) {
     def thriftJsonEnabled = true
     def fullCamel = false
+    def annotationsAsMetadata = false
 
     ext {
         thriftVersion = null
         thriftPath = null
         enableThriftFullCamel = { fullCamel = true }
         disableThriftJson = { thriftJsonEnabled = false }
+        enableAnnotationsAsMetadata = {annotationsAsMetadata = true}
     }
 
     // TODO(anuraaga): Consider replacing with https://github.com/yodle/griddle
@@ -57,6 +59,7 @@ configure(projectsWithFlags('java')) {
                 it.includeDirs.addAll(includeDirs)
                 it.thriftJsonEnabled = thriftJsonEnabled
                 it.fullCamel = fullCamel
+                it.annotationsAsMetadata = annotationsAsMetadata
                 it.thriftBinary = project.ext.thriftPath != null ? project.file(project.ext.thriftPath) : null
                 it.thriftVersion = project.ext.thriftVersion
 
@@ -118,6 +121,9 @@ class CompileThriftTask extends DefaultTask {
     @Input
     Boolean fullCamel
 
+    @Input
+    Boolean annotationsAsMetadata
+
     @OutputDirectory
     File javaOutputDir
 
@@ -144,7 +150,10 @@ class CompileThriftTask extends DefaultTask {
                 project.mkdir(javaOutputDir)
                 def javaGenerator = 'java'
                 if (fullCamel) {
-                    javaGenerator = 'java:fullcamel'
+                    javaGenerator += ':fullcamel'
+                }
+                if (annotationsAsMetadata) {
+                    javaGenerator += ':annotations_as_metadata'
                 }
                 project.exec {
                     commandLine actualThriftPath

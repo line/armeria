@@ -200,4 +200,23 @@ class DefaultCookieJarTest {
         assertThat(cookieJar.state(expectCookie, currentTimeMillis + 1000)).isEqualTo(CookieState.EXISTENT);
         assertThat(cookieJar.state(expectCookie, currentTimeMillis + 1001)).isEqualTo(CookieState.EXPIRED);
     }
+
+    @Test
+    void overwrite() {
+        final CookieJar cookieJar = new DefaultCookieJar();
+        final URI foo = URI.create("https://foo.com");
+        cookieJar.set(foo, Cookies.of(Cookie.ofSecure("name", "value1")));
+        cookieJar.set(foo, Cookies.of(Cookie.ofSecure("name", "value2")));
+
+        assertThat(cookieJar.get(foo)).hasSize(1).contains(
+                Cookie.secureBuilder("name", "value2").domain("foo.com").path("/").build()
+        );
+
+        final URI nonHttp = URI.create("foo://foo.com");
+        cookieJar.set(nonHttp, Cookies.of(Cookie.ofSecure("name", "value3")));
+
+        assertThat(cookieJar.get(foo)).hasSize(1).contains(
+                Cookie.secureBuilder("name", "value2").domain("foo.com").path("/").build()
+        );
+    }
 }

@@ -112,11 +112,18 @@ allprojects {
             maxParallelForks = gradle.startParameter.maxWorkerCount
         }
 
+        // Allow re-running the tests if the DOC_SERVICE_DEMO property changes.
+        inputs.property('DOC_SERVICE_DEMO', 'true'.equals(project.findProperty('DOC_SERVICE_DEMO')))
+
         // Fail the build at the end if there was any leak.
         // We do not fail immediately so that we collect as many leaks as possible.
         doFirst {
             addTestOutputListener({ descriptor, event ->
                 if (event.message.contains('LEAK: ')) {
+                    if (isCi) {
+                        logger.warn("Leak is detected in ${descriptor.className}.${descriptor.displayName}\n" +
+                                    "${event.message}")
+                    }
                     hasLeak.set(true)
                 }
             })
@@ -186,15 +193,12 @@ configure(projectsWithFlags('java')) {
         tasks.withType(JavaCompile) {
             options.errorprone.excludedPaths = '.*/gen-src/.*'
             options.errorprone.nullaway {
-                if (name.toLowerCase().contains("test")) {
-                    // Disable NullAway for tests for now.
+                if (name.contains("Test") || name.contains("Jmh")) {
+                    // Disable NullAway for tests and benchmarks for now.
                     disable()
                 } else if (name.matches(/compileJava[0-9]+.*/)) {
                     // Disable MR-JAR classes which seem to confuse NullAway and break the build.
                     disable()
-                } else if (project != project(':core')) {
-                    // TODO(trustin): Enable NullAway for all projects once we fix all violations.
-                    warn()
                 } else {
                     error()
                     assertsEnabled = true
@@ -487,4 +491,8 @@ allprojects {
             }
         }
     }
+}
+
+configure(projectsWithFlags('java', 'publish')) {
+    failOnVersionConflict(libs.protobuf.java)
 }

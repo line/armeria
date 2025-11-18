@@ -75,11 +75,6 @@ final class DefaultContentPreviewFactory implements ContentPreviewerFactory {
 
         final MediaType contentType = headers.contentType();
         if (contentType != null) {
-            final Charset charset = contentType.charset();
-            if (charset != null) {
-                return new TextContentPreviewer(maxLength, charset);
-            }
-
             if ("text".equals(contentType.type()) ||
                 textSubTypes.contains(contentType.subtype()) ||
                 textSubTypeSuffixes.stream().anyMatch(contentType.subtype()::endsWith) ||

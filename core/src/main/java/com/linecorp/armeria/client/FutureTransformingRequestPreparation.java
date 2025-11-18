@@ -416,4 +416,11 @@ public final class FutureTransformingRequestPreparation<T>
         delegate.exchangeType(exchangeType);
         return this;
     }
+
+    @Override
+    public FutureTransformingRequestPreparation<T> responseTimeoutMode(
+            ResponseTimeoutMode responseTimeoutMode) {
+        delegate.responseTimeoutMode(responseTimeoutMode);
+        return this;
+    }
 }

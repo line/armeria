@@ -21,9 +21,11 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableMap;
 
 import com.linecorp.armeria.server.docs.DocService;
@@ -39,6 +41,7 @@ import com.linecorp.armeria.server.docs.DocStringExtractor;
  */
 final class ThriftDocStringExtractor extends DocStringExtractor {
 
+    private static final Logger logger = LoggerFactory.getLogger(ThriftDocStringExtractor.class);
     private static final TypeReference<HashMap<String, Object>> JSON_VALUE_TYPE =
             new TypeReference<HashMap<String, Object>>() {};
 
@@ -58,13 +61,18 @@ final class ThriftDocStringExtractor extends DocStringExtractor {
     @Override
     protected Map<String, String> getDocStringsFromFiles(Map<String, byte[]> files) {
         final ImmutableMap.Builder<String, String> docStrings = ImmutableMap.builder();
-        for (byte[] file : files.values()) {
+        for (Map.Entry<String, byte[]> entry : files.entrySet()) {
             try {
-                final Map<String, Object> json = new ObjectMapper().readValue(file, JSON_VALUE_TYPE);
+                final Map<String, Object> json =
+                        new ObjectMapper().readValue(entry.getValue(), JSON_VALUE_TYPE);
                 @SuppressWarnings("unchecked")
                 final Map<String, Object> namespaces =
                         (Map<String, Object>) json.getOrDefault("namespaces", ImmutableMap.of());
                 final String packageName = (String) namespaces.get("java");
+                if (packageName == null) {
+                    logger.info("Skipping Thrift DocString generation for file: {}", entry.getKey());
+                    continue;
+                }
                 json.forEach((key, children) -> {
                     if (children instanceof Collection) {
                         @SuppressWarnings("unchecked")
@@ -90,7 +98,7 @@ final class ThriftDocStringExtractor extends DocStringExtractor {
             final String doc = (String) map.get("doc");
             final String childPrefix;
             if (name != null) {
-                childPrefix = MoreObjects.firstNonNull(prefix, "") + delimiter + name;
+                childPrefix = prefix + delimiter + name;
                 if (doc != null) {
                     docStrings.put(childPrefix, doc.trim());
                 }

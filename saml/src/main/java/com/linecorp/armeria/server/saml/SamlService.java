@@ -169,6 +169,8 @@ final class SamlService implements HttpServiceWithRoutes {
             }
 
             final SamlPortConfig portConfig = portConfigHolder.config();
+            assert portConfig != null;
+
             final boolean isTls = ctx.sessionProtocol().isTls();
             if (portConfig.scheme().isTls() != isTls) {
                 if (isTls) {

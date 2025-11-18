@@ -29,6 +29,8 @@ import java.util.concurrent.Executor;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import com.google.common.util.concurrent.MoreExecutors;
 
@@ -37,11 +39,14 @@ import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.ResponseHeaders;
+import com.linecorp.armeria.common.grpc.GrpcExceptionHandlerFunction;
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
+import com.linecorp.armeria.internal.common.grpc.InternalGrpcExceptionHandler;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 import io.grpc.CompressorRegistry;
 import io.grpc.DecompressorRegistry;
+import io.grpc.ForwardingServerCall.SimpleForwardingServerCall;
 import io.grpc.ServerCall;
 import io.netty.channel.EventLoop;
 import testing.grpc.Messages.SimpleRequest;
@@ -58,10 +63,14 @@ class DeferredListenerTest {
                             AsyncServerInterceptor.class.getName());
     }
 
-    @Test
-    void shouldLazilyExecuteCallbacks() {
+    @ValueSource(booleans = { true, false })
+    @ParameterizedTest
+    void shouldLazilyExecuteCallbacks(boolean wrap) {
         final EventLoop eventLoop = CommonPools.workerGroup().next();
-        final UnaryServerCall<SimpleRequest, SimpleResponse> serverCall = newServerCall(eventLoop, null);
+        ServerCall<SimpleRequest, SimpleResponse> serverCall = newServerCall(eventLoop, null);
+        if (wrap) {
+            serverCall = new SimpleForwardingServerCall<SimpleRequest, SimpleResponse>(serverCall) {};
+        }
         assertListenerEvents(serverCall, eventLoop);
 
         final Executor blockingExecutor =
@@ -112,7 +121,9 @@ class DeferredListenerTest {
                                      DecompressorRegistry.getDefaultInstance(),
                                      HttpResponse.streaming(), new CompletableFuture<>(), 0, 0, ctx,
                                      GrpcSerializationFormats.PROTO, null, false,
-                                     ResponseHeaders.of(200), null, blockingTaskExecutor, false, false);
+                                     ResponseHeaders.of(200),
+                                     new InternalGrpcExceptionHandler(GrpcExceptionHandlerFunction.of()),
+                                     blockingTaskExecutor, false, false);
     }
 
     private static class TestListener extends ServerCall.Listener<SimpleRequest> {

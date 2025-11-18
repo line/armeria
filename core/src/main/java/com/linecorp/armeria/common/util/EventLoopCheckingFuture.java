@@ -31,9 +31,8 @@ import org.slf4j.LoggerFactory;
 import com.google.common.collect.MapMaker;
 
 import com.linecorp.armeria.common.Flags;
+import com.linecorp.armeria.common.NonBlocking;
 import com.linecorp.armeria.common.annotation.Nullable;
-
-import reactor.core.scheduler.NonBlocking;
 
 /**
  * A {@link CompletableFuture} that warns the user if they call a method that blocks the event loop.

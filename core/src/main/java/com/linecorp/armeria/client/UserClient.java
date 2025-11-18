@@ -23,15 +23,11 @@ import java.util.concurrent.CompletionStage;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.Request;
-import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.RequestTarget;
 import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.RpcRequest;
@@ -39,7 +35,6 @@ import com.linecorp.armeria.common.RpcResponse;
 import com.linecorp.armeria.common.Scheme;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.util.AbstractUnwrappable;
-import com.linecorp.armeria.common.util.SystemInfo;
 import com.linecorp.armeria.internal.client.DefaultClientRequestContext;
 
 import io.micrometer.core.instrument.MeterRegistry;
@@ -57,9 +52,6 @@ import io.micrometer.core.instrument.MeterRegistry;
 public abstract class UserClient<I extends Request, O extends Response>
         extends AbstractUnwrappable<Client<I, O>>
         implements ClientBuilderParams {
-
-    private static final Logger logger = LoggerFactory.getLogger(UserClient.class);
-    private static boolean warnedNullRequestId;
 
     private final ClientBuilderParams params;
     private final MeterRegistry meterRegistry;
@@ -119,13 +111,39 @@ public abstract class UserClient<I extends Request, O extends Response>
     }
 
     /**
+     * The {@link Function} that converts a {@link CompletableFuture} of response
+     * into a response, e.g. {@link HttpResponse#of(CompletionStage)}
+     * and {@link RpcResponse#from(CompletionStage)}.
+     */
+    protected Function<CompletableFuture<O>, O> futureConverter() {
+        return futureConverter;
+    }
+
+    /**
+     * The {@link BiFunction} that returns a new response failed with the given exception.
+     */
+    protected BiFunction<ClientRequestContext, Throwable, O> errorResponseFactory() {
+        return errorResponseFactory;
+    }
+
+    /**
+     * The {@link MeterRegistry} used for requests produced by this client.
+     */
+    protected MeterRegistry meterRegistry() {
+        return meterRegistry;
+    }
+
+    /**
      * Executes the specified {@link Request} via the delegate.
      *
      * @param protocol the {@link SessionProtocol} to use
      * @param method the method of the {@link Request}
      * @param reqTarget the {@link RequestTarget} of the {@link Request}
      * @param req the {@link Request}
+     *
+     * @deprecated prefer {@link ClientOptions#clientPreprocessors()} to execute requests
      */
+    @Deprecated
     protected final O execute(SessionProtocol protocol, HttpMethod method, RequestTarget reqTarget, I req) {
         return execute(protocol, method, reqTarget, req, RequestOptions.of());
     }
@@ -138,7 +156,10 @@ public abstract class UserClient<I extends Request, O extends Response>
      * @param reqTarget the {@link RequestTarget} of the {@link Request}
      * @param req the {@link Request}
      * @param requestOptions the {@link RequestOptions} of the {@link Request}
+     *
+     * @deprecated prefer {@link ClientOptions#clientPreprocessors()} to execute requests
      */
+    @Deprecated
     protected final O execute(SessionProtocol protocol, HttpMethod method, RequestTarget reqTarget,
                               I req, RequestOptions requestOptions) {
         return execute(protocol, endpointGroup(), method, reqTarget, req, requestOptions);
@@ -152,7 +173,10 @@ public abstract class UserClient<I extends Request, O extends Response>
      * @param method the method of the {@link Request}
      * @param reqTarget the {@link RequestTarget} of the {@link Request}
      * @param req the {@link Request}
+     *
+     * @deprecated prefer {@link ClientOptions#clientPreprocessors()} to execute requests
      */
+    @Deprecated
     protected final O execute(SessionProtocol protocol, EndpointGroup endpointGroup, HttpMethod method,
                               RequestTarget reqTarget, I req) {
         return execute(protocol, endpointGroup, method, reqTarget, req, RequestOptions.of());
@@ -167,13 +191,15 @@ public abstract class UserClient<I extends Request, O extends Response>
      * @param reqTarget the {@link RequestTarget} of the {@link Request}
      * @param req the {@link Request}
      * @param requestOptions the {@link RequestOptions} of the {@link Request}
+     *
+     * @deprecated prefer {@link ClientOptions#clientPreprocessors()} to execute requests
      */
+    @Deprecated
     protected final O execute(SessionProtocol protocol, EndpointGroup endpointGroup, HttpMethod method,
                               RequestTarget reqTarget, I req, RequestOptions requestOptions) {
 
         final HttpRequest httpReq;
         final RpcRequest rpcReq;
-        final RequestId id = nextRequestId();
 
         if (req instanceof HttpRequest) {
             httpReq = (HttpRequest) req;
@@ -184,23 +210,10 @@ public abstract class UserClient<I extends Request, O extends Response>
         }
 
         final DefaultClientRequestContext ctx = new DefaultClientRequestContext(
-                meterRegistry, protocol, id, method, reqTarget, options(), httpReq, rpcReq,
-                requestOptions, System.nanoTime(), SystemInfo.currentTimeMicros());
+                protocol, httpReq, method, rpcReq, reqTarget, endpointGroup,
+                requestOptions, options(), meterRegistry);
 
-        return initContextAndExecuteWithFallback(unwrap(), ctx, endpointGroup,
-                                                 futureConverter, errorResponseFactory);
-    }
-
-    private RequestId nextRequestId() {
-        final RequestId id = options().requestIdGenerator().get();
-        if (id == null) {
-            if (!warnedNullRequestId) {
-                warnedNullRequestId = true;
-                logger.warn("requestIdGenerator.get() returned null; using RequestId.random()");
-            }
-            return RequestId.random();
-        } else {
-            return id;
-        }
+        return initContextAndExecuteWithFallback(unwrap(), ctx, futureConverter, errorResponseFactory, req,
+                                                 true);
     }
 }

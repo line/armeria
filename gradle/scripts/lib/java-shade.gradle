@@ -38,6 +38,17 @@ configure(relocatedProjects) {
         // Exclude the module metadata that'll become invalid after relocation.
         exclude '**/module-info.class'
 
+        // Exclude the MRJARs files that are not compatible with the target Java version.
+        exclude { details ->
+            def path = details.path  // e.g., META-INF/versions/15/com/example/Foo.class
+            def matcher = path =~ /^META-INF\/versions\/(\d+)\/.*$/
+            if (matcher.matches()) {
+                def version = matcher[0][1].toInteger()
+                return version > project.ext.targetJavaVersion
+            }
+            return false
+        }
+
         def shadowExclusions = []
         if (rootProject.hasProperty('shadowExclusions')) {
             shadowExclusions = rootProject.findProperty('shadowExclusions').split(",")
@@ -48,8 +59,10 @@ configure(relocatedProjects) {
 
         // Set the 'Automatic-Module-Name' property in MANIFEST.MF.
         if (project.ext.automaticModuleName != null) {
-            manifest {
-                attributes('Automatic-Module-Name': project.ext.automaticModuleName)
+            doFirst {
+                manifest {
+                    attributes('Automatic-Module-Name': project.ext.automaticModuleName.get())
+                }
             }
         }
     }
@@ -88,7 +101,6 @@ configure(relocatedProjects) {
             group: 'Build',
             description: 'Extracts the shaded test JAR.',
             dependsOn: tasks.shadedTestJar) {
-
         from(zipTree(tasks.shadedTestJar.archiveFile.get().asFile))
         from(sourceSets.test.output.classesDirs) {
             // Add the JAR resources excluded in the 'shadedTestJar' task.
@@ -335,7 +347,8 @@ private void configureShadowTask(Project project, ShadowJar task, boolean isMain
 private Configuration configureShadedTestImplementConfiguration(
         Project project, Project recursedProject = project,
         Set<ExcludeRule> excludeRules = new HashSet<>(),
-        Set<Project> visitedProjects = new HashSet<>()) {
+        Set<Project> visitedProjects = new HashSet<>(),
+        boolean recursedProjectRelocated = true) {
 
     def shadedJarTestImplementation = project.configurations.getByName('shadedJarTestImplementation')
 
@@ -364,14 +377,24 @@ private Configuration configureShadedTestImplementConfiguration(
     }.each { cfg ->
         cfg.allDependencies.each { dep ->
             if (dep instanceof ProjectDependency) {
+                if (!dep.dependencyProject.hasFlag('java')) {
+                    // Do not add the dependencies of non-Java projects.
+                    return
+                }
                 // Project dependency - recurse later.
                 // Note that we recurse later to have immediate module dependencies higher precedence.
                 projectDependencies.add(dep)
             } else {
                 // Module dependency - add.
                 if (shadedDependencyNames.contains("${dep.group}:${dep.name}")) {
-                    // Skip the shaded dependencies.
-                    return
+                    if (recursedProjectRelocated) {
+                        // Skip the shaded dependencies.
+                        return
+                    }
+                    throw new IllegalStateException(
+                            "${recursedProject} has a shaded dependency: ${dep.group}:${dep.name} " +
+                                    "but it is not relocated. Please add a 'relocate' flag to " +
+                                    "${recursedProject} in settings.gradle.")
                 }
 
                 if (excludeRules.find { rule ->
@@ -382,16 +405,23 @@ private Configuration configureShadedTestImplementConfiguration(
                 }
                 // Do not use `project.dependencies.add(name, dep)` that discards the classifier of
                 // a dependency. See https://github.com/gradle/gradle/issues/23096
-                project.configurations.getByName(shadedJarTestImplementation.name).dependencies.add(dep)
+                shadedJarTestImplementation.dependencies.add(dep)
             }
         }
     }
 
     // Recurse into the project dependencies.
     projectDependencies.each { ProjectDependency dep ->
+        if (!dep.dependencyProject.hasFlag('relocate')) {
+            shadedJarTestImplementation.dependencies.add(
+                    project.dependencies.project(path: dep.dependencyProject.path))
+            recursedProjectRelocated = false
+        } else {
+            recursedProjectRelocated = true
+        }
         configureShadedTestImplementConfiguration(
                 project, dep.dependencyProject,
-                excludeRules + dep.excludeRules, visitedProjects)
+                excludeRules + dep.excludeRules, visitedProjects, recursedProjectRelocated)
     }
 
     return shadedJarTestImplementation

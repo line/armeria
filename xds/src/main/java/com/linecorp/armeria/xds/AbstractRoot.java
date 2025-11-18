@@ -1,7 +1,7 @@
 /*
- * Copyright 2023 LINE Corporation
+ * Copyright 2025 LY Corporation
  *
- * LINE Corporation licenses this file to you under the Apache License,
+ * LY Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
@@ -80,23 +80,6 @@ abstract class AbstractRoot<T extends Snapshot<? extends XdsResource>>
         }
     }
 
-    /**
-     * Removes a watcher which waits for a snapshot update.
-     */
-    public void removeSnapshotWatcher(SnapshotWatcher<? super T> watcher) {
-        requireNonNull(watcher, "watcher");
-        checkState(!closed, "Watcher %s can't be removed since %s is already closed.",
-                   watcher, getClass().getSimpleName());
-        if (!eventLoop.inEventLoop()) {
-            eventLoop.execute(() -> removeSnapshotWatcher(watcher));
-            return;
-        }
-        if (closed) {
-            return;
-        }
-        snapshotWatchers.remove(watcher);
-    }
-
     @Override
     public void snapshotUpdated(T newSnapshot) {
         if (closed) {
@@ -107,7 +90,7 @@ abstract class AbstractRoot<T extends Snapshot<? extends XdsResource>>
             return;
         }
         snapshot = newSnapshot;
-        notifyWatchers("snapshotUpdated", watcher -> watcher.snapshotUpdated(snapshot));
+        notifyWatchers("snapshotUpdated", watcher -> watcher.snapshotUpdated(newSnapshot));
     }
 
     @Override
@@ -123,15 +106,15 @@ abstract class AbstractRoot<T extends Snapshot<? extends XdsResource>>
     }
 
     @Override
-    public void onError(XdsType type, Status status) {
+    public void onError(XdsType type, String resourceName, Status status) {
         if (closed) {
             return;
         }
         if (!eventLoop.inEventLoop()) {
-            eventLoop.execute(() -> onError(type, status));
+            eventLoop.execute(() -> onError(type, resourceName, status));
             return;
         }
-        notifyWatchers("onError", watcher -> watcher.onError(type, status));
+        notifyWatchers("onError", watcher -> watcher.onError(type, resourceName, status));
     }
 
     private void notifyWatchers(String methodName, Consumer<SnapshotWatcher<? super T>> consumer) {
@@ -145,6 +128,12 @@ abstract class AbstractRoot<T extends Snapshot<? extends XdsResource>>
         }
     }
 
+    @Nullable
+    @VisibleForTesting
+    T current() {
+        return snapshot;
+    }
+
     @VisibleForTesting
     boolean closed() {
         return closed;
@@ -153,5 +142,15 @@ abstract class AbstractRoot<T extends Snapshot<? extends XdsResource>>
     @Override
     public void close() {
         closed = true;
+    }
+
+    static Runnable safeRunnable(Runnable runnable, Consumer<Throwable> onError) {
+        return () -> {
+            try {
+                runnable.run();
+            } catch (Throwable t) {
+                onError.accept(t);
+            }
+        };
     }
 }

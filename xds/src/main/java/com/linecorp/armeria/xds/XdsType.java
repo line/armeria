@@ -16,6 +16,9 @@
 
 package com.linecorp.armeria.xds;
 
+import java.util.EnumSet;
+import java.util.Set;
+
 import com.linecorp.armeria.common.annotation.UnstableApi;
 
 /**
@@ -23,10 +26,14 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
  */
 @UnstableApi
 public enum XdsType {
+
     LISTENER("type.googleapis.com/envoy.config.listener.v3.Listener"),
     ROUTE("type.googleapis.com/envoy.config.route.v3.RouteConfiguration"),
     CLUSTER("type.googleapis.com/envoy.config.cluster.v3.Cluster"),
-    ENDPOINT("type.googleapis.com/envoy.config.endpoint.v3.ClusterLoadAssignment");
+    ENDPOINT("type.googleapis.com/envoy.config.endpoint.v3.ClusterLoadAssignment"),
+    VIRTUAL_HOST("type.googleapis.com/envoy.config.route.v3.VirtualHost");
+
+    private static final Set<XdsType> discoverableTypes = EnumSet.of(LISTENER, ROUTE, CLUSTER, ENDPOINT);
 
     private final String typeUrl;
 
@@ -39,5 +46,9 @@ public enum XdsType {
      */
     public String typeUrl() {
         return typeUrl;
+    }
+
+    static Set<XdsType> discoverableTypes() {
+        return discoverableTypes;
     }
 }

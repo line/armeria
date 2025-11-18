@@ -55,6 +55,7 @@ public interface MeterIdPrefixFunction {
      *   <li>Client-side tags:<ul>
      *     <li>{@code method} - RPC method name or {@link HttpMethod#name()} if RPC method name is not
      *                          available</li>
+     *     <li>{@code service} - RPC service name or innermost service class name</li>
      *     <li>{@code httpStatus} - {@link HttpStatus#code()}</li>
      *   </ul></li>
      * </ul>

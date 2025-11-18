@@ -31,9 +31,10 @@ import com.linecorp.armeria.xds.EndpointSnapshot;
 
 import io.envoyproxy.envoy.config.cluster.v3.Cluster;
 import io.envoyproxy.envoy.config.cluster.v3.Cluster.CommonLbConfig;
-import io.envoyproxy.envoy.config.endpoint.v3.ClusterLoadAssignment;
+import io.envoyproxy.envoy.config.cluster.v3.Cluster.CommonLbConfig.ZoneAwareLbConfig;
 
 final class PrioritySet {
+
     private final Map<Integer, HostSet> hostSets;
     private final SortedSet<Integer> priorities;
     private final List<Endpoint> origEndpoints;
@@ -59,6 +60,29 @@ final class PrioritySet {
             return false;
         }
         return commonLbConfig.getZoneAwareLbConfig().getFailTrafficOnPanic();
+    }
+
+    long minClusterSize() {
+        final CommonLbConfig commonLbConfig = commonLbConfig();
+        if (commonLbConfig == null ||
+            !commonLbConfig.hasZoneAwareLbConfig() ||
+            !commonLbConfig.getZoneAwareLbConfig().hasMinClusterSize()) {
+            return 6;
+        }
+        final ZoneAwareLbConfig zoneAwareLbConfig = cluster.getCommonLbConfig().getZoneAwareLbConfig();
+        return zoneAwareLbConfig.getMinClusterSize().getValue();
+    }
+
+    long routingEnabled() {
+        final CommonLbConfig commonLbConfig = commonLbConfig();
+        if (commonLbConfig == null || !commonLbConfig.hasZoneAwareLbConfig()) {
+            return 100;
+        }
+        final ZoneAwareLbConfig zoneAwareLbConfig = commonLbConfig.getZoneAwareLbConfig();
+        if (!zoneAwareLbConfig.hasRoutingEnabled()) {
+            return 100;
+        }
+        return Math.round(zoneAwareLbConfig.getRoutingEnabled().getValue());
     }
 
     @Nullable
@@ -120,18 +144,16 @@ final class PrioritySet {
         private final ImmutableMap.Builder<Integer, HostSet> hostSetsBuilder = ImmutableMap.builder();
         private final ClusterSnapshot clusterSnapshot;
         private final List<Endpoint> origEndpoints;
-        private final ClusterLoadAssignment clusterLoadAssignment;
 
         PrioritySetBuilder(ClusterSnapshot clusterSnapshot, List<Endpoint> origEndpoints) {
             this.clusterSnapshot = clusterSnapshot;
             this.origEndpoints = origEndpoints;
             final EndpointSnapshot endpointSnapshot = clusterSnapshot.endpointSnapshot();
             assert endpointSnapshot != null;
-            clusterLoadAssignment = endpointSnapshot.xdsResource().resource();
         }
 
         void createHostSet(int priority, UpdateHostsParam params) {
-            final HostSet hostSet = new HostSet(params, clusterLoadAssignment);
+            final DefaultHostSet hostSet = new DefaultHostSet(params, clusterSnapshot);
             hostSetsBuilder.put(priority, hostSet);
         }
 

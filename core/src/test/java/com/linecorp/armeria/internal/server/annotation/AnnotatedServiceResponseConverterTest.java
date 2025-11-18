@@ -416,15 +416,13 @@ class AnnotatedServiceResponseConverterTest {
                 public ResponseEntity<Void> expectNotModified() {
                     // Will send '304 Not Modified' because ResponseEntity overrides the @StatusCode
                     // annotation.
-                    return ResponseEntity.of(ResponseHeaders.of(HttpStatus.NOT_MODIFIED));
+                    return ResponseEntity.of(HttpStatus.NOT_MODIFIED);
                 }
 
                 @Get("/expect-unauthorized")
                 public ResponseEntity<HttpResponse> expectUnauthorized() {
                     // Will send '401 Unauthorized' because the content of ResponseEntity is HttpResponse.
-                    return ResponseEntity.of(
-                            ResponseHeaders.of(HttpStatus.OK),
-                            HttpResponse.of(HttpStatus.UNAUTHORIZED));
+                    return ResponseEntity.of(HttpStatus.OK, HttpResponse.of(HttpStatus.UNAUTHORIZED));
                 }
 
                 @Get("/expect-no-content-from-converter")

@@ -23,7 +23,8 @@ import com.linecorp.armeria.server.Server
 
 fun main() {
     val backend =
-        Server.builder()
+        Server
+            .builder()
             .service("/square/{num}") { ctx, _ ->
                 val num = ctx.pathParam("num")?.toLong()
                 if (num != null) {
@@ -31,14 +32,14 @@ fun main() {
                 } else {
                     HttpResponse.of(HttpStatus.BAD_REQUEST)
                 }
-            }
-            .http(8081)
+            }.http(8081)
             .build()
 
     val backendClient = WebClient.of("http://localhost:8081")
 
     val frontend =
-        Server.builder()
+        Server
+            .builder()
             .http(8080)
             .serviceUnder("/", MainService(backendClient))
             .build()

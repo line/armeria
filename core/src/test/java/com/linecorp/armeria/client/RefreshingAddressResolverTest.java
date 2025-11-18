@@ -905,6 +905,22 @@ class RefreshingAddressResolverTest {
         }
     }
 
+    @Test
+    void shouldRemoveListenerFromDnsCacheWhenClosed() {
+        final EventLoop eventLoop = eventLoopExtension.get();
+        final DnsCache dnsCache = DnsCache.builder()
+                .executor(eventLoop)
+                .build();
+        try (RefreshingAddressResolverGroup group = new DnsResolverGroupBuilder()
+                .dnsCache(dnsCache)
+                .build(eventLoop)) {
+            final AddressResolver<InetSocketAddress> resolver = group.getResolver(eventLoop);
+            resolver.close();
+            final DefaultDnsCache defaultDnsCache = (DefaultDnsCache) dnsCache;
+            assertThat(defaultDnsCache.listeners()).isEmpty();
+        }
+    }
+
     private static AbstractStringAssert<?> assertIpAddress(Future<InetSocketAddress> staticAddr) {
         await().untilAsserted(() -> assertThat(staticAddr.isSuccess()).isTrue());
         return assertThat(NetUtil.bytesToIpAddress(staticAddr.getNow().getAddress().getAddress()));

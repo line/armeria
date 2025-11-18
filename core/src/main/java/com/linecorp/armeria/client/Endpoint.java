@@ -55,6 +55,7 @@ import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
+import com.linecorp.armeria.common.loadbalancer.Weighted;
 import com.linecorp.armeria.common.util.DomainSocketAddress;
 import com.linecorp.armeria.common.util.UnmodifiableFuture;
 import com.linecorp.armeria.internal.common.ArmeriaHttpUtil;
@@ -72,7 +73,7 @@ import io.netty.util.NetUtil;
  * represented as {@code "<host>"} or {@code "<host>:<port>"} in the authority part of a URI. It can have
  * an IP address if the host name has been resolved and thus there's no need to query a DNS server.</p>
  */
-public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
+public final class Endpoint implements Comparable<Endpoint>, EndpointGroup, Weighted {
 
     private static final Comparator<Endpoint> COMPARATOR =
             Comparator.comparing(Endpoint::host)
@@ -232,7 +233,6 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
     private final int weight;
     private final List<Endpoint> endpoints;
     private final String authority;
-    private final String strVal;
 
     @Nullable
     private final Attributes attributes;
@@ -264,8 +264,6 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
 
         // Pre-generate the authority.
         authority = generateAuthority(type, host, port);
-        // Pre-generate toString() value.
-        strVal = generateToString(type, authority, ipAddr, weight, attributes);
         this.attributes = attributes;
     }
 
@@ -288,22 +286,6 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
                     host = host.substring(0, host.length() - 1);
                 }
                 return port != 0 ? host + ':' + port : host;
-        }
-    }
-
-    private static String generateToString(Type type, String authority, @Nullable String ipAddr,
-                                           int weight, @Nullable Attributes attributes) {
-        try (TemporaryThreadLocals tempThreadLocals = TemporaryThreadLocals.acquire()) {
-            final StringBuilder buf = tempThreadLocals.stringBuilder();
-            buf.append("Endpoint{").append(authority);
-            if (type == Type.HOSTNAME_AND_IP) {
-                buf.append(", ipAddr=").append(ipAddr);
-            }
-            buf.append(", weight=").append(weight);
-            if (attributes != null) {
-                buf.append(", attributes=").append(attributes);
-            }
-            return buf.append('}').toString();
         }
     }
 
@@ -640,6 +622,22 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
     }
 
     /**
+     * Returns a new {@link Endpoint} with a host whose trailing dot is removed.
+     *
+     * @return the new endpoint with the new host whose trailing dot is removed.
+     *         {@code this} if the {@link #host()} does not end with a dot ({@code .}).
+     */
+    @UnstableApi
+    public Endpoint withoutTrailingDot() {
+        if (!hasTrailingDot(host)) {
+            return this;
+        }
+
+        final String stripped = host.substring(0, host.length() - 1);
+        return new Endpoint(type, stripped, ipAddr, port, weight, attributes);
+    }
+
+    /**
      * Returns a new host endpoint with the specified weight.
      *
      * @return the new endpoint with the specified weight. {@code this} if this endpoint has the same weight.
@@ -655,6 +653,7 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
     /**
      * Returns the weight of this endpoint.
      */
+    @Override
     public int weight() {
         return weight;
     }
@@ -965,6 +964,14 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
 
     @Override
     public String toString() {
-        return strVal;
+        try (TemporaryThreadLocals tempThreadLocals = TemporaryThreadLocals.acquire()) {
+            final StringBuilder buf = tempThreadLocals.stringBuilder();
+            buf.append("Endpoint{").append(authority);
+            if (type == Type.HOSTNAME_AND_IP) {
+                buf.append(", ipAddr=").append(ipAddr);
+            }
+            return buf.append(", weight=").append(weight)
+                      .append('}').toString();
+        }
     }
 }

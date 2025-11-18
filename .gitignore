@@ -12,6 +12,8 @@
 /reports
 /site/public
 /site/.cache
+/site-new/.docusaurus
+/site-new/.cache-loader
 
 # Package Files #
 *.jar
@@ -26,6 +28,7 @@ hs_err_pid*
 
 # Gradle
 .gradle
+.kotlin
 
 # IntelliJ
 **/.idea/*
@@ -140,3 +143,6 @@ typings/
 
 # macOS folder metadata
 .DS_Store
+
+# Claude
+CLAUDE.md

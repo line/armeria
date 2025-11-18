@@ -513,6 +513,7 @@ public abstract class TomcatService implements HttpService {
         coyoteReq.setLocalPort(localAddr.getPort());
 
         final String hostHeader = req.authority();
+        assert hostHeader != null;
         final int colonPos = hostHeader.indexOf(':');
         if (colonPos < 0) {
             coyoteReq.serverName().setString(hostHeader);

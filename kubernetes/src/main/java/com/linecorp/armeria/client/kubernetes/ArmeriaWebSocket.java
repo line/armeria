@@ -52,6 +52,7 @@ final class ArmeriaWebSocket implements WebSocket, Subscriber<WebSocketFrame> {
         // 'buffer' may be mutated by the caller, so we need to copy it.
         final ByteBufAllocator alloc = ClientRequestContext.mapCurrent(RequestContext::alloc,
                                                                        () -> ByteBufAllocator.DEFAULT);
+        assert alloc != null;
         final ByteBuf data = alloc.buffer(buffer.remaining()).writeBytes(buffer.duplicate());
         final int dataLength = data.readableBytes();
         pending.addAndGet(dataLength);

@@ -22,8 +22,8 @@ import static com.linecorp.armeria.xds.XdsTestResources.locality;
 import static com.linecorp.armeria.xds.XdsTestResources.localityLbEndpoints;
 import static com.linecorp.armeria.xds.XdsTestResources.staticBootstrap;
 import static com.linecorp.armeria.xds.XdsTestResources.staticResourceListener;
+import static com.linecorp.armeria.xds.XdsTestUtil.pollLoadBalancer;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.awaitility.Awaitility.await;
 
 import java.util.HashMap;
 import java.util.List;
@@ -36,7 +36,6 @@ import com.google.common.collect.ImmutableMap;
 
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.Endpoint;
-import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.xds.ListenerRoot;
@@ -69,6 +68,7 @@ class LocalityTest {
         final ClusterLoadAssignment loadAssignment =
                 ClusterLoadAssignment
                         .newBuilder()
+                        .setClusterName("cluster")
                         .addEndpoints(localityLbEndpoints(locality("regionA"), lbEndpointsA, 0, 9))
                         .addEndpoints(localityLbEndpoints(locality("regionB"), lbEndpointsB, 0, 1))
                         .build();
@@ -77,16 +77,15 @@ class LocalityTest {
 
         final Bootstrap bootstrap = staticBootstrap(listener, cluster);
         final Map<Endpoint, Integer> countsMap = new HashMap<>();
-        try (XdsBootstrap xdsBootstrap = XdsBootstrap.of(bootstrap)) {
-            final ListenerRoot listenerRoot = xdsBootstrap.listenerRoot("listener");
-            final EndpointGroup endpointGroup = XdsEndpointGroup.of(listenerRoot);
-            await().untilAsserted(() -> assertThat(endpointGroup.whenReady()).isDone());
+        try (XdsBootstrap xdsBootstrap = XdsBootstrap.of(bootstrap);
+             ListenerRoot root = xdsBootstrap.listenerRoot("listener")) {
+            final XdsLoadBalancer loadBalancer = pollLoadBalancer(root, "cluster", cluster);
             // Regardless of the endpoint weight, the locality weight will be used
             // to determine which endpoint group to use
             final ClientRequestContext ctx =
                     ClientRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
             for (int i = 0; i < 10; i++) {
-                final Endpoint selected = endpointGroup.selectNow(ctx);
+                final Endpoint selected = loadBalancer.selectNow(ctx);
                 assertThat(selected).isNotNull();
                 countsMap.compute(selected, (k, v) -> v == null ? 1 : v + 1);
             }
@@ -107,6 +106,7 @@ class LocalityTest {
                                  endpoint("127.0.0.1", 8081));
         final ClusterLoadAssignment loadAssignment =
                 ClusterLoadAssignment.newBuilder()
+                                     .setClusterName("cluster")
                                      .addEndpoints(localityLbEndpoints(locality("regionA"), lbEndpointsA))
                                      .addEndpoints(localityLbEndpoints(locality("regionB"), lbEndpointsB))
                                      .build();
@@ -114,15 +114,14 @@ class LocalityTest {
                 .toBuilder().setCommonLbConfig(LOCALITY_LB_CONFIG).build();
 
         final Bootstrap bootstrap = staticBootstrap(listener, cluster);
-        try (XdsBootstrap xdsBootstrap = XdsBootstrap.of(bootstrap)) {
-            final ListenerRoot listenerRoot = xdsBootstrap.listenerRoot("listener");
-            final EndpointGroup endpointGroup = XdsEndpointGroup.of(listenerRoot);
-            await().untilAsserted(() -> assertThat(endpointGroup.whenReady()).isDone());
+        try (XdsBootstrap xdsBootstrap = XdsBootstrap.of(bootstrap);
+             ListenerRoot root = xdsBootstrap.listenerRoot("listener")) {
+            final XdsLoadBalancer loadBalancer = pollLoadBalancer(root, "cluster", cluster);
             // regionA won't be selected at all since it is empty
             final ClientRequestContext ctx =
                     ClientRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
-            assertThat(endpointGroup.selectNow(ctx)).isEqualTo(Endpoint.of("127.0.0.1", 8081));
-            assertThat(endpointGroup.selectNow(ctx)).isEqualTo(Endpoint.of("127.0.0.1", 8081));
+            assertThat(loadBalancer.selectNow(ctx)).isEqualTo(Endpoint.of("127.0.0.1", 8081));
+            assertThat(loadBalancer.selectNow(ctx)).isEqualTo(Endpoint.of("127.0.0.1", 8081));
         }
     }
 
@@ -140,6 +139,7 @@ class LocalityTest {
         final ClusterLoadAssignment loadAssignment =
                 ClusterLoadAssignment
                         .newBuilder()
+                        .setClusterName("cluster")
                         .addEndpoints(localityLbEndpoints(locality("regionA"), lbEndpointsA, 0, 9))
                         .addEndpoints(localityLbEndpoints(locality("regionB"), lbEndpointsB, 0, 1000))
                         .addEndpoints(localityLbEndpoints(locality("regionC"), lbEndpointsC, 0, 1))
@@ -148,16 +148,16 @@ class LocalityTest {
                 .toBuilder().setCommonLbConfig(LOCALITY_LB_CONFIG).build();
 
         final Bootstrap bootstrap = staticBootstrap(listener, cluster);
-        try (XdsBootstrap xdsBootstrap = XdsBootstrap.of(bootstrap)) {
-            final ListenerRoot listenerRoot = xdsBootstrap.listenerRoot("listener");
-            final EndpointGroup endpointGroup = XdsEndpointGroup.of(listenerRoot);
-            await().untilAsserted(() -> assertThat(endpointGroup.whenReady()).isDone());
+        try (XdsBootstrap xdsBootstrap = XdsBootstrap.of(bootstrap);
+             ListenerRoot root = xdsBootstrap.listenerRoot("listener")) {
+
+            final XdsLoadBalancer loadBalancer = pollLoadBalancer(root, "cluster", cluster);
 
             final ClientRequestContext ctx =
                     ClientRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
             final Map<Endpoint, Integer> countsMap = new HashMap<>();
             for (int i = 0; i < 10; i++) {
-                final Endpoint selected = endpointGroup.selectNow(ctx);
+                final Endpoint selected = loadBalancer.selectNow(ctx);
                 assertThat(selected).isNotNull();
                 countsMap.compute(selected, (k, v) -> v == null ? 1 : v + 1);
             }

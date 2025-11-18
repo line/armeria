@@ -75,7 +75,9 @@ final class ArmeriaHttpResponseBodyStream extends DefaultSplitHttpResponse {
             if (publisherForLateSubscribersUpdater.compareAndSet(this, null, newPublisher)) {
                 newPublisher.subscribe(s);
             } else {
-                this.publisherForLateSubscribers.subscribe(s);
+                final Publisher<HttpData> oldPublisherForLateSubscribers = this.publisherForLateSubscribers;
+                assert oldPublisherForLateSubscribers != null;
+                oldPublisherForLateSubscribers.subscribe(s);
             }
         }
     }

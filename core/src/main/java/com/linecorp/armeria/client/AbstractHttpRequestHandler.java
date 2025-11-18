@@ -45,6 +45,8 @@ import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.internal.client.ClientRequestContextExtension;
 import com.linecorp.armeria.internal.client.DecodedHttpResponse;
 import com.linecorp.armeria.internal.client.HttpSession;
+import com.linecorp.armeria.internal.common.CancellationScheduler;
+import com.linecorp.armeria.internal.common.CancellationScheduler.CancellationTask;
 import com.linecorp.armeria.internal.common.RequestContextUtil;
 import com.linecorp.armeria.unsafe.PooledObjects;
 
@@ -89,6 +91,7 @@ abstract class AbstractHttpRequestHandler implements ChannelFutureListener {
     private ScheduledFuture<?> timeoutFuture;
     private State state = State.NEEDS_TO_WRITE_FIRST_HEADER;
     private boolean loggedRequestFirstBytesTransferred;
+    private boolean failed;
 
     AbstractHttpRequestHandler(Channel ch, ClientHttpObjectEncoder encoder, HttpResponseDecoder responseDecoder,
                                DecodedHttpResponse originalRes,
@@ -184,6 +187,7 @@ abstract class AbstractHttpRequestHandler implements ChannelFutureListener {
         }
 
         this.session = session;
+        originalRes.setStreamId(streamId());
         responseWrapper = responseDecoder.addResponse(this, id, originalRes, ctx, ch.eventLoop());
 
         if (timeoutMillis > 0) {
@@ -192,7 +196,31 @@ abstract class AbstractHttpRequestHandler implements ChannelFutureListener {
                     () -> failAndReset(WriteTimeoutException.get()),
                     timeoutMillis, TimeUnit.MILLISECONDS);
         }
+        final CancellationScheduler scheduler = cancellationScheduler();
+        if (scheduler != null) {
+            scheduler.updateTask(newCancellationTask());
+            if (ctx.responseTimeoutMode() == ResponseTimeoutMode.CONNECTION_ACQUIRED) {
+                scheduler.start();
+            }
+        }
+        if (ctx.isCancelled()) {
+            // The previous cancellation task wraps the cause with an UnprocessedRequestException
+            // so we return early
+            return false;
+        }
         return true;
+    }
+
+    private CancellationTask newCancellationTask() {
+        return cause -> {
+            if (ch.eventLoop().inEventLoop()) {
+                try (SafeCloseable ignored = RequestContextUtil.pop()) {
+                    failAndReset(cause);
+                }
+            } else {
+                ch.eventLoop().execute(() -> failAndReset(cause));
+            }
+        };
     }
 
     RequestHeaders mergedRequestHeaders(RequestHeaders headers) {
@@ -354,6 +382,10 @@ abstract class AbstractHttpRequestHandler implements ChannelFutureListener {
     }
 
     private void fail(Throwable cause) {
+        if (failed) {
+            return;
+        }
+        failed = true;
         state = State.DONE;
         cancel();
         logBuilder.endRequest(cause);
@@ -368,9 +400,20 @@ abstract class AbstractHttpRequestHandler implements ChannelFutureListener {
             logBuilder.endResponse(cause);
             originalRes.close(cause);
         }
+
+        final CancellationScheduler scheduler = cancellationScheduler();
+        if (scheduler != null) {
+            // best-effort attempt to cancel the scheduled timeout task so that RequestContext#cause
+            // isn't set unnecessarily
+            scheduler.cancelScheduled();
+        }
     }
 
     final void failAndReset(Throwable cause) {
+        if (failed) {
+            return;
+        }
+
         if (cause instanceof WriteTimeoutException) {
             final HttpSession session = HttpSession.get(ch);
             // Mark the session as unhealthy so that subsequent requests do not use it.
@@ -382,26 +425,25 @@ abstract class AbstractHttpRequestHandler implements ChannelFutureListener {
             state = State.DONE;
             cancel();
             logBuilder.endRequest(cause);
-            return;
+        } else {
+            fail(cause);
         }
 
-        fail(cause);
-
         final Http2Error error;
-        if (Exceptions.isStreamCancelling(cause)) {
+        if (cause instanceof ResponseCompleteException || Exceptions.isStreamCancelling(cause)) {
             error = Http2Error.CANCEL;
         } else {
             error = Http2Error.INTERNAL_ERROR;
         }
 
-        if (error.code() != Http2Error.CANCEL.code()) {
+        if (error.code() != Http2Error.CANCEL.code() && cause != ctx.cancellationCause()) {
             Exceptions.logIfUnexpected(logger, ch,
                                        HttpSession.get(ch).protocol(),
                                        "a request publisher raised an exception", cause);
         }
 
         if (ch.isActive()) {
-            encoder.writeReset(id, streamId(), error, false);
+            encoder.writeReset(id, streamId(), error);
             ch.flush();
         }
     }
@@ -414,5 +456,14 @@ abstract class AbstractHttpRequestHandler implements ChannelFutureListener {
 
         this.timeoutFuture = null;
         return timeoutFuture.cancel(false);
+    }
+
+    @Nullable
+    private CancellationScheduler cancellationScheduler() {
+        final ClientRequestContextExtension ctxExt = ctx.as(ClientRequestContextExtension.class);
+        if (ctxExt != null) {
+            return ctxExt.responseCancellationScheduler();
+        }
+        return null;
     }
 }

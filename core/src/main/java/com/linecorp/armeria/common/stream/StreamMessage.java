@@ -20,6 +20,7 @@ import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.linecorp.armeria.common.stream.StreamMessageUtil.createStreamMessageFrom;
 import static com.linecorp.armeria.internal.common.stream.InternalStreamMessageUtil.EMPTY_OPTIONS;
+import static com.linecorp.armeria.internal.common.stream.InternalStreamMessageUtil.containsNotifyCancellation;
 import static java.util.Objects.requireNonNull;
 
 import java.io.File;
@@ -28,6 +29,7 @@ import java.io.OutputStream;
 import java.nio.file.OpenOption;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
+import java.time.Duration;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
@@ -43,10 +45,12 @@ import org.reactivestreams.Subscription;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
+import com.google.common.collect.ObjectArrays;
 
 import com.linecorp.armeria.common.CommonPools;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.RequestContext;
+import com.linecorp.armeria.common.StreamTimeoutException;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.util.Exceptions;
@@ -752,6 +756,11 @@ public interface StreamMessage<T> extends Publisher<T> {
         requireNonNull(executor, "executor");
         requireNonNull(options, "options");
         final StreamMessageCollector<T> collector = new StreamMessageCollector<>(options);
+        if (!containsNotifyCancellation(options)) {
+            // Make the return CompletableFuture completed exceptionally if the stream is cancelled while
+            // collecting the elements.
+            options = ObjectArrays.concat(options, SubscriptionOption.NOTIFY_CANCELLATION);
+        }
         subscribe(collector, executor, options);
         return collector.collect();
     }
@@ -1183,7 +1192,7 @@ public interface StreamMessage<T> extends Publisher<T> {
      */
     @UnstableApi
     default StreamMessage<T> endWith(Function<@Nullable Throwable, ? extends @Nullable T> finalizer) {
-        return new SurroundingPublisher<>(null, this, finalizer);
+        return SurroundingPublisher.of(null, this, finalizer);
     }
 
     /**
@@ -1202,5 +1211,49 @@ public interface StreamMessage<T> extends Publisher<T> {
     default StreamMessage<T> subscribeOn(EventExecutor eventExecutor) {
         requireNonNull(eventExecutor, "eventExecutor");
         return new SubscribeOnStreamMessage<>(this, eventExecutor);
+    }
+
+    /**
+     * Configures a timeout for the stream based on the specified duration with
+     * {@link StreamTimeoutMode#UNTIL_NEXT}. If no events are received within the specified duration,
+     * the stream will be terminated with a {@link StreamTimeoutException}.
+     *
+     * <p>Example usage:
+     * <pre>{@code
+     * StreamMessage<String> stream = ...;
+     * // An item must be received within 10 seconds of the previous item to avoid a timeout.
+     * StreamMessage<String> timeoutStream = stream.timeout(Duration.ofSeconds(10));
+     * }</pre>
+     *
+     * @param timeoutDuration the duration before a timeout occurs
+     * @return a new {@link StreamMessage} with the specified timeout duration and default mode
+     */
+    @UnstableApi
+    default StreamMessage<T> timeout(Duration timeoutDuration) {
+        return timeout(timeoutDuration, StreamTimeoutMode.UNTIL_NEXT);
+    }
+
+    /**
+     * Configures a timeout for the stream based on the specified duration and mode. >If no events are received
+     * within the specified duration, the stream will be terminated with a {@link StreamTimeoutException}.
+     *
+     * <p>Example usage:
+     * <pre>{@code
+     * StreamMessage<String> stream = ...;
+     * StreamMessage<String> timeoutStream = stream.timeout(
+     *     Duration.ofSeconds(10),
+     *     StreamTimeoutMode.UNTIL_FIRST
+     * );
+     * }</pre>
+     *
+     * @param timeoutDuration the duration before a timeout occurs
+     * @param timeoutMode the mode in which the timeout is applied (see {@link StreamTimeoutMode} for details)
+     * @return a new {@link StreamMessage} with the specified timeout duration and mode applied
+     */
+    @UnstableApi
+    default StreamMessage<T> timeout(Duration timeoutDuration, StreamTimeoutMode timeoutMode) {
+        requireNonNull(timeoutDuration, "timeoutDuration");
+        requireNonNull(timeoutMode, "timeoutMode");
+        return new TimeoutStreamMessage<>(this, timeoutDuration, timeoutMode);
     }
 }

@@ -155,7 +155,8 @@ public abstract class AbstractRequestContextBuilder {
         } else {
             reqTarget = DefaultRequestTarget.createWithoutValidation(
                     RequestTargetForm.ORIGIN, null, null, null, -1,
-                    uri.getRawPath(), uri.getRawPath(), uri.getRawQuery(), uri.getRawFragment());
+                    uri.getRawPath(), uri.getRawPath(), null,
+                    uri.getRawQuery(), uri.getRawFragment());
         }
     }
 

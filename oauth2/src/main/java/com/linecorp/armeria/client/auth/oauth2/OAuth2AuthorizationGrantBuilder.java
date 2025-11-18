@@ -20,8 +20,10 @@ import static com.google.common.base.Preconditions.checkState;
 import static java.util.Objects.requireNonNull;
 
 import java.time.Duration;
+import java.time.Instant;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Consumer;
+import java.util.function.Predicate;
 import java.util.function.Supplier;
 
 import com.linecorp.armeria.client.WebClient;
@@ -36,10 +38,17 @@ import com.linecorp.armeria.common.auth.oauth2.OAuth2ResponseHandler;
 @UnstableApi
 public final class OAuth2AuthorizationGrantBuilder {
 
+    private static final Duration DEFAULT_REFRESH_BEFORE = Duration.ofMinutes(1L); // 1 minute
+
     /**
      * A period when the token should be refreshed proactively prior to its expiry.
      */
-    private static final Duration DEFAULT_REFRESH_BEFORE = Duration.ofMinutes(1L); // 1 minute
+    private static final Predicate<? super GrantedOAuth2AccessToken> DEFAULT_REFRESH_IF =
+            toRefreshIf(DEFAULT_REFRESH_BEFORE);
+
+    private static Predicate<? super GrantedOAuth2AccessToken> toRefreshIf(Duration refreshBefore) {
+        return token -> !token.isValid(Instant.now().plus(refreshBefore));
+    }
 
     private final WebClient accessTokenEndpoint;
     private final String accessTokenEndpointPath;
@@ -48,7 +57,8 @@ public final class OAuth2AuthorizationGrantBuilder {
     private Supplier<AccessTokenRequest> requestSupplier;
     private OAuth2ResponseHandler<GrantedOAuth2AccessToken> responseHandler =
             DefaultAccessTokenResponseHandler.INSTANCE;
-    private Duration refreshBefore = DEFAULT_REFRESH_BEFORE;
+    @Nullable
+    private Predicate<? super GrantedOAuth2AccessToken> refreshIf = DEFAULT_REFRESH_IF;
 
     @Nullable
     private Supplier<CompletableFuture<? extends GrantedOAuth2AccessToken>> fallbackTokenProvider;
@@ -99,7 +109,22 @@ public final class OAuth2AuthorizationGrantBuilder {
      * Sets a period when the token should be refreshed proactively prior to its expiry.
      */
     public OAuth2AuthorizationGrantBuilder refreshBefore(Duration refreshBefore) {
-        this.refreshBefore = requireNonNull(refreshBefore, "refreshBefore");
+        requireNonNull(refreshBefore, "refreshBefore");
+        checkState(!refreshBefore.isNegative(), "refreshBefore: %s (expected: >= 0)", refreshBefore);
+        if (refreshBefore.isZero()) {
+            refreshIf = null;
+            return this;
+        } else {
+            return refreshIf(toRefreshIf(refreshBefore));
+        }
+    }
+
+    /**
+     * Sets a period when the token should be refreshed proactively prior to its expiry.
+     */
+    public OAuth2AuthorizationGrantBuilder refreshIf(Predicate<? super GrantedOAuth2AccessToken> refreshIf) {
+        requireNonNull(refreshIf, "refreshIf");
+        this.refreshIf = refreshIf;
         return this;
     }
 
@@ -141,7 +166,7 @@ public final class OAuth2AuthorizationGrantBuilder {
     public OAuth2AuthorizationGrant build() {
         checkState(requestSupplier != null, "accessTokenRequest() is not set.");
         return new DefaultOAuth2AuthorizationGrant(
-                accessTokenEndpoint, accessTokenEndpointPath, requestSupplier, responseHandler, refreshBefore,
+                accessTokenEndpoint, accessTokenEndpointPath, requestSupplier, responseHandler, refreshIf,
                 fallbackTokenProvider, newTokenConsumer);
     }
 }

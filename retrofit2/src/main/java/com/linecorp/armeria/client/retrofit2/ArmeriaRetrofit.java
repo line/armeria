@@ -22,9 +22,11 @@ import java.net.URI;
 
 import com.linecorp.armeria.client.Clients;
 import com.linecorp.armeria.client.Endpoint;
+import com.linecorp.armeria.client.HttpPreprocessor;
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 
 import retrofit2.Retrofit;
 
@@ -101,6 +103,23 @@ public final class ArmeriaRetrofit {
      */
     public static Retrofit of(SessionProtocol protocol, EndpointGroup endpointGroup, String path) {
         return builder(protocol, endpointGroup, path).build();
+    }
+
+    /**
+     * Returns a new {@link Retrofit} which is configured with specified {@link HttpPreprocessor}.
+     */
+    @UnstableApi
+    public static Retrofit of(HttpPreprocessor preprocessor) {
+        return builder(preprocessor).build();
+    }
+
+    /**
+     * Returns a new {@link Retrofit} which is configured with specified {@link HttpPreprocessor}
+     * and {@code path}.
+     */
+    @UnstableApi
+    public static Retrofit of(HttpPreprocessor preprocessor, String path) {
+        return builder(preprocessor, path).build();
     }
 
     /**
@@ -187,6 +206,24 @@ public final class ArmeriaRetrofit {
         requireNonNull(endpointGroup, "endpointGroup");
         requireNonNull(path, "path");
         return builder(WebClient.of(protocol, endpointGroup, path));
+    }
+
+    /**
+     * Returns a new {@link ArmeriaRetrofitBuilder} which is configured with specified
+     * {@link HttpPreprocessor}.
+     */
+    @UnstableApi
+    public static ArmeriaRetrofitBuilder builder(HttpPreprocessor httpPreprocessor) {
+        return builder(WebClient.of(httpPreprocessor));
+    }
+
+    /**
+     * Returns a new {@link ArmeriaRetrofitBuilder} which is configured with specified {@link HttpPreprocessor}
+     * and {@code path}.
+     */
+    @UnstableApi
+    public static ArmeriaRetrofitBuilder builder(HttpPreprocessor httpPreprocessor, String path) {
+        return builder(WebClient.of(httpPreprocessor, path));
     }
 
     /**

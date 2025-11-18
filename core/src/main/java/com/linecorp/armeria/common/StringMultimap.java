@@ -722,7 +722,7 @@ abstract class StringMultimap<IN_NAME extends CharSequence, NAME extends IN_NAME
     final void addObject(IN_NAME name, Object value) {
         final NAME normalizedName = normalizeName(name);
         requireNonNull(value, "value");
-        addObjectAndNotify(normalizedName, fromObject(value), true);
+        addObjectAndNotify(normalizedName, value, true);
     }
 
     final void addObject(IN_NAME name, Iterable<?> values) {

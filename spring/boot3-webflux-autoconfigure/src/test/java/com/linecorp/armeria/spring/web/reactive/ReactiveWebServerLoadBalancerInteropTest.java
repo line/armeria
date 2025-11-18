@@ -22,6 +22,8 @@ import static org.springframework.web.reactive.function.server.RequestPredicates
 import static org.springframework.web.reactive.function.server.RouterFunctions.route;
 import static org.springframework.web.reactive.function.server.ServerResponse.ok;
 
+import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.stream.Collectors;
 
 import org.junit.jupiter.api.AfterEach;
@@ -50,7 +52,7 @@ import com.linecorp.armeria.common.SessionProtocol;
 
 import ch.qos.logback.classic.Logger;
 import ch.qos.logback.classic.spi.ILoggingEvent;
-import ch.qos.logback.core.read.ListAppender;
+import ch.qos.logback.core.AppenderBase;
 import reactor.core.publisher.Mono;
 
 @SpringBootTest(webEnvironment = WebEnvironment.RANDOM_PORT)
@@ -79,7 +81,7 @@ class ReactiveWebServerLoadBalancerInteropTest {
     int port;
 
     final Logger httpWebHandlerAdapterLogger = (Logger) LoggerFactory.getLogger(HttpWebHandlerAdapter.class);
-    final ListAppender<ILoggingEvent> logAppender = new ListAppender<>();
+    final ConcurrentListAppender<ILoggingEvent> logAppender = new ConcurrentListAppender<>();
 
     @BeforeEach
     public void attachAppender() {
@@ -147,5 +149,15 @@ class ReactiveWebServerLoadBalancerInteropTest {
                            .filter(event -> event.getFormattedMessage().contains(errorLogSubString))
                            .collect(Collectors.toList()))
                 .isEmpty();
+    }
+
+    private static final class ConcurrentListAppender<E> extends AppenderBase<E> {
+
+        List<E> list = new CopyOnWriteArrayList<>();
+
+        @Override
+        protected void append(E eventObject) {
+            list.add(eventObject);
+        }
     }
 }

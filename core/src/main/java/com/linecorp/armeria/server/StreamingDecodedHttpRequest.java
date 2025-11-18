@@ -16,7 +16,11 @@
 
 package com.linecorp.armeria.server;
 
+import java.util.concurrent.CompletableFuture;
+
 import javax.annotation.Nonnull;
+
+import com.google.common.annotations.VisibleForTesting;
 
 import com.linecorp.armeria.common.ExchangeType;
 import com.linecorp.armeria.common.HttpData;
@@ -43,7 +47,7 @@ final class StreamingDecodedHttpRequest extends DefaultHttpRequest implements De
     private final long requestStartTimeNanos;
     private final long requestStartTimeMicros;
     private final boolean http1WebSocket;
-    private boolean shouldResetOnlyIfRemoteIsOpen;
+    private final CompletableFuture<Void> whenResponseSent = new CompletableFuture<>();
 
     @Nullable
     private ServiceRequestContext ctx;
@@ -60,7 +64,7 @@ final class StreamingDecodedHttpRequest extends DefaultHttpRequest implements De
                                 boolean keepAlive, InboundTrafficController inboundTrafficController,
                                 long maxRequestLength, RoutingContext routingCtx, ExchangeType exchangeType,
                                 long requestStartTimeNanos, long requestStartTimeMicros,
-                                boolean http1WebSocket, boolean shouldResetOnlyIfRemoteIsOpen) {
+                                boolean http1WebSocket) {
         super(headers);
 
         this.eventLoop = eventLoop;
@@ -75,12 +79,17 @@ final class StreamingDecodedHttpRequest extends DefaultHttpRequest implements De
         this.requestStartTimeNanos = requestStartTimeNanos;
         this.requestStartTimeMicros = requestStartTimeMicros;
         this.http1WebSocket = http1WebSocket;
-        this.shouldResetOnlyIfRemoteIsOpen = shouldResetOnlyIfRemoteIsOpen;
     }
 
     @Override
     public void init(ServiceRequestContext ctx) {
         this.ctx = ctx;
+    }
+
+    @Nullable
+    @Override
+    public ServiceRequestContext requestContext() {
+        return ctx;
     }
 
     @Override
@@ -163,7 +172,7 @@ final class StreamingDecodedHttpRequest extends DefaultHttpRequest implements De
     protected void onRemoval(HttpObject obj) {
         if (obj instanceof HttpData) {
             final int length = ((HttpData) obj).length();
-            inboundTrafficController.dec(length);
+            inboundTrafficController.dec(streamId, length);
         }
     }
 
@@ -214,6 +223,11 @@ final class StreamingDecodedHttpRequest extends DefaultHttpRequest implements De
     }
 
     @Override
+    public CompletableFuture<Void> whenResponseSent() {
+        return whenResponseSent;
+    }
+
+    @Override
     public ExchangeType exchangeType() {
         return exchangeType;
     }
@@ -233,13 +247,8 @@ final class StreamingDecodedHttpRequest extends DefaultHttpRequest implements De
         return http1WebSocket;
     }
 
-    @Override
-    public void setShouldResetOnlyIfRemoteIsOpen(boolean shouldResetOnlyIfRemoteIsOpen) {
-        this.shouldResetOnlyIfRemoteIsOpen = shouldResetOnlyIfRemoteIsOpen;
-    }
-
-    @Override
-    public boolean shouldResetOnlyIfRemoteIsOpen() {
-        return shouldResetOnlyIfRemoteIsOpen;
+    @VisibleForTesting
+    InboundTrafficController inboundTrafficController() {
+        return inboundTrafficController;
     }
 }

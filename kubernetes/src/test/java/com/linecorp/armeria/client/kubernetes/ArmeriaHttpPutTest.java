@@ -15,6 +15,8 @@
  */
 package com.linecorp.armeria.client.kubernetes;
 
+import com.linecorp.armeria.client.UnprocessedRequestException;
+
 import io.fabric8.kubernetes.client.http.AbstractHttpPutTest;
 import io.fabric8.kubernetes.client.http.HttpClient;
 
@@ -23,5 +25,10 @@ class ArmeriaHttpPutTest extends AbstractHttpPutTest {
     @Override
     protected HttpClient.Factory getHttpClientFactory() {
         return new ArmeriaHttpClientFactory();
+    }
+
+    @Override
+    protected Class<? extends Exception> getConnectionFailedExceptionType() {
+        return UnprocessedRequestException.class;
     }
 }

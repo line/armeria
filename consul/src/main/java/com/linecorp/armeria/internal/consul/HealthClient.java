@@ -110,6 +110,16 @@ final class HealthClient {
 
     @Nullable
     private static Endpoint toEndpoint(HealthService healthService) {
+        if (healthService.service == null) {
+            return null;
+        }
+        if (healthService.node == null) {
+            return null;
+        }
+
+        assert healthService.service != null;
+        assert healthService.node != null;
+
         if (!Strings.isNullOrEmpty(healthService.service.address)) {
             return Endpoint.of(healthService.service.address, healthService.service.port);
         } else if (!Strings.isNullOrEmpty(healthService.node.address)) {
@@ -122,9 +132,11 @@ final class HealthClient {
     @JsonIgnoreProperties(ignoreUnknown = true)
     @JsonInclude(Include.NON_NULL)
     private static final class HealthService {
+        @Nullable
         @JsonProperty("Node")
         Node node;
 
+        @Nullable
         @JsonProperty("Service")
         Service service;
     }
@@ -132,21 +144,27 @@ final class HealthClient {
     @JsonIgnoreProperties(ignoreUnknown = true)
     @JsonInclude(Include.NON_NULL)
     private static final class Node {
+        @Nullable
         @JsonProperty("ID")
         String id;
 
+        @Nullable
         @JsonProperty("Node")
         String node;
 
+        @Nullable
         @JsonProperty("Address")
         String address;
 
+        @Nullable
         @JsonProperty("Datacenter")
         String datacenter;
 
+        @Nullable
         @JsonProperty("TaggedAddresses")
         Object taggedAddresses;
 
+        @Nullable
         @JsonProperty("Meta")
         Map<String, Object> meta;
     }
@@ -154,27 +172,34 @@ final class HealthClient {
     @JsonIgnoreProperties(ignoreUnknown = true)
     @JsonInclude(Include.NON_NULL)
     public static final class Service {
+        @Nullable
         @JsonProperty("ID")
         String id;
 
+        @Nullable
         @JsonProperty("Service")
         String service;
 
+        @Nullable
         @JsonProperty("Tags")
         String[] tags;
 
+        @Nullable
         @JsonProperty("Address")
         String address;
 
+        @Nullable
         @JsonProperty("TaggedAddresses")
         Object taggedAddresses;
 
+        @Nullable
         @JsonProperty("Meta")
         Map<String, Object> meta;
 
         @JsonProperty("Port")
         int port;
 
+        @Nullable
         @JsonProperty("Weights")
         Map<String, Object> weights;
     }

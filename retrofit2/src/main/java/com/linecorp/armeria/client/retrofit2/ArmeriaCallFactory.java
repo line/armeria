@@ -171,12 +171,14 @@ final class ArmeriaCallFactory implements Factory {
             return request;
         }
 
-        private synchronized void createRequest() {
+        private synchronized HttpResponse createRequest() {
             if (httpResponse != null) {
                 throw new IllegalStateException("executed already");
             }
             executionStateUpdater.compareAndSet(this, ExecutionState.IDLE, ExecutionState.RUNNING);
-            httpResponse = doCall(callFactory, request);
+            final HttpResponse newResponse = doCall(callFactory, request);
+            httpResponse = newResponse;
+            return newResponse;
         }
 
         @Override
@@ -194,8 +196,7 @@ final class ArmeriaCallFactory implements Factory {
 
         @Override
         public void enqueue(Callback callback) {
-            createRequest();
-            httpResponse.subscribe(callFactory.subscriberFactory.create(this, callback, request));
+            createRequest().subscribe(callFactory.subscriberFactory.create(this, callback, request));
         }
 
         @Override

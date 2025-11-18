@@ -16,6 +16,12 @@
 
 package com.linecorp.armeria.common;
 
+import java.lang.reflect.Method;
+import java.util.function.Predicate;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.linecorp.armeria.client.ClientFactoryBuilder;
 import com.linecorp.armeria.common.metric.MeterIdPrefix;
 import com.linecorp.armeria.common.metric.MoreMeterBinders;
@@ -30,6 +36,8 @@ import io.netty.channel.EventLoopGroup;
  */
 public final class CommonPools {
 
+    private static final Logger logger = LoggerFactory.getLogger(CommonPools.class);
+
     // Threads spawned as needed and reused, with a 60s timeout and unbounded work queue.
     private static final BlockingTaskExecutor BLOCKING_TASK_EXECUTOR =
             BlockingTaskExecutor.builder().threadNamePrefix("armeria-common-blocking-tasks").build();
@@ -41,6 +49,20 @@ public final class CommonPools {
         MoreMeterBinders
                 .eventLoopMetrics(WORKER_GROUP, new MeterIdPrefix("armeria.netty.common"))
                 .bindTo(Flags.meterRegistry());
+
+        try {
+            final Class<?> aClass = Class.forName("reactor.core.scheduler.Schedulers",
+                                                  true, CommonPools.class.getClassLoader());
+            final Method ignored = aClass.getDeclaredMethod(
+                    "registerNonBlockingThreadPredicate", Predicate.class);
+            // Call only when the method exists.
+            ReactorNonBlockingUtil.registerEventLoopAsNonBlocking();
+        } catch (ClassNotFoundException e) {
+            // Do nothing because reactor is not available.
+        } catch (NoSuchMethodException e) {
+            logger.warn("Failed to register the common worker group as non-blocking for Reactor. " +
+                        "Please consider upgrading Reactor to 3.7.0 or newer.");
+        }
     }
 
     /**

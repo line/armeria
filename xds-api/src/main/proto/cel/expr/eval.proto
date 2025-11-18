@@ -1,0 +1,138 @@
+// Copyright 2023 Google LLC
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+syntax = "proto3";
+
+package cel.expr;
+
+import "google/protobuf/any.proto";
+import "cel/expr/value.proto";
+
+option cc_enable_arenas = true;
+option go_package = "cel.dev/expr";
+option java_multiple_files = true;
+option java_outer_classname = "EvalProto";
+option java_package = "dev.cel.expr";
+
+// The state of an evaluation.
+//
+// Can represent an initial, partial, or completed state of evaluation.
+message EvalState {
+  // A single evaluation result.
+  message Result {
+    // The id of the expression this result if for.
+    int64 expr = 1;
+
+    // The index in `values` of the resulting value.
+    int64 value = 2;
+  }
+
+  // The unique values referenced in this message.
+  repeated ExprValue values = 1;
+
+  // An ordered list of results.
+  //
+  // Tracks the flow of evaluation through the expression.
+  // May be sparse.
+  repeated Result results = 3;
+}
+
+// The value of an evaluated expression.
+message ExprValue {
+  // An expression can resolve to a value, error or unknown.
+  oneof kind {
+    Value value = 1;
+
+    // The set of errors in the critical path of evaluation.
+    //
+    // Only errors in the critical path are included. For example,
+    // `(<error1> || true) && <error2>` will only result in `<error2>`,
+    // while `<error1> || <error2>` will result in both `<error1>` and
+    // `<error2>`.
+    //
+    // Errors cause by the presence of other errors are not included in the
+    // set. For example `<error1>.foo`, `foo(<error1>)`, and `<error1> + 1` will
+    // only result in `<error1>`.
+    //
+    // Multiple errors *might* be included when evaluation could result
+    // in different errors. For example `<error1> + <error2>` and
+    // `foo(<error1>, <error2>)` may result in `<error1>`, `<error2>` or both.
+    // The exact subset of errors included for this case is unspecified and
+    // depends on the implementation details of the evaluator.
+    ErrorSet error = 2;
+
+    // The set of unknowns in the critical path of evaluation.
+    //
+    // Unknown behaves identically to Error with regards to propagation.
+    // Specifically, only unknowns in the critical path are included, unknowns
+    // caused by the presence of other unknowns are not included, and multiple
+    // unknowns *might* be included when evaluation could result in
+    // different unknowns. For example:
+    //
+    //     (<unknown[1]> || true) && <unknown[2]> -> <unknown[2]>
+    //     <unknown[1]> || <unknown[2]> -> <unknown[1,2]>
+    //     <unknown[1]>.foo -> <unknown[1]>
+    //     foo(<unknown[1]>) -> <unknown[1]>
+    //     <unknown[1]> + <unknown[2]> -> <unknown[1]> or <unknown[2[>
+    //
+    // Unknown takes precedence over Error in cases where a `Value` can short
+    // circuit the result:
+    //
+    //     <error> || <unknown> -> <unknown>
+    //     <error> && <unknown> -> <unknown>
+    //
+    // Errors take precedence in all other cases:
+    //
+    //     <unknown> + <error> -> <error>
+    //     foo(<unknown>, <error>) -> <error>
+    UnknownSet unknown = 3;
+  }
+}
+
+// A set of errors.
+//
+// The errors included depend on the context. See `ExprValue.error`.
+message ErrorSet {
+  // Errors that could come up during evaluation phase.
+  repeated Status errors = 1;
+}
+
+  // Each `Status` message contains three pieces of data: error code, error message,
+  // and error details.
+  //
+  // You can find out more about this error model and how to work with it in the
+  // [API Design Guide](https://cloud.google.com/apis/design/errors).
+  //
+  // Status value is intended to be wire and field compatible with `google.rpc.Status`.
+  message Status {
+    // The status code, which should be an enum value of [google.rpc.Code][].
+    int32 code = 1;
+
+    // A developer-facing error message, which should be in English. Any
+    // user-facing error message should be localized and sent in the
+    // [Status.details][] field, or localized by the client.
+    string message = 2;
+
+    // A list of messages that carry the error details.  There is a common set of
+    // message types for APIs to use.
+    repeated google.protobuf.Any details = 3;
+  }
+
+// A set of expressions for which the value is unknown.
+//
+// The unknowns included depend on the context. See `ExprValue.unknown`.
+message UnknownSet {
+  // The ids of the expressions with unknown values.
+  repeated int64 exprs = 1;
+}

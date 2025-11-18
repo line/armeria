@@ -36,7 +36,7 @@ public final class ThriftMetadataAccess {
 
     private static boolean preInitializeThriftClass;
 
-    private static final String THRIFT_OPTIONS_PROPERTIES = "../../common/thrift/thrift-options.properties";
+    private static final String THRIFT_OPTIONS_PROPERTIES = "thrift-options.properties";
 
     static {
         try {

@@ -109,7 +109,9 @@ class Http1ServerDelayedCloseConnectionTest {
             assertThat(in.readLine()).isEmpty();
             assertThat(in.readLine()).isEqualToIgnoringCase("OK");
 
-            assertThat(server.server().numConnections()).isEqualTo(1);
+            await().untilAsserted(() -> {
+                assertThat(server.server().numConnections()).isEqualTo(1);
+            });
 
             socket.close();
             assertThatThrownBy(

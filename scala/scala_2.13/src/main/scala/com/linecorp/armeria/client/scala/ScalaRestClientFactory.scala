@@ -17,7 +17,7 @@
 package com.linecorp.armeria.client.scala
 
 import com.linecorp.armeria.client.{ClientBuilderParams, ClientFactory, DecoratingClientFactory, WebClient}
-import com.linecorp.armeria.common.{Scheme, SerializationFormat}
+import com.linecorp.armeria.common.SerializationFormat
 
 private[scala] final class ScalaRestClientFactory(delegate: ClientFactory)
     extends DecoratingClientFactory(delegate) {
@@ -26,13 +26,11 @@ private[scala] final class ScalaRestClientFactory(delegate: ClientFactory)
     classOf[ScalaRestClient].isAssignableFrom(clientType)
 
   override def newClient(params: ClientBuilderParams): ScalaRestClient = {
-    val scheme = params.scheme()
-    val newParams = ClientBuilderParams.of(
-      Scheme.of(SerializationFormat.NONE, scheme.sessionProtocol()),
-      params.endpointGroup(),
-      params.absolutePathRef(),
-      classOf[WebClient],
-      params.options())
+    val newParams = params
+      .paramsBuilder()
+      .serializationFormat(SerializationFormat.NONE)
+      .clientType(classOf[WebClient])
+      .build()
     val webClient = super.newClient(newParams).asInstanceOf[WebClient]
     ScalaRestClient(webClient)
   }

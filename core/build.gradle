@@ -107,6 +107,7 @@ dependencies {
 
     // Micrometer and other metric-related stuff
     api libs.micrometer.core
+    api libs.context.propagation
     optionalApi libs.micrometer.prometheus.legacy
     optionalApi libs.dropwizard.metrics.core
     optionalApi libs.prometheus.legacy
@@ -136,8 +137,8 @@ dependencies {
     // TestNG
     testRuntimeOnly libs.junit.testng.engine
 
-    // JUnit Pioneer
-    testImplementation libs.junit.pioneer
+    // Reactor for registering EventLoop as a non blocking thread.
+    optionalImplementation libs.reactor.core
 
     // Reactive Streams
     api libs.reactivestreams
@@ -165,6 +166,9 @@ dependencies {
     optionalImplementation libs.brotli4j.osx
     optionalImplementation libs.brotli4j.osx.aarch64
     optionalImplementation libs.brotli4j.windows
+
+    // Nullability Support
+    api libs.jspecify
 
     // for testing the observation API with tracing
     testImplementation (libs.micrometer.tracing.integration.test) {
@@ -217,8 +221,6 @@ if (tasks.findByName('trimShadedJar')) {
     tasks.trimShadedJar.configure {
         // Keep all classes under com.linecorp.armeria, except the internal ones.
         keep "class !com.linecorp.armeria.internal.shaded.**,com.linecorp.armeria.** { *; }"
-        // Keep the 'NonBlocking' tag interface.
-        keep "class reactor.core.scheduler.NonBlocking { *; }"
         // Do not optimize the dependencies that access some fields via sun.misc.Unsafe or reflection only.
         keep "class com.linecorp.armeria.internal.shaded.caffeine.** { *; }"
         keep "class com.linecorp.armeria.internal.shaded.jctools.** { *; }"

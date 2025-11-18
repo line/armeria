@@ -34,7 +34,10 @@ class ContextAwareService {
     companion object {
         private val log = LoggerFactory.getLogger(ContextAwareService::class.java)
 
-        data class FooResponse(val id: Int, val name: String)
+        data class FooResponse(
+            val id: Int,
+            val name: String,
+        )
     }
 }
 
@@ -43,13 +46,12 @@ object BusinessLogic {
     // To limit the number of parallel executions
     private val myDispatcher = Executors.newFixedThreadPool(1).asCoroutineDispatcher()
 
-    suspend fun blockingTask() {
-        return withContext(myDispatcher) {
+    suspend fun blockingTask() =
+        withContext(myDispatcher) {
             // Make sure that current thread is request context aware
             // Propagating RequestContext is needed for logging, tracing.
             ServiceRequestContext.current()
 
             Thread.sleep(1000)
         }
-    }
 }

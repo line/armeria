@@ -20,9 +20,15 @@ import static java.util.Objects.requireNonNull;
 
 import java.util.concurrent.CompletableFuture;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.linecorp.armeria.common.util.Exceptions;
 
 final class HttpResponseUtil {
+
+    // This logger is used in the default methods of HttpResponse related interfaces.
+    static final Logger httpResponseUtilLogger = LoggerFactory.getLogger(HttpResponseUtil.class);
 
     /**
      * Creates a new HTTP response that delegates to the {@link HttpResponse} produced by the specified

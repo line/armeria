@@ -75,14 +75,15 @@ public final class ConsulClient {
     }
 
     /**
-     * Registers a service to Consul Agent with service ID.
+     * Registers a service to Consul Agent.
      *
      * @param serviceId a service ID that identifying a service
      * @param serviceName a service name to register
      * @param endpoint an endpoint of service to register
      * @param check a check for the service
      * @param tags tags for the service
-     * @return a {@link CompletableFuture} that will be completed with the registered service ID
+     *
+     * @return an HttpResponse representing the HTTP response from Consul
      */
     public HttpResponse register(String serviceId, String serviceName, Endpoint endpoint,
                                  @Nullable Check check, List<String> tags) {
@@ -90,23 +91,36 @@ public final class ConsulClient {
     }
 
     /**
-     * De-registers a service to Consul Agent.
+     * De-registers a service from Consul Agent.
      *
      * @param serviceId a service ID that identifying a service
+     *
+     * @return an HttpResponse representing the HTTP response from Consul
      */
     public HttpResponse deregister(String serviceId) {
         return agentClient.deregister(serviceId);
     }
 
     /**
-     * Get registered endpoints with service name from Consul agent.
+     * Retrieves the list of registered endpoints for the specified service name from the Consul agent.
+     *
+     * @param serviceName the name of the service whose endpoints are to be retrieved
+     *
+     * @return a {@link CompletableFuture} which provides a list of {@link Endpoint}s
      */
     public CompletableFuture<List<Endpoint>> endpoints(String serviceName) {
         return endpoints(serviceName, null, null);
     }
 
     /**
-     * Get registered endpoints with service name in datacenter from Consul agent.
+     * Retrieves the list of registered endpoints for the specified service name and datacenter
+     * from the Consul agent, optionally applying a filter.
+     *
+     * @param serviceName the name of the service whose endpoints are to be retrieved
+     * @param datacenter the datacenter to query; if {@code null}, the default datacenter is used
+     * @param filter a filter expression to apply; if {@code null}, no filtering is performed
+     *
+     * @return a {@link CompletableFuture} which provides a list of {@link Endpoint}s
      */
     public CompletableFuture<List<Endpoint>> endpoints(String serviceName, @Nullable String datacenter,
                                                        @Nullable String filter) {
@@ -114,14 +128,25 @@ public final class ConsulClient {
     }
 
     /**
-     * Returns the registered endpoints with the specified service name from Consul agent.
+     * Retrieves the list of healthy endpoints for the specified service name from the Consul agent.
+     *
+     * @param serviceName the name of the service whose healthy endpoints are to be retrieved
+     *
+     * @return a {@link CompletableFuture} which provides a list of healthy {@link Endpoint}s
      */
     public CompletableFuture<List<Endpoint>> healthyEndpoints(String serviceName) {
         return healthyEndpoints(serviceName, null, null);
     }
 
     /**
-     * Returns the registered endpoints with the specified service name in datacenter from Consul agent.
+     * Retrieves the list of healthy endpoints for the specified service name and datacenter
+     * from the Consul agent, optionally applying a filter.
+     *
+     * @param serviceName the name of the service whose healthy endpoints are to be retrieved
+     * @param datacenter the datacenter to query; if {@code null}, the default datacenter is used
+     * @param filter a filter expression to apply; if {@code null}, no filtering is performed
+     *
+     * @return a {@link CompletableFuture} which provides a list of healthy {@link Endpoint}s
      */
     public CompletableFuture<List<Endpoint>> healthyEndpoints(String serviceName, @Nullable String datacenter,
                                                               @Nullable String filter) {

@@ -19,6 +19,7 @@ package com.linecorp.armeria.client.thrift;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.linecorp.armeria.client.thrift.ThriftClientOptions.MAX_RESPONSE_CONTAINER_LENGTH;
 import static com.linecorp.armeria.client.thrift.ThriftClientOptions.MAX_RESPONSE_STRING_LENGTH;
+import static com.linecorp.armeria.internal.client.ClientBuilderParamsUtil.preprocessorToUri;
 import static java.util.Objects.requireNonNull;
 
 import java.net.URI;
@@ -42,12 +43,16 @@ import com.linecorp.armeria.client.DecoratingHttpClientFunction;
 import com.linecorp.armeria.client.DecoratingRpcClientFunction;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.HttpClient;
+import com.linecorp.armeria.client.HttpPreprocessor;
+import com.linecorp.armeria.client.ResponseTimeoutMode;
 import com.linecorp.armeria.client.RpcClient;
+import com.linecorp.armeria.client.RpcPreprocessor;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.client.redirect.RedirectConfig;
 import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.Scheme;
 import com.linecorp.armeria.common.SerializationFormat;
+import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.SuccessFunction;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
@@ -89,6 +94,16 @@ public final class ThriftClientBuilder extends AbstractClientOptionsBuilder {
         this.scheme = scheme;
         validateOrSetSerializationFormat();
         this.endpointGroup = endpointGroup;
+    }
+
+    ThriftClientBuilder(SerializationFormat serializationFormat, RpcPreprocessor rpcPreprocessor) {
+        requireNonNull(serializationFormat, "serializationFormat");
+        requireNonNull(rpcPreprocessor, "rpcPreprocessor");
+        scheme = Scheme.of(serializationFormat, SessionProtocol.HTTP);
+        validateOrSetSerializationFormat();
+        uri = preprocessorToUri(scheme, rpcPreprocessor, null);
+        endpointGroup = null;
+        rpcPreprocessor(rpcPreprocessor);
     }
 
     private void validateOrSetSerializationFormat() {
@@ -372,5 +387,22 @@ public final class ThriftClientBuilder extends AbstractClientOptionsBuilder {
     public ThriftClientBuilder contextCustomizer(
             Consumer<? super ClientRequestContext> contextCustomizer) {
         return (ThriftClientBuilder) super.contextCustomizer(contextCustomizer);
+    }
+
+    @Override
+    public ThriftClientBuilder responseTimeoutMode(ResponseTimeoutMode responseTimeoutMode) {
+        return (ThriftClientBuilder) super.responseTimeoutMode(responseTimeoutMode);
+    }
+
+    @Override
+    @Deprecated
+    public ThriftClientBuilder preprocessor(HttpPreprocessor decorator) {
+        throw new UnsupportedOperationException("preprocessor() does not support Thrift. " +
+                                                "Use rpcPreprocessor() instead.");
+    }
+
+    @Override
+    public ThriftClientBuilder rpcPreprocessor(RpcPreprocessor decorator) {
+        return (ThriftClientBuilder) super.rpcPreprocessor(decorator);
     }
 }

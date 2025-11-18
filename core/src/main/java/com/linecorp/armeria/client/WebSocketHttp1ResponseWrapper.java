@@ -26,9 +26,8 @@ import io.netty.channel.EventLoop;
 final class WebSocketHttp1ResponseWrapper extends HttpResponseWrapper {
 
     WebSocketHttp1ResponseWrapper(DecodedHttpResponse delegate,
-                                  EventLoop eventLoop, ClientRequestContext ctx,
-                                  long responseTimeoutMillis, long maxContentLength) {
-        super(null, delegate, eventLoop, ctx, responseTimeoutMillis, maxContentLength);
+                                  EventLoop eventLoop, ClientRequestContext ctx, long maxContentLength) {
+        super(null, delegate, eventLoop, ctx, maxContentLength);
         WebSocketClientUtil.setClosingResponseTask(ctx, cause -> {
             super.close(cause, false);
         });

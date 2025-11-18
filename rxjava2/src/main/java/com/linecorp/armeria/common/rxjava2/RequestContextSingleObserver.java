@@ -17,6 +17,7 @@
 package com.linecorp.armeria.common.rxjava2;
 
 import com.linecorp.armeria.common.RequestContext;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.SafeCloseable;
 
 import io.reactivex.SingleObserver;
@@ -26,6 +27,7 @@ import io.reactivex.internal.disposables.DisposableHelper;
 final class RequestContextSingleObserver<T> implements SingleObserver<T>, Disposable {
     private final SingleObserver<T> actual;
     private final RequestContext assemblyContext;
+    @Nullable
     private Disposable disposable;
 
     RequestContextSingleObserver(SingleObserver<T> actual, RequestContext assemblyContext) {
@@ -60,11 +62,13 @@ final class RequestContextSingleObserver<T> implements SingleObserver<T>, Dispos
 
     @Override
     public boolean isDisposed() {
+        assert disposable != null;
         return disposable.isDisposed();
     }
 
     @Override
     public void dispose() {
+        assert disposable != null;
         disposable.dispose();
     }
 }

@@ -1,7 +1,7 @@
 /*
- * Copyright 2024 LINE Corporation
+ * Copyright 2025 LY Corporation
  *
- * LINE Corporation licenses this file to you under the Apache License,
+ * LY Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
@@ -19,42 +19,45 @@ package com.linecorp.armeria.xds;
 import com.google.common.base.MoreObjects;
 import com.google.common.base.Objects;
 
+import com.linecorp.armeria.client.ClientRequestContext;
+import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
+import com.linecorp.armeria.xds.client.endpoint.UpdatableXdsLoadBalancer;
+import com.linecorp.armeria.xds.client.endpoint.XdsLoadBalancer;
 
 import io.envoyproxy.envoy.config.cluster.v3.Cluster;
-import io.envoyproxy.envoy.config.route.v3.Route;
-import io.envoyproxy.envoy.config.route.v3.VirtualHost;
 
 /**
  * A snapshot of a {@link Cluster} resource.
  */
 @UnstableApi
 public final class ClusterSnapshot implements Snapshot<ClusterXdsResource> {
+
     private final ClusterXdsResource clusterXdsResource;
     @Nullable
     private final EndpointSnapshot endpointSnapshot;
     @Nullable
-    private final VirtualHost virtualHost;
-    @Nullable
-    private final Route route;
-    private final int index;
+    private final XdsLoadBalancer loadBalancer;
 
-    ClusterSnapshot(ClusterXdsResource clusterXdsResource, EndpointSnapshot endpointSnapshot,
-                    @Nullable VirtualHost virtualHost, @Nullable Route route, int index) {
-        this.clusterXdsResource = clusterXdsResource;
-        this.endpointSnapshot = endpointSnapshot;
-        this.virtualHost = virtualHost;
-        this.route = route;
-        this.index = index;
+    static ClusterSnapshot of(ClusterXdsResource clusterXdsResource,
+                              EndpointSnapshot newSnapshot, UpdatableXdsLoadBalancer loadBalancer) {
+        final ClusterSnapshot snapshot = new ClusterSnapshot(clusterXdsResource, newSnapshot, loadBalancer);
+        loadBalancer.updateSnapshot(snapshot);
+        return snapshot;
     }
 
     ClusterSnapshot(ClusterXdsResource clusterXdsResource) {
         this.clusterXdsResource = clusterXdsResource;
         endpointSnapshot = null;
-        virtualHost = null;
-        route = null;
-        index = -1;
+        loadBalancer = null;
+    }
+
+    ClusterSnapshot(ClusterXdsResource clusterXdsResource, EndpointSnapshot endpointSnapshot,
+                    XdsLoadBalancer loadBalancer) {
+        this.clusterXdsResource = clusterXdsResource;
+        this.endpointSnapshot = endpointSnapshot;
+        this.loadBalancer = loadBalancer;
     }
 
     @Override
@@ -70,26 +73,6 @@ public final class ClusterSnapshot implements Snapshot<ClusterXdsResource> {
         return endpointSnapshot;
     }
 
-    /**
-     * The {@link VirtualHost} this {@link Cluster} belongs to.
-     */
-    @Nullable
-    public VirtualHost virtualHost() {
-        return virtualHost;
-    }
-
-    /**
-     * The {@link Route} this {@link Cluster} belongs to.
-     */
-    @Nullable
-    public Route route() {
-        return route;
-    }
-
-    int index() {
-        return index;
-    }
-
     @Override
     public boolean equals(Object object) {
         if (this == object) {
@@ -99,15 +82,24 @@ public final class ClusterSnapshot implements Snapshot<ClusterXdsResource> {
             return false;
         }
         final ClusterSnapshot that = (ClusterSnapshot) object;
-        return index == that.index && Objects.equal(clusterXdsResource, that.clusterXdsResource) &&
+        return Objects.equal(clusterXdsResource, that.clusterXdsResource) &&
                Objects.equal(endpointSnapshot, that.endpointSnapshot) &&
-               Objects.equal(virtualHost, that.virtualHost) &&
-               Objects.equal(route, that.route);
+               Objects.equal(loadBalancer, that.loadBalancer);
+    }
+
+    /**
+     * The {@link XdsLoadBalancer} which allows users to select an upstream {@link Endpoint} for a given
+     * {@link ClientRequestContext}. Note that the lifecycle of {@link XdsLoadBalancer} is not bound to
+     * the current {@link ClusterSnapshot}, and may be updated if the cluster is updated.
+     */
+    @Nullable
+    public XdsLoadBalancer loadBalancer() {
+        return loadBalancer;
     }
 
     @Override
     public int hashCode() {
-        return Objects.hashCode(clusterXdsResource, endpointSnapshot, virtualHost, route, index);
+        return Objects.hashCode(clusterXdsResource, endpointSnapshot, loadBalancer);
     }
 
     @Override
@@ -116,9 +108,7 @@ public final class ClusterSnapshot implements Snapshot<ClusterXdsResource> {
                           .omitNullValues()
                           .add("clusterXdsResource", clusterXdsResource)
                           .add("endpointSnapshot", endpointSnapshot)
-                          .add("virtualHost", virtualHost)
-                          .add("route", route)
-                          .add("index", index)
+                          .add("loadBalancer", loadBalancer)
                           .toString();
     }
 }

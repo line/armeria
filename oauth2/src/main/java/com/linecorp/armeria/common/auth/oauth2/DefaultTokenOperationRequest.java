@@ -53,6 +53,7 @@ final class DefaultTokenOperationRequest extends AbstractOAuth2Request implement
         return token;
     }
 
+    @Nullable
     @Override
     public String tokenTypeHint() {
         return tokenTypeHint;

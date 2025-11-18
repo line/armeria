@@ -36,6 +36,6 @@ public final class ServiceDescriptorResolutionException extends RuntimeException
 
     @Override
     public String toString() {
-        return stubFactoryName + '=' + getCause().toString();
+        return stubFactoryName + '=' + getCause();
     }
 }

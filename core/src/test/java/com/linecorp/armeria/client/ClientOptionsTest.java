@@ -19,6 +19,7 @@ import static com.linecorp.armeria.client.ClientOptions.DECORATION;
 import static com.linecorp.armeria.client.ClientOptions.ENDPOINT_REMAPPER;
 import static com.linecorp.armeria.client.ClientOptions.HEADERS;
 import static com.linecorp.armeria.client.ClientOptions.MAX_RESPONSE_LENGTH;
+import static com.linecorp.armeria.client.ClientOptions.PREPROCESSORS;
 import static com.linecorp.armeria.client.ClientOptions.REQUEST_ID_GENERATOR;
 import static com.linecorp.armeria.client.ClientOptions.RESPONSE_TIMEOUT_MILLIS;
 import static com.linecorp.armeria.client.ClientOptions.WRITE_TIMEOUT_MILLIS;
@@ -42,6 +43,7 @@ import org.junit.jupiter.params.provider.ArgumentsSource;
 import com.linecorp.armeria.client.logging.LoggingClient;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
+import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.RequestId;
 
 class ClientOptionsTest {
@@ -124,7 +126,9 @@ class ClientOptionsTest {
                     arguments(HEADERS, HttpHeaders.of(HttpHeaderNames.USER_AGENT, "armeria")),
                     arguments(DECORATION, ClientDecoration.of(LoggingClient.newDecorator())),
                     arguments(REQUEST_ID_GENERATOR, requestIdGenerator),
-                    arguments(ENDPOINT_REMAPPER, Function.identity()));
+                    arguments(ENDPOINT_REMAPPER, Function.identity()),
+                    arguments(PREPROCESSORS, ClientPreprocessors.of(
+                            (delegate, ctx, req) -> HttpResponse.of(200))));
         }
     }
 }

@@ -37,7 +37,7 @@ public final class SessionProtocolNegotiationException extends RuntimeException 
      * Creates a new instance with the specified expected {@link SessionProtocol}.
      */
     public SessionProtocolNegotiationException(SessionProtocol expected, @Nullable String reason) {
-        super("expected: " + requireNonNull(expected, "expected") + ", reason: " + reason);
+        super(appendReason("expected: " + requireNonNull(expected, "expected"), reason));
         this.expected = expected;
         actual = null;
     }
@@ -48,8 +48,8 @@ public final class SessionProtocolNegotiationException extends RuntimeException 
     public SessionProtocolNegotiationException(SessionProtocol expected,
                                                @Nullable SessionProtocol actual, @Nullable String reason) {
 
-        super("expected: " + requireNonNull(expected, "expected") +
-              ", actual: " + requireNonNull(actual, "actual") + ", reason: " + reason);
+        super(appendReason("expected: " + requireNonNull(expected, "expected") +
+                           ", actual: " + actual, reason));
         this.expected = expected;
         this.actual = actual;
     }
@@ -77,5 +77,12 @@ public final class SessionProtocolNegotiationException extends RuntimeException 
             return super.fillInStackTrace();
         }
         return this;
+    }
+
+    private static String appendReason(String message, @Nullable String reason) {
+        if (reason == null) {
+            return message;
+        }
+        return message + ", reason: " + reason;
     }
 }

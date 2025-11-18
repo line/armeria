@@ -41,21 +41,22 @@ sensible defaults. By applying them, you can:
 
 ## Setup
 
-1. Run `gradle wrapper` to set up a new project.
+1. Run `gradle init` to set up a new project.
 
    ```
    $ mkdir myproject
    $ cd myproject
-   $ gradle wrapper
+   $ gradle init 
    $ ls
    gradle/
    gradlew
    gradlew.bat
    ```
-2. Copy everything in this directory into `<project_root>/gradle/scripts`.
-   If copied correctly, you should see the following `ls` command output:
+2. Add this repository as submodule into `<project_root>/gradle/scripts`.
+   If cloned correctly, you should see the following `ls` command output:
 
    ```
+   $ git submodule add https://github.com/line/gradle-scripts.git gradle/scripts
    $ ls gradle/scripts
    lib/
    build-flags.gradle
@@ -695,8 +696,16 @@ and artifact ID. For example:
 
 If enabled, each project with `java` flag will have the `automaticModuleName` property.
 
-You can override the automatic module name of a certain project via the `automaticModuleNameOverrides`
-extension property:
+You can override the automatic module name of a certain project via `automaticModuleNameOverride`:
+
+    ```groovy
+    ext {
+        // Change the automatic module name of a project to 'com.example.fubar'.
+        automaticModuleNameOverride = 'com.example.fubar'
+    }
+    ```
+
+Alternatively, you can also specify a mapping via the `automaticModuleNameOverrides` extension property:
 
     ```groovy
     ext {

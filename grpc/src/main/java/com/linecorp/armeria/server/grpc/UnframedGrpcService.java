@@ -32,6 +32,7 @@ import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.RequestHeadersBuilder;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.SerializationFormat;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
 import com.linecorp.armeria.common.grpc.protocol.GrpcHeaderNames;
 import com.linecorp.armeria.common.logging.RequestLogProperty;
@@ -76,6 +77,7 @@ final class UnframedGrpcService extends AbstractUnframedGrpcService {
         checkArgument(delegate.isFramed(), "Decorated service must be a framed GrpcService.");
     }
 
+    @Nullable
     @Override
     public ServerMethodDefinition<?, ?> methodDefinition(ServiceRequestContext ctx) {
         return delegate.methodDefinition(ctx);

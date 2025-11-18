@@ -21,6 +21,7 @@ import com.linecorp.armeria.client.{
   RequestOptions,
   RequestPreparationSetters,
   ResponseAs,
+  ResponseTimeoutMode,
   RestClientPreparation
 }
 import com.linecorp.armeria.common.annotation.UnstableApi
@@ -260,6 +261,11 @@ final class ScalaRestClientPreparation private[scala] (delegate: RestClientPrepa
    */
   def cookies(cookies: immutable.Seq[Cookie]): ScalaRestClientPreparation = {
     delegate.cookies(cookies.asJava)
+    this
+  }
+
+  override def responseTimeoutMode(responseTimeoutMode: ResponseTimeoutMode): ScalaRestClientPreparation = {
+    delegate.responseTimeoutMode(responseTimeoutMode)
     this
   }
 }

@@ -36,13 +36,13 @@ import java.util.function.Consumer;
 
 import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLException;
-import javax.net.ssl.SSLParameters;
 
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.HttpRequest;
@@ -94,6 +94,7 @@ import io.netty.handler.codec.http2.DefaultHttp2ConnectionDecoder;
 import io.netty.handler.codec.http2.DefaultHttp2ConnectionEncoder;
 import io.netty.handler.codec.http2.DefaultHttp2FrameReader;
 import io.netty.handler.codec.http2.DefaultHttp2FrameWriter;
+import io.netty.handler.codec.http2.DefaultHttp2LocalFlowController;
 import io.netty.handler.codec.http2.Http2ClientUpgradeCodec;
 import io.netty.handler.codec.http2.Http2CodecUtil;
 import io.netty.handler.codec.http2.Http2Connection;
@@ -159,7 +160,7 @@ final class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
 
     HttpClientPipelineConfigurator(HttpClientFactory clientFactory,
                                    boolean webSocket, SessionProtocol sessionProtocol,
-                                   @Nullable SslContext sslCtx) {
+                                   SslContext sslCtx) {
         this.clientFactory = clientFactory;
         this.webSocket = webSocket;
 
@@ -238,7 +239,7 @@ final class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
         }
         final ClientConnectionTimingsBuilder timingsBuilder = ch.attr(TIMINGS_BUILDER_KEY).get();
         final SslHandler sslHandler = new ClientSslHandler(sslEngine, timingsBuilder);
-        p.addLast(configureSslHandler(sslHandler));
+        p.addLast(sslHandler);
         p.addLast(TrafficLoggingHandler.CLIENT);
         p.addLast(new ChannelInboundHandlerAdapter() {
             @Nullable
@@ -334,20 +335,6 @@ final class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
      */
     private SocketAddress remoteAddress(ChannelHandlerContext ctx) {
         return firstNonNull(ctx.channel().remoteAddress(), remoteAddress);
-    }
-
-    /**
-     * Configures the specified {@link SslHandler} with common settings.
-     */
-    private static SslHandler configureSslHandler(SslHandler sslHandler) {
-        // Set endpoint identification algorithm so that JDK's default X509TrustManager implementation
-        // performs host name checks. Without this, the X509TrustManager implementation will never raise
-        // a CertificateException even if the domain name or IP address mismatches.
-        final SSLEngine engine = sslHandler.engine();
-        final SSLParameters params = engine.getSSLParameters();
-        params.setEndpointIdentificationAlgorithm("HTTPS");
-        engine.setSSLParameters(params);
-        return sslHandler;
     }
 
     private boolean attemptUpgrade() {
@@ -460,7 +447,8 @@ final class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
         final ChannelPipeline pipeline = ctx.pipeline();
         pipeline.channel().eventLoop().execute(
                 () -> pipeline.fireUserEventTriggered(
-                        new SessionProtocolNegotiationException(expected, actual, reason)));
+                        new SessionProtocolNegotiationException(
+                                expected, actual, reason + " (channel: " + pipeline.channel() + ')')));
         ctx.close();
     }
 
@@ -537,7 +525,9 @@ final class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
             final Http2ResponseDecoder responseDecoder = this.responseDecoder;
             final DecodedHttpResponse res = new DecodedHttpResponse(ctx.channel().eventLoop());
 
+            final int id = 0;
             res.init(responseDecoder.inboundTrafficController());
+            res.setStreamId(1);
             res.subscribe(new Subscriber<HttpObject>() {
 
                 private boolean notified;
@@ -572,13 +562,13 @@ final class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
             final DefaultClientRequestContext reqCtx = new DefaultClientRequestContext(
                     ctx.channel().eventLoop(), Flags.meterRegistry(), H1C, RequestId.random(),
                     com.linecorp.armeria.common.HttpMethod.OPTIONS,
-                    REQ_TARGET_ASTERISK, ClientOptions.of(),
+                    REQ_TARGET_ASTERISK, EndpointGroup.of(), ClientOptions.of(),
                     HttpRequest.of(com.linecorp.armeria.common.HttpMethod.OPTIONS, "*"),
                     null, REQUEST_OPTIONS_FOR_UPGRADE_REQUEST, CancellationScheduler.noop(),
                     System.nanoTime(), SystemInfo.currentTimeMicros());
 
             // NB: No need to set the response timeout because we have session creation timeout.
-            responseDecoder.addResponse(null, 0, res, reqCtx, ctx.channel().eventLoop());
+            responseDecoder.addResponse(null, id, res, reqCtx, ctx.channel().eventLoop());
             ctx.fireChannelActive();
         }
 
@@ -779,6 +769,10 @@ final class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
                 /* validateHeaders */ false, clientFactory.http2MaxHeaderListSize());
         Http2FrameReader reader = new DefaultHttp2FrameReader(headersDecoder);
         reader = new Http2InboundFrameLogger(reader, frameLogger);
+        final DefaultHttp2LocalFlowController flowController =
+                new DefaultHttp2LocalFlowController(connection, clientFactory.http2StreamWindowUpdateRatio(),
+                                                    false);
+        connection.local().flowController(flowController);
         return new DefaultHttp2ConnectionDecoder(connection, encoder, reader);
     }
 

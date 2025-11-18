@@ -21,15 +21,21 @@ import static java.util.Objects.requireNonNull;
 import java.util.function.BiFunction;
 
 import com.linecorp.armeria.common.util.SafeCloseable;
+import com.linecorp.armeria.internal.common.context.ArmeriaContextPropagation;
+
+import io.micrometer.context.ContextSnapshot;
+import io.micrometer.context.ContextSnapshot.Scope;
 
 final class DefaultContextAwareBiFunction<T, U, R> implements ContextAwareBiFunction<T, U, R> {
 
     private final RequestContext context;
     private final BiFunction<T, U, R> function;
+    private final ContextSnapshot contextSnapshot;
 
     DefaultContextAwareBiFunction(RequestContext context, BiFunction<T, U, R> function) {
         this.context = requireNonNull(context, "context");
         this.function = requireNonNull(function, "function");
+        contextSnapshot = ArmeriaContextPropagation.captureAll();
     }
 
     @Override
@@ -45,7 +51,9 @@ final class DefaultContextAwareBiFunction<T, U, R> implements ContextAwareBiFunc
     @Override
     public R apply(T t, U u) {
         try (SafeCloseable ignored = context.push()) {
-            return function.apply(t, u);
+            try (Scope ignored2 = contextSnapshot.setThreadLocals()) {
+                return function.apply(t, u);
+            }
         }
     }
 }

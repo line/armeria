@@ -15,7 +15,6 @@
  */
 package com.linecorp.armeria.client;
 
-import static com.linecorp.armeria.internal.common.CancellationScheduler.noopCancellationTask;
 import static java.util.Objects.requireNonNull;
 
 import java.net.InetSocketAddress;
@@ -123,23 +122,17 @@ public final class ClientRequestContextBuilder extends AbstractRequestContextBui
             endpointGroup = Endpoint.parse(authority());
         }
 
-        final CancellationScheduler responseCancellationScheduler;
-        if (timedOut()) {
-            responseCancellationScheduler = CancellationScheduler.finished(false);
-        } else {
-            responseCancellationScheduler = CancellationScheduler.ofClient(0);
-        }
         final DefaultClientRequestContext ctx = new DefaultClientRequestContext(
-                eventLoop(), meterRegistry(), sessionProtocol(), id(), method(), requestTarget(), options,
-                request(), rpcRequest(), requestOptions, responseCancellationScheduler,
+                eventLoop(), meterRegistry(), sessionProtocol(), id(), method(), requestTarget(),
+                endpointGroup, options,
+                request(), rpcRequest(), requestOptions, CancellationScheduler.ofClient(0),
                 isRequestStartTimeSet() ? requestStartTimeNanos() : System.nanoTime(),
                 isRequestStartTimeSet() ? requestStartTimeMicros() : SystemInfo.currentTimeMicros());
-
-        ctx.init(endpointGroup).handle((unused, cause) -> {
+        if (timedOut()) {
+            ctx.timeoutNow();
+        }
+        ctx.init().handle((unused, cause) -> {
             ctx.finishInitialization(cause == null);
-            if (!timedOut()) {
-                ctx.responseCancellationScheduler().initAndStart(ctx.eventLoop(), noopCancellationTask);
-            }
             return null;
         });
         ctx.logBuilder().session(fakeChannel(ctx.eventLoop()), sessionProtocol(), sslSession(),

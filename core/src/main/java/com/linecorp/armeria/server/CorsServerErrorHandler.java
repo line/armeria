@@ -16,91 +16,57 @@
 
 package com.linecorp.armeria.server;
 
-import static com.linecorp.armeria.internal.server.CorsHeaderUtil.addCorsHeaders;
+import static com.linecorp.armeria.internal.common.ArmeriaHttpUtil.isCorsPreflightRequest;
+import static com.linecorp.armeria.internal.server.CorsHeaderUtil.isForbiddenOrigin;
 
-import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpResponse;
-import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.RequestHeaders;
-import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.annotation.Nullable;
-import com.linecorp.armeria.server.cors.CorsConfig;
+import com.linecorp.armeria.internal.server.CorsHeaderUtil;
 import com.linecorp.armeria.server.cors.CorsService;
 
 /**
  * wraps ServerErrorHandler for adding CORS headers to error responses.
  */
-final class CorsServerErrorHandler implements ServerErrorHandler {
-    ServerErrorHandler serverErrorHandler;
+final class CorsServerErrorHandler implements DecoratingServerErrorHandlerFunction {
 
     /**
-     * Constructs a new {@link CorsServerErrorHandler} instance with a specified {@link ServerErrorHandler}.
-     * This handler is used to delegate server error handling for CORS-related errors.
-     *
-     * @param serverErrorHandler The {@link ServerErrorHandler} to be used for handling server errors.
+     * Sets CORS headers for <a href="https://developer.mozilla.org/en-US/docs/Web/HTTP/CORS#simple_requests">
+     * simple CORS requests</a> or main requests.
+     * Preflight requests is unsupported because we don't know if it is safe to perform the main request.
      */
-    CorsServerErrorHandler(ServerErrorHandler serverErrorHandler) {
-        this.serverErrorHandler = serverErrorHandler;
-    }
-
-    @Nullable
-    @Override
-    public AggregatedHttpResponse renderStatus(@Nullable ServiceRequestContext ctx,
-                                               ServiceConfig serviceConfig,
-                                               @Nullable RequestHeaders headers,
-                                               HttpStatus status, @Nullable String description,
-                                               @Nullable Throwable cause) {
-
-        if (ctx == null) {
-            return serverErrorHandler.renderStatus(null, serviceConfig, headers, status, description, cause);
-        }
-
-        final CorsService corsService = ctx.findService(CorsService.class);
+    private static boolean shouldSetCorsHeaders(@Nullable CorsService corsService, ServiceRequestContext ctx) {
         if (corsService == null) {
-            return serverErrorHandler.renderStatus(ctx, serviceConfig, headers, status, description, cause);
+            // No CorsService is configured.
+            return false;
+        }
+        if (CorsHeaderUtil.isCorsHeadersSet(ctx)) {
+            // CORS headers were set by CorsService.
+            return false;
+        }
+        final RequestHeaders headers = ctx.request().headers();
+        if (isCorsPreflightRequest(headers)) {
+            return false;
+        }
+        //noinspection RedundantIfStatement
+        if (isForbiddenOrigin(corsService.config(), ctx, headers)) {
+            return false;
         }
 
-        final AggregatedHttpResponse res = serverErrorHandler.renderStatus(ctx, serviceConfig, headers, status,
-                                                                           description, cause);
-
-        if (res == null) {
-            return serverErrorHandler.renderStatus(ctx, serviceConfig, headers, status, description, cause);
-        }
-
-        final CorsConfig corsConfig = corsService.config();
-        final ResponseHeaders updatedResponseHeaders = addCorsHeaders(ctx, corsConfig,
-                                                                      res.headers());
-
-        return AggregatedHttpResponse.of(updatedResponseHeaders, res.content());
+        return true;
     }
 
     @Nullable
     @Override
-    public HttpResponse onServiceException(ServiceRequestContext ctx, Throwable cause) {
-        if (cause instanceof HttpResponseException) {
-            final HttpResponse oldRes = serverErrorHandler.onServiceException(ctx, cause);
-            if (oldRes == null) {
-                return null;
-            }
-            final CorsService corsService = ctx.findService(CorsService.class);
-            if (corsService == null) {
-                return oldRes;
-            }
-            return oldRes.recover(HttpResponseException.class, ex -> {
-                return ex.httpResponse()
-                         .mapHeaders(oldHeaders -> addCorsHeaders(ctx, corsService.config(), oldHeaders));
+    public HttpResponse onServiceException(ServerErrorHandler delegate,
+                                           ServiceRequestContext ctx, Throwable cause) {
+        final CorsService corsService = ctx.findService(CorsService.class);
+        if (shouldSetCorsHeaders(corsService, ctx)) {
+            assert corsService != null;
+            ctx.mutateAdditionalResponseHeaders(builder -> {
+                CorsHeaderUtil.setCorsResponseHeaders(ctx, ctx.request(), builder, corsService.config());
             });
-        } else {
-            return serverErrorHandler.onServiceException(ctx, cause);
         }
-    }
-
-    @Nullable
-    @Override
-    public AggregatedHttpResponse onProtocolViolation(ServiceConfig config,
-                                                      @Nullable RequestHeaders headers,
-                                                      HttpStatus status, @Nullable String description,
-                                                      @Nullable Throwable cause) {
-        return serverErrorHandler.onProtocolViolation(config, headers, status, description, cause);
+        return delegate.onServiceException(ctx, cause);
     }
 }

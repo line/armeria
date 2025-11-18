@@ -41,6 +41,12 @@ public final class DirectProxyConfig extends ProxyConfig {
     }
 
     @Override
+    public ProxyConfig withProxyAddress(InetSocketAddress newProxyAddress) {
+        throw new UnsupportedOperationException(
+                "A proxy address can't be set to DirectProxyConfig.");
+    }
+
+    @Override
     public String toString() {
         return "DirectProxyConfig{proxyType=DIRECT}";
     }

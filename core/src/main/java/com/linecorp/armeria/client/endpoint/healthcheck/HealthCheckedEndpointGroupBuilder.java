@@ -23,6 +23,7 @@ import java.util.function.Function;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.common.util.AsyncCloseable;
+import com.linecorp.armeria.internal.client.endpoint.healthcheck.DefaultHttpHealthChecker;
 
 /**
  * A builder for creating a new {@link HealthCheckedEndpointGroup} that sends HTTP health check requests.
@@ -72,7 +73,8 @@ public final class HealthCheckedEndpointGroupBuilder
 
         @Override
         public AsyncCloseable apply(HealthCheckerContext ctx) {
-            final HttpHealthChecker checker = new HttpHealthChecker(ctx, path, useGet);
+            final DefaultHttpHealthChecker checker =
+                    new DefaultHttpHealthChecker(ctx, ctx.endpoint(), path, useGet, ctx.protocol(), null);
             checker.start();
             return checker;
         }

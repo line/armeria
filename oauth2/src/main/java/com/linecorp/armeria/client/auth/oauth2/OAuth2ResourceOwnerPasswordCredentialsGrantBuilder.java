@@ -65,6 +65,7 @@ public final class OAuth2ResourceOwnerPasswordCredentialsGrantBuilder
      * Builds a new instance of {@link OAuth2ResourceOwnerPasswordCredentialsGrant} using configured parameters.
      */
     public OAuth2ResourceOwnerPasswordCredentialsGrant build() {
+        final Supplier<? extends Entry<String, String>> userCredentialsSupplier = this.userCredentialsSupplier;
         checkState(userCredentialsSupplier != null, "userCredentialsSupplier must be set.");
         final ClientAuthentication clientAuthentication = buildClientAuthentication();
         final Supplier<AccessTokenRequest> accessTokenRequestSupplier = () -> {

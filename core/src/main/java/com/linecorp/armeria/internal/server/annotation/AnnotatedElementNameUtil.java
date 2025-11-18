@@ -31,9 +31,9 @@ import com.linecorp.armeria.server.annotation.Param;
 final class AnnotatedElementNameUtil {
 
     /**
-     * Returns the value of {@link Header}, {@link Param}, {@link Attribute} if the value is not blank.
+     * Returns the value of {@link Param}, {@link Attribute} if the value is not blank.
      * If the value is blank, it returns the name of the specified {@code nameRetrievalTarget} object
-     * which is an instance of {@link Header}, {@link Param}, {@link Attribute} or {@link Field}.
+     * which is an instance of {@link Param}, {@link Attribute} or {@link Field}.
      */
     static String findName(Object nameRetrievalTarget, String value) {
         requireNonNull(nameRetrievalTarget, "nameRetrievalTarget");
@@ -42,6 +42,27 @@ final class AnnotatedElementNameUtil {
             return value;
         }
         return getName(nameRetrievalTarget);
+    }
+
+    /**
+     * Returns the value of the {@link Header} annotation which is specified on the {@code element} if
+     * the value is not blank. If the value is blank, it returns the name of the specified
+     * {@code nameRetrievalTarget} object which is an instance of {@link Parameter} or {@link Field}.
+     *
+     * <p>Note that the name of the specified {@code nameRetrievalTarget} will be converted as
+     * {@link CaseFormat#LOWER_HYPHEN} that the string elements are separated with one hyphen({@code -})
+     * character. The value of the {@link Header} annotation will not be converted because it is clearly
+     * specified by a user.
+     */
+    static String findName(Header header, Object nameRetrievalTarget) {
+        requireNonNull(nameRetrievalTarget, "nameRetrievalTarget");
+
+        final String value = header.value();
+        if (DefaultValues.isSpecified(value)) {
+            checkArgument(!value.isEmpty(), "value is empty.");
+            return value;
+        }
+        return toHeaderName(getName(nameRetrievalTarget));
     }
 
     /**

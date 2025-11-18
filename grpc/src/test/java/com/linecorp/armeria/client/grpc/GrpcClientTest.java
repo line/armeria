@@ -66,6 +66,7 @@ import com.linecorp.armeria.client.ClientRequestContextCaptor;
 import com.linecorp.armeria.client.Clients;
 import com.linecorp.armeria.client.DecoratingHttpClientFunction;
 import com.linecorp.armeria.client.Endpoint;
+import com.linecorp.armeria.client.HttpPreprocessor;
 import com.linecorp.armeria.client.ResponseTimeoutException;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.common.CommonPools;
@@ -75,6 +76,7 @@ import com.linecorp.armeria.common.HttpHeadersBuilder;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.RpcResponse;
+import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.grpc.GrpcCallOptions;
 import com.linecorp.armeria.common.grpc.GrpcExceptionHandlerFunction;
@@ -300,6 +302,14 @@ class GrpcClientTest {
     }
 
     @Test
+    void preprocessor() throws Exception {
+        final TestServiceBlockingStub stub =
+                GrpcClients.newClient(HttpPreprocessor.of(SessionProtocol.HTTP, server.httpEndpoint()),
+                                      TestServiceBlockingStub.class);
+        assertThat(stub.emptyCall(EMPTY)).isEqualTo(EMPTY);
+    }
+
+    @Test
     void contextCaptorBlocking() {
         try (ClientRequestContextCaptor ctxCaptor = Clients.newContextCaptor()) {
             blockingStub.emptyCall(EMPTY);
@@ -374,6 +384,7 @@ class GrpcClientTest {
         await().untilAtomic(onCompleteThread, instanceOf(EventLoopThread.class));
     }
 
+    @Test
     void grpcCallOptions() {
         try (ClientRequestContextCaptor ctxCaptor = Clients.newContextCaptor()) {
             blockingStub
@@ -381,6 +392,18 @@ class GrpcClientTest {
                     .emptyCall(EMPTY);
             final ClientRequestContext ctx = ctxCaptor.get();
             assertThat(GrpcCallOptions.get(ctx).getOption(MY_CALL_OPTION_KEY)).isEqualTo("foo");
+        }
+    }
+
+    @Test
+    void grpcClientCall() {
+        try (ClientRequestContextCaptor ctxCaptor = Clients.newContextCaptor()) {
+            blockingStub
+                    .withOption(MY_CALL_OPTION_KEY, "foo")
+                    .emptyCall(EMPTY);
+            final ClientRequestContext ctx = ctxCaptor.get();
+            assertThat(GrpcClientCall.callOptions(ctx).getOption(MY_CALL_OPTION_KEY)).isEqualTo("foo");
+            assertThat(GrpcClientCall.methodDescriptor(ctx).getBareMethodName()).isEqualTo("EmptyCall");
         }
     }
 

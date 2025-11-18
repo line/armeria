@@ -65,6 +65,7 @@ class ManagedArmeriaServer<T extends Configuration> implements Managed {
     public void start() throws Exception {
         logger.trace("Getting Armeria Server Builder");
         final ServerBuilder sb = ((ArmeriaServerFactory) serverFactory).getServerBuilder();
+        assert sb != null;
         logger.trace("Calling Server Configurator");
         serverConfigurator.configure(sb);
         server = sb.build();

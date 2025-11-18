@@ -52,7 +52,6 @@ public class ClientRequestContextWrapper
         return unwrap().newDerivedContext(id, req, rpcReq, endpoint);
     }
 
-    @Nullable
     @Override
     public EndpointGroup endpointGroup() {
         return unwrap().endpointGroup();
@@ -165,6 +164,11 @@ public class ClientRequestContextWrapper
     @Override
     public ExchangeType exchangeType() {
         return unwrap().exchangeType();
+    }
+
+    @Override
+    public ResponseTimeoutMode responseTimeoutMode() {
+        return unwrap().responseTimeoutMode();
     }
 
     @Override

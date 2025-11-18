@@ -72,7 +72,7 @@ class ResponseEntityUtilTest {
                                                                .routingResult(routingResult)
                                                                .build();
 
-        final ResponseEntity<Void> result = ResponseEntity.of(ResponseHeaders.of(HttpStatus.OK));
+        final ResponseEntity<Void> result = ResponseEntity.of(HttpStatus.OK);
         final ResponseHeaders actual = ResponseEntityUtil.buildResponseHeaders(ctx, result);
         assertThat(actual.contentType()).isEqualTo(MediaType.JSON_UTF_8);
     }

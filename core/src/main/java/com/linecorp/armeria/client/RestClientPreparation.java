@@ -173,6 +173,7 @@ public final class RestClientPreparation implements RequestPreparationSetters {
 
     @Override
     @FormatMethod
+    @SuppressWarnings("FormatStringAnnotation")
     public RestClientPreparation content(@FormatString String format, Object... content) {
         delegate.content(format, content);
         return this;
@@ -180,6 +181,7 @@ public final class RestClientPreparation implements RequestPreparationSetters {
 
     @Override
     @FormatMethod
+    @SuppressWarnings("FormatStringAnnotation")
     public RestClientPreparation content(MediaType contentType, @FormatString String format,
                                          Object... content) {
         delegate.content(contentType, format, content);
@@ -309,6 +311,12 @@ public final class RestClientPreparation implements RequestPreparationSetters {
     @Override
     public RestClientPreparation requestOptions(RequestOptions requestOptions) {
         delegate.requestOptions(requestOptions);
+        return this;
+    }
+
+    @Override
+    public RestClientPreparation responseTimeoutMode(ResponseTimeoutMode responseTimeoutMode) {
+        delegate.responseTimeoutMode(responseTimeoutMode);
         return this;
     }
 }

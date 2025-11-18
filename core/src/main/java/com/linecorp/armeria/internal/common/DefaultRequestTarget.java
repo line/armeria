@@ -16,6 +16,7 @@
 package com.linecorp.armeria.internal.common;
 
 import static com.linecorp.armeria.internal.common.ArmeriaHttpUtil.findAuthority;
+import static com.linecorp.armeria.internal.common.util.BitSetUtil.toBitSet;
 import static io.netty.util.internal.StringUtil.decodeHexNibble;
 import static java.util.Objects.requireNonNull;
 
@@ -36,6 +37,36 @@ public final class DefaultRequestTarget implements RequestTarget {
     private static final String ALLOWED_COMMON_CHARS =
             "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~:/?@!$&'()*,;=";
 
+    private static final String ALLOWED_COMMON_ENCODED_CHARS;
+
+    static {
+        // Note:
+        // RFC 3986 doesn't prohibit control characters when percent-encoded.
+        // However, Armeria does prohibit most control characters except the following for security reasons:
+        //
+        // - TAB (0x09)
+        // - FS  (0x1C)
+        // - GS  (0x1D)
+        // - RS  (0x1E)
+        // - US  (0x1F)
+        // - LF  (0x0A, allowed only in a query string)
+        // - CR  (0x0D, allowed only in a query string)
+        //
+        // Please open a new issue to start a discussion if you think there are harmless control characters
+        // we should allow additionally.
+        final StringBuilder buf = new StringBuilder(128);
+        buf.append("\t\u001c\u001d\u001e\u001f");
+
+        // Add all non-control ASCII characters.
+        // Note that we don't need to add all unicode codepoints here
+        // because non-ASCII characters will always be percent-encoded.
+        for (char ch = ' '; ch <= '~'; ch++) {
+            assert !Character.isISOControl(ch) : "Attempted to add a control character: " + (int) ch;
+            buf.append(ch);
+        }
+        ALLOWED_COMMON_ENCODED_CHARS = buf.toString();
+    }
+
     /**
      * The lookup table for the characters allowed in a path.
      */
@@ -50,6 +81,21 @@ public final class DefaultRequestTarget implements RequestTarget {
      * The lookup table for the characters allowed in a fragment.
      */
     private static final BitSet FRAGMENT_ALLOWED = PATH_ALLOWED;
+
+    /**
+     * The lookup table for the characters allowed in a path when percent-encoded.
+     */
+    private static final BitSet PATH_ALLOWED_IF_ENCODED = toBitSet(ALLOWED_COMMON_ENCODED_CHARS);
+
+    /**
+     * The lookup table for the characters allowed in a query when percent-encoded.
+     */
+    private static final BitSet QUERY_ALLOWED_IF_ENCODED = toBitSet(ALLOWED_COMMON_ENCODED_CHARS + "\n\r");
+
+    /**
+     * The lookup table for the characters allowed in a fragment when percent-encoded.
+     */
+    private static final BitSet FRAGMENT_ALLOWED_IF_ENCODED = PATH_ALLOWED_IF_ENCODED;
 
     /**
      * The lookup table for the characters that whose percent encoding must be preserved
@@ -74,30 +120,28 @@ public final class DefaultRequestTarget implements RequestTarget {
      */
     private static final BitSet FRAGMENT_MUST_PRESERVE_ENCODING = PATH_MUST_PRESERVE_ENCODING;
 
-    private static BitSet toBitSet(String chars) {
-        final BitSet bitSet = new BitSet();
-        for (int i = 0; i < chars.length(); i++) {
-            bitSet.set(chars.charAt(i));
-        }
-        return bitSet;
-    }
-
     private enum ComponentType {
-        CLIENT_PATH(PATH_ALLOWED, PATH_MUST_PRESERVE_ENCODING),
-        SERVER_PATH(PATH_ALLOWED, PATH_MUST_PRESERVE_ENCODING),
-        QUERY(QUERY_ALLOWED, QUERY_MUST_PRESERVE_ENCODING),
-        FRAGMENT(FRAGMENT_ALLOWED, FRAGMENT_MUST_PRESERVE_ENCODING);
+        CLIENT_PATH(PATH_ALLOWED, PATH_ALLOWED_IF_ENCODED, PATH_MUST_PRESERVE_ENCODING),
+        SERVER_PATH(PATH_ALLOWED, PATH_ALLOWED_IF_ENCODED, PATH_MUST_PRESERVE_ENCODING),
+        QUERY(QUERY_ALLOWED, QUERY_ALLOWED_IF_ENCODED, QUERY_MUST_PRESERVE_ENCODING),
+        FRAGMENT(FRAGMENT_ALLOWED, FRAGMENT_ALLOWED_IF_ENCODED, FRAGMENT_MUST_PRESERVE_ENCODING);
 
         private final BitSet allowed;
+        private final BitSet allowedIfEncoded;
         private final BitSet mustPreserveEncoding;
 
-        ComponentType(BitSet allowed, BitSet mustPreserveEncoding) {
+        ComponentType(BitSet allowed, BitSet allowedIfEncoded, BitSet mustPreserveEncoding) {
             this.allowed = allowed;
+            this.allowedIfEncoded = allowedIfEncoded;
             this.mustPreserveEncoding = mustPreserveEncoding;
         }
 
         boolean isAllowed(int cp) {
             return allowed.get(cp);
+        }
+
+        boolean isAllowedIfEncoded(int cp) {
+            return (cp & 0xFFFFFF80) != 0 || allowedIfEncoded.get(cp);
         }
 
         boolean mustPreserveEncoding(int cp) {
@@ -119,16 +163,8 @@ public final class DefaultRequestTarget implements RequestTarget {
     private static final Bytes EMPTY_BYTES = new Bytes(0);
     private static final Bytes SLASH_BYTES = new Bytes(new byte[] { '/' });
 
-    private static final RequestTarget INSTANCE_ASTERISK = createWithoutValidation(
-            RequestTargetForm.ASTERISK,
-            null,
-            null,
-            null,
-            -1,
-            "*",
-            "*",
-            null,
-            null);
+    private static final RequestTarget CLIENT_INSTANCE_ASTERISK = createAsterisk(false);
+    private static final RequestTarget SERVER_INSTANCE_ASTERISK = createAsterisk(true);
 
     /**
      * The main implementation of {@link RequestTarget#forServer(String)}.
@@ -189,9 +225,9 @@ public final class DefaultRequestTarget implements RequestTarget {
     public static RequestTarget createWithoutValidation(
             RequestTargetForm form, @Nullable String scheme, @Nullable String authority,
             @Nullable String host, int port, String path, String pathWithMatrixVariables,
-            @Nullable String query, @Nullable String fragment) {
+            @Nullable String rawPath, @Nullable String query, @Nullable String fragment) {
         return new DefaultRequestTarget(
-                form, scheme, authority, host, port, path, pathWithMatrixVariables, query, fragment);
+                form, scheme, authority, host, port, path, pathWithMatrixVariables, rawPath, query, fragment);
     }
 
     private final RequestTargetForm form;
@@ -205,6 +241,8 @@ public final class DefaultRequestTarget implements RequestTarget {
     private final String path;
     private final String maybePathWithMatrixVariables;
     @Nullable
+    private final String rawPath;
+    @Nullable
     private final String query;
     @Nullable
     private final String fragment;
@@ -212,7 +250,7 @@ public final class DefaultRequestTarget implements RequestTarget {
 
     private DefaultRequestTarget(RequestTargetForm form, @Nullable String scheme,
                                  @Nullable String authority, @Nullable String host, int port,
-                                 String path, String maybePathWithMatrixVariables,
+                                 String path, String maybePathWithMatrixVariables, @Nullable String rawPath,
                                  @Nullable String query, @Nullable String fragment) {
 
         assert (scheme != null && authority != null && host != null) ||
@@ -226,6 +264,7 @@ public final class DefaultRequestTarget implements RequestTarget {
         this.port = port;
         this.path = path;
         this.maybePathWithMatrixVariables = maybePathWithMatrixVariables;
+        this.rawPath = rawPath;
         this.query = query;
         this.fragment = fragment;
     }
@@ -266,6 +305,12 @@ public final class DefaultRequestTarget implements RequestTarget {
     @Override
     public String maybePathWithMatrixVariables() {
         return maybePathWithMatrixVariables;
+    }
+
+    @Override
+    @Nullable
+    public String rawPath() {
+        return rawPath;
     }
 
     @Nullable
@@ -336,6 +381,21 @@ public final class DefaultRequestTarget implements RequestTarget {
         }
     }
 
+    private static RequestTarget createAsterisk(boolean server) {
+        final String rawPath = server ? "*" : null;
+        return createWithoutValidation(
+                RequestTargetForm.ASTERISK,
+                null,
+                null,
+                null,
+                -1,
+                "*",
+                "*",
+                rawPath,
+                null,
+                null);
+    }
+
     @Nullable
     private static RequestTarget slowForServer(String reqTarget, boolean allowSemicolonInPathComponent,
                                                boolean allowDoubleDotsInQueryString) {
@@ -367,7 +427,7 @@ public final class DefaultRequestTarget implements RequestTarget {
         // Reject a relative path and accept an asterisk (e.g. OPTIONS * HTTP/1.1).
         if (isRelativePath(path)) {
             if (query == null && path.length == 1 && path.data[0] == '*') {
-                return INSTANCE_ASTERISK;
+                return SERVER_INSTANCE_ASTERISK;
             } else {
                 // Do not accept a relative path.
                 return null;
@@ -399,6 +459,7 @@ public final class DefaultRequestTarget implements RequestTarget {
                                         -1,
                                         matrixVariablesRemovedPath,
                                         encodedPath,
+                                        reqTarget,
                                         encodeQueryToPercents(query),
                                         null);
     }
@@ -578,7 +639,7 @@ public final class DefaultRequestTarget implements RequestTarget {
 
         // Accept an asterisk (e.g. OPTIONS * HTTP/1.1).
         if (query == null && path.length == 1 && path.data[0] == '*') {
-            return INSTANCE_ASTERISK;
+            return CLIENT_INSTANCE_ASTERISK;
         }
 
         final String encodedPath;
@@ -601,7 +662,9 @@ public final class DefaultRequestTarget implements RequestTarget {
                                             null,
                                             -1,
                                             encodedPath,
-                                            encodedPath, encodedQuery,
+                                            encodedPath,
+                                            null,
+                                            encodedQuery,
                                             encodedFragment);
         }
     }
@@ -648,6 +711,7 @@ public final class DefaultRequestTarget implements RequestTarget {
                                         port,
                                         encodedPath,
                                         encodedPath,
+                                        null,
                                         encodedQuery,
                                         encodedFragment);
     }
@@ -760,23 +824,6 @@ public final class DefaultRequestTarget implements RequestTarget {
     }
 
     private static boolean appendOneByte(Bytes buf, int cp, boolean wasSlash, ComponentType type) {
-        if (cp == 0x7F) {
-            // Reject the control character: 0x7F
-            return false;
-        }
-
-        if (cp >>> 5 == 0) {
-            // Reject the control characters: 0x00..0x1F
-            if (type != ComponentType.QUERY) {
-                return false;
-            }
-
-            if (cp != 0x0A && cp != 0x0D && cp != 0x09) {
-                // .. except 0x0A (LF), 0x0D (CR) and 0x09 (TAB) because they are used in a form.
-                return false;
-            }
-        }
-
         if (cp == '/' && type == ComponentType.SERVER_PATH) {
             if (!wasSlash) {
                 buf.ensure(1);
@@ -788,8 +835,10 @@ public final class DefaultRequestTarget implements RequestTarget {
             buf.ensure(1);
             if (type.isAllowed(cp)) {
                 buf.add((byte) cp);
-            } else {
+            } else if (type.isAllowedIfEncoded(cp)) {
                 buf.addEncoded((byte) cp);
+            } else {
+                return false;
             }
         }
 

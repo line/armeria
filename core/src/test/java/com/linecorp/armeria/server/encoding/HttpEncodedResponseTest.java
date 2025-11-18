@@ -19,6 +19,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.awaitility.Awaitility.await;
 
+import java.io.IOException;
+import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.concurrent.CompletionException;
@@ -30,6 +32,7 @@ import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 
 import com.linecorp.armeria.common.AggregatedHttpResponse;
+import com.linecorp.armeria.common.AggregationOptions;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.HttpResponse;
@@ -38,14 +41,16 @@ import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.encoding.StreamDecoder;
 import com.linecorp.armeria.common.encoding.StreamDecoderFactory;
+import com.linecorp.armeria.common.encoding.StreamEncoderFactories;
+import com.linecorp.armeria.common.encoding.StreamEncoderFactory;
 import com.linecorp.armeria.common.stream.AbortedStreamException;
 import com.linecorp.armeria.common.stream.CancelledSubscriptionException;
 import com.linecorp.armeria.common.stream.NoopSubscriber;
 import com.linecorp.armeria.common.stream.SubscriptionOption;
-import com.linecorp.armeria.internal.common.encoding.StreamEncoderFactories;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
+import io.netty.buffer.ByteBufOutputStream;
 import io.netty.buffer.Unpooled;
 import io.netty.util.concurrent.ImmediateEventExecutor;
 import reactor.test.StepVerifier;
@@ -53,7 +58,7 @@ import reactor.test.StepVerifier;
 class HttpEncodedResponseTest {
 
     @Test
-    void testLeak() {
+    void testLeakOnSubscribe() {
         final ByteBuf buf = Unpooled.directBuffer();
         buf.writeCharSequence("foo", StandardCharsets.UTF_8);
 
@@ -66,6 +71,43 @@ class HttpEncodedResponseTest {
 
         // Drain the stream.
         encoded.subscribe(NoopSubscriber.get(), ImmediateEventExecutor.INSTANCE);
+
+        // 'buf' should be released.
+        assertThat(buf.refCnt()).isZero();
+    }
+
+    @Test
+    void testLeakOnError() {
+        final ByteBuf buf = Unpooled.directBuffer();
+        buf.writeCharSequence("foo", StandardCharsets.UTF_8);
+
+        final HttpResponse orig = HttpResponse.of(HttpStatus.OK,
+                                                  MediaType.PLAIN_TEXT_UTF_8,
+                                                  HttpData.wrap(buf).withEndOfStream());
+        final StreamEncoderFactory throwingEncoderFactory = new StreamEncoderFactory() {
+            @Override
+            public String encodingHeaderValue() {
+                return "gzip";
+            }
+
+            @Override
+            public OutputStream newEncoder(ByteBufOutputStream os) {
+                return new OutputStream() {
+                    @Override
+                    public void write(int b) throws IOException {
+                        throw new IOException("Oops");
+                    }
+                };
+            }
+        };
+        final HttpEncodedResponse encoded = new HttpEncodedResponse(
+                orig, throwingEncoderFactory, mediaType -> true, ByteBufAllocator.DEFAULT, 1);
+
+        assertThatThrownBy(() -> {
+            encoded.aggregate(AggregationOptions.usePooledObjects(ByteBufAllocator.DEFAULT)).join();
+        }).isInstanceOf(CompletionException.class)
+          .hasCauseInstanceOf(IllegalStateException.class)
+          .hasRootCauseInstanceOf(IOException.class);
 
         // 'buf' should be released.
         assertThat(buf.refCnt()).isZero();

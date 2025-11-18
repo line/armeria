@@ -32,6 +32,7 @@ import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.logging.ContentPreviewer;
 import com.linecorp.armeria.common.logging.ContentPreviewerFactory;
 import com.linecorp.armeria.common.logging.RequestLog;
@@ -68,7 +69,6 @@ public final class ContentPreviewingService extends SimpleDecoratingHttpService 
      * {@link RequestHeaders} or {@link ResponseHeaders} meets any of the following conditions:
      * <ul>
      *     <li>when it matches {@code text/*} or {@code application/x-www-form-urlencoded}</li>
-     *     <li>when its charset has been specified</li>
      *     <li>when its subtype is {@code "xml"} or {@code "json"}</li>
      *     <li>when its subtype ends with {@code "+xml"} or {@code "+json"}</li>
      * </ul>
@@ -86,7 +86,6 @@ public final class ContentPreviewingService extends SimpleDecoratingHttpService 
      * {@link RequestHeaders} or {@link ResponseHeaders} meets any of the following conditions:
      * <ul>
      *     <li>when it matches {@code text/*} or {@code application/x-www-form-urlencoded}</li>
-     *     <li>when its charset has been specified</li>
      *     <li>when its subtype is {@code "xml"} or {@code "json"}</li>
      *     <li>when its subtype ends with {@code "+xml"} or {@code "+json"}</li>
      * </ul>
@@ -140,6 +139,22 @@ public final class ContentPreviewingService extends SimpleDecoratingHttpService 
         this.responsePreviewSanitizer = responsePreviewSanitizer;
     }
 
+    /**
+     * Returns the specified {@link ContentPreviewerFactory}.
+     */
+    @UnstableApi
+    public ContentPreviewerFactory contentPreviewerFactory() {
+        return contentPreviewerFactory;
+    }
+
+    /**
+     * Returns the specified {@link BiFunction} that sanitizes the response content preview.
+     */
+    @UnstableApi
+    public BiFunction<? super RequestContext, String, ? extends @Nullable Object> responsePreviewSanitizer() {
+        return responsePreviewSanitizer;
+    }
+
     @Override
     public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
         final Boolean settingContentPreview = ctx.attr(SETTING_CONTENT_PREVIEW);
@@ -156,8 +171,12 @@ public final class ContentPreviewingService extends SimpleDecoratingHttpService 
             ctx.logBuilder().requestContentPreview("");
         }
 
-        ctx.logBuilder().defer(RequestLogProperty.RESPONSE_CONTENT_PREVIEW);
-        final HttpResponse res = unwrap().serve(ctx, req);
-        return setUpResponseContentPreviewer(contentPreviewerFactory, ctx, res, responsePreviewSanitizer);
+        try {
+            ctx.logBuilder().defer(RequestLogProperty.RESPONSE_CONTENT_PREVIEW);
+            final HttpResponse res = unwrap().serve(ctx, req);
+            return setUpResponseContentPreviewer(contentPreviewerFactory, ctx, res, responsePreviewSanitizer);
+        } catch (Throwable t) {
+            return HttpResponse.ofFailure(t);
+        }
     }
 }

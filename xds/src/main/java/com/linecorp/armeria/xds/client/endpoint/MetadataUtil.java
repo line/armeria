@@ -16,52 +16,24 @@
 
 package com.linecorp.armeria.xds.client.endpoint;
 
+import static com.linecorp.armeria.xds.client.endpoint.XdsAttributeKeys.ROUTE_METADATA_MATCH;
 import static com.linecorp.armeria.xds.client.endpoint.XdsConstants.SUBSET_LOAD_BALANCING_FILTER_NAME;
 
-import java.util.Map;
-
-import com.google.protobuf.ProtocolStringList;
 import com.google.protobuf.Struct;
-import com.google.protobuf.Value;
 
-import com.linecorp.armeria.xds.ClusterSnapshot;
+import com.linecorp.armeria.client.ClientRequestContext;
 
-import io.envoyproxy.envoy.config.cluster.v3.Cluster.LbSubsetConfig;
-import io.envoyproxy.envoy.config.cluster.v3.Cluster.LbSubsetConfig.LbSubsetSelector;
-import io.envoyproxy.envoy.config.route.v3.Route;
-import io.envoyproxy.envoy.config.route.v3.RouteAction;
+import io.envoyproxy.envoy.config.core.v3.Metadata;
 
 final class MetadataUtil {
 
-    static Struct filterMetadata(ClusterSnapshot clusterSnapshot) {
-        final Route route = clusterSnapshot.route();
-        if (route == null) {
+    static Struct filterMetadata(ClientRequestContext ctx) {
+        final Metadata metadataMatch = ctx.attr(ROUTE_METADATA_MATCH);
+        if (metadataMatch == null) {
             return Struct.getDefaultInstance();
         }
-        final RouteAction action = route.getRoute();
-        return action.getMetadataMatch().getFilterMetadataOrDefault(SUBSET_LOAD_BALANCING_FILTER_NAME,
-                                                                    Struct.getDefaultInstance());
-    }
-
-    static boolean findMatchedSubsetSelector(LbSubsetConfig lbSubsetConfig, Struct filterMetadata) {
-        for (LbSubsetSelector subsetSelector : lbSubsetConfig.getSubsetSelectorsList()) {
-            final ProtocolStringList keysList = subsetSelector.getKeysList();
-            if (filterMetadata.getFieldsCount() != keysList.size()) {
-                continue;
-            }
-            boolean found = true;
-            final Map<String, Value> filterMetadataMap = filterMetadata.getFieldsMap();
-            for (String key : filterMetadataMap.keySet()) {
-                if (!keysList.contains(key)) {
-                    found = false;
-                    break;
-                }
-            }
-            if (found) {
-                return true;
-            }
-        }
-        return false;
+        return metadataMatch.getFilterMetadataOrDefault(SUBSET_LOAD_BALANCING_FILTER_NAME,
+                                                        Struct.getDefaultInstance());
     }
 
     private MetadataUtil() {}

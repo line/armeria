@@ -142,6 +142,7 @@ class InitiateConnectionShutdownTest {
         });
         await().untilTrue(finished);
         await().untilTrue(connectionClosed);
+        clientChannel.closeFuture().syncUninterruptibly();
     }
 
     @BeforeEach

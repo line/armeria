@@ -89,6 +89,7 @@ public abstract class ServerRuleDelegate {
     public Server start() {
         final Server oldServer = server.get();
         if (!isStopped(oldServer)) {
+            assert oldServer != null;
             return oldServer;
         }
 
@@ -149,6 +150,7 @@ public abstract class ServerRuleDelegate {
         if (isStopped(server)) {
             throw new IllegalStateException("server did not start.");
         }
+        assert server != null;
         return server;
     }
 
@@ -364,7 +366,9 @@ public abstract class ServerRuleDelegate {
         if (this.webClient.compareAndSet(null, newWebClient)) {
             return newWebClient;
         } else {
-            return this.webClient.get();
+            final WebClient oldWebClient = this.webClient.get();
+            assert oldWebClient != null;
+            return oldWebClient;
         }
     }
 
@@ -430,7 +434,9 @@ public abstract class ServerRuleDelegate {
         if (this.webSocketClient.compareAndSet(null, newWebSocketClient)) {
             return newWebSocketClient;
         } else {
-            return this.webSocketClient.get();
+            final WebSocketClient oldWebClient = this.webSocketClient.get();
+            assert oldWebClient != null;
+            return oldWebClient;
         }
     }
 

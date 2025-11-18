@@ -38,10 +38,14 @@ import com.linecorp.armeria.internal.client.dns.DnsUtil;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import io.netty.channel.EventLoopGroup;
+import io.netty.channel.socket.DatagramChannel;
+import io.netty.channel.socket.SocketChannel;
 import io.netty.handler.codec.dns.DnsRecord;
 import io.netty.resolver.HostsFileEntriesResolver;
 import io.netty.resolver.dns.BiDnsQueryLifecycleObserverFactory;
+import io.netty.resolver.dns.DnsNameResolver;
 import io.netty.resolver.dns.DnsNameResolverBuilder;
+import io.netty.resolver.dns.DnsNameResolverChannelStrategy;
 import io.netty.resolver.dns.DnsQueryLifecycleObserverFactory;
 import io.netty.resolver.dns.DnsServerAddressStream;
 import io.netty.resolver.dns.DnsServerAddressStreamProvider;
@@ -83,6 +87,11 @@ public abstract class AbstractDnsResolverBuilder<SELF extends AbstractDnsResolve
     private List<String> searchDomains = DnsUtil.defaultSearchDomains();
     private int ndots = DnsUtil.defaultNdots();
     private boolean decodeIdn = true;
+    @Nullable
+    private DnsNameResolverChannelStrategy datagramChannelStrategy;
+    @Nullable
+    private Class<? extends SocketChannel> socketChannelType;
+    private boolean retrySocketChannelOnTimeout;
 
     @Nullable
     private MeterRegistry meterRegistry;
@@ -488,6 +497,35 @@ public abstract class AbstractDnsResolverBuilder<SELF extends AbstractDnsResolve
     }
 
     /**
+     * Set the strategy that is used to determine how a {@link DatagramChannel} is used by the resolver for
+     * sending queries over UDP protocol.
+     */
+    @UnstableApi
+    public SELF datagramChannelStrategy(DnsNameResolverChannelStrategy datagramChannelStrategy) {
+        requireNonNull(datagramChannelStrategy, "datagramChannelStrategy");
+        this.datagramChannelStrategy = datagramChannelStrategy;
+        return self();
+    }
+
+    /**
+     * Enables <a href="https://datatracker.ietf.org/doc/html/rfc7766">TCP fallback</a> using the specified
+     * {@link SocketChannel} type.
+     * Note that TCP fallback is disabled by default.
+     * @param socketChannelType the type of {@link SocketChannel} to use for TCP fallback.
+     * @param retrySocketChannelOnTimeout if {@code true} the {@link DnsNameResolver} will also fallback to
+     *                                    TCP if a timeout was detected, if {@code false} it will only try to
+     *                                    use TCP if the response was marked as truncated.
+     */
+    @UnstableApi
+    public SELF socketChannelType(Class<? extends SocketChannel> socketChannelType,
+                                  boolean retrySocketChannelOnTimeout) {
+        requireNonNull(socketChannelType, "channelType");
+        this.socketChannelType = socketChannelType;
+        this.retrySocketChannelOnTimeout = retrySocketChannelOnTimeout;
+        return self();
+    }
+
+    /**
      * Builds a configurator that configures a {@link DnsNameResolverBuilder} with the properties set.
      */
     @UnstableApi
@@ -515,9 +553,15 @@ public abstract class AbstractDnsResolverBuilder<SELF extends AbstractDnsResolve
         final boolean dnsQueryMetricsEnabled = this.dnsQueryMetricsEnabled;
         final boolean decodeIdn = this.decodeIdn;
 
+        Class<? extends SocketChannel> socketChannelType = this.socketChannelType;
+        if (socketChannelType == null) {
+            socketChannelType = TransportType.socketChannelType(eventLoopGroup);
+        }
+        final Class<? extends SocketChannel> finalSocketChannelType = socketChannelType;
+
         return builder -> {
-            builder.channelType(TransportType.datagramChannelType(eventLoopGroup))
-                   .socketChannelType(TransportType.socketChannelType(eventLoopGroup))
+            builder.datagramChannelType(TransportType.datagramChannelType(eventLoopGroup))
+                   .socketChannelType(finalSocketChannelType, retrySocketChannelOnTimeout)
                    // Disable all caches provided by Netty and use DnsCache instead.
                    .resolveCache(NoopDnsCache.INSTANCE)
                    .authoritativeDnsServerCache(NoopAuthoritativeDnsServerCache.INSTANCE)
@@ -560,6 +604,10 @@ public abstract class AbstractDnsResolverBuilder<SELF extends AbstractDnsResolve
             }
             if (observerFactory != null) {
                 builder.dnsQueryLifecycleObserverFactory(observerFactory);
+            }
+            final DnsNameResolverChannelStrategy datagramChannelStrategy = this.datagramChannelStrategy;
+            if (datagramChannelStrategy != null) {
+                builder.datagramChannelStrategy(datagramChannelStrategy);
             }
         };
     }

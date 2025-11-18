@@ -1,7 +1,7 @@
 /*
- * Copyright 2023 LINE Corporation
+ * Copyright 2025 LY Corporation
  *
- * LINE Corporation licenses this file to you under the Apache License,
+ * LY Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
@@ -16,117 +16,166 @@
 
 package com.linecorp.armeria.xds;
 
-import java.util.ArrayDeque;
-import java.util.Deque;
+import static com.google.common.base.Preconditions.checkArgument;
+
+import java.util.HashSet;
+import java.util.Set;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import com.google.common.base.MoreObjects;
 
 import com.linecorp.armeria.common.annotation.Nullable;
 
 import io.envoyproxy.envoy.config.core.v3.ConfigSource;
 import io.grpc.Status;
 
-abstract class AbstractResourceNode<T extends XdsResource> implements ResourceNode<T> {
+abstract class AbstractResourceNode<T extends XdsResource, S extends Snapshot<T>> implements ResourceNode<T> {
 
-    private final Deque<ResourceNode<?>> children = new ArrayDeque<>();
+    private static final Logger logger = LoggerFactory.getLogger(AbstractResourceNode.class);
 
-    private final XdsBootstrapImpl xdsBootstrap;
+    private final SubscriptionContext context;
     @Nullable
     private final ConfigSource configSource;
     private final XdsType type;
     private final String resourceName;
-    private final SnapshotWatcher<? extends Snapshot<T>> parentWatcher;
+    private final Set<SnapshotWatcher<? super S>> watchers = new HashSet<>();
     private final ResourceNodeType resourceNodeType;
     @Nullable
-    private T current;
+    private S snapshot;
 
-    AbstractResourceNode(XdsBootstrapImpl xdsBootstrap, @Nullable ConfigSource configSource,
-                         XdsType type, String resourceName,
-                         SnapshotWatcher<? extends Snapshot<T>> parentWatcher,
+    AbstractResourceNode(SubscriptionContext context, @Nullable ConfigSource configSource,
+                         XdsType type, String resourceName, SnapshotWatcher<S> parentWatcher,
                          ResourceNodeType resourceNodeType) {
-        this.xdsBootstrap = xdsBootstrap;
+        if (resourceNodeType == ResourceNodeType.DYNAMIC) {
+            checkArgument(configSource != null, "Dynamic node <%s.%s> received a null config source",
+                          type, resourceName);
+        } else if (resourceNodeType == ResourceNodeType.STATIC) {
+            checkArgument(configSource == null, "Static node <%s.%s> received a config source <%s>",
+                          type, resourceName, configSource);
+        }
+        this.context = context;
         this.configSource = configSource;
         this.type = type;
         this.resourceName = resourceName;
-        this.parentWatcher = parentWatcher;
+        this.resourceNodeType = resourceNodeType;
+        watchers.add(parentWatcher);
+    }
+
+    AbstractResourceNode(SubscriptionContext context, @Nullable ConfigSource configSource,
+                         XdsType type, String resourceName, ResourceNodeType resourceNodeType) {
+        this.context = context;
+        this.configSource = configSource;
+        this.type = type;
+        this.resourceName = resourceName;
         this.resourceNodeType = resourceNodeType;
     }
 
-    XdsBootstrapImpl xdsBootstrap() {
-        return xdsBootstrap;
+    final SubscriptionContext context() {
+        return context;
     }
 
+    @Nullable
     @Override
-    public ConfigSource configSource() {
+    public final ConfigSource configSource() {
         return configSource;
     }
 
-    private void setCurrent(@Nullable T current) {
-        this.current = current;
-    }
-
-    @Override
-    public T currentResource() {
-        return current;
-    }
-
-    @Override
-    public void onError(XdsType type, Status error) {
-        parentWatcher.onError(type, error);
-    }
-
-    @Override
-    public void onResourceDoesNotExist(XdsType type, String resourceName) {
-        setCurrent(null);
-
-        for (ResourceNode<?> child: children) {
-            child.close();
+    final void addWatcher(SnapshotWatcher<? super S> watcher) {
+        watchers.add(watcher);
+        if (snapshot != null) {
+            watcher.snapshotUpdated(snapshot);
         }
-        children.clear();
-        parentWatcher.onMissing(type, resourceName);
+    }
+
+    final void removeWatcher(SnapshotWatcher<S> watcher) {
+        watchers.remove(watcher);
+    }
+
+    final boolean hasWatchers() {
+        return !watchers.isEmpty();
     }
 
     @Override
-    public void onChanged(T update) {
+    public final void onError(XdsType type, String resourceName, Status error) {
+        notifyOnError(type, resourceName, error);
+    }
+
+    final void notifyOnError(XdsType type, String resourceName, Status error) {
+        for (SnapshotWatcher<? super S> watcher : watchers) {
+            try {
+                watcher.onError(type, resourceName, error);
+            } catch (Exception e) {
+                logger.warn("Unexpected exception notifying <{}> for 'onError' <{},{}> for error <{}> e: ",
+                            watcher, resourceName, type, error, e);
+            }
+        }
+    }
+
+    @Override
+    public final void onResourceDoesNotExist(XdsType type, String resourceName) {
+        notifyOnMissing(type, resourceName);
+    }
+
+    final void notifyOnMissing(XdsType type, String resourceName) {
+        for (SnapshotWatcher<? super S> watcher : watchers) {
+            try {
+                watcher.onMissing(type, resourceName);
+            } catch (Exception e) {
+                logger.warn("Unexpected exception notifying <{}> for 'onMissing' <{},{}> e: ",
+                            watcher, resourceName, type, e);
+            }
+        }
+    }
+
+    @Override
+    public final void onChanged(T update) {
         assert update.type() == type();
-        setCurrent(update);
-
-        final Deque<ResourceNode<?>> prevChildren = new ArrayDeque<>(children);
-        children.clear();
-
         doOnChanged(update);
-
-        for (ResourceNode<?> child: prevChildren) {
-            child.close();
-        }
     }
 
     abstract void doOnChanged(T update);
 
+    final void notifyOnChanged(S snapshot) {
+        this.snapshot = snapshot;
+        for (SnapshotWatcher<? super S> watcher : watchers) {
+            try {
+                watcher.snapshotUpdated(snapshot);
+            } catch (Exception e) {
+                logger.warn("Unexpected exception notifying <{}> for 'snapshotUpdated' <{}> e: ",
+                            watcher, snapshot, e);
+            }
+        }
+    }
+
     @Override
     public void close() {
-        for (ResourceNode<?> child: children) {
-            child.close();
-        }
-        children.clear();
         if (resourceNodeType == ResourceNodeType.DYNAMIC) {
-            xdsBootstrap.unsubscribe(this);
+            context.unsubscribe(this);
         }
-    }
-
-    Deque<ResourceNode<?>> children() {
-        return children;
     }
 
     @Override
-    public XdsType type() {
+    public final XdsType type() {
         return type;
     }
 
     @Override
-    public String name() {
+    public final String name() {
         return resourceName;
     }
 
-    ConfigSourceMapper configSourceMapper() {
-        return xdsBootstrap.configSourceMapper().withParentConfigSource(configSource);
+    @Override
+    public String toString() {
+        return MoreObjects.toStringHelper(this)
+                          .add("context", context)
+                          .add("configSource", configSource)
+                          .add("type", type)
+                          .add("resourceName", resourceName)
+                          .add("watchers", watchers)
+                          .add("resourceNodeType", resourceNodeType)
+                          .add("snapshot", snapshot)
+                          .toString();
     }
 }

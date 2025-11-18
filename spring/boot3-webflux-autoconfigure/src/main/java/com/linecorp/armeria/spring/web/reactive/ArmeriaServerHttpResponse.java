@@ -120,6 +120,15 @@ final class ArmeriaServerHttpResponse extends AbstractServerHttpResponseVersionS
         }
     }
 
+    @Nullable
+    @Override
+    Integer getStatusCode0() {
+        if (future.isDone() && !future.isCompletedExceptionally()) {
+            return armeriaHeaders.status().code();
+        }
+        return null;
+    }
+
     @Override
     protected void applyHeaders() {
         getHeaders().forEach((name, values) -> armeriaHeaders.add(HttpHeaderNames.of(name), values));

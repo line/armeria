@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.xds;
 
+import java.net.InetSocketAddress;
 import java.net.URI;
 import java.util.Arrays;
 import java.util.Collection;
@@ -23,7 +24,6 @@ import java.util.Collection;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.protobuf.Any;
-import com.google.protobuf.Duration;
 import com.google.protobuf.UInt32Value;
 import com.google.protobuf.Value;
 import com.google.protobuf.util.Durations;
@@ -51,6 +51,7 @@ import io.envoyproxy.envoy.config.core.v3.SocketAddress;
 import io.envoyproxy.envoy.config.core.v3.TransportSocket;
 import io.envoyproxy.envoy.config.endpoint.v3.ClusterLoadAssignment;
 import io.envoyproxy.envoy.config.endpoint.v3.Endpoint;
+import io.envoyproxy.envoy.config.endpoint.v3.Endpoint.HealthCheckConfig;
 import io.envoyproxy.envoy.config.endpoint.v3.LbEndpoint;
 import io.envoyproxy.envoy.config.endpoint.v3.LocalityLbEndpoints;
 import io.envoyproxy.envoy.config.listener.v3.ApiListener;
@@ -71,12 +72,25 @@ import io.envoyproxy.envoy.type.v3.Percent;
 public final class XdsTestResources {
 
     public static final String BOOTSTRAP_CLUSTER_NAME = "bootstrap-cluster";
+    public static final String TLS_TRANSPORT_SOCKET_NAME = "envoy.transport_sockets.tls";
 
     private XdsTestResources() {}
+
+    public static TransportSocket upstreamTls() {
+        return TransportSocket.newBuilder()
+                              .setName(TLS_TRANSPORT_SOCKET_NAME)
+                              .setTypedConfig(Any.pack(UpstreamTlsContext.getDefaultInstance()))
+                              .build();
+    }
 
     public static LbEndpoint endpoint(String address, int port) {
         return endpoint(address, port, Metadata.getDefaultInstance(), 1,
                         HealthStatus.HEALTHY);
+    }
+
+    public static LbEndpoint endpoint(InetSocketAddress address, int weight) {
+        return endpoint(address.getAddress().getHostAddress(), address.getPort(),
+                        Metadata.getDefaultInstance(), weight, HealthStatus.HEALTHY);
     }
 
     public static LbEndpoint endpoint(String address, int port, int weight) {
@@ -99,20 +113,28 @@ public final class XdsTestResources {
 
     public static LbEndpoint endpoint(String address, int port, Metadata metadata, int weight,
                                       HealthStatus healthStatus) {
-        final SocketAddress socketAddress = SocketAddress.newBuilder()
-                                                         .setAddress(address)
-                                                         .setPortValue(port)
-                                                         .build();
+        return endpoint(address, port, metadata, weight, healthStatus, HealthCheckConfig.getDefaultInstance());
+    }
+
+    public static LbEndpoint endpoint(String address, int port, Metadata metadata, int weight,
+                                      HealthStatus healthStatus, HealthCheckConfig healthCheckConfig) {
         return LbEndpoint
                 .newBuilder()
                 .setLoadBalancingWeight(UInt32Value.of(weight))
                 .setMetadata(metadata)
                 .setHealthStatus(healthStatus)
                 .setEndpoint(Endpoint.newBuilder()
-                                     .setAddress(Address.newBuilder()
-                                                        .setSocketAddress(socketAddress)
-                                                        .build())
+                                     .setAddress(address(address, port))
+                                     .setHealthCheckConfig(healthCheckConfig)
                                      .build()).build();
+    }
+
+    public static SocketAddress socketAddress(String address, int port) {
+        return SocketAddress.newBuilder().setAddress(address).setPortValue(port).build();
+    }
+
+    public static Address address(String address, int port) {
+        return Address.newBuilder().setSocketAddress(socketAddress(address, port)).build();
     }
 
     public static Locality locality(String region) {
@@ -126,7 +148,8 @@ public final class XdsTestResources {
     }
 
     public static ClusterLoadAssignment loadAssignment(String clusterName, URI uri) {
-        return loadAssignment(clusterName, uri.getHost(), uri.getPort());
+        final int port = uri.getPort() > -1 ? uri.getPort() : 80;
+        return loadAssignment(clusterName, uri.getHost(), port);
     }
 
     public static ClusterLoadAssignment loadAssignment(String clusterName, String address, int port) {
@@ -139,6 +162,13 @@ public final class XdsTestResources {
 
     public static ClusterLoadAssignment loadAssignment(String clusterName) {
         return ClusterLoadAssignment.newBuilder().setClusterName(clusterName)
+                                    .build();
+    }
+
+    public static ClusterLoadAssignment loadAssignment(String clusterName,
+                                                       LocalityLbEndpoints... localityLbEndpoints) {
+        return ClusterLoadAssignment.newBuilder().setClusterName(clusterName)
+                                    .addAllEndpoints(ImmutableList.copyOf(localityLbEndpoints))
                                     .build();
     }
 
@@ -194,6 +224,7 @@ public final class XdsTestResources {
                 .setDynamicResources(DynamicResources
                                              .newBuilder()
                                              .setCdsConfig(configSource)
+                                             .setLdsConfig(configSource)
                                              .setAdsConfig(configSource.getApiConfigSource())
                 )
                 .build();
@@ -246,7 +277,6 @@ public final class XdsTestResources {
     public static Cluster createCluster(String clusterName, int connectTimeoutSeconds) {
         final ConfigSource edsSource =
                 ConfigSource.newBuilder()
-                            .setInitialFetchTimeout(Duration.newBuilder().setSeconds(0))
                             .setAds(AggregatedConfigSource.getDefaultInstance())
                             .setResourceApiVersion(ApiVersion.V3)
                             .build();
@@ -312,7 +342,9 @@ public final class XdsTestResources {
 
     public static Listener exampleListener(String listenerName, String routeName) {
         final HttpConnectionManager manager =
-                httpConnectionManager(Rds.newBuilder().setRouteConfigName(routeName).build());
+                httpConnectionManager(Rds.newBuilder().setRouteConfigName(routeName)
+                                         .setConfigSource(adsConfigSource())
+                                         .build());
         return exampleListener(listenerName, manager);
     }
 
@@ -396,11 +428,11 @@ public final class XdsTestResources {
                        .build();
     }
 
-    public static Bootstrap staticBootstrap(Listener listener, Cluster cluster) {
+    public static Bootstrap staticBootstrap(Listener listener, Cluster... clusters) {
         return Bootstrap.newBuilder()
                         .setStaticResources(StaticResources.newBuilder()
                                                            .addListeners(listener)
-                                                           .addClusters(cluster)
+                                                           .addAllClusters(ImmutableList.copyOf(clusters))
                                                            .build()).build();
     }
 

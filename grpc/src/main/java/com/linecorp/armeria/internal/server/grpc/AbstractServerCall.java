@@ -29,6 +29,7 @@ import java.util.concurrent.Executor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Splitter;
 
 import com.linecorp.armeria.common.HttpData;
@@ -111,8 +112,9 @@ public abstract class AbstractServerCall<I, O> extends ServerCall<I, O> {
     private final String clientAcceptEncoding;
     private final boolean autoCompression;
 
+    @VisibleForTesting
     @Nullable
-    private final Executor blockingExecutor;
+    final Executor blockingExecutor;
     private final InternalGrpcExceptionHandler exceptionHandler;
 
     // Only set once.
@@ -382,6 +384,11 @@ public abstract class AbstractServerCall<I, O> extends ServerCall<I, O> {
     }
 
     protected final void invokeOnReady() {
+        if (blockingExecutor != null && cancelled) {
+            // Do not call listener.onReady() if the call is cancelled after
+            // this task was scheduled to blockingTaskExecutor.
+            return;
+        }
         try {
             if (listener != null) {
                 listener.onReady();
@@ -392,6 +399,11 @@ public abstract class AbstractServerCall<I, O> extends ServerCall<I, O> {
     }
 
     private void invokeOnMessage(I request, boolean halfClose) {
+        if (blockingExecutor != null && cancelled) {
+            // Do not call listener.onMessage() if the call is cancelled after
+            // this task was scheduled to blockingTaskExecutor.
+            return;
+        }
         try (SafeCloseable ignored = ctx.push()) {
             assert listener != null;
             listener.onMessage(request);
@@ -404,6 +416,11 @@ public abstract class AbstractServerCall<I, O> extends ServerCall<I, O> {
     }
 
     protected final void invokeHalfClose() {
+        if (blockingExecutor != null && cancelled) {
+            // Do not call listener.onHalfClose() if the call is cancelled after
+            // this task was scheduled to blockingTaskExecutor.
+            return;
+        }
         try (SafeCloseable ignored = ctx.push()) {
             assert listener != null;
             listener.onHalfClose();
@@ -509,6 +526,7 @@ public abstract class AbstractServerCall<I, O> extends ServerCall<I, O> {
         if (compressor != Codec.Identity.NONE || InternalMetadata.headerCount(metadata) > 0) {
             headers = headers.withMutations(builder -> {
                 if (compressor != Codec.Identity.NONE) {
+                    assert compressor != null;
                     builder.set(GrpcHeaderNames.GRPC_ENCODING, compressor.getMessageEncoding());
                 }
                 MetadataUtil.fillHeaders(metadata, builder);
@@ -535,7 +553,7 @@ public abstract class AbstractServerCall<I, O> extends ServerCall<I, O> {
     }
 
     protected final HttpObject responseTrailers(ServiceRequestContext ctx, Status status,
-                                                Metadata metadata, boolean trailersOnly) {
+                                                @Nullable Metadata metadata, boolean trailersOnly) {
         final HttpHeadersBuilder defaultTrailers =
                 trailersOnly ? defaultResponseHeaders.toBuilder() : HttpHeaders.builder();
         final HttpHeaders trailers = statusToTrailers(ctx, defaultTrailers, status, metadata);
@@ -551,7 +569,8 @@ public abstract class AbstractServerCall<I, O> extends ServerCall<I, O> {
 
     // Returns ResponseHeaders if headersSent == false or HttpHeaders otherwise.
     public static HttpHeaders statusToTrailers(
-            ServiceRequestContext ctx, HttpHeadersBuilder trailersBuilder, Status status, Metadata metadata) {
+            ServiceRequestContext ctx, HttpHeadersBuilder trailersBuilder,
+            Status status, @Nullable Metadata metadata) {
         try {
             MetadataUtil.fillHeaders(metadata, trailersBuilder);
         } catch (Exception e) {

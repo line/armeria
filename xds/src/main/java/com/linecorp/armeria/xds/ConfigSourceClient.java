@@ -24,63 +24,50 @@ import java.util.function.Consumer;
 
 import com.google.protobuf.Duration;
 
-import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.client.grpc.GrpcClientBuilder;
 import com.linecorp.armeria.client.grpc.GrpcClients;
 import com.linecorp.armeria.client.retry.Backoff;
-import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.util.SafeCloseable;
-import com.linecorp.armeria.xds.client.endpoint.XdsEndpointGroup;
 
 import io.envoyproxy.envoy.config.core.v3.ApiConfigSource;
 import io.envoyproxy.envoy.config.core.v3.ApiConfigSource.ApiType;
 import io.envoyproxy.envoy.config.core.v3.ConfigSource;
 import io.envoyproxy.envoy.config.core.v3.GrpcService;
-import io.envoyproxy.envoy.config.core.v3.GrpcService.EnvoyGrpc;
-import io.envoyproxy.envoy.config.core.v3.HeaderValue;
 import io.envoyproxy.envoy.config.core.v3.Node;
-import io.envoyproxy.envoy.extensions.transport_sockets.tls.v3.UpstreamTlsContext;
 import io.netty.util.concurrent.EventExecutor;
 
 final class ConfigSourceClient implements SafeCloseable {
 
     private final SubscriberStorage subscriberStorage;
-    private final EndpointGroup endpointGroup;
     private final XdsStream stream;
 
     ConfigSourceClient(ConfigSource configSource,
                        EventExecutor eventLoop,
                        Node node, Consumer<GrpcClientBuilder> clientCustomizer,
-                       BootstrapClusters bootstrapClusters) {
-        checkArgument(configSource.hasApiConfigSource(),
-                      "No api config source available in %s", configSource);
+                       BootstrapClusters bootstrapClusters,
+                       ConfigSourceMapper configSourceMapper) {
+        final ApiConfigSource apiConfigSource;
+        if (configSource.hasAds()) {
+            apiConfigSource = configSourceMapper.bootstrapAdsConfig();
+        } else if (configSource.hasApiConfigSource()) {
+            apiConfigSource = configSource.getApiConfigSource();
+        } else {
+            throw new IllegalArgumentException("Unsupported config source: " + configSource);
+        }
+
         final long fetchTimeoutMillis = initialFetchTimeoutMillis(configSource);
         subscriberStorage = new SubscriberStorage(eventLoop, fetchTimeoutMillis);
         final XdsResponseHandler handler = new DefaultResponseHandler(subscriberStorage);
 
-        // TODO: @jrhee17 revisit using multiple grpcServices once TLS per endpoint is supported
-        final ApiConfigSource apiConfigSource = configSource.getApiConfigSource();
         final List<GrpcService> grpcServices = apiConfigSource.getGrpcServicesList();
-        final GrpcService grpcService = grpcServices.get(0);
-        final EnvoyGrpc envoyGrpc = grpcService.getEnvoyGrpc();
-        final String clusterName = envoyGrpc.getClusterName();
-        final ClusterSnapshot clusterSnapshot = bootstrapClusters.clusterSnapshot(clusterName);
-        checkArgument(clusterSnapshot != null, "Unable to find static cluster '%s'", clusterName);
-
-        endpointGroup = XdsEndpointGroup.of(clusterSnapshot);
+        checkArgument(!grpcServices.isEmpty(),
+                      "At least one GrpcService should be specified for '%s'", configSource);
         final boolean ads = apiConfigSource.getApiType() == ApiType.AGGREGATED_GRPC;
-        final UpstreamTlsContext tlsContext = clusterSnapshot.xdsResource().upstreamTlsContext();
-        final SessionProtocol sessionProtocol =
-                tlsContext != null ? SessionProtocol.HTTPS : SessionProtocol.HTTP;
-        final GrpcClientBuilder builder = GrpcClients.builder(sessionProtocol, endpointGroup);
-        builder.responseTimeout(java.time.Duration.ZERO);
+        final GrpcClientBuilder builder =
+                GrpcClients.builder(new GrpcServicesPreprocessor(grpcServices, bootstrapClusters));
+        builder.responseTimeoutMillis(Long.MAX_VALUE);
         builder.maxResponseLength(0);
-        for (HeaderValue headerValue: grpcService.getInitialMetadataList()) {
-            builder.addHeader(headerValue.getKey(), headerValue.getValue());
-        }
-
         clientCustomizer.accept(builder);
-
         if (ads) {
             final SotwDiscoveryStub stub = SotwDiscoveryStub.ads(builder);
             stream = new SotwXdsStream(stub, node, Backoff.ofDefault(),
@@ -113,7 +100,6 @@ final class ConfigSourceClient implements SafeCloseable {
     @Override
     public void close() {
         stream.close();
-        endpointGroup.closeAsync();
         subscriberStorage.close();
     }
 

@@ -15,6 +15,7 @@
  */
 package com.linecorp.armeria.spring.web.reactive;
 
+import static com.linecorp.armeria.common.logging.RequestLogProperty.RESPONSE_HEADERS;
 import static java.util.Objects.requireNonNull;
 
 import java.util.concurrent.CompletableFuture;
@@ -28,6 +29,7 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.spring.internal.common.DataBufferFactoryWrapper;
 
@@ -70,6 +72,15 @@ final class ArmeriaHttpHandlerAdapter {
                           .doOnError(cause -> {
                               logger.debug("{} Failed to handle a request", ctx, cause);
                               convertedResponse.setComplete(cause).subscribe();
+                          })
+                          .doOnCancel(() -> {
+                              // If Armeria has already returned a response (e.g. RequestTimeout)
+                              // make a best effort to reflect this in the returned response
+                              final RequestLog requestLog = ctx.log().getIfAvailable(RESPONSE_HEADERS);
+                              if (requestLog != null) {
+                                  convertedResponse.setRawStatusCode(requestLog.responseStatus().code());
+                                  convertedResponse.setComplete().subscribe();
+                              }
                           });
     }
 }

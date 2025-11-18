@@ -16,15 +16,52 @@
 
 package com.linecorp.armeria.common;
 
-import static org.assertj.core.api.Assertions.assertThatCode;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.awaitility.Awaitility.await;
+
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.junit.jupiter.api.Test;
+
+import com.linecorp.armeria.internal.common.FlagsLoaded;
+import com.linecorp.armeria.internal.common.RequestContextUtil;
 
 class FlagsCyclicDependencyTest {
 
     @Test
-    void testBasicCase() {
-        assertThatCode(Flags::requestContextStorageProvider)
-                .doesNotThrowAnyException();
+    void testRequestContextUtilAndFlagsCycle() throws InterruptedException {
+        final AtomicInteger counter = new AtomicInteger();
+        final CountDownLatch latch = new CountDownLatch(1);
+        final ExecutorService executorService = Executors.newFixedThreadPool(2);
+        executorService.execute(() -> {
+            try {
+                latch.await();
+            } catch (InterruptedException e) {
+                throw new RuntimeException(e);
+            }
+            // Calls Flags.requestContextStorageProvider() internally when initializing RequestContextUtil.
+            RequestContextUtil.get();
+            counter.incrementAndGet();
+        });
+
+        executorService.execute(() -> {
+            try {
+                latch.await();
+            } catch (InterruptedException e) {
+                throw new RuntimeException(e);
+            }
+            // If RequestContextExportingAppender is enabled, when initializing Flags,
+            // it calls RequestContextUtil.get() internally if FlagsLoaded doesn't work properly.
+            Flags.requestContextStorageProvider();
+            counter.incrementAndGet();
+        });
+        latch.countDown();
+        await().until(() -> counter.get() == 2);
+
+        // Flags should be loaded
+        assertThat(FlagsLoaded.get()).isTrue();
     }
 }

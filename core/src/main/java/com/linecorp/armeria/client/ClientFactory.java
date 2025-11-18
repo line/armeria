@@ -36,6 +36,7 @@ import com.google.common.base.Strings;
 
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.common.FlagsProvider;
+import com.linecorp.armeria.common.NonBlocking;
 import com.linecorp.armeria.common.Scheme;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
@@ -45,11 +46,11 @@ import com.linecorp.armeria.common.util.ListenableAsyncCloseable;
 import com.linecorp.armeria.common.util.ReleasableHolder;
 import com.linecorp.armeria.common.util.ShutdownHooks;
 import com.linecorp.armeria.common.util.Unwrappable;
+import com.linecorp.armeria.internal.client.ClientBuilderParamsUtil;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
-import reactor.core.scheduler.NonBlocking;
 
 /**
  * Creates and manages clients.
@@ -291,8 +292,8 @@ public interface ClientFactory extends Unwrappable, ListenableAsyncCloseable {
     default URI validateUri(URI uri) {
         requireNonNull(uri, "uri");
 
-        if (Clients.isUndefinedUri(uri)) {
-            // We use a special singleton marker URI for clients that do not explicitly define a
+        if (ClientBuilderParamsUtil.isInternalUri(uri)) {
+            // We use a special marker URI for clients that do not explicitly define a
             // host or scheme at construction time.
             // As this isn't created by users, we don't need to normalize it.
             return uri;

@@ -55,7 +55,7 @@ final class TextHeadersSanitizer implements HeadersSanitizer<String> {
 
         final StringBuilder sb = new StringBuilder();
         if (headers.isEndOfStream()) {
-            sb.append("[EOS], ");
+            sb.append("[EOS, ");
         } else {
             sb.append('[');
         }

@@ -222,7 +222,10 @@ public final class RequestContextAssembly {
     private abstract static class ConditionalOnCurrentRequestContextFunction<T> implements Function<T, T> {
         @Override
         public final T apply(T t) {
-            return RequestContext.mapCurrent(requestContext -> applyActual(t, requestContext), () -> t);
+            final T result = RequestContext.mapCurrent(requestContext -> applyActual(t, requestContext),
+                                                       () -> t);
+            assert result != null;
+            return result;
         }
 
         abstract T applyActual(T t, RequestContext ctx);

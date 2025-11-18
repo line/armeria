@@ -49,8 +49,13 @@ final class MetricCollectingCircuitBreakerListener implements CircuitBreakerList
         metricsOf(circuitBreakerName).onStateChanged(state);
     }
 
+    @Deprecated
     @Override
-    public void onEventCountUpdated(String circuitBreakerName, EventCount eventCount) {
+    public void onEventCountUpdated(String circuitBreakerName, EventCount eventCount) {}
+
+    @Override
+    public void onEventCountUpdated(String circuitBreakerName,
+                                    com.linecorp.armeria.common.util.EventCount eventCount) throws Exception {
         metricsOf(circuitBreakerName).onCountUpdated(eventCount);
     }
 

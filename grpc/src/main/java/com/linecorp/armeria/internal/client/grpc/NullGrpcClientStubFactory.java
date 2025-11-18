@@ -17,7 +17,6 @@
 package com.linecorp.armeria.internal.client.grpc;
 
 import com.linecorp.armeria.client.grpc.GrpcClientStubFactory;
-import com.linecorp.armeria.common.annotation.Nullable;
 
 import io.grpc.Channel;
 import io.grpc.ServiceDescriptor;
@@ -31,7 +30,6 @@ public enum NullGrpcClientStubFactory implements GrpcClientStubFactory {
         throw new UnsupportedOperationException();
     }
 
-    @Nullable
     @Override
     public Object newClientStub(Class<?> clientType, Channel channel) {
         throw new UnsupportedOperationException();

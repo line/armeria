@@ -20,12 +20,12 @@ import static java.util.Objects.requireNonNull;
 import java.util.List;
 import java.util.function.ToLongFunction;
 
-import com.google.common.hash.Hashing;
-
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.Endpoint;
+import com.linecorp.armeria.client.endpoint.DefaultEndpointSelector.LoadBalancerFactory;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.loadbalancer.LoadBalancer;
 
 /**
  * An {@link EndpointSelector} strategy which implements sticky load-balancing using
@@ -45,7 +45,9 @@ import com.linecorp.armeria.common.annotation.Nullable;
  * final StickyEndpointSelectionStrategy strategy = new StickyEndpointSelectionStrategy(hasher);
  * }</pre>
  */
-final class StickyEndpointSelectionStrategy implements EndpointSelectionStrategy {
+final class StickyEndpointSelectionStrategy
+        implements EndpointSelectionStrategy,
+                   LoadBalancerFactory<LoadBalancer<Endpoint, ClientRequestContext>> {
 
     private final ToLongFunction<? super ClientRequestContext> requestContextHasher;
 
@@ -60,39 +62,16 @@ final class StickyEndpointSelectionStrategy implements EndpointSelectionStrategy
     }
 
     /**
-     * Creates a new {@link StickyEndpointSelector}.
-     *
-     * @param endpointGroup an {@link EndpointGroup}
-     * @return a new {@link StickyEndpointSelector}
+     * Creates a new sticky {@link EndpointSelector}.
      */
     @Override
     public EndpointSelector newSelector(EndpointGroup endpointGroup) {
-        return new StickyEndpointSelector(endpointGroup, requestContextHasher);
+        return new DefaultEndpointSelector<>(endpointGroup, this);
     }
 
-    private static final class StickyEndpointSelector extends AbstractEndpointSelector {
-
-        private final ToLongFunction<? super ClientRequestContext> requestContextHasher;
-
-        StickyEndpointSelector(EndpointGroup endpointGroup,
-                               ToLongFunction<? super ClientRequestContext> requestContextHasher) {
-            super(endpointGroup);
-            this.requestContextHasher = requireNonNull(requestContextHasher, "requestContextHasher");
-            initialize();
-        }
-
-        @Nullable
-        @Override
-        public Endpoint selectNow(ClientRequestContext ctx) {
-
-            final List<Endpoint> endpoints = group().endpoints();
-            if (endpoints.isEmpty()) {
-                return null;
-            }
-
-            final long key = requestContextHasher.applyAsLong(ctx);
-            final int nearest = Hashing.consistentHash(key, endpoints.size());
-            return endpoints.get(nearest);
-        }
+    @Override
+    public LoadBalancer<Endpoint, ClientRequestContext> newLoadBalancer(
+            @Nullable LoadBalancer<Endpoint, ClientRequestContext> oldLoadBalancer, List<Endpoint> candidates) {
+        return LoadBalancer.ofSticky(candidates, requestContextHasher);
     }
 }

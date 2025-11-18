@@ -52,11 +52,13 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.ResponseHeaders;
+import com.linecorp.armeria.common.grpc.GrpcExceptionHandlerFunction;
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
 import com.linecorp.armeria.common.grpc.protocol.DeframedMessage;
 import com.linecorp.armeria.common.util.EventLoopGroups;
 import com.linecorp.armeria.internal.common.grpc.DefaultJsonMarshaller;
 import com.linecorp.armeria.internal.common.grpc.GrpcTestUtil;
+import com.linecorp.armeria.internal.common.grpc.InternalGrpcExceptionHandler;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.unsafe.grpc.GrpcUnsafeBufferUtil;
 
@@ -80,6 +82,9 @@ class UnaryServerCallTest {
     private static final AsciiString EXTRA_HEADER_NAME1 = HttpHeaderNames.of("extra-header-1");
     private static final Key<String> EXTRA_HEADER_KEY1 = Key.of(EXTRA_HEADER_NAME1.toString(),
                                                                 Metadata.ASCII_STRING_MARSHALLER);
+
+    private static final InternalGrpcExceptionHandler exceptionHandler =
+            new InternalGrpcExceptionHandler(GrpcExceptionHandlerFunction.of());
 
     private HttpResponse res;
 
@@ -329,7 +334,7 @@ class UnaryServerCallTest {
                         ResponseHeaders.builder(HttpStatus.OK)
                                        .contentType(GrpcSerializationFormats.PROTO.mediaType())
                                        .build(),
-                        /* exceptionMappings */ null,
+                        exceptionHandler,
                         /* blockingExecutor */ null,
                         /* autoCompress */ false,
                         /* useMethodMarshaller */ false);
@@ -375,7 +380,7 @@ class UnaryServerCallTest {
                 ResponseHeaders.builder(HttpStatus.OK)
                                .contentType(GrpcSerializationFormats.PROTO.mediaType())
                                .build(),
-                /* exceptionMappings */ null,
+                exceptionHandler,
                 /* blockingExecutor */ null,
                 /* autoCompress */ false,
                 /* useMethodMarshaller */ false);

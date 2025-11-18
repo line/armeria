@@ -1,0 +1,138 @@
+---
+date: 2024-11-13
+---
+
+## 🌟 New features
+
+- **Dynamic TLS Configuration**: You can now update TLS configurations dynamically using <type://TlsProvider> #5033 #5228
+  - You can create a <type://TlsProvider> which specifies <type://TlsKeyPair> dynamically.
+    ```java
+    // return a TlsKeyPair for host patterns
+    TlsProvider tlsProvider = TlsProvider
+      .builder()
+      .keyPair("*.a.com", TlsKeyPair.of(...))
+      .keyPair("*.b.com", TlsKeyPair.of(...))
+      .build();
+
+    // return a TlsKeyPair dynamically
+    TlsProvider tlsProvider = hostname -> TlsKeyPair.of(...);
+    ```
+  - The <type://TlsProvider> can be used for both servers and clients.
+    ```java
+    // client-side
+    ClientFactory
+      .builder()
+      .tlsProvider(tlsProvider);
+
+    // server-side
+    Server
+      .builder()
+      .tlsProvider(tlsProvider);
+    ```
+- **Access to Raw Request Path**: You can access the raw request path via <type://ServiceRequestContext#rawPath()>. #5931 #5932
+  - This can be useful when you need to get the original request path sent from the client, even if it's potentially insecure.
+    ```java
+    ServiceRequestContext ctx = ...;
+    String rawPath = ctx.rawPath();
+    // rawPath may contain unencoded, invalid or insecure characters.
+    ```
+- **Additional Static Factory Methods for ResponseEntity**: More static factory methods are added for <type://ResponseEntity>. #5954
+  ```java
+  ResponseEntity<Object> response = ResponseEntity.of(200);
+  ResponseEntity<String> response = ResponseEntity.of("Hello!");
+  ```
+- **Timeout Support for HttpRequest and HttpResponse**: You can specify <type://HttpRequest#timeout(Duration)> or <type://HttpResponse#timeout(Duration)> to set a timeout
+  for an <type://HttpRequest> or <type://HttpResponse>. #5744 #5761
+  ```java
+  HttpRequest
+    .streaming(HttpMethod.GET, "/")
+    .timeout(Duration.ofSeconds(1)) // timeout if there is a delay exceeding 1 second between each data chunk
+  ```
+- **Nacos Integration for Server Registration and Endpoint Retrieval**: You can now register your server to or retrieve <typeplural://Endpoint> from
+a [Nacos](https://nacos.io/) registry server. #5365 #5409
+  - Use <type://NacosUpdatingListener> to register the <typeplural://Server> to [Nacos](https://nacos.io/):
+  ```java
+  Server server = ...;
+  server.addListener(
+    NacosUpdatingListener
+      .builder(nacosUri, "my-service")
+      ...
+      .build());
+  ```
+  - Use <type://NacosEndpointGroup> for clients:
+  ```java
+  EndpointGroup group = NacosEndpointGroup.of(nacosUri, "my-service");
+  WebClient client = WebClient.of(SessionProtocol.HTTP, group);
+  ```
+
+## 📈 Improvements
+
+- <type://XdsEndpointGroup> now supports `disable_active_health_check`. #5879
+
+## 🛠️ Bug fixes
+
+- DNS resolver now correctly adds search domains for hostnames with trailing dots. #5963
+- CORS headers for failed requests are now correctly set even when a custom <type://ServerErrorHandler> is configured. #5493 #5939
+- Fixed a bug where <type://AsyncServerInterceptor> is incompatible with the OpenTelemetry gRPC agent. #5937 #5938
+- The GraalVM native image metadata has been updated to reflect recent code changes. #5946
+- Spring Actuator correctly collects metrics when using Spring WebFlux integration. #5882 #5884
+
+## ☢️ Breaking changes
+
+- ABI compatibility of <type://ResponseEntity#of(ResponseHeaders)> has been broken. #5954
+
+## ⛓ Dependencies
+
+- Brotli4j 1.16.0 → 1.17.0
+- java-control-plane 1.0.45 → 1.0.46
+- Eureka 2.0.3 → 2.0.4
+- GraphQL Kotlin 7.1.4 → 8.2.1
+- Java gRPC 1.65.1 → 1.68.1
+- Jackson 2.17.2 → 2.18.1
+- Jetty
+  - 11.0.22 → 11.0.24
+  - 12.0.12 → 12.0.14
+- Kotlin 3.8.0 → 3.8.1
+- Kotlin coroutines 1.8.1 → 1.9.0
+- Fabric8 Kubernetes Client 6.13.1 → 6.13.4
+- Micrometer 1.13.2 → 1.13.6
+- Micrometer Tracing 1.3.2 → 1.3.5
+- Netty 4.1.112.Final → 4.1.115.Final
+- prometheus 1.3.1 → 1.3.2
+- Protobuf 3.25.1 → 3.25.5
+- protobuf-jackson 2.5.0 → 2.6.0
+- Reactor 3.6.8 → 3.6.11
+- RXJava 3.1.8 → 3.1.9
+- Sangria 4.1.1 → 4.2.2
+- Scala
+  - 2.12.19 → 2.12.20
+  - 2.13.14 → 2.13.15
+  - 3.4.2 → 3.6.1
+- Spring 6.1.11 → 6.1.14
+- Spring Boot 3.3.2 → 3.3.5
+- Tomcat
+  - 9.0.91 → 9.0.96
+  - 10.1.26 → 10.1.31
+
+## 🙇 Thank you
+
+<ThankYou usernames={[
+  'Bue-von-hon',
+  'JiwonKKang',
+  'KarboniteKream',
+  'KonaEspresso94',
+  'Mina-1316',
+  'be-hase',
+  'blue-hope',
+  'chickenchickenlove',
+  'friscoMad',
+  'ikhoon',
+  'jrhee17',
+  'kabigon-sung',
+  'minwoox',
+  'my4-dev',
+  'roderick675',
+  'sjy982',
+  'trustin',
+  'yzfeng2020'
+]} />

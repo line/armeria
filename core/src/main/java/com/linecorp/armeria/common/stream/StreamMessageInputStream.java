@@ -145,16 +145,16 @@ final class StreamMessageInputStream<T> extends InputStream {
                 byteBufsInputStream.add(result.byteBuf());
             } catch (Throwable ex) {
                 StreamMessageUtil.closeOrAbort(item, ex);
+                onError(ex);
                 final Subscription upstream = this.upstream;
                 assert upstream != null;
                 upstream.cancel();
-                onError(ex);
             }
         }
 
         @Override
         public void onError(Throwable cause) {
-            byteBufsInputStream.setEos();
+            byteBufsInputStream.interrupt(cause);
         }
 
         @Override

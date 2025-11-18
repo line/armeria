@@ -36,6 +36,7 @@ import com.google.common.base.Splitter;
 import com.google.common.collect.Sets;
 import com.google.common.collect.Streams;
 
+import com.linecorp.armeria.client.ResponseTimeoutMode;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.InetAddressPredicates;
 import com.linecorp.armeria.common.util.Sampler;
@@ -274,6 +275,10 @@ final class SystemPropertyFlagsProvider implements FlagsProvider {
     @Nullable
     @Override
     public Boolean defaultPreferHttp1() {
+        final Boolean defaultPreferHttp1 = getBoolean("defaultPreferHttp1");
+        if (defaultPreferHttp1 != null) {
+            return defaultPreferHttp1;
+        }
         return getBoolean("preferHttp1");
     }
 
@@ -341,6 +346,11 @@ final class SystemPropertyFlagsProvider implements FlagsProvider {
     @Override
     public Integer defaultHttp2InitialStreamWindowSize() {
         return getInt("defaultHttp2InitialStreamWindowSize");
+    }
+
+    @Override
+    public @Nullable Float defaultHttp2StreamWindowUpdateRatio() {
+        return getFloat("defaultHttp2StreamWindowUpdateRatio");
     }
 
     @Nullable
@@ -598,6 +608,18 @@ final class SystemPropertyFlagsProvider implements FlagsProvider {
         return getLong("defaultUnloggedExceptionsReportIntervalMillis");
     }
 
+    @Override
+    @Nullable
+    public ResponseTimeoutMode responseTimeoutMode() {
+        return getAndParse("responseTimeoutMode", ResponseTimeoutMode::valueOf);
+    }
+
+    @Nullable
+    @Override
+    public Boolean annotatedServiceContentLogging() {
+        return getBoolean("annotatedServiceContentLogging");
+    }
+
     @Nullable
     private static Long getLong(String name) {
         return getAndParse(name, Long::parseLong);
@@ -606,6 +628,11 @@ final class SystemPropertyFlagsProvider implements FlagsProvider {
     @Nullable
     private static Integer getInt(String name) {
         return getAndParse(name, Integer::parseInt);
+    }
+
+    @Nullable
+    private static Float getFloat(String name) {
+        return getAndParse(name, Float::parseFloat);
     }
 
     @Nullable

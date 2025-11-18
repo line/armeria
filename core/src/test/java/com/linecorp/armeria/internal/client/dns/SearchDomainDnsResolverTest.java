@@ -18,6 +18,7 @@ package com.linecorp.armeria.internal.client.dns;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.net.UnknownHostException;
 import java.util.List;
 import java.util.Queue;
 import java.util.concurrent.CompletableFuture;
@@ -76,6 +77,46 @@ class SearchDomainDnsResolverTest {
                 DnsQuestionWithoutTrailingDot.of("example.com", "example.com.armeria.io.", DnsRecordType.A),
                 DnsQuestionWithoutTrailingDot.of("example.com", "example.com.armeria.dev.", DnsRecordType.A),
                 DnsQuestionWithoutTrailingDot.of("example.com", "example.com.", DnsRecordType.A));
-        context.cancel();
+        context.cancelScheduler();
+    }
+
+    @Test
+    void unknownHostnameEndingWithDot() {
+        final ByteArrayDnsRecord record = new ByteArrayDnsRecord("example.com", DnsRecordType.A,
+                                                                 1, new byte[] { 10, 0, 1, 1 });
+        final Queue<DnsQuestion> questions = new LinkedBlockingQueue<>();
+        final DnsResolver mockResolver = new DnsResolver() {
+
+            @Override
+            public CompletableFuture<List<DnsRecord>> resolve(DnsQuestionContext ctx, DnsQuestion question) {
+                questions.add(question);
+                if ("trailing-dot.com.armeria.dev.".equals(question.name())) {
+                    return UnmodifiableFuture.completedFuture(ImmutableList.of(record));
+                } else {
+                    return UnmodifiableFuture.exceptionallyCompletedFuture(new UnknownHostException());
+                }
+            }
+
+            @Override
+            public void close() {}
+        };
+
+        final List<String> searchDomains = ImmutableList.of("armeria.io", "armeria.dev");
+        final DnsQuestionContext context = new DnsQuestionContext(eventLoop.get(), 10000);
+        final DnsQuestionWithoutTrailingDot question =
+                DnsQuestionWithoutTrailingDot.of("trailing-dot.com.", DnsRecordType.A);
+        final SearchDomainDnsResolver resolver = new SearchDomainDnsResolver(mockResolver, searchDomains, 2);
+        final CompletableFuture<List<DnsRecord>> result = resolver.resolve(context, question);
+
+        assertThat(result.join()).contains(record);
+        assertThat(questions).hasSize(3);
+        assertThat(questions).containsExactly(
+                DnsQuestionWithoutTrailingDot.of("trailing-dot.com.", "trailing-dot.com.",
+                                                 DnsRecordType.A),
+                DnsQuestionWithoutTrailingDot.of("trailing-dot.com.", "trailing-dot.com.armeria.io.",
+                                                 DnsRecordType.A),
+                DnsQuestionWithoutTrailingDot.of("trailing-dot.com.", "trailing-dot.com.armeria.dev.",
+                                                 DnsRecordType.A));
+        context.cancelScheduler();
     }
 }

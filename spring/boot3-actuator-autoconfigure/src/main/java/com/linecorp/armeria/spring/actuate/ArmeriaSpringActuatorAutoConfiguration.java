@@ -323,6 +323,7 @@ public class ArmeriaSpringActuatorAutoConfiguration {
                                                       ManagementServerProperties properties) {
         Object internalServices = null;
         if (MANAGEMENT_SERVER_PORT_METHOD != null) {
+            assert INTERNAL_SERVICES_CLASS != null;
             internalServices = findBean(beanFactory, INTERNAL_SERVICES_CLASS);
         }
 
@@ -338,6 +339,7 @@ public class ArmeriaSpringActuatorAutoConfiguration {
             return managementPort.getPort();
         }
 
+        assert MANAGEMENT_SERVER_PORT_METHOD != null;
         try {
             final Port port = (Port) MANAGEMENT_SERVER_PORT_METHOD.invoke(internalServices);
             if (port == null) {
@@ -352,6 +354,10 @@ public class ArmeriaSpringActuatorAutoConfiguration {
     @Nullable
     private static Integer getExposedInternalServicePort(BeanFactory beanFactory,
                                                          ArmeriaSettings armeriaSettings) {
+        if (INTERNAL_SERVICES_CLASS == null) {
+            return null;
+        }
+
         final Object internalServices = findBean(beanFactory, INTERNAL_SERVICES_CLASS);
         if (internalServices == null) {
             return null;
@@ -365,6 +371,8 @@ public class ArmeriaSpringActuatorAutoConfiguration {
         if (!actuatorEnabled) {
             return null;
         }
+
+        assert internalServiceProperties != null;
         return internalServiceProperties.getPort();
     }
 
@@ -381,7 +389,7 @@ public class ArmeriaSpringActuatorAutoConfiguration {
 
     private static void addLocalManagementPortPropertyAlias(ConfigurableEnvironment environment, Integer port) {
         environment.getPropertySources().addLast(new PropertySource<Object>("Management Server") {
-
+            @Nullable
             @Override
             public Object getProperty(String name) {
                 if ("local.management.port".equals(name)) {

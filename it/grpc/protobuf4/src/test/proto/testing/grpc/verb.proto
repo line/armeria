@@ -1,0 +1,50 @@
+syntax = "proto3";
+
+package example.grpc.testing;
+
+option java_package = "testing.grpc";
+
+import "google/api/annotations.proto";
+
+service TranscodingVerbService {
+  rpc WildcardVerb(Simple) returns (Simple) {
+    option (google.api.http) = {
+      get: "/v1/wildcard/1/{first=hello/*}:verb"
+    };
+  }
+
+  rpc DeepWildcardVerb(Simple) returns (Simple) {
+    option (google.api.http) = {
+      get: "/v1/wildcard/1/{first=hello/**}:verb"
+    };
+  }
+
+  rpc ComplexWildcardVerb(Simple) returns (Simple) {
+    option (google.api.http) = {
+      get: "/v1/wildcard/2/{first=*/{second=*/{third=hello/**}}}:verb"
+    };
+  }
+
+  rpc NoParamsVerb(Simple) returns (Simple) {
+    option (google.api.http) = {
+      get: "/v1/simple/1/noparam:verb"
+    };
+  }
+
+  rpc UnderScoreVerb(UnderScore) returns (UnderScore) {
+    option (google.api.http) = {
+      get: "/v1/underscore/{first_message}/{second_message}:verb"
+    };
+  }
+}
+
+message Simple {
+  string first = 1;
+  string second = 2;
+  string third = 3;
+}
+
+message UnderScore {
+  string first_message = 1;
+  string second_message = 2;
+}

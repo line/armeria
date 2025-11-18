@@ -20,6 +20,7 @@ import static com.linecorp.armeria.xds.client.endpoint.XdsAttributeKeys.LB_ENDPO
 import static com.linecorp.armeria.xds.client.endpoint.XdsAttributeKeys.LOCALITY_LB_ENDPOINTS_KEY;
 
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
@@ -35,11 +36,13 @@ final class XdsAttributeAssigningEndpointGroup extends DynamicEndpointGroup
 
     private final LocalityLbEndpoints localityLbEndpoints;
     private final LbEndpoint lbEndpoint;
+    private final EndpointGroup delegate;
 
     XdsAttributeAssigningEndpointGroup(EndpointGroup delegate, LocalityLbEndpoints localityLbEndpoints,
                                        LbEndpoint lbEndpoint) {
         this.localityLbEndpoints = localityLbEndpoints;
         this.lbEndpoint = lbEndpoint;
+        this.delegate = delegate;
         delegate.addListener(this, true);
     }
 
@@ -52,5 +55,10 @@ final class XdsAttributeAssigningEndpointGroup extends DynamicEndpointGroup
                                                   .withWeight(XdsEndpointUtil.endpointWeight(lbEndpoint)))
                          .collect(Collectors.toList());
         setEndpoints(mappedEndpoints);
+    }
+
+    @Override
+    protected void doCloseAsync(CompletableFuture<?> future) {
+        delegate.closeAsync().handle((ignored, t) -> future.complete(null));
     }
 }

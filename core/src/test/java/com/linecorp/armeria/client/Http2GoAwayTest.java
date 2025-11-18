@@ -15,12 +15,13 @@
  */
 package com.linecorp.armeria.client;
 
-import static io.netty.handler.codec.http2.Http2CodecUtil.connectionPrefaceBuf;
+import static com.linecorp.armeria.internal.testing.Http2ByteUtil.handleInitialExchange;
+import static com.linecorp.armeria.internal.testing.Http2ByteUtil.newClientFactory;
+import static com.linecorp.armeria.internal.testing.Http2ByteUtil.readFrame;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.io.BufferedOutputStream;
-import java.io.IOException;
 import java.io.InputStream;
 import java.net.ServerSocket;
 import java.net.Socket;
@@ -31,14 +32,9 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
-import com.google.common.io.ByteStreams;
-
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.testing.junit5.common.EventLoopExtension;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
-import io.netty.handler.codec.http2.Http2CodecUtil;
 import io.netty.handler.codec.http2.Http2FrameTypes;
 
 @Timeout(10)
@@ -53,7 +49,7 @@ class Http2GoAwayTest {
     @Test
     void streamEndsBeforeGoAway() throws Exception {
         try (ServerSocket ss = new ServerSocket(0);
-             ClientFactory clientFactory = newClientFactory()) {
+             ClientFactory clientFactory = newClientFactory(eventLoop.get())) {
 
             final int port = ss.getLocalPort();
 
@@ -101,7 +97,7 @@ class Http2GoAwayTest {
     @Test
     void streamEndsAfterGoAway() throws Exception {
         try (ServerSocket ss = new ServerSocket(0);
-             ClientFactory clientFactory = newClientFactory()) {
+             ClientFactory clientFactory = newClientFactory(eventLoop.get())) {
 
             final int port = ss.getLocalPort();
 
@@ -150,7 +146,7 @@ class Http2GoAwayTest {
     @Test
     void streamGreaterThanLastStreamId() throws Exception {
         try (ServerSocket ss = new ServerSocket(0);
-             ClientFactory clientFactory = newClientFactory()) {
+             ClientFactory clientFactory = newClientFactory(eventLoop.get())) {
 
             final int port = ss.getLocalPort();
 
@@ -207,56 +203,5 @@ class Http2GoAwayTest {
                 assertThat(in.read()).isEqualTo(-1);
             }
         }
-    }
-
-    private static ClientFactory newClientFactory() {
-        return ClientFactory.builder()
-                            .useHttp2Preface(true)
-                            // Set the window size to the HTTP/2 default values to simplify the traffic.
-                            .http2InitialConnectionWindowSize(Http2CodecUtil.DEFAULT_WINDOW_SIZE)
-                            .http2InitialStreamWindowSize(Http2CodecUtil.DEFAULT_WINDOW_SIZE)
-                            .workerGroup(eventLoop.get(), false)
-                            .build();
-    }
-
-    private static void handleInitialExchange(InputStream in, BufferedOutputStream out) throws IOException {
-        // Read the connection preface and discard it.
-        readBytes(in, connectionPrefaceBuf().readableBytes());
-
-        // Read a SETTINGS frame.
-        assertThat(readFrame(in).getByte(3)).isEqualTo(Http2FrameTypes.SETTINGS);
-
-        // Send a SETTINGS frame and the ack for the received SETTINGS frame.
-        sendEmptySettingsAndAckFrame(out);
-
-        // Read a SETTINGS ack frame.
-        assertThat(readFrame(in).getByte(3)).isEqualTo(Http2FrameTypes.SETTINGS);
-    }
-
-    private static byte[] readBytes(InputStream in, int length) throws IOException {
-        final byte[] buf = new byte[length];
-        ByteStreams.readFully(in, buf);
-        return buf;
-    }
-
-    private static void sendEmptySettingsAndAckFrame(BufferedOutputStream bos) throws IOException {
-        // Send an empty SETTINGS frame.
-        bos.write(new byte[] { 0x00, 0x00, 0x00, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00 });
-        // Send a SETTINGS_ACK frame.
-        bos.write(new byte[] { 0x00, 0x00, 0x00, 0x04, 0x01, 0x00, 0x00, 0x00, 0x00 });
-        bos.flush();
-    }
-
-    private static int payloadLength(byte[] buf) {
-        return (buf[0] & 0xff) << 16 | (buf[1] & 0xff) << 8 | (buf[2] & 0xff);
-    }
-
-    private static ByteBuf readFrame(InputStream in) throws IOException {
-        final byte[] frameBuf = readBytes(in, 9);
-        final int payloadLength = payloadLength(frameBuf);
-        final ByteBuf buffer = Unpooled.buffer(9 + payloadLength);
-        buffer.writeBytes(frameBuf);
-        buffer.writeBytes(in, payloadLength);
-        return buffer;
     }
 }

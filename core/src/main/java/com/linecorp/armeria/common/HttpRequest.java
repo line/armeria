@@ -21,6 +21,7 @@ import static java.util.Objects.requireNonNull;
 
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
 import java.util.Formatter;
 import java.util.List;
 import java.util.Locale;
@@ -47,6 +48,7 @@ import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.stream.PublisherBasedStreamMessage;
 import com.linecorp.armeria.common.stream.StreamMessage;
+import com.linecorp.armeria.common.stream.StreamTimeoutMode;
 import com.linecorp.armeria.common.stream.SubscriptionOption;
 import com.linecorp.armeria.internal.common.DefaultHttpRequest;
 import com.linecorp.armeria.internal.common.DefaultSplitHttpRequest;
@@ -277,7 +279,6 @@ public interface HttpRequest extends Request, HttpMessage {
         if (publisher instanceof HttpRequest) {
             return ((HttpRequest) publisher).withHeaders(headers);
         } else if (publisher instanceof StreamMessage) {
-            //noinspection unchecked
             return new StreamMessageBasedHttpRequest(headers, (StreamMessage<? extends HttpObject>) publisher);
         } else {
             return new PublisherBasedHttpRequest(headers, publisher);
@@ -301,7 +302,24 @@ public interface HttpRequest extends Request, HttpMessage {
         if (trailers.isEmpty()) {
             return of(headers, publisher);
         }
-        return of(headers, new SurroundingPublisher<>(null, publisher, unused -> trailers));
+        return of(headers, SurroundingPublisher.of(null, publisher, trailers));
+    }
+
+    /**
+     * Creates a new instance from an existing {@link RequestHeaders}, {@link Publisher} and trailers.
+     *
+     * <p>Note that the {@link HttpData}s in the {@link Publisher} are not released when
+     * {@link Subscription#cancel()} or {@link #abort()} is called. You should add a hook in order to
+     * release the elements. See {@link PublisherBasedStreamMessage} for more information.
+     */
+    @UnstableApi
+    static HttpRequest of(RequestHeaders headers,
+                          Publisher<? extends HttpData> publisher,
+                          CompletableFuture<HttpHeaders> trailers) {
+        requireNonNull(headers, "headers");
+        requireNonNull(publisher, "publisher");
+        requireNonNull(trailers, "trailers");
+        return of(headers, SurroundingPublisher.of(null, publisher, trailers));
     }
 
     /**
@@ -815,5 +833,17 @@ public interface HttpRequest extends Request, HttpMessage {
     default HttpRequest subscribeOn(EventExecutor eventExecutor) {
         requireNonNull(eventExecutor, "eventExecutor");
         return of(headers(), HttpMessage.super.subscribeOn(eventExecutor));
+    }
+
+    @UnstableApi
+    @Override
+    default HttpRequest timeout(Duration timeoutDuration) {
+        return timeout(timeoutDuration, StreamTimeoutMode.UNTIL_NEXT);
+    }
+
+    @UnstableApi
+    @Override
+    default HttpRequest timeout(Duration timeoutDuration, StreamTimeoutMode timeoutMode) {
+        return of(headers(), HttpMessage.super.timeout(timeoutDuration, timeoutMode));
     }
 }

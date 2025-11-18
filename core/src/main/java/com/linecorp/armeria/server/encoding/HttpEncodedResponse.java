@@ -40,8 +40,8 @@ import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.ResponseHeadersBuilder;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.encoding.StreamEncoderFactory;
 import com.linecorp.armeria.common.stream.FilteredStreamMessage;
-import com.linecorp.armeria.internal.common.encoding.StreamEncoderFactory;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
@@ -143,7 +143,7 @@ final class HttpEncodedResponse extends FilteredHttpResponse {
             encodedBuf.readerIndex(encodedBuf.writerIndex());
             return httpData;
         } catch (IOException e) {
-            // An unreleased ByteBuf will be released by `beforeError()`
+            // An unreleased ByteBuf in `encodedStream` will be released by `beforeError()`
             throw new IllegalStateException(
                     "Error encoding HttpData, this should not happen with byte arrays.",
                     e);

@@ -17,6 +17,7 @@
 package com.linecorp.armeria.common.rxjava2;
 
 import com.linecorp.armeria.common.RequestContext;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.SafeCloseable;
 
 import io.reactivex.MaybeObserver;
@@ -26,6 +27,7 @@ import io.reactivex.internal.disposables.DisposableHelper;
 final class RequestContextMaybeObserver<T> implements MaybeObserver<T>, Disposable {
     private final MaybeObserver<T> actual;
     private final RequestContext assemblyContext;
+    @Nullable
     private Disposable disposable;
 
     RequestContextMaybeObserver(MaybeObserver<T> actual, RequestContext assemblyContext) {
@@ -67,11 +69,13 @@ final class RequestContextMaybeObserver<T> implements MaybeObserver<T>, Disposab
 
     @Override
     public boolean isDisposed() {
+        assert disposable != null;
         return disposable.isDisposed();
     }
 
     @Override
     public void dispose() {
+        assert disposable != null;
         disposable.dispose();
     }
 }

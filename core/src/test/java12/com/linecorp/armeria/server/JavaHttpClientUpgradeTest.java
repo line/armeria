@@ -38,12 +38,14 @@ import org.junit.jupiter.params.provider.EnumSource;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.ResponseHeaders;
+import com.linecorp.armeria.internal.testing.FlakyTest;
 import com.linecorp.armeria.server.logging.LoggingService;
 import com.linecorp.armeria.testing.junit5.common.EventLoopExtension;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
 import io.netty.channel.ChannelPipeline;
 
+@FlakyTest
 class JavaHttpClientUpgradeTest {
 
     static int maxRequestLength = 10;

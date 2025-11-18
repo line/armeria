@@ -206,6 +206,11 @@ final class UpdatableServerConfig implements ServerConfig {
     }
 
     @Override
+    public float http2StreamWindowSizeRatio() {
+        return delegate.http2StreamWindowSizeRatio();
+    }
+
+    @Override
     public long http2MaxStreamsPerConnection() {
         return delegate.http2MaxStreamsPerConnection();
     }
@@ -238,6 +243,11 @@ final class UpdatableServerConfig implements ServerConfig {
     @Override
     public Duration gracefulShutdownTimeout() {
         return delegate.gracefulShutdownTimeout();
+    }
+
+    @Override
+    public GracefulShutdown gracefulShutdown() {
+        return delegate.gracefulShutdown();
     }
 
     @Override

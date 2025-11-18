@@ -9,7 +9,6 @@ import javax.ws.rs.core.Response;
 
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
 
 import com.codahale.metrics.health.HealthCheck;
 import com.codahale.metrics.health.HealthCheck.Result;
@@ -19,10 +18,8 @@ import com.linecorp.armeria.common.HttpStatus;
 import example.dropwizard.health.PingCheck;
 import example.dropwizard.resources.JerseyResource;
 import io.dropwizard.testing.junit5.DropwizardAppExtension;
-import io.dropwizard.testing.junit5.DropwizardExtensionsSupport;
 import io.dropwizard.testing.junit5.ResourceExtension;
 
-@ExtendWith(DropwizardExtensionsSupport.class)
 public class DropwizardArmeriaApplicationTest {
     public static final ResourceExtension RESOURCES = ResourceExtension.builder()
                                                                        .addResource(new JerseyResource())
@@ -35,7 +32,10 @@ public class DropwizardArmeriaApplicationTest {
     private static String endpoint;
 
     @BeforeAll
-    public static void setUp() {
+    public static void setUp() throws Throwable {
+        EXTENSION.before();
+        RESOURCES.before();
+
         endpoint = "http://localhost:" + EXTENSION.getLocalPort();
         client = EXTENSION.client().target(endpoint);
     }

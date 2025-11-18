@@ -53,7 +53,11 @@ final class HealthCheckContextGroup {
     }
 
     List<Endpoint> candidates() {
-        return candidates;
+        return candidates.stream().map(endpoint -> {
+            final DefaultHealthCheckerContext context = contexts.get(endpoint);
+            assert context != null;
+            return endpoint.withAttrs(context.endpointAttributes());
+        }).collect(toImmutableList());
     }
 
     void initialize() {

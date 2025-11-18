@@ -142,6 +142,7 @@ public abstract class AbstractUnsafeUnaryGrpcService extends AbstractHttpService
                             final HttpData content = framer.writePayload(responseMessage);
                             final ResponseHeaders responseHeaders = RESPONSE_HEADERS_MAP.get(
                                     serializationFormat);
+                            assert responseHeaders != null;
                             if (UnaryGrpcSerializationFormats.isGrpcWeb(serializationFormat)) {
                                 // Send trailer as a part of the body for gRPC-web.
                                 final HttpData serializedTrailers = framer.writePayload(

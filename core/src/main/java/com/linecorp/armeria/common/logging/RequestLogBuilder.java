@@ -28,6 +28,7 @@ import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.util.SystemInfo;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.logging.AccessLogWriter;
@@ -109,12 +110,16 @@ public interface RequestLogBuilder extends RequestLogAccess {
      *    <li>A path pattern and HTTP method name for {@link HttpService}</li>
      * </ul>
      * This property is often used as a meter tag or distributed trace's span name.
+     * Note that calling {@link #responseContent(Object, Object)} will automatically fill
+     * {@link RequestLogProperty#NAME}, so {@link #name(String, String)} must be called beforehand.
      */
     void name(String serviceName, String name);
 
     /**
      * Sets the human-readable name of the {@link Request}, such as RPC method name, annotated service method
      * name or HTTP method name. This property is often used as a meter tag or distributed trace's span name.
+     * Note that calling {@link #responseContent(Object, Object)} will automatically fill
+     * {@link RequestLogProperty#NAME}, so {@link #name(String)} must be called beforehand.
      */
     void name(String name);
 
@@ -438,4 +443,11 @@ public interface RequestLogBuilder extends RequestLogAccess {
      * in the child log will be propagated immediately.
      */
     void endResponseWithLastChild();
+
+    /**
+     * Fills the response-side logs from the specified child. Note that already collected properties
+     * in the child log will be propagated immediately.
+     */
+    @UnstableApi
+    void endResponseWithChild(RequestLogAccess child);
 }

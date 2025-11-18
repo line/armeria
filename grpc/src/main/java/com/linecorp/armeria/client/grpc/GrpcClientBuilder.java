@@ -28,6 +28,7 @@ import static com.linecorp.armeria.client.grpc.GrpcClientOptions.MAX_INBOUND_MES
 import static com.linecorp.armeria.client.grpc.GrpcClientOptions.MAX_OUTBOUND_MESSAGE_SIZE_BYTES;
 import static com.linecorp.armeria.client.grpc.GrpcClientOptions.UNSAFE_WRAP_RESPONSE_BUFFERS;
 import static com.linecorp.armeria.client.grpc.GrpcClientOptions.USE_METHOD_MARSHALLER;
+import static com.linecorp.armeria.internal.client.ClientBuilderParamsUtil.preprocessorToUri;
 import static java.util.Objects.requireNonNull;
 
 import java.net.URI;
@@ -55,13 +56,17 @@ import com.linecorp.armeria.client.DecoratingHttpClientFunction;
 import com.linecorp.armeria.client.DecoratingRpcClientFunction;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.HttpClient;
+import com.linecorp.armeria.client.HttpPreprocessor;
+import com.linecorp.armeria.client.ResponseTimeoutMode;
 import com.linecorp.armeria.client.RpcClient;
+import com.linecorp.armeria.client.RpcPreprocessor;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.client.redirect.RedirectConfig;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.Scheme;
 import com.linecorp.armeria.common.SerializationFormat;
+import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.SuccessFunction;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
@@ -121,6 +126,16 @@ public final class GrpcClientBuilder extends AbstractClientOptionsBuilder {
         this.scheme = scheme;
         validateOrSetSerializationFormat();
         this.endpointGroup = endpointGroup;
+    }
+
+    GrpcClientBuilder(SerializationFormat serializationFormat, HttpPreprocessor httpPreprocessor) {
+        requireNonNull(serializationFormat, "serializationFormat");
+        requireNonNull(httpPreprocessor, "httpPreprocessor");
+        endpointGroup = null;
+        scheme = Scheme.of(serializationFormat, SessionProtocol.HTTP);
+        uri = preprocessorToUri(scheme, httpPreprocessor, null);
+        validateOrSetSerializationFormat();
+        preprocessor(httpPreprocessor);
     }
 
     private void validateOrSetSerializationFormat() {
@@ -593,6 +608,23 @@ public final class GrpcClientBuilder extends AbstractClientOptionsBuilder {
     public GrpcClientBuilder contextCustomizer(
             Consumer<? super ClientRequestContext> contextCustomizer) {
         return (GrpcClientBuilder) super.contextCustomizer(contextCustomizer);
+    }
+
+    @Override
+    public GrpcClientBuilder responseTimeoutMode(ResponseTimeoutMode responseTimeoutMode) {
+        return (GrpcClientBuilder) super.responseTimeoutMode(responseTimeoutMode);
+    }
+
+    @Override
+    public GrpcClientBuilder preprocessor(HttpPreprocessor decorator) {
+        return (GrpcClientBuilder) super.preprocessor(decorator);
+    }
+
+    @Override
+    @Deprecated
+    public GrpcClientBuilder rpcPreprocessor(RpcPreprocessor decorator) {
+        throw new UnsupportedOperationException("rpcPreprocessor() does not support gRPC. " +
+                                                "Use preprocessor() instead.");
     }
 
     /**

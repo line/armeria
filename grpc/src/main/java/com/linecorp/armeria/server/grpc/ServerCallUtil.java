@@ -18,7 +18,7 @@ package com.linecorp.armeria.server.grpc;
 
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
-import java.lang.invoke.MethodType;
+import java.lang.reflect.Method;
 
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.internal.server.grpc.AbstractServerCall;
@@ -34,8 +34,9 @@ final class ServerCallUtil {
 
     static {
         try {
-            delegateMH = MethodHandles.lookup().findVirtual(ForwardingServerCall.class, "delegate",
-                                                            MethodType.methodType(ServerCall.class));
+            final Method delegate = ForwardingServerCall.class.getDeclaredMethod("delegate");
+            delegate.setAccessible(true);
+            delegateMH = MethodHandles.lookup().unreflect(delegate);
         } catch (NoSuchMethodException | IllegalAccessException e) {
             delegateMH = null;
         }

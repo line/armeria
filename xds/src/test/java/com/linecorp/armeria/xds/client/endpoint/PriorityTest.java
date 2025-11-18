@@ -22,6 +22,7 @@ import static com.linecorp.armeria.xds.XdsTestResources.localityLbEndpoints;
 import static com.linecorp.armeria.xds.XdsTestResources.percent;
 import static com.linecorp.armeria.xds.XdsTestResources.staticBootstrap;
 import static com.linecorp.armeria.xds.XdsTestResources.staticResourceListener;
+import static com.linecorp.armeria.xds.XdsTestUtil.pollLoadBalancer;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 
@@ -39,12 +40,12 @@ import com.google.protobuf.UInt32Value;
 
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.Endpoint;
-import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.xds.ListenerRoot;
 import com.linecorp.armeria.xds.XdsBootstrap;
+import com.linecorp.armeria.xds.client.endpoint.XdsRandom.RandomHint;
 
 import io.envoyproxy.envoy.config.bootstrap.v3.Bootstrap;
 import io.envoyproxy.envoy.config.cluster.v3.Cluster;
@@ -69,21 +70,20 @@ class PriorityTest {
                                  endpoint("127.0.0.1", 8082));
         final ClusterLoadAssignment loadAssignment =
                 ClusterLoadAssignment.newBuilder()
+                                     .setClusterName("cluster")
                                      .addEndpoints(localityLbEndpoints(
                                              Locality.getDefaultInstance(), lbEndpoints))
                                      .build();
         final Cluster cluster = createStaticCluster("cluster", loadAssignment);
 
         final Bootstrap bootstrap = staticBootstrap(listener, cluster);
-        try (XdsBootstrap xdsBootstrap = XdsBootstrap.of(bootstrap)) {
-            final ListenerRoot listenerRoot = xdsBootstrap.listenerRoot("listener");
-            final EndpointGroup endpointGroup = XdsEndpointGroup.of(listenerRoot);
-
-            await().untilAsserted(() -> assertThat(endpointGroup.whenReady()).isDone());
+        try (XdsBootstrap xdsBootstrap = XdsBootstrap.of(bootstrap);
+             ListenerRoot root = xdsBootstrap.listenerRoot("listener")) {
+            final XdsLoadBalancer loadBalancer = pollLoadBalancer(root, "cluster", cluster);
             final ClientRequestContext ctx = ClientRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
-            assertThat(endpointGroup.selectNow(ctx)).isEqualTo(Endpoint.of("127.0.0.1", 8080));
-            assertThat(endpointGroup.selectNow(ctx)).isEqualTo(Endpoint.of("127.0.0.1", 8081));
-            assertThat(endpointGroup.selectNow(ctx)).isEqualTo(Endpoint.of("127.0.0.1", 8082));
+            assertThat(loadBalancer.selectNow(ctx)).isEqualTo(Endpoint.of("127.0.0.1", 8080));
+            assertThat(loadBalancer.selectNow(ctx)).isEqualTo(Endpoint.of("127.0.0.1", 8081));
+            assertThat(loadBalancer.selectNow(ctx)).isEqualTo(Endpoint.of("127.0.0.1", 8082));
         }
     }
 
@@ -97,22 +97,22 @@ class PriorityTest {
                                  endpoint("127.0.0.1", 8082, 2));
         final ClusterLoadAssignment loadAssignment =
                 ClusterLoadAssignment.newBuilder()
+                                     .setClusterName("cluster")
                                      .addEndpoints(localityLbEndpoints(
                                              Locality.getDefaultInstance(), lbEndpoints))
                                      .build();
         final Cluster cluster = createStaticCluster("cluster", loadAssignment);
 
         final Bootstrap bootstrap = staticBootstrap(listener, cluster);
-        try (XdsBootstrap xdsBootstrap = XdsBootstrap.of(bootstrap)) {
-            final ListenerRoot listenerRoot = xdsBootstrap.listenerRoot("listener");
-            final EndpointGroup endpointGroup = XdsEndpointGroup.of(listenerRoot);
+        try (XdsBootstrap xdsBootstrap = XdsBootstrap.of(bootstrap);
+             ListenerRoot root = xdsBootstrap.listenerRoot("listener")) {
 
-            await().untilAsserted(() -> assertThat(endpointGroup.whenReady()).isDone());
+            final XdsLoadBalancer loadBalancer = pollLoadBalancer(root, "cluster", cluster);
             final ClientRequestContext ctx = ClientRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
-            assertThat(endpointGroup.selectNow(ctx)).isEqualTo(Endpoint.of("127.0.0.1", 8080));
-            assertThat(endpointGroup.selectNow(ctx)).isEqualTo(Endpoint.of("127.0.0.1", 8081));
-            assertThat(endpointGroup.selectNow(ctx)).isEqualTo(Endpoint.of("127.0.0.1", 8082));
-            assertThat(endpointGroup.selectNow(ctx)).isEqualTo(Endpoint.of("127.0.0.1", 8082));
+            assertThat(loadBalancer.selectNow(ctx)).isEqualTo(Endpoint.of("127.0.0.1", 8080));
+            assertThat(loadBalancer.selectNow(ctx)).isEqualTo(Endpoint.of("127.0.0.1", 8081));
+            assertThat(loadBalancer.selectNow(ctx)).isEqualTo(Endpoint.of("127.0.0.1", 8082));
+            assertThat(loadBalancer.selectNow(ctx)).isEqualTo(Endpoint.of("127.0.0.1", 8082));
         }
     }
 
@@ -129,31 +129,33 @@ class PriorityTest {
         final ClusterLoadAssignment loadAssignment =
                 ClusterLoadAssignment
                         .newBuilder()
+                        .setClusterName("cluster")
                         .addEndpoints(localityLbEndpoints(Locality.getDefaultInstance(), lbEndpoints0, 0))
                         .addEndpoints(localityLbEndpoints(Locality.getDefaultInstance(), lbEndpoints1, 1))
                         .build();
         final Cluster cluster = createStaticCluster("cluster", loadAssignment);
 
         final Bootstrap bootstrap = staticBootstrap(listener, cluster);
-        try (XdsBootstrap xdsBootstrap = XdsBootstrap.of(bootstrap)) {
-            final ListenerRoot listenerRoot = xdsBootstrap.listenerRoot("listener");
-            final EndpointGroup endpointGroup = XdsEndpointGroup.of(listenerRoot);
-            await().untilAsserted(() -> assertThat(endpointGroup.whenReady()).isDone());
+        try (XdsBootstrap xdsBootstrap = XdsBootstrap.of(bootstrap);
+             ListenerRoot root = xdsBootstrap.listenerRoot("listener")) {
+            final XdsLoadBalancer loadBalancer = pollLoadBalancer(root, "cluster", cluster);
             final ClientRequestContext ctx =
                     ClientRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
+            final SettableXdsRandom random = new SettableXdsRandom();
+            ctx.setAttr(XdsAttributeKeys.XDS_RANDOM, random);
 
             // default overprovisioning factor (140) * 0.5 = 70 will be routed
             // to healthy endpoints for priority 0
-            ctx.setAttr(XdsAttributeKeys.SELECTION_HASH, 0);
-            assertThat(endpointGroup.selectNow(ctx)).isEqualTo(Endpoint.of("127.0.0.1", 8080));
-            ctx.setAttr(XdsAttributeKeys.SELECTION_HASH, 68);
-            assertThat(endpointGroup.selectNow(ctx)).isEqualTo(Endpoint.of("127.0.0.1", 8080));
+            random.fixNextInt(RandomHint.SELECT_PRIORITY, 0);
+            assertThat(loadBalancer.selectNow(ctx)).isEqualTo(Endpoint.of("127.0.0.1", 8080));
+            random.fixNextInt(RandomHint.SELECT_PRIORITY, 68);
+            assertThat(loadBalancer.selectNow(ctx)).isEqualTo(Endpoint.of("127.0.0.1", 8080));
 
             // 100 - 70 (priority 0) = 30 will be routed to healthy endpoints for priority 1
-            ctx.setAttr(XdsAttributeKeys.SELECTION_HASH, 70);
-            assertThat(endpointGroup.selectNow(ctx)).isEqualTo(Endpoint.of("127.0.0.1", 8082));
-            ctx.setAttr(XdsAttributeKeys.SELECTION_HASH, 99);
-            assertThat(endpointGroup.selectNow(ctx)).isEqualTo(Endpoint.of("127.0.0.1", 8082));
+            random.fixNextInt(RandomHint.SELECT_PRIORITY, 70);
+            assertThat(loadBalancer.selectNow(ctx)).isEqualTo(Endpoint.of("127.0.0.1", 8082));
+            random.fixNextInt(RandomHint.SELECT_PRIORITY, 99);
+            assertThat(loadBalancer.selectNow(ctx)).isEqualTo(Endpoint.of("127.0.0.1", 8082));
         }
     }
 
@@ -170,6 +172,7 @@ class PriorityTest {
         final ClusterLoadAssignment loadAssignment =
                 ClusterLoadAssignment
                         .newBuilder()
+                        .setClusterName("cluster")
                         .addEndpoints(localityLbEndpoints(Locality.getDefaultInstance(), lbEndpoints0, 0))
                         .addEndpoints(localityLbEndpoints(Locality.getDefaultInstance(), lbEndpoints1, 1))
                         // set overprovisioning factor to 100 for simpler calculation
@@ -185,24 +188,25 @@ class PriorityTest {
                 .build();
 
         final Bootstrap bootstrap = staticBootstrap(listener, cluster);
-        try (XdsBootstrap xdsBootstrap = XdsBootstrap.of(bootstrap)) {
-            final ListenerRoot listenerRoot = xdsBootstrap.listenerRoot("listener");
-            final EndpointGroup endpointGroup = XdsEndpointGroup.of(listenerRoot);
-            await().untilAsserted(() -> assertThat(endpointGroup.whenReady()).isDone());
+        try (XdsBootstrap xdsBootstrap = XdsBootstrap.of(bootstrap);
+             ListenerRoot root = xdsBootstrap.listenerRoot("listener")) {
+            final XdsLoadBalancer loadBalancer = pollLoadBalancer(root, "cluster", cluster);
             final ClientRequestContext ctx =
                     ClientRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
+            final SettableXdsRandom random = new SettableXdsRandom();
+            ctx.setAttr(XdsAttributeKeys.XDS_RANDOM, random);
 
             // 0 ~ 9 for priority 0 HEALTHY
-            ctx.setAttr(XdsAttributeKeys.SELECTION_HASH, 0);
-            assertThat(endpointGroup.selectNow(ctx)).isEqualTo(Endpoint.of("127.0.0.1", 8080));
+            random.fixNextInt(RandomHint.SELECT_PRIORITY, 0);
+            assertThat(loadBalancer.selectNow(ctx)).isEqualTo(Endpoint.of("127.0.0.1", 8080));
 
             // 10 ~ 19 for priority 1 HEALTHY
-            ctx.setAttr(XdsAttributeKeys.SELECTION_HASH, 10);
-            assertThat(endpointGroup.selectNow(ctx)).isEqualTo(Endpoint.of("127.0.0.1", 8082));
+            random.fixNextInt(RandomHint.SELECT_PRIORITY, 10);
+            assertThat(loadBalancer.selectNow(ctx)).isEqualTo(Endpoint.of("127.0.0.1", 8082));
 
             // 20 ~ 99 for priority 1 DEGRADED
-            ctx.setAttr(XdsAttributeKeys.SELECTION_HASH, 20);
-            assertThat(endpointGroup.selectNow(ctx)).isEqualTo(Endpoint.of("127.0.0.1", 8083));
+            random.fixNextInt(RandomHint.SELECT_PRIORITY, 20);
+            assertThat(loadBalancer.selectNow(ctx)).isEqualTo(Endpoint.of("127.0.0.1", 8083));
         }
     }
 
@@ -213,6 +217,7 @@ class PriorityTest {
         final ClusterLoadAssignment loadAssignment =
                 ClusterLoadAssignment
                         .newBuilder()
+                        .setClusterName("cluster")
                         .addEndpoints(localityLbEndpoints(Locality.getDefaultInstance(), lbEndpoints0, 0))
                         .build();
         final Cluster cluster = createStaticCluster("cluster", loadAssignment)
@@ -223,15 +228,14 @@ class PriorityTest {
                 .build();
 
         final Bootstrap bootstrap = staticBootstrap(listener, cluster);
-        try (XdsBootstrap xdsBootstrap = XdsBootstrap.of(bootstrap)) {
-            final ListenerRoot listenerRoot = xdsBootstrap.listenerRoot("listener");
-            final EndpointGroup endpointGroup = XdsEndpointGroup.of(listenerRoot, true);
-            await().untilAsserted(() -> assertThat(endpointGroup.whenReady()).isDone());
+        try (XdsBootstrap xdsBootstrap = XdsBootstrap.of(bootstrap);
+             ListenerRoot root = xdsBootstrap.listenerRoot("listener")) {
+            final XdsLoadBalancer loadBalancer = pollLoadBalancer(root, "cluster", cluster);
 
             final ClientRequestContext ctx =
                     ClientRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
             await().pollDelay(3, TimeUnit.SECONDS)
-                   .untilAsserted(() -> assertThat(endpointGroup.selectNow(ctx)).isNull());
+                   .untilAsserted(() -> assertThat(loadBalancer.selectNow(ctx)).isNull());
         }
     }
 
@@ -249,6 +253,7 @@ class PriorityTest {
         final ClusterLoadAssignment loadAssignment =
                 ClusterLoadAssignment
                         .newBuilder()
+                        .setClusterName("cluster")
                         .addEndpoints(localityLbEndpoints(Locality.getDefaultInstance(), lbEndpoints0, 0))
                         .addEndpoints(localityLbEndpoints(Locality.getDefaultInstance(), lbEndpoints1, 1))
                         .build();
@@ -259,17 +264,19 @@ class PriorityTest {
                 .build();
 
         final Bootstrap bootstrap = staticBootstrap(listener, cluster);
-        try (XdsBootstrap xdsBootstrap = XdsBootstrap.of(bootstrap)) {
-            final ListenerRoot listenerRoot = xdsBootstrap.listenerRoot("listener");
-            final EndpointGroup endpointGroup = XdsEndpointGroup.of(listenerRoot);
-            await().untilAsserted(() -> assertThat(endpointGroup.whenReady()).isDone());
+        try (XdsBootstrap xdsBootstrap = XdsBootstrap.of(bootstrap);
+             ListenerRoot root = xdsBootstrap.listenerRoot("listener")) {
+            final XdsLoadBalancer loadBalancer = pollLoadBalancer(root, "cluster", cluster);
 
             final ClientRequestContext ctx =
                     ClientRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
-            ctx.setAttr(XdsAttributeKeys.SELECTION_HASH, 0);
-            assertThat(endpointGroup.selectNow(ctx)).isEqualTo(Endpoint.of("127.0.0.1", 8083));
-            ctx.setAttr(XdsAttributeKeys.SELECTION_HASH, 99);
-            assertThat(endpointGroup.selectNow(ctx)).isEqualTo(Endpoint.of("127.0.0.1", 8083));
+            final SettableXdsRandom random = new SettableXdsRandom();
+            ctx.setAttr(XdsAttributeKeys.XDS_RANDOM, random);
+
+            random.fixNextInt(RandomHint.SELECT_PRIORITY, 0);
+            assertThat(loadBalancer.selectNow(ctx)).isEqualTo(Endpoint.of("127.0.0.1", 8083));
+            random.fixNextInt(RandomHint.SELECT_PRIORITY, 99);
+            assertThat(loadBalancer.selectNow(ctx)).isEqualTo(Endpoint.of("127.0.0.1", 8083));
         }
     }
 
@@ -285,6 +292,7 @@ class PriorityTest {
         final ClusterLoadAssignment loadAssignment =
                 ClusterLoadAssignment
                         .newBuilder()
+                        .setClusterName("cluster")
                         .addEndpoints(localityLbEndpoints(Locality.getDefaultInstance(), lbEndpoints0, 0))
                         .build();
         final Cluster cluster = createStaticCluster("cluster", loadAssignment)
@@ -294,17 +302,14 @@ class PriorityTest {
                 .build();
 
         final Bootstrap bootstrap = staticBootstrap(listener, cluster);
-        try (XdsBootstrap xdsBootstrap = XdsBootstrap.of(bootstrap)) {
-            final ListenerRoot listenerRoot = xdsBootstrap.listenerRoot("listener");
-            final EndpointGroup endpointGroup = XdsEndpointGroup.of(listenerRoot);
-            await().untilAsserted(() -> assertThat(endpointGroup.whenReady()).isDone());
-
+        try (XdsBootstrap xdsBootstrap = XdsBootstrap.of(bootstrap);
+             ListenerRoot root = xdsBootstrap.listenerRoot("listener")) {
             // When in panic mode, all endpoints are selected regardless of health status
-            await().untilAsserted(() -> assertThat(endpointGroup.whenReady()).isDone());
+            final XdsLoadBalancer loadBalancer = pollLoadBalancer(root, "cluster", cluster);
             final ClientRequestContext ctx = ClientRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
-            assertThat(endpointGroup.selectNow(ctx)).isEqualTo(Endpoint.of("127.0.0.1", 8080));
-            assertThat(endpointGroup.selectNow(ctx)).isEqualTo(Endpoint.of("127.0.0.1", 8081));
-            assertThat(endpointGroup.selectNow(ctx)).isEqualTo(Endpoint.of("127.0.0.1", 8082));
+            assertThat(loadBalancer.selectNow(ctx)).isEqualTo(Endpoint.of("127.0.0.1", 8080));
+            assertThat(loadBalancer.selectNow(ctx)).isEqualTo(Endpoint.of("127.0.0.1", 8081));
+            assertThat(loadBalancer.selectNow(ctx)).isEqualTo(Endpoint.of("127.0.0.1", 8082));
         }
     }
 
@@ -319,6 +324,7 @@ class PriorityTest {
         final ClusterLoadAssignment loadAssignment =
                 ClusterLoadAssignment
                         .newBuilder()
+                        .setClusterName("cluster")
                         .addEndpoints(localityLbEndpoints(Locality.getDefaultInstance(), lbEndpoints0))
                         .build();
         final Cluster cluster = createStaticCluster("cluster", loadAssignment)
@@ -327,17 +333,14 @@ class PriorityTest {
                 .build();
 
         final Bootstrap bootstrap = staticBootstrap(listener, cluster);
-        try (XdsBootstrap xdsBootstrap = XdsBootstrap.of(bootstrap)) {
-            final ListenerRoot listenerRoot = xdsBootstrap.listenerRoot("listener");
-            final EndpointGroup endpointGroup = XdsEndpointGroup.of(listenerRoot);
-            await().untilAsserted(() -> assertThat(endpointGroup.whenReady()).isDone());
-
+        try (XdsBootstrap xdsBootstrap = XdsBootstrap.of(bootstrap);
+             ListenerRoot root = xdsBootstrap.listenerRoot("listener")) {
             // When in panic mode, all endpoints are selected regardless of health status
-            await().untilAsserted(() -> assertThat(endpointGroup.whenReady()).isDone());
+            final XdsLoadBalancer loadBalancer = pollLoadBalancer(root, "cluster", cluster);
             final ClientRequestContext ctx = ClientRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
-            assertThat(endpointGroup.selectNow(ctx)).isNull();
-            assertThat(endpointGroup.selectNow(ctx)).isNull();
-            assertThat(endpointGroup.selectNow(ctx)).isNull();
+            assertThat(loadBalancer.selectNow(ctx)).isNull();
+            assertThat(loadBalancer.selectNow(ctx)).isNull();
+            assertThat(loadBalancer.selectNow(ctx)).isNull();
         }
     }
 
@@ -362,6 +365,7 @@ class PriorityTest {
         final ClusterLoadAssignment loadAssignment =
                 ClusterLoadAssignment
                         .newBuilder()
+                        .setClusterName("cluster")
                         .addEndpoints(localityLbEndpoints(Locality.getDefaultInstance(), lbEndpoints0))
                         .setPolicy(Policy.newBuilder()
                                          .setWeightedPriorityHealth(true))
@@ -373,16 +377,13 @@ class PriorityTest {
                 .build();
 
         final Bootstrap bootstrap = staticBootstrap(listener, cluster);
-        try (XdsBootstrap xdsBootstrap = XdsBootstrap.of(bootstrap)) {
-            final ListenerRoot listenerRoot = xdsBootstrap.listenerRoot("listener");
-            final EndpointGroup endpointGroup = XdsEndpointGroup.of(listenerRoot);
-            await().untilAsserted(() -> assertThat(endpointGroup.whenReady()).isDone());
-
+        try (XdsBootstrap xdsBootstrap = XdsBootstrap.of(bootstrap);
+             ListenerRoot root = xdsBootstrap.listenerRoot("listener")) {
             // When in panic mode, all endpoints are selected regardless of health status
-            await().untilAsserted(() -> assertThat(endpointGroup.whenReady()).isDone());
+            final XdsLoadBalancer loadBalancer = pollLoadBalancer(root, "cluster", cluster);
             final ClientRequestContext ctx = ClientRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
-            assertThat(endpointGroup.selectNow(ctx)).isEqualTo(endpoint1);
-            assertThat(endpointGroup.selectNow(ctx)).isEqualTo(endpoint2);
+            assertThat(loadBalancer.selectNow(ctx)).isEqualTo(endpoint1);
+            assertThat(loadBalancer.selectNow(ctx)).isEqualTo(endpoint2);
         }
     }
 }

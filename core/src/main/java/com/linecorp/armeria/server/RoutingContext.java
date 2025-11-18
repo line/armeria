@@ -169,6 +169,7 @@ public interface RoutingContext {
                         oldReqTarget.port(),
                         pathWithoutMatrixVariables,
                         path,
+                        path,
                         oldReqTarget.query(),
                         oldReqTarget.fragment());
 

@@ -83,6 +83,7 @@ final class UnionMap<K, V> extends AbstractMap<K, V> {
         return first.containsValue(value) || second.containsValue(value);
     }
 
+    @Nullable
     @Override
     public V get(Object key) {
         final V value = first.get(key);

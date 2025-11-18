@@ -96,7 +96,7 @@ public final class DefaultDnsResolver implements SafeCloseable {
         });
         future.handle((unused0, unused1) -> {
             // Maybe cancel the timeout scheduler.
-            ctx.cancel();
+            ctx.setComplete();
             return null;
         });
         return future;
@@ -112,7 +112,7 @@ public final class DefaultDnsResolver implements SafeCloseable {
             final int order = i;
             delegate.resolve(ctx, questions.get(i)).handle((records, cause) -> {
                 assert executor.inEventLoop();
-                maybeCompletePreferredRecords(future, questions, results, order, records, cause);
+                maybeCompletePreferredRecords(ctx, future, questions, results, order, records, cause);
                 return null;
             });
         }
@@ -140,7 +140,8 @@ public final class DefaultDnsResolver implements SafeCloseable {
     }
 
     @VisibleForTesting
-    static void maybeCompletePreferredRecords(CompletableFuture<List<DnsRecord>> future,
+    static void maybeCompletePreferredRecords(DnsQuestionContext ctx,
+                                              CompletableFuture<List<DnsRecord>> future,
                                               List<? extends DnsQuestion> questions,
                                               Object[] results, int order,
                                               @Nullable List<DnsRecord> records,
@@ -170,6 +171,7 @@ public final class DefaultDnsResolver implements SafeCloseable {
             // Found a successful result.
             assert result instanceof List;
             future.complete(Collections.unmodifiableList((List<DnsRecord>) result));
+            ctx.setComplete();
             return;
         }
 
@@ -181,6 +183,7 @@ public final class DefaultDnsResolver implements SafeCloseable {
             unknownHostException.addSuppressed((Throwable) result);
         }
         future.completeExceptionally(unknownHostException);
+        ctx.setComplete();
     }
 
     public DnsCache dnsCache() {

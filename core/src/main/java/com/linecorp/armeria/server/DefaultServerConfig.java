@@ -82,6 +82,7 @@ final class DefaultServerConfig implements ServerConfig {
 
     private final int http2InitialConnectionWindowSize;
     private final int http2InitialStreamWindowSize;
+    private final float http2StreamWindowUpdateRatio;
     private final long http2MaxStreamsPerConnection;
     private final int http2MaxFrameSize;
     private final long http2MaxHeaderListSize;
@@ -91,8 +92,7 @@ final class DefaultServerConfig implements ServerConfig {
     private final int http1MaxHeaderSize;
     private final int http1MaxChunkSize;
 
-    private final Duration gracefulShutdownQuietPeriod;
-    private final Duration gracefulShutdownTimeout;
+    private final GracefulShutdown gracefulShutdown;
 
     private final BlockingTaskExecutor blockingTaskExecutor;
 
@@ -119,7 +119,7 @@ final class DefaultServerConfig implements ServerConfig {
 
     @Nullable
     private final Mapping<String, SslContext> sslContexts;
-    private final ServerMetrics serverMetrics = new ServerMetrics();
+    private final ServerMetrics serverMetrics;
 
     @Nullable
     private String strVal;
@@ -132,10 +132,10 @@ final class DefaultServerConfig implements ServerConfig {
             long maxConnectionAgeMillis,
             int maxNumRequestsPerConnection, long connectionDrainDurationMicros,
             int http2InitialConnectionWindowSize, int http2InitialStreamWindowSize,
-            long http2MaxStreamsPerConnection, int http2MaxFrameSize, long http2MaxHeaderListSize,
-            int http2MaxResetFramesPerWindow, int http2MaxResetFramesWindowSeconds,
+            float http2StreamWindowUpdateRatio, long http2MaxStreamsPerConnection, int http2MaxFrameSize,
+            long http2MaxHeaderListSize, int http2MaxResetFramesPerWindow, int http2MaxResetFramesWindowSeconds,
             int http1MaxInitialLineLength, int http1MaxHeaderSize,
-            int http1MaxChunkSize, Duration gracefulShutdownQuietPeriod, Duration gracefulShutdownTimeout,
+            int http1MaxChunkSize, GracefulShutdown gracefulShutdown,
             BlockingTaskExecutor blockingTaskExecutor,
             MeterRegistry meterRegistry, int proxyProtocolMaxTlvSize,
             Map<ChannelOption<?>, Object> channelOptions,
@@ -172,6 +172,7 @@ final class DefaultServerConfig implements ServerConfig {
                                                                  "connectionDrainDurationMicros");
         this.http2InitialConnectionWindowSize = http2InitialConnectionWindowSize;
         this.http2InitialStreamWindowSize = http2InitialStreamWindowSize;
+        this.http2StreamWindowUpdateRatio = http2StreamWindowUpdateRatio;
         this.http2MaxStreamsPerConnection = http2MaxStreamsPerConnection;
         this.http2MaxFrameSize = http2MaxFrameSize;
         this.http2MaxHeaderListSize = http2MaxHeaderListSize;
@@ -183,12 +184,7 @@ final class DefaultServerConfig implements ServerConfig {
                 http1MaxHeaderSize, "http1MaxHeaderSize");
         this.http1MaxChunkSize = validateNonNegative(
                 http1MaxChunkSize, "http1MaxChunkSize");
-        this.gracefulShutdownQuietPeriod = validateNonNegative(requireNonNull(
-                gracefulShutdownQuietPeriod), "gracefulShutdownQuietPeriod");
-        this.gracefulShutdownTimeout = validateNonNegative(requireNonNull(
-                gracefulShutdownTimeout), "gracefulShutdownTimeout");
-        validateGreaterThanOrEqual(gracefulShutdownTimeout, "gracefulShutdownTimeout",
-                                   gracefulShutdownQuietPeriod, "gracefulShutdownQuietPeriod");
+        this.gracefulShutdown = requireNonNull(gracefulShutdown, "gracefulShutdown");
 
         requireNonNull(blockingTaskExecutor, "blockingTaskExecutor");
         this.blockingTaskExecutor = monitorBlockingTaskExecutor(blockingTaskExecutor, meterRegistry);
@@ -272,6 +268,7 @@ final class DefaultServerConfig implements ServerConfig {
         this.absoluteUriTransformer = castAbsoluteUriTransformer;
         this.unloggedExceptionsReportIntervalMillis = unloggedExceptionsReportIntervalMillis;
         this.shutdownSupports = ImmutableList.copyOf(requireNonNull(shutdownSupports, "shutdownSupports"));
+        serverMetrics = new ServerMetrics(meterRegistry);
     }
 
     private static Int2ObjectMap<Mapping<String, VirtualHost>> buildDomainAndPortMapping(
@@ -364,14 +361,6 @@ final class DefaultServerConfig implements ServerConfig {
             throw new IllegalArgumentException(fieldName + ": " + duration + " (expected: >= 0)");
         }
         return duration;
-    }
-
-    static void validateGreaterThanOrEqual(Duration larger, String largerFieldName,
-                                           Duration smaller, String smallerFieldName) {
-        if (larger.compareTo(smaller) < 0) {
-            throw new IllegalArgumentException(largerFieldName + " must be greater than or equal to" +
-                                               smallerFieldName);
-        }
     }
 
     @Override
@@ -560,6 +549,11 @@ final class DefaultServerConfig implements ServerConfig {
     }
 
     @Override
+    public float http2StreamWindowSizeRatio() {
+        return http2StreamWindowUpdateRatio;
+    }
+
+    @Override
     public long http2MaxStreamsPerConnection() {
         return http2MaxStreamsPerConnection;
     }
@@ -586,12 +580,17 @@ final class DefaultServerConfig implements ServerConfig {
 
     @Override
     public Duration gracefulShutdownQuietPeriod() {
-        return gracefulShutdownQuietPeriod;
+        return gracefulShutdown.quietPeriod();
     }
 
     @Override
     public Duration gracefulShutdownTimeout() {
-        return gracefulShutdownTimeout;
+        return gracefulShutdown.timeout();
+    }
+
+    @Override
+    public GracefulShutdown gracefulShutdown() {
+        return gracefulShutdown;
     }
 
     @Override
@@ -702,7 +701,7 @@ final class DefaultServerConfig implements ServerConfig {
                     http2InitialConnectionWindowSize(), http2InitialStreamWindowSize(),
                     http2MaxStreamsPerConnection(), http2MaxFrameSize(), http2MaxHeaderListSize(),
                     http1MaxInitialLineLength(), http1MaxHeaderSize(), http1MaxChunkSize(),
-                    proxyProtocolMaxTlvSize(), gracefulShutdownQuietPeriod(), gracefulShutdownTimeout(),
+                    proxyProtocolMaxTlvSize(), gracefulShutdown(),
                     blockingTaskExecutor(),
                     meterRegistry(), channelOptions(), childChannelOptions(),
                     clientAddressSources(), clientAddressTrustedProxyFilter(), clientAddressFilter(),
@@ -723,7 +722,7 @@ final class DefaultServerConfig implements ServerConfig {
             int http2InitialStreamWindowSize, long http2MaxStreamsPerConnection, int http2MaxFrameSize,
             long http2MaxHeaderListSize, long http1MaxInitialLineLength, long http1MaxHeaderSize,
             long http1MaxChunkSize, int proxyProtocolMaxTlvSize,
-            Duration gracefulShutdownQuietPeriod, Duration gracefulShutdownTimeout,
+            GracefulShutdown gracefulShutdown,
             @Nullable BlockingTaskExecutor blockingTaskExecutor,
             @Nullable MeterRegistry meterRegistry,
             Map<ChannelOption<?>, ?> channelOptions, Map<ChannelOption<?>, ?> childChannelOptions,
@@ -799,10 +798,8 @@ final class DefaultServerConfig implements ServerConfig {
         buf.append(http1MaxChunkSize);
         buf.append("B, proxyProtocolMaxTlvSize: ");
         buf.append(proxyProtocolMaxTlvSize);
-        buf.append("B, gracefulShutdownQuietPeriod: ");
-        buf.append(gracefulShutdownQuietPeriod);
-        buf.append(", gracefulShutdownTimeout: ");
-        buf.append(gracefulShutdownTimeout);
+        buf.append("B, gracefulShutdown: ");
+        buf.append(gracefulShutdown);
         if (blockingTaskExecutor != null) {
             buf.append(", blockingTaskExecutor: ");
             buf.append(blockingTaskExecutor);

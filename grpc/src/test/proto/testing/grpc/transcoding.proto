@@ -21,6 +21,7 @@ package armeria.grpc.testing;
 option java_package = "testing.grpc";
 
 import "google/api/annotations.proto";
+import "google/api/field_behavior.proto";
 import "google/protobuf/timestamp.proto";
 import "google/protobuf/duration.proto";
 import "google/protobuf/wrappers.proto";
@@ -57,7 +58,7 @@ service HttpJsonTranscodingTestService {
   }
   rpc GetMessageV5(GetMessageRequestV5) returns (Message) {
     option (google.api.http) = {
-      get:"/v5/messages/{messageType}"
+      get:"/v5/messages/{message_id}"
     };
   }
   rpc UpdateMessageV1(UpdateMessageRequestV1) returns (Message) {
@@ -292,6 +293,8 @@ message UpdateMessageRequestV1 {
 
 message Message {
   string text = 1; // The resource content.
+  google.protobuf.StringValue required_text = 2 [(google.api.field_behavior) = REQUIRED];
+  google.protobuf.StringValue optional_text = 3;
 }
 
 enum MessageType {

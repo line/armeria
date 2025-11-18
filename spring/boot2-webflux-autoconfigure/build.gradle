@@ -37,6 +37,7 @@ dependencies {
 task copyBoot3Sources(type: Copy) {
     from("${rootProject.projectDir}/spring/boot3-autoconfigure/src/main/java") {
         // Copy from /internal/spring package.
+        include '**/AthenzSupport.java'
         include '**/ArmeriaConfigurationNetUtil.java'
         include '**/ArmeriaConfigurationSettingsUtil.java'
         include '**/ArmeriaConfigurationUtil.java'
@@ -48,6 +49,7 @@ task copyBoot3Sources(type: Copy) {
         include '**/*ArmeriaBeanPostProcessor*.java'
         include '**/ArmeriaServerConfigurator.java'
         include '**/ArmeriaSettings.java'
+        include '**/AthenzConfig.java'
         include '**/DocServiceConfigurator.java'
         include '**/DropwizardExpositionService.java'
         include '**/DropwizardSupport.java'
@@ -86,6 +88,8 @@ task generateSources(type: Copy) {
         exclude '**/package-info.java'
         exclude '**/org.springframework.boot.autoconfigure.AutoConfiguration.imports'
         exclude '**/TlsUtil.java'
+        // Micrometer observation is not supported for spring-boot-2
+        exclude '**/ObservationTest.java'
     }
 
     into "${project.ext.genSrcDir}"

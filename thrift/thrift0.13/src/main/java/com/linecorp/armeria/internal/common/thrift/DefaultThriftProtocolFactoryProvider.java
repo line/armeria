@@ -24,6 +24,7 @@ import org.apache.thrift.protocol.TProtocolFactory;
 import com.google.common.collect.ImmutableSet;
 
 import com.linecorp.armeria.common.SerializationFormat;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.thrift.ThriftProtocolFactories;
 import com.linecorp.armeria.common.thrift.ThriftProtocolFactoryProvider;
 import com.linecorp.armeria.common.thrift.ThriftSerializationFormats;
@@ -46,6 +47,7 @@ public final class DefaultThriftProtocolFactoryProvider extends ThriftProtocolFa
         return SERIALIZATION_FORMATS;
     }
 
+    @Nullable
     @Override
     protected TProtocolFactory protocolFactory(SerializationFormat serializationFormat,
                                                int maxStringLength, int maxContainerLength) {

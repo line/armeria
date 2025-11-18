@@ -22,13 +22,22 @@ import java.security.cert.CertificateException;
 import java.util.Calendar;
 import java.util.Collection;
 import java.util.Date;
+import java.util.Map;
+import java.util.concurrent.ThreadLocalRandom;
 
 import org.assertj.core.api.AbstractDoubleAssert;
 import org.junit.jupiter.api.Test;
 
+import com.google.common.collect.ImmutableList;
+
 import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.metric.CloseableMeterBinder;
+import com.linecorp.armeria.common.metric.MeterIdPrefix;
+import com.linecorp.armeria.common.metric.MoreMeterBinders;
+import com.linecorp.armeria.common.metric.MoreMeters;
 import com.linecorp.armeria.common.prometheus.PrometheusMeterRegistries;
 import com.linecorp.armeria.internal.common.util.SelfSignedCertificate;
+import com.linecorp.armeria.internal.common.util.SelfSingedCertificateNameType;
 
 import io.micrometer.core.instrument.Gauge;
 import io.micrometer.core.instrument.MeterRegistry;
@@ -111,19 +120,19 @@ public class ServerTlsCertificateMetricsTest {
         assertThat(daysValidityGauges.size()).isEqualTo(2);
 
         assertThat(meterRegistry.find(CERT_VALIDITY_GAUGE_NAME)
-                                .tag("common.name", commonName)
+                                .tag("hostname", commonName)
                                 .tag("hostname.pattern", "*") // default virtual host
                                 .gauge().value()).isOne();
         assertThat(meterRegistry.find(CERT_VALIDITY_GAUGE_NAME)
-                                .tag("common.name", commonName)
+                                .tag("hostname", commonName)
                                 .tag("hostname.pattern", hostnamePattern) // non-default virtual host
                                 .gauge().value()).isOne();
         assertThat(meterRegistry.find(CERT_VALIDITY_DAYS_GAUGE_NAME)
-                                .tag("common.name", commonName)
+                                .tag("hostname", commonName)
                                 .tag("hostname.pattern", "*") // default virtual host
                                 .gauge().value()).isPositive();
         assertThat(meterRegistry.find(CERT_VALIDITY_DAYS_GAUGE_NAME)
-                                .tag("common.name", commonName)
+                                .tag("hostname", commonName)
                                 .tag("hostname.pattern", hostnamePattern) // non-default virtual host
                                 .gauge().value()).isPositive();
     }
@@ -181,14 +190,36 @@ public class ServerTlsCertificateMetricsTest {
               .build();
 
         assertThatGauge(meterRegistry, CERT_VALIDITY_GAUGE_NAME, "localhost").isZero();
-        assertThatGauge(meterRegistry, CERT_VALIDITY_DAYS_GAUGE_NAME, "localhost").isEqualTo(-1);
+        assertThatGauge(meterRegistry, CERT_VALIDITY_DAYS_GAUGE_NAME, "localhost").isLessThanOrEqualTo(-1);
         assertThatGauge(meterRegistry, CERT_VALIDITY_GAUGE_NAME, "test.root.armeria").isOne();
         assertThatGauge(meterRegistry, CERT_VALIDITY_DAYS_GAUGE_NAME, "test.root.armeria").isPositive();
     }
 
+    @Test
+    void useSubjectAltNameWhenCommonNameIsAbsent() throws CertificateException {
+        final Calendar calendar = Calendar.getInstance();
+        calendar.add(Calendar.DAY_OF_MONTH, 10);
+        final Date notAfter = calendar.getTime();
+        calendar.add(Calendar.DAY_OF_MONTH, -1);
+        final Date notBefore = calendar.getTime();
+        final SelfSignedCertificate ssc =
+                new SelfSignedCertificate(
+                        "san.name", ThreadLocalRandom.current(), 2048, notBefore, notAfter, "RSA",
+                        ImmutableList.of(SelfSingedCertificateNameType.SUBJECT_ALTERNATIVE_NAME));
+        try (CloseableMeterBinder meterBinder =
+                     MoreMeterBinders.certificateMetrics(ssc.cert(), new MeterIdPrefix("test"))) {
+            final MeterRegistry meterRegistry = PrometheusMeterRegistries.newRegistry();
+            meterBinder.bindTo(meterRegistry);
+            final Map<String, Double> captured = MoreMeters.measureAll(meterRegistry);
+            assertThat(captured)
+                    .containsEntry("test.tls.certificate.validity#value{hostname=san.name}", 0.0)
+                    .containsEntry("test.tls.certificate.validity.days#value{hostname=san.name}", 9.0);
+        }
+    }
+
     private static AbstractDoubleAssert<?> assertThatGauge(MeterRegistry meterRegistry, String gaugeName,
                                                            String cn) {
-        final Gauge gauge = meterRegistry.find(gaugeName).tag("common.name", cn).gauge();
+        final Gauge gauge = meterRegistry.find(gaugeName).tag("hostname", cn).gauge();
         assertThat(gauge).isNotNull();
         return assertThat(gauge.value());
     }

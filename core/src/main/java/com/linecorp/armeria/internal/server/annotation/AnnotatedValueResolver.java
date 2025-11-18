@@ -22,7 +22,6 @@ import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.linecorp.armeria.internal.server.annotation.AnnotatedElementNameUtil.findName;
 import static com.linecorp.armeria.internal.server.annotation.AnnotatedElementNameUtil.getName;
 import static com.linecorp.armeria.internal.server.annotation.AnnotatedElementNameUtil.getNameOrDefault;
-import static com.linecorp.armeria.internal.server.annotation.AnnotatedElementNameUtil.toHeaderName;
 import static com.linecorp.armeria.internal.server.annotation.AnnotatedServiceFactory.findDescription;
 import static com.linecorp.armeria.internal.server.annotation.AnnotatedServiceTypeUtil.stringToType;
 import static com.linecorp.armeria.internal.server.annotation.DefaultValues.getSpecifiedValue;
@@ -31,6 +30,7 @@ import static java.util.Objects.requireNonNull;
 import java.io.File;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.AnnotatedElement;
+import java.lang.reflect.AnnotatedType;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Executable;
 import java.lang.reflect.Field;
@@ -49,6 +49,7 @@ import java.util.EnumSet;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.ServiceLoader;
@@ -64,6 +65,7 @@ import com.google.common.base.Ascii;
 import com.google.common.base.MoreObjects;
 import com.google.common.base.Splitter;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.primitives.Primitives;
 
@@ -125,6 +127,8 @@ final class AnnotatedValueResolver {
     private static final Object[] emptyArguments = new Object[0];
 
     private static final List<RequestObjectResolver> defaultRequestObjectResolvers;
+
+    private static final Set<Type> fileTypes = ImmutableSet.of(File.class, Path.class, MultipartFile.class);
 
     static {
         final ImmutableList.Builder<RequestObjectResolver> builder = ImmutableList.builderWithExpectedSize(4);
@@ -459,7 +463,19 @@ final class AnnotatedValueResolver {
         final Param param = annotatedElement.getAnnotation(Param.class);
         if (param != null) {
             final String name = findName(typeElement, param.value());
-            if (type == File.class || type == Path.class || type == MultipartFile.class) {
+            // If the parameter is of type Map and the @Param annotation does not specify a value,
+            // map all query parameters into the Map.
+            if (Map.class.isAssignableFrom(type)) {
+                if (DefaultValues.isSpecified(param.value())) {
+                    throw new IllegalArgumentException(
+                            String.format("Invalid @Param annotation on Map parameter: '%s'. " +
+                                          "The @Param annotation specifies a value ('%s'), " +
+                                          "which is not allowed. ",
+                                          annotatedElement, param.value()));
+                }
+                return ofQueryParamMap(name, annotatedElement, typeElement, type, description);
+            }
+            if (fileTypes.contains(type) || isListOfFiles(typeElement)) {
                 return ofFileParam(name, annotatedElement, typeElement, type, description);
             }
             if (pathParams.contains(name)) {
@@ -471,7 +487,7 @@ final class AnnotatedValueResolver {
 
         final Header header = annotatedElement.getAnnotation(Header.class);
         if (header != null) {
-            final String name = toHeaderName(findName(typeElement, header.value()));
+            final String name = findName(header, typeElement);
             return ofHeader(name, annotatedElement, typeElement, type, description);
         }
 
@@ -513,6 +529,31 @@ final class AnnotatedValueResolver {
         }
 
         return null;
+    }
+
+    private static boolean isListOfFiles(AnnotatedElement typeElement) {
+        if (!(typeElement instanceof Parameter)) {
+            return false;
+        }
+        final Type parameter = ((Parameter) typeElement).getParameterizedType();
+        if (!(parameter instanceof ParameterizedType)) {
+            return false;
+        }
+        final ParameterizedType parameterizedType = (ParameterizedType) parameter;
+        final Type raw = parameterizedType.getRawType();
+        if (!(raw instanceof Class<?>)) {
+            return false;
+        }
+        final Class<?> rawClass = (Class<?>) raw;
+        if (!List.class.isAssignableFrom(rawClass) && !Set.class.isAssignableFrom(rawClass)) {
+            return false;
+        }
+        final Type[] args = parameterizedType.getActualTypeArguments();
+        if (args.length != 1) {
+            return false;
+        }
+        final Type arg = args[0];
+        return fileTypes.contains(arg);
     }
 
     static List<RequestObjectResolver> addToFirstIfExists(List<RequestObjectResolver> resolvers,
@@ -583,6 +624,67 @@ final class AnnotatedValueResolver {
                 .resolver(resolver(ctx -> ctx.queryParams().getAll(name),
                                    () -> "Cannot resolve a value from a query parameter: " + name,
                                    queryDelimiter))
+                .build();
+    }
+
+    private static AnnotatedValueResolver ofQueryParamMap(String name,
+                                                          AnnotatedElement annotatedElement,
+                                                          AnnotatedElement typeElement, Class<?> type,
+                                                          DescriptionInfo description) {
+        final Type valueType = ((ParameterizedType) ((Parameter) typeElement).getParameterizedType())
+                .getActualTypeArguments()[1];
+        final Class<?> rawValueType = ClassUtil.typeToClass(valueType);
+        assert rawValueType != null;
+
+        if (valueType instanceof ParameterizedType && !(List.class.isAssignableFrom(rawValueType) ||
+                                                        Set.class.isAssignableFrom(rawValueType))) {
+            throw new IllegalArgumentException(
+                    "Invalid parameterized map value type: " + rawValueType +
+                    " (expected List or Set)");
+        }
+
+        final BiFunction<AnnotatedValueResolver, ResolverContext, Object> biFunction;
+
+        if (Set.class.isAssignableFrom(rawValueType)) {
+            biFunction = (resolver, ctx) -> ctx.queryParams().stream()
+                                               .collect(toImmutableMap(
+                                                       Entry::getKey,
+                                                       e -> ImmutableSet.of(e.getValue()),
+                                                       (existing, replacement) ->
+                                                               ImmutableSet.<String>builder()
+                                                                           .addAll(existing)
+                                                                           .addAll(replacement)
+                                                                           .build()
+                                               ));
+        } else if (List.class.isAssignableFrom(rawValueType) ||
+                   Collection.class.isAssignableFrom(rawValueType) ||
+                   Iterable.class.isAssignableFrom(rawValueType)
+        ) {
+            biFunction = (resolver, ctx) -> ctx.queryParams().stream()
+                                               .collect(toImmutableMap(
+                                                       Entry::getKey,
+                                                       e -> ImmutableList.of(e.getValue()),
+                                                       (existing, replacement) ->
+                                                               ImmutableList.<String>builder()
+                                                                            .addAll(existing)
+                                                                            .addAll(replacement)
+                                                                            .build()
+                                               ));
+        } else {
+            biFunction = (resolver, ctx) -> ctx.queryParams().stream()
+                                               .collect(toImmutableMap(
+                                                       Entry::getKey,
+                                                       Entry::getValue,
+                                                       (existing, replacement) -> replacement
+                                               ));
+        }
+
+        return new Builder(annotatedElement, type, name)
+                .annotationType(Param.class)
+                .typeElement(typeElement)
+                .description(description)
+                .aggregation(AggregationStrategy.FOR_FORM_DATA)
+                .resolver(biFunction)
                 .build();
     }
 
@@ -948,13 +1050,59 @@ final class AnnotatedValueResolver {
                                            element.getClass().getSimpleName());
     }
 
+    /**
+     * Return if the given {@link AnnotatedElement} is annotated with {@code @Nullable} annotation.
+     * This method checks both declaration annotation and type-use annotation.
+     *
+     * <p>For example:
+     * <pre>{@code
+     * @Nullable // declaration annotation
+     * public String declarationAnnotatedMethod() {
+     *     return null;
+     * }
+     *
+     * // type-use annotation
+     * public @Nullable String typeUseAnnotatedMethod() {
+     *     return null;
+     * }
+     * }</pre>
+     */
     static boolean isAnnotatedNullable(AnnotatedElement annotatedElement) {
+        // 1) declaration annotation
         for (Annotation a : annotatedElement.getAnnotations()) {
             final String annotationTypeName = a.annotationType().getName();
             if (annotationTypeName.endsWith(".Nullable")) {
                 return true;
             }
         }
+
+        // 2) type-use annotation
+        if (annotatedElement instanceof Field) {
+            final Field field = (Field) annotatedElement;
+            final AnnotatedType annotatedType = field.getAnnotatedType();
+            return isAnnotatedNullableType(annotatedType);
+        }
+        if (annotatedElement instanceof Method) {
+            final Method method = (Method) annotatedElement;
+            final AnnotatedType annotatedType = method.getAnnotatedReturnType();
+            return isAnnotatedNullableType(annotatedType);
+        }
+        if (annotatedElement instanceof Parameter) {
+            final Parameter parameter = (Parameter) annotatedElement;
+            final AnnotatedType annotatedType = parameter.getAnnotatedType();
+            return isAnnotatedNullableType(annotatedType);
+        }
+
+        return false;
+    }
+
+    private static boolean isAnnotatedNullableType(AnnotatedType annotatedType) {
+        for (Annotation a : annotatedType.getAnnotations()) {
+            if (a.annotationType().getName().endsWith(".Nullable")) {
+                return true;
+            }
+        }
+
         return false;
     }
 
@@ -983,6 +1131,7 @@ final class AnnotatedValueResolver {
 
     @Nullable
     private final EnumConverter<?> enumConverter;
+    private final AnnotatedBeanFieldInfo beanFieldInfo;
 
     @Nullable
     private final BeanFactoryId beanFactoryId;
@@ -1000,7 +1149,8 @@ final class AnnotatedValueResolver {
                                    DescriptionInfo description,
                                    BiFunction<AnnotatedValueResolver, ResolverContext, Object> resolver,
                                    @Nullable BeanFactoryId beanFactoryId,
-                                   AggregationStrategy aggregationStrategy) {
+                                   AggregationStrategy aggregationStrategy,
+                                   AnnotatedBeanFieldInfo beanFieldInfo) {
         this.annotationType = annotationType;
         this.httpElementName = httpElementName;
         this.isPathVariable = isPathVariable;
@@ -1015,6 +1165,7 @@ final class AnnotatedValueResolver {
         this.beanFactoryId = beanFactoryId;
         this.aggregationStrategy = requireNonNull(aggregationStrategy, "aggregationStrategy");
         enumConverter = enumConverter(elementType);
+        this.beanFieldInfo = beanFieldInfo;
 
         // Must be called after initializing 'enumConverter'.
         this.defaultValue = defaultValue != null ? convert(defaultValue, elementType, enumConverter)
@@ -1136,6 +1287,10 @@ final class AnnotatedValueResolver {
                                            httpElementName);
     }
 
+    AnnotatedBeanFieldInfo beanFieldInfo() {
+        return beanFieldInfo;
+    }
+
     @Override
     public String toString() {
         return MoreObjects.toStringHelper(this).omitNullValues()
@@ -1159,7 +1314,7 @@ final class AnnotatedValueResolver {
 
     private static final class Builder {
         private final AnnotatedElement annotatedElement;
-        private final Type type;
+        private final Class<?> type;
         private final String httpElementName;
         private AnnotatedElement typeElement;
         @Nullable
@@ -1175,7 +1330,7 @@ final class AnnotatedValueResolver {
         private AggregationStrategy aggregation = AggregationStrategy.NONE;
         private boolean warnedRedundantUse;
 
-        private Builder(AnnotatedElement annotatedElement, Type type, String name) {
+        private Builder(AnnotatedElement annotatedElement, Class<?> type, String name) {
             this.annotatedElement = requireNonNull(annotatedElement, "annotatedElement");
             this.type = requireNonNull(type, "type");
             httpElementName = requireNonNull(name, "name");
@@ -1356,10 +1511,12 @@ final class AnnotatedValueResolver {
                 }
             }
 
+            final AnnotatedBeanFieldInfo beanFieldInfo =
+                    new AnnotatedBeanFieldInfo(typeElement, type, httpElementName);
             return new AnnotatedValueResolver(annotationType, httpElementName, pathVariable, shouldExist,
                                               isOptional, containerType, elementType, rawType,
                                               parameterizedElementType, defaultValue, description, resolver,
-                                              beanFactoryId, aggregation);
+                                              beanFactoryId, aggregation, beanFieldInfo);
         }
 
         private void warnRedundantUse(String whatWasUsed1, @Nullable String whatWasUsed2) {

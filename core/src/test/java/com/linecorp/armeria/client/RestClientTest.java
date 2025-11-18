@@ -17,6 +17,7 @@
 package com.linecorp.armeria.client;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
@@ -29,6 +30,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.ArgumentsProvider;
 import org.junit.jupiter.params.provider.ArgumentsSource;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.reflections.ReflectionUtils;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
@@ -41,6 +43,7 @@ import com.linecorp.armeria.common.Cookie;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.internal.testing.GenerateNativeImageTrace;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServiceRequestContext;
@@ -56,6 +59,7 @@ import com.linecorp.armeria.server.annotation.Put;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
 class RestClientTest {
+
     @RegisterExtension
     static ServerExtension server = new ServerExtension() {
         @Override
@@ -112,23 +116,54 @@ class RestClientTest {
                     break;
             }
             assertThat(preparation).isNotNull();
-            final RestResponse response =
-                    preparation.content("content")
-                               .header("x-header", "header-value")
-                               .cookie(Cookie.ofSecure("cookie", "cookie-value"))
-                               .pathParam("id", "1")
-                               .queryParam("query", "query-value")
-                               .execute(RestResponse.class)
-                               .join()
-                               .content();
-
-            assertThat(response.getId()).isEqualTo("1");
-            assertThat(response.getMethod()).isEqualTo(method.toString());
-            assertThat(response.getQuery()).isEqualTo("query-value");
-            assertThat(response.getHeader()).isEqualTo("header-value");
-            assertThat(response.getCookie()).isEqualTo("cookie-value");
-            assertThat(response.getContent()).isEqualTo("content");
+            validatePreparation(method, preparation);
         }
+    }
+
+    private static void validatePreparation(HttpMethod method, RestClientPreparation preparation) {
+        final RestResponse response =
+                preparation.content("content")
+                           .header("x-header", "header-value")
+                           .cookie(Cookie.ofSecure("cookie", "cookie-value"))
+                           .pathParam("id", "1")
+                           .queryParam("query", "query-value")
+                           .execute(RestResponse.class)
+                           .join()
+                           .content();
+
+        assertThat(response.getId()).isEqualTo("1");
+        assertThat(response.getMethod()).isEqualTo(method.toString());
+        assertThat(response.getQuery()).isEqualTo("query-value");
+        assertThat(response.getHeader()).isEqualTo("header-value");
+        assertThat(response.getCookie()).isEqualTo("cookie-value");
+        assertThat(response.getContent()).isEqualTo("content");
+    }
+
+    @ArgumentsSource(RestClientProvider.class)
+    @ParameterizedTest
+    void derivedClients(RestClient restClient) {
+        final ClientOptionValue<Long> option = ClientOptions.MAX_RESPONSE_LENGTH.doNewValue(Long.MAX_VALUE);
+        final RestClient derivedClient = Clients.newDerivedClient(restClient, option);
+        final RestClientPreparation preparation = derivedClient.get("/rest/{id}");
+        validatePreparation(HttpMethod.GET, preparation);
+        assertThat(restClient.options().clientPreprocessors().preprocessors())
+                .containsExactlyElementsOf(derivedClient.options().clientPreprocessors().preprocessors());
+    }
+
+    public static Stream<Arguments> preprocessorWithPrefix_args() {
+        final HttpPreprocessor preprocessor = HttpPreprocessor.of(SessionProtocol.HTTP, server.httpEndpoint());
+        return Stream.of(
+                Arguments.of(RestClient.of(preprocessor, "/rest")),
+                Arguments.of(WebClient.of(preprocessor, "/rest")
+                                      .asRestClient())
+        );
+    }
+
+    @ParameterizedTest
+    @MethodSource("preprocessorWithPrefix_args")
+    void preprocessorWithPrefix(RestClient restClient) {
+        final RestClientPreparation preparation = restClient.get("/{id}");
+        validatePreparation(HttpMethod.GET, preparation);
     }
 
     @Test
@@ -157,17 +192,48 @@ class RestClientTest {
         }
     }
 
+    @Test
+    void notAllowRpcPreprocessor() {
+        final RpcPreprocessor rpcPreprocessor =
+                RpcPreprocessor.of(SessionProtocol.HTTP, Endpoint.of("1.2.3.4"));
+        assertThatThrownBy(() -> RestClient.builder().rpcPreprocessor(rpcPreprocessor))
+                .isInstanceOf(UnsupportedOperationException.class)
+                .hasMessageContaining("RPC preprocessor cannot be added");
+    }
+
+    @Test
+    void atLeastOneHttpPreprocessorNeeded() {
+        final RpcPreprocessor rpcPreprocessor =
+                RpcPreprocessor.of(SessionProtocol.HTTP, Endpoint.of("1.2.3.4"));
+        assertThatThrownBy(() -> Clients.newClient(ClientPreprocessors.ofRpc(rpcPreprocessor),
+                                                   RestClient.class))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("At least one preprocessor must be specified");
+    }
+
     private static class RestClientProvider implements ArgumentsProvider {
 
         @Override
         public Stream<? extends Arguments> provideArguments(ExtensionContext context) throws Exception {
+            final HttpPreprocessor httpPreprocessor = HttpPreprocessor.of(SessionProtocol.HTTP,
+                                                                          server.httpEndpoint());
             return Stream.of(RestClient.of(server.httpUri()),
                              RestClient.of(server.webClient()),
                              RestClient.of("http://127.0.0.1:" + server.httpPort()),
                              server.webClient().asRestClient(),
                              RestClient.builder(server.httpUri())
                                        .decorator(LoggingClient.newDecorator())
-                                       .build())
+                                       .build(),
+                             RestClient.of(httpPreprocessor),
+                             RestClient.builder()
+                                       .preprocessor(httpPreprocessor)
+                                       .build(),
+                             WebClient.builder()
+                                      .preprocessor(httpPreprocessor)
+                                      .build()
+                                      .asRestClient(),
+                             WebClient.of(httpPreprocessor).asRestClient()
+                         )
                          .map(Arguments::of);
         }
     }

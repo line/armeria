@@ -1,0 +1,185 @@
+---
+date: 2025-03-05
+---
+
+## 🌟 New features
+
+- **Load Balancer**: You can now create a <type://LoadBalancer> using various load balancing strategies to
+  select an element from a list of candidates. #5289 #5779
+  ```java
+  List<Endpoint> candidates = ...;
+  LoadBalancer.ofRoundRobin(candidates);
+  LoadBalancer.ofWeightedRoundRobin(candidates);
+  LoadBalancer.ofSticky(candidates, contextHasher);
+  LoadBalancer.ofWeightedRandom(candidates);
+  LoadBalancer.ofRampingUp(candidates);
+  ```
+- **Filter Invalid IP address**: You can now reject invalid IP addresses using
+  <type://ClientFactoryBuilder#ipAddressFilter(Predicate)>. #6106 #6111
+  ```java
+  ClientFactory
+    .builder()
+    .ipAddressFilter(ip -> { // 👈👈👈
+      if ("1.2.3.4".equals(ip.getAddress().getHostAddress())) {
+        return false;
+      }
+      return true;
+    }).build();
+  ```
+- **Graceful Shutdown**: You can now use <type://GracefulShutdown> to terminate unfinished requests
+  when a server stops.  #5941
+  ```java
+  GracefulShutdown gracefulShutdown =
+    GracefulShutdown
+      .builder()
+      .quietPeriod(Duration.ofSeconds(10))
+      .timeout(Duration.ofSeconds(15))
+      .toExceptionFunction((ctx, req) -> {
+        return new ServerStopException();
+      })
+      .build();
+  Server.builder()
+        .gracefulShutdown(gracefulShutdown);
+  ```
+- **DNS Channel Strategy**: You can now set `datagramChannelStrategy` which provides an option to create a
+  channel per-resolution for DNS queries. #6122 #6127
+  ```java
+  DnsAddressEndpointGroup
+    .builder("foo.com")
+    .port(8080)
+    .datagramChannelStrategy(
+      DnsNameResolverChannelStrategy.ChannelPerResolution) // 👈👈👈
+    .build();
+  ```
+- **Map Injection for an Annotated Service**: The annotated service now supports the `Map<String, Object>`
+  parameter. #6058 #6072
+  ```java
+  @Get("/dogma/repos")
+  public String repos(@Param Map<String, Object> repoOptions) {...}
+  ```
+- **Eureka InstanceInfo**: You can now retrieve a Eureka <type://InstanceInfo> from an <type://Endpoint>
+  via <type://InstanceInfo#instanceInfo(Endpoint)>. #6056 #6069
+  ```java
+  EurekaEndpointGroup eurekaEndpointGroup = ...;
+  eurekaEndpointGroup.endpoints().forEach(endpoint -> {
+    InstanceInfo instanceInfo = InstanceInfo.instanceInfo(endpoint); // 👈👈👈
+  ```
+- **Client Preprocessor**: You can now use a client <type://Preprocessor> to customize certain properties. #6057
+  ```java
+  HttpPreprocessor preprocessor = (delegate, ctx, req) -> {
+    ctx.setEndpointGroup(Endpoint.of("overriding-host"));
+    return delegate.execute(ctx, req);
+  };
+  WebClient client =
+    WebClient.builder()
+             .preprocessor(preprocessor) // 👈👈👈
+             .build();
+  ```
+- **Backoff Builder**: You can now easily create a <type://Backoff> using builder. #5483 #5488
+  ```java
+  Backoff backoff =
+    Backoff.builderForExponential()
+           .initialDelayMillis(100)
+           .maxDelayMillis(10000)
+           .multiplier(2.0)
+           .build();
+  ```
+
+## 📈 Improvements
+
+- Armeria now automatically registers the metrics of `PooledByteBufAllocator.DEFAULT`. #2633 #5916
+- Server metrics now have a port tag for better monitoring and troubleshooting. #6089 #6116
+- You can now see the remoteAddress in the error message when a <type://SessionProtocolNegotiationException>
+  is raised. #6113
+- You can now use the default <type://HealthCheckUpdateHandler> via <type://HealthCheckUpdateHandler#of()> #6002
+
+## 🛠️ Bug fixes
+
+- A cookie is correctly overwritten when a cookie with the same name, domain, and path is set. #5870 #6126
+- <type://CorsPolicyBuilder#build()> is exposed publicly again. #6121
+- Connections do not hold references on automatically aborted requests, resulting in less memory pressure. #6108
+- <type://CircuitBreakerRuleBuilder#onTimeoutException()> and <Type://RetryRuleBuilder#onTimeoutException()>
+  now work when a connection or proxy establishment is timed out. #6107
+- DNS refresh query is executed by the correct executor. #5891 #6092
+- You can now choose whether to use the `json_name` field option when transcoding HTTP/JSON to gRPC messages. #5890 #6082
+- `Automatic-Module-Name`s are correctly set by replacing a dot followed by a digit with an underscore. #6075 #6076
+- Delayed tasks for gRPC requests that have already been cancelled are not executed anymore. #6066
+- You no longer see a false positive warning log when <type://HealthCheckedEndpointGroup> is closing. #6063
+- An <type://Endpoint> no longer includes attributes in `.toString()`. #6061
+- Fixed a bug where a trailing dot was included in the hostname used by SNI. #6044 #6046
+- Log levels for responses are now correctly mapped based on the <type://SuccessFunction>. #6042
+- Resolved the Java module conflict with the `NonBlocking` interface. #6037
+- Unnecessary logs aren't left from an `HttpResponseWrapper`. #6035
+- Requests with a Content-Length header exceeding the allowed limit can now be rejected early
+  for improving efficiency. #5880 #6032
+- You can now sample the stacktrace of <type://ResponseCompleteException> with `verboseExceptionSampler`. #5972
+- The <type://ProxyConfig> now correctly respect the TTL of a DNS record. #5843 #5960
+- A recovered <type://HttpResponse> by the <type://ServiceErrorHandler> now correctly produces a response
+  content preview. #3969 #5076
+
+## 🏚️ Deprecations
+
+- <type://ServerConfig#gracefulShutdownQuietPeriod()> and <type://ServerConfig#gracefulShutdownTimeout()>
+  are now deprecated. #5941
+  - Use <type://ServerConfig.gracefulShutdown()> instead.
+
+## ☢️ Breaking changes
+
+- The `json_name` field option will only be used when <type://HttpJsonTranscodingQueryParamMatchRule#JSON_NAME>
+  is explicitly specified via <type://HttpJsonTranscodingOptionsBuilder#queryParamMatchRules(Iterable)>. #6136
+
+## ⛓ Dependencies
+
+- Apache Client 5.4.1 → 5.4.2
+- BlockHound 1.0.10.RELEASE → 1.0.11.RELEASE
+- Brave 6.0.3 → 6.1.0
+- Brotli4J 1.17.0 → 1.18.0
+- Context Propagation 1.1.1 → 1.1.2
+- ControlPlane 1.0.46 → 1.0.48
+- GraphQL Kotlin 8.2.1 → 8.3.0
+- gRPC Java 1.68.1 → 1.70.0
+- Guava 33.3.1-jre → 33.4.0-jre
+- Jackson 2.18.1 → 2.18.2
+- JSoup 1.18.1 → 1.18.3
+- Kafka 3.8.1 → 3.9.0
+- Kotlin 1.9.25 → 2.1.10
+- Kotlin Coroutine 1.9.0 → 1.10.1
+- Kubernetes Client 6.13.4 → 6.13.5
+- Logback 1.5.12 → 1.5.16
+- Micrometer 1.13.6 → 1.14.4
+- Micrometer Tracing 1.3.5 → 1.4.3
+- Netty 4.1.115.Final → 4.1.118.Final
+- Netty Incubator IO_Uring 0.0.25.Final → 0.0.26.Final
+- Prometheus 1.3.2 → 1.3.6
+- Protobuf Jackson 2.6.0 → 2.7.0
+- Reactor 3.6.11 → 3.7.3
+- Resilience4J 2.2.0 → 2.3.0
+- RxJava 3.1.9 → 3.1.10
+- Sangria 4.2.2 → 4.2.5
+- Scala213 2.13.15 → 2.13.16
+- SLF4J2 2.0.16 → 2.0.17
+- Spring6 6.2.3
+- Spring Boot 3.3.5 → 3.4.3
+
+## 🙇 Thank you
+
+<ThankYou usernames={[
+  '0x1306e6d',
+  'Bue-von-hon',
+  'C0mbatwombat',
+  'Ivan-Montes',
+  'be-hase',
+  'chickenchickenlove',
+  'ikhoon',
+  'jrhee17',
+  'kth496',
+  'kwondh5217',
+  'minwoox',
+  'ohadgur',
+  'rickyma',
+  'suzuki764',
+  'tobias-',
+  'trustin',
+  'wreulicke',
+  'yzfeng2020'
+]} />

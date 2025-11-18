@@ -1,7 +1,7 @@
 /*
- * Copyright 2024 LINE Corporation
+ * Copyright 2025 LY Corporation
  *
- * LINE Corporation licenses this file to you under the Apache License,
+ * LY Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
@@ -18,9 +18,10 @@ package com.linecorp.armeria.xds;
 
 import static com.linecorp.armeria.xds.ResourceNodeType.STATIC;
 
+import com.linecorp.armeria.xds.client.endpoint.UpdatableXdsLoadBalancer;
+
 import io.envoyproxy.envoy.config.cluster.v3.Cluster;
 import io.envoyproxy.envoy.config.endpoint.v3.ClusterLoadAssignment;
-import io.envoyproxy.envoy.config.route.v3.Route;
 import io.envoyproxy.envoy.config.route.v3.RouteConfiguration;
 import io.envoyproxy.envoy.config.route.v3.VirtualHost;
 
@@ -28,56 +29,55 @@ final class StaticResourceUtils {
 
     private StaticResourceUtils() {}
 
-    static RouteResourceNode staticRoute(XdsBootstrapImpl xdsBootstrap, String resourceName,
-                                         ListenerXdsResource primer,
+    static RouteResourceNode staticRoute(SubscriptionContext context, String resourceName,
                                          SnapshotWatcher<RouteSnapshot> parentWatcher,
-                                         RouteConfiguration routeConfiguration) {
+                                         RouteConfiguration routeConfiguration, String version, long revision) {
         final RouteResourceParser resourceParser =
                 (RouteResourceParser) XdsResourceParserUtil.fromType(XdsType.ROUTE);
-        final RouteXdsResource parsed = resourceParser.parse(routeConfiguration);
-        final RouteResourceNode node = new RouteResourceNode(null, resourceName, xdsBootstrap, primer,
+        final RouteXdsResource parsed = resourceParser.parse(routeConfiguration, version, revision);
+        final RouteResourceNode node = new RouteResourceNode(null, resourceName, context,
                                                              parentWatcher, STATIC);
         node.onChanged(parsed);
         return node;
     }
 
-    static ClusterResourceNode staticCluster(XdsBootstrapImpl xdsBootstrap, String resourceName,
-                                             SnapshotWatcher<ClusterSnapshot> parentWatcher,
-                                             Cluster cluster) {
-        final ClusterResourceNode node = new ClusterResourceNode(null, resourceName, xdsBootstrap,
-                                                                 null, parentWatcher, STATIC);
-        setClusterXdsResourceToNode(cluster, node);
+    static VirtualHostResourceNode staticVirtualHost(
+            SubscriptionContext context, String resourceName,
+            SnapshotWatcher<VirtualHostSnapshot> parentWatcher,
+            int index, VirtualHost virtualHost, String version, long revision) {
+        final VirtualHostResourceNode node =
+                new VirtualHostResourceNode(null, resourceName, context, parentWatcher, index, STATIC);
+        final VirtualHostXdsResource resource = new VirtualHostXdsResource(virtualHost, version, revision);
+        node.onChanged(resource);
         return node;
     }
 
-    static ClusterResourceNode staticCluster(XdsBootstrapImpl xdsBootstrap, String resourceName,
-                                             RouteXdsResource primer,
-                                             SnapshotWatcher<ClusterSnapshot> parentWatcher,
-                                             VirtualHost virtualHost, Route route, int index,
-                                             Cluster cluster) {
-        final ClusterResourceNode node = new ClusterResourceNode(null, resourceName, xdsBootstrap,
-                                                                 primer, parentWatcher, virtualHost, route,
-                                                                 index, STATIC);
-        setClusterXdsResourceToNode(cluster, node);
+    static ClusterResourceNode staticCluster(SubscriptionContext context, String resourceName,
+                                             Cluster cluster, UpdatableXdsLoadBalancer loadBalancer,
+                                             String version, long revision) {
+        final ClusterResourceNode node = new ClusterResourceNode(null, resourceName, context, STATIC,
+                                                                 loadBalancer);
+        setClusterXdsResourceToNode(cluster, node, version, revision);
         return node;
     }
 
-    private static void setClusterXdsResourceToNode(Cluster cluster, ClusterResourceNode node) {
+    private static void setClusterXdsResourceToNode(Cluster cluster, ClusterResourceNode node,
+                                                    String version, long revision) {
         final ClusterResourceParser resourceParser =
                 (ClusterResourceParser) XdsResourceParserUtil.fromType(XdsType.CLUSTER);
-        final ClusterXdsResource parsed = resourceParser.parse(cluster);
+        final ClusterXdsResource parsed = resourceParser.parse(cluster, version, revision);
         node.onChanged(parsed);
     }
 
-    static EndpointResourceNode staticEndpoint(XdsBootstrapImpl xdsBootstrap, String resourceName,
-                                               ClusterXdsResource primer,
+    static EndpointResourceNode staticEndpoint(SubscriptionContext context, String resourceName,
                                                SnapshotWatcher<EndpointSnapshot> parentWatcher,
-                                               ClusterLoadAssignment clusterLoadAssignment) {
+                                               ClusterLoadAssignment clusterLoadAssignment, String version,
+                                               long revision) {
         final EndpointResourceParser resourceParser =
                 (EndpointResourceParser) XdsResourceParserUtil.fromType(XdsType.ENDPOINT);
-        final EndpointXdsResource parsed = resourceParser.parse(clusterLoadAssignment);
-        final EndpointResourceNode node = new EndpointResourceNode(null, resourceName, xdsBootstrap,
-                                                                   primer, parentWatcher, STATIC);
+        final EndpointXdsResource parsed = resourceParser.parse(clusterLoadAssignment, version, revision);
+        final EndpointResourceNode node = new EndpointResourceNode(null, resourceName, context,
+                                                                   parentWatcher, STATIC);
         node.onChanged(parsed);
         return node;
     }

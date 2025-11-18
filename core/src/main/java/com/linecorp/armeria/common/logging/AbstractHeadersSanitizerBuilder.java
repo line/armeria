@@ -38,9 +38,11 @@ abstract class AbstractHeadersSanitizerBuilder<SELF extends AbstractHeadersSanit
     // - https://docs.rs/tower-http/latest/tower_http/sensitive_headers/index.html
     // - https://techdocs.akamai.com/edge-diagnostics/reference/sensitive-headers
     // - https://cloud.spring.io/spring-cloud-netflix/multi/multi__router_and_filter_zuul.html#_cookies_and_sensitive_headers
+    // - https://github.com/AthenZ/athenz/blob/885df3e109a2706dc72d3c039be9846b6c041c85/clients/java/zpe/src/main/java/com/yahoo/athenz/zpe/AuthZpeClient.java#L453-L456
     private static final Set<AsciiString> DEFAULT_SENSITIVE_HEADERS =
             ImmutableSet.of(HttpHeaderNames.AUTHORIZATION, HttpHeaderNames.COOKIE,
-                            HttpHeaderNames.SET_COOKIE, HttpHeaderNames.PROXY_AUTHORIZATION);
+                            HttpHeaderNames.SET_COOKIE, HttpHeaderNames.PROXY_AUTHORIZATION,
+                            HttpHeaderNames.ATHENZ_ROLE_AUTH, HttpHeaderNames.YAHOO_ROLE_AUTH);
 
     @Nullable
     private Set<AsciiString> sensitiveHeaders;

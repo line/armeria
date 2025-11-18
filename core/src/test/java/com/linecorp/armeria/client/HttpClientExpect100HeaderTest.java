@@ -552,7 +552,7 @@ final class HttpClientExpect100HeaderTest {
     private static void sendFrameHeaders(BufferedOutputStream bos,
                                          HttpStatus status,
                                          boolean endOfStream, int streamId) throws Exception {
-        final HPackEncoder encoder = new HPackEncoder(StandardCharsets.UTF_8);
+        final HPackEncoder encoder = new HPackEncoder(4096, StandardCharsets.UTF_8);
         final ByteArrayBuffer buffer = new ByteArrayBuffer(1024);
         encoder.encodeHeader(buffer, ":status", status.codeAsText(), false);
         final byte[] headersPayload = buffer.toByteArray();

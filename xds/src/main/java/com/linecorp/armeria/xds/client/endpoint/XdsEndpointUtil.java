@@ -25,6 +25,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.function.Predicate;
 
+import com.google.common.base.Predicates;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
 import com.google.common.primitives.Ints;
@@ -35,9 +36,7 @@ import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.client.endpoint.dns.DnsAddressEndpointGroup;
 import com.linecorp.armeria.client.endpoint.dns.DnsAddressEndpointGroupBuilder;
-import com.linecorp.armeria.client.endpoint.healthcheck.HealthCheckedEndpointGroup;
 import com.linecorp.armeria.client.retry.Backoff;
-import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.xds.ClusterSnapshot;
 import com.linecorp.armeria.xds.EndpointSnapshot;
 
@@ -45,7 +44,6 @@ import io.envoyproxy.envoy.config.cluster.v3.Cluster;
 import io.envoyproxy.envoy.config.cluster.v3.Cluster.RefreshRate;
 import io.envoyproxy.envoy.config.core.v3.HealthCheck;
 import io.envoyproxy.envoy.config.core.v3.HealthCheck.HttpHealthCheck;
-import io.envoyproxy.envoy.config.core.v3.RequestMethod;
 import io.envoyproxy.envoy.config.core.v3.SocketAddress;
 import io.envoyproxy.envoy.config.endpoint.v3.ClusterLoadAssignment;
 import io.envoyproxy.envoy.config.endpoint.v3.LbEndpoint;
@@ -97,38 +95,26 @@ final class XdsEndpointUtil {
                 break;
             default:
                 throw new UnsupportedOperationException(
-                        "Cluster (" + cluster.getName() + ") is attempting to use an" +
+                        "Cluster (" + cluster.getName() + ") is attempting to use an " +
                         "unsupported cluster type: (" + cluster.getType() + "). " +
                         "Only (STATIC, STRICT_DNS, EDS) are supported.");
         }
         if (!cluster.getHealthChecksList().isEmpty()) {
             // multiple health-checks aren't supported
             final HealthCheck healthCheck = cluster.getHealthChecksList().get(0);
-            return maybeHealthChecked(endpointGroup, healthCheck);
+            if (healthCheck.hasHttpHealthCheck()) {
+                return maybeHealthChecked(endpointGroup, cluster, healthCheck);
+            }
         }
         return endpointGroup;
     }
 
-    private static EndpointGroup maybeHealthChecked(EndpointGroup delegate, HealthCheck healthCheck) {
-        if (!healthCheck.hasHttpHealthCheck()) {
-            return delegate;
-        }
+    private static EndpointGroup maybeHealthChecked(EndpointGroup delegate, Cluster cluster,
+                                                    HealthCheck healthCheck) {
         final HttpHealthCheck httpHealthCheck = healthCheck.getHttpHealthCheck();
-        final String path = httpHealthCheck.getPath();
-
-        // We can't support SessionProtocol, excluded endpoints,
-        // per-cluster-member health checking, etc without refactoring how we deal with health checking.
-        // For now, just simply health check all targets depending on the cluster configuration.
-        return HealthCheckedEndpointGroup.builder(delegate, path)
-                                         .useGet(healthCheckMethod(httpHealthCheck) == HttpMethod.GET)
-                                         .build();
-    }
-
-    private static HttpMethod healthCheckMethod(HttpHealthCheck httpHealthCheck) {
-        if (httpHealthCheck.getMethod() == RequestMethod.HEAD) {
-            return HttpMethod.HEAD;
-        }
-        return HttpMethod.GET;
+        return new XdsHealthCheckedEndpointGroupBuilder(delegate, cluster, httpHealthCheck)
+                .healthCheckedEndpointPredicate(Predicates.alwaysTrue())
+                .build();
     }
 
     private static EndpointGroup staticEndpointGroup(ClusterSnapshot clusterSnapshot) {

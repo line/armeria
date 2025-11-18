@@ -48,6 +48,16 @@ public interface Ticker {
      * A ticker that reads the current time using {@link System#nanoTime}.
      */
     static Ticker systemTicker() {
-        return System::nanoTime;
+        return new Ticker() {
+            @Override
+            public long read() {
+                return System.nanoTime();
+            }
+
+            @Override
+            public String toString() {
+                return "Ticker.systemTicker()";
+            }
+        };
     }
 }

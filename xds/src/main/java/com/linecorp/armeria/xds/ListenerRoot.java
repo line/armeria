@@ -1,7 +1,7 @@
 /*
- * Copyright 2023 LINE Corporation
+ * Copyright 2025 LY Corporation
  *
- * LINE Corporation licenses this file to you under the Apache License,
+ * LY Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
@@ -18,8 +18,8 @@ package com.linecorp.armeria.xds;
 
 import com.linecorp.armeria.common.annotation.UnstableApi;
 
-import io.envoyproxy.envoy.config.core.v3.ConfigSource;
 import io.envoyproxy.envoy.config.listener.v3.Listener;
+import io.grpc.Status;
 
 /**
  * A root node representing a {@link Listener}.
@@ -29,30 +29,23 @@ import io.envoyproxy.envoy.config.listener.v3.Listener;
 @UnstableApi
 public final class ListenerRoot extends AbstractRoot<ListenerSnapshot> {
 
-    private final ListenerResourceNode node;
+    private final String resourceName;
+    private final ListenerManager listenerManager;
 
-    ListenerRoot(XdsBootstrapImpl xdsBootstrap, ConfigSourceMapper configSourceMapper,
-                 String resourceName, BootstrapListeners bootstrapListeners) {
-        super(xdsBootstrap.eventLoop());
-        final ListenerXdsResource listenerXdsResource = bootstrapListeners.staticListeners().get(resourceName);
-        if (listenerXdsResource != null) {
-            node = new ListenerResourceNode(null, resourceName, xdsBootstrap, this, ResourceNodeType.STATIC);
-            node.onChanged(listenerXdsResource);
-        } else {
-            final ConfigSource configSource = configSourceMapper.ldsConfigSource(null, resourceName);
-            node = new ListenerResourceNode(configSource, resourceName, xdsBootstrap,
-                                            this, ResourceNodeType.DYNAMIC);
-            xdsBootstrap.subscribe(node);
-        }
+    ListenerRoot(SubscriptionContext context, String resourceName, ListenerManager listenerManager) {
+        super(context.eventLoop());
+        this.resourceName = resourceName;
+        this.listenerManager = listenerManager;
+        context.eventLoop().execute(
+                safeRunnable(() -> listenerManager.register(resourceName, context, this),
+                             t -> onError(XdsType.LISTENER, resourceName, Status.fromThrowable(t))));
     }
 
     @Override
     public void close() {
-        if (!eventLoop().inEventLoop()) {
-            eventLoop().execute(this::close);
-            return;
-        }
-        node.close();
-        super.close();
+        eventLoop().execute(() -> {
+            listenerManager.unregister(resourceName, this);
+            super.close();
+        });
     }
 }

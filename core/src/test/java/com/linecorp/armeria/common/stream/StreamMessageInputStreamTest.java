@@ -23,6 +23,7 @@ import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.InterruptedIOException;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.junit.jupiter.api.Test;
@@ -227,15 +228,20 @@ class StreamMessageInputStreamTest {
 
         final ByteBuf result = Unpooled.buffer();
         int read;
-        while ((read = inputStream.read()) != -1) {
-            result.writeByte(read);
+        try {
+            while ((read = inputStream.read()) != -1) {
+                result.writeByte(read);
+            }
+        } catch (Exception e) {
+            assertThat(e).isInstanceOf(InterruptedIOException.class)
+                         .hasCauseInstanceOf(AbortedStreamException.class);
         }
 
+        // Read before the exception is raised.
         final byte[] actual = ByteBufUtil.getBytes(result);
         result.release();
         assertThat(actual).isEqualTo(expected);
         assertThat(inputStream.available()).isZero();
-        assertThat(inputStream.read()).isEqualTo(-1);
     }
 
     @Test
@@ -256,15 +262,20 @@ class StreamMessageInputStreamTest {
 
         final ByteBuf result = Unpooled.buffer();
         int read;
-        while ((read = inputStream.read()) != -1) {
-            result.writeByte(read);
+        try {
+            while ((read = inputStream.read()) != -1) {
+                result.writeByte(read);
+            }
+        } catch (Exception e) {
+            assertThat(e).isInstanceOf(InterruptedIOException.class)
+                         .hasCauseInstanceOf(RuntimeException.class);
         }
 
+        // Read before the exception is raised.
         final byte[] actual = ByteBufUtil.getBytes(result);
         result.release();
         assertThat(actual).isEqualTo(expected);
         assertThat(inputStream.available()).isZero();
-        assertThat(inputStream.read()).isEqualTo(-1);
     }
 
     @Test
@@ -335,10 +346,16 @@ class StreamMessageInputStreamTest {
 
         final ByteBuf result = Unpooled.buffer();
         int read;
-        while ((read = inputStream.read()) != -1) {
-            result.writeByte(read);
+        try {
+            while ((read = inputStream.read()) != -1) {
+                result.writeByte(read);
+            }
+        } catch (Exception e) {
+            assertThat(e).isInstanceOf(InterruptedIOException.class)
+                         .hasCauseInstanceOf(RuntimeException.class);
         }
 
+        // Read before the exception is raised.
         final byte[] actual = ByteBufUtil.getBytes(result);
         result.release();
         assertThat(actual).isEqualTo(expected);

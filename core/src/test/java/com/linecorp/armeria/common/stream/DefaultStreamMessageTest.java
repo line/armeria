@@ -22,6 +22,8 @@ import static org.awaitility.Awaitility.await;
 import static org.junit.jupiter.api.Assertions.fail;
 
 import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.LinkedTransferQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -301,5 +303,45 @@ class DefaultStreamMessageTest {
             }
         }, executor);
         await().untilTrue(onError);
+    }
+
+    @Test
+    void abortAndSubscribe() throws Exception {
+        final DefaultStreamMessage<String> streamMessage = new DefaultStreamMessage<>();
+        final BlockingQueue<String> queue = new LinkedBlockingQueue<>();
+        final CountDownLatch latch = new CountDownLatch(1);
+        eventLoop.get().execute(() -> {
+            try {
+                latch.await();
+            } catch (InterruptedException e) {
+                throw new RuntimeException(e);
+            }
+            streamMessage.abort();
+        });
+        streamMessage.subscribe(new Subscriber<String>() {
+            @Override
+            public void onSubscribe(Subscription subscription) {
+                assertThat(eventLoop.get().inEventLoop()).isTrue();
+                queue.add("onSubscribe");
+            }
+
+            @Override
+            public void onNext(String s) {
+                queue.add("onNext");
+            }
+
+            @Override
+            public void onError(Throwable throwable) {
+                assertThat(eventLoop.get().inEventLoop()).isTrue();
+                queue.add("onError");
+            }
+
+            @Override
+            public void onComplete() {
+                queue.add("onComplete");
+            }
+        }, eventLoop.get());
+        latch.countDown();
+        await().untilAsserted(() -> assertThat(queue).containsExactly("onSubscribe", "onError"));
     }
 }

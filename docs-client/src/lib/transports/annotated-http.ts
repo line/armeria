@@ -15,7 +15,7 @@
  */
 import { Endpoint, Method } from '../specification';
 
-import Transport from './transport';
+import { Transport } from './transport';
 import { isValidJsonMimeType, validateJsonObject } from '../json-util';
 
 export const ANNOTATED_HTTP_MIME_TYPE = 'application/json; charset=utf-8';
@@ -83,7 +83,7 @@ export default class AnnotatedHttpTransport extends Transport {
 
   protected async doSend(
     method: Method,
-    headers: { [name: string]: string },
+    headers: { [p: string]: string },
     pathPrefix: string,
     bodyJson?: string,
     endpointPath?: string,
@@ -92,7 +92,15 @@ export default class AnnotatedHttpTransport extends Transport {
     const endpoint = this.getDebugMimeTypeEndpoint(method);
 
     const hdrs = new Headers();
-    hdrs.set('content-type', ANNOTATED_HTTP_MIME_TYPE);
+    if (
+      method.httpMethod === 'POST' ||
+      method.httpMethod === 'PUT' ||
+      method.httpMethod === 'PATCH'
+    ) {
+      // Set content-type only for methods that usually have a body.
+      hdrs.set('content-type', ANNOTATED_HTTP_MIME_TYPE);
+    }
+
     for (const [name, value] of Object.entries(headers)) {
       hdrs.set(name, value);
     }

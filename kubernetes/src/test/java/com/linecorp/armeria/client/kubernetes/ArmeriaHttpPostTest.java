@@ -17,6 +17,8 @@ package com.linecorp.armeria.client.kubernetes;
 
 import org.junit.jupiter.api.Disabled;
 
+import com.linecorp.armeria.client.UnprocessedRequestException;
+
 import io.fabric8.kubernetes.client.http.AbstractHttpPostTest;
 import io.fabric8.kubernetes.client.http.HttpClient;
 
@@ -25,6 +27,11 @@ class ArmeriaHttpPostTest extends AbstractHttpPostTest {
     @Override
     protected HttpClient.Factory getHttpClientFactory() {
         return new ArmeriaHttpClientFactory();
+    }
+
+    @Override
+    protected Class<? extends Exception> getConnectionFailedExceptionType() {
+        return UnprocessedRequestException.class;
     }
 
     @Disabled("Armeria does not support 'Expect: 100-Continue'")

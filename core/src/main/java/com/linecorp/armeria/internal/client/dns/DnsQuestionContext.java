@@ -29,6 +29,7 @@ final class DnsQuestionContext {
     private final long queryTimeoutMillis;
     private final CompletableFuture<Void> whenCancelled = new CompletableFuture<>();
     private final ScheduledFuture<?> scheduledFuture;
+    private boolean complete;
 
     DnsQuestionContext(EventExecutor executor, long queryTimeoutMillis) {
         this.queryTimeoutMillis = queryTimeoutMillis;
@@ -48,10 +49,19 @@ final class DnsQuestionContext {
         return whenCancelled.isCompletedExceptionally();
     }
 
-    void cancel() {
+    void cancelScheduler() {
         if (!scheduledFuture.isDone()) {
             scheduledFuture.cancel(false);
         }
+    }
+
+    void setComplete() {
+        complete = true;
+        cancelScheduler();
+    }
+
+    boolean isCompleted() {
+        return complete;
     }
 
     @Override
@@ -65,6 +75,7 @@ final class DnsQuestionContext {
 
         final DnsQuestionContext that = (DnsQuestionContext) o;
         return queryTimeoutMillis == that.queryTimeoutMillis &&
+               complete == that.complete &&
                whenCancelled.equals(that.whenCancelled) &&
                scheduledFuture.equals(that.scheduledFuture);
     }
@@ -74,6 +85,7 @@ final class DnsQuestionContext {
         int result = whenCancelled.hashCode();
         result = 31 * result + scheduledFuture.hashCode();
         result = 31 * result + (int) queryTimeoutMillis;
+        result = 31 * result + (complete ? 1 : 0);
         return result;
     }
 

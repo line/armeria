@@ -67,12 +67,6 @@ class LoggingDecoratorBuilderTest {
                 assertThat(content).isNotNull();
                 return SANITIZED_CONTENT;
             };
-    private static final BiFunction<? super RequestContext, ? super Throwable, ?> CAUSE_SANITIZER =
-            (ctx, cause) -> {
-                assertThat(ctx).isNotNull();
-                assertThat(cause).isNotNull();
-                return "dummy cause sanitizer";
-            };
 
     private Builder builder;
     private ServiceRequestContext ctx;

@@ -38,6 +38,7 @@ import javax.annotation.processing.SupportedAnnotationTypes;
 import javax.lang.model.SourceVersion;
 import javax.lang.model.element.ElementKind;
 import javax.lang.model.element.ExecutableElement;
+import javax.lang.model.element.QualifiedNameable;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.element.VariableElement;
 import javax.tools.Diagnostic.Kind;
@@ -148,7 +149,9 @@ public final class DocumentationProcessor extends AbstractProcessor {
     }
 
     private void processMethod(ExecutableElement method) throws IOException {
-        final String className = ((TypeElement) method.getEnclosingElement()).getQualifiedName().toString();
+        final QualifiedNameable enclosingElement = (QualifiedNameable) method.getEnclosingElement();
+        assert enclosingElement != null;
+        final String className = enclosingElement.getQualifiedName().toString();
         final Properties properties = readProperties(className);
         final String docComment = processingEnv.getElementUtils().getDocComment(method);
         if (docComment == null || !docComment.contains("@param")) {

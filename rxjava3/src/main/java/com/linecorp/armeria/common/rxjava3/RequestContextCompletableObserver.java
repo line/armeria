@@ -17,6 +17,7 @@
 package com.linecorp.armeria.common.rxjava3;
 
 import com.linecorp.armeria.common.RequestContext;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.SafeCloseable;
 
 import io.reactivex.rxjava3.core.CompletableObserver;
@@ -26,6 +27,7 @@ import io.reactivex.rxjava3.internal.disposables.DisposableHelper;
 final class RequestContextCompletableObserver implements CompletableObserver, Disposable {
     private final CompletableObserver actual;
     private final RequestContext assemblyContext;
+    @Nullable
     private Disposable disposable;
 
     RequestContextCompletableObserver(CompletableObserver actual, RequestContext assemblyContext) {
@@ -60,11 +62,13 @@ final class RequestContextCompletableObserver implements CompletableObserver, Di
 
     @Override
     public boolean isDisposed() {
+        assert disposable != null;
         return disposable.isDisposed();
     }
 
     @Override
     public void dispose() {
+        assert disposable != null;
         disposable.dispose();
     }
 }

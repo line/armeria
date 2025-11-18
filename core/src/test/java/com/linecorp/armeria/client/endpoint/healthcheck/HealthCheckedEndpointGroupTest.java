@@ -15,6 +15,7 @@
  */
 package com.linecorp.armeria.client.endpoint.healthcheck;
 
+import static com.linecorp.armeria.client.endpoint.healthcheck.AbstractHealthCheckedEndpointGroupBuilder.DEFAULT_ENDPOINT_PREDICATE;
 import static com.linecorp.armeria.client.endpoint.healthcheck.AbstractHealthCheckedEndpointGroupBuilder.DEFAULT_HEALTH_CHECK_RETRY_BACKOFF;
 import static com.linecorp.armeria.common.util.UnmodifiableFuture.completedFuture;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -34,7 +35,9 @@ import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Consumer;
 import java.util.function.Function;
 
 import org.junit.jupiter.api.Test;
@@ -53,6 +56,7 @@ import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
+import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.auth.AuthToken;
 import com.linecorp.armeria.common.auth.BasicToken;
@@ -60,6 +64,7 @@ import com.linecorp.armeria.common.auth.OAuth1aToken;
 import com.linecorp.armeria.common.auth.OAuth2Token;
 import com.linecorp.armeria.common.util.AsyncCloseable;
 import com.linecorp.armeria.common.util.AsyncCloseableSupport;
+import com.linecorp.armeria.internal.client.endpoint.EndpointAttributeKeys;
 import com.linecorp.armeria.internal.testing.AnticipatedException;
 import com.linecorp.armeria.server.AbstractHttpService;
 import com.linecorp.armeria.server.HttpService;
@@ -71,6 +76,7 @@ import com.linecorp.armeria.server.logging.LoggingService;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
 import io.netty.channel.EventLoopGroup;
+import io.netty.util.concurrent.ScheduledFuture;
 
 class HealthCheckedEndpointGroupTest {
 
@@ -174,7 +180,7 @@ class HealthCheckedEndpointGroupTest {
             // 'foo' should not be healthy even if `ctx.updateHealth()` was called.
             ctx.updateHealth(1, null, null, null);
             assertThat(group.endpoints()).isEmpty();
-            assertThat(group.healthyEndpoints).isEmpty();
+            assertThat(group.allHealthyEndpoints()).isEmpty();
 
             // An attempt to schedule a new task for a disappeared endpoint must fail.
             assertThatThrownBy(() -> ctx.executor().execute(() -> {}))
@@ -229,7 +235,7 @@ class HealthCheckedEndpointGroupTest {
             // 'foo' should not be healthy after `bar` become healthy.
             ctx2.updateHealth(1, null, null, null);
             assertThat(group.endpoints()).containsOnly(endpoint2);
-            assertThat(group.healthyEndpoints).containsOnly(endpoint2);
+            assertThat(group.allHealthyEndpoints()).containsOnly(endpoint2);
         }
     }
 
@@ -257,14 +263,15 @@ class HealthCheckedEndpointGroupTest {
                                                     SessionProtocol.HTTP, 80,
                                                     DEFAULT_HEALTH_CHECK_RETRY_BACKOFF,
                                                     ClientOptions.of(), checkFactory,
-                                                    HealthCheckStrategy.all())) {
+                                                    HealthCheckStrategy.all(),
+                                                    DEFAULT_ENDPOINT_PREDICATE)) {
 
-            assertThat(group.healthyEndpoints).containsOnly(candidate1, candidate2);
+            assertThat(group.allHealthyEndpoints()).containsOnly(candidate1, candidate2);
 
             final ClientRequestContext mockCtx =
                     ClientRequestContext.of(HttpRequest.of(HttpMethod.GET, "/health"));
             firstSelectedCandidates.get().updateHealth(UNHEALTHY, mockCtx, null, new AnticipatedException());
-            assertThat(group.healthyEndpoints).containsOnly(candidate2);
+            assertThat(group.allHealthyEndpoints()).containsOnly(candidate2);
         }
     }
 
@@ -287,7 +294,8 @@ class HealthCheckedEndpointGroupTest {
                                                     SessionProtocol.HTTP, 80,
                                                     DEFAULT_HEALTH_CHECK_RETRY_BACKOFF,
                                                     ClientOptions.of(), checkFactory,
-                                                    HealthCheckStrategy.all())) {
+                                                    HealthCheckStrategy.all(),
+                                                    DEFAULT_ENDPOINT_PREDICATE)) {
 
             assertThat(group.endpoints()).usingElementComparator(new EndpointComparator())
                                          .containsOnly(candidate1, candidate2);
@@ -318,7 +326,8 @@ class HealthCheckedEndpointGroupTest {
                                                     SessionProtocol.HTTP, 80,
                                                     DEFAULT_HEALTH_CHECK_RETRY_BACKOFF,
                                                     ClientOptions.of(), checkFactory,
-                                                    HealthCheckStrategy.all())) {
+                                                    HealthCheckStrategy.all(),
+                                                    DEFAULT_ENDPOINT_PREDICATE)) {
             assertThat(counter.get()).isEqualTo(2);
         }
     }
@@ -342,7 +351,8 @@ class HealthCheckedEndpointGroupTest {
                                                     SessionProtocol.HTTP, 80,
                                                     DEFAULT_HEALTH_CHECK_RETRY_BACKOFF,
                                                     ClientOptions.of(), checkFactory,
-                                                    HealthCheckStrategy.all())) {
+                                                    HealthCheckStrategy.all(),
+                                                    DEFAULT_ENDPOINT_PREDICATE)) {
             final BlockingQueue<List<Endpoint>> healthyEndpointsList = new LinkedTransferQueue<>();
             endpointGroup.addListener(healthyEndpointsList::add, true);
             delegate.set(candidate1, candidate3);
@@ -518,6 +528,110 @@ class HealthCheckedEndpointGroupTest {
         }
 
         server.stop();
+    }
+
+    @Test
+    void cacheReflectsAttributeChanges() throws InterruptedException {
+        final AtomicInteger healthy = new AtomicInteger(1);
+        final AtomicReference<ResponseHeaders> headers = new AtomicReference<>();
+        final Function<? super HealthCheckerContext, ? extends AsyncCloseable> checkFactory = ctx -> {
+            final EventLoopGroup executors = CommonPools.workerGroup();
+            final ScheduledFuture<?> scheduledFuture = executors.scheduleAtFixedRate(
+                    () -> ctx.updateHealth(healthy.get(), null, headers.get(), null),
+                    0, 100, TimeUnit.MILLISECONDS);
+            return AsyncCloseableSupport.of(f -> {
+                scheduledFuture.cancel(true);
+                f.complete(null);
+            });
+        };
+
+        final Endpoint candidate1 = Endpoint.of("candidate1");
+
+        final MockEndpointGroup delegate = new MockEndpointGroup();
+        delegate.set(candidate1);
+
+        final AtomicLong updateInvokedCounter = new AtomicLong();
+        final Consumer<List<Endpoint>> endpointsListener = endpoints -> updateInvokedCounter.incrementAndGet();
+
+        try (HealthCheckedEndpointGroup endpointGroup =
+                     new HealthCheckedEndpointGroup(delegate, true,
+                                                    10000, 10000,
+                                                    SessionProtocol.HTTP, 80,
+                                                    DEFAULT_HEALTH_CHECK_RETRY_BACKOFF,
+                                                    ClientOptions.of(), checkFactory,
+                                                    HealthCheckStrategy.all(),
+                                                    DEFAULT_ENDPOINT_PREDICATE)) {
+            endpointGroup.addListener(endpointsListener, true);
+            await().untilAsserted(() -> assertThat(updateInvokedCounter).hasValue(1));
+            // the counter should stay 1 after 1 second has passed
+            await().pollDelay(1, TimeUnit.SECONDS)
+                   .untilAsserted(() -> assertThat(updateInvokedCounter).hasValue(1));
+            assertThat(endpointGroup.endpoints().get(0).attrs().attr(EndpointAttributeKeys.DEGRADED_ATTR))
+                    .isFalse();
+            assertThat(endpointGroup.endpoints().get(0).attrs().attr(EndpointAttributeKeys.HEALTHY_ATTR))
+                    .isTrue();
+
+            headers.set(ResponseHeaders.of(HttpStatus.OK, "x-envoy-degraded", ""));
+            // the counter should be incremented to three now
+            await().untilAsserted(() -> assertThat(updateInvokedCounter).hasValue(2));
+            assertThat(endpointGroup.endpoints().get(0).attrs().attr(EndpointAttributeKeys.DEGRADED_ATTR))
+                    .isTrue();
+            assertThat(endpointGroup.endpoints().get(0).attrs().attr(EndpointAttributeKeys.HEALTHY_ATTR))
+                    .isTrue();
+
+            // the counter should be incremented to two now
+            healthy.set(0);
+            await().untilAsserted(() -> assertThat(updateInvokedCounter).hasValue(3));
+            assertThat(endpointGroup.endpoints()).isEmpty();
+
+            // healthy again
+            healthy.set(1);
+            await().untilAsserted(() -> assertThat(updateInvokedCounter).hasValue(4));
+            assertThat(endpointGroup.endpoints().get(0).attrs().attr(EndpointAttributeKeys.HEALTHY_ATTR))
+                    .isTrue();
+            assertThat(endpointGroup.endpoints().get(0).attrs().attr(EndpointAttributeKeys.DEGRADED_ATTR))
+                    .isTrue();
+
+            // turn off degraded again
+            headers.set(null);
+            await().untilAsserted(() -> assertThat(updateInvokedCounter).hasValue(5));
+            assertThat(endpointGroup.endpoints().get(0).attrs().attr(EndpointAttributeKeys.HEALTHY_ATTR))
+                    .isTrue();
+            assertThat(endpointGroup.endpoints().get(0).attrs().attr(EndpointAttributeKeys.DEGRADED_ATTR))
+                    .isFalse();
+        }
+    }
+
+    @Test
+    void shouldStopUpdatingEndpointsWhenClosing() throws InterruptedException {
+        final AtomicInteger counter = new AtomicInteger();
+        final Function<? super HealthCheckerContext, ? extends AsyncCloseable> checkFactory = ctx -> {
+            counter.incrementAndGet();
+            ctx.updateHealth(HEALTHY, null, null, null);
+            return AsyncCloseableSupport.of();
+        };
+
+        final Endpoint candidate1 = Endpoint.of("candidate1");
+        final Endpoint candidate2 = Endpoint.of("candidate2");
+
+        final MockEndpointGroup delegate = new MockEndpointGroup();
+        delegate.set(candidate1, candidate2, candidate2);
+
+        final HealthCheckedEndpointGroup endpointGroup =
+                new HealthCheckedEndpointGroup(delegate, true,
+                                               10000, 10000,
+                                               SessionProtocol.HTTP, 80,
+                                               DEFAULT_HEALTH_CHECK_RETRY_BACKOFF,
+                                               ClientOptions.of(), checkFactory,
+                                               HealthCheckStrategy.all(),
+                                               DEFAULT_ENDPOINT_PREDICATE);
+        assertThat(counter.get()).isEqualTo(2);
+        final EndpointComparator comparator = new EndpointComparator();
+        assertThat(endpointGroup.endpoints()).usingElementComparator(comparator)
+                                             .containsOnly(candidate1, candidate2);
+        endpointGroup.close();
+        assertThat(endpointGroup.endpoints()).usingElementComparator(comparator)
+                                             .containsOnly(candidate1, candidate2);
     }
 
     static final class MockEndpointGroup extends DynamicEndpointGroup {

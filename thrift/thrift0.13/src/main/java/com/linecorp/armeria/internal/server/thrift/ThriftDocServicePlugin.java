@@ -365,6 +365,7 @@ public final class ThriftDocServicePlugin implements DocServicePlugin {
         return ImmutableSet.of(TBase.class);
     }
 
+    @Nullable
     @Override
     public String guessServiceName(Object exampleRequest) {
         final TBase<?, ?> exampleTBase = asTBase(exampleRequest);
@@ -375,6 +376,7 @@ public final class ThriftDocServicePlugin implements DocServicePlugin {
         return exampleTBase.getClass().getEnclosingClass().getName();
     }
 
+    @Nullable
     @Override
     public String guessServiceMethodName(Object exampleRequest) {
         final TBase<?, ?> exampleTBase = asTBase(exampleRequest);
@@ -387,6 +389,7 @@ public final class ThriftDocServicePlugin implements DocServicePlugin {
                                   typeName.length() - REQUEST_STRUCT_SUFFIX.length());
     }
 
+    @Nullable
     @Override
     public String serializeExampleRequest(String serviceName, String methodName,
                                           Object exampleRequest) {

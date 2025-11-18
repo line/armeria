@@ -135,11 +135,13 @@ final class ManagedTomcatService extends TomcatService {
         postStopTask.accept(connector);
     }
 
+    @Nullable
     @Override
     public Connector connector() {
         return connector;
     }
 
+    @Nullable
     @Override
     String hostName() {
         return hostName;

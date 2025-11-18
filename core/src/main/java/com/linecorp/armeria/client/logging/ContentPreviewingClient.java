@@ -68,7 +68,6 @@ public final class ContentPreviewingClient extends SimpleDecoratingHttpClient {
      * {@link RequestHeaders} or {@link ResponseHeaders} meets any of the following conditions:
      * <ul>
      *     <li>when it matches {@code text/*} or {@code application/x-www-form-urlencoded}</li>
-     *     <li>when its charset has been specified</li>
      *     <li>when its subtype is {@code "xml"} or {@code "json"}</li>
      *     <li>when its subtype ends with {@code "+xml"} or {@code "+json"}</li>
      * </ul>
@@ -86,7 +85,6 @@ public final class ContentPreviewingClient extends SimpleDecoratingHttpClient {
      * {@link RequestHeaders} or {@link ResponseHeaders} meets any of the following conditions:
      * <ul>
      *     <li>when it matches {@code text/*} or {@code application/x-www-form-urlencoded}</li>
-     *     <li>when its charset has been specified</li>
      *     <li>when its subtype is {@code "xml"} or {@code "json"}</li>
      *     <li>when its subtype ends with {@code "+xml"} or {@code "+json"}</li>
      * </ul>
@@ -157,8 +155,13 @@ public final class ContentPreviewingClient extends SimpleDecoratingHttpClient {
             ctx.logBuilder().requestContentPreview("");
         }
 
-        ctx.logBuilder().defer(RequestLogProperty.RESPONSE_CONTENT_PREVIEW);
-        final HttpResponse res = unwrap().execute(ctx, req);
-        return setUpResponseContentPreviewer(contentPreviewerFactory, ctx, res, responsePreviewSanitizer);
+        try {
+            ctx.logBuilder().defer(RequestLogProperty.RESPONSE_CONTENT_PREVIEW);
+            final HttpResponse res = unwrap().execute(ctx, req);
+            return setUpResponseContentPreviewer(contentPreviewerFactory, ctx, res, responsePreviewSanitizer);
+        } catch (Throwable e) {
+            ctx.logBuilder().responseContentPreview(null);
+            return HttpResponse.ofFailure(e);
+        }
     }
 }

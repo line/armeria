@@ -21,6 +21,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.linecorp.armeria.client.Endpoint;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.zookeeper.ServerSetsInstance;
 import com.linecorp.armeria.internal.common.zookeeper.ServerSetsNodeValueCodec;
 
@@ -34,11 +35,13 @@ final class ServerSetsDiscoverySpec implements ZooKeeperDiscoverySpec {
         this.converter = converter;
     }
 
+    @Nullable
     @Override
     public String path() {
         return null;
     }
 
+    @Nullable
     @Override
     public Endpoint decode(byte[] data) {
         final ServerSetsInstance decodedInstance = ServerSetsNodeValueCodec.INSTANCE.decode(data);

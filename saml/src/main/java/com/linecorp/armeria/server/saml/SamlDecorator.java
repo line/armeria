@@ -198,6 +198,7 @@ final class SamlDecorator extends SimpleDecoratingHttpService {
         // The ProtocolBinding attribute is mutually exclusive with the AssertionConsumerServiceIndex attribute
         // and is typically accompanied by the AssertionConsumerServiceURL attribute.
         final SamlPortConfig portConfig = portConfigHolder.config();
+        assert portConfig != null;
         final SamlEndpoint acsEndpoint = idp.acsEndpoint() != null ? idp.acsEndpoint()
                                                                    : sp.defaultAcsConfig().endpoint();
         authnRequest.setAssertionConsumerServiceURL(acsEndpoint.toUriString(portConfig.scheme().uriText(),

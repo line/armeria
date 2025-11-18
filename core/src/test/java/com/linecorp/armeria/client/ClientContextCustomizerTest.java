@@ -20,10 +20,15 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.stream.Stream;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
@@ -48,27 +53,44 @@ class ClientContextCustomizerTest {
         }
     };
 
-    @Test
-    void contextCustomizer_ClientBuilder() {
+    public static Stream<Arguments> contextCustomizer_ClientBuilder_args() {
+        final HttpPreprocessor asyncPreprocessor =
+                (delegate, ctx, req) -> HttpResponse.of(
+                        CompletableFuture.supplyAsync(() -> {
+                            try {
+                                return delegate.execute(ctx, req);
+                            } catch (Exception e) {
+                                throw new RuntimeException(e);
+                            }
+                        }));
+        return Stream.of(
+                Arguments.of(WebClient.builder(server.httpUri())),
+                Arguments.of(WebClient.builder(server.httpUri())
+                                      .preprocessor(asyncPreprocessor))
+        );
+    }
+
+    @ParameterizedTest
+    @MethodSource("contextCustomizer_ClientBuilder_args")
+    void contextCustomizer_ClientBuilder(WebClientBuilder builder) {
         final String traceId = "12345";
         final AtomicReference<Thread> threadRef = new AtomicReference<>();
 
         final BlockingWebClient client =
-                WebClient.builder(server.httpUri())
-                         .contextCustomizer(ctx -> {
-                             threadRef.set(Thread.currentThread());
-                             ctx.setAttr(TRACE_ID, traceId);
-                         })
-                         .decorator((delegate, ctx, req) -> {
-                             final HttpRequest newReq = req.mapHeaders(headers -> {
-                                 return headers.toBuilder()
-                                               .add("X-Trace-ID", ctx.attr(TRACE_ID))
-                                               .build();
-                             });
-                             ctx.updateRequest(newReq);
-                             return delegate.execute(ctx, newReq);
-                         }).build()
-                         .blocking();
+                builder.contextCustomizer(ctx -> {
+                           threadRef.set(Thread.currentThread());
+                           ctx.setAttr(TRACE_ID, traceId);
+                       })
+                       .decorator((delegate, ctx, req) -> {
+                           final HttpRequest newReq = req.mapHeaders(headers -> {
+                               return headers.toBuilder()
+                                             .add("X-Trace-ID", ctx.attr(TRACE_ID))
+                                             .build();
+                           });
+                           ctx.updateRequest(newReq);
+                           return delegate.execute(ctx, newReq);
+                       }).build()
+                       .blocking();
 
         assertThat(client.get("/foo").contentUtf8()).isEqualTo("12345:null");
         assertThat(threadRef).hasValue(Thread.currentThread());

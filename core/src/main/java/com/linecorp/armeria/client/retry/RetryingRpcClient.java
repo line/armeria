@@ -152,7 +152,7 @@ public final class RetryingRpcClient extends AbstractRetryingClient<RpcRequest, 
                             RpcResponse returnedRes, CompletableFuture<RpcResponse> future) {
         final int totalAttempts = getTotalAttempts(ctx);
         final boolean initialAttempt = totalAttempts <= 1;
-        if (returnedRes.isDone()) {
+        if (ctx.isCancelled() || returnedRes.isDone()) {
             // The response has been cancelled by the client before it receives a response, so stop retrying.
             handleException(ctx, future, new CancellationException(
                     "the response returned to the client has been cancelled"), initialAttempt);
@@ -179,11 +179,13 @@ public final class RetryingRpcClient extends AbstractRetryingClient<RpcRequest, 
             // clear the pending throwable to retry endpoint selection
             ClientPendingThrowableUtil.removePendingThrowable(derivedCtx);
             // if the endpoint hasn't been selected, try to initialize the ctx with a new endpoint/event loop
-            res = initContextAndExecuteWithFallback(unwrap(), ctxExtension, endpointGroup, RpcResponse::from,
-                                                    (context, cause) -> RpcResponse.ofFailure(cause));
+            res = initContextAndExecuteWithFallback(unwrap(), ctxExtension, RpcResponse::from,
+                                                    (context, cause) -> RpcResponse.ofFailure(cause),
+                                                    req, true);
         } else {
             res = executeWithFallback(unwrap(), derivedCtx,
-                                      (context, cause) -> RpcResponse.ofFailure(cause));
+                                      (context, cause) -> RpcResponse.ofFailure(cause),
+                                      req, true);
         }
 
         final RetryConfig<RpcResponse> retryConfig = mappedRetryConfig(ctx);

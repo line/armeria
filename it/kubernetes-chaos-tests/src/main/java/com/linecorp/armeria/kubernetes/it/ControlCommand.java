@@ -44,6 +44,7 @@ import io.fabric8.kubernetes.client.KubernetesClientBuilder;
 import picocli.CommandLine;
 import picocli.CommandLine.Command;
 
+@SuppressWarnings("NullAway")
 @Command(name = "control", mixinStandardHelpOptions = true)
 public class ControlCommand implements Runnable {
 

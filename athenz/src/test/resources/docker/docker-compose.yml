@@ -1,0 +1,101 @@
+services:
+  zms-db:
+    image: athenz/athenz-zms-db:latest
+    hostname: athenz-zms-db
+    networks:
+      - athenz
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: mariadb
+      MYSQL_DATABASE: zms_server
+
+    volumes:
+      # Mount config, initialization script.
+      - ./zms/db/zms-db.cnf:/etc/mysql/conf.d/zms-db.cnf
+      - ./zms/db/zms-init-db.sql:/docker-entrypoint-initdb.d/init-db.sql
+    healthcheck:
+      # This check ensures the DB is ready before ZMS starts.
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-pmariadb"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  zms-server:
+    image: athenz/athenz-zms-server:latest
+    hostname: athenz-zms-server
+    networks:
+      - athenz
+    restart: unless-stopped
+    depends_on:
+      zms-db:
+        condition: service_healthy
+    environment:
+      ZMS_DB_ADMIN_PASS: mariadbmariadb
+      ZMS_RODB_ADMIN_PASS: mariadbmariadb
+      ZMS_KEYSTORE_PASS: athenz
+      ZMS_TRUSTSTORE_PASS: athenz
+      ZMS_PORT: 4443
+      JAVA_OPTS: ""
+    volumes:
+      - ./zms/var:/opt/athenz/zms/var
+      - ./zms/conf:/opt/athenz/zms/conf/zms_server
+      # Uncomment the following line to see ZMS logs locally.
+      # - ./logs/zms:/opt/athenz/zms/logs/zms_server
+    healthcheck:
+      test: [ "CMD", "curl", "-k", "--fail", "https://localhost:4443/zms/v1/status" ]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  zts-db:
+    image: athenz/athenz-zts-db:latest
+    hostname: athenz-zts-db
+    networks:
+      - athenz
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: mariadb
+    volumes:
+      - ./zts/db/zts-db.cnf:/etc/mysql/conf.d/zts-db.cnf
+      - ./zts/db/zts-init-db.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-pmariadb"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  zts-server:
+    image: athenz/athenz-zts-server:latest
+    hostname: athenz-zts-server
+    networks:
+      - athenz
+    restart: unless-stopped
+    depends_on:
+      zts-db:
+        condition: service_healthy
+      zms-server:
+        condition: service_healthy
+    environment:
+      ZTS_DB_ADMIN_PASS: mariadbmariadb
+      ZTS_KEYSTORE_PASS: athenz
+      ZTS_TRUSTSTORE_PASS: athenz
+      ZTS_SIGNER_KEYSTORE_PASS: athenz
+      ZTS_SIGNER_TRUSTSTORE_PASS: athenz
+      ZMS_CLIENT_KEYSTORE_PASS: athenz
+      ZMS_CLIENT_TRUSTSTORE_PASS: athenz
+      ZTS_PORT: 8443
+      JAVA_OPTS: ""
+    volumes:
+      - ./zts/var:/opt/athenz/zts/var
+      - ./zts/conf:/opt/athenz/zts/conf/zts_server
+      # Uncomment the following line to see ZTS logs locally.
+      # - ./logs/zts:/opt/athenz/zts/logs/zts_server
+    healthcheck:
+      test: ["CMD", "curl", "-k", "--fail", "https://localhost:8443/zts/v1/status"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+networks:
+  athenz:
+    driver: bridge

@@ -262,7 +262,7 @@ final class StreamingServerCall<I, O> extends AbstractServerCall<I, O>
     }
 
     @Override
-    public void transportReportStatus(Status status, Metadata metadata) {
+    public void transportReportStatus(Status status, @Nullable Metadata metadata) {
         // A server doesn't see trailers from the client so will never have Metadata here.
 
         if (isCloseCalled()) {

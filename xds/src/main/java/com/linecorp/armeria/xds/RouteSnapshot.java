@@ -16,19 +16,20 @@
 
 package com.linecorp.armeria.xds;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.LinkedHashMap;
+import static com.linecorp.armeria.xds.FilterUtil.toParsedFilterConfigs;
+
 import java.util.List;
 import java.util.Map;
 
 import com.google.common.base.MoreObjects;
 import com.google.common.base.Objects;
+import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.common.annotation.UnstableApi;
 
 import io.envoyproxy.envoy.config.route.v3.RouteConfiguration;
-import io.envoyproxy.envoy.config.route.v3.VirtualHost;
+import io.envoyproxy.envoy.extensions.filters.http.router.v3.Router;
+import io.envoyproxy.envoy.extensions.filters.network.http_connection_manager.v3.HttpFilter;
 
 /**
  * A snapshot of a {@link RouteConfiguration} resource.
@@ -37,22 +38,31 @@ import io.envoyproxy.envoy.config.route.v3.VirtualHost;
 public final class RouteSnapshot implements Snapshot<RouteXdsResource> {
 
     private final RouteXdsResource routeXdsResource;
-    private final List<ClusterSnapshot> clusterSnapshots;
+    private final List<VirtualHostSnapshot> virtualHostSnapshots;
+    private final Map<String, ParsedFilterConfig> filterConfigs;
 
-    private final Map<VirtualHost, List<ClusterSnapshot>> virtualHostMap;
-
-    RouteSnapshot(RouteXdsResource routeXdsResource, List<ClusterSnapshot> clusterSnapshots) {
+    RouteSnapshot(RouteXdsResource routeXdsResource, List<VirtualHostSnapshot> virtualHostSnapshots) {
         this.routeXdsResource = routeXdsResource;
-        this.clusterSnapshots = clusterSnapshots;
+        filterConfigs = toParsedFilterConfigs(routeXdsResource.resource().getTypedPerFilterConfigMap());
+        this.virtualHostSnapshots =
+                virtualHostSnapshots.stream().map(vhs -> vhs.withFilterConfigs(filterConfigs,
+                                                                               ImmutableList.of()))
+                                    .collect(ImmutableList.toImmutableList());
+    }
 
-        final LinkedHashMap<VirtualHost, List<ClusterSnapshot>> virtualHostMap = new LinkedHashMap<>();
-        for (ClusterSnapshot clusterSnapshot: clusterSnapshots) {
-            final VirtualHost virtualHost = clusterSnapshot.virtualHost();
-            assert virtualHost != null;
-            virtualHostMap.computeIfAbsent(virtualHost, ignored -> new ArrayList<>())
-                          .add(clusterSnapshot);
-        }
-        this.virtualHostMap = Collections.unmodifiableMap(virtualHostMap);
+    private RouteSnapshot(RouteXdsResource routeXdsResource, List<HttpFilter> upstreamFilters,
+                          Map<String, ParsedFilterConfig> filterConfigs,
+                          List<VirtualHostSnapshot> virtualHostSnapshots) {
+        this.routeXdsResource = routeXdsResource;
+        this.filterConfigs = filterConfigs;
+        this.virtualHostSnapshots =
+                virtualHostSnapshots.stream().map(vhs -> vhs.withFilterConfigs(filterConfigs, upstreamFilters))
+                                    .collect(ImmutableList.toImmutableList());
+    }
+
+    RouteSnapshot withRouter(Router router) {
+        return new RouteSnapshot(routeXdsResource, router.getUpstreamHttpFiltersList(),
+                                 filterConfigs, virtualHostSnapshots);
     }
 
     @Override
@@ -61,18 +71,10 @@ public final class RouteSnapshot implements Snapshot<RouteXdsResource> {
     }
 
     /**
-     * A list of {@link ClusterSnapshot}s which belong to this {@link RouteConfiguration}.
+     * The virtual hosts represented by {@link RouteConfiguration#getVirtualHostsList()}.
      */
-    public List<ClusterSnapshot> clusterSnapshots() {
-        return clusterSnapshots;
-    }
-
-    /**
-     * A map of {@link VirtualHost}s to {@link ClusterSnapshot}s which belong
-     * to this {@link RouteConfiguration}.
-     */
-    public Map<VirtualHost, List<ClusterSnapshot>> virtualHostMap() {
-        return virtualHostMap;
+    public List<VirtualHostSnapshot> virtualHostSnapshots() {
+        return virtualHostSnapshots;
     }
 
     @Override
@@ -85,12 +87,12 @@ public final class RouteSnapshot implements Snapshot<RouteXdsResource> {
         }
         final RouteSnapshot that = (RouteSnapshot) object;
         return Objects.equal(routeXdsResource, that.routeXdsResource) &&
-               Objects.equal(clusterSnapshots, that.clusterSnapshots);
+               Objects.equal(virtualHostSnapshots, that.virtualHostSnapshots);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hashCode(routeXdsResource, clusterSnapshots);
+        return Objects.hashCode(routeXdsResource, virtualHostSnapshots);
     }
 
     @Override
@@ -98,7 +100,7 @@ public final class RouteSnapshot implements Snapshot<RouteXdsResource> {
         return MoreObjects.toStringHelper(this)
                           .omitNullValues()
                           .add("routeXdsResource", routeXdsResource)
-                          .add("clusterSnapshots", clusterSnapshots)
+                          .add("virtualHostSnapshots", virtualHostSnapshots)
                           .toString();
     }
 }

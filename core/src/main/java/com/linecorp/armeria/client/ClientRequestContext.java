@@ -42,6 +42,7 @@ import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.RpcRequest;
+import com.linecorp.armeria.common.TimeoutException;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.logging.RequestLog;
@@ -250,9 +251,8 @@ public interface ClientRequestContext extends RequestContext {
      * Returns the {@link EndpointGroup} used for the current {@link Request}.
      *
      * @return the {@link EndpointGroup} if a user specified an {@link EndpointGroup} when initiating
-     *         a {@link Request}. {@code null} if a user specified an {@link Endpoint}.
+     *         a {@link Request}.
      */
-    @Nullable
     EndpointGroup endpointGroup();
 
     /**
@@ -515,6 +515,20 @@ public interface ClientRequestContext extends RequestContext {
     }
 
     /**
+     * Returns whether this {@link ClientRequestContext} has been timed-out, that is the cancellation cause
+     * is an instance of {@link TimeoutException} or
+     * {@link UnprocessedRequestException} and wrapped cause is {@link TimeoutException}.
+     */
+    @Override
+    default boolean isTimedOut() {
+        if (RequestContext.super.isTimedOut()) {
+            return true;
+        }
+        final Throwable cause = cancellationCause();
+        return TimeoutExceptionPredicate.isTimeoutException(cause);
+    }
+
+    /**
      * Returns the maximum length of the received {@link Response}.
      * This value is initially set from {@link ClientOptions#MAX_RESPONSE_LENGTH}.
      *
@@ -595,6 +609,15 @@ public interface ClientRequestContext extends RequestContext {
     @Override
     @UnstableApi
     ExchangeType exchangeType();
+
+    /**
+     * Returns the {@link ResponseTimeoutMode} which determines when a {@link #responseTimeoutMillis()}
+     * will start to be scheduled.
+     *
+     * @see ResponseTimeoutMode
+     */
+    @UnstableApi
+    ResponseTimeoutMode responseTimeoutMode();
 
     @Override
     default ClientRequestContext unwrap() {

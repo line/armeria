@@ -156,6 +156,23 @@ public final class ClientOptions
     public static final ClientOption<Supplier<? extends AutoCloseable>> CONTEXT_HOOK =
             ClientOption.define("CONTEXT_HOOK", NOOP_CONTEXT_HOOK);
 
+    @UnstableApi
+    public static final ClientOption<ResponseTimeoutMode> RESPONSE_TIMEOUT_MODE =
+            ClientOption.define("RESPONSE_TIMEOUT_MODE", Flags.responseTimeoutMode());
+
+    @UnstableApi
+    public static final ClientOption<ClientPreprocessors> PREPROCESSORS =
+            ClientOption.define("PREPROCESSORS", ClientPreprocessors.of(), Function.identity(),
+                                (oldValue, newValue) -> {
+                                    final ClientPreprocessors newPreprocessors = newValue.value();
+                                    final ClientPreprocessors oldPreprocessors = oldValue.value();
+                                    return newValue.option().newValue(
+                                            ClientPreprocessors.builder()
+                                                               .add(oldPreprocessors)
+                                                               .add(newPreprocessors)
+                                                               .build());
+                                });
+
     private static final List<AsciiString> PROHIBITED_HEADER_NAMES = ImmutableList.of(
             HttpHeaderNames.HTTP2_SETTINGS,
             HttpHeaderNames.METHOD,
@@ -393,6 +410,25 @@ public final class ClientOptions
     @SuppressWarnings("unchecked")
     public Supplier<AutoCloseable> contextHook() {
         return (Supplier<AutoCloseable>) get(CONTEXT_HOOK);
+    }
+
+    /**
+     * Returns the {@link ResponseTimeoutMode} which determines when a {@link #responseTimeoutMillis()}
+     * will start to be scheduled.
+     *
+     * @see ResponseTimeoutMode
+     */
+    @UnstableApi
+    public ResponseTimeoutMode responseTimeoutMode() {
+        return get(RESPONSE_TIMEOUT_MODE);
+    }
+
+    /**
+     * Returns the {@link Preprocessor}s that preprocesses the components of a client.
+     */
+    @UnstableApi
+    public ClientPreprocessors clientPreprocessors() {
+        return get(PREPROCESSORS);
     }
 
     /**

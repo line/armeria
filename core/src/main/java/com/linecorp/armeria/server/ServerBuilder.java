@@ -23,7 +23,6 @@ import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.linecorp.armeria.common.SessionProtocol.HTTP;
 import static com.linecorp.armeria.common.SessionProtocol.HTTPS;
 import static com.linecorp.armeria.common.SessionProtocol.PROXY;
-import static com.linecorp.armeria.server.DefaultServerConfig.validateGreaterThanOrEqual;
 import static com.linecorp.armeria.server.DefaultServerConfig.validateIdleTimeoutMillis;
 import static com.linecorp.armeria.server.DefaultServerConfig.validateMaxNumConnections;
 import static com.linecorp.armeria.server.DefaultServerConfig.validateNonNegative;
@@ -83,6 +82,8 @@ import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.SuccessFunction;
+import com.linecorp.armeria.common.TlsKeyPair;
+import com.linecorp.armeria.common.TlsProvider;
 import com.linecorp.armeria.common.TlsSetters;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
@@ -94,7 +95,6 @@ import com.linecorp.armeria.common.util.SystemInfo;
 import com.linecorp.armeria.common.util.ThreadFactories;
 import com.linecorp.armeria.common.util.TlsEngineType;
 import com.linecorp.armeria.internal.common.BuiltInDependencyInjector;
-import com.linecorp.armeria.internal.common.ReflectiveDependencyInjector;
 import com.linecorp.armeria.internal.common.RequestContextUtil;
 import com.linecorp.armeria.internal.common.util.ChannelUtil;
 import com.linecorp.armeria.internal.server.RouteDecoratingService;
@@ -110,6 +110,7 @@ import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.EventLoopGroup;
+import io.netty.handler.codec.http2.DefaultHttp2LocalFlowController;
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.util.Mapping;
@@ -209,6 +210,7 @@ public final class ServerBuilder implements TlsSetters, ServiceConfigsBuilder<Se
     private int maxNumRequestsPerConnection = Flags.defaultMaxServerNumRequestsPerConnection();
     private int http2InitialConnectionWindowSize = Flags.defaultHttp2InitialConnectionWindowSize();
     private int http2InitialStreamWindowSize = Flags.defaultHttp2InitialStreamWindowSize();
+    private float http2StreamWindowUpdateRatio = Flags.defaultHttp2StreamWindowUpdateRatio();
     private long http2MaxStreamsPerConnection = Flags.defaultHttp2MaxStreamsPerConnection();
     private int http2MaxFrameSize = Flags.defaultHttp2MaxFrameSize();
     private long http2MaxHeaderListSize = Flags.defaultHttp2MaxHeaderListSize();
@@ -216,8 +218,7 @@ public final class ServerBuilder implements TlsSetters, ServiceConfigsBuilder<Se
     private int http1MaxHeaderSize = Flags.defaultHttp1MaxHeaderSize();
     private int http1MaxChunkSize = Flags.defaultHttp1MaxChunkSize();
     private int proxyProtocolMaxTlvSize = PROXY_PROTOCOL_DEFAULT_MAX_TLV_SIZE;
-    private Duration gracefulShutdownQuietPeriod = DEFAULT_GRACEFUL_SHUTDOWN_QUIET_PERIOD;
-    private Duration gracefulShutdownTimeout = DEFAULT_GRACEFUL_SHUTDOWN_TIMEOUT;
+    private GracefulShutdown gracefulShutdown = GracefulShutdown.disabled();
     private MeterRegistry meterRegistry = Flags.meterRegistry();
     @Nullable
     private ServerErrorHandler errorHandler;
@@ -237,6 +238,10 @@ public final class ServerBuilder implements TlsSetters, ServiceConfigsBuilder<Se
     private final List<ShutdownSupport> shutdownSupports = new ArrayList<>();
     private int http2MaxResetFramesPerWindow = Flags.defaultServerHttp2MaxResetFramesPerMinute();
     private int http2MaxResetFramesWindowSeconds = 60;
+    @Nullable
+    private TlsProvider tlsProvider;
+    @Nullable
+    private ServerTlsConfig tlsConfig;
 
     ServerBuilder() {
         // Set the default host-level properties.
@@ -794,6 +799,23 @@ public final class ServerBuilder implements TlsSetters, ServiceConfigsBuilder<Se
     }
 
     /**
+     * Sets the threshold ratio of the HTTP/2 stream flow-control window at which a
+     * <a href="https://datatracker.ietf.org/doc/html/rfc7540#section-6.9">WINDOW_UPDATE</a> frame will be sent.
+     * When the size of the flow-control window drops below the specified ratio (relative to the initial window
+     * size), a {@code WINDOW_UPDATE} frame is triggered to replenish the window.
+     *
+     * <p>The default value is {@value DefaultHttp2LocalFlowController#DEFAULT_WINDOW_UPDATE_RATIO}.
+     * The value must be greater than 0 and less than 1.0.
+     */
+    public ServerBuilder http2StreamWindowUpdateRatio(float http2StreamWindowUpdateRatio) {
+        checkArgument(http2StreamWindowUpdateRatio > 0 && http2StreamWindowUpdateRatio < 1.0f,
+                      "http2StreamWindowUpdateRatio: %s (expected: > 0 and < 1.0)",
+                      http2StreamWindowUpdateRatio);
+        this.http2StreamWindowUpdateRatio = http2StreamWindowUpdateRatio;
+        return this;
+    }
+
+    /**
      * Sets the maximum number of concurrent streams per HTTP/2 connection. Unset means there is
      * no limit on the number of concurrent streams. Note, this differs from {@link #maxNumConnections()},
      * which is the maximum number of HTTP/2 connections themselves, not the streams that are
@@ -893,8 +915,10 @@ public final class ServerBuilder implements TlsSetters, ServiceConfigsBuilder<Se
      *                      to ensure the server shuts down even if there is a stuck request.
      */
     public ServerBuilder gracefulShutdownTimeoutMillis(long quietPeriodMillis, long timeoutMillis) {
-        return gracefulShutdownTimeout(
-                Duration.ofMillis(quietPeriodMillis), Duration.ofMillis(timeoutMillis));
+        return gracefulShutdown(GracefulShutdown.builder()
+                                                .quietPeriodMillis(quietPeriodMillis)
+                                                .timeoutMillis(timeoutMillis)
+                                                .build());
     }
 
     /**
@@ -909,12 +933,19 @@ public final class ServerBuilder implements TlsSetters, ServiceConfigsBuilder<Se
      *                shuts down even if there is a stuck request.
      */
     public ServerBuilder gracefulShutdownTimeout(Duration quietPeriod, Duration timeout) {
-        requireNonNull(quietPeriod, "quietPeriod");
-        requireNonNull(timeout, "timeout");
-        gracefulShutdownQuietPeriod = validateNonNegative(quietPeriod, "quietPeriod");
-        gracefulShutdownTimeout = validateNonNegative(timeout, "timeout");
-        validateGreaterThanOrEqual(gracefulShutdownTimeout, "quietPeriod",
-                                   gracefulShutdownQuietPeriod, "timeout");
+        return gracefulShutdown(GracefulShutdown.builder()
+                                                .quietPeriod(quietPeriod)
+                                                .timeout(timeout)
+                                                .build());
+    }
+
+    /**
+     * Sets the {@link GracefulShutdown} configuration.
+     * If not set, {@link GracefulShutdown#disabled()} is used.
+     */
+    @UnstableApi
+    public ServerBuilder gracefulShutdown(GracefulShutdown gracefulShutdown) {
+        this.gracefulShutdown = requireNonNull(gracefulShutdown, "gracefulShutdown");
         return this;
     }
 
@@ -1074,49 +1105,65 @@ public final class ServerBuilder implements TlsSetters, ServiceConfigsBuilder<Se
         return this;
     }
 
+    @Deprecated
     @Override
     public ServerBuilder tls(File keyCertChainFile, File keyFile) {
         return (ServerBuilder) TlsSetters.super.tls(keyCertChainFile, keyFile);
     }
 
+    @Deprecated
     @Override
     public ServerBuilder tls(
             File keyCertChainFile, File keyFile, @Nullable String keyPassword) {
-        virtualHostTemplate.tls(keyCertChainFile, keyFile, keyPassword);
-        return this;
+        return (ServerBuilder) TlsSetters.super.tls(keyCertChainFile, keyFile, keyPassword);
     }
 
+    @Deprecated
     @Override
     public ServerBuilder tls(InputStream keyCertChainInputStream, InputStream keyInputStream) {
         return (ServerBuilder) TlsSetters.super.tls(keyCertChainInputStream, keyInputStream);
     }
 
+    @Deprecated
     @Override
     public ServerBuilder tls(InputStream keyCertChainInputStream, InputStream keyInputStream,
                              @Nullable String keyPassword) {
-        virtualHostTemplate.tls(keyCertChainInputStream, keyInputStream, keyPassword);
-        return this;
+        return (ServerBuilder) TlsSetters.super.tls(keyCertChainInputStream, keyInputStream, keyPassword);
     }
 
+    @Deprecated
     @Override
     public ServerBuilder tls(PrivateKey key, X509Certificate... keyCertChain) {
         return (ServerBuilder) TlsSetters.super.tls(key, keyCertChain);
     }
 
+    @Deprecated
     @Override
     public ServerBuilder tls(PrivateKey key, Iterable<? extends X509Certificate> keyCertChain) {
         return (ServerBuilder) TlsSetters.super.tls(key, keyCertChain);
     }
 
+    @Deprecated
     @Override
     public ServerBuilder tls(PrivateKey key, @Nullable String keyPassword, X509Certificate... keyCertChain) {
         return (ServerBuilder) TlsSetters.super.tls(key, keyPassword, keyCertChain);
     }
 
+    @Deprecated
     @Override
     public ServerBuilder tls(PrivateKey key, @Nullable String keyPassword,
                              Iterable<? extends X509Certificate> keyCertChain) {
-        virtualHostTemplate.tls(key, keyPassword, keyCertChain);
+        return (ServerBuilder) TlsSetters.super.tls(key, keyPassword, keyCertChain);
+    }
+
+    /**
+     * Configures SSL or TLS with the specified {@link TlsKeyPair}.
+     *
+     * <p>Note that this method mutually exclusive with {@link #tlsProvider(TlsProvider)}.
+     */
+    @Override
+    public ServerBuilder tls(TlsKeyPair tlsKeyPair) {
+        virtualHostTemplate.tls(tlsKeyPair);
         return this;
     }
 
@@ -1127,8 +1174,76 @@ public final class ServerBuilder implements TlsSetters, ServiceConfigsBuilder<Se
     }
 
     /**
+     * Sets the specified {@link TlsProvider} which will be used for building an {@link SslContext} of
+     * a hostname.
+     *
+     * <pre>{@code
+     * Server
+     *   .builder()
+     *   .tlsProvider(
+     *     TlsProvider.builder()
+     *                // Set the default key pair.
+     *                .keyPair(TlsKeyPair.of(...))
+     *                // Set the key pair for "example.com".
+     *                .keyPair("example.com", TlsKeyPair.of(...))
+     *                .build())
+     * }</pre>
+     *
+     * <p>Note that this method mutually exclusive with {@link #tls(TlsKeyPair)} and other static TLS settings.
+     */
+    @UnstableApi
+    public ServerBuilder tlsProvider(TlsProvider tlsProvider) {
+        requireNonNull(tlsProvider, "tlsProvider");
+        this.tlsProvider = tlsProvider;
+        tlsConfig = null;
+
+        if (tlsProvider.autoClose()) {
+            shutdownSupports.add(ShutdownSupport.of(tlsProvider));
+        }
+        return this;
+    }
+
+    /**
+     * Sets the specified {@link TlsProvider} and {@link ServerTlsConfig} which will be used for building an
+     * {@link SslContext} of a hostname.
+     *
+     * <pre>{@code
+     * TlsProvider tlsProvider =
+     *   TlsProvider
+     *     .builder()
+     *     // Set the default key pair.
+     *     .keyPair(TlsKeyPair.of(...))
+     *     // Set the key pair for "example.com".
+     *     .keyPair("example.com", TlsKeyPair.of(...))
+     *     .build();
+     *
+     * ServerTlsConfig tlsConfig =
+     *   ServerTlsConfig
+     *     .builder()
+     *     .clientAuth(ClientAuth.REQUIRED)
+     *     .meterIdPrefix(...)
+     *     .build();
+     *
+     * Server
+     *   .builder()
+     *   .tlsProvider(tlsProvider, tlsConfig)
+     * }</pre>
+     */
+    @UnstableApi
+    public ServerBuilder tlsProvider(TlsProvider tlsProvider, ServerTlsConfig tlsConfig) {
+        tlsProvider(tlsProvider);
+        this.tlsConfig = requireNonNull(tlsConfig, "tlsConfig");
+
+        if (tlsProvider.autoClose()) {
+            shutdownSupports.add(ShutdownSupport.of(tlsProvider));
+        }
+        return this;
+    }
+
+    /**
      * Configures SSL or TLS of the {@link Server} with an auto-generated self-signed certificate.
-     * <strong>Note:</strong> You should never use this in production but only for a testing purpose.
+     *
+     * <p><strong>Note:</strong> You should never use this in production but only for a testing purpose.
      *
      * @see #tlsCustomizer(Consumer)
      */
@@ -1139,7 +1254,8 @@ public final class ServerBuilder implements TlsSetters, ServiceConfigsBuilder<Se
 
     /**
      * Configures SSL or TLS of the {@link Server} with an auto-generated self-signed certificate.
-     * <strong>Note:</strong> You should never use this in production but only for a testing purpose.
+     *
+     * <p><strong>Note:</strong> You should never use this in production but only for a testing purpose.
      *
      * @see #tlsCustomizer(Consumer)
      */
@@ -2234,11 +2350,7 @@ public final class ServerBuilder implements TlsSetters, ServiceConfigsBuilder<Se
         return server;
     }
 
-    DefaultServerConfig buildServerConfig(ServerConfig existingConfig) {
-        return buildServerConfig(existingConfig.ports());
-    }
-
-    private DefaultServerConfig buildServerConfig(List<ServerPort> serverPorts) {
+    DefaultServerConfig buildServerConfig(List<ServerPort> serverPorts) {
         final AnnotatedServiceExtensions extensions =
                 virtualHostTemplate.annotatedServiceExtensions();
         assert extensions != null;
@@ -2253,17 +2365,21 @@ public final class ServerBuilder implements TlsSetters, ServiceConfigsBuilder<Se
             unloggedExceptionsReporter = null;
         }
 
-        final ServerErrorHandler errorHandler =
-                new CorsServerErrorHandler(
-                        this.errorHandler == null ? ServerErrorHandler.ofDefault()
-                                                  : this.errorHandler.orElse(ServerErrorHandler.ofDefault()));
+        final TlsProvider tlsProvider = this.tlsProvider;
+        if (tlsProvider != null && tlsProvider.autoClose()) {
+            shutdownSupports.add(ShutdownSupport.of(tlsProvider));
+        }
+
+        final ServerErrorHandler errorHandler = ServerErrorHandlerDecorators.decorate(
+                this.errorHandler == null ? ServerErrorHandler.ofDefault()
+                                          : this.errorHandler.orElse(ServerErrorHandler.ofDefault()));
         final VirtualHost defaultVirtualHost =
                 defaultVirtualHostBuilder.build(virtualHostTemplate, dependencyInjector,
-                                                unloggedExceptionsReporter, errorHandler);
+                                                unloggedExceptionsReporter, errorHandler, tlsProvider);
         final List<VirtualHost> virtualHosts =
                 virtualHostBuilders.stream()
                                    .map(vhb -> vhb.build(virtualHostTemplate, dependencyInjector,
-                                                         unloggedExceptionsReporter, errorHandler))
+                                                         unloggedExceptionsReporter, errorHandler, tlsProvider))
                                    .collect(toImmutableList());
         // Pre-populate the domain name mapping for later matching.
         final Mapping<String, SslContext> sslContexts;
@@ -2291,7 +2407,9 @@ public final class ServerBuilder implements TlsSetters, ServiceConfigsBuilder<Se
                        virtualHostPort, portNumbers);
         }
 
-        if (defaultSslContext == null) {
+        checkState(defaultSslContext == null || tlsProvider == null,
+                   "Can't set %s with a static TLS setting", TlsProvider.class.getSimpleName());
+        if (defaultSslContext == null && tlsProvider == null) {
             sslContexts = null;
             if (!serverPorts.isEmpty()) {
                 ports = resolveDistinctPorts(serverPorts);
@@ -2319,21 +2437,28 @@ public final class ServerBuilder implements TlsSetters, ServiceConfigsBuilder<Se
                 ports = ImmutableList.of(new ServerPort(0, HTTPS));
             }
 
-            final DomainMappingBuilder<SslContext>
-                    mappingBuilder = new DomainMappingBuilder<>(defaultSslContext);
-            for (VirtualHost h : virtualHosts) {
-                final SslContext sslCtx = h.sslContext();
-                if (sslCtx != null) {
-                    final String originalHostnamePattern = h.originalHostnamePattern();
-                    // The SslContext for the default virtual host was added when creating DomainMappingBuilder.
-                    if (!"*".equals(originalHostnamePattern)) {
-                        mappingBuilder.add(originalHostnamePattern, sslCtx);
+            if (defaultSslContext != null) {
+                final DomainMappingBuilder<SslContext>
+                        mappingBuilder = new DomainMappingBuilder<>(defaultSslContext);
+                for (VirtualHost h : virtualHosts) {
+                    final SslContext sslCtx = h.sslContext();
+                    if (sslCtx != null) {
+                        final String originalHostnamePattern = h.originalHostnamePattern();
+                        // The SslContext for the default virtual host was added when creating
+                        // DomainMappingBuilder.
+                        if (!"*".equals(originalHostnamePattern)) {
+                            mappingBuilder.add(originalHostnamePattern, sslCtx);
+                        }
                     }
                 }
+                sslContexts = mappingBuilder.build();
+            } else {
+                final TlsEngineType tlsEngineType = defaultVirtualHost.tlsEngineType();
+                assert tlsEngineType != null;
+                assert tlsProvider != null;
+                sslContexts = new TlsProviderMapping(tlsProvider, tlsEngineType, tlsConfig, meterRegistry);
             }
-            sslContexts = mappingBuilder.build();
         }
-
         if (pingIntervalMillis > 0) {
             pingIntervalMillis = Math.max(pingIntervalMillis, MIN_PING_INTERVAL_MILLIS);
             if (idleTimeoutMillis > 0 && pingIntervalMillis >= idleTimeoutMillis) {
@@ -2359,11 +2484,11 @@ public final class ServerBuilder implements TlsSetters, ServiceConfigsBuilder<Se
                 idleTimeoutMillis, keepAliveOnPing, pingIntervalMillis, maxConnectionAgeMillis,
                 maxNumRequestsPerConnection,
                 connectionDrainDurationMicros, http2InitialConnectionWindowSize,
-                http2InitialStreamWindowSize, http2MaxStreamsPerConnection,
+                http2InitialStreamWindowSize, http2StreamWindowUpdateRatio, http2MaxStreamsPerConnection,
                 http2MaxFrameSize, http2MaxHeaderListSize,
                 http2MaxResetFramesPerWindow, http2MaxResetFramesWindowSeconds,
                 http1MaxInitialLineLength, http1MaxHeaderSize,
-                http1MaxChunkSize, gracefulShutdownQuietPeriod, gracefulShutdownTimeout,
+                http1MaxChunkSize, gracefulShutdown,
                 blockingTaskExecutor,
                 meterRegistry, proxyProtocolMaxTlvSize, channelOptions, newChildChannelOptions,
                 childChannelPipelineCustomizer,
@@ -2427,7 +2552,7 @@ public final class ServerBuilder implements TlsSetters, ServiceConfigsBuilder<Se
         if (dependencyInjector != null) {
             return dependencyInjector;
         }
-        final ReflectiveDependencyInjector reflectiveDependencyInjector = new ReflectiveDependencyInjector();
+        final DependencyInjector reflectiveDependencyInjector = DependencyInjector.ofReflective();
         shutdownSupports.add(ShutdownSupport.of(reflectiveDependencyInjector));
         return reflectiveDependencyInjector;
     }

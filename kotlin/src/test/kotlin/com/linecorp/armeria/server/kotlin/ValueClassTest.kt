@@ -39,7 +39,8 @@ class ValueClassTest {
             }
             """.trimIndent()
         val res =
-            client.prepare()
+            client
+                .prepare()
                 .post("/value-class")
                 .content(
                     MediaType.JSON,
@@ -58,17 +59,20 @@ class ValueClassTest {
                 }
             }
 
-        data class Inner(val hello: String, val hi: Int)
+        data class Inner(
+            val hello: String,
+            val hi: Int,
+        )
 
         @JvmInline
-        value class MyValueClass(val inner: Inner)
+        value class MyValueClass(
+            val inner: Inner,
+        )
 
         private class MyAnnotatedService {
             @Post("/value-class")
             @ProducesJson
-            suspend fun foo(input: MyValueClass): MyValueClass {
-                return input
-            }
+            suspend fun foo(input: MyValueClass): MyValueClass = input
         }
     }
 }

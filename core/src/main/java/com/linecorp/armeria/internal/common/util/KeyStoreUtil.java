@@ -33,32 +33,31 @@ import java.util.List;
 import com.google.common.collect.ImmutableList;
 import com.google.common.io.ByteStreams;
 
+import com.linecorp.armeria.common.TlsKeyPair;
 import com.linecorp.armeria.common.annotation.Nullable;
 
-import io.netty.util.internal.EmptyArrays;
-
 public final class KeyStoreUtil {
-    public static KeyPair load(File keyStoreFile,
-                               @Nullable String keyStorePassword,
-                               @Nullable String keyPassword,
-                               @Nullable String alias) throws IOException, GeneralSecurityException {
+    public static TlsKeyPair load(File keyStoreFile,
+                                  @Nullable String keyStorePassword,
+                                  @Nullable String keyPassword,
+                                  @Nullable String alias) throws IOException, GeneralSecurityException {
         try (InputStream in = new FileInputStream(keyStoreFile)) {
             return load(in, keyStorePassword, keyPassword, alias, keyStoreFile);
         }
     }
 
-    public static KeyPair load(InputStream keyStoreStream,
-                               @Nullable String keyStorePassword,
-                               @Nullable String keyPassword,
-                               @Nullable String alias) throws IOException, GeneralSecurityException {
+    public static TlsKeyPair load(InputStream keyStoreStream,
+                                  @Nullable String keyStorePassword,
+                                  @Nullable String keyPassword,
+                                  @Nullable String alias) throws IOException, GeneralSecurityException {
         return load(keyStoreStream, keyStorePassword, keyPassword, alias, null);
     }
 
-    private static KeyPair load(InputStream keyStoreStream,
-                                @Nullable String keyStorePassword,
-                                @Nullable String keyPassword,
-                                @Nullable String alias,
-                                @Nullable File keyStoreFile)
+    private static TlsKeyPair load(InputStream keyStoreStream,
+                                   @Nullable String keyStorePassword,
+                                   @Nullable String keyPassword,
+                                   @Nullable String alias,
+                                   @Nullable File keyStoreFile)
             throws IOException, GeneralSecurityException {
 
         try (InputStream in = new BufferedInputStream(keyStoreStream, 8192)) {
@@ -117,7 +116,7 @@ public final class KeyStoreUtil {
 
             assert certificateChain != null;
 
-            return new KeyPair(privateKey, certificateChain);
+            return TlsKeyPair.of(privateKey, certificateChain);
         }
     }
 
@@ -165,22 +164,4 @@ public final class KeyStoreUtil {
     }
 
     private KeyStoreUtil() {}
-
-    public static final class KeyPair {
-        private final PrivateKey privateKey;
-        private final List<X509Certificate> certificateChain;
-
-        private KeyPair(PrivateKey privateKey, Iterable<X509Certificate> certificateChain) {
-            this.privateKey = privateKey;
-            this.certificateChain = ImmutableList.copyOf(certificateChain);
-        }
-
-        public PrivateKey privateKey() {
-            return privateKey;
-        }
-
-        public X509Certificate[] certificateChain() {
-            return certificateChain.toArray(EmptyArrays.EMPTY_X509_CERTIFICATES);
-        }
-    }
 }

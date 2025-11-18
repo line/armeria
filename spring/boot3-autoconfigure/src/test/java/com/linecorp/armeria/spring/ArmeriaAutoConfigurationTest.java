@@ -382,7 +382,7 @@ class ArmeriaAutoConfigurationTest {
     void testMetrics() {
         assertThat(GrpcClients.newClient(newUrl("h2c") + '/', TestServiceBlockingStub.class)
                               .hello(HelloRequest.getDefaultInstance())
-                              .getMessage()).isNotNull();
+                              .getMessage()).isEqualTo("Hello, ");
 
         final String metricReport = WebClient.of(newUrl("http"))
                                              .get("/internal/metrics")
@@ -398,9 +398,9 @@ class ArmeriaAutoConfigurationTest {
         final WebClient client = WebClient.of(newUrl("h1c"));
         final HttpResponse response = client.get("/annotated/error");
         final String expectedSuccess =
-                "http_status=\"404\",method=\"error\",result=\"success\",service=\"annotatedService\",} 1.0";
+                "http_status=\"404\",method=\"error\",result=\"success\",service=\"annotatedService\"[,]?} 1.0";
         final String expectedFailure =
-                "http_status=\"404\",method=\"error\",result=\"failure\",service=\"annotatedService\",} 0.0";
+                "http_status=\"404\",method=\"error\",result=\"failure\",service=\"annotatedService\"[,]?} 0.0";
 
         final AggregatedHttpResponse res = response.aggregate().get();
         assertThat(res.status()).isEqualTo(HttpStatus.NOT_FOUND);
@@ -413,8 +413,8 @@ class ArmeriaAutoConfigurationTest {
                                                         .aggregate()
                                                         .join()
                                                         .contentUtf8();
-                   assertThat(metricReport).contains(expectedSuccess);
-                   assertThat(metricReport).contains(expectedFailure);
+                   assertThat(metricReport).containsPattern(expectedSuccess);
+                   assertThat(metricReport).containsPattern(expectedFailure);
                });
     }
 

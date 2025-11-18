@@ -27,6 +27,7 @@ import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.ResponseHeaders;
+import com.linecorp.armeria.common.ShuttingDownException;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.internal.common.RequestContextExtension;
@@ -93,6 +94,11 @@ enum DefaultServerErrorHandler implements ServerErrorHandler {
                 status = HttpStatus.REQUEST_TIMEOUT;
             }
             return internalRenderStatus(ctx, ctx.request().headers(), status, cause);
+        }
+
+        if (cause instanceof ShuttingDownException) {
+            return internalRenderStatus(ctx, ctx.request().headers(),
+                                        HttpStatus.SERVICE_UNAVAILABLE, cause);
         }
 
         return internalRenderStatus(ctx, ctx.request().headers(),

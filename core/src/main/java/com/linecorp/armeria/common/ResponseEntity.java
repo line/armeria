@@ -18,7 +18,6 @@ package com.linecorp.armeria.common;
 
 import static java.util.Objects.requireNonNull;
 
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 
 /**
@@ -30,8 +29,9 @@ public interface ResponseEntity<T> extends HttpEntity<T> {
     /**
      * Returns a newly created {@link ResponseEntity} with the specified {@link ResponseHeaders}.
      */
-    static ResponseEntity<Void> of(ResponseHeaders headers) {
-        return of(headers, null, HttpHeaders.of());
+    static <T> ResponseEntity<T> of(ResponseHeaders headers) {
+        requireNonNull(headers, "headers");
+        return new DefaultResponseEntity<>(headers, null, HttpHeaders.of());
     }
 
     /**
@@ -39,8 +39,41 @@ public interface ResponseEntity<T> extends HttpEntity<T> {
      * {@code content}.
      */
     static <T> ResponseEntity<T> of(ResponseHeaders headers, T content) {
-        requireNonNull(content, "content");
         return of(headers, content, HttpHeaders.of());
+    }
+
+    /**
+     * Returns a newly created {@link ResponseEntity} with the specified {@link ResponseHeaders},
+     * {@code content} and {@linkplain HttpHeaders trailers}.
+     */
+    static <T> ResponseEntity<T> of(ResponseHeaders headers, T content, HttpHeaders trailers) {
+        requireNonNull(headers, "headers");
+        requireNonNull(content, "content");
+        requireNonNull(trailers, "trailers");
+        return new DefaultResponseEntity<>(headers, content, trailers);
+    }
+
+    /**
+     * Returns a newly created {@link ResponseEntity} with the specified {@link HttpStatus}.
+     */
+    static <T> ResponseEntity<T> of(HttpStatus status) {
+        return of(ResponseHeaders.of(status));
+    }
+
+    /**
+     * Returns a newly created {@link ResponseEntity} with the specified {@link HttpStatus} and
+     * {@code content}.
+     */
+    static <T> ResponseEntity<T> of(HttpStatus status, T content) {
+        return of(ResponseHeaders.of(status), content);
+    }
+
+    /**
+     * Returns a newly created {@link ResponseEntity} with the specified {@link HttpStatus},
+     * {@code content} and {@linkplain HttpHeaders trailers}.
+     */
+    static <T> ResponseEntity<T> of(HttpStatus status, T content, HttpHeaders trailers) {
+        return of(ResponseHeaders.of(status), content, trailers);
     }
 
     /**
@@ -48,18 +81,7 @@ public interface ResponseEntity<T> extends HttpEntity<T> {
      * {@link HttpStatus#OK} status.
      */
     static <T> ResponseEntity<T> of(T content) {
-        requireNonNull(content, "content");
-        return of(ResponseHeaders.of(HttpStatus.OK), content, HttpHeaders.of());
-    }
-
-    /**
-     * Returns a newly created {@link ResponseEntity} with the specified {@link ResponseHeaders},
-     * {@code content} and {@linkplain HttpHeaders trailers}.
-     */
-    static <T> ResponseEntity<T> of(ResponseHeaders headers, @Nullable T content, HttpHeaders trailers) {
-        requireNonNull(headers, "headers");
-        requireNonNull(trailers, "trailers");
-        return new DefaultResponseEntity<>(headers, content, trailers);
+        return of(HttpStatus.OK, content);
     }
 
     /**

@@ -18,17 +18,20 @@ package com.linecorp.armeria.dropwizard;
 import static io.dropwizard.testing.ResourceHelpers.resourceFilePath;
 import static org.assertj.core.api.Assertions.assertThat;
 
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
 
 import io.dropwizard.testing.junit5.DropwizardAppExtension;
-import io.dropwizard.testing.junit5.DropwizardExtensionsSupport;
 
-@ExtendWith(DropwizardExtensionsSupport.class)
 class DropwizardArmeriaApplicationTest {
     static final DropwizardAppExtension<TestConfiguration> appExtension =
             new DropwizardAppExtension<>(TestApplication.class,
                                          resourceFilePath("dropwizard-armeria-app.yaml"));
+
+    @BeforeAll
+    static void beforeAll() throws Exception {
+        appExtension.before();
+    }
 
     @Test
     void helloWorld() {

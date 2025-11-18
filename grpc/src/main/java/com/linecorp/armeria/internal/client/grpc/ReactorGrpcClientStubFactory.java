@@ -22,6 +22,7 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 
 import com.linecorp.armeria.client.grpc.GrpcClientStubFactory;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.Exceptions;
 
 import io.grpc.Channel;
@@ -32,6 +33,7 @@ import io.grpc.ServiceDescriptor;
  */
 public final class ReactorGrpcClientStubFactory implements GrpcClientStubFactory {
 
+    @Nullable
     @Override
     public ServiceDescriptor findServiceDescriptor(Class<?> clientType) {
         final String clientTypeName = clientType.getName();
@@ -53,6 +55,7 @@ public final class ReactorGrpcClientStubFactory implements GrpcClientStubFactory
     @Override
     public Object newClientStub(Class<?> clientType, Channel channel) {
         final Method stubFactoryMethod = GrpcClientFactoryUtil.findStubFactoryMethod(clientType);
+        assert stubFactoryMethod != null : "No stub factory method found for " + clientType;
         try {
             return stubFactoryMethod.invoke(null, channel);
         } catch (IllegalAccessException | InvocationTargetException e) {

@@ -1,5 +1,5 @@
 /*
- * Copyright 2016 LINE Corporation
+ * Copyright 2024 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -13,6 +13,7 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
+
 package com.linecorp.armeria.server;
 
 import static com.google.common.base.MoreObjects.firstNonNull;
@@ -20,8 +21,11 @@ import static com.linecorp.armeria.common.SessionProtocol.H1;
 import static com.linecorp.armeria.common.SessionProtocol.H1C;
 import static com.linecorp.armeria.common.SessionProtocol.H2;
 import static com.linecorp.armeria.common.SessionProtocol.H2C;
+import static com.linecorp.armeria.internal.client.ClosedStreamExceptionUtil.newClosedSessionException;
 import static com.linecorp.armeria.internal.common.HttpHeadersUtil.CLOSE_STRING;
 import static com.linecorp.armeria.internal.common.RequestContextUtil.NOOP_CONTEXT_HOOK;
+import static com.linecorp.armeria.server.AccessLogWriterUtil.maybeWriteAccessLog;
+import static com.linecorp.armeria.server.ServerPortMetric.SERVER_PORT_METRIC;
 import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_WINDOW_SIZE;
 import static java.util.Objects.requireNonNull;
 
@@ -54,6 +58,7 @@ import com.linecorp.armeria.common.ResponseCompleteException;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.ResponseHeadersBuilder;
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.ShuttingDownException;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
 import com.linecorp.armeria.common.metric.NoopMeterRegistry;
@@ -80,6 +85,7 @@ import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.socket.ChannelInputShutdownReadComplete;
 import io.netty.handler.codec.http2.Http2Connection;
+import io.netty.handler.codec.http2.Http2Error;
 import io.netty.handler.codec.http2.Http2Exception;
 import io.netty.handler.codec.http2.Http2Settings;
 import io.netty.handler.ssl.SslCloseCompletionEvent;
@@ -178,6 +184,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
     }
 
     private final ServerConfig config;
+    private final ServerPortMetric serverPortMetric;
     private final GracefulShutdownSupport gracefulShutdownSupport;
 
     private SessionProtocol protocol;
@@ -189,18 +196,17 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
 
     @Nullable
     private final ProxiedAddresses proxiedAddresses;
-    @Nullable
-    private InetSocketAddress remoteAddress;
-    @Nullable
-    private InetSocketAddress localAddress;
+    private final InetSocketAddress remoteAddress;
+    private final InetSocketAddress localAddress;
 
     private final IdentityHashMap<DecodedHttpRequest, HttpResponse> unfinishedRequests;
     private boolean isReading;
     private boolean isCleaning;
+    private boolean isClosing;
     private boolean handledLastRequest;
 
     HttpServerHandler(ServerConfig config,
-                      GracefulShutdownSupport gracefulShutdownSupport,
+                      Channel channel, GracefulShutdownSupport gracefulShutdownSupport,
                       @Nullable ServerHttpObjectEncoder responseEncoder,
                       SessionProtocol protocol,
                       @Nullable ProxiedAddresses proxiedAddresses) {
@@ -208,6 +214,11 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
         assert protocol == H1 || protocol == H1C || protocol == H2;
 
         this.config = requireNonNull(config, "config");
+        final ServerPortMetric serverPortMetric = channel.attr(SERVER_PORT_METRIC).get();
+        assert serverPortMetric != null;
+        this.serverPortMetric = serverPortMetric;
+        remoteAddress = firstNonNull(ChannelUtil.remoteAddress(channel), UNKNOWN_ADDR);
+        localAddress = firstNonNull(ChannelUtil.localAddress(channel), UNKNOWN_ADDR);
         this.gracefulShutdownSupport = requireNonNull(gracefulShutdownSupport, "gracefulShutdownSupport");
 
         this.protocol = requireNonNull(protocol, "protocol");
@@ -228,11 +239,23 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
 
     @Override
     public void channelInactive(ChannelHandlerContext ctx) throws Exception {
-        if (responseEncoder != null) {
-            // Immediately close responseEncoder so that a late response is completed with
-            // a ClosedSessionException.
-            responseEncoder.close();
+        cleanup(ctx.channel(), false, null);
+    }
+
+    CompletableFuture<Void> shutdown(Channel channel) {
+        final CompletableFuture<Void> completionFuture = new CompletableFuture<>();
+        // This method is called from a startStopExecutor
+        channel.eventLoop().execute(() -> {
+            cleanup(channel, true, completionFuture);
+        });
+        return completionFuture;
+    }
+
+    private void cleanup(Channel ch, boolean shutdown, @Nullable CompletableFuture<Void> completionFuture) {
+        if (isClosing) {
+            return;
         }
+        isClosing = true;
 
         // Give the unfinished streaming responses a chance to close themselves before we abort them,
         // so that successful responses are not aborted due to a race condition like the following:
@@ -249,26 +272,68 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
             case H1C:
             case H1:
                 // XXX(trustin): How much time is 'a little bit'?
-                ctx.channel().eventLoop().schedule(this::cleanup, 1, TimeUnit.SECONDS);
+                ch.eventLoop().schedule(() -> cleanup0(ch, shutdown, completionFuture), 1, TimeUnit.SECONDS);
                 break;
             default:
                 // HTTP/2 is unaffected by this issue because a client is expected to wait for a frame with
                 // endOfStream set.
-                cleanup();
+                cleanup0(ch, shutdown, completionFuture);
         }
     }
 
-    private void cleanup() {
+    private void cleanup0(Channel ch, boolean shutdown, @Nullable CompletableFuture<Void> completionFuture) {
+        final Throwable defaultCause = shutdown ? ShuttingDownException.get() : newClosedSessionException(ch);
         if (!unfinishedRequests.isEmpty()) {
             isCleaning = true;
-            final ClosedSessionException cause = ClosedSessionException.get();
             unfinishedRequests.forEach((req, res) -> {
                 // An HTTP2 request is cancelled by Http2RequestDecoder.onRstStreamRead()
                 final boolean cancel = !protocol.isMultiplex();
                 // Mark the request stream as closed due to disconnection.
+                Throwable cause = null;
+                if (shutdown) {
+                    cause = shutdownError(req);
+                }
+                if (cause == null) {
+                    cause = defaultCause;
+                }
                 req.abortResponse(cause, cancel);
             });
+
+            if (completionFuture != null) {
+                final CompletableFuture<?>[] futures =
+                        unfinishedRequests.keySet().stream()
+                                          .map(DecodedHttpRequest::whenResponseSent)
+                                          .toArray(CompletableFuture[]::new);
+                CompletableFuture.allOf(futures).handle((unused0, unused1) -> {
+                    completionFuture.complete(null);
+                    // responseEncoder.close() should be called after writing all unfinished responses.
+                    if (responseEncoder != null) {
+                        responseEncoder.close(defaultCause);
+                    }
+                    return null;
+                });
+            } else {
+                if (responseEncoder != null) {
+                    responseEncoder.close(defaultCause);
+                }
+            }
+
             unfinishedRequests.clear();
+        }
+    }
+
+    @Nullable
+    private Throwable shutdownError(DecodedHttpRequest req) {
+        final ServiceRequestContext ctx = req.requestContext();
+        if (ctx == null) {
+            return null;
+        }
+        try {
+            return config.gracefulShutdown().toException(ctx, req);
+        } catch (Exception e) {
+            logger.warn("{} Unexpected exception from gracefulShutdown.toException(): {}",
+                        ctx, config.gracefulShutdown(), e);
+            return null;
         }
     }
 
@@ -302,7 +367,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
         final Http2ServerConnectionHandler connectionHandler =
                 (Http2ServerConnectionHandler) connectionHandlerCtx.handler();
         if (responseEncoder instanceof Http1ObjectEncoder) {
-            responseEncoder.close();
+            responseEncoder.close(ClosedSessionException.get());
         }
         responseEncoder = connectionHandler.getOrCreateResponseEncoder(connectionHandlerCtx);
 
@@ -342,19 +407,25 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
         }
 
         final Channel channel = ctx.channel();
-        final RequestHeaders headers = req.headers();
-        final InetSocketAddress remoteAddress = firstNonNull(remoteAddress(channel), UNKNOWN_ADDR);
-        final InetSocketAddress localAddress = firstNonNull(localAddress(channel), UNKNOWN_ADDR);
-        final ProxiedAddresses proxiedAddresses = determineProxiedAddresses(remoteAddress, headers);
-        final InetAddress clientAddress = config.clientAddressMapper().apply(proxiedAddresses).getAddress();
         final EventLoop channelEventLoop = channel.eventLoop();
-
         final RoutingContext routingCtx = req.routingContext();
+        final RequestHeaders headers = req.headers();
+        // `determineProxiedAddresses` could throw IllegalArgumentException if the headers are invalid.
+        // If it does, we will return a 400 Bad Request response.
+        // We need to get the ServiceConfig before responding, hence, we store the exception first.
+        ProxiedAddresses proxiedAddresses = (this.proxiedAddresses != null) ?
+                this.proxiedAddresses : ProxiedAddresses.of(remoteAddress);
+        IllegalArgumentException invalidProxiedAddressesException = null;
+        try {
+            proxiedAddresses = determineProxiedAddresses(headers);
+        } catch (IllegalArgumentException e) {
+            invalidProxiedAddressesException = e;
+        }
+        final InetAddress clientAddress = config.clientAddressMapper().apply(proxiedAddresses).getAddress();
         final RoutingStatus routingStatus = routingCtx.status();
         if (!routingStatus.routeMustExist()) {
             final ServiceRequestContext reqCtx = newEarlyRespondingRequestContext(
-                    channel, req, proxiedAddresses, clientAddress, remoteAddress, localAddress, routingCtx,
-                    channelEventLoop);
+                    channel, req, proxiedAddresses, clientAddress, routingCtx, channelEventLoop);
 
             // Handle 'OPTIONS * HTTP/1.1'.
             if (routingStatus == RoutingStatus.OPTIONS) {
@@ -374,6 +445,15 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
         final RoutingResult routingResult = routed.routingResult();
         final ServiceConfig serviceCfg = routed.value();
         final HttpService service = serviceCfg.service();
+        // Respond BAD_REQUEST if the proxied addresses are invalid.
+        if (invalidProxiedAddressesException != null) {
+            responseEncoder.writeErrorResponse(req.id(), req.streamId(), serviceCfg, headers,
+                    HttpStatus.BAD_REQUEST, "Invalid proxied address",
+                    invalidProxiedAddressesException);
+            req.abort(invalidProxiedAddressesException);
+            decreasePendingRequests();
+            return;
+        }
         final EventLoop serviceEventLoop;
         final EventLoopGroup serviceWorkerGroup = serviceCfg.serviceWorkerGroup();
         if (serviceWorkerGroup == config.workerGroup()) {
@@ -437,7 +517,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
 
         // A future which is completed when the all response objects are written to channel and
         // the returned promises are done.
-        final CompletableFuture<Void> resWriteFuture = new CompletableFuture<>();
+        final CompletableFuture<Void> resWriteFuture = req.whenResponseSent();
         resWriteFuture.handle(handler.responseCompleteHandler);
 
         // Set the response to the request in order to be able to immediately abort the response
@@ -463,21 +543,21 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
 
     private void decreasePendingRequests() {
         if (protocol.isExplicitHttp1()) {
-            config.serverMetrics().decreasePendingHttp1Requests();
+            serverPortMetric.decreasePendingHttp1Requests();
         } else {
             assert protocol.isExplicitHttp2();
-            config.serverMetrics().decreasePendingHttp2Requests();
+            serverPortMetric.decreasePendingHttp2Requests();
         }
     }
 
     private void increaseActiveRequests(boolean isHttp1WebSocket) {
         if (isHttp1WebSocket) {
-            config.serverMetrics().increaseActiveHttp1WebSocketRequests();
+            serverPortMetric.increaseActiveHttp1WebSocketRequests();
         } else if (protocol.isExplicitHttp1()) {
-            config.serverMetrics().increaseActiveHttp1Requests();
+            serverPortMetric.increaseActiveHttp1Requests();
         } else {
             assert protocol.isExplicitHttp2();
-            config.serverMetrics().increaseActiveHttp2Requests();
+            serverPortMetric.increaseActiveHttp2Requests();
         }
     }
 
@@ -511,8 +591,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
                            .subscribeOn(serviceEventLoop);
     }
 
-    private ProxiedAddresses determineProxiedAddresses(InetSocketAddress remoteAddress,
-                                                       RequestHeaders headers) {
+    private ProxiedAddresses determineProxiedAddresses(RequestHeaders headers) {
         if (config.clientAddressTrustedProxyFilter().test(remoteAddress.getAddress())) {
             return HttpHeaderUtil.determineProxiedAddresses(
                     headers, config.clientAddressSources(), proxiedAddresses,
@@ -520,30 +599,6 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
         } else {
             return proxiedAddresses != null ? proxiedAddresses : ProxiedAddresses.of(remoteAddress);
         }
-    }
-
-    @Nullable
-    private InetSocketAddress remoteAddress(Channel ch) {
-        final InetSocketAddress remoteAddress = this.remoteAddress;
-        if (remoteAddress != null) {
-            return remoteAddress;
-        }
-
-        final InetSocketAddress newRemoteAddress = ChannelUtil.remoteAddress(ch);
-        this.remoteAddress = newRemoteAddress;
-        return newRemoteAddress;
-    }
-
-    @Nullable
-    private InetSocketAddress localAddress(Channel ch) {
-        final InetSocketAddress localAddress = this.localAddress;
-        if (localAddress != null) {
-            return localAddress;
-        }
-
-        final InetSocketAddress newLocalAddress = ChannelUtil.localAddress(ch);
-        this.localAddress = newLocalAddress;
-        return newLocalAddress;
     }
 
     private void handleOptions(ChannelHandlerContext ctx, ServiceRequestContext reqCtx) {
@@ -612,11 +667,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
                     logBuilder.endResponse(firstNonNull(cause, f.cause()));
                 }
             }
-            reqCtx.log().whenComplete().thenAccept(log -> {
-                try (SafeCloseable ignored = reqCtx.push()) {
-                    reqCtx.config().accessLogWriter().log(log);
-                }
-            });
+            maybeWriteAccessLog(reqCtx);
         });
         return future;
     }
@@ -678,8 +729,6 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
     private ServiceRequestContext newEarlyRespondingRequestContext(Channel channel, DecodedHttpRequest req,
                                                                    ProxiedAddresses proxiedAddresses,
                                                                    InetAddress clientAddress,
-                                                                   InetSocketAddress remoteAddress,
-                                                                   InetSocketAddress localAddress,
                                                                    RoutingContext routingCtx,
                                                                    EventLoop eventLoop) {
         final ServiceConfig serviceConfig = routingCtx.virtualHost().fallbackServiceConfig();
@@ -725,6 +774,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
         private final ChannelHandlerContext ctx;
         private final DecodedHttpRequest req;
         private final boolean isTransientService;
+        private final long closeHttp2StreamDelayMillis;
 
         RequestAndResponseCompleteHandler(EventLoop eventLoop, ChannelHandlerContext ctx,
                                           ServiceRequestContext reqCtx, DecodedHttpRequest req,
@@ -732,6 +782,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
             this.ctx = ctx;
             this.req = req;
             this.isTransientService = isTransientService;
+            closeHttp2StreamDelayMillis = reqCtx.config().service().options().closeHttp2StreamDelayMillis();
 
             assert responseEncoder != null;
 
@@ -794,11 +845,11 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
                     return;
                 }
                 if (req.isHttp1WebSocket()) {
-                    config.serverMetrics().decreaseActiveHttp1WebSocketRequests();
+                    serverPortMetric.decreaseActiveHttp1WebSocketRequests();
                 } else if (protocol.isExplicitHttp1()) {
-                    config.serverMetrics().decreaseActiveHttp1Requests();
+                    serverPortMetric.decreaseActiveHttp1Requests();
                 } else if (protocol.isExplicitHttp2()) {
-                    config.serverMetrics().decreaseActiveHttp2Requests();
+                    serverPortMetric.decreaseActiveHttp2Requests();
                 }
 
                 // NB: logBuilder.endResponse() is called by HttpResponseSubscriber.
@@ -810,6 +861,11 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
                 // As `unfinishedRequests` is being iterated, `unfinishedRequests` should not be removed.
                 if (!isCleaning) {
                     unfinishedRequests.remove(req);
+                }
+
+                if (!isNeedsDisconnection() && responseEncoder instanceof ServerHttp2ObjectEncoder) {
+                    ((ServerHttp2ObjectEncoder) responseEncoder)
+                            .maybeResetStream(req.streamId(), Http2Error.CANCEL, closeHttp2StreamDelayMillis);
                 }
 
                 final boolean needsDisconnection = ctx.channel().isActive() &&

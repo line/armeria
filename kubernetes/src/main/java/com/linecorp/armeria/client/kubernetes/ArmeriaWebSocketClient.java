@@ -29,6 +29,7 @@ import com.google.common.base.Strings;
 
 import com.linecorp.armeria.client.RequestOptions;
 import com.linecorp.armeria.client.websocket.WebSocketClient;
+import com.linecorp.armeria.client.websocket.WebSocketClientBuilder;
 import com.linecorp.armeria.client.websocket.WebSocketClientHandshakeException;
 import com.linecorp.armeria.client.websocket.WebSocketSession;
 import com.linecorp.armeria.common.HttpHeaderNames;
@@ -69,10 +70,12 @@ final class ArmeriaWebSocketClient implements SafeCloseable {
             if (webSocketClient0 != null) {
                 return webSocketClient0;
             }
-            webSocketClient0 = WebSocketClient.builder()
-                                              .factory(armeriaHttpClientBuilder.clientFactory(true))
-                                              .aggregateContinuation(true)
-                                              .build();
+            final WebSocketClientBuilder webSocketClientBuilder =
+                    WebSocketClient.builder()
+                                   .factory(armeriaHttpClientBuilder.clientFactory(true))
+                                   .aggregateContinuation(true);
+            armeriaHttpClientBuilder.getClientFactory().additionalWebSocketConfig(webSocketClientBuilder);
+            webSocketClient0 = webSocketClientBuilder.build();
             this.webSocketClient = webSocketClient0;
             return webSocketClient0;
         } finally {

@@ -1,7 +1,7 @@
 /*
- * Copyright 2023 LINE Corporation
+ * Copyright 2025 LY Corporation
  *
- * LINE Corporation licenses this file to you under the Apache License,
+ * LY Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
@@ -16,11 +16,8 @@
 
 package com.linecorp.armeria.xds;
 
-import static com.google.common.base.Preconditions.checkArgument;
-import static com.google.common.base.Preconditions.checkState;
 import static java.util.Objects.requireNonNull;
 
-import java.util.HashMap;
 import java.util.Map;
 import java.util.function.Consumer;
 
@@ -31,20 +28,16 @@ import com.linecorp.armeria.common.CommonPools;
 
 import io.envoyproxy.envoy.config.bootstrap.v3.Bootstrap;
 import io.envoyproxy.envoy.config.core.v3.ConfigSource;
-import io.envoyproxy.envoy.config.core.v3.Node;
 import io.netty.util.concurrent.EventExecutor;
 
 final class XdsBootstrapImpl implements XdsBootstrap {
+    private final Bootstrap bootstrap;
     private final EventExecutor eventLoop;
 
-    private final Map<ConfigSource, ConfigSourceClient> clientMap = new HashMap<>();
-
-    private final BootstrapListeners bootstrapListeners;
-    private final ConfigSourceMapper configSourceMapper;
-    private final BootstrapClusters bootstrapClusters;
-    private final Consumer<GrpcClientBuilder> configClientCustomizer;
-    private final Node bootstrapNode;
-    private boolean closed;
+    private final XdsClusterManager clusterManager;
+    private final ListenerManager listenerManager;
+    private final ControlPlaneClientManager controlPlaneClientManager;
+    private final SubscriptionContext subscriptionContext;
 
     XdsBootstrapImpl(Bootstrap bootstrap) {
         this(bootstrap, CommonPools.workerGroup().next(), ignored -> {});
@@ -57,81 +50,36 @@ final class XdsBootstrapImpl implements XdsBootstrap {
     @VisibleForTesting
     XdsBootstrapImpl(Bootstrap bootstrap, EventExecutor eventLoop,
                      Consumer<GrpcClientBuilder> configClientCustomizer) {
+        this.bootstrap = bootstrap;
         this.eventLoop = requireNonNull(eventLoop, "eventLoop");
-        this.configClientCustomizer = configClientCustomizer;
-        configSourceMapper = new ConfigSourceMapper(bootstrap);
-        bootstrapListeners = new BootstrapListeners(bootstrap);
-        bootstrapClusters = new BootstrapClusters(bootstrap, this);
-        bootstrapNode = bootstrap.hasNode() ? bootstrap.getNode() : Node.getDefaultInstance();
-    }
+        clusterManager = new XdsClusterManager(eventLoop, bootstrap);
+        final BootstrapClusters bootstrapClusters = new BootstrapClusters(bootstrap, eventLoop, clusterManager);
+        final ConfigSourceMapper configSourceMapper = new ConfigSourceMapper(bootstrap);
+        controlPlaneClientManager = new ControlPlaneClientManager(bootstrap, eventLoop,
+                                                                  configClientCustomizer, bootstrapClusters,
+                                                                  configSourceMapper);
+        subscriptionContext = new DefaultSubscriptionContext(
+                eventLoop, clusterManager, configSourceMapper, controlPlaneClientManager);
 
-    BootstrapClusters bootstrapClusters() {
-        return bootstrapClusters;
-    }
-
-    void subscribe(ResourceNode<?> node) {
-        final XdsType type = node.type();
-        final String name = node.name();
-        final ConfigSource configSource = node.configSource();
-        checkArgument(configSource != null, "Cannot subscribe to a node without a configSource");
-        subscribe0(configSource, type, name, node);
-    }
-
-    private void subscribe0(ConfigSource configSource, XdsType type, String resourceName,
-                            ResourceWatcher<?> node) {
-        if (!eventLoop.inEventLoop()) {
-            eventLoop.execute(() -> subscribe0(configSource, type, resourceName, node));
-            return;
-        }
-        checkState(!closed, "Attempting to subscribe to a closed XdsBootstrap");
-        final ConfigSourceClient client = clientMap.computeIfAbsent(
-                configSource, ignored -> new ConfigSourceClient(
-                        configSource, eventLoop, bootstrapNode,
-                        configClientCustomizer, bootstrapClusters));
-        client.addSubscriber(type, resourceName, node);
-    }
-
-    void unsubscribe(ResourceNode<?> node) {
-        if (!eventLoop.inEventLoop()) {
-            eventLoop.execute(() -> unsubscribe(node));
-            return;
-        }
-        checkState(!closed, "Attempting to unsubscribe to a closed XdsBootstrap");
-        final XdsType type = node.type();
-        final String resourceName = node.name();
-        final ConfigSourceClient client = clientMap.get(node.configSource());
-        if (client != null && client.removeSubscriber(type, resourceName, node)) {
-            client.close();
-            clientMap.remove(node.configSource());
-        }
+        bootstrapClusters.initializeSecondary(subscriptionContext);
+        listenerManager = new ListenerManager(eventLoop, bootstrap, subscriptionContext);
     }
 
     @Override
     public ListenerRoot listenerRoot(String resourceName) {
         requireNonNull(resourceName, "resourceName");
-        return new ListenerRoot(this, configSourceMapper, resourceName, bootstrapListeners);
+        return new ListenerRoot(subscriptionContext, resourceName, listenerManager);
     }
 
     @Override
     public ClusterRoot clusterRoot(String resourceName) {
         requireNonNull(resourceName, "resourceName");
-        return new ClusterRoot(this, configSourceMapper, resourceName);
-    }
-
-    @Override
-    public void close() {
-        if (!eventLoop.inEventLoop()) {
-            eventLoop.execute(this::close);
-            return;
-        }
-        closed = true;
-        clientMap.values().forEach(ConfigSourceClient::close);
-        clientMap.clear();
+        return new ClusterRoot(subscriptionContext, resourceName);
     }
 
     @VisibleForTesting
     Map<ConfigSource, ConfigSourceClient> clientMap() {
-        return clientMap;
+        return controlPlaneClientManager.clientMap();
     }
 
     @Override
@@ -139,7 +87,14 @@ final class XdsBootstrapImpl implements XdsBootstrap {
         return eventLoop;
     }
 
-    ConfigSourceMapper configSourceMapper() {
-        return configSourceMapper;
+    @Override
+    public Bootstrap bootstrap() {
+        return bootstrap;
+    }
+
+    @Override
+    public void close() {
+        controlPlaneClientManager.close();
+        clusterManager.close();
     }
 }
