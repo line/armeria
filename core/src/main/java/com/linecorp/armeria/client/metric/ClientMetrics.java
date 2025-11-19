@@ -25,7 +25,7 @@ import java.util.concurrent.atomic.LongAdder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.linecorp.armeria.client.endpoint.EndpointGroup;
+import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
 
@@ -33,7 +33,7 @@ import com.linecorp.armeria.common.annotation.Nullable;
  * Collects simple client-side metrics such as:
  * <ul>
  *     <li>The number of pending requests per {@link SessionProtocol}</li>
- *     <li>The number of active requests per {@link EndpointGroup}</li>
+ *     <li>The number of active requests per {@link Endpoint}</li>
  * </ul>
  * This class is intended to be used as an in-memory counter.
  */
@@ -47,16 +47,16 @@ public class ClientMetrics {
     private final LongAdder http2PendingRequest;
     private final LongAdder proxyPendingRequest;
 
-    // EndpointGroup does not override equals() and hashCode().
-    // Call sites must use the same 'EndpointGroup' instance when invoking
+    // Endpoint does not override equals() and hashCode().
+    // Call sites must use the same 'Endpoint' instance when invoking
     // 'incrementActiveRequest(...)' and 'decrementActiveRequest'.
-    private final ConcurrentMap<EndpointGroup, LongAdder> activeRequestsPerEndpointGroup;
+    private final ConcurrentMap<Endpoint, LongAdder> activeRequestsPerEndpoint;
 
     /**
      * Creates a new instance with all counters initialized to zero.
      */
     public ClientMetrics() {
-        this.activeRequestsPerEndpointGroup = new ConcurrentHashMap<>();
+        this.activeRequestsPerEndpoint = new ConcurrentHashMap<>();
         this.httpsPendingRequest = new LongAdder();
         this.httpPendingRequest = new LongAdder();
         this.http1PendingRequest = new LongAdder();
@@ -66,31 +66,32 @@ public class ClientMetrics {
 
     /**
      * Increments the number of active requests for the
-     * specified {@link EndpointGroup}.
-     * @param endpointGroup the endpoint group.
+     * specified {@link Endpoint}.
+     * @param endpoint the endpoint.
      */
-    public void incrementActiveRequest(EndpointGroup endpointGroup) {
-        if (endpointGroup == null) {
+    public void incrementActiveRequest(@Nullable Endpoint endpoint) {
+        if (endpoint == null) {
             return;
         }
-        this.activeRequestsPerEndpointGroup
-                .computeIfAbsent(endpointGroup, unusedKey -> new LongAdder())
+
+        this.activeRequestsPerEndpoint
+                .computeIfAbsent(endpoint, unusedKey -> new LongAdder())
                 .increment();
     }
 
     /**
      * Decrements the number of active requests for the
-     * specified {@link EndpointGroup}. If the counter for the
-     * {@code endpointGroup} becomes zero after decrement,
-     * the entry is removed from {@code activeRequestsPerEndpointGroup}.
-     * @param endpointGroup the endpoint group.
+     * specified {@link Endpoint}. If the counter for the
+     * {@code endpoint} becomes zero after decrement,
+     * the entry is removed from {@code activeRequestsPerEndpoint}.
+     * @param endpoint the endpoint.
      */
-    public void decrementActiveRequest(EndpointGroup endpointGroup) {
-        if (endpointGroup == null) {
+    public void decrementActiveRequest(@Nullable Endpoint endpoint) {
+        if (endpoint == null) {
             return;
         }
 
-        activeRequestsPerEndpointGroup.computeIfPresent(endpointGroup, (key, counter) -> {
+        activeRequestsPerEndpoint.computeIfPresent(endpoint, (key, counter) -> {
             counter.decrement();
             final long currentCount = counter.sum();
             assert currentCount >= 0;
@@ -174,14 +175,14 @@ public class ClientMetrics {
     }
 
     /**
-     * Returns a snapshot of the number of active requests per {@link EndpointGroup}.
-     * @return a map whose key is an {@link EndpointGroup} and whose value is the number of
+     * Returns a snapshot of the number of active requests per {@link Endpoint}.
+     * @return a map whose key is an {@link Endpoint} and whose value is the number of
      *         active requests currently associated with it
      */
-    public Map<EndpointGroup, Long> activeRequestPerEndpointGroup() {
-        final Map<EndpointGroup, Long> result = new HashMap<>();
-        for (Map.Entry<EndpointGroup, LongAdder> entry : activeRequestsPerEndpointGroup.entrySet()) {
-            final EndpointGroup key = entry.getKey();
+    public Map<Endpoint, Long> activeRequestPerEndpoint() {
+        final Map<Endpoint, Long> result = new HashMap<>();
+        for (Map.Entry<Endpoint, LongAdder> entry : activeRequestsPerEndpoint.entrySet()) {
+            final Endpoint key = entry.getKey();
             final LongAdder value = entry.getValue();
             result.put(key, value.sum());
         }
