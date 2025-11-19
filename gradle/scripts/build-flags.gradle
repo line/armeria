@@ -29,10 +29,10 @@ if (!projectsWithFlags('java').isEmpty()) {
     }
 
     if (!projectsWithFlags('java', 'relocate').isEmpty()) {
-        ['gradle.plugin.com.github.johnrengelman:shadow', 'com.guardsquare:proguard-gradle'].each {
+        ['com.gradleup.shadow:com.gradleup.shadow.gradle.plugin', 'com.guardsquare:proguard-gradle'].each {
             if (!managedVersions.containsKey(it)) {
                 throw new IllegalStateException(
-                        "${it} must be specified in dependencies.(toml|yml) to use the 'relocate' flag.")
+                        "${it} must be specified in dependencies.toml to use the 'relocate' flag.")
             }
         }
         apply from: "${libDir}/java-shade.gradle"
