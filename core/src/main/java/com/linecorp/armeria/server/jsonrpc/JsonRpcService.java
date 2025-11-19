@@ -269,7 +269,7 @@ public final class JsonRpcService implements HttpService {
 
     private CompletableFuture<@Nullable JsonRpcResponse> handleUnaryRequest(ServiceRequestContext ctx,
                                                                             JsonNode unary) {
-        final JsonRpcMessage message = parseNodeAsRpcRequest(unary);
+        final JsonRpcMessage message = parseNodeAsRpcMessage(unary);
         ctx.setAttr(REQUEST_KEY, message);
         ctx.logBuilder().requestContent(message, unary);
 
@@ -295,7 +295,7 @@ public final class JsonRpcService implements HttpService {
         });
     }
 
-    private static JsonRpcMessage parseNodeAsRpcRequest(JsonNode node) {
+    private static JsonRpcMessage parseNodeAsRpcMessage(JsonNode node) {
         if (node.has("method") && node.has("id")) {
             return JsonRpcRequest.fromJson(node);
         }

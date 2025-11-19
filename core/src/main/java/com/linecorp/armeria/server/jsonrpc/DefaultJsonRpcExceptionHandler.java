@@ -16,8 +16,6 @@
 
 package com.linecorp.armeria.server.jsonrpc;
 
-import com.linecorp.armeria.common.HttpResponse;
-import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.jsonrpc.JsonRpcError;
 import com.linecorp.armeria.common.jsonrpc.JsonRpcMessage;
@@ -44,13 +42,5 @@ enum DefaultJsonRpcExceptionHandler implements JsonRpcExceptionHandler {
         }
 
         return JsonRpcResponse.ofFailure(JsonRpcError.INTERNAL_ERROR.withData(cause.getMessage()));
-    }
-
-    private static HttpResponse renderError(ServiceRequestContext ctx, HttpStatus status,
-                                            @Nullable Object id,
-                                            JsonRpcError error, Throwable cause) {
-        final JsonRpcResponse rpcResponse = JsonRpcResponse.ofFailure(error.withData(cause.getMessage()));
-        ctx.logBuilder().responseContent(rpcResponse, rpcResponse);
-        return HttpResponse.ofJson(status, rpcResponse);
     }
 }
