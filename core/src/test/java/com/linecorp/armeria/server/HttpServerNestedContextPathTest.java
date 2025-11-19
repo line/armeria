@@ -481,6 +481,99 @@ public class HttpServerNestedContextPathTest {
         assertThat(exactPath).noneMatch(path -> path.contains("//"));
     }
 
+    @Test
+    void duplicate_path_should_be_failed_in_2depth_nested_context_with_server_builder() {
+
+        assertThatThrownBy(() -> {
+            final Server server = new ServerBuilder()
+                    .rejectedRouteHandler(RejectedRouteHandler.FAIL)
+                    .baseContextPath("/api")
+                    .contextPath("/foo", ctx1 -> {
+                        ctx1.contextPath(ImmutableSet.of("/foo"), ctx2 -> {
+                            ctx2.service("/bar", (c, r) -> HttpResponse.of("duplicated1"));
+                        });
+
+                        ctx1.contextPath(ImmutableSet.of("/foo"), ctx2 -> {
+                            ctx2.service("/bar", (c, r) -> HttpResponse.of("duplicated2"));
+                        });
+                    }).build();
+        }).isInstanceOf(DuplicateRouteException.class);
+    }
+
+    @Test
+    void duplicate_path_should_be_failed_in_1depth_nested_context_with_server_builder() {
+
+        assertThatThrownBy(() -> {
+            final Server server = new ServerBuilder()
+                    .rejectedRouteHandler(RejectedRouteHandler.FAIL)
+                    .baseContextPath("/api")
+                    .contextPath(ImmutableSet.of("/foo", "/bar"), ctx1 -> {
+                        ctx1.contextPath(ImmutableSet.of("/foo"), ctx2 -> {
+                            ctx2.service("/bar", (c, r) -> HttpResponse.of("duplicated1"));
+                        });
+
+                        ctx1.contextPath(ImmutableSet.of("/foo"), ctx2 -> {
+                            ctx2.service("/bar", (c, r) -> HttpResponse.of("duplicated2"));
+                        });
+                    })
+                    .contextPath("/bar", ctx1 -> {
+                        ctx1.contextPath("/foo", ctx2 -> {
+                            ctx2.service("/bar", (c, r) -> HttpResponse.of("duplicated1"));
+                        });
+                    })
+                    .build();
+        }).isInstanceOf(DuplicateRouteException.class);
+    }
+
+    @Test
+    void duplicate_path_should_be_failed_in_2depth_nested_context_with_virtual_host_builder() {
+
+        assertThatThrownBy(() -> {
+            final Server server = new ServerBuilder()
+                    .virtualHost("foo.com")
+                    .rejectedRouteHandler(RejectedRouteHandler.FAIL)
+                    .baseContextPath("/api")
+                    .contextPath("/foo", ctx1 -> {
+                        ctx1.contextPath(ImmutableSet.of("/foo"), ctx2 -> {
+                            ctx2.service("/bar", (c, r) -> HttpResponse.of("duplicated1"));
+                        });
+
+                        ctx1.contextPath(ImmutableSet.of("/foo"), ctx2 -> {
+                            ctx2.service("/bar", (c, r) -> HttpResponse.of("duplicated2"));
+                        });
+                    })
+                    .and()
+                    .build();
+        }).isInstanceOf(DuplicateRouteException.class);
+    }
+
+    @Test
+    void duplicate_path_should_be_failed_in_1depth_nested_context_with_virtual_host_builder() {
+
+        assertThatThrownBy(() -> {
+            final Server server = new ServerBuilder()
+                    .virtualHost("foo.com")
+                    .rejectedRouteHandler(RejectedRouteHandler.FAIL)
+                    .baseContextPath("/api")
+                    .contextPath(ImmutableSet.of("/foo", "/bar"), ctx1 -> {
+                        ctx1.contextPath(ImmutableSet.of("/foo"), ctx2 -> {
+                            ctx2.service("/bar", (c, r) -> HttpResponse.of("duplicated1"));
+                        });
+
+                        ctx1.contextPath(ImmutableSet.of("/foo"), ctx2 -> {
+                            ctx2.service("/bar", (c, r) -> HttpResponse.of("duplicated2"));
+                        });
+                    })
+                    .contextPath("/bar", ctx1 -> {
+                        ctx1.contextPath("/foo", ctx2 -> {
+                            ctx2.service("/bar", (c, r) -> HttpResponse.of("duplicated1"));
+                        });
+                    })
+                    .and()
+                    .build();
+        }).isInstanceOf(DuplicateRouteException.class);
+    }
+
     private static final class StatusCodeAndBody {
 
         final HttpStatus status;
