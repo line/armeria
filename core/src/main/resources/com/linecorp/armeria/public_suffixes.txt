@@ -3746,7 +3746,6 @@ hoylandet.no
 hr
 hr.eu.org
 hra.health
-hrsn.au
 hrsn.dev
 hs.kr
 hsbc
@@ -6983,6 +6982,7 @@ pru
 prudential
 pruszkow.pl
 prvcy.page
+prvw.eu
 przeworsk.pl
 ps
 psc.br
@@ -9237,7 +9237,6 @@ watches
 watson.jp
 waw.pl
 wazuka.kyoto.jp
-wdh.app
 we.bs
 weather
 weatherchannel
