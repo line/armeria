@@ -23,8 +23,11 @@ import com.linecorp.armeria.common.HttpHeaderNames
 import com.linecorp.armeria.common.HttpResponse
 import com.linecorp.armeria.common.HttpStatus
 import com.linecorp.armeria.common.MediaType
-import com.linecorp.armeria.internal.testing.GenerateNativeImageTrace
-import com.linecorp.armeria.server.*
+import com.linecorp.armeria.server.DuplicateRouteException
+import com.linecorp.armeria.server.Server
+import com.linecorp.armeria.server.ServerBuilder
+import com.linecorp.armeria.server.RejectedRouteHandler
+import com.linecorp.armeria.server.RoutePathType
 import com.linecorp.armeria.server.annotation.Get
 import com.linecorp.armeria.testing.junit5.server.ServerExtension
 import org.assertj.core.api.Assertions.assertThat
@@ -39,138 +42,150 @@ import java.util.function.Function
 import java.util.stream.Collectors
 import java.util.stream.Collectors.toSet
 
-internal class HttpServerNestedContextPathKotlinTest {
-
+internal class HttpServerNestedContextPathTest {
     companion object {
         private const val VIRTUAL_HOSTNAME = "foo.com"
 
         @JvmField
         @RegisterExtension
-        val server: ServerExtension = object : ServerExtension() {
-            @Throws(Exception::class)
-            override fun configure(sb: ServerBuilder) {
-                sb.baseContextPath("/api")
-                    .contextPath(ImmutableSet.of("/b1", "/b2")) { ctx1 ->
-                        ctx1.annotatedService(object {
-                            @Get("/svc1")
-                            fun depth1(): HttpResponse =
-                                HttpResponse.of(
-                                    HttpStatus.OK,
-                                    MediaType.PLAIN_TEXT_UTF_8,
-                                    "/api/[b1|b2]/svc1"
+        val server: ServerExtension =
+            object : ServerExtension() {
+                @Throws(Exception::class)
+                override fun configure(sb: ServerBuilder) {
+                    sb
+                        .baseContextPath("/api")
+                        .contextPath(ImmutableSet.of("/b1", "/b2")) { ctx1 ->
+                            ctx1.annotatedService(
+                                object {
+                                    @Get("/svc1")
+                                    fun depth1(): HttpResponse =
+                                        HttpResponse.of(
+                                            HttpStatus.OK,
+                                            MediaType.PLAIN_TEXT_UTF_8,
+                                            "/api/[b1|b2]/svc1",
+                                        )
+                                },
+                            )
+
+                            ctx1.contextPath(ImmutableSet.of("/c1", "/c2")) { ctx2 ->
+                                ctx2.annotatedService(
+                                    object {
+                                        @Get("/svc2")
+                                        fun depth2(): HttpResponse =
+                                            HttpResponse.of(
+                                                HttpStatus.OK,
+                                                MediaType.PLAIN_TEXT_UTF_8,
+                                                "/api/[b1|b2]/[c1/c2]/svc2",
+                                            )
+                                    },
                                 )
-                        })
 
-                        ctx1.contextPath(ImmutableSet.of("/c1", "/c2")) { ctx2 ->
-                            ctx2.annotatedService(object {
-                                @Get("/svc2")
-                                fun depth2(): HttpResponse =
-                                    HttpResponse.of(
-                                        HttpStatus.OK,
-                                        MediaType.PLAIN_TEXT_UTF_8,
-                                        "/api/[b1|b2]/[c1/c2]/svc2"
-                                    )
-                            })
-
-                            ctx2.annotatedService(object {
-                                @Get("/svc3")
-                                fun depth2(): HttpResponse =
-                                    HttpResponse.of(
-                                        HttpStatus.OK,
-                                        MediaType.PLAIN_TEXT_UTF_8,
-                                        "/api/[b1|b2]/[c1/c2]/svc3"
-                                    )
-                            })
-                        }
-                    }
-                    .contextPath(ImmutableSet.of("/d3", "/d4")) { ctx3 ->
-                        ctx3.annotatedService(object {
-                            @Get("/svc4")
-                            fun depth1(): HttpResponse =
-                                HttpResponse.of(
-                                    HttpStatus.OK,
-                                    MediaType.PLAIN_TEXT_UTF_8,
-                                    "/api/[d3|d4]/svc4"
+                                ctx2.annotatedService(
+                                    object {
+                                        @Get("/svc3")
+                                        fun depth2(): HttpResponse =
+                                            HttpResponse.of(
+                                                HttpStatus.OK,
+                                                MediaType.PLAIN_TEXT_UTF_8,
+                                                "/api/[b1|b2]/[c1/c2]/svc3",
+                                            )
+                                    },
                                 )
-                        })
-
-                        ctx3.contextPath(ImmutableSet.of("/e3", "/e4")) { ctx4 ->
-                            ctx4.service("/another/{id}/") { _, _ ->
-                                HttpResponse.of(HttpStatus.OK)
                             }
-                            ctx4.service("/another/{id}") { _, _ ->
-                                HttpResponse.of(HttpStatus.NO_CONTENT)
-                            }
+                        }.contextPath(ImmutableSet.of("/d3", "/d4")) { ctx3 ->
+                            ctx3.annotatedService(
+                                object {
+                                    @Get("/svc4")
+                                    fun depth1(): HttpResponse =
+                                        HttpResponse.of(
+                                            HttpStatus.OK,
+                                            MediaType.PLAIN_TEXT_UTF_8,
+                                            "/api/[d3|d4]/svc4",
+                                        )
+                                },
+                            )
 
-                            ctx4.serviceUnder("/prefix-test/") { _, _ ->
-                                HttpResponse.of(HttpStatus.OK)
-                            }
+                            ctx3.contextPath(ImmutableSet.of("/e3", "/e4")) { ctx4 ->
+                                ctx4.service("/another/{id}/") { _, _ ->
+                                    HttpResponse.of(HttpStatus.OK)
+                                }
+                                ctx4.service("/another/{id}") { _, _ ->
+                                    HttpResponse.of(HttpStatus.NO_CONTENT)
+                                }
 
-                            ctx4.annotatedService(object {
-                                @Get("/svc5")
-                                fun depth1(): HttpResponse =
-                                    HttpResponse.of(
-                                        HttpStatus.OK,
-                                        MediaType.PLAIN_TEXT_UTF_8,
-                                        "/api/[d3|d4]/[e3|e4]/svc5"
-                                    )
-                            })
-                        }
-                    }
-                    .contextPath("/single-path1") { ctx1 ->
-                        ctx1.contextPath("/single-path2") { ctx2 ->
-                            ctx2.contextPath("/single-path3") { ctx3 ->
-                                ctx3.contextPath("/single-path4") { ctx4 ->
-                                    ctx4.service("/hello") { _, _ ->
-                                        HttpResponse.of(HttpStatus.OK)
+                                ctx4.serviceUnder("/prefix-test/") { _, _ ->
+                                    HttpResponse.of(HttpStatus.OK)
+                                }
+
+                                ctx4.annotatedService(
+                                    object {
+                                        @Get("/svc5")
+                                        fun depth1(): HttpResponse =
+                                            HttpResponse.of(
+                                                HttpStatus.OK,
+                                                MediaType.PLAIN_TEXT_UTF_8,
+                                                "/api/[d3|d4]/[e3|e4]/svc5",
+                                            )
+                                    },
+                                )
+                            }
+                        }.contextPath("/single-path1") { ctx1 ->
+                            ctx1.contextPath("/single-path2") { ctx2 ->
+                                ctx2.contextPath("/single-path3") { ctx3 ->
+                                    ctx3.contextPath("/single-path4") { ctx4 ->
+                                        ctx4.service("/hello") { _, _ ->
+                                            HttpResponse.of(HttpStatus.OK)
+                                        }
                                     }
                                 }
                             }
                         }
-                    }
 
-                sb.virtualHost(VIRTUAL_HOSTNAME)
-                    .contextPath(ImmutableSet.of("/k1", "/k2")) { ctx1 ->
-                        ctx1.service("/hello") { _, _ ->
-                            HttpResponse.of(HttpStatus.OK)
-                        }
-                        ctx1.service("/hello/") { _, _ ->
-                            HttpResponse.of(HttpStatus.NO_CONTENT)
-                        }
-
-                        ctx1.contextPath(ImmutableSet.of("/q1", "/q2")) { ctx2 ->
-                            ctx2.annotatedService(object {
-                                @Get("/svc5")
-                                fun svc5(): HttpResponse =
-                                    HttpResponse.of(
-                                        HttpStatus.OK,
-                                        MediaType.PLAIN_TEXT_UTF_8,
-                                        "svc5 response"
-                                    )
-
-                                @Get("/svc6")
-                                fun svc6(): HttpResponse =
-                                    HttpResponse.of(
-                                        HttpStatus.OK,
-                                        MediaType.PLAIN_TEXT_UTF_8,
-                                        "svc6 response"
-                                    )
-                            })
-
-                            ctx2.serviceUnder("/prefix-match/") { _, _ ->
+                    sb
+                        .virtualHost(VIRTUAL_HOSTNAME)
+                        .contextPath(ImmutableSet.of("/k1", "/k2")) { ctx1 ->
+                            ctx1.service("/hello") { _, _ ->
                                 HttpResponse.of(HttpStatus.OK)
                             }
-
-                            ctx2.service("/exact-match-test/hello") { _, _ ->
-                                HttpResponse.of(HttpStatus.OK)
-                            }
-                            ctx2.serviceUnder("/exact-match-test/") { _, _ ->
+                            ctx1.service("/hello/") { _, _ ->
                                 HttpResponse.of(HttpStatus.NO_CONTENT)
                             }
+                            ctx1.contextPath(ImmutableSet.of("/q1", "/q2")) { ctx2 ->
+                                ctx2.annotatedService(
+                                    object {
+                                        @Get("/svc5")
+                                        fun svc5(): HttpResponse =
+                                            HttpResponse.of(
+                                                HttpStatus.OK,
+                                                MediaType.PLAIN_TEXT_UTF_8,
+                                                "svc5 response",
+                                            )
+
+                                        @Get("/svc6")
+                                        fun svc6(): HttpResponse =
+                                            HttpResponse.of(
+                                                HttpStatus.OK,
+                                                MediaType.PLAIN_TEXT_UTF_8,
+                                                "svc6 response",
+                                            )
+                                    },
+                                )
+
+                                ctx2.serviceUnder("/prefix-match/") { _, _ ->
+                                    HttpResponse.of(HttpStatus.OK)
+                                }
+
+                                ctx2.service("/exact-match-test/hello") { _, _ ->
+                                    HttpResponse.of(HttpStatus.OK)
+                                }
+
+                                ctx2.serviceUnder("/exact-match-test/") { _, _ ->
+                                    HttpResponse.of(HttpStatus.NO_CONTENT)
+                                }
+                            }
                         }
-                    }
+                }
             }
-        }
 
         private val TEST_URLS = LinkedHashMap<String, StatusCodeAndBody>()
         private val VIRTUAL_HOST_TEST_URLS = LinkedHashMap<String, StatusCodeAndBody>()
@@ -365,16 +380,18 @@ internal class HttpServerNestedContextPathKotlinTest {
 
     data class StatusCodeAndBody(
         val status: HttpStatus,
-        val body: String
+        val body: String,
     )
 
     @Test
     fun testNestedContextPathsWithOkResponse() {
         TEST_URLS.forEach { (path, expected) ->
-            val res: AggregatedHttpResponse = WebClient.of(server.httpUri())
-                .get(path)
-                .aggregate()
-                .join()
+            val res: AggregatedHttpResponse =
+                WebClient
+                    .of(server.httpUri())
+                    .get(path)
+                    .aggregate()
+                    .join()
 
             assertThat(res.status()).isEqualTo(expected.status)
             if (res.status() == HttpStatus.OK) {
@@ -386,12 +403,14 @@ internal class HttpServerNestedContextPathKotlinTest {
     @Test
     fun testVirtualHostNestedContextPaths() {
         VIRTUAL_HOST_TEST_URLS.forEach { (path, expected) ->
-            val res = WebClient.builder(server.httpUri())
-                .addHeader(HttpHeaderNames.HOST, VIRTUAL_HOSTNAME)
-                .build()
-                .get(path)
-                .aggregate()
-                .join()
+            val res =
+                WebClient
+                    .builder(server.httpUri())
+                    .addHeader(HttpHeaderNames.HOST, VIRTUAL_HOSTNAME)
+                    .build()
+                    .get(path)
+                    .aggregate()
+                    .join()
 
             assertThat(res.status()).isEqualTo(expected.status)
             if (res.status() == HttpStatus.OK) {
@@ -402,7 +421,10 @@ internal class HttpServerNestedContextPathKotlinTest {
 
     @Test
     fun emptyContextPathShouldBeFailed() {
-        val serverBuilder = Server.builder().baseContextPath("/api")
+        val serverBuilder =
+            Server
+                .builder()
+                .baseContextPath("/api")
         assertThatThrownBy {
             serverBuilder.contextPath(ImmutableSet.of<String>()) { ctx1 ->
                 ctx1.serviceUnder("/hello") { _, _ ->
@@ -454,23 +476,28 @@ internal class HttpServerNestedContextPathKotlinTest {
 
     @Test
     fun duplicatedContextPathShouldBeMerged() {
-        val server = Server.builder()
-            .baseContextPath("/api")
-            .contextPath(ImmutableList.of("/b1", "/b1", "/b2")) { ctx ->
-                ctx.service("/svc") { _, _ ->
-                    HttpResponse.of(HttpStatus.OK)
-                }
-            }
-            .build()
+        val server =
+            Server
+                .builder()
+                .baseContextPath("/api")
+                .contextPath(ImmutableList.of("/b1", "/b1", "/b2")) { ctx ->
+                    ctx.service("/svc") { _, _ ->
+                        HttpResponse.of(HttpStatus.OK)
+                    }
+                }.build()
 
-        val counts = server.config().serviceConfigs().stream()
-            .flatMap { sc -> sc.route().paths().stream() }
-            .collect(
-                Collectors.groupingBy(
-                    Function.identity(),
-                    Collectors.counting()
+        val counts =
+            server
+                .config()
+                .serviceConfigs()
+                .stream()
+                .flatMap { sc -> sc.route().paths().stream() }
+                .collect(
+                    Collectors.groupingBy(
+                        Function.identity(),
+                        Collectors.counting(),
+                    ),
                 )
-            )
 
         assertThat(counts)
             .containsEntry("/api/b1/svc", 2L)
@@ -481,19 +508,24 @@ internal class HttpServerNestedContextPathKotlinTest {
     @ParameterizedTest
     @CsvSource("/api", "/api/")
     fun noDoubleSlashInRoutes(basePath: String) {
-        val server = Server.builder()
-            .baseContextPath(basePath)
-            .contextPath("/foo") { ctx ->
-                ctx.service("/bar") { _, _ ->
-                    HttpResponse.of(HttpStatus.OK)
-                }
-            }
-            .build()
+        val server =
+            Server
+                .builder()
+                .baseContextPath(basePath)
+                .contextPath("/foo") { ctx ->
+                    ctx.service("/bar") { _, _ ->
+                        HttpResponse.of(HttpStatus.OK)
+                    }
+                }.build()
 
-        val exactPath = server.config().serviceConfigs().stream()
-            .filter { sc -> sc.route().pathType() == RoutePathType.EXACT }
-            .flatMap { sc -> sc.route().paths().stream() }
-            .collect(toSet())
+        val exactPath =
+            server
+                .config()
+                .serviceConfigs()
+                .stream()
+                .filter { sc -> sc.route().pathType() == RoutePathType.EXACT }
+                .flatMap { sc -> sc.route().paths().stream() }
+                .collect(toSet())
 
         assertThat(exactPath).contains("/api/foo/bar")
         assertThat(exactPath).noneMatch { path -> path.contains("//") }
@@ -502,21 +534,26 @@ internal class HttpServerNestedContextPathKotlinTest {
     @ParameterizedTest
     @CsvSource("/pa", "/pa/")
     fun noDoubleSlashInNestedContextRoutes(nestedContextPath: String) {
-        val server = Server.builder()
-            .baseContextPath("/api")
-            .contextPath("/foo") { ctx1 ->
-                ctx1.contextPath(ImmutableSet.of(nestedContextPath)) { ctx2 ->
-                    ctx2.service("/bar") { _, _ ->
-                        HttpResponse.of(HttpStatus.OK)
+        val server =
+            Server
+                .builder()
+                .baseContextPath("/api")
+                .contextPath("/foo") { ctx1 ->
+                    ctx1.contextPath(ImmutableSet.of(nestedContextPath)) { ctx2 ->
+                        ctx2.service("/bar") { _, _ ->
+                            HttpResponse.of(HttpStatus.OK)
+                        }
                     }
-                }
-            }
-            .build()
+                }.build()
 
-        val exactPath = server.config().serviceConfigs().stream()
-            .filter { sc -> sc.route().pathType() == RoutePathType.EXACT }
-            .flatMap { sc -> sc.route().paths().stream() }
-            .collect(toSet())
+        val exactPath =
+            server
+                .config()
+                .serviceConfigs()
+                .stream()
+                .filter { sc -> sc.route().pathType() == RoutePathType.EXACT }
+                .flatMap { sc -> sc.route().paths().stream() }
+                .collect(toSet())
 
         assertThat(exactPath).contains("/api/foo/pa/bar")
         assertThat(exactPath).noneMatch { path -> path.contains("//") }
@@ -525,7 +562,8 @@ internal class HttpServerNestedContextPathKotlinTest {
     @Test
     fun duplicate_path_should_be_failed_in_2depth_nested_context_with_server_builder() {
         assertThatThrownBy {
-            Server.builder()
+            Server
+                .builder()
                 .rejectedRouteHandler(RejectedRouteHandler.FAIL)
                 .baseContextPath("/api")
                 .contextPath("/foo") { ctx1 ->
@@ -540,15 +578,15 @@ internal class HttpServerNestedContextPathKotlinTest {
                             HttpResponse.of("duplicated2")
                         }
                     }
-                }
-                .build()
+                }.build()
         }.isInstanceOf(DuplicateRouteException::class.java)
     }
 
     @Test
     fun duplicate_path_should_be_failed_in_1depth_nested_context_with_server_builder() {
         assertThatThrownBy {
-            Server.builder()
+            Server
+                .builder()
                 .rejectedRouteHandler(RejectedRouteHandler.FAIL)
                 .baseContextPath("/api")
                 .contextPath(ImmutableSet.of("/foo", "/bar")) { ctx1 ->
@@ -563,22 +601,21 @@ internal class HttpServerNestedContextPathKotlinTest {
                             HttpResponse.of("duplicated2")
                         }
                     }
-                }
-                .contextPath("/bar") { ctx1 ->
+                }.contextPath("/bar") { ctx1 ->
                     ctx1.contextPath("/foo") { ctx2 ->
                         ctx2.service("/bar") { _, _ ->
                             HttpResponse.of("duplicated1")
                         }
                     }
-                }
-                .build()
+                }.build()
         }.isInstanceOf(DuplicateRouteException::class.java)
     }
 
     @Test
     fun duplicate_path_should_be_failed_in_2depth_nested_context_with_virtual_host_builder() {
         assertThatThrownBy {
-            Server.builder()
+            Server
+                .builder()
                 .virtualHost("foo.com")
                 .rejectedRouteHandler(RejectedRouteHandler.FAIL)
                 .baseContextPath("/api")
@@ -594,8 +631,7 @@ internal class HttpServerNestedContextPathKotlinTest {
                             HttpResponse.of("duplicated2")
                         }
                     }
-                }
-                .and()
+                }.and()
                 .build()
         }.isInstanceOf(DuplicateRouteException::class.java)
     }
@@ -603,7 +639,8 @@ internal class HttpServerNestedContextPathKotlinTest {
     @Test
     fun duplicate_path_should_be_failed_in_1depth_nested_context_with_virtual_host_builder() {
         assertThatThrownBy {
-            Server.builder()
+            Server
+                .builder()
                 .virtualHost("foo.com")
                 .rejectedRouteHandler(RejectedRouteHandler.FAIL)
                 .baseContextPath("/api")
@@ -619,15 +656,13 @@ internal class HttpServerNestedContextPathKotlinTest {
                             HttpResponse.of("duplicated2")
                         }
                     }
-                }
-                .contextPath("/bar") { ctx1 ->
+                }.contextPath("/bar") { ctx1 ->
                     ctx1.contextPath("/foo") { ctx2 ->
                         ctx2.service("/bar") { _, _ ->
                             HttpResponse.of("duplicated1")
                         }
                     }
-                }
-                .and()
+                }.and()
                 .build()
         }.isInstanceOf(DuplicateRouteException::class.java)
     }
