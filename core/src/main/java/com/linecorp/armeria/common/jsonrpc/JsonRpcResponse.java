@@ -121,23 +121,6 @@ public interface JsonRpcResponse extends JsonRpcMessage {
      * Returns a new {@link JsonRpcResponse} with the specified {@code id}.
      * If the current {@link #id()} is equal to the specified {@code id}, this instance is returned.
      */
-    default JsonRpcResponse withId(long id) {
-        return withId((Object) id);
-    }
-
-    /**
-     * Returns a new {@link JsonRpcResponse} with the specified {@code id}.
-     * If the current {@link #id()} is equal to the specified {@code id}, this instance is returned.
-     */
-    default JsonRpcResponse withId(String id) {
-        requireNonNull(id, "id");
-        return withId((Object) id);
-    }
-
-    /**
-     * Returns a new {@link JsonRpcResponse} with the specified {@code id}.
-     * If the current {@link #id()} is equal to the specified {@code id}, this instance is returned.
-     */
     JsonRpcResponse withId(Object id);
 
     /**

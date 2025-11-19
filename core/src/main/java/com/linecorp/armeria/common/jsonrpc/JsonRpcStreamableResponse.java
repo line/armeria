@@ -133,30 +133,6 @@ public interface JsonRpcStreamableResponse extends StreamWriter<JsonRpcMessage>,
      * You can also use {@link #hasFinalResponse()} to check if the final response has been written.
      */
     @Override
-    default JsonRpcResponse withId(long id) {
-        return JsonRpcResponse.super.withId(id);
-    }
-
-    /**
-     * {@inheritDoc}
-     *
-     * <p>Note that this method will throw an {@link IllegalStateException} if the stream has not been closed
-     * with {@link #close(JsonRpcResponse)}. So make sure to call that method before invoking this method.
-     * You can also use {@link #hasFinalResponse()} to check if the final response has been written.
-     */
-    @Override
-    default JsonRpcResponse withId(String id) {
-        return JsonRpcResponse.super.withId(id);
-    }
-
-    /**
-     * {@inheritDoc}
-     *
-     * <p>Note that this method will throw an {@link IllegalStateException} if the stream has not been closed
-     * with {@link #close(JsonRpcResponse)}. So make sure to call that method before invoking this method.
-     * You can also use {@link #hasFinalResponse()} to check if the final response has been written.
-     */
-    @Override
     JsonRpcResponse withId(Object id);
 
     /**

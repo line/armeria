@@ -36,7 +36,7 @@ public interface JsonRpcRequest extends JsonRpcMessage, JsonRpcMethodInvokable {
 
     /**
      * Creates a new instance with no parameters.
-     * Note that the {@code id} can be of type {@link String}, {@link Long}, {@link Integer}.
+     * Note that the {@code id} can be of type {@link String}, {@link Long} or {@link Integer}.
      */
     static JsonRpcRequest of(Object id, String method) {
         return of(id, method, JsonRpcParameters.empty());
@@ -44,7 +44,7 @@ public interface JsonRpcRequest extends JsonRpcMessage, JsonRpcMethodInvokable {
 
     /**
      * Creates a new instance with the specified {@link JsonRpcParameters}.
-     * Note that the {@code id} can be of type {@link String}, {@link Long}, {@link Integer}.
+     * Note that the {@code id} can be of type {@link String}, {@link Long} or {@link Integer}.
      */
     static JsonRpcRequest of(Object id, String method, JsonRpcParameters parameters) {
         return new DefaultJsonRpcRequest(id, method, parameters);
@@ -52,7 +52,7 @@ public interface JsonRpcRequest extends JsonRpcMessage, JsonRpcMethodInvokable {
 
     /**
      * Creates a new instance with the specified parameters.
-     * Note that the {@code id} can be of type {@link String}, {@link Long}, {@link Integer}.
+     * Note that the {@code id} can be of type {@link String}, {@link Long} or {@link Integer}.
      */
     static JsonRpcRequest of(Object id, String method, Iterable<?> parameters) {
         return of(id, method, JsonRpcParameters.of(parameters));
@@ -60,7 +60,7 @@ public interface JsonRpcRequest extends JsonRpcMessage, JsonRpcMethodInvokable {
 
     /**
      * Creates a new instance with the specified parameters.
-     * Note that the {@code id} can be of type {@link String}, {@link Long}, {@link Integer}.
+     * Note that the {@code id} can be of type {@link String}, {@link Long} or {@link Integer}.
      */
     static JsonRpcRequest of(Object id, String method, Map<String, ?> parameters) {
         return of(id, method, JsonRpcParameters.of(parameters));
