@@ -15,32 +15,50 @@
  */
 package com.linecorp.armeria.server.jsonrpc;
 
+import static com.google.common.base.Preconditions.checkState;
 import static java.util.Objects.requireNonNull;
 
+import java.io.IOException;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
 
-import com.linecorp.armeria.common.AggregatedHttpRequest;
-import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.ResponseHeaders;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.jsonrpc.JsonRpcError;
+import com.linecorp.armeria.common.jsonrpc.JsonRpcMessage;
+import com.linecorp.armeria.common.jsonrpc.JsonRpcMethodInvokable;
+import com.linecorp.armeria.common.jsonrpc.JsonRpcNotification;
 import com.linecorp.armeria.common.jsonrpc.JsonRpcRequest;
 import com.linecorp.armeria.common.jsonrpc.JsonRpcResponse;
+import com.linecorp.armeria.common.jsonrpc.JsonRpcStreamableResponse;
+import com.linecorp.armeria.common.sse.ServerSentEvent;
+import com.linecorp.armeria.common.sse.ServerSentEventBuilder;
+import com.linecorp.armeria.common.stream.StreamMessage;
+import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.common.util.UnmodifiableFuture;
 import com.linecorp.armeria.internal.common.JacksonUtil;
+import com.linecorp.armeria.internal.common.jsonrpc.JsonRpcSseMessage;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.ServiceRequestContext;
+import com.linecorp.armeria.server.streaming.ServerSentEvents;
+
+import io.netty.util.AttributeKey;
 
 /**
  * A JSON-RPC {@link HttpService}.
@@ -64,187 +82,272 @@ import com.linecorp.armeria.server.ServiceRequestContext;
  */
 @UnstableApi
 public final class JsonRpcService implements HttpService {
-    private static final ObjectMapper mapper = JacksonUtil.newDefaultObjectMapper();
 
-    private final Map<String, JsonRpcHandler> methodHandlers;
+    private static final Logger logger = LoggerFactory.getLogger(JsonRpcService.class);
+
+    private static final ObjectMapper mapper = JacksonUtil.newDefaultObjectMapper();
+    private static final AttributeKey<JsonRpcMessage> REQUEST_KEY =
+            AttributeKey.valueOf(JsonRpcService.class, "REQUEST_KEY");
 
     /**
-    * Returns a new {@link JsonRpcServiceBuilder}.
-    */
+     * Returns a new {@link JsonRpcServiceBuilder}.
+     */
     public static JsonRpcServiceBuilder builder() {
         return new JsonRpcServiceBuilder();
     }
 
-    JsonRpcService(Map<String, JsonRpcHandler> methodHandlers) {
-        this.methodHandlers = requireNonNull(methodHandlers, "methodHandlers");
+    private final Map<String, JsonRpcMethodHandler> methodHandlers;
+    private final JsonRpcHandler defaultHandler;
+    @Nullable
+    private final HttpService fallbackService;
+    private final JsonRpcExceptionHandler exceptionHandler;
+    private final JsonRpcStatusFunction statusFunction;
+    private final boolean enableServerSentEvents;
+
+    JsonRpcService(Map<String, JsonRpcMethodHandler> methodHandlers, JsonRpcHandler defaultHandler,
+                   @Nullable HttpService fallbackService, JsonRpcExceptionHandler exceptionHandler,
+                   JsonRpcStatusFunction statusFunction,
+                   boolean enableServerSentEvents) {
+        this.methodHandlers = methodHandlers;
+        this.defaultHandler = defaultHandler;
+        this.fallbackService = fallbackService;
+        this.exceptionHandler = exceptionHandler;
+        this.statusFunction = statusFunction;
+        this.enableServerSentEvents = enableServerSentEvents;
     }
+
+    // TODO(ikhoon): Override ServiceOptions method to disable request timeout and max request length for SSE.
 
     @Override
-    public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) {
+    public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
         if (req.method() != HttpMethod.POST) {
-            return HttpResponse.of(HttpStatus.METHOD_NOT_ALLOWED);
+            if (fallbackService != null) {
+                return fallbackService.serve(ctx, req);
+            } else {
+                return HttpResponse.of(HttpStatus.METHOD_NOT_ALLOWED);
+            }
         }
-
         final MediaType contentType = req.contentType();
         if (contentType == null || !contentType.isJson()) {
-            return HttpResponse.of(HttpStatus.UNSUPPORTED_MEDIA_TYPE);
+            if (fallbackService != null) {
+                return fallbackService.serve(ctx, req);
+            } else {
+                return HttpResponse.of(HttpStatus.UNSUPPORTED_MEDIA_TYPE);
+            }
         }
 
-        return HttpResponse.of(
-                req.aggregate()
-                   .handle((aggregate, throwable) -> {
-                       if (throwable != null) {
-                           return HttpResponse.ofJson(HttpStatus.INTERNAL_SERVER_ERROR,
-                                                      JsonRpcError.INTERNAL_ERROR.withData(
-                                                              throwable.getMessage()));
-                       }
-
-                       try {
-                           final JsonNode parsedJson = parseRequestContentAsJson(aggregate);
-                           return dispatchRequest(ctx, parsedJson);
-                       } catch (Exception e) {
-                           if (e instanceof IllegalArgumentException) {
-                               return HttpResponse.ofJson(HttpStatus.BAD_REQUEST,
-                                                          JsonRpcError.PARSE_ERROR);
-                           }
-                           return HttpResponse.ofJson(HttpStatus.INTERNAL_SERVER_ERROR,
-                                                      JsonRpcError.INTERNAL_ERROR.withData(e.getMessage()));
-                       }
-                   }));
-    }
-
-    @VisibleForTesting
-    static JsonNode parseRequestContentAsJson(AggregatedHttpRequest request) {
-        try {
-            return mapper.readTree(request.contentUtf8());
-        } catch (JsonProcessingException e) {
-            throw new IllegalArgumentException(e);
+        if (enableServerSentEvents && !canAcceptSse(req.headers())) {
+            return HttpResponse.of(HttpStatus.BAD_REQUEST, MediaType.PLAIN_TEXT,
+                    "Both 'text/event-stream' and 'application/json' must be present in " +
+                            "the Accept header.");
         }
+
+        return HttpResponse.of(req.aggregate().thenCompose(aggReq -> {
+            try {
+                final JsonNode json;
+                try {
+                    json = mapper.readTree(aggReq.content().array());
+                } catch (IOException e) {
+                    throw new JsonRpcParseException(e);
+                }
+                return dispatchRequest(ctx, json).handle((rpcResponse, cause) -> {
+                    final JsonRpcMessage message = ctx.attr(REQUEST_KEY);
+                    if (cause != null) {
+                        rpcResponse = handleException(ctx, cause, message);
+                    }
+                    return toHttpResponse(ctx, message, rpcResponse);
+                });
+            } catch (Exception ex) {
+                final JsonRpcMessage message = ctx.attr(REQUEST_KEY);
+                final JsonRpcResponse recovered = handleException(ctx, ex, message);
+                return UnmodifiableFuture.completedFuture(toHttpResponse(ctx, message, recovered));
+            }
+        }));
     }
 
-    @VisibleForTesting
-    HttpResponse dispatchRequest(ServiceRequestContext ctx, JsonNode rawRequest) {
-        if (rawRequest.isObject()) {
-            return handleUnaryRequest(ctx, rawRequest);
-        } else {
-            return HttpResponse.ofJson(HttpStatus.BAD_REQUEST,
-                    JsonRpcError.INVALID_REQUEST.withData("Batch requests are not supported by this server."));
+    private JsonRpcResponse handleException(ServiceRequestContext ctx, Throwable cause,
+                                            @Nullable JsonRpcMessage message) {
+        cause = Exceptions.peel(cause);
+        JsonRpcResponse recovered = exceptionHandler.handleException(ctx, message, cause);
+        assert recovered != null;
+        if (message instanceof JsonRpcRequest && recovered.id() == null) {
+            recovered = recovered.withId(((JsonRpcRequest) message).id());
         }
+        return recovered;
     }
 
-    private HttpResponse handleUnaryRequest(ServiceRequestContext ctx, JsonNode unary) {
-        return HttpResponse.of(executeRpcCall(ctx, unary).thenApply(JsonRpcService::toHttpResponse));
-    }
-
-    private static HttpResponse toHttpResponse(DefaultJsonRpcResponse response) {
+    private HttpResponse toHttpResponse(ServiceRequestContext ctx, @Nullable JsonRpcMessage request,
+                                        @Nullable JsonRpcResponse response) {
         if (response == null) {
             return HttpResponse.of(ResponseHeaders.of(HttpStatus.ACCEPTED));
         }
 
-        if (response.error() != null) {
-            if (response.error().code() == JsonRpcError.INTERNAL_ERROR.code()) {
-                return HttpResponse.ofJson(HttpStatus.INTERNAL_SERVER_ERROR, response);
+        if (response instanceof JsonRpcStreamableResponse) {
+            checkState(enableServerSentEvents,
+                    "The JsonRpcStreamableResponse is not supported unless server-sent events are enabled.");
+            return toSseHttpResponse(ctx, request, (JsonRpcStreamableResponse) response);
+        } else {
+            return toUnaryHttpResponse(ctx, request, response);
+        }
+    }
+
+    private HttpResponse toUnaryHttpResponse(ServiceRequestContext ctx, @Nullable JsonRpcMessage request,
+                                             JsonRpcResponse response) {
+
+        if (response.id() == null && request instanceof JsonRpcRequest) {
+            final JsonRpcRequest req = (JsonRpcRequest) request;
+            response = response.withId(req.id());
+        }
+
+        ctx.logBuilder().responseContent(response, response);
+
+        if (response.isSuccess()) {
+            return HttpResponse.ofJson(response);
+        }
+
+        final HttpStatus status;
+        if (request == null) {
+            status = HttpStatus.BAD_REQUEST;
+        } else {
+            final JsonRpcRequest rpcRequest = (JsonRpcRequest) request;
+            final JsonRpcError error = response.error();
+            assert error != null;
+            status = statusFunction.toHttpStatus(ctx, rpcRequest, response, error);
+            assert status != null;
+        }
+        return HttpResponse.ofJson(status, response);
+    }
+
+    private static HttpResponse toSseHttpResponse(ServiceRequestContext ctx, @Nullable JsonRpcMessage request,
+                                                  JsonRpcStreamableResponse stream) {
+        final StreamMessage<ServerSentEvent> events = stream.map(message -> {
+            String messageId = null;
+            String eventType = null;
+            if (message instanceof JsonRpcSseMessage) {
+                messageId = ((JsonRpcSseMessage) message).messageId();
+                eventType = ((JsonRpcSseMessage) message).eventType();
+                message = ((JsonRpcSseMessage) message).unwrap();
             }
 
-            return HttpResponse.ofJson(HttpStatus.BAD_REQUEST, response);
-        }
-
-        return HttpResponse.ofJson(response);
-    }
-
-    @VisibleForTesting
-    CompletableFuture<DefaultJsonRpcResponse> executeRpcCall(ServiceRequestContext ctx, JsonNode node) {
-        final JsonRpcRequest request;
-        try {
-            request = parseNodeAsRpcRequest(node);
-            maybeLogRequestContent(ctx, request, node);
-        } catch (IllegalArgumentException e) {
-            return UnmodifiableFuture.completedFuture(
-                    new DefaultJsonRpcResponse(null, JsonRpcError.PARSE_ERROR.withData(e.getMessage())));
-        }
-
-        return invokeMethod(ctx, request)
-                .exceptionally(e -> {
-                    return new DefaultJsonRpcResponse(request.id(),
-                                                      JsonRpcError.INTERNAL_ERROR.withData(e.getMessage()));
-                });
-    }
-
-    private static void maybeLogRequestContent(ServiceRequestContext ctx, JsonRpcRequest request,
-                                               JsonNode node) {
-        // Introduce another flag or add a property to the builder instead of using
-        // the annotatedServiceContentLogging flag.
-        if (!Flags.annotatedServiceContentLogging()) {
-            return;
-        }
-
-        ctx.logBuilder().requestContent(request, node);
-    }
-
-    @VisibleForTesting
-    static JsonRpcRequest parseNodeAsRpcRequest(JsonNode node) {
-        try {
-            return JsonRpcRequest.of(node);
-        } catch (JsonProcessingException e) {
-            throw new IllegalArgumentException(e);
-        }
-    }
-
-    @VisibleForTesting
-    CompletableFuture<DefaultJsonRpcResponse> invokeMethod(ServiceRequestContext ctx, JsonRpcRequest req) {
-        final JsonRpcHandler handler = methodHandlers.get(req.method());
-
-        // Notification
-        if (req.id() == null) {
-            if (handler != null) {
-                return handler.handle(ctx, req)
-                              .thenApply(res -> null);
+            if (message instanceof JsonRpcResponse) {
+                final JsonRpcResponse response = (JsonRpcResponse) message;
+                if (response.id() == null && request instanceof JsonRpcRequest) {
+                    final JsonRpcRequest req = (JsonRpcRequest) request;
+                    message = response.withId(req.id());
+                }
+                ctx.logBuilder().responseContent(message, message);
             }
-            return UnmodifiableFuture.completedFuture(null);
+
+            final ServerSentEventBuilder sseBuilder = ServerSentEvent.builder();
+            if (messageId != null) {
+                sseBuilder.id(messageId);
+            }
+            if (eventType != null) {
+                sseBuilder.event(eventType);
+            }
+            try {
+                sseBuilder.data(mapper.writeValueAsString(message));
+            } catch (JsonProcessingException e) {
+                throw new IllegalStateException(
+                        "Failed to serialize a JSON-RPC message to JSON string: " + message, e);
+            }
+            return sseBuilder.build();
+        });
+        return ServerSentEvents.fromPublisher(events);
+    }
+
+    @VisibleForTesting
+    CompletableFuture<@Nullable JsonRpcResponse> dispatchRequest(ServiceRequestContext ctx, JsonNode jsonNode) {
+        if (jsonNode.isObject()) {
+            return handleUnaryRequest(ctx, jsonNode);
+        } else {
+            // TODO(ikhoon): Implement batch request handling.
+            return UnmodifiableFuture.completedFuture(JsonRpcResponse.ofFailure(
+                    JsonRpcError.INVALID_REQUEST.withData("Batch requests are not supported by this server.")));
+        }
+    }
+
+    private CompletableFuture<@Nullable JsonRpcResponse> handleUnaryRequest(ServiceRequestContext ctx,
+                                                                            JsonNode unary) {
+        final JsonRpcMessage message = parseNodeAsRpcMessage(unary);
+        ctx.setAttr(REQUEST_KEY, message);
+        ctx.logBuilder().requestContent(message, unary);
+
+        final CompletableFuture<?> future = invokeMethod(ctx, message);
+        requireNonNull(future, "A JSON-RPC handler returned null");
+        return future.thenApply(res -> {
+            if (res == null) {
+                return null;
+            }
+
+            if (message instanceof JsonRpcNotification || message instanceof JsonRpcResponse) {
+                // Notifications and Responses do not expect any response.
+                logger.warn("A response was returned for a notification or a response. request={}, response={}",
+                        message, res);
+                return null;
+            }
+
+            if (!(res instanceof JsonRpcResponse)) {
+                throw new IllegalStateException(
+                        "A response Handler returned a non-JSON-RPC response: " + res);
+            }
+            return (JsonRpcResponse) res;
+        });
+    }
+
+    private static JsonRpcMessage parseNodeAsRpcMessage(JsonNode node) {
+        if (node.has("method") && node.has("id")) {
+            return JsonRpcRequest.fromJson(node);
+        }
+        if (node.has("method") && !node.has("id")) {
+            return JsonRpcNotification.fromJson(node);
+        }
+        if (node.has("result") || node.has("error")) {
+            return JsonRpcResponse.fromJson(node);
         }
 
+        throw new JsonRpcParseException("Cannot deserialize JsonRpcMessage: " + node);
+    }
+
+    private CompletableFuture<?> invokeMethod(ServiceRequestContext ctx, JsonRpcMessage message) {
+        if (message instanceof JsonRpcResponse) {
+            return defaultHandler.handleRpcCall(ctx, message);
+        }
+
+        final JsonRpcMethodHandler handler = methodHandlers.get(((JsonRpcMethodInvokable) message).method());
         if (handler == null) {
-            return UnmodifiableFuture.completedFuture(
-                    new DefaultJsonRpcResponse(req.id(), JsonRpcError.METHOD_NOT_FOUND));
+            return defaultHandler.handleRpcCall(ctx, message);
         }
-        return handler.handle(ctx, req)
-                      .thenApply(res -> {
-                          final DefaultJsonRpcResponse finalResponse = buildFinalResponse(req, res);
-                          maybeLogResponseContent(ctx, finalResponse, res);
-                          return finalResponse;
-                      });
+        if (message instanceof JsonRpcNotification) {
+            final JsonRpcNotification noti = (JsonRpcNotification) message;
+            return handler.onNotification(ctx, noti);
+        }
+
+        final JsonRpcRequest req = (JsonRpcRequest) message;
+        return handler.onRequest(ctx, req);
     }
 
-    private static void maybeLogResponseContent(ServiceRequestContext ctx,
-                                                DefaultJsonRpcResponse response,
-                                                JsonRpcResponse originalResponse) {
-        if (!Flags.annotatedServiceContentLogging()) {
-            return;
+    private static boolean canAcceptSse(RequestHeaders headers) {
+        final List<MediaType> acceptTypes = headers.accept();
+        if (acceptTypes.isEmpty()) {
+            return false;
         }
-
-        ctx.logBuilder().responseContent(response, originalResponse);
-    }
-
-    @VisibleForTesting
-    DefaultJsonRpcResponse buildFinalResponse(JsonRpcRequest request, JsonRpcResponse response) {
-        if (response instanceof DefaultJsonRpcResponse) {
-            return (DefaultJsonRpcResponse) response;
+        boolean jsonMatched = false;
+        boolean sseMatched = false;
+        for (MediaType acceptType : acceptTypes) {
+            if (acceptType.isJson()) {
+                jsonMatched = true;
+                if (sseMatched) {
+                    return true;
+                }
+            }
+            if (acceptType.is(MediaType.EVENT_STREAM)) {
+                sseMatched = true;
+                if (jsonMatched) {
+                    return true;
+                }
+            }
         }
-
-        final Object id = request.id();
-        final Object result = response.result();
-        final JsonRpcError error = response.error();
-        if (id != null && result != null && error == null) {
-            return new DefaultJsonRpcResponse(id, result);
-        }
-        if (error != null && result == null) {
-            return new DefaultJsonRpcResponse(id, error);
-        }
-        return new DefaultJsonRpcResponse(
-                id,
-                // Leave a warning message instead of sending this error response to the client
-                // because the server-side handler implementation is faulty.
-                JsonRpcError.INTERNAL_ERROR.withData(
-                        "A response cannot have both or neither 'result' and 'error' fields."));
+        return false;
     }
 }

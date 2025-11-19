@@ -15,104 +15,86 @@
  */
 package com.linecorp.armeria.common.jsonrpc;
 
-import static com.google.common.base.Preconditions.checkArgument;
+import static com.linecorp.armeria.common.jsonrpc.JsonRpcMessageUtil.objectMapper;
 import static java.util.Objects.requireNonNull;
 
-import java.util.List;
 import java.util.Map;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
-import com.google.common.collect.ImmutableList;
 
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
+import com.linecorp.armeria.server.jsonrpc.JsonRpcParseException;
 
 /**
  * A JSON-RPC request.
  */
 @UnstableApi
-public interface JsonRpcRequest {
+public interface JsonRpcRequest extends JsonRpcMessage, JsonRpcMethodInvokable {
+
     /**
-    * Creates a new instance with no parameter.
-    */
-    static JsonRpcRequest of(@Nullable Object id, String method) {
-        return new DefaultJsonRpcRequest(id, requireNonNull(method, "method"), ImmutableList.of());
+     * Creates a new instance with no parameters.
+     * Note that the {@code id} can be of type {@link String}, {@link Long} or {@link Integer}.
+     */
+    static JsonRpcRequest of(Object id, String method) {
+        return of(id, method, JsonRpcParameters.empty());
     }
 
     /**
-     * Creates a new instance with a single parameter.
+     * Creates a new instance with the specified {@link JsonRpcParameters}.
+     * Note that the {@code id} can be of type {@link String}, {@link Long} or {@link Integer}.
      */
-    static JsonRpcRequest of(@Nullable Object id, String method, @Nullable Object parameter) {
-        final List<Object> parameters = parameter == null ? ImmutableList.of()
-                : ImmutableList.of(parameter);
-        return new DefaultJsonRpcRequest(id, requireNonNull(method, "method"), parameters);
+    static JsonRpcRequest of(Object id, String method, JsonRpcParameters parameters) {
+        return new DefaultJsonRpcRequest(id, method, parameters);
     }
 
     /**
      * Creates a new instance with the specified parameters.
+     * Note that the {@code id} can be of type {@link String}, {@link Long} or {@link Integer}.
      */
-    static JsonRpcRequest of(@Nullable Object id, String method, Iterable<?> params) {
-        return new DefaultJsonRpcRequest(id,
-                requireNonNull(method, "method"),
-                requireNonNull(params, "params"));
+    static JsonRpcRequest of(Object id, String method, Iterable<?> parameters) {
+        return of(id, method, JsonRpcParameters.of(parameters));
     }
 
     /**
      * Creates a new instance with the specified parameters.
+     * Note that the {@code id} can be of type {@link String}, {@link Long} or {@link Integer}.
      */
-    static JsonRpcRequest of(@Nullable Object id, String method, Object... params) {
-        return new DefaultJsonRpcRequest(id,
-                requireNonNull(method, "method"),
-                requireNonNull(params, "params"));
+    static JsonRpcRequest of(Object id, String method, Map<String, ?> parameters) {
+        return of(id, method, JsonRpcParameters.of(parameters));
     }
 
     /**
-     * Creates a new instance with the named parameter.
+     * Parses the specified {@link JsonNode} into a {@link JsonRpcRequest}.
      */
-    static JsonRpcRequest of(@Nullable Object id, String method, Map<String, Object> parameter) {
-        return new DefaultJsonRpcRequest(id,
-                requireNonNull(method, "method"),
-                requireNonNull(parameter, "parameter"));
-    }
-
-    /**
-    * Creates a new instance with a JsonNode.
-    */
-    static JsonRpcRequest of(JsonNode node) throws JsonProcessingException {
+    @JsonCreator
+    static JsonRpcRequest fromJson(JsonNode node) {
         requireNonNull(node, "node");
-        checkArgument(node.isObject(), "node.isObject(): %s (expected: true)", node.isObject());
-        return DefaultJsonRpcRequest.objectMapper.treeToValue(node, DefaultJsonRpcRequest.class);
+        try {
+            return objectMapper.treeToValue(node, DefaultJsonRpcRequest.class);
+        } catch (JsonProcessingException e) {
+            throw new JsonRpcParseException(e);
+        }
     }
 
     /**
-     * Returns {@code true} if this request is a notification.
+     * Parses the specified JSON string into a {@link JsonRpcRequest}.
      */
-    @JsonIgnore
-    default boolean isNotification() {
-        return id() == null;
+    static JsonRpcRequest fromJson(String json) {
+        requireNonNull(json, "json");
+        try {
+            return objectMapper.readValue(json, DefaultJsonRpcRequest.class);
+        } catch (JsonProcessingException e) {
+            throw new JsonRpcParseException(e);
+        }
     }
 
     /**
-    * Returns the ID of the JSON-RPC request.
-    * The type must be {@link Number} or {@link String}.
-    */
-    @Nullable
+     * Returns the ID of the JSON-RPC request.
+     * The type must be {@link String}, {@link Long}, {@link Integer}.
+     */
+    @JsonProperty
     Object id();
-
-    /**
-     * Returns the JSON-RPC method name.
-     */
-    String method();
-
-    /**
-     * Returns the parameters for the JSON-RPC method.
-     */
-    JsonRpcParameter params();
-
-    /**
-     * Returns the JSON-RPC version.
-     */
-    JsonRpcVersion version();
 }

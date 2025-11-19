@@ -56,6 +56,7 @@ public interface StreamWriter<T> extends StreamMessage<T> {
     /**
      * Returns {@code true} if the {@link StreamMessage} is open.
      */
+    @Override
     boolean isOpen();
 
     /**
