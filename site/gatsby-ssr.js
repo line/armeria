@@ -1,5 +1,15 @@
 import React from 'react';
 
+export const onRenderBody = ({ setHeadComponents }) => {
+  setHeadComponents([
+    <meta
+      key="algolia-site-verification"
+      name="algolia-site-verification"
+      content="90A5F01485F88CCB"
+    />,
+  ]);
+};
+
 export const onPreRenderHTML = ({
   getHeadComponents,
   replaceHeadComponents,
