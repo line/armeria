@@ -98,7 +98,8 @@ class InvalidContentLengthHeaderTest {
         final ResponseHeaders serverResponseHeaders = responseHeadersCapture.get();
         assertThat(serverResponseHeaders).isNotNull();
 
-        // The mistakenly set content-length (500) should have been removed by statusToTrailers().
+        // The mistakenly set content-length (500) is removed by statusToTrailers() and is set to 0
+        // in ArmeriaHttpUtil.maybeUpdateContentLengthAndEndOfStream.
         final String contentLength = serverResponseHeaders.get(HttpHeaderNames.CONTENT_LENGTH);
         assertThat(contentLength).isEqualTo("0");
         assertThat(serverResponseHeaders.isEndOfStream()).isTrue();
