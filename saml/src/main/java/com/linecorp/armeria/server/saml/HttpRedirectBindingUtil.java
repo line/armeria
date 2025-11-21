@@ -106,13 +106,6 @@ final class HttpRedirectBindingUtil {
         params.add(messageParamName, toDeflatedBase64(msg));
 
         if (relayState != null) {
-            // RelayState data MAY be included with a SAML protocol message transmitted with this binding.
-            // The value MUST NOT exceed 80 bytes in length and SHOULD be integrity protected by the entity
-            // creating the message independent of any other protections that may or may not exist
-            // during message transmission.
-            if (relayState.length() > 80) {
-                throw new IllegalArgumentException("too long relayState string: " + relayState.length());
-            }
             params.add(RELAY_STATE, relayState);
         }
 
