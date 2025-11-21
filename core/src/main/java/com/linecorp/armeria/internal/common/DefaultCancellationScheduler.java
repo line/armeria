@@ -273,6 +273,11 @@ final class DefaultCancellationScheduler implements CancellationScheduler {
         return ScheduleResult.INVOKE_LATER;
     }
 
+    @Override
+    public boolean hasEventLoop() {
+        return eventLoop != null;
+    }
+
     private EventExecutor eventLoop() {
         assert eventLoop != null;
         return eventLoop;

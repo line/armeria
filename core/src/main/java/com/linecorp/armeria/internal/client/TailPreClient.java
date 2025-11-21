@@ -79,6 +79,6 @@ public final class TailPreClient<I extends Request, O extends Response, C extend
         assert ctxExt != null;
         final Client<I, O> delegate0 = clientCustomizer.apply(ctxExt, delegate);
         return ClientUtil.initContextAndExecuteWithFallback(delegate0, ctxExt,
-                                                            futureConverter, errorResponseFactory, req, true);
+                                                            futureConverter, errorResponseFactory, req, false);
     }
 }
