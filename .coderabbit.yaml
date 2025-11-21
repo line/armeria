@@ -1,0 +1,25 @@
+reviews:
+  profile: "chill"
+  high_level_summary: false
+  auto_review:
+    enabled: true
+    drafts: false
+    ignore_title_keywords: ["WIP"]
+
+  # Path filters for reviews
+  path_filters:
+    - "**/*.java"
+    - "**/*.ts"
+    - "**/*.tsx"
+
+  # Custom review instructions for specific paths
+  path_instructions:
+    - path: "**/*.java"
+      instructions: |
+        - The primary coding conventions and style guide for this project are defined in `site/src/pages/community/developer-guide.mdx`. Please strictly adhere to this file as the ultimate source of truth for all style and convention-related feedback.
+
+        # 2. Specific check for `@UnstableApi`
+        - Review all newly added public classes and methods to ensure they have the `@UnstableApi` annotation.
+        - However, this annotation is NOT required under the following conditions:
+          - If the class or method is located in a package containing `.internal`.
+          - If a public method is part of a class that is already annotated with `@UnstableApi`.
