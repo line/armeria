@@ -6,12 +6,6 @@ reviews:
     drafts: false
     ignore_title_keywords: ["WIP"]
 
-  # Path filters for reviews
-  path_filters:
-    - "**/*.java"
-    - "**/*.ts"
-    - "**/*.tsx"
-
   # Custom review instructions for specific paths
   path_instructions:
     - path: "**/*.java"
