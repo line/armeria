@@ -18,7 +18,6 @@ package com.linecorp.armeria.server.jsonrpc;
 
 import static java.util.Objects.requireNonNull;
 
-import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.jsonrpc.JsonRpcMessage;
@@ -40,7 +39,7 @@ public interface JsonRpcExceptionHandler {
     }
 
     /**
-     * Handles the given exception and returns an {@link HttpResponse}.
+     * Handles the given exception and returns an {@link JsonRpcResponse}.
      * @param ctx the {@link ServiceRequestContext}
      * @param input the parsed {@link JsonRpcMessage}, or {@code null} if the request could not be parsed.
      * @param cause the exception that occurred while processing the request.

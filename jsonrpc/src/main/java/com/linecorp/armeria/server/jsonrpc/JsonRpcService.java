@@ -65,15 +65,15 @@ import io.netty.util.AttributeKey;
  *
  * <p>Example:
  * <pre>{@code
- * class EchoHandler implements JsonRpcHandler {
+ * class EchoHandler implements JsonRpcMethodHandler {
  *  @Override
- *  public CompletableFuture<JsonRpcResponse> handle(ServiceRequestContext ctx, JsonRpcRequest request) {
+ *  public CompletableFuture<JsonRpcResponse> onRequest(ServiceRequestContext ctx, JsonRpcRequest request) {
  *      return UnmodifiableFuture.completedFuture(JsonRpcResponse.of(request.params()));
  *  }
  * }
  *
  * JsonRpcService jsonRpcService = JsonRpcService.builder()
- *                                               .addHandler("echo", new EchoHandler())
+ *                                               .methodHandler("echo", new EchoHandler())
  *                                               .build();
  *
  * ServerBuilder sb = Server.builder();
