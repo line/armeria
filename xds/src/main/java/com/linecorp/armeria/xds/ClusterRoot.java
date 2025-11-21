@@ -32,8 +32,8 @@ public final class ClusterRoot extends AbstractRoot<ClusterSnapshot> {
     private final SubscriptionContext context;
     private final String resourceName;
 
-    ClusterRoot(SubscriptionContext context, String resourceName) {
-        super(context.eventLoop());
+    ClusterRoot(SubscriptionContext context, String resourceName, SnapshotWatcher<Object> defaultWatcher) {
+        super(context.eventLoop(), defaultWatcher);
         this.context = context;
         this.resourceName = resourceName;
         eventLoop().execute(safeRunnable(() -> context.clusterManager().register(resourceName, context, this),
