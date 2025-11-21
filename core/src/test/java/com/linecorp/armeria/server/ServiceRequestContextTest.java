@@ -155,7 +155,9 @@ class ServiceRequestContextTest {
         try (SafeCloseable ignored = cctx.push()) {
             assertUnwrapAllCurrentCtx(cctx);
             final ServiceRequestContext sctx = serviceRequestContext();
-            assertThatThrownBy(sctx::push).isInstanceOf(IllegalStateException.class);
+            try (SafeCloseable ignored2 = sctx.push()) {
+                // Make sure that sctx.push() succeeds.
+            }
         }
         assertUnwrapAllCurrentCtx(null);
     }
