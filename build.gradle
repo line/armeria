@@ -61,6 +61,14 @@ allprojects {
             jvmArgs '--add-exports=java.base/jdk.internal.misc=ALL-UNNAMED'
         }
 
+        if (project.ext.testJavaVersion >= 24) {
+            jvmArgs '--enable-native-access=ALL-UNNAMED'
+        }
+
+        if (project.ext.testJavaVersion >= 24) {
+            jvmArgs '--enable-native-access=ALL-UNNAMED'
+        }
+
         // Enable leak detection when '-Pleak' option is specified.
         if (rootProject.hasProperty('leak')) {
             systemProperties 'io.netty.leakDetectionLevel': 'paranoid'
@@ -80,11 +88,14 @@ allprojects {
         jvmArgs '-XX:+ExitOnOutOfMemoryError'
         jvmArgs '-XX:+HeapDumpOnOutOfMemoryError'
 
-        // `-Djava.security.manager` was added in Java 17 and the default value was changed to
-        // `disallow` in Java 18.
-        // - https://openjdk.org/jeps/411
-        // - https://bugs.openjdk.org/browse/JDK-8270380
-        if (project.ext.testJavaVersion >= 17 || it.name == 'nativeImageTrace') {
+        // - `-Djava.security.manager` was added in Java 17 and the default value was changed to `disallow` in
+        //   Java 18.
+        //   - https://openjdk.org/jeps/411
+        //   - https://bugs.openjdk.org/browse/JDK-8270380
+        // - Security manager is disabled for Java 24 and later.
+        //   - https://openjdk.org/jeps/486
+        if ((project.ext.testJavaVersion >= 17 && project.ext.testJavaVersion < 24) ||
+            it.name == 'nativeImageTrace') {
             systemProperty "java.security.manager", "allow"
         }
 
@@ -207,11 +218,38 @@ configure(projectsWithFlags('java')) {
         }
     }
 
+    if (rootProject.ext.buildJdkVersion >= 23) {
+        // Starting with JDK 23, annotation processors are not run by default.
+        // https://mail.openjdk.org/pipermail/jdk-dev/2024-May/009028.html
+        tasks.withType(JavaCompile).configureEach {
+            options.compilerArgs += ["-proc:full"]
+        }
+    }
+
     // Common dependencies
     dependencies {
         // All projects currently require ':core' (except itself)
         if (project != project(':core')) {
             api project(':core')
+
+            if (rootProject.ext.buildJdkVersion >= 25) {
+                // Java 25's compiler is stricter about resolving Type Annotations (e.g. @Nullable)
+                // on classes from transitive dependencies. If a type used in an annotation belongs
+                // to a hidden 'implementation' dependency (like Caffeine), javac will fail.
+                // > RequestTargetCache.class: error: Cannot attach type annotations
+                // > @com.linecorp.armeria.common.annotation.Nullable to RequestTargetCache.SERVER_CACHE:
+                //
+                // This hack forces the compile classpath to use the 'runtime' variant, ensuring
+                // that all transitive implementation dependencies are visible to the compiler.
+                // NOTE: This only affects local compilation; the published POM file remains unchanged.
+                configurations.compileClasspath.attributes {
+                    attribute(Usage.USAGE_ATTRIBUTE, objects.named(Usage, Usage.JAVA_RUNTIME))
+                }
+
+                configurations.testCompileClasspath.attributes {
+                    attribute(Usage.USAGE_ATTRIBUTE, objects.named(Usage, Usage.JAVA_RUNTIME))
+                }
+            }
         }
 
         // Testing utilities
@@ -310,10 +348,10 @@ allprojects {
     }
 }
 
-// Require to use JDK 19 when releasing.
+// Require to use JDK 25 when releasing.
 tasks.closeAndReleaseStagingRepositories.doFirst {
-    if (JavaVersion.current() != JavaVersion.VERSION_21) {
-        throw new IllegalStateException("You must release using JDK 21.");
+    if (JavaVersion.current() != JavaVersion.RSION_25) {
+        throw new IllegalStateException("You must release using JDK 25.");
     }
 }
 
