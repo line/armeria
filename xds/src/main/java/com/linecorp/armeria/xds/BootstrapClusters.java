@@ -17,14 +17,19 @@
 package com.linecorp.armeria.xds;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
+import com.google.common.base.MoreObjects;
+import com.google.common.collect.ImmutableList;
+
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.metric.MeterIdPrefix;
 import com.linecorp.armeria.xds.client.endpoint.XdsLoadBalancer;
 
 import io.envoyproxy.envoy.config.bootstrap.v3.Bootstrap;
 import io.envoyproxy.envoy.config.cluster.v3.Cluster;
-import io.grpc.Status;
+import io.micrometer.core.instrument.MeterRegistry;
 import io.netty.util.concurrent.EventExecutor;
 
 final class BootstrapClusters implements SnapshotWatcher<ClusterSnapshot> {
@@ -33,21 +38,27 @@ final class BootstrapClusters implements SnapshotWatcher<ClusterSnapshot> {
     private final Bootstrap bootstrap;
     private final EventExecutor eventLoop;
     private final XdsClusterManager clusterManager;
+    private final List<SnapshotWatcher<? super ClusterSnapshot>> watchers;
 
-    BootstrapClusters(Bootstrap bootstrap, EventExecutor eventLoop, XdsClusterManager clusterManager) {
+    BootstrapClusters(Bootstrap bootstrap, EventExecutor eventLoop, XdsClusterManager clusterManager,
+                      MeterRegistry meterRegistry, MeterIdPrefix meterIdPrefix,
+                      SnapshotWatcher<Object> defaultSnapshotWatcher) {
         this.bootstrap = bootstrap;
         this.eventLoop = eventLoop;
         this.clusterManager = clusterManager;
-        initializePrimary(bootstrap);
+        watchers = ImmutableList.of(defaultSnapshotWatcher, this);
+        initializePrimary(bootstrap, meterRegistry, meterIdPrefix);
     }
 
-    private void initializePrimary(Bootstrap bootstrap) {
-        final StaticSubscriptionContext context = new StaticSubscriptionContext(eventLoop);
+    private void initializePrimary(Bootstrap bootstrap, MeterRegistry meterRegistry,
+                                   MeterIdPrefix meterIdPrefix) {
+        final StaticSubscriptionContext context =
+                new StaticSubscriptionContext(eventLoop, meterRegistry, meterIdPrefix);
         for (Cluster cluster: bootstrap.getStaticResources().getClustersList()) {
             if (!cluster.hasLoadAssignment()) {
                 continue;
             }
-            clusterManager.register(cluster, context, this);
+            clusterManager.register(cluster, context, watchers, "", 0);
         }
     }
 
@@ -56,7 +67,7 @@ final class BootstrapClusters implements SnapshotWatcher<ClusterSnapshot> {
             if (!cluster.hasEdsClusterConfig()) {
                 continue;
             }
-            clusterManager.register(cluster, context, this);
+            clusterManager.register(cluster, context, watchers, "", 0);
         }
     }
 
@@ -81,14 +92,9 @@ final class BootstrapClusters implements SnapshotWatcher<ClusterSnapshot> {
     }
 
     @Override
-    public void onMissing(XdsType type, String resourceName) {
-        throw new IllegalArgumentException("Bootstrap cluster not found for type: '" +
-                                           type + "', resourceName: '" + resourceName + '\'');
-    }
-
-    @Override
-    public void onError(XdsType type, String resourceName, Status status) {
-        throw new IllegalArgumentException("Unexpected error for bootstrap cluster with type: '" +
-                                           type + '\'', status.asException());
+    public String toString() {
+        return MoreObjects.toStringHelper(this)
+                          .add("clusterSnapshots", clusterSnapshots)
+                          .toString();
     }
 }

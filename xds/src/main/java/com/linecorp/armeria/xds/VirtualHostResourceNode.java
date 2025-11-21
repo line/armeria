@@ -24,7 +24,6 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 
 import com.linecorp.armeria.common.annotation.Nullable;
-import com.linecorp.armeria.common.util.SafeCloseable;
 
 import io.envoyproxy.envoy.config.core.v3.ConfigSource;
 import io.envoyproxy.envoy.config.route.v3.Route;
@@ -48,6 +47,9 @@ final class VirtualHostResourceNode extends AbstractResourceNode<VirtualHostXdsR
     @Override
     void doOnChanged(VirtualHostXdsResource resource) {
         final ClusterSnapshotWatcher prevWatcher = snapshotWatcher;
+        if (prevWatcher != null) {
+            prevWatcher.preClose();
+        }
         snapshotWatcher = new ClusterSnapshotWatcher(resource, context(), this, index);
         if (prevWatcher != null) {
             prevWatcher.close();
@@ -63,7 +65,7 @@ final class VirtualHostResourceNode extends AbstractResourceNode<VirtualHostXdsR
         super.close();
     }
 
-    private static class ClusterSnapshotWatcher implements SnapshotWatcher<ClusterSnapshot>, SafeCloseable {
+    private static class ClusterSnapshotWatcher extends AbstractNodeSnapshotWatcher<ClusterSnapshot> {
 
         private final Map<String, ClusterSnapshot> snapshots = new HashMap<>();
         private final VirtualHostXdsResource resource;
@@ -71,8 +73,6 @@ final class VirtualHostResourceNode extends AbstractResourceNode<VirtualHostXdsR
         private final VirtualHostResourceNode parentNode;
         private final int index;
         private final Set<String> clusterNames;
-
-        private boolean closed;
 
         ClusterSnapshotWatcher(VirtualHostXdsResource resource, SubscriptionContext context,
                                VirtualHostResourceNode parentNode, int index) {
@@ -97,10 +97,7 @@ final class VirtualHostResourceNode extends AbstractResourceNode<VirtualHostXdsR
         }
 
         @Override
-        public void snapshotUpdated(ClusterSnapshot newSnapshot) {
-            if (closed) {
-                return;
-            }
+        protected void doSnapshotUpdated(ClusterSnapshot newSnapshot) {
             snapshots.put(newSnapshot.xdsResource().name(), newSnapshot);
             // checks if all clusters for the route have reported a snapshot
             if (snapshots.size() < clusterNames.size()) {
@@ -112,24 +109,17 @@ final class VirtualHostResourceNode extends AbstractResourceNode<VirtualHostXdsR
         }
 
         @Override
-        public void onError(XdsType type, String resourceName, Status status) {
-            if (closed) {
-                return;
-            }
+        protected void doOnError(XdsType type, String resourceName, Status status) {
             parentNode.notifyOnError(type, resourceName, status);
         }
 
         @Override
-        public void onMissing(XdsType type, String resourceName) {
-            if (closed) {
-                return;
-            }
+        protected void doOnMissing(XdsType type, String resourceName) {
             parentNode.notifyOnMissing(type, resourceName);
         }
 
         @Override
-        public void close() {
-            closed = true;
+        protected void doClose() {
             for (String clusterName : clusterNames) {
                 context.clusterManager().unregister(clusterName, this);
             }
