@@ -270,6 +270,12 @@ public final class FutureTransformingRequestPreparation<T>
     }
 
     @Override
+    public FutureTransformingRequestPreparation<T> content(HttpData content) {
+        delegate.content(content);
+        return this;
+    }
+
+    @Override
     public FutureTransformingRequestPreparation<T> content(MediaType contentType, HttpData content) {
         delegate.content(contentType, content);
         return this;
