@@ -28,8 +28,10 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import java.time.Duration;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CancellationException;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedTransferQueue;
 import java.util.concurrent.TimeUnit;
@@ -39,9 +41,12 @@ import java.util.concurrent.atomic.AtomicReference;
 import org.apache.thrift.TApplicationException;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 
 import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.client.ClientRequestContext;
+import com.linecorp.armeria.client.ResponseCancellationException;
 import com.linecorp.armeria.client.UnprocessedRequestException;
 import com.linecorp.armeria.client.retry.Backoff;
 import com.linecorp.armeria.client.retry.RetryConfig;
@@ -53,6 +58,7 @@ import com.linecorp.armeria.client.thrift.ThriftClients;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.RpcResponse;
 import com.linecorp.armeria.common.logging.RequestLog;
+import com.linecorp.armeria.common.util.TimeoutMode;
 import com.linecorp.armeria.common.util.UnmodifiableFuture;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.thrift.THttpService;
@@ -326,38 +332,140 @@ class RetryingRpcClientTest {
                              "(?i).*(factory has been closed|not accepting a task).*"));
     }
 
-    @Test
-    void doNotRetryWhenResponseIsCancelled() throws Exception {
+    enum DoNotRetryWhenResponseIsCancelledTestParams {
+        // Cancel delays for a backoff of 50 milliseconds (quickBackoffMillis).
+        CANCEL_CTX_FIRST_REQUEST_NO_DELAY(true, true, 0),
+        CANCEL_CTX_FIRST_REQUEST_WITH_DELAY(true, true, 500),
+        CANCEL_CTX_AFTER_FIRST_REQUEST_NO_DELAY(false, true, 0),
+        CANCEL_CTX_AFTER_FIRST_REQUEST_WITH_DELAY(false, false, 500),
+        CANCEL_RES_AFTER_FIRST_REQUEST_NO_DELAY(false, true, 0),
+        CANCEL_RES_AFTER_FIRST_REQUEST_WITH_DELAY(false, false, 500);
+
+        static final int BACKOFF_MILLIS = 50;
+        final boolean ensureCancelBeforeFirstRequest;
+        final boolean cancelViaCtx;
+        final long cancelDelayMillis;
+
+        DoNotRetryWhenResponseIsCancelledTestParams(boolean ensureCancelBeforeFirstRequest,
+                                                    boolean cancelViaCtx,
+                                                    long cancelDelayMillis) {
+            this.ensureCancelBeforeFirstRequest = ensureCancelBeforeFirstRequest;
+            if (this.ensureCancelBeforeFirstRequest) {
+                this.cancelViaCtx = true;
+            } else {
+                this.cancelViaCtx = cancelViaCtx;
+            }
+
+            this.cancelDelayMillis = cancelDelayMillis;
+        }
+    }
+
+    @ParameterizedTest
+    @EnumSource(DoNotRetryWhenResponseIsCancelledTestParams.class)
+    void doNotRetryWhenResponseIsCancelled(DoNotRetryWhenResponseIsCancelledTestParams param) throws Exception {
+        serviceRetryCount.set(0);
+
+        final RetryRuleWithContent<RpcResponse> quickRetryAlways =
+                RetryRuleWithContent.<RpcResponse>builder()
+                                    .onException()
+                                    .thenBackoff(Backoff.fixed(
+                                            DoNotRetryWhenResponseIsCancelledTestParams.BACKOFF_MILLIS));
+
+        final int maxExpectedAttempts =
+                (int) (param.cancelDelayMillis / DoNotRetryWhenResponseIsCancelledTestParams.BACKOFF_MILLIS) +
+                5;
+        final AtomicInteger serviceRetryCountWhenCancelled = new AtomicInteger();
         try (ClientFactory factory = ClientFactory.builder().build()) {
             final AtomicReference<ClientRequestContext> context = new AtomicReference<>();
             final HelloService.Iface client =
                     ThriftClients.builder(server.httpUri())
                                  .path("/thrift")
                                  .factory(factory)
-                                 .rpcDecorator(RetryingRpcClient.builder(retryAlways).newDecorator())
+                                 .rpcDecorator(RetryingRpcClient.builder(quickRetryAlways)
+                                                                // We want to cancel the request before
+                                                                // we quit because of reaching max attempts.
+                                                                .maxTotalAttempts(maxExpectedAttempts)
+                                                                .newDecorator())
+                                 .rpcDecorator((delegate, ctx, req) -> {
+                                     final CompletableFuture<RpcResponse> resFuture = new CompletableFuture<>();
+                                     final RpcResponse res = RpcResponse.from(resFuture);
+
+                                     if (param.ensureCancelBeforeFirstRequest) {
+                                         Thread.sleep(param.cancelDelayMillis);
+
+                                         assertThat(ctx.isCancelled()).isFalse();
+                                         assertThat(res.isDone()).isFalse();
+                                         assert param.cancelViaCtx;
+                                         ctx.cancel();
+                                         serviceRetryCountWhenCancelled.set(serviceRetryCount.get());
+
+                                         resFuture.complete(delegate.execute(ctx, req));
+                                     } else {
+                                         final RpcResponse nextRes = delegate.execute(ctx, req);
+                                         resFuture.complete(nextRes);
+
+                                         Thread.sleep(param.cancelDelayMillis);
+
+                                         assertThat(ctx.isCancelled()).isFalse();
+                                         assertThat(nextRes.isDone()).isFalse();
+
+                                         if (param.cancelViaCtx) {
+                                             ctx.cancel();
+                                         } else {
+                                             nextRes.cancel(true);
+                                         }
+
+                                         serviceRetryCountWhenCancelled.set(serviceRetryCount.get());
+                                     }
+
+                                     return res;
+                                 })
                                  .rpcDecorator((delegate, ctx, req) -> {
                                      context.set(ctx);
-                                     final RpcResponse res = delegate.execute(ctx, req);
-                                     res.cancel(true);
-                                     return res;
+                                     // Make sure we do not time out while delaying the cancel.
+                                     ctx.setResponseTimeout(
+                                             TimeoutMode.EXTEND,
+                                             Duration.ofMillis(param.cancelDelayMillis + 5000)
+                                     );
+
+                                     return delegate.execute(ctx, req);
                                  })
                                  .build(HelloService.Iface.class);
             when(serviceHandler.hello(anyString())).thenThrow(new IllegalArgumentException());
 
-            assertThatThrownBy(() -> client.hello("hello")).isInstanceOf(CancellationException.class);
+            assertThatThrownBy(() -> client.hello("hello"))
+                    .isOfAnyClassIn(CancellationException.class, ResponseCancellationException.class);
 
             await().untilAsserted(() -> {
-                verify(serviceHandler, only()).hello("hello");
+                assertThat(serviceRetryCountWhenCancelled.get()).isIn(serviceRetryCount.get(),
+                                                                      serviceRetryCount.get() - 1);
+                verify(serviceHandler, times(serviceRetryCount.get())).hello("hello");
             });
-            final RequestLog log = context.get().log().whenComplete().join();
 
-            // ClientUtil.completeLogIfIncomplete() records exceptions caused by response cancellations.
-            assertThat(log.requestCause()).isExactlyInstanceOf(CancellationException.class);
-            assertThat(log.responseCause()).isExactlyInstanceOf(CancellationException.class);
+            final RequestLog log = context.get().log().whenComplete().join();
+            if (param.ensureCancelBeforeFirstRequest) {
+                assertThat(serviceRetryCount.get()).isZero();
+                assertThat(log.requestCause()).isExactlyInstanceOf(ResponseCancellationException.class);
+                assertThat(log.responseCause()).isExactlyInstanceOf(ResponseCancellationException.class);
+            } else {
+                // We still could cancel the before the first request so we do not have a guarantee for
+                // requestCause() to be null.
+                assertThat(log.responseCause()).isOfAnyClassIn(ResponseCancellationException.class,
+                                                               CancellationException.class);
+            }
 
             // Sleep 1 second more to check if there was another retry.
             TimeUnit.SECONDS.sleep(1);
-            verify(serviceHandler, only()).hello("hello");
+
+            if (param.ensureCancelBeforeFirstRequest) {
+                assertThat(serviceRetryCountWhenCancelled.get()).isZero();
+                assertThat(serviceRetryCount.get()).isZero();
+            } else if (param.cancelDelayMillis > 0) {
+                assertThat(serviceRetryCountWhenCancelled.get()).isIn(serviceRetryCount.get() - 1,
+                                                                      serviceRetryCount.get());
+            }
+
+            verify(serviceHandler, times(serviceRetryCount.get())).hello("hello");
         }
     }
 }

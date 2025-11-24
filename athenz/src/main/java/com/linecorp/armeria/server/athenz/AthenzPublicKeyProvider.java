@@ -51,13 +51,15 @@ final class AthenzPublicKeyProvider implements PublicKeyStore {
     private final long minRetryInterval;
     private final AsyncLoader<Map<String, CompletableFuture<PublicKey>>> ztsKeyLoader;
     private final AsyncLoader<Map<String, CompletableFuture<PublicKey>>> zmsKeyLoader;
+    private final String oauth2KeyPath;
     private volatile long lastReloadZtsJwkTime;
     private volatile long lastReloadZmsJwkTime;
 
-    AthenzPublicKeyProvider(ZtsBaseClient ztsBaseClient, Duration refreshInterval) {
+    AthenzPublicKeyProvider(ZtsBaseClient ztsBaseClient, Duration refreshInterval, String oauth2KeyPath) {
         // TODO(ikhoon): Make minRetryInterval configurable.
         minRetryInterval = refreshInterval.toMillis() / 4;
         webClient = ztsBaseClient.webClient();
+        this.oauth2KeyPath = oauth2KeyPath;
         ztsKeyLoader = AsyncLoader.<Map<String, CompletableFuture<PublicKey>>>builder(k -> fetchZtsKeys())
                                   .name("athenz-zts-key-loader")
                                   .refreshAfterLoad(refreshInterval)
@@ -108,7 +110,7 @@ final class AthenzPublicKeyProvider implements PublicKeyStore {
     private CompletableFuture<Map<String, CompletableFuture<PublicKey>>> fetchZtsKeys() {
         return webClient
                 .prepare()
-                .get("/oauth2/keys")
+                .get(oauth2KeyPath)
                 .asJson(Keys.class)
                 .execute()
                 .thenApply(res -> {

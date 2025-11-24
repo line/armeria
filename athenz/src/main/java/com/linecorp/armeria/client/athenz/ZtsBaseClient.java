@@ -120,11 +120,7 @@ public final class ZtsBaseClient implements SafeCloseable {
         }
         clientFactory = factoryBuilder.build();
         this.webClientConfigurer = webClientConfigurer;
-        defaultWebClient = webClient(builder -> {
-            if (webClientConfigurer != null) {
-                webClientConfigurer.accept(builder);
-            }
-        });
+        defaultWebClient = webClient(builder -> {});
     }
 
     /**

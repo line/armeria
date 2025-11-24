@@ -100,7 +100,7 @@ class ConfigSourceGrpcServiceTest {
         cache.setSnapshot(
                 GROUP,
                 Snapshot.create(
-                        ImmutableList.of(createCluster("cluster1", 0)),
+                        ImmutableList.of(createCluster("cluster1", 1)),
                         ImmutableList.of(loadAssignment("cluster1", URI.create("http://a.b"))),
                         ImmutableList.of(exampleListener("listener1", httpConnectionManager)),
                         ImmutableList.of(routeConfiguration("route1", "cluster1")),
@@ -117,7 +117,8 @@ class ConfigSourceGrpcServiceTest {
                 XdsTestResources.createStaticCluster(
                         BOOTSTRAP_CLUSTER_NAME, loadAssignment(BOOTSTRAP_CLUSTER_NAME,
                                                                                 server.httpUri()));
-        final Bootstrap bootstrap = XdsTestResources.bootstrap(adsConfigSource, null, bootstrap1);
+        final ConfigSource basicConfigSource = XdsTestResources.adsConfigSource();
+        final Bootstrap bootstrap = XdsTestResources.bootstrap(adsConfigSource, basicConfigSource, bootstrap1);
         try (XdsBootstrap xdsBootstrap = XdsBootstrap.of(bootstrap)) {
             final ListenerRoot listenerRoot = xdsBootstrap.listenerRoot(listenerName);
             final TestResourceWatcher watcher = new TestResourceWatcher();

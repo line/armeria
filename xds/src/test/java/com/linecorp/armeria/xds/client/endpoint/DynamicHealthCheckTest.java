@@ -36,6 +36,8 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
 import com.google.common.collect.ImmutableList;
+import com.google.protobuf.UInt32Value;
+import com.google.protobuf.util.Durations;
 
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.Endpoint;
@@ -149,6 +151,7 @@ class DynamicHealthCheckTest {
         final ClusterLoadAssignment loadAssignment =
                 ClusterLoadAssignment
                         .newBuilder()
+                        .setClusterName("cluster")
                         .addEndpoints(localityLbEndpoints(Locality.getDefaultInstance(), allEndpoints))
                         .setPolicy(Policy.newBuilder().setWeightedPriorityHealth(true))
                         .build();
@@ -156,6 +159,10 @@ class DynamicHealthCheckTest {
                 HealthCheck.newBuilder()
                            .setHttpHealthCheck(HttpHealthCheck.newBuilder()
                                                               .setPath("/monitor/healthcheck"))
+                           .setTimeout(Durations.fromSeconds(5))
+                           .setInterval(Durations.fromSeconds(10))
+                           .setUnhealthyThreshold(UInt32Value.of(10))
+                           .setHealthyThreshold(UInt32Value.of(10))
                            .build();
         Cluster cluster = createStaticCluster("cluster", loadAssignment)
                 .toBuilder()
@@ -181,6 +188,10 @@ class DynamicHealthCheckTest {
                     HealthCheck.newBuilder()
                                .setHttpHealthCheck(HttpHealthCheck.newBuilder()
                                                                   .setPath("/monitor/healthcheck2"))
+                               .setTimeout(Durations.fromSeconds(5))
+                               .setInterval(Durations.fromSeconds(10))
+                               .setUnhealthyThreshold(UInt32Value.of(10))
+                               .setHealthyThreshold(UInt32Value.of(10))
                                .build();
             cluster = createStaticCluster("cluster", loadAssignment)
                     .toBuilder().addHealthChecks(hc2).build();
@@ -215,6 +226,7 @@ class DynamicHealthCheckTest {
         final ClusterLoadAssignment loadAssignment =
                 ClusterLoadAssignment
                         .newBuilder()
+                        .setClusterName("cluster")
                         .addEndpoints(localityLbEndpoints(Locality.getDefaultInstance(), allEndpoints))
                         .setPolicy(Policy.newBuilder().setWeightedPriorityHealth(true))
                         .build();
@@ -222,6 +234,10 @@ class DynamicHealthCheckTest {
                 HealthCheck.newBuilder()
                            .setHttpHealthCheck(HttpHealthCheck.newBuilder()
                                                               .setPath("/monitor/healthcheck"))
+                           .setTimeout(Durations.fromSeconds(5))
+                           .setInterval(Durations.fromSeconds(10))
+                           .setUnhealthyThreshold(UInt32Value.of(10))
+                           .setHealthyThreshold(UInt32Value.of(10))
                            .build();
         Cluster cluster = createStaticCluster("cluster", loadAssignment)
                 .toBuilder()
@@ -248,6 +264,10 @@ class DynamicHealthCheckTest {
             hc1 = HealthCheck.newBuilder()
                              .setHttpHealthCheck(HttpHealthCheck.newBuilder()
                                                                 .setPath("/monitor/healthcheck2"))
+                             .setTimeout(Durations.fromSeconds(5))
+                             .setInterval(Durations.fromSeconds(10))
+                             .setUnhealthyThreshold(UInt32Value.of(10))
+                             .setHealthyThreshold(UInt32Value.of(10))
                              .build();
             cluster = createStaticCluster("cluster", loadAssignment)
                     .toBuilder()
@@ -298,6 +318,7 @@ class DynamicHealthCheckTest {
         final ClusterLoadAssignment loadAssignment =
                 ClusterLoadAssignment
                         .newBuilder()
+                        .setClusterName("cluster")
                         .addEndpoints(localityLbEndpoints(Locality.getDefaultInstance(), allEndpoints))
                         .setPolicy(Policy.newBuilder().setWeightedPriorityHealth(true))
                         .build();
@@ -307,6 +328,10 @@ class DynamicHealthCheckTest {
                                             .setHttpHealthCheck(
                                                     HttpHealthCheck.newBuilder()
                                                                    .setPath("/monitor/healthcheck2"))
+                                            .setTimeout(Durations.fromSeconds(5))
+                                            .setInterval(Durations.fromSeconds(10))
+                                            .setUnhealthyThreshold(UInt32Value.of(10))
+                                            .setHealthyThreshold(UInt32Value.of(10))
                                             .build())
                 .setCommonLbConfig(CommonLbConfig.newBuilder()
                                                  .setHealthyPanicThreshold(Percent.newBuilder().setValue(0)))

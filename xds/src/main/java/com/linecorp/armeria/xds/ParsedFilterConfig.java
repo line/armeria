@@ -19,7 +19,6 @@ package com.linecorp.armeria.xds;
 import static java.util.Objects.requireNonNull;
 
 import com.google.protobuf.Any;
-import com.google.protobuf.InvalidProtocolBufferException;
 import com.google.protobuf.Message;
 
 import com.linecorp.armeria.common.annotation.Nullable;
@@ -48,13 +47,7 @@ public final class ParsedFilterConfig {
         requireNonNull(config, "config");
         if (FILTER_CONFIG_TYPE_URL.equals(config.getTypeUrl())) {
             final FilterConfig filterConfig;
-            try {
-                filterConfig = config.unpack(FilterConfig.class);
-            } catch (InvalidProtocolBufferException e) {
-                throw new IllegalArgumentException(
-                        "Unable to unpack filter config '" + config +
-                        "' to class: '" + HttpFilterFactory.class.getSimpleName() + '\'', e);
-            }
+            filterConfig = XdsValidatorIndex.of().unpack(config, FilterConfig.class);
             return new ParsedFilterConfig(filterName, filterConfig.getConfig(), filterConfig.getIsOptional(),
                                           filterConfig.getDisabled());
         }
@@ -100,13 +93,7 @@ public final class ParsedFilterConfig {
         if (config == Any.getDefaultInstance()) {
             return null;
         }
-        try {
-            return config.unpack(clazz);
-        } catch (InvalidProtocolBufferException e) {
-            throw new IllegalArgumentException(
-                    "Unable to unpack filter config '" + config + "' to class: '" +
-                    clazz.getSimpleName() + '\'', e);
-        }
+        return XdsValidatorIndex.of().unpack(config, clazz);
     }
 
     /**

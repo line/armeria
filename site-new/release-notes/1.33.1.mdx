@@ -1,0 +1,31 @@
+---
+date: 2025-08-14
+---
+
+# v1.33.1
+
+## 🌟 New features
+
+- You can now use [@RequiresAthenzRole](type) when `armeria.athenz` is configured in Spring integration. #6348
+  ```yaml 
+  // in application.yml
+  armeria:
+    athenz:
+      zts-uri: https://athenz.example.com:8443/zts/v1
+      domains: my-athenz-provider-domain
+      athenz-private-key: /path/to/athenz_private.pem
+      athenz-public-key: /path/to/athenz_public.pem
+  ```
+
+## ⛓ Dependencies
+
+- Netty 4.2.3 → 4.2.4
+
+## 🙇 Thank you
+
+<ThankYou usernames={[
+  'ikhoon',
+  'jrhee17',
+  'minwoox',
+  'trustin'
+]} />

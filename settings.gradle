@@ -5,10 +5,10 @@ plugins {
     // If Gradle can’t find a locally available toolchain that matches the requirements of the build, it can
     // automatically download one based on the foojay Disco API.
     // https://docs.gradle.org/8.1.1/userguide/toolchains.html#sec:provisioning
-    id 'org.gradle.toolchains.foojay-resolver-convention' version '0.6.0'
-    id 'com.gradle.develocity' version '4.1'
+    id 'org.gradle.toolchains.foojay-resolver-convention' version '1.0.0'
+    id 'com.gradle.develocity' version '4.2.2'
     // adds additional metadata to build scans
-    id 'com.gradle.common-custom-user-data-gradle-plugin' version '2.3'
+    id 'com.gradle.common-custom-user-data-gradle-plugin' version '2.4.0'
 }
 
 import com.gradle.develocity.agent.gradle.scan.PublishedBuildScan
@@ -113,6 +113,7 @@ includeWithFlags ':jetty12',                             'java17', 'publish', 'r
 project(':jetty12').projectDir = file('jetty/jetty12')
 includeWithFlags ':junit4',                              'java', 'publish', 'relocate'
 includeWithFlags ':junit5',                              'java', 'publish', 'relocate'
+includeWithFlags ':jsonrpc',                             'java', 'publish', 'relocate'
 includeWithFlags ':kafka',                               'java', 'publish', 'relocate', 'native'
 includeWithFlags ':kotlin',                              'java', 'publish', 'relocate', 'kotlin', 'native'
 includeWithFlags ':kubernetes',                          'java11', 'publish', 'relocate', 'native'
@@ -197,6 +198,7 @@ includeWithFlags ':tomcat8',                             'java', 'publish', 'rel
 includeWithFlags ':tomcat9',                             'java', 'publish', 'relocate', 'no_aggregation'
 includeWithFlags ':tomcat10',                            'java11', 'publish', 'relocate'
 includeWithFlags ':xds',                                 'java', 'publish', 'relocate'
+includeWithFlags ':xds-api',                             'java', 'publish', 'relocate', 'javapgv', 'no_aggregation'
 includeWithFlags ':zookeeper3',                          'java', 'publish', 'relocate', 'native'
 includeWithFlags ':saml',                                'java', 'publish', 'relocate', 'native'
 includeWithFlags ':bucket4j',                            'java', 'publish', 'relocate', 'native'
@@ -241,7 +243,6 @@ includeWithFlags ':it:spring:boot3-jetty12',                   'java17', 'reloca
 includeWithFlags ':it:spring:boot3-kotlin',                    'java17', 'relocate', 'kotlin'
 includeWithFlags ':it:spring:boot3-mixed',                     'java17', 'relocate'
 includeWithFlags ':it:spring:boot3-mixed-tomcat10',            'java17', 'relocate'
-includeWithFlags ':it:spring:boot2-tomcat8',                   'java17', 'relocate'
 includeWithFlags ':it:spring:boot3-tomcat10',                  'java17', 'relocate'
 includeWithFlags ':it:spring:webflux-security',                'java17', 'relocate'
 includeWithFlags ':it:thrift-fullcamel',                       'java', 'relocate'

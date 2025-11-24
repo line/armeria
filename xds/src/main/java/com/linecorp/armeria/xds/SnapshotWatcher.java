@@ -41,5 +41,5 @@ public interface SnapshotWatcher<T> {
     /**
      * Invoked when an unexpected error occurs while processing a resource.
      */
-    default void onError(XdsType type, Status status) {}
+    default void onError(XdsType type, String resourceName, Status status) {}
 }

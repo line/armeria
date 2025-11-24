@@ -21,10 +21,12 @@ tasks.register('generateSources', Copy.class) {
     exclude '**/package-info.java'
 }
 
-tasks.compileJava.dependsOn(generateSources)
-tasks.processResources.dependsOn(generateSources)
-tasks.compileTestJava.dependsOn(generateSources)
-tasks.processTestResources.dependsOn(generateSources)
+tasks.withType(JavaCompile).configureEach {
+    dependsOn(generateSources)
+}
+tasks.withType(ProcessResources).configureEach {
+    dependsOn(generateSources)
+}
 
 ext {
     testThriftSrcDirs = ["$brave6ProjectDir/src/test/thrift"]

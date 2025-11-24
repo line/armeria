@@ -147,7 +147,7 @@ const ResponseStatusBar: React.FC<{
       style={{
         display: 'flex',
         flexWrap: 'wrap',
-        justifyContent: 'flex-end',
+        justifyContent: 'flex-start',
         alignItems: 'center',
         gap: '4px 16px',
         overflow: 'hidden',
@@ -155,25 +155,23 @@ const ResponseStatusBar: React.FC<{
       }}
     >
       <Typography
-        variant="body2"
+        variant="subtitle2"
         style={{
           display: 'flex',
           flexWrap: 'wrap',
         }}
       >
-        <span style={{ marginLeft: 16, color }}>
+        <span style={{ marginRight: 16, color }}>
           <strong>Status</strong>: {responseMetaData.status ?? '–'}
         </span>
-        <span style={{ marginLeft: 16 }}>
-          <strong>Execution Time</strong>:{' '}
-          {responseMetaData.executionTime ?? '–'} ms
+        <span style={{ marginRight: 16 }}>
+          <strong>Duration</strong>: {responseMetaData.executionTime ?? '–'} ms
         </span>
-        <span style={{ marginLeft: 16 }}>
-          <strong>Response Size</strong>: {responseMetaData.size ?? '–'} B
+        <span style={{ marginRight: 16 }}>
+          <strong>Size</strong>: {responseMetaData.size ?? '–'} B
         </span>
-        <span style={{ marginLeft: 16 }}>
-          <strong>Execution Timestamp</strong> :{' '}
-          {responseMetaData.timestamp ?? '-'}
+        <span>
+          <strong>Timestamp</strong> : {responseMetaData.timestamp ?? '-'}
         </span>
       </Typography>
     </Grid>
@@ -688,8 +686,8 @@ const DebugPage: React.FunctionComponent<Props> = ({
                   {responseHeadersString && (
                     <>
                       <Typography
-                        variant="subtitle1"
-                        style={{ marginTop: '1rem' }}
+                        variant="subtitle2"
+                        style={{ marginTop: '1rem', fontWeight: 'bold' }}
                       >
                         Response Headers:
                       </Typography>
@@ -702,7 +700,10 @@ const DebugPage: React.FunctionComponent<Props> = ({
                       </SyntaxHighlighter>
                     </>
                   )}
-                  <Typography variant="subtitle1" style={{ marginTop: '1rem' }}>
+                  <Typography
+                    variant="subtitle2"
+                    style={{ marginTop: '1rem', fontWeight: 'bold' }}
+                  >
                     Response Body:
                   </Typography>
                   <SyntaxHighlighter

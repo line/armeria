@@ -1,0 +1,25 @@
+dependencies {
+    configurations.configureEach {
+        resolutionStrategy {
+            force "com.google.protobuf:protobuf-java:${libs.versions.protobuf.asProvider().get()}"
+        }
+    }
+
+    compileOnly libs.protobuf.java
+    compileOnly libs.protobuf.java.util
+    compileOnly project(":grpc")
+    compileOnly libs.protoc.gen.validate
+    compileOnly libs.protoc.pgv.java.stub
+
+    testImplementation libs.protobuf.java
+    testImplementation libs.protobuf.java.util
+    testImplementation libs.protoc.pgv.java.stub
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.forkOptions.memoryMaximumSize = '1g'
+}
+
+tasks.withType(Javadoc).configureEach {
+    enabled = false
+}
