@@ -152,7 +152,7 @@ public final class FileAggregatedMultipart {
                 final String truncatedFilename;
                 if (filename.length() <= 20) {
                     truncatedFilename = filename;
-                } else if (dotIndex != -1) {
+                } else if (dotIndex > 0) {
                     final String name = filename.substring(0, dotIndex);
                     final String extension = filename.substring(dotIndex);
                     if (extension.length() >= 20) {

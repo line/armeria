@@ -571,7 +571,7 @@ public final class ContentDisposition {
                 sb.append((char) b);
             } else {
                 sb.append('=');
-                sb.append(String.format("%02X", b));
+                sb.append(String.format("%02X", b & 0xFF));
             }
         }
         sb.append("?=");
@@ -601,7 +601,7 @@ public final class ContentDisposition {
                 sb.append((char) b);
             } else {
                 sb.append('%');
-                sb.append(String.format("%02X", b));
+                sb.append(String.format("%02X", b & 0xFF));
             }
         }
         return sb.toString();
