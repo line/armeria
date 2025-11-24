@@ -41,6 +41,7 @@ import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.grpc.GrpcService;
 import com.linecorp.armeria.testing.junit5.common.EventLoopExtension;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
+import com.linecorp.armeria.xds.SotwXdsStream.ActualStream;
 
 import io.envoyproxy.controlplane.cache.v3.SimpleCache;
 import io.envoyproxy.controlplane.cache.v3.Snapshot;
@@ -100,7 +101,7 @@ class SotwXdsStreamTest {
 
         @Override
         public <I extends Message, O extends XdsResource> void handleResponse(
-                ResourceParser<I, O> resourceParser, DiscoveryResponse value, SotwXdsStream sender) {
+                ResourceParser<I, O> resourceParser, DiscoveryResponse value, ActualStream sender) {
             responses.add(value);
             sender.ackResponse(resourceParser.type(), value.getVersionInfo(), value.getNonce());
         }
@@ -146,7 +147,7 @@ class SotwXdsStreamTest {
 
             // now the stream is stopped, so no more updates
             stream.stop();
-            await().until(() -> stream.requestObserver == null);
+            await().until(() -> stream.actualStream == null);
 
             cache.setSnapshot(
                     GROUP,
@@ -186,7 +187,7 @@ class SotwXdsStreamTest {
 
             // stop the stream and verify there are no updates
             stream.stop();
-            await().until(() -> stream.requestObserver == null);
+            await().until(() -> stream.actualStream == null);
 
             cache.setSnapshot(
                     GROUP,
@@ -217,9 +218,10 @@ class SotwXdsStreamTest {
         final TestResponseHandler responseHandler = new TestResponseHandler() {
             @Override
             public <I extends Message, O extends XdsResource> void handleResponse(
-                    ResourceParser<I, O> resourceParser, DiscoveryResponse value, SotwXdsStream sender) {
+                    ResourceParser<I, O> resourceParser, DiscoveryResponse value, ActualStream sender) {
                 if (cntRef.getAndIncrement() < 3) {
-                    throw new RuntimeException("test");
+                    sender.onError(new Exception("error"));
+                    return;
                 }
                 try {
                     latch.await();
@@ -262,7 +264,7 @@ class SotwXdsStreamTest {
         final TestResponseHandler responseHandler = new TestResponseHandler() {
             @Override
             public <I extends Message, O extends XdsResource> void handleResponse(
-                    ResourceParser<I, O> resourceParser, DiscoveryResponse value, SotwXdsStream sender) {
+                    ResourceParser<I, O> resourceParser, DiscoveryResponse value, ActualStream sender) {
                 if (ackRef.get()) {
                     super.handleResponse(resourceParser, value, sender);
                 } else {
@@ -273,8 +275,8 @@ class SotwXdsStreamTest {
         };
 
         try (SotwXdsStream stream = new SotwXdsStream(
-                     stub, SERVER_INFO, Backoff.ofDefault(), eventLoop.get(), responseHandler,
-                     subscriberStorage)) {
+                stub, SERVER_INFO, Backoff.ofDefault(), eventLoop.get(), responseHandler,
+                subscriberStorage)) {
 
             await().pollDelay(100, TimeUnit.MILLISECONDS)
                    .untilAsserted(() -> assertThat(responseHandler.getResponses()).isEmpty());

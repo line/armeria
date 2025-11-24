@@ -68,7 +68,7 @@ final class ListenerManager implements SafeCloseable, SnapshotWatcher<ListenerSn
         nodes.put(listener.getName(), node);
 
         final ListenerXdsResource listenerResource =
-                ListenerResourceParser.INSTANCE.parse(listener);
+                ListenerResourceParser.INSTANCE.parse(listener, "", 0);
         eventLoop.execute(() -> node.onChanged(listenerResource));
     }
 

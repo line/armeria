@@ -16,9 +16,6 @@
 
 package com.linecorp.armeria.xds;
 
-import com.google.common.base.MoreObjects;
-import com.google.common.base.Objects;
-
 import com.linecorp.armeria.common.annotation.UnstableApi;
 
 import io.envoyproxy.envoy.config.endpoint.v3.ClusterLoadAssignment;
@@ -27,11 +24,12 @@ import io.envoyproxy.envoy.config.endpoint.v3.ClusterLoadAssignment;
  * A resource object for a {@link ClusterLoadAssignment}.
  */
 @UnstableApi
-public final class EndpointXdsResource implements XdsResource {
+public final class EndpointXdsResource extends AbstractXdsResource {
 
     private final ClusterLoadAssignment clusterLoadAssignment;
 
-    EndpointXdsResource(ClusterLoadAssignment clusterLoadAssignment) {
+    EndpointXdsResource(ClusterLoadAssignment clusterLoadAssignment,  String version, long revision) {
+        super(version, revision);
         XdsValidatorIndex.of().assertValid(clusterLoadAssignment);
         this.clusterLoadAssignment = clusterLoadAssignment;
     }
@@ -49,29 +47,5 @@ public final class EndpointXdsResource implements XdsResource {
     @Override
     public String name() {
         return clusterLoadAssignment.getClusterName();
-    }
-
-    @Override
-    public boolean equals(Object object) {
-        if (this == object) {
-            return true;
-        }
-        if (object == null || getClass() != object.getClass()) {
-            return false;
-        }
-        final EndpointXdsResource resource = (EndpointXdsResource) object;
-        return Objects.equal(clusterLoadAssignment, resource.clusterLoadAssignment);
-    }
-
-    @Override
-    public int hashCode() {
-        return Objects.hashCode(clusterLoadAssignment);
-    }
-
-    @Override
-    public String toString() {
-        return MoreObjects.toStringHelper(this)
-                          .add("clusterLoadAssignment", clusterLoadAssignment)
-                          .toString();
     }
 }
