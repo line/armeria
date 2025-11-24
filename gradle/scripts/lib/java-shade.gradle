@@ -113,7 +113,7 @@ configure(relocatedProjects) {
 // NB: Configure in a new closure so that all relocated projects have a 'shadedJar' task.
 configure(relocatedProjects) {
     if (project.hasFlags('trim')) {
-        // Task 'shadedJar' may produce a very large JAR. Rename it to '*-untrimmed-*.jar' and
+        // Task 'shadedJar' may produce a very large JAR. Rename it to '<artifact>-untrimmed-<version>-shaded.jar' and
         // let the task 'trimShadedJar' produce the trimmed JAR from it.
         tasks.shadedJar.archiveBaseName.set("${tasks.jar.archiveBaseName.get()}-untrimmed")
 
@@ -128,7 +128,9 @@ configure(relocatedProjects) {
             }
 
             def shadedFile = tasks.shadedJar.archiveFile.get().asFile
-            def shadedAndTrimmedFile = file(shadedFile.path.replaceFirst('-untrimmed-', '-shaded-'))
+            // Rename the output file to ''<artifact>-<version>-shaded.jar' by removing '-untrimmed' from
+            // the input file name.
+            def shadedAndTrimmedFile = file(shadedFile.path.replaceFirst('-untrimmed-', '-'))
 
             injars shadedFile
             // NB: By specifying 'outjars' *before* other 'injars' below, ProGuard will put only the classes
