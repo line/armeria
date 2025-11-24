@@ -74,12 +74,12 @@ public final class ArmeriaStreamableServerTransportProviderBuilder {
 
     /**
      * Sets the keep-alive interval for the server transport.
+     * By default, no keep-alive will be scheduled.
      *
-     * @param keepAliveInterval The interval for sending keep-alive messages. If null,
-     *                          no keep-alive will be scheduled.
+     * @param keepAliveInterval The interval for sending keep-alive messages.
      */
     public ArmeriaStreamableServerTransportProviderBuilder keepAliveInterval(Duration keepAliveInterval) {
-        this.keepAliveInterval = keepAliveInterval;
+        this.keepAliveInterval = requireNonNull(keepAliveInterval, "keepAliveInterval");
         return this;
     }
 
