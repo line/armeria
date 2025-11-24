@@ -252,7 +252,7 @@ public final class SamlServiceProviderBuilder {
      */
     public SamlServiceProviderBuilder ssoHandler(SamlSingleSignOnHandler ssoHandler) {
         checkState(relayStateMaxLength == null,
-                   "relayStateMaxLength() and sslHandler() are mutually exclusive.");
+                   "relayStateMaxLength() and ssoHandler() are mutually exclusive.");
         this.ssoHandler = requireNonNull(ssoHandler, "ssoHandler");
         return this;
     }
@@ -264,7 +264,7 @@ public final class SamlServiceProviderBuilder {
      * The value must be equal to or greater than {@value #DEFAULT_MIN_RELAY_STATE_MAX_LENGTH}.
      */
     public SamlServiceProviderBuilder relayStateMaxLength(int maxLength) {
-        checkState(ssoHandler == null, "relayStateMaxLength() and sslHandler() are mutually exclusive.");
+        checkState(ssoHandler == null, "relayStateMaxLength() and ssoHandler() are mutually exclusive.");
         checkArgument(maxLength >= DEFAULT_MIN_RELAY_STATE_MAX_LENGTH,
                       "maxLength: %s (expected: >= %s)", maxLength, DEFAULT_MIN_RELAY_STATE_MAX_LENGTH);
         relayStateMaxLength = maxLength;
