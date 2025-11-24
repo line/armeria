@@ -13,9 +13,6 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-/*
- * Copyright 2025-2025 the original author or authors.
- */
 
 package com.linecorp.armeria.server.ai.mcp;
 
@@ -68,7 +65,7 @@ public final class ArmeriaStreamableServerTransportProviderBuilder {
      * Sets whether the session removal capability is disabled.
      *
      * @param disallowDelete if {@code true}, the DELETE endpoint will not be supported and
-     * sessions won't be deleted.
+     *                       sessions won't be deleted.
      */
     public ArmeriaStreamableServerTransportProviderBuilder disallowDelete(boolean disallowDelete) {
         this.disallowDelete = disallowDelete;
@@ -79,9 +76,7 @@ public final class ArmeriaStreamableServerTransportProviderBuilder {
      * Sets the keep-alive interval for the server transport.
      *
      * @param keepAliveInterval The interval for sending keep-alive messages. If null,
-     * no keep-alive will be scheduled.
-     *
-     * @return this builder instance
+     *                          no keep-alive will be scheduled.
      */
     public ArmeriaStreamableServerTransportProviderBuilder keepAliveInterval(Duration keepAliveInterval) {
         this.keepAliveInterval = keepAliveInterval;

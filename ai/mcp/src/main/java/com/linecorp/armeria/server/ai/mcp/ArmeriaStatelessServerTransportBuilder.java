@@ -13,9 +13,6 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-/*
- * Copyright 2025-2025 the original author or authors.
- */
 
 package com.linecorp.armeria.server.ai.mcp;
 
@@ -69,5 +66,4 @@ public final class ArmeriaStatelessServerTransportBuilder {
     public ArmeriaStatelessServerTransport build() {
         return new ArmeriaStatelessServerTransport(jsonMapper, contextExtractor);
     }
-
 }

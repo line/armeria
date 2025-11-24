@@ -105,8 +105,7 @@ public final class ArmeriaStatelessServerTransport implements McpStatelessServer
      * Returns the {@link HttpService} that defines the transport's HTTP endpoints.
      * This {@link HttpService} should be registered to Armeria {@link Server}.
      *
-     * <p>
-     * The {@link HttpService} defines one endpoint with two methods:
+     * <p>The {@link HttpService} defines one endpoint with two methods:
      * <ul>
      *   <li>GET - Unsupported, returns 405 METHOD NOT ALLOWED</li>
      *   <li>POST - For handling client requests and notifications</li>
@@ -127,8 +126,8 @@ public final class ArmeriaStatelessServerTransport implements McpStatelessServer
 
             if (!canAcceptSse(req.headers())) {
                 return HttpResponse.of(HttpStatus.BAD_REQUEST, MediaType.PLAIN_TEXT,
-                                       "Accept header must include both application/json "
-                                       + "and text/event-stream");
+                                       "Accept header must include both application/json " +
+                                       "and text/event-stream");
             }
 
             return HttpResponse.of(req.aggregate().thenCompose(agg -> {

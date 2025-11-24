@@ -129,9 +129,10 @@ class ArmeriaStreamableIntegrationTests extends AbstractMcpClientServerIntegrati
                             // TODO(ikhoon): Open a pull request to the upstream to fix the test.
                             return exchange.createElicitation(elicitationRequest).doOnNext(result -> {
                                                assertThat(result).isNotNull();
-                                               assertThat(result.action()).isEqualTo(
-                                                       McpSchema.ElicitResult.Action.ACCEPT);
-                                               assertThat(result.content().get("message")).isEqualTo("Test message");
+                                               assertThat(result.action())
+                                                       .isEqualTo(McpSchema.ElicitResult.Action.ACCEPT);
+                                               assertThat(result.content().get("message"))
+                                                       .isEqualTo("Test message");
                                            })
                                            .thenReturn(callResponse);
                         })
@@ -143,15 +144,17 @@ class ArmeriaStreamableIntegrationTests extends AbstractMcpClientServerIntegrati
                         .tools(tool)
                         .build();
 
-        try (McpSyncClient mcpClient = clientBuilder.clientInfo(new McpSchema.Implementation("Sample client", "0.0.0"))
-                                                    .capabilities(ClientCapabilities.builder().elicitation().build())
-                                                    .elicitation(elicitationHandler)
-                                                    .build()) {
+        try (McpSyncClient mcpClient =
+                     clientBuilder.clientInfo(new McpSchema.Implementation("Sample client", "0.0.0"))
+                                  .capabilities(ClientCapabilities.builder().elicitation().build())
+                                  .elicitation(elicitationHandler)
+                                  .build()) {
 
             final InitializeResult initResult = mcpClient.initialize();
             assertThat(initResult).isNotNull();
 
-            final CallToolResult response = mcpClient.callTool(new McpSchema.CallToolRequest("tool1", Map.of()));
+            final CallToolResult response = mcpClient.callTool(
+                    new McpSchema.CallToolRequest("tool1", Map.of()));
 
             assertThat(response).isNotNull();
             assertThat(response).isEqualTo(callResponse);

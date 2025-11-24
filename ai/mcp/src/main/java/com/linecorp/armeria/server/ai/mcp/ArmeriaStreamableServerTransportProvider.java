@@ -58,6 +58,7 @@ import io.modelcontextprotocol.json.TypeRef;
 import io.modelcontextprotocol.server.McpTransportContextExtractor;
 import io.modelcontextprotocol.spec.HttpHeaders;
 import io.modelcontextprotocol.spec.McpSchema;
+import io.modelcontextprotocol.spec.McpSchema.InitializeRequest;
 import io.modelcontextprotocol.spec.McpSchema.JSONRPCMessage;
 import io.modelcontextprotocol.spec.McpSchema.JSONRPCResponse;
 import io.modelcontextprotocol.spec.McpStreamableServerSession;
@@ -78,6 +79,7 @@ import reactor.util.context.Context;
  */
 @UnstableApi
 public final class ArmeriaStreamableServerTransportProvider implements McpStreamableServerTransportProvider {
+    private static final TypeRef<InitializeRequest> INIT_REQ_TYPE_REF = new TypeRef<>() {};
 
     // Forked from https://github.com/modelcontextprotocol/java-sdk/blob/14ff4a385dc8b953886a56966b675a0794b72638/mcp-spring/mcp-spring-webflux/src/main/java/io/modelcontextprotocol/server/transport/WebFluxStreamableServerTransportProvider.java
     // to adapt to Armeria HttpService.
@@ -114,9 +116,9 @@ public final class ArmeriaStreamableServerTransportProvider implements McpStream
     private McpStreamableServerSession.Factory sessionFactory;
     private volatile boolean isClosing;
 
-    ArmeriaStreamableServerTransportProvider(McpJsonMapper jsonMapper,
-                                             McpTransportContextExtractor<ServiceRequestContext> contextExtractor,
-                                             boolean disallowDelete, @Nullable Duration keepAliveInterval) {
+    ArmeriaStreamableServerTransportProvider(
+            McpJsonMapper jsonMapper, McpTransportContextExtractor<ServiceRequestContext> contextExtractor,
+            boolean disallowDelete, @Nullable Duration keepAliveInterval) {
         requireNonNull(jsonMapper, "jsonMapper");
         requireNonNull(contextExtractor, "contextExtractor");
 
@@ -185,8 +187,7 @@ public final class ArmeriaStreamableServerTransportProvider implements McpStream
      * Returns the {@link HttpService} that defines the transport's HTTP endpoints.
      * This {@link HttpService} should be registered to Armeria {@link Server}.
      *
-     * <p>
-     * The {@link HttpService} defines one endpoint with three methods:
+     * <p>The {@link HttpService} defines one endpoint with three methods:
      * <ul>
      *   <li>GET - For the client listening SSE stream</li>
      *   <li>POST - For receiving client messages</li>
@@ -257,8 +258,8 @@ public final class ArmeriaStreamableServerTransportProvider implements McpStream
 
             if (!canAcceptSse(req.headers())) {
                 return HttpResponse.of(HttpStatus.BAD_REQUEST, MediaType.PLAIN_TEXT,
-                                       "Accept header must include both application/json "
-                                       + "and text/event-stream");
+                                       "Accept header must include both application/json " +
+                                       "and text/event-stream");
             }
 
             return HttpResponse.of(req.aggregate().thenCompose(agg -> {
@@ -279,17 +280,16 @@ public final class ArmeriaStreamableServerTransportProvider implements McpStream
             final McpTransportContext mcpContext = contextExtractor.extract(ctx);
             final McpSchema.JSONRPCMessage message = McpSchema.deserializeJsonRpcMessage(jsonMapper, jsonText);
             ctx.logBuilder().requestContent(message, message);
-            if (message instanceof McpSchema.JSONRPCRequest jsonrpcRequest
-                && jsonrpcRequest.method().equals(McpSchema.METHOD_INITIALIZE)) {
-                final TypeRef<McpSchema.InitializeRequest> typeReference = new TypeRef<>() {};
+            if (message instanceof McpSchema.JSONRPCRequest rpcRequest &&
+                rpcRequest.method().equals(McpSchema.METHOD_INITIALIZE)) {
                 final McpSchema.InitializeRequest initializeRequest =
-                        jsonMapper.convertValue(jsonrpcRequest.params(), typeReference);
+                        jsonMapper.convertValue(rpcRequest.params(), INIT_REQ_TYPE_REF);
                 assert sessionFactory != null;
                 final McpStreamableServerSession.McpStreamableServerSessionInit init =
                         sessionFactory.startSession(initializeRequest);
                 sessions.put(init.session().getId(), init.session());
                 return init.initResult().map(initializeResult -> {
-                               return serialize(new JSONRPCResponse(McpSchema.JSONRPC_VERSION, jsonrpcRequest.id(),
+                               return serialize(new JSONRPCResponse(McpSchema.JSONRPC_VERSION, rpcRequest.id(),
                                                                     initializeResult, null));
                            })
                            .contextWrite(writeContext(mcpContext))
