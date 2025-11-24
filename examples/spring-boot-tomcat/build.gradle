@@ -4,15 +4,16 @@ plugins {
 
 dependencies {
     implementation project(':core')
-    implementation project(':spring:boot3-starter')
+    implementation project(':spring:boot4-starter')
     implementation project(':tomcat10')
 
-    implementation libs.spring.boot3.starter.web
-    annotationProcessor libs.spring.boot3.configuration.processor
+    implementation libs.spring.boot4.starter.web
+    annotationProcessor libs.spring.boot4.configuration.processor
 
-    runtimeOnly project(':spring:boot3-actuator-starter')
+    runtimeOnly project(':spring:boot4-actuator-starter')
 
     testImplementation libs.assertj
     testImplementation libs.junit5.jupiter.api
-    testImplementation libs.spring.boot3.starter.test
+    testImplementation libs.spring.boot4.starter.test
+    testImplementation libs.spring.boot4.webmvc.test
 }

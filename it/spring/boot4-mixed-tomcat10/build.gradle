@@ -1,0 +1,12 @@
+dependencies {
+    implementation project(':spring:boot4-starter')
+    implementation project(':spring:boot4-webflux-starter')
+    implementation project(':tomcat10')
+    implementation libs.spring.boot4.health
+    implementation(libs.spring.boot4.starter.web) {
+        exclude group: 'org.springframework.boot', module: 'spring-boot-starter-tomcat'
+    }
+    implementation libs.spring.boot4.tomcat
+    implementation libs.spring7.web
+    testImplementation libs.spring.boot4.starter.test
+}

@@ -185,7 +185,6 @@ class MultipartCollectIntegrationTest {
 
         // To allow sending large file
         final SimpleClientHttpRequestFactory requestFactory = new SimpleClientHttpRequestFactory();
-        requestFactory.setBufferRequestBody(false);
         final RestTemplate restTemplate = new RestTemplate(requestFactory);
         final ResponseEntity<String> response =
                 restTemplate.postForEntity(server.httpUri().resolve("/multipart/large-file"), requestEntity,

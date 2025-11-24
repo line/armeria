@@ -1,7 +1,8 @@
 dependencies {
-    testImplementation project(":spring:boot3-webflux-starter")
+    testImplementation project(":spring:boot4-webflux-starter")
 
-    testImplementation libs.spring.boot3.starter.security
-    testImplementation libs.spring.boot3.starter.test
-    testImplementation libs.spring.boot3.starter.webflux
+    testImplementation libs.spring.boot4.health
+    testImplementation libs.spring.boot4.starter.security
+    testImplementation libs.spring.boot4.starter.test
+    testImplementation libs.spring.boot4.starter.webflux
 }

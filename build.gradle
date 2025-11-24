@@ -22,8 +22,6 @@ plugins {
     alias libs.plugins.nexus.publish
     alias libs.plugins.kotlin apply false
     alias libs.plugins.ktlint apply false
-    alias libs.plugins.errorprone apply false
-    alias libs.plugins.nullaway apply false
 }
 
 allprojects {

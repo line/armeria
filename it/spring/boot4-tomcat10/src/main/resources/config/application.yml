@@ -1,0 +1,9 @@
+armeria:
+  ports:
+    - port: 0
+      protocols: HTTP
+
+spring:
+  web:
+    error:
+      include-message: always

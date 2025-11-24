@@ -1,3 +1,5 @@
+import com.linecorp.armeria.conventions.spring.SpringBuildUtil
+
 dependencies {
     api libs.spring.boot2.actuator.autoconfigure
     api libs.javax.inject
@@ -16,26 +18,24 @@ dependencies {
     testImplementation project(':spring:boot2-starter')
 }
 
-// Use the sources from ':spring:boot3-actuator-autoconfigure'.
 def boot3Actuator = "boot3-actuator-autoconfigure"
-def boot3ActuatorProjectDir = "${rootProject.projectDir}/spring/$boot3Actuator"
+def boot4Actuator = "boot4-actuator-autoconfigure"
 
-tasks.register('generateTestSources', Copy.class) {
-    from "${boot3ActuatorProjectDir}/src/test/java"
-    into "${project.ext.genSrcDir}/test/java"
-
+SpringBuildUtil.copyTestSources(project(":spring:${boot4Actuator}"), project) {
+    include "**/*.java"
+    filter { String line ->
+        line.replaceAll(/\bjakarta\.annotation\./, 'javax.annotation.')
+                .replaceAll(/\bjakarta\.validation\./, 'javax.validation.')
+                .replaceAll(/\bjakarta\.persistence\./, 'javax.persistence.')
+                .replaceAll(/\bjakarta\./, 'javax.')
+    }
     exclude "**/EnableTestMetrics.java"
+    exclude "**/SettableHealthIndicator.java"
 }
 
-tasks.compileJava.dependsOn(project(":spring:$boot3Actuator").tasks.compileJava)
-tasks.compileTestJava.dependsOn(project(":spring:$boot3Actuator").tasks.compileTestJava)
-tasks.compileTestJava.dependsOn(tasks.generateTestSources)
-tasks.sourcesJar.dependsOn(project(":spring:$boot3Actuator").tasks.sourcesJar)
+SpringBuildUtil.useMainSources(project(":spring:${boot4Actuator}"), project) {
+    exclude "**/HealthConfiguration.java"
+    exclude "**/package-info.java"
+}
 
-tasks.compileJava.source "${boot3ActuatorProjectDir}/src/main/java",
-        "${boot3ActuatorProjectDir}/gen-src/main/java"
-tasks.compileTestJava.source "${boot3ActuatorProjectDir}/gen-src/test/java"
-tasks.processTestResources.from "${boot3ActuatorProjectDir}/src/test/resources"
-tasks.sourcesJar.from "${boot3ActuatorProjectDir}/src/main/java", "${boot3ActuatorProjectDir}/gen-src/main/java"
-tasks.sourcesJar.from "${boot3ActuatorProjectDir}/src/main/resources"
-tasks.javadoc.source "${boot3ActuatorProjectDir}/src/main/java", "${boot3ActuatorProjectDir}/gen-src/main/java"
+SpringBuildUtil.useMainSources(project(":spring:${boot3Actuator}"), project)

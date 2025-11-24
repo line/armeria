@@ -1,0 +1,31 @@
+dependencies {
+    // To let a user choose between thrift and thrift0.9.
+    compileOnly project(':thrift0.18')
+    implementation project(':logback')
+
+    optionalApi project(':prometheus1')
+    optionalApi libs.micrometer.prometheus.legacy
+    optionalApi libs.dropwizard.metrics.json
+
+    api libs.jakarta.inject
+    api libs.spring.boot4.autoconfigure
+    compileOnly libs.jakarta.validation
+    annotationProcessor libs.spring.boot4.configuration.processor
+
+    testImplementation project(':grpc')
+    testImplementation project(':thrift0.18')
+    testImplementation libs.spring.boot4.starter
+    testImplementation libs.spring.boot4.starter.actuator
+    testImplementation libs.spring.boot4.starter.test
+    // Enables cglib for testing
+    testImplementation("org.springframework:spring-aspects:7.0.1")
+    // Added for sharing test suites with boot2
+    testImplementation libs.javax.inject
+}
+
+// allows illegal access by cglib
+if (project.ext.testJavaVersion >= 16) {
+    tasks.withType(Test) {
+        jvmArgs '--add-opens=java.base/java.lang=ALL-UNNAMED'
+    }
+}

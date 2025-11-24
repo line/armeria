@@ -1,0 +1,8 @@
+dependencies {
+    implementation project(':spring:boot4-actuator-autoconfigure')
+    api libs.spring.boot4.starter.actuator
+}
+
+tasks.withType(Test).configureEach {
+    failOnNoDiscoveredTests = false
+}

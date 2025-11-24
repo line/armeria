@@ -1,0 +1,15 @@
+dependencies {
+    implementation project(':spring:boot4-starter')
+    implementation project(':spring:boot4-actuator-starter')
+    implementation project(':tomcat10')
+    implementation libs.spring.boot4.micrometer.metrics.test
+    implementation(libs.spring.boot4.starter.web) {
+        exclude group: 'org.springframework.boot', module: 'spring-boot-starter-tomcat'
+    }
+    implementation libs.spring.boot4.web.server
+    implementation (libs.spring.boot4.tomcat) {
+        exclude group: 'org.apache.tomcat.embed', module: 'tomcat-embed-core'
+    }
+    implementation libs.spring7.web
+    testImplementation libs.spring.boot4.starter.test
+}
