@@ -134,7 +134,7 @@ public final class ArmeriaStatelessServerTransport implements McpStatelessServer
                 try {
                     return handlePost(ctx, agg.contentUtf8());
                 } catch (IllegalArgumentException | IOException e) {
-                    logger.warn("Failed to deserialize message: {}", e.getMessage(), e);
+                    logger.debug("Failed to deserialize message: {}", e.getMessage(), e);
                     final HttpResponse response =
                             HttpResponse.ofJson(HttpStatus.BAD_REQUEST, JsonRpcResponse.ofFailure(
                                     JsonRpcError.PARSE_ERROR.withData("Invalid message format")));

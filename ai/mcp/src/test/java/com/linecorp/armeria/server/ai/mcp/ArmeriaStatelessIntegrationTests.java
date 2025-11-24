@@ -54,7 +54,7 @@ class ArmeriaStatelessIntegrationTests extends AbstractStatelessIntegrationTests
         clientBuilders
                 .put("httpclient",
                      McpClient.sync(HttpClientStreamableHttpTransport
-                                            .builder("http://localhost:" + port)
+                                            .builder("http://127.0.0.1:" + port)
                                             .endpoint(CUSTOM_MESSAGE_ENDPOINT)
                                             .build())
                               .initializationTimeout(Duration.ofHours(10))
@@ -63,7 +63,7 @@ class ArmeriaStatelessIntegrationTests extends AbstractStatelessIntegrationTests
         clientBuilders
                 .put("webflux", McpClient
                         .sync(WebClientStreamableHttpTransport
-                                      .builder(WebClient.builder().baseUrl("http://localhost:" + port))
+                                      .builder(WebClient.builder().baseUrl("http://127.0.0.1:" + port))
                                       .endpoint(CUSTOM_MESSAGE_ENDPOINT)
                                       .build())
                         .initializationTimeout(Duration.ofHours(10))
