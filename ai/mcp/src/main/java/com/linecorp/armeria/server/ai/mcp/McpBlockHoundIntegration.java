@@ -31,5 +31,8 @@ public final class McpBlockHoundIntegration implements BlockHoundIntegration {
         // startSession uses UUID.randomUUID() to generate session IDs.
         builder.allowBlockingCallsInside(
                 "io.modelcontextprotocol.spec.DefaultMcpStreamableServerSessionFactory", "startSession");
+        builder.allowBlockingCallsInside(
+                "io.modelcontextprotocol.spec.McpStreamableServerSession$McpStreamableServerSessionStream",
+                "<init>");
     }
 }
