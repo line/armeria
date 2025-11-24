@@ -128,7 +128,7 @@ configure(relocatedProjects) {
             }
 
             def shadedFile = tasks.shadedJar.archiveFile.get().asFile
-            // Rename the output file to ''<artifact>-<version>-shaded.jar' by removing '-untrimmed' from
+            // Rename the output file to '<artifact>-<version>-shaded.jar' by removing '-untrimmed' from
             // the input file name.
             def shadedAndTrimmedFile = file(shadedFile.path.replaceFirst('-untrimmed-', '-'))
 
