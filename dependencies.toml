@@ -81,7 +81,8 @@ junit5 = "5.14.1"
 # Don't upgrade junit-pioneer to 2.x.x that requires Java 11
 junit-pioneer = "1.9.1"
 jwt = "4.5.0"
-kafka = "4.1.1"
+# kafka >=4.0.0 requires java 11
+kafka = "3.9.1"
 kotlin = "2.2.21"
 kotlin-coroutine = "1.10.2"
 krotodc = "1.2.2"
