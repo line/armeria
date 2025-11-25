@@ -389,7 +389,10 @@ public final class ArmeriaStreamableServerTransportProvider implements McpStream
             return HttpResponse.of(session.delete()
                                           .contextWrite(writeContext(mcpContext))
                                           .toFuture()
-                                          .thenApply(unused -> HttpResponse.of(HttpStatus.OK)));
+                                          .thenApply(unused -> {
+                                              sessions.remove(sessionId);
+                                              return HttpResponse.of(HttpStatus.OK);
+                                          }));
         }
     }
 
