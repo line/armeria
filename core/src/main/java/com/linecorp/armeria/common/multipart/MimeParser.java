@@ -30,13 +30,13 @@
  */
 package com.linecorp.armeria.common.multipart;
 
-import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.util.regex.Pattern;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpHeadersBuilder;
@@ -59,7 +59,8 @@ final class MimeParser {
     private static final Logger logger = LoggerFactory.getLogger(MimeParser.class);
 
     private static final ByteBuf NEED_MORE = Unpooled.buffer(1);
-    private static final Charset HEADER_ENCODING = StandardCharsets.ISO_8859_1;
+    private static final MultipartFilenameDecodingMode MULTIPART_FILENAME_DECODING_MODE =
+            Flags.defaultMultipartFilenameDecodingMode();
 
     /**
      * Boundary as bytes.
@@ -545,7 +546,12 @@ final class MimeParser {
         final ByteBuf byteBuf = in.readBytes(headerLength);
         try {
             in.skipBytes(lwsp);
-            return new String(ByteBufUtil.getBytes(byteBuf), HEADER_ENCODING);
+            if (MULTIPART_FILENAME_DECODING_MODE == MultipartFilenameDecodingMode.UTF_8 ||
+                MULTIPART_FILENAME_DECODING_MODE == MultipartFilenameDecodingMode.URL_DECODING) {
+                return new String(ByteBufUtil.getBytes(byteBuf), StandardCharsets.UTF_8);
+            }
+
+            return new String(ByteBufUtil.getBytes(byteBuf), StandardCharsets.ISO_8859_1);
         } finally {
             byteBuf.release();
         }
