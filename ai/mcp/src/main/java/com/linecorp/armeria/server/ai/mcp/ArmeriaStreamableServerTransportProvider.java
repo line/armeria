@@ -218,6 +218,14 @@ public final class ArmeriaStreamableServerTransportProvider implements McpStream
                 return HttpResponse.of(HttpStatus.BAD_REQUEST, MediaType.PLAIN_TEXT,
                                        "Missing required header: " + HttpHeaders.MCP_SESSION_ID);
             }
+            // Use a blocking execute since MCP implementations may perform blocking operations.
+            final CompletableFuture<HttpResponse> future =
+                    CompletableFuture.supplyAsync(() -> handleGet(ctx, req, sessionId),
+                                                  ctx.blockingTaskExecutor());
+            return HttpResponse.of(future);
+        }
+
+        private HttpResponse handleGet(ServiceRequestContext ctx, HttpRequest req, String sessionId) {
             final McpStreamableServerSession session = sessions.get(sessionId);
             if (session == null) {
                 return HttpResponse.of(HttpStatus.BAD_REQUEST, MediaType.PLAIN_TEXT,
@@ -262,7 +270,8 @@ public final class ArmeriaStreamableServerTransportProvider implements McpStream
                                        "and text/event-stream");
             }
 
-            return HttpResponse.of(req.aggregate().thenCompose(agg -> {
+            // Use a blocking execute since MCP implementations may perform blocking operations.
+            return HttpResponse.of(req.aggregate().thenComposeAsync(agg -> {
                 try {
                     return handlePost(ctx, agg.contentUtf8());
                 } catch (IllegalArgumentException | IOException e) {
@@ -272,7 +281,7 @@ public final class ArmeriaStreamableServerTransportProvider implements McpStream
                                     JsonRpcError.PARSE_ERROR.withData("Invalid message format")));
                     return UnmodifiableFuture.completedFuture(response);
                 }
-            }));
+            }, ctx.blockingTaskExecutor()));
         }
 
         private CompletableFuture<HttpResponse> handlePost(ServiceRequestContext ctx, String jsonText)

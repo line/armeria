@@ -130,7 +130,7 @@ public final class ArmeriaStatelessServerTransport implements McpStatelessServer
                                        "and text/event-stream");
             }
 
-            return HttpResponse.of(req.aggregate().thenCompose(agg -> {
+            return HttpResponse.of(req.aggregate().thenComposeAsync(agg -> {
                 try {
                     return handlePost(ctx, agg.contentUtf8());
                 } catch (IllegalArgumentException | IOException e) {
@@ -140,7 +140,7 @@ public final class ArmeriaStatelessServerTransport implements McpStatelessServer
                                     JsonRpcError.PARSE_ERROR.withData("Invalid message format")));
                     return UnmodifiableFuture.completedFuture(response);
                 }
-            }));
+            }, ctx.blockingTaskExecutor()));
         }
 
         private CompletableFuture<HttpResponse> handlePost(ServiceRequestContext ctx, String jsonText)
