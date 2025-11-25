@@ -1,0 +1,179 @@
+---
+date: 2025-11-28
+---
+
+## 🌟 New features
+
+- **Model Context Protocol (MCP) Server**: You can now build [MCP](https://modelcontextprotocol.io/) services on top of Armeria using the `armeria-mcp` module. #6513 #6492
+  ```java
+  // Create an MCP server transport
+  var transport =
+        ArmeriaStreamableServerTransportProvider
+                .builder()
+                .jsonMapper(...)
+                .contextExtractor(...)
+                .build();
+  // Build the MCP server with your tools and resources
+  McpServer mcpServer = McpServer.async(transport)
+                                 .tools(myTool)
+                                 .resources(myResource)
+                                 .build();
+  // Serve MCP via Armeria
+  Server server =
+    Server.builder()
+          .service("/mcp/message", transport.httpService()) // 👈👈👈
+          .build();
+  ```
+- **Retry Limiting**: You can now limit retry requests using <type://RetryLimiter> to prevent system overload during prolonged service degradation. #6409
+  ```java
+  RetryRule rule = ...
+  RetryConfig config =
+    RetryConfig.builder(rule)
+               .retryLimiter(RetryLimiter.concurrencyLimiting(3)) // 👈👈👈
+               .build();
+  var retryingClient = RetryingClient.newDecorator(config);
+  ```
+- **JSON-RPC 2.0 Protocol Support**: You can now build [JSON-RPC](https://www.jsonrpc.org/) services using the `armeria-jsonrpc` module. #6504 #6487 #6289
+  ```java
+  JsonRpcService jsonRpcService = JsonRpcService
+        .builder()
+        .methodHandler("echo", (ctx, req) -> {
+            // handle the request
+        })
+        .build();
+
+  ServerBuilder sb = Server
+        .builder()
+        .service("/json-rpc", jsonRpcService); // 👈👈👈
+  ```
+- **Support for Multipart Requests with Duplicate Names**: You can now handle multipart requests that contain multiple parts with the same form field name. #6419 #6430
+  ```java
+  @Post("/upload")
+  public void upload(@Param("file") List<MultipartFile> files) { // 👈👈👈
+    ...
+  }
+  ```
+- **AnnotatedService with JSpecify**: You can now use <type://AnnotatedService> with [JSpecify](https://jspecify.dev/)'s `@Nullable` annotations. #6454 #6457
+  ```java
+  public class MyAnnotatedService {
+    @Get("/hello")
+    public String hello(@org.jspecify.annotations.Nullable String value) {
+        ...
+    }
+  }
+  ```
+- **HTTP Compression Algorithm Control**: You can now configure which compression algorithms to use with <type://EncodingService>. #6390 #6398
+  ```java
+  EncodingService encodingService =
+    EncodingService.builder()
+                   .encoderFactories( // 👈👈👈
+                     StreamEncoderFactories.GZIP,
+                     StreamEncoderFactories.DEFLATE,
+                     new MyCustomBrotliEncoderFactory())
+                   .build();
+  ```
+- **Athenz Authentication Metrics**: `armeria-athenz` exports metrics of your Athenz-secured services by default. #6423 #6517
+  - You may also configure the metrics:
+  ```java
+  var ztsBaseClient =
+        ZtsBaseClient.builder(ztsUri)
+                     .enableMetrics(meterRegistry, meterIdPrefixFunction) // 👈👈👈
+                     ...
+                     .build();
+  // For services
+  var decoratorFactory = AthenzServiceDecoratorFactory
+          .builder(ztsBaseClient)
+          .meterIdPrefix(myMeterIdPrefix) // 👈👈👈
+          ...
+          .build();
+  // For clients
+  var athenzClient = AthenzClient
+        .builder(ztsBaseClient)
+        .meterIdPrefix(myMeterIdPrefix) // 👈👈👈
+        ...
+        .newDecorator();
+  ```
+- **Multipart File Upload Encoding Configuration**: You can now configure how multipart filenames are decoded #6465
+  - Use `-Dcom.linecorp.armeria.defaultMultipartFilenameDecodingMode` with `utf_8`, `iso_8859_1`, or `url_decoding`.
+- **SAML RelayState Length Configuration**: You can now configure the maximum length for SAML RelayState parameters. #6381
+  ```java
+  SamlServiceProvider sp =
+    SamlServiceProvider
+        .builder()
+        .relayStateMaxLength(256) // 👈👈👈 Default is 80
+        ...
+  ```
+
+## 📈 Improvements
+
+- Comprehensive improvements to the `armeria-xds` module. #6470 #6469 #6468 #6474 #6475 #6403 #6366 #6461
+  - Improved logs and metrics for better observability.
+  - `protoc-gen-validate` is applied for all xDS resources by default.
+  - Support for Envoy's `RetryPolicy` has been added.
+
+## 🛠️ Bug fixes
+
+- <type://ServiceRequestContext> validation has been improved to avoid false-positive exceptions. #6420 #6479
+  - Pushing a <type://ServiceRequestContext>-based <type://RequestContext> to a thread that does not already have a <type://ServiceRequestContext> no longer emits an <type://IllegalStateException>.
+- Resolved duplicate decorator registration in <type://ZtsBaseClient> when using <type://ArmeriaAutoConfiguration>. #6424
+- <type://ContentPreviewerFactory> no longer unnecessarily logs content for binary types. #6485
+- Trailers-only gRPC responses no longer include incorrect `Content-Length` headers #6511
+- A closing WebSocket session no longer sends an unnecessary `RST_STREAM` frame. #6375
+- <type://RejectedRouterHandler#FAIL> correctly throws an exception when duplicate routes are detected. #6498 #6499
+- JSON formatting has been fixed in the <type://DocService> debug console. #6434
+- <type://DocService> no longer sends `Content-Type` headers for HTTP methods that don't have request bodies. #6442
+- A warning log is no longer emitted for certificates missing both a Subject Alternative Name (SAN) and a Common Name (CN). #6477
+- `armeria-logback`'s MDC export works correctly when `-Dcom.linecorp.armeria.warnNettyVersions` is set to false. #6428
+
+## ☢️ Breaking changes
+
+- The default decoding mode for multipart request filenames is now UTF-8 instead of ISO-8859-1.
+  - For the previous behavior, set the system property `-Dcom.linecorp.armeria.defaultMultipartFilenameDecodingMode=iso_8859_1`. #6465
+- Dropwizard 1.x integration is no longer supported. #6515
+
+## ⛓ Dependencies
+
+- Athenz 1.12.21 → 1.12.29
+- Bouncy Castle 1.81 → 1.82
+- Brotli4j 1.18.0 → 1.20.0
+- GraphQL Java 24.2 → 25.0
+- gRPC Java 1.74.0 → 1.77.0
+- Jackson 2.19.2 → 2.20.1
+- Jetty 10.0.20 → 10.0.26, 11.0.25 → 11.0.26
+- Kotlin 2.1.10 → 2.2.21
+- Kotlin Coroutines 1.10.1 → 1.10.2
+- Kubernetes Client 7.3.1 → 7.4.0
+- Logback 1.5.18 → 1.5.21
+- Micrometer 1.15.2 → 1.16.0
+- Micrometer Context Propagation 1.1.3 → 1.2.0
+- Micrometer Tracing 1.5.2 → 1.6.0
+- Netty 4.2.6.Final → 4.2.7.Final
+- Prometheus 1.3.10 → 1.4.3
+- Protobuf 3.25.5 → 3.25.8, 4.29.3 → 4.33.1
+- Protobuf Jackson 2.7.0 → 2.8.1
+- Reactor Core 3.7.8 → 3.8.0
+- Reactor Kotlin Extensions 1.2.3 → 1.3.0
+- RxJava 3.1.11 → 3.1.12
+- Sangria 4.2.10 → 4.2.15
+- ScalaPB 0.11.17 → 0.11.20
+- ScalaPB JSON 0.12.1 → 0.12.2
+- Spring 6.2.9 → 6.2.14
+- Spring Boot 3.5.7 → 3.5.8
+- Tomcat 10.1.31 → 10.1.49
+
+
+## 🙇 Thank you
+
+<ThankYou usernames={[
+  '0x1306e6d',
+  'chickenchickenlove',
+  'hirakida',
+  'ikhoon',
+  'jrhee17',
+  'minwoox',
+  'patcher454',
+  'schiemon',
+  'sh-cho',
+  'triberraar',
+  'trustin'
+]} />
