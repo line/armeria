@@ -44,8 +44,9 @@ abstract class AbstractRoot<T extends Snapshot<? extends XdsResource>>
     private final Set<SnapshotWatcher<? super T>> snapshotWatchers = new HashSet<>();
     private boolean closed;
 
-    AbstractRoot(EventExecutor eventLoop) {
+    AbstractRoot(EventExecutor eventLoop, SnapshotWatcher<Object> defaultWatcher) {
         this.eventLoop = eventLoop;
+        snapshotWatchers.add(defaultWatcher);
     }
 
     /**

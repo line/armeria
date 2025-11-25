@@ -16,24 +16,19 @@
 
 package com.linecorp.armeria.xds;
 
-import com.linecorp.armeria.common.metric.MeterIdPrefix;
+import java.util.function.Consumer;
 
-import io.micrometer.core.instrument.MeterRegistry;
-import io.netty.util.concurrent.EventExecutor;
+final class WatcherUtil {
 
-interface SubscriptionContext {
+    static Runnable safeRunnable(Runnable runnable, Consumer<Throwable> onError) {
+        return () -> {
+            try {
+                runnable.run();
+            } catch (Throwable t) {
+                onError.accept(t);
+            }
+        };
+    }
 
-    EventExecutor eventLoop();
-
-    MeterRegistry meterRegistry();
-
-    MeterIdPrefix meterIdPrefix();
-
-    void subscribe(ResourceNode<?> node);
-
-    void unsubscribe(ResourceNode<?> node);
-
-    ConfigSourceMapper configSourceMapper();
-
-    XdsClusterManager clusterManager();
+    private WatcherUtil() {}
 }

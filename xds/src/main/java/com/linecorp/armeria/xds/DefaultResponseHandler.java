@@ -37,7 +37,8 @@ final class DefaultResponseHandler implements XdsResponseHandler {
 
     @Override
     public <I extends Message, O extends XdsResource> void handleResponse(
-            ResourceParser<I, O> resourceParser, DiscoveryResponse response, ActualStream sender) {
+            ResourceParser<I, O> resourceParser, DiscoveryResponse response, ActualStream sender,
+            ConfigSourceLifecycleObserver observer) {
         final long nextRevision = sender.versionManager()
                                         .nextRevision(resourceParser.type(), response.getVersionInfo());
         final ParsedResourcesHolder holder =
@@ -58,6 +59,8 @@ final class DefaultResponseHandler implements XdsResponseHandler {
             errorDetails = errorMessageJoiner.join(holder.errors());
             sender.nackResponse(resourceParser.type(), response.getNonce(), errorDetails);
         }
+        observer.resourceUpdated(resourceParser.type(), response, holder.parsedResources());
+        observer.resourceRejected(resourceParser.type(), response, holder.invalidResources());
 
         final Map<String, XdsStreamSubscriber<O>> subscribedResources =
                 storage.subscribers(resourceParser.type());
