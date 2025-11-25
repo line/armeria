@@ -81,6 +81,10 @@ configure(projectsWithFlags('publish', 'java')) {
             }
         }
     }
+    def shadedJarTask = tasks.findByName('trimShadedJar') ?: tasks.findByName('shadedJar')
+    if (shadedJarTask != null) {
+        tasks.publishJarPublicationToMavenLocal.dependsOn(shadedJarTask)
+    }
 }
 
 configure(projectsWithFlags('publish')) {
