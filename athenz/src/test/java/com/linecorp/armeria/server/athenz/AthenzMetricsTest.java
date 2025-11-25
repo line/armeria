@@ -19,7 +19,6 @@ package com.linecorp.armeria.server.athenz;
 import static com.linecorp.armeria.server.athenz.AthenzDocker.ADMIN_ROLE;
 import static com.linecorp.armeria.server.athenz.AthenzDocker.TEST_DOMAIN_NAME;
 import static com.linecorp.armeria.server.athenz.AthenzDocker.TEST_SERVICE;
-import static com.linecorp.armeria.server.athenz.AthenzDocker.USER_ROLE;
 import static net.javacrumbs.jsonunit.fluent.JsonFluentAssert.assertThatJson;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -28,6 +27,7 @@ import static org.awaitility.Awaitility.await;
 import java.util.List;
 
 import org.junit.jupiter.api.Order;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
@@ -40,11 +40,13 @@ import com.linecorp.armeria.client.athenz.AthenzClient;
 import com.linecorp.armeria.client.athenz.ZtsBaseClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.DependencyInjector;
+import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.athenz.AccessDeniedException;
 import com.linecorp.armeria.common.athenz.TokenType;
 import com.linecorp.armeria.common.metric.MeterIdPrefix;
 import com.linecorp.armeria.common.metric.MeterIdPrefixFunction;
+import com.linecorp.armeria.common.metric.MoreMeters;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServerListener;
 import com.linecorp.armeria.server.annotation.Get;
@@ -56,9 +58,9 @@ import io.micrometer.core.instrument.Timer;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 
 @EnabledIfDockerAvailable
-class AthenzAnnotatedServiceTest {
+class AthenzMetricsTest {
 
-    private static final MeterRegistry meterRegistry = new SimpleMeterRegistry();
+    private static final MeterRegistry serverMeterRegistry = new SimpleMeterRegistry();
 
     @Order(1)
     @RegisterExtension
@@ -79,68 +81,12 @@ class AthenzAnnotatedServiceTest {
             final DependencyInjector di = DependencyInjector.ofSingletons(decoratorFactory)
                                                             .orElse(DependencyInjector.ofReflective());
             sb.dependencyInjector(di, true);
-            sb.meterRegistry(meterRegistry);
+            sb.meterRegistry(serverMeterRegistry);
             sb.serverListener(ServerListener.builder()
                                             .whenStopped(server -> baseClient.close())
                                             .build());
         }
     };
-
-    @CsvSource({
-            "foo-service, YAHOO_ROLE_TOKEN",
-            "foo-service, ATHENZ_ROLE_TOKEN",
-            "foo-service, ACCESS_TOKEN",
-            "test-service, YAHOO_ROLE_TOKEN",
-            "test-service, ATHENZ_ROLE_TOKEN",
-            "test-service, ACCESS_TOKEN"
-    })
-    @ParameterizedTest
-    void testUserRole(String serviceName, TokenType tokenType) {
-        try (ZtsBaseClient ztsBaseClient = athenzExtension.newZtsBaseClient(serviceName)) {
-            final BlockingWebClient client =
-                    WebClient.builder(server.httpUri())
-                             .decorator(AthenzClient.newDecorator(ztsBaseClient, TEST_DOMAIN_NAME,
-                                                                  USER_ROLE, tokenType))
-                             .build()
-                             .blocking();
-
-            final AggregatedHttpResponse response = client.get("/files");
-            assertThat(response.status()).isEqualTo(HttpStatus.OK);
-            assertThatJson(response.contentUtf8()).isEqualTo(ImmutableList.of("foo.txt", "bar.txt"));
-        }
-    }
-
-    @CsvSource({
-            "foo-service, YAHOO_ROLE_TOKEN, false",
-            "foo-service, ATHENZ_ROLE_TOKEN, false",
-            "foo-service, ACCESS_TOKEN, false",
-            "test-service, YAHOO_ROLE_TOKEN, true",
-            "test-service, ATHENZ_ROLE_TOKEN, true",
-            "test-service, ACCESS_TOKEN, true"
-    })
-    @ParameterizedTest
-    void testAdminRole(String serviceName, TokenType tokenType, boolean shouldSucceed) {
-        try (ZtsBaseClient ztsBaseClient = athenzExtension.newZtsBaseClient(serviceName)) {
-            final BlockingWebClient client =
-                    WebClient.builder(server.httpUri())
-                             .decorator(AthenzClient.newDecorator(ztsBaseClient, TEST_DOMAIN_NAME,
-                                                                  ADMIN_ROLE, tokenType))
-                             .build()
-                             .blocking();
-
-            if (shouldSucceed) {
-                final AggregatedHttpResponse response = client.get("/secrets");
-                assertThat(response.status()).isEqualTo(HttpStatus.OK);
-                assertThatJson(response.contentUtf8()).isEqualTo(ImmutableList.of("Armeria", "Athenz"));
-            } else {
-                assertThatThrownBy(() -> client.get("/secrets"))
-                        .isInstanceOf(AccessDeniedException.class)
-                        .hasMessage("Failed to obtain an Athenz %s token. " +
-                                    "(domain: testing, roles: test_role_admin)",
-                                    tokenType.isRoleToken() ? "role" : "access");
-            }
-        }
-    }
 
     @CsvSource({
             "foo-service, YAHOO_ROLE_TOKEN, false",
@@ -152,22 +98,23 @@ class AthenzAnnotatedServiceTest {
     })
     @ParameterizedTest
     void testMetrics(String serviceName, TokenType tokenType, boolean shouldSucceed) {
-        final Timer serviceAllowedMeter = meterRegistry.get("athenz.service.test.token.authorization")
-                                                       .tag("result", "allowed")
+
+        final Timer serviceAllowed = serverMeterRegistry.get("athenz.service.test.token.authorization")
+                                                        .tag("result", "allowed")
+                                                        .tag("resource", "secrets")
+                                                        .tag("action", "obtain")
+                                                        .timer();
+        final long numServiceAllowed = serviceAllowed.count();
+        final Timer serviceDenied = serverMeterRegistry.get("athenz.service.test.token.authorization")
+                                                       .tag("result", "denied")
                                                        .tag("resource", "secrets")
                                                        .tag("action", "obtain")
                                                        .timer();
+        final long numServiceDenied = serviceDenied.count();
 
-        final Timer serviceDeniedMeter = meterRegistry.get("athenz.service.test.token.authorization")
-                                                      .tag("result", "denied")
-                                                      .tag("resources", "secrets")
-                                                      .tag("action", "obtain")
-                                                      .timer();
-        final int numAllowed = (int) serviceAllowedMeter.count();
-        final int numDenied = (int) serviceDeniedMeter.count();
-
+        final MeterRegistry clientMeterRegistry = new SimpleMeterRegistry();
         try (ZtsBaseClient ztsBaseClient = athenzExtension.newZtsBaseClient(serviceName, cb -> {
-            cb.enableMetrics(meterRegistry, MeterIdPrefixFunction.ofDefault("athenz.zts.client.test"));
+            cb.enableMetrics(clientMeterRegistry, MeterIdPrefixFunction.ofDefault("athenz.zts.client.test"));
         })) {
             final BlockingWebClient client =
                     WebClient.builder(server.httpUri())
@@ -185,27 +132,27 @@ class AthenzAnnotatedServiceTest {
                 assertThat(response.status()).isEqualTo(HttpStatus.OK);
                 assertThatJson(response.contentUtf8()).isEqualTo(ImmutableList.of("Armeria", "Athenz"));
                 await().untilAsserted(() -> {
-                    assertThat(meterRegistry.get("athenz.client.test.token.fetch")
-                                            .tag("result", "success")
-                                            .tag("domain", TEST_DOMAIN_NAME)
-                                            .tag("roles", ADMIN_ROLE)
-                                            .tag("type", tokenType.name())
-                                            .timer()
-                                            .count())
-                            .isEqualTo(1);
-                    assertThat(meterRegistry.get("athenz.client.test.token.fetch")
-                                            .tag("result", "failure")
-                                            .tag("domain", TEST_DOMAIN_NAME)
-                                            .tag("roles", ADMIN_ROLE)
-                                            .tag("type", tokenType.name())
-                                            .timer()
-                                            .count())
-                            .isZero();
+                    final Timer clientSuccess = clientMeterRegistry.get("athenz.client.test.token.fetch")
+                                                                   .tag("result", "success")
+                                                                   .tag("domain", TEST_DOMAIN_NAME)
+                                                                   .tag("roles", ADMIN_ROLE)
+                                                                   .tag("type", tokenType.name())
+                                                                   .timer();
 
-                    assertThat(serviceAllowedMeter.count() - numAllowed)
-                            .isEqualTo(1);
-                    assertThat(serviceDeniedMeter.count() - numDenied)
-                            .isZero();
+                    final Timer clientFailure = clientMeterRegistry.get("athenz.client.test.token.fetch")
+                                                                   .tag("result", "failure")
+                                                                   .tag("domain", TEST_DOMAIN_NAME)
+                                                                   .tag("roles", ADMIN_ROLE)
+                                                                   .tag("type", tokenType.name())
+                                                                   .timer();
+                    assertThat(clientSuccess.count()).isEqualTo(1);
+                    assertThat(clientFailure.count()).isZero();
+                    assertThat(MoreMeters.measureAll(clientMeterRegistry))
+                            .anySatisfy((meterId, value) -> {
+                                assertThat(meterId).startsWith("athenz.zts.client.test");
+                            });
+                    assertThat(serviceAllowed.count() - numServiceAllowed).isEqualTo(1);
+                    assertThat(serviceDenied.count() - numServiceDenied).isZero();
                 });
             } else {
                 assertThatThrownBy(() -> client.get("/secrets"))
@@ -215,9 +162,58 @@ class AthenzAnnotatedServiceTest {
                                     tokenType.isRoleToken() ? "role" : "access");
 
                 await().untilAsserted(() -> {
+                    final Timer clientSuccess = clientMeterRegistry.get("athenz.client.test.token.fetch")
+                                                                   .tag("result", "success")
+                                                                   .tag("domain", TEST_DOMAIN_NAME)
+                                                                   .tag("roles", ADMIN_ROLE)
+                                                                   .tag("type", tokenType.name())
+                                                                   .timer();
+
+                    final Timer clientFailure = clientMeterRegistry.get("athenz.client.test.token.fetch")
+                                                                   .tag("result", "failure")
+                                                                   .tag("domain", TEST_DOMAIN_NAME)
+                                                                   .tag("roles", ADMIN_ROLE)
+                                                                   .tag("type", tokenType.name())
+                                                                   .timer();
+                    assertThat(clientSuccess.count()).isZero();
+                    assertThat(clientFailure.count()).isEqualTo(1);
+                    assertThat(MoreMeters.measureAll(clientMeterRegistry))
+                            .anySatisfy((meterId, value) -> {
+                                assertThat(meterId).startsWith("athenz.zts.client.test");
+                            });
+                    assertThat(serviceAllowed.count() - numServiceAllowed).isZero();
+                    // The access was denied at the client side, so the server's denied count should not
+                    // increase.
+                    assertThat(serviceDenied.count() - numServiceDenied).isZero();
                 });
             }
         }
+    }
+
+    @Test
+    void shouldRejectTokenAtServerSide() {
+        final Timer serviceAllowed = serverMeterRegistry.get("athenz.service.test.token.authorization")
+                                                        .tag("result", "allowed")
+                                                        .tag("resource", "secrets")
+                                                        .tag("action", "obtain")
+                                                        .timer();
+        final long numServiceAllowed = serviceAllowed.count();
+        final Timer serviceDenied = serverMeterRegistry.get("athenz.service.test.token.authorization")
+                                                       .tag("result", "denied")
+                                                       .tag("resource", "secrets")
+                                                       .tag("action", "obtain")
+                                                       .timer();
+        final long numServiceDenied = serviceDenied.count();
+        final BlockingWebClient client = server.blockingWebClient();
+        final AggregatedHttpResponse response = client.prepare()
+                                                      .get("/secrets")
+                                                      .header(HttpHeaderNames.AUTHORIZATION, "invalid-token")
+                                                      .execute();
+        assertThat(response.status()).isEqualTo(HttpStatus.UNAUTHORIZED);
+        await().untilAsserted(() -> {
+            assertThat(serviceAllowed.count() - numServiceAllowed).isZero();
+            assertThat(serviceDenied.count() - numServiceDenied).isEqualTo(1);
+        });
     }
 
     private static final class AthenzAnnotatedService {

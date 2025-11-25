@@ -27,6 +27,7 @@ import com.google.common.collect.ImmutableList;
 import com.linecorp.armeria.client.athenz.ZtsBaseClient;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.athenz.TokenType;
+import com.linecorp.armeria.common.metric.MeterIdPrefix;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.annotation.DecoratorFactoryFunction;
 
@@ -48,9 +49,11 @@ public final class AthenzServiceDecoratorFactory implements DecoratorFactoryFunc
     }
 
     private final MinifiedAuthZpeClient authZpeClient;
+    private final MeterIdPrefix meterIdPrefix;
 
-    AthenzServiceDecoratorFactory(MinifiedAuthZpeClient authZpeClient) {
+    AthenzServiceDecoratorFactory(MinifiedAuthZpeClient authZpeClient, MeterIdPrefix meterIdPrefix) {
         this.authZpeClient = authZpeClient;
+        this.meterIdPrefix = meterIdPrefix;
     }
 
     @Override
@@ -65,6 +68,7 @@ public final class AthenzServiceDecoratorFactory implements DecoratorFactoryFunc
         checkArgument(!action.isEmpty(), "action must not be empty");
         checkArgument(!tokenTypes.isEmpty(), "tokenType must not be empty");
 
-        return delegate -> new AthenzService(delegate, authZpeClient, resource, action, tokenTypes);
+        return delegate -> new AthenzService(delegate, authZpeClient, resource, action, tokenTypes,
+                                             meterIdPrefix);
     }
 }

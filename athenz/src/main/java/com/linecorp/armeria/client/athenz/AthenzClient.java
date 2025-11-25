@@ -16,14 +16,11 @@
 
 package com.linecorp.armeria.client.athenz;
 
-import static java.util.Objects.requireNonNull;
-
 import java.time.Duration;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
-
-import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.HttpClient;
@@ -33,7 +30,12 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.RequestHeadersBuilder;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.athenz.TokenType;
+import com.linecorp.armeria.common.metric.MeterIdPrefix;
+import com.linecorp.armeria.common.metric.MoreMeters;
 import com.linecorp.armeria.common.util.Exceptions;
+
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Timer;
 
 /**
  * An {@link HttpClient} that adds an Athenz token to the request headers.
@@ -53,10 +55,22 @@ import com.linecorp.armeria.common.util.Exceptions;
  *     .keyPair("/var/lib/athenz/service.key.pem", "/var/lib/athenz/service.cert.pem")
  *     .build();
  *
+ * // Using builder
+ * WebClient
+ *   .builder()
+ *   .decorator(AthenzClient.builder()
+ *                          .ztsBaseClient(ztsBaseClient)
+ *                          .domainName("my-domain")
+ *                          .tokenType(TokenType.ROLE_TOKEN)
+ *                          .newDecorator())
+ *   ...
+ *   .build();
+ *
+ * // Or using static factory method
  * WebClient
  *   .builder()
  *   .decorator(AthenzClient.newDecorator(ztsBaseClient, "my-domain",
- *                                        TokenType.ROLE_TOKEN)
+ *                                        TokenType.ROLE_TOKEN))
  *   ...
  *   .build();
  * }</pre>
@@ -64,7 +78,12 @@ import com.linecorp.armeria.common.util.Exceptions;
 @UnstableApi
 public final class AthenzClient extends SimpleDecoratingHttpClient {
 
-    private static final Duration DEFAULT_REFRESH_BEFORE = Duration.ofMinutes(10);
+    /**
+     * Returns a new {@link AthenzClientBuilder} with the specified {@link ZtsBaseClient}.
+     */
+    public static AthenzClientBuilder builder(ZtsBaseClient ztsBaseClient) {
+        return new AthenzClientBuilder(ztsBaseClient);
+    }
 
     /**
      * Returns a new {@link HttpClient} decorator that obtains an Athenz token for the specified domain and
@@ -76,7 +95,10 @@ public final class AthenzClient extends SimpleDecoratingHttpClient {
      */
     public static Function<HttpClient, AthenzClient> newDecorator(ZtsBaseClient ztsBaseClient,
                                                                   String domainName, TokenType tokenType) {
-        return newDecorator(ztsBaseClient, domainName, ImmutableList.of(), tokenType);
+        return builder(ztsBaseClient)
+                .domainName(domainName)
+                .tokenType(tokenType)
+                .newDecorator();
     }
 
     /**
@@ -91,7 +113,11 @@ public final class AthenzClient extends SimpleDecoratingHttpClient {
     public static Function<HttpClient, AthenzClient> newDecorator(ZtsBaseClient ztsBaseClient,
                                                                   String domainName, String roleName,
                                                                   TokenType tokenType) {
-        return newDecorator(ztsBaseClient, domainName, ImmutableList.of(roleName), tokenType);
+        return builder(ztsBaseClient)
+                .domainName(domainName)
+                .roleNames(roleName)
+                .tokenType(tokenType)
+                .newDecorator();
     }
 
     /**
@@ -106,7 +132,11 @@ public final class AthenzClient extends SimpleDecoratingHttpClient {
     public static Function<HttpClient, AthenzClient> newDecorator(ZtsBaseClient ztsBaseClient,
                                                                   String domainName, List<String> roleNames,
                                                                   TokenType tokenType) {
-        return newDecorator(ztsBaseClient, domainName, roleNames, tokenType, DEFAULT_REFRESH_BEFORE);
+        return builder(ztsBaseClient)
+                .domainName(domainName)
+                .roleNames(roleNames)
+                .tokenType(tokenType)
+                .newDecorator();
     }
 
     /**
@@ -122,23 +152,37 @@ public final class AthenzClient extends SimpleDecoratingHttpClient {
     public static Function<HttpClient, AthenzClient> newDecorator(ZtsBaseClient ztsBaseClient,
                                                                   String domainName, List<String> roleNames,
                                                                   TokenType tokenType, Duration refreshBefore) {
-        requireNonNull(ztsBaseClient, "ztsBaseClient");
-        requireNonNull(domainName, "domainName");
-        requireNonNull(roleNames, "roleNames");
-        final ImmutableList<String> roleNames0 = ImmutableList.copyOf(roleNames);
-        requireNonNull(tokenType, "tokenType");
-        requireNonNull(refreshBefore, "refreshBefore");
-        return delegate -> new AthenzClient(delegate, ztsBaseClient, domainName, roleNames0,
-                                            tokenType, refreshBefore);
+        return builder(ztsBaseClient)
+                .domainName(domainName)
+                .roleNames(roleNames)
+                .tokenType(tokenType)
+                .refreshBefore(refreshBefore)
+                .newDecorator();
     }
 
     private final TokenType tokenType;
     private final TokenClient tokenClient;
+    private final Timer successTimer;
+    private final Timer failureTimer;
 
-    private AthenzClient(HttpClient delegate, ZtsBaseClient ztsBaseClient, String domainName,
-                         List<String> roleNames, TokenType tokenType, Duration refreshBefore) {
+    AthenzClient(HttpClient delegate, ZtsBaseClient ztsBaseClient, String domainName,
+                 List<String> roleNames, TokenType tokenType, Duration refreshBefore,
+                 MeterIdPrefix meterIdPrefix) {
         super(delegate);
         this.tokenType = tokenType;
+        final MeterRegistry meterRegistry = ztsBaseClient.clientFactory().meterRegistry();
+        final String prefix = meterIdPrefix.name("token.fetch");
+        successTimer = MoreMeters.newTimer(meterRegistry, prefix,
+                                           meterIdPrefix.tags("result", "success",
+                                                              "domain", domainName,
+                                                              "roles", String.join(",", roleNames),
+                                                              "type", tokenType.name()));
+        failureTimer = MoreMeters.newTimer(meterRegistry, prefix,
+                                           meterIdPrefix.tags("result", "failure",
+                                                              "domain", domainName,
+                                                              "roles", String.join(",", roleNames),
+                                                              "type", tokenType.name()));
+
         if (tokenType.isRoleToken()) {
             tokenClient = new RoleTokenClient(ztsBaseClient, domainName, roleNames, refreshBefore);
         } else {
@@ -148,7 +192,16 @@ public final class AthenzClient extends SimpleDecoratingHttpClient {
 
     @Override
     public HttpResponse execute(ClientRequestContext ctx, HttpRequest req) throws Exception {
-        final CompletableFuture<HttpResponse> future = tokenClient.getToken().thenApply(token -> {
+        final long startNanos = System.nanoTime();
+
+        final CompletableFuture<HttpResponse> future = tokenClient.getToken().handle((token, cause) -> {
+            final long elapsedNanos = System.nanoTime() - startNanos;
+            if (cause != null) {
+                failureTimer.record(elapsedNanos, TimeUnit.NANOSECONDS);
+                return Exceptions.throwUnsafely(cause);
+            }
+
+            successTimer.record(elapsedNanos, TimeUnit.NANOSECONDS);
             final HttpRequest newReq = req.mapHeaders(headers -> {
                 final RequestHeadersBuilder builder = headers.toBuilder();
                 String token0 = token;
