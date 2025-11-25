@@ -29,6 +29,7 @@ import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.SimpleDecoratingClient;
+import com.linecorp.armeria.client.retry.limiter.RetryLimiter;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.Request;
@@ -199,8 +200,9 @@ public abstract class AbstractRetryingClient<I extends Request, O extends Respon
      *         {@code currentAttemptNo} exceeds the {@code maxAttempts} or the {@code nextDelay} is after
      *         the moment which timeout happens.
      */
-    protected final long getNextDelay(ClientRequestContext ctx, Backoff backoff) {
-        return getNextDelay(ctx, backoff, -1);
+    protected final long getNextDelay(ClientRequestContext ctx, @Nullable RetryLimiter limiter,
+                                      Backoff backoff) {
+        return getNextDelay(ctx, limiter, backoff, -1);
     }
 
     /**
@@ -214,7 +216,8 @@ public abstract class AbstractRetryingClient<I extends Request, O extends Respon
      *         the moment which timeout happens.
      */
     @SuppressWarnings("MethodMayBeStatic") // Intentionally left non-static for better user experience.
-    protected final long getNextDelay(ClientRequestContext ctx, Backoff backoff, long millisAfterFromServer) {
+    protected final long getNextDelay(ClientRequestContext ctx, @Nullable RetryLimiter limiter,
+                                      Backoff backoff, long millisAfterFromServer) {
         requireNonNull(ctx, "ctx");
         requireNonNull(backoff, "backoff");
         final State state = state(ctx);
@@ -237,6 +240,9 @@ public abstract class AbstractRetryingClient<I extends Request, O extends Respon
             return -1;
         }
 
+        if (!RetryLimiterExecutor.shouldRetry(limiter, ctx, currentAttemptNo)) {
+            return -1;
+        }
         return nextDelay;
     }
 

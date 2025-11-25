@@ -195,10 +195,12 @@ public final class RetryingRpcClient extends AbstractRetryingClient<RpcRequest, 
         res.handle((unused1, cause) -> {
             try {
                 assert retryRule != null;
+                RetryLimiterExecutor.onCompletedAttempt(retryConfig.retryLimiter(), ctx, ctx.log().partial(),
+                                                        totalAttempts);
                 retryRule.shouldRetry(derivedCtx, res, cause).handle((decision, unused3) -> {
                     final Backoff backoff = decision != null ? decision.backoff() : null;
                     if (backoff != null) {
-                        final long nextDelay = getNextDelay(derivedCtx, backoff);
+                        final long nextDelay = getNextDelay(derivedCtx, retryConfig.retryLimiter(), backoff);
                         if (nextDelay < 0) {
                             onRetryComplete(ctx, derivedCtx, res, future);
                             return null;

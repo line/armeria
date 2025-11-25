@@ -32,6 +32,7 @@ import org.slf4j.LoggerFactory;
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.client.ResponseTimeoutException;
+import com.linecorp.armeria.client.retry.limiter.RetryLimiter;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.AggregationOptions;
 import com.linecorp.armeria.common.HttpHeaderNames;
@@ -362,10 +363,11 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
         }
         try {
             final RetryRule retryRule = retryRule(config);
+            final RetryLimiter limiter = config.retryLimiter();
             final CompletionStage<RetryDecision> f = retryRule.shouldRetry(derivedCtx, responseCause);
             f.handle((decision, shouldRetryCause) -> {
                 warnIfExceptionIsRaised(retryRule, shouldRetryCause);
-                handleRetryDecision(decision, ctx, derivedCtx, rootReqDuplicator,
+                handleRetryDecision(decision, limiter, ctx, derivedCtx, rootReqDuplicator,
                                     originalReq, returnedRes, future, response);
                 return null;
             });
@@ -412,8 +414,9 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
                                        .handle((decision, cause) -> {
                                            warnIfExceptionIsRaised(ruleWithContent, cause);
                                            truncatingHttpResponse.abort();
-                                           handleRetryDecision(decision, ctx, derivedCtx, rootReqDuplicator,
-                                                               originalReq, returnedRes, future, duplicated);
+                                           handleRetryDecision(decision, retryConfig.retryLimiter(), ctx,
+                                                               derivedCtx, rootReqDuplicator, originalReq,
+                                                               returnedRes, future, duplicated);
                                            return null;
                                        });
                     } catch (Throwable cause) {
@@ -449,9 +452,9 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
                 ruleWithContent.shouldRetry(derivedCtx, aggregatedRes.toHttpResponse(), null)
                                .handle((decision, cause) -> {
                                    warnIfExceptionIsRaised(ruleWithContent, cause);
-                                   handleRetryDecision(
-                                           decision, ctx, derivedCtx, rootReqDuplicator, originalReq,
-                                           returnedRes, future, aggregatedRes.toHttpResponse());
+                                   handleRetryDecision(decision, retryConfig.retryLimiter(), ctx, derivedCtx,
+                                                       rootReqDuplicator, originalReq, returnedRes, future,
+                                                       aggregatedRes.toHttpResponse());
                                    return null;
                                });
             } catch (Throwable cause) {
@@ -521,14 +524,20 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
         ctx.logBuilder().endResponse(cause);
     }
 
-    private void handleRetryDecision(@Nullable RetryDecision decision, ClientRequestContext ctx,
-                                     ClientRequestContext derivedCtx, HttpRequestDuplicator rootReqDuplicator,
-                                     HttpRequest originalReq, HttpResponse returnedRes,
-                                     CompletableFuture<HttpResponse> future, HttpResponse originalRes) {
+    private void handleRetryDecision(@Nullable RetryDecision decision, @Nullable RetryLimiter limiter,
+                                     ClientRequestContext ctx, ClientRequestContext derivedCtx,
+                                     HttpRequestDuplicator rootReqDuplicator, HttpRequest originalReq,
+                                     HttpResponse returnedRes, CompletableFuture<HttpResponse> future,
+                                     HttpResponse originalRes) {
+        // Notify the retry limiter that this attempt has completed
+        final RetryConfig<HttpResponse> config = mappedRetryConfig(ctx);
+        RetryLimiterExecutor.onCompletedAttempt(config.retryLimiter(), ctx, derivedCtx.log().partial(),
+                                                getTotalAttempts(ctx));
+
         final Backoff backoff = decision != null ? decision.backoff() : null;
         if (backoff != null) {
             final long millisAfter = useRetryAfter ? getRetryAfterMillis(derivedCtx) : -1;
-            final long nextDelay = getNextDelay(ctx, backoff, millisAfter);
+            final long nextDelay = getNextDelay(ctx, limiter, backoff, millisAfter);
             if (nextDelay >= 0) {
                 abortResponse(originalRes, derivedCtx);
                 scheduleNextRetry(

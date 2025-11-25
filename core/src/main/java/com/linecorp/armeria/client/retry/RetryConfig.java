@@ -22,6 +22,7 @@ import static java.util.Objects.requireNonNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.linecorp.armeria.client.retry.limiter.RetryLimiter;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.RpcResponse;
@@ -87,25 +88,30 @@ public final class RetryConfig<T extends Response> {
     private final RetryRule fromRetryRuleWithContent;
     @Nullable
     private RetryRuleWithContent<T> fromRetryRule;
+    @Nullable
+    private RetryLimiter retryLimiter;
 
-    RetryConfig(RetryRule retryRule, int maxTotalAttempts, long responseTimeoutMillisForEachAttempt) {
-        this(requireNonNull(retryRule, "retryRule"), null,
-                maxTotalAttempts, responseTimeoutMillisForEachAttempt, 0);
+    RetryConfig(RetryRule retryRule, @Nullable RetryLimiter retryLimiter, int maxTotalAttempts,
+                long responseTimeoutMillisForEachAttempt) {
+        this(requireNonNull(retryRule, "retryRule"), null, retryLimiter,
+             maxTotalAttempts, responseTimeoutMillisForEachAttempt, 0);
         checkArguments(maxTotalAttempts, responseTimeoutMillisForEachAttempt);
     }
 
     RetryConfig(
             RetryRuleWithContent<T> retryRuleWithContent,
+            @Nullable RetryLimiter retryLimiter,
             int maxContentLength,
             int maxTotalAttempts,
             long responseTimeoutMillisForEachAttempt) {
-        this(null, requireNonNull(retryRuleWithContent, "retryRuleWithContent"),
-                maxTotalAttempts, responseTimeoutMillisForEachAttempt, maxContentLength);
+        this(null, requireNonNull(retryRuleWithContent, "retryRuleWithContent"), retryLimiter,
+             maxTotalAttempts, responseTimeoutMillisForEachAttempt, maxContentLength);
     }
 
     private RetryConfig(
             @Nullable RetryRule retryRule,
             @Nullable RetryRuleWithContent<T> retryRuleWithContent,
+            @Nullable RetryLimiter retryLimiter,
             int maxTotalAttempts,
             long responseTimeoutMillisForEachAttempt,
             int maxContentLength) {
@@ -120,6 +126,7 @@ public final class RetryConfig<T extends Response> {
         } else {
             fromRetryRuleWithContent = RetryRuleUtil.fromRetryRuleWithContent(retryRuleWithContent);
         }
+        this.retryLimiter = retryLimiter;
     }
 
     private static void checkArguments(int maxTotalAttempts, long responseTimeoutMillisForEachAttempt) {
@@ -145,9 +152,12 @@ public final class RetryConfig<T extends Response> {
             assert retryRule != null;
             builder = builder0(retryRule);
         }
-        return builder
-                .maxTotalAttempts(maxTotalAttempts)
-                .responseTimeoutMillisForEachAttempt(responseTimeoutMillisForEachAttempt);
+        builder.maxTotalAttempts(maxTotalAttempts)
+               .responseTimeoutMillisForEachAttempt(responseTimeoutMillisForEachAttempt);
+        if (retryLimiter != null) {
+            builder.limiter(retryLimiter);
+        }
+        return builder;
     }
 
     /**
@@ -181,6 +191,15 @@ public final class RetryConfig<T extends Response> {
     @Nullable
     public RetryRuleWithContent<T> retryRuleWithContent() {
         return retryRuleWithContent;
+    }
+
+    /**
+     * Returns the {@link RetryLimiter} which was specified with
+     * {@link RetryConfigBuilder#limiter(RetryLimiter)}.
+     */
+    @Nullable
+    public RetryLimiter retryLimiter() {
+        return retryLimiter;
     }
 
     /**
