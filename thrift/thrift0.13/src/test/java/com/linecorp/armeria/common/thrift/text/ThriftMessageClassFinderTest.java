@@ -38,19 +38,19 @@ class ThriftMessageClassFinderTest {
     }
 
     private static Stream<Arguments> testThriftMessageClassParameters() throws Throwable {
-        Stream<Arguments> parameters = Stream.of(Arguments.of(new DefaultThriftMessageClassFinder()));
-
+        final Stream.Builder<AbstractThriftMessageClassFinder> builder = Stream.builder();
+        builder.add(new DefaultThriftMessageClassFinder());
         if (SystemInfo.javaVersion() >= 9) {
-            parameters = Stream.concat(
-                    parameters,
-                    Stream.of(
-                            Arguments.of(new StackWalkingThriftMessageClassFinder()),
-                            Arguments.of(getNoOptionStackWalkerInstance())));
+            builder.add(new StackWalkingThriftMessageClassFinder());
+            if (SystemInfo.javaVersion() < 25) {
+                // Security manager is permanently removed in Java 25 and later.
+                builder.add(getNoOptionStackWalkerInstance());
+            }
         }
-        return parameters;
+        return builder.build().map(Arguments::of);
     }
 
-    private static Supplier<Class<?>> getNoOptionStackWalkerInstance() throws Throwable {
+    private static AbstractThriftMessageClassFinder getNoOptionStackWalkerInstance() throws Throwable {
         final SecurityManager SM = System.getSecurityManager();
         System.setSecurityManager(new SecurityManager() {
             @Override
