@@ -26,8 +26,6 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.Executor;
 
-import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
@@ -39,6 +37,7 @@ import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.ResponseHeaders;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.grpc.GrpcExceptionHandlerFunction;
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
 import com.linecorp.armeria.internal.common.grpc.InternalGrpcExceptionHandler;
@@ -110,7 +109,6 @@ class DeferredListenerTest {
         CompletableFuture.runAsync(task, executor).join();
     }
 
-    @NotNull
     private static UnaryServerCall<SimpleRequest, SimpleResponse> newServerCall(
             EventLoop eventLoop, @Nullable Executor blockingTaskExecutor) {
         final ServiceRequestContext ctx = ServiceRequestContext.builder(HttpRequest.of(HttpMethod.POST, "/"))

@@ -1,4 +1,15 @@
+/* eslint-disable react/jsx-filename-extension */
 import React from 'react';
+
+export const onRenderBody = ({ setHeadComponents }) => {
+  setHeadComponents([
+    <meta
+      key="algolia-site-verification"
+      name="algolia-site-verification"
+      content="90A5F01485F88CCB"
+    />,
+  ]);
+};
 
 export const onPreRenderHTML = ({
   getHeadComponents,
@@ -17,7 +28,6 @@ export const onPreRenderHTML = ({
     if (node.type === 'style') {
       const globalStyleHref = node.props['data-href'];
       if (globalStyleHref) {
-        // eslint-disable-next-line react/jsx-filename-extension
         return <link href={globalStyleHref} rel="stylesheet" type="text/css" />;
       }
       return node;
@@ -26,3 +36,4 @@ export const onPreRenderHTML = ({
   });
   replaceHeadComponents(transformedHeadComponents);
 };
+/* eslint-enable react/jsx-filename-extension */

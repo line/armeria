@@ -19,12 +19,13 @@ dependencies {
     }
 }
 
-// Use the test sources from ':jetty9'.
-// NB: We should never add these directories using the 'sourceSets' directive because that will make
-//     them added to more than one project and having a source directory with more than one output directory
-//     will confuse IDEs such as IntelliJ IDEA.
-tasks.compileTestJava.source "${rootProject.projectDir}/jetty9/src/test/java"
-tasks.processTestResources.from "${rootProject.projectDir}/jetty9/src/test/resources"
+
+tasks.register("copyJetty9Test", Copy.class) {
+    from("${rootProject.projectDir}/jetty/jetty9/src/test")
+    into("${project.ext.genSrcDir}/test")
+}
+tasks.compileTestJava.dependsOn("copyJetty9Test")
+tasks.processTestResources.dependsOn("copyJetty9Test")
 
 // Disable checkstyle because it's checked by ':jetty9'.
 tasks.withType(Checkstyle) {
