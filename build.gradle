@@ -65,10 +65,6 @@ allprojects {
             jvmArgs '--enable-native-access=ALL-UNNAMED'
         }
 
-        if (project.ext.testJavaVersion >= 24) {
-            jvmArgs '--enable-native-access=ALL-UNNAMED'
-        }
-
         // Enable leak detection when '-Pleak' option is specified.
         if (rootProject.hasProperty('leak')) {
             systemProperties 'io.netty.leakDetectionLevel': 'paranoid'
