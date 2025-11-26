@@ -25,9 +25,12 @@ import com.google.common.annotations.VisibleForTesting;
 
 import com.linecorp.armeria.client.grpc.GrpcClientBuilder;
 import com.linecorp.armeria.common.CommonPools;
+import com.linecorp.armeria.common.Flags;
+import com.linecorp.armeria.common.metric.MeterIdPrefix;
 
 import io.envoyproxy.envoy.config.bootstrap.v3.Bootstrap;
 import io.envoyproxy.envoy.config.core.v3.ConfigSource;
+import io.micrometer.core.instrument.MeterRegistry;
 import io.netty.util.concurrent.EventExecutor;
 
 final class XdsBootstrapImpl implements XdsBootstrap {
@@ -50,16 +53,25 @@ final class XdsBootstrapImpl implements XdsBootstrap {
     @VisibleForTesting
     XdsBootstrapImpl(Bootstrap bootstrap, EventExecutor eventLoop,
                      Consumer<GrpcClientBuilder> configClientCustomizer) {
+        this(bootstrap, eventLoop, XdsBootstrapBuilder.DEFAULT_METER_ID_PREFIX,
+             Flags.meterRegistry(), configClientCustomizer);
+    }
+
+    XdsBootstrapImpl(Bootstrap bootstrap, EventExecutor eventLoop,
+                     MeterIdPrefix meterIdPrefix, MeterRegistry meterRegistry,
+                     Consumer<GrpcClientBuilder> configClientCustomizer) {
         this.bootstrap = bootstrap;
         this.eventLoop = requireNonNull(eventLoop, "eventLoop");
-        clusterManager = new XdsClusterManager(eventLoop, bootstrap);
-        final BootstrapClusters bootstrapClusters = new BootstrapClusters(bootstrap, eventLoop, clusterManager);
+        clusterManager = new XdsClusterManager(eventLoop, bootstrap, meterIdPrefix, meterRegistry);
+        final BootstrapClusters bootstrapClusters =
+                new BootstrapClusters(bootstrap, eventLoop, clusterManager, meterRegistry, meterIdPrefix);
         final ConfigSourceMapper configSourceMapper = new ConfigSourceMapper(bootstrap);
         controlPlaneClientManager = new ControlPlaneClientManager(bootstrap, eventLoop,
                                                                   configClientCustomizer, bootstrapClusters,
                                                                   configSourceMapper);
         subscriptionContext = new DefaultSubscriptionContext(
-                eventLoop, clusterManager, configSourceMapper, controlPlaneClientManager);
+                eventLoop, clusterManager, configSourceMapper, controlPlaneClientManager,
+                meterRegistry, meterIdPrefix);
 
         bootstrapClusters.initializeSecondary(subscriptionContext);
         listenerManager = new ListenerManager(eventLoop, bootstrap, subscriptionContext);
@@ -96,5 +108,6 @@ final class XdsBootstrapImpl implements XdsBootstrap {
     public void close() {
         controlPlaneClientManager.close();
         clusterManager.close();
+        listenerManager.close();
     }
 }
