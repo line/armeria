@@ -79,6 +79,8 @@ public class StackTracingBenchmark extends hello_args {
 
             stackWalkingThriftMessageClassFinder = new StackWalkingThriftMessageClassFinder();
             System.setSecurityManager(securityManager);
+        } else {
+            stackWalkingThriftMessageClassFinder = new StackWalkingThriftMessageClassFinder();
         }
     }
 
