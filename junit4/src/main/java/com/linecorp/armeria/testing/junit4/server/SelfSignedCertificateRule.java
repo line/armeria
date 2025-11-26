@@ -26,8 +26,6 @@ import java.time.temporal.TemporalAccessor;
 import org.junit.rules.ExternalResource;
 import org.junit.rules.TestRule;
 
-import com.linecorp.armeria.internal.testing.SelfSignedCertificateRuleDelegate;
-
 /**
  * A {@link TestRule} that provides a temporary self-signed certificate.
  */
