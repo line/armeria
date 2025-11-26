@@ -26,7 +26,6 @@ import java.io.InputStream;
 import java.util.List;
 import java.util.Map;
 
-import org.jetbrains.annotations.Nullable;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
@@ -40,6 +39,7 @@ import com.linecorp.armeria.client.grpc.GrpcClients;
 import com.linecorp.armeria.common.CommonPools;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
 import com.linecorp.armeria.common.logging.LogLevel;
 import com.linecorp.armeria.internal.common.grpc.TestServiceImpl;
@@ -484,7 +484,6 @@ class GrpcServiceBuilderTest {
                     return null;
                 }
 
-                @Nullable
                 @Override
                 public SimpleRequest getMessagePrototype() {
                     return SimpleRequest.getDefaultInstance();

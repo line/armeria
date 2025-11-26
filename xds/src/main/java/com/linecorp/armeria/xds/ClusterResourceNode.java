@@ -57,6 +57,7 @@ final class ClusterResourceNode extends AbstractResourceNode<ClusterXdsResource,
         if (snapshotWatcher != null) {
             snapshotWatcher.close();
         }
+        loadBalancer.close();
         super.close();
     }
 
@@ -81,15 +82,17 @@ final class ClusterResourceNode extends AbstractResourceNode<ClusterXdsResource,
             final Cluster cluster = resource.resource();
             if (cluster.hasLoadAssignment()) {
                 final ClusterLoadAssignment loadAssignment = cluster.getLoadAssignment();
-                node = StaticResourceUtils.staticEndpoint(context, loadAssignment.getClusterName(),
-                                                          this, loadAssignment);
+                node = StaticResourceUtils.staticEndpoint(
+                        context, loadAssignment.getClusterName(), this, loadAssignment,
+                        resource.version(), resource.revision());
             } else if (cluster.hasEdsClusterConfig()) {
                 final EdsClusterConfig edsClusterConfig = cluster.getEdsClusterConfig();
                 final String serviceName = edsClusterConfig.getServiceName();
                 final String clusterName = !isNullOrEmpty(serviceName) ? serviceName : cluster.getName();
                 final ConfigSource configSource =
-                        context.configSourceMapper().withParentConfigSource(parentConfigSource)
-                               .edsConfigSource(cluster.getEdsClusterConfig().getEdsConfig(), clusterName);
+                        context.configSourceMapper()
+                               .configSource(cluster.getEdsClusterConfig().getEdsConfig(),
+                                             parentConfigSource, clusterName);
                 node = new EndpointResourceNode(configSource, clusterName, context,
                                                 this, ResourceNodeType.DYNAMIC);
                 context.subscribe(node);
@@ -109,11 +112,11 @@ final class ClusterResourceNode extends AbstractResourceNode<ClusterXdsResource,
         }
 
         @Override
-        public void onError(XdsType type, Status status) {
+        public void onError(XdsType type, String resourceName, Status status) {
             if (closed) {
                 return;
             }
-            parentNode.notifyOnError(type, status);
+            parentNode.notifyOnError(type, resourceName, status);
         }
 
         @Override

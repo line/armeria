@@ -36,7 +36,6 @@ import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.grpc.GrpcService;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
-import io.envoyproxy.controlplane.cache.TestResources;
 import io.envoyproxy.controlplane.cache.v3.SimpleCache;
 import io.envoyproxy.controlplane.cache.v3.Snapshot;
 import io.envoyproxy.controlplane.server.V3DiscoveryServer;
@@ -98,7 +97,7 @@ class ClientTimeoutTest {
             // add the resource afterward
             cache.setSnapshot(
                     GROUP,
-                    Snapshot.create(ImmutableList.of(TestResources.createCluster(clusterName)),
+                    Snapshot.create(ImmutableList.of(XdsTestResources.createCluster(clusterName)),
                                     ImmutableList.of(XdsTestResources.loadAssignment(clusterName, URI.create("http://a.b"))),
                                     ImmutableList.of(), ImmutableList.of(), ImmutableList.of(), "2"));
             simulateTimeout.set(false);
@@ -142,7 +141,7 @@ class ClientTimeoutTest {
 
             cache.setSnapshot(
                     GROUP,
-                    Snapshot.create(ImmutableList.of(TestResources.createCluster(clusterName)),
+                    Snapshot.create(ImmutableList.of(XdsTestResources.createCluster(clusterName)),
                                     ImmutableList.of(XdsTestResources.loadAssignment(clusterName, URI.create("http://a.b"))),
                                     ImmutableList.of(),
                                     ImmutableList.of(), ImmutableList.of(), "2"));

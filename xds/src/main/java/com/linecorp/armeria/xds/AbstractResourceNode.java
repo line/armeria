@@ -40,7 +40,7 @@ abstract class AbstractResourceNode<T extends XdsResource, S extends Snapshot<T>
     private final ConfigSource configSource;
     private final XdsType type;
     private final String resourceName;
-    private final Set<SnapshotWatcher<S>> watchers = new HashSet<>();
+    private final Set<SnapshotWatcher<? super S>> watchers = new HashSet<>();
     private final ResourceNodeType resourceNodeType;
     @Nullable
     private S snapshot;
@@ -82,7 +82,7 @@ abstract class AbstractResourceNode<T extends XdsResource, S extends Snapshot<T>
         return configSource;
     }
 
-    final void addWatcher(SnapshotWatcher<S> watcher) {
+    final void addWatcher(SnapshotWatcher<? super S> watcher) {
         watchers.add(watcher);
         if (snapshot != null) {
             watcher.snapshotUpdated(snapshot);
@@ -98,14 +98,14 @@ abstract class AbstractResourceNode<T extends XdsResource, S extends Snapshot<T>
     }
 
     @Override
-    public final void onError(XdsType type, Status error) {
-        notifyOnError(type, error);
+    public final void onError(XdsType type, String resourceName, Status error) {
+        notifyOnError(type, resourceName, error);
     }
 
-    final void notifyOnError(XdsType type, Status error) {
-        for (SnapshotWatcher<S> watcher : watchers) {
+    final void notifyOnError(XdsType type, String resourceName, Status error) {
+        for (SnapshotWatcher<? super S> watcher : watchers) {
             try {
-                watcher.onError(type, error);
+                watcher.onError(type, resourceName, error);
             } catch (Exception e) {
                 logger.warn("Unexpected exception notifying <{}> for 'onError' <{},{}> for error <{}> e: ",
                             watcher, resourceName, type, error, e);
@@ -119,7 +119,7 @@ abstract class AbstractResourceNode<T extends XdsResource, S extends Snapshot<T>
     }
 
     final void notifyOnMissing(XdsType type, String resourceName) {
-        for (SnapshotWatcher<S> watcher : watchers) {
+        for (SnapshotWatcher<? super S> watcher : watchers) {
             try {
                 watcher.onMissing(type, resourceName);
             } catch (Exception e) {
@@ -139,7 +139,7 @@ abstract class AbstractResourceNode<T extends XdsResource, S extends Snapshot<T>
 
     final void notifyOnChanged(S snapshot) {
         this.snapshot = snapshot;
-        for (SnapshotWatcher<S> watcher : watchers) {
+        for (SnapshotWatcher<? super S> watcher : watchers) {
             try {
                 watcher.snapshotUpdated(snapshot);
             } catch (Exception e) {

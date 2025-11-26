@@ -104,7 +104,9 @@ class ApiConfigSourceTest {
                 XdsTestResources.createStaticCluster(
                         bootstrapCluster2,
                         XdsTestResources.loadAssignment(bootstrapCluster2, server2.httpUri()));
-        final Bootstrap bootstrap = XdsTestResources.bootstrap(adsConfigSource, null, bootstrap1, bootstrap2);
+        final ConfigSource cdsSource = XdsTestResources.adsConfigSource();
+        final Bootstrap bootstrap =
+                XdsTestResources.bootstrap(adsConfigSource, cdsSource, bootstrap1, bootstrap2);
         try (XdsBootstrap xdsBootstrap = XdsBootstrap.of(bootstrap)) {
             final ClusterRoot root = xdsBootstrap.clusterRoot(adsClusterName);
 
