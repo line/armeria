@@ -18,11 +18,25 @@ dependencies {
 
 def grpcDir = "${rootProject.projectDir}/grpc"
 
-task generateTestSources(type: Copy) {
+tasks.register('copyProtoFiles', Copy) {
+    from "${rootProject.projectDir}/grpc/src/test/proto"
+    into "${rootProject.projectDir}/it/grpc/protobuf4/gen-src/test/proto"
+}
+
+tasks.register('generateTestSources', Copy) {
     from("${grpcDir}/src/test/java")
     into "${project.ext.genSrcDir}/test/java"
     include "**/HttpJsonTranscoding*Test.java"
 }
 
+sourceSets {
+    test {
+        proto {
+            srcDir "${project.ext.genSrcDir}/test/proto"
+        }
+    }
+}
+
+tasks.generateTestProto.dependsOn(tasks.copyProtoFiles)
 tasks.compileTestJava.dependsOn(tasks.generateTestSources)
 tasks.processTestResources.from "${grpcDir}/src/test/resources"

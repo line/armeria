@@ -35,12 +35,16 @@ import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.client.ClientFactoryBuilder;
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.client.WebClientBuilder;
+import com.linecorp.armeria.client.metric.MetricCollectingClient;
 import com.linecorp.armeria.client.proxy.ConnectProxyConfig;
 import com.linecorp.armeria.client.proxy.ProxyConfig;
 import com.linecorp.armeria.common.TlsKeyPair;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
+import com.linecorp.armeria.common.metric.MeterIdPrefixFunction;
 import com.linecorp.armeria.internal.common.util.CertificateUtil;
+
+import io.micrometer.core.instrument.MeterRegistry;
 
 /**
  * A builder for creating a {@link ZtsBaseClient} instance.
@@ -184,6 +188,19 @@ public final class ZtsBaseClientBuilder {
         } else {
             webClientConfigurer = webClientConfigurer.andThen(configurer);
         }
+        return this;
+    }
+
+    /**
+     * Enable metrics collection for the ZTS client using the specified {@link MeterRegistry} and
+     * {@link MeterIdPrefixFunction}.
+     */
+    public ZtsBaseClientBuilder enableMetrics(MeterRegistry meterRegistry,
+                                              MeterIdPrefixFunction meterIdPrefixFunction) {
+        requireNonNull(meterRegistry, "meterRegistry");
+        requireNonNull(meterIdPrefixFunction, "meterIdPrefixFunction");
+        configureClientFactory(fb -> fb.meterRegistry(meterRegistry));
+        configureWebClient(cb -> cb.decorator(MetricCollectingClient.newDecorator(meterIdPrefixFunction)));
         return this;
     }
 

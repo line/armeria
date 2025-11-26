@@ -36,6 +36,6 @@ public final class AthenzServiceDecoratorFactoryBuilder
      */
     public AthenzServiceDecoratorFactory build() {
         final MinifiedAuthZpeClient authZpeClient = buildAuthZpeClient();
-        return new AthenzServiceDecoratorFactory(authZpeClient);
+        return new AthenzServiceDecoratorFactory(authZpeClient, meterIdPrefix());
     }
 }

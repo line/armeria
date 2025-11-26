@@ -171,7 +171,6 @@ includeWithFlags ':spring:boot3-webflux-autoconfigure',  'java17', 'publish', 'r
 includeWithFlags ':spring:boot3-webflux-starter',        'java17', 'publish', 'relocate'
 includeWithFlags ':spring:spring6',                      'java17', 'publish', 'relocate'
 
-includeWithFlags ':dropwizard1',                         'java', 'publish', 'relocate', 'no_aggregation'
 includeWithFlags ':dropwizard2',                         'java', 'publish', 'relocate'
 includeWithFlags ':thrift0.9',                           'java', 'publish', 'relocate', 'no_aggregation', 'native'
 project(':thrift0.9').projectDir = file('thrift/thrift0.9')
