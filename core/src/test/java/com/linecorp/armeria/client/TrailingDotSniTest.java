@@ -24,6 +24,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
 import com.linecorp.armeria.common.AggregatedHttpResponse;
+import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.TlsProvider;
@@ -67,6 +68,25 @@ class TrailingDotSniTest {
 
             final BlockingWebClient client = WebClient.builder("https://example.com.:" + server.httpsPort())
                                                       .factory(factory)
+                                                      .build()
+                                                      .blocking();
+            final AggregatedHttpResponse response = client.get("/");
+            assertThat(response.status()).isEqualTo(HttpStatus.OK);
+        }
+    }
+
+    @Test
+    void usesAuthorityHeader() {
+        try (ClientFactory factory = ClientFactory.builder()
+                                                  .tlsCustomizer(b -> b.trustManager(ssc.certificate()))
+                                                  .build()) {
+
+            final BlockingWebClient client = WebClient.builder(server.httpsUri())
+                                                      .factory(factory)
+                                                      .decorator((delegate, ctx, req) -> {
+                                                          ctx.setAdditionalRequestHeader(HttpHeaderNames.AUTHORITY, "example.com");
+                                                          return delegate.execute(ctx, req);
+                                                      })
                                                       .build()
                                                       .blocking();
             final AggregatedHttpResponse response = client.get("/");
