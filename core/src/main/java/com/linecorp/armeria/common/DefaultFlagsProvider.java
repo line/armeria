@@ -27,6 +27,7 @@ import com.google.common.base.Splitter;
 import com.google.common.collect.ImmutableSet;
 
 import com.linecorp.armeria.client.ResponseTimeoutMode;
+import com.linecorp.armeria.common.multipart.MultipartFilenameDecodingMode;
 import com.linecorp.armeria.common.util.Sampler;
 import com.linecorp.armeria.common.util.TlsEngineType;
 import com.linecorp.armeria.common.util.TransportType;
@@ -478,6 +479,11 @@ final class DefaultFlagsProvider implements FlagsProvider {
     @Override
     public Boolean allowSemicolonInPathComponent() {
         return false;
+    }
+
+    @Override
+    public MultipartFilenameDecodingMode defaultMultipartFilenameDecodingMode() {
+        return MultipartFilenameDecodingMode.UTF_8;
     }
 
     @Override

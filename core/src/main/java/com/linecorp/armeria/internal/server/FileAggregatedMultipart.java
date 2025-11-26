@@ -147,7 +147,23 @@ public final class FileAggregatedMultipart {
         return CompletableFuture.supplyAsync(() -> {
             try {
                 Files.createDirectories(directory);
-                return Files.createTempFile(directory, null, '-' + filename);
+                final int dotIndex = filename.lastIndexOf('.');
+                // Truncate the filename to prevent "File name too long" error by the file system.
+                final String truncatedFilename;
+                if (filename.length() <= 20) {
+                    truncatedFilename = filename;
+                } else if (dotIndex > 0) {
+                    final String name = filename.substring(0, dotIndex);
+                    final String extension = filename.substring(dotIndex);
+                    if (extension.length() >= 20) {
+                        truncatedFilename = filename.substring(0, 20);
+                    } else {
+                        truncatedFilename = name.substring(0, 20 - extension.length()) + extension;
+                    }
+                } else {
+                    truncatedFilename = filename.substring(0, 20);
+                }
+                return Files.createTempFile(directory, null, '-' + truncatedFilename);
             } catch (IOException e) {
                 throw new UncheckedIOException(e);
             }

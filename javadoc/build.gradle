@@ -2,15 +2,36 @@ import java.util.stream.Collectors
 
 def aggregatedProjects = projectsWithFlags('java', 'publish') - projectsWithFlags('no_aggregation')
 
+configurations {
+    javadocClasspath {
+        // This configuration is meant to be resolved, not consumed by other projects.
+        canBeResolved = true
+        canBeConsumed = false
+        extendsFrom(configurations.runtimeClasspath)
+    }
+}
+
+dependencies {
+    aggregatedProjects.each { subproject ->
+        javadocClasspath(subproject)
+        // Add a dependency that explicitly requests the 'optional' capability.
+        // This tells Gradle to include the dependencies associated with the 'optional' feature
+        // from the subproject.
+        javadocClasspath(project(subproject.path)) {
+            capabilities {
+                requireCapability("${subproject.group}:${subproject.name}-optional")
+            }
+        }
+    }
+}
+
 tasks.javadoc.configure {
     aggregatedProjects.each {
-        source it.sourceSets.main.java.srcDirs
+        source it.sourceSets.main.allJava
+        source it.sourceSets.optional.allJava
         dependsOn it.tasks.compileJava
     }
-    classpath = aggregatedProjects.inject(project.files()) { ConfigurableFileCollection result, project ->
-        result.from(project.sourceSets.main.compileClasspath)
-        result.from(project.sourceSets.main.runtimeClasspath)
-    }
+    classpath = configurations.javadocClasspath
 }
 tasks.build.dependsOn tasks.javadoc
 

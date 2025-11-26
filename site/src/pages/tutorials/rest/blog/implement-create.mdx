@@ -59,7 +59,7 @@ We can use Armeria's default <type://JacksonRequestConverterFunction> as is, but
 
 1. Create a `BlogPostRequestConverter.java` file and declare a class, implementing the <type://RequestConverterFunction> interface. For the sake of simplicity, generate impromptu IDs for this tutorial.
 
-  ```java filename=BlogRequestConverter.java
+  ```java filename=BlogPostRequestConverter.java
   package example.armeria.server.blog;
 
   import com.fasterxml.jackson.databind.ObjectMapper;
@@ -74,7 +74,7 @@ We can use Armeria's default <type://JacksonRequestConverterFunction> as is, but
 
 2. Add a method retrieving a value of a given key in a JSON object:
 
-  ```java filename=BlogRequestConverter.java highlight=6-12
+  ```java filename=BlogPostRequestConverter.java highlight=6-12
   import com.fasterxml.jackson.databind.JsonNode;
 
   final class BlogPostRequestConverter implements RequestConverterFunction {
@@ -92,7 +92,7 @@ We can use Armeria's default <type://JacksonRequestConverterFunction> as is, but
 
 3. Customize the default `convertRequest()` method as follows.
 
-  ```java filename=BlogRequestConverter.java highlight=10-22
+  ```java filename=BlogPostRequestConverter.java highlight=10-22
   import com.linecorp.armeria.server.ServiceRequestContext;
   import com.linecorp.armeria.common.AggregatedHttpRequest;
   import com.linecorp.armeria.common.annotation.Nullable;

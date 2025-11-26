@@ -92,6 +92,7 @@ internal fun callKotlinSuspendingMethod(
  * Forked from https://github.com/spring-projects/spring-framework/blob/91b9a7537138d7de478c3229069acfe946adcb3a/spring-web/src/main/java/org/springframework/web/method/support/InvocableHandlerMethod.java#L309
  * to support value classes.
  */
+@OptIn(ExperimentalContextParameters::class)
 private fun toArgMap(
     kFunction: KFunction<*>,
     target: Any,
@@ -128,7 +129,7 @@ private fun toArgMap(
                 }
                 index++
             }
-            KParameter.Kind.EXTENSION_RECEIVER ->
+            KParameter.Kind.EXTENSION_RECEIVER, KParameter.Kind.CONTEXT ->
                 throw IllegalStateException("Unsupported parameter kind: ${parameter.kind}")
         }
     }
