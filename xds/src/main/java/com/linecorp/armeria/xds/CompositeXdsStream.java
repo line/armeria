@@ -18,7 +18,9 @@ package com.linecorp.armeria.xds;
 
 import java.util.EnumMap;
 import java.util.EnumSet;
+import java.util.Locale;
 import java.util.Map;
+import java.util.function.Function;
 
 import com.linecorp.armeria.client.grpc.GrpcClientBuilder;
 import com.linecorp.armeria.client.retry.Backoff;
@@ -33,11 +35,13 @@ final class CompositeXdsStream implements XdsStream {
 
     CompositeXdsStream(GrpcClientBuilder clientBuilder, Node node, Backoff backoff,
                        EventExecutor eventLoop, XdsResponseHandler handler,
-                       SubscriberStorage subscriberStorage) {
+                       SubscriberStorage subscriberStorage,
+                       Function<String, DefaultConfigSourceLifecycleObserver> metersFunction) {
         for (XdsType type: XdsType.discoverableTypes()) {
             final SotwXdsStream stream = new SotwXdsStream(
                     SotwDiscoveryStub.basic(type, clientBuilder), node, backoff, eventLoop,
-                    handler, subscriberStorage, EnumSet.of(type));
+                    handler, subscriberStorage, EnumSet.of(type),
+                    metersFunction.apply(type.name().toLowerCase(Locale.ROOT)));
             streamMap.put(type, stream);
         }
     }
