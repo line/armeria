@@ -25,6 +25,7 @@ import java.util.function.Function;
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.ResponseTimeoutException;
 import com.linecorp.armeria.client.RpcClient;
+import com.linecorp.armeria.client.UnprocessedRequestException;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RpcRequest;
@@ -169,6 +170,16 @@ public final class RetryingRpcClient extends AbstractRetryingClient<RpcRequest, 
                     mutator -> mutator.add(ARMERIA_RETRY_COUNT, StringUtil.toString(totalAttempts - 1)));
         }
 
+        final RetryConfig<RpcResponse> config = mappedRetryConfig(ctx);
+        if (!initialAttempt) {
+            final boolean shouldRetry = config.retryLimiter().shouldRetry(derivedCtx);
+            if (!shouldRetry) {
+                handleException(ctx, future, UnprocessedRequestException.of(RetryLimitedException.of()),
+                                initialAttempt);
+                return;
+            }
+        }
+
         final RpcResponse res;
 
         final ClientRequestContextExtension ctxExtension = derivedCtx.as(ClientRequestContextExtension.class);
@@ -193,6 +204,10 @@ public final class RetryingRpcClient extends AbstractRetryingClient<RpcRequest, 
             try {
                 assert retryRule != null;
                 retryRule.shouldRetry(derivedCtx, res, cause).handle((decision, unused3) -> {
+                    if (decision != null) {
+                        config.retryLimiter().handleDecision(derivedCtx, decision);
+                    }
+
                     final Backoff backoff = decision != null ? decision.backoff() : null;
                     if (backoff != null) {
                         final long nextDelay = getNextDelay(derivedCtx, backoff);

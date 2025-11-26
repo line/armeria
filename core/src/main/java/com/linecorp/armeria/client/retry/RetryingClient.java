@@ -312,6 +312,15 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
             return;
         }
 
+        final RetryConfig<HttpResponse> config = mappedRetryConfig(ctx);
+        if (!initialAttempt) {
+            final boolean shouldRetry = config.retryLimiter().shouldRetry(derivedCtx);
+            if (!shouldRetry) {
+                handleException(ctx, rootReqDuplicator, future, RetryLimitedException.of(), initialAttempt);
+                return;
+            }
+        }
+
         final HttpRequest ctxReq = derivedCtx.request();
         assert ctxReq != null;
         final HttpResponse response;
@@ -330,7 +339,6 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
                                            (context, cause) -> HttpResponse.ofFailure(cause), ctxReq, false);
         }
 
-        final RetryConfig<HttpResponse> config = mappedRetryConfig(ctx);
         if (!ctx.exchangeType().isResponseStreaming() || config.requiresResponseTrailers()) {
             response.aggregate().handle((aggregated, cause) -> {
                 if (cause != null) {
@@ -368,7 +376,7 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
             f.handle((decision, shouldRetryCause) -> {
                 warnIfExceptionIsRaised(retryRule, shouldRetryCause);
                 handleRetryDecision(decision, ctx, derivedCtx, rootReqDuplicator,
-                                    originalReq, returnedRes, future, response);
+                                    originalReq, returnedRes, future, response, config);
                 return null;
             });
         } catch (Throwable cause) {
@@ -415,7 +423,8 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
                                            warnIfExceptionIsRaised(ruleWithContent, cause);
                                            truncatingHttpResponse.abort();
                                            handleRetryDecision(decision, ctx, derivedCtx, rootReqDuplicator,
-                                                               originalReq, returnedRes, future, duplicated);
+                                                               originalReq, returnedRes, future, duplicated,
+                                                               retryConfig);
                                            return null;
                                        });
                     } catch (Throwable cause) {
@@ -453,7 +462,7 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
                                    warnIfExceptionIsRaised(ruleWithContent, cause);
                                    handleRetryDecision(
                                            decision, ctx, derivedCtx, rootReqDuplicator, originalReq,
-                                           returnedRes, future, aggregatedRes.toHttpResponse());
+                                           returnedRes, future, aggregatedRes.toHttpResponse(), retryConfig);
                                    return null;
                                });
             } catch (Throwable cause) {
@@ -526,7 +535,12 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
     private void handleRetryDecision(@Nullable RetryDecision decision, ClientRequestContext ctx,
                                      ClientRequestContext derivedCtx, HttpRequestDuplicator rootReqDuplicator,
                                      HttpRequest originalReq, HttpResponse returnedRes,
-                                     CompletableFuture<HttpResponse> future, HttpResponse originalRes) {
+                                     CompletableFuture<HttpResponse> future, HttpResponse originalRes,
+                                     RetryConfig<HttpResponse> config) {
+        if (decision != null) {
+            config.retryLimiter().handleDecision(derivedCtx, decision);
+        }
+
         final Backoff backoff = decision != null ? decision.backoff() : null;
         if (backoff != null) {
             final long millisAfter = useRetryAfter ? getRetryAfterMillis(derivedCtx) : -1;
