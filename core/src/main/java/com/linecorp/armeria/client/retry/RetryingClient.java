@@ -325,14 +325,16 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
         assert ctxReq != null;
         final HttpResponse response;
         final ClientRequestContextExtension ctxExtension = derivedCtx.as(ClientRequestContextExtension.class);
-        if (!initialAttempt && ctxExtension != null && derivedCtx.endpoint() == null) {
+        if (!initialAttempt && ctxExtension != null && !ctxExtension.initializationTriggered()) {
             // clear the pending throwable to retry endpoint selection
             ClientPendingThrowableUtil.removePendingThrowable(derivedCtx);
             // if the endpoint hasn't been selected, try to initialize the ctx with a new endpoint/event loop
+            // tryCompleteLog is false because we handle it in completeLogIfBytesNotTransferred.
             response = initContextAndExecuteWithFallback(
                     unwrap(), ctxExtension, HttpResponse::of,
                     (context, cause) -> HttpResponse.ofFailure(cause), ctxReq, false);
         } else {
+            // tryCompleteLog is false because we handle it in completeLogIfBytesNotTransferred.
             response = executeWithFallback(unwrap(), derivedCtx,
                                            (context, cause) -> HttpResponse.ofFailure(cause), ctxReq, false);
         }

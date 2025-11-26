@@ -169,19 +169,26 @@ public final class ClientUtil {
     }
 
     public static <I extends Request, O extends Response, U extends PreClient<I, O>>
-    O executeWithFallback(U execution,
-                          PreClientRequestContext ctx, I req,
-                          BiFunction<ClientRequestContext, Throwable, O> errorResponseFactory) {
+    O executePreClientWithFallback(U execution,
+                                   PreClientRequestContext ctx, I req,
+                                   BiFunction<ClientRequestContext, Throwable, O> errorResponseFactory) {
         final ClientRequestContextExtension ctxExt = ctx.as(ClientRequestContextExtension.class);
         if (ctxExt != null) {
             ctxExt.runContextCustomizer();
         }
+        O res;
         try {
-            return execution.execute(ctx, req);
+            res = execution.execute(ctx, req);
         } catch (Exception e) {
+            if (ctxExt != null && !ctxExt.initializationTriggered()) {
+                ctxExt.initAndFail(e);
+            }
             fail(ctx, e);
-            return errorResponseFactory.apply(ctx, e);
+            res = errorResponseFactory.apply(ctx, e);
         }
+
+        completeLogIfIncomplete(ctx, res);
+        return res;
     }
 
     private static <I extends Request, O extends Response, U extends Client<I, O>>
