@@ -24,8 +24,10 @@ import static com.linecorp.armeria.internal.server.grpc.GrpcDocServicePlugin.con
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Consumer;
 import java.util.function.Function;
 
 import org.junit.jupiter.api.Test;
@@ -118,19 +120,23 @@ class GrpcDocServicePluginTest {
         services.get(HttpJsonTranscodingTestServiceGrpc.SERVICE_NAME +
                      GrpcDocServicePlugin.HTTP_SERVICE_SUFFIX).methods().forEach(m -> {
             m.endpoints().forEach(e -> {
-                if (m.examplePaths().isEmpty()) {
-                    return;
-                }
-                assertThat(e.pathMapping()).satisfiesAnyOf(
-                        path -> assertThat(path).endsWith(m.examplePaths().get(0)),
-                        path -> assertThat(convertRegexPath(path)).endsWith(m.examplePaths().get(0)));
+                assertThat(e.pathMapping()).satisfiesAnyOf(toVerifierArray(m));
             });
         });
     }
 
+    @SuppressWarnings({"unchecked", "ConstantForZeroLengthArrayAllocation"})
+    private static Consumer<String>[] toVerifierArray(MethodInfo m) {
+        final List<Consumer<String>> pathVerifiers = new ArrayList<>();
+        for (String examplePath : m.examplePaths()) {
+            pathVerifiers.add(path -> assertThat(path).endsWith(examplePath));
+            pathVerifiers.add(path -> assertThat(convertRegexPath(path)).endsWith(examplePath));
+        }
+        return pathVerifiers.toArray(new Consumer[0]);
+    }
+
     @Test
     void include() {
-
         // 1. Nothing specified: include all.
         // 2. Exclude specified: include all except the methods which the exclude filter returns true.
         // 3. Include specified: include the methods which the include filter returns true.
