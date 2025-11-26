@@ -37,8 +37,8 @@ class AthenzInvalidPolicyDataTest {
 
     @Test
     void shouldFailWithInvalidPolicyData() {
-        try (ZtsBaseClient ztsBaseClient = athenzExtension.newZtsBaseClient(TEST_SERVICE, cb -> {
-            cb.decorator((delegate, ctx, req) -> {
+        try (ZtsBaseClient ztsBaseClient = athenzExtension.newZtsBaseClient(TEST_SERVICE, zcb -> {
+            zcb.configureWebClient(cb -> cb.decorator((delegate, ctx, req) -> {
                 if (ctx.path().equals("/zts/v1/domain/" + TEST_DOMAIN_NAME + "/policy/signed")) {
                     // Simulate an invalid policy data response.
                     return HttpResponse.of(HttpStatus.OK,
@@ -47,7 +47,7 @@ class AthenzInvalidPolicyDataTest {
                 } else {
                     return delegate.execute(ctx, req);
                 }
-            });
+            }));
         })) {
             assertThatThrownBy(() -> {
                 AthenzService.builder(ztsBaseClient)
