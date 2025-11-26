@@ -73,14 +73,14 @@ jobs:
         name: Set up JDK ${{ matrix.java }}
         uses: actions/setup-java@v4
         with:
-          distribution: 'temurin'
+          distribution: 'zulu'
           java-version: ${{ matrix.java }}
 
       - id: setup-build-jdk
         name: Set up build JDK ${{ env.BUILD_JDK_VERSION }}
         uses: actions/setup-java@v4
         with:
-          distribution: 'temurin'
+          distribution: 'zulu'
           java-version: ${{ env.BUILD_JDK_VERSION }}
 
       - name: Clean up stale build scan data
@@ -230,7 +230,7 @@ jobs:
         name: Set up JDK ${{ env.BUILD_JDK_VERSION }}
         uses: actions/setup-java@v4
         with:
-          distribution: 'temurin'
+          distribution: 'zulu'
           java-version: ${{ env.BUILD_JDK_VERSION }}
 
       - name: Setup Gradle
@@ -256,7 +256,7 @@ jobs:
         name: Set up JDK ${{ env.BUILD_JDK_VERSION }}
         uses: actions/setup-java@v4
         with:
-          distribution: 'temurin'
+          distribution: 'zulu'
           java-version: ${{ env.BUILD_JDK_VERSION }}
 
       - name: Setup Gradle
@@ -278,7 +278,7 @@ jobs:
         name: Set up JDK ${{ env.BUILD_JDK_VERSION }}
         uses: actions/setup-java@v4
         with:
-          distribution: 'temurin'
+          distribution: 'zulu'
           java-version: ${{ env.BUILD_JDK_VERSION }}
 
       - name: Setup Gradle

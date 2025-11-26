@@ -16,7 +16,7 @@ jobs:
         name: Set up JDK 25
         uses: actions/setup-java@v4
         with:
-          distribution: 'temurin'
+          distribution: 'zulu'
           java-version: '25'
 
       - uses: gradle/gradle-enterprise-build-validation-scripts/.github/actions/gradle/download@actions-stable
