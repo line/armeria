@@ -92,6 +92,7 @@ logback12 = "1.2.13"
 logback13 = "1.3.14"
 logback14 = "1.4.14"
 logback15 = "1.5.21"
+mcp = "0.15.0"
 micrometer = "1.16.0"
 micrometer-tracing = "1.6.0"
 micrometer-docs-generator = "1.0.2"
@@ -190,6 +191,7 @@ dropwizard-metrics = { module = "io.dropwizard.metrics:metrics-bom", version.ref
 grpc-java = { module = "io.grpc:grpc-bom", version.ref = "grpc-java" }
 jackson = { module = "com.fasterxml.jackson:jackson-bom", version.ref = "jackson" }
 junit5 = { module = "org.junit:junit-bom", version.ref = "junit5" }
+mcp = { module = "io.modelcontextprotocol.sdk:mcp-bom", version.ref = "mcp" }
 netty = { module = "io.netty:netty-bom", version.ref = "netty" }
 testcontainers = { module = "org.testcontainers:testcontainers-bom", version.ref = "testcontainers" }
 
@@ -870,6 +872,14 @@ javadocs = "https://www.javadoc.io/doc/ch.qos.logback/logback-classic/1.4.7/"
 module = "ch.qos.logback:logback-classic"
 version.ref = "logback15"
 javadocs = "https://www.javadoc.io/doc/ch.qos.logback/logback-classic/1.5.12/"
+
+[libraries.mcp-core]
+module = "io.modelcontextprotocol.sdk:mcp"
+# MCP Spring WebFlux is only used for testing in :ai:mcp module.
+[libraries.mcp-spring-webflux]
+module = "io.modelcontextprotocol.sdk:mcp-spring-webflux"
+[libraries.mcp-test]
+module = "io.modelcontextprotocol.sdk:mcp-test"
 
 [libraries.micrometer-core]
 module = "io.micrometer:micrometer-core"
