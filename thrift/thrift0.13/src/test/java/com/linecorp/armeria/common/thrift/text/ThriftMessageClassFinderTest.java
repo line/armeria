@@ -42,8 +42,8 @@ class ThriftMessageClassFinderTest {
         builder.add(new DefaultThriftMessageClassFinder());
         if (SystemInfo.javaVersion() >= 9) {
             builder.add(new StackWalkingThriftMessageClassFinder());
-            if (SystemInfo.javaVersion() < 25) {
-                // Security manager is permanently removed in Java 25 and later.
+            if (SystemInfo.javaVersion() < 24) {
+                // Security manager is permanently removed in Java 24 and later.
                 builder.add(getNoOptionStackWalkerInstance());
             }
         }

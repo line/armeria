@@ -56,7 +56,7 @@ public class StackTracingBenchmark extends hello_args {
         defaultThriftMessageClassFinder = new DefaultThriftMessageClassFinder();
         stackWalkingFinderWithRetainOption = new StackWalkingThriftMessageClassFinder();
 
-        if (SystemInfo.javaVersion() >= 9 && SystemInfo.javaVersion() < 25) {
+        if (SystemInfo.javaVersion() < 24) {
             final SecurityManager securityManager = System.getSecurityManager();
             System.setSecurityManager(new SecurityManager() {
                 @Override
