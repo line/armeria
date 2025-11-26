@@ -38,8 +38,7 @@ import com.linecorp.armeria.common.metric.MeterIdPrefix;
  * <pre>{@code
  * ZtsBaseClient ztsBaseClient = ...;
  *
- * AthenzClient.builder()
- *             .ztsBaseClient(ztsBaseClient)
+ * AthenzClient.builder(ztsBaseClient)
  *             .domainName("my-domain")
  *             .roleNames("my-role")
  *             .tokenType(TokenType.ACCESS_TOKEN)
@@ -125,7 +124,7 @@ public final class AthenzClientBuilder {
     /**
      * Returns a new {@link HttpClient} decorator configured with the settings in this builder.
      */
-    public Function<HttpClient, AthenzClient> newDecorator() {
+    public Function<? super HttpClient, AthenzClient> newDecorator() {
         final String domainName = this.domainName;
         checkState(domainName != null, "domainName is not set");
 

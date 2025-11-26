@@ -58,8 +58,7 @@ import io.micrometer.core.instrument.Timer;
  * // Using builder
  * WebClient
  *   .builder()
- *   .decorator(AthenzClient.builder()
- *                          .ztsBaseClient(ztsBaseClient)
+ *   .decorator(AthenzClient.builder(ztsBaseClient)
  *                          .domainName("my-domain")
  *                          .tokenType(TokenType.ROLE_TOKEN)
  *                          .newDecorator())
@@ -93,8 +92,8 @@ public final class AthenzClient extends SimpleDecoratingHttpClient {
      * @param domainName the Athenz domain name
      * @param tokenType the type of Athenz token to obtain
      */
-    public static Function<HttpClient, AthenzClient> newDecorator(ZtsBaseClient ztsBaseClient,
-                                                                  String domainName, TokenType tokenType) {
+    public static Function<? super HttpClient, AthenzClient> newDecorator(
+            ZtsBaseClient ztsBaseClient, String domainName, TokenType tokenType) {
         return builder(ztsBaseClient)
                 .domainName(domainName)
                 .tokenType(tokenType)
@@ -110,9 +109,8 @@ public final class AthenzClient extends SimpleDecoratingHttpClient {
      * @param roleName the Athenz role name
      * @param tokenType the type of Athenz token to obtain
      */
-    public static Function<HttpClient, AthenzClient> newDecorator(ZtsBaseClient ztsBaseClient,
-                                                                  String domainName, String roleName,
-                                                                  TokenType tokenType) {
+    public static Function<? super HttpClient, AthenzClient> newDecorator(
+            ZtsBaseClient ztsBaseClient, String domainName, String roleName, TokenType tokenType) {
         return builder(ztsBaseClient)
                 .domainName(domainName)
                 .roleNames(roleName)
@@ -129,9 +127,8 @@ public final class AthenzClient extends SimpleDecoratingHttpClient {
      * @param roleNames the list of Athenz role names
      * @param tokenType the type of Athenz token to obtain
      */
-    public static Function<HttpClient, AthenzClient> newDecorator(ZtsBaseClient ztsBaseClient,
-                                                                  String domainName, List<String> roleNames,
-                                                                  TokenType tokenType) {
+    public static Function<? super HttpClient, AthenzClient> newDecorator(
+            ZtsBaseClient ztsBaseClient, String domainName, List<String> roleNames, TokenType tokenType) {
         return builder(ztsBaseClient)
                 .domainName(domainName)
                 .roleNames(roleNames)
@@ -149,9 +146,9 @@ public final class AthenzClient extends SimpleDecoratingHttpClient {
      * @param tokenType the type of Athenz token to obtain
      * @param refreshBefore the duration before the token expires to refresh it
      */
-    public static Function<HttpClient, AthenzClient> newDecorator(ZtsBaseClient ztsBaseClient,
-                                                                  String domainName, List<String> roleNames,
-                                                                  TokenType tokenType, Duration refreshBefore) {
+    public static Function<? super HttpClient, AthenzClient> newDecorator(
+            ZtsBaseClient ztsBaseClient, String domainName, List<String> roleNames,
+            TokenType tokenType, Duration refreshBefore) {
         return builder(ztsBaseClient)
                 .domainName(domainName)
                 .roleNames(roleNames)
