@@ -84,7 +84,8 @@ class TrailingDotSniTest {
             final BlockingWebClient client = WebClient.builder(server.httpsUri())
                                                       .factory(factory)
                                                       .decorator((delegate, ctx, req) -> {
-                                                          ctx.setAdditionalRequestHeader(HttpHeaderNames.AUTHORITY, "example.com");
+                                                          ctx.setAdditionalRequestHeader(HttpHeaderNames.AUTHORITY,
+                                                                                         "example.com");
                                                           return delegate.execute(ctx, req);
                                                       })
                                                       .build()
