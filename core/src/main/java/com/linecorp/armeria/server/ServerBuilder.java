@@ -65,6 +65,7 @@ import org.slf4j.LoggerFactory;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Sets;
 import com.google.common.net.HostAndPort;
 
@@ -98,6 +99,7 @@ import com.linecorp.armeria.internal.common.BuiltInDependencyInjector;
 import com.linecorp.armeria.internal.common.RequestContextUtil;
 import com.linecorp.armeria.internal.common.util.ChannelUtil;
 import com.linecorp.armeria.internal.server.RouteDecoratingService;
+import com.linecorp.armeria.internal.server.RouteUtil;
 import com.linecorp.armeria.internal.server.annotation.AnnotatedServiceExtensions;
 import com.linecorp.armeria.server.annotation.ExceptionHandlerFunction;
 import com.linecorp.armeria.server.annotation.RequestConverterFunction;
@@ -1361,6 +1363,15 @@ public final class ServerBuilder implements TlsSetters, ServiceConfigsBuilder<Se
                                      Consumer<ContextPathServicesBuilder> customizer) {
         requireNonNull(contextPaths, "contextPaths");
         requireNonNull(customizer, "customizer");
+
+        if (Iterables.isEmpty(contextPaths)) {
+            throw new IllegalArgumentException("contextPaths is empty");
+        }
+
+        for (String contextPath : contextPaths) {
+            RouteUtil.ensureAbsolutePath(contextPath, "contextPath");
+        }
+
         customizer.accept(contextPath(contextPaths));
         return this;
     }

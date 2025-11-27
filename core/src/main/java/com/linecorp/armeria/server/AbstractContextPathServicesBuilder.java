@@ -424,7 +424,6 @@ abstract class AbstractContextPathServicesBuilder<SELF extends AbstractContextPa
         final Set<String> mergedContextPaths = new HashSet<>();
         for (String currentContextPath : contextPaths()) {
             for (String childContextPath : paths) {
-                RouteUtil.ensureAbsolutePath(childContextPath, "contextPath");
                 final String mergedContextPath = currentContextPath + childContextPath;
                 mergedContextPaths.add(mergedContextPath);
             }

@@ -25,6 +25,7 @@ import java.util.function.Function;
 import com.google.common.collect.ImmutableSet;
 
 import com.linecorp.armeria.common.annotation.UnstableApi;
+import com.linecorp.armeria.internal.server.RouteUtil;
 import com.linecorp.armeria.server.annotation.ExceptionHandlerFunction;
 import com.linecorp.armeria.server.annotation.RequestConverterFunction;
 import com.linecorp.armeria.server.annotation.ResponseConverterFunction;
@@ -108,6 +109,11 @@ public final class ContextPathServicesBuilder
                                                   Consumer<ContextPathServicesBuilder> customizer) {
         requireNonNull(paths, "contextPaths");
         requireNonNull(customizer, "customizer");
+
+        for (String path : paths) {
+            RouteUtil.ensureAbsolutePath(path, "contextPath");
+        }
+
         final ContextPathServicesBuilder child =
                 new ContextPathServicesBuilder(parent(),
                                                virtualHostBuilder(),
@@ -121,7 +127,6 @@ public final class ContextPathServicesBuilder
                                                   Consumer<ContextPathServicesBuilder> customizer) {
         requireNonNull(path, "contextPath");
         requireNonNull(customizer, "customizer");
-        contextPath(ImmutableSet.of(path), customizer);
-        return this;
+        return contextPath(ImmutableSet.of(path), customizer);
     }
 }
