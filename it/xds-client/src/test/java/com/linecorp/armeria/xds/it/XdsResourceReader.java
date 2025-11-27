@@ -19,6 +19,7 @@ package com.linecorp.armeria.xds.it;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
+import com.google.protobuf.GeneratedMessageV3;
 import com.google.protobuf.util.JsonFormat;
 import com.google.protobuf.util.JsonFormat.Parser;
 import com.google.protobuf.util.JsonFormat.TypeRegistry;
@@ -45,6 +46,19 @@ public final class XdsResourceReader {
             throw new RuntimeException(e);
         }
         return bootstrapBuilder.build();
+    }
+
+    @SuppressWarnings("unchecked")
+    public static <T extends GeneratedMessageV3> T fromYaml(String yaml, Class<T> clazz) {
+        final GeneratedMessageV3.Builder<?> builder;
+        try {
+            builder = (GeneratedMessageV3.Builder<?>) clazz.getMethod("newBuilder").invoke(null);
+            final JsonNode jsonNode = mapper.reader().readTree(yaml);
+            parser.merge(jsonNode.toString(), builder);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+        return (T) builder.build();
     }
 
     private XdsResourceReader() {}

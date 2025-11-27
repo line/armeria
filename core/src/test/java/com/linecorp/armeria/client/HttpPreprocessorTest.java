@@ -18,6 +18,7 @@ package com.linecorp.armeria.client;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.awaitility.Awaitility.await;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -31,6 +32,7 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.internal.client.ClientRequestContextExtension;
+import com.linecorp.armeria.internal.client.DefaultClientRequestContext;
 import com.linecorp.armeria.internal.common.CancellationScheduler.State;
 import com.linecorp.armeria.testing.junit5.common.EventLoopExtension;
 
@@ -110,6 +112,26 @@ class HttpPreprocessorTest {
                          .build()
                          .blocking();
         assertThat(client.get("/").status().code()).isEqualTo(200);
+    }
+
+    @Test
+    void failureCompletesContext() {
+        final RuntimeException exception = new RuntimeException("test");
+        try (ClientRequestContextCaptor captor = Clients.newContextCaptor()) {
+            final WebClient client = WebClient.of(new HttpPreprocessor() {
+                @Override
+                public HttpResponse execute(PreClient<HttpRequest, HttpResponse> delegate,
+                                            PreClientRequestContext ctx, HttpRequest req) throws Exception {
+                    throw exception;
+                }
+            });
+
+            assertThatThrownBy(() -> client.blocking().get("/")).isEqualTo(exception);
+            final DefaultClientRequestContext ctx = (DefaultClientRequestContext) captor.get();
+            await().untilAsserted(() -> assertThat(ctx.whenInitialized()).isDone());
+            await().untilAsserted(() -> assertThat(ctx.log().isComplete()).isTrue());
+            assertThat(ctx.eventLoop()).isNotNull();
+        }
     }
 
     private static final class RunnablePreprocessor implements HttpPreprocessor {
