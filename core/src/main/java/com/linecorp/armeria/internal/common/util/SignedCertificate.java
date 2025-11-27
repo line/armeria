@@ -145,7 +145,8 @@ public class SignedCertificate {
      */
     public SignedCertificate(String fqdn, SignedCertificate parent) throws CertificateException {
         this(new CertificateParams(fqdn, ThreadLocalRandom.current(), DEFAULT_KEY_LENGTH_BITS,
-                                   DEFAULT_NOT_BEFORE, DEFAULT_NOT_AFTER, "RSA", parent.cert, parent.key()));
+                                   DEFAULT_NOT_BEFORE, DEFAULT_NOT_AFTER, parent.key.getAlgorithm(),
+                                   parent.cert, parent.key()));
     }
 
     /**
@@ -208,7 +209,7 @@ public class SignedCertificate {
     }
 
     /**
-     * Returns the generated RSA private key file in PEM format.
+     * Returns the generated private key file in PEM format.
      */
     public File privateKey() {
         return privateKey;
@@ -222,7 +223,7 @@ public class SignedCertificate {
     }
 
     /**
-     * Returns the generated RSA private key.
+     * Returns the generated private key.
      */
     public PrivateKey key() {
         return key;

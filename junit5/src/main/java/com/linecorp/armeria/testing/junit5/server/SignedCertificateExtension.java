@@ -38,6 +38,7 @@ import com.linecorp.armeria.testing.junit5.common.AbstractAllOrEachExtension;
  * Note that the specified {@link SignedCertificateExtension} should be executed before
  * the current extension, optionally be adjusting the order via {@link Order}.
  */
+@UnstableApi
 public class SignedCertificateExtension extends AbstractAllOrEachExtension {
 
     private final ThrowingSupplier<SignedCertificate> certificateFactory;
