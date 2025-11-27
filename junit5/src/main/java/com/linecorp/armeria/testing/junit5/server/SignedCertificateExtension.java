@@ -67,7 +67,7 @@ public class SignedCertificateExtension extends AbstractAllOrEachExtension {
     }
 
     /**
-     * Generates a self-signed certificate.
+     * Generates a signed certificate.
      */
     @Override
     public void before(ExtensionContext context) throws Exception {
@@ -79,7 +79,7 @@ public class SignedCertificateExtension extends AbstractAllOrEachExtension {
     }
 
     /**
-     * Deletes the generated self-signed certificate.
+     * Deletes the generated signed certificate.
      */
     @Override
     public void after(ExtensionContext context) throws Exception {
@@ -97,28 +97,28 @@ public class SignedCertificateExtension extends AbstractAllOrEachExtension {
     }
 
     /**
-     * Returns the self-signed certificate file.
+     * Returns the signed certificate file.
      */
     public File certificateFile() {
         return signedCertificate().certificate();
     }
 
     /**
-     * Returns the {@link PrivateKey} of the self-signed certificate.
+     * Returns the {@link PrivateKey} of the signed certificate.
      */
     public PrivateKey privateKey() {
         return signedCertificate().key();
     }
 
     /**
-     * Returns the private key file of the self-signed certificate.
+     * Returns the private key file of the signed certificate.
      */
     public File privateKeyFile() {
         return signedCertificate().privateKey();
     }
 
     /**
-     * Returns the {@link TlsKeyPair} of the self-signed certificate.
+     * Returns the {@link TlsKeyPair} of the signed certificate.
      */
     @UnstableApi
     public TlsKeyPair tlsKeyPair() {
