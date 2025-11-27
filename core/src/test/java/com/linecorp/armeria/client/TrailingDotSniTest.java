@@ -81,15 +81,15 @@ class TrailingDotSniTest {
                                                   .tlsCustomizer(b -> b.trustManager(ssc.certificate()))
                                                   .build()) {
 
-            final BlockingWebClient client = WebClient.builder(server.httpsUri())
-                                                      .factory(factory)
-                                                      .decorator((delegate, ctx, req) -> {
-                                                          ctx.setAdditionalRequestHeader(HttpHeaderNames.AUTHORITY,
-                                                                                         "example.com");
-                                                          return delegate.execute(ctx, req);
-                                                      })
-                                                      .build()
-                                                      .blocking();
+            final BlockingWebClient client =
+                    WebClient.builder(server.httpsUri())
+                             .factory(factory)
+                             .decorator((delegate, ctx, req) -> {
+                                 ctx.setAdditionalRequestHeader(HttpHeaderNames.AUTHORITY, "example.com");
+                                 return delegate.execute(ctx, req);
+                             })
+                             .build()
+                             .blocking();
             final AggregatedHttpResponse response = client.get("/");
             assertThat(response.status()).isEqualTo(HttpStatus.OK);
         }
