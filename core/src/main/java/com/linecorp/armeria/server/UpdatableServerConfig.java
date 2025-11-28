@@ -311,6 +311,11 @@ final class UpdatableServerConfig implements ServerConfig {
     }
 
     @Override
+    public List<String> additionalAllowedHttpMethods() {
+        return delegate.additionalAllowedHttpMethods();
+    }
+
+    @Override
     public DependencyInjector dependencyInjector() {
         return delegate.dependencyInjector();
     }
