@@ -47,6 +47,8 @@ abstract class CancellableStreamMessage<T> extends AggregationSupport implements
     static final Logger logger = LoggerFactory.getLogger(CancellableStreamMessage.class);
 
     static final CloseEvent SUCCESSFUL_CLOSE = new CloseEvent(null);
+    static final CloseEvent CANCELLED_CLOSE = new CloseEvent(CancelledSubscriptionException.INSTANCE);
+    static final CloseEvent ABORTED_CLOSE = new CloseEvent(AbortedStreamException.INSTANCE);
 
     private final CompletableFuture<Void> completionFuture = new EventLoopCheckingFuture<>();
 
@@ -132,10 +134,17 @@ abstract class CancellableStreamMessage<T> extends AggregationSupport implements
     }
 
     /**
-     * Returns newly created {@link CloseEvent} with the cause.
+     * Returns newly created {@link CloseEvent} if the specified {@link Throwable} is not an instance of
+     * {@link CancelledSubscriptionException#INSTANCE} or {@link AbortedStreamException#INSTANCE}.
      */
     static CloseEvent newCloseEvent(Throwable cause) {
-        return new CloseEvent(cause);
+        if (cause == CancelledSubscriptionException.INSTANCE) {
+            return CANCELLED_CLOSE;
+        } else if (cause == AbortedStreamException.INSTANCE) {
+            return ABORTED_CLOSE;
+        } else {
+            return new CloseEvent(cause);
+        }
     }
 
     static final class SubscriptionImpl implements Subscription {

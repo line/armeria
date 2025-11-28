@@ -293,7 +293,7 @@ public class DefaultStreamMessage<T> extends AbstractStreamWriter<T> {
             // is called. We just ignore the previously pushed event and deal with cancelled close event.
             final SubscriptionImpl subscription = this.subscription;
             assert subscription != null;
-            notifySubscriberOfCloseEvent(subscription, new CloseEvent(CancelledSubscriptionException.get()));
+            notifySubscriberOfCloseEvent(subscription, newCloseEvent(CancelledSubscriptionException.get()));
         }
     }
 
