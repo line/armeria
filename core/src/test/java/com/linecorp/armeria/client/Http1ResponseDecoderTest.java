@@ -35,10 +35,9 @@ class Http1ResponseDecoderTest {
     @Test
     void testRequestTimeoutClosesImmediately() throws Exception {
         final EmbeddedChannel channel = new EmbeddedChannel();
-        try (HttpClientFactory httpClientFactory = new HttpClientFactory(ClientFactoryOptions.of(),
-                                                                         true)) {
+        try (ClientFactory cf = ClientFactory.builder().build()) {
             final Http1ResponseDecoder decoder = new Http1ResponseDecoder(
-                    channel, httpClientFactory, SessionProtocol.H1);
+                    channel, (HttpClientFactory) cf.unwrap(), SessionProtocol.H1);
             channel.pipeline().addLast(decoder);
 
             final HttpHeaders httpHeaders = new DefaultHttpHeaders();

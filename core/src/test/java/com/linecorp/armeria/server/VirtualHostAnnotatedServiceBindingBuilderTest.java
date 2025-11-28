@@ -35,6 +35,7 @@ import com.google.common.collect.ImmutableList;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
+import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
@@ -43,6 +44,7 @@ import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.internal.common.SslContextFactory;
 import com.linecorp.armeria.server.annotation.ExceptionHandlerFunction;
 import com.linecorp.armeria.server.annotation.Get;
 import com.linecorp.armeria.server.annotation.JacksonResponseConverterFunction;
@@ -58,6 +60,7 @@ class VirtualHostAnnotatedServiceBindingBuilderTest {
     private static final ExceptionHandlerFunction handlerFunction = (ctx, req, cause) -> HttpResponse.of(501);
     private static final JacksonResponseConverterFunction customJacksonResponseConverterFunction =
             customJacksonResponseConverterFunction();
+    private static final SslContextFactory sslContextFactory = new SslContextFactory(Flags.meterRegistry());
 
     private static JacksonResponseConverterFunction customJacksonResponseConverterFunction() {
         final ObjectMapper objectMapper = new ObjectMapper();
@@ -107,7 +110,8 @@ class VirtualHostAnnotatedServiceBindingBuilderTest {
                 .multipartUploadsLocation(multipartUploadsLocation)
                 .requestIdGenerator(serviceRequestIdGenerator)
                 .build(new TestService())
-                .build(template, noopDependencyInjector, null, ServerErrorHandler.ofDefault(), null);
+                .build(template, noopDependencyInjector, null, ServerErrorHandler.ofDefault(), null,
+                       sslContextFactory);
 
         assertThat(virtualHost.serviceConfigs()).hasSize(2);
         final ServiceConfig pathBar = virtualHost.serviceConfigs().get(0);

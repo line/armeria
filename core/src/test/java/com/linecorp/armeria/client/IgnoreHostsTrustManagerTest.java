@@ -34,10 +34,9 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
-import com.google.common.collect.ImmutableSet;
-
 import com.linecorp.armeria.common.HttpResponse;
-import com.linecorp.armeria.internal.common.IgnoreHostsTrustManager;
+import com.linecorp.armeria.common.TlsPeerVerifierFactory;
+import com.linecorp.armeria.internal.common.util.SslContextUtil;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
@@ -74,79 +73,54 @@ class IgnoreHostsTrustManagerTest {
     }
 
     @Test
-    void testCreate() {
-        assertThat(IgnoreHostsTrustManager.of(ImmutableSet.of("localhost"))).isNotNull();
-    }
-
-    @Test
-    void testCheckServerTrustedWithSocket() throws Exception {
-        final Socket socket = new Socket("localhost", httpsPort);
-        final X509Certificate[] certs = EMPTY_CERTIFICATES;
-        final MockTrustManager delegate = new MockTrustManager();
-        IgnoreHostsTrustManager tm;
-
-        // if host is ignored, the check is not delegated, therefore delegate.received is false
-        tm = new IgnoreHostsTrustManager(delegate, ImmutableSet.of("localhost"));
-        tm.checkServerTrusted(certs, "", socket);
-        assertThat(delegate.received).isFalse();
-
-        // if host is not ignored, the check is delegated
-        tm = new IgnoreHostsTrustManager(delegate, ImmutableSet.of());
-        tm.checkServerTrusted(certs, "", socket);
-        assertThat(delegate.received).isTrue();
-
-        socket.close();
-    }
-
-    @Test
     void testCheckServerTrustedWithSslEngine() throws Exception {
         final MockSSLEngine sslEngine = new MockSSLEngine("localhost", httpsPort);
         final X509Certificate[] certs = EMPTY_CERTIFICATES;
         final MockTrustManager delegate = new MockTrustManager();
-        IgnoreHostsTrustManager tm;
+        X509ExtendedTrustManager tm;
 
         // if host is ignored, the check is not delegated, therefore delegate.received is false
-        tm = new IgnoreHostsTrustManager(delegate, ImmutableSet.of("localhost"));
+        final ClientTlsSpec clientTlsSpec =
+                ClientTlsSpec.builder().verifierFactories(TlsPeerVerifierFactory.insecureHosts("localhost"))
+                             .build();
+        tm = SslContextUtil.toTrustManager(clientTlsSpec, delegate);
         tm.checkServerTrusted(certs, "", sslEngine);
         assertThat(delegate.received).isFalse();
 
         // if host is not ignored, the check is delegated
-        tm = new IgnoreHostsTrustManager(delegate, ImmutableSet.of());
+        tm = SslContextUtil.toTrustManager(ClientTlsSpec.of(), delegate);
         tm.checkServerTrusted(certs, "", sslEngine);
         assertThat(delegate.received).isTrue();
     }
 
     @Test
-    void testGetAcceptedIssuers() {
+    void testGetAcceptedIssuers() throws Exception {
         final MockTrustManager delegate = new MockTrustManager();
-        final IgnoreHostsTrustManager tm = new IgnoreHostsTrustManager(delegate, ImmutableSet.of());
+        final X509ExtendedTrustManager tm = SslContextUtil.toTrustManager(ClientTlsSpec.of(), delegate);
         assertThat(tm.getAcceptedIssuers()).isEqualTo(delegate.certificates);
     }
 
     @Test
-    void testCheckServerTrustedWithAuthType() {
-        final IgnoreHostsTrustManager tm = IgnoreHostsTrustManager.of(ImmutableSet.of());
+    void testCheckServerTrustedWithAuthType() throws Exception {
+        final MockTrustManager delegate = new MockTrustManager();
+        final X509ExtendedTrustManager tm = SslContextUtil.toTrustManager(ClientTlsSpec.of(), delegate);
         assertThatThrownBy(() -> tm.checkServerTrusted(defaultCerts, ""))
                 .isInstanceOf(UnsupportedOperationException.class);
     }
 
     @Test
-    void testCheckClientTrustedWithSocket() {
-        final IgnoreHostsTrustManager tm = IgnoreHostsTrustManager.of(ImmutableSet.of());
-        assertThatThrownBy(() -> tm.checkClientTrusted(defaultCerts, "", defaultSocket))
-                .isInstanceOf(UnsupportedOperationException.class);
-    }
-
-    @Test
-    void testCheckClientTrustedWithSslEngine() {
-        final IgnoreHostsTrustManager tm = IgnoreHostsTrustManager.of(ImmutableSet.of());
+    void testCheckClientTrustedWithSslEngine() throws Exception {
+        final MockTrustManager delegate = new MockTrustManager();
+        final X509ExtendedTrustManager tm = SslContextUtil.toTrustManager(ClientTlsSpec.of(), delegate);
         assertThatThrownBy(() -> tm.checkClientTrusted(defaultCerts, "", defaultSslEngine))
-                .isInstanceOf(UnsupportedOperationException.class);
+                .isInstanceOf(UnsupportedOperationException.class)
+                .hasMessageContaining("can only verify server peers");
     }
 
     @Test
-    void testCheckClientTrustedWithAuthType() {
-        final IgnoreHostsTrustManager tm = IgnoreHostsTrustManager.of(ImmutableSet.of());
+    void testCheckClientTrustedWithAuthType() throws Exception {
+        final MockTrustManager delegate = new MockTrustManager();
+        final X509ExtendedTrustManager tm = SslContextUtil.toTrustManager(ClientTlsSpec.of(), delegate);
         assertThatThrownBy(() -> tm.checkClientTrusted(defaultCerts, ""))
                 .isInstanceOf(UnsupportedOperationException.class);
     }

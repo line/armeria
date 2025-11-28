@@ -16,32 +16,26 @@
 
 package com.linecorp.armeria.testing.junit5.server;
 
-import java.io.File;
-import java.security.PrivateKey;
 import java.security.SecureRandom;
 import java.security.cert.Certificate;
-import java.security.cert.X509Certificate;
+import java.time.Instant;
 import java.time.temporal.TemporalAccessor;
+import java.util.Date;
 
 import org.junit.jupiter.api.extension.Extension;
-import org.junit.jupiter.api.extension.ExtensionContext;
 
-import com.linecorp.armeria.common.TlsKeyPair;
-import com.linecorp.armeria.common.annotation.UnstableApi;
-import com.linecorp.armeria.internal.testing.SelfSignedCertificateRuleDelegate;
-import com.linecorp.armeria.testing.junit5.common.AbstractAllOrEachExtension;
+import com.linecorp.armeria.internal.common.util.SelfSignedCertificate;
 
 /**
  * An {@link Extension} that provides a temporary self-signed certificate.
  */
-public class SelfSignedCertificateExtension extends AbstractAllOrEachExtension {
-    private final SelfSignedCertificateRuleDelegate delegate;
+public final class SelfSignedCertificateExtension extends SignedCertificateExtension {
 
     /**
      * Creates a new instance.
      */
     public SelfSignedCertificateExtension() {
-        delegate = new SelfSignedCertificateRuleDelegate();
+        super(SelfSignedCertificate::new);
     }
 
     /**
@@ -51,7 +45,7 @@ public class SelfSignedCertificateExtension extends AbstractAllOrEachExtension {
      * @param notAfter {@link Certificate} is not valid after this time
      */
     public SelfSignedCertificateExtension(TemporalAccessor notBefore, TemporalAccessor notAfter) {
-        delegate = new SelfSignedCertificateRuleDelegate(notBefore, notAfter);
+        super(() -> new SelfSignedCertificate(toDate(notBefore), toDate(notAfter)));
     }
 
     /**
@@ -60,7 +54,7 @@ public class SelfSignedCertificateExtension extends AbstractAllOrEachExtension {
      * @param fqdn a fully qualified domain name
      */
     public SelfSignedCertificateExtension(String fqdn) {
-        delegate = new SelfSignedCertificateRuleDelegate(fqdn);
+        super(() -> new SelfSignedCertificate(fqdn));
     }
 
     /**
@@ -71,7 +65,7 @@ public class SelfSignedCertificateExtension extends AbstractAllOrEachExtension {
      * @param notAfter {@link Certificate} is not valid after this time
      */
     public SelfSignedCertificateExtension(String fqdn, TemporalAccessor notBefore, TemporalAccessor notAfter) {
-        delegate = new SelfSignedCertificateRuleDelegate(fqdn, notBefore, notAfter);
+        super(() -> new SelfSignedCertificate(fqdn, toDate(notBefore), toDate(notAfter)));
     }
 
     /**
@@ -82,7 +76,7 @@ public class SelfSignedCertificateExtension extends AbstractAllOrEachExtension {
      * @param bits the number of bits of the generated private key
      */
     public SelfSignedCertificateExtension(String fqdn, SecureRandom random, int bits) {
-        delegate = new SelfSignedCertificateRuleDelegate(fqdn, random, bits);
+        super(() -> new SelfSignedCertificate(fqdn, random, bits));
     }
 
     /**
@@ -96,62 +90,11 @@ public class SelfSignedCertificateExtension extends AbstractAllOrEachExtension {
      */
     public SelfSignedCertificateExtension(String fqdn, SecureRandom random, int bits,
                                           TemporalAccessor notBefore, TemporalAccessor notAfter) {
-        delegate = new SelfSignedCertificateRuleDelegate(fqdn, random, bits, notBefore, notAfter);
+        super(() -> new SelfSignedCertificate(fqdn, random, bits, toDate(notBefore), toDate(notAfter)));
     }
 
-    /**
-     * Generates a self-signed certificate.
-     */
-    @Override
-    public void before(ExtensionContext context) throws Exception {
-        try {
-            delegate.before();
-        } catch (Throwable t) {
-            throw new RuntimeException("Failed to set up before callback", t);
-        }
-    }
-
-    /**
-     * Deletes the generated self-signed certificate.
-     */
-    @Override
-    public void after(ExtensionContext context) throws Exception {
-        delegate.after();
-    }
-
-    /**
-     *  Returns the generated {@link X509Certificate}.
-     */
-    public X509Certificate certificate() {
-        return delegate.certificate();
-    }
-
-    /**
-     * Returns the self-signed certificate file.
-     */
-    public File certificateFile() {
-        return delegate.certificateFile();
-    }
-
-    /**
-     * Returns the {@link PrivateKey} of the self-signed certificate.
-     */
-    public PrivateKey privateKey() {
-        return delegate.privateKey();
-    }
-
-    /**
-     * Returns the private key file of the self-signed certificate.
-     */
-    public File privateKeyFile() {
-        return delegate.privateKeyFile();
-    }
-
-    /**
-     * Returns the {@link TlsKeyPair} of the self-signed certificate.
-     */
-    @UnstableApi
-    public TlsKeyPair tlsKeyPair() {
-        return delegate.tlsKeyPair();
+    @SuppressWarnings("UseOfObsoleteDateTimeApi")
+    private static Date toDate(TemporalAccessor temporalAccessor) {
+        return new Date(Instant.from(temporalAccessor).toEpochMilli());
     }
 }

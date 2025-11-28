@@ -17,8 +17,6 @@
 package com.linecorp.armeria.server;
 
 import java.nio.ByteBuffer;
-import java.util.function.Consumer;
-import java.util.function.Supplier;
 
 import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.SSLEngine;
@@ -26,14 +24,13 @@ import javax.net.ssl.SSLEngineResult;
 import javax.net.ssl.SSLException;
 import javax.net.ssl.SSLSession;
 
-import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.client.ClientTlsSpec;
+import com.linecorp.armeria.common.TlsPeerVerifierFactory;
 import com.linecorp.armeria.common.util.TlsEngineType;
 import com.linecorp.armeria.internal.common.util.SslContextUtil;
 
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.handler.ssl.SslContext;
-import io.netty.handler.ssl.SslContextBuilder;
-import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty.util.ReferenceCountUtil;
 
 /**
@@ -61,10 +58,12 @@ final class ServerSslContextUtil {
             serverEngine.setNeedClientAuth(false);
 
             // Create a client-side engine with very permissive settings.
-            final SslContext sslContextClient =
-                    buildSslContext(() -> SslContextBuilder.forClient()
-                                                           .trustManager(InsecureTrustManagerFactory.INSTANCE),
-                                    tlsEngineType, true, null);
+            final ClientTlsSpec clientTlsSpec =
+                    ClientTlsSpec.builder()
+                                 .verifierFactories(TlsPeerVerifierFactory.noVerify())
+                                 .engineType(tlsEngineType)
+                                 .build();
+            final SslContext sslContextClient = SslContextUtil.toSslContext(clientTlsSpec, true);
             clientEngine = sslContextClient.newEngine(ByteBufAllocator.DEFAULT);
             clientEngine.setUseClientMode(true);
             clientEngine.setEnabledProtocols(clientEngine.getSupportedProtocols());
@@ -92,16 +91,6 @@ final class ServerSslContextUtil {
         }
 
         return sslSession;
-    }
-
-    static SslContext buildSslContext(
-            Supplier<SslContextBuilder> sslContextBuilderSupplier,
-            TlsEngineType tlsEngineType,
-            boolean tlsAllowUnsafeCiphers,
-            @Nullable Consumer<? super SslContextBuilder> tlsCustomizer) {
-        return SslContextUtil
-                .createSslContext(sslContextBuilderSupplier,/* forceHttp1 */ false, tlsEngineType,
-                                  tlsAllowUnsafeCiphers, tlsCustomizer, null);
     }
 
     private static void unwrap(SSLEngine engine, ByteBuffer packetBuf) throws SSLException {

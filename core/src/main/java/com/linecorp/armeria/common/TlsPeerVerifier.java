@@ -14,23 +14,23 @@
  * under the License.
  */
 
-package com.linecorp.armeria.internal.common.util;
+package com.linecorp.armeria.common;
+
+import java.security.cert.CertificateException;
+import java.security.cert.X509Certificate;
+
+import javax.net.ssl.SSLEngine;
 
 import com.linecorp.armeria.common.annotation.UnstableApi;
 
 /**
- * Defines the type of name to use for a self-signed certificate.
- * This is used to determine whether to use the Common Name (CN) or the Subject Alternative Name (SAN)
- * for the certificate's identity.
+ * Verifies TLS peer certificates during handshake.
  */
 @UnstableApi
-public enum SelfSingedCertificateNameType {
+public interface TlsPeerVerifier {
+
     /**
-     * Use the Common Name (CN) for the self-signed certificate.
+     * Verifies the peer's certificate chain. One may throw an exception if a peer is not valid.
      */
-    COMMON_NAME,
-    /**
-     * Use the Subject Alternative Name (SAN) for the self-signed certificate.
-     */
-    SUBJECT_ALTERNATIVE_NAME
+    void verify(X509Certificate[] chain, String authType, SSLEngine engine) throws CertificateException;
 }

@@ -25,8 +25,11 @@ import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.TlsKeyPair;
 import com.linecorp.armeria.common.TlsProvider;
 import com.linecorp.armeria.common.util.TlsEngineType;
+import com.linecorp.armeria.internal.common.SslContextFactory;
 
 class TlsProviderMappingTest {
+
+    private static final SslContextFactory factory = new SslContextFactory(Flags.meterRegistry());
 
     @Test
     void testNoDefault() {
@@ -39,7 +42,7 @@ class TlsProviderMappingTest {
         final TlsProviderMapping mapping = new TlsProviderMapping(tlsProvider,
                                                                   TlsEngineType.OPENSSL,
                                                                   ServerTlsConfig.builder().build(),
-                                                                  Flags.meterRegistry());
+                                                                  factory);
         assertThat(mapping.map("example.com")).isNotNull();
         assertThat(mapping.map("api.example.com")).isNotNull();
         assertThatThrownBy(() -> mapping.map("web.example.com"))
@@ -64,7 +67,7 @@ class TlsProviderMappingTest {
         final TlsProviderMapping mapping = new TlsProviderMapping(tlsProvider,
                                                                   TlsEngineType.OPENSSL,
                                                                   ServerTlsConfig.builder().build(),
-                                                                  Flags.meterRegistry());
+                                                                  factory);
         assertThat(mapping.map("example.com")).isNotNull();
         assertThat(mapping.map("api.example.com")).isNotNull();
         assertThat(mapping.map("web.example.com")).isNotNull();
