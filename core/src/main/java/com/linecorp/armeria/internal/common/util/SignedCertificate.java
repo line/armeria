@@ -30,6 +30,7 @@
  */
 package com.linecorp.armeria.internal.common.util;
 
+import static java.util.Objects.requireNonNull;
 import static org.bouncycastle.asn1.x509.Extension.subjectAlternativeName;
 import static org.bouncycastle.asn1.x509.GeneralName.dNSName;
 import static org.bouncycastle.asn1.x509.GeneralName.iPAddress;
@@ -144,9 +145,9 @@ public class SignedCertificate {
      * @param fqdn a fully qualified domain name
      */
     public SignedCertificate(String fqdn, SignedCertificate parent) throws CertificateException {
-        this(new CertificateParams(fqdn, ThreadLocalRandom.current(), DEFAULT_KEY_LENGTH_BITS,
-                                   DEFAULT_NOT_BEFORE, DEFAULT_NOT_AFTER, parent.key.getAlgorithm(),
-                                   parent.cert, parent.key()));
+        this(new CertificateParams(requireNonNull(fqdn, "fqdn"), ThreadLocalRandom.current(),
+                                   DEFAULT_KEY_LENGTH_BITS, DEFAULT_NOT_BEFORE, DEFAULT_NOT_AFTER,
+                                   requireNonNull(parent, "parent")));
     }
 
     /**

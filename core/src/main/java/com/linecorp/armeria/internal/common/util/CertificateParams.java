@@ -59,7 +59,7 @@ final class CertificateParams {
     }
 
     CertificateParams(String fqdn, Random random, int bits, Date notBefore, Date notAfter,
-                      String algorithm, X509Certificate issuerCert, PrivateKey issuerPrivateKey)
+                      SignedCertificate issuer)
             throws CertificateException {
         this.fqdn = fqdn;
         ownerName = new X500Name("CN=" + fqdn);
@@ -68,9 +68,9 @@ final class CertificateParams {
         this.bits = bits;
         this.notBefore = notBefore;
         this.notAfter = notAfter;
-        this.algorithm = algorithm;
-        this.issuerCert = issuerCert;
-        this.issuerPrivateKey = issuerPrivateKey;
+        algorithm = issuer.key().getAlgorithm();
+        issuerCert = issuer.cert();
+        issuerPrivateKey = issuer.key();
         issuerName = new JcaX509CertificateHolder(issuerCert).getSubject();
     }
 
