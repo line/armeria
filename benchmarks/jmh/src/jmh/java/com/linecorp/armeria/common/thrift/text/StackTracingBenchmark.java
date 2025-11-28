@@ -25,6 +25,7 @@ import org.openjdk.jmh.annotations.Setup;
 import org.openjdk.jmh.annotations.State;
 import org.openjdk.jmh.infra.Blackhole;
 
+import com.linecorp.armeria.common.util.SystemInfo;
 import com.linecorp.armeria.thrift.services.HelloService.hello_args;
 
 /**
@@ -55,27 +56,32 @@ public class StackTracingBenchmark extends hello_args {
         defaultThriftMessageClassFinder = new DefaultThriftMessageClassFinder();
         stackWalkingFinderWithRetainOption = new StackWalkingThriftMessageClassFinder();
 
-        final SecurityManager securityManager = System.getSecurityManager();
-        System.setSecurityManager(new SecurityManager() {
-            @Override
-            public void checkPermission(Permission perm) {
-                // `getStackWalkerWithClassReference` is called by RETAIN_CLASS_REFERENCE option.
-                if (perm.getName().equals("getStackWalkerWithClassReference")) {
-                    throw new SecurityException("Failing SecurityManage.checkPermission() for unit testing");
+        if (SystemInfo.javaVersion() < 24) {
+            final SecurityManager securityManager = System.getSecurityManager();
+            System.setSecurityManager(new SecurityManager() {
+                @Override
+                public void checkPermission(Permission perm) {
+                    // `getStackWalkerWithClassReference` is called by RETAIN_CLASS_REFERENCE option.
+                    if (perm.getName().equals("getStackWalkerWithClassReference")) {
+                        throw new SecurityException(
+                                "Failing SecurityManage.checkPermission() for unit testing");
+                    }
                 }
-            }
 
-            @Override
-            public void checkPermission(Permission perm, Object context) {
-            }
+                @Override
+                public void checkPermission(Permission perm, Object context) {
+                }
 
-            @Override
-            public void checkExit(int status) {
-            }
-        });
+                @Override
+                public void checkExit(int status) {
+                }
+            });
 
-        stackWalkingThriftMessageClassFinder =  new StackWalkingThriftMessageClassFinder();
-        System.setSecurityManager(securityManager);
+            stackWalkingThriftMessageClassFinder = new StackWalkingThriftMessageClassFinder();
+            System.setSecurityManager(securityManager);
+        } else {
+            stackWalkingThriftMessageClassFinder = new StackWalkingThriftMessageClassFinder();
+        }
     }
 
     @Benchmark

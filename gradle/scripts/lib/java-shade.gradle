@@ -197,13 +197,18 @@ configure(relocatedProjects) {
             }
 
             // Add JDK. Use modules instead of rt.jar if possible.
-            File jmodDir = file("${System.getProperty('java.home')}/jmods")
+            def javaToolchainService = project.extensions.getByType(JavaToolchainService)
+            def javaPluginExt = project.extensions.getByType(JavaPluginExtension)
+            def launcher = javaToolchainService.launcherFor(javaPluginExt.toolchain).get()
+            File jdkHome = launcher.metadata.installationPath.asFile
+            File jmodDir = new File(jdkHome, "jmods")
             if (jmodDir.isDirectory()) {
                 jmodDir.listFiles().findAll { File f ->
                     f.isFile() && f.name.toLowerCase(Locale.ENGLISH).endsWith(".jmod")
                 }.sort().each { libraryjars it }
             } else {
-                libraryjars file("${System.getProperty('java.home')}/lib/rt.jar")
+                File rtJar = new File(jdkHome, "jre/lib/rt.jar")
+                libraryjars rtJar
             }
 
             dontoptimize

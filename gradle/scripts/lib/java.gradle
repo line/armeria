@@ -108,7 +108,35 @@ configure(projectsWithFlags('java')) {
     java {
         toolchain {
             languageVersion = JavaLanguageVersion.of(rootProject.ext.buildJdkVersion)
+            // Use Azul JDKs because the default vendor 'temurin' no longer includes the jmods folder
+            // required by Proguard.
+            // - https://adoptium.net/fr/news/2025/03/eclipse-temurin-jdk24-JEP493-enabled
+            // - https://github.com/actions/runner-images/issues/13158
+            vendor = JvmVendorSpec.AZUL
             implementation = JvmImplementation.VENDOR_SPECIFIC
+        }
+    }
+
+    if (rootProject.ext.buildJdkVersion >= 25) {
+        // Java 25's compiler is stricter about resolving Type Annotations (e.g. @Nullable)
+        // on classes from transitive dependencies. If a type used in an annotation belongs
+        // to a hidden 'implementation' dependency (like Caffeine), javac will fail with the following message:
+        // > RequestTargetCache.class: error: Cannot attach type annotations
+        // > @com.linecorp.armeria.common.annotation.Nullable to RequestTargetCache.SERVER_CACHE:
+        //
+        // This hack forces the compile classpath to use the 'runtime' variant, ensuring
+        // that all transitive implementation dependencies are visible to the compiler.
+        // NOTE: This only affects local compilation; the published POM file remains unchanged.
+        configurations.compileClasspath.attributes {
+            attribute(Usage.USAGE_ATTRIBUTE, objects.named(Usage, Usage.JAVA_RUNTIME))
+        }
+        configurations.testCompileClasspath.attributes {
+            attribute(Usage.USAGE_ATTRIBUTE, objects.named(Usage, Usage.JAVA_RUNTIME))
+        }
+        plugins.withId('me.champeau.jmh') {
+            configurations.jmhCompileClasspath.attributes {
+                attribute(Usage.USAGE_ATTRIBUTE, objects.named(Usage, Usage.JAVA_RUNTIME))
+            }
         }
     }
 
