@@ -930,6 +930,7 @@ public final class ClientFactoryBuilder implements TlsSetters {
      * Sets the quiet period in milliseconds for graceful shutdown of a worker group.
      * {@code 0} removes the quiet period entirely.
      */
+    @UnstableApi
     public ClientFactoryBuilder workerGroupGracefulShutdownQuietPeriod(Duration duration) {
         requireNonNull(duration, "duration");
         return workerGroupGracefulShutdownQuietPeriodMillis(duration.toMillis());
@@ -939,6 +940,7 @@ public final class ClientFactoryBuilder implements TlsSetters {
      * Sets the quiet period in milliseconds for graceful shutdown of a worker group.
      * {@code 0} removes the quiet period entirely.
      */
+    @UnstableApi
     public ClientFactoryBuilder workerGroupGracefulShutdownQuietPeriodMillis(long workerGroupGracefulShutdownQuietPeriodMillis) {
         checkArgument(workerGroupGracefulShutdownQuietPeriodMillis >= 0,
                       "workerGroupGracefulShutdownQuietPeriodMillis: %s (expected: >= 0)",
@@ -952,6 +954,7 @@ public final class ClientFactoryBuilder implements TlsSetters {
      * Sets the timeout in milliseconds for graceful shutdown of a worker group.
      * {@code 0} disables the timeout and closes the worker group immediately.
      */
+    @UnstableApi
     public ClientFactoryBuilder workerGroupGracefulShutdownTimeout(Duration duration) {
         requireNonNull(duration, "duration");
         return workerGroupGracefulShutdownTimeoutMillis(duration.toMillis());
@@ -961,6 +964,7 @@ public final class ClientFactoryBuilder implements TlsSetters {
      * Sets the timeout in milliseconds for graceful shutdown of a worker group.
      * {@code 0} disables the timeout and closes the worker group immediately.
      */
+    @UnstableApi
     public ClientFactoryBuilder workerGroupGracefulShutdownTimeoutMillis(long workerGroupGracefulShutdownTimeoutMillis) {
         checkArgument(workerGroupGracefulShutdownTimeoutMillis >= 0,
                       "workerGroupGracefulShutdownTimeoutMillis: %s (expected: >= 0)",

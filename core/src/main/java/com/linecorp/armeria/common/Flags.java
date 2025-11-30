@@ -291,11 +291,11 @@ public final class Flags {
             getValue(FlagsProvider::defaultServerConnectionDrainDurationMicros,
                      "defaultServerConnectionDrainDurationMicros", value -> value >= 0);
 
-    private static final long DEFAULT_CLIENT_WORKER_GROUP_GRACEFUL_SHUTDOWN_TIMEOUT_MILLIS =
+    private static final long DEFAULT_CLIENT_WORKER_GROUP_GRACEFUL_SHUTDOWN_QUIET_PERIOD_MILLIS =
             getValue(FlagsProvider::defaultClientWorkerGroupGracefulShutdownQuietPeriodMillis,
                      "defaultClientWorkerGroupGracefulShutdownQuietPeriodMillis", value -> value >= 0);
 
-    private static final long DEFAULT_CLIENT_WORKER_GROUP_GRACEFUL_SHUTDOWN_QUIET_PERIOD_MILLIS =
+    private static final long DEFAULT_CLIENT_WORKER_GROUP_GRACEFUL_SHUTDOWN_TIMEOUT_MILLIS =
             getValue(FlagsProvider::defaultClientWorkerGroupGracefulShutdownTimeoutMillis,
                      "defaultClientWorkerGroupGracefulShutdownTimeoutMillis", value -> value >= 0);
 
@@ -1097,6 +1097,7 @@ public final class Flags {
      * @see ClientFactoryBuilder#workerGroupGracefulShutdownQuietPeriod(Duration)
      * @see ClientFactoryBuilder#workerGroupGracefulShutdownQuietPeriodMillis(long)
      */
+    @UnstableApi
     public static long defaultClientWorkerGroupGracefulShutdownQuietPeriodMillis() {
         return DEFAULT_CLIENT_WORKER_GROUP_GRACEFUL_SHUTDOWN_QUIET_PERIOD_MILLIS;
     }
@@ -1114,6 +1115,7 @@ public final class Flags {
      * @see ClientFactoryBuilder#workerGroupGracefulShutdownTimeout(Duration)
      * @see ClientFactoryBuilder#workerGroupGracefulShutdownTimeoutMillis(long)
      */
+    @UnstableApi
     public static long defaultClientWorkerGroupGracefulShutdownTimeoutMillis() {
         return DEFAULT_CLIENT_WORKER_GROUP_GRACEFUL_SHUTDOWN_TIMEOUT_MILLIS;
     }
