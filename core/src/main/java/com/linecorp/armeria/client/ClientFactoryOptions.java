@@ -683,7 +683,7 @@ public final class ClientFactoryOptions
     }
 
     /**
-     * Returns the graceful worker group pool time out in milliseconds.
+     * Returns the graceful worker group pool timeout in milliseconds.
      */
     public long workerGroupGracefulShutdownTimeoutMillis() {
         return get(WORKER_GROUP_GRACEFUL_SHUTDOWN_TIMEOUT_MILLIS);
