@@ -305,7 +305,21 @@ public final class ClientFactoryOptions
             ClientFactoryOption.define("CONNECTION_POOL_LISTENER", ConnectionPoolListener.noop());
 
     /**
-     * The graceful connection shutdown timeout in milliseconds..
+     * The graceful worker group pool quiet period in milliseconds.
+     */
+    public static final ClientFactoryOption<Long> WORKER_GROUP_GRACEFUL_SHUTDOWN_QUIET_PERIOD_MILLIS =
+            ClientFactoryOption.define("WORKER_GROUP_GRACEFUL_SHUTDOWN_QUIET_PERIOD_MILLIS",
+                                       Flags.defaultClientWorkerGroupGracefulShutdownQuietPeriodMillis());
+
+    /**
+     * The graceful worker group pool time out in milliseconds.
+     */
+    public static final ClientFactoryOption<Long> WORKER_GROUP_GRACEFUL_SHUTDOWN_TIMEOUT_MILLIS =
+            ClientFactoryOption.define("WORKER_GROUP_GRACEFUL_SHUTDOWN_TIMEOUT_MILLIS",
+                                       Flags.defaultClientWorkerGroupGracefulShutdownTimeoutMillis());
+
+    /**
+     * The graceful connection shutdown timeout in milliseconds.
      */
     public static final ClientFactoryOption<Long> HTTP2_GRACEFUL_SHUTDOWN_TIMEOUT_MILLIS =
             ClientFactoryOption.define("HTTP2_GRACEFUL_SHUTDOWN_TIMEOUT_MILLIS",
@@ -659,6 +673,20 @@ public final class ClientFactoryOptions
     @UnstableApi
     public OutlierDetection connectionOutlierDetection() {
         return get(CONNECTION_OUTLIER_DETECTION);
+    }
+
+    /**
+     * Returns the graceful worker group pool quiet period in milliseconds.
+     */
+    public long workerGroupGracefulShutdownQuietPeriodMillis() {
+        return get(WORKER_GROUP_GRACEFUL_SHUTDOWN_QUIET_PERIOD_MILLIS);
+    }
+
+    /**
+     * Returns the graceful worker group pool time out in milliseconds.
+     */
+    public long workerGroupGracefulShutdownTimeoutMillis() {
+        return get(WORKER_GROUP_GRACEFUL_SHUTDOWN_TIMEOUT_MILLIS);
     }
 
     /**

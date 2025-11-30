@@ -588,7 +588,39 @@ public interface FlagsProvider {
     }
 
     /**
-     * Returns the default client-side graceful connection shutdown timeout in microseconds.
+     * Returns the default client-side graceful worker group pool shutdown quiet period in milliseconds.
+     *
+     * <p>Note that this flag has no effect if a user specified the value explicitly via
+     * {@link ClientFactoryBuilder#workerGroupGracefulShutdownQuietPeriodMillis(long)}.
+     *
+     * <p>The default value of this flag is
+     * {@value DefaultFlagsProvider#DEFAULT_CLIENT_WORKER_GROUP_GRACEFUL_SHUTDOWN_QUIET_PERIOD_MILLIS}.
+     * Specify the {@code -Dcom.linecorp.armeria.defaultClientWorkerGroupGracefulShutdownQuietPeriodMillis=<long>}
+     * JVM option to override the default value. {@code 0} disables the graceful shutdown.
+     */
+    @Nullable
+    default Long defaultClientWorkerGroupGracefulShutdownQuietPeriodMillis() {
+        return null;
+    }
+
+    /**
+     * Returns the default client-side graceful worker group pool shutdown timeout in milliseconds.
+     *
+     * <p>Note that this flag has no effect if a user specified the value explicitly via
+     * {@link ClientFactoryBuilder#workerGroupGracefulShutdownTimeoutMillis(long)}.
+     *
+     * <p>The default value of this flag is
+     * {@value DefaultFlagsProvider#DEFAULT_CLIENT_WORKER_GROUP_GRACEFUL_SHUTDOWN_TIMEOUT_MILLIS}.
+     * Specify the {@code -Dcom.linecorp.armeria.defaultClientWorkerGroupGracefulShutdownTimeoutMillis=<long>}
+     * JVM option to override the default value. {@code 0} disables the graceful shutdown.
+     */
+    @Nullable
+    default Long defaultClientWorkerGroupGracefulShutdownTimeoutMillis() {
+        return null;
+    }
+
+    /**
+     * Returns the default client-side graceful connection shutdown timeout in milliseconds.
      *
      * <p>Note that this flag has no effect if a user specified the value explicitly via
      * {@link ClientFactoryBuilder#http2GracefulShutdownTimeoutMillis(long)}.

@@ -81,6 +81,10 @@ final class DefaultFlagsProvider implements FlagsProvider {
     static final long DEFAULT_SERVER_CONNECTION_DRAIN_DURATION_MICROS = 1000000;
     // Same as server connection drain duration
     static final long DEFAULT_CLIENT_HTTP2_GRACEFUL_SHUTDOWN_TIMEOUT_MILLIS = 1000;
+    // Same as AbstractEventExecutor.DEFAULT_SHUTDOWN_QUIET_PERIOD
+    static final long DEFAULT_CLIENT_WORKER_GROUP_GRACEFUL_SHUTDOWN_TIMEOUT_MILLIS = 2000L;
+    // Same as AbstractEventExecutor.DEFAULT_SHUTDOWN_TIMEOUT
+    static final long DEFAULT_CLIENT_WORKER_GROUP_GRACEFUL_SHUTDOWN_QUIET_PERIOD_MILLIS = 15000L;
     static final int DEFAULT_HTTP2_INITIAL_CONNECTION_WINDOW_SIZE = 1024 * 1024; // 1MiB
     static final int DEFAULT_HTTP2_INITIAL_STREAM_WINDOW_SIZE = 1024 * 1024; // 1MiB
     static final float DEFAULT_HTTP2_STREAM_WINDOW_UPDATE_RATIO =
@@ -317,6 +321,16 @@ final class DefaultFlagsProvider implements FlagsProvider {
     @Override
     public Long defaultServerConnectionDrainDurationMicros() {
         return DEFAULT_SERVER_CONNECTION_DRAIN_DURATION_MICROS;
+    }
+
+    @Override
+    public Long defaultClientWorkerGroupGracefulShutdownQuietPeriodMillis() {
+        return DEFAULT_CLIENT_WORKER_GROUP_GRACEFUL_SHUTDOWN_QUIET_PERIOD_MILLIS;
+    }
+
+    @Override
+    public Long defaultClientWorkerGroupGracefulShutdownTimeoutMillis() {
+        return DEFAULT_CLIENT_WORKER_GROUP_GRACEFUL_SHUTDOWN_TIMEOUT_MILLIS;
     }
 
     @Override
