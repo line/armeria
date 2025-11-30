@@ -23,6 +23,7 @@ import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.util.Arrays;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
@@ -305,15 +306,19 @@ public final class ClientFactoryOptions
             ClientFactoryOption.define("CONNECTION_POOL_LISTENER", ConnectionPoolListener.noop());
 
     /**
-     * The graceful worker group pool quiet period in milliseconds.
+     * The quiet period for graceful shutdown of the worker {@link EventLoopGroup}, in milliseconds.
+     * This is the quiet period parameter passed to {@link EventLoopGroup#shutdownGracefully(long, long, TimeUnit)}.
      */
+    @UnstableApi
     public static final ClientFactoryOption<Long> WORKER_GROUP_GRACEFUL_SHUTDOWN_QUIET_PERIOD_MILLIS =
             ClientFactoryOption.define("WORKER_GROUP_GRACEFUL_SHUTDOWN_QUIET_PERIOD_MILLIS",
                                        Flags.defaultClientWorkerGroupGracefulShutdownQuietPeriodMillis());
 
     /**
-     * The graceful worker group pool time out in milliseconds.
+     * The timeout for graceful shutdown of the worker {@link EventLoopGroup}, in milliseconds.
+     * This is the timeout parameter passed to {@link EventLoopGroup#shutdownGracefully(long, long, TimeUnit)}.
      */
+    @UnstableApi
     public static final ClientFactoryOption<Long> WORKER_GROUP_GRACEFUL_SHUTDOWN_TIMEOUT_MILLIS =
             ClientFactoryOption.define("WORKER_GROUP_GRACEFUL_SHUTDOWN_TIMEOUT_MILLIS",
                                        Flags.defaultClientWorkerGroupGracefulShutdownTimeoutMillis());
@@ -678,6 +683,7 @@ public final class ClientFactoryOptions
     /**
      * Returns the graceful worker group pool quiet period in milliseconds.
      */
+    @UnstableApi
     public long workerGroupGracefulShutdownQuietPeriodMillis() {
         return get(WORKER_GROUP_GRACEFUL_SHUTDOWN_QUIET_PERIOD_MILLIS);
     }
@@ -685,6 +691,7 @@ public final class ClientFactoryOptions
     /**
      * Returns the graceful worker group pool timeout in milliseconds.
      */
+    @UnstableApi
     public long workerGroupGracefulShutdownTimeoutMillis() {
         return get(WORKER_GROUP_GRACEFUL_SHUTDOWN_TIMEOUT_MILLIS);
     }
