@@ -106,6 +106,11 @@ public class AthenzDocker implements SafeCloseable {
                 logger.info("Initializing Athenz Docker container (attempt {}/{})...", attempt, maxAttempts);
                 composeContainer.start();
                 defaultScaffold();
+
+                if (System.getenv("CI") != null) {
+                    // In CI environment, wait a bit more to ensure ZTS is fully synced.
+                    Thread.sleep(10000);
+                }
                 initialized = true;
                 return true;
             } catch (Exception e) {
