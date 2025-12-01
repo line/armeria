@@ -222,10 +222,11 @@ static Map<String, Object> extractMetadata(TomlTable dependency, String group, S
     def relocations = dependency["relocations"]
     if (relocations != null) {
         if (relocations instanceof TomlTable) {
-            metadata["relocations"] = [[name: module, from: relocations["from"], to: relocations["to"]]]
+            metadata["relocations"] = [[name: module, from: relocations["from"], to: relocations["to"],
+                                        exclude: toListify(relocations['exclude'])]]
         } else if (relocations instanceof TomlArray) {
             metadata["relocations"] = relocations.toList().collect {
-                [name: module, from: it["from"], to: it["to"]]
+                [name: module, from: it["from"], to: it["to"], exclude: toListify(it['exclude'])]
             }
         } else {
             throw new IllegalStateException("An invalid relocations on ${alias}: $relocations" +
@@ -233,6 +234,22 @@ static Map<String, Object> extractMetadata(TomlTable dependency, String group, S
         }
     }
     metadata
+}
+
+static List<String> toListify(Object raw) {
+    if (raw == null) {
+        return []
+    }
+    if (raw instanceof TomlArray) {
+        // TomlArray -> List<String>
+        return raw.toList().collect { it.toString() }
+    }
+    if (raw instanceof Iterable) {
+        // Already some iterable -> List<String>
+        return raw.collect { it.toString() }
+    }
+    // Single scalar -> List<String> of one
+    return [raw.toString()]
 }
 
 static def addBundle(VersionCatalogBuilder libs, String alias, List<String> aliases) {

@@ -16,50 +16,39 @@
 
 package com.linecorp.armeria.xds;
 
+import java.util.Comparator;
+import java.util.ServiceLoader;
+
+import com.google.common.collect.Streams;
 import com.google.protobuf.Any;
 import com.google.protobuf.InvalidProtocolBufferException;
 import com.google.protobuf.Message;
 
-import io.envoyproxy.pgv.ReflectiveValidatorIndex;
-import io.envoyproxy.pgv.ValidationException;
-import io.envoyproxy.pgv.Validator;
-import io.envoyproxy.pgv.ValidatorIndex;
+import com.linecorp.armeria.xds.validator.XdsValidatorIndex;
 
-final class XdsValidatorIndex implements ValidatorIndex {
+final class XdsValidatorIndexRegistry {
 
-    private static final XdsValidatorIndex INSTANCE = new XdsValidatorIndex();
+    private static final XdsValidatorIndex xdsValidatorIndex =
+            Streams.stream(ServiceLoader.load(XdsValidatorIndex.class,
+                                              XdsValidatorIndex.class.getClassLoader()))
+                   .max(Comparator.comparingInt(XdsValidatorIndex::priority))
+                   .orElse(XdsValidatorIndex.noop());
 
-    static XdsValidatorIndex of() {
-        return INSTANCE;
+    static void assertValid(Object message) {
+        xdsValidatorIndex.assertValid(message);
     }
 
-    private final ValidatorIndex delegate;
-
-    private XdsValidatorIndex() {
-        delegate = new ReflectiveValidatorIndex();
-    }
-
-    @Override
-    public <T> Validator<T> validatorFor(Class clazz) {
-        return delegate.validatorFor(clazz);
-    }
-
-    void assertValid(Object message) {
-        try {
-            validatorFor(message).assertValid(message);
-        } catch (ValidationException e) {
-            throw new IllegalArgumentException(e);
-        }
-    }
-
-    <T extends Message> T unpack(Any message, Class<T> clazz) {
+    static <T extends Message> T unpack(Any message, Class<T> clazz) {
         final T unpacked;
         try {
             unpacked = message.unpack(clazz);
         } catch (InvalidProtocolBufferException e) {
             throw new IllegalArgumentException(e);
         }
-        assertValid(unpacked);
+        xdsValidatorIndex.assertValid(unpacked);
         return unpacked;
+    }
+
+    private XdsValidatorIndexRegistry() {
     }
 }

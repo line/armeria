@@ -17,6 +17,15 @@ buildscript {
 def relocatedProjects = projectsWithFlags('java', 'relocate')
 def numConfiguredRelocatedProjects = new AtomicInteger()
 configure(relocatedProjects) {
+
+    // per-dependency shade configuration
+    // while shade per-project shades all dependencies, shade per-dependency allows for finer control
+    def shadeConfig = project.configurations.create("shade") {
+        canBeResolved = true
+        canBeConsumed = false
+    }
+    project.configurations.implementation.extendsFrom(shadeConfig)
+
     // Generate the shaded JARs.
     task shadedJar(
             type: ShadowJar,
@@ -24,7 +33,11 @@ configure(relocatedProjects) {
             description: 'Builds the shaded main JAR.',
             dependsOn: tasks.classes) {
 
-        configureShadowTask(project, delegate, true)
+        def self = this
+        def delegate0 = delegate
+        project.afterEvaluate {
+            self.configureShadowTask(project, delegate0, true)
+        }
         archiveClassifier.set('shaded')
 
         // Exclude the legacy file listing.
@@ -92,7 +105,11 @@ configure(relocatedProjects) {
             description: 'Builds the shaded test JAR.',
             dependsOn: tasks.testClasses) {
 
-        configureShadowTask(project, delegate, false)
+        def self = this
+        def delegate0 = delegate
+        project.afterEvaluate {
+            self.configureShadowTask(project, delegate0, false)
+        }
         archiveBaseName.set("test-${tasks.jar.archiveBaseName.get()}-shaded")
     }
 
@@ -338,8 +355,19 @@ private void configureShadowTask(Project project, ShadowJar task, boolean isMain
 
         configurations = [project.configurations[isMain ? 'compileClasspath' : 'testCompileClasspath']]
 
+        def shadeConfig = project.configurations.findByName("shade")
+        def shadedDeps = shadeConfig ?
+                shadeConfig.dependencies.collect { "${it.group}:${it.name}" }.toSet() :
+                [] as Set<String>
+
+
         relocations.each { props ->
-            task.relocate props['from'], props['to']
+            task.relocate(props['from'], props['to']) { task0 ->
+                def excludeArr = props['exclude']
+                excludeArr.each {
+                    task0.exclude(it)
+                }
+            }
         }
 
         dependencies {
@@ -361,8 +389,10 @@ private void configureShadowTask(Project project, ShadowJar task, boolean isMain
                     }
                 }
             } else { // hasFlags('relocate')
-                // Only want to rewrite source references, not bundle dependencies.
-                exclude { true }
+                // Only want to shade if explicitly specified on the dependency
+                exclude {
+                    return !shadedDeps.contains("${it.moduleGroup}:${it.moduleName}")
+                }
             }
         }
     }

@@ -5,11 +5,17 @@ dependencies {
         }
     }
 
+    api project(":xds-validator")
+
     compileOnly libs.protobuf.java
     compileOnly libs.protobuf.java.util
     compileOnly project(":grpc")
     compileOnly libs.protoc.gen.validate
-    compileOnly libs.protoc.pgv.java.stub
+
+    // shade to avoid Validate.class compiled by proto 4 leaking in
+    shade (libs.protoc.pgv.java.stub) {
+        exclude group: 'com.google.protobuf'
+    }
 
     testImplementation libs.protobuf.java
     testImplementation libs.protobuf.java.util

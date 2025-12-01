@@ -8,12 +8,13 @@ dependencies {
 
     api project(':grpc')
     api project(':xds-api')
+    api project(':xds-validator')
 
     implementation libs.re2j
-    implementation (libs.protoc.pgv.java.stub) {
-        exclude group: 'com.google.protobuf'
-    }
 
     testImplementation libs.controlplane.server
     testImplementation libs.controlplane.cache
+    testImplementation (libs.protoc.pgv.java.stub) {
+        exclude group: 'com.google.protobuf'
+    }
 }

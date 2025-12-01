@@ -988,6 +988,8 @@ version.ref = "prometheus-legacy"
 [libraries.protoc-pgv-java-stub]
 module = "build.buf.protoc-gen-validate:pgv-java-stub"
 version.ref = "protoc-gen-validate"
+# exclude pgv-generated validate.proto with proto4 until consumers are ready for proto4
+relocations = {from = "io.envoyproxy.pgv", to = "com.linecorp.armeria.internal.shaded.xds.pgv", exclude = "io/envoyproxy/pgv/validate/**" }
 [libraries.protoc-gen-validate]
 module = "build.buf.protoc-gen-validate:protoc-gen-validate"
 version.ref = "protoc-gen-validate"
