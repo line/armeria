@@ -9,7 +9,7 @@ interface ShortUrlPluginOptions {
   shortUrls: ShortUrl[];
 }
 
-function shortUrlPlugin(
+export default function shortUrlPlugin(
   context: LoadContext,
   options: ShortUrlPluginOptions,
 ): Plugin<void> {
@@ -39,5 +39,3 @@ function shortUrlPlugin(
     },
   };
 }
-
-export default shortUrlPlugin;

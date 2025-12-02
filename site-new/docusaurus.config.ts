@@ -63,10 +63,10 @@ export default async function createConfigAsync() {
     onBrokenLinks: 'warn',
 
     markdown: {
-        hooks: {
-          onBrokenMarkdownImages: 'warn',
-          onBrokenMarkdownLinks: 'warn',
-        },
+      hooks: {
+        onBrokenMarkdownImages: 'warn',
+        onBrokenMarkdownLinks: 'warn',
+      },
     },
 
     // Even if you don't use internationalization, you can use this field to set
@@ -91,15 +91,16 @@ export default async function createConfigAsync() {
             path: 'src/content/news',
             routeBasePath: '/news',
             blogTitle: 'Armeria Newsletter',
-            blogDescription:
-              'The Armeria Newsletter provides the latest insights, updates, and best practices to help you maximize the potential of Armeria.',
             blogSidebarTitle: ' ',
             blogSidebarCount: 'ALL',
             showReadingTime: false,
             blogListComponent: '@site/src/components/news-redirect', // Redirect to the latest newsletter when accessing /news
             feedOptions: {
-              type: ['rss', 'atom'],
-              xslt: true,
+              title: 'Armeria Newsletter',
+              description: '',
+              copyright: `© 2015-${new Date().getFullYear()}, LY Corporation`,
+              type: ['rss'],
+              xslt: false,
             },
             editUrl: 'https://github.com/line/armeria/edit/main/site/',
             onInlineTags: 'warn',
@@ -120,6 +121,18 @@ export default async function createConfigAsync() {
           },
         } satisfies Preset.Options,
       ],
+    ],
+
+    headTags: [
+      {
+        tagName: 'link',
+        attributes: {
+          rel: 'alternate',
+          type: 'application/rss+xml',
+          href: '/rss.xml',
+          title: 'Armeria RSS Feed',
+        },
+      },
     ],
 
     themeConfig: {
@@ -258,15 +271,15 @@ export default async function createConfigAsync() {
           path: 'src/content/blog/en',
           routeBasePath: 'blog',
           blogTitle: 'Armeria Blog',
-          blogDescription:
-            'Discover stories, insights, and experiences in building modern microservices with Armeria — from gRPC to Spring Boot, with metrics, tracing, and more.',
           blogSidebarTitle: ' ',
           blogSidebarCount: 'ALL',
           showReadingTime: true,
           feedOptions: {
-            // TODO
-            type: ['rss', 'atom'],
-            xslt: true,
+            title: 'Armeria Blog',
+            description: '',
+            copyright: `© 2015-${new Date().getFullYear()}, LY Corporation`,
+            type: ['rss'],
+            xslt: false,
           },
           editUrl: 'https://github.com/line/armeria/edit/main/site/',
           onInlineTags: 'warn',
@@ -281,15 +294,15 @@ export default async function createConfigAsync() {
           path: 'src/content/blog/ja',
           routeBasePath: 'blog/ja',
           blogTitle: 'Armeria Blog',
-          blogDescription:
-            'Discover stories, insights, and experiences in building modern microservices with Armeria — from gRPC to Spring Boot, with metrics, tracing, and more.',
           blogSidebarTitle: ' ',
           blogSidebarCount: 'ALL',
           showReadingTime: true,
           feedOptions: {
-            // TODO
-            type: ['rss', 'atom'],
-            xslt: true,
+            title: 'Armeria Blog - Japanese',
+            description: '',
+            copyright: `© 2015-${new Date().getFullYear()}, LY Corporation`,
+            type: ['rss'],
+            xslt: false,
           },
           editUrl: 'https://github.com/line/armeria/edit/main/site/',
           onInlineTags: 'warn',
@@ -304,15 +317,15 @@ export default async function createConfigAsync() {
           path: 'src/content/blog/ko',
           routeBasePath: 'blog/ko',
           blogTitle: 'Armeria Blog',
-          blogDescription:
-            'Discover stories, insights, and experiences in building modern microservices with Armeria — from gRPC to Spring Boot, with metrics, tracing, and more.',
           blogSidebarTitle: ' ',
           blogSidebarCount: 'ALL',
           showReadingTime: true,
           feedOptions: {
-            // TODO
-            type: ['rss', 'atom'],
-            xslt: true,
+            title: 'Armeria Blog - Korean',
+            description: '',
+            copyright: `© 2015-${new Date().getFullYear()}, LY Corporation`,
+            type: ['rss'],
+            xslt: false,
           },
           editUrl: 'https://github.com/line/armeria/edit/main/site/',
           onInlineTags: 'warn',
@@ -359,6 +372,14 @@ export default async function createConfigAsync() {
               href: 'https://discord.gg/7FH8c6npmg',
             },
           ],
+        },
+      ],
+      [
+        './src/plugins/rss-generator.ts',
+        {
+          path: '/release-notes',
+          title: 'Armeria Release Notes',
+          exclude: ['version-*/index.html'],
         },
       ],
     ],
