@@ -362,12 +362,7 @@ private void configureShadowTask(Project project, ShadowJar task, boolean isMain
 
 
         relocations.each { props ->
-            task.relocate(props['from'], props['to']) { task0 ->
-                def excludeArr = props['exclude']
-                excludeArr.each {
-                    task0.exclude(it)
-                }
-            }
+            task.relocate props['from'], props['to']
         }
 
         dependencies {

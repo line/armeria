@@ -574,12 +574,11 @@ dependency needs shading:
 module = "com.google.guava:guava"
 version = "17.0" # What an ancient dependency!
 relocations [ { from: "com.google.common", to: "com.doe.john.myproject.shaded.guava" },
-              { from: "com.google.thirdparty.publicsuffix", to: "com.doe.john.myproject.shaded.publicsuffix" } ]
+              { from: "com.google.thirdparty.publicsuffix", to: "com.doe.john.myproject.shaded.publicsuffix", exclude: "excluded/package/**" } ]
 ```
 
 Unshaded tests are disabled by default when a shading task is configured. If you want to run unshaded tests,
 you can specify `-PpreferShadedTests=false` option.
-
 
 If you would like to remove specific files when shading the JAR, you may specify the
 `-PshadowExclusions=<comma delimited files>` option.

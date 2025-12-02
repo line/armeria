@@ -20,6 +20,7 @@ dependencies {
     testImplementation libs.protobuf.java
     testImplementation libs.protobuf.java.util
     testImplementation libs.protoc.pgv.java.stub
+    testImplementation libs.re2j
 }
 
 tasks.withType(JavaCompile).configureEach {
