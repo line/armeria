@@ -17,6 +17,7 @@
 package com.linecorp.armeria.testing.junit5.server;
 
 import static com.google.common.base.Preconditions.checkState;
+import static java.util.Objects.requireNonNull;
 
 import java.io.File;
 import java.security.PrivateKey;
@@ -50,7 +51,7 @@ public class SignedCertificateExtension extends AbstractAllOrEachExtension {
      */
     @SuppressWarnings("CopyConstructorMissesField")
     public SignedCertificateExtension(SignedCertificateExtension parent) {
-        this(() -> new SignedCertificate(parent.signedCertificate()));
+        this(() -> new SignedCertificate(requireNonNull(parent, "parent").signedCertificate()));
     }
 
     /**
@@ -59,7 +60,20 @@ public class SignedCertificateExtension extends AbstractAllOrEachExtension {
      * @param fqdn a fully qualified domain name
      */
     public SignedCertificateExtension(String fqdn, SignedCertificateExtension parent) {
-        this(() -> new SignedCertificate(fqdn, parent.signedCertificate()));
+        this(() -> new SignedCertificate(fqdn, requireNonNull(parent, "parent").signedCertificate()));
+    }
+
+    /**
+     * Creates a new instance.
+     *
+     * @param fqdn                     a fully qualified domain name
+     * @param parent                   the parent extension to sign with
+     * @param subjectAlternativeNames  additional Subject Alternative Names
+     */
+    public SignedCertificateExtension(String fqdn, SignedCertificateExtension parent,
+                                      Iterable<String> subjectAlternativeNames) {
+        this(() -> new SignedCertificate(fqdn, requireNonNull(parent, "parent").signedCertificate(),
+                                         subjectAlternativeNames));
     }
 
     SignedCertificateExtension(ThrowingSupplier<SignedCertificate> certificateFactory) {
