@@ -15,5 +15,6 @@ reviews:
         # 2. Specific check for `@UnstableApi`
         - Review all newly added public classes and methods to ensure they have the `@UnstableApi` annotation.
         - However, this annotation is NOT required under the following conditions:
-          - If the class or method is located in a package containing `.internal`.
+          - If the class or method is located in a package containing `.internal` or `.testing`.
+          - If the class or method is located in a test source set.
           - If a public method is part of a class that is already annotated with `@UnstableApi`.
