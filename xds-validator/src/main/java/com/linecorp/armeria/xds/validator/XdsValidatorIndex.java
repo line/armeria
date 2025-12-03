@@ -16,9 +16,12 @@
 
 package com.linecorp.armeria.xds.validator;
 
+import com.linecorp.armeria.common.annotation.UnstableApi;
+
 /**
  * Validates an xDS resource. Validators are loaded using Java SPI (Service Provider Interface).
  */
+@UnstableApi
 public interface XdsValidatorIndex {
 
     /**
