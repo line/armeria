@@ -89,7 +89,6 @@ class ClientRequestContextDelayedInitTest {
 
                 protected TestEndpointSelector(EndpointGroup endpointGroup) {
                     super(endpointGroup);
-                    initialize();
                 }
 
                 @Nullable

@@ -249,7 +249,6 @@ public final class XdsEndpointGroup extends AbstractListenable<List<Endpoint>>
 
         XdsEndpointGroupSelector(EndpointGroup endpointGroup) {
             super(endpointGroup);
-            initialize();
         }
 
         @Override
