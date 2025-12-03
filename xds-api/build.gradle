@@ -13,6 +13,10 @@ dependencies {
     compileOnly libs.protoc.gen.validate
 
     // shade to avoid Validate.class compiled by proto 4 leaking in
+    // `xds-api`'s Validate.class wins since
+    // 1) from(main) is called duration configuration phase
+    // 2) dependencies are included in ShadowJar's copy spec during execution phase
+    // 3) the default DuplicatesStrategy is EXCLUDE for ShadowJar
     shade (libs.protoc.pgv.java.stub) {
         exclude group: 'com.google.protobuf'
     }
