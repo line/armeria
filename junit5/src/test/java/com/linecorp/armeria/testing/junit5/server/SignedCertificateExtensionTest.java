@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 LINE Corporation
+ * Copyright 2025 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -13,56 +13,52 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package com.linecorp.armeria.internal.common.util;
+package com.linecorp.armeria.testing.junit5.server;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static org.assertj.core.api.Assertions.assertThat;
 
-import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
 import java.util.Collection;
 import java.util.List;
-import java.util.concurrent.ThreadLocalRandom;
 
+import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import com.google.common.collect.ImmutableList;
 
-class SelfSignedCertificateTest {
-    @Test
-    void fqdnAsteriskDoesNotThrowTest() throws CertificateException {
-        new SelfSignedCertificate("*.netty.io", "EC", 256);
-        new SelfSignedCertificate("*.netty.io", "RSA", 2048);
-    }
+class SignedCertificateExtensionTest {
+
+    @RegisterExtension
+    @Order(1)
+    static final SelfSignedCertificateExtension parent = new SelfSignedCertificateExtension("ca.example.com");
+
+    @RegisterExtension
+    @Order(2)
+    static final SignedCertificateExtension childWithSans = new SignedCertificateExtension(
+            "service.example.com",
+            parent,
+            ImmutableList.of(
+                    "api.example.com",
+                    "*.example.com",
+                    "192.168.1.1",
+                    "spiffe://example.com/service"
+            )
+    );
 
     @Test
-    void fqdnAsteriskFileNameTest() throws CertificateException {
-        final SelfSignedCertificate ssc = new SelfSignedCertificate("*.netty.io", "EC", 256);
-        assertThat(ssc.certificate().getName()).doesNotContain("*");
-        assertThat(ssc.privateKey().getName()).doesNotContain("*");
-    }
+    void signedCertificateWithParentAndSans() throws Exception {
+        final X509Certificate cert = childWithSans.certificate();
+        assertThat(cert).isNotNull();
 
-    @Test
-    void subjectAlternativeNamesWithUriTest() throws Exception {
-        final List<String> additionalSans = ImmutableList.of(
-                "example.com",
-                "192.168.1.1",
-                "spiffe://centraldogma.dev/sa/centraldogma-alpha",
-                "https://api.example.com/service");
-        final SelfSignedCertificate ssc = new SelfSignedCertificate(
-                "test.armeria.dev",
-                ThreadLocalRandom.current(),
-                2048,
-                SignedCertificate.DEFAULT_NOT_BEFORE,
-                SignedCertificate.DEFAULT_NOT_AFTER,
-                "RSA",
-                additionalSans);
+        // Verify it's signed by the parent
+        cert.verify(parent.certificate().getPublicKey());
 
-        final X509Certificate cert = ssc.cert();
+        // Verify SANs
         final Collection<List<?>> sans = cert.getSubjectAlternativeNames();
         assertThat(sans).isNotNull();
 
-        // Extract DNS names (type 2), IP addresses (type 7), and URIs (type 6) from SANs
         final List<String> dnsNames = sans.stream()
                                           .filter(san -> (Integer) san.get(0) == 2) // DNS name
                                           .map(san -> (String) san.get(1))
@@ -76,10 +72,9 @@ class SelfSignedCertificateTest {
                                       .map(san -> (String) san.get(1))
                                       .collect(toImmutableList());
 
-        assertThat(dnsNames).contains("test.armeria.dev");
-        assertThat(dnsNames).contains("example.com");
+        assertThat(dnsNames).contains("service.example.com", "api.example.com", "*.example.com");
         assertThat(ipAddresses).contains("192.168.1.1");
-        assertThat(uris).contains("spiffe://centraldogma.dev/sa/centraldogma-alpha",
-                                  "https://api.example.com/service");
+        assertThat(uris).contains("spiffe://example.com/service");
     }
 }
+
