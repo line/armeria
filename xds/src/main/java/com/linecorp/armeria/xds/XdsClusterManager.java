@@ -17,6 +17,7 @@
 package com.linecorp.armeria.xds;
 
 import static com.google.common.base.Preconditions.checkArgument;
+import static com.linecorp.armeria.xds.ResourceNodeType.STATIC;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -71,12 +72,14 @@ final class XdsClusterManager implements SafeCloseable {
             loadBalancer = XdsLoadBalancer.of(eventLoop, bootstrap.getNode().getLocality(),
                                               localLoadBalancer, observer);
         }
-        final ClusterResourceNode node =
-                StaticResourceUtils.staticCluster(context, cluster.getName(), cluster, loadBalancer, "", 0);
+        final ClusterResourceNode node = new ClusterResourceNode(null, cluster.getName(), context, STATIC,
+                                                                 loadBalancer);
         for (SnapshotWatcher<? super ClusterSnapshot> watcher: watchers) {
             node.addWatcher(watcher);
         }
         nodes.put(cluster.getName(), node);
+        final ClusterXdsResource parsed = ClusterResourceParser.INSTANCE.parse(cluster, "", 0);
+        eventLoop.execute(() -> node.onChanged(parsed));
     }
 
     void register(String name, SubscriptionContext context, SnapshotWatcher<ClusterSnapshot> watcher) {
