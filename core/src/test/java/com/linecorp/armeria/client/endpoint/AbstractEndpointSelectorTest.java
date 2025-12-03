@@ -138,7 +138,7 @@ class AbstractEndpointSelectorTest {
 
             @Nullable
             @Override
-            public Endpoint selectNow(ClientRequestContext ctx) {
+            public Endpoint doSelectNow(ClientRequestContext ctx) {
                 final List<Endpoint> endpoints = endpointGroup.endpoints();
                 return endpoints.isEmpty() ? null : endpoints.get(0);
             }

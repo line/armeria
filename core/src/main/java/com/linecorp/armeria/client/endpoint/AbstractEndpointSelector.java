@@ -95,6 +95,18 @@ public abstract class AbstractEndpointSelector implements EndpointSelector {
         return asyncSelector.select(ctx, executor, endpointGroup.selectionTimeoutMillis());
     }
 
+    @Override
+    public final @Nullable Endpoint selectNow(ClientRequestContext ctx) {
+        tryInitialize();
+        return doSelectNow(ctx);
+    }
+
+    /**
+     * Selects an {@link Endpoint} from this {@link EndpointGroup} immediately.
+     */
+    @Nullable
+    protected abstract Endpoint doSelectNow(ClientRequestContext ctx);
+
     private void refreshEndpoints(List<Endpoint> endpoints) {
         // Allow subclasses to update the endpoints first.
         updateNewEndpoints(endpoints);
@@ -130,7 +142,6 @@ public abstract class AbstractEndpointSelector implements EndpointSelector {
         @Nullable
         @Override
         protected Endpoint selectNow(ClientRequestContext ctx) {
-            tryInitialize();
             return AbstractEndpointSelector.this.selectNow(ctx);
         }
 
