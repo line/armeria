@@ -18,9 +18,6 @@ package com.linecorp.armeria.xds;
 
 import static com.linecorp.armeria.xds.ResourceNodeType.STATIC;
 
-import com.linecorp.armeria.xds.client.endpoint.UpdatableXdsLoadBalancer;
-
-import io.envoyproxy.envoy.config.cluster.v3.Cluster;
 import io.envoyproxy.envoy.config.endpoint.v3.ClusterLoadAssignment;
 import io.envoyproxy.envoy.config.route.v3.RouteConfiguration;
 import io.envoyproxy.envoy.config.route.v3.VirtualHost;
@@ -50,23 +47,6 @@ final class StaticResourceUtils {
         final VirtualHostXdsResource resource = new VirtualHostXdsResource(virtualHost, version, revision);
         node.onChanged(resource);
         return node;
-    }
-
-    static ClusterResourceNode staticCluster(SubscriptionContext context, String resourceName,
-                                             Cluster cluster, UpdatableXdsLoadBalancer loadBalancer,
-                                             String version, long revision) {
-        final ClusterResourceNode node = new ClusterResourceNode(null, resourceName, context, STATIC,
-                                                                 loadBalancer);
-        setClusterXdsResourceToNode(cluster, node, version, revision);
-        return node;
-    }
-
-    private static void setClusterXdsResourceToNode(Cluster cluster, ClusterResourceNode node,
-                                                    String version, long revision) {
-        final ClusterResourceParser resourceParser =
-                (ClusterResourceParser) XdsResourceParserUtil.fromType(XdsType.CLUSTER);
-        final ClusterXdsResource parsed = resourceParser.parse(cluster, version, revision);
-        node.onChanged(parsed);
     }
 
     static EndpointResourceNode staticEndpoint(SubscriptionContext context, String resourceName,
