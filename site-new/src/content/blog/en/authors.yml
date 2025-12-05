@@ -1,0 +1,39 @@
+ikhunum:
+  name: Um Ikhun
+  title: Ikhun is developing for open-source Armeria and Central Dogma at LINE Plus.
+  image_url: https://github.com/ikhoon.png
+
+inseong:
+  name: Inseong
+  title: LINE Engineer
+  image_url: /img/author-inseong.png
+
+onoyuichi:
+  name: Ono Yuichi
+  title: He is a LINE engineer.
+  image_url: /img/author-onoyuichi.png
+
+seoyeonlee:
+  name: SeoYeon Lee
+  title: I'm responsible for open source projects at LINE
+  image_url: https://github.com/syleeeee.png
+
+seunghwanjoo:
+  name: Seunghwan Joo
+  title: Seunghwan is in charge of LINE OpenChat back-end development
+  image_url: /img/author-seunghwanjoo.jpeg
+
+shinjonghun:
+  name: Shin Jong Hun
+  title: I don’t like being inconvenienced. One of the focal points of my work is to reduce these inconveniences so I have more time to focus on what matters. I think that’s why I like programming. Although I can’t really figure out why I seem to be getting busier with time…
+  image_url: /img/author-shinjonghun.png
+
+teo:
+  name: Teo
+  title: Teodor is a server-side engineer at LINE.
+  image_url: /img/author-teo.png
+
+trustin:
+  name: Trustin Lee
+  title: He is the founder of Netty and a co-founder of Apache MINA.
+  image_url: https://github.com/trustin.png

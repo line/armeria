@@ -1,0 +1,173 @@
+---
+authors:
+  - seunghwanjoo
+other_languages:
+  en: /blog/2020/07/08/circuit-breakers-armeria
+---
+
+# Armeria의 서킷 브레이커 사용해 보기
+
+안녕하세요.
+LINE에서 OpenChat 서비스의 백엔드를 개발하고 있는 주승환입니다. 이번 글에서는 간단한 코드 예제와 함께 Armeria의 서킷 브레이커 기능을 사용해 본 내용을 공유하고자 합니다.
+
+{/* truncate */}
+
+## 서킷 브레이커란?
+
+만약 예상치 못한 장애(네크워크 이슈 혹은 서버 다운 등)가 발생하여 어떤 원격 서버 하나가 요청에 응답하지 못하는 상태라고 가정해 보겠습니다. 이때 해당 서버로 요청을 보낸 클라이언트는 타임아웃이 발생할 때까지 응답을 기다리거나 계속 무의미한 요청을 보내며 자원을 낭비하게 될 것입니다.
+MSA(Microservice Architecture)에서는 이 클라이언트가 또 다른 누군가의 서버가 될 수도 있는데요. 그렇다면 이 서버의 클라이언트 역시 똑같은 문제를 겪게 될 것입니다. 이렇게 장애가 계속 전파되며 한 원격 서버에서 발생한 장애가 모든 시스템에 큰 영향을 줄 수 있습니다. 이런 문제를 해결하기 위해 등장한 개념이 바로 '서킷 브레이커(circuit breaker)'입니다.
+
+서킷 브레이커란, 클라이언트에서 어떤 원격 서버로 전송한 요청의 실패율이 특정 임계치(threshold)를 넘어서면, 이 서버에 문제가 있다고 판단하여 더 이상 무의미한 요청을 전송하지 않고 빠르게 에러를 발생시키는 방법(fail fast)입니다. 이 방법으로 앞서 언급한 문제를 방지하여 장애 규모를 최소화할 수 있습니다(서킷 브레이커의 개념은 '[분산 서비스 환경에 대한 Circuit Breaker 적용](/blog/ko/2016/07/24/circuit-breakers-for-distributed-services)' 블로그에 잘 설명되어 있으니 참고하시기 바랍니다).
+
+## 서킷 브레이커의 상태
+
+서킷 브레이커에는 총 3가지 상태가 있습니다.
+
+![](/img/circuit-breakers-armeria-1.png)
+
+- `CLOSED`: 요청의 실패율이 정해 놓은 임계치보다 낮은 정상적인 상태.
+- `OPEN`: 요청의 실패율이 정해 놓은 임계치를 넘어선 상태. 요청을 전송하지 않고 바로 에러를 발생시킴(fail fast).
+- `HALF_OPEN`: `OPEN` 상태에서 주기적으로 요청을 전송하여 응답을 확인하는 상태. 성공하면 `CLOSED` 상태로 전환하고 실패하면 `OPEN` 상태를 유지.
+
+## Armeria의 서킷 브레이커
+
+LINE에서 운영하는 [Netty](https://netty.io/) 기반의 비동기 마이크로 서비스 프레임워크 오픈소스, [Armeria](https://github.com/line/armeria)에서는 서킷 브레이커 기능을 직접 구현하여 제공하고 있습니다. 이를 이용해 직접 로그를 살펴보며 서킷 브레이커의 동작을 확인해 보겠습니다.
+
+### 준비하기
+
+먼저, 테스트를 위해 간단하게 요청과 응답을 주고받을 서버 2대, Server1과 Server2를 준비합니다.
+
+클라이언트가 Server1으로 `/hello` 요청을 보내면, Server1은 Server2로 `/world` 요청을 보냅니다.
+Server2가 Server1으로 응답을 보내면 Server1은 그 응답을 다시 클라이언트에게 반환합니다.
+Server1은 클라이언트의 서버이면서 Server2의 클라이언트이기도 합니다.
+
+![](/img/circuit-breakers-armeria-2.png)
+
+#### Server2 구현 코드
+
+상대적으로 구현이 간단한, Server1의 응답을 받을 Server2의 구현 코드부터 보겠습니다. `/world`로 전송된 요청에 대한 응답으로 성공(200)과 실패(500)를 번갈아 반환하도록 간단하게 구현했습니다.
+
+```java title="Server2Application.java"
+@SpringBootApplication
+public class Server2Application {
+
+    private static final AtomicInteger REQ_CNT = new AtomicInteger();
+
+    public static void main(String[] args) {
+        ServerBuilder sb = Server.builder();
+        sb.http(5008);
+        sb.decorator(LoggingService.newDecorator());
+
+        sb.service("/world", (ctx, res) -> {
+            if (REQ_CNT.addAndGet(1) % 2 == 0) {
+                return HttpResponse.of(HttpStatus.INTERNAL_SERVER_ERROR);
+            }
+            return HttpResponse.of(HttpStatus.OK);
+        });
+
+        Server server = sb.build();
+        CompletableFuture<Void> future = server.start();
+        future.join();
+    }
+}
+```
+
+#### Server1 구현 코드
+
+Server1의 구현 코드입니다.
+Server2는 `ServerBuilder`를 이용하여 간단하게 구현한 후, Server1은 클라이언트의 요청을 받을 서비스와 Server2로 요청을 보낼 클라이언트를 모두 빈(bean)으로 만들어 사용합니다.
+
+```java title="Server1Application.java"
+@SpringBootApplication
+@Import(Server1Context.class)
+public class Server1Application {
+
+    public static void main(String[] args) {
+        SpringApplication.run(Server1Application.class, args);
+    }
+}
+```
+
+```java title="Server1Context.java"
+@Configuration
+public class Server1Context {
+
+    @Bean
+    public HttpServiceRegistrationBean httpService(WebClient webClient) {
+        return new HttpServiceRegistrationBean()
+                .setService((ctx, req) -> webClient.get("/world"))
+                .setServiceName("httpService")
+                .setRoute(Route.builder()
+                               .path("/hello")
+                               .methods(HttpMethod.GET)
+                               .build());
+    }
+
+    @Bean
+    public WebClient webClient() {
+        CircuitBreakerStrategy strategy = CircuitBreakerStrategy.onServerErrorStatus();
+
+        // CircuitBreaker 설정!!!
+        CircuitBreaker circuitBreaker = CircuitBreaker
+                .builder("test-circuit-breaker")
+                .counterSlidingWindow(Duration.ofSeconds(10))
+                .circuitOpenWindow(Duration.ofSeconds(5))
+                .failureRateThreshold(0.3)
+                .minimumRequestThreshold(5)
+                .trialRequestInterval(Duration.ofSeconds(3))
+                .build();
+
+        return WebClient
+                .builder("http://localhost:5008")
+                .decorator(LoggingClient.newDecorator())
+                .decorator(CircuitBreakerHttpClient.newDecorator(circuitBreaker, strategy))
+                .build();
+    }
+}
+```
+
+Armeria에서 `CircuitBreaker`를 구현할 때 주의해야 할 점은, 클라이언트 객체는 각자 자신만의 `CircuitBreaker`를 가진다는 점입니다. 만약 Server2로 전송되는 매 요청마다 클라이언트 객체를 새로 생성하고 요청이 끝난 후에 소멸되는 방식으로 구현했다면, 각 객체에 연결된 `CircuitBreaker`는 사실상 무의미해집니다. 따라서 Server2로 요청을 보낼 `WebClient`를 빈(bean)으로 만들어서 Server2로 전송되는 모든 요청에 대해 동일한 `WebClient` 객체를 재사용하도록 구현한 후, Armeria에서 제공하는 [Decorator](https://line.github.io/armeria/client-decorator.html)를 이용해 이 `WebClient` 객체에 서킷 브레이커를 적용했습니다.
+
+위 코드에서 `CircuitBreaker`에 설정한 각 필드를 하나씩 살펴보겠습니다.
+
+- `counterSlidingWindow`(10s): 서킷 브레이커에서 요청의 성공/실패의 수를 측정하는 시간 간격입니다. 즉, 위 코드에선 10초 동안의 집계를 바탕으로 어떤 상태로 전환 또는 유지할지 판단합니다.
+- `circuitOpenWindow`(5s): 서킷 브레이커가 `OPEN` 상태로 유지되는 시간입니다. 위 코드에선 `OPEN` 상태가 되면 5초 동안 외부 서버로 요청을 보내지 않고 바로 에러(FailFastException)를 발생시킵니다.
+- `failureRateThreshold`(0.3): `OPEN` 상태로 전환되기 위한 요청 실패율입니다. `circuitOpenWindow`에서 설정한 시간 동안 0.3(30%) 비율 이상으로 요청이 실패해야 `OPEN` 상태로 전환됩니다.
+- `minimumRequestThreshold`(5): 측정에 필요한 요청의 최소 개수입니다. 실패율이 `failureRateThreshold`보다 높다고 해도, 그 값이 최소 5개 이상의 요청에 대한 결과값일 때만 `OPEN` 상태로 전환됩니다.
+- `trialRequestInterval`(3s): `HALF_OPEN` 상태로 유지되는 시간입니다. 3초 동안은 `OPEN` 상태일 때와 마찬가지로 `FailFastException` 에러를 발생시키는 한편, 외부 서버로도 요청을 전송하며 서버가 정상으로 돌아왔는지 확인합니다. 3초 동안 요청을 전송하면서 성공 응답을 받으면 즉시 `CLOSED` 상태로 전환되고, 모두 실패하면 다시 `OPEN` 상태로 전환됩니다.
+
+### 테스트
+
+아래와 같이 터미널에서 [loadtest](https://www.npmjs.com/package/loadtest) 라이브러리를 이용하여 지속적으로 Server1에 요청을 보내겠습니다.
+
+```
+$ loadtest http://127.0.0.1:5007/hello --rps 1
+```
+
+Server1의 로그를 살펴보면 서킷 브레이커의 동작을 눈으로 확인할 수 있습니다. 서버가 처음 실행될 때는 서킷 브레이커의 초기 상태가 `CLOSED`입니다.
+
+![](/img/circuit-breakers-armeria-3.png)
+
+_03:03:41.830_ 초에 측정된 전체 5개의 요청 중 실패한 요청 수는 두 개이고, 실패율은 2/5 = 0.4입니다. 실패율이 앞서 설정한 0.3(`failureRateThreshold`)보다 크고, 측정에 사용한 요청 수도 5(`minimumRequestThreshold`) 이상이므로 서킷 브레이커는 `OPEN` 상태로 전환됩니다.
+
+![](/img/circuit-breakers-armeria-4.png)
+
+이후 _03:03:41.830_ ~ _03:03:47.824_, 약 5초(`circuitOpenWindow`) 간 Server2로 요청이 전송되지 않고 `FailFastException` 에러가 계속 발생합니다(Server2의 로그를 보면 해당 시간에 요청이 들어오지 않은 것을 확인할 수 있습니다).
+
+![](/img/circuit-breakers-armeria-5.png)
+
+_03:03:47.824_ 초에 `HALF_OPEN` 상태로 전환되고, 클라이언트가 보낸 요청이 Server2로 전송됩니다. 이때 전송된 요청이 운 좋게 200 응답을 받으면서 `CLOSED` 상태로 전환됩니다.
+
+![](/img/circuit-breakers-armeria-6.png)
+
+다시 `CLOSED`가 되어서 이 과정을 또 반복합니다. _03:03:47.827_ ~ _03:03:56.824_, 약 10초(`counterSlidingWindow`) 동안 실패율을 측정합니다. 이번에 측정한 실패율은 4/8 = 0.5이므로, 서킷 브레이커는 다시 `OPEN` 상태로 전환됩니다.
+
+![](/img/circuit-breakers-armeria-7.png)
+
+위와 같이 간단한 테스트를 통해 Armeria 서킷 브레이커의 동작을 직접 확인해 보면서, 여러 설정 옵션의 의미와 그에 따른 동작을 보다 쉽게 이해할 수 있었습니다. 또한 간단한 설정으로도 완벽히 동작하는 서킷 브레이커 클라이언트를 구현할 수 있다는 점도 알게 되었습니다.
+
+> Armeria 서킷 브레이커에 관한 보다 자세한 내용은 https://armeria.dev/docs/client-circuit-breaker/ 를 참고하시기 바랍니다.
+
+## 마치며
+
+Armeria에서는 서킷 브레이커 외에도 MSA에 필요한 클라이언트 측 로드 밸런싱이나 auto-retry와 같은 여러 유용한 기능을 제공하고 있습니다. 실제 저희 OpenChat 서버 개발에도 Armeria를 사용하고 있는데요. 덕분에 많은 기능을 편하게 사용하고 있습니다. 지금 이 순간에도 개발자의 목소리에 귀를 기울이며 새로운 기능을 추가하고 개선하고 있는 Armeria 오픈소스 개발 팀에게 감사의 말을 전하며 이 글을 마칩니다.

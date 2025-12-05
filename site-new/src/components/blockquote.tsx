@@ -1,7 +1,6 @@
 import React from 'react';
 import Heading from '@theme/Heading';
-import Pattern1 from '@site/static/img/pattern-1.svg';
-import Pattern2 from '@site/static/img/pattern-2.svg';
+import useBaseUrl from '@docusaurus/useBaseUrl';
 
 import styles from './blockquote.module.css';
 
@@ -13,39 +12,43 @@ interface BlockquoteProps {
 }
 
 const Blockquote: React.FC<BlockquoteProps> = (props) => {
+  const pattern1 = useBaseUrl('/img/pattern-1.svg');
+  const pattern2 = useBaseUrl('/img/pattern-2.svg');
+
   return (
     <blockquote className={styles.blockquote}>
-      {props.reverse ? (
-        <Pattern2
-          className={styles.backgroundPattern1Reverse}
-          height={200}
-          aria-hidden
-          title=" "
-        />
-      ) : (
-        <Pattern1
-          className={styles.backgroundPattern1}
-          height={200}
-          aria-hidden
-        />
-      )}
-      {props.reverse ? (
-        <Pattern1
-          className={styles.backgroundPattern2Reverse}
-          height={200}
-          aria-hidden
-        />
-      ) : (
-        <Pattern2
-          className={styles.backgroundPattern2}
-          height={200}
-          aria-hidden
-        />
-      )}
+      <img
+        src={props.reverse ? pattern2 : pattern1}
+        className={
+          props.reverse
+            ? styles.backgroundPattern1Reverse
+            : styles.backgroundPattern1
+        }
+        height={200}
+        alt=""
+        role="presentation"
+        aria-hidden="true"
+        loading="lazy"
+      />
+      <img
+        src={props.reverse ? pattern1 : pattern2}
+        className={
+          props.reverse
+            ? styles.backgroundPattern2Reverse
+            : styles.backgroundPattern2
+        }
+        height={200}
+        alt=""
+        role="presentation"
+        aria-hidden="true"
+        loading="lazy"
+      />
+
       <p className={styles.body}>
         {props.children}
         <span className={styles.quote} />
       </p>
+
       <Heading as="h4" className={styles.author}>
         <span className={styles.separator}>&mdash; </span>
         {props.author}

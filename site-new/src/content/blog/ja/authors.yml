@@ -1,0 +1,34 @@
+hirotakakawata:
+  name: Hirotaka Kawata
+  title: LINE Engineer
+  image_url: /img/author-hirotakakawata.png
+
+ikhunum:
+  name: Um Ikhun
+  title: Ikhun is developing for open-source Armeria and Central Dogma at LINE Plus.
+  image_url: https://github.com/ikhoon.png
+
+onoyuichi:
+  name: Ono Yuichi
+  title: LINEのエンジニアです。
+  image_url: /img/author-onoyuichi.png
+
+seoyeonlee:
+  name: SeoYeon Lee
+  title: I'm responsible for open source projects at LINE
+  image_url: https://github.com/syleeeee.png
+
+shinjonghun:
+  name: Shin Jong Hun
+  title: 面倒なことが大嫌いで、面倒を減らすために悩み続けています。これがプログラミングが好きになった理由なのですが、なんだかやることが増えた気がするのは自分だけでしょうか
+  image_url: /img/author-shinjonghun.png
+
+teo:
+  name: Teo
+  title: Teodor is a server-side engineer at LINE.
+  image_url: /img/author-teo.png
+
+trustin:
+  name: Trustin Lee
+  title: Nettyプロジェクトの設立者兼Apache MINAプロジェクトの共同設立者です。
+  image_url: https://github.com/trustin.png

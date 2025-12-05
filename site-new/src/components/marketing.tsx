@@ -1,5 +1,7 @@
 import React, { ReactNode } from 'react';
 import { Fade } from 'react-awesome-reveal';
+import clsx from 'clsx';
+import BrowserOnly from '@docusaurus/BrowserOnly';
 
 import styles from './marketing.module.css';
 
@@ -21,16 +23,20 @@ interface MarketingBlockProps {
 }
 
 const Highlight: React.FC<HighlightProps> = (props) => (
-  <span className={props.nowrap ? styles.highlightNoWrap : styles.highlight}>
+  <span
+    className={clsx(props.nowrap ? styles.highlightNoWrap : styles.highlight)}
+  >
     {props.children}
   </span>
 );
 
 const Marketing: React.FC<MarketingProps> = (props) => {
   return (
-    <div className={`${styles.wrapper} ${props.className || ''}`}>
+    <div className={clsx(styles.wrapper, props.className || '')}>
       <div
-        className={props.reverse ? styles.blockListReverse : styles.blockList}
+        className={clsx(
+          props.reverse ? styles.blockListReverse : styles.blockList,
+        )}
       >
         {props.children}
       </div>
@@ -40,8 +46,14 @@ const Marketing: React.FC<MarketingProps> = (props) => {
 
 const MarketingBlock: React.FC<MarketingBlockProps> = (props) => {
   return (
-    <div className={`${styles.block} ${props.className || ''}`}>
-      {props.noreveal ? props.children : <Fade>{props.children}</Fade>}
+    <div className={clsx(styles.block, props.className || '')}>
+      {props.noreveal ? (
+        props.children
+      ) : (
+        <BrowserOnly fallback={props.children}>
+          {() => <Fade>{props.children}</Fade>}
+        </BrowserOnly>
+      )}
     </div>
   );
 };

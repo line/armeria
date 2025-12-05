@@ -18,8 +18,8 @@ async function getLatestFilePath(
   sortFunc: (a: string, b: string) => number,
 ): Promise<string> {
   const extension = '.mdx';
-  const directoryPath = path.join(__dirname, directory);
-  const files = await fs.readdir(directoryPath);
+  const fullPath = path.join(__dirname, 'src/content', directory);
+  const files = await fs.readdir(fullPath);
   const filteredFiles = files.filter((file) => file.endsWith(extension));
   const identifiers = filteredFiles.map((file) =>
     path.basename(file, extension),
@@ -27,7 +27,7 @@ async function getLatestFilePath(
 
   if (identifiers.length === 0) {
     throw new Error(
-      `No files found in ${directory} with extension ${extension}.`,
+      `No files found in ${fullPath} with extension ${extension}.`,
     );
   }
 
@@ -50,7 +50,7 @@ export default async function createConfigAsync() {
     favicon: 'img/favicon.svg',
 
     // Set the production url of your site here
-    url: 'https://your-docusaurus-site.example.com',
+    url: 'https://armeria.dev',
     // Set the /<baseUrl>/ pathname under which your site is served
     // For GitHub pages deployment, it is often '/<projectName>/'
     baseUrl: '/',
@@ -60,8 +60,14 @@ export default async function createConfigAsync() {
     organizationName: 'line', // Usually your GitHub org/user name.
     projectName: 'armeria', // Usually your repo name.
 
-    onBrokenLinks: 'throw',
-    onBrokenMarkdownLinks: 'warn',
+    onBrokenLinks: 'warn',
+
+    markdown: {
+      hooks: {
+        onBrokenMarkdownImages: 'warn',
+        onBrokenMarkdownLinks: 'warn',
+      },
+    },
 
     // Even if you don't use internationalization, you can use this field to set
     // useful metadata like html lang. For example, if your site is Chinese, you
@@ -77,24 +83,26 @@ export default async function createConfigAsync() {
         {
           docs: {
             sidebarPath: './sidebars.ts',
+            path: 'src/content/docs',
             editUrl: 'https://github.com/line/armeria/edit/main/site/',
             remarkPlugins: [remarkApiLink, remarkGithub],
           },
           blog: {
+            path: 'src/content/news',
             routeBasePath: '/news',
-            path: 'news',
             blogTitle: 'Armeria Newsletter',
-            blogDescription:
-              'The Armeria Newsletter provides the latest insights, updates, and best practices to help you maximize the potential of Armeria.',
             blogSidebarTitle: ' ',
             blogSidebarCount: 'ALL',
             showReadingTime: false,
+            blogListComponent: '@site/src/components/news-redirect', // Redirect to the latest newsletter when accessing /news
             feedOptions: {
-              type: ['rss', 'atom'],
-              xslt: true,
+              title: 'Armeria Newsletter',
+              description: '',
+              copyright: `© 2015-${new Date().getFullYear()}, LY Corporation`,
+              type: ['rss'],
+              xslt: false,
             },
             editUrl: 'https://github.com/line/armeria/edit/main/site/',
-            // Useful options to enforce blogging best practices
             onInlineTags: 'warn',
             onInlineAuthors: 'warn',
             onUntruncatedBlogPosts: 'warn',
@@ -107,18 +115,44 @@ export default async function createConfigAsync() {
               require.resolve('react-tweet/theme.css'),
             ],
           },
+          gtag: {
+            trackingID: 'G-CY9YHLJ0K6',
+            anonymizeIP: true,
+          },
         } satisfies Preset.Options,
       ],
     ],
 
+    headTags: [
+      {
+        tagName: 'link',
+        attributes: {
+          rel: 'alternate',
+          type: 'application/rss+xml',
+          href: '/rss.xml',
+          title: 'Armeria RSS Feed',
+        },
+      },
+    ],
+
     themeConfig: {
       image: 'img/og-image.jpg',
+      metadata: [
+        {
+          name: 'og:site_name',
+          content: 'Armeria - Your go-to microservice framework',
+        },
+        { name: 'og:type', content: 'website' },
+        { name: 'og:image:width', content: '1280' },
+        { name: 'og:image:height', content: '640' },
+        { name: 'twitter:site', content: '@armeria_project' },
+        { name: 'twitter:creator', content: '@armeria_project' },
+      ],
       navbar: {
-        title: 'Armeria',
         style: 'dark',
         logo: {
           alt: 'Armeria Logo',
-          src: 'img/logo.svg',
+          src: 'img/armeria_logo_horiz.svg',
         },
         items: [
           {
@@ -155,25 +189,28 @@ export default async function createConfigAsync() {
             to: '/blog',
           },
           {
-            href: 'https://github.com/facebook/docusaurus',
-            label: 'GitHub',
+            href: 'https://github.com/line/armeria',
             position: 'right',
+            className: 'header-github-link',
+            'aria-label': 'GitHub repository',
+          },
+          {
+            to: '/s/discord',
+            position: 'right',
+            className: 'header-discord-link',
+            'aria-label': 'Discord',
+          },
+          {
+            href: 'https://x.com/armeria_project',
+            position: 'right',
+            className: 'header-x-link',
+            'aria-label': 'X',
           },
         ],
       },
       footer: {
         style: 'dark',
-        links: [
-          {
-            label: 'LY Corporation Tech Blog',
-            href: 'https://techblog.lycorp.co.jp/en',
-          },
-          {
-            label: 'Privacy policy',
-            href: 'https://terms.line.me/line_rules?lang=en',
-          },
-        ],
-        copyright: `Copyright © ${new Date().getFullYear()} My Project, Inc. Built with Docusaurus.`,
+        // See src/theme/Footer/index.tsx for the footer implementation
       },
       prism: {
         theme: prismThemes.github,
@@ -196,6 +233,14 @@ export default async function createConfigAsync() {
           autoCollapseCategories: true,
         },
       },
+      // TODO: enable Algolia search when the index is ready.
+      // algolia: {
+      //   appId: 'TASSHENNEI',
+      //   apiKey: '1defe0560dbb853243bd0cccce18127f',
+      //   indexName: 'Armeria Crawler',
+      //   contextualSearch: true,
+      //   searchPagePath: 'search',
+      // },
     } satisfies Preset.ThemeConfig,
 
     plugins: [
@@ -203,17 +248,18 @@ export default async function createConfigAsync() {
         '@docusaurus/plugin-content-docs',
         {
           id: 'community',
-          path: 'community',
+          path: 'src/content/community',
           routeBasePath: 'community',
           sidebarPath: './sidebarsCommunity.ts',
+          editUrl: 'https://github.com/line/armeria/edit/main/site/',
+          remarkPlugins: [remarkApiLink, remarkGithub],
         },
       ],
-      './src/plugins/tutorial.ts',
       [
         '@docusaurus/plugin-content-docs',
         {
           id: 'release-notes',
-          path: 'release-notes',
+          path: 'src/content/release-notes',
           routeBasePath: 'release-notes',
           async sidebarItemsGenerator({
             defaultSidebarItemsGenerator,
@@ -222,6 +268,7 @@ export default async function createConfigAsync() {
             const sidebarItems = await defaultSidebarItemsGenerator(args);
             return sortReleaseNoteSidebarItems(sidebarItems);
           },
+          editUrl: 'https://github.com/line/armeria/edit/main/site/',
           remarkPlugins: [remarkApiLink, remarkGithub, remarkReleaseDate],
         },
       ],
@@ -229,45 +276,69 @@ export default async function createConfigAsync() {
         '@docusaurus/plugin-content-blog',
         {
           id: 'blog',
-          path: 'blog/en',
+          path: 'src/content/blog/en',
           routeBasePath: 'blog',
-          postsPerPage: 12,
-          showReadingTime: true,
-          blogSidebarCount: 'ALL',
+          blogTitle: 'Armeria Blog',
           blogSidebarTitle: ' ',
-          // authorsMapPath: '../blog/authors.yaml',
+          blogSidebarCount: 'ALL',
+          showReadingTime: true,
+          feedOptions: {
+            title: 'Armeria Blog',
+            description: '',
+            copyright: `© 2015-${new Date().getFullYear()}, LY Corporation`,
+            type: ['rss'],
+            xslt: false,
+          },
           editUrl: 'https://github.com/line/armeria/edit/main/site/',
-          // TODO
+          onInlineTags: 'warn',
+          onInlineAuthors: 'warn',
+          onUntruncatedBlogPosts: 'throw',
         },
       ],
       [
         '@docusaurus/plugin-content-blog',
         {
           id: 'blog-ja',
-          path: 'blog/ja',
+          path: 'src/content/blog/ja',
           routeBasePath: 'blog/ja',
-          postsPerPage: 12,
-          showReadingTime: true,
-          blogSidebarCount: 10,
+          blogTitle: 'Armeria Blog',
           blogSidebarTitle: ' ',
-          // authorsMapPath: '../blog/authors.yaml',
+          blogSidebarCount: 'ALL',
+          showReadingTime: true,
+          feedOptions: {
+            title: 'Armeria Blog - Japanese',
+            description: '',
+            copyright: `© 2015-${new Date().getFullYear()}, LY Corporation`,
+            type: ['rss'],
+            xslt: false,
+          },
           editUrl: 'https://github.com/line/armeria/edit/main/site/',
-          // TODO
+          onInlineTags: 'warn',
+          onInlineAuthors: 'warn',
+          onUntruncatedBlogPosts: 'throw',
         },
       ],
       [
         '@docusaurus/plugin-content-blog',
         {
           id: 'blog-ko',
-          path: 'blog/ko',
+          path: 'src/content/blog/ko',
           routeBasePath: 'blog/ko',
-          postsPerPage: 12,
-          showReadingTime: true,
-          blogSidebarCount: 10,
+          blogTitle: 'Armeria Blog',
           blogSidebarTitle: ' ',
-          // authorsMapPath: '../blog/authors.yaml',
+          blogSidebarCount: 'ALL',
+          showReadingTime: true,
+          feedOptions: {
+            title: 'Armeria Blog - Korean',
+            description: '',
+            copyright: `© 2015-${new Date().getFullYear()}, LY Corporation`,
+            type: ['rss'],
+            xslt: false,
+          },
           editUrl: 'https://github.com/line/armeria/edit/main/site/',
-          // TODO
+          onInlineTags: 'warn',
+          onInlineAuthors: 'warn',
+          onUntruncatedBlogPosts: 'throw',
         },
       ],
       [
@@ -275,18 +346,48 @@ export default async function createConfigAsync() {
         {
           redirects: [
             {
-              from: '/s/discord',
-              to: 'https://discord.gg/7FH8c6npmg',
-            },
-            {
-              from: '/news',
-              to: await getLatestNewsletterPath(),
-            },
-            {
               from: '/release-notes',
               to: await getLatestReleaseNotePath(),
             },
           ],
+        },
+      ],
+      [
+        '@docusaurus/plugin-pwa',
+        {
+          debug: false,
+          offlineModeActivationStrategies: [
+            'appInstalled',
+            'standalone',
+            'queryString',
+          ],
+          pwaHead: [
+            {
+              tagName: 'link',
+              rel: 'manifest',
+              href: '/manifest.json',
+            },
+          ],
+        },
+      ],
+      './src/plugins/tutorial.ts',
+      [
+        './src/plugins/short-url.ts',
+        {
+          shortUrls: [
+            {
+              name: 'discord',
+              href: 'https://discord.gg/7FH8c6npmg',
+            },
+          ],
+        },
+      ],
+      [
+        './src/plugins/rss-generator.ts',
+        {
+          path: '/release-notes',
+          title: 'Armeria Release Notes',
+          exclude: ['version-*/index.html'],
         },
       ],
     ],
@@ -297,6 +398,8 @@ export default async function createConfigAsync() {
 
     customFields: {
       latestReleaseNotePath: await getLatestReleaseNotePath(),
+      latestNewsPath: await getLatestNewsletterPath(),
+      buildDate: new Date().toISOString(),
     },
   };
   return config;
