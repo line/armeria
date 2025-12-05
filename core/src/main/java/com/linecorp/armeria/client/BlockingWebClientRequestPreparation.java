@@ -446,6 +446,12 @@ public final class BlockingWebClientRequestPreparation
     }
 
     @Override
+    public BlockingWebClientRequestPreparation content(HttpData content) {
+        delegate.content(content);
+        return this;
+    }
+
+    @Override
     public BlockingWebClientRequestPreparation content(MediaType contentType, HttpData content) {
         delegate.content(contentType, content);
         return this;
