@@ -690,7 +690,12 @@ public final class Server implements ListenableAsyncCloseable {
                         // Shut down the worker group if necessary.
                         final Future<?> workerShutdownFuture;
                         if (config.shutdownWorkerGroupOnStop()) {
-                            workerShutdownFuture = config.workerGroup().shutdownGracefully();
+                            final GracefulShutdown gracefulShutdown = config().gracefulShutdown();
+                            workerShutdownFuture = config.workerGroup().shutdownGracefully(
+                                gracefulShutdown.quietPeriod().toMillis(),
+                                gracefulShutdown.timeout().toMillis(),
+                                TimeUnit.MILLISECONDS
+                            );
                         } else {
                             workerShutdownFuture = ImmediateEventExecutor.INSTANCE.newSucceededFuture(null);
                         }
@@ -711,7 +716,12 @@ public final class Server implements ListenableAsyncCloseable {
                             // Shut down all boss groups and wait until they are terminated.
                             final AtomicInteger remainingBossGroups = new AtomicInteger(bossGroups.size());
                             bossGroups.forEach(bossGroup -> {
-                                bossGroup.shutdownGracefully();
+                                final GracefulShutdown gracefulShutdown = config().gracefulShutdown();
+                                bossGroup.shutdownGracefully(
+                                    gracefulShutdown.quietPeriod().toMillis(),
+                                    gracefulShutdown.timeout().toMillis(),
+                                    TimeUnit.MILLISECONDS
+                                );
                                 bossGroup.terminationFuture().addListener(unused8 -> {
                                     if (remainingBossGroups.decrementAndGet() != 0) {
                                         // There are more boss groups to terminate.
