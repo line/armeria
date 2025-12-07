@@ -558,9 +558,10 @@ public final class DocServiceBuilder {
 
     /**
      * Sets the title of the web application to be used in the documentation service.
-     * @param webAppTitle  * The title cannot be null, empty, or exceed a maximum length of 50 characters.
+     * @param webAppTitle  The title cannot be null, empty, or exceed a maximum length of 50 characters.
      * @return The current {@link DocServiceBuilder} instance for method chaining.
      */
+    @UnstableApi
     public DocServiceBuilder webAppTitle(String webAppTitle) {
         requireNonNull(webAppTitle, WEB_APP_TITLE_KEY);
         checkArgument(!webAppTitle.trim().isEmpty(), "%s is empty.", WEB_APP_TITLE_KEY);

@@ -40,7 +40,7 @@ public class DocServiceInjectableScriptsTest {
     @ValueSource(strings = { "#1234567", "#ABCDEFA", "#7654321"})
     void titleBackground_givenTooLongColor_throwsException(String color) {
 
-        assertThatThrownBy(() -> DocServiceInjectableScripts.gotoBackground(color))
+        assertThatThrownBy(() -> DocServiceInjectableScripts.titleBackground(color))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("length exceeds");
     }
@@ -49,7 +49,7 @@ public class DocServiceInjectableScriptsTest {
     @ValueSource(strings = { "#12345Z", "#ZABCDE", "#@12345"})
     void titleBackground_givenInvalidColor_throwsException(String color) {
 
-        assertThatThrownBy(() -> DocServiceInjectableScripts.gotoBackground(color))
+        assertThatThrownBy(() -> DocServiceInjectableScripts.titleBackground(color))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("not in hex format");
     }

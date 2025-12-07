@@ -20,9 +20,12 @@ import static java.util.Objects.requireNonNull;
 
 import java.util.regex.Pattern;
 
+import com.linecorp.armeria.common.annotation.UnstableApi;
+
 /**
  * Provides utilities for {@link DocServiceBuilder#injectedScripts(String...)}.
  */
+@UnstableApi
 public final class DocServiceInjectableScripts {
 
     private static final String HEX_COLOR_PATTERN = "^#?([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$";
