@@ -22,6 +22,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.linecorp.armeria.common.AggregatedHttpRequest;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 import java.util.concurrent.CompletableFuture;
@@ -51,6 +52,7 @@ import java.util.concurrent.CompletableFuture;
  * }
  * }</pre>
  */
+@UnstableApi
 public class JsonBodyFieldAthenzResourceProvider implements AthenzResourceProvider {
 
     private final ObjectMapper objectMapper;

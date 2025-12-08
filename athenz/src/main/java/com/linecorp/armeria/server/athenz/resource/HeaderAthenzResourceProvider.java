@@ -18,6 +18,7 @@
 package com.linecorp.armeria.server.athenz.resource;
 
 import com.linecorp.armeria.common.HttpRequest;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 import java.util.concurrent.CompletableFuture;
@@ -37,6 +38,7 @@ import java.util.concurrent.CompletableFuture;
  *              .newDecorator();
  * }</pre>
  */
+@UnstableApi
 public class HeaderAthenzResourceProvider implements AthenzResourceProvider {
 
     private final String headerName;
