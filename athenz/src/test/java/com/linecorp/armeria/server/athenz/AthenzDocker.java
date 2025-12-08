@@ -44,8 +44,8 @@ import com.yahoo.athenz.zms.TopLevelDomain;
 import com.yahoo.athenz.zms.ZMSClient;
 import com.yahoo.athenz.zts.ZTSClient;
 
-import com.linecorp.armeria.client.WebClientBuilder;
 import com.linecorp.armeria.client.athenz.ZtsBaseClient;
+import com.linecorp.armeria.client.athenz.ZtsBaseClientBuilder;
 import com.linecorp.armeria.common.TlsKeyPair;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.SafeCloseable;
@@ -106,6 +106,12 @@ public class AthenzDocker implements SafeCloseable {
                 logger.info("Initializing Athenz Docker container (attempt {}/{})...", attempt, maxAttempts);
                 composeContainer.start();
                 defaultScaffold();
+
+                if (System.getenv("CI") != null) {
+                    // In CI environment, wait a bit more to ensure ZTS is fully synced.
+                    Thread.sleep(10000);
+                }
+                initialized = true;
                 return true;
             } catch (Exception e) {
                 logger.warn("Attempt {}/{} to initialize Athenz Docker container failed.",
@@ -260,22 +266,24 @@ public class AthenzDocker implements SafeCloseable {
     }
 
     public ZtsBaseClient newZtsBaseClient(String serviceName) {
-        return newZtsBaseClient(serviceName, webClientBuilder -> {});
+        return newZtsBaseClient(serviceName, clientBuilder -> {
+        });
     }
 
     public ZtsBaseClient newZtsBaseClient(String serviceName,
-                                          Consumer<WebClientBuilder> webClientConfigurer) {
+                                          Consumer<ZtsBaseClientBuilder> clientConfigurer) {
         final String serviceKeyFile = ATHENZ_CERTS + serviceName + "/key.pem";
         final String serviceCertFile = ATHENZ_CERTS + serviceName + "/cert.pem";
         try (InputStream serviceKey = AthenzDocker.class.getResourceAsStream(serviceKeyFile);
              InputStream serviceCert = AthenzDocker.class.getResourceAsStream(serviceCertFile);
              InputStream caCert = AthenzDocker.class.getResourceAsStream(CA_CERT_FILE)) {
             final TlsKeyPair tlsKeyPair = TlsKeyPair.of(serviceKey, serviceCert);
-            return ZtsBaseClient.builder(ztsUri())
-                                .keyPair(() -> tlsKeyPair)
-                                .trustedCertificate(caCert)
-                                .configureWebClient(webClientConfigurer)
-                                .build();
+            final ZtsBaseClientBuilder ztsClientBuilder =
+                    ZtsBaseClient.builder(ztsUri())
+                                 .keyPair(() -> tlsKeyPair)
+                                 .trustedCertificate(caCert);
+            clientConfigurer.accept(ztsClientBuilder);
+            return ztsClientBuilder.build();
         } catch (IOException e) {
             throw new RuntimeException(e);
         }

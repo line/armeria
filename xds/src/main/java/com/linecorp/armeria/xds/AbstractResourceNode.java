@@ -132,7 +132,12 @@ abstract class AbstractResourceNode<T extends XdsResource, S extends Snapshot<T>
     @Override
     public final void onChanged(T update) {
         assert update.type() == type();
-        doOnChanged(update);
+        try {
+            doOnChanged(update);
+        } catch (Throwable t) {
+            final Status status = Status.fromThrowable(t);
+            notifyOnError(type, resourceName, status);
+        }
     }
 
     abstract void doOnChanged(T update);

@@ -141,7 +141,7 @@ class DefaultHttpClientObservationConvention implements ObservationConvention<Cl
         if (logAccess.isAvailable(RequestLogProperty.NAME)) {
             return logAccess.partial().fullName();
         } else {
-            return context.getName();
+            return firstNonNull(context.getName(), "UNKNOWN");
         }
     }
 

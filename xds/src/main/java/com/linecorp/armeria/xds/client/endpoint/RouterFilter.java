@@ -53,19 +53,28 @@ final class RouterFilter<I extends Request, O extends Response> implements Prepr
     public O execute(PreClient<I, O> delegate, PreClientRequestContext ctx, I req) throws Exception {
         final RouteConfig routeConfig = ctx.attr(ROUTE_CONFIG);
         if (routeConfig == null) {
-            throw UnprocessedRequestException.of(new IllegalArgumentException(
-                    "RouteConfig is not set for the ctx. If a new ctx has been used, " +
-                    "please make sure to use ctx.newDerivedContext()."));
+            final UnprocessedRequestException e = UnprocessedRequestException.of(
+                    new IllegalArgumentException(
+                            "RouteConfig is not set for the ctx. If a new ctx has been used, " +
+                            "please make sure to use ctx.newDerivedContext()."));
+            ctx.cancel(e);
+            throw e;
         }
         final RouteEntry selectedRoute = routeConfig.select(ctx);
         if (selectedRoute == null) {
-            throw UnprocessedRequestException.of(new IllegalArgumentException(
-                    "No route has been selected for listener '" + routeConfig.listenerSnapshot() + "'."));
+            final UnprocessedRequestException e = UnprocessedRequestException.of(
+                    new IllegalArgumentException("No route has been selected for listener '" +
+                                                 routeConfig.listenerSnapshot() + '.'));
+            ctx.cancel(e);
+            throw e;
         }
         final ClusterSnapshot clusterSnapshot = selectedRoute.clusterSnapshot();
         if (clusterSnapshot == null) {
-            throw UnprocessedRequestException.of(new IllegalArgumentException(
-                    "No cluster is specified for selected route '" + selectedRoute + "'."));
+            final UnprocessedRequestException e = UnprocessedRequestException.of(
+                    new IllegalArgumentException("No cluster is specified for selected route '" +
+                                                 selectedRoute + "'."));
+            ctx.cancel(e);
+            throw e;
         }
         selectedRoute.applyUpstreamFilter(ctx);
 
@@ -84,8 +93,11 @@ final class RouterFilter<I extends Request, O extends Response> implements Prepr
 
         final XdsLoadBalancer loadBalancer = clusterSnapshot.loadBalancer();
         if (loadBalancer == null) {
-            throw UnprocessedRequestException.of(new IllegalArgumentException(
-                    "The target cluster '" + clusterSnapshot + "' does not specify ClusterLoadAssignments."));
+            final UnprocessedRequestException e = UnprocessedRequestException.of(
+                    new IllegalArgumentException("The target cluster '" + clusterSnapshot +
+                                                 "' does not specify ClusterLoadAssignments."));
+            ctx.cancel(e);
+            throw e;
         }
 
         final Endpoint endpoint = loadBalancer.selectNow(ctx);

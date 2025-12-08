@@ -89,6 +89,7 @@ project(':version-catalog').with {
 }
 
 // Published Java projects
+includeWithFlags ':ai:mcp',                              'java17', 'publish', 'relocate'
 includeWithFlags ':annotation-processor',                'java', 'publish', 'relocate'
 includeWithFlags ':athenz',                              'java11', 'publish', 'relocate', 'native'
 includeWithFlags ':brave5',                              'java', 'publish', 'relocate', 'no_aggregation'
@@ -113,6 +114,7 @@ includeWithFlags ':jetty12',                             'java17', 'publish', 'r
 project(':jetty12').projectDir = file('jetty/jetty12')
 includeWithFlags ':junit4',                              'java', 'publish', 'relocate'
 includeWithFlags ':junit5',                              'java', 'publish', 'relocate'
+includeWithFlags ':jsonrpc',                             'java', 'publish', 'relocate'
 includeWithFlags ':kafka',                               'java', 'publish', 'relocate', 'native'
 includeWithFlags ':kotlin',                              'java', 'publish', 'relocate', 'kotlin', 'native'
 includeWithFlags ':kubernetes',                          'java11', 'publish', 'relocate', 'native'
@@ -169,7 +171,6 @@ includeWithFlags ':spring:boot3-webflux-autoconfigure',  'java17', 'publish', 'r
 includeWithFlags ':spring:boot3-webflux-starter',        'java17', 'publish', 'relocate'
 includeWithFlags ':spring:spring6',                      'java17', 'publish', 'relocate'
 
-includeWithFlags ':dropwizard1',                         'java', 'publish', 'relocate', 'no_aggregation'
 includeWithFlags ':dropwizard2',                         'java', 'publish', 'relocate'
 includeWithFlags ':thrift0.9',                           'java', 'publish', 'relocate', 'no_aggregation', 'native'
 project(':thrift0.9').projectDir = file('thrift/thrift0.9')
@@ -198,6 +199,7 @@ includeWithFlags ':tomcat9',                             'java', 'publish', 'rel
 includeWithFlags ':tomcat10',                            'java11', 'publish', 'relocate'
 includeWithFlags ':xds',                                 'java', 'publish', 'relocate'
 includeWithFlags ':xds-api',                             'java', 'publish', 'relocate', 'javapgv', 'no_aggregation'
+includeWithFlags ':xds-validator',                       'java', 'publish', 'relocate', 'no_aggregation'
 includeWithFlags ':zookeeper3',                          'java', 'publish', 'relocate', 'native'
 includeWithFlags ':saml',                                'java', 'publish', 'relocate', 'native'
 includeWithFlags ':bucket4j',                            'java', 'publish', 'relocate', 'native'
