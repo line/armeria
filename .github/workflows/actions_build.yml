@@ -242,7 +242,7 @@ jobs:
 
   site:
     if: github.repository == 'line/armeria'
-    runs-on: ubicloud-standard-16
+    runs-on: ubuntu-latest
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
@@ -264,7 +264,7 @@ jobs:
 
       - name: Build the site
         run: |
-          ./gradlew clean --no-daemon --stacktrace  --max-workers=2 --parallel -PgithubToken=${{ secrets.GITHUB_TOKEN }} site
+          ./gradlew --no-daemon --stacktrace  --max-workers=2 --parallel -PgithubToken=${{ secrets.GITHUB_TOKEN }} site
         shell: bash
 
   flaky-tests:

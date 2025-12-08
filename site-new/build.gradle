@@ -23,17 +23,13 @@ plugins {
 }
 
 node {
-    version = '24.11.1'
-    npmVersion = '11.6.2'
+    version = '22.10.0'
+    npmVersion = '10.9.0'
     download = true
-    npmInstallCommand = "ci"
+    npmInstallCommand = "install"
 }
 
-tasks.named('npmInstall') {
-    environment = ['NODE_OPTIONS': '--max-old-space-size=4096']
-}
-
-tasks.register('npmClean', NpmTask) {4
+tasks.register('npmClean', NpmTask) {
     dependsOn tasks.npmInstall
     args = ['run', 'clear']
 }
