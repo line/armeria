@@ -125,6 +125,6 @@ public final class AthenzServiceBuilder extends AbstractAthenzServiceBuilder<Ath
 
         final MinifiedAuthZpeClient authZpeClient = buildAuthZpeClient();
         return delegate -> new AthenzService(delegate, authZpeClient,
-                                             athenzResourceProvider, athenzAction, tokenTypes);
+                                             athenzResourceProvider, athenzAction, tokenTypes,  meterIdPrefix());
     }
 }

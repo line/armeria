@@ -101,6 +101,10 @@ service HttpJsonTranscodingTestService {
         post: "/v1/echo/wrappers"
         body: "value"
       }
+      additional_bindings {
+        post: "/v1/echo/wrappers2"
+        body: "*"
+      }
     };
   }
 

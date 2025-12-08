@@ -887,7 +887,7 @@ public class HttpJsonTranscodingTest {
     })
     void shouldDenyTypeMismatchedValue(String jsonContent)
             throws JsonProcessingException {
-        final AggregatedHttpResponse response = jsonPostRequest(webClient, "/v1/echo/wrappers", jsonContent);
+        final AggregatedHttpResponse response = jsonPostRequest(webClient, "/v1/echo/wrappers2", jsonContent);
         final JsonNode root = mapper.readTree(response.contentUtf8());
         assertThat(response.headers().status()).isEqualTo(HttpStatus.BAD_REQUEST);
         assertThat(root.get("code").asInt()).isEqualTo(Code.INVALID_ARGUMENT.value());

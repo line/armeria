@@ -17,6 +17,15 @@ buildscript {
 def relocatedProjects = projectsWithFlags('java', 'relocate')
 def numConfiguredRelocatedProjects = new AtomicInteger()
 configure(relocatedProjects) {
+
+    // per-dependency shade configuration
+    // while shade per-project shades all dependencies, shade per-dependency allows for finer control
+    def shadeConfig = project.configurations.create("shade") {
+        canBeResolved = true
+        canBeConsumed = false
+    }
+    project.configurations.implementation.extendsFrom(shadeConfig)
+
     // Generate the shaded JARs.
     task shadedJar(
             type: ShadowJar,
@@ -24,7 +33,11 @@ configure(relocatedProjects) {
             description: 'Builds the shaded main JAR.',
             dependsOn: tasks.classes) {
 
-        configureShadowTask(project, delegate, true)
+        def self = this
+        def delegate0 = delegate
+        project.afterEvaluate {
+            self.configureShadowTask(project, delegate0, true)
+        }
         archiveClassifier.set('shaded')
 
         // Exclude the legacy file listing.
@@ -92,7 +105,11 @@ configure(relocatedProjects) {
             description: 'Builds the shaded test JAR.',
             dependsOn: tasks.testClasses) {
 
-        configureShadowTask(project, delegate, false)
+        def self = this
+        def delegate0 = delegate
+        project.afterEvaluate {
+            self.configureShadowTask(project, delegate0, false)
+        }
         archiveBaseName.set("test-${tasks.jar.archiveBaseName.get()}-shaded")
     }
 
@@ -113,7 +130,7 @@ configure(relocatedProjects) {
 // NB: Configure in a new closure so that all relocated projects have a 'shadedJar' task.
 configure(relocatedProjects) {
     if (project.hasFlags('trim')) {
-        // Task 'shadedJar' may produce a very large JAR. Rename it to '*-untrimmed-*.jar' and
+        // Task 'shadedJar' may produce a very large JAR. Rename it to '<artifact>-untrimmed-<version>-shaded.jar' and
         // let the task 'trimShadedJar' produce the trimmed JAR from it.
         tasks.shadedJar.archiveBaseName.set("${tasks.jar.archiveBaseName.get()}-untrimmed")
 
@@ -128,7 +145,9 @@ configure(relocatedProjects) {
             }
 
             def shadedFile = tasks.shadedJar.archiveFile.get().asFile
-            def shadedAndTrimmedFile = file(shadedFile.path.replaceFirst('-untrimmed-', '-shaded-'))
+            // Rename the output file to '<artifact>-<version>-shaded.jar' by removing '-untrimmed' from
+            // the input file name.
+            def shadedAndTrimmedFile = file(shadedFile.path.replaceFirst('-untrimmed-', '-'))
 
             injars shadedFile
             // NB: By specifying 'outjars' *before* other 'injars' below, ProGuard will put only the classes
@@ -195,13 +214,18 @@ configure(relocatedProjects) {
             }
 
             // Add JDK. Use modules instead of rt.jar if possible.
-            File jmodDir = file("${System.getProperty('java.home')}/jmods")
+            def javaToolchainService = project.extensions.getByType(JavaToolchainService)
+            def javaPluginExt = project.extensions.getByType(JavaPluginExtension)
+            def launcher = javaToolchainService.launcherFor(javaPluginExt.toolchain).get()
+            File jdkHome = launcher.metadata.installationPath.asFile
+            File jmodDir = new File(jdkHome, "jmods")
             if (jmodDir.isDirectory()) {
                 jmodDir.listFiles().findAll { File f ->
                     f.isFile() && f.name.toLowerCase(Locale.ENGLISH).endsWith(".jmod")
                 }.sort().each { libraryjars it }
             } else {
-                libraryjars file("${System.getProperty('java.home')}/lib/rt.jar")
+                File rtJar = new File(jdkHome, "jre/lib/rt.jar")
+                libraryjars rtJar
             }
 
             dontoptimize
@@ -331,6 +355,12 @@ private void configureShadowTask(Project project, ShadowJar task, boolean isMain
 
         configurations = [project.configurations[isMain ? 'compileClasspath' : 'testCompileClasspath']]
 
+        def shadeConfig = project.configurations.findByName("shade")
+        def shadedDeps = shadeConfig ?
+                shadeConfig.dependencies.collect { "${it.group}:${it.name}" }.toSet() :
+                [] as Set<String>
+
+
         relocations.each { props ->
             task.relocate props['from'], props['to']
         }
@@ -354,8 +384,10 @@ private void configureShadowTask(Project project, ShadowJar task, boolean isMain
                     }
                 }
             } else { // hasFlags('relocate')
-                // Only want to rewrite source references, not bundle dependencies.
-                exclude { true }
+                // Only want to shade if explicitly specified on the dependency
+                exclude {
+                    return !shadedDeps.contains("${it.moduleGroup}:${it.moduleName}")
+                }
             }
         }
     }

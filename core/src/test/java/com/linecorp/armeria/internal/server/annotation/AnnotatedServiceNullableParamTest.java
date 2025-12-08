@@ -55,7 +55,7 @@ class AnnotatedServiceNullableParamTest {
 
                 @Get("/other_nullable")
                 public String otherNullable(
-                        @Param @io.micrometer.core.lang.Nullable String value) {
+                        @Param @io.micrometer.common.lang.Nullable String value) {
                     return nullable(value);
                 }
 

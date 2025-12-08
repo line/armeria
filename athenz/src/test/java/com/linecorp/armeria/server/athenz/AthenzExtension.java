@@ -26,8 +26,8 @@ import org.junit.jupiter.api.extension.ExtensionContext;
 
 import com.yahoo.athenz.zms.ZMSClient;
 
-import com.linecorp.armeria.client.WebClientBuilder;
 import com.linecorp.armeria.client.athenz.ZtsBaseClient;
+import com.linecorp.armeria.client.athenz.ZtsBaseClientBuilder;
 import com.linecorp.armeria.testing.junit5.common.AbstractAllOrEachExtension;
 
 public class AthenzExtension extends AbstractAllOrEachExtension {
@@ -56,8 +56,8 @@ public class AthenzExtension extends AbstractAllOrEachExtension {
     }
 
     public ZtsBaseClient newZtsBaseClient(String serviceName,
-                                          Consumer<WebClientBuilder> webClientConfigurer) {
-        return delegate.newZtsBaseClient(serviceName, webClientConfigurer);
+                                          Consumer<ZtsBaseClientBuilder> clientConfigurer) {
+        return delegate.newZtsBaseClient(serviceName, clientConfigurer);
     }
 
     @Override
