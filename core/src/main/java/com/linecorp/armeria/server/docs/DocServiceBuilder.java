@@ -27,6 +27,7 @@ import java.util.function.BiFunction;
 
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ListMultimap;
 
 import com.linecorp.armeria.common.HttpHeaders;
@@ -567,7 +568,7 @@ public final class DocServiceBuilder {
         checkArgument(!webAppTitle.trim().isEmpty(), "%s is empty.", WEB_APP_TITLE_KEY);
         checkArgument(webAppTitle.length() <= WEB_APP_TITLE_MAX_SIZE,
                       "%s length exceeds %s.", WEB_APP_TITLE_KEY, WEB_APP_TITLE_MAX_SIZE);
-        docServiceExtraInfo.putIfAbsent(WEB_APP_TITLE_KEY, webAppTitle);
+        docServiceExtraInfo.put(WEB_APP_TITLE_KEY, webAppTitle);
         return this;
     }
 
@@ -577,6 +578,6 @@ public final class DocServiceBuilder {
     public DocService build() {
         return new DocService(exampleHeaders, exampleRequests, examplePaths, exampleQueries,
                               injectedScriptSuppliers, unifyFilter(includeFilter, excludeFilter),
-                              descriptiveTypeInfoProvider, docServiceExtraInfo);
+                              descriptiveTypeInfoProvider, ImmutableMap.copyOf(docServiceExtraInfo));
     }
 }

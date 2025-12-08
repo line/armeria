@@ -15,23 +15,64 @@
  */
 package com.linecorp.armeria.server.docs;
 
+import static com.linecorp.armeria.server.docs.DocServiceInjectableScripts.favicon;
+import static com.linecorp.armeria.server.docs.DocServiceInjectableScripts.gotoBackground;
+import static com.linecorp.armeria.server.docs.DocServiceInjectableScripts.titleBackground;
+import static net.javacrumbs.jsonunit.fluent.JsonFluentAssert.assertThatJson;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.util.stream.Stream;
 
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.ValueSource;
 
-public class DocServiceInjectableScriptsTest {
+import com.linecorp.armeria.internal.testing.TestUtil;
+import com.linecorp.armeria.server.ServerBuilder;
+import com.linecorp.armeria.server.annotation.Get;
+import com.linecorp.armeria.testing.junit5.server.ServerExtension;
+
+class DocServiceInjectableScriptsTest {
+
+    @RegisterExtension
+    static ServerExtension server = new ServerExtension() {
+        @Override
+        protected void configure(ServerBuilder sb) throws Exception {
+            sb.annotatedService("/annotated", new Object() {
+                @Get("/")
+                public String index() {
+                    return "index";
+                }
+            });
+            sb.serviceUnder("/docs",
+                            DocService.builder()
+                                      .webAppTitle("my-title")
+                                      .injectedScripts(titleBackground("0000ff"), // blue
+                                                       gotoBackground("ff0000"), // red
+                                                       favicon("https://github.com/favicon.ico"))
+                                      .build());
+        }
+    };
+
+    @Test
+    void specification() throws Exception {
+        if (TestUtil.isDocServiceDemoMode()) {
+            Thread.sleep(Long.MAX_VALUE);
+        }
+
+        final String content = server.blockingWebClient().get("/docs/specification.json").contentUtf8();
+        assertThatJson(content).node("docServiceExtraInfo.webAppTitle").isStringEqualTo("my-title");
+    }
 
     @ParameterizedTest
     @ValueSource(strings = { "#ff0089", "ff9dc3", "#3a3"})
     void titleBackground_givenValidColor_returnsScriptWithColor(String color) {
 
-        final String result = DocServiceInjectableScripts.titleBackground(color);
+        final String result = titleBackground(color);
 
         assertThat(result).isNotBlank().contains(color);
     }
@@ -40,7 +81,7 @@ public class DocServiceInjectableScriptsTest {
     @ValueSource(strings = { "#1234567", "#ABCDEFA", "#7654321"})
     void titleBackground_givenTooLongColor_throwsException(String color) {
 
-        assertThatThrownBy(() -> DocServiceInjectableScripts.titleBackground(color))
+        assertThatThrownBy(() -> titleBackground(color))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("length exceeds");
     }
@@ -49,7 +90,7 @@ public class DocServiceInjectableScriptsTest {
     @ValueSource(strings = { "#12345Z", "#ZABCDE", "#@12345"})
     void titleBackground_givenInvalidColor_throwsException(String color) {
 
-        assertThatThrownBy(() -> DocServiceInjectableScripts.titleBackground(color))
+        assertThatThrownBy(() -> titleBackground(color))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("not in hex format");
     }
@@ -58,7 +99,7 @@ public class DocServiceInjectableScriptsTest {
     @ValueSource(strings = { "#ff0089", "ff9dc3", "#3a3"})
     void gotoBackground_givenValidColor_returnsScriptWithColor(String color) {
 
-        final String result = DocServiceInjectableScripts.gotoBackground(color);
+        final String result = gotoBackground(color);
 
         assertThat(result).isNotBlank().contains(color);
     }
@@ -67,7 +108,7 @@ public class DocServiceInjectableScriptsTest {
     @MethodSource("getStreamOfValidUri")
     void favicon_givenValidUri_returnsScriptWithUri(String uri, String expectedUri) {
 
-        final String result = DocServiceInjectableScripts.favicon(uri);
+        final String result = favicon(uri);
 
         assertThat(result).contains(expectedUri).doesNotContain(uri);
     }
@@ -83,7 +124,7 @@ public class DocServiceInjectableScriptsTest {
     @MethodSource("getStreamOfEvilUri")
     void favicon_givenEvilUri_returnsScriptWithCleanUri(String uri, String expectedUri) {
 
-        final String result = DocServiceInjectableScripts.favicon(uri);
+        final String result = favicon(uri);
 
         assertThat(result).contains(expectedUri).doesNotContain(uri);
     }
