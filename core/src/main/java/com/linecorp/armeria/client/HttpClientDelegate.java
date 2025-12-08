@@ -42,12 +42,14 @@ import com.linecorp.armeria.internal.client.DecodedHttpResponse;
 import com.linecorp.armeria.internal.client.HttpSession;
 import com.linecorp.armeria.internal.client.PooledChannel;
 import com.linecorp.armeria.internal.common.RequestContextUtil;
+import com.linecorp.armeria.internal.common.SchemeAndAuthority;
 import com.linecorp.armeria.server.ProxiedAddresses;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 import io.netty.channel.Channel;
 import io.netty.channel.EventLoop;
 import io.netty.resolver.AddressResolverGroup;
+import io.netty.util.NetUtil;
 import io.netty.util.concurrent.Future;
 
 final class HttpClientDelegate implements HttpClient {
@@ -214,6 +216,20 @@ final class HttpClientDelegate implements HttpClient {
                                               HttpRequest req, DecodedHttpResponse res,
                                               ClientConnectionTimingsBuilder timingsBuilder,
                                               ProxyConfig proxyConfig) {
+        final SessionProtocol protocol = ctx.sessionProtocol();
+        if (protocol.isTls() && endpoint.isIpAddrOnly()) {
+            // The connection will be established with the IP address but `host` set to the `Endpoint`
+            // could be used for SNI. It would make users send HTTPS requests with CSLB or configure a reverse
+            // proxy based on an authority.
+            final String serverName = authorityToServerName(ctx.authority());
+            if (serverName != null) {
+                endpoint = endpoint.withHost(serverName);
+            }
+        }
+        // Remove the trailing dot of the host name because SNI does not allow it.
+        // https://lists.w3.org/Archives/Public/ietf-http-wg/2016JanMar/0430.html
+        endpoint = endpoint.withoutTrailingDot();
+
         final PoolKey key = new PoolKey(endpoint, proxyConfig);
         final HttpChannelPool pool;
         try {
@@ -222,7 +238,6 @@ final class HttpClientDelegate implements HttpClient {
             earlyCancelRequest(t, ctx, timingsBuilder);
             return;
         }
-        final SessionProtocol protocol = ctx.sessionProtocol();
         final SerializationFormat serializationFormat = ctx.log().partial().serializationFormat();
         final PooledChannel pooledChannel = pool.acquireNow(protocol, serializationFormat, key);
         if (pooledChannel != null) {
@@ -240,6 +255,22 @@ final class HttpClientDelegate implements HttpClient {
                     return null;
                 });
         }
+    }
+
+    @Nullable
+    private static String authorityToServerName(@Nullable String authority) {
+        if (authority == null) {
+            return null;
+        }
+        String serverName = SchemeAndAuthority.of(null, authority).host();
+        if (NetUtil.isValidIpV4Address(serverName) || NetUtil.isValidIpV6Address(serverName)) {
+            return null;
+        }
+        serverName = serverName.trim();
+        if (serverName.isEmpty()) {
+            return null;
+        }
+        return serverName;
     }
 
     private void resolveProxyConfig(SessionProtocol protocol, Endpoint endpoint, ClientRequestContext ctx,
