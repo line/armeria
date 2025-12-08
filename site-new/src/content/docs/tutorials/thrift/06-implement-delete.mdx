@@ -1,5 +1,5 @@
 ---
-sidebar_label: "6. Implement DELETE"
+sidebar_label: '6. Implement DELETE'
 category: thrift
 tags:
   - server
@@ -115,51 +115,57 @@ This time, we'll add Armeria's [Documentation service](/docs/server/docservice).
 The Documentation service automatically creates documentation of your service methods, as well as providing means to test out the methods.
 
 1. In the `newServer()` method, add a [DocService](type) and a request example for [creating blog posts](/docs/tutorials/thrift/implement-create),
-  using [DocServiceBuilder#exampleRequests(Class,String,Iterable)](type). Feel free to add more examples for other service methods.
-  ```java title="Main.java"
-  import com.linecorp.armeria.server.docs.DocService;
-  import example.armeria.blog.thrift.CreateBlogPostRequest;
+   using [DocServiceBuilder#exampleRequests(Class,String,Iterable)](type). Feel free to add more examples for other service methods.
+
+```java title="Main.java"
+import com.linecorp.armeria.server.docs.DocService;
+import example.armeria.blog.thrift.CreateBlogPostRequest;
+...
+private static Server newServer(int port) throws Exception {
   ...
-  private static Server newServer(int port) throws Exception {
-    ...
-    final CreateBlogPostRequest exampleRequest = new CreateBlogPostRequest()
-            .setTitle("Example title")
-            .setContent("Example content");
-    final DocService docService = DocService
-            .builder()
-            .exampleRequests(List.of(new BlogService.createBlogPost_args(exampleRequest)))
-            .build();
-    ...
-  }
-  ```
+  final CreateBlogPostRequest exampleRequest = new CreateBlogPostRequest()
+          .setTitle("Example title")
+          .setContent("Example content");
+  final DocService docService = DocService
+          .builder()
+          .exampleRequests(List.of(new BlogService.createBlogPost_args(exampleRequest)))
+          .build();
+  ...
+}
+```
+
 2. In the `newServer()` method, add the [DocService](type) to our server builder.
-  ```java title="Main.java"
-  private static Server newServer(int port) throws Exception {
-    ...
-    return Server.builder()
-             .http(port)
-             .service("/thrift", tHttpService)
-             // You can access the documentation service at http://127.0.0.1:8080/docs.
-             // See https://armeria.dev/docs/server/docservice for more information.
-             .serviceUnder("/docs", docService)
-             .build();
-  }
-  ```
+
+```java title="Main.java"
+private static Server newServer(int port) throws Exception {
+  ...
+  return Server.builder()
+           .http(port)
+           .service("/thrift", tHttpService)
+           // You can access the documentation service at http://127.0.0.1:8080/docs.
+           // See https://armeria.dev/docs/server/docservice for more information.
+           .serviceUnder("/docs", docService)
+           .build();
+}
+```
 
 3. (Optional) To access the Documentation service result easily, edit the log message in the `main()` method.
-  ```java title="Main.java"
-  public static void main(String[] args) throws Exception {
-    ...
-    logger.info("Server has been started. Serving DocService at http://127.0.0.1:{}/docs",
-                server.activeLocalPort());
-  }
-  ```
+
+```java title="Main.java"
+public static void main(String[] args) throws Exception {
+  ...
+  logger.info("Server has been started. Serving DocService at http://127.0.0.1:{}/docs",
+              server.activeLocalPort());
+}
+```
+
 4. Now, [re-run the server](/docs/tutorials/thrift/run-service#4-run-the-server).
 
-  The server and services are launched successfully if you see this message.
-  ```bash
-   Server has been started. Serving DocService at http://127.0.0.1:8080/docs
-  ```
+The server and services are launched successfully if you see this message.
+
+```bash
+ Server has been started. Serving DocService at http://127.0.0.1:8080/docs
+```
 
 ## 6. Check the DocService page
 
@@ -167,25 +173,25 @@ Let's test and call our service operations using Armeria's Documentation service
 
 1. Click the URL http://127.0.0.1:8080/docs from the log message or open up the URL on a web browser.
 
-  If you see the Document service page, you've successfully launched the [DocService](type) and server.
+If you see the Document service page, you've successfully launched the [DocService](type) and server.
 
-  ![](/img/tutorial_blogservice_thrift_docservice_start.png)
+![](/img/tutorial_blogservice_thrift_docservice_start.png)
 
 2. Click the **createBlogPost()** method link in the left panel. You can make calls to the method by clicking on the `Debug` button on the top right.
 
-  ![](/img/tutorial_blogservice_thrift_reqex.png)
+![](/img/tutorial_blogservice_thrift_reqex.png)
 
-  Note that in the **REQUEST BODY** section the values specified in the `exampleRequest` are automatically displayed on the page.
+Note that in the **REQUEST BODY** section the values specified in the `exampleRequest` are automatically displayed on the page.
 
-  ```java title="Main.java"
-  final CreateBlogPostRequest exampleRequest = new CreateBlogPostRequest()
-          .setTitle("Example title")
-          .setContent("Example content");
-  ```
+```java title="Main.java"
+final CreateBlogPostRequest exampleRequest = new CreateBlogPostRequest()
+        .setTitle("Example title")
+        .setContent("Example content");
+```
 
 3. Click the **SUBMIT** button, and you'll see the blog post information returned in the right panel.
 
-  ![](/img/tutorial_blogservice_thrift_return.png)
+![](/img/tutorial_blogservice_thrift_return.png)
 
 ## What's next
 

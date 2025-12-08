@@ -183,6 +183,7 @@ that you write your own [SamlSingleSignOnHandler](type) according to your authen
 ## What services are automatically configured
 
 `armeria-saml` module automatically adds SAML services to your server with the following default paths:
+
 - `/saml/acs/post` and `/saml/acs/redirect`
   - SAML assertion consumer services for HTTP Post binding and HTTP Redirect binding. These services are invoked
     by an identity provider when it responds to an authentication request received from your service.

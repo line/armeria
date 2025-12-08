@@ -1,5 +1,5 @@
 ---
-sidebar_label: "2. Run a service"
+sidebar_label: '2. Run a service'
 category: thrift
 type: step
 targetLang: java
@@ -74,62 +74,71 @@ public class BlogServiceImpl implements BlogService.AsyncIface {
 Let's create a server to serve our service.
 
 1. Create the `Main` class for the server.
-You can see the full version of the file [here](https://github.com/line/armeria-examples/tree/main/tutorials/thrift/src/main/java/example/armeria/server/blog/thrift/Main.java).
-  ```java title="Main.java"
-  package example.armeria.server.blog.thrift;
+   You can see the full version of the file [here](https://github.com/line/armeria-examples/tree/main/tutorials/thrift/src/main/java/example/armeria/server/blog/thrift/Main.java).
 
-  import org.slf4j.Logger;
-  import org.slf4j.LoggerFactory;
+```java title="Main.java"
+package example.armeria.server.blog.thrift;
 
-  public final class Main {
-    private static final Logger logger = LoggerFactory.getLogger(Main.class);
-  }
-  ```
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+public final class Main {
+  private static final Logger logger = LoggerFactory.getLogger(Main.class);
+}
+```
+
 2. Add the `newServer()` method in the `Main` class as follows.
-We are using Armeria's [THttpService](type) to handle Thrift calls.
-  ```java title="Main.java"
-  import com.linecorp.armeria.server.Server;
-  import com.linecorp.armeria.server.thrift.THttpService;
-  ...
-  private static Server newServer(int port) throws Exception {
-    final THttpService tHttpService =
-              THttpService.builder()
-                          .addService(new BlogServiceImpl())
-                          .build();
-  }
-  ```
+   We are using Armeria's [THttpService](type) to handle Thrift calls.
+
+```java title="Main.java"
+import com.linecorp.armeria.server.Server;
+import com.linecorp.armeria.server.thrift.THttpService;
+...
+private static Server newServer(int port) throws Exception {
+  final THttpService tHttpService =
+            THttpService.builder()
+                        .addService(new BlogServiceImpl())
+                        .build();
+}
+```
+
 3. Create and return a server instance using Armeria's [ServerBuilder](type).
-Note that the service instance, `tHttpService`, is added to the server instance.
-  ```java title="Main.java"
-  private static Server newServer(int port) throws Exception {
-    ...
-    return Server.builder()
-                 .http(port)
-                 .service("/thrift", tHttpService) // Add the service to server
-                 .build();
-  }
-  ```
+   Note that the service instance, `tHttpService`, is added to the server instance.
+
+```java title="Main.java"
+private static Server newServer(int port) throws Exception {
+  ...
+  return Server.builder()
+               .http(port)
+               .service("/thrift", tHttpService) // Add the service to server
+               .build();
+}
+```
+
 4. Add the `main()` method in the `Main` class as follows.
-  ```java title="Main.java"
-  public static void main(String[] args) throws Exception {
-    final Server server = newServer(8080);
 
-    server.closeOnJvmShutdown().thenRun(() -> {
-      logger.info("Server has been stopped.");
-    });
+```java title="Main.java"
+public static void main(String[] args) throws Exception {
+  final Server server = newServer(8080);
 
-    server.start().join();
-  }
-  ```
+  server.closeOnJvmShutdown().thenRun(() -> {
+    logger.info("Server has been stopped.");
+  });
+
+  server.start().join();
+}
+```
 
 ## 4. Run the server
 
 Run the `Main.main()` method on your IDE or using Gradle.
+
 ```bash
 ./gradlew run
 ```
 
 Your server is running if you see the following message.
+
 ```bash
 [armeria-boss-http-*:8080] INFO com.linecorp.armeria.server.Server - Serving HTTP at /[0:0:0:0:0:0:0:0]:8080 - http://127.0.0.1:8080/
 ```

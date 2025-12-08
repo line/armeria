@@ -1,6 +1,7 @@
 # Browsing and invoking services with `DocService`
 
 [DocService](type) is a single-page web application which provides the following useful features:
+
 - Browsing the list of gRPC, Thrift or annotated services and their operations available in the server
 - Invoking a service operation from a web form
 - Creating a permalink for the invocation you've made
@@ -32,6 +33,7 @@ sb.serviceUnder("/docs", new DocService());
 Server server = sb.build();
 server.start().join();
 ```
+
 :::tip
 
 [DocService](type) will scan for all supported services automatically when the [Server](type) starts up.
@@ -75,6 +77,7 @@ The result pane right next to the text area you entered the JSON request will sh
 ![](/img/docservice_4.png)
 
 The current location of your web browser should be updated like the following:
+
 - `http://127.0.0.1:8080/docs/#!method/com.example.ThriftHelloService/hello?args=%7B%22name%22%3A%22Armeria%22%7D`
 
 Imagine you build a request that reproduces the problem using the debug form and share the URL of the request
@@ -93,6 +96,7 @@ text area which allows you to specify the HTTP headers you want to add:
 </MaxWidth>
 
 ## Including and excluding service methods
+
 You can include or exclude service methods using [DocServiceFilter](type) when building a [DocService](type)
 with a [DocServiceBuilder](type):
 
@@ -114,12 +118,14 @@ sb.serviceUnder("/docs", DocService.builder()
 ```
 
 The inclusion rule is as follows:
+
 - No `include(DocServiceFilter)` and `exclude(DocServiceFilter)` is called: include all methods.
 - Only `exclude(DocServiceFilter)` is called: include all methods except the methods which the exclusion filter returns `true`.
 - Only `include(DocServiceFilter)` is called: include the methods which the inclusion filter returns `true`.
 - `include(DocServiceFilter)` and `exclude(DocServiceFilter)` is called: include the methods which the inclusion filter returns `true` and the exclusion filter returns `false`.
 
 ## Example requests and headers
+
 You can specify the example requests and HTTP headers which will be used as the default value of the debug form
 with a [DocServiceBuilder](type):
 
@@ -147,10 +153,12 @@ By adding examples to [DocService](type), your users will be able to play with t
 without a hassle and thus will understand them sooner and better.
 
 ## Adding docstrings
+
 Configure your build script so that it generates the required metadata file for your `.thrift` or `.proto`
 files into the specific location in the class path.
 
 ### For Thrift
+
 - Use the `--gen json` option to generate the `.json` file that contains the docstrings.
 - Put the generated `.json` file into the `META-INF/armeria/thrift` directory.
 
@@ -229,66 +237,67 @@ Note that .bin, .desc, .dsc, .pb and .protobin are acceptable descriptor set fil
 
 ### For annotated service
 
-  Using [@Description](type) annotation:
+Using [@Description](type) annotation:
 
-  ```java
-  import com.linecorp.armeria.server.annotation.Description;
+```java
+import com.linecorp.armeria.server.annotation.Description;
 
-  @Description(value = "### A service that provides user information.", markup=Markup.MARKDOWN)
-  public class UserService {
+@Description(value = "### A service that provides user information.", markup=Markup.MARKDOWN)
+public class UserService {
 
-      @Get("/users/{id}")
-      @Description("Retrieves the user information by the given user ID.")
-      public User getUser(
-            @Param("id") @Description("the user ID") String id,
-            @Param("userType") @Description("the user type") UserType userType
-      ) { ... }
+    @Get("/users/{id}")
+    @Description("Retrieves the user information by the given user ID.")
+    public User getUser(
+          @Param("id") @Description("the user ID") String id,
+          @Param("userType") @Description("the user type") UserType userType
+    ) { ... }
 
-      ...
-  }
+    ...
+}
 
-  public class User {
-      @Description("User Identification")
-      private String id;
+public class User {
+    @Description("User Identification")
+    private String id;
 
-      @Description("User name")
-      private String name;
-  }
+    @Description("User name")
+    private String name;
+}
 
-  @Description(value = "flowchart LR\n" +
-                       " ADMIN --- USER",
-               markup = Markup.MERMAID)
-  public enum UserType {
-      @Description(value = "`Admin` type", markup = Markup.MARKDOWN)
-      ADMIN,
-      @Description(value = "`User` type", markup = Markup.MARKDOWN)
-      USER;
-  }
-  ```
+@Description(value = "flowchart LR\n" +
+                     " ADMIN --- USER",
+             markup = Markup.MERMAID)
+public enum UserType {
+    @Description(value = "`Admin` type", markup = Markup.MARKDOWN)
+    ADMIN,
+    @Description(value = "`User` type", markup = Markup.MARKDOWN)
+    USER;
+}
+```
 
-  :::tip
+:::tip
 
-  You can render the description as [Markdown](https://github.github.com/gfm/) or [Mermaid](https://mermaid-js.github.io/mermaid/#/) using [Markup](type).
+You can render the description as [Markdown](https://github.github.com/gfm/) or [Mermaid](https://mermaid-js.github.io/mermaid/#/) using [Markup](type).
 
-  :::
+:::
 
-  Using JavaDoc:
+Using JavaDoc:
 
-  This only works with method parameters.
-  To enable it, you have to add the armeria annotation processor to your project:
+This only works with method parameters.
+To enable it, you have to add the armeria annotation processor to your project:
 
-  <Tabs groupId="grpc">
-    <TabItem label="Gradle" value="gradle">
-      <CodeBlock language="groovy" title="build.gradle">{`
+<Tabs groupId="grpc">
+  <TabItem label="Gradle" value="gradle">
+    <CodeBlock language="groovy" title="build.gradle">
+      {`
       dependencies {
           compileOnly 'com.linecorp.armeria:armeria-annotation-processor'
           annotationProcessor 'com.linecorp.armeria:armeria-annotation-processor'
       }
       `}
-      </CodeBlock>
-    </TabItem>
-    <TabItem label="Gradle (Kotlin)" value="gradle_kotlin">
-      <CodeBlock language="kotlin" title="build.gradle.kts">{`
+    </CodeBlock>
+  </TabItem>
+  <TabItem label="Gradle (Kotlin)" value="gradle_kotlin">
+    <CodeBlock language="kotlin" title="build.gradle.kts">{`
       plugins {
           kotlin("kapt") apply true
       }\n
@@ -299,5 +308,5 @@ Note that .bin, .desc, .dsc, .pb and .protobin are acceptable descriptor set fil
           annotationProcessor("com.linecorp.armeria.server.annotation.processor.DocumentationProcessor")
       }
       `}</CodeBlock>
-    </TabItem>
-  </Tabs>
+  </TabItem>
+</Tabs>

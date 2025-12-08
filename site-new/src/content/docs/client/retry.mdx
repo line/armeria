@@ -3,6 +3,7 @@
 When a client gets an error response, it might want to retry the request depending on the response.
 This can be accomplished using a [decorator](/docs/client/decorator), and Armeria provides the following
 implementations out-of-the box.
+
 - [RetryingClient](type)
 - [RetryingRpcClient](type)
 
@@ -190,6 +191,7 @@ public CompletionStage<RetryDecision> shouldRetry(ClientRequestContext ctx,
 
 You can use a [Backoff](type) to determine the delay between attempts. Armeria provides [Backoff](type)
 implementations which produce the following delays out of the box:
+
 - Fixed delay, created with [Backoff#fixed(long)](type)
 - Random delay, created with [Backoff#random(long,long)](type)
 - Exponential delay which is multiplied on each attempt, created with [Backoff#exponential(long,long)](type)

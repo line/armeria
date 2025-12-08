@@ -7,17 +7,18 @@ date: 2019-03-08
 ## New features
 
 - A user now can generate `cache-control` header value programmatically. #1615
+
   ```java
   HttpHeaders headers = HttpHeaders.of();
   HttpFileBuilder fileBuilder = HttpFileBuilder.of(...);
   HttpFileServiceBuilder fileServiceBuilder = HttpFileServiceBuilder.forFileSystem(...);
- 
+
   // Before:
   headers.set(HttpHeaderNames.CACHE_CONTROL, "no-cache, no-store, must-revalidate"));
   fileBuilder.setHeader(HttpHeaderNames.CACHE_CONTROL,
                         "max-age=86400, no-cache, must-revalidate");
   fileServiceBuilder.setHeader(HttpHeaderNames.CACHE_CONTROL, "public, max-age=3600");
- 
+
   // After:
   headers.setObject(HttpHeaderNames.CACHE_CONTROL, ServerCacheControl.DISABLED);
   fileBuilder.cacheControl(new ServerCacheControlBuilder()
@@ -30,6 +31,7 @@ date: 2019-03-08
                                           .maxAgeSeconds(3600)
                                           .build());
   ```
+
 - Armeria supports [gRPC Server Reflection](https://github.com/grpc/grpc-java/blob/master/documentation/server-reflection-tutorial.md). #1623
   ```java
   ServerBuilder sb = new ServerBuilder();
@@ -37,7 +39,7 @@ date: 2019-03-08
                                      .addService(ProtoReflectionService.newInstance())
                                      .build());
   ```
-- Added `StreamMessage.drailAll(...)` to simply collect all the elements from the `StreamMessage`. #1620 
+- Added `StreamMessage.drailAll(...)` to simply collect all the elements from the `StreamMessage`. #1620
   ```java
   HttpResponse res = HttpResponse.of(HttpHeaders.of(HttpStatus.OK)
                                                 .contentType(PLAIN_TEXT_UTF_8),
@@ -57,23 +59,23 @@ date: 2019-03-08
 
 ## Improvements
 
-- Added more logging to `SamlService` to inform the reasons of the failure. #1629 
-- Various documentation updates. #1604, #1607, #1610, #1611, #1613, #1618, #1626, #1627, #1628  
+- Added more logging to `SamlService` to inform the reasons of the failure. #1629
+- Various documentation updates. #1604, #1607, #1610, #1611, #1613, #1618, #1626, #1627, #1628
 
 ## Bug fixes
 
 - Fixed a bug where HTTP trailers is added to message headers. #1620
-- Fixed a bug where the TLS handshake exception pollutes the log message. #1612 
+- Fixed a bug where the TLS handshake exception pollutes the log message. #1612
 - Fixed a bug where Server-Sent Events messages miss the `end-of-line` character. #1610
-- Fixed an API design flaw where a user cannot specify more than one decorator when adding a `ServiceWithPathMappings`. #1627 
-- Fixed a bug where `contentPreview` is not working correctly. #1624 
-- Fixed a bug where a `StackOverFlowError` is raised while finding annotations in `AnnotationUtil`. #1635 
-- Fixed a bug where the Armeria actuator sends the response with the incorrect media type. #1641 
+- Fixed an API design flaw where a user cannot specify more than one decorator when adding a `ServiceWithPathMappings`. #1627
+- Fixed a bug where `contentPreview` is not working correctly. #1624
+- Fixed a bug where a `StackOverFlowError` is raised while finding annotations in `AnnotationUtil`. #1635
+- Fixed a bug where the Armeria actuator sends the response with the incorrect media type. #1641
 
 ## Breaking Change
 
-- The `HttpHeaders` is added to `get()` in `HttpVfs` as a parameter. #1615 
-  -  A user can easily add the `HttpHeaders` when building an `HttpFile`. 
+- The `HttpHeaders` is added to `get()` in `HttpVfs` as a parameter. #1615
+  - A user can easily add the `HttpHeaders` when building an `HttpFile`.
 
 ## Dependencies
 

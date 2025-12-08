@@ -34,7 +34,7 @@ assert greeting.equals("Hello, Armerian World!");
 Note that if a serialization format is unspecified, [ThriftSerializationFormats#BINARY](type) is used by
 default. You can also specify one of [ThriftSerializationFormats#BINARY](type),
 [ThriftSerializationFormats#COMPACT](type), [ThriftSerializationFormats#JSON](type)
-and [ThriftSerializationFormats#TEXT](type) 
+and [ThriftSerializationFormats#TEXT](type)
 using [ThriftClientBuilder#serializationFormat(SerializationFormat)](type).
 
 ```java
@@ -56,7 +56,7 @@ import com.linecorp.armeria.common.thrift.ThriftFuture;
 import com.linecorp.armeria.common.util.CompletionActions;
 import com.linecorp.armeria.client.thrift.ThriftClients;
 
-HelloService.AsyncIface helloService = 
+HelloService.AsyncIface helloService =
     ThriftClients.newClient("http://127.0.0.1:8080/hello",
                             HelloService.AsyncIface.class);
 
@@ -74,7 +74,7 @@ String reply = future.get();
 ```
 
 The example above introduces a new class called [ThriftFuture](type). It is a subtype of Java 8
-CompletableFuture_ that implements Thrift [AsyncMethodCallback]. Once passed as a callback of an asynchronous
+CompletableFuture\_ that implements Thrift [AsyncMethodCallback]. Once passed as a callback of an asynchronous
 Thrift call, [ThriftFuture](type) will complete itself when the reply is received or the call
 fails. You'll find it way more convenient to consume the reply than [AsyncMethodCallback] thanks to the rich set
 of methods provided by [CompletableFuture].

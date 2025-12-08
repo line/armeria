@@ -32,8 +32,9 @@ date: 2022-04-19
     }
   }
   ```
+
   - You can also specify a delimiter programmatically with [AnnotatedServiceBindingBuilder#queryDelimiter(String)](type)
-- You can now use the no-op `subscribe()` to drain elements from a [StreamMessage](type)  #4145 #4185
+- You can now use the no-op `subscribe()` to drain elements from a [StreamMessage](type) #4145 #4185
   ```java
   // The following statement prints 1, 2 and 3.
   StreamMessage
@@ -45,6 +46,7 @@ date: 2022-04-19
   - This option is useful when you need to make a certain response field as a response body.
     For example, the following Protobuf definition allows you to send a JSON array body
     whose values are sourced from `GetNumbersResponse.myNumberArray`:
+
     ```protobuf
     service MyService {
       rpc GetNumbers(GetNumbersRequest) returns (GetNumbersResponse) {
@@ -54,7 +56,7 @@ date: 2022-04-19
         };
       }
     }
-    
+
     message GetNumbersRequest {}
     message GetNumbersResponse {
       repeated string my_number_array = 1; // 👈👈👈
@@ -65,7 +67,7 @@ date: 2022-04-19
   @LoggingDecorator // 👈👈👈
   public class GreeterImpl extends GreeterGrpc.GreeterImplBase {
     @Override
-    @RateLimitingDecorator(/* requestsPerSec */ 10.0) // 👈👈👈 
+    @RateLimitingDecorator(/* requestsPerSec */ 10.0) // 👈👈👈
     public void sayHello(
       HelloRequest req,
       StreamObserver<HelloReply> responseObserver
@@ -93,11 +95,12 @@ date: 2022-04-19
     .queryParams(Map.of("bar", "2")) // 👈👈👈
     .execute()
   ```
-- You can now override the global [Flags](type) by implementing your own [FlagsProvider](type) and 
+- You can now override the global [Flags](type) by implementing your own [FlagsProvider](type) and
   loading it via Java SPI. #4093 #4151
+
   ```java
   package com.example.providers;
-  
+
   // Add the following text file to your classpath or JAR file:
   //
   // $ cat META-INF/services/com.linecorp.armeria.common.FlagsProvider
@@ -115,7 +118,8 @@ date: 2022-04-19
         return 100;
     }
   }
-  ``` 
+  ```
+
 - When using `armeria-graphql`, you can now retrieve the current [ServiceRequestContext](type) with
   [GraphqlServiceContexts#get(DataFetchingEnvironment)](type) #4201
   ```java
@@ -133,7 +137,7 @@ date: 2022-04-19
 {/* truncate */}
 
 ## 📈 Improvements
- 
+
 - `armeria-graphql` doesn't use deprecated `graphql-java` API anymore. #4201
 - Less verbose and clearer TLS handshake logging #4181
 
@@ -208,30 +212,32 @@ date: 2022-04-19
 
 ## 🙇 Thank you
 
-<ThankYou usernames={[
-  'Jsing',
-  'KarboniteKream',
-  'TheWeaVer',
-  'aboivin',
-  'alexc-db',
-  'anuraaga',
-  'clatisus',
-  'eisig',
-  'ghkim3221',
-  'heowc',
-  'ikhoon',
-  'jrhee17',
-  'jupiny',
-  'klurpicolo',
-  'kojilin',
-  'ks-yim',
-  'minwoox',
-  'natsumehu',
-  'syleeeee',
-  'ta7uw',
-  'techno',
-  'timothy-xflowpay',
-  'tokuhirom',
-  'trustin',
-  'wooseongshin'
-]} />
+<ThankYou
+  usernames={[
+    'Jsing',
+    'KarboniteKream',
+    'TheWeaVer',
+    'aboivin',
+    'alexc-db',
+    'anuraaga',
+    'clatisus',
+    'eisig',
+    'ghkim3221',
+    'heowc',
+    'ikhoon',
+    'jrhee17',
+    'jupiny',
+    'klurpicolo',
+    'kojilin',
+    'ks-yim',
+    'minwoox',
+    'natsumehu',
+    'syleeeee',
+    'ta7uw',
+    'techno',
+    'timothy-xflowpay',
+    'tokuhirom',
+    'trustin',
+    'wooseongshin',
+  ]}
+/>

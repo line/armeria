@@ -20,6 +20,7 @@ date: 2023-02-09
     ...
   ```
 - You can now use [AsyncServerInterceptor](type) to asynchronously intercept gRPC service calls. #4647
+
   ```java
   class AuthServerInterceptor implements AsyncServerInterceptor {
     @Override
@@ -40,6 +41,7 @@ date: 2023-02-09
              .addService(...)
              ...
   ```
+
 - [@Blocking](type) annotation can now be used with gRPC services. #4389 #4585
   ```java
   @Blocking // 👈👈👈 applies to all methods in the class
@@ -88,7 +90,7 @@ date: 2023-02-09
 
 - Armeria's gRPC services now try to throw a `StatusRuntimeException` instead of a `StatusException`. #4658
   - Note that users are still recommended to perform error handling for both `StatusRuntimeException` and `StatusException`
-  for gRPC services.
+    for gRPC services.
 - We are planning on stopping support for integration with Spring Boot 1. Please join the discussion at our
   [Github issue](https://github.com/line/armeria/issues/4651) if you have any opinions. #4651
 
@@ -120,21 +122,23 @@ date: 2023-02-09
 
 ## 🙇 Thank you
 
-<ThankYou usernames={[
-  'cormoran',
-  'daniel-itunu',
-  'Dogacel',
-  'heesuk-ahn',
-  'hyperxpro',
-  'ikhoon',
-  'jrhee17',
-  'kezhenxu94',
-  'kojilin',
-  'minwoox',
-  'mscheong01',
-  'rhodo',
-  'sullis',
-  'ta7uw',
-  'tomatophobia',
-  'trustin'
-]} />
+<ThankYou
+  usernames={[
+    'cormoran',
+    'daniel-itunu',
+    'Dogacel',
+    'heesuk-ahn',
+    'hyperxpro',
+    'ikhoon',
+    'jrhee17',
+    'kezhenxu94',
+    'kojilin',
+    'minwoox',
+    'mscheong01',
+    'rhodo',
+    'sullis',
+    'ta7uw',
+    'tomatophobia',
+    'trustin',
+  ]}
+/>

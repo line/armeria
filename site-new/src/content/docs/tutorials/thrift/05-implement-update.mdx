@@ -1,5 +1,5 @@
 ---
-sidebar_label: "5. Implement UPDATE"
+sidebar_label: '5. Implement UPDATE'
 category: thrift
 tags:
   - server
@@ -36,39 +36,42 @@ This time, we'll use a custom exception handler.
 First, add a custom exception handler for the blog service.
 
 1. Add an exception handler class to convert an `IllegalArgumentException` into a `BlogNotFoundException`.
-  ```java title="BlogServiceExceptionHandler.java"
-  package example.armeria.server.blog.thrift;
 
-  import java.util.function.BiFunction;
+```java title="BlogServiceExceptionHandler.java"
+package example.armeria.server.blog.thrift;
 
-  import com.linecorp.armeria.common.RpcResponse;
-  import com.linecorp.armeria.server.ServiceRequestContext;
+import java.util.function.BiFunction;
 
-  import example.armeria.blog.thrift.BlogNotFoundException;
+import com.linecorp.armeria.common.RpcResponse;
+import com.linecorp.armeria.server.ServiceRequestContext;
 
-  public class BlogServiceExceptionHandler implements BiFunction<ServiceRequestContext, Throwable, RpcResponse> {
+import example.armeria.blog.thrift.BlogNotFoundException;
 
-    @Override
-    public RpcResponse apply(ServiceRequestContext serviceRequestContext, Throwable cause) {
-      if (cause instanceof IllegalArgumentException) {
-        return RpcResponse.ofFailure(new BlogNotFoundException(cause.getMessage()));
-      }
-      return RpcResponse.ofFailure(cause);
+public class BlogServiceExceptionHandler implements BiFunction<ServiceRequestContext, Throwable, RpcResponse> {
+
+  @Override
+  public RpcResponse apply(ServiceRequestContext serviceRequestContext, Throwable cause) {
+    if (cause instanceof IllegalArgumentException) {
+      return RpcResponse.ofFailure(new BlogNotFoundException(cause.getMessage()));
     }
+    return RpcResponse.ofFailure(cause);
   }
-  ```
+}
+```
+
 2. In the `Main` class, bind the `BlogServiceExceptionHandler` to our service.
-  ```java title="Main.java"
+
+```java title="Main.java"
+...
+private static Server newServer(int port) throws Exception {
+  final THttpService tHttpService =
+    THttpService.builder()
+                .addService(new BlogServiceImpl())
+                .exceptionHandler(new BlogServiceExceptionHandler()) // Add this
+                .build();
   ...
-  private static Server newServer(int port) throws Exception {
-    final THttpService tHttpService =
-      THttpService.builder()
-                  .addService(new BlogServiceImpl())
-                  .exceptionHandler(new BlogServiceExceptionHandler()) // Add this
-                  .build();
-    ...
-  }
-  ```
+}
+```
 
 ### Implement the service method
 
@@ -133,36 +136,40 @@ Check that you see the test is passed.
 To check that our exception handler is working, let's try updating a post which does not exist.
 
 1. Bind the exception handler to the service for the test server.
-  ```java title="BlogServiceTest.java"
-  @RegisterExtension
-  static final ServerExtension server = new ServerExtension() {
-    @Override
-    protected void configure(ServerBuilder sb) throws Exception {
-      sb.service("/thrift", THttpService.builder()
-          .exceptionHandler(new BlogServiceExceptionHandler()) // Add this
-          .addService(new BlogServiceImpl())
-          .build());
-    }
-  };
-  ```
-2. Add a test method to update a blog post with an invalid ID, asserting a `BlogNotFoundException` is thrown.
-  ```java title="BlogServiceTest.java"
-  @Test
-  @Order(6)
-  void updateInvalidBlogPost() {
-    final BlogClient client = new BlogClient(server.httpUri(), "/thrift");
-    final Throwable exception = catchThrowable(() -> {
-      final BlogPost updated = client.updateBlogPost(Integer.MAX_VALUE, "My first blog", "Hello awesome Armeria!");
-    });
-    assertThat(exception)
-      .isInstanceOf(BlogNotFoundException.class)
-      .extracting("reason")
-      .asString()
-      .isEqualTo("The blog post does not exist. ID: " + Integer.MAX_VALUE);
+
+```java title="BlogServiceTest.java"
+@RegisterExtension
+static final ServerExtension server = new ServerExtension() {
+  @Override
+  protected void configure(ServerBuilder sb) throws Exception {
+    sb.service("/thrift", THttpService.builder()
+        .exceptionHandler(new BlogServiceExceptionHandler()) // Add this
+        .addService(new BlogServiceImpl())
+        .build());
   }
-  ```
+};
+```
+
+2. Add a test method to update a blog post with an invalid ID, asserting a `BlogNotFoundException` is thrown.
+
+```java title="BlogServiceTest.java"
+@Test
+@Order(6)
+void updateInvalidBlogPost() {
+  final BlogClient client = new BlogClient(server.httpUri(), "/thrift");
+  final Throwable exception = catchThrowable(() -> {
+    final BlogPost updated = client.updateBlogPost(Integer.MAX_VALUE, "My first blog", "Hello awesome Armeria!");
+  });
+  assertThat(exception)
+    .isInstanceOf(BlogNotFoundException.class)
+    .extracting("reason")
+    .asString()
+    .isEqualTo("The blog post does not exist. ID: " + Integer.MAX_VALUE);
+}
+```
+
 3. Run all the test cases on your IDE or using Gradle.
-  Check that you see the test is passed.
+   Check that you see the test is passed.
 
 ## What's next
 

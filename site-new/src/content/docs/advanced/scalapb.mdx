@@ -1,4 +1,4 @@
-import versions from '@site/gen-src-temp/versions.json';
+import versions from '../../../../gen-src/versions.json';
 
 # ScalaPB integration
 
@@ -8,16 +8,17 @@ Visit [here](https://github.com/line/armeria/tree/main/examples/grpc-scala) to f
 
 :::
 
-[ScalaPB](https://scalapb.github.io/) is a protocol buffer compiler (protoc) plugin for 
-[Scala](https://www.scala-lang.org/). It will generate Scala case classes, parsers and serializers for 
-your [protocol buffers](https://developers.google.com/protocol-buffers). 
+[ScalaPB](https://scalapb.github.io/) is a protocol buffer compiler (protoc) plugin for
+[Scala](https://www.scala-lang.org/). It will generate Scala case classes, parsers and serializers for
+your [protocol buffers](https://developers.google.com/protocol-buffers).
 ScalaPB also supports a thin wrapper around [grpc-java](https://grpc.io/docs/languages/java/quickstart/),
 and provides you with an interface that is based on Scala's standard library
-[Future](https://docs.scala-lang.org/overviews/core/futures.html), 
+[Future](https://docs.scala-lang.org/overviews/core/futures.html),
 while streaming is based on the Observer pattern.
 If you integrate ScalaPB with Armeria, you can leverage the followings:
-- Using both [gRPC server](https://armeria.dev/docs/server-docservice) and 
-  [gRPC client](https://armeria.dev/docs/client-grpc) features such as gRPC-over-HTTP/1 and 
+
+- Using both [gRPC server](https://armeria.dev/docs/server-docservice) and
+  [gRPC client](https://armeria.dev/docs/client-grpc) features such as gRPC-over-HTTP/1 and
   [gRPC-Web](gRPC-Web) protocol powered by Armeria
 - Browsing the list of available RPC operations and invoking a service operation via a web console
 - Converting either a Protocol Buffers or JSON to and from an
@@ -29,11 +30,11 @@ First, you need the `armeria-scalapb_2.12` or `armeria-scalapb_2.13` dependency 
 libraryDependencies += "com.linecorp.armeria" %% "armeria-scalapb" % "${versions['com.linecorp.armeria:armeria-bom']}"
 `}</CodeBlock>
 
-:::tip 
+:::tip
 
 `armeria-scalapb` is only available for Scala 2.12.x and 2.13.x.
 
-::: 
+:::
 
 ## Running a gRPC service
 
@@ -63,7 +64,7 @@ Server.builder()
       .http(httpPort)
       .https(httpsPort)
       .service(grpcService)
-      // Add DocService for browsing the list of gRPC services and 
+      // Add DocService for browsing the list of gRPC services and
       // invoking a service operation from a web form.
       // See https://armeria.dev/docs/server-docservice for more information.
       .serviceUnder("/docs", new DocService())
@@ -75,21 +76,21 @@ Please see [gRPC service](https://armeria.dev/docs/server-grpc) for more informa
 ## Calling a gRPC service
 
 You can also call a gRPC service using a ScalaPB gRPC client.
-`ScalaPbJsonMarshaller` should be registered with [GrpcClientBuilder#jsonMarshallerFactory(Function)](type) to 
+`ScalaPbJsonMarshaller` should be registered with [GrpcClientBuilder#jsonMarshallerFactory(Function)](type) to
 support gRPC JSON serialization format.
 
 ```scala
 import com.linecorp.armeria.client.grpc.GrpcClients
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats
 import com.linecorp.armeria.common.scalapb.ScalaPbJsonMarshaller
-        
-val client = 
+
+val client =
   GrpcClients.builder("http://127.0.0.1:8080/")
              .serializationFormat(GrpcSerializationFormats.JSON)
              // Register 'ScalaPbJsonMarshaller' for enabling gRPC JSON serialization format
              .jsonMarshallerFactory(_ => ScalaPbJsonMarshaller())
              .build(classOf[HelloServiceBlockingStub])
-    
+
 val request = HelloRequest("Armerian World")
 val reply = helloService.hello(request)
 assert(reply.message == "Hello, Armerian World!")
@@ -97,17 +98,17 @@ assert(reply.message == "Hello, Armerian World!")
 
 Please see [gRPC client](https://armeria.dev/docs/client-grpc) for more information.
 
-## Supporting ScalaPB in annotated services. 
+## Supporting ScalaPB in annotated services.
 
-### Converting an HTTP request to a ScalaPB's `GeneratedMesage` 
+### Converting an HTTP request to a ScalaPB's `GeneratedMesage`
 
 - A Protocol Buffers is automatically converted to a `GeneratedMessage` only when
   the content type is one of followings:
-  - `application/probuf` 
+  - `application/probuf`
   - `application/octet-stream`
   - `application/x-protobuf`
   - no media type negotiated
-- A JSON is automatically converted to a `GeneratedMessage` only when the content type 
+- A JSON is automatically converted to a `GeneratedMessage` only when the content type
   is either `application/json` or ends with `+json`.
 
 If you have the following proto file,
@@ -174,7 +175,7 @@ class GreetingService {
   // Convert 'SimpleResponse' into Protocol Buffers wire format with Scala Future
   @Get("/protobuf+async")
   @ProducesProtobuf
-  def produceProtobufFuture: Future[SimpleResponse] = 
+  def produceProtobufFuture: Future[SimpleResponse] =
     Future { SimpleResponse("Hello, Armeria!") }
 }
 ```
@@ -182,11 +183,12 @@ class GreetingService {
 However, a sequence of `GeneratedMesage`s can be only converted to JSON array because Protocol Buffers
 wire format is [not self-delimiting](https://developers.google.com/protocol-buffers/docs/techniques#streaming).
 The following collection types can be converted to JSON array:
+
 - `scala.List`
 - `scala.Vector`
 - `scala.Set`
 - Reactive Stream [Publisher](https://www.reactive-streams.org/reactive-streams-1.0.2-javadoc/org/reactivestreams/Publisher.html)
-- `java.util.List` 
+- `java.util.List`
 - `java.util.Set`
 - `java.util.stream.Stream`
 

@@ -34,10 +34,10 @@ date: 2021-08-19
 - You can now recover a failed [HttpResponse](type) with a fallback [HttpResponse](type). It would be useful
   for handling an error of [HttpResponse](type) in a decorator. #3674
   ```java
-  HttpResponse response = 
+  HttpResponse response =
       HttpResponse.ofFailure(new IllegalStateException("Oops..."));
   // The failed HttpResponse will be recovered by the fallback function.
-  HttpResponse recovered = 
+  HttpResponse recovered =
       response.recover(cause -> HttpResponse.of("Fallback"));
   assert recovered.aggregate().join().contentUtf8().equals("Fallback");
   ```
@@ -47,14 +47,14 @@ date: 2021-08-19
   stream.write(1);
   stream.write(2);
   stream.close(new IllegalStateException("Oops..."));
-  StreamMessage<Integer> resumed = 
+  StreamMessage<Integer> resumed =
       stream.recoverAndResume(cause -> StreamMessage.of(3, 4));
   assert resumed.collect().join().equals(List.of(1, 2, 3, 4));
   ```
 - You can now transform an error of [StreamMessage](type) into another using
   [StreamMessage#mapError(Function)](type). #3668
   ```java
-  StreamMessage stream = 
+  StreamMessage stream =
       StreamMessage.aborted(ClosedStreamException.get());
   StreamMessage transformed = stream.mapError(ex -> {
     if (ex instanceof ClosedStreamException) {
@@ -62,7 +62,7 @@ date: 2021-08-19
     } else {
       return ex;
     }
-  }); 
+  });
   ```
 - You can now automatically encode an object into JSON for a response payload using
   [HttpResponse#ofJson(Object)](type). #3662
@@ -79,7 +79,7 @@ date: 2021-08-19
              .addService(myService)
              .intercept(myInterceptror)
              .build();
-  ``` 
+  ```
 - You can now easily add `Accept` headers with [RequestHeadersBuilder#accept(Iterable)](type). #3704
   ```java
   RequestHeaders.builder()
@@ -89,10 +89,11 @@ date: 2021-08-19
 - You can now initiate graceful connection shutdown using
   [ServiceRequestContext#initiateConnectionShutdown()](type). #3516 #3715
 - You can now specify the default `ObjectMapper` using [JacksonObjectMapperProvider](type). #3728
+
   ```java
-  public class MyObjectMapperProvider 
+  public class MyObjectMapperProvider
       implements JacksonObjectMapperProvider {
-  
+
     @Override
     public ObjectMapper newObjectMapper() {
       return JsonMapper
@@ -103,6 +104,7 @@ date: 2021-08-19
     }
   }
   ```
+
 - You can now serve `application/grpc-web+proto` and `application/grpc-web-text+proto`
   [protocols](https://github.com/grpc/grpc/blob/master/doc/PROTOCOL-WEB.md#protocol-differences-vs-grpc-over-http2)
   using [AbstractUnaryGrpcService](type). #3638 #3716
@@ -110,7 +112,7 @@ date: 2021-08-19
   ```java
   UnaryGrpcClient client = ...;
   try (ClientRequestContextCaptor captor = Clients.newContextCaptor()) {
-      client.execute("/com.example.MyService/UnaryCall", request); 
+      client.execute("/com.example.MyService/UnaryCall", request);
       ClientRequestContext ctx = captor.get();
       HttpHeaders trailers = GrpcWebTrailers.get(ctx); // 👈👈👈
   }
@@ -162,7 +164,7 @@ date: 2021-08-19
 - An `IllegalArgumentException` raised in annotated service will be correctly logged by
   [LoggingService](type). #3674
 - You no longer see [ClosedSessionException](type) when a large content is sent to an invalid path. #3674
-- [ServerBuilder#localPort(int,Iterable)](type) correctly binds both IPv4 and IPv6 
+- [ServerBuilder#localPort(int,Iterable)](type) correctly binds both IPv4 and IPv6
   loopback addresses. #3725 #3726
 - A `Publisher` or a `CompletableFuture` returned by a service now properly gets a cancellation signal when the
   request is cancelled. #3690 #3691
@@ -203,7 +205,7 @@ date: 2021-08-19
       }
       return null;
   }
-    
+
   // After:
   ExceptionHandler handler = (ctx, cause) -> {
       if (cause instanceof IllegalArgumentException) {
@@ -213,6 +215,7 @@ date: 2021-08-19
   }
   ```
 - [RequestContext](type) is added as the first parameter of [GrpcStatusFunction](type). #3692 #3693
+
   ```java
   // Before:
   GrpcService.builder()
@@ -222,7 +225,7 @@ date: 2021-08-19
                  }
                  return null;
              });
-  
+
   // After:
   GrpcService.builder()
              .exceptionMapping((ctx, throwable, metadata) -> { // 👈👈👈
@@ -232,6 +235,7 @@ date: 2021-08-19
                  return null;
               });
   ```
+
 - `JacksonModuleProvider` has been removed in favor of [JacksonObjectMapperProvider](type).
 - `ResponseConverterFunctionProvider.createResponseConverterFunction(Type,ResponseConverterFunction,ExceptionHandlerFunction)`
   has been removed in favor of
@@ -270,26 +274,28 @@ date: 2021-08-19
 
 ## 🙇 Thank you
 
-<ThankYou usernames={[
-  'anuraaga',
-  'alexc-db',
-  'freevie',
-  'ghkim3221',
-  'heowc',
-  'heka1024',
-  'icepeppermint',
-  'imasahiro',
-  'jrhee17',
-  'jupiny',
-  'karellen-kim',
-  'kezhenxu94',
-  'kojilin',
-  'ks-yim',
-  'ikhoon',
-  'minwoox',
-  'mauhiz',
-  'mynameisjwlee',
-  'sfc-gh-pbennes',
-  'tobias-',
-  'trustin'
-]} />
+<ThankYou
+  usernames={[
+    'anuraaga',
+    'alexc-db',
+    'freevie',
+    'ghkim3221',
+    'heowc',
+    'heka1024',
+    'icepeppermint',
+    'imasahiro',
+    'jrhee17',
+    'jupiny',
+    'karellen-kim',
+    'kezhenxu94',
+    'kojilin',
+    'ks-yim',
+    'ikhoon',
+    'minwoox',
+    'mauhiz',
+    'mynameisjwlee',
+    'sfc-gh-pbennes',
+    'tobias-',
+    'trustin',
+  ]}
+/>

@@ -3,7 +3,7 @@ type: tutorial
 level: basic
 ---
 
-import versions from '@site/gen-src-temp/versions.json';
+import versions from '../../../../../gen-src/versions.json';
 
 # Thrift tutorial introduction
 
@@ -19,7 +19,7 @@ Before we start, let's swiftly go over Armeria's Thrift features:
 - Transport over HTTP/1.1 or HTTP/2.
 - Support for `TBINARY`, `TCOMPACT`, `TJSON` and `TTEXT` [serialization formats](/docs/server/thrift#serialization-formats).
 - RPC level decorator support for both [client](/docs/client/decorator#implementing-decoratinghttpclientfunction-and-decoratingrpcclientfunction)
-and [server](/docs/server/decorator#implementing-decoratinghttpservicefunction-and-decoratingrpcservicefunction).
+  and [server](/docs/server/decorator#implementing-decoratinghttpservicefunction-and-decoratingrpcservicefunction).
   - Out of the box support for circuit breaker, retries, metric collection and more.
 - Full-fledged [Thrift documentation service](/docs/server/docservice).
 
@@ -35,19 +35,19 @@ This tutorial assumes that you have:
 
 To run and develop the sample service, set your computer with the following requirements:
 
-* JDK 11 or higher
-* Thrift compiler: Install a Thrift compiler by either [building from source](https://thrift.apache.org/docs/install/) or using a package manager like `brew` or `apt` depending on your environment.
+- JDK 11 or higher
+- Thrift compiler: Install a Thrift compiler by either [building from source](https://thrift.apache.org/docs/install/) or using a package manager like `brew` or `apt` depending on your environment.
 
 ## Sample service
 
 The [sample service](https://github.com/line/armeria-examples/tree/main/tutorials/thrift) provides you implementations of CRUD operations as specified below.
 
-| Operation | Method |
-| -- | -- |
-| Create | `createBlogPost()` |
-| Read | `getBlogPost()`, `listBlogPosts()` |
-| Update | `updateBlogPost()` |
-| Delete | `deleteBlogPost()` |
+| Operation | Method                             |
+| --------- | ---------------------------------- |
+| Create    | `createBlogPost()`                 |
+| Read      | `getBlogPost()`, `listBlogPosts()` |
+| Update    | `updateBlogPost()`                 |
+| Delete    | `deleteBlogPost()`                 |
 
 The sample service code consists of the following folders and files.
 
@@ -72,7 +72,7 @@ thrift/
 
 :::tip
 
-  To keep our focus on Armeria, this tutorial and the sample service implement memory-based operations instead of using a database.
+To keep our focus on Armeria, this tutorial and the sample service implement memory-based operations instead of using a database.
 
 :::
 
@@ -83,13 +83,17 @@ Using Armeria's [Documentation Service](/docs/server/docservice), you can easily
 
 1. Download the code from [here](https://github.com/line/armeria-examples/tree/main/tutorials/thrift).
 2. Build the sample service using the Gradle Wrapper.
-  ```bash
-  $ ./gradlew build
-  ```
+
+```bash
+$ ./gradlew build
+```
+
 3. Run the sample service again, using the Gradle Wrapper.
-  ```bash
-  $ ./gradlew run
-  ```
+
+```bash
+$ ./gradlew run
+```
+
 4. Open the Documentation service page on your web browser at http://127.0.0.1:8080/docs.
 
 ## Try writing blog service yourself

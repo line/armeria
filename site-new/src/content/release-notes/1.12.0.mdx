@@ -8,15 +8,17 @@ date: 2021-10-07
 
 - You can now enable [HTTP/JSON to GRPC transcoding](https://cloud.google.com/endpoints/docs/grpc/transcoding)
   in your [GrpcService](type). #3786
+
   ```java
   GrpcService.builder()
              .addService(helloService)
              .enableHttpJsonTranscoding(true) // 👈👈👈
              .build();
   ```
+
   :::tip
 
-    HTTP/JSON transcoding is currently experimental. We're looking forward to your feedback.
+  HTTP/JSON transcoding is currently experimental. We're looking forward to your feedback.
 
   :::
 
@@ -37,6 +39,7 @@ date: 2021-10-07
   ```
 - You can now customize any HTTP error status responses including a decoder-level error and
   [HttpStatusException](type). #3822 #3853
+
   ```java
   ServerBuilder sb = ...
   sb.errorHandler(new ServerErrorHandler() {
@@ -71,7 +74,9 @@ date: 2021-10-07
       }
   })
   ```
+
 - You can now share [ConcurrencyLimit](type) between [ConcurrencyLimitingClient](type). #3478 #3753 #3860
+
   ```java
   ConcurrencyLimit limit = ConcurrencyLimit.of(64); // Can send 64 requests concurrently.
 
@@ -87,6 +92,7 @@ date: 2021-10-07
     ...
     .build(...);
   ```
+
 - You can now allow all headers in `Access-Control-Request-Headers` from a
   [preflight request](https://developer.mozilla.org/en-US/docs/Glossary/Preflight_request) using
   [CorsServiceBuilder#allowAllRequestHeaders(boolean)](type). #3839 #3843
@@ -97,6 +103,7 @@ date: 2021-10-07
                                                     .allowAllRequestHeaders(true) // 👈👈👈
                                                     .newDecorator()));
   ```
+
   - Specifying `*` in `Access-Control-Allow-Headers` does not work with
     [certain browsers](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Access-Control-Allow-Headers#browser_compatibility)
     so you should use [CorsServiceBuilder#allowAllRequestHeaders(boolean)](type) to allow all headers.
@@ -143,6 +150,7 @@ date: 2021-10-07
   ```
 - You can now export different properties for different [RequestContextExportingAppender](typeplural) to log
   with [Logback](http://logback.qos.ch). #3775 #3769
+
   ```xml
   // logback.xml
   <appender name="RCEA1" class="com.linecorp.armeria.common.logback.RequestContextExportingAppender">
@@ -155,6 +163,7 @@ date: 2021-10-07
     <export>remote.port</export>
   </appender>
   ```
+
 - You can now log HTTP/2 frames using the frame loggers. #3817
   ```xml
   <!-- logback.xml -->
@@ -228,6 +237,7 @@ date: 2021-10-07
                                        ...
                                        .build());
   ```
+
 ## 📃 Documentation
 
 - You can now learn [how to write a streaming response](https://armeria.dev/docs/advanced-streaming-backpressure)
@@ -305,20 +315,22 @@ date: 2021-10-07
 
 ## 🙇 Thank you
 
-<ThankYou usernames={[
-  'anuraaga',
-  'berry120',
-  'fantayeneh',
-  'freevie',
-  'ghkim3221',
-  'heowc',
-  'ikhoon',
-  'jasper-vandemalle',
-  'jrhee17',
-  'kezhenxu94',
-  'ks-yim',
-  'minwoox',
-  'TheWeaVer',
-  'trustin',
-  'vivekkothari'
-]} />
+<ThankYou
+  usernames={[
+    'anuraaga',
+    'berry120',
+    'fantayeneh',
+    'freevie',
+    'ghkim3221',
+    'heowc',
+    'ikhoon',
+    'jasper-vandemalle',
+    'jrhee17',
+    'kezhenxu94',
+    'ks-yim',
+    'minwoox',
+    'TheWeaVer',
+    'trustin',
+    'vivekkothari',
+  ]}
+/>

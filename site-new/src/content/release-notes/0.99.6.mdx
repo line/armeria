@@ -29,6 +29,7 @@ date: 2020-05-28
   ```
 - You can now easily bind an MDC property to a [RequestContext](type) and log it using a logging framework.
   #2634 #2724 #2729
+
   ```java
   MDC.put("transactionId", "1234");
   WebClient client = ...;
@@ -40,7 +41,9 @@ date: 2020-05-28
       client.execute(...);
   }
   ```
+
 - You can now install a custom hook to [RequestContextStorage](type) in runtime, usually at startup time. #2723
+
   ```java
   RequestContextStorage.hook(delegate -> new RequestContextStorageWrapper(delegate) {
       @Nullable
@@ -60,6 +63,7 @@ date: 2020-05-28
       ...
   }
   ```
+
 - You can now set method parameter descriptions for annotated services in
   [DocService](type) using Javadoc. #2697
 - You can now easily sanitize headers and content using [RegexBasedSanitizer](type). #1810 #2721

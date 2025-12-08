@@ -7,6 +7,7 @@ date: 2019-02-19
 ## New features
 
 - A user now can see the content of HTTP request/response in logs. #1574
+
   ```java
   ServerBuilder sb = new ServerBuilder();
   // Enables previewing the content with the maximum length of 100 for textual contents.
@@ -21,9 +22,11 @@ date: 2019-02-19
       });
   });
   ```
+
 - Added `ClientRequestContextBuilder` and `ServiceRequestContextBuilder`. #1548
   - A user can create a mock of `RequestContext`.
   - A user can emulate an incoming request and feed it into his or her processing pipeline.
+
   ```java
   @Test
   public void testService() throws Exception {
@@ -32,16 +35,18 @@ date: 2019-02-19
                                        MediaType.JSON_UTF_8,
                                        "{ \"name\": \"foo\" }");
       ServiceRequestContext sctx = ServiceRequestContext.of(req);
- 
+
       // When
       HttpResponse res = service.serve(sctx, req);
- 
+
       // Then
       AggregatedHttpMessage aggregatedRes = res.aggregate().get();
       assertEquals(200, aggregatedRes.status().code());
   }
   ```
+
 - A user can use `@CorsDecorator` in annotated services. #1547
+
   ```java
   sb.annotatedService("/cors6", new Object() {
 
@@ -57,6 +62,7 @@ date: 2019-02-19
       }
   }
   ```
+
 - Added `ClientFactoryBuilder.domainNameResolverCustomizer()` so that a user can customize the resolver easily. #1553
   ```java
   ClientFactory f = new ClientFactoryBuilder()
@@ -67,6 +73,7 @@ date: 2019-02-19
       .build();
   ```
 - A user can define a custom annotation which attaches other annotations for simplicity. #1560
+
   ```java
   // Define a custom annotation:
   @ProducesJson
@@ -78,6 +85,7 @@ date: 2019-02-19
   @MyApiSpecification // You can use one annotation which holds other other annotations.
   public Something getSomething() {}
   ```
+
 - Added `@AdditionalHeader` and `@AdditionalTrailer` to insert headers easily in annotated services. #1555
 - Added a way to add multiple gRPC services with a single method call. #1563
   ```java
@@ -89,23 +97,25 @@ date: 2019-02-19
   GrpcService s = new GrpcServiceBuilder().addServices(a, b).build();
   ```
 - Added more shortcut methods for convenience. #1576
+
   ```java
   HttpRequest req = ...;
   AggregatedHttpMessage aggregated = ...;
   MediaType contentType;
   String content;
- 
+
   // Before
   contentType = req.headers().contentType();
   contentType = aggregated.headers().contentType();
   content = aggregated.content().toStringUtf8();
- 
+
   // After
   contentType = req.contentType();
   contentType = aggregated.contentType();
   content = aggregated.contentUtf8();
   ```
-- `RequestObject` is shown in `DocService`. #1557 
+
+- `RequestObject` is shown in `DocService`. #1557
 - Added `verboseSocketExceptions` flag so that a user can ignore harmless socket-related error message. #1577
 - Added automatic directory listing generation to `HttpFileService`. #1573
 - Added `armeria-spring-boot-actuator` dependency. #1578
@@ -113,20 +123,22 @@ date: 2019-02-19
 - Added metrics related to timeouts. #1589
 - Added `responseCauseSanitizer` to `LoggingDecoratorBuilder`. #1594
   - A user can sanitize the stack trace of `RequestLog.responseCause()` or avoid logging the stack trace completely.
+
   ```java
   ServerBuilder sb = ...
   final Function<Throwable, Throwable> responseCauseSanitizer = cause -> {
       if (cause instanceof AnticipatedException) {
-          return null; // Do not log when AnticipatedException is raised. 
+          return null; // Do not log when AnticipatedException is raised.
       }
       return cause;
    };
 
-   sb.decorator(new LoggingServiceBuilder().requestLogLevel(LogLevel.INFO)                                                    
-                                           .successfulResponseLogLevel(LogLevel.INFO)                                                    
+   sb.decorator(new LoggingServiceBuilder().requestLogLevel(LogLevel.INFO)
+                                           .successfulResponseLogLevel(LogLevel.INFO)
                                            .responseCauseSanitizer(responseCauseSanitizer)
                                            .newDecorator());
   ```
+
 - A user can easily send [Server-Sent Events](https://html.spec.whatwg.org/multipage/server-sent-events.html). #1551
   ```java
   public class MyAnnotatedService {
@@ -158,8 +170,9 @@ date: 2019-02-19
 - Fixed a bug where gRPC callbacks are not executed in order. #1600
 
 ## Breaking Change
+
 - The `HttpHeaders` in `AggregatedHttpMessage` is immutable.
-  - You should call `headers.toMutable()` to set or remove a header. 
+  - You should call `headers.toMutable()` to set or remove a header.
 
 ## Deprecations
 

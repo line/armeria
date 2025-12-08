@@ -8,7 +8,7 @@ date: 2022-03-24
 
 - gRPC health check protocol
 - Multipart file uploads in annotated services
-- Preliminary GraphQL support in [DocService](type) 
+- Preliminary GraphQL support in [DocService](type)
 - Refactored DNS resolver cache with higher hit ratio and reduced traffic
 - New metrics that help you get alerts before your TLS certificates are expired
 
@@ -37,6 +37,7 @@ date: 2022-03-24
     .build();
   ```
 - You can now use the `||` (logical OR) operator in parameter and header predicate expressions. #4116 #4138
+
   ```java
   // "Hi!" for /greet?casual or /greet?casual=true
   // "Hello!" for /greet or /greet?casual=false
@@ -49,14 +50,16 @@ date: 2022-03-24
     .route()
       .get("/greet")
       .matchesParam("!casual || casual!=true") // 👈👈👈
-      .build(ctx, req) -> HttpResponse.of("Hello!"))  
+      .build(ctx, req) -> HttpResponse.of("Hello!"))
   ```
+
   :::tip
-  
+
   You can use the same syntax in [annotated services](/docs/server/annotated-service)
   using [@MatchesParam](type) and [@MatchesHeader](type).
 
   :::
+
 - You can now enable [gRPC health check protocol](https://github.com/grpc/grpc/blob/master/src/proto/grpc/health/v1/health.proto)
   with [GrpcHealthCheckService](type) #3146 #3963
   ```java
@@ -86,7 +89,7 @@ date: 2022-03-24
   ```
 - You can now configure the timeout of DNS sub-queries with `queryTimeoutMillisForEachAttempt()`. Previously,
   you were only able to specify the timeout for the entire DNS resolution process, which can consist of more
-  than one DNS query. #2940 #4133 
+  than one DNS query. #2940 #4133
   ```java
   DnsAddressEndpointGroup
     .builder("armeria.dev")
@@ -96,20 +99,21 @@ date: 2022-03-24
   ```
 - Armeria now has the global shared DNS cache by default for higher hit ratio and less DNS traffic.
   You can also build and share a custom DNS cache across multiple resolvers. #2940 #4133
+
   ```java
-  DnsCache dnsCache = 
+  DnsCache dnsCache =
     DnsCache
       .builder()
       .ttl(60, 3600)
       .negativeTtl(600)
       .build();
-  
-  EndpointGroup endpointGroup = 
+
+  EndpointGroup endpointGroup =
     DnsAddressEndpointGroup
       .builder("armeria.dev")
       .dnsCache(dnsCache) // 👈👈👈
       .build();
-  
+
   ClientFactory factory =
     ClientFactory
       .builder()
@@ -117,21 +121,23 @@ date: 2022-03-24
         builder.dnsCache(dnsCache); // 👈👈👈
       })
       .build();
-  
+
   WebClient client =
     WebClient
       .builder(SessionProtocol.HTTPS, endpointGroup) // 👈👈👈
       .factory(factory) // 👈👈👈
-      .build();         
+      .build();
   ```
+
 - Failed search domain queries are now cached according to the negative TTL configuration. #2940 #4133
 - You can now specify a [SuccessFunction](type) when constructing a client or server, and let all decorators
   use it for determining whether a request was successful or not. #4101
+
   ```java
   Server
     .builder()
     .successFunction((ctx, log) -> { // 👈👈👈
-      // Treat only '200 OK' and '204 No Content' as success. 
+      // Treat only '200 OK' and '204 No Content' as success.
       switch (log.responseStatus().code()) {
         case 200:
         case 204:
@@ -143,7 +149,7 @@ date: 2022-03-24
     .decorator(LoggingService.newDecorator())
     .decorator(MetricCollectingService.newDecorator())
     ...
-  
+
   WebClient
     .builder()
     .successFunction(...) // 👈👈👈
@@ -151,6 +157,7 @@ date: 2022-03-24
     .decorator(MetricCollectingClient.newDecorator())
     .build();
   ```
+
 - You can now specify different sampling ratio (or [Sampler](type)) for successful and failed requests
   when using [LoggingClient](type) and [LoggingService](type) #3666 #4101
   ```java
@@ -179,9 +186,10 @@ date: 2022-03-24
     .responseLogLevel(HttpStatus.OK, LogLevel.INFO)
     // Log at WARN if 5xx.
     .responseLogLevel(HttpStatusClass.SERVER_ERROR, LogLevel.WARN)
-    .newDecorator()    
+    .newDecorator()
   ```
 - You can now specify a customizer that customizes a [ClientRequestContext](type) when building a client. #4075 #4082
+
   ```java
   WebClient client =
     WebClient
@@ -192,7 +200,9 @@ date: 2022-03-24
       })
       .build();
   ```
+
   For instance, you could manually propagate a Brave thread-local `TraceContext` using it:
+
   ```java
   Tracing reactorTracing = ...;
   Tracing requestContextTracing =
@@ -210,6 +220,7 @@ date: 2022-03-24
     .decorator(BraveClient.newDecorator(requestContextTracing))
     .build();
   ```
+
 - You can now write the content of [StreamMessage](type) into a file using
   [StreamMessage#writeTo(Function,Path,OpenOption)](type) #4048 #4130
   ```java
@@ -244,8 +255,9 @@ date: 2022-03-24
   with a configurable concurrency limit. #4031
 - You can now decode a [StreamMessage](type) into another using [StreamMessage#decode(StreamDecoder)](type)
   which was previously possible only for [HttpMessage](type). #4147 #4148 #4152
-- You can now give Armeria a performance optimization hint by specifying if your service is unary, 
+- You can now give Armeria a performance optimization hint by specifying if your service is unary,
   request-streaming, response-streaming or bidi-streaming by implementing [HttpService#exchangeType()](type) #3956
+
   ```java
   class MyUnaryService implements HttpService {
     @Override
@@ -261,7 +273,7 @@ date: 2022-03-24
           })
       );
     }
-  
+
     // Tells Armeria to assume non-streaming requests and responses.
     @Override
     public ExchangeType exchangeType() {
@@ -277,13 +289,13 @@ date: 2022-03-24
 ## 🛠️ Bug fixes
 
 - A response with status code `408` doesn't trigger a `NullPointerException` anymore, even if its reason phrase
-  is not exactly `Request Timeout`. #4165 
+  is not exactly `Request Timeout`. #4165
 - Failed search domain queries are now cached properly according to the negative TTL configuration. #2940 #4133
 - [GrpcService](type) now logs [RequestOnlyLog#requestContent()](type) for invalid requests. #4128
 - [DocService](type) doesn't crash the whole Armeria service anymore when `.proto` files have comments
   on service options or extensions. #4123 #4127
 - [GraphQlService](type) doesn't throw a `ClassCastException` anymore when `query` or `operationName` are not
-  a string. #4104 #4168  
+  a string. #4104 #4168
 - [FileService](type) doesn't choose a `.br` file for generating decompressed content anymore when Brotli
   is not available. #4119
 - You no longer see an [HttpResponseException](type) or [HttpStatusException](type) from built-in services. #4056 #4117
@@ -334,25 +346,27 @@ date: 2022-03-24
 
 ## 🙇 Thank you
 
-<ThankYou usernames={[
-  'Dogacel',
-  'Jimexist',
-  'anuraaga',
-  'doppany',
-  'ghkim3221',
-  'heowc',
-  'ikhoon',
-  'injae-kim',
-  'jrhee17',
-  'klurpicolo',
-  'kojilin',
-  'lucasamoroso',
-  'minwoox',
-  'pine',
-  'sleeplesslord',
-  'ta7uw',
-  'tobias-',
-  'trustin',
-  'wooseongshin',
-  'wooyeong'
-]} />
+<ThankYou
+  usernames={[
+    'Dogacel',
+    'Jimexist',
+    'anuraaga',
+    'doppany',
+    'ghkim3221',
+    'heowc',
+    'ikhoon',
+    'injae-kim',
+    'jrhee17',
+    'klurpicolo',
+    'kojilin',
+    'lucasamoroso',
+    'minwoox',
+    'pine',
+    'sleeplesslord',
+    'ta7uw',
+    'tobias-',
+    'trustin',
+    'wooseongshin',
+    'wooyeong',
+  ]}
+/>

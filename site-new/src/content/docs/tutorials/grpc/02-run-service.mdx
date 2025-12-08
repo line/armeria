@@ -1,5 +1,5 @@
 ---
-sidebar_label: "2. Run a service"
+sidebar_label: '2. Run a service'
 category: grpc
 tags:
   - server
@@ -34,68 +34,77 @@ Build a service and server using Armeria's [ServerBuilder](type) to serve our se
 
 1. Create a main class for our server. You can see the full version of the file [here](https://github.com/line/armeria-examples/blob/main/tutorials/grpc/src/main/java/example/armeria/server/blog/grpc/Main.java).
 
-  ```java title="Main.java"
-  package example.armeria.blog.grpc;
+```java title="Main.java"
+package example.armeria.blog.grpc;
 
-  import org.slf4j.Logger;
-  import org.slf4j.LoggerFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-  public final class Main {
-    private static final Logger logger = LoggerFactory.getLogger(Main.class);
-  }
-  ```
+public final class Main {
+  private static final Logger logger = LoggerFactory.getLogger(Main.class);
+}
+```
+
 2. Create a service instance using Armeria's [GrpcService#builder()](type).
-  ```java title="Main.java"
-  import com.linecorp.armeria.server.grpc.GrpcService;
-  import com.linecorp.armeria.server.Server;
 
-  public final class Main {
-  ...
-    static Server newServer(int port) throws Exception {
-      final GrpcService grpcService =
-        GrpcService.builder()
-                   .addService(new BlogService())
-                   .build();
-    }
+```java title="Main.java"
+import com.linecorp.armeria.server.grpc.GrpcService;
+import com.linecorp.armeria.server.Server;
+
+public final class Main {
+...
+  static Server newServer(int port) throws Exception {
+    final GrpcService grpcService =
+      GrpcService.builder()
+                 .addService(new BlogService())
+                 .build();
   }
-  ```
-3. Build and return a new server instance using Armeria's [ServerBuilder](type).
-  ```java title="Main.java"
-    public final class Main {
-      static Server newServer(int port) throws Exception {
-        ...
-        return Server.builder()
-                     .http(port)
-                     .service(grpcService)
-                     .build();
+}
+```
 
-      }
-  ```
+3. Build and return a new server instance using Armeria's [ServerBuilder](type).
+
+```java title="Main.java"
+  public final class Main {
+    static Server newServer(int port) throws Exception {
+      ...
+      return Server.builder()
+                   .http(port)
+                   .service(grpcService)
+                   .build();
+
+    }
+```
 
 ## 3. Run the server and service
 
 Create a server instance and run the blog service.
 
 1. Create a server instance in the `main()` method.
-  ```java title="Main.java"
-  public static void main(String[] args) throws Exception {
-      final Server server = newServer(8080);
 
-      server.closeOnJvmShutdown().thenRun(() -> {
-          logger.info("Server has been stopped.");
-      });
+```java title="Main.java"
+public static void main(String[] args) throws Exception {
+    final Server server = newServer(8080);
 
-      server.start().join();
-  }
-  ```
+    server.closeOnJvmShutdown().thenRun(() -> {
+        logger.info("Server has been stopped.");
+    });
+
+    server.start().join();
+}
+```
+
 2. Start the server by running the `Main.main()` method on your IDE or using Gradle.
-  ```bash
-  ./gradlew run
-  ```
-  Your server is running if you see the following message.
-  ```bash
-  [armeria-boss-http-*:8080] INFO com.linecorp.armeria.server.Server - Serving HTTP at /[0:0:0:0:0:0:0:0%0]:8080 - http://127.0.0.1:8080/
-  ```
+
+```bash
+./gradlew run
+```
+
+Your server is running if you see the following message.
+
+```bash
+[armeria-boss-http-*:8080] INFO com.linecorp.armeria.server.Server - Serving HTTP at /[0:0:0:0:0:0:0:0%0]:8080 - http://127.0.0.1:8080/
+```
 
 ## 4. Test connecting to the server
 
@@ -103,43 +112,48 @@ Let's create test code and connect to the server by sending a request using a cl
 Note that we'll use test code to verify what we implement along the way.
 
 1. Create a file, `BlogServiceTest.java`, under `{project_root}/src/test/java/example/armeria/blog/grpc` as follows.
-You can see the full version of the file [here](https://github.com/line/armeria-examples/blob/main/tutorials/grpc/src/test/java/example/armeria/server/blog/grpc/BlogServiceTest.java).
-  ```java title="BlogServiceTest.java"
-  package example.armeria.blog.grpc;
-  import example.armeria.blog.grpc.BlogServiceGrpc.BlogServiceBlockingStub;
+   You can see the full version of the file [here](https://github.com/line/armeria-examples/blob/main/tutorials/grpc/src/test/java/example/armeria/server/blog/grpc/BlogServiceTest.java).
 
-  class BlogServiceTest {
-    static BlogServiceBlockingStub client;
-  }
-  ```
+```java title="BlogServiceTest.java"
+package example.armeria.blog.grpc;
+import example.armeria.blog.grpc.BlogServiceGrpc.BlogServiceBlockingStub;
+
+class BlogServiceTest {
+  static BlogServiceBlockingStub client;
+}
+```
+
 2. In the `BlogServiceTest` class, add a test method as follows.
-Although we haven't implemented any service methods, we'll call one just to check whether we can connect to the server.
+   Although we haven't implemented any service methods, we'll call one just to check whether we can connect to the server.
 
-  ```java title="BlogServiceTest.java"
-  import org.junit.jupiter.api.Test;
-  import com.linecorp.armeria.client.grpc.GrpcClients;
+```java title="BlogServiceTest.java"
+import org.junit.jupiter.api.Test;
+import com.linecorp.armeria.client.grpc.GrpcClients;
 
-  @Test
-  void connect() {
-    client = GrpcClients.newClient("http://127.0.0.1:8080/",
-                                   BlogServiceBlockingStub.class);
-    client.createBlogPost(CreateBlogPostRequest.newBuilder().build());
-  }
-  ```
+@Test
+void connect() {
+  client = GrpcClients.newClient("http://127.0.0.1:8080/",
+                                 BlogServiceBlockingStub.class);
+  client.createBlogPost(CreateBlogPostRequest.newBuilder().build());
+}
+```
+
 3. Make sure that your server is running.
-  If you have not stopped the server, it should already be running.
-  Otherwise, restart the server by running the `Main.main()` method.
+   If you have not stopped the server, it should already be running.
+   Otherwise, restart the server by running the `Main.main()` method.
 4. Run the test case on your IDE or using Gradle.
-  ```
-  ./gradlew test
-  ```
-  Your client sent a request to the service successfully if the test fails and throws an "UNIMPLEMENTED" exception.
 
-  ```bash
-  UNIMPLEMENTED: Method example.armeria.blog.grpc.BlogService/CreateBlogPost is unimplemented
-  ```
+```
+./gradlew test
+```
 
-  This is because we are yet to implement the service method to create a blog post. One thing we did check is that our service does return something to a client call.
+Your client sent a request to the service successfully if the test fails and throws an "UNIMPLEMENTED" exception.
+
+```bash
+UNIMPLEMENTED: Method example.armeria.blog.grpc.BlogService/CreateBlogPost is unimplemented
+```
+
+This is because we are yet to implement the service method to create a blog post. One thing we did check is that our service does return something to a client call.
 
 ## What's next
 

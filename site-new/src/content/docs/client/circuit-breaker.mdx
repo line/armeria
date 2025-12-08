@@ -14,6 +14,7 @@ for more information.
 ## State of `CircuitBreaker`
 
 A [CircuitBreaker](type) can be one of the following three states:
+
 - `CLOSED`
   - Initial state. All requests are treated normally.
 - `OPEN`
@@ -23,7 +24,7 @@ A [CircuitBreaker](type) can be one of the following three states:
   - After a certain amount of time in the `OPEN` state, the state machine enters the `HALF_OPEN` state
     which sends a request to find out if the service is still unavailable or not.
     If the request succeeds, it enters the `CLOSED` state. If it fails, it enters the `OPEN` state again.
-    
+
 ```bob-svg
                                    +----------------+
                                    |                |
@@ -49,6 +50,7 @@ A [CircuitBreaker](type) can be one of the following three states:
 
 Armeria provides two different client implementations depending on the
 [Request](type) and [Response](type) types:
+
 - [CircuitBreakerClient](type)
 - [CircuitBreakerRpcClient](type)
 
@@ -98,10 +100,10 @@ import com.linecorp.armeria.client.UnprocessedRequestException;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.HttpStatusClass;
 
-final CircuitBreakerRule myRule = 
+final CircuitBreakerRule myRule =
         CircuitBreakerRule.of(
                 // A failure if an Exception is raised.
-                CircuitBreakerRule.onException(), 
+                CircuitBreakerRule.onException(),
                 // Neither a success nor a failure because the request has not been handled by the server.
                 CircuitBreakerRule.builder()
                                   .onUnprocessed()
@@ -157,6 +159,7 @@ It's even worse if the client connects to the services on different machines.
 When one of the remote services is down, your [CircuitBreaker](type) will probably be `OPEN` state although
 you can connect to other services.
 Therefore, Armeria provides various ways that let users group the range of circuit breaker instances.
+
 - Group by host: a single [CircuitBreaker](type) is used for each remote host.
 
   ```java
@@ -168,10 +171,10 @@ Therefore, Armeria provides various ways that let users group the range of circu
                                                         .onException()
                                                         .thenFailure();
   final CircuitBreakerRule rpcRule = CircuitBreakerRule.onException();
-  
+
   // Create a CircuitBreaker with the key name
   final Function<String, CircuitBreaker> factory = key -> CircuitBreaker.of("my-cb-" + key);
-  
+
   // Create CircuitBreakers per host (a.com, b.com ...)
   CircuitBreakerClient.newPerHostDecorator(factory, httpRule);
   CircuitBreakerRpcClient.newPerHostDecorator(factory, rpcRule);
@@ -210,6 +213,7 @@ Therefore, Armeria provides various ways that let users group the range of circu
 We have used static factory methods in [CircuitBreaker](type) interface to create a [CircuitBreaker](type) so far.
 If you use [CircuitBreakerBuilder](type), you can configure the parameters which decide
 [CircuitBreaker](type)'s behavior. Here are the parameters:
+
 - `name`:
   - The name of the [CircuitBreaker](type).
 - `failureRateThreshold`:

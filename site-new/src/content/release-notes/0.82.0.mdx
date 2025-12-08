@@ -18,9 +18,10 @@ date: 2019-03-19
           .exclude(DocServiceFilter.ofThrift().and(DocServiceFilter.ofMethodName("foo")))
           .build());
   ```
-- `HttpHeaderNames` now forks from Guava's `HttpHeaders` instead of Netty's `HttpHeaderNames` 
+- `HttpHeaderNames` now forks from Guava's `HttpHeaders` instead of Netty's `HttpHeaderNames`
   because it has more recent HTTP headers which may be useful to service authors.
 - You can use `SystemInfo` utility class in order to get the system information. #1656
+
   ```java
   // Java version
   SystemInfo.javaVersion();
@@ -62,10 +63,10 @@ date: 2019-03-19
   String name();
   ServiceSpecification generateSpecification(Set<ServiceConfig> serviceConfigs, DocServiceFilter filter);
   ```
--  Some header names in `HttpHeaderNames` were removed, although it is very unlikely to be used by users: #1660
-  - `Keep-Alive`
-  - `Proxy-Connection`
-  - `Content-Transfer-Encoding`
+- Some header names in `HttpHeaderNames` were removed, although it is very unlikely to be used by users: #1660
+- `Keep-Alive`
+- `Proxy-Connection`
+- `Content-Transfer-Encoding`
 
 ## Dependencies
 

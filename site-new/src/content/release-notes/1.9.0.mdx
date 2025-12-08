@@ -8,6 +8,7 @@ date: 2021-06-23
 
 - A new module `armeria-graphql` integrates with [GraphQL Java](https://www.graphql-java.com/) to let you serve
   GraphQL requests. #3318 #3373
+
   ```java
   ServerBuilder sb = ...;
   sb.service("/graphql",
@@ -18,16 +19,19 @@ date: 2021-06-23
                     ...
                     .build());
   ```
+
   :::tip
 
   `armeria-graphql` is currently experimental. We're looking forward to your feedback.
 
   :::
+
 - You can now transform the objects of [HttpRequest](type) and [HttpResponse](type) using a function.
   #3606 #3624
+
   ```java
   HttpRequest req1 = ...;
-  HttpRequest req2 = 
+  HttpRequest req2 =
       req1.mapHeaders(headers -> headers.toBuilder()
                                         .add("TraceId", "1")
                                         .build())
@@ -35,9 +39,9 @@ date: 2021-06-23
           .mapTrailers(trailers -> trailers.toBuilder()
                                            .add("trailer-key", "val")
                                            .build())
-  
+
   HttpResponse res1 = ...;
-  HttpResponse res2 = 
+  HttpResponse res2 =
       res1.mapHeaders(headers -> headers.toBuilder()
                                         .add("SessionId", "123")
                                         .build())
@@ -52,6 +56,7 @@ date: 2021-06-23
                                            .add("result", "0")
                                            .build());
   ```
+
 - You can now collect the all elements of a [StreamMessage](type) with [StreamMessage#collect()](type). #3603
   ```java
   StreamMessage<Integer> stream = StreamMessage.of(1, 2, 3);
@@ -59,6 +64,7 @@ date: 2021-06-23
   assert collected.join().equals(List.of(1, 2, 3));
   ```
 - You can exclude a [Route](type) from another [Route](type) when configuring a service. #2737 #3562
+
   ```java
   ServerBuilder sb = ...;
   sb.route()
@@ -75,8 +81,9 @@ date: 2021-06-23
     .exclude("prefix:/api/admin")
     .build(MetricCollectingService.newDecorator());
   ```
+
 - You can now update the service bindings without restarting a [Server](type) using
-  [Server#reconfigure(ServerConfigurator)](type). #3041 #3362 Note that there are some limitations on 
+  [Server#reconfigure(ServerConfigurator)](type). #3041 #3362 Note that there are some limitations on
   the [Server](type) reconfiguration. Please check out #3041 for details.
   ```java
   Server server = ...;
@@ -85,6 +92,7 @@ date: 2021-06-23
   });
   ```
 - You can now use [RequestOptions](type) to configure various options at request level. #3593
+
   ```java
   HttpRequest req = ...;
   WebClient client = ...;
@@ -97,7 +105,7 @@ date: 2021-06-23
                     .build();
   // Specify RequestOptions when sending a request.
   client.execute(req, options);
-  
+
   // You can also specify the options when building a request
   // using WebClientRequestPreparation.
   client.prepare()
@@ -108,6 +116,7 @@ date: 2021-06-23
         .attr(foo, "bar")
         .execute();
   ```
+
 - You can now fluently build a [BlockingTaskExecutor](type) using [BlockingTaskExecutorBuilder](type).
   #3315 #3389
   ```java
@@ -143,6 +152,7 @@ date: 2021-06-23
   - `TCP_KEEPIDLE` and `TCP_KEEPINTVL` options are enabled when a PING interval is greater than 0.
 - You can now get the last value of a header or a query parameter using
   [HttpHeaders#getLast(CharSequence)](type) and [QueryParams#getLast(String)](type). #3438 #3568
+
   ```java
   HttpHeaders headers =
       HttpHeaders.builder()
@@ -151,13 +161,14 @@ date: 2021-06-23
                  .build();
   assert headers.getLast(HttpHeaderNames.X_FORWARDED_FOR)
                 .equals("150.172.238.178");
-  
-  QueryParams params = 
+
+  QueryParams params =
       QueryParams.builder()
                  .add("items", List.of("1", "2", "3"))
                  .build();
   assert params.getLastInt("items").equals(3);
   ```
+
 - [ContentTooLargeException](type) now provides you the following 3 properties about why
   the exception was raised. #3520, #3616
   - The maximum allowed content length
@@ -168,17 +179,19 @@ date: 2021-06-23
 - You can now figure out the number of connections managed by a [ClientFactory](type) with
   [ClientFactory#numConnections()](type). #3596 #3613
 - You can now specify the number of event loop threads and blocking task threads more conveniently. #3597 #3602
+
   ```java
   Server.builder()
         .workerGroup(3)
         .blockingTaskExecutor(10)
         ...
         .build();
-  
+
   ClientFactory.builder()
                .workerGroup(3)
                .build();
   ```
+
 - You can now clear the mocking state of a [MockWebServerExtension](type) using
   [MockWebServerExtension#reset()](type). #3629
 
@@ -241,23 +254,25 @@ date: 2021-06-23
 
 ## 🙇 Thank you
 
-<ThankYou usernames={[
-  'amitvc',
-  'anuraaga',
-  'haithamgabr',
-  'heowc',
-  'hexoul',
-  'hyangtack',
-  'ikhoon',
-  'jrhee17',
-  'JunoJunho',
-  'KarboniteKream',
-  'kezhenxu94',
-  'kojilin',
-  'mauhiz',
-  'max904-github',
-  'minwoox',
-  'nirvanarsc',
-  'serajin00',
-  'trustin'
-]} />
+<ThankYou
+  usernames={[
+    'amitvc',
+    'anuraaga',
+    'haithamgabr',
+    'heowc',
+    'hexoul',
+    'hyangtack',
+    'ikhoon',
+    'jrhee17',
+    'JunoJunho',
+    'KarboniteKream',
+    'kezhenxu94',
+    'kojilin',
+    'mauhiz',
+    'max904-github',
+    'minwoox',
+    'nirvanarsc',
+    'serajin00',
+    'trustin',
+  ]}
+/>

@@ -28,6 +28,7 @@ date: 2020-06-22
               .build();
     ```
   - By using [@ServiceName](type):
+
     ```java
     @ServiceName("my-service")
     public class MyAnnotatedService {
@@ -39,6 +40,7 @@ date: 2020-06-22
         public String post(@Param String value) { ... }
     }
     ```
+
   - Programmatically:
     ```java
     Server server =
@@ -49,6 +51,7 @@ date: 2020-06-22
               .build();
     ```
   - Armeria will use the FQCN of the service class if you did not specify a service name.
+
 - You can now use `@Nullable` annotation to specify an optional parameter or request object in annotated
   services. Previously, only the parameters with [@Default](type) annotation or `Optional` type were accepted.
   #2773
@@ -70,6 +73,7 @@ date: 2020-06-22
 - You can now determine whether a request was successful or not from HTTP trailers in
   [CircuitBreakerClient](type) and [RetryingClient](type) using `onResponseTrailers()` method.
   This can be useful when you work with gRPC, whose status code is encoded in the `grpc-status` trailer. #2816
+
   ```java
   CircuitBreaker cb = CircuitBreaker.of("my-service");
   CircuitBreakerRule cbr =
@@ -85,6 +89,7 @@ date: 2020-06-22
              .decorator(CircuitBreakerClient.newDecorator(cb, cbr))
              .build(MyServiceStub.class);
   ```
+
 - [RequestLog](type) sanitizers now accept [RequestContext](type) as an additional input, so that
   the sanitizers can behave differently depending on the current path, etc. #2803
   ```java
@@ -129,6 +134,7 @@ date: 2020-06-22
       curator, "/discovery/serversets",
       ZooKeeperRegistrationSpec.serverSets()));
   ```
+
 - You can now build [OAuth1aToken](type) more conveniently using the builder API. #2770
   ```java
   OAuth1aToken token =
@@ -158,7 +164,7 @@ date: 2020-06-22
 
 ## 🛠️ Bug fixes
 
-- It's now allowed to specify an absolute URL *only when* a [WebClient](type) was created *without* a base
+- It's now allowed to specify an absolute URL _only when_ a [WebClient](type) was created _without_ a base
   URL. #2757
   ```java
   WebClient clientWithoutBaseUrl = WebClient.of();
@@ -197,7 +203,7 @@ date: 2020-06-22
 
 ## ☢️ Breaking changes
 
-- You can specify an absolute URL *only when* a [WebClient](type) was created *without* a base URL.
+- You can specify an absolute URL _only when_ a [WebClient](type) was created _without_ a base URL.
   It was previously allowed to specify an absolute URL even when created with a base URL. #2757
 - The method signature of
   [RequestConverterFunction#convertRequest(ServiceRequestContext,AggregatedHttpRequest,Class,ParameterizedType)](type)

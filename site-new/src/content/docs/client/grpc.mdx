@@ -5,7 +5,6 @@
 Visit [armeria-examples](https://github.com/line/armeria-examples) to find a fully working example.
 
 :::
-  
 
 Let's assume we have the following [gRPC] service definition, served at `http://127.0.0.1:8080/`, just like
 what we used in [Running a gRPC service](/docs/server/grpc):
@@ -55,7 +54,7 @@ If a serialization format is not specified, `gproto` will be used by default.
 :::
 
 Since we specified `HelloServiceBlockingStub.class` as the client type, `Clients.newClient()` will return a
-synchronous client implementation.  If we specified `HelloServiceFutureStub`, the calling code would have
+synchronous client implementation. If we specified `HelloServiceFutureStub`, the calling code would have
 looked like the following:
 
 ```java

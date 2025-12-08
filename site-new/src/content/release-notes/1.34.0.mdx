@@ -36,6 +36,7 @@ date: 2025-11-28
   var retryingClient = RetryingClient.newDecorator(config);
   ```
 - **JSON-RPC 2.0 Protocol Support**: You can now build [JSON-RPC](https://www.jsonrpc.org/) services using the `armeria-jsonrpc` module. #6504 #6487 #6289
+
   ```java
   JsonRpcService jsonRpcService = JsonRpcService
         .builder()
@@ -48,6 +49,7 @@ date: 2025-11-28
         .builder()
         .service("/json-rpc", jsonRpcService); // 👈👈👈
   ```
+
 - **Support for Multipart Requests with Duplicate Names**: You can now handle multipart requests that contain multiple parts with the same form field name. #6419 #6430
   ```java
   @Post("/upload")
@@ -106,6 +108,7 @@ date: 2025-11-28
         ...
   ```
 - **Easier Certificate Chain Testing**: You can now use [SignedCertificateExtension](type) to generate certificate chains. #6519
+
 ```java
   @Order(1)
   @RegisterExtension
@@ -114,7 +117,7 @@ date: 2025-11-28
   @Order(2)
   @RegisterExtension
   static var leafCert = new SignedCertificateExtension(caCert);
-  ```
+```
 
 ## 📈 Improvements
 
@@ -174,19 +177,20 @@ date: 2025-11-28
 - Spring Boot 3.5.7 → 3.5.8
 - Tomcat 10.1.31 → 10.1.49
 
-
 ## 🙇 Thank you
 
-<ThankYou usernames={[
-  '0x1306e6d',
-  'chickenchickenlove',
-  'hirakida',
-  'ikhoon',
-  'jrhee17',
-  'minwoox',
-  'patcher454',
-  'schiemon',
-  'sh-cho',
-  'triberraar',
-  'trustin'
-]} />
+<ThankYou
+  usernames={[
+    '0x1306e6d',
+    'chickenchickenlove',
+    'hirakida',
+    'ikhoon',
+    'jrhee17',
+    'minwoox',
+    'patcher454',
+    'schiemon',
+    'sh-cho',
+    'triberraar',
+    'trustin',
+  ]}
+/>

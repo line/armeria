@@ -120,34 +120,33 @@ sb.service("/fallbackLogWriter", (ctx, req) -> HttpResponse.of(OK));
 
 Pre-defined log formats are as follows.
 
-
 Tokens for the log format are listed in the following table.
 
-| <div style={{width: '12rem'}} >Tokens</div> | Condition support | Description |
-|---------------------------------------|-------------------|-------------|
-| `%A` | No | the local IP address |
-| `%a` | No | the IP address of the client who initiated a request. Use `%{c}a` format string to get the remote IP address where the channel is connected to, which may yield a different value when there is an intermediary proxy server. This value relies on the `clientAddress()` and `remoteAddress()` methods of [ServiceRequestContext](type), please refer to [Getting an IP address of a client who initiated a request] about how to configure the [ServerBuilder](type) to get the client address you interest. |
-| `%h` | No | the remote hostname or IP address if DNS hostname lookup is not available |
-| `%I` | No | the request ID. Use `%{short}I` format string to get the short form. |
-| `%l` | No | the remote logname of the user (not supported yet, always write `-`) |
-| `%u` | No | the name of the authenticated remote user (not supported yet, always write `-`) |
-| `%t` | No | the date, time and time zone that the request was received, by default in `strftime` format %d/%b/%Y:%H:%M:%S %z. (for example, `10/Oct/2000:13:55:36 -0700`) Refer to [Customizing timestamp format](#customizing-timestamp-format) for more information. |
-| `%r` | Yes | the request line from the client (for example, `GET /path h2`) |
-| `%s` | No | the HTTP status code returned to the client |
-| `%b` | Yes | the size of the object returned to the client, measured in bytes |
-| `%{HEADER_NAME}i` | Yes | the value of the specified HTTP request header name |
-| `%{HEADER_NAME}o` | Yes | the value of the specified HTTP response header name |
-| `%{ATTRIBUTE_NAME}j` | Yes | the value of the specified attribute name |
-| `%{REQUEST_LOG_NAME}L` | Yes | the value of the specified variable of the [RequestLog](type). Refer to [Retrieving values from RequestLog](#retrieving-values-from-requestlog) for more information. |
+| <div style={{width: '12rem'}} >Tokens</div> | Condition support | Description                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
+| ------------------------------------------- | ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `%A`                                        | No                | the local IP address                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
+| `%a`                                        | No                | the IP address of the client who initiated a request. Use `%{c}a` format string to get the remote IP address where the channel is connected to, which may yield a different value when there is an intermediary proxy server. This value relies on the `clientAddress()` and `remoteAddress()` methods of [ServiceRequestContext](type), please refer to [Getting an IP address of a client who initiated a request] about how to configure the [ServerBuilder](type) to get the client address you interest. |
+| `%h`                                        | No                | the remote hostname or IP address if DNS hostname lookup is not available                                                                                                                                                                                                                                                                                                                                                                                                                                     |
+| `%I`                                        | No                | the request ID. Use `%{short}I` format string to get the short form.                                                                                                                                                                                                                                                                                                                                                                                                                                          |
+| `%l`                                        | No                | the remote logname of the user (not supported yet, always write `-`)                                                                                                                                                                                                                                                                                                                                                                                                                                          |
+| `%u`                                        | No                | the name of the authenticated remote user (not supported yet, always write `-`)                                                                                                                                                                                                                                                                                                                                                                                                                               |
+| `%t`                                        | No                | the date, time and time zone that the request was received, by default in `strftime` format %d/%b/%Y:%H:%M:%S %z. (for example, `10/Oct/2000:13:55:36 -0700`) Refer to [Customizing timestamp format](#customizing-timestamp-format) for more information.                                                                                                                                                                                                                                                    |
+| `%r`                                        | Yes               | the request line from the client (for example, `GET /path h2`)                                                                                                                                                                                                                                                                                                                                                                                                                                                |
+| `%s`                                        | No                | the HTTP status code returned to the client                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
+| `%b`                                        | Yes               | the size of the object returned to the client, measured in bytes                                                                                                                                                                                                                                                                                                                                                                                                                                              |
+| `%{HEADER_NAME}i`                           | Yes               | the value of the specified HTTP request header name                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
+| `%{HEADER_NAME}o`                           | Yes               | the value of the specified HTTP response header name                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
+| `%{ATTRIBUTE_NAME}j`                        | Yes               | the value of the specified attribute name                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
+| `%{REQUEST_LOG_NAME}L`                      | Yes               | the value of the specified variable of the [RequestLog](type). Refer to [Retrieving values from RequestLog](#retrieving-values-from-requestlog) for more information.                                                                                                                                                                                                                                                                                                                                         |
 
 Some tokens can have a condition of the response status code and the log message can be omitted with
 the condition.
 
-| <div style={{width: '25rem'}}>Example of a condition</div> | Description |
-|-------------------------------------------------------|-------------|
-| `%200b` | Write the size of the object returned to the client only if the response code is `200`. |
-| `%200,304{User-Agent}i` | Write `User-Agent` header value only if the response code is `200` or `304`. |
-| `%!200,304{com.example.armeria.Attribute#KEY}j` | Write the value of the specified attribute only if the response code is neither `200` nor `304`. |
+| <div style={{width: '25rem'}}>Example of a condition</div> | Description                                                                                      |
+| ---------------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
+| `%200b`                                                    | Write the size of the object returned to the client only if the response code is `200`.          |
+| `%200,304{User-Agent}i`                                    | Write `User-Agent` header value only if the response code is `200` or `304`.                     |
+| `%!200,304{com.example.armeria.Attribute#KEY}j`            | Write the value of the specified attribute only if the response code is neither `200` nor `304`. |
 
 ### Retrieving values from `RequestLog`
 
@@ -188,23 +187,23 @@ You can use one of the following formatters which is provided by JDK as a variab
 e.g. `%{BASIC_ISO_DATE}t`. If you want to use your own pattern, you can specify it as the variable,
 e.g. `%{yyyy MM dd}t`.
 
-| Formatter | Description | Example |
-|-----------|-------------|---------|
-| `BASIC_ISO_DATE` | Basic ISO date | `20111203` |
-| `ISO_LOCAL_DATE` | ISO Local Date | `2011-12-03` |
-| `ISO_OFFSET_DATE` | ISO Date with offset | `2011-12-03+01:00` |
-| `ISO_DATE` | ISO Date with or without offset | `2011-12-03+01:00`; `2011-12-03` |
-| `ISO_LOCAL_TIME` | Time without offset | `10:15:30` |
-| `ISO_OFFSET_TIME` | Time with offset | `10:15:30+01:00` |
-| `ISO_TIME` | Time with or without offset | `10:15:30+01:00`; `10:15:30` |
-| `ISO_LOCAL_DATE_TIME` | ISO Local Date and Time | `2011-12-03T10:15:30` |
-| `ISO_OFFSET_DATE_TIME` | Date Time with Offset | `2011-12-03T10:15:30+01:00` |
-| `ISO_ZONED_DATE_TIME` | Zoned Date Time | `2011-12-03T10:15:30+01:00[Europe/Paris]` |
-| `ISO_DATE_TIME` | Date and time with ZoneId | `2011-12-03T10:15:30+01:00[Europe/Paris]` |
-| `ISO_ORDINAL_DATE` | Year and day of year | `2012-337` |
-| `ISO_WEEK_DATE` | Year and Week | `2012-W48-6` |
-| `ISO_INSTANT` | Date and Time of an Instant | `2011-12-03T10:15:30Z` |
-| `RFC_1123_DATE_TIME` | RFC 1123 / RFC 822 | `Tue, 3 Jun 2008 11:05:30 GMT` |
+| Formatter              | Description                     | Example                                   |
+| ---------------------- | ------------------------------- | ----------------------------------------- |
+| `BASIC_ISO_DATE`       | Basic ISO date                  | `20111203`                                |
+| `ISO_LOCAL_DATE`       | ISO Local Date                  | `2011-12-03`                              |
+| `ISO_OFFSET_DATE`      | ISO Date with offset            | `2011-12-03+01:00`                        |
+| `ISO_DATE`             | ISO Date with or without offset | `2011-12-03+01:00`; `2011-12-03`          |
+| `ISO_LOCAL_TIME`       | Time without offset             | `10:15:30`                                |
+| `ISO_OFFSET_TIME`      | Time with offset                | `10:15:30+01:00`                          |
+| `ISO_TIME`             | Time with or without offset     | `10:15:30+01:00`; `10:15:30`              |
+| `ISO_LOCAL_DATE_TIME`  | ISO Local Date and Time         | `2011-12-03T10:15:30`                     |
+| `ISO_OFFSET_DATE_TIME` | Date Time with Offset           | `2011-12-03T10:15:30+01:00`               |
+| `ISO_ZONED_DATE_TIME`  | Zoned Date Time                 | `2011-12-03T10:15:30+01:00[Europe/Paris]` |
+| `ISO_DATE_TIME`        | Date and time with ZoneId       | `2011-12-03T10:15:30+01:00[Europe/Paris]` |
+| `ISO_ORDINAL_DATE`     | Year and day of year            | `2012-337`                                |
+| `ISO_WEEK_DATE`        | Year and Week                   | `2012-W48-6`                              |
+| `ISO_INSTANT`          | Date and Time of an Instant     | `2011-12-03T10:15:30Z`                    |
+| `RFC_1123_DATE_TIME`   | RFC 1123 / RFC 822              | `Tue, 3 Jun 2008 11:05:30 GMT`            |
 
 ## Customizing an access log writer
 
@@ -222,6 +221,7 @@ sb.accessLogWriter(requestLog -> {
 
 Armeria uses an SLF4J logger whose name is based on a reversed domain name of each virtual host by
 default, e.g.
+
 - `com.linecorp.armeria.logging.access.com.example` for `*.example.com`
 - `com.linecorp.armeria.logging.access.com.linecorp` for `*.linecorp.com`
 

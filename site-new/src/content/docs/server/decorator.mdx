@@ -36,7 +36,7 @@ sb.serviceUnder("/web", service.decorate((delegate, ctx, req) -> {
 });
 ```
 
-## Extending `SimpleDecoratingHttpService` and ``SimpleDecoratingRpcService``
+## Extending `SimpleDecoratingHttpService` and `SimpleDecoratingRpcService`
 
 If your decorator is expected to be reusable, it is recommended to define a new top-level class that extends
 [SimpleDecoratingHttpService](type) or [SimpleDecoratingRpcService](type) depending on whether you are
@@ -71,7 +71,7 @@ ServerBuilder sb = Server.builder();
 sb.serviceUnder("/web", service.decorate(delegate -> new AuthService(delegate)));
 ```
 
-## Extending ``DecoratingService``
+## Extending `DecoratingService`
 
 So far, we only demonstrated the case where a decorating service does not transform the type of the request and
 response. You can do that as well, of course, using [DecoratingService](type):
@@ -280,4 +280,3 @@ Please refer to [DecoratingServiceBindingBuilder](type) for more information.
 
 - [Decorating a client](/docs/client/decorator)
 - [`RequestContext` custom attributes](/docs/advanced/custom-attributes)
-

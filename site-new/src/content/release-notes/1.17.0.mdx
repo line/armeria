@@ -43,6 +43,7 @@ date: 2022-07-06
       .build();
   ```
 - You can now inject dependencies in an annotation using [DependencyInjector](type). #4006 #4202
+
   ```java
   // Inject authClient that is needed to create the AuthDecorator.
   WebClient authClient = ...
@@ -72,6 +73,7 @@ date: 2022-07-06
       }
   }
   ```
+
   - Set `armeria.enable-auto-injection` to `true` to apply [SpringDependencyInjector](type) automatically
     when using Spring Boot integration.
     ```yaml
@@ -81,6 +83,7 @@ date: 2022-07-06
         ...
       enable-auto-injection: true  // 👈👈👈
     ```
+
 - You can now customize the length of string fields or container fields
   of Thrift messages using [THttpServiceBuilder](type) or [ThriftClientBuilder](type). #4024 #4226
   ```java
@@ -97,6 +100,7 @@ date: 2022-07-06
   ```
 - You can now set attributes to an [Endpoint](type) using [Attributes](type) and
   [AttributesBuilder](type). #4241
+
   ```java
   AttributeKey<String> region = AttributeKey.valueOf(MyAttrs.class, "region");
   Attributes attrs =
@@ -110,6 +114,7 @@ date: 2022-07-06
   assert endpointB.attr(region).equals("us-west-1");
   assert !endpointA.equals(endpointB)
   ```
+
 - You can now use [MultipartFile](type) to get the actual filename of an uploaded file
   through `multipart/form-data`. #4262
   ```java
@@ -161,6 +166,7 @@ date: 2022-07-06
              .autoCompression(true)
              .build();
   ```
+
   - This only works when the client sends a `grpc-accept-encoding` header and
     the `CompressorRegistry` has the compressor.
 - You can now add a hook to [Server](type) and [ClientFactory](type) that is called when the
@@ -178,6 +184,7 @@ date: 2022-07-06
     Armeria and Netty internals.
 
 ### Kotlin
+
 - You can now use the Kotlin nullable type (`?`) to indicate a nullable parameter in
   an annotated service. #4144 #4225
   ```kotlin
@@ -288,26 +295,28 @@ date: 2022-07-06
 
 ## 🙇 Thank you
 
-<ThankYou usernames={[
-  'ahnyujin',
-  'be-hase',
-  'devdynam0507',
-  'eisig',
-  'ghkim3221',
-  'ikhoon',
-  'injae-kim',
-  'Jimexist',
-  'jrhee17',
-  'kezhenxu94',
-  'kojilin',
-  'ks-yim',
-  'litols',
-  'mauhiz',
-  'minwoox',
-  'natsumehu',
-  'ngyukman',
-  'ta7uw',
-  'timothy-xflowpay',
-  'tobias-',
-  'trustin'
-]} />
+<ThankYou
+  usernames={[
+    'ahnyujin',
+    'be-hase',
+    'devdynam0507',
+    'eisig',
+    'ghkim3221',
+    'ikhoon',
+    'injae-kim',
+    'Jimexist',
+    'jrhee17',
+    'kezhenxu94',
+    'kojilin',
+    'ks-yim',
+    'litols',
+    'mauhiz',
+    'minwoox',
+    'natsumehu',
+    'ngyukman',
+    'ta7uw',
+    'timothy-xflowpay',
+    'tobias-',
+    'trustin',
+  ]}
+/>

@@ -3,7 +3,7 @@ type: tutorial
 level: basic
 ---
 
-import versions from '@site/gen-src-temp/versions.json';
+import versions from '../../../../../gen-src/versions.json';
 
 # gRPC tutorial introduction
 
@@ -52,12 +52,12 @@ To run and develop the sample service, you need JDK 11 or higher.
 
 The [sample service](https://github.com/line/armeria-examples/tree/main/tutorials/grpc) provides implementations of CRUD operations as specified below.
 
-| Operation | Method |
-| -- | -- |
-| Create | `createBlogPost()` |
-| Read | `getBlogPost()`, `listBlogPosts()` |
-| Update | `updateBlogPost()` |
-| Delete | `deleteBlogPost()` |
+| Operation | Method                             |
+| --------- | ---------------------------------- |
+| Create    | `createBlogPost()`                 |
+| Read      | `getBlogPost()`, `listBlogPosts()` |
+| Update    | `updateBlogPost()`                 |
+| Delete    | `deleteBlogPost()`                 |
 
 The sample service code consists of the following folders and files.
 
@@ -82,7 +82,7 @@ grpc/
 
 :::tip
 
-  To keep our focus on Armeria, this tutorial and the sample service implement memory-based operations instead of using a database.
+To keep our focus on Armeria, this tutorial and the sample service implement memory-based operations instead of using a database.
 
 :::
 
@@ -94,13 +94,17 @@ Using Armeria's [Documentation Service](/docs/server/docservice), you can easily
 
 1. Download the code from [here](https://github.com/line/armeria-examples/tree/main/tutorials/grpc).
 2. Build the sample service using the Gradle Wrapper.
-  ```bash
-  $ ./gradlew build
-  ```
+
+```bash
+$ ./gradlew build
+```
+
 3. Run the sample service again, using the Gradle Wrapper.
-  ```bash
-  $ ./gradlew run
-  ```
+
+```bash
+$ ./gradlew run
+```
+
 4. Open the Documentation service page on your web browser at http://127.0.0.1:8080/docs.
 
 ## Try writing blog service yourself
@@ -135,4 +139,3 @@ Start writing the blog service yourself by following the tutorial step by step:
 4. [Implement READ](/docs/tutorials/grpc/implement-read)
 5. [Implement UPDATE](/docs/tutorials/grpc/implement-update)
 6. [Implement DELETE](/docs/tutorials/grpc/implement-delete)
-

@@ -1,13 +1,20 @@
-import React, {type ReactNode} from 'react';
+import React, { type ReactNode } from 'react';
 import clsx from 'clsx';
-import type {Props} from '@theme/NotFound/Content';
+import type { Props } from '@theme/NotFound/Content';
 import Logo from '@site/src/components/logo';
 
 import styles from './index.module.css';
 
-export default function NotFoundContent({className}: Props): ReactNode {
+export default function NotFoundContent({ className }: Props): ReactNode {
   return (
-    <main className={clsx('container', 'margin-vert--xl', styles.wrapper, className)}>
+    <main
+      className={clsx(
+        'container',
+        'margin-vert--xl',
+        styles.wrapper,
+        className,
+      )}
+    >
       <div className={styles.main}>
         4
         <Logo

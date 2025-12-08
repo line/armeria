@@ -26,6 +26,7 @@ sb.serviceUnder("/resources",
 ```
 
 ## Auto-generating directory listings
+
 You can configure [FileService](type) to generate the directory listing of the directories without
 an `index.html` file using the `autoIndex(boolean)` method in [FileServiceBuilder](type).
 
@@ -47,6 +48,7 @@ Be careful when you enable this feature in production environment; consider its 
 :::
 
 ## Specifying additional response headers
+
 You can specify additional response headers such as `cache-control` and other custom headers.
 
 ```java
@@ -69,6 +71,7 @@ FileService fs = fsb.build();
 ```
 
 ## Adjusting static file cache
+
 By default, [FileService](type) caches up to 1024 files whose length is less than or equal to
 65,536 bytes. You can customize this behavior using [FileServiceBuilder](type).
 
@@ -91,6 +94,7 @@ Or, you can override the default cache specification of `maximumSize=1024` using
 the JVM property `-Dcom.linecorp.armeria.fileServiceCache=<spec>`.
 
 ## Serving pre-compressed files
+
 [FileService](type) can be configured to serve a pre-compressed file based on the value of the
 `Accept-Encoding` header. For example, if a client sent the following HTTP request:
 
@@ -141,6 +145,7 @@ FileService fs = fsb.build();
 
 If you set [FileServiceBuilder#autoDecompress(boolean)](type) to `true`, the [FileService](type) automatically
 decompresses the pre-compressed file when a client does not send an `Accept-Encoding` header.
+
 ```java
 FileServiceBuilder fsb = ...
 fsb.serveCompressedFiles(true);
@@ -150,6 +155,7 @@ FileService fs = fsb.build();
 ```
 
 ## Serving an individual file
+
 You can also serve an individual file using [HttpFile](type). Like [FileService](type) does, [HttpFile](type)
 supports `GET` and `HEAD` HTTP methods and will auto-fill `Date`, `Last-Modified`, `ETag` and
 auto-detected `Content-Type` headers for you. It is also capable of sending a `304 Not Modified` response
@@ -197,8 +203,10 @@ sb.annotatedService(new Object() {
 ```
 
 ## Configuring `HttpFile`
+
 An [HttpFile](type) can be configured to send different headers than the auto-filled ones using
 [HttpFileBuilder](type). For example, you can:
+
 - Disable auto-generation of `Date`, `Last-Modified`, `Content-Type` and `ETag` header.
 - Customize how `ETag` is calculated from metadata.
 - Add or set additional custom HTTP headers.
@@ -226,6 +234,7 @@ HttpFile f = fb.build();
 ```
 
 ## Caching `HttpFile`
+
 Unlike [FileService](type), [HttpFile](type) does not cache the file content.
 Use [HttpFile#ofCached(HttpFile,int)](type) to enable content caching for an existing [HttpFile](type):
 
@@ -238,6 +247,7 @@ Note that you need to specify the maximum allowed length of the cached content. 
 will not be cached if the length of the file exceeds 65,536 bytes.
 
 ## Aggregating `HttpFile`
+
 An [HttpFile](type) usually does not store its content in memory but reads its content on demand, allowing you
 to stream a potentially very large file. If you want to ensure the content of the file is kept in memory so
 that file I/O does not occur on each retrieval, you can use the [HttpFile#aggregate(Executor)](type) method:
@@ -260,6 +270,7 @@ from, which means the content and attributes of the aggregated [HttpFile](type) 
 [HttpFile](type) changes. Use [HttpFile#ofCached(HttpFile,int)](type) instead if such behavior is necessary.
 
 ## Building `AggregatedHttpFile` from `HttpData`
+
 The content you need to serve is not always from an external resource but sometimes from memory, such as
 `byte[]` or `String`. Use [HttpFile#of(HttpData)](type) or [HttpFile#builder(HttpData)](type) to build an
 [AggregatedHttpFile](type) from an in-memory resource:

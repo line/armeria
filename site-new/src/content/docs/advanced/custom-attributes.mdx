@@ -47,7 +47,7 @@ import com.linecorp.armeria.client.WebClient;
 static final AttributeKey<Integer> USER_ID = AttributeKey.valueOf(MyAttributeKeys.class, "USER_ID");
 static final AttributeKey<String> USER_SECRET = AttributeKey.valueOf(MyAttributeKeys.class, "USER_SECRET");
 
-WebClient client = WebClient.of("http://example.com"); 
+WebClient client = WebClient.of("http://example.com");
 client.prepare()
       .get("/my-service")
       .attr(USER_ID, userId)

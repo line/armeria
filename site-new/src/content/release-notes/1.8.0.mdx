@@ -16,7 +16,7 @@ date: 2021-05-14
 - You can now create a propagating [ContextAwareExecutorService](type) and
   [ContextAwareScheduledExecutorService](type) using [RequestContext#makeContextPropagating(ExecutorService)?full](type)
   and [RequestContext#makeContextPropagating(ScheduledExecutorService)?full](type).
-  The executors propagate a [RequestContext](type) to submitted tasks when a submission thread is 
+  The executors propagate a [RequestContext](type) to submitted tasks when a submission thread is
   a request-context-aware thread. #3483
   ```java
   ExecutorService myExecutor = Executors.newSingleThreadExecutor();
@@ -37,16 +37,18 @@ date: 2021-05-14
         .execute();
   ```
 - You can now add or set HTTP headers and query params with `java.util.Map`. #3499 #3502
+
   ```java
    HttpHeaders
       .builder()
       .add(Map.of("foo", "1"))
       .set(Map.of("bar", "2"));
-  
+
   QueryParams.builder()
              .add(Map.of("page", "1"))
              .set(Map.of("size", "2"));
   ```
+
 - You can now disable DNS query metrics using [DnsResolverGroupBuilder#disableDnsQueryMetrics()](type).
   #3368 #3552
   ```java
@@ -88,9 +90,9 @@ date: 2021-05-14
 ## 🛠️ Bug fixes
 
 - Armeria server now correctly sends `Connection: close` header on an invalid HTTP/1 request. #3506
-- You no longer see an infinity loop or an `IllegalStateException: Recurse update` when invalidating 
+- You no longer see an infinity loop or an `IllegalStateException: Recurse update` when invalidating
   a DNS cache. #3528
-- [LoggingService](type) now correctly logs a request failed with the server error class(5xx) that is served 
+- [LoggingService](type) now correctly logs a request failed with the server error class(5xx) that is served
   by [TransientService](type). #3551 #3559
 - You no longer see trailing dollar signs from a service name. #3508
 - You no longer see a `NullPointerException` when a request times out. #3564
@@ -101,7 +103,7 @@ date: 2021-05-14
 - Dropwizard Metrics 4.1.20 -> 4.1.21
 - java-jwt 3.15.0 -> 3.16.0
 - Micrometer 1.6.6 -> 1.7.0
-  - Note that `PrometheusMeterRegistry` will work with the Prometheus `simpleclient` dependency version 0.10.0 
+  - Note that `PrometheusMeterRegistry` will work with the Prometheus `simpleclient` dependency version 0.10.0
     or later only. See [Micrometer 1.7.0 release note](https://github.com/micrometer-metrics/micrometer/releases/tag/v1.7.0) for more information.
 - Reactor 3.4.5 -> 3.4.6
 - scala-collection-compat 2.4.3 -> 2.4.4
@@ -124,6 +126,6 @@ date: 2021-05-14
     'max904-github',
     'minwoox',
     'nirvanarsc',
-    'trustin'
+    'trustin',
   ]}
 />

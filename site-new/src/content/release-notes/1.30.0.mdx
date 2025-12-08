@@ -6,8 +6,9 @@ date: 2024-08-12
 
 ## 🌟 New features
 
-- **Outlier Detection for Connections**: You can now use [OutlierDetection](type) to detect unhealthy 
+- **Outlier Detection for Connections**: You can now use [OutlierDetection](type) to detect unhealthy
   connections and close them gracefully. #5751 #5763
+
   ```java
   OutlierDetectingRule rule =
     OutlierDetectingRule
@@ -16,22 +17,24 @@ date: 2024-08-12
       .onException(IOException.class)
       .onException(WriteTimeoutException.class, OutlierDetectionDecision.FATAL)
       .build();
-  
-  OutlierDetection outlierDetection = 
+
+  OutlierDetection outlierDetection =
     OutlierDetection
       .builder(rule)
       .counterSlidingWindow(Duration.ofSeconds(10))
       .counterUpdateInterval(Duration.ofSeconds(1))
       .failureRateThreshold(0.5)
       .build();
-  
+
   ClientFactory
     .builder()
     // Apply the OutlierDetection to detect and close unhealthy connections
     .connectionOutlierDetection(outlierDetection)
   ```
-- **Automatic value loader**: You can now use an [AsyncLoader](type) to (re)load a value atomically, lazily and 
+
+- **Automatic value loader**: You can now use an [AsyncLoader](type) to (re)load a value atomically, lazily and
   asynchronously. #5506 #5590
+
   ```java
   Function<String, CompletableFuture<String>> loader = cache -> {
     ResponseEntity<String> response =
@@ -46,8 +49,9 @@ date: 2024-08-12
       .build();
   asyncLoader.get().join();
   ```
+
 - **Configurable Response Timeout**: You can now use [ResponseTimeoutMode](type) to configure when a response
-  timeout starts for a client. The timeout can be set when a request is started, a connection is acquired or a 
+  timeout starts for a client. The timeout can be set when a request is started, a connection is acquired or a
   request is fully sent. #4591 #5793
   ```java
   ClientFactory
@@ -109,7 +113,7 @@ date: 2024-08-12
 - Content decompression exceptions are now properly propagated. #5177 #5620
 - [@Blocking](type) now correctly works with gRPC-Kotlin stubs #5295 #5399
 - Fixed [DocService](type) sidebar to occupy at most 40% of the window width. #5091 #5839
-- `InputStream` created from [StreamMessage#toInputStream(Function)](type) now correctly raises 
+- `InputStream` created from [StreamMessage#toInputStream(Function)](type) now correctly raises
   an exception if the original [StreamMessage](type) is closed with an exception. #5859
 - [ClientRequestContext#isTimedOut()](type) now correctly returns `true` if a DNS query, a session creation or
   a write operation times out. #4935 #5156
@@ -120,7 +124,7 @@ date: 2024-08-12
 
 ## ☢️ Breaking changes
 
-- Modified the behavior of [Endpoint#withAttrs(Attributes)](type) to merge the original [Attributes](type) 
+- Modified the behavior of [Endpoint#withAttrs(Attributes)](type) to merge the original [Attributes](type)
   with the new one. #5802
   - Instead, [Endpoint#replaceAttrs(Attributes)](type) is added to replace the entire attributes of [Endpoint](type).
 
@@ -150,19 +154,21 @@ date: 2024-08-12
 
 ## 🙇 Thank you
 
-<ThankYou usernames={[
-  'Be-poz',
-  'Dogacel',
-  'KarboniteKream',
-  'eottabom',
-  'ikhoon',
-  'injae-kim',
-  'jrhee17',
-  'kojilin',
-  'minwoox',
-  'moromin',
-  'patcher454',
-  'seonWKim',
-  'thomasbruggink',
-  'trustin'
-]} />
+<ThankYou
+  usernames={[
+    'Be-poz',
+    'Dogacel',
+    'KarboniteKream',
+    'eottabom',
+    'ikhoon',
+    'injae-kim',
+    'jrhee17',
+    'kojilin',
+    'minwoox',
+    'moromin',
+    'patcher454',
+    'seonWKim',
+    'thomasbruggink',
+    'trustin',
+  ]}
+/>

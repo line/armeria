@@ -1,5 +1,5 @@
 ---
-sidebar_label: "5. Implement READ"
+sidebar_label: '5. Implement READ'
 type: step
 tags:
   - rest
@@ -9,7 +9,7 @@ level: basic
 
 # Implementing READ operation
 
-In this step, we'll implement two methods at once. One is for retrieving a single post and another for multiple blog 
+In this step, we'll implement two methods at once. One is for retrieving a single post and another for multiple blog
 posts. By completing this step, you'll learn to map your service with the HTTP GET ([@Get](type)) method, use parameter injection ([@Param](type)), set default parameter value ([@Default](type)), and return a JSON object ([@ProducesJson](type)) as a response.
 
 <TutorialSteps current={5} />
@@ -37,18 +37,18 @@ Map the HTTP GET method for retrieving a single post:
 2. Map this service method with the HTTP GET method by adding the [@Get](type) annotation as follows.
 3. Bind the endpoint `/blogs` to the method.
 
-  ```java title="BlogService.java" {6}
-  import com.linecorp.armeria.server.annotation.Get;
+```java title="BlogService.java" {6}
+import com.linecorp.armeria.server.annotation.Get;
 
-  public final class BlogService {
-    ...
+public final class BlogService {
+  ...
 
-    @Get("/blogs")
-    public void getBlogPost(int id) {
-      // Retrieve a single post
-    }
+  @Get("/blogs")
+  public void getBlogPost(int id) {
+    // Retrieve a single post
   }
-  ```
+}
+```
 
 </TabItem>
 <TabItem label="Multiple posts" value="2">
@@ -59,18 +59,18 @@ Map the HTTP GET method for retrieving multiple posts:
 2. Map this service method with the HTTP GET method by adding the [@Get](type) annotation as follows.
 3. Bind the endpoint `/blogs` to the method.
 
-  ```java title="BlogService.java" {6}
-  import com.linecorp.armeria.server.annotation.Get;
+```java title="BlogService.java" {6}
+import com.linecorp.armeria.server.annotation.Get;
 
-  public final class BlogService {
-    ...
+public final class BlogService {
+  ...
 
-    @Get("/blogs")
-    public void getBlogPosts(boolean descending) {
-      // Retrieve multiple posts
-    }
+  @Get("/blogs")
+  public void getBlogPosts(boolean descending) {
+    // Retrieve multiple posts
   }
-  ```
+}
+```
 
 </TabItem>
 </Tabs>
@@ -109,19 +109,19 @@ Let's handle parameters for retrieving multiple posts:
 2. [Inject the parameter](/docs/server/annotated-service#parameter-injection) by annotating the parameter `descending` with [@Param](type) as in line 8.
 3. Set the default sorting order to descending by annotating the parameter `descending` with [@Default](type), with its parameter as `"true"`.
 
-  ```java title="BlogService.java" showLineNumbers
-  import com.linecorp.armeria.server.annotation.Param;
-  import com.linecorp.armeria.server.annotation.Default;
+```java title="BlogService.java" showLineNumbers
+import com.linecorp.armeria.server.annotation.Param;
+import com.linecorp.armeria.server.annotation.Default;
 
-  public final class BlogService {
-    ...
+public final class BlogService {
+  ...
 
-    @Get("/blogs")
-    public void getBlogPosts(@Param @Default("true") boolean descending) {
-      // Retrieve multiple posts
-    }
+  @Get("/blogs")
+  public void getBlogPosts(@Param @Default("true") boolean descending) {
+    // Retrieve multiple posts
   }
-  ```
+}
+```
 
 </TabItem>
 </Tabs>
@@ -169,7 +169,6 @@ public Iterable<BlogPost> getBlogPosts(@Param @Default("true") boolean descendin
 
 </TabItem>
 </Tabs>
-
 
 ## 4. Return response
 
@@ -219,46 +218,50 @@ public Iterable<BlogPost> getBlogPosts(@Param @Default("true") boolean descendin
 Let's test if we can retrieve a blog post we created.
 
 1. In the `BlogServiceTest` class, add a test method to retrieve the first blog post with ID `0`.
-  ```java title="BlogServiceTest.java"
-  @Test
-  void getBlogPost() throws JsonProcessingException {
-    final WebClient client = WebClient.of(server.httpUri());
-    final AggregatedHttpResponse res = client.get("/blogs/0").aggregate().join();
-    final Map<String, Object> expected = Map.of("id", 0,
-                "title", "My first blog",
-                "content", "Hello Armeria!");
 
-    assertThatJson(res.contentUtf8()).whenIgnoringPaths("createdAt", "modifiedAt")
-                .isEqualTo(mapper.writeValueAsString(expected));
-  }
-  ```
+```java title="BlogServiceTest.java"
+@Test
+void getBlogPost() throws JsonProcessingException {
+  final WebClient client = WebClient.of(server.httpUri());
+  final AggregatedHttpResponse res = client.get("/blogs/0").aggregate().join();
+  final Map<String, Object> expected = Map.of("id", 0,
+              "title", "My first blog",
+              "content", "Hello Armeria!");
+
+  assertThatJson(res.contentUtf8()).whenIgnoringPaths("createdAt", "modifiedAt")
+              .isEqualTo(mapper.writeValueAsString(expected));
+}
+```
+
 2. Add annotations to configure the order our test methods will be executed.
-  The annotations guarantee that the first blog post will be created in the `createBlogPost()` method before we try to retrieve it in the `getBlogPost()` method.
-  ```java title="BlogServiceTest.java"
-  import org.junit.jupiter.api.MethodOrderer.OrderAnnotation;
-  import org.junit.jupiter.api.Order;
-  import org.junit.jupiter.api.TestMethodOrder;
+   The annotations guarantee that the first blog post will be created in the `createBlogPost()` method before we try to retrieve it in the `getBlogPost()` method.
 
-  @TestMethodOrder(OrderAnnotation.class) // Add this
-  class BlogServiceTest {
+```java title="BlogServiceTest.java"
+import org.junit.jupiter.api.MethodOrderer.OrderAnnotation;
+import org.junit.jupiter.api.Order;
+import org.junit.jupiter.api.TestMethodOrder;
+
+@TestMethodOrder(OrderAnnotation.class) // Add this
+class BlogServiceTest {
+  ...
+
+  @Test
+  @Order(1) // Add this
+  void createBlogPost() throws JsonProcessingException {
     ...
-
-    @Test
-    @Order(1) // Add this
-    void createBlogPost() throws JsonProcessingException {
-      ...
-    }
-
-    @Test
-    @Order(2) // Add this
-    void getBlogPost() throws JsonProcessingException {
-      ...
-    }
   }
-  ```
+
+  @Test
+  @Order(2) // Add this
+  void getBlogPost() throws JsonProcessingException {
+    ...
+  }
+}
+```
+
 3. Run all the test cases on your IDE or using Gradle.
 
-  Your client retrieved a blog post from the server successfully if the test is passed.
+Your client retrieved a blog post from the server successfully if the test is passed.
 
 ## 6. Test retrieving multiple posts
 

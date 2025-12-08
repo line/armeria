@@ -4,6 +4,7 @@ You can make Armeria serve your JEE web application on the same JVM and TCP/IP p
 [Apache Tomcat](https://tomcat.apache.org/) or [Jetty](https://www.eclipse.org/jetty/).
 Neither Tomcat nor Jetty will open a server socket or accept an incoming connection.
 All HTTP requests and responses go through Armeria. As a result, you get the following bonuses:
+
 - Your webapp gets HTTP/2 support for free even if your servlet container does not support it.
 - You can run your RPC services on the same JVM and port as your webapp with no performance loss.
 

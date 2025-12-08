@@ -1,5 +1,3 @@
-import versions from '@site/gen-src-temp/versions.json';
-
 # Kotlin integration
 
 ## Coroutines support for annotated services
@@ -14,10 +12,10 @@ You can implement annotated services with [Kotlin coroutines](https://kotlinlang
 by adding the following dependency:
 
 <RequiredDependencies
-boms={[{ groupId: 'com.linecorp.armeria', artifactId: 'armeria-bom' }]}
-dependencies={[
-{ groupId: 'com.linecorp.armeria', artifactId: 'armeria-kotlin' },
-]}
+  boms={[{ groupId: 'com.linecorp.armeria', artifactId: 'armeria-bom' }]}
+  dependencies={[
+    { groupId: 'com.linecorp.armeria', artifactId: 'armeria-kotlin' },
+  ]}
 />
 
 Then, define the suspending function:
@@ -61,7 +59,7 @@ class MyRestService {
 ### Coroutine context and dispatcher
 
 [ServiceRequestContext](type) is injected to the default `CoroutineContext` of a `suspend` function,
-so you can access [ServiceRequestContext](type) from a `suspend` function with [ServiceRequestContext.current()/](type) 
+so you can access [ServiceRequestContext](type) from a `suspend` function with [ServiceRequestContext.current()/](type)
 and the context is inherits to child contexts.
 
 ```kotlin
@@ -71,7 +69,7 @@ class MyContextAwareService {
         assert(ServiceRequestContext.current() != null)
 
         return withContext(myDispatcher) {
-            // Make sure that the ServiceRequestContext is propagated to other CoroutineContext which is needed 
+            // Make sure that the ServiceRequestContext is propagated to other CoroutineContext which is needed
             // for logging, tracing.
             assert(ServiceRequestContext.current() != null)
             ...
@@ -82,7 +80,7 @@ class MyContextAwareService {
 
 ### Coroutine dispatcher
 
-By default, Armeria uses a context-aware event loop as a 
+By default, Armeria uses a context-aware event loop as a
 [coroutine dispatcher](https://kotlin.github.io/kotlinx.coroutines/kotlinx-coroutines-core/kotlinx.coroutines/-coroutine-dispatcher/) to run `suspend` functions.
 A context-aware blocking executor is used as a dispatcher if you annotate a service method with
 [@Blocking](type) or enable [AnnotatedServiceBindingBuilder#useBlockingTaskExecutor(boolean)](type).
@@ -157,6 +155,7 @@ Visit [grpc-kotlin](https://github.com/line/armeria/tree/main/examples/grpc-kotl
 :::
 
 To use gRPC-Kotlin with Armeria, add the following dependency:
+
 <RequiredDependencies
   boms={[{ groupId: 'com.linecorp.armeria', artifactId: 'armeria-bom' }]}
   dependencies={[
@@ -193,7 +192,7 @@ Server
   .http(httpPort)
   .https(httpsPort)
   .service(grpcService)
-  // Add DocService for browsing the list of gRPC services and 
+  // Add DocService for browsing the list of gRPC services and
   // invoking a service operation from a web form.
   // See https://armeria.dev/docs/server-docservice for more information.
   .serviceUnder("/docs", DocService())
@@ -202,7 +201,7 @@ Server
 
 ### Calling a gRPC-Kotlin service
 
-You can use [GrpcClients](type) to specify a coroutine stub that ends with `CoroutineStub` when creating a 
+You can use [GrpcClients](type) to specify a coroutine stub that ends with `CoroutineStub` when creating a
 gRPC-Kotlin client.
 
 ```kotlin
@@ -222,15 +221,15 @@ Please refer to [Calling a gRPC service](/docs/client/grpc) for more information
 ### Customizing `CoroutineContext` for gRPC-Kotlin services
 
 When you use gRPC-Kotlin's suspend functions, the default `CoroutineContext` is the combination of
-[ServiceRequestContext](type) and an event loop `CoroutineDispatcher`. You can access 
-[ServiceRequestContext](type) from the suspend functions with [ServiceRequestContext#current()](type), 
+[ServiceRequestContext](type) and an event loop `CoroutineDispatcher`. You can access
+[ServiceRequestContext](type) from the suspend functions with [ServiceRequestContext#current()](type),
 similar to how you access it in annotated services.
 
 With Armeria's integration with gRPC-Kotlin, it's easy to set up a custom `CoroutineContext` for your
-gRPC-Kotlin service. You can create your own `CoroutineContext` using [CoroutineContextProvider](type), and 
+gRPC-Kotlin service. You can create your own `CoroutineContext` using [CoroutineContextProvider](type), and
 add it to your service through Java SPI.
 
-Note that the [ServiceRequestContext](type) is still a part of the 
+Note that the [ServiceRequestContext](type) is still a part of the
 `CoroutineContext`, but the event loop `CoroutineDispatcher` is disabled if the custom `CoroutineContext`
 is used.
 
@@ -241,9 +240,10 @@ class CustomCoroutineContextProvider : CoroutineContextProvider {
     }
 }
 ```
+
 :::tip
 
-A custom `CoroutineContextProvider` should be registered via Java SPI in 
+A custom `CoroutineContextProvider` should be registered via Java SPI in
 `META-INF/services/com.linecorp.armeria.common.kotlin.CoroutineContextProvider`.
 
 :::

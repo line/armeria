@@ -1,5 +1,5 @@
 ---
-sidebar_label: "6. Implement DELETE"
+sidebar_label: '6. Implement DELETE'
 category: grpc
 tags:
   - server
@@ -33,46 +33,47 @@ Let's implement a service method `deleteBlogPost()` in the `BlogService` class.
 
 1. Add a service method, `deleteBlogPost()`.
 
-  ```java title="BlogService.java"
-  import example.armeria.blog.grpc.DeleteBlogPostRequest;
+```java title="BlogService.java"
+import example.armeria.blog.grpc.DeleteBlogPostRequest;
 
-  public class BlogService extends BlogServiceGrpc.BlogServiceImplBase {
-    @Override
-    public void deleteBlogPost(DeleteBlogPostRequest request, StreamObserver<Empty> responseObserver) {
-      try {
-        // Simulate a blocking API call.
-        Thread.sleep(100);
-      } catch (InterruptedException e) {
-        throw new RuntimeException(e);
-      }
+public class BlogService extends BlogServiceGrpc.BlogServiceImplBase {
+  @Override
+  public void deleteBlogPost(DeleteBlogPostRequest request, StreamObserver<Empty> responseObserver) {
+    try {
+      // Simulate a blocking API call.
+      Thread.sleep(100);
+    } catch (InterruptedException e) {
+      throw new RuntimeException(e);
+    }
 
-      final BlogPost removed = blogPosts.remove(request.getId());
-      if (removed == null) {
-        responseObserver.onError(
-          new BlogNotFoundException("The blog post does not exist. ID: " + request.getId()));
-      } else {
-          responseObserver.onNext(Empty.getDefaultInstance());
-          responseObserver.onCompleted();
-      }
-   }
-  }
-  ```
+    final BlogPost removed = blogPosts.remove(request.getId());
+    if (removed == null) {
+      responseObserver.onError(
+        new BlogNotFoundException("The blog post does not exist. ID: " + request.getId()));
+    } else {
+        responseObserver.onNext(Empty.getDefaultInstance());
+        responseObserver.onCompleted();
+    }
+ }
+}
+```
+
 2. Add Armeria's [GrpcServiceBuilder](type)'s blocking task executor to make all gRPC methods executed
-  in the blocking task executor's thread pool.
+   in the blocking task executor's thread pool.
 
-  By default, service methods are executed on the event loop and are expected to be implemented asynchronously.
-  To implement blocking logic, call `useBlockingTaskExecutor(true)`.
+By default, service methods are executed on the event loop and are expected to be implemented asynchronously.
+To implement blocking logic, call `useBlockingTaskExecutor(true)`.
 
-  ```java title="Main.java"
-  private static Server newServer(int port) throws Exception {
-    final GrpcService grpcService =
-            GrpcService.builder().addService(new BlogService())
-                                 .exceptionMapping(new GrpcExceptionHandler())
-                                 .useBlockingTaskExecutor(true) // Add this
-                                 .build();
-    ...
-  }
-  ```
+```java title="Main.java"
+private static Server newServer(int port) throws Exception {
+  final GrpcService grpcService =
+          GrpcService.builder().addService(new BlogService())
+                               .exceptionMapping(new GrpcExceptionHandler())
+                               .useBlockingTaskExecutor(true) // Add this
+                               .build();
+  ...
+}
+```
 
 ## 2. Test deleting a blog post
 
@@ -130,71 +131,80 @@ This time, we'll add Armeria's [Documentation service](/docs/server/docservice).
 The Documentation service automatically creates documentation of your service methods, as well as providing means to test out the methods.
 
 1. In the `newServer()` method, add a [DocService](type) instance and a request example for [creating blog posts](/docs/tutorials/grpc/implement-create),
-  using [DocServiceBuilder#exampleRequests(Class,String,Iterable)](type). Feel free to add more examples for other service methods.
-  ```java title="Main.java"
-  import com.linecorp.armeria.server.docs.DocService;
-  import com.linecorp.armeria.server.docs.DocServiceFilter;
-  import io.grpc.reflection.v1alpha.ServerReflectionGrpc;
+   using [DocServiceBuilder#exampleRequests(Class,String,Iterable)](type). Feel free to add more examples for other service methods.
 
-  final class Main {
-    private static Server newServer(int port) throws Exception {
-      final BlogPost exampleRequest =
-        BlogPost.newBuilder()
-                .setTitle("Example title")
-                .setContent("Example content")
+```java title="Main.java"
+import com.linecorp.armeria.server.docs.DocService;
+import com.linecorp.armeria.server.docs.DocServiceFilter;
+import io.grpc.reflection.v1alpha.ServerReflectionGrpc;
+
+final class Main {
+  private static Server newServer(int port) throws Exception {
+    final BlogPost exampleRequest =
+      BlogPost.newBuilder()
+              .setTitle("Example title")
+              .setContent("Example content")
+              .build();
+    final DocService docService =
+      DocService.builder()
+                .exampleRequests(BlogServiceGrpc.SERVICE_NAME,
+                                 "CreateBlogPost", exampleRequest)
+                .exclude(DocServiceFilter.ofServiceName(
+                         ServerReflectionGrpc.SERVICE_NAME))
                 .build();
-      final DocService docService =
-        DocService.builder()
-                  .exampleRequests(BlogServiceGrpc.SERVICE_NAME,
-                                   "CreateBlogPost", exampleRequest)
-                  .exclude(DocServiceFilter.ofServiceName(
-                           ServerReflectionGrpc.SERVICE_NAME))
-                  .build();
 
-    }
   }
-  ```
+}
+```
+
 2. Enable unframed requests by setting [GrpcServiceBuilder#enableUnframedRequests(boolean)](type) to `true`.
-  This makes the blog service support requests that are not framed in gRPC wire format.
-  For us, this enables making calls from a web browser.
-  ```java title="Main.java"
-  private static Server newServer(int port) throws Exception {
-  ...
-  final GrpcService grpcService =
-          GrpcService.builder()
-                     .addService(new BlogService())
-                     .enableUnframedRequests(true) // Add this
-                     .exceptionMapping(new GrpcExceptionHandler())
-                     .useBlockingTaskExecutor(true)
-                     .build();
-  ...
-  }
-  ```
+   This makes the blog service support requests that are not framed in gRPC wire format.
+   For us, this enables making calls from a web browser.
+
+```java title="Main.java"
+private static Server newServer(int port) throws Exception {
+...
+final GrpcService grpcService =
+        GrpcService.builder()
+                   .addService(new BlogService())
+                   .enableUnframedRequests(true) // Add this
+                   .exceptionMapping(new GrpcExceptionHandler())
+                   .useBlockingTaskExecutor(true)
+                   .build();
+...
+}
+```
+
 3. Add the [DocService](type) to the server builder.
-  ```java title="Main.java"
-  private static Server newServer(int port) throws Exception {
-    ...
-    return Server.builder()
-                 .http(port)
-                 .service(grpcService)
-                 .serviceUnder("/docs", docService) // Add this
-                 .build();
-  }
-  ```
+
+```java title="Main.java"
+private static Server newServer(int port) throws Exception {
+  ...
+  return Server.builder()
+               .http(port)
+               .service(grpcService)
+               .serviceUnder("/docs", docService) // Add this
+               .build();
+}
+```
+
 4. (Optional) To access the Documentation service result easily, edit the log message in the `main()` method.
-  ```java title="Main.java"
-  public static void main(String[] args) throws Exception {
-    ...
-    logger.info("Server has been started. Serving DocService at http://127.0.0.1:{}/docs",
-                server.activeLocalPort());
-  }
-  ```
+
+```java title="Main.java"
+public static void main(String[] args) throws Exception {
+  ...
+  logger.info("Server has been started. Serving DocService at http://127.0.0.1:{}/docs",
+              server.activeLocalPort());
+}
+```
+
 5. Otherwise, restart the server by running the `Main.main()` method.
 
-  The server and services are launched successfully if you see this message.
-  ```bash
-  Server has been started. Serving DocService at http://127.0.0.1:8080/docs
-  ```
+The server and services are launched successfully if you see this message.
+
+```bash
+Server has been started. Serving DocService at http://127.0.0.1:8080/docs
+```
 
 ## 5. Check the DocService page
 
@@ -202,26 +212,26 @@ Let's test and call our service operations using Armeria's Documentation service
 
 1. Click the URL http://127.0.0.1:8080/docs from the log message or open up the URL on a web browser.
 
-  If you see the Document service page, you've successfully launched the [DocService](type) and server.
+If you see the Document service page, you've successfully launched the [DocService](type) and server.
 
-  ![](/img/tutorial_blogservice_grpc_docservice_start.png)
+![](/img/tutorial_blogservice_grpc_docservice_start.png)
 
 2. Click the **CreateBlogPost()** method link in the left panel. You can make calls to the method from the page.
 
-  ![](/img/tutorial_blogservice_grpc_reqex.png)
+![](/img/tutorial_blogservice_grpc_reqex.png)
 
-  Note that in the **REQUEST BODY** section the values specified in the `exampleRequest` are automatically displayed on the page.
+Note that in the **REQUEST BODY** section the values specified in the `exampleRequest` are automatically displayed on the page.
 
-  ```java title="Main.java"
-  final BlogPost exampleRequest = BlogPost.newBuilder()
-                     .setTitle("Example title")
-                     .setContent("Example content")
-                     .build();
-  ```
+```java title="Main.java"
+final BlogPost exampleRequest = BlogPost.newBuilder()
+                   .setTitle("Example title")
+                   .setContent("Example content")
+                   .build();
+```
 
 3. Click the **SUBMIT** button, and you'll see the blog post information returned in the right panel.
 
-  ![](/img/tutorial_blogservice_grpc_return.png)
+![](/img/tutorial_blogservice_grpc_return.png)
 
 ## What's next
 

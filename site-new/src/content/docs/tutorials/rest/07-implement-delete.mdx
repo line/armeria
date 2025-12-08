@@ -1,5 +1,5 @@
 ---
-sidebar_label: "7. Implement DELETE"
+sidebar_label: '7. Implement DELETE'
 type: step
 tags:
   - rest
@@ -55,18 +55,18 @@ Let's take the blog post ID (`id`) as a path parameter for identifying the post 
 1. Take in the ID value as a path parameter by adding `/blogs/:id` to the [@Delete](type) annotation.
 2. [Inject the path parameter](/docs/server/annotated-service#parameter-injection) to the service method by annotating the parameter with [@Param](type).
 
-  ```java title="BlogService.java" {6}-7
-  import com.linecorp.armeria.server.annotation.Param;
+```java title="BlogService.java" {6}-7
+import com.linecorp.armeria.server.annotation.Param;
 
-  public final class BlogService {
-    ...
+public final class BlogService {
+  ...
 
-    @Delete("/blogs/:id")
-    public void deleteBlogPost(@Param int id) {
-      // Delete a blog post
-    }
+  @Delete("/blogs/:id")
+  public void deleteBlogPost(@Param int id) {
+    // Delete a blog post
   }
-  ```
+}
+```
 
 ## 3. Implement service code
 
@@ -95,16 +95,16 @@ What if there is no such post to delete? We can check if the blog exists before 
 
 1. Throw an `IllegalArgumentException` if no blog post exists with a given ID.
 
-  ```java title="BlogService.java"
-  @Delete("/blogs/:id")
-  public void deleteBlogPost(@Param int id) {
-    ...
+```java title="BlogService.java"
+@Delete("/blogs/:id")
+public void deleteBlogPost(@Param int id) {
+  ...
 
-    if (removed == null) {
-      throw new IllegalArgumentException("The blog post does not exist. ID: " + id);
-    }
+  if (removed == null) {
+    throw new IllegalArgumentException("The blog post does not exist. ID: " + id);
   }
-  ```
+}
+```
 
 2. Create an exception handler for the blog service:
    1. Create a file, `BadRequestExceptionHandler.java`.
@@ -112,10 +112,10 @@ What if there is no such post to delete? We can check if the blog exists before 
 
    ```java title="BadRequestExceptionHandler.java"
    package example.armeria.server.blog;
-   
+
    import com.linecorp.armeria.server.annotation.ExceptionHandlerFunction;
    import com.fasterxml.jackson.databind.ObjectMapper;
-   
+
    public class BadRequestExceptionHandler implements ExceptionHandlerFunction {
      private static final ObjectMapper mapper = new ObjectMapper();
    }
@@ -123,37 +123,37 @@ What if there is no such post to delete? We can check if the blog exists before 
 
 3. Implement your own exception handler by overriding the default `handleException()` method. Add a code block for handling the `IllegalArgumentException` thrown. For this tutorial, return a BAD REQUEST as the response.
 
-  ```java title="BadRequesExceptionHandler.java" {11,15,17}
-  import com.fasterxml.jackson.databind.node.ObjectNode;
-  import com.linecorp.armeria.common.HttpResponse;
-  import com.linecorp.armeria.common.HttpStatus;
-  import com.linecorp.armeria.server.ServiceRequestContext;
+```java title="BadRequesExceptionHandler.java" {11,15,17}
+import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.HttpStatus;
+import com.linecorp.armeria.server.ServiceRequestContext;
 
-  public class BadRequestExceptionHandler implements ExceptionHandlerFunction {
-    ...
+public class BadRequestExceptionHandler implements ExceptionHandlerFunction {
+  ...
 
-    @Override
-    public HttpResponse handleException(ServiceRequestContext ctx, HttpRequest req, Throwable cause) {
-      if (cause instanceof IllegalArgumentException) {
-          String message = cause.getMessage();
-          ObjectNode objectNode = mapper.createObjectNode();
-          objectNode.put("error", message);
-          return HttpResponse.ofJson(HttpStatus.BAD_REQUEST, objectNode);
-      }
-      return ExceptionHandlerFunction.fallthrough();
+  @Override
+  public HttpResponse handleException(ServiceRequestContext ctx, HttpRequest req, Throwable cause) {
+    if (cause instanceof IllegalArgumentException) {
+        String message = cause.getMessage();
+        ObjectNode objectNode = mapper.createObjectNode();
+        objectNode.put("error", message);
+        return HttpResponse.ofJson(HttpStatus.BAD_REQUEST, objectNode);
     }
+    return ExceptionHandlerFunction.fallthrough();
   }
-  ```
+}
+```
 
 4. Assign the exception handler to the `deleteBlogPost()` method by annotating the `deletePost()` method with the [@ExceptionHandler](type) as follows.
 
-  ```java title="BlogService.java" {2}
-  import com.linecorp.armeria.server.annotation.ExceptionHandler;
+```java title="BlogService.java" {2}
+import com.linecorp.armeria.server.annotation.ExceptionHandler;
 
-  @Delete("/blogs/:id")
-  @ExceptionHandler(BadRequestExceptionHandler.class)
-  public void deleteBlogPost(@Param int id) { ... }
-  ```
+@Delete("/blogs/:id")
+@ExceptionHandler(BadRequestExceptionHandler.class)
+public void deleteBlogPost(@Param int id) { ... }
+```
 
 ### Add blocking
 

@@ -7,6 +7,7 @@ date: 2019-10-04
 ## New features
 
 - You can now decorate multiple services by path mapping. See the [documentation](https://armeria.dev/docs/server-decorator#decorating-multiple-services-by-path-mapping) for more information. #582 #2040 #2057
+
   ```java
   ServerBuilder sb = new ServerBuilder();
   // Register vipService and memberService under '/users' path
@@ -21,7 +22,9 @@ date: 2019-10-04
       return delegate.serve(ctx, req);
   });
   ```
+
   You can also use fluent route builder with `routeDecorator()` to decorate more than one service by path mapping.
+
   ```java
   // Decorate services under '/users' path with fluent route builder
   sb.routeDecorator()
@@ -33,6 +36,7 @@ date: 2019-10-04
         return delegate.serve(ctx, req);
     });
   ```
+
 - You can now get the current `HttpRequest` and `RpcRequest` from `RequestContext` so you don’t need to downcast `Request` to `HttpRequest` or `RpcRequest`. #2089 #2120
 
   ```java

@@ -55,7 +55,6 @@ date: 2019-04-23
     SettableHealthChecker myHealthChecker = new SettableHealthChecker().setHealthy(false);
     ```
 - You can now specify different path mappings for different CORS policies. #1698 #1699
-
   - Using a builder pattern:
 
     ```java
@@ -98,7 +97,6 @@ date: 2019-04-23
     ```
 
 - You can now build a gRPC service without depending on upstream gRPC API. #1720 #1727
-
   - Added `armeria-grpc-protocol` which provides a core functionality required for building a gRPC service, which does not depend on `io.grpc:grpc-java` but only on `com.google.protobuf:protobuf-java`.
   - Added `AbstractUnaryGrpcService` which allows you to implement a unary gRPC easily without depending on `io.grpc:grpc-java`.
 

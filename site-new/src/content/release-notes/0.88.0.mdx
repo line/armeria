@@ -37,6 +37,7 @@ date: 2019-07-03
           .retryBackoff(Backoff.fixed(10000).withJitter(0.3))
           .build();
   ```
+
   - By default, `HealthCheckedEndpointGroup` will now add 20% jitter to the health check request interval.
 - A new module `armeria-brave` has been added to replace the deprecated `armeria-zipkin`. #1840
   - The package name has been changed from `com.linecorp.armeria.{common,client,server}.tracing` to `com.linecorp.armeria.{common,client,server}.brave`.
@@ -60,6 +61,7 @@ date: 2019-07-03
       }
   }
   ```
+
   - We also added `RetrofitMeterIdPrefixFunction` which provides the sensible default `MeterIdPrefixFunction` for Retrofit calls.
 
 {/* truncate */}

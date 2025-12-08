@@ -1,5 +1,5 @@
 ---
-sidebar_label: "6. Implement UPDATE"
+sidebar_label: '6. Implement UPDATE'
 type: step
 tags:
   - rest
@@ -53,36 +53,37 @@ For updating a blog post, let's take a blog post ID (`id`) and new blog post inf
 2. [Inject the path parameter](/docs/server/annotated-service#parameter-injection) to the service method by annotating the parameter with [@Param](type).
 3. [Convert request body](/docs/server/annotated-service#converting-an-http-request-to-a-java-object) into a Java object by annotating the `BlogPost` parameter with [@RequestObject](type).
 
-  ```java title="BlogService.java"
-  import com.linecorp.armeria.server.annotation.Param;
-  import com.linecorp.armeria.server.annotation.RequestObject;
+```java title="BlogService.java"
+import com.linecorp.armeria.server.annotation.Param;
+import com.linecorp.armeria.server.annotation.RequestObject;
 
-  public final class BlogService {
-    ...
+public final class BlogService {
+  ...
 
-    // Instructions 1 to 3
-    @Put("/blogs/:id")
-    public void updateBlogPost(@Param int id, @RequestObject BlogPost blogPost) {
-      // Update a blog post
-    }
+  // Instructions 1 to 3
+  @Put("/blogs/:id")
+  public void updateBlogPost(@Param int id, @RequestObject BlogPost blogPost) {
+    // Update a blog post
   }
-  ```
+}
+```
+
 4. For conversion, annotate blog post constructor to map JSON object keys to blog post object members. You can find more information on `@JsonCreator` [here](https://www.baeldung.com/jackson-annotations#1-jsoncreator).
 
-  ```java title="BlogPost.java" {7-9}
-  import com.fasterxml.jackson.annotation.JsonCreator;
-  import com.fasterxml.jackson.annotation.JsonProperty;
+```java title="BlogPost.java" {7-9}
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
-  public final class BlogPost {
+public final class BlogPost {
+  ...
+
+  @JsonCreator
+  BlogPost(@JsonProperty("id") int id, @JsonProperty("title") String title,
+           @JsonProperty("content") String content) {
     ...
-
-    @JsonCreator
-    BlogPost(@JsonProperty("id") int id, @JsonProperty("title") String title,
-             @JsonProperty("content") String content) {
-      ...
-    }
   }
-  ```
+}
+```
 
 ## 3. Implement service code
 

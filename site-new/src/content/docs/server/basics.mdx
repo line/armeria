@@ -136,21 +136,21 @@ glob pattern matching.
 Also, we decorated the second service using [LoggingService](type), which logs all requests and responses.
 You might be interested in decorating a service using other decorators, for example to gather metrics.
 
-You can also use an arbitrary object that's annotated by the [@Path](type) annotation 
+You can also use an arbitrary object that's annotated by the [@Path](type) annotation
 using `annotatedService()`.
 
 ## Path patterns
 
 You can use the following path patterns to map an HTTP request path to a service or a decorator.
 
-| Pattern | Example |
-|---------|---------|
-| Exact match | `/foo/bar` or `exact:/foo/bar` |
-| Curly-brace style path variables | `/users/{userId}` |
-| Colon style path variables | `/list/:productType/by/:ordering` |
-| Prefix match | `prefix:/files` |
-| Glob pattern | `glob:/*/downloads/**` |
-| Regular expression | `regex:^/files/(?<filePath>.*)$` |
+| Pattern                          | Example                           |
+| -------------------------------- | --------------------------------- |
+| Exact match                      | `/foo/bar` or `exact:/foo/bar`    |
+| Curly-brace style path variables | `/users/{userId}`                 |
+| Colon style path variables       | `/list/:productType/by/:ordering` |
+| Prefix match                     | `prefix:/files`                   |
+| Glob pattern                     | `glob:/*/downloads/**`            |
+| Regular expression               | `regex:^/files/(?<filePath>.*)$`  |
 
 :::tip
 
@@ -158,6 +158,7 @@ By default, colon style path variables assume that a path segment starting with 
 If the colon starting a path segment should signify a literal, you can prefix the ':' with '\\'.
 
 e.g.
+
 - `/foo/\\:colon:` will match a request with path `/foo/:colon:`.
   - Note that only the first colon starting the segment should be escaped.
 - `/foo/:colon` will match a request with path `/foo/bar`. The path parameter 'colon' will be bound to 'bar'.
@@ -207,10 +208,9 @@ sb.https(8443)
 ...
 ```
 
-
 ## PROXY protocol
 
-Armeria supports both text (v1) and binary (v2) versions of 
+Armeria supports both text (v1) and binary (v2) versions of
 [PROXY protocol](https://www.haproxy.org/download/1.8/doc/proxy-protocol.txt).
 If your server is behind a load balancer such as [HAProxy](https://www.haproxy.org/) and
 [AWS ELB](https://aws.amazon.com/elasticloadbalancing/), you could consider enabling the PROXY protocol:
@@ -226,7 +226,6 @@ sb.port(8443, PROXY, HTTPS);
 ...
 ```
 
-
 ## Serving HTTP and HTTPS on the same port
 
 For whatever reason, you may have to serve both HTTP and HTTPS on the same port. Armeria is one of the few
@@ -239,7 +238,6 @@ sb.port(8888, HTTP, HTTPS);
 sb.port(9999, PROXY, HTTP, HTTPS);
 ...
 ```
-
 
 ## Virtual hosts
 
@@ -292,7 +290,7 @@ sb.clientAddressSources(ClientAddressSource.ofHeader(HttpHeaderNames.FORWARDED),
 
 // Get an IP address of a client who initiated a request.
 sb.service("/", (ctx, res) ->
-        HttpResponse.of("A request was initiated by %s!", 
+        HttpResponse.of("A request was initiated by %s!",
                         ctx.clientAddress().getHostAddress()));
 ```
 

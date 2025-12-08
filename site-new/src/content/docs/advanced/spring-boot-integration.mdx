@@ -14,8 +14,8 @@ which can be conveniently configured through beans.
 
 :::tip
 
-  Visit [armeria-examples/spring-boot-tomcat](https://github.com/line/armeria/tree/main/examples/spring-boot-tomcat) to
-  find a fully working example.
+Visit [armeria-examples/spring-boot-tomcat](https://github.com/line/armeria/tree/main/examples/spring-boot-tomcat) to
+find a fully working example.
 
 :::
 
@@ -23,9 +23,7 @@ You can integrate your Spring MVC with Armeria using [TomcatService](type).
 First, add the following dependency to your application.
 
 <RequiredDependencies
-  boms={[
-    { groupId: 'com.linecorp.armeria', artifactId: 'armeria-bom' }
-  ]}
+  boms={[{ groupId: 'com.linecorp.armeria', artifactId: 'armeria-bom' }]}
   dependencies={[
     {
       groupId: 'com.linecorp.armeria',
@@ -34,7 +32,7 @@ First, add the following dependency to your application.
     {
       groupId: 'com.linecorp.armeria',
       artifactId: 'armeria-tomcat10',
-    }
+    },
   ]}
 />
 
@@ -93,8 +91,8 @@ Although it may not seem like much has changed compared to before, your applicat
 
 :::tip
 
-  Visit [armeria-examples/spring-boot-minimal](https://github.com/line/armeria-examples/tree/main/spring-boot-minimal) to
-  find a fully working example.
+Visit [armeria-examples/spring-boot-minimal](https://github.com/line/armeria-examples/tree/main/spring-boot-minimal) to
+find a fully working example.
 
 :::
 
@@ -104,14 +102,12 @@ You can leverage the automatic configuration and dependency injection features o
 First, you need the `armeria-spring-boot3-starter` dependency:
 
 <RequiredDependencies
-  boms={[
-    { groupId: 'com.linecorp.armeria', artifactId: 'armeria-bom' }
-  ]}
+  boms={[{ groupId: 'com.linecorp.armeria', artifactId: 'armeria-bom' }]}
   dependencies={[
     {
       groupId: 'com.linecorp.armeria',
       artifactId: 'armeria-spring-boot3-starter',
-    }
+    },
   ]}
 />
 
@@ -203,7 +199,7 @@ armeria:
         - HTTP
   # Add the below configuration
   internal-services:
-    include: docs, health, metrics, actuator  # you can add all of the services using `all`
+    include: docs, health, metrics, actuator # you can add all of the services using `all`
     port: 8090
 ```
 
@@ -213,9 +209,9 @@ It is acceptable to set the port of the internal service to be the same as one o
 
 :::tip
 
-  The internal services should be configured using the beans described in the documentation.
-  Avoid directly using the [ServerBuilder](type) method with [ArmeriaServerConfigurator](type) or `Consumer<ServerBuilder>` beans,
-  as they may be overridden by Armeria's automatic configuration.
+The internal services should be configured using the beans described in the documentation.
+Avoid directly using the [ServerBuilder](type) method with [ArmeriaServerConfigurator](type) or `Consumer<ServerBuilder>` beans,
+as they may be overridden by Armeria's automatic configuration.
 
 :::
 
@@ -294,14 +290,14 @@ armeria:
   internal-services:
     include: metrics
   metrics-path: /internal/metrics
-  enable-metrics: true  # default is true
+  enable-metrics: true # default is true
 ```
 
 :::tip
 
-  The current internal metric service in Armeria supports automatic configuration for Prometheus and Dropwizard monitoring systems.
-  If you intend to use a different monitoring system, you will need to utilize the [ArmeriaServerConfigurator](type) or
-  `Consumer<ServerBuilder>` bean and set `armeria.enable-metrics` to `false` to disable the auto-configured service.
+The current internal metric service in Armeria supports automatic configuration for Prometheus and Dropwizard monitoring systems.
+If you intend to use a different monitoring system, you will need to utilize the [ArmeriaServerConfigurator](type) or
+`Consumer<ServerBuilder>` bean and set `armeria.enable-metrics` to `false` to disable the auto-configured service.
 
 :::
 
@@ -318,9 +314,9 @@ public PrometheusMeterRegistry prometheusMeterRegistry() {
 
 :::tip
 
-  If you are using [Spring Boot Actuator](https://docs.spring.io/spring-boot/docs/current/actuator-api/htmlsingle/),
-  the `PrometheusMeterRegistry` bean will already be configured by the actuator. Therefore, you should not create the above bean
-  to avoid potential problems.
+If you are using [Spring Boot Actuator](https://docs.spring.io/spring-boot/docs/current/actuator-api/htmlsingle/),
+the `PrometheusMeterRegistry` bean will already be configured by the actuator. Therefore, you should not create the above bean
+to avoid potential problems.
 
 :::
 
@@ -357,7 +353,7 @@ In order to use the actuator service, you need to first add the following depend
     {
       groupId: 'com.linecorp.armeria',
       artifactId: 'armeria-spring-boot3-actuator-starter',
-    }
+    },
   ]}
 />
 
@@ -403,6 +399,7 @@ public DependencyInjector dependencyInjector() {
     );
 }
 ```
+
 You can also utilize a dependency injector that leverages the [`BeanFactory`](https://docs.spring.io/spring-framework/docs/current/javadoc-api/org/springframework/beans/factory/BeanFactory.html)
 of Spring. After configuring the properties, you can effortlessly create beans to be injected, similar to how you would do it in a Spring-based setup.
 

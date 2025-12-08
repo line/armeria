@@ -7,6 +7,7 @@ date: 2021-04-07
 ## 🌟 New features
 
 - You can now send and handle multipart requests and responses. #253 #3327
+
   ```java
   // Send a multipart message.
   WebClient client = WebClient.of("http://example.com/");
@@ -26,6 +27,7 @@ date: 2021-04-07
             }));
        });
   ```
+
 - Armeria now provides various useful extensions and conversions for Scala. #3395
   - See [Scala integration](/docs/advanced/scala) for the full features.
 - You can now create a [StreamMessage](type) from a `Path` or a `File`. #3344
@@ -35,6 +37,7 @@ date: 2021-04-07
   ```
 - You can now filter or transform values of a [StreamMessage](type) using
   [StreamMessage#filter(Predicate)](type) or [StreamMessage#map(Function)](type). #3351
+
   ```java
   // Filter.
   StreamMessage<Integer> source = StreamMessage.of(1, 2, 3, 4, 5);
@@ -44,7 +47,9 @@ date: 2021-04-07
   StreamMessage<Integer> source = StreamMessage.of(1, 2, 3, 4, 5);
   StreamMessage<Boolean> isEven = source.map(x -> x % 2 == 0);
   ```
+
 - You can now send a different response depending on the exception. #3209 #3413
+
   ```java
   Server.builder().exceptionHandler((ctx, cause) -> {
       if (cause instanceof RequestTimeoutException) {
@@ -56,6 +61,7 @@ date: 2021-04-07
       return null;
   })...
   ```
+
 - You can now convert an exception into an [RpcResponse](type) in [THttpService](type). #3349 #3383
   ```java
   THttpService.builder()
@@ -115,6 +121,7 @@ date: 2021-04-07
   ```
 - You can now convert a stream of Protobuf Messages into
   [JSON Text sequences](https://datatracker.ietf.org/doc/rfc7464/) using an annotated service. #3394
+
   ```java
   @Get("/items")
   @ProducesJsonSequences
@@ -130,6 +137,7 @@ date: 2021-04-07
                        MyProtobufMessage.newBuilder()...build());
   }
   ```
+
 - You can now customize the default service name of a [RequestLog](type). #3232 #3366
   ```java
   Server.builder()
@@ -174,6 +182,7 @@ date: 2021-04-07
   }
   ```
 - You can now easily set 'cookie' or 'set-cookie' headers. #3388 #3391
+
   ```java
   Cookie cookie = Cookie.of("cookie", "value");
   RequestHeaders headers = RequestHeaders.builder(HttpMethod.GET, "/")
@@ -188,6 +197,7 @@ date: 2021-04-07
                                            .build();
   assert headers.cookies().equals(Cookies.of(setCookie1, setCookie2));
   ```
+
 - You can now use `req.root_id` [BuiltInProperty](type) to log the ID of [RequestContext#root()](type).
   #3429 #3433
 - You can now use Thrift 0.14.0 with the new `armeria-thrift0.14` module. #3470 #3422
@@ -251,6 +261,7 @@ date: 2021-04-07
 - [ServiceRequestContext](type) is added to the parameter of `handleMessage` in
   [AbstractUnaryGrpcService](type). #3403
   - The return type is also changed to `CompletionStage`. #3409
+
   ```java
   protected abstract CompletionStage<byte[]> handleMessage(
           ServiceRequestContext ctx, byte[] message);
@@ -258,6 +269,7 @@ date: 2021-04-07
   protected final CompletionStage<ByteBuf> handleMessage(
           ServiceRequestContext ctx, ByteBuf message) {...}
   ```
+
 - [GrpcStatusFunction](type) now extends `BiFunction<Throwable, Metadata, Status>`. #3329
 - The `numberSteps` method in [WeightRampingUpStrategyBuilder](type) is now changed to `totalSteps`. #3377
 
@@ -314,6 +326,6 @@ date: 2021-04-07
     'selectAll',
     'szeiger',
     'trustin',
-    'Waynefn'
+    'Waynefn',
   ]}
 />

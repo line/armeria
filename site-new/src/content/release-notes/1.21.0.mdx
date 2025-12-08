@@ -8,9 +8,10 @@ date: 2022-12-22
 
 - You can now use [@RequestTimeout](type) to set a request timeout to annotated services and
   gRPC services. #4463 #4499
+
   ```java
   import com.linecorp.armeria.server.annotation.decorator.RequestTimeout;
-  
+
   @RequestTimeout(value = 1, unit = TimeUnit.SECONDS) // 👈👈👈
   class MyAnnotationService {
     // A request gets timed out after 1 second.
@@ -26,6 +27,7 @@ date: 2022-12-22
     }
   }
   ```
+
 - You can now set the default `MeterRegistry` by implementing a custom [FlagsProvider](type). #4541
   ```java
   public class CustomFlagsProvider implements FlagsProvider {
@@ -37,6 +39,7 @@ date: 2022-12-22
   ```
 - You can now set the default [HttpHeaders](type) to [Server](type), [VirtualHost](type) and
   [Service](type). #4520
+
   ```java
   static AsciiString CUSTOM_HEADER =
     HttpHeaderNames.of("x-custom-header");
@@ -50,10 +53,11 @@ date: 2022-12-22
     .path("/foo")
     .setHeader(CUSTOM_HEADER, "service-default-header")
   ```
+
 - You can now set `:authority` or `Host` header whose value is different from [Endpoint#host()](type) using
   [ClientBuilder#setHeader(CharSequence,Object)](type). #4440 #4520
   - This will be useful when you want to send a request through a proxy server.
-  ```java 
+  ```java
   WebClient
     // A request is sent to 'reverse-proxy.example.com'.
     .builder("http://reverse-proxy.example.com/")
@@ -72,7 +76,7 @@ date: 2022-12-22
 
 - [DecodingClient](type) and [DecodingService](type) can now limit the maximum length of decompressed
   data. #4469 #4564
-- `synchronized` blocks have been replaced with [ReentrantLock](type) for better virtual thread 
+- `synchronized` blocks have been replaced with [ReentrantLock](type) for better virtual thread
   compatibility. #4551 #4549
 - [ServiceSpecification](type) for [DocService](type) is lazily loaded so as to not block a [Server](type)
   from starting. #4491
@@ -134,18 +138,20 @@ date: 2022-12-22
 
 ## 🙇 Thank you
 
-<ThankYou usernames={[
-  'Bue-von-hon',
-  'Dogacel',
-  'Jimexist',
-  'Lincong',
-  'Yuri999',
-  'chris-ryan-square',
-  'ikhoon',
-  'jrhee17',
-  'ks-yim',
-  'minwoox',
-  'mscheong01',
-  'tobias-',
-  'Trustin'
-]} />
+<ThankYou
+  usernames={[
+    'Bue-von-hon',
+    'Dogacel',
+    'Jimexist',
+    'Lincong',
+    'Yuri999',
+    'chris-ryan-square',
+    'ikhoon',
+    'jrhee17',
+    'ks-yim',
+    'minwoox',
+    'mscheong01',
+    'tobias-',
+    'Trustin',
+  ]}
+/>

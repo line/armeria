@@ -58,6 +58,7 @@ public class MyHelloService extends HelloServiceGrpc.HelloServiceImplBase {
     }
 }
 ```
+
 :::tip
 
 It is recommended to use the build plugin as explained in
@@ -67,6 +68,7 @@ running `protoc` manually.
 :::
 
 ## `GrpcService`
+
 Once you've finished the implementation of the service, you need to build a [GrpcService](type) using
 a [GrpcServiceBuilder](type) and add it to the [ServerBuilder](type):
 
@@ -98,7 +100,6 @@ If you don't want your [GrpcService](type) support all those formats, specify th
 using [GrpcServiceBuilder#supportedSerializationFormats(Iterable)](type).
 
 :::
-
 
 ## Decorating a `GrpcService`
 
@@ -199,6 +200,7 @@ sb.service(GrpcService.builder()
 Server server = sb.build();
 server.start();
 ```
+
 Please refer to [Configuring CORS](/docs/server/cors) for more information.
 
 ## Unframed requests
@@ -300,7 +302,9 @@ sb.service(GrpcService.builder()
                       .useBlockingTaskExecutor(true) // 👈
                       .build());
 ```
+
 ## Exception propagation
+
 It can be very useful to enable [Flags#verboseResponses()](type) in your server by specifying the
 `-Dcom.linecorp.armeria.verboseResponses=true` system property, which will automatically return
 information about an exception thrown in the server to gRPC clients. Armeria clients will automatically
@@ -311,6 +315,7 @@ to all your clients before enabling this flag!
 See more details at [Client gRPC](/docs/client/grpc).
 
 ## Server Reflection
+
 Armeria supports gRPC server reflection - just add an instance of `ProtoReflectionService` to your server.
 
 ```java
@@ -326,9 +331,11 @@ sb.service(GrpcService.builder()
 Server server = sb.build();
 server.start();
 ```
+
 For more information, see the official [gRPC Server Reflection tutorial](https://github.com/grpc/grpc-java/blob/master/documentation/server-reflection-tutorial.md).
 
 ## See also
+
 - [Client gRPC](/docs/client/grpc)
 - [Kotlin coroutine gRPC service](/docs/advanced/kotlin#coroutines-support-for-grpc-kotlin)
 

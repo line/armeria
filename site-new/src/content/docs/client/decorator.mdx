@@ -10,7 +10,6 @@ There are basically two ways to write a decorating client:
 - Implementing [DecoratingHttpClientFunction](type) and [DecoratingRpcClientFunction](type)
 - Extending [SimpleDecoratingClient](type)
 
-
 ## Implementing `DecoratingHttpClientFunction` and `DecoratingRpcClientFunction`
 
 [DecoratingHttpClientFunction](type) and [DecoratingRpcClientFunction](type) are functional interfaces that
@@ -34,7 +33,7 @@ MyService.Iface client = cb.build(MyService.Iface.class);
 ## Extending `SimpleDecoratingHttpClient` and `SimpleDecoratingRpcClient`
 
 If your decorator is expected to be reusable, it is recommended to define a new top-level class that extends
-[SimpleDecoratingHttpClient](type) or [SimpleDecoratingRpcClient](type) depending on whether 
+[SimpleDecoratingHttpClient](type) or [SimpleDecoratingRpcClient](type) depending on whether
 you are decorating an [HttpClient](type) or an [RpcClient](type):
 
 ```java
@@ -88,7 +87,6 @@ WebClient myClient = cb.build(WebClient.class);
 ```
 
 The following diagram describes how an HTTP request and HTTP response are gone through decorators:
-
 
 ```bob-svg
 +-----------+  req  +-----------+  req  +-----------+  req  +------------------+    req    +--------------+
@@ -159,14 +157,14 @@ cb.decorator(DecodingClient.newDecorator());
 cb.decorator(ContentPreviewingClient.newDecorator(1000));
 ```
 
-[DecodingClient](type) decodes the content of HTTP responses. [ContentPreviewingClient](type) is 
+[DecodingClient](type) decodes the content of HTTP responses. [ContentPreviewingClient](type) is
 [Enabling content previews](/docs/advanced/structured-logging#enabling-content-previews)
-of the HTTP response by setting it to the [RequestLog](type). 
+of the HTTP response by setting it to the [RequestLog](type).
 Because it's evaluated after [DecodingClient](type) from the point of view of an
 HTTP response, which means that the response content is set after it's decoded, you will see the decoded
 response content preview. If the two decorators are added in the opposite order, you will get the encoded
 preview because [ContentPreviewingClient](type) is evaluated first for the HTTP response.
-For [RetryingClient](type), please check out 
+For [RetryingClient](type), please check out
 [`RetryingClient` with logging](/docs/client/retry#retryingclient-with-logging).
 
 ## Modifying responses
@@ -212,8 +210,9 @@ cb.decorator((delegate, ctx, req) -> {
 ### Using [FilteredHttpResponse](type):
 
 A couple of caveats to note here.
-* Informational response headers may occur zero or more times.
-* [HttpData](type) will almost always just be a part of the whole response data
+
+- Informational response headers may occur zero or more times.
+- [HttpData](type) will almost always just be a part of the whole response data
   unless the response has been passed through [HttpResponse#aggregate()](type).
 
 ```java
@@ -268,7 +267,7 @@ cb.decorator((delegate, ctx, req) -> {
 ## Reacting to or logging responses
 
 If modification is not required, e.g. when handling quota responses from the service, and it doesn't need to
-look at the [HttpData](type), it can be achieved in a more performant way via 
+look at the [HttpData](type), it can be achieved in a more performant way via
 `ClientRequestContext.log().whenAvailable(RequestLogProperty).thenAccept(...)`. Accessing the
 [ClientRequestContext](type) can be done via either wrapping in a decorator (and using the ctx or by using
 [ClientRequestContextCaptor](type):

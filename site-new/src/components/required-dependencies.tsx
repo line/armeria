@@ -2,7 +2,7 @@ import React from 'react';
 import CodeBlock from '@theme/CodeBlock';
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
-import versionsJson from '@site/gen-src-temp/versions.json';
+import versionsJson from '../../gen-src/versions.json';
 
 const versions: any = versionsJson;
 

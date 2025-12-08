@@ -10,7 +10,7 @@ tags:
 level: basic
 ---
 
-import versions from '@site/gen-src-temp/versions.json';
+import versions from '../../../../../gen-src/versions.json';
 
 # REST tutorial introduction
 
@@ -47,12 +47,12 @@ To run and develop the sample service, set your computer with the requirements:
 
 The [sample service](https://github.com/line/armeria-examples/tree/main/tutorials/rest-api-annotated-service) provides you implementations of CRUD operations as specified below.
 
-| Operation | Method | Annotation |
-| -- | -- | -- |
-| Create | `createBlogPost()` | [@Post](type) |
-| Read | `getBlogPost()`, `getBlogPosts()` | [@Get](type) |
-| Update | `updateBlogPost()` | [@Put](type) |
-| Delete | `deleteBlogPost()` | [@Delete](type) |
+| Operation | Method                            | Annotation      |
+| --------- | --------------------------------- | --------------- |
+| Create    | `createBlogPost()`                | [@Post](type)   |
+| Read      | `getBlogPost()`, `getBlogPosts()` | [@Get](type)    |
+| Update    | `updateBlogPost()`                | [@Put](type)    |
+| Delete    | `deleteBlogPost()`                | [@Delete](type) |
 
 The sample service code consists of the following folders and files.
 
@@ -76,7 +76,7 @@ rest-api-annotated-service/
 
 :::tip
 
-  To keep our focus on Armeria, this tutorial and the sample service implement memory-based operations instead of using a database.
+To keep our focus on Armeria, this tutorial and the sample service implement memory-based operations instead of using a database.
 
 :::
 
@@ -87,13 +87,17 @@ Using Armeria's [Documentation Service](/docs/server/docservice), you can see a 
 
 1. Download the code from [here](https://github.com/line/armeria-examples/tree/main/tutorials/rest-api-annotated-service).
 2. Build the sample service using the Gradle Wrapper.
-  ```bash
-  $ ./gradlew build
-  ```
+
+```bash
+$ ./gradlew build
+```
+
 3. Run the sample service again, using the Gradle Wrapper.
-  ```bash
-  $ ./gradlew run
-  ```
+
+```bash
+$ ./gradlew run
+```
+
 4. Open the Documentation service page on your web browser at http://127.0.0.1:8080/docs.
 
 ## Try writing blog service yourself

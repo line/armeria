@@ -68,6 +68,7 @@ date: 2020-07-07
   CompletableFuture<Endpoint> future =
           group.select(ctx, ctx.eventLoop(), 1000 /* timeout */ );
   ```
+
   - Thanks to this change, you can now avoid the [EmptyEndpointGroupException](type) at least
     for the case where the [Endpoint](typeplural) disappear temporarily.
 - You can now get the snapshot status of circuit breakers from monitoring system. #2841
@@ -146,7 +147,7 @@ date: 2020-07-07
 - The APIs of [HttpFile](type) and [HttpVfs](type) have been changed. #1668 #2845 #2861
 - [AggregatedHttpFile](type) does not extend [HttpFile](type) anymore. #2861
 - [AbstractHttpFile#headers()](type) is now [AbstractHttpFile#additionalHeaders()](type). #2861
-- [EndpointSelector](type) API has been changed. #2837  #1910
+- [EndpointSelector](type) API has been changed. #2837 #1910
   - It is not a functional interface anymore.
   - `select()` has been renamed to [EndpointSelector#selectNow(ClientRequestContext)](type).
   - An asynchronous [EndpointSelector#select(ClientRequestContext,ScheduledExecutorService,long)](type)

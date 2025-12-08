@@ -73,18 +73,21 @@ date: 2022-07-14
 <div className="noBullet">
 
 🔰 Want to contribute but not sure where to start from? Try one of these:
-  - #4237 Support for request scoped DataLoader for GraphQL-Java
-  ```java
-  class GraphqlServiceBuilder {
-      public GraphqlServiceBuilder dataLoaderRegistry(
-        Function<ServiceRequestContext, DataLoaderRegistry>
-        dataLoaderRegistrySupplier) {
-           // This method will be mutually exclusive
-           // with configureDataLoaderRegistry(...)
-      }
-  }
-  ```
-  - #4347 Show the full stack trace of [CompositeException](type) when the system property `verboseExceptions` is `true`
+
+- #4237 Support for request scoped DataLoader for GraphQL-Java
+
+```java
+class GraphqlServiceBuilder {
+    public GraphqlServiceBuilder dataLoaderRegistry(
+      Function<ServiceRequestContext, DataLoaderRegistry>
+      dataLoaderRegistrySupplier) {
+         // This method will be mutually exclusive
+         // with configureDataLoaderRegistry(...)
+    }
+}
+```
+
+- #4347 Show the full stack trace of [CompositeException](type) when the system property `verboseExceptions` is `true`
 
 </div>
 
@@ -92,14 +95,19 @@ date: 2022-07-14
 
 Sign up for our newsletters to keep up-to-date with new releases and useful tips!
 
-<div style={{maxWidth: '320px', marginTop: '0.5rem'}}>
+<div style={{ maxWidth: '320px', marginTop: '0.5rem' }}>
   <Mailchimp />
 </div>
 
 ## Thank you!
 
 <ThankYou
-  message={() => <p>Since our last newsletter, we received awesome contributions from the following contributors:</p>}
+  message={() => (
+    <p>
+      Since our last newsletter, we received awesome contributions from the
+      following contributors:
+    </p>
+  )}
   usernames={[
     'aboivin',
     'ahnyujin',

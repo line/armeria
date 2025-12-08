@@ -1,5 +1,5 @@
 ---
-sidebar_label: "4. Implement READ"
+sidebar_label: '4. Implement READ'
 type: step
 category: grpc
 tags:
@@ -96,42 +96,46 @@ final class BlogService extends BlogServiceGrpc.BlogServiceImplBase {
 Let's test if we can retrieve a blog post we created.
 
 1. In the `BlogServiceTest` class, add a test method to retrieve the first blog post with ID `0`.
-  ```java title="BlogServiceTest.java"
-  @Test
-  void getBlogPost() throws JsonProcessingException {
-    final BlogPost blogPost = client.getBlogPost(GetBlogPostRequest.newBuilder().setId(0).build());
 
-    assertThat(blogPost.getTitle()).isEqualTo("My first blog");
-    assertThat(blogPost.getContent()).isEqualTo("Hello Armeria!");
-  }
-  ```
+```java title="BlogServiceTest.java"
+@Test
+void getBlogPost() throws JsonProcessingException {
+  final BlogPost blogPost = client.getBlogPost(GetBlogPostRequest.newBuilder().setId(0).build());
+
+  assertThat(blogPost.getTitle()).isEqualTo("My first blog");
+  assertThat(blogPost.getContent()).isEqualTo("Hello Armeria!");
+}
+```
+
 2. Add annotations to configure the order our test methods will be executed.
-  The annotations guarantee that the first blog post will be created in the `createBlogPost()` method before we try to retrieve it in the `getBlogPost()` method.
-  ```java title="BlogServiceTest.java"
-  import org.junit.jupiter.api.MethodOrderer.OrderAnnotation;
-  import org.junit.jupiter.api.Order;
-  import org.junit.jupiter.api.TestMethodOrder;
+   The annotations guarantee that the first blog post will be created in the `createBlogPost()` method before we try to retrieve it in the `getBlogPost()` method.
 
-  @TestMethodOrder(OrderAnnotation.class) // Add this
-  class BlogServiceTest {
+```java title="BlogServiceTest.java"
+import org.junit.jupiter.api.MethodOrderer.OrderAnnotation;
+import org.junit.jupiter.api.Order;
+import org.junit.jupiter.api.TestMethodOrder;
+
+@TestMethodOrder(OrderAnnotation.class) // Add this
+class BlogServiceTest {
+  ...
+
+  @Test
+  @Order(1) // Add this
+  void createBlogPost() throws JsonProcessingException {
     ...
-
-    @Test
-    @Order(1) // Add this
-    void createBlogPost() throws JsonProcessingException {
-      ...
-    }
-
-    @Test
-    @Order(2) // Add this
-    void getBlogPost() throws JsonProcessingException {
-      ...
-    }
   }
-  ```
+
+  @Test
+  @Order(2) // Add this
+  void getBlogPost() throws JsonProcessingException {
+    ...
+  }
+}
+```
+
 3. Run all the test cases on your IDE or using Gradle.
 
-  Your client retrieved a blog post from the server successfully if the test is passed.
+Your client retrieved a blog post from the server successfully if the test is passed.
 
 ## 4. Test an error case
 

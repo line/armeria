@@ -131,10 +131,10 @@ global:
   scrape_interval: 10s
 
 scrape_configs:
-  - job_name: "armeria-prometheus"
+  - job_name: 'armeria-prometheus'
     metrics_path: '/metrics'
     static_configs:
-    - targets: ["localhost:8083"]
+      - targets: ['localhost:8083']
 ```
 
 변경한 후에 Prometheus 서비스를 재시작해야 변경된 설정이 적용됩니다.

@@ -45,6 +45,7 @@ date: 2020-11-30
   HttpRequest request = ...;
   request.subscribe(deframer);
   ```
+
   - See [HttpDeframer](type) for more information.
 - You can now apply [CircuitBreaker](type) per request path. #3134, #3135
   ```java
@@ -78,6 +79,7 @@ date: 2020-11-30
   RetryingClient.newDecoratorWithMapping(mapping);
   ```
 - You can now split the [ResponseHeaders](type) and bodies using [HttpResponse#split()](type). #3038
+
   ```java
   HttpResponse response = ...
   SplitHttpResponse splitHttpResponse = response.split();
@@ -95,6 +97,7 @@ date: 2020-11-30
       }
   });
   ```
+
 - You can now customize for mapping an exception to a gRPC status. #3197
   ```java
   GrpcService.builder()
@@ -146,6 +149,7 @@ date: 2020-11-30
   - `public static T valueOf(String) { ... }`
   - `public static T fromString(String) { ... }`
   - `public T(String) { ... } // constructor`
+
   ```java
   public class UserService {
 
@@ -160,6 +164,7 @@ date: 2020-11-30
       }
   }
   ```
+
 - You can now build and execute an [HttpRequest](type) fluently. #3110
   ```java
   // Creates a POST HttpRequest whose URI is "/foo?q=bar"
@@ -318,6 +323,6 @@ date: 2020-11-30
     'tumile',
     'Ubehebe',
     'wickedev',
-    'windmeup'
+    'windmeup',
   ]}
 />

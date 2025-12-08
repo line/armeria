@@ -18,6 +18,7 @@ date: 2023-10-23
         .service(myService) // served by virtual host "foo.com" under "/api/v3"
         .build();
   ```
+
   - You can also set the context path via Spring property.
   ```yaml
   armeria:
@@ -33,6 +34,7 @@ date: 2023-10-23
   ```
 - **gRPC Exception Handler Annotation**: You can now easily handle an exception that is raised from a gRPC service using
   [@GrpcExceptionHandler](type) annotation. #5046
+
   ```java
   @GrpcExceptionHandler(MyGrpcExceptionHandlerFunction.class)
   @Override
@@ -52,6 +54,7 @@ date: 2023-10-23
     }
   }
   ```
+
 - **StreamMessage finalizer**: You can now produce the last value for a [StreamMessage](type) when it completes
   exceptionally or successfully using [StreamMessage#endWith(Function)](type). #4816 #5198
   ```java
@@ -74,6 +77,7 @@ date: 2023-10-23
   - `armeria.client.tls.certificates.validity`: `1` if valid, `0` otherwise.
   - `armeria.client.tls.certificates.validity.days`: The number of days until the certificate expires.
 - You can now add a hook that is invoked when a [RequestContext](type) is pushed and popped. #4991 #5107
+
   ```java
   Supplier<AutoCloseable> contextHook = () -> {
     System.out.println("Context is pushed.");
@@ -95,6 +99,7 @@ date: 2023-10-23
     ...
     .build();
   ```
+
 - **New Circuit Breaker and Retry Rule for Time-consuming Requests**: You can now report a failure to a
   circuit breaking or retry when the total duration exceeds a certain threshold. #4782 #4827
   ```java
@@ -198,29 +203,31 @@ date: 2023-10-23
 
 ## 🙇 Thank you
 
-<ThankYou usernames={[
-  'anuraaga',
-  'babjo',
-  'bkkanq',
-  'Dogacel',
-  'esperar',
-  'ghkim3221',
-  'ikhoon',
-  'injae-kim',
-  'jrhee17',
-  'kezhenxu94',
-  'Kyurenpoto',
-  'minwoox',
-  'my4-dev',
-  'ribafish',
-  'runningcode',
-  'russell-yoo',
-  'seonwoo960000',
-  'sfc-gh-skabanov',
-  'sh-cho',
-  'sindhunaydu',
-  'ta7uw',
-  'thomasbruggink',
-  'tobias-',
-  'trustin'
-]} />
+<ThankYou
+  usernames={[
+    'anuraaga',
+    'babjo',
+    'bkkanq',
+    'Dogacel',
+    'esperar',
+    'ghkim3221',
+    'ikhoon',
+    'injae-kim',
+    'jrhee17',
+    'kezhenxu94',
+    'Kyurenpoto',
+    'minwoox',
+    'my4-dev',
+    'ribafish',
+    'runningcode',
+    'russell-yoo',
+    'seonwoo960000',
+    'sfc-gh-skabanov',
+    'sh-cho',
+    'sindhunaydu',
+    'ta7uw',
+    'thomasbruggink',
+    'tobias-',
+    'trustin',
+  ]}
+/>

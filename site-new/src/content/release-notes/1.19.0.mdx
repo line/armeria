@@ -10,6 +10,7 @@ date: 2022-09-13
   [HttpRequest#aggregate()](type) and [HttpResponse#aggregate()](type). If an [HttpRequest](type) or an
   [HttpResponse](type) is aggregated before, the cached [AggregatedHttpRequest](type) or
   [AggregatedHttpResponse](type) is returned for subsequent calls. #3789 #4366
+
   ```java
   HttpRequest request = ...;
   AggregatedHttpRequest aggregatedReq0 = request.aggregate().join();
@@ -21,43 +22,46 @@ date: 2022-09-13
   AggregatedHttpResponse aggregatedRes1 = response.aggregate().join();
   assert aggregatedRes0 == aggregatedRes1;
   ```
+
 - You can now customize the behavior of auto-refresh for an `AddressResolverGroup` with
   [DnsResolverGroupBuilder](type). #4400
-  ```java 
-  // Disable auto refresh 
+
+  ```java
+  // Disable auto refresh
   ClientFactory
     .builder()
-    .domainNameResolverCustomizer(customizer -> { 
+    .domainNameResolverCustomizer(customizer -> {
       customizer.enableAutoRefresh(false); // 👈👈👈
     })
     .build();
-  
-  // Set a constant refresh timeout 
+
+  // Set a constant refresh timeout
   ClientFactory
     .builder()
-    .domainNameResolverCustomizer(customizer -> { 
+    .domainNameResolverCustomizer(customizer -> {
       customizer.autoRefreshTimeout(Duration.ofDays(1)); // 👈👈👈
     })
-    .build(); 
-  
+    .build();
+
   // Build a flexible refresh timeout depending on the hostname
   ClientFactory
     .builder()
-    .domainNameResolverCustomizer(customizer -> { 
+    .domainNameResolverCustomizer(customizer -> {
       customizer.autoRefreshTimeout(hostname -> {  // 👈👈👈
-        if (hostname.endsWith("busy.domain.com")) { 
-          // Automatically refresh the cached domain for 7 days. 
-          return Duration.ofDays(7).toMillis(); 
-        } 
-        if (hostname.endsWith("sporadic.domain.dom")) { 
-          // Don't need to refresh a sporadically used domain. 
-          return 0; 
-        } 
-        ... 
-      }); 
+        if (hostname.endsWith("busy.domain.com")) {
+          // Automatically refresh the cached domain for 7 days.
+          return Duration.ofDays(7).toMillis();
+        }
+        if (hostname.endsWith("sporadic.domain.dom")) {
+          // Don't need to refresh a sporadically used domain.
+          return 0;
+        }
+        ...
+      });
     })
     .build();
   ```
+
 - You can now export [RequestOnlyLog#requestCause()](type) and [RequestLog#responseCause()](type) to MDC
   by specifying `req.cause` and `res.cause` to an appender of a Logback configuration.
   ```xml
@@ -116,6 +120,7 @@ date: 2022-09-13
 - You no longer see `ClassCastException` when an invalid path request is received. #4405
 - Annotated services now correctly return `204 No Content` status when `void`, `Publisher<Void>` or
   `CompletionStage<Void>` and `@ProducesJson` are used at the same time. #4390 #4398
+
   ```java
   // 200 OK status and "null" string body is returned
   @Get("/null-content")
@@ -123,7 +128,7 @@ date: 2022-09-13
   public Publisher<Void> nullBody() {
     return Mono.empty();
   }
-  
+
   // 204 No Content status and no body is returned
   @Get("/no-content")
   @StatusCode(204)
@@ -132,11 +137,12 @@ date: 2022-09-13
     return Mono.empty();
   }
   ```
+
 - Armeria server no longer sends chunked encoding header with `304 Not Modified` status. #4386
 - HTTP/2 graceful shutdown timeout is correctly set using [ClientFactory#idleTimeoutMillis()](type). #4381
 - Unframed [GrpcService](typeplural) now support `application/x-protobuf` and `application/x-google-protobuf`
   media types. #4355 #4364
-- You can now use a custom `JsonFormat.Printer` for [ProtobufResponseConverterFunction](type).  #4301 #4336
+- You can now use a custom `JsonFormat.Printer` for [ProtobufResponseConverterFunction](type). #4301 #4336
 
 ## 📃 Documentation
 
@@ -154,7 +160,7 @@ date: 2022-09-13
 - The method signature of [ResponseConverterFunctionProvider#createResponseConverterFunction(Type)](type) has
   been changed.
   - [ResponseConverterFunctionProvider](type) no longer takes a [ResponseConverterFunction](type) as
-    the second parameter. Use [DelegatingResponseConverterFunctionProvider](type) to create a new 
+    the second parameter. Use [DelegatingResponseConverterFunctionProvider](type) to create a new
     [ResponseConverterFunction](type) based on the delegating [ResponseConverterFunction](type).
 
 ## ⛓ Dependencies
@@ -172,23 +178,25 @@ date: 2022-09-13
 
 ## 🙇 Thank you
 
-<ThankYou usernames={[
-  'DasAmpharos',
-  'anuraaga',
-  'cnabro',
-  'devdynam0507',
-  'dinujoh',
-  'freevie',
-  'ghkim3221',
-  'heowc',
-  'ikhoon',
-  'injae-kim',
-  'jrhee17',
-  'klurpicolo',
-  'ks-yim',
-  'minwoox',
-  'mscheong01',
-  'resquivel-squareup',
-  'tawAsh1',
-  'trustin'
-]} />
+<ThankYou
+  usernames={[
+    'DasAmpharos',
+    'anuraaga',
+    'cnabro',
+    'devdynam0507',
+    'dinujoh',
+    'freevie',
+    'ghkim3221',
+    'heowc',
+    'ikhoon',
+    'injae-kim',
+    'jrhee17',
+    'klurpicolo',
+    'ks-yim',
+    'minwoox',
+    'mscheong01',
+    'resquivel-squareup',
+    'tawAsh1',
+    'trustin',
+  ]}
+/>

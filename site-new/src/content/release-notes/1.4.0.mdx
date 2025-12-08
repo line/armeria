@@ -8,6 +8,7 @@ date: 2021-02-01
 
 - You can now register/discover your servers to/from [Consul](https://www.consul.io/)
   using a new `armeria-consul` module. #194 #2192 #3002 #3281
+
   ```java
   // Registration
   Server server = ...;
@@ -23,9 +24,11 @@ date: 2021-02-01
                        .consulToken(myConsulAccessToken)
                        .build();
   ```
+
 - You can now smoothly ramp up the weight of newly added [Endpoint](type) in
   an [EndpointGroup](type) using [EndpointSelectionStrategy#rampingUp()](type)
   to protect a fresh node from getting too much traffic suddenly. #1757 #3217
+
   ```java
   EndpointGroup endpointGroup =
     DnsAddressEndpointGroup
@@ -42,6 +45,7 @@ date: 2021-02-01
     .numberSteps(60)
     .build();
   ```
+
 - You can now start your server as unhealthy with
   [HealthCheckServiceBuilder#startUnhealthy()](type). #3260
   - This can be useful when you don't want to handle incoming requests immediately
@@ -69,6 +73,7 @@ date: 2021-02-01
   - [v0.99.7](/release-notes/0.99.7) introduced this feature partially for the server
     side. We expanded it into both client and server side and also added a way
     to disconnect after handling a certain number of requests.
+
     ```java
     // For server
     Server.builder()
@@ -82,6 +87,7 @@ date: 2021-02-01
                  // receiving the 2000th request's response.
                  .maxNumRequestsPerConnection(2000);
     ```
+
 - You can now turn any service into a transient service by decorating it with
   [TransientHttpService](type) or [TransientRpcService](type). #3221
   - By making a service transient, you can disable metric collection by
@@ -111,6 +117,7 @@ date: 2021-02-01
   ```
 - You can now get, set and parse a `Content-Disposition` header using
   [ContentDisposition](type). #3253
+
   ```java
   // Setting
   HttpHeaders headers = HttpHeaders.of(
@@ -128,6 +135,7 @@ date: 2021-02-01
     "attachment; name=\"fileName\"; filename=\"file.png\"");
   assert parsed.equals(disposition);
   ```
+
 - You can now serve a file by returning an [HttpFile](type) in an annotated service. #3258 #3287
   ```java
   Server
@@ -150,25 +158,27 @@ date: 2021-02-01
     logger.info("Current request: {}", ServiceRequestContext.current());
   };
   ctx.run(task);
-  ``` 
-- You can now concat multiple `Publisher`s into one using 
+  ```
+- You can now concat multiple `Publisher`s into one using
   [StreamMessage#concat(Iterable)](type). #3254 #3299
+
   ```java
   StreamMessage<String> stream =
     StreamMessage.concat(Mono.just("foo"),
                          Mono.just("bar"));
-  
+
   StepVerifier.create(stream)
               .expectNext("foo")
               .expectNext("bar")
               .expectComplete()
               .verify()
-  
+
   // You can also concat a `Publisher` of `Publisher`s.
   StreamMessage<String> flat =
     StreamMessage.concat(Flux.just(Mono.just("foo"),
                                    Mono.just("bar")));
   ```
+
 - You can now create an [HttpResponse](type) from a [ResponseHeaders](type) and
   a stream of [HttpData](typeplural) using
   [HttpResponse#of(ResponseHeaders,Publisher)](type). #3089 #3237
@@ -187,6 +197,7 @@ date: 2021-02-01
                 TransportType.EPOLL.unavailabilityCause());
   }
   ```
+
   - We also added methods like `serverChannelType()`, `socketChannelType()` and
     `datagramChannelType()`, which may be useful when you need to deal with Netty
     channels.
@@ -317,6 +328,6 @@ date: 2021-02-01
     'tobias-',
     'trustin',
     'tumile',
-    'wickedev'
+    'wickedev',
   ]}
 />

@@ -8,10 +8,11 @@ date: 2023-06-15
 
 - **Unix Domain Socket Support**: You can now use [Unix domain socket](https://en.wikipedia.org/wiki/Unix_domain_socket)
   to serve and send requests which is useful for configuring a service mesh to communicate with a sidecar. #1837 #4846
+
   ```java
   import com.linecorp.armeria.common.util.DomainSocketAddress;
 
-  DomainSocketAddress domainSocketAddress = 
+  DomainSocketAddress domainSocketAddress =
     DomainSocketAddress.of(Paths.get("/tmp/armeria.sock"));
 
   Server
@@ -23,8 +24,9 @@ date: 2023-06-15
   WebClient
     .builder("http://" + domainSocketAddress.authority())
     ...
-    .build(); 
+    .build();
   ```
+
 - **WebSocket Support**: You can now send and receive data over [WebSocket](https://en.wikipedia.org/wiki/WebSocket)
   using [WebSocketService](type). #1076 #3904
   ```java
@@ -38,6 +40,7 @@ date: 2023-06-15
   ```
 - **Customizable Logging**: You can now use [LogFormatter](type) and [LogWriter](type) to customize the log
   format and consumer. #3918 #4267 #4943
+
   ```java
   // Convert RequestLog to JSON.
   LogFormatter logFormatter = LogFormatter.ofJson();
@@ -47,29 +50,32 @@ date: 2023-06-15
       .logFormatter(logFormatter)
       .logger(logger)
       .build();
-  
+
   LoggingClient
     .builder()
     .logWriter(logWriter)
-    .newDecorator();    
+    .newDecorator();
   ```
+
 - **BlockHound Integrations**: Armeria now provides BlockHound integrations, offering enhanced support for
   detecting with blocking calls in event loops. #4493
 - **Delayed Request Abortion**: You can now delay aborting the [HttpRequest](type) when the [HttpResponse](type)
   completes. This may be useful when you want to send additional data even after the response is complete. #4913
+
   ```java
   Server
     .builder()
     .requestAutoAbortDelayMillis(2000) // Delay aborting the request for 2 second.
     ...
     .build();
-  
+
   WebClient
     .builder()
     .requestAutoAbortDelayMillis(1000) // Delay aborting the request for 1 second.
     ...
     .build();
-  ``` 
+  ```
+
 - **Circuit Breaker and Retry Rule for timeout**: You can now use [RetryRule#onTimeoutException()](type) and
   [CircuitBreakerRule#onTimeoutException()](type) to open the circuit or retry the request when the response is
   timed out. #4876 #4882
@@ -86,21 +92,25 @@ date: 2023-06-15
   ```
 - **Custom CoroutineContext for gRPC-Kotlin**: You can now inject a custom `CoroutineContext` for gRPC-Kotlin
   with [CoroutineContextProvider](type). #4842 #4866
+
   ```kotlin
-  class CustomCoroutineContextProvider : CoroutineContextProvider { 
-    override fun provide(ctx: ServiceRequestContext): CoroutineContext { 
-      return ... // A custom CoroutineContext 
-    }  
+  class CustomCoroutineContextProvider : CoroutineContextProvider {
+    override fun provide(ctx: ServiceRequestContext): CoroutineContext {
+      return ... // A custom CoroutineContext
+    }
   }
-  ``` 
+  ```
+
   :::tip
-  
-  Note that a custom `CoroutineContextProvider` should be registered via Java SPI to 
+
+  Note that a custom `CoroutineContextProvider` should be registered via Java SPI to
   `META-INF/services/com.linecorp.armeria.common.kotlin.CoroutineContextProvider`.
- 
+
   :::
+
 - **Retrieving CallOptions with GrpcCallOptions**: With [GrpcCallOptions](type) in Armeria, you can now easily
   retrieve `CallOptions` from a given [RequestContext](type). #4776 #4822
+
   ```java
   GrpcClients
     .builder(grpcServerUri)
@@ -109,12 +119,13 @@ date: 2023-06-15
       MyOption myOption = options.getOption(myOptionKey);
       // act on myOption if needed
       ...
-  
+
       return delegate.execute(ctx, req);
     })
     .build(MyGrpcStub.class);
   ```
-- **Fallback Strategy for CircuitBreakerClient**: You can now easily set a fallback strategy to 
+
+- **Fallback Strategy for CircuitBreakerClient**: You can now easily set a fallback strategy to
   [CircuitBreakerClient](type) when a [CircuitBreaker](type) is open. #4800 #4818
   ```java
   CircuitBreakerClient
@@ -133,7 +144,7 @@ date: 2023-06-15
     })
     .build();
   ```
-- **HTTP/2 over TLS without ALPN**: Armeria now supports using HTTP/2 over TLS without the need for 
+- **HTTP/2 over TLS without ALPN**: Armeria now supports using HTTP/2 over TLS without the need for
   [ALPN](https://datatracker.ietf.org/doc/html/draft-ietf-httpbis-http2-17#section-3.3). #4702 #4704
   ```java
   ClientFactory
@@ -177,7 +188,7 @@ date: 2023-06-15
 - [FailFastException](type) is now correctly converted to `Status.UNAVAILABLE` in gRPC clients. #4805 #4924
 - `DocService` now correctly makes the link to [StructInfo](type) even when a protobuf `Message` is used in both gRPC
   services and annotated services. #4885
-- [ConcurrencyLimitingClient](type) used with [RetryingClient](type) or [CircuitBreakerClient](type) now 
+- [ConcurrencyLimitingClient](type) used with [RetryingClient](type) or [CircuitBreakerClient](type) now
   doesn't produce a deadlock. #4826 #4834
 - `connection: close` is set correctly in the response when an HTTP/1.1 request contains `connection: close`. #4864
 - You no longer see `NullPointerException` when using [StreamMessage#mapError(Function)](type) #4852 #4859
@@ -255,35 +266,37 @@ date: 2023-06-15
 
 ## 🙇 Thank you
 
-<ThankYou usernames={[
-  '0lejk4',
-  'AngerM-DD',
-  'Bue-von-hon',
-  'KarboniteKream',
-  'Lincong',
-  'amirhadadi',
-  'anuraaga',
-  'arinchampatidd',
-  'be-hase',
-  'danicheg',
-  'echo304',
-  'heowc',
-  'himangi-db',
-  'ikhoon',
-  'injae-kim',
-  'jrhee17',
-  'kojilin',
-  'mauhiz',
-  'minwoox',
-  'my4-dev',
-  'nhacvuong',
-  'rhodo',
-  'richieyan',
-  'seonwoo960000',
-  'staktrace',
-  'ta7uw',
-  'tomatophobia',
-  'trustin',
-  'vkostyukov',
-  'wreulicke'
-]} />
+<ThankYou
+  usernames={[
+    '0lejk4',
+    'AngerM-DD',
+    'Bue-von-hon',
+    'KarboniteKream',
+    'Lincong',
+    'amirhadadi',
+    'anuraaga',
+    'arinchampatidd',
+    'be-hase',
+    'danicheg',
+    'echo304',
+    'heowc',
+    'himangi-db',
+    'ikhoon',
+    'injae-kim',
+    'jrhee17',
+    'kojilin',
+    'mauhiz',
+    'minwoox',
+    'my4-dev',
+    'nhacvuong',
+    'rhodo',
+    'richieyan',
+    'seonwoo960000',
+    'staktrace',
+    'ta7uw',
+    'tomatophobia',
+    'trustin',
+    'vkostyukov',
+    'wreulicke',
+  ]}
+/>

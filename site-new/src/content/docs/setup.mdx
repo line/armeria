@@ -2,7 +2,7 @@
 sidebar_position: 2
 ---
 
-import versions from '@site/gen-src-temp/versions.json';
+import versions from '../../../gen-src/versions.json';
 
 # Setting up a project
 
@@ -24,35 +24,35 @@ under group ID `com.linecorp.armeria` so that you can fetch them easily using yo
 Add the Armeria artifacts that provide the desired functionality to your project dependencies. The following is
 the list of major Armeria artifacts which might interest you:
 
-| Artifact ID | Description |
-|-------------|-------------|
-| `armeria` | The core library. |
-| `armeria-brave` | Distributed tracing with Brave. See [Zipkin integration](/docs/advanced/zipkin). |
-| `armeria-bucket4j` | Support [Bucket4j](https://github.com/bucket4j/bucket4j) based [ThrottlingStrategy](type). |
-| `armeria-consul` | Consul based service discovery. See [Consul service discovery] and [Consul service registration]. |
-| `armeria-dropwizard2` | Provides a Dropwizard 2 Bundle around `armeria-jetty9`. See [Using Armeria with Dropwizard](/docs/advanced/dropwizard-integration). |
-| `armeria-eureka` | Eureka based service discovery. See [Eureka service discovery] and [Eureka service registration]. |
-| `armeria-graphql` | GraphQL service support. See [Running a GraphQL service](/docs/server/graphql). |
-| `armeria-grpc` and `armeria-grpc-kotlin` | gRPC client and server support. See [Running a gRPC service](/docs/server/grpc) and [Calling a gRPC service](/docs/client/grpc). |
-| `armeria-jetty11` | Embedded Jetty 11 Servlet container. See [Embedding a servlet container](/docs/server/servlet). |
-| `armeria-kafka` | Enables sending access logs to Kafka |
-| `armeria-kotlin` | Kotlin support. See [Kotlin coroutines support]. |
-| `armeria-logback14` | Provides Logback `Appender` implementation that adds request information. See [Logging contextual information](/docs/advanced/logging). |
-| `armeria-oauth2` | Support OAuth 2.0. |
-| `armeria-protobuf` | Support Protocol Buffers in annotated service. |
-| `armeria-retrofit2` | Allows using Armeria instead of OkHttp as transport layer when using Retrofit2. See [Retrofit integration](/docs/client/retrofit). |
-| `armeria-reactor3` | [Project Reactor](https://projectreactor.io/) plugin |
-| `armeria-resilience4j2` | Support [Resilience4j](https://github.com/resilience4j/resilience4j) Circuit Breaker integration. |
-| `armeria-resteasy` | Support [RESTEasy](https://resteasy.dev/) integration. |
-| `armeria-rxjava3` | [RxJava 3](https://github.com/ReactiveX/RxJava) plugin |
-| `armeria-saml` | SAML support |
-| `armeria-scalapb_2.12` and `armeria-scalapb_2.13` | Support ScalaPB for gRPC and annotated service. |
-| `armeria-spring-boot3-actuator` | Spring Boot 3 Actuator integration. See [Actuator support](/docs/advanced/spring-boot-integration#actuator-support). |
-| `armeria-spring-boot3-autoconfigure` | Spring Boot 3 integration. See [Spring Boot integration](/docs/advanced/spring-boot-integration). |
-| `armeria-spring-boot3-webflux-autoconfigure` | Spring Boot 3 WebFlux integration. See [Using Armeria with Spring WebFlux](/docs/advanced/spring-webflux-integration). |
-| `armeria-thrift0.18` | Thrift 0.18 client and server support. See [Running a Thrift service](/docs/server/thrift) and [Calling a Thrift service](/docs/client/thrift). |
-| `armeria-tomcat10` | Embedded Tomcat 10 Servlet container. See [Embedding a servlet container](/docs/server/servlet). |
-| `armeria-zookeeper3` | ZooKeeper 3 based service discovery. See [ZooKeeper service discovery] and [ZooKeeper service registration]. |
+| Artifact ID                                       | Description                                                                                                                                     |
+| ------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| `armeria`                                         | The core library.                                                                                                                               |
+| `armeria-brave`                                   | Distributed tracing with Brave. See [Zipkin integration](/docs/advanced/zipkin).                                                                |
+| `armeria-bucket4j`                                | Support [Bucket4j](https://github.com/bucket4j/bucket4j) based [ThrottlingStrategy](type).                                                      |
+| `armeria-consul`                                  | Consul based service discovery. See [Consul service discovery] and [Consul service registration].                                               |
+| `armeria-dropwizard2`                             | Provides a Dropwizard 2 Bundle around `armeria-jetty9`. See [Using Armeria with Dropwizard](/docs/advanced/dropwizard-integration).             |
+| `armeria-eureka`                                  | Eureka based service discovery. See [Eureka service discovery] and [Eureka service registration].                                               |
+| `armeria-graphql`                                 | GraphQL service support. See [Running a GraphQL service](/docs/server/graphql).                                                                 |
+| `armeria-grpc` and `armeria-grpc-kotlin`          | gRPC client and server support. See [Running a gRPC service](/docs/server/grpc) and [Calling a gRPC service](/docs/client/grpc).                |
+| `armeria-jetty11`                                 | Embedded Jetty 11 Servlet container. See [Embedding a servlet container](/docs/server/servlet).                                                 |
+| `armeria-kafka`                                   | Enables sending access logs to Kafka                                                                                                            |
+| `armeria-kotlin`                                  | Kotlin support. See [Kotlin coroutines support].                                                                                                |
+| `armeria-logback14`                               | Provides Logback `Appender` implementation that adds request information. See [Logging contextual information](/docs/advanced/logging).         |
+| `armeria-oauth2`                                  | Support OAuth 2.0.                                                                                                                              |
+| `armeria-protobuf`                                | Support Protocol Buffers in annotated service.                                                                                                  |
+| `armeria-retrofit2`                               | Allows using Armeria instead of OkHttp as transport layer when using Retrofit2. See [Retrofit integration](/docs/client/retrofit).              |
+| `armeria-reactor3`                                | [Project Reactor](https://projectreactor.io/) plugin                                                                                            |
+| `armeria-resilience4j2`                           | Support [Resilience4j](https://github.com/resilience4j/resilience4j) Circuit Breaker integration.                                               |
+| `armeria-resteasy`                                | Support [RESTEasy](https://resteasy.dev/) integration.                                                                                          |
+| `armeria-rxjava3`                                 | [RxJava 3](https://github.com/ReactiveX/RxJava) plugin                                                                                          |
+| `armeria-saml`                                    | SAML support                                                                                                                                    |
+| `armeria-scalapb_2.12` and `armeria-scalapb_2.13` | Support ScalaPB for gRPC and annotated service.                                                                                                 |
+| `armeria-spring-boot3-actuator`                   | Spring Boot 3 Actuator integration. See [Actuator support](/docs/advanced/spring-boot-integration#actuator-support).                            |
+| `armeria-spring-boot3-autoconfigure`              | Spring Boot 3 integration. See [Spring Boot integration](/docs/advanced/spring-boot-integration).                                               |
+| `armeria-spring-boot3-webflux-autoconfigure`      | Spring Boot 3 WebFlux integration. See [Using Armeria with Spring WebFlux](/docs/advanced/spring-webflux-integration).                          |
+| `armeria-thrift0.18`                              | Thrift 0.18 client and server support. See [Running a Thrift service](/docs/server/thrift) and [Calling a Thrift service](/docs/client/thrift). |
+| `armeria-tomcat10`                                | Embedded Tomcat 10 Servlet container. See [Embedding a servlet container](/docs/server/servlet).                                                |
+| `armeria-zookeeper3`                              | ZooKeeper 3 based service discovery. See [ZooKeeper service discovery] and [ZooKeeper service registration].                                    |
 
 [Kotlin coroutines support]: /docs/advanced/kotlin
 [ZooKeeper service discovery]: /docs/client/service-discovery#zookeeper-based-service-discovery-with-zookeeperendpointgroup

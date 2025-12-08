@@ -132,10 +132,10 @@ global:
   scrape_interval: 10s
 
 scrape_configs:
-  - job_name: "armeria-prometheus"
+  - job_name: 'armeria-prometheus'
     metrics_path: '/metrics'
     static_configs:
-    - targets: ["localhost:8083"]
+      - targets: ['localhost:8083']
 ```
 
 Once you have made the changes, you must restart the Prometheus service to apply the changed settings.
@@ -220,4 +220,3 @@ You can see the results of calling the `/hello/{seq}` API being expressed as a b
 
 In this post, we took a look at how you can monitor Prometheus metrics collected from running an Armeria server, using a Grafana dashboard.
 Armeria provides various features for collecting metrics, and in our next post we will take a look at how you can customize the metrics you collect from Armeria to your needs.
-

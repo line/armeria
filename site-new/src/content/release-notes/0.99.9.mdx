@@ -23,6 +23,7 @@ date: 2020-08-03
   ```
 - You can now specify whether the entire annotated service methods have to run in a `blockingTaskExecutor`.
   #2923 #2925
+
   ```java
   Server.builder()
         .annotatedService().pathPrefix("/my_service")
@@ -30,6 +31,7 @@ date: 2020-08-03
                            .build(myService);
 
   ```
+
 - You can also specify the [@Blocking](type) annotation on a class. It was previously allowed only on methods.
   #2915
   ```java
@@ -43,6 +45,7 @@ date: 2020-08-03
   }
   ```
 - You can now bind an annotated service method to the prefix path by specifying no path. #2708 #2853
+
   ```java
   public class MyAnnotatedService {
       @Get
@@ -71,6 +74,7 @@ date: 2020-08-03
       WebClient.of().get("http://127.0.0.1:8080/prefix/")
                .aggregate().toStringUtf8());
   ```
+
 - You can now send and receive `grpc-web-text` messages in gRPC, as well as `grpc-web+proto` and
   `grpc-web+json`. #2938 #2955
   ```java
@@ -80,6 +84,7 @@ date: 2020-08-03
   ```
 - You can now send a request via an HAPROXY server preserving the original source and destination addresses.
   #2589 #2907
+
   ```java
   ClientFactory factory =
       ClientFactory.builder()
@@ -95,8 +100,10 @@ date: 2020-08-03
   // preserving the source address by using HAPROXY protocol.
   client.get("http://example.com/").aggregate().join();
   ```
+
 - You can now use different [ProxyConfig](type) for different [Endpoint](typeplural) using
   [ProxyConfigSelector](type). #2752
+
   ```java
   ProxyConfigSelector mySelector = (protocol, endpoint) -> {
       // Send the requests to *.foo.com via a SOCKS5 server.
@@ -115,6 +122,7 @@ date: 2020-08-03
                    .proxyConfig(mySelector)
                    .build();
   ```
+
 - Added [Route#patternString()](type) which can be used as a simple human-readable description of
   a [Route](type). #2932 #2933
 - [HttpData](type) now extends `AutoCloseable` and provides various methods useful when using

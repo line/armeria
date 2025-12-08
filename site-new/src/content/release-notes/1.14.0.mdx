@@ -21,8 +21,9 @@ date: 2022-01-27
           .get("/v1/items/1")
           .asJson(MyObject.class)
           .execute();
-  ``` 
+  ```
 - You can now use [BlockingWebClient](type) to wait for an [HttpResponse](type) to be completed. #4021
+
   ```java
   BlockingWebClient client = BlockingWebClient.of("https://api.example.com");
   ResponseEntity<MyObject> response =
@@ -30,13 +31,15 @@ date: 2022-01-27
           .get("/v1/items/1")
           .asJson(MyObject.class)
           .execute();
-  ``` 
+  ```
+
   :::tip
 
   Note that you should never use this client in an `EventLoop` thread.
   Use it from a non-`EventLoop` thread such as [BlockingTaskExecutor](type).
- 
+
   :::
+
 - You can now fluently build a gRPC client with various options using
   [GrpcClientBuilder](type). #3981 #3999 #3964 #3975
   ```java
@@ -49,7 +52,7 @@ date: 2022-01-27
     })
     .intercept(myInterceptors)
     .build(MyStub.class);
-  ``` 
+  ```
 - You can now fluently build an [HttpResponse](type) by using [HttpResponseBuilder](type). #3398 #3941
   ```java
   HttpResponse
@@ -57,21 +60,24 @@ date: 2022-01-27
     .ok()
     .header(HttpHeaderNames.USER_AGENT, "Armeria")
     .content(content)
-    .build(); 
+    .build();
   ```
-- You can now use [StreamMessage#mapAsync(Function)](type) to transform a [StreamMessage](type) 
+- You can now use [StreamMessage#mapAsync(Function)](type) to transform a [StreamMessage](type)
   using an async operation. #3916 #3962
+
   ```java
   StreamMessage<Integer> userIds = StreamMessage.of(...);
   StreamMessage<UserInfo> userInfos = userIds.mapAsync(this::getUserInfo);
-  
+
   CompletableFuture<UserInfo> getUserInfo(int userId) {
     ...
   }
   ```
-- You can now use [HttpResponse#peekHeaders(Consumer)](type), [HttpMessage#peekData(Consumer)](type), 
+
+- You can now use [HttpResponse#peekHeaders(Consumer)](type), [HttpMessage#peekData(Consumer)](type),
   [HttpMessage#peekTrailers(Consumer)](type) and [StreamMessage#peekError(Consumer)](type) operators on
   [HttpRequest](type) and [HttpResponse](type). #3097 #3988 #3949
+
   ```java
   HttpRequest request =
     HttpRequest.of(RequestHeaders.of(HttpMethod.POST, "/items"),
@@ -83,14 +89,15 @@ date: 2022-01-27
     }).peekTrailers(trailers -> {
       assert trailers.get("trailer").equals("foo");
     });
-  
-  HttpRequest failed = 
+
+  HttpRequest failed =
     HttpRequest.ofFailure(new IllegalStateException("Something went wrong."));
   HttpRequest peeked = failed.peekError(cause -> {
     assert cause instanceof IllegalStateException;
   });
   ```
-- You can now generate an error response differently in [ServerErrorHandler](type) depending 
+
+- You can now generate an error response differently in [ServerErrorHandler](type) depending
   on the [RequestHeaders](type). #4037
 - You can now use `{*var}` and `:*var` path patterns to capture rest paths of a request. #3031 #3997
   ```java
@@ -102,7 +109,7 @@ date: 2022-01-27
       assert ctx.pathParam("contents").equals("foo/bar/baz");
     });
   ```
-- You can now use [ServiceRequestContext#queryParams(String)](type) to get the decoded query 
+- You can now use [ServiceRequestContext#queryParams(String)](type) to get the decoded query
   parameters. #3955 #3960
 - You can now send query parameters using [QueryParams](type) with [WebClient](type). #3915 #3921
   ```java
@@ -134,9 +141,10 @@ date: 2022-01-27
   ```
 - You can now dynamically change the maximum number of concurrent active requests of
   a [ConcurrencyLimitingClient](type). #3842 #3985
+
   ```java
   ConcurrencyLimitingClient.newDecorator(new DynamicLimit());
-  
+
   class DynamicLimit implements IntSupplier {
     @Override
     public int getAsInt() {
@@ -145,8 +153,10 @@ date: 2022-01-27
     }
   }
   ```
+
 - You can now split an [HttpRequest](type) into [RequestHeaders](type), `StreamMessage<HttpData>`
   and trailers using [HttpRequest#split()](type). #3924 #3953
+
   ```java
   HttpRequest request = HttpRequest.of(...);
   SplitHttpRequest splitRequest = request.split();
@@ -155,6 +165,7 @@ date: 2022-01-27
   StreamMessage<HttpData> body = splitRequest.body();
   CompletableFuture<HttpHeaders> trailers = splitRequest.trailers();
   ```
+
 - Added more well-known MIME type constants to [MediaType](type). #4040
 - You can now customize the [MediaType](type) of a file when using [FileService](type). #4001 #4009
   ```java
@@ -174,6 +185,7 @@ date: 2022-01-27
   ```
 - You can now send requests to a test server by using [ServerExtension#webClient()](type)
   or [ServerRule#webClient()](type). #3761 #3890
+
   ```java
    @RegisterExtension
    static ServerExtension server = new ServerExtension() {
@@ -191,12 +203,14 @@ date: 2022-01-27
      client.get("/foo").aggregate().join();
    }
   ```
+
 - You can now export metrics as [OpenMetrics](https://github.com/OpenObservability/OpenMetrics/blob/main/specification/OpenMetrics.md)
   format using [PrometheusExpositionService](type). #3926 #3928
-- You can now use [UnframedGrpcStatusMappingFunction](type) to customize how a gRPC status is mapped to 
+- You can now use [UnframedGrpcStatusMappingFunction](type) to customize how a gRPC status is mapped to
   an [HttpStatus](type) when using an unframed gRPC service. #3683 #3948
+
   ```java
-  UnframedGrpcStatusMappingFunction mappingFunction = 
+  UnframedGrpcStatusMappingFunction mappingFunction =
     (ctx, grpcStatus, cause) -> {
       if (grpcStatus.getCode() == DEADLINE_EXCEEDED) {
         return INTERNAL_SERVER_ERROR;
@@ -205,22 +219,23 @@ date: 2022-01-27
       return null;
     };
 
-  UnframedGrpcErrorHandler errorHandler = 
+  UnframedGrpcErrorHandler errorHandler =
     UnframedGrpcErrorHandler.ofJson(mappingFunction);
 
   GrpcService
     .builder()
     .unframedGrpcErrorHandler(errorHandler);
   ```
+
 - You can now expose `WebOperation`s of Actuator to a port of internal services. #3919 #3946
   ```yaml
   armeria:
     ...
     internal-services:
       # Actuator will be exposed to 18080 port.
-      include: actuator, health 
+      include: actuator, health
       port: 18080
-  ``` 
+  ```
 - Added [JettyServiceBuilder#tlsReverseDnsLookup(boolean)](type) that makes [JettyService](type)
   perform a reverse DNS lookup for each TLS connection, which may be useful for
   servlets that assume `ServletRequest.getRemoteHost()` will return a remote host name
@@ -232,23 +247,22 @@ date: 2022-01-27
 
 ## 📈 Improvements
 
-- You can now distinguish services, messages and enums with the same name by their package names from 
+- You can now distinguish services, messages and enums with the same name by their package names from
   [DocService](type) UI. #3979
 - Improved the memory footprint of [PrometheusExpositionService](type) by removing large byte array
   allocations. #3929
 - Meters created by [MoreMeters](type) are now using more accurate percentiles. #4047
 
-
 ## 🛠️ Bug fixes
 
-- You no longer see `ClassCastException` when duplicating an [HttpRequest](type) or 
+- You no longer see `ClassCastException` when duplicating an [HttpRequest](type) or
   an [HttpResponse](type). #4030 #4032
 - You no longer see `IllegalArgumentException` if an upper-bounded wildcard type with [@Param](type)
   is used in annotated services. #4007 #4008
 - You can now properly get `SameSite` attribute from [Cookie#sameSite()](type). #3968 #3984
 - You no longer see an [EmptyEndpointGroupException](type) when an [EndpointGroup](type) is successfully
   resolved with the initial [Endpoint](typeplural). #3978
-- [HttpRequestBuilder#header(CharSequence,Object)](type) does not overwrite an old header value 
+- [HttpRequestBuilder#header(CharSequence,Object)](type) does not overwrite an old header value
   anymore. #3932 #3941
   - A new header value will be appended to the old value.
 - You no longer see `413 Request Entity Too Large` when a server receives a cleartext (h2c) upgrade request
@@ -268,12 +282,12 @@ date: 2022-01-27
 
 ## 🏚️ Deprecations
 
-- [CircuitBreaker#canRequest()](type) has been deprecated in favor of 
+- [CircuitBreaker#canRequest()](type) has been deprecated in favor of
   [CircuitBreaker#tryRequest()](type). #4012
 - [Cookie#builder(String,String)](type) and [Cookie#of(String,String)](type) have been deprecated in favor of
   [Cookie#secureBuilder(String,String)](type) and [Cookie#ofSecure(String,String)](type). #3788 #3939
 - [GrpcServiceBuilder#setMaxInboundMessageSizeBytes(int)](type) and [GrpcServiceBuilder#setMaxOutboundMessageSizeBytes(int)](type)
-  have been deprecated in favor of [GrpcServiceBuilder#maxRequestMessageLength(int)](type) and 
+  have been deprecated in favor of [GrpcServiceBuilder#maxRequestMessageLength(int)](type) and
   [GrpcServiceBuilder#maxResponseMessageLength(int)](type). #3999
 - [AbstractBlockingHttpVfs#get(Executor,String,Clock,String,HttpHeaders)?full](type) has been deprecated in favor of
   [AbstractBlockingHttpVfs#get(Executor,String,Clock,String,HttpHeaders,MediaTypeResolver)?full](type). #4009
@@ -282,10 +296,10 @@ date: 2022-01-27
 
 ## ☢️ Breaking changes
 
-- [HealthChecker#of(Supplier,Duration)?full](type) and 
-  [HealthChecker#of(Supplier,Duration,EventExecutor)?full](type) now returns 
+- [HealthChecker#of(Supplier,Duration)?full](type) and
+  [HealthChecker#of(Supplier,Duration,EventExecutor)?full](type) now returns
   [ListenableHealthChecker](type) instead of [HealthChecker](type). #4017
-- [ServerErrorHandler#renderStatus(ServiceConfig,RequestHeaders,HttpStatus,String,Throwable)](type) now 
+- [ServerErrorHandler#renderStatus(ServiceConfig,RequestHeaders,HttpStatus,String,Throwable)](type) now
   requires an additional parameter [RequestHeaders](type). #4037
   - This allows a user to generate a different error response depending on the request header value.
 
@@ -323,36 +337,38 @@ date: 2022-01-27
 
 ## 🙇 Thank you
 
-<ThankYou usernames={[
-  'AmosDoan',
-  'AngerM',
-  'LiYing2010',
-  'anuraaga',
-  'arhont375',
-  'chris-ryan-square',
-  'di-seo',
-  'freevie',
-  'ghkim3221',
-  'gurudatta-carbon',
-  'heowc',
-  'hyangtack',
-  'icepeppermint',
-  'ikhoon',
-  'injae-kim',
-  'jrhee17',
-  'jupiny',
-  'KarboniteKream',
-  'klurpicolo',
-  'kojilin',
-  'ks-yim',
-  'lan17',
-  'minwoox',
-  'nvidyala',
-  'policeman-kh',
-  'sleeplesslord',
-  'ta7uw',
-  'tobias-',
-  'trustin',
-  'wasifaleem',
-  'woohhan'
-]} />
+<ThankYou
+  usernames={[
+    'AmosDoan',
+    'AngerM',
+    'LiYing2010',
+    'anuraaga',
+    'arhont375',
+    'chris-ryan-square',
+    'di-seo',
+    'freevie',
+    'ghkim3221',
+    'gurudatta-carbon',
+    'heowc',
+    'hyangtack',
+    'icepeppermint',
+    'ikhoon',
+    'injae-kim',
+    'jrhee17',
+    'jupiny',
+    'KarboniteKream',
+    'klurpicolo',
+    'kojilin',
+    'ks-yim',
+    'lan17',
+    'minwoox',
+    'nvidyala',
+    'policeman-kh',
+    'sleeplesslord',
+    'ta7uw',
+    'tobias-',
+    'trustin',
+    'wasifaleem',
+    'woohhan',
+  ]}
+/>

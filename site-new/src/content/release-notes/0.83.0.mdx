@@ -7,25 +7,27 @@ date: 2019-03-29
 ## New features
 
 - You can now configure TLS for Armeria server when using `armeria-spring-boot-autoconfigure`. #1663
+
   ```yaml
   # Your application.yml
 
   armeria:
-     ports:
-       - port: 8080
-         protocols: HTTP
-       - ip: 127.0.0.1
-         port: 8081
-         protocols: HTTP
-       - port: 8443
-         protocols: HTTPS
-     ssl:
-       key-alias: "host.name.com"
-       key-store: "keystore.jks"
-       key-store-password: "changeme"
-       trust-store: "truststore.jks"
-       trust-store-password: "changeme"
+    ports:
+      - port: 8080
+        protocols: HTTP
+      - ip: 127.0.0.1
+        port: 8081
+        protocols: HTTP
+      - port: 8443
+        protocols: HTTPS
+    ssl:
+      key-alias: 'host.name.com'
+      key-store: 'keystore.jks'
+      key-store-password: 'changeme'
+      trust-store: 'truststore.jks'
+      trust-store-password: 'changeme'
   ```
+
 - Now, you have enough information to determine the status of a Thrift endpoint with `InvalidResponseHeadersException`. #1668
 - `EventLoopThread` now implements `NonBlocking` tag interface using in Project Reactor. #1665
   - `Schedulers.isInNonBlockingThread()` returns `true` when you call in the Armeria `EventLoop`s.

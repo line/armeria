@@ -48,6 +48,7 @@ date: 2020-08-21
   [Project Reactor](https://projectreactor.io/). #2999
   - See [the complete example](https://github.com/line/armeria-examples/tree/main/context-propagation/reactor)
     for more information.
+
   ```java
   // Enable the hooks.
   RequestContextHooks.enable();
@@ -71,6 +72,7 @@ date: 2020-08-21
 ## 📈 Improvements
 
 - [RequestContext#setAttr(AttributeKey,Object)](type) now returns an old value being replaced. #2997 #3004
+
   ```java
   static final AttributeKey<String> ATTR_KEY =
       AttributeKey.valueOf(MyClass.class, "KEY");
@@ -80,7 +82,9 @@ date: 2020-08-21
   String oldValue = ctx.setAttr(ATTR_KEY, "bar");
   assert "foo".equals(oldValue);
   ```
+
 - You can now bind a [ServiceWithRoutes](type) (e.g. [GrpcService](type)) using the fluent builder API. #2996
+
   ```java
   HttpService myGrpcService =
       GrpcService.builder()
@@ -96,6 +100,7 @@ date: 2020-08-21
                 .build(myGrpcService)
         .build();
   ```
+
 - `localAddress()` and `remoteAddress()` builder methods in [ServiceRequestContextBuilder](type) and
   [ClientRequestContextBuilder](type) now accept `SocketAddress` instead of `InetSocketAddress`, so we have
   more freedom in the future when we add support for UNIX domain sockets. #2996

@@ -10,7 +10,7 @@ date: 2023-08-22
   [reachability metadata](https://www.graalvm.org/latest/reference-manual/native-image/metadata/) to easily build
   [GraalVM](https://www.graalvm.org/) native images. #5005
 - **Micrometer Observation Support**: Support for [Micrometer Observation](https://docs.micrometer.io/micrometer/reference/observation) is added.
-  Refer to [ObservationClient](type) or [ObservationService](type) for details on how to integrate with Armeria.  #4659 #4980
+  Refer to [ObservationClient](type) or [ObservationService](type) for details on how to integrate with Armeria. #4659 #4980
   ```java
   ObservationRegistry observationRegistry = ...
   WebClient.builder()
@@ -22,6 +22,7 @@ date: 2023-08-22
   ```
 - **WebSocket Client Support**: You can now send and receive data over [WebSocket](https://en.wikipedia.org/wiki/WebSocket)
   using [WebSocketClient](type). #4972
+
   ```java
   WebSocketClient client = WebSocketClient.of("ws://...");
   client.connect("/").thenAccept(webSocketSession -> {
@@ -35,6 +36,7 @@ date: 2023-08-22
     webSocketSessions.inbound().subscribe(subscriber);
   });
   ```
+
 - **Implement gRPC Richer Error Model More Easily**: You can now easily use gRPC
   [Richer Error Model](https://grpc.io/docs/guides/error/#richer-error-model) via [GoogleGrpcStatusFunction](type). #4614 #4986
   ```java
@@ -93,7 +95,7 @@ date: 2023-08-22
   are set to the same value internal services are bound to the port only once. #4796 #5022
 - Exceptions that occurred during a TLS handshake are properly propagated to users. #4950
 - [AggregatedHttpObject#content(Charset)](type) now respects the `charset` attribute in the
-  `Content-Type` header if available. #4931  #4948
+  `Content-Type` header if available. #4931 #4948
 - Routes with dynamic predicates are not incorrectly cached anymore. #4927 #4934
 
 ## 📃 Documentation
@@ -136,31 +138,33 @@ date: 2023-08-22
 
 ## 🙇 Thank you
 
-<ThankYou usernames={[
-  'Dogacel',
-  'KarboniteKream',
-  'Kyoungwoong',
-  'aki-s',
-  'anuraaga',
-  'baezzys',
-  'ceki',
-  'chrisryan10',
-  'ghkim3221',
-  'heowc',
-  'hyperxpro',
-  'ikhoon',
-  'jrhee17',
-  'marcingrzejszczak',
-  'minwoox',
-  'mscheong01',
-  'my4-dev',
-  'mynameisjwlee',
-  'r3mariano',
-  'ribafish',
-  'sh-cho',
-  'ta7uw',
-  'tomatophobia',
-  'trustin',
-  'wreulicke',
-  'yunjoopark'
-]} />
+<ThankYou
+  usernames={[
+    'Dogacel',
+    'KarboniteKream',
+    'Kyoungwoong',
+    'aki-s',
+    'anuraaga',
+    'baezzys',
+    'ceki',
+    'chrisryan10',
+    'ghkim3221',
+    'heowc',
+    'hyperxpro',
+    'ikhoon',
+    'jrhee17',
+    'marcingrzejszczak',
+    'minwoox',
+    'mscheong01',
+    'my4-dev',
+    'mynameisjwlee',
+    'r3mariano',
+    'ribafish',
+    'sh-cho',
+    'ta7uw',
+    'tomatophobia',
+    'trustin',
+    'wreulicke',
+    'yunjoopark',
+  ]}
+/>

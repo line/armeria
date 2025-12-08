@@ -1,5 +1,5 @@
 ---
-sidebar_label: "3. Add services to a server"
+sidebar_label: '3. Add services to a server'
 type: step
 tags:
   - docservice
@@ -40,22 +40,25 @@ public final class BlogService {
 In [Step 1. Create a server](/docs/tutorials/rest/create-server), we added a dummy service just to check that a server is launched. Now, let's remove the dummy service and add an empty blog service, instead.
 
 1. From `Main.java`, remove the dummy service at line 4.
-  ```java title="Main.java" {4} showLineNumbers
-  static Server newServer(int port) {
-    ...
-    return sb.http(port)
-             .service("/", (ctx, req) -> HttpResponse.of("Hello, Armeria!")) // Remove this
-             .build();
-  ```
+
+```java title="Main.java" {4} showLineNumbers
+static Server newServer(int port) {
+  ...
+  return sb.http(port)
+           .service("/", (ctx, req) -> HttpResponse.of("Hello, Armeria!")) // Remove this
+           .build();
+```
+
 2. Add our service by adding line 4.
-  ```java title="Main.java" {4} showLineNumbers
-  static Server newServer(int port) {
-    ...
-    return sb.http(port)
-             .annotatedService(new BlogService())   // Add this
-             .build();
-  }
-  ```
+
+```java title="Main.java" {4} showLineNumbers
+static Server newServer(int port) {
+  ...
+  return sb.http(port)
+           .annotatedService(new BlogService())   // Add this
+           .build();
+}
+```
 
 ## 3. Add the Documentation service
 
@@ -64,40 +67,40 @@ This time, we'll add Armeria's [Documentation service](/docs/server/docservice):
 1. In the `newServer()` method, add a [DocService](type) and a request example for [creating blog posts](/docs/tutorials/rest/implement-create),
    using [DocServiceBuilder#exampleRequests(Class,String,Iterable)](type). Feel free to add more examples for other service methods.
 
-  ```java title="Main.java" {1,6-13}
-  import com.linecorp.armeria.server.docs.DocService;
+```java title="Main.java" {1,6-13}
+import com.linecorp.armeria.server.docs.DocService;
 
-  public final class Main {
-    static Server newServer(int port) {
-      ServerBuilder sb = Server.builder();
-      DocService docService =
-              DocService.builder()
-                        .exampleRequests(BlogService.class,
-                            "createBlogPost", // Name of service method
-                            "{\"title\":\"My first blog\", \"content\":\"Hello Armeria!\"}")
-                        .build();
-  ```
+public final class Main {
+  static Server newServer(int port) {
+    ServerBuilder sb = Server.builder();
+    DocService docService =
+            DocService.builder()
+                      .exampleRequests(BlogService.class,
+                          "createBlogPost", // Name of service method
+                          "{\"title\":\"My first blog\", \"content\":\"Hello Armeria!\"}")
+                      .build();
+```
 
 2. Inside the `newServer()` method, add the [DocService](type) to our server builder.
 
-  ```java title="Main.java" {5}
-  static Server newServer(int port) {
-    ...
-    return sb.http(port)
-             .annotatedService(new BlogService())
-             .serviceUnder("/docs", docService)  // Add Documentation service
-             .build();
-  }
-  ```
+```java title="Main.java" {5}
+static Server newServer(int port) {
+  ...
+  return sb.http(port)
+           .annotatedService(new BlogService())
+           .serviceUnder("/docs", docService)  // Add Documentation service
+           .build();
+}
+```
 
 3. (Optional) To access the Documentation service result easily, edit the log message we added in [Step 1. Create a server](/docs/tutorials/rest/create-server) to the one specified below.
 
-  ```java title="Main.java" {2}
-  public static void main(String[] args) throws Exception {
-      logger.info("Server has been started. Serving DocService at http://127.0.0.1:{}/docs",
-                  server.activeLocalPort());
-  }
-  ```
+```java title="Main.java" {2}
+public static void main(String[] args) throws Exception {
+    logger.info("Server has been started. Serving DocService at http://127.0.0.1:{}/docs",
+                server.activeLocalPort());
+}
+```
 
 ## 4. Run the server and services
 
@@ -116,7 +119,7 @@ Let's test and call our service operations, using Armeria's Documentation servic
 Click the URL http://127.0.0.1:8080/docs from the log message or open the URL on a web browser. If you see the Document service page, you've launched the [DocService](type) and server successfully. We're seeing no services on the
 page because we're to implement service methods.
 
-  ![](/img/tutorial_blogservice_docservice_start.png)
+![](/img/tutorial_blogservice_docservice_start.png)
 
 ### Using DocService after adding service methods
 
@@ -128,25 +131,25 @@ To test your service methods with the [Documentation service](/docs/server/docse
 
 1. Click the **createBlogPost()** method link in the left panel. You can make calls to the creation method from the page opened.
 
-  ![](/img/tutorial_blogservice_reqex.png)
+![](/img/tutorial_blogservice_reqex.png)
 
-  Note that in the **REQUEST BODY** section that the values specified for the [DocServiceBuilder](type) are automatically entered on the page.
+Note that in the **REQUEST BODY** section that the values specified for the [DocServiceBuilder](type) are automatically entered on the page.
 
-  ```java title="Main.java" {5-8}
-  static Server newServer(int port) {
-    ServerBuilder sb = Server.builder();
-    DocService docService =
-      DocService.builder()
-                .exampleRequests(
-                  BlogService.class,
-                  "createBlogPost",
-                  "{\"title\":\"My first blog\",\"content\":\"Hello Armeria!\"}")
-                .build();
-  ```
+```java title="Main.java" {5-8}
+static Server newServer(int port) {
+  ServerBuilder sb = Server.builder();
+  DocService docService =
+    DocService.builder()
+              .exampleRequests(
+                BlogService.class,
+                "createBlogPost",
+                "{\"title\":\"My first blog\",\"content\":\"Hello Armeria!\"}")
+              .build();
+```
 
 2. Click the **SUBMIT** button, and you'll see the blog post information returned in the right panel.
 
-  ![](/img/tutorial_blogservice_return.png)
+![](/img/tutorial_blogservice_return.png)
 
 ## What's next?
 

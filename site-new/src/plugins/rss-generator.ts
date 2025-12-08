@@ -59,7 +59,9 @@ export default async function RssGeneratorPlugin(
  * Extract date from header element for Release notes
  */
 function extractDateFromReleaseNotes(html: string): Date | null {
-  const dateMatch = html.match(/<header[^>]*>.*?<p>\s*<em>(.*?)<\/em>\s*<\/p>/is);
+  const dateMatch = html.match(
+    /<header[^>]*>.*?<p>\s*<em>(.*?)<\/em>\s*<\/p>/is,
+  );
   if (!dateMatch) {
     return null;
   }
@@ -113,8 +115,7 @@ function extractDate(html: string): Date {
 
 function extractTitle(html: string): string {
   const titleMatch =
-    html.match(/<h1[^>]*>(.*?)<\/h1>/i) ||
-    html.match(/<title>(.*?)<\/title>/i);
+    html.match(/<h1[^>]*>(.*?)<\/h1>/i) || html.match(/<title>(.*?)<\/title>/i);
   return titleMatch
     ? titleMatch[1].replace(/<[^>]*>/g, '').trim()
     : 'Title not found';

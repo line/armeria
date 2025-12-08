@@ -41,7 +41,6 @@ date: 2019-05-17
   ````
 
 - We revamped our `HttpHeaders` API to make it cleaner and safer. #1731
-
   - `HttpHeaders` has been split into three types:
     - `RequestHeaders` for request headers with `:method` and `:path` header
     - `ResponseHeaders` for response headers with `:status` header
@@ -69,7 +68,6 @@ date: 2019-05-17
   - See `HttpHeaders` Javadoc for more examples.
 
 - You can now test your Armeria app with JUnit 5. A new module `armeria-testing-junit5` has been added with the following extensions: #1736
-
   - `com.linecorp.armeria.testing.junit.server.ServerExtension`
   - `com.linecorp.armeria.testing.junit.server.SelfSignedCertificateExtension`
   - `com.linecorp.armeria.testing.junit.common.EventLoopGroupExtension`

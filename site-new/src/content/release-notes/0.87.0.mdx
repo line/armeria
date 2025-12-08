@@ -7,7 +7,10 @@ date: 2019-06-13
 ## New features
 
 - You can now jump to a service method quickly using a go-to form in a `DocService` debug page. #1815
-  <img src="https://user-images.githubusercontent.com/1866157/59041505-b6dd7100-88b3-11e9-87d5-edc826751620.gif" width="800" />
+  <img
+    src="https://user-images.githubusercontent.com/1866157/59041505-b6dd7100-88b3-11e9-87d5-edc826751620.gif"
+    width="800"
+  />
 - From this release, TLSv1.3 is enabled by default. #1779
 - `Route` replaces `PathMapping`. #1789
   ```java
@@ -25,7 +28,6 @@ date: 2019-06-13
   - The factory methods and some getter methods in `AggregatedHttpMessage` have been pushed down to the two subtypes. For example, `AggregatedHttpMessage.method()` does not exist anymore and you will find it in `AggregatedHttpRequest`.
   - We have revised the API to use `AggregatedHttpRequest` or `AggregatedHttpResponse` rather than `AggregatedHttpMessage` wherever possible for clarity.
 - New static factory methods have been added to `HttpData`. #1797
-
   - `HttpData.of()` was not very clear about whether it will wrap the specified bytes or make a copy of them. `HttpData.wrap()` and `HttpData.copyOf()` removes such ambiguity.
 
     ```java

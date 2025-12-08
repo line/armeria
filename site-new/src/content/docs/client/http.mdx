@@ -68,7 +68,7 @@ You can enrich your [WebClient](type) by decorating it with decorators.
 A decorator wraps another client to intercept an outgoing request or an incoming response.
 A lot of core features such as logging, metrics and distributed tracing are implemented as decorators.
 
-- [BraveClient](type) which [traces](/docs/advanced/zipkin) outbound requests using 
+- [BraveClient](type) which [traces](/docs/advanced/zipkin) outbound requests using
   [Brave](https://github.com/openzipkin/brave).
 - [CircuitBreakerClient](type) which [opens a circuit](/docs/client/circuit-breaker) on failed responses.
 - [CookieClient](type) which stores cookies of responses using [CookieJar](type).
@@ -78,12 +78,12 @@ A lot of core features such as logging, metrics and distributed tracing are impl
   requests and responses.
 - [DecodingClient](type) which decompresses a
   [compressed](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Encoding) response.
-- [MetricCollectingClient](type) which 
-  [collects metrics](/docs/advanced/metrics#collecting-client-side-metrics) using 
+- [MetricCollectingClient](type) which
+  [collects metrics](/docs/advanced/metrics#collecting-client-side-metrics) using
   [Micrometer](https://micrometer.io/).
 - [LoggingClient](type) which logs requests and responses.
 - [RetryingClient](type) which [automatically retries](/docs/client/retry) failed requests.
-  
+
 ```java
 import brave.http.HttpTracing;
 import com.linecorp.armeria.client.brave.BraveClient;
@@ -122,8 +122,8 @@ Please see [Decorating a client](/docs/client/decorator) to learn how it works.
 ## Service discovery with WebClient
 
 Armeria provides the various [service discovery](https://microservices.io/patterns/client-side-discovery.html)
-mechanisms with [EndpointGroup](type), 
-from Kubernetes-style [DNS records](/docs/client/service-discovery#dns-based-service-discovery-with-dnsendpointgroup) 
+mechanisms with [EndpointGroup](type),
+from Kubernetes-style [DNS records](/docs/client/service-discovery#dns-based-service-discovery-with-dnsendpointgroup)
 to [Consul](/docs/client/service-discovery#consul-based-service-discovery-with-consulendpointgroup).
 Requests are sent to dynamically retrieved [Endpoint](typeplural) by specifying an [EndpointGroup](type)
 to a [WebClient](type).
@@ -134,11 +134,11 @@ import com.linecorp.armeria.client.endpoint.dns.DnsServiceEndpointGroup;
 // Retrieve the Endpoint list from SRV records
 DnsServiceEndpointGroup group =
     DnsServiceEndpointGroup.of("k8s.default.svc.cluster.local.");
-    
+
 // Filter out unhealthy endpoints
 HealthCheckedEndpointGroup healthCheckedGroup =
         HealthCheckedEndpointGroup.of(group, "/monitor/l7check");
-        
+
 WebClient.builder(SessionProtocol.HTTP, healthCheckedGroup)
          ...
          .build();
@@ -150,7 +150,7 @@ for more information.
 ## Configuring ClientFactory
 
 A [ClientFactory](type) manages connections and protocol-specific properties.
-You can build your own [ClientFactory](type) using [ClientFactoryBuilder](type) and 
+You can build your own [ClientFactory](type) using [ClientFactoryBuilder](type) and
 set it through [WebClientBuilder#factory()](type).
 
 ```java
@@ -173,5 +173,5 @@ Please check [Customizing a `ClientFactory` with `ClientFactoryBuilder`](/docs/c
 for the details.
 
 ## See also
-- [Retrofit integration](/docs/client/retrofit)
 
+- [Retrofit integration](/docs/client/retrofit)

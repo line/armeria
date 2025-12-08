@@ -1,6 +1,7 @@
 # Unit-testing `Client` and `Service`
 
 A unit test of a client or a service will require you to prepare two objects:
+
 - [ClientRequestContext](type) or [ServiceRequestContext](type)
 - [HttpRequest](type) or [RpcRequest](type)
 
@@ -104,6 +105,7 @@ It is usually not necessary to build a context object by yourself except when wr
 because Armeria will always create a context object for you. However, you may need to build a fake context and
 invoke your request processing pipeline with it when you want to handle the requests received via other sources
 such as:
+
 - Non-Armeria services
 - Non-HTTP protocols, e.g. Kafka and STOMP
 - Timers, i.e. Trigger a certain request every N minutes.

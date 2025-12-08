@@ -5,6 +5,7 @@ traditional server-side load balancing where the requests go through a dedicated
 [L4 and L7 switches](https://en.wikipedia.org/wiki/Multilayer_switch#Layer_4%E2%80%937_switch,_web_switch,_or_content_switch).
 
 There are 3 elements involved in client-side load balancing in Armeria:
+
 - [Endpoint](type) represents an individual host (with an optional port number) and its weight.
 - [EndpointGroup](type) represents a set of [Endpoint](typeplural).
 - A user specifies an [EndpointGroup](type) when building a client.
@@ -36,6 +37,7 @@ assert endpoints.contains(Endpoint.of("duckduckgo.com", 443));
 An [EndpointGroup](type) is created with [EndpointSelectionStrategy#weightedRoundRobin()](type) by default,
 unless specified otherwise. Armeria currently provides the following [EndpointSelectionStrategy](type)
 implementations out-of-the-box:
+
 - [EndpointSelectionStrategy#weightedRoundRobin()](type) for weighted round robin.
 - [EndpointSelectionStrategy#roundRobin()](type) for round robin.
 - [EndpointSelectionStrategy#sticky(ToLongFunction)](type) for pinning requests based on a criteria
@@ -121,7 +123,7 @@ especially those which updates the [Endpoint](type) list dynamically, such as re
 :::tip
 
 An [EndpointGroup](type), whose [Endpoint](typeplural) change even after it's instantiated and registered,
-is called *dynamic endpoint group*.
+is called _dynamic endpoint group_.
 
 :::
 
@@ -170,7 +172,7 @@ checking will not be enabled.
 
 :::tip
 
-You can decorate *any* [EndpointGroup](type) implementations with [HealthCheckedEndpointGroup](type),
+You can decorate _any_ [EndpointGroup](type) implementations with [HealthCheckedEndpointGroup](type),
 including what we will explain later in this page.
 
 :::
@@ -178,6 +180,7 @@ including what we will explain later in this page.
 ## DNS-based service discovery with `DnsEndpointGroup`
 
 Armeria provides 3 DNS-based [EndpointGroup](type) implementations:
+
 - [DnsAddressEndpointGroup](type) that retrieves the [Endpoint](type) list from `A` and `AAAA` records
 - [DnsServiceEndpointGroup](type) that retrieves the [Endpoint](type) list from `SRV` records
 - [DnsTextEndpointGroup](type) that retrieves the [Endpoint](type) list from `TXT` records
@@ -339,10 +342,10 @@ See [Eureka service registration](/docs/server/service-registration#eureka-based
 First, You need the `armeria-consul` dependency:
 
 <RequiredDependencies
-boms={[{ groupId: 'com.linecorp.armeria', artifactId: 'armeria-bom' }]}
-dependencies={[
-{ groupId: 'com.linecorp.armeria', artifactId: 'armeria-consul' },
-]}
+  boms={[{ groupId: 'com.linecorp.armeria', artifactId: 'armeria-bom' }]}
+  dependencies={[
+    { groupId: 'com.linecorp.armeria', artifactId: 'armeria-consul' },
+  ]}
 />
 
 Then, use [ConsulEndpointGroup](type) to retrieve the information of servers:

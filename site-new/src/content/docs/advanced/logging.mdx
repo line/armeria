@@ -51,6 +51,7 @@ Then, let's look at the following example:
 ```
 
 The above configuration defines an appender called `RCEA` which exports the following:
+
 - `remote.ip`
   - the IP address of the remote peer,
 - `tls.cipher`
@@ -70,6 +71,7 @@ There are three types of properties you can export using [RequestContextExportin
 A built-in property is a common property available for most requests. See the complete list of the built-in
 properties and their MDC keys at [BuiltInProperty](type).
 You can also use wildcard character `*` instead of listing all properties. For example:
+
 - `"*"`
 - `"req.*"`
 
@@ -78,6 +80,7 @@ You can also use wildcard character `*` instead of listing all properties. For e
 When the session protocol of the current connection is HTTP, a user can export HTTP headers of the current
 request and response. The MDC key of the exported header is `"req.headers.<lower-case header name>"` or
 `"res.headers.<lower-case header name>"`. For example:
+
 - `"req.headers.user-agent"`
 - `"res.headers.set-cookie"`
 

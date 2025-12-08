@@ -1,5 +1,5 @@
 #starBegging {
-  transition: transform .25s;
+  transition: transform 0.25s;
   transform: scale(0);
   border-radius: 8px;
   position: fixed;

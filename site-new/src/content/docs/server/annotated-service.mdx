@@ -57,25 +57,20 @@ public class MyAnnotatedService {
 There are 5 different path types that you can define:
 
 - Exact path, e.g. `/hello` or `exact:/hello`
-
   - a service method will handle the path exactly matched with the specified path.
 
 - Prefix path, e.g. `prefix:/hello`
-
   - a service method will handle every path which starts with the specified prefix.
 
 - Path containing path variables, e.g `/hello/{name}` or `/hello/:name`
-
   - a service method will handle the path matched with the specified path pattern. A path variable in the
     specified pattern may be mapped to a parameter of the service method.
 
 - Regular expression path, e.g. `regex:^/hello/(?<name>.*)$`
-
   - a service method will handle the path matched with the specified regular expression. If a named capturing
     group exists in the regular expression, it may be mapped to a parameter of the service method.
 
 - Glob pattern path, e.g. `glob:/*/hello/**`
-
   - a service method will handle the path matched with the specified glob pattern. Each wildcard is mapped to
     an index which starts with `0`, so it may be mapped to a parameter of the service method.
 
@@ -198,7 +193,7 @@ one of the following supported types:
   - `UUID`
   - `java.time` package classes
     - `Instant`
-    - `Duration` and  `Period`
+    - `Duration` and `Period`
     - `LocalDate`, `LocalDateTime` and `LocalTime`,
     - `OffsetDateTime` and `OffsetTime`
     - `ZonedDateTime`, `ZoneId` and `ZoneOffset`
@@ -221,7 +216,7 @@ public class MyAnnotatedService {
 }
 ```
 
-Please refer to [Configure -parameters javac option](/docs/setup#configure--parameters-javac-option) 
+Please refer to [Configure -parameters javac option](/docs/setup#configure--parameters-javac-option)
 for more information.
 
 ### Injecting a parameter as an `Enum` type
@@ -267,7 +262,7 @@ a user sends an HTTP `GET` request with URI of `/hello1?name=armeria`, the servi
 as the value of parameter `name`.
 
 If there is no parameter named `name` in the query string, the service method that requires it will not be
-invoked, but the client will get a `400 Bad Request` response.  If you want to allow `null` to be injected,
+invoked, but the client will get a `400 Bad Request` response. If you want to allow `null` to be injected,
 you can use [@Default](type) annotation, `@Nullable` annotation or `Optional<?>` class, like demonstrated
 below in `hello2()`, `hello3()` and `hello4()` methods:
 
@@ -297,9 +292,9 @@ public class MyAnnotatedService {
 
 :::tip
 
-`@Nullable` annotation can be from *any* package as long as its simple name is `Nullable`.
- For example, it can be `@javax.annotation.Nullable`, `@org.checkerframework.checker.nullness.qual.Nullable` or
- `@io.reactivex.annotations.Nullable`.
+`@Nullable` annotation can be from _any_ package as long as its simple name is `Nullable`.
+For example, it can be `@javax.annotation.Nullable`, `@org.checkerframework.checker.nullness.qual.Nullable` or
+`@io.reactivex.annotations.Nullable`.
 
 :::
 
@@ -399,7 +394,7 @@ public class MyAnnotatedService {
 Armeria also provides the [@Attribute](type) annotation to inject a
 custom attribute value of a [RequestContext](type) into the annotated
 parameter. The [@Attribute](type) annotation has two attributes:
-`value` and  `prefix`, as shown in the example below. If both `prefix`
+`value` and `prefix`, as shown in the example below. If both `prefix`
 and `value` are specified, `AttributeKey.valueOf(prefix, value)` will
 be used to look up the `AttributeKey` of the custom attribute.
 If `prefix` is unspecified, the class of the annotated service will be
@@ -556,8 +551,8 @@ public class ToEnglishConverter implements RequestConverterFunction {
 ```
 
 Then, you can write your service method as follows. Custom request objects will be converted automatically
-by the converters you registered with [@RequestConverter](type) annotation. 
-Note that [@RequestConverter](type) annotation can be specified on a class, a method or a parameter 
+by the converters you registered with [@RequestConverter](type) annotation.
+Note that [@RequestConverter](type) annotation can be specified on a class, a method or a parameter
 in an annotated service, and its scope is determined depending on where it is specified.
 
 ```java
@@ -683,7 +678,7 @@ public class MyRequestObject {
 The usage of [@Param](type) or [@Header](type) annotations on Java object elements is much like
 using them on the parameters of a service method because even you can use [@Default](type) and
 [@RequestObject](type) annotations defined there.
-Please refer to [Parameter injection](#parameter-injection), and 
+Please refer to [Parameter injection](#parameter-injection), and
 [Getting an HTTP header](#getting-an-http-header) for more information.
 
 ### Converting a Java object to an HTTP response
@@ -738,8 +733,8 @@ public class MyAnnotatedService {
 }
 ```
 
-Armeria supports [Media type negotiation](#media-type-negotiation). So you may want to get 
-a negotiated media type in order to set a `Content-Type` header on your response. 
+Armeria supports [Media type negotiation](#media-type-negotiation). So you may want to get
+a negotiated media type in order to set a `Content-Type` header on your response.
 In this case, you can access it in your response converter as follows.
 
 ```java
@@ -763,18 +758,15 @@ an [HttpResponse](type) by one of the following response converters which perfor
 the negotiated media type and the type of the object.
 
 - [JacksonResponseConverterFunction](type)
-
   - converts an object to a JSON document if the negotiated media type is `application/json`.
     `JsonNode` object can be converted to a JSON document even if there is no media type negotiated.
 
 - [StringResponseConverterFunction](type)
-
   - converts an object to a string if the negotiated main media type is one of `text` types.
     If there is no media type negotiated, `String` and `CharSequence` object will be written as a text
     with `Content-Type: text/plain; charset=utf-8` header.
 
 - [ByteArrayResponseConverterFunction](type)
-
   - converts an object to a byte array. Only [HttpData](type) and `byte[]` will be handled
     even if the negotiated media type is `application/binary` or `application/octet-stream`.
     If there is no media type negotiated, [HttpData](type) and `byte[]` object will be written as a binary
@@ -961,13 +953,11 @@ In the earlier examples, the annotated service methods only return [HttpResponse
 more response types which can be used in the annotated service.
 
 - [HttpResponse](type) and [AggregatedHttpResponse](type)
-
   - It will be sent to the client without any modification. If an exception is raised while the response is
     being sent, exception handlers will handle it. If no message has been sent to the client yet,
     the exception handler can send an [HttpResponse](type) instead.
 
 - [ResponseEntity](type)
-
   - It contains the [HttpHeaders](type) and the object which can be converted into HTTP response body by
     response converters. A user can customize the HTTP status and headers including the trailers, with this type.
 
@@ -988,7 +978,6 @@ more response types which can be used in the annotated service.
   ```
 
 - Reactive Streams [Publisher]
-
   - All objects which are produced by the publisher will be collected, then the collected ones will be
     converted to an [HttpResponse](type) by response converters. If a single object is produced, it will be
     passed into the response converters as it is. But if multiple objects are produced, they will be passed
@@ -997,23 +986,21 @@ more response types which can be used in the annotated service.
     will be treated in the same way as [Publisher] if you add `armeria-rxjava` to the dependencies.
 
 - `CompletionStage` and `CompletableFuture`
-
   - An object which is generated by the `CompletionStage` will be converted to an [HttpResponse](type)
     by response converters. If the `CompletionStage` completes exceptionally, exception handlers will
     handle the cause.
 
 - Other types
-
-  - As described in 
-    [Converting a Java object to an HTTP response](#converting-a-java-object-to-an-http-response), 
-    you can use any response types with response converters that convert them. 
+  - As described in
+    [Converting a Java object to an HTTP response](#converting-a-java-object-to-an-http-response),
+    you can use any response types with response converters that convert them.
     If a service method raises an exception, exception handlers will handle it.
 
 ## Decorating an annotated service
 
 Every [HttpService](type) can be wrapped by another [HttpService](type) in Armeria (Refer to
-[Decorating a service](/docs/server/decorator) for more information). 
-Simply, you can write your own decorator by 
+[Decorating a service](/docs/server/decorator) for more information).
+Simply, you can write your own decorator by
 implementing [DecoratingHttpServiceFunction](type) interface as follows.
 
 ```java
@@ -1111,11 +1098,11 @@ public class MyAnnotatedService {
 
 Note that the evaluation order of the decorators is slightly different from that of the converters and exception
 handlers. As you read in [Using ServerBuilder to configure converters and exception
-handlers](#using-serverbuilder-to-configure-converters-and-exception-handlers), 
-both the converters and exception handlers are applied in the order of method-level ones, 
-class-level ones and global ones. 
-Unlike them, decorators are applied in the opposite order as follows, 
-because it is more understandable for a user to apply from the outer decorators to the inner decorators, 
+handlers](#using-serverbuilder-to-configure-converters-and-exception-handlers),
+both the converters and exception handlers are applied in the order of method-level ones,
+class-level ones and global ones.
+Unlike them, decorators are applied in the opposite order as follows,
+because it is more understandable for a user to apply from the outer decorators to the inner decorators,
 which means the order of global decorators, class-level decorators and method-level decorators.
 
 ```java
@@ -1285,7 +1272,7 @@ Accept: application/json
 Note that a `Content-Type` header of a response is not automatically set. You may want to get the
 negotiated [@Produces](type) from [ServiceRequestContext#negotiatedResponseMediaType()](type) method and
 set it as the value of the `Content-Type` header of your response.
-    
+
 :::
 
 If a client sends a request without an `Accept` header (or sending an `Accept` header with an unsupported
@@ -1459,11 +1446,11 @@ In this case, the values of the HTTP header named `custom-header` and the HTTP t
 Note that the trailers will not be injected into the responses with the following HTTP status code,
 because they always have an empty content.
 
-| Status code | Description |
-|-------------|-------------|
-| 204 | No content |
-| 205 | Reset content |
-| 304 | Not modified |
+| Status code | Description   |
+| ----------- | ------------- |
+| 204         | No content    |
+| 205         | Reset content |
+| 304         | Not modified  |
 
 ## Using a composite annotation
 

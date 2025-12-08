@@ -6,6 +6,7 @@ traditional server-side load balancing where the requests go through a dedicated
 [L4 and L7 switches](https://en.wikipedia.org/wiki/Multilayer_switch#Layer_4%E2%80%937_switch,_web_switch,_or_content_switch).
 
 Armeria provides 2 [ServerListener](type) implementations for service registration:
+
 - [ZooKeeperUpdatingListener](type) which registers to [ZooKeeper](https://zookeeper.apache.org/)
   as an ephemeral node.
 - [EurekaUpdatingListener](type) which registers to [Eureka](https://github.com/Netflix/eureka/).
@@ -125,7 +126,7 @@ EurekaUpdatingListenerBuilder builder =
                               // using SystemInfo.defaultNonLoopbackIpV4Address().
                               .ipAddr("192.168.10.10")
                               .vipAddress("armeria.service.com:8080");
-                              
+
 EurekaUpdatingListener listener = builder.build();
 ServerBuilder sb = Server.builder();
 sb.serverListener(listener);
@@ -146,10 +147,10 @@ See [Eureka service discovery](/docs/client/service-discovery#eureka-based-servi
 First, You need the `armeria-consul` dependency:
 
 <RequiredDependencies
-boms={[{ groupId: 'com.linecorp.armeria', artifactId: 'armeria-bom' }]}
-dependencies={[
-{ groupId: 'com.linecorp.armeria', artifactId: 'armeria-consul' },
-]}
+  boms={[{ groupId: 'com.linecorp.armeria', artifactId: 'armeria-bom' }]}
+  dependencies={[
+    { groupId: 'com.linecorp.armeria', artifactId: 'armeria-consul' },
+  ]}
 />
 
 Then, use [ConsulUpdatingListener](type) to register your server to the Consul:
@@ -167,8 +168,8 @@ sb.serverListener(listener);
 sb.build().start();
 ```
 
-If you want to specify an [HTTP check](https://www.consul.io/api/agent/check#http) or 
-[tags](https://www.consul.io/api-docs/agent/service#tags) to the [Server](type), 
+If you want to specify an [HTTP check](https://www.consul.io/api/agent/check#http) or
+[tags](https://www.consul.io/api-docs/agent/service#tags) to the [Server](type),
 use [ConsulUpdatingListenerBuilder](type):
 
 ```java
@@ -178,7 +179,7 @@ ConsulUpdatingListenerBuilder builder =
     ConsulUpdatingListener.builder("http://my-consul.com:8500", "my-service")
                           .check("http://my.hostname.local:8080/internal/l7check")
                           .tags("production", "v1");
-                              
+
 ConsulUpdatingListener listener = builder.build();
 ServerBuilder sb = Server.builder();
 sb.serverListener(listener);
