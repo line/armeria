@@ -33,7 +33,7 @@ import java.util.concurrent.CompletableFuture;
  * <pre>{@code
  * AthenzResourceProvider provider = new PathAthenzResourceProvider();
  * AthenzService.builder(ztsBaseClient)
- *              .resourceProvider(provider)
+ *              .resourceProvider(provider, resourceTagValue)
  *              .action("read")
  *              .newDecorator();
  * }</pre>

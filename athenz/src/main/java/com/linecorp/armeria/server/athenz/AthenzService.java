@@ -181,7 +181,7 @@ public final class AthenzService extends SimpleDecoratingHttpService {
         final CompletableFuture<HttpResponse> future = athenzResourceProvider.provide(ctx, req)
                 .exceptionally(cause -> "")
                 .thenCompose(athenzResource -> {
-                    if (athenzResource.isEmpty()) {
+                    if (athenzResource == null || athenzResource.isEmpty()) {
                         assert deniedTimer != null;
                         deniedTimer.record(System.nanoTime() - startNanos, TimeUnit.NANOSECONDS);
                         return CompletableFuture.completedFuture(HttpResponse.of(HttpStatus.INTERNAL_SERVER_ERROR, MediaType.PLAIN_TEXT, "Failed to resolve resource"));

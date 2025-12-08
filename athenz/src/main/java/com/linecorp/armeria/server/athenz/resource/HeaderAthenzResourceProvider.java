@@ -23,6 +23,10 @@ import com.linecorp.armeria.server.ServiceRequestContext;
 
 import java.util.concurrent.CompletableFuture;
 
+import static com.google.common.base.Preconditions.checkArgument;
+import static java.util.Objects.requireNonNull;
+
+
 /**
  * Provides the Athenz resource string from a specific HTTP header.
  *
@@ -33,7 +37,7 @@ import java.util.concurrent.CompletableFuture;
  * <pre>{@code
  * AthenzResourceProvider provider = new HeaderAthenzResourceProvider("X-Athenz-Resource");
  * AthenzService.builder(ztsBaseClient)
- *              .resourceProvider(provider)
+ *              .resourceProvider(provider, resourceTagValue)
  *              .action("read")
  *              .newDecorator();
  * }</pre>
@@ -50,6 +54,8 @@ public class HeaderAthenzResourceProvider implements AthenzResourceProvider {
      * @param headerName the name of the HTTP header to extract the resource from
      */
     public HeaderAthenzResourceProvider(String headerName) {
+        requireNonNull(headerName, "headerName");
+        checkArgument(!headerName.isEmpty(), "headerName must not be empty");
         this.headerName = headerName;
     }
 

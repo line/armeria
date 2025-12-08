@@ -27,6 +27,9 @@ import com.linecorp.armeria.server.ServiceRequestContext;
 
 import java.util.concurrent.CompletableFuture;
 
+import static com.google.common.base.Preconditions.checkArgument;
+import static java.util.Objects.requireNonNull;
+
 /**
  * Provides the Athenz resource string from a specific field in the JSON request body.
  *
@@ -37,9 +40,9 @@ import java.util.concurrent.CompletableFuture;
  * <p>Example:
  * <pre>{@code
  * ObjectMapper mapper = new ObjectMapper();
- * AthenzResourceProvider provider = new JsonBodyFieldAthenzResourceProvider(mapper, "resourceId");
+ * AthenzResourceProvider provider = new JsonBodyFieldAthenzResourceProvider(mapper, resourceId);
  * AthenzService.builder(ztsBaseClient)
- *              .resourceProvider(provider)
+ *              .resourceProvider(provider, resourceTagValue)
  *              .action("write")
  *              .newDecorator();
  * }</pre>
@@ -62,10 +65,13 @@ public class JsonBodyFieldAthenzResourceProvider implements AthenzResourceProvid
     /**
      * Creates a new instance that extracts the Athenz resource from the specified JSON field.
      *
-     * @param objectMapper the {@link ObjectMapper} used to parse the JSON request body
+     * @param objectMapper  the {@link ObjectMapper} used to parse the JSON request body
      * @param jsonFieldName the name of the JSON field to extract the resource from
      */
     public JsonBodyFieldAthenzResourceProvider(ObjectMapper objectMapper, String jsonFieldName) {
+        requireNonNull(objectMapper, "objectMapper");
+        requireNonNull(jsonFieldName, "jsonFieldName");
+        checkArgument(!jsonFieldName.isEmpty(), "jsonFieldName must not be empty");
         this.objectMapper = objectMapper;
         this.jsonFieldName = jsonFieldName;
     }
