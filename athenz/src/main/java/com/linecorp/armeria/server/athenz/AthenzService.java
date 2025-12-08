@@ -178,31 +178,33 @@ public final class AthenzService extends SimpleDecoratingHttpService {
             return HttpResponse.of(HttpStatus.UNAUTHORIZED, MediaType.PLAIN_TEXT, "Missing token");
         }
 
-        final CompletableFuture<HttpResponse> future = athenzResourceProvider.provide(ctx, req).thenCompose(athenzResource -> {
-            if (athenzResource.isEmpty()) {
-                assert deniedTimer != null;
-                deniedTimer.record(System.nanoTime() - startNanos, TimeUnit.NANOSECONDS);
-                return CompletableFuture.completedFuture(HttpResponse.of(HttpStatus.INTERNAL_SERVER_ERROR, MediaType.PLAIN_TEXT, "Failed to resolve resource"));
-            }
-
-            return CompletableFuture.supplyAsync(() -> {
-                final AccessCheckStatus status = authZpeClient.allowAccess(token, athenzResource, athenzAction);
-                final long elapsedNanos = System.nanoTime() - startNanos;
-                if (status == AccessCheckStatus.ALLOW) {
-                    assert allowedTimer != null;
-                    allowedTimer.record(elapsedNanos, TimeUnit.NANOSECONDS);
-                    try {
-                        return unwrap().serve(ctx, req);
-                    } catch (Exception e) {
-                        return Exceptions.throwUnsafely(e);
+        final CompletableFuture<HttpResponse> future = athenzResourceProvider.provide(ctx, req)
+                .exceptionally(cause -> "")
+                .thenCompose(athenzResource -> {
+                    if (athenzResource.isEmpty()) {
+                        assert deniedTimer != null;
+                        deniedTimer.record(System.nanoTime() - startNanos, TimeUnit.NANOSECONDS);
+                        return CompletableFuture.completedFuture(HttpResponse.of(HttpStatus.INTERNAL_SERVER_ERROR, MediaType.PLAIN_TEXT, "Failed to resolve resource"));
                     }
-                } else {
-                    assert deniedTimer != null;
-                    deniedTimer.record(elapsedNanos, TimeUnit.NANOSECONDS);
-                    return HttpResponse.of(HttpStatus.UNAUTHORIZED, MediaType.PLAIN_TEXT, status.toString());
-                }
-            }, ctx.blockingTaskExecutor());
-        });
+
+                    return CompletableFuture.supplyAsync(() -> {
+                        final AccessCheckStatus status = authZpeClient.allowAccess(token, athenzResource, athenzAction);
+                        final long elapsedNanos = System.nanoTime() - startNanos;
+                        if (status == AccessCheckStatus.ALLOW) {
+                            assert allowedTimer != null;
+                            allowedTimer.record(elapsedNanos, TimeUnit.NANOSECONDS);
+                            try {
+                                return unwrap().serve(ctx, req);
+                            } catch (Exception e) {
+                                return Exceptions.throwUnsafely(e);
+                            }
+                        } else {
+                            assert deniedTimer != null;
+                            deniedTimer.record(elapsedNanos, TimeUnit.NANOSECONDS);
+                            return HttpResponse.of(HttpStatus.UNAUTHORIZED, MediaType.PLAIN_TEXT, status.toString());
+                        }
+                    }, ctx.blockingTaskExecutor());
+                });
         return HttpResponse.of(future);
     }
 
