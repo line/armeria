@@ -16,7 +16,7 @@ export default () => {
   const buildDateObj = dayjs(buildDate as string);
 
   return (
-    <footer className={`footer footer--dark`}>
+    <footer className="footer footer--dark">
       <div className="container container--fluid">
         <div className="row">
           <div className={`${styles.newsletterForm} col`}>

@@ -8,7 +8,7 @@ import CookieConsent from '@site/src/components/cookie-consent';
 
 type Props = WrapperProps<typeof LayoutType>;
 
-export default function LayoutWrapper(props: Props): ReactNode {
+const LayoutWrapper = (props: Props): ReactNode => {
   return (
     <>
       <Layout {...props} />
@@ -16,4 +16,6 @@ export default function LayoutWrapper(props: Props): ReactNode {
       <CookieConsent />
     </>
   );
-}
+};
+
+export default LayoutWrapper;

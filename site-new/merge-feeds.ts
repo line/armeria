@@ -58,6 +58,7 @@ async function collectFeedItems(
   for (const feed of feeds) {
     const fullPath = path.join(process.cwd(), feed.path);
     try {
+      // eslint-disable-next-line no-await-in-loop
       const feedContent = await fs.readFile(fullPath, 'utf-8');
       const items = extractItems(feedContent);
       const itemsWithCategory = items.map((item) =>
@@ -65,6 +66,7 @@ async function collectFeedItems(
       );
       feedItems.push(...itemsWithCategory);
     } catch (error) {
+      // eslint-disable-next-line no-console
       console.warn(`Failed to read feed: ${feed.path}`, error);
       continue;
     }
@@ -79,6 +81,7 @@ async function writeFeedToFile(
 ): Promise<void> {
   const outputPath = path.join(process.cwd(), outputFile);
   await fs.writeFile(outputPath, feedContent, 'utf-8');
+  // eslint-disable-next-line no-console
   console.log(`Merged feed written to ${outputPath}`);
 }
 

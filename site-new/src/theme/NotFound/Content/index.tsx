@@ -5,7 +5,7 @@ import Logo from '@site/src/components/logo';
 
 import styles from './index.module.css';
 
-export default function NotFoundContent({ className }: Props): ReactNode {
+const NotFoundContent = ({ className }: Props): ReactNode => {
   return (
     <main
       className={clsx(
@@ -30,4 +30,6 @@ export default function NotFoundContent({ className }: Props): ReactNode {
       </div>
     </main>
   );
-}
+};
+
+export default NotFoundContent;

@@ -1,6 +1,8 @@
 import { Octokit } from '@octokit/core';
+// eslint-disable-next-line import/no-extraneous-dependencies
 import { chain } from 'lodash';
 import { JSDOM } from 'jsdom';
+// eslint-disable-next-line import/no-extraneous-dependencies
 import fetch from 'node-fetch';
 import fs from 'fs';
 
@@ -60,7 +62,7 @@ async function getAllRequestIds(
     owner: 'line',
     repo: 'armeria',
     milestone: milestone.toString(),
-    page: page,
+    page,
     per_page: 100,
     state: 'all',
   });
@@ -72,21 +74,22 @@ async function getAllRequestIds(
     });
   if (pullRequestIds.length < 100) {
     return pullRequestIds;
-  } else {
-    // Try to collect PRs in the next page.
-    const nextPullRequestIds = await getAllRequestIds(milestone, page + 1);
-    return pullRequestIds.concat(nextPullRequestIds);
   }
+  // Try to collect PRs in the next page.
+  const nextPullRequestIds = await getAllRequestIds(milestone, page + 1);
+  return pullRequestIds.concat(nextPullRequestIds);
 }
 
 async function getAllPullRequests(milestone: number): Promise<PullRequest[]> {
   const pullRequestIds = await getAllRequestIds(milestone);
   const result: PullRequest[] = [];
   for (const id of pullRequestIds) {
+    // eslint-disable-next-line no-console
     console.log(
       `💻 Collecting information for https://github.com/line/armeria/pull/${id} ...`,
     );
 
+    // eslint-disable-next-line no-await-in-loop
     const pr = await octokit.request(
       'GET /repos/{owner}/{repo}/pulls/{pull_number}',
       {
@@ -108,10 +111,13 @@ async function getAllPullRequests(milestone: number): Promise<PullRequest[]> {
       labelToCategory(label),
     );
 
+    // eslint-disable-next-line no-await-in-loop
     const html = await fetch(pr.data.html_url);
+    // eslint-disable-next-line no-await-in-loop
     const dom: JSDOM = new JSDOM(await html.text());
     const issues: number[] = getLinkedIssues(dom);
     const participants: string[] = getParticipants(dom);
+    // eslint-disable-next-line no-await-in-loop
     const reporters: string[] = await Promise.all(
       issues.map((issue) => getIssueReporters(issue)),
     );
@@ -167,19 +173,15 @@ function parseResult(body: string | null): string[] {
     if (line.startsWith('- ')) {
       result.push(line.replace(/^- /, ''));
       wasDash = true;
+    } else if (wasDash) {
+      const last = result.pop();
+      result.push(`${last}\n${line}`);
+    } else if (result.length === 0) {
+      // A single result will be expected.
+      result.push(line);
     } else {
-      if (wasDash) {
-        const last = result.pop();
-        result.push(last + '\n' + line);
-      } else {
-        // A single result will be expected.
-        if (result.length == 0) {
-          result.push(line);
-        } else {
-          const last = result.pop();
-          result.push(last + ' ' + line);
-        }
-      }
+      const last = result.pop();
+      result.push(`${last} ${line}`);
     }
   }
   return result;
@@ -301,23 +303,24 @@ function labelToCategory(label: any): Category {
 
 function today(): string {
   const d = new Date();
-  return (
-    `${d.getFullYear()}-` +
-    `${d.getMonth() + 1}`.padStart(2, '0') +
-    '-' +
-    `${d.getDate()}`.padStart(2, '0')
-  );
+  return `${d.getFullYear()}-${`${d.getMonth() + 1}`.padStart(
+    2,
+    '0',
+  )}-${`${d.getDate()}`.padStart(2, '0')}`;
 }
 
 async function main() {
   const version = process.argv.slice(2).shift();
   if (!version) {
+    // eslint-disable-next-line no-console
     console.log('The release version is not specified.');
+    // eslint-disable-next-line no-console
     console.log(`Usage: npm run release-note <version>`);
     process.exitCode = 1;
     return;
   }
 
+  // eslint-disable-next-line no-console
   console.log(`🎬 Generating a skeletal release note for ${version} ...`);
   const milestoneId: number = await getMilestoneId(version);
   const pullRequests: PullRequest[] = await getAllPullRequests(milestoneId);
@@ -325,6 +328,7 @@ async function main() {
 
   const path = `${__dirname}/src/content/release-notes/${version}.mdx`;
   fs.writeFileSync(path, notes);
+  // eslint-disable-next-line no-console
   console.log(`✅  The release note is successfully written to ${path}`);
 }
 

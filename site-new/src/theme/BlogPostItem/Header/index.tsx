@@ -53,7 +53,7 @@ const I18nLink: React.FC<I18nLinkData> = ({ ko, ja, en }) => {
   );
 };
 
-export default function BlogPostItemHeader(): ReactNode {
+const BlogPostItemHeader = (): ReactNode => {
   const { metadata, isBlogPostPage } = useBlogPost();
   const { frontMatter } = metadata;
   const { other_languages: i18nLinkData } = frontMatter as {
@@ -68,4 +68,6 @@ export default function BlogPostItemHeader(): ReactNode {
       <BlogPostItemHeaderAuthors />
     </header>
   );
-}
+};
+
+export default BlogPostItemHeader;

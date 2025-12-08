@@ -58,7 +58,7 @@ const StarBegging: React.FC = () => {
       >
         ×
       </span>{' '}
-      {/* eslint-disable-line prettier/prettier */}
+      {}
       <iframe
         id="starFrame"
         ref={iframeRef}

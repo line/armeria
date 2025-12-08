@@ -45,7 +45,7 @@ export default async function RssGeneratorPlugin(
       await writeRssFeed(rssXml, outDir, options.path);
     },
 
-    injectHtmlTags({ content }) {
+    injectHtmlTags() {
       return {
         headTags: [
           `<link rel="alternate" type="application/rss+xml" href="${options.path}/rss.xml" title="${options.title} RSS Feed">`,
@@ -76,7 +76,7 @@ function extractDateFromReleaseNotes(html: string): Date | null {
   const year = parseInt(yearStr, 10);
 
   const monthDate = new Date(`${monthStr} 1, 2000`);
-  if (isNaN(monthDate.getTime())) {
+  if (Number.isNaN(monthDate.getTime())) {
     return null;
   }
 
@@ -101,12 +101,12 @@ function extractDateFromMetaOrTime(html: string): Date | null {
 
 function extractDate(html: string): Date {
   const dateFromHeader = extractDateFromReleaseNotes(html);
-  if (dateFromHeader && !isNaN(dateFromHeader.getTime())) {
+  if (dateFromHeader && !Number.isNaN(dateFromHeader.getTime())) {
     return dateFromHeader;
   }
 
   const dateFromMetaOrTime = extractDateFromMetaOrTime(html);
-  if (dateFromMetaOrTime && !isNaN(dateFromMetaOrTime.getTime())) {
+  if (dateFromMetaOrTime && !Number.isNaN(dateFromMetaOrTime.getTime())) {
     return dateFromMetaOrTime;
   }
 
@@ -142,7 +142,7 @@ function extractDescription(html: string): string | undefined {
         .trim();
       const maxLength = 200;
       return contentAfterH2.length > maxLength
-        ? contentAfterH2.substring(0, maxLength) + '...'
+        ? `${contentAfterH2.substring(0, maxLength)}...`
         : contentAfterH2;
     }
   }
@@ -160,7 +160,7 @@ function generateUrlFromFile(
   const urlPath = relativePath
     .replace(/index\.html$/, '')
     .replace(/\.html$/, '');
-  const fullUrl = siteUrl + `${baseUrl}${urlPath}`;
+  const fullUrl = `${siteUrl}${baseUrl}${urlPath}`;
   return fullUrl.replace(/([^:])\/+/g, '$1/');
 }
 
@@ -169,7 +169,7 @@ async function collectHtmlFiles(
   excludePatterns?: string[],
 ): Promise<string[]> {
   const pattern = path.join(basePath, '**', '*.html');
-  let files = await fg(pattern);
+  const files = await fg(pattern);
 
   if (!excludePatterns || excludePatterns.length === 0) {
     return files;
@@ -177,7 +177,9 @@ async function collectHtmlFiles(
 
   return files.filter((file) => {
     const relativePath = path.relative(basePath, file);
-    return !excludePatterns.some((pattern) => minimatch(relativePath, pattern));
+    return !excludePatterns.some((excludePattern) =>
+      minimatch(relativePath, excludePattern),
+    );
   });
 }
 
@@ -209,7 +211,7 @@ function compareVersions(a: string, b: string): number {
     const aPart = aParts[i] || 0;
     const bPart = bParts[i] || 0;
 
-    if (isNaN(aPart) || isNaN(bPart)) {
+    if (Number.isNaN(aPart) || Number.isNaN(bPart)) {
       return b.localeCompare(a);
     }
 

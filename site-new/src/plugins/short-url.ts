@@ -21,6 +21,7 @@ export default function shortUrlPlugin(
 
       for (const entry of shortUrls) {
         // Create a JSON data file with the href
+        // eslint-disable-next-line no-await-in-loop
         const dataPath = await createData(
           `short-url-${entry.name}.json`,
           JSON.stringify({ href: entry.href }),
