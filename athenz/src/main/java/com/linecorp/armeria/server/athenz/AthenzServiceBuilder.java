@@ -21,6 +21,7 @@ import static com.google.common.base.Preconditions.checkState;
 import static java.util.Objects.requireNonNull;
 
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
 
 import com.google.common.collect.ImmutableList;
@@ -32,6 +33,7 @@ import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.athenz.TokenType;
 import com.linecorp.armeria.server.HttpService;
+import com.linecorp.armeria.server.athenz.resource.AthenzResourceProvider;
 
 /**
  * A builder for creating an {@link AthenzService} that checks access permissions using Athenz policies.
@@ -44,7 +46,7 @@ public final class AthenzServiceBuilder extends AbstractAthenzServiceBuilder<Ath
     private List<TokenType> tokenTypes = DEFAULT_TOKEN_TYPES;
 
     @Nullable
-    private String athenzResource;
+    private AthenzResourceProvider athenzResourceProvider;
     @Nullable
     private String athenzAction;
 
@@ -55,14 +57,27 @@ public final class AthenzServiceBuilder extends AbstractAthenzServiceBuilder<Ath
     /**
      * Sets the Athenz resource to check access permissions against.
      *
-     * <p><strong>Mandatory:</strong> This field must be set before calling {@link #newDecorator()}.
+     * <p><strong>Mandatory:</strong> Either this or {@link #resourceProvider(AthenzResourceProvider)} must be set before calling {@link #newDecorator()}.</p>
      */
     public AthenzServiceBuilder resource(String athenzResource) {
         requireNonNull(athenzResource, "athenzResource");
         checkArgument(!athenzResource.isEmpty(), "athenzResource must not be empty");
-        this.athenzResource = athenzResource;
+        athenzResourceProvider = (ctx, req) -> CompletableFuture.completedFuture(athenzResource);
         return this;
     }
+
+
+    /**
+     * Sets the {@link AthenzResourceProvider} used to resolve the Athenz resource dynamically for each request.
+     *
+     * <p><strong>Mandatory:</strong> Either this or {@link #resource(String)} must be set before calling {@link #newDecorator()}.</p>
+     */
+    public AthenzServiceBuilder resourceProvider(AthenzResourceProvider athenzResourceProvider) {
+        this.athenzResourceProvider = athenzResourceProvider;
+        requireNonNull(athenzResourceProvider, "resourceProvider");
+        return this;
+    }
+
 
     /**
      * Sets the Athenz action to check access permissions against.
@@ -101,15 +116,15 @@ public final class AthenzServiceBuilder extends AbstractAthenzServiceBuilder<Ath
      * Returns a new {@link HttpClient} decorator that performs access checks using Athenz policies.
      */
     public Function<? super HttpService, AthenzService> newDecorator() {
-        final String athenzResource = this.athenzResource;
+        final AthenzResourceProvider athenzResourceProvider = this.athenzResourceProvider;
         final String athenzAction = this.athenzAction;
         final List<TokenType> tokenTypes = this.tokenTypes;
 
-        checkState(athenzResource != null, "resource is not set");
+        checkState(athenzResourceProvider != null, "resource or resourceProvider is not set");
         checkState(athenzAction != null, "action is not set");
 
         final MinifiedAuthZpeClient authZpeClient = buildAuthZpeClient();
         return delegate -> new AthenzService(delegate, authZpeClient,
-                                             athenzResource, athenzAction, tokenTypes);
+                                             athenzResourceProvider, athenzAction, tokenTypes);
     }
 }

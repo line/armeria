@@ -17,6 +17,7 @@
 
 package com.linecorp.armeria.server.athenz;
 
+import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
 
 import java.util.List;
@@ -36,6 +37,7 @@ import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.SimpleDecoratingHttpService;
 import com.linecorp.armeria.server.athenz.MinifiedAuthZpeClient.AccessCheckStatus;
+import com.linecorp.armeria.server.athenz.resource.AthenzResourceProvider;
 
 /**
  * Decorates an {@link HttpService} to check access permissions using Athenz policies.
@@ -74,16 +76,28 @@ public final class AthenzService extends SimpleDecoratingHttpService {
     }
 
     private final MinifiedAuthZpeClient authZpeClient;
-    private final String athenzResource;
+    private final AthenzResourceProvider athenzResourceProvider;
     private final String athenzAction;
     private final List<TokenType> tokenTypes;
 
     AthenzService(HttpService delegate, MinifiedAuthZpeClient authZpeClient,
-                  String athenzResource, String athenzAction, List<TokenType> tokenTypes) {
+                  AthenzResourceProvider athenzResourceProvider, String athenzAction,
+                  List<TokenType> tokenTypes) {
         super(delegate);
 
         this.authZpeClient = authZpeClient;
-        this.athenzResource = athenzResource;
+        this.athenzResourceProvider = athenzResourceProvider;
+        this.athenzAction = athenzAction;
+        this.tokenTypes = tokenTypes;
+    }
+
+    AthenzService(HttpService delegate, MinifiedAuthZpeClient authZpeClient,
+                  String athenzResource, String athenzAction,
+                  List<TokenType> tokenTypes) {
+        super(delegate);
+
+        this.authZpeClient = authZpeClient;
+        this.athenzResourceProvider =  (ctx, req) -> CompletableFuture.completedFuture(athenzResource);
         this.athenzAction = athenzAction;
         this.tokenTypes = tokenTypes;
     }
@@ -95,19 +109,23 @@ public final class AthenzService extends SimpleDecoratingHttpService {
             return HttpResponse.of(HttpStatus.UNAUTHORIZED, MediaType.PLAIN_TEXT, "Missing token");
         }
 
-        final CompletableFuture<HttpResponse> future = CompletableFuture.supplyAsync(() -> {
-            final AccessCheckStatus status = authZpeClient.allowAccess(token, athenzResource, athenzAction);
-            if (status == AccessCheckStatus.ALLOW) {
-                try {
-                    return unwrap().serve(ctx, req);
-                } catch (Exception e) {
-                    return Exceptions.throwUnsafely(e);
+        final CompletableFuture<String> resourceFuture = athenzResourceProvider.provide(ctx, req);
+        final CompletableFuture<HttpResponse> responseFuture = resourceFuture.thenCompose(resource -> {
+            checkArgument(!resource.isEmpty(), "athenzResource must not be empty");
+
+            return CompletableFuture.supplyAsync(() -> {
+                final AccessCheckStatus status = authZpeClient.allowAccess(token, resource, athenzAction);
+                if (status == AccessCheckStatus.ALLOW) {
+                    try {
+                        return unwrap().serve(ctx, req);
+                    } catch (Exception e) {
+                        return Exceptions.throwUnsafely(e);
+                    }
                 }
-            } else {
                 return HttpResponse.of(HttpStatus.UNAUTHORIZED, MediaType.PLAIN_TEXT, status.toString());
-            }
-        }, ctx.blockingTaskExecutor());
-        return HttpResponse.of(future);
+            }, ctx.blockingTaskExecutor());
+        });
+        return HttpResponse.of(responseFuture);
     }
 
     @Nullable
