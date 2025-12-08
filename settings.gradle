@@ -262,6 +262,7 @@ includeWithFlags ':docs-client'
 
 // Site generation project
 includeWithFlags ':site'
+includeWithFlags ':site-new'
 
 // Examples
 includeWithFlags ':examples:annotated-http-service',               'java11'
