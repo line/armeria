@@ -47,8 +47,12 @@ public final class AthenzServiceBuilder extends AbstractAthenzServiceBuilder<Ath
 
     @Nullable
     private AthenzResourceProvider athenzResourceProvider;
+
     @Nullable
     private String athenzAction;
+
+    @Nullable
+    private String resourceTagValue;
 
     AthenzServiceBuilder(ZtsBaseClient ztsBaseClient) {
         super(ztsBaseClient);
@@ -57,12 +61,13 @@ public final class AthenzServiceBuilder extends AbstractAthenzServiceBuilder<Ath
     /**
      * Sets the Athenz resource to check access permissions against.
      *
-     * <p><strong>Mandatory:</strong> Either this or {@link #resourceProvider(AthenzResourceProvider)} must be set before calling {@link #newDecorator()}.</p>
+     * <p><strong>Mandatory:</strong> Either this or {@link #resourceProvider(AthenzResourceProvider, String)} must be set before calling {@link #newDecorator()}.</p>
      */
     public AthenzServiceBuilder resource(String athenzResource) {
         requireNonNull(athenzResource, "athenzResource");
         checkArgument(!athenzResource.isEmpty(), "athenzResource must not be empty");
         athenzResourceProvider = (ctx, req) -> CompletableFuture.completedFuture(athenzResource);
+        resourceTagValue = athenzResource;
         return this;
     }
 
@@ -72,9 +77,12 @@ public final class AthenzServiceBuilder extends AbstractAthenzServiceBuilder<Ath
      *
      * <p><strong>Mandatory:</strong> Either this or {@link #resource(String)} must be set before calling {@link #newDecorator()}.</p>
      */
-    public AthenzServiceBuilder resourceProvider(AthenzResourceProvider athenzResourceProvider) {
-        this.athenzResourceProvider = athenzResourceProvider;
+    public AthenzServiceBuilder resourceProvider(AthenzResourceProvider athenzResourceProvider, String resourceTagValue) {
         requireNonNull(athenzResourceProvider, "resourceProvider");
+        requireNonNull(resourceTagValue, "resourceTagValue");
+        checkArgument(!resourceTagValue.isEmpty(), "resourceTagValue must not be empty");
+        this.athenzResourceProvider = athenzResourceProvider;
+        this.resourceTagValue = resourceTagValue;
         return this;
     }
 
@@ -119,12 +127,13 @@ public final class AthenzServiceBuilder extends AbstractAthenzServiceBuilder<Ath
         final AthenzResourceProvider athenzResourceProvider = this.athenzResourceProvider;
         final String athenzAction = this.athenzAction;
         final List<TokenType> tokenTypes = this.tokenTypes;
+        final String resourceTagValue = this.resourceTagValue;
 
         checkState(athenzResourceProvider != null, "resource or resourceProvider is not set");
         checkState(athenzAction != null, "action is not set");
+        checkState(resourceTagValue != null, "resourceTagValue is not set");
 
         final MinifiedAuthZpeClient authZpeClient = buildAuthZpeClient();
-        return delegate -> new AthenzService(delegate, authZpeClient,
-                                             athenzResourceProvider, athenzAction, tokenTypes,  meterIdPrefix());
+        return delegate -> new AthenzService(delegate, authZpeClient, athenzResourceProvider, athenzAction, tokenTypes, meterIdPrefix(), resourceTagValue);
     }
 }

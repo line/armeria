@@ -71,7 +71,7 @@ class AthenzResourceProviderIntegrationTest {
             sb.service("/admin/path/test", (ctx, req) -> HttpResponse.of("Path resource accessed"));
             sb.decorator("/admin/path/test", AthenzService.builder(ztsBaseClient)
                     .action("obtain")
-                    .resourceProvider(new PathAthenzResourceProvider())
+                    .resourceProvider(new PathAthenzResourceProvider(), "admin-path")
                     .policyConfig(new AthenzPolicyConfig(TEST_DOMAIN_NAME))
                     .newDecorator());
 
@@ -79,7 +79,7 @@ class AthenzResourceProviderIntegrationTest {
             sb.service("/admin/header/test", (ctx, req) -> HttpResponse.of("Header resource accessed"));
             sb.decorator("/admin/header/test", AthenzService.builder(ztsBaseClient)
                     .action("obtain")
-                    .resourceProvider(new HeaderAthenzResourceProvider("X-Athenz-Resource"))
+                    .resourceProvider(new HeaderAthenzResourceProvider("X-Athenz-Resource"), "admin-header")
                     .policyConfig(new AthenzPolicyConfig(TEST_DOMAIN_NAME))
                     .newDecorator());
 
@@ -87,7 +87,7 @@ class AthenzResourceProviderIntegrationTest {
             sb.service("/admin/json/test", (ctx, req) -> HttpResponse.of("JSON resource accessed"));
             sb.decorator("/admin/json/test", AthenzService.builder(ztsBaseClient)
                     .action("obtain")
-                    .resourceProvider(new JsonBodyFieldAthenzResourceProvider(new ObjectMapper(), "resource"))
+                    .resourceProvider(new JsonBodyFieldAthenzResourceProvider(new ObjectMapper(), "resource"), "admin-json")
                     .policyConfig(new AthenzPolicyConfig(TEST_DOMAIN_NAME))
                     .newDecorator());
         }
