@@ -64,7 +64,7 @@ public final class StreamMessageUtil {
             try {
                 ((AutoCloseable) obj).close();
             } catch (Exception e) {
-                logger.warn("Unexpected exception while closing {}", obj);
+                logger.warn("Unexpected exception while closing {}", obj, e);
             }
             return;
         }

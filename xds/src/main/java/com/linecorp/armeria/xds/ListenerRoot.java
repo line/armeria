@@ -32,8 +32,9 @@ public final class ListenerRoot extends AbstractRoot<ListenerSnapshot> {
     private final String resourceName;
     private final ListenerManager listenerManager;
 
-    ListenerRoot(SubscriptionContext context, String resourceName, ListenerManager listenerManager) {
-        super(context.eventLoop());
+    ListenerRoot(SubscriptionContext context, String resourceName, ListenerManager listenerManager,
+                 SnapshotWatcher<Object> defaultWatcher) {
+        super(context.eventLoop(), defaultWatcher);
         this.resourceName = resourceName;
         this.listenerManager = listenerManager;
         context.eventLoop().execute(

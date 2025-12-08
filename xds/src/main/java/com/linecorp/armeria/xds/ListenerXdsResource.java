@@ -50,13 +50,13 @@ public final class ListenerXdsResource extends AbstractXdsResource {
 
     ListenerXdsResource(Listener listener, String version, long revision) {
         super(version, revision);
-        XdsValidatorIndex.of().assertValid(listener);
+        XdsValidatorIndexRegistry.assertValid(listener);
         this.listener = listener;
 
         if (listener.getApiListener().hasApiListener()) {
             final Any apiListener = listener.getApiListener().getApiListener();
             if (HTTP_CONNECTION_MANAGER_TYPE_URL.equals(apiListener.getTypeUrl())) {
-                connectionManager = XdsValidatorIndex.of().unpack(apiListener, HttpConnectionManager.class);
+                connectionManager = XdsValidatorIndexRegistry.unpack(apiListener, HttpConnectionManager.class);
             } else {
                 throw new IllegalArgumentException("Unsupported api listener: " + apiListener);
             }
@@ -112,6 +112,6 @@ public final class ListenerXdsResource extends AbstractXdsResource {
             return null;
         }
         checkArgument(lastHttpFilter.hasTypedConfig(), "Only typedConfig is supported for 'Router'.");
-        return XdsValidatorIndex.of().unpack(lastHttpFilter.getTypedConfig(), Router.class);
+        return XdsValidatorIndexRegistry.unpack(lastHttpFilter.getTypedConfig(), Router.class);
     }
 }

@@ -30,6 +30,7 @@ import com.yahoo.athenz.zpe.pkey.PublicKeyStore;
 import com.linecorp.armeria.client.athenz.ZtsBaseClient;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
+import com.linecorp.armeria.common.metric.MeterIdPrefix;
 
 /**
  * A base builder for creating an Athenz service that checks access permissions using Athenz policies.
@@ -40,8 +41,10 @@ public abstract class AbstractAthenzServiceBuilder<SELF extends AbstractAthenzSe
     private static final Duration DEFAULT_OAUTH2_KEYS_REFRESH_INTERVAL = Duration.ofHours(1);
     private static final String DEFAULT_OAUTH2_KEY_PATH = "/oauth2/keys?rfc=true";
     private static final int MAX_TOKEN_CACHE_SIZE = 10240;
+    static final MeterIdPrefix DEFAULT_METER_ID_PREFIX = new MeterIdPrefix("armeria.server.athenz");
 
     private Duration oauth2KeysRefreshInterval = DEFAULT_OAUTH2_KEYS_REFRESH_INTERVAL;
+    private MeterIdPrefix meterIdPrefix = DEFAULT_METER_ID_PREFIX;
 
     private final ZtsBaseClient ztsBaseClient;
     @Nullable
@@ -99,6 +102,19 @@ public abstract class AbstractAthenzServiceBuilder<SELF extends AbstractAthenzSe
         checkArgument(maxTokenCacheSize > 0, "maxTokenCacheSize: %s (expected > 0)", maxTokenCacheSize);
         this.maxTokenCacheSize = maxTokenCacheSize;
         return self();
+    }
+
+    /**
+     * Sets the {@link MeterIdPrefix} of the metrics collected through {@link AthenzService}.
+     * If not set, a default {@link MeterIdPrefix} with the name {@code "armeria.server.athenz"} is used.
+     */
+    public SELF meterIdPrefix(MeterIdPrefix meterIdPrefix) {
+        this.meterIdPrefix = requireNonNull(meterIdPrefix, "meterIdPrefix");
+        return self();
+    }
+
+    MeterIdPrefix meterIdPrefix() {
+        return meterIdPrefix;
     }
 
     MinifiedAuthZpeClient buildAuthZpeClient() {

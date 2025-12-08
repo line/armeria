@@ -28,8 +28,6 @@ import java.util.concurrent.ThreadLocalRandom;
 import org.assertj.core.api.AbstractDoubleAssert;
 import org.junit.jupiter.api.Test;
 
-import com.google.common.collect.ImmutableList;
-
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.metric.CloseableMeterBinder;
 import com.linecorp.armeria.common.metric.MeterIdPrefix;
@@ -37,7 +35,6 @@ import com.linecorp.armeria.common.metric.MoreMeterBinders;
 import com.linecorp.armeria.common.metric.MoreMeters;
 import com.linecorp.armeria.common.prometheus.PrometheusMeterRegistries;
 import com.linecorp.armeria.internal.common.util.SelfSignedCertificate;
-import com.linecorp.armeria.internal.common.util.SelfSingedCertificateNameType;
 
 import io.micrometer.core.instrument.Gauge;
 import io.micrometer.core.instrument.MeterRegistry;
@@ -204,8 +201,7 @@ public class ServerTlsCertificateMetricsTest {
         final Date notBefore = calendar.getTime();
         final SelfSignedCertificate ssc =
                 new SelfSignedCertificate(
-                        "san.name", ThreadLocalRandom.current(), 2048, notBefore, notAfter, "RSA",
-                        ImmutableList.of(SelfSingedCertificateNameType.SUBJECT_ALTERNATIVE_NAME));
+                        "san.name", ThreadLocalRandom.current(), 2048, notBefore, notAfter, "RSA");
         try (CloseableMeterBinder meterBinder =
                      MoreMeterBinders.certificateMetrics(ssc.cert(), new MeterIdPrefix("test"))) {
             final MeterRegistry meterRegistry = PrometheusMeterRegistries.newRegistry();

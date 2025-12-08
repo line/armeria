@@ -18,12 +18,16 @@ package com.linecorp.armeria.xds;
 
 import static java.util.Objects.requireNonNull;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.metric.MeterIdPrefix;
 import com.linecorp.armeria.common.util.EventLoopGroups;
 
 import io.envoyproxy.envoy.config.bootstrap.v3.Bootstrap;
+import io.grpc.Status;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.netty.channel.EventLoopGroup;
 import io.netty.util.concurrent.EventExecutor;
@@ -35,6 +39,8 @@ import io.netty.util.concurrent.EventExecutor;
 public final class XdsBootstrapBuilder {
 
     static final MeterIdPrefix DEFAULT_METER_ID_PREFIX = new MeterIdPrefix("armeria.xds");
+    private static final Logger logger = LoggerFactory.getLogger(XdsBootstrapBuilder.class);
+
     private static final EventLoopGroup DEFAULT_GROUP =
             EventLoopGroups.newEventLoopGroup(1, "xds-common-worker", true);
 
@@ -42,6 +48,15 @@ public final class XdsBootstrapBuilder {
     private MeterIdPrefix meterIdPrefix = DEFAULT_METER_ID_PREFIX;
     private EventExecutor eventExecutor = DEFAULT_GROUP.next();
     private final Bootstrap bootstrap;
+    private SnapshotWatcher<Object> snapshotWatcher = new SnapshotWatcher<Object>() {
+        @Override
+        public void snapshotUpdated(Object newSnapshot) {}
+
+        @Override
+        public void onError(XdsType type, String resourceName, Status status) {
+            logger.warn("Error fetching resource '{}:{}' e: {}", type, resourceName, status);
+        }
+    };
 
     XdsBootstrapBuilder(Bootstrap bootstrap) {
         this.bootstrap = requireNonNull(bootstrap, "bootstrap");
@@ -68,6 +83,15 @@ public final class XdsBootstrapBuilder {
      */
     public XdsBootstrapBuilder eventExecutor(EventExecutor eventExecutor) {
         this.eventExecutor = requireNonNull(eventExecutor, "eventExecutor");
+        return this;
+    }
+
+    /**
+     * Sets the default {@link SnapshotWatcher} which is added to all
+     * {@link ClusterRoot} and {@link ListenerRoot} by default.
+     */
+    public XdsBootstrapBuilder defaultSnapshotWatcher(SnapshotWatcher<Object> snapshotWatcher) {
+        this.snapshotWatcher = requireNonNull(snapshotWatcher, "snapshotWatcher");
         return this;
     }
 

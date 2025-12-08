@@ -48,7 +48,11 @@ public final class ClientObservationContext
 
     ClientObservationContext(ClientRequestContext clientRequestContext, RequestHeadersBuilder carrier,
                              HttpRequest httpRequest) {
-        super(RequestHeadersBuilder::add);
+        super((carrier1, key, value) -> {
+            if (carrier1 != null) {
+                carrier1.add(key, value);
+            }
+        });
         this.clientRequestContext = clientRequestContext;
         this.httpRequest = httpRequest;
         setCarrier(carrier);

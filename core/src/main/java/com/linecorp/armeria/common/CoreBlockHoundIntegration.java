@@ -71,5 +71,6 @@ public final class CoreBlockHoundIntegration implements BlockHoundIntegration {
         builder.allowBlockingCallsInside("io.netty.handler.ssl.SslContext", "buildKeyStore");
         // StampedLock.writeLock() can be called
         builder.allowBlockingCallsInside("io.netty.buffer.AdaptivePoolingAllocator", "allocate");
+        builder.allowBlockingCallsInside("com.linecorp.armeria.common.util.Version", "getAll");
     }
 }

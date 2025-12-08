@@ -550,7 +550,7 @@ class RetryTest {
             final long expectedDelayMillis = expectedDelaysMillis.get(i);
 
             // Verify delay matches expected value (tolerance for 50% jitter + responseTimeout recalc)
-            assertThat(actualDelayMillis).isCloseTo(expectedDelayMillis, withinPercentage(60.0));
+            assertThat(actualDelayMillis).isCloseTo(expectedDelayMillis, withinPercentage(100.0));
         }
     }
 

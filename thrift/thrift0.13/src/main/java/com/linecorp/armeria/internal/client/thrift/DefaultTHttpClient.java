@@ -89,7 +89,7 @@ final class DefaultTHttpClient extends UserClient<RpcRequest, RpcResponse> imple
         final DefaultClientRequestContext ctx = new DefaultClientRequestContext(
                 scheme().sessionProtocol(), null, HttpMethod.POST, call, reqTarget, endpointGroup(),
                 UNARY_REQUEST_OPTIONS, options(), meterRegistry());
-        return ClientUtil.executeWithFallback(preClient, ctx, call, errorResponseFactory());
+        return ClientUtil.executePreClientWithFallback(preClient, ctx, call, errorResponseFactory());
     }
 
     @Override
