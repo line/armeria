@@ -29,7 +29,11 @@ node {
     npmInstallCommand = "ci"
 }
 
-tasks.register('npmClean', NpmTask) {
+tasks.named('npmInstall') {
+    environment = ['NODE_OPTIONS': '--max-old-space-size=4096']
+}
+
+tasks.register('npmClean', NpmTask) {4
     dependsOn tasks.npmInstall
     args = ['run', 'clear']
 }

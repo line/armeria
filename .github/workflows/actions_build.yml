@@ -264,7 +264,7 @@ jobs:
 
       - name: Build the site
         run: |
-          ./gradlew --no-daemon --stacktrace  --max-workers=2 --parallel -PgithubToken=${{ secrets.GITHUB_TOKEN }} site
+          ./gradlew clean --no-daemon --stacktrace  --max-workers=2 --parallel -PgithubToken=${{ secrets.GITHUB_TOKEN }} site
         shell: bash
 
   flaky-tests:
