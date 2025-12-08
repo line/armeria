@@ -24,7 +24,6 @@ import java.util.function.Consumer;
 import com.google.common.annotations.VisibleForTesting;
 
 import com.linecorp.armeria.client.grpc.GrpcClientBuilder;
-import com.linecorp.armeria.common.CommonPools;
 import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.metric.MeterIdPrefix;
 
@@ -43,25 +42,12 @@ final class XdsBootstrapImpl implements XdsBootstrap {
     private final SubscriptionContext subscriptionContext;
     private final SnapshotWatcher<Object> defaultWatcher;
 
-    XdsBootstrapImpl(Bootstrap bootstrap) {
-        this(bootstrap, CommonPools.workerGroup().next(), ignored -> {});
-    }
-
-    XdsBootstrapImpl(Bootstrap bootstrap, EventExecutor eventLoop) {
-        this(bootstrap, eventLoop, ignored -> {});
-    }
-
     @VisibleForTesting
     XdsBootstrapImpl(Bootstrap bootstrap, EventExecutor eventLoop,
                      Consumer<GrpcClientBuilder> configClientCustomizer) {
         this(bootstrap, eventLoop, XdsBootstrapBuilder.DEFAULT_METER_ID_PREFIX,
-             Flags.meterRegistry(), configClientCustomizer);
-    }
-
-    XdsBootstrapImpl(Bootstrap bootstrap, EventExecutor eventLoop,
-                     MeterIdPrefix meterIdPrefix, MeterRegistry meterRegistry,
-                     Consumer<GrpcClientBuilder> configClientCustomizer) {
-        this(bootstrap, eventLoop, meterIdPrefix, meterRegistry, configClientCustomizer, ignored -> {});
+             Flags.meterRegistry(), configClientCustomizer,
+             XdsBootstrapBuilder.DEFAULT_SNAPSHOT_WATCHER);
     }
 
     XdsBootstrapImpl(Bootstrap bootstrap, EventExecutor eventLoop,

@@ -71,7 +71,6 @@ final class ConfigSourceClient implements SafeCloseable {
                       "Only envoyGrpc is supported for '%s'", configSource);
         final EnvoyGrpc envoyGrpc = firstGrpcService.getEnvoyGrpc();
 
-        final boolean ads = configSource.hasAds();
         final GrpcClientBuilder builder =
                 GrpcClients.builder(new GrpcServicesPreprocessor(grpcServices, bootstrapClusters));
         builder.responseTimeoutMillis(Long.MAX_VALUE);
@@ -83,6 +82,7 @@ final class ConfigSourceClient implements SafeCloseable {
                         meterRegistry, meterIdPrefix, configSource.getConfigSourceSpecifierCase(),
                         envoyGrpc.getClusterName(), xdsType);
 
+        final boolean ads = configSource.hasAds();
         if (ads) {
             final SotwDiscoveryStub stub = SotwDiscoveryStub.ads(builder);
             stream = new SotwXdsStream(stub, node, Backoff.ofDefault(),

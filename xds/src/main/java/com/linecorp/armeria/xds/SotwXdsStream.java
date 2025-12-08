@@ -85,7 +85,7 @@ final class SotwXdsStream implements XdsStream, XdsStreamState {
         this.responseHandler = requireNonNull(responseHandler, "responseHandler");
         this.subscriberStorage = requireNonNull(subscriberStorage, "subscriberStorage");
         this.targetTypes = targetTypes;
-        this.lifecycleObserver = lifecycleObserver;
+        this.lifecycleObserver = requireNonNull(lifecycleObserver, "lifecycleObserver");
     }
 
     @VisibleForTesting

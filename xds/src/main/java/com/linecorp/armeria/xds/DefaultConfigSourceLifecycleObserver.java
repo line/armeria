@@ -104,14 +104,14 @@ final class DefaultConfigSourceLifecycleObserver implements ConfigSourceLifecycl
 
     @Override
     public void requestSent(DiscoveryRequest request) {
-        logger.debug("{} Sending discovery request: {}", request, loggingIdentifier);
+        logger.debug("{} Sending discovery request: {}", loggingIdentifier, request);
         streamRequestCounter.increment();
     }
 
     @Override
     public void responseReceived(DiscoveryResponse value) {
         if (logger.isTraceEnabled()) {
-            logger.trace("{} Received discovery response: {}", value, loggingIdentifier);
+            logger.trace("{} Received discovery response: {}", loggingIdentifier, value);
         }
         streamResponseCounter.increment();
     }

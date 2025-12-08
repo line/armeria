@@ -86,7 +86,7 @@ class MostlyStaticWithDynamicEdsTest {
         final Cluster cluster = createStaticCluster("cluster", loadAssignment);
         final Bootstrap bootstrap = XdsTestResources.bootstrap(configSource, listener,
                                                                bootstrapCluster, cluster);
-        try (XdsBootstrapImpl xdsBootstrap = new XdsBootstrapImpl(bootstrap)) {
+        try (XdsBootstrap xdsBootstrap = XdsBootstrap.of(bootstrap)) {
             final ListenerRoot listenerRoot = xdsBootstrap.listenerRoot("listener");
             final TestResourceWatcher watcher = new TestResourceWatcher();
             listenerRoot.addSnapshotWatcher(watcher);

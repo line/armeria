@@ -134,7 +134,7 @@ class ClientTimeoutTest {
         final String clusterName = "cluster1";
         simulateTimeout.set(true);
         final Bootstrap bootstrap = bootstrapWithTimeout(100);
-        try (XdsBootstrapImpl xdsBootstrap = new XdsBootstrapImpl(bootstrap)) {
+        try (XdsBootstrap xdsBootstrap = XdsBootstrap.of(bootstrap)) {
             final ClusterRoot clusterRoot = xdsBootstrap.clusterRoot(clusterName);
             clusterRoot.addSnapshotWatcher(watcher);
             assertThat(watcher.blockingMissing()).isEqualTo(ImmutableList.of(XdsType.CLUSTER, clusterName));
