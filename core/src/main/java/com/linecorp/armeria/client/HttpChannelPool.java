@@ -29,6 +29,7 @@ import java.util.HashMap;
 import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.BiFunction;
@@ -54,9 +55,10 @@ import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.logging.ClientConnectionTimingsBuilder;
 import com.linecorp.armeria.common.util.AsyncCloseable;
 import com.linecorp.armeria.common.util.AsyncCloseableSupport;
+import com.linecorp.armeria.common.util.DomainSocketAddress;
 import com.linecorp.armeria.internal.client.HttpSession;
 import com.linecorp.armeria.internal.client.PooledChannel;
-import com.linecorp.armeria.internal.common.SslContextFactory;
+import com.linecorp.armeria.internal.common.ClientSslContextFactory;
 import com.linecorp.armeria.internal.common.util.ChannelUtil;
 import com.linecorp.armeria.internal.common.util.TemporaryThreadLocals;
 
@@ -101,9 +103,7 @@ final class HttpChannelPool implements AsyncCloseable {
     private final int connectTimeoutMillis;
 
     HttpChannelPool(HttpClientFactory clientFactory, EventLoop eventLoop,
-                    SslContext sslCtxHttp1Or2, SslContext sslCtxHttp1Only,
-                    @Nullable SslContextFactory sslContextFactory,
-                    ConnectionPoolListener listener) {
+                    ClientSslContextFactory sslContextFactory, ConnectionPoolListener listener) {
         this.clientFactory = clientFactory;
         this.eventLoop = eventLoop;
         this.listener = listener;
@@ -118,11 +118,11 @@ final class HttpChannelPool implements AsyncCloseable {
                                        .get(ChannelOption.CONNECT_TIMEOUT_MILLIS);
         assert connectTimeoutMillisBoxed != null;
         connectTimeoutMillis = connectTimeoutMillisBoxed;
-        bootstraps = new Bootstraps(clientFactory, eventLoop, sslCtxHttp1Or2, sslCtxHttp1Only,
-                                    sslContextFactory);
+        bootstraps = new Bootstraps(clientFactory, eventLoop,
+                                    sslContextFactory, clientFactory.defaultSslContexts());
     }
 
-    private void configureProxy(Channel ch, ProxyConfig proxyConfig, SessionProtocol desiredProtocol) {
+    private void configureProxy(Channel ch, ProxyConfig proxyConfig, ClientTlsSpec tlsSpec) {
         if (proxyConfig.proxyType() == ProxyType.DIRECT) {
             return;
         }
@@ -160,12 +160,10 @@ final class HttpChannelPool implements AsyncCloseable {
         ch.pipeline().addFirst(proxyHandler);
 
         if (proxyConfig instanceof ConnectProxyConfig && ((ConnectProxyConfig) proxyConfig).useTls()) {
-            final SslContext sslCtx = bootstraps.getOrCreateSslContext(proxyAddress, desiredProtocol);
+            final SslContext sslCtx = bootstraps.getOrCreateSslContext(tlsSpec);
             ch.pipeline().addFirst(sslCtx.newHandler(ch.alloc(), proxyAddress.getHostString(),
                                                      proxyAddress.getPort()));
-            if (bootstraps.shouldReleaseSslContext(sslCtx)) {
-                ch.closeFuture().addListener(unused -> bootstraps.releaseSslContext(sslCtx));
-            }
+            ch.closeFuture().addListener(unused -> bootstraps.release(sslCtx));
         }
     }
 
@@ -391,7 +389,8 @@ final class HttpChannelPool implements AsyncCloseable {
                  @Nullable ClientConnectionTimingsBuilder timingsBuilder) {
         final Bootstrap bootstrap;
         try {
-            bootstrap = bootstraps.getOrCreate(remoteAddress, desiredProtocol, serializationFormat);
+            bootstrap = bootstraps.getOrCreate(remoteAddress, desiredProtocol,
+                                               serializationFormat, poolKey.tlsSpec);
         } catch (Exception e) {
             sessionPromise.tryFailure(e);
             return;
@@ -405,7 +404,7 @@ final class HttpChannelPool implements AsyncCloseable {
 
             try {
                 final Channel channel = registerFuture.channel();
-                configureProxy(channel, poolKey.proxyConfig, desiredProtocol);
+                configureProxy(channel, poolKey.proxyConfig, poolKey.tlsSpec);
 
                 if (desiredProtocol.isTls() && timingsBuilder != null) {
                     channel.attr(TIMINGS_BUILDER_KEY).set(timingsBuilder);
@@ -619,18 +618,20 @@ final class HttpChannelPool implements AsyncCloseable {
     static final class PoolKey {
         final Endpoint endpoint;
         final ProxyConfig proxyConfig;
+        private final ClientTlsSpec tlsSpec;
         private final int hashCode;
 
-        PoolKey(Endpoint endpoint, ProxyConfig proxyConfig) {
+        PoolKey(Endpoint endpoint, ProxyConfig proxyConfig, ClientTlsSpec tlsSpec) {
             this.endpoint = endpoint;
             this.proxyConfig = proxyConfig;
-            hashCode = endpoint.hashCode() * 31 + proxyConfig.hashCode();
+            this.tlsSpec = tlsSpec;
+            hashCode = Objects.hash(endpoint, proxyConfig, tlsSpec);
         }
 
         SocketAddress toRemoteAddress() {
             final InetSocketAddress remoteAddr = endpoint.toSocketAddress(-1);
             if (endpoint.isDomainSocket()) {
-                return ((com.linecorp.armeria.common.util.DomainSocketAddress) remoteAddr).asNettyAddress();
+                return ((DomainSocketAddress) remoteAddr).asNettyAddress();
             }
 
             assert !remoteAddr.isUnresolved() || proxyConfig.proxyType().isForwardProxy()
@@ -652,7 +653,8 @@ final class HttpChannelPool implements AsyncCloseable {
             final PoolKey that = (PoolKey) o;
             return hashCode == that.hashCode &&
                    endpoint.equals(that.endpoint) &&
-                   proxyConfig.equals(that.proxyConfig);
+                   proxyConfig.equals(that.proxyConfig) &&
+                   tlsSpec.equals(that.tlsSpec);
         }
 
         @Override
@@ -668,6 +670,7 @@ final class HttpChannelPool implements AsyncCloseable {
             final boolean isDomainSocket = endpoint.isDomainSocket();
             final String proxyConfigStr = proxyConfig.proxyType() != ProxyType.DIRECT ? proxyConfig.toString()
                                                                                       : null;
+            final String tlsSpecStr = tlsSpec != null ? tlsSpec.toString() : null;
             try (TemporaryThreadLocals tempThreadLocals = TemporaryThreadLocals.acquire()) {
                 final StringBuilder buf = tempThreadLocals.stringBuilder();
                 buf.append('{').append(host);
@@ -680,6 +683,10 @@ final class HttpChannelPool implements AsyncCloseable {
                 if (proxyConfigStr != null) {
                     buf.append(" via ");
                     buf.append(proxyConfigStr);
+                }
+                if (tlsSpecStr != null) {
+                    buf.append(", ");
+                    buf.append(tlsSpecStr);
                 }
                 buf.append('}');
                 return buf.toString();
