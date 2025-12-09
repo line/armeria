@@ -24,7 +24,6 @@ import java.util.function.Consumer;
 import com.google.common.annotations.VisibleForTesting;
 
 import com.linecorp.armeria.client.grpc.GrpcClientBuilder;
-import com.linecorp.armeria.common.CommonPools;
 import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.metric.MeterIdPrefix;
 
@@ -41,52 +40,48 @@ final class XdsBootstrapImpl implements XdsBootstrap {
     private final ListenerManager listenerManager;
     private final ControlPlaneClientManager controlPlaneClientManager;
     private final SubscriptionContext subscriptionContext;
-
-    XdsBootstrapImpl(Bootstrap bootstrap) {
-        this(bootstrap, CommonPools.workerGroup().next(), ignored -> {});
-    }
-
-    XdsBootstrapImpl(Bootstrap bootstrap, EventExecutor eventLoop) {
-        this(bootstrap, eventLoop, ignored -> {});
-    }
+    private final SnapshotWatcher<Object> defaultWatcher;
 
     @VisibleForTesting
     XdsBootstrapImpl(Bootstrap bootstrap, EventExecutor eventLoop,
                      Consumer<GrpcClientBuilder> configClientCustomizer) {
         this(bootstrap, eventLoop, XdsBootstrapBuilder.DEFAULT_METER_ID_PREFIX,
-             Flags.meterRegistry(), configClientCustomizer);
+             Flags.meterRegistry(), configClientCustomizer, XdsBootstrapBuilder.DEFAULT_SNAPSHOT_WATCHER);
     }
 
     XdsBootstrapImpl(Bootstrap bootstrap, EventExecutor eventLoop,
                      MeterIdPrefix meterIdPrefix, MeterRegistry meterRegistry,
-                     Consumer<GrpcClientBuilder> configClientCustomizer) {
+                     Consumer<GrpcClientBuilder> configClientCustomizer,
+                     SnapshotWatcher<Object> defaultWatcher) {
         this.bootstrap = bootstrap;
+        this.defaultWatcher = defaultWatcher;
         this.eventLoop = requireNonNull(eventLoop, "eventLoop");
         clusterManager = new XdsClusterManager(eventLoop, bootstrap, meterIdPrefix, meterRegistry);
         final BootstrapClusters bootstrapClusters =
-                new BootstrapClusters(bootstrap, eventLoop, clusterManager, meterRegistry, meterIdPrefix);
+                new BootstrapClusters(bootstrap, eventLoop, clusterManager,
+                                      defaultWatcher, meterIdPrefix, meterRegistry);
         final ConfigSourceMapper configSourceMapper = new ConfigSourceMapper(bootstrap);
-        controlPlaneClientManager = new ControlPlaneClientManager(bootstrap, eventLoop,
-                                                                  configClientCustomizer, bootstrapClusters,
-                                                                  configSourceMapper);
+        controlPlaneClientManager = new ControlPlaneClientManager(
+                bootstrap, eventLoop, configClientCustomizer, bootstrapClusters,
+                configSourceMapper, meterRegistry, meterIdPrefix);
         subscriptionContext = new DefaultSubscriptionContext(
                 eventLoop, clusterManager, configSourceMapper, controlPlaneClientManager,
                 meterRegistry, meterIdPrefix);
 
         bootstrapClusters.initializeSecondary(subscriptionContext);
-        listenerManager = new ListenerManager(eventLoop, bootstrap, subscriptionContext);
+        listenerManager = new ListenerManager(eventLoop, bootstrap, subscriptionContext, defaultWatcher);
     }
 
     @Override
     public ListenerRoot listenerRoot(String resourceName) {
         requireNonNull(resourceName, "resourceName");
-        return new ListenerRoot(subscriptionContext, resourceName, listenerManager);
+        return new ListenerRoot(subscriptionContext, resourceName, listenerManager, defaultWatcher);
     }
 
     @Override
     public ClusterRoot clusterRoot(String resourceName) {
         requireNonNull(resourceName, "resourceName");
-        return new ClusterRoot(subscriptionContext, resourceName);
+        return new ClusterRoot(subscriptionContext, resourceName, defaultWatcher);
     }
 
     @VisibleForTesting

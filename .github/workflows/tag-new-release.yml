@@ -49,12 +49,12 @@ jobs:
           git_user_signingkey: true
           git_commit_gpgsign: true
 
-      - id: setup-jdk-21
-        name: Set up JDK 21
+      - id: setup-jdk-25
+        name: Set up JDK 25
         uses: actions/setup-java@v4
         with:
-          distribution: 'temurin'
-          java-version: '21'
+          distribution: 'zulu'
+          java-version: '25'
 
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4

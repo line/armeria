@@ -24,14 +24,14 @@ import io.netty.util.concurrent.EventExecutor;
 final class StaticSubscriptionContext implements SubscriptionContext {
 
     private final EventExecutor eventLoop;
-    private final MeterRegistry meterRegistry;
     private final MeterIdPrefix meterIdPrefix;
+    private final MeterRegistry meterRegistry;
 
-    StaticSubscriptionContext(EventExecutor eventLoop, MeterRegistry meterRegistry,
-                              MeterIdPrefix meterIdPrefix) {
+    StaticSubscriptionContext(EventExecutor eventLoop, MeterIdPrefix meterIdPrefix,
+                              MeterRegistry meterRegistry) {
         this.eventLoop = eventLoop;
-        this.meterRegistry = meterRegistry;
         this.meterIdPrefix = meterIdPrefix;
+        this.meterRegistry = meterRegistry;
     }
 
     @Override

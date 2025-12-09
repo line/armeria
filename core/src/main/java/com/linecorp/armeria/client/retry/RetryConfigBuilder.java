@@ -24,6 +24,7 @@ import java.time.Duration;
 import com.google.common.base.MoreObjects;
 import com.google.common.base.MoreObjects.ToStringHelper;
 
+import com.linecorp.armeria.client.retry.RetryLimiters.AlwaysRetryLimiter;
 import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.annotation.Nullable;
@@ -42,6 +43,7 @@ public final class RetryConfigBuilder<T extends Response> {
     private final RetryRule retryRule;
     @Nullable
     private final RetryRuleWithContent<T> retryRuleWithContent;
+    private RetryLimiter retryLimiter = AlwaysRetryLimiter.INSTANCE;
 
     /**
      * Creates a {@link RetryConfigBuilder} with this {@link RetryRule}.
@@ -112,18 +114,29 @@ public final class RetryConfigBuilder<T extends Response> {
     }
 
     /**
+     * Sets a {@link RetryLimiter} which may limit retry requests.
+     * @see RetryLimiter
+     */
+    public RetryConfigBuilder<T> retryLimiter(RetryLimiter retryLimiter) {
+        this.retryLimiter = requireNonNull(retryLimiter, "retryLimiter");
+        return this;
+    }
+
+    /**
      * Returns a newly-created {@link RetryConfig} from this {@link RetryConfigBuilder}'s values.
      */
     public RetryConfig<T> build() {
         if (retryRule != null) {
-            return new RetryConfig<>(retryRule, maxTotalAttempts, responseTimeoutMillisForEachAttempt);
+            return new RetryConfig<>(retryRule, maxTotalAttempts, responseTimeoutMillisForEachAttempt,
+                                     retryLimiter);
         }
         assert retryRuleWithContent != null;
         return new RetryConfig<>(
                 retryRuleWithContent,
                 maxContentLength,
                 maxTotalAttempts,
-                responseTimeoutMillisForEachAttempt);
+                responseTimeoutMillisForEachAttempt,
+                retryLimiter);
     }
 
     @Override
@@ -139,6 +152,7 @@ public final class RetryConfigBuilder<T extends Response> {
                 .add("retryRuleWithContent", retryRuleWithContent)
                 .add("maxTotalAttempts", maxTotalAttempts)
                 .add("responseTimeoutMillisForEachAttempt", responseTimeoutMillisForEachAttempt)
-                .add("maxContentLength", maxContentLength);
+                .add("maxContentLength", maxContentLength)
+                .add("retryLimiter", retryLimiter);
     }
 }

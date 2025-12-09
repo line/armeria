@@ -60,7 +60,7 @@ public interface RejectedRouteHandler {
     };
 
     /**
-     * A {@link RejectedRouteHandler} that raises an {@link IllegalStateException} for a problematic
+     * A {@link RejectedRouteHandler} that raises an {@link DuplicateRouteException} for a problematic
      * {@link Route}.
      */
     RejectedRouteHandler FAIL = (virtualHost, route, existingRoute) -> {
@@ -68,10 +68,10 @@ public interface RejectedRouteHandler {
         final String b = existingRoute.toString();
         final String hostnamePattern = virtualHost.hostnamePattern();
         if (a.equals(b)) {
-            throw new IllegalStateException(
+            throw new DuplicateRouteException(
                     "Virtual host '" + hostnamePattern + "' has a duplicate route: " + a);
         } else {
-            throw new IllegalStateException(
+            throw new DuplicateRouteException(
                     "Virtual host '" + hostnamePattern + "' has routes with a conflict: " +
                     a + " vs. " + b);
         }

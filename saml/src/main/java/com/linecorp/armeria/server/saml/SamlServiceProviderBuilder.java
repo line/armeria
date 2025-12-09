@@ -16,6 +16,8 @@
 package com.linecorp.armeria.server.saml;
 
 import static com.google.common.base.MoreObjects.firstNonNull;
+import static com.google.common.base.Preconditions.checkArgument;
+import static com.google.common.base.Preconditions.checkState;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static com.linecorp.armeria.server.saml.HttpRedirectBindingUtil.responseWithLocation;
@@ -68,7 +70,10 @@ import com.linecorp.armeria.server.auth.Authorizer;
  * A builder which builds a {@link SamlServiceProvider}.
  */
 public final class SamlServiceProviderBuilder {
+
     private static final Logger logger = LoggerFactory.getLogger(SamlServiceProviderBuilder.class);
+
+    private static final int DEFAULT_MIN_RELAY_STATE_MAX_LENGTH = 80;
 
     private final List<SamlIdentityProviderConfigBuilder> idpConfigBuilders = new ArrayList<>();
     private final List<SamlAssertionConsumerConfigBuilder> acsConfigBuilders = new ArrayList<>();
@@ -101,35 +106,11 @@ public final class SamlServiceProviderBuilder {
 
     private boolean signatureRequired = true;
 
-    private SamlSingleSignOnHandler ssoHandler = new SamlSingleSignOnHandler() {
-        @Override
-        public CompletionStage<Void> beforeInitiatingSso(ServiceRequestContext ctx, HttpRequest req,
-                                                         MessageContext<AuthnRequest> message,
-                                                         SamlIdentityProviderConfig idpConfig) {
-            final String requestedPath = req.path();
-            if (requestedPath.length() <= 80) {
-                // Relay the requested path by default.
-                final SAMLBindingContext sub = message.getSubcontext(SAMLBindingContext.class, true);
-                assert sub != null : "SAMLBindingContext";
-                sub.setRelayState(requestedPath);
-            }
-            return UnmodifiableFuture.completedFuture(null);
-        }
+    @Nullable
+    private Integer relayStateMaxLength;
 
-        @Override
-        public HttpResponse loginSucceeded(ServiceRequestContext ctx, AggregatedHttpRequest req,
-                                           MessageContext<Response> message, @Nullable String sessionIndex,
-                                           @Nullable String relayState) {
-            return responseWithLocation(firstNonNull(relayState, "/"));
-        }
-
-        @Override
-        public HttpResponse loginFailed(ServiceRequestContext ctx, AggregatedHttpRequest req,
-                                        @Nullable MessageContext<Response> message, Throwable cause) {
-            logger.warn("{} SAML SSO failed", ctx, cause);
-            return responseWithLocation("/error");
-        }
-    };
+    @Nullable
+    private SamlSingleSignOnHandler ssoHandler;
 
     private SamlSingleLogoutHandler sloHandler = new SamlSingleLogoutHandler() {
         @Override
@@ -263,10 +244,30 @@ public final class SamlServiceProviderBuilder {
     }
 
     /**
-     * Sets a {@link SamlSingleSignOnHandler} which handles SAML messages for a single sign-on.
+     * Sets a {@link SamlSingleSignOnHandler} which handles SAML messages for a single sign-on. If this is set,
+     * {@link #relayStateMaxLength(int)} will be ignored so that the
+     * {@link SamlSingleSignOnHandler#beforeInitiatingSso(ServiceRequestContext, HttpRequest,
+     * MessageContext, SamlIdentityProviderConfig)}
+     * is responsible for handling the {@code RelayState} parameter.
      */
     public SamlServiceProviderBuilder ssoHandler(SamlSingleSignOnHandler ssoHandler) {
+        checkState(relayStateMaxLength == null,
+                   "relayStateMaxLength() and ssoHandler() are mutually exclusive.");
         this.ssoHandler = requireNonNull(ssoHandler, "ssoHandler");
+        return this;
+    }
+
+    /**
+     * Sets the maximum length of the {@code RelayState} parameter which is sent to an identity provider
+     * and is returned with the {@code SAMLResponse} parameter. If the length of the {@code RelayState}
+     * exceeds the specified value, the {@code RelayState} parameter will be ignored.
+     * The value must be equal to or greater than {@value #DEFAULT_MIN_RELAY_STATE_MAX_LENGTH}.
+     */
+    public SamlServiceProviderBuilder relayStateMaxLength(int maxLength) {
+        checkState(ssoHandler == null, "relayStateMaxLength() and ssoHandler() are mutually exclusive.");
+        checkArgument(maxLength >= DEFAULT_MIN_RELAY_STATE_MAX_LENGTH,
+                      "maxLength: %s (expected: >= %s)", maxLength, DEFAULT_MIN_RELAY_STATE_MAX_LENGTH);
+        relayStateMaxLength = maxLength;
         return this;
     }
 
@@ -447,6 +448,15 @@ public final class SamlServiceProviderBuilder {
                                             e);
         }
 
+        final SamlSingleSignOnHandler ssoHandler;
+        if (this.ssoHandler != null) {
+            ssoHandler = this.ssoHandler;
+        } else {
+            final int relayStateMaxLength = firstNonNull(this.relayStateMaxLength,
+                                                         DEFAULT_MIN_RELAY_STATE_MAX_LENGTH);
+            ssoHandler = newDefaultSsoHandler(relayStateMaxLength);
+        }
+
         return new SamlServiceProvider(authorizer,
                                        entityId,
                                        hostname,
@@ -485,6 +495,41 @@ public final class SamlServiceProviderBuilder {
             throw new IllegalStateException("failed to initialize a signature with an algorithm: " +
                                             signatureAlgorithm, e);
         }
+    }
+
+    private static SamlSingleSignOnHandler newDefaultSsoHandler(int relayStateMaxLength) {
+        return new SamlSingleSignOnHandler() {
+            @Override
+            public CompletionStage<Void> beforeInitiatingSso(ServiceRequestContext ctx, HttpRequest req,
+                                                             MessageContext<AuthnRequest> message,
+                                                             SamlIdentityProviderConfig idpConfig) {
+                final String requestedPath = req.path();
+                if (requestedPath.length() <= relayStateMaxLength) {
+                    // Relay the requested path by default.
+                    final SAMLBindingContext sub = message.getSubcontext(SAMLBindingContext.class, true);
+                    assert sub != null : "SAMLBindingContext";
+                    sub.setRelayState(requestedPath);
+                } else {
+                    logger.debug("requested path length ({}) exceeds the configured maximum length ({}).",
+                                 requestedPath.length(), relayStateMaxLength);
+                }
+                return UnmodifiableFuture.completedFuture(null);
+            }
+
+            @Override
+            public HttpResponse loginSucceeded(ServiceRequestContext ctx, AggregatedHttpRequest req,
+                                               MessageContext<Response> message, @Nullable String sessionIndex,
+                                               @Nullable String relayState) {
+                return responseWithLocation(firstNonNull(relayState, "/"));
+            }
+
+            @Override
+            public HttpResponse loginFailed(ServiceRequestContext ctx, AggregatedHttpRequest req,
+                                            @Nullable MessageContext<Response> message, Throwable cause) {
+                logger.warn("{} SAML SSO failed", ctx, cause);
+                return responseWithLocation("/error");
+            }
+        };
     }
 
     /**

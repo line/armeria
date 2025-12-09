@@ -30,6 +30,7 @@ import java.util.Map.Entry;
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 import java.util.function.Consumer;
 import java.util.function.Function;
@@ -96,7 +97,6 @@ import io.netty.channel.Channel;
 import io.netty.channel.EventLoop;
 import io.netty.handler.codec.http.HttpHeaderValues;
 import io.netty.util.AttributeKey;
-import io.netty.util.NetUtil;
 
 /**
  * Default {@link ClientRequestContext} implementation.
@@ -116,6 +116,10 @@ public final class DefaultClientRequestContext
             whenInitializedUpdater = AtomicReferenceFieldUpdater.newUpdater(
             DefaultClientRequestContext.class, CompletableFuture.class, "whenInitialized");
 
+    private static final AtomicIntegerFieldUpdater<DefaultClientRequestContext>
+            initializationTriggeredUpdater = AtomicIntegerFieldUpdater.newUpdater(
+            DefaultClientRequestContext.class, "initializationTriggered");
+
     private static SessionProtocol desiredSessionProtocol(SessionProtocol protocol, ClientOptions options) {
         if (!options.factory().options().preferHttp1()) {
             return protocol;
@@ -134,7 +138,8 @@ public final class DefaultClientRequestContext
     private static final short STR_PARENT_LOG_AVAILABILITY = 1 << 1;
     private static boolean warnedNullRequestId;
 
-    private boolean initialized;
+    // 0: not initialized, 1: initialized
+    private volatile int initializationTriggered;
     @Nullable
     private EventLoop eventLoop;
     private EndpointGroup endpointGroup;
@@ -358,9 +363,10 @@ public final class DefaultClientRequestContext
 
     @Override
     public CompletableFuture<Boolean> init() {
+        if (!initializationTriggeredUpdater.compareAndSet(this, 0, 1)) {
+            return whenInitialized();
+        }
         assert endpoint == null : endpoint;
-        assert !initialized;
-        initialized = true;
 
         final Throwable cancellationCause = cancellationCause();
         if (cancellationCause != null) {
@@ -383,6 +389,29 @@ public final class DefaultClientRequestContext
         }
     }
 
+    @Override
+    public boolean initAndFail(Throwable cause) {
+        if (!initializationTriggeredUpdater.compareAndSet(this, 0, 1)) {
+            return false;
+        }
+        acquireEventLoop(endpointGroup);
+        failEarly(cause);
+        finishInitialization(false);
+        return true;
+    }
+
+    private void initNow() {
+        if (!initializationTriggeredUpdater.compareAndSet(this, 0, 1)) {
+            return;
+        }
+        finishInitialization(false);
+    }
+
+    @Override
+    public boolean initializationTriggered() {
+        return initializationTriggered == 1;
+    }
+
     private EndpointGroup mapEndpoint(EndpointGroup endpointGroup) {
         if (endpointGroup instanceof Endpoint) {
             return requireNonNull(options().endpointRemapper().apply((Endpoint) endpointGroup),
@@ -395,6 +424,7 @@ public final class DefaultClientRequestContext
     private CompletableFuture<Boolean> initEndpoint(Endpoint endpoint) {
         updateEndpoint(endpoint);
         acquireEventLoop(endpoint);
+        maybeInitializeResponseCancellationScheduler();
         return initFuture(true, null);
     }
 
@@ -404,6 +434,7 @@ public final class DefaultClientRequestContext
         if (endpoint != null) {
             updateEndpoint(endpoint);
             acquireEventLoop(endpointGroup);
+            maybeInitializeResponseCancellationScheduler();
             return initFuture(true, null);
         }
 
@@ -412,6 +443,7 @@ public final class DefaultClientRequestContext
         return endpointGroup.select(this, temporaryEventLoop).handle((e, cause) -> {
             updateEndpoint(e);
             acquireEventLoop(endpointGroup);
+            maybeInitializeResponseCancellationScheduler();
 
             final boolean success;
             if (cause != null) {
@@ -462,20 +494,26 @@ public final class DefaultClientRequestContext
     public void finishInitialization(boolean success) {
         final CompletableFuture<Boolean> whenInitialized = this.whenInitialized;
         if (whenInitialized != null) {
-            whenInitialized.complete(success);
+            if (!whenInitialized.isDone()) {
+                whenInitialized.complete(success);
+            }
         } else {
             if (!whenInitializedUpdater.compareAndSet(this, null,
                                                       UnmodifiableFuture.completedFuture(success))) {
                 final CompletableFuture<Boolean> oldWhenInitialized = this.whenInitialized;
                 assert oldWhenInitialized != null;
-                oldWhenInitialized.complete(success);
+                if (!oldWhenInitialized.isDone()) {
+                    oldWhenInitialized.complete(success);
+                }
             }
         }
     }
 
     private void updateEndpoint(@Nullable Endpoint endpoint) {
         this.endpoint = endpoint;
-        autoFillSchemeAuthorityAndOrigin();
+        internalRequestHeaders = computeInternalHeaders(defaultInternalRequestHeaders,
+                                                        endpoint, sessionProtocol,
+                                                        options().autoFillOriginHeader());
     }
 
     private void acquireEventLoop(EndpointGroup endpointGroup) {
@@ -484,7 +522,6 @@ public final class DefaultClientRequestContext
                     options().factory().acquireEventLoop(sessionProtocol(), endpointGroup, endpoint);
             eventLoop = releasableEventLoop.get();
             log.whenComplete().thenAccept(unused -> releasableEventLoop.release());
-            initializeResponseCancellationScheduler();
         }
     }
 
@@ -533,43 +570,33 @@ public final class DefaultClientRequestContext
         final UnprocessedRequestException wrapped = UnprocessedRequestException.of(cause);
         final HttpRequest req = request();
         if (req != null) {
-            autoFillSchemeAuthorityAndOrigin();
+            internalRequestHeaders = computeInternalHeaders(
+                    defaultInternalRequestHeaders, null, sessionProtocol,
+                    options().autoFillOriginHeader());
             req.abort(wrapped);
         }
 
         final RequestLogBuilder logBuilder = logBuilder();
         logBuilder.endRequest(wrapped);
         logBuilder.endResponse(wrapped);
+        responseCancellationScheduler.finishNow(cause);
     }
 
-    // TODO(ikhoon): Consider moving the logic for filling authority to `HttpClientDelegate.exceute()`.
-    private void autoFillSchemeAuthorityAndOrigin() {
-        final String authority = authority();
-        if (authority != null && endpoint != null && endpoint.isIpAddrOnly()) {
-            // The connection will be established with the IP address but `host` set to the `Endpoint`
-            // could be used for SNI. It would make users send HTTPS requests with CSLB or configure a reverse
-            // proxy based on an authority.
-            final String host = SchemeAndAuthority.of(null, authority).host();
-            if (!NetUtil.isValidIpV4Address(host) && !NetUtil.isValidIpV6Address(host)) {
-                endpoint = endpoint.withHost(host);
-            }
-        }
-
-        final HttpHeadersBuilder headersBuilder = internalRequestHeaders.toBuilder();
-        headersBuilder.set(HttpHeaderNames.SCHEME, getScheme(sessionProtocol()));
+    private static HttpHeaders computeInternalHeaders(
+            HttpHeaders internalHeaders, @Nullable Endpoint endpoint,
+            SessionProtocol sessionProtocol, boolean autoFillOriginHeader) {
+        final HttpHeadersBuilder headersBuilder = internalHeaders.toBuilder();
+        headersBuilder.set(HttpHeaderNames.SCHEME, getScheme(sessionProtocol));
         if (endpoint != null) {
             final String endpointAuthority = endpoint.authority();
             headersBuilder.set(HttpHeaderNames.AUTHORITY, endpointAuthority);
-            final String origin = origin();
-            if (origin != null) {
-                headersBuilder.set(HttpHeaderNames.ORIGIN, origin);
-            } else if (options().autoFillOriginHeader()) {
-                final String uriText = sessionProtocol().isTls() ? SessionProtocol.HTTPS.uriText()
-                                                                 : SessionProtocol.HTTP.uriText();
+            if (autoFillOriginHeader) {
+                final String uriText = sessionProtocol.isTls() ? SessionProtocol.HTTPS.uriText()
+                                                               : SessionProtocol.HTTP.uriText();
                 headersBuilder.set(HttpHeaderNames.ORIGIN, uriText + "://" + endpointAuthority);
             }
         }
-        internalRequestHeaders = headersBuilder.build();
+        return headersBuilder.build();
     }
 
     /**
@@ -616,17 +643,23 @@ public final class DefaultClientRequestContext
 
         this.endpointGroup = endpointGroup;
         updateEndpoint(endpoint);
+        if (endpoint != null) {
+            initNow();
+        }
         // We don't need to acquire an EventLoop for the initial attempt because it's already acquired by
         // the root context.
         if (endpoint == null || ctx.endpoint() == endpoint && ctx.log.children().isEmpty()) {
             eventLoop = ctx.eventLoop().withoutContext();
-            initializeResponseCancellationScheduler();
         } else {
             acquireEventLoop(endpoint);
         }
+        maybeInitializeResponseCancellationScheduler();
     }
 
-    private void initializeResponseCancellationScheduler() {
+    private void maybeInitializeResponseCancellationScheduler() {
+        if (responseCancellationScheduler.hasEventLoop()) {
+            return;
+        }
         final CancellationTask cancellationTask = cause -> {
             try (SafeCloseable ignored = RequestContextUtil.pop()) {
                 final HttpRequest request = request();
@@ -683,7 +716,7 @@ public final class DefaultClientRequestContext
 
     @Override
     public void setSessionProtocol(SessionProtocol sessionProtocol) {
-        checkState(!initialized, "Cannot update sessionProtocol after initialization");
+        checkState(!initializationTriggered(), "Cannot update sessionProtocol after initialization");
         this.sessionProtocol = desiredSessionProtocol(requireNonNull(sessionProtocol, "sessionProtocol"),
                                                       options);
     }
@@ -789,10 +822,9 @@ public final class DefaultClientRequestContext
 
     @Override
     public void setEventLoop(EventLoop eventLoop) {
-        checkState(!initialized, "Cannot update eventLoop after initialization");
+        checkState(!initializationTriggered(), "Cannot update eventLoop after initialization");
         checkState(this.eventLoop == null, "eventLoop can be updated only once");
         this.eventLoop = requireNonNull(eventLoop, "eventLoop");
-        initializeResponseCancellationScheduler();
     }
 
     @Override
@@ -820,7 +852,7 @@ public final class DefaultClientRequestContext
 
     @Override
     public void setEndpointGroup(EndpointGroup endpointGroup) {
-        checkState(!initialized, "Cannot update endpointGroup after initialization");
+        checkState(!initializationTriggered(), "Cannot update endpointGroup after initialization");
         this.endpointGroup = requireNonNull(endpointGroup, "endpointGroup");
     }
 
@@ -861,23 +893,6 @@ public final class DefaultClientRequestContext
             authority = internalRequestHeaders.get(HttpHeaderNames.HOST);
         }
         return authority;
-    }
-
-    @Nullable
-    private String origin() {
-        final HttpHeaders additionalRequestHeaders = this.additionalRequestHeaders;
-        String origin = additionalRequestHeaders.get(HttpHeaderNames.ORIGIN);
-        final HttpRequest request = request();
-        if (origin == null && request != null) {
-            origin = request.headers().get(HttpHeaderNames.ORIGIN);
-        }
-        if (origin == null) {
-            origin = defaultRequestHeaders.get(HttpHeaderNames.ORIGIN);
-        }
-        if (origin == null) {
-            origin = internalRequestHeaders.get(HttpHeaderNames.ORIGIN);
-        }
-        return origin;
     }
 
     @Nullable
@@ -1035,7 +1050,14 @@ public final class DefaultClientRequestContext
     @Override
     public void cancel(Throwable cause) {
         requireNonNull(cause, "cause");
-        responseCancellationScheduler.finishNow(cause);
+        if (initializationTriggered()) {
+            // happy path
+            responseCancellationScheduler.finishNow(cause);
+            return;
+        }
+        if (!initAndFail(cause)) {
+            responseCancellationScheduler.finishNow(cause);
+        }
     }
 
     @Nullable
