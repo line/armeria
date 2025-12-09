@@ -24,6 +24,8 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.server.ServiceRequestContext;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.concurrent.CompletableFuture;
 
@@ -58,6 +60,8 @@ import static java.util.Objects.requireNonNull;
 @UnstableApi
 public class JsonBodyFieldAthenzResourceProvider implements AthenzResourceProvider {
 
+    private static final Logger logger = LoggerFactory.getLogger(JsonBodyFieldAthenzResourceProvider.class);
+
     private final ObjectMapper objectMapper;
 
     private final String jsonFieldName;
@@ -78,19 +82,24 @@ public class JsonBodyFieldAthenzResourceProvider implements AthenzResourceProvid
 
     @Override
     public CompletableFuture<String> provide(ServiceRequestContext ctx, HttpRequest req) {
+        final MediaType contentType = req.contentType();
+        if (contentType == null || !contentType.is(MediaType.JSON)) {
+            return CompletableFuture.completedFuture("");
+        }
         return req.aggregate().thenApply(this::extractFieldSafely);
     }
 
     private String extractFieldSafely(AggregatedHttpRequest agg) {
-        final MediaType contentType = agg.contentType();
-        if (contentType == null || !contentType.is(MediaType.JSON)) {
-            return "";
-        }
         try {
             final JsonNode root = objectMapper.readTree(agg.contentUtf8());
             final JsonNode node = root.get(jsonFieldName);
-            return node != null ? node.asText("") : "";
-        } catch (Exception ignored) {
+            if (node == null) {
+                logger.debug("JSON field '{}' not found in request body", jsonFieldName);
+                return "";
+            }
+            return node.asText("");
+        } catch (Exception e) {
+            logger.debug("Failed to extract resource from JSON field '{}': {}", jsonFieldName, e.getMessage(), e);
             return "";
         }
     }

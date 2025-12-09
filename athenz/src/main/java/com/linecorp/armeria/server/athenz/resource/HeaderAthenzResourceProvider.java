@@ -20,6 +20,8 @@ package com.linecorp.armeria.server.athenz.resource;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.server.ServiceRequestContext;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.concurrent.CompletableFuture;
 
@@ -45,8 +47,9 @@ import static java.util.Objects.requireNonNull;
 @UnstableApi
 public class HeaderAthenzResourceProvider implements AthenzResourceProvider {
 
-    private final String headerName;
+    private static final Logger logger = LoggerFactory.getLogger(HeaderAthenzResourceProvider.class);
 
+    private final String headerName;
 
     /**
      * Creates a new instance that extracts the Athenz resource from the specified header.
@@ -62,6 +65,10 @@ public class HeaderAthenzResourceProvider implements AthenzResourceProvider {
     @Override
     public CompletableFuture<String> provide(ServiceRequestContext ctx, HttpRequest req) {
         final String value = req.headers().get(headerName);
-        return CompletableFuture.completedFuture(value != null ? value : "");
+        if (value == null) {
+            logger.debug("Header '{}' not found in the request", headerName);
+            return CompletableFuture.completedFuture("");
+        }
+        return CompletableFuture.completedFuture(value);
     }
 }
