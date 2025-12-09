@@ -164,3 +164,7 @@ li {
 img[alt='-BG-'] {
   background-color: var(--armeria-white);
 }
+
+.navbar__brand {
+  min-width: 170px;
+}
