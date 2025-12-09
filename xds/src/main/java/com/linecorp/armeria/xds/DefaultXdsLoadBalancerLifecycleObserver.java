@@ -92,23 +92,20 @@ final class DefaultXdsLoadBalancerLifecycleObserver implements XdsLoadBalancerLi
 
     private static class LoadBalancerRecorder implements SafeCloseable {
 
+        private final Gauge subsetsGauge;
         private Map<Integer, PriorityRecorder> priorityMap = new HashMap<>();
         private final MeterRegistry meterRegistry;
         private final MeterIdPrefix prefix;
-        private final List<Meter> meters;
 
-        private int numSubsets;
+        private volatile int numSubsets;
 
         LoadBalancerRecorder(MeterRegistry meterRegistry, MeterIdPrefix prefix) {
             this.meterRegistry = meterRegistry;
             this.prefix = prefix;
-
-            final ImmutableList.Builder<Meter> metersBuilder = ImmutableList.builder();
-            metersBuilder.add(Gauge.builder(prefix.name("lb.state.subsets"), () -> numSubsets)
-                                   .tags(prefix.tags())
-                                   .description("the number of subsets")
-                                   .register(meterRegistry));
-            meters = metersBuilder.build();
+            subsetsGauge = Gauge.builder(prefix.name("lb.state.subsets"), () -> numSubsets)
+                                .tags(prefix.tags())
+                                .description("the number of subsets")
+                                .register(meterRegistry);
         }
 
         void stateUpdated(LoadBalancerState state) {
@@ -140,7 +137,7 @@ final class DefaultXdsLoadBalancerLifecycleObserver implements XdsLoadBalancerLi
 
         @Override
         public void close() {
-            meters.forEach(meterRegistry::remove);
+            meterRegistry.remove(subsetsGauge);
             priorityMap.values().forEach(PriorityRecorder::close);
         }
     }
@@ -153,10 +150,10 @@ final class DefaultXdsLoadBalancerLifecycleObserver implements XdsLoadBalancerLi
         private final int priority;
         private final List<Meter> meters;
 
-        private int healthyLoad;
-        private int degradedLoad;
-        private boolean panicState;
-        private double zarLocalPercentage;
+        private volatile int healthyLoad;
+        private volatile int degradedLoad;
+        private volatile boolean panicState;
+        private volatile double zarLocalPercentage;
 
         PriorityRecorder(MeterRegistry meterRegistry, MeterIdPrefix prefix, int priority) {
             this.meterRegistry = meterRegistry;
@@ -224,11 +221,11 @@ final class DefaultXdsLoadBalancerLifecycleObserver implements XdsLoadBalancerLi
         private final Locality locality;
         private final List<Meter> meters;
 
-        private int total;
-        private int healthy;
-        private int degraded;
-        private int localityWeight;
-        private double zarPercentage;
+        private volatile int total;
+        private volatile int healthy;
+        private volatile int degraded;
+        private volatile int localityWeight;
+        private volatile double zarPercentage;
 
         LocalityRecorder(MeterRegistry meterRegistry, MeterIdPrefix prefix, Locality locality,
                          int priority) {
@@ -281,7 +278,7 @@ final class DefaultXdsLoadBalancerLifecycleObserver implements XdsLoadBalancerLi
     private static class SnapshotUpdateRecorder implements SafeCloseable {
 
         private final MeterRegistry meterRegistry;
-        private long revision;
+        private volatile long revision;
         private final Gauge revisionGauge;
         private final Counter updatedCounter;
 
