@@ -136,8 +136,8 @@ public final class ClientFactoryBuilder implements TlsSetters {
     private ClientTlsConfig tlsConfig;
     private boolean staticTlsSettingsSet;
     private boolean autoCloseConnectionPoolListener = true;
-    private ClientRequestLifecycleListener clientRequestLifecycleListener = 
-            new ClientRequestMetrics();
+    private ClientRequestLifecycleListener clientRequestLifecycleListener =
+            ClientRequestLifecycleListener.noop();
 
     ClientFactoryBuilder() {
         connectTimeoutMillis(Flags.defaultConnectTimeoutMillis());

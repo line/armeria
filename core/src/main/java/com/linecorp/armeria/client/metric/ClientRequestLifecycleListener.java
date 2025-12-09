@@ -42,4 +42,43 @@ public interface ClientRequestLifecycleListener {
         return new ClientRequestMetrics();
     }
     
+    static ClientRequestLifecycleListener noop() {
+        return NoopClientRequestLifecycleListener.INSTANCE;
+    }
+    
+    class NoopClientRequestLifecycleListener implements ClientRequestLifecycleListener {
+        
+        private static final NoopClientRequestLifecycleListener INSTANCE = new NoopClientRequestLifecycleListener();
+        
+        @Override
+        public void onRequestPending(ClientRequestContext ctx) {
+            // no-op
+        }
+
+        @Override
+        public void onRequestStart(ClientRequestContext ctx) {
+            // no-op
+        }
+
+        @Override
+        public void onRequestSendComplete(ClientRequestContext ctx) {
+            // no-op
+        }
+
+        @Override
+        public void onResponseHeaders(ClientRequestContext ctx, ResponseHeaders headers) {
+            // no-op
+        }
+
+        @Override
+        public void onResponseComplete(ClientRequestContext ctx) {
+            // no-op
+        }
+
+        @Override
+        public void onRequestComplete(ClientRequestContext ctx, @Nullable Throwable cause) {
+            // no-op
+        }
+    }
+    
 }
