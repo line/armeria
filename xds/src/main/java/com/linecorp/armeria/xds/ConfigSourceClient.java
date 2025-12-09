@@ -21,19 +21,22 @@ import static com.google.common.base.Preconditions.checkArgument;
 import java.time.Instant;
 import java.util.List;
 import java.util.function.Consumer;
+import java.util.function.Function;
 
 import com.google.protobuf.Duration;
 
 import com.linecorp.armeria.client.grpc.GrpcClientBuilder;
 import com.linecorp.armeria.client.grpc.GrpcClients;
 import com.linecorp.armeria.client.retry.Backoff;
+import com.linecorp.armeria.common.metric.MeterIdPrefix;
 import com.linecorp.armeria.common.util.SafeCloseable;
 
 import io.envoyproxy.envoy.config.core.v3.ApiConfigSource;
-import io.envoyproxy.envoy.config.core.v3.ApiConfigSource.ApiType;
 import io.envoyproxy.envoy.config.core.v3.ConfigSource;
 import io.envoyproxy.envoy.config.core.v3.GrpcService;
+import io.envoyproxy.envoy.config.core.v3.GrpcService.EnvoyGrpc;
 import io.envoyproxy.envoy.config.core.v3.Node;
+import io.micrometer.core.instrument.MeterRegistry;
 import io.netty.util.concurrent.EventExecutor;
 
 final class ConfigSourceClient implements SafeCloseable {
@@ -45,7 +48,8 @@ final class ConfigSourceClient implements SafeCloseable {
                        EventExecutor eventLoop,
                        Node node, Consumer<GrpcClientBuilder> clientCustomizer,
                        BootstrapClusters bootstrapClusters,
-                       ConfigSourceMapper configSourceMapper) {
+                       ConfigSourceMapper configSourceMapper, MeterRegistry meterRegistry,
+                       MeterIdPrefix meterIdPrefix) {
         final ApiConfigSource apiConfigSource;
         if (configSource.hasAds()) {
             apiConfigSource = configSourceMapper.bootstrapAdsConfig();
@@ -62,19 +66,31 @@ final class ConfigSourceClient implements SafeCloseable {
         final List<GrpcService> grpcServices = apiConfigSource.getGrpcServicesList();
         checkArgument(!grpcServices.isEmpty(),
                       "At least one GrpcService should be specified for '%s'", configSource);
-        final boolean ads = apiConfigSource.getApiType() == ApiType.AGGREGATED_GRPC;
+        final GrpcService firstGrpcService = grpcServices.get(0);
+        checkArgument(firstGrpcService.hasEnvoyGrpc(),
+                      "Only envoyGrpc is supported for '%s'", configSource);
+        final EnvoyGrpc envoyGrpc = firstGrpcService.getEnvoyGrpc();
+
         final GrpcClientBuilder builder =
                 GrpcClients.builder(new GrpcServicesPreprocessor(grpcServices, bootstrapClusters));
         builder.responseTimeoutMillis(Long.MAX_VALUE);
         builder.maxResponseLength(0);
         clientCustomizer.accept(builder);
+
+        final Function<String, DefaultConfigSourceLifecycleObserver> metersFunction =
+                xdsType -> new DefaultConfigSourceLifecycleObserver(
+                        meterRegistry, meterIdPrefix, configSource.getConfigSourceSpecifierCase(),
+                        envoyGrpc.getClusterName(), xdsType);
+
+        final boolean ads = configSource.hasAds();
         if (ads) {
             final SotwDiscoveryStub stub = SotwDiscoveryStub.ads(builder);
             stream = new SotwXdsStream(stub, node, Backoff.ofDefault(),
-                                       eventLoop, handler, subscriberStorage);
+                                       eventLoop, handler, subscriberStorage, metersFunction.apply("ads"));
         } else {
             stream = new CompositeXdsStream(builder, node, Backoff.ofDefault(),
-                                            eventLoop, handler, subscriberStorage);
+                                            eventLoop, handler, subscriberStorage,
+                                            metersFunction);
         }
     }
 

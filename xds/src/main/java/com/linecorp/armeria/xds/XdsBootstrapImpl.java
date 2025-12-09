@@ -24,10 +24,12 @@ import java.util.function.Consumer;
 import com.google.common.annotations.VisibleForTesting;
 
 import com.linecorp.armeria.client.grpc.GrpcClientBuilder;
-import com.linecorp.armeria.common.CommonPools;
+import com.linecorp.armeria.common.Flags;
+import com.linecorp.armeria.common.metric.MeterIdPrefix;
 
 import io.envoyproxy.envoy.config.bootstrap.v3.Bootstrap;
 import io.envoyproxy.envoy.config.core.v3.ConfigSource;
+import io.micrometer.core.instrument.MeterRegistry;
 import io.netty.util.concurrent.EventExecutor;
 
 final class XdsBootstrapImpl implements XdsBootstrap {
@@ -40,21 +42,16 @@ final class XdsBootstrapImpl implements XdsBootstrap {
     private final SubscriptionContext subscriptionContext;
     private final SnapshotWatcher<Object> defaultWatcher;
 
-    XdsBootstrapImpl(Bootstrap bootstrap) {
-        this(bootstrap, CommonPools.workerGroup().next(), ignored -> {});
-    }
-
-    XdsBootstrapImpl(Bootstrap bootstrap, EventExecutor eventLoop) {
-        this(bootstrap, eventLoop, ignored -> {});
-    }
-
     @VisibleForTesting
     XdsBootstrapImpl(Bootstrap bootstrap, EventExecutor eventLoop,
                      Consumer<GrpcClientBuilder> configClientCustomizer) {
-        this(bootstrap, eventLoop, configClientCustomizer, ignored -> {});
+        this(bootstrap, eventLoop, XdsBootstrapBuilder.DEFAULT_METER_ID_PREFIX,
+             Flags.meterRegistry(), configClientCustomizer,
+             XdsBootstrapBuilder.DEFAULT_SNAPSHOT_WATCHER);
     }
 
     XdsBootstrapImpl(Bootstrap bootstrap, EventExecutor eventLoop,
+                     MeterIdPrefix meterIdPrefix, MeterRegistry meterRegistry,
                      Consumer<GrpcClientBuilder> configClientCustomizer,
                      SnapshotWatcher<Object> defaultWatcher) {
         this.bootstrap = bootstrap;
@@ -65,9 +62,9 @@ final class XdsBootstrapImpl implements XdsBootstrap {
                 new BootstrapClusters(bootstrap, eventLoop, clusterManager,
                                       defaultWatcher);
         final ConfigSourceMapper configSourceMapper = new ConfigSourceMapper(bootstrap);
-        controlPlaneClientManager = new ControlPlaneClientManager(bootstrap, eventLoop,
-                                                                  configClientCustomizer, bootstrapClusters,
-                                                                  configSourceMapper);
+        controlPlaneClientManager = new ControlPlaneClientManager(
+                bootstrap, eventLoop, configClientCustomizer, bootstrapClusters,
+                configSourceMapper, meterRegistry, meterIdPrefix);
         subscriptionContext = new DefaultSubscriptionContext(
                 eventLoop, clusterManager, configSourceMapper, controlPlaneClientManager);
 
