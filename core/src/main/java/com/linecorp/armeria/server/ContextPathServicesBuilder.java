@@ -110,8 +110,15 @@ public final class ContextPathServicesBuilder
         requireNonNull(paths, "contextPaths");
         requireNonNull(customizer, "customizer");
 
+        boolean isEmpty = true;
+        
         for (String path : paths) {
+            isEmpty = false;
             RouteUtil.ensureAbsolutePath(path, "contextPath");
+        }
+
+        if (isEmpty) {
+            throw new IllegalArgumentException("contextPaths must not be empty.");
         }
 
         final ContextPathServicesBuilder child =

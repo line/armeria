@@ -413,7 +413,7 @@ abstract class AbstractContextPathServicesBuilder<SELF extends AbstractContextPa
     }
 
     VirtualHostBuilder virtualHostBuilder() {
-        return this.virtualHostBuilder;
+        return virtualHostBuilder;
     }
 
     T parent() {
