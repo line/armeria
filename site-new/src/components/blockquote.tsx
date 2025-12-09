@@ -25,6 +25,7 @@ const Blockquote: React.FC<BlockquoteProps> = (props) => {
             : styles.backgroundPattern1
         }
         height={200}
+        width={props.reverse ? 180 : 130}
         alt=""
         role="presentation"
         aria-hidden="true"
@@ -38,6 +39,7 @@ const Blockquote: React.FC<BlockquoteProps> = (props) => {
             : styles.backgroundPattern2
         }
         height={200}
+        width={props.reverse ? 130 : 180}
         alt=""
         role="presentation"
         aria-hidden="true"
