@@ -17,7 +17,12 @@ package com.linecorp.armeria.common.logging;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkState;
+import static com.linecorp.armeria.common.logging.RequestLogProperty.ALL_COMPLETE;
 import static com.linecorp.armeria.common.logging.RequestLogProperty.FLAGS_ALL_COMPLETE;
+import static com.linecorp.armeria.common.logging.RequestLogProperty.FLAGS_REQUEST_COMPLETE;
+import static com.linecorp.armeria.common.logging.RequestLogProperty.FLAGS_RESPONSE_COMPLETE;
+import static com.linecorp.armeria.common.logging.RequestLogProperty.REQUEST_COMPLETE;
+import static com.linecorp.armeria.common.logging.RequestLogProperty.RESPONSE_COMPLETE;
 import static java.util.Objects.requireNonNull;
 
 import java.util.ArrayList;
@@ -30,6 +35,9 @@ import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import java.util.concurrent.locks.Lock;
 
 import javax.net.ssl.SSLSession;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
@@ -81,6 +89,8 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
             RequestHeaders.builder(HttpMethod.UNKNOWN, "?").scheme("https").authority("?").build();
     private static final ResponseHeaders DUMMY_RESPONSE_HEADERS = ResponseHeaders.of(HttpStatus.UNKNOWN);
 
+    private static final Logger logger = LoggerFactory.getLogger(DefaultRequestLog.class);
+
     private final RequestContext ctx;
     private int currentAttempt;
 
@@ -103,6 +113,9 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
 
     @GuardedBy("lock")
     private final List<RequestLogFuture> pendingFutures = new ArrayList<>(4);
+
+    @Nullable
+    private List<RequestLogListener> listeners;
 
     private final Lock lock = new ReentrantShortLock();
     @Nullable
@@ -177,7 +190,7 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
 
     @Override
     public boolean isComplete() {
-        return isComplete(flags);
+        return isAvailable(ALL_COMPLETE);
     }
 
     private static boolean isComplete(int flags) {
@@ -186,7 +199,7 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
 
     @Override
     public boolean isRequestComplete() {
-        return hasInterestedFlags(flags, RequestLogProperty.FLAGS_REQUEST_COMPLETE);
+        return isAvailable(REQUEST_COMPLETE);
     }
 
     @Override
@@ -252,6 +265,16 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
         return flags;
     }
 
+    private static List<RequestLogProperty> toProperties(int flags) {
+        final ImmutableList.Builder<RequestLogProperty> properties = ImmutableList.builder();
+        for (RequestLogProperty property : RequestLogProperty.values()) {
+            if (hasInterestedFlags(flags, property.flag())) {
+                properties.add(property);
+            }
+        }
+        return properties.build();
+    }
+
     @Override
     public RequestLog partial() {
         return partial(flags);
@@ -263,12 +286,12 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
 
     @Override
     public CompletableFuture<RequestLog> whenComplete() {
-        return future(FLAGS_ALL_COMPLETE);
+        return whenAvailable(ALL_COMPLETE);
     }
 
     @Override
     public CompletableFuture<RequestOnlyLog> whenRequestComplete() {
-        return future(RequestLogProperty.FLAGS_REQUEST_COMPLETE);
+        return future(REQUEST_COMPLETE.flag());
     }
 
     @Override
@@ -401,27 +424,35 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
     }
 
     private void updateFlags(int flags) {
-        for (;;) {
+        lock.lock();
+        try {
             final int oldFlags = this.flags;
-            final int newFlags = oldFlags | flags;
-            if (oldFlags == newFlags) {
-                break;
+            int newFlags = oldFlags | flags;
+
+            // Set the corresponding COMPLETE flags if all properties for request/response are available.
+            if (hasInterestedFlags(newFlags, FLAGS_REQUEST_COMPLETE)) {
+                newFlags |= REQUEST_COMPLETE.flag();
+            }
+            if (hasInterestedFlags(newFlags, FLAGS_RESPONSE_COMPLETE)) {
+                newFlags |= RESPONSE_COMPLETE.flag();
+            }
+            if (hasInterestedFlags(newFlags, FLAGS_ALL_COMPLETE)) {
+                newFlags |= ALL_COMPLETE.flag();
             }
 
-            if (flagsUpdater.compareAndSet(this, oldFlags, newFlags)) {
-                final RequestLogFuture[] satisfiedFutures;
-                lock.lock();
-                try {
-                    satisfiedFutures = removeSatisfiedFutures(pendingFutures);
-                } finally {
-                    lock.unlock();
-                }
-                if (satisfiedFutures != null) {
-                    final RequestLog log = partial(newFlags);
-                    completeSatisfiedFutures(satisfiedFutures, log, ctx);
-                }
-                break;
+            if (oldFlags == newFlags) {
+                return;
             }
+
+            this.flags = newFlags;
+            maybeNotifyListeners(oldFlags, newFlags);
+            final RequestLogFuture[] satisfiedFutures = removeSatisfiedFutures(pendingFutures);
+            if (satisfiedFutures != null) {
+                final RequestLog log = partial(newFlags);
+                completeSatisfiedFutures(satisfiedFutures, log, ctx);
+            }
+        } finally {
+            lock.unlock();
         }
     }
 
@@ -557,41 +588,49 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
     private void propagateRequestSideLog(RequestLogAccess child) {
         // Update the available properties always by adding a callback,
         // because the child's properties will never be available immediately.
-        child.whenAvailable(RequestLogProperty.REQUEST_START_TIME)
-             .thenAccept(log -> startRequest(log.requestStartTimeNanos(), log.requestStartTimeMicros()));
-        child.whenAvailable(RequestLogProperty.SESSION)
-             .thenAccept(log -> session(log.channel(), log.sessionProtocol(),
-                                        log.sslSession(), log.connectionTimings()));
-        child.whenAvailable(RequestLogProperty.SCHEME)
-             .thenAccept(log -> serializationFormat(log.scheme().serializationFormat()));
-        child.whenAvailable(RequestLogProperty.NAME)
-             .thenAccept(log -> {
-                 final String serviceName = log.serviceName();
-                 final String name = log.name();
-                 if (serviceName != null) {
-                     name(serviceName, name);
-                 } else {
-                     name(name);
-                 }
-             });
-        child.whenAvailable(RequestLogProperty.REQUEST_FIRST_BYTES_TRANSFERRED_TIME)
-             .thenAccept(log -> {
-                 final Long timeNanos = log.requestFirstBytesTransferredTimeNanos();
-                 if (timeNanos != null) {
-                     requestFirstBytesTransferred(timeNanos);
-                 }
-             });
-        child.whenAvailable(RequestLogProperty.REQUEST_HEADERS)
-             .thenAccept(log -> requestHeaders(log.requestHeaders()));
-        child.whenAvailable(RequestLogProperty.REQUEST_CONTENT)
-             .thenAccept(log -> requestContent(log.requestContent(), log.rawRequestContent()));
-        child.whenRequestComplete().thenAccept(log -> {
-            requestLength(log.requestLength());
-            requestContentPreview(log.requestContentPreview());
-            requestTrailers(log.requestTrailers());
-            // Note that we do not propagate `requestCause` because otherwise the request which succeeded after
-            // retries can be considered to have failed.
-            endRequest0(/* requestCause */ null, log.requestEndTimeNanos());
+        child.addListener((property, log) -> {
+            switch (property) {
+                case REQUEST_START_TIME:
+                    startRequest(log.requestStartTimeNanos(), log.requestStartTimeMicros());
+                    break;
+                case SESSION:
+                    session(log.channel(), log.sessionProtocol(), log.sslSession(), log.connectionTimings());
+                    break;
+                case SCHEME:
+                    serializationFormat(log.scheme().serializationFormat());
+                    break;
+                case NAME:
+                    final String serviceName = log.serviceName();
+                    final String name = log.name();
+                    if (serviceName != null) {
+                        name(serviceName, name);
+                    } else {
+                        name(name);
+                    }
+                    break;
+                case REQUEST_FIRST_BYTES_TRANSFERRED_TIME:
+                    final Long timeNanos = log.requestFirstBytesTransferredTimeNanos();
+                    if (timeNanos != null) {
+                        requestFirstBytesTransferred(timeNanos);
+                    }
+                    break;
+                case REQUEST_HEADERS:
+                    requestHeaders(log.requestHeaders());
+                    break;
+                case REQUEST_CONTENT:
+                    requestContent(log.requestContent(), log.rawRequestContent());
+                    break;
+                case REQUEST_COMPLETE:
+                    requestLength(log.requestLength());
+                    requestContentPreview(log.requestContentPreview());
+                    requestTrailers(log.requestTrailers());
+                    // Note that we do not propagate `requestCause` because otherwise the request which
+                    // succeeded after retries can be considered to have failed.
+                    endRequest0(/* requestCause */ null, log.requestEndTimeNanos());
+                    break;
+                default:
+                    break;
+            }
         });
     }
 
@@ -614,66 +653,42 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
     }
 
     private void propagateResponseSideLog(RequestLog childLog) {
-        if (childLog.isAvailable(RequestLogProperty.RESPONSE_CAUSE)) {
-            // Update responseCause first if available because callbacks of the other properties may need it
-            // to retry or open circuit breakers.
-            final Throwable responseCause = childLog.responseCause();
-            if (responseCause != null) {
-                responseCause(responseCause);
+        childLog.addListener((property, log) -> {
+            switch (property) {
+                case RESPONSE_CAUSE:
+                    // Update responseCause first if available because callbacks of the other properties may
+                    // need it to retry or open circuit breakers.
+                    final Throwable responseCause = log.responseCause();
+                    if (responseCause != null) {
+                        responseCause(responseCause);
+                    }
+                    break;
+                case RESPONSE_START_TIME:
+                    startResponse(log.responseStartTimeNanos(), log.responseStartTimeMicros(), true);
+                    break;
+                case RESPONSE_FIRST_BYTES_TRANSFERRED_TIME:
+                    final Long timeNanos = log.responseFirstBytesTransferredTimeNanos();
+                    if (timeNanos != null) {
+                        responseFirstBytesTransferred(timeNanos);
+                    }
+                    break;
+                case RESPONSE_HEADERS:
+                    responseHeaders(log.responseHeaders());
+                    break;
+                case RESPONSE_TRAILERS:
+                    responseTrailers(log.responseTrailers());
+                    break;
+                case RESPONSE_COMPLETE:
+                    responseContent(log.responseContent(), log.rawResponseContent());
+                    responseLength(log.responseLength());
+                    responseContentPreview(log.responseContentPreview());
+                    responseTrailers(log.responseTrailers());
+                    endResponse0(log.responseCause(), log.responseEndTimeNanos());
+                    break;
+                default:
+                    break;
             }
-        }
-
-        // Update the available properties without adding a callback if the childLog already has them.
-        if (childLog.isAvailable(RequestLogProperty.RESPONSE_START_TIME)) {
-            startResponse(childLog.responseStartTimeNanos(), childLog.responseStartTimeMicros(), true);
-        } else {
-            childLog.whenAvailable(RequestLogProperty.RESPONSE_START_TIME)
-                     .thenAccept(log -> startResponse(log.responseStartTimeNanos(),
-                                                      log.responseStartTimeMicros(), true));
-        }
-
-        if (childLog.isAvailable(RequestLogProperty.RESPONSE_FIRST_BYTES_TRANSFERRED_TIME)) {
-            final Long timeNanos = childLog.responseFirstBytesTransferredTimeNanos();
-            if (timeNanos != null) {
-                responseFirstBytesTransferred(timeNanos);
-            }
-        } else {
-            childLog.whenAvailable(RequestLogProperty.RESPONSE_FIRST_BYTES_TRANSFERRED_TIME)
-                     .thenAccept(log -> {
-                         final Long timeNanos = log.responseFirstBytesTransferredTimeNanos();
-                         if (timeNanos != null) {
-                             responseFirstBytesTransferred(timeNanos);
-                         }
-                     });
-        }
-
-        if (childLog.isAvailable(RequestLogProperty.RESPONSE_HEADERS)) {
-            responseHeaders(childLog.responseHeaders());
-        } else {
-            childLog.whenAvailable(RequestLogProperty.RESPONSE_HEADERS)
-                     .thenAccept(log -> responseHeaders(log.responseHeaders()));
-        }
-
-        if (childLog.isAvailable(RequestLogProperty.RESPONSE_TRAILERS)) {
-            responseTrailers(childLog.responseTrailers());
-        } else {
-            childLog.whenAvailable(RequestLogProperty.RESPONSE_TRAILERS)
-                     .thenAccept(log -> responseTrailers(log.responseTrailers()));
-        }
-
-        if (childLog.isComplete()) {
-            propagateResponseEndData(childLog);
-        } else {
-            childLog.whenComplete().thenAccept(this::propagateResponseEndData);
-        }
-    }
-
-    private void propagateResponseEndData(RequestLog log) {
-        responseContent(log.responseContent(), log.rawResponseContent());
-        responseLength(log.responseLength());
-        responseContentPreview(log.responseContentPreview());
-        responseTrailers(log.responseTrailers());
-        endResponse0(log.responseCause(), log.responseEndTimeNanos());
+        });
     }
 
     // Request-side methods.
@@ -1083,7 +1098,7 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
             deferredFlags = this.deferredFlags;
         }
 
-        final int flags = RequestLogProperty.FLAGS_REQUEST_COMPLETE & ~deferredFlags;
+        final int flags = FLAGS_REQUEST_COMPLETE & ~deferredFlags;
         if (isAvailable(flags)) {
             return;
         }
@@ -1468,6 +1483,48 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
             this.responseCause = responseCause;
             if (updateFlag) {
                 updateFlags(RequestLogProperty.RESPONSE_CAUSE);
+            }
+        }
+    }
+
+    @Override
+    public void addListener(RequestLogListener listener) {
+        requireNonNull(listener, "listener");
+        lock.lock();
+        try {
+            if (listeners == null) {
+                listeners = new ArrayList<>();
+            }
+            listeners.add(listener);
+
+            // Notify the listener of all already available properties.
+            for (RequestLogProperty property : toProperties(flags)) {
+                notifyListener(listener, property);
+            }
+        } finally {
+            lock.unlock();
+        }
+    }
+
+    private void notifyListener(RequestLogListener listener, RequestLogProperty property) {
+        // The lock should be held by the caller.
+        try {
+            listener.onEvent(property, this);
+        } catch (Throwable t) {
+            logger.warn("An exception was raised from a RequestLogListener: {}", listener, t);
+        }
+    }
+
+    private void maybeNotifyListeners(int oldFlags, int newFlags) {
+        // The lock should be held by the caller.
+        if (listeners != null) {
+            // Multiple properties have been completed.
+            final int addedFlags = newFlags & ~oldFlags;
+            final List<RequestLogProperty> properties = toProperties(addedFlags);
+            for (RequestLogProperty newProp : properties) {
+                for (RequestLogListener listener : listeners) {
+                    notifyListener(listener, newProp);
+                }
             }
         }
     }
@@ -1878,6 +1935,14 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
         @Override
         public HttpHeaders responseTrailers() {
             return responseTrailers;
+        }
+
+        @Override
+        public void addListener(RequestLogListener listener) {
+            requireNonNull(listener, "listener");
+            for (RequestLogProperty property : RequestLogProperty.values()) {
+                notifyListener(listener, property);
+            }
         }
 
         @Override
