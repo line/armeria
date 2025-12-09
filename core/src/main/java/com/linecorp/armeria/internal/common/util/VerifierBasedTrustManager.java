@@ -42,7 +42,7 @@ final class VerifierBasedTrustManager extends X509ExtendedTrustManager {
         if (isServer) {
             verifier = delegate::checkClientTrusted;
         } else {
-            verifier =  delegate::checkServerTrusted;
+            verifier = delegate::checkServerTrusted;
         }
         for (TlsPeerVerifierFactory verifierFactory : verifierFactories) {
             verifier = verifierFactory.create(verifier);

@@ -165,7 +165,7 @@ public abstract class AbstractTlsSpec {
                Objects.equal(trustedCertificates, tlsSpec.trustedCertificates()) &&
                Objects.equal(verifierFactories, tlsSpec.verifierFactories()) &&
                engineType == tlsSpec.engineType() &&
-               Objects.equal(tlsCustomizer, tlsSpec.tlsCustomizer) &&
+               Objects.equal(tlsCustomizer, tlsSpec.tlsCustomizer()) &&
                Objects.equal(keyManagerFactory, tlsSpec.keyManagerFactory());
     }
 

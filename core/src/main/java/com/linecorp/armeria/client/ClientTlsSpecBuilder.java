@@ -37,6 +37,11 @@ import io.netty.handler.ssl.SslContextBuilder;
 @UnstableApi
 public final class ClientTlsSpecBuilder extends AbstractTlsSpecBuilder<ClientTlsSpecBuilder, ClientTlsSpec> {
 
+    private Set<String> alpnProtocols = SslContextUtil.DEFAULT_ALPN_PROTOCOLS;
+    private Consumer<? super SslContextBuilder> tlsCustomizer = SslContextUtil.DEFAULT_NOOP_CUSTOMIZER;
+    @Nullable
+    private KeyManagerFactory keyManagerFactory;
+
     ClientTlsSpecBuilder() {}
 
     ClientTlsSpecBuilder(ClientTlsSpec clientTlsSpec) {
@@ -46,11 +51,6 @@ public final class ClientTlsSpecBuilder extends AbstractTlsSpecBuilder<ClientTls
         keyManagerFactory = clientTlsSpec.keyManagerFactory();
         tlsCustomizer = clientTlsSpec.tlsCustomizer();
     }
-
-    private Set<String> alpnProtocols = SslContextUtil.DEFAULT_ALPN_PROTOCOLS;
-    private Consumer<? super SslContextBuilder> tlsCustomizer = SslContextUtil.DEFAULT_NOOP_CUSTOMIZER;
-    @Nullable
-    private KeyManagerFactory keyManagerFactory;
 
     ClientTlsSpecBuilder alpnProtocols(SessionProtocol sessionProtocol) {
         if (sessionProtocol.isExplicitHttp1()) {

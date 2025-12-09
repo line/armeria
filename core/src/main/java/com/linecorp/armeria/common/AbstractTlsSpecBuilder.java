@@ -66,7 +66,7 @@ public abstract class AbstractTlsSpecBuilder<SELF extends AbstractTlsSpecBuilder
      * Sets the cipher suites to use.
      */
     public final SELF ciphers(String... ciphers) {
-        return ciphers(ImmutableList.copyOf(ciphers));
+        return ciphers(ImmutableSet.copyOf(ciphers));
     }
 
     /**
