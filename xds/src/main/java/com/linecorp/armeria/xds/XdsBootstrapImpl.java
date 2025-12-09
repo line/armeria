@@ -46,8 +46,7 @@ final class XdsBootstrapImpl implements XdsBootstrap {
     XdsBootstrapImpl(Bootstrap bootstrap, EventExecutor eventLoop,
                      Consumer<GrpcClientBuilder> configClientCustomizer) {
         this(bootstrap, eventLoop, XdsBootstrapBuilder.DEFAULT_METER_ID_PREFIX,
-             Flags.meterRegistry(), configClientCustomizer,
-             XdsBootstrapBuilder.DEFAULT_SNAPSHOT_WATCHER);
+             Flags.meterRegistry(), configClientCustomizer, XdsBootstrapBuilder.DEFAULT_SNAPSHOT_WATCHER);
     }
 
     XdsBootstrapImpl(Bootstrap bootstrap, EventExecutor eventLoop,
@@ -57,16 +56,17 @@ final class XdsBootstrapImpl implements XdsBootstrap {
         this.bootstrap = bootstrap;
         this.defaultWatcher = defaultWatcher;
         this.eventLoop = requireNonNull(eventLoop, "eventLoop");
-        clusterManager = new XdsClusterManager(eventLoop, bootstrap);
+        clusterManager = new XdsClusterManager(eventLoop, bootstrap, meterIdPrefix, meterRegistry);
         final BootstrapClusters bootstrapClusters =
                 new BootstrapClusters(bootstrap, eventLoop, clusterManager,
-                                      defaultWatcher);
+                                      defaultWatcher, meterIdPrefix, meterRegistry);
         final ConfigSourceMapper configSourceMapper = new ConfigSourceMapper(bootstrap);
         controlPlaneClientManager = new ControlPlaneClientManager(
                 bootstrap, eventLoop, configClientCustomizer, bootstrapClusters,
                 configSourceMapper, meterRegistry, meterIdPrefix);
         subscriptionContext = new DefaultSubscriptionContext(
-                eventLoop, clusterManager, configSourceMapper, controlPlaneClientManager);
+                eventLoop, clusterManager, configSourceMapper, controlPlaneClientManager,
+                meterRegistry, meterIdPrefix);
 
         bootstrapClusters.initializeSecondary(subscriptionContext);
         listenerManager = new ListenerManager(eventLoop, bootstrap, subscriptionContext, defaultWatcher);

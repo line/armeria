@@ -16,11 +16,18 @@
 
 package com.linecorp.armeria.xds;
 
+import com.linecorp.armeria.common.metric.MeterIdPrefix;
+
+import io.micrometer.core.instrument.MeterRegistry;
 import io.netty.util.concurrent.EventExecutor;
 
 interface SubscriptionContext {
 
     EventExecutor eventLoop();
+
+    MeterRegistry meterRegistry();
+
+    MeterIdPrefix meterIdPrefix();
 
     void subscribe(ResourceNode<?> node);
 
