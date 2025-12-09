@@ -406,8 +406,9 @@ class InputStreamStreamMessageTest {
 
         StepVerifier.create(byteStreamMessage)
                     .verifyComplete();
+        byteStreamMessage.whenComplete().join();
+        assertThat(byteStreamMessage.isOpen()).isFalse();
         assertThat(byteStreamMessage.isEmpty()).isTrue();
-        await().untilAsserted(() -> assertThat(byteStreamMessage.isOpen()).isFalse());
     }
 
     @Test
