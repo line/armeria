@@ -30,7 +30,7 @@ const ShortUrlRedirect: React.FC<ShortUrlPluginData> = ({ pluginData }) => {
         event_callback: () => {},
       });
     }
-  });
+  }, [href]);
 
   return <Redirect href={href} />;
 };
