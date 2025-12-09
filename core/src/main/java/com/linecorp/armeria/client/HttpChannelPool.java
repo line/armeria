@@ -654,7 +654,7 @@ final class HttpChannelPool implements AsyncCloseable {
             return hashCode == that.hashCode &&
                    endpoint.equals(that.endpoint) &&
                    proxyConfig.equals(that.proxyConfig) &&
-                   tlsSpec.equals(that.tlsSpec);
+                   Objects.equals(tlsSpec, that.tlsSpec);
         }
 
         @Override

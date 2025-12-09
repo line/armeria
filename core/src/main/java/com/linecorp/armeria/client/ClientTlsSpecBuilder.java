@@ -44,6 +44,7 @@ public final class ClientTlsSpecBuilder extends AbstractTlsSpecBuilder<ClientTls
               clientTlsSpec.verifierFactories(), clientTlsSpec.engineType());
         alpnProtocols = clientTlsSpec.alpnProtocols();
         keyManagerFactory = clientTlsSpec.keyManagerFactory();
+        tlsCustomizer = clientTlsSpec.tlsCustomizer();
     }
 
     private Set<String> alpnProtocols = SslContextUtil.DEFAULT_ALPN_PROTOCOLS;
