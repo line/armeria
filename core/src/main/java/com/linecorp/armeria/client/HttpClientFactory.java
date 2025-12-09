@@ -39,7 +39,6 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.MapMaker;
 
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
-import com.linecorp.armeria.client.metric.ClientMetrics;
 import com.linecorp.armeria.client.proxy.ProxyConfigSelector;
 import com.linecorp.armeria.client.redirect.RedirectConfig;
 import com.linecorp.armeria.common.Http1HeaderNaming;
@@ -143,7 +142,6 @@ final class HttpClientFactory implements ClientFactory {
     private final ClientFactoryOptions options;
     private final boolean autoCloseConnectionPoolListener;
     private final AsyncCloseableSupport closeable = AsyncCloseableSupport.of(this::closeAsync);
-    private final ClientMetrics clientMetrics = new ClientMetrics();
 
     HttpClientFactory(ClientFactoryOptions options, boolean autoCloseConnectionPoolListener) {
         workerGroup = options.workerGroup();
@@ -545,13 +543,7 @@ final class HttpClientFactory implements ClientFactory {
                                      e -> new HttpChannelPool(this, eventLoop,
                                                               sslCtxHttp1Or2, sslCtxHttp1Only,
                                                               sslContextFactory,
-                                                              connectionPoolListener(),
-                                                              clientMetrics)
-        );
-    }
-
-    ClientMetrics clientMetrics() {
-        return this.clientMetrics;
+                                                              connectionPoolListener()));
     }
 
     @VisibleForTesting

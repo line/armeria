@@ -39,7 +39,6 @@ import org.slf4j.LoggerFactory;
 
 import com.google.common.collect.ImmutableSet;
 
-import com.linecorp.armeria.client.metric.ClientMetrics;
 import com.linecorp.armeria.client.proxy.ConnectProxyConfig;
 import com.linecorp.armeria.client.proxy.HAProxyConfig;
 import com.linecorp.armeria.client.proxy.ProxyConfig;
@@ -100,17 +99,14 @@ final class HttpChannelPool implements AsyncCloseable {
     // Fields for creating a new connection:
     private final Bootstraps bootstraps;
     private final int connectTimeoutMillis;
-    private final ClientMetrics clientMetrics;
 
     HttpChannelPool(HttpClientFactory clientFactory, EventLoop eventLoop,
                     SslContext sslCtxHttp1Or2, SslContext sslCtxHttp1Only,
                     @Nullable SslContextFactory sslContextFactory,
-                    ConnectionPoolListener listener,
-                    ClientMetrics clientMetrics) {
+                    ConnectionPoolListener listener) {
         this.clientFactory = clientFactory;
         this.eventLoop = eventLoop;
         this.listener = listener;
-        this.clientMetrics = clientMetrics;
 
         pool = newEnumMap(ImmutableSet.of(SessionProtocol.H1, SessionProtocol.H1C,
                                           SessionProtocol.H2, SessionProtocol.H2C));
@@ -215,12 +211,10 @@ final class HttpChannelPool implements AsyncCloseable {
 
     private void setPendingAcquisition(SessionProtocol desiredProtocol, PoolKey key,
                                        ChannelAcquisitionFuture future) {
-        clientMetrics.incrementPendingRequest(desiredProtocol);
         pendingAcquisitions[desiredProtocol.ordinal()].put(key, future);
     }
 
     private void removePendingAcquisition(SessionProtocol desiredProtocol, PoolKey key) {
-        clientMetrics.decrementPendingRequest(desiredProtocol);
         pendingAcquisitions[desiredProtocol.ordinal()].remove(key);
     }
 
