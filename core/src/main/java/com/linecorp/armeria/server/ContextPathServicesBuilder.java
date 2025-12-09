@@ -111,7 +111,7 @@ public final class ContextPathServicesBuilder
         requireNonNull(customizer, "customizer");
 
         boolean isEmpty = true;
-        
+
         for (String path : paths) {
             isEmpty = false;
             RouteUtil.ensureAbsolutePath(path, "contextPath");

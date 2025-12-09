@@ -121,7 +121,7 @@ public final class VirtualHostContextPathServicesBuilder
         if (isEmpty) {
             throw new IllegalArgumentException("contextPaths must not be empty.");
         }
-        
+
         final VirtualHostContextPathServicesBuilder child =
                 new VirtualHostContextPathServicesBuilder(parent(),
                                                           virtualHostBuilder(),
