@@ -53,6 +53,8 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.primitives.Ints;
 
+import com.linecorp.armeria.client.metric.ClientRequestLifecycleListener;
+import com.linecorp.armeria.client.metric.ClientRequestMetrics;
 import com.linecorp.armeria.client.proxy.ProxyConfig;
 import com.linecorp.armeria.client.proxy.ProxyConfigSelector;
 import com.linecorp.armeria.common.CommonPools;
@@ -134,6 +136,8 @@ public final class ClientFactoryBuilder implements TlsSetters {
     private ClientTlsConfig tlsConfig;
     private boolean staticTlsSettingsSet;
     private boolean autoCloseConnectionPoolListener = true;
+    private ClientRequestLifecycleListener clientRequestLifecycleListener = 
+            new ClientRequestMetrics();
 
     ClientFactoryBuilder() {
         connectTimeoutMillis(Flags.defaultConnectTimeoutMillis());
@@ -259,6 +263,13 @@ public final class ClientFactoryBuilder implements TlsSetters {
         channelOptions(ImmutableMap.of(option, value));
         return this;
     }
+    
+    public ClientFactoryBuilder clientRequestLifeCycleListener(ClientRequestLifecycleListener clientRequestLifecycleListener) {
+        requireNonNull(clientRequestLifecycleListener, "clientRequestLifecycleListener");
+        this.clientRequestLifecycleListener = clientRequestLifecycleListener;
+        return this;
+    }
+        
 
     private void channelOptions(Map<ChannelOption<?>, Object> newChannelOptions) {
         @SuppressWarnings("unchecked")
@@ -1124,7 +1135,13 @@ public final class ClientFactoryBuilder implements TlsSetters {
      * Returns a newly-created {@link ClientFactory} based on the properties of this builder.
      */
     public ClientFactory build() {
-        return new DefaultClientFactory(new HttpClientFactory(buildOptions(), autoCloseConnectionPoolListener));
+        return new DefaultClientFactory(
+                new HttpClientFactory(
+                        buildOptions(), 
+                        autoCloseConnectionPoolListener, 
+                        clientRequestLifecycleListener
+                )
+        );
     }
 
     @Override

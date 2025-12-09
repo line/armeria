@@ -32,6 +32,7 @@ import java.util.function.Consumer;
 import java.util.function.Supplier;
 import java.util.stream.Stream;
 
+import com.linecorp.armeria.client.metric.ClientRequestLifecycleListener;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -142,8 +143,10 @@ final class HttpClientFactory implements ClientFactory {
     private final ClientFactoryOptions options;
     private final boolean autoCloseConnectionPoolListener;
     private final AsyncCloseableSupport closeable = AsyncCloseableSupport.of(this::closeAsync);
+    private final ClientRequestLifecycleListener clientRequestLifecycleListener;
 
-    HttpClientFactory(ClientFactoryOptions options, boolean autoCloseConnectionPoolListener) {
+    HttpClientFactory(ClientFactoryOptions options, boolean autoCloseConnectionPoolListener,
+                      ClientRequestLifecycleListener clientRequestLifecycleListener) {
         workerGroup = options.workerGroup();
 
         @SuppressWarnings("unchecked")
@@ -232,6 +235,7 @@ final class HttpClientFactory implements ClientFactory {
         this.autoCloseConnectionPoolListener = autoCloseConnectionPoolListener;
 
         this.options = options;
+        this.clientRequestLifecycleListener = clientRequestLifecycleListener;
 
         clientDelegate = new HttpClientDelegate(this, addressResolverGroup);
         RequestTargetCache.registerClientMetrics(meterRegistry);
@@ -338,6 +342,8 @@ final class HttpClientFactory implements ClientFactory {
     Http1HeaderNaming http1HeaderNaming() {
         return http1HeaderNaming;
     }
+    
+    ClientRequestLifecycleListener clientRequestLifecycleListener() {return clientRequestLifecycleListener;}
 
     @VisibleForTesting
     AddressResolverGroup<InetSocketAddress> addressResolverGroup() {
