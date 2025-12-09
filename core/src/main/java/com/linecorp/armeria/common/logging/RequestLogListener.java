@@ -19,7 +19,7 @@ package com.linecorp.armeria.common.logging;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 
 /**
- * A listener that listens to a specific event of a {@link RequestLog}.
+ * A listener that listens to all events of a {@link RequestLog}.
  *
  * <p>If a {@link RequestLogProperty} was completed before adding this listener to the {@link RequestLog},
  * the {@link #onEvent(RequestLogProperty, RequestLog)} method will be invoked immediately with the already

@@ -1518,7 +1518,6 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
     private void maybeNotifyListeners(int oldFlags, int newFlags) {
         // The lock should be held by the caller.
         if (listeners != null) {
-            // Multiple properties have been completed.
             final int addedFlags = newFlags & ~oldFlags;
             final List<RequestLogProperty> properties = toProperties(addedFlags);
             for (RequestLogProperty newProp : properties) {
