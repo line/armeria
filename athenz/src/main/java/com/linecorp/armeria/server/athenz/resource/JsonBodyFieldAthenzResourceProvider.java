@@ -39,7 +39,8 @@ import com.linecorp.armeria.server.ServiceRequestContext;
  *
  * <p>This provider parses the request body as JSON and extracts the resource value from the field
  * specified by a JSON pointer. If the content type is not JSON, the field does not exist,
- * or parsing fails, an empty string is returned and the error is logged at debug level.
+ * or parsing fails, the returned future completes exceptionally with
+ * {@link AthenzResourceNotFoundException}.
  *
  * <p>The provider supports both simple field names and nested paths using JSON Pointer notation:
  * <ul>

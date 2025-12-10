@@ -31,7 +31,8 @@ import com.linecorp.armeria.server.ServiceRequestContext;
  * Provides the Athenz resource string from a specific HTTP header.
  *
  * <p>This provider extracts the resource value from the request header specified by the header name.
- * If the header is not present or empty, an empty string is returned and logged at debug level.
+ * If the header is not present or empty, the returned future completes exceptionally with
+ * {@link AthenzResourceNotFoundException}.
  *
  * <p>Example:
  * <pre>{@code
