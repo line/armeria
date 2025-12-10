@@ -101,7 +101,8 @@ class AthenzResourceProviderIntegrationTest {
                                                                .action("obtain")
                                                                .resourceProvider((ctx, request) -> {
                                                                    throw new AthenzResourceNotFoundException(
-                                                                          "Simulated resource provider exception");
+                                                                           "Simulated resource provider " +
+                                                                           "exception");
                                                                }).policyConfig(
                             new AthenzPolicyConfig(TEST_DOMAIN_NAME))
                                                                .newDecorator());
