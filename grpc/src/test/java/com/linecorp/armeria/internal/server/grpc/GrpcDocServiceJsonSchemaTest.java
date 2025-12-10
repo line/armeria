@@ -158,9 +158,8 @@ class GrpcDocServiceJsonSchemaTest {
         assertThatJson(properties).node("int_to_string_map.type").isEqualTo("object");
         assertThatJson(properties).node("int_to_string_map.additionalProperties.type").isEqualTo("string");
 
-        // "string_to_int_map" references to "#/properties/complex_other_message/properties/map"
-        assertThatJson(properties).node("string_to_int_map.$ref").isEqualTo(
-                "#/properties/complex_other_message/properties/map");
+        assertThatJson(properties).node("string_to_int_map.type").isEqualTo("object");
+        assertThatJson(properties).node("string_to_int_map.additionalProperties.type").isEqualTo("integer");
         final JsonNode stringToIntMap = properties.get("complex_other_message").get("properties")
                                                   .get("map");
         assertThatJson(stringToIntMap).node("type").isEqualTo("object");
