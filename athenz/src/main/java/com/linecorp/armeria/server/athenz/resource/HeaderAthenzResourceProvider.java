@@ -32,17 +32,19 @@ import static java.util.Objects.requireNonNull;
 /**
  * Provides the Athenz resource string from a specific HTTP header.
  *
- * <p>This provider extracts the resource value from the request header specified by the {@code headerName}.
- * If the header is not present or empty, an empty string is returned.
+ * <p>This provider extracts the resource value from the request header specified by the header name.
+ * If the header is not present or empty, an empty string is returned and logged at debug level.
  *
  * <p>Example:
  * <pre>{@code
- * AthenzResourceProvider provider = new HeaderAthenzResourceProvider("X-Athenz-Resource");
  * AthenzService.builder(ztsBaseClient)
- *              .resourceProvider(provider, resourceTagValue)
+ *              .resourceProvider(AthenzResourceProvider.ofHeader("X-Athenz-Resource"))
  *              .action("read")
  *              .newDecorator();
  * }</pre>
+ *
+ * <p>If a request includes the header {@code X-Athenz-Resource: resourceId},
+ * the resource will be {@code "resourceId"}.
  */
 @UnstableApi
 public class HeaderAthenzResourceProvider implements AthenzResourceProvider {
@@ -56,7 +58,7 @@ public class HeaderAthenzResourceProvider implements AthenzResourceProvider {
      *
      * @param headerName the name of the HTTP header to extract the resource from
      */
-    public HeaderAthenzResourceProvider(String headerName) {
+    protected HeaderAthenzResourceProvider(String headerName) {
         requireNonNull(headerName, "headerName");
         checkArgument(!headerName.isEmpty(), "headerName must not be empty");
         this.headerName = headerName;

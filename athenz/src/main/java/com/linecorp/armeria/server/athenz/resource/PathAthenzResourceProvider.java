@@ -27,24 +27,46 @@ import java.util.concurrent.CompletableFuture;
  * Provides the Athenz resource string from the request path.
  *
  * <p>This provider extracts the resource value directly from the request path.
- * The path returned includes the full URI path after the host.
+ * The path returned includes the full URI path after the host, and optionally query parameters
+ * based on the configuration.
  *
- * <p>Example:
+ * <p>Example (without query parameters):
  * <pre>{@code
- * AthenzResourceProvider provider = new PathAthenzResourceProvider();
  * AthenzService.builder(ztsBaseClient)
- *              .resourceProvider(provider, resourceTagValue)
+ *              .resourceProvider(AthenzResourceProvider.ofPath())
  *              .action("read")
  *              .newDecorator();
  * }</pre>
  *
- * <p>If a request is made to {@code "/api/users/123"}, the resource will be {@code "/api/users/123"}.
+ * <p>Example (with query parameters):
+ * <pre>{@code
+ * AthenzService.builder(ztsBaseClient)
+ *              .resourceProvider(AthenzResourceProvider.ofPath(true))
+ *              .action("read")
+ *              .newDecorator();
+ * }</pre>
+ *
+ * <p>If a request is made to {@code "/api/users/123?status=active"}:
+ * <ul>
+ *   <li>Without query: resource will be {@code "/api/users/123"}</li>
+ *   <li>With query: resource will be {@code "/api/users/123?status=active"}</li>
+ * </ul>
  */
 @UnstableApi
 public final class PathAthenzResourceProvider implements AthenzResourceProvider {
 
+    static final PathAthenzResourceProvider INSTANCE = new PathAthenzResourceProvider(false);
+    static final PathAthenzResourceProvider QUERY_INSTANCE = new PathAthenzResourceProvider(true);
+
+    private final boolean includeQuery;
+
+    private PathAthenzResourceProvider(boolean includeQuery) {
+        this.includeQuery = includeQuery;
+    }
+
     @Override
     public CompletableFuture<String> provide(ServiceRequestContext ctx, HttpRequest req) {
-        return CompletableFuture.completedFuture(req.path());
+        final String resource = includeQuery ? req.path() : ctx.path();
+        return CompletableFuture.completedFuture(resource);
     }
 }

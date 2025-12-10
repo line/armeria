@@ -45,6 +45,8 @@ public final class AthenzServiceBuilder extends AbstractAthenzServiceBuilder<Ath
 
     private List<TokenType> tokenTypes = DEFAULT_TOKEN_TYPES;
 
+    private static final String DEFAULT_RESOURCE_TAG_VALUE = "*";
+
     @Nullable
     private AthenzResourceProvider athenzResourceProvider;
 
@@ -66,11 +68,20 @@ public final class AthenzServiceBuilder extends AbstractAthenzServiceBuilder<Ath
     public AthenzServiceBuilder resource(String athenzResource) {
         requireNonNull(athenzResource, "athenzResource");
         checkArgument(!athenzResource.isEmpty(), "athenzResource must not be empty");
-        athenzResourceProvider = (ctx, req) -> CompletableFuture.completedFuture(athenzResource);
-        resourceTagValue = athenzResource;
+        checkState(this.athenzResourceProvider == null, "resource() and resourceProvider() are mutually exclusive");
+        this.athenzResourceProvider = (ctx, req) -> CompletableFuture.completedFuture(athenzResource);
+        this.resourceTagValue = athenzResource;
         return this;
     }
 
+    /**
+     * Sets the {@link AthenzResourceProvider} used to resolve the Athenz resource dynamically for each request.
+     *
+     * <p><strong>Mandatory:</strong> Either this or {@link #resource(String)} must be set before calling {@link #newDecorator()}.</p>
+     */
+    public AthenzServiceBuilder resourceProvider(AthenzResourceProvider athenzResourceProvider) {
+        return resourceProvider(athenzResourceProvider, DEFAULT_RESOURCE_TAG_VALUE);
+    }
 
     /**
      * Sets the {@link AthenzResourceProvider} used to resolve the Athenz resource dynamically for each request.
@@ -85,7 +96,6 @@ public final class AthenzServiceBuilder extends AbstractAthenzServiceBuilder<Ath
         this.resourceTagValue = resourceTagValue;
         return this;
     }
-
 
     /**
      * Sets the Athenz action to check access permissions against.
