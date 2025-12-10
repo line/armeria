@@ -20,12 +20,14 @@ package com.linecorp.armeria.server.athenz.resource;
 import com.fasterxml.jackson.core.JsonPointer;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+
 import com.linecorp.armeria.common.AggregatedHttpRequest;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.internal.common.JacksonUtil;
 import com.linecorp.armeria.server.ServiceRequestContext;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -123,7 +125,8 @@ public class JsonBodyFieldAthenzResourceProvider implements AthenzResourceProvid
             }
             return node.asText("");
         } catch (Exception e) {
-            logger.debug("Failed to extract resource from JSON pointer '{}': {}", jsonPointer, e.getMessage(), e);
+            logger.debug("Failed to extract resource from JSON pointer '{}': {}", jsonPointer, e.getMessage(),
+                         e);
             return "";
         }
     }
