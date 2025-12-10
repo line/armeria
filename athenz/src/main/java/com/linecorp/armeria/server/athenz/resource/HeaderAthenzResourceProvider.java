@@ -17,17 +17,16 @@
 
 package com.linecorp.armeria.server.athenz.resource;
 
-import com.linecorp.armeria.common.HttpRequest;
-import com.linecorp.armeria.common.annotation.UnstableApi;
-import com.linecorp.armeria.server.ServiceRequestContext;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import java.util.concurrent.CompletableFuture;
-
 import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
 
+import java.util.concurrent.CompletableFuture;
+
+import com.linecorp.armeria.common.HttpRequest;
+import com.linecorp.armeria.common.annotation.UnstableApi;
+import com.linecorp.armeria.common.util.UnmodifiableFuture;
+import com.linecorp.armeria.server.ServiceRequestContext;
+import com.linecorp.armeria.server.athenz.AthenzResourceNotFoundException;
 
 /**
  * Provides the Athenz resource string from a specific HTTP header.
@@ -47,9 +46,7 @@ import static java.util.Objects.requireNonNull;
  * the resource will be {@code "resourceId"}.
  */
 @UnstableApi
-public class HeaderAthenzResourceProvider implements AthenzResourceProvider {
-
-    private static final Logger logger = LoggerFactory.getLogger(HeaderAthenzResourceProvider.class);
+final class HeaderAthenzResourceProvider implements AthenzResourceProvider {
 
     private final String headerName;
 
@@ -58,7 +55,7 @@ public class HeaderAthenzResourceProvider implements AthenzResourceProvider {
      *
      * @param headerName the name of the HTTP header to extract the resource from
      */
-    protected HeaderAthenzResourceProvider(String headerName) {
+    HeaderAthenzResourceProvider(String headerName) {
         requireNonNull(headerName, "headerName");
         checkArgument(!headerName.isEmpty(), "headerName must not be empty");
         this.headerName = headerName;
@@ -67,10 +64,11 @@ public class HeaderAthenzResourceProvider implements AthenzResourceProvider {
     @Override
     public CompletableFuture<String> provide(ServiceRequestContext ctx, HttpRequest req) {
         final String value = req.headers().get(headerName);
-        if (value == null) {
-            logger.debug("Header '{}' not found in the request", headerName);
-            return CompletableFuture.completedFuture("");
+        if (value == null || value.isEmpty()) {
+            return UnmodifiableFuture.exceptionallyCompletedFuture(
+                    new AthenzResourceNotFoundException(
+                            "Athenz resource not found in header: " + headerName));
         }
-        return CompletableFuture.completedFuture(value);
+        return UnmodifiableFuture.completedFuture(value);
     }
 }

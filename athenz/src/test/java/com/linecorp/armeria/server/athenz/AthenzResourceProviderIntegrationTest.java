@@ -22,8 +22,6 @@ import static com.linecorp.armeria.server.athenz.AthenzDocker.TEST_SERVICE;
 import static com.linecorp.armeria.server.athenz.AthenzDocker.USER_ROLE;
 import static org.assertj.core.api.Assertions.assertThat;
 
-import java.util.concurrent.CompletableFuture;
-
 import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
@@ -43,6 +41,7 @@ import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.athenz.TokenType;
+import com.linecorp.armeria.common.util.UnmodifiableFuture;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServerListener;
 import com.linecorp.armeria.server.athenz.resource.AthenzResourceProvider;
@@ -100,8 +99,8 @@ class AthenzResourceProviderIntegrationTest {
             sb.decorator("/admin/exception/test", AthenzService.builder(ztsBaseClient)
                                                                .action("obtain")
                                                                .resourceProvider((ctx, request) -> {
-                                                                   throw new RuntimeException(
-                                                                           "Resource provider exception");
+                                                                   throw new AthenzResourceNotFoundException(
+                                                                          "Simulated resource provider exception");
                                                                }).policyConfig(
                             new AthenzPolicyConfig(TEST_DOMAIN_NAME))
                                                                .newDecorator());
@@ -111,8 +110,9 @@ class AthenzResourceProviderIntegrationTest {
             sb.decorator("/admin/null/test", AthenzService.builder(ztsBaseClient)
                                                           .action("obtain")
                                                           .resourceProvider(
-                                                                  (ctx, request) -> CompletableFuture.completedFuture(
-                                                                          null))
+                                                                  (ctx, request) ->
+                                                                          UnmodifiableFuture.completedFuture(
+                                                                                  null))
                                                           .policyConfig(
                                                                   new AthenzPolicyConfig(TEST_DOMAIN_NAME))
                                                           .newDecorator());
@@ -122,8 +122,9 @@ class AthenzResourceProviderIntegrationTest {
             sb.decorator("/admin/empty/test", AthenzService.builder(ztsBaseClient)
                                                            .action("obtain")
                                                            .resourceProvider(
-                                                                   (ctx, request) -> CompletableFuture.completedFuture(
-                                                                           ""))
+                                                                   (ctx, request) ->
+                                                                           UnmodifiableFuture.completedFuture(
+                                                                                   ""))
                                                            .policyConfig(
                                                                    new AthenzPolicyConfig(TEST_DOMAIN_NAME))
                                                            .newDecorator());
@@ -266,7 +267,7 @@ class AthenzResourceProviderIntegrationTest {
                              .blocking();
 
             final AggregatedHttpResponse response = client.get("/admin/exception/test");
-            assertThat(response.status()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
+            assertThat(response.status()).isEqualTo(HttpStatus.FORBIDDEN);
         }
     }
 

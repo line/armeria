@@ -21,7 +21,6 @@ import static com.google.common.base.Preconditions.checkState;
 import static java.util.Objects.requireNonNull;
 
 import java.util.List;
-import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
 
 import com.google.common.collect.ImmutableList;
@@ -32,6 +31,7 @@ import com.linecorp.armeria.client.athenz.ZtsBaseClient;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.athenz.TokenType;
+import com.linecorp.armeria.common.util.UnmodifiableFuture;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.athenz.resource.AthenzResourceProvider;
 
@@ -63,21 +63,26 @@ public final class AthenzServiceBuilder extends AbstractAthenzServiceBuilder<Ath
     /**
      * Sets the Athenz resource to check access permissions against.
      *
-     * <p><strong>Mandatory:</strong> Either this or {@link #resourceProvider(AthenzResourceProvider, String)} must be set before calling {@link #newDecorator()}.</p>
+     * <p><strong>Mandatory:</strong> Either this or
+     * {@link #resourceProvider(AthenzResourceProvider, String)} must be set before calling
+     * {@link #newDecorator()}.</p>
      */
     public AthenzServiceBuilder resource(String athenzResource) {
         requireNonNull(athenzResource, "athenzResource");
         checkArgument(!athenzResource.isEmpty(), "athenzResource must not be empty");
-        checkState(this.athenzResourceProvider == null, "resource() and resourceProvider() are mutually exclusive");
-        this.athenzResourceProvider = (ctx, req) -> CompletableFuture.completedFuture(athenzResource);
-        this.resourceTagValue = athenzResource;
+        checkState(athenzResourceProvider == null,
+                   "resource() and resourceProvider() are mutually exclusive");
+        athenzResourceProvider = (ctx, req) -> UnmodifiableFuture.completedFuture(athenzResource);
+        resourceTagValue = athenzResource;
         return this;
     }
 
     /**
-     * Sets the {@link AthenzResourceProvider} used to resolve the Athenz resource dynamically for each request.
+     * Sets the {@link AthenzResourceProvider} used to resolve the Athenz resource dynamically for
+     * each request.
      *
-     * <p><strong>Mandatory:</strong> Either this or {@link #resource(String)} must be set before calling {@link #newDecorator()}.</p>
+     * <p><strong>Mandatory:</strong> Either this or {@link #resource(String)} must be set before
+     * calling {@link #newDecorator()}.</p>
      *
      * @param athenzResourceProvider the provider that resolves the resource for each request
      */
@@ -86,19 +91,23 @@ public final class AthenzServiceBuilder extends AbstractAthenzServiceBuilder<Ath
     }
 
     /**
-     * Sets the {@link AthenzResourceProvider} used to resolve the Athenz resource dynamically for each request.
+     * Sets the {@link AthenzResourceProvider} used to resolve the Athenz resource dynamically for
+     * each request.
      *
-     * <p><strong>Mandatory:</strong> Either this or {@link #resource(String)} must be set before calling {@link #newDecorator()}.</p>
+     * <p><strong>Mandatory:</strong> Either this or {@link #resource(String)} must be set before
+     * calling {@link #newDecorator()}.</p>
      *
      * @param athenzResourceProvider the provider that resolves the resource for each request
      * @param resourceTagValue       a stable tag value for metrics to avoid cardinality explosion
      *                               (e.g., "admin" or "users" instead of dynamic resource values)
      */
-    public AthenzServiceBuilder resourceProvider(AthenzResourceProvider athenzResourceProvider, String resourceTagValue) {
+    public AthenzServiceBuilder resourceProvider(AthenzResourceProvider athenzResourceProvider,
+                                                  String resourceTagValue) {
         requireNonNull(athenzResourceProvider, "resourceProvider");
         requireNonNull(resourceTagValue, "resourceTagValue");
         checkArgument(!resourceTagValue.isEmpty(), "resourceTagValue must not be empty");
-        checkState(this.athenzResourceProvider == null, "resource() and resourceProvider() are mutually exclusive");
+        checkState(this.athenzResourceProvider == null,
+                   "resource() and resourceProvider() are mutually exclusive");
         this.athenzResourceProvider = athenzResourceProvider;
         this.resourceTagValue = resourceTagValue;
         return this;

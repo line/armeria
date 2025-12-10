@@ -20,6 +20,7 @@ package com.linecorp.armeria.server.athenz.resource;
 import java.util.concurrent.CompletableFuture;
 
 import com.fasterxml.jackson.core.JsonPointer;
+
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.server.ServiceRequestContext;
@@ -33,10 +34,12 @@ import com.linecorp.armeria.server.ServiceRequestContext;
  * <p>Built-in implementations are available through static factory methods:
  * <ul>
  *   <li>{@link #ofPath()} - Extracts resource from the request path</li>
- *   <li>{@link #ofPath(boolean)} - Extracts resource from the request path, optionally including query parameters</li>
+ *   <li>{@link #ofPath(boolean)} - Extracts resource from the request path,
+ *   optionally including query parameters</li>
  *   <li>{@link #ofHeader(String)} - Extracts resource from a specific HTTP header</li>
  *   <li>{@link #ofJsonField(String)} - Extracts resource from a JSON body field</li>
- *   <li>{@link #ofJsonField(JsonPointer)} - Extracts resource from a JSON body field using JSON Pointer</li>
+ *   <li>{@link #ofJsonField(JsonPointer)} - Extracts resource from a JSON body field
+ *   using JSON Pointer</li>
  * </ul>
  *
  * <p>Example usage with path-based resource:
@@ -55,19 +58,35 @@ import com.linecorp.armeria.server.ServiceRequestContext;
  *              .newDecorator();
  * }</pre>
  *
- * <p>Custom implementations can be created by implementing the {@link #provide(ServiceRequestContext, HttpRequest)}
- * method to extract resources from any part of the request.
+ * <p>Custom implementations can be created by implementing the
+ * {@link #provide(ServiceRequestContext, HttpRequest)} method to extract resources from any part of
+ * the request.
  */
 @UnstableApi
 @FunctionalInterface
 public interface AthenzResourceProvider {
 
+    /**
+     * Provides the Athenz resource string from the given HTTP request.
+     *
+     * @param ctx the service request context
+     * @param req the HTTP request
+     * @return a {@link CompletableFuture} that completes with the resource string
+     */
     CompletableFuture<String> provide(ServiceRequestContext ctx, HttpRequest req);
 
+    /**
+     * Returns an {@link AthenzResourceProvider} that extracts the resource from the request path.
+     */
     static AthenzResourceProvider ofPath() {
         return PathAthenzResourceProvider.INSTANCE;
     }
 
+    /**
+     * Returns an {@link AthenzResourceProvider} that extracts the resource from the request path.
+     *
+     * @param includeQuery whether to include query parameters in the resource string
+     */
     static AthenzResourceProvider ofPath(boolean includeQuery) {
         if (includeQuery) {
             return PathAthenzResourceProvider.QUERY_INSTANCE;
@@ -76,16 +95,32 @@ public interface AthenzResourceProvider {
         }
     }
 
+    /**
+     * Returns an {@link AthenzResourceProvider} that extracts the resource from the specified
+     * HTTP header.
+     *
+     * @param headerName the name of the header to extract the resource from
+     */
     static AthenzResourceProvider ofHeader(String headerName) {
         return new HeaderAthenzResourceProvider(headerName);
     }
 
+    /**
+     * Returns an {@link AthenzResourceProvider} that extracts the resource from a JSON body field
+     * using a JSON Pointer.
+     *
+     * @param jsonPointer the JSON Pointer to the field containing the resource
+     */
     static AthenzResourceProvider ofJsonField(JsonPointer jsonPointer) {
         return new JsonBodyFieldAthenzResourceProvider(jsonPointer);
     }
 
+    /**
+     * Returns an {@link AthenzResourceProvider} that extracts the resource from a JSON body field.
+     *
+     * @param jsonFieldName the name of the JSON field containing the resource
+     */
     static AthenzResourceProvider ofJsonField(String jsonFieldName) {
         return new JsonBodyFieldAthenzResourceProvider(jsonFieldName);
     }
-
 }

@@ -17,11 +17,12 @@
 
 package com.linecorp.armeria.server.athenz.resource;
 
+import java.util.concurrent.CompletableFuture;
+
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.annotation.UnstableApi;
+import com.linecorp.armeria.common.util.UnmodifiableFuture;
 import com.linecorp.armeria.server.ServiceRequestContext;
-
-import java.util.concurrent.CompletableFuture;
 
 /**
  * Provides the Athenz resource string from the request path.
@@ -53,7 +54,7 @@ import java.util.concurrent.CompletableFuture;
  * </ul>
  */
 @UnstableApi
-public final class PathAthenzResourceProvider implements AthenzResourceProvider {
+final class PathAthenzResourceProvider implements AthenzResourceProvider {
 
     static final PathAthenzResourceProvider INSTANCE = new PathAthenzResourceProvider(false);
     static final PathAthenzResourceProvider QUERY_INSTANCE = new PathAthenzResourceProvider(true);
@@ -67,6 +68,6 @@ public final class PathAthenzResourceProvider implements AthenzResourceProvider 
     @Override
     public CompletableFuture<String> provide(ServiceRequestContext ctx, HttpRequest req) {
         final String resource = includeQuery ? req.path() : ctx.path();
-        return CompletableFuture.completedFuture(resource);
+        return UnmodifiableFuture.completedFuture(resource);
     }
 }

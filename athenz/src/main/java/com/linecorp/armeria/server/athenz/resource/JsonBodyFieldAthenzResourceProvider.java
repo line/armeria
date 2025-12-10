@@ -17,6 +17,11 @@
 
 package com.linecorp.armeria.server.athenz.resource;
 
+import static com.google.common.base.Preconditions.checkArgument;
+import static java.util.Objects.requireNonNull;
+
+import java.util.concurrent.CompletableFuture;
+
 import com.fasterxml.jackson.core.JsonPointer;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -25,16 +30,10 @@ import com.linecorp.armeria.common.AggregatedHttpRequest;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.annotation.UnstableApi;
+import com.linecorp.armeria.common.util.UnmodifiableFuture;
 import com.linecorp.armeria.internal.common.JacksonUtil;
 import com.linecorp.armeria.server.ServiceRequestContext;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import java.util.concurrent.CompletableFuture;
-
-import static com.google.common.base.Preconditions.checkArgument;
-import static java.util.Objects.requireNonNull;
+import com.linecorp.armeria.server.athenz.AthenzResourceNotFoundException;
 
 /**
  * Provides the Athenz resource string from a specific field in the JSON request body.
@@ -77,9 +76,7 @@ import static java.util.Objects.requireNonNull;
  * }</pre>
  */
 @UnstableApi
-public class JsonBodyFieldAthenzResourceProvider implements AthenzResourceProvider {
-
-    private static final Logger logger = LoggerFactory.getLogger(JsonBodyFieldAthenzResourceProvider.class);
+final class JsonBodyFieldAthenzResourceProvider implements AthenzResourceProvider {
 
     private static final ObjectMapper mapper = JacksonUtil.newDefaultObjectMapper();
 
@@ -90,10 +87,10 @@ public class JsonBodyFieldAthenzResourceProvider implements AthenzResourceProvid
      *
      * @param jsonFieldName the name of the JSON field to extract the resource from
      */
-    protected JsonBodyFieldAthenzResourceProvider(String jsonFieldName) {
+    JsonBodyFieldAthenzResourceProvider(String jsonFieldName) {
         requireNonNull(jsonFieldName, "jsonFieldName");
         checkArgument(!jsonFieldName.isEmpty(), "jsonFieldName must not be empty");
-        this.jsonPointer = JsonPointer.compile('/' + jsonFieldName.replace(".", "/"));
+        jsonPointer = JsonPointer.compile('/' + jsonFieldName.replace(".", "/"));
     }
 
     /**
@@ -101,7 +98,7 @@ public class JsonBodyFieldAthenzResourceProvider implements AthenzResourceProvid
      *
      * @param jsonPointer the JSON pointer to extract the resource from
      */
-    protected JsonBodyFieldAthenzResourceProvider(JsonPointer jsonPointer) {
+    JsonBodyFieldAthenzResourceProvider(JsonPointer jsonPointer) {
         requireNonNull(jsonPointer, "jsonPointer");
         this.jsonPointer = jsonPointer;
     }
@@ -110,7 +107,9 @@ public class JsonBodyFieldAthenzResourceProvider implements AthenzResourceProvid
     public CompletableFuture<String> provide(ServiceRequestContext ctx, HttpRequest req) {
         final MediaType contentType = req.contentType();
         if (contentType == null || !contentType.is(MediaType.JSON)) {
-            return CompletableFuture.completedFuture("");
+            return UnmodifiableFuture.exceptionallyCompletedFuture(
+                    new AthenzResourceNotFoundException("Unsupported media type. Only " +
+                                                        "application/json are supported"));
         }
         return req.aggregate().thenApply(this::extractFieldSafely);
     }
@@ -120,14 +119,11 @@ public class JsonBodyFieldAthenzResourceProvider implements AthenzResourceProvid
             final JsonNode root = mapper.readTree(agg.contentUtf8());
             final JsonNode node = root.at(jsonPointer);
             if (node.isMissingNode()) {
-                logger.debug("JSON pointer '{}' not found in request body", jsonPointer);
-                return "";
+                throw new AthenzResourceNotFoundException("JSON field not found for pointer: " + jsonPointer);
             }
             return node.asText("");
         } catch (Exception e) {
-            logger.debug("Failed to extract resource from JSON pointer '{}': {}", jsonPointer, e.getMessage(),
-                         e);
-            return "";
+            throw new AthenzResourceNotFoundException("Failed to extract JSON field", e);
         }
     }
 }
