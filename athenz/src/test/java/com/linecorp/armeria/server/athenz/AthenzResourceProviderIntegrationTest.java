@@ -44,6 +44,7 @@ import com.linecorp.armeria.common.athenz.TokenType;
 import com.linecorp.armeria.common.util.UnmodifiableFuture;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServerListener;
+import com.linecorp.armeria.server.athenz.resource.AthenzResourceNotFoundException;
 import com.linecorp.armeria.server.athenz.resource.AthenzResourceProvider;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 

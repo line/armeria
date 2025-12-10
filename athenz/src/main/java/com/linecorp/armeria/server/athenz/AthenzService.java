@@ -41,6 +41,7 @@ import com.linecorp.armeria.server.ServiceConfig;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.SimpleDecoratingHttpService;
 import com.linecorp.armeria.server.athenz.MinifiedAuthZpeClient.AccessCheckStatus;
+import com.linecorp.armeria.server.athenz.resource.AthenzResourceNotFoundException;
 import com.linecorp.armeria.server.athenz.resource.AthenzResourceProvider;
 
 import io.micrometer.core.instrument.MeterRegistry;

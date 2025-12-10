@@ -26,7 +26,6 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.util.UnmodifiableFuture;
 import com.linecorp.armeria.server.ServiceRequestContext;
-import com.linecorp.armeria.server.athenz.AthenzResourceNotFoundException;
 
 /**
  * Provides the Athenz resource string from a specific HTTP header.

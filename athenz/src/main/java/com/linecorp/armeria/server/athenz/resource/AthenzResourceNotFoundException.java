@@ -14,7 +14,7 @@
  * under the License.
  */
 
-package com.linecorp.armeria.server.athenz;
+package com.linecorp.armeria.server.athenz.resource;
 
 import com.linecorp.armeria.common.annotation.UnstableApi;
 

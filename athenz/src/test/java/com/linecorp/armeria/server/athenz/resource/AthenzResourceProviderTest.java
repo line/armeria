@@ -30,7 +30,6 @@ import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.server.ServiceRequestContext;
-import com.linecorp.armeria.server.athenz.AthenzResourceNotFoundException;
 
 public class AthenzResourceProviderTest {
 

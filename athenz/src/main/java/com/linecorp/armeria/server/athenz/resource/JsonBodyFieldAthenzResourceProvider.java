@@ -33,7 +33,6 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.util.UnmodifiableFuture;
 import com.linecorp.armeria.internal.common.JacksonUtil;
 import com.linecorp.armeria.server.ServiceRequestContext;
-import com.linecorp.armeria.server.athenz.AthenzResourceNotFoundException;
 
 /**
  * Provides the Athenz resource string from a specific field in the JSON request body.
@@ -118,7 +117,7 @@ final class JsonBodyFieldAthenzResourceProvider implements AthenzResourceProvide
         try {
             final JsonNode root = mapper.readTree(agg.contentUtf8());
             final JsonNode node = root.at(jsonPointer);
-            if (node.isMissingNode()) {
+            if (node.isMissingNode() || node.asText("").isEmpty()) {
                 throw new AthenzResourceNotFoundException("JSON field not found for pointer: " + jsonPointer);
             }
             return node.asText("");
