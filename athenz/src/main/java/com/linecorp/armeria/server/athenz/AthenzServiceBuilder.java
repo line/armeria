@@ -92,6 +92,7 @@ public final class AthenzServiceBuilder extends AbstractAthenzServiceBuilder<Ath
         requireNonNull(athenzResourceProvider, "resourceProvider");
         requireNonNull(resourceTagValue, "resourceTagValue");
         checkArgument(!resourceTagValue.isEmpty(), "resourceTagValue must not be empty");
+        checkState(this.athenzResourceProvider == null, "resource() and resourceProvider() are mutually exclusive");
         this.athenzResourceProvider = athenzResourceProvider;
         this.resourceTagValue = resourceTagValue;
         return this;
