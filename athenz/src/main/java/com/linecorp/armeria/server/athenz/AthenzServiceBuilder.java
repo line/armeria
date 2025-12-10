@@ -145,6 +145,8 @@ public final class AthenzServiceBuilder extends AbstractAthenzServiceBuilder<Ath
         checkState(resourceTagValue != null, "resourceTagValue is not set");
 
         final MinifiedAuthZpeClient authZpeClient = buildAuthZpeClient();
-        return delegate -> new AthenzService(delegate, authZpeClient, athenzResourceProvider, athenzAction, tokenTypes, meterIdPrefix(), resourceTagValue);
+        return delegate -> new AthenzService(
+                delegate, authZpeClient, athenzResourceProvider,
+                athenzAction, tokenTypes, meterIdPrefix(), resourceTagValue);
     }
 }
