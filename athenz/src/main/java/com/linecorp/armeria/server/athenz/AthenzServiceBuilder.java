@@ -78,6 +78,8 @@ public final class AthenzServiceBuilder extends AbstractAthenzServiceBuilder<Ath
      * Sets the {@link AthenzResourceProvider} used to resolve the Athenz resource dynamically for each request.
      *
      * <p><strong>Mandatory:</strong> Either this or {@link #resource(String)} must be set before calling {@link #newDecorator()}.</p>
+     *
+     * @param athenzResourceProvider the provider that resolves the resource for each request
      */
     public AthenzServiceBuilder resourceProvider(AthenzResourceProvider athenzResourceProvider) {
         return resourceProvider(athenzResourceProvider, DEFAULT_RESOURCE_TAG_VALUE);
@@ -100,7 +102,6 @@ public final class AthenzServiceBuilder extends AbstractAthenzServiceBuilder<Ath
         this.athenzResourceProvider = athenzResourceProvider;
         this.resourceTagValue = resourceTagValue;
         return this;
-    }
     }
 
     /**
