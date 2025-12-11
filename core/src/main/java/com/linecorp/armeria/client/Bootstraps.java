@@ -19,15 +19,14 @@ package com.linecorp.armeria.client;
 import static com.linecorp.armeria.common.SessionProtocol.httpAndHttpsValues;
 
 import java.lang.reflect.Array;
-import java.net.InetSocketAddress;
 import java.net.SocketAddress;
+import java.util.Objects;
 import java.util.Set;
 
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
-import com.linecorp.armeria.internal.common.SslContextFactory;
-import com.linecorp.armeria.internal.common.SslContextFactory.SslContextMode;
+import com.linecorp.armeria.internal.common.ClientSslContextFactory;
 
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.Channel;
@@ -39,28 +38,24 @@ import io.netty.handler.ssl.SslContext;
 final class Bootstraps {
 
     private final EventLoop eventLoop;
-    private final SslContext sslCtxHttp1Only;
-    private final SslContext sslCtxHttp1Or2;
-    @Nullable
-    private final SslContextFactory sslContextFactory;
+    private final ClientSslContextFactory sslContextFactory;
 
     private final HttpClientFactory clientFactory;
     private final Bootstrap inetBaseBootstrap;
+    private final BootstrapSslContexts bootstrapSslContexts;
     @Nullable
     private final Bootstrap unixBaseBootstrap;
     private final Bootstrap[][] inetBootstraps;
     private final Bootstrap @Nullable [][] unixBootstraps;
 
     Bootstraps(HttpClientFactory clientFactory, EventLoop eventLoop,
-               SslContext sslCtxHttp1Or2, SslContext sslCtxHttp1Only,
-               @Nullable SslContextFactory sslContextFactory) {
+               ClientSslContextFactory sslContextFactory, BootstrapSslContexts bootstrapSslContexts) {
         this.eventLoop = eventLoop;
-        this.sslCtxHttp1Or2 = sslCtxHttp1Or2;
-        this.sslCtxHttp1Only = sslCtxHttp1Only;
         this.sslContextFactory = sslContextFactory;
         this.clientFactory = clientFactory;
 
         inetBaseBootstrap = clientFactory.newInetBootstrap();
+        this.bootstrapSslContexts = bootstrapSslContexts;
         inetBaseBootstrap.group(eventLoop);
         inetBootstraps = staticBootstrapMap(inetBaseBootstrap);
 
@@ -80,18 +75,11 @@ final class Bootstraps {
         // Attempting to access the array with an unallowed protocol will trigger NPE,
         // which will help us find a bug.
         for (SessionProtocol p : sessionProtocols) {
-            final SslContext sslCtx = determineSslContext(p);
+            final SslContext sslCtx = p.isTls() ? bootstrapSslContexts.getSslContext(p) : null;
             createAndSetBootstrap(baseBootstrap, maps, p, sslCtx, true);
             createAndSetBootstrap(baseBootstrap, maps, p, sslCtx, false);
         }
         return maps;
-    }
-
-    /**
-     * Determine {@link SslContext} by the specified {@link SessionProtocol}.
-     */
-    SslContext determineSslContext(SessionProtocol desiredProtocol) {
-        return desiredProtocol.isExplicitHttp1() ? sslCtxHttp1Only : sslCtxHttp1Or2;
     }
 
     private Bootstrap select(boolean isDomainSocket, SessionProtocol desiredProtocol,
@@ -102,7 +90,7 @@ final class Bootstraps {
     }
 
     private void createAndSetBootstrap(Bootstrap baseBootstrap, Bootstrap[][] maps,
-                                       SessionProtocol desiredProtocol, SslContext sslContext,
+                                       SessionProtocol desiredProtocol, @Nullable SslContext sslContext,
                                        boolean webSocket) {
         maps[desiredProtocol.ordinal()][toIndex(webSocket)] = newBootstrap(baseBootstrap, desiredProtocol,
                                                                            sslContext, webSocket, false);
@@ -121,7 +109,7 @@ final class Bootstraps {
      * {@link SessionProtocol} and {@link SerializationFormat}.
      */
     Bootstrap getOrCreate(SocketAddress remoteAddress, SessionProtocol desiredProtocol,
-                          SerializationFormat serializationFormat) {
+                          SerializationFormat serializationFormat, ClientTlsSpec tlsSpec) {
         if (!httpAndHttpsValues().contains(desiredProtocol)) {
             throw new IllegalArgumentException("Unsupported session protocol: " + desiredProtocol);
         }
@@ -132,71 +120,50 @@ final class Bootstraps {
                                                eventLoop.getClass().getName());
         }
 
-        if (sslContextFactory == null || !desiredProtocol.isTls()) {
+        if (!desiredProtocol.isTls()) {
+            return select(isDomainSocket, desiredProtocol, serializationFormat);
+        }
+        final ClientTlsSpec defaultTlsSpec = bootstrapSslContexts.getClientTlsSpec(desiredProtocol);
+        if (Objects.equals(defaultTlsSpec, tlsSpec)) {
             return select(isDomainSocket, desiredProtocol, serializationFormat);
         }
 
         final Bootstrap baseBootstrap = isDomainSocket ? unixBaseBootstrap : inetBaseBootstrap;
         assert baseBootstrap != null;
-        return newBootstrap(baseBootstrap, remoteAddress, desiredProtocol, serializationFormat);
+        return newBootstrap(baseBootstrap, desiredProtocol, serializationFormat, tlsSpec);
     }
 
-    private Bootstrap newBootstrap(Bootstrap baseBootstrap, SocketAddress remoteAddress,
+    private Bootstrap newBootstrap(Bootstrap baseBootstrap,
                                    SessionProtocol desiredProtocol,
-                                   SerializationFormat serializationFormat) {
+                                   SerializationFormat serializationFormat, ClientTlsSpec tlsSpec) {
         final boolean webSocket = serializationFormat == SerializationFormat.WS;
-        final SslContext sslContext = newSslContext(remoteAddress, desiredProtocol);
+        final SslContext sslContext = sslContextFactory.getOrCreate(tlsSpec);
         return newBootstrap(baseBootstrap, desiredProtocol, sslContext, webSocket, true);
     }
 
     private Bootstrap newBootstrap(Bootstrap baseBootstrap, SessionProtocol desiredProtocol,
-                                   SslContext sslContext, boolean webSocket, boolean closeSslContext) {
+                                   @Nullable SslContext sslContext, boolean webSocket,
+                                   boolean closeSslContext) {
         final Bootstrap bootstrap = baseBootstrap.clone();
         bootstrap.handler(clientChannelInitializer(desiredProtocol, sslContext, webSocket, closeSslContext));
         return bootstrap;
     }
 
-    SslContext getOrCreateSslContext(SocketAddress remoteAddress, SessionProtocol desiredProtocol) {
-        if (sslContextFactory == null) {
-            return determineSslContext(desiredProtocol);
-        } else {
-            return newSslContext(remoteAddress, desiredProtocol);
-        }
+    SslContext getOrCreateSslContext(ClientTlsSpec tlsSpec) {
+        return sslContextFactory.getOrCreate(tlsSpec);
     }
 
-    private SslContext newSslContext(SocketAddress remoteAddress, SessionProtocol desiredProtocol) {
-        final String hostname;
-        if (remoteAddress instanceof InetSocketAddress) {
-            hostname = ((InetSocketAddress) remoteAddress).getHostString();
-        } else {
-            assert remoteAddress instanceof DomainSocketAddress;
-            hostname = "unix:" + ((DomainSocketAddress) remoteAddress).path();
-        }
-
-        final SslContextMode sslContextMode =
-                desiredProtocol.isExplicitHttp1() ? SslContextFactory.SslContextMode.CLIENT_HTTP1_ONLY
-                                                  : SslContextFactory.SslContextMode.CLIENT;
-        assert sslContextFactory != null;
-        return sslContextFactory.getOrCreate(sslContextMode, hostname);
+    void release(SslContext sslContext) {
+        sslContextFactory.release(sslContext);
     }
 
-    boolean shouldReleaseSslContext(SslContext sslContext) {
-        return sslContext != sslCtxHttp1Only && sslContext != sslCtxHttp1Or2;
-    }
-
-    void releaseSslContext(SslContext sslContext) {
-        if (sslContextFactory != null) {
-            sslContextFactory.release(sslContext);
-        }
-    }
-
-    private ChannelInitializer<Channel> clientChannelInitializer(SessionProtocol p, SslContext sslCtx,
+    private ChannelInitializer<Channel> clientChannelInitializer(SessionProtocol p, @Nullable SslContext sslCtx,
                                                                  boolean webSocket, boolean closeSslContext) {
         return new ChannelInitializer<Channel>() {
             @Override
             protected void initChannel(Channel ch) throws Exception {
-                if (closeSslContext) {
-                    ch.closeFuture().addListener(unused -> releaseSslContext(sslCtx));
+                if (closeSslContext && sslCtx != null) {
+                    ch.closeFuture().addListener(unused -> release(sslCtx));
                 }
                 ch.pipeline().addLast(new HttpClientPipelineConfigurator(
                         clientFactory, webSocket, p, sslCtx));

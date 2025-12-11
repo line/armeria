@@ -37,7 +37,7 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.TlsProvider;
 import com.linecorp.armeria.common.logging.RequestLogProperty;
-import com.linecorp.armeria.internal.common.SslContextFactory;
+import com.linecorp.armeria.internal.common.ClientSslContextFactory;
 import com.linecorp.armeria.internal.testing.MockAddressResolverGroup;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServerTlsConfig;
@@ -117,6 +117,7 @@ class TlsProviderCacheTest {
 
         final List<Channel> channels = new ArrayList<>();
         final List<CompletableFuture<AggregatedHttpResponse>> responses = new ArrayList<>();
+        final ClientSslContextFactory sslContextFactory;
         try (
                 ClientFactory factory = ClientFactory
                         .builder()
@@ -124,6 +125,10 @@ class TlsProviderCacheTest {
                         .tlsProvider(tlsProvider)
                         .connectionPoolListener(poolListener)
                         .build()) {
+            final HttpClientFactory clientFactory = (HttpClientFactory) factory.unwrap();
+            sslContextFactory = clientFactory.sslContextFactory();
+            assertThat(sslContextFactory.numCachedContexts()).isEqualTo(2);
+
             for (String host : ImmutableList.of("foo.com", "bar.com")) {
                 final WebClient client =
                         // Use HTTP/1 to create multiple connections.
@@ -151,11 +156,9 @@ class TlsProviderCacheTest {
                 assertThat(poolListener.opened()).isEqualTo(6);
             });
 
-            final HttpClientFactory clientFactory = (HttpClientFactory) factory.unwrap();
-            final SslContextFactory sslContextFactory = clientFactory.sslContextFactory();
             assertThat(sslContextFactory).isNotNull();
             // Make sure the SslContext is reused
-            assertThat(sslContextFactory.numCachedContexts()).isEqualTo(2);
+            assertThat(sslContextFactory.numCachedContexts()).isEqualTo(4);
 
             startFuture.complete(null);
             final List<AggregatedHttpResponse> responses0 = CompletableFutures.allAsList(responses).join();
@@ -173,7 +176,8 @@ class TlsProviderCacheTest {
                 assertThat(poolListener.closed()).isEqualTo(6);
             });
             // Make sure a cached SslContext is released when all referenced channels are closed.
-            assertThat(sslContextFactory.numCachedContexts()).isEqualTo(0);
+            assertThat(sslContextFactory.numCachedContexts()).isEqualTo(2);
         }
+        assertThat(sslContextFactory.numCachedContexts()).isEqualTo(0);
     }
 }

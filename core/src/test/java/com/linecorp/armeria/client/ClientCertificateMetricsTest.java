@@ -21,7 +21,7 @@ import static org.awaitility.Awaitility.await;
 
 import java.io.InputStream;
 import java.security.cert.CertificateException;
-import java.sql.Date;
+import java.time.Duration;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.Calendar;
@@ -29,12 +29,17 @@ import java.util.Map;
 
 import org.assertj.core.api.AbstractDoubleAssert;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
+import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.metric.MeterIdPrefix;
 import com.linecorp.armeria.common.metric.MoreMeterBinders;
 import com.linecorp.armeria.common.metric.MoreMeters;
 import com.linecorp.armeria.internal.common.util.SelfSignedCertificate;
+import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServerTlsCertificateMetricsTest;
+import com.linecorp.armeria.testing.junit5.server.SelfSignedCertificateExtension;
+import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
 import io.micrometer.core.instrument.Gauge;
 import io.micrometer.core.instrument.MeterRegistry;
@@ -45,33 +50,41 @@ class ClientCertificateMetricsTest {
     private static final String RESOURCE_PATH_PREFIX =
             "/testing/core/" + ServerTlsCertificateMetricsTest.class.getSimpleName() + '/';
 
+    @RegisterExtension
+    static SelfSignedCertificateExtension certificate = new SelfSignedCertificateExtension(
+            "armeria.dev", Instant.now().minusSeconds(30),
+            Instant.now().plus(10, ChronoUnit.DAYS).plus(1, ChronoUnit.HOURS));
+
+    @RegisterExtension
+    static ServerExtension server = new ServerExtension() {
+        @Override
+        protected void configure(ServerBuilder sb) throws Exception {
+            sb.service("/", (ctx, req) -> HttpResponse.delayed(HttpResponse.of(200),
+                                                               Duration.of(3, ChronoUnit.SECONDS)));
+        }
+    };
+
     @Test
     void shouldMeasureClientCertValidityInClientFactory() {
-        // If the test runs at 11:59:59 PM, it could fail.
-        await().untilAsserted(() -> {
-            final Instant now = Instant.now();
-            final Instant notAfter = now.plus(10, ChronoUnit.DAYS);
-            final SelfSignedCertificate ssc = new SelfSignedCertificate("armeria.dev", Date.from(now),
-                                                                        Date.from(notAfter));
-            try {
-                final MeterRegistry meterRegistry = new SimpleMeterRegistry();
-                final ClientFactory factory =
-                        ClientFactory.builder()
-                                     .tls(ssc.certificate(), ssc.privateKey())
-                                     .meterRegistry(meterRegistry)
-                                     .build();
+        final MeterRegistry meterRegistry = new SimpleMeterRegistry();
+        try (ClientFactory factory = ClientFactory.builder()
+                                                  .tls(certificate.tlsKeyPair())
+                                                  .meterRegistry(meterRegistry)
+                                                  .build()) {
+            final HttpResponse res = server.webClient(cb -> cb.factory(factory)).get("/");
+            await().untilAsserted(() -> {
                 final Map<String, Double> metrics = MoreMeters.measureAll(meterRegistry);
-                assertThat(metrics)
-                        .containsEntry(
-                                "armeria.client.tls.certificate.validity.days#value{hostname=armeria.dev}",
-                                9.0)
-                        .containsEntry("armeria.client.tls.certificate.validity#value{hostname=armeria.dev}",
-                                       1.0);
-                factory.close();
-            } finally {
-                ssc.delete();
-            }
-        });
+                assertThat(metrics.get("armeria.client.tls.certificate.validity.days" +
+                                       "#value{hostname=armeria.dev}"))
+                        .withFailMessage("Expected value not in %s", metrics)
+                        .isEqualTo(10d);
+                assertThat(metrics.get("armeria.client.tls.certificate.validity" +
+                                       "#value{hostname=armeria.dev}"))
+                        .withFailMessage("Expected value not in %s", metrics)
+                        .isEqualTo(1);
+            });
+            assertThat(res.aggregate().join().status().code()).isEqualTo(200);
+        }
     }
 
     @Test
