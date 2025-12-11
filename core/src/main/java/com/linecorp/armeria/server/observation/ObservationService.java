@@ -26,7 +26,6 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
-import com.linecorp.armeria.common.logging.RequestLogProperty;
 import com.linecorp.armeria.internal.common.RequestContextExtension;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.ServiceRequestContext;
@@ -140,23 +139,24 @@ public final class ObservationService extends SimpleDecoratingHttpService {
     private static void enrichObservation(ServiceRequestContext ctx,
                                           ServiceObservationContext serviceObservationContext,
                                           Observation observation) {
-        ctx.log()
-           .whenAvailable(RequestLogProperty.REQUEST_FIRST_BYTES_TRANSFERRED_TIME)
-           .thenAccept(requestLog -> observation.event(
-                   HttpServiceObservationDocumentation.Events.WIRE_RECEIVE));
-
-        ctx.log()
-           .whenAvailable(RequestLogProperty.RESPONSE_FIRST_BYTES_TRANSFERRED_TIME)
-           .thenAccept(requestLog -> {
-               if (requestLog.responseFirstBytesTransferredTimeNanos() != null) {
-                   observation.event(HttpServiceObservationDocumentation.Events.WIRE_SEND);
-               }
-           });
-
-        ctx.log().whenComplete()
-           .thenAccept(requestLog -> {
-               serviceObservationContext.setResponse(requestLog);
-               observation.stop();
-           });
+        ctx.log().addListener((property, log) -> {
+            switch (property) {
+                case REQUEST_FIRST_BYTES_TRANSFERRED_TIME:
+                    observation.event(HttpServiceObservationDocumentation.Events.WIRE_RECEIVE);
+                    break;
+                case RESPONSE_FIRST_BYTES_TRANSFERRED_TIME:
+                    if (log.responseFirstBytesTransferredTimeNanos() != null) {
+                        observation.event(HttpServiceObservationDocumentation.Events.WIRE_SEND);
+                    }
+                    break;
+                case ALL_COMPLETE:
+                    serviceObservationContext.setResponse(log);
+                    observation.stop();
+                    break;
+                default:
+                    // Do nothing.
+                    break;
+            }
+        });
     }
 }

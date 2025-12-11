@@ -31,7 +31,6 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.function.BiFunction;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -65,13 +64,6 @@ import com.linecorp.armeria.testing.junit5.common.EventLoopExtension;
 import io.netty.channel.Channel;
 
 class DefaultRequestLogTest {
-
-    private static final BiFunction<RequestContext, HttpHeaders, String> headersSanitizer =
-            (ctx, headers) -> "sanitized_headers";
-    private static final BiFunction<RequestContext, Object, String> contentSanitizer =
-            (ctx, content) -> "sanitized_content";
-    private static final BiFunction<RequestContext, HttpHeaders, String> trailersSanitizer =
-            (ctx, trailers) -> "sanitized_trailers";
 
     @Mock
     private RequestContext ctx;
@@ -188,7 +180,6 @@ class DefaultRequestLogTest {
     @ValueSource(booleans = {true, false})
     void addChild(boolean isResponseEndingWithFirstChild) {
         when(ctx.method()).thenReturn(HttpMethod.GET);
-        when(ctx.eventLoop()).thenReturn(ContextAwareEventLoop.of(ctx, ImmediateEventLoop.INSTANCE));
         final DefaultRequestLog firstChild = new DefaultRequestLog(ctx);
         final DefaultRequestLog lastChild = new DefaultRequestLog(ctx);
         log.addChild(firstChild);
