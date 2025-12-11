@@ -1,0 +1,38 @@
+---
+date: 2022-02-18
+---
+
+# v1.14.1
+
+## 📈 Improvements
+
+- Context of the [EndpointGroup](type) is added to the [EmptyEndpointGroupException](type) message. #4084
+
+{/* truncate */}
+
+## 🛠️ Bug fixes
+
+- [DnsAddressEndpointGroup](type), [DnsServiceEndpointGroup](type), and [DnsTextEndpointGroup](type)
+  now correctly respect the trailing dot in a hostname when resolving DNS records. #4088
+- You can now allow double dots (`..`) in a request path query string by specifying the
+  `-Dcom.linecorp.armeria.allowDoubleDotsInQueryString=true` JVM option. #4091 #4094
+- [GrpcClientBuilder](type) now correctly normalizes path prefixes. #4085
+- [GraphQlService](type) won't reject GraphQL requests with `null` variables. #4068 #4069
+
+## 🏚️ Deprecations
+
+- [GrpcClientBuilder#path(String)](type) has been deprecated in favor of [GrpcClientBuilder#pathPrefix(String)](type). #4085
+
+## 🙇 Thank you
+
+<ThankYou
+  usernames={[
+    'heowc',
+    'ikhoon',
+    'jrhee17',
+    'ks-yim',
+    'minwoox',
+    'tobias-',
+    'trustin',
+  ]}
+/>

@@ -5,7 +5,7 @@ import type { WrapperProps } from '@docusaurus/types';
 /* Swizzling starts */
 import useDocusaurusContext from '@docusaurus/useDocusaurusContext';
 import Link from '@docusaurus/Link';
-import { useLocation } from 'react-router-dom';
+import { useLocation } from '@docusaurus/router';
 import Admonition from '@theme/Admonition';
 /* Swizzling ends */
 

@@ -11,7 +11,8 @@
   "scripts": {
     "docusaurus": "docusaurus",
     "start": "docusaurus start --no-open",
-    "build": "docusaurus build",
+    "build": "docusaurus build && tsx merge-feeds.ts",
+    "build:dev": "docusaurus build --dev",
     "swizzle": "docusaurus swizzle",
     "lint": "eslint .",
     "lint:fix": "eslint --fix .",
@@ -20,14 +21,17 @@
     "serve": "docusaurus serve",
     "write-translations": "docusaurus write-translations",
     "write-heading-ids": "docusaurus write-heading-ids",
-    "typecheck": "tsc"
+    "typecheck": "tsc",
+    "source-map": "source-map-explorer build/**/*.js",
+    "release-note": "tsx release-note.ts"
   },
   "dependencies": {
     "@ant-design/icons": "^6.0.0",
     "@ant-design/v5-patch-for-react-19": "^1.0.3",
-    "@docusaurus/core": "^3.8.1",
-    "@docusaurus/plugin-client-redirects": "^3.8.1",
-    "@docusaurus/preset-classic": "^3.8.1",
+    "@docusaurus/core": "^3.9.2",
+    "@docusaurus/plugin-client-redirects": "^3.9.2",
+    "@docusaurus/plugin-pwa": "^3.9.2",
+    "@docusaurus/preset-classic": "^3.9.2",
     "@emotion/react": "^11.14.0",
     "@eslint/eslintrc": "^3.2.0",
     "@eslint/js": "^9.20.0",
@@ -41,12 +45,15 @@
     "dayjs": "^1.11.13",
     "dompurify": "^3.2.6",
     "email-validator": "^2.0.4",
+    "fast-glob": "^3.3.3",
     "gray-matter": "^4.0.3",
     "jsdom": "^26.1.0",
     "jsonp": "^0.2.1",
+    "minimatch": "^10.1.1",
     "prism-react-renderer": "^2.3.0",
     "react": "^19.0.0",
     "react-awesome-reveal": "^4.3.1",
+    "react-cookie-consent": "^9.0.0",
     "react-dom": "^19.0.0",
     "react-easy-emoji": "^1.8.1",
     "react-mixitup": "^4.0.6",
@@ -57,9 +64,12 @@
     "unist-util-visit": "^5.0.0"
   },
   "devDependencies": {
-    "@docusaurus/module-type-aliases": "3.8.1",
-    "@docusaurus/tsconfig": "3.8.1",
-    "@docusaurus/types": "3.8.1",
+    "@docusaurus/module-type-aliases": "^3.9.2",
+    "@docusaurus/tsconfig": "^3.9.2",
+    "@docusaurus/types": "^3.9.2",
+    "@octokit/core": "^7.0.4",
+    "@types/fs-extra": "^11.0.4",
+    "@types/minimatch": "^5.1.2",
     "@typescript-eslint/eslint-plugin": "^5.62.0",
     "@typescript-eslint/parser": "^5.62.0",
     "eslint": "^8.57.1",
@@ -73,7 +83,12 @@
     "eslint-plugin-prettier": "^5.0.0",
     "eslint-plugin-react": "^7.37.4",
     "eslint-plugin-react-hooks": "^4.6.2",
+    "fs-extra": "^11.3.2",
+    "lodash": "^4.17.21",
+    "node-fetch": "^3.3.2",
     "prettier": "^3.5.0",
+    "source-map-explorer": "^2.5.2",
+    "tsx": "^4.20.5",
     "typescript": ">=5.1.0 <5.2.0"
   },
   "browserslist": {
@@ -89,6 +104,6 @@
     ]
   },
   "engines": {
-    "node": ">=18.0"
+    "node": ">=20.0"
   }
 }

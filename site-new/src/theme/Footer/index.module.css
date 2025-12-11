@@ -1,0 +1,36 @@
+.newsletterForm {
+  text-align: left;
+  flex-grow: 1;
+  max-width: 100%;
+  margin-bottom: 1.5rem;
+
+  > p {
+    margin-bottom: 0.5rem;
+  }
+
+  :global(.ant-input-group-wrapper) {
+    width: 15rem;
+    max-width: 100%;
+  }
+}
+
+.copyright {
+  text-align: right;
+  flex-grow: 1;
+  width: 100%;
+  line-height: 1.3;
+  margin-bottom: 1.5rem;
+
+  display: flex;
+  align-items: flex-end;
+
+  > div:first-child {
+    flex-grow: 1;
+    margin-right: 8px;
+  }
+
+  > div:last-child {
+    position: relative;
+    top: 5px;
+  }
+}

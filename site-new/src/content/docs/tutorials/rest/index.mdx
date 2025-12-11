@@ -1,0 +1,134 @@
+---
+type: tutorial
+tags:
+  - rest
+  - request
+  - request-converter
+  - exceptions
+  - exception-handling
+  - blocking
+level: basic
+---
+
+import versions from '../../../../../gen-src/versions.json';
+
+# REST tutorial introduction
+
+Using Armeria's annotations, you can build RESTful services on the go.
+Through this tutorial, you'll learn to build a RESTful service with Armeria.
+In particular, you'll be using these Armeria features:
+
+- [Service annotations](/docs/server/annotated-service)
+- [Request converter](/docs/server/annotated-service#converting-an-http-request-to-a-java-object)
+- [Parameter injection](/docs/server/annotated-service#injecting-value-of-parameters-and-http-headers-into-a-java-object)
+- [Exception handler](/docs/server/annotated-service#handling-exceptions)
+- [Blocking task executor](/docs/server/annotated-service/#specifying-a-blocking-task-executor)
+
+This tutorial is based on a [sample service](#sample-service), a minimal blog service, with which you can create, read, update, and delete blog posts.
+
+Follow this tutorial to write a service yourself or try [running the sample service](#build-and-run-sample-service) right away.
+
+## Assumptions
+
+This tutorial assumes that you have:
+
+- Experience in building services in Java
+- Experience in Java frameworks for server-side programming
+- Understanding of RESTful APIs and how to implement them
+
+## Prerequisites
+
+To run and develop the sample service, set your computer with the requirements:
+
+- JDK 11 or higher
+- Gradle: Set your Gradle to compile Java with the [-parameters](/docs/setup/#configure--parameters-javac-option) option
+
+## Sample service
+
+The [sample service](https://github.com/line/armeria-examples/tree/main/tutorials/rest-api-annotated-service) provides you implementations of CRUD operations as specified below.
+
+| Operation | Method                            | Annotation      |
+| --------- | --------------------------------- | --------------- |
+| Create    | `createBlogPost()`                | [@Post](type)   |
+| Read      | `getBlogPost()`, `getBlogPosts()` | [@Get](type)    |
+| Update    | `updateBlogPost()`                | [@Put](type)    |
+| Delete    | `deleteBlogPost()`                | [@Delete](type) |
+
+The sample service code consists of the following folders and files.
+
+```
+rest-api-annotated-service/
+├─ src/
+│  ├─ main/
+│  │  ├─ java/
+│  │  │  ├─ example.armeria.server.blog/
+│  │  │  │  ├─ BadRequestExceptionHandler.java
+│  │  │  │  ├─ BlogPost.java
+│  │  │  │  ├─ BlogPostRequestConverter.java
+│  │  │  │  ├─ BlogService.java
+│  │  │  │  └─ Main.java
+│  └─ test/
+│     └─ java/
+│        └─ example.armeria.server.blog/
+│           └─ BlogServiceTest.java
+└─ build.gradle
+```
+
+:::tip
+
+To keep our focus on Armeria, this tutorial and the sample service implement memory-based operations instead of using a database.
+
+:::
+
+## Build and run sample service
+
+Have a go at running the sample service and experience the outcome of this tutorial.
+Using Armeria's [Documentation Service](/docs/server/docservice), you can see a server running, receiving requests and sending responses.
+
+1. Download the code from [here](https://github.com/line/armeria-examples/tree/main/tutorials/rest-api-annotated-service).
+2. Build the sample service using the Gradle Wrapper.
+
+```bash
+$ ./gradlew build
+```
+
+3. Run the sample service again, using the Gradle Wrapper.
+
+```bash
+$ ./gradlew run
+```
+
+4. Open the Documentation service page on your web browser at http://127.0.0.1:8080/docs.
+
+## Try writing blog service yourself
+
+Use the sample service's [build.gradle](https://github.com/line/armeria-examples/blob/main/tutorials/rest-api-annotated-service/build.gradle) file to start building the service from scratch.
+Below is a part of the `build.gradle` file for the sample service.
+
+<CodeBlock language="groovy" filename="build.gradle">{`
+  apply plugin: 'java'
+  apply plugin: 'idea'
+  apply plugin: 'eclipse'\n
+  repositories {
+    mavenCentral()
+  }\n
+  dependencies {
+    implementation "com.linecorp.armeria:armeria:${versions['com.linecorp.armeria:armeria-bom']}"\n
+    // Logging
+    runtimeOnly 'ch.qos.logback:logback-classic:${versions['ch.qos.logback:logback-classic']}'\n
+    runtimeOnly 'org.slf4j:log4j-over-slf4j:${versions['org.slf4j:log4j-over-slf4j']}'\n
+    testImplementation "org.junit.jupiter:junit-jupiter:${versions['org.junit:junit-bom']}"\n
+    testImplementation "com.linecorp.armeria:armeria-junit5:${versions['com.linecorp.armeria:armeria-bom']}"\n
+    testImplementation "org.assertj:assertj-core:${versions['org.assertj:assertj-core']}"
+  }
+`}</CodeBlock>
+
+Start writing the blog service yourself by following the tutorial step by step:
+
+1. [Creating a server](/docs/tutorials/rest/create-server)
+2. [Preparing a data object](/docs/tutorials/rest/prepare-data-object)
+3. [Adding services to server](/docs/tutorials/rest/add-services-to-server)
+4. [Implementing CREATE operation](/docs/tutorials/rest/implement-create)
+5. [Implementing READ operation](/docs/tutorials/rest/implement-read)
+6. [Implementing UPDATE operation](/docs/tutorials/rest/implement-update)
+7. [Implementing DELETE operation](/docs/tutorials/rest/implement-delete)

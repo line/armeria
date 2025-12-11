@@ -1,0 +1,30 @@
+---
+date: 2021-10-26
+---
+
+# v1.13.2
+
+## 🛠️ Bug fixes
+
+- Fixed the HTTP content corruption #3894
+  - The corruption occurs when all the following 3 conditions are met:
+    - A request or response is streaming, such as using [HttpResponse#streaming()](type);
+    - its content is longer than 16378 bytes; and
+    - its session protocol is [SessionProtocol#H1](type) (HTTP/1 over TLS).
+  - Note that cleartext or HTTP/2 connections are unaffected.
+- HTTP/JSON-to-gRPC transcoding now works with imported types. #3891 #3892
+
+{/* truncate */}
+
+## 🙇 Thank you
+
+<ThankYou
+  usernames={[
+    'hyangtack',
+    'ikhoon',
+    'ks-yim',
+    'minwoox',
+    'trustin',
+    'wasifaleemdd',
+  ]}
+/>

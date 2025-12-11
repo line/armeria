@@ -15,7 +15,7 @@
 
   &::before {
     height: 0;
-    content: "";
+    content: '';
     display: block;
     padding-bottom: calc(100% / var(--aspect-ratio));
   }

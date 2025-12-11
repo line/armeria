@@ -1,0 +1,58 @@
+---
+sidebar_position: 1
+---
+
+import contributorList from '../../../gen-src/contributors.json';
+
+# Contributor manual
+
+## You are the contributor 🚀
+
+First of all, thank you so much for taking your time to visit Armeria project.
+Here, everything you do or even your mere presence is a contribution in a broad sense.
+We strongly believe your contribution will enrich our community and create
+a virtuous cycle that propels the project into something great.
+
+## We're all ears 👂
+
+- Join [our Discord server](/s/discord) to chat with us.
+- Ask a question or start a discussion at [the discussion forum](https://github.com/line/armeria/discussions).
+- File an issue in [the issue tracker](https://github.com/line/armeria/issues?q=is%3Aissue+is%3Aopen+sort%3Aupdated-desc)
+  to report a bug or suggest an idea.
+  - In case of a security issue, use [LINE Security Bug Bounty Program](https://bugbounty.linecorp.com/en/)
+    or [contact us](mailto:dl_oss_dev@linecorp.com) directly.
+
+## Watch our community in action 🎬
+
+- Check out [the articles and presentations](/community/articles) by our community.
+- Sign up for our newsletters to keep up-to-date with new releases and useful tips!
+  <div style={{ maxWidth: '320px', marginTop: '0.5rem' }}>
+    <Mailchimp />
+  </div>
+
+## Sending a pull request? 😍
+
+Check out [the developer guide](/community/developer-guide) to learn how to build, develop and send an awesome pull request.
+
+## Be respectful to others 🙇
+
+We expect contributors to follow [our code of conduct](/community/code-of-conduct).
+
+## Hall of fame 🏛️
+
+<ThankYou
+  usernames={Object.keys(contributorList)}
+  avatarUrls={contributorList}
+  message={() => (
+    <p>
+      See{' '}
+      <a href="https://github.com/line/armeria/contributors">
+        the complete list of our contributors
+      </a>
+      .
+    </p>
+  )}
+  href={(username) =>
+    `https://github.com/line/armeria/commits?author=${username}`
+  }
+/>
