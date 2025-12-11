@@ -52,7 +52,6 @@ final class DefaultEndpointSelector<T extends LoadBalancer<Endpoint, ClientReque
                 }
             });
         }
-        initialize();
     }
 
     @Override
@@ -70,7 +69,7 @@ final class DefaultEndpointSelector<T extends LoadBalancer<Endpoint, ClientReque
 
     @Nullable
     @Override
-    public Endpoint selectNow(ClientRequestContext ctx) {
+    public Endpoint doSelectNow(ClientRequestContext ctx) {
         final T loadBalancer = this.loadBalancer;
         if (loadBalancer == null) {
             return null;
