@@ -28,6 +28,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 import java.util.stream.Stream;
@@ -494,7 +495,11 @@ final class HttpClientFactory implements ClientFactory {
                 connectionPoolListener.close();
             }
             if (shutdownWorkerGroupOnClose) {
-                workerGroup.shutdownGracefully().addListener((FutureListener<Object>) f -> {
+                workerGroup.shutdownGracefully(
+                        options.workerGroupGracefulShutdownQuietPeriodMillis(),
+                        options.workerGroupGracefulShutdownTimeoutMillis(),
+                        TimeUnit.MILLISECONDS
+                ).addListener((FutureListener<Object>) f -> {
                     if (f.cause() != null) {
                         logger.warn("Failed to shut down a worker group:", f.cause());
                     }
