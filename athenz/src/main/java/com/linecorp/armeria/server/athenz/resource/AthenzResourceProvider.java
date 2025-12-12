@@ -32,15 +32,11 @@ import com.linecorp.armeria.server.ServiceRequestContext;
  * (path, headers, JSON body fields, etc.) for Athenz authorization.
  *
  * <p>Built-in implementations are available through static factory methods:
- * <ul>
- *   <li>{@link #ofPath()} - Extracts resource from the request path</li>
- *   <li>{@link #ofPath(boolean)} - Extracts resource from the request path,
- *   optionally including query parameters</li>
- *   <li>{@link #ofHeader(String)} - Extracts resource from a specific HTTP header</li>
- *   <li>{@link #ofJsonField(String)} - Extracts resource from a JSON body field</li>
- *   <li>{@link #ofJsonField(JsonPointer)} - Extracts resource from a JSON body field
- *   using JSON Pointer</li>
- * </ul>
+ * - {@link #ofPath()} - Extracts resource from the request path
+ * - {@link #ofPath(boolean)} - Extracts resource from the request path, optionally including query parameters
+ * - {@link #ofHeader(String)} - Extracts resource from a specific HTTP header
+ * - {@link #ofJsonField(String)} - Extracts resource from a JSON body field
+ * - {@link #ofJsonField(JsonPointer)} - Extracts resource from a JSON body field using JSON Pointer
  *
  * <p>Example usage with path-based resource:
  * <pre>{@code
@@ -76,16 +72,46 @@ public interface AthenzResourceProvider {
     CompletableFuture<String> provide(ServiceRequestContext ctx, HttpRequest req);
 
     /**
-     * Returns an {@link AthenzResourceProvider} that extracts the resource from the request path.
+     * Returns an {@link AthenzResourceProvider} that extracts the resource from the request path
+     * without query parameters.
+     *
+     * <p>The provider reads the normalized path from {@link ServiceRequestContext#path()} and returns it
+     * as the Athenz resource string. Query parameters are excluded. The returned
+     * {@link CompletableFuture} is completed immediately with the path value.
+     *
+     * <p>Example:
+     * <pre>{@code
+     * // For a request to "/api/users/123?status=active", the resource is "/api/users/123".
+     * AthenzService.builder(ztsBaseClient)
+     *              .resourceProvider(AthenzResourceProvider.ofPath())
+     *              .action("read")
+     *              .newDecorator();
+     * }</pre>
+     *
+     * @return an {@link AthenzResourceProvider} that provides the request path as the resource
      */
     static AthenzResourceProvider ofPath() {
         return PathAthenzResourceProvider.INSTANCE;
     }
 
     /**
-     * Returns an {@link AthenzResourceProvider} that extracts the resource from the request path.
+     * Returns an {@link AthenzResourceProvider} that extracts the resource from the request path,
+     * optionally including query parameters.
+     *
+     * <p>When {@code includeQuery} is {@code true}, the provider returns the raw path from
+     * {@link HttpRequest#path()} which includes query parameters.
+     * When {@code false}, it uses the normalized path from {@link ServiceRequestContext#path()}
+     * which excludes query parameters.
+     *
+     * <p>The returned {@link CompletableFuture} is completed immediately with the path value.
+     *
+     * <p>Example:
+     * - Request: {@code "/api/users/123?status=active"}
+     * - {@code includeQuery = false} → resource: {@code "/api/users/123"}
+     * - {@code includeQuery = true} → resource: {@code "/api/users/123?status=active"}
      *
      * @param includeQuery whether to include query parameters in the resource string
+     * @return an {@link AthenzResourceProvider} that provides the request path as the resource
      */
     static AthenzResourceProvider ofPath(boolean includeQuery) {
         if (includeQuery) {
@@ -96,29 +122,93 @@ public interface AthenzResourceProvider {
     }
 
     /**
-     * Returns an {@link AthenzResourceProvider} that extracts the resource from the specified
-     * HTTP header.
+     * Returns an {@link AthenzResourceProvider} that extracts the Athenz resource string
+     * from the specified HTTP header in the request.
      *
-     * @param headerName the name of the header to extract the resource from
+     * <p>This provider reads the header value for the given name from the incoming request.
+     * If the header is missing or its value is empty, the returned {@link CompletableFuture}
+     * completes exceptionally with {@link AthenzResourceNotFoundException}.
+     *
+     * <p>Example:
+     * <pre>{@code
+     * AthenzService.builder(ztsBaseClient)
+     *              .resourceProvider(AthenzResourceProvider.ofHeader("X-Resource-Id"))
+     *              .action("read")
+     *              .newDecorator();
+     * }</pre>
+     *
+     * @param headerName the HTTP header name to read the resource from; must not be {@code null} or empty
+     * @return an {@link AthenzResourceProvider} that reads the resource from the specified header
+     * @throws NullPointerException if {@code headerName} is {@code null}
+     * @throws IllegalArgumentException if {@code headerName} is empty
      */
     static AthenzResourceProvider ofHeader(String headerName) {
         return new HeaderAthenzResourceProvider(headerName);
     }
 
     /**
-     * Returns an {@link AthenzResourceProvider} that extracts the resource from a JSON body field
-     * using a JSON Pointer.
+     * Returns an {@link AthenzResourceProvider} that extracts the resource from a JSON request body
+     * using the given {@link JsonPointer}.
      *
-     * @param jsonPointer the JSON Pointer to the field containing the resource
+     * <p>This provider aggregates the request and parses the body as JSON, then navigates to the field
+     * addressed by the provided JSON Pointer to read the resource string.
+     *
+     * <p>The returned {@link CompletableFuture} completes exceptionally with
+     * {@link AthenzResourceNotFoundException} when:
+     * - the request {@code Content-Type} is not JSON,
+     * - the addressed field is missing or resolves to an empty string,
+     * - parsing or extraction fails for any reason.
+     *
+     * <p>Example:
+     * <pre>{@code
+     * JsonPointer pointer = JsonPointer.compile("/user/id");
+     * AthenzService.builder(ztsBaseClient)
+     *              .resourceProvider(AthenzResourceProvider.ofJsonField(pointer))
+     *              .action("write")
+     *              .newDecorator();
+     * }</pre>
+     *
+     * @param jsonPointer the JSON Pointer for the field containing the resource; must not be {@code null}
+     * @return an {@link AthenzResourceProvider} that reads the resource from the specified JSON field
+     * @throws NullPointerException if {@code jsonPointer} is {@code null}
      */
     static AthenzResourceProvider ofJsonField(JsonPointer jsonPointer) {
         return new JsonBodyFieldAthenzResourceProvider(jsonPointer);
     }
 
     /**
-     * Returns an {@link AthenzResourceProvider} that extracts the resource from a JSON body field.
+     * Returns an {@link AthenzResourceProvider} that extracts the resource from a JSON request body field.
      *
-     * @param jsonFieldName the name of the JSON field containing the resource
+     * <p>This provider parses the request body as JSON and looks up the field specified by
+     * {@code jsonFieldName}. The name supports dot notation for nested paths and is converted to
+     * a JSON Pointer by replacing dots with slashes and prefixing with {@code '/'}.
+     * For example, {@code "user.id"} maps to the JSON Pointer {@code "/user/id"}.
+     *
+     * <p>The returned {@link CompletableFuture} completes exceptionally with
+     * {@link AthenzResourceNotFoundException} when:
+     * - the request {@code Content-Type} is not JSON,
+     * - the field does not exist or resolves to an empty string,
+     * - parsing or extraction fails for any reason.
+     *
+     * <p>Example:
+     * <pre>{@code
+     * // Simple field
+     * AthenzService.builder(ztsBaseClient)
+     *              .resourceProvider(AthenzResourceProvider.ofJsonField("resourceId"))
+     *              .action("write")
+     *              .newDecorator();
+     *
+     * // Nested field via dot notation
+     * AthenzService.builder(ztsBaseClient)
+     *              .resourceProvider(AthenzResourceProvider.ofJsonField("user.id"))
+     *              .action("read")
+     *              .newDecorator();
+     * }</pre>
+     *
+     * @param jsonFieldName the JSON field name; dots denote nested paths (e.g., {@code "user.id"})
+     * @return an {@link AthenzResourceProvider} that reads the resource from the specified JSON field
+     * @throws NullPointerException if {@code jsonFieldName} is {@code null}
+     * @throws IllegalArgumentException if {@code jsonFieldName} is empty
      */
     static AthenzResourceProvider ofJsonField(String jsonFieldName) {
         return new JsonBodyFieldAthenzResourceProvider(jsonFieldName);

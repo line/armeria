@@ -20,40 +20,9 @@ package com.linecorp.armeria.server.athenz.resource;
 import java.util.concurrent.CompletableFuture;
 
 import com.linecorp.armeria.common.HttpRequest;
-import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.util.UnmodifiableFuture;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
-/**
- * Provides the Athenz resource string from the request path.
- *
- * <p>This provider extracts the resource value directly from the request path.
- * The path returned includes the full URI path after the host, and optionally query parameters
- * based on the configuration.
- *
- * <p>Example (without query parameters):
- * <pre>{@code
- * AthenzService.builder(ztsBaseClient)
- *              .resourceProvider(AthenzResourceProvider.ofPath())
- *              .action("read")
- *              .newDecorator();
- * }</pre>
- *
- * <p>Example (with query parameters):
- * <pre>{@code
- * AthenzService.builder(ztsBaseClient)
- *              .resourceProvider(AthenzResourceProvider.ofPath(true))
- *              .action("read")
- *              .newDecorator();
- * }</pre>
- *
- * <p>If a request is made to {@code "/api/users/123?status=active"}:
- * <ul>
- *   <li>Without query: resource will be {@code "/api/users/123"}</li>
- *   <li>With query: resource will be {@code "/api/users/123?status=active"}</li>
- * </ul>
- */
-@UnstableApi
 final class PathAthenzResourceProvider implements AthenzResourceProvider {
 
     static final PathAthenzResourceProvider INSTANCE = new PathAthenzResourceProvider(false);

@@ -23,38 +23,13 @@ import static java.util.Objects.requireNonNull;
 import java.util.concurrent.CompletableFuture;
 
 import com.linecorp.armeria.common.HttpRequest;
-import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.util.UnmodifiableFuture;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
-/**
- * Provides the Athenz resource string from a specific HTTP header.
- *
- * <p>This provider extracts the resource value from the request header specified by the header name.
- * If the header is not present or empty, the returned future completes exceptionally with
- * {@link AthenzResourceNotFoundException}.
- *
- * <p>Example:
- * <pre>{@code
- * AthenzService.builder(ztsBaseClient)
- *              .resourceProvider(AthenzResourceProvider.ofHeader("X-Athenz-Resource"))
- *              .action("read")
- *              .newDecorator();
- * }</pre>
- *
- * <p>If a request includes the header {@code X-Athenz-Resource: resourceId},
- * the resource will be {@code "resourceId"}.
- */
-@UnstableApi
 final class HeaderAthenzResourceProvider implements AthenzResourceProvider {
 
     private final String headerName;
 
-    /**
-     * Creates a new instance that extracts the Athenz resource from the specified header.
-     *
-     * @param headerName the name of the HTTP header to extract the resource from
-     */
     HeaderAthenzResourceProvider(String headerName) {
         requireNonNull(headerName, "headerName");
         checkArgument(!headerName.isEmpty(), "headerName must not be empty");
@@ -63,8 +38,8 @@ final class HeaderAthenzResourceProvider implements AthenzResourceProvider {
 
     @Override
     public CompletableFuture<String> provide(ServiceRequestContext ctx, HttpRequest req) {
-        final String value = req.headers().get(headerName);
-        if (value == null || value.isEmpty()) {
+        final String value = req.headers().get(headerName, "");
+        if (value.isEmpty()) {
             return UnmodifiableFuture.exceptionallyCompletedFuture(
                     new AthenzResourceNotFoundException(
                             "Athenz resource not found in header: " + headerName));

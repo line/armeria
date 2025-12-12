@@ -29,75 +29,22 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.linecorp.armeria.common.AggregatedHttpRequest;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.MediaType;
-import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.util.UnmodifiableFuture;
 import com.linecorp.armeria.internal.common.JacksonUtil;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
-/**
- * Provides the Athenz resource string from a specific field in the JSON request body.
- *
- * <p>This provider parses the request body as JSON and extracts the resource value from the field
- * specified by a JSON pointer. If the content type is not JSON, the field does not exist,
- * or parsing fails, the returned future completes exceptionally with
- * {@link AthenzResourceNotFoundException}.
- *
- * <p>The provider supports both simple field names and nested paths using JSON Pointer notation:
- * <ul>
- *   <li>Simple field: {@code "resourceId"} → {@code /resourceId}</li>
- *   <li>Nested field: {@code "user.id"} → {@code /user/id}</li>
- * </ul>
- *
- * <p>Example with simple field name:
- * <pre>{@code
- * AthenzService.builder(ztsBaseClient)
- *              .resourceProvider(AthenzResourceProvider.ofJsonField("resourceId"))
- *              .action("write")
- *              .newDecorator();
- * }</pre>
- *
- * <p>Example with JSON pointer:
- * <pre>{@code
- * JsonPointer pointer = JsonPointer.compile("/user/id");
- * AthenzService.builder(ztsBaseClient)
- *              .resourceProvider(AthenzResourceProvider.ofJsonField(pointer))
- *              .action("write")
- *              .newDecorator();
- * }</pre>
- *
- * <p>Request body example:
- * <pre>{@code
- * {
- *   "resourceId": "myResource",
- *   "user": {
- *     "id": "123"
- *   }
- * }
- * }</pre>
- */
-@UnstableApi
 final class JsonBodyFieldAthenzResourceProvider implements AthenzResourceProvider {
 
     private static final ObjectMapper mapper = JacksonUtil.newDefaultObjectMapper();
 
     private final JsonPointer jsonPointer;
 
-    /**
-     * Creates a new instance that extracts the Athenz resource from the specified JSON field.
-     *
-     * @param jsonFieldName the name of the JSON field to extract the resource from
-     */
     JsonBodyFieldAthenzResourceProvider(String jsonFieldName) {
         requireNonNull(jsonFieldName, "jsonFieldName");
         checkArgument(!jsonFieldName.isEmpty(), "jsonFieldName must not be empty");
         jsonPointer = JsonPointer.compile('/' + jsonFieldName.replace(".", "/"));
     }
 
-    /**
-     * Creates a new instance that extracts the Athenz resource from the specified JSON pointer.
-     *
-     * @param jsonPointer the JSON pointer to extract the resource from
-     */
     JsonBodyFieldAthenzResourceProvider(JsonPointer jsonPointer) {
         requireNonNull(jsonPointer, "jsonPointer");
         this.jsonPointer = jsonPointer;
