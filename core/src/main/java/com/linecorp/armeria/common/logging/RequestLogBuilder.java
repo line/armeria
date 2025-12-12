@@ -181,6 +181,15 @@ public interface RequestLogBuilder extends RequestLogAccess {
     void requestTrailers(HttpHeaders requestTrailers);
 
     /**
+     * Sets the {@link RequestLog#requestCause()} without completing the request log.
+     * This method may be useful when you need to expose a request-side failure early.
+     * If you want to end the request log right away when an exception is raised,
+     * please use {@link #endRequest(Throwable)}.
+     */
+    @UnstableApi
+    void requestCause(Throwable cause);
+
+    /**
      * Finishes the collection of the {@link Request} information. This method sets the following properties:
      * <ul>
      *   <li>{@link RequestLog#requestEndTimeNanos()}</li>
