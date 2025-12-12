@@ -21,6 +21,7 @@ import static com.google.common.base.Preconditions.checkState;
 import static java.util.Objects.requireNonNull;
 
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
 
 import com.google.common.collect.ImmutableList;
@@ -72,7 +73,8 @@ public final class AthenzServiceBuilder extends AbstractAthenzServiceBuilder<Ath
         checkArgument(!athenzResource.isEmpty(), "athenzResource must not be empty");
         checkState(athenzResourceProvider == null,
                    "resource() and resourceProvider() are mutually exclusive");
-        athenzResourceProvider = (ctx, req) -> UnmodifiableFuture.completedFuture(athenzResource);
+        final CompletableFuture<String> resourceFuture = UnmodifiableFuture.completedFuture(athenzResource);
+        athenzResourceProvider = (ctx, req) -> resourceFuture;
         resourceTagValue = athenzResource;
         return this;
     }
@@ -102,7 +104,7 @@ public final class AthenzServiceBuilder extends AbstractAthenzServiceBuilder<Ath
      *                               (e.g., "admin" or "users" instead of dynamic resource values)
      */
     public AthenzServiceBuilder resourceProvider(AthenzResourceProvider athenzResourceProvider,
-                                                  String resourceTagValue) {
+                                                 String resourceTagValue) {
         requireNonNull(athenzResourceProvider, "resourceProvider");
         requireNonNull(resourceTagValue, "resourceTagValue");
         checkArgument(!resourceTagValue.isEmpty(), "resourceTagValue must not be empty");
