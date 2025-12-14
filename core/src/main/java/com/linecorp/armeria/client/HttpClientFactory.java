@@ -39,6 +39,7 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.MapMaker;
 
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
+import com.linecorp.armeria.client.metric.ClientRequestLifecycleListener;
 import com.linecorp.armeria.client.proxy.ProxyConfigSelector;
 import com.linecorp.armeria.client.redirect.RedirectConfig;
 import com.linecorp.armeria.common.Http1HeaderNaming;
@@ -142,14 +143,20 @@ final class HttpClientFactory implements ClientFactory {
     private final ClientFactoryOptions options;
     private final boolean autoCloseConnectionPoolListener;
     private final AsyncCloseableSupport closeable = AsyncCloseableSupport.of(this::closeAsync);
+    private final ClientRequestLifecycleListener clientRequestLifecycleListener;
 
     HttpClientFactory(ClientFactoryOptions options, boolean autoCloseConnectionPoolListener) {
+        this(options, autoCloseConnectionPoolListener, ClientRequestLifecycleListener.noop());
+    }
+
+    HttpClientFactory(ClientFactoryOptions options, boolean autoCloseConnectionPoolListener,
+                      ClientRequestLifecycleListener clientRequestLifecycleListener) {
         workerGroup = options.workerGroup();
 
         @SuppressWarnings("unchecked")
         final AddressResolverGroup<InetSocketAddress> group =
                 (AddressResolverGroup<InetSocketAddress>) options.addressResolverGroupFactory()
-                                                                 .apply(workerGroup);
+                        .apply(workerGroup);
         addressResolverGroup = group;
 
         final Bootstrap bootstrap = new Bootstrap();
@@ -189,10 +196,10 @@ final class HttpClientFactory implements ClientFactory {
         final TlsEngineType tlsEngineType = options.tlsEngineType();
         sslCtxHttp1Or2 = SslContextUtil
                 .createSslContext(SslContextBuilder::forClient, false, tlsEngineType,
-                                  tlsAllowUnsafeCiphers, tlsCustomizer, keyCertChainCaptor);
+                        tlsAllowUnsafeCiphers, tlsCustomizer, keyCertChainCaptor);
         sslCtxHttp1Only = SslContextUtil
                 .createSslContext(SslContextBuilder::forClient, true, tlsEngineType,
-                                  tlsAllowUnsafeCiphers, tlsCustomizer, keyCertChainCaptor);
+                        tlsAllowUnsafeCiphers, tlsCustomizer, keyCertChainCaptor);
         setupTlsMetrics(keyCertChainCaptor, options.meterRegistry());
 
         final TlsProvider tlsProvider = options.tlsProvider();
@@ -202,7 +209,7 @@ final class HttpClientFactory implements ClientFactory {
                 clientTlsConfig = null;
             }
             sslContextFactory = new SslContextFactory(tlsProvider, options.tlsEngineType(), clientTlsConfig,
-                                                      options.meterRegistry());
+                    options.meterRegistry());
         } else {
             sslContextFactory = null;
         }
@@ -232,6 +239,7 @@ final class HttpClientFactory implements ClientFactory {
         this.autoCloseConnectionPoolListener = autoCloseConnectionPoolListener;
 
         this.options = options;
+        this.clientRequestLifecycleListener = clientRequestLifecycleListener;
 
         clientDelegate = new HttpClientDelegate(this, addressResolverGroup);
         RequestTargetCache.registerClientMetrics(meterRegistry);
@@ -337,6 +345,10 @@ final class HttpClientFactory implements ClientFactory {
 
     Http1HeaderNaming http1HeaderNaming() {
         return http1HeaderNaming;
+    }
+
+    ClientRequestLifecycleListener clientRequestLifecycleListener() {
+        return clientRequestLifecycleListener;
     }
 
     @VisibleForTesting
