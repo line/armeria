@@ -196,7 +196,7 @@ public class ClientRequestMetrics implements ClientRequestLifecycleListener {
     }
 
     private static State state(ClientRequestContext ctx) {
-        State s = ctx.attr(METRICS_STATE);
+        State s = ctx.ownAttr(METRICS_STATE);
         if (s != null) {
             return s;
         }
