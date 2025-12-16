@@ -37,10 +37,7 @@ def boot4Autoconfigure = "boot4-autoconfigure"
 SpringBuildUtil.copyTestSources(project(":spring:boot4-autoconfigure"), project) {
     include "**/*.java"
     filter { String line ->
-        line.replaceAll(/\bjakarta\.annotation\./, 'javax.annotation.')
-                .replaceAll(/\bjakarta\.validation\./, 'javax.validation.')
-                .replaceAll(/\bjakarta\.persistence\./, 'javax.persistence.')
-                .replaceAll(/\bjakarta\./, 'javax.')
+        line.replaceAll(/\bjakarta\./, 'javax.')
     }
 }
 

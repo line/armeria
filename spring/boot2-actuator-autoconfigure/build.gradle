@@ -24,10 +24,7 @@ def boot4Actuator = "boot4-actuator-autoconfigure"
 SpringBuildUtil.copyTestSources(project(":spring:${boot4Actuator}"), project) {
     include "**/*.java"
     filter { String line ->
-        line.replaceAll(/\bjakarta\.annotation\./, 'javax.annotation.')
-                .replaceAll(/\bjakarta\.validation\./, 'javax.validation.')
-                .replaceAll(/\bjakarta\.persistence\./, 'javax.persistence.')
-                .replaceAll(/\bjakarta\./, 'javax.')
+        line.replaceAll(/\bjakarta\./, 'javax.')
     }
     exclude "**/EnableTestMetrics.java"
     exclude "**/SettableHealthIndicator.java"

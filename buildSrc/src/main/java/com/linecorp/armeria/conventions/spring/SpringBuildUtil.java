@@ -208,7 +208,7 @@ public final class SpringBuildUtil {
         });
         useFromProjectResources(fromProject, toProject, SourceSetType.MAIN);
 
-        disableNullAway(toProject, SourceSetType.MAIN);
+        disableErrorProne(toProject, SourceSetType.MAIN);
         disableCheckstyle(toProject);
     }
 
@@ -303,7 +303,7 @@ public final class SpringBuildUtil {
         return copyMainSources(fromProject, toProject, null);
     }
 
-    private static void disableNullAway(final Project project, SourceSetType sourceSetType) {
+    private static void disableErrorProne(final Project project, SourceSetType sourceSetType) {
         project.getTasks()
                .named(sourceSetType.compileTaskName, JavaCompile.class)
                .configure(compile -> {
