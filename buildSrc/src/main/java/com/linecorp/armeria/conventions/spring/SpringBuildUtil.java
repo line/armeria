@@ -22,6 +22,7 @@ import java.util.Set;
 import java.util.regex.Pattern;
 
 import org.gradle.api.Project;
+import org.gradle.api.Task;
 import org.gradle.api.file.Directory;
 import org.gradle.api.plugins.ExtensionAware;
 import org.gradle.api.plugins.ExtensionContainer;
@@ -112,15 +113,20 @@ public final class SpringBuildUtil {
         return sourceDirs;
     }
 
+    private static Set<File> resourceDirs(Project project, SourceSetType sourceSetType) {
+        final SourceSetContainer sourceSets =
+                project.getExtensions().findByType(SourceSetContainer.class);
+        assert sourceSets != null : "Couldn't find source set for " + project.getName();
+        final SourceSet sourceSet = sourceSets.getByName(sourceSetType.sourceName);
+        return sourceSet.getResources().getSrcDirs();
+    }
+
     public static TaskProvider<Copy> copyTestSources(
             Project fromProject,
             Project toProject,
             @Nullable Closure<? extends Copy> extraConfig) {
         final TaskProvider<Copy> copyTask = copySourceTask(
                 fromProject, toProject, extraConfig, SourceSetType.TEST);
-        // add dependency for testResources
-        useFromProjectResources(fromProject, toProject, SourceSetType.TEST);
-
         return copyTask;
     }
 
@@ -129,15 +135,20 @@ public final class SpringBuildUtil {
             @Nullable Closure<? extends Copy> extraConfig, SourceSetType sourceSetType) {
         final String taskName = toCamelId("copy", sourceSetType.sourceName,
                                           fromProject.getName(), "to", toProject.getName());
-        final String outputDirName = "gen-src/" + sourceSetType.sourceName + "/java";
-        final Directory outputDirProvider = toProject.getLayout().getProjectDirectory().dir(outputDirName);
-        final Set<File> sourceDirs = sourceDirs(fromProject, sourceSetType);
+        final String outputRootName = "gen-src/" + sourceSetType.sourceName;
+        final Directory outputRootDir =
+                toProject.getLayout().getProjectDirectory().dir(outputRootName);
+        final Directory outputJavaDirProvider = outputRootDir.dir("java");
+        final Directory outputResourcesDirProvider = outputRootDir.dir("resources");
 
         final TaskProvider<Copy> copyTask = toProject.getTasks().register(taskName, Copy.class, t -> {
-            t.setGroup("verification");
-
-            t.from(sourceDirs);
-            t.into(outputDirProvider);
+            t.into(outputRootDir);
+            t.from(sourceDirs(fromProject, sourceSetType), spec -> {
+                spec.into("java");
+            });
+            t.from(resourceDirs(fromProject, sourceSetType), spec -> {
+                spec.into("resources");
+            });
 
             if (extraConfig != null) {
                 extraConfig.setDelegate(t);
@@ -147,6 +158,7 @@ public final class SpringBuildUtil {
         });
         copyTask.configure(t -> {
             t.dependsOn(fromProject.getTasks().named(sourceSetType.compileTaskName));
+            t.dependsOn(fromProject.getTasks().named(sourceSetType.processResourcesTaskName));
         });
         toProject.getTasks()
                  .named(sourceSetType.compileTaskName, JavaCompile.class)
@@ -155,12 +167,12 @@ public final class SpringBuildUtil {
                  .named(sourceSetType.processResourcesTaskName, ProcessResources.class)
                  .configure(it -> it.dependsOn(copyTask));
 
-        // add test sources/resources
         final SourceSetContainer targetSourceSets =
                 toProject.getExtensions().findByType(SourceSetContainer.class);
         assert targetSourceSets != null : "Couldn't find source set for " + toProject.getName();
         final SourceSet targetSourceSet = targetSourceSets.getByName(sourceSetType.sourceName);
-        targetSourceSet.getJava().srcDir(outputDirProvider);
+        targetSourceSet.getJava().srcDir(outputJavaDirProvider);
+        targetSourceSet.getResources().srcDir(outputResourcesDirProvider);
         return copyTask;
     }
 
@@ -180,17 +192,15 @@ public final class SpringBuildUtil {
         final SourceSetContainer targetSourceSets =
                 toProject.getExtensions().findByType(SourceSetContainer.class);
         assert targetSourceSets != null : "Couldn't find source set for " + toProject.getName();
-        final SourceSet targetMain = targetSourceSets.getByName(sourceSetType.sourceName);
+        final SourceSet target = targetSourceSets.getByName(sourceSetType.sourceName);
 
-        final SourceSetContainer sourceSets =
-                fromProject.getExtensions().findByType(SourceSetContainer.class);
-        assert sourceSets != null : "Couldn't find source set for " + fromProject.getName();
-        final SourceSet sourceMain = sourceSets.getByName(sourceSetType.sourceName);
-
-        final Set<File> resourceDirs = sourceMain.getResources().getSrcDirs();
+        final Set<File> resourceDirs = resourceDirs(fromProject, sourceSetType);
         for (final File resDir : resourceDirs) {
-            targetMain.getResources().srcDir(resDir);
+            target.getResources().srcDir(resDir);
         }
+        toProject.getTasks().named(sourceSetType.processResourcesTaskName).configure(it -> {
+            it.dependsOn(fromProject.getTasks().named(sourceSetType.processResourcesTaskName));
+        });
     }
 
     public static void useMainSources(
@@ -199,10 +209,7 @@ public final class SpringBuildUtil {
             @Nullable Closure<?> extraConfig) {
 
         useSources(fromProject, toProject, extraConfig, SourceSetType.MAIN);
-        useMainJavadocSources(fromProject, toProject, extraConfig);
-        toProject.getTasks().named("processResources").configure(it -> {
-            it.dependsOn(fromProject.getTasks().named("processResources"));
-        });
+        useMainJavadoc(fromProject, toProject, extraConfig);
         toProject.getTasks().named("sourcesJar").configure(it -> {
             it.dependsOn(fromProject.getTasks().named("sourcesJar"));
         });
@@ -239,7 +246,7 @@ public final class SpringBuildUtil {
                  });
     }
 
-    private static void useMainJavadocSources(
+    private static void useMainJavadoc(
             final Project fromProject,
             final Project toProject,
             @Nullable final Closure<?> extraConfig) {
@@ -284,12 +291,6 @@ public final class SpringBuildUtil {
 
         final TaskProvider<Copy> copyTask = copySourceTask(
                 fromProject, toProject, extraConfig, SourceSetType.MAIN);
-        copyTask.configure(t -> {
-            t.dependsOn(fromProject.getTasks().named("compileJava"));
-        });
-        toProject.getTasks()
-                 .named("compileJava", JavaCompile.class)
-                 .configure(task -> task.dependsOn(copyTask));
         toProject.getTasks().named("sourcesJar").configure(it -> {
             it.dependsOn(fromProject.getTasks().named("sourcesJar"));
             it.dependsOn(copyTask);

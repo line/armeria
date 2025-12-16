@@ -22,9 +22,11 @@ def boot3Actuator = "boot3-actuator-autoconfigure"
 def boot4Actuator = "boot4-actuator-autoconfigure"
 
 SpringBuildUtil.copyTestSources(project(":spring:${boot4Actuator}"), project) {
-    include "**/*.java"
-    filter { String line ->
-        line.replaceAll(/\bjakarta\./, 'javax.')
+    include "**"
+    filesMatching("**/*.java") {
+        filter { String line ->
+            line.replaceAll(/\bjakarta\./, 'javax.')
+        }
     }
     exclude "**/EnableTestMetrics.java"
     exclude "**/SettableHealthIndicator.java"

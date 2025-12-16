@@ -1373,8 +1373,8 @@ version.ref = "spring-boot4"
 [libraries.spring-boot4-starter-test]
 module = "org.springframework.boot:spring-boot-starter-test"
 version.ref = "spring-boot4"
-[libraries.spring-boot4-starter-web]
-module = "org.springframework.boot:spring-boot-starter-web"
+[libraries.spring-boot4-starter-webmvc]
+module = "org.springframework.boot:spring-boot-starter-webmvc"
 version.ref = "spring-boot4"
 [libraries.spring-boot4-web-server]
 module = "org.springframework.boot:spring-boot-web-server"

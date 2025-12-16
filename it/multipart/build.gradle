@@ -3,5 +3,5 @@ dependencies {
 
      testImplementation libs.reactor.core
      testImplementation libs.spring.boot4.starter.test
-     testImplementation libs.spring.boot4.starter.web
+     testImplementation libs.spring.boot4.starter.webmvc
 }

@@ -3,7 +3,7 @@ dependencies {
     implementation project(':spring:boot4-webflux-starter')
     implementation project(':tomcat10')
     implementation libs.spring.boot4.health
-    implementation(libs.spring.boot4.starter.web) {
+    implementation(libs.spring.boot4.starter.webmvc) {
         exclude group: 'org.springframework.boot', module: 'spring-boot-starter-tomcat'
     }
     implementation libs.spring.boot4.tomcat

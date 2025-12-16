@@ -116,7 +116,6 @@ class ObservationTest {
     void throwsException() throws Exception {
         final WebClient client = WebClient.of("http://127.0.0.1:" + port);
         final AggregatedHttpResponse response = client.blocking().get("/hello?mode=throw");
-        System.out.println(response);
         assertThat(response.status().code()).isEqualTo(500);
 
         await().untilAsserted(() -> assertThat(ctxStatusRef.get()).isNotNull());

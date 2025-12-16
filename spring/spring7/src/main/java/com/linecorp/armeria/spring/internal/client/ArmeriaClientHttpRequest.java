@@ -15,7 +15,6 @@
  */
 package com.linecorp.armeria.spring.internal.client;
 
-import static com.google.common.base.Preconditions.checkState;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static java.util.Objects.requireNonNull;
 
@@ -124,11 +123,12 @@ public final class ArmeriaClientHttpRequest extends AbstractClientHttpRequest {
         return uri;
     }
 
-    @SuppressWarnings("override") // To be compatible with Spring 5.2.X
+    @SuppressWarnings({"override", "unchecked"}) // To be compatible with Spring 5.2.X
     public <T> T getNativeRequest() {
         final HttpRequest request = this.request;
-        checkState(request != null);
-        //noinspection unchecked
+        if (request == null) {
+            return (T) HttpRequest.of(RequestHeaders.of(headers.build()));
+        }
         return (T) request;
     }
 

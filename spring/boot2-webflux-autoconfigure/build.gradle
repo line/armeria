@@ -53,9 +53,11 @@ SpringBuildUtil.useMainSources(project(":spring:boot4-webflux-autoconfigure"), p
 
 def boot4Webflux = "boot4-webflux-autoconfigure"
 SpringBuildUtil.copyTestSources(project(":spring:${boot4Webflux}"), project) {
-    include "**/*.java"
-    filter { String line ->
-        line.replaceAll(/\bjakarta\./, 'javax.')
+    include "**"
+    filesMatching("**/*.java") {
+        filter { String line ->
+            line.replaceAll(/\bjakarta\./, 'javax.')
+        }
     }
     exclude "**/EnableTestMetrics.java"
     exclude "**/SettableHealthIndicator.java"

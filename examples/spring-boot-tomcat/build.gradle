@@ -7,7 +7,7 @@ dependencies {
     implementation project(':spring:boot4-starter')
     implementation project(':tomcat10')
 
-    implementation libs.spring.boot4.starter.web
+    implementation libs.spring.boot4.starter.webmvc
     annotationProcessor libs.spring.boot4.configuration.processor
 
     runtimeOnly project(':spring:boot4-actuator-starter')
