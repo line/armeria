@@ -58,7 +58,7 @@ import com.linecorp.armeria.common.util.AsyncCloseableSupport;
 import com.linecorp.armeria.common.util.DomainSocketAddress;
 import com.linecorp.armeria.internal.client.HttpSession;
 import com.linecorp.armeria.internal.client.PooledChannel;
-import com.linecorp.armeria.internal.common.ClientSslContextFactory;
+import com.linecorp.armeria.internal.common.SslContextFactory;
 import com.linecorp.armeria.internal.common.util.ChannelUtil;
 import com.linecorp.armeria.internal.common.util.TemporaryThreadLocals;
 
@@ -103,7 +103,7 @@ final class HttpChannelPool implements AsyncCloseable {
     private final int connectTimeoutMillis;
 
     HttpChannelPool(HttpClientFactory clientFactory, EventLoop eventLoop,
-                    ClientSslContextFactory sslContextFactory, ConnectionPoolListener listener) {
+                    SslContextFactory sslContextFactory, ConnectionPoolListener listener) {
         this.clientFactory = clientFactory;
         this.eventLoop = eventLoop;
         this.listener = listener;

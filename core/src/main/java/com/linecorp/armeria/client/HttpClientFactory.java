@@ -53,8 +53,8 @@ import com.linecorp.armeria.common.util.ReleasableHolder;
 import com.linecorp.armeria.common.util.ShutdownHooks;
 import com.linecorp.armeria.common.util.TransportType;
 import com.linecorp.armeria.internal.client.ClientBuilderParamsUtil;
-import com.linecorp.armeria.internal.common.ClientSslContextFactory;
 import com.linecorp.armeria.internal.common.RequestTargetCache;
+import com.linecorp.armeria.internal.common.SslContextFactory;
 import com.linecorp.armeria.internal.common.util.ChannelUtil;
 
 import io.micrometer.core.instrument.MeterRegistry;
@@ -87,7 +87,7 @@ final class HttpClientFactory implements ClientFactory {
     private final Bootstrap inetBaseBootstrap;
     @Nullable
     private final Bootstrap unixBaseBootstrap;
-    private final ClientSslContextFactory sslContextFactory;
+    private final SslContextFactory sslContextFactory;
     private final AddressResolverGroup<InetSocketAddress> addressResolverGroup;
     private final int http2InitialConnectionWindowSize;
     private final int http2InitialStreamWindowSize;
@@ -170,8 +170,8 @@ final class HttpClientFactory implements ClientFactory {
             meterIdPrefix = options.tlsConfig().meterIdPrefix();
             allowUnsafeCiphers = options.tlsConfig().allowsUnsafeCiphers();
         }
-        sslContextFactory = new ClientSslContextFactory(meterIdPrefix, options.meterRegistry(),
-                                                        allowUnsafeCiphers);
+        sslContextFactory = new SslContextFactory(meterIdPrefix, options.meterRegistry(),
+                                                  allowUnsafeCiphers);
         bootstrapSslContexts = new BootstrapSslContexts(baseClientTlsSpec, options, sslContextFactory);
 
         http2InitialConnectionWindowSize = options.http2InitialConnectionWindowSize();
@@ -513,7 +513,7 @@ final class HttpClientFactory implements ClientFactory {
     }
 
     @VisibleForTesting
-    ClientSslContextFactory sslContextFactory() {
+    SslContextFactory sslContextFactory() {
         return sslContextFactory;
     }
 

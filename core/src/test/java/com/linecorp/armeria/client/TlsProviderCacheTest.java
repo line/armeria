@@ -37,7 +37,7 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.TlsProvider;
 import com.linecorp.armeria.common.logging.RequestLogProperty;
-import com.linecorp.armeria.internal.common.ClientSslContextFactory;
+import com.linecorp.armeria.internal.common.SslContextFactory;
 import com.linecorp.armeria.internal.testing.MockAddressResolverGroup;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServerTlsConfig;
@@ -117,7 +117,7 @@ class TlsProviderCacheTest {
 
         final List<Channel> channels = new ArrayList<>();
         final List<CompletableFuture<AggregatedHttpResponse>> responses = new ArrayList<>();
-        final ClientSslContextFactory sslContextFactory;
+        final SslContextFactory sslContextFactory;
         try (
                 ClientFactory factory = ClientFactory
                         .builder()
