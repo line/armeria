@@ -27,7 +27,6 @@ import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
-import com.linecorp.armeria.common.logging.RequestLogListener;
 
 import io.netty.util.AttributeKey;
 
@@ -52,24 +51,6 @@ public class ClientRequestMetrics implements ClientRequestLifecycleListener {
 
     private final EnumMap<SessionProtocol, LongAdder> pendingRequestsPerProtocol =
             new EnumMap<>(SessionProtocol.class);
-
-    private final RequestLogListener requestLogListener = (property, log) -> {
-        if (!(log.context() instanceof ClientRequestContext)) {
-            return;
-        }
-
-        final ClientRequestContext ctx = (ClientRequestContext) log.context();
-        switch (property) {
-            case REQUEST_FIRST_BYTES_TRANSFERRED_TIME:
-                onRequestStart(ctx);
-                break;
-            case ALL_COMPLETE:
-                onRequestComplete(ctx, log.responseCause());
-                break;
-            default:
-                break;
-        }
-    };
 
     /**
      * Creates a new {@link ClientRequestMetrics} instance.
@@ -104,9 +85,13 @@ public class ClientRequestMetrics implements ClientRequestLifecycleListener {
         if (s.activeCounted.compareAndSet(false, true)) {
             final Endpoint endpoint = ctx.endpoint();
             if (endpoint != null) {
-                activeRequestsPerEndpoint
-                        .computeIfAbsent(endpoint, e -> new LongAdder())
-                        .increment();
+                activeRequestsPerEndpoint.compute(endpoint, (k, adder) -> {
+                    if (adder == null) {
+                        adder = new LongAdder();
+                    }
+                    adder.increment();
+                    return adder;
+                });
             }
         }
     }
@@ -143,16 +128,14 @@ public class ClientRequestMetrics implements ClientRequestLifecycleListener {
 
         final Endpoint endpoint = ctx.endpoint();
         if (endpoint != null) {
-            final LongAdder adder = activeRequestsPerEndpoint.get(endpoint);
-            if (adder != null) {
+            activeRequestsPerEndpoint.compute(endpoint, (key, adder) -> {
+                if (adder == null) {
+                    return null;
+                }
                 adder.decrement();
-            }
+                return adder.sum() == 0 ? null : adder;
+            });
         }
-    }
-
-    @Override
-    public RequestLogListener asRequestLogListener() {
-        return this.requestLogListener;
     }
 
     /**

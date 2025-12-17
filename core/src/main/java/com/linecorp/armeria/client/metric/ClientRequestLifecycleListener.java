@@ -17,6 +17,7 @@
 package com.linecorp.armeria.client.metric;
 
 import com.linecorp.armeria.client.ClientRequestContext;
+import com.linecorp.armeria.client.logging.DefaultClientRequestLogListener;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
@@ -90,7 +91,9 @@ public interface ClientRequestLifecycleListener {
      * defined in this interface. The returned listener is registered to the {@link ClientRequestContext}
      * automatically when the request starts.
      */
-    RequestLogListener asRequestLogListener();
+    default RequestLogListener asRequestLogListener() {
+        return new DefaultClientRequestLogListener(this);
+    }
 
     /**
      * Returns a {@link ClientRequestMetrics} that collects the number of pending and active requests.
@@ -103,52 +106,6 @@ public interface ClientRequestLifecycleListener {
      * Returns a {@link ClientRequestLifecycleListener} that does nothing.
      */
     static ClientRequestLifecycleListener noop() {
-        return NoopClientRequestLifecycleListener.INSTANCE;
-    }
-
-    /**
-     * A {@link ClientRequestLifecycleListener} that does nothing.
-     */
-    class NoopClientRequestLifecycleListener implements ClientRequestLifecycleListener {
-
-        private static final NoopClientRequestLifecycleListener INSTANCE =
-                new NoopClientRequestLifecycleListener();
-        private final RequestLogListener requestLogListener = ((property, log) -> {});
-
-        @Override
-        public void onRequestPending(ClientRequestContext ctx) {
-            // no-op
-        }
-
-        @Override
-        public void onRequestStart(ClientRequestContext ctx) {
-            // no-op
-        }
-
-        @Override
-        public void onRequestSendComplete(ClientRequestContext ctx) {
-            // no-op
-        }
-
-        @Override
-        public void onResponseHeaders(ClientRequestContext ctx, ResponseHeaders headers) {
-            // no-op
-        }
-
-        @Override
-        public void onResponseComplete(ClientRequestContext ctx) {
-            // no-op
-        }
-
-        @Override
-        public void onRequestComplete(ClientRequestContext ctx, @Nullable Throwable cause) {
-            // no-op
-        }
-
-        @Override
-        public RequestLogListener asRequestLogListener() {
-            // no-op
-            return requestLogListener;
-        }
+        return NoopClientRequestLifecycleListener.getInstance();
     }
 }
