@@ -18,6 +18,7 @@ package com.linecorp.armeria.client.logging;
 
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.metric.ClientRequestLifecycleListener;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogListener;
 import com.linecorp.armeria.common.logging.RequestLogProperty;
@@ -30,6 +31,7 @@ import com.linecorp.armeria.common.logging.RequestLogProperty;
  * callback methods of the {@link ClientRequestLifecycleListener} when specific {@link RequestLogProperty}
  * become available.
  */
+@UnstableApi
 public class DefaultClientRequestLogListener implements RequestLogListener {
 
     private final ClientRequestLifecycleListener lifecycleListener;

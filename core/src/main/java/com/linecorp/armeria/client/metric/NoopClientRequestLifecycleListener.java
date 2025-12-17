@@ -19,11 +19,13 @@ package com.linecorp.armeria.client.metric;
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.logging.RequestLogListener;
 
 /**
  * A {@link ClientRequestLifecycleListener} that does nothing.
  */
+@UnstableApi
 public final class NoopClientRequestLifecycleListener implements ClientRequestLifecycleListener {
 
     private static final NoopClientRequestLifecycleListener INSTANCE =
