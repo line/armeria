@@ -175,7 +175,7 @@ class ClientTlsSpecTest {
         assertThat(rebuilt.verifierFactories()).isEqualTo(original.verifierFactories());
         assertThat(rebuilt.engineType()).isEqualTo(original.engineType());
         assertThat(rebuilt.ciphers()).isEqualTo(original.ciphers());
-        assertThat(rebuilt.protocols()).isEqualTo(original.protocols());
+        assertThat(rebuilt.tlsVersions()).isEqualTo(original.tlsVersions());
         assertThat(rebuilt.alpnProtocols()).isEqualTo(original.alpnProtocols());
     }
 }

@@ -44,13 +44,13 @@ class SslContextUtilTest {
 
     @Test
     void openSsl() {
-        final Set<String> supportedProtocols = SslContextUtil.supportedProtocols(SslProvider.OPENSSL);
+        final Set<String> supportedProtocols = SslContextUtil.supportedTlsVersions(SslProvider.OPENSSL);
         assertThat(supportedProtocols).contains("TLSv1.2", "TLSv1.3");
     }
 
     @Test
     void jdkSsl() {
-        final Set<String> supportedProtocols = SslContextUtil.supportedProtocols(SslProvider.JDK);
+        final Set<String> supportedProtocols = SslContextUtil.supportedTlsVersions(SslProvider.JDK);
         if (SystemInfo.javaVersion() >= 11) {
             assertThat(supportedProtocols).contains("TLSv1.2", "TLSv1.3");
         } else {

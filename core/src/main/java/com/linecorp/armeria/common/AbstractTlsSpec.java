@@ -33,6 +33,7 @@ import com.google.common.collect.ImmutableSet;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.util.TlsEngineType;
+import com.linecorp.armeria.internal.common.util.SslContextUtil;
 
 import io.netty.handler.ssl.SslContextBuilder;
 
@@ -42,7 +43,7 @@ import io.netty.handler.ssl.SslContextBuilder;
 @UnstableApi
 public abstract class AbstractTlsSpec {
 
-    private final Set<String> protocols;
+    private final Set<String> tlsVersions;
     private final Set<String> alpnProtocols;
     private final Set<String> ciphers;
     @Nullable
@@ -57,14 +58,15 @@ public abstract class AbstractTlsSpec {
     /**
      * Creates a new instance with the specified TLS configuration.
      */
-    protected AbstractTlsSpec(Set<String> protocols, Set<String> alpnProtocols, Set<String> ciphers,
+    protected AbstractTlsSpec(Set<String> tlsVersions, Set<String> alpnProtocols, Set<String> ciphers,
                               @Nullable TlsKeyPair tlsKeyPair, List<X509Certificate> trustedCertificates,
                               List<TlsPeerVerifierFactory> verifierFactories, TlsEngineType engineType,
                               Consumer<? super SslContextBuilder> tlsCustomizer,
                               @Nullable KeyManagerFactory keyManagerFactory) {
         checkArgument(tlsKeyPair == null || keyManagerFactory == null,
                       "'tlsKeyPair' and 'keyManagerFactory' cannot both be set");
-        this.protocols = ImmutableSet.copyOf(protocols);
+        SslContextUtil.checkVersionsSupported(tlsVersions, engineType.sslProvider());
+        this.tlsVersions = ImmutableSet.copyOf(tlsVersions);
         this.alpnProtocols = ImmutableSet.copyOf(alpnProtocols);
         this.ciphers = ImmutableSet.copyOf(ciphers);
         this.tlsKeyPair = tlsKeyPair;
@@ -78,8 +80,8 @@ public abstract class AbstractTlsSpec {
     /**
      * Returns the supported TLS protocols.
      */
-    public final Set<String> protocols() {
-        return protocols;
+    public final Set<String> tlsVersions() {
+        return tlsVersions;
     }
 
     /**
@@ -158,7 +160,7 @@ public abstract class AbstractTlsSpec {
             return true;
         }
         final AbstractTlsSpec tlsSpec = (AbstractTlsSpec) o;
-        return Objects.equal(protocols, tlsSpec.protocols()) &&
+        return Objects.equal(tlsVersions, tlsSpec.tlsVersions()) &&
                Objects.equal(alpnProtocols, tlsSpec.alpnProtocols()) &&
                Objects.equal(ciphers, tlsSpec.ciphers()) &&
                Objects.equal(tlsKeyPair, tlsSpec.tlsKeyPair()) &&
@@ -171,14 +173,14 @@ public abstract class AbstractTlsSpec {
 
     @Override
     public int hashCode() {
-        return Objects.hashCode(protocols, alpnProtocols, ciphers, tlsKeyPair, trustedCertificates,
+        return Objects.hashCode(tlsVersions, alpnProtocols, ciphers, tlsKeyPair, trustedCertificates,
                                 verifierFactories, engineType, tlsCustomizer, keyManagerFactory);
     }
 
     @Override
     public String toString() {
         return MoreObjects.toStringHelper(this)
-                          .add("protocols", protocols)
+                          .add("tlsVersions", tlsVersions)
                           .add("alpnProtocols", alpnProtocols)
                           .add("ciphers", ciphers)
                           .add("tlsKeyPair", tlsKeyPair)

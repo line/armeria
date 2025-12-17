@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.internal.common.util;
 
+import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkState;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 
@@ -99,6 +100,8 @@ public final class SslContextUtil {
     private static final String MISSING_ESSENTIAL_CIPHER_SUITE_MESSAGE =
             "Attempted to configure TLS without the " + ESSENTIAL_HTTP2_CIPHER_SUITE +
             " cipher suite enabled. It must be enabled for proper HTTP/2 support.";
+    private static final ImmutableSet<String> tlsVersion23 = ImmutableSet.of("TLSv1.3", "TLSv1.2");
+    private static final ImmutableSet<String> tlsVersion2 = ImmutableSet.of("TLSv1.2");
 
     private static boolean warnedUnsupportedProtocols;
     private static boolean warnedMissingEssentialCipherSuite;
@@ -188,11 +191,20 @@ public final class SslContextUtil {
         }
     }
 
-    public static Set<String> supportedProtocols(SslProvider provider) {
+    public static void checkVersionsSupported(Set<String> protocols, SslProvider provider) {
+        checkArgument(!protocols.isEmpty(), "protocols cannot be empty");
+        final Set<String> supportedTlsVersions = supportedTlsVersions(provider);
+        for (String protocol : protocols) {
+            checkArgument(supportedTlsVersions.contains(protocol),
+                          "Unsupported TLS protocol: %s for %s", protocol, provider);
+        }
+    }
+
+    public static Set<String> supportedTlsVersions(SslProvider provider) {
         if (SslProvider.isTlsv13Supported(provider)) {
-            return ImmutableSet.of("TLSv1.3", "TLSv1.2");
+            return tlsVersion23;
         } else {
-            return ImmutableSet.of("TLSv1.2");
+            return tlsVersion2;
         }
     }
 
@@ -258,7 +270,7 @@ public final class SslContextUtil {
     }
 
     private static List<String> filterProtocols(Collection<String> protocols, SslProvider provider) {
-        final Set<String> supportedProtocols = supportedProtocols(provider);
+        final Set<String> supportedProtocols = supportedTlsVersions(provider);
         final List<String> filtered = protocols.stream()
                                                .filter(supportedProtocols::contains)
                                                .collect(toImmutableList());
@@ -300,7 +312,7 @@ public final class SslContextUtil {
             builder.trustManager(toTrustManager(tlsSpec, delegate));
         }
 
-        final List<String> protocols = filterProtocols(tlsSpec.protocols(),
+        final List<String> protocols = filterProtocols(tlsSpec.tlsVersions(),
                                                        tlsSpec.engineType().sslProvider());
         builder.protocols(protocols);
         builder.ciphers(tlsSpec.ciphers(), SupportedCipherSuiteFilter.INSTANCE);

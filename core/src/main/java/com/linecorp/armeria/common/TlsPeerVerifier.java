@@ -27,6 +27,7 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
  * Verifies TLS peer certificates during handshake.
  */
 @UnstableApi
+@FunctionalInterface
 public interface TlsPeerVerifier {
 
     /**

@@ -66,6 +66,7 @@ public abstract class AbstractTlsSpecBuilder<SELF extends AbstractTlsSpecBuilder
      * Sets the cipher suites to use.
      */
     public final SELF ciphers(String... ciphers) {
+        requireNonNull(ciphers, "ciphers");
         return ciphers(ImmutableSet.copyOf(ciphers));
     }
 
@@ -73,16 +74,10 @@ public abstract class AbstractTlsSpecBuilder<SELF extends AbstractTlsSpecBuilder
      * Sets the cipher suites to use.
      */
     public final SELF ciphers(Iterable<String> ciphers) {
-        return ciphers(ImmutableSet.copyOf(ciphers));
-    }
-
-    /**
-     * Sets the cipher suites to use.
-     */
-    public final SELF ciphers(Set<String> ciphers) {
         requireNonNull(ciphers, "ciphers");
-        checkArgument(!ciphers.isEmpty(), "At least one cipher must be specified.");
-        this.ciphers = ImmutableSet.copyOf(ciphers);
+        final Set<String> ciphersSet = ImmutableSet.copyOf(ciphers);
+        checkArgument(!ciphersSet.isEmpty(), "At least one cipher must be specified.");
+        this.ciphers = ciphersSet;
         return self();
     }
 
@@ -112,6 +107,7 @@ public abstract class AbstractTlsSpecBuilder<SELF extends AbstractTlsSpecBuilder
      * Sets the trusted certificates to use for peer verification.
      */
     public final SELF trustedCertificates(X509Certificate... trustedCertificates) {
+        requireNonNull(trustedCertificates, "trustedCertificates");
         return trustedCertificates(ImmutableList.copyOf(trustedCertificates));
     }
 
@@ -119,13 +115,6 @@ public abstract class AbstractTlsSpecBuilder<SELF extends AbstractTlsSpecBuilder
      * Sets the trusted certificates to use for peer verification.
      */
     public final SELF trustedCertificates(Iterable<X509Certificate> trustedCertificates) {
-        return trustedCertificates(ImmutableList.copyOf(trustedCertificates));
-    }
-
-    /**
-     * Sets the trusted certificates to use for peer verification.
-     */
-    public final SELF trustedCertificates(List<X509Certificate> trustedCertificates) {
         requireNonNull(trustedCertificates, "trustedCertificates");
         this.trustedCertificates = ImmutableList.copyOf(trustedCertificates);
         return self();
@@ -145,6 +134,7 @@ public abstract class AbstractTlsSpecBuilder<SELF extends AbstractTlsSpecBuilder
      * @see TlsPeerVerifierFactory
      */
     public final SELF verifierFactories(TlsPeerVerifierFactory... verifierFactories) {
+        requireNonNull(verifierFactories, "verifierFactories");
         return verifierFactories(ImmutableList.copyOf(verifierFactories));
     }
 
@@ -155,16 +145,6 @@ public abstract class AbstractTlsSpecBuilder<SELF extends AbstractTlsSpecBuilder
      * @see TlsPeerVerifierFactory
      */
     public final SELF verifierFactories(Iterable<TlsPeerVerifierFactory> verifierFactories) {
-        return verifierFactories(ImmutableList.copyOf(verifierFactories));
-    }
-
-    /**
-     * Sets the TLS peer verifier factories that will be used to verify the peer.
-     * Note that {@link TlsPeerVerifierFactory#create(TlsPeerVerifier)} will be applied in the
-     * reverse order.
-     * @see TlsPeerVerifierFactory
-     */
-    public final SELF verifierFactories(List<TlsPeerVerifierFactory> verifierFactories) {
         requireNonNull(verifierFactories, "verifierFactories");
         this.verifierFactories = ImmutableList.copyOf(verifierFactories);
         return self();

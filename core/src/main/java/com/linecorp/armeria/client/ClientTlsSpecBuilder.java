@@ -76,7 +76,7 @@ public final class ClientTlsSpecBuilder extends AbstractTlsSpecBuilder<ClientTls
      */
     @Override
     public ClientTlsSpec build() {
-        return new ClientTlsSpec(SslContextUtil.supportedProtocols(engineType().sslProvider()),
+        return new ClientTlsSpec(SslContextUtil.supportedTlsVersions(engineType().sslProvider()),
                                  alpnProtocols, ciphers(), tlsKeyPair(), trustedCertificates(),
                                  verifierFactories(), engineType(), tlsCustomizer, keyManagerFactory);
     }

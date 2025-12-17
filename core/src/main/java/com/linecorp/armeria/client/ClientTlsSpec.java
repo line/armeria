@@ -40,21 +40,6 @@ public final class ClientTlsSpec extends AbstractTlsSpec {
 
     private static final ClientTlsSpec DEFAULT = builder().build();
 
-    ClientTlsSpec(Set<String> protocols, Set<String> alpnProtocols, Set<String> ciphers,
-                  @Nullable TlsKeyPair tlsKeyPair,
-                  List<X509Certificate> trustedCertificates,
-                  List<TlsPeerVerifierFactory> verifierFactories, TlsEngineType engineType,
-                  Consumer<? super SslContextBuilder> tlsCustomizer,
-                  @Nullable KeyManagerFactory keyManagerFactory) {
-        super(protocols, alpnProtocols, ciphers, tlsKeyPair, trustedCertificates, verifierFactories, engineType,
-              tlsCustomizer, keyManagerFactory);
-    }
-
-    @Override
-    public boolean isServer() {
-        return false;
-    }
-
     /**
      * Returns the default {@link ClientTlsSpec}.
      */
@@ -75,5 +60,20 @@ public final class ClientTlsSpec extends AbstractTlsSpec {
      */
     public ClientTlsSpecBuilder toBuilder() {
         return new ClientTlsSpecBuilder(this);
+    }
+
+    ClientTlsSpec(Set<String> tlsVersions, Set<String> alpnProtocols, Set<String> ciphers,
+                  @Nullable TlsKeyPair tlsKeyPair,
+                  List<X509Certificate> trustedCertificates,
+                  List<TlsPeerVerifierFactory> verifierFactories, TlsEngineType engineType,
+                  Consumer<? super SslContextBuilder> tlsCustomizer,
+                  @Nullable KeyManagerFactory keyManagerFactory) {
+        super(tlsVersions, alpnProtocols, ciphers, tlsKeyPair, trustedCertificates, verifierFactories, engineType,
+              tlsCustomizer, keyManagerFactory);
+    }
+
+    @Override
+    public boolean isServer() {
+        return false;
     }
 }

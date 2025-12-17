@@ -29,7 +29,7 @@ final class InsecureHostsPeerVerifierFactory implements TlsPeerVerifierFactory {
     private final Set<String> hosts;
 
     InsecureHostsPeerVerifierFactory(String... hosts) {
-        this(ImmutableSet.copyOf(hosts));
+        this(ImmutableSet.copyOf(requireNonNull(hosts, "hosts")));
     }
 
     InsecureHostsPeerVerifierFactory(Set<String> hosts) {

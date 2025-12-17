@@ -60,9 +60,7 @@ public final class ClientSslContextFactory {
     }
 
     public ClientSslContextFactory(@Nullable MeterIdPrefix meterIdPrefix, MeterRegistry meterRegistry) {
-        this.meterIdPrefix = meterIdPrefix;
-        this.meterRegistry = meterRegistry;
-        allowUnsafeCiphers = false;
+        this(meterIdPrefix, meterRegistry, false);
     }
 
     public ClientSslContextFactory(@Nullable MeterIdPrefix meterIdPrefix, MeterRegistry meterRegistry,
