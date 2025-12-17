@@ -68,8 +68,8 @@ public final class ClientTlsSpec extends AbstractTlsSpec {
                   List<TlsPeerVerifierFactory> verifierFactories, TlsEngineType engineType,
                   Consumer<? super SslContextBuilder> tlsCustomizer,
                   @Nullable KeyManagerFactory keyManagerFactory) {
-        super(tlsVersions, alpnProtocols, ciphers, tlsKeyPair, trustedCertificates, verifierFactories, engineType,
-              tlsCustomizer, keyManagerFactory);
+        super(tlsVersions, alpnProtocols, ciphers, tlsKeyPair, trustedCertificates, verifierFactories,
+              engineType, tlsCustomizer, keyManagerFactory);
     }
 
     @Override
