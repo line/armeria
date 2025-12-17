@@ -38,16 +38,6 @@ public enum RequestLogProperty {
     REQUEST_START_TIME(true),
 
     /**
-     * {@link RequestLog#requestEndTimeNanos()}, {@link RequestLog#requestDurationNanos()}.
-     */
-    REQUEST_END_TIME(true),
-
-    /**
-     * {@link RequestLog#requestFirstBytesTransferredTimeNanos()}.
-     */
-    REQUEST_FIRST_BYTES_TRANSFERRED_TIME(true),
-
-    /**
      * {@link RequestLog#channel()}, {@link RequestLog#sessionProtocol()}, {@link RequestLog#sslSession()},
      * {@link RequestLog#connectionTimings()}.
      */
@@ -74,6 +64,11 @@ public enum RequestLogProperty {
     REQUEST_HEADERS(true),
 
     /**
+     * {@link RequestLog#requestFirstBytesTransferredTimeNanos()}.
+     */
+    REQUEST_FIRST_BYTES_TRANSFERRED_TIME(true),
+
+    /**
      * {@link RequestLog#requestContent()}, {@link RequestLog#rawRequestContent()}.
      */
     REQUEST_CONTENT(true),
@@ -98,7 +93,23 @@ public enum RequestLogProperty {
      */
     REQUEST_CAUSE(true),
 
+    /**
+     * {@link RequestLog#requestEndTimeNanos()}, {@link RequestLog#requestDurationNanos()}.
+     */
+    REQUEST_END_TIME(true),
+
+    /**
+     * Indicates that the request is complete and all request properties are available.
+     */
+    REQUEST_COMPLETE(true),
+
     // Response properties
+
+    /**
+     * {@link RequestLog#responseCause()}.
+     */
+    // Notify the response cause before other response properties to propagate the cause as early as possible.
+    RESPONSE_CAUSE(false),
 
     /**
      * {@link RequestLog#responseStartTimeMicros()}, {@link RequestLog#responseStartTimeMillis()},
@@ -107,20 +118,14 @@ public enum RequestLogProperty {
     RESPONSE_START_TIME(false),
 
     /**
-     * {@link RequestLog#responseEndTimeNanos()}, {@link RequestLog#responseDurationNanos()},
-     * {@link RequestLog#totalDurationNanos()}.
+     * {@link RequestLog#responseHeaders()}.
      */
-    RESPONSE_END_TIME(false),
+    RESPONSE_HEADERS(false),
 
     /**
      * {@link RequestLog#responseFirstBytesTransferredTimeNanos()}.
      */
     RESPONSE_FIRST_BYTES_TRANSFERRED_TIME(false),
-
-    /**
-     * {@link RequestLog#responseHeaders()}.
-     */
-    RESPONSE_HEADERS(false),
 
     /**
      * {@link RequestLog#responseContent()}.
@@ -133,19 +138,31 @@ public enum RequestLogProperty {
     RESPONSE_CONTENT_PREVIEW(false),
 
     /**
+     * {@link RequestLog#responseLength()}.
+     */
+    // TODO(ikhoon): Check if this property is actually used anywhere.
+    RESPONSE_LENGTH(false),
+
+    /**
      * {@link RequestLog#responseTrailers()}.
      */
     RESPONSE_TRAILERS(false),
 
     /**
-     * {@link RequestLog#responseLength()}.
+     * {@link RequestLog#responseEndTimeNanos()}, {@link RequestLog#responseDurationNanos()},
+     * {@link RequestLog#totalDurationNanos()}.
      */
-    RESPONSE_LENGTH(false),
+    RESPONSE_END_TIME(false),
 
     /**
-     * {@link RequestLog#responseCause()}.
+     * Indicates that the response is complete and all response properties are available.
      */
-    RESPONSE_CAUSE(false);
+    RESPONSE_COMPLETE(false),
+
+    /**
+     * Indicates that both the request and response are complete and all properties are available.
+     */
+    ALL_COMPLETE(false);
 
     private static final Set<RequestLogProperty> REQUEST_PROPERTIES =
             Arrays.stream(values())
@@ -154,7 +171,7 @@ public enum RequestLogProperty {
 
     private static final Set<RequestLogProperty> RESPONSE_PROPERTIES =
             Arrays.stream(values())
-                  .filter(p -> !p.isRequestProperty)
+                  .filter(p -> !p.isRequestProperty && p != ALL_COMPLETE)
                   .collect(Sets.toImmutableEnumSet());
 
     private static final Set<RequestLogProperty> ALL_PROPERTIES =
@@ -165,8 +182,8 @@ public enum RequestLogProperty {
     static final int FLAGS_ALL_COMPLETE;
 
     static {
-        FLAGS_REQUEST_COMPLETE = flags(REQUEST_PROPERTIES);
-        FLAGS_RESPONSE_COMPLETE = flags(RESPONSE_PROPERTIES);
+        FLAGS_REQUEST_COMPLETE = flags(REQUEST_PROPERTIES) & ~REQUEST_COMPLETE.flag();
+        FLAGS_RESPONSE_COMPLETE = flags(RESPONSE_PROPERTIES) & ~RESPONSE_COMPLETE.flag();
         FLAGS_ALL_COMPLETE = FLAGS_REQUEST_COMPLETE | FLAGS_RESPONSE_COMPLETE;
     }
 
