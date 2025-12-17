@@ -339,6 +339,13 @@ public final class BlockingWebClientRequestPreparation
     }
 
     @Override
+    @UnstableApi
+    public BlockingWebClientRequestPreparation clientTlsSpec(ClientTlsSpec clientTlsSpec) {
+        delegate.clientTlsSpec(clientTlsSpec);
+        return this;
+    }
+
+    @Override
     public BlockingWebClientRequestPreparation requestOptions(RequestOptions requestOptions) {
         delegate.requestOptions(requestOptions);
         return this;

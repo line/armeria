@@ -619,6 +619,18 @@ public interface ClientRequestContext extends RequestContext {
     @UnstableApi
     ResponseTimeoutMode responseTimeoutMode();
 
+    /**
+     * Returns the request-specific TLS configuration.
+     */
+    @UnstableApi
+    @Nullable
+    ClientTlsSpec clientTlsSpec();
+
+    /**
+     * Sets the request-specific TLS configuration.
+     */
+    void setClientTlsSpec(ClientTlsSpec clientTlsSpec);
+
     @Override
     default ClientRequestContext unwrap() {
         return (ClientRequestContext) RequestContext.super.unwrap();
