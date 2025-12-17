@@ -54,14 +54,6 @@ public final class ClientTlsSpec extends AbstractTlsSpec {
         return new ClientTlsSpecBuilder();
     }
 
-    /**
-     * Returns a new {@link ClientTlsSpecBuilder} initialized with the properties of this
-     * {@link ClientTlsSpec}.
-     */
-    public ClientTlsSpecBuilder toBuilder() {
-        return new ClientTlsSpecBuilder(this);
-    }
-
     ClientTlsSpec(Set<String> tlsVersions, Set<String> alpnProtocols, Set<String> ciphers,
                   @Nullable TlsKeyPair tlsKeyPair,
                   List<X509Certificate> trustedCertificates,
@@ -70,6 +62,14 @@ public final class ClientTlsSpec extends AbstractTlsSpec {
                   @Nullable KeyManagerFactory keyManagerFactory) {
         super(tlsVersions, alpnProtocols, ciphers, tlsKeyPair, trustedCertificates, verifierFactories,
               engineType, tlsCustomizer, keyManagerFactory);
+    }
+
+    /**
+     * Returns a new {@link ClientTlsSpecBuilder} initialized with the properties of this
+     * {@link ClientTlsSpec}.
+     */
+    public ClientTlsSpecBuilder toBuilder() {
+        return new ClientTlsSpecBuilder(this);
     }
 
     @Override
