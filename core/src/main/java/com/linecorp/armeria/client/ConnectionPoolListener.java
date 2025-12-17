@@ -123,11 +123,50 @@ public interface ConnectionPoolListener extends Unwrappable, SafeCloseable {
 
     /**
      * Invoked when a connection in the connection pool has been closed.
+     * Once a connection has been closed, it is guaranteed
+     * that no more events are published for the corresponding connection.
      */
     void connectionClosed(SessionProtocol protocol,
                           InetSocketAddress remoteAddr,
                           InetSocketAddress localAddr,
                           AttributeMap attrs) throws Exception;
+
+    /**
+     * Invoked when a connection in the connection pool has been closed with a hint on
+     * why the connection has been closed. Once a connection has been closed, it is guaranteed
+     * that no more events are published for the corresponding connection.
+     */
+    default void connectionClosed(SessionProtocol protocol,
+                                  InetSocketAddress remoteAddr,
+                                  InetSocketAddress localAddr,
+                                  AttributeMap attrs,
+                                  String closeHint) throws Exception {
+        connectionClosed(protocol, remoteAddr, localAddr, attrs);
+    }
+
+    /**
+     * Invoked when a ping is written to the peer.
+     * For HTTP/1, the identifier is an internal request id associated with the ping request.
+     * For HTTP/2, the identifier is data as described in the
+     * <a href="https://datatracker.ietf.org/doc/html/rfc7540#section-6.7">specification</a>.
+     */
+    default void pingWrite(SessionProtocol protocol,
+                           InetSocketAddress remoteAddr,
+                           InetSocketAddress localAddr,
+                           AttributeMap attrs,
+                           long identifier) throws Exception {}
+
+    /**
+     * Invoked when a written ping is acknowledged by the peer.
+     * For HTTP/1, the identifier is an internal request id associated with the ping request.
+     * For HTTP/2, the identifier is data as described in the
+     * <a href="https://datatracker.ietf.org/doc/html/rfc7540#section-6.7">specification</a>.
+     */
+    default void pingAck(SessionProtocol protocol,
+                         InetSocketAddress remoteAddr,
+                         InetSocketAddress localAddr,
+                         AttributeMap attrs,
+                         long identifier) throws Exception {}
 
     @Override
     default ConnectionPoolListener unwrap() {
@@ -163,6 +202,28 @@ public interface ConnectionPoolListener extends Unwrappable, SafeCloseable {
                     ConnectionPoolListener.this.connectionClosed(protocol, remoteAddr, localAddr, attrs);
                 } finally {
                     nextConnectionPoolListener.connectionClosed(protocol, remoteAddr,localAddr,attrs);
+                }
+            }
+
+            @Override
+            public void pingAck(SessionProtocol protocol, InetSocketAddress remoteAddr,
+                                InetSocketAddress localAddr, AttributeMap attrs, long identifier)
+                    throws Exception {
+                try {
+                    ConnectionPoolListener.this.pingAck(protocol, remoteAddr, localAddr, attrs, identifier);
+                } finally {
+                    nextConnectionPoolListener.pingAck(protocol, remoteAddr,localAddr,attrs, identifier);
+                }
+            }
+
+            @Override
+            public void pingWrite(SessionProtocol protocol, InetSocketAddress remoteAddr,
+                                  InetSocketAddress localAddr, AttributeMap attrs, long identifier)
+                    throws Exception {
+                try {
+                    ConnectionPoolListener.this.pingWrite(protocol, remoteAddr, localAddr, attrs, identifier);
+                } finally {
+                    nextConnectionPoolListener.pingWrite(protocol, remoteAddr,localAddr,attrs, identifier);
                 }
             }
 

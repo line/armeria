@@ -51,8 +51,9 @@ public interface KeepAliveHandler {
     void onPing();
 
     /**
-     * Invoked when a <a href="https://datatracker.ietf.org/doc/html/rfc9113#name-ping">PING ACK</a> is
-     * received. Note that this method is only valid for an HTTP/2 connection.
+     * Invoked when an acknowledgement for a previously sent ping is received.
+     * For HTTP/2, this is invoked when a
+     * <a href="https://datatracker.ietf.org/doc/html/rfc9113#name-ping">PING ACK</a> is received.
      */
     void onPingAck(long data);
 

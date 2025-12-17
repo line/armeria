@@ -86,4 +86,33 @@ final class ConnectionPoolLoggingListener implements ConnectionPoolListener {
                         TextFormatter.elapsed(elapsedNanos, TimeUnit.NANOSECONDS), activeChannels);
         }
     }
+
+    @Override
+    public void connectionClosed(SessionProtocol protocol, InetSocketAddress remoteAddr,
+                                 InetSocketAddress localAddr, AttributeMap attrs, String closeHint)
+            throws Exception {
+        final int activeChannels = this.activeChannels.decrementAndGet();
+        if (logger.isInfoEnabled() && attrs.hasAttr(OPEN_NANOS)) {
+            final long closeNanos = ticker.read();
+            final long elapsedNanos = closeNanos - attrs.attr(OPEN_NANOS).get();
+            logger.info("[L:{} ! R:{}][{}] CLOSED (lasted for: {}, active channels: {}, reason: {})",
+                        localAddr, remoteAddr, protocol.uriText(),
+                        TextFormatter.elapsed(elapsedNanos, TimeUnit.NANOSECONDS), activeChannels,
+                        closeHint);
+        }
+    }
+
+    @Override
+    public void pingWrite(SessionProtocol protocol, InetSocketAddress remoteAddr, InetSocketAddress localAddr,
+                          AttributeMap attrs, long identifier) throws Exception {
+        logger.info("[L:{} ! R:{}][{}] PING WRITE (identifier: {})",
+                    localAddr, remoteAddr, protocol.uriText(), identifier);
+    }
+
+    @Override
+    public void pingAck(SessionProtocol protocol, InetSocketAddress remoteAddr, InetSocketAddress localAddr,
+                        AttributeMap attrs, long identifier) throws Exception {
+        logger.info("[L:{} ! R:{}][{}] PING ACK (identifier: {})",
+                    localAddr, remoteAddr, protocol.uriText(), identifier);
+    }
 }
