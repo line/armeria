@@ -128,11 +128,12 @@ final class HttpClientFactory implements ClientFactory {
 
     HttpClientFactory(ClientFactoryOptions options, boolean autoCloseConnectionPoolListener,
                       ClientTlsSpec baseClientTlsSpec) {
-        this(options, autoCloseConnectionPoolListener, baseClientTlsSpec, ClientRequestLifecycleListener.noop());
+        this(options, autoCloseConnectionPoolListener, baseClientTlsSpec,
+                ClientRequestLifecycleListener.noop());
     }
 
     HttpClientFactory(ClientFactoryOptions options, boolean autoCloseConnectionPoolListener,
-                      ClientTlsSpec baseClientTlsSpec, 
+                      ClientTlsSpec baseClientTlsSpec,
                       ClientRequestLifecycleListener clientRequestLifecycleListener) {
         workerGroup = options.workerGroup();
 
