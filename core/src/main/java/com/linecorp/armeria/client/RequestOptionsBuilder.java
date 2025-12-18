@@ -64,6 +64,7 @@ public final class RequestOptionsBuilder implements RequestOptionsSetters {
             }
             exchangeType = options.exchangeType();
             responseTimeoutMode = options.responseTimeoutMode();
+            clientTlsSpec = options.clientTlsSpec();
         }
     }
 
