@@ -349,7 +349,219 @@ export default async function createConfigAsync() {
               from: '/release-notes',
               to: await getLatestReleaseNotePath(),
             },
+
+            // Below are legacy redirects from the old site structure to the new one.
+            {
+              from: '/release-notes/list',
+              to: await getLatestReleaseNotePath(),
+            },
+            {
+              from: '/news/list',
+              to: '/news/archive',
+            },
+            {
+              from: '/docs/server-basics',
+              to: '/docs/server/basics',
+            },
+            {
+              from: '/docs/server-decorator',
+              to: '/docs/server/decorator',
+            },
+            {
+              from: '/docs/server-grpc',
+              to: '/docs/server/grpc',
+            },
+            {
+              from: '/docs/server-thrift',
+              to: '/docs/server/thrift',
+            },
+            {
+              from: '/docs/server-graphql',
+              to: '/docs/server/graphql',
+            },
+            {
+              from: '/docs/server-docservice',
+              to: '/docs/server/docservice',
+            },
+            {
+              from: '/docs/server-annotated-service',
+              to: '/docs/server/annotated-service',
+            },
+            {
+              from: '/docs/server-http-file',
+              to: '/docs/server/http-file',
+            },
+            {
+              from: '/docs/server-servlet',
+              to: '/docs/server/servlet',
+            },
+            {
+              from: '/docs/server-access-log',
+              to: '/docs/server/access-log',
+            },
+            {
+              from: '/docs/server-cors',
+              to: '/docs/server/cors',
+            },
+            {
+              from: '/docs/server-sse',
+              to: '/docs/server/sse',
+            },
+            {
+              from: '/docs/server-service-registration',
+              to: '/docs/server/service-registration',
+            },
+            {
+              from: '/docs/server-multipart',
+              to: '/docs/server/multipart',
+            },
+            {
+              from: '/docs/server-timeouts',
+              to: '/docs/server/timeouts',
+            },
+            {
+              from: '/docs/client-http',
+              to: '/docs/client/http',
+            },
+            {
+              from: '/docs/client-thrift',
+              to: '/docs/client/thrift',
+            },
+            {
+              from: '/docs/client-grpc',
+              to: '/docs/client/grpc',
+            },
+            {
+              from: '/docs/client-factory',
+              to: '/docs/client/factory',
+            },
+            {
+              from: '/docs/client-decorator',
+              to: '/docs/client/decorator',
+            },
+            {
+              from: '/docs/client-retrofit',
+              to: '/docs/client/retrofit',
+            },
+            {
+              from: '/docs/client-custom-http-headers',
+              to: '/docs/client/custom-http-headers',
+            },
+            {
+              from: '/docs/client-timeouts',
+              to: '/docs/client/timeouts',
+            },
+            {
+              from: '/docs/client-retry',
+              to: '/docs/client/retry',
+            },
+            {
+              from: '/docs/client-circuit-breaker',
+              to: '/docs/client/circuit-breaker',
+            },
+            {
+              from: '/docs/client-service-discovery',
+              to: '/docs/client/service-discovery',
+            },
+            {
+              from: '/docs/advanced-logging',
+              to: '/docs/advanced/logging',
+            },
+            {
+              from: '/docs/advanced-structured-logging',
+              to: '/docs/advanced/structured-logging',
+            },
+            {
+              from: '/docs/advanced-custom-attributes',
+              to: '/docs/advanced/custom-attributes',
+            },
+            {
+              from: '/docs/advanced-streaming-backpressure',
+              to: '/docs/advanced/streaming-backpressure',
+            },
+            {
+              from: '/docs/advanced-structured-logging-kafka',
+              to: '/docs/advanced/structured-logging-kafka',
+            },
+            {
+              from: '/docs/advanced-metrics',
+              to: '/docs/advanced/metrics',
+            },
+            {
+              from: '/docs/advanced-unit-testing',
+              to: '/docs/advanced/unit-testing',
+            },
+            {
+              from: '/docs/advanced-production-checklist',
+              to: '/docs/advanced/production-checklist',
+            },
+            {
+              from: '/docs/advanced-saml',
+              to: '/docs/advanced/saml',
+            },
+            {
+              from: '/docs/advanced-athenz',
+              to: '/docs/advanced/athenz',
+            },
+            {
+              from: '/docs/advanced-spring-boot-integration',
+              to: '/docs/advanced/spring-boot-integration',
+            },
+            {
+              from: '/docs/advanced-spring-webflux-integration',
+              to: '/docs/advanced/spring-webflux-integration',
+            },
+            {
+              from: '/docs/advanced-dropwizard-integration',
+              to: '/docs/advanced/dropwizard-integration',
+            },
+            {
+              from: '/docs/advanced-kotlin',
+              to: '/docs/advanced/kotlin',
+            },
+            {
+              from: '/docs/advanced-scala',
+              to: '/docs/advanced/scala',
+            },
+            {
+              from: '/docs/advanced-scalapb',
+              to: '/docs/advanced/scalapb',
+            },
+            {
+              from: '/docs/advanced-flags-provider',
+              to: '/docs/advanced/flags-provider',
+            },
+            {
+              from: '/docs/advanced-zipkin',
+              to: '/docs/advanced/zipkin',
+            },
+            {
+              from: '/docs/advanced-client-interoperability',
+              to: '/docs/advanced/client-interoperability',
+            },
           ],
+          createRedirects(existingPath) {
+            if (existingPath.includes('/docs/tutorials/rest')) {
+              // Redirect from /tutorials/rest/blog/X to /docs/tutorials/rest/X
+              return [
+                existingPath.replace('/docs/tutorials/rest', '/tutorials/rest/blog'),
+              ];
+            }
+            if (existingPath.includes('/docs/tutorials/grpc')) {
+              // Redirect from /tutorials/grpc/blog/X to /docs/tutorials/grpc/X
+              return [
+                existingPath.replace('/docs/tutorials/grpc', '/tutorials/grpc/blog'),
+              ];
+            }
+            if (existingPath.includes('/docs/tutorials/thrift')) {
+              // Redirect from /tutorials/thrift/blog/X to /docs/tutorials/thrift/X
+              return [
+                existingPath.replace('/docs/tutorials/thrift', '/tutorials/thrift/blog'),
+              ];
+            }
+
+            return undefined; // Return a falsy value: no redirect created
+          },
         },
       ],
       [
