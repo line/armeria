@@ -62,6 +62,7 @@ import com.linecorp.armeria.common.Http1HeaderNaming;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.TlsKeyPair;
+import com.linecorp.armeria.common.TlsPeerVerifierFactory;
 import com.linecorp.armeria.common.TlsProvider;
 import com.linecorp.armeria.common.TlsSetters;
 import com.linecorp.armeria.common.annotation.Nullable;
@@ -69,7 +70,6 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.outlier.OutlierDetection;
 import com.linecorp.armeria.common.util.EventLoopGroups;
 import com.linecorp.armeria.common.util.TlsEngineType;
-import com.linecorp.armeria.internal.common.IgnoreHostsTrustManager;
 import com.linecorp.armeria.internal.common.RequestContextUtil;
 import com.linecorp.armeria.internal.common.util.ChannelUtil;
 
@@ -133,6 +133,7 @@ public final class ClientFactoryBuilder implements TlsSetters {
     private TlsProvider tlsProvider;
     @Nullable
     private ClientTlsConfig tlsConfig;
+    private ClientTlsSpec clientTlsSpec = ClientTlsSpec.of();
     private boolean staticTlsSettingsSet;
     private boolean autoCloseConnectionPoolListener = true;
     private ClientRequestLifecycleListener clientRequestLifecycleListener =
@@ -439,8 +440,10 @@ public final class ClientFactoryBuilder implements TlsSetters {
     @Override
     public ClientFactoryBuilder tls(TlsKeyPair tlsKeyPair) {
         requireNonNull(tlsKeyPair, "tlsKeyPair");
-        return tlsCustomizer(customizer -> customizer.keyManager(tlsKeyPair.privateKey(),
-                                                                 tlsKeyPair.certificateChain()));
+        ensureNoTlsProvider();
+        staticTlsSettingsSet = true;
+        clientTlsSpec = clientTlsSpec.toBuilder().tlsKeyPair(tlsKeyPair).build();
+        return this;
     }
 
     /**
@@ -449,7 +452,10 @@ public final class ClientFactoryBuilder implements TlsSetters {
     @Override
     public ClientFactoryBuilder tls(KeyManagerFactory keyManagerFactory) {
         requireNonNull(keyManagerFactory, "keyManagerFactory");
-        return tlsCustomizer(customizer -> customizer.keyManager(keyManagerFactory));
+        ensureNoTlsProvider();
+        staticTlsSettingsSet = true;
+        clientTlsSpec = clientTlsSpec.toBuilder().keyManagerFactory(keyManagerFactory).build();
+        return this;
     }
 
     /**
@@ -1091,12 +1097,6 @@ public final class ClientFactoryBuilder implements TlsSetters {
             if (tlsConfig != null) {
                 option(ClientFactoryOptions.TLS_CONFIG, tlsConfig);
             }
-        } else {
-            if (tlsNoVerifySet) {
-                tlsCustomizer(b -> b.trustManager(InsecureTrustManagerFactory.INSTANCE));
-            } else if (!insecureHosts.isEmpty()) {
-                tlsCustomizer(b -> b.trustManager(IgnoreHostsTrustManager.of(insecureHosts)));
-            }
         }
 
         final ClientFactoryOptions newOptions = ClientFactoryOptions.of(options.values());
@@ -1142,13 +1142,21 @@ public final class ClientFactoryBuilder implements TlsSetters {
      * Returns a newly-created {@link ClientFactory} based on the properties of this builder.
      */
     public ClientFactory build() {
-        return new DefaultClientFactory(
-                new HttpClientFactory(
-                        buildOptions(),
-                        autoCloseConnectionPoolListener,
-                        clientRequestLifecycleListener
-                )
-        );
+        final ClientFactoryOptions options = buildOptions();
+        final ClientTlsSpec baseClientTlsSpec = buildTlsSpec(clientTlsSpec, tlsNoVerifySet, insecureHosts);
+        return new DefaultClientFactory(new HttpClientFactory(
+                options, autoCloseConnectionPoolListener, baseClientTlsSpec, clientRequestLifecycleListener));
+    }
+
+    private static ClientTlsSpec buildTlsSpec(
+            ClientTlsSpec clientTlsSpec, boolean tlsNoVerifySet, Set<String> insecureHosts) {
+        final ClientTlsSpecBuilder builder = clientTlsSpec.toBuilder();
+        if (tlsNoVerifySet) {
+            builder.verifierFactories(TlsPeerVerifierFactory.noVerify());
+        } else if (!insecureHosts.isEmpty()) {
+            builder.verifierFactories(TlsPeerVerifierFactory.insecureHosts(insecureHosts));
+        }
+        return builder.build();
     }
 
     @Override

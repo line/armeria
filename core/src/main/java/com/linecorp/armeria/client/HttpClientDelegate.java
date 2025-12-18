@@ -20,6 +20,8 @@ import static java.util.Objects.requireNonNull;
 
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
+import java.security.cert.X509Certificate;
+import java.util.List;
 import java.util.function.BiConsumer;
 
 import com.linecorp.armeria.client.HttpChannelPool.PoolKey;
@@ -32,6 +34,9 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.IpAddressRejectedException;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.TlsKeyPair;
+import com.linecorp.armeria.common.TlsPeerVerifierFactory;
+import com.linecorp.armeria.common.TlsProvider;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.logging.ClientConnectionTimings;
 import com.linecorp.armeria.common.logging.ClientConnectionTimingsBuilder;
@@ -236,7 +241,10 @@ final class HttpClientDelegate implements HttpClient {
         // https://lists.w3.org/Archives/Public/ietf-http-wg/2016JanMar/0430.html
         endpoint = endpoint.withoutTrailingDot();
 
-        final PoolKey key = new PoolKey(endpoint, proxyConfig);
+        final TlsProvider tlsProvider = factory.options().tlsProvider();
+        final ClientTlsSpec tlsSpec = determineTlsSpec(endpoint, protocol, tlsProvider);
+
+        final PoolKey key = new PoolKey(endpoint, proxyConfig, tlsSpec);
         final HttpChannelPool pool;
         try {
             pool = factory.pool(ctx.eventLoop().withoutContext());
@@ -261,6 +269,48 @@ final class HttpClientDelegate implements HttpClient {
                     return null;
                 });
         }
+    }
+
+    private ClientTlsSpec determineTlsSpec(Endpoint endpoint, SessionProtocol sessionProtocol,
+                                           TlsProvider tlsProvider) {
+        if (tlsProvider != NullTlsProvider.INSTANCE) {
+            TlsKeyPair keyPair = null;
+            final String hostname = endpoint.toSocketAddress(-1).getHostString();
+            if (hostname != null) {
+                keyPair = tlsProvider.keyPair(hostname);
+            }
+            if (keyPair == null) {
+                keyPair = tlsProvider.keyPair("*");
+            }
+            final ClientTlsConfig config = factory.options().tlsConfig();
+            List<X509Certificate> certs = null;
+            if (hostname != null) {
+                certs = tlsProvider.trustedCertificates(hostname);
+            }
+            if (certs == null) {
+                certs = tlsProvider.trustedCertificates("*");
+            }
+
+            final ClientTlsSpecBuilder builder =
+                    ClientTlsSpec.builder()
+                                 .tlsCustomizer(config.tlsCustomizer())
+                                 .engineType(factory.options().tlsEngineType())
+                                 .alpnProtocols(sessionProtocol);
+            if (keyPair != null) {
+                builder.tlsKeyPair(keyPair);
+            }
+            if (certs != null) {
+                builder.trustedCertificates(certs);
+            }
+            if (config.tlsNoVerifySet()) {
+                builder.verifierFactories(TlsPeerVerifierFactory.noVerify());
+            } else if (!config.insecureHosts().isEmpty()) {
+                builder.verifierFactories(TlsPeerVerifierFactory.insecureHosts(config.insecureHosts()));
+            }
+            return builder.build();
+        }
+        // proxies may use TLS, so just return the default spec
+        return factory.defaultSslContexts().getClientTlsSpec(sessionProtocol.withTls());
     }
 
     @Nullable
