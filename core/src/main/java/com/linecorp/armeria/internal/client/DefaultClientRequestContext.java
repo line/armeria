@@ -640,6 +640,7 @@ public final class DefaultClientRequestContext
         defaultRequestHeaders = ctx.defaultRequestHeaders();
         additionalRequestHeaders = ctx.additionalRequestHeaders();
         responseTimeoutMode = ctx.responseTimeoutMode();
+        clientTlsSpec = ctx.clientTlsSpec();
 
         for (final Iterator<Entry<AttributeKey<?>, Object>> i = ctx.ownAttrs(); i.hasNext();) {
             addAttr(i.next());

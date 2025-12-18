@@ -179,6 +179,7 @@ public class ClientRequestContextWrapper
     }
 
     @Override
+    @UnstableApi
     public void setClientTlsSpec(ClientTlsSpec clientTlsSpec) {
         unwrap().setClientTlsSpec(clientTlsSpec);
     }

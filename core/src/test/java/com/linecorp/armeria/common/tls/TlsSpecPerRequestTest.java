@@ -40,10 +40,15 @@ import org.junit.jupiter.params.provider.MethodSource;
 import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.client.ClientFactory;
+import com.linecorp.armeria.client.ClientRequestContextCaptor;
 import com.linecorp.armeria.client.ClientTlsSpec;
+import com.linecorp.armeria.client.Clients;
 import com.linecorp.armeria.client.ConnectionPoolListenerAdapter;
 import com.linecorp.armeria.client.UnprocessedRequestException;
 import com.linecorp.armeria.client.WebClient;
+import com.linecorp.armeria.client.retry.RetryConfig;
+import com.linecorp.armeria.client.retry.RetryRule;
+import com.linecorp.armeria.client.retry.RetryingClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.SessionProtocol;
@@ -106,6 +111,7 @@ class TlsSpecPerRequestTest {
             sb.tlsProvider(serverTlsProvider, ServerTlsConfig.builder()
                                                              .clientAuth(ClientAuth.REQUIRE)
                                                              .build());
+            sb.service("/500",  (ctx, req) -> HttpResponse.of(500));
         }
     };
 
@@ -341,6 +347,35 @@ class TlsSpecPerRequestTest {
             }
         }
         await().untilAsserted(() -> assertThat(counter).hasValue(0));
+    }
+
+    @Test
+    void derivedCtx() throws Exception {
+        final TlsKeyPair clientTlsKeyPair =
+                TlsKeyPair.of(clientLeaf.privateKey(),
+                              clientLeaf.certificate(),
+                              clientIntermediateCert.certificate());
+        final ClientTlsSpec clientTlsSpec = ClientTlsSpec.builder()
+                                                         .tlsKeyPair(clientTlsKeyPair)
+                                                         .trustedCertificates(serverRootCert.certificate())
+                                                         .build();
+        try (ClientRequestContextCaptor captor = Clients.newContextCaptor()) {
+            final AggregatedHttpResponse res =
+                    server.blockingWebClient(cb -> {
+                              final RetryConfig<HttpResponse> retryConfig =
+                                      RetryConfig.builder(RetryRule.onServerErrorStatus())
+                                                 .maxTotalAttempts(3)
+                                                 .build();
+                              cb.decorator(RetryingClient.newDecorator(retryConfig));
+                              cb.decorator((delegate, ctx, req) -> {
+                                  ctx.setClientTlsSpec(clientTlsSpec);
+                                  return delegate.execute(ctx, req);
+                              });
+                          })
+                          .get("/500");
+            assertThat(res.status().code()).isEqualTo(500);
+            assertThat(captor.get().log().children()).hasSize(3);
+        }
     }
 
     private static final class AlwaysThrowing implements TlsPeerVerifierFactory {

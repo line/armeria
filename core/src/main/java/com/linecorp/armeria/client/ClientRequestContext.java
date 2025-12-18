@@ -629,6 +629,7 @@ public interface ClientRequestContext extends RequestContext {
     /**
      * Sets the request-specific TLS configuration.
      */
+    @UnstableApi
     void setClientTlsSpec(ClientTlsSpec clientTlsSpec);
 
     @Override

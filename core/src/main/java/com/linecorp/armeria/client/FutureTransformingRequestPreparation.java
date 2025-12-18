@@ -426,7 +426,7 @@ public final class FutureTransformingRequestPreparation<T>
 
     @Override
     @UnstableApi
-    public FutureTransformingRequestPreparation clientTlsSpec(ClientTlsSpec clientTlsSpec) {
+    public FutureTransformingRequestPreparation<T> clientTlsSpec(ClientTlsSpec clientTlsSpec) {
         delegate.clientTlsSpec(clientTlsSpec);
         return this;
     }

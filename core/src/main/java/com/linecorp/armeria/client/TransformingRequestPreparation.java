@@ -88,7 +88,7 @@ public class TransformingRequestPreparation<T, R> implements WebRequestPreparati
 
     @Override
     @UnstableApi
-    public TransformingRequestPreparation clientTlsSpec(ClientTlsSpec clientTlsSpec) {
+    public TransformingRequestPreparation<T, R> clientTlsSpec(ClientTlsSpec clientTlsSpec) {
         delegate.clientTlsSpec(clientTlsSpec);
         return this;
     }
