@@ -18,12 +18,14 @@ package com.linecorp.armeria.common.tls;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.awaitility.Awaitility.await;
 
+import java.net.InetSocketAddress;
 import java.security.cert.CertificateException;
 import java.util.ArrayDeque;
 import java.util.Deque;
 import java.util.List;
-import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Stream;
 
 import javax.net.ssl.SSLHandshakeException;
@@ -39,6 +41,7 @@ import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.client.ClientTlsSpec;
+import com.linecorp.armeria.client.ConnectionPoolListenerAdapter;
 import com.linecorp.armeria.client.UnprocessedRequestException;
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
@@ -56,6 +59,7 @@ import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 import com.linecorp.armeria.testing.junit5.server.SignedCertificateExtension;
 
 import io.netty.handler.ssl.ClientAuth;
+import io.netty.util.AttributeMap;
 
 class TlsSpecPerRequestTest {
 
@@ -249,32 +253,6 @@ class TlsSpecPerRequestTest {
     }
 
     @Test
-    void tlsCustomizerAppliedFromFactory() throws Exception {
-        final TlsKeyPair clientTlsKeyPair =
-                TlsKeyPair.of(clientLeaf.privateKey(),
-                              clientLeaf.certificate(),
-                              clientIntermediateCert.certificate());
-        final AtomicBoolean customizerCalled = new AtomicBoolean(false);
-        try (ClientFactory factory = ClientFactory
-                .builder()
-                .tlsCustomizer(sslCtxBuilder -> customizerCalled.set(true))
-                .build()) {
-            final ClientTlsSpec clientTlsSpec = ClientTlsSpec.builder()
-                                                             .tlsKeyPair(clientTlsKeyPair)
-                                                             .trustedCertificates(serverRootCert.certificate())
-                                                             .build();
-
-            final AggregatedHttpResponse res = server.blockingWebClient(cb -> cb.factory(factory))
-                                                     .prepare()
-                                                     .clientTlsSpec(clientTlsSpec)
-                                                     .get("/")
-                                                     .execute();
-            assertThat(res.status().code()).isEqualTo(200);
-            assertThat(customizerCalled).isTrue();
-        }
-    }
-
-    @Test
     void alpnOverwritten() throws Exception {
         final TlsKeyPair clientTlsKeyPair =
                 TlsKeyPair.of(clientLeaf.privateKey(),
@@ -313,6 +291,56 @@ class TlsSpecPerRequestTest {
                       }))
                       .get("/");
         assertThat(res.status().code()).isEqualTo(200);
+    }
+
+    @Test
+    void connPool() throws Exception {
+        final TlsKeyPair clientTlsKeyPair =
+                TlsKeyPair.of(clientLeaf.privateKey(),
+                              clientLeaf.certificate(),
+                              clientIntermediateCert.certificate());
+        final ClientTlsSpec clientTlsSpec1 = ClientTlsSpec.builder()
+                                                          .tlsKeyPair(clientTlsKeyPair)
+                                                          .trustedCertificates(serverRootCert.certificate())
+                                                          .build();
+        final ClientTlsSpec clientTlsSpec2 = ClientTlsSpec.builder()
+                                                          .tlsKeyPair(clientTlsKeyPair)
+                                                          .verifierFactories(TlsPeerVerifierFactory.noVerify())
+                                                          .build();
+        final AtomicLong counter = new AtomicLong();
+        final ConnectionPoolListenerAdapter listener = new ConnectionPoolListenerAdapter() {
+            @Override
+            public void connectionOpen(SessionProtocol protocol, InetSocketAddress remoteAddr,
+                                       InetSocketAddress localAddr, AttributeMap attrs) throws Exception {
+                counter.incrementAndGet();
+            }
+
+            @Override
+            public void connectionClosed(SessionProtocol protocol, InetSocketAddress remoteAddr,
+                                         InetSocketAddress localAddr, AttributeMap attrs) throws Exception {
+                counter.decrementAndGet();
+            }
+        };
+        try (ClientFactory factory = ClientFactory.builder()
+                                                  .connectionPoolListener(listener)
+                                                  .build()) {
+            for (int i = 0; i < 2; i++) {
+                final AggregatedHttpResponse res =
+                        server.blockingWebClient(cb -> cb.factory(factory))
+                              .prepare().clientTlsSpec(clientTlsSpec1).get("/").execute();
+                assertThat(res.status().code()).isEqualTo(200);
+                assertThat(counter).hasValue(1);
+            }
+
+            for (int i = 0; i < 2; i++) {
+                final AggregatedHttpResponse res =
+                        server.blockingWebClient(cb -> cb.factory(factory))
+                              .prepare().clientTlsSpec(clientTlsSpec2).get("/").execute();
+                assertThat(res.status().code()).isEqualTo(200);
+                assertThat(counter).hasValue(2);
+            }
+        }
+        await().untilAsserted(() -> assertThat(counter).hasValue(0));
     }
 
     private static final class AlwaysThrowing implements TlsPeerVerifierFactory {

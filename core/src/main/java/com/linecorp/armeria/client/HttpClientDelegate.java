@@ -269,10 +269,7 @@ final class HttpClientDelegate implements HttpClient {
                                            TlsProvider tlsProvider, ClientRequestContext ctx) {
         final ClientTlsSpec reqTlsSpec = ctx.clientTlsSpec();
         if (reqTlsSpec != null) {
-            return reqTlsSpec.toBuilder()
-                             .alpnProtocols(sessionProtocol)
-                             .tlsCustomizer(ctx.options().factory().options().tlsCustomizer())
-                             .build();
+            return reqTlsSpec.toBuilder().alpnProtocols(sessionProtocol).build();
         }
         if (tlsProvider != NullTlsProvider.INSTANCE) {
             TlsKeyPair keyPair = null;
