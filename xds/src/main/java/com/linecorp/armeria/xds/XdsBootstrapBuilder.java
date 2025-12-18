@@ -16,16 +16,22 @@
 
 package com.linecorp.armeria.xds;
 
+import static com.google.common.base.MoreObjects.firstNonNull;
 import static java.util.Objects.requireNonNull;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.linecorp.armeria.common.Flags;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
+import com.linecorp.armeria.common.metric.MeterIdPrefix;
 import com.linecorp.armeria.common.util.EventLoopGroups;
+import com.linecorp.armeria.internal.common.util.ReentrantShortLock;
 
 import io.envoyproxy.envoy.config.bootstrap.v3.Bootstrap;
 import io.grpc.Status;
+import io.micrometer.core.instrument.MeterRegistry;
 import io.netty.channel.EventLoopGroup;
 import io.netty.util.concurrent.EventExecutor;
 
@@ -35,14 +41,32 @@ import io.netty.util.concurrent.EventExecutor;
 @UnstableApi
 public final class XdsBootstrapBuilder {
 
+    static final MeterIdPrefix DEFAULT_METER_ID_PREFIX = new MeterIdPrefix("armeria.xds");
     private static final Logger logger = LoggerFactory.getLogger(XdsBootstrapBuilder.class);
 
-    private static final EventLoopGroup DEFAULT_GROUP =
-            EventLoopGroups.newEventLoopGroup(1, "xds-common-worker", true);
+    @Nullable
+    private static EventLoopGroup defaultEventLoopGroup;
+    private static final ReentrantShortLock DEFAULT_GROUP_LOCK = new ReentrantShortLock();
 
-    private EventExecutor eventExecutor = DEFAULT_GROUP.next();
-    private final Bootstrap bootstrap;
-    private SnapshotWatcher<Object> snapshotWatcher = new SnapshotWatcher<Object>() {
+    private static EventLoopGroup defaultGroup() {
+        final EventLoopGroup group = defaultEventLoopGroup;
+        if (group != null) {
+            return group;
+        }
+        DEFAULT_GROUP_LOCK.lock();
+        try {
+            final EventLoopGroup group0 = defaultEventLoopGroup;
+            if (group0 != null) {
+                return group0;
+            }
+            defaultEventLoopGroup = EventLoopGroups.newEventLoopGroup(1, "xds-common-worker", true);
+            return defaultEventLoopGroup;
+        } finally {
+            DEFAULT_GROUP_LOCK.unlock();
+        }
+    }
+
+    static final SnapshotWatcher<Object> DEFAULT_SNAPSHOT_WATCHER = new SnapshotWatcher<Object>() {
         @Override
         public void snapshotUpdated(Object newSnapshot) {}
 
@@ -52,8 +76,31 @@ public final class XdsBootstrapBuilder {
         }
     };
 
+    private MeterRegistry meterRegistry = Flags.meterRegistry();
+    private MeterIdPrefix meterIdPrefix = DEFAULT_METER_ID_PREFIX;
+    @Nullable
+    private EventExecutor eventExecutor;
+    private final Bootstrap bootstrap;
+    private SnapshotWatcher<Object> snapshotWatcher = DEFAULT_SNAPSHOT_WATCHER;
+
     XdsBootstrapBuilder(Bootstrap bootstrap) {
         this.bootstrap = requireNonNull(bootstrap, "bootstrap");
+    }
+
+    /**
+     * Sets the {@link MeterRegistry} used to collect metrics for this {@link XdsBootstrap}.
+     */
+    public XdsBootstrapBuilder meterRegistry(MeterRegistry meterRegistry) {
+        this.meterRegistry = requireNonNull(meterRegistry, "meterRegistry");
+        return this;
+    }
+
+    /**
+     * Sets the {@link MeterIdPrefix} which will be applied to metrics emitted by this {@link XdsBootstrap}.
+     */
+    public XdsBootstrapBuilder meterIdPrefix(MeterIdPrefix meterIdPrefix) {
+        this.meterIdPrefix = requireNonNull(meterIdPrefix, "meterIdPrefix");
+        return this;
     }
 
     /**
@@ -77,6 +124,8 @@ public final class XdsBootstrapBuilder {
      * Builds the {@link XdsBootstrap}.
      */
     public XdsBootstrap build() {
-        return new XdsBootstrapImpl(bootstrap, eventExecutor, ignored -> {}, snapshotWatcher);
+        final EventExecutor eventExecutor = firstNonNull(this.eventExecutor, defaultGroup().next());
+        return new XdsBootstrapImpl(bootstrap, eventExecutor, meterIdPrefix, meterRegistry,
+                                    ignored -> {}, snapshotWatcher);
     }
 }

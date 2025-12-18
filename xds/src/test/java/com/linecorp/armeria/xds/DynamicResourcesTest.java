@@ -96,7 +96,7 @@ class DynamicResourcesTest {
         final String routeName = "local_route";
         final String clusterName = "some_service";
         final Bootstrap bootstrap = XdsTestResources.bootstrap(server.httpUri());
-        try (XdsBootstrapImpl xdsBootstrap = new XdsBootstrapImpl(bootstrap)) {
+        try (XdsBootstrap xdsBootstrap = XdsBootstrap.of(bootstrap)) {
             final ListenerRoot listenerRoot = xdsBootstrap.listenerRoot(listenerName);
 
             final TestResourceWatcher watcher = new TestResourceWatcher();
@@ -161,6 +161,6 @@ class DynamicResourcesTest {
                                                       .newBuilder()
                                                       .setResourceApiVersion(ApiVersion.V3)
                                                       .setApiConfigSource(apiConfigSource)))
-                      .build();
+                .build();
     }
 }

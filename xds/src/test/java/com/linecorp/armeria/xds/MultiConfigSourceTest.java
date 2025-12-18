@@ -127,7 +127,7 @@ class MultiConfigSourceTest {
     @Test
     void basicCase() throws Exception {
         final Bootstrap bootstrap = bootstrap();
-        try (XdsBootstrapImpl xdsBootstrap = new XdsBootstrapImpl(bootstrap)) {
+        try (XdsBootstrap xdsBootstrap = XdsBootstrap.of(bootstrap)) {
             final TestResourceWatcher watcher = new TestResourceWatcher();
             final ClusterRoot clusterRoot = xdsBootstrap.clusterRoot("cluster1");
             clusterRoot.addSnapshotWatcher(watcher);
