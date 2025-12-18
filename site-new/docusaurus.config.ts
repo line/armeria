@@ -544,19 +544,28 @@ export default async function createConfigAsync() {
             if (existingPath.includes('/docs/tutorials/rest')) {
               // Redirect from /tutorials/rest/blog/X to /docs/tutorials/rest/X
               return [
-                existingPath.replace('/docs/tutorials/rest', '/tutorials/rest/blog'),
+                existingPath.replace(
+                  '/docs/tutorials/rest',
+                  '/tutorials/rest/blog',
+                ),
               ];
             }
             if (existingPath.includes('/docs/tutorials/grpc')) {
               // Redirect from /tutorials/grpc/blog/X to /docs/tutorials/grpc/X
               return [
-                existingPath.replace('/docs/tutorials/grpc', '/tutorials/grpc/blog'),
+                existingPath.replace(
+                  '/docs/tutorials/grpc',
+                  '/tutorials/grpc/blog',
+                ),
               ];
             }
             if (existingPath.includes('/docs/tutorials/thrift')) {
               // Redirect from /tutorials/thrift/blog/X to /docs/tutorials/thrift/X
               return [
-                existingPath.replace('/docs/tutorials/thrift', '/tutorials/thrift/blog'),
+                existingPath.replace(
+                  '/docs/tutorials/thrift',
+                  '/tutorials/thrift/blog',
+                ),
               ];
             }
 
