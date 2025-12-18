@@ -136,7 +136,7 @@ export default async function createConfigAsync() {
     ],
 
     themeConfig: {
-      image: 'img/og-image.jpg',
+      image: 'img/og-image.png',
       metadata: [
         {
           name: 'og:site_name',
