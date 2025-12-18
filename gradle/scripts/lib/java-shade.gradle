@@ -14,6 +14,20 @@ buildscript {
     }
 }
 
+def globalShadowExclusions = []
+if (rootProject.hasProperty('shadowExclusions')) {
+    def rawShadowExclusions = rootProject.findProperty("shadowExclusions")
+    if (!(rawShadowExclusions instanceof String)) {
+        throw new RuntimeException("Property 'shadowExclusions' must be a String but was: ${raw.getClass().name}")
+    }
+    globalShadowExclusions = rawShadowExclusions.split(",")
+}
+subprojects {
+    ext {
+        shadowExclusions = globalShadowExclusions.collect()
+    }
+}
+
 def relocatedProjects = projectsWithFlags('java', 'relocate')
 def numConfiguredRelocatedProjects = new AtomicInteger()
 configure(relocatedProjects) {
@@ -60,14 +74,6 @@ configure(relocatedProjects) {
                 return version > project.ext.targetJavaVersion
             }
             return false
-        }
-
-        def shadowExclusions = []
-        if (rootProject.hasProperty('shadowExclusions')) {
-            shadowExclusions = rootProject.findProperty('shadowExclusions').split(",")
-        }
-        shadowExclusions.each {
-            exclude it
         }
 
         // Set the 'Automatic-Module-Name' property in MANIFEST.MF.
@@ -351,6 +357,9 @@ private void configureShadowTask(Project project, ShadowJar task, boolean isMain
             // Prevent the shadow plugin from exploding the JARs in the resources directory.
             // e.g. WEB-INF/lib/hello.jar
             exclude '**/*.jar'
+        }
+        project.ext.shadowExclusions.each {
+            exclude it
         }
 
         configurations = [project.configurations[isMain ? 'compileClasspath' : 'testCompileClasspath']]

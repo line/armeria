@@ -1,0 +1,14 @@
+tasks.withType(Test).configureEach {
+    failOnNoDiscoveredTests = false
+}
+
+project.ext.shadowExclusions += "io/envoyproxy/pgv/validate/Validate.class"
+project.ext.shadowExclusions += "io/envoyproxy/pgv/validate/Validate\$*.class"
+
+dependencies {
+    // shade to avoid Validate.class compiled by proto 4 leaking
+    // ref: https://github.com/bufbuild/protoc-gen-validate/blob/30a917216358a22c5cf84ed509a79e3738f46e84/java/pgv-java-stub/pom.xml#L101
+    shade (libs.protoc.pgv.java.stub) {
+        exclude group: 'com.google.protobuf'
+    }
+}
