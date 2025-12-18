@@ -1,0 +1,150 @@
+---
+date: 2024-08-06
+---
+
+# Armeria Newsletter vol. 7
+
+<video class="hideOnReducedMotion" src="../../images/armeria.m4v" preload="none" autoplay muted loop style="width: 282px; height: 112px;">
+  <img src="../../images/armeria.gif" loading="lazy" width="282" height="112" />
+</video>
+
+## From the devs
+
+<div class="noBullet">
+
+- ✨ We've released several new versions since our last newsletter with a bunch of new exciting features! Here are the highlights between [1.27.0](/release-notes/1.27.0) and [1.30.0](/release-notes/1.30.0).
+  - GraphQL Subscriptions over WebSocket
+  - Spring HTTP Interface integration
+  - Per-service `EventLoopGroup`
+  - Ability to mask sensitive headers
+  - <type://KubernetesEndpointGroup>
+  - Customizable OAuth 2.0 Extension Grants
+  - TODO(trustin): Add links to the relevant documentation.
+
+</div>
+
+## From the community
+
+<div class="noBullet">
+
+- 🎙️ [**When Armeria Blooms in Spring (Boot)**](https://www.youtube.com/watch?v=GTITs9lJY4U)
+  - @trustin shows the benefits of integrating your Spring Boot application into Armeria, such as multi-protocol support (e.g., gRPC and REST API on a single HTTP port), detailed structured logging, service discovery, and load-balancing.
+- ⚙️ [**Building an authorization framework with Armeria**](https://blog.dogac.dev/building-an-authorization-framework-with-armeria/)
+  - @Dogacel wrote a comprehensive guide on how to implement authentication and authorization in your Armeria application. He also covers interesting topics like Kotlin coroutines and OPA (Open Policy Agent) based authorization without using Envoy at all.
+- 🐦 [**Migration to Armeria Server**](https://evitadb.io/blog/13-migration-to-armeria-server)
+  - @novoj and his team share their successful migration story for evitaDB's multi-protocol (REST, GraphQL, and gRPC) server from Undertow to Armeria. This blog post covers various aspects of the migration, including the performance changes they observed and the new interesting features in Armeria previously impossible, such as serving TLS and cleartext traffic in the same port.
+
+</div>
+
+### Customer highlight
+
+<div class="noBullet">
+
+- 💲 **[evitaDB](https://evitadb.io/)** recently finished the migration from Undertow to Armeria! According to evitaDB team, they chose Armeria because of the following:
+  - Ability to serve gRPC requests in binary and JSON format
+  - Ability to host REST API, GraphQL and gRPC in a single framework
+  - Very active and helpful community
+  - Easy to use yet good performance
+- 🙋 [**Who else are using Armeria?**](https://github.com/line/armeria/discussions/4626)
+
+</div>
+
+## Pull request from our community
+
+<div class="noBullet">
+
+- 🤔 @someone contributed #1234 PR_DESCRIPTION
+  > This PR is blah blah. It was fun! blah blah
+
+</div>
+
+## Good first issues
+
+<div class="noBullet">
+
+- 🔰 Want to contribute but not sure where to start from? Try these issues:
+  - #5289 Add `EventLoopSchedulerFactory`
+  - #5219 Provide an option to preserve %-encoding in the request path
+
+</div>
+
+## Stay tuned
+
+Sign up for our newsletters to keep up-to-date with new releases and useful tips!
+
+<div style="max-width: 320px; margin-top: 0.5rem;">
+  <Mailchimp />
+</div>
+
+## Thank you!
+
+<ThankYou
+  message={() => <p>Since our last newsletter, we received awesome contributions from the following contributors:</p>}
+  usernames={[
+    '0x1306e6d',
+    '0lejk4',
+    'AngerM-DD',
+    'Bue-von-hon',
+    'Dogacel',
+    'KarboniteKream',
+    'Kyoungwoong',
+    'Kyurenpoto',
+    'Lincong',
+    'aki-s',
+    'amirhadadi',
+    'anuraaga',
+    'arinchampatidd',
+    'babjo',
+    'baezzys',
+    'be-hase',
+    'bkkanq',
+    'ceki',
+    'chrisryan10',
+    'danicheg',
+    'echo304',
+    'esperar',
+    'geun-son',
+    'haneepark',
+    'heowc',
+    'himangi-db',
+    'hyperxpro',
+    'ikhoon',
+    'injae-kim',
+    'joonhaeng',
+    'jrhee17',
+    'kezhenxu94',
+    'kojilin',
+    'ks-yim',
+    'lishiki',
+    'marcingrzejszczak',
+    'mauhiz',
+    'minwoox',
+    'mraasvel',
+    'mscheong01',
+    'my4-dev',
+    'mynameisjwlee',
+    'nao0811ta',
+    'nhacvuong',
+    'r3mariano',
+    'rhodo',
+    'ribafish',
+    'richieyan',
+    'runningcode',
+    'russell-yoo',
+    'seonWKim',
+    'sfc-gh-skabanov',
+    'sh-cho',
+    'sindhunaydu',
+    'staktrace',
+    'syleeeee',
+    'ta7uw',
+    'thomasbruggink',
+    'tobias-',
+    'tomatophobia',
+    'trustin',
+    'vkostyukov',
+    'wreulicke',
+    'yswdqz',
+    'yunjoopark'
+  ]}
+/>
