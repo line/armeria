@@ -1534,9 +1534,6 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
     }
 
     private void maybeNotifyListeners(int oldFlags, int newFlags) {
-        final int addedFlags1 = newFlags & ~oldFlags;
-        final List<RequestLogProperty> properties1 = toProperties(addedFlags1);
-        System.out.println(properties1);
         if (!listeners.isEmpty()) {
             final int addedFlags = newFlags & ~oldFlags;
             final List<RequestLogProperty> properties = toProperties(addedFlags);
