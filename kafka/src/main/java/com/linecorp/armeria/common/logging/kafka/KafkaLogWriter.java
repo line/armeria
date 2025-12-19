@@ -73,7 +73,7 @@ public final class KafkaLogWriter<K, V> implements LogWriter {
      * @param topic the name of topic which is used to send logs
      */
     @SuppressWarnings("unchecked")
-    public KafkaLogWriter(Producer<K, V> producer, String topic) {
+    KafkaLogWriter(Producer<K, V> producer, String topic) {
         this(producer, topic,
              log -> null,
              log -> (V) LogFormatter.ofJson().formatRequest(log),
@@ -99,7 +99,7 @@ public final class KafkaLogWriter<K, V> implements LogWriter {
      *                               a {@link RequestLog}. The {@link Function} is allowed to return
      *                               {@code null} to skip logging for the given log.
      */
-    public KafkaLogWriter(Producer<K, V> producer, String topic,
+    KafkaLogWriter(Producer<K, V> producer, String topic,
                           Function<? super RequestOnlyLog, ? extends @Nullable K> requestKeyExtractor,
                           Function<? super RequestOnlyLog, ? extends @Nullable V> requestValueExtractor,
                           Function<? super RequestLog, ? extends @Nullable K> responseKeyExtractor,
