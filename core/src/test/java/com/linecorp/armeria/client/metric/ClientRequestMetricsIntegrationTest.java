@@ -20,6 +20,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.net.InetSocketAddress;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
@@ -31,12 +32,16 @@ import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.client.ClientFactoryBuilder;
 import com.linecorp.armeria.client.ClientRequestContextCaptor;
 import com.linecorp.armeria.client.Clients;
+import com.linecorp.armeria.client.ConnectionPoolListener;
 import com.linecorp.armeria.client.UnprocessedRequestException;
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.CancellationException;
 import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
+
+import io.netty.util.AttributeMap;
 
 class ClientRequestMetricsIntegrationTest {
 
@@ -136,8 +141,27 @@ class ClientRequestMetricsIntegrationTest {
     @Test
     void client_request_early_cancel_test() throws InterruptedException {
         final ClientRequestMetrics metrics = ClientRequestLifecycleListener.counting();
+        final ConnectionPoolListener delayListener = new ConnectionPoolListener() {
+            @Override
+            public void connectionOpen(SessionProtocol protocol, InetSocketAddress remoteAddr,
+                                       InetSocketAddress localAddr, AttributeMap attrs) {
+                try {
+                    Thread.sleep(3000);
+                } catch (InterruptedException e) {
+                    // ignore
+                }
+            }
+
+            @Override
+            public void connectionClosed(SessionProtocol protocol, InetSocketAddress remoteAddr,
+                                         InetSocketAddress localAddr, AttributeMap attrs) throws Exception {
+                // ignore
+            }
+        };
+
         final ClientFactoryBuilder factoryBuilder = ClientFactory
                 .builder()
+                .connectionPoolListener(delayListener)
                 .clientRequestLifecycleListener(metrics);
         try (ClientFactory clientFactory = factoryBuilder.build();
              ClientRequestContextCaptor captor = Clients.newContextCaptor()) {
@@ -147,8 +171,10 @@ class ClientRequestMetricsIntegrationTest {
                     .build()
                     .get(SCENARIO2_PATH);
 
-            assertEquals(1L, metrics.pendingRequest());
-            assertEquals(0L, metrics.activeRequests());
+            await().pollInSameThread().atMost(3, TimeUnit.SECONDS).untilAsserted(() -> {
+                assertEquals(1L, metrics.pendingRequest());
+                assertEquals(0L, metrics.activeRequests());
+            });
 
             // early cancel.
             captor.get().cancel(new CancellationException("test-cancel"));
@@ -158,13 +184,12 @@ class ClientRequestMetricsIntegrationTest {
                 assertEquals(0L, metrics.pendingRequest());
             });
 
-            try {
-                // because of early cancel,
-                // it will never reach here.
-                SCENARIO2_NEVER_CALLED.await(1, TimeUnit.SECONDS);
-            } catch (Exception e) {
-                assertInstanceOf(InterruptedException.class, e);
-            }
+            await().during(500, TimeUnit.MILLISECONDS)
+                    .atMost(1, TimeUnit.SECONDS)
+                    .untilAsserted(() ->
+                            // because of early cancel, CountdownLatch in Server Side never be called.
+                            assertEquals(1L, SCENARIO2_NEVER_CALLED.getCount())
+            );
         }
     }
 
