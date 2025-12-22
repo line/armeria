@@ -3,7 +3,7 @@ plugins {
 }
 
 dependencies {
-    implementation project(':spring:boot3-starter')
+    implementation project(':spring:boot4-starter')
     implementation libs.hibernate.validator8
 
     // Preprocessor that enables you to use JavaDoc to add description to REST API parameters.
@@ -12,11 +12,12 @@ dependencies {
     compileOnly project(':annotation-processor')
     annotationProcessor project(':annotation-processor')
 
-    annotationProcessor libs.spring.boot3.configuration.processor
+    annotationProcessor libs.spring.boot4.configuration.processor
 
-    runtimeOnly project(':spring:boot3-actuator-starter')
+    runtimeOnly project(':spring:boot4-actuator-starter')
+    runtimeOnly libs.spring.boot4.validation
 
     testImplementation libs.json.unit.fluent
     testImplementation libs.junit5.jupiter.api
-    testImplementation libs.spring.boot3.starter.test
+    testImplementation libs.spring.boot4.starter.test
 }

@@ -3,12 +3,13 @@ plugins {
 }
 
 dependencies {
-    implementation project(':spring:boot3-webflux-starter')
+    implementation project(':spring:boot4-webflux-starter')
 
-    annotationProcessor libs.spring.boot3.configuration.processor
+    annotationProcessor libs.spring.boot4.configuration.processor
 
-    runtimeOnly project(':spring:boot3-actuator-starter')
+    runtimeOnly project(':spring:boot4-actuator-starter')
 
     testImplementation libs.junit5.jupiter.api
-    testImplementation libs.spring.boot3.starter.test
+    testImplementation libs.spring.boot4.starter.test
+    testImplementation libs.spring.boot4.webflux.test
 }

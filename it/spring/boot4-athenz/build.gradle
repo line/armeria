@@ -1,0 +1,26 @@
+dependencies {
+    implementation project(":athenz")
+    implementation project(':spring:boot4-starter')
+    implementation libs.athenz.zms.client
+    implementation libs.athenz.zts.client
+
+    testImplementation libs.testcontainers.junit.jupiter
+    testImplementation libs.junit5.jupiter.api
+    testImplementation libs.spring.boot4.starter.test
+}
+
+// TODO(ikhoon): Consider adding `athenz-testing-internal` module.
+// Copy the Athenz Docker resources from ':athenz'.
+task copyTestResources(type: Copy) {
+    from("${rootProject.projectDir}/athenz/src/test") {
+        include 'resources/**'
+        include '**/AthenzDocker.java'
+        include '**/AthenzExtension.java'
+    }
+    into "${project.ext.genSrcDir}/test"
+}
+
+tasks.compileJava.dependsOn(tasks.copyTestResources)
+tasks.processResources.dependsOn(tasks.copyTestResources)
+tasks.processTestResources.dependsOn(tasks.copyTestResources)
+tasks.sourcesJar.dependsOn(tasks.copyTestResources)

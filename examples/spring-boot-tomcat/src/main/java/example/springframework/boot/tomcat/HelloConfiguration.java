@@ -1,8 +1,8 @@
 package example.springframework.boot.tomcat;
 
 import org.apache.catalina.connector.Connector;
-import org.springframework.boot.web.embedded.tomcat.TomcatWebServer;
-import org.springframework.boot.web.servlet.context.ServletWebServerApplicationContext;
+import org.springframework.boot.tomcat.TomcatWebServer;
+import org.springframework.boot.web.server.servlet.context.ServletWebServerApplicationContext;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
