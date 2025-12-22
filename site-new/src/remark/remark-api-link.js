@@ -1,5 +1,5 @@
 import { visit } from 'unist-util-visit';
-import apiIndex from '../../gen-src-temp/api-index.json';
+import apiIndex from '../../gen-src/api-index.json';
 
 /**
  * A remark plugin that appends API links to type links.

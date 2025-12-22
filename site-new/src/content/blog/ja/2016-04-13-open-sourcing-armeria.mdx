@@ -1,0 +1,158 @@
+---
+authors:
+  - trustin
+other_languages:
+  en: /blog/2016/04/13/open-sourcing-armeria
+  ko: /blog/ko/2016/04/13/open-sourcing-armeria
+---
+
+import Head from '@docusaurus/Head';
+
+# 社内プロジェクト「Armeria」をオープンソース化するために行った６つのステップ
+
+[Armeria](http://line.github.io/armeria/)は、Java 8および[Netty](http://netty.io/)上に非同期RPC/APIクライアントサーバを実装したものです。LINEは昨年11月、ArmeriaをApache License 2.0のもと、オープンソースとして公開しました。Armeriaは、HTTP/2をセッションレイヤプロトコルとして使用する高性能の非同期Thriftクライアントサーバを構築するために立ち上げたプロジェクトですが、基本的にプロトコル非依存型で拡張性に優れています(例えば、HTTP/2によって静的ファイルを処理すると同時に、Java EE Webアプリケーションを起動することができます)。
+
+{/* truncate */}
+
+今回の記事では、技術的な面にフォーカスするよりは、社内プロジェクトをオープンソース化する過程についてご紹介したいと思います。Armeriaの技術的な情報が知りたい方は、2月にLINE福岡オフィスにて開催された第14回LINE Developer Meetupで発表した資料をご参考ください。
+
+<Head>
+  <script
+    async
+    className="speakerdeck-embed-script"
+    src="https://speakerdeck.com/assets/embed.js"
+  ></script>
+</Head>
+<div
+  className="deck-embed js-deck-embed"
+  style={{ aspectRatio: '1024/640' }}
+  data-ratio="1.6"
+  data-state="processed"
+>
+  <div
+    className="speakerdeck-embed"
+    data-title="false"
+    data-skip-resize="true"
+    data-id="8d645c29ce33400e8360e61fd0250f91"
+    data-name="Armeria: LINE's next generation RPC layer"
+    data-ratio="1.6"
+    data-host="speakerdeck.com"
+  />
+</div>
+
+## 1. プロジェクト履歴のクリーニング
+
+社内プロジェクトを進めていると、公開プロジェクトであれば決して表に出さないはずの次のような変更履歴が多数含まれてしまいます。
+
+- 機密情報(イシュー番号、ホスト名、社内URLなど)
+- 無意味または不確実なコミットメッセージ(「Blah」、「WIP」、「WTF」など)
+- 著作権告知ヘッダー
+
+このような文言を修正するコミットをリポジトリに追加するとしても、プロジェクトの履歴が完全に残ってしまうので、そうした作業は役に立ちません。そのため、履歴の内容を「クリーニング」しておけば、予期せぬ情報の流出を回避することができます。クリーニングには2つの方法があります。
+
+一つ目は、変更履歴を一つ一つ検討しながら修正する方法です。この場合、[`git filter-branch`](https://git-scm.com/docs/git-filter-branch)のようなコマンドを使って自動化すれば、ある程度の手間を省くことはできますが、変更履歴をいちいち注意深く確認する必要があります。
+
+二つ目は、流出してはいけない内容を全部修正し、複数の変更履歴を一つのコミットに圧縮する方法です。これは、一つ目の方法よりは簡単ですが、すべての履歴が失われてしまいます。既存の履歴が消えるので、後で特定のコードを書いた理由が思い出せなくても知りようがありません。
+
+プロジェクトの履歴が比較的に短く、明確に定義されているコーディングスタイルガイドに沿ってコードを作成した場合は、一つ目の方法を選択するでしょう。一方、時間も足りず、検討すべき量も多すぎる場合は、私たちのように大胆な道を選ぶはずです。つまり、すべての履歴をたった一つのコミットにまとめてしまうのです。
+
+ただ、最近はコードを一人で全部書くことはないため、この方法にも問題はあります。コミットを一つだけ残しておくことになると、巧みなスキルを発揮して協力してくれた多くの方の労をねぎらう方法がなくなってしまいます。そのため、結局下記のとおりコミットメッセージを残すことで感謝の意を表すしかありませんでした。
+
+```
+Subject: Initial import
+This commit contains the collective work of the following enthusiastic
+contributors at LINE Corporation:
+- Anuraag Agrawal  @anuraaga
+- Heon Jeong       @blmarket
+- Young-tae Seok   @delegacy
+- Su-ahn Lee       @inch772
+- Woo-jung Choi    @sophiechoi
+- Trustin Lee      @trustin
+- Yuichi Ono
+```
+
+今振り返ってみると、コミットメッセージに感謝の気持ちをもっと積極的に表現すべきだったと思います。この記事をお借りして、ご協力いただいた方々に改めて厚く御礼申し上げます。
+
+## 2. APIドキュメントの作成
+
+ゼロからプロジェクトを始めるとき、特に参考にできるテンプレートがない場合は、コードを迅速に作成して早めに公開する必要があります。そうしなければ、設計上のイシューやバグを早期に発見することができません。この段階でAPIの変更が頻繁に発生しますが、実装作業に集中しているとAPIドキュメントの作成は後回しになり、いつか埋めなければならない穴として残ってしまいます(正直なところ、ドキュメントを書くことよりコードを書くことよりコードを書くことの方が遥かに楽しいということもあります)。
+
+しかし、良いドキュメント化はオープンソース分野において中核的な要素です。よほど切実な状況でない限り、ドキュメントを提供していないオープンソースソフトウェアを使おうとする人はいません。しっかりドキュメント化されていない私たちのオープンソースプロジェクトを、誰が選択してくれるでしょうか。世の中には、すでに類似したプロジェクトが数多く公開されていることを忘れてはいけません。
+
+結局、残しておいた穴はすべて埋めざるを得ませんでした。それを「技術的負債(technical debt)」という用語にならって「ドキュメント化の負債(documentation debt)」と呼びました。率直に言って、その負債を返すことは決して愉快なことではありませんでした。でも、一度しっかりドキュメント化してからは、負債を最低限に抑えて維持できるようになりました。パブリックメソッドやクラスを新規で作成したら、レビューしながらドキュメント化作業を平行すればいいのです。これはバランスの良い体を維持することと似ています。一度スマートな体を作っておけば、その次からは体型を維持しやすくなるという原理です。
+
+## 3. Webサイトの構築
+
+Githubはプロジェクトを提供するためのいい土台ですが、専用のWebサイトを活用するとさらに効率的です。プロジェクトのWebサイトがあれば、知りたい情報を好きな方法で構成して提供できるだけでなく、プロジェクトの性格をより視覚的かつ効果的に伝えることができます。
+
+しかし、Webサイトの構築は簡単なことではありません。さらに、Webサイトの管理のために、コードを数行書き込む以外に多くの時間をかけたくはありませんでした。そのため必要だったのは、拡張可能な方式でWebサイトを構築・メンテナンスできるツールでした。
+
+幸いなことに、数人のエンジニアがオープンソースで公開した素晴らしいWebサイト作成ツールがありました。このツールを使用すれば、HTMLやCSSを直接扱えるようになり、デザイナーの負担を軽減できます。そこで選択したのは[Sphinx](http://www.sphinx-doc.org/en/stable/)で、[sphinx-maven-plugin](http://trustin.github.io/sphinx-maven-plugin/)と[Read the Docs theme](http://read-the-docs.readthedocs.org/en/latest/)をも併用することで、ビルドプロセスの一部としてWebサイトを作成できるようになりました。そのほかにも、[Awestruct](http://awestruct.org/)、[Jekyll](https://jekyllrb.com/)のように同じ用途で使用できるツールが複数あります。Webサイトの構築に興味のある方は、これらのツールを試してみて、ご自分に一番適したものを選択してみてはいかがでしょうか。
+
+## 4. ロゴの作成
+
+![](/img/open-sourcing-armeria-1.png)
+
+Armeriaのロゴ
+
+ロゴはプロジェクトのエッセンスと言えます。ロゴは、そのプロジェクトの目的と方向性を視覚的に、そして象徴的に表現する手段です。なお、ロゴからプロジェクトが連想され、より覚えてもらいやすくする効果もあります。
+
+このように、ロゴはプロジェクトに重大な影響を及ぼすため、デザイナーは慎重に工夫してたくさんのプロトタイプを制作してみる必要があります。幸いにも、産業デザインを専攻したメンバーがタイミングよく入社してくれました。メインの業務で多忙な中、時間を割いてサポートしてくれて本当に助かりました。これからも今回に負けないくらい素敵なロゴを作ってくれると期待しています。
+
+## 5. ライセンスの法的効力と責任に対する検討
+
+オープンソースソフトウェアという考え方は、コンピュータ技術の始まりの頃から存在してきたものです。しかし、人々がオープンソースライセンスに関心を向けるようになったのは最近のことです。一部の人々は、無料で使用できるプロジェクトであっても、誰かに所有権があることを見過ごしているのではないかと思います。その観点からArmeriaプロジェクトでは、法的問題が発生する可能性を抑えるため、Armeriaで使用したオープンソースソフトウェアプロジェクトのライセンス条項に違反しないように、格別な注意を払いました。
+
+その一環として、プロジェクトのリポジトリにすべてのライセンス条項ファイルとサマリーを含め、Armeriaがどのソフトウェアに助けられたのかをユーザーに明確に開示しています。なお、Armeria内でそのオープンソースソフトウェアのどの部分を修正し、再配布したのかを具体的に明記しています。
+
+Armeriaについては、所有主体のあるオープンソースプロジェクトなので、公正かつ明確なルールに則ってライセンスを与えています。次のような特徴から、複数あるライセンスのうち[Apache License 2.0](<https://tldrlegal.com/license/apache-license-2.0-(apache-2.0)>)を選択しました。
+
+- Apache License 2.0ライセンスを採用しているソフトウェアは、無料で使用、複製、修正、頒布、販売することができ、ソースコードを開示する必要がありません。
+- オープンソースの特許ライセンスの付与および特許侵害に関する条項(Grant of Patent License)が明記されています。
+
+見逃しがちなもう一つの重要なポイントはCLA(Contributor License Agreement)です。CLAは、部外者による貢献をプロジェクトに取り入れたいときに必要です。例えば、部外者が有用な機能を提案するpull requestを送った場合は、その機能をプロジェクトに反映する前に、提案を提出した人からCLAに同意する署名を受ける必要があります。CLAについて詳しく説明すると、今回の記事のテーマから外れるので割愛しますが、その代わりに関連情報を提供しているリンクをご紹介します。詳しくは、[OSS Watch](http://oss-watch.ac.uk/resources/cla)および[CLAHub](https://www.clahub.com/pages/why_cla)をご参考ください。.
+
+このような一連の過程は、多くの時間と手間がかかりそうに見えますが、実際はそうではありません。ほとんどは一回で終わる作業であり、法務部署の仲間が厄介な法的問題を代わりに処理してくれます。少しでも懸念点があれば、すぐに法務部署を訪ねましょう。
+
+## 6. 多様なオープンソースプロジェクトとの協業
+
+オープンソースプロジェクトを利用していると、バグを発見することがあります。自分で解決策を講じることもできますが、そうならない場合もあります。元のプロジェクトをフォークして自分用のプロジェクトを作成し、直接修正・管理することもできますが、それよりもっと効率的なのは、アップストリーム(upstream)に変更を提案する方法です。そうしないと、いつまでもプロジェクトを直接管理しなればなりません。なお、アップストリームに貢献すれば、オープンソース業界で自分の活動をアピールでき、他の人との協業でさらなる楽しさを味わうこともできます。このようなことは、いずれも皆様の経歴にとってプラスになるに違いありません。 Armeriaの開発に取り組んでいる間、[Nettyプロジェクト](http://netty.io/)で様々なイシューを発見して報告しました。一部のイシューについては、修正作業を手伝ったこともあります。
+
+- HTTP/1およびHTTP/2関連
+  - [#4785](https://github.com/netty/netty/pull/4785) - Fix missing trailing data on HTTP client upgrade
+  - [#4582](https://github.com/netty/netty/pull/4582) - Revamp InboundHttp2ToHttpAdapter builder API
+  - [#4574](https://github.com/netty/netty/pull/4574) - Revamp the Http2ConnectionHandler builder API
+  - [#4525](https://github.com/netty/netty/pull/4525) - Fix the incorrect usage/value of "Connection: upgrade"
+  - [#4524](https://github.com/netty/netty/pull/4524) - Fix IllegalReferenceCountException caused by HttpClientCodec.upgradeFrom()
+  - [#4523](https://github.com/netty/netty/pull/4523) - Relax the sanity check in HttpClientUpgradeHandler
+  - [#4428](https://github.com/netty/netty/pull/4428) - Reject the first SETTINGS ack on HTTP/2 Preface
+  - [#4210](https://github.com/netty/netty/pull/4210) - Http2ConnectionHandler does not close the stream 1 (HTTP_UPGRADE_STREAM_ID)
+  - [#3876](https://github.com/netty/netty/pull/3876) - Lazily instantiate HttpServerUpgradeHandler.UpgradeCodec
+- DNS関連
+  - [#4946](https://github.com/netty/netty/pull/4946) - Fix potential infinite loop when resolving CNAME records
+  - [#4837](https://github.com/netty/netty/pull/4837) - Preserve the host name of address when parsing /etc/hosts file
+  - [#4665](https://github.com/netty/netty/pull/4665) - Netty's DNS resolution should take into account system domain name
+  - [#4541](https://github.com/netty/netty/pull/4541) - Don't cycle dns servers while cycling dns record types.
+- その他
+  - [#4547](https://github.com/netty/netty/pull/4547) - NPE in PooledByteBufAllocator.newDirectBuffer()
+  - [#4419](https://github.com/netty/netty/pull/4419) - Fix a bug where DefaultPromise.toString() says "incomplete" when it's done
+
+様々なプロジェクトの開発者とともに作業したお陰で、Armeriaで使用したオープンソースプロジェクトのフォークを別途でメンテナンスする負担を減らすことができました。さらに、オープンソースコミュニティにおいてArmeriaプロジェクト自体はもちろん、プロジェクトに参加したメンバーの活動を広くアピールする機会を得ることもできました。
+
+## 一緒にチャレンジしよう！
+
+開発成果物を共有してコミュニティに貢献し、様々なプロジェクトの開発者と協業する姿、楽しそうではありませんか？Armeriaはまだプロジェクトの初期段階なので、ロードマップに基づいて今後新しい機能を追加する予定です。現在構想している機能としては次のようなものがあります。
+
+- クライアント側のロードバランシング
+- Reactive Streamsによる大容量コンテンツストリーミング
+- Redis、MySQLなど、より多様なプロトコルへの対応
+- 管理とモニタリングを統合的に実行できるWebコンソール
+- ドキュメント化とコード作成をより効率化できる新たなThriftコンパイラ
+
+現在LINEには、オープンソース化を準備しているプロジェクトがまだたくさんあります。エンジニアに対しては、目先の利益を追求することに留まらず、長期的な観点から多くの人の役に立つものを創るように促しています。是非LINEにご応募いただき、一緒にプロジェクトチームを組んで世の中を驚かせてみませんか？
+
+[採用情報はこちら](http://linecorp.com/ja/career/position/458)
+
+## 著者紹介
+
+[Trustin Lee](https://github.com/trustin)は、[Nettyプロジェクト](http://netty.io/)の設立者兼[Apache MINA](http://mina.apache.org/)プロジェクトの共同設立者で、現在LINEでプラットフォームソフトウェアエンジニアとして働いています。
