@@ -18,7 +18,7 @@ def globalShadowExclusions = []
 if (rootProject.hasProperty('shadowExclusions')) {
     def rawShadowExclusions = rootProject.findProperty("shadowExclusions")
     if (!(rawShadowExclusions instanceof String)) {
-        throw new RuntimeException("Property 'shadowExclusions' must be a String but was: ${raw.getClass().name}")
+        throw new RuntimeException("Property 'shadowExclusions' must be a String but was: ${rawShadowExclusions.getClass().name}")
     }
     globalShadowExclusions = rawShadowExclusions.split(",")
 }
