@@ -208,6 +208,7 @@ includeWithFlags ':tomcat10',                            'java11', 'publish', 'r
 includeWithFlags ':xds',                                 'java', 'publish', 'relocate'
 includeWithFlags ':xds-api',                             'java', 'publish', 'relocate', 'javapgv', 'no_aggregation'
 includeWithFlags ':xds-validator',                       'java', 'publish', 'relocate', 'no_aggregation'
+includeWithFlags ':xds-pgv-shaded',                      'java', 'publish', 'relocate', 'no_aggregation'
 includeWithFlags ':zookeeper3',                          'java', 'publish', 'relocate', 'native'
 includeWithFlags ':saml',                                'java', 'publish', 'relocate', 'native'
 includeWithFlags ':bucket4j',                            'java', 'publish', 'relocate', 'native'
