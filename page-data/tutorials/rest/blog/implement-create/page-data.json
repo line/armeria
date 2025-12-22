@@ -1,0 +1,5 @@
+{
+    "componentChunkName": "component---src-pages-tutorials-rest-blog-implement-create-mdx",
+    "path": "/tutorials/rest/blog/implement-create/",
+    "result": {"pageContext":{"frontmatter":{"menuTitle":"Implement CREATE","order":4,"type":"step","tags":["rest","request","request-converter"],"level":"basic"}}},
+    "staticQueryHashes": ["1552981879","3172452987","512065377","636866790"]}

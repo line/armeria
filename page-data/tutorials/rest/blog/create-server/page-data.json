@@ -1,0 +1,5 @@
+{
+    "componentChunkName": "component---src-pages-tutorials-rest-blog-create-server-mdx",
+    "path": "/tutorials/rest/blog/create-server/",
+    "result": {"pageContext":{"frontmatter":{"menuTitle":"Create a server","order":1,"type":"step","tags":["server"],"level":"basic"}}},
+    "staticQueryHashes": ["1552981879","3172452987","512065377","636866790"]}

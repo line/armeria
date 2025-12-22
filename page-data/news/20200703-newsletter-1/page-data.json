@@ -1,0 +1,5 @@
+{
+    "componentChunkName": "component---src-pages-news-20200703-newsletter-1-mdx",
+    "path": "/news/20200703-newsletter-1/",
+    "result": {"pageContext":{"frontmatter":{"date":"2020-07-03T00:00:00.000Z"},"hrefs":{"prev":{"label":"Newer: 20210202-newsletter-2","href":"/news/20210202-newsletter-2"},"next":{"label":"Older: 20200514-newsletter-0","href":"/news/20200514-newsletter-0"}}}},
+    "staticQueryHashes": ["1552981879","512065377","636866790"]}

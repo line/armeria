@@ -1,0 +1,5 @@
+{
+    "componentChunkName": "component---src-pages-news-20211029-newsletter-3-mdx",
+    "path": "/news/20211029-newsletter-3/",
+    "result": {"pageContext":{"frontmatter":{"date":"2021-10-29T00:00:00.000Z"},"hrefs":{"prev":{"label":"Newer: 20220714-newsletter-4","href":"/news/20220714-newsletter-4"},"next":{"label":"Older: 20210202-newsletter-2","href":"/news/20210202-newsletter-2"}}}},
+    "staticQueryHashes": ["1552981879","512065377","636866790"]}
