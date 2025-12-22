@@ -104,7 +104,7 @@ date: 2025-11-28
         ...
   ```
 - **Easier Certificate Chain Testing**: You can now use <type://SignedCertificateExtension> to generate certificate chains. #6519
-```java
+  ```java
   @Order(1)
   @RegisterExtension
   static var caCert = new SelfSignedCertificateExtension();
