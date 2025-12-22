@@ -1,0 +1,1 @@
+"use strict";(globalThis.webpackChunkarmeria_site=globalThis.webpackChunkarmeria_site||[]).push([[3150],{38265:a=>{a.exports=JSON.parse('{"name":"short-url-plugin","id":"default"}')}}]);

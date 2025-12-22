@@ -1,0 +1,1 @@
+"use strict";(globalThis.webpackChunkarmeria_site=globalThis.webpackChunkarmeria_site||[]).push([[1903],{1912:e=>{e.exports=JSON.parse('{"blogBasePath":"/news","blogTitle":"Armeria Newsletter","authorsListPath":"/news/authors"}')}}]);
