@@ -13,5 +13,5 @@ Result:
 
 <!--
 Visit this URL to learn more about how to write a pull request description:
-https://armeria.dev/community/developer-guide#how-to-write-pull-request-description
+https://line.github.io/armeria/community/developer-guide#how-to-write-pull-request-description
 -->

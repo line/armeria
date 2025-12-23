@@ -11,7 +11,7 @@
   },
   "scripts": {
     "clean": "cross-env TERM='dumb' gatsby clean",
-    "build": "cross-env TERM='dumb' NODE_OPTIONS='--max-old-space-size=2560' gatsby build",
+    "build": "cross-env TERM='dumb' NODE_OPTIONS='--max-old-space-size=2560' gatsby build --prefix-paths",
     "develop": "cross-env TERM='dumb' gatsby develop",
     "lint": "eslint --ext json,js,jsx,ts,tsx .",
     "lint:fix": "eslint --fix --ext json,js,jsx,ts,tsx .",
