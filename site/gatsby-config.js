@@ -5,7 +5,7 @@ const remarkGridTablesPlugin = require('remark-grid-tables');
 module.exports = {
   siteMetadata: {
     title: 'Armeria - Your go-to microservice framework',
-    siteUrl: 'https://armeria.dev/',
+    siteUrl: 'https://line.github.io/',
     shortUrls: [
       {
         name: 'discord',
@@ -13,6 +13,7 @@ module.exports = {
       },
     ],
   },
+  pathPrefix: '/armeria/',
   plugins: [
     {
       resolve: 'gatsby-source-build-date',

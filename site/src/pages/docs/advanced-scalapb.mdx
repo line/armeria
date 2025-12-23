@@ -16,8 +16,8 @@ and provides you with an interface that is based on Scala's standard library
 [Future](https://docs.scala-lang.org/overviews/core/futures.html), 
 while streaming is based on the Observer pattern.
 If you integrate ScalaPB with Armeria, you can leverage the followings:
-- Using both [gRPC server](https://armeria.dev/docs/server-docservice) and 
-  [gRPC client](https://armeria.dev/docs/client-grpc) features such as gRPC-over-HTTP/1 and 
+- Using both [gRPC server](https://line.github.io/armeria/docs/server-docservice) and
+  [gRPC client](https://line.github.io/armeria/docs/client-grpc) features such as gRPC-over-HTTP/1 and
   [gRPC-Web](gRPC-Web) protocol powered by Armeria
 - Browsing the list of available RPC operations and invoking a service operation via a web console
 - Converting either a Protocol Buffers or JSON to and from an
@@ -65,12 +65,12 @@ Server.builder()
       .service(grpcService)
       // Add DocService for browsing the list of gRPC services and 
       // invoking a service operation from a web form.
-      // See https://armeria.dev/docs/server-docservice for more information.
+      // See https://line.github.io/armeria/docs/server-docservice for more information.
       .serviceUnder("/docs", new DocService())
       .build()
 ```
 
-Please see [gRPC service](https://armeria.dev/docs/server-grpc) for more information.
+Please see [gRPC service](https://line.github.io/armeria/docs/server-grpc) for more information.
 
 ## Calling a gRPC service
 
@@ -95,7 +95,7 @@ val reply = helloService.hello(request)
 assert(reply.message == "Hello, Armerian World!")
 ```
 
-Please see [gRPC client](https://armeria.dev/docs/client-grpc) for more information.
+Please see [gRPC client](https://line.github.io/armeria/docs/client-grpc) for more information.
 
 ## Supporting ScalaPB in annotated services. 
 

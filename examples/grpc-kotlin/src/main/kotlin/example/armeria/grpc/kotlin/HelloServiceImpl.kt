@@ -35,7 +35,7 @@ class HelloServiceImpl : HelloServiceGrpcKt.HelloServiceCoroutineImplBase() {
      * You can remove the [[withArmeriaBlockingContext]] block when your gRPC service is built with
      * [[com.linecorp.armeria.server.grpc.GrpcServiceBuilder.useBlockingTaskExecutor]].
      *
-     * @see [Blocking service implementation](https://armeria.dev/docs/server-grpc#blocking-service-implementation)
+     * @see [Blocking service implementation](https://line.github.io/armeria/docs/server-grpc#blocking-service-implementation)
      */
     override suspend fun blockingHello(request: HelloRequest): HelloReply =
         withArmeriaBlockingContext {

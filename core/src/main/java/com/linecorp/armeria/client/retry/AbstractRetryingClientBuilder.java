@@ -103,7 +103,7 @@ public abstract class AbstractRetryingClientBuilder<O extends Response> {
      *
      * @return {@code this} to support method chaining.
      *
-     * @see <a href="https://armeria.dev/docs/client-retry#per-attempt-timeout">Per-attempt timeout</a>
+     * @see <a href="https://line.github.io/armeria/docs/client-retry#per-attempt-timeout">Per-attempt timeout</a>
      *
      * @deprecated Use {@link RetryConfigBuilder#responseTimeoutMillisForEachAttempt(long)} instead.
      */
@@ -125,7 +125,7 @@ public abstract class AbstractRetryingClientBuilder<O extends Response> {
      *
      * @return {@code this} to support method chaining.
      *
-     * @see <a href="https://armeria.dev/docs/client-retry#per-attempt-timeout">Per-attempt timeout</a>
+     * @see <a href="https://line.github.io/armeria/docs/client-retry#per-attempt-timeout">Per-attempt timeout</a>
      *
      * @deprecated Use {@link RetryConfigBuilder#responseTimeoutForEachAttempt(Duration)} instead.
      */

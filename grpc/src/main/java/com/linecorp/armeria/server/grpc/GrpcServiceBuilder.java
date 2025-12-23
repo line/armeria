@@ -230,7 +230,7 @@ public final class GrpcServiceBuilder {
      * Decorates a gRPC {@link BindableService} with the given decorators, in the order of iteration.
      * For more details on decorator behavior, please refer to the following document.
      *
-     * @see <a href="https://armeria.dev/docs/server-grpc#decorating-a-grpcservice">Decorating a GrpcService</a>
+     * @see <a href="https://line.github.io/armeria/docs/server-grpc#decorating-a-grpcservice">Decorating a GrpcService</a>
      */
     @UnstableApi
     public GrpcServiceBuilder addService(
@@ -287,7 +287,7 @@ public final class GrpcServiceBuilder {
      * Decorates a gRPC {@link BindableService} with the given decorators, in the order of iteration.
      * For more details on decorator behavior, please refer to the following document.
      *
-     * @see <a href="https://armeria.dev/docs/server-grpc#decorating-a-grpcservice">Decorating a GrpcService</a>
+     * @see <a href="https://line.github.io/armeria/docs/server-grpc#decorating-a-grpcservice">Decorating a GrpcService</a>
      */
     @UnstableApi
     public GrpcServiceBuilder addService(
@@ -358,7 +358,7 @@ public final class GrpcServiceBuilder {
      *
      * <p>For more details on decorator behavior, please refer to the following document.
      *
-     * @see <a href="https://armeria.dev/docs/server-grpc#decorating-a-grpcservice">Decorating a GrpcService</a>
+     * @see <a href="https://line.github.io/armeria/docs/server-grpc#decorating-a-grpcservice">Decorating a GrpcService</a>
      */
     @UnstableApi
     public <T> GrpcServiceBuilder addService(
@@ -405,7 +405,7 @@ public final class GrpcServiceBuilder {
      * with the given decorators, in the order of iteration.
      * For more details on decorator behavior, please refer to the following document.
      *
-     * @see <a href="https://armeria.dev/docs/server-grpc#decorating-a-grpcservice">Decorating a GrpcService</a>
+     * @see <a href="https://line.github.io/armeria/docs/server-grpc#decorating-a-grpcservice">Decorating a GrpcService</a>
      */
     @UnstableApi
     public GrpcServiceBuilder addService(
