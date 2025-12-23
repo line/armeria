@@ -28,7 +28,7 @@ public final class ProxyService extends AbstractHttpService {
      * backends dynamically using {@link DnsServiceEndpointGroup}, ZooKeeper or Central Dogma.
      * See <a href="https://line.github.io/armeria/docs/client-service-discovery">service discovery</a>,
      * <a href="https://line.github.io/armeria/docs/advanced-zookeeper">Service discovery
-     * with ZooKeeper</a> and <a href="https://line.github.io/armeria/centraldogma/">centraldogma</a>.
+     * with ZooKeeper</a> and <a href="https://line.github.io/centraldogma/">centraldogma</a>.
      */
     private static final EndpointGroup animationGroup = EndpointGroup.of(
             // You can use EndpointSelectionStrategy.weightedRoundRobin() or even
