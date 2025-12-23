@@ -38,6 +38,9 @@ import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestOnlyLog;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
+/**
+ * Tests for {@link KafkaLogWriter}.
+ */
 class KafkaLogWriterTest {
 
     private Producer<String, String> producer;
