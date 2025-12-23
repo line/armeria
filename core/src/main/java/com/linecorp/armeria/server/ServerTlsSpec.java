@@ -88,7 +88,9 @@ public final class ServerTlsSpec extends AbstractTlsSpec {
         if (!super.equals(o)) {
             return false;
         }
-        assert o != null;
+        if (!(o instanceof ServerTlsSpec)) {
+            return false;
+        }
         final ServerTlsSpec that = (ServerTlsSpec) o;
         return clientAuth == that.clientAuth &&
                hostnamePattern.equals(that.hostnamePattern);
@@ -102,7 +104,15 @@ public final class ServerTlsSpec extends AbstractTlsSpec {
     @Override
     public String toString() {
         return MoreObjects.toStringHelper(this)
-                          .add("super", super.toString())
+                          .add("tlsVersions", tlsVersions())
+                          .add("alpnProtocols", alpnProtocols())
+                          .add("ciphers", ciphers())
+                          .add("tlsKeyPair", tlsKeyPair())
+                          .add("trustedCertificates", trustedCertificates())
+                          .add("verifierFactories", verifierFactories())
+                          .add("engineType", engineType())
+                          .add("tlsCustomizer", tlsCustomizer())
+                          .add("keyManagerFactory", keyManagerFactory())
                           .add("clientAuth", clientAuth)
                           .add("hostnamePattern", hostnamePattern)
                           .toString();
