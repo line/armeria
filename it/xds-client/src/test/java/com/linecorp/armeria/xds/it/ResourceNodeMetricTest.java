@@ -1070,7 +1070,7 @@ class ResourceNodeMetricTest {
     private static void assertErrorAndMissingMetricsAreZero(Map<String, Double> metrics) {
         for (Map.Entry<String, Double> entry : metrics.entrySet()) {
             final String metricName = entry.getKey();
-            if (metricName.contains("error#value") || metricName.contains("missing#value")) {
+            if (metricName.contains("error#count") || metricName.contains("missing#count")) {
                 assertThat(entry.getValue()).isEqualTo(0.0);
             }
         }
