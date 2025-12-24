@@ -1087,7 +1087,7 @@ public final class Flags {
      * <p>The default value of this flag is
      * {@value DefaultFlagsProvider#DEFAULT_CLIENT_WORKER_GROUP_GRACEFUL_SHUTDOWN_QUIET_PERIOD_MILLIS}.
      * Specify the {@code -Dcom.linecorp.armeria.defaultClientWorkerGroupGracefulShutdownQuietPeriodMillis=<long>}
-     * JVM option to override the default value. {@code 0} disables the graceful shutdown.
+     * JVM option to override the default value.
      * </p>
      *
      * @see ClientFactoryBuilder#workerGroupGracefulShutdownQuietPeriod(Duration)
@@ -1105,7 +1105,7 @@ public final class Flags {
      * <p>The default value of this flag is
      * {@value DefaultFlagsProvider#DEFAULT_CLIENT_WORKER_GROUP_GRACEFUL_SHUTDOWN_TIMEOUT_MILLIS}.
      * Specify the {@code -Dcom.linecorp.armeria.defaultClientWorkerGroupGracefulShutdownTimeoutMillis=<long>}
-     * JVM option to override the default value. {@code 0} disables the graceful shutdown.
+     * JVM option to override the default value.
      * </p>
      *
      * @see ClientFactoryBuilder#workerGroupGracefulShutdownTimeout(Duration)
