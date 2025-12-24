@@ -22,7 +22,6 @@ plugins {
     alias libs.plugins.nexus.publish
     alias libs.plugins.kotlin apply false
     alias libs.plugins.ktlint apply false
-    alias libs.plugins.errorprone apply false
     alias libs.plugins.nullaway apply false
 }
 
@@ -61,6 +60,10 @@ allprojects {
             jvmArgs '--add-exports=java.base/jdk.internal.misc=ALL-UNNAMED'
         }
 
+        if (project.ext.testJavaVersion >= 24) {
+            jvmArgs '--enable-native-access=ALL-UNNAMED'
+        }
+
         // Enable leak detection when '-Pleak' option is specified.
         if (rootProject.hasProperty('leak')) {
             systemProperties 'io.netty.leakDetectionLevel': 'paranoid'
@@ -80,11 +83,14 @@ allprojects {
         jvmArgs '-XX:+ExitOnOutOfMemoryError'
         jvmArgs '-XX:+HeapDumpOnOutOfMemoryError'
 
-        // `-Djava.security.manager` was added in Java 17 and the default value was changed to
-        // `disallow` in Java 18.
-        // - https://openjdk.org/jeps/411
-        // - https://bugs.openjdk.org/browse/JDK-8270380
-        if (project.ext.testJavaVersion >= 17 || it.name == 'nativeImageTrace') {
+        // - `-Djava.security.manager` was added in Java 17 and the default value was changed to `disallow` in
+        //   Java 18.
+        //   - https://openjdk.org/jeps/411
+        //   - https://bugs.openjdk.org/browse/JDK-8270380
+        // - Security manager is disabled for Java 24 and later.
+        //   - https://openjdk.org/jeps/486
+        if ((project.ext.testJavaVersion >= 17 && project.ext.testJavaVersion < 24) ||
+            it.name == 'nativeImageTrace') {
             systemProperty "java.security.manager", "allow"
         }
 
@@ -207,6 +213,14 @@ configure(projectsWithFlags('java')) {
         }
     }
 
+    if (rootProject.ext.buildJdkVersion >= 23) {
+        // Starting with JDK 23, annotation processors are not run by default.
+        // https://mail.openjdk.org/pipermail/jdk-dev/2024-May/009028.html
+        tasks.withType(JavaCompile).configureEach {
+            options.compilerArgs += ["-proc:full"]
+        }
+    }
+
     // Common dependencies
     dependencies {
         // All projects currently require ':core' (except itself)
@@ -310,10 +324,10 @@ allprojects {
     }
 }
 
-// Require to use JDK 19 when releasing.
+// Require to use JDK 25 when releasing.
 tasks.closeAndReleaseStagingRepositories.doFirst {
-    if (JavaVersion.current() != JavaVersion.VERSION_21) {
-        throw new IllegalStateException("You must release using JDK 21.");
+    if (JavaVersion.current() != JavaVersion.VERSION_25) {
+        throw new IllegalStateException("You must release using JDK 25.");
     }
 }
 

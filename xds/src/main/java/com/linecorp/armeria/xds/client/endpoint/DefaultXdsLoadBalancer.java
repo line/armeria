@@ -118,7 +118,7 @@ final class DefaultXdsLoadBalancer implements UpdatableXdsLoadBalancer {
             LoadBalancer loadBalancer = new DefaultLoadBalancer(prioritySet, localCluster, localPrioritySet);
             if (clusterSnapshot.xdsResource().resource().hasLbSubsetConfig()) {
                 loadBalancer = new SubsetLoadBalancer(prioritySet, loadBalancer, localCluster,
-                                                       localPrioritySet);
+                                                      localPrioritySet);
             }
             delegate = loadBalancer;
             this.prioritySet = prioritySet;
@@ -156,7 +156,7 @@ final class DefaultXdsLoadBalancer implements UpdatableXdsLoadBalancer {
             final TimeoutException timeoutException;
             if (prioritySet != null) {
                 timeoutException = new TimeoutException(
-                        "Failed to select an endpoint from state '" + prioritySet +
+                        "Failed to select an endpoint from state '" + clusterSnapshot +
                         "' within '" + selectionTimeoutMillis + "'ms");
             } else {
                 timeoutException = new TimeoutException(

@@ -19,7 +19,7 @@ concurrency:
 
 env:
   LC_ALL: "en_US.UTF-8"
-  BUILD_JDK_VERSION: "21"
+  BUILD_JDK_VERSION: "25"
   # Used by GitHub CLI
   GH_TOKEN: ${{ github.token }}
   RUN_ID: ${{ github.run_id }}
@@ -35,7 +35,7 @@ jobs:
       fail-fast: false
       matrix:
         on: [ ubicloud-standard-16, macos-latest, windows-latest ]
-        java: [ 21 ]
+        java: [ 25 ]
         include:
           - java: 8
             on: ubicloud-standard-16
@@ -73,14 +73,14 @@ jobs:
         name: Set up JDK ${{ matrix.java }}
         uses: actions/setup-java@v4
         with:
-          distribution: 'temurin'
+          distribution: 'zulu'
           java-version: ${{ matrix.java }}
 
       - id: setup-build-jdk
         name: Set up build JDK ${{ env.BUILD_JDK_VERSION }}
         uses: actions/setup-java@v4
         with:
-          distribution: 'temurin'
+          distribution: 'zulu'
           java-version: ${{ env.BUILD_JDK_VERSION }}
 
       - name: Clean up stale build scan data
@@ -230,7 +230,7 @@ jobs:
         name: Set up JDK ${{ env.BUILD_JDK_VERSION }}
         uses: actions/setup-java@v4
         with:
-          distribution: 'temurin'
+          distribution: 'zulu'
           java-version: ${{ env.BUILD_JDK_VERSION }}
 
       - name: Setup Gradle
@@ -256,7 +256,7 @@ jobs:
         name: Set up JDK ${{ env.BUILD_JDK_VERSION }}
         uses: actions/setup-java@v4
         with:
-          distribution: 'temurin'
+          distribution: 'zulu'
           java-version: ${{ env.BUILD_JDK_VERSION }}
 
       - name: Setup Gradle
@@ -266,6 +266,13 @@ jobs:
         run: |
           ./gradlew --no-daemon --stacktrace  --max-workers=2 --parallel -PgithubToken=${{ secrets.GITHUB_TOKEN }} site
         shell: bash
+
+      - name: Upload npm logs
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: npm-debug-logs
+          path: /home/runner/.npm/_logs/
 
   flaky-tests:
     if: github.repository == 'line/armeria'
@@ -278,7 +285,7 @@ jobs:
         name: Set up JDK ${{ env.BUILD_JDK_VERSION }}
         uses: actions/setup-java@v4
         with:
-          distribution: 'temurin'
+          distribution: 'zulu'
           java-version: ${{ env.BUILD_JDK_VERSION }}
 
       - name: Setup Gradle

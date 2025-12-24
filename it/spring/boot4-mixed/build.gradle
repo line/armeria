@@ -1,0 +1,6 @@
+dependencies {
+    implementation project(':spring:boot4-starter')
+    implementation project(':spring:boot4-webflux-starter')
+    testImplementation libs.spring.boot4.starter.test
+    testImplementation libs.spring.boot4.health
+}

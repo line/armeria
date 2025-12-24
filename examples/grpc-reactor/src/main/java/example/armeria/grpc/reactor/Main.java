@@ -53,7 +53,7 @@ public final class Main {
                            .build();
         sb.service(grpcService)
           // You can access the documentation service at http://127.0.0.1:8080/docs.
-          // See https://armeria.dev/docs/server-docservice for more information.
+          // See https://line.github.io/armeria/docs/server-docservice for more information.
           .serviceUnder("/docs",
                         DocService.builder()
                                   .exampleRequests(

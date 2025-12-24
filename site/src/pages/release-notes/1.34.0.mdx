@@ -103,6 +103,16 @@ date: 2025-11-28
         .relayStateMaxLength(256) // 👈👈👈 Default is 80
         ...
   ```
+- **Easier Certificate Chain Testing**: You can now use <type://SignedCertificateExtension> to generate certificate chains. #6519
+  ```java
+  @Order(1)
+  @RegisterExtension
+  static var caCert = new SelfSignedCertificateExtension();
+
+  @Order(2)
+  @RegisterExtension
+  static var leafCert = new SignedCertificateExtension(caCert);
+  ```
 
 ## 📈 Improvements
 
@@ -110,6 +120,7 @@ date: 2025-11-28
   - Improved logs and metrics for better observability.
   - `protoc-gen-validate` is applied for all xDS resources by default.
   - Support for Envoy's `RetryPolicy` has been added.
+- You may adjust stacktrace generation for <type://CancelledSubscriptionException> using `verboseExceptionSampler`. #6525
 
 ## 🛠️ Bug fixes
 

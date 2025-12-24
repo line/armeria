@@ -36,6 +36,8 @@ import java.util.Date;
 import java.util.Random;
 import java.util.concurrent.ThreadLocalRandom;
 
+import com.google.common.collect.ImmutableList;
+
 /**
  * Generates a temporary self-signed certificate for testing purposes.
  * <p>
@@ -198,6 +200,24 @@ public final class SelfSignedCertificate extends SignedCertificate {
      */
     public SelfSignedCertificate(String fqdn, Random random, int bits, Date notBefore, Date notAfter,
                                  String algorithm) throws CertificateException {
-        super(new CertificateParams(fqdn, random, bits, notBefore, notAfter, algorithm));
+        this(fqdn, random, bits, notBefore, notAfter, algorithm, ImmutableList.of());
+    }
+
+    /**
+     * Creates a new instance.
+     *
+     * @param fqdn                     a fully qualified domain name
+     * @param random                   the {@link Random} to use
+     * @param bits                     the number of bits of the generated private key
+     * @param notBefore                Certificate is not valid before this time
+     * @param notAfter                 Certificate is not valid after this time
+     * @param algorithm                Key pair algorithm
+     * @param subjectAlternativeNames  additional Subject Alternative Names
+     */
+    public SelfSignedCertificate(String fqdn, Random random, int bits, Date notBefore, Date notAfter,
+                                 String algorithm, Iterable<String> subjectAlternativeNames)
+            throws CertificateException {
+        super(new CertificateParams(fqdn, random, bits, notBefore, notAfter, algorithm,
+                                    subjectAlternativeNames));
     }
 }

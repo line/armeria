@@ -1,1 +1,1 @@
-See [Contributor manual](https://armeria.dev/community).
+See [Contributor manual](https://line.github.io/armeria/community).

@@ -47,7 +47,7 @@ public final class ParsedFilterConfig {
         requireNonNull(config, "config");
         if (FILTER_CONFIG_TYPE_URL.equals(config.getTypeUrl())) {
             final FilterConfig filterConfig;
-            filterConfig = XdsValidatorIndex.of().unpack(config, FilterConfig.class);
+            filterConfig = XdsValidatorIndexRegistry.unpack(config, FilterConfig.class);
             return new ParsedFilterConfig(filterName, filterConfig.getConfig(), filterConfig.getIsOptional(),
                                           filterConfig.getDisabled());
         }
@@ -93,7 +93,7 @@ public final class ParsedFilterConfig {
         if (config == Any.getDefaultInstance()) {
             return null;
         }
-        return XdsValidatorIndex.of().unpack(config, clazz);
+        return XdsValidatorIndexRegistry.unpack(config, clazz);
     }
 
     /**

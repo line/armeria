@@ -20,7 +20,6 @@ import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static java.util.Objects.requireNonNull;
 
 import java.net.InetSocketAddress;
-import java.security.cert.X509Certificate;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Iterator;
@@ -48,20 +47,16 @@ import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.Scheme;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
-import com.linecorp.armeria.common.TlsProvider;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.metric.MeterIdPrefix;
-import com.linecorp.armeria.common.metric.MoreMeterBinders;
 import com.linecorp.armeria.common.util.AsyncCloseableSupport;
 import com.linecorp.armeria.common.util.ReleasableHolder;
 import com.linecorp.armeria.common.util.ShutdownHooks;
-import com.linecorp.armeria.common.util.TlsEngineType;
 import com.linecorp.armeria.common.util.TransportType;
 import com.linecorp.armeria.internal.client.ClientBuilderParamsUtil;
+import com.linecorp.armeria.internal.common.ClientSslContextFactory;
 import com.linecorp.armeria.internal.common.RequestTargetCache;
-import com.linecorp.armeria.internal.common.SslContextFactory;
 import com.linecorp.armeria.internal.common.util.ChannelUtil;
-import com.linecorp.armeria.internal.common.util.SslContextUtil;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import io.netty.bootstrap.Bootstrap;
@@ -70,8 +65,6 @@ import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
-import io.netty.handler.ssl.SslContext;
-import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.resolver.AddressResolverGroup;
 import io.netty.util.concurrent.FutureListener;
 
@@ -90,25 +83,12 @@ final class HttpClientFactory implements ClientFactory {
                                           Scheme.of(SerializationFormat.WS, p)))
                   .collect(toImmutableSet());
 
-    private static void setupTlsMetrics(List<X509Certificate> certificates, MeterRegistry registry) {
-        final MeterIdPrefix meterIdPrefix = new MeterIdPrefix("armeria.client");
-        try {
-            MoreMeterBinders.certificateMetrics(certificates, meterIdPrefix)
-                            .bindTo(registry);
-        } catch (Exception ex) {
-            logger.warn("Failed to set up TLS certificate metrics: {}", certificates, ex);
-        }
-    }
-
     private final EventLoopGroup workerGroup;
     private final boolean shutdownWorkerGroupOnClose;
     private final Bootstrap inetBaseBootstrap;
     @Nullable
     private final Bootstrap unixBaseBootstrap;
-    private final SslContext sslCtxHttp1Or2;
-    private final SslContext sslCtxHttp1Only;
-    @Nullable
-    private final SslContextFactory sslContextFactory;
+    private final ClientSslContextFactory sslContextFactory;
     private final AddressResolverGroup<InetSocketAddress> addressResolverGroup;
     private final int http2InitialConnectionWindowSize;
     private final int http2InitialStreamWindowSize;
@@ -143,8 +123,10 @@ final class HttpClientFactory implements ClientFactory {
     private final ClientFactoryOptions options;
     private final boolean autoCloseConnectionPoolListener;
     private final AsyncCloseableSupport closeable = AsyncCloseableSupport.of(this::closeAsync);
+    private final BootstrapSslContexts bootstrapSslContexts;
 
-    HttpClientFactory(ClientFactoryOptions options, boolean autoCloseConnectionPoolListener) {
+    HttpClientFactory(ClientFactoryOptions options, boolean autoCloseConnectionPoolListener,
+                      ClientTlsSpec baseClientTlsSpec) {
         workerGroup = options.workerGroup();
 
         @SuppressWarnings("unchecked")
@@ -183,30 +165,15 @@ final class HttpClientFactory implements ClientFactory {
             unixBaseBootstrap = null;
         }
 
-        final Consumer<? super SslContextBuilder> tlsCustomizer =
-                options.tlsCustomizer();
-        final boolean tlsAllowUnsafeCiphers = options.tlsAllowUnsafeCiphers();
-        final List<X509Certificate> keyCertChainCaptor = new ArrayList<>();
-        final TlsEngineType tlsEngineType = options.tlsEngineType();
-        sslCtxHttp1Or2 = SslContextUtil
-                .createSslContext(SslContextBuilder::forClient, false, tlsEngineType,
-                                  tlsAllowUnsafeCiphers, tlsCustomizer, keyCertChainCaptor);
-        sslCtxHttp1Only = SslContextUtil
-                .createSslContext(SslContextBuilder::forClient, true, tlsEngineType,
-                                  tlsAllowUnsafeCiphers, tlsCustomizer, keyCertChainCaptor);
-        setupTlsMetrics(keyCertChainCaptor, options.meterRegistry());
-
-        final TlsProvider tlsProvider = options.tlsProvider();
-        if (tlsProvider != NullTlsProvider.INSTANCE) {
-            ClientTlsConfig clientTlsConfig = options.tlsConfig();
-            if (clientTlsConfig == ClientTlsConfig.NOOP) {
-                clientTlsConfig = null;
-            }
-            sslContextFactory = new SslContextFactory(tlsProvider, options.tlsEngineType(), clientTlsConfig,
-                                                      options.meterRegistry());
-        } else {
-            sslContextFactory = null;
+        MeterIdPrefix meterIdPrefix = null;
+        boolean allowUnsafeCiphers = options.tlsAllowUnsafeCiphers();
+        if (options.tlsConfig() != ClientTlsConfig.NOOP) {
+            meterIdPrefix = options.tlsConfig().meterIdPrefix();
+            allowUnsafeCiphers = options.tlsConfig().allowsUnsafeCiphers();
         }
+        sslContextFactory = new ClientSslContextFactory(meterIdPrefix, options.meterRegistry(),
+                                                        allowUnsafeCiphers);
+        bootstrapSslContexts = new BootstrapSslContexts(baseClientTlsSpec, options, sslContextFactory);
 
         http2InitialConnectionWindowSize = options.http2InitialConnectionWindowSize();
         http2InitialStreamWindowSize = options.http2InitialStreamWindowSize();
@@ -494,6 +461,7 @@ final class HttpClientFactory implements ClientFactory {
             if (autoCloseConnectionPoolListener) {
                 connectionPoolListener.close();
             }
+            bootstrapSslContexts.release(sslContextFactory);
             if (shutdownWorkerGroupOnClose) {
                 workerGroup.shutdownGracefully(
                         options.workerGroupGracefulShutdownQuietPeriodMillis(),
@@ -546,14 +514,15 @@ final class HttpClientFactory implements ClientFactory {
 
         return pools.computeIfAbsent(eventLoop,
                                      e -> new HttpChannelPool(this, eventLoop,
-                                                              sslCtxHttp1Or2, sslCtxHttp1Only,
-                                                              sslContextFactory,
-                                                              connectionPoolListener()));
+                                                              sslContextFactory, connectionPoolListener()));
     }
 
     @VisibleForTesting
-    @Nullable
-    SslContextFactory sslContextFactory() {
+    ClientSslContextFactory sslContextFactory() {
         return sslContextFactory;
+    }
+
+    BootstrapSslContexts defaultSslContexts() {
+        return bootstrapSslContexts;
     }
 }

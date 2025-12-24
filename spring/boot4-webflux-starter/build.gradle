@@ -1,0 +1,7 @@
+dependencies {
+    api project(':spring:boot4-webflux-autoconfigure')
+}
+
+tasks.withType(Test).configureEach {
+    failOnNoDiscoveredTests = false
+}

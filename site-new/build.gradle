@@ -1,0 +1,236 @@
+import groovy.json.JsonBuilder
+import groovy.json.JsonSlurper
+import org.jsoup.Jsoup
+
+import java.nio.file.Files
+import java.util.concurrent.TimeUnit
+import java.util.regex.Pattern
+import java.util.stream.Collectors
+
+buildscript {
+    repositories {
+        gradlePluginPortal()
+        mavenCentral()
+    }
+    dependencies {
+        classpath libs.jsoup
+    }
+}
+
+plugins {
+    id 'base'
+    alias(libs.plugins.node.gradle)
+}
+
+node {
+    version = '22.10.0'
+    npmVersion = '10.9.0'
+    download = true
+    npmInstallCommand = "install"
+}
+
+tasks.register('npmClean', NpmTask) {
+    dependsOn tasks.npmInstall
+    args = ['run', 'clear']
+}
+
+// Note that we didn't make `clean` depend on `npmClean`,
+// because otherwise `clean` will trigger `npmInstall`.
+tasks.clean.delete(project.file("${project.projectDir}/.docusaurus"))
+tasks.clean.delete(project.file("${project.projectDir}/gen-src"))
+tasks.clean.delete(project.file("${project.projectDir}/build"))
+tasks.clean.delete(project.file("${project.projectDir}/node_modules/.cache"))
+
+tasks.register('versionIndex', VersionIndexTask)
+tasks.register('apiIndex', ApiIndexTask) {
+    dependsOn ':javadoc:javadoc'
+}
+tasks.register('contributorList', ContributorListTask)
+
+tasks.register('generateSiteSources') {
+    dependsOn tasks.npmInstall
+    dependsOn tasks.versionIndex
+    dependsOn tasks.apiIndex
+    dependsOn tasks.contributorList
+}
+
+tasks.register('develop', NpmTask) {
+    dependsOn tasks.generateSiteSources
+    args = ['run', 'start']
+}
+
+tasks.register('eslint', NpmTask) {
+    dependsOn tasks.generateSiteSources
+    args = ['run', 'lint']
+    inputs.dir('src')
+    inputs.file('.eslintrc.js')
+    inputs.file('package.json')
+    inputs.file('package-lock.json')
+}
+
+// 'siteLint' could run separately regardless of '-PnoLint' option
+tasks.register('siteLint') {
+    dependsOn tasks.eslint
+}
+
+// Note that this task is not triggered by the 'build' task
+// because it takes long to build a site.
+tasks.register('site', NpmTask) {
+    dependsOn tasks.generateSiteSources
+    if (!rootProject.hasProperty('noLint')) {
+        dependsOn tasks.siteLint
+    }
+    args = ['run', 'build']
+    inputs.dir('src')
+    inputs.file('docusaurus.config.ts')
+    inputs.file('package.json')
+    inputs.file('package-lock.json')
+    inputs.file('tsconfig.json')
+    outputs.dir('.docusaurus')
+    outputs.dir('build')
+}
+
+class VersionIndexTask extends DefaultTask {
+
+    @Input
+    final def version = project.property('version')
+    @Input
+    final def managedVersions = project.property('managedVersions') as Map
+    @OutputFile
+    final def versionIndexFile = project.file("${project.projectDir}/gen-src/versions.json")
+
+    @TaskAction
+    def run() {
+        def info = new TreeMap(this.managedVersions)
+        info["${project.group}:armeria-bom"] = version
+
+        versionIndexFile.withPrintWriter('UTF-8') { out ->
+            out.println(new JsonBuilder(info).toPrettyString())
+        }
+    }
+}
+
+class ApiIndexTask extends DefaultTask {
+
+    @InputDirectory
+    final def javadocDir = project.file("${project.rootProject.projectDir}/javadoc/build/docs/javadoc")
+    @OutputFile
+    final def nameToHrefFile = project.file("${project.projectDir}/gen-src/api-index.json")
+
+    @TaskAction
+    def run() {
+        def javadocPath = javadocDir.toPath()
+        def nameToHref = Files.walk(javadocPath).filter({ path ->
+            if (Files.isDirectory(path)) {
+                return false
+            }
+
+            return path.getName(path.nameCount - 1).toString().matches(/[A-Z][a-zA-Z0-9._$]+\.html/)
+        }).sorted().flatMap({ path ->
+            def relativePath = "${javadocPath.relativize(path)}".replace(File.separator, '/')
+            def fqcn = relativePath[0..-6].replace('/', '.')
+            def href = "https://javadoc.io/doc/com.linecorp.armeria/armeria-javadoc/latest/${relativePath}"
+
+            def result = []
+            result.add([fqcn, href])
+
+            def simpleClassName = fqcn.substring(fqcn.lastIndexOf('.') + 1)
+            result.add([simpleClassName, href])
+
+            def doc = Jsoup.parse(path.toFile(), 'UTF-8')
+            doc.select(""".constant-details .member-list .detail,
+                          .constructor-details .member-list .detail,
+                          .field-details .member-list .detail,
+                          .method-details .member-list .detail""").each {
+                def methodSignature = it.attr("id")
+                def hrefWithMethod = href + '#' + methodSignature
+
+                def split = methodSignature.split('\\(|\\)|,')
+                if (split.length != 1) {
+                    // Make the type of parameters from FQCN to Simple class name in order to use as a key.
+                    def parameters = ''
+                    for (int i = 1; i < split.length; i++) {
+                        // Remove the trailing '...' in varargs
+                        def p = split[i].replaceAll(/\.+$/, '')
+                        parameters += ',' + p.substring(p.lastIndexOf('.') + 1)
+                    }
+                    methodSignature = split[0] + '(' + parameters.substring(1) + ')'
+                }
+
+                result.add([fqcn + '#' + methodSignature, hrefWithMethod])
+                result.add([simpleClassName + '#' + methodSignature, hrefWithMethod])
+            }
+
+            return result.stream()
+        }).collect(Collectors.toMap({ e -> e[0] }, { e -> e[1] }, { a, b -> a }, { new TreeMap()}))
+
+
+        nameToHrefFile.withPrintWriter('UTF-8') { out ->
+            out.println(new JsonBuilder(nameToHref).toPrettyString())
+        }
+    }
+}
+
+class ContributorListTask extends DefaultTask {
+    // Rebuild up to once an hour, unless cleaned.
+    @Input
+    final def hourOfDay = System.currentTimeMillis() / TimeUnit.HOURS.toMillis(1)
+    @OutputFile
+    final def contributorsFile = project.file("${project.projectDir}/gen-src/contributors.json")
+
+    @TaskAction
+    def run() {
+        def contributors = new TreeMap<String, String>()
+        def accessToken = project.findProperty('githubToken')
+        def url = 'https://api.github.com/repos/line/armeria/contributors'
+        def nextPattern = Pattern.compile(/<(https:\/\/api\.github\.com\/[^>]+)>; rel="next"/)
+        for (def i = 0; i < 10; i++) {
+            def req = new URL(url).openConnection()
+            if (accessToken?.trim()) {
+                req.setRequestProperty('Authorization', "token ${accessToken}")
+            }
+            def resText = req.getInputStream().getText()
+            if (req.getResponseCode() != 200) {
+                if (req.getHeaderFieldInt('X-RateLimit-Remaining', Integer.MAX_VALUE) <= 0) {
+                    throw new Exception('Exceeded Github API rate limit. ' +
+                            'Specify "-PgithubToken=<personalAccessToken>" option: ' +
+                            "${req.getResponseCode()}, ${req.getHeaderFields()}, ${resText}")
+                } else {
+                    throw new Exception('Received a non-200 response from Github: ' +
+                            'Maybe specify "-PgithubToken=<personalAccessToken>" option: ' +
+                            "${req.getResponseCode()}, ${req.getHeaderFields()}, ${resText}")
+                }
+            }
+            def res = new JsonSlurper().parseText(resText)
+            res.each({
+                def username = it['login']
+                def avatarUrl = it['avatar_url']
+                if (!(username instanceof CharSequence) || !(avatarUrl instanceof CharSequence)) {
+                    throw new Exception("Received an invalid response from Github: ${resText}")
+                }
+                contributors.put("${username}".toString(), "${avatarUrl}".toString())
+            })
+
+            // Handle pagination
+            def link = req.getHeaderField('Link')
+            if (link == null) {
+                // Last page or no link header
+                break
+            }
+
+            def nextLinkMatcher = nextPattern.matcher(link)
+            if (!nextLinkMatcher.find()) {
+                // No next link
+                break
+            }
+
+            // Jump to the next page
+            url = nextLinkMatcher.group(1)
+        }
+
+        contributorsFile.withPrintWriter('UTF-8') { out ->
+            out.println(new JsonBuilder(contributors).toPrettyString())
+        }
+    }
+}
+

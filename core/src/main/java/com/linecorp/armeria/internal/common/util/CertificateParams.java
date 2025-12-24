@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.internal.common.util;
 
+import static java.util.Objects.requireNonNull;
+
 import java.security.PrivateKey;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
@@ -24,6 +26,8 @@ import java.util.Random;
 
 import org.bouncycastle.asn1.x500.X500Name;
 import org.bouncycastle.cert.jcajce.JcaX509CertificateHolder;
+
+import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.common.annotation.Nullable;
 
@@ -36,6 +40,7 @@ final class CertificateParams {
     private final Date notBefore;
     private final Date notAfter;
     private final String algorithm;
+    private final ImmutableList<String> subjectAlternativeNames;
 
     @Nullable
     private final X509Certificate issuerCert;
@@ -44,13 +49,15 @@ final class CertificateParams {
     private final X500Name issuerName;
 
     CertificateParams(String fqdn, Random random, int bits, Date notBefore, Date notAfter,
-                      String algorithm) {
-        this.fqdn = fqdn;
-        this.random = random;
+                      String algorithm, Iterable<String> subjectAlternativeNames) {
+        this.fqdn = requireNonNull(fqdn, "fqdn");
+        this.random = requireNonNull(random, "random");
         this.bits = bits;
-        this.notBefore = notBefore;
-        this.notAfter = notAfter;
-        this.algorithm = algorithm;
+        this.notBefore = requireNonNull(notBefore, "notBefore");
+        this.notAfter = requireNonNull(notAfter, "notAfter");
+        this.algorithm = requireNonNull(algorithm, "algorithm");
+        this.subjectAlternativeNames =
+                ImmutableList.copyOf(requireNonNull(subjectAlternativeNames, "subjectAlternativeNames"));
         issuerCert = null;
         issuerPrivateKey = null;
 
@@ -61,13 +68,22 @@ final class CertificateParams {
     CertificateParams(String fqdn, Random random, int bits, Date notBefore, Date notAfter,
                       SignedCertificate issuer)
             throws CertificateException {
-        this.fqdn = fqdn;
+        this(fqdn, random, bits, notBefore, notAfter, issuer, ImmutableList.of());
+    }
+
+    CertificateParams(String fqdn, Random random, int bits, Date notBefore, Date notAfter,
+                      SignedCertificate issuer, Iterable<String> subjectAlternativeNames)
+            throws CertificateException {
+        this.fqdn = requireNonNull(fqdn, "fqdn");
         ownerName = new X500Name("CN=" + fqdn);
 
-        this.random = random;
+        this.random = requireNonNull(random, "random");
         this.bits = bits;
-        this.notBefore = notBefore;
-        this.notAfter = notAfter;
+        this.notBefore = requireNonNull(notBefore, "notBefore");
+        this.notAfter = requireNonNull(notAfter, "notAfter");
+        this.subjectAlternativeNames =
+                ImmutableList.copyOf(requireNonNull(subjectAlternativeNames, "subjectAlternativeNames"));
+        requireNonNull(issuer, "issuer");
         algorithm = issuer.key().getAlgorithm();
         issuerCert = issuer.cert();
         issuerPrivateKey = issuer.key();
@@ -112,5 +128,9 @@ final class CertificateParams {
 
     X500Name ownerName() {
         return ownerName;
+    }
+
+    ImmutableList<String> subjectAlternativeNames() {
+        return subjectAlternativeNames;
     }
 }

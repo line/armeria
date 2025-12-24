@@ -3,7 +3,7 @@ web site for Armeria.
 
 ### Build requirements
 
-- The build requirements in [CONTRIBUTING.md](https://armeria.dev/community/developer-guide/#build-requirements)
+- The build requirements in [CONTRIBUTING.md](https://line.github.io/armeria/community/developer-guide/#build-requirements)
 - `svgbob_cli`
   - `brew install svgbob` on Mac OS X
 

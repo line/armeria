@@ -26,6 +26,8 @@ import java.util.Date;
 
 import org.junit.jupiter.api.extension.Extension;
 
+import com.google.common.collect.ImmutableList;
+
 import com.linecorp.armeria.internal.common.util.SelfSignedCertificate;
 
 /**
@@ -96,9 +98,26 @@ public final class SelfSignedCertificateExtension extends SignedCertificateExten
      */
     public SelfSignedCertificateExtension(String fqdn, SecureRandom random, int bits,
                                           TemporalAccessor notBefore, TemporalAccessor notAfter) {
-        super(() -> new SelfSignedCertificate(requireNonNull(fqdn, "fqdn"), requireNonNull(random, "random"),
-                                              bits, toDate(requireNonNull(notBefore, "notBefore")),
-                                              toDate(requireNonNull(notAfter, "notAfter"))));
+        this(fqdn, random, bits, notBefore, notAfter, ImmutableList.of());
+    }
+
+    /**
+     * Creates a new instance.
+     *
+     * @param fqdn a fully qualified domain name
+     * @param random the {@link SecureRandom} to use
+     * @param bits the number of bits of the generated private key
+     * @param notBefore {@link Certificate} is not valid before this time
+     * @param notAfter {@link Certificate} is not valid after this time
+     * @param subjectAlternativeNames additional Subject Alternative Names
+     */
+    public SelfSignedCertificateExtension(String fqdn, SecureRandom random, int bits,
+                                          TemporalAccessor notBefore, TemporalAccessor notAfter,
+                                          Iterable<String> subjectAlternativeNames) {
+        super(() -> new SelfSignedCertificate(fqdn, random, bits,
+                                              toDate(requireNonNull(notBefore, "notBefore")),
+                                              toDate(requireNonNull(notAfter, "notAfter")), "RSA",
+                                              subjectAlternativeNames));
     }
 
     @SuppressWarnings("UseOfObsoleteDateTimeApi")

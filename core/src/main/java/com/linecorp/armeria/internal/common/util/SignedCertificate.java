@@ -34,6 +34,7 @@ import static java.util.Objects.requireNonNull;
 import static org.bouncycastle.asn1.x509.Extension.subjectAlternativeName;
 import static org.bouncycastle.asn1.x509.GeneralName.dNSName;
 import static org.bouncycastle.asn1.x509.GeneralName.iPAddress;
+import static org.bouncycastle.asn1.x509.GeneralName.uniformResourceIdentifier;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -152,6 +153,22 @@ public class SignedCertificate {
 
     /**
      * Creates a new instance.
+     * <p> Algorithm: RSA </p>
+     *
+     * @param fqdn a fully qualified domain name
+     * @param parent the parent certificate to sign with
+     * @param subjectAlternativeNames additional Subject Alternative Names
+     */
+    public SignedCertificate(String fqdn, SignedCertificate parent,
+                             Iterable<String> subjectAlternativeNames) throws CertificateException {
+        this(new CertificateParams(requireNonNull(fqdn, "fqdn"), ThreadLocalRandom.current(),
+                                   DEFAULT_KEY_LENGTH_BITS, DEFAULT_NOT_BEFORE, DEFAULT_NOT_AFTER,
+                                   requireNonNull(parent, "parent"),
+                                   requireNonNull(subjectAlternativeNames, "subjectAlternativeNames")));
+    }
+
+    /**
+     * Creates a new instance.
      */
     SignedCertificate(CertificateParams certificateParams) throws CertificateException {
         if (!"EC".equalsIgnoreCase(certificateParams.algorithm()) && !"RSA".equalsIgnoreCase(
@@ -264,6 +281,18 @@ public class SignedCertificate {
         } else if ("127.0.0.1".equals(fqdn)) {
             names.add(new GeneralName(dNSName, "localhost"));
             names.add(new GeneralName(iPAddress, "::1"));
+        }
+
+        // Add additional Subject Alternative Names
+        for (String san : params.subjectAlternativeNames()) {
+            if (NetUtil.isValidIpV4Address(san) || NetUtil.isValidIpV6Address(san)) {
+                names.add(new GeneralName(iPAddress, san));
+            } else if (san.contains("://")) {
+                // URI format (e.g., spiffe://example.com/service)
+                names.add(new GeneralName(uniformResourceIdentifier, san));
+            } else {
+                names.add(new GeneralName(dNSName, san));
+            }
         }
 
         builder.addExtension(subjectAlternativeName,
