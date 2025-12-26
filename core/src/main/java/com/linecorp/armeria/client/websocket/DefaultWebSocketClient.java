@@ -21,6 +21,7 @@ import static com.linecorp.armeria.internal.common.websocket.WebSocketUtil.gener
 import static java.util.Objects.requireNonNull;
 
 import java.net.URI;
+import java.time.Duration;
 import java.util.Base64;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
@@ -49,9 +50,11 @@ import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.Scheme;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.SplitHttpResponse;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.logging.RequestLogProperty;
 import com.linecorp.armeria.common.stream.ByteStreamMessage;
 import com.linecorp.armeria.common.stream.StreamMessage;
+import com.linecorp.armeria.common.websocket.WebSocket;
 import com.linecorp.armeria.internal.common.DefaultSplitHttpResponse;
 import com.linecorp.armeria.internal.common.websocket.WebSocketFrameEncoder;
 import com.linecorp.armeria.internal.common.websocket.WebSocketWrapper;
@@ -70,10 +73,14 @@ final class DefaultWebSocketClient implements WebSocketClient {
     private final List<String> subprotocols;
     private final String joinedSubprotocols;
     private final boolean aggregateContinuation;
+    @Nullable
+    private final Duration streamTimeout;
 
-    DefaultWebSocketClient(WebClient webClient, int maxFramePayloadLength, boolean allowMaskMismatch,
-                           List<String> subprotocols, boolean aggregateContinuation) {
+    DefaultWebSocketClient(WebClient webClient, @Nullable Duration streamTimeout, int maxFramePayloadLength,
+                           boolean allowMaskMismatch, List<String> subprotocols,
+                           boolean aggregateContinuation) {
         this.webClient = webClient;
+        this.streamTimeout = streamTimeout;
         this.maxFramePayloadLength = maxFramePayloadLength;
         this.allowMaskMismatch = allowMaskMismatch;
         this.subprotocols = subprotocols;
@@ -123,7 +130,9 @@ final class DefaultWebSocketClient implements WebSocketClient {
             final WebSocketClientFrameDecoder decoder =
                     new WebSocketClientFrameDecoder(ctx, maxFramePayloadLength, allowMaskMismatch,
                                                     aggregateContinuation);
-            final WebSocketWrapper inbound = new WebSocketWrapper(split.body().decode(decoder, ctx.alloc()));
+            final WebSocketWrapper baseInbound =
+                    new WebSocketWrapper(split.body().decode(decoder, ctx.alloc()));
+            final WebSocket inbound = streamTimeout != null ? baseInbound.timeout(streamTimeout) : baseInbound;
 
             result.complete(new WebSocketSession(ctx, responseHeaders, inbound, outboundFuture, encoder));
             return null;

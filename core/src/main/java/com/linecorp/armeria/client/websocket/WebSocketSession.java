@@ -15,6 +15,7 @@
  */
 package com.linecorp.armeria.client.websocket;
 
+import static com.linecorp.armeria.internal.common.websocket.WebSocketUtil.newCloseWebSocketFrame;
 import static java.util.Objects.requireNonNull;
 
 import java.util.concurrent.CompletableFuture;
@@ -26,13 +27,17 @@ import com.google.common.base.MoreObjects;
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
+import com.linecorp.armeria.common.InboundCompleteException;
 import com.linecorp.armeria.common.ResponseHeaders;
+import com.linecorp.armeria.common.StreamTimeoutException;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
+import com.linecorp.armeria.common.stream.ClosedStreamException;
 import com.linecorp.armeria.common.stream.PublisherBasedStreamMessage;
 import com.linecorp.armeria.common.stream.StreamMessage;
 import com.linecorp.armeria.common.websocket.WebSocket;
 import com.linecorp.armeria.common.websocket.WebSocketFrame;
+import com.linecorp.armeria.common.websocket.WebSocketIdleTimeoutException;
 import com.linecorp.armeria.common.websocket.WebSocketWriter;
 import com.linecorp.armeria.internal.common.websocket.WebSocketFrameEncoder;
 
@@ -123,11 +128,36 @@ public final class WebSocketSession {
             streamMessage = new PublisherBasedStreamMessage<>(outbound);
         }
 
-        if (!outboundFuture.complete(
-                streamMessage.map(webSocketFrame -> HttpData.wrap(encoder.encode(ctx, webSocketFrame))))) {
-            streamMessage.abort();
+        final StreamMessage<HttpData> data =
+                streamMessage.map(webSocketFrame -> HttpData.wrap(encoder.encode(ctx, webSocketFrame)))
+                        .endWith(cause -> {
+                           if (cause == null) {
+                               return null;
+                           }
+                           if (cause instanceof ClosedStreamException) {
+                               return null;
+                           }
+                           ctx.logBuilder().requestCause(cause);
+                           ctx.logBuilder().responseCause(cause);
+                           return HttpData.wrap(encoder.encode(ctx, newCloseWebSocketFrame(cause)));
+                        });
+
+        if (!outboundFuture.complete(data)) {
+            data.abort();
             throw new IllegalStateException("outbound() or setOutbound() has been already called.");
         }
+
+        inbound.whenComplete().exceptionally(cause -> {
+            final Throwable wrapped;
+            if (cause instanceof StreamTimeoutException) {
+                wrapped = new WebSocketIdleTimeoutException("WebSocket inbound idle-timeout exceeded",
+                                                            cause);
+            } else {
+                wrapped = new InboundCompleteException("inbound stream was cancelled", cause);
+            }
+            streamMessage.abort(wrapped);
+            return null;
+        });
     }
 
     @Override
