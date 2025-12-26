@@ -17,23 +17,18 @@
 package com.linecorp.armeria.client.scala
 
 import com.fasterxml.jackson.module.scala.{ClassTagExtensions, JavaTypeable}
-import com.linecorp.armeria.client.{
-  RequestOptions,
-  RequestPreparationSetters,
-  ResponseAs,
-  ResponseTimeoutMode,
-  RestClientPreparation
-}
+import com.linecorp.armeria.client._
 import com.linecorp.armeria.common.annotation.UnstableApi
-import com.linecorp.armeria.common.{Cookie, ExchangeType, HttpData, HttpResponse, MediaType, ResponseEntity}
+import com.linecorp.armeria.common._
 import com.linecorp.armeria.scala.implicits._
 import io.netty.util.AttributeKey
+import org.reactivestreams.Publisher
+
 import java.lang.{Iterable => JIterable}
 import java.time.Duration
 import java.util.{Map => JMap}
-import org.reactivestreams.Publisher
-import scala.collection.immutable
-import scala.concurrent.Future
+import _root_.scala.collection.immutable
+import _root_.scala.concurrent.Future
 
 /**
  * Prepares and executes a new `HttpRequest` for `ScalaRestClient`.
@@ -266,6 +261,11 @@ final class ScalaRestClientPreparation private[scala] (delegate: RestClientPrepa
 
   override def responseTimeoutMode(responseTimeoutMode: ResponseTimeoutMode): ScalaRestClientPreparation = {
     delegate.responseTimeoutMode(responseTimeoutMode)
+    this
+  }
+
+  override def clientTlsSpec(clientTlsSpec: ClientTlsSpec): ScalaRestClientPreparation = {
+    delegate.clientTlsSpec(clientTlsSpec)
     this
   }
 }

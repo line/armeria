@@ -403,6 +403,13 @@ public final class WebClientRequestPreparation
         return this;
     }
 
+    @Override
+    @UnstableApi
+    public WebClientRequestPreparation clientTlsSpec(ClientTlsSpec clientTlsSpec) {
+        requestOptionsBuilder().clientTlsSpec(clientTlsSpec);
+        return this;
+    }
+
     private RequestOptionsBuilder requestOptionsBuilder() {
         if (requestOptionsBuilder == null) {
             requestOptionsBuilder = RequestOptions.builder();

@@ -236,7 +236,7 @@ final class HttpClientDelegate implements HttpClient {
         endpoint = endpoint.withoutTrailingDot();
 
         final TlsProvider tlsProvider = factory.options().tlsProvider();
-        final ClientTlsSpec tlsSpec = determineTlsSpec(endpoint, protocol, tlsProvider);
+        final ClientTlsSpec tlsSpec = determineTlsSpec(endpoint, protocol, tlsProvider, ctx);
 
         final PoolKey key = new PoolKey(endpoint, proxyConfig, tlsSpec);
         final HttpChannelPool pool;
@@ -266,7 +266,11 @@ final class HttpClientDelegate implements HttpClient {
     }
 
     private ClientTlsSpec determineTlsSpec(Endpoint endpoint, SessionProtocol sessionProtocol,
-                                           TlsProvider tlsProvider) {
+                                           TlsProvider tlsProvider, ClientRequestContext ctx) {
+        final ClientTlsSpec reqTlsSpec = ctx.clientTlsSpec();
+        if (reqTlsSpec != null) {
+            return reqTlsSpec.toBuilder().alpnProtocols(sessionProtocol).build();
+        }
         if (tlsProvider != NullTlsProvider.INSTANCE) {
             TlsKeyPair keyPair = null;
             final String hostname = endpoint.toSocketAddress(-1).getHostString();

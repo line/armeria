@@ -231,6 +231,7 @@ class RequestOptionsTest {
     @Test
     void copyFromOtherOptions() {
         final AttributeKey<String> quz = AttributeKey.valueOf("quz");
+        final ClientTlsSpec spec = ClientTlsSpec.builder().build();
         final RequestOptions requestOptions1 = RequestOptions.builder()
                                                              .responseTimeoutMillis(2000)
                                                              .writeTimeoutMillis(1000)
@@ -238,6 +239,7 @@ class RequestOptionsTest {
                                                              .requestAutoAbortDelayMillis(1000)
                                                              .attr(foo, "hello")
                                                              .attr(bar, "options")
+                                                             .clientTlsSpec(spec)
                                                              .build();
 
         final RequestOptions requestOptions2 = RequestOptions.builder(requestOptions1)
@@ -251,6 +253,7 @@ class RequestOptionsTest {
         assertThat(requestOptions2.requestAutoAbortDelayMillis()).isEqualTo(
                 requestOptions1.requestAutoAbortDelayMillis());
         assertThat(requestOptions2.maxResponseLength()).isEqualTo(3000);
+        assertThat(requestOptions1.clientTlsSpec()).isSameAs(requestOptions2.clientTlsSpec());
         final Map<AttributeKey<?>, Object> attrs = requestOptions2.attrs();
         assertThat(attrs.get(foo)).isEqualTo("world");
         assertThat(attrs.get(bar)).isEqualTo("options");
