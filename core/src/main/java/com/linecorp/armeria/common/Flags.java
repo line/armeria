@@ -291,6 +291,14 @@ public final class Flags {
             getValue(FlagsProvider::defaultServerConnectionDrainDurationMicros,
                      "defaultServerConnectionDrainDurationMicros", value -> value >= 0);
 
+    private static final long DEFAULT_CLIENT_WORKER_GROUP_GRACEFUL_SHUTDOWN_QUIET_PERIOD_MILLIS =
+            getValue(FlagsProvider::defaultClientWorkerGroupGracefulShutdownQuietPeriodMillis,
+                     "defaultClientWorkerGroupGracefulShutdownQuietPeriodMillis", value -> value >= 0);
+
+    private static final long DEFAULT_CLIENT_WORKER_GROUP_GRACEFUL_SHUTDOWN_TIMEOUT_MILLIS =
+            getValue(FlagsProvider::defaultClientWorkerGroupGracefulShutdownTimeoutMillis,
+                     "defaultClientWorkerGroupGracefulShutdownTimeoutMillis", value -> value >= 0);
+
     private static final long DEFAULT_CLIENT_HTTP2_GRACEFUL_SHUTDOWN_TIMEOUT_MILLIS =
             getValue(FlagsProvider::defaultClientHttp2GracefulShutdownTimeoutMillis,
                      "defaultClientHttp2GracefulShutdownTimeoutMillis", value -> value >= 0);
@@ -1070,6 +1078,42 @@ public final class Flags {
      */
     public static long defaultServerConnectionDrainDurationMicros() {
         return DEFAULT_SERVER_CONNECTION_DRAIN_DURATION_MICROS;
+    }
+
+    /**
+     * Returns the default client-side graceful worker group shutdown quiet period in milliseconds.
+     * {@code 0} disables the quiet period.
+     *
+     * <p>The default value of this flag is
+     * {@value DefaultFlagsProvider#DEFAULT_CLIENT_WORKER_GROUP_GRACEFUL_SHUTDOWN_QUIET_PERIOD_MILLIS}.
+     * Specify the {@code -Dcom.linecorp.armeria.defaultClientWorkerGroupGracefulShutdownQuietPeriodMillis=<long>}
+     * JVM option to override the default value.
+     * </p>
+     *
+     * @see ClientFactoryBuilder#workerGroupGracefulShutdownQuietPeriod(Duration)
+     * @see ClientFactoryBuilder#workerGroupGracefulShutdownQuietPeriodMillis(long)
+     */
+    @UnstableApi
+    public static long defaultClientWorkerGroupGracefulShutdownQuietPeriodMillis() {
+        return DEFAULT_CLIENT_WORKER_GROUP_GRACEFUL_SHUTDOWN_QUIET_PERIOD_MILLIS;
+    }
+
+    /**
+     * Returns the default client-side graceful worker group shutdown timeout in milliseconds.
+     * {@code 0} disables the timeout and closes the worker group immediately.
+     *
+     * <p>The default value of this flag is
+     * {@value DefaultFlagsProvider#DEFAULT_CLIENT_WORKER_GROUP_GRACEFUL_SHUTDOWN_TIMEOUT_MILLIS}.
+     * Specify the {@code -Dcom.linecorp.armeria.defaultClientWorkerGroupGracefulShutdownTimeoutMillis=<long>}
+     * JVM option to override the default value.
+     * </p>
+     *
+     * @see ClientFactoryBuilder#workerGroupGracefulShutdownTimeout(Duration)
+     * @see ClientFactoryBuilder#workerGroupGracefulShutdownTimeoutMillis(long)
+     */
+    @UnstableApi
+    public static long defaultClientWorkerGroupGracefulShutdownTimeoutMillis() {
+        return DEFAULT_CLIENT_WORKER_GROUP_GRACEFUL_SHUTDOWN_TIMEOUT_MILLIS;
     }
 
     /**
