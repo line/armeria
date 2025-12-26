@@ -25,6 +25,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.logging.LogLevel;
 import com.linecorp.armeria.common.util.TextFormatter;
 import com.linecorp.armeria.common.util.Ticker;
 
@@ -41,21 +42,18 @@ final class ConnectionPoolLoggingListener implements ConnectionPoolListener {
             AttributeKey.valueOf(ConnectionPoolLoggingListener.class, "OPEN_NANOS");
 
     private final AtomicInteger activeChannels = new AtomicInteger();
+    private final LogLevel connectionLogLevel;
+    private final LogLevel pingLogLevel;
     private final Ticker ticker;
-
-    /**
-     * Creates a new instance with a {@linkplain Ticker#systemTicker() system ticker}.
-     */
-    ConnectionPoolLoggingListener() {
-        this(Ticker.systemTicker());
-    }
 
     /**
      * Creates a new instance with an alternative {@link Ticker}.
      *
      * @param ticker an alternative {@link Ticker}
      */
-    ConnectionPoolLoggingListener(Ticker ticker) {
+    ConnectionPoolLoggingListener(LogLevel connectionLogLevel, LogLevel pingLogLevel, Ticker ticker) {
+        this.connectionLogLevel = connectionLogLevel;
+        this.pingLogLevel = pingLogLevel;
         this.ticker = requireNonNull(ticker, "ticker");
     }
 
@@ -65,10 +63,10 @@ final class ConnectionPoolLoggingListener implements ConnectionPoolListener {
                                InetSocketAddress localAddr,
                                AttributeMap attrs) throws Exception {
         final int activeChannels = this.activeChannels.incrementAndGet();
-        if (logger.isInfoEnabled()) {
+        if (connectionLogLevel.isEnabled(logger)) {
             attrs.attr(OPEN_NANOS).set(ticker.read());
-            logger.info("[L:{} - R:{}][{}] OPEN (active channels: {})",
-                        localAddr, remoteAddr, protocol.uriText(), activeChannels);
+            connectionLogLevel.log(logger, "[L:{} - R:{}][{}] OPEN (active channels: {})",
+                                   localAddr, remoteAddr, protocol.uriText(), activeChannels);
         }
     }
 
@@ -78,12 +76,12 @@ final class ConnectionPoolLoggingListener implements ConnectionPoolListener {
                                  InetSocketAddress localAddr,
                                  AttributeMap attrs) throws Exception {
         final int activeChannels = this.activeChannels.decrementAndGet();
-        if (logger.isInfoEnabled() && attrs.hasAttr(OPEN_NANOS)) {
+        if (connectionLogLevel.isEnabled(logger) && attrs.hasAttr(OPEN_NANOS)) {
             final long closeNanos = ticker.read();
             final long elapsedNanos = closeNanos - attrs.attr(OPEN_NANOS).get();
-            logger.info("[L:{} ! R:{}][{}] CLOSED (lasted for: {}, active channels: {})",
-                        localAddr, remoteAddr, protocol.uriText(),
-                        TextFormatter.elapsed(elapsedNanos, TimeUnit.NANOSECONDS), activeChannels);
+            connectionLogLevel.log(logger, "[L:{} ! R:{}][{}] CLOSED (lasted for: {}, active channels: {})",
+                                   localAddr, remoteAddr, protocol.uriText(),
+                                   TextFormatter.elapsed(elapsedNanos, TimeUnit.NANOSECONDS), activeChannels);
         }
     }
 
@@ -92,27 +90,29 @@ final class ConnectionPoolLoggingListener implements ConnectionPoolListener {
                                  InetSocketAddress localAddr, AttributeMap attrs, String closeHint)
             throws Exception {
         final int activeChannels = this.activeChannels.decrementAndGet();
-        if (logger.isInfoEnabled() && attrs.hasAttr(OPEN_NANOS)) {
+        if (connectionLogLevel.isEnabled(logger) && attrs.hasAttr(OPEN_NANOS)) {
             final long closeNanos = ticker.read();
             final long elapsedNanos = closeNanos - attrs.attr(OPEN_NANOS).get();
-            logger.info("[L:{} ! R:{}][{}] CLOSED (lasted for: {}, active channels: {}, reason: {})",
-                        localAddr, remoteAddr, protocol.uriText(),
-                        TextFormatter.elapsed(elapsedNanos, TimeUnit.NANOSECONDS), activeChannels,
-                        closeHint);
+            connectionLogLevel.log(logger, "[L:{} ! R:{}][{}] CLOSED " +
+                                           "(lasted for: {}, active channels: {}, reason: {})",
+                                   localAddr, remoteAddr, protocol.uriText(),
+                                   TextFormatter.elapsed(elapsedNanos, TimeUnit.NANOSECONDS), activeChannels,
+                                   closeHint);
         }
     }
 
     @Override
-    public void pingWrite(SessionProtocol protocol, InetSocketAddress remoteAddr, InetSocketAddress localAddr,
-                          AttributeMap attrs, long identifier) throws Exception {
-        logger.info("[L:{} ! R:{}][{}] PING WRITE (identifier: {})",
-                    localAddr, remoteAddr, protocol.uriText(), identifier);
+    public void onPingSent(SessionProtocol protocol, InetSocketAddress remoteAddr, InetSocketAddress localAddr,
+                           AttributeMap attrs, long identifier) throws Exception {
+        pingLogLevel.log(logger, "[L:{} ! R:{}][{}] PING WRITE (identifier: {})",
+                         localAddr, remoteAddr, protocol.uriText(), identifier);
     }
 
     @Override
-    public void pingAck(SessionProtocol protocol, InetSocketAddress remoteAddr, InetSocketAddress localAddr,
-                        AttributeMap attrs, long identifier) throws Exception {
-        logger.info("[L:{} ! R:{}][{}] PING ACK (identifier: {})",
-                    localAddr, remoteAddr, protocol.uriText(), identifier);
+    public void onPingAcknowledged(SessionProtocol protocol, InetSocketAddress remoteAddr,
+                                   InetSocketAddress localAddr,
+                                   AttributeMap attrs, long identifier) throws Exception {
+        pingLogLevel.log(logger, "[L:{} ! R:{}][{}] PING ACK (identifier: {})",
+                         localAddr, remoteAddr, protocol.uriText(), identifier);
     }
 }

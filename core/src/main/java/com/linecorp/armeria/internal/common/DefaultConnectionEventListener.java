@@ -92,8 +92,8 @@ public final class DefaultConnectionEventListener implements ConnectionEventList
         if (closed) {
             return;
         }
-        safelyNotify(() -> connectionPoolListener.pingWrite(sessionProtocol, remoteAddress(),
-                                                            localAddress(), channel, id),
+        safelyNotify(() -> connectionPoolListener.onPingSent(sessionProtocol, remoteAddress(),
+                                                             localAddress(), channel, id),
                      "pingWrite");
     }
 
@@ -102,12 +102,12 @@ public final class DefaultConnectionEventListener implements ConnectionEventList
         if (closed) {
             return;
         }
-        safelyNotify(() -> connectionPoolListener.pingAck(sessionProtocol, remoteAddress(),
-                                                          localAddress(), channel, id),
+        safelyNotify(() -> connectionPoolListener.onPingAcknowledged(sessionProtocol, remoteAddress(),
+                                                                     localAddress(), channel, id),
                      "pingAck");
     }
 
-    void safelyNotify(ThrowingRunnable runnable, String name) {
+    private void safelyNotify(ThrowingRunnable runnable, String name) {
         try {
             runnable.run();
         } catch (Throwable e) {

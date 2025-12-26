@@ -160,15 +160,15 @@ class ConnectionPoolKeepAliveTest {
         }
 
         @Override
-        public void pingAck(SessionProtocol protocol, InetSocketAddress remoteAddr,
-                            InetSocketAddress localAddr, AttributeMap attrs, long identifier)
+        public void onPingAcknowledged(SessionProtocol protocol, InetSocketAddress remoteAddr,
+                                       InetSocketAddress localAddr, AttributeMap attrs, long identifier)
                 throws Exception {
             ackIds.add(identifier);
         }
 
         @Override
-        public void pingWrite(SessionProtocol protocol, InetSocketAddress remoteAddr,
-                              InetSocketAddress localAddr, AttributeMap attrs, long identifier)
+        public void onPingSent(SessionProtocol protocol, InetSocketAddress remoteAddr,
+                               InetSocketAddress localAddr, AttributeMap attrs, long identifier)
                 throws Exception {
             writeIds.add(identifier);
         }

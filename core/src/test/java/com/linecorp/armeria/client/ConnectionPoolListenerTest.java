@@ -62,8 +62,8 @@ class ConnectionPoolListenerTest {
             }
 
             @Override
-            public void pingAck(SessionProtocol protocol, InetSocketAddress remoteAddr,
-                                InetSocketAddress localAddr, AttributeMap attrs, long identifier)
+            public void onPingAcknowledged(SessionProtocol protocol, InetSocketAddress remoteAddr,
+                                           InetSocketAddress localAddr, AttributeMap attrs, long identifier)
                     throws Exception {
                 counterArray[6] = (int) identifier;
             }
@@ -83,8 +83,8 @@ class ConnectionPoolListenerTest {
             }
 
             @Override
-            public void pingWrite(SessionProtocol protocol, InetSocketAddress remoteAddr,
-                                  InetSocketAddress localAddr, AttributeMap attrs, long identifier)
+            public void onPingSent(SessionProtocol protocol, InetSocketAddress remoteAddr,
+                                   InetSocketAddress localAddr, AttributeMap attrs, long identifier)
                     throws Exception {
                 counterArray[7] = (int) identifier;
             }
@@ -99,8 +99,8 @@ class ConnectionPoolListenerTest {
 
         cplCombined.connectionOpen(protocol, remoteAddr, localAddr, attrs);
         cplCombined.connectionClosed(protocol, remoteAddr, localAddr, attrs);
-        cplCombined.pingAck(protocol, remoteAddr, localAddr, attrs, 60);
-        cplCombined.pingWrite(protocol, remoteAddr, localAddr, attrs, 70);
+        cplCombined.onPingAcknowledged(protocol, remoteAddr, localAddr, attrs, 60);
+        cplCombined.onPingSent(protocol, remoteAddr, localAddr, attrs, 70);
         cplCombined.close();
 
         for (int i = 0; i < counterArray.length; i++) {

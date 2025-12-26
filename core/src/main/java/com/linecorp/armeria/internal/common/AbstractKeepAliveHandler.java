@@ -91,14 +91,6 @@ public abstract class AbstractKeepAliveHandler implements KeepAliveHandler {
     protected AbstractKeepAliveHandler(Channel channel, String name, Timer keepAliveTimer,
                                        long idleTimeoutMillis, long pingIntervalMillis,
                                        long maxConnectionAgeMillis, long maxNumRequestsPerConnection,
-                                       boolean keepAliveOnPing) {
-        this(channel, name, keepAliveTimer, idleTimeoutMillis, pingIntervalMillis, maxConnectionAgeMillis,
-             maxNumRequestsPerConnection, keepAliveOnPing, ConnectionEventListener.NOOP);
-    }
-
-    protected AbstractKeepAliveHandler(Channel channel, String name, Timer keepAliveTimer,
-                                       long idleTimeoutMillis, long pingIntervalMillis,
-                                       long maxConnectionAgeMillis, long maxNumRequestsPerConnection,
                                        boolean keepAliveOnPing, ConnectionEventListener listener) {
         this.channel = channel;
         this.name = name;

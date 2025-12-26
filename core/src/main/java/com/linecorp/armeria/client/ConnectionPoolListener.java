@@ -21,6 +21,7 @@ import java.net.InetSocketAddress;
 
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.UnstableApi;
+import com.linecorp.armeria.common.logging.LogLevel;
 import com.linecorp.armeria.common.metric.MeterIdPrefix;
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.common.util.Ticker;
@@ -45,7 +46,7 @@ public interface ConnectionPoolListener extends Unwrappable, SafeCloseable {
      * Returns a {@link ConnectionPoolListener} that logs the connection pool events.
      */
     static ConnectionPoolListener logging() {
-        return new ConnectionPoolLoggingListener();
+        return logging(LogLevel.INFO, LogLevel.TRACE);
     }
 
     /**
@@ -53,7 +54,14 @@ public interface ConnectionPoolListener extends Unwrappable, SafeCloseable {
      * {@link Ticker}.
      */
     static ConnectionPoolListener logging(Ticker ticker) {
-        return new ConnectionPoolLoggingListener(ticker);
+        return new ConnectionPoolLoggingListener(LogLevel.INFO, LogLevel.TRACE, ticker);
+    }
+
+    /**
+     * Returns a {@link ConnectionPoolListener} that logs the connection pool events.
+     */
+    static ConnectionPoolListener logging(LogLevel connectionLogLevel, LogLevel pingLogLevel) {
+        return new ConnectionPoolLoggingListener(connectionLogLevel, pingLogLevel, Ticker.systemTicker());
     }
 
     /**
@@ -125,7 +133,11 @@ public interface ConnectionPoolListener extends Unwrappable, SafeCloseable {
      * Invoked when a connection in the connection pool has been closed.
      * Once a connection has been closed, it is guaranteed
      * that no more events are published for the corresponding connection.
+     *
+     * @deprecated prefer {@link #connectionClosed(SessionProtocol, InetSocketAddress,
+     *             InetSocketAddress, AttributeMap, String)}
      */
+    @Deprecated
     void connectionClosed(SessionProtocol protocol,
                           InetSocketAddress remoteAddr,
                           InetSocketAddress localAddr,
@@ -136,6 +148,7 @@ public interface ConnectionPoolListener extends Unwrappable, SafeCloseable {
      * why the connection has been closed. Once a connection has been closed, it is guaranteed
      * that no more events are published for the corresponding connection.
      */
+    @UnstableApi
     default void connectionClosed(SessionProtocol protocol,
                                   InetSocketAddress remoteAddr,
                                   InetSocketAddress localAddr,
@@ -146,27 +159,29 @@ public interface ConnectionPoolListener extends Unwrappable, SafeCloseable {
 
     /**
      * Invoked when a ping is written to the peer.
-     * For HTTP/1, the identifier is an internal request id associated with the ping request.
+     * For HTTP/1.1, the identifier is an internal request id associated with the ping request.
      * For HTTP/2, the identifier is data as described in the
      * <a href="https://datatracker.ietf.org/doc/html/rfc7540#section-6.7">specification</a>.
      */
-    default void pingWrite(SessionProtocol protocol,
-                           InetSocketAddress remoteAddr,
-                           InetSocketAddress localAddr,
-                           AttributeMap attrs,
-                           long identifier) throws Exception {}
+    @UnstableApi
+    default void onPingSent(SessionProtocol protocol,
+                            InetSocketAddress remoteAddr,
+                            InetSocketAddress localAddr,
+                            AttributeMap attrs,
+                            long identifier) throws Exception {}
 
     /**
      * Invoked when a written ping is acknowledged by the peer.
-     * For HTTP/1, the identifier is an internal request id associated with the ping request.
+     * For HTTP/1.1, the identifier is an internal request id associated with the ping request.
      * For HTTP/2, the identifier is data as described in the
      * <a href="https://datatracker.ietf.org/doc/html/rfc7540#section-6.7">specification</a>.
      */
-    default void pingAck(SessionProtocol protocol,
-                         InetSocketAddress remoteAddr,
-                         InetSocketAddress localAddr,
-                         AttributeMap attrs,
-                         long identifier) throws Exception {}
+    @UnstableApi
+    default void onPingAcknowledged(SessionProtocol protocol,
+                                    InetSocketAddress remoteAddr,
+                                    InetSocketAddress localAddr,
+                                    AttributeMap attrs,
+                                    long identifier) throws Exception {}
 
     @Override
     default ConnectionPoolListener unwrap() {
@@ -206,24 +221,26 @@ public interface ConnectionPoolListener extends Unwrappable, SafeCloseable {
             }
 
             @Override
-            public void pingAck(SessionProtocol protocol, InetSocketAddress remoteAddr,
-                                InetSocketAddress localAddr, AttributeMap attrs, long identifier)
+            public void onPingAcknowledged(SessionProtocol protocol, InetSocketAddress remoteAddr,
+                                           InetSocketAddress localAddr, AttributeMap attrs, long identifier)
                     throws Exception {
                 try {
-                    ConnectionPoolListener.this.pingAck(protocol, remoteAddr, localAddr, attrs, identifier);
+                    ConnectionPoolListener.this.onPingAcknowledged(protocol, remoteAddr, localAddr, attrs,
+                                                                   identifier);
                 } finally {
-                    nextConnectionPoolListener.pingAck(protocol, remoteAddr,localAddr,attrs, identifier);
+                    nextConnectionPoolListener.onPingAcknowledged(protocol, remoteAddr, localAddr, attrs,
+                                                                  identifier);
                 }
             }
 
             @Override
-            public void pingWrite(SessionProtocol protocol, InetSocketAddress remoteAddr,
-                                  InetSocketAddress localAddr, AttributeMap attrs, long identifier)
+            public void onPingSent(SessionProtocol protocol, InetSocketAddress remoteAddr,
+                                   InetSocketAddress localAddr, AttributeMap attrs, long identifier)
                     throws Exception {
                 try {
-                    ConnectionPoolListener.this.pingWrite(protocol, remoteAddr, localAddr, attrs, identifier);
+                    ConnectionPoolListener.this.onPingSent(protocol, remoteAddr, localAddr, attrs, identifier);
                 } finally {
-                    nextConnectionPoolListener.pingWrite(protocol, remoteAddr,localAddr,attrs, identifier);
+                    nextConnectionPoolListener.onPingSent(protocol, remoteAddr, localAddr, attrs, identifier);
                 }
             }
 
