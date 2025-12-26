@@ -267,6 +267,13 @@ jobs:
           ./gradlew --no-daemon --stacktrace  --max-workers=2 --parallel -PgithubToken=${{ secrets.GITHUB_TOKEN }} site
         shell: bash
 
+      - name: Upload npm logs
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: npm-debug-logs
+          path: /home/runner/.npm/_logs/
+
   flaky-tests:
     if: github.repository == 'line/armeria'
     runs-on: ubuntu-latest

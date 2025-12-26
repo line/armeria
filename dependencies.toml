@@ -100,7 +100,7 @@ micrometer-docs-generator = "1.0.2"
 mockito = "4.11.0"
 monix = "3.4.1"
 munit = "1.2.1"
-netty = "4.2.7.Final"
+netty = "4.2.9.Final"
 nexus-publish = "2.0.0"
 node-gradle-plugin = "7.1.0"
 nullaway = "0.12.12"
@@ -157,9 +157,12 @@ shibboleth-utilities = "7.5.2"
 snappy = "1.1.10.8"
 slf4j = "1.7.36"
 slf4j2 = "2.0.17"
+spring5 = "5.3.39"
 spring6 = "6.2.14"
+spring7 = "7.0.1"
 spring-boot2 = "2.7.18"
 spring-boot3 = "3.5.8"
+spring-boot4 = "4.0.0"
 testcontainers = "1.21.3"
 thrift09 = { strictly = "0.9.3-1" }
 thrift012 = { strictly = "0.12.0" }
@@ -1240,8 +1243,15 @@ module = "org.slf4j:slf4j-api"
 version.ref = "slf4j2"
 javadocs = "https://www.javadoc.io/doc/org.slf4j/slf4j-api/2.0.7/"
 
+[libraries.spring5-aspects]
+module = "org.springframework:spring-aspects"
+version.ref = "spring5"
+
 [libraries.spring6-context]
 module = "org.springframework:spring-context"
+version.ref = "spring6"
+[libraries.spring6-aspects]
+module = "org.springframework:spring-aspects"
 version.ref = "spring6"
 [libraries.spring6-test]
 module = "org.springframework:spring-test"
@@ -1252,6 +1262,22 @@ version.ref = "spring6"
 [libraries.spring6-webflux]
 module = "org.springframework:spring-webflux"
 version.ref = "spring6"
+
+[libraries.spring7-context]
+module = "org.springframework:spring-context"
+version.ref = "spring7"
+[libraries.spring7-aspects]
+module = "org.springframework:spring-aspects"
+version.ref = "spring7"
+[libraries.spring7-test]
+module = "org.springframework:spring-test"
+version.ref = "spring7"
+[libraries.spring7-web]
+module = "org.springframework:spring-web"
+version.ref = "spring7"
+[libraries.spring7-webflux]
+module = "org.springframework:spring-webflux"
+version.ref = "spring7"
 
 [libraries.spring-boot2-actuator-autoconfigure]
 module = "org.springframework.boot:spring-boot-actuator-autoconfigure"
@@ -1265,9 +1291,6 @@ version.ref = "spring-boot2"
 javadocs = "https://docs.spring.io/spring/docs/current/javadoc-api/"
 [libraries.spring-boot2-starter-actuator]
 module = "org.springframework.boot:spring-boot-starter-actuator"
-version.ref = "spring-boot2"
-[libraries.spring-boot2-starter-security]
-module = "org.springframework.boot:spring-boot-starter-security"
 version.ref = "spring-boot2"
 [libraries.spring-boot2-starter-test]
 module = "org.springframework.boot:spring-boot-starter-test"
@@ -1299,9 +1322,6 @@ version.ref = "spring-boot3"
 [libraries.spring-boot3-starter-jetty]
 module = "org.springframework.boot:spring-boot-starter-jetty"
 version.ref = "spring-boot3"
-[libraries.spring-boot3-starter-security]
-module = "org.springframework.boot:spring-boot-starter-security"
-version.ref = "spring-boot3"
 [libraries.spring-boot3-starter-test]
 module = "org.springframework.boot:spring-boot-starter-test"
 version.ref = "spring-boot3"
@@ -1315,6 +1335,68 @@ exclusions = "org.springframework.boot:spring-boot-starter-reactor-netty"
 [libraries.spring-boot3-configuration-processor]
 module = "org.springframework.boot:spring-boot-configuration-processor"
 version.ref = "spring-boot3"
+
+[libraries.spring-boot4-actuator-autoconfigure]
+module = "org.springframework.boot:spring-boot-actuator-autoconfigure"
+version.ref = "spring-boot4"
+[libraries.spring-boot4-autoconfigure]
+module = "org.springframework.boot:spring-boot-autoconfigure"
+version.ref = "spring-boot4"
+[libraries.spring-boot4-configuration-processor]
+module = "org.springframework.boot:spring-boot-configuration-processor"
+version.ref = "spring-boot4"
+[libraries.spring-boot4-micrometer-metrics-test]
+module = "org.springframework.boot:spring-boot-micrometer-metrics-test"
+version.ref = "spring-boot4"
+[libraries.spring-boot4-micrometer-observation]
+module = "org.springframework.boot:spring-boot-micrometer-observation"
+version.ref = "spring-boot4"
+[libraries.spring-boot4-starter]
+module = "org.springframework.boot:spring-boot-starter"
+version.ref = "spring-boot4"
+javadocs = "https://docs.spring.io/spring/docs/current/javadoc-api/"
+[libraries.spring-boot4-starter-actuator]
+module = "org.springframework.boot:spring-boot-starter-actuator"
+version.ref = "spring-boot4"
+[libraries.spring-boot4-health]
+module = "org.springframework.boot:spring-boot-health"
+version.ref = "spring-boot4"
+[libraries.spring-boot4-jetty]
+module = "org.springframework.boot:spring-boot-jetty"
+version.ref = "spring-boot4"
+[libraries.spring-boot4-starter-jetty]
+module = "org.springframework.boot:spring-boot-starter-jetty"
+version.ref = "spring-boot4"
+[libraries.spring-boot4-starter-security]
+module = "org.springframework.boot:spring-boot-starter-security"
+version.ref = "spring-boot4"
+[libraries.spring-boot4-starter-test]
+module = "org.springframework.boot:spring-boot-starter-test"
+version.ref = "spring-boot4"
+[libraries.spring-boot4-starter-webmvc]
+module = "org.springframework.boot:spring-boot-starter-webmvc"
+version.ref = "spring-boot4"
+[libraries.spring-boot4-web-server]
+module = "org.springframework.boot:spring-boot-web-server"
+version.ref = "spring-boot4"
+[libraries.spring-boot4-webclient]
+module = "org.springframework.boot:spring-boot-webclient"
+version.ref = "spring-boot4"
+[libraries.spring-boot4-webmvc-test]
+module = "org.springframework.boot:spring-boot-webmvc-test"
+version.ref = "spring-boot4"
+[libraries.spring-boot4-webflux-test]
+module = "org.springframework.boot:spring-boot-webflux-test"
+version.ref = "spring-boot4"
+[libraries.spring-boot4-validation]
+module = "org.springframework.boot:spring-boot-validation"
+version.ref = "spring-boot4"
+[libraries.spring-boot4-starter-webflux]
+module = "org.springframework.boot:spring-boot-starter-webflux"
+version.ref = "spring-boot4"
+[libraries.spring-boot4-tomcat]
+module = "org.springframework.boot:spring-boot-tomcat"
+version.ref = "spring-boot4"
 
 [libraries.testcontainers-core]
 module = "org.testcontainers:testcontainers"

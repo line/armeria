@@ -1,0 +1,261 @@
+---
+authors:
+  - seunghwanjoo
+other_languages:
+  en: /blog/2021/08/04/customizing-armeria-metrics
+---
+
+# Armeria 지표 커스터마이징하기
+
+## 시작하며
+
+이전 글 [Armeria에서 Prometheus 지표 모니터링하기](/blog/ko/2021/06/28/monitoring-prometheus-metrics-from-armeria)에서 Armeria 지표를 Grafana로 모니터링하는 방법을 살펴봤습니다.
+이번 글에는 Armeria에서 필요에 따라 지표를 커스터마이징하는 방법을 알아보겠습니다.
+
+{/* truncate */}
+
+> 이번 글에서 사용한 코드는 [Armeria에서 Prometheus 지표 모니터링하기](/blog/ko/2021/06/28/monitoring-prometheus-metrics-from-armeria) 글의 예제 코드를 재사용했습니다.
+
+## MeterIdPrefixFunction 이용해 지표 프리픽스 이름 커스터마이징하기
+
+이전 글에서 `MeterIdPrefixFunction#ofDefault` 함수를 이용해 지표의 기본 프리픽스 이름을 설정할 수 있다는 것을 말씀드렸는데요. 이때 `MeterIdPrefixFunction#andThen` 함수를 이용하면 이 프리픽스 이름을 더욱 다양하게 커스터마이징할 수 있습니다.
+
+HTTP 메서드 이름을 메트릭의 프리픽스 이름으로 추가하고 싶다고 가정해보겠습니다.
+
+- AS-IS: `my_http_service`
+- TO-BE: `my_http_service_{HTTP method}`
+
+먼저 `MeterIdPrefixFunctionCustomizer`를 구현한 클래스를 생성해야 합니다. `MeterIdPrefixFunctionCustomizer#apply` 함수 안에서 기존 `MeterIdPrefix`에 HTTP 메서드 이름을 추가하도록 구현했습니다.
+
+이때 [RequestLog#requestHeaders](<https://javadoc.io/doc/com.linecorp.armeria/armeria-javadoc/1.8.0/com/linecorp/armeria/common/logging/RequestOnlyLog.html#requestHeaders()>)를 통해 요청 HTTP 메서드 이름을 가져올 수 있습니다. [RequestLog](https://javadoc.io/doc/com.linecorp.armeria/armeria-javadoc/1.8.0/com/linecorp/armeria/common/logging/RequestLog.html)에는 이외에도 하나의 요청을 처리하면서 발생하는 다양한 정보들이 수집되는데요. 자세한 내용은 [Armeria 공식 블로그](https://armeria.dev/docs/advanced-structured-logging/)에서 확인하실 수 있습니다.
+
+```java title="MeterIdPrefixFunctionCustomizer.java"
+public class MyMeterIdPrefixFunction implements MeterIdPrefixFunctionCustomizer {
+
+    @Override
+    public MeterIdPrefix apply(MeterRegistry registry, RequestOnlyLog log, MeterIdPrefix meterIdPrefix) {
+        return meterIdPrefix.append(log.requestHeaders().method().name());
+    }
+}
+```
+
+다음으로 `MeterIdPrefixFunction#andThen` 함수로 이 클래스의 인스턴스를 넣습니다.
+
+```java title="ArmeriaPrometheusApplication.java"
+ServerBuilder sb = Server.builder();
+                         .http(8083)
+                         .meterRegistry(meterRegistry);
+sb.annotatedService(...);
+sb.service("/metrics", ...);
+sb.decorator(MetricCollectingService.builder(MeterIdPrefixFunction.ofDefault("my.http.service")
+                                                                  // 추가
+                                                                  .andThen(new MyMeterIdPrefixFunction()))
+                                                                  .newDecorator());
+Server server = sb.build();
+// ... 생략 ...
+```
+
+서버를 재기동한 뒤 살펴보면 지표 이름에 HTTP 메서드 이름이 잘 추가된 것을 확인할 수 있습니다.
+
+```
+$ curl -s http://localhost:8083/metrics | grep "my_http_service_"
+# HELP my_http_service_GET_timeouts_total
+# TYPE my_http_service_GET_timeouts_total counter
+my_http_service_GET_timeouts_total{cause="RequestTimeoutException",hostname_pattern="*",http_status="500",method="hello",service="com.example.armeria_prometheus.MyAnnotatedService",} 0.0
+my_http_service_GET_timeouts_total{cause="RequestTimeoutException",hostname_pattern="*",http_status="200",method="hello",service="com.example.armeria_prometheus.MyAnnotatedService",} 0.0
+# HELP my_http_service_GET_active_requests
+# TYPE my_http_service_GET_active_requests gauge
+my_http_service_GET_active_requests{hostname_pattern="*",method="hello",service="com.example.armeria_prometheus.MyAnnotatedService",} 0.0
+...
+```
+
+다른 방법으로, 아래와 같이 Java 8부터 지원되는 람다(lambda) 표현식을 이용해 바로 추가할 수도 있습니다.
+
+```java title="ArmeriaPrometheusApplication.java"
+MeterIdPrefixFunction.ofDefault("my.http.service")
+                     .andThen((registry, log, prefix) -> prefix.append(log.requestHeaders().method().name())))
+```
+
+## HTTP API 응답 성공 기준 커스터마이징하기
+
+Armeria에서는 기본적으로 HTTP API의 응답 상태 코드가 100보다 작거나, 400보다 크거나 같은 경우에 실패로 간주하고 있습니다. 이때 `MetricCollectingServiceBuilder#successFunction`를 이용하면, 응답 성공과 실패의 기준을 내가 원하는 대로 재정의할 수 있습니다.
+
+먼저 API에서 404 상태 코드로 응답한 상황을 가정해 보겠습니다.
+
+```java title="MyAnnotatedService.java"
+public class MyAnnotatedService {
+
+    @Get("/hello/{seq}")
+    public HttpResponse hello(@Param("seq") int seq) {
+        if (seq % 5 == 0) {
+            return HttpResponse.of(HttpStatus.NOT_FOUND);
+        }
+        // ... 생략 ...
+    }
+}
+```
+
+```
+$ curl http://localhost:8083/hello/5
+404 Not Found
+
+$ curl -s http://localhost:8083/metrics | grep "my_http_service_GET_requests_total" | grep "404"
+my_http_service_GET_requests_total{hostname_pattern="*",http_status="404",method="hello",result="success",service="com.example.armeria_prometheus.MyAnnotatedService",} 0.0
+my_http_service_GET_requests_total{hostname_pattern="*",http_status="404",method="hello",result="failure",service="com.example.armeria_prometheus.MyAnnotatedService",} 1.0
+```
+
+만약 404 상태 코드를 실패가 아닌 성공으로 처리하고 싶다면, [RequestLog#responseHeaders](<https://javadoc.io/static/com.linecorp.armeria/armeria-javadoc/1.8.0/com/linecorp/armeria/common/logging/RequestLog.html#responseHeaders()>)에서 HTTP 상태를 가져와서 아래와 같이 `MetricCollectingServiceBuilder#successFunction`을 구현하면 됩니다.
+
+```java title="ArmeriaPrometheusApplication.java"
+// ... 생략 ...
+sb.decorator(MetricCollectingService.builder(MeterIdPrefixFunction.ofDefault("my.http.service")
+                                                                  .andThen(new MyMeterIdPrefixFunction()))
+                                     // 추가
+                                     .successFunction((context, log) -> {
+                                        final int statusCode = log.responseHeaders().status().code();
+                                        return (statusCode >= 200 && statusCode < 400) || statusCode == 404;
+                                     })
+                                     .newDecorator());
+// ... 생략 ...
+```
+
+구현 후 테스트한 결과 404 상태 코드도 성공(success)으로 집계된 것을 확인할 수 있습니다.
+
+```
+$ curl -s http://localhost:8083/metrics | grep "my_http_service_GET_requests_total" | grep "404"
+my_http_service_GET_requests_total{hostname_pattern="*",http_status="404",method="hello",result="success",service="com.example.armeria_prometheus.MyAnnotatedService",} 1.0
+my_http_service_GET_requests_total{hostname_pattern="*",http_status="404",method="hello",result="failure",service="com.example.armeria_prometheus.MyAnnotatedService",} 0.0
+```
+
+## 지표 필터링하기
+
+`MeterFilter`를 이용하면 내가 원하지 않는 지표를 집계에서 제외할 수 있습니다. 예를 들어, JVM 지표들을 집계에서 제외하고 싶다면, 아래와 같이 `MeterFilter`를 설정하면 됩니다.
+
+```java title="ArmeriaPrometheusApplication.java"
+public static void main(String[] args) {
+        PrometheusMeterRegistry meterRegistry = new PrometheusMeterRegistry(PrometheusConfig.DEFAULT);
+        meterRegistry.config()
+                     .meterFilter(MeterFilter.denyNameStartsWith("jvm"));
+        ServerBuilder sb = Server.builder();
+                                 .http(8083)
+                                 .meterRegistry(meterRegistry);
+        // ... 생략 ...
+```
+
+`jvm_` 지표들이 모두 제외된 것을 확인할 수 있습니다.
+
+```
+$ curl -s http://localhost:8083/metrics | grep "^jvm"
+```
+
+## gRPC 지표 수집하기
+
+Armeria의 [GrpcMeterIdPrefixFunction](https://javadoc.io/doc/com.linecorp.armeria/armeria-javadoc/1.8.0/com/linecorp/armeria/common/grpc/GrpcMeterIdPrefixFunction.html)를 이용해 [gRPC 상태 코드](https://grpc.github.io/grpc/core/md_doc_statuscodes.html)에 대한 지표도 수집할 수 있습니다. 지표를 수집하기 위해서는 먼저 아래와 같이 `armeria-grpc`를 디펜던시에 추가해야 합니다.
+
+```groovy title="build.gradle"
+dependencies {
+
+    // Armeria
+    implementation "com.linecorp.armeria:armeria:1.8.0"
+    implementation "com.linecorp.armeria:armeria-logback:1.8.0"
+    implementation "com.linecorp.armeria:armeria-grpc:1.8.0" // 추가
+
+    // ...
+}
+```
+
+테스트하기 위해 아래와 같이 간단한 gRPC 서비스를 하나 생성했습니다.
+
+```protobuf title="hello.proto"
+syntax = "proto3";
+
+package com.example.armeria_prometheus;
+
+option java_package = "com.example.armeria_prometheus.grpc";
+
+service HelloService {
+  rpc Hello (HelloRequest) returns (HelloReply) {}
+}
+
+message HelloRequest {
+  int32 seq = 1;
+}
+
+message HelloReply {
+  string message = 1;
+}
+```
+
+```java title="MyGrpcService.java"
+public class MyGrpcService extends HelloServiceGrpc.HelloServiceImplBase {
+
+    @Override
+    public void hello(HelloRequest request, StreamObserver<HelloReply> responseObserver) {
+        if (request.getSeq() % 3 != 0) {
+            HelloReply reply = HelloReply.newBuilder()
+                                         .setMessage("Success")
+                                         .build();
+            responseObserver.onNext(reply);
+            responseObserver.onCompleted();
+            return;
+        }
+        responseObserver.onError(Status.INTERNAL.asException());
+    }
+}
+```
+
+위에서 만든 gRPC 서비스를 새로운 서비스로 추가합니다. 기존의 HTTP 지표 수집에 영향을 주지 않도록 각 서비스에 `MetricCollectingService` `decorator`를 적용하는 형태로 변경했습니다.
+
+```java title="ArmeriaPrometheusApplication.java"
+// ... 생략 ...
+sb.annotatedService(new MyAnnotatedService(),
+                    MetricCollectingService.builder(MeterIdPrefixFunction.ofDefault("my.http.service")
+                                                                          // ... 생략 ...
+sb.service(GrpcService.builder()
+                      .addService(new MyGrpcService())
+                      .build(),
+           MetricCollectingService.newDecorator(GrpcMeterIdPrefixFunction.of("my.grpc.service")));
+sb.service("/metrics", PrometheusExpositionService.of(meterRegistry.getPrometheusRegistry()));
+// ... 생략 ...
+```
+
+간편하게 테스트를 진행하기 위해 복수 개의 gRPC 요청을 발생시키는 클라이언트 코드도 작성했습니다(클라이언트 역시 Armeria를 이용하면 쉽게 작성할 수 있습니다).
+
+```java title="RpcClientApplication.java"
+public class RpcClientApplication {
+
+    private static final Logger logger = LoggerFactory.getLogger(RpcClientApplication.class);
+
+    public static void main(String[] args) {
+        HelloServiceBlockingStub helloService = Clients
+                .newClient("gproto+http://127.0.0.1:8083/", HelloServiceBlockingStub.class);
+        for (int i = 0; i < 100; i++) {
+            try {
+                HelloRequest request = HelloRequest.newBuilder().setSeq(i).build();
+                HelloReply reply = helloService.hello(request);
+                logger.info(reply.getMessage());
+            } catch (Exception e) {
+                logger.error("Error", e);
+            }
+        }
+    }
+}
+```
+
+서버를 재기동하고 클라이언트 코드를 실행해 봅니다.
+
+```
+$ curl -s http://localhost:8083/metrics | grep "my_grpc_service_requests_total"
+# HELP my_grpc_service_requests_total
+# TYPE my_grpc_service_requests_total counter
+my_grpc_service_requests_total{grpc_status="13",hostname_pattern="*",http_status="200",method="Hello",result="success",service="com.example.armeria_prometheus.HelloService",} 0.0
+my_grpc_service_requests_total{grpc_status="13",hostname_pattern="*",http_status="200",method="Hello",result="failure",service="com.example.armeria_prometheus.HelloService",} 34.0
+my_grpc_service_requests_total{grpc_status="0",hostname_pattern="*",http_status="200",method="Hello",result="failure",service="com.example.armeria_prometheus.HelloService",} 0.0
+my_grpc_service_requests_total{grpc_status="0",hostname_pattern="*",http_status="200",method="Hello",result="success",service="com.example.armeria_prometheus.HelloService",} 66.0
+```
+
+실질적인 gRPC 응답에 해당하는 [gRPC 상태 코드](https://grpc.github.io/grpc/core/md_doc_statuscodes.html) 지표도 함께 수집돼 출력된 것을 확인할 수 있습니다.
+
+## 마치며
+
+Armeria에서는 이 밖에도 사용자들이 각자의 요구 사항에 맞게 지표를 수집할 수 있도록 다양한 기능을 제공하고 있습니다. 이런 기능들을 활용해 서버 개발자들이 보다 생산적으로 모니터링할 수 있기를 소망하며 글을 마치겠습니다.

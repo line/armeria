@@ -13,7 +13,7 @@ import jakarta.validation.constraints.Size;
  * Note that this is not a Spring-based component but an annotated HTTP service that leverages
  * Armeria's built-in annotations.
  *
- * @see <a href="https://armeria.dev/docs/server-annotated-service">Annotated HTTP Service</a>
+ * @see <a href="https://line.github.io/armeria/docs/server-annotated-service">Annotated HTTP Service</a>
  */
 @Component
 @Validated

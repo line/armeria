@@ -2,7 +2,7 @@ package example.springframework.boot.webflux;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.autoconfigure.ImportAutoConfiguration;
-import org.springframework.boot.test.autoconfigure.web.reactive.WebFluxTest;
+import org.springframework.boot.webflux.test.autoconfigure.WebFluxTest;
 import org.springframework.test.web.reactive.server.WebTestClient;
 
 import com.linecorp.armeria.spring.web.reactive.ArmeriaClientAutoConfiguration;

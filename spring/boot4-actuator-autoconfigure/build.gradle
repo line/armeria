@@ -1,0 +1,41 @@
+import com.linecorp.armeria.conventions.spring.SpringBuildUtil
+
+dependencies {
+    api libs.spring.boot4.actuator.autoconfigure
+    api libs.spring.boot4.health
+    api libs.spring.boot4.web.server
+    api libs.jakarta.inject
+    compileOnly libs.jakarta.validation
+
+    optionalApi project(':prometheus1')
+    optionalApi libs.micrometer.prometheus.legacy
+    optionalApi libs.dropwizard.metrics.json
+
+    implementation libs.spring.boot4.autoconfigure
+    optionalImplementation libs.reactor.core
+
+    testImplementation project(':spring:boot4-autoconfigure')
+    testImplementation libs.spring.boot4.starter.actuator
+    testImplementation libs.spring.boot4.starter.test
+    testImplementation libs.micrometer.prometheus
+    testImplementation libs.spring.boot4.micrometer.metrics.test
+}
+
+// Copy common files from boot4-autoconfigure module to gen-src directory in order to use them as
+// a source/test set.
+
+SpringBuildUtil.copyTestSources(project(":spring:boot4-autoconfigure"), project) {
+    include '**/RetryableArmeriaServerGracefulShutdownLifecycle.java'
+    include '**/RetryableArmeriaServerGracefulShutdownLifecycleConfiguration.java'
+    include '**/META-INF/spring/**'
+}
+
+SpringBuildUtil.copyMainSources(project(":spring:boot4-autoconfigure"), project) {
+    include '**/ArmeriaConfigurationNetUtil.java'
+    include '**/ArmeriaServerConfigurator.java'
+    include '**/ArmeriaSettings.java'
+    include '**/AthenzConfig.java'
+    include '**/InternalServiceId.java'
+    include '**/SpringDependencyInjector.java'
+    include '**/Ssl.java'
+}

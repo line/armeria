@@ -1,0 +1,15 @@
+plugins {
+	id 'java'
+}
+
+repositories {
+	gradlePluginPortal()
+	mavenCentral()
+}
+
+dependencies {
+	implementation gradleApi()
+	implementation localGroovy()
+	// we can't use version-catalog as it is generated dynamically
+	implementation "net.ltgt.gradle:gradle-errorprone-plugin:4.3.0"
+}

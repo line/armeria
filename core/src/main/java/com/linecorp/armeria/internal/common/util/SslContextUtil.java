@@ -20,17 +20,14 @@ import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkState;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 
-import java.lang.reflect.Field;
 import java.security.KeyStore;
 import java.security.cert.X509Certificate;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 import java.util.Set;
 import java.util.function.Consumer;
-import java.util.function.Supplier;
 
-import javax.net.ssl.SSLException;
+import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.TrustManager;
 import javax.net.ssl.TrustManagerFactory;
 import javax.net.ssl.X509ExtendedTrustManager;
@@ -47,7 +44,7 @@ import com.linecorp.armeria.common.AbstractTlsSpec;
 import com.linecorp.armeria.common.TlsKeyPair;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.Exceptions;
-import com.linecorp.armeria.common.util.TlsEngineType;
+import com.linecorp.armeria.server.ServerTlsSpec;
 
 import io.netty.handler.codec.http2.Http2SecurityUtil;
 import io.netty.handler.ssl.ApplicationProtocolConfig;
@@ -55,12 +52,12 @@ import io.netty.handler.ssl.ApplicationProtocolConfig.Protocol;
 import io.netty.handler.ssl.ApplicationProtocolConfig.SelectedListenerFailureBehavior;
 import io.netty.handler.ssl.ApplicationProtocolConfig.SelectorFailureBehavior;
 import io.netty.handler.ssl.ApplicationProtocolNames;
+import io.netty.handler.ssl.ClientAuth;
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.handler.ssl.SslProvider;
 import io.netty.handler.ssl.SupportedCipherSuiteFilter;
 import io.netty.util.ReferenceCountUtil;
-import io.netty.util.internal.EmptyArrays;
 
 /**
  * Utilities for configuring {@link SslContextBuilder}.
@@ -107,145 +104,25 @@ public final class SslContextUtil {
     private static boolean warnedMissingEssentialCipherSuite;
     private static boolean warnedBadCipherSuite;
 
-    /**
-     * Creates a {@link SslContext} with Armeria's defaults, enabling support for HTTP/2,
-     * TLSv1.3 (if supported), and TLSv1.2.
-     */
-    public static SslContext createSslContext(
-            Supplier<SslContextBuilder> builderSupplier, boolean forceHttp1,
-            TlsEngineType tlsEngineType, boolean tlsAllowUnsafeCiphers,
-            @Nullable Consumer<? super SslContextBuilder> userCustomizer,
-            @Nullable List<X509Certificate> keyCertChainCaptor) {
-
-        return MinifiedBouncyCastleProvider.call(() -> {
-            final SslContextBuilder builder = builderSupplier.get();
-            final SslProvider provider = tlsEngineType.sslProvider();
-            builder.sslProvider(provider);
-
-            final List<String> protocols = filterProtocols(DEFAULT_PROTOCOLS, provider);
-
-            // Set endpoint identification algorithm so that JDK's default X509TrustManager implementation
-            // performs host name checks. This options is effective only for clients.
-            builder.endpointIdentificationAlgorithm("HTTPS");
-            builder.protocols(protocols.toArray(EmptyArrays.EMPTY_STRINGS))
-                   .ciphers(DEFAULT_CIPHERS, SupportedCipherSuiteFilter.INSTANCE);
-
-            if (userCustomizer != null) {
-                userCustomizer.accept(builder);
-            }
-
-            // We called user customization logic before setting ALPN to make sure they don't break
-            // compatibility with HTTP/2.
-            if (!forceHttp1) {
-                builder.applicationProtocolConfig(ALPN_CONFIG);
-            }
-            maybeCaptureKeyCertChain(builder, keyCertChainCaptor);
-
-            SslContext sslContext = null;
-            boolean success = false;
-            try {
-                sslContext = builder.build();
-
-                final Set<String> ciphers = ImmutableSet.copyOf(sslContext.cipherSuites());
-                checkState(!ciphers.isEmpty(),
-                           "SSLContext has no cipher suites enabled. " +
-                           "You must specify at least one cipher suite.");
-
-                if (forceHttp1) {
-                    // Skip validation
-                } else {
-                    validateHttp2Ciphers(ciphers, tlsAllowUnsafeCiphers);
-                }
-
-                success = true;
-                return sslContext;
-            } catch (SSLException e) {
-                throw new IllegalStateException(
-                        "Could not initialize SSL context. Ensure that netty-tcnative is " +
-                        "on the path, this is running on Java 11+, or user customization " +
-                        "of the SSL context is supported by the environment.", e);
-            } finally {
-                if (!success && sslContext != null) {
-                    ReferenceCountUtil.release(sslContext);
-                }
-            }
-        });
-    }
-
-    private static void maybeCaptureKeyCertChain(SslContextBuilder sslContextBuilder,
-                                                 @Nullable List<X509Certificate> keyCertChainCaptor) {
-        if (keyCertChainCaptor == null) {
-            return;
-        }
-        try {
-            // TODO(ikhoon): Open an issue to Netty to expose `keyCertChain` in `SslContextBuilder`.
-            final Field keyCertChain = SslContextBuilder.class.getDeclaredField("keyCertChain");
-            keyCertChain.setAccessible(true);
-            final X509Certificate[] certificates = (X509Certificate[]) keyCertChain.get(sslContextBuilder);
-            if (certificates == null || certificates.length == 0) {
-                return;
-            }
-            keyCertChainCaptor.addAll(Arrays.asList(certificates));
-        } catch (NoSuchFieldException | IllegalAccessException e) {
-            logger.warn("Failed to access keyCertChain in {}", SslContextBuilder.class, e);
-        }
-    }
-
-    public static void checkVersionsSupported(Set<String> protocols, SslProvider provider) {
-        checkArgument(!protocols.isEmpty(), "protocols cannot be empty");
-        final Set<String> supportedTlsVersions = supportedTlsVersions(provider);
-        for (String protocol : protocols) {
-            checkArgument(supportedTlsVersions.contains(protocol),
-                          "Unsupported TLS protocol: %s for %s", protocol, provider);
-        }
-    }
-
-    public static Set<String> supportedTlsVersions(SslProvider provider) {
-        if (SslProvider.isTlsv13Supported(provider)) {
-            return tlsVersion23;
-        } else {
-            return tlsVersion2;
-        }
-    }
-
-    private static void validateHttp2Ciphers(Set<String> ciphers, boolean tlsAllowUnsafeCiphers) {
-        if (!ciphers.contains(ESSENTIAL_HTTP2_CIPHER_SUITE)) {
-            if (tlsAllowUnsafeCiphers) {
-                if (!warnedMissingEssentialCipherSuite) {
-                    warnedMissingEssentialCipherSuite = true;
-                    logger.warn(MISSING_ESSENTIAL_CIPHER_SUITE_MESSAGE);
-                }
-            } else {
-                throw new IllegalStateException(MISSING_ESSENTIAL_CIPHER_SUITE_MESSAGE);
-            }
-        }
-
-        for (String cipher : ciphers) {
-            if (BAD_HTTP2_CIPHERS.contains(cipher)) {
-                if (tlsAllowUnsafeCiphers) {
-                    if (!warnedBadCipherSuite) {
-                        warnedBadCipherSuite = true;
-                        logger.warn(badCipherSuiteMessage(cipher));
-                    }
-                    break;
-                } else {
-                    throw new IllegalStateException(badCipherSuiteMessage(cipher));
-                }
-            }
-        }
-    }
-
-    private static String badCipherSuiteMessage(String cipher) {
-        return "Attempted to configure TLS with a bad cipher suite (" + cipher + "). " +
-               "Do not use any cipher suites listed in " +
-               "https://datatracker.ietf.org/doc/html/rfc7540#appendix-A";
-    }
-
     public static SslContext toSslContext(ClientTlsSpec clientTlsSpec, boolean allowUnsafeCiphers) {
         return MinifiedBouncyCastleProvider.call(() -> {
             SslContext sslContext = null;
             try {
                 sslContext = toSslContext0(clientTlsSpec);
+                validateSslContext(allowUnsafeCiphers, sslContext);
+            } catch (Exception e) {
+                ReferenceCountUtil.release(sslContext);
+                return Exceptions.throwUnsafely(e);
+            }
+            return sslContext;
+        });
+    }
+
+    public static SslContext toSslContext(ServerTlsSpec serverTlsSpec, boolean allowUnsafeCiphers) {
+        return MinifiedBouncyCastleProvider.call(() -> {
+            SslContext sslContext = null;
+            try {
+                sslContext = toSslContext0(serverTlsSpec);
                 validateSslContext(allowUnsafeCiphers, sslContext);
             } catch (Exception e) {
                 ReferenceCountUtil.release(sslContext);
@@ -267,6 +144,21 @@ public final class SslContextUtil {
         applyCommonConfigs(clientTlsSpec, builder);
 
         return builder.build();
+    }
+
+    private static SslContext toSslContext0(ServerTlsSpec serverTlsSpec) throws Exception {
+        final SslContextBuilder contextBuilder;
+        final TlsKeyPair keyPair = serverTlsSpec.tlsKeyPair();
+        if (keyPair != null) {
+            contextBuilder = SslContextBuilder.forServer(keyPair.privateKey(), keyPair.certificateChain());
+        } else {
+            final KeyManagerFactory keyManagerFactory = serverTlsSpec.keyManagerFactory();
+            assert keyManagerFactory != null;
+            contextBuilder = SslContextBuilder.forServer(keyManagerFactory);
+        }
+        contextBuilder.clientAuth(ClientAuth.valueOf(serverTlsSpec.clientAuth()));
+        applyCommonConfigs(serverTlsSpec, contextBuilder);
+        return contextBuilder.build();
     }
 
     private static List<String> filterProtocols(Collection<String> protocols, SslProvider provider) {
@@ -298,6 +190,56 @@ public final class SslContextUtil {
         if (sslContext.applicationProtocolNegotiator().protocols().contains(ApplicationProtocolNames.HTTP_2)) {
             validateHttp2Ciphers(ciphers, tlsAllowUnsafeCiphers);
         }
+    }
+
+    public static void checkVersionsSupported(Set<String> protocols, SslProvider provider) {
+        checkArgument(!protocols.isEmpty(), "protocols cannot be empty");
+        final Set<String> supportedTlsVersions = supportedTlsVersions(provider);
+        for (String protocol : protocols) {
+            checkArgument(supportedTlsVersions.contains(protocol),
+                          "Unsupported TLS protocol: %s for %s", protocol, provider);
+        }
+    }
+
+    public static Set<String> supportedTlsVersions(SslProvider provider) {
+        if (SslProvider.isTlsv13Supported(provider)) {
+            return tlsVersion23;
+        } else {
+            return tlsVersion2;
+        }
+    }
+
+    static void validateHttp2Ciphers(Set<String> ciphers, boolean tlsAllowUnsafeCiphers) {
+        if (!ciphers.contains(ESSENTIAL_HTTP2_CIPHER_SUITE)) {
+            if (tlsAllowUnsafeCiphers) {
+                if (!warnedMissingEssentialCipherSuite) {
+                    warnedMissingEssentialCipherSuite = true;
+                    logger.warn(MISSING_ESSENTIAL_CIPHER_SUITE_MESSAGE);
+                }
+            } else {
+                throw new IllegalStateException(MISSING_ESSENTIAL_CIPHER_SUITE_MESSAGE);
+            }
+        }
+
+        for (String cipher : ciphers) {
+            if (BAD_HTTP2_CIPHERS.contains(cipher)) {
+                if (tlsAllowUnsafeCiphers) {
+                    if (!warnedBadCipherSuite) {
+                        warnedBadCipherSuite = true;
+                        logger.warn(badCipherSuiteMessage(cipher));
+                    }
+                    break;
+                } else {
+                    throw new IllegalStateException(badCipherSuiteMessage(cipher));
+                }
+            }
+        }
+    }
+
+    private static String badCipherSuiteMessage(String cipher) {
+        return "Attempted to configure TLS with a bad cipher suite (" + cipher + "). " +
+               "Do not use any cipher suites listed in " +
+               "https://datatracker.ietf.org/doc/html/rfc7540#appendix-A";
     }
 
     private static void applyCommonConfigs(AbstractTlsSpec tlsSpec, SslContextBuilder builder)

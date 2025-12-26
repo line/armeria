@@ -1,0 +1,198 @@
+---
+authors:
+  - trustin
+other_languages:
+  ja: /blog/ja/2016/04/13/open-sourcing-armeria
+  ko: /blog/ko/2016/04/13/open-sourcing-armeria
+---
+
+import Head from '@docusaurus/Head';
+
+# Open-sourcing Armeria
+
+[Armeria](http://line.github.io/armeria/) is an asynchronous RPC/API client-server implementation built on top of Java 8 and [Netty](http://netty.io/) that went open-source last November under Apache License 2.0 by LINE Corporation.
+Its primary goal is to help engineers build high-performance asynchronous Thrift clients and servers that use HTTP/2 as a session layer protocol, although it is designed to be protocol-agnostic and highly extensible (for example, you can serve a directory of static files via HTTP/2 and run Java EE web applications).
+
+{/* truncate */}
+
+In this post, I'd like to focus on the steps that were taken to open-source an internal project rather than the technical aspect.
+If you are interested in the technical details of Armeria, you might want to check out the following slides presented last February during the 14th LINE Developer Meetup:
+
+<Head>
+  <script
+    async
+    className="speakerdeck-embed-script"
+    src="https://speakerdeck.com/assets/embed.js"
+  ></script>
+</Head>
+<div
+  className="deck-embed js-deck-embed"
+  style={{ aspectRatio: '1024/640' }}
+  data-ratio="1.6"
+  data-state="processed"
+>
+  <div
+    className="speakerdeck-embed"
+    data-title="false"
+    data-skip-resize="true"
+    data-id="8d645c29ce33400e8360e61fd0250f91"
+    data-name="Armeria: LINE's next generation RPC layer"
+    data-ratio="1.6"
+    data-host="speakerdeck.com"
+  />
+</div>
+
+## Cleaning up the project history
+
+When you work on an internal project, it is very likely that the project contains changesets you wouldn't have published if they were public from day 1, such as:
+
+- Confidential information (Such as issue numbers, host names, internal URLs)
+- Commit messages that are meaningless or written in poor taste ("Blah", "WIP", "WTF")
+- Copyright headers
+
+It is obviously not an option to append an amending commit to the repository, because the history of the project would still be preserved.
+We need to clean up the history so that it does not leak anything unexpected.
+There are basically two options for this.
+
+One option is to review each changeset and amend it individually.
+Although you can reduce the amount of effort by using automation such as the [`git filter-branch`](https://git-scm.com/docs/git-filter-branch) command, you'll basically have to review every changeset carefully.
+The other option is to hide any unwanted information and collapse all changesets into a single commit.
+This is much simpler than the first option, but you will lose the history.
+Someday, you may wonder why you wrote a piece of code in a certain way, but you'll have no clue because the history has been squashed away.
+
+If the project history is relatively short and you are sure your coding standards are pretty high, you might want to choose the first option.
+Otherwise, if your time is limited and there's too much stuff to review, you would want to push the big red button like we did - squashing the history into a single commit.
+
+However, code is not written by a single person nowadays.
+If we just make a single commit, how would we credit the people who participated in this collaborative effort of fine workmanship?
+We ended up crediting them in our commit message.
+
+```
+Subject: Initial import
+This commit contains the collective work of the following enthusiastic
+contributors at LINE Corporation:
+- Anuraag Agrawal  @anuraaga
+- Heon Jeong       @blmarket
+- Young-tae Seok   @delegacy
+- Su-ahn Lee       @inch772
+- Woo-jung Choi    @sophiechoi
+- Trustin Lee      @trustin
+- Yuichi Ono
+```
+
+Looking back, I should have expressed more appreciation into the commit message.
+I can't thank you enough, folks!
+
+## Writing API documentation
+
+When starting a project from scratch, especially one with no real template to follow, it is important to write code fast and get it out fast to find design issues and bugs.
+APIs change fast in the early stages and it can be convenient to leave out API documentation to focus on implementation, leaving some holes that need to be filled later (of course, we also find it much more fun to write code than documentation).
+
+However, good documentation is one of the critical factors of adoption in the open-source scene.
+It's only when we are very desperate when we consider to use undocumented open-source software.
+Why would people use our open-source project if it is not documented well?
+There are already so many similar projects in the wild!
+
+So, we had to fill all the holes we left open.
+We could call it "documentation debt" and we must admit that paying it back was not the most pleasing experience.
+Now that we have documented everything properly, it is very easy to keep the documentation debt low by making sure any new public methods and classes are documented properly during the review process.
+It's like keeping your body fit; it's easier once you're fit.
+
+## Building a website
+
+Although Github is a good starting point for hosting a project, it is almost always better to provide a dedicated website.
+In a dedicated project website, we can organize the information we want to provide in the way we want and express the identity of the project in a more visually appealing way.
+
+However, building a website is not a simple job and we did not want to spend more time than writing a few lines of code to maintain it; we needed a scalable way to write and maintain it.
+
+Fortunately, some engineers have open-sourced great website generation tools that help us deal with HTML and CSS, so we can bug our designers less often.
+We chose [Sphinx](http://www.sphinx-doc.org/en/stable/) in conjunction with [sphinx-maven-plugin](http://trustin.github.io/sphinx-maven-plugin/) and [Read the Docs theme](http://read-the-docs.readthedocs.org/en/latest/) so that we can generate our website as a part of the build process.
+There are also many other tools that serve similar purposes, such as [Awestruct](http://awestruct.org/) and [Jekyll](https://jekyllrb.com/), so you might want to play with them and choose what fits you if you are interested in building a website.
+
+## Designing a logo
+
+![](/img/open-sourcing-armeria-1.png)
+
+The Armeria logo
+
+A logo is like the essence of a project.
+It visualizes and symbolizes what the project is and where it is going.
+It also helps people remember the project via association.
+
+Because of its impact on a project, it requires a designer to contemplate and iterate over many prototypes.
+We fortunately had a new member with an industrial design degree who joined us at just the right time.
+We really appreciate her for helping us in her spare time, and we believe her next logo will be fascinating as well!
+
+## I'm not a lawyer but legal stuff matters
+
+The notion of open-source software has been around since the beginning of computing, but it hasn't been very long since open-source licensing caught our attention.
+Some people overlook the fact that an open source project is still owned by someone even if it is free to use.
+To avoid any potential legal issues, what we did first was to make sure that we do not violate the license terms of the open-source software projects Armeria depends on.
+
+For instance, we included all the license agreement files and their summaries into our repository so that our users are informed about what software Armeria depends on.
+We also explicitly mentioned what portions of other open-source software have been modified and redistributed in Armeria.
+
+On the other hand, Armeria is also an open source project with an owner, so we licensed it to its users under fair and clear terms as well.
+We chose [Apache License 2.0](<https://tldrlegal.com/license/apache-license-2.0-(apache-2.0)>) over other open source licenses because of the following notable features:
+
+- Software licensed under Apache License 2.0 may be freely used, reproduced, modified, distributed or sold without accompanying the corresponding source code.
+- It contains a provision that states the conditions of the granting and infringement of patent licenses.
+
+Another important thing people often miss out is the contributor license agreement (CLA) which is required when accepting an external contribution.
+When someone outside your company sends a pull request for a very cool feature you feel like merging immediately, you'd better make sure the submitter of the pull request has signed the contributor license agreement.
+It's outside the scope of this post to explain what exactly CLA is, but you can find detailed explanations on [OSS Watch](http://oss-watch.ac.uk/resources/cla) and [CLAHub](https://www.clahub.com/pages/why_cla).
+
+All these steps are seemingly time-consuming and painful, but it wasn't anything like that in reality.
+They are mostly one-time things, and our friendly folks at the legal department freed us from the hassles of dealing with legal issues we would have had to deal with by ourselves otherwise.
+When you are in doubt, just find your legal department; we are not lawyers!
+
+## Working with other open-source projects
+
+You may sometimes find bugs in an open-source project you depend on.
+Sometimes it can be worked around, but sometimes it can't.
+You could keep the fix in your own fork of the project, but it's almost always better to propose a change upstream so that you do not need to maintain it by yourself indefinitely.
+Contributing upstream also increases your visibility to the open-source scene and you will find yourself having fun collaborating with others, both of which are very positive to your career.
+
+While developing Armeria, we reported various issues and contributed some of their fixes to the [Netty](http://netty.io/) project:
+
+- HTTP/1 and 2
+  - [#4785](https://github.com/netty/netty/pull/4785) - Fix missing trailing data on HTTP client upgrade
+  - [#4582](https://github.com/netty/netty/pull/4582) - Revamp InboundHttp2ToHttpAdapter builder API
+  - [#4574](https://github.com/netty/netty/pull/4574) - Revamp the Http2ConnectionHandler builder API
+  - [#4525](https://github.com/netty/netty/pull/4525) - Fix the incorrect usage/value of "Connection: upgrade"
+  - [#4524](https://github.com/netty/netty/pull/4524) - Fix IllegalReferenceCountException caused by HttpClientCodec.upgradeFrom()
+  - [#4523](https://github.com/netty/netty/pull/4523) - Relax the sanity check in HttpClientUpgradeHandler
+  - [#4428](https://github.com/netty/netty/pull/4428) - Reject the first SETTINGS ack on HTTP/2 Preface
+  - [#4210](https://github.com/netty/netty/pull/4210) - Http2ConnectionHandler does not close the stream 1 (HTTP_UPGRADE_STREAM_ID)
+  - [#3876](https://github.com/netty/netty/pull/3876) - Lazily instantiate HttpServerUpgradeHandler.UpgradeCodec
+- DNS
+  - [#4946](https://github.com/netty/netty/pull/4946) - Fix potential infinite loop when resolving CNAME records
+  - [#4837](https://github.com/netty/netty/pull/4837) - Preserve the host name of address when parsing /etc/hosts file
+  - [#4665](https://github.com/netty/netty/pull/4665) - Netty's DNS resolution should take into account system domain name
+  - [#4541](https://github.com/netty/netty/pull/4541) - Don't cycle dns servers while cycling dns record types.
+- Miscellaneous
+  - [#4547](https://github.com/netty/netty/pull/4547) - NPE in PooledByteBufAllocator.newDirectBuffer()
+  - [#4419](https://github.com/netty/netty/pull/4419) - Fix a bug where DefaultPromise.toString() says "incomplete" when it's done
+
+By working closely with the projects Armeria depends on, we were able to reduce the burden of maintaining a fork and increase the visibility of Armeria itself and its project members in the open-source community.
+
+## Please join us!
+
+Did you find our story about contributing our work to the community and working with other projects interesting?
+Armeria is still in its early stages, and we have various new features in our roadmap, such as:
+
+- Client-side load balancing
+- Large content streaming via reactive streams
+- Support for more protocols such as Redis and MySQL
+- Integrated web-based administrative and monitoring console
+- New Thrift compiler for better documentation and code generation
+
+We also have a few more projects in our open-sourcing pipeline and we encourage our engineers to build something that could be useful to more people in the longer term rather than just serving our own immediate purpose.
+Please apply to join us in building something fascinating that could impress the world!
+
+[Job opening](http://recruit.linepluscorp.com/lineplus/career/detail/20000312) (Scroll down for English)
+
+## About the author
+
+[Trustin Lee](https://github.com/trustin) is a platform software engineer at LINE.
+He is also the founder of [Netty](http://netty.io/) and a co-founder of [Apache MINA](http://mina.apache.org/).

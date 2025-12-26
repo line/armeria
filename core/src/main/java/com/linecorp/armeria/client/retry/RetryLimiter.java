@@ -31,12 +31,12 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
  *            RetryRule.builder()
  *                     .onStatus(OK)
  *                     // decrement permits
- *                     .build(RetryDecision.retry(Backoff.ofDefault(), -1)));
+ *                     .build(RetryDecision.noRetry(-1)));
  * var config = RetryConfig.builder(rule)
- *                         // max 5 concurrent retry request
- *                         .retryLimiter(RetryLimiter.concurrencyLimiting(5))
+ *                         // max 100 tokens with threshold 30
+ *                         .retryLimiter(RetryLimiter.tokenBased(100, 30))
  *                         .build();
- * var decorator = RetryingClient.newDecorator(config)
+ * var decorator = RetryingClient.newDecorator(config);
  * }</pre>
  */
 @UnstableApi
