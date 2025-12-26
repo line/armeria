@@ -58,10 +58,8 @@ import com.linecorp.armeria.common.util.AsyncCloseableSupport;
 import com.linecorp.armeria.common.util.DomainSocketAddress;
 import com.linecorp.armeria.internal.client.HttpSession;
 import com.linecorp.armeria.internal.client.PooledChannel;
-import com.linecorp.armeria.internal.common.SslContextFactory;
-import com.linecorp.armeria.internal.common.util.ChannelUtil;
-import com.linecorp.armeria.internal.common.ClientSslContextFactory;
 import com.linecorp.armeria.internal.common.ConnectionEventListener;
+import com.linecorp.armeria.internal.common.SslContextFactory;
 import com.linecorp.armeria.internal.common.util.TemporaryThreadLocals;
 
 import io.netty.bootstrap.Bootstrap;
