@@ -104,6 +104,12 @@ final class HttpClientDelegate implements HttpClient {
         final DecodedHttpResponse res = new DecodedHttpResponse(eventLoop);
         updateCancellationTask(ctx, req, res);
 
+        factory.clientRequestLifecycleListener().onRequestPending(ctx);
+        ctx.log().addListener(
+                factory.clientRequestLifecycleListener()
+                        .asRequestLogListener()
+        );
+
         try {
             resolveProxyConfig(protocol, endpoint, ctx, (proxyConfig, thrown) -> {
                 if (thrown != null) {
