@@ -24,6 +24,7 @@ import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.internal.client.HttpSession;
 import com.linecorp.armeria.internal.client.UserAgentUtil;
+import com.linecorp.armeria.internal.common.ConnectionEventListener;
 import com.linecorp.armeria.internal.common.Http1KeepAliveHandler;
 
 import io.micrometer.core.instrument.Timer;
@@ -48,7 +49,8 @@ final class Http1ClientKeepAliveHandler extends Http1KeepAliveHandler {
                                 long maxConnectionAgeMillis, int maxNumRequestsPerConnection,
                                 boolean keepAliveOnPing) {
         super(channel, "client", keepAliveTimer, idleTimeoutMillis,
-              pingIntervalMillis, maxConnectionAgeMillis, maxNumRequestsPerConnection, keepAliveOnPing);
+              pingIntervalMillis, maxConnectionAgeMillis, maxNumRequestsPerConnection, keepAliveOnPing,
+              ConnectionEventListener.get(channel));
         httpSession = HttpSession.get(requireNonNull(channel, "channel"));
         this.decoder = requireNonNull(decoder, "decoder");
     }
@@ -65,6 +67,7 @@ final class Http1ClientKeepAliveHandler extends Http1KeepAliveHandler {
         decoder.setPingReqId(id);
         final ChannelFuture future = encoder.writeHeaders(id, 0, HTTP1_PING_REQUEST, true, ctx.newPromise());
         ctx.flush();
+        listener().pingWrite(id);
         return future;
     }
 

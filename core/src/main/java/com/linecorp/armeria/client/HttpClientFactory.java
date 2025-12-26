@@ -508,8 +508,7 @@ final class HttpClientFactory implements ClientFactory {
         }
 
         return pools.computeIfAbsent(eventLoop,
-                                     e -> new HttpChannelPool(this, eventLoop,
-                                                              sslContextFactory, connectionPoolListener()));
+                                     e -> new HttpChannelPool(this, eventLoop, sslContextFactory));
     }
 
     @VisibleForTesting

@@ -22,9 +22,10 @@ import io.netty.channel.Channel;
 public abstract class Http1KeepAliveHandler extends AbstractKeepAliveHandler {
     protected Http1KeepAliveHandler(Channel channel, String name, Timer keepAliveTimer, long idleTimeoutMillis,
                                     long pingIntervalMillis, long maxConnectionAgeMillis,
-                                    long maxNumRequestsPerConnection, boolean keepAliveOnPing) {
+                                    long maxNumRequestsPerConnection, boolean keepAliveOnPing,
+                                    ConnectionEventListener listener) {
         super(channel, name, keepAliveTimer, idleTimeoutMillis, pingIntervalMillis, maxConnectionAgeMillis,
-              maxNumRequestsPerConnection, keepAliveOnPing);
+              maxNumRequestsPerConnection, keepAliveOnPing, listener);
     }
 
     @Override
@@ -34,6 +35,7 @@ public abstract class Http1KeepAliveHandler extends AbstractKeepAliveHandler {
 
     @Override
     public void onPingAck(long data) {
-        throw new UnsupportedOperationException();
+        listener().pingAck(data);
+        onPing();
     }
 }

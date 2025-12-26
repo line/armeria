@@ -351,7 +351,7 @@ final class Http1ResponseDecoder extends AbstractHttpResponseDecoder implements 
 
     private void onPingRead(Object msg) {
         if (msg instanceof HttpResponse) {
-            keepAliveHandler.onPing();
+            keepAliveHandler.onPingAck(lastPingReqId);
         }
         if (msg instanceof LastHttpContent) {
             onPingComplete();
