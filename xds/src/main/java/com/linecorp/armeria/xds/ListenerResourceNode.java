@@ -19,7 +19,6 @@ package com.linecorp.armeria.xds;
 import static com.linecorp.armeria.xds.XdsType.LISTENER;
 
 import com.linecorp.armeria.common.annotation.Nullable;
-import com.linecorp.armeria.common.util.SafeCloseable;
 
 import io.envoyproxy.envoy.config.core.v3.ConfigSource;
 import io.envoyproxy.envoy.config.route.v3.RouteConfiguration;
@@ -46,11 +45,22 @@ final class ListenerResourceNode extends AbstractResourceNode<ListenerXdsResourc
     @Override
     public void doOnChanged(ListenerXdsResource resource) {
         final RouteSnapshotWatcher previousWatcher = snapshotWatcher;
-        snapshotWatcher = new RouteSnapshotWatcher(resource, context(), this,
-                                                   configSource());
+        if (previousWatcher != null) {
+            previousWatcher.preClose();
+        }
+        snapshotWatcher = new RouteSnapshotWatcher(resource, context(), this, configSource());
         if (previousWatcher != null) {
             previousWatcher.close();
         }
+    }
+
+    @Override
+    void preClose() {
+        final RouteSnapshotWatcher snapshotWatcher = this.snapshotWatcher;
+        if (snapshotWatcher != null) {
+            snapshotWatcher.preClose();
+        }
+        super.preClose();
     }
 
     @Override
@@ -62,13 +72,12 @@ final class ListenerResourceNode extends AbstractResourceNode<ListenerXdsResourc
         super.close();
     }
 
-    private static class RouteSnapshotWatcher implements SnapshotWatcher<RouteSnapshot>, SafeCloseable {
+    private static class RouteSnapshotWatcher extends AbstractNodeSnapshotWatcher<RouteSnapshot> {
 
         private final ListenerXdsResource resource;
         private final ListenerResourceNode parentNode;
         @Nullable
         private final RouteResourceNode node;
-        private boolean closed;
 
         RouteSnapshotWatcher(ListenerXdsResource resource, SubscriptionContext context,
                              ListenerResourceNode parentNode, @Nullable ConfigSource parentConfigSource) {
@@ -101,32 +110,29 @@ final class ListenerResourceNode extends AbstractResourceNode<ListenerXdsResourc
         }
 
         @Override
-        public void snapshotUpdated(RouteSnapshot newSnapshot) {
-            if (closed) {
-                return;
-            }
+        protected void doSnapshotUpdated(RouteSnapshot newSnapshot) {
             parentNode.notifyOnChanged(new ListenerSnapshot(resource, newSnapshot));
         }
 
         @Override
-        public void onMissing(XdsType type, String resourceName) {
-            if (closed) {
-                return;
-            }
+        protected void doOnMissing(XdsType type, String resourceName) {
             parentNode.notifyOnMissing(type, resourceName);
         }
 
         @Override
-        public void onError(XdsType type, String resourceName, Status status) {
-            if (closed) {
-                return;
-            }
+        protected void doOnError(XdsType type, String resourceName, Status status) {
             parentNode.notifyOnError(type, resourceName, status);
         }
 
         @Override
-        public void close() {
-            closed = true;
+        protected void doPreClose() {
+            if (node != null) {
+                node.preClose();
+            }
+        }
+
+        @Override
+        protected void doClose() {
             if (node != null) {
                 node.close();
             }

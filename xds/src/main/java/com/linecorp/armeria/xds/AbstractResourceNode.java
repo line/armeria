@@ -44,6 +44,7 @@ abstract class AbstractResourceNode<T extends XdsResource, S extends Snapshot<T>
     private final ResourceNodeType resourceNodeType;
     @Nullable
     private S snapshot;
+    private final ResourceNodeMeterBinder meterBinder;
 
     AbstractResourceNode(SubscriptionContext context, @Nullable ConfigSource configSource,
                          XdsType type, String resourceName, SnapshotWatcher<S> parentWatcher,
@@ -55,11 +56,14 @@ abstract class AbstractResourceNode<T extends XdsResource, S extends Snapshot<T>
             checkArgument(configSource == null, "Static node <%s.%s> received a config source <%s>",
                           type, resourceName, configSource);
         }
+
         this.context = context;
         this.configSource = configSource;
         this.type = type;
         this.resourceName = resourceName;
         this.resourceNodeType = resourceNodeType;
+        meterBinder = new ResourceNodeMeterBinder(context.meterRegistry(), context.meterIdPrefix(),
+                                                  type, resourceName);
         watchers.add(parentWatcher);
     }
 
@@ -70,6 +74,8 @@ abstract class AbstractResourceNode<T extends XdsResource, S extends Snapshot<T>
         this.type = type;
         this.resourceName = resourceName;
         this.resourceNodeType = resourceNodeType;
+        meterBinder = new ResourceNodeMeterBinder(context.meterRegistry(),
+                                                  context.meterIdPrefix(), type, resourceName);
     }
 
     final SubscriptionContext context() {
@@ -100,6 +106,7 @@ abstract class AbstractResourceNode<T extends XdsResource, S extends Snapshot<T>
     @Override
     public final void onError(XdsType type, String resourceName, Status error) {
         notifyOnError(type, resourceName, error);
+        meterBinder.onError(type, resourceName, error);
     }
 
     final void notifyOnError(XdsType type, String resourceName, Status error) {
@@ -116,6 +123,7 @@ abstract class AbstractResourceNode<T extends XdsResource, S extends Snapshot<T>
     @Override
     public final void onResourceDoesNotExist(XdsType type, String resourceName) {
         notifyOnMissing(type, resourceName);
+        meterBinder.onResourceDoesNotExist(type, resourceName);
     }
 
     final void notifyOnMissing(XdsType type, String resourceName) {
@@ -134,9 +142,11 @@ abstract class AbstractResourceNode<T extends XdsResource, S extends Snapshot<T>
         assert update.type() == type();
         try {
             doOnChanged(update);
+            meterBinder.onChanged(update);
         } catch (Throwable t) {
             final Status status = Status.fromThrowable(t);
             notifyOnError(type, resourceName, status);
+            meterBinder.onError(type, resourceName, status);
         }
     }
 
@@ -154,8 +164,13 @@ abstract class AbstractResourceNode<T extends XdsResource, S extends Snapshot<T>
         }
     }
 
+    void preClose() {
+        meterBinder.close();
+    }
+
     @Override
     public void close() {
+        meterBinder.close();
         if (resourceNodeType == ResourceNodeType.DYNAMIC) {
             context.unsubscribe(this);
         }
