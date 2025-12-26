@@ -18,6 +18,7 @@ package com.linecorp.armeria.server;
 
 import static com.linecorp.armeria.server.RoutingContextTest.create;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import org.junit.jupiter.api.Test;
 
@@ -42,5 +43,19 @@ class ExactPathMappingTest {
     void patternString() {
         final ExactPathMapping exactPathMapping = new ExactPathMapping("/foo/bar");
         assertThat(exactPathMapping.patternString()).isEqualTo("/foo/bar");
+    }
+
+    @Test
+    void shouldDisallowQueryString() {
+        assertThatThrownBy(() -> new ExactPathMapping("/find/me?with=query"))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("must not contain a query string");
+
+        assertThatThrownBy(() -> {
+            Server.builder()
+                  .route()
+                  .path("/find/me?with=query");
+        }).isInstanceOf(IllegalArgumentException.class)
+          .hasMessageContaining("must not contain a query string");
     }
 }
