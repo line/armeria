@@ -89,12 +89,11 @@ class ClientRequestContextDelayedInitTest {
 
                 protected TestEndpointSelector(EndpointGroup endpointGroup) {
                     super(endpointGroup);
-                    initialize();
                 }
 
                 @Nullable
                 @Override
-                public Endpoint selectNow(ClientRequestContext ctx) {
+                public Endpoint doSelectNow(ClientRequestContext ctx) {
                     if (counter.getAndIncrement() >= failAfter) {
                         throw cause;
                     }
