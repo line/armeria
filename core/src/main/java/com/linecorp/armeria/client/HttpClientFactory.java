@@ -27,6 +27,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 import java.util.stream.Stream;
@@ -40,6 +41,7 @@ import com.google.common.collect.MapMaker;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.client.proxy.ProxyConfigSelector;
 import com.linecorp.armeria.client.redirect.RedirectConfig;
+import com.linecorp.armeria.common.GracefulShutdown;
 import com.linecorp.armeria.common.Http1HeaderNaming;
 import com.linecorp.armeria.common.NonBlocking;
 import com.linecorp.armeria.common.RequestContext;
@@ -462,7 +464,12 @@ final class HttpClientFactory implements ClientFactory {
             }
             bootstrapSslContexts.release(sslContextFactory);
             if (shutdownWorkerGroupOnClose) {
-                workerGroup.shutdownGracefully().addListener((FutureListener<Object>) f -> {
+                final GracefulShutdown gracefulShutdown = options.workerGroupGracefulShutdown();
+                workerGroup.shutdownGracefully(
+                        gracefulShutdown.quietPeriod().toMillis(),
+                        gracefulShutdown.timeout().toMillis(),
+                        TimeUnit.MILLISECONDS
+                ).addListener((FutureListener<Object>) f -> {
                     if (f.cause() != null) {
                         logger.warn("Failed to shut down a worker group:", f.cause());
                     }

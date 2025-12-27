@@ -14,27 +14,21 @@
  * under the License.
  */
 
-package com.linecorp.armeria.server;
+package com.linecorp.armeria.common;
 
 import java.time.Duration;
 import java.util.Objects;
-import java.util.function.BiFunction;
 
 import com.google.common.base.MoreObjects;
-
-import com.linecorp.armeria.common.HttpRequest;
 
 final class DefaultGracefulShutdown implements GracefulShutdown {
 
     private final Duration quietPeriod;
     private final Duration timeout;
-    private final BiFunction<ServiceRequestContext, HttpRequest, Throwable> toExceptionFunction;
 
-    DefaultGracefulShutdown(Duration quietPeriod, Duration timeout,
-                            BiFunction<ServiceRequestContext, HttpRequest, Throwable> toExceptionFunction) {
+    DefaultGracefulShutdown(Duration quietPeriod, Duration timeout) {
         this.quietPeriod = quietPeriod;
         this.timeout = timeout;
-        this.toExceptionFunction = toExceptionFunction;
     }
 
     @Override
@@ -48,11 +42,6 @@ final class DefaultGracefulShutdown implements GracefulShutdown {
     }
 
     @Override
-    public Throwable toException(ServiceRequestContext ctx, HttpRequest request) {
-        return toExceptionFunction.apply(ctx, request);
-    }
-
-    @Override
     public boolean equals(Object o) {
         if (this == o) {
             return true;
@@ -62,13 +51,12 @@ final class DefaultGracefulShutdown implements GracefulShutdown {
         }
         final DefaultGracefulShutdown that = (DefaultGracefulShutdown) o;
         return quietPeriod.equals(that.quietPeriod) &&
-               timeout.equals(that.timeout) &&
-               toExceptionFunction.equals(that.toExceptionFunction);
+               timeout.equals(that.timeout);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(quietPeriod, timeout, toExceptionFunction);
+        return Objects.hash(quietPeriod, timeout);
     }
 
     @Override
@@ -76,7 +64,6 @@ final class DefaultGracefulShutdown implements GracefulShutdown {
         return MoreObjects.toStringHelper(this)
                           .add("quietPeriod", quietPeriod)
                           .add("timeout", timeout)
-                          .add("toExceptionFunction", toExceptionFunction)
                           .toString();
     }
 }

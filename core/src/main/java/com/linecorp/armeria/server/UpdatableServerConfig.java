@@ -29,6 +29,7 @@ import java.util.function.Function;
 import java.util.function.Predicate;
 
 import com.linecorp.armeria.common.DependencyInjector;
+import com.linecorp.armeria.common.GracefulShutdown;
 import com.linecorp.armeria.common.Http1HeaderNaming;
 import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.annotation.Nullable;
@@ -248,6 +249,21 @@ final class UpdatableServerConfig implements ServerConfig {
     @Override
     public GracefulShutdown gracefulShutdown() {
         return delegate.gracefulShutdown();
+    }
+
+    @Override
+    public GracefulShutdown workerGroupGracefulShutdown() {
+        return delegate.workerGroupGracefulShutdown();
+    }
+
+    @Override
+    public GracefulShutdown bossGroupGracefulShutdown() {
+        return delegate.bossGroupGracefulShutdown();
+    }
+
+    @Override
+    public GracefulShutdownExceptionFactory gracefulShutdownExceptionFactory() {
+        return delegate.gracefulShutdownExceptionFactory();
     }
 
     @Override

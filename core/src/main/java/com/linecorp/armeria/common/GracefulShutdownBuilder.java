@@ -14,17 +14,12 @@
  * under the License.
  */
 
-package com.linecorp.armeria.server;
+package com.linecorp.armeria.common;
 
-import static com.linecorp.armeria.server.DefaultServerConfig.validateNonNegative;
 import static java.util.Objects.requireNonNull;
 
 import java.time.Duration;
-import java.util.function.BiFunction;
 
-import com.linecorp.armeria.common.HttpRequest;
-import com.linecorp.armeria.common.HttpStatus;
-import com.linecorp.armeria.common.ShuttingDownException;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 
 /**
@@ -36,20 +31,25 @@ public final class GracefulShutdownBuilder {
     // Defaults to no graceful shutdown.
     private static final Duration DEFAULT_GRACEFUL_SHUTDOWN_QUIET_PERIOD = Duration.ZERO;
     private static final Duration DEFAULT_GRACEFUL_SHUTDOWN_TIMEOUT = Duration.ZERO;
-    private static final BiFunction<ServiceRequestContext, HttpRequest, Throwable> DEFAULT_ERROR_FUNCTION =
-            (ctx, req) -> ShuttingDownException.get();
 
     static final GracefulShutdown DISABLED = GracefulShutdown.builder().build();
 
     private Duration quietPeriod = DEFAULT_GRACEFUL_SHUTDOWN_QUIET_PERIOD;
     private Duration timeout = DEFAULT_GRACEFUL_SHUTDOWN_TIMEOUT;
-    private BiFunction<ServiceRequestContext, HttpRequest, Throwable> toException = DEFAULT_ERROR_FUNCTION;
 
     GracefulShutdownBuilder() {}
 
+    static Duration validateNonNegative(Duration duration, String fieldName) {
+        if (duration.isNegative()) {
+            throw new IllegalArgumentException(fieldName + ": " + duration + " (expected: >= 0)");
+        }
+        return duration;
+    }
+
     /**
      * Sets the quiet period to wait for active requests to go end before shutting down.
-     * {@link Duration#ZERO} means the server will stop right away without waiting.
+     * {@link Duration#ZERO} means the client or server (depending on the place of usage) will stop right away
+     * without waiting.
      *
      * <p>The default is {@link Duration#ZERO}.
      */
@@ -61,7 +61,7 @@ public final class GracefulShutdownBuilder {
 
     /**
      * Sets the quiet period millis to wait for active requests to go end before shutting down.
-     * 0 means the server will stop right away without waiting.
+     * 0 means the client or server (depending on the place of usage) will stop right away without waiting.
      *
      * <p>The default is 0.
      */
@@ -70,9 +70,9 @@ public final class GracefulShutdownBuilder {
     }
 
     /**
-     * Sets the amount of time to wait before shutting down the server regardless of active requests.
-     * This should be set to a time greater than {@code quietPeriod} to ensure the server shuts down even
-     * if there is a stuck request.
+     * Sets the amount of time to wait before shutting down the client or server (depending on the place of
+     * usage) regardless of active requests. This should be set to a time greater than {@code quietPeriod} to
+     * ensure the client/server shuts down even if there is a stuck request.
      *
      * <p>The default is {@link Duration#ZERO}.
      */
@@ -83,27 +83,14 @@ public final class GracefulShutdownBuilder {
     }
 
     /**
-     * Sets the amount of time to wait before shutting down the server regardless of active requests.
-     * This should be set to a time greater than {@code quietPeriod} to ensure the server shuts down even
-     * if there is a stuck request.
+     * Sets the amount of time to wait before shutting down the client or server (depending on the place of
+     * usage) regardless of active requests. This should be set to a time greater than {@code quietPeriod} to
+     * ensure the client/server shuts down even if there is a stuck request.
      *
      * <p>The default is {@link Duration#ZERO}.
      */
     public GracefulShutdownBuilder timeoutMillis(long timeoutMillis) {
         return timeout(Duration.ofMillis(timeoutMillis));
-    }
-
-    /**
-     * Sets the function that returns an {@link Throwable} to terminate a pending request when the server is
-     * shutting down. If unspecified, the request will be terminated with {@link ShuttingDownException} that
-     * will be converted to an {@link HttpStatus#SERVICE_UNAVAILABLE} response.
-     */
-    public GracefulShutdownBuilder toExceptionFunction(
-            BiFunction<? super ServiceRequestContext, ? super HttpRequest, ? extends Throwable> toException) {
-        requireNonNull(toException, "toException");
-        //noinspection unchecked
-        this.toException = (BiFunction<ServiceRequestContext, HttpRequest, Throwable>) toException;
-        return this;
     }
 
     private static void validateGreaterThanOrEqual(Duration larger, String largerFieldName,
@@ -119,6 +106,6 @@ public final class GracefulShutdownBuilder {
      */
     public GracefulShutdown build() {
         validateGreaterThanOrEqual(timeout, "timeout", quietPeriod, "quietPeriod");
-        return new DefaultGracefulShutdown(quietPeriod, timeout, toException);
+        return new DefaultGracefulShutdown(quietPeriod, timeout);
     }
 }

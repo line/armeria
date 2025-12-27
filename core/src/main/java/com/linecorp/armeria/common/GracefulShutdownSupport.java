@@ -14,7 +14,7 @@
  * under the License.
  */
 
-package com.linecorp.armeria.server;
+package com.linecorp.armeria.common;
 
 import java.time.Duration;
 import java.util.concurrent.Executor;
@@ -27,17 +27,17 @@ import com.google.common.base.Ticker;
  * Keeps track of pending requests to allow shutdown to happen after a fixed quiet period passes
  * after the last pending request.
  */
-abstract class GracefulShutdownSupport {
+public abstract class GracefulShutdownSupport {
 
-    static GracefulShutdownSupport create(Duration quietPeriod, Executor blockingTaskExecutor) {
+    public static GracefulShutdownSupport create(Duration quietPeriod, Executor blockingTaskExecutor) {
         return create(quietPeriod, blockingTaskExecutor, Ticker.systemTicker());
     }
 
-    static GracefulShutdownSupport create(Duration quietPeriod, Executor blockingTaskExecutor, Ticker ticker) {
+    public static GracefulShutdownSupport create(Duration quietPeriod, Executor blockingTaskExecutor, Ticker ticker) {
         return new DefaultGracefulShutdownSupport(quietPeriod, blockingTaskExecutor, ticker);
     }
 
-    static GracefulShutdownSupport createDisabled() {
+    public static GracefulShutdownSupport createDisabled() {
         return new DisabledGracefulShutdownSupport();
     }
 
@@ -46,45 +46,45 @@ abstract class GracefulShutdownSupport {
     /**
      * Increases the number of pending responses.
      */
-    final void inc() {
+    public final void inc() {
         pendingResponses.increment();
     }
 
     /**
      * Decreases the number of pending responses.
      */
-    void dec() {
+    public void dec() {
         pendingResponses.decrement();
     }
 
     /**
      * Returns the number of pending responses.
      */
-    final long pendingResponses() {
+    public final long pendingResponses() {
         return pendingResponses.sum();
     }
 
     /**
      * Returns {@code true} if the graceful shutdown has started (or finished).
      */
-    abstract boolean isShuttingDown();
+    public abstract boolean isShuttingDown();
 
     /**
      * Indicates the quiet period duration has passed since the last request.
      */
-    abstract boolean completedQuietPeriod();
+    public abstract boolean completedQuietPeriod();
 
     private static final class DisabledGracefulShutdownSupport extends GracefulShutdownSupport {
 
         private volatile boolean shuttingDown;
 
         @Override
-        boolean isShuttingDown() {
+        public boolean isShuttingDown() {
             return shuttingDown;
         }
 
         @Override
-        boolean completedQuietPeriod() {
+        public boolean completedQuietPeriod() {
             shuttingDown = true;
             return true;
         }
@@ -109,18 +109,18 @@ abstract class GracefulShutdownSupport {
         }
 
         @Override
-        void dec() {
+        public void dec() {
             lastResTimeNanos = readTicker();
             super.dec();
         }
 
         @Override
-        boolean isShuttingDown() {
+        public boolean isShuttingDown() {
             return shutdownStartTimeNanos != 0;
         }
 
         @Override
-        boolean completedQuietPeriod() {
+        public boolean completedQuietPeriod() {
             if (shutdownStartTimeNanos == 0) {
                 shutdownStartTimeNanos = readTicker();
             }

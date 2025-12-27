@@ -34,6 +34,7 @@ import com.linecorp.armeria.client.proxy.ProxyConfig;
 import com.linecorp.armeria.client.proxy.ProxyConfigSelector;
 import com.linecorp.armeria.common.CommonPools;
 import com.linecorp.armeria.common.Flags;
+import com.linecorp.armeria.common.GracefulShutdown;
 import com.linecorp.armeria.common.Http1HeaderNaming;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.TlsKeyPair;
@@ -70,6 +71,13 @@ public final class ClientFactoryOptions
      */
     public static final ClientFactoryOption<Boolean> SHUTDOWN_WORKER_GROUP_ON_CLOSE =
             ClientFactoryOption.define("SHUTDOWN_WORKER_GROUP_ON_CLOSE", false);
+
+    /**
+     * Graceful shutdown settings for the worker {@link EventLoopGroup} when the {@link ClientFactory} is
+     * closed.
+     */
+    public static final ClientFactoryOption<GracefulShutdown> WORKER_GROUP_GRACEFUL_SHUTDOWN =
+            ClientFactoryOption.define("WORKER_GROUP_GRACEFUL_SHUTDOWN", Flags.workerGroupGracefulShutdown());
 
     /**
      * The factory that creates an {@link EventLoopScheduler} which is responsible for assigning an
@@ -744,4 +752,14 @@ public final class ClientFactoryOptions
     public Consumer<? super ChannelPipeline> channelPipelineCustomizer() {
         return get(CHANNEL_PIPELINE_CUSTOMIZER);
     }
+
+    /**
+     * Returns the settings for graceful shutdown of the worker {@link EventLoopGroup} when the
+     * {@link ClientFactory} is closed.
+     */
+    @UnstableApi
+    public GracefulShutdown workerGroupGracefulShutdown() {
+        return get(WORKER_GROUP_GRACEFUL_SHUTDOWN);
+    }
+
 }

@@ -461,6 +461,9 @@ public final class Flags {
     private static final boolean ANNOTATED_SERVICE_CONTENT_LOGGING =
             getValue(FlagsProvider::annotatedServiceContentLogging, "annotatedServiceContentLogging");
 
+    private static final GracefulShutdown WORKER_GROUP_GRACEFUL_SHUTDOWN =
+            getValue(FlagsProvider::workerGroupGracefulShutdown, "workerGroupGracefulShutdown");
+
     /**
      * Returns the specification of the {@link Sampler} that determines whether to retain the stack
      * trace of the exceptions that are thrown frequently by Armeria. A sampled exception will have the stack
@@ -1728,6 +1731,17 @@ public final class Flags {
      */
     public static boolean annotatedServiceContentLogging() {
         return ANNOTATED_SERVICE_CONTENT_LOGGING;
+    }
+
+    /**
+     * Provides a configuration for a graceful shutdown of a worker group.
+     * The method returns an instance of {@link GracefulShutdown}, which specifies
+     * the shutdown strategy for the worker group. By default, this method
+     * disables the graceful shutdown process.
+     */
+    @UnstableApi
+    public static GracefulShutdown workerGroupGracefulShutdown() {
+        return WORKER_GROUP_GRACEFUL_SHUTDOWN;
     }
 
     @Nullable
