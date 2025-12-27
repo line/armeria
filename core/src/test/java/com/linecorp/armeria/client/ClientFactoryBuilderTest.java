@@ -26,6 +26,7 @@ import static org.assertj.core.api.Assertions.entry;
 import static org.assertj.core.api.Assumptions.assumeThat;
 import static org.mockito.Mockito.mock;
 
+import java.time.Duration;
 import java.util.Map;
 
 import org.junit.jupiter.api.Test;
@@ -35,6 +36,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 
 import com.linecorp.armeria.common.Flags;
+import com.linecorp.armeria.common.GracefulShutdown;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.util.TransportType;
 import com.linecorp.armeria.internal.common.util.MinifiedBouncyCastleProvider;
@@ -316,5 +318,67 @@ class ClientFactoryBuilderTest {
         assertThatThrownBy(() -> Clients.newClient(preprocessors, WebClient.class))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("At least one preprocessor must be specified for http-based clients");
+    }
+
+    @Test
+    void gracefulShutdown() {
+        final GracefulShutdown workerGroupGracefulShutdown = GracefulShutdown
+                .builder()
+                .quietPeriod(Duration.ofMillis(100))
+                .timeout(Duration.ofMillis(200))
+                .build();
+
+        try (ClientFactory factory = ClientFactory.builder()
+                                                  .workerGroup(1, workerGroupGracefulShutdown)
+                                                  .http2GracefulShutdownTimeout(Duration.ofMillis(5000))
+                                                  .build()) {
+            final ClientFactoryOptions options = factory.options();
+            assertThat(options.workerGroupGracefulShutdown()).isSameAs(workerGroupGracefulShutdown);
+            assertThat(options.http2GracefulShutdownTimeoutMillis()).isEqualTo(5000);
+        }
+
+        // Verify defaults
+        try (ClientFactory factoryDefaults = ClientFactory.builder().build()) {
+            final ClientFactoryOptions optionsDefaults = factoryDefaults.options();
+            assertThat(optionsDefaults.workerGroupGracefulShutdown())
+                    .isSameAs(Flags.workerGroupGracefulShutdown());
+            assertThat(optionsDefaults.http2GracefulShutdownTimeoutMillis())
+                    .isEqualTo(Flags.defaultClientHttp2GracefulShutdownTimeoutMillis());
+        }
+    }
+
+    @Test
+    void http2GracefulShutdownTimeoutMillis() {
+        // Test with Duration
+        try (ClientFactory factory = ClientFactory
+                .builder()
+                .http2GracefulShutdownTimeout(Duration.ofSeconds(10))
+                .build()) {
+            assertThat(factory.options().http2GracefulShutdownTimeoutMillis()).isEqualTo(10000);
+        }
+
+        // Test with millis
+        try (ClientFactory factory = ClientFactory
+                .builder()
+                .http2GracefulShutdownTimeoutMillis(3000)
+                .build()) {
+            assertThat(factory.options().http2GracefulShutdownTimeoutMillis()).isEqualTo(3000);
+        }
+
+        // Test with 0 (disabled)
+        try (ClientFactory factory = ClientFactory
+                .builder()
+                .http2GracefulShutdownTimeoutMillis(0)
+                .build()) {
+            assertThat(factory.options().http2GracefulShutdownTimeoutMillis()).isEqualTo(0);
+        }
+
+        // Test negative value throws exception
+        assertThatThrownBy(() -> ClientFactory
+                .builder()
+                .http2GracefulShutdownTimeoutMillis(-1)
+                .build())
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("http2GracefulShutdownTimeoutMillis");
     }
 }

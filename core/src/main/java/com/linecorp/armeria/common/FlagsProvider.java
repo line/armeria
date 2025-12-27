@@ -1292,4 +1292,15 @@ public interface FlagsProvider {
     default Boolean annotatedServiceContentLogging() {
         return null;
     }
+
+    /**
+     * Provides a configuration for a graceful shutdown of a worker group.
+     * The method returns an instance of {@link GracefulShutdown}, which specifies
+     * the shutdown strategy for the worker group. By default, this method
+     * disables the graceful shutdown process.
+     */
+    @UnstableApi
+    default GracefulShutdown workerGroupGracefulShutdown() {
+        return GracefulShutdown.disabled();
+    }
 }

@@ -31,6 +31,7 @@ import org.junit.jupiter.params.provider.ArgumentsSource;
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.client.logging.LoggingClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
+import com.linecorp.armeria.common.GracefulShutdown;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.ShuttingDownException;
@@ -43,20 +44,25 @@ class CustomGracefulShutDownTest {
     void testGracefulShutdown(GracefulShutdown gracefulShutdown, Class<Throwable> expectedCause,
                               HttpStatus expectedStatus) {
         final CompletableFuture<ServiceRequestContext> whenReceived = new CompletableFuture<>();
-        final Server server =
-                Server.builder()
-                      .service("/", (ctx, req) -> {
-                          whenReceived.complete(ctx);
-                          return HttpResponse.streaming();
-                      })
-                      .gracefulShutdown(gracefulShutdown)
-                      .errorHandler((ctx, cause) -> {
-                          if (cause instanceof AnticipatedException) {
-                              return HttpResponse.of(HttpStatus.BAD_GATEWAY);
-                          }
-                          return null;
-                      })
-                      .build();
+        final ServerBuilder serverBuilder = Server
+                .builder()
+                .service("/", (ctx, req) -> {
+                    whenReceived.complete(ctx);
+                    return HttpResponse.streaming();
+                })
+                .gracefulShutdown(gracefulShutdown)
+                .errorHandler((ctx, cause) -> {
+                    if (cause instanceof AnticipatedException) {
+                        return HttpResponse.of(HttpStatus.BAD_GATEWAY);
+                    }
+                    return null;
+                });
+        if (AnticipatedException.class.isAssignableFrom(expectedCause)) {
+            serverBuilder.gracefulShutdownExceptionFactory(
+                    (ctx, req) -> new AnticipatedException()
+            );
+        }
+        final Server server = serverBuilder.build();
         server.start().join();
         final WebClient client = WebClient.builder("http://127.0.0.1:" + server.activeLocalPort())
                                           .responseTimeoutMillis(0)
@@ -78,8 +84,6 @@ class CustomGracefulShutDownTest {
                     GracefulShutdown.builder()
                                     .quietPeriod(Duration.ofMillis(500))
                                     .timeout(Duration.ofMillis(500))
-                                    .toExceptionFunction(
-                                            (ctx, req) -> new AnticipatedException())
                                     .build();
 
             final GracefulShutdown defaultError =

@@ -37,6 +37,7 @@ import java.util.function.Predicate;
 import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.common.DependencyInjector;
+import com.linecorp.armeria.common.GracefulShutdown;
 import com.linecorp.armeria.common.Http1HeaderNaming;
 import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.annotation.Nullable;
@@ -93,6 +94,9 @@ final class DefaultServerConfig implements ServerConfig {
     private final int http1MaxChunkSize;
 
     private final GracefulShutdown gracefulShutdown;
+    private final GracefulShutdown workerGroupGracefulShutdown;
+    private final GracefulShutdown bossGroupGracefulShutdown;
+    private final GracefulShutdownExceptionFactory gracefulShutdownExceptionFactory;
 
     private final BlockingTaskExecutor blockingTaskExecutor;
 
@@ -135,7 +139,11 @@ final class DefaultServerConfig implements ServerConfig {
             float http2StreamWindowUpdateRatio, long http2MaxStreamsPerConnection, int http2MaxFrameSize,
             long http2MaxHeaderListSize, int http2MaxResetFramesPerWindow, int http2MaxResetFramesWindowSeconds,
             int http1MaxInitialLineLength, int http1MaxHeaderSize,
-            int http1MaxChunkSize, GracefulShutdown gracefulShutdown,
+            int http1MaxChunkSize,
+            GracefulShutdown gracefulShutdown,
+            GracefulShutdown workerGroupGracefulShutdown,
+            GracefulShutdown bossGroupGracefulShutdown,
+            GracefulShutdownExceptionFactory gracefulShutdownExceptionFactory,
             BlockingTaskExecutor blockingTaskExecutor,
             MeterRegistry meterRegistry, int proxyProtocolMaxTlvSize,
             Map<ChannelOption<?>, Object> channelOptions,
@@ -185,6 +193,10 @@ final class DefaultServerConfig implements ServerConfig {
         this.http1MaxChunkSize = validateNonNegative(
                 http1MaxChunkSize, "http1MaxChunkSize");
         this.gracefulShutdown = requireNonNull(gracefulShutdown, "gracefulShutdown");
+        this.workerGroupGracefulShutdown = requireNonNull(workerGroupGracefulShutdown, "workerGroupGracefulShutdown");
+        this.bossGroupGracefulShutdown = requireNonNull(bossGroupGracefulShutdown, "bossGroupGracefulShutdown");
+        this.gracefulShutdownExceptionFactory = requireNonNull(
+                gracefulShutdownExceptionFactory, "gracefulShutdownExceptionFactory");
 
         requireNonNull(blockingTaskExecutor, "blockingTaskExecutor");
         this.blockingTaskExecutor = monitorBlockingTaskExecutor(blockingTaskExecutor, meterRegistry);
@@ -594,6 +606,21 @@ final class DefaultServerConfig implements ServerConfig {
     }
 
     @Override
+    public GracefulShutdown workerGroupGracefulShutdown() {
+        return workerGroupGracefulShutdown;
+    }
+
+    @Override
+    public GracefulShutdown bossGroupGracefulShutdown() {
+        return bossGroupGracefulShutdown;
+    }
+
+    @Override
+    public GracefulShutdownExceptionFactory gracefulShutdownExceptionFactory() {
+        return gracefulShutdownExceptionFactory;
+    }
+
+    @Override
     public BlockingTaskExecutor blockingTaskExecutor() {
         return blockingTaskExecutor;
     }
@@ -701,7 +728,10 @@ final class DefaultServerConfig implements ServerConfig {
                     http2InitialConnectionWindowSize(), http2InitialStreamWindowSize(),
                     http2MaxStreamsPerConnection(), http2MaxFrameSize(), http2MaxHeaderListSize(),
                     http1MaxInitialLineLength(), http1MaxHeaderSize(), http1MaxChunkSize(),
-                    proxyProtocolMaxTlvSize(), gracefulShutdown(),
+                    proxyProtocolMaxTlvSize(),
+                    gracefulShutdown(),
+                    workerGroupGracefulShutdown(),
+                    bossGroupGracefulShutdown(),
                     blockingTaskExecutor(),
                     meterRegistry(), channelOptions(), childChannelOptions(),
                     clientAddressSources(), clientAddressTrustedProxyFilter(), clientAddressFilter(),
@@ -723,6 +753,8 @@ final class DefaultServerConfig implements ServerConfig {
             long http2MaxHeaderListSize, long http1MaxInitialLineLength, long http1MaxHeaderSize,
             long http1MaxChunkSize, int proxyProtocolMaxTlvSize,
             GracefulShutdown gracefulShutdown,
+            GracefulShutdown workerGroupGracefulShutdown,
+            GracefulShutdown bossGroupGracefulShutdown,
             @Nullable BlockingTaskExecutor blockingTaskExecutor,
             @Nullable MeterRegistry meterRegistry,
             Map<ChannelOption<?>, ?> channelOptions, Map<ChannelOption<?>, ?> childChannelOptions,
@@ -800,6 +832,10 @@ final class DefaultServerConfig implements ServerConfig {
         buf.append(proxyProtocolMaxTlvSize);
         buf.append("B, gracefulShutdown: ");
         buf.append(gracefulShutdown);
+        buf.append(", workerGroupGracefulShutdown: ");
+        buf.append(workerGroupGracefulShutdown);
+        buf.append(", bossGroupGracefulShutdown: ");
+        buf.append(bossGroupGracefulShutdown);
         if (blockingTaskExecutor != null) {
             buf.append(", blockingTaskExecutor: ");
             buf.append(blockingTaskExecutor);

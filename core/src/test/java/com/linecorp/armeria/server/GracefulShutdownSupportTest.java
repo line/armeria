@@ -36,6 +36,7 @@ import org.mockito.Mock;
 
 import com.google.common.base.Ticker;
 
+import com.linecorp.armeria.common.GracefulShutdownSupport;
 import com.linecorp.armeria.common.util.ThreadFactories;
 
 class GracefulShutdownSupportTest {

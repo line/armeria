@@ -27,9 +27,13 @@ import java.util.function.Function;
 import java.util.function.Predicate;
 
 import com.linecorp.armeria.common.DependencyInjector;
+import com.linecorp.armeria.common.GracefulShutdown;
 import com.linecorp.armeria.common.Http1HeaderNaming;
+import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RequestId;
+import com.linecorp.armeria.common.ShuttingDownException;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.util.BlockingTaskExecutor;
 
@@ -258,6 +262,30 @@ public interface ServerConfig {
      */
     @UnstableApi
     GracefulShutdown gracefulShutdown();
+
+    /**
+     * Returns the {@link GracefulShutdown} that is used to gracefully shut down the {@link Server} worker
+     * group.
+     */
+    @UnstableApi
+    GracefulShutdown workerGroupGracefulShutdown();
+
+    /**
+     * Returns the {@link GracefulShutdown} that is used to gracefully shut down the {@link Server} boss
+     * group(s).
+     */
+    @UnstableApi
+    GracefulShutdown bossGroupGracefulShutdown();
+
+    /**
+     * Returns a factory function returning {@link Throwable} to terminate a pending request when the server is
+     * shutting down. The exception will be converted to an {@link HttpResponse} by {@link ServerErrorHandler}.
+     *
+     * <p>If factory returns null, the request will be terminated with {@link ShuttingDownException} that will
+     * be converted to an {@link HttpStatus#SERVICE_UNAVAILABLE} response.
+     */
+    @UnstableApi
+    GracefulShutdownExceptionFactory gracefulShutdownExceptionFactory();
 
     /**
      * Returns the {@link BlockingTaskExecutor} dedicated to the execution of blocking tasks or invocations.

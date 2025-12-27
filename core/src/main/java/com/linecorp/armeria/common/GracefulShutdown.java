@@ -14,15 +14,12 @@
  * under the License.
  */
 
-package com.linecorp.armeria.server;
+package com.linecorp.armeria.common;
 
 import java.time.Duration;
 
-import com.linecorp.armeria.common.HttpRequest;
-import com.linecorp.armeria.common.HttpResponse;
-import com.linecorp.armeria.common.HttpStatus;
-import com.linecorp.armeria.common.ShuttingDownException;
 import com.linecorp.armeria.common.annotation.UnstableApi;
+import com.linecorp.armeria.server.Server;
 
 /**
  * Configures the graceful shutdown behavior of a {@link Server}.
@@ -57,12 +54,4 @@ public interface GracefulShutdown {
      */
     Duration timeout();
 
-    /**
-     * Returns an {@link Throwable} to terminate a pending request when the server is shutting down.
-     * The exception will be converted to an {@link HttpResponse} by {@link ServerErrorHandler}.
-     *
-     * <p>If null is returned, the request will be terminated with {@link ShuttingDownException} that will be
-     * converted to an {@link HttpStatus#SERVICE_UNAVAILABLE} response.
-     */
-    Throwable toException(ServiceRequestContext ctx, HttpRequest request);
 }

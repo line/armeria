@@ -23,6 +23,7 @@ import java.time.Duration;
 
 import org.junit.jupiter.api.Test;
 
+import com.linecorp.armeria.common.GracefulShutdown;
 import com.linecorp.armeria.common.ShuttingDownException;
 import com.linecorp.armeria.internal.testing.AnticipatedException;
 
@@ -53,8 +54,6 @@ class GracefulShutdownBuilderTest {
         final GracefulShutdown gracefulShutdown = GracefulShutdown.builder().build();
         assertThat(gracefulShutdown.quietPeriod()).isZero();
         assertThat(gracefulShutdown.timeout()).isZero();
-        assertThat(gracefulShutdown.toException(null, null))
-                .isInstanceOf(ShuttingDownException.class);
     }
 
     @Test
@@ -63,11 +62,8 @@ class GracefulShutdownBuilderTest {
                 GracefulShutdown.builder()
                                 .quietPeriod(Duration.ofSeconds(1))
                                 .timeout(Duration.ofSeconds(2))
-                                .toExceptionFunction((ctx, req) -> new AnticipatedException("test"))
                                 .build();
         assertThat(gracefulShutdown.quietPeriod()).isEqualTo(Duration.ofSeconds(1));
         assertThat(gracefulShutdown.timeout()).isEqualTo(Duration.ofSeconds(2));
-        assertThat(gracefulShutdown.toException(null, null))
-                .isInstanceOf(AnticipatedException.class);
     }
 }

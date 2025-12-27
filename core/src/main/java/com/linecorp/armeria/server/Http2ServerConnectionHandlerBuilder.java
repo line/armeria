@@ -15,6 +15,7 @@
  */
 package com.linecorp.armeria.server;
 
+import com.linecorp.armeria.common.GracefulShutdownSupport;
 import com.linecorp.armeria.internal.common.AbstractHttp2ConnectionHandlerBuilder;
 
 import io.micrometer.core.instrument.Timer;

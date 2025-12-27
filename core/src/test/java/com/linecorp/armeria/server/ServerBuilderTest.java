@@ -50,14 +50,17 @@ import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.Flags;
+import com.linecorp.armeria.common.GracefulShutdown;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.ShuttingDownException;
 import com.linecorp.armeria.common.prometheus.PrometheusMeterRegistries;
 import com.linecorp.armeria.common.util.DomainSocketAddress;
 import com.linecorp.armeria.common.util.TlsEngineType;
 import com.linecorp.armeria.common.util.TransportType;
 import com.linecorp.armeria.internal.common.util.MinifiedBouncyCastleProvider;
+import com.linecorp.armeria.internal.testing.AnticipatedException;
 import com.linecorp.armeria.internal.testing.MockAddressResolverGroup;
 import com.linecorp.armeria.testing.junit5.server.SelfSignedCertificateExtension;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
@@ -816,5 +819,75 @@ class ServerBuilderTest {
                                           .config();
         assertThat(config.http2MaxResetFramesPerWindow()).isEqualTo(99);
         assertThat(config.http2MaxResetFramesWindowSeconds()).isEqualTo(2);
+    }
+
+    @Test
+    void gracefulShutdownExceptionFactory() {
+        final Server server = Server
+                .builder()
+                .service(
+                        "/", (ctx, req) -> HttpResponse.of(HttpStatus.OK)
+                )
+                .build();
+        assertThat(server.config().gracefulShutdownExceptionFactory().createThrowableForContext(null, null))
+                .isInstanceOf(ShuttingDownException.class);
+
+        final Server server2 = Server
+                .builder()
+                .service(
+                        "/", (ctx, req) -> HttpResponse.of(HttpStatus.OK)
+                )
+                .gracefulShutdownExceptionFactory(
+                        (ctx, req) -> new AnticipatedException("test")
+                )
+                .build();
+        assertThat(server2.config().gracefulShutdownExceptionFactory().createThrowableForContext(null, null))
+                .isInstanceOf(AnticipatedException.class);
+    }
+
+    @Test
+    void gracefulShutdown() {
+        final GracefulShutdown gracefulShutdown = GracefulShutdown
+                .builder()
+                .quietPeriod(Duration.ofMillis(100))
+                .timeout(Duration.ofMillis(200))
+                .build();
+        final GracefulShutdown workerGroupGracefulShutdown = GracefulShutdown
+                .builder()
+                .quietPeriod(Duration.ofMillis(300))
+                .timeout(Duration.ofMillis(400))
+                .build();
+        final GracefulShutdown bossGroupGracefulShutdown = GracefulShutdown
+                .builder()
+                .quietPeriod(Duration.ofMillis(500))
+                .timeout(Duration.ofMillis(600))
+                .build();
+
+        final Server server = Server
+                .builder()
+                .service(
+                        "/", (ctx, req) -> HttpResponse.of(HttpStatus.OK)
+                )
+                .gracefulShutdown(gracefulShutdown)
+                .bossGroupGracefulShutdown(bossGroupGracefulShutdown)
+                .workerGroup(1, workerGroupGracefulShutdown)
+                .build();
+
+        final ServerConfig config = server.config();
+        assertThat(config.gracefulShutdown()).isSameAs(gracefulShutdown);
+        assertThat(config.bossGroupGracefulShutdown()).isSameAs(bossGroupGracefulShutdown);
+        assertThat(config.workerGroupGracefulShutdown()).isSameAs(workerGroupGracefulShutdown);
+
+        // Verify defaults
+        final Server serverDefaults = Server
+                .builder()
+                .service(
+                        "/", (ctx, req) -> HttpResponse.of(HttpStatus.OK)
+                )
+                .build();
+        final ServerConfig configDefaults = serverDefaults.config();
+        assertThat(configDefaults.gracefulShutdown()).isSameAs(GracefulShutdown.disabled());
+        assertThat(configDefaults.bossGroupGracefulShutdown()).isSameAs(GracefulShutdown.disabled());
+        assertThat(configDefaults.workerGroupGracefulShutdown()).isSameAs(GracefulShutdown.disabled());
     }
 }

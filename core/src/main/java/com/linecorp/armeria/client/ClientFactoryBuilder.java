@@ -57,6 +57,7 @@ import com.linecorp.armeria.client.proxy.ProxyConfig;
 import com.linecorp.armeria.client.proxy.ProxyConfigSelector;
 import com.linecorp.armeria.common.CommonPools;
 import com.linecorp.armeria.common.Flags;
+import com.linecorp.armeria.common.GracefulShutdown;
 import com.linecorp.armeria.common.Http1HeaderNaming;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.SessionProtocol;
@@ -163,6 +164,33 @@ public final class ClientFactoryBuilder implements TlsSetters {
      */
     public ClientFactoryBuilder workerGroup(int numThreads) {
         return workerGroup(EventLoopGroups.newEventLoopGroup(numThreads), true);
+    }
+
+    /**
+     * Sets the worker {@link EventLoopGroup} which is responsible for performing socket I/O and running
+     * {@link Client#execute(ClientRequestContext, Request)}.
+     * If not set, {@linkplain CommonPools#workerGroup() the common worker group} is used.
+     *
+     * @param shutdownOnClose whether to shut down the worker {@link EventLoopGroup}
+     *                        when the {@link ClientFactory} is closed
+     */
+    public ClientFactoryBuilder workerGroup(
+            EventLoopGroup workerGroup, boolean shutdownOnClose, GracefulShutdown gracefulShutdown) {
+        option(ClientFactoryOptions.WORKER_GROUP, requireNonNull(workerGroup, "workerGroup"));
+        option(ClientFactoryOptions.SHUTDOWN_WORKER_GROUP_ON_CLOSE, shutdownOnClose);
+        option(ClientFactoryOptions.WORKER_GROUP_GRACEFUL_SHUTDOWN, gracefulShutdown);
+        return this;
+    }
+
+    /**
+     * Uses a newly created {@link EventLoopGroup} with the specified number of threads for
+     * performing socket I/O and running {@link Client#execute(ClientRequestContext, Request)}.
+     * The worker {@link EventLoopGroup} will be shut down when the {@link ClientFactory} is closed.
+     *
+     * @param numThreads the number of event loop threads
+     */
+    public ClientFactoryBuilder workerGroup(int numThreads, GracefulShutdown gracefulShutdown) {
+        return workerGroup(EventLoopGroups.newEventLoopGroup(numThreads), true, gracefulShutdown);
     }
 
     /**

@@ -71,16 +71,19 @@ import com.google.common.net.HostAndPort;
 import com.linecorp.armeria.common.CommonPools;
 import com.linecorp.armeria.common.DependencyInjector;
 import com.linecorp.armeria.common.Flags;
+import com.linecorp.armeria.common.GracefulShutdown;
 import com.linecorp.armeria.common.Http1HeaderNaming;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.RequestContextStorage;
 import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.ShuttingDownException;
 import com.linecorp.armeria.common.SuccessFunction;
 import com.linecorp.armeria.common.TlsKeyPair;
 import com.linecorp.armeria.common.TlsProvider;
@@ -219,6 +222,10 @@ public final class ServerBuilder implements TlsSetters, ServiceConfigsBuilder<Se
     private int http1MaxChunkSize = Flags.defaultHttp1MaxChunkSize();
     private int proxyProtocolMaxTlvSize = PROXY_PROTOCOL_DEFAULT_MAX_TLV_SIZE;
     private GracefulShutdown gracefulShutdown = GracefulShutdown.disabled();
+    private GracefulShutdown workerGroupGracefulShutdown = GracefulShutdown.disabled();
+    private GracefulShutdown bossGroupGracefulShutdown = GracefulShutdown.disabled();
+    private GracefulShutdownExceptionFactory gracefulShutdownExceptionFactory =
+            (ctx, req) -> ShuttingDownException.get();
     private MeterRegistry meterRegistry = Flags.meterRegistry();
     @Nullable
     private ServerErrorHandler errorHandler;
@@ -544,6 +551,36 @@ public final class ServerBuilder implements TlsSetters, ServiceConfigsBuilder<Se
     public ServerBuilder workerGroup(int numThreads) {
         checkArgument(numThreads >= 0, "numThreads: %s (expected: >= 0)", numThreads);
         workerGroup(EventLoopGroups.newEventLoopGroup(numThreads), true);
+        return this;
+    }
+
+    /**
+     * Sets the worker {@link EventLoopGroup} which is responsible for performing socket I/O and running
+     * {@link Service#serve(ServiceRequestContext, Request)}.
+     * If not set, {@linkplain CommonPools#workerGroup() the common worker group} is used.
+     *
+     * @param shutdownOnStop whether to shut down the worker {@link EventLoopGroup}
+     *                       when the {@link Server} stops
+     * @param gracefulShutdown the {@link GracefulShutdown} configuration for the worker {@link EventLoopGroup}
+     */
+    public ServerBuilder workerGroup(EventLoopGroup workerGroup, boolean shutdownOnStop, GracefulShutdown gracefulShutdown) {
+        this.workerGroup = requireNonNull(workerGroup, "workerGroup");
+        workerGroupGracefulShutdown = requireNonNull(gracefulShutdown, "gracefulShutdown");
+        // We don't use ShutdownSupport to shutdown with other instances because we shut down workerGroup first.
+        shutdownWorkerGroupOnStop = shutdownOnStop;
+        return this;
+    }
+
+    /**
+     * Uses a newly created {@link EventLoopGroup} with the specified number of threads for
+     * performing socket I/O and running {@link Service#serve(ServiceRequestContext, Request)}.
+     * The worker {@link EventLoopGroup} will be shut down when the {@link Server} stops.
+     *
+     * @param numThreads the number of event loop threads
+     */
+    public ServerBuilder workerGroup(int numThreads, GracefulShutdown gracefulShutdown) {
+        checkArgument(numThreads >= 0, "numThreads: %s (expected: >= 0)", numThreads);
+        workerGroup(EventLoopGroups.newEventLoopGroup(numThreads), true, gracefulShutdown);
         return this;
     }
 
@@ -946,6 +983,31 @@ public final class ServerBuilder implements TlsSetters, ServiceConfigsBuilder<Se
     @UnstableApi
     public ServerBuilder gracefulShutdown(GracefulShutdown gracefulShutdown) {
         this.gracefulShutdown = requireNonNull(gracefulShutdown, "gracefulShutdown");
+        return this;
+    }
+
+    /**
+     * Sets the {@link GracefulShutdown} configuration for the boss {@link EventLoopGroup}s.
+     * If not set, {@link GracefulShutdown#disabled()} is used.
+     */
+    @UnstableApi
+    public ServerBuilder bossGroupGracefulShutdown(GracefulShutdown gracefulShutdown) {
+        bossGroupGracefulShutdown = requireNonNull(gracefulShutdown, "gracefulShutdown");
+        return this;
+    }
+
+    /**
+     * Sets the function that returns an {@link Throwable} to terminate a pending request when
+     * the server is shutting down. The exception will be converted to an {@link HttpResponse}
+     * by {@link ServerErrorHandler}. If null is returned, the request will be terminated with
+     * {@link ShuttingDownException} that will be converted to an {@link HttpStatus#SERVICE_UNAVAILABLE}
+     * response.
+     */
+    @UnstableApi
+    public ServerBuilder gracefulShutdownExceptionFactory(
+            GracefulShutdownExceptionFactory toException
+    ) {
+        gracefulShutdownExceptionFactory = requireNonNull(toException, "toException");
         return this;
     }
 
@@ -2451,7 +2513,9 @@ public final class ServerBuilder implements TlsSetters, ServiceConfigsBuilder<Se
                 http2MaxFrameSize, http2MaxHeaderListSize,
                 http2MaxResetFramesPerWindow, http2MaxResetFramesWindowSeconds,
                 http1MaxInitialLineLength, http1MaxHeaderSize,
-                http1MaxChunkSize, gracefulShutdown,
+                http1MaxChunkSize,
+                gracefulShutdown, workerGroupGracefulShutdown, bossGroupGracefulShutdown,
+                gracefulShutdownExceptionFactory,
                 blockingTaskExecutor,
                 meterRegistry, proxyProtocolMaxTlvSize, channelOptions, newChildChannelOptions,
                 childChannelPipelineCustomizer,

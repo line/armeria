@@ -65,6 +65,8 @@ import com.google.errorprone.annotations.concurrent.GuardedBy;
 import com.spotify.futures.CompletableFutures;
 
 import com.linecorp.armeria.common.Flags;
+import com.linecorp.armeria.common.GracefulShutdown;
+import com.linecorp.armeria.common.GracefulShutdownSupport;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.metric.MeterIdPrefix;
@@ -690,7 +692,13 @@ public final class Server implements ListenableAsyncCloseable {
                         // Shut down the worker group if necessary.
                         final Future<?> workerShutdownFuture;
                         if (config.shutdownWorkerGroupOnStop()) {
-                            workerShutdownFuture = config.workerGroup().shutdownGracefully();
+                            final EventLoopGroup workerGroup = config.workerGroup();
+                            final GracefulShutdown gracefulShutdown = config.workerGroupGracefulShutdown();
+                            workerShutdownFuture = workerGroup.shutdownGracefully(
+                                    gracefulShutdown.quietPeriod().toMillis(),
+                                    gracefulShutdown.timeout().toMillis(),
+                                    TimeUnit.MILLISECONDS
+                            );
                         } else {
                             workerShutdownFuture = ImmediateEventExecutor.INSTANCE.newSucceededFuture(null);
                         }
@@ -709,9 +717,14 @@ public final class Server implements ListenableAsyncCloseable {
                             }
 
                             // Shut down all boss groups and wait until they are terminated.
+                            final GracefulShutdown gracefulShutdown = config.bossGroupGracefulShutdown();
                             final AtomicInteger remainingBossGroups = new AtomicInteger(bossGroups.size());
                             bossGroups.forEach(bossGroup -> {
-                                bossGroup.shutdownGracefully();
+                                bossGroup.shutdownGracefully(
+                                        gracefulShutdown.quietPeriod().toMillis(),
+                                        gracefulShutdown.timeout().toMillis(),
+                                        TimeUnit.MILLISECONDS
+                                );
                                 bossGroup.terminationFuture().addListener(unused8 -> {
                                     if (remainingBossGroups.decrementAndGet() != 0) {
                                         // There are more boss groups to terminate.
