@@ -23,7 +23,6 @@ import java.util.Objects;
 import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableList;
 
-import io.envoyproxy.envoy.config.route.v3.Route;
 import io.envoyproxy.envoy.config.route.v3.RouteConfiguration;
 import io.envoyproxy.envoy.config.route.v3.VirtualHost;
 import io.envoyproxy.envoy.extensions.filters.network.http_connection_manager.v3.HttpFilter;
@@ -39,31 +38,11 @@ public final class VirtualHostSnapshot implements Snapshot<VirtualHostXdsResourc
     private final int index;
 
     VirtualHostSnapshot(VirtualHostXdsResource virtualHostXdsResource,
-                        Map<String, ClusterSnapshot> clusterSnapshots, int index) {
-        this.virtualHostXdsResource = virtualHostXdsResource;
-        final VirtualHost virtualHost = virtualHostXdsResource.resource();
-        filterConfigs = FilterUtil.toParsedFilterConfigs(virtualHost.getTypedPerFilterConfigMap());
-
-        final ImmutableList.Builder<RouteEntry> routeEntriesBuilder = ImmutableList.builder();
-        final List<Route> routes = virtualHost.getRoutesList();
-        for (int i = 0; i < routes.size(); i++) {
-            final Route route = routes.get(i);
-            ClusterSnapshot clusterSnapshot = null;
-            if (route.getRoute().hasCluster()) {
-                clusterSnapshot = clusterSnapshots.get(route.getRoute().getCluster());
-            }
-            routeEntriesBuilder.add(new RouteEntry(route, clusterSnapshot, i));
-        }
-        routeEntries = routeEntriesBuilder.build();
-        this.index = index;
-    }
-
-    VirtualHostSnapshot(VirtualHostXdsResource virtualHostXdsResource,
                         List<RouteEntry> routeEntries, int index) {
         this.virtualHostXdsResource = virtualHostXdsResource;
         final VirtualHost virtualHost = virtualHostXdsResource.resource();
         filterConfigs = FilterUtil.toParsedFilterConfigs(virtualHost.getTypedPerFilterConfigMap());
-        this.routeEntries = routeEntries;
+        this.routeEntries = ImmutableList.copyOf(routeEntries);
         this.index = index;
     }
 

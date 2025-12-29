@@ -19,7 +19,10 @@ package com.linecorp.armeria.xds;
 import static com.google.common.base.Strings.isNullOrEmpty;
 import static com.linecorp.armeria.xds.XdsType.CLUSTER;
 
+import java.util.List;
 import java.util.Optional;
+
+import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.xds.client.endpoint.XdsLoadBalancer;
@@ -27,6 +30,7 @@ import com.linecorp.armeria.xds.client.endpoint.XdsLoadBalancerFactory;
 
 import io.envoyproxy.envoy.config.cluster.v3.Cluster;
 import io.envoyproxy.envoy.config.cluster.v3.Cluster.EdsClusterConfig;
+import io.envoyproxy.envoy.config.cluster.v3.Cluster.TransportSocketMatch;
 import io.envoyproxy.envoy.config.core.v3.ConfigSource;
 import io.envoyproxy.envoy.config.endpoint.v3.ClusterLoadAssignment;
 
@@ -40,8 +44,7 @@ final class ClusterStream extends RefCountedStream<ClusterSnapshot> {
     private final XdsLoadBalancerFactory loadBalancerFactory;
     private final LoadBalancerFactoryPool loadBalancerFactoryPool;
 
-    ClusterStream(ClusterXdsResource clusterXdsResource,
-                  SubscriptionContext context,
+    ClusterStream(ClusterXdsResource clusterXdsResource, SubscriptionContext context,
                   LoadBalancerFactoryPool loadBalancerFactoryPool) {
         this.clusterXdsResource = clusterXdsResource;
         this.context = context;
@@ -81,27 +84,64 @@ final class ClusterStream extends RefCountedStream<ClusterSnapshot> {
 
     private SnapshotStream<ClusterSnapshot> resource2snapshot(ClusterXdsResource resource,
                                                               @Nullable ConfigSource configSource) {
-        return new EndpointSnapshotNode(resource, context, configSource)
-                .switchMap(optEndpointSnapshot -> {
-                    if (!optEndpointSnapshot.isPresent()) {
-                        return SnapshotStream.just(new ClusterSnapshot(resource));
-                    }
-                    final EndpointSnapshot endpointSnapshot = optEndpointSnapshot.get();
-                    if (context.clusterManager().hasLocalCluster() &&
-                        // local cluster shouldn't wait for itself
-                        !resourceName.equals(context.clusterManager().localClusterName())) {
-                        return new LocalClusterStream(context.clusterManager())
-                                .switchMap(localCluster -> {
-                                    return new LoadBalancerStream(resource, endpointSnapshot,
-                                                                  loadBalancerFactory, localCluster)
-                                            .map(lb -> new ClusterSnapshot(resource, lb));
-                                });
-                    } else {
-                        return new LoadBalancerStream(resource, endpointSnapshot,
-                                                      loadBalancerFactory, Optional.empty())
-                                .map(lb -> new ClusterSnapshot(resource, lb));
-                    }
-                });
+        final TransportSocketStream transportSocket = new TransportSocketStream(
+                context, configSource, resource.resource().getTransportSocket());
+        final SnapshotStream<Optional<XdsLoadBalancer>> lbStream =
+                new EndpointSnapshotNode(resource, context, configSource)
+                        .switchMap(optEndpointSnapshot -> {
+                            if (!optEndpointSnapshot.isPresent()) {
+                                return SnapshotStream.empty();
+                            }
+                            final EndpointSnapshot endpointSnapshot = optEndpointSnapshot.get();
+                            if (context.clusterManager().hasLocalCluster() &&
+                                !resourceName.equals(context.clusterManager().localClusterName())) {
+                                return new LocalClusterStream(context.clusterManager())
+                                        .switchMap(localCluster -> {
+                                            return new LoadBalancerStream(resource, endpointSnapshot,
+                                                                          loadBalancerFactory, localCluster);
+                                        }).map(Optional::of);
+                            } else {
+                                return new LoadBalancerStream(resource, endpointSnapshot,
+                                                              loadBalancerFactory, Optional.empty())
+                                        .map(Optional::of);
+                            }
+                        });
+        final List<TransportSocketMatch> matches = resource.resource().getTransportSocketMatchesList();
+        final TransportSocketMatchesStream socketMatchesStream =
+                new TransportSocketMatchesStream(context, configSource, matches);
+        return SnapshotStream.combineLatest(
+                lbStream, transportSocket, socketMatchesStream,
+                (lb, socket, socketMatches) -> new ClusterSnapshot(resource, lb, socket, socketMatches));
+    }
+
+    private static class TransportSocketMatchesStream
+            extends RefCountedStream<List<TransportSocketMatchSnapshot>> {
+
+        private final SubscriptionContext context;
+        @Nullable
+        private final ConfigSource parentConfigSource;
+        private final List<TransportSocketMatch> transportSocketMatchList;
+
+        TransportSocketMatchesStream(SubscriptionContext context, @Nullable ConfigSource parentConfigSource,
+                                     List<TransportSocketMatch> transportSocketMatchList) {
+            this.context = context;
+            this.parentConfigSource = parentConfigSource;
+            this.transportSocketMatchList = transportSocketMatchList;
+        }
+
+        @Override
+        protected Subscription onStart(SnapshotWatcher<List<TransportSocketMatchSnapshot>> watcher) {
+            final ImmutableList.Builder<SnapshotStream<TransportSocketMatchSnapshot>> streamsBuilder =
+                    ImmutableList.builder();
+            for (TransportSocketMatch socketMatch : transportSocketMatchList) {
+                streamsBuilder.add(new TransportSocketStream(context, parentConfigSource,
+                                                             socketMatch.getTransportSocket())
+                                           .map(socket -> new TransportSocketMatchSnapshot(socketMatch,
+                                                                                           socket)));
+            }
+            return SnapshotStream.combineNLatest(streamsBuilder.build())
+                                 .subscribe(watcher);
+        }
     }
 
     private static class LocalClusterStream extends RefCountedStream<Optional<ClusterSnapshot>> {
