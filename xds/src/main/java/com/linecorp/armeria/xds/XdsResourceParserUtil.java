@@ -32,11 +32,13 @@ final class XdsResourceParserUtil {
         typeUrlToResourceType.put(XdsType.CLUSTER.typeUrl(), ClusterResourceParser.INSTANCE);
         typeUrlToResourceType.put(XdsType.LISTENER.typeUrl(), ListenerResourceParser.INSTANCE);
         typeUrlToResourceType.put(XdsType.ROUTE.typeUrl(), RouteResourceParser.INSTANCE);
+        typeUrlToResourceType.put(XdsType.SECRET.typeUrl(), SecretResourceParser.INSTANCE);
 
         typeToResourceType.put(XdsType.ENDPOINT, EndpointResourceParser.INSTANCE);
         typeToResourceType.put(XdsType.CLUSTER, ClusterResourceParser.INSTANCE);
         typeToResourceType.put(XdsType.LISTENER, ListenerResourceParser.INSTANCE);
         typeToResourceType.put(XdsType.ROUTE, RouteResourceParser.INSTANCE);
+        typeToResourceType.put(XdsType.SECRET, SecretResourceParser.INSTANCE);
     }
 
     @Nullable

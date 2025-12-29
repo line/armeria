@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.xds;
 
+import com.linecorp.armeria.common.file.DirectoryWatchService;
 import com.linecorp.armeria.common.metric.MeterIdPrefix;
 
 import io.micrometer.core.instrument.MeterRegistry;
@@ -29,17 +30,22 @@ final class DefaultSubscriptionContext implements SubscriptionContext {
     private final ControlPlaneClientManager controlPlaneClientManager;
     private final MeterRegistry meterRegistry;
     private final MeterIdPrefix meterIdPrefix;
+    private final DirectoryWatchService watchService;
+    private final BootstrapSecrets bootstrapSecrets;
 
     DefaultSubscriptionContext(EventExecutor eventLoop, XdsClusterManager clusterManager,
                                ConfigSourceMapper configSourceMapper,
                                ControlPlaneClientManager controlPlaneClientManager,
-                               MeterRegistry meterRegistry, MeterIdPrefix meterIdPrefix) {
+                               MeterRegistry meterRegistry, MeterIdPrefix meterIdPrefix,
+                               DirectoryWatchService watchService, BootstrapSecrets bootstrapSecrets) {
         this.eventLoop = eventLoop;
         this.clusterManager = clusterManager;
         this.configSourceMapper = configSourceMapper;
         this.controlPlaneClientManager = controlPlaneClientManager;
         this.meterRegistry = meterRegistry;
         this.meterIdPrefix = meterIdPrefix;
+        this.watchService = watchService;
+        this.bootstrapSecrets = bootstrapSecrets;
     }
 
     @Override
@@ -75,5 +81,15 @@ final class DefaultSubscriptionContext implements SubscriptionContext {
     @Override
     public XdsClusterManager clusterManager() {
         return clusterManager;
+    }
+
+    @Override
+    public DirectoryWatchService watchService() {
+        return watchService;
+    }
+
+    @Override
+    public BootstrapSecrets bootstrapSecrets() {
+        return bootstrapSecrets;
     }
 }

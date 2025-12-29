@@ -41,6 +41,7 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.metric.MoreMeters;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.grpc.GrpcService;
+import com.linecorp.armeria.testing.junit5.server.SelfSignedCertificateExtension;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 import com.linecorp.armeria.xds.ClusterRoot;
 import com.linecorp.armeria.xds.ListenerRoot;
@@ -54,6 +55,7 @@ import io.envoyproxy.envoy.config.cluster.v3.Cluster;
 import io.envoyproxy.envoy.config.endpoint.v3.ClusterLoadAssignment;
 import io.envoyproxy.envoy.config.listener.v3.Listener;
 import io.envoyproxy.envoy.config.route.v3.RouteConfiguration;
+import io.envoyproxy.envoy.extensions.transport_sockets.tls.v3.Secret;
 import io.micrometer.core.instrument.Meter;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Tag;
@@ -76,10 +78,17 @@ class ResourceNodeMetricTest {
                                   .addService(v3DiscoveryServer.getClusterDiscoveryServiceImpl())
                                   .addService(v3DiscoveryServer.getRouteDiscoveryServiceImpl())
                                   .addService(v3DiscoveryServer.getEndpointDiscoveryServiceImpl())
+                                  .addService(v3DiscoveryServer.getSecretDiscoveryServiceImpl())
                                   .build());
             sb.service("/hello", (ctx, req) -> HttpResponse.of("world"));
         }
     };
+
+    @RegisterExtension
+    static final SelfSignedCertificateExtension certificate1 = new SelfSignedCertificateExtension();
+
+    @RegisterExtension
+    static final SelfSignedCertificateExtension certificate2 = new SelfSignedCertificateExtension();
 
     //language=YAML
     private static final String bootstrapYaml =
@@ -1013,6 +1022,155 @@ class ResourceNodeMetricTest {
             } else {
                 assertThat(existingTagKeys).isEqualTo(tagKeys);
             }
+        }
+    }
+
+    @Test
+    void listenerRootWithSdsSecretUpdate() throws Exception {
+        //language=YAML
+        final String tlsCertYaml =
+                """
+                name: my-cert
+                tls_certificate:
+                  private_key:
+                    filename: %s
+                  certificate_chain:
+                    filename: %s
+                """;
+
+        //language=YAML
+        final String sdsListenerYaml =
+                """
+                    name: my-listener
+                    api_listener:
+                      api_listener:
+                        "@type": type.googleapis.com/envoy.extensions.filters.network.http_connection_manager\
+                    .v3.HttpConnectionManager
+                        stat_prefix: http
+                        route_config:
+                          name: local_route
+                          virtual_hosts:
+                          - name: local_service1
+                            domains: [ "*" ]
+                            routes:
+                              - match:
+                                  prefix: /
+                                route:
+                                  cluster: my-cluster
+                        http_filters:
+                        - name: envoy.filters.http.router
+                          typed_config:
+                            "@type": type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
+                    """;
+
+        //language=YAML
+        final String sdsClusterYaml =
+                """
+                    name: my-cluster
+                    type: STATIC
+                    load_assignment:
+                      cluster_name: my-cluster
+                      endpoints:
+                      - lb_endpoints:
+                        - endpoint:
+                            address:
+                              socket_address:
+                                address: 127.0.0.1
+                                port_value: 8080
+                    transport_socket:
+                      name: envoy.transport_sockets.tls
+                      typed_config:
+                        "@type": type.googleapis.com/envoy.extensions.transport_sockets\
+                    .tls.v3.UpstreamTlsContext
+                        common_tls_context:
+                          tls_certificate_sds_secret_configs:
+                            - name: my-cert
+                              sds_config:
+                                ads: {}
+                    """;
+
+        final Listener listener = XdsResourceReader.fromYaml(sdsListenerYaml, Listener.class);
+        final Cluster cluster = XdsResourceReader.fromYaml(sdsClusterYaml, Cluster.class);
+
+        final Secret secret1 = XdsResourceReader.fromYaml(
+                tlsCertYaml.formatted(certificate1.privateKeyFile().toPath().toString(),
+                                      certificate1.certificateFile().toPath().toString()), Secret.class);
+        final Secret secret2 = XdsResourceReader.fromYaml(
+                tlsCertYaml.formatted(certificate2.privateKeyFile().toPath().toString(),
+                                      certificate2.certificateFile().toPath().toString()), Secret.class);
+
+        final Bootstrap bootstrap = XdsResourceReader.fromYaml(bootstrapYaml.formatted(server.httpPort()),
+                                                               Bootstrap.class);
+        final MeterRegistry meterRegistry = new SimpleMeterRegistry();
+
+        try (XdsBootstrap xdsBootstrap = XdsBootstrap.builder(bootstrap)
+                                                     .meterRegistry(meterRegistry)
+                                                     .build()) {
+
+            version.incrementAndGet();
+            cache.setSnapshot(GROUP, Snapshot.create(ImmutableList.of(cluster),
+                                                     ImmutableList.of(),
+                                                     ImmutableList.of(listener),
+                                                     ImmutableList.of(),
+                                                     ImmutableList.of(secret1),
+                                                     version.toString()));
+
+            final ListenerRoot listenerRoot = xdsBootstrap.listenerRoot("my-listener");
+
+            await().untilAsserted(() -> {
+                final var metrics = measureAll(meterRegistry);
+                assertThat(metrics).containsAllEntriesOf(Map.of(
+                        "armeria.xds.resource.node.revision#value{name=my-listener,type=listener}", 1.0,
+                        "armeria.xds.resource.node.revision#value{name=my-cluster,type=cluster}", 1.0,
+                        "armeria.xds.resource.node.revision#value{name=my-cert,type=secret}", 1.0
+                ));
+                assertErrorAndMissingMetricsAreZero(metrics);
+            });
+
+            version.incrementAndGet();
+            cache.setSnapshot(GROUP, Snapshot.create(ImmutableList.of(cluster),
+                                                     ImmutableList.of(),
+                                                     ImmutableList.of(listener),
+                                                     ImmutableList.of(),
+                                                     ImmutableList.of(secret2),
+                                                     version.toString()));
+
+            await().untilAsserted(() -> {
+                final var metrics = measureAll(meterRegistry);
+                assertThat(metrics).containsAllEntriesOf(Map.of(
+                        "armeria.xds.resource.node.revision#value{name=my-listener,type=listener}", 2.0,
+                        "armeria.xds.resource.node.revision#value{name=my-cluster,type=cluster}", 2.0,
+                        "armeria.xds.resource.node.revision#value{name=my-cert,type=secret}", 2.0
+                ));
+                assertErrorAndMissingMetricsAreZero(metrics);
+            });
+
+            version.incrementAndGet();
+            cache.setSnapshot(GROUP, Snapshot.create(ImmutableList.of(cluster),
+                                                     ImmutableList.of(),
+                                                     ImmutableList.of(listener),
+                                                     ImmutableList.of(),
+                                                     ImmutableList.of(secret1),
+                                                     version.toString()));
+
+            await().untilAsserted(() -> {
+                final var metrics = measureAll(meterRegistry);
+                assertThat(metrics).containsAllEntriesOf(Map.of(
+                        "armeria.xds.resource.node.revision#value{name=my-listener,type=listener}", 3.0,
+                        "armeria.xds.resource.node.revision#value{name=my-cluster,type=cluster}", 3.0,
+                        "armeria.xds.resource.node.revision#value{name=my-cert,type=secret}", 3.0
+                ));
+                assertErrorAndMissingMetricsAreZero(metrics);
+            });
+
+            validatePrometheusTagConsistency(meterRegistry);
+
+            listenerRoot.close();
+
+            await().untilAsserted(() -> {
+                final var metrics = measureAll(meterRegistry);
+                assertThat(metrics).isEmpty();
+            });
         }
     }
 }

@@ -18,16 +18,14 @@ package com.linecorp.armeria.xds;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.function.BiFunction;
 import java.util.function.Function;
 
 import com.google.common.collect.ImmutableList;
 import com.google.errorprone.annotations.CheckReturnValue;
 
-/**
- * A stream of snapshots. In xDS usage, callbacks are driven by the event loop and
- * are serialized; implementations may be re-entrant (e.g., a watcher can close its subscription
- * during onUpdate).
- */
+import com.linecorp.armeria.xds.CombineLatest3Stream.TriFunction;
+
 @FunctionalInterface
 interface SnapshotStream<T> {
 
@@ -55,6 +53,21 @@ interface SnapshotStream<T> {
 
     static <S extends SnapshotStream<I>, I> SnapshotStream<List<I>> combineNLatest(List<S> stream) {
         return new CombineNLatestStream<>(ImmutableList.copyOf(stream));
+    }
+
+    static <A, B, O> SnapshotStream<O> combineLatest(
+            SnapshotStream<A> a,
+            SnapshotStream<B> b,
+            BiFunction<? super A, ? super B, ? extends O> combiner) {
+        return new CombineLatest2Stream<>(a, b, combiner);
+    }
+
+    static <A, B, C, O> SnapshotStream<O> combineLatest(
+            SnapshotStream<A> a,
+            SnapshotStream<B> b,
+            SnapshotStream<C> c,
+            TriFunction<? super A, ? super B, ? super C, ? extends O> combiner) {
+        return new CombineLatest3Stream<>(a, b, c, combiner);
     }
 
     static <T> SnapshotStream<T> just(T value) {
