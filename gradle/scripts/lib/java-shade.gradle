@@ -38,7 +38,7 @@ configure(relocatedProjects) {
         canBeResolved = true
         canBeConsumed = false
     }
-    project.configurations.implementation.extendsFrom(shadeConfig)
+    project.configurations.api.extendsFrom(shadeConfig)
 
     // Generate the shaded JARs.
     task shadedJar(
