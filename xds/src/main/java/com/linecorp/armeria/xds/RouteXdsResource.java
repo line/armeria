@@ -34,6 +34,12 @@ public final class RouteXdsResource extends AbstractXdsResource {
         this.routeConfiguration = routeConfiguration;
     }
 
+    RouteXdsResource(RouteConfiguration routeConfiguration) {
+        super("", 0);
+        XdsValidatorIndexRegistry.assertValid(routeConfiguration);
+        this.routeConfiguration = routeConfiguration;
+    }
+
     @Override
     public XdsType type() {
         return XdsType.ROUTE;

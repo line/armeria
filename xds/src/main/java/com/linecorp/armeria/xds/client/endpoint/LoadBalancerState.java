@@ -16,11 +16,14 @@
 
 package com.linecorp.armeria.xds.client.endpoint;
 
+import java.util.List;
 import java.util.Map;
 
 import com.google.protobuf.Struct;
 
+import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.common.annotation.UnstableApi;
+import com.linecorp.armeria.xds.EndpointSnapshot;
 
 import io.envoyproxy.envoy.config.core.v3.Locality;
 
@@ -65,4 +68,16 @@ public interface LoadBalancerState {
      * For load balancers which are not subset-based, this will return an empty map.
      */
     Map<Struct, LoadBalancerState> subsetStates();
+
+    /**
+     * TBU.
+     * @deprecated will be removed once {@link XdsEndpointGroup} is removed
+     */
+    @Deprecated
+    List<Endpoint> allEndpoints();
+
+    /**
+     * TBU.
+     */
+    EndpointSnapshot endpointSnapshot();
 }

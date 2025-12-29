@@ -20,7 +20,6 @@ import java.util.Locale;
 
 import com.linecorp.armeria.common.metric.MeterIdPrefix;
 
-import io.grpc.Status;
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.Gauge;
 import io.micrometer.core.instrument.MeterRegistry;
@@ -67,7 +66,7 @@ final class ResourceNodeMeterBinder implements ResourceWatcher<XdsResource> {
     }
 
     @Override
-    public void onError(XdsType type, String resourceName, Status status) {
+    public void onError(XdsType type, String resourceName, Throwable t) {
         errorCounter.increment();
     }
 

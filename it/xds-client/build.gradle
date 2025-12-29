@@ -1,6 +1,7 @@
 dependencies {
     testImplementation project(':xds')
     testImplementation libs.jackson.dataformat.yaml
+    testImplementation libs.junit.pioneer
     testImplementation libs.protobuf.java.util
     testImplementation libs.controlplane.server
     testImplementation libs.controlplane.cache

@@ -19,82 +19,106 @@ package com.linecorp.armeria.xds;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
 
 import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.common.annotation.Nullable;
-import com.linecorp.armeria.common.metric.MeterIdPrefix;
-import com.linecorp.armeria.xds.client.endpoint.XdsLoadBalancer;
+import com.linecorp.armeria.common.util.UnmodifiableFuture;
 
 import io.envoyproxy.envoy.config.bootstrap.v3.Bootstrap;
 import io.envoyproxy.envoy.config.cluster.v3.Cluster;
-import io.micrometer.core.instrument.MeterRegistry;
-import io.netty.util.concurrent.EventExecutor;
 
 final class BootstrapClusters implements SnapshotWatcher<ClusterSnapshot> {
 
-    private final Map<String, ClusterSnapshot> clusterSnapshots = new HashMap<>();
+    private final Map<String, CompletableFuture<ClusterSnapshot>> initialFutures = new HashMap<>();
+    private final Map<String, ClusterSnapshot> snapshots = new HashMap<>();
     private final Bootstrap bootstrap;
-    private final EventExecutor eventLoop;
     private final XdsClusterManager clusterManager;
     private final List<SnapshotWatcher<? super ClusterSnapshot>> watchers;
+    final LocalCluster localCluster;
 
-    BootstrapClusters(Bootstrap bootstrap, EventExecutor eventLoop, XdsClusterManager clusterManager,
-                      SnapshotWatcher<Object> defaultSnapshotWatcher,
-                      MeterIdPrefix meterIdPrefix, MeterRegistry meterRegistry) {
+    BootstrapClusters(Bootstrap bootstrap, XdsClusterManager clusterManager,
+                      SnapshotWatcher<Object> defaultSnapshotWatcher) {
+        localCluster = new LocalCluster(bootstrap);
         this.bootstrap = bootstrap;
-        this.eventLoop = eventLoop;
         this.clusterManager = clusterManager;
         watchers = ImmutableList.of(defaultSnapshotWatcher, this);
-        initializePrimary(bootstrap, meterIdPrefix, meterRegistry);
     }
 
-    private void initializePrimary(Bootstrap bootstrap, MeterIdPrefix meterIdPrefix,
-                                   MeterRegistry meterRegistry) {
-        final StaticSubscriptionContext context =
-                new StaticSubscriptionContext(eventLoop, meterIdPrefix, meterRegistry);
+    void initializeStaticClusters(SubscriptionContext context) {
         for (Cluster cluster: bootstrap.getStaticResources().getClustersList()) {
-            if (!cluster.hasLoadAssignment()) {
-                continue;
-            }
-            clusterManager.register(cluster, context, watchers);
+            initialFutures.put(cluster.getName(), new CompletableFuture<>());
         }
-    }
-
-    void initializeSecondary(SubscriptionContext context) {
         for (Cluster cluster: bootstrap.getStaticResources().getClustersList()) {
-            if (!cluster.hasEdsClusterConfig()) {
-                continue;
+            if (cluster.getName().equals(localCluster.localClusterName)) {
+                final List<SnapshotWatcher<? super ClusterSnapshot>> watchers =
+                        ImmutableList.<SnapshotWatcher<? super ClusterSnapshot>>builder()
+                                     .addAll(this.watchers)
+                                     .add(localCluster)
+                                     .build();
+                clusterManager.register(cluster, context, watchers);
+            } else {
+                clusterManager.register(cluster, context, watchers);
             }
-            clusterManager.register(cluster, context, watchers);
         }
     }
 
     @Override
-    public void snapshotUpdated(ClusterSnapshot newSnapshot) {
-        final String name = newSnapshot.xdsResource().name();
-        clusterSnapshots.put(name, newSnapshot);
-    }
-
-    @Nullable
-    ClusterSnapshot clusterSnapshot(String clusterName) {
-        return clusterSnapshots.get(clusterName);
-    }
-
-    @Nullable
-    XdsLoadBalancer loadBalancer(String clusterName) {
-        final ClusterSnapshot snapshot = clusterSnapshots.get(clusterName);
+    public void onUpdate(@Nullable ClusterSnapshot snapshot, @Nullable Throwable t) {
         if (snapshot == null) {
-            return null;
+            return;
         }
-        return snapshot.loadBalancer();
+        final String name = snapshot.xdsResource().name();
+        final CompletableFuture<ClusterSnapshot> f = initialFutures.get(name);
+        assert f != null;
+        if (!f.isDone()) {
+            f.complete(snapshot);
+        }
+        snapshots.put(name, snapshot);
+    }
+
+    @Nullable
+    CompletableFuture<ClusterSnapshot> clusterSnapshot(String clusterName) {
+        final ClusterSnapshot snapshot = snapshots.get(clusterName);
+        if (snapshot != null) {
+            return UnmodifiableFuture.completedFuture(snapshot);
+        }
+        return initialFutures.get(clusterName);
     }
 
     @Override
     public String toString() {
         return MoreObjects.toStringHelper(this)
-                          .add("clusterSnapshots", clusterSnapshots)
+                          .add("clusterSnapshots", initialFutures)
                           .toString();
+    }
+
+    LocalCluster localCluster() {
+        return localCluster;
+    }
+
+    static class LocalCluster extends DelegatingWatcher<ClusterSnapshot> {
+
+        final String localClusterName;
+
+        LocalCluster(Bootstrap bootstrap) {
+            localClusterName = bootstrap.getClusterManager().getLocalClusterName();
+        }
+
+        @Override
+        void addWatcher(SnapshotWatcher<? super ClusterSnapshot> watcher) {
+            super.addWatcher(watcher);
+        }
+
+        @Override
+        public void onUpdate(@Nullable ClusterSnapshot snapshot, @Nullable Throwable t) {
+            super.onUpdate(snapshot, t);
+        }
+
+        boolean exists() {
+            return !localClusterName.isEmpty();
+        }
     }
 }

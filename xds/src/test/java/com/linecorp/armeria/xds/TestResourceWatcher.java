@@ -35,21 +35,27 @@ class TestResourceWatcher implements SnapshotWatcher<Snapshot<?>> {
     private final LinkedBlockingDeque<List<Object>> events = new LinkedBlockingDeque<>();
 
     @Override
-    public void onError(XdsType type, String resourceName, Status error) {
-        logger.info("onError: {}", error);
-        events.add(ImmutableList.of("onError", error));
-    }
-
-    @Override
-    public void onMissing(XdsType type, String resourceName) {
-        logger.info("onMissing: {}", resourceName);
-        events.add(ImmutableList.of("onMissing", ImmutableList.of(type, resourceName)));
-    }
-
-    @Override
-    public void snapshotUpdated(Snapshot<?> newSnapshot) {
-        logger.info("snapshotUpdated: {}", newSnapshot);
-        events.add(ImmutableList.of("snapshotUpdated", newSnapshot));
+    public void onUpdate(@com.linecorp.armeria.common.annotation.Nullable Snapshot<?> snapshot,
+                         @com.linecorp.armeria.common.annotation.Nullable Throwable t) {
+        if (snapshot == null) {
+            if (t instanceof XdsResourceException) {
+                final XdsResourceException xdsError = (XdsResourceException) t;
+                if (t instanceof MissingXdsResourceException) {
+                    logger.info("onMissing: {}", xdsError.name());
+                    events.add(ImmutableList.of("onMissing", ImmutableList.of(xdsError.type(),
+                                                                              xdsError.name())));
+                } else {
+                    logger.info("onError: {}", Status.fromThrowable(t));
+                    events.add(ImmutableList.of("onError", Status.fromThrowable(t)));
+                }
+            } else {
+                logger.info("onError: {}", t);
+                events.add(ImmutableList.of("onError", t));
+            }
+            return;
+        }
+        logger.info("snapshotUpdated: {}", snapshot);
+        events.add(ImmutableList.of("snapshotUpdated", snapshot));
     }
 
     List<Object> blockingMissing() {

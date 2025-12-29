@@ -1,7 +1,7 @@
 /*
- * Copyright 2024 LINE Corporation
+ * Copyright 2025 LY Corporation
  *
- * LINE Corporation licenses this file to you under the Apache License,
+ * LY Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
@@ -14,14 +14,18 @@
  * under the License.
  */
 
-package com.linecorp.armeria.xds.client.endpoint;
+package com.linecorp.armeria.xds;
 
-import com.linecorp.armeria.client.ClientRequestContext;
-import com.linecorp.armeria.client.Endpoint;
-import com.linecorp.armeria.common.annotation.Nullable;
+final class SecretSnapshot implements Snapshot<SecretXdsResource> {
 
-interface LoadBalancer extends LoadBalancerState {
+    private final SecretXdsResource resource;
 
-    @Nullable
-    Endpoint selectNow(ClientRequestContext ctx);
+    SecretSnapshot(SecretXdsResource resource) {
+        this.resource = resource;
+    }
+
+    @Override
+    public SecretXdsResource xdsResource() {
+        return resource;
+    }
 }

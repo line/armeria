@@ -15,11 +15,12 @@
  */
 package com.linecorp.armeria.client.endpoint;
 
+import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
 
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
-import java.io.InputStream;
-import java.nio.file.Files;
+import java.io.UncheckedIOException;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
@@ -31,24 +32,26 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.client.Endpoint;
-import com.linecorp.armeria.client.endpoint.FileWatcherRegistry.FileWatchRegisterKey;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.file.DirectoryWatcher;
+import com.linecorp.armeria.common.file.WatchKey;
+import com.linecorp.armeria.common.file.WatchService;
 
 /**
  * A {@link Properties} backed {@link EndpointGroup}. The list of {@link Endpoint}s are loaded from the
  * {@link Properties}.
  */
 public final class PropertiesEndpointGroup extends DynamicEndpointGroup {
-    private static FileWatcherRegistry registry = new FileWatcherRegistry();
+    private static WatchService registry = new WatchService();
 
     /**
      * Resets the registry for {@link PropertiesEndpointGroup}.
-     * @throws Exception when an exception occurs while closing the {@link FileWatcherRegistry}.
+     * @throws Exception when an exception occurs while closing the {@link WatchService}.
      */
     @VisibleForTesting
     static void resetRegistry() throws Exception {
         registry.close();
-        registry = new FileWatcherRegistry();
+        registry = new WatchService();
     }
 
     /**
@@ -177,7 +180,7 @@ public final class PropertiesEndpointGroup extends DynamicEndpointGroup {
     }
 
     @Nullable
-    private FileWatchRegisterKey watchRegisterKey;
+    private WatchKey watchRegisterKey;
 
     PropertiesEndpointGroup(EndpointSelectionStrategy selectionStrategy, List<Endpoint> endpoints) {
         super(selectionStrategy);
@@ -185,24 +188,23 @@ public final class PropertiesEndpointGroup extends DynamicEndpointGroup {
     }
 
     PropertiesEndpointGroup(EndpointSelectionStrategy selectionStrategy,
-                            Path path, String endpointKeyPrefix, int defaultPort) {
+                            Path filePath, String endpointKeyPrefix, int defaultPort) {
         super(selectionStrategy);
-        setEndpoints(loadEndpoints(
-                path,
-                requireNonNull(endpointKeyPrefix, "endpointKeyPrefix"),
-                defaultPort));
-        watchRegisterKey = registry.register(path, () ->
-                setEndpoints(loadEndpoints(path, endpointKeyPrefix, defaultPort)));
+        final Path watchDir = filePath.getParent();
+        checkArgument(watchDir != null, "Cannot watch parent directory for '%s'", filePath);
+        watchRegisterKey = registry.register(watchDir, DirectoryWatcher.fileWatcher(filePath, bytes -> {
+            setEndpoints(loadEndpoints(bytes, endpointKeyPrefix, defaultPort));
+        }));
     }
 
-    private static List<Endpoint> loadEndpoints(Path path, String endpointKeyPrefix, int defaultPort) {
-        try (InputStream in = Files.newInputStream(path)) {
-            final Properties props = new Properties();
-            props.load(in);
-            return loadEndpoints(props, endpointKeyPrefix, defaultPort);
+    private static List<Endpoint> loadEndpoints(byte[] bytes, String endpointKeyPrefix, int defaultPort) {
+        final Properties props = new Properties();
+        try {
+            props.load(new ByteArrayInputStream(bytes));
         } catch (IOException e) {
-            throw new IllegalArgumentException("failed to load: " + path, e);
+            throw new UncheckedIOException(e);
         }
+        return loadEndpoints(props, endpointKeyPrefix, defaultPort);
     }
 
     private static List<Endpoint> loadEndpoints(Properties properties, String endpointKeyPrefix,
@@ -226,7 +228,7 @@ public final class PropertiesEndpointGroup extends DynamicEndpointGroup {
     @Override
     protected void doCloseAsync(CompletableFuture<?> future) {
         if (watchRegisterKey != null) {
-            registry.unregister(watchRegisterKey);
+            watchRegisterKey.cancel();
         }
         future.complete(null);
     }

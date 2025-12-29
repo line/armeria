@@ -16,8 +16,6 @@
 
 package com.linecorp.armeria.xds;
 
-import io.grpc.Status;
-
 /**
  * A resource watcher.
  *
@@ -26,7 +24,7 @@ import io.grpc.Status;
 @FunctionalInterface
 interface ResourceWatcher<T extends XdsResource> {
 
-    default void onError(XdsType type, String resourceName, Status error) {}
+    default void onError(XdsType type, String resourceName, Throwable t) {}
 
     default void onResourceDoesNotExist(XdsType type, String resourceName) {}
 

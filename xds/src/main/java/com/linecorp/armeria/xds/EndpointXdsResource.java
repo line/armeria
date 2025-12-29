@@ -34,6 +34,15 @@ public final class EndpointXdsResource extends AbstractXdsResource {
         this.clusterLoadAssignment = clusterLoadAssignment;
     }
 
+    EndpointXdsResource(ClusterLoadAssignment clusterLoadAssignment) {
+        super("", 0);
+        this.clusterLoadAssignment = clusterLoadAssignment;
+    }
+
+    EndpointXdsResource() {
+        this(ClusterLoadAssignment.getDefaultInstance());
+    }
+
     @Override
     public XdsType type() {
         return XdsType.ENDPOINT;

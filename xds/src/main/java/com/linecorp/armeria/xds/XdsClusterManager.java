@@ -17,112 +17,78 @@
 package com.linecorp.armeria.xds;
 
 import static com.google.common.base.Preconditions.checkArgument;
-import static com.linecorp.armeria.xds.ResourceNodeType.STATIC;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
-import com.google.common.base.Strings;
-
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.metric.MeterIdPrefix;
 import com.linecorp.armeria.common.util.SafeCloseable;
-import com.linecorp.armeria.xds.client.endpoint.UpdatableXdsLoadBalancer;
-import com.linecorp.armeria.xds.client.endpoint.XdsLoadBalancer;
-import com.linecorp.armeria.xds.client.endpoint.XdsLoadBalancerLifecycleObserver;
+import com.linecorp.armeria.xds.ListenerManager.WatcherKey;
+import com.linecorp.armeria.xds.SnapshotStream.Subscription;
 
 import io.envoyproxy.envoy.config.bootstrap.v3.Bootstrap;
 import io.envoyproxy.envoy.config.cluster.v3.Cluster;
-import io.envoyproxy.envoy.config.core.v3.ConfigSource;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.netty.util.concurrent.EventExecutor;
 
 final class XdsClusterManager implements SafeCloseable {
 
-    private static final XdsLoadBalancerLifecycleObserver observer = new XdsLoadBalancerLifecycleObserver() {};
-
-    private final Map<String, ClusterResourceNode> nodes = new HashMap<>();
+    private final Map<String, ClusterStream> nodes = new HashMap<>();
     private boolean closed;
 
-    final String localClusterName;
-    @Nullable
-    final UpdatableXdsLoadBalancer localLoadBalancer;
-
     private final EventExecutor eventLoop;
-    private final Bootstrap bootstrap;
+    private final LoadBalancerFactoryPool loadBalancerFactoryPool;
+
+    private final Map<WatcherKey, Subscription> subscriptions = new HashMap<>();
 
     XdsClusterManager(EventExecutor eventLoop, Bootstrap bootstrap, MeterIdPrefix meterIdPrefix,
                       MeterRegistry meterRegistry) {
         this.eventLoop = eventLoop;
-        this.bootstrap = bootstrap;
-        localClusterName = bootstrap.getClusterManager().getLocalClusterName();
-        if (!Strings.isNullOrEmpty(localClusterName) && bootstrap.getNode().hasLocality()) {
-            final DefaultXdsLoadBalancerLifecycleObserver observer =
-                    new DefaultXdsLoadBalancerLifecycleObserver(meterIdPrefix, meterRegistry, localClusterName);
-            localLoadBalancer = XdsLoadBalancer.of(eventLoop, bootstrap.getNode().getLocality(),
-                                                   null, observer);
-        } else {
-            localLoadBalancer = null;
-        }
+        final String localClusterName = bootstrap.getClusterManager().getLocalClusterName();
+        loadBalancerFactoryPool = new LoadBalancerFactoryPool(localClusterName, meterIdPrefix,
+                                                              meterRegistry, eventLoop, bootstrap);
     }
 
     void register(Cluster cluster, SubscriptionContext context,
-                  Iterable<SnapshotWatcher<? super ClusterSnapshot>> watchers) {
+                  List<SnapshotWatcher<? super ClusterSnapshot>> watchers) {
         checkArgument(!nodes.containsKey(cluster.getName()),
-                      "Static cluster with name '%s' already registered", cluster.getName());
-        final UpdatableXdsLoadBalancer loadBalancer;
-        if (cluster.getName().equals(localClusterName) && localLoadBalancer != null) {
-            loadBalancer = localLoadBalancer;
-        } else {
-            final DefaultXdsLoadBalancerLifecycleObserver observer =
-                    new DefaultXdsLoadBalancerLifecycleObserver(context.meterIdPrefix(),
-                                                                context.meterRegistry(), cluster.getName());
-            loadBalancer = XdsLoadBalancer.of(eventLoop, bootstrap.getNode().getLocality(),
-                                              localLoadBalancer, observer);
-        }
-        final ClusterResourceNode node = new ClusterResourceNode(null, cluster.getName(), context, STATIC,
-                                                                 loadBalancer);
-        for (SnapshotWatcher<? super ClusterSnapshot> watcher: watchers) {
-            node.addWatcher(watcher);
-        }
+                      "Cluster with name '%s' already registered", cluster.getName());
+        final ClusterStream node = new ClusterStream(new ClusterXdsResource(cluster), context,
+                                                     loadBalancerFactoryPool);
         nodes.put(cluster.getName(), node);
-        final ClusterXdsResource parsed = ClusterResourceParser.INSTANCE.parse(cluster, "", 0);
-        eventLoop.execute(() -> node.onChanged(parsed));
+        eventLoop.execute(() -> {
+            for (SnapshotWatcher<? super ClusterSnapshot> watcher : watchers) {
+                final Subscription subscription = node.subscribe(watcher);
+                subscriptions.put(new WatcherKey(watcher, cluster.getName()), subscription);
+            }
+        });
     }
 
     void register(String name, SubscriptionContext context, SnapshotWatcher<ClusterSnapshot> watcher) {
         if (closed) {
             return;
         }
-        final ClusterResourceNode node = nodes.computeIfAbsent(name, ignored -> {
+        final ClusterStream node = nodes.computeIfAbsent(name, ignored -> {
             // on-demand cds if not already registered
-            final DefaultXdsLoadBalancerLifecycleObserver observer =
-                    new DefaultXdsLoadBalancerLifecycleObserver(context.meterIdPrefix(),
-                                                                context.meterRegistry(), name);
-            final UpdatableXdsLoadBalancer loadBalancer =
-                    XdsLoadBalancer.of(eventLoop, bootstrap.getNode().getLocality(),
-                                       localLoadBalancer, observer);
-            final ConfigSource configSource = context.configSourceMapper().cdsConfigSource(name);
-            final ClusterResourceNode dynamicNode = new ClusterResourceNode(
-                    configSource, name, context, ResourceNodeType.DYNAMIC, loadBalancer);
-            context.subscribe(dynamicNode);
-            return dynamicNode;
+            return new ClusterStream(name, context, loadBalancerFactoryPool);
         });
-        node.addWatcher(watcher);
+        final Subscription subscription = node.subscribe(watcher);
+        subscriptions.put(new WatcherKey(watcher, name), subscription);
     }
 
     void unregister(String name, SnapshotWatcher<ClusterSnapshot> watcher) {
         if (closed) {
             return;
         }
-        final ClusterResourceNode node = nodes.get(name);
-        if (node == null) {
-            return;
-        }
-        node.removeWatcher(watcher);
-        if (!node.hasWatchers()) {
-            node.close();
-            nodes.remove(name);
+        final WatcherKey key = new WatcherKey(watcher, name);
+        final Subscription subscription = subscriptions.remove(key);
+        if (subscription != null) {
+            subscription.close();
+            final ClusterStream node = nodes.get(name);
+            if (node != null && !node.hasWatchers()) {
+                nodes.remove(name);
+            }
         }
     }
 
@@ -136,8 +102,9 @@ final class XdsClusterManager implements SafeCloseable {
             return;
         }
         closed = true;
-        for (ClusterResourceNode node : nodes.values()) {
-            node.close();
+        for (Subscription subscription : subscriptions.values()) {
+            subscription.close();
         }
+        loadBalancerFactoryPool.close();
     }
 }
