@@ -18,6 +18,7 @@ package com.linecorp.armeria.server;
 
 import static com.linecorp.armeria.server.RoutingContextTest.create;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.Test;
@@ -57,5 +58,19 @@ class PrefixPathMappingTest {
     void pathParams() {
         final PrefixPathMapping prefixPathMapping = new PrefixPathMapping("/bar/baz", true);
         assertThat(prefixPathMapping.paramNames()).isEmpty();
+    }
+
+    @Test
+    void shouldDisallowQueryString() {
+        assertThatThrownBy(() -> new PrefixPathMapping("/prefix/?with=query", true))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("must not contain a query string");
+
+        assertThatThrownBy(() -> {
+            Server.builder()
+                  .route()
+                  .pathPrefix("/prefix/?with=query");
+        }).isInstanceOf(IllegalArgumentException.class)
+          .hasMessageContaining("must not contain a query string");
     }
 }
