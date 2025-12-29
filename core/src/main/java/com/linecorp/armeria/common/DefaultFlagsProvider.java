@@ -19,6 +19,7 @@ import java.io.File;
 import java.net.InetAddress;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.time.Duration;
 import java.util.List;
 import java.util.Set;
 import java.util.function.Predicate;
@@ -536,5 +537,13 @@ final class DefaultFlagsProvider implements FlagsProvider {
     @Override
     public Boolean annotatedServiceContentLogging() {
         return true;
+    }
+
+    @Override
+    public GracefulShutdown workerGroupGracefulShutdown() {
+        return GracefulShutdown.builder()
+                               .quietPeriod(Duration.ofSeconds(2L))
+                               .timeout(Duration.ofSeconds(15L))
+                               .build();
     }
 }

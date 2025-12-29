@@ -561,13 +561,23 @@ public final class ServerBuilder implements TlsSetters, ServiceConfigsBuilder<Se
      * {@link Service#serve(ServiceRequestContext, Request)}.
      * If not set, {@linkplain CommonPools#workerGroup() the common worker group} is used.
      *
+     * @param workerGroup the worker {@link EventLoopGroup}
      * @param shutdownOnStop whether to shut down the worker {@link EventLoopGroup}
      *                       when the {@link Server} stops
-     * @param gracefulShutdown the {@link GracefulShutdown} configuration for the worker {@link EventLoopGroup}
+     * @param gracefulShutdown the {@link GracefulShutdown} configuration to be used when the worker
+     * {@link EventLoopGroup} is being shut down, makes sense only if {@link #shutdownWorkerGroupOnStop} is true
      */
+    @UnstableApi
     public ServerBuilder workerGroup(EventLoopGroup workerGroup, boolean shutdownOnStop, GracefulShutdown gracefulShutdown) {
         this.workerGroup = requireNonNull(workerGroup, "workerGroup");
-        workerGroupGracefulShutdown = requireNonNull(gracefulShutdown, "gracefulShutdown");
+        if (shutdownOnStop) {
+            workerGroupGracefulShutdown = requireNonNull(gracefulShutdown, "gracefulShutdown");
+        } else {
+            // disabled graceful shutdown is default, therefore we check developer didn't set anything else
+            // because it wouldn't be used and might indicate a mistake
+            checkArgument(gracefulShutdown == GracefulShutdown.disabled(),
+                          "GracefulShutdown makes no sense when shutdownOnClose is false");
+        }
         // We don't use ShutdownSupport to shutdown with other instances because we shut down workerGroup first.
         shutdownWorkerGroupOnStop = shutdownOnStop;
         return this;
@@ -579,7 +589,10 @@ public final class ServerBuilder implements TlsSetters, ServiceConfigsBuilder<Se
      * The worker {@link EventLoopGroup} will be shut down when the {@link Server} stops.
      *
      * @param numThreads the number of event loop threads
+     * @param gracefulShutdown the {@link GracefulShutdown} configuration to be used when the worker
+     * {@link EventLoopGroup} is being shut down, makes sense only if {@link #shutdownWorkerGroupOnStop} is true
      */
+    @UnstableApi
     public ServerBuilder workerGroup(int numThreads, GracefulShutdown gracefulShutdown) {
         checkArgument(numThreads >= 0, "numThreads: %s (expected: >= 0)", numThreads);
         workerGroup(EventLoopGroups.newEventLoopGroup(numThreads), true, gracefulShutdown);
@@ -989,27 +1002,30 @@ public final class ServerBuilder implements TlsSetters, ServiceConfigsBuilder<Se
     }
 
     /**
+     * Sets the {@link GracefulShutdown} configuration.
+     * If not set, {@link GracefulShutdown#disabled()} is used.
+     *
+     * @param gracefulShutdown the graceful shutdown configuration setting quiet and timeout periods
+     * @param toException the function that returns a {@link Throwable} to terminate a pending request when
+     *                    the server is shutting down. The exception will be converted to
+     *                    an {@link HttpResponse} by {@link ServerErrorHandler}. If null is returned,
+     *                    the request will be terminated with {@link ShuttingDownException} that will be
+     *                    converted to an {@link HttpStatus#SERVICE_UNAVAILABLE} response.
+     */
+    @UnstableApi
+    public ServerBuilder gracefulShutdown(GracefulShutdown gracefulShutdown, GracefulShutdownExceptionFactory toException) {
+        this.gracefulShutdown = requireNonNull(gracefulShutdown, "gracefulShutdown");
+        gracefulShutdownExceptionFactory = requireNonNull(toException, "toException");
+        return this;
+    }
+
+    /**
      * Sets the {@link GracefulShutdown} configuration for the boss {@link EventLoopGroup}s.
      * If not set, {@link GracefulShutdown#disabled()} is used.
      */
     @UnstableApi
     public ServerBuilder bossGroupGracefulShutdown(GracefulShutdown gracefulShutdown) {
         bossGroupGracefulShutdown = requireNonNull(gracefulShutdown, "gracefulShutdown");
-        return this;
-    }
-
-    /**
-     * Sets the function that returns an {@link Throwable} to terminate a pending request when
-     * the server is shutting down. The exception will be converted to an {@link HttpResponse}
-     * by {@link ServerErrorHandler}. If null is returned, the request will be terminated with
-     * {@link ShuttingDownException} that will be converted to an {@link HttpStatus#SERVICE_UNAVAILABLE}
-     * response.
-     */
-    @UnstableApi
-    public ServerBuilder gracefulShutdownExceptionFactory(
-            GracefulShutdownExceptionFactory toException
-    ) {
-        gracefulShutdownExceptionFactory = requireNonNull(toException, "toException");
         return this;
     }
 

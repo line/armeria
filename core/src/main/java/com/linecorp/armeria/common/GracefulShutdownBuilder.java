@@ -39,7 +39,7 @@ public final class GracefulShutdownBuilder {
 
     GracefulShutdownBuilder() {}
 
-    static Duration validateNonNegative(Duration duration, String fieldName) {
+    private static Duration validateNonNegative(Duration duration, String fieldName) {
         if (duration.isNegative()) {
             throw new IllegalArgumentException(fieldName + ": " + duration + " (expected: >= 0)");
         }

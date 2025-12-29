@@ -45,7 +45,6 @@ import org.slf4j.LoggerFactory;
 import com.linecorp.armeria.common.AggregationOptions;
 import com.linecorp.armeria.common.ClosedSessionException;
 import com.linecorp.armeria.common.Flags;
-import com.linecorp.armeria.common.GracefulShutdownSupport;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpMethod;
@@ -332,8 +331,9 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
         try {
             return config.gracefulShutdownExceptionFactory().createThrowableForContext(ctx, req);
         } catch (Exception e) {
-            logger.warn("{} Unexpected exception from gracefulShutdown.toException(): {}",
-                        ctx, config.gracefulShutdown(), e);
+            logger.warn(
+                    "{} Unexpected exception from gracefulShutdownExceptionFactory.createThrowableForContext(): "
+                    + "{}", ctx, config.gracefulShutdown(), e);
             return null;
         }
     }

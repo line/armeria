@@ -14,7 +14,7 @@
  * under the License.
  */
 
-package com.linecorp.armeria.common;
+package com.linecorp.armeria.server;
 
 import java.time.Duration;
 import java.util.concurrent.Executor;
@@ -23,10 +23,13 @@ import java.util.concurrent.atomic.LongAdder;
 
 import com.google.common.base.Ticker;
 
+import com.linecorp.armeria.common.annotation.UnstableApi;
+
 /**
  * Keeps track of pending requests to allow shutdown to happen after a fixed quiet period passes
  * after the last pending request.
  */
+@UnstableApi
 public abstract class GracefulShutdownSupport {
 
     public static GracefulShutdownSupport create(Duration quietPeriod, Executor blockingTaskExecutor) {

@@ -68,6 +68,7 @@ import io.netty.channel.EventLoopGroup;
 import io.netty.handler.codec.http2.Http2Exception;
 import io.netty.resolver.DefaultAddressResolverGroup;
 import io.netty.resolver.dns.DnsNameResolverTimeoutException;
+import io.netty.util.concurrent.AbstractEventExecutor;
 
 /**
  * A Java SPI (Service Provider Interface) for the {@link Flags} values. Returning null to indicates that this
@@ -1298,9 +1299,15 @@ public interface FlagsProvider {
      * The method returns an instance of {@link GracefulShutdown}, which specifies
      * the shutdown strategy for the worker group. By default, this method
      * disables the graceful shutdown process.
+     *
+     * <p>By default, this option is enabled with Netty defaults.
+     *
+     * @see AbstractEventExecutor for defaults
      */
+    @Nullable
     @UnstableApi
     default GracefulShutdown workerGroupGracefulShutdown() {
-        return GracefulShutdown.disabled();
+        return null;
     }
+
 }

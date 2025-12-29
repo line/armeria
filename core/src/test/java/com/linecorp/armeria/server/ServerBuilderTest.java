@@ -837,7 +837,11 @@ class ServerBuilderTest {
                 .service(
                         "/", (ctx, req) -> HttpResponse.of(HttpStatus.OK)
                 )
-                .gracefulShutdownExceptionFactory(
+                .gracefulShutdown(
+                        GracefulShutdown.builder()
+                                        .quietPeriod(Duration.ofMillis(100))
+                                        .timeout(Duration.ofMillis(200))
+                                        .build(),
                         (ctx, req) -> new AnticipatedException("test")
                 )
                 .build();

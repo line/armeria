@@ -61,7 +61,6 @@ import com.spotify.futures.CompletableFutures;
 
 import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.GracefulShutdown;
-import com.linecorp.armeria.common.GracefulShutdownSupport;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.DomainSocketAddress;

@@ -50,7 +50,6 @@ class CustomGracefulShutDownTest {
                     whenReceived.complete(ctx);
                     return HttpResponse.streaming();
                 })
-                .gracefulShutdown(gracefulShutdown)
                 .errorHandler((ctx, cause) -> {
                     if (cause instanceof AnticipatedException) {
                         return HttpResponse.of(HttpStatus.BAD_GATEWAY);
@@ -58,9 +57,12 @@ class CustomGracefulShutDownTest {
                     return null;
                 });
         if (AnticipatedException.class.isAssignableFrom(expectedCause)) {
-            serverBuilder.gracefulShutdownExceptionFactory(
+            serverBuilder.gracefulShutdown(
+                    gracefulShutdown,
                     (ctx, req) -> new AnticipatedException()
             );
+        } else {
+            serverBuilder.gracefulShutdown(gracefulShutdown);
         }
         final Server server = serverBuilder.build();
         server.start().join();
