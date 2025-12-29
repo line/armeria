@@ -1297,8 +1297,7 @@ public interface FlagsProvider {
     /**
      * Provides a configuration for a graceful shutdown of a worker group.
      * The method returns an instance of {@link GracefulShutdown}, which specifies
-     * the shutdown strategy for the worker group. By default, this method
-     * disables the graceful shutdown process.
+     * the shutdown strategy for the worker group.
      *
      * <p>By default, this option is enabled with Netty defaults.
      *
