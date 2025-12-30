@@ -561,25 +561,21 @@ public final class ServerBuilder implements TlsSetters, ServiceConfigsBuilder<Se
      * {@link Service#serve(ServiceRequestContext, Request)}.
      * If not set, {@linkplain CommonPools#workerGroup() the common worker group} is used.
      *
+     * <p>Note: this method automatically enables shutdown of the worker group on server stop
+     * (see {@link #shutdownWorkerGroupOnStop}), because a custom graceful shutdown implies that.
+     *
      * @param workerGroup the worker {@link EventLoopGroup}
-     * @param shutdownOnStop whether to shut down the worker {@link EventLoopGroup}
-     *                       when the {@link Server} stops
      * @param gracefulShutdown the {@link GracefulShutdown} configuration to be used when the worker
      * {@link EventLoopGroup} is being shut down, makes sense only if {@link #shutdownWorkerGroupOnStop} is true
      */
     @UnstableApi
-    public ServerBuilder workerGroup(EventLoopGroup workerGroup, boolean shutdownOnStop, GracefulShutdown gracefulShutdown) {
+    public ServerBuilder workerGroup(EventLoopGroup workerGroup, GracefulShutdown gracefulShutdown) {
         this.workerGroup = requireNonNull(workerGroup, "workerGroup");
-        if (shutdownOnStop) {
-            workerGroupGracefulShutdown = requireNonNull(gracefulShutdown, "gracefulShutdown");
-        } else {
-            // disabled graceful shutdown is default, therefore we check developer didn't set anything else
-            // because it wouldn't be used and might indicate a mistake
-            checkArgument(gracefulShutdown == GracefulShutdown.disabled(),
-                          "GracefulShutdown makes no sense when shutdownOnClose is false");
-        }
+        workerGroupGracefulShutdown = requireNonNull(gracefulShutdown, "gracefulShutdown");
         // We don't use ShutdownSupport to shutdown with other instances because we shut down workerGroup first.
-        shutdownWorkerGroupOnStop = shutdownOnStop;
+        // the shutdownWorkerGroupOnStop flag is set to true, because it's implied when
+        // a custom graceful shutdown is provided
+        shutdownWorkerGroupOnStop = true;
         return this;
     }
 
@@ -595,7 +591,7 @@ public final class ServerBuilder implements TlsSetters, ServiceConfigsBuilder<Se
     @UnstableApi
     public ServerBuilder workerGroup(int numThreads, GracefulShutdown gracefulShutdown) {
         checkArgument(numThreads >= 0, "numThreads: %s (expected: >= 0)", numThreads);
-        workerGroup(EventLoopGroups.newEventLoopGroup(numThreads), true, gracefulShutdown);
+        workerGroup(EventLoopGroups.newEventLoopGroup(numThreads), gracefulShutdown);
         return this;
     }
 
