@@ -32,7 +32,7 @@ class ConnectionPoolListenerTest {
     @Test
     void andThen_shouldFinishWithoutErrors() throws Exception {
 
-        final Integer[] counterArray = new Integer[8];
+        final Integer[] counterArray = new Integer[9];
 
         final ConnectionPoolListener cpl1 = new ConnectionPoolListener() {
             @Override
@@ -83,6 +83,13 @@ class ConnectionPoolListenerTest {
             }
 
             @Override
+            public void connectionClosed(SessionProtocol protocol, InetSocketAddress remoteAddr,
+                                         InetSocketAddress localAddr, AttributeMap attrs, String closeHint)
+                    throws Exception {
+                counterArray[8] = 80;
+            }
+
+            @Override
             public void onPingSent(SessionProtocol protocol, InetSocketAddress remoteAddr,
                                    InetSocketAddress localAddr, AttributeMap attrs, long identifier)
                     throws Exception {
@@ -99,6 +106,7 @@ class ConnectionPoolListenerTest {
 
         cplCombined.connectionOpen(protocol, remoteAddr, localAddr, attrs);
         cplCombined.connectionClosed(protocol, remoteAddr, localAddr, attrs);
+        cplCombined.connectionClosed(protocol, remoteAddr, localAddr, attrs, "hint");
         cplCombined.onPingAcknowledged(protocol, remoteAddr, localAddr, attrs, 60);
         cplCombined.onPingSent(protocol, remoteAddr, localAddr, attrs, 70);
         cplCombined.close();

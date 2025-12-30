@@ -20,16 +20,13 @@ import static java.util.Objects.requireNonNull;
 
 import java.util.concurrent.Future;
 import java.util.concurrent.ThreadLocalRandom;
-import java.util.concurrent.TimeUnit;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Stopwatch;
 
 import com.linecorp.armeria.common.Flags;
-import com.linecorp.armeria.common.annotation.Nullable;
 
 import io.micrometer.core.instrument.Timer;
 import io.netty.channel.Channel;
@@ -58,9 +55,6 @@ import io.netty.handler.codec.http2.Http2PingFrame;
 public abstract class Http2KeepAliveHandler extends AbstractKeepAliveHandler {
 
     private static final Logger logger = LoggerFactory.getLogger(Http2KeepAliveHandler.class);
-
-    @Nullable
-    private final Stopwatch stopwatch = logger.isDebugEnabled() ? Stopwatch.createUnstarted() : null;
     private final Http2FrameWriter frameWriter;
     private final ThreadLocalRandom random = ThreadLocalRandom.current();
     private final Channel channel;
@@ -93,7 +87,6 @@ public abstract class Http2KeepAliveHandler extends AbstractKeepAliveHandler {
 
     @Override
     public final void onPingAck(long data) {
-        final long elapsed = getStopwatchElapsedInNanos();
         listener().pingAck(data);
 
         if (!isGoodPingAck(data)) {
@@ -108,7 +101,6 @@ public abstract class Http2KeepAliveHandler extends AbstractKeepAliveHandler {
                 logger.debug("{} shutdownFuture cannot be cancelled because of late PING ACK", channel);
             }
         }
-        logger.debug("{} PING(ACK=1, DATA={}) received in {} ns", channel, lastPingPayload, elapsed);
     }
 
     @Override
@@ -134,12 +126,5 @@ public abstract class Http2KeepAliveHandler extends AbstractKeepAliveHandler {
     @VisibleForTesting
     final long lastPingPayload() {
         return lastPingPayload;
-    }
-
-    private long getStopwatchElapsedInNanos() {
-        if (stopwatch == null) {
-            return -1;
-        }
-        return stopwatch.elapsed(TimeUnit.NANOSECONDS);
     }
 }

@@ -221,6 +221,19 @@ public interface ConnectionPoolListener extends Unwrappable, SafeCloseable {
             }
 
             @Override
+            public void connectionClosed(SessionProtocol protocol, InetSocketAddress remoteAddr,
+                                         InetSocketAddress localAddr, AttributeMap attrs, String closeHint)
+                    throws Exception {
+                try {
+                    ConnectionPoolListener.this.connectionClosed(protocol, remoteAddr, localAddr,
+                                                                 attrs, closeHint);
+                } finally {
+                    nextConnectionPoolListener.connectionClosed(protocol, remoteAddr, localAddr,
+                                                                attrs, closeHint);
+                }
+            }
+
+            @Override
             public void onPingAcknowledged(SessionProtocol protocol, InetSocketAddress remoteAddr,
                                            InetSocketAddress localAddr, AttributeMap attrs, long identifier)
                     throws Exception {
