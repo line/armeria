@@ -224,7 +224,7 @@ public final class ServerBuilder implements TlsSetters, ServiceConfigsBuilder<Se
     private int http1MaxChunkSize = Flags.defaultHttp1MaxChunkSize();
     private int proxyProtocolMaxTlvSize = PROXY_PROTOCOL_DEFAULT_MAX_TLV_SIZE;
     private GracefulShutdown gracefulShutdown = GracefulShutdown.disabled();
-    private GracefulShutdown workerGroupGracefulShutdown = GracefulShutdown.disabled();
+    private GracefulShutdown workerGroupGracefulShutdown = Flags.workerGroupGracefulShutdown();
     private GracefulShutdown bossGroupGracefulShutdown = GracefulShutdown.disabled();
     private GracefulShutdownExceptionFactory gracefulShutdownExceptionFactory =
             (ctx, req) -> ShuttingDownException.get();
