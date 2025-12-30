@@ -171,25 +171,21 @@ public final class ClientFactoryBuilder implements TlsSetters {
      * {@link Client#execute(ClientRequestContext, Request)}.
      * If not set, {@linkplain CommonPools#workerGroup() the common worker group} is used.
      *
+     * <p>Note: this method automatically enables shutdown of the worker group on {@link ClientFactory} close,
+     * because a custom graceful shutdown implies that.
+     *
      * @param workerGroup the worker {@link EventLoopGroup}
-     * @param shutdownOnClose whether to shut down the worker {@link EventLoopGroup}
-     *                        when the {@link ClientFactory} is closed
      * @param gracefulShutdown the graceful shutdown configuration for the worker {@link EventLoopGroup}
      */
     @UnstableApi
     public ClientFactoryBuilder workerGroup(
-            EventLoopGroup workerGroup, boolean shutdownOnClose, GracefulShutdown gracefulShutdown) {
+            EventLoopGroup workerGroup, GracefulShutdown gracefulShutdown) {
         option(ClientFactoryOptions.WORKER_GROUP, requireNonNull(workerGroup, "workerGroup"));
-        option(ClientFactoryOptions.SHUTDOWN_WORKER_GROUP_ON_CLOSE, shutdownOnClose);
-        if (shutdownOnClose) {
-            option(ClientFactoryOptions.WORKER_GROUP_GRACEFUL_SHUTDOWN,
-                   requireNonNull(gracefulShutdown, "gracefulShutdown"));
-        } else {
-            // disabled graceful shutdown is default, therefore we check developer didn't set anything else
-            // because it wouldn't be used and might indicate a mistake
-            checkArgument(gracefulShutdown == GracefulShutdown.disabled(),
-                          "GracefulShutdown makes no sense when shutdownOnClose is false");
-        }
+        // the shutdownWorkerGroupOnClose flag is set to true, because it's implied when
+        // a custom graceful shutdown is provided
+        option(ClientFactoryOptions.SHUTDOWN_WORKER_GROUP_ON_CLOSE, true);
+        option(ClientFactoryOptions.WORKER_GROUP_GRACEFUL_SHUTDOWN,
+               requireNonNull(gracefulShutdown, "gracefulShutdown"));
         return this;
     }
 
@@ -202,7 +198,7 @@ public final class ClientFactoryBuilder implements TlsSetters {
      */
     @UnstableApi
     public ClientFactoryBuilder workerGroup(int numThreads, GracefulShutdown gracefulShutdown) {
-        return workerGroup(EventLoopGroups.newEventLoopGroup(numThreads), true, gracefulShutdown);
+        return workerGroup(EventLoopGroups.newEventLoopGroup(numThreads), gracefulShutdown);
     }
 
     /**
