@@ -17,7 +17,7 @@ import example.armeria.server.annotated.ExceptionHandlerService.GlobalExceptionH
 /**
  * Examples how to use {@link ExceptionHandler}.
  *
- * @see <a href="https://line.github.io/armeria/docs/server-annotated-service#handling-exceptions">
+ * @see <a href="https://armeria.dev/docs/server-annotated-service#handling-exceptions">
  *      Handling exceptions</a>
  */
 @LoggingDecorator(

@@ -61,7 +61,7 @@ public class TestServiceImpl extends TestServiceImplBase {
     /**
      * Sends a {@link HelloReply} using {@code blockingTaskExecutor}.
      *
-     * @see <a href="https://line.github.io/armeria/docs/server-grpc#blocking-service-implementation">Blocking
+     * @see <a href="https://armeria.dev/docs/server-grpc#blocking-service-implementation">Blocking
      *      service implementation</a>
      */
     @Override

@@ -30,7 +30,17 @@ interface BaseLayoutProps extends RouteComponentProps {
 let firstRender = true;
 
 const BaseLayout: React.FC<BaseLayoutProps> = (props) => {
-  const robots = 'index,follow';
+  // Redirect to the new URL if at the old URL.
+  const hrefMatches = props.location.href?.match(
+    /:\/\/line\.github\.io\/armeria(.*)/,
+  );
+  let redirectUrl;
+  if (hrefMatches && hrefMatches.length === 2) {
+    redirectUrl = `https://armeria.dev/${hrefMatches[1]}`;
+    globalHistory.navigate(redirectUrl);
+  }
+  // Do not index redirect pages.
+  const robots = `${redirectUrl ? 'noindex' : 'index'},follow`;
 
   useEffect(() => {
     // Jump to hash or flash at hash only when rendering in a browser.
@@ -63,6 +73,15 @@ const BaseLayout: React.FC<BaseLayoutProps> = (props) => {
   return (
     <>
       <Helmet title={pageTitle}>
+        {redirectUrl ? (
+          <>
+            <meta httpEquiv="refresh" content={`0; url=${redirectUrl}`} />
+            <script>{`
+              window.location = '${redirectUrl}';
+            `}</script>
+          </>
+        ) : null}
+
         <link rel="canonical" href={canonicalUrl} />
         <meta name="googlebot" content={robots} />
         <meta name="robots" content={robots} />
