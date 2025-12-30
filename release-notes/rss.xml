@@ -1,0 +1,922 @@
+<?xml version="1.0" encoding="utf-8"?>
+<rss version="2.0" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:content="http://purl.org/rss/1.0/modules/content/">
+    <channel>
+        <title>Armeria Release Notes</title>
+        <link>https://armeria.dev/release-notes</link>
+        
+        <lastBuildDate>Tue, 30 Dec 2025 06:03:23 GMT</lastBuildDate>
+        <docs>https://validator.w3.org/feed/docs/rss2.html</docs>
+        <language>en</language>
+        <copyright>© 2015-2025, LY Corporation</copyright>
+        <item>
+            <title><![CDATA[v1.34.1]]></title>
+            <link>https://armeria.dev/release-notes/1.34.1/</link>
+            <guid>https://armeria.dev/release-notes/1.34.1/</guid>
+            <pubDate>Thu, 04 Dec 2025 00:00:00 GMT</pubDate>
+            <description><![CDATA[You can now generate self-signed certificates with one or more Subject Alternative Names. #6534 The xds module no longer brings in dependencies with binary incompatibility. #6532 XdsBootstrap no longe...]]></description>
+        </item>
+        <item>
+            <title><![CDATA[v1.34.0]]></title>
+            <link>https://armeria.dev/release-notes/1.34.0/</link>
+            <guid>https://armeria.dev/release-notes/1.34.0/</guid>
+            <pubDate>Fri, 28 Nov 2025 00:00:00 GMT</pubDate>
+            <description><![CDATA[Model Context Protocol (MCP) Server: You can now build MCP services on top of Armeria using the armeria-ai-mcp module. #6513 #6492 // Create an MCP server transportvar transport = ArmeriaStreamableSer...]]></description>
+        </item>
+        <item>
+            <title><![CDATA[v1.33.4]]></title>
+            <link>https://armeria.dev/release-notes/1.33.4/</link>
+            <guid>https://armeria.dev/release-notes/1.33.4/</guid>
+            <pubDate>Thu, 28 Aug 2025 00:00:00 GMT</pubDate>
+            <description><![CDATA[All client-side request logs, including those that are aborted concurrently, will now be completed correctly. #6414 The deadlock between Flags and RequestContextUtil static initialization is eliminate...]]></description>
+        </item>
+        <item>
+            <title><![CDATA[v1.33.3]]></title>
+            <link>https://armeria.dev/release-notes/1.33.3/</link>
+            <guid>https://armeria.dev/release-notes/1.33.3/</guid>
+            <pubDate>Thu, 28 Aug 2025 00:00:00 GMT</pubDate>
+            <description><![CDATA[Fixed Athenz access token validation to work with RFC-compliant JWKS. #6393 FileService now correctly handles HEAD method. #6392 #6395 🙇 Thank you​ This release was possible thanks to the following c...]]></description>
+        </item>
+        <item>
+            <title><![CDATA[v1.33.2]]></title>
+            <link>https://armeria.dev/release-notes/1.33.2/</link>
+            <guid>https://armeria.dev/release-notes/1.33.2/</guid>
+            <pubDate>Thu, 28 Aug 2025 00:00:00 GMT</pubDate>
+            <description><![CDATA[Fixed HTTP/2 flow control by using a correct stream ID for computing the window size. #6367 #6371 🙇 Thank you​ This release was possible thanks to the following contributors who shared their brillian...]]></description>
+        </item>
+        <item>
+            <title><![CDATA[v1.33.1]]></title>
+            <link>https://armeria.dev/release-notes/1.33.1/</link>
+            <guid>https://armeria.dev/release-notes/1.33.1/</guid>
+            <pubDate>Thu, 14 Aug 2025 00:00:00 GMT</pubDate>
+            <description><![CDATA[You can now use @RequiresAthenzRole when armeria.athenz is configured in Spring integration. #6348 // in application.ymlarmeria: athenz: zts-uri: https://athenz.example.com:8443/zts/v1 domains: my-ath...]]></description>
+        </item>
+        <item>
+            <title><![CDATA[v1.33.0]]></title>
+            <link>https://armeria.dev/release-notes/1.33.0/</link>
+            <guid>https://armeria.dev/release-notes/1.33.0/</guid>
+            <pubDate>Wed, 06 Aug 2025 00:00:00 GMT</pubDate>
+            <description><![CDATA[Athenz Integration: You can now use the new armeria-athenz module to easily obtain and validate Athenz tokens for secure service-to-service communication. #6050 #6321 Server-side validation: Use @Requ...]]></description>
+        </item>
+        <item>
+            <title><![CDATA[v1.32.5]]></title>
+            <link>https://armeria.dev/release-notes/1.32.5/</link>
+            <guid>https://armeria.dev/release-notes/1.32.5/</guid>
+            <pubDate>Tue, 15 Apr 2025 00:00:00 GMT</pubDate>
+            <description><![CDATA[The default DNS resolver now correctly performs TCP fallback. #6202 Recipient URIs in SAML assertions are now compared more robustly, reducing the chance of false mismatches. #6199 🙇 Thank you​ This ...]]></description>
+        </item>
+        <item>
+            <title><![CDATA[v1.32.4]]></title>
+            <link>https://armeria.dev/release-notes/1.32.4/</link>
+            <guid>https://armeria.dev/release-notes/1.32.4/</guid>
+            <pubDate>Tue, 08 Apr 2025 00:00:00 GMT</pubDate>
+            <description><![CDATA[Fixed a potential deadlock in RetryingClient caused by an incomplete RequestLog. #5714 Fixed a bug where RequestLog is not completed when the HTTP response is fully consumed on the client. #5714 Handl...]]></description>
+        </item>
+        <item>
+            <title><![CDATA[v1.32.3]]></title>
+            <link>https://armeria.dev/release-notes/1.32.3/</link>
+            <guid>https://armeria.dev/release-notes/1.32.3/</guid>
+            <pubDate>Mon, 17 Mar 2025 00:00:00 GMT</pubDate>
+            <description><![CDATA[Fixed a bug where outdated endpoints were not removed in KubernetesEndpointGroup. #6161 Spring integration doesn&#x27;t throw an exception anymore when the port that is less than 0 is specified. #6162...]]></description>
+        </item>
+        <item>
+            <title><![CDATA[v1.32.2]]></title>
+            <link>https://armeria.dev/release-notes/1.32.2/</link>
+            <guid>https://armeria.dev/release-notes/1.32.2/</guid>
+            <pubDate>Fri, 14 Mar 2025 00:00:00 GMT</pubDate>
+            <description><![CDATA[KubernetesEndpointGroup works properly even when the namespace is specified. #6159 🙇 Thank you​ This release was possible thanks to the following contributors who shared their brilliant ideas and awe...]]></description>
+        </item>
+        <item>
+            <title><![CDATA[v1.32.1]]></title>
+            <link>https://armeria.dev/release-notes/1.32.1/</link>
+            <guid>https://armeria.dev/release-notes/1.32.1/</guid>
+            <pubDate>Thu, 13 Mar 2025 00:00:00 GMT</pubDate>
+            <description><![CDATA[The client does not send an RST_STREAM when an UnprocessedRequestException is raised. #6157 KubernetesEndpointGroup.whenReady() is now completed after collecting all endpoints. #6154 The cumulative de...]]></description>
+        </item>
+        <item>
+            <title><![CDATA[v1.32.0]]></title>
+            <link>https://armeria.dev/release-notes/1.32.0/</link>
+            <guid>https://armeria.dev/release-notes/1.32.0/</guid>
+            <pubDate>Wed, 05 Mar 2025 00:00:00 GMT</pubDate>
+            <description><![CDATA[Load Balancer: You can now create a LoadBalancer using various load balancing strategies to select an element from a list of candidates. #5289 #5779 List&lt;Endpoint&gt; candidates = ...;LoadBalancer....]]></description>
+        </item>
+        <item>
+            <title><![CDATA[v1.30.3]]></title>
+            <link>https://armeria.dev/release-notes/1.30.3/</link>
+            <guid>https://armeria.dev/release-notes/1.30.3/</guid>
+            <pubDate>Tue, 14 Jan 2025 00:00:00 GMT</pubDate>
+            <description><![CDATA[Requests with a Content-Length header exceeding the allowed limit can now be rejected early in the request flow, reducing wasted resources and improving efficiency. #5880 #6032 Fixed a bug where a tra...]]></description>
+        </item>
+        <item>
+            <title><![CDATA[v1.31.3]]></title>
+            <link>https://armeria.dev/release-notes/1.31.3/</link>
+            <guid>https://armeria.dev/release-notes/1.31.3/</guid>
+            <pubDate>Wed, 11 Dec 2024 00:00:00 GMT</pubDate>
+            <description><![CDATA[ResponseTimeoutMode.FROM_START correctly bounds requests that go through RetryingClient. #6025 Fix the bug where EventLoop is blocked for a long time by ConnectionPoolListener.metricCollecting() when ...]]></description>
+        </item>
+        <item>
+            <title><![CDATA[v1.31.2]]></title>
+            <link>https://armeria.dev/release-notes/1.31.2/</link>
+            <guid>https://armeria.dev/release-notes/1.31.2/</guid>
+            <pubDate>Tue, 03 Dec 2024 00:00:00 GMT</pubDate>
+            <description><![CDATA[Fixed a bug where stale endpoints remained when a Kubernetes service was updated. #6012 Fix a bug where weights could unintentionally be set to 0 in ramping-up strategies. #6014 🙇 Thank you​ This rel...]]></description>
+        </item>
+        <item>
+            <title><![CDATA[v1.31.1]]></title>
+            <link>https://armeria.dev/release-notes/1.31.1/</link>
+            <guid>https://armeria.dev/release-notes/1.31.1/</guid>
+            <pubDate>Fri, 22 Nov 2024 00:00:00 GMT</pubDate>
+            <description><![CDATA[Fixed a race condition which intermittently prevented RequestLog from completing. #5981 #5986 armeria-grpc no longer exposes protobuf-java 4.x as a compile-time dependency. #5990 #5992 📈 Improvements...]]></description>
+        </item>
+        <item>
+            <title><![CDATA[v1.30.2]]></title>
+            <link>https://armeria.dev/release-notes/1.30.2/</link>
+            <guid>https://armeria.dev/release-notes/1.30.2/</guid>
+            <pubDate>Fri, 22 Nov 2024 00:00:00 GMT</pubDate>
+            <description><![CDATA[Fixed a race condition which intermittently prevented RequestLog from completing. #5981 #5986 Fixed a bug where the original request path is not exposed to ServiceRequestContext. #5931 #5932 You can a...]]></description>
+        </item>
+        <item>
+            <title><![CDATA[v1.31.0]]></title>
+            <link>https://armeria.dev/release-notes/1.31.0/</link>
+            <guid>https://armeria.dev/release-notes/1.31.0/</guid>
+            <pubDate>Wed, 13 Nov 2024 00:00:00 GMT</pubDate>
+            <description><![CDATA[Dynamic TLS Configuration: You can now update TLS configurations dynamically using TlsProvider #5033 #5228 You can create a TlsProvider which specifies TlsKeyPair dynamically. // return a TlsKeyPair f...]]></description>
+        </item>
+        <item>
+            <title><![CDATA[v1.30.1]]></title>
+            <link>https://armeria.dev/release-notes/1.30.1/</link>
+            <guid>https://armeria.dev/release-notes/1.30.1/</guid>
+            <pubDate>Tue, 10 Sep 2024 00:00:00 GMT</pubDate>
+            <description><![CDATA[Fixed a bug where timeout tasks leak when using ResponseTimeoutMode.FROM_START with RetryingClient. #5896 🙇 Thank you​ This release was possible thanks to the following contributors who shared their ...]]></description>
+        </item>
+        <item>
+            <title><![CDATA[v1.30.0]]></title>
+            <link>https://armeria.dev/release-notes/1.30.0/</link>
+            <guid>https://armeria.dev/release-notes/1.30.0/</guid>
+            <pubDate>Mon, 12 Aug 2024 00:00:00 GMT</pubDate>
+            <description><![CDATA[Outlier Detection for Connections: You can now use OutlierDetection to detect unhealthy connections and close them gracefully. #5751 #5763 OutlierDetectingRule rule = OutlierDetectingRule .builder() ....]]></description>
+        </item>
+        <item>
+            <title><![CDATA[v1.29.4]]></title>
+            <link>https://armeria.dev/release-notes/1.29.4/</link>
+            <guid>https://armeria.dev/release-notes/1.29.4/</guid>
+            <pubDate>Tue, 30 Jul 2024 00:00:00 GMT</pubDate>
+            <description><![CDATA[An annotated service that uses a @Header annotation with the specified value now works correctly. #5841 This is a regression introduced by #5547, affecting 1.29.0 through 1.29.3. 🙇 Thank you​ This re...]]></description>
+        </item>
+        <item>
+            <title><![CDATA[v1.29.3]]></title>
+            <link>https://armeria.dev/release-notes/1.29.3/</link>
+            <guid>https://armeria.dev/release-notes/1.29.3/</guid>
+            <pubDate>Fri, 26 Jul 2024 00:00:00 GMT</pubDate>
+            <description><![CDATA[NullPointerException is no longer raised when GraphQlService handles errors. #5815 #5816 Fixed a regression where a protocol violation error is not handled by ServerErrorHandler.onProtocolViolation() ...]]></description>
+        </item>
+        <item>
+            <title><![CDATA[v1.29.2]]></title>
+            <link>https://armeria.dev/release-notes/1.29.2/</link>
+            <guid>https://armeria.dev/release-notes/1.29.2/</guid>
+            <pubDate>Wed, 10 Jul 2024 00:00:00 GMT</pubDate>
+            <description><![CDATA[Service binding builder methods now correctly return the self-types. #5797 The peeled exception is now correctly passed to GrpcExceptionHandlerFunction.apply() method. #5796 Endpoint selection calls t...]]></description>
+        </item>
+        <item>
+            <title><![CDATA[v1.29.1]]></title>
+            <link>https://armeria.dev/release-notes/1.29.1/</link>
+            <guid>https://armeria.dev/release-notes/1.29.1/</guid>
+            <pubDate>Fri, 28 Jun 2024 00:00:00 GMT</pubDate>
+            <description><![CDATA[The default GrpcExceptionHandlerFunction now properly handles and returns the correct gRPC Status. #5786 The ExchangeType is now correctly detected for the default WebClient. #5787 A duplicate key exc...]]></description>
+        </item>
+        <item>
+            <title><![CDATA[v1.29.0]]></title>
+            <link>https://armeria.dev/release-notes/1.29.0/</link>
+            <guid>https://armeria.dev/release-notes/1.29.0/</guid>
+            <pubDate>Wed, 12 Jun 2024 00:00:00 GMT</pubDate>
+            <description><![CDATA[Armeria HTTP/JSON to GRPC transcoding service now supports Custom methods. #5613 rpc Watch(WatchRequest) returns (WatchResponse) { option (google.api.http) = { post: &quot;/v1:watch&quot; // 👈👈👈 bo...]]></description>
+        </item>
+        <item>
+            <title><![CDATA[v1.28.4]]></title>
+            <link>https://armeria.dev/release-notes/1.28.4/</link>
+            <guid>https://armeria.dev/release-notes/1.28.4/</guid>
+            <pubDate>Mon, 29 Apr 2024 00:00:00 GMT</pubDate>
+            <description><![CDATA[XdsEndpointGroup now adheres to the LbSubsetFallbackPolicy.NO_FALLBACK policy. #5649 The HttpResponse returned from an HttpService is now correctly recovered from the exception. #5648 Aborted Deferred...]]></description>
+        </item>
+        <item>
+            <title><![CDATA[v1.28.3]]></title>
+            <link>https://armeria.dev/release-notes/1.28.3/</link>
+            <guid>https://armeria.dev/release-notes/1.28.3/</guid>
+            <pubDate>Fri, 26 Apr 2024 00:00:00 GMT</pubDate>
+            <description><![CDATA[The annotated service with a Kotlin suspend function works correctly even with a nullable parameter. #5638 🙇 Thank you​ This release was possible thanks to the following contributors who shared their...]]></description>
+        </item>
+        <item>
+            <title><![CDATA[v1.28.2]]></title>
+            <link>https://armeria.dev/release-notes/1.28.2/</link>
+            <guid>https://armeria.dev/release-notes/1.28.2/</guid>
+            <pubDate>Wed, 17 Apr 2024 00:00:00 GMT</pubDate>
+            <description><![CDATA[Unary and response streaming requests are now properly timed out if they fail to receive the body within the designated timeout period. #5572 #5614 🙇 Thank you​ This release was possible thanks to th...]]></description>
+        </item>
+        <item>
+            <title><![CDATA[v1.28.1]]></title>
+            <link>https://armeria.dev/release-notes/1.28.1/</link>
+            <guid>https://armeria.dev/release-notes/1.28.1/</guid>
+            <pubDate>Mon, 15 Apr 2024 00:00:00 GMT</pubDate>
+            <description><![CDATA[Fixed bug where CorsService doesn&#x27;t check the Origin header case-insensitively. #5602 ⛓ Dependencies​ Brave 6.0.2 → 6.0.3 🙇 Thank you​ This release was possible thanks to the following contribut...]]></description>
+        </item>
+        <item>
+            <title><![CDATA[v1.28.0]]></title>
+            <link>https://armeria.dev/release-notes/1.28.0/</link>
+            <guid>https://armeria.dev/release-notes/1.28.0/</guid>
+            <pubDate>Fri, 12 Apr 2024 00:00:00 GMT</pubDate>
+            <description><![CDATA[You can now create a Spring HTTP Interface backed by Armeria&#x27;s WebClient. #5370 WebClient webClient = ...;ArmeriaHttpExchangeAdapter adapter = ArmeriaHttpExchangeAdapter.of(webClient);MyService m...]]></description>
+        </item>
+        <item>
+            <title><![CDATA[v1.27.3]]></title>
+            <link>https://armeria.dev/release-notes/1.27.3/</link>
+            <guid>https://armeria.dev/release-notes/1.27.3/</guid>
+            <pubDate>Tue, 26 Mar 2024 00:00:00 GMT</pubDate>
+            <description><![CDATA[You no longer see NullPointerException when creating Thrift clients in a multi-threaded environment. #5497 IllegalReferenceCountException no longer occurs during WebSocket handshake. #5495 When a clie...]]></description>
+        </item>
+        <item>
+            <title><![CDATA[v1.27.2]]></title>
+            <link>https://armeria.dev/release-notes/1.27.2/</link>
+            <guid>https://armeria.dev/release-notes/1.27.2/</guid>
+            <pubDate>Mon, 26 Feb 2024 00:00:00 GMT</pubDate>
+            <description><![CDATA[Armeria&#x27;s SAML integration now rejects unsigned SAML messages by default. CVE-2024-1735 You can set SamlServiceProviderBuilder.signatureRequired() to control whether to accept unsigned SAML messa...]]></description>
+        </item>
+        <item>
+            <title><![CDATA[v1.27.1]]></title>
+            <link>https://armeria.dev/release-notes/1.27.1/</link>
+            <guid>https://armeria.dev/release-notes/1.27.1/</guid>
+            <pubDate>Wed, 07 Feb 2024 00:00:00 GMT</pubDate>
+            <description><![CDATA[Restored dependency breaking changes in the Brave integration module. #5438 armeria-brave now consistently uses Brave 5. armeria-brave5 and armeria-brave6 modules have been introduced to let users cho...]]></description>
+        </item>
+        <item>
+            <title><![CDATA[v1.27.0]]></title>
+            <link>https://armeria.dev/release-notes/1.27.0/</link>
+            <guid>https://armeria.dev/release-notes/1.27.0/</guid>
+            <pubDate>Tue, 30 Jan 2024 00:00:00 GMT</pubDate>
+            <description><![CDATA[xDS-based EndpointGroup: You can utilize xDS protocol to create XdsEndpointGroup for service discovery. #5342 #5336 XdsBootstrap bootstrap = XdsBootstrap.of(...);EndpointGroup endpointGroup = XdsEndpo...]]></description>
+        </item>
+        <item>
+            <title><![CDATA[v1.26.4]]></title>
+            <link>https://armeria.dev/release-notes/1.26.4/</link>
+            <guid>https://armeria.dev/release-notes/1.26.4/</guid>
+            <pubDate>Fri, 08 Dec 2023 00:00:00 GMT</pubDate>
+            <description><![CDATA[Fixed a bug where a RequestLog isn&#x27;t complete when an HttpResponse is cancelled. #5312 gRPC HTTP/JSON transcoding service now sends 400 Bad Request when the request body is invalid JSON. #5306 #5...]]></description>
+        </item>
+        <item>
+            <title><![CDATA[v1.26.3]]></title>
+            <link>https://armeria.dev/release-notes/1.26.3/</link>
+            <guid>https://armeria.dev/release-notes/1.26.3/</guid>
+            <pubDate>Fri, 17 Nov 2023 00:00:00 GMT</pubDate>
+            <description><![CDATA[You no longer see a NullPointerException when an Endpoint is selected from an EndpointGroup #5302 This bug affects 1.26.2 only. You no longer see an intermittent deadlock when a StreamMessage is being...]]></description>
+        </item>
+        <item>
+            <title><![CDATA[v1.26.2]]></title>
+            <link>https://armeria.dev/release-notes/1.26.2/</link>
+            <guid>https://armeria.dev/release-notes/1.26.2/</guid>
+            <pubDate>Wed, 08 Nov 2023 00:00:00 GMT</pubDate>
+            <description><![CDATA[Armeria now reuses the connections more efficiently when RetryingClient is used in conjunction with client-side load-balancing. Previously, an excessive number of connections were created when request...]]></description>
+        </item>
+        <item>
+            <title><![CDATA[v1.26.1]]></title>
+            <link>https://armeria.dev/release-notes/1.26.1/</link>
+            <guid>https://armeria.dev/release-notes/1.26.1/</guid>
+            <pubDate>Mon, 30 Oct 2023 00:00:00 GMT</pubDate>
+            <description><![CDATA[HTTP/2 clients do not limit the maximum number of RST frames per minute before the connection is closed. Only 1.26.0 is affected. #5277 ☢️ Breaking changes​ Flags.defaultHttp2MaxResetFramesPerMinute()...]]></description>
+        </item>
+        <item>
+            <title><![CDATA[v1.26.0]]></title>
+            <link>https://armeria.dev/release-notes/1.26.0/</link>
+            <guid>https://armeria.dev/release-notes/1.26.0/</guid>
+            <pubDate>Mon, 23 Oct 2023 00:00:00 GMT</pubDate>
+            <description><![CDATA[Context Path Support: You can now set services/decorators under a context path fluently. #3591 #4802 #5037 #5157 #5260 Server.builder() .baseContextPath(&quot;/api&quot;) .contextPath(&quot;/v1&quot;,...]]></description>
+        </item>
+        <item>
+            <title><![CDATA[v1.25.2]]></title>
+            <link>https://armeria.dev/release-notes/1.25.2/</link>
+            <guid>https://armeria.dev/release-notes/1.25.2/</guid>
+            <pubDate>Fri, 25 Aug 2023 00:00:00 GMT</pubDate>
+            <description><![CDATA[Removed unnecessary debug logs when using Spring integration. #5142 Only 1.25.0, 1.25.1 is affected. 🙇 Thank you​ This release was possible thanks to the following contributors who shared their brill...]]></description>
+        </item>
+        <item>
+            <title><![CDATA[v1.25.1]]></title>
+            <link>https://armeria.dev/release-notes/1.25.1/</link>
+            <guid>https://armeria.dev/release-notes/1.25.1/</guid>
+            <pubDate>Wed, 23 Aug 2023 00:00:00 GMT</pubDate>
+            <description><![CDATA[armeria-logback now correctly declares the armeria-logback12 dependency. #5139 Only 1.25.0 is affected. 🙇 Thank you​ This release was possible thanks to the following contributors who shared their br...]]></description>
+        </item>
+        <item>
+            <title><![CDATA[v1.25.0]]></title>
+            <link>https://armeria.dev/release-notes/1.25.0/</link>
+            <guid>https://armeria.dev/release-notes/1.25.0/</guid>
+            <pubDate>Tue, 22 Aug 2023 00:00:00 GMT</pubDate>
+            <description><![CDATA[GraalVM Support: Armeria now provides GraalVM reachability metadata to easily build GraalVM native images. #5005 Micrometer Observation Support: Support for Micrometer Observation is added. Refer to O...]]></description>
+        </item>
+        <item>
+            <title><![CDATA[v1.24.3]]></title>
+            <link>https://armeria.dev/release-notes/1.24.3/</link>
+            <guid>https://armeria.dev/release-notes/1.24.3/</guid>
+            <pubDate>Tue, 25 Jul 2023 00:00:00 GMT</pubDate>
+            <description><![CDATA[Armeria server now strips matrix variables from a request path before finding a matching route. CVE-2023-38493 Previously, when an Armeria decorator is used to decorate a Spring controller served usin...]]></description>
+        </item>
+        <item>
+            <title><![CDATA[v1.24.2]]></title>
+            <link>https://armeria.dev/release-notes/1.24.2/</link>
+            <guid>https://armeria.dev/release-notes/1.24.2/</guid>
+            <pubDate>Wed, 28 Jun 2023 00:00:00 GMT</pubDate>
+            <description><![CDATA[Fixed a bug where content preview is not logged when using LoggingService or LoggingClient. #4979 Note that this bug affects 1.24.0 and 1.24.1. 🙇 Thank you​ This release was possible thanks to the fo...]]></description>
+        </item>
+        <item>
+            <title><![CDATA[v1.24.1]]></title>
+            <link>https://armeria.dev/release-notes/1.24.1/</link>
+            <guid>https://armeria.dev/release-notes/1.24.1/</guid>
+            <pubDate>Wed, 21 Jun 2023 00:00:00 GMT</pubDate>
+            <description><![CDATA[You can no longer see compilation errors when using TextLogFormatterBuilder.build() and JsonLogFormatterBuilder.build(). #4975 Armeria server does not accept a ClientHello message larger than 4096 byt...]]></description>
+        </item>
+        <item>
+            <title><![CDATA[v1.24.0]]></title>
+            <link>https://armeria.dev/release-notes/1.24.0/</link>
+            <guid>https://armeria.dev/release-notes/1.24.0/</guid>
+            <pubDate>Thu, 15 Jun 2023 00:00:00 GMT</pubDate>
+            <description><![CDATA[Unix Domain Socket Support: You can now use Unix domain socket to serve and send requests which is useful for configuring a service mesh to communicate with a sidecar. #1837 #4846 import com.linecorp....]]></description>
+        </item>
+        <item>
+            <title><![CDATA[v1.23.1]]></title>
+            <link>https://armeria.dev/release-notes/1.23.1/</link>
+            <guid>https://armeria.dev/release-notes/1.23.1/</guid>
+            <pubDate>Sat, 08 Apr 2023 00:00:00 GMT</pubDate>
+            <description><![CDATA[Spring Boot 3 integration modules are correctly published to the Maven repository and included in the BOM. #4814 🙇 Thank you​ This release was possible thanks to the following contributors who shared...]]></description>
+        </item>
+        <item>
+            <title><![CDATA[v1.23.0]]></title>
+            <link>https://armeria.dev/release-notes/1.23.0/</link>
+            <guid>https://armeria.dev/release-notes/1.23.0/</guid>
+            <pubDate>Fri, 07 Apr 2023 00:00:00 GMT</pubDate>
+            <description><![CDATA[DocService now supports auto-completion for gRPC and Thrift services. #4516 Check out this awesome demo video by @Dogacel to learn more. 🌟 New features​ You can now write a circuit breaker or retry r...]]></description>
+        </item>
+        <item>
+            <title><![CDATA[v1.16.2]]></title>
+            <link>https://armeria.dev/release-notes/1.16.2/</link>
+            <guid>https://armeria.dev/release-notes/1.16.2/</guid>
+            <pubDate>Mon, 20 Feb 2023 00:00:00 GMT</pubDate>
+            <description><![CDATA[Client-side gRPC callback ClientCall.Listener.onHeaders() is now invoked correctly. #4583 #4608 🙇 Thank you​ This release was possible thanks to the following contributors who shared their brilliant ...]]></description>
+        </item>
+        <item>
+            <title><![CDATA[v1.22.1]]></title>
+            <link>https://armeria.dev/release-notes/1.22.1/</link>
+            <guid>https://armeria.dev/release-notes/1.22.1/</guid>
+            <pubDate>Tue, 14 Feb 2023 00:00:00 GMT</pubDate>
+            <description><![CDATA[You no longer see a NullPointerException when a StreamMessage is aborted. #4667 gRPC and Protobuf dependencies are downgraded due to an incompatibility with JRE 8. #4666 ⛓ Dependencies​ gRPC Java 1.52...]]></description>
+        </item>
+        <item>
+            <title><![CDATA[v1.22.0]]></title>
+            <link>https://armeria.dev/release-notes/1.22.0/</link>
+            <guid>https://armeria.dev/release-notes/1.22.0/</guid>
+            <pubDate>Thu, 09 Feb 2023 00:00:00 GMT</pubDate>
+            <description><![CDATA[CircuitBreakerClient integration with Resilience4j&#x27;s circuit breaker is now available. #1469 #4139 Note that armeria-resilience4j2 requires Java 17 or higher. Resilience4jCircuitBreakerMapping ma...]]></description>
+        </item>
+        <item>
+            <title><![CDATA[v1.21.0]]></title>
+            <link>https://armeria.dev/release-notes/1.21.0/</link>
+            <guid>https://armeria.dev/release-notes/1.21.0/</guid>
+            <pubDate>Thu, 22 Dec 2022 00:00:00 GMT</pubDate>
+            <description><![CDATA[You can now use @RequestTimeout to set a request timeout to annotated services and gRPC services. #4463 #4499 import com.linecorp.armeria.server.annotation.decorator.RequestTimeout;@RequestTimeout(val...]]></description>
+        </item>
+        <item>
+            <title><![CDATA[v1.16.1]]></title>
+            <link>https://armeria.dev/release-notes/1.16.1/</link>
+            <guid>https://armeria.dev/release-notes/1.16.1/</guid>
+            <pubDate>Tue, 06 Dec 2022 00:00:00 GMT</pubDate>
+            <description><![CDATA[Exceptions raised in decorators can now be used to determine whether to retry by RetryingClient. #4558 #4559 🙇 Thank you​ This release was possible thanks to the following contributors who shared the...]]></description>
+        </item>
+        <item>
+            <title><![CDATA[v1.20.3]]></title>
+            <link>https://armeria.dev/release-notes/1.20.3/</link>
+            <guid>https://armeria.dev/release-notes/1.20.3/</guid>
+            <pubDate>Thu, 10 Nov 2022 00:00:00 GMT</pubDate>
+            <description><![CDATA[You can now see HTTP/2 stream error logs at the debug level. #4515 You can now see FieldInfo of parameter types and return types in the debug form without visiting the detail page. #4481 #4484 🛠️ Bug...]]></description>
+        </item>
+        <item>
+            <title><![CDATA[v1.20.2]]></title>
+            <link>https://armeria.dev/release-notes/1.20.2/</link>
+            <guid>https://armeria.dev/release-notes/1.20.2/</guid>
+            <pubDate>Mon, 07 Nov 2022 00:00:00 GMT</pubDate>
+            <description><![CDATA[You no longer see StacklessClosedChannelException when an incoming HTTP/1.0 or HTTP/1.1 request has a Connection: close header. #4508 Armeria doesn&#x27;t send a bad response with non-empty body anymo...]]></description>
+        </item>
+        <item>
+            <title><![CDATA[v1.20.1]]></title>
+            <link>https://armeria.dev/release-notes/1.20.1/</link>
+            <guid>https://armeria.dev/release-notes/1.20.1/</guid>
+            <pubDate>Tue, 11 Oct 2022 00:00:00 GMT</pubDate>
+            <description><![CDATA[application/json media type is correctly set for HTTP/JSON-to-gRPC transcoded responses. #4473 #4474 Versions 1.19.0 to 1.20.0 are affected 🙇 Thank you​ This release was possible thanks to the follow...]]></description>
+        </item>
+        <item>
+            <title><![CDATA[v1.20.0]]></title>
+            <link>https://armeria.dev/release-notes/1.20.0/</link>
+            <guid>https://armeria.dev/release-notes/1.20.0/</guid>
+            <pubDate>Wed, 05 Oct 2022 00:00:00 GMT</pubDate>
+            <description><![CDATA[You can now handle a GraphQL error using GraphqlErrorHandler. #4435 GraphqlErrorHandler errorHandler = new GraphqlErrorHandler() { @Override public HttpResponse handle(ServiceRequestContext ctx, Execu...]]></description>
+        </item>
+        <item>
+            <title><![CDATA[v1.19.0]]></title>
+            <link>https://armeria.dev/release-notes/1.19.0/</link>
+            <guid>https://armeria.dev/release-notes/1.19.0/</guid>
+            <pubDate>Tue, 13 Sep 2022 00:00:00 GMT</pubDate>
+            <description><![CDATA[You can now repeatedly aggregate an HttpRequest and HttpResponse when using HttpRequest.aggregate() and HttpResponse.aggregate(). If an HttpRequest or an HttpResponse is aggregated before, the cached ...]]></description>
+        </item>
+        <item>
+            <title><![CDATA[v1.18.0]]></title>
+            <link>https://armeria.dev/release-notes/1.18.0/</link>
+            <guid>https://armeria.dev/release-notes/1.18.0/</guid>
+            <pubDate>Mon, 08 Aug 2022 00:00:00 GMT</pubDate>
+            <description><![CDATA[DocService can now render Markdown and Mermaid formatted documentation for annotated services. #4299 #4304 @Description(value = &quot;### Markdown format&quot;, markup = Markup.MARKDOWN)@Get(&quot;/ma...]]></description>
+        </item>
+        <item>
+            <title><![CDATA[v1.17.2]]></title>
+            <link>https://armeria.dev/release-notes/1.17.2/</link>
+            <guid>https://armeria.dev/release-notes/1.17.2/</guid>
+            <pubDate>Tue, 02 Aug 2022 00:00:00 GMT</pubDate>
+            <description><![CDATA[CORS requests with query params are handled correctly. #4378 Armeria versions from 1.15.0 to 1.17.1 are affected. 🙇 Thank you​ This release was possible thanks to the following contributors who share...]]></description>
+        </item>
+        <item>
+            <title><![CDATA[v1.17.1]]></title>
+            <link>https://armeria.dev/release-notes/1.17.1/</link>
+            <guid>https://armeria.dev/release-notes/1.17.1/</guid>
+            <pubDate>Fri, 08 Jul 2022 00:00:00 GMT</pubDate>
+            <description><![CDATA[A bug is fixed where Retrofit client calls hang indefinitely #4342 Users who use OkHttp3 3.x.x with Armeria 1.17.0 are affected. 🙇 Thank you​ This release was possible thanks to the following contrib...]]></description>
+        </item>
+        <item>
+            <title><![CDATA[v1.17.0]]></title>
+            <link>https://armeria.dev/release-notes/1.17.0/</link>
+            <guid>https://armeria.dev/release-notes/1.17.0/</guid>
+            <pubDate>Wed, 06 Jul 2022 00:00:00 GMT</pubDate>
+            <description><![CDATA[You can now easily send and receive RESTful APIs using RestClient. #4263 Java RestClient restClient = RestClient.of(&quot;...&quot;);CompletableFuture&lt;ResponseEntity&lt;Customer&gt;&gt; response = ...]]></description>
+        </item>
+        <item>
+            <title><![CDATA[v1.16.0]]></title>
+            <link>https://armeria.dev/release-notes/1.16.0/</link>
+            <guid>https://armeria.dev/release-notes/1.16.0/</guid>
+            <pubDate>Tue, 19 Apr 2022 00:00:00 GMT</pubDate>
+            <description><![CDATA[Armeria Server now exposes the metrics about TLS handshake results. #4191 armeria_server_tls_handshakes_total{ cipher_suite=&lt;the negotiated TLS cipher suite&gt;, common_name=&lt;the common name in ...]]></description>
+        </item>
+        <item>
+            <title><![CDATA[v1.15.0]]></title>
+            <link>https://armeria.dev/release-notes/1.15.0/</link>
+            <guid>https://armeria.dev/release-notes/1.15.0/</guid>
+            <pubDate>Thu, 24 Mar 2022 00:00:00 GMT</pubDate>
+            <description><![CDATA[gRPC health check protocol Multipart file uploads in annotated services Preliminary GraphQL support in DocService Refactored DNS resolver cache with higher hit ratio and reduced traffic New metrics th...]]></description>
+        </item>
+        <item>
+            <title><![CDATA[v1.14.1]]></title>
+            <link>https://armeria.dev/release-notes/1.14.1/</link>
+            <guid>https://armeria.dev/release-notes/1.14.1/</guid>
+            <pubDate>Fri, 18 Feb 2022 00:00:00 GMT</pubDate>
+            <description><![CDATA[Context of the EndpointGroup is added to the EmptyEndpointGroupException message. #4084 🛠️ Bug fixes​ DnsAddressEndpointGroup, DnsServiceEndpointGroup, and DnsTextEndpointGroup now correctly respect ...]]></description>
+        </item>
+        <item>
+            <title><![CDATA[v1.14.0]]></title>
+            <link>https://armeria.dev/release-notes/1.14.0/</link>
+            <guid>https://armeria.dev/release-notes/1.14.0/</guid>
+            <pubDate>Thu, 27 Jan 2022 00:00:00 GMT</pubDate>
+            <description><![CDATA[You can now use Scala 3 for armeria-scala and armeria-scalapb. #3614 #4036 tipScala 3 modules are currently experimental. We&#x27;re looking forward to your feedback. You can now fluently convert an H...]]></description>
+        </item>
+        <item>
+            <title><![CDATA[v1.13.4]]></title>
+            <link>https://armeria.dev/release-notes/1.13.4/</link>
+            <guid>https://armeria.dev/release-notes/1.13.4/</guid>
+            <pubDate>Fri, 03 Dec 2021 00:00:00 GMT</pubDate>
+            <description><![CDATA[Server now aborts the startup process if ServerListener.serverStarting() raises an exception. #3935 #3947 You no longer see an EmptyEndpointGroupException when the entire Endpoints are replaced in a H...]]></description>
+        </item>
+        <item>
+            <title><![CDATA[v1.13.3]]></title>
+            <link>https://armeria.dev/release-notes/1.13.3/</link>
+            <guid>https://armeria.dev/release-notes/1.13.3/</guid>
+            <pubDate>Tue, 23 Nov 2021 00:00:00 GMT</pubDate>
+            <description><![CDATA[You no longer see Maximum active streams violated for this endpoint. exception anymore. #3858 #3908 DecodingClient does not raise an exception anymore when duplicated encodings are specified. #3932 #3...]]></description>
+        </item>
+        <item>
+            <title><![CDATA[v1.13.2]]></title>
+            <link>https://armeria.dev/release-notes/1.13.2/</link>
+            <guid>https://armeria.dev/release-notes/1.13.2/</guid>
+            <pubDate>Tue, 26 Oct 2021 00:00:00 GMT</pubDate>
+            <description><![CDATA[Fixed the HTTP content corruption #3894 The corruption occurs when all the following 3 conditions are met: A request or response is streaming, such as using HttpResponse.streaming(); its content is lo...]]></description>
+        </item>
+        <item>
+            <title><![CDATA[v1.13.1]]></title>
+            <link>https://armeria.dev/release-notes/1.13.1/</link>
+            <guid>https://armeria.dev/release-notes/1.13.1/</guid>
+            <pubDate>Wed, 20 Oct 2021 00:00:00 GMT</pubDate>
+            <description><![CDATA[You no longer see an IllegalArgumentException when a port-based virtual host and TLS are configured together. #3883 A request content preview is produced properly when a decorator that delays the subs...]]></description>
+        </item>
+        <item>
+            <title><![CDATA[v1.13.0]]></title>
+            <link>https://armeria.dev/release-notes/1.13.0/</link>
+            <guid>https://armeria.dev/release-notes/1.13.0/</guid>
+            <pubDate>Fri, 15 Oct 2021 00:00:00 GMT</pubDate>
+            <description><![CDATA[You can now customize HTTP/1 header names on the server side using ServerBuilder.http1HeaderNaming(). #3845 #3866 Server.builder() .http1HeaderNaming(Http1HeaderNaming.traditional()); You can now easi...]]></description>
+        </item>
+        <item>
+            <title><![CDATA[v1.12.0]]></title>
+            <link>https://armeria.dev/release-notes/1.12.0/</link>
+            <guid>https://armeria.dev/release-notes/1.12.0/</guid>
+            <pubDate>Thu, 07 Oct 2021 00:00:00 GMT</pubDate>
+            <description><![CDATA[You can now enable HTTP/JSON to GRPC transcoding in your GrpcService. #3786 GrpcService.builder() .addService(helloService) .enableHttpJsonTranscoding(true) // 👈👈👈 .build(); tipHTTP/JSON transcodin...]]></description>
+        </item>
+        <item>
+            <title><![CDATA[v1.11.0]]></title>
+            <link>https://armeria.dev/release-notes/1.11.0/</link>
+            <guid>https://armeria.dev/release-notes/1.11.0/</guid>
+            <pubDate>Fri, 27 Aug 2021 00:00:00 GMT</pubDate>
+            <description><![CDATA[You can now easily check if the system has a working IPv6 stack using SystemInfo.hasIpV6(). #3784 📈 Improvements​ The cost of creating an Endpoint is reduced by cache. #3767 #3772 🛠️ Bug fixes​ No m...]]></description>
+        </item>
+        <item>
+            <title><![CDATA[v1.10.0]]></title>
+            <link>https://armeria.dev/release-notes/1.10.0/</link>
+            <guid>https://armeria.dev/release-notes/1.10.0/</guid>
+            <pubDate>Thu, 19 Aug 2021 00:00:00 GMT</pubDate>
+            <description><![CDATA[A new module armeria-sangria that integrates with Sangria GraphQL is introduced to let you serve a GraphQL request in Scala. #3703 #3704 val schema: Schema[CharacterRepo, Unit] = Schema(Query)Server.b...]]></description>
+        </item>
+        <item>
+            <title><![CDATA[v1.9.2]]></title>
+            <link>https://armeria.dev/release-notes/1.9.2/</link>
+            <guid>https://armeria.dev/release-notes/1.9.2/</guid>
+            <pubDate>Fri, 02 Jul 2021 00:00:00 GMT</pubDate>
+            <description><![CDATA[You no longer see a ResponseTimeoutException when collecting a large number of messages using HttpRequest.aggregate() and HttpResponse.aggregate(). #3670 Armeria doesn&#x27;t fail to load a class in s...]]></description>
+        </item>
+        <item>
+            <title><![CDATA[v1.9.1]]></title>
+            <link>https://armeria.dev/release-notes/1.9.1/</link>
+            <guid>https://armeria.dev/release-notes/1.9.1/</guid>
+            <pubDate>Thu, 24 Jun 2021 00:00:00 GMT</pubDate>
+            <description><![CDATA[You no longer see ClassCastException when EpollChannelOption.TCP_USER_TIMEOUT or IOUringChannelOption.TCP_USER_TIMEOUT is automatically enabled. #3659 ServerPort.hasProtocol() doesn&#x27;t return fals...]]></description>
+        </item>
+        <item>
+            <title><![CDATA[v1.9.0]]></title>
+            <link>https://armeria.dev/release-notes/1.9.0/</link>
+            <guid>https://armeria.dev/release-notes/1.9.0/</guid>
+            <pubDate>Wed, 23 Jun 2021 00:00:00 GMT</pubDate>
+            <description><![CDATA[A new module armeria-graphql integrates with GraphQL Java to let you serve GraphQL requests. #3318 #3373 ServerBuilder sb = ...;sb.service(&quot;/graphql&quot;, GraphqlService.builder() .schemaFile(sc...]]></description>
+        </item>
+        <item>
+            <title><![CDATA[v1.8.0]]></title>
+            <link>https://armeria.dev/release-notes/1.8.0/</link>
+            <guid>https://armeria.dev/release-notes/1.8.0/</guid>
+            <pubDate>Fri, 14 May 2021 00:00:00 GMT</pubDate>
+            <description><![CDATA[You can now create a HealthChecker that updates its healthiness periodically. #3392 #3406 HealthChecker.of(() -&gt; { HealthCheckStatus status = ...; UnmodifiableFuture.completedFuture(status);}, Dura...]]></description>
+        </item>
+        <item>
+            <title><![CDATA[v1.7.2]]></title>
+            <link>https://armeria.dev/release-notes/1.7.2/</link>
+            <guid>https://armeria.dev/release-notes/1.7.2/</guid>
+            <pubDate>Fri, 30 Apr 2021 00:00:00 GMT</pubDate>
+            <description><![CDATA[We fixed the bad POM files in the artifacts distributed via Maven Central. line/gradle-scripts#95 The bad POM started to show up since 1.7.0. You no longer see a NullPointerException when a server sen...]]></description>
+        </item>
+        <item>
+            <title><![CDATA[v1.7.1]]></title>
+            <link>https://armeria.dev/release-notes/1.7.1/</link>
+            <guid>https://armeria.dev/release-notes/1.7.1/</guid>
+            <pubDate>Thu, 29 Apr 2021 00:00:00 GMT</pubDate>
+            <description><![CDATA[You no longer see an incomplete RequestLog on the server-side when a client cancels a request. #3494 🙇 Thank you​ This release was possible thanks to the following contributors who shared their brill...]]></description>
+        </item>
+        <item>
+            <title><![CDATA[v1.7.0]]></title>
+            <link>https://armeria.dev/release-notes/1.7.0/</link>
+            <guid>https://armeria.dev/release-notes/1.7.0/</guid>
+            <pubDate>Wed, 28 Apr 2021 00:00:00 GMT</pubDate>
+            <description><![CDATA[You can now monitor the state of all live threads and heap using ManagementService. #3463 // ServerServer.builder() .serviceUnder(&quot;/internal/management/&quot;, ManagementService.of()) ...// Clien...]]></description>
+        </item>
+        <item>
+            <title><![CDATA[v1.6.0]]></title>
+            <link>https://armeria.dev/release-notes/1.6.0/</link>
+            <guid>https://armeria.dev/release-notes/1.6.0/</guid>
+            <pubDate>Wed, 07 Apr 2021 00:00:00 GMT</pubDate>
+            <description><![CDATA[You can now send and handle multipart requests and responses. #253 #3327 // Send a multipart message.WebClient client = WebClient.of(&quot;http://example.com/&quot;);BodyPart part1 = BodyPart.of(Conte...]]></description>
+        </item>
+        <item>
+            <title><![CDATA[v1.5.0]]></title>
+            <link>https://armeria.dev/release-notes/1.5.0/</link>
+            <guid>https://armeria.dev/release-notes/1.5.0/</guid>
+            <pubDate>Sat, 13 Feb 2021 00:00:00 GMT</pubDate>
+            <description><![CDATA[You can now run asynchronous Servlets in JettyService. #3320 #3331 JettyService.builder() .handler(new AbstractHandler() { @Override public void handle(String target, Request baseRequest, HttpServletR...]]></description>
+        </item>
+        <item>
+            <title><![CDATA[v1.4.0]]></title>
+            <link>https://armeria.dev/release-notes/1.4.0/</link>
+            <guid>https://armeria.dev/release-notes/1.4.0/</guid>
+            <pubDate>Mon, 01 Feb 2021 00:00:00 GMT</pubDate>
+            <description><![CDATA[You can now register/discover your servers to/from Consul using a new armeria-consul module. #194 #2192 #3002 #3281 // RegistrationServer server = ...;server.addListener( ConsulUpdatingListener.builde...]]></description>
+        </item>
+        <item>
+            <title><![CDATA[v1.3.0]]></title>
+            <link>https://armeria.dev/release-notes/1.3.0/</link>
+            <guid>https://armeria.dev/release-notes/1.3.0/</guid>
+            <pubDate>Mon, 30 Nov 2020 00:00:00 GMT</pubDate>
+            <description><![CDATA[You can now use io_uring for efficient I/O processing in Linux. #3182 Specify the -Dcom.linecorp.armeria.transportType=io_uring JVM option to enable it. Netty&#x27;s io_uring transport is currently ex...]]></description>
+        </item>
+        <item>
+            <title><![CDATA[v1.2.0]]></title>
+            <link>https://armeria.dev/release-notes/1.2.0/</link>
+            <guid>https://armeria.dev/release-notes/1.2.0/</guid>
+            <pubDate>Thu, 22 Oct 2020 00:00:00 GMT</pubDate>
+            <description><![CDATA[You can now bind a GrpcService to a custom route path. #3072 #3083 This is useful if you want to serve an unframed gRPC service with RESTful routes. ServerBuilder sb = ...sb.service(GrpcService.builde...]]></description>
+        </item>
+        <item>
+            <title><![CDATA[v1.1.0]]></title>
+            <link>https://armeria.dev/release-notes/1.1.0/</link>
+            <guid>https://armeria.dev/release-notes/1.1.0/</guid>
+            <pubDate>Tue, 22 Sep 2020 00:00:00 GMT</pubDate>
+            <description><![CDATA[You can now inject your own MeterIdPrefixFunction when using Armeria Spring Boot integration. #3034 @Beanpublic MeterIdPrefixFunction myMeterIdPrefixFunction() { return MeterIdPrefixFunction.of(&quot;...]]></description>
+        </item>
+        <item>
+            <title><![CDATA[v1.0.0]]></title>
+            <link>https://armeria.dev/release-notes/1.0.0/</link>
+            <guid>https://armeria.dev/release-notes/1.0.0/</guid>
+            <pubDate>Fri, 21 Aug 2020 00:00:00 GMT</pubDate>
+            <description><![CDATA[You can now check whether a RequestContext contains an attribute or not conveniently using RequestContext.hasAttr() and RequestContext.hasOwnAttr(). #3014 You can now specify the default service and l...]]></description>
+        </item>
+        <item>
+            <title><![CDATA[v0.99.9]]></title>
+            <link>https://armeria.dev/release-notes/0.99.9/</link>
+            <guid>https://armeria.dev/release-notes/0.99.9/</guid>
+            <pubDate>Mon, 03 Aug 2020 00:00:00 GMT</pubDate>
+            <description><![CDATA[You can now add multiple request timeout callbacks using the following methods: #2937 #2939 ClientRequestContext.whenResponseTimingOut() ClientRequestContext.whenResponseTimedOut() ServiceRequestConte...]]></description>
+        </item>
+        <item>
+            <title><![CDATA[v0.99.8]]></title>
+            <link>https://armeria.dev/release-notes/0.99.8/</link>
+            <guid>https://armeria.dev/release-notes/0.99.8/</guid>
+            <pubDate>Tue, 07 Jul 2020 00:00:00 GMT</pubDate>
+            <description><![CDATA[You can now use ClientRequestContext to build a complex RetryRule and CircuitBreakerRule. #2851 RetryRuleWithContent.&lt;RpcResponse&gt;builder() .onServerErrorStatus() // Now it&#x27;s the BiPredicat...]]></description>
+        </item>
+        <item>
+            <title><![CDATA[v0.99.7]]></title>
+            <link>https://armeria.dev/release-notes/0.99.7/</link>
+            <guid>https://armeria.dev/release-notes/0.99.7/</guid>
+            <pubDate>Mon, 22 Jun 2020 00:00:00 GMT</pubDate>
+            <description><![CDATA[You can now specify the maximum lifespan of server-side connections using ServerBuilder.maxConnectionAge(). This is useful when you have to deal with a load balancer without HTTP/2 support. #2747 #279...]]></description>
+        </item>
+        <item>
+            <title><![CDATA[v0.99.6]]></title>
+            <link>https://armeria.dev/release-notes/0.99.6/</link>
+            <guid>https://armeria.dev/release-notes/0.99.6/</guid>
+            <pubDate>Thu, 28 May 2020 00:00:00 GMT</pubDate>
+            <description><![CDATA[New CircuitBreakerRule and CircuitBreakerRuleWithContent API let you define a complex circuit breaking policy conveniently. #2726 CircuitBreakerRule myRule = CircuitBreakerRule.of( // A failure if an ...]]></description>
+        </item>
+        <item>
+            <title><![CDATA[v0.99.5]]></title>
+            <link>https://armeria.dev/release-notes/0.99.5/</link>
+            <guid>https://armeria.dev/release-notes/0.99.5/</guid>
+            <pubDate>Thu, 14 May 2020 00:00:00 GMT</pubDate>
+            <description><![CDATA[Added Server.blockUntilShutdown() which lets you wait for a Server to close. #2659 Server server = Server.builder()...build();server.start().join();// Returns when server.close() or closeAsync() is ca...]]></description>
+        </item>
+        <item>
+            <title><![CDATA[v0.99.4]]></title>
+            <link>https://armeria.dev/release-notes/0.99.4/</link>
+            <guid>https://armeria.dev/release-notes/0.99.4/</guid>
+            <pubDate>Mon, 20 Apr 2020 00:00:00 GMT</pubDate>
+            <description><![CDATA[ConcurrencyLimitingClient now disables the limit when maxConcurrency is Integer.MAX_VALUE. #2667 🛠️ Bug fixes​ Fixed a memory leak where a HEAD request is not cleaned up properly in a certain case. #...]]></description>
+        </item>
+        <item>
+            <title><![CDATA[v0.99.3]]></title>
+            <link>https://armeria.dev/release-notes/0.99.3/</link>
+            <guid>https://armeria.dev/release-notes/0.99.3/</guid>
+            <pubDate>Tue, 14 Apr 2020 00:00:00 GMT</pubDate>
+            <description><![CDATA[Added RetryStrategy.onException() #2652 Armeria clients can now send an OPTIONS * HTTP/1 request as an alternative to an HTTP/2 PING frame. #2636 This feature is disabled by default and you can enable...]]></description>
+        </item>
+        <item>
+            <title><![CDATA[v0.99.2]]></title>
+            <link>https://armeria.dev/release-notes/0.99.2/</link>
+            <guid>https://armeria.dev/release-notes/0.99.2/</guid>
+            <pubDate>Tue, 31 Mar 2020 00:00:00 GMT</pubDate>
+            <description><![CDATA[Dropwizard 2.0.2 -&gt; 2.0.5 Retrofit 2.8.0 -&gt; 2.8.1 Spring Boot 2.2.5.RELEASE -&gt; 2.2.6.RELEASE Zookeeper 3.6.0 -&gt; 3.5.7 🙇 Thank you​ This release was possible thanks to the following contri...]]></description>
+        </item>
+        <item>
+            <title><![CDATA[v0.99.1]]></title>
+            <link>https://armeria.dev/release-notes/0.99.1/</link>
+            <guid>https://armeria.dev/release-notes/0.99.1/</guid>
+            <pubDate>Tue, 31 Mar 2020 00:00:00 GMT</pubDate>
+            <description><![CDATA[The response is not encoded anymore at EncodingSerivce when the HTTP status indicates the content is empty. #2631 ⛓ Dependencies​ Micrometer 1.4.0 -&gt; 1.3.6 🙇 Thank you​ This release was possible t...]]></description>
+        </item>
+        <item>
+            <title><![CDATA[v0.99.0]]></title>
+            <link>https://armeria.dev/release-notes/0.99.0/</link>
+            <guid>https://armeria.dev/release-notes/0.99.0/</guid>
+            <pubDate>Mon, 30 Mar 2020 00:00:00 GMT</pubDate>
+            <description><![CDATA[You can now make your client connect via a SOCKS 4, SOCKS 5 or HTTP CONNECT proxy server. #2321 #2496 ClientFactory.builder() .proxyConfig(ProxyConfig.socks4(socksProxyServer.address())) .build(); You...]]></description>
+        </item>
+        <item>
+            <title><![CDATA[v0.98.7]]></title>
+            <link>https://armeria.dev/release-notes/0.98.7/</link>
+            <guid>https://armeria.dev/release-notes/0.98.7/</guid>
+            <pubDate>Tue, 17 Mar 2020 00:00:00 GMT</pubDate>
+            <description><![CDATA[Fixed a bug where an exception is not wrapped by UnprocessedRequestException in a certain case. #2594 🙇 Thank you​ This release was possible thanks to the following contributors who shared their bril...]]></description>
+        </item>
+        <item>
+            <title><![CDATA[v0.98.6]]></title>
+            <link>https://armeria.dev/release-notes/0.98.6/</link>
+            <guid>https://armeria.dev/release-notes/0.98.6/</guid>
+            <pubDate>Mon, 16 Mar 2020 00:00:00 GMT</pubDate>
+            <description><![CDATA[Added TextFormatter.socketAddress() and inetAddress() that convert a SocketAddress or an InetAddress into a String without repeating an IP address twice. #2591 📈 Improvements​ RequestContext.toString...]]></description>
+        </item>
+        <item>
+            <title><![CDATA[v0.98.5]]></title>
+            <link>https://armeria.dev/release-notes/0.98.5/</link>
+            <guid>https://armeria.dev/release-notes/0.98.5/</guid>
+            <pubDate>Sat, 14 Mar 2020 00:00:00 GMT</pubDate>
+            <description><![CDATA[You can now use UUID as a parameter in your annotated service. #2573 #2577 public class MyAnnotatedService { @Get(&quot;/user/by-uuid/{uuid}&quot;) public User findUserByUuid(@Param UUID uuid) { ... }...]]></description>
+        </item>
+        <item>
+            <title><![CDATA[v0.98.4]]></title>
+            <link>https://armeria.dev/release-notes/0.98.4/</link>
+            <guid>https://armeria.dev/release-notes/0.98.4/</guid>
+            <pubDate>Fri, 06 Mar 2020 00:00:00 GMT</pubDate>
+            <description><![CDATA[HealthCheckService does not leak the event loop tasks it scheduled anymore. #2557 ServiceRequestContext.setRequestTimeout() and ClientRequestContext.setResponseTimeout() now schedules a timeout correc...]]></description>
+        </item>
+        <item>
+            <title><![CDATA[v0.98.3]]></title>
+            <link>https://armeria.dev/release-notes/0.98.3/</link>
+            <guid>https://armeria.dev/release-notes/0.98.3/</guid>
+            <pubDate>Tue, 25 Feb 2020 00:00:00 GMT</pubDate>
+            <description><![CDATA[RequestContextExporter and RequestContextExportingAppender for Logback can now export the current request ID into MDC. #2511 &lt;?xml version=&quot;1.0&quot; encoding=&quot;UTF-8&quot;?&gt;&lt;configu...]]></description>
+        </item>
+        <item>
+            <title><![CDATA[v0.98.2]]></title>
+            <link>https://armeria.dev/release-notes/0.98.2/</link>
+            <guid>https://armeria.dev/release-notes/0.98.2/</guid>
+            <pubDate>Tue, 18 Feb 2020 00:00:00 GMT</pubDate>
+            <description><![CDATA[You can now specify any client options when building with ArmeriaRetrofitBuilder, because it extends AbstractClientOptionsBuilder. #2483 Retrofit retrofit = ArmeriaRetrofit.builder(&quot;http://exampl...]]></description>
+        </item>
+        <item>
+            <title><![CDATA[v0.98.1]]></title>
+            <link>https://armeria.dev/release-notes/0.98.1/</link>
+            <guid>https://armeria.dev/release-notes/0.98.1/</guid>
+            <pubDate>Wed, 12 Feb 2020 00:00:00 GMT</pubDate>
+            <description><![CDATA[FileService does not warn about blocking operations anymore. #2473 #2478 HealthCheckedEndpointGroup does not fail to check the healthiness of old Armeria servers anymore. #2474 ⛓ Dependencies​ Brave 5...]]></description>
+        </item>
+        <item>
+            <title><![CDATA[v0.98.0]]></title>
+            <link>https://armeria.dev/release-notes/0.98.0/</link>
+            <guid>https://armeria.dev/release-notes/0.98.0/</guid>
+            <pubDate>Wed, 12 Feb 2020 00:00:00 GMT</pubDate>
+            <description><![CDATA[This release contains more breaking changes and deprecations than usual, which were necessary for the preparation of 1.0 release and the long term evolution of our API after 1.0. We&#x27;d like to apo...]]></description>
+        </item>
+        <item>
+            <title><![CDATA[v0.97.0]]></title>
+            <link>https://armeria.dev/release-notes/0.97.0/</link>
+            <guid>https://armeria.dev/release-notes/0.97.0/</guid>
+            <pubDate>Sun, 08 Dec 2019 00:00:00 GMT</pubDate>
+            <description><![CDATA[We now have a new immutable cookie API with SameSite attribute support, which replaces Netty&#x27;s cookie API. #1567 #2286 Cookie c1 = Cookie.of(&quot;foo&quot;, &quot;bar&quot;)Cookie c2 = Cookie.bu...]]></description>
+        </item>
+        <item>
+            <title><![CDATA[v0.96.0]]></title>
+            <link>https://armeria.dev/release-notes/0.96.0/</link>
+            <guid>https://armeria.dev/release-notes/0.96.0/</guid>
+            <pubDate>Sat, 23 Nov 2019 00:00:00 GMT</pubDate>
+            <description><![CDATA[The type signature of clients and services has been greatly simplified. Note that this involves various breaking changes unfortunately. See the &#x27;Breaking changes&#x27; section for the details. #2...]]></description>
+        </item>
+        <item>
+            <title><![CDATA[v0.95.0]]></title>
+            <link>https://armeria.dev/release-notes/0.95.0/</link>
+            <guid>https://armeria.dev/release-notes/0.95.0/</guid>
+            <pubDate>Sat, 26 Oct 2019 00:00:00 GMT</pubDate>
+            <description><![CDATA[You can now bind multiple paths to an annotated service easily using @Path. #1822 #1870 @Get@Post@Path(&quot;/a&quot;)@Path(&quot;/b&quot;)public String myAwesomeServcie(...) {...} You can now make an...]]></description>
+        </item>
+        <item>
+            <title><![CDATA[v0.94.0]]></title>
+            <link>https://armeria.dev/release-notes/0.94.0/</link>
+            <guid>https://armeria.dev/release-notes/0.94.0/</guid>
+            <pubDate>Fri, 04 Oct 2019 00:00:00 GMT</pubDate>
+            <description><![CDATA[You can now decorate multiple services by path mapping. See the documentation for more information. #582 #2040 #2057 ServerBuilder sb = new ServerBuilder();// Register vipService and memberService und...]]></description>
+        </item>
+        <item>
+            <title><![CDATA[v0.93.0]]></title>
+            <link>https://armeria.dev/release-notes/0.93.0/</link>
+            <guid>https://armeria.dev/release-notes/0.93.0/</guid>
+            <pubDate>Thu, 26 Sep 2019 00:00:00 GMT</pubDate>
+            <description><![CDATA[You can now create a Sampler from a specification string such as random=0.1 and rate-limited=10. #2108 This is going to be useful when you want to make the sampling policy of Brave{Client,Server} or L...]]></description>
+        </item>
+        <item>
+            <title><![CDATA[v0.92.0]]></title>
+            <link>https://armeria.dev/release-notes/0.92.0/</link>
+            <guid>https://armeria.dev/release-notes/0.92.0/</guid>
+            <pubDate>Mon, 23 Sep 2019 00:00:00 GMT</pubDate>
+            <description><![CDATA[You can now easily get the request URI using RequestHeaders.uri() and HttpRequest.uri(). #2092 RequestHeaders headers = RequestHeaders.of(HttpMethod.GET, &quot;/foo&quot;, HttpHeaderNames.SCHEME, &quo...]]></description>
+        </item>
+        <item>
+            <title><![CDATA[v0.91.0]]></title>
+            <link>https://armeria.dev/release-notes/0.91.0/</link>
+            <guid>https://armeria.dev/release-notes/0.91.0/</guid>
+            <pubDate>Fri, 06 Sep 2019 00:00:00 GMT</pubDate>
+            <description><![CDATA[You can specify the maximum number of event loops to handle connections. #1886 ClientFactoryBuilder builder = ...;builder.maxNumEventLoopsPerEndpoint(5); // Assign 5 event loops for endpoints. 1 is us...]]></description>
+        </item>
+        <item>
+            <title><![CDATA[v0.90.3]]></title>
+            <link>https://armeria.dev/release-notes/0.90.3/</link>
+            <guid>https://armeria.dev/release-notes/0.90.3/</guid>
+            <pubDate>Wed, 21 Aug 2019 00:00:00 GMT</pubDate>
+            <description><![CDATA[HealthCheckedEndpointGroup does not report healthy endpoints as unhealthy anymore. #2004 UnaryGrpcClient now handles gRPC status in HTTP trailer correctly. #1998 byte[] or HttpData returned by an anno...]]></description>
+        </item>
+        <item>
+            <title><![CDATA[v0.90.2]]></title>
+            <link>https://armeria.dev/release-notes/0.90.2/</link>
+            <guid>https://armeria.dev/release-notes/0.90.2/</guid>
+            <pubDate>Wed, 14 Aug 2019 00:00:00 GMT</pubDate>
+            <description><![CDATA[This release updates Netty from 4.1.38 to 4.1.39 to address the HTTP/2 security issues found in its previous versions. Please upgrade as soon as possible if your application serves the traffic from un...]]></description>
+        </item>
+        <item>
+            <title><![CDATA[v0.90.1]]></title>
+            <link>https://armeria.dev/release-notes/0.90.1/</link>
+            <guid>https://armeria.dev/release-notes/0.90.1/</guid>
+            <pubDate>Mon, 12 Aug 2019 00:00:00 GMT</pubDate>
+            <description><![CDATA[Armeria does not fail to initialize SSLContext anymore when JRE does not support TLSv1.3 and OpenSSL support is missing. #1984 #1986 HealthCheckedEndpointGroup does not fail with ConcurrentModificatio...]]></description>
+        </item>
+        <item>
+            <title><![CDATA[v0.90.0]]></title>
+            <link>https://armeria.dev/release-notes/0.90.0/</link>
+            <guid>https://armeria.dev/release-notes/0.90.0/</guid>
+            <pubDate>Mon, 12 Aug 2019 00:00:00 GMT</pubDate>
+            <description><![CDATA[You can now send an HTTP request to an absolute URI, which means you don&#x27;t need to create different HttpClients for different hosts. #1143 #1343 #1961 HttpClient client = HttpClient.of(); // No b...]]></description>
+        </item>
+        <item>
+            <title><![CDATA[v0.89.1]]></title>
+            <link>https://armeria.dev/release-notes/0.89.1/</link>
+            <guid>https://armeria.dev/release-notes/0.89.1/</guid>
+            <pubDate>Mon, 12 Aug 2019 00:00:00 GMT</pubDate>
+            <description><![CDATA[RetryingClient now respects the Endpoint selection order, which was broken since 0.89.0. #1973 #1974 Edit this page]]></description>
+        </item>
+        <item>
+            <title><![CDATA[v0.89.0]]></title>
+            <link>https://armeria.dev/release-notes/0.89.0/</link>
+            <guid>https://armeria.dev/release-notes/0.89.0/</guid>
+            <pubDate>Mon, 29 Jul 2019 00:00:00 GMT</pubDate>
+            <description><![CDATA[You can now specify decorators for all services in a Server in a functional way. #1882 #1900 ServerBuilder sb = new ServerBuilder();sb.service(...);// After:sb.decorator((delegate, ctx, req) -&gt; { ....]]></description>
+        </item>
+        <item>
+            <title><![CDATA[v0.88.0]]></title>
+            <link>https://armeria.dev/release-notes/0.88.0/</link>
+            <guid>https://armeria.dev/release-notes/0.88.0/</guid>
+            <pubDate>Wed, 03 Jul 2019 00:00:00 GMT</pubDate>
+            <description><![CDATA[ClientRequestContext.current() and ServiceRequestContext.current() have been added so you don&#x27;t need to downcast RequestContext to ClientRequestContext or ServiceRequestContext. It also makes sur...]]></description>
+        </item>
+        <item>
+            <title><![CDATA[v0.87.0]]></title>
+            <link>https://armeria.dev/release-notes/0.87.0/</link>
+            <guid>https://armeria.dev/release-notes/0.87.0/</guid>
+            <pubDate>Thu, 13 Jun 2019 00:00:00 GMT</pubDate>
+            <description><![CDATA[You can now jump to a service method quickly using a go-to form in a DocService debug page. #1815 From this release, TLSv1.3 is enabled by default. #1779 Route replaces PathMapping. #1789 ServerBuilde...]]></description>
+        </item>
+        <item>
+            <title><![CDATA[v0.81.1]]></title>
+            <link>https://armeria.dev/release-notes/0.81.1/</link>
+            <guid>https://armeria.dev/release-notes/0.81.1/</guid>
+            <pubDate>Fri, 31 May 2019 00:00:00 GMT</pubDate>
+            <description><![CDATA[The percent-encoding of the characters such as # and / are now preserved correctly. #1805 Thank you​ This release was possible thanks to the following contributors who shared their brilliant ideas and...]]></description>
+        </item>
+        <item>
+            <title><![CDATA[v0.86.0]]></title>
+            <link>https://armeria.dev/release-notes/0.86.0/</link>
+            <guid>https://armeria.dev/release-notes/0.86.0/</guid>
+            <pubDate>Fri, 17 May 2019 00:00:00 GMT</pubDate>
+            <description><![CDATA[The request body is injected automatically in annotated HTTP service when the parameter type is byte[], HttpData, String or CharSequence regardless of the content-type header. #1584, #1745 You can now...]]></description>
+        </item>
+        <item>
+            <title><![CDATA[v0.85.0]]></title>
+            <link>https://armeria.dev/release-notes/0.85.0/</link>
+            <guid>https://armeria.dev/release-notes/0.85.0/</guid>
+            <pubDate>Fri, 17 May 2019 00:00:00 GMT</pubDate>
+            <description><![CDATA[You can now bind your Service to a certain HTTP method or enable HTTP content-type negotiation very easily with the new ServerBuilder.route() method. #1737 ServerBuilder sb = new ServerBuilder();sb.ro...]]></description>
+        </item>
+        <item>
+            <title><![CDATA[v0.84.0]]></title>
+            <link>https://armeria.dev/release-notes/0.84.0/</link>
+            <guid>https://armeria.dev/release-notes/0.84.0/</guid>
+            <pubDate>Tue, 23 Apr 2019 00:00:00 GMT</pubDate>
+            <description><![CDATA[You can now access the detailed timing information for the connection attempts made by Armeria via RequestLog API, including DNS lookup and socket connect time. #1692 HttpClient client = new HttpClien...]]></description>
+        </item>
+        <item>
+            <title><![CDATA[v0.83.0]]></title>
+            <link>https://armeria.dev/release-notes/0.83.0/</link>
+            <guid>https://armeria.dev/release-notes/0.83.0/</guid>
+            <pubDate>Fri, 29 Mar 2019 00:00:00 GMT</pubDate>
+            <description><![CDATA[You can now configure TLS for Armeria server when using armeria-spring-boot-autoconfigure. #1663 # Your application.ymlarmeria: ports: - port: 8080 protocols: HTTP - ip: 127.0.0.1 port: 8081 protocols...]]></description>
+        </item>
+        <item>
+            <title><![CDATA[v0.82.0]]></title>
+            <link>https://armeria.dev/release-notes/0.82.0/</link>
+            <guid>https://armeria.dev/release-notes/0.82.0/</guid>
+            <pubDate>Tue, 19 Mar 2019 00:00:00 GMT</pubDate>
+            <description><![CDATA[You can now include or exclude service methods using DocServiceFilter when building a DocService. See our documentation for more information. #1609 ServerBuilder sb = new ServerBuilder();...sb.service...]]></description>
+        </item>
+        <item>
+            <title><![CDATA[v0.81.0]]></title>
+            <link>https://armeria.dev/release-notes/0.81.0/</link>
+            <guid>https://armeria.dev/release-notes/0.81.0/</guid>
+            <pubDate>Fri, 08 Mar 2019 00:00:00 GMT</pubDate>
+            <description><![CDATA[A user now can generate cache-control header value programmatically. #1615 HttpHeaders headers = HttpHeaders.of();HttpFileBuilder fileBuilder = HttpFileBuilder.of(...);HttpFileServiceBuilder fileServi...]]></description>
+        </item>
+        <item>
+            <title><![CDATA[v0.80.0]]></title>
+            <link>https://armeria.dev/release-notes/0.80.0/</link>
+            <guid>https://armeria.dev/release-notes/0.80.0/</guid>
+            <pubDate>Tue, 19 Feb 2019 00:00:00 GMT</pubDate>
+            <description><![CDATA[A user now can see the content of HTTP request/response in logs. #1574 ServerBuilder sb = new ServerBuilder();// Enables previewing the content with the maximum length of 100 for textual contents.sb.c...]]></description>
+        </item>
+    </channel>
+</rss>

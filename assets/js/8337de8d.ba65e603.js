@@ -1,0 +1,1 @@
+"use strict";(globalThis.webpackChunkarmeria_site=globalThis.webpackChunkarmeria_site||[]).push([[1239],{1441:a=>{a.exports=JSON.parse('{"name":"docusaurus-plugin-content-blog","id":"blog-ja"}')}}]);

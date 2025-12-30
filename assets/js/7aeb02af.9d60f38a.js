@@ -1,0 +1,1 @@
+"use strict";(globalThis.webpackChunkarmeria_site=globalThis.webpackChunkarmeria_site||[]).push([[6045],{20161:e=>{e.exports=JSON.parse('{"metadata":{"permalink":"/news","page":1,"postsPerPage":10,"totalPages":1,"totalCount":7,"blogDescription":"Blog","blogTitle":"Armeria Newsletter"}}')}}]);
