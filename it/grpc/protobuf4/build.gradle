@@ -27,6 +27,7 @@ tasks.register('generateTestSources', Copy) {
     from("${grpcDir}/src/test/java")
     into "${project.ext.genSrcDir}/test/java"
     include "**/HttpJsonTranscoding*Test.java"
+    include "**/HttpJsonTranscodingTestService.java"
 }
 
 sourceSets {

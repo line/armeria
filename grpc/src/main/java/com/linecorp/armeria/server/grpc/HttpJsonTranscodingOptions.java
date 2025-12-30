@@ -16,8 +16,10 @@
 
 package com.linecorp.armeria.server.grpc;
 
+import java.util.List;
 import java.util.Set;
 
+import com.google.api.HttpRule;
 import com.google.protobuf.Message;
 
 import com.linecorp.armeria.common.annotation.UnstableApi;
@@ -41,6 +43,21 @@ public interface HttpJsonTranscodingOptions {
     static HttpJsonTranscodingOptions of() {
         return DefaultHttpJsonTranscodingOptions.DEFAULT;
     }
+
+    /**
+     * Returns whether to extract and register HTTP/JSON transcoding rules from {@code google.api.http}
+     * annotations in proto descriptors. When {@code true}, methods with {@code google.api.http} options
+     * are automatically registered as HTTP/JSON endpoints according to their annotation specifications.
+     * This option is enabled by default.
+     */
+    boolean useHttpAnnotations();
+
+    /**
+     * Returns additional HTTP/JSON transcoding rules that supplement annotation-based rules. These rules
+     * allow programmatic configuration of HTTP/JSON transcoding without modifying proto files. The rules are
+     * processed regardless of the {@link #useHttpAnnotations()} setting. Returns an empty list by default.
+     */
+    List<HttpRule> additionalHttpRules();
 
     /**
      * Returns the {@link HttpJsonTranscodingQueryParamMatchRule}s which is used to match fields in a

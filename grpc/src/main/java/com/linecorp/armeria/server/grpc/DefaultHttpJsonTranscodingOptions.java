@@ -16,22 +16,40 @@
 
 package com.linecorp.armeria.server.grpc;
 
+import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 
+import com.google.api.HttpRule;
 import com.google.common.base.MoreObjects;
 
 final class DefaultHttpJsonTranscodingOptions implements HttpJsonTranscodingOptions {
 
     static final HttpJsonTranscodingOptions DEFAULT = HttpJsonTranscodingOptions.builder().build();
 
+    private final boolean useHttpAnnotations;
+    private final List<HttpRule> additionalHttpRules;
     private final Set<HttpJsonTranscodingQueryParamMatchRule> queryParamMatchRules;
     private final UnframedGrpcErrorHandler errorHandler;
 
-    DefaultHttpJsonTranscodingOptions(Set<HttpJsonTranscodingQueryParamMatchRule> queryParamMatchRules,
+    DefaultHttpJsonTranscodingOptions(boolean useHttpAnnotations,
+                                      List<HttpRule> additionalHttpRules,
+                                      Set<HttpJsonTranscodingQueryParamMatchRule> queryParamMatchRules,
                                       UnframedGrpcErrorHandler errorHandler) {
+        this.useHttpAnnotations = useHttpAnnotations;
+        this.additionalHttpRules = additionalHttpRules;
         this.queryParamMatchRules = queryParamMatchRules;
         this.errorHandler = errorHandler;
+    }
+
+    @Override
+    public boolean useHttpAnnotations() {
+        return useHttpAnnotations;
+    }
+
+    @Override
+    public List<HttpRule> additionalHttpRules() {
+        return additionalHttpRules;
     }
 
     @Override
@@ -53,18 +71,22 @@ final class DefaultHttpJsonTranscodingOptions implements HttpJsonTranscodingOpti
             return false;
         }
         final HttpJsonTranscodingOptions that = (HttpJsonTranscodingOptions) o;
-        return queryParamMatchRules.equals(that.queryParamMatchRules()) &&
+        return useHttpAnnotations == that.useHttpAnnotations() &&
+               additionalHttpRules.equals(that.additionalHttpRules()) &&
+               queryParamMatchRules.equals(that.queryParamMatchRules()) &&
                errorHandler.equals(that.errorHandler());
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(queryParamMatchRules, errorHandler);
+        return Objects.hash(useHttpAnnotations, additionalHttpRules, queryParamMatchRules, errorHandler);
     }
 
     @Override
     public String toString() {
         return MoreObjects.toStringHelper(this)
+                          .add("useHttpAnnotations", useHttpAnnotations)
+                          .add("additionalHttpRules", additionalHttpRules)
                           .add("queryParamMatchRules", queryParamMatchRules)
                           .add("errorHandler", errorHandler)
                           .toString();

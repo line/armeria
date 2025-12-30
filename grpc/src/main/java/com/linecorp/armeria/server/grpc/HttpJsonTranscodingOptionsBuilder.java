@@ -22,8 +22,10 @@ import static com.linecorp.armeria.server.grpc.HttpJsonTranscodingQueryParamMatc
 import static java.util.Objects.requireNonNull;
 
 import java.util.EnumSet;
+import java.util.List;
 import java.util.Set;
 
+import com.google.api.HttpRule;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
@@ -46,12 +48,26 @@ public final class HttpJsonTranscodingOptionsBuilder {
     private static final EnumSet<HttpJsonTranscodingQueryParamMatchRule> DEFAULT_QUERY_PARAM_MATCH_RULES =
             EnumSet.of(JSON_NAME, ORIGINAL_FIELD);
 
+    private final ImmutableList.Builder<HttpRule> additionalHttpRules = ImmutableList.builder();
+
+    private boolean useHttpAnnotations = true;
+
     private UnframedGrpcErrorHandler errorHandler = UnframedGrpcErrorHandler.ofJson();
 
     @Nullable
     private Set<HttpJsonTranscodingQueryParamMatchRule> queryParamMatchRules;
 
     HttpJsonTranscodingOptionsBuilder() {}
+
+    /**
+     * A copy constructor.
+     */
+    HttpJsonTranscodingOptionsBuilder(HttpJsonTranscodingOptions options) {
+        useHttpAnnotations(options.useHttpAnnotations());
+        additionalHttpRules(options.additionalHttpRules());
+        queryParamMatchRules(options.queryParamMatchRules());
+        errorHandler(options.errorHandler());
+    }
 
     /**
      * Adds the specified {@link HttpJsonTranscodingQueryParamMatchRule} which is used
@@ -82,6 +98,38 @@ public final class HttpJsonTranscodingOptionsBuilder {
     }
 
     /**
+     * Sets whether to extract and register HTTP/JSON transcoding rules from {@code google.api.http}
+     * annotations in proto descriptors. When {@code true}, methods with {@code google.api.http} options
+     * are automatically registered as HTTP/JSON endpoints according to their annotation specifications.
+     * This option is enabled by default.
+     */
+    public HttpJsonTranscodingOptionsBuilder useHttpAnnotations(boolean useHttpAnnotations) {
+        this.useHttpAnnotations = useHttpAnnotations;
+        return this;
+    }
+
+    /**
+     * Adds additional HTTP/JSON transcoding rules that supplement annotation-based rules. These rules
+     * allow programmatic configuration of HTTP/JSON transcoding without modifying proto files. The rules are
+     * processed regardless of the {@link #useHttpAnnotations(boolean)} setting.
+     */
+    public HttpJsonTranscodingOptionsBuilder additionalHttpRules(HttpRule... rules) {
+        requireNonNull(rules, "rules");
+        return additionalHttpRules(ImmutableList.copyOf(rules));
+    }
+
+    /**
+     * Adds additional HTTP/JSON transcoding rules that supplement annotation-based rules. These rules
+     * allow programmatic configuration of HTTP/JSON transcoding without modifying proto files. The rules are
+     * processed regardless of the {@link #useHttpAnnotations(boolean)} setting.
+     */
+    public HttpJsonTranscodingOptionsBuilder additionalHttpRules(Iterable<HttpRule> rules) {
+        requireNonNull(rules, "rules");
+        additionalHttpRules.addAll(rules);
+        return this;
+    }
+
+    /**
      * Sets an error handler which handles an exception raised while serving a gRPC request transcoded from
      * an HTTP/JSON request. By default, {@link UnframedGrpcErrorHandler#ofJson()} would be set.
      */
@@ -96,6 +144,7 @@ public final class HttpJsonTranscodingOptionsBuilder {
      * Returns a newly created {@link HttpJsonTranscodingOptions}.
      */
     public HttpJsonTranscodingOptions build() {
+        final List<HttpRule> rules = additionalHttpRules.build();
         final Set<HttpJsonTranscodingQueryParamMatchRule> matchRules;
         if (queryParamMatchRules == null) {
             matchRules = DEFAULT_QUERY_PARAM_MATCH_RULES;
@@ -112,6 +161,6 @@ public final class HttpJsonTranscodingOptionsBuilder {
                 matchRules = ImmutableSet.copyOf(queryParamMatchRules);
             }
         }
-        return new DefaultHttpJsonTranscodingOptions(matchRules, errorHandler);
+        return new DefaultHttpJsonTranscodingOptions(useHttpAnnotations, rules, matchRules, errorHandler);
     }
 }
