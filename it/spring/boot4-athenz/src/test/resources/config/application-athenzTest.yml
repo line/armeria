@@ -9,5 +9,7 @@ armeria:
     athenz-private-key: "gen-src/test/resources/docker/certs/test-service/key.pem"
     athenz-public-key: "gen-src/test/resources/docker/certs/test-service/cert.pem"
     athenz-ca-cert: "gen-src/test/resources/docker/certs/CAs/athenz_ca_cert.pem"
+    enable-metrics: true
+    meter-id-prefix: "test.armeria.athenz.zts.client"
   # Set graceful shutdown timeout to 0 to stop the server immediately.
   graceful-shutdown-quiet-period-millis: 0

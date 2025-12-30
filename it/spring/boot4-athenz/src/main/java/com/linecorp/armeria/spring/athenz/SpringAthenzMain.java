@@ -16,10 +16,14 @@
 
 package com.linecorp.armeria.spring.athenz;
 
+import java.util.function.Consumer;
+
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.Bean;
 
+import com.linecorp.armeria.client.athenz.ZtsBaseClientBuilder;
+import com.linecorp.armeria.client.logging.LoggingClient;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.spring.ArmeriaServerConfigurator;
 
@@ -36,6 +40,20 @@ public class SpringAthenzMain {
     public ArmeriaServerConfigurator armeriaServerConfigurator(SimpleFileService service) {
         // Customize the server using the given ServerBuilder. For example:
         return builder -> builder.annotatedService(service);
+    }
+
+    /**
+     * A user can customize the underlying {@link ZtsBaseClientBuilder} by providing a bean of
+     * {@code Consumer<ZtsBaseClientBuilder>}.
+     */
+    @Bean
+    public Consumer<ZtsBaseClientBuilder> ztsBaseClientCustomizer() {
+        return builder -> {
+            builder.configureWebClient(cb -> {
+                // Customize the underlying WebClient if necessary.
+                cb.decorator(LoggingClient.newDecorator());
+            });
+        };
     }
 
     public static void main(String[] args) {
