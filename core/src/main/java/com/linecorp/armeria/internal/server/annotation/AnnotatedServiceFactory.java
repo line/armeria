@@ -112,7 +112,7 @@ import com.linecorp.armeria.server.docs.DescriptionInfo;
 /**
  * Builds a list of {@link AnnotatedService}s from an {@link Object}.
  * This class is not supposed to be used by a user. Please check out the documentation
- * <a href="https://line.github.io/armeria/docs/server-annotated-service">Annotated HTTP Service</a>
+ * <a href="https://armeria.dev/docs/server-annotated-service">Annotated HTTP Service</a>
  * to use {@link AnnotatedService}.
  */
 public final class AnnotatedServiceFactory {
@@ -250,7 +250,7 @@ public final class AnnotatedServiceFactory {
             throw new IllegalArgumentException(
                     "Kotlin suspending functions are supported " +
                     "only when you added 'armeria-kotlin' as a dependency.\n" +
-                    "See https://line.github.io/armeria/docs/server-annotated-service#kotlin-coroutines-support " +
+                    "See https://armeria.dev/docs/server-annotated-service#kotlin-coroutines-support " +
                     "for more information.");
         }
 

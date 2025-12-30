@@ -1,10 +1,10 @@
-Visit [the official web site](https://line.github.io/armeria) for more information.
+Visit [the official web site](https://armeria.dev/) for more information.
 
 # Armeria
 
 [![GitHub stars](https://img.shields.io/github/stars/line/armeria.svg?style=social)](https://github.com/line/armeria)
 [![Twitter Follow](https://img.shields.io/twitter/follow/armeria_project.svg?label=Follow)](https://twitter.com/armeria_project)
-[![Discord](https://img.shields.io/badge/chat-on%20Discord-brightgreen.svg?style=social&logo=discord)](https://line.github.io/armeria/s/discord)
+[![Discord](https://img.shields.io/badge/chat-on%20Discord-brightgreen.svg?style=social&logo=discord)](https://armeria.dev/s/discord)
 [![GitHub contributors](https://img.shields.io/github/contributors/line/armeria.svg)](https://github.com/line/armeria/contributors)
 [![GitHub commit activity](https://img.shields.io/github/commit-activity/m/line/armeria.svg?label=commits)](https://github.com/line/armeria/pulse)
 [![Maven Central](https://img.shields.io/maven-central/v/com.linecorp.armeria/armeria.svg?label=version)](https://search.maven.org/search?q=g:com.linecorp.armeria%20AND%20a:armeria)
@@ -26,11 +26,11 @@ It is open-sourced by the creator of [Netty](https://netty.io/) and his colleagu
 ## Requirements
 
 - Java 8 or later if you are a user.
-- See [the developer guide](https://line.github.io/armeria/community/developer-guide/) if you are building Armeria.
+- See [the developer guide](https://armeria.dev/community/developer-guide/) if you are building Armeria.
 
 ## How to reach us — chat, questions and newsletters
 
-Visit [the community](https://line.github.io/armeria/community/) to chat with us, ask questions and learn how to contribute.
+Visit [the community](https://armeria.dev/community/) to chat with us, ask questions and learn how to contribute.
 
 ## Hall of fame
 

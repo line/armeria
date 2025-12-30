@@ -15,7 +15,7 @@
  */
 
 /**
- * Fabric8 Kubernetes client based on <a href="https://line.github.io/armeria">Armeria</a>.
+ * Fabric8 Kubernetes client based on <a href="https://armeria.dev">Armeria</a>.
  */
 @NonNullByDefault
 package com.linecorp.armeria.client.kubernetes;
