@@ -249,12 +249,11 @@ public final class XdsEndpointGroup extends AbstractListenable<List<Endpoint>>
 
         XdsEndpointGroupSelector(EndpointGroup endpointGroup) {
             super(endpointGroup);
-            initialize();
         }
 
         @Override
         @Nullable
-        public Endpoint selectNow(ClientRequestContext ctx) {
+        public Endpoint doSelectNow(ClientRequestContext ctx) {
             final XdsLoadBalancer loadBalancer = XdsEndpointGroup.this.loadBalancer;
             if (loadBalancer == null) {
                 return null;
