@@ -4,7 +4,7 @@ rootProject.ext {
     projectName = project.findProperty('projectName')
     projectUrl = project.findProperty('projectUrl')
     projectDescription = project.findProperty('projectDescription')?: rootProject.name
-    authorName = project.findProperty('authorName')?: 'LINE Corporation'
+    authorName = project.findProperty('authorName')?: 'LY Corporation'
     authorEmail = project.findProperty('authorEmail')?: 'dl_armeria@linecorp.com'
     authorUrl = project.findProperty('authorUrl')?: 'https://engineering.linecorp.com/en/'
     inceptionYear = project.findProperty('inceptionYear')
