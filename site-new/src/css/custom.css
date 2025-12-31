@@ -168,3 +168,33 @@ img[alt='-BG-'] {
 .navbar__brand {
   min-width: 170px;
 }
+
+/* Pagination customization for release notes */
+
+.pagination-nav__link[href*="/release-notes/"]:not([href*="/version-"]) .pagination-nav__sublabel {
+  visibility: hidden;
+  position: relative;
+}
+
+.pagination-nav__link[href*="/release-notes/"]:not([href*="/version-"]) .pagination-nav__sublabel::before {
+  visibility: visible;
+  position: absolute;
+  top: 0;
+}
+
+.pagination-nav__link--prev[href*="/release-notes/"]:not([href*="/version-"]) .pagination-nav__sublabel::before {
+  content: "Newer release";
+  left: 0;
+}
+
+.pagination-nav__link--next[href*="/release-notes/"]:not([href*="/version-"]) .pagination-nav__sublabel::before {
+  content: "Older release";
+  right: 0;
+}
+
+.pagination-nav__link[href*="/release-notes/version-"] {
+  /* Hide whole buttons that link to version category pages */
+  display: none;
+}
+
+/* End of pagination customization */
