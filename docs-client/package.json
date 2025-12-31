@@ -31,7 +31,7 @@
     "react-markdown": "^8.0.7",
     "react-router": "^5.3.4",
     "react-router-dom": "^5.3.4",
-    "react-syntax-highlighter": "^15.6.1",
+    "react-syntax-highlighter": "^16.1.0",
     "regenerator-runtime": "^0.14.1",
     "remark-gfm": "^3.0.1"
   },
