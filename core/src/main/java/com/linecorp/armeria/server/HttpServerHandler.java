@@ -333,7 +333,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
         } catch (Exception e) {
             logger.warn(
                     "{} Unexpected exception from gracefulShutdownExceptionFactory.createThrowableForContext(): "
-                    + "{}", ctx, config.gracefulShutdown(), e);
+                    + "{}", ctx, config.gracefulShutdownExceptionFactory(), e);
             return null;
         }
     }
