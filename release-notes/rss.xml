@@ -4,10 +4,17 @@
         <title>Armeria Release Notes</title>
         <link>https://armeria.dev/release-notes</link>
         
-        <lastBuildDate>Tue, 30 Dec 2025 06:03:23 GMT</lastBuildDate>
+        <lastBuildDate>Wed, 31 Dec 2025 02:39:50 GMT</lastBuildDate>
         <docs>https://validator.w3.org/feed/docs/rss2.html</docs>
         <language>en</language>
         <copyright>© 2015-2025, LY Corporation</copyright>
+        <item>
+            <title><![CDATA[v1.34.2]]></title>
+            <link>https://armeria.dev/release-notes/1.34.2/</link>
+            <guid>https://armeria.dev/release-notes/1.34.2/</guid>
+            <pubDate>Tue, 30 Dec 2025 00:00:00 GMT</pubDate>
+            <description><![CDATA[A bug was fixed where armeria-xds-api wasn&#x27;t compatible with Protobuf 4 runtime since 1.34.0. #6555 🙇 Thank you​ This release was possible thanks to the following contributors who shared their b...]]></description>
+        </item>
         <item>
             <title><![CDATA[v1.34.1]]></title>
             <link>https://armeria.dev/release-notes/1.34.1/</link>
