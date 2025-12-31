@@ -25,13 +25,23 @@ import com.linecorp.armeria.client.{
   RestClientPreparation
 }
 import com.linecorp.armeria.common.annotation.UnstableApi
-import com.linecorp.armeria.common.{Cookie, ExchangeType, HttpData, HttpResponse, MediaType, ResponseEntity}
+import com.linecorp.armeria.common.{
+  Cookie,
+  ExchangeType,
+  HttpData,
+  HttpMessageSetters,
+  HttpResponse,
+  MediaType,
+  ResponseEntity
+}
 import com.linecorp.armeria.scala.implicits._
 import io.netty.util.AttributeKey
+
 import java.lang.{Iterable => JIterable}
 import java.time.Duration
 import java.util.{Map => JMap}
 import org.reactivestreams.Publisher
+
 import scala.collection.immutable
 import scala.concurrent.Future
 
@@ -183,6 +193,11 @@ final class ScalaRestClientPreparation private[scala] (delegate: RestClientPrepa
 
   override def content(contentType: MediaType, content: Array[Byte]): ScalaRestClientPreparation = {
     delegate.content(contentType, content)
+    this
+  }
+
+  override def content(content: HttpData): ScalaRestClientPreparation = {
+    delegate.content(content)
     this
   }
 

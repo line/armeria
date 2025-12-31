@@ -50,6 +50,7 @@ class Http1ServerDelayedCloseConnectionTest {
                 return HttpResponse.builder()
                                    .ok()
                                    .content("OK\n")
+                                    .header(HttpHeaderNames.CONTENT_TYPE, "text/plain; charset=utf-8")
                                    .header(HttpHeaderNames.CONNECTION, "close")
                                    .build();
             });
