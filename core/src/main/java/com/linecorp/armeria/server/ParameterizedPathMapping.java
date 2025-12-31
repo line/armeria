@@ -119,6 +119,10 @@ final class ParameterizedPathMapping extends AbstractPathMapping {
             checkArgument(pathPattern.indexOf(';') < 0,
                           "pathPattern: %s (expected not to have a ';')", pathPattern);
         }
+        checkArgument(!hasQueryString(pathPattern),
+                      "pathPattern: %s must not contain a query string. " +
+                      "Use 'RouteBuilder.matchesParams()' instead.", pathPattern);
+
         this.prefix = prefix;
         requireNonNull(pathPattern, "pathPattern");
 
