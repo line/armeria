@@ -452,6 +452,46 @@ public final class VirtualHostBuilder implements TlsSetters, ServiceConfigsBuild
     }
 
     /**
+     * Applies the specified {@code customizer} to a {@link VirtualHostContextPathServicesBuilder}
+     * rooted at the given {@code contextPaths} of this {@link VirtualHostBuilder}.
+     * @param contextPaths the context paths to group services under; must be non-empty and absolute
+     * @param customizer the action that configures services/nesting under the context paths
+     * @return this builder for chaining
+     * @throws IllegalArgumentException if {@code contextPaths} is empty or contains a relative path
+     *
+     * @see #contextPath(String, Consumer)
+     */
+    @UnstableApi
+    public VirtualHostBuilder contextPath(
+            Iterable<String> contextPaths,
+            Consumer<VirtualHostContextPathServicesBuilder> customizer) {
+        requireNonNull(contextPaths, "contextPaths");
+        requireNonNull(customizer, "customizer");
+        customizer.accept(contextPath(contextPaths));
+        return this;
+    }
+
+    /**
+     * A convenience overload of {@link #contextPath(Iterable, Consumer)} for a single context path.
+     *
+     * @param contextPath the context path to group services under; must be absolute
+     * @param customizer the action that configures services/nesting under the context path
+     * @return this builder for chaining
+     * @throws IllegalArgumentException if {@code contextPath} is relative (non-absolute)
+     *
+     * @see #contextPath(Iterable, Consumer)
+     */
+    @UnstableApi
+    public VirtualHostBuilder contextPath(
+            String contextPath,
+            Consumer<VirtualHostContextPathServicesBuilder> customizer) {
+        requireNonNull(contextPath, "contextPath");
+        requireNonNull(customizer, "customizer");
+        contextPath(ImmutableSet.of(contextPath), customizer);
+        return this;
+    }
+
+    /**
      * Configures an {@link HttpService} of the {@link VirtualHost} with the {@code customizer}.
      */
     public VirtualHostBuilder withRoute(Consumer<? super VirtualHostServiceBindingBuilder> customizer) {

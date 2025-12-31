@@ -65,6 +65,7 @@ import org.slf4j.LoggerFactory;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Sets;
 import com.google.common.net.HostAndPort;
 
@@ -100,6 +101,7 @@ import com.linecorp.armeria.internal.common.RequestContextUtil;
 import com.linecorp.armeria.internal.common.SslContextFactory;
 import com.linecorp.armeria.internal.common.util.ChannelUtil;
 import com.linecorp.armeria.internal.server.RouteDecoratingService;
+import com.linecorp.armeria.internal.server.RouteUtil;
 import com.linecorp.armeria.internal.server.annotation.AnnotatedServiceExtensions;
 import com.linecorp.armeria.server.annotation.ExceptionHandlerFunction;
 import com.linecorp.armeria.server.annotation.RequestConverterFunction;
@@ -1345,6 +1347,53 @@ public final class ServerBuilder implements TlsSetters, ServiceConfigsBuilder<Se
         requireNonNull(contextPaths, "contextPaths");
         return new ContextPathServicesBuilder(
                 this, defaultVirtualHostBuilder, ImmutableSet.copyOf(contextPaths));
+    }
+
+    /**
+     * Applies the specified {@code customizer} to a {@link ContextPathServicesBuilder} rooted at the
+     * given {@code contextPaths} of the default {@link VirtualHost}.
+     * @param contextPaths the context paths to group services under; must be non-empty and absolute
+     * @param customizer the action that configures services/nesting under the context paths
+     * @return this builder for chaining
+     * @throws IllegalArgumentException if {@code contextPaths} is empty or contains a relative path
+     *
+     * @see #contextPath(String, Consumer)
+     * @see #baseContextPath(String)
+     */
+    @UnstableApi
+    public ServerBuilder contextPath(Iterable<String> contextPaths,
+                                     Consumer<ContextPathServicesBuilder> customizer) {
+        requireNonNull(contextPaths, "contextPaths");
+        requireNonNull(customizer, "customizer");
+
+        if (Iterables.isEmpty(contextPaths)) {
+            throw new IllegalArgumentException("contextPaths is empty");
+        }
+
+        for (String contextPath : contextPaths) {
+            RouteUtil.ensureAbsolutePath(contextPath, "contextPath");
+        }
+
+        customizer.accept(contextPath(contextPaths));
+        return this;
+    }
+
+    /**
+     * A convenience overload of {@link #contextPath(Iterable, Consumer)} for a single context path.
+     *
+     * @param contextPath the context path to group services under; must be absolute
+     * @param customizer the action that configures services/nesting under the context path
+     * @return this builder for chaining
+     * @throws IllegalArgumentException if {@code contextPath} is relative (non-absolute)
+     * @see #contextPath(Iterable, Consumer)
+     */
+    @UnstableApi
+    public ServerBuilder contextPath(String contextPath,
+                                     Consumer<ContextPathServicesBuilder> customizer) {
+        requireNonNull(contextPath, "contextPath");
+        requireNonNull(customizer, "customizer");
+        contextPath(ImmutableSet.of(contextPath), customizer);
+        return this;
     }
 
     /**
