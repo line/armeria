@@ -62,12 +62,24 @@ final class JsonSchemaGenerator {
                 .collect(toImmutableMap(EnumInfo::name, Function.identity()));
 
         // Pre-compute mappings from subtype to its base type's DiscriminatorInfo
+        final Map<String, String> nameToAlias = new HashMap<>();
+        for (final StructInfo struct : serviceSpecification.structs()) {
+            if (struct.alias() != null) {
+                nameToAlias.put(struct.name(), struct.alias());
+            }
+        }
+
         polymorphismToBase = new HashMap<>();
-        for (final StructInfo structInfo : serviceSpecification.structs()) {
-            if (structInfo.discriminator() != null && !structInfo.oneOf().isEmpty()) {
-                for (TypeSignature subType : structInfo.oneOf()) {
-                    polymorphismToBase.put(subType.name(), structInfo.discriminator());
-                }
+        for (final StructInfo struct : serviceSpecification.structs()) {
+            final DiscriminatorInfo discriminator = struct.discriminator();
+            if (discriminator != null) {
+                struct.oneOf().forEach(sub -> {
+                    polymorphismToBase.putIfAbsent(sub.name(), discriminator);
+                    final String alias = nameToAlias.get(sub.name());
+                    if (alias != null) {
+                        polymorphismToBase.putIfAbsent(alias, discriminator);
+                    }
+                });
             }
         }
     }
@@ -298,7 +310,11 @@ final class JsonSchemaGenerator {
         if (typeSignature.type() == TypeSignatureType.OPTIONAL ||
                 typeSignature.type() == TypeSignatureType.CONTAINER) {
             final TypeSignature inner = ((ContainerTypeSignature) typeSignature).typeParameters().get(0);
-            return generateFieldSchema(FieldInfo.of("", inner));
+            final ObjectNode innerNode = generateFieldSchema(FieldInfo.of("", inner));
+            if (!docString.isEmpty()) {
+                innerNode.put("description", docString);
+            }
+            return innerNode;
         }
 
         final String schemaType = getSchemaType(typeSignature);
