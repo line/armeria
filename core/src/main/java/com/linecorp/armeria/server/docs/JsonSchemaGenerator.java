@@ -21,6 +21,7 @@ import static java.util.Objects.requireNonNull;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.function.Function;
 
@@ -107,7 +108,7 @@ final class JsonSchemaGenerator {
                 break;
         }
 
-        switch (typeSignature.name().toLowerCase()) {
+        switch (typeSignature.name().toLowerCase(Locale.ROOT)) {
             case "boolean":
             case "bool":
                 return "boolean";
