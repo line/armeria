@@ -253,6 +253,10 @@ final class JsonSchemaGenerator {
     private static ObjectNode generateEnumDefinition(EnumInfo enumInfo) {
         final ObjectNode schemaNode = mapper.createObjectNode();
         schemaNode.put("type", "string");
+        final String docString = enumInfo.descriptionInfo().docString();
+        if (!docString.isEmpty()) {
+            schemaNode.put("description", docString);
+        }
         final ArrayNode enumValues = mapper.createArrayNode();
         enumInfo.values().forEach(value -> enumValues.add(value.name()));
         schemaNode.set("enum", enumValues);
