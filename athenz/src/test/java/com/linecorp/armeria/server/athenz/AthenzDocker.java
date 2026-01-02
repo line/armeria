@@ -83,7 +83,6 @@ public class AthenzDocker implements SafeCloseable {
     public AthenzDocker(File dockerComposeFile) {
         composeContainer =
                 new ComposeContainer(dockerComposeFile)
-                        .withLocalCompose(true)
                         .withExposedService(ZMS_SERVICE_NAME, ZMS_PORT, Wait.forHealthcheck())
                         .withExposedService(ZTS_SERVICE_NAME, ZTS_PORT, Wait.forHealthcheck());
     }
