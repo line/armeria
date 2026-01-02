@@ -18,7 +18,8 @@ package com.linecorp.armeria.common.jsonrpc;
 
 import static java.util.Objects.requireNonNull;
 
-import com.linecorp.armeria.common.annotation.Nullable;
+import org.jspecify.annotations.Nullable;
+
 import com.linecorp.armeria.common.stream.ClosedStreamException;
 import com.linecorp.armeria.common.stream.DefaultStreamMessage;
 import com.linecorp.armeria.internal.common.jsonrpc.JsonRpcSseMessage;

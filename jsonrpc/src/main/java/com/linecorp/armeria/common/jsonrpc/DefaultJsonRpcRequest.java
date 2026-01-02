@@ -21,11 +21,11 @@ import static com.linecorp.armeria.common.jsonrpc.JsonRpcMessageUtil.validateVer
 
 import java.util.Objects;
 
+import org.jspecify.annotations.Nullable;
+
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.MoreObjects;
-
-import com.linecorp.armeria.common.annotation.Nullable;
 
 /**
  * Default {@link JsonRpcRequest} implementation.

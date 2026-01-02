@@ -23,10 +23,11 @@ import java.security.cert.X509Certificate;
 import java.util.List;
 import java.util.Set;
 
+import org.jspecify.annotations.Nullable;
+
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.util.TlsEngineType;
 import com.linecorp.armeria.internal.common.util.SslContextUtil;

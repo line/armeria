@@ -18,10 +18,11 @@ package com.linecorp.armeria.server.jsonrpc;
 import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
 
+import org.jspecify.annotations.Nullable;
+
 import com.google.common.collect.ImmutableMap;
 
 import com.linecorp.armeria.common.HttpHeaderNames;
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.server.HttpService;
 

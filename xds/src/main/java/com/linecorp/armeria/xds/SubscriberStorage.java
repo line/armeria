@@ -22,9 +22,10 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 
+import org.jspecify.annotations.Nullable;
+
 import com.google.common.collect.ImmutableMap;
 
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.SafeCloseable;
 
 import io.netty.util.concurrent.EventExecutor;

@@ -20,13 +20,13 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.concurrent.CompletableFuture;
 
+import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
 import com.linecorp.armeria.client.BlockingWebClient;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.ResponseEntity;
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.jsonrpc.JsonRpcError;
 import com.linecorp.armeria.common.jsonrpc.JsonRpcMessage;
 import com.linecorp.armeria.common.jsonrpc.JsonRpcRequest;

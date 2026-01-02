@@ -18,8 +18,9 @@ package com.linecorp.armeria.server.jsonrpc;
 
 import static java.util.Objects.requireNonNull;
 
+import org.jspecify.annotations.Nullable;
+
 import com.linecorp.armeria.common.HttpStatus;
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.jsonrpc.JsonRpcError;
 import com.linecorp.armeria.common.jsonrpc.JsonRpcRequest;

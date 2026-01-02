@@ -23,6 +23,8 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.function.Function;
 
+import org.jspecify.annotations.Nullable;
+
 import com.google.common.collect.ImmutableMap;
 import com.google.protobuf.Any;
 import com.google.protobuf.Message;
@@ -37,7 +39,6 @@ import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.client.HttpPreprocessor;
 import com.linecorp.armeria.client.RpcPreprocessor;
 import com.linecorp.armeria.client.retry.RetryingClient;
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.xds.filter.HttpFilterFactory;
 import com.linecorp.armeria.xds.filter.HttpFilterFactoryRegistry;
 

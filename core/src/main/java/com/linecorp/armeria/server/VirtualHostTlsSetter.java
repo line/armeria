@@ -22,8 +22,9 @@ import java.util.function.Consumer;
 
 import javax.net.ssl.KeyManagerFactory;
 
+import org.jspecify.annotations.Nullable;
+
 import com.linecorp.armeria.common.TlsKeyPair;
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.TlsEngineType;
 import com.linecorp.armeria.server.ServerTlsSpec.ServerTlsSpecBuilder;
 

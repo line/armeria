@@ -16,7 +16,8 @@
 
 package com.linecorp.armeria.common.jsonrpc;
 
-import com.linecorp.armeria.common.annotation.Nullable;
+import org.jspecify.annotations.Nullable;
+
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.sse.ServerSentEvent;
 import com.linecorp.armeria.common.stream.ClosedStreamException;

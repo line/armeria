@@ -51,8 +51,9 @@ final class BlogNotFoundException extends IllegalStateException {
 ```java title="GrpcExceptionHandler.java"
 package example.armeria.server.blog.grpc;
 
+import org.jspecify.annotations.Nullable;
+
 import com.linecorp.armeria.common.RequestContext;
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.grpc.GrpcExceptionHandlerFunction;
 
 import io.grpc.Metadata;

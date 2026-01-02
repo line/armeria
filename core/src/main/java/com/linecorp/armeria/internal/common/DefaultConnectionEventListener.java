@@ -18,12 +18,12 @@ package com.linecorp.armeria.internal.common;
 
 import java.net.InetSocketAddress;
 
+import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.linecorp.armeria.client.ConnectionPoolListener;
 import com.linecorp.armeria.common.SessionProtocol;
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.internal.common.util.ChannelUtil;
 
 import io.netty.channel.Channel;
