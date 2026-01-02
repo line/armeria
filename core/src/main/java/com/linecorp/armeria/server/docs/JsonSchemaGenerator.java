@@ -133,6 +133,9 @@ final class JsonSchemaGenerator {
 
     private ObjectNode doGenerate() {
         final ObjectNode root = mapper.createObjectNode();
+        if (serviceSpecification.services().isEmpty()) {
+            throw new IllegalArgumentException("serviceSpecification must contain at least one service.");
+        }
         final ServiceInfo representativeService = serviceSpecification.services().iterator().next();
         // Use a representative service name for the title and ID for now.
         final String serviceName = representativeService.name();
@@ -163,9 +166,8 @@ final class JsonSchemaGenerator {
         final ObjectNode methodsNode = mapper.createObjectNode();
         for (final ServiceInfo svc : serviceSpecification.services()) {
             for (final MethodInfo m : svc.methods()) {
-                // To avoid potential name collision, we can use a more unique key like method
-                // id.
-                // For now, using method name as requested.
+                // To avoid potential name collision, we can use a more unique key like
+                // method id.
                 methodsNode.set(m.name(), generateMethodSchema(m));
             }
         }
