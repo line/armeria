@@ -74,7 +74,7 @@ public final class DiscriminatorInfo {
      * The keys are the values that appear in the {@link #propertyName()} field, and
      * the values are
      * the schema definitions to use for that value (e.g.,
-     * {@code "#/definitions/Cat"}).
+     * {@code "#/$defs/models/Cat"}).
      */
     @JsonProperty
     public Map<String, String> mapping() {

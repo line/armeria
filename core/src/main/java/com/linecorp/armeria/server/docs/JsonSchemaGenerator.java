@@ -24,9 +24,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
@@ -41,7 +38,6 @@ import com.linecorp.armeria.internal.common.JacksonUtil;
  */
 final class JsonSchemaGenerator {
 
-    private static final Logger logger = LoggerFactory.getLogger(JsonSchemaGenerator.class);
     private static final ObjectMapper mapper = JacksonUtil.newDefaultObjectMapper();
 
     private final ServiceSpecification serviceSpecification;
@@ -201,10 +197,7 @@ final class JsonSchemaGenerator {
                 if (!discriminator.mapping().isEmpty()) {
                     final ObjectNode mapping = disc.putObject("mapping");
                     // Update mapping paths
-                    discriminator.mapping().forEach((key, value) -> {
-                        final String newPath = value.replace("#/definitions/", "#/$defs/models/");
-                        mapping.put(key, newPath);
-                    });
+                    discriminator.mapping().forEach(mapping::put);
                 }
             }
             return schemaNode;

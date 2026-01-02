@@ -44,22 +44,26 @@ import com.linecorp.armeria.server.docs.StructInfo;
 import com.linecorp.armeria.server.docs.TypeSignature;
 
 /**
- * A {@link DescriptiveTypeInfoProvider} that provides {@link DescriptiveTypeInfo} for a polymorphic
- * type by inspecting Jackson annotations such as {@link JsonTypeInfo} and {@link JsonSubTypes}.
+ * A {@link DescriptiveTypeInfoProvider} that provides
+ * {@link DescriptiveTypeInfo} for a polymorphic
+ * type by inspecting Jackson annotations such as {@link JsonTypeInfo} and
+ * {@link JsonSubTypes}.
  */
 public final class JacksonPolymorphismTypeInfoProvider implements DescriptiveTypeInfoProvider {
 
     private static final ObjectMapper mapper = JacksonUtil.newDefaultObjectMapper();
 
     /**
-     * Creates a new {@link StructInfo} for the specified {@code typeDescriptor} if it is a polymorphic
+     * Creates a new {@link StructInfo} for the specified {@code typeDescriptor} if
+     * it is a polymorphic
      * base type annotated with {@link JsonTypeInfo} and {@link JsonSubTypes}.
      * The generated {@link StructInfo} will contain {@link StructInfo#oneOf()} and
      * {@link StructInfo#discriminator()} metadata.
      *
      * @param typeDescriptor the {@link Class} to be inspected.
-     * @return a new {@link StructInfo} with polymorphism metadata, or {@code null} if the
-     *     {@code typeDescriptor} is not a supported polymorphic type.
+     * @return a new {@link StructInfo} with polymorphism metadata, or {@code null}
+     *         if the
+     *         {@code typeDescriptor} is not a supported polymorphic type.
      */
     @Override
     @Nullable
@@ -74,7 +78,6 @@ public final class JacksonPolymorphismTypeInfoProvider implements DescriptiveTyp
         final JsonSubTypes jsonSubTypes = clazz.getAnnotation(JsonSubTypes.class);
 
         if (jsonTypeInfo == null || jsonSubTypes == null) {
-
             return null;
         }
 
@@ -92,32 +95,31 @@ public final class JacksonPolymorphismTypeInfoProvider implements DescriptiveTyp
             final Class<?> subClass = subType.value();
             final String key = isNullOrEmpty(subType.name()) ? subClass.getSimpleName() : subType.name();
             final String schemaName = TypeSignature.ofStruct(subClass).name();
-            mapping.put(key, "#/definitions/" + schemaName);
+            mapping.put(key, "#/$defs/models/" + schemaName);
         });
 
         final DiscriminatorInfo discriminator = DiscriminatorInfo.of(propertyName, mapping);
 
-        final List<TypeSignature> oneOf =
-                Arrays.stream(jsonSubTypes.value())
-                      .map(subType -> TypeSignature.ofStruct(subType.value()))
-                      .collect(toImmutableList());
+        final List<TypeSignature> oneOf = Arrays.stream(jsonSubTypes.value())
+                .map(subType -> TypeSignature.ofStruct(subType.value()))
+                .collect(toImmutableList());
 
         final JavaType javaType = mapper.constructType(clazz);
         final BeanDescription description = mapper.getSerializationConfig().introspect(javaType);
         final List<BeanPropertyDefinition> properties = description.findProperties();
 
         final List<FieldInfo> fields = properties.stream()
-                                                 .map(prop -> FieldInfo.of(prop.getName(),
-                                                                           toTypeSignature(
-                                                                                   prop.getPrimaryType())))
-                                                 .collect(toImmutableList());
+                .map(prop -> FieldInfo.of(prop.getName(),
+                        toTypeSignature(
+                                prop.getPrimaryType())))
+                .collect(toImmutableList());
 
         final Description classDescription = clazz.getAnnotation(Description.class);
 
-        final DescriptionInfo descriptionInfo =
-                classDescription == null ? DescriptionInfo.empty() : DescriptionInfo.from(classDescription);
+        final DescriptionInfo descriptionInfo = classDescription == null ? DescriptionInfo.empty()
+                : DescriptionInfo.from(classDescription);
 
         return new StructInfo(clazz.getName(), null, fields,
-                              descriptionInfo, oneOf, discriminator);
+                descriptionInfo, oneOf, discriminator);
     }
 }
