@@ -17,9 +17,10 @@
 /**
  * Provides classes for detecting outliers.
  */
-@NonNullByDefault
+@NullMarked
 @UnstableApi
 package com.linecorp.armeria.common.outlier;
 
-import com.linecorp.armeria.common.annotation.NonNullByDefault;
+import org.jspecify.annotations.NullMarked;
+
 import com.linecorp.armeria.common.annotation.UnstableApi;

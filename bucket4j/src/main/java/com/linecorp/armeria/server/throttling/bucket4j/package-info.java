@@ -20,8 +20,9 @@
  * and <a href="https://github.com/vladimir-bukhtoyarov/bucket4j">Bucket4j</a> library.
  */
 @UnstableApi
-@NonNullByDefault
+@NullMarked
 package com.linecorp.armeria.server.throttling.bucket4j;
 
-import com.linecorp.armeria.common.annotation.NonNullByDefault;
+import org.jspecify.annotations.NullMarked;
+
 import com.linecorp.armeria.common.annotation.UnstableApi;

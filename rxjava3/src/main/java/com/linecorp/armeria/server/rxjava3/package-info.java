@@ -20,7 +20,7 @@
  * {@link com.linecorp.armeria.common.HttpResponse} when the {@link io.reactivex.rxjava3.core.ObservableSource}
  * is returned by an annotated HTTP service.
  */
-@NonNullByDefault
+@NullMarked
 package com.linecorp.armeria.server.rxjava3;
 
-import com.linecorp.armeria.common.annotation.NonNullByDefault;
+import org.jspecify.annotations.NullMarked;

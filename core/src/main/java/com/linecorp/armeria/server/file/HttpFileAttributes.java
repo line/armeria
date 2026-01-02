@@ -20,9 +20,9 @@ import static com.google.common.base.Preconditions.checkArgument;
 import java.util.Date;
 import java.util.concurrent.Executor;
 
-import com.google.common.base.MoreObjects;
+import org.jspecify.annotations.Nullable;
 
-import com.linecorp.armeria.common.annotation.Nullable;
+import com.google.common.base.MoreObjects;
 
 import io.netty.handler.codec.DateFormatter;
 

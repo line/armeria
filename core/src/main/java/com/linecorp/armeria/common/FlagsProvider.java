@@ -29,6 +29,8 @@ import java.util.function.Predicate;
 import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLException;
 
+import org.jspecify.annotations.Nullable;
+
 import com.github.benmanes.caffeine.cache.CaffeineSpec;
 
 import com.linecorp.armeria.client.ClientBuilder;
@@ -38,7 +40,6 @@ import com.linecorp.armeria.client.ResponseTimeoutMode;
 import com.linecorp.armeria.client.retry.Backoff;
 import com.linecorp.armeria.client.retry.RetryingClient;
 import com.linecorp.armeria.client.retry.RetryingRpcClient;
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.multipart.MultipartFilenameDecodingMode;
 import com.linecorp.armeria.common.util.Exceptions;

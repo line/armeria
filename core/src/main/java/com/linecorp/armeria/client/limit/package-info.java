@@ -16,7 +16,7 @@
 /**
  * Limits the number of executed {@link com.linecorp.armeria.common.Request}s.
  */
-@NonNullByDefault
+@NullMarked
 package com.linecorp.armeria.client.limit;
 
-import com.linecorp.armeria.common.annotation.NonNullByDefault;
+import org.jspecify.annotations.NullMarked;

@@ -35,11 +35,12 @@ import java.lang.reflect.Modifier;
 import java.util.BitSet;
 import java.util.Map;
 
+import org.jspecify.annotations.Nullable;
+
 import com.google.common.base.Ascii;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.math.IntMath;
 
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 
 import io.netty.util.AsciiString;
@@ -71,8 +72,8 @@ public final class HttpHeaderNames {
     private static final String[] PROHIBITED_NAME_CHAR_NAMES;
     private static final byte LAST_PROHIBITED_NAME_CHAR;
 
-    @Nullable
-    private static ImmutableMap.Builder<AsciiString, String> inverseMapBuilder = ImmutableMap.builder();
+    private static ImmutableMap.@Nullable Builder<AsciiString, String> inverseMapBuilder =
+            ImmutableMap.builder();
 
     static {
         PROHIBITED_NAME_CHARS = new BitSet();

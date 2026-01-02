@@ -18,10 +18,11 @@ package com.linecorp.armeria.server.websocket;
 
 import static java.util.Objects.requireNonNull;
 
+import org.jspecify.annotations.Nullable;
+
 import com.google.common.base.MoreObjects;
 
 import com.linecorp.armeria.common.HttpResponse;
-import com.linecorp.armeria.common.annotation.Nullable;
 
 /**
  * The result of a WebSocket upgrade.

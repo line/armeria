@@ -17,7 +17,7 @@
  * <a href="https://github.com/Netflix/eureka/">Eureka</a>-based
  * {@link com.linecorp.armeria.client.endpoint.EndpointGroup} for automatic service discovery.
  */
-@NonNullByDefault
+@NullMarked
 package com.linecorp.armeria.client.eureka;
 
-import com.linecorp.armeria.common.annotation.NonNullByDefault;
+import org.jspecify.annotations.NullMarked;

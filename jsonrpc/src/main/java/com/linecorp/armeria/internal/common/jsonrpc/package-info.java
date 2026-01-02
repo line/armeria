@@ -17,7 +17,7 @@
 /**
  * Internal classes for JSON-RPC implementation.
  */
-@NonNullByDefault
+@NullMarked
 package com.linecorp.armeria.internal.common.jsonrpc;
 
-import com.linecorp.armeria.common.annotation.NonNullByDefault;
+import org.jspecify.annotations.NullMarked;

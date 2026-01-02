@@ -23,9 +23,10 @@ import java.util.function.Consumer;
 
 import javax.net.ssl.KeyManagerFactory;
 
+import org.jspecify.annotations.Nullable;
+
 import com.linecorp.armeria.common.AbstractTlsSpecBuilder;
 import com.linecorp.armeria.common.SessionProtocol;
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.internal.common.util.SslContextUtil;
 

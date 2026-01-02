@@ -18,7 +18,7 @@ package com.linecorp.armeria.xds;
 
 import static com.linecorp.armeria.xds.XdsType.ENDPOINT;
 
-import com.linecorp.armeria.common.annotation.Nullable;
+import org.jspecify.annotations.Nullable;
 
 import io.envoyproxy.envoy.config.core.v3.ConfigSource;
 

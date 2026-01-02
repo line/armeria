@@ -23,10 +23,11 @@ import static java.util.Objects.requireNonNull;
 
 import java.util.Map;
 
+import org.jspecify.annotations.Nullable;
+
 import com.google.common.collect.ImmutableMap;
 
 import com.linecorp.armeria.common.SessionProtocol;
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.eureka.DataCenterInfo;
 import com.linecorp.armeria.common.eureka.InstanceInfo;
 import com.linecorp.armeria.common.eureka.InstanceInfo.InstanceStatus;

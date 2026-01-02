@@ -59,6 +59,7 @@ import java.util.concurrent.locks.Lock;
 
 import javax.net.ssl.SSLSession;
 
+import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -80,7 +81,6 @@ import com.linecorp.armeria.common.RpcResponse;
 import com.linecorp.armeria.common.Scheme;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.EventLoopCheckingFuture;
 import com.linecorp.armeria.common.util.SystemInfo;
 import com.linecorp.armeria.common.util.UnmodifiableFuture;
@@ -496,8 +496,7 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
         }
     }
 
-    @Nullable
-    private RequestLogFuture[] removeSatisfiedFutures(List<RequestLogFuture> pendingFutures) {
+    private RequestLogFuture @Nullable [] removeSatisfiedFutures(List<RequestLogFuture> pendingFutures) {
         if (pendingFutures.isEmpty()) {
             return null;
         }

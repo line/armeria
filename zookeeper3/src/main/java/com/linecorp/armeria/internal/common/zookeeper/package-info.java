@@ -16,7 +16,7 @@
 /**
  * <a href="https://zookeeper.apache.org/">ZooKeeper</a>-related internal common classes.
  */
-@NonNullByDefault
+@NullMarked
 package com.linecorp.armeria.internal.common.zookeeper;
 
-import com.linecorp.armeria.common.annotation.NonNullByDefault;
+import org.jspecify.annotations.NullMarked;

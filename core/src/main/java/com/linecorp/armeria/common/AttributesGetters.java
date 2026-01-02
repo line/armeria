@@ -19,7 +19,8 @@ package com.linecorp.armeria.common;
 import java.util.Iterator;
 import java.util.Map.Entry;
 
-import com.linecorp.armeria.common.annotation.Nullable;
+import org.jspecify.annotations.Nullable;
+
 import com.linecorp.armeria.common.annotation.UnstableApi;
 
 import io.netty.util.AttributeKey;

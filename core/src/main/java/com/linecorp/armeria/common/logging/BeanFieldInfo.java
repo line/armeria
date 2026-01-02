@@ -18,7 +18,8 @@ package com.linecorp.armeria.common.logging;
 
 import java.lang.annotation.Annotation;
 
-import com.linecorp.armeria.common.annotation.Nullable;
+import org.jspecify.annotations.Nullable;
+
 import com.linecorp.armeria.common.annotation.UnstableApi;
 
 /**

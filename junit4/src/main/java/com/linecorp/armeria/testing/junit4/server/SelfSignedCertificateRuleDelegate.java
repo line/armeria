@@ -28,8 +28,9 @@ import java.time.Instant;
 import java.time.temporal.TemporalAccessor;
 import java.util.Date;
 
+import org.jspecify.annotations.Nullable;
+
 import com.linecorp.armeria.common.TlsKeyPair;
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.internal.common.util.SelfSignedCertificate;
 
 /**

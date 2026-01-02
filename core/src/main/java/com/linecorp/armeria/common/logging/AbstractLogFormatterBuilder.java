@@ -21,9 +21,10 @@ import static java.util.Objects.requireNonNull;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 
+import org.jspecify.annotations.Nullable;
+
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.RequestContext;
-import com.linecorp.armeria.common.annotation.Nullable;
 
 /**
  * A skeletal builder implementation for {@link LogFormatter}.

@@ -19,7 +19,8 @@ package com.linecorp.armeria.xds;
 import static com.google.common.base.Strings.isNullOrEmpty;
 import static com.linecorp.armeria.xds.XdsType.CLUSTER;
 
-import com.linecorp.armeria.common.annotation.Nullable;
+import org.jspecify.annotations.Nullable;
+
 import com.linecorp.armeria.xds.client.endpoint.UpdatableXdsLoadBalancer;
 
 import io.envoyproxy.envoy.config.cluster.v3.Cluster;

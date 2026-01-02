@@ -19,7 +19,7 @@ package com.linecorp.armeria.internal.server.annotation;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 
-import com.linecorp.armeria.common.annotation.Nullable;
+import org.jspecify.annotations.Nullable;
 
 import scala.concurrent.ExecutionContext;
 import scala.util.Failure;

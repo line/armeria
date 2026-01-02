@@ -27,9 +27,10 @@ import java.util.concurrent.ThreadLocalRandom;
 
 import javax.net.ssl.SSLSession;
 
+import org.jspecify.annotations.Nullable;
+
 import com.linecorp.armeria.client.Client;
 import com.linecorp.armeria.client.ClientRequestContextBuilder;
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.metric.NoopMeterRegistry;
 import com.linecorp.armeria.internal.common.DefaultRequestTarget;
 import com.linecorp.armeria.server.Service;

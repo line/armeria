@@ -39,6 +39,7 @@ import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.stream.StreamSupport;
 
+import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -47,7 +48,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
 
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.internal.server.RouteDecoratingService;
 import com.linecorp.armeria.server.RoutingTrie.Node;
 import com.linecorp.armeria.server.RoutingTrie.NodeProcessor;
@@ -414,8 +414,7 @@ final class Routers {
 
         private final class RouteCandidateCollectingNodeProcessor implements NodeProcessor<V> {
             private final RoutingContext routingCtx;
-            @Nullable
-            private ImmutableList.Builder<Routed<V>> routeCollector;
+            private ImmutableList.@Nullable Builder<Routed<V>> routeCollector;
 
             private RouteCandidateCollectingNodeProcessor(RoutingContext routingCtx) {
                 this.routingCtx = routingCtx;

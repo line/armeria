@@ -20,6 +20,8 @@ import static java.util.Objects.requireNonNull;
 
 import java.util.function.Function;
 
+import org.jspecify.annotations.Nullable;
+
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.client.SimpleDecoratingHttpClient;
@@ -27,7 +29,6 @@ import com.linecorp.armeria.client.observation.HttpClientObservationDocumentatio
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.RequestHeadersBuilder;
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.internal.common.RequestContextExtension;
 import com.linecorp.armeria.server.observation.ObservationService;

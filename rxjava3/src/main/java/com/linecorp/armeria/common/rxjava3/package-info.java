@@ -17,7 +17,7 @@
 /**
  * RxJava3 plugins to help keep {@link com.linecorp.armeria.common.RequestContext} during RxJava3 Operations.
  */
-@NonNullByDefault
+@NullMarked
 package com.linecorp.armeria.common.rxjava3;
 
-import com.linecorp.armeria.common.annotation.NonNullByDefault;
+import org.jspecify.annotations.NullMarked;

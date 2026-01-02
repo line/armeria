@@ -23,12 +23,13 @@ import static java.util.Objects.requireNonNull;
 import java.net.URI;
 import java.time.Duration;
 
+import org.jspecify.annotations.Nullable;
+
 import com.yahoo.athenz.zpe.ZpeClient;
 import com.yahoo.athenz.zpe.ZpeConsts;
 import com.yahoo.athenz.zpe.pkey.PublicKeyStore;
 
 import com.linecorp.armeria.client.athenz.ZtsBaseClient;
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.metric.MeterIdPrefix;
 

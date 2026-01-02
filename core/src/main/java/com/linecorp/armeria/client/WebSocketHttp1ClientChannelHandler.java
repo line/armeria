@@ -20,6 +20,7 @@ import static com.linecorp.armeria.client.AbstractHttpResponseDecoder.contentToo
 import static com.linecorp.armeria.internal.client.ClosedStreamExceptionUtil.newClosedSessionException;
 import static io.netty.handler.codec.http.LastHttpContent.EMPTY_LAST_CONTENT;
 
+import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -29,7 +30,6 @@ import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.ProtocolViolationException;
 import com.linecorp.armeria.common.ResponseHeaders;
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.internal.client.DecodedHttpResponse;
 import com.linecorp.armeria.internal.client.HttpSession;
 import com.linecorp.armeria.internal.common.ArmeriaHttpUtil;

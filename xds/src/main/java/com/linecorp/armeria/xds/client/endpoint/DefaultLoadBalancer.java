@@ -22,6 +22,8 @@ import static com.linecorp.armeria.xds.client.endpoint.XdsRandom.RandomHint.ROUT
 
 import java.util.Map;
 
+import org.jspecify.annotations.Nullable;
+
 import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableMap;
 import com.google.protobuf.Struct;
@@ -29,7 +31,6 @@ import com.google.protobuf.Struct;
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.xds.client.endpoint.DefaultLbStateFactory.DefaultLbState;
 import com.linecorp.armeria.xds.client.endpoint.LocalityRoutingStateFactory.LocalityRoutingState;
 import com.linecorp.armeria.xds.client.endpoint.LocalityRoutingStateFactory.State;

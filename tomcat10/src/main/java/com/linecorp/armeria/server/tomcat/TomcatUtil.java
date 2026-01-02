@@ -33,8 +33,7 @@ import org.apache.catalina.realm.NullRealm;
 import org.apache.catalina.startup.Constants;
 import org.apache.catalina.startup.Tomcat;
 import org.apache.catalina.startup.Tomcat.DefaultWebXmlListener;
-
-import com.linecorp.armeria.common.annotation.Nullable;
+import org.jspecify.annotations.Nullable;
 
 final class TomcatUtil {
 

@@ -16,10 +16,11 @@
 
 package com.linecorp.armeria.xds.client.endpoint;
 
+import org.jspecify.annotations.Nullable;
+
 import com.linecorp.armeria.client.HttpPreClient;
 import com.linecorp.armeria.client.PreClientRequestContext;
 import com.linecorp.armeria.client.RpcPreClient;
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.xds.ListenerSnapshot;
 import com.linecorp.armeria.xds.RouteEntry;
 import com.linecorp.armeria.xds.RouteSnapshot;

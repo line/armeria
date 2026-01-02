@@ -17,11 +17,11 @@
 package com.linecorp.armeria.server.grpc;
 
 import org.curioswitch.common.protobuf.json.MessageMarshaller;
+import org.jspecify.annotations.Nullable;
 
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.MediaType;
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 import io.grpc.Status;

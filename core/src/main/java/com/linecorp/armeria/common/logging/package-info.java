@@ -24,7 +24,7 @@
  *   <li>{@link com.linecorp.armeria.common.logging.RequestLogBuilder}</li>
  * </ul>
  */
-@NonNullByDefault
+@NullMarked
 package com.linecorp.armeria.common.logging;
 
-import com.linecorp.armeria.common.annotation.NonNullByDefault;
+import org.jspecify.annotations.NullMarked;

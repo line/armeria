@@ -20,8 +20,7 @@ import static java.util.Objects.requireNonNull;
 
 import org.apache.thrift.transport.TTransport;
 import org.apache.thrift.transport.TTransportException;
-
-import com.linecorp.armeria.common.annotation.Nullable;
+import org.jspecify.annotations.Nullable;
 
 import io.netty.buffer.ByteBuf;
 
@@ -70,9 +69,8 @@ abstract class AbstractTByteBufTransport extends TTransport {
         this.buf.writeBytes(buf, off, len);
     }
 
-    @Nullable
     @Override
-    public byte[] getBuffer() {
+    public byte @Nullable [] getBuffer() {
         final ByteBuf buf = this.buf;
         if (!buf.hasArray())  {
             return null;

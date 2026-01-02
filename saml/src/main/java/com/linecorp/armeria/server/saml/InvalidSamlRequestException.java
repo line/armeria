@@ -15,7 +15,7 @@
  */
 package com.linecorp.armeria.server.saml;
 
-import com.linecorp.armeria.common.annotation.Nullable;
+import org.jspecify.annotations.Nullable;
 
 /**
  * Indicates that a SAML request is not valid.

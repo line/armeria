@@ -22,9 +22,10 @@ import static com.linecorp.armeria.xds.ResourceNodeType.STATIC;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.jspecify.annotations.Nullable;
+
 import com.google.common.base.Strings;
 
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.metric.MeterIdPrefix;
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.xds.client.endpoint.UpdatableXdsLoadBalancer;

@@ -18,7 +18,8 @@ package com.linecorp.armeria.spring;
 import java.util.Optional;
 import java.util.Set;
 
-import com.linecorp.armeria.common.annotation.Nullable;
+import org.jspecify.annotations.Nullable;
+
 import com.linecorp.armeria.server.prometheus.PrometheusExpositionService;
 
 import io.micrometer.core.instrument.MeterRegistry;

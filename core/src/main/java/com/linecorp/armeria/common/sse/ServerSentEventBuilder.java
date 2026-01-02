@@ -19,7 +19,7 @@ import static java.util.Objects.requireNonNull;
 
 import java.time.Duration;
 
-import com.linecorp.armeria.common.annotation.Nullable;
+import org.jspecify.annotations.Nullable;
 
 /**
  * A builder which creates a {@link ServerSentEvent} instance.

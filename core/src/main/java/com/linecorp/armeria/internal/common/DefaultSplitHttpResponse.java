@@ -19,6 +19,7 @@ package com.linecorp.armeria.internal.common;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Predicate;
 
+import org.jspecify.annotations.Nullable;
 import org.reactivestreams.Subscription;
 
 import com.linecorp.armeria.common.HttpObject;
@@ -26,7 +27,6 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.SplitHttpResponse;
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.stream.AbortedStreamException;
 import com.linecorp.armeria.common.stream.CancelledSubscriptionException;
 

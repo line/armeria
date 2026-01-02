@@ -20,7 +20,7 @@ import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.Map;
 
-import com.linecorp.armeria.common.annotation.Nullable;
+import org.jspecify.annotations.Nullable;
 
 final class XdsResourceParserUtil {
 

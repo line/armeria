@@ -30,12 +30,13 @@ import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import org.jspecify.annotations.Nullable;
+
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.ResponseHeaders;
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.auth.oauth2.MockOAuth2AccessToken;
 
 public abstract class MockOAuth2Service {
@@ -53,8 +54,7 @@ public abstract class MockOAuth2Service {
             "\\s*(?i)basic\\s+(?<credential>\\S+)\\s*");
     private static final String WWW_AUTHENTICATE_RESPONSE = "Basic realm=\"%s\"";
 
-    @Nullable
-    private static Map.Entry<String, String> decodeClientCredentials(String clientCredential) {
+    private static Map.@Nullable Entry<String, String> decodeClientCredentials(String clientCredential) {
         final String decodedCredential = new String(Base64.getDecoder().decode(clientCredential),
                                                     StandardCharsets.UTF_8);
         final Matcher matcher = CREDENTIALS_PATTERN.matcher(decodedCredential);
@@ -136,7 +136,7 @@ public abstract class MockOAuth2Service {
         return clientSecret.equals(authorizedClients.get(clientId));
     }
 
-    protected boolean isAuthorizedClient(@Nullable Map.Entry<String, String> clientCredential) {
+    protected boolean isAuthorizedClient(Map.@Nullable Entry<String, String> clientCredential) {
         return (clientCredential != null) &&
                isAuthorizedClient(clientCredential.getKey(), clientCredential.getValue());
     }

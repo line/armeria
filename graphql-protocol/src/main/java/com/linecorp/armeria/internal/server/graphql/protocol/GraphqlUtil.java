@@ -18,10 +18,11 @@ package com.linecorp.armeria.internal.server.graphql.protocol;
 
 import java.util.List;
 
+import org.jspecify.annotations.Nullable;
+
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.RequestHeaders;
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.server.graphql.protocol.AbstractGraphqlService;
 
 /**

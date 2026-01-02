@@ -22,12 +22,13 @@ import java.util.Map;
 
 import javax.annotation.Nonnull;
 
+import org.jspecify.annotations.Nullable;
+
 import com.google.common.collect.ImmutableMap;
 
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.internal.server.graphql.protocol.GraphqlUtil;
 import com.linecorp.armeria.server.ServiceRequestContext;
 

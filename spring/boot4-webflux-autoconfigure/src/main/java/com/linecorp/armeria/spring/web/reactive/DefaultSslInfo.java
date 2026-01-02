@@ -37,10 +37,9 @@ import java.util.List;
 
 import javax.net.ssl.SSLSession;
 
+import org.jspecify.annotations.Nullable;
 import org.springframework.http.server.reactive.SslInfo;
 import org.springframework.util.Assert;
-
-import com.linecorp.armeria.common.annotation.Nullable;
 
 /**
  * Default implementation of {@link SslInfo}.
@@ -55,8 +54,7 @@ final class DefaultSslInfo implements SslInfo {
     @Nullable
     private final String sessionId;
 
-    @Nullable
-    private final X509Certificate[] peerCertificates;
+    private final X509Certificate @Nullable [] peerCertificates;
 
     DefaultSslInfo(SSLSession session) {
         Assert.notNull(session, "SSLSession is required");
@@ -71,8 +69,7 @@ final class DefaultSslInfo implements SslInfo {
     }
 
     @Override
-    @Nullable
-    public X509Certificate[] getPeerCertificates() {
+    public X509Certificate @Nullable [] getPeerCertificates() {
         return peerCertificates;
     }
 
@@ -97,8 +94,7 @@ final class DefaultSslInfo implements SslInfo {
         return sb.toString();
     }
 
-    @Nullable
-    private static X509Certificate[] initCertificates(SSLSession session) {
+    private static X509Certificate @Nullable [] initCertificates(SSLSession session) {
         final Certificate[] certificates;
         try {
             certificates = session.getPeerCertificates();

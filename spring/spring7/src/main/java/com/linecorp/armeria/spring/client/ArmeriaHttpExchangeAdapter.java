@@ -22,6 +22,7 @@ import static java.util.Objects.requireNonNull;
 import java.net.URI;
 import java.util.Map;
 
+import org.jspecify.annotations.Nullable;
 import org.reactivestreams.Publisher;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpHeaders;
@@ -49,7 +50,6 @@ import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.SplitHttpResponse;
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.spring.internal.client.ArmeriaClientHttpRequest;
 import com.linecorp.armeria.spring.internal.client.ArmeriaClientHttpResponse;

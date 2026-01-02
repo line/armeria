@@ -22,6 +22,7 @@ import static com.linecorp.armeria.internal.server.annotation.ClassUtil.unwrapUn
 import java.lang.reflect.Type;
 import java.util.stream.Stream;
 
+import org.jspecify.annotations.Nullable;
 import org.reactivestreams.Publisher;
 
 import com.linecorp.armeria.common.HttpData;
@@ -29,7 +30,6 @@ import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.ResponseHeaders;
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 /**

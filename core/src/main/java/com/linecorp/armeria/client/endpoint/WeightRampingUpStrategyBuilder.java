@@ -21,9 +21,10 @@ import java.time.Duration;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
+import org.jspecify.annotations.Nullable;
+
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.common.CommonPools;
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.loadbalancer.AbstractRampingUpLoadBalancerBuilder;
 import com.linecorp.armeria.common.loadbalancer.WeightTransition;

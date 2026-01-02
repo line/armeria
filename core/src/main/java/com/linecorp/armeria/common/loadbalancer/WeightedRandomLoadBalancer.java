@@ -25,12 +25,13 @@ import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.ToIntFunction;
 
+import org.jspecify.annotations.Nullable;
+
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.MoreObjects;
 import com.google.common.collect.Streams;
 import com.google.errorprone.annotations.concurrent.GuardedBy;
 
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.internal.common.loadbalancer.WeightedObject;
 import com.linecorp.armeria.internal.common.util.ReentrantShortLock;
 

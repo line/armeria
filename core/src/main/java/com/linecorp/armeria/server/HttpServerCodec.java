@@ -38,7 +38,7 @@ import java.util.ArrayDeque;
 import java.util.List;
 import java.util.Queue;
 
-import com.linecorp.armeria.common.annotation.Nullable;
+import org.jspecify.annotations.Nullable;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;

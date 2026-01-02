@@ -17,7 +17,7 @@
 /**
  * A mock server for use when testing clients.
  */
-@NonNullByDefault
+@NullMarked
 package com.linecorp.armeria.testing.junit5.server.mock;
 
-import com.linecorp.armeria.common.annotation.NonNullByDefault;
+import org.jspecify.annotations.NullMarked;

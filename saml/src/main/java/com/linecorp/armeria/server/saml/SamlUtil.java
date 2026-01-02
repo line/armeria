@@ -17,10 +17,9 @@ package com.linecorp.armeria.server.saml;
 
 import java.util.function.Predicate;
 
+import org.jspecify.annotations.Nullable;
 import org.opensaml.saml.saml2.core.NameID;
 import org.opensaml.saml.saml2.core.Response;
-
-import com.linecorp.armeria.common.annotation.Nullable;
 
 /**
  * A utility class which helps a user to easily handle a SAML message.

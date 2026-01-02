@@ -38,10 +38,9 @@ import org.bouncycastle.jcajce.provider.asymmetric.X509;
 import org.bouncycastle.jcajce.provider.config.ConfigurableProvider;
 import org.bouncycastle.jcajce.provider.util.AsymmetricKeyInfoConverter;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
+import org.jspecify.annotations.Nullable;
 
 import com.google.common.annotations.VisibleForTesting;
-
-import com.linecorp.armeria.common.annotation.Nullable;
 
 /**
  * A downsized version of {@link BouncyCastleProvider} which provides only RSA/DSA/EC {@link KeyFactorySpi}s

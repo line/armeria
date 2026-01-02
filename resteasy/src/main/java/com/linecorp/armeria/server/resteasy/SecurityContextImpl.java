@@ -23,10 +23,10 @@ import java.security.Principal;
 import javax.ws.rs.core.SecurityContext;
 
 import org.jboss.resteasy.plugins.server.embedded.SecurityDomain;
+import org.jspecify.annotations.Nullable;
 
 import com.google.common.base.MoreObjects;
 
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 
 /**

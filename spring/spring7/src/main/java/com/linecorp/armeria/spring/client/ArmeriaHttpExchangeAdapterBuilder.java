@@ -19,11 +19,11 @@ package com.linecorp.armeria.spring.client;
 
 import static java.util.Objects.requireNonNull;
 
+import org.jspecify.annotations.Nullable;
 import org.springframework.web.reactive.function.client.ExchangeStrategies;
 
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.HttpStatus;
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 
 /**

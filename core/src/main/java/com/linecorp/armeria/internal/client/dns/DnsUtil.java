@@ -21,6 +21,7 @@ import java.lang.reflect.Method;
 import java.net.UnknownHostException;
 import java.util.List;
 
+import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -29,7 +30,6 @@ import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.client.DnsTimeoutException;
 import com.linecorp.armeria.common.CommonPools;
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.TransportType;
 
 import io.netty.buffer.ByteBufUtil;

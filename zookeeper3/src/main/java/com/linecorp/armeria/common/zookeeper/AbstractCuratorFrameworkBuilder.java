@@ -28,11 +28,11 @@ import org.apache.curator.framework.CuratorFrameworkFactory;
 import org.apache.curator.framework.CuratorFrameworkFactory.Builder;
 import org.apache.curator.retry.ExponentialBackoffRetry;
 import org.apache.zookeeper.common.PathUtils;
+import org.jspecify.annotations.Nullable;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.primitives.Ints;
 
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 
 /**
@@ -50,10 +50,8 @@ public class AbstractCuratorFrameworkBuilder<SELF extends AbstractCuratorFramewo
     private final CuratorFramework client;
     private final String znodePath;
 
-    @Nullable
-    private final CuratorFrameworkFactory.Builder clientBuilder;
-    @Nullable
-    private final ImmutableList.Builder<Consumer<? super Builder>> customizers;
+    private final CuratorFrameworkFactory.@Nullable Builder clientBuilder;
+    private final ImmutableList.@Nullable Builder<Consumer<? super Builder>> customizers;
 
     /**
      * Creates a new instance with the specified {@code zkConnectionStr}.

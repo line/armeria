@@ -17,7 +17,7 @@
 /**
  * Thrift-related common classes.
  */
-@NonNullByDefault
+@NullMarked
 package com.linecorp.armeria.common.thrift;
 
-import com.linecorp.armeria.common.annotation.NonNullByDefault;
+import org.jspecify.annotations.NullMarked;

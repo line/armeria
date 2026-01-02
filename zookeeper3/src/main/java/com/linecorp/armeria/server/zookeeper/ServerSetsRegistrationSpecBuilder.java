@@ -21,11 +21,11 @@ import static java.util.Objects.requireNonNull;
 import java.util.Map;
 
 import org.apache.zookeeper.CreateMode;
+import org.jspecify.annotations.Nullable;
 
 import com.google.common.collect.ImmutableMap;
 
 import com.linecorp.armeria.client.Endpoint;
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.zookeeper.ServerSetsInstance;
 
 /**

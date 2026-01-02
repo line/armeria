@@ -17,7 +17,7 @@
 /**
  * <a href="https://projects.spring.io/spring-boot/">Spring Boot</a> integration based on reactive server stack.
  */
-@NonNullByDefault
+@NullMarked
 package com.linecorp.armeria.spring.web.reactive;
 
-import com.linecorp.armeria.common.annotation.NonNullByDefault;
+import org.jspecify.annotations.NullMarked;

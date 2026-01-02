@@ -16,8 +16,9 @@
 
 package com.linecorp.armeria.common.logging;
 
+import org.jspecify.annotations.Nullable;
+
 import com.linecorp.armeria.common.HttpData;
-import com.linecorp.armeria.common.annotation.Nullable;
 
 /**
  * Produces the preview of {@link RequestLog}.

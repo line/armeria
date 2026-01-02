@@ -17,8 +17,9 @@ package com.linecorp.armeria.server.annotation;
 
 import static java.util.Objects.requireNonNull;
 
+import org.jspecify.annotations.Nullable;
+
 import com.linecorp.armeria.common.HttpHeaders;
-import com.linecorp.armeria.common.annotation.Nullable;
 
 /**
  * A default {@link HttpResult} implementation.

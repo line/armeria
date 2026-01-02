@@ -23,13 +23,14 @@ import static java.util.Objects.requireNonNull;
 import java.time.Duration;
 import java.util.function.Predicate;
 
+import org.jspecify.annotations.Nullable;
+
 import com.google.common.base.Strings;
 
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.endpoint.AbstractDynamicEndpointGroupBuilder;
 import com.linecorp.armeria.client.endpoint.EndpointSelectionStrategy;
 import com.linecorp.armeria.common.Flags;
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 
 import io.fabric8.kubernetes.api.model.NodeAddress;

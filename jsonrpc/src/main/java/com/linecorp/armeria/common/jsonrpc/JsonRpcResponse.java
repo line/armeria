@@ -19,6 +19,8 @@ import static com.google.common.base.Preconditions.checkArgument;
 import static com.linecorp.armeria.common.jsonrpc.JsonRpcMessageUtil.objectMapper;
 import static java.util.Objects.requireNonNull;
 
+import org.jspecify.annotations.Nullable;
+
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
@@ -26,7 +28,6 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.server.jsonrpc.JsonRpcParseException;
 import com.linecorp.armeria.server.jsonrpc.JsonRpcService;

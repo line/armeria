@@ -29,6 +29,7 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 
 import org.curioswitch.common.protobuf.json.MessageMarshaller;
+import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -41,7 +42,6 @@ import com.google.protobuf.Message;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.SerializationFormat;
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.grpc.GrpcExceptionHandlerFunction;
 import com.linecorp.armeria.common.grpc.GrpcExceptionHandlerFunctionBuilder;
@@ -118,8 +118,7 @@ public final class GrpcServiceBuilder {
     @Nullable
     private GrpcExceptionHandlerFunction exceptionHandler;
 
-    @Nullable
-    private ImmutableList.Builder<ServerInterceptor> interceptors;
+    private ImmutableList.@Nullable Builder<ServerInterceptor> interceptors;
 
     @Nullable
     private UnframedGrpcErrorHandler unframedGrpcErrorHandler;

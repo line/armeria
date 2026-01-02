@@ -42,13 +42,13 @@ import org.apache.thrift.TException;
 import org.apache.thrift.TFieldIdEnum;
 import org.apache.thrift.TSerializer;
 import org.apache.thrift.meta_data.FieldMetaData;
+import org.jspecify.annotations.Nullable;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 
 import com.linecorp.armeria.common.HttpMethod;
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.thrift.ThriftProtocolFactories;
 import com.linecorp.armeria.internal.common.thrift.ThriftMetadataAccess;
 import com.linecorp.armeria.server.Route;

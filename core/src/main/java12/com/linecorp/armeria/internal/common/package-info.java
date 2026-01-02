@@ -17,7 +17,7 @@
 /**
  * Various classes used internally for JDK 12.
  */
-@NonNullByDefault
+@NullMarked
 package com.linecorp.armeria.internal.common;
 
-import com.linecorp.armeria.common.annotation.NonNullByDefault;
+import org.jspecify.annotations.NullMarked;

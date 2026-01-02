@@ -21,13 +21,12 @@ import static java.util.Objects.requireNonNull;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
+import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.protobuf.Message;
 import com.google.protobuf.util.JsonFormat;
-
-import com.linecorp.armeria.common.annotation.Nullable;
 
 /**
  * A builder for creating a new {@link GrpcJsonMarshaller} that serializes and deserializes a {@link Message}

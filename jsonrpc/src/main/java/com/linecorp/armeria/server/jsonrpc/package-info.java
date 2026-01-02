@@ -18,8 +18,9 @@
 * Server-side classes for <a href="https://www.jsonrpc.org/specification">the JSON-RPC</a>.
 */
 @UnstableApi
-@NonNullByDefault
+@NullMarked
 package com.linecorp.armeria.server.jsonrpc;
 
-import com.linecorp.armeria.common.annotation.NonNullByDefault;
+import org.jspecify.annotations.NullMarked;
+
 import com.linecorp.armeria.common.annotation.UnstableApi;

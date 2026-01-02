@@ -46,6 +46,8 @@ import java.util.function.ToIntFunction;
 import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.TrustManagerFactory;
 
+import org.jspecify.annotations.Nullable;
+
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.MoreObjects;
 import com.google.common.base.MoreObjects.ToStringHelper;
@@ -64,7 +66,6 @@ import com.linecorp.armeria.common.TlsKeyPair;
 import com.linecorp.armeria.common.TlsPeerVerifierFactory;
 import com.linecorp.armeria.common.TlsProvider;
 import com.linecorp.armeria.common.TlsSetters;
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.outlier.OutlierDetection;
 import com.linecorp.armeria.common.util.EventLoopGroups;

@@ -19,8 +19,9 @@
  * <a href="https://www.envoyproxy.io/docs/envoy/latest/api-docs/xds_protocol">v3 gRPC-xDS protocol</a>.
  */
 @UnstableApi
-@NonNullByDefault
+@NullMarked
 package com.linecorp.armeria.xds.validator;
 
-import com.linecorp.armeria.common.annotation.NonNullByDefault;
+import org.jspecify.annotations.NullMarked;
+
 import com.linecorp.armeria.common.annotation.UnstableApi;

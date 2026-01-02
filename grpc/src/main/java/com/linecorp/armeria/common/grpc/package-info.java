@@ -17,7 +17,7 @@
 /**
  * gRPC-related common classes.
  */
-@NonNullByDefault
+@NullMarked
 package com.linecorp.armeria.common.grpc;
 
-import com.linecorp.armeria.common.annotation.NonNullByDefault;
+import org.jspecify.annotations.NullMarked;

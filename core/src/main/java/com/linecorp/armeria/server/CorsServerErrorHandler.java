@@ -19,9 +19,10 @@ package com.linecorp.armeria.server;
 import static com.linecorp.armeria.internal.common.ArmeriaHttpUtil.isCorsPreflightRequest;
 import static com.linecorp.armeria.internal.server.CorsHeaderUtil.isForbiddenOrigin;
 
+import org.jspecify.annotations.Nullable;
+
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.RequestHeaders;
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.internal.server.CorsHeaderUtil;
 import com.linecorp.armeria.server.cors.CorsService;
 

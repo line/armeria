@@ -22,7 +22,7 @@
  * converts an {@link com.linecorp.armeria.common.AggregatedHttpRequest} into
  * a {@link com.google.protobuf.Message}.
  */
-@NonNullByDefault
+@NullMarked
 package com.linecorp.armeria.server.protobuf;
 
-import com.linecorp.armeria.common.annotation.NonNullByDefault;
+import org.jspecify.annotations.NullMarked;

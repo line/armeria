@@ -28,6 +28,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Function;
 
+import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -39,7 +40,6 @@ import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.ResponseHeaders;
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.jsonrpc.JsonRpcError;
 import com.linecorp.armeria.common.jsonrpc.JsonRpcResponse;
@@ -112,8 +112,7 @@ public final class ArmeriaStreamableServerTransportProvider implements McpStream
     @Nullable
     private final KeepAliveScheduler keepAliveScheduler;
 
-    @Nullable
-    private McpStreamableServerSession.Factory sessionFactory;
+    private McpStreamableServerSession.@Nullable Factory sessionFactory;
     private volatile boolean isClosing;
 
     ArmeriaStreamableServerTransportProvider(

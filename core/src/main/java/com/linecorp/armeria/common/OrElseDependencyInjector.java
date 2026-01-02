@@ -15,10 +15,9 @@
  */
 package com.linecorp.armeria.common;
 
+import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import com.linecorp.armeria.common.annotation.Nullable;
 
 final class OrElseDependencyInjector implements DependencyInjector {
 

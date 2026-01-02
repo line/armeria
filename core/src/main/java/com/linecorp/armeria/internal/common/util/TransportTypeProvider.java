@@ -23,9 +23,10 @@ import java.lang.invoke.MethodType;
 import java.util.concurrent.ThreadFactory;
 import java.util.function.BiFunction;
 
+import org.jspecify.annotations.Nullable;
+
 import com.google.common.base.Ascii;
 
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.common.util.SystemInfo;
 import com.linecorp.armeria.common.util.TransportType;

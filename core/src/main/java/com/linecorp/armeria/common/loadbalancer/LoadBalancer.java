@@ -21,11 +21,12 @@ import static java.util.Objects.requireNonNull;
 import java.util.function.ToIntFunction;
 import java.util.function.ToLongFunction;
 
+import org.jspecify.annotations.Nullable;
+
 import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.common.HttpRequest;
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.util.SafeCloseable;
 

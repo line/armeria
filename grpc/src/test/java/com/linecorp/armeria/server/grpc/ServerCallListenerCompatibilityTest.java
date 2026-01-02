@@ -28,6 +28,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
 import java.util.stream.Stream;
 
+import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.extension.ExtensionContext;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -40,7 +41,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.protobuf.ByteString;
 
 import com.linecorp.armeria.client.grpc.GrpcClients;
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.common.util.ReleasableHolder;
 import com.linecorp.armeria.server.Server;

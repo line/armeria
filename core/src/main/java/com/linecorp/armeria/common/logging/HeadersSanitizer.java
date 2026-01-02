@@ -18,12 +18,13 @@ package com.linecorp.armeria.common.logging;
 
 import java.util.function.BiFunction;
 
+import org.jspecify.annotations.Nullable;
+
 import com.fasterxml.jackson.databind.JsonNode;
 
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.RequestContext;
-import com.linecorp.armeria.common.annotation.Nullable;
 
 /**
  * A sanitizer that sanitizes {@link HttpHeaders}.

@@ -21,6 +21,7 @@ import static com.linecorp.armeria.internal.spring.ArmeriaConfigurationNetUtil.m
 import java.net.InetAddress;
 import java.util.List;
 
+import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.SpringApplication;
@@ -29,7 +30,6 @@ import com.google.common.base.MoreObjects;
 import com.google.common.base.Strings;
 
 import com.linecorp.armeria.client.ClientFactory;
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.internal.common.util.PortUtil;
 import com.linecorp.armeria.internal.spring.ArmeriaConfigurationUtil;

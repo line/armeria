@@ -17,7 +17,7 @@
 /**
  * HTTP content decoding client.
  */
-@NonNullByDefault
+@NullMarked
 package com.linecorp.armeria.client.encoding;
 
-import com.linecorp.armeria.common.annotation.NonNullByDefault;
+import org.jspecify.annotations.NullMarked;

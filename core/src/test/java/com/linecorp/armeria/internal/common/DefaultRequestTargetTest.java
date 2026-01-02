@@ -24,6 +24,7 @@ import java.net.URISyntaxException;
 import java.util.Set;
 import java.util.stream.Stream;
 
+import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
@@ -38,7 +39,6 @@ import com.google.common.collect.Maps;
 
 import com.linecorp.armeria.common.QueryParams;
 import com.linecorp.armeria.common.RequestTarget;
-import com.linecorp.armeria.common.annotation.Nullable;
 
 class DefaultRequestTargetTest {
 

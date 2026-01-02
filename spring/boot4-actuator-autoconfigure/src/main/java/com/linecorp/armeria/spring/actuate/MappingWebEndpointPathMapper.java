@@ -34,13 +34,12 @@ package com.linecorp.armeria.spring.actuate;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.jspecify.annotations.Nullable;
 import org.springframework.boot.actuate.endpoint.EndpointId;
 import org.springframework.boot.actuate.endpoint.web.PathMapper;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
 import org.springframework.util.StringUtils;
-
-import com.linecorp.armeria.common.annotation.Nullable;
 
 /**
  * Fork of <a href="https://github.com/spring-projects/spring-boot/blob/e3aac5913ed3caf53b34eb7750138a4ed6839549/spring-boot-project/spring-boot-actuator-autoconfigure/src/main/java/org/springframework/boot/actuate/autoconfigure/endpoint/web/MappingWebEndpointPathMapper.java">MappingWebEndpointPathMapper</a>.

@@ -18,7 +18,7 @@
  * Filters out unhealthy {@link com.linecorp.armeria.client.Endpoint}s from an existing
  * {@link com.linecorp.armeria.client.endpoint.EndpointGroup} by sending health check requests.
  */
-@NonNullByDefault
+@NullMarked
 package com.linecorp.armeria.client.endpoint.healthcheck;
 
-import com.linecorp.armeria.common.annotation.NonNullByDefault;
+import org.jspecify.annotations.NullMarked;

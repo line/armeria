@@ -18,9 +18,10 @@
  * Provides integrations with the
  * <a href="https://www.envoyproxy.io/docs/envoy/latest/api-docs/xds_protocol">v3 gRPC-xDS protocol</a>.
  */
-@NonNullByDefault
+@NullMarked
 @UnstableApi
 package com.linecorp.armeria.xds.api;
 
-import com.linecorp.armeria.common.annotation.NonNullByDefault;
+import org.jspecify.annotations.NullMarked;
+
 import com.linecorp.armeria.common.annotation.UnstableApi;

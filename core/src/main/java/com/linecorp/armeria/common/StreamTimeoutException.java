@@ -18,7 +18,8 @@ package com.linecorp.armeria.common;
 
 import java.time.Duration;
 
-import com.linecorp.armeria.common.annotation.Nullable;
+import org.jspecify.annotations.Nullable;
+
 import com.linecorp.armeria.common.stream.StreamMessage;
 
 /**

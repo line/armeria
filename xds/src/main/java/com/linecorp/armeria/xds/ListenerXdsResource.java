@@ -20,9 +20,10 @@ import static com.google.common.base.Preconditions.checkArgument;
 
 import java.util.List;
 
+import org.jspecify.annotations.Nullable;
+
 import com.google.protobuf.Any;
 
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 
 import io.envoyproxy.envoy.config.listener.v3.Listener;

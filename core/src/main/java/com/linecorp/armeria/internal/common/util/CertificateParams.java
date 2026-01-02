@@ -26,10 +26,9 @@ import java.util.Random;
 
 import org.bouncycastle.asn1.x500.X500Name;
 import org.bouncycastle.cert.jcajce.JcaX509CertificateHolder;
+import org.jspecify.annotations.Nullable;
 
 import com.google.common.collect.ImmutableList;
-
-import com.linecorp.armeria.common.annotation.Nullable;
 
 final class CertificateParams {
 

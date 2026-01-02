@@ -42,13 +42,13 @@
     <property name="ignoreCase" value="true"/>
     <property name="message" value="A copyright header must not appear in examples."/>
   </module>
-  <!-- All packages must be annotated with @NonNullByDefault -->
+  <!-- All packages must be annotated with @NullMarked -->
   <module name="RegexpSingleline">
-    <property name="id" value="NonNullByDefaultAnnotation"/>
-    <property name="format" value="^\s*@(?:com\.linecorp\.armeria\.common\.util\.)?NonNullByDefault"/>
+    <property name="id" value="NullMarkedAnnotation"/>
+    <property name="format" value="^\s*@(?:org\.jspecify\.annotations\.)?NullMarked"/>
     <property name="minimum" value="1"/>
     <property name="maximum" value="1"/>
-    <property name="message" value="A package must be annotated with @NonNullByDefault."/>
+    <property name="message" value="A package must be annotated with @NullMarked."/>
   </module>
   <!-- Unmaintainable Javadoc tags -->
   <module name="RegexpSingleline">

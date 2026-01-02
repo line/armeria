@@ -17,7 +17,7 @@ package com.linecorp.armeria.client.retrofit2;
 
 import java.io.IOException;
 
-import com.linecorp.armeria.common.annotation.Nullable;
+import org.jspecify.annotations.Nullable;
 
 import okio.Buffer;
 import okio.Source;

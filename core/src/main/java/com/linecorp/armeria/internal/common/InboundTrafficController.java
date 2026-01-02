@@ -18,14 +18,13 @@ package com.linecorp.armeria.internal.common;
 
 import java.util.concurrent.atomic.AtomicInteger;
 
+import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.MoreObjects;
 import com.google.common.math.IntMath;
-
-import com.linecorp.armeria.common.annotation.Nullable;
 
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelConfig;

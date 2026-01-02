@@ -17,7 +17,7 @@
 /**
  * DNS-based {@link com.linecorp.armeria.client.endpoint.EndpointGroup} implementation.
  */
-@NonNullByDefault
+@NullMarked
 package com.linecorp.armeria.client.endpoint.dns;
 
-import com.linecorp.armeria.common.annotation.NonNullByDefault;
+import org.jspecify.annotations.NullMarked;

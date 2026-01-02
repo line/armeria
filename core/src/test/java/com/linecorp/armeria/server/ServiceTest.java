@@ -20,6 +20,7 @@ import static com.linecorp.armeria.internal.common.RequestContextUtil.NOOP_CONTE
 import static org.assertj.core.api.Assertions.assertThat;
 
 import org.assertj.core.util.Files;
+import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.Test;
 
 import com.google.common.collect.ImmutableList;
@@ -31,7 +32,6 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.SuccessFunction;
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.server.logging.AccessLogWriter;
 
 public class ServiceTest {

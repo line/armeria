@@ -16,7 +16,8 @@
 
 package com.linecorp.armeria.server.jsonrpc;
 
-import com.linecorp.armeria.common.annotation.Nullable;
+import org.jspecify.annotations.Nullable;
+
 import com.linecorp.armeria.common.jsonrpc.JsonRpcError;
 import com.linecorp.armeria.common.jsonrpc.JsonRpcMessage;
 import com.linecorp.armeria.common.jsonrpc.JsonRpcResponse;

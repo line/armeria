@@ -16,7 +16,7 @@
 
 package com.linecorp.armeria.internal.common.grpc;
 
-import com.linecorp.armeria.common.annotation.Nullable;
+import org.jspecify.annotations.Nullable;
 
 import io.grpc.Metadata;
 import io.grpc.Status;
