@@ -29,8 +29,12 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
 
 /**
  * Metadata about a discriminator object, which is used for polymorphism.
- * This corresponds to the {@code discriminator} object in the OpenAPI Specification.
- * @see <a href="https://swagger.io/docs/specification/data-models/inheritance-and-polymorphism/">Inheritance and Polymorphism</a>
+ * This corresponds to the {@code discriminator} object in the OpenAPI
+ * Specification.
+ *
+ * @see <a href=
+ *      "https://swagger.io/docs/specification/data-models/inheritance-and-polymorphism/">Inheritance
+ *      and Polymorphism</a>
  */
 @UnstableApi
 public final class DiscriminatorInfo {
@@ -39,8 +43,9 @@ public final class DiscriminatorInfo {
     private final Map<String, String> mapping;
 
     /**
-     * Creates a new {@link DiscriminatorInfo} with {@code propertyName}, the name of the property
-     * int the payload that will be used to differentiate between schemas.
+     * Creates a new {@link DiscriminatorInfo} with {@code propertyName}, the name
+     * of the property
+     * in the payload that will be used to differentiate between schemas.
      * and {@code mapping} a map of payload values to schema names or references.
      */
     public static DiscriminatorInfo of(String propertyName, Map<String, String> mapping) {
@@ -56,7 +61,8 @@ public final class DiscriminatorInfo {
     }
 
     /**
-     * Returns the name of the property that is used to differentiate between schemas.
+     * Returns the name of the property that is used to differentiate between
+     * schemas.
      */
     @JsonProperty
     public String propertyName() {
@@ -65,8 +71,10 @@ public final class DiscriminatorInfo {
 
     /**
      * Returns the map of payload values to schema names.
-     * The keys are the values that appear in the {@link #propertyName()} field, and the values are
-     * the schema definitions to use for that value (e.g., {@code "#/definitions/Cat"}).
+     * The keys are the values that appear in the {@link #propertyName()} field, and
+     * the values are
+     * the schema definitions to use for that value (e.g.,
+     * {@code "#/definitions/Cat"}).
      */
     @JsonProperty
     public Map<String, String> mapping() {
@@ -93,6 +101,6 @@ public final class DiscriminatorInfo {
     @Override
     public String toString() {
         return MoreObjects.toStringHelper(this).add("propertyName", propertyName).add("mapping", mapping)
-                          .toString();
+                .toString();
     }
 }

@@ -18,11 +18,11 @@ package com.linecorp.armeria.server.docs;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static java.util.Objects.requireNonNull;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
-import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -52,8 +52,8 @@ final class JsonSchemaGenerator {
     private JsonSchemaGenerator(ServiceSpecification serviceSpecification) {
         this.serviceSpecification = requireNonNull(serviceSpecification, "serviceSpecification");
 
-        final ImmutableMap.Builder<String, StructInfo> structsBuilder =
-                ImmutableMap.builderWithExpectedSize(serviceSpecification.structs().size());
+        final ImmutableMap.Builder<String, StructInfo> structsBuilder = ImmutableMap
+                .builderWithExpectedSize(serviceSpecification.structs().size());
         for (final StructInfo structInfo : serviceSpecification.structs()) {
             structsBuilder.put(structInfo.name(), structInfo);
             if (structInfo.alias() != null) {
@@ -63,7 +63,7 @@ final class JsonSchemaGenerator {
         structs = structsBuilder.build();
 
         enums = serviceSpecification.enums().stream()
-                                    .collect(toImmutableMap(EnumInfo::name, Function.identity()));
+                .collect(toImmutableMap(EnumInfo::name, Function.identity()));
 
         // Pre-compute mappings from subtype to its base type's DiscriminatorInfo
         polymorphismToBase = new HashMap<>();
@@ -92,8 +92,7 @@ final class JsonSchemaGenerator {
                 return "object";
             case OPTIONAL:
             case CONTAINER: {
-                final TypeSignature inner =
-                        ((ContainerTypeSignature) typeSignature).typeParameters().get(0);
+                final TypeSignature inner = ((ContainerTypeSignature) typeSignature).typeParameters().get(0);
                 return getSchemaType(inner);
             }
             default:
@@ -168,7 +167,8 @@ final class JsonSchemaGenerator {
         final ObjectNode methodsNode = mapper.createObjectNode();
         for (final ServiceInfo svc : serviceSpecification.services()) {
             for (final MethodInfo m : svc.methods()) {
-                // To avoid potential name collision, we can use a more unique key like method id.
+                // To avoid potential name collision, we can use a more unique key like method
+                // id.
                 // For now, using method name as requested.
                 methodsNode.set(m.name(), generateMethodSchema(m));
             }
@@ -211,7 +211,6 @@ final class JsonSchemaGenerator {
         }
 
         final ObjectNode props = mapper.createObjectNode();
-        final ArrayNode required = mapper.createArrayNode();
 
         // Check if this struct is a subtype and add the discriminator property
         final DiscriminatorInfo discriminatorInfo = polymorphismToBase.get(structInfo.name());
@@ -220,31 +219,25 @@ final class JsonSchemaGenerator {
             propertySchema.put("type", "string");
         }
 
+        final List<String> requiredFields = new ArrayList<>();
         for (final FieldInfo field : structInfo.fields()) {
             props.set(field.name(), generateFieldSchema(field));
             if (field.requirement() == FieldRequirement.REQUIRED) {
-                required.add(field.name());
+                requiredFields.add(field.name());
             }
         }
         if (!props.isEmpty()) {
             schemaNode.set("properties", props);
         }
-        if (!required.isEmpty()) {
-            // Filter out discriminator property from required list as it's often not in the constructor
-            final List<String> requiredFields = structInfo.fields().stream()
-                                                          .filter(f -> f.requirement() ==
-                                                                       FieldRequirement.REQUIRED)
-                                                          .map(FieldInfo::name)
-                                                          .collect(Collectors.toList());
 
-            if (discriminatorInfo != null) {
-                requiredFields.add(discriminatorInfo.propertyName());
-            }
-            if (!requiredFields.isEmpty()) {
-                final ArrayNode requiredNode = mapper.createArrayNode();
-                requiredFields.forEach(requiredNode::add);
-                schemaNode.set("required", requiredNode);
-            }
+        if (discriminatorInfo != null) {
+            requiredFields.add(discriminatorInfo.propertyName());
+        }
+
+        if (!requiredFields.isEmpty()) {
+            final ArrayNode requiredNode = mapper.createArrayNode();
+            requiredFields.forEach(requiredNode::add);
+            schemaNode.set("required", requiredNode);
         }
         return schemaNode;
     }
@@ -302,15 +295,14 @@ final class JsonSchemaGenerator {
         }
 
         if (typeSignature.type() == TypeSignatureType.STRUCT ||
-            typeSignature.type() == TypeSignatureType.ENUM) {
+                typeSignature.type() == TypeSignatureType.ENUM) {
             fieldNode.put("$ref", "#/$defs/models/" + typeSignature.name());
             return fieldNode;
         }
 
         if (typeSignature.type() == TypeSignatureType.OPTIONAL ||
-            typeSignature.type() == TypeSignatureType.CONTAINER) {
-            final TypeSignature inner =
-                    ((ContainerTypeSignature) typeSignature).typeParameters().get(0);
+                typeSignature.type() == TypeSignatureType.CONTAINER) {
+            final TypeSignature inner = ((ContainerTypeSignature) typeSignature).typeParameters().get(0);
             return generateFieldSchema(FieldInfo.of("", inner));
         }
 
@@ -319,16 +311,14 @@ final class JsonSchemaGenerator {
 
         switch (typeSignature.type()) {
             case ITERABLE: {
-                final TypeSignature itemType =
-                        ((ContainerTypeSignature) typeSignature).typeParameters().get(0);
+                final TypeSignature itemType = ((ContainerTypeSignature) typeSignature).typeParameters().get(0);
                 fieldNode.set("items", generateFieldSchema(FieldInfo.of("", itemType)));
                 break;
             }
             case MAP: {
-                final TypeSignature valueType =
-                        ((MapTypeSignature) typeSignature).valueTypeSignature();
+                final TypeSignature valueType = ((MapTypeSignature) typeSignature).valueTypeSignature();
                 fieldNode.set("additionalProperties",
-                              generateFieldSchema(FieldInfo.of("", valueType)));
+                        generateFieldSchema(FieldInfo.of("", valueType)));
                 break;
             }
             default:
