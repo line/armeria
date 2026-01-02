@@ -1,7 +1,0 @@
-armeria:
-  ports:
-    - port: 0
-      protocols: HTTP
-server:
-  error:
-    include-message: always

@@ -290,10 +290,10 @@ public class DefaultStreamMessage<T> extends AbstractStreamWriter<T> {
     final void cancel() {
         if (setState(State.OPEN, State.CLEANUP) || setState(State.CLOSED, State.CLEANUP)) {
             // It the state was CLOSED, close() or close(cause) has been called before cancel() or abort()
-            // is called. We just ignore the previously pushed event and deal with CANCELLED_CLOSE.
+            // is called. We just ignore the previously pushed event and deal with cancelled close event.
             final SubscriptionImpl subscription = this.subscription;
             assert subscription != null;
-            notifySubscriberOfCloseEvent(subscription, CANCELLED_CLOSE);
+            notifySubscriberOfCloseEvent(subscription, newCloseEvent(CancelledSubscriptionException.get()));
         }
     }
 

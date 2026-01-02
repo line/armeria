@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.xds.client.endpoint;
 
+import java.util.function.Function;
+
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -28,6 +30,8 @@ import com.linecorp.armeria.client.endpoint.WeightRampingUpStrategyBuilder;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.loadbalancer.WeightTransition;
 import com.linecorp.armeria.internal.client.endpoint.EndpointAttributeKeys;
+import com.linecorp.armeria.xds.ClusterSnapshot;
+import com.linecorp.armeria.xds.EndpointSnapshot;
 
 import io.envoyproxy.envoy.config.cluster.v3.Cluster;
 import io.envoyproxy.envoy.config.cluster.v3.Cluster.CommonLbConfig;
@@ -152,17 +156,30 @@ final class EndpointUtil {
         return localityLbEndpoints;
     }
 
-    static int overProvisionFactor(ClusterLoadAssignment clusterLoadAssignment) {
-        if (!clusterLoadAssignment.hasPolicy()) {
-            return 140;
-        }
-        final Policy policy = clusterLoadAssignment.getPolicy();
-        return policy.hasOverprovisioningFactor() ? policy.getOverprovisioningFactor().getValue() : 140;
+    static int overProvisionFactor(ClusterSnapshot clusterSnapshot) {
+        return loadAssignmentProperty(clusterSnapshot, loadAssignment -> {
+            if (!loadAssignment.hasPolicy()) {
+                return 140;
+            }
+            final Policy policy = loadAssignment.getPolicy();
+            return policy.hasOverprovisioningFactor() ? policy.getOverprovisioningFactor().getValue() : 140;
+        }, 140);
     }
 
-    static boolean weightedPriorityHealth(ClusterLoadAssignment clusterLoadAssignment) {
-        return clusterLoadAssignment.hasPolicy() ?
-               clusterLoadAssignment.getPolicy().getWeightedPriorityHealth() : false;
+    static boolean weightedPriorityHealth(ClusterSnapshot clusterSnapshot) {
+        return loadAssignmentProperty(clusterSnapshot, loadAssignment -> {
+            return loadAssignment.hasPolicy() ?
+                   loadAssignment.getPolicy().getWeightedPriorityHealth() : false;
+        }, false);
+    }
+
+    static <T> T loadAssignmentProperty(ClusterSnapshot snapshot, Function<ClusterLoadAssignment, T> mapper,
+                                        T defaultValue) {
+        final EndpointSnapshot endpointSnapshot = snapshot.endpointSnapshot();
+        if (endpointSnapshot == null) {
+            return defaultValue;
+        }
+        return mapper.apply(endpointSnapshot.xdsResource().resource());
     }
 
     static int panicThreshold(Cluster cluster) {

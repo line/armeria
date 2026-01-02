@@ -570,6 +570,7 @@ public abstract class AbstractServerCall<I, O> extends ServerCall<I, O> {
     public static HttpHeaders statusToTrailers(
             ServiceRequestContext ctx, HttpHeadersBuilder trailersBuilder,
             Status status, @Nullable Metadata metadata) {
+        trailersBuilder.endOfStream(true);
         try {
             MetadataUtil.fillHeaders(metadata, trailersBuilder);
         } catch (Exception e) {
@@ -593,6 +594,8 @@ public abstract class AbstractServerCall<I, O> extends ServerCall<I, O> {
         final HttpHeaders additionalTrailers = ctx.additionalResponseTrailers();
         ctx.mutateAdditionalResponseTrailers(HttpHeadersBuilder::clear);
         trailersBuilder.add(additionalTrailers);
+        // Remove content-length just in case it was set mistakenly.
+        trailersBuilder.remove(HttpHeaderNames.CONTENT_LENGTH);
         return trailersBuilder.build();
     }
 

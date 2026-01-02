@@ -64,8 +64,11 @@ public final class RetryRuleBuilder extends AbstractRuleBuilder<RetryRuleBuilder
         return build(RetryDecision.noRetry());
     }
 
-    private RetryRule build(RetryDecision decision) {
-        if (decision != RetryDecision.noRetry() &&
+    /**
+     * Returns a newly created {@link RetryRule} based on the {@link RetryDecision}.
+     */
+    public RetryRule build(RetryDecision decision) {
+        if (decision.backoff() != null &&
             exceptionFilter() == null && responseHeadersFilter() == null &&
             responseTrailersFilter() == null && grpcTrailersFilter() == null &&
             totalDurationFilter() == null) {

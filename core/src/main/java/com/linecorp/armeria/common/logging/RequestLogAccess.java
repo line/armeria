@@ -232,6 +232,13 @@ public interface RequestLogAccess {
     RequestLog ensureAvailable(Iterable<RequestLogProperty> properties);
 
     /**
+     * Adds the specified {@link RequestLogListener} which will be invoked when a {@link RequestLogProperty}
+     * becomes available.
+     */
+    @UnstableApi
+    void addListener(RequestLogListener listener);
+
+    /**
      * Returns the {@link RequestLog} for the {@link Request}, where all properties may not be available yet.
      * Note that this method is potentially unsafe; an attempt to access an unavailable property will trigger
      * a {@link RequestLogAvailabilityException}. If in doubt, use {@link #whenComplete()} or

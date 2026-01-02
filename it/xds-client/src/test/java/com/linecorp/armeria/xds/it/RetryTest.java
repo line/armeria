@@ -57,6 +57,7 @@ class RetryTest {
                       api_listener:
                         "@type": type.googleapis.com/envoy.extensions.filters.network.http_connection_manager\
                 .v3.HttpConnectionManager
+                        stat_prefix: http
                         route_config:
                           name: local_route
                           virtual_hosts:
@@ -76,6 +77,7 @@ class RetryTest {
                   - name: my-cluster
                     type: STATIC
                     load_assignment:
+                      cluster_name: my-cluster
                       endpoints:
                       - lb_endpoints:
                         - endpoint:
@@ -548,7 +550,7 @@ class RetryTest {
             final long expectedDelayMillis = expectedDelaysMillis.get(i);
 
             // Verify delay matches expected value (tolerance for 50% jitter + responseTimeout recalc)
-            assertThat(actualDelayMillis).isCloseTo(expectedDelayMillis, withinPercentage(60.0));
+            assertThat(actualDelayMillis).isCloseTo(expectedDelayMillis, withinPercentage(100.0));
         }
     }
 

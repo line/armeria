@@ -50,8 +50,10 @@ import io.envoyproxy.controlplane.cache.v3.SimpleCache;
 import io.envoyproxy.controlplane.cache.v3.Snapshot;
 import io.envoyproxy.envoy.config.bootstrap.v3.Bootstrap;
 import io.envoyproxy.envoy.config.cluster.v3.Cluster;
+import io.envoyproxy.envoy.config.core.v3.AggregatedConfigSource;
 import io.envoyproxy.envoy.config.core.v3.ApiConfigSource;
 import io.envoyproxy.envoy.config.core.v3.ApiConfigSource.ApiType;
+import io.envoyproxy.envoy.config.core.v3.ConfigSource;
 import io.envoyproxy.envoy.config.endpoint.v3.ClusterLoadAssignment;
 import io.envoyproxy.envoy.service.discovery.v3.AggregatedDiscoveryServiceGrpc.AggregatedDiscoveryServiceImplBase;
 import io.envoyproxy.envoy.service.discovery.v3.DiscoveryRequest;
@@ -89,7 +91,7 @@ class MissingResourceTest {
         cache.setSnapshot(
                 GROUP,
                 Snapshot.create(
-                        ImmutableList.of(XdsTestResources.createCluster("cluster1", 0)),
+                        ImmutableList.of(XdsTestResources.createCluster("cluster1", 1)),
                         ImmutableList.of(XdsTestResources.loadAssignment("cluster1", "127.0.0.1", 8080)),
                         ImmutableList.of(),
                         ImmutableList.of(),
@@ -105,7 +107,10 @@ class MissingResourceTest {
                 XdsTestResources.loadAssignment(BOOTSTRAP_CLUSTER_NAME, server.httpUri()));
         final ApiConfigSource configSource =
                 XdsTestResources.apiConfigSource(BOOTSTRAP_CLUSTER_NAME, ApiType.AGGREGATED_GRPC);
-        final Bootstrap bootstrap = XdsTestResources.bootstrap(configSource, null, bootstrapCluster);
+        final ConfigSource cdsSource =
+                ConfigSource.newBuilder().setAds(AggregatedConfigSource.getDefaultInstance())
+                            .build();
+        final Bootstrap bootstrap = XdsTestResources.bootstrap(configSource, cdsSource, bootstrapCluster);
         try (XdsBootstrap xdsBootstrap = XdsBootstrap.of(bootstrap)) {
             final ClusterRoot clusterRoot = xdsBootstrap.clusterRoot(clusterName);
             final TestResourceWatcher watcher = new TestResourceWatcher();
@@ -161,7 +166,8 @@ class MissingResourceTest {
                 XdsTestResources.loadAssignment(BOOTSTRAP_CLUSTER_NAME, server.httpUri()));
         final ApiConfigSource configSource =
                 XdsTestResources.apiConfigSource(BOOTSTRAP_CLUSTER_NAME, ApiType.AGGREGATED_GRPC);
-        final Bootstrap bootstrap = XdsTestResources.bootstrap(configSource, null, bootstrapCluster);
+        final Bootstrap bootstrap =
+                XdsTestResources.bootstrap(configSource, XdsTestResources.adsConfigSource(), bootstrapCluster);
         try (XdsBootstrap xdsBootstrap = XdsBootstrap.of(bootstrap)) {
             final ClusterRoot clusterRoot = xdsBootstrap.clusterRoot(clusterName);
             final TestResourceWatcher watcher = new TestResourceWatcher();

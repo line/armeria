@@ -1,0 +1,18 @@
+---
+date: 2024-12-11
+---
+
+# v1.31.3
+
+## 🛠️ Bug fixes
+
+- [ResponseTimeoutMode#FROM_START](type) correctly bounds requests that go through [RetryingClient](type). #6025
+- Fix the bug where `EventLoop` is blocked for a long time by [ConnectionPoolListener#metricCollecting(MeterRegistry)](type)
+  when a connection is closed. #6024
+- [KubernetesEndpointGroup](type) automatically reconnects when a `WatcherException` is raised from a `Watcher`. #6023
+
+{/* truncate */}
+
+## 🙇 Thank you
+
+<ThankYou usernames={['ikhoon', 'jrhee17', 'minwoox', 'trustin']} />

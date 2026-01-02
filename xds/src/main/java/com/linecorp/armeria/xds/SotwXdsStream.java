@@ -30,6 +30,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.MoreObjects;
+import com.google.common.base.Objects;
 import com.google.rpc.Code;
 
 import com.linecorp.armeria.client.retry.Backoff;
@@ -42,47 +44,40 @@ import io.grpc.Status;
 import io.grpc.stub.StreamObserver;
 import io.netty.util.concurrent.EventExecutor;
 
-final class SotwXdsStream implements XdsStream {
+final class SotwXdsStream implements XdsStream, XdsStreamState {
 
     private static final Logger logger = LoggerFactory.getLogger(SotwXdsStream.class);
 
+    private final VersionManager versionManager = new VersionManager();
     private final SotwDiscoveryStub stub;
     private final Node node;
     private final Backoff backoff;
     private final EventExecutor eventLoop;
     private final XdsResponseHandler responseHandler;
     private final SubscriberStorage subscriberStorage;
-    private final StreamObserver<DiscoveryResponse> responseObserver =
-            new DiscoveryResponseObserver();
-    @Nullable
-    @VisibleForTesting
-    StreamObserver<DiscoveryRequest> requestObserver;
-    private int connBackoffAttempts;
-    private int ackBackoffAttempts;
+    private int connBackoffAttempts = 1;
+
     // whether the stream is stopped explicitly by the user
     private boolean stopped;
+    @Nullable
+    @VisibleForTesting
+    ActualStream actualStream;
 
-    private final Map<XdsType, String> noncesMap = new EnumMap<>(XdsType.class);
-    private final Map<XdsType, String> versionsMap = new EnumMap<>(XdsType.class);
     private final Set<XdsType> targetTypes;
+    private final ConfigSourceLifecycleObserver lifecycleObserver;
 
-    SotwXdsStream(SotwDiscoveryStub stub,
-                  Node node,
-                  Backoff backoff,
-                  EventExecutor eventLoop,
-                  XdsResponseHandler responseHandler,
-                  SubscriberStorage subscriberStorage) {
+    SotwXdsStream(SotwDiscoveryStub stub, Node node, Backoff backoff,
+                  EventExecutor eventLoop, XdsResponseHandler responseHandler,
+                  SubscriberStorage subscriberStorage,
+                  ConfigSourceLifecycleObserver lifecycleObserver) {
         this(stub, node, backoff, eventLoop, responseHandler, subscriberStorage,
-             XdsType.discoverableTypes());
+             XdsType.discoverableTypes(), lifecycleObserver);
     }
 
-    SotwXdsStream(SotwDiscoveryStub stub,
-                  Node node,
-                  Backoff backoff,
-                  EventExecutor eventLoop,
-                  XdsResponseHandler responseHandler,
-                  SubscriberStorage subscriberStorage,
-                  Set<XdsType> targetTypes) {
+    SotwXdsStream(SotwDiscoveryStub stub, Node node, Backoff backoff,
+                  EventExecutor eventLoop, XdsResponseHandler responseHandler,
+                  SubscriberStorage subscriberStorage, Set<XdsType> targetTypes,
+                  ConfigSourceLifecycleObserver lifecycleObserver) {
         this.stub = requireNonNull(stub, "stub");
         this.node = requireNonNull(node, "node");
         this.backoff = requireNonNull(backoff, "backoff");
@@ -90,6 +85,7 @@ final class SotwXdsStream implements XdsStream {
         this.responseHandler = requireNonNull(responseHandler, "responseHandler");
         this.subscriberStorage = requireNonNull(subscriberStorage, "subscriberStorage");
         this.targetTypes = targetTypes;
+        this.lifecycleObserver = requireNonNull(lifecycleObserver, "lifecycleObserver");
     }
 
     @VisibleForTesting
@@ -109,7 +105,7 @@ final class SotwXdsStream implements XdsStream {
 
         for (XdsType targetType : targetTypes) {
             // check the resource type actually has subscriptions.
-            // otherwise a unintentional onMissing callback may be received
+            // otherwise, an unintentional onMissing callback may be received
             if (!subscriberStorage.resources(targetType).isEmpty()) {
                 resourcesUpdated(targetType);
             }
@@ -127,83 +123,158 @@ final class SotwXdsStream implements XdsStream {
             return;
         }
         stopped = true;
-        if (requestObserver == null) {
+        if (actualStream == null) {
             return;
         }
-        requestObserver.onError(throwable);
-        requestObserver = null;
+        actualStream.closeStream();
+        actualStream = null;
     }
 
     @Override
     public void close() {
         stop();
-    }
-
-    void sendDiscoveryRequest(XdsType type, @Nullable String version, Collection<String> resources,
-                              @Nullable String nonce, @Nullable String errorDetail) {
-        if (requestObserver == null) {
-            requestObserver = stub.stream(responseObserver);
-        }
-        final Builder builder = DiscoveryRequest.newBuilder()
-                                                .setTypeUrl(type.typeUrl())
-                                                .setNode(node)
-                                                .addAllResourceNames(resources);
-        if (version != null) {
-            builder.setVersionInfo(version);
-        }
-        if (nonce != null) {
-            builder.setResponseNonce(nonce);
-        }
-        if (errorDetail != null) {
-            builder.setErrorDetail(com.google.rpc.Status.newBuilder()
-                                                        .setCode(Code.INVALID_ARGUMENT_VALUE)
-                                                        .setMessage(errorDetail)
-                                                        .build());
-        }
-        final DiscoveryRequest request = builder.build();
-        if (errorDetail != null) {
-            ackBackoffAttempts++;
-            logger.debug("Sending discovery request: {} with backoff attempt ({})",
-                         request, ackBackoffAttempts);
-            eventLoop.schedule(() -> {
-                                   assert requestObserver != null;
-                                   requestObserver.onNext(request);
-                               },
-                               backoff.nextDelayMillis(ackBackoffAttempts), TimeUnit.MILLISECONDS);
-        } else {
-            ackBackoffAttempts = 0;
-            logger.debug("Sending discovery request: {}", request);
-            requestObserver.onNext(request);
-        }
-    }
-
-    void ackResponse(XdsType type, String versionInfo, String nonce) {
-        versionsMap.put(type, versionInfo);
-        sendDiscoveryRequest(type, versionInfo, subscriberStorage.resources(type),
-                             nonce, null);
-    }
-
-    void nackResponse(XdsType type, String nonce, String errorDetail) {
-        sendDiscoveryRequest(type, versionsMap.get(type), subscriberStorage.resources(type),
-                             nonce, errorDetail);
+        lifecycleObserver.close();
     }
 
     @Override
     public void resourcesUpdated(XdsType type) {
-        assert targetTypes.contains(type);
-        final Set<String> resources = subscriberStorage.resources(type);
-        sendDiscoveryRequest(type, versionsMap.get(type), resources, noncesMap.get(type), null);
+        actualStream().sendDiscoveryRequest(type);
     }
 
-    private class DiscoveryResponseObserver implements StreamObserver<DiscoveryResponse> {
+    private ActualStream actualStream() {
+        if (actualStream == null) {
+            actualStream = new ActualStream(stub, this, versionManager, eventLoop,
+                                            lifecycleObserver, responseHandler, backoff, node);
+        }
+        return actualStream;
+    }
+
+    @Override
+    public void retryOrClose(boolean closedByError) {
+        if (!eventLoop.inEventLoop()) {
+            eventLoop.execute(() -> retryOrClose(closedByError));
+            return;
+        }
+        if (stopped) {
+            // don't reschedule automatically since the user explicitly closed the stream
+            return;
+        }
+        actualStream = null;
+        // wait backoff
+        if (closedByError) {
+            connBackoffAttempts++;
+        } else {
+            connBackoffAttempts = 1;
+        }
+        final long nextDelayMillis = backoff.nextDelayMillis(connBackoffAttempts);
+        if (nextDelayMillis < 0) {
+            return;
+        }
+        eventLoop.schedule(this::reset, nextDelayMillis, TimeUnit.MILLISECONDS);
+    }
+
+    @Override
+    public Collection<String> watchedResources(XdsType type) {
+        return subscriberStorage.resources(type);
+    }
+
+    static class ActualStream implements StreamObserver<DiscoveryResponse> {
+
+        private final StreamObserver<DiscoveryRequest> requestObserver;
+        private final XdsStreamState xdsStreamState;
+        private final VersionManager versionManager;
+        private final EventExecutor eventLoop;
+        private final ConfigSourceLifecycleObserver lifecycleObserver;
+        private final XdsResponseHandler responseHandler;
+        private final Backoff backoff;
+        private final Node node;
+
+        private int ackBackoffAttempts;
+        private final Map<XdsType, String> noncesMap = new EnumMap<>(XdsType.class);
+        boolean completed;
+
+        ActualStream(SotwDiscoveryStub stub, XdsStreamState xdsStreamState, VersionManager versionManager,
+                     EventExecutor eventLoop, ConfigSourceLifecycleObserver lifecycleObserver,
+                     XdsResponseHandler responseHandler, Backoff backoff, Node node) {
+            this.xdsStreamState = xdsStreamState;
+            this.versionManager = versionManager;
+            this.eventLoop = eventLoop;
+            this.lifecycleObserver = lifecycleObserver;
+            this.responseHandler = responseHandler;
+            this.backoff = backoff;
+            this.node = node;
+            requestObserver = stub.stream(this);
+            lifecycleObserver.streamOpened();
+        }
+
+        void ackResponse(XdsType type, String versionInfo, String nonce) {
+            ackBackoffAttempts = 0;
+            versionManager.updateVersion(type, versionInfo);
+            sendDiscoveryRequest(type, versionInfo, xdsStreamState.watchedResources(type),
+                                 nonce, null);
+        }
+
+        void nackResponse(XdsType type, String nonce, String errorDetail) {
+            ackBackoffAttempts++;
+            eventLoop.schedule(() -> sendDiscoveryRequest(type, versionManager.getVersion(type),
+                                                          xdsStreamState.watchedResources(type), nonce,
+                                                          errorDetail),
+                               backoff.nextDelayMillis(ackBackoffAttempts), TimeUnit.MILLISECONDS);
+        }
+
+        VersionManager versionManager() {
+            return versionManager;
+        }
+
+        void closeStream() {
+            if (completed) {
+                return;
+            }
+            completed = true;
+            requestObserver.onCompleted();
+        }
+
+        void sendDiscoveryRequest(XdsType type) {
+            sendDiscoveryRequest(type, versionManager.getVersion(type),
+                                 xdsStreamState.watchedResources(type), noncesMap.get(type), null);
+        }
+
+        private void sendDiscoveryRequest(XdsType type, @Nullable String version, Collection<String> resources,
+                                          @Nullable String nonce, @Nullable String errorDetail) {
+            if (completed) {
+                return;
+            }
+            final Builder builder = DiscoveryRequest.newBuilder()
+                                                    .setTypeUrl(type.typeUrl())
+                                                    .setNode(node)
+                                                    .addAllResourceNames(resources);
+            if (version != null) {
+                builder.setVersionInfo(version);
+            }
+            if (nonce != null) {
+                builder.setResponseNonce(nonce);
+            }
+            if (errorDetail != null) {
+                builder.setErrorDetail(com.google.rpc.Status.newBuilder()
+                                                            .setCode(Code.INVALID_ARGUMENT_VALUE)
+                                                            .setMessage(errorDetail)
+                                                            .build());
+            }
+            final DiscoveryRequest request = builder.build();
+            lifecycleObserver.requestSent(request);
+            requestObserver.onNext(request);
+        }
+
         @Override
         public void onNext(DiscoveryResponse value) {
             if (!eventLoop.inEventLoop()) {
                 eventLoop.execute(() -> onNext(value));
                 return;
             }
-
-            logger.debug("Received discovery response: {}", value);
+            if (completed) {
+                return;
+            }
+            lifecycleObserver.responseReceived(value);
 
             final ResourceParser<?, ?> resourceParser = fromTypeUrl(value.getTypeUrl());
             if (resourceParser == null) {
@@ -211,49 +282,93 @@ final class SotwXdsStream implements XdsStream {
                 return;
             }
             noncesMap.put(resourceParser.type(), value.getNonce());
-
-            try {
-                responseHandler.handleResponse(resourceParser, value, SotwXdsStream.this);
-            } catch (Exception e) {
-                // Handling the response threw an error for some reason.
-                // Close the stream in case a request wasn't sent so that the most recent
-                // version is still fetched.
-                logger.warn("The SotW stream was unexpectedly reset while handling ({}): ", value, e);
-                responseObserver.onError(e);
-            }
+            responseHandler.handleResponse(resourceParser, value, this, lifecycleObserver);
         }
 
         @Override
         public void onError(Throwable throwable) {
-            requireNonNull(throwable, "throwable");
-            retryOrClose(Status.fromThrowable(throwable));
+            if (!eventLoop.inEventLoop()) {
+                eventLoop.execute(() -> onError(throwable));
+                return;
+            }
+            completed = true;
+            lifecycleObserver.streamError(throwable);
+            xdsStreamState.retryOrClose(true);
         }
 
         @Override
         public void onCompleted() {
-            retryOrClose(Status.UNAVAILABLE.withDescription("Closed by server"));
+            if (!eventLoop.inEventLoop()) {
+                eventLoop.execute(this::onCompleted);
+                return;
+            }
+            completed = true;
+            lifecycleObserver.streamCompleted();
+            xdsStreamState.retryOrClose(false);
+        }
+    }
+
+    static class VersionManager {
+
+        private final Map<XdsType, VersionInfo> versionMap = new EnumMap<>(XdsType.class);
+
+        void updateVersion(XdsType type, String version) {
+            final VersionInfo prevVersion = versionMap.get(type);
+            if (prevVersion != null && prevVersion.version.equals(version)) {
+                return;
+            }
+            final long revision = prevVersion != null ? prevVersion.revision + 1 : 1;
+            versionMap.put(type, new VersionInfo(version, revision));
         }
 
-        private void retryOrClose(Status status) {
-            if (!eventLoop.inEventLoop()) {
-                eventLoop.execute(() -> retryOrClose(status));
-                return;
+        @Nullable
+        String getVersion(XdsType type) {
+            final VersionInfo versionInfo = versionMap.get(type);
+            if (versionInfo == null) {
+                return null;
             }
-            if (stopped) {
-                // don't reschedule automatically since the user explicitly closed the stream
-                return;
+            return versionInfo.version;
+        }
+
+        long nextRevision(XdsType type, String version) {
+            final VersionInfo prevVersion = versionMap.get(type);
+            if (prevVersion != null && Objects.equal(prevVersion.version, version)) {
+                return prevVersion.revision;
             }
-            requestObserver = null;
-            // wait backoff
-            connBackoffAttempts++;
-            final long nextDelayMillis = backoff.nextDelayMillis(connBackoffAttempts);
-            if (nextDelayMillis < 0) {
-                logger.warn("Stream closed with status {}, not retrying.", status);
-                return;
+            return prevVersion != null ? prevVersion.revision + 1 : 1;
+        }
+
+        private static final class VersionInfo {
+
+            private final String version;
+            private final long revision;
+
+            private VersionInfo(String version, long revision) {
+                this.version = version;
+                this.revision = revision;
             }
-            logger.debug("Stream closed with status {}. Retrying for attempt ({}) in {}ms.",
-                         status, connBackoffAttempts, nextDelayMillis);
-            eventLoop.schedule(SotwXdsStream.this::reset, nextDelayMillis, TimeUnit.MILLISECONDS);
+
+            @Override
+            public boolean equals(Object o) {
+                if (o == null || getClass() != o.getClass()) {
+                    return false;
+                }
+                final VersionInfo that = (VersionInfo) o;
+                return revision == that.revision && Objects.equal(version, that.version);
+            }
+
+            @Override
+            public int hashCode() {
+                return Objects.hashCode(version, revision);
+            }
+
+            @Override
+            public String toString() {
+                return MoreObjects.toStringHelper(this)
+                                  .add("version", version)
+                                  .add("revision", revision)
+                                  .toString();
+            }
         }
     }
 }

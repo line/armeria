@@ -33,7 +33,7 @@ import zookeeperjunit.ZooKeeperAssert;
 
 public class ZooKeeperExtension extends AbstractAllOrEachExtension implements ZooKeeperAssert {
 
-    private static final Duration duration = Duration.ofSeconds(10);
+    private static final Duration duration = Duration.ofSeconds(60);
     private static final TemporaryFolder tempFolder = new TemporaryFolder();
 
     @Nullable

@@ -16,15 +16,12 @@
 
 package com.linecorp.armeria.common;
 
-import org.jspecify.annotations.Nullable;
-
 import com.linecorp.armeria.common.annotation.UnstableApi;
 
 /**
  * An entity of an HTTP message.
  */
 @UnstableApi
-@Nullable
 public interface HttpEntity<T> {
 
     /**

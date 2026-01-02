@@ -48,6 +48,7 @@ import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.client.ClientBuilder;
 import com.linecorp.armeria.client.ClientFactoryBuilder;
+import com.linecorp.armeria.client.ClientTlsSpec;
 import com.linecorp.armeria.client.DnsResolverGroupBuilder;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.ResponseTimeoutMode;
@@ -55,6 +56,7 @@ import com.linecorp.armeria.client.retry.Backoff;
 import com.linecorp.armeria.client.retry.RetryingClient;
 import com.linecorp.armeria.client.retry.RetryingRpcClient;
 import com.linecorp.armeria.common.annotation.UnstableApi;
+import com.linecorp.armeria.common.multipart.MultipartFilenameDecodingMode;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.common.util.Sampler;
 import com.linecorp.armeria.common.util.SystemInfo;
@@ -91,7 +93,6 @@ import io.netty.channel.EventLoopGroup;
 import io.netty.handler.codec.http2.Http2CodecUtil;
 import io.netty.handler.codec.http2.Http2Exception;
 import io.netty.handler.ssl.OpenSsl;
-import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.resolver.DefaultAddressResolverGroup;
 import io.netty.resolver.dns.DnsNameResolverTimeoutException;
 import io.netty.util.ReferenceCountUtil;
@@ -431,6 +432,10 @@ public final class Flags {
     private static final boolean ALLOW_SEMICOLON_IN_PATH_COMPONENT =
             getValue(FlagsProvider::allowSemicolonInPathComponent, "allowSemicolonInPathComponent");
 
+    private static final MultipartFilenameDecodingMode DEFAULT_MULTIPART_DECODING_MODE =
+            getValue(FlagsProvider::defaultMultipartFilenameDecodingMode,
+                     "defaultMultipartFilenameDecodingMode");
+
     private static final Path DEFAULT_MULTIPART_UPLOADS_LOCATION =
             getValue(FlagsProvider::defaultMultipartUploadsLocation, "defaultMultipartUploadsLocation");
 
@@ -649,12 +654,8 @@ public final class Flags {
                     Long.toHexString(OpenSsl.version() & 0xFFFFFFFFL));
         dumpOpenSslInfo = getValue(FlagsProvider::dumpOpenSslInfo, "dumpOpenSslInfo");
         if (dumpOpenSslInfo) {
-            final SSLEngine engine = SslContextUtil.createSslContext(
-                    SslContextBuilder::forClient,
-                    /* forceHttp1 */ false,
-                    tlsEngineType,
-                    /* tlsAllowUnsafeCiphers */ false,
-                    null, null).newEngine(ByteBufAllocator.DEFAULT);
+            final SSLEngine engine = SslContextUtil.toSslContext(ClientTlsSpec.of(), false)
+                                                   .newEngine(ByteBufAllocator.DEFAULT);
             logger.info("All available SSL protocols: {}",
                         ImmutableList.copyOf(engine.getSupportedProtocols()));
             logger.info("Default enabled SSL protocols: {}", SslContextUtil.DEFAULT_PROTOCOLS);
@@ -1530,6 +1531,32 @@ public final class Flags {
      */
     public static boolean useLegacyRouteDecoratorOrdering() {
         return USE_LEGACY_ROUTE_DECORATOR_ORDERING;
+    }
+
+    /**
+     * Returns the default decoding mode for a {@code filename} parameter in a
+     * {@link HttpHeaderNames#CONTENT_DISPOSITION} header of a multipart request.
+     *
+     * <p>This flag determines how a server interprets the raw bytes of a {@code filename} parameter when it
+     * contains non-ASCII characters.
+     * <ul>
+     *   <li>{@link MultipartFilenameDecodingMode#UTF_8}:
+     *       (Default) Interprets the filename as a raw UTF-8 string</li>
+     *   <li>{@link MultipartFilenameDecodingMode#ISO_8859_1}:
+     *       Interprets the filename as a raw ISO-8859-1 string</li>
+     *   <li>{@link MultipartFilenameDecodingMode#URL_DECODING}:
+     *       URL-decodes the filename using the UTF-8 charset.
+     *       Use this for compatibility with clients that percent-encode the filename.</li>
+     * </ul>
+     *
+     * <p>The default value of this flag is {@link MultipartFilenameDecodingMode#UTF_8}.
+     * Specify the
+     * {@code -Dcom.linecorp.armeria.defaultMultipartFilenameDecodingMode=<UTF_8|ISO_8859_1|URL_DECODING>}
+     * JVM option to override the default value.
+     */
+    @UnstableApi
+    public static MultipartFilenameDecodingMode defaultMultipartFilenameDecodingMode() {
+        return DEFAULT_MULTIPART_DECODING_MODE;
     }
 
     /**

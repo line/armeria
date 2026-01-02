@@ -70,6 +70,7 @@ class PriorityTest {
                                  endpoint("127.0.0.1", 8082));
         final ClusterLoadAssignment loadAssignment =
                 ClusterLoadAssignment.newBuilder()
+                                     .setClusterName("cluster")
                                      .addEndpoints(localityLbEndpoints(
                                              Locality.getDefaultInstance(), lbEndpoints))
                                      .build();
@@ -96,6 +97,7 @@ class PriorityTest {
                                  endpoint("127.0.0.1", 8082, 2));
         final ClusterLoadAssignment loadAssignment =
                 ClusterLoadAssignment.newBuilder()
+                                     .setClusterName("cluster")
                                      .addEndpoints(localityLbEndpoints(
                                              Locality.getDefaultInstance(), lbEndpoints))
                                      .build();
@@ -127,6 +129,7 @@ class PriorityTest {
         final ClusterLoadAssignment loadAssignment =
                 ClusterLoadAssignment
                         .newBuilder()
+                        .setClusterName("cluster")
                         .addEndpoints(localityLbEndpoints(Locality.getDefaultInstance(), lbEndpoints0, 0))
                         .addEndpoints(localityLbEndpoints(Locality.getDefaultInstance(), lbEndpoints1, 1))
                         .build();
@@ -169,6 +172,7 @@ class PriorityTest {
         final ClusterLoadAssignment loadAssignment =
                 ClusterLoadAssignment
                         .newBuilder()
+                        .setClusterName("cluster")
                         .addEndpoints(localityLbEndpoints(Locality.getDefaultInstance(), lbEndpoints0, 0))
                         .addEndpoints(localityLbEndpoints(Locality.getDefaultInstance(), lbEndpoints1, 1))
                         // set overprovisioning factor to 100 for simpler calculation
@@ -213,6 +217,7 @@ class PriorityTest {
         final ClusterLoadAssignment loadAssignment =
                 ClusterLoadAssignment
                         .newBuilder()
+                        .setClusterName("cluster")
                         .addEndpoints(localityLbEndpoints(Locality.getDefaultInstance(), lbEndpoints0, 0))
                         .build();
         final Cluster cluster = createStaticCluster("cluster", loadAssignment)
@@ -248,6 +253,7 @@ class PriorityTest {
         final ClusterLoadAssignment loadAssignment =
                 ClusterLoadAssignment
                         .newBuilder()
+                        .setClusterName("cluster")
                         .addEndpoints(localityLbEndpoints(Locality.getDefaultInstance(), lbEndpoints0, 0))
                         .addEndpoints(localityLbEndpoints(Locality.getDefaultInstance(), lbEndpoints1, 1))
                         .build();
@@ -286,6 +292,7 @@ class PriorityTest {
         final ClusterLoadAssignment loadAssignment =
                 ClusterLoadAssignment
                         .newBuilder()
+                        .setClusterName("cluster")
                         .addEndpoints(localityLbEndpoints(Locality.getDefaultInstance(), lbEndpoints0, 0))
                         .build();
         final Cluster cluster = createStaticCluster("cluster", loadAssignment)
@@ -317,6 +324,7 @@ class PriorityTest {
         final ClusterLoadAssignment loadAssignment =
                 ClusterLoadAssignment
                         .newBuilder()
+                        .setClusterName("cluster")
                         .addEndpoints(localityLbEndpoints(Locality.getDefaultInstance(), lbEndpoints0))
                         .build();
         final Cluster cluster = createStaticCluster("cluster", loadAssignment)
@@ -357,6 +365,7 @@ class PriorityTest {
         final ClusterLoadAssignment loadAssignment =
                 ClusterLoadAssignment
                         .newBuilder()
+                        .setClusterName("cluster")
                         .addEndpoints(localityLbEndpoints(Locality.getDefaultInstance(), lbEndpoints0))
                         .setPolicy(Policy.newBuilder()
                                          .setWeightedPriorityHealth(true))

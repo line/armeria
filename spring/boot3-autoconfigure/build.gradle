@@ -1,3 +1,5 @@
+import com.linecorp.armeria.conventions.spring.SpringBuildUtil
+
 dependencies {
     // To let a user choose between thrift and thrift0.9.
     compileOnly project(':thrift0.18')
@@ -18,10 +20,14 @@ dependencies {
     testImplementation libs.spring.boot3.starter.actuator
     testImplementation libs.spring.boot3.starter.test
     // Enables cglib for testing
-    testImplementation libs.hibernate.validator8
+    testImplementation libs.spring6.aspects
     // Added for sharing test suites with boot2
     testImplementation libs.javax.inject
 }
+
+def boot4Autoconfigure = "boot4-autoconfigure"
+SpringBuildUtil.useTestSources(project(":spring:${boot4Autoconfigure}"), project)
+SpringBuildUtil.useMainSources(project(":spring:${boot4Autoconfigure}"), project)
 
 // allows illegal access by cglib
 if (project.ext.testJavaVersion >= 16) {

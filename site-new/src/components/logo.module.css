@@ -1,0 +1,27 @@
+.primary {
+  fill-opacity: 1;
+  fill-rule: nonzero;
+  stroke: none;
+  fill: #ff0089;
+}
+
+.secondary {
+  fill-opacity: 1;
+  fill-rule: nonzero;
+  stroke: none;
+  fill: #ff9dc3;
+}
+
+.tertiary {
+  fill-opacity: 1;
+  fill-rule: nonzero;
+  stroke: none;
+  fill: #ffffff;
+}
+
+.text {
+  fill-opacity: 1;
+  fill-rule: nonzero;
+  stroke: none;
+  fill: #3a3a3a;
+}

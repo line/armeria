@@ -77,8 +77,6 @@ final class LocalityRoutingStateFactory {
                                           .sorted(Comparator.comparing(AbstractMessage::toString))
                                           .collect(Collectors.toList());
         final ImmutableList.Builder<ResidualCapacity> residualCapacity = ImmutableList.builder();
-        // to guarantee that residualCapacity has at least one element
-        residualCapacity.add(new ResidualCapacity(localLocality, 0));
         long lastResidualCapacity = 0;
         for (Locality locality : upstreamLocalities) {
             final LocalityPercentages percentages = localityPercentages.get(locality);
@@ -87,7 +85,7 @@ final class LocalityRoutingStateFactory {
             if (percentages.canRouteToUpstream()) {
                 newResidualCapacity = lastResidualCapacity + percentages.offset();
             }
-            residualCapacity.add(new ResidualCapacity(locality, newResidualCapacity));
+            residualCapacity.add(new ResidualCapacity(locality, newResidualCapacity, percentages.offset()));
             lastResidualCapacity = newResidualCapacity;
         }
         return new LocalityRoutingState(localPercentToRoute, residualCapacity.build(),
@@ -97,10 +95,12 @@ final class LocalityRoutingStateFactory {
     static final class ResidualCapacity {
         private final Locality locality;
         private final long capacity;
+        private final long offset;
 
-        private ResidualCapacity(Locality locality, long capacity) {
+        private ResidualCapacity(Locality locality, long capacity, long offset) {
             this.locality = locality;
             this.capacity = capacity;
+            this.offset = offset;
         }
 
         @Override
@@ -108,6 +108,7 @@ final class LocalityRoutingStateFactory {
             return MoreObjects.toStringHelper(this)
                               .add("locality", locality)
                               .add("capacity", capacity)
+                              .add("offset", offset)
                               .toString();
         }
     }
@@ -126,6 +127,7 @@ final class LocalityRoutingStateFactory {
         @Nullable
         private final HostSet localHostSet;
         private final Locality localLocality;
+        private final Map<Locality, Double> residualPercentages;
 
         private LocalityRoutingState(State state, @Nullable HostSet localHostSet, Locality localLocality) {
             assert state == State.NO_LOCALITY_ROUTING || state == State.LOCALITY_DIRECT;
@@ -134,6 +136,7 @@ final class LocalityRoutingStateFactory {
             residualCapacities = ImmutableList.of();
             this.localHostSet = localHostSet;
             this.localLocality = localLocality;
+            residualPercentages = ImmutableMap.of();
         }
 
         private LocalityRoutingState(long localPercentageToRoute, List<ResidualCapacity> residualCapacities,
@@ -144,6 +147,28 @@ final class LocalityRoutingStateFactory {
             this.residualCapacities = residualCapacities;
             this.localHostSet = localHostSet;
             this.localLocality = localLocality;
+            residualPercentages = residualPercentages(residualCapacities);
+        }
+
+        private static Map<Locality, Double> residualPercentages(List<ResidualCapacity> residualCapacities) {
+            final long lastResidualCapacity = residualCapacities.get(residualCapacities.size() - 1).capacity;
+            if (lastResidualCapacity == 0) {
+                return residualCapacities.stream().collect(ImmutableMap.toImmutableMap(
+                        e -> e.locality, e -> 0.0));
+            }
+            return residualCapacities.stream()
+                                     .collect(ImmutableMap.<ResidualCapacity, Locality, Double>toImmutableMap(
+                                             rc -> rc.locality,
+                                             rc -> {
+                                                 if (rc.offset <= 0) {
+                                                     return 0d;
+                                                 }
+                                                 return 1.0 * rc.offset / lastResidualCapacity;
+                                             }));
+        }
+
+        Map<Locality, Double> residualPercentages() {
+            return residualPercentages;
         }
 
         State state() {
@@ -157,6 +182,16 @@ final class LocalityRoutingStateFactory {
 
         Locality localLocality() {
             return localLocality;
+        }
+
+        double localPercentage() {
+            if (state == State.LOCALITY_DIRECT) {
+                return 100;
+            }
+            if (state == State.NO_LOCALITY_ROUTING) {
+                return 0;
+            }
+            return 1.0 * localPercentageToRoute / MOD;
         }
 
         Locality tryChooseLocalLocalityHosts(HostSet hostSet, XdsRandom random) {

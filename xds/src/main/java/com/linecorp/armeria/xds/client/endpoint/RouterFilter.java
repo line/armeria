@@ -34,8 +34,9 @@ import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.TimeoutException;
 import com.linecorp.armeria.common.util.Exceptions;
-import com.linecorp.armeria.internal.client.ClientRequestContextExtension;
 import com.linecorp.armeria.xds.ClusterSnapshot;
+import com.linecorp.armeria.xds.RouteEntry;
+import com.linecorp.armeria.xds.internal.XdsCommonUtil;
 
 import io.envoyproxy.envoy.extensions.transport_sockets.tls.v3.UpstreamTlsContext;
 import io.netty.channel.ChannelOption;
@@ -53,38 +54,33 @@ final class RouterFilter<I extends Request, O extends Response> implements Prepr
     public O execute(PreClient<I, O> delegate, PreClientRequestContext ctx, I req) throws Exception {
         final RouteConfig routeConfig = ctx.attr(ROUTE_CONFIG);
         if (routeConfig == null) {
-            throw UnprocessedRequestException.of(new IllegalArgumentException(
-                    "RouteConfig is not set for the ctx. If a new ctx has been used, " +
-                    "please make sure to use ctx.newDerivedContext()."));
+            final UnprocessedRequestException e = UnprocessedRequestException.of(
+                    new IllegalArgumentException(
+                            "RouteConfig is not set for the ctx. If a new ctx has been used, " +
+                            "please make sure to use ctx.newDerivedContext()."));
+            ctx.cancel(e);
+            throw e;
         }
-        final SelectedRoute selectedRoute = routeConfig.select(ctx);
+        final RouteEntry selectedRoute = routeConfig.select(ctx);
         if (selectedRoute == null) {
-            throw UnprocessedRequestException.of(new IllegalArgumentException(
-                    "No route has been selected for listener '" + routeConfig.listenerSnapshot() + "'."));
+            final UnprocessedRequestException e = UnprocessedRequestException.of(
+                    new IllegalArgumentException("No route has been selected for listener '" +
+                                                 routeConfig.listenerSnapshot() + '.'));
+            ctx.cancel(e);
+            throw e;
         }
         final ClusterSnapshot clusterSnapshot = selectedRoute.clusterSnapshot();
         if (clusterSnapshot == null) {
-            throw UnprocessedRequestException.of(new IllegalArgumentException(
-                    "No cluster is specified for selected route '" + selectedRoute.routeEntry() + "'."));
+            final UnprocessedRequestException e = UnprocessedRequestException.of(
+                    new IllegalArgumentException("No cluster is specified for selected route '" +
+                                                 selectedRoute + "'."));
+            ctx.cancel(e);
+            throw e;
         }
+        selectedRoute.applyUpstreamFilter(ctx);
 
-        final ClientRequestContextExtension ctxExt = ctx.as(ClientRequestContextExtension.class);
-        if (ctxExt != null) {
-            if (selectedRoute.rpcClient() != null) {
-                ctxExt.rpcClientCustomizer(actualClient -> {
-                    DelegatingRpcClient.setDelegate(ctx, actualClient);
-                    return selectedRoute.rpcClient();
-                });
-            }
-            if (selectedRoute.httpClient() != null) {
-                ctxExt.httpClientCustomizer(actualClient -> {
-                    DelegatingHttpClient.setDelegate(ctx, actualClient);
-                    return selectedRoute.httpClient();
-                });
-            }
-        }
-
-        final long responseTimeoutMillis = selectedRoute.responseTimeoutMillis();
+        final long responseTimeoutMillis =
+                XdsCommonUtil.durationToMillis(selectedRoute.route().getRoute().getTimeout(), -1);
         if (responseTimeoutMillis > 0) {
             ctx.setResponseTimeoutMillis(responseTimeoutMillis);
         }
@@ -98,8 +94,11 @@ final class RouterFilter<I extends Request, O extends Response> implements Prepr
 
         final XdsLoadBalancer loadBalancer = clusterSnapshot.loadBalancer();
         if (loadBalancer == null) {
-            throw UnprocessedRequestException.of(new IllegalArgumentException(
-                    "The target cluster '" + clusterSnapshot + "' does not specify ClusterLoadAssignments."));
+            final UnprocessedRequestException e = UnprocessedRequestException.of(
+                    new IllegalArgumentException("The target cluster '" + clusterSnapshot +
+                                                 "' does not specify ClusterLoadAssignments."));
+            ctx.cancel(e);
+            throw e;
         }
 
         final Endpoint endpoint = loadBalancer.selectNow(ctx);

@@ -1,3 +1,5 @@
+import com.linecorp.armeria.conventions.spring.SpringBuildUtil
+
 configurations {
     // TODO(hyangtack) The followings are not transitive dependencies and they are not in testRuntime
     //                 dependencies. Need to figure out why they are included in shadedJarTestRuntime dependencies.
@@ -33,68 +35,32 @@ dependencies {
     testImplementation libs.spring.boot2.starter.test
 }
 
-// Copy the sources from ':spring:boot3-autoconfigure'.
-task copyBoot3Sources(type: Copy) {
-    from("${rootProject.projectDir}/spring/boot3-autoconfigure/src/main/java") {
-        // Copy from /internal/spring package.
-        include '**/AthenzSupport.java'
-        include '**/ArmeriaConfigurationNetUtil.java'
-        include '**/ArmeriaConfigurationSettingsUtil.java'
-        include '**/ArmeriaConfigurationUtil.java'
-        include '**/CustomAlias*KeyManager*.java'
-        include '**/SpringDependencyInjector.java'
-        include '**/ThriftServiceUtils.java'
-
-        // Copy from /spring package.
-        include '**/*ArmeriaBeanPostProcessor*.java'
-        include '**/ArmeriaServerConfigurator.java'
-        include '**/ArmeriaSettings.java'
-        include '**/AthenzConfig.java'
-        include '**/DocServiceConfigurator.java'
-        include '**/DropwizardExpositionService.java'
-        include '**/DropwizardSupport.java'
-        include '**/HealthCheckServiceConfigurator.java'
-        include '**/InternalServiceId.java'
-        include '**/InternalServices.java'
-        include '**/MetricCollectingServiceConfigurator.java'
-        include '**/LocalArmeriaPort.java'
-        include '**/LocalArmeriaPorts.java'
-        include '**/PrometheusSupport.java'
-        include '**/PrometheusLegacySupport.java'
-        include '**/SpringDependencyInjector.java'
-        include '**/Ssl.java'
-    }
-
-    into "${project.ext.genSrcDir}/main/java"
+SpringBuildUtil.useMainSources(project(":spring:spring7"), project) {
+    include '**/ArmeriaClientHttpRequest.java'
+    include '**/ArmeriaClientHttpResponse.java'
+    include '**/DataBufferFactoryWrapper.java'
 }
 
-task copySpring6Sources(type: Copy) {
-    from("${rootProject.projectDir}/spring/spring6/src/main/java") {
-        include '**/ArmeriaClientHttpRequest.java'
-        include '**/ArmeriaClientHttpResponse.java'
-        include '**/DataBufferFactoryWrapper.java'
-    }
-
-    into "${project.ext.genSrcDir}/main/java"
+SpringBuildUtil.useMainSources(project(":spring:boot4-webflux-autoconfigure"), project) {
+    exclude '**/AbstractServerHttpResponseVersionSpecific.java'
+    exclude '**/AbstractServerHttpRequestVersionSpecific.java'
+    exclude '**/VersionSpecificConfiguration.java'
+    exclude '**/VersionSpecificReactiveWebServerFactory.java'
+    exclude '**/package-info.java'
+    exclude '**/org.springframework.boot.autoconfigure.AutoConfiguration.imports'
+    exclude '**/TlsUtil.java'
 }
 
-// Copy the main and test sources from ':spring:boot3-webflux-autoconfigure'.
-task generateSources(type: Copy) {
-    dependsOn(tasks.copyBoot3Sources)
-    dependsOn(tasks.copySpring6Sources)
-    from("${"${rootProject.projectDir}/spring/boot3-webflux-autoconfigure"}/src") {
-        exclude '**/AbstractServerHttpResponseVersionSpecific.java'
-        exclude '**/AbstractServerHttpRequestVersionSpecific.java'
-        exclude '**/package-info.java'
-        exclude '**/org.springframework.boot.autoconfigure.AutoConfiguration.imports'
-        exclude '**/TlsUtil.java'
-        // Micrometer observation is not supported for spring-boot-2
-        exclude '**/ObservationTest.java'
+def boot4Webflux = "boot4-webflux-autoconfigure"
+SpringBuildUtil.copyTestSources(project(":spring:${boot4Webflux}"), project) {
+    include "**"
+    filesMatching("**/*.java") {
+        filter { String line ->
+            line.replaceAll(/\bjakarta\./, 'javax.')
+        }
     }
-
-    into "${project.ext.genSrcDir}"
+    exclude "**/EnableTestMetrics.java"
+    exclude "**/SettableHealthIndicator.java"
+    exclude "**/ObservationTest.java"
+    exclude "**/VersionSpecificTestUtil.java"
 }
-
-tasks.compileJava.dependsOn(tasks.generateSources)
-tasks.processResources.dependsOn(tasks.generateSources)
-tasks.processTestResources.dependsOn(tasks.generateSources)

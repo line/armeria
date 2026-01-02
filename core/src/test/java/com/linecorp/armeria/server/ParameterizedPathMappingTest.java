@@ -258,4 +258,11 @@ class ParameterizedPathMappingTest {
         assertThat(res.path()).isEqualTo(reqPath);
         assertThat(res.pathParams()).isEmpty();
     }
+
+    @Test
+    void shouldDisallowQueryString() {
+        assertThatThrownBy(() -> new ParameterizedPathMapping("/find/{me}?with=query"))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("must not contain a query string");
+    }
 }

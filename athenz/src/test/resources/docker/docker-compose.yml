@@ -17,8 +17,8 @@ services:
       # This check ensures the DB is ready before ZMS starts.
       test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-pmariadb"]
       interval: 10s
-      timeout: 5s
-      retries: 5
+      timeout: 10s
+      retries: 10
 
   zms-server:
     image: athenz/athenz-zms-server:latest
@@ -44,11 +44,11 @@ services:
     healthcheck:
       test: [ "CMD", "curl", "-k", "--fail", "https://localhost:4443/zms/v1/status" ]
       interval: 5s
-      timeout: 3s
+      timeout: 5s
       retries: 20
 
   zts-db:
-    image: athenz/athenz-zms-db:latest
+    image: athenz/athenz-zts-db:latest
     hostname: athenz-zts-db
     networks:
       - athenz
@@ -61,8 +61,8 @@ services:
     healthcheck:
       test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-pmariadb"]
       interval: 10s
-      timeout: 5s
-      retries: 5
+      timeout: 10s
+      retries: 10
 
   zts-server:
     image: athenz/athenz-zts-server:latest
@@ -93,7 +93,7 @@ services:
     healthcheck:
       test: ["CMD", "curl", "-k", "--fail", "https://localhost:8443/zts/v1/status"]
       interval: 5s
-      timeout: 3s
+      timeout: 5s
       retries: 20
 
 networks:

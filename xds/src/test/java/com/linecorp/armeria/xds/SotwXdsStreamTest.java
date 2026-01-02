@@ -41,6 +41,7 @@ import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.grpc.GrpcService;
 import com.linecorp.armeria.testing.junit5.common.EventLoopExtension;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
+import com.linecorp.armeria.xds.SotwXdsStream.ActualStream;
 
 import io.envoyproxy.controlplane.cache.v3.SimpleCache;
 import io.envoyproxy.controlplane.cache.v3.Snapshot;
@@ -56,6 +57,8 @@ class SotwXdsStreamTest {
     private static final String GROUP = "key";
     private static final SimpleCache<String> cache = new SimpleCache<>(node -> GROUP);
     private static final String clusterName = "cluster1";
+    private static final ConfigSourceLifecycleObserver lifecycleObserver =
+            new ConfigSourceLifecycleObserver() {};
 
     @RegisterExtension
     static final ServerExtension server = new ServerExtension() {
@@ -73,7 +76,7 @@ class SotwXdsStreamTest {
         cache.setSnapshot(
                 GROUP,
                 Snapshot.create(
-                        ImmutableList.of(createCluster(clusterName, 0)),
+                        ImmutableList.of(createCluster(clusterName, 1)),
                         ImmutableList.of(),
                         ImmutableList.of(),
                         ImmutableList.of(),
@@ -100,7 +103,8 @@ class SotwXdsStreamTest {
 
         @Override
         public <I extends Message, O extends XdsResource> void handleResponse(
-                ResourceParser<I, O> resourceParser, DiscoveryResponse value, SotwXdsStream sender) {
+                ResourceParser<I, O> resourceParser, DiscoveryResponse value, ActualStream sender,
+                ConfigSourceLifecycleObserver observer) {
             responses.add(value);
             sender.ackResponse(resourceParser.type(), value.getVersionInfo(), value.getNonce());
         }
@@ -113,7 +117,8 @@ class SotwXdsStreamTest {
         final SubscriberStorage subscriberStorage = new SubscriberStorage(eventLoop.get(), 15_000);
         final TestResponseHandler responseHandler = new TestResponseHandler();
         try (SotwXdsStream stream = new SotwXdsStream(stub, SERVER_INFO, Backoff.ofDefault(), eventLoop.get(),
-                                                      responseHandler, subscriberStorage)) {
+                                                      responseHandler, subscriberStorage,
+                                                      lifecycleObserver)) {
 
             await().pollDelay(100, TimeUnit.MILLISECONDS)
                    .untilAsserted(() -> assertThat(responseHandler.getResponses()).isEmpty());
@@ -146,7 +151,7 @@ class SotwXdsStreamTest {
 
             // now the stream is stopped, so no more updates
             stream.stop();
-            await().until(() -> stream.requestObserver == null);
+            await().until(() -> stream.actualStream == null);
 
             cache.setSnapshot(
                     GROUP,
@@ -168,7 +173,7 @@ class SotwXdsStreamTest {
         final TestResponseHandler responseHandler = new TestResponseHandler();
 
         try (SotwXdsStream stream = new SotwXdsStream(stub, SERVER_INFO, Backoff.ofDefault(), eventLoop.get(),
-                                                      responseHandler, subscriberStorage)) {
+                                                      responseHandler, subscriberStorage, lifecycleObserver)) {
 
             await().pollDelay(100, TimeUnit.MILLISECONDS)
                    .untilAsserted(() -> assertThat(responseHandler.getResponses()).isEmpty());
@@ -186,7 +191,7 @@ class SotwXdsStreamTest {
 
             // stop the stream and verify there are no updates
             stream.stop();
-            await().until(() -> stream.requestObserver == null);
+            await().until(() -> stream.actualStream == null);
 
             cache.setSnapshot(
                     GROUP,
@@ -217,21 +222,23 @@ class SotwXdsStreamTest {
         final TestResponseHandler responseHandler = new TestResponseHandler() {
             @Override
             public <I extends Message, O extends XdsResource> void handleResponse(
-                    ResourceParser<I, O> resourceParser, DiscoveryResponse value, SotwXdsStream sender) {
+                    ResourceParser<I, O> resourceParser, DiscoveryResponse value, ActualStream sender,
+                    ConfigSourceLifecycleObserver observer) {
                 if (cntRef.getAndIncrement() < 3) {
-                    throw new RuntimeException("test");
+                    sender.onError(new Exception("error"));
+                    return;
                 }
                 try {
                     latch.await();
                 } catch (InterruptedException e) {
                     throw new RuntimeException(e);
                 }
-                super.handleResponse(resourceParser, value, sender);
+                super.handleResponse(resourceParser, value, sender, observer);
             }
         };
 
         try (SotwXdsStream stream = new SotwXdsStream(stub, SERVER_INFO, Backoff.ofDefault(), eventLoop.get(),
-                                                      responseHandler, subscriberStorage)) {
+                                                      responseHandler, subscriberStorage, lifecycleObserver)) {
 
             await().pollDelay(100, TimeUnit.MILLISECONDS)
                    .untilAsserted(() -> assertThat(responseHandler.getResponses()).isEmpty());
@@ -262,9 +269,10 @@ class SotwXdsStreamTest {
         final TestResponseHandler responseHandler = new TestResponseHandler() {
             @Override
             public <I extends Message, O extends XdsResource> void handleResponse(
-                    ResourceParser<I, O> resourceParser, DiscoveryResponse value, SotwXdsStream sender) {
+                    ResourceParser<I, O> resourceParser, DiscoveryResponse value, ActualStream sender,
+                    ConfigSourceLifecycleObserver observer) {
                 if (ackRef.get()) {
-                    super.handleResponse(resourceParser, value, sender);
+                    super.handleResponse(resourceParser, value, sender, observer);
                 } else {
                     nackResponses.incrementAndGet();
                     sender.nackResponse(XdsType.CLUSTER, value.getNonce(), "temporarily unavailable");
@@ -273,8 +281,8 @@ class SotwXdsStreamTest {
         };
 
         try (SotwXdsStream stream = new SotwXdsStream(
-                     stub, SERVER_INFO, Backoff.ofDefault(), eventLoop.get(), responseHandler,
-                     subscriberStorage)) {
+                stub, SERVER_INFO, Backoff.ofDefault(), eventLoop.get(), responseHandler,
+                subscriberStorage, lifecycleObserver)) {
 
             await().pollDelay(100, TimeUnit.MILLISECONDS)
                    .untilAsserted(() -> assertThat(responseHandler.getResponses()).isEmpty());

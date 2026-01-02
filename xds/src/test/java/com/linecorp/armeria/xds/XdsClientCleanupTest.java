@@ -76,7 +76,7 @@ class XdsClientCleanupTest {
     void testRemoveWatcher() throws Exception {
         final String clusterName = "cluster1";
         final Bootstrap bootstrap = XdsTestResources.bootstrap(server.httpUri());
-        try (XdsBootstrapImpl xdsBootstrap = new XdsBootstrapImpl(bootstrap)) {
+        try (XdsBootstrapImpl xdsBootstrap = (XdsBootstrapImpl) XdsBootstrap.of(bootstrap)) {
             final ClusterRoot clusterRoot = xdsBootstrap.clusterRoot(clusterName);
             final Map<ConfigSource, ConfigSourceClient> clientMap = xdsBootstrap.clientMap();
             await().until(() -> !clientMap.isEmpty());
@@ -90,7 +90,7 @@ class XdsClientCleanupTest {
     void testMultipleWatchers() throws Exception {
         final String clusterName = "cluster1";
         final Bootstrap bootstrap = XdsTestResources.bootstrap(server.httpUri());
-        try (XdsBootstrapImpl xdsBootstrap = new XdsBootstrapImpl(bootstrap)) {
+        try (XdsBootstrapImpl xdsBootstrap = (XdsBootstrapImpl) XdsBootstrap.of(bootstrap)) {
             final SafeCloseable closeable1 = xdsBootstrap.clusterRoot(clusterName);
             final SafeCloseable closeable2 = xdsBootstrap.clusterRoot(clusterName);
             final Map<ConfigSource, ConfigSourceClient> clientMap = xdsBootstrap.clientMap();
@@ -109,7 +109,7 @@ class XdsClientCleanupTest {
     void closeIsValidOnce() throws Exception {
         final String clusterName = "cluster1";
         final Bootstrap bootstrap = XdsTestResources.bootstrap(server.httpUri());
-        try (XdsBootstrapImpl xdsBootstrap = new XdsBootstrapImpl(bootstrap)) {
+        try (XdsBootstrapImpl xdsBootstrap = (XdsBootstrapImpl) XdsBootstrap.of(bootstrap)) {
             final ClusterRoot clusterRoot1 = xdsBootstrap.clusterRoot(clusterName);
             final ClusterRoot clusterRoot2 = xdsBootstrap.clusterRoot(clusterName);
             final Map<ConfigSource, ConfigSourceClient> clientMap = xdsBootstrap.clientMap();

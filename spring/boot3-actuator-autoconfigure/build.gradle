@@ -1,3 +1,5 @@
+import com.linecorp.armeria.conventions.spring.SpringBuildUtil
+
 dependencies {
     api libs.spring.boot3.actuator.autoconfigure
     api libs.jakarta.inject
@@ -18,29 +20,13 @@ dependencies {
     testImplementation libs.javax.inject
 }
 
-// Copy common files from boot3-autoconfigure module to gen-src directory in order to use them as
-// a source/test set.
-task generateTestSources(type: Copy) {
-    from "${rootProject.projectDir}/spring/boot3-autoconfigure/src/test"
-    into "${project.ext.genSrcDir}/test"
-    include '**/RetryableArmeriaServerGracefulShutdownLifecycle.java'
-    include '**/RetryableArmeriaServerGracefulShutdownLifecycleConfiguration.java'
-    include '**/META-INF/spring/**'
+def boot4Actuator = "boot4-actuator-autoconfigure"
+SpringBuildUtil.useTestSources(project(":spring:${boot4Actuator}"), project) {
+    exclude '**/EnableTestMetrics.java'
+    exclude '**/SettableHealthIndicator.java'
 }
 
-task generateSources(type: Copy) {
-    dependsOn(generateTestSources)
-
-    from "${rootProject.projectDir}/spring/boot3-autoconfigure/src/main/java"
-    into "${project.ext.genSrcDir}/main/java"
-    include '**/ArmeriaConfigurationNetUtil.java'
-    include '**/ArmeriaServerConfigurator.java'
-    include '**/ArmeriaSettings.java'
-    include '**/AthenzConfig.java'
-    include '**/InternalServiceId.java'
-    include '**/SpringDependencyInjector.java'
-    include '**/Ssl.java'
+SpringBuildUtil.useMainSources(project(":spring:${boot4Actuator}"), project) {
+    exclude "**/HealthConfiguration.java"
+    exclude "**/package-info.java"
 }
-
-tasks.compileJava.dependsOn(tasks.generateSources)
-tasks.processTestResources.dependsOn(tasks.generateSources)

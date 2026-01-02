@@ -128,6 +128,8 @@ final class AnnotatedValueResolver {
 
     private static final List<RequestObjectResolver> defaultRequestObjectResolvers;
 
+    private static final Set<Type> fileTypes = ImmutableSet.of(File.class, Path.class, MultipartFile.class);
+
     static {
         final ImmutableList.Builder<RequestObjectResolver> builder = ImmutableList.builderWithExpectedSize(4);
         builder.add((resolverContext, expectedResultType, expectedParameterizedResultType, beanFactoryId) -> {
@@ -473,7 +475,7 @@ final class AnnotatedValueResolver {
                 }
                 return ofQueryParamMap(name, annotatedElement, typeElement, type, description);
             }
-            if (type == File.class || type == Path.class || type == MultipartFile.class) {
+            if (fileTypes.contains(type) || isListOfFiles(typeElement)) {
                 return ofFileParam(name, annotatedElement, typeElement, type, description);
             }
             if (pathParams.contains(name)) {
@@ -527,6 +529,31 @@ final class AnnotatedValueResolver {
         }
 
         return null;
+    }
+
+    private static boolean isListOfFiles(AnnotatedElement typeElement) {
+        if (!(typeElement instanceof Parameter)) {
+            return false;
+        }
+        final Type parameter = ((Parameter) typeElement).getParameterizedType();
+        if (!(parameter instanceof ParameterizedType)) {
+            return false;
+        }
+        final ParameterizedType parameterizedType = (ParameterizedType) parameter;
+        final Type raw = parameterizedType.getRawType();
+        if (!(raw instanceof Class<?>)) {
+            return false;
+        }
+        final Class<?> rawClass = (Class<?>) raw;
+        if (!List.class.isAssignableFrom(rawClass) && !Set.class.isAssignableFrom(rawClass)) {
+            return false;
+        }
+        final Type[] args = parameterizedType.getActualTypeArguments();
+        if (args.length != 1) {
+            return false;
+        }
+        final Type arg = args[0];
+        return fileTypes.contains(arg);
     }
 
     static List<RequestObjectResolver> addToFirstIfExists(List<RequestObjectResolver> resolvers,
@@ -1023,6 +1050,23 @@ final class AnnotatedValueResolver {
                                            element.getClass().getSimpleName());
     }
 
+    /**
+     * Return if the given {@link AnnotatedElement} is annotated with {@code @Nullable} annotation.
+     * This method checks both declaration annotation and type-use annotation.
+     *
+     * <p>For example:
+     * <pre>{@code
+     * @Nullable // declaration annotation
+     * public String declarationAnnotatedMethod() {
+     *     return null;
+     * }
+     *
+     * // type-use annotation
+     * public @Nullable String typeUseAnnotatedMethod() {
+     *     return null;
+     * }
+     * }</pre>
+     */
     static boolean isAnnotatedNullable(AnnotatedElement annotatedElement) {
         // 1) declaration annotation
         for (Annotation a : annotatedElement.getAnnotations()) {

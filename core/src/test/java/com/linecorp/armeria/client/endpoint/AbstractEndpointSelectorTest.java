@@ -46,8 +46,11 @@ class AbstractEndpointSelectorTest {
         final Endpoint endpoint = Endpoint.of("foo");
         final ClientRequestContext ctx = ClientRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
         final AbstractEndpointSelector endpointSelector = newSelector(endpoint);
+        assertThat(endpointSelector.isInitialized()).isFalse();
         assertThat(endpointSelector.select(ctx, ctx.eventLoop(), Long.MAX_VALUE))
                 .isCompletedWithValue(endpoint);
+        // The AbstractEndpointSelector should be initialized when the first selection is made.
+        assertThat(endpointSelector.isInitialized()).isTrue();
         assertThat(endpointSelector.pendingFutures()).isEmpty();
     }
 
@@ -56,8 +59,11 @@ class AbstractEndpointSelectorTest {
         final DynamicEndpointGroup group = new DynamicEndpointGroup();
         final ClientRequestContext ctx = ClientRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
         final AbstractEndpointSelector endpointSelector = newSelector(group);
+        assertThat(endpointSelector.isInitialized()).isFalse();
         final CompletableFuture<Endpoint> future = endpointSelector.select(ctx, ctx.eventLoop(),
                                                                            Long.MAX_VALUE);
+        // The AbstractEndpointSelector should be initialized when the first selection is made.
+        assertThat(endpointSelector.isInitialized()).isTrue();
         assertThat(future).isNotDone();
 
         final Endpoint endpoint = Endpoint.of("foo");
@@ -128,16 +134,14 @@ class AbstractEndpointSelectorTest {
     }
 
     private static AbstractEndpointSelector newSelector(EndpointGroup endpointGroup) {
-        final AbstractEndpointSelector selector = new AbstractEndpointSelector(endpointGroup) {
+        return new AbstractEndpointSelector(endpointGroup) {
 
             @Nullable
             @Override
-            public Endpoint selectNow(ClientRequestContext ctx) {
+            public Endpoint doSelectNow(ClientRequestContext ctx) {
                 final List<Endpoint> endpoints = endpointGroup.endpoints();
                 return endpoints.isEmpty() ? null : endpoints.get(0);
             }
         };
-        selector.initialize();
-        return selector;
     }
 }

@@ -47,8 +47,9 @@ public interface XdsLoadBalancer extends EndpointSelector {
      * {@link Endpoint}s.
      */
     static UpdatableXdsLoadBalancer of(EventExecutor eventLoop, Locality locality,
-                                       @Nullable XdsLoadBalancer localLoadBalancer) {
-        return new DefaultXdsLoadBalancer(eventLoop, locality, localLoadBalancer);
+                                       @Nullable XdsLoadBalancer localLoadBalancer,
+                                       XdsLoadBalancerLifecycleObserver lifecycleObserver) {
+        return new DefaultXdsLoadBalancer(eventLoop, locality, localLoadBalancer, lifecycleObserver);
     }
 
     @Override

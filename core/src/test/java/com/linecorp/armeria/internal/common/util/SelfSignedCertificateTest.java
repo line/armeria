@@ -15,11 +15,18 @@
  */
 package com.linecorp.armeria.internal.common.util;
 
+import static com.google.common.collect.ImmutableList.toImmutableList;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.security.cert.CertificateException;
+import java.security.cert.X509Certificate;
+import java.util.Collection;
+import java.util.List;
+import java.util.concurrent.ThreadLocalRandom;
 
 import org.junit.jupiter.api.Test;
+
+import com.google.common.collect.ImmutableList;
 
 class SelfSignedCertificateTest {
     @Test
@@ -33,5 +40,46 @@ class SelfSignedCertificateTest {
         final SelfSignedCertificate ssc = new SelfSignedCertificate("*.netty.io", "EC", 256);
         assertThat(ssc.certificate().getName()).doesNotContain("*");
         assertThat(ssc.privateKey().getName()).doesNotContain("*");
+    }
+
+    @Test
+    void subjectAlternativeNamesWithUriTest() throws Exception {
+        final List<String> additionalSans = ImmutableList.of(
+                "example.com",
+                "192.168.1.1",
+                "spiffe://centraldogma.dev/sa/centraldogma-alpha",
+                "https://api.example.com/service");
+        final SelfSignedCertificate ssc = new SelfSignedCertificate(
+                "test.armeria.dev",
+                ThreadLocalRandom.current(),
+                2048,
+                SignedCertificate.DEFAULT_NOT_BEFORE,
+                SignedCertificate.DEFAULT_NOT_AFTER,
+                "RSA",
+                additionalSans);
+
+        final X509Certificate cert = ssc.cert();
+        final Collection<List<?>> sans = cert.getSubjectAlternativeNames();
+        assertThat(sans).isNotNull();
+
+        // Extract DNS names (type 2), IP addresses (type 7), and URIs (type 6) from SANs
+        final List<String> dnsNames = sans.stream()
+                                          .filter(san -> (Integer) san.get(0) == 2) // DNS name
+                                          .map(san -> (String) san.get(1))
+                                          .collect(toImmutableList());
+        final List<String> ipAddresses = sans.stream()
+                                             .filter(san -> (Integer) san.get(0) == 7) // IP address
+                                             .map(san -> (String) san.get(1))
+                                             .collect(toImmutableList());
+        final List<String> uris = sans.stream()
+                                      .filter(san -> (Integer) san.get(0) == 6) // URI
+                                      .map(san -> (String) san.get(1))
+                                      .collect(toImmutableList());
+
+        assertThat(dnsNames).contains("test.armeria.dev");
+        assertThat(dnsNames).contains("example.com");
+        assertThat(ipAddresses).contains("192.168.1.1");
+        assertThat(uris).contains("spiffe://centraldogma.dev/sa/centraldogma-alpha",
+                                  "https://api.example.com/service");
     }
 }

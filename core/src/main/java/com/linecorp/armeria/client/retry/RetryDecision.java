@@ -20,31 +20,51 @@ import static java.util.Objects.requireNonNull;
 
 import org.jspecify.annotations.Nullable;
 
+import com.google.common.base.MoreObjects;
+import com.google.common.base.MoreObjects.ToStringHelper;
+
 /**
  * A {@link RetryDecision} that determines whether a {@link RetryRule} retries with a {@link Backoff},
  * skips the current {@link RetryRule} or no retries.
  */
 public final class RetryDecision {
 
-    private static final RetryDecision NO_RETRY = new RetryDecision(null);
-    private static final RetryDecision NEXT = new RetryDecision(null);
-    static final RetryDecision DEFAULT = new RetryDecision(Backoff.ofDefault());
+    private static final RetryDecision NO_RETRY = new RetryDecision(null, -1);
+    private static final RetryDecision NEXT = new RetryDecision(null, 0);
+    static final RetryDecision DEFAULT = new RetryDecision(Backoff.ofDefault(), 1);
+
+    /**
+     * Returns a {@link RetryDecision} that retries with the specified {@link Backoff}.
+     * The permits will be {@code 1} by default.
+     */
+    public static RetryDecision retry(Backoff backoff) {
+        return retry(backoff, 1);
+    }
 
     /**
      * Returns a {@link RetryDecision} that retries with the specified {@link Backoff}.
      */
-    public static RetryDecision retry(Backoff backoff) {
-        if (backoff == Backoff.ofDefault()) {
+    @SuppressWarnings("FloatingPointEquality")
+    public static RetryDecision retry(Backoff backoff, double permits) {
+        if (backoff == DEFAULT.backoff() && permits == DEFAULT.permits()) {
             return DEFAULT;
         }
-        return new RetryDecision(requireNonNull(backoff, "backoff"));
+        return new RetryDecision(requireNonNull(backoff, "backoff"), permits);
+    }
+
+    /**
+     * Returns a {@link RetryDecision} that never retries.
+     * The permits will be {@code -1} by default.
+     */
+    public static RetryDecision noRetry() {
+        return NO_RETRY;
     }
 
     /**
      * Returns a {@link RetryDecision} that never retries.
      */
-    public static RetryDecision noRetry() {
-        return NO_RETRY;
+    public static RetryDecision noRetry(double permits) {
+        return new RetryDecision(null, permits);
     }
 
     /**
@@ -57,9 +77,11 @@ public final class RetryDecision {
 
     @Nullable
     private final Backoff backoff;
+    private final double permits;
 
-    private RetryDecision(@Nullable Backoff backoff) {
+    private RetryDecision(@Nullable Backoff backoff, double permits) {
         this.backoff = backoff;
+        this.permits = permits;
     }
 
     @Nullable
@@ -67,14 +89,29 @@ public final class RetryDecision {
         return backoff;
     }
 
+    /**
+     * The number of permits associated with this {@link RetryDecision}.
+     * This may be used by {@link RetryLimiter} to determine whether retry requests should
+     * be limited or not. The semantics of whether or how the returned value affects {@link RetryLimiter}
+     * depends on what type of {@link RetryLimiter} is used.
+     */
+    public double permits() {
+        return permits;
+    }
+
     @Override
     public String toString() {
-        if (this == NO_RETRY) {
-            return "RetryDecision(NO_RETRY)";
-        } else if (this == NEXT) {
-            return "RetryDecision(NEXT)";
+        final ToStringHelper stringHelper = MoreObjects.toStringHelper(this);
+        if (this == NEXT) {
+            stringHelper.add("type", "NEXT");
+        } else if (backoff != null) {
+            stringHelper.add("type", "RETRY");
         } else {
-            return "RetryDecision(RETRY(" + backoff + "))";
+            stringHelper.add("type", "NO_RETRY");
         }
+        return stringHelper.omitNullValues()
+                           .add("backoff", backoff)
+                           .add("permits", permits)
+                           .toString();
     }
 }

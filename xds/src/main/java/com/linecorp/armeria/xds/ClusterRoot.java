@@ -19,6 +19,7 @@ package com.linecorp.armeria.xds;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 
 import io.envoyproxy.envoy.config.cluster.v3.Cluster;
+import io.grpc.Status;
 
 /**
  * A root node representing a {@link Cluster}.
@@ -31,11 +32,12 @@ public final class ClusterRoot extends AbstractRoot<ClusterSnapshot> {
     private final SubscriptionContext context;
     private final String resourceName;
 
-    ClusterRoot(SubscriptionContext context, String resourceName) {
-        super(context.eventLoop());
+    ClusterRoot(SubscriptionContext context, String resourceName, SnapshotWatcher<Object> defaultWatcher) {
+        super(context.eventLoop(), defaultWatcher);
         this.context = context;
         this.resourceName = resourceName;
-        eventLoop().execute(() -> context.clusterManager().register(resourceName, context, this));
+        eventLoop().execute(safeRunnable(() -> context.clusterManager().register(resourceName, context, this),
+                                         t -> onError(XdsType.CLUSTER, resourceName, Status.fromThrowable(t))));
     }
 
     @Override

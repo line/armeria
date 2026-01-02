@@ -21,7 +21,7 @@ import org.jspecify.annotations.Nullable;
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.Endpoint;
 
-interface LoadBalancer {
+interface LoadBalancer extends LoadBalancerState {
 
     @Nullable
     Endpoint selectNow(ClientRequestContext ctx);

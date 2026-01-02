@@ -42,6 +42,10 @@ abstract class AbstractPathMapping implements PathMapping {
         return path.substring(length);
     }
 
+    static boolean hasQueryString(String path) {
+        return path.indexOf('?') >= 0;
+    }
+
     @Override
     public final PathMapping withPrefix(String prefix) {
         prefix = ensureAbsolutePath(prefix, "prefix");

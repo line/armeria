@@ -26,6 +26,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.linecorp.armeria.common.util.SafeCloseable;
+import com.linecorp.armeria.xds.SubscriberStorage.ResourceCache;
 
 import io.grpc.Status;
 import io.netty.util.concurrent.EventExecutor;
@@ -38,6 +39,7 @@ class XdsStreamSubscriber<T extends XdsResource> implements SafeCloseable {
     private final XdsType type;
     private final String resource;
     private final long timeoutMillis;
+    private final ResourceCache resourceCache;
     private final EventExecutor eventLoop;
 
     @Nullable
@@ -47,11 +49,13 @@ class XdsStreamSubscriber<T extends XdsResource> implements SafeCloseable {
     private ScheduledFuture<?> initialAbsentFuture;
     private final Set<ResourceWatcher<T>> resourceWatchers = new HashSet<>();
 
-    XdsStreamSubscriber(XdsType type, String resource, EventExecutor eventLoop, long timeoutMillis) {
+    XdsStreamSubscriber(XdsType type, String resource, EventExecutor eventLoop, long timeoutMillis,
+                        ResourceCache resourceCache) {
         this.type = type;
         this.resource = resource;
         this.eventLoop = eventLoop;
         this.timeoutMillis = timeoutMillis;
+        this.resourceCache = resourceCache;
 
         restartTimer();
     }
@@ -97,16 +101,11 @@ class XdsStreamSubscriber<T extends XdsResource> implements SafeCloseable {
         }
     }
 
-    @Nullable
-    T data() {
-        return data;
-    }
-
-    void onError(Status status) {
+    void onError(String resourceName, Status status) {
         maybeCancelAbsentTimer();
         for (ResourceWatcher<?> watcher: resourceWatchers) {
             try {
-                watcher.onError(type, status);
+                watcher.onError(type, resourceName, status);
             } catch (Exception e) {
                 logger.warn("Unexpected exception while invoking {}.onError() with ({}, {}) for ({}).",
                             getClass().getSimpleName(), type, resource, status, e);
@@ -136,10 +135,12 @@ class XdsStreamSubscriber<T extends XdsResource> implements SafeCloseable {
         return resourceWatchers.isEmpty();
     }
 
+    @SuppressWarnings("unchecked")
     void registerWatcher(ResourceWatcher<T> watcher) {
         resourceWatchers.add(watcher);
-        if (data != null) {
-            watcher.onChanged(data);
+        final Object cached = resourceCache.find(type, resource);
+        if (cached != null) {
+            watcher.onChanged((T) cached);
         } else if (absent) {
             watcher.onResourceDoesNotExist(type, resource);
         }

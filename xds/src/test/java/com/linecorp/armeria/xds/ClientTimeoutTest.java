@@ -36,7 +36,6 @@ import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.grpc.GrpcService;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
-import io.envoyproxy.controlplane.cache.TestResources;
 import io.envoyproxy.controlplane.cache.v3.SimpleCache;
 import io.envoyproxy.controlplane.cache.v3.Snapshot;
 import io.envoyproxy.controlplane.server.V3DiscoveryServer;
@@ -98,7 +97,7 @@ class ClientTimeoutTest {
             // add the resource afterward
             cache.setSnapshot(
                     GROUP,
-                    Snapshot.create(ImmutableList.of(TestResources.createCluster(clusterName)),
+                    Snapshot.create(ImmutableList.of(XdsTestResources.createCluster(clusterName)),
                                     ImmutableList.of(XdsTestResources.loadAssignment(clusterName, URI.create("http://a.b"))),
                                     ImmutableList.of(), ImmutableList.of(), ImmutableList.of(), "2"));
             simulateTimeout.set(false);
@@ -135,14 +134,14 @@ class ClientTimeoutTest {
         final String clusterName = "cluster1";
         simulateTimeout.set(true);
         final Bootstrap bootstrap = bootstrapWithTimeout(100);
-        try (XdsBootstrapImpl xdsBootstrap = new XdsBootstrapImpl(bootstrap)) {
+        try (XdsBootstrap xdsBootstrap = XdsBootstrap.of(bootstrap)) {
             final ClusterRoot clusterRoot = xdsBootstrap.clusterRoot(clusterName);
             clusterRoot.addSnapshotWatcher(watcher);
             assertThat(watcher.blockingMissing()).isEqualTo(ImmutableList.of(XdsType.CLUSTER, clusterName));
 
             cache.setSnapshot(
                     GROUP,
-                    Snapshot.create(ImmutableList.of(TestResources.createCluster(clusterName)),
+                    Snapshot.create(ImmutableList.of(XdsTestResources.createCluster(clusterName)),
                                     ImmutableList.of(XdsTestResources.loadAssignment(clusterName, URI.create("http://a.b"))),
                                     ImmutableList.of(),
                                     ImmutableList.of(), ImmutableList.of(), "2"));

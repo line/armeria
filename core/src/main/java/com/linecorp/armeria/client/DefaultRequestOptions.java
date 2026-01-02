@@ -25,13 +25,14 @@ import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableMap;
 
 import com.linecorp.armeria.common.ExchangeType;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 
 import io.netty.util.AttributeKey;
 
 final class DefaultRequestOptions implements RequestOptions {
 
     static final DefaultRequestOptions EMPTY = new DefaultRequestOptions(-1, -1, -1, null,
-                                                                         ImmutableMap.of(), null, null);
+                                                                         ImmutableMap.of(), null, null, null);
 
     private final long responseTimeoutMillis;
     private final long writeTimeoutMillis;
@@ -43,12 +44,15 @@ final class DefaultRequestOptions implements RequestOptions {
     private final ExchangeType exchangeType;
     @Nullable
     private final ResponseTimeoutMode responseTimeoutMode;
+    @Nullable
+    private final ClientTlsSpec clientTlsSpec;
 
     DefaultRequestOptions(long responseTimeoutMillis, long writeTimeoutMillis,
                           long maxResponseLength, @Nullable Long requestAutoAbortDelayMillis,
                           Map<AttributeKey<?>, Object> attributeMap,
                           @Nullable ExchangeType exchangeType,
-                          @Nullable ResponseTimeoutMode responseTimeoutMode) {
+                          @Nullable ResponseTimeoutMode responseTimeoutMode,
+                          @Nullable ClientTlsSpec clientTlsSpec) {
         this.responseTimeoutMillis = responseTimeoutMillis;
         this.writeTimeoutMillis = writeTimeoutMillis;
         this.maxResponseLength = maxResponseLength;
@@ -56,6 +60,7 @@ final class DefaultRequestOptions implements RequestOptions {
         this.attributeMap = attributeMap;
         this.exchangeType = exchangeType;
         this.responseTimeoutMode = responseTimeoutMode;
+        this.clientTlsSpec = clientTlsSpec;
     }
 
     @Override
@@ -97,6 +102,12 @@ final class DefaultRequestOptions implements RequestOptions {
     }
 
     @Override
+    @UnstableApi
+    public @Nullable ClientTlsSpec clientTlsSpec() {
+        return clientTlsSpec;
+    }
+
+    @Override
     public boolean equals(Object o) {
         if (this == o) {
             return true;
@@ -113,13 +124,14 @@ final class DefaultRequestOptions implements RequestOptions {
                maxResponseLength == that.maxResponseLength &&
                attributeMap.equals(that.attributeMap) &&
                exchangeType == that.exchangeType &&
-               responseTimeoutMode == that.responseTimeoutMode;
+               responseTimeoutMode == that.responseTimeoutMode &&
+               Objects.equals(clientTlsSpec, that.clientTlsSpec);
     }
 
     @Override
     public int hashCode() {
         return Objects.hash(responseTimeoutMillis, writeTimeoutMillis, maxResponseLength,
-                            attributeMap, exchangeType, responseTimeoutMode);
+                            attributeMap, exchangeType, responseTimeoutMode, clientTlsSpec);
     }
 
     @Override
@@ -132,6 +144,7 @@ final class DefaultRequestOptions implements RequestOptions {
                           .add("attributeMap", attributeMap)
                           .add("exchangeType", exchangeType)
                           .add("responseTimeoutMode", responseTimeoutMode)
+                          .add("clientTlsSpec", clientTlsSpec)
                           .toString();
     }
 }

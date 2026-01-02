@@ -25,6 +25,7 @@ import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.RpcResponse;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.xds.XdsBootstrap;
+import com.linecorp.armeria.xds.internal.DelegatingRpcClient;
 
 /**
  * An {@link RpcPreprocessor} implementation which allows clients to execute requests based on

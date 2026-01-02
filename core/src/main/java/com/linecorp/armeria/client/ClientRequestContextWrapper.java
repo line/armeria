@@ -32,6 +32,7 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.RequestContextWrapper;
 import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.RpcRequest;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.util.TimeoutMode;
 
 /**
@@ -170,6 +171,18 @@ public class ClientRequestContextWrapper
     @Override
     public ResponseTimeoutMode responseTimeoutMode() {
         return unwrap().responseTimeoutMode();
+    }
+
+    @Override
+    @UnstableApi
+    public @Nullable ClientTlsSpec clientTlsSpec() {
+        return unwrap().clientTlsSpec();
+    }
+
+    @Override
+    @UnstableApi
+    public void setClientTlsSpec(ClientTlsSpec clientTlsSpec) {
+        unwrap().setClientTlsSpec(clientTlsSpec);
     }
 
     @Override

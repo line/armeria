@@ -25,8 +25,6 @@ import org.jspecify.annotations.Nullable;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 
-import com.linecorp.armeria.common.util.SafeCloseable;
-
 import io.envoyproxy.envoy.config.core.v3.ConfigSource;
 import io.envoyproxy.envoy.config.route.v3.Route;
 import io.envoyproxy.envoy.config.route.v3.RouteAction;
@@ -64,7 +62,7 @@ final class VirtualHostResourceNode extends AbstractResourceNode<VirtualHostXdsR
         super.close();
     }
 
-    private static class ClusterSnapshotWatcher implements SnapshotWatcher<ClusterSnapshot>, SafeCloseable {
+    private static class ClusterSnapshotWatcher extends AbstractNodeSnapshotWatcher<ClusterSnapshot> {
 
         private final Map<String, ClusterSnapshot> snapshots = new HashMap<>();
         private final VirtualHostXdsResource resource;
@@ -72,8 +70,6 @@ final class VirtualHostResourceNode extends AbstractResourceNode<VirtualHostXdsR
         private final VirtualHostResourceNode parentNode;
         private final int index;
         private final Set<String> clusterNames;
-
-        private boolean closed;
 
         ClusterSnapshotWatcher(VirtualHostXdsResource resource, SubscriptionContext context,
                                VirtualHostResourceNode parentNode, int index) {
@@ -98,10 +94,7 @@ final class VirtualHostResourceNode extends AbstractResourceNode<VirtualHostXdsR
         }
 
         @Override
-        public void snapshotUpdated(ClusterSnapshot newSnapshot) {
-            if (closed) {
-                return;
-            }
+        protected void doSnapshotUpdated(ClusterSnapshot newSnapshot) {
             snapshots.put(newSnapshot.xdsResource().name(), newSnapshot);
             // checks if all clusters for the route have reported a snapshot
             if (snapshots.size() < clusterNames.size()) {
@@ -113,24 +106,22 @@ final class VirtualHostResourceNode extends AbstractResourceNode<VirtualHostXdsR
         }
 
         @Override
-        public void onError(XdsType type, Status status) {
-            if (closed) {
-                return;
-            }
-            parentNode.notifyOnError(type, status);
+        protected void doOnError(XdsType type, String resourceName, Status status) {
+            parentNode.notifyOnError(type, resourceName, status);
         }
 
         @Override
-        public void onMissing(XdsType type, String resourceName) {
-            if (closed) {
-                return;
-            }
+        protected void doOnMissing(XdsType type, String resourceName) {
             parentNode.notifyOnMissing(type, resourceName);
         }
 
         @Override
-        public void close() {
-            closed = true;
+        void doPreClose() {
+            // no need to pre-close as cluster nodes are cached
+        }
+
+        @Override
+        protected void doClose() {
             for (String clusterName : clusterNames) {
                 context.clusterManager().unregister(clusterName, this);
             }

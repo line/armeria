@@ -123,4 +123,11 @@ public interface RequestOptions {
     @Nullable
     @UnstableApi
     ResponseTimeoutMode responseTimeoutMode();
+
+    /**
+     * Returns the request-specific TLS configuration for this request.
+     */
+    @UnstableApi
+    @Nullable
+    ClientTlsSpec clientTlsSpec();
 }

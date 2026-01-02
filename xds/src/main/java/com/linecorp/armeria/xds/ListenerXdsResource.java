@@ -22,10 +22,7 @@ import java.util.List;
 
 import org.jspecify.annotations.Nullable;
 
-import com.google.common.base.MoreObjects;
-import com.google.common.base.Objects;
 import com.google.protobuf.Any;
-import com.google.protobuf.InvalidProtocolBufferException;
 
 import com.linecorp.armeria.common.annotation.UnstableApi;
 
@@ -38,7 +35,7 @@ import io.envoyproxy.envoy.extensions.filters.network.http_connection_manager.v3
  * A resource object for a {@link Listener}.
  */
 @UnstableApi
-public final class ListenerXdsResource implements XdsResource {
+public final class ListenerXdsResource extends AbstractXdsResource {
 
     private static final String HTTP_CONNECTION_MANAGER_TYPE_URL =
             "type.googleapis.com/" +
@@ -52,18 +49,18 @@ public final class ListenerXdsResource implements XdsResource {
     @Nullable
     private final Router router;
 
-    ListenerXdsResource(Listener listener) {
+    ListenerXdsResource(Listener listener, String version, long revision) {
+        super(version, revision);
+        XdsValidatorIndexRegistry.assertValid(listener);
         this.listener = listener;
 
-        final Any apiListener = listener.getApiListener().getApiListener();
-        if (HTTP_CONNECTION_MANAGER_TYPE_URL.equals(apiListener.getTypeUrl())) {
-            try {
-                connectionManager = apiListener.unpack(HttpConnectionManager.class);
-            } catch (InvalidProtocolBufferException e) {
-                throw new IllegalArgumentException(e);
+        if (listener.getApiListener().hasApiListener()) {
+            final Any apiListener = listener.getApiListener().getApiListener();
+            if (HTTP_CONNECTION_MANAGER_TYPE_URL.equals(apiListener.getTypeUrl())) {
+                connectionManager = XdsValidatorIndexRegistry.unpack(apiListener, HttpConnectionManager.class);
+            } else {
+                throw new IllegalArgumentException("Unsupported api listener: " + apiListener);
             }
-            checkArgument(connectionManager.hasRds() || connectionManager.hasRouteConfig(),
-                          "connectionManager should have an RDS or RouteConfig");
         } else {
             connectionManager = null;
         }
@@ -116,34 +113,6 @@ public final class ListenerXdsResource implements XdsResource {
             return null;
         }
         checkArgument(lastHttpFilter.hasTypedConfig(), "Only typedConfig is supported for 'Router'.");
-        try {
-            return lastHttpFilter.getTypedConfig().unpack(Router.class);
-        } catch (InvalidProtocolBufferException e) {
-            throw new RuntimeException("Failed to unpack 'Router'.", e);
-        }
-    }
-
-    @Override
-    public boolean equals(Object object) {
-        if (this == object) {
-            return true;
-        }
-        if (object == null || getClass() != object.getClass()) {
-            return false;
-        }
-        final ListenerXdsResource resource = (ListenerXdsResource) object;
-        return Objects.equal(listener, resource.listener);
-    }
-
-    @Override
-    public int hashCode() {
-        return Objects.hashCode(listener);
-    }
-
-    @Override
-    public String toString() {
-        return MoreObjects.toStringHelper(this)
-                          .add("listener", listener)
-                          .toString();
+        return XdsValidatorIndexRegistry.unpack(lastHttpFilter.getTypedConfig(), Router.class);
     }
 }

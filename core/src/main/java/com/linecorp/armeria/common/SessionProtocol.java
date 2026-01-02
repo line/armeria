@@ -17,6 +17,7 @@
 package com.linecorp.armeria.common;
 
 import static com.google.common.base.Preconditions.checkArgument;
+import static com.google.common.base.Preconditions.checkState;
 import static java.util.Objects.requireNonNull;
 
 import java.util.Map;
@@ -205,6 +206,24 @@ public enum SessionProtocol {
      */
     public int defaultPort() {
         return defaultPort;
+    }
+
+    /**
+     * Returns the equivalent protocol which supports TLS.
+     */
+    @UnstableApi
+    public SessionProtocol withTls() {
+        checkState(this != PROXY, "Unsupported protocol: %s", this);
+        if (isTls()) {
+            return this;
+        }
+        if (isExplicitHttp1()) {
+            return H1;
+        } else if (isExplicitHttp2()) {
+            return H2;
+        } else {
+            return HTTPS;
+        }
     }
 
     @Override

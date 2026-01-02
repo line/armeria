@@ -24,58 +24,64 @@ import java.util.function.Consumer;
 import com.google.common.annotations.VisibleForTesting;
 
 import com.linecorp.armeria.client.grpc.GrpcClientBuilder;
-import com.linecorp.armeria.common.CommonPools;
+import com.linecorp.armeria.common.Flags;
+import com.linecorp.armeria.common.metric.MeterIdPrefix;
 
 import io.envoyproxy.envoy.config.bootstrap.v3.Bootstrap;
 import io.envoyproxy.envoy.config.core.v3.ConfigSource;
+import io.micrometer.core.instrument.MeterRegistry;
 import io.netty.util.concurrent.EventExecutor;
 
 final class XdsBootstrapImpl implements XdsBootstrap {
     private final Bootstrap bootstrap;
     private final EventExecutor eventLoop;
 
-    private final BootstrapListeners bootstrapListeners;
-    private final BootstrapClusters bootstrapClusters;
     private final XdsClusterManager clusterManager;
+    private final ListenerManager listenerManager;
     private final ControlPlaneClientManager controlPlaneClientManager;
     private final SubscriptionContext subscriptionContext;
-
-    XdsBootstrapImpl(Bootstrap bootstrap) {
-        this(bootstrap, CommonPools.workerGroup().next(), ignored -> {});
-    }
-
-    XdsBootstrapImpl(Bootstrap bootstrap, EventExecutor eventLoop) {
-        this(bootstrap, eventLoop, ignored -> {});
-    }
+    private final SnapshotWatcher<Object> defaultWatcher;
 
     @VisibleForTesting
     XdsBootstrapImpl(Bootstrap bootstrap, EventExecutor eventLoop,
                      Consumer<GrpcClientBuilder> configClientCustomizer) {
-        this.bootstrap = bootstrap;
-        this.eventLoop = requireNonNull(eventLoop, "eventLoop");
-        clusterManager = new XdsClusterManager(eventLoop, bootstrap);
-        bootstrapClusters = new BootstrapClusters(bootstrap, eventLoop, clusterManager);
-        bootstrapListeners = new BootstrapListeners(bootstrap);
-        controlPlaneClientManager = new ControlPlaneClientManager(bootstrap, eventLoop,
-                                                                  configClientCustomizer, bootstrapClusters);
-        subscriptionContext = new DefaultSubscriptionContext(
-                eventLoop, clusterManager, new ConfigSourceMapper(bootstrap), controlPlaneClientManager);
+        this(bootstrap, eventLoop, XdsBootstrapBuilder.DEFAULT_METER_ID_PREFIX,
+             Flags.meterRegistry(), configClientCustomizer, XdsBootstrapBuilder.DEFAULT_SNAPSHOT_WATCHER);
+    }
 
-        eventLoop.execute(() -> {
-            bootstrapClusters.initializeSecondary(subscriptionContext);
-        });
+    XdsBootstrapImpl(Bootstrap bootstrap, EventExecutor eventLoop,
+                     MeterIdPrefix meterIdPrefix, MeterRegistry meterRegistry,
+                     Consumer<GrpcClientBuilder> configClientCustomizer,
+                     SnapshotWatcher<Object> defaultWatcher) {
+        this.bootstrap = bootstrap;
+        this.defaultWatcher = defaultWatcher;
+        this.eventLoop = requireNonNull(eventLoop, "eventLoop");
+        clusterManager = new XdsClusterManager(eventLoop, bootstrap, meterIdPrefix, meterRegistry);
+        final BootstrapClusters bootstrapClusters =
+                new BootstrapClusters(bootstrap, eventLoop, clusterManager,
+                                      defaultWatcher, meterIdPrefix, meterRegistry);
+        final ConfigSourceMapper configSourceMapper = new ConfigSourceMapper(bootstrap);
+        controlPlaneClientManager = new ControlPlaneClientManager(
+                bootstrap, eventLoop, configClientCustomizer, bootstrapClusters,
+                configSourceMapper, meterRegistry, meterIdPrefix);
+        subscriptionContext = new DefaultSubscriptionContext(
+                eventLoop, clusterManager, configSourceMapper, controlPlaneClientManager,
+                meterRegistry, meterIdPrefix);
+
+        bootstrapClusters.initializeSecondary(subscriptionContext);
+        listenerManager = new ListenerManager(eventLoop, bootstrap, subscriptionContext, defaultWatcher);
     }
 
     @Override
     public ListenerRoot listenerRoot(String resourceName) {
         requireNonNull(resourceName, "resourceName");
-        return new ListenerRoot(subscriptionContext, resourceName, bootstrapListeners);
+        return new ListenerRoot(subscriptionContext, resourceName, listenerManager, defaultWatcher);
     }
 
     @Override
     public ClusterRoot clusterRoot(String resourceName) {
         requireNonNull(resourceName, "resourceName");
-        return new ClusterRoot(subscriptionContext, resourceName);
+        return new ClusterRoot(subscriptionContext, resourceName, defaultWatcher);
     }
 
     @VisibleForTesting
@@ -97,5 +103,6 @@ final class XdsBootstrapImpl implements XdsBootstrap {
     public void close() {
         controlPlaneClientManager.close();
         clusterManager.close();
+        listenerManager.close();
     }
 }

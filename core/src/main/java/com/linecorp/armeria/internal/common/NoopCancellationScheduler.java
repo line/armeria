@@ -117,4 +117,9 @@ final class NoopCancellationScheduler implements CancellationScheduler {
     public State state() {
         return State.INIT;
     }
+
+    @Override
+    public boolean hasEventLoop() {
+        return false;
+    }
 }

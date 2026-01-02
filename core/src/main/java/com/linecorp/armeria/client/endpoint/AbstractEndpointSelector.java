@@ -21,6 +21,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 
 import org.jspecify.annotations.Nullable;
 
@@ -39,8 +40,13 @@ import com.linecorp.armeria.internal.client.ClientPendingThrowableUtil;
  */
 public abstract class AbstractEndpointSelector implements EndpointSelector {
 
+    private static final AtomicIntegerFieldUpdater<AbstractEndpointSelector> initializedUpdater =
+            AtomicIntegerFieldUpdater.newUpdater(AbstractEndpointSelector.class, "initialized");
+
     private final EndpointGroup endpointGroup;
     private final EndpointAsyncSelector asyncSelector;
+    // 0 - not initialized, 1 - initialized
+    private volatile int initialized;
 
     /**
      * Creates a new instance that selects an {@link Endpoint} from the specified {@link EndpointGroup}.
@@ -60,17 +66,47 @@ public abstract class AbstractEndpointSelector implements EndpointSelector {
     /**
      * Initialize this {@link EndpointSelector} to listen to the new endpoints emitted by the
      * {@link EndpointGroup}. The new endpoints will be passed to {@link #updateNewEndpoints(List)}.
+     *
+     * <p>This method is called automatically when the first selection is made. However, if you want to
+     * start listening to the {@link EndpointGroup} earlier, you can call this method manually.
      */
-    @UnstableApi
     protected final void initialize() {
-        endpointGroup.addListener(this::refreshEndpoints, true);
+        tryInitialize();
+    }
+
+    private void tryInitialize() {
+        if (initialized == 1) {
+            return;
+        }
+
+        if (initializedUpdater.compareAndSet(this, 0, 1)) {
+            endpointGroup.addListener(this::refreshEndpoints, true);
+        }
+    }
+
+    @VisibleForTesting
+    boolean isInitialized() {
+        return initialized == 1;
     }
 
     @Override
     public CompletableFuture<Endpoint> select(ClientRequestContext ctx, ScheduledExecutorService executor,
                                               long timeoutMillis) {
+        tryInitialize();
         return asyncSelector.select(ctx, executor, endpointGroup.selectionTimeoutMillis());
     }
+
+    @Override
+    public final @Nullable Endpoint selectNow(ClientRequestContext ctx) {
+        tryInitialize();
+        return doSelectNow(ctx);
+    }
+
+    /**
+     * Selects an {@link Endpoint} from this {@link EndpointGroup} immediately.
+     */
+    @Nullable
+    protected abstract Endpoint doSelectNow(ClientRequestContext ctx);
 
     private void refreshEndpoints(List<Endpoint> endpoints) {
         // Allow subclasses to update the endpoints first.

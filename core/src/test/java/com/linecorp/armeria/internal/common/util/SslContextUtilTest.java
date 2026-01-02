@@ -30,6 +30,7 @@ import org.junit.jupiter.api.Test;
 import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.client.ClientFactory;
+import com.linecorp.armeria.client.ClientTlsSpec;
 import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.common.util.SystemInfo;
@@ -43,15 +44,13 @@ class SslContextUtilTest {
 
     @Test
     void openSsl() {
-        final Set<String> supportedProtocols = SslContextUtil.supportedProtocols(
-                SslContextBuilder.forClient().sslProvider(SslProvider.OPENSSL));
+        final Set<String> supportedProtocols = SslContextUtil.supportedTlsVersions(SslProvider.OPENSSL);
         assertThat(supportedProtocols).contains("TLSv1.2", "TLSv1.3");
     }
 
     @Test
     void jdkSsl() {
-        final Set<String> supportedProtocols = SslContextUtil.supportedProtocols(
-                SslContextBuilder.forClient().sslProvider(SslProvider.JDK));
+        final Set<String> supportedProtocols = SslContextUtil.supportedTlsVersions(SslProvider.JDK);
         if (SystemInfo.javaVersion() >= 11) {
             assertThat(supportedProtocols).contains("TLSv1.2", "TLSv1.3");
         } else {
@@ -79,6 +78,21 @@ class SslContextUtilTest {
                              .tlsCustomizer(builder -> builder.ciphers(ImmutableList.of(cipher)))
                              .build();
         factory.closeAsync();
+    }
+
+    @Test
+    void tlsSpecForUnsafeTlsCipher() {
+        final String cipher = getBadCipher();
+        assumeThat(cipher).isNotNull();
+
+        assertThatThrownBy(() -> {
+            SslContextUtil.toSslContext(ClientTlsSpec.builder().ciphers(BAD_HTTP2_CIPHERS).build(), false);
+        }).isInstanceOf(IllegalStateException.class)
+          .hasMessageContaining("TLS without the TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256 cipher suite");
+
+        final SslContext sslContext = SslContextUtil.toSslContext(
+                ClientTlsSpec.builder().ciphers(BAD_HTTP2_CIPHERS).build(), true);
+        ReferenceCountUtil.release(sslContext);
     }
 
     @Nullable

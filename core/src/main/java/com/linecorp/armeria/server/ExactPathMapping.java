@@ -47,6 +47,10 @@ final class ExactPathMapping extends AbstractPathMapping {
             checkArgument(prefix.indexOf(';') < 0, "prefix: %s (expected not to have a ';')", prefix);
             checkArgument(exactPath.indexOf(';') < 0, "exactPath: %s (expected not to have a ';')", exactPath);
         }
+        checkArgument(!hasQueryString(exactPath),
+                      "exactPath: %s must not contain a query string. " +
+                      "Use 'RouteBuilder.matchesParams()' instead.", exactPath);
+
         this.prefix = prefix;
         ensureAbsolutePath(exactPath, "exactPath");
         exactPath = ESCAPE_COLON.matcher(exactPath).replaceAll("/:");

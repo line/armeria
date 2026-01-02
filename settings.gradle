@@ -5,8 +5,8 @@ plugins {
     // If Gradle can’t find a locally available toolchain that matches the requirements of the build, it can
     // automatically download one based on the foojay Disco API.
     // https://docs.gradle.org/8.1.1/userguide/toolchains.html#sec:provisioning
-    id 'org.gradle.toolchains.foojay-resolver-convention' version '0.6.0'
-    id 'com.gradle.develocity' version '4.2.2'
+    id 'org.gradle.toolchains.foojay-resolver-convention' version '1.0.0'
+    id 'com.gradle.develocity' version '4.3'
     // adds additional metadata to build scans
     id 'com.gradle.common-custom-user-data-gradle-plugin' version '2.4.0'
 }
@@ -89,6 +89,7 @@ project(':version-catalog').with {
 }
 
 // Published Java projects
+includeWithFlags ':ai:mcp',                              'java17', 'publish', 'relocate'
 includeWithFlags ':annotation-processor',                'java', 'publish', 'relocate'
 includeWithFlags ':athenz',                              'java11', 'publish', 'relocate', 'native'
 includeWithFlags ':brave5',                              'java', 'publish', 'relocate', 'no_aggregation'
@@ -113,6 +114,7 @@ includeWithFlags ':jetty12',                             'java17', 'publish', 'r
 project(':jetty12').projectDir = file('jetty/jetty12')
 includeWithFlags ':junit4',                              'java', 'publish', 'relocate'
 includeWithFlags ':junit5',                              'java', 'publish', 'relocate'
+includeWithFlags ':jsonrpc',                             'java', 'publish', 'relocate'
 includeWithFlags ':kafka',                               'java', 'publish', 'relocate', 'native'
 includeWithFlags ':kotlin',                              'java', 'publish', 'relocate', 'kotlin', 'native'
 includeWithFlags ':kubernetes',                          'java11', 'publish', 'relocate', 'native'
@@ -161,15 +163,22 @@ includeWithFlags ':spring:boot2-starter',                'java', 'publish', 'rel
 includeWithFlags ':spring:boot2-webflux-autoconfigure',  'java', 'publish', 'relocate', 'no_aggregation'
 includeWithFlags ':spring:boot2-webflux-starter',        'java', 'publish', 'relocate', 'no_aggregation'
 
-includeWithFlags ':spring:boot3-actuator-autoconfigure', 'java17', 'publish', 'relocate'
-includeWithFlags ':spring:boot3-actuator-starter',       'java17', 'publish', 'relocate'
-includeWithFlags ':spring:boot3-autoconfigure',          'java17', 'publish', 'relocate'
-includeWithFlags ':spring:boot3-starter',                'java17', 'publish', 'relocate'
-includeWithFlags ':spring:boot3-webflux-autoconfigure',  'java17', 'publish', 'relocate'
-includeWithFlags ':spring:boot3-webflux-starter',        'java17', 'publish', 'relocate'
-includeWithFlags ':spring:spring6',                      'java17', 'publish', 'relocate'
+includeWithFlags ':spring:boot3-actuator-autoconfigure', 'java17', 'publish', 'relocate', 'no_aggregation'
+includeWithFlags ':spring:boot3-actuator-starter',       'java17', 'publish', 'relocate', 'no_aggregation'
+includeWithFlags ':spring:boot3-autoconfigure',          'java17', 'publish', 'relocate', 'no_aggregation'
+includeWithFlags ':spring:boot3-starter',                'java17', 'publish', 'relocate', 'no_aggregation'
+includeWithFlags ':spring:boot3-webflux-autoconfigure',  'java17', 'publish', 'relocate', 'no_aggregation'
+includeWithFlags ':spring:boot3-webflux-starter',        'java17', 'publish', 'relocate', 'no_aggregation'
+includeWithFlags ':spring:spring6',                      'java17', 'publish', 'relocate', 'no_aggregation'
 
-includeWithFlags ':dropwizard1',                         'java', 'publish', 'relocate', 'no_aggregation'
+includeWithFlags ':spring:boot4-actuator-autoconfigure', 'java17', 'publish', 'relocate'
+includeWithFlags ':spring:boot4-actuator-starter',       'java17', 'publish', 'relocate', 'no_aggregation'
+includeWithFlags ':spring:boot4-autoconfigure',          'java17', 'publish', 'relocate'
+includeWithFlags ':spring:boot4-starter',                'java17', 'publish', 'relocate', 'no_aggregation'
+includeWithFlags ':spring:boot4-webflux-autoconfigure',  'java17', 'publish', 'relocate'
+includeWithFlags ':spring:boot4-webflux-starter',        'java17', 'publish', 'relocate', 'no_aggregation'
+includeWithFlags ':spring:spring7',                      'java17', 'publish', 'relocate'
+
 includeWithFlags ':dropwizard2',                         'java', 'publish', 'relocate'
 includeWithFlags ':thrift0.9',                           'java', 'publish', 'relocate', 'no_aggregation', 'native'
 project(':thrift0.9').projectDir = file('thrift/thrift0.9')
@@ -197,7 +206,9 @@ includeWithFlags ':tomcat8',                             'java', 'publish', 'rel
 includeWithFlags ':tomcat9',                             'java', 'publish', 'relocate', 'no_aggregation'
 includeWithFlags ':tomcat10',                            'java11', 'publish', 'relocate'
 includeWithFlags ':xds',                                 'java', 'publish', 'relocate'
-includeWithFlags ':xds-api',                             'java', 'publish', 'relocate', 'javapgv'
+includeWithFlags ':xds-api',                             'java', 'publish', 'relocate', 'javapgv', 'no_aggregation'
+includeWithFlags ':xds-validator',                       'java', 'publish', 'relocate', 'no_aggregation'
+includeWithFlags ':xds-pgv-shaded',                      'java', 'publish', 'relocate', 'no_aggregation'
 includeWithFlags ':zookeeper3',                          'java', 'publish', 'relocate', 'native'
 includeWithFlags ':saml',                                'java', 'publish', 'relocate', 'native'
 includeWithFlags ':bucket4j',                            'java', 'publish', 'relocate', 'native'
@@ -237,13 +248,12 @@ includeWithFlags ':it:okhttp',                                 'java', 'relocate
 includeWithFlags ':it:resilience4j',                           'java17', 'relocate'
 includeWithFlags ':it:server',                                 'java', 'relocate'
 includeWithFlags ':it:server-allow-semicolon',                 'java'
-includeWithFlags ':it:spring:boot3-athenz',                    'java17', 'relocate'
+includeWithFlags ':it:spring:boot4-athenz',                    'java17', 'relocate'
 includeWithFlags ':it:spring:boot3-jetty12',                   'java17', 'relocate'
-includeWithFlags ':it:spring:boot3-kotlin',                    'java17', 'relocate', 'kotlin'
-includeWithFlags ':it:spring:boot3-mixed',                     'java17', 'relocate'
-includeWithFlags ':it:spring:boot3-mixed-tomcat10',            'java17', 'relocate'
-includeWithFlags ':it:spring:boot2-tomcat8',                   'java17', 'relocate'
-includeWithFlags ':it:spring:boot3-tomcat10',                  'java17', 'relocate'
+includeWithFlags ':it:spring:boot4-kotlin',                    'java17', 'relocate', 'kotlin'
+includeWithFlags ':it:spring:boot4-mixed',                     'java17', 'relocate'
+includeWithFlags ':it:spring:boot4-mixed-tomcat10',            'java17', 'relocate'
+includeWithFlags ':it:spring:boot4-tomcat10',                  'java17', 'relocate'
 includeWithFlags ':it:spring:webflux-security',                'java17', 'relocate'
 includeWithFlags ':it:thrift-fullcamel',                       'java', 'relocate'
 includeWithFlags ':it:thrift0.9.1',                            'java', 'relocate'
@@ -260,7 +270,7 @@ project(':thrift0.12').projectDir = file('thrift/thrift0.12')
 includeWithFlags ':docs-client'
 
 // Site generation project
-includeWithFlags ':site'
+includeWithFlags ':site-new'
 
 // Examples
 includeWithFlags ':examples:annotated-http-service',               'java11'

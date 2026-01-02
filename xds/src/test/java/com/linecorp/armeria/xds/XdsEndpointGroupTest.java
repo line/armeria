@@ -97,8 +97,8 @@ class XdsEndpointGroupTest {
 
     @BeforeEach
     void beforeEach() {
-        final Cluster httpCluster = XdsTestResources.createCluster(clusterName, 0);
-        final Cluster httpsCluster = XdsTestResources.createCluster(httpsClusterName, 0);
+        final Cluster httpCluster = XdsTestResources.createCluster(clusterName, 1);
+        final Cluster httpsCluster = XdsTestResources.createCluster(httpsClusterName, 1);
         final ClusterLoadAssignment httpAssignment =
                 XdsTestResources.loadAssignment(clusterName,
                                                 helloServer.httpSocketAddress().getHostString(),

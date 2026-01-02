@@ -42,6 +42,8 @@ final class PrefixPathMapping extends AbstractPathMapping {
     PrefixPathMapping(String prefix, boolean stripPrefix) {
         checkArgument(Flags.allowSemicolonInPathComponent() || prefix.indexOf(';') < 0,
                       "prefix: %s (expected not to have a ';')", prefix);
+        checkArgument(!hasQueryString(prefix), "prefix: %s must not contain a query string. " +
+                                               "Use 'RouteBuilder.matchesParams()' instead.", prefix);
         prefix = ensureAbsolutePath(prefix, "prefix");
         if (!prefix.endsWith("/")) {
             prefix += '/';

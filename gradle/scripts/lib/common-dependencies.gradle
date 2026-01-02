@@ -10,7 +10,7 @@ buildscript {
 
     dependencies {
         // These should be the only dependencies that need hard-coded versions.
-        classpath 'com.github.ben-manes:gradle-versions-plugin:0.42.0'
+        classpath 'com.github.ben-manes:gradle-versions-plugin:0.53.0'
         classpath 'org.yaml:snakeyaml:1.33'
     }
 }
@@ -81,8 +81,8 @@ configure(rootProject) {
                 File outputFile = project.file(filename)
                 def reporter = new GentlePlainTextReporter(project, "release", "release-candidate")
                 reporter.write(System.out, result)
-                outputFile.withPrintWriter { PrintWriter pw ->
-                    reporter.write(pw, result)
+                outputFile.withOutputStream { os ->
+                    reporter.write(os, result)
                 }
                 logger.lifecycle '\nGenerated report file ' + filename
             }
@@ -297,23 +297,16 @@ final class GentlePlainTextReporter implements Reporter {
         delegate = new PlainTextReporter(project, revision, gradleReleaseChannel)
     }
 
-    def write(Object printStream, Result result) {
-        delegate.write(printStream, updateProjectUrl(result))
+    void write(OutputStream os, Result result) {
+        PrintStream ps = (os instanceof PrintStream) ? (PrintStream) os
+                : new PrintStream(os, true, "UTF-8")
+        delegate.write(ps, updateProjectUrl(result))
     }
 
     private static Result updateProjectUrl(Result result) {
         DependenciesGroup<DependencyOutdated> outdated = result.outdated
         def updated = outdated.dependencies.collect { old ->
-            List versionParts = []
-            if (old.version != null) {
-                versionParts = old.version.split('\\.').toList()
-            }
-            if (versionParts.size() < 2) {
-                return old
-            }
-
-            String quickSearchLink = "https://search.maven.org/search?q=g:${old.group}%20a:${old.name}%20v:" +
-                                     "${versionParts[0]}.${versionParts[1]}.*\n"
+            String quickSearchLink = "https://central.sonatype.com/artifact/${old.group}/${old.name}/versions\n"
             String projectUrl
             if (old.projectUrl == null) {
                 projectUrl = quickSearchLink
@@ -325,7 +318,7 @@ final class GentlePlainTextReporter implements Reporter {
 
         DependenciesGroup<DependencyOutdated> outdatedWithNote = new DependenciesGroup<>(outdated.count, updated)
         return new Result(result.count, result.current, outdatedWithNote, result.exceeded, result.undeclared,
-                          result.unresolved, result.gradle)
+                result.unresolved, result.gradle)
     }
 
     String getFileExtension() {

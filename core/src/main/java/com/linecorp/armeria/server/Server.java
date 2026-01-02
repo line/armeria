@@ -19,14 +19,11 @@ package com.linecorp.armeria.server;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static com.linecorp.armeria.server.ServerPortMetric.SERVER_PORT_METRIC;
-import static com.linecorp.armeria.server.ServerSslContextUtil.validateSslContext;
 import static java.util.Objects.requireNonNull;
 
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
-import java.security.cert.Certificate;
-import java.security.cert.X509Certificate;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Iterator;
@@ -49,8 +46,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.stream.Collectors;
 
-import javax.net.ssl.SSLSession;
-
 import org.jctools.maps.NonBlockingHashSet;
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
@@ -67,15 +62,12 @@ import com.spotify.futures.CompletableFutures;
 
 import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.SessionProtocol;
-import com.linecorp.armeria.common.metric.MeterIdPrefix;
-import com.linecorp.armeria.common.metric.MoreMeterBinders;
 import com.linecorp.armeria.common.util.DomainSocketAddress;
 import com.linecorp.armeria.common.util.EventLoopGroups;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.common.util.ListenableAsyncCloseable;
 import com.linecorp.armeria.common.util.ShutdownHooks;
 import com.linecorp.armeria.common.util.StartStopSupport;
-import com.linecorp.armeria.common.util.TlsEngineType;
 import com.linecorp.armeria.common.util.TransportType;
 import com.linecorp.armeria.common.util.UnmodifiableFuture;
 import com.linecorp.armeria.common.util.Version;
@@ -96,7 +88,6 @@ import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.ServerChannel;
 import io.netty.channel.socket.ServerSocketChannel;
-import io.netty.handler.ssl.SslContext;
 import io.netty.util.concurrent.FastThreadLocalThread;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.ImmediateEventExecutor;
@@ -139,14 +130,6 @@ public final class Server implements ListenableAsyncCloseable {
         // Server-wide metrics.
         RequestTargetCache.registerServerMetrics(config.meterRegistry());
         setupVersionMetrics();
-
-        for (VirtualHost virtualHost : config().virtualHosts()) {
-            if (virtualHost.sslContext() != null) {
-                assert virtualHost.tlsEngineType() != null;
-                setupTlsMetrics(virtualHost.sslContext(), virtualHost.tlsEngineType(),
-                                virtualHost.hostnamePattern());
-            }
-        }
 
         // Invoke the serviceAdded() method in Service so that it can keep the reference to this Server or
         // add a listener to it.
@@ -418,29 +401,6 @@ public final class Server implements ListenableAsyncCloseable {
              .description("A metric with a constant '1' value labeled by version and commit hash" +
                           " from which Armeria was built.")
              .register(meterRegistry);
-    }
-
-    /**
-     * Sets up gauge metric for each server certificate.
-     */
-    private void setupTlsMetrics(SslContext sslContext, TlsEngineType tlsEngineType, String hostnamePattern) {
-        final MeterRegistry meterRegistry = config().meterRegistry();
-
-        final SSLSession sslSession = validateSslContext(sslContext, tlsEngineType);
-        final MeterIdPrefix meterIdPrefix = new MeterIdPrefix("armeria.server",
-                                                              "hostname.pattern", hostnamePattern);
-        for (Certificate certificate : sslSession.getLocalCertificates()) {
-            if (!(certificate instanceof X509Certificate)) {
-                continue;
-            }
-
-            try {
-                MoreMeterBinders.certificateMetrics((X509Certificate) certificate, meterIdPrefix)
-                                .bindTo(meterRegistry);
-            } catch (Exception ex) {
-                logger.warn("Failed to set up TLS certificate metrics for a host: {}", hostnamePattern, ex);
-            }
-        }
     }
 
     @Override

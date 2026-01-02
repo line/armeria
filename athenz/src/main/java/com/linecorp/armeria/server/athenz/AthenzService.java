@@ -21,6 +21,7 @@ import static java.util.Objects.requireNonNull;
 
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
 
 import org.jspecify.annotations.Nullable;
 
@@ -32,11 +33,17 @@ import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.athenz.TokenType;
+import com.linecorp.armeria.common.metric.MeterIdPrefix;
+import com.linecorp.armeria.common.metric.MoreMeters;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.server.HttpService;
+import com.linecorp.armeria.server.ServiceConfig;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.SimpleDecoratingHttpService;
 import com.linecorp.armeria.server.athenz.MinifiedAuthZpeClient.AccessCheckStatus;
+
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Timer;
 
 /**
  * Decorates an {@link HttpService} to check access permissions using Athenz policies.
@@ -78,33 +85,65 @@ public final class AthenzService extends SimpleDecoratingHttpService {
     private final String athenzResource;
     private final String athenzAction;
     private final List<TokenType> tokenTypes;
+    private final MeterIdPrefix meterIdPrefix;
+
+    @Nullable
+    private Timer allowedTimer;
+    @Nullable
+    private Timer deniedTimer;
 
     AthenzService(HttpService delegate, MinifiedAuthZpeClient authZpeClient,
-                  String athenzResource, String athenzAction, List<TokenType> tokenTypes) {
+                  String athenzResource, String athenzAction, List<TokenType> tokenTypes,
+                  MeterIdPrefix meterIdPrefix) {
         super(delegate);
 
         this.authZpeClient = authZpeClient;
         this.athenzResource = athenzResource;
         this.athenzAction = athenzAction;
         this.tokenTypes = tokenTypes;
+        this.meterIdPrefix = meterIdPrefix;
+    }
+
+    @Override
+    public void serviceAdded(ServiceConfig cfg) throws Exception {
+        super.serviceAdded(cfg);
+        final MeterRegistry meterRegistry = cfg.server().meterRegistry();
+        final String name = meterIdPrefix.name("token.authorization");
+        allowedTimer = MoreMeters.newTimer(meterRegistry, name,
+                                           meterIdPrefix.tags("result", "allowed",
+                                                              "resource", athenzResource,
+                                                              "action", athenzAction));
+        deniedTimer = MoreMeters.newTimer(meterRegistry, name,
+                                          meterIdPrefix.tags("result", "denied",
+                                                             "resource", athenzResource,
+                                                             "action", athenzAction));
     }
 
     @Override
     public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
+        final long startNanos = System.nanoTime();
+
         final String token = extractToken(req.headers());
         if (token == null) {
+            assert deniedTimer != null;
+            deniedTimer.record(System.nanoTime() - startNanos, TimeUnit.NANOSECONDS);
             return HttpResponse.of(HttpStatus.UNAUTHORIZED, MediaType.PLAIN_TEXT, "Missing token");
         }
 
         final CompletableFuture<HttpResponse> future = CompletableFuture.supplyAsync(() -> {
             final AccessCheckStatus status = authZpeClient.allowAccess(token, athenzResource, athenzAction);
+            final long elapsedNanos = System.nanoTime() - startNanos;
             if (status == AccessCheckStatus.ALLOW) {
+                assert allowedTimer != null;
+                allowedTimer.record(elapsedNanos, TimeUnit.NANOSECONDS);
                 try {
                     return unwrap().serve(ctx, req);
                 } catch (Exception e) {
                     return Exceptions.throwUnsafely(e);
                 }
             } else {
+                assert deniedTimer != null;
+                deniedTimer.record(elapsedNanos, TimeUnit.NANOSECONDS);
                 return HttpResponse.of(HttpStatus.UNAUTHORIZED, MediaType.PLAIN_TEXT, status.toString());
             }
         }, ctx.blockingTaskExecutor());

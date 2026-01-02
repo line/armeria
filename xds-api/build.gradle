@@ -5,17 +5,24 @@ dependencies {
         }
     }
 
+    api project(":xds-validator")
+    api project(":xds-pgv-shaded")
+
     compileOnly libs.protobuf.java
     compileOnly libs.protobuf.java.util
     compileOnly project(":grpc")
     compileOnly libs.protoc.gen.validate
-    compileOnly libs.protoc.pgv.java.stub
 
     testImplementation libs.protobuf.java
     testImplementation libs.protobuf.java.util
     testImplementation libs.protoc.pgv.java.stub
+    testImplementation libs.re2j
 }
 
 tasks.withType(JavaCompile).configureEach {
     options.forkOptions.memoryMaximumSize = '1g'
+}
+
+tasks.withType(Javadoc).configureEach {
+    enabled = false
 }

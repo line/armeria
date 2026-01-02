@@ -16,13 +16,8 @@
 
 package com.linecorp.armeria.xds.client.endpoint;
 
-import java.util.List;
-
 import org.jspecify.annotations.Nullable;
 
-import com.google.common.collect.ImmutableList;
-
-import com.linecorp.armeria.client.ClientPreprocessors;
 import com.linecorp.armeria.client.HttpPreClient;
 import com.linecorp.armeria.client.PreClientRequestContext;
 import com.linecorp.armeria.client.RpcPreClient;
@@ -30,49 +25,21 @@ import com.linecorp.armeria.xds.ListenerSnapshot;
 import com.linecorp.armeria.xds.RouteEntry;
 import com.linecorp.armeria.xds.RouteSnapshot;
 import com.linecorp.armeria.xds.VirtualHostSnapshot;
+import com.linecorp.armeria.xds.internal.DelegatingHttpClient;
+import com.linecorp.armeria.xds.internal.DelegatingRpcClient;
 
 final class RouteConfig {
     private final ListenerSnapshot listenerSnapshot;
 
     private final HttpPreClient httpPreClient;
     private final RpcPreClient rpcPreClient;
-    private final List<List<SelectedRoute>> precomputedRoutes;
     private final VirtualHostMatcher virtualHostMatcher;
 
     RouteConfig(ListenerSnapshot listenerSnapshot) {
         this.listenerSnapshot = listenerSnapshot;
-        final ClientPreprocessors preprocessors = FilterUtil.buildDownstreamFilter(listenerSnapshot);
-        httpPreClient = preprocessors.decorate(DelegatingHttpClient.INSTANCE);
-        rpcPreClient = preprocessors.rpcDecorate(DelegatingRpcClient.INSTANCE);
-        precomputedRoutes = precomputeRoutes(listenerSnapshot);
+        httpPreClient = listenerSnapshot.downstreamFilter().decorate(DelegatingHttpClient.of());
+        rpcPreClient = listenerSnapshot.downstreamFilter().rpcDecorate(DelegatingRpcClient.of());
         virtualHostMatcher = new VirtualHostMatcher(listenerSnapshot);
-    }
-
-    private static List<List<SelectedRoute>> precomputeRoutes(ListenerSnapshot listenerSnapshot) {
-        final RouteSnapshot routeSnapshot = listenerSnapshot.routeSnapshot();
-        if (routeSnapshot == null) {
-            return ImmutableList.of();
-        }
-
-        final int vhostsSz = routeSnapshot.virtualHostSnapshots().size();
-        final ImmutableList.Builder<List<SelectedRoute>> vHostsListBuilder =
-                ImmutableList.builderWithExpectedSize(vhostsSz);
-        for (int i = 0; i < vhostsSz; i++) {
-            final VirtualHostSnapshot virtualHostSnapshot = routeSnapshot.virtualHostSnapshots().get(i);
-            assert virtualHostSnapshot.index() == i;
-            final int routesSz = virtualHostSnapshot.routeEntries().size();
-            final ImmutableList.Builder<SelectedRoute> routesListBuilder =
-                    ImmutableList.builderWithExpectedSize(routesSz);
-            for (int j = 0; j < routesSz; j++) {
-                final RouteEntry routeEntry = virtualHostSnapshot.routeEntries().get(j);
-                assert j == routeEntry.index();
-                final SelectedRoute selectedRoute = new SelectedRoute(listenerSnapshot, routeSnapshot,
-                                                                      virtualHostSnapshot, routeEntry);
-                routesListBuilder.add(selectedRoute);
-            }
-            vHostsListBuilder.add(routesListBuilder.build());
-        }
-        return vHostsListBuilder.build();
     }
 
     ListenerSnapshot listenerSnapshot() {
@@ -88,7 +55,7 @@ final class RouteConfig {
     }
 
     @Nullable
-    SelectedRoute select(PreClientRequestContext ctx) {
+    RouteEntry select(PreClientRequestContext ctx) {
         final RouteSnapshot routeSnapshot = listenerSnapshot.routeSnapshot();
         if (routeSnapshot == null) {
             return null;
@@ -97,12 +64,12 @@ final class RouteConfig {
         if (virtualHostSnapshot == null) {
             return null;
         }
-        final List<SelectedRoute> selectedRoutes = precomputedRoutes.get(virtualHostSnapshot.index());
-        for (SelectedRoute selectedRoute : selectedRoutes) {
-            if (selectedRoute.routeEntryMatcher().matches(ctx)) {
+
+        for (RouteEntry entry: virtualHostSnapshot.routeEntries()) {
+            if (entry.matches(ctx)) {
                 ctx.setAttr(XdsAttributeKeys.ROUTE_METADATA_MATCH,
-                            selectedRoute.routeEntry().route().getRoute().getMetadataMatch());
-                return selectedRoute;
+                            entry.route().getRoute().getMetadataMatch());
+                return entry;
             }
         }
         return null;

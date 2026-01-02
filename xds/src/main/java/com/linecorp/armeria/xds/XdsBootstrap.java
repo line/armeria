@@ -51,7 +51,7 @@ public interface XdsBootstrap extends SafeCloseable {
      */
     @UnstableApi
     static XdsBootstrap of(Bootstrap bootstrap) {
-        return new XdsBootstrapImpl(bootstrap);
+        return builder(bootstrap).build();
     }
 
     /**
@@ -60,7 +60,14 @@ public interface XdsBootstrap extends SafeCloseable {
      */
     @UnstableApi
     static XdsBootstrap of(Bootstrap bootstrap, EventExecutor eventLoop) {
-        return new XdsBootstrapImpl(bootstrap, eventLoop);
+        return builder(bootstrap).eventExecutor(eventLoop).build();
+    }
+
+    /**
+     * Returns a {@link XdsBootstrapBuilder} which can be used to fluently create an {@link XdsBootstrap}.
+     */
+    static XdsBootstrapBuilder builder(Bootstrap bootstrap) {
+        return new XdsBootstrapBuilder(bootstrap);
     }
 
     /**

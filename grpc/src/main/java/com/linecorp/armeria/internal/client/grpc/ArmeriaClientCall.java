@@ -245,7 +245,8 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
 
         // Must come after handling deadline.
         final HttpRequest newReq = prepareHeaders(compressor, metadata, remainingNanos);
-        final HttpResponse res = ClientUtil.executeWithFallback(preClient, ctx, newReq, errorResponseFactory);
+        final HttpResponse res = ClientUtil.executePreClientWithFallback(preClient, ctx, newReq,
+                                                                         errorResponseFactory);
 
         final HttpStreamDeframer deframer = new HttpStreamDeframer(
                 decompressorRegistry, ctx, this, exceptionHandler,

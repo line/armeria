@@ -29,6 +29,7 @@ import java.util.HashMap;
 import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.BiFunction;
@@ -54,10 +55,11 @@ import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.logging.ClientConnectionTimingsBuilder;
 import com.linecorp.armeria.common.util.AsyncCloseable;
 import com.linecorp.armeria.common.util.AsyncCloseableSupport;
+import com.linecorp.armeria.common.util.DomainSocketAddress;
 import com.linecorp.armeria.internal.client.HttpSession;
 import com.linecorp.armeria.internal.client.PooledChannel;
+import com.linecorp.armeria.internal.common.ConnectionEventListener;
 import com.linecorp.armeria.internal.common.SslContextFactory;
-import com.linecorp.armeria.internal.common.util.ChannelUtil;
 import com.linecorp.armeria.internal.common.util.TemporaryThreadLocals;
 
 import io.netty.bootstrap.Bootstrap;
@@ -94,19 +96,15 @@ final class HttpChannelPool implements AsyncCloseable {
     private final Map<PoolKey, Deque<PooledChannel>>[] pool;
     private final Map<PoolKey, ChannelAcquisitionFuture>[] pendingAcquisitions;
     private final Map<Channel, Boolean> allChannels;
-    private final ConnectionPoolListener listener;
 
     // Fields for creating a new connection:
     private final Bootstraps bootstraps;
     private final int connectTimeoutMillis;
 
     HttpChannelPool(HttpClientFactory clientFactory, EventLoop eventLoop,
-                    SslContext sslCtxHttp1Or2, SslContext sslCtxHttp1Only,
-                    @Nullable SslContextFactory sslContextFactory,
-                    ConnectionPoolListener listener) {
+                    SslContextFactory sslContextFactory) {
         this.clientFactory = clientFactory;
         this.eventLoop = eventLoop;
-        this.listener = listener;
 
         pool = newEnumMap(ImmutableSet.of(SessionProtocol.H1, SessionProtocol.H1C,
                                           SessionProtocol.H2, SessionProtocol.H2C));
@@ -118,11 +116,11 @@ final class HttpChannelPool implements AsyncCloseable {
                                        .get(ChannelOption.CONNECT_TIMEOUT_MILLIS);
         assert connectTimeoutMillisBoxed != null;
         connectTimeoutMillis = connectTimeoutMillisBoxed;
-        bootstraps = new Bootstraps(clientFactory, eventLoop, sslCtxHttp1Or2, sslCtxHttp1Only,
-                                    sslContextFactory);
+        bootstraps = new Bootstraps(clientFactory, eventLoop,
+                                    sslContextFactory, clientFactory.defaultSslContexts());
     }
 
-    private void configureProxy(Channel ch, ProxyConfig proxyConfig, SessionProtocol desiredProtocol) {
+    private void configureProxy(Channel ch, ProxyConfig proxyConfig, ClientTlsSpec tlsSpec) {
         if (proxyConfig.proxyType() == ProxyType.DIRECT) {
             return;
         }
@@ -160,12 +158,10 @@ final class HttpChannelPool implements AsyncCloseable {
         ch.pipeline().addFirst(proxyHandler);
 
         if (proxyConfig instanceof ConnectProxyConfig && ((ConnectProxyConfig) proxyConfig).useTls()) {
-            final SslContext sslCtx = bootstraps.getOrCreateSslContext(proxyAddress, desiredProtocol);
+            final SslContext sslCtx = bootstraps.getOrCreateSslContext(tlsSpec);
             ch.pipeline().addFirst(sslCtx.newHandler(ch.alloc(), proxyAddress.getHostString(),
                                                      proxyAddress.getPort()));
-            if (bootstraps.shouldReleaseSslContext(sslCtx)) {
-                ch.closeFuture().addListener(unused -> bootstraps.releaseSslContext(sslCtx));
-            }
+            ch.closeFuture().addListener(unused -> bootstraps.release(sslCtx));
         }
     }
 
@@ -391,7 +387,8 @@ final class HttpChannelPool implements AsyncCloseable {
                  @Nullable ClientConnectionTimingsBuilder timingsBuilder) {
         final Bootstrap bootstrap;
         try {
-            bootstrap = bootstraps.getOrCreate(remoteAddress, desiredProtocol, serializationFormat);
+            bootstrap = bootstraps.getOrCreate(remoteAddress, desiredProtocol,
+                                               serializationFormat, poolKey.tlsSpec);
         } catch (Exception e) {
             sessionPromise.tryFailure(e);
             return;
@@ -405,7 +402,9 @@ final class HttpChannelPool implements AsyncCloseable {
 
             try {
                 final Channel channel = registerFuture.channel();
-                configureProxy(channel, poolKey.proxyConfig, desiredProtocol);
+                ConnectionEventListener.setToChannelAttr(
+                        desiredProtocol, clientFactory.connectionPoolListener(), channel);
+                configureProxy(channel, poolKey.proxyConfig, poolKey.tlsSpec);
 
                 if (desiredProtocol.isTls() && timingsBuilder != null) {
                     channel.attr(TIMINGS_BUILDER_KEY).set(timingsBuilder);
@@ -481,6 +480,7 @@ final class HttpChannelPool implements AsyncCloseable {
         try {
             if (future.isSuccess()) {
                 final Channel channel = future.getNow();
+
                 final SessionProtocol protocol = getProtocolIfHealthy(channel);
                 if (protocol == null || closeable.isClosing()) {
                     channel.close();
@@ -492,18 +492,7 @@ final class HttpChannelPool implements AsyncCloseable {
 
                 allChannels.put(channel, Boolean.TRUE);
 
-                final InetSocketAddress remoteAddr = ChannelUtil.remoteAddress(channel);
-                final InetSocketAddress localAddr = ChannelUtil.localAddress(channel);
-                assert remoteAddr != null && localAddr != null
-                        : "raddr: " + remoteAddr + ", laddr: " + localAddr;
-                try {
-                    listener.connectionOpen(protocol, remoteAddr, localAddr, channel);
-                } catch (Throwable e) {
-                    if (logger.isWarnEnabled()) {
-                        logger.warn("{} Exception handling {}.connectionOpen()",
-                                    channel, listener.getClass().getName(), e);
-                    }
-                }
+                ConnectionEventListener.get(channel).connectionOpened();
 
                 final HttpSession session = HttpSession.get(channel);
                 if (session.incrementNumUnfinishedResponses()) {
@@ -536,14 +525,7 @@ final class HttpChannelPool implements AsyncCloseable {
                         }
                     }
 
-                    try {
-                        listener.connectionClosed(protocol, remoteAddr, localAddr, channel);
-                    } catch (Throwable e) {
-                        if (logger.isWarnEnabled()) {
-                            logger.warn("{} Exception handling {}.connectionClosed()",
-                                        channel, listener.getClass().getName(), e);
-                        }
-                    }
+                    ConnectionEventListener.get(channel).connectionClosed();
                 });
             } else {
                 final Throwable throwable = future.cause();
@@ -619,20 +601,20 @@ final class HttpChannelPool implements AsyncCloseable {
     static final class PoolKey {
         final Endpoint endpoint;
         final ProxyConfig proxyConfig;
+        private final ClientTlsSpec tlsSpec;
         private final int hashCode;
 
-        PoolKey(Endpoint endpoint, ProxyConfig proxyConfig) {
-            // Remove the trailing dot of the host name because SNI does not allow it.
-            // https://lists.w3.org/Archives/Public/ietf-http-wg/2016JanMar/0430.html
-            this.endpoint = endpoint.withoutTrailingDot();
+        PoolKey(Endpoint endpoint, ProxyConfig proxyConfig, ClientTlsSpec tlsSpec) {
+            this.endpoint = endpoint;
             this.proxyConfig = proxyConfig;
-            hashCode = endpoint.hashCode() * 31 + proxyConfig.hashCode();
+            this.tlsSpec = tlsSpec;
+            hashCode = Objects.hash(endpoint, proxyConfig, tlsSpec);
         }
 
         SocketAddress toRemoteAddress() {
             final InetSocketAddress remoteAddr = endpoint.toSocketAddress(-1);
             if (endpoint.isDomainSocket()) {
-                return ((com.linecorp.armeria.common.util.DomainSocketAddress) remoteAddr).asNettyAddress();
+                return ((DomainSocketAddress) remoteAddr).asNettyAddress();
             }
 
             assert !remoteAddr.isUnresolved() || proxyConfig.proxyType().isForwardProxy()
@@ -654,7 +636,8 @@ final class HttpChannelPool implements AsyncCloseable {
             final PoolKey that = (PoolKey) o;
             return hashCode == that.hashCode &&
                    endpoint.equals(that.endpoint) &&
-                   proxyConfig.equals(that.proxyConfig);
+                   proxyConfig.equals(that.proxyConfig) &&
+                   Objects.equals(tlsSpec, that.tlsSpec);
         }
 
         @Override
@@ -670,6 +653,7 @@ final class HttpChannelPool implements AsyncCloseable {
             final boolean isDomainSocket = endpoint.isDomainSocket();
             final String proxyConfigStr = proxyConfig.proxyType() != ProxyType.DIRECT ? proxyConfig.toString()
                                                                                       : null;
+            final String tlsSpecStr = tlsSpec != null ? tlsSpec.toString() : null;
             try (TemporaryThreadLocals tempThreadLocals = TemporaryThreadLocals.acquire()) {
                 final StringBuilder buf = tempThreadLocals.stringBuilder();
                 buf.append('{').append(host);
@@ -682,6 +666,10 @@ final class HttpChannelPool implements AsyncCloseable {
                 if (proxyConfigStr != null) {
                     buf.append(" via ");
                     buf.append(proxyConfigStr);
+                }
+                if (tlsSpecStr != null) {
+                    buf.append(", ");
+                    buf.append(tlsSpecStr);
                 }
                 buf.append('}');
                 return buf.toString();
