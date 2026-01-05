@@ -739,10 +739,11 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
         }
 
         requireNonNull(cause, "cause");
-        setRequestCause(cause, true);
+        setRequestCause(cause);
+        updateFlags(RequestLogProperty.REQUEST_CAUSE);
     }
 
-    private void setRequestCause(@Nullable Throwable requestCause, boolean updateFlag) {
+    private void setRequestCause(@Nullable Throwable requestCause) {
         if (this.requestCause != null) {
             return;
         }
@@ -756,9 +757,6 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
         }
         if (requestCause != null) {
             this.requestCause = requestCause;
-            if (updateFlag) {
-                updateFlags(RequestLogProperty.REQUEST_CAUSE);
-            }
         }
     }
 
@@ -1146,7 +1144,7 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
 
         this.requestEndTimeNanos = requestEndTimeNanos;
 
-        setRequestCause(requestCause, false);
+        setRequestCause(requestCause);
         updateFlags(flags);
     }
 
