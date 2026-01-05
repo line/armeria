@@ -419,6 +419,8 @@ public final class DocServiceBuilder {
      *     return Promise.resolve({ authorization: 'accesstoken' });
      *   });
      * }</pre>
+     *
+     * @see DocServiceInjectableScripts for predefined scripts that can be injected.
      */
     public DocServiceBuilder injectedScripts(String... scripts) {
         requireNonNull(scripts, "scripts");
@@ -437,6 +439,8 @@ public final class DocServiceBuilder {
      *     return Promise.resolve({ authorization: 'accesstoken' });
      *   });
      * }</pre>
+     *
+     * @see DocServiceInjectableScripts for predefined scripts that can be injected.
      */
     public DocServiceBuilder injectedScripts(Iterable<String> scripts) {
         requireNonNull(scripts, "scripts");

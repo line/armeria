@@ -261,7 +261,7 @@ public final class ServiceSpecification {
     }
 
     /**
-     *  * Sets the additional information for the document service.
+     * Sets the additional information for the document service.
      * @param docServiceExtraInfo a map containing the extra information for the document service.
      */
     public void setDocServiceExtraInfo(Map<String, String> docServiceExtraInfo) {
