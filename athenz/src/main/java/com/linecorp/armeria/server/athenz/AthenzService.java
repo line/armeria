@@ -147,15 +147,8 @@ public final class AthenzService extends SimpleDecoratingHttpService {
 
     AthenzService(HttpService delegate, MinifiedAuthZpeClient authZpeClient, String athenzResource,
                   String athenzAction, List<TokenType> tokenTypes, MeterIdPrefix meterIdPrefix) {
-        super(delegate);
-
-        this.authZpeClient = authZpeClient;
-        final CompletableFuture<String> resourceFuture = UnmodifiableFuture.completedFuture(athenzResource);
-        athenzResourceProvider = (ctx, req) -> resourceFuture;
-        this.athenzAction = athenzAction;
-        this.tokenTypes = tokenTypes;
-        this.meterIdPrefix = meterIdPrefix;
-        resourceTagValue = athenzResource;
+        this(delegate, authZpeClient, (ctx, req) -> UnmodifiableFuture.completedFuture(athenzResource),
+                athenzAction, tokenTypes, meterIdPrefix, athenzResource);
     }
 
     @Override
