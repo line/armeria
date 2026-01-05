@@ -62,7 +62,7 @@ import io.micrometer.core.instrument.Timer;
  * <ol>
  *   <li>Extracts authentication token from request headers</li>
  *   <li>Resolves the Athenz resource (either static or dynamic)</li>
- *   <li>Checks access permissions using the Athenz policy engine</li>
+ *   <li>Checks access permissions using the Athenz policy</li>
  *   <li>Either allows the request to proceed or returns an error response</li>
  * </ol>
  *
@@ -101,9 +101,10 @@ import io.micrometer.core.instrument.Timer;
  *
  * <p><strong>Error Handling:</strong>
  * <ul>
- *   <li>{@link HttpStatus#UNAUTHORIZED} (401) - Missing token or access denied</li>
- *   <li>{@link HttpStatus#FORBIDDEN} (403) - Resource could not be resolved</li>
- *   <li>{@link HttpStatus#INTERNAL_SERVER_ERROR} (500) - Exception occurred while resolving resource</li>
+ *   <li>{@link HttpStatus#UNAUTHORIZED} (401) - Returned when the token is missing, access is denied,
+ *       or the Athenz resource cannot be resolved.</li>
+ *   <li>{@link HttpStatus#INTERNAL_SERVER_ERROR} (500) - Returned when an exception occurs while
+ *       resolving the Athenz resource.</li>
  * </ul>
  *
  * @see AthenzServiceBuilder
@@ -234,7 +235,7 @@ public final class AthenzService extends SimpleDecoratingHttpService {
 
     private static HttpResponse createErrorResponse(Throwable cause) {
         if (cause instanceof AthenzResourceNotFoundException) {
-            return HttpResponse.of(HttpStatus.FORBIDDEN, MediaType.PLAIN_TEXT,
+            return HttpResponse.of(HttpStatus.UNAUTHORIZED, MediaType.PLAIN_TEXT,
                                    "Resource could not be resolved: " + cause.getMessage());
         } else {
             return HttpResponse.of(HttpStatus.INTERNAL_SERVER_ERROR, MediaType.PLAIN_TEXT,

@@ -269,7 +269,7 @@ class AthenzResourceProviderIntegrationTest {
                              .blocking();
 
             final AggregatedHttpResponse response = client.get("/admin/exception/test");
-            assertThat(response.status()).isEqualTo(HttpStatus.FORBIDDEN);
+            assertThat(response.status()).isEqualTo(HttpStatus.UNAUTHORIZED);
         }
     }
 
@@ -284,7 +284,7 @@ class AthenzResourceProviderIntegrationTest {
                              .blocking();
 
             final AggregatedHttpResponse response = client.get("/admin/null/test");
-            assertThat(response.status()).isEqualTo(HttpStatus.FORBIDDEN);
+            assertThat(response.status()).isEqualTo(HttpStatus.UNAUTHORIZED);
         }
     }
 
@@ -299,7 +299,7 @@ class AthenzResourceProviderIntegrationTest {
                              .blocking();
 
             final AggregatedHttpResponse response = client.get("/admin/empty/test");
-            assertThat(response.status()).isEqualTo(HttpStatus.FORBIDDEN);
+            assertThat(response.status()).isEqualTo(HttpStatus.UNAUTHORIZED);
         }
     }
 }

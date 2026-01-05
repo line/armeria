@@ -70,6 +70,8 @@ final class JsonBodyFieldAthenzResourceProvider implements AthenzResourceProvide
                 throw new AthenzResourceNotFoundException("JSON field not found for pointer: " + jsonPointer);
             }
             return node.asText("");
+        } catch (AthenzResourceNotFoundException e) {
+            throw e;
         } catch (Exception e) {
             throw new AthenzResourceNotFoundException("Failed to extract JSON field", e);
         }
