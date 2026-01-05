@@ -63,7 +63,7 @@ final class JsonBodyFieldAthenzResourceProvider implements AthenzResourceProvide
 
     private String extractFieldSafely(AggregatedHttpRequest agg) {
         try {
-            final JsonNode root = mapper.readTree(agg.contentUtf8());
+            final JsonNode root = mapper.readTree(agg.content().array());
             final JsonNode node = root.at(jsonPointer);
             if (node.isMissingNode() || node.asText("").isEmpty()) {
                 throw new AthenzResourceNotFoundException("JSON field not found for pointer: " + jsonPointer);
