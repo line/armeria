@@ -112,7 +112,7 @@ public class AthenzResourceProviderTest {
     @Test
     public void shouldProvideJsonFieldStringIfExits() {
         // given
-        final AthenzResourceProvider provider = AthenzResourceProvider.ofJsonField("resourceId");
+        final AthenzResourceProvider provider = AthenzResourceProvider.ofJsonField("/resourceId");
         final String jsonBody = "{\"resourceId\":\"resource\",\"data\":\"test\"}";
         final HttpRequest req = HttpRequest.of(
                 RequestHeaders.of(HttpMethod.POST, "/", "Content-Type", "application/json"),
@@ -147,7 +147,7 @@ public class AthenzResourceProviderTest {
     @Test
     public void shouldThrowExceptionIfJsonFieldNotExits() {
         // given
-        final AthenzResourceProvider provider = AthenzResourceProvider.ofJsonField("resourceId");
+        final AthenzResourceProvider provider = AthenzResourceProvider.ofJsonField("/resourceId");
         final HttpRequest req = HttpRequest.of(
                 RequestHeaders.of(HttpMethod.POST, "/", "Content-Type", "application/json"),
                 HttpData.ofUtf8("{\"invalid\":\"json\"}"));

@@ -147,24 +147,26 @@ public interface AthenzResourceProvider {
     }
 
     /**
-     * Returns an {@link AthenzResourceProvider} that extracts the resource from a JSON request body
+     * Returns an {@link AthenzResourceProvider} that extracts the resource from a JSON request body field
      * using the given {@link JsonPointer}.
      *
-     * <p>This provider aggregates the request and parses the body as JSON, then navigates to the field
-     * addressed by the provided JSON Pointer to read the resource string.
+     * <p>This provider aggregates the request, parses the body as JSON, and reads the value at the
+     * specified JSON Pointer.
      *
      * <p>The returned {@link CompletableFuture} completes exceptionally with
      * {@link AthenzResourceNotFoundException} when:
-     * - the request {@code Content-Type} is not JSON,
-     * - the addressed field is missing or resolves to an empty string,
-     * - parsing or extraction fails for any reason.
+     * <ul>
+     *   <li>the request {@code Content-Type} is not JSON,</li>
+     *   <li>the addressed field is missing or resolves to an empty string, or</li>
+     *   <li>parsing or extraction fails for any reason.</li>
+     * </ul>
      *
      * <p>Example:
      * <pre>{@code
      * JsonPointer pointer = JsonPointer.compile("/user/id");
      * AthenzService.builder(ztsBaseClient)
      *              .resourceProvider(AthenzResourceProvider.ofJsonField(pointer))
-     *              .action("write")
+     *              .action("read")
      *              .newDecorator();
      * }</pre>
      *
@@ -177,40 +179,38 @@ public interface AthenzResourceProvider {
     }
 
     /**
-     * Returns an {@link AthenzResourceProvider} that extracts the resource from a JSON request body field.
+     * Returns an {@link AthenzResourceProvider} that extracts the resource from a JSON request body field
+     * using the given JSON Pointer expression string.
      *
-     * <p>This provider parses the request body as JSON and looks up the field specified by
-     * {@code jsonFieldName}. The name supports dot notation for nested paths and is converted to
-     * a JSON Pointer by replacing dots with slashes and prefixing with {@code '/'}.
-     * For example, {@code "user.id"} maps to the JSON Pointer {@code "/user/id"}.
+     * <p>This provider aggregates the request, parses the body as JSON, and reads the value at the
+     * specified JSON Pointer.
+     *
+     * <p>{@code jsonPointerExpr} must be a JSON Pointer expression as defined in RFC 6901, starting with
+     * {@code '/'} (e.g., {@code "/user/id"}).
      *
      * <p>The returned {@link CompletableFuture} completes exceptionally with
      * {@link AthenzResourceNotFoundException} when:
-     * - the request {@code Content-Type} is not JSON,
-     * - the field does not exist or resolves to an empty string,
-     * - parsing or extraction fails for any reason.
+     * <ul>
+     *   <li>the request {@code Content-Type} is not JSON,</li>
+     *   <li>the addressed field is missing or resolves to an empty string, or</li>
+     *   <li>parsing or extraction fails for any reason.</li>
+     * </ul>
      *
      * <p>Example:
      * <pre>{@code
-     * // Simple field
      * AthenzService.builder(ztsBaseClient)
-     *              .resourceProvider(AthenzResourceProvider.ofJsonField("resourceId"))
-     *              .action("write")
-     *              .newDecorator();
-     *
-     * // Nested field via dot notation
-     * AthenzService.builder(ztsBaseClient)
-     *              .resourceProvider(AthenzResourceProvider.ofJsonField("user.id"))
+     *              .resourceProvider(AthenzResourceProvider.ofJsonField("/user/id"))
      *              .action("read")
      *              .newDecorator();
      * }</pre>
      *
-     * @param jsonFieldName the JSON field name; dots denote nested paths (e.g., {@code "user.id"})
+     * @param jsonPointerExpr the JSON Pointer expression string (RFC 6901); must not be {@code null} and
+     *                        must start with {@code '/'}
      * @return an {@link AthenzResourceProvider} that reads the resource from the specified JSON field
-     * @throws NullPointerException if {@code jsonFieldName} is {@code null}
-     * @throws IllegalArgumentException if {@code jsonFieldName} is empty
+     * @throws NullPointerException if {@code jsonPointerExpr} is {@code null}
+     * @throws IllegalArgumentException if {@code jsonPointerExpr} is empty or does not start with {@code '/'}
      */
-    static AthenzResourceProvider ofJsonField(String jsonFieldName) {
-        return new JsonBodyFieldAthenzResourceProvider(jsonFieldName);
+    static AthenzResourceProvider ofJsonField(String jsonPointerExpr) {
+        return new JsonBodyFieldAthenzResourceProvider(jsonPointerExpr);
     }
 }

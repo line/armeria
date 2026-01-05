@@ -39,10 +39,11 @@ final class JsonBodyFieldAthenzResourceProvider implements AthenzResourceProvide
 
     private final JsonPointer jsonPointer;
 
-    JsonBodyFieldAthenzResourceProvider(String jsonFieldName) {
-        requireNonNull(jsonFieldName, "jsonFieldName");
-        checkArgument(!jsonFieldName.isEmpty(), "jsonFieldName must not be empty");
-        jsonPointer = JsonPointer.compile('/' + jsonFieldName.replace(".", "/"));
+    JsonBodyFieldAthenzResourceProvider(String jsonPointerExpr) {
+        requireNonNull(jsonPointerExpr, "jsonPointerExpr");
+        checkArgument(!jsonPointerExpr.isEmpty(), "jsonPointerExpr must not be empty");
+        checkArgument(jsonPointerExpr.charAt(0) == '/', "jsonPointerExpr must start with '/'");
+        jsonPointer = JsonPointer.compile(jsonPointerExpr);
     }
 
     JsonBodyFieldAthenzResourceProvider(JsonPointer jsonPointer) {

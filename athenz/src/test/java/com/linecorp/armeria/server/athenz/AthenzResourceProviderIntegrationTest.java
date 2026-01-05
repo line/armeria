@@ -90,7 +90,7 @@ class AthenzResourceProviderIntegrationTest {
             sb.decorator("/admin/json/test", AthenzService.builder(ztsBaseClient)
                                                           .action("obtain")
                                                           .resourceProvider(AthenzResourceProvider.ofJsonField(
-                                                                  "resource"))
+                                                                  "/resource"))
                                                           .policyConfig(
                                                                   new AthenzPolicyConfig(TEST_DOMAIN_NAME))
                                                           .newDecorator());
