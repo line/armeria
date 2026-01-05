@@ -69,6 +69,8 @@ final class AthenzSupport {
                    "Please set 'armeria.athenz.domains' property in application properties.");
 
         try {
+            // Athenz requires Java 11 but Spring Boot 2 Java 8, so we use reflection instead of
+            // compile-time dependency.
             final Class<?> factoryProvider = Class.forName(
                     "com.linecorp.armeria.internal.server.athenz.AthenzServiceDecoratorFactoryProvider");
 
