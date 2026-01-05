@@ -1,0 +1,104 @@
+---
+date: 2026-01-06
+---
+
+# v1.35.0
+
+## 🌟 New features
+
+- **Dynamic Athenz Resource Resolution**: You can now determine the target resource for Athenz authorization
+  dynamically from the request using [AthenzResourceProvider](type). #6541
+  ```java
+  // Example 1: Use the request path
+  sb.decorator("/admin/users/:userId",
+               AthenzService
+                 .builder(ztsBaseClient)
+                 .action("read")
+                 .resourceProvider(
+                    AthenzResourceProvider.ofPath()) // 👈👈👈
+                 .newDecorator());
+
+  // Example 2: Extract the resource from an HTTP header
+  sb.decorator("/api/resources",
+               AthenzService
+                 .builder(ztsBaseClient)
+                 .action("write")
+                 .resourceProvider(AthenzResourceProvider.ofHeader(
+                    "X-Resource-Id")) // 👈👈👈
+                 .newDecorator());
+- **Per-Request Client TLS Configuration**: You can now specify [ClientTlsSpec](type) for each request using
+  [RequestOptions#clientTlsSpec()](type) or [ClientRequestContext#clientTlsSpec()](type). #6551
+- **Nested Context Paths**: You can now use nested context paths to organize your service routes more effectively. #5758 #5846
+  ```java
+  Server.builder()
+        .contextPath("/rest")
+            .contextPath("/catalog")  // 👈👈👈
+                .service("/product", new GetProductService())  // /rest/catalog/product
+                .and()
+            .contextPath("/cart")
+                .contextPath("/foo")
+                     .contextPath("/bar")
+                          .service("/checkout", new CheckoutService()); // /rest/cart/foo/bar/checkout
+                          .and()
+        .contextPath("/gql")
+            .service("/catalog", new GraphQLService()); // /gql/catalog
+  ```
+- **WebSocket Stream Timeout**: You can now set `streamTimeout` option to [WebSocketService](type) and [WebSocketClient](type). #6357
+```java
+// Server-side
+WebSocketService.builder(myWebSocketHandler)
+                .streamTimeout(Duration.ofMinutes(1)) // 👈👈👈
+                .build();
+// Client-side
+WebSocketClient.builder(url)
+               .streamTimeout(Duration.ofMinutes(1)) // 👈👈👈
+               .build();
+  ```
+- **Athenz Spring Integration Enhancements**: You can now customize metrics configuration. #6566
+  - You can customize [ZtsBaseClient](type) via `Consumer<ZtsBaseClientBuilder>`.
+- **RequestLogListener**: You can now use [RequestLogListener](type) to observe all [RequestLog](type) events. #6543
+- **Connection Pool Ping Events**: [ConnectionPoolListener](type) now supports ping-related events. #6539 #6552
+- **DocService UI Customization**: You can now customize the appearance of DocService, including the title, header background color, and button colors. #6235
+
+## 📈 Improvements
+
+- Metrics specific to `ResourceNode` are now exported. #6557
+- `DefaultXdsLoadBalancerLifecycleObserver` now records metrics for `XdsLoadBalancers` by default. #6490
+- You can now observe the behavior of `ConfigSourceClient` via metrics. #6488
+- `SslContextFactory` and [ServerTlsSpec](type) are now used to create `SslContext`s for the server-side. #6550
+- Refactored internal logic to facilitate per-request TLS configurations. #6542
+
+## 🛠️ Bug fixes
+
+- [Route](type) now properly rejects paths with query strings to avoid incorrect routing behavior. #5054 #6546
+- [AbstractEndpointSelector](type) now auto-initializes to prevent user-side implementation errors. #6535
+- Resolved inconsistencies in SNI determination behavior. #6522
+
+## ⛓ Dependencies
+
+- Athenz 1.12.29 → 1.12.31
+- Bouncy Castle 1.82 → 1.83
+- GAX gRPC 2.72.1 → 2.72.2
+- gRPC-Java 1.77.0 → 1.78.0
+- Jsoup 1.21.2 → 1.22.1
+- Logback 1.5.21 → 1.5.23
+- Micrometer 1.16.0 → 1.16.1
+- Micrometer Context Propagation 0.15.0 → 0.17.0
+- Protobuf 4.33.1 → 4.33.2
+- Protoc-gen-validate 1.2.1 → 1.3.0
+- Reactor 3.8.0 → 3.8.1
+- Spring 7.0.1 → 7.0.2
+- Spring Boot 4.0.0 → 4.0.1
+
+## 🙇 Thank you
+
+<ThankYou usernames={[
+  'Ivan-Montes',
+  'JungJaeLee-JJ',
+  'chickenchickenlove',
+  'ikhoon',
+  'jrhee17',
+  'minwoox',
+  'sjy982',
+  'trustin'
+]} />
