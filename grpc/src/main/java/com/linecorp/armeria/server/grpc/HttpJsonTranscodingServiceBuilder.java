@@ -18,7 +18,6 @@ package com.linecorp.armeria.server.grpc;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.linecorp.armeria.server.grpc.HttpJsonTranscodingQueryParamMatchRule.ORIGINAL_FIELD;
-import static java.util.Objects.requireNonNull;
 
 import java.util.HashMap;
 import java.util.List;
@@ -77,12 +76,20 @@ final class HttpJsonTranscodingServiceBuilder {
 
     private static final Logger logger = LoggerFactory.getLogger(HttpJsonTranscodingServiceBuilder.class);
 
-    private final Map<Route, TranscodingSpec> routeAndSpecs = new HashMap<>();
+    private final Map<String, HttpRule> httpRules = new HashMap<>();
 
     private final GrpcService delegate;
     private final Map<String, GrpcMethod> methods;
 
     private final HttpJsonTranscodingOptions options;
+
+    HttpJsonTranscodingServiceBuilder(GrpcService delegate,
+                                      Map<String, GrpcMethod> methods,
+                                      HttpJsonTranscodingOptions options) {
+        this.delegate = delegate;
+        this.methods = methods;
+        this.options = options;
+    }
 
     static HttpJsonTranscodingServiceBuilder of(GrpcService delegate, HttpJsonTranscodingOptions options) {
         final Map<String, GrpcMethod> methods = new HashMap<>();
@@ -104,7 +111,7 @@ final class HttpJsonTranscodingServiceBuilder {
         final HttpJsonTranscodingServiceBuilder builder = new HttpJsonTranscodingServiceBuilder(delegate,
                                                                                                 methods,
                                                                                                 options);
-        if (options.useHttpAnnotations()) {
+        if (!options.ignoreProtoHttpRule()) {
             for (GrpcMethod method : methods.values()) {
                 final MethodOptions methodOptions = method.descriptor.getOptions();
                 if (!methodOptions.hasExtension((ExtensionLite<MethodOptions, ?>) AnnotationsProto.http)) {
@@ -113,21 +120,13 @@ final class HttpJsonTranscodingServiceBuilder {
 
                 final HttpRule httpRule = methodOptions.getExtension(
                         (ExtensionLite<MethodOptions, HttpRule>) AnnotationsProto.http);
-                builder.httpRule(method, httpRule);
+                builder.httpRule(method.descriptor.getFullName(), httpRule);
             }
         }
-        for (HttpRule httpRule : options.additionalHttpRules()) {
-            builder.httpRule(httpRule);
+        for (HttpRule additionalRule : options.additionalHttpRules()) {
+            builder.httpRule(additionalRule.getSelector(), additionalRule);
         }
         return builder;
-    }
-
-    HttpJsonTranscodingServiceBuilder(GrpcService delegate,
-                                      Map<String, GrpcMethod> methods,
-                                      HttpJsonTranscodingOptions options) {
-        this.delegate = delegate;
-        this.methods = methods;
-        this.options = options;
     }
 
     @Nullable
@@ -333,39 +332,80 @@ final class HttpJsonTranscodingServiceBuilder {
         return null;
     }
 
-    public Map<String, GrpcMethod> methods() {
-        return methods;
-    }
-
-    HttpJsonTranscodingServiceBuilder httpRule(HttpRule httpRule) {
-        requireNonNull(httpRule, "httpRule");
-        final GrpcMethod method = methods.get(httpRule.getSelector());
-        if (method == null) {
-            throw new IllegalArgumentException(
-                    "No gRPC method found for the given selector: " + httpRule.getSelector());
+    private static void doRegisterRoute(Map<Route, TranscodingSpec> routeAndSpecs,
+                                        Route route,
+                                        TranscodingSpec spec) {
+        final TranscodingSpec existing = routeAndSpecs.get(route);
+        if (existing != null) {
+            throw new IllegalStateException(
+                    String.format("Duplicate route: %s is mapped to both method '%s' and method '%s'. " +
+                                  "Each HTTP route can only be mapped to one gRPC method.",
+                                  route,
+                                  existing.methodDescriptor().getFullName(),
+                                  spec.methodDescriptor().getFullName()));
         }
-        return httpRule(method, httpRule);
+        routeAndSpecs.put(route, spec);
     }
 
-    private HttpJsonTranscodingServiceBuilder httpRule(GrpcMethod method, HttpRule httpRule) {
+    GrpcService build() {
+        if (httpRules.isEmpty()) {
+            return delegate;
+        }
+        final Map<Route, TranscodingSpec> routeAndSpecs = buildRouteAndSpecs();
+        return new HttpJsonTranscodingService(delegate, routeAndSpecs, options);
+    }
+
+    private Map<Route, TranscodingSpec> buildRouteAndSpecs() {
+        final Map<Route, TranscodingSpec> routeAndSpecs = new HashMap<>();
+        for (Map.Entry<String, HttpRule> entry : httpRules.entrySet()) {
+            final String selector = entry.getKey();
+            final GrpcMethod method = methods.get(selector);
+            assert method != null;
+            registerRoute(routeAndSpecs, method, entry.getValue());
+        }
+        return ImmutableMap.copyOf(routeAndSpecs);
+    }
+
+    private void httpRule(String selector, HttpRule httpRule) {
+        if (!methods.containsKey(selector)) {
+            throw new IllegalArgumentException("No gRPC method found for selector: " + selector);
+        }
+
+        final HttpRule oldRule = httpRules.get(selector);
+        if (oldRule == null) {
+            httpRules.put(selector, httpRule);
+            return;
+        }
+
+        final HttpRule resolved = options.conflictStrategy()
+                                         .resolve(selector, oldRule, httpRule);
+        if (resolved != httpRule && resolved != oldRule) {
+            throw new IllegalStateException(
+                    "HttpRule returned by conflict strategy must be either the existing rule or " +
+                    "the new rule, but got a different instance for selector: " + selector);
+        }
+        httpRules.put(selector, resolved);
+    }
+
+    private void registerRoute(Map<Route, TranscodingSpec> routeAndSpecs,
+                               GrpcMethod method, HttpRule httpRule) {
         final ServerMethodDefinition<?, ?> definition = method.definition;
         if (definition.getMethodDescriptor().getType() != MethodType.UNARY) {
             logger.warn("Only unary methods can be configured with an HTTP/JSON endpoint: " +
                         "method={}, httpRule={}",
                         definition.getMethodDescriptor().getFullMethodName(), httpRule);
-            return this;
+            return;
         }
 
         @Nullable
         final HttpJsonTranscodingRouteAndPathVariables routeAndVariables =
                 HttpJsonTranscodingRouteAndPathVariables.of(httpRule);
         if (routeAndVariables == null) {
-            return this;
+            return;
         }
 
         final Descriptors.MethodDescriptor desc = method.descriptor;
-        final Set<HttpJsonTranscodingQueryParamMatchRule> queryParamMatchRules =
-                options.queryParamMatchRules();
+        final Set<HttpJsonTranscodingQueryParamMatchRule> queryParamMatchRules = options.queryParamMatchRules();
         final Route route = routeAndVariables.route();
         final Map<String, Field> originalFields = buildFields(desc.getInputType(),
                                                               ImmutableList.of(),
@@ -381,44 +421,26 @@ final class HttpJsonTranscodingServiceBuilder {
                                        ImmutableSet.of(),
                                        matchRule, queryParamMatchRules);
                 }).collect(toImmutableList());
-
-        if (routeAndSpecs.containsKey(route)) {
-            logger.warn("{} is not added because the route is duplicate: {}", httpRule, route);
-            return this;
-        }
         final List<FieldDescriptor> topLevelFields = desc.getOutputType().getFields();
         final String responseBody = getResponseBody(topLevelFields, httpRule.getResponseBody());
-        int order = 0;
-        routeAndSpecs.put(route, new TranscodingSpec(order++, httpRule, definition,
-                                                     desc.getService(), desc, originalFields,
-                                                     queryMappingFields,
-                                                     routeAndVariables.pathVariables(),
-                                                     routeAndVariables.hasVerb(),
-                                                     responseBody));
+
+        final TranscodingSpec newSpec = new TranscodingSpec(
+                0, httpRule, definition, desc.getService(), desc, originalFields, queryMappingFields,
+                routeAndVariables.pathVariables(), routeAndVariables.hasVerb(), responseBody);
+        doRegisterRoute(routeAndSpecs, route, newSpec);
+
+        int order = 1;
         for (HttpRule additionalHttpRule : httpRule.getAdditionalBindingsList()) {
-            @Nullable
-            final HttpJsonTranscodingRouteAndPathVariables additionalRouteAndVariables
-                    = HttpJsonTranscodingRouteAndPathVariables.of(additionalHttpRule);
+            final HttpJsonTranscodingRouteAndPathVariables additionalRouteAndVariables =
+                    HttpJsonTranscodingRouteAndPathVariables.of(additionalHttpRule);
             if (additionalRouteAndVariables != null) {
-                routeAndSpecs.put(additionalRouteAndVariables.route(),
-                                  new TranscodingSpec(order++, additionalHttpRule, definition,
-                                                      desc.getService(), desc, originalFields,
-                                                      queryMappingFields,
-                                                      additionalRouteAndVariables.pathVariables(),
-                                                      routeAndVariables.hasVerb(), responseBody));
+                final TranscodingSpec additionalSpec = new TranscodingSpec(
+                        order++, additionalHttpRule, definition, desc.getService(), desc, originalFields,
+                        queryMappingFields, additionalRouteAndVariables.pathVariables(),
+                        routeAndVariables.hasVerb(), responseBody);
+                doRegisterRoute(routeAndSpecs, additionalRouteAndVariables.route(), additionalSpec);
             }
         }
-
-        return this;
-    }
-
-    GrpcService build() {
-        if (routeAndSpecs.isEmpty()) {
-            return delegate;
-        }
-        return new HttpJsonTranscodingService(delegate,
-                                              ImmutableMap.copyOf(routeAndSpecs),
-                                              options);
     }
 
     private static final class GrpcMethod {

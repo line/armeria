@@ -17,6 +17,7 @@
 package com.linecorp.armeria.server.grpc;
 
 import static com.google.common.base.Preconditions.checkArgument;
+import static com.linecorp.armeria.server.grpc.HttpJsonTranscodingConflictStrategy.firstWins;
 import static com.linecorp.armeria.server.grpc.HttpJsonTranscodingQueryParamMatchRule.JSON_NAME;
 import static com.linecorp.armeria.server.grpc.HttpJsonTranscodingQueryParamMatchRule.ORIGINAL_FIELD;
 import static java.util.Objects.requireNonNull;
@@ -50,7 +51,9 @@ public final class HttpJsonTranscodingOptionsBuilder {
 
     private final ImmutableList.Builder<HttpRule> additionalHttpRules = ImmutableList.builder();
 
-    private boolean useHttpAnnotations = true;
+    private boolean ignoreProtoHttpRule;
+
+    private HttpJsonTranscodingConflictStrategy conflictStrategy = firstWins();
 
     private UnframedGrpcErrorHandler errorHandler = UnframedGrpcErrorHandler.ofJson();
 
@@ -63,8 +66,9 @@ public final class HttpJsonTranscodingOptionsBuilder {
      * A copy constructor.
      */
     HttpJsonTranscodingOptionsBuilder(HttpJsonTranscodingOptions options) {
-        useHttpAnnotations(options.useHttpAnnotations());
+        ignoreProtoHttpRule(options.ignoreProtoHttpRule());
         additionalHttpRules(options.additionalHttpRules());
+        conflictStrategy(options.conflictStrategy());
         queryParamMatchRules(options.queryParamMatchRules());
         errorHandler(options.errorHandler());
     }
@@ -98,20 +102,33 @@ public final class HttpJsonTranscodingOptionsBuilder {
     }
 
     /**
-     * Sets whether to extract and register HTTP/JSON transcoding rules from {@code google.api.http}
-     * annotations in proto descriptors. When {@code true}, methods with {@code google.api.http} options
-     * are automatically registered as HTTP/JSON endpoints according to their annotation specifications.
-     * This option is enabled by default.
+     * Sets whether to ignore {@code google.api.http} annotations defined in the Protobuf descriptors.
+     *
+     * <p>When {@code true}, automatic registration of endpoints from Proto annotations is
+     * disabled. Only the rules specified via {@link #additionalHttpRules(Iterable)} will be used.
+     *
+     * <p>When {@code false} (default), the service scans the Protobuf descriptors for
+     * {@code google.api.http} annotations and registers them automatically, merging them
+     * with any {@link #additionalHttpRules(Iterable)} provided.
+     *
+     * <p>This option is useful when:
+     * <ul>
+     *     <li>You want to strictly control exposed endpoints (allowlist approach).</li>
+     *     <li>You are using third-party Proto files and want to prevent them from unintentionally exposing
+     *     HTTP routes.</li>
+     * </ul>
      */
-    public HttpJsonTranscodingOptionsBuilder useHttpAnnotations(boolean useHttpAnnotations) {
-        this.useHttpAnnotations = useHttpAnnotations;
+    public HttpJsonTranscodingOptionsBuilder ignoreProtoHttpRule(boolean ignoreProtoHttpRule) {
+        this.ignoreProtoHttpRule = ignoreProtoHttpRule;
         return this;
     }
 
     /**
-     * Adds additional HTTP/JSON transcoding rules that supplement annotation-based rules. These rules
-     * allow programmatic configuration of HTTP/JSON transcoding without modifying proto files. The rules are
-     * processed regardless of the {@link #useHttpAnnotations(boolean)} setting.
+     * Adds additional HTTP/JSON transcoding rules that supplement annotation-based rules. These rules allow
+     * programmatic configuration of HTTP/JSON transcoding without modifying proto files.
+     *
+     * <p>These rules are processed in addition to any rules found in Proto annotations, unless
+     * {@link #ignoreProtoHttpRule(boolean)} is set to {@code true}.
      */
     public HttpJsonTranscodingOptionsBuilder additionalHttpRules(HttpRule... rules) {
         requireNonNull(rules, "rules");
@@ -119,13 +136,30 @@ public final class HttpJsonTranscodingOptionsBuilder {
     }
 
     /**
-     * Adds additional HTTP/JSON transcoding rules that supplement annotation-based rules. These rules
-     * allow programmatic configuration of HTTP/JSON transcoding without modifying proto files. The rules are
-     * processed regardless of the {@link #useHttpAnnotations(boolean)} setting.
+     * Adds additional HTTP/JSON transcoding rules that supplement annotation-based rules. These rules allow
+     * programmatic configuration of HTTP/JSON transcoding without modifying proto files.
+     *
+     * <p>These rules are processed in addition to any rules found in Proto annotations, unless
+     * {@link #ignoreProtoHttpRule(boolean)} is set to {@code true}.
      */
     public HttpJsonTranscodingOptionsBuilder additionalHttpRules(Iterable<HttpRule> rules) {
         requireNonNull(rules, "rules");
         additionalHttpRules.addAll(rules);
+        return this;
+    }
+
+    /**
+     * Sets the {@link HttpJsonTranscodingConflictStrategy} to use when multiple {@link HttpRule}s target the
+     * same gRPC method selector.
+     *
+     * <p>This strategy determines which rule is applied when a gRPC method is configured multiple times
+     * (e.g. via both Proto annotations and programmatic configuration).
+     * By default, {@link HttpJsonTranscodingConflictStrategy#firstWins()} is used.
+     */
+    public HttpJsonTranscodingOptionsBuilder conflictStrategy(
+            HttpJsonTranscodingConflictStrategy conflictStrategy) {
+        requireNonNull(conflictStrategy, "conflictStrategy");
+        this.conflictStrategy = conflictStrategy;
         return this;
     }
 
@@ -161,6 +195,7 @@ public final class HttpJsonTranscodingOptionsBuilder {
                 matchRules = ImmutableSet.copyOf(queryParamMatchRules);
             }
         }
-        return new DefaultHttpJsonTranscodingOptions(useHttpAnnotations, rules, matchRules, errorHandler);
+        return new DefaultHttpJsonTranscodingOptions(ignoreProtoHttpRule, rules, conflictStrategy,
+                                                     matchRules, errorHandler);
     }
 }

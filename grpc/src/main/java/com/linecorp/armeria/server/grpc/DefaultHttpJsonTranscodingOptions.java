@@ -27,29 +27,37 @@ final class DefaultHttpJsonTranscodingOptions implements HttpJsonTranscodingOpti
 
     static final HttpJsonTranscodingOptions DEFAULT = HttpJsonTranscodingOptions.builder().build();
 
-    private final boolean useHttpAnnotations;
+    private final boolean ignoreProtoHttpRule;
     private final List<HttpRule> additionalHttpRules;
+    private final HttpJsonTranscodingConflictStrategy conflictStrategy;
     private final Set<HttpJsonTranscodingQueryParamMatchRule> queryParamMatchRules;
     private final UnframedGrpcErrorHandler errorHandler;
 
-    DefaultHttpJsonTranscodingOptions(boolean useHttpAnnotations,
+    DefaultHttpJsonTranscodingOptions(boolean ignoreProtoHttpRule,
                                       List<HttpRule> additionalHttpRules,
+                                      HttpJsonTranscodingConflictStrategy conflictStrategy,
                                       Set<HttpJsonTranscodingQueryParamMatchRule> queryParamMatchRules,
                                       UnframedGrpcErrorHandler errorHandler) {
-        this.useHttpAnnotations = useHttpAnnotations;
+        this.ignoreProtoHttpRule = ignoreProtoHttpRule;
         this.additionalHttpRules = additionalHttpRules;
+        this.conflictStrategy = conflictStrategy;
         this.queryParamMatchRules = queryParamMatchRules;
         this.errorHandler = errorHandler;
     }
 
     @Override
-    public boolean useHttpAnnotations() {
-        return useHttpAnnotations;
+    public boolean ignoreProtoHttpRule() {
+        return ignoreProtoHttpRule;
     }
 
     @Override
     public List<HttpRule> additionalHttpRules() {
         return additionalHttpRules;
+    }
+
+    @Override
+    public HttpJsonTranscodingConflictStrategy conflictStrategy() {
+        return conflictStrategy;
     }
 
     @Override
@@ -71,22 +79,25 @@ final class DefaultHttpJsonTranscodingOptions implements HttpJsonTranscodingOpti
             return false;
         }
         final HttpJsonTranscodingOptions that = (HttpJsonTranscodingOptions) o;
-        return useHttpAnnotations == that.useHttpAnnotations() &&
+        return ignoreProtoHttpRule == that.ignoreProtoHttpRule() &&
                additionalHttpRules.equals(that.additionalHttpRules()) &&
+               conflictStrategy.equals(that.conflictStrategy()) &&
                queryParamMatchRules.equals(that.queryParamMatchRules()) &&
                errorHandler.equals(that.errorHandler());
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(useHttpAnnotations, additionalHttpRules, queryParamMatchRules, errorHandler);
+        return Objects.hash(ignoreProtoHttpRule, additionalHttpRules, conflictStrategy,
+                            queryParamMatchRules, errorHandler);
     }
 
     @Override
     public String toString() {
         return MoreObjects.toStringHelper(this)
-                          .add("useHttpAnnotations", useHttpAnnotations)
+                          .add("ignoreProtoHttpRule", ignoreProtoHttpRule)
                           .add("additionalHttpRules", additionalHttpRules)
+                          .add("conflictStrategy", conflictStrategy)
                           .add("queryParamMatchRules", queryParamMatchRules)
                           .add("errorHandler", errorHandler)
                           .toString();

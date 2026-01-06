@@ -79,7 +79,7 @@ class HttpJsonTranscodingOptionsBuilderTest {
 
         final HttpJsonTranscodingOptions original =
                 HttpJsonTranscodingOptions.builder()
-                                          .useHttpAnnotations(false)
+                                          .ignoreProtoHttpRule(false)
                                           .additionalHttpRules(rule)
                                           .queryParamMatchRules(LOWER_CAMEL_CASE, ORIGINAL_FIELD)
                                           .errorHandler(UnframedGrpcErrorHandler.ofJson())
@@ -87,7 +87,7 @@ class HttpJsonTranscodingOptionsBuilderTest {
 
         final HttpJsonTranscodingOptions copy = new HttpJsonTranscodingOptionsBuilder(original).build();
 
-        assertThat(copy.useHttpAnnotations()).isEqualTo(original.useHttpAnnotations());
+        assertThat(copy.ignoreProtoHttpRule()).isEqualTo(original.ignoreProtoHttpRule());
         assertThat(copy.additionalHttpRules()).isEqualTo(original.additionalHttpRules());
         assertThat(copy.queryParamMatchRules()).isEqualTo(original.queryParamMatchRules());
         assertThat(copy.errorHandler()).isEqualTo(original.errorHandler());

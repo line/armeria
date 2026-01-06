@@ -60,7 +60,7 @@ import testing.grpc.Transcoding.Message;
 import testing.grpc.Transcoding.Recursive;
 import testing.grpc.Transcoding.UpdateMessageRequestV1;
 
-class HttpJsonTranscodingTestService extends HttpJsonTranscodingTestServiceImplBase {
+public final class HttpJsonTranscodingTestService extends HttpJsonTranscodingTestServiceImplBase {
 
     static final String testBytesValue = "abc123!?$*&()'-=@~";
 

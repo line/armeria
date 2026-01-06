@@ -269,6 +269,11 @@ final class HttpJsonTranscodingService extends AbstractUnframedGrpcService
         return unwrap().serve(ctx, req);
     }
 
+    @VisibleForTesting
+    Map<Route, TranscodingSpec> routeAndSpecs() {
+        return routeAndSpecs;
+    }
+
     private HttpResponse serve0(ServiceRequestContext ctx, HttpRequest req,
                                 TranscodingSpec spec) throws Exception {
         final RequestHeaders clientHeaders = req.headers();
@@ -597,7 +602,8 @@ final class HttpJsonTranscodingService extends AbstractUnframedGrpcService
                         Map<String, Field> originalFields,
                         List<Map<String, Field>> queryMappingFields,
                         List<PathVariable> pathVariables,
-                        boolean hasVerb, @Nullable String responseBody) {
+                        boolean hasVerb,
+                        @Nullable String responseBody) {
             this.order = order;
             this.httpRule = httpRule;
             this.method = method;
@@ -608,6 +614,10 @@ final class HttpJsonTranscodingService extends AbstractUnframedGrpcService
             this.pathVariables = pathVariables;
             this.hasVerb = hasVerb;
             this.responseBody = responseBody;
+        }
+
+        MethodDescriptor methodDescriptor() {
+            return methodDescriptor;
         }
     }
 
