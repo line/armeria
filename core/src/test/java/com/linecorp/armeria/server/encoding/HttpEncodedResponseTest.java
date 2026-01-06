@@ -254,4 +254,47 @@ class HttpEncodedResponseTest {
         assertThat(result).isEqualTo("foobarbaz");
         assertThat(encoded.encodedStream.buffer().refCnt()).isZero();
     }
+
+    @Test
+    void shouldNotAccessReleasedBufferAfterCancellation() {
+        final HttpResponse upstream = HttpResponse.of(ResponseHeaders.of(HttpStatus.OK),
+                                                      HttpData.ofUtf8("data1"));
+
+        final HttpEncodedResponse encoded = new HttpEncodedResponse(
+                upstream, StreamEncoderFactories.DEFLATE, mediaType -> true, ByteBufAllocator.DEFAULT, 1);
+
+        final AtomicReference<Throwable> exceptionRef = new AtomicReference<>();
+
+        encoded.subscribe(new Subscriber<HttpObject>() {
+            Subscription subscription;
+            @Override
+            public void onSubscribe(Subscription s) {
+                subscription = s;
+                s.request(Long.MAX_VALUE);
+            }
+
+            @Override
+            public void onNext(HttpObject obj) {
+                if (obj instanceof AutoCloseable) {
+                    try {
+                        ((AutoCloseable) obj).close();
+                    } catch (Throwable t) {
+                        exceptionRef.set(t);
+                    }
+                }
+                if (!(obj instanceof ResponseHeaders)) {
+                    subscription.cancel();
+                }
+            }
+
+            @Override
+            public void onError(Throwable t) {}
+
+            @Override
+            public void onComplete() {
+            }
+        }, ImmediateEventExecutor.INSTANCE);
+
+        assertThat(exceptionRef.get()).isNull();
+    }
 }
