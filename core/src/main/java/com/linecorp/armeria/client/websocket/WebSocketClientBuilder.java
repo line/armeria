@@ -64,7 +64,10 @@ import com.linecorp.armeria.common.auth.AuthToken;
 import com.linecorp.armeria.common.auth.BasicToken;
 import com.linecorp.armeria.common.auth.OAuth1aToken;
 import com.linecorp.armeria.common.auth.OAuth2Token;
+import com.linecorp.armeria.common.stream.StreamMessage;
+import com.linecorp.armeria.common.stream.StreamTimeoutMode;
 import com.linecorp.armeria.common.websocket.WebSocketFrameType;
+import com.linecorp.armeria.common.websocket.WebSocketIdleTimeoutException;
 
 /**
  * Builds a {@link WebSocketClient}.
@@ -85,6 +88,8 @@ public final class WebSocketClientBuilder extends AbstractWebClientBuilder {
     private boolean allowMaskMismatch;
     private List<String> subprotocols = ImmutableList.of();
     private boolean aggregateContinuation;
+    @Nullable
+    private Duration streamTimeout;
 
     WebSocketClientBuilder(URI uri) {
         super(validateUri(requireNonNull(uri, "uri")), null, null, null);
@@ -212,12 +217,32 @@ public final class WebSocketClientBuilder extends AbstractWebClientBuilder {
     }
 
     /**
+     * Sets an idle-timeout for inbound WebSocket frames.
+     * Applies {@link StreamMessage#timeout(Duration)} to the WebSocket inbound in
+     * {@link StreamTimeoutMode#UNTIL_NEXT} mode.
+     *
+     * <p>If the next frame does not arrive within {@code streamTimeout} after the previous one,
+     * the stream is terminated with {@link WebSocketIdleTimeoutException}.</p>
+     *
+     * <p>By default, no idle-timeout is applied.</p>
+     *
+     * @param streamTimeout maximum idle time between frames
+     */
+    public WebSocketClientBuilder streamTimeout(Duration streamTimeout) {
+        requireNonNull(streamTimeout, "streamTimeout");
+        checkArgument(!streamTimeout.isNegative() && !streamTimeout.isZero(),
+                      "streamTimeout: %s (expected: > 0)", "streamTimeout");
+        this.streamTimeout = streamTimeout;
+        return this;
+    }
+
+    /**
      * Returns a newly-created {@link WebSocketClient} based on the properties of this builder.
      */
     public WebSocketClient build() {
         final WebClient webClient = buildWebClient();
-        return new DefaultWebSocketClient(webClient, maxFramePayloadLength, allowMaskMismatch, subprotocols,
-                                          aggregateContinuation);
+        return new DefaultWebSocketClient(webClient, streamTimeout, maxFramePayloadLength, allowMaskMismatch,
+                                          subprotocols, aggregateContinuation);
     }
 
     // Override the return type of the chaining methods in the superclass.
