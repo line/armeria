@@ -72,6 +72,10 @@ public class AthenzDocker implements SafeCloseable {
     public static final String ADMIN_POLICY = "admin-policy";
     public static final String USER_POLICY = "user-policy";
 
+    public static final String ADMIN_PATH_POLICY = "admin-path-policy";
+    public static final String ADMIN_HEADER_POLICY = "admin-header-policy";
+    public static final String ADMIN_JSON_POLICY = "admin-json-policy";
+
     private final ComposeContainer composeContainer;
 
     @Nullable
@@ -156,6 +160,11 @@ public class AthenzDocker implements SafeCloseable {
 
         createPolicy(USER_POLICY, USER_ROLE, "files", "obtain");
         createPolicy(ADMIN_POLICY, ADMIN_ROLE, "secrets", "obtain");
+
+        // Additional policies for testing athenzResourceProvider
+        createPolicy(ADMIN_PATH_POLICY, ADMIN_ROLE, "/admin/path/**", "obtain");
+        createPolicy(ADMIN_HEADER_POLICY, ADMIN_ROLE, "header-resource", "obtain");
+        createPolicy(ADMIN_JSON_POLICY, ADMIN_ROLE, "body-resource", "obtain");
 
         // Create user-defined roles and policies.
         scaffold(zmsClient());
