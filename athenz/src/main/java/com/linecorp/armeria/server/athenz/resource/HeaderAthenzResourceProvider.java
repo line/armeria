@@ -40,9 +40,7 @@ final class HeaderAthenzResourceProvider implements AthenzResourceProvider {
     public CompletableFuture<String> provide(ServiceRequestContext ctx, HttpRequest req) {
         final String value = req.headers().get(headerName, "");
         if (value.isEmpty()) {
-            return UnmodifiableFuture.exceptionallyCompletedFuture(
-                    new AthenzResourceNotFoundException(
-                            "Athenz resource not found in header: " + headerName));
+            throw new IllegalArgumentException("Missing required header: " + headerName);
         }
         return UnmodifiableFuture.completedFuture(value);
     }

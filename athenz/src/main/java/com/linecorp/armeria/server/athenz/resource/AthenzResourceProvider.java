@@ -126,8 +126,7 @@ public interface AthenzResourceProvider {
      * from the specified HTTP header in the request.
      *
      * <p>This provider reads the header value for the given name from the incoming request.
-     * If the header is missing or its value is empty, the returned {@link CompletableFuture}
-     * completes exceptionally with {@link AthenzResourceNotFoundException}.
+     * If the header is missing or its value is empty, an {@link IllegalArgumentException} is thrown.
      *
      * <p>Example:
      * <pre>{@code
@@ -153,14 +152,6 @@ public interface AthenzResourceProvider {
      * <p>This provider aggregates the request, parses the body as JSON, and reads the value at the
      * specified JSON Pointer.
      *
-     * <p>The returned {@link CompletableFuture} completes exceptionally with
-     * {@link AthenzResourceNotFoundException} when:
-     * <ul>
-     *   <li>the request {@code Content-Type} is not JSON,</li>
-     *   <li>the addressed field is missing or resolves to an empty string, or</li>
-     *   <li>parsing or extraction fails for any reason.</li>
-     * </ul>
-     *
      * <p>Example:
      * <pre>{@code
      * JsonPointer pointer = JsonPointer.compile("/user/id");
@@ -172,7 +163,6 @@ public interface AthenzResourceProvider {
      *
      * @param jsonPointer the JSON Pointer for the field containing the resource; must not be {@code null}
      * @return an {@link AthenzResourceProvider} that reads the resource from the specified JSON field
-     * @throws NullPointerException if {@code jsonPointer} is {@code null}
      */
     static AthenzResourceProvider ofJsonField(JsonPointer jsonPointer) {
         return new JsonBodyFieldAthenzResourceProvider(jsonPointer);
@@ -188,14 +178,6 @@ public interface AthenzResourceProvider {
      * <p>{@code jsonPointerExpr} must be a JSON Pointer expression as defined in RFC 6901, starting with
      * {@code '/'} (e.g., {@code "/user/id"}).
      *
-     * <p>The returned {@link CompletableFuture} completes exceptionally with
-     * {@link AthenzResourceNotFoundException} when:
-     * <ul>
-     *   <li>the request {@code Content-Type} is not JSON,</li>
-     *   <li>the addressed field is missing or resolves to an empty string, or</li>
-     *   <li>parsing or extraction fails for any reason.</li>
-     * </ul>
-     *
      * <p>Example:
      * <pre>{@code
      * AthenzService.builder(ztsBaseClient)
@@ -207,8 +189,6 @@ public interface AthenzResourceProvider {
      * @param jsonPointerExpr the JSON Pointer expression string (RFC 6901); must not be {@code null} and
      *                        must start with {@code '/'}
      * @return an {@link AthenzResourceProvider} that reads the resource from the specified JSON field
-     * @throws NullPointerException if {@code jsonPointerExpr} is {@code null}
-     * @throws IllegalArgumentException if {@code jsonPointerExpr} is empty or does not start with {@code '/'}
      */
     static AthenzResourceProvider ofJsonField(String jsonPointerExpr) {
         return new JsonBodyFieldAthenzResourceProvider(jsonPointerExpr);

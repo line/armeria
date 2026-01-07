@@ -20,6 +20,7 @@ package com.linecorp.armeria.server.athenz.resource;
 import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
 
+import java.io.IOException;
 import java.util.concurrent.CompletableFuture;
 
 import com.fasterxml.jackson.core.JsonPointer;
@@ -28,9 +29,11 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 import com.linecorp.armeria.common.AggregatedHttpRequest;
 import com.linecorp.armeria.common.HttpRequest;
+import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
-import com.linecorp.armeria.common.util.UnmodifiableFuture;
 import com.linecorp.armeria.internal.common.JacksonUtil;
+import com.linecorp.armeria.server.HttpResponseException;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 final class JsonBodyFieldAthenzResourceProvider implements AthenzResourceProvider {
@@ -55,25 +58,26 @@ final class JsonBodyFieldAthenzResourceProvider implements AthenzResourceProvide
     public CompletableFuture<String> provide(ServiceRequestContext ctx, HttpRequest req) {
         final MediaType contentType = req.contentType();
         if (contentType == null || !contentType.is(MediaType.JSON)) {
-            return UnmodifiableFuture.exceptionallyCompletedFuture(
-                    new AthenzResourceNotFoundException("Unsupported media type. Only " +
-                                                        "application/json are supported"));
+            // Throwing HttpResponseException will be okay because this is in a server module.
+            // Will introduce a new Exception type later if needed.
+            throw HttpResponseException.of(
+                    HttpResponse.of(HttpStatus.UNSUPPORTED_MEDIA_TYPE, MediaType.PLAIN_TEXT_UTF_8,
+                                    "Content-Type must be application/json"));
         }
         return req.aggregate().thenApply(this::extractFieldSafely);
     }
 
     private String extractFieldSafely(AggregatedHttpRequest agg) {
+        final JsonNode root;
         try {
-            final JsonNode root = mapper.readTree(agg.content().array());
-            final JsonNode node = root.at(jsonPointer);
-            if (node.isMissingNode() || node.asText("").isEmpty()) {
-                throw new AthenzResourceNotFoundException("JSON field not found for pointer: " + jsonPointer);
-            }
-            return node.asText("");
-        } catch (AthenzResourceNotFoundException e) {
-            throw e;
-        } catch (Exception e) {
-            throw new AthenzResourceNotFoundException("Failed to extract JSON field", e);
+            root = mapper.readTree(agg.content().array());
+        } catch (IOException e) {
+            throw new IllegalArgumentException("Failed to parse JSON body", e);
         }
+        final JsonNode node = root.at(jsonPointer);
+        if (node.isMissingNode() || node.asText("").isEmpty()) {
+            throw new IllegalArgumentException("Missing required json node field: " + jsonPointer);
+        }
+        return node.asText("");
     }
 }

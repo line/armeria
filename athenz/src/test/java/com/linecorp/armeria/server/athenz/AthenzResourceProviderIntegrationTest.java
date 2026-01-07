@@ -44,7 +44,6 @@ import com.linecorp.armeria.common.athenz.TokenType;
 import com.linecorp.armeria.common.util.UnmodifiableFuture;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServerListener;
-import com.linecorp.armeria.server.athenz.resource.AthenzResourceNotFoundException;
 import com.linecorp.armeria.server.athenz.resource.AthenzResourceProvider;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
@@ -100,7 +99,7 @@ class AthenzResourceProviderIntegrationTest {
             sb.decorator("/admin/exception/test", AthenzService.builder(ztsBaseClient)
                                                                .action("obtain")
                                                                .resourceProvider((ctx, request) -> {
-                                                                   throw new AthenzResourceNotFoundException(
+                                                                   throw new IllegalArgumentException(
                                                                            "Simulated resource provider " +
                                                                            "exception");
                                                                }).policyConfig(
@@ -269,7 +268,7 @@ class AthenzResourceProviderIntegrationTest {
                              .blocking();
 
             final AggregatedHttpResponse response = client.get("/admin/exception/test");
-            assertThat(response.status()).isEqualTo(HttpStatus.UNAUTHORIZED);
+            assertThat(response.status()).isEqualTo(HttpStatus.BAD_REQUEST);
         }
     }
 
@@ -284,7 +283,7 @@ class AthenzResourceProviderIntegrationTest {
                              .blocking();
 
             final AggregatedHttpResponse response = client.get("/admin/null/test");
-            assertThat(response.status()).isEqualTo(HttpStatus.UNAUTHORIZED);
+            assertThat(response.status()).isEqualTo(HttpStatus.BAD_REQUEST);
         }
     }
 
@@ -299,7 +298,7 @@ class AthenzResourceProviderIntegrationTest {
                              .blocking();
 
             final AggregatedHttpResponse response = client.get("/admin/empty/test");
-            assertThat(response.status()).isEqualTo(HttpStatus.UNAUTHORIZED);
+            assertThat(response.status()).isEqualTo(HttpStatus.BAD_REQUEST);
         }
     }
 }

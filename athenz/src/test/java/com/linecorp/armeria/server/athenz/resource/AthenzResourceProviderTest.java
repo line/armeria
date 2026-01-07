@@ -31,7 +31,7 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
-public class AthenzResourceProviderTest {
+class AthenzResourceProviderTest {
 
     @Test
     public void shouldProvidePathExcludeQueryParam() {
@@ -83,13 +83,7 @@ public class AthenzResourceProviderTest {
         final HttpRequest req = HttpRequest.of(HttpMethod.GET, "/");
         final ServiceRequestContext ctx = ServiceRequestContext.of(req);
 
-        // when
-        final CompletableFuture<String> result = provider.provide(ctx, req);
-
-        // then
-        assertThat(result).isCompletedExceptionally();
-        assertThatThrownBy(result::join)
-                .hasCauseInstanceOf(AthenzResourceNotFoundException.class);
+        assertThatThrownBy(() -> provider.provide(ctx, req)).isInstanceOf(IllegalArgumentException.class);
     }
 
     @Test
@@ -100,13 +94,7 @@ public class AthenzResourceProviderTest {
                 RequestHeaders.of(HttpMethod.GET, "/", "X-Athenz-Resource", ""));
         final ServiceRequestContext ctx = ServiceRequestContext.of(req);
 
-        // when
-        final CompletableFuture<String> result = provider.provide(ctx, req);
-
-        // then
-        assertThat(result).isCompletedExceptionally();
-        assertThatThrownBy(result::join)
-                .hasCauseInstanceOf(AthenzResourceNotFoundException.class);
+        assertThatThrownBy(() -> provider.provide(ctx, req)).isInstanceOf(IllegalArgumentException.class);
     }
 
     @Test
@@ -158,6 +146,6 @@ public class AthenzResourceProviderTest {
 
         // then
         assertThatThrownBy(result::join)
-                .hasCauseInstanceOf(AthenzResourceNotFoundException.class);
+                .hasCauseInstanceOf(IllegalArgumentException.class);
     }
 }

@@ -41,7 +41,6 @@ import com.linecorp.armeria.server.ServiceConfig;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.SimpleDecoratingHttpService;
 import com.linecorp.armeria.server.athenz.MinifiedAuthZpeClient.AccessCheckStatus;
-import com.linecorp.armeria.server.athenz.resource.AthenzResourceNotFoundException;
 import com.linecorp.armeria.server.athenz.resource.AthenzResourceProvider;
 
 import io.micrometer.core.instrument.MeterRegistry;
@@ -184,8 +183,7 @@ public final class AthenzService extends SimpleDecoratingHttpService {
                     .thenApplyAsync(
                             athenzResource -> {
                                 if (athenzResource == null || athenzResource.isEmpty()) {
-                                    throw new AthenzResourceNotFoundException(
-                                            "Athenz resource could not be resolved.");
+                                    throw new IllegalArgumentException("Resource is null or empty");
                                 }
                                 final AccessCheckStatus status = authZpeClient.allowAccess(token,
                                                                                            athenzResource,
@@ -208,10 +206,9 @@ public final class AthenzService extends SimpleDecoratingHttpService {
                             },
                             ctx.blockingTaskExecutor())
                     .exceptionally(cause -> {
-                        final Throwable unwrapped = Exceptions.peel(cause);
                         assert deniedTimer != null;
                         deniedTimer.record(System.nanoTime() - startNanos, TimeUnit.NANOSECONDS);
-                        return createErrorResponse(unwrapped);
+                        return createErrorResponse(cause);
                     });
             return HttpResponse.of(future);
         } catch (Exception e) {
@@ -234,12 +231,12 @@ public final class AthenzService extends SimpleDecoratingHttpService {
     }
 
     private static HttpResponse createErrorResponse(Throwable cause) {
-        if (cause instanceof AthenzResourceNotFoundException) {
-            return HttpResponse.of(HttpStatus.UNAUTHORIZED, MediaType.PLAIN_TEXT,
+        final Throwable peeled = Exceptions.peel(cause);
+        if (peeled instanceof IllegalArgumentException) {
+            return HttpResponse.of(HttpStatus.BAD_REQUEST, MediaType.PLAIN_TEXT,
                                    "Resource could not be resolved: " + cause.getMessage());
-        } else {
-            return HttpResponse.of(HttpStatus.INTERNAL_SERVER_ERROR, MediaType.PLAIN_TEXT,
-                                   "Exception occurred while resolving resource: " + cause.getMessage());
         }
+
+        return Exceptions.throwUnsafely(peeled);
     }
 }
