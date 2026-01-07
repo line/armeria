@@ -20,6 +20,7 @@ import static com.linecorp.armeria.common.util.Exceptions.throwIfFatal;
 
 import java.io.IOException;
 import java.io.OutputStream;
+import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import java.util.function.Predicate;
 
 import org.reactivestreams.Subscriber;
@@ -54,6 +55,9 @@ final class HttpEncodedResponse extends FilteredHttpResponse {
 
     private static final Logger logger = LoggerFactory.getLogger(HttpEncodedResponse.class);
 
+    private static final AtomicIntegerFieldUpdater<HttpEncodedResponse> encoderClosedUpdater =
+            AtomicIntegerFieldUpdater.newUpdater(HttpEncodedResponse.class, "encoderClosed");
+
     private final StreamEncoderFactory encoderFactory;
     private final Predicate<MediaType> encodableContentTypePredicate;
     private final long minBytesToForceChunkedAndEncoding;
@@ -68,7 +72,8 @@ final class HttpEncodedResponse extends FilteredHttpResponse {
 
     private boolean headersSent;
 
-    private boolean encoderClosed;
+    // 0 - not closed, 1 - closed
+    private volatile int encoderClosed;
 
     HttpEncodedResponse(HttpResponse delegate,
                         StreamEncoderFactory encoderFactory,
@@ -152,7 +157,9 @@ final class HttpEncodedResponse extends FilteredHttpResponse {
 
     @Override
     protected void beforeComplete(Subscriber<? super HttpObject> subscriber) {
-        closeEncoder(false);
+        if (!closeEncoder(false)) {
+            return;
+        }
         if (encodedStream == null) {
             return;
         }
@@ -183,22 +190,22 @@ final class HttpEncodedResponse extends FilteredHttpResponse {
         closeEncoder(true);
     }
 
-    private void closeEncoder(boolean releaseEncodedBuf) {
-        if (encoderClosed) {
-            return;
+    private boolean closeEncoder(boolean releaseEncodedBuf) {
+        if (!encoderClosedUpdater.compareAndSet(this, 0, 1)) {
+            return false;
         }
-        encoderClosed = true;
         if (encodingStream == null) {
-            return;
+            return false;
         }
         try {
             encodingStream.close();
-            if (encodedStream != null && releaseEncodedBuf) {
-                encodedStream.buffer().release();
-            }
         } catch (IOException e) {
             logger.warn("Unexpected exception is raised while closing the encoding stream.", e);
         }
+        if (encodedStream != null && releaseEncodedBuf) {
+            encodedStream.buffer().release();
+        }
+        return true;
     }
 
     private boolean shouldEncodeResponse(ResponseHeaders headers) {
