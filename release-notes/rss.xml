@@ -4,10 +4,17 @@
         <title>Armeria Release Notes</title>
         <link>https://armeria.dev/release-notes</link>
         
-        <lastBuildDate>Wed, 31 Dec 2025 02:39:50 GMT</lastBuildDate>
+        <lastBuildDate>Wed, 07 Jan 2026 07:09:14 GMT</lastBuildDate>
         <docs>https://validator.w3.org/feed/docs/rss2.html</docs>
         <language>en</language>
-        <copyright>© 2015-2025, LY Corporation</copyright>
+        <copyright>© 2015-2026, LY Corporation</copyright>
+        <item>
+            <title><![CDATA[v1.35.0]]></title>
+            <link>https://armeria.dev/release-notes/1.35.0/</link>
+            <guid>https://armeria.dev/release-notes/1.35.0/</guid>
+            <pubDate>Wed, 07 Jan 2026 00:00:00 GMT</pubDate>
+            <description><![CDATA[Dynamic Athenz Resource Resolution: You can now determine the target resource for Athenz authorization dynamically from the request using AthenzResourceProvider. #6541 // Example 1: Use the request pa...]]></description>
+        </item>
         <item>
             <title><![CDATA[v1.34.2]]></title>
             <link>https://armeria.dev/release-notes/1.34.2/</link>

@@ -8,7 +8,7 @@
         <docs>https://validator.w3.org/feed/docs/rss2.html</docs>
         <generator>https://github.com/jpmonette/feed</generator>
         <language>en</language>
-        <copyright>© 2015-2025, LY Corporation</copyright>
+        <copyright>© 2015-2026, LY Corporation</copyright>
         <item>
             <title><![CDATA[Let’s play Reactive Streams with Armeria vol.2]]></title>
             <link>https://armeria.dev/blog/ja/2020/03/26/reactive-streams-armeria-2</link>
