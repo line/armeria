@@ -32,10 +32,14 @@ class EventLoopGroupBuilderTest {
     @Test
     void testDefault() {
         final EventLoopGroup group = EventLoopGroups.builder().build();
-        assertThat(group).isNotNull();
-        // Default should not wrap (uses Netty defaults)
-        assertThat(group.getClass().getSimpleName())
-                .isNotEqualTo("ShutdownConfigurableEventLoopGroup");
+        try {
+            assertThat(group).isNotNull();
+            // Default should not wrap (uses Netty defaults)
+            assertThat(group.getClass().getSimpleName())
+                    .isNotEqualTo("ShutdownConfigurableEventLoopGroup");
+        } finally {
+            group.shutdownGracefully();
+        }
     }
 
     @Test

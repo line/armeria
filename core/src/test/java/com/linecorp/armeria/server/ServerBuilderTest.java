@@ -859,8 +859,6 @@ class ServerBuilderTest {
             server.start().join();
             assertThat(factoryCalled.get()).isTrue();
             assertThat(capturedThreadName.get()).startsWith("armeria-boss-");
-        } finally {
-            server.stop().join();
         }
     }
 
@@ -888,8 +886,6 @@ class ServerBuilderTest {
             server.start().join();
             // Factory should be called once per port
             assertThat(factoryCallCount.get()).isEqualTo(2);
-        } finally {
-            server.stop().join();
         }
     }
 

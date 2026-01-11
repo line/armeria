@@ -21,6 +21,8 @@ import static java.util.Objects.requireNonNull;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 
+import com.linecorp.armeria.common.annotation.UnstableApi;
+
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.AbstractEventLoop;
 import io.netty.channel.Channel;
@@ -57,6 +59,7 @@ public final class EventLoopGroups {
      *     .build();
      * }</pre>
      */
+    @UnstableApi
     public static EventLoopGroupBuilder builder() {
         return new EventLoopGroupBuilder();
     }
