@@ -242,6 +242,8 @@ public final class ServerBuilder implements TlsSetters, ServiceConfigsBuilder<Se
     private TlsProvider tlsProvider;
     @Nullable
     private ServerTlsConfig tlsConfig;
+    @Nullable
+    private Function<String, EventLoopGroup> bossGroupFactory;
 
     ServerBuilder() {
         // Set the default host-level properties.
@@ -572,6 +574,38 @@ public final class ServerBuilder implements TlsSetters, ServiceConfigsBuilder<Se
     @UnstableApi
     public ServerBuilder serviceWorkerGroup(int numThreads) {
         virtualHostTemplate.serviceWorkerGroup(EventLoopGroups.newEventLoopGroup(numThreads), true);
+        return this;
+    }
+
+    /**
+     * Sets the factory that creates an {@link EventLoopGroup} for accepting incoming connections.
+     * The factory receives the boss thread name prefix (e.g., {@code "armeria-boss-http-*:8080"}) and
+     * should return a new {@link EventLoopGroup}.
+     *
+     * <p>This is useful for customizing the boss group's graceful shutdown behavior:
+     * <pre>{@code
+     * Server.builder()
+     *     .bossGroupFactory(bossThreadName -> {
+     *         return EventLoopGroups.builder()
+     *             .numThreads(1)
+     *             .threadNamePrefix(bossThreadName)
+     *             .useDaemonThreads(false)
+     *             .gracefulShutdown(Duration.ofSeconds(5), Duration.ofSeconds(30))
+     *             .build();
+     *     })
+     *     .service("/", (ctx, req) -> HttpResponse.of(200))
+     *     .build();
+     * }</pre>
+     *
+     * <p>Note: Boss groups are always shut down when the server stops, regardless of any
+     * configuration. This ensures proper cleanup of server resources.
+     *
+     * @param bossGroupFactory the factory function that creates boss {@link EventLoopGroup}s
+     * @see EventLoopGroups#builder()
+     */
+    @UnstableApi
+    public ServerBuilder bossGroupFactory(Function<String, EventLoopGroup> bossGroupFactory) {
+        this.bossGroupFactory = requireNonNull(bossGroupFactory, "bossGroupFactory");
         return this;
     }
 
@@ -2458,7 +2492,8 @@ public final class ServerBuilder implements TlsSetters, ServiceConfigsBuilder<Se
                 clientAddressSources, clientAddressTrustedProxyFilter, clientAddressFilter, clientAddressMapper,
                 enableServerHeader, enableDateHeader, errorHandler, sslContexts,
                 http1HeaderNaming, dependencyInjector, absoluteUriTransformer,
-                unloggedExceptionsReportIntervalMillis, ImmutableList.copyOf(shutdownSupports));
+                unloggedExceptionsReportIntervalMillis, ImmutableList.copyOf(shutdownSupports),
+                bossGroupFactory);
     }
 
     /**
