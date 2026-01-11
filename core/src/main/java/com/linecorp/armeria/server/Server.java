@@ -63,7 +63,6 @@ import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.DomainSocketAddress;
-import com.linecorp.armeria.common.util.EventLoopGroups;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.common.util.ListenableAsyncCloseable;
 import com.linecorp.armeria.common.util.ShutdownHooks;
@@ -88,7 +87,7 @@ import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.ServerChannel;
 import io.netty.channel.socket.ServerSocketChannel;
-import io.netty.util.concurrent.FastThreadLocalThread;
+import io.netty.handler.ssl.SslContext;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.ImmediateEventExecutor;
 
@@ -513,11 +512,8 @@ public final class Server implements ListenableAsyncCloseable {
                 }
             });
 
-            final EventLoopGroup bossGroup = EventLoopGroups.newEventLoopGroup(1, r -> {
-                final FastThreadLocalThread thread = new FastThreadLocalThread(r, bossThreadName(port));
-                thread.setDaemon(false);
-                return thread;
-            });
+            final String bossThreadName = bossThreadName(port);
+            final EventLoopGroup bossGroup = config.bossGroupFactory().apply(bossThreadName);
 
             final GracefulShutdownSupport gracefulShutdownSupport = this.gracefulShutdownSupport;
             assert gracefulShutdownSupport != null;
