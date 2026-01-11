@@ -24,6 +24,7 @@ import java.util.concurrent.ThreadFactory;
 
 import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 
 import io.netty.channel.EventLoopGroup;
 
@@ -43,6 +44,7 @@ import io.netty.channel.EventLoopGroup;
  *
  * @see EventLoopGroups#builder()
  */
+@UnstableApi
 public final class EventLoopGroupBuilder {
 
     // Netty defaults from AbstractEventExecutorGroup.shutdownGracefully()
