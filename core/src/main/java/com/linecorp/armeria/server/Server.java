@@ -47,6 +47,7 @@ import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.ReentrantLock;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import javax.net.ssl.SSLSession;
@@ -553,11 +554,18 @@ public final class Server implements ListenableAsyncCloseable {
                 }
             });
 
-            final EventLoopGroup bossGroup = EventLoopGroups.newEventLoopGroup(1, r -> {
-                final FastThreadLocalThread thread = new FastThreadLocalThread(r, bossThreadName(port));
-                thread.setDaemon(false);
-                return thread;
-            });
+            final String bossThreadName = bossThreadName(port);
+            final EventLoopGroup bossGroup;
+            final Function<String, EventLoopGroup> bossGroupFactory = config.bossGroupFactory();
+            if (bossGroupFactory != null) {
+                bossGroup = bossGroupFactory.apply(bossThreadName);
+            } else {
+                bossGroup = EventLoopGroups.newEventLoopGroup(1, r -> {
+                    final FastThreadLocalThread thread = new FastThreadLocalThread(r, bossThreadName);
+                    thread.setDaemon(false);
+                    return thread;
+                });
+            }
 
             final GracefulShutdownSupport gracefulShutdownSupport = this.gracefulShutdownSupport;
             assert gracefulShutdownSupport != null;

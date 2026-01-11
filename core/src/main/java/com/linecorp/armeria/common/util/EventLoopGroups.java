@@ -16,13 +16,10 @@
 
 package com.linecorp.armeria.common.util;
 
-import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
 
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
-
-import com.linecorp.armeria.common.Flags;
 
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.AbstractEventLoop;
@@ -47,12 +44,32 @@ public final class EventLoopGroups {
     private static final Runnable NO_OP = () -> {};
 
     /**
+     * Returns a new builder for creating an {@link EventLoopGroup}.
+     *
+     * <h2>Example</h2>
+     * <pre>{@code
+     * EventLoopGroup eventLoopGroup = EventLoopGroups
+     *     .builder()
+     *     .numThreads(4)
+     *     .threadNamePrefix("my-eventloop")
+     *     .useDaemonThreads(true)
+     *     .gracefulShutdown(Duration.ofSeconds(2), Duration.ofSeconds(15))
+     *     .build();
+     * }</pre>
+     */
+    public static EventLoopGroupBuilder builder() {
+        return new EventLoopGroupBuilder();
+    }
+
+    /**
      * Returns a newly-created {@link EventLoopGroup}.
      *
      * @param numThreads the number of event loop threads
      */
     public static EventLoopGroup newEventLoopGroup(int numThreads) {
-        return newEventLoopGroup(numThreads, false);
+        return builder()
+                .numThreads(numThreads)
+                .build();
     }
 
     /**
@@ -62,7 +79,10 @@ public final class EventLoopGroups {
      * @param useDaemonThreads whether to create daemon threads or not
      */
     public static EventLoopGroup newEventLoopGroup(int numThreads, boolean useDaemonThreads) {
-        return newEventLoopGroup(numThreads, "armeria-eventloop", useDaemonThreads);
+        return builder()
+                .numThreads(numThreads)
+                .useDaemonThreads(useDaemonThreads)
+                .build();
     }
 
     /**
@@ -72,7 +92,10 @@ public final class EventLoopGroups {
      * @param threadNamePrefix the prefix of thread names
      */
     public static EventLoopGroup newEventLoopGroup(int numThreads, String threadNamePrefix) {
-        return newEventLoopGroup(numThreads, threadNamePrefix, false);
+        return builder()
+                .numThreads(numThreads)
+                .threadNamePrefix(threadNamePrefix)
+                .build();
     }
 
     /**
@@ -84,14 +107,11 @@ public final class EventLoopGroups {
      */
     public static EventLoopGroup newEventLoopGroup(int numThreads, String threadNamePrefix,
                                                    boolean useDaemonThreads) {
-
-        checkArgument(numThreads > 0, "numThreads: %s (expected: > 0)", numThreads);
-        requireNonNull(threadNamePrefix, "threadNamePrefix");
-
-        final TransportType type = Flags.transportType();
-        final String prefix = threadNamePrefix + '-' + type.lowerCasedName();
-        return newEventLoopGroup(numThreads, ThreadFactories.newEventLoopThreadFactory(prefix,
-                                                                                       useDaemonThreads));
+        return builder()
+                .numThreads(numThreads)
+                .threadNamePrefix(threadNamePrefix)
+                .useDaemonThreads(useDaemonThreads)
+                .build();
     }
 
     /**
@@ -101,12 +121,10 @@ public final class EventLoopGroups {
      * @param threadFactory the factory of event loop threads
      */
     public static EventLoopGroup newEventLoopGroup(int numThreads, ThreadFactory threadFactory) {
-
-        checkArgument(numThreads > 0, "numThreads: %s (expected: > 0)", numThreads);
-        requireNonNull(threadFactory, "threadFactory");
-
-        final TransportType type = Flags.transportType();
-        return type.newEventLoopGroup(numThreads, unused -> threadFactory);
+        return builder()
+                .numThreads(numThreads)
+                .threadFactory(threadFactory)
+                .build();
     }
 
     /**

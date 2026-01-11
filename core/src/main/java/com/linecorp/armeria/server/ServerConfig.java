@@ -28,6 +28,7 @@ import java.util.function.Predicate;
 
 import com.linecorp.armeria.common.DependencyInjector;
 import com.linecorp.armeria.common.Http1HeaderNaming;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.annotation.UnstableApi;
@@ -116,6 +117,16 @@ public interface ServerConfig {
      */
     @Deprecated
     boolean shutdownWorkerGroupOnStop();
+
+    /**
+     * Returns the factory that creates boss {@link EventLoopGroup}s for accepting incoming connections.
+     * Returns {@code null} if no custom factory was specified.
+     *
+     * @see ServerBuilder#bossGroupFactory(Function)
+     */
+    @Nullable
+    @UnstableApi
+    Function<String, EventLoopGroup> bossGroupFactory();
 
     /**
      * Returns the {@link ChannelOption}s and their values of {@link Server}'s server sockets.

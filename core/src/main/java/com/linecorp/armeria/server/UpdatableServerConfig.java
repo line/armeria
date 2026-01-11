@@ -131,6 +131,12 @@ final class UpdatableServerConfig implements ServerConfig {
     }
 
     @Override
+    @Nullable
+    public Function<String, EventLoopGroup> bossGroupFactory() {
+        return delegate.bossGroupFactory();
+    }
+
+    @Override
     public Map<ChannelOption<?>, ?> channelOptions() {
         return delegate.channelOptions();
     }

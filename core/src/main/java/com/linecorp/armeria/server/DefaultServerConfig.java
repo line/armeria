@@ -120,6 +120,8 @@ final class DefaultServerConfig implements ServerConfig {
     @Nullable
     private final Mapping<String, SslContext> sslContexts;
     private final ServerMetrics serverMetrics;
+    @Nullable
+    private final Function<String, EventLoopGroup> bossGroupFactory;
 
     @Nullable
     private String strVal;
@@ -152,7 +154,8 @@ final class DefaultServerConfig implements ServerConfig {
             DependencyInjector dependencyInjector,
             Function<? super String, String> absoluteUriTransformer,
             long unloggedExceptionsReportIntervalMillis,
-            List<ShutdownSupport> shutdownSupports) {
+            List<ShutdownSupport> shutdownSupports,
+            @Nullable Function<String, EventLoopGroup> bossGroupFactory) {
         requireNonNull(ports, "ports");
         requireNonNull(defaultVirtualHost, "defaultVirtualHost");
         requireNonNull(virtualHosts, "virtualHosts");
@@ -268,6 +271,7 @@ final class DefaultServerConfig implements ServerConfig {
         this.absoluteUriTransformer = castAbsoluteUriTransformer;
         this.unloggedExceptionsReportIntervalMillis = unloggedExceptionsReportIntervalMillis;
         this.shutdownSupports = ImmutableList.copyOf(requireNonNull(shutdownSupports, "shutdownSupports"));
+        this.bossGroupFactory = bossGroupFactory;
         serverMetrics = new ServerMetrics(meterRegistry);
     }
 
@@ -461,6 +465,12 @@ final class DefaultServerConfig implements ServerConfig {
     @Override
     public boolean shutdownWorkerGroupOnStop() {
         return shutdownWorkerGroupOnStop;
+    }
+
+    @Override
+    @Nullable
+    public Function<String, EventLoopGroup> bossGroupFactory() {
+        return bossGroupFactory;
     }
 
     /**
