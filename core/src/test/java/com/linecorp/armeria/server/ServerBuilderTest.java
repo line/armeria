@@ -35,6 +35,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
+import java.util.function.Function;
 import java.util.function.Supplier;
 
 import org.junit.jupiter.api.AfterAll;
@@ -57,6 +58,7 @@ import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.prometheus.PrometheusMeterRegistries;
 import com.linecorp.armeria.common.util.DomainSocketAddress;
 import com.linecorp.armeria.common.util.EventLoopGroups;
+import com.linecorp.armeria.common.util.ThreadFactories;
 import com.linecorp.armeria.common.util.TlsEngineType;
 import com.linecorp.armeria.common.util.TransportType;
 import com.linecorp.armeria.internal.common.util.MinifiedBouncyCastleProvider;
@@ -67,6 +69,7 @@ import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 import io.micrometer.core.instrument.Metrics;
 import io.micrometer.prometheusmetrics.PrometheusMeterRegistry;
 import io.netty.channel.ChannelOption;
+import io.netty.channel.EventLoopGroup;
 import io.netty.handler.ssl.SslContextBuilder;
 import reactor.core.scheduler.Schedulers;
 
@@ -828,7 +831,8 @@ class ServerBuilderTest {
                         .service("/", (ctx, req) -> HttpResponse.of(HttpStatus.OK))
                         .build()
         ) {
-            assertThat(server.config().bossGroupFactory()).isNull();
+            final Function<String, EventLoopGroup> bossGroupFactory = server.config().bossGroupFactory();
+            assertThat(bossGroupFactory).isNotNull();
         }
     }
 
@@ -845,12 +849,12 @@ class ServerBuilderTest {
                         .bossGroupFactory(threadName -> {
                             capturedThreadName.set(threadName);
                             factoryCalled.set(true);
-                            return EventLoopGroups.builder()
-                                                  .numThreads(1)
-                                                  .threadNamePrefix(threadName)
-                                                  .useDaemonThreads(false)
-                                                  .gracefulShutdownMillis(0L, 0L)
-                                                  .build();
+                            return EventLoopGroups
+                                    .builder()
+                                    .numThreads(1)
+                                    .threadFactory(ThreadFactories.newThreadFactory(threadName, false))
+                                    .gracefulShutdownMillis(0L, 0L)
+                                    .build();
                         })
                         .build()
         ) {
@@ -875,11 +879,11 @@ class ServerBuilderTest {
                         .service("/", (ctx, req) -> HttpResponse.of(HttpStatus.OK))
                         .bossGroupFactory(threadName -> {
                             factoryCallCount.incrementAndGet();
-                            return EventLoopGroups.builder()
-                                                  .numThreads(1)
-                                                  .threadNamePrefix(threadName)
-                                                  .useDaemonThreads(false)
-                                                  .build();
+                            return EventLoopGroups
+                                    .builder()
+                                    .numThreads(1)
+                                    .threadFactory(ThreadFactories.newThreadFactory(threadName, false))
+                                    .build();
                         })
                         .build()
         ) {

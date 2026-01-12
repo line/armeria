@@ -47,13 +47,13 @@ import io.netty.channel.EventLoopGroup;
 @UnstableApi
 public final class EventLoopGroupBuilder {
 
+    public static final String DEFAULT_ARMERIA_THREAD_NAME_PREFIX = "armeria-eventloop";
+
     // Netty defaults from AbstractEventExecutorGroup.shutdownGracefully()
     private static final long DEFAULT_SHUTDOWN_QUIET_PERIOD_MILLIS = 2000;
     private static final long DEFAULT_SHUTDOWN_TIMEOUT_MILLIS = 15000;
 
     private int numThreads = Flags.numCommonWorkers();
-    private String threadNamePrefix = "armeria-eventloop";
-    private boolean useDaemonThreads;
     @Nullable
     private ThreadFactory threadFactory;
     private long shutdownQuietPeriodMillis = DEFAULT_SHUTDOWN_QUIET_PERIOD_MILLIS;
@@ -74,31 +74,10 @@ public final class EventLoopGroupBuilder {
     }
 
     /**
-     * Sets the prefix of thread names. The default is {@code "armeria-eventloop"}.
-     * The actual thread name will be suffixed with the transport type (e.g., {@code "armeria-eventloop-nio"}).
-     *
-     * @param threadNamePrefix the prefix for thread names
-     */
-    public EventLoopGroupBuilder threadNamePrefix(String threadNamePrefix) {
-        this.threadNamePrefix = requireNonNull(threadNamePrefix, "threadNamePrefix");
-        return this;
-    }
-
-    /**
-     * Sets whether to create daemon threads. The default is {@code false}.
-     *
-     * @param useDaemonThreads whether to create daemon threads
-     */
-    public EventLoopGroupBuilder useDaemonThreads(boolean useDaemonThreads) {
-        this.useDaemonThreads = useDaemonThreads;
-        return this;
-    }
-
-    /**
      * Sets a custom {@link ThreadFactory} for creating event loop threads.
-     * When set, {@link #threadNamePrefix(String)} and {@link #useDaemonThreads(boolean)} are ignored.
      *
      * @param threadFactory the thread factory to use
+     * @see ThreadFactories for convenient factory methods to create a {@link ThreadFactory}
      */
     public EventLoopGroupBuilder threadFactory(ThreadFactory threadFactory) {
         this.threadFactory = requireNonNull(threadFactory, "threadFactory");
@@ -140,8 +119,8 @@ public final class EventLoopGroupBuilder {
                       "quietPeriodMillis: %s (expected: >= 0)", quietPeriodMillis);
         checkArgument(timeoutMillis >= quietPeriodMillis,
                       "timeoutMillis: %s (expected: >= quietPeriodMillis)", timeoutMillis);
-        this.shutdownQuietPeriodMillis = quietPeriodMillis;
-        this.shutdownTimeoutMillis = timeoutMillis;
+        shutdownQuietPeriodMillis = quietPeriodMillis;
+        shutdownTimeoutMillis = timeoutMillis;
         return this;
     }
 
@@ -156,8 +135,8 @@ public final class EventLoopGroupBuilder {
         if (threadFactory != null) {
             factory = threadFactory;
         } else {
-            final String prefix = threadNamePrefix + '-' + type.lowerCasedName();
-            factory = ThreadFactories.newEventLoopThreadFactory(prefix, useDaemonThreads);
+            final String prefix = DEFAULT_ARMERIA_THREAD_NAME_PREFIX + '-' + type.lowerCasedName();
+            factory = ThreadFactories.newEventLoopThreadFactory(prefix, false);
         }
 
         final EventLoopGroup eventLoopGroup = type.newEventLoopGroup(numThreads, unused -> factory);

@@ -55,18 +55,4 @@ final class ShutdownConfigurableEventLoopGroup extends DelegatingEventLoopGroup 
                 shutdownQuietPeriodMillis, shutdownTimeoutMillis, TimeUnit.MILLISECONDS);
     }
 
-    /**
-     * Returns the configured graceful shutdown quiet period in milliseconds.
-     */
-    long shutdownQuietPeriodMillis() {
-        return shutdownQuietPeriodMillis;
-    }
-
-    /**
-     * Returns the configured graceful shutdown timeout in milliseconds.
-     */
-    long shutdownTimeoutMillis() {
-        return shutdownTimeoutMillis;
-    }
-
 }
