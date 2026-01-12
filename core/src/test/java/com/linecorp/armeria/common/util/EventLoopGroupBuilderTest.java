@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.common.util;
 
+import static com.linecorp.armeria.common.util.EventLoopGroupBuilder.*;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -77,7 +78,7 @@ class EventLoopGroupBuilderTest {
     void testCustomThreadNamePrefix() {
         final EventLoopGroup group = EventLoopGroups.builder()
                 .numThreads(1)
-                .threadNamePrefix("test-eventloop")
+                .threadFactory(ThreadFactories.newThreadFactory("test-eventloop", false))
                 .build();
         try {
             assertThat(group).isNotNull();
@@ -91,7 +92,9 @@ class EventLoopGroupBuilderTest {
     void testUseDaemonThreads() {
         final EventLoopGroup group = EventLoopGroups.builder()
                 .numThreads(1)
-                .useDaemonThreads(true)
+                .threadFactory(
+                        ThreadFactories.newThreadFactory(DEFAULT_ARMERIA_THREAD_NAME_PREFIX, true)
+                )
                 .build();
         try {
             assertThat(group).isNotNull();
@@ -193,8 +196,11 @@ class EventLoopGroupBuilderTest {
 
     @Test
     void testNullThreadNamePrefix() {
-        assertThatThrownBy(() -> EventLoopGroups.builder().threadNamePrefix(null))
-                .isInstanceOf(NullPointerException.class);
+        assertThatThrownBy(
+                () -> EventLoopGroups
+                        .builder()
+                        .threadFactory(ThreadFactories.newThreadFactory(null, false))
+        ).isInstanceOf(NullPointerException.class);
     }
 
     @Test

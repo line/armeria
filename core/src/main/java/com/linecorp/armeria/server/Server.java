@@ -47,7 +47,6 @@ import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.ReentrantLock;
-import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import javax.net.ssl.SSLSession;
@@ -71,7 +70,6 @@ import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.metric.MeterIdPrefix;
 import com.linecorp.armeria.common.metric.MoreMeterBinders;
 import com.linecorp.armeria.common.util.DomainSocketAddress;
-import com.linecorp.armeria.common.util.EventLoopGroups;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.common.util.ListenableAsyncCloseable;
 import com.linecorp.armeria.common.util.ShutdownHooks;
@@ -98,7 +96,6 @@ import io.netty.channel.EventLoopGroup;
 import io.netty.channel.ServerChannel;
 import io.netty.channel.socket.ServerSocketChannel;
 import io.netty.handler.ssl.SslContext;
-import io.netty.util.concurrent.FastThreadLocalThread;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.ImmediateEventExecutor;
 
@@ -555,17 +552,7 @@ public final class Server implements ListenableAsyncCloseable {
             });
 
             final String bossThreadName = bossThreadName(port);
-            final EventLoopGroup bossGroup;
-            final Function<String, EventLoopGroup> bossGroupFactory = config.bossGroupFactory();
-            if (bossGroupFactory != null) {
-                bossGroup = bossGroupFactory.apply(bossThreadName);
-            } else {
-                bossGroup = EventLoopGroups.newEventLoopGroup(1, r -> {
-                    final FastThreadLocalThread thread = new FastThreadLocalThread(r, bossThreadName);
-                    thread.setDaemon(false);
-                    return thread;
-                });
-            }
+            final EventLoopGroup bossGroup = config.bossGroupFactory().apply(bossThreadName);
 
             final GracefulShutdownSupport gracefulShutdownSupport = this.gracefulShutdownSupport;
             assert gracefulShutdownSupport != null;

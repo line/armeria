@@ -28,7 +28,6 @@ import java.util.function.Predicate;
 
 import com.linecorp.armeria.common.DependencyInjector;
 import com.linecorp.armeria.common.Http1HeaderNaming;
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.annotation.UnstableApi;
@@ -124,7 +123,6 @@ public interface ServerConfig {
      *
      * @see ServerBuilder#bossGroupFactory(Function)
      */
-    @Nullable
     @UnstableApi
     Function<String, EventLoopGroup> bossGroupFactory();
 

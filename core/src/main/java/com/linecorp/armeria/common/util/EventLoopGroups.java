@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.common.util;
 
+import static com.linecorp.armeria.common.util.EventLoopGroupBuilder.DEFAULT_ARMERIA_THREAD_NAME_PREFIX;
 import static java.util.Objects.requireNonNull;
 
 import java.util.concurrent.ThreadFactory;
@@ -84,7 +85,9 @@ public final class EventLoopGroups {
     public static EventLoopGroup newEventLoopGroup(int numThreads, boolean useDaemonThreads) {
         return builder()
                 .numThreads(numThreads)
-                .useDaemonThreads(useDaemonThreads)
+                .threadFactory(
+                        ThreadFactories.newThreadFactory(DEFAULT_ARMERIA_THREAD_NAME_PREFIX, useDaemonThreads)
+                )
                 .build();
     }
 
@@ -97,7 +100,7 @@ public final class EventLoopGroups {
     public static EventLoopGroup newEventLoopGroup(int numThreads, String threadNamePrefix) {
         return builder()
                 .numThreads(numThreads)
-                .threadNamePrefix(threadNamePrefix)
+                .threadFactory(ThreadFactories.newThreadFactory(threadNamePrefix, false))
                 .build();
     }
 
@@ -112,8 +115,7 @@ public final class EventLoopGroups {
                                                    boolean useDaemonThreads) {
         return builder()
                 .numThreads(numThreads)
-                .threadNamePrefix(threadNamePrefix)
-                .useDaemonThreads(useDaemonThreads)
+                .threadFactory(ThreadFactories.newThreadFactory(threadNamePrefix, useDaemonThreads))
                 .build();
     }
 
