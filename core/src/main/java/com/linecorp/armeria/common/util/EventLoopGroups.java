@@ -54,8 +54,7 @@ public final class EventLoopGroups {
      * EventLoopGroup eventLoopGroup = EventLoopGroups
      *     .builder()
      *     .numThreads(4)
-     *     .threadNamePrefix("my-eventloop")
-     *     .useDaemonThreads(true)
+     *     .threadFactory(ThreadFactories.newThreadFactory("my-eventloop", false))
      *     .gracefulShutdown(Duration.ofSeconds(2), Duration.ofSeconds(15))
      *     .build();
      * }</pre>
