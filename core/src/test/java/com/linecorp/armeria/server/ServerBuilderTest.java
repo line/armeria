@@ -831,7 +831,7 @@ class ServerBuilderTest {
                         .service("/", (ctx, req) -> HttpResponse.of(HttpStatus.OK))
                         .build()
         ) {
-            final Function<String, EventLoopGroup> bossGroupFactory = server.config().bossGroupFactory();
+            final Function<? super String, ? extends EventLoopGroup> bossGroupFactory = server.config().bossGroupFactory();
             assertThat(bossGroupFactory).isNotNull();
         }
     }

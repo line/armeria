@@ -131,7 +131,7 @@ final class UpdatableServerConfig implements ServerConfig {
     }
 
     @Override
-    public Function<String, EventLoopGroup> bossGroupFactory() {
+    public Function<? super String, ? extends EventLoopGroup> bossGroupFactory() {
         return delegate.bossGroupFactory();
     }
 

@@ -243,7 +243,7 @@ public final class ServerBuilder implements TlsSetters, ServiceConfigsBuilder<Se
     private TlsProvider tlsProvider;
     @Nullable
     private ServerTlsConfig tlsConfig;
-    private Function<String, EventLoopGroup> bossGroupFactory = DEFAULT_BOSS_GROUP_FACTORY;
+    private Function<? super String, ? extends EventLoopGroup> bossGroupFactory = DEFAULT_BOSS_GROUP_FACTORY;
 
     ServerBuilder() {
         // Set the default host-level properties.
@@ -604,7 +604,7 @@ public final class ServerBuilder implements TlsSetters, ServiceConfigsBuilder<Se
      * @see EventLoopGroups#builder()
      */
     @UnstableApi
-    public ServerBuilder bossGroupFactory(Function<String, EventLoopGroup> bossGroupFactory) {
+    public ServerBuilder bossGroupFactory(Function<? super String, ? extends EventLoopGroup> bossGroupFactory) {
         this.bossGroupFactory = requireNonNull(bossGroupFactory, "bossGroupFactory");
         return this;
     }

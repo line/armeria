@@ -64,7 +64,7 @@ final class DefaultServerConfig implements ServerConfig {
      * factory. The created threads are not daemon threads and use {@link FastThreadLocalThread}
      * to optimize performance in environments with frequent thread-local accesses.
      */
-    static final Function<String, EventLoopGroup> DEFAULT_BOSS_GROUP_FACTORY =
+    static final Function<? super String, ? extends EventLoopGroup> DEFAULT_BOSS_GROUP_FACTORY =
             bossThreadName -> EventLoopGroups.newEventLoopGroup(1, r -> {
                 final FastThreadLocalThread thread = new FastThreadLocalThread(r, bossThreadName);
                 thread.setDaemon(false);
@@ -136,7 +136,7 @@ final class DefaultServerConfig implements ServerConfig {
     @Nullable
     private final Mapping<String, SslContext> sslContexts;
     private final ServerMetrics serverMetrics;
-    private final Function<String, EventLoopGroup> bossGroupFactory;
+    private final Function<? super String, ? extends EventLoopGroup> bossGroupFactory;
 
     @Nullable
     private String strVal;
@@ -170,7 +170,7 @@ final class DefaultServerConfig implements ServerConfig {
             Function<? super String, String> absoluteUriTransformer,
             long unloggedExceptionsReportIntervalMillis,
             List<ShutdownSupport> shutdownSupports,
-            @Nullable Function<String, EventLoopGroup> bossGroupFactory) {
+            @Nullable Function<? super String, ? extends EventLoopGroup> bossGroupFactory) {
         requireNonNull(ports, "ports");
         requireNonNull(defaultVirtualHost, "defaultVirtualHost");
         requireNonNull(virtualHosts, "virtualHosts");
@@ -483,7 +483,7 @@ final class DefaultServerConfig implements ServerConfig {
     }
 
     @Override
-    public Function<String, EventLoopGroup> bossGroupFactory() {
+    public Function<? super String, ? extends EventLoopGroup> bossGroupFactory() {
         return bossGroupFactory;
     }
 
