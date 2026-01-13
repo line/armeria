@@ -83,8 +83,7 @@ abstract class AbstractBindingBuilder<SELF extends AbstractBindingBuilder<SELF>>
 
     /**
      * Sets the path pattern that an {@link HttpService} will be bound to.
-     * Please refer to the
-     * <a href="https://line.github.io/armeria/docs/server-basics#path-patterns">Path patterns</a>
+     * Please refer to the <a href="https://armeria.dev/docs/server-basics#path-patterns">Path patterns</a>
      * in order to learn how to specify a path pattern.
      *
      * @throws IllegalArgumentException if the specified path pattern is invalid
@@ -108,8 +107,7 @@ abstract class AbstractBindingBuilder<SELF extends AbstractBindingBuilder<SELF>>
     /**
      * Sets the path pattern that an {@link HttpService} will be bound to, only supporting
      * {@link HttpMethod#GET} requests.
-     * Please refer to the
-     * <a href="https://line.github.io/armeria/docs/server-basics#path-patterns">Path patterns</a>
+     * Please refer to the <a href="https://armeria.dev/docs/server-basics#path-patterns">Path patterns</a>
      * in order to learn how to specify a path pattern.
      *
      * @throws IllegalArgumentException if the specified path pattern is invalid
@@ -122,8 +120,7 @@ abstract class AbstractBindingBuilder<SELF extends AbstractBindingBuilder<SELF>>
     /**
      * Sets the path pattern that an {@link HttpService} will be bound to, only supporting
      * {@link HttpMethod#POST} requests.
-     * Please refer to the
-     * <a href="https://line.github.io/armeria/docs/server-basics#path-patterns">Path patterns</a>
+     * Please refer to the <a href="https://armeria.dev/docs/server-basics#path-patterns">Path patterns</a>
      * in order to learn how to specify a path pattern.
      *
      * @throws IllegalArgumentException if the specified path pattern is invalid
@@ -136,8 +133,7 @@ abstract class AbstractBindingBuilder<SELF extends AbstractBindingBuilder<SELF>>
     /**
      * Sets the path pattern that an {@link HttpService} will be bound to, only supporting
      * {@link HttpMethod#PUT} requests.
-     * Please refer to the
-     * <a href="https://line.github.io/armeria/docs/server-basics#path-patterns">Path patterns</a>
+     * Please refer to the <a href="https://armeria.dev/docs/server-basics#path-patterns">Path patterns</a>
      * in order to learn how to specify a path pattern.
      *
      * @throws IllegalArgumentException if the specified path pattern is invalid
@@ -150,8 +146,7 @@ abstract class AbstractBindingBuilder<SELF extends AbstractBindingBuilder<SELF>>
     /**
      * Sets the path pattern that an {@link HttpService} will be bound to, only supporting
      * {@link HttpMethod#PATCH} requests.
-     * Please refer to the
-     * <a href="https://line.github.io/armeria/docs/server-basics#path-patterns">Path patterns</a>
+     * Please refer to the <a href="https://armeria.dev/docs/server-basics#path-patterns">Path patterns</a>
      * in order to learn how to specify a path pattern.
      *
      * @throws IllegalArgumentException if the specified path pattern is invalid
@@ -164,8 +159,7 @@ abstract class AbstractBindingBuilder<SELF extends AbstractBindingBuilder<SELF>>
     /**
      * Sets the path pattern that an {@link HttpService} will be bound to, only supporting
      * {@link HttpMethod#DELETE} requests.
-     * Please refer to the
-     * <a href="https://line.github.io/armeria/docs/server-basics#path-patterns">Path patterns</a>
+     * Please refer to the <a href="https://armeria.dev/docs/server-basics#path-patterns">Path patterns</a>
      * in order to learn how to specify a path pattern.
      *
      * @throws IllegalArgumentException if the specified path pattern is invalid
@@ -178,8 +172,7 @@ abstract class AbstractBindingBuilder<SELF extends AbstractBindingBuilder<SELF>>
     /**
      * Sets the path pattern that an {@link HttpService} will be bound to, only supporting
      * {@link HttpMethod#OPTIONS} requests.
-     * Please refer to the
-     * <a href="https://line.github.io/armeria/docs/server-basics#path-patterns">Path patterns</a>
+     * Please refer to the <a href="https://armeria.dev/docs/server-basics#path-patterns">Path patterns</a>
      * in order to learn how to specify a path pattern.
      *
      * @throws IllegalArgumentException if the specified path pattern is invalid
@@ -192,8 +185,7 @@ abstract class AbstractBindingBuilder<SELF extends AbstractBindingBuilder<SELF>>
     /**
      * Sets the path pattern that an {@link HttpService} will be bound to, only supporting
      * {@link HttpMethod#HEAD} requests.
-     * Please refer to the
-     * <a href="https://line.github.io/armeria/docs/server-basics#path-patterns">Path patterns</a>
+     * Please refer to the <a href="https://armeria.dev/docs/server-basics#path-patterns">Path patterns</a>
      * in order to learn how to specify a path pattern.
      *
      * @throws IllegalArgumentException if the specified path pattern is invalid
@@ -206,8 +198,7 @@ abstract class AbstractBindingBuilder<SELF extends AbstractBindingBuilder<SELF>>
     /**
      * Sets the path pattern that an {@link HttpService} will be bound to, only supporting
      * {@link HttpMethod#TRACE} requests.
-     * Please refer to the
-     * <a href="https://line.github.io/armeria/docs/server-basics#path-patterns">Path patterns</a>
+     * Please refer to the <a href="https://armeria.dev/docs/server-basics#path-patterns">Path patterns</a>
      * in order to learn how to specify a path pattern.
      *
      * @throws IllegalArgumentException if the specified path pattern is invalid
@@ -220,8 +211,7 @@ abstract class AbstractBindingBuilder<SELF extends AbstractBindingBuilder<SELF>>
     /**
      * Sets the path pattern that an {@link HttpService} will be bound to, only supporting
      * {@link HttpMethod#CONNECT} requests.
-     * Please refer to the
-     * <a href="https://line.github.io/armeria/docs/server-basics#path-patterns">Path patterns</a>
+     * Please refer to the <a href="https://armeria.dev/docs/server-basics#path-patterns">Path patterns</a>
      * in order to learn how to specify a path pattern.
      *
      * @throws IllegalArgumentException if the specified path pattern is invalid
@@ -293,8 +283,7 @@ abstract class AbstractBindingBuilder<SELF extends AbstractBindingBuilder<SELF>>
 
     /**
      * Sets {@link MediaType}s that an {@link HttpService} will produce to be used in
-     * content negotiation.
-     * See <a href="https://datatracker.ietf.org/doc/html/rfc7231#section-5.3.2">Accept header</a>
+     * content negotiation. See <a href="https://datatracker.ietf.org/doc/html/rfc7231#section-5.3.2">Accept header</a>
      * for more information.
      */
     public SELF produces(MediaType... produceTypes) {
@@ -304,8 +293,7 @@ abstract class AbstractBindingBuilder<SELF extends AbstractBindingBuilder<SELF>>
 
     /**
      * Sets {@link MediaType}s that an {@link HttpService} will produce to be used in
-     * content negotiation.
-     * See <a href="https://datatracker.ietf.org/doc/html/rfc7231#section-5.3.2">Accept header</a>
+     * content negotiation. See <a href="https://datatracker.ietf.org/doc/html/rfc7231#section-5.3.2">Accept header</a>
      * for more information.
      */
     public SELF produces(Iterable<MediaType> produceTypes) {
@@ -436,8 +424,7 @@ abstract class AbstractBindingBuilder<SELF extends AbstractBindingBuilder<SELF>>
     /**
      * Adds a {@code pathPattern} that is supposed to be excluded from the {@link Route}s built by this
      * {@link AbstractBindingBuilder}.
-     * Please refer to
-     * <a href="https://line.github.io/armeria/docs/server-basics#path-patterns">Path patterns</a>
+     * Please refer to <a href="https://armeria.dev/docs/server-basics#path-patterns">Path patterns</a>
      * to learn more about path pattern syntax.
      */
     public SELF exclude(String pathPattern) {

@@ -23,7 +23,7 @@ import java.util.Map;
 import com.google.common.collect.ImmutableMap;
 
 import com.linecorp.armeria.common.SessionProtocol;
-import com.linecorp.armeria.internal.common.ClientSslContextFactory;
+import com.linecorp.armeria.internal.common.SslContextFactory;
 
 import io.netty.handler.ssl.SslContext;
 
@@ -33,7 +33,7 @@ final class BootstrapSslContexts {
     private final Map<SessionProtocol, SslContext> contexts;
 
     BootstrapSslContexts(ClientTlsSpec baseClientTlsSpec, ClientFactoryOptions options,
-                         ClientSslContextFactory sslContextFactory) {
+                         SslContextFactory sslContextFactory) {
         final ImmutableMap.Builder<SessionProtocol, ClientTlsSpec> tlsSpecsBuilder = ImmutableMap.builder();
         final ImmutableMap.Builder<SessionProtocol, SslContext> sslContextsBuilder = ImmutableMap.builder();
         for (SessionProtocol sessionProtocol: SessionProtocol.httpsValues()) {
@@ -63,7 +63,7 @@ final class BootstrapSslContexts {
         return sslContext;
     }
 
-    void release(ClientSslContextFactory factory) {
+    void release(SslContextFactory factory) {
         for (SslContext sslContext: contexts.values()) {
             factory.release(sslContext);
         }

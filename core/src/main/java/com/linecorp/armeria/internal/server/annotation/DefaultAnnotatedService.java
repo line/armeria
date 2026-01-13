@@ -81,7 +81,7 @@ import com.linecorp.armeria.server.annotation.ServiceName;
 /**
  * An {@link HttpService} which is defined by a {@link Path} or HTTP method annotations.
  * This class is not supposed to be instantiated by a user. Please check out the documentation
- * <a href="https://line.github.io/armeria/docs/server-annotated-service">Annotated HTTP Service</a> to use this.
+ * <a href="https://armeria.dev/docs/server-annotated-service">Annotated HTTP Service</a> to use this.
  */
 final class DefaultAnnotatedService implements AnnotatedService {
     private static final Logger logger = LoggerFactory.getLogger(DefaultAnnotatedService.class);

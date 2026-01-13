@@ -29,6 +29,7 @@ import com.google.common.base.Stopwatch;
 
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.Exceptions;
+import com.linecorp.armeria.internal.common.ConnectionEventListener.CloseHint;
 
 import io.micrometer.core.instrument.Timer;
 import io.netty.channel.Channel;
@@ -64,6 +65,7 @@ public abstract class AbstractKeepAliveHandler implements KeepAliveHandler {
     private final long connectionIdleTimeNanos;
     private long lastConnectionIdleTime;
     private final boolean keepAliveOnPing;
+    private final ConnectionEventListener listener;
 
     @Nullable
     private ScheduledFuture<?> pingIdleTimeout;
@@ -89,13 +91,14 @@ public abstract class AbstractKeepAliveHandler implements KeepAliveHandler {
     protected AbstractKeepAliveHandler(Channel channel, String name, Timer keepAliveTimer,
                                        long idleTimeoutMillis, long pingIntervalMillis,
                                        long maxConnectionAgeMillis, long maxNumRequestsPerConnection,
-                                       boolean keepAliveOnPing) {
+                                       boolean keepAliveOnPing, ConnectionEventListener listener) {
         this.channel = channel;
         this.name = name;
         isServer = "server".equals(name);
         this.keepAliveTimer = keepAliveTimer;
         this.maxNumRequestsPerConnection = maxNumRequestsPerConnection;
         this.keepAliveOnPing = keepAliveOnPing;
+        this.listener = listener;
 
         if (idleTimeoutMillis <= 0) {
             connectionIdleTimeNanos = 0;
@@ -270,6 +273,7 @@ public abstract class AbstractKeepAliveHandler implements KeepAliveHandler {
         }
         logger.debug("{} Closing an idle channel", channel);
         pingState = PingState.SHUTDOWN;
+        listener.closeHint(CloseHint.PING_TIMEOUT);
         channel.close().addListener(future -> {
             if (future.isSuccess()) {
                 logger.debug("{} Closed an idle channel", channel);
@@ -281,6 +285,10 @@ public abstract class AbstractKeepAliveHandler implements KeepAliveHandler {
 
     private ScheduledExecutorService executor() {
         return channel.eventLoop();
+    }
+
+    protected final ConnectionEventListener listener() {
+        return listener;
     }
 
     /**
@@ -377,6 +385,7 @@ public abstract class AbstractKeepAliveHandler implements KeepAliveHandler {
                     if (!hasRequestsInProgress(ctx)) {
                         pingState = PingState.SHUTDOWN;
                         logger.debug("{} Closing an idle {} connection", ctx.channel(), name);
+                        listener.closeHint(CloseHint.CONNECTION_IDLE);
                         ctx.channel().close();
                     }
                 } catch (Exception e) {
@@ -456,6 +465,7 @@ public abstract class AbstractKeepAliveHandler implements KeepAliveHandler {
                 if (!isServer && !hasRequestsInProgress(ctx)) {
                     logger.debug("{} Closing a {} connection exceeding the max age: {}ns",
                                  ctx.channel(), name, maxConnectionAgeNanos);
+                    listener.closeHint(CloseHint.MAX_CONNECTION_AGE);
                     ctx.channel().close();
                 }
             } catch (Exception e) {

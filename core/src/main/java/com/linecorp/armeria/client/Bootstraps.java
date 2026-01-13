@@ -26,7 +26,7 @@ import java.util.Set;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
-import com.linecorp.armeria.internal.common.ClientSslContextFactory;
+import com.linecorp.armeria.internal.common.SslContextFactory;
 
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.Channel;
@@ -38,7 +38,7 @@ import io.netty.handler.ssl.SslContext;
 final class Bootstraps {
 
     private final EventLoop eventLoop;
-    private final ClientSslContextFactory sslContextFactory;
+    private final SslContextFactory sslContextFactory;
 
     private final HttpClientFactory clientFactory;
     private final Bootstrap inetBaseBootstrap;
@@ -49,7 +49,7 @@ final class Bootstraps {
     private final Bootstrap @Nullable [][] unixBootstraps;
 
     Bootstraps(HttpClientFactory clientFactory, EventLoop eventLoop,
-               ClientSslContextFactory sslContextFactory, BootstrapSslContexts bootstrapSslContexts) {
+               SslContextFactory sslContextFactory, BootstrapSslContexts bootstrapSslContexts) {
         this.eventLoop = eventLoop;
         this.sslContextFactory = sslContextFactory;
         this.clientFactory = clientFactory;

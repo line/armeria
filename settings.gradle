@@ -270,7 +270,7 @@ project(':thrift0.12').projectDir = file('thrift/thrift0.12')
 includeWithFlags ':docs-client'
 
 // Site generation project
-includeWithFlags ':site'
+includeWithFlags ':site-new'
 
 // Examples
 includeWithFlags ':examples:annotated-http-service',               'java11'

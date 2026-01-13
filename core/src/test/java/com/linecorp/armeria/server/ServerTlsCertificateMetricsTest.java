@@ -121,7 +121,7 @@ public class ServerTlsCertificateMetricsTest {
                                 .tag("hostname.pattern", "*") // default virtual host
                                 .gauge().value()).isOne();
         assertThat(meterRegistry.find(CERT_VALIDITY_GAUGE_NAME)
-                                .tag("hostname", commonName)
+                                .tag("hostname", hostnamePattern)
                                 .tag("hostname.pattern", hostnamePattern) // non-default virtual host
                                 .gauge().value()).isOne();
         assertThat(meterRegistry.find(CERT_VALIDITY_DAYS_GAUGE_NAME)
@@ -129,7 +129,7 @@ public class ServerTlsCertificateMetricsTest {
                                 .tag("hostname.pattern", "*") // default virtual host
                                 .gauge().value()).isPositive();
         assertThat(meterRegistry.find(CERT_VALIDITY_DAYS_GAUGE_NAME)
-                                .tag("hostname", commonName)
+                                .tag("hostname", hostnamePattern)
                                 .tag("hostname.pattern", hostnamePattern) // non-default virtual host
                                 .gauge().value()).isPositive();
     }

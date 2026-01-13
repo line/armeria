@@ -196,7 +196,7 @@ public final class ArmeriaConfigurationUtil {
                                      internalServiceIds, false);
         }
 
-        configureDependencyInjector(server, settings, dependencyInjectors, beanFactory);
+        configureDependencyInjector(server, settings, dependencyInjectors, beanFactory, meterRegistry);
 
         // serverErrorHandlers from beans are added first, which will be used first thing,
         // then from armeriaServerConfigurators and armeriaServerBuilderConsumers.
@@ -210,7 +210,8 @@ public final class ArmeriaConfigurationUtil {
 
     private static void configureDependencyInjector(
             ServerBuilder server, ArmeriaSettings settings,
-            List<DependencyInjector> dependencyInjectors, BeanFactory beanFactory) {
+            List<DependencyInjector> dependencyInjectors, BeanFactory beanFactory,
+            MeterRegistry meterRegistry) {
 
         DependencyInjector dependencyInjector = null;
         if (!dependencyInjectors.isEmpty()) {
@@ -236,8 +237,10 @@ public final class ArmeriaConfigurationUtil {
         if (settings.getAthenz() != null) {
             final String athenzServiceClass = "com.linecorp.armeria.server.athenz.AthenzService";
             if (hasClass(athenzServiceClass)) {
-                dependencyInjector = AthenzSupport.injectAthenzDecorator(server, settings.getAthenz(),
-                                                                         dependencyInjector);
+                dependencyInjector = AthenzSupport.injectAthenzDecorator(beanFactory, server,
+                                                                         settings.getAthenz(),
+                                                                         dependencyInjector,
+                                                                         meterRegistry);
             } else {
                 throw new IllegalStateException(
                         "'armeria.athenz' setting is defined but '" + athenzServiceClass + "' class is not " +

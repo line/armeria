@@ -47,7 +47,7 @@ public final class Main {
         sb.service("/", thriftService)
           .service("/second", thriftService)
           // You can access the documentation service at http://127.0.0.1:8080/docs.
-          // See https://line.github.io/armeria/docs/server-docservice for more information.
+          // See https://armeria.dev/docs/server-docservice for more information.
           .serviceUnder("/docs",
                         DocService.builder()
                                   .exampleRequests(Arrays.asList(

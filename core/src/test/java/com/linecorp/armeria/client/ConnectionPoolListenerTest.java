@@ -32,7 +32,7 @@ class ConnectionPoolListenerTest {
     @Test
     void andThen_shouldFinishWithoutErrors() throws Exception {
 
-        final Integer[] counterArray = new Integer[6];
+        final Integer[] counterArray = new Integer[9];
 
         final ConnectionPoolListener cpl1 = new ConnectionPoolListener() {
             @Override
@@ -60,6 +60,13 @@ class ConnectionPoolListenerTest {
                                          InetSocketAddress localAddr, AttributeMap attrs) throws Exception {
                 counterArray[4] = 40;
             }
+
+            @Override
+            public void onPingAcknowledged(SessionProtocol protocol, InetSocketAddress remoteAddr,
+                                           InetSocketAddress localAddr, AttributeMap attrs, long identifier)
+                    throws Exception {
+                counterArray[6] = (int) identifier;
+            }
         };
 
         final ConnectionPoolListener cpl3 = new ConnectionPoolListener() {
@@ -74,6 +81,20 @@ class ConnectionPoolListenerTest {
                                          InetSocketAddress localAddr, AttributeMap attrs) throws Exception {
                 counterArray[5] = 50;
             }
+
+            @Override
+            public void connectionClosed(SessionProtocol protocol, InetSocketAddress remoteAddr,
+                                         InetSocketAddress localAddr, AttributeMap attrs, String closeHint)
+                    throws Exception {
+                counterArray[8] = 80;
+            }
+
+            @Override
+            public void onPingSent(SessionProtocol protocol, InetSocketAddress remoteAddr,
+                                   InetSocketAddress localAddr, AttributeMap attrs, long identifier)
+                    throws Exception {
+                counterArray[7] = (int) identifier;
+            }
         };
 
         final SessionProtocol protocol = SessionProtocol.HTTP;
@@ -85,13 +106,14 @@ class ConnectionPoolListenerTest {
 
         cplCombined.connectionOpen(protocol, remoteAddr, localAddr, attrs);
         cplCombined.connectionClosed(protocol, remoteAddr, localAddr, attrs);
+        cplCombined.connectionClosed(protocol, remoteAddr, localAddr, attrs, "hint");
+        cplCombined.onPingAcknowledged(protocol, remoteAddr, localAddr, attrs, 60);
+        cplCombined.onPingSent(protocol, remoteAddr, localAddr, attrs, 70);
         cplCombined.close();
 
-        assertThat(counterArray[0]).isEqualTo(0);
-        assertThat(counterArray[1]).isEqualTo(10);
-        assertThat(counterArray[2]).isEqualTo(20);
-        assertThat(counterArray[3]).isEqualTo(30);
-        assertThat(counterArray[4]).isEqualTo(40);
-        assertThat(counterArray[5]).isEqualTo(50);
+        for (int i = 0; i < counterArray.length; i++) {
+            assertThat(counterArray[i]).withFailMessage("i: %s", i)
+                                       .isEqualTo(i * 10);
+        }
     }
 }

@@ -49,6 +49,8 @@ public final class RequestOptionsBuilder implements RequestOptionsSetters {
     private Map<AttributeKey<?>, Object> attributes;
     @Nullable
     private ExchangeType exchangeType;
+    @Nullable
+    private ClientTlsSpec clientTlsSpec;
 
     RequestOptionsBuilder(@Nullable RequestOptions options) {
         if (options != null) {
@@ -62,6 +64,7 @@ public final class RequestOptionsBuilder implements RequestOptionsSetters {
             }
             exchangeType = options.exchangeType();
             responseTimeoutMode = options.responseTimeoutMode();
+            clientTlsSpec = options.clientTlsSpec();
         }
     }
 
@@ -146,13 +149,20 @@ public final class RequestOptionsBuilder implements RequestOptionsSetters {
         return this;
     }
 
+    @Override
+    @UnstableApi
+    public RequestOptionsBuilder clientTlsSpec(ClientTlsSpec clientTlsSpec) {
+        this.clientTlsSpec = requireNonNull(clientTlsSpec, "clientTlsSpec");
+        return this;
+    }
+
     /**
      * Returns a newly created {@link RequestOptions} with the properties specified so far.
      */
     public RequestOptions build() {
         if (responseTimeoutMillis < 0 && writeTimeoutMillis < 0 &&
             maxResponseLength < 0 && requestAutoAbortDelayMillis == null && attributes == null &&
-            exchangeType == null && responseTimeoutMode == null) {
+            exchangeType == null && responseTimeoutMode == null && clientTlsSpec == null) {
             return EMPTY;
         } else {
             final Map<AttributeKey<?>, Object> attributes;
@@ -163,7 +173,8 @@ public final class RequestOptionsBuilder implements RequestOptionsSetters {
             }
             return new DefaultRequestOptions(responseTimeoutMillis, writeTimeoutMillis,
                                              maxResponseLength, requestAutoAbortDelayMillis,
-                                             attributes, exchangeType, responseTimeoutMode);
+                                             attributes, exchangeType, responseTimeoutMode,
+                                             clientTlsSpec);
         }
     }
 }

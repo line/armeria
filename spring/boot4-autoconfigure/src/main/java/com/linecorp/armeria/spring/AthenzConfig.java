@@ -100,6 +100,18 @@ public final class AthenzConfig {
     private Duration policyRefreshInterval = Duration.ofHours(1);
 
     /**
+     * Whether to enable metrics collection for Athenz {@code ZtsBaseClient}.
+     * The default is {@code true}.
+     */
+    private boolean enableMetrics = true;
+
+    /**
+     * The meter ID prefix for Athenz {@code ZtsBaseClient} metrics.
+     * The default is {@code "armeria.athenz.zts.client"}.
+     */
+    private String meterIdPrefix = "armeria.athenz.zts.client";
+
+    /**
      * Returns the URI of the ZTS server that the Athenz client connects to.
      */
     @Nullable
@@ -251,6 +263,38 @@ public final class AthenzConfig {
         this.policyRefreshInterval = requireNonNull(policyRefreshInterval);
     }
 
+    /**
+     * Returns whether metrics collection for Athenz {@code ZtsBaseClient} is enabled.
+     * The default is {@code true}.
+     */
+    public boolean isEnableMetrics() {
+        return enableMetrics;
+    }
+
+    /**
+     * Sets whether metrics collection for Athenz {@code ZtsBaseClient} is enabled.
+     * The default is {@code true}.
+     */
+    public void setEnableMetrics(boolean enableMetrics) {
+        this.enableMetrics = enableMetrics;
+    }
+
+    /**
+     * Returns the meter ID prefix for Athenz {@code ZtsBaseClient} metrics.
+     * The default is {@code "armeria.athenz.zts.client"}.
+     */
+    public String getMeterIdPrefix() {
+        return meterIdPrefix;
+    }
+
+    /**
+     * Sets the meter ID prefix for Athenz {@code ZtsBaseClient} metrics.
+     * The default is {@code "armeria.athenz.zts.client"}.
+     */
+    public void setMeterIdPrefix(String meterIdPrefix) {
+        this.meterIdPrefix = requireNonNull(meterIdPrefix, "meterIdPrefix");
+    }
+
     @Override
     public String toString() {
         return MoreObjects.toStringHelper(this)
@@ -263,6 +307,7 @@ public final class AthenzConfig {
                           .add("domains", domains)
                           .add("jwsPolicySupport", jwsPolicySupport)
                           .add("policyRefreshInterval", policyRefreshInterval)
+                          .add("enableMetrics", enableMetrics)
                           .toString();
     }
 }

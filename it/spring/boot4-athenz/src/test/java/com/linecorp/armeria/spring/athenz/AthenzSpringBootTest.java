@@ -17,8 +17,12 @@
 package com.linecorp.armeria.spring.athenz;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.awaitility.Awaitility.await;
 
 import java.io.File;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.function.Consumer;
 
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
@@ -26,6 +30,8 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.context.SpringBootTest.WebEnvironment;
+import org.springframework.context.annotation.Bean;
+import org.springframework.core.annotation.Order;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
@@ -35,21 +41,56 @@ import com.linecorp.armeria.client.BlockingWebClient;
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.client.athenz.AthenzClient;
 import com.linecorp.armeria.client.athenz.ZtsBaseClient;
+import com.linecorp.armeria.client.athenz.ZtsBaseClientBuilder;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.athenz.TokenType;
+import com.linecorp.armeria.common.metric.MoreMeters;
 import com.linecorp.armeria.server.athenz.AthenzDocker;
 import com.linecorp.armeria.server.athenz.AthenzExtension;
 import com.linecorp.armeria.spring.LocalArmeriaPort;
 
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
+
 @ActiveProfiles({ "local", "athenzTest" })
-@SpringBootTest(webEnvironment = WebEnvironment.NONE)
+@SpringBootTest(webEnvironment = WebEnvironment.NONE, classes = {
+        AthenzSpringBootTest.TestConfiguration.class,
+        SpringAthenzMain.class
+})
 @EnabledIfDockerAvailable
 class AthenzSpringBootTest {
 
     @RegisterExtension
     static AthenzExtension
             athenzDocker = new AthenzExtension(new File("gen-src/test/resources/docker/docker-compose.yml"));
+
+    private static final MeterRegistry meterRegistry = new SimpleMeterRegistry();
+    private static final List<String> customizerInvocations = new ArrayList<>();
+
+    static class TestConfiguration {
+
+        @Bean
+        MeterRegistry meterRegistry() {
+            return meterRegistry;
+        }
+
+        @Order(1)
+        @Bean
+        Consumer<ZtsBaseClientBuilder> ztsBaseClientCustomizer1() {
+            return builder -> {
+                customizerInvocations.add("ztsBaseClientCustomizer1");
+            };
+        }
+
+        @Order(0)
+        @Bean
+        Consumer<ZtsBaseClientBuilder> ztsBaseClientCustomizer0() {
+            return builder -> {
+                customizerInvocations.add("ztsBaseClientCustomizer0");
+            };
+        }
+    }
 
     private static ZtsBaseClient ztsBaseClient;
 
@@ -69,6 +110,7 @@ class AthenzSpringBootTest {
     @AfterAll
     static void afterAll() {
         ztsBaseClient.close();
+        customizerInvocations.clear();
     }
 
     @DynamicPropertySource
@@ -103,5 +145,14 @@ class AthenzSpringBootTest {
         assertThat(response.status()).isEqualTo(HttpStatus.OK);
         assertThat(response.contentUtf8()).isEqualTo("file:armeria");
         assertThat(response.headers().get("X-Test-Header")).isEqualTo("TestValue");
+
+        assertThat(customizerInvocations)
+                .containsExactly("ztsBaseClientCustomizer0", "ztsBaseClientCustomizer1");
+        await().untilAsserted(() -> {
+            assertThat(MoreMeters.measureAll(meterRegistry))
+                    .anySatisfy((k, v) -> {
+                        assertThat(k).startsWith("test.armeria.athenz.zts.client.active.requests");
+                    });
+        });
     }
 }

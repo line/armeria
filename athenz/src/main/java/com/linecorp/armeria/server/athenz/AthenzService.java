@@ -35,11 +35,13 @@ import com.linecorp.armeria.common.athenz.TokenType;
 import com.linecorp.armeria.common.metric.MeterIdPrefix;
 import com.linecorp.armeria.common.metric.MoreMeters;
 import com.linecorp.armeria.common.util.Exceptions;
+import com.linecorp.armeria.common.util.UnmodifiableFuture;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.ServiceConfig;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.SimpleDecoratingHttpService;
 import com.linecorp.armeria.server.athenz.MinifiedAuthZpeClient.AccessCheckStatus;
+import com.linecorp.armeria.server.athenz.resource.AthenzResourceProvider;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Timer;
@@ -47,27 +49,65 @@ import io.micrometer.core.instrument.Timer;
 /**
  * Decorates an {@link HttpService} to check access permissions using Athenz policies.
  *
- * <p>Example:
+ * <p>This decorator supports both static and dynamic resource configurations:
+ * <ul>
+ *   <li><strong>Static Resource</strong>: Use when the resource name is fixed
+ *   (e.g., "users", "admin")</li>
+ *   <li><strong>Dynamic Resource</strong>: Use when the resource varies per request
+ *   (e.g., extracted from path, headers, or body)</li>
+ * </ul>
+ *
+ * <p>The decorator performs the following steps for each request:
+ * <ol>
+ *   <li>Extracts authentication token from request headers</li>
+ *   <li>Resolves the Athenz resource (either static or dynamic)</li>
+ *   <li>Checks access permissions using the Athenz policy</li>
+ *   <li>Either allows the request to proceed or returns an error response</li>
+ * </ol>
+ *
+ * <p><strong>Static Resource Example:</strong>
  * <pre>{@code
- *  import com.linecorp.armeria.client.athenz.ZtsBaseClient;
- *  import com.linecorp.armeria.server.athenz.AthenzService;
+ * ZtsBaseClient ztsBaseClient =
+ *   ZtsBaseClient.builder("https://athenz.example.com:8443/zts/v1")
+ *                .keyPair("/var/lib/athenz/service.key.pem", "/var/lib/athenz/service.cert.pem")
+ *                .build();
  *
- *  ZtsBaseClient ztsBaseClient =
- *    ZtsBaseClient
- *      .builder("https://athenz.example.com:8443/zts/v1")
- *      .keyPair("/var/lib/athenz/service.key.pem", "/var/lib/athenz/service.cert.pem")
- *      .build();
- *
- *  ServerBuilder sb = Server.builder();
- *  // Decorate the service to check access permissions for the "/users" resource.
- *  sb.decorator("/users",
- *               AthenzService
- *                 .builder(ztsBaseClient)
- *                 .action("read")
- *                 .resource("users")
- *                 .policyConfig(new AthenzPolicyConfig("my-domain"))
- *                 .newDecorator());
+ * ServerBuilder sb = Server.builder();
+ * sb.decorator("/users",
+ *              AthenzService.builder(ztsBaseClient)
+ *                           .action("read")
+ *                           .resource("users")
+ *                           .newDecorator());
  * }</pre>
+ *
+ * <p><strong>Dynamic Resource Example (Path-based):</strong>
+ * <pre>{@code
+ * sb.decorator("/admin/users/:userId",
+ *              AthenzService.builder(ztsBaseClient)
+ *                           .action("read")
+ *                           .resourceProvider(AthenzResourceProvider.ofPath())
+ *                           .newDecorator());
+ * }</pre>
+ *
+ * <p><strong>Dynamic Resource Example (Header-based):</strong>
+ * <pre>{@code
+ * sb.decorator("/api/resources",
+ *              AthenzService.builder(ztsBaseClient)
+ *                           .action("write")
+ *                           .resourceProvider(AthenzResourceProvider.ofHeader("X-Resource-Id"))
+ *                           .newDecorator());
+ * }</pre>
+ *
+ * <p><strong>Error Handling:</strong>
+ * <ul>
+ *   <li>{@link HttpStatus#UNAUTHORIZED} (401) - Returned when the token is missing, access is denied,
+ *       or the Athenz resource cannot be resolved.</li>
+ *   <li>{@link HttpStatus#INTERNAL_SERVER_ERROR} (500) - Returned when an exception occurs while
+ *       resolving the Athenz resource.</li>
+ * </ul>
+ *
+ * @see AthenzServiceBuilder
+ * @see AthenzResourceProvider
  */
 @UnstableApi
 public final class AthenzService extends SimpleDecoratingHttpService {
@@ -81,10 +121,11 @@ public final class AthenzService extends SimpleDecoratingHttpService {
     }
 
     private final MinifiedAuthZpeClient authZpeClient;
-    private final String athenzResource;
+    private final AthenzResourceProvider athenzResourceProvider;
     private final String athenzAction;
     private final List<TokenType> tokenTypes;
     private final MeterIdPrefix meterIdPrefix;
+    private final String resourceTagValue;
 
     @Nullable
     private Timer allowedTimer;
@@ -92,15 +133,22 @@ public final class AthenzService extends SimpleDecoratingHttpService {
     private Timer deniedTimer;
 
     AthenzService(HttpService delegate, MinifiedAuthZpeClient authZpeClient,
-                  String athenzResource, String athenzAction, List<TokenType> tokenTypes,
-                  MeterIdPrefix meterIdPrefix) {
+                  AthenzResourceProvider athenzResourceProvider, String athenzAction,
+                  List<TokenType> tokenTypes, MeterIdPrefix meterIdPrefix, String resourceTagValue) {
         super(delegate);
 
         this.authZpeClient = authZpeClient;
-        this.athenzResource = athenzResource;
+        this.athenzResourceProvider = athenzResourceProvider;
         this.athenzAction = athenzAction;
         this.tokenTypes = tokenTypes;
         this.meterIdPrefix = meterIdPrefix;
+        this.resourceTagValue = resourceTagValue;
+    }
+
+    AthenzService(HttpService delegate, MinifiedAuthZpeClient authZpeClient, String athenzResource,
+                  String athenzAction, List<TokenType> tokenTypes, MeterIdPrefix meterIdPrefix) {
+        this(delegate, authZpeClient, (ctx, req) -> UnmodifiableFuture.completedFuture(athenzResource),
+                athenzAction, tokenTypes, meterIdPrefix, athenzResource);
     }
 
     @Override
@@ -110,11 +158,11 @@ public final class AthenzService extends SimpleDecoratingHttpService {
         final String name = meterIdPrefix.name("token.authorization");
         allowedTimer = MoreMeters.newTimer(meterRegistry, name,
                                            meterIdPrefix.tags("result", "allowed",
-                                                              "resource", athenzResource,
+                                                              "resource", resourceTagValue,
                                                               "action", athenzAction));
         deniedTimer = MoreMeters.newTimer(meterRegistry, name,
                                           meterIdPrefix.tags("result", "denied",
-                                                             "resource", athenzResource,
+                                                             "resource", resourceTagValue,
                                                              "action", athenzAction));
     }
 
@@ -129,24 +177,45 @@ public final class AthenzService extends SimpleDecoratingHttpService {
             return HttpResponse.of(HttpStatus.UNAUTHORIZED, MediaType.PLAIN_TEXT, "Missing token");
         }
 
-        final CompletableFuture<HttpResponse> future = CompletableFuture.supplyAsync(() -> {
-            final AccessCheckStatus status = authZpeClient.allowAccess(token, athenzResource, athenzAction);
-            final long elapsedNanos = System.nanoTime() - startNanos;
-            if (status == AccessCheckStatus.ALLOW) {
-                assert allowedTimer != null;
-                allowedTimer.record(elapsedNanos, TimeUnit.NANOSECONDS);
-                try {
-                    return unwrap().serve(ctx, req);
-                } catch (Exception e) {
-                    return Exceptions.throwUnsafely(e);
-                }
-            } else {
-                assert deniedTimer != null;
-                deniedTimer.record(elapsedNanos, TimeUnit.NANOSECONDS);
-                return HttpResponse.of(HttpStatus.UNAUTHORIZED, MediaType.PLAIN_TEXT, status.toString());
-            }
-        }, ctx.blockingTaskExecutor());
-        return HttpResponse.of(future);
+        try {
+            final CompletableFuture<String> resourceFuture = athenzResourceProvider.provide(ctx, req);
+            final CompletableFuture<HttpResponse> future = resourceFuture
+                    .thenApplyAsync(
+                            athenzResource -> {
+                                if (athenzResource == null || athenzResource.isEmpty()) {
+                                    throw new IllegalArgumentException("Resource is null or empty");
+                                }
+                                final AccessCheckStatus status = authZpeClient.allowAccess(token,
+                                                                                           athenzResource,
+                                                                                           athenzAction);
+                                final long elapsedNanos = System.nanoTime() - startNanos;
+                                if (status == AccessCheckStatus.ALLOW) {
+                                    assert allowedTimer != null;
+                                    allowedTimer.record(elapsedNanos, TimeUnit.NANOSECONDS);
+                                    try {
+                                        return unwrap().serve(ctx, req);
+                                    } catch (Exception e) {
+                                        return Exceptions.throwUnsafely(e);
+                                    }
+                                } else {
+                                    assert deniedTimer != null;
+                                    deniedTimer.record(elapsedNanos, TimeUnit.NANOSECONDS);
+                                    return HttpResponse.of(HttpStatus.UNAUTHORIZED, MediaType.PLAIN_TEXT,
+                                                           status.toString());
+                                }
+                            },
+                            ctx.blockingTaskExecutor())
+                    .exceptionally(cause -> {
+                        assert deniedTimer != null;
+                        deniedTimer.record(System.nanoTime() - startNanos, TimeUnit.NANOSECONDS);
+                        return createErrorResponse(cause);
+                    });
+            return HttpResponse.of(future);
+        } catch (Exception e) {
+            assert deniedTimer != null;
+            deniedTimer.record(System.nanoTime() - startNanos, TimeUnit.NANOSECONDS);
+            return createErrorResponse(e);
+        }
     }
 
     @Nullable
@@ -159,5 +228,15 @@ public final class AthenzService extends SimpleDecoratingHttpService {
             return token;
         }
         return null;
+    }
+
+    private static HttpResponse createErrorResponse(Throwable cause) {
+        final Throwable peeled = Exceptions.peel(cause);
+        if (peeled instanceof IllegalArgumentException) {
+            return HttpResponse.of(HttpStatus.BAD_REQUEST, MediaType.PLAIN_TEXT,
+                                   "Resource could not be resolved: " + cause.getMessage());
+        }
+
+        return Exceptions.throwUnsafely(peeled);
     }
 }

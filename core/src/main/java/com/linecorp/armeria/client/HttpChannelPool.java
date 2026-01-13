@@ -58,8 +58,8 @@ import com.linecorp.armeria.common.util.AsyncCloseableSupport;
 import com.linecorp.armeria.common.util.DomainSocketAddress;
 import com.linecorp.armeria.internal.client.HttpSession;
 import com.linecorp.armeria.internal.client.PooledChannel;
-import com.linecorp.armeria.internal.common.ClientSslContextFactory;
-import com.linecorp.armeria.internal.common.util.ChannelUtil;
+import com.linecorp.armeria.internal.common.ConnectionEventListener;
+import com.linecorp.armeria.internal.common.SslContextFactory;
 import com.linecorp.armeria.internal.common.util.TemporaryThreadLocals;
 
 import io.netty.bootstrap.Bootstrap;
@@ -96,17 +96,15 @@ final class HttpChannelPool implements AsyncCloseable {
     private final Map<PoolKey, Deque<PooledChannel>>[] pool;
     private final Map<PoolKey, ChannelAcquisitionFuture>[] pendingAcquisitions;
     private final Map<Channel, Boolean> allChannels;
-    private final ConnectionPoolListener listener;
 
     // Fields for creating a new connection:
     private final Bootstraps bootstraps;
     private final int connectTimeoutMillis;
 
     HttpChannelPool(HttpClientFactory clientFactory, EventLoop eventLoop,
-                    ClientSslContextFactory sslContextFactory, ConnectionPoolListener listener) {
+                    SslContextFactory sslContextFactory) {
         this.clientFactory = clientFactory;
         this.eventLoop = eventLoop;
-        this.listener = listener;
 
         pool = newEnumMap(ImmutableSet.of(SessionProtocol.H1, SessionProtocol.H1C,
                                           SessionProtocol.H2, SessionProtocol.H2C));
@@ -404,6 +402,8 @@ final class HttpChannelPool implements AsyncCloseable {
 
             try {
                 final Channel channel = registerFuture.channel();
+                ConnectionEventListener.setToChannelAttr(
+                        desiredProtocol, clientFactory.connectionPoolListener(), channel);
                 configureProxy(channel, poolKey.proxyConfig, poolKey.tlsSpec);
 
                 if (desiredProtocol.isTls() && timingsBuilder != null) {
@@ -480,6 +480,7 @@ final class HttpChannelPool implements AsyncCloseable {
         try {
             if (future.isSuccess()) {
                 final Channel channel = future.getNow();
+
                 final SessionProtocol protocol = getProtocolIfHealthy(channel);
                 if (protocol == null || closeable.isClosing()) {
                     channel.close();
@@ -491,18 +492,7 @@ final class HttpChannelPool implements AsyncCloseable {
 
                 allChannels.put(channel, Boolean.TRUE);
 
-                final InetSocketAddress remoteAddr = ChannelUtil.remoteAddress(channel);
-                final InetSocketAddress localAddr = ChannelUtil.localAddress(channel);
-                assert remoteAddr != null && localAddr != null
-                        : "raddr: " + remoteAddr + ", laddr: " + localAddr;
-                try {
-                    listener.connectionOpen(protocol, remoteAddr, localAddr, channel);
-                } catch (Throwable e) {
-                    if (logger.isWarnEnabled()) {
-                        logger.warn("{} Exception handling {}.connectionOpen()",
-                                    channel, listener.getClass().getName(), e);
-                    }
-                }
+                ConnectionEventListener.get(channel).connectionOpened();
 
                 final HttpSession session = HttpSession.get(channel);
                 if (session.incrementNumUnfinishedResponses()) {
@@ -535,14 +525,7 @@ final class HttpChannelPool implements AsyncCloseable {
                         }
                     }
 
-                    try {
-                        listener.connectionClosed(protocol, remoteAddr, localAddr, channel);
-                    } catch (Throwable e) {
-                        if (logger.isWarnEnabled()) {
-                            logger.warn("{} Exception handling {}.connectionClosed()",
-                                        channel, listener.getClass().getName(), e);
-                        }
-                    }
+                    ConnectionEventListener.get(channel).connectionClosed();
                 });
             } else {
                 final Throwable throwable = future.cause();

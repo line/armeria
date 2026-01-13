@@ -32,6 +32,7 @@ import com.linecorp.armeria.server.Server;
 @ConditionalOnBean(Server.class)
 @ConditionalOnClass(ArmeriaBeanPostProcessor.class)
 @AutoConfigureAfter(name = "com.linecorp.armeria.spring.ArmeriaAutoConfiguration")
+@SuppressWarnings("checkstyle:HideUtilityClassConstructor")
 public class ArmeriaBeanPostProcessorConfiguration {
 
     /**
@@ -39,7 +40,7 @@ public class ArmeriaBeanPostProcessorConfiguration {
      */
     @Bean
     @ConditionalOnMissingBean(ArmeriaBeanPostProcessor.class)
-    public ArmeriaBeanPostProcessor armeriaBeanPostProcessor(BeanFactory beanFactory) {
+    public static ArmeriaBeanPostProcessor armeriaBeanPostProcessor(BeanFactory beanFactory) {
         return new ArmeriaBeanPostProcessor(beanFactory);
     }
 }

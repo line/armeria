@@ -165,7 +165,7 @@ public final class ExportGroupBuilder {
 
     /**
      * Adds the property represented by the specified key pattern to the export list. Please refer to the
-     * <a href="https://line.github.io/armeria/docs/advanced-logging">Logging contextual information</a>
+     * <a href="https://armeria.dev/docs/advanced-logging">Logging contextual information</a>
      * in order to learn how to specify a key pattern.
      */
     public ExportGroupBuilder keyPattern(String keyPattern) {

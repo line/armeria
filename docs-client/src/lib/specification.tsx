@@ -108,6 +108,7 @@ export interface SpecificationData {
   exceptions: Struct[];
   exampleHeaders: { [name: string]: string }[];
   docServiceRoute?: Route;
+  docServiceExtraInfo: Record<string, string>;
 }
 
 export function simpleName(fullName: string): string {
@@ -221,6 +222,10 @@ export class Specification {
 
   public getDocServiceRoute(): Route | undefined {
     return this.docServiceRoute;
+  }
+
+  public getDocServiceExtraInfo(): Record<string, string> {
+    return this.data.docServiceExtraInfo;
   }
 
   public hasUniqueEnumNames(): boolean {

@@ -66,39 +66,39 @@ class HttpServerConnectMethodTest {
             }
         };
 
-        final ClientFactory factory = ClientFactory.builder()
+        try (ClientFactory factory = ClientFactory.builder()
                                                    .connectionPoolListener(poolListener)
-                                                   .build();
-        final WebClient client = WebClient.builder(server.uri(SessionProtocol.H1C))
-                                          .factory(factory)
-                                          .build();
+                                                   .build()) {
+            final WebClient client = WebClient.builder(server.uri(SessionProtocol.H1C))
+                                              .factory(factory)
+                                              .build();
 
-        final AggregatedHttpResponse res1 = client
-                .execute(HttpRequest.of(HttpMethod.CONNECT, "/"))
-                .aggregate()
-                .join();
-        assertThat(res1.status()).isSameAs(HttpStatus.METHOD_NOT_ALLOWED);
-        await().untilAsserted(() -> {
-            assertThat(openedCount).hasValue(1);
-            assertThat(closedCount).hasValue(1);
-        });
+            final AggregatedHttpResponse res1 = client
+                    .execute(HttpRequest.of(HttpMethod.CONNECT, "/"))
+                    .aggregate()
+                    .join();
+            assertThat(res1.status()).isSameAs(HttpStatus.METHOD_NOT_ALLOWED);
+            await().untilAsserted(() -> {
+                assertThat(openedCount).hasValue(1);
+                assertThat(closedCount).hasValue(1);
+            });
 
-        final AggregatedHttpResponse res2 = client
-                .prepare()
-                .method(HttpMethod.CONNECT)
-                .path("/")
-                .header(HttpHeaderNames.PROTOCOL, "websocket")
-                .execute()
-                .aggregate()
-                .join();
+            final AggregatedHttpResponse res2 = client
+                    .prepare()
+                    .method(HttpMethod.CONNECT)
+                    .path("/")
+                    .header(HttpHeaderNames.PROTOCOL, "websocket")
+                    .execute()
+                    .aggregate()
+                    .join();
 
-        // HTTP/1 decoder will reject a header starts with `:` anyway.
-        assertThat(res2.status()).isSameAs(HttpStatus.BAD_REQUEST);
-        await().untilAsserted(() -> {
-            assertThat(openedCount).hasValue(2);
-            assertThat(closedCount).hasValue(2);
-        });
-        factory.closeAsync();
+            // HTTP/1 decoder will reject a header starts with `:` anyway.
+            assertThat(res2.status()).isSameAs(HttpStatus.BAD_REQUEST);
+            await().untilAsserted(() -> {
+                assertThat(openedCount).hasValue(2);
+                assertThat(closedCount).hasValue(2);
+            });
+        }
     }
 
     @Test

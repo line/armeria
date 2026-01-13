@@ -19,7 +19,7 @@
  * a Java tracing library compatible with <a href="http://zipkin.io/">Zipkin</a>.
  *
  * @deprecated Use armeria-brave6 module.
- *             See <a href="https://line.github.io/armeria/release-notes/1.28.0#%EF%B8%8F-breaking-changes">
+ *             See <a href="https://armeria.dev/release-notes/1.28.0#%EF%B8%8F-breaking-changes">
  *             1.28 Breaking Changes</a> for more information.
  */
 @Deprecated

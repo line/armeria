@@ -66,6 +66,7 @@ import org.slf4j.LoggerFactory;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Sets;
 import com.google.common.net.HostAndPort;
 
@@ -89,6 +90,7 @@ import com.linecorp.armeria.common.TlsSetters;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.logging.RequestOnlyLog;
+import com.linecorp.armeria.common.metric.MeterIdPrefix;
 import com.linecorp.armeria.common.util.BlockingTaskExecutor;
 import com.linecorp.armeria.common.util.DomainSocketAddress;
 import com.linecorp.armeria.common.util.EventLoopGroups;
@@ -97,8 +99,10 @@ import com.linecorp.armeria.common.util.ThreadFactories;
 import com.linecorp.armeria.common.util.TlsEngineType;
 import com.linecorp.armeria.internal.common.BuiltInDependencyInjector;
 import com.linecorp.armeria.internal.common.RequestContextUtil;
+import com.linecorp.armeria.internal.common.SslContextFactory;
 import com.linecorp.armeria.internal.common.util.ChannelUtil;
 import com.linecorp.armeria.internal.server.RouteDecoratingService;
+import com.linecorp.armeria.internal.server.RouteUtil;
 import com.linecorp.armeria.internal.server.annotation.AnnotatedServiceExtensions;
 import com.linecorp.armeria.server.annotation.ExceptionHandlerFunction;
 import com.linecorp.armeria.server.annotation.RequestConverterFunction;
@@ -1380,6 +1384,53 @@ public final class ServerBuilder implements TlsSetters, ServiceConfigsBuilder<Se
     }
 
     /**
+     * Applies the specified {@code customizer} to a {@link ContextPathServicesBuilder} rooted at the
+     * given {@code contextPaths} of the default {@link VirtualHost}.
+     * @param contextPaths the context paths to group services under; must be non-empty and absolute
+     * @param customizer the action that configures services/nesting under the context paths
+     * @return this builder for chaining
+     * @throws IllegalArgumentException if {@code contextPaths} is empty or contains a relative path
+     *
+     * @see #contextPath(String, Consumer)
+     * @see #baseContextPath(String)
+     */
+    @UnstableApi
+    public ServerBuilder contextPath(Iterable<String> contextPaths,
+                                     Consumer<ContextPathServicesBuilder> customizer) {
+        requireNonNull(contextPaths, "contextPaths");
+        requireNonNull(customizer, "customizer");
+
+        if (Iterables.isEmpty(contextPaths)) {
+            throw new IllegalArgumentException("contextPaths is empty");
+        }
+
+        for (String contextPath : contextPaths) {
+            RouteUtil.ensureAbsolutePath(contextPath, "contextPath");
+        }
+
+        customizer.accept(contextPath(contextPaths));
+        return this;
+    }
+
+    /**
+     * A convenience overload of {@link #contextPath(Iterable, Consumer)} for a single context path.
+     *
+     * @param contextPath the context path to group services under; must be absolute
+     * @param customizer the action that configures services/nesting under the context path
+     * @return this builder for chaining
+     * @throws IllegalArgumentException if {@code contextPath} is relative (non-absolute)
+     * @see #contextPath(Iterable, Consumer)
+     */
+    @UnstableApi
+    public ServerBuilder contextPath(String contextPath,
+                                     Consumer<ContextPathServicesBuilder> customizer) {
+        requireNonNull(contextPath, "contextPath");
+        requireNonNull(customizer, "customizer");
+        contextPath(ImmutableSet.of(contextPath), customizer);
+        return this;
+    }
+
+    /**
      * Configures an {@link HttpService} of the default {@link VirtualHost} with the {@code customizer}.
      */
     public ServerBuilder withRoute(Consumer<? super ServiceBindingBuilder> customizer) {
@@ -2370,13 +2421,17 @@ public final class ServerBuilder implements TlsSetters, ServiceConfigsBuilder<Se
         final ServerErrorHandler errorHandler = ServerErrorHandlerDecorators.decorate(
                 this.errorHandler == null ? ServerErrorHandler.ofDefault()
                                           : this.errorHandler.orElse(ServerErrorHandler.ofDefault()));
+        final MeterIdPrefix meterIdPrefix = tlsConfig != null ? tlsConfig.meterIdPrefix() : null;
+        final SslContextFactory sslContextFactory = new SslContextFactory(meterIdPrefix, meterRegistry);
         final VirtualHost defaultVirtualHost =
                 defaultVirtualHostBuilder.build(virtualHostTemplate, dependencyInjector,
-                                                unloggedExceptionsReporter, errorHandler, tlsProvider);
+                                                unloggedExceptionsReporter, errorHandler,
+                                                tlsProvider, sslContextFactory);
         final List<VirtualHost> virtualHosts =
                 virtualHostBuilders.stream()
                                    .map(vhb -> vhb.build(virtualHostTemplate, dependencyInjector,
-                                                         unloggedExceptionsReporter, errorHandler, tlsProvider))
+                                                         unloggedExceptionsReporter, errorHandler,
+                                                         tlsProvider, sslContextFactory))
                                    .collect(toImmutableList());
         // Pre-populate the domain name mapping for later matching.
         final Mapping<String, SslContext> sslContexts;
@@ -2453,7 +2508,7 @@ public final class ServerBuilder implements TlsSetters, ServiceConfigsBuilder<Se
                 final TlsEngineType tlsEngineType = defaultVirtualHost.tlsEngineType();
                 assert tlsEngineType != null;
                 assert tlsProvider != null;
-                sslContexts = new TlsProviderMapping(tlsProvider, tlsEngineType, tlsConfig, meterRegistry);
+                sslContexts = new TlsProviderMapping(tlsProvider, tlsEngineType, tlsConfig, sslContextFactory);
             }
         }
         if (pingIntervalMillis > 0) {

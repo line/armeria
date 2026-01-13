@@ -22,7 +22,10 @@ import java.util.Set;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
+import com.google.common.collect.ImmutableSet;
+
 import com.linecorp.armeria.common.annotation.UnstableApi;
+import com.linecorp.armeria.internal.server.RouteUtil;
 import com.linecorp.armeria.server.annotation.ExceptionHandlerFunction;
 import com.linecorp.armeria.server.annotation.RequestConverterFunction;
 import com.linecorp.armeria.server.annotation.ResponseConverterFunction;
@@ -100,5 +103,40 @@ public final class VirtualHostContextPathServicesBuilder
     @Override
     public VirtualHostContextPathAnnotatedServiceConfigSetters annotatedService() {
         return new VirtualHostContextPathAnnotatedServiceConfigSetters(this);
+    }
+
+    @Override
+    public VirtualHostContextPathServicesBuilder contextPath(
+            Iterable<String> paths,
+            Consumer<VirtualHostContextPathServicesBuilder> customizer) {
+        requireNonNull(paths, "contextPaths");
+        requireNonNull(customizer, "customizer");
+
+        boolean isEmpty = true;
+        for (String path : paths) {
+            isEmpty = false;
+            RouteUtil.ensureAbsolutePath(path, "contextPath");
+        }
+
+        if (isEmpty) {
+            throw new IllegalArgumentException("contextPaths must not be empty.");
+        }
+
+        final VirtualHostContextPathServicesBuilder child =
+                new VirtualHostContextPathServicesBuilder(parent(),
+                                                          virtualHostBuilder(),
+                                                          mergedContextPaths(paths));
+        customizer.accept(child);
+        return this;
+    }
+
+    @Override
+    public VirtualHostContextPathServicesBuilder contextPath(
+            String path,
+            Consumer<VirtualHostContextPathServicesBuilder> customizer
+    ) {
+        requireNonNull(path, "contextPath");
+        requireNonNull(customizer, "customizer");
+        return contextPath(ImmutableSet.of(path), customizer);
     }
 }
