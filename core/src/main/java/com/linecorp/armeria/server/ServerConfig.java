@@ -119,12 +119,12 @@ public interface ServerConfig {
 
     /**
      * Returns the factory that creates boss {@link EventLoopGroup}s for accepting incoming connections.
-     * Returns {@code null} if no custom factory was specified.
+     * Default implementation is defined in {@link DefaultServerConfig#DEFAULT_BOSS_GROUP_FACTORY}.
      *
      * @see ServerBuilder#bossGroupFactory(Function)
      */
     @UnstableApi
-    Function<String, EventLoopGroup> bossGroupFactory();
+    Function<? super String, ? extends EventLoopGroup> bossGroupFactory();
 
     /**
      * Returns the {@link ChannelOption}s and their values of {@link Server}'s server sockets.
