@@ -23,6 +23,7 @@ import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.linecorp.armeria.common.SessionProtocol.HTTP;
 import static com.linecorp.armeria.common.SessionProtocol.HTTPS;
 import static com.linecorp.armeria.common.SessionProtocol.PROXY;
+import static com.linecorp.armeria.server.DefaultServerConfig.DEFAULT_BOSS_GROUP_FACTORY;
 import static com.linecorp.armeria.server.DefaultServerConfig.validateIdleTimeoutMillis;
 import static com.linecorp.armeria.server.DefaultServerConfig.validateMaxNumConnections;
 import static com.linecorp.armeria.server.DefaultServerConfig.validateNonNegative;
@@ -242,8 +243,7 @@ public final class ServerBuilder implements TlsSetters, ServiceConfigsBuilder<Se
     private TlsProvider tlsProvider;
     @Nullable
     private ServerTlsConfig tlsConfig;
-    @Nullable
-    private Function<String, EventLoopGroup> bossGroupFactory;
+    private Function<String, EventLoopGroup> bossGroupFactory = DEFAULT_BOSS_GROUP_FACTORY;
 
     ServerBuilder() {
         // Set the default host-level properties.

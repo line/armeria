@@ -64,7 +64,7 @@ final class DefaultServerConfig implements ServerConfig {
      * factory. The created threads are not daemon threads and use {@link FastThreadLocalThread}
      * to optimize performance in environments with frequent thread-local accesses.
      */
-    private static final Function<String, EventLoopGroup> DEFAULT_BOSS_GROUP_FACTORY =
+    static final Function<String, EventLoopGroup> DEFAULT_BOSS_GROUP_FACTORY =
             bossThreadName -> EventLoopGroups.newEventLoopGroup(1, r -> {
                 final FastThreadLocalThread thread = new FastThreadLocalThread(r, bossThreadName);
                 thread.setDaemon(false);
