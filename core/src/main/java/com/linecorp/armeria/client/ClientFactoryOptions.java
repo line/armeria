@@ -23,7 +23,6 @@ import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.util.Arrays;
 import java.util.Map;
-import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
@@ -306,25 +305,7 @@ public final class ClientFactoryOptions
             ClientFactoryOption.define("CONNECTION_POOL_LISTENER", ConnectionPoolListener.noop());
 
     /**
-     * The quiet period for graceful shutdown of the worker {@link EventLoopGroup}, in milliseconds.
-     * This is the quiet period parameter passed to {@link EventLoopGroup#shutdownGracefully(long, long, TimeUnit)}.
-     */
-    @UnstableApi
-    public static final ClientFactoryOption<Long> WORKER_GROUP_GRACEFUL_SHUTDOWN_QUIET_PERIOD_MILLIS =
-            ClientFactoryOption.define("WORKER_GROUP_GRACEFUL_SHUTDOWN_QUIET_PERIOD_MILLIS",
-                                       Flags.defaultClientWorkerGroupGracefulShutdownQuietPeriodMillis());
-
-    /**
-     * The timeout for graceful shutdown of the worker {@link EventLoopGroup}, in milliseconds.
-     * This is the timeout parameter passed to {@link EventLoopGroup#shutdownGracefully(long, long, TimeUnit)}.
-     */
-    @UnstableApi
-    public static final ClientFactoryOption<Long> WORKER_GROUP_GRACEFUL_SHUTDOWN_TIMEOUT_MILLIS =
-            ClientFactoryOption.define("WORKER_GROUP_GRACEFUL_SHUTDOWN_TIMEOUT_MILLIS",
-                                       Flags.defaultClientWorkerGroupGracefulShutdownTimeoutMillis());
-
-    /**
-     * The graceful connection shutdown timeout in milliseconds.
+     * The graceful connection shutdown timeout in milliseconds..
      */
     public static final ClientFactoryOption<Long> HTTP2_GRACEFUL_SHUTDOWN_TIMEOUT_MILLIS =
             ClientFactoryOption.define("HTTP2_GRACEFUL_SHUTDOWN_TIMEOUT_MILLIS",
@@ -678,22 +659,6 @@ public final class ClientFactoryOptions
     @UnstableApi
     public OutlierDetection connectionOutlierDetection() {
         return get(CONNECTION_OUTLIER_DETECTION);
-    }
-
-    /**
-     * Returns the graceful worker group pool quiet period in milliseconds.
-     */
-    @UnstableApi
-    public long workerGroupGracefulShutdownQuietPeriodMillis() {
-        return get(WORKER_GROUP_GRACEFUL_SHUTDOWN_QUIET_PERIOD_MILLIS);
-    }
-
-    /**
-     * Returns the graceful worker group pool timeout in milliseconds.
-     */
-    @UnstableApi
-    public long workerGroupGracefulShutdownTimeoutMillis() {
-        return get(WORKER_GROUP_GRACEFUL_SHUTDOWN_TIMEOUT_MILLIS);
     }
 
     /**
