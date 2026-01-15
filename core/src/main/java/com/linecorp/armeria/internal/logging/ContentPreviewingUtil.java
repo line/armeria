@@ -115,6 +115,7 @@ public final class ContentPreviewingUtil {
             this.ctx = ctx;
             whenComplete().handle((unused, cause) -> {
                 if (responseContentPreviewer == null) {
+                    ctx.logBuilder().responseContentPreview(null);
                     return null;
                 }
                 if (!responseContentPreviewer.isDisabled()) {
