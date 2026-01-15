@@ -16,17 +16,16 @@
 
 package com.linecorp.armeria.common.util;
 
-import static com.google.common.base.Preconditions.checkArgument;
-import static java.util.Objects.requireNonNull;
+import com.linecorp.armeria.common.Flags;
+import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.annotation.UnstableApi;
+import io.netty.channel.EventLoopGroup;
 
 import java.time.Duration;
 import java.util.concurrent.ThreadFactory;
 
-import com.linecorp.armeria.common.Flags;
-import com.linecorp.armeria.common.annotation.Nullable;
-import com.linecorp.armeria.common.annotation.UnstableApi;
-
-import io.netty.channel.EventLoopGroup;
+import static com.google.common.base.Preconditions.checkArgument;
+import static java.util.Objects.requireNonNull;
 
 /**
  * A builder for creating an {@link EventLoopGroup} with custom configuration.
@@ -36,8 +35,7 @@ import io.netty.channel.EventLoopGroup;
  * EventLoopGroup eventLoopGroup = EventLoopGroups
  *     .builder()
  *     .numThreads(4)
- *     .threadNamePrefix("my-eventloop")
- *     .useDaemonThreads(true)
+ *     .threadFactory(ThreadFactories.newThreadFactory("my-eventloop", true))
  *     .gracefulShutdown(Duration.ofSeconds(2), Duration.ofSeconds(15))
  *     .build();
  * }</pre>

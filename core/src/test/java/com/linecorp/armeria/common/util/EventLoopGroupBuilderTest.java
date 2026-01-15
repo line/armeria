@@ -1,5 +1,5 @@
 /*
- * Copyright 2025 LINE Corporation
+ * Copyright 2026 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -16,17 +16,15 @@
 
 package com.linecorp.armeria.common.util;
 
-import static com.linecorp.armeria.common.util.EventLoopGroupBuilder.*;
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import com.linecorp.armeria.common.Flags;
+import io.netty.channel.EventLoopGroup;
+import org.junit.jupiter.api.Test;
 
 import java.time.Duration;
 
-import org.junit.jupiter.api.Test;
-
-import com.linecorp.armeria.common.Flags;
-
-import io.netty.channel.EventLoopGroup;
+import static com.linecorp.armeria.common.util.EventLoopGroupBuilder.DEFAULT_ARMERIA_THREAD_NAME_PREFIX;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class EventLoopGroupBuilderTest {
 
