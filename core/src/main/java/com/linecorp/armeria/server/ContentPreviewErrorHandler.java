@@ -22,14 +22,11 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.server.logging.ContentPreviewingService;
 
-final class ContentPreviewServerErrorHandler implements DecoratingServerErrorHandlerFunction {
+final class ContentPreviewErrorHandler implements DecoratingErrorHandlerFunction {
 
     @Nullable
-    @Override
-    public HttpResponse onServiceException(ServerErrorHandler delegate,
-                                           ServiceRequestContext ctx, Throwable cause) {
-        final HttpResponse res = delegate.onServiceException(ctx, cause);
-
+    private static HttpResponse maybeSetUpResponseContentPreviewer(ServiceRequestContext ctx,
+                                                                   @Nullable HttpResponse res) {
         final ContentPreviewingService contentPreviewingService =
                 ctx.findService(ContentPreviewingService.class);
         if (contentPreviewingService == null) {
@@ -44,5 +41,21 @@ final class ContentPreviewServerErrorHandler implements DecoratingServerErrorHan
         // Call requestContentPreview(null) to make sure that the log is complete.
         ctx.logBuilder().responseContentPreview(null);
         return res;
+    }
+
+    @Nullable
+    @Override
+    public HttpResponse onServiceException(ServerErrorHandler delegate,
+                                           ServiceRequestContext ctx, Throwable cause) {
+        final HttpResponse res = delegate.onServiceException(ctx, cause);
+        return maybeSetUpResponseContentPreviewer(ctx, res);
+    }
+
+    @Nullable
+    @Override
+    public HttpResponse onServiceException(ServiceErrorHandler delegate,
+                                           ServiceRequestContext ctx, Throwable cause) {
+        final HttpResponse res = delegate.onServiceException(ctx, cause);
+        return maybeSetUpResponseContentPreviewer(ctx, res);
     }
 }

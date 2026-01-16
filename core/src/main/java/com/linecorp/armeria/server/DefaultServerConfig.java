@@ -258,7 +258,7 @@ final class DefaultServerConfig implements ServerConfig {
         this.enableServerHeader = enableServerHeader;
         this.enableDateHeader = enableDateHeader;
 
-        this.errorHandler = requireNonNull(errorHandler, "errorHandler");
+        this.errorHandler = ErrorHandlerDecorators.decorate(requireNonNull(errorHandler, "errorHandler"));
         this.sslContexts = sslContexts;
         this.http1HeaderNaming = requireNonNull(http1HeaderNaming, "http1HeaderNaming");
         this.dependencyInjector = requireNonNull(dependencyInjector, "dependencyInjector");
