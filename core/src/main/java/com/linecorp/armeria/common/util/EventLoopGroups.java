@@ -42,7 +42,7 @@ public final class EventLoopGroups {
     /**
      * Returns a new builder for creating an {@link EventLoopGroup}.
      *
-     * <h3>Example</h3>
+     * <strong>Example</strong>
      * <pre>{@code
      * EventLoopGroup eventLoopGroup = EventLoopGroups
      *     .builder()
