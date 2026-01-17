@@ -1,0 +1,338 @@
+# Request Context
+
+[RequestContext](type://RequestContext) is the central abstraction for accessing request-scoped information in Armeria.
+Every request being handled—whether on the server or client side—has an associated context that provides
+information about the request, utilities for thread-safe context propagation, and control over timeouts and cancellation.
+
+Armeria provides two main implementations:
+- [ServiceRequestContext](type://ServiceRequestContext): Used on the server-side when handling a server request.
+- [ClientRequestContext](type://ClientRequestContext): Used on the client-side when making a client request.
+
+## Accessing the current context
+
+Within a request's execution scope, you can access the current context using static methods:
+
+```java
+import com.linecorp.armeria.common.RequestContext;
+import com.linecorp.armeria.server.ServiceRequestContext;
+import com.linecorp.armeria.client.ClientRequestContext;
+
+// Get any context (throws IllegalStateException if unavailable)
+RequestContext ctx = RequestContext.current();
+
+// Get context or null if unavailable
+RequestContext ctxOrNull = RequestContext.currentOrNull();
+
+// Get specific context types
+ServiceRequestContext serverCtx = ServiceRequestContext.current();
+ClientRequestContext clientCtx = ClientRequestContext.current();
+```
+
+:::note
+`current()` throws an `IllegalStateException` if the context is not available in the current thread.
+Use `currentOrNull()` if you want to handle the absence of context gracefully.
+:::
+
+When making a client request from within a server request handler, the [ClientRequestContext](type://ClientRequestContext)
+has a `root()` that returns the originating [ServiceRequestContext](type://ServiceRequestContext):
+
+```java
+// Inside a client callback that was initiated from a server request
+ServiceRequestContext serverCtx = ClientRequestContext.current().root();
+```
+
+## Context propagation across threads
+
+Armeria's context is thread-local. If you switch threads (e.g., using `CompletableFuture`, `Executor`, or reactive streams),
+you must propagate the context to the new thread. Failing to do so will result in lost context, breaking features like
+distributed tracing and logging.
+
+### Using context-aware executors
+
+The preferred approach is to use the context's built-in executors.
+[RequestContext](type://RequestContext) provides methods to obtain them.
+
+```java
+import java.util.concurrent.CompletableFuture;
+
+ServiceRequestContext ctx = ServiceRequestContext.current();
+
+// For non-blocking async callbacks - uses the event loop
+ctx.eventLoop().execute(() -> {
+    assert ServiceRequestContext.current() == ctx;
+    // Handle async logic...
+});
+
+// For blocking operations (DB calls, file I/O, etc.)
+ctx.blockingTaskExecutor().execute(() -> {
+    assert ServiceRequestContext.current() == ctx;
+    // Blocking call that will be traced...
+    Thread.sleep(1000);
+});
+```
+
+### Making existing code context-aware
+
+You can wrap an existing `Executor` or callbacks to make them context-aware using `makeContextAware()`:
+
+```java
+import java.util.concurrent.Executor;
+import java.util.concurrent.Callable;
+
+ServiceRequestContext ctx = ServiceRequestContext.current();
+Executor myExecutor = ...;
+
+// Wrap an executor
+Executor contextAwareExecutor = ctx.makeContextAware(myExecutor);
+
+contextAwareExecutor.execute(() -> {
+    // Context is available here
+    assert RequestContext.current() == ctx;
+});
+
+// Wrap individual callbacks
+Runnable wrapped = ctx.makeContextAware(() -> { /* ... */ });
+Callable<String> wrappedCallable = ctx.makeContextAware(() -> "result");
+
+// Wrap CompletableFuture to propagate context in callbacks
+CompletableFuture<String> future = someFuture();
+CompletableFuture<String> contextAwareFuture = ctx.makeContextAware(future);
+```
+
+### Manual context pushing
+
+For fine-grained control, you can manually push the context onto the thread-local stack using `push()`.
+Always use try-with-resources to ensure the context is popped:
+
+```java
+import com.linecorp.armeria.common.util.SafeCloseable;
+
+try (SafeCloseable ignored = ctx.push()) {
+    // Context is available in this block
+    assert RequestContext.current() == ctx;
+}
+```
+
+## Capturing client request context
+
+When you need to access the [ClientRequestContext](type://ClientRequestContext) of a request you're about to send,
+use [Clients.newContextCaptor()](type://Clients#newContextCaptor()) to capture it. This is useful for inspecting
+request details, accessing the request log, or performing assertions in tests.
+
+```java
+import com.linecorp.armeria.client.Clients;
+import com.linecorp.armeria.client.ClientRequestContextCaptor;
+import com.linecorp.armeria.client.WebClient;
+
+try (ClientRequestContextCaptor captor = Clients.newContextCaptor()) {
+    WebClient.of().get("https://example.com/hello");
+    ClientRequestContext ctx = captor.get();
+    assert ctx.path().equals("/hello");
+}
+```
+
+You can also capture multiple [ClientRequestContext](type://ClientRequestContext) instances:
+
+```java
+try (ClientRequestContextCaptor captor = Clients.newContextCaptor()) {
+    WebClient.of().get("https://example.com/foo");
+    WebClient.of().get("https://example.com/bar");
+    List<ClientRequestContext> contexts = captor.getAll();
+    assert contexts.get(0).path().equals("/foo");
+    assert contexts.get(1).path().equals("/bar");
+}
+```
+
+:::note
+The captor only captures contexts for requests made from the same thread that created the captor.
+:::
+
+## Custom attributes
+
+You can attach custom attributes to a [RequestContext](type://RequestContext) to share data between decorators
+or different parts of your application.
+
+First, define an [AttributeKey](type://io.netty.util.AttributeKey):
+
+```java
+import io.netty.util.AttributeKey;
+
+// Define keys (typically as static constants)
+public final class MyAttributeKeys {
+    public static final AttributeKey<String> USER_ID =
+            AttributeKey.valueOf(MyAttributeKeys.class, "USER_ID");
+}
+```
+
+Then, set and get attributes:
+
+```java
+// Setting an attribute
+ctx.setAttr(MyAttributeKeys.USER_ID, "user-123");
+
+// Getting an attribute
+String userId = ctx.attr(MyAttributeKeys.USER_ID);
+
+// Iterating over all attributes
+ctx.attrs().forEachRemaining(entry -> {
+    System.out.println(entry.getKey() + ": " + entry.getValue());
+});
+```
+
+### Setting attributes for client requests
+
+You can set attributes when building a client request using [WebClient](type://WebClient) or [RequestOptions](type://RequestOptions):
+
+```java
+import com.linecorp.armeria.client.WebClient;
+
+WebClient client = WebClient.of("http://example.com");
+
+// Using WebClientRequestPreparation
+client.prepare()
+      .get("/my-service")
+      .attr(MyAttributeKeys.USER_ID, "user-123")
+      .execute();
+```
+
+### Server vs Client attributes
+
+On the client side, [ClientRequestContext](type://ClientRequestContext) is often created within a
+[ServiceRequestContext](type://ServiceRequestContext) (e.g., a server making a downstream call).
+In this case, the [ServiceRequestContext](type://ServiceRequestContext) is the *root* of the
+[ClientRequestContext](type://ClientRequestContext).
+
+- `attr(key)`: Searches in the current context, and then in the root context.
+- `ownAttr(key)`: Searches only in the current context.
+
+This allows attributes to be inherited from the server context to the client context.
+
+## Timeout control
+
+You can dynamically adjust the timeout of a request or response using [TimeoutMode](type://TimeoutMode).
+
+### Server-side timeouts
+
+Control request timeouts dynamically using [ServiceRequestContext](type://ServiceRequestContext):
+
+```java
+import com.linecorp.armeria.common.util.TimeoutMode;
+import java.time.Duration;
+
+ServiceRequestContext ctx = ServiceRequestContext.current();
+
+// Set timeout from now
+ctx.setRequestTimeout(Duration.ofSeconds(30));
+
+// Extend existing timeout
+ctx.setRequestTimeoutMillis(TimeoutMode.EXTEND, 5000);
+
+// Set timeout from request start
+ctx.setRequestTimeout(TimeoutMode.SET_FROM_START, Duration.ofSeconds(60));
+
+// Disable timeout entirely
+ctx.clearRequestTimeout();
+
+// Trigger immediate timeout
+ctx.timeoutNow();
+```
+
+### Client-side timeouts
+
+Control response timeouts using [ClientRequestContext](type://ClientRequestContext):
+
+```java
+ClientRequestContext ctx = ClientRequestContext.current();
+
+// Set response timeout from now
+ctx.setResponseTimeout(Duration.ofSeconds(30));
+
+// Extend for long-running streaming responses
+ctx.setResponseTimeout(TimeoutMode.EXTEND, Duration.ofSeconds(10));
+
+// Disable timeout
+ctx.clearResponseTimeout();
+```
+
+## Request cancellation
+
+You can cancel a request or check its cancellation status:
+
+```java
+ServiceRequestContext ctx = ServiceRequestContext.current();
+
+// Cancel with default exception
+ctx.cancel();
+
+// Cancel with custom cause
+ctx.cancel(new RuntimeException("Operation aborted"));
+
+// Cancel due to timeout
+ctx.timeoutNow();
+
+// Check status
+boolean cancelled = ctx.isCancelled();
+boolean timedOut = ctx.isTimedOut();
+Throwable cause = ctx.cancellationCause();
+```
+
+### Listening for cancellation
+
+React to cancellation events:
+
+```java
+// Server-side
+ServiceRequestContext sctx = ServiceRequestContext.current();
+sctx.whenRequestCancelling().thenAccept(cause -> {
+    // Cleanup before cancellation completes
+});
+sctx.whenRequestCancelled().thenAccept(cause -> {
+    // Cancellation is complete
+});
+
+// Client-side
+ClientRequestContext cctx = ClientRequestContext.current();
+cctx.whenResponseCancelling().thenAccept(cause -> { /* ... */ });
+cctx.whenResponseCancelled().thenAccept(cause -> { /* ... */ });
+```
+
+## Accessing request information
+
+[RequestContext](type://RequestContext) provides access to essential request details:
+
+```java
+RequestContext ctx = RequestContext.current();
+
+// Request details
+HttpMethod method = ctx.method();
+String path = ctx.path();
+String decodedPath = ctx.decodedPath();
+String query = ctx.query();
+URI uri = ctx.uri();
+RequestId id = ctx.id();
+
+// Connection info
+SessionProtocol protocol = ctx.sessionProtocol();
+InetSocketAddress remoteAddr = ctx.remoteAddress();
+InetSocketAddress localAddr = ctx.localAddress();
+SSLSession sslSession = ctx.sslSession();
+
+// Server-specific (ServiceRequestContext)
+ServiceRequestContext sctx = ServiceRequestContext.current();
+Map<String, String> pathParams = sctx.pathParams();
+QueryParams queryParams = sctx.queryParams();
+InetAddress clientAddress = sctx.clientAddress();
+
+// Request log (access after request is complete or for partial info)
+RequestLogAccess log = ctx.log();
+ctx.log().whenComplete().thenAccept(requestLog -> {
+    System.out.println("Request finished in " + requestLog.totalDurationMillis() + "ms");
+});
+```
+
+## See also
+
+- [Configuring server timeouts](/docs/server/timeouts)
+- [Overriding client timeouts](/docs/client/timeouts)
+- [Decorating a service](/docs/server/decorator)
+- [Logging contextual information](/docs/advanced/logging)
