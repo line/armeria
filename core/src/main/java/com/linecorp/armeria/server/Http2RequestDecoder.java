@@ -158,8 +158,11 @@ final class Http2RequestDecoder extends Http2EventAdapter {
                     }
                     break;
                 case UNKNOWN:
-                    writeUnsupportedMethodResponse(streamId, headers);
-                    return;
+                    if (!cfg.additionalAllowedHttpMethods().contains(headers.get(com.linecorp.armeria.common.HttpHeaderNames.METHOD))) {
+                        writeUnsupportedMethodResponse(streamId, headers);
+                        return;
+                    }
+                    break;
             }
 
             // Do not accept the request path '*' for a non-OPTIONS request.

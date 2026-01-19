@@ -41,6 +41,7 @@ import java.security.PrivateKey;
 import java.security.cert.X509Certificate;
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
@@ -74,6 +75,7 @@ import com.linecorp.armeria.common.DependencyInjector;
 import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.Http1HeaderNaming;
 import com.linecorp.armeria.common.HttpHeaderNames;
+import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.Request;
@@ -234,6 +236,7 @@ public final class ServerBuilder implements TlsSetters, ServiceConfigsBuilder<Se
     private boolean enableServerHeader = true;
     private boolean enableDateHeader = true;
     private Http1HeaderNaming http1HeaderNaming = Http1HeaderNaming.ofDefault();
+    private final List<String> additionalAllowedHttpMethods = new ArrayList<>();
     @Nullable
     private DependencyInjector dependencyInjector;
     private Function<? super String, String> absoluteUriTransformer = Function.identity();
@@ -2298,6 +2301,17 @@ public final class ServerBuilder implements TlsSetters, ServiceConfigsBuilder<Se
     }
 
     /**
+     * Adds additional allowed HTTP methods to the default set of allowed {@link HttpMethod}s.
+     *
+     * @param additionalAllowedHttpMethods the additional allowed HTTP methods
+     */
+    public ServerBuilder additionalAllowedHttpMethods(String... additionalAllowedHttpMethods) {
+        requireNonNull(additionalAllowedHttpMethods, "additionalAllowedHttpMethods");
+        this.additionalAllowedHttpMethods.addAll(Arrays.asList(additionalAllowedHttpMethods));
+        return this;
+    }
+
+    /**
      * Sets the interval between reporting exceptions which is not logged
      * by any decorators or services such as {@link LoggingService}.
      * @param unhandledExceptionsReportInterval the interval between reports,
@@ -2512,7 +2526,7 @@ public final class ServerBuilder implements TlsSetters, ServiceConfigsBuilder<Se
                 childChannelPipelineCustomizer,
                 clientAddressSources, clientAddressTrustedProxyFilter, clientAddressFilter, clientAddressMapper,
                 enableServerHeader, enableDateHeader, errorHandler, sslContexts,
-                http1HeaderNaming, dependencyInjector, absoluteUriTransformer,
+                http1HeaderNaming, additionalAllowedHttpMethods, dependencyInjector, absoluteUriTransformer,
                 unloggedExceptionsReportIntervalMillis, ImmutableList.copyOf(shutdownSupports));
     }
 
