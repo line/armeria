@@ -438,7 +438,7 @@ final class HttpJsonTranscodingServiceBuilder {
                 final TranscodingSpec additionalSpec = new TranscodingSpec(
                         order++, additionalHttpRule, definition, desc.getService(), desc, originalFields,
                         queryMappingFields, additionalRouteAndVariables.pathVariables(),
-                        routeAndVariables.hasVerb(), responseBody);
+                        additionalRouteAndVariables.hasVerb(), responseBody);
                 doRegisterRoute(routeAndSpecs, additionalRouteAndVariables.route(), additionalSpec);
             }
         }
