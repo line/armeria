@@ -76,7 +76,7 @@ final class HttpJsonTranscodingServiceBuilder {
 
     private static final Logger logger = LoggerFactory.getLogger(HttpJsonTranscodingServiceBuilder.class);
 
-    private final Map<String, HttpRule> httpRules = new HashMap<>();
+    private final Map<Descriptors.MethodDescriptor, HttpRule> httpRules = new HashMap<>();
 
     private final GrpcService delegate;
     private final Map<String, GrpcMethod> methods;
@@ -120,11 +120,16 @@ final class HttpJsonTranscodingServiceBuilder {
 
                 final HttpRule httpRule = methodOptions.getExtension(
                         (ExtensionLite<MethodOptions, HttpRule>) AnnotationsProto.http);
-                builder.httpRule(method.descriptor.getFullName(), httpRule);
+                builder.registerHttpRule(method.descriptor, httpRule);
             }
         }
         for (HttpRule additionalRule : options.additionalHttpRules()) {
-            builder.httpRule(additionalRule.getSelector(), additionalRule);
+            final GrpcMethod method = methods.get(additionalRule.getSelector());
+            if (method == null) {
+                throw new IllegalArgumentException(
+                        "No such method for the additional HttpRule: " + additionalRule.getSelector());
+            }
+            builder.registerHttpRule(method.descriptor, additionalRule);
         }
         return builder;
     }
@@ -355,36 +360,32 @@ final class HttpJsonTranscodingServiceBuilder {
         return new HttpJsonTranscodingService(delegate, routeAndSpecs, options);
     }
 
-    private Map<Route, TranscodingSpec> buildRouteAndSpecs() {
-        final Map<Route, TranscodingSpec> routeAndSpecs = new HashMap<>();
-        for (Map.Entry<String, HttpRule> entry : httpRules.entrySet()) {
-            final String selector = entry.getKey();
-            final GrpcMethod method = methods.get(selector);
-            assert method != null;
-            registerRoute(routeAndSpecs, method, entry.getValue());
-        }
-        return ImmutableMap.copyOf(routeAndSpecs);
-    }
-
-    private void httpRule(String selector, HttpRule httpRule) {
-        if (!methods.containsKey(selector)) {
-            throw new IllegalArgumentException("No gRPC method found for selector: " + selector);
-        }
-
-        final HttpRule oldRule = httpRules.get(selector);
+    private void registerHttpRule(Descriptors.MethodDescriptor method, HttpRule httpRule) {
+        final HttpRule oldRule = httpRules.get(method);
         if (oldRule == null) {
-            httpRules.put(selector, httpRule);
+            httpRules.put(method, httpRule);
             return;
         }
 
         final HttpRule resolved = options.conflictStrategy()
-                                         .resolve(selector, oldRule, httpRule);
+                                         .resolve(method, oldRule, httpRule);
         if (resolved != httpRule && resolved != oldRule) {
             throw new IllegalStateException(
                     "HttpRule returned by conflict strategy must be either the existing rule or " +
-                    "the new rule, but got a different instance for selector: " + selector);
+                    "the new rule, but got a different instance for selector: " + method.getFullName());
         }
-        httpRules.put(selector, resolved);
+        httpRules.put(method, resolved);
+    }
+
+    private Map<Route, TranscodingSpec> buildRouteAndSpecs() {
+        final Map<Route, TranscodingSpec> routeAndSpecs = new HashMap<>();
+        for (Map.Entry<Descriptors.MethodDescriptor, HttpRule> entry : httpRules.entrySet()) {
+            final MethodDescriptor desc = entry.getKey();
+            final GrpcMethod method = methods.get(desc.getFullName());
+            assert method != null;
+            registerRoute(routeAndSpecs, method, entry.getValue());
+        }
+        return ImmutableMap.copyOf(routeAndSpecs);
     }
 
     private void registerRoute(Map<Route, TranscodingSpec> routeAndSpecs,

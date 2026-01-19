@@ -17,7 +17,6 @@
 package com.linecorp.armeria.server.grpc;
 
 import static com.google.common.base.Preconditions.checkArgument;
-import static com.linecorp.armeria.server.grpc.HttpJsonTranscodingConflictStrategy.firstWins;
 import static com.linecorp.armeria.server.grpc.HttpJsonTranscodingQueryParamMatchRule.JSON_NAME;
 import static com.linecorp.armeria.server.grpc.HttpJsonTranscodingQueryParamMatchRule.ORIGINAL_FIELD;
 import static java.util.Objects.requireNonNull;
@@ -53,7 +52,7 @@ public final class HttpJsonTranscodingOptionsBuilder {
 
     private boolean ignoreProtoHttpRule;
 
-    private HttpJsonTranscodingConflictStrategy conflictStrategy = firstWins();
+    private HttpJsonTranscodingConflictStrategy conflictStrategy = HttpJsonTranscodingConflictStrategy.strict();
 
     private UnframedGrpcErrorHandler errorHandler = UnframedGrpcErrorHandler.ofJson();
 
@@ -150,11 +149,11 @@ public final class HttpJsonTranscodingOptionsBuilder {
 
     /**
      * Sets the {@link HttpJsonTranscodingConflictStrategy} to use when multiple {@link HttpRule}s target the
-     * same gRPC method selector.
+     * same gRPC method.
      *
      * <p>This strategy determines which rule is applied when a gRPC method is configured multiple times
      * (e.g. via both Proto annotations and programmatic configuration).
-     * By default, {@link HttpJsonTranscodingConflictStrategy#firstWins()} is used.
+     * By default, {@link HttpJsonTranscodingConflictStrategy#strict()} is used.
      */
     public HttpJsonTranscodingOptionsBuilder conflictStrategy(
             HttpJsonTranscodingConflictStrategy conflictStrategy) {

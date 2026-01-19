@@ -18,6 +18,7 @@ package com.linecorp.armeria.server.grpc;
 
 import static com.linecorp.armeria.server.grpc.HttpJsonTranscodingConflictStrategy.firstWins;
 import static com.linecorp.armeria.server.grpc.HttpJsonTranscodingConflictStrategy.lastWins;
+import static com.linecorp.armeria.server.grpc.HttpJsonTranscodingConflictStrategy.strict;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -149,7 +150,7 @@ class HttpJsonTranscodingConflictStrategyTest {
                 .setSelector("armeria.grpc.testing.HttpJsonTranscodingTestService.GetMessageV2")
                 .setGet("/v2/different/messages/{message_id}")
                 .build();
-        final HttpJsonTranscodingConflictStrategy differentStrategy = (selector, oldRule, newRule) -> {
+        final HttpJsonTranscodingConflictStrategy differentStrategy = (method, oldRule, newRule) -> {
             return differentRule;
         };
         final HttpRule conflictingRule = HttpRule
@@ -168,5 +169,24 @@ class HttpJsonTranscodingConflictStrategyTest {
                        .enableHttpJsonTranscoding(options)
                        .build();
         }).isInstanceOf(IllegalStateException.class);
+    }
+
+    @Test
+    void strictShouldThrowOnConflict() {
+        final HttpRule rule = HttpRule
+                .newBuilder()
+                .setSelector("armeria.grpc.testing.HttpJsonTranscodingTestService.GetMessageV2")
+                .setGet("/v2/additional/messages/{message_id}")
+                .build();
+        final HttpJsonTranscodingOptions options = HttpJsonTranscodingOptions.builder()
+                                                                             .additionalHttpRules(rule)
+                                                                             .conflictStrategy(strict())
+                                                                             .build();
+        assertThatThrownBy(() -> {
+            GrpcService.builder()
+                       .addService(new HttpJsonTranscodingTestService())
+                       .enableHttpJsonTranscoding(options)
+                       .build();
+        }).isInstanceOf(IllegalArgumentException.class);
     }
 }

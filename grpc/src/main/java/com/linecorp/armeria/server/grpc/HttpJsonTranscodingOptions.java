@@ -77,8 +77,8 @@ public interface HttpJsonTranscodingOptions {
      * target the same gRPC method.
      *
      * <p>A conflict occurs when multiple {@link HttpRule}s (from annotations or
-     * {@link #additionalHttpRules()}) attempt to configure the same gRPC method selector. This strategy
-     * determines which rule is effectively applied.
+     * {@link #additionalHttpRules()}) attempt to configure the same gRPC method. This strategy determines
+     * which rule is effectively applied.
      *
      * <p>Note: This strategy only handles configuration conflicts for the same method. It does <b>not</b>
      * resolve route conflicts where two <em>different</em> gRPC methods map to the exact same HTTP path.
