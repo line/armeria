@@ -54,5 +54,4 @@ final class ShutdownConfigurableEventLoopGroup extends DelegatingEventLoopGroup 
         return delegate().shutdownGracefully(
                 shutdownQuietPeriodMillis, shutdownTimeoutMillis, TimeUnit.MILLISECONDS);
     }
-
 }

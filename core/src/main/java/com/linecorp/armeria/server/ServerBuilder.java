@@ -16,18 +16,87 @@
 
 package com.linecorp.armeria.server;
 
+import static com.google.common.base.Preconditions.checkArgument;
+import static com.google.common.base.Preconditions.checkNotNull;
+import static com.google.common.base.Preconditions.checkState;
+import static com.google.common.collect.ImmutableList.toImmutableList;
+import static com.linecorp.armeria.common.SessionProtocol.HTTP;
+import static com.linecorp.armeria.common.SessionProtocol.HTTPS;
+import static com.linecorp.armeria.common.SessionProtocol.PROXY;
+import static com.linecorp.armeria.server.DefaultServerConfig.DEFAULT_BOSS_GROUP_FACTORY;
+import static com.linecorp.armeria.server.DefaultServerConfig.validateIdleTimeoutMillis;
+import static com.linecorp.armeria.server.DefaultServerConfig.validateMaxNumConnections;
+import static com.linecorp.armeria.server.DefaultServerConfig.validateNonNegative;
+import static com.linecorp.armeria.server.VirtualHost.normalizeHostnamePattern;
+import static com.linecorp.armeria.server.VirtualHost.validateHostnamePattern;
+import static io.netty.handler.codec.http2.Http2CodecUtil.MAX_FRAME_SIZE_LOWER_BOUND;
+import static io.netty.handler.codec.http2.Http2CodecUtil.MAX_FRAME_SIZE_UPPER_BOUND;
+import static java.util.Objects.requireNonNull;
+
+import java.io.File;
+import java.io.InputStream;
+import java.net.InetAddress;
+import java.net.InetSocketAddress;
+import java.nio.file.Path;
+import java.security.PrivateKey;
+import java.security.cert.X509Certificate;
+import java.time.Duration;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.Optional;
+import java.util.concurrent.Executor;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
+import java.util.function.Consumer;
+import java.util.function.Function;
+import java.util.function.Predicate;
+import java.util.function.Supplier;
+
+import javax.net.ssl.KeyManagerFactory;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Sets;
 import com.google.common.net.HostAndPort;
-import com.linecorp.armeria.common.*;
+
+import com.linecorp.armeria.common.CommonPools;
+import com.linecorp.armeria.common.DependencyInjector;
+import com.linecorp.armeria.common.Flags;
+import com.linecorp.armeria.common.Http1HeaderNaming;
+import com.linecorp.armeria.common.HttpHeaderNames;
+import com.linecorp.armeria.common.HttpRequest;
+import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.Request;
+import com.linecorp.armeria.common.RequestContext;
+import com.linecorp.armeria.common.RequestContextStorage;
+import com.linecorp.armeria.common.RequestId;
+import com.linecorp.armeria.common.ResponseHeaders;
+import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.SuccessFunction;
+import com.linecorp.armeria.common.TlsKeyPair;
+import com.linecorp.armeria.common.TlsProvider;
+import com.linecorp.armeria.common.TlsSetters;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.logging.RequestOnlyLog;
 import com.linecorp.armeria.common.metric.MeterIdPrefix;
-import com.linecorp.armeria.common.util.*;
+import com.linecorp.armeria.common.util.BlockingTaskExecutor;
+import com.linecorp.armeria.common.util.DomainSocketAddress;
+import com.linecorp.armeria.common.util.EventLoopGroups;
+import com.linecorp.armeria.common.util.SystemInfo;
+import com.linecorp.armeria.common.util.ThreadFactories;
+import com.linecorp.armeria.common.util.TlsEngineType;
 import com.linecorp.armeria.internal.common.BuiltInDependencyInjector;
 import com.linecorp.armeria.internal.common.RequestContextUtil;
 import com.linecorp.armeria.internal.common.SslContextFactory;
@@ -40,6 +109,7 @@ import com.linecorp.armeria.server.annotation.RequestConverterFunction;
 import com.linecorp.armeria.server.annotation.ResponseConverterFunction;
 import com.linecorp.armeria.server.logging.AccessLogWriter;
 import com.linecorp.armeria.server.logging.LoggingService;
+
 import io.micrometer.core.instrument.MeterRegistry;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelOption;
@@ -51,35 +121,6 @@ import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.util.Mapping;
 import io.netty.util.NetUtil;
 import it.unimi.dsi.fastutil.objects.Object2ObjectArrayMap;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import javax.net.ssl.KeyManagerFactory;
-import java.io.File;
-import java.io.InputStream;
-import java.net.InetAddress;
-import java.net.InetSocketAddress;
-import java.nio.file.Path;
-import java.security.PrivateKey;
-import java.security.cert.X509Certificate;
-import java.time.Duration;
-import java.util.*;
-import java.util.Map.Entry;
-import java.util.concurrent.*;
-import java.util.function.Consumer;
-import java.util.function.Function;
-import java.util.function.Predicate;
-import java.util.function.Supplier;
-
-import static com.google.common.base.Preconditions.*;
-import static com.google.common.collect.ImmutableList.toImmutableList;
-import static com.linecorp.armeria.common.SessionProtocol.*;
-import static com.linecorp.armeria.server.DefaultServerConfig.*;
-import static com.linecorp.armeria.server.VirtualHost.normalizeHostnamePattern;
-import static com.linecorp.armeria.server.VirtualHost.validateHostnamePattern;
-import static io.netty.handler.codec.http2.Http2CodecUtil.MAX_FRAME_SIZE_LOWER_BOUND;
-import static io.netty.handler.codec.http2.Http2CodecUtil.MAX_FRAME_SIZE_UPPER_BOUND;
-import static java.util.Objects.requireNonNull;
 
 /**
  * Builds a new {@link Server} and its {@link ServerConfig}.

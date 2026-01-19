@@ -16,15 +16,18 @@
 
 package com.linecorp.armeria.common.util;
 
-import com.linecorp.armeria.common.Flags;
-import io.netty.channel.EventLoopGroup;
-import org.junit.jupiter.api.Test;
-
-import java.time.Duration;
-
 import static com.linecorp.armeria.common.util.EventLoopGroupBuilder.DEFAULT_ARMERIA_THREAD_NAME_PREFIX;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+
+import java.time.Duration;
+import java.util.concurrent.CompletableFuture;
+
+import org.junit.jupiter.api.Test;
+
+import com.linecorp.armeria.common.Flags;
+
+import io.netty.channel.EventLoopGroup;
 
 class EventLoopGroupBuilderTest {
 
@@ -45,12 +48,7 @@ class EventLoopGroupBuilderTest {
     void testDefaultNumThreads() {
         final EventLoopGroup group = EventLoopGroups.builder().build();
         try {
-            // Default numThreads should be Flags.numCommonWorkers()
-            int count = 0;
-            for (Object ignored : group) {
-                count++;
-            }
-            assertThat(count).isEqualTo(Flags.numCommonWorkers());
+            assertThat(group).hasSize(Flags.numCommonWorkers());
         } finally {
             group.shutdownGracefully();
         }
@@ -62,11 +60,7 @@ class EventLoopGroupBuilderTest {
                 .numThreads(2)
                 .build();
         try {
-            int count = 0;
-            for (Object ignored : group) {
-                count++;
-            }
-            assertThat(count).isEqualTo(2);
+            assertThat(group).hasSize(2);
         } finally {
             group.shutdownGracefully();
         }
@@ -79,8 +73,11 @@ class EventLoopGroupBuilderTest {
                 .threadFactory(ThreadFactories.newThreadFactory("test-eventloop", false))
                 .build();
         try {
-            assertThat(group).isNotNull();
+            final CompletableFuture<String> threadNameFuture = new CompletableFuture<>();
+            group.submit(() -> threadNameFuture.complete(Thread.currentThread().getName()));
+            assertThat(threadNameFuture.join()).startsWith("test-eventloop");
             // Thread name prefix is applied (will be suffixed with transport type)
+
         } finally {
             group.shutdownGracefully();
         }
@@ -95,6 +92,9 @@ class EventLoopGroupBuilderTest {
                 )
                 .build();
         try {
+            final CompletableFuture<Boolean> isDaemonFuture = new CompletableFuture<>();
+            group.submit(() -> isDaemonFuture.complete(Thread.currentThread().isDaemon()));
+            assertThat(isDaemonFuture.join()).isTrue();
             assertThat(group).isNotNull();
         } finally {
             group.shutdownGracefully();

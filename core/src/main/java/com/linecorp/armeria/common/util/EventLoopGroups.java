@@ -16,18 +16,25 @@
 
 package com.linecorp.armeria.common.util;
 
-import com.linecorp.armeria.common.annotation.UnstableApi;
-import io.netty.bootstrap.Bootstrap;
-import io.netty.channel.*;
-import io.netty.channel.socket.DatagramChannel;
-import io.netty.channel.socket.SocketChannel;
-import io.netty.util.concurrent.Future;
+import static com.linecorp.armeria.common.util.EventLoopGroupBuilder.DEFAULT_ARMERIA_THREAD_NAME_PREFIX;
+import static java.util.Objects.requireNonNull;
 
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 
-import static com.linecorp.armeria.common.util.EventLoopGroupBuilder.DEFAULT_ARMERIA_THREAD_NAME_PREFIX;
-import static java.util.Objects.requireNonNull;
+import com.linecorp.armeria.common.annotation.UnstableApi;
+
+import io.netty.bootstrap.Bootstrap;
+import io.netty.channel.AbstractEventLoop;
+import io.netty.channel.Channel;
+import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelPromise;
+import io.netty.channel.EventLoop;
+import io.netty.channel.EventLoopGroup;
+import io.netty.channel.ServerChannel;
+import io.netty.channel.socket.DatagramChannel;
+import io.netty.channel.socket.SocketChannel;
+import io.netty.util.concurrent.Future;
 
 /**
  * Provides methods that are useful for creating an {@link EventLoopGroup}.
@@ -78,7 +85,8 @@ public final class EventLoopGroups {
         return builder()
                 .numThreads(numThreads)
                 .threadFactory(
-                        ThreadFactories.newEventLoopThreadFactory(DEFAULT_ARMERIA_THREAD_NAME_PREFIX, useDaemonThreads)
+                        ThreadFactories.newEventLoopThreadFactory(DEFAULT_ARMERIA_THREAD_NAME_PREFIX,
+                                                                  useDaemonThreads)
                 )
                 .build();
     }

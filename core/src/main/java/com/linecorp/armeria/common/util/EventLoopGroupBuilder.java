@@ -16,16 +16,17 @@
 
 package com.linecorp.armeria.common.util;
 
-import com.linecorp.armeria.common.Flags;
-import com.linecorp.armeria.common.annotation.Nullable;
-import com.linecorp.armeria.common.annotation.UnstableApi;
-import io.netty.channel.EventLoopGroup;
+import static com.google.common.base.Preconditions.checkArgument;
+import static java.util.Objects.requireNonNull;
 
 import java.time.Duration;
 import java.util.concurrent.ThreadFactory;
 
-import static com.google.common.base.Preconditions.checkArgument;
-import static java.util.Objects.requireNonNull;
+import com.linecorp.armeria.common.Flags;
+import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.annotation.UnstableApi;
+
+import io.netty.channel.EventLoopGroup;
 
 /**
  * A builder for creating an {@link EventLoopGroup} with custom configuration.

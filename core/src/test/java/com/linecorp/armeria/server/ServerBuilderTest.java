@@ -825,13 +825,13 @@ class ServerBuilderTest {
 
     @Test
     void bossGroupFactoryDefault() {
-        try (
-                final Server server = Server
-                        .builder()
-                        .service("/", (ctx, req) -> HttpResponse.of(HttpStatus.OK))
-                        .build()
+        try (Server server = Server
+                .builder()
+                .service("/", (ctx, req) -> HttpResponse.of(HttpStatus.OK))
+                .build()
         ) {
-            final Function<? super String, ? extends EventLoopGroup> bossGroupFactory = server.config().bossGroupFactory();
+            final Function<? super String, ? extends EventLoopGroup> bossGroupFactory =
+                    server.config().bossGroupFactory();
             assertThat(bossGroupFactory).isNotNull();
         }
     }
@@ -841,22 +841,21 @@ class ServerBuilderTest {
         final AtomicReference<String> capturedThreadName = new AtomicReference<>();
         final AtomicBoolean factoryCalled = new AtomicBoolean(false);
 
-        try (
-                final Server server = Server
-                        .builder()
-                        .http(0)
-                        .service("/", (ctx, req) -> HttpResponse.of(HttpStatus.OK))
-                        .bossGroupFactory(threadName -> {
-                            capturedThreadName.set(threadName);
-                            factoryCalled.set(true);
-                            return EventLoopGroups
-                                    .builder()
-                                    .numThreads(1)
-                                    .threadFactory(ThreadFactories.newThreadFactory(threadName, false))
-                                    .gracefulShutdownMillis(0L, 0L)
-                                    .build();
-                        })
-                        .build()
+        try (Server server = Server
+                .builder()
+                .http(0)
+                .service("/", (ctx, req) -> HttpResponse.of(HttpStatus.OK))
+                .bossGroupFactory(threadName -> {
+                    capturedThreadName.set(threadName);
+                    factoryCalled.set(true);
+                    return EventLoopGroups
+                            .builder()
+                            .numThreads(1)
+                            .threadFactory(ThreadFactories.newThreadFactory(threadName, false))
+                            .gracefulShutdownMillis(0L, 0L)
+                            .build();
+                })
+                .build()
         ) {
             assertThat(server.config().bossGroupFactory()).isNotNull();
 
@@ -870,22 +869,21 @@ class ServerBuilderTest {
     void bossGroupFactoryWithMultiplePorts() {
         final AtomicInteger factoryCallCount = new AtomicInteger();
 
-        try (
-                final Server server = Server
-                        .builder()
-                        .http(0)
-                        .https(0)
-                        .tlsSelfSigned()
-                        .service("/", (ctx, req) -> HttpResponse.of(HttpStatus.OK))
-                        .bossGroupFactory(threadName -> {
-                            factoryCallCount.incrementAndGet();
-                            return EventLoopGroups
-                                    .builder()
-                                    .numThreads(1)
-                                    .threadFactory(ThreadFactories.newThreadFactory(threadName, false))
-                                    .build();
-                        })
-                        .build()
+        try (Server server = Server
+                .builder()
+                .http(0)
+                .https(0)
+                .tlsSelfSigned()
+                .service("/", (ctx, req) -> HttpResponse.of(HttpStatus.OK))
+                .bossGroupFactory(threadName -> {
+                    factoryCallCount.incrementAndGet();
+                    return EventLoopGroups
+                            .builder()
+                            .numThreads(1)
+                            .threadFactory(ThreadFactories.newThreadFactory(threadName, false))
+                            .build();
+                })
+                .build()
         ) {
             server.start().join();
             // Factory should be called once per port
@@ -895,18 +893,11 @@ class ServerBuilderTest {
 
     @Test
     void bossGroupFactoryNullValidation() {
-        assertThatThrownBy(
-                () -> {
-                    try (
-                            final Server unused = Server
-                                    .builder()
-                                    .bossGroupFactory(null)
-                                    .build()
-                    ) {
-
-                    }
-                }
-        )
+        assertThatThrownBy(() -> {
+            Server.builder()
+                  .bossGroupFactory(null)
+                  .build();
+        })
                 .isInstanceOf(NullPointerException.class)
                 .hasMessageContaining("bossGroupFactory");
     }
