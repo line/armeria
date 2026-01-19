@@ -47,7 +47,7 @@ public final class EventLoopGroups {
      * EventLoopGroup eventLoopGroup = EventLoopGroups
      *     .builder()
      *     .numThreads(4)
-     *     .threadFactory(ThreadFactories.newThreadFactory("my-eventloop", false))
+     *     .threadFactory(ThreadFactories.newEventLoopThreadFactory("my-eventloop", false))
      *     .gracefulShutdown(Duration.ofSeconds(2), Duration.ofSeconds(15))
      *     .build();
      * }</pre>
@@ -78,7 +78,7 @@ public final class EventLoopGroups {
         return builder()
                 .numThreads(numThreads)
                 .threadFactory(
-                        ThreadFactories.newThreadFactory(DEFAULT_ARMERIA_THREAD_NAME_PREFIX, useDaemonThreads)
+                        ThreadFactories.newEventLoopThreadFactory(DEFAULT_ARMERIA_THREAD_NAME_PREFIX, useDaemonThreads)
                 )
                 .build();
     }
@@ -92,7 +92,7 @@ public final class EventLoopGroups {
     public static EventLoopGroup newEventLoopGroup(int numThreads, String threadNamePrefix) {
         return builder()
                 .numThreads(numThreads)
-                .threadFactory(ThreadFactories.newThreadFactory(threadNamePrefix, false))
+                .threadFactory(ThreadFactories.newEventLoopThreadFactory(threadNamePrefix, false))
                 .build();
     }
 
@@ -107,7 +107,7 @@ public final class EventLoopGroups {
                                                    boolean useDaemonThreads) {
         return builder()
                 .numThreads(numThreads)
-                .threadFactory(ThreadFactories.newThreadFactory(threadNamePrefix, useDaemonThreads))
+                .threadFactory(ThreadFactories.newEventLoopThreadFactory(threadNamePrefix, useDaemonThreads))
                 .build();
     }
 
