@@ -95,8 +95,8 @@ the default response timeout applies to the entire duration of the stream—from
 the stream completes. This means that if your stream is expected to last longer than the configured
 response timeout, you must manually extend the timeout as messages are received.
 
-You can extend the timeout dynamically using [ClientRequestContext](type://ClientRequestContext) with
-[TimeoutMode.EXTEND](type://TimeoutMode#EXTEND):
+You can extend the timeout dynamically using [ClientRequestContext](type) with
+[TimeoutMode#EXTEND](type):
 
 ```java
 import com.linecorp.armeria.client.ClientRequestContext;
@@ -130,8 +130,8 @@ client.withDeadlineAfter(5, TimeUnit.SECONDS)
       });
 ```
 
-For blocking gRPC clients, you can capture the [ClientRequestContext](type://ClientRequestContext) using
-[Clients.newContextCaptor()](type://Clients#newContextCaptor()) and extend the timeout while iterating:
+For blocking gRPC clients, you can capture the [ClientRequestContext](type) using
+[Clients#newContextCaptor()](type) and extend the timeout while iterating:
 
 ```java
 import com.linecorp.armeria.client.ClientRequestContext;
@@ -171,7 +171,7 @@ WebClient client = WebClient.builder("http://example.com")
 :::tip
 
 See [Timeout control](/docs/advanced/request-context#timeout-control) for more details on using
-[TimeoutMode](type://TimeoutMode) to dynamically adjust timeouts.
+[TimeoutMode](type) to dynamically adjust timeouts.
 
 :::
 

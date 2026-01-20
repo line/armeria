@@ -9,7 +9,7 @@ explains how timeout and cancellation signals flow between clients and servers.
 ### Client perspective
 
 When a client receives a timeout-related error, the timeout may not have originated on the client side.
-A [ResponseTimeoutException](type://ResponseTimeoutException) on the client can occur in two scenarios:
+A [ResponseTimeoutException](type) on the client can occur in two scenarios:
 
 1. **Client-side timeout**: The client's response timeout expired before receiving a complete response.
 2. **Server-side timeout**: The server's request timeout expired, and the server sent a `503 Service Unavailable`
@@ -22,7 +22,7 @@ receives a proper `503 Service Unavailable` response rather than experiencing it
 ### Server perspective
 
 When a server experiences a request cancellation, the cancellation may not have originated on the server side.
-A [RequestTimeoutException](type://RequestTimeoutException) or request cancellation on the server can occur
+A [RequestTimeoutException](type) or request cancellation on the server can occur
 in multiple scenarios:
 
 1. **Server-side timeout**: The server's request timeout expired before the response was fully sent.
@@ -39,9 +39,9 @@ propagated to the server. This applies to **both unary (request-response) and st
 the underlying connection/stream is still open:
 
 - **HTTP/2**: The client sends an `RST_STREAM` frame with the `CANCEL` error code to notify the server.
-  The server receives this as a [ClosedStreamException](type://ClosedStreamException).
+  The server receives this as a [ClosedStreamException](type).
 - **HTTP/1.1**: The client closes the connection, which the server detects as a closed session,
-  resulting in a [ClosedSessionException](type://ClosedSessionException).
+  resulting in a [ClosedSessionException](type).
 
 This propagation allows the server to stop processing the request early and free up resources. For example,
 if a client times out while waiting for a slow database query, the server can detect the cancellation and
@@ -51,7 +51,7 @@ abort the query instead of completing unnecessary work.
 
 When a server-side timeout occurs, the server sends a `503 Service Unavailable` response to the client
 (if the response headers haven't been sent yet) or closes the connection/stream. The client then receives
-this as an error, which may appear as a [ResponseTimeoutException](type://ResponseTimeoutException) or
+this as an error, which may appear as a [ResponseTimeoutException](type) or
 connection-related exception depending on the timing.
 
 ## Debugging timeout issues
@@ -73,4 +73,4 @@ cancellation.
 - [Overriding client timeouts](/docs/client/timeouts) - Configure client-side timeout settings
 - [Configuring server timeouts](/docs/server/timeouts) - Configure server-side timeout settings
 - [Timeout control](/docs/advanced/request-context#timeout-control) - Dynamically adjust timeouts using
-  [TimeoutMode](type://TimeoutMode)
+  [TimeoutMode](type)

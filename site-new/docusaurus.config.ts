@@ -472,10 +472,6 @@ export default async function createConfigAsync() {
               to: '/docs/advanced/structured-logging',
             },
             {
-              from: '/docs/advanced-custom-attributes',
-              to: '/docs/advanced/custom-attributes',
-            },
-            {
               from: '/docs/advanced-streaming-backpressure',
               to: '/docs/advanced/streaming-backpressure',
             },
