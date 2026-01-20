@@ -75,9 +75,8 @@ class EventLoopGroupBuilderTest {
         try {
             final CompletableFuture<String> threadNameFuture = new CompletableFuture<>();
             group.submit(() -> threadNameFuture.complete(Thread.currentThread().getName()));
-            assertThat(threadNameFuture.join()).startsWith("test-eventloop");
             // Thread name prefix is applied (will be suffixed with transport type)
-
+            assertThat(threadNameFuture.join()).startsWith("test-eventloop");
         } finally {
             group.shutdownGracefully();
         }
