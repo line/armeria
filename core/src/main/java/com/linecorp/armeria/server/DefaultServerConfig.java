@@ -41,6 +41,7 @@ import com.linecorp.armeria.common.Http1HeaderNaming;
 import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.BlockingTaskExecutor;
+import com.linecorp.armeria.common.util.EventLoopGroups;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.binder.jvm.ExecutorServiceMetrics;
@@ -49,11 +50,26 @@ import io.netty.channel.ChannelPipeline;
 import io.netty.channel.EventLoopGroup;
 import io.netty.handler.ssl.SslContext;
 import io.netty.util.Mapping;
+import io.netty.util.concurrent.FastThreadLocalThread;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.objects.Object2ObjectArrayMap;
 
 final class DefaultServerConfig implements ServerConfig {
+
+    /**
+     * Default implementation of a factory function responsible for creating a {@link EventLoopGroup}
+     * for handling boss threads in a networking context. The function takes a thread name
+     * as input and produces an {@link EventLoopGroup} configured with a custom thread
+     * factory. The created threads are not daemon threads and use {@link FastThreadLocalThread}
+     * to optimize performance in environments with frequent thread-local accesses.
+     */
+    static final Function<? super String, ? extends EventLoopGroup> DEFAULT_BOSS_GROUP_FACTORY =
+            bossThreadName -> EventLoopGroups.newEventLoopGroup(1, r -> {
+                final FastThreadLocalThread thread = new FastThreadLocalThread(r, bossThreadName);
+                thread.setDaemon(false);
+                return thread;
+            });
 
     /**
      * Initialized later by {@link Server} via {@link #setServer(Server)}.
@@ -120,6 +136,7 @@ final class DefaultServerConfig implements ServerConfig {
     @Nullable
     private final Mapping<String, SslContext> sslContexts;
     private final ServerMetrics serverMetrics;
+    private final Function<? super String, ? extends EventLoopGroup> bossGroupFactory;
 
     @Nullable
     private String strVal;
@@ -152,7 +169,8 @@ final class DefaultServerConfig implements ServerConfig {
             DependencyInjector dependencyInjector,
             Function<? super String, String> absoluteUriTransformer,
             long unloggedExceptionsReportIntervalMillis,
-            List<ShutdownSupport> shutdownSupports) {
+            List<ShutdownSupport> shutdownSupports,
+            @Nullable Function<? super String, ? extends EventLoopGroup> bossGroupFactory) {
         requireNonNull(ports, "ports");
         requireNonNull(defaultVirtualHost, "defaultVirtualHost");
         requireNonNull(virtualHosts, "virtualHosts");
@@ -268,6 +286,7 @@ final class DefaultServerConfig implements ServerConfig {
         this.absoluteUriTransformer = castAbsoluteUriTransformer;
         this.unloggedExceptionsReportIntervalMillis = unloggedExceptionsReportIntervalMillis;
         this.shutdownSupports = ImmutableList.copyOf(requireNonNull(shutdownSupports, "shutdownSupports"));
+        this.bossGroupFactory = bossGroupFactory == null ? DEFAULT_BOSS_GROUP_FACTORY : bossGroupFactory;
         serverMetrics = new ServerMetrics(meterRegistry);
     }
 
@@ -461,6 +480,11 @@ final class DefaultServerConfig implements ServerConfig {
     @Override
     public boolean shutdownWorkerGroupOnStop() {
         return shutdownWorkerGroupOnStop;
+    }
+
+    @Override
+    public Function<? super String, ? extends EventLoopGroup> bossGroupFactory() {
+        return bossGroupFactory;
     }
 
     /**

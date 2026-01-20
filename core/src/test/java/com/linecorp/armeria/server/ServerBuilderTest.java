@@ -31,9 +31,11 @@ import java.time.Duration;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Executors;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
+import java.util.function.Function;
 import java.util.function.Supplier;
 
 import org.junit.jupiter.api.AfterAll;
@@ -55,6 +57,8 @@ import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.prometheus.PrometheusMeterRegistries;
 import com.linecorp.armeria.common.util.DomainSocketAddress;
+import com.linecorp.armeria.common.util.EventLoopGroups;
+import com.linecorp.armeria.common.util.ThreadFactories;
 import com.linecorp.armeria.common.util.TlsEngineType;
 import com.linecorp.armeria.common.util.TransportType;
 import com.linecorp.armeria.internal.common.util.MinifiedBouncyCastleProvider;
@@ -65,6 +69,7 @@ import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 import io.micrometer.core.instrument.Metrics;
 import io.micrometer.prometheusmetrics.PrometheusMeterRegistry;
 import io.netty.channel.ChannelOption;
+import io.netty.channel.EventLoopGroup;
 import io.netty.handler.ssl.SslContextBuilder;
 import reactor.core.scheduler.Schedulers;
 
@@ -816,5 +821,84 @@ class ServerBuilderTest {
                                           .config();
         assertThat(config.http2MaxResetFramesPerWindow()).isEqualTo(99);
         assertThat(config.http2MaxResetFramesWindowSeconds()).isEqualTo(2);
+    }
+
+    @Test
+    void bossGroupFactoryDefault() {
+        try (Server server = Server
+                .builder()
+                .service("/", (ctx, req) -> HttpResponse.of(HttpStatus.OK))
+                .build()
+        ) {
+            final Function<? super String, ? extends EventLoopGroup> bossGroupFactory =
+                    server.config().bossGroupFactory();
+            assertThat(bossGroupFactory).isNotNull();
+        }
+    }
+
+    @Test
+    void bossGroupFactoryCustom() {
+        final AtomicReference<String> capturedThreadName = new AtomicReference<>();
+        final AtomicBoolean factoryCalled = new AtomicBoolean(false);
+
+        try (Server server = Server
+                .builder()
+                .http(0)
+                .service("/", (ctx, req) -> HttpResponse.of(HttpStatus.OK))
+                .bossGroupFactory(threadName -> {
+                    capturedThreadName.set(threadName);
+                    factoryCalled.set(true);
+                    return EventLoopGroups
+                            .builder()
+                            .numThreads(1)
+                            .threadFactory(ThreadFactories.newThreadFactory(threadName, false))
+                            .gracefulShutdownMillis(0L, 0L)
+                            .build();
+                })
+                .build()
+        ) {
+            assertThat(server.config().bossGroupFactory()).isNotNull();
+
+            server.start().join();
+            assertThat(factoryCalled.get()).isTrue();
+            assertThat(capturedThreadName.get()).startsWith("armeria-boss-");
+        }
+    }
+
+    @Test
+    void bossGroupFactoryWithMultiplePorts() {
+        final AtomicInteger factoryCallCount = new AtomicInteger();
+
+        try (Server server = Server
+                .builder()
+                .http(0)
+                .https(0)
+                .tlsSelfSigned()
+                .service("/", (ctx, req) -> HttpResponse.of(HttpStatus.OK))
+                .bossGroupFactory(threadName -> {
+                    factoryCallCount.incrementAndGet();
+                    return EventLoopGroups
+                            .builder()
+                            .numThreads(1)
+                            .threadFactory(ThreadFactories.newThreadFactory(threadName, false))
+                            .build();
+                })
+                .build()
+        ) {
+            server.start().join();
+            // Factory should be called once per port
+            assertThat(factoryCallCount.get()).isEqualTo(2);
+        }
+    }
+
+    @Test
+    void bossGroupFactoryNullValidation() {
+        assertThatThrownBy(() -> {
+            Server.builder()
+                  .bossGroupFactory(null)
+                  .build();
+        })
+                .isInstanceOf(NullPointerException.class)
+                .hasMessageContaining("bossGroupFactory");
     }
 }
