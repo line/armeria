@@ -248,6 +248,16 @@ service HttpJsonTranscodingTestService {
       post: "/v1/echo/bidirectional_stream"
     };
   }
+
+  rpc AdditionalBinding(Message) returns (Message) {
+    option (google.api.http) = {
+      post: "/v1/additional_binding"
+
+      additional_bindings {
+        put: "/v1/alternate_additional_binding"
+      }
+    };
+  }
 }
 
 message GetMessageRequestV1 {

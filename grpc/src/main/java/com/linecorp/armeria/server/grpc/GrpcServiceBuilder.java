@@ -1070,16 +1070,14 @@ public final class GrpcServiceBuilder {
             final HttpJsonTranscodingOptions httpJsonTranscodingOptions;
             if (httpJsonTranscodingErrorHandler != null) {
                 httpJsonTranscodingOptions =
-                        HttpJsonTranscodingOptions
-                                .builder()
-                                .queryParamMatchRules(
-                                        this.httpJsonTranscodingOptions.queryParamMatchRules())
+                        new HttpJsonTranscodingOptionsBuilder(this.httpJsonTranscodingOptions)
                                 .errorHandler(httpJsonTranscodingErrorHandler)
                                 .build();
             } else {
                 httpJsonTranscodingOptions = this.httpJsonTranscodingOptions;
             }
-            grpcService = HttpJsonTranscodingService.of(grpcService, httpJsonTranscodingOptions);
+            grpcService = HttpJsonTranscodingServiceBuilder.of(grpcService, httpJsonTranscodingOptions)
+                                                           .build();
         }
         if (handlerRegistry.containsDecorators()) {
             grpcService = new GrpcDecoratingService(grpcService, handlerRegistry);
