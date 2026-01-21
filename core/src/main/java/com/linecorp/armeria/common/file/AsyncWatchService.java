@@ -196,7 +196,7 @@ final class AsyncWatchService implements SafeCloseable {
         }
     }
 
-    static void runSafely(Path dirPath, WatchEvent<?> event, DirectoryWatcher callback) {
+    private static void runSafely(Path dirPath, WatchEvent<?> event, DirectoryWatcher callback) {
         try {
             callback.onEvent(dirPath, event);
         } catch (Exception e) {

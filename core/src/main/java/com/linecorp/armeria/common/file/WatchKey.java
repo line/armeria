@@ -16,10 +16,7 @@
 
 package com.linecorp.armeria.common.file;
 
-import static com.linecorp.armeria.common.file.AsyncWatchService.runSafely;
-
 import java.nio.file.Path;
-import java.nio.file.WatchEvent;
 
 import com.google.common.base.MoreObjects;
 
@@ -49,10 +46,6 @@ public final class WatchKey {
         this.path = path;
         this.registry = registry;
         this.callback = callback;
-    }
-
-    void invokeEvent(WatchEvent<?> event) {
-        runSafely(path, event, callback);
     }
 
     DirectoryWatcher callback() {
