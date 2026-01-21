@@ -49,9 +49,9 @@ import com.google.errorprone.annotations.concurrent.GuardedBy;
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.internal.common.util.ReentrantShortLock;
 
-final class AsyncWatchService implements SafeCloseable {
+final class DirectoryWatcherRegistry implements SafeCloseable {
 
-    private static final Logger logger = LoggerFactory.getLogger(AsyncWatchService.class);
+    private static final Logger logger = LoggerFactory.getLogger(DirectoryWatcherRegistry.class);
 
     private final Thread watchThread;
     private final Thread callbackThread;
@@ -62,7 +62,7 @@ final class AsyncWatchService implements SafeCloseable {
     private final BlockingDeque<java.nio.file.WatchKey> watchKeys = new LinkedBlockingDeque<>();
     private volatile boolean closed;
 
-    AsyncWatchService(String name, FileSystem fileSystem) {
+    DirectoryWatcherRegistry(String name, FileSystem fileSystem) {
         try {
             watchService = fileSystem.newWatchService();
         } catch (IOException e) {

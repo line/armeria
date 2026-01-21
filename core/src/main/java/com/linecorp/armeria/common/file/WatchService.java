@@ -33,8 +33,7 @@ import com.linecorp.armeria.internal.common.util.ReentrantShortLock;
 @UnstableApi
 public final class WatchService implements AutoCloseable {
 
-    private final Map<FileSystem, AsyncWatchService> fileSystemWatchServiceMap =
-            new HashMap<>();
+    private final Map<FileSystem, DirectoryWatcherRegistry> registryMap = new HashMap<>();
     private final ReentrantLock lock = new ReentrantShortLock();
 
     /**
@@ -50,8 +49,8 @@ public final class WatchService implements AutoCloseable {
         final Path normalizedPath = path.toAbsolutePath().normalize();
         lock.lock();
         try {
-            final AsyncWatchService watchServiceContext = fileSystemWatchServiceMap.computeIfAbsent(
-                    path.getFileSystem(), fileSystem -> new AsyncWatchService(
+            final DirectoryWatcherRegistry watchServiceContext = registryMap.computeIfAbsent(
+                    path.getFileSystem(), fileSystem -> new DirectoryWatcherRegistry(
                             "armeria-file-watcher-" + fileSystem.getClass().getName(),
                             fileSystem));
             final WatchKey key = new WatchKey(normalizedPath, this, callback);
@@ -66,14 +65,14 @@ public final class WatchService implements AutoCloseable {
         lock.lock();
         try {
             final FileSystem fileSystem = watchKey.path().getFileSystem();
-            final AsyncWatchService watchServiceContext = fileSystemWatchServiceMap.get(fileSystem);
+            final DirectoryWatcherRegistry watchServiceContext = registryMap.get(fileSystem);
             if (watchServiceContext == null) {
                 return;
             }
             watchServiceContext.unregister(watchKey);
             if (!watchServiceContext.hasWatchers()) {
                 watchServiceContext.close();
-                fileSystemWatchServiceMap.remove(fileSystem);
+                registryMap.remove(fileSystem);
             }
         } finally {
             lock.unlock();
@@ -82,17 +81,17 @@ public final class WatchService implements AutoCloseable {
 
     @VisibleForTesting
     boolean hasWatchers() {
-        return fileSystemWatchServiceMap.values().stream().anyMatch(AsyncWatchService::hasWatchers);
+        return registryMap.values().stream().anyMatch(DirectoryWatcherRegistry::hasWatchers);
     }
 
     @Override
     public void close() throws Exception {
         lock.lock();
         try {
-            for (AsyncWatchService context : fileSystemWatchServiceMap.values()) {
+            for (DirectoryWatcherRegistry context : registryMap.values()) {
                 context.close();
             }
-            fileSystemWatchServiceMap.clear();
+            registryMap.clear();
         } finally {
             lock.unlock();
         }

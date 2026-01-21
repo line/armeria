@@ -27,10 +27,10 @@ class FileWatcherRunnableTest {
 
     @Test
     void testPropertyFileWatcherRunnableExitsOnInterrupt() throws Exception {
-        final AsyncWatchService fileWatcherRunnable =
-                new AsyncWatchService("my-service", FileSystems.getDefault());
-        await().untilAsserted(() -> assertThat(fileWatcherRunnable.isRunning()).isTrue());
-        fileWatcherRunnable.close();
-        await().untilAsserted(() -> assertThat(fileWatcherRunnable.isRunning()).isFalse());
+        final DirectoryWatcherRegistry registry =
+                new DirectoryWatcherRegistry("my-service", FileSystems.getDefault());
+        await().untilAsserted(() -> assertThat(registry.isRunning()).isTrue());
+        registry.close();
+        await().untilAsserted(() -> assertThat(registry.isRunning()).isFalse());
     }
 }
