@@ -37,11 +37,9 @@ final class BootstrapClusters implements SnapshotWatcher<ClusterSnapshot> {
     private final Bootstrap bootstrap;
     private final XdsClusterManager clusterManager;
     private final List<SnapshotWatcher<? super ClusterSnapshot>> watchers;
-    final LocalCluster localCluster;
 
     BootstrapClusters(Bootstrap bootstrap, XdsClusterManager clusterManager,
                       SnapshotWatcher<Object> defaultSnapshotWatcher) {
-        localCluster = new LocalCluster(bootstrap);
         this.bootstrap = bootstrap;
         this.clusterManager = clusterManager;
         watchers = ImmutableList.of(defaultSnapshotWatcher, this);
@@ -52,16 +50,7 @@ final class BootstrapClusters implements SnapshotWatcher<ClusterSnapshot> {
             initialFutures.put(cluster.getName(), new CompletableFuture<>());
         }
         for (Cluster cluster: bootstrap.getStaticResources().getClustersList()) {
-            if (cluster.getName().equals(localCluster.localClusterName)) {
-                final List<SnapshotWatcher<? super ClusterSnapshot>> watchers =
-                        ImmutableList.<SnapshotWatcher<? super ClusterSnapshot>>builder()
-                                     .addAll(this.watchers)
-                                     .add(localCluster)
-                                     .build();
-                clusterManager.register(cluster, context, watchers);
-            } else {
-                clusterManager.register(cluster, context, watchers);
-            }
+            clusterManager.register(cluster, context, watchers);
         }
     }
 
@@ -93,32 +82,5 @@ final class BootstrapClusters implements SnapshotWatcher<ClusterSnapshot> {
         return MoreObjects.toStringHelper(this)
                           .add("clusterSnapshots", initialFutures)
                           .toString();
-    }
-
-    LocalCluster localCluster() {
-        return localCluster;
-    }
-
-    static class LocalCluster extends DelegatingWatcher<ClusterSnapshot> {
-
-        final String localClusterName;
-
-        LocalCluster(Bootstrap bootstrap) {
-            localClusterName = bootstrap.getClusterManager().getLocalClusterName();
-        }
-
-        @Override
-        void addWatcher(SnapshotWatcher<? super ClusterSnapshot> watcher) {
-            super.addWatcher(watcher);
-        }
-
-        @Override
-        public void onUpdate(@Nullable ClusterSnapshot snapshot, @Nullable Throwable t) {
-            super.onUpdate(snapshot, t);
-        }
-
-        boolean exists() {
-            return !localClusterName.isEmpty();
-        }
     }
 }

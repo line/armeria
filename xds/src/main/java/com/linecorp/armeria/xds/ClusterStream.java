@@ -20,11 +20,11 @@ import static com.google.common.base.Strings.isNullOrEmpty;
 import static com.linecorp.armeria.xds.XdsType.CLUSTER;
 
 import java.util.List;
+import java.util.Optional;
 
 import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.common.annotation.Nullable;
-import com.linecorp.armeria.xds.BootstrapClusters.LocalCluster;
 import com.linecorp.armeria.xds.client.endpoint.XdsLoadBalancer;
 import com.linecorp.armeria.xds.client.endpoint.XdsLoadBalancerFactory;
 
@@ -90,16 +90,16 @@ final class ClusterStream extends RefCountedStream<ClusterSnapshot> {
         final SnapshotStream<XdsLoadBalancer> lbStream =
                 new EndpointSnapshotNode(resource, context, configSource)
                         .switchMap(endpointSnapshot -> {
-                            if (context.localCluster().exists() &&
-                                !resource.name().equals(context.localCluster().localClusterName)) {
-                                return new LocalClusterStream(context.localCluster())
+                            if (context.clusterManager().hasLocalCluster() &&
+                                !resourceName.equals(context.clusterManager().localClusterName())) {
+                                return new LocalClusterStream(context.clusterManager())
                                         .switchMap(localCluster -> {
                                             return new LoadBalancerStream(resource, endpointSnapshot,
                                                                           loadBalancerFactory, localCluster);
                                         });
                             } else {
                                 return new LoadBalancerStream(resource, endpointSnapshot,
-                                                              loadBalancerFactory, null);
+                                                              loadBalancerFactory, Optional.empty());
                             }
                         });
         final List<TransportSocketMatch> matches = resource.resource().getTransportSocketMatchesList();
@@ -141,18 +141,19 @@ final class ClusterStream extends RefCountedStream<ClusterSnapshot> {
         }
     }
 
-    private static class LocalClusterStream extends RefCountedStream<ClusterSnapshot> {
+    private static class LocalClusterStream extends RefCountedStream<Optional<ClusterSnapshot>> {
 
-        private final LocalCluster localCluster;
+        private final XdsClusterManager xdsClusterManager;
 
-        LocalClusterStream(LocalCluster localCluster) {
-            this.localCluster = localCluster;
+        LocalClusterStream(XdsClusterManager xdsClusterManager) {
+            this.xdsClusterManager = xdsClusterManager;
         }
 
         @Override
-        protected Subscription onStart(SnapshotWatcher<ClusterSnapshot> watcher) {
-            localCluster.addWatcher(watcher);
-            return () -> localCluster.removeWatcher(watcher);
+        protected Subscription onStart(SnapshotWatcher<Optional<ClusterSnapshot>> watcher) {
+            // local clusters are optional - late local clusters shouldn't block upstream cluster loading
+            watcher.onUpdate(Optional.empty(), null);
+            return xdsClusterManager.registerLocalWatcher(watcher);
         }
     }
 
@@ -167,11 +168,11 @@ final class ClusterStream extends RefCountedStream<ClusterSnapshot> {
         LoadBalancerStream(ClusterXdsResource clusterXdsResource,
                            EndpointSnapshot endpointSnapshot,
                            XdsLoadBalancerFactory loadBalancerFactory,
-                           @Nullable ClusterSnapshot localSnapshot) {
+                           Optional<ClusterSnapshot> localSnapshot) {
             this.clusterXdsResource = clusterXdsResource;
             this.endpointSnapshot = endpointSnapshot;
             this.loadBalancerFactory = loadBalancerFactory;
-            localLoadBalancer = localSnapshot != null ? localSnapshot.loadBalancer() : null;
+            localLoadBalancer = localSnapshot.isPresent() ? localSnapshot.get().loadBalancer() : null;
         }
 
         @Override

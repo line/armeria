@@ -104,6 +104,12 @@ final class SubsetLoadBalancer implements XdsLoadBalancer {
         return allEndpointsLoadBalancer.endpointSnapshot();
     }
 
+    @Nullable
+    @Override
+    public LoadBalancerState localLoadBalancer() {
+        return allEndpointsLoadBalancer.localLoadBalancer();
+    }
+
     private Map<Struct, XdsLoadBalancer> createSubsetLoadBalancers(PrioritySet prioritySet) {
         final Map<Struct, List<Endpoint>> endpointsPerFilterStruct = new HashMap<>();
         for (LbSubsetSelector subsetSelector: lbSubsetConfig.getSubsetSelectorsList()) {

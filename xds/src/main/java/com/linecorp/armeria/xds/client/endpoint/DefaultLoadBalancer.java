@@ -42,11 +42,14 @@ final class DefaultLoadBalancer implements XdsLoadBalancer {
 
     private final DefaultLbStateFactory.DefaultLbState lbState;
     @Nullable
+    private final XdsLoadBalancer localLoadBalancer;
+    @Nullable
     private final LocalityRoutingState localityRoutingState;
 
     DefaultLoadBalancer(PrioritySet prioritySet, Locality locality,
                         @Nullable XdsLoadBalancer localLoadBalancer) {
         lbState = DefaultLbStateFactory.newInstance(prioritySet);
+        this.localLoadBalancer = localLoadBalancer;
         if (localLoadBalancer != null) {
             localityRoutingState = new LocalityRoutingStateFactory(locality)
                     .create(prioritySet, localLoadBalancer);
@@ -235,6 +238,12 @@ final class DefaultLoadBalancer implements XdsLoadBalancer {
     @Override
     public EndpointSnapshot endpointSnapshot() {
         return lbState.prioritySet().endpointSnapshot();
+    }
+
+    @Nullable
+    @Override
+    public LoadBalancerState localLoadBalancer() {
+        return localLoadBalancer;
     }
 
     static class PriorityAndAvailability {

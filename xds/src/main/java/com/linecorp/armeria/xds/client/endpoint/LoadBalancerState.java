@@ -22,6 +22,7 @@ import java.util.Map;
 import com.google.protobuf.Struct;
 
 import com.linecorp.armeria.client.Endpoint;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.xds.EndpointSnapshot;
 
@@ -80,4 +81,10 @@ public interface LoadBalancerState {
      * TBU.
      */
     EndpointSnapshot endpointSnapshot();
+
+    /**
+     * TBU.
+     */
+    @Nullable
+    LoadBalancerState localLoadBalancer();
 }

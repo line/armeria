@@ -69,8 +69,7 @@ final class XdsBootstrapImpl implements XdsBootstrap {
                 configSourceMapper, meterRegistry, meterIdPrefix);
         subscriptionContext = new DefaultSubscriptionContext(
                 eventLoop, clusterManager, configSourceMapper, controlPlaneClientManager,
-                meterRegistry, meterIdPrefix, watchService, bootstrapClusters.localCluster(),
-                bootstrapSecrets);
+                meterRegistry, meterIdPrefix, watchService, bootstrapSecrets);
         bootstrapClusters.initializeStaticClusters(subscriptionContext);
         listenerManager = new ListenerManager(eventLoop, bootstrap, subscriptionContext, defaultWatcher);
     }

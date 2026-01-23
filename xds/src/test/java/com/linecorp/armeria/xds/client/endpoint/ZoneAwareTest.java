@@ -27,6 +27,7 @@ import static com.linecorp.armeria.xds.XdsTestUtil.pollLoadBalancer;
 import static io.envoyproxy.envoy.config.core.v3.HealthStatus.HEALTHY;
 import static io.envoyproxy.envoy.config.core.v3.HealthStatus.UNHEALTHY;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.awaitility.Awaitility.await;
 
 import java.util.HashSet;
 import java.util.Set;
@@ -95,6 +96,7 @@ class ZoneAwareTest {
                 .build();
         try (XdsBootstrap xdsBootstrap = XdsBootstrap.of(bootstrap);
              ListenerRoot root = xdsBootstrap.listenerRoot("listener")) {
+            awaitLocalLoadBalancer(root, "cluster", cluster);
             final XdsLoadBalancer loadBalancer = pollLoadBalancer(root, "cluster", cluster);
             final ClientRequestContext ctx = ClientRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
             final SettableXdsRandom random = new SettableXdsRandom();
@@ -146,6 +148,7 @@ class ZoneAwareTest {
                 .build();
         try (XdsBootstrap xdsBootstrap = XdsBootstrap.of(bootstrap);
              ListenerRoot root = xdsBootstrap.listenerRoot("listener")) {
+            awaitLocalLoadBalancer(root, "cluster", cluster);
             final XdsLoadBalancer loadBalancer = pollLoadBalancer(root, "cluster", cluster);
             final ClientRequestContext ctx = ClientRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
             final SettableXdsRandom random = new SettableXdsRandom();
@@ -197,6 +200,7 @@ class ZoneAwareTest {
                 .build();
         try (XdsBootstrap xdsBootstrap = XdsBootstrap.of(bootstrap);
              ListenerRoot root = xdsBootstrap.listenerRoot("listener")) {
+            awaitLocalLoadBalancer(root, "cluster", cluster);
             final XdsLoadBalancer loadBalancer = pollLoadBalancer(root, "cluster", cluster);
             final ClientRequestContext ctx = ClientRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
             final SettableXdsRandom random = new SettableXdsRandom();
@@ -245,6 +249,7 @@ class ZoneAwareTest {
                 .build();
         try (XdsBootstrap xdsBootstrap = XdsBootstrap.of(bootstrap);
              ListenerRoot root = xdsBootstrap.listenerRoot("listener")) {
+            awaitLocalLoadBalancer(root, "cluster", cluster);
             final XdsLoadBalancer loadBalancer = pollLoadBalancer(root, "cluster", cluster);
             final ClientRequestContext ctx = ClientRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
             final SettableXdsRandom random = new SettableXdsRandom();
@@ -263,7 +268,7 @@ class ZoneAwareTest {
 
     @ParameterizedTest
     @CsvSource(value = {
-            "1000:regionC"
+            "0:regionB", "999:regionB", "1000:regionC", "2999:regionC"
     }, delimiter = ':')
     void multiResidualRegion(long localThreshold, String expectedRegion) throws Exception {
         final Listener listener = staticResourceListener();
@@ -295,6 +300,7 @@ class ZoneAwareTest {
                 .build();
         try (XdsBootstrap xdsBootstrap = XdsBootstrap.of(bootstrap);
              ListenerRoot root = xdsBootstrap.listenerRoot("listener")) {
+            awaitLocalLoadBalancer(root, "cluster", cluster);
             final XdsLoadBalancer loadBalancer = pollLoadBalancer(root, "cluster", cluster);
             final ClientRequestContext ctx = ClientRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
             final SettableXdsRandom random = new SettableXdsRandom();
@@ -349,6 +355,7 @@ class ZoneAwareTest {
                 .build();
         try (XdsBootstrap xdsBootstrap = XdsBootstrap.of(bootstrap);
              ListenerRoot root = xdsBootstrap.listenerRoot("listener")) {
+            awaitLocalLoadBalancer(root, "cluster", cluster);
             final XdsLoadBalancer loadBalancer = pollLoadBalancer(root, "cluster", cluster);
             final ClientRequestContext ctx = ClientRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
             final SettableXdsRandom random = new SettableXdsRandom();
@@ -372,7 +379,7 @@ class ZoneAwareTest {
     }
 
     @ParameterizedTest
-    @CsvSource(value = {"0:39:local"}, delimiter = ':')
+    @CsvSource(value = {"0:39:local", "0:40:local", "1:39:regionA", "1:40:local"}, delimiter = ':')
     void priorityOneNotUsed(int priority, int selectPriority, String expectedRegion) throws Exception {
         final Listener listener = staticResourceListener();
         final ClusterLoadAssignment loadAssignment =
@@ -403,6 +410,7 @@ class ZoneAwareTest {
                 .build();
         try (XdsBootstrap xdsBootstrap = XdsBootstrap.of(bootstrap);
              ListenerRoot root = xdsBootstrap.listenerRoot("listener")) {
+            awaitLocalLoadBalancer(root, "cluster", cluster);
             final XdsLoadBalancer loadBalancer = pollLoadBalancer(root, "cluster", cluster);
             final ClientRequestContext ctx = ClientRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
             final SettableXdsRandom random = new SettableXdsRandom();
@@ -462,6 +470,7 @@ class ZoneAwareTest {
         final Set<String> selectedRegions = new HashSet<>();
         try (XdsBootstrap xdsBootstrap = XdsBootstrap.of(bootstrap);
              ListenerRoot root = xdsBootstrap.listenerRoot("listener")) {
+            awaitLocalLoadBalancer(root, "cluster", cluster);
             final XdsLoadBalancer loadBalancer = pollLoadBalancer(root, "cluster", cluster);
             final ClientRequestContext ctx = ClientRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
             final SettableXdsRandom random = new SettableXdsRandom();
@@ -492,5 +501,13 @@ class ZoneAwareTest {
             lbEndpointsBuilder.add(endpoint(region + "-unhealthy-" + i + ".com", 8080, UNHEALTHY));
         }
         return XdsTestResources.localityLbEndpoints(locality(region), lbEndpointsBuilder.build());
+    }
+
+    private static void awaitLocalLoadBalancer(ListenerRoot root, String clusterName, Cluster cluster) {
+        await().untilAsserted(() -> {
+            final XdsLoadBalancer loadBalancer = pollLoadBalancer(root, clusterName, cluster);
+            assertThat(loadBalancer).isNotNull();
+            assertThat(loadBalancer.localLoadBalancer()).isNotNull();
+        });
     }
 }

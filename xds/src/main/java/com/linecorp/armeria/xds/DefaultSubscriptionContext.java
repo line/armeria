@@ -18,7 +18,6 @@ package com.linecorp.armeria.xds;
 
 import com.linecorp.armeria.common.file.WatchService;
 import com.linecorp.armeria.common.metric.MeterIdPrefix;
-import com.linecorp.armeria.xds.BootstrapClusters.LocalCluster;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import io.netty.util.concurrent.EventExecutor;
@@ -32,15 +31,13 @@ final class DefaultSubscriptionContext implements SubscriptionContext {
     private final MeterRegistry meterRegistry;
     private final MeterIdPrefix meterIdPrefix;
     private final WatchService watchService;
-    private final LocalCluster localCluster;
     private final BootstrapSecrets bootstrapSecrets;
 
     DefaultSubscriptionContext(EventExecutor eventLoop, XdsClusterManager clusterManager,
                                ConfigSourceMapper configSourceMapper,
                                ControlPlaneClientManager controlPlaneClientManager,
                                MeterRegistry meterRegistry, MeterIdPrefix meterIdPrefix,
-                               WatchService watchService, LocalCluster localCluster,
-                               BootstrapSecrets bootstrapSecrets) {
+                               WatchService watchService, BootstrapSecrets bootstrapSecrets) {
         this.eventLoop = eventLoop;
         this.clusterManager = clusterManager;
         this.configSourceMapper = configSourceMapper;
@@ -48,7 +45,6 @@ final class DefaultSubscriptionContext implements SubscriptionContext {
         this.meterRegistry = meterRegistry;
         this.meterIdPrefix = meterIdPrefix;
         this.watchService = watchService;
-        this.localCluster = localCluster;
         this.bootstrapSecrets = bootstrapSecrets;
     }
 
@@ -85,11 +81,6 @@ final class DefaultSubscriptionContext implements SubscriptionContext {
     @Override
     public XdsClusterManager clusterManager() {
         return clusterManager;
-    }
-
-    @Override
-    public LocalCluster localCluster() {
-        return localCluster;
     }
 
     @Override

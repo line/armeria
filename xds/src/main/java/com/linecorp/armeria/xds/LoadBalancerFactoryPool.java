@@ -20,9 +20,6 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
-import com.google.common.base.Strings;
-
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.metric.MeterIdPrefix;
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.xds.client.endpoint.XdsLoadBalancerFactory;
@@ -36,26 +33,13 @@ class LoadBalancerFactoryPool implements SafeCloseable {
     private final Map<String, XdsLoadBalancerFactory> factories = new HashMap<>();
     private final Map<String, DelayedClose> delayedCloses = new HashMap<>();
 
-    @Nullable
-    private final XdsLoadBalancerFactory localLoadBalancer;
     private final MeterIdPrefix meterIdPrefix;
     private final MeterRegistry meterRegistry;
     private final EventExecutor eventLoop;
     private final Bootstrap bootstrap;
-    private final String localClusterName;
 
-    LoadBalancerFactoryPool(String localClusterName,
-                            MeterIdPrefix meterIdPrefix, MeterRegistry meterRegistry,
+    LoadBalancerFactoryPool(MeterIdPrefix meterIdPrefix, MeterRegistry meterRegistry,
                             EventExecutor eventLoop, Bootstrap bootstrap) {
-        this.localClusterName = localClusterName;
-        if (!Strings.isNullOrEmpty(localClusterName) && bootstrap.getNode().hasLocality()) {
-            final DefaultXdsLoadBalancerLifecycleObserver observer =
-                    new DefaultXdsLoadBalancerLifecycleObserver(meterIdPrefix, meterRegistry, localClusterName);
-            localLoadBalancer = XdsLoadBalancerFactory.of(eventLoop, bootstrap.getNode().getLocality(),
-                                                          observer);
-        } else {
-            localLoadBalancer = null;
-        }
         this.meterIdPrefix = meterIdPrefix;
         this.meterRegistry = meterRegistry;
         this.eventLoop = eventLoop;
@@ -64,9 +48,6 @@ class LoadBalancerFactoryPool implements SafeCloseable {
 
     XdsLoadBalancerFactory register(String name) {
         maybeRemoveDelayedClose(name);
-        if (name.equals(localClusterName) && localLoadBalancer != null) {
-            return localLoadBalancer;
-        }
         final XdsLoadBalancerFactory cached = factories.get(name);
         if (cached != null) {
             return cached;
@@ -99,9 +80,6 @@ class LoadBalancerFactoryPool implements SafeCloseable {
         }
         for (DelayedClose delayedClose : delayedCloses.values()) {
             delayedClose.closeFuture.cancel(true);
-        }
-        if (localLoadBalancer != null) {
-            localLoadBalancer.close();
         }
     }
 

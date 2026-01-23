@@ -21,6 +21,7 @@ import static com.google.common.base.Preconditions.checkArgument;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 import com.linecorp.armeria.common.metric.MeterIdPrefix;
 import com.linecorp.armeria.common.util.SafeCloseable;
@@ -39,15 +40,33 @@ final class XdsClusterManager implements SafeCloseable {
 
     private final EventExecutor eventLoop;
     private final LoadBalancerFactoryPool loadBalancerFactoryPool;
+    private final String localClusterName;
 
     private final Map<WatcherKey, Subscription> subscriptions = new HashMap<>();
 
     XdsClusterManager(EventExecutor eventLoop, Bootstrap bootstrap, MeterIdPrefix meterIdPrefix,
                       MeterRegistry meterRegistry) {
         this.eventLoop = eventLoop;
-        final String localClusterName = bootstrap.getClusterManager().getLocalClusterName();
-        loadBalancerFactoryPool = new LoadBalancerFactoryPool(localClusterName, meterIdPrefix,
+        localClusterName = bootstrap.getClusterManager().getLocalClusterName();
+        loadBalancerFactoryPool = new LoadBalancerFactoryPool(meterIdPrefix,
                                                               meterRegistry, eventLoop, bootstrap);
+    }
+
+    boolean hasLocalCluster() {
+        return !localClusterName.isEmpty();
+    }
+
+    String localClusterName() {
+        return localClusterName;
+    }
+
+    Subscription registerLocalWatcher(SnapshotWatcher<Optional<ClusterSnapshot>> watcher) {
+        final ClusterStream clusterStream = nodes.get(localClusterName);
+        if (clusterStream == null) {
+            return SnapshotStream.just(Optional.<ClusterSnapshot>empty())
+                                 .subscribe(watcher);
+        }
+        return clusterStream.map(Optional::of).subscribe(watcher);
     }
 
     void register(Cluster cluster, SubscriptionContext context,
