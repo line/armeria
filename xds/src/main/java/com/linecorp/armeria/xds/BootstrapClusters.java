@@ -37,19 +37,31 @@ final class BootstrapClusters implements SnapshotWatcher<ClusterSnapshot> {
     private final Bootstrap bootstrap;
     private final XdsClusterManager clusterManager;
     private final List<SnapshotWatcher<? super ClusterSnapshot>> watchers;
+    private final String localClusterName;
 
     BootstrapClusters(Bootstrap bootstrap, XdsClusterManager clusterManager,
                       SnapshotWatcher<Object> defaultSnapshotWatcher) {
         this.bootstrap = bootstrap;
         this.clusterManager = clusterManager;
         watchers = ImmutableList.of(defaultSnapshotWatcher, this);
+        localClusterName = bootstrap.getClusterManager().getLocalClusterName();
     }
 
     void initializeStaticClusters(SubscriptionContext context) {
         for (Cluster cluster: bootstrap.getStaticResources().getClustersList()) {
             initialFutures.put(cluster.getName(), new CompletableFuture<>());
+            if (!cluster.getName().equals(localClusterName)) {
+                continue;
+            }
+            // register the local cluster first
+            clusterManager.register(cluster, context, watchers);
         }
+
+        // register the rest of the clusters
         for (Cluster cluster: bootstrap.getStaticResources().getClustersList()) {
+            if (cluster.getName().equals(localClusterName)) {
+                continue;
+            }
             clusterManager.register(cluster, context, watchers);
         }
     }
