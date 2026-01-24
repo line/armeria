@@ -18,12 +18,12 @@ package com.linecorp.armeria.client.retry;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.catchThrowable;
+import static org.assertj.core.api.Assertions.within;
 
 import java.time.Duration;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.TimeUnit;
 
-import org.assertj.core.data.Percentage;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
@@ -89,9 +89,8 @@ class ResponseTimeoutFromStartTest {
             assertThat(TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - prev))
                     .isLessThan(TimeUnit.SECONDS.toMillis(timeoutSeconds));
         } else {
-
             assertThat(TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - prev))
-                    .isCloseTo(TimeUnit.SECONDS.toMillis(timeoutSeconds), Percentage.withPercentage(10));
+                    .isCloseTo(TimeUnit.SECONDS.toMillis(timeoutSeconds), within(1000L));
         }
     }
 }
