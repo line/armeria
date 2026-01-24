@@ -125,6 +125,8 @@ public final class VirtualHostBuilder implements TlsSetters, ServiceConfigsBuild
     @Nullable
     private String hostnamePattern;
     private int port = -1;
+    @Nullable
+    private final ServerPort serverPort;
     private String baseContextPath = "/";
     @Nullable
     private SelfSignedCertificate selfSignedCertificate;
@@ -182,6 +184,7 @@ public final class VirtualHostBuilder implements TlsSetters, ServiceConfigsBuild
         this.serverBuilder = requireNonNull(serverBuilder, "serverBuilder");
         this.defaultVirtualHost = defaultVirtualHost;
         portBased = false;
+        serverPort = null;
     }
 
     /**
@@ -193,6 +196,21 @@ public final class VirtualHostBuilder implements TlsSetters, ServiceConfigsBuild
     VirtualHostBuilder(ServerBuilder serverBuilder, int port) {
         this.serverBuilder = requireNonNull(serverBuilder, "serverBuilder");
         this.port = port;
+        portBased = true;
+        defaultVirtualHost = true;
+        serverPort = null;
+    }
+
+    /**
+     * Creates a new {@link VirtualHostBuilder}.
+     *
+     * @param serverBuilder the parent {@link ServerBuilder} to be returned by {@link #and()}
+     * @param serverPort the {@link ServerPort} that this virtual host binds to
+     */
+    VirtualHostBuilder(ServerBuilder serverBuilder, ServerPort serverPort) {
+        this.serverBuilder = requireNonNull(serverBuilder, "serverBuilder");
+        this.serverPort = requireNonNull(serverPort, "serverPort");
+        this.port = serverPort.localAddress().getPort();
         portBased = true;
         defaultVirtualHost = true;
     }
@@ -1501,7 +1519,7 @@ public final class VirtualHostBuilder implements TlsSetters, ServiceConfigsBuild
         final SslContext sslContext = sslContext(template, sslContextFactory, serverTlsSpec);
 
         final VirtualHost virtualHost =
-                new VirtualHost(defaultHostname, hostnamePattern, port,
+                new VirtualHost(defaultHostname, hostnamePattern, port, serverPort,
                                 sslContext, tlsProvider, tlsEngineType,
                                 serviceConfigs, fallbackServiceConfig, rejectedRouteHandler,
                                 accessLoggerMapper, defaultServiceNaming, defaultLogName, requestTimeoutMillis,
@@ -1610,6 +1628,15 @@ public final class VirtualHostBuilder implements TlsSetters, ServiceConfigsBuild
 
     int port() {
         return port;
+    }
+
+    /**
+     * Returns the {@link ServerPort} that this virtual host binds to,
+     * or {@code null} if this virtual host is not based on a {@link ServerPort}.
+     */
+    @Nullable
+    ServerPort serverPort() {
+        return serverPort;
     }
 
     boolean defaultVirtualHost() {

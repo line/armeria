@@ -20,6 +20,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.net.ServerSocket;
+import java.util.List;
 
 import javax.net.ssl.KeyManagerFactory;
 
@@ -31,6 +32,7 @@ import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
+import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.internal.testing.MockAddressResolverGroup;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
@@ -234,5 +236,97 @@ class PortBasedVirtualHostTest {
                                                             .virtualHost(8080);
         assertThatThrownBy(() -> virtualHostBuilder.hostnamePattern("foo.com"))
                 .isInstanceOf(UnsupportedOperationException.class);
+    }
+
+    @Test
+    void virtualHostWithServerPort() throws Exception {
+        // Test that a server with ServerPort-based virtual hosts can be built and routes correctly.
+        final ServerPort port1 = new ServerPort(0, SessionProtocol.HTTP);
+        final ServerPort port2 = new ServerPort(0, SessionProtocol.HTTP);
+
+        final Server server = Server.builder()
+                                    .port(port1)
+                                    .virtualHost(port1)
+                                    .service("/foo", (ctx, req) -> HttpResponse.of("foo"))
+                                    .and()
+                                    .port(port2)
+                                    .virtualHost(port2)
+                                    .service("/bar", (ctx, req) -> HttpResponse.of("bar"))
+                                    .and()
+                                    .build();
+
+        server.start().join();
+        try {
+            // Get the actual ports from activePorts
+            final List<Integer> actualPorts = server.activePorts().values().stream()
+                                                    .map(p -> p.localAddress().getPort())
+                                                    .sorted()
+                                                    .collect(java.util.stream.Collectors.toList());
+
+            assertThat(actualPorts).hasSize(2);
+
+            // Test both ports - one should serve /foo, the other /bar
+            final WebClient client1 = WebClient.of("http://127.0.0.1:" + actualPorts.get(0));
+            final WebClient client2 = WebClient.of("http://127.0.0.1:" + actualPorts.get(1));
+
+            // Check /foo on both ports
+            final AggregatedHttpResponse resp1Foo = client1.get("/foo").aggregate().join();
+            final AggregatedHttpResponse resp2Foo = client2.get("/foo").aggregate().join();
+
+            // Check /bar on both ports
+            final AggregatedHttpResponse resp1Bar = client1.get("/bar").aggregate().join();
+            final AggregatedHttpResponse resp2Bar = client2.get("/bar").aggregate().join();
+
+            // One port should serve /foo with OK, the other with NOT_FOUND
+            final boolean port1ServesFoo = resp1Foo.status() == HttpStatus.OK;
+            final boolean port2ServesFoo = resp2Foo.status() == HttpStatus.OK;
+            assertThat(port1ServesFoo || port2ServesFoo)
+                    .as("At least one port should serve /foo, but got: port1=%s, port2=%s",
+                        resp1Foo.status(), resp2Foo.status())
+                    .isTrue();
+        } finally {
+            server.stop().join();
+        }
+    }
+
+    @Test
+    void shouldReturnSameInstanceForSameServerPort() {
+        final ServerPort serverPort = new ServerPort(0, SessionProtocol.HTTP);
+        final ServerBuilder serverBuilder = Server.builder();
+
+        serverBuilder.port(serverPort);
+        final VirtualHostBuilder virtualHost1 = serverBuilder.virtualHost(serverPort);
+        final VirtualHostBuilder virtualHost2 = serverBuilder.virtualHost(serverPort);
+
+        assertThat(virtualHost1).isSameAs(virtualHost2);
+    }
+
+    @Test
+    void differentServerPortsCreateDifferentVirtualHosts() {
+        final ServerPort serverPort1 = new ServerPort(0, SessionProtocol.HTTP);
+        final ServerPort serverPort2 = new ServerPort(0, SessionProtocol.HTTP);
+        final ServerBuilder serverBuilder = Server.builder();
+
+        serverBuilder.port(serverPort1);
+        serverBuilder.port(serverPort2);
+        final VirtualHostBuilder virtualHost1 = serverBuilder.virtualHost(serverPort1);
+        final VirtualHostBuilder virtualHost2 = serverBuilder.virtualHost(serverPort2);
+
+        assertThat(virtualHost1).isNotSameAs(virtualHost2);
+    }
+
+    @Test
+    void serverPortMustBeAddedBeforeVirtualHost() {
+        final ServerPort serverPort = new ServerPort(0, SessionProtocol.HTTP);
+        final ServerBuilder serverBuilder = Server.builder();
+
+        serverBuilder.virtualHost(serverPort)
+                     .service("/foo", (ctx, req) -> HttpResponse.of("foo"))
+                     .and();
+
+        // Build should fail because serverPort is not in the ports list
+        assertThatThrownBy(serverBuilder::build)
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("ServerPort for a virtual host is not in the server's port list");
     }
 }

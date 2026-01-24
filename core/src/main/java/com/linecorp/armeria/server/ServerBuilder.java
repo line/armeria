@@ -1857,6 +1857,51 @@ public final class ServerBuilder implements TlsSetters, ServiceConfigsBuilder<Se
         return virtualHostBuilder;
     }
 
+    /**
+     * Adds the <a href="https://en.wikipedia.org/wiki/Virtual_hosting#Port-based">port-based virtual host</a>
+     * with the specified {@link ServerPort}. This method can be used to bind a virtual host to a
+     * random port (port 0).
+     *
+     * <p>Note that you cannot configure TLS to the port-based virtual host. Configure it to the
+     * {@link ServerBuilder} or a {@linkplain #virtualHost(String) name-based virtual host}.
+     *
+     * <p>Example usage for random ports:
+     * <pre>{@code
+     * ServerPort port1 = new ServerPort(0, SessionProtocol.HTTP);
+     * ServerPort port2 = new ServerPort(0, SessionProtocol.HTTP);
+     *
+     * Server server = Server.builder()
+     *     .port(port1)
+     *     .virtualHost(port1)
+     *         .service("/foo", (ctx, req) -> HttpResponse.of("foo"))
+     *     .and()
+     *     .port(port2)
+     *     .virtualHost(port2)
+     *         .service("/bar", (ctx, req) -> HttpResponse.of("bar"))
+     *     .and()
+     *     .build();
+     * }</pre>
+     *
+     * @param serverPort the {@link ServerPort} that this virtual host binds to
+     * @return {@link VirtualHostBuilder} for building the virtual host
+     */
+    public VirtualHostBuilder virtualHost(ServerPort serverPort) {
+        requireNonNull(serverPort, "serverPort");
+
+        // Look for a virtual host that has already been made with the same ServerPort instance.
+        final Optional<VirtualHostBuilder> vhost =
+                virtualHostBuilders.stream()
+                                   .filter(v -> v.serverPort() == serverPort && v.defaultVirtualHost())
+                                   .findFirst();
+        if (vhost.isPresent()) {
+            return vhost.get();
+        }
+
+        final VirtualHostBuilder virtualHostBuilder = new VirtualHostBuilder(this, serverPort);
+        virtualHostBuilders.add(virtualHostBuilder);
+        return virtualHostBuilder;
+    }
+
     private VirtualHostBuilder findOrCreateVirtualHostBuilder(String hostnamePattern) {
         requireNonNull(hostnamePattern, "hostnamePattern");
         final HostAndPort hostAndPort = HostAndPort.fromString(hostnamePattern);
@@ -2456,6 +2501,16 @@ public final class ServerBuilder implements TlsSetters, ServiceConfigsBuilder<Se
             final boolean portMatched = portNumbers.stream().anyMatch(port -> port == virtualHostPort);
             checkState(portMatched, "virtual host port: %s (expected: one of %s)",
                        virtualHostPort, portNumbers);
+        }
+
+        // Validate that ServerPort-based virtual hosts have their ServerPort in the ports list.
+        for (VirtualHostBuilder vhb : virtualHostBuilders) {
+            final ServerPort serverPort = vhb.serverPort();
+            if (serverPort != null) {
+                checkState(this.ports.contains(serverPort),
+                           "The ServerPort for a virtual host is not in the server's port list. " +
+                           "Please add the ServerPort using port(ServerPort) before creating a virtual host.");
+            }
         }
 
         checkState(defaultSslContext == null || tlsProvider == null,
