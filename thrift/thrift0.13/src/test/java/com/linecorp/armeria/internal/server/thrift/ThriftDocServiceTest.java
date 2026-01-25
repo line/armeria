@@ -57,6 +57,7 @@ import com.linecorp.armeria.server.thrift.THttpService;
 import com.linecorp.armeria.testing.junit4.server.ServerRule;
 
 import testing.thrift.hbase.Hbase;
+import testing.thrift.main.FileService;
 import testing.thrift.main.FooService;
 import testing.thrift.main.HelloService;
 import testing.thrift.main.HelloService.hello_args;
@@ -98,6 +99,8 @@ public class ThriftDocServiceTest {
                     THttpService.of(mock(Hbase.AsyncIface.class));
             final THttpService onewayHelloService =
                     THttpService.of(mock(OnewayHelloService.AsyncIface.class));
+            final THttpService fileService =
+                    THttpService.of(mock(FileService.AsyncIface.class));
 
             sb.service("/", helloAndSleepService);
             sb.service("/foo", fooService);
@@ -105,6 +108,7 @@ public class ThriftDocServiceTest {
             sb.serviceUnder("/foo", fooService);
             sb.service("/hbase", hbaseService);
             sb.service("/oneway", onewayHelloService);
+            sb.service("/file", fileService);
 
             sb.serviceUnder(
                     "/docs/",
@@ -156,6 +160,12 @@ public class ThriftDocServiceTest {
                         .build(),
                 new EntryBuilder(OnewayHelloService.class)
                         .endpoint(EndpointInfo.builder("*", "/oneway")
+                                              .defaultFormat(BINARY)
+                                              .availableFormats(allThriftFormats)
+                                              .build())
+                        .build(),
+                new EntryBuilder(FileService.class)
+                        .endpoint(EndpointInfo.builder("*", "/file")
                                               .defaultFormat(BINARY)
                                               .availableFormats(allThriftFormats)
                                               .build())
@@ -261,18 +271,7 @@ public class ThriftDocServiceTest {
         final JsonNode servicesNode = actualJson.get("services");
         assertThat(servicesNode).isNotNull();
 
-        // Find thrift.test.ThriftTest service (from ThriftTest.thrift)
-        JsonNode thriftTestService = null;
-        for (JsonNode service : servicesNode) {
-            if ("thrift.test.ThriftTest".equals(service.get("name").textValue())) {
-                thriftTestService = service;
-                break;
-            }
-        }
-
-        // The ThriftTest service may not be present in this test setup,
-        // so we'll just verify the structure is correct for services that are present.
-        // At minimum, verify that the specification contains method return info.
+        // Verify that all methods have returnInfo and exceptions with the expected structure
         for (JsonNode service : servicesNode) {
             for (JsonNode method : service.get("methods")) {
                 // Every method should have a returnInfo
@@ -293,5 +292,46 @@ public class ThriftDocServiceTest {
                 }
             }
         }
+
+        // Verify that HelloService.hello has the @return docstring from main.thrift
+        JsonNode helloService = null;
+        for (JsonNode service : servicesNode) {
+            if ("testing.thrift.main.HelloService".equals(service.get("name").textValue())) {
+                helloService = service;
+                break;
+            }
+        }
+        assertThat(helloService).isNotNull();
+
+        final JsonNode helloMethod = helloService.get("methods").get(0);
+        assertThat(helloMethod.get("name").textValue()).isEqualTo("hello");
+        final JsonNode helloReturnInfo = helloMethod.get("returnInfo");
+        assertThat(helloReturnInfo.get("typeSignature").textValue()).isEqualTo("string");
+        // Verify the @return docstring is present
+        final JsonNode helloReturnDescriptionInfo = helloReturnInfo.get("descriptionInfo");
+        assertThat(helloReturnDescriptionInfo.get("docString").textValue())
+                .isEqualTo("a greeting message");
+
+        // Verify that FileService.create has the @throws docstring from main.thrift
+        JsonNode fileService = null;
+        for (JsonNode service : servicesNode) {
+            if ("testing.thrift.main.FileService".equals(service.get("name").textValue())) {
+                fileService = service;
+                break;
+            }
+        }
+        assertThat(fileService).isNotNull();
+
+        final JsonNode createMethod = fileService.get("methods").get(0);
+        assertThat(createMethod.get("name").textValue()).isEqualTo("create");
+        final JsonNode exceptions = createMethod.get("exceptions");
+        assertThat(exceptions.size()).isEqualTo(1);
+        final JsonNode fileServiceException = exceptions.get(0);
+        assertThat(fileServiceException.get("typeSignature").textValue())
+                .isEqualTo("testing.thrift.main.FileServiceException");
+        // Verify the @throws docstring is present
+        final JsonNode exceptionDescriptionInfo = fileServiceException.get("descriptionInfo");
+        assertThat(exceptionDescriptionInfo.get("docString").textValue())
+                .isEqualTo("when the file cannot be created");
     }
 }

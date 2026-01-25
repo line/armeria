@@ -1,7 +1,14 @@
 namespace java testing.thrift.main
 
-// Tests a non-oneway method with a return value.
+/**
+ * Tests a non-oneway method with a return value.
+ */
 service HelloService {
+    /**
+     * Sends a greeting to the specified name.
+     * @param string name - the name to greet
+     * @return string - a greeting message
+     */
     string hello(1:string name)
 }
 
@@ -20,9 +27,20 @@ service TimeService {
     i64 getServerTime()
 }
 
-// Tests exception handling.
+/**
+ * Exception thrown by FileService.
+ */
 exception FileServiceException {}
+
+/**
+ * Tests exception handling.
+ */
 service FileService {
+    /**
+     * Creates a file at the specified path.
+     * @param string path - the path to create
+     * @throws FileServiceException - when the file cannot be created
+     */
     void create(1:string path) throws (1:FileServiceException ouch)
 }
 
