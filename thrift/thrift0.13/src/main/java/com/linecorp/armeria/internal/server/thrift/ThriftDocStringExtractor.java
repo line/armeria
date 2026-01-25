@@ -54,15 +54,17 @@ final class ThriftDocStringExtractor extends DocStringExtractor {
 
     private static final String DELIM = "/";
 
-    // Pattern to match @return tag in docstrings
+    // Pattern to match @return tag in docstrings (must be at beginning of line)
     // Matches: @return <type> - <description> or @return <type> <description>
+    // The tag must appear at the start of a line (after optional whitespace and * for Javadoc-style)
     private static final Pattern RETURN_PATTERN =
-            Pattern.compile("@return\\s+\\S+\\s*[-–]?\\s*(.*)$", Pattern.MULTILINE);
+            Pattern.compile("^[\\s*]*@return\\s+\\S+\\s*[-–]?\\s*(.*)$", Pattern.MULTILINE);
 
-    // Pattern to match @throws tag in docstrings
+    // Pattern to match @throws tag in docstrings (must be at beginning of line)
     // Matches: @throws <type> - <description> or @throws <type> <description>
+    // The tag must appear at the start of a line (after optional whitespace and * for Javadoc-style)
     private static final Pattern THROWS_PATTERN =
-            Pattern.compile("@throws\\s+(\\S+)\\s*[-–]?\\s*(.*)$", Pattern.MULTILINE);
+            Pattern.compile("^[\\s*]*@throws\\s+(\\S+)\\s*[-–]?\\s*(.*)$", Pattern.MULTILINE);
 
     ThriftDocStringExtractor() {
         super("META-INF/armeria/thrift", "com.linecorp.armeria.thrift.jsonDir");

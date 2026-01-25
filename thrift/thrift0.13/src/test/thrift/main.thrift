@@ -178,4 +178,12 @@ service MissingDocStringService {
      * @throws FooServiceException
      */
     void throwsTypeOnly(1:string value) throws (1:FooServiceException e)
+
+    /**
+     * Method with mid-line @return string - should be ignored because tags must be at line start.
+     * Similarly, mid-line @throws FooServiceException - should also be ignored.
+     * @param string value - the input value
+     * @return string - valid return description
+     */
+    string midLineTagsIgnored(1:string value)
 }

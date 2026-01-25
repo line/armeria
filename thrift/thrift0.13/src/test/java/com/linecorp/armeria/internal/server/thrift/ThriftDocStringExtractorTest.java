@@ -112,4 +112,22 @@ class ThriftDocStringExtractorTest {
                 "testing.thrift.main.MissingDocStringService/throwsTypeOnly:throws/testing.thrift.main.FooServiceException"))
                 .isFalse();
     }
+
+    @Test
+    void testMidLineTagsIgnored() throws IOException {
+        // Test that @return and @throws appearing in the middle of a line are ignored
+        final Map<String, String> docStrings = extractor.getAllDocStrings(getClass().getClassLoader());
+
+        // The method has mid-line "@return string" and "@throws FooServiceException" which should be ignored
+        // But it also has a valid "@return string - valid return description" at line start
+        final String methodDoc = docStrings.get(
+                "testing.thrift.main.MissingDocStringService/midLineTagsIgnored");
+        assertThat(methodDoc).contains("mid-line @return string");
+        assertThat(methodDoc).contains("mid-line @throws FooServiceException");
+
+        // The :return entry should only capture the valid line-start @return tag
+        assertThat(docStrings.get(
+                "testing.thrift.main.MissingDocStringService/midLineTagsIgnored:return"))
+                .isEqualTo("valid return description");
+    }
 }

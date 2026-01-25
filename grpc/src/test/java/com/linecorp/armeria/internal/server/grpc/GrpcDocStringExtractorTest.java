@@ -136,4 +136,20 @@ class GrpcDocStringExtractorTest {
         assertThat(DOCSTRINGS).doesNotContainKey(
                 "armeria.grpc.testing.MissingDocStringService/ReturnTypeOnly:return");
     }
+
+    @Test
+    void midLineTagIgnored() {
+        // Test that @return appearing in the middle of a line is ignored
+        // MidLineTagIgnored has mid-line "@return SimpleResponse" which should be ignored,
+        // but also has a valid "@return SimpleResponse - valid return description" at line start
+        assertThat(DOCSTRINGS).containsEntry(
+                "armeria.grpc.testing.MissingDocStringService/MidLineTagIgnored",
+                " A call with mid-line @return SimpleResponse - should be ignored because the tag " +
+                "must be at line start.\n" +
+                " @return SimpleResponse - valid return description\n");
+        // The :return entry should only capture the valid line-start @return tag
+        assertThat(DOCSTRINGS).containsEntry(
+                "armeria.grpc.testing.MissingDocStringService/MidLineTagIgnored:return",
+                "valid return description");
+    }
 }

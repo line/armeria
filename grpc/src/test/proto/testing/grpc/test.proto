@@ -193,4 +193,8 @@ service MissingDocStringService {
   // A call where only the type is specified in the return tag.
   // @return SimpleResponse
   rpc ReturnTypeOnly(SimpleRequest) returns (SimpleResponse);
+
+  // A call with mid-line @return SimpleResponse - should be ignored because the tag must be at line start.
+  // @return SimpleResponse - valid return description
+  rpc MidLineTagIgnored(SimpleRequest) returns (SimpleResponse);
 }
