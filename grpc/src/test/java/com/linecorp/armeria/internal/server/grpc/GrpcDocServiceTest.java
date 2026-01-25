@@ -213,7 +213,8 @@ class GrpcDocServiceTest {
         removeDescriptionInfos(actualJson);
         removeDescriptionInfos(expectedJson);
 
-        assertThatJson(actualJson).whenIgnoringPaths("docServiceRoute").isEqualTo(expectedJson);
+        // Ignore docServiceRoute (route path) and docStrings (loaded by DocStringSupport, not plugin)
+        assertThatJson(actualJson).whenIgnoringPaths("docServiceRoute", "docStrings").isEqualTo(expectedJson);
 
         final AggregatedHttpResponse injected = client.get("/docs/injected.js").aggregate().join();
 
@@ -237,7 +238,9 @@ class GrpcDocServiceTest {
                                                                                  ImmutableList.of(),
                                                                                  docServiceRoute);
         final JsonNode expectedJson = mapper.valueToTree(emptySpecification);
-        assertThatJson(actualJson).isEqualTo(expectedJson);
+        // Note: docStrings are loaded from all services on the virtual host regardless of the filter,
+        // so we ignore them in this comparison. This test focuses on verifying services are excluded.
+        assertThatJson(actualJson).whenIgnoringPaths("docStrings").isEqualTo(expectedJson);
     }
 
     @Test
@@ -294,5 +297,152 @@ class GrpcDocServiceTest {
         if (json.isObject() || json.isArray()) {
             json.forEach(GrpcDocServiceTest::removeDescriptionInfos);
         }
+    }
+
+    @Test
+    void returnInfoStructure() throws Exception {
+        if (TestUtil.isDocServiceDemoMode()) {
+            return;
+        }
+
+        final WebClient client = WebClient.of(server.httpUri());
+        final AggregatedHttpResponse res = client.get("/docs/specification.json").aggregate().join();
+        assertThat(res.status()).isSameAs(HttpStatus.OK);
+
+        final JsonNode actualJson = mapper.readTree(res.contentUtf8());
+        final JsonNode servicesNode = actualJson.get("services");
+        assertThat(servicesNode).isNotNull();
+
+        // Verify that all methods have returnTypeSignature with the expected structure
+        for (JsonNode service : servicesNode) {
+            for (JsonNode method : service.get("methods")) {
+                // Every method should have a returnTypeSignature
+                final JsonNode returnTypeSignature = method.get("returnTypeSignature");
+                assertThat(returnTypeSignature).isNotNull();
+                assertThat(returnTypeSignature.isTextual()).isTrue();
+
+                // Every method should have an exceptionTypeSignatures list (empty for gRPC)
+                final JsonNode exceptionTypeSignatures = method.get("exceptionTypeSignatures");
+                assertThat(exceptionTypeSignatures).isNotNull();
+                assertThat(exceptionTypeSignatures.isArray()).isTrue();
+            }
+        }
+
+        // Verify that TestService.UnaryCall has the expected return type signature
+        JsonNode testService = null;
+        for (JsonNode service : servicesNode) {
+            if (TestServiceGrpc.SERVICE_NAME.equals(service.get("name").textValue())) {
+                testService = service;
+                break;
+            }
+        }
+        assertThat(testService).isNotNull();
+
+        JsonNode unaryCallMethod = null;
+        for (JsonNode method : testService.get("methods")) {
+            if ("UnaryCall".equals(method.get("name").textValue())) {
+                unaryCallMethod = method;
+                break;
+            }
+        }
+        assertThat(unaryCallMethod).isNotNull();
+
+        final JsonNode unaryCallReturnTypeSignature = unaryCallMethod.get("returnTypeSignature");
+        assertThat(unaryCallReturnTypeSignature.textValue())
+                .isEqualTo("armeria.grpc.testing.SimpleResponse");
+    }
+
+    @Test
+    void docStringsAreLoaded() throws Exception {
+        if (TestUtil.isDocServiceDemoMode()) {
+            return;
+        }
+
+        final WebClient client = WebClient.of(server.httpUri());
+        final AggregatedHttpResponse res = client.get("/docs/specification.json").aggregate().join();
+        assertThat(res.status()).isSameAs(HttpStatus.OK);
+
+        final JsonNode actualJson = mapper.readTree(res.contentUtf8());
+
+        // Verify the docStrings map exists and contains the expected docstrings
+        final JsonNode docStrings = actualJson.get("docStrings");
+        assertThat(docStrings)
+                .withFailMessage("docStrings should be present in the specification JSON")
+                .isNotNull();
+
+        // Build expected docStrings for TestService
+        // (comments from test.proto - note the proto format includes leading space and trailing newline)
+        final String serviceName = TestServiceGrpc.SERVICE_NAME;
+        final ObjectNode expectedDocStrings = mapper.createObjectNode();
+
+        // TestService description
+        expectedDocStrings.set(serviceName,
+                descriptionInfo(" A simple service to test the various types of RPCs and experiment with\n" +
+                               " performance with various types of payload.\n"));
+
+        // Method descriptions (include @return in comment for methods that have it)
+        expectedDocStrings.set(serviceName + "/EmptyCall",
+                descriptionInfo(" One empty request followed by one empty response.\n" +
+                               " @return an empty response\n"));
+        expectedDocStrings.set(serviceName + "/EmptyCall:return",
+                descriptionInfo("an empty response"));
+
+        expectedDocStrings.set(serviceName + "/UnaryCall",
+                descriptionInfo(" One request followed by one response.\n" +
+                               " @return a response containing the payload\n"));
+        expectedDocStrings.set(serviceName + "/UnaryCall:return",
+                descriptionInfo("a response containing the payload"));
+
+        expectedDocStrings.set(serviceName + "/UnaryCall2",
+                descriptionInfo(" Another method with one request followed by one response.\n"));
+
+        expectedDocStrings.set(serviceName + "/StreamingOutputCall",
+                descriptionInfo(" One request followed by a sequence of responses (streamed download).\n" +
+                               " The server returns the payload with client desired type and sizes.\n"));
+
+        expectedDocStrings.set(serviceName + "/StreamingInputCall",
+                descriptionInfo(" A sequence of requests followed by one response (streamed upload).\n" +
+                               " The server returns the aggregated size of client payload as the result.\n"));
+
+        expectedDocStrings.set(serviceName + "/FullDuplexCall",
+                descriptionInfo(
+                        " A sequence of requests with each request served by the server immediately.\n" +
+                        " As one request could lead to multiple responses, this interface\n" +
+                        " demonstrates the idea of full duplexing.\n"));
+
+        expectedDocStrings.set(serviceName + "/HalfDuplexCall",
+                descriptionInfo(
+                        " A sequence of requests followed by a sequence of responses.\n" +
+                        " The server buffers all the client requests and then serves them in order. A\n" +
+                        " stream of responses are returned to the client when the server starts with\n" +
+                        " first request.\n"));
+
+        expectedDocStrings.set(serviceName + "/UnimplementedCall",
+                descriptionInfo(" The test server will not implement this method. It will be used\n" +
+                               " to test the behavior when clients call unimplemented methods.\n"));
+
+        expectedDocStrings.set(serviceName + "/UnaryCallWithAllDifferentParameterTypes",
+                descriptionInfo(
+                        " This method's parameter message contains all different types of parameters\n" +
+                        " as well as the response type contains all different types of parameters.\n" +
+                        " Can be used to check any kind of serialization issues.\n"));
+
+        // Filter actual docStrings to only include TestService entries for comparison
+        final ObjectNode filteredActualDocStrings = mapper.createObjectNode();
+        docStrings.fields().forEachRemaining(entry -> {
+            if (entry.getKey().startsWith(serviceName)) {
+                filteredActualDocStrings.set(entry.getKey(), entry.getValue());
+            }
+        });
+
+        // Compare using assertThatJson for clear diff output
+        assertThatJson(filteredActualDocStrings).isEqualTo(expectedDocStrings);
+    }
+
+    private ObjectNode descriptionInfo(String docString) {
+        final ObjectNode node = mapper.createObjectNode();
+        node.put("docString", docString);
+        node.put("markup", "NONE");
+        return node;
     }
 }

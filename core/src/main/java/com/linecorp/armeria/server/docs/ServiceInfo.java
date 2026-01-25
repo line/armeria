@@ -41,6 +41,7 @@ import com.linecorp.armeria.server.Service;
 
 /**
  * Metadata about a {@link Service}.
+ * Descriptions are stored separately in {@link ServiceSpecification#docStrings()}.
  */
 @UnstableApi
 public final class ServiceInfo {
@@ -48,14 +49,12 @@ public final class ServiceInfo {
     private final String name;
     private final Set<MethodInfo> methods;
     private final List<HttpHeaders> exampleHeaders;
-    private final DescriptionInfo descriptionInfo;
 
     /**
      * Creates a new instance.
      */
-    public ServiceInfo(String name,
-                       Iterable<MethodInfo> methods) {
-        this(name, methods, DescriptionInfo.empty());
+    public ServiceInfo(String name, Iterable<MethodInfo> methods) {
+        this(name, methods, ImmutableList.of());
     }
 
     /**
@@ -63,22 +62,11 @@ public final class ServiceInfo {
      */
     public ServiceInfo(String name,
                        Iterable<MethodInfo> methods,
-                       DescriptionInfo descriptionInfo) {
-        this(name, methods, ImmutableList.of(), descriptionInfo);
-    }
-
-    /**
-     * Creates a new instance.
-     */
-    public ServiceInfo(String name,
-                       Iterable<MethodInfo> methods,
-                       Iterable<HttpHeaders> exampleHeaders,
-                       DescriptionInfo descriptionInfo) {
+                       Iterable<HttpHeaders> exampleHeaders) {
 
         this.name = requireNonNull(name, "name");
         this.methods = mergeEndpoints(requireNonNull(methods));
         this.exampleHeaders = ImmutableList.copyOf(requireNonNull(exampleHeaders, "exampleHeaders"));
-        this.descriptionInfo = requireNonNull(descriptionInfo, "descriptionInfo");
     }
 
     /**
@@ -107,7 +95,7 @@ public final class ServiceInfo {
             return this;
         }
 
-        return new ServiceInfo(name, methods, exampleHeaders, descriptionInfo);
+        return new ServiceInfo(name, methods, exampleHeaders);
     }
 
     /**
@@ -126,11 +114,12 @@ public final class ServiceInfo {
                 }
                 final Set<EndpointInfo> endpointInfos =
                         Sets.union(value.endpoints(), methodInfo.endpoints());
-                return new MethodInfo(value.name(), value.returnTypeSignature(), value.parameters(),
-                                      value.useParameterAsRoot(), value.exceptionTypeSignatures(),
+                return new MethodInfo(value.name(), value.returnTypeSignature(),
+                                      value.parameters(), value.useParameterAsRoot(),
+                                      value.exceptionTypeSignatures(),
                                       endpointInfos, value.exampleHeaders(),
                                       value.exampleRequests(), value.examplePaths(), value.exampleQueries(),
-                                      value.httpMethod(), value.descriptionInfo(), value.id());
+                                      value.httpMethod(), value.id());
             });
         }
         return ImmutableSortedSet
@@ -165,7 +154,8 @@ public final class ServiceInfo {
                 m.parameters().forEach(p -> findDescriptiveTypes(collectedDescriptiveTypes, p.typeSignature()));
             } else {
                 findDescriptiveTypes(collectedDescriptiveTypes, m.returnTypeSignature());
-                m.exceptionTypeSignatures().forEach(s -> findDescriptiveTypes(collectedDescriptiveTypes, s));
+                m.exceptionTypeSignatures().forEach(
+                        e -> findDescriptiveTypes(collectedDescriptiveTypes, e));
             }
         });
         return ImmutableSet.copyOf(collectedDescriptiveTypes);
@@ -187,28 +177,6 @@ public final class ServiceInfo {
     }
 
     /**
-     * Returns the description information of the service.
-     * If not available, {@link DescriptionInfo#empty()} is returned.
-     */
-    @JsonProperty
-    public DescriptionInfo descriptionInfo() {
-        return descriptionInfo;
-    }
-
-    /**
-     * Returns a new {@link ServiceInfo} with the specified {@link DescriptionInfo}.
-     * Returns {@code this} if this {@link ServiceInfo} has the same {@link DescriptionInfo}.
-     */
-    public ServiceInfo withDescriptionInfo(DescriptionInfo descriptionInfo) {
-        requireNonNull(descriptionInfo, "descriptionInfo");
-        if (descriptionInfo.equals(this.descriptionInfo)) {
-            return this;
-        }
-
-        return new ServiceInfo(name, methods, exampleHeaders, descriptionInfo);
-    }
-
-    /**
      * Returns the example HTTP headers of the service.
      */
     @JsonProperty
@@ -226,7 +194,7 @@ public final class ServiceInfo {
             return this;
         }
 
-        return new ServiceInfo(name, methods, exampleHeaders, descriptionInfo);
+        return new ServiceInfo(name, methods, exampleHeaders);
     }
 
     @Override
@@ -254,7 +222,6 @@ public final class ServiceInfo {
                           .add("name", name)
                           .add("methods", methods)
                           .add("exampleHeaders", exampleHeaders)
-                          .add("descriptionInfo", descriptionInfo)
                           .toString();
     }
 }

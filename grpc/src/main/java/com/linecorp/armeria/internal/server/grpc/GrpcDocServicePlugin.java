@@ -68,11 +68,10 @@ import com.linecorp.armeria.server.docs.DescriptiveTypeSignature;
 import com.linecorp.armeria.server.docs.DocServiceFilter;
 import com.linecorp.armeria.server.docs.DocServicePlugin;
 import com.linecorp.armeria.server.docs.EndpointInfo;
-import com.linecorp.armeria.server.docs.FieldInfo;
-import com.linecorp.armeria.server.docs.FieldInfoBuilder;
 import com.linecorp.armeria.server.docs.FieldLocation;
 import com.linecorp.armeria.server.docs.FieldRequirement;
 import com.linecorp.armeria.server.docs.MethodInfo;
+import com.linecorp.armeria.server.docs.ParamInfo;
 import com.linecorp.armeria.server.docs.ServiceInfo;
 import com.linecorp.armeria.server.docs.ServiceSpecification;
 import com.linecorp.armeria.server.docs.TypeSignature;
@@ -267,7 +266,7 @@ public final class GrpcDocServicePlugin implements DocServicePlugin {
             final HttpEndpoint firstEndpoint = sortedEndpoints.get(0);
             final HttpEndpointSpecification firstSpec = firstEndpoint.spec();
 
-            final ImmutableList.Builder<FieldInfo> fieldInfosBuilder = ImmutableList.builder();
+            final ImmutableList.Builder<ParamInfo> paramInfosBuilder = ImmutableList.builder();
             firstSpec.pathVariables().forEach(paramName -> {
                 @Nullable
                 final Parameter parameter = firstSpec.parameters().get(paramName);
@@ -276,7 +275,7 @@ public final class GrpcDocServicePlugin implements DocServicePlugin {
                 final TypeSignature typeSignature =
                         parameter != null ? toTypeSignature(parameter)
                                           : TypeSignature.ofBase(JavaType.STRING.name());
-                fieldInfosBuilder.add(FieldInfo.builder(paramName, typeSignature)
+                paramInfosBuilder.add(ParamInfo.builder(paramName, typeSignature)
                                                .requirement(FieldRequirement.REQUIRED)
                                                .location(FieldLocation.PATH)
                                                .build());
@@ -286,20 +285,20 @@ public final class GrpcDocServicePlugin implements DocServicePlugin {
                                                                                      : FieldLocation.BODY;
             firstSpec.parameters().forEach((paramName, parameter) -> {
                 if (!firstSpec.pathVariables().contains(paramName)) {
-                    final FieldInfoBuilder builder;
+                    final String actualParamName;
                     if (fieldLocation == FieldLocation.BODY && !"*".equals(bodyParamName) &&
                         paramName.startsWith(bodyParamName + '.')) {
-                        builder = FieldInfo.builder(paramName.substring(bodyParamName.length() + 1),
-                                                    toTypeSignature(parameter));
+                        actualParamName = paramName.substring(bodyParamName.length() + 1);
                     } else {
-                        builder = FieldInfo.builder(paramName, toTypeSignature(parameter));
+                        actualParamName = paramName;
                     }
 
-                    builder.requirement(parameter.isRequired() ? FieldRequirement.REQUIRED
-                                                               : FieldRequirement.OPTIONAL);
-
-                    fieldInfosBuilder.add(builder.location(fieldLocation)
-                                                 .build());
+                    final FieldRequirement requirement =
+                            parameter.isRequired() ? FieldRequirement.REQUIRED : FieldRequirement.OPTIONAL;
+                    paramInfosBuilder.add(ParamInfo.builder(actualParamName, toTypeSignature(parameter))
+                                                   .requirement(requirement)
+                                                   .location(fieldLocation)
+                                                   .build());
                 }
             });
 
@@ -341,11 +340,11 @@ public final class GrpcDocServicePlugin implements DocServicePlugin {
                     firstSpec.methodName(),
                     firstSpec.order(),
                     descriptiveMessageSignature(firstSpec.methodDescriptor().getOutputType()),
-                    fieldInfosBuilder.build(),
+                    paramInfosBuilder.build(),
                     endpointInfos,
                     examplePaths,
                     exampleQueries,
-                    firstEndpoint.httpMethod(), DescriptionInfo.empty()));
+                    firstEndpoint.httpMethod()));
         });
         return new ServiceInfo(serviceName, methodInfos.build());
     }
@@ -429,16 +428,16 @@ public final class GrpcDocServicePlugin implements DocServicePlugin {
                 method.getName(),
                 // gRPC methods always take a single request parameter of message type.
                 descriptiveMessageSignature(method.getOutputType()),
-                ImmutableList.of(FieldInfo.builder("request",
+                ImmutableList.of(ParamInfo.builder("request",
                                                    descriptiveMessageSignature(method.getInputType()))
                                           .requirement(FieldRequirement.REQUIRED).build()),
-                true, ImmutableList.of(),
+                true, ImmutableSet.<TypeSignature>of(),
                 endpointInfos,
                 ImmutableList.of(),
                 defaultExamples(method),
                 ImmutableList.of(),
                 ImmutableList.of(),
-                HttpMethod.POST, DescriptionInfo.empty());
+                HttpMethod.POST);
     }
 
     private static List<String> defaultExamples(MethodDescriptor method) {

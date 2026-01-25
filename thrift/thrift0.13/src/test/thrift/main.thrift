@@ -1,7 +1,14 @@
 namespace java testing.thrift.main
 
-// Tests a non-oneway method with a return value.
+/**
+ * Tests a non-oneway method with a return value.
+ */
 service HelloService {
+    /**
+     * Sends a greeting to the specified name.
+     * @param string name - the name to greet
+     * @return a greeting message
+     */
     string hello(1:string name)
 }
 
@@ -20,9 +27,20 @@ service TimeService {
     i64 getServerTime()
 }
 
-// Tests exception handling.
+/**
+ * Exception thrown by FileService.
+ */
 exception FileServiceException {}
+
+/**
+ * Tests exception handling.
+ */
 service FileService {
+    /**
+     * Creates a file at the specified path.
+     * @param string path - the path to create
+     * @throws FileServiceException - when the file cannot be created
+     */
     void create(1:string path) throws (1:FileServiceException ouch)
 }
 
@@ -143,4 +161,22 @@ service TypeDefService {
                   10: TypedefedListI32 td10, 11: TypedefedI64 td11, 12: TypedefedListI64 td12,
                   13: TypedefedDouble td13, 14: TypedefedListDouble td14, 15: TypedefedBinary td15,
                   16: TypedefedListBinary td16)
+}
+
+// Tests that mid-line @return and @throws tags are ignored.
+service MidLineTagTestService {
+    /**
+     * Method where only the type is specified in the throws tag.
+     * @param string value - the input value
+     * @throws FooServiceException
+     */
+    void throwsTypeOnly(1:string value) throws (1:FooServiceException e)
+
+    /**
+     * Method with mid-line @return should be ignored because tags must be at line start.
+     * Similarly, mid-line @throws FooServiceException - should also be ignored.
+     * @param string value - the input value
+     * @return valid return description
+     */
+    string midLineTagsIgnored(1:string value)
 }

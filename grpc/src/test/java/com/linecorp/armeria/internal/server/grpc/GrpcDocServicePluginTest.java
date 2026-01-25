@@ -33,6 +33,7 @@ import java.util.function.Function;
 import org.junit.jupiter.api.Test;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.protobuf.Descriptors.FieldDescriptor.JavaType;
 import com.google.protobuf.Descriptors.ServiceDescriptor;
@@ -52,10 +53,10 @@ import com.linecorp.armeria.server.docs.DescriptionInfo;
 import com.linecorp.armeria.server.docs.DescriptiveTypeSignature;
 import com.linecorp.armeria.server.docs.DocServiceFilter;
 import com.linecorp.armeria.server.docs.EndpointInfo;
-import com.linecorp.armeria.server.docs.FieldInfo;
 import com.linecorp.armeria.server.docs.FieldLocation;
 import com.linecorp.armeria.server.docs.FieldRequirement;
 import com.linecorp.armeria.server.docs.MethodInfo;
+import com.linecorp.armeria.server.docs.ParamInfo;
 import com.linecorp.armeria.server.docs.ServiceInfo;
 import com.linecorp.armeria.server.docs.ServiceSpecification;
 import com.linecorp.armeria.server.docs.TypeSignature;
@@ -281,7 +282,8 @@ class GrpcDocServicePluginTest {
                                     .availableFormats(GrpcSerializationFormats.JSON)
                                     .build()));
         assertThat(methodInfo.name()).isEqualTo("UnaryCall");
-        assertThat(methodInfo.returnTypeSignature().name()).isEqualTo("armeria.grpc.testing.SimpleResponse");
+        assertThat(methodInfo.returnTypeSignature().name())
+                .isEqualTo("armeria.grpc.testing.SimpleResponse");
         assertThat(((DescriptiveTypeSignature) methodInfo.returnTypeSignature()).descriptor())
                 .isEqualTo(SimpleResponse.getDescriptor());
         assertThat(methodInfo.parameters()).hasSize(1);
@@ -294,7 +296,6 @@ class GrpcDocServicePluginTest {
                 .isEqualTo(SimpleRequest.getDescriptor());
         assertThat(methodInfo.useParameterAsRoot()).isTrue();
         assertThat(methodInfo.exceptionTypeSignatures()).isEmpty();
-        assertThat(methodInfo.descriptionInfo()).isSameAs(DescriptionInfo.empty());
         assertThat(methodInfo.endpoints()).containsExactlyInAnyOrder(
                 EndpointInfo.builder("*", "/foo")
                             .availableFormats(GrpcSerializationFormats.PROTO)
@@ -328,7 +329,7 @@ class GrpcDocServicePluginTest {
         final MethodInfo emptyCall = functions.get("EmptyCall");
         assertThat(emptyCall.name()).isEqualTo("EmptyCall");
         assertThat(emptyCall.parameters())
-                .containsExactly(FieldInfo.builder("request",
+                .containsExactly(ParamInfo.builder("request",
                                                    TypeSignature.ofStruct("armeria.grpc.testing.Empty",
                                                                           Empty.getDescriptor()))
                                           .requirement(FieldRequirement.REQUIRED)
@@ -394,7 +395,7 @@ class GrpcDocServicePluginTest {
                 EndpointInfo.builder(virtualHostNamePattern, "/v1/messages/:p0")
                             .availableMimeTypes(MediaType.JSON_UTF_8).build()));
         assertThat(getMessageV1.parameters()).containsAll(ImmutableList.of(
-                FieldInfo.builder("name", TypeSignature.ofBase(JavaType.STRING.name()))
+                ParamInfo.builder("name", TypeSignature.ofBase(JavaType.STRING.name()))
                          .location(FieldLocation.PATH).requirement(FieldRequirement.REQUIRED).build()));
         assertThat(getMessageV1.useParameterAsRoot()).isFalse();
 
@@ -406,13 +407,13 @@ class GrpcDocServicePluginTest {
                 EndpointInfo.builder(virtualHostNamePattern, "/v2/messages/:message_id")
                             .availableMimeTypes(MediaType.JSON_UTF_8).build()));
         assertThat(getMessageV2.parameters()).containsAll(ImmutableList.of(
-                FieldInfo.builder("message_id", TypeSignature.ofBase(JavaType.STRING.name()))
+                ParamInfo.builder("message_id", TypeSignature.ofBase(JavaType.STRING.name()))
                          .location(FieldLocation.PATH).requirement(FieldRequirement.REQUIRED).build(),
-                FieldInfo.builder("revision", TypeSignature.ofBase(JavaType.LONG.name()))
+                ParamInfo.builder("revision", TypeSignature.ofBase(JavaType.LONG.name()))
                          .location(FieldLocation.QUERY).requirement(FieldRequirement.OPTIONAL).build(),
-                FieldInfo.builder("sub.subfield", TypeSignature.ofBase(JavaType.STRING.name()))
+                ParamInfo.builder("sub.subfield", TypeSignature.ofBase(JavaType.STRING.name()))
                          .location(FieldLocation.QUERY).requirement(FieldRequirement.OPTIONAL).build(),
-                FieldInfo.builder("type", TypeSignature.ofBase(JavaType.ENUM.name()))
+                ParamInfo.builder("type", TypeSignature.ofBase(JavaType.ENUM.name()))
                          .location(FieldLocation.QUERY).requirement(FieldRequirement.OPTIONAL).build()));
         assertThat(getMessageV2.useParameterAsRoot()).isFalse();
 
@@ -424,9 +425,9 @@ class GrpcDocServicePluginTest {
                 EndpointInfo.builder(virtualHostNamePattern, "/v3/messages/:message_id")
                             .availableMimeTypes(MediaType.JSON_UTF_8).build()));
         assertThat(getMessageV3.parameters()).containsAll(ImmutableList.of(
-                FieldInfo.builder("message_id", TypeSignature.ofBase(JavaType.STRING.name()))
+                ParamInfo.builder("message_id", TypeSignature.ofBase(JavaType.STRING.name()))
                          .location(FieldLocation.PATH).requirement(FieldRequirement.REQUIRED).build(),
-                FieldInfo.builder("revision",
+                ParamInfo.builder("revision",
                                   TypeSignature.ofList(TypeSignature.ofBase(JavaType.LONG.name())))
                          .location(FieldLocation.QUERY).requirement(FieldRequirement.OPTIONAL).build()));
         assertThat(getMessageV3.useParameterAsRoot()).isFalse();
@@ -440,9 +441,9 @@ class GrpcDocServicePluginTest {
                 EndpointInfo.builder(virtualHostNamePattern, "/v1/messages/:message_id")
                             .availableMimeTypes(MediaType.JSON_UTF_8).build()));
         assertThat(updateMessageV1.parameters()).containsAll(ImmutableList.of(
-                FieldInfo.builder("message_id", TypeSignature.ofBase(JavaType.STRING.name()))
+                ParamInfo.builder("message_id", TypeSignature.ofBase(JavaType.STRING.name()))
                          .location(FieldLocation.PATH).requirement(FieldRequirement.REQUIRED).build(),
-                FieldInfo.builder("text", TypeSignature.ofBase(JavaType.STRING.name()))
+                ParamInfo.builder("text", TypeSignature.ofBase(JavaType.STRING.name()))
                          .location(FieldLocation.BODY).requirement(FieldRequirement.OPTIONAL).build()));
         assertThat(updateMessageV1.useParameterAsRoot()).isFalse();
 
@@ -454,13 +455,13 @@ class GrpcDocServicePluginTest {
                 EndpointInfo.builder(virtualHostNamePattern, "/v2/messages/:message_id")
                             .availableMimeTypes(MediaType.JSON_UTF_8).build()));
         assertThat(updateMessageV2.parameters()).containsAll(ImmutableList.of(
-                FieldInfo.builder("message_id", TypeSignature.ofBase(JavaType.STRING.name()))
+                ParamInfo.builder("message_id", TypeSignature.ofBase(JavaType.STRING.name()))
                          .location(FieldLocation.PATH).requirement(FieldRequirement.REQUIRED).build(),
-                FieldInfo.builder("text", TypeSignature.ofBase(JavaType.STRING.name()))
+                ParamInfo.builder("text", TypeSignature.ofBase(JavaType.STRING.name()))
                          .location(FieldLocation.BODY).requirement(FieldRequirement.OPTIONAL).build(),
-                FieldInfo.builder("required_text", TypeSignature.ofBase(JavaType.STRING.name()))
+                ParamInfo.builder("required_text", TypeSignature.ofBase(JavaType.STRING.name()))
                         .location(FieldLocation.BODY).requirement(FieldRequirement.REQUIRED).build(),
-                FieldInfo.builder("optional_text", TypeSignature.ofBase(JavaType.STRING.name()))
+                ParamInfo.builder("optional_text", TypeSignature.ofBase(JavaType.STRING.name()))
                         .location(FieldLocation.BODY).requirement(FieldRequirement.OPTIONAL).build()));
         assertThat(updateMessageV2.useParameterAsRoot()).isFalse();
     }
@@ -470,5 +471,85 @@ class GrpcDocServicePluginTest {
         assertThat(convertRegexPath("/a/(?<p0>[^/]+):get")).isEqualTo("/a/p0:get");
         assertThat(convertRegexPath("^/a/(?<p0>[^/]+):get")).isEqualTo("/a/p0:get");
         assertThat(convertRegexPath("^/a/(?<p0>[^/]+):get$")).isEqualTo("/a/p0:get");
+    }
+
+    @Test
+    void testDocStrings() {
+        // Test that loadDocStrings correctly extracts docstrings from gRPC descriptors
+        final ServerBuilder sb = Server.builder();
+        sb.service(GrpcService.builder()
+                              .addService(new TestServiceImplBase() {})
+                              .addService(new ReconnectServiceImplBase() {})
+                              .build());
+        final Server server = sb.build();
+
+        final Map<String, DescriptionInfo> allDocStrings = generator.loadDocStrings(
+                ImmutableSet.copyOf(server.serviceConfigs()));
+
+        final String serviceName = TestServiceGrpc.SERVICE_NAME;
+
+        // Filter to only include TestService and ReconnectService entries
+        final Map<String, DescriptionInfo> actualDocStrings = allDocStrings.entrySet().stream()
+                .filter(e -> e.getKey().startsWith(serviceName) ||
+                             e.getKey().startsWith(ReconnectServiceGrpc.SERVICE_NAME))
+                .collect(toImmutableMap(Map.Entry::getKey, Map.Entry::getValue));
+
+        // Proto comments include leading space and trailing newline
+        final Map<String, DescriptionInfo> expectedDocStrings = ImmutableMap.<String, DescriptionInfo>builder()
+                // TestService
+                .put(serviceName,
+                     DescriptionInfo.of(
+                             " A simple service to test the various types of RPCs and experiment with\n" +
+                             " performance with various types of payload.\n"))
+                .put(serviceName + "/EmptyCall",
+                     DescriptionInfo.of(
+                             " One empty request followed by one empty response.\n" +
+                             " @return an empty response\n"))
+                .put(serviceName + "/EmptyCall:return",
+                     DescriptionInfo.of("an empty response"))
+                .put(serviceName + "/UnaryCall",
+                     DescriptionInfo.of(
+                             " One request followed by one response.\n" +
+                             " @return a response containing the payload\n"))
+                .put(serviceName + "/UnaryCall:return",
+                     DescriptionInfo.of("a response containing the payload"))
+                .put(serviceName + "/UnaryCall2",
+                     DescriptionInfo.of(
+                             " Another method with one request followed by one response.\n"))
+                // Note: No @return for UnaryCall2
+                .put(serviceName + "/StreamingOutputCall",
+                     DescriptionInfo.of(
+                             " One request followed by a sequence of responses (streamed download).\n" +
+                             " The server returns the payload with client desired type and sizes.\n"))
+                .put(serviceName + "/StreamingInputCall",
+                     DescriptionInfo.of(
+                             " A sequence of requests followed by one response (streamed upload).\n" +
+                             " The server returns the aggregated size of client payload as the result.\n"))
+                .put(serviceName + "/FullDuplexCall",
+                     DescriptionInfo.of(
+                             " A sequence of requests with each request served by the server immediately.\n" +
+                             " As one request could lead to multiple responses, this interface\n" +
+                             " demonstrates the idea of full duplexing.\n"))
+                .put(serviceName + "/HalfDuplexCall",
+                     DescriptionInfo.of(
+                             " A sequence of requests followed by a sequence of responses.\n" +
+                             " The server buffers all the client requests and then serves them in order. A\n" +
+                             " stream of responses are returned to the client when the server starts with\n" +
+                             " first request.\n"))
+                .put(serviceName + "/UnimplementedCall",
+                     DescriptionInfo.of(
+                             " The test server will not implement this method. It will be used\n" +
+                             " to test the behavior when clients call unimplemented methods.\n"))
+                .put(serviceName + "/UnaryCallWithAllDifferentParameterTypes",
+                     DescriptionInfo.of(
+                             " This method's parameter message contains all different types of parameters\n" +
+                             " as well as the response type contains all different types of parameters.\n" +
+                             " Can be used to check any kind of serialization issues.\n"))
+                // ReconnectService
+                .put(ReconnectServiceGrpc.SERVICE_NAME,
+                     DescriptionInfo.of(" A service used to control reconnect server.\n"))
+                .build();
+
+        assertThat(actualDocStrings).isEqualTo(expectedDocStrings);
     }
 }

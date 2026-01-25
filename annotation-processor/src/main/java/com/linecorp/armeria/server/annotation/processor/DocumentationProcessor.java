@@ -30,6 +30,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import javax.annotation.processing.AbstractProcessor;
@@ -40,14 +41,16 @@ import javax.lang.model.element.ElementKind;
 import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.QualifiedNameable;
 import javax.lang.model.element.TypeElement;
-import javax.lang.model.element.VariableElement;
 import javax.tools.Diagnostic.Kind;
 import javax.tools.FileObject;
 import javax.tools.StandardLocation;
 
 import com.google.common.base.Splitter;
+import com.google.common.base.Strings;
 import com.google.common.collect.Streams;
 
+import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.internal.server.docs.DocStringTagPatterns;
 import com.linecorp.armeria.server.annotation.Description;
 
 /**
@@ -67,10 +70,11 @@ public final class DocumentationProcessor extends AbstractProcessor {
     private static final Splitter LINEBREAK_SPLITTER = Splitter.on(Pattern.compile("\\R"))
                                                                .trimResults()
                                                                .omitEmptyStrings();
+
     private final Map<String, Properties> propertiesMap = new HashMap<>();
 
     @Override
-    public boolean process(Set<? extends TypeElement> annotations, RoundEnvironment roundEnv) {
+    public boolean process(@Nullable Set<? extends TypeElement> annotations, RoundEnvironment roundEnv) {
         if (annotations == null || annotations.isEmpty()) {
             return false;
         }
@@ -154,50 +158,79 @@ public final class DocumentationProcessor extends AbstractProcessor {
         final String className = enclosingElement.getQualifiedName().toString();
         final Properties properties = readProperties(className);
         final String docComment = processingEnv.getElementUtils().getDocComment(method);
-        if (docComment == null || !docComment.contains("@param")) {
+        if (docComment == null) {
             return;
         }
-        final List<List<String>> lines = Streams.stream(LINEBREAK_SPLITTER.split(docComment))
-                                                .map(line -> Arrays.stream(line.split("\\s"))
-                                                                   .filter(word -> !word.trim().isEmpty())
-                                                                   .collect(toImmutableList()))
-                                                .collect(toImmutableList());
-        method.getParameters().forEach(param -> {
-            final StringBuilder stringBuilder = new StringBuilder();
-            JavaDocParserState state = JavaDocParserState.SEARCHING;
-            for (List<String> line : lines) {
-                final List<String> subLine;
-                if ((line.size() < 3 ||
-                     !"@param".equals(line.get(0)) ||
-                     !param.getSimpleName().toString().equals(line.get(1))) &&
-                    state == JavaDocParserState.SEARCHING) {
-                    continue;
-                } else if (state == JavaDocParserState.IN_DESCRIPTION &&
-                           !line.isEmpty() &&
-                           line.get(0).startsWith("@")) {
-                    break;
-                } else if (state == JavaDocParserState.SEARCHING) {
-                    subLine = line.subList(2, line.size());
-                    state = JavaDocParserState.IN_DESCRIPTION;
-                } else {
-                    subLine = line;
+
+        final boolean hasParam = docComment.contains("@param");
+        final boolean hasReturn = docComment.contains("@return");
+        final boolean hasThrows = docComment.contains("@throws");
+        if (!hasParam && !hasReturn && !hasThrows) {
+            return;
+        }
+
+        final String methodName = method.getSimpleName().toString();
+
+        // Extract @param tags
+        if (hasParam) {
+            final List<List<String>> lines = Streams.stream(LINEBREAK_SPLITTER.split(docComment))
+                                                    .map(line -> Arrays.stream(line.split("\\s"))
+                                                                       .filter(word -> !word.trim().isEmpty())
+                                                                       .collect(toImmutableList()))
+                                                    .collect(toImmutableList());
+            method.getParameters().forEach(param -> {
+                final StringBuilder stringBuilder = new StringBuilder();
+                JavaDocParserState state = JavaDocParserState.SEARCHING;
+                for (List<String> line : lines) {
+                    final List<String> subLine;
+                    if (state == JavaDocParserState.SEARCHING) {
+                        if (line.size() < 3 ||
+                            !"@param".equals(line.get(0)) ||
+                            !param.getSimpleName().toString().equals(line.get(1))) {
+                            continue;
+                        }
+                        subLine = line.subList(2, line.size());
+                        state = JavaDocParserState.IN_DESCRIPTION;
+                    } else {
+                        assert state == JavaDocParserState.IN_DESCRIPTION;
+                        if (!line.isEmpty() && line.get(0).startsWith("@")) {
+                            break;
+                        } else {
+                            subLine = line;
+                        }
+                    }
+                    for (String word : subLine) {
+                        stringBuilder.append(word);
+                        stringBuilder.append(' ');
+                    }
                 }
-                for (String word : subLine) {
-                    stringBuilder.append(word);
-                    stringBuilder.append(' ');
+                final String paramName = param.getSimpleName().toString();
+                properties.setProperty(methodName + '.' + paramName, stringBuilder.toString().trim());
+            });
+        }
+
+        // Extract @return tag
+        if (hasReturn) {
+            final Matcher returnMatcher = DocStringTagPatterns.RETURN.matcher(docComment);
+            if (returnMatcher.find()) {
+                final String returnDescription = returnMatcher.group(1);
+                if (!Strings.isNullOrEmpty(returnDescription)) {
+                    properties.setProperty(methodName + ":return", returnDescription);
                 }
             }
-            setProperty(properties, method, param, stringBuilder.toString().trim());
-        });
-    }
+        }
 
-    private static void setProperty(Properties properties,
-                                    ExecutableElement method,
-                                    VariableElement parameter,
-                                    String description) {
-        final String methodName = method.getSimpleName().toString();
-        final String parameterName = parameter.getSimpleName().toString();
-        properties.setProperty(methodName + '.' + parameterName, description);
+        // Extract @throws tags
+        if (hasThrows) {
+            final Matcher throwsMatcher = DocStringTagPatterns.THROWS.matcher(docComment);
+            while (throwsMatcher.find()) {
+                final String exceptionType = throwsMatcher.group(1);
+                final String throwsDescription = throwsMatcher.group(2);
+                if (!Strings.isNullOrEmpty(throwsDescription)) {
+                    properties.setProperty(methodName + ":throws/" + exceptionType, throwsDescription);
+                }
+            }
+        }
     }
 
     private enum JavaDocParserState {

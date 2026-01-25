@@ -35,14 +35,13 @@ import com.linecorp.armeria.internal.server.RouteUtil;
 import com.linecorp.armeria.server.Route;
 import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.ServiceConfig;
-import com.linecorp.armeria.server.docs.DescriptionInfo;
 import com.linecorp.armeria.server.docs.DescriptiveTypeInfoProvider;
 import com.linecorp.armeria.server.docs.DocServiceFilter;
 import com.linecorp.armeria.server.docs.DocServicePlugin;
 import com.linecorp.armeria.server.docs.EndpointInfo;
-import com.linecorp.armeria.server.docs.FieldInfo;
 import com.linecorp.armeria.server.docs.FieldRequirement;
 import com.linecorp.armeria.server.docs.MethodInfo;
+import com.linecorp.armeria.server.docs.ParamInfo;
 import com.linecorp.armeria.server.docs.ServiceInfo;
 import com.linecorp.armeria.server.docs.ServiceSpecification;
 import com.linecorp.armeria.server.docs.TypeSignature;
@@ -80,7 +79,6 @@ public final class GraphqlDocServicePlugin implements DocServicePlugin {
         requireNonNull(filter, "filter");
 
         final Map<Class<?>, Set<MethodInfo>> methodInfos = new HashMap<>();
-        final Map<Class<?>, DescriptionInfo> serviceDescription = new HashMap<>();
         serviceConfigs.forEach(sc -> {
             final AbstractGraphqlService service = sc.service().as(AbstractGraphqlService.class);
             if (service != null) {
@@ -92,17 +90,17 @@ public final class GraphqlDocServicePlugin implements DocServicePlugin {
             }
         });
 
-        return generate(serviceDescription, methodInfos);
+        return generate(methodInfos);
     }
 
     private static void addMethodInfo(Map<Class<?>, Set<MethodInfo>> methodInfos,
                                       String hostnamePattern, AbstractGraphqlService service, Route route) {
         final EndpointInfo endpoint = endpointInfo(route, hostnamePattern);
-        final List<FieldInfo> fieldInfos = fieldInfos();
+        final List<ParamInfo> paramInfos = paramInfos();
         final Class<?> clazz = service.getClass();
         final MethodInfo methodInfo = new MethodInfo(
-                clazz.getName(), DEFAULT_METHOD_NAME, 0, JSON, fieldInfos, ImmutableList.of(),
-                ImmutableList.of(endpoint), HttpMethod.POST, DescriptionInfo.empty());
+                clazz.getName(), DEFAULT_METHOD_NAME, 0, JSON, paramInfos,
+                ImmutableSet.of(), ImmutableList.of(endpoint), HttpMethod.POST);
         methodInfos.computeIfAbsent(clazz, unused -> new HashSet<>()).add(methodInfo);
     }
 
@@ -126,25 +124,20 @@ public final class GraphqlDocServicePlugin implements DocServicePlugin {
         return builder.build();
     }
 
-    private static List<FieldInfo> fieldInfos() {
+    private static List<ParamInfo> paramInfos() {
         return ImmutableList.of(
-                FieldInfo.builder("query", STRING).requirement(FieldRequirement.REQUIRED).build(),
-                FieldInfo.builder("operationName", STRING).requirement(FieldRequirement.OPTIONAL).build(),
-                FieldInfo.builder("variables", MAP).requirement(FieldRequirement.OPTIONAL).build(),
-                FieldInfo.builder("extensions", MAP).requirement(FieldRequirement.OPTIONAL).build()
+                ParamInfo.builder("query", STRING).requirement(FieldRequirement.REQUIRED).build(),
+                ParamInfo.builder("operationName", STRING).requirement(FieldRequirement.OPTIONAL).build(),
+                ParamInfo.builder("variables", MAP).requirement(FieldRequirement.OPTIONAL).build(),
+                ParamInfo.builder("extensions", MAP).requirement(FieldRequirement.OPTIONAL).build()
         );
     }
 
     @VisibleForTesting
-    static ServiceSpecification generate(Map<Class<?>, DescriptionInfo> serviceDescription,
-                                         Map<Class<?>, Set<MethodInfo>> methodInfos) {
+    static ServiceSpecification generate(Map<Class<?>, Set<MethodInfo>> methodInfos) {
         final Set<ServiceInfo> serviceInfos = methodInfos
                 .entrySet().stream()
-                .map(entry -> {
-                    final Class<?> service = entry.getKey();
-                    return new ServiceInfo(service.getName(), entry.getValue(),
-                                           serviceDescription.getOrDefault(service, DescriptionInfo.empty()));
-                })
+                .map(entry -> new ServiceInfo(entry.getKey().getName(), entry.getValue()))
                 .collect(toImmutableSet());
 
         return ServiceSpecification.generate(serviceInfos, unused -> null);

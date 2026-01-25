@@ -117,4 +117,29 @@ public class WithJavaDoc {
     public void hasMultilineComment(@Param("x") String x) {
         System.out.println(x);
     }
+
+    /**
+     * Method where only the type is specified in the throws tag.
+     * @param x The x variable
+     * @throws IllegalArgumentException
+     */
+    @Get
+    public void throwsTypeOnly(@Param("x") String x) {
+        if (x.isEmpty()) {
+            throw new IllegalArgumentException();
+        }
+        System.out.println(x);
+    }
+
+    /**
+     * Method with mid-line @return should be ignored because tags must be at line start.
+     * Similarly, mid-line @throws IllegalArgumentException - should also be ignored.
+     * @param x The x variable
+     * @return valid return description
+     */
+    @Get
+    public int midLineTagsIgnored(@Param("x") String x) {
+        System.out.println(x);
+        return 1;
+    }
 }
