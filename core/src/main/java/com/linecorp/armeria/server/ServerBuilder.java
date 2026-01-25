@@ -1885,6 +1885,7 @@ public final class ServerBuilder implements TlsSetters, ServiceConfigsBuilder<Se
      * @param serverPort the {@link ServerPort} that this virtual host binds to
      * @return {@link VirtualHostBuilder} for building the virtual host
      */
+    @UnstableApi
     public VirtualHostBuilder virtualHost(ServerPort serverPort) {
         requireNonNull(serverPort, "serverPort");
 
@@ -2503,11 +2504,11 @@ public final class ServerBuilder implements TlsSetters, ServiceConfigsBuilder<Se
                        virtualHostPort, portNumbers);
         }
 
-        // Validate that ServerPort-based virtual hosts have their ServerPort in the ports list.
         for (VirtualHostBuilder vhb : virtualHostBuilders) {
             final ServerPort serverPort = vhb.serverPort();
             if (serverPort != null) {
-                checkState(this.ports.contains(serverPort),
+                final boolean presentByIdentity = this.ports.stream().anyMatch(p -> p == serverPort);
+                checkState(presentByIdentity,
                            "The ServerPort for a virtual host is not in the server's port list. " +
                            "Please add the ServerPort using port(ServerPort) before creating a virtual host.");
             }

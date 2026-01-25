@@ -277,13 +277,16 @@ class PortBasedVirtualHostTest {
             final AggregatedHttpResponse resp1Bar = client1.get("/bar").aggregate().join();
             final AggregatedHttpResponse resp2Bar = client2.get("/bar").aggregate().join();
 
-            // One port should serve /foo with OK, the other with NOT_FOUND
             final boolean port1ServesFoo = resp1Foo.status() == HttpStatus.OK;
             final boolean port2ServesFoo = resp2Foo.status() == HttpStatus.OK;
-            assertThat(port1ServesFoo || port2ServesFoo)
-                    .as("At least one port should serve /foo, but got: port1=%s, port2=%s",
-                        resp1Foo.status(), resp2Foo.status())
-                    .isTrue();
+            final boolean port1ServesBar = resp1Bar.status() == HttpStatus.OK;
+            final boolean port2ServesBar = resp2Bar.status() == HttpStatus.OK;
+
+            // Exactly one port should serve /foo and the other should serve /bar
+            assertThat(port1ServesFoo).isNotEqualTo(port2ServesFoo);
+            assertThat(port1ServesBar).isNotEqualTo(port2ServesBar);
+            assertThat(port1ServesFoo).isEqualTo(!port1ServesBar);
+            assertThat(port2ServesFoo).isEqualTo(!port2ServesBar);
         } finally {
             server.stop().join();
         }
@@ -324,9 +327,138 @@ class PortBasedVirtualHostTest {
                      .service("/foo", (ctx, req) -> HttpResponse.of("foo"))
                      .and();
 
-        // Build should fail because serverPort is not in the ports list
         assertThatThrownBy(serverBuilder::build)
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("ServerPort for a virtual host is not in the server's port list");
+    }
+
+    @Test
+    void virtualHostBuilderServerPortAccessor() {
+        final ServerPort serverPort = new ServerPort(0, SessionProtocol.HTTP);
+        final ServerBuilder serverBuilder = Server.builder();
+        serverBuilder.port(serverPort);
+
+        final VirtualHostBuilder vhBuilder = serverBuilder.virtualHost(serverPort);
+
+        assertThat(vhBuilder.serverPort()).isSameAs(serverPort);
+    }
+
+    @Test
+    void virtualHostBuilderServerPortReturnsNullForIntPort() {
+        final ServerBuilder serverBuilder = Server.builder();
+        serverBuilder.http(8080);
+
+        final VirtualHostBuilder vhBuilder = serverBuilder.virtualHost(8080);
+
+        assertThat(vhBuilder.serverPort()).isNull();
+    }
+
+    @Test
+    void virtualHostServerPortAccessor() {
+        final ServerPort serverPort = new ServerPort(0, SessionProtocol.HTTP);
+        final Server server = Server.builder()
+                                    .port(serverPort)
+                                    .virtualHost(serverPort)
+                                    .service("/test", (ctx, req) -> HttpResponse.of("test"))
+                                    .and()
+                                    .build();
+
+        final boolean found = server.config().virtualHosts().stream()
+                                    .anyMatch(vh -> vh.serverPort() == serverPort);
+        assertThat(found).isTrue();
+    }
+
+    @Test
+    void virtualHostServerPortReturnsNullForIntPort() {
+        final Server server = Server.builder()
+                                    .http(8080)
+                                    .virtualHost(8080)
+                                    .service("/test", (ctx, req) -> HttpResponse.of("test"))
+                                    .and()
+                                    .build();
+
+        for (VirtualHost vh : server.config().virtualHosts()) {
+            if (vh.port() == 8080) {
+                assertThat(vh.serverPort()).isNull();
+            }
+        }
+    }
+
+    @Test
+    void serverPortOriginalServerPortAccessor() {
+        final ServerPort originalPort = new ServerPort(0, SessionProtocol.HTTP);
+        final Server server = Server.builder()
+                                    .port(originalPort)
+                                    .virtualHost(originalPort)
+                                    .service("/test", (ctx, req) -> HttpResponse.of("test"))
+                                    .and()
+                                    .build();
+
+        server.start().join();
+        try {
+            final boolean found = server.activePorts().values().stream()
+                                        .anyMatch(p -> p.originalServerPort() == originalPort);
+            assertThat(found).isTrue();
+        } finally {
+            server.stop().join();
+        }
+    }
+
+    @Test
+    void serverPortOriginalServerPortReturnsNullForNormalCreation() {
+        final ServerPort port = new ServerPort(8080, SessionProtocol.HTTP);
+        assertThat(port.originalServerPort()).isNull();
+    }
+
+    @Test
+    void defaultVirtualHostServerPortReturnsNull() {
+        final Server server = Server.builder()
+                                    .http(0)
+                                    .service("/test", (ctx, req) -> HttpResponse.of("test"))
+                                    .build();
+
+        assertThat(server.config().defaultVirtualHost().serverPort()).isNull();
+    }
+
+    @Test
+    void serverPortBasedVirtualHostRoutesCorrectly() throws Exception {
+        final ServerPort port1 = new ServerPort(0, SessionProtocol.HTTP);
+        final ServerPort port2 = new ServerPort(0, SessionProtocol.HTTP);
+
+        final Server server = Server.builder()
+                                    .port(port1)
+                                    .virtualHost(port1)
+                                    .service("/api", (ctx, req) -> HttpResponse.of("port1"))
+                                    .and()
+                                    .port(port2)
+                                    .virtualHost(port2)
+                                    .service("/api", (ctx, req) -> HttpResponse.of("port2"))
+                                    .and()
+                                    .build();
+
+        server.start().join();
+        try {
+            int actualPort1 = -1;
+            int actualPort2 = -1;
+            for (ServerPort activePort : server.activePorts().values()) {
+                if (activePort.originalServerPort() == port1) {
+                    actualPort1 = activePort.localAddress().getPort();
+                } else if (activePort.originalServerPort() == port2) {
+                    actualPort2 = activePort.localAddress().getPort();
+                }
+            }
+
+            assertThat(actualPort1).isGreaterThan(0);
+            assertThat(actualPort2).isGreaterThan(0);
+            assertThat(actualPort1).isNotEqualTo(actualPort2);
+
+            final WebClient client1 = WebClient.of("http://127.0.0.1:" + actualPort1);
+            final WebClient client2 = WebClient.of("http://127.0.0.1:" + actualPort2);
+
+            assertThat(client1.get("/api").aggregate().join().contentUtf8()).isEqualTo("port1");
+            assertThat(client2.get("/api").aggregate().join().contentUtf8()).isEqualTo("port2");
+        } finally {
+            server.stop().join();
+        }
     }
 }
