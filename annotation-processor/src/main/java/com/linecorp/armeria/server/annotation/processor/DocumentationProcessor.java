@@ -30,6 +30,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import javax.annotation.processing.AbstractProcessor;
@@ -67,6 +68,25 @@ public final class DocumentationProcessor extends AbstractProcessor {
     private static final Splitter LINEBREAK_SPLITTER = Splitter.on(Pattern.compile("\\R"))
                                                                .trimResults()
                                                                .omitEmptyStrings();
+
+    // Pattern to match @return tag in docstrings (must be at beginning of line)
+    // Matches either:
+    // - JavaDoc format: @return <description> (description has spaces or is multi-word)
+    // - Proto/Thrift format: @return <type> - <description> (type followed by dash and description)
+    // Single-word returns without a dash are skipped (assumed to be type-only)
+    // The tag must appear at the start of a line (after optional whitespace and *)
+    // Note: [ \t] ensures we match only horizontal whitespace, not newlines
+    private static final Pattern RETURN_PATTERN =
+            Pattern.compile("^[ \t*]*@return[ \t]+(?:(?:\\S+[ \t]*[-–][ \t]*)([^\r\n]+)|([^\r\n]*[ \t]+[^\r\n]*))$",
+                            Pattern.MULTILINE);
+
+    // Pattern to match @throws tag in docstrings (must be at beginning of line)
+    // Matches: @throws <type> - <description> or @throws <type> <description>
+    // Group 1 captures the exception type name (simple name, not fully qualified)
+    // Group 2 captures the description (if present)
+    private static final Pattern THROWS_PATTERN =
+            Pattern.compile("^[\\s*]*@throws\\s+(\\S+)\\s*[-–]?\\s*(.*)$", Pattern.MULTILINE);
+
     private final Map<String, Properties> propertiesMap = new HashMap<>();
 
     @Override
@@ -154,41 +174,85 @@ public final class DocumentationProcessor extends AbstractProcessor {
         final String className = enclosingElement.getQualifiedName().toString();
         final Properties properties = readProperties(className);
         final String docComment = processingEnv.getElementUtils().getDocComment(method);
-        if (docComment == null || !docComment.contains("@param")) {
+        if (docComment == null) {
             return;
         }
-        final List<List<String>> lines = Streams.stream(LINEBREAK_SPLITTER.split(docComment))
-                                                .map(line -> Arrays.stream(line.split("\\s"))
-                                                                   .filter(word -> !word.trim().isEmpty())
-                                                                   .collect(toImmutableList()))
-                                                .collect(toImmutableList());
-        method.getParameters().forEach(param -> {
-            final StringBuilder stringBuilder = new StringBuilder();
-            JavaDocParserState state = JavaDocParserState.SEARCHING;
-            for (List<String> line : lines) {
-                final List<String> subLine;
-                if ((line.size() < 3 ||
-                     !"@param".equals(line.get(0)) ||
-                     !param.getSimpleName().toString().equals(line.get(1))) &&
-                    state == JavaDocParserState.SEARCHING) {
-                    continue;
-                } else if (state == JavaDocParserState.IN_DESCRIPTION &&
-                           !line.isEmpty() &&
-                           line.get(0).startsWith("@")) {
-                    break;
-                } else if (state == JavaDocParserState.SEARCHING) {
-                    subLine = line.subList(2, line.size());
-                    state = JavaDocParserState.IN_DESCRIPTION;
-                } else {
-                    subLine = line;
+
+        final boolean hasParam = docComment.contains("@param");
+        final boolean hasReturn = docComment.contains("@return");
+        final boolean hasThrows = docComment.contains("@throws");
+        if (!hasParam && !hasReturn && !hasThrows) {
+            return;
+        }
+
+        final String methodName = method.getSimpleName().toString();
+
+        // Extract @param tags
+        if (hasParam) {
+            final List<List<String>> lines = Streams.stream(LINEBREAK_SPLITTER.split(docComment))
+                                                    .map(line -> Arrays.stream(line.split("\\s"))
+                                                                       .filter(word -> !word.trim().isEmpty())
+                                                                       .collect(toImmutableList()))
+                                                    .collect(toImmutableList());
+            method.getParameters().forEach(param -> {
+                final StringBuilder stringBuilder = new StringBuilder();
+                JavaDocParserState state = JavaDocParserState.SEARCHING;
+                for (List<String> line : lines) {
+                    final List<String> subLine;
+                    if ((line.size() < 3 ||
+                         !"@param".equals(line.get(0)) ||
+                         !param.getSimpleName().toString().equals(line.get(1))) &&
+                        state == JavaDocParserState.SEARCHING) {
+                        continue;
+                    } else if (state == JavaDocParserState.IN_DESCRIPTION &&
+                               !line.isEmpty() &&
+                               line.get(0).startsWith("@")) {
+                        break;
+                    } else if (state == JavaDocParserState.SEARCHING) {
+                        subLine = line.subList(2, line.size());
+                        state = JavaDocParserState.IN_DESCRIPTION;
+                    } else {
+                        subLine = line;
+                    }
+                    for (String word : subLine) {
+                        stringBuilder.append(word);
+                        stringBuilder.append(' ');
+                    }
                 }
-                for (String word : subLine) {
-                    stringBuilder.append(word);
-                    stringBuilder.append(' ');
+                setProperty(properties, method, param, stringBuilder.toString().trim());
+            });
+        }
+
+        // Extract @return tag
+        if (hasReturn) {
+            final Matcher returnMatcher = RETURN_PATTERN.matcher(docComment);
+            if (returnMatcher.find()) {
+                // Group 1: Proto/Thrift style with dash (Type - description)
+                // Group 2: JavaDoc style (multi-word description)
+                String returnDescription = returnMatcher.group(1);
+                if (returnDescription == null) {
+                    returnDescription = returnMatcher.group(2);
+                }
+                if (returnDescription != null) {
+                    returnDescription = returnDescription.trim();
+                    if (!returnDescription.isEmpty()) {
+                        properties.setProperty(methodName + ":return", returnDescription);
+                    }
                 }
             }
-            setProperty(properties, method, param, stringBuilder.toString().trim());
-        });
+        }
+
+        // Extract @throws tags
+        if (hasThrows) {
+            final Matcher throwsMatcher = THROWS_PATTERN.matcher(docComment);
+            while (throwsMatcher.find()) {
+                final String exceptionType = throwsMatcher.group(1).trim();
+                final String throwsDescription = throwsMatcher.group(2).trim();
+                if (!throwsDescription.isEmpty()) {
+                    properties.setProperty(methodName + ":throws/" + exceptionType, throwsDescription);
+                }
+            }
+        }
     }
 
     private static void setProperty(Properties properties,
