@@ -61,15 +61,36 @@ final class DocStringSupport {
     }
 
     private MethodInfo addMethodDocStrings(ServiceInfo service, MethodInfo method) {
+        final String methodKey = service.name() + '/' + method.name();
         final DescriptionInfo descriptionInfo =
-                findDescription(service.name() + '/' + method.name(), method.descriptionInfo());
+                findDescription(methodKey, method.descriptionInfo());
+        final DescribedTypeSignature returnInfo = addReturnDocString(methodKey, method.returnInfo());
         final List<FieldInfo> paramsWithDescription =
                 method.parameters().stream()
                       .map(field -> addParameterDocString(service, method, field))
                       .collect(toImmutableList());
+        final List<DescribedTypeSignature> exceptionsWithDescription =
+                method.exceptions().stream()
+                      .map(e -> addExceptionDocString(methodKey, e))
+                      .collect(toImmutableList());
 
         return method.withParameters(paramsWithDescription)
+                     .withExceptions(exceptionsWithDescription)
+                     .withReturnInfo(returnInfo)
                      .withDescriptionInfo(descriptionInfo);
+    }
+
+    private DescribedTypeSignature addReturnDocString(String methodKey, DescribedTypeSignature returnInfo) {
+        final DescriptionInfo descriptionInfo =
+                findDescription(methodKey + ":return", returnInfo.descriptionInfo());
+        return returnInfo.withDescriptionInfo(descriptionInfo);
+    }
+
+    private DescribedTypeSignature addExceptionDocString(String methodKey, DescribedTypeSignature exception) {
+        final DescriptionInfo descriptionInfo =
+                findDescription(methodKey + ":throws/" + exception.typeSignature().signature(),
+                                exception.descriptionInfo());
+        return exception.withDescriptionInfo(descriptionInfo);
     }
 
     private FieldInfo addParameterDocString(ServiceInfo service, MethodInfo method, FieldInfo field) {

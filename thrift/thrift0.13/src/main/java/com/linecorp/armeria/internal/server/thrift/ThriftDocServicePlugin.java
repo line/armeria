@@ -66,6 +66,7 @@ import com.linecorp.armeria.server.docs.FieldInfo;
 import com.linecorp.armeria.server.docs.MethodInfo;
 import com.linecorp.armeria.server.docs.ServiceInfo;
 import com.linecorp.armeria.server.docs.ServiceSpecification;
+import com.linecorp.armeria.server.docs.DescribedTypeSignature;
 import com.linecorp.armeria.server.docs.TypeSignature;
 import com.linecorp.armeria.server.thrift.THttpService;
 import com.linecorp.armeria.server.thrift.ThriftServiceEntry;
@@ -266,21 +267,21 @@ public final class ThriftDocServicePlugin implements DocServicePlugin {
             }
         }
 
-        final TypeSignature returnTypeSignature;
+        final DescribedTypeSignature returnInfo;
         if (fieldInfo == null) {
-            returnTypeSignature = VOID;
+            returnInfo = DescribedTypeSignature.of(VOID);
         } else {
-            returnTypeSignature = fieldInfo.typeSignature();
+            returnInfo = DescribedTypeSignature.of(fieldInfo.typeSignature());
         }
 
-        final List<TypeSignature> exceptionTypeSignatures =
+        final List<DescribedTypeSignature> exceptions =
                 Arrays.stream(exceptionClasses)
                       .filter(e -> e != TException.class)
-                      .map(TypeSignature::ofStruct)
+                      .map(e -> DescribedTypeSignature.of(TypeSignature.ofStruct(e)))
                       .collect(toImmutableList());
 
-        return new MethodInfo(serviceName, name, returnTypeSignature, parameters, false,
-                              exceptionTypeSignatures,
+        return new MethodInfo(serviceName, name, returnInfo,
+                              parameters, false, exceptions,
                               endpoints,
                               ImmutableList.of(),
                               ImmutableList.of(),

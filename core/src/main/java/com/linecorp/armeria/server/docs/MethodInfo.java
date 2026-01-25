@@ -17,6 +17,7 @@
 package com.linecorp.armeria.server.docs;
 
 import static com.google.common.base.Preconditions.checkArgument;
+import static com.google.common.collect.ImmutableList.toImmutableList;
 import static java.util.Comparator.comparing;
 import static java.util.Objects.requireNonNull;
 
@@ -30,6 +31,7 @@ import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSortedSet;
 import com.google.common.collect.Iterables;
+import com.google.common.collect.Streams;
 
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpMethod;
@@ -44,16 +46,14 @@ import com.linecorp.armeria.server.Service;
 @UnstableApi
 public final class MethodInfo {
 
-    // FIXME(trustin): Return types and exception types should also have docstrings like params have them.
-
     private final String id;
     private final String name;
-    private final TypeSignature returnTypeSignature;
+    private final DescribedTypeSignature returnInfo;
 
     private final List<FieldInfo> parameters;
     private final boolean useParameterAsRoot;
 
-    private final Set<TypeSignature> exceptionTypeSignatures;
+    private final List<DescribedTypeSignature> exceptions;
     private final Set<EndpointInfo> endpoints;
     private final List<HttpHeaders> exampleHeaders;
     private final List<String> exampleRequests;
@@ -74,7 +74,8 @@ public final class MethodInfo {
                       Iterable<EndpointInfo> endpoints,
                       HttpMethod httpMethod,
                       DescriptionInfo descriptionInfo) {
-        this(name, returnTypeSignature, parameters, false, exceptionTypeSignatures,
+        this(name, DescribedTypeSignature.of(returnTypeSignature),
+             parameters, false, toDescribedTypeSignatures(exceptionTypeSignatures),
              endpoints, ImmutableList.of(),
              ImmutableList.of(), ImmutableList.of(), ImmutableList.of(), httpMethod, descriptionInfo,
              createId(serviceName, name, overloadId, httpMethod)
@@ -92,7 +93,8 @@ public final class MethodInfo {
                       Iterable<String> exampleQueries,
                       HttpMethod httpMethod,
                       DescriptionInfo descriptionInfo) {
-        this(name, returnTypeSignature, parameters, false, ImmutableList.of(), endpoints, ImmutableList.of(),
+        this(name, DescribedTypeSignature.of(returnTypeSignature),
+             parameters, false, ImmutableList.of(), endpoints, ImmutableList.of(),
              ImmutableList.of(), examplePaths, exampleQueries, httpMethod, descriptionInfo,
              createId(serviceName, name, overloadId, httpMethod)
         );
@@ -113,30 +115,52 @@ public final class MethodInfo {
                       Iterable<String> exampleQueries,
                       HttpMethod httpMethod,
                       DescriptionInfo descriptionInfo) {
-        this(name, returnTypeSignature, parameters, useParameterAsRoot,
-             exceptionTypeSignatures, endpoints, exampleHeaders,
+        this(name, DescribedTypeSignature.of(returnTypeSignature),
+             parameters, useParameterAsRoot,
+             toDescribedTypeSignatures(exceptionTypeSignatures), endpoints, exampleHeaders,
              exampleRequests, examplePaths, exampleQueries, httpMethod, descriptionInfo,
              createId(serviceName, name, 0, httpMethod));
     }
 
-    MethodInfo(String name, TypeSignature returnTypeSignature,
+    /**
+     * Creates a new instance with {@link DescribedTypeSignature}.
+     */
+    public MethodInfo(String serviceName, String name,
+                      DescribedTypeSignature returnInfo,
+                      Iterable<FieldInfo> parameters,
+                      boolean useParameterAsRoot,
+                      Iterable<DescribedTypeSignature> exceptions,
+                      Iterable<EndpointInfo> endpoints,
+                      Iterable<HttpHeaders> exampleHeaders,
+                      Iterable<String> exampleRequests,
+                      Iterable<String> examplePaths,
+                      Iterable<String> exampleQueries,
+                      HttpMethod httpMethod,
+                      DescriptionInfo descriptionInfo) {
+        this(name, returnInfo,
+             parameters, useParameterAsRoot,
+             exceptions, endpoints, exampleHeaders,
+             exampleRequests, examplePaths, exampleQueries, httpMethod, descriptionInfo,
+             createId(serviceName, name, 0, httpMethod));
+    }
+
+    MethodInfo(String name, DescribedTypeSignature returnInfo,
                Iterable<FieldInfo> parameters, boolean useParameterAsRoot,
-               Iterable<TypeSignature> exceptionTypeSignatures, Iterable<EndpointInfo> endpoints,
+               Iterable<DescribedTypeSignature> exceptions, Iterable<EndpointInfo> endpoints,
                Iterable<HttpHeaders> exampleHeaders, Iterable<String> exampleRequests,
                Iterable<String> examplePaths, Iterable<String> exampleQueries, HttpMethod httpMethod,
                DescriptionInfo descriptionInfo, String id) {
         this.id = requireNonNull(id, "id");
         this.name = requireNonNull(name, "name");
 
-        this.returnTypeSignature = requireNonNull(returnTypeSignature, "returnTypeSignature");
+        this.returnInfo = requireNonNull(returnInfo, "returnInfo");
         this.parameters = ImmutableList.copyOf(requireNonNull(parameters, "parameters"));
         assert !useParameterAsRoot || this.parameters.size() == 1;
         this.useParameterAsRoot = useParameterAsRoot;
 
-        this.exceptionTypeSignatures =
-                ImmutableSortedSet.copyOf(
-                        comparing(TypeSignature::signature),
-                        requireNonNull(exceptionTypeSignatures, "exceptionTypeSignatures"));
+        this.exceptions = ImmutableList.sortedCopyOf(
+                comparing(e -> e.typeSignature().signature()),
+                requireNonNull(exceptions, "exceptions"));
         this.endpoints = ImmutableSortedSet.copyOf(
                 comparing(e -> e.hostnamePattern() + ':' + e.pathMapping()),
                 requireNonNull(endpoints, "endpoints"));
@@ -169,6 +193,13 @@ public final class MethodInfo {
         this.descriptionInfo = requireNonNull(descriptionInfo, "descriptionInfo");
     }
 
+    private static List<DescribedTypeSignature> toDescribedTypeSignatures(
+            Iterable<TypeSignature> exceptionTypeSignatures) {
+        return Streams.stream(requireNonNull(exceptionTypeSignatures, "exceptionTypeSignatures"))
+                      .map(DescribedTypeSignature::of)
+                      .collect(toImmutableList());
+    }
+
     /**
      * Returns the id of this function. It's a form of {@code serviceName/methodName/httpMethod}.
      * The {@code methodName} might have {@code -x} suffix if the method is overloaded.
@@ -187,11 +218,51 @@ public final class MethodInfo {
     }
 
     /**
-     * Returns the signature of the return type of the function.
+     * Returns the return type information including the type signature and its description.
      */
     @JsonProperty
+    public DescribedTypeSignature returnInfo() {
+        return returnInfo;
+    }
+
+    /**
+     * Returns a new {@link MethodInfo} with the specified return {@link DescribedTypeSignature}.
+     * Returns {@code this} if this {@link MethodInfo} has the same return {@link DescribedTypeSignature}.
+     */
+    public MethodInfo withReturnInfo(DescribedTypeSignature returnInfo) {
+        requireNonNull(returnInfo, "returnInfo");
+        if (returnInfo.equals(this.returnInfo)) {
+            return this;
+        }
+
+        return new MethodInfo(name, returnInfo,
+                              parameters, useParameterAsRoot, exceptions, endpoints,
+                              exampleHeaders, exampleRequests, examplePaths, exampleQueries, httpMethod,
+                              descriptionInfo, id);
+    }
+
+    /**
+     * Returns the signature of the return type of the function.
+     *
+     * @deprecated Use {@link #returnInfo()}.{@link DescribedTypeSignature#typeSignature() typeSignature()}
+     *             instead.
+     */
+    @Deprecated
+    @JsonIgnore
     public TypeSignature returnTypeSignature() {
-        return returnTypeSignature;
+        return returnInfo.typeSignature();
+    }
+
+    /**
+     * Returns the description information of the return type.
+     *
+     * @deprecated Use {@link #returnInfo()}.{@link DescribedTypeSignature#descriptionInfo() descriptionInfo()}
+     *             instead.
+     */
+    @Deprecated
+    @JsonIgnore
+    public DescriptionInfo returnDescriptionInfo() {
+        return returnInfo.descriptionInfo();
     }
 
     /**
@@ -230,18 +301,48 @@ public final class MethodInfo {
             return this;
         }
 
-        return new MethodInfo(name, returnTypeSignature, parameters, useParameterAsRoot,
-                              exceptionTypeSignatures, endpoints,
+        return new MethodInfo(name, returnInfo,
+                              parameters, useParameterAsRoot, exceptions, endpoints,
                               exampleHeaders, exampleRequests, examplePaths, exampleQueries, httpMethod,
                               descriptionInfo, id);
     }
 
     /**
      * Returns the metadata about the exceptions declared by the function.
+     *
+     * @deprecated Use {@link #exceptions()} instead.
+     */
+    @Deprecated
+    @JsonIgnore
+    public Set<TypeSignature> exceptionTypeSignatures() {
+        return exceptions.stream()
+                         .map(DescribedTypeSignature::typeSignature)
+                         .collect(ImmutableSortedSet.toImmutableSortedSet(
+                                 comparing(TypeSignature::signature)));
+    }
+
+    /**
+     * Returns the metadata about the exceptions declared by the function.
      */
     @JsonProperty
-    public Set<TypeSignature> exceptionTypeSignatures() {
-        return exceptionTypeSignatures;
+    public List<DescribedTypeSignature> exceptions() {
+        return exceptions;
+    }
+
+    /**
+     * Returns a new {@link MethodInfo} with the specified exceptions.
+     * Returns {@code this} if this {@link MethodInfo} has the same exceptions.
+     */
+    public MethodInfo withExceptions(Iterable<DescribedTypeSignature> exceptions) {
+        requireNonNull(exceptions, "exceptions");
+        if (exceptions.equals(this.exceptions)) {
+            return this;
+        }
+
+        return new MethodInfo(name, returnInfo,
+                              parameters, useParameterAsRoot, exceptions, endpoints,
+                              exampleHeaders, exampleRequests, examplePaths, exampleQueries, httpMethod,
+                              descriptionInfo, id);
     }
 
     /**
@@ -303,8 +404,8 @@ public final class MethodInfo {
             return this;
         }
 
-        return new MethodInfo(name, returnTypeSignature, parameters, useParameterAsRoot,
-                              exceptionTypeSignatures, endpoints,
+        return new MethodInfo(name, returnInfo,
+                              parameters, useParameterAsRoot, exceptions, endpoints,
                               exampleHeaders, exampleRequests, examplePaths, exampleQueries, httpMethod,
                               descriptionInfo, id);
     }
@@ -322,10 +423,10 @@ public final class MethodInfo {
         final MethodInfo that = (MethodInfo) o;
         return id().equals(that.id()) &&
                name().equals(that.name()) &&
-               returnTypeSignature().equals(that.returnTypeSignature()) &&
+               returnInfo().equals(that.returnInfo()) &&
                parameters().equals(that.parameters()) &&
                useParameterAsRoot() == that.useParameterAsRoot() &&
-               exceptionTypeSignatures().equals(that.exceptionTypeSignatures()) &&
+               exceptions().equals(that.exceptions()) &&
                endpoints().equals(that.endpoints()) &&
                httpMethod() == that.httpMethod() &&
                descriptionInfo().equals(that.descriptionInfo());
@@ -333,8 +434,9 @@ public final class MethodInfo {
 
     @Override
     public int hashCode() {
-        return Objects.hash(id(), name(), returnTypeSignature(), parameters(), useParameterAsRoot(),
-                            exceptionTypeSignatures(), endpoints(), httpMethod(), descriptionInfo());
+        return Objects.hash(id(), name(), returnInfo(),
+                            parameters(), useParameterAsRoot(),
+                            exceptions(), endpoints(), httpMethod(), descriptionInfo());
     }
 
     @Override
@@ -342,10 +444,10 @@ public final class MethodInfo {
         return MoreObjects.toStringHelper(this).omitNullValues()
                           .add("id", id())
                           .add("name", name())
-                          .add("returnTypeSignature", returnTypeSignature())
+                          .add("returnInfo", returnInfo())
                           .add("parameters", parameters())
                           .add("useParameterAsRoot", useParameterAsRoot())
-                          .add("exceptionTypeSignatures", exceptionTypeSignatures())
+                          .add("exceptions", exceptions())
                           .add("endpoints", endpoints())
                           .add("httpMethod", httpMethod())
                           .add("descriptionInfo", descriptionInfo())

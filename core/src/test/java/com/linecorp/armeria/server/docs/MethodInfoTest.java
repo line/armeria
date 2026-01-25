@@ -30,7 +30,8 @@ import com.linecorp.armeria.common.HttpMethod;
 class MethodInfoTest {
 
     private static MethodInfo newMethodInfo(List<String> examplePaths, List<String> exampleQueries) {
-        return new MethodInfo("foo", TypeSignature.ofBase("T"), ImmutableList.of(), false, ImmutableList.of(),
+        return new MethodInfo("foo", DescribedTypeSignature.of(TypeSignature.ofBase("T")),
+                              ImmutableList.of(), false, ImmutableList.of(),
                               ImmutableList.of(), ImmutableList.of(), ImmutableList.of(), examplePaths,
                               exampleQueries, HttpMethod.GET, DescriptionInfo.empty(), "id");
     }
@@ -65,6 +66,106 @@ class MethodInfoTest {
         assertThat(methodInfo.id()).isEqualTo("com.MyService/foo/GET");
         final MethodInfo methodInfo1 = methodInfo(1);
         assertThat(methodInfo1.id()).isEqualTo("com.MyService/foo-1/GET");
+    }
+
+    @Test
+    void returnInfo() {
+        final DescriptionInfo returnDescriptionInfo = DescriptionInfo.of("Return value description");
+        final DescribedTypeSignature returnInfo = DescribedTypeSignature.of(
+                TypeSignature.ofBase("String"), returnDescriptionInfo);
+        final MethodInfo methodInfo = new MethodInfo(
+                "com.MyService", "foo",
+                returnInfo,
+                ImmutableList.of(), false, ImmutableList.of(),
+                ImmutableList.of(), ImmutableList.of(), ImmutableList.of(),
+                ImmutableList.of(), ImmutableList.of(),
+                HttpMethod.GET, DescriptionInfo.empty());
+
+        assertThat(methodInfo.returnInfo()).isEqualTo(returnInfo);
+        assertThat(methodInfo.returnInfo().descriptionInfo()).isEqualTo(returnDescriptionInfo);
+    }
+
+    @Test
+    @SuppressWarnings("deprecation")
+    void returnDescriptionInfoDeprecated() {
+        final MethodInfo methodInfo = methodInfo(0);
+        assertThat(methodInfo.returnDescriptionInfo()).isEqualTo(DescriptionInfo.empty());
+
+        final DescriptionInfo newReturnDescription = DescriptionInfo.of("New return description");
+        final MethodInfo updatedMethodInfo = methodInfo.withReturnInfo(
+                methodInfo.returnInfo().withDescriptionInfo(newReturnDescription));
+
+        assertThat(updatedMethodInfo.returnDescriptionInfo()).isEqualTo(newReturnDescription);
+        assertThat(methodInfo.returnDescriptionInfo()).isEqualTo(DescriptionInfo.empty());
+    }
+
+    @Test
+    void withReturnInfoReturnsSameInstanceWhenUnchanged() {
+        final MethodInfo methodInfo = methodInfo(0);
+        final MethodInfo same = methodInfo.withReturnInfo(methodInfo.returnInfo());
+        assertThat(same).isSameAs(methodInfo);
+    }
+
+    @Test
+    void exceptions() {
+        final DescribedTypeSignature exceptionInfo1 = DescribedTypeSignature.of(
+                TypeSignature.ofStruct(IllegalArgumentException.class));
+        final DescribedTypeSignature exceptionInfo2 = DescribedTypeSignature.of(
+                TypeSignature.ofStruct(IllegalStateException.class),
+                DescriptionInfo.of("State is invalid"));
+
+        final MethodInfo methodInfo = new MethodInfo(
+                "com.MyService", "foo",
+                DescribedTypeSignature.of(TypeSignature.ofBase("void")),
+                ImmutableList.of(), false,
+                ImmutableList.of(exceptionInfo1, exceptionInfo2),
+                ImmutableList.of(), ImmutableList.of(), ImmutableList.of(),
+                ImmutableList.of(), ImmutableList.of(),
+                HttpMethod.GET, DescriptionInfo.empty());
+
+        assertThat(methodInfo.exceptions()).hasSize(2);
+        assertThat(methodInfo.exceptions()).contains(exceptionInfo1, exceptionInfo2);
+    }
+
+    @Test
+    void withExceptions() {
+        final MethodInfo methodInfo = methodInfo(0);
+        assertThat(methodInfo.exceptions()).isEmpty();
+
+        final DescribedTypeSignature newException = DescribedTypeSignature.of(
+                TypeSignature.ofStruct(RuntimeException.class),
+                DescriptionInfo.of("A runtime exception"));
+        final MethodInfo updatedMethodInfo = methodInfo.withExceptions(ImmutableList.of(newException));
+
+        assertThat(updatedMethodInfo.exceptions()).containsExactly(newException);
+        assertThat(methodInfo.exceptions()).isEmpty();
+    }
+
+    @Test
+    void withExceptionsReturnsSameInstanceWhenUnchanged() {
+        final MethodInfo methodInfo = methodInfo(0);
+        final MethodInfo same = methodInfo.withExceptions(ImmutableList.of());
+        assertThat(same).isSameAs(methodInfo);
+    }
+
+    @Test
+    @SuppressWarnings("deprecation")
+    void exceptionTypeSignaturesBackwardCompatibility() {
+        final DescribedTypeSignature exceptionInfo = DescribedTypeSignature.of(
+                TypeSignature.ofStruct(IllegalArgumentException.class));
+
+        final MethodInfo methodInfo = new MethodInfo(
+                "com.MyService", "foo",
+                DescribedTypeSignature.of(TypeSignature.ofBase("void")),
+                ImmutableList.of(), false,
+                ImmutableList.of(exceptionInfo),
+                ImmutableList.of(), ImmutableList.of(), ImmutableList.of(),
+                ImmutableList.of(), ImmutableList.of(),
+                HttpMethod.GET, DescriptionInfo.empty());
+
+        // The deprecated exceptionTypeSignatures() should return the type signatures
+        assertThat(methodInfo.exceptionTypeSignatures())
+                .containsExactly(TypeSignature.ofStruct(IllegalArgumentException.class));
     }
 
     private static MethodInfo methodInfo(int overloadId) {

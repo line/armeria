@@ -126,8 +126,8 @@ public final class ServiceInfo {
                 }
                 final Set<EndpointInfo> endpointInfos =
                         Sets.union(value.endpoints(), methodInfo.endpoints());
-                return new MethodInfo(value.name(), value.returnTypeSignature(), value.parameters(),
-                                      value.useParameterAsRoot(), value.exceptionTypeSignatures(),
+                return new MethodInfo(value.name(), value.returnInfo(),
+                                      value.parameters(), value.useParameterAsRoot(), value.exceptions(),
                                       endpointInfos, value.exampleHeaders(),
                                       value.exampleRequests(), value.examplePaths(), value.exampleQueries(),
                                       value.httpMethod(), value.descriptionInfo(), value.id());
@@ -156,7 +156,7 @@ public final class ServiceInfo {
     /**
      * Returns all {@link TypeSignature} of {@link MethodInfo#parameters()} of {@link #methods()} if
      * {@code request} is set to true. Otherwise, returns all {@link MethodInfo#returnTypeSignature()} and
-     * {@link MethodInfo#exceptionTypeSignatures()} of the {@link #methods()}.
+     * {@link MethodInfo#exceptions()} of the {@link #methods()}.
      */
     public Set<DescriptiveTypeSignature> findDescriptiveTypes(boolean request) {
         final Set<DescriptiveTypeSignature> collectedDescriptiveTypes = new HashSet<>();
@@ -165,7 +165,7 @@ public final class ServiceInfo {
                 m.parameters().forEach(p -> findDescriptiveTypes(collectedDescriptiveTypes, p.typeSignature()));
             } else {
                 findDescriptiveTypes(collectedDescriptiveTypes, m.returnTypeSignature());
-                m.exceptionTypeSignatures().forEach(s -> findDescriptiveTypes(collectedDescriptiveTypes, s));
+                m.exceptions().forEach(e -> findDescriptiveTypes(collectedDescriptiveTypes, e.typeSignature()));
             }
         });
         return ImmutableSet.copyOf(collectedDescriptiveTypes);

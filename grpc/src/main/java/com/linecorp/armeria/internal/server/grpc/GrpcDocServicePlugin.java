@@ -75,6 +75,7 @@ import com.linecorp.armeria.server.docs.FieldRequirement;
 import com.linecorp.armeria.server.docs.MethodInfo;
 import com.linecorp.armeria.server.docs.ServiceInfo;
 import com.linecorp.armeria.server.docs.ServiceSpecification;
+import com.linecorp.armeria.server.docs.DescribedTypeSignature;
 import com.linecorp.armeria.server.docs.TypeSignature;
 import com.linecorp.armeria.server.grpc.GrpcService;
 
@@ -428,11 +429,11 @@ public final class GrpcDocServicePlugin implements DocServicePlugin {
                 serviceName,
                 method.getName(),
                 // gRPC methods always take a single request parameter of message type.
-                descriptiveMessageSignature(method.getOutputType()),
+                DescribedTypeSignature.of(descriptiveMessageSignature(method.getOutputType())),
                 ImmutableList.of(FieldInfo.builder("request",
                                                    descriptiveMessageSignature(method.getInputType()))
                                           .requirement(FieldRequirement.REQUIRED).build()),
-                true, ImmutableList.of(),
+                true, ImmutableList.<DescribedTypeSignature>of(),
                 endpointInfos,
                 ImmutableList.of(),
                 defaultExamples(method),
