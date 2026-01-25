@@ -75,10 +75,10 @@ final class GrpcDocStringExtractor extends DocStringExtractor {
             ImmutableSet.of(".bin", ".desc", ".dsc", ".pb", ".protobin");
 
     // Pattern to match @return tag in docstrings (must be at beginning of line)
-    // Matches: @return <description> or @return <type> - <description>
+    // Matches: @return <description> (return type is known from method definition)
     // The tag must appear at the start of a line (after optional whitespace)
     private static final Pattern RETURN_PATTERN =
-            Pattern.compile("^\\s*@return\\s+(?:\\S+\\s*[-–]?\\s*)?(.*)$", Pattern.MULTILINE);
+            Pattern.compile("^\\s*@return\\s+(.+)$", Pattern.MULTILINE);
 
     GrpcDocStringExtractor() {
         super("META-INF/armeria/grpc", "com.linecorp.armeria.grpc.descriptorDir");

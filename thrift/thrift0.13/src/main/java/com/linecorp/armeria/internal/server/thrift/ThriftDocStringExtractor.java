@@ -55,13 +55,14 @@ final class ThriftDocStringExtractor extends DocStringExtractor {
     private static final String DELIM = "/";
 
     // Pattern to match @return tag in docstrings (must be at beginning of line)
-    // Matches: @return <type> - <description> or @return <type> <description>
+    // Matches: @return <description> (return type is known from method definition)
     // The tag must appear at the start of a line (after optional whitespace and * for Javadoc-style)
     private static final Pattern RETURN_PATTERN =
-            Pattern.compile("^[\\s*]*@return\\s+\\S+\\s*[-–]?\\s*(.*)$", Pattern.MULTILINE);
+            Pattern.compile("^[\\s*]*@return\\s+(.+)$", Pattern.MULTILINE);
 
     // Pattern to match @throws tag in docstrings (must be at beginning of line)
-    // Matches: @throws <type> - <description> or @throws <type> <description>
+    // Matches: @throws <type> <description> or @throws <type> - <description>
+    // The dash separator is optional
     // The tag must appear at the start of a line (after optional whitespace and * for Javadoc-style)
     private static final Pattern THROWS_PATTERN =
             Pattern.compile("^[\\s*]*@throws\\s+(\\S+)\\s*[-–]?\\s*(.*)$", Pattern.MULTILINE);

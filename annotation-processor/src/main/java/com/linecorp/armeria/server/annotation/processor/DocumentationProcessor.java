@@ -70,15 +70,11 @@ public final class DocumentationProcessor extends AbstractProcessor {
                                                                .omitEmptyStrings();
 
     // Pattern to match @return tag in docstrings (must be at beginning of line)
-    // Matches either:
-    // - JavaDoc format: @return <description> (description has spaces or is multi-word)
-    // - Proto/Thrift format: @return <type> - <description> (type followed by dash and description)
-    // Single-word returns without a dash are skipped (assumed to be type-only)
+    // Matches: @return <description>
     // The tag must appear at the start of a line (after optional whitespace and *)
     // Note: [ \t] ensures we match only horizontal whitespace, not newlines
     private static final Pattern RETURN_PATTERN =
-            Pattern.compile("^[ \t*]*@return[ \t]+(?:(?:\\S+[ \t]*[-–][ \t]*)([^\r\n]+)|([^\r\n]*[ \t]+[^\r\n]*))$",
-                            Pattern.MULTILINE);
+            Pattern.compile("^[ \t*]*@return[ \t]+([^\r\n]+)$", Pattern.MULTILINE);
 
     // Pattern to match @throws tag in docstrings (must be at beginning of line)
     // Matches: @throws <type> - <description> or @throws <type> <description>
@@ -227,17 +223,9 @@ public final class DocumentationProcessor extends AbstractProcessor {
         if (hasReturn) {
             final Matcher returnMatcher = RETURN_PATTERN.matcher(docComment);
             if (returnMatcher.find()) {
-                // Group 1: Proto/Thrift style with dash (Type - description)
-                // Group 2: JavaDoc style (multi-word description)
-                String returnDescription = returnMatcher.group(1);
-                if (returnDescription == null) {
-                    returnDescription = returnMatcher.group(2);
-                }
-                if (returnDescription != null) {
-                    returnDescription = returnDescription.trim();
-                    if (!returnDescription.isEmpty()) {
-                        properties.setProperty(methodName + ":return", returnDescription);
-                    }
+                final String returnDescription = returnMatcher.group(1).trim();
+                if (!returnDescription.isEmpty()) {
+                    properties.setProperty(methodName + ":return", returnDescription);
                 }
             }
         }

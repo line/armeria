@@ -350,9 +350,9 @@ class GrpcDocServiceTest {
         final JsonNode unaryCallReturnInfo = unaryCallMethod.get("returnInfo");
         assertThat(unaryCallReturnInfo.get("typeSignature").textValue())
                 .isEqualTo("armeria.grpc.testing.SimpleResponse");
-        // Verify the @return docstring is present
+        // Verify the @return docstring is present (entire content after @return is captured)
         final JsonNode unaryCallReturnDescriptionInfo = unaryCallReturnInfo.get("descriptionInfo");
         assertThat(unaryCallReturnDescriptionInfo.get("docString").textValue())
-                .isEqualTo("a response containing the payload");
+                .isEqualTo("SimpleResponse - a response containing the payload");
     }
 }

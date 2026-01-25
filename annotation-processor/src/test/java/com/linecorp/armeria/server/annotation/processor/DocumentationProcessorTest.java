@@ -107,8 +107,8 @@ public class DocumentationProcessorTest {
         assertThat(properties.getProperty("hasReturnAndThrows:throws/IllegalArgumentException"))
                 .isEqualTo("when x is empty");
 
-        // Test type-only @return (no description) should not create a property
-        assertThat(properties.getProperty("returnTypeOnly:return")).isNull();
+        // Test @return captures whatever follows the tag (no special-casing for single words)
+        assertThat(properties.getProperty("returnTypeOnly:return")).isEqualTo("int");
         assertThat(properties.getProperty("returnTypeOnly.x")).isEqualTo("The x variable");
 
         // Test type-only @throws (no description) should not create a property
@@ -117,7 +117,7 @@ public class DocumentationProcessorTest {
 
         // Test mid-line tags should be ignored, only valid line-start tag should be captured
         assertThat(properties.getProperty("midLineTagsIgnored:return"))
-                .isEqualTo("valid return description");
+                .isEqualTo("int - valid return description");
         assertThat(properties.getProperty("midLineTagsIgnored.x")).isEqualTo("The x variable");
     }
 

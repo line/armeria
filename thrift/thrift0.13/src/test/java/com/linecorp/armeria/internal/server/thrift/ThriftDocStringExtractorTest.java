@@ -54,11 +54,12 @@ class ThriftDocStringExtractorTest {
                                 "META-INF/armeria/thrift/ThriftTest.json"))));
         // Test that @return docstrings are extracted
         // The testString method has: @return string - returns the string 'thing'
+        // Since return type is known from method definition, the entire content is captured
         assertThat(docStrings.get("thrift.test.ThriftTest/testString:return"))
-                .isEqualTo("returns the string 'thing'");
+                .isEqualTo("string - returns the string 'thing'");
         // The testStruct method has: @return Xtruct - returns the Xtruct 'thing'
         assertThat(docStrings.get("thrift.test.ThriftTest/testStruct:return"))
-                .isEqualTo("returns the Xtruct 'thing'");
+                .isEqualTo("Xtruct - returns the Xtruct 'thing'");
     }
 
     @Test
@@ -89,15 +90,15 @@ class ThriftDocStringExtractorTest {
     }
 
     @Test
-    void testMissingReturnDescription() throws IOException {
-        // Test that @return with only type name (no description) does not create a :return entry
+    void testReturnTypeOnly() throws IOException {
+        // Test that @return captures whatever follows the tag (no special-casing)
         final Map<String, String> docStrings = extractor.getAllDocStrings(getClass().getClassLoader());
-        // MissingDocStringService.returnTypeOnly has "@return string" without description
+        // MissingDocStringService.returnTypeOnly has "@return string"
         assertThat(docStrings.get("testing.thrift.main.MissingDocStringService/returnTypeOnly"))
                 .contains("@return string");
-        // The :return entry should not exist because there's no description
-        assertThat(docStrings.containsKey("testing.thrift.main.MissingDocStringService/returnTypeOnly:return"))
-                .isFalse();
+        // The :return entry should capture "string"
+        assertThat(docStrings.get("testing.thrift.main.MissingDocStringService/returnTypeOnly:return"))
+                .isEqualTo("string");
     }
 
     @Test
@@ -126,8 +127,9 @@ class ThriftDocStringExtractorTest {
         assertThat(methodDoc).contains("mid-line @throws FooServiceException");
 
         // The :return entry should only capture the valid line-start @return tag
+        // The entire content after @return is captured (no type parsing)
         assertThat(docStrings.get(
                 "testing.thrift.main.MissingDocStringService/midLineTagsIgnored:return"))
-                .isEqualTo("valid return description");
+                .isEqualTo("string - valid return description");
     }
 }
