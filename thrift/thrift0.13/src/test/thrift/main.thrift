@@ -162,3 +162,20 @@ service TypeDefService {
                   13: TypedefedDouble td13, 14: TypedefedListDouble td14, 15: TypedefedBinary td15,
                   16: TypedefedListBinary td16)
 }
+
+// Tests missing docstrings (type-only return and throws tags)
+service MissingDocStringService {
+    /**
+     * Method where only the type is specified in the return tag.
+     * @param string value - the input value
+     * @return string
+     */
+    string returnTypeOnly(1:string value)
+
+    /**
+     * Method where only the type is specified in the throws tag.
+     * @param string value - the input value
+     * @throws FooServiceException
+     */
+    void throwsTypeOnly(1:string value) throws (1:FooServiceException e)
+}

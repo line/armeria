@@ -123,4 +123,17 @@ class GrpcDocStringExtractorTest {
                 "armeria.grpc.testing.SimpleRequest.NestedEnum/OK",
                 " We're ok.\n");
     }
+
+    @Test
+    void missingReturnDescription() {
+        // Test that @return with only type name (no description) does not create a :return entry
+        // MissingDocStringService.ReturnTypeOnly has "@return SimpleResponse" without description
+        assertThat(DOCSTRINGS).containsEntry(
+                "armeria.grpc.testing.MissingDocStringService/ReturnTypeOnly",
+                " A call where only the type is specified in the return tag.\n" +
+                " @return SimpleResponse\n");
+        // The :return entry should not exist because there's no description
+        assertThat(DOCSTRINGS).doesNotContainKey(
+                "armeria.grpc.testing.MissingDocStringService/ReturnTypeOnly:return");
+    }
 }

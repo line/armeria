@@ -187,3 +187,10 @@ service UnitTestBarService {
   rpc StaticUnaryCall(SimpleRequest) returns (SimpleResponse);
   rpc StaticUnaryCall2(SimpleRequest) returns (SimpleResponse);
 }
+
+// Tests missing return description
+service MissingDocStringService {
+  // A call where only the type is specified in the return tag.
+  // @return SimpleResponse
+  rpc ReturnTypeOnly(SimpleRequest) returns (SimpleResponse);
+}

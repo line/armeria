@@ -87,4 +87,29 @@ class ThriftDocStringExtractorTest {
         final Map<String, String> docStrings = extractor.getAllDocStrings(getClass().getClassLoader());
         assertThat(docStrings.containsKey("thrift.test.Numberz")).isTrue();
     }
+
+    @Test
+    void testMissingReturnDescription() throws IOException {
+        // Test that @return with only type name (no description) does not create a :return entry
+        final Map<String, String> docStrings = extractor.getAllDocStrings(getClass().getClassLoader());
+        // MissingDocStringService.returnTypeOnly has "@return string" without description
+        assertThat(docStrings.get("testing.thrift.main.MissingDocStringService/returnTypeOnly"))
+                .contains("@return string");
+        // The :return entry should not exist because there's no description
+        assertThat(docStrings.containsKey("testing.thrift.main.MissingDocStringService/returnTypeOnly:return"))
+                .isFalse();
+    }
+
+    @Test
+    void testMissingThrowsDescription() throws IOException {
+        // Test that @throws with only type name (no description) does not create a :throws entry
+        final Map<String, String> docStrings = extractor.getAllDocStrings(getClass().getClassLoader());
+        // MissingDocStringService.throwsTypeOnly has "@throws FooServiceException" without description
+        assertThat(docStrings.get("testing.thrift.main.MissingDocStringService/throwsTypeOnly"))
+                .contains("@throws FooServiceException");
+        // The :throws entry should not exist because there's no description
+        assertThat(docStrings.containsKey(
+                "testing.thrift.main.MissingDocStringService/throwsTypeOnly:throws/testing.thrift.main.FooServiceException"))
+                .isFalse();
+    }
 }
