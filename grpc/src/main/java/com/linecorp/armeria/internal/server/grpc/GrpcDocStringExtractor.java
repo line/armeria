@@ -19,12 +19,13 @@ package com.linecorp.armeria.internal.server.grpc;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 
 import java.io.IOException;
-import java.util.AbstractMap.SimpleImmutableEntry;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.Objects;
 import java.util.Set;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
 import org.slf4j.Logger;
@@ -73,6 +74,11 @@ final class GrpcDocStringExtractor extends DocStringExtractor {
     private static final Set<String> acceptableExtensions =
             ImmutableSet.of(".bin", ".desc", ".dsc", ".pb", ".protobin");
 
+    // Pattern to match @return tag in docstrings
+    // Matches: @return <description> or @return <type> - <description>
+    private static final Pattern RETURN_PATTERN =
+            Pattern.compile("@return\\s+(?:\\S+\\s*[-–]?\\s*)?(.*)$", Pattern.MULTILINE);
+
     GrpcDocStringExtractor() {
         super("META-INF/armeria/grpc", "com.linecorp.armeria.grpc.descriptorDir");
     }
@@ -101,22 +107,49 @@ final class GrpcDocStringExtractor extends DocStringExtractor {
     }
 
     private static Map<String, String> parseFile(FileDescriptorProto descriptor) {
-        return descriptor.getSourceCodeInfo().getLocationList().stream()
-                         .filter(l -> !l.getLeadingComments().isEmpty())
-                         .map(l -> {
-                             final String fullName = getFullName(descriptor, l.getPathList());
-                             if (fullName != null) {
-                                 return new SimpleImmutableEntry<>(fullName, l.getLeadingComments());
-                             } else {
-                                 return null;
-                             }
-                         })
-                         .filter(Objects::nonNull)
-                         .collect(toImmutableMap(Entry::getKey, Entry::getValue, (first, second) -> {
-                             logger.warn("Multiple keys found while parsing proto comments," +
-                                         " skipping entry \"{}\".", second);
-                             return first;
-                         }));
+        final Map<String, String> result = new HashMap<>();
+        for (com.google.protobuf.DescriptorProtos.SourceCodeInfo.Location location
+                : descriptor.getSourceCodeInfo().getLocationList()) {
+            if (location.getLeadingComments().isEmpty()) {
+                continue;
+            }
+
+            final String fullName = getFullName(descriptor, location.getPathList());
+            if (fullName == null) {
+                continue;
+            }
+
+            final String comment = location.getLeadingComments();
+            result.putIfAbsent(fullName, comment);
+
+            // If this is a method comment, also extract @return docstring
+            if (isMethodPath(location.getPathList())) {
+                parseReturnDocString(result, fullName, comment);
+            }
+        }
+        return result;
+    }
+
+    /**
+     * Checks if the path represents a method (rpc) in a service.
+     */
+    private static boolean isMethodPath(List<Integer> path) {
+        return path.size() == 4 &&
+               path.get(0) == FileDescriptorProto.SERVICE_FIELD_NUMBER &&
+               path.get(2) == ServiceDescriptorProto.METHOD_FIELD_NUMBER;
+    }
+
+    /**
+     * Parses the @return tag from a docstring and adds it to the result map.
+     */
+    private static void parseReturnDocString(Map<String, String> result, String methodKey, String doc) {
+        final Matcher matcher = RETURN_PATTERN.matcher(doc);
+        if (matcher.find()) {
+            final String returnDescription = matcher.group(1).trim();
+            if (!returnDescription.isEmpty()) {
+                result.put(methodKey + ":return", returnDescription);
+            }
+        }
     }
 
     // A path is field number and indices within a list of types, going through a tree of protobuf

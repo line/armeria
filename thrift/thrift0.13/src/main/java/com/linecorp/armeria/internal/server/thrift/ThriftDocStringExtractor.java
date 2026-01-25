@@ -19,15 +19,20 @@ package com.linecorp.armeria.internal.server.thrift;
 import java.io.IOException;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.server.docs.DocService;
 import com.linecorp.armeria.server.docs.DocStringExtractor;
 
@@ -48,6 +53,16 @@ final class ThriftDocStringExtractor extends DocStringExtractor {
     private static final String FQCN_DELIM = ".";
 
     private static final String DELIM = "/";
+
+    // Pattern to match @return tag in docstrings
+    // Matches: @return <type> - <description> or @return <type> <description>
+    private static final Pattern RETURN_PATTERN =
+            Pattern.compile("@return\\s+\\S+\\s*[-–]?\\s*(.*)$", Pattern.MULTILINE);
+
+    // Pattern to match @throws tag in docstrings
+    // Matches: @throws <type> - <description> or @throws <type> <description>
+    private static final Pattern THROWS_PATTERN =
+            Pattern.compile("@throws\\s+(\\S+)\\s*[-–]?\\s*(.*)$", Pattern.MULTILINE);
 
     ThriftDocStringExtractor() {
         super("META-INF/armeria/thrift", "com.linecorp.armeria.thrift.jsonDir");
@@ -79,7 +94,7 @@ final class ThriftDocStringExtractor extends DocStringExtractor {
                         final Collection<Object> castChildren = (Collection<Object>) children;
                         castChildren.forEach(
                                 grandChild -> traverseChildren(docStrings, packageName, FQCN_DELIM,
-                                                               grandChild));
+                                                               grandChild, packageName));
                     }
                 });
             } catch (IOException e) {
@@ -90,7 +105,7 @@ final class ThriftDocStringExtractor extends DocStringExtractor {
     }
 
     private static void traverseChildren(ImmutableMap.Builder<String, String> docStrings, String prefix,
-                                         String delimiter, Object node) {
+                                         String delimiter, Object node, String packageName) {
         if (node instanceof Map) {
             @SuppressWarnings("unchecked")
             final Map<String, Object> map = (Map<String, Object>) node;
@@ -100,16 +115,117 @@ final class ThriftDocStringExtractor extends DocStringExtractor {
             if (name != null) {
                 childPrefix = prefix + delimiter + name;
                 if (doc != null) {
-                    docStrings.put(childPrefix, doc.trim());
+                    final String trimmedDoc = doc.trim();
+                    docStrings.put(childPrefix, trimmedDoc);
+
+                    // Check if this is a function (has returnTypeId field)
+                    if (map.containsKey("returnTypeId")) {
+                        // Parse @return tag from docstring
+                        parseReturnDocString(docStrings, childPrefix, trimmedDoc);
+
+                        // Parse @throws tags from docstring
+                        parseThrowsDocStrings(docStrings, childPrefix, trimmedDoc, packageName,
+                                              getExceptionNames(map));
+                    }
                 }
             } else {
                 childPrefix = prefix;
             }
-            map.forEach((key, value) -> traverseChildren(docStrings, childPrefix, DELIM, value));
+            map.forEach((key, value) -> traverseChildren(docStrings, childPrefix, DELIM, value, packageName));
         } else if (node instanceof Iterable) {
             @SuppressWarnings("unchecked")
             final Iterable<Object> children = (Iterable<Object>) node;
-            children.forEach(child -> traverseChildren(docStrings, prefix, DELIM, child));
+            children.forEach(child -> traverseChildren(docStrings, prefix, DELIM, child, packageName));
         }
+    }
+
+    /**
+     * Parses the @return tag from a docstring and adds it to the docStrings map.
+     */
+    private static void parseReturnDocString(ImmutableMap.Builder<String, String> docStrings,
+                                             String methodKey, String doc) {
+        final Matcher matcher = RETURN_PATTERN.matcher(doc);
+        if (matcher.find()) {
+            final String returnDescription = matcher.group(1).trim();
+            if (!returnDescription.isEmpty()) {
+                docStrings.put(methodKey + ":return", returnDescription);
+            }
+        }
+    }
+
+    /**
+     * Parses @throws tags from a docstring and adds them to the docStrings map.
+     */
+    private static void parseThrowsDocStrings(ImmutableMap.Builder<String, String> docStrings,
+                                              String methodKey, String doc, String packageName,
+                                              List<String> exceptionNames) {
+        final Matcher matcher = THROWS_PATTERN.matcher(doc);
+        while (matcher.find()) {
+            final String exceptionType = matcher.group(1).trim();
+            final String throwsDescription = matcher.group(2).trim();
+            if (!throwsDescription.isEmpty()) {
+                // Find the fully qualified exception name
+                final String fqcn = findExceptionFqcn(exceptionType, packageName, exceptionNames);
+                if (fqcn != null) {
+                    docStrings.put(methodKey + ":throws/" + fqcn, throwsDescription);
+                }
+            }
+        }
+    }
+
+    /**
+     * Finds the fully qualified class name for an exception type.
+     */
+    @Nullable
+    private static String findExceptionFqcn(String exceptionType, String packageName,
+                                            List<String> exceptionNames) {
+        // If the exception type is already fully qualified, use it directly
+        if (exceptionType.contains(".")) {
+            return exceptionType;
+        }
+
+        // Check if the exception name matches any declared exception
+        for (String exceptionName : exceptionNames) {
+            if (exceptionName.equals(exceptionType)) {
+                // The exception name in the JSON is just the simple name, so add the package
+                return packageName + "." + exceptionType;
+            }
+            if (exceptionName.endsWith("." + exceptionType)) {
+                return exceptionName;
+            }
+        }
+
+        // Default to package name + exception type
+        return packageName + "." + exceptionType;
+    }
+
+    /**
+     * Extracts exception class names from a function's exceptions field.
+     */
+    private static List<String> getExceptionNames(Map<String, Object> functionMap) {
+        final Object exceptions = functionMap.get("exceptions");
+        if (!(exceptions instanceof List)) {
+            return ImmutableList.of();
+        }
+
+        final ImmutableList.Builder<String> names = ImmutableList.builder();
+        @SuppressWarnings("unchecked")
+        final List<Object> exceptionList = (List<Object>) exceptions;
+        for (Object exception : exceptionList) {
+            if (exception instanceof Map) {
+                @SuppressWarnings("unchecked")
+                final Map<String, Object> exceptionMap = (Map<String, Object>) exception;
+                final Object type = exceptionMap.get("type");
+                if (type instanceof Map) {
+                    @SuppressWarnings("unchecked")
+                    final Map<String, Object> typeMap = (Map<String, Object>) type;
+                    final String className = (String) typeMap.get("class");
+                    if (className != null) {
+                        names.add(className);
+                    }
+                }
+            }
+        }
+        return names.build();
     }
 }

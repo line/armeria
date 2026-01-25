@@ -39,7 +39,19 @@ class GrpcDocStringExtractorTest {
     void method() {
         assertThat(DOCSTRINGS).containsEntry(
                 "armeria.grpc.testing.TestService/UnaryCall",
-                " One request followed by one response.\n");
+                " One request followed by one response.\n" +
+                " @return SimpleResponse - a response containing the payload\n");
+    }
+
+    @Test
+    void methodReturnDocString() {
+        // Test that @return docstrings are extracted from method comments
+        assertThat(DOCSTRINGS).containsEntry(
+                "armeria.grpc.testing.TestService/EmptyCall:return",
+                "an empty response");
+        assertThat(DOCSTRINGS).containsEntry(
+                "armeria.grpc.testing.TestService/UnaryCall:return",
+                "a response containing the payload");
     }
 
     @Test

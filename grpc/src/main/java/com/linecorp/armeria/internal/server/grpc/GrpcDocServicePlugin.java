@@ -61,6 +61,7 @@ import com.linecorp.armeria.server.Route;
 import com.linecorp.armeria.server.RoutePathType;
 import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.ServiceConfig;
+import com.linecorp.armeria.server.docs.DescribedTypeSignature;
 import com.linecorp.armeria.server.docs.DescriptionInfo;
 import com.linecorp.armeria.server.docs.DescriptiveTypeInfo;
 import com.linecorp.armeria.server.docs.DescriptiveTypeInfoProvider;
@@ -75,7 +76,6 @@ import com.linecorp.armeria.server.docs.FieldRequirement;
 import com.linecorp.armeria.server.docs.MethodInfo;
 import com.linecorp.armeria.server.docs.ServiceInfo;
 import com.linecorp.armeria.server.docs.ServiceSpecification;
-import com.linecorp.armeria.server.docs.DescribedTypeSignature;
 import com.linecorp.armeria.server.docs.TypeSignature;
 import com.linecorp.armeria.server.grpc.GrpcService;
 

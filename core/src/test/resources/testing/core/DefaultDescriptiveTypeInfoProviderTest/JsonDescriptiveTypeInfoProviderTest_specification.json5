@@ -6,7 +6,13 @@
         {
           "name": "json",
           "id" : "com.linecorp.armeria.internal.server.annotation.DefaultDescriptiveTypeInfoProviderTest$JsonService/json/POST",
-          "returnTypeSignature": "CompletableFuture<com.linecorp.armeria.internal.server.annotation.DefaultDescriptiveTypeInfoProviderTest$BarResponse>",
+          "returnInfo": {
+            "typeSignature": "CompletableFuture<com.linecorp.armeria.internal.server.annotation.DefaultDescriptiveTypeInfoProviderTest$BarResponse>",
+            "descriptionInfo": {
+              "docString": "",
+              "markup": "NONE"
+            }
+          },
           "parameters": [
             {
               "name": "req",
@@ -19,7 +25,7 @@
               }
             }
           ],
-          "exceptionTypeSignatures": [ ],
+          "exceptions": [ ],
           "endpoints": [
             {
               "hostnamePattern": "*",

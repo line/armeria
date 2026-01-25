@@ -295,4 +295,36 @@ class GrpcDocServiceTest {
             json.forEach(GrpcDocServiceTest::removeDescriptionInfos);
         }
     }
+
+    @Test
+    void returnInfoStructure() throws Exception {
+        if (TestUtil.isDocServiceDemoMode()) {
+            return;
+        }
+
+        final WebClient client = WebClient.of(server.httpUri());
+        final AggregatedHttpResponse res = client.get("/docs/specification.json").aggregate().join();
+        assertThat(res.status()).isSameAs(HttpStatus.OK);
+
+        final JsonNode actualJson = mapper.readTree(res.contentUtf8());
+        final JsonNode servicesNode = actualJson.get("services");
+        assertThat(servicesNode).isNotNull();
+
+        // Verify that all methods have returnInfo with the expected structure
+        for (JsonNode service : servicesNode) {
+            for (JsonNode method : service.get("methods")) {
+                // Every method should have a returnInfo
+                final JsonNode returnInfo = method.get("returnInfo");
+                assertThat(returnInfo).isNotNull();
+                assertThat(returnInfo.get("typeSignature")).isNotNull();
+                // descriptionInfo should exist (even if empty)
+                assertThat(returnInfo.get("descriptionInfo")).isNotNull();
+
+                // Every method should have an exceptions list (empty for gRPC)
+                final JsonNode exceptions = method.get("exceptions");
+                assertThat(exceptions).isNotNull();
+                assertThat(exceptions.isArray()).isTrue();
+            }
+        }
+    }
 }

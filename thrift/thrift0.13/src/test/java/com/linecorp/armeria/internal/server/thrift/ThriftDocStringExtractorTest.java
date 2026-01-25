@@ -46,6 +46,43 @@ class ThriftDocStringExtractorTest {
     }
 
     @Test
+    void testReturnDocString() throws Exception {
+        final Map<String, String> docStrings = extractor.getDocStringsFromFiles(
+                ImmutableMap.of(
+                        "META-INF/armeria/thrift/ThriftTest.json",
+                        Resources.toByteArray(Resources.getResource(
+                                "META-INF/armeria/thrift/ThriftTest.json"))));
+        // Test that @return docstrings are extracted
+        // The testString method has: @return string - returns the string 'thing'
+        assertThat(docStrings.get("thrift.test.ThriftTest/testString:return"))
+                .isEqualTo("returns the string 'thing'");
+        // The testStruct method has: @return Xtruct - returns the Xtruct 'thing'
+        assertThat(docStrings.get("thrift.test.ThriftTest/testStruct:return"))
+                .isEqualTo("returns the Xtruct 'thing'");
+    }
+
+    @Test
+    void testThrowsDocString() throws Exception {
+        final Map<String, String> docStrings = extractor.getDocStringsFromFiles(
+                ImmutableMap.of(
+                        "META-INF/armeria/thrift/ThriftTest.json",
+                        Resources.toByteArray(Resources.getResource(
+                                "META-INF/armeria/thrift/ThriftTest.json"))));
+        // Test that @throws docstrings are extracted
+        // The testException method has: @throws Xception - when arg is "Xception"
+        assertThat(docStrings.get("thrift.test.ThriftTest/testException:throws/thrift.test.Xception"))
+                .isEqualTo("when arg is \"Xception\"");
+
+        // The testMultiException method has:
+        // @throws Xception - when arg0 is "Xception"
+        // @throws Xception2 - when arg0 is "Xception2"
+        assertThat(docStrings.get("thrift.test.ThriftTest/testMultiException:throws/thrift.test.Xception"))
+                .isEqualTo("when arg0 is \"Xception\"");
+        assertThat(docStrings.get("thrift.test.ThriftTest/testMultiException:throws/thrift.test.Xception2"))
+                .isEqualTo("when arg0 is \"Xception2\"");
+    }
+
+    @Test
     void testGetAllDocStrings() throws IOException {
         final Map<String, String> docStrings = extractor.getAllDocStrings(getClass().getClassLoader());
         assertThat(docStrings.containsKey("thrift.test.Numberz")).isTrue();
