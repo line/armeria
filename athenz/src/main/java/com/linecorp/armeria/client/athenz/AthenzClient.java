@@ -29,6 +29,7 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.RequestHeadersBuilder;
 import com.linecorp.armeria.common.annotation.UnstableApi;
+import com.linecorp.armeria.common.athenz.AthenzTokenHeader;
 import com.linecorp.armeria.common.athenz.TokenType;
 import com.linecorp.armeria.common.metric.MeterIdPrefix;
 import com.linecorp.armeria.common.metric.MoreMeters;
@@ -60,7 +61,7 @@ import io.micrometer.core.instrument.Timer;
  *   .builder()
  *   .decorator(AthenzClient.builder(ztsBaseClient)
  *                          .domainName("my-domain")
- *                          .tokenType(TokenType.ROLE_TOKEN)
+ *                          .header(tokenHeader)
  *                          .newDecorator())
  *   ...
  *   .build();
@@ -69,7 +70,7 @@ import io.micrometer.core.instrument.Timer;
  * WebClient
  *   .builder()
  *   .decorator(AthenzClient.newDecorator(ztsBaseClient, "my-domain",
- *                                        TokenType.ROLE_TOKEN))
+ *                                        tokenHeader))
  *   ...
  *   .build();
  * }</pre>
@@ -157,30 +158,30 @@ public final class AthenzClient extends SimpleDecoratingHttpClient {
                 .newDecorator();
     }
 
-    private final TokenType tokenType;
+    private final AthenzTokenHeader tokenHeader;
     private final TokenClient tokenClient;
     private final Timer successTimer;
     private final Timer failureTimer;
 
     AthenzClient(HttpClient delegate, ZtsBaseClient ztsBaseClient, String domainName,
-                 List<String> roleNames, TokenType tokenType, Duration refreshBefore,
+                 List<String> roleNames, AthenzTokenHeader tokenHeader, Duration refreshBefore,
                  MeterIdPrefix meterIdPrefix) {
         super(delegate);
-        this.tokenType = tokenType;
+        this.tokenHeader = tokenHeader;
         final MeterRegistry meterRegistry = ztsBaseClient.clientFactory().meterRegistry();
         final String prefix = meterIdPrefix.name("token.fetch");
         successTimer = MoreMeters.newTimer(meterRegistry, prefix,
                                            meterIdPrefix.tags("result", "success",
                                                               "domain", domainName,
                                                               "roles", String.join(",", roleNames),
-                                                              "type", tokenType.name()));
+                                                              "type", tokenHeader.name()));
         failureTimer = MoreMeters.newTimer(meterRegistry, prefix,
                                            meterIdPrefix.tags("result", "failure",
                                                               "domain", domainName,
                                                               "roles", String.join(",", roleNames),
-                                                              "type", tokenType.name()));
+                                                              "type", tokenHeader.name()));
 
-        if (tokenType.isRoleToken()) {
+        if (tokenHeader.isRoleToken()) {
             tokenClient = new RoleTokenClient(ztsBaseClient, domainName, roleNames, refreshBefore);
         } else {
             tokenClient = new AccessTokenClient(ztsBaseClient, domainName, roleNames, refreshBefore);
@@ -202,10 +203,10 @@ public final class AthenzClient extends SimpleDecoratingHttpClient {
             final HttpRequest newReq = req.mapHeaders(headers -> {
                 final RequestHeadersBuilder builder = headers.toBuilder();
                 String token0 = token;
-                if (tokenType.authScheme() != null) {
-                    token0 = tokenType.authScheme() + ' ' + token0;
+                if (tokenHeader.authScheme() != null) {
+                    token0 = tokenHeader.authScheme() + ' ' + token0;
                 }
-                builder.set(tokenType.headerName(), token0);
+                builder.set(tokenHeader.headerName(), token0);
                 return builder.build();
             });
             ctx.updateRequest(newReq);

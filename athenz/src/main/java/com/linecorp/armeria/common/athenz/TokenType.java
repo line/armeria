@@ -26,7 +26,7 @@ import io.netty.util.AsciiString;
  * The type of Athenz token.
  */
 @UnstableApi
-public enum TokenType {
+public enum TokenType implements AthenzTokenHeader {
     /**
      * Athenz access token.
      */

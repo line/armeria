@@ -28,6 +28,7 @@ import com.google.common.collect.ImmutableList;
 import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
+import com.linecorp.armeria.common.athenz.AthenzTokenHeader;
 import com.linecorp.armeria.common.athenz.TokenType;
 import com.linecorp.armeria.common.metric.MeterIdPrefix;
 
@@ -41,10 +42,12 @@ import com.linecorp.armeria.common.metric.MeterIdPrefix;
  * AthenzClient.builder(ztsBaseClient)
  *             .domainName("my-domain")
  *             .roleNames("my-role")
- *             .tokenType(TokenType.ACCESS_TOKEN)
+ *             .header(TokenType.ACCESS_TOKEN)
  *             .refreshBefore(Duration.ofMinutes(5))
  *             .newDecorator();
  * }</pre>
+ *
+ * <p>For custom header implementation, see {@link AthenzTokenHeader}.
  */
 @UnstableApi
 public final class AthenzClientBuilder {
@@ -57,7 +60,7 @@ public final class AthenzClientBuilder {
     @Nullable
     private String domainName;
     private final ImmutableList.Builder<String> roleNamesBuilder = ImmutableList.builder();
-    private TokenType tokenType = TokenType.ACCESS_TOKEN;
+    private AthenzTokenHeader tokenHeader = TokenType.ACCESS_TOKEN;
     private Duration refreshBefore = DEFAULT_REFRESH_BEFORE;
     private MeterIdPrefix meterIdPrefix = DEFAULT_METER_ID_PREFIX;
 
@@ -95,9 +98,26 @@ public final class AthenzClientBuilder {
     /**
      * Sets the type of Athenz token to obtain.
      * If not set, the default is {@link TokenType#ACCESS_TOKEN}.
+     *
+     * @deprecated Use {@link #header(AthenzTokenHeader)} instead.
      */
+    @Deprecated
     public AthenzClientBuilder tokenType(TokenType tokenType) {
-        this.tokenType = requireNonNull(tokenType, "tokenType");
+        return header(tokenType);
+    }
+
+    /**
+     * Sets the header to use for the Athenz token.
+     * If not set, the default is {@link TokenType#ACCESS_TOKEN}.
+     *
+     * <p>This method allows you to specify either a predefined {@link TokenType} or a custom
+     * {@link AthenzTokenHeader} implementation for flexible header configuration.
+     *
+     * @param tokenHeader the token header configuration
+     * @return this builder
+     */
+    public AthenzClientBuilder header(AthenzTokenHeader tokenHeader) {
+        this.tokenHeader = requireNonNull(tokenHeader, "tokenHeader");
         return this;
     }
 
@@ -130,7 +150,7 @@ public final class AthenzClientBuilder {
 
         final List<String> roleNames = roleNamesBuilder.build();
         return delegate -> new AthenzClient(delegate, ztsBaseClient, domainName, roleNames,
-                                            tokenType, refreshBefore, meterIdPrefix);
+                                            tokenHeader, refreshBefore, meterIdPrefix);
     }
 }
 
