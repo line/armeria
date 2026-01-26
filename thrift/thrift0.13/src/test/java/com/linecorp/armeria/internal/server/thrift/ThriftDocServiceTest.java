@@ -263,7 +263,7 @@ public class ThriftDocServiceTest {
     }
 
     @Test
-    public void testReturnAndExceptionDocStrings() throws Exception {
+    public void testReturnInfoAndExceptionsJsonStructure() throws Exception {
         final WebClient client = WebClient.of(server.httpUri());
         final AggregatedHttpResponse res = client.get("/docs/specification.json").aggregate().join();
         assertThat(res.status()).isSameAs(HttpStatus.OK);
@@ -293,10 +293,19 @@ public class ThriftDocServiceTest {
                 }
             }
         }
+    }
 
-        // The following assertions verify docstrings from main.json which is only generated
-        // when Thrift JSON generation is enabled (thrift0.13). Skip for thrift0.9.
+    @Test
+    public void testReturnInfoAndExceptionDocStrings() throws Exception {
         assumeThriftJsonEnabled();
+
+        final WebClient client = WebClient.of(server.httpUri());
+        final AggregatedHttpResponse res = client.get("/docs/specification.json").aggregate().join();
+        assertThat(res.status()).isSameAs(HttpStatus.OK);
+
+        final JsonNode actualJson = mapper.readTree(res.contentUtf8());
+        final JsonNode servicesNode = actualJson.get("services");
+        assertThat(servicesNode).isNotNull();
 
         // Verify that HelloService.hello has the @return docstring from main.thrift
         JsonNode helloService = null;

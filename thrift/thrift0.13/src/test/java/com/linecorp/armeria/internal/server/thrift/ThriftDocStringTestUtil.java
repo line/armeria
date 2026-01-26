@@ -25,8 +25,8 @@ final class ThriftDocStringTestUtil {
 
     /**
      * Skips the current test if Thrift JSON metadata is not available.
-     * Thrift JSON generation is disabled for thrift0.9, so tests that depend on
-     * docstrings extracted from JSON files should call this method.
+     * Thrift JSON generation is disabled for {@code thrift0.9} because Thrift 0.9 does not support the
+     * JSON target. Tests that depend on docstrings extracted from JSON files should call this method.
      */
     static void assumeThriftJsonEnabled() {
         assumeTrue("Thrift JSON metadata is not available (JSON generation may be disabled)",
