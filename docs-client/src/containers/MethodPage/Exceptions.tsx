@@ -62,13 +62,13 @@ const ExceptionRow: React.FunctionComponent<ExceptionRowProps> = ({
           {specification.getTypeSignatureHtml(exception.typeSignature)}
         </code>
       </TableCell>
-      {hasDescription && (
-        <TableCell>
+      <TableCell>
+        {hasDescription && (
           <pre className={styles.description}>
             <Description descriptionInfo={exception.descriptionInfo} />
           </pre>
-        </TableCell>
-      )}
+        )}
+      </TableCell>
     </TableRow>
   );
 };
