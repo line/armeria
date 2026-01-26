@@ -3932,7 +3932,7 @@
     "name" : "exampleRequests",
     "parameterTypes" : [ ]
   }, {
-    "name" : "exceptionTypeSignatures",
+    "name" : "exceptions",
     "parameterTypes" : [ ]
   }, {
     "name" : "httpMethod",
@@ -3947,7 +3947,7 @@
     "name" : "parameters",
     "parameterTypes" : [ ]
   }, {
-    "name" : "returnTypeSignature",
+    "name" : "returnInfo",
     "parameterTypes" : [ ]
   } ]
 }, {
