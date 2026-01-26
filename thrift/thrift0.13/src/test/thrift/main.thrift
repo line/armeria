@@ -7,7 +7,7 @@ service HelloService {
     /**
      * Sends a greeting to the specified name.
      * @param string name - the name to greet
-     * @return string - a greeting message
+     * @return a greeting message
      */
     string hello(1:string name)
 }
@@ -180,10 +180,10 @@ service MissingDocStringService {
     void throwsTypeOnly(1:string value) throws (1:FooServiceException e)
 
     /**
-     * Method with mid-line @return string - should be ignored because tags must be at line start.
+     * Method with mid-line @return should be ignored because tags must be at line start.
      * Similarly, mid-line @throws FooServiceException - should also be ignored.
      * @param string value - the input value
-     * @return string - valid return description
+     * @return valid return description
      */
     string midLineTagsIgnored(1:string value)
 }

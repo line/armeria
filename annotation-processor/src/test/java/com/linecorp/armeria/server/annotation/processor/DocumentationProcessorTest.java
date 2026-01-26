@@ -117,7 +117,7 @@ public class DocumentationProcessorTest {
 
         // Test mid-line tags should be ignored, only valid line-start tag should be captured
         assertThat(properties.getProperty("midLineTagsIgnored:return"))
-                .isEqualTo("int - valid return description");
+                .isEqualTo("valid return description");
         assertThat(properties.getProperty("midLineTagsIgnored.x")).isEqualTo("The x variable");
     }
 

@@ -40,19 +40,18 @@ class GrpcDocStringExtractorTest {
         assertThat(DOCSTRINGS).containsEntry(
                 "armeria.grpc.testing.TestService/UnaryCall",
                 " One request followed by one response.\n" +
-                " @return SimpleResponse - a response containing the payload\n");
+                " @return a response containing the payload\n");
     }
 
     @Test
     void methodReturnDocString() {
         // Test that @return docstrings are extracted from method comments
-        // The entire content after @return is captured (no type parsing)
         assertThat(DOCSTRINGS).containsEntry(
                 "armeria.grpc.testing.TestService/EmptyCall:return",
-                "Empty - an empty response");
+                "an empty response");
         assertThat(DOCSTRINGS).containsEntry(
                 "armeria.grpc.testing.TestService/UnaryCall:return",
-                "SimpleResponse - a response containing the payload");
+                "a response containing the payload");
     }
 
     @Test
@@ -142,17 +141,16 @@ class GrpcDocStringExtractorTest {
     @Test
     void midLineTagIgnored() {
         // Test that @return appearing in the middle of a line is ignored
-        // MidLineTagIgnored has mid-line "@return SimpleResponse" which should be ignored,
-        // but also has a valid "@return SimpleResponse - valid return description" at line start
+        // MidLineTagIgnored has mid-line "@return" which should be ignored,
+        // but also has a valid "@return valid return description" at line start
         assertThat(DOCSTRINGS).containsEntry(
                 "armeria.grpc.testing.MissingDocStringService/MidLineTagIgnored",
-                " A call with mid-line @return SimpleResponse - should be ignored because the tag " +
+                " A call with mid-line @return should be ignored because the tag " +
                 "must be at line start.\n" +
-                " @return SimpleResponse - valid return description\n");
+                " @return valid return description\n");
         // The :return entry should only capture the valid line-start @return tag
-        // The entire content after @return is captured (no type parsing)
         assertThat(DOCSTRINGS).containsEntry(
                 "armeria.grpc.testing.MissingDocStringService/MidLineTagIgnored:return",
-                "SimpleResponse - valid return description");
+                "valid return description");
     }
 }

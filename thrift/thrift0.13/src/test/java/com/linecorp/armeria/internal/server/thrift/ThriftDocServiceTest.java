@@ -307,10 +307,10 @@ public class ThriftDocServiceTest {
         assertThat(helloMethod.get("name").textValue()).isEqualTo("hello");
         final JsonNode helloReturnInfo = helloMethod.get("returnInfo");
         assertThat(helloReturnInfo.get("typeSignature").textValue()).isEqualTo("string");
-        // Verify the @return docstring is present (entire content after @return is captured)
+        // Verify the @return docstring is present
         final JsonNode helloReturnDescriptionInfo = helloReturnInfo.get("descriptionInfo");
         assertThat(helloReturnDescriptionInfo.get("docString").textValue())
-                .isEqualTo("string - a greeting message");
+                .isEqualTo("a greeting message");
 
         // Verify that FileService.create has the @throws docstring from main.thrift
         JsonNode fileService = null;

@@ -143,10 +143,10 @@ public class WithJavaDoc {
     }
 
     /**
-     * Method with mid-line @return int - should be ignored because tags must be at line start.
+     * Method with mid-line @return should be ignored because tags must be at line start.
      * Similarly, mid-line @throws IllegalArgumentException - should also be ignored.
      * @param x The x variable
-     * @return int - valid return description
+     * @return valid return description
      */
     @Get
     public int midLineTagsIgnored(@Param("x") String x) {

@@ -328,7 +328,7 @@ class GrpcDocServiceTest {
         }
 
         // Verify that TestService.UnaryCall has the @return docstring from test.proto
-        // The test.proto has: "// @return SimpleResponse - a response containing the payload"
+        // The test.proto has: "// @return a response containing the payload"
         JsonNode testService = null;
         for (JsonNode service : servicesNode) {
             if (TestServiceGrpc.SERVICE_NAME.equals(service.get("name").textValue())) {
@@ -350,9 +350,9 @@ class GrpcDocServiceTest {
         final JsonNode unaryCallReturnInfo = unaryCallMethod.get("returnInfo");
         assertThat(unaryCallReturnInfo.get("typeSignature").textValue())
                 .isEqualTo("armeria.grpc.testing.SimpleResponse");
-        // Verify the @return docstring is present (entire content after @return is captured)
+        // Verify the @return docstring is present
         final JsonNode unaryCallReturnDescriptionInfo = unaryCallReturnInfo.get("descriptionInfo");
         assertThat(unaryCallReturnDescriptionInfo.get("docString").textValue())
-                .isEqualTo("SimpleResponse - a response containing the payload");
+                .isEqualTo("a response containing the payload");
     }
 }
