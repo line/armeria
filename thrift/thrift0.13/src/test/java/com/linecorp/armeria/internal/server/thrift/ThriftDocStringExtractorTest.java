@@ -97,9 +97,10 @@ class ThriftDocStringExtractorTest {
         assertThat(docStrings.get("testing.thrift.main.MidLineTagTestService/throwsTypeOnly"))
                 .contains("@throws FooServiceException");
         // The :throws entry should not exist because there's no description
-        assertThat(docStrings.containsKey(
-                "testing.thrift.main.MidLineTagTestService/throwsTypeOnly:throws/testing.thrift.main.FooServiceException"))
-                .isFalse();
+        final String throwsKey =
+                "testing.thrift.main.MidLineTagTestService/throwsTypeOnly:throws/" +
+                "testing.thrift.main.FooServiceException";
+        assertThat(docStrings.containsKey(throwsKey)).isFalse();
     }
 
     @Test

@@ -281,7 +281,8 @@ class GrpcDocServicePluginTest {
                                     .availableFormats(GrpcSerializationFormats.JSON)
                                     .build()));
         assertThat(methodInfo.name()).isEqualTo("UnaryCall");
-        assertThat(methodInfo.returnInfo().typeSignature().name()).isEqualTo("armeria.grpc.testing.SimpleResponse");
+        assertThat(methodInfo.returnInfo().typeSignature().name())
+                .isEqualTo("armeria.grpc.testing.SimpleResponse");
         assertThat(((DescriptiveTypeSignature) methodInfo.returnInfo().typeSignature()).descriptor())
                 .isEqualTo(SimpleResponse.getDescriptor());
         assertThat(methodInfo.parameters()).hasSize(1);
