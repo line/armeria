@@ -69,17 +69,19 @@ public final class DocumentationProcessor extends AbstractProcessor {
                                                                .trimResults()
                                                                .omitEmptyStrings();
 
-    // Pattern to match @return tag in docstrings (must be at beginning of line)
-    // Matches: @return <description>
-    // The tag must appear at the start of a line (after optional whitespace and *)
-    // Note: [ \t] ensures we match only horizontal whitespace, not newlines
+    /**
+     * A {@link Pattern} to match {@code @return} tag in docstrings.
+     * The tag must appear at the start of a line (after optional whitespace and {@code *}).
+     */
     private static final Pattern RETURN_PATTERN =
             Pattern.compile("^[ \t*]*@return[ \t]+([^\r\n]+)$", Pattern.MULTILINE);
 
-    // Pattern to match @throws tag in docstrings (must be at beginning of line)
-    // Matches: @throws <type> - <description> or @throws <type> <description>
-    // Group 1 captures the exception type name (simple name, not fully qualified)
-    // Group 2 captures the description (if present)
+    /**
+     * A {@link Pattern} to match {@code @throws} tag in docstrings.
+     * Matches: {@code @throws <type> - <description>} or {@code @throws <type> <description>}.
+     * Group 1 captures the exception type name (simple name, not fully qualified).
+     * Group 2 captures the description (if present).
+     */
     private static final Pattern THROWS_PATTERN =
             Pattern.compile("^[\\s*]*@throws\\s+(\\S+)\\s*[-–]?\\s*(.*)$", Pattern.MULTILINE);
 
