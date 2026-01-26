@@ -17,7 +17,7 @@ package com.linecorp.armeria.internal.server.thrift;
 
 import static com.linecorp.armeria.common.thrift.ThriftSerializationFormats.BINARY;
 import static com.linecorp.armeria.common.thrift.ThriftSerializationFormats.COMPACT;
-import static com.linecorp.armeria.internal.server.thrift.ThriftDocStringTestUtil.assumeThriftJsonEnabled;
+import static com.linecorp.armeria.internal.server.thrift.ThriftDocStringTestUtil.assumeDocStringsAvailable;
 import static net.javacrumbs.jsonunit.fluent.JsonFluentAssert.assertThatJson;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
@@ -297,7 +297,7 @@ public class ThriftDocServiceTest {
 
     @Test
     public void testReturnInfoAndExceptionDocStrings() throws Exception {
-        assumeThriftJsonEnabled();
+        assumeDocStringsAvailable();
 
         final WebClient client = WebClient.of(server.httpUri());
         final AggregatedHttpResponse res = client.get("/docs/specification.json").aggregate().join();

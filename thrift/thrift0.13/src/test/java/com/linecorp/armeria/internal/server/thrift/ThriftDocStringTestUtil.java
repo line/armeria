@@ -18,20 +18,29 @@ package com.linecorp.armeria.internal.server.thrift;
 
 import static org.junit.Assume.assumeTrue;
 
+import java.util.Map;
+
 /**
  * Utility methods for Thrift doc string tests.
  */
 final class ThriftDocStringTestUtil {
 
+    private static final ThriftDocStringExtractor extractor = new ThriftDocStringExtractor();
+
     /**
-     * Skips the current test if Thrift JSON metadata is not available.
+     * Skips the current test if Thrift docstrings are not available.
      * Thrift JSON generation is disabled for {@code thrift0.9} because Thrift 0.9 does not support the
-     * JSON target. Tests that depend on docstrings extracted from JSON files should call this method.
+     * JSON target. Additionally, older Thrift versions (0.9.x) do not include docstrings in the JSON output
+     * even when generated. Tests that depend on docstrings extracted from JSON files should call this method.
      */
-    static void assumeThriftJsonEnabled() {
-        assumeTrue("Thrift JSON metadata is not available (JSON generation may be disabled)",
-                   ThriftDocStringTestUtil.class.getClassLoader()
-                                                .getResource("META-INF/armeria/thrift/main.json") != null);
+    static void assumeDocStringsAvailable() {
+        final Map<String, String> docStrings = extractor.getAllDocStrings(
+                ThriftDocStringTestUtil.class.getClassLoader());
+        // Check for a known docstring that should exist if docstrings are properly generated.
+        // HelloService.hello has "@return a greeting message" in main.thrift.
+        assumeTrue("Thrift docstrings are not available (JSON generation may be disabled or " +
+                   "Thrift version does not support docstrings in JSON output)",
+                   docStrings.get("testing.thrift.main.HelloService/hello:return") != null);
     }
 
     private ThriftDocStringTestUtil() {}

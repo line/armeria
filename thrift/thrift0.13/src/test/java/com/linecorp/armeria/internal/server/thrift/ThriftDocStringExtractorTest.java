@@ -16,7 +16,7 @@
 
 package com.linecorp.armeria.internal.server.thrift;
 
-import static com.linecorp.armeria.internal.server.thrift.ThriftDocStringTestUtil.assumeThriftJsonEnabled;
+import static com.linecorp.armeria.internal.server.thrift.ThriftDocStringTestUtil.assumeDocStringsAvailable;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.io.IOException;
@@ -92,7 +92,7 @@ class ThriftDocStringExtractorTest {
 
     @Test
     void testMissingThrowsDescription() throws IOException {
-        assumeThriftJsonEnabled();
+        assumeDocStringsAvailable();
         // Test that @throws with only type name (no description) does not create a :throws entry
         final Map<String, String> docStrings = extractor.getAllDocStrings(getClass().getClassLoader());
         // MidLineTagTestService.throwsTypeOnly has "@throws FooServiceException" without description
@@ -107,7 +107,7 @@ class ThriftDocStringExtractorTest {
 
     @Test
     void testMidLineTagsIgnored() throws IOException {
-        assumeThriftJsonEnabled();
+        assumeDocStringsAvailable();
         // Test that @return and @throws appearing in the middle of a line are ignored
         final Map<String, String> docStrings = extractor.getAllDocStrings(getClass().getClassLoader());
 
