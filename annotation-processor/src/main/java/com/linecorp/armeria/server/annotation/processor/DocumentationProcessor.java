@@ -71,20 +71,20 @@ public final class DocumentationProcessor extends AbstractProcessor {
 
     /**
      * A {@link Pattern} to match {@code @return} tag in docstrings.
-     * The tag must appear at the start of a line (after optional whitespace and {@code *}).
+     * The tag must appear at the start of a line (after optional whitespace and {@code *} for Javadoc-style).
      */
     private static final Pattern RETURN_PATTERN =
-            Pattern.compile("^[ \t*]*@return[ \t]+([^\r\n]*[^\r\n \t])[ \t]*$", Pattern.MULTILINE);
+            Pattern.compile("^[\\s*]*@return\\s+(.*\\S)\\s*$", Pattern.MULTILINE);
 
     /**
      * A {@link Pattern} to match {@code @throws} tag in docstrings.
      * Matches: {@code @throws <type> - <description>} or {@code @throws <type> <description>}.
      * Group 1 captures the exception type name (simple name, not fully qualified).
      * Group 2 captures the description (if present).
+     * The tag must appear at the start of a line (after optional whitespace and {@code *} for Javadoc-style).
      */
     private static final Pattern THROWS_PATTERN =
-            Pattern.compile("^[\\s*]*@throws\\s+(\\S+)\\s*[-–]?\\s*([^\r\n]*[^ \t\r\n])?[ \t]*$",
-                            Pattern.MULTILINE);
+            Pattern.compile("^[\\s*]*@throws\\s+(\\S+)\\s*[-–]?\\s*(.*\\S)?\\s*$", Pattern.MULTILINE);
 
     private final Map<String, Properties> propertiesMap = new HashMap<>();
 

@@ -76,10 +76,10 @@ final class GrpcDocStringExtractor extends DocStringExtractor {
 
     /**
      * A {@link Pattern} to match {@code @return} tag in docstrings.
-     * The tag must appear at the start of a line (after optional whitespace).
+     * The tag must appear at the start of a line (after optional whitespace and {@code *} for Javadoc-style).
      */
     private static final Pattern RETURN_PATTERN =
-            Pattern.compile("^\\s*@return\\s+(.*\\S)\\s*$", Pattern.MULTILINE);
+            Pattern.compile("^[\\s*]*@return\\s+(.*\\S)\\s*$", Pattern.MULTILINE);
 
     GrpcDocStringExtractor() {
         super("META-INF/armeria/grpc", "com.linecorp.armeria.grpc.descriptorDir");
