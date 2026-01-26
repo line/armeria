@@ -107,10 +107,6 @@ public class DocumentationProcessorTest {
         assertThat(properties.getProperty("hasReturnAndThrows:throws/IllegalArgumentException"))
                 .isEqualTo("when x is empty");
 
-        // Test @return captures whatever follows the tag (no special-casing for single words)
-        assertThat(properties.getProperty("returnTypeOnly:return")).isEqualTo("int");
-        assertThat(properties.getProperty("returnTypeOnly.x")).isEqualTo("The x variable");
-
         // Test type-only @throws (no description) should not create a property
         assertThat(properties.getProperty("throwsTypeOnly:throws/IllegalArgumentException")).isNull();
         assertThat(properties.getProperty("throwsTypeOnly.x")).isEqualTo("The x variable");

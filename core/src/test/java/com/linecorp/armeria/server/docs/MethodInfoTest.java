@@ -86,20 +86,6 @@ class MethodInfoTest {
     }
 
     @Test
-    @SuppressWarnings("deprecation")
-    void returnDescriptionInfoDeprecated() {
-        final MethodInfo methodInfo = methodInfo(0);
-        assertThat(methodInfo.returnDescriptionInfo()).isEqualTo(DescriptionInfo.empty());
-
-        final DescriptionInfo newReturnDescription = DescriptionInfo.of("New return description");
-        final MethodInfo updatedMethodInfo = methodInfo.withReturnInfo(
-                methodInfo.returnInfo().withDescriptionInfo(newReturnDescription));
-
-        assertThat(updatedMethodInfo.returnDescriptionInfo()).isEqualTo(newReturnDescription);
-        assertThat(methodInfo.returnDescriptionInfo()).isEqualTo(DescriptionInfo.empty());
-    }
-
-    @Test
     void withReturnInfoReturnsSameInstanceWhenUnchanged() {
         final MethodInfo methodInfo = methodInfo(0);
         final MethodInfo same = methodInfo.withReturnInfo(methodInfo.returnInfo());
@@ -146,26 +132,6 @@ class MethodInfoTest {
         final MethodInfo methodInfo = methodInfo(0);
         final MethodInfo same = methodInfo.withExceptions(ImmutableList.of());
         assertThat(same).isSameAs(methodInfo);
-    }
-
-    @Test
-    @SuppressWarnings("deprecation")
-    void exceptionTypeSignaturesBackwardCompatibility() {
-        final DescribedTypeSignature exceptionInfo = DescribedTypeSignature.of(
-                TypeSignature.ofStruct(IllegalArgumentException.class));
-
-        final MethodInfo methodInfo = new MethodInfo(
-                "com.MyService", "foo",
-                DescribedTypeSignature.of(TypeSignature.ofBase("void")),
-                ImmutableList.of(), false,
-                ImmutableList.of(exceptionInfo),
-                ImmutableList.of(), ImmutableList.of(), ImmutableList.of(),
-                ImmutableList.of(), ImmutableList.of(),
-                HttpMethod.GET, DescriptionInfo.empty());
-
-        // The deprecated exceptionTypeSignatures() should return the type signatures
-        assertThat(methodInfo.exceptionTypeSignatures())
-                .containsExactly(TypeSignature.ofStruct(IllegalArgumentException.class));
     }
 
     private static MethodInfo methodInfo(int overloadId) {

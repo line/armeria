@@ -281,8 +281,8 @@ class GrpcDocServicePluginTest {
                                     .availableFormats(GrpcSerializationFormats.JSON)
                                     .build()));
         assertThat(methodInfo.name()).isEqualTo("UnaryCall");
-        assertThat(methodInfo.returnTypeSignature().name()).isEqualTo("armeria.grpc.testing.SimpleResponse");
-        assertThat(((DescriptiveTypeSignature) methodInfo.returnTypeSignature()).descriptor())
+        assertThat(methodInfo.returnInfo().typeSignature().name()).isEqualTo("armeria.grpc.testing.SimpleResponse");
+        assertThat(((DescriptiveTypeSignature) methodInfo.returnInfo().typeSignature()).descriptor())
                 .isEqualTo(SimpleResponse.getDescriptor());
         assertThat(methodInfo.parameters()).hasSize(1);
         assertThat(methodInfo.parameters().get(0).name()).isEqualTo("request");
@@ -293,7 +293,7 @@ class GrpcDocServicePluginTest {
                                                          .typeSignature()).descriptor())
                 .isEqualTo(SimpleRequest.getDescriptor());
         assertThat(methodInfo.useParameterAsRoot()).isTrue();
-        assertThat(methodInfo.exceptionTypeSignatures()).isEmpty();
+        assertThat(methodInfo.exceptions()).isEmpty();
         assertThat(methodInfo.descriptionInfo()).isSameAs(DescriptionInfo.empty());
         assertThat(methodInfo.endpoints()).containsExactlyInAnyOrder(
                 EndpointInfo.builder("*", "/foo")
@@ -334,7 +334,7 @@ class GrpcDocServicePluginTest {
                                           .requirement(FieldRequirement.REQUIRED)
                                           .build());
         assertThat(emptyCall.useParameterAsRoot()).isTrue();
-        assertThat(emptyCall.returnTypeSignature())
+        assertThat(emptyCall.returnInfo().typeSignature())
                 .isEqualTo(TypeSignature.ofStruct("armeria.grpc.testing.Empty", Empty.getDescriptor()));
 
         // Just sanity check that all methods are present, function conversion is more thoroughly tested in

@@ -74,7 +74,7 @@ public final class DocumentationProcessor extends AbstractProcessor {
      * The tag must appear at the start of a line (after optional whitespace and {@code *}).
      */
     private static final Pattern RETURN_PATTERN =
-            Pattern.compile("^[ \t*]*@return[ \t]+([^\r\n]+)$", Pattern.MULTILINE);
+            Pattern.compile("^[ \t*]*@return[ \t]+([^\r\n]*[^\r\n \t])[ \t]*$", Pattern.MULTILINE);
 
     /**
      * A {@link Pattern} to match {@code @throws} tag in docstrings.
@@ -83,7 +83,8 @@ public final class DocumentationProcessor extends AbstractProcessor {
      * Group 2 captures the description (if present).
      */
     private static final Pattern THROWS_PATTERN =
-            Pattern.compile("^[\\s*]*@throws\\s+(\\S+)\\s*[-–]?\\s*(.*)$", Pattern.MULTILINE);
+            Pattern.compile("^[\\s*]*@throws\\s+(\\S+)\\s*[-–]?\\s*([^\r\n]*[^ \t\r\n])?[ \t]*$",
+                            Pattern.MULTILINE);
 
     private final Map<String, Properties> propertiesMap = new HashMap<>();
 
@@ -225,8 +226,8 @@ public final class DocumentationProcessor extends AbstractProcessor {
         if (hasReturn) {
             final Matcher returnMatcher = RETURN_PATTERN.matcher(docComment);
             if (returnMatcher.find()) {
-                final String returnDescription = returnMatcher.group(1).trim();
-                if (!returnDescription.isEmpty()) {
+                final String returnDescription = returnMatcher.group(1);
+                if (returnDescription != null && !returnDescription.isEmpty()) {
                     properties.setProperty(methodName + ":return", returnDescription);
                 }
             }
@@ -236,9 +237,9 @@ public final class DocumentationProcessor extends AbstractProcessor {
         if (hasThrows) {
             final Matcher throwsMatcher = THROWS_PATTERN.matcher(docComment);
             while (throwsMatcher.find()) {
-                final String exceptionType = throwsMatcher.group(1).trim();
-                final String throwsDescription = throwsMatcher.group(2).trim();
-                if (!throwsDescription.isEmpty()) {
+                final String exceptionType = throwsMatcher.group(1);
+                final String throwsDescription = throwsMatcher.group(2);
+                if (throwsDescription != null && !throwsDescription.isEmpty()) {
                     properties.setProperty(methodName + ":throws/" + exceptionType, throwsDescription);
                 }
             }

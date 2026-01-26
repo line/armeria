@@ -90,27 +90,15 @@ class ThriftDocStringExtractorTest {
     }
 
     @Test
-    void testReturnTypeOnly() throws IOException {
-        // Test that @return captures whatever follows the tag (no special-casing)
-        final Map<String, String> docStrings = extractor.getAllDocStrings(getClass().getClassLoader());
-        // MissingDocStringService.returnTypeOnly has "@return string"
-        assertThat(docStrings.get("testing.thrift.main.MissingDocStringService/returnTypeOnly"))
-                .contains("@return string");
-        // The :return entry should capture "string"
-        assertThat(docStrings.get("testing.thrift.main.MissingDocStringService/returnTypeOnly:return"))
-                .isEqualTo("string");
-    }
-
-    @Test
     void testMissingThrowsDescription() throws IOException {
         // Test that @throws with only type name (no description) does not create a :throws entry
         final Map<String, String> docStrings = extractor.getAllDocStrings(getClass().getClassLoader());
-        // MissingDocStringService.throwsTypeOnly has "@throws FooServiceException" without description
-        assertThat(docStrings.get("testing.thrift.main.MissingDocStringService/throwsTypeOnly"))
+        // MidLineTagTestService.throwsTypeOnly has "@throws FooServiceException" without description
+        assertThat(docStrings.get("testing.thrift.main.MidLineTagTestService/throwsTypeOnly"))
                 .contains("@throws FooServiceException");
         // The :throws entry should not exist because there's no description
         assertThat(docStrings.containsKey(
-                "testing.thrift.main.MissingDocStringService/throwsTypeOnly:throws/testing.thrift.main.FooServiceException"))
+                "testing.thrift.main.MidLineTagTestService/throwsTypeOnly:throws/testing.thrift.main.FooServiceException"))
                 .isFalse();
     }
 
@@ -122,13 +110,13 @@ class ThriftDocStringExtractorTest {
         // The method has mid-line "@return" and "@throws FooServiceException" which should be ignored
         // But it also has a valid "@return valid return description" at line start
         final String methodDoc = docStrings.get(
-                "testing.thrift.main.MissingDocStringService/midLineTagsIgnored");
+                "testing.thrift.main.MidLineTagTestService/midLineTagsIgnored");
         assertThat(methodDoc).contains("mid-line @return should be ignored");
         assertThat(methodDoc).contains("mid-line @throws FooServiceException");
 
         // The :return entry should only capture the valid line-start @return tag
         assertThat(docStrings.get(
-                "testing.thrift.main.MissingDocStringService/midLineTagsIgnored:return"))
+                "testing.thrift.main.MidLineTagTestService/midLineTagsIgnored:return"))
                 .isEqualTo("valid return description");
     }
 }

@@ -155,7 +155,7 @@ public final class ServiceInfo {
 
     /**
      * Returns all {@link TypeSignature} of {@link MethodInfo#parameters()} of {@link #methods()} if
-     * {@code request} is set to true. Otherwise, returns all {@link MethodInfo#returnTypeSignature()} and
+     * {@code request} is set to true. Otherwise, returns all {@link MethodInfo#returnInfo()} and
      * {@link MethodInfo#exceptions()} of the {@link #methods()}.
      */
     public Set<DescriptiveTypeSignature> findDescriptiveTypes(boolean request) {
@@ -164,7 +164,7 @@ public final class ServiceInfo {
             if (request) {
                 m.parameters().forEach(p -> findDescriptiveTypes(collectedDescriptiveTypes, p.typeSignature()));
             } else {
-                findDescriptiveTypes(collectedDescriptiveTypes, m.returnTypeSignature());
+                findDescriptiveTypes(collectedDescriptiveTypes, m.returnInfo().typeSignature());
                 m.exceptions().forEach(e -> findDescriptiveTypes(collectedDescriptiveTypes, e.typeSignature()));
             }
         });

@@ -79,7 +79,7 @@ final class GrpcDocStringExtractor extends DocStringExtractor {
      * The tag must appear at the start of a line (after optional whitespace).
      */
     private static final Pattern RETURN_PATTERN =
-            Pattern.compile("^\\s*@return\\s+(.+)$", Pattern.MULTILINE);
+            Pattern.compile("^\\s*@return\\s+(.*\\S)\\s*$", Pattern.MULTILINE);
 
     GrpcDocStringExtractor() {
         super("META-INF/armeria/grpc", "com.linecorp.armeria.grpc.descriptorDir");
@@ -147,8 +147,8 @@ final class GrpcDocStringExtractor extends DocStringExtractor {
     private static void parseReturnDocString(Map<String, String> result, String methodKey, String doc) {
         final Matcher matcher = RETURN_PATTERN.matcher(doc);
         if (matcher.find()) {
-            final String returnDescription = matcher.group(1).trim();
-            if (!returnDescription.isEmpty()) {
+            final String returnDescription = matcher.group(1);
+            if (returnDescription != null && !returnDescription.isEmpty()) {
                 result.put(methodKey + ":return", returnDescription);
             }
         }

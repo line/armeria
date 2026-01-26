@@ -242,30 +242,6 @@ public final class MethodInfo {
     }
 
     /**
-     * Returns the signature of the return type of the function.
-     *
-     * @deprecated Use {@link #returnInfo()}.{@link DescribedTypeSignature#typeSignature() typeSignature()}
-     *             instead.
-     */
-    @Deprecated
-    @JsonIgnore
-    public TypeSignature returnTypeSignature() {
-        return returnInfo.typeSignature();
-    }
-
-    /**
-     * Returns the description information of the return type.
-     *
-     * @deprecated Use {@link #returnInfo()}.{@link DescribedTypeSignature#descriptionInfo() descriptionInfo()}
-     *             instead.
-     */
-    @Deprecated
-    @JsonIgnore
-    public DescriptionInfo returnDescriptionInfo() {
-        return returnInfo.descriptionInfo();
-    }
-
-    /**
      * Returns the endpoints for accessing this method.
      */
     @JsonProperty
@@ -305,20 +281,6 @@ public final class MethodInfo {
                               parameters, useParameterAsRoot, exceptions, endpoints,
                               exampleHeaders, exampleRequests, examplePaths, exampleQueries, httpMethod,
                               descriptionInfo, id);
-    }
-
-    /**
-     * Returns the metadata about the exceptions declared by the function.
-     *
-     * @deprecated Use {@link #exceptions()} instead.
-     */
-    @Deprecated
-    @JsonIgnore
-    public Set<TypeSignature> exceptionTypeSignatures() {
-        return exceptions.stream()
-                         .map(DescribedTypeSignature::typeSignature)
-                         .collect(ImmutableSortedSet.toImmutableSortedSet(
-                                 comparing(TypeSignature::signature)));
     }
 
     /**

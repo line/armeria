@@ -59,7 +59,7 @@ final class ThriftDocStringExtractor extends DocStringExtractor {
      * The tag must appear at the start of a line (after optional whitespace and {@code *} for Javadoc-style).
      */
     private static final Pattern RETURN_PATTERN =
-            Pattern.compile("^[\\s*]*@return\\s+(.+)$", Pattern.MULTILINE);
+            Pattern.compile("^[\\s*]*@return\\s+(.*\\S)\\s*$", Pattern.MULTILINE);
 
     /**
      * A {@link Pattern} to match {@code @throws} tag in docstrings.
@@ -68,7 +68,7 @@ final class ThriftDocStringExtractor extends DocStringExtractor {
      * The tag must appear at the start of a line (after optional whitespace and {@code *} for Javadoc-style).
      */
     private static final Pattern THROWS_PATTERN =
-            Pattern.compile("^[\\s*]*@throws\\s+(\\S+)\\s*[-–]?\\s*(.*)$", Pattern.MULTILINE);
+            Pattern.compile("^[\\s*]*@throws\\s+(\\S+)\\s*[-–]?\\s*(.*\\S)?\\s*$", Pattern.MULTILINE);
 
     ThriftDocStringExtractor() {
         super("META-INF/armeria/thrift", "com.linecorp.armeria.thrift.jsonDir");
@@ -152,8 +152,8 @@ final class ThriftDocStringExtractor extends DocStringExtractor {
                                              String methodKey, String doc) {
         final Matcher matcher = RETURN_PATTERN.matcher(doc);
         if (matcher.find()) {
-            final String returnDescription = matcher.group(1).trim();
-            if (!returnDescription.isEmpty()) {
+            final String returnDescription = matcher.group(1);
+            if (returnDescription != null && !returnDescription.isEmpty()) {
                 docStrings.put(methodKey + ":return", returnDescription);
             }
         }
@@ -167,9 +167,9 @@ final class ThriftDocStringExtractor extends DocStringExtractor {
                                               List<String> exceptionNames) {
         final Matcher matcher = THROWS_PATTERN.matcher(doc);
         while (matcher.find()) {
-            final String exceptionType = matcher.group(1).trim();
-            final String throwsDescription = matcher.group(2).trim();
-            if (!throwsDescription.isEmpty()) {
+            final String exceptionType = matcher.group(1);
+            final String throwsDescription = matcher.group(2);
+            if (throwsDescription != null && !throwsDescription.isEmpty()) {
                 // Find the fully qualified exception name
                 final String fqcn = findExceptionFqcn(exceptionType, packageName, exceptionNames);
                 if (fqcn != null) {

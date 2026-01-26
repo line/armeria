@@ -332,7 +332,7 @@ class AnnotatedDocServicePluginTest {
                          .location(HEADER)
                          .build());
 
-        assertThat(fooMethod.returnTypeSignature()).isEqualTo(VOID);
+        assertThat(fooMethod.returnInfo().typeSignature()).isEqualTo(VOID);
 
         assertThat(fooMethod.endpoints()).containsExactly(EndpointInfo.builder("*", "exact:/foo")
                                                                       .defaultMimeType(MediaType.JSON)
@@ -349,7 +349,7 @@ class AnnotatedDocServicePluginTest {
         final MethodInfo barMethod = methods.get("barMethod");
         assertThat(barMethod.exampleHeaders()).isEmpty();
         assertThat(barMethod.exampleRequests()).isEmpty();
-        assertThat(barMethod.returnTypeSignature()).isEqualTo(VOID);
+        assertThat(barMethod.returnInfo().typeSignature()).isEqualTo(VOID);
 
         assertThat(barMethod.endpoints()).containsExactly(EndpointInfo.builder("*", "exact:/bar")
                                                                       .defaultMimeType(MediaType.JSON)

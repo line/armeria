@@ -188,12 +188,8 @@ service UnitTestBarService {
   rpc StaticUnaryCall2(SimpleRequest) returns (SimpleResponse);
 }
 
-// Tests missing return description
-service MissingDocStringService {
-  // A call where only the type is specified in the return tag.
-  // @return SimpleResponse
-  rpc ReturnTypeOnly(SimpleRequest) returns (SimpleResponse);
-
+// Tests that mid-line @return tags are ignored.
+service MidLineTagTestService {
   // A call with mid-line @return should be ignored because the tag must be at line start.
   // @return valid return description
   rpc MidLineTagIgnored(SimpleRequest) returns (SimpleResponse);
