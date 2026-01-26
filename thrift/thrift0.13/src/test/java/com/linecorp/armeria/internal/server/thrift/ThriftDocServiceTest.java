@@ -17,6 +17,7 @@ package com.linecorp.armeria.internal.server.thrift;
 
 import static com.linecorp.armeria.common.thrift.ThriftSerializationFormats.BINARY;
 import static com.linecorp.armeria.common.thrift.ThriftSerializationFormats.COMPACT;
+import static com.linecorp.armeria.internal.server.thrift.ThriftDocStringTestUtil.assumeThriftJsonEnabled;
 import static net.javacrumbs.jsonunit.fluent.JsonFluentAssert.assertThatJson;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
@@ -292,6 +293,10 @@ public class ThriftDocServiceTest {
                 }
             }
         }
+
+        // The following assertions verify docstrings from main.json which is only generated
+        // when Thrift JSON generation is enabled (thrift0.13). Skip for thrift0.9.
+        assumeThriftJsonEnabled();
 
         // Verify that HelloService.hello has the @return docstring from main.thrift
         JsonNode helloService = null;
