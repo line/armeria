@@ -26,7 +26,7 @@ import io.netty.util.AsciiString;
  * The type of Athenz token.
  */
 @UnstableApi
-public enum TokenType {
+public enum TokenType implements AthenzTokenHeader {
     /**
      * Athenz access token.
      */
@@ -55,6 +55,7 @@ public enum TokenType {
     /**
      * Returns the header name used to pass the token.
      */
+    @Override
     public AsciiString headerName() {
         return headerName;
     }
@@ -62,6 +63,7 @@ public enum TokenType {
     /**
      * Returns whether this token type is a role token.
      */
+    @Override
     public boolean isRoleToken() {
         return isRoleToken;
     }
@@ -73,6 +75,7 @@ public enum TokenType {
      * any authentication scheme.
      */
     @Nullable
+    @Override
     public String authScheme() {
         return authScheme;
     }
