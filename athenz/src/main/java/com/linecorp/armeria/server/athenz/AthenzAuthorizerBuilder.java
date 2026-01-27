@@ -1,5 +1,5 @@
 /*
- * Copyright 2025 LY Corporation
+ * Copyright 2026 LY Corporation
  *
  * LY Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -20,22 +20,19 @@ import com.linecorp.armeria.client.athenz.ZtsBaseClient;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 
 /**
- * A builder for creating an {@link AthenzServiceDecoratorFactory} that checks access permissions using
- * Athenz policies.
+ * Builds a new {@link AthenzAuthorizer}.
  */
 @UnstableApi
-public final class AthenzServiceDecoratorFactoryBuilder
-        extends AbstractAthenzServiceBuilder<AthenzServiceDecoratorFactoryBuilder> {
+public final class AthenzAuthorizerBuilder extends AbstractAthenzAuthorizerBuilder<AthenzAuthorizerBuilder> {
 
-    AthenzServiceDecoratorFactoryBuilder(ZtsBaseClient ztsBaseClient) {
+    AthenzAuthorizerBuilder(ZtsBaseClient ztsBaseClient) {
         super(ztsBaseClient);
     }
 
     /**
-     * Returns a new {@link AthenzServiceDecoratorFactory} instance.
+     * Builds a new {@link AthenzAuthorizer} based on the properties set in this builder.
      */
-    public AthenzServiceDecoratorFactory build() {
-        final AthenzAuthorizer authorizer = new AthenzAuthorizer(buildAuthZpeClient());
-        return new AthenzServiceDecoratorFactory(authorizer, meterIdPrefix());
+    public AthenzAuthorizer build() {
+        return new AthenzAuthorizer(buildAuthZpeClient());
     }
 }

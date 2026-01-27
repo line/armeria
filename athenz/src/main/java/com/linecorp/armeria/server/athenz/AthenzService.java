@@ -23,6 +23,8 @@ import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 
+import com.google.common.base.Strings;
+
 import com.linecorp.armeria.client.athenz.ZtsBaseClient;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
@@ -40,7 +42,6 @@ import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.ServiceConfig;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.SimpleDecoratingHttpService;
-import com.linecorp.armeria.server.athenz.MinifiedAuthZpeClient.AccessCheckStatus;
 import com.linecorp.armeria.server.athenz.resource.AthenzResourceProvider;
 
 import io.micrometer.core.instrument.MeterRegistry;
@@ -120,7 +121,7 @@ public final class AthenzService extends SimpleDecoratingHttpService {
         return new AthenzServiceBuilder(ztsBaseClient);
     }
 
-    private final MinifiedAuthZpeClient authZpeClient;
+    private final AthenzAuthorizer authorizer;
     private final AthenzResourceProvider athenzResourceProvider;
     private final String athenzAction;
     private final List<TokenType> tokenTypes;
@@ -132,12 +133,12 @@ public final class AthenzService extends SimpleDecoratingHttpService {
     @Nullable
     private Timer deniedTimer;
 
-    AthenzService(HttpService delegate, MinifiedAuthZpeClient authZpeClient,
+    AthenzService(HttpService delegate, AthenzAuthorizer authorizer,
                   AthenzResourceProvider athenzResourceProvider, String athenzAction,
                   List<TokenType> tokenTypes, MeterIdPrefix meterIdPrefix, String resourceTagValue) {
         super(delegate);
 
-        this.authZpeClient = authZpeClient;
+        this.authorizer = authorizer;
         this.athenzResourceProvider = athenzResourceProvider;
         this.athenzAction = athenzAction;
         this.tokenTypes = tokenTypes;
@@ -145,10 +146,10 @@ public final class AthenzService extends SimpleDecoratingHttpService {
         this.resourceTagValue = resourceTagValue;
     }
 
-    AthenzService(HttpService delegate, MinifiedAuthZpeClient authZpeClient, String athenzResource,
+    AthenzService(HttpService delegate, AthenzAuthorizer authorizer, String athenzResource,
                   String athenzAction, List<TokenType> tokenTypes, MeterIdPrefix meterIdPrefix) {
-        this(delegate, authZpeClient, (ctx, req) -> UnmodifiableFuture.completedFuture(athenzResource),
-                athenzAction, tokenTypes, meterIdPrefix, athenzResource);
+        this(delegate, authorizer, (ctx, req) -> UnmodifiableFuture.completedFuture(athenzResource),
+             athenzAction, tokenTypes, meterIdPrefix, athenzResource);
     }
 
     @Override
@@ -182,12 +183,11 @@ public final class AthenzService extends SimpleDecoratingHttpService {
             final CompletableFuture<HttpResponse> future = resourceFuture
                     .thenApplyAsync(
                             athenzResource -> {
-                                if (athenzResource == null || athenzResource.isEmpty()) {
+                                if (Strings.isNullOrEmpty(athenzResource)) {
                                     throw new IllegalArgumentException("Resource is null or empty");
                                 }
-                                final AccessCheckStatus status = authZpeClient.allowAccess(token,
-                                                                                           athenzResource,
-                                                                                           athenzAction);
+                                final AccessCheckStatus status = authorizer.authorize(token, athenzResource,
+                                                                                      athenzAction);
                                 final long elapsedNanos = System.nanoTime() - startNanos;
                                 if (status == AccessCheckStatus.ALLOW) {
                                     assert allowedTimer != null;
