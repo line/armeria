@@ -84,7 +84,7 @@
     "eslint-plugin-react": "^7.37.4",
     "eslint-plugin-react-hooks": "^4.6.2",
     "fs-extra": "^11.3.2",
-    "lodash": "^4.17.21",
+    "lodash": "^4.17.23",
     "node-fetch": "^3.3.2",
     "prettier": "^3.5.0",
     "source-map-explorer": "^2.5.2",
