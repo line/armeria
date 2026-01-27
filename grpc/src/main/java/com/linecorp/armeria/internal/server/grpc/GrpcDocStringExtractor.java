@@ -38,6 +38,7 @@ import com.google.protobuf.DescriptorProtos.FieldDescriptorProto;
 import com.google.protobuf.DescriptorProtos.FileDescriptorProto;
 import com.google.protobuf.DescriptorProtos.FileDescriptorSet;
 import com.google.protobuf.DescriptorProtos.ServiceDescriptorProto;
+import com.google.protobuf.DescriptorProtos.SourceCodeInfo.Location;
 
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.server.docs.DocService;
@@ -110,8 +111,7 @@ final class GrpcDocStringExtractor extends DocStringExtractor {
 
     private static Map<String, String> parseFile(FileDescriptorProto descriptor) {
         final Map<String, String> result = new HashMap<>();
-        for (com.google.protobuf.DescriptorProtos.SourceCodeInfo.Location location
-                : descriptor.getSourceCodeInfo().getLocationList()) {
+        for (Location location : descriptor.getSourceCodeInfo().getLocationList()) {
             if (location.getLeadingComments().isEmpty()) {
                 continue;
             }
