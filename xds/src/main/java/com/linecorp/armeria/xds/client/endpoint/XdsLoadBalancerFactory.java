@@ -18,27 +18,47 @@ package com.linecorp.armeria.xds.client.endpoint;
 
 import javax.annotation.concurrent.NotThreadSafe;
 
+import com.linecorp.armeria.client.Endpoint;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.xds.ClusterSnapshot;
+import com.linecorp.armeria.xds.ClusterXdsResource;
+import com.linecorp.armeria.xds.EndpointSnapshot;
+import com.linecorp.armeria.xds.SnapshotWatcher;
 import com.linecorp.armeria.xds.XdsBootstrap;
 
+import io.envoyproxy.envoy.config.core.v3.Locality;
 import io.envoyproxy.envoy.config.endpoint.v3.ClusterLoadAssignment;
+import io.netty.util.concurrent.EventExecutor;
 
 /**
  * A variant of {@link XdsLoadBalancer} which allows updates.
  * This may be useful if the cluster doesn't have a static {@link ClusterLoadAssignment}
  * and needs to be continuously updated.
- * Users are encouraged to use {@link XdsBootstrap} to retrieve an instance of {@link LoadBalancer}
+ * Users are encouraged to use {@link XdsBootstrap} to retrieve an instance of {@link XdsLoadBalancer}
  * instead of using this class directly.
  */
 @UnstableApi
 @NotThreadSafe
-public interface UpdatableXdsLoadBalancer extends XdsLoadBalancer, SafeCloseable {
+public interface XdsLoadBalancerFactory extends SafeCloseable {
+
+    /**
+     * Creates a {@link XdsLoadBalancerFactory} based on the input parameters.
+     * Rather than instantiating a {@link XdsLoadBalancer} directly, users are encouraged
+     * to use the load balancer provided by {@link ClusterSnapshot#loadBalancer()} to select
+     * {@link Endpoint}s.
+     */
+    static XdsLoadBalancerFactory of(EventExecutor eventLoop, Locality locality,
+                                     XdsLoadBalancerLifecycleObserver lifecycleObserver) {
+        return new DefaultXdsLoadBalancerFactory(eventLoop, locality, lifecycleObserver);
+    }
 
     /**
      * Updates the {@link XdsLoadBalancer} state with the input {@link ClusterSnapshot}.
      * Note that there are no thread-safety guarantees with this method.
      */
-    void updateSnapshot(ClusterSnapshot clusterSnapshot);
+    void register(ClusterXdsResource clusterXdsResource, EndpointSnapshot endpointSnapshot,
+                  SnapshotWatcher<XdsLoadBalancer> watcher,
+                  @Nullable XdsLoadBalancer localLoadBalancer);
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2025 LY Corporation
+ * Copyright 2026 LY Corporation
  *
  * LY Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -16,22 +16,24 @@
 
 package com.linecorp.armeria.xds;
 
-import static com.linecorp.armeria.xds.XdsType.ENDPOINT;
-
 import com.linecorp.armeria.common.annotation.Nullable;
 
-import io.envoyproxy.envoy.config.core.v3.ConfigSource;
+final class StaticSnapshotStream<T> implements SnapshotStream<T> {
 
-final class EndpointResourceNode extends AbstractResourceNode<EndpointXdsResource, EndpointSnapshot> {
+    private final @Nullable T value;
+    private final @Nullable Throwable error;
 
-    EndpointResourceNode(@Nullable ConfigSource configSource,
-                         String resourceName, SubscriptionContext context,
-                         SnapshotWatcher<EndpointSnapshot> parentWatcher, ResourceNodeType resourceNodeType) {
-        super(context, configSource, ENDPOINT, resourceName, parentWatcher, resourceNodeType);
+    StaticSnapshotStream(@Nullable T value, @Nullable Throwable error) {
+        if (value == null && error == null) {
+            throw new IllegalArgumentException("Either value or error must be non-null");
+        }
+        this.value = value;
+        this.error = error;
     }
 
     @Override
-    void doOnChanged(EndpointXdsResource update) {
-        notifyOnChanged(new EndpointSnapshot(update));
+    public Subscription subscribe(SnapshotWatcher<? super T> watcher) {
+        watcher.onUpdate(value, error);
+        return Subscription.noop();
     }
 }

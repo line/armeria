@@ -48,6 +48,10 @@ public final class ListenerXdsResource extends AbstractXdsResource {
     @Nullable
     private final Router router;
 
+    ListenerXdsResource(Listener listener) {
+        this(listener, "", 0);
+    }
+
     ListenerXdsResource(Listener listener, String version, long revision) {
         super(version, revision);
         XdsValidatorIndexRegistry.assertValid(listener);

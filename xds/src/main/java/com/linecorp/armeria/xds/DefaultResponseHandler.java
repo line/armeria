@@ -24,7 +24,6 @@ import com.google.protobuf.Message;
 import com.linecorp.armeria.xds.SotwXdsStream.ActualStream;
 
 import io.envoyproxy.envoy.service.discovery.v3.DiscoveryResponse;
-import io.grpc.Status;
 
 final class DefaultResponseHandler implements XdsResponseHandler {
 
@@ -76,7 +75,7 @@ final class DefaultResponseHandler implements XdsResponseHandler {
 
             final Throwable errorCause = holder.invalidResources().get(resourceName);
             if (errorCause != null) {
-                subscriber.onError(resourceName, Status.UNAVAILABLE.withCause(errorCause).asException());
+                subscriber.onError(resourceName, errorCause);
                 continue;
             }
 

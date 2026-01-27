@@ -21,7 +21,6 @@ import static com.linecorp.armeria.xds.client.endpoint.XdsAttributeKeys.ROUTE_CO
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
 
-import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.PreClient;
 import com.linecorp.armeria.client.PreClientRequestContext;
@@ -32,21 +31,15 @@ import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.TimeoutException;
 import com.linecorp.armeria.common.annotation.Nullable;
-import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.xds.ClusterSnapshot;
 import com.linecorp.armeria.xds.RouteEntry;
 import com.linecorp.armeria.xds.internal.XdsCommonUtil;
 
 import io.envoyproxy.envoy.extensions.transport_sockets.tls.v3.UpstreamTlsContext;
-import io.netty.channel.ChannelOption;
-import io.netty.channel.EventLoop;
 
 final class RouterFilter<I extends Request, O extends Response> implements Preprocessor<I, O> {
 
-    private final Function<CompletableFuture<O>, O> futureConverter;
-
     RouterFilter(Function<CompletableFuture<O>, O> futureConverter) {
-        this.futureConverter = futureConverter;
     }
 
     @Override
@@ -101,28 +94,7 @@ final class RouterFilter<I extends Request, O extends Response> implements Prepr
         }
 
         final Endpoint endpoint = loadBalancer.selectNow(ctx);
-        if (endpoint != null) {
-            return execute0(delegate, ctx, req, endpoint);
-        }
-        final EventLoop temporaryEventLoop = ctx.options().factory().eventLoopSupplier().get();
-        final CompletableFuture<O> cf =
-                loadBalancer.select(ctx, temporaryEventLoop, connectTimeoutMillis(ctx))
-                            .thenApply(endpoint0 -> {
-                                try {
-                                    return execute0(delegate, ctx, req, endpoint0);
-                                } catch (Exception e) {
-                                    return Exceptions.throwUnsafely(e);
-                                }
-                            });
-        return futureConverter.apply(cf);
-    }
-
-    private int connectTimeoutMillis(ClientRequestContext ctx) {
-        final Integer connectTimeoutMillisBoxed =
-                (Integer) ctx.options().factory().options()
-                             .channelOptions().get(ChannelOption.CONNECT_TIMEOUT_MILLIS);
-        assert connectTimeoutMillisBoxed != null;
-        return connectTimeoutMillisBoxed;
+        return execute0(delegate, ctx, req, endpoint);
     }
 
     private O execute0(PreClient<I, O> delegate, PreClientRequestContext ctx, I req,

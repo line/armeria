@@ -26,7 +26,7 @@ import com.google.common.collect.ImmutableMap;
 
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.common.annotation.Nullable;
-import com.linecorp.armeria.xds.ClusterSnapshot;
+import com.linecorp.armeria.xds.ClusterXdsResource;
 import com.linecorp.armeria.xds.EndpointSnapshot;
 
 import io.envoyproxy.envoy.config.cluster.v3.Cluster;
@@ -38,14 +38,16 @@ final class PrioritySet {
     private final Map<Integer, HostSet> hostSets;
     private final SortedSet<Integer> priorities;
     private final List<Endpoint> origEndpoints;
-    private final ClusterSnapshot clusterSnapshot;
-    private final Cluster cluster;
+    private final ClusterXdsResource clusterXdsResource;
+    private final EndpointSnapshot endpointSnapshot;
     private final int panicThreshold;
 
-    PrioritySet(ClusterSnapshot clusterSnapshot, Map<Integer, HostSet> hostSets, List<Endpoint> origEndpoints) {
-        this.clusterSnapshot = clusterSnapshot;
-        cluster = clusterSnapshot.xdsResource().resource();
-        panicThreshold = EndpointUtil.panicThreshold(cluster);
+    PrioritySet(ClusterXdsResource clusterXdsResource,
+                EndpointSnapshot endpointSnapshot, Map<Integer, HostSet> hostSets,
+                List<Endpoint> origEndpoints) {
+        this.clusterXdsResource = clusterXdsResource;
+        this.endpointSnapshot = endpointSnapshot;
+        panicThreshold = EndpointUtil.panicThreshold(clusterXdsResource.resource());
         this.hostSets = hostSets;
         priorities = new TreeSet<>(hostSets.keySet());
         this.origEndpoints = origEndpoints;
@@ -69,7 +71,8 @@ final class PrioritySet {
             !commonLbConfig.getZoneAwareLbConfig().hasMinClusterSize()) {
             return 6;
         }
-        final ZoneAwareLbConfig zoneAwareLbConfig = cluster.getCommonLbConfig().getZoneAwareLbConfig();
+        final ZoneAwareLbConfig zoneAwareLbConfig =
+                clusterXdsResource.resource().getCommonLbConfig().getZoneAwareLbConfig();
         return zoneAwareLbConfig.getMinClusterSize().getValue();
     }
 
@@ -87,10 +90,10 @@ final class PrioritySet {
 
     @Nullable
     private CommonLbConfig commonLbConfig() {
-        if (!cluster.hasCommonLbConfig()) {
+        if (!clusterXdsResource.resource().hasCommonLbConfig()) {
             return null;
         }
-        return cluster.getCommonLbConfig();
+        return clusterXdsResource.resource().getCommonLbConfig();
     }
 
     boolean localityWeightedBalancing() {
@@ -124,41 +127,48 @@ final class PrioritySet {
     }
 
     Cluster cluster() {
-        return cluster;
+        return clusterXdsResource.resource();
     }
 
-    ClusterSnapshot clusterSnapshot() {
-        return clusterSnapshot;
+    ClusterXdsResource clusterXdsResource() {
+        return clusterXdsResource;
+    }
+
+    EndpointSnapshot endpointSnapshot() {
+        return endpointSnapshot;
     }
 
     @Override
     public String toString() {
         return MoreObjects.toStringHelper(this)
                           .add("hostSets", hostSets)
-                          .add("cluster", cluster)
+                          .add("clusterXdsResource", clusterXdsResource)
+                          .add("endpointSnapshot", endpointSnapshot)
                           .toString();
     }
 
     static final class PrioritySetBuilder {
 
         private final ImmutableMap.Builder<Integer, HostSet> hostSetsBuilder = ImmutableMap.builder();
-        private final ClusterSnapshot clusterSnapshot;
+        private final ClusterXdsResource clusterXdsResource;
+        private final EndpointSnapshot endpointSnapshot;
         private final List<Endpoint> origEndpoints;
 
-        PrioritySetBuilder(ClusterSnapshot clusterSnapshot, List<Endpoint> origEndpoints) {
-            this.clusterSnapshot = clusterSnapshot;
+        PrioritySetBuilder(ClusterXdsResource clusterXdsResource,
+                           EndpointSnapshot endpointSnapshot, List<Endpoint> origEndpoints) {
+            this.clusterXdsResource = clusterXdsResource;
+            this.endpointSnapshot = endpointSnapshot;
             this.origEndpoints = origEndpoints;
-            final EndpointSnapshot endpointSnapshot = clusterSnapshot.endpointSnapshot();
-            assert endpointSnapshot != null;
         }
 
         void createHostSet(int priority, UpdateHostsParam params) {
-            final DefaultHostSet hostSet = new DefaultHostSet(params, clusterSnapshot);
+            final DefaultHostSet hostSet = new DefaultHostSet(params, endpointSnapshot);
             hostSetsBuilder.put(priority, hostSet);
         }
 
         PrioritySet build() {
-            return new PrioritySet(clusterSnapshot, hostSetsBuilder.build(), origEndpoints);
+            return new PrioritySet(clusterXdsResource, endpointSnapshot,
+                                   hostSetsBuilder.build(), origEndpoints);
         }
     }
 }

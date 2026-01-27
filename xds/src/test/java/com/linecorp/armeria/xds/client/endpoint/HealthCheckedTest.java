@@ -139,7 +139,7 @@ class HealthCheckedTest {
 
             final ClientRequestContext ctx =
                     ClientRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
-            final Endpoint endpoint = loadBalancer.select(ctx, ctx.eventLoop(), Long.MAX_VALUE).join();
+            final Endpoint endpoint = loadBalancer.selectNow(ctx);
             assertThat(endpoint).isNotNull();
             final Set<Integer> healthyPorts = server.server().activePorts().values().stream()
                                                     .map(port -> port.localAddress().getPort())

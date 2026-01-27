@@ -25,7 +25,7 @@ import com.google.common.primitives.Ints;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.common.loadbalancer.LoadBalancer;
 import com.linecorp.armeria.common.loadbalancer.SimpleLoadBalancer;
-import com.linecorp.armeria.xds.ClusterSnapshot;
+import com.linecorp.armeria.xds.EndpointSnapshot;
 
 import io.envoyproxy.envoy.config.core.v3.Locality;
 
@@ -45,9 +45,9 @@ final class DefaultHostSet implements HostSet {
     private final Map<Locality, EndpointGroup> degradedEndpointGroupPerLocality;
     private final Map<Locality, Integer> localityWeights;
 
-    DefaultHostSet(UpdateHostsParam params, ClusterSnapshot clusterSnapshot) {
-        weightedPriorityHealth = EndpointUtil.weightedPriorityHealth(clusterSnapshot);
-        overProvisioningFactor = EndpointUtil.overProvisionFactor(clusterSnapshot);
+    DefaultHostSet(UpdateHostsParam params, EndpointSnapshot endpointSnapshot) {
+        weightedPriorityHealth = EndpointUtil.weightedPriorityHealth(endpointSnapshot);
+        overProvisioningFactor = EndpointUtil.overProvisionFactor(endpointSnapshot);
 
         healthyLocalitySelector = rebuildLocalityScheduler(
                 params.healthyHostsPerLocality(), params.hostsPerLocality(),

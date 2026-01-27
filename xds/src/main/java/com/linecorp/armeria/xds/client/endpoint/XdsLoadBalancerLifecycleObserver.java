@@ -21,7 +21,7 @@ import java.util.List;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.util.SafeCloseable;
-import com.linecorp.armeria.xds.ClusterSnapshot;
+import com.linecorp.armeria.xds.ClusterXdsResource;
 
 /**
  * Event handler for xDS load balancer updates.
@@ -32,22 +32,23 @@ public interface XdsLoadBalancerLifecycleObserver extends SafeCloseable {
     /**
      * Called when an update is triggered.
      */
-    default void resourceUpdated(ClusterSnapshot snapshot) {}
+    default void resourceUpdated(ClusterXdsResource clusterXdsResource) {}
 
     /**
      * Called when endpoints are updated.
      */
-    default void endpointsUpdated(ClusterSnapshot snapshot, List<Endpoint> endpoints) {}
+    default void endpointsUpdated(ClusterXdsResource clusterXdsResource, List<Endpoint> endpoints) {}
 
     /**
      * Called when an update is completed.
      */
-    default void stateUpdated(ClusterSnapshot snapshot, LoadBalancerState state) {}
+    default void stateUpdated(ClusterXdsResource clusterXdsResource, LoadBalancerState state) {}
 
     /**
      * Called when an update is rejected.
      */
-    default void stateRejected(ClusterSnapshot snapshot, List<Endpoint> endpoints, Throwable cause) {}
+    default void stateRejected(ClusterXdsResource clusterXdsResource, List<Endpoint> endpoints,
+                               Throwable cause) {}
 
     @Override
     default void close() {}

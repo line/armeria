@@ -16,7 +16,9 @@
 
 package com.linecorp.armeria.xds;
 
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
+import com.linecorp.armeria.xds.SnapshotStream.Subscription;
 
 import io.envoyproxy.envoy.config.listener.v3.Listener;
 
@@ -28,23 +30,23 @@ import io.envoyproxy.envoy.config.listener.v3.Listener;
 @UnstableApi
 public final class ListenerRoot extends AbstractRoot<ListenerSnapshot> {
 
-    private final String resourceName;
-    private final ListenerManager listenerManager;
+    @Nullable
+    private Subscription subscription;
 
     ListenerRoot(SubscriptionContext context, String resourceName, ListenerManager listenerManager,
                  SnapshotWatcher<Object> defaultWatcher) {
         super(context.eventLoop(), defaultWatcher);
-        this.resourceName = resourceName;
-        this.listenerManager = listenerManager;
         context.eventLoop().execute(safeRunnable(
-                () -> listenerManager.register(resourceName, context, this),
+                () -> subscription = listenerManager.register(resourceName, context, this),
                 t -> onUpdate(null, XdsResourceException.maybeWrap(XdsType.LISTENER, resourceName, t))));
     }
 
     @Override
     public void close() {
         eventLoop().execute(() -> {
-            listenerManager.unregister(resourceName, this);
+            if (subscription != null) {
+                subscription.close();
+            }
             super.close();
         });
     }

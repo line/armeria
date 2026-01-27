@@ -30,7 +30,6 @@ import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.loadbalancer.WeightTransition;
 import com.linecorp.armeria.internal.client.endpoint.EndpointAttributeKeys;
-import com.linecorp.armeria.xds.ClusterSnapshot;
 import com.linecorp.armeria.xds.EndpointSnapshot;
 
 import io.envoyproxy.envoy.config.cluster.v3.Cluster;
@@ -156,29 +155,25 @@ final class EndpointUtil {
         return localityLbEndpoints;
     }
 
-    static int overProvisionFactor(ClusterSnapshot clusterSnapshot) {
-        return loadAssignmentProperty(clusterSnapshot, loadAssignment -> {
+    static int overProvisionFactor(EndpointSnapshot endpointSnapshot) {
+        return loadAssignmentProperty(endpointSnapshot, loadAssignment -> {
             if (!loadAssignment.hasPolicy()) {
                 return 140;
             }
             final Policy policy = loadAssignment.getPolicy();
             return policy.hasOverprovisioningFactor() ? policy.getOverprovisioningFactor().getValue() : 140;
-        }, 140);
+        });
     }
 
-    static boolean weightedPriorityHealth(ClusterSnapshot clusterSnapshot) {
-        return loadAssignmentProperty(clusterSnapshot, loadAssignment -> {
+    static boolean weightedPriorityHealth(EndpointSnapshot endpointSnapshot) {
+        return loadAssignmentProperty(endpointSnapshot, loadAssignment -> {
             return loadAssignment.hasPolicy() ?
                    loadAssignment.getPolicy().getWeightedPriorityHealth() : false;
-        }, false);
+        });
     }
 
-    static <T> T loadAssignmentProperty(ClusterSnapshot snapshot, Function<ClusterLoadAssignment, T> mapper,
-                                        T defaultValue) {
-        final EndpointSnapshot endpointSnapshot = snapshot.endpointSnapshot();
-        if (endpointSnapshot == null) {
-            return defaultValue;
-        }
+    static <T> T loadAssignmentProperty(EndpointSnapshot endpointSnapshot,
+                                        Function<ClusterLoadAssignment, T> mapper) {
         return mapper.apply(endpointSnapshot.xdsResource().resource());
     }
 

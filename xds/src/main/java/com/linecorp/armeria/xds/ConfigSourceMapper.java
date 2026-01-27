@@ -16,8 +16,6 @@
 
 package com.linecorp.armeria.xds;
 
-import static com.google.common.base.Preconditions.checkArgument;
-
 import com.linecorp.armeria.common.annotation.Nullable;
 
 import io.envoyproxy.envoy.config.bootstrap.v3.Bootstrap;
@@ -36,32 +34,30 @@ final class ConfigSourceMapper {
         bootstrapAdsConfig = bootstrap.getDynamicResources().getAdsConfig();
     }
 
-    ConfigSource configSource(ConfigSource configSource, @Nullable ConfigSource parentConfigSource,
-                              String resourceName) {
+    @Nullable
+    ConfigSource configSource(ConfigSource configSource, @Nullable ConfigSource parentConfigSource) {
         if (configSource.hasAds() || configSource.hasApiConfigSource()) {
             return configSource;
         }
         if (configSource.hasSelf()) {
-            checkArgument(parentConfigSource != null,
-                          "parentConfigSource not available for '%s' when fetching '%s'",
-                          configSource, resourceName);
             return parentConfigSource;
         }
-        throw new IllegalArgumentException("Unsupported config source: '" + configSource +
-                                           "' when fetching resource '" + resourceName + '\'');
+        return null;
     }
 
-    ConfigSource cdsConfigSource(String resourceName) {
-        checkArgument(bootstrapCdsConfig.hasApiConfigSource() || bootstrapCdsConfig.hasAds(),
-                      "Unsupported CDS config source '%s' when fetching '%s'",
-                      bootstrapCdsConfig, resourceName);
+    @Nullable
+    ConfigSource cdsConfigSource() {
+        if (!bootstrapCdsConfig.hasApiConfigSource() && !bootstrapCdsConfig.hasAds()) {
+            return null;
+        }
         return bootstrapCdsConfig;
     }
 
-    ConfigSource ldsConfigSource(String resourceName) {
-        checkArgument(bootstrapLdsConfig.hasApiConfigSource() || bootstrapLdsConfig.hasAds(),
-                      "Unsupported LDS config source '%s' when fetching '%s'",
-                      bootstrapLdsConfig, resourceName);
+    @Nullable
+    ConfigSource ldsConfigSource() {
+        if (!bootstrapLdsConfig.hasApiConfigSource() && !bootstrapLdsConfig.hasAds()) {
+            return null;
+        }
         return bootstrapLdsConfig;
     }
 

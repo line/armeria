@@ -52,7 +52,6 @@ import io.envoyproxy.envoy.config.endpoint.v3.ClusterLoadAssignment;
 import io.envoyproxy.envoy.config.listener.v3.Listener;
 import io.envoyproxy.envoy.config.route.v3.RouteConfiguration;
 import io.envoyproxy.pgv.ValidationException;
-import io.grpc.StatusException;
 
 class ErrorHandlingTest {
 
@@ -186,7 +185,7 @@ class ErrorHandlingTest {
             assertThat(xdsResourceException)
                     .cause()
                     .isInstanceOf(IllegalArgumentException.class)
-                    .hasMessageContaining("Unsupported");
+                    .hasMessage("config source not found");
         }
     }
 
@@ -258,8 +257,8 @@ class ErrorHandlingTest {
     static Stream<Arguments> discoveryFailure_args() {
         final Consumer<XdsBootstrap> clusterGen = xdsBootstrap -> xdsBootstrap.clusterRoot("my-cluster");
         final Consumer<XdsBootstrap> listenerGen = xdsBootstrap -> xdsBootstrap.listenerRoot("my-listener");
-        return Stream.of(Arguments.of(clusterGen, XdsType.CLUSTER, "my-cluster"),
-                         Arguments.of(listenerGen, XdsType.LISTENER, "my-listener"));
+        return Stream.of(Arguments.of(clusterGen, XdsType.ENDPOINT, "unknown-cluster"),
+                         Arguments.of(listenerGen, XdsType.ROUTE, "unknown-route"));
     }
 
     @ParameterizedTest
@@ -550,8 +549,6 @@ class ErrorHandlingTest {
             assertThat(xdsResourceException.type()).isEqualTo(type);
             assertThat(xdsResourceException.name()).isEqualTo(name);
             assertThat(xdsResourceException).cause()
-                                            .isInstanceOf(StatusException.class)
-                                            .cause()
                                             .isInstanceOf(IllegalArgumentException.class)
                                             .cause()
                                             .isInstanceOf(ValidationException.class)
@@ -610,8 +607,6 @@ class ErrorHandlingTest {
             assertThat(xdsResourceException.type()).isEqualTo(type);
             assertThat(xdsResourceException.name()).isEqualTo(name);
             assertThat(xdsResourceException).cause()
-                                            .isInstanceOf(StatusException.class)
-                                            .cause()
                                             .isInstanceOf(IllegalArgumentException.class)
                                             .cause()
                                             .isInstanceOf(ValidationException.class)

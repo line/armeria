@@ -43,7 +43,7 @@ final class LocalityRoutingStateFactory {
         this.localLocality = localLocality;
     }
 
-    LocalityRoutingState create(PrioritySet upstreamPrioritySet, PrioritySet localPrioritySet) {
+    LocalityRoutingState create(PrioritySet upstreamPrioritySet, XdsLoadBalancer localPrioritySet) {
         // Only priority 0 is supported
         final HostSet upstreamHostSet = upstreamPrioritySet.hostSets().get(0);
         final HostSet localHostSet = localPrioritySet.hostSets().get(0);

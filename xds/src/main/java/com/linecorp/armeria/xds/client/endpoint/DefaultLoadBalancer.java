@@ -20,6 +20,7 @@ import static com.google.common.base.Preconditions.checkArgument;
 import static com.linecorp.armeria.xds.client.endpoint.DefaultLbStateFactory.isHostSetInPanic;
 import static com.linecorp.armeria.xds.client.endpoint.XdsRandom.RandomHint.ROUTING_ENABLED;
 
+import java.util.List;
 import java.util.Map;
 
 import com.google.common.base.MoreObjects;
@@ -30,23 +31,28 @@ import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.xds.EndpointSnapshot;
 import com.linecorp.armeria.xds.client.endpoint.DefaultLbStateFactory.DefaultLbState;
 import com.linecorp.armeria.xds.client.endpoint.LocalityRoutingStateFactory.LocalityRoutingState;
 import com.linecorp.armeria.xds.client.endpoint.LocalityRoutingStateFactory.State;
 
 import io.envoyproxy.envoy.config.core.v3.Locality;
 
-final class DefaultLoadBalancer implements LoadBalancer {
+final class DefaultLoadBalancer implements XdsLoadBalancer {
 
     private final DefaultLbStateFactory.DefaultLbState lbState;
     @Nullable
+    private final XdsLoadBalancer localLoadBalancer;
+    @Nullable
     private final LocalityRoutingState localityRoutingState;
 
-    DefaultLoadBalancer(PrioritySet prioritySet, @Nullable LocalCluster localCluster,
-                        @Nullable PrioritySet localPrioritySet) {
+    DefaultLoadBalancer(PrioritySet prioritySet, Locality locality,
+                        @Nullable XdsLoadBalancer localLoadBalancer) {
         lbState = DefaultLbStateFactory.newInstance(prioritySet);
-        if (localCluster != null && localPrioritySet != null) {
-            localityRoutingState = localCluster.stateFactory().create(prioritySet, localPrioritySet);
+        this.localLoadBalancer = localLoadBalancer;
+        if (localLoadBalancer != null) {
+            localityRoutingState = new LocalityRoutingStateFactory(locality)
+                    .create(prioritySet, localLoadBalancer);
         } else {
             localityRoutingState = null;
         }
@@ -222,6 +228,22 @@ final class DefaultLoadBalancer implements LoadBalancer {
     @Override
     public Map<Struct, LoadBalancerState> subsetStates() {
         return ImmutableMap.of();
+    }
+
+    @Override
+    public List<Endpoint> allEndpoints() {
+        return lbState.prioritySet().endpoints();
+    }
+
+    @Override
+    public EndpointSnapshot endpointSnapshot() {
+        return lbState.prioritySet().endpointSnapshot();
+    }
+
+    @Nullable
+    @Override
+    public LoadBalancerState localLoadBalancer() {
+        return localLoadBalancer;
     }
 
     static class PriorityAndAvailability {
