@@ -23,7 +23,7 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
  */
 @UnstableApi
 @FunctionalInterface
-public interface Snapshot<T extends XdsResource> {
+public interface Snapshot<T> {
 
     /**
      * Returns the {@link XdsResource} of the current snapshot.

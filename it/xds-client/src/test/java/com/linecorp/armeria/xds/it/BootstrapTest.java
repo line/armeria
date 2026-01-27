@@ -28,6 +28,7 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.grpc.GrpcService;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
@@ -118,7 +119,14 @@ class BootstrapTest {
         cache.setSnapshot(GROUP, snapshot);
 
         final AtomicReference<Object> objRef = new AtomicReference<>();
-        final SnapshotWatcher<Object> watcher = objRef::set;
+        final SnapshotWatcher<Object> watcher = new SnapshotWatcher<>() {
+            @Override
+            public void onUpdate(@Nullable Object snapshot, @Nullable Throwable t) {
+                if (snapshot != null) {
+                    objRef.set(snapshot);
+                }
+            }
+        };
         try (XdsBootstrap xdsBootstrap = XdsBootstrap.builder(bootstrap)
                                                      .defaultSnapshotWatcher(watcher)
                                                      .build()) {

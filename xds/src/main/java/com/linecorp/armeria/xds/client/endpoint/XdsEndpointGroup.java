@@ -119,8 +119,11 @@ public final class XdsEndpointGroup extends AbstractListenable<List<Endpoint>>
     }
 
     @Override
-    public void snapshotUpdated(ListenerSnapshot listenerSnapshot) {
-        final RouteSnapshot routeSnapshot = listenerSnapshot.routeSnapshot();
+    public void onUpdate(@Nullable ListenerSnapshot snapshot, @Nullable Throwable t) {
+        if (snapshot == null) {
+            return;
+        }
+        final RouteSnapshot routeSnapshot = snapshot.routeSnapshot();
         if (routeSnapshot == null) {
             return;
         }

@@ -30,7 +30,6 @@ import com.linecorp.armeria.common.util.EventLoopGroups;
 import com.linecorp.armeria.internal.common.util.ReentrantShortLock;
 
 import io.envoyproxy.envoy.config.bootstrap.v3.Bootstrap;
-import io.grpc.Status;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.netty.channel.EventLoopGroup;
 import io.netty.util.concurrent.EventExecutor;
@@ -67,12 +66,12 @@ public final class XdsBootstrapBuilder {
     }
 
     static final SnapshotWatcher<Object> DEFAULT_SNAPSHOT_WATCHER = new SnapshotWatcher<Object>() {
-        @Override
-        public void snapshotUpdated(Object newSnapshot) {}
 
         @Override
-        public void onError(XdsType type, String resourceName, Status status) {
-            logger.warn("Error fetching resource '{}:{}' e: {}", type, resourceName, status);
+        public void onUpdate(@Nullable Object snapshot, @Nullable Throwable t) {
+            if (t != null) {
+                logger.warn("Error fetching resource e: ", t);
+            }
         }
     };
 

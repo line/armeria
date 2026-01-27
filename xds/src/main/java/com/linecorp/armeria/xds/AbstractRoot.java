@@ -31,7 +31,6 @@ import com.google.common.annotations.VisibleForTesting;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.SafeCloseable;
 
-import io.grpc.Status;
 import io.netty.util.concurrent.EventExecutor;
 
 abstract class AbstractRoot<T extends Snapshot<? extends XdsResource>>
@@ -73,7 +72,7 @@ abstract class AbstractRoot<T extends Snapshot<? extends XdsResource>>
         snapshotWatchers.add(watcher);
         if (snapshot != null) {
             try {
-                watcher.snapshotUpdated(snapshot);
+                watcher.onUpdate(snapshot, null);
             } catch (Throwable t) {
                 logger.warn("Unexpected exception while invoking {}.snapshotUpdated",
                             watcher.getClass().getSimpleName(), t);
@@ -82,40 +81,18 @@ abstract class AbstractRoot<T extends Snapshot<? extends XdsResource>>
     }
 
     @Override
-    public void snapshotUpdated(T newSnapshot) {
+    public void onUpdate(@Nullable T snapshot, @Nullable Throwable t) {
         if (closed) {
             return;
         }
         if (!eventLoop.inEventLoop()) {
-            eventLoop.execute(() -> snapshotUpdated(newSnapshot));
+            eventLoop.execute(() -> onUpdate(snapshot, t));
             return;
         }
-        snapshot = newSnapshot;
-        notifyWatchers("snapshotUpdated", watcher -> watcher.snapshotUpdated(newSnapshot));
-    }
-
-    @Override
-    public void onMissing(XdsType type, String resourceName) {
-        if (closed) {
-            return;
+        if (snapshot != null) {
+            this.snapshot = snapshot;
         }
-        if (!eventLoop.inEventLoop()) {
-            eventLoop.execute(() -> onMissing(type, resourceName));
-            return;
-        }
-        notifyWatchers("onMissing", watcher -> watcher.onMissing(type, resourceName));
-    }
-
-    @Override
-    public void onError(XdsType type, String resourceName, Status status) {
-        if (closed) {
-            return;
-        }
-        if (!eventLoop.inEventLoop()) {
-            eventLoop.execute(() -> onError(type, resourceName, status));
-            return;
-        }
-        notifyWatchers("onError", watcher -> watcher.onError(type, resourceName, status));
+        notifyWatchers("onUpdate", watcher -> watcher.onUpdate(snapshot, t));
     }
 
     private void notifyWatchers(String methodName, Consumer<SnapshotWatcher<? super T>> consumer) {

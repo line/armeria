@@ -1,7 +1,7 @@
 /*
- * Copyright 2024 LINE Corporation
+ * Copyright 2026 LY Corporation
  *
- * LINE Corporation licenses this file to you under the Apache License,
+ * LY Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
@@ -16,19 +16,16 @@
 
 package com.linecorp.armeria.xds;
 
-import com.linecorp.armeria.common.annotation.Nullable;
-import com.linecorp.armeria.common.annotation.UnstableApi;
-
 /**
- * A watcher implementation which waits for updates on an xDS snapshot.
+ * An exception that indicates an xDS resource does not exist.
+ * This can occur when a timeout expires while waiting for a resource,
+ * or when the xDS control plane explicitly signals that a resource is missing.
  */
-@UnstableApi
-@FunctionalInterface
-public interface SnapshotWatcher<T> {
+public final class MissingXdsResourceException extends XdsResourceException {
 
-    /**
-     * Invoked when a snapshot is updated or an error occurs.
-     * Either snapshot or error will be non-null.
-     */
-    void onUpdate(@Nullable T snapshot, @Nullable Throwable t);
+    private static final long serialVersionUID = -3769529407892638288L;
+
+    MissingXdsResourceException(XdsType type, String name) {
+        super(type, name);
+    }
 }
