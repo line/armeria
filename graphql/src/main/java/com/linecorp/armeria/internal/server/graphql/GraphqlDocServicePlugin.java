@@ -35,6 +35,7 @@ import com.linecorp.armeria.internal.server.RouteUtil;
 import com.linecorp.armeria.server.Route;
 import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.ServiceConfig;
+import com.linecorp.armeria.server.docs.DescribedTypeSignature;
 import com.linecorp.armeria.server.docs.DescriptionInfo;
 import com.linecorp.armeria.server.docs.DescriptiveTypeInfoProvider;
 import com.linecorp.armeria.server.docs.DocServiceFilter;
@@ -101,8 +102,8 @@ public final class GraphqlDocServicePlugin implements DocServicePlugin {
         final List<FieldInfo> fieldInfos = fieldInfos();
         final Class<?> clazz = service.getClass();
         final MethodInfo methodInfo = new MethodInfo(
-                clazz.getName(), DEFAULT_METHOD_NAME, 0, JSON, fieldInfos, ImmutableList.of(),
-                ImmutableList.of(endpoint), HttpMethod.POST, DescriptionInfo.empty());
+                clazz.getName(), DEFAULT_METHOD_NAME, 0, DescribedTypeSignature.of(JSON), fieldInfos,
+                ImmutableList.of(), ImmutableList.of(endpoint), HttpMethod.POST, DescriptionInfo.empty());
         methodInfos.computeIfAbsent(clazz, unused -> new HashSet<>()).add(methodInfo);
     }
 

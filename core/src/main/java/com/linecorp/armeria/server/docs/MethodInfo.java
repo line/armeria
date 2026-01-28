@@ -17,7 +17,6 @@
 package com.linecorp.armeria.server.docs;
 
 import static com.google.common.base.Preconditions.checkArgument;
-import static com.google.common.collect.ImmutableList.toImmutableList;
 import static java.util.Comparator.comparing;
 import static java.util.Objects.requireNonNull;
 
@@ -31,7 +30,6 @@ import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSortedSet;
 import com.google.common.collect.Iterables;
-import com.google.common.collect.Streams;
 
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpMethod;
@@ -68,62 +66,40 @@ public final class MethodInfo {
      * Creates a new instance.
      */
     public MethodInfo(String serviceName, String name,
-                      int overloadId, TypeSignature returnTypeSignature,
+                      int overloadId,
+                      DescribedTypeSignature returnInfo,
                       Iterable<FieldInfo> parameters,
-                      Iterable<TypeSignature> exceptionTypeSignatures,
+                      Iterable<DescribedTypeSignature> exceptions,
                       Iterable<EndpointInfo> endpoints,
                       HttpMethod httpMethod,
                       DescriptionInfo descriptionInfo) {
-        this(name, DescribedTypeSignature.of(returnTypeSignature),
-             parameters, false, toDescribedTypeSignatures(exceptionTypeSignatures),
+        this(name, returnInfo,
+             parameters, false, exceptions,
              endpoints, ImmutableList.of(),
              ImmutableList.of(), ImmutableList.of(), ImmutableList.of(), httpMethod, descriptionInfo,
-             createId(serviceName, name, overloadId, httpMethod)
-        );
+             createId(serviceName, name, overloadId, httpMethod));
     }
 
     /**
      * Creates a new instance.
      */
     public MethodInfo(String serviceName, String name,
-                      int overloadId, TypeSignature returnTypeSignature,
+                      int overloadId,
+                      DescribedTypeSignature returnInfo,
                       Iterable<FieldInfo> parameters,
                       Iterable<EndpointInfo> endpoints,
                       Iterable<String> examplePaths,
                       Iterable<String> exampleQueries,
                       HttpMethod httpMethod,
                       DescriptionInfo descriptionInfo) {
-        this(name, DescribedTypeSignature.of(returnTypeSignature),
+        this(name, returnInfo,
              parameters, false, ImmutableList.of(), endpoints, ImmutableList.of(),
              ImmutableList.of(), examplePaths, exampleQueries, httpMethod, descriptionInfo,
-             createId(serviceName, name, overloadId, httpMethod)
-        );
+             createId(serviceName, name, overloadId, httpMethod));
     }
 
     /**
      * Creates a new instance.
-     */
-    public MethodInfo(String serviceName, String name,
-                      TypeSignature returnTypeSignature,
-                      Iterable<FieldInfo> parameters,
-                      boolean useParameterAsRoot,
-                      Iterable<TypeSignature> exceptionTypeSignatures,
-                      Iterable<EndpointInfo> endpoints,
-                      Iterable<HttpHeaders> exampleHeaders,
-                      Iterable<String> exampleRequests,
-                      Iterable<String> examplePaths,
-                      Iterable<String> exampleQueries,
-                      HttpMethod httpMethod,
-                      DescriptionInfo descriptionInfo) {
-        this(name, DescribedTypeSignature.of(returnTypeSignature),
-             parameters, useParameterAsRoot,
-             toDescribedTypeSignatures(exceptionTypeSignatures), endpoints, exampleHeaders,
-             exampleRequests, examplePaths, exampleQueries, httpMethod, descriptionInfo,
-             createId(serviceName, name, 0, httpMethod));
-    }
-
-    /**
-     * Creates a new instance with {@link DescribedTypeSignature}.
      */
     public MethodInfo(String serviceName, String name,
                       DescribedTypeSignature returnInfo,
@@ -142,24 +118,6 @@ public final class MethodInfo {
              exceptions, endpoints, exampleHeaders,
              exampleRequests, examplePaths, exampleQueries, httpMethod, descriptionInfo,
              createId(serviceName, name, 0, httpMethod));
-    }
-
-    /**
-     * Creates a new instance with {@link DescribedTypeSignature} and overload ID.
-     */
-    public MethodInfo(String serviceName, String name,
-                      int overloadId,
-                      DescribedTypeSignature returnInfo,
-                      Iterable<FieldInfo> parameters,
-                      Iterable<DescribedTypeSignature> exceptions,
-                      Iterable<EndpointInfo> endpoints,
-                      HttpMethod httpMethod,
-                      DescriptionInfo descriptionInfo) {
-        this(name, returnInfo,
-             parameters, false,
-             exceptions, endpoints, ImmutableList.of(),
-             ImmutableList.of(), ImmutableList.of(), ImmutableList.of(), httpMethod, descriptionInfo,
-             createId(serviceName, name, overloadId, httpMethod));
     }
 
     MethodInfo(String name, DescribedTypeSignature returnInfo,
@@ -209,13 +167,6 @@ public final class MethodInfo {
 
         this.httpMethod = requireNonNull(httpMethod, "httpMethod");
         this.descriptionInfo = requireNonNull(descriptionInfo, "descriptionInfo");
-    }
-
-    private static List<DescribedTypeSignature> toDescribedTypeSignatures(
-            Iterable<TypeSignature> exceptionTypeSignatures) {
-        return Streams.stream(requireNonNull(exceptionTypeSignatures, "exceptionTypeSignatures"))
-                      .map(DescribedTypeSignature::of)
-                      .collect(toImmutableList());
     }
 
     /**

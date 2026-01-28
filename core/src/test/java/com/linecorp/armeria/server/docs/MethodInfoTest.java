@@ -135,7 +135,8 @@ class MethodInfoTest {
     }
 
     private static MethodInfo methodInfo(int overloadId) {
-        return new MethodInfo("com.MyService", "foo", overloadId, TypeSignature.ofBase("T"),
+        return new MethodInfo("com.MyService", "foo", overloadId,
+                              DescribedTypeSignature.of(TypeSignature.ofBase("T")),
                               ImmutableList.of(), ImmutableList.of(),
                               ImmutableList.of(), HttpMethod.GET, DescriptionInfo.empty());
     }

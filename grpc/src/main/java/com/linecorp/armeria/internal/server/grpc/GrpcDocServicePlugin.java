@@ -341,7 +341,8 @@ public final class GrpcDocServicePlugin implements DocServicePlugin {
                     serviceName,
                     firstSpec.methodName(),
                     firstSpec.order(),
-                    descriptiveMessageSignature(firstSpec.methodDescriptor().getOutputType()),
+                    DescribedTypeSignature.of(
+                            descriptiveMessageSignature(firstSpec.methodDescriptor().getOutputType())),
                     fieldInfosBuilder.build(),
                     endpointInfos,
                     examplePaths,
