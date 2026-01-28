@@ -836,7 +836,11 @@ final class HttpChannelPool implements AsyncCloseable {
                     break;
                 case NEW_CONNECTION:
                     timingsBuilder.pendingAcquisitionEnd();
-                    connect(desiredProtocol, serializationFormat, key, childPromise, timingsBuilder);
+                    // Reschedule the connection attempt to avoid creating a new connection in the middle of
+                    // initializing the acquired channel.
+                    eventLoop.execute(() -> {
+                        connect(desiredProtocol, serializationFormat, key, childPromise, timingsBuilder);
+                    });
                     break;
                 case PIGGYBACKED_AGAIN:
                     // There's nothing to do because usePendingAcquisition() was called successfully above.
